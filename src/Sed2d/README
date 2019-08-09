@@ -1,0 +1,27 @@
+
+---------------------------------------------------------------------
+-                                                                   -
+-                         SED2D USER GUIDE                          -
+-                                                                   -
+---------------------------------------------------------------------
+
+ SED2D is a SCHISM module that allows to compute sediment transport
+ rate and bottom evolution in 2D mode.
+
+ The total transport is computed based on empirical formulae and the 
+ Exner equation is solved to update the bathymetry at each time step.
+
+ This module is compiled if the key USE_SED2D is activated in the 
+ Makefile.
+
+ To use the model you need to setup a 2D SCHISM simulation, copy the
+ sed2d.in.sample file in your work directory and rename it sed2d.in.
+ Once the parameters in sed2d.in are set to the desired value, you
+ only need to run the model (no additional files are required).
+
+ The input parameters are written in the sed2d.out file which can
+ be later used as a "light" input file.
+
+ If any problem, question or bugs, please contact Thomas Guerin
+ (thomas.guerin@univ-lr.fr), or Guillaume Dodet
+ (guillaume.dodet@univ-brest.fr)

@@ -1,0 +1,144 @@
+!-----------------------------------------------------------------------
+!BOP
+!
+! !MODULE:
+!
+! !INTERFACE:
+   MODULE
+!
+! !DESCRIPTION: 
+   Please fill out - Latex commands are encouraged.
+!
+! !USE:
+   List of mudules used (can be empty)
+   IMPLICIT NONE
+!
+! !PUBLIC MEMBER FUNCTIONS:
+!
+! !PUBLIC DATA MEMBERS:
+!
+! !REVISION HISTORY:
+!  Author(s):
+!  01Jan2000: Ver. ?.?.? (kbk):
+!
+! !LOCAL VARIABLES:
+!
+! !BUGS
+!
+!EOP
+!-----------------------------------------------------------------------
+
+   CONTAINS
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE:
+!
+! !INTERFACE:
+   SUBROUTINE 
+!
+! !DESCRIPTION:
+   Please fill out here what happens in this routine - Latex accepted.
+!
+! !USES
+   List any modules used by this routine.
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   INTEGER, INTENT(IN)
+!
+! !INPUT/OUTPUT PARAMETERS:
+   INTEGER, INTENT(INOUT)
+!
+! !OUTPUT PARAMETERS:
+   INTEGER, INTENT(OUT)
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+
+   RETURN
+   END SUBROUTINE
+!EOC
+
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE:
+!
+! !INTERFACE:
+   SUBROUTINE 
+!
+! !DESCRIPTION:
+   Please fill out here what happens in this routine - Latex accepted.
+!
+! !USES
+   List any modules used by this routine.
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   INTEGER, INTENT(IN)
+!
+! !INPUT/OUTPUT PARAMETERS:
+   INTEGER, INTENT(INOUT)
+!
+! !OUTPUT PARAMETERS:
+   INTEGER, INTENT(OUT)
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+   RETURN
+   END SUBROUTINE
+!EOC
+
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE:
+!
+! !INTERFACE:
+   SUBROUTINE 
+!
+! !DESCRIPTION:
+   Please fill out here what happens in this routine - Latex accepted.
+!
+! !USES
+   List any modules used by this routine.
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   INTEGER, INTENT(IN)
+!
+! !INPUT/OUTPUT PARAMETERS:
+   INTEGER, INTENT(INOUT)
+!
+! !OUTPUT PARAMETERS:
+   INTEGER, INTENT(OUT)
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+   RETURN
+   END SUBROUTINE
+!EOC
+
+!-----------------------------------------------------------------------
+
+   END MODULE
+
+!-----------------------------------------------------------------------
+
+!Copyright (C) 2000 - NAME

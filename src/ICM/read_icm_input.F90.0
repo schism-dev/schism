@@ -1,0 +1,2573 @@
+!   Copyright 2014 College of William and Mary
+!
+!   Licensed under the Apache License, Version 2.0 (the "License");
+!   you may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+!   Unless required by applicable law or agreed to in writing, software
+!   distributed under the License is distributed on an "AS IS" BASIS,
+!   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+!   See the License for the specific language governing permissions and
+!   limitations under the License.
+
+!Routines & functions:
+!WQinput: read time varying input 
+!read_icm_param2: read spatially varying parameter 
+!read_icm_param: read parameter in icm.in
+!read_icm_stainfo: read in icm station output information
+!check_icm_param: Output ICM parameters to check
+!get_param_1D: read 1D array parameters
+!get_param_2D: read 2D array parameters
+
+subroutine WQinput(time)
+!---------------------------------------------------------------------
+!read time varying input:
+!1) benthic flux, 2) atmoshperic loading, 3)solor radition 
+!4) non-point source load, 5) point source load
+!---------------------------------------------------------------------
+  use icm_mod
+  use schism_glbl, only : errmsg,rkind,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+
+  real(kind=rkind),intent(in) :: time
+  
+  
+  !local variable
+  integer :: i,j,k,ie,iegb,neben
+  real(kind=rkind) :: rtmp
+  real(kind=rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
+  real(kind=rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                   &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO 
+
+  !read atmospheric loading (unit: g/m2/day)
+  if(iAtm==1.and.time_icm(1)<time) then
+    do while(time_icm(1)<time)
+      read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
+                & SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO 
+      time_icm(1)=rtmp
+    enddo
+  endif !iAtm
+ 
+  !read benthic flux (unit: g/m2/day; positive value means from sediment to water column)
+  if(iBen/=0.and.time_icm(2)<time) then
+    do while(time_icm(2)<time)
+      if(iBen==1) then !uniform Benthic flux
+        read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+        if(rtmp<time) then
+          read(402,*)
+          cycle
+        endif
+        BRPOC=tRPOC
+        BLPOC=tLPOC
+        BDOC =tDOC
+        BRPON=tRPON
+        BLPON=tLPON
+        BDON =tDON
+        BNH4 =tNH4
+        BNO3 =tNO3
+        BRPOP=tRPOP
+        BLPOP=tLPOP
+        BDOP =tDOP
+        BPO4t=tPO4t
+        BSU  =tSU
+        BSAt =tSAt
+        BCOD =tCOD
+        BDO  =tDO
+        time_icm(2)=rtmp
+        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+      elseif(iBen==2) then !spatially varying benthic flux 
+        read(402,*)rtmp,neben
+        if(rtmp<time) then
+          do i=1,neben+1; read(402,*); enddo
+          cycle
+        endif
+        do ie=1,neben
+          read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+          if(iegl(iegb)%rank==myrank) then
+            BRPOC(iegl(iegb)%id) = tRPOC
+            BLPOC(iegl(iegb)%id) = tLPOC
+            BDOC(iegl(iegb)%id)  = tDOC
+            BRPON(iegl(iegb)%id) = tRPON
+            BLPON(iegl(iegb)%id) = tLPON
+            BDON(iegl(iegb)%id)  = tDON
+            BNH4(iegl(iegb)%id)  = tNH4
+            BNO3(iegl(iegb)%id)  = tNO3
+            BRPOP(iegl(iegb)%id) = tRPOP
+            BLPOP(iegl(iegb)%id) = tLPOP
+            BDOP(iegl(iegb)%id)  = tDOP
+            BPO4t(iegl(iegb)%id) = tPO4t
+            BSU(iegl(iegb)%id)   = tSU
+            BSAt(iegl(iegb)%id)  = tSAt
+            BCOD(iegl(iegb)%id)  = tCOD
+            BDO(iegl(iegb)%id)   = tDO
+          endif
+        enddo
+        time_icm(2)=rtmp
+        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+      else
+        write(errmsg,*)'Unknown ICM value: ', iBen
+        call parallel_abort(errmsg)
+      endif !iBen
+    enddo !while
+  endif !iAtm
+
+  !read solar radiation (unit: ly/day)
+  if(iRad==2.and.time_icm(3)<time) then!manually input
+    do while(time_icm(3)<time)
+      ! need more work if necessary  
+
+
+
+      !comments for this part: in former version, iRad==1 is option for uniform
+      !solar radiation, could be ref for future iRad=2 work
+      !if(iRad==1) then !uniform solar radiation
+      !  read(403,*)rtmp,rIa,TU,TD !time, radiation, time of sunrise and sunset
+      !  time_icm(3)=rtmp
+      !  if(time==0.d0) rIavg=rIa
+      !  rIavg=0.7*rIa+0.3*rIavg
+      !elseif(iRad==2) then !spatially varying solar radiation
+      !! need more work if necessary 
+      !else
+      !  write(errmsg,*)'Unknown ICM iRad value: ', iRad
+      !  call parallel_abort(errmsg)
+      !endif !iRad
+
+    enddo !while 
+
+    !Daylen=(TD-TU)
+
+    !PTT=pi/(TD-TU)
+    !do i=1,3
+    !  rIn(i)=12.d0*PTT*rIa
+    !enddo
+  elseif(iRad/=1.and.iRad/=2)then
+    write(errmsg,*)'Unknown ICM iRad value: ', iRad
+    call parallel_abort(errmsg)
+  endif!time_icm
+
+
+!  !more work to do, put code in schism_step here, ZG
+!  !read non-point source
+!  if(iNPS/=0) then
+!  endif
+!  !read point source
+!  if(iPS/=0) then
+!  endif
+
+  !read PH nudge file
+  if(iPh==1.and.inu_ph==1.and.time_ph<time) then
+    do while(time_ph<time) 
+      read(406,rec=irec_ph)time_ph,TIC_t(1:nvrt,1:ne_global),ALK_t(1:nvrt,1:ne_global)
+      do i=1,ne_global
+         if(iegl(i)%rank==myrank) then
+           do k=1,nvrt
+             TIC_el(k,iegl(i)%id)=TIC_t(nvrt-k+1,i)
+             ALK_el(k:nvrt,iegl(i)%id)=ALK_t(nvrt-k+1,i)
+           enddo !k
+         endif !if(iegl(i)
+      enddo !i
+      irec_ph=irec_ph+1
+    enddo !while
+  endif !iPh
+  
+end subroutine WQinput
+
+subroutine read_icm_param2
+!---------------------------------------------------------------------
+!read spatially varying paramters in icm.in
+!---------------------------------------------------------------------
+  use schism_glbl, only : rkind,np_global,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
+                   & iegl,errmsg,nvrt,kbe,ze
+  use schism_msgp, only : myrank, parallel_abort
+  use icm_mod
+  use misc_modules
+  implicit none
+ 
+  !local variables
+  integer :: i,j,ie,ip,npgb,negb,nd,itmp,itmp1(1),itmp2(1,1),k,k2,m,n,q
+  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
+  character(len=2) :: stmp
+  real(kind=rkind) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS 
+  real(kind=rkind),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs 
+  real(kind=rkind),allocatable :: swild2(:,:)
+  
+  !read settling velocity  
+  !Initializing 
+  WSRP=0.0; WSLP=0.0; WSPB1=0.0; WSPB2=0.0; WSPB3=0.0 
+  call get_param('icm.in','iWS',1,iWS,rtmp,stmp)
+  if(iWS==1) then !uniform
+    call get_param('icm.in','WSRP',2,itmp,tWSRP,stmp)
+    call get_param('icm.in','WSLP',2,itmp,tWSLP,stmp)
+    call get_param('icm.in','WSPB1',2,itmp,tWSPB1,stmp)
+    call get_param('icm.in','WSPB2',2,itmp,tWSPB2,stmp)
+    call get_param('icm.in','WSPB3',2,itmp,tWSPB3,stmp)
+    do i=1,nea
+      WSRP(i)=tWSRP
+      WSLP(i)=tWSLP
+      WSPB1(i)=tWSPB1
+      WSPB2(i)=tWSPB2
+      WSPB3(i)=tWSPB3
+    enddo !i
+  elseif(iWS==2) then !spatially varying
+    open(31,file='settling.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3
+      if(ipgl(ip)%rank==myrank) then
+        tWSRPs(ipgl(ip)%id)=tWSRP
+        tWSLPs(ipgl(ip)%id)=tWSLP
+        tWSPB1s(ipgl(ip)%id)=tWSPB1
+        tWSPB2s(ipgl(ip)%id)=tWSPB2
+        tWSPB3s(ipgl(ip)%id)=tWSPB3
+      endif !ipgl(ip)%rank
+    enddo !i
+    close(31)
+    
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        WSRP(i)=WSRP(i)+tWSRPs(nd)/i34(i)
+        WSLP(i)=WSLP(i)+tWSLPs(nd)/i34(i)
+        WSPB1(i)=WSPB1(i)+tWSPB1s(nd)/i34(i)
+        WSPB2(i)=WSPB2(i)+tWSPB2s(nd)/i34(i)
+        WSPB3(i)=WSPB3(i)+tWSPB3s(nd)/i34(i)
+      enddo
+    enddo !i
+  else
+    write(errmsg,*)'Unknow ICM paramter iWS ',iWS
+    call parallel_abort(errmsg)
+  endif ! iWS
+  
+  !read Light extinction coefficient
+  Turb=0.0
+  call get_param('icm.in','iTurb',1,iTurb,rtmp,stmp)
+  if(iTurb==1) then !uniform
+    call get_param('icm.in','Turb',2,itmp,tTurb,stmp)
+    do i=1,nea
+      Turb(i)=tTurb
+    enddo !i
+  elseif(iTurb==2) then !spatially varying
+    open(31,file='Turb.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check Turb.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,tTurb
+      if(ipgl(ip)%rank==myrank) then
+        tTurbs(ipgl(ip)%id)=tTurb
+      endif !ipgl(ip)%rank
+    enddo !i
+    close(31)
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        Turb(i)=Turb(i)+tTurbs(nd)/i34(i)
+      enddo
+    enddo !i
+  else
+    write(errmsg,*)'Unknow ICM paramter iTurb ',iTurb
+    call parallel_abort(errmsg)
+  endif !iTurb
+
+  !read coefficients for Wind-induced reaeration of DO 
+  WRea=0.0
+  call get_param('icm.in','iWRea',1,iWRea,rtmp,stmp)
+  if(iWRea==1) then !uniform
+    call get_param('icm.in','WRea',2,itmp,tWRea,stmp)
+    do i=1,nea
+      WRea(i)=tWRea
+    enddo !i
+  elseif(iWRea==2) then !spatially varying
+    open(31,file='WRea.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check WRea.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,tWRea
+      if(ipgl(ip)%rank==myrank) then
+        tWReas(ipgl(ip)%id)=tWRea
+      endif !ipgl(ip)%rank
+    enddo !i
+    close(31)
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        WRea(i)=WRea(i)+tWReas(nd)/i34(i)
+      enddo
+    enddo !i
+  else
+    write(errmsg,*)'Unknow ICM paramter iWRea ',iWRea
+    call parallel_abort(errmsg)
+  endif !iWRea
+
+  !read coefficients for the relation between TSS and PC
+  PC2TSS=0.0
+  call get_param('icm.in','iTSS',1,iTSS,rtmp,stmp)
+  if(iLight==3.or.iLight==4) then !read PC2TSS 
+    if(iTSS==1) then !uniform
+      call get_param('icm.in','PC2TSS',2,itmp,tPC2TSS,stmp)
+      do i=1,nea
+        PC2TSS(i)=tPC2TSS
+      enddo !i
+    elseif(iTSS==2) then !spatially varying
+      open(31,file='PC2TSS.gr3',status='old')
+      read(31,*); read(31,*)negb,npgb
+      if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check PC2TSS.gr3')
+      do i=1,np_global
+        read(31,*)ip,xtmp,ytmp,tPC2TSS
+        if(ipgl(ip)%rank==myrank) then
+          tPC2TSSs(ipgl(ip)%id)=tPC2TSS
+        endif !ipgl(ip)%rank
+      enddo !i
+      close(31)
+      do i=1,nea
+        do j=1,i34(i)
+          nd=elnode(j,i)
+          PC2TSS(i)=PC2TSS(i)+tPC2TSSs(nd)/i34(i)
+        enddo
+      enddo !i
+    else
+      write(errmsg,*)'Unknow ICM paramter iTSS ',iTSS
+      call parallel_abort(errmsg)
+    endif !iTSS
+  endif !iLight
+
+  !read PH flag
+  if(iPh==1) then
+    iphgb=0
+    open(31,file='ph.prop',status='old')
+    do i=1,ne_global
+      read(31,*)ie,itmp
+      if(iegl(ie)%rank==myrank) then
+        iphgb(iegl(ie)%id)=itmp
+      endif
+    enddo !i
+    close(31)
+  
+
+    !read PH nudge flag
+    if(inu_ph==1) then
+      open(31,file='ph_nudge.gr3',status='old')
+      read(31,*); read(31,*)
+      do i=1,np_global
+        read(31,*)ip,xtmp,ytmp,ztmp
+        if(ztmp<0.or.ztmp>1) then
+          write(errmsg,*)'Wrong PH nudging factor at node (1):',i,ztmp
+          call parallel_abort(errmsg)
+        endif
+        if(ipgl(ip)%rank==myrank) ph_nudge_nd(ipgl(ip)%id)=ztmp
+      enddo !i
+      close(31)
+
+      ph_nudge=0.0
+      do ie=1,nea
+        do i=1,i34(ie) 
+          ph_nudge(ie)=ph_nudge(ie)+ph_nudge_nd(elnode(i,ie))
+        enddo !i
+        ph_nudge(ie)=ph_nudge(ie)/i34(ie)
+      enddo  !ie
+    endif !inu_ph
+ 
+  endif !iPh
+
+  !ncai
+  !read sav patch flag
+  if(isav_icm==1) then
+    open(31,file='patchsav.prop',status='old')
+    do i=1,ne_global
+      read(31,*)j,tmp
+      itmp=nint(tmp)
+      if(itmp/=0.and.itmp/=1) then
+        write(errmsg,*)'Unknown patchsav flag at elem:',i,tmp
+        call parallel_abort(errmsg)
+      endif
+      if(iegl(i)%rank==myrank) patchsav(iegl(i)%id)=itmp
+      enddo !i
+    close(31)
+  endif !isav_icm
+
+  !ncai
+  !read sav initial biomass
+  if(isav_icm==1) then
+    allocate(swild2(4,npa),stat=i)
+    if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
+    open(10,file='sav_icm_lf.gr3',status='old')
+    open(31,file='sav_icm_st.gr3',status='old')
+    open(32,file='sav_icm_rt.gr3',status='old')
+    read(10,*); read(10,*) n,q
+    read(31,*); read(31,*)k,m
+    read(32,*); read(32,*)i,j
+    if(n/=ne_global.or.q/=np_global.or.i/=ne_global.or.j/=np_global.or.k/=ne_global.or.m/=np_global) then
+      call parallel_abort('ICM_init: Check sav_*.gr3') 
+    endif
+
+    do i=1,np_global
+      read(10,*)j,xtmp,ytmp,tmp
+      read(31,*)j,xtmp,ytmp,tmp1
+      read(32,*)j,xtmp,ytmp,tmp2
+      if(tmp<0.or.tmp1<0.or.tmp2<0) then
+        write(errmsg,*)'ICM_init: illegal sav_*:',i,tmp,tmp1,tmp2
+        call parallel_abort(errmsg)
+      endif
+
+      if(ipgl(i)%rank==myrank) then
+        nd=ipgl(i)%id
+        swild2(1,nd)=tmp
+        swild2(2,nd)=tmp1
+        swild2(3,nd)=tmp2
+        swild2(4,nd)=rlf*tmp+rst*tmp1+rrt*tmp2+hcansav0
+
+!        tlfsav(nd)=tmp
+!        tstsav(nd)=tmp1
+!        trtsav(nd)=tmp2
+!        hcansav(nd)=rlf*tlfsav(nd)+rst*tstsav(nd)+rrt*trtsav(nd)+hcansav0
+        !xcai
+        !write(97,*)'init hcansav for elem', hcansav(nd)
+      endif
+    enddo!i=np_global
+    close(10)
+    close(31)
+    close(32)
+
+    lfsav=0; stsav=0; rtsav=0
+    do i=1,nea
+      tlfsav(i)=sum(swild2(1,elnode(1:i34(i),i)))/i34(i)
+      tstsav(i)=sum(swild2(2,elnode(1:i34(i),i)))/i34(i)
+      trtsav(i)=sum(swild2(3,elnode(1:i34(i),i)))/i34(i)
+      hcansavori(i)=sum(swild2(4,elnode(1:i34(i),i)))/i34(i) !>0
+      hcansav(i)=min(hcansavori(i),(ze(nvrt,i)-ze(kbe(i),i)),hcansav_limit)
+
+      !Biomass at each layer (0 if above canopy)
+      if(patchsav(i)==1) then
+        do k=kbe(i)+1,nvrt
+          if(ze(k-1,i)<hcansav(i)+ze(kbe(i),i)) then
+            tmp=min(ze(k,i),hcansav(i)+ze(kbe(i),i))-ze(k-1,i) !>0
+            if(hcansav(i)<=0.or.tmp<=0) call parallel_abort('read_icm: hcansav<=0')
+            k2=nvrt-k+1 !ICM convention
+            lfsav(k2,i)=tlfsav(i)*tmp/hcansav(i)
+            stsav(k2,i)=tstsav(i)*tmp/hcansav(i)
+            rtsav(k2,i)=trtsav(i)*tmp/hcansav(i)
+          endif !ze
+
+          !write(12,*)'init sav leaf biomass for id and it on
+          !layer:',id,ielg(i),it,i,lfsav(i,i)
+          !write(12,*)'with hcansav is: ; zdep is',hcansav(i)
+        enddo !k
+      endif !patchsav
+    enddo !i
+
+    deallocate(swild2)
+  endif !isav_icm
+
+end subroutine read_icm_param2
+
+subroutine read_icm_param
+!---------------------------------------------------------------------
+!read paramters in icm.in
+!---------------------------------------------------------------------
+   use schism_glbl, only : rkind,dt,NDTWQ,nvrt,ne_global
+   use schism_msgp, only : parallel_abort
+   use icm_mod
+   use misc_modules
+   implicit none
+
+  !local variables
+  integer :: i,j,itmp,itmp1(1),itmp2(1,1)
+  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),tmp
+  character(len=2) :: stmp
+  
+  !read glocal swtiches  
+  call get_param('icm.in','iLight',1,iLight,rtmp,stmp)
+  call get_param('icm.in','jLight',1,jLight,rtmp,stmp)
+  call get_param('icm.in','iSun',1,iSun,rtmp,stmp)
+!  call get_param('icm.in','iNPS',1,iNPS,rtmp,stmp)
+!  call get_param('icm.in','iPS',1,iPS,rtmp,stmp)
+  call get_param('icm.in','iSed',1,iSed,rtmp,stmp)
+  call get_param('icm.in','iRea',1,iRea,rtmp,stmp)
+  call get_param('icm.in','iZoo',1,iZoo,rtmp,stmp)
+  call get_param('icm.in','iPh',1,iPh,rtmp,stmp)
+  call get_param('icm.in','iAtm',1,iAtm,rtmp,stmp)
+  call get_param('icm.in','iBen',1,iBen,rtmp,stmp)
+  call get_param('icm.in','iRad',1,iRad,rtmp,stmp)
+  call get_param('icm.in','iCheck',1,iCheck,rtmp,stmp)
+  call get_param('icm.in','iout_icm',1,iout_icm,rtmp,stmp)
+  call get_param('icm.in','nspool_icm',1,nspool_icm,rtmp,stmp)
+  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
+
+  !ncai 
+  !check iLight
+  if(iLight==4.and.isav_icm==0) call parallel_abort('read_icm: iLight==4 with sav switched off') 
+  if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
+
+!Error: need more check on the flags
+
+  
+
+  !read in icm station information
+  if(iout_icm==1) call read_icm_stainfo
+
+#ifndef USE_SED 
+  if(iLight==2) then
+    call parallel_abort('iLight=2,need to turn on SED')
+  endif
+#endif
+  !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
+  if(iAtm==1) then
+    open(401,file='ICM_atm.th',status='old')
+  endif 
+  if(iBen/=0) then
+    open(402,file='ICM_ben.th',status='old')
+  endif 
+  if(iRad==2) then
+    open(403,file='ICM_rad.th',status='old')
+  elseif(iRad/=1.and.iRad/=2) then
+    call parallel_abort('error: iRad')
+  endif
+  time_icm=-999.d0  !initializing time stamp
+  
+  !read Zooplanktion parameters
+  call get_param_2D('icm.in','GZM',2,itmp2,GZM,stmp,8,2)
+  call get_param_2D('icm.in','rKhGE',2,itmp2,rKhGE,stmp,8,2)
+  call get_param_2D('icm.in','PPC',2,itmp2,PPC,stmp,8,2)
+
+  call get_param_1D('icm.in','BMZR',2,itmp1,BMZR,stmp,2)
+  call get_param_1D('icm.in','DRZ',2,itmp1,DRZ,stmp,2)
+  call get_param_1D('icm.in','TGZ',2,itmp1,TGZ,stmp,2)     
+  call get_param_1D('icm.in','rKTGZ1',2,itmp1,rKTGZ1,stmp,2) 
+  call get_param_1D('icm.in','rKTGZ2',2,itmp1,rKTGZ2,stmp,2)
+  call get_param_1D('icm.in','TBZ',2,itmp1,TBZ,stmp,2);  
+  call get_param_1D('icm.in','rKTBZ',2,itmp1,rKTBZ,stmp,2)
+  call get_param_1D('icm.in','RZ',2,itmp1,RZ,stmp,2)
+
+  call get_param('icm.in','Eff',2,itmp,Eff,stmp)
+  call get_param('icm.in','RF',2,itmp,RF,stmp)
+  call get_param('icm.in','Pf',2,itmp,Pf,stmp)
+
+  !read phytoplankton parameters
+  call get_param_1D('icm.in','GPM',2,itmp1,GPM,stmp,3)
+  call get_param_1D('icm.in','BMPR',2,itmp1,BMPR,stmp,3)
+  call get_param_1D('icm.in','PRR',2,itmp1,PRR,stmp,3)
+  call get_param_1D('icm.in','TGP',2,itmp1,TGP,stmp,3)
+  call get_param_1D('icm.in','rKTGP1',2,itmp1,rKTGP1,stmp,3)
+  call get_param_1D('icm.in','rKTGP2',2,itmp1,rKTGP2,stmp,3)
+  call get_param_1D('icm.in','TBP',2,itmp1,TBP,stmp,3)
+  call get_param_1D('icm.in','rKTBP',2,itmp1,rKTBP,stmp,3)
+  call get_param_1D('icm.in','CChl',2,itmp1,CChl,stmp,3)
+  call get_param_1D('icm.in','rKhN',2,itmp1,rKhN,stmp,3)
+  call get_param_1D('icm.in','rKhP',2,itmp1,rKhP,stmp,3)
+  call get_param_1D('icm.in','rIm',2,itmp1,rIm,stmp,3)
+  call get_param_1D('icm.in','alpha_PB',2,itmp1,alpha_PB,stmp,3)
+
+  call get_param('icm.in','rKhS',2,itmp,rKhS,stmp)
+  call get_param('icm.in','ST',2,itmp,ST,stmp)
+  call get_param('icm.in','rKeC1',2,itmp,rKeC1,stmp)
+  call get_param('icm.in','rKeC2',2,itmp,rKeC2,stmp)
+  call get_param('icm.in','Dopt',2,itmp,Dopt,stmp)
+  !call get_param('icm.in','STB',2,itmp,STB,stmp)
+
+  !read sav parameters
+  if(isav_icm==1) then
+    call get_param('icm.in','famsav',2,itmp,famsav,stmp)
+    call get_param('icm.in','fplfsav',2,itmp,fplfsav,stmp)
+    call get_param('icm.in','fpstsav',2,itmp,fpstsav,stmp)
+    call get_param('icm.in','fprtsav',2,itmp,fprtsav,stmp)
+    call get_param('icm.in','acdwsav',2,itmp,acdwsav,stmp)
+    call get_param('icm.in','ancsav',2,itmp,ancsav,stmp)
+    call get_param('icm.in','apcsav',2,itmp,apcsav,stmp)
+    call get_param('icm.in','aocrsav',2,itmp,aocrsav,stmp)
+    call get_param('icm.in','pmbssav',2,itmp,pmbssav,stmp)
+    call get_param('icm.in','toptsav',2,itmp,toptsav,stmp)
+    call get_param('icm.in','ktg1sav',2,itmp,ktg1sav,stmp)
+    call get_param('icm.in','ktg2sav',2,itmp,ktg2sav,stmp)
+    call get_param('icm.in','bmlfrsav',2,itmp,bmlfrsav,stmp)
+    call get_param('icm.in','bmstrsav',2,itmp,bmstrsav,stmp)
+    call get_param('icm.in','bmrtrsav',2,itmp,bmrtrsav,stmp)
+    call get_param('icm.in','ktblfsav',2,itmp,ktblfsav,stmp)
+    call get_param('icm.in','ktbstsav',2,itmp,ktbstsav,stmp)
+    call get_param('icm.in','ktbrtsav',2,itmp,ktbrtsav,stmp)
+    call get_param('icm.in','trlfsav',2,itmp,trlfsav,stmp)
+    call get_param('icm.in','trstsav',2,itmp,trstsav,stmp)
+    call get_param('icm.in','trrtsav',2,itmp,trrtsav,stmp)
+    call get_param('icm.in','alphasav',2,itmp,alphasav,stmp)
+    call get_param('icm.in','rkshsav',2,itmp,rkshsav,stmp)
+    call get_param('icm.in','rlf',2,itmp,rlf,stmp)
+    call get_param('icm.in','rst',2,itmp,rst,stmp)
+    call get_param('icm.in','rrt',2,itmp,rrt,stmp)
+    call get_param('icm.in','hcansav0',2,itmp,hcansav0,stmp)
+    call get_param('icm.in','hcansav_limit',2,itmp,hcansav_limit,stmp)
+    call get_param('icm.in','khnwsav',2,itmp,khnwsav,stmp)
+    call get_param('icm.in','khnssav',2,itmp,khnssav,stmp)
+    call get_param('icm.in','khnprsav',2,itmp,khnprsav,stmp)
+    call get_param('icm.in','fnisav',2,itmp,fnisav,stmp)
+    call get_param('icm.in','fndsav',2,itmp,fndsav,stmp)
+    call get_param('icm.in','fnlpsav',2,itmp,fnlpsav,stmp)
+    call get_param('icm.in','fnrpsav',2,itmp,fnrpsav,stmp)
+    call get_param('icm.in','khpwsav',2,itmp,khpwsav,stmp)
+    call get_param('icm.in','khpssav',2,itmp,khpssav,stmp)
+    call get_param('icm.in','fpisav',2,itmp,fpisav,stmp)
+    call get_param('icm.in','fpdsav',2,itmp,fpdsav,stmp)
+    call get_param('icm.in','fplpsav',2,itmp,fplpsav,stmp)
+    call get_param('icm.in','fprpsav',2,itmp,fprpsav,stmp)
+    call get_param('icm.in','fdosav',2,itmp,fdosav,stmp)
+    call get_param('icm.in','fcdsav',2,itmp,fcdsav,stmp)
+    call get_param('icm.in','fclpsav',2,itmp,fclpsav,stmp)
+    call get_param('icm.in','fcrpsav',2,itmp,fcrpsav,stmp)
+  endif !isav_icm
+
+  !read Carbon parameters
+  call get_param('icm.in','FCRPZ',2,itmp,FCRPZ,stmp)
+  call get_param('icm.in','FCLPZ',2,itmp,FCLPZ,stmp)
+  call get_param('icm.in','FCDPZ',2,itmp,FCDPZ,stmp)
+  call get_param_1D('icm.in','FCDZ',2,itmp1,FCDZ,stmp,2)
+  call get_param_1D('icm.in','rKHRZ',2,itmp1,rKHRZ,stmp,2)
+
+  call get_param('icm.in','FCRP',2,itmp,FCRP,stmp)
+  call get_param('icm.in','FCLP',2,itmp,FCLP,stmp)
+  call get_param('icm.in','FCDP',2,itmp,FCDP,stmp)
+  call get_param_1D('icm.in','FCD',2,itmp1,FCD,stmp,2)
+
+  call get_param('icm.in','rKRC',2,itmp,rKRC,stmp)
+  call get_param('icm.in','rKLC',2,itmp,rKLC,stmp)
+  call get_param('icm.in','rKDC',2,itmp,rKDC,stmp)
+  call get_param('icm.in','rKRCalg',2,itmp,rKRCalg,stmp)
+  call get_param('icm.in','rKLCalg',2,itmp,rKLCalg,stmp)
+  call get_param('icm.in','rKDCalg',2,itmp,rKDCalg,stmp)
+  call get_param('icm.in','TRHDR',2,itmp,TRHDR,stmp)
+  call get_param('icm.in','TRMNL',2,itmp,TRMNL,stmp)
+  call get_param('icm.in','rKTHDR',2,itmp,rKTHDR,stmp)
+  call get_param('icm.in','rKTMNL',2,itmp,rKTMNL,stmp)
+
+  call get_param('icm.in','rKHR1',2,itmp,rKHR1,stmp)
+  call get_param('icm.in','rKHR2',2,itmp,rKHR2,stmp)
+  call get_param('icm.in','rKHR3',2,itmp,rKHR3,stmp)
+  call get_param('icm.in','rKHORDO',2,itmp,rKHORDO,stmp)
+  call get_param('icm.in','rKHDNn',2,itmp,rKHDNn,stmp)
+  call get_param('icm.in','AANOX',2,itmp,AANOX,stmp)
+
+  !read Nitrogen parameters
+  call get_param('icm.in','FNRPZ',2,itmp,FNRPZ,stmp)
+  call get_param('icm.in','FNLPZ',2,itmp,FNLPZ,stmp)
+  call get_param('icm.in','FNDPZ',2,itmp,FNDPZ,stmp)
+  call get_param('icm.in','FNIPZ',2,itmp,FNIPZ,stmp)
+
+  call get_param_1D('icm.in','FNRZ',2,itmp1,FNRZ,stmp,2)
+  call get_param_1D('icm.in','FNLZ',2,itmp1,FNLZ,stmp,2)
+  call get_param_1D('icm.in','FNDZ',2,itmp1,FNDZ,stmp,2)
+  call get_param_1D('icm.in','FNIZ',2,itmp1,FNIZ,stmp,2)
+  call get_param_1D('icm.in','ANCZ',2,itmp1,ANCZ,stmp,2)
+  
+  call get_param('icm.in','FNRP',2,itmp,FNRP,stmp)
+  call get_param('icm.in','FNLP',2,itmp,FNLP,stmp)
+  call get_param('icm.in','FNDP',2,itmp,FNDP,stmp)
+  call get_param('icm.in','FNIP',2,itmp,FNIP,stmp)
+  call get_param('icm.in','ANDC',2,itmp,ANDC,stmp)
+
+  call get_param_1D('icm.in','FNR',2,itmp1,FNR,stmp,3)
+  call get_param_1D('icm.in','FNL',2,itmp1,FNL,stmp,3)
+  call get_param_1D('icm.in','FND',2,itmp1,FND,stmp,3)
+  call get_param_1D('icm.in','FNI',2,itmp1,FNI,stmp,3)
+  call get_param_1D('icm.in','ANC',2,itmp1,ANC,stmp,3)
+
+  call get_param('icm.in','rKRN',2,itmp,rKRN,stmp)
+  call get_param('icm.in','rKLN',2,itmp,rKLN,stmp)
+  call get_param('icm.in','rKDN',2,itmp,rKDN,stmp)
+  call get_param('icm.in','rKRNalg',2,itmp,rKRNalg,stmp)
+  call get_param('icm.in','rKLNalg',2,itmp,rKLNalg,stmp)
+  call get_param('icm.in','rKDNalg',2,itmp,rKDNalg,stmp)
+  call get_param('icm.in','rNitM',2,itmp,rNitM,stmp)
+  call get_param('icm.in','rKhNitDO',2,itmp,rKhNitDO,stmp)
+  call get_param('icm.in','rKhNitN',2,itmp,rKhNitN,stmp)
+  call get_param('icm.in','TNit',2,itmp,TNit,stmp)
+  call get_param('icm.in','rKNit1',2,itmp,rKNit1,stmp)
+  call get_param('icm.in','rKNit2',2,itmp,rKNit2,stmp)
+ 
+  !read Phosphorus parameters
+  call get_param('icm.in','FPRPZ',2,itmp,FPRPZ,stmp)
+  call get_param('icm.in','FPLPZ',2,itmp,FPLPZ,stmp)
+  call get_param('icm.in','FPDPZ',2,itmp,FPDPZ,stmp)
+  call get_param('icm.in','FPIPZ',2,itmp,FPIPZ,stmp)
+
+  call get_param_1D('icm.in','FPRZ',2,itmp1,FPRZ,stmp,2)
+  call get_param_1D('icm.in','FPLZ',2,itmp1,FPLZ,stmp,2)
+  call get_param_1D('icm.in','FPDZ',2,itmp1,FPDZ,stmp,2)
+  call get_param_1D('icm.in','FPIZ',2,itmp1,FPIZ,stmp,2)
+  call get_param_1D('icm.in','APCZ',2,itmp1,APCZ,stmp,2)
+
+  call get_param('icm.in','FPRP',2,itmp,FPRP,stmp)
+  call get_param('icm.in','FPLP',2,itmp,FPLP,stmp)
+  call get_param('icm.in','FPDP',2,itmp,FPDP,stmp)
+  call get_param('icm.in','FPIP',2,itmp,FPIP,stmp)
+
+  call get_param_1D('icm.in','FPR',2,itmp1,FPR,stmp,3)
+  call get_param_1D('icm.in','FPL',2,itmp1,FPL,stmp,3)
+  call get_param_1D('icm.in','FPD',2,itmp1,FPD,stmp,3)
+  call get_param_1D('icm.in','FPI',2,itmp1,FPI,stmp,3)
+  call get_param_1D('icm.in','APC',2,itmp1,APC,stmp,3)
+
+  call get_param('icm.in','rKPO4p',2,itmp,rKPO4p,stmp)
+  call get_param('icm.in','rKRP',2,itmp,rKRP,stmp)
+  call get_param('icm.in','rKLP',2,itmp,rKLP,stmp)
+  call get_param('icm.in','rKDP',2,itmp,rKDP,stmp)
+  call get_param('icm.in','rKRPalg',2,itmp,rKRPalg,stmp)
+  call get_param('icm.in','rKLPalg',2,itmp,rKLPalg,stmp)
+  call get_param('icm.in','rKDPalg',2,itmp,rKDPalg,stmp)
+
+  !read Silica parameters
+  call get_param('icm.in','FSPPZ',2,itmp,FSPPZ,stmp)
+  call get_param('icm.in','FSIPZ',2,itmp,FSIPZ,stmp)
+  call get_param_1D('icm.in','FSPZ',2,itmp1,FSPZ,stmp,2)
+  call get_param_1D('icm.in','FSIZ',2,itmp1,FSIZ,stmp,2)
+  call get_param_1D('icm.in','ASCZ',2,itmp1,ASCZ,stmp,2)
+
+  call get_param('icm.in','FSPP',2,itmp,FSPP,stmp)
+  call get_param('icm.in','FSIP',2,itmp,FSIP,stmp)
+  call get_param('icm.in','FSPd',2,itmp,FSPd,stmp)
+  call get_param('icm.in','FSId',2,itmp,FSId,stmp)
+  call get_param('icm.in','ASCd',2,itmp,ASCd,stmp)
+  call get_param('icm.in','rKSAp',2,itmp,rKSAp,stmp)
+  call get_param('icm.in','rKSU',2,itmp,rKSU,stmp)
+  call get_param('icm.in','TRSUA',2,itmp,TRSUA,stmp)
+  call get_param('icm.in','rKTSUA',2,itmp,rKTSUA,stmp)
+  
+  !read COD and DO parameters
+  call get_param('icm.in','rKHCOD',2,itmp,rKHCOD,stmp)
+  call get_param('icm.in','rKCD',2,itmp,rKCD,stmp)
+  call get_param('icm.in','TRCOD',2,itmp,TRCOD,stmp)
+  call get_param('icm.in','rKTCOD',2,itmp,rKTCOD,stmp)
+  call get_param('icm.in','AOC',2,itmp,AOC,stmp)
+  call get_param('icm.in','AONO',2,itmp,AONO,stmp)
+  call get_param('icm.in','AON',2,itmp,AON,stmp)
+  call get_param('icm.in','rKro',2,itmp,rKro,stmp)
+  call get_param('icm.in','rKTr',2,itmp,rKTr,stmp)
+
+  !for TSS settling
+  call get_param('icm.in','WSSED',2,itmp,WSSED,stmp)
+
+  !for CACO3 settling
+  call get_param('icm.in','WSCACO3',2,itmp,WSCACO3,stmp)
+  call get_param('icm.in','rKCACO3',2,itmp,rKCACO3,stmp)
+  call get_param('icm.in','rKCA',2,itmp,rKCA,stmp)
+  call get_param('icm.in','rKa',2,itmp,rKa,stmp)
+  call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
+
+  !Check for sav
+  if(isav_icm==1) then
+    if(alphasav<=0) call parallel_abort('read_icm_input: alphasav')
+    if(pmbssav<=0) call parallel_abort('read_icm_input: pmbssav')
+    if(khnssav<=0) call parallel_abort('read_icm_input: khnssav')
+    if(khnwsav<=0) call parallel_abort('read_icm_input: khnwsav')
+    if(khpssav<=0) call parallel_abort('read_icm_input: khpssav')
+    if(khpwsav<=0) call parallel_abort('read_icm_input: khpwsav')
+    if(acdwsav<=0) call parallel_abort('read_icm_input: acdwsav')
+    if(bmlfrsav<=0.or.bmstrsav<=0.or.bmrtrsav<=0) call parallel_abort('read_icm_input: bmlfrsav')
+  endif
+
+  !PH nudge for TIC and ALK
+  if(iPh==1.and.inu_ph==1) then
+    open(406,file='ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
+    time_ph=-999.d0
+    irec_ph=1
+  endif
+
+  !---------------preprocess parameters----------------------------
+  dtw=NDTWQ*dt/86400.0 !days
+  dtw2=dtw/2.d0
+
+  !zooplankton
+!  Ef1=Eff*(1-RF)
+!  Ef2=(1-Eff)*(1-RF)
+!  Ef3=1-Ef1
+!  Ef4=RF+Ef1
+  do i=1,2
+    do j=1,8
+      PPC(j,i)=PPC(j,i)/rKhGE(j,i)
+    enddo !j
+  enddo! 
+
+  !phytoplankton
+  mKhN=0.0
+  mKhP=0.0
+  do i=1,3
+    mKhN=mKhN+rKhN(i)/3.d0
+    mKhP=mKhP+rKhP(i)/3.d0
+  enddo
+  ST=ST*ST
+
+!  do i=1,2
+!    CCZR2(i)=FCRPZ*RZ(i)
+!    CCZL2(i)=FCLPZ*RZ(i)
+!    CCZD2(i)=FCDPZ*RZ(i)
+!
+!    CNZR2(i)=FNRPZ*RZ(i)*ANCZ(i)
+!    CNZL2(i)=FNLPZ*RZ(i)*ANCZ(i)
+!    CNZD2(i)=FNDPZ*RZ(i)*ANCZ(i)
+!    CNZI2(i)=FNIPZ*RZ(j)*ANCZ(i)
+!
+!    CPZR2(i)=FPRPZ*RZ(i)*APCZ(i)
+!    CPZL2(i)=FPLPZ*RZ(i)*APCZ(i)
+!    CPZD2(i)=FPDPZ*RZ(i)*APCZ(i)
+!    CPZI2(i)=FPIPZ*RZ(i)*APCZ(i)
+!
+!    CSZP2(i)=FSPPZ*RZ(i)*ASCZ(i)
+!    CSZI2(i)=FSIPZ*RZ(i)*ASCZ(i)
+!
+!    CCZR3(i)=FCRPZ*DRZ(i)
+!    CCZL3(i)=FCLPZ*DRZ(i)
+!    CCZD3(i)=FCDPZ*DRZ(i)
+!
+!    CNZR3(i)=FNRPZ*DRZ(i)*ANCZ(i)
+!    CNZL3(i)=FNLPZ*DRZ(i)*ANCZ(i)
+!    CNZD3(i)=FNDPZ*DRZ(i)*ANCZ(i)
+!    CNZI3(i)=FNIPZ*DRZ(i)*ANCZ(i)
+!
+!    CPZR3(i)=FPRPZ*DRZ(i)*APCZ(i)
+!    CPZL3(i)=FPLPZ*DRZ(i)*APCZ(i)
+!    CPZD3(i)=FPDPZ*DRZ(i)*APCZ(i)
+!    CPZI3(i)=FPIPZ*DRZ(i)*APCZ(i)
+!
+!    CSZP3(i)=FSPPZ*DRZ(i)*ASCZ(i)
+!    CSZI3(i)=FSIPZ*DRZ(i)*ASCZ(i)
+!  enddo
+!
+!  CCPR=FCRP*Pf
+!  CCPL=FCLP*Pf
+!  CCPD=FCDP*Pf
+!
+!  do i=1,3
+!    CNPR2(i)=FNRP*Pf*ANC(i)
+!    CNPL2(i)=FNLP*Pf*ANC(i)
+!    CNPD2(i)=FNDP*Pf*ANC(i)
+!    CNPI2(i)=FNIP*Pf*ANC(i)
+!
+!    CPPR2(i)=FPRP*Pf*APC(i)
+!    CPPL2(i)=FPLP*Pf*APC(i)
+!    CPPD2(i)=FPDP*Pf*APC(i)
+!    CPPI2(i)=FPIP*Pf*APC(i)
+!  enddo
+!  CSPP2 = FSPP*Pf*ASCd
+!  CSPI2 = FSIP*Pf*ASCd
+
+  if(iCheck==1) call check_icm_param 
+  return 
+  
+end subroutine read_icm_param
+
+subroutine read_icm_stainfo
+!-----------------------------------------------------------------------
+!read in ICM station output information
+!-----------------------------------------------------------------------
+  use icm_mod, only : nsta,ista,depsta,stanum,nspool_icm
+  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode
+  use schism_msgp, only : myrank,nproc,parallel_abort
+  implicit none
+
+  !local variables
+  integer,parameter :: maxsta=10000,maxl=100 !maximum station
+  integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
+  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
+  character(len=4) :: fn
+  logical :: lexist
+
+  !read station info.
+  open(31,file='cstation.in',status='old')
+  read(31,*)
+  read(31,*)nstation
+  do i=1,nstation
+    read(31,*)j,slx(i),sly(i),sdep(i)
+  enddo
+  close(31)
+
+  !alloc.
+  allocate(ista(ne),stat=istat)
+  if(istat/=0) call parallel_abort('failure in alloc. ista')
+
+  !determine the elements with values to be checked
+  id=0; ista=0; nstai=0;
+  msta=-100; depstai=-9999
+  do i=1,ne
+    iflag=0
+    do j=1,nstation
+      x(1:i34(i))=xnd(elnode(1:i34(i),i))
+      y(1:i34(i))=ynd(elnode(1:i34(i),i))
+      call pt_in_poly(i34(i),x(1:i34(i)),y(1:i34(i)),slx(j),sly(j),inside,arco,nodel)
+      if(inside==1) then
+        if(ista(i)==0) then
+          id=id+1
+          ista(i)=id
+        endif
+        nstai(id)=nstai(id)+1
+        depstai(nstai(id),id)=sdep(j)
+        stanumi(nstai(id),id)=j
+        msta=max(msta,nstai(id))
+      endif
+    enddo !j
+  enddo !i
+  mid=id !number of elements
+
+  if(mid==0) return
+
+  !alloc.
+  allocate(nsta(mid),depsta(msta,mid),stanum(msta,mid),stat=istat)
+  if(istat/=0) call parallel_abort('failure in alloc. nsta')
+
+  nsta=0; depsta=-9999
+  do i=1,mid
+    nsta(i)=nstai(i)
+    do j=1,nsta(i)
+      depsta(j,i)=depstai(j,i)
+      stanum(j,i)=stanumi(j,i)
+    enddo
+  enddo
+
+  !open a station output file
+  write(fn,'(i4.4)')myrank
+  inquire(file='outputs/cstation_'//fn//'.out',exist=lexist)
+  if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
+    open(410,file='outputs/cstation_'//fn//'.out',form='unformatted',status='replace')
+    write(410)sum(nsta),dt*nspool_icm
+  elseif(ihot==2..and.lexist) then
+    open(410,file='outputs/cstation_'//fn//'.out',form='unformatted',access='append',status='old')
+  else
+    call parallel_abort('unknown ihot, ICM')
+  endif
+
+  return
+
+end subroutine read_icm_stainfo
+
+
+subroutine check_icm_param 
+!-----------------------------------------------------------------------
+! Outputs water quality parameter to check
+!-----------------------------------------------------------------------
+  use icm_mod
+  use schism_glbl, only : NDTWQ
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+
+  integer :: i,j 
+      
+  if(myrank==0) then
+    open(31, file='ecosim_1.out', status='replace')
+    write(31,*) 'Water Quality Model Parameter output2'
+
+    write(31,*)
+    write(31,*)'!-------Global Switch---------------------------------'
+    write(31,'(a10,i5)')'iLight= ',iLight
+    write(31,'(a10,i5)')'iSun= ',iSun
+    write(31,'(a10,i5)')'iNPS= ',iNPS
+    write(31,'(a10,i5)')'iPS= ',iPS
+    write(31,'(a10,i5)')'iSed= ', iSed 
+    write(31,'(a10,i5)')'iRea= ', iRea
+    write(31,'(a10,i5)')'iZoo= ',iZoo
+    write(31,'(a10,i5)')'iAtm= ',iAtm
+    write(31,'(a10,i5)')'iBen= ',iBen
+    write(31,'(a10,i5)')'iRad= ',iRad
+
+    write(31,*)
+    write(31,*)'!-------Zooplankton parameter--------------------------'
+    write(31,'(a10,100(f8.5 x))')'GZM= ',GZM
+    write(31,'(a10,100(f8.5 x))')'rKhGE= ',rKhGE
+    write(31,'(a10,100(f8.5 x))')'PPC= ',PPC
+    write(*,*)
+    write(31,807)'BMZR','DRZ','TGZ','rKTGZ1','rKTGZ2','TBZ','rKTBZ','RZ'
+    do i=1,2
+      write(31,808) BMZR(i),DRZ(i),TGZ(i),rKTGZ1(i),rKTGZ2(i),TBZ(i),rKTBZ(i),RZ(i)
+    enddo
+    write(31,807)'Eff','RF','Pf'
+    write(31,808)Eff,RF,Pf
+
+    write(31,*)
+    write(31,*)'!------Phytoplankton Parameters------------------------'
+    write(31,807)'GPM','BMPR','PRR','TGP','rKTGP1','rKTGP2','TBP','rKTBP','CChl','rKhN','rKhP','rIm'
+    do i=1,3
+      write(31,808) GPM(i),BMPR(i),PRR(i),TGP(i),rKTGP1(i),rKTGP2(i),TBP(i),rKTBP(i),CChl(i),rKhN(i),rKhP(i),rIm(i)
+    enddo
+    write(31,807)'rKhS','ST','rKeC1','rKeC2'
+    write(31,808)rKhS,ST,rKeC1,rKeC2
+
+    write(31,*)
+    write(31,*)'!-----Carbon Parameters-------------------------------' 
+    write(31,807)'FCRPZ','FCLPZ','FCDPZ','FCDZ(1:2)','rKHRZ(1:2)'
+    write(31,808)FCRPZ,FCLPZ,FCDPZ,FCDZ,rKHRZ
+
+    write(31,807)'FCRP','FCLP','FCDP','FCD(1:3)'
+    write(31,808)FCRP,FCLP,FCDP,FCD
+
+    write(31,807)'rKRC','rKLC','rKDC','rKRCalg','rKLCalg','rKDCalg'
+    write(31,808)rKRC,rKLC,rKDC,rKRCalg,rKLCalg,rKDCalg
+    write(31,807)'TRHDR','TRMNL','rKTHDR','rKTMNL'
+    write(31,808)TRHDR,TRMNL,rKTHDR,rKTMNL
+    write(31,807)'rKHR1','rKHR2','rKHR3','rKHORDO','rKHDNn','AANOX'
+    write(31,808)rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
+
+    write(31,*)
+    write(31,*)'!---Nitrogen Parameters-------------------------------'
+    write(31,807) 'FNRPZ','FNLPZ','FNDPZ','FNIPZ'
+    write(31,808)FNRPZ,FNLPZ,FNDPZ,FNIPZ
+    write(31,807)'FNRZ','FNLZ','FNDZ','FNIZ','ANCZ'
+    do j= 1,2
+      write(31,808)FNRZ(j),FNLZ(j),FNDZ(j),FNIZ(j),ANCZ(j)
+    enddo
+    write(31,807)'FNRP','FNLP','FNDP','FNIP','ANDC'
+    write(31,808)FNRP,FNLP,FNDP,FNIP,ANDC
+    write(31,807)'FNR','FNL','FND','FNI','ANC'
+    do j= 1,3
+      write(31,808)FNR(j),FNL(j),FND(j),FNI(j),ANC(j)
+    enddo
+    write(31,807)'rKRN','rKLN','rKDN','rKRNalg','rKLNalg','rKDNalg'
+    write(31,808)rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg
+    write(31,807)'rNitM','rKhNitDO','rKhNitN','TNit','rKNit1','rKNit2'
+    write(31,808)rNitM,rKhNitDO,rKhNitN,TNit,rKNit1,rKNit2
+
+    write(31,*)
+    write(31,*)'!---Phosphorus Parameters----------------------------'
+    write(31,807)'FPRPZ','FPLPZ','FPDPZ','FPIPZ'
+    write(31,808)FPRPZ,FPLPZ,FPDPZ,FPIPZ
+    write(31,807)'FPRZ','FPLZ','FPDZ','FPIZ','APCZ'
+    do j = 1,2
+      write(31,808)FPRZ(j),FPLZ(j),FPDZ(j),FPIZ(j),APCZ(j)
+    enddo
+    write(31,807)'FPRP','FPLP','FPDP','FPIP'
+    write(31,808)FPRP,FPLP,FPDP,FPIP
+    write(31,807)'FPR','FPL','FPD','FPI','APC'
+    do j = 1,3
+      write(31,808)FPR(j),FPL(j),FPD(j),FPI(j),APC(j)
+    enddo
+    write(31,807)'rKPO4p','rKRP','rKLP','rKDP','rKRPalg','rKLPalg','rKDPalg'
+    write(31,808)rKPO4p,rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg
+
+    write(31,*)
+    write(31,*)'!----Silica Parameters-------------------------------'
+    write(31,807)'FSPPZ','FSIPZ'
+    write(31,808)FSPPZ,FSIPZ
+    write(31,807)'FSPZ','FSIZ','ASCZ'
+    do j = 1,2
+      write(31,808)FSPZ(j),FSIZ(j),ASCZ(j)
+    enddo
+    write(31,807)'FSPP','FSIP','FSPd','FSId'
+    write(31,808)FSPP,FSIP,FSPd,FSId
+    write(31,807)'ASCd','rKSAp','rKSU','TRSUA','rKTSUA'
+    write(31,808)ASCd,rKSAp,rKSU,TRSUA,rKTSUA
+   
+    write(31,*)
+    write(31,*)'!----COD and DO Parameters---------------------------'
+    write(31,807)'rKHCOD','rKCD','TRCOD','rKTCOD','ACO','AON','rKro','rKTr'
+    write(31,808) rKHCOD,rKCD,TRCOD,rKTCOD,AOC,AON,rKro,rKTr
+    close(31)
+  endif
+
+  return
+
+807 format(100(a10,x))
+808 format(100(f10.5,x))
+end subroutine check_icm_param
+
+subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
+!--------------------------------------------------------------------
+!Read a one-Dimensional ICM parameter
+!--------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  use schism_msgp, only : parallel_abort,myrank
+  use misc_modules
+  implicit none
+
+  character(*),intent(in) :: fname
+  character(*),intent(in) :: varname
+  integer,intent(in) :: vartype
+  integer,intent(in) :: idim1
+  integer,intent(out) :: ivar(idim1)
+  real(rkind),intent(out) :: rvar(idim1)
+  character(len=2),intent(out) :: svar
+  
+  !local variables
+  integer :: itmp,iarray(10000)
+  real(rkind) :: rtmp,rarray(10000)
+  character(len=2) :: stmp
+
+  svar='  '
+  if(vartype==1) then  !read 1D integer array
+    call get_param(fname,varname,3,itmp,rtmp,stmp,ndim1=idim1,iarr1=iarray)
+    ivar=iarray(1:idim1)
+  elseif(vartype==2) then !read 1D float array
+    call get_param(fname,varname,4,itmp,rtmp,stmp,ndim1=idim1,arr1=rarray)
+    rvar=rarray(1:idim1)
+  else
+    write(errmsg,*)'unknown vartype :',varname
+    call parallel_abort(errmsg)
+  endif
+
+  return
+end subroutine get_param_1D
+
+subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
+!--------------------------------------------------------------------
+!Read a 2-Dimensional ICM parameter
+!--------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  use schism_msgp, only : parallel_abort,myrank
+  use misc_modules
+  implicit none
+
+  character(*),intent(in) :: fname
+  character(*),intent(in) :: varname
+  integer,intent(in) :: vartype
+  integer,intent(in) :: idim1,idim2
+  integer,intent(out) :: ivar(idim1,idim2)
+  real(rkind),intent(out) :: rvar(idim1,idim2)
+  character(len=2),intent(out) :: svar
+  
+  !local variables
+  integer :: itmp,iarray(10000),i,j,irec
+  real(rkind) :: rtmp,rarray(10000)
+  character(len=2) :: stmp
+
+  irec=idim1*idim2
+
+  if(vartype==1) then  !read 2D integer array
+    call get_param(fname,varname,3,itmp,rtmp,stmp,ndim1=irec,iarr1=iarray)
+    ivar=transpose(reshape(iarray(1:irec),(/idim2,idim1/)))
+  elseif(vartype==2) then !read 2D float array
+    call get_param(fname,varname,4,itmp,rtmp,stmp,ndim1=irec,arr1=rarray)
+    rvar=transpose(reshape(rarray(1:irec),(/idim2,idim1/)))
+  else
+    write(errmsg,*)'unknown vartype :',varname
+    call parallel_abort(errmsg)
+  endif
+
+  return
+end subroutine get_param_2D
+
+subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
+!---------------------------------------------------------------------------
+!subroutine from Utility/UtilLib
+!---------------------------------------------------------------------------
+!     (Single-precision) Routine to perform point-in-polygon
+!     (triangle/quads) test and if it's inside, calculate the area coord.
+!     (for quad, split it into 2 triangles and return the 3 nodes and
+!     area coord.)
+!     Inputs:
+!            i34: 3 or 4 (type of elem)
+!            x(i34),y(i34): coord. of polygon/elem. (counter-clockwise)
+!            xp,yp: point to be tested
+!     Outputs:
+!            inside: 0, outside; 1, inside
+!            arco(3), nodel(3) : area coord. and 3 local node indices (valid
+!            only if inside)
+      implicit real*8(a-h,o-z)
+      integer, intent(in) :: i34
+      real(kind=8), intent(in) :: x(i34),y(i34),xp,yp
+      integer, intent(out) :: inside,nodel(3)
+      real(kind=8), intent(out) :: arco(3)
+
+      !Local
+      integer :: list(3)
+      real(kind=8) :: ar(2),swild(2,3)
+
+      !Areas
+      ar(1)=signa(x(1),x(2),x(3),y(1),y(2),y(3))
+      ar(2)=0 !init
+      if(i34==4) ar(2)=signa(x(1),x(3),x(4),y(1),y(3),y(4))
+      if(ar(1)<=0.or.i34==4.and.ar(2)<=0) then
+        print*, 'Negative area:',i34,ar,x,y
+        stop
+      endif
+
+      inside=0
+      do m=1,i34-2 !# of triangles
+        if(m==1) then
+          list(1:3)=(/1,2,3/) !local indices
+        else !quads
+          list(1:3)=(/1,3,4/)
+        endif !m
+        aa=0
+        do j=1,3
+          j1=j+1
+          j2=j+2
+          if(j1>3) j1=j1-3
+          if(j2>3) j2=j2-3
+          swild(m,j)=signa(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp)
+          !temporary storage
+          aa=aa+abs(swild(m,j))
+        enddo !j=1,3
+
+        ae=abs(aa-ar(m))/ar(m)
+        if(ae<=1.e-5) then
+          inside=1
+          nodel(1:3)=list(1:3)
+          arco(1:3)=swild(m,1:3)/ar(m)
+          arco(1)=max(0.,min(1.,arco(1)))
+          arco(2)=max(0.,min(1.,arco(2)))
+          if(arco(1)+arco(2)>1) then
+            arco(3)=0
+            arco(2)=1-arco(1)
+          else
+            arco(3)=1-arco(1)-arco(2)
+          endif
+          exit
+        endif
+      enddo !m
+
+end subroutine pt_in_poly
+
+
+
+
+!subroutine get_param_icm(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
+!!--------------------------------------------------------------------
+!!Read a ICM parameter
+!!--------------------------------------------------------------------
+!! Inputs:
+!!    fname: file name (wqparam.in, wqparam2.in,icm_sed.in)
+!!    varname: paramter name in fname    
+!!    vartype: parameter value type (0: string; 1: integer; 2: float)
+!!    idim1,idim2: the dimensions of variables (but only one string is allowed)
+!! Outputs:
+!!    ivar(dim1,dim2): integer output 
+!!    rvar(dim1,dim2): float output;
+!!    svar: string output.
+!!
+!! Format rules:
+!! (1) Lines beginning with "!" are comments; blank lines are ignored;
+!! (2) one line for each parameter in the format: keywords= value;
+!!     keywords are case sensitive; spaces allowed between keywords and "=" and value;
+!!     comments starting with "!"  allowed after value;
+!! (3) value is an integer, double, or char. string; for double, any of the format is acceptable
+!
+!  use schism_glbl, only : rkind,errmsg
+!  use schism_msgp, only : parallel_abort,myrank
+!  implicit none
+!
+!  character(*),intent(in) :: fname
+!  character(*),intent(in) :: varname
+!  integer,intent(in) :: vartype
+!  integer,intent(in) :: idim1,idim2 
+!  integer,intent(out) :: ivar(idim1,idim2)
+!  real(rkind),intent(out) :: rvar(idim1,idim2)
+!  character(90),intent(out) :: svar 
+!  
+!  !local variables
+!  character(len=300) :: str,str_tmp,str_tmp2
+!  integer :: lstr,lstr_tmp,lstr_tmp2,loc,loc2
+!  integer :: istat,i,j
+!
+!
+!  str_tmp2=adjustl(varname)
+!  lstr_tmp2=len_trim(str_tmp2)
+!
+!
+!  !scan fname
+!  open(15,file=fname,status='old')
+!  rewind(15)
+!  
+!  do 
+!    read(15,'(a)',end=99)str
+!    str=adjustl(str) !place blanks at end
+!    lstr=len_trim(str)
+!    if(lstr==0.or.str(1:1)=='!') cycle
+!
+!    loc=index(str,'=')
+!    loc2=index(str,'!')
+!    if(loc2/=0.and.loc2-1<loc+1) call parallel_abort('READ_PARAM: comments before =')
+!
+!    str_tmp=''
+!    str_tmp(1:loc-1)=str(1:loc-1) !keyword
+!    str_tmp=trim(str_tmp)
+!    lstr_tmp=len_trim(str_tmp)
+!
+!    if(str_tmp(1:lstr_tmp)==str_tmp2(1:lstr_tmp2)) then
+!      if(loc2/=0) then
+!        str_tmp2=str(loc+1:loc2-1)
+!      else
+!        str_tmp2=str(loc+1:lstr)
+!      endif
+!      str_tmp2=adjustl(str_tmp2)
+!      str_tmp2=trim(str_tmp2)
+!
+!      if(vartype==0 ) then !string
+!        loc=0
+!        loc=index(str_tmp2,' ')
+!        if(loc/=0) then
+!          svar=str_tmp2(1:loc-1) !only the first string in str_tmp2
+!        else
+!          svar=str_tmp2
+!        endif
+!      elseif(vartype==1) then !integer
+!        read(str_tmp2,*)((ivar(i,j),j=1,idim2),i=1,idim1)
+!      elseif(vartype==2) then !float
+!        read(str_tmp2,*)((rvar(i,j),j=1,idim2),i=1,idim1)
+!      else
+!        write(errmsg,*)'read_param_icm: unknown type:',vartype
+!        call parallel_abort(errmsg)
+!      endif !varytpe
+!      exit
+!    endif !str_tmp(1:lstr_tmp)==str_tmp2(1:lstr_tmp2)
+!
+!  enddo
+!  close(15)
+!  return
+!
+!99  close(15)
+!  
+!  write(errmsg,*)'Failed to find ICM parameter: ',varname,' in ',fname
+!  call parallel_abort(errmsg)
+!end subroutine get_param_icm
+
+!!**********************************************************************C
+!subroutine WQCO2(WSRP,WSLP,WSPB1,WSPB2,WSPB3,turb,WRea)       !YC
+!!**********************************************************************C
+!! Read in constants from 'wqparam2.in'.
+!!: Settling velocity for nodes (WSRP) and sides (WSRPs)
+!!: Light extinction coefficient for nodes (turb) and sides (turbs)
+!!: Wind-induced reaeration coefficient for nodes (WRea) and sides (WReas)
+!!***********************************************************************
+!  use icm_mod, only : ie_do_flag,WReab,ie_light_flag,OpenOceanFlag,iLight,PC2TSS
+!  use schism_glbl, only : np_global,npa,ne_global,nea,i34,elnode,ipgl,iegl,ielg
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!
+!  character*4 :: char
+!  integer :: i, j, M, npbp,nd                                      !added by YC
+!  integer :: ie1,ie2,ie3,iflag,temp_ie_1
+!  integer :: NS2
+!  real :: temp_1,temp_2,temp_3,temp_4                            !added by wangzg
+!  real*8 :: xtmp,ytmp,ztmp,t_WSRPs,t_WSLPs,t_WSPB1s,t_WSPB2s,t_WSPB3s   !added by YC
+!  real*8 :: t_turbs,t_WReas                                       
+!  real*8, intent(out), dimension(nea) :: WSRP,WSLP,WSPB1,WSPB2,WSPB3,turb,WRea
+!  real*8,allocatable,dimension(:) :: WSRPs,WSLPs,WSPB1s,WSPB2s,WSPB3s,turbs,WReas,PC2TSSs
+!
+!9999 FORMAT(1X)
+!
+!! initialize  WSRP,WSLP,WSPB1,WSPB2,WSPB3
+!! allocate(WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),turb(nea),WRea(nea),stat=istat)
+!  WSRP  = 0.0
+!  WSLP  = 0.0
+!  WSPB1 = 0.0
+!  WSPB2 = 0.0
+!  WSPB3 = 0.0
+!
+!! settling velocity for WSRP,WSLP,WSPB1,WSPB2,WSPB3
+!  open(17,file='wqparam2.in',status='old')
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) NS2
+!  if(NS2==1) then  !uniform
+!    allocate(WSRPs(1),WSLPs(1),WSPB1s(1),WSPB2s(1),WSPB3s(1))
+!    backspace(17)
+!    read(17,*)NS2,WSRPs(1),WSLPs(1),WSPB1s(1),WSPB2s(1),WSPB3s(1)
+!    do i=1,nea
+!      WSRP(i)  = WSRPs(1)
+!      WSLP(i)  = WSLPs(1)
+!      WSPB1(i) = WSPB1s(1)
+!      WSPB2(i) = WSPB2s(1)
+!      WSPB3(i) = WSPB3s(1)
+!    enddo
+!!
+!    if(myrank==0) then
+!      open(31, file='ecosim2.out', status='replace')
+!      write(31,801)'* Uniform Settling velocity (m/day) of            '
+!      write(31,802)'     WSRP,     WSLP,     WSPB1,    WSPB2,    WSPB3'
+!      write(31,803) NS2,':',WSRP(1),WSLP(1),WSPB1(1),WSPB2(1),WSPB3(1)
+!    endif
+!!
+!  else  ! NS2.ne.1 (spatial-varying)
+!    open(21,file='settling.bp',status='old')
+!    read(21,*)
+!    read(21,*) npbp
+!    if(npbp/=np_global) then
+!!     write(11,*)'settling.bp is hgrid.gr3 based'
+!      call parallel_abort('settling.bp is hgrid.gr3 based')
+!    endif
+!!
+!    allocate(WSRPs(npa),WSLPs(npa),WSPB1s(npa),WSPB2s(npa),WSPB3s(npa))
+!    do i=1,np_global
+!      read(21,*)j,xtmp,ytmp,t_WSRPs,t_WSLPs,t_WSPB1s,t_WSPB2s,t_WSPB3s
+!      if(ipgl(j)%rank==myrank) then
+!        WSRPs(ipgl(j)%id)=t_WSRPs
+!        WSLPs(ipgl(j)%id)=t_WSLPs
+!        WSPB1s(ipgl(j)%id)=t_WSPB1s
+!        WSPB2s(ipgl(j)%id)=t_WSPB2s
+!        WSPB3s(ipgl(j)%id)=t_WSPB3s
+!      endif
+!    enddo
+!!
+!    WSRP=0.0
+!    WSLP=0.0
+!    WSPB1=0.0
+!    WSPB2=0.0
+!    WSPB3=0.0
+!!        
+!    do i=1,nea
+!      do j=1,i34(i)
+!        nd=elnode(j,i)
+!        WSRP(i)  = WSRP(i)  + WSRPs(nd)
+!        WSLP(i)  = WSLP(i)  + WSLPs(nd)
+!        WSPB1(i) = WSPB1(i) + WSPB1s(nd)
+!        WSPB2(i) = WSPB2(i) + WSPB2s(nd)
+!        WSPB3(i) = WSPB3(i) + WSPB3s(nd)
+!      enddo
+!      WSRP(i) = WSRP(i)/i34(i)
+!      WSLP(i) = WSLP(i)/i34(i)
+!      WSPB1(i) = WSPB1(i)/i34(i)
+!      WSPB2(i) = WSPB2(i)/i34(i)
+!      WSPB3(i) = WSPB3(i)/i34(i)
+!    enddo
+!    close(21)
+!  endif
+!  deallocate(WSRPs,WSLPs,WSPB1s,WSPB2s,WSPB3s)
+!
+!! light extinction coefficient, turb
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) NS2
+!  if(NS2==1) then  !uniform
+!    allocate(turbs(1))
+!    backspace(17)
+!    read(17,*)NS2,turbs(1)
+!    do i=1,nea
+!      turb(i) = turbs(1)
+!    enddo
+!
+!    if(myrank==0) then
+!      write(31,801)'* Uniform light extinction coefficient (/m)       '
+!      write(31,803) NS2,':',turb(1)
+!    endif
+!
+!!   ZG,sample to add a flag
+!!    open(1311,file='OpenOceanFlag.2dm',status='old')
+!!    read(1311,*)
+!!    do i=1,ne_global
+!!       read(1311,*)char,j,ie1,ie2,ie3,iflag
+!!       if(iegl(i)%rank==myrank) then
+!!          OpenOceanFlag(iegl(i)%id)=iflag
+!!          write(1234,*)i,iegl(i)%id,myrank,iflag
+!!       endif
+!!    enddo
+!!    close(1311)
+!
+!  else  ! NS2.ne.1 (spatial-varying)
+!    open(21,file='turb.bp',status='old')
+!    read(21,*)
+!    read(21,*) npbp
+!    if(npbp/=np_global) then
+!      call parallel_abort('turb.bp is hgrid.gr3 based')
+!    endif
+!!
+!    allocate(turbs(npa))
+!    do i=1,np_global
+!      read(21,*)j,xtmp,ytmp,t_turbs
+!      if(ipgl(j)%rank==myrank) then
+!        turbs(ipgl(j)%id)=t_turbs
+!      endif
+!    enddo
+!!
+!    turb=0.0
+!    do i=1,nea
+!      do j=1,i34(i)
+!        nd=elnode(j,i)
+!        turb(i) = turb(i) + turbs(nd)
+!       enddo
+!      turb(i) = turb(i)/i34(i)
+!    enddo
+!    close(21)
+!  endif
+!  deallocate(turbs)
+!
+!! wind-induced reaeration coefficient, WRea
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) NS2
+!  if(NS2==1) then  !uniform
+!    allocate(WReas(1))
+!    backspace(17)
+!    read(17,*)NS2,WReas(1)
+!    do i=1,nea
+!      WRea(i) = WReas(1)
+!    enddo
+!    
+!    if(myrank==0) then
+!      write(31,801)'* Uniform wind-induced reaeration coeff. (m/day)  '
+!      write(31,803) NS2,':',WRea(1)
+!    endif
+!!
+!  else  ! NS2.ne.1 (spatial-varying)
+!    open(21,file='wrea.bp',status='old')
+!    read(21,*)
+!    read(21,*) npbp
+!    if(npbp/=np_global) then
+!      call parallel_abort('wrea.bp is hgrid.gr3 based')
+!    endif
+!    allocate(WReas(npa))
+!    do i=1,np_global
+!      read(21,*)j,xtmp,ytmp,t_WReas
+!      if(ipgl(j)%rank==myrank) then
+!        WReas(ipgl(j)%id)=t_WReas
+!      endif
+!    enddo
+!!
+!    WRea=0.0
+!    do i=1,nea
+!      do j=1,i34(i)
+!        nd=elnode(j,i)
+!        WRea(i) = WRea(i) + WReas(nd)
+!      enddo
+!      WRea(i) = WRea(i) /i34(i) 
+!    enddo
+!    close(21)
+!  endif
+!  deallocate(WReas)
+!!
+!  close(17)
+!  close(31)
+!
+!  if(iLight==3) then
+!    open(1121,file='PC2TSS.ic',status='old')
+!    read(1121,*)
+!    read(1121,*)nd,npbp
+!    if(npbp/=np_global) then
+!      call parallel_abort('PC2TSS.bp is hgrid.gr3 based')
+!    endif
+!    allocate(PC2TSSs(npa))
+!    do i=1,np_global
+!      read(1121,*)j,xtmp,ytmp,ztmp
+!      if(ipgl(j)%rank==myrank) then
+!        PC2TSSs(ipgl(j)%id)=ztmp
+!      endif
+!    enddo
+!  
+!    PC2TSS=0.0
+!    do i=1,nea
+!      do j=1,i34(i)
+!        nd=elnode(j,i)
+!        PC2TSS(i)=PC2TSS(i)+PC2TSSs(nd)
+!      enddo
+!      PC2TSS(i)=PC2TSS(i)/i34(i)
+!    enddo
+!    deallocate(PC2TSSs)
+!    close(1121)
+!  endif
+!
+!
+!!
+!801 FORMAT(/, A50)
+!802 FORMAT(A50)
+!803 FORMAT(I2,A1,5(F8.4,2x))
+!
+!  return
+!end subroutine WQCO2
+
+!subroutine WQinput !(time) !(iPSload)
+!!**********************************************************************C
+!! Read in parameters that may vary w/t time.               !YC
+!!**********************************************************************C
+!  use icm_mod
+!  use schism_glbl, only : ne_global,nea,ipgl,iegl,ihot
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!
+!  logical, save :: init=.TRUE.
+!  character  Title*50
+!  integer :: i,j,m,iegb
+!  integer,save :: NDG, NS2, iUPS,icount
+!  real(kind=dbl_kind1),save :: x1
+!  real(kind=dbl_kind1),save :: t_xBRPOC,t_xBLPOC,t_xBDOCA,                &
+!                   &           t_xBRPON,t_xBLPON,t_xBDON,t_xBNH4,t_xBNO3, &
+!                   &           t_xBRPOP,t_xBLPOP,t_xBDOP,t_xBPO4t,        &
+!                   &           t_xBSU,t_xBSAt,t_xBCOD,t_xBDO
+!  real(kind=dbl_kind1),save :: BRPOC,BLPOC,BDOCA,          &
+!                      &        BRPON,BLPON,BDON,BNH4,BNO3, &
+!                      &        BRPOP,BLPOP,BDOP,BPO4t,     &
+!                      &        BSU,BSAt,BCOD,BDO
+!
+!  if(init) then
+!    init = .FALSE.
+!    icount = 1
+!    open(24,file='wqparam3.in',status='old') !add by YC
+!  else if(ihot.ne.0.and.icount.eq.1) then
+!    icount = 2
+!    open(24,file='wqparam3.in',status='old')
+!    rewind(24)
+!  endif
+!  read(24,802) Title
+!  read(24,9001) NDG, NS2
+!
+!  do while (NDG/=99)
+!!   Set UpConc = 0 if non-point source is specified.
+!!   PN1 in kg/d and point source loadings (WPN1) will be divided by Vol;
+!!   WPN1 = PN1(kg/d) / Vol(cm**3) = C mg/L/d (C = 1.0E9)
+!    if(NDG==2) then 
+!      if(iWQPS==1) then
+!        iUPS=25
+!        !WRITE(18,801)'*2 Daily point source input in kg/day           '
+!      else
+!        iUPS = 24
+!      endif
+!
+!      WWPSalt(:) = 0.0   !zhujz
+!      WWPRPOC(:) = 0.0
+!      WWPLPOC(:) = 0.0
+!      WWPDOCA(:) = 0.0
+!      WWPRPON(:) = 0.0
+!      WWPLPON(:) = 0.0
+!      WWPDON(:)  = 0.0
+!      WWPNH4(:)  = 0.0
+!      WWPNO3(:)  = 0.0
+!      WWPRPOP(:) = 0.0
+!      WWPLPOP(:) = 0.0
+!      WWPDOP(:)  = 0.0
+!      WWPPO4t(:) = 0.0
+!      WWPSU(:)   = 0.0
+!      WWPSAt(:)  = 0.0
+!      WWPCOD(:)  = 0.0
+!      WWPDO(:)   = 0.0
+!      !WRITE(18,'(A90)')'  i : PSQ(m**3/s),RPOC,LPOC,DOCA,RPON,LPON,DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DO '
+!
+!      x1 = 1.0E3 !* DTD !need check  YC
+!      do m=1,NS2
+!        read(iUPS,*) i, xPSQ, PSalt,PRPOC,PLPOC,PDOCA,PRPON,PLPON,PDON, &
+!                   & PNH4,PNO3,PRPOP,PLPOP,PDOP,PPO4t,PSU,PSAt,PCOD,PDO
+!       WWPSalt(i) = PSalt   !zhujz
+!       WWPRPOC(i) = PRPOC * x1  ! kg/d * 10^3 * dt/86400 = g per dt
+!       WWPLPOC(i) = PLPOC * x1
+!       WWPDOCA(i) = PDOCA * x1
+!       WWPRPON(i) = PRPON * x1
+!       WWPLPON(i) = PLPON * x1
+!       WWPDON(i)  = PDON  * x1
+!       WWPNH4(i)  = PNH4  * x1
+!       WWPNO3(i)  = PNO3  * x1
+!       WWPRPOP(i) = PRPOP * x1
+!       WWPLPOP(i) = PLPOP * x1
+!       WWPDOP(i)  = PDOP  * x1
+!       WWPPO4t(i) = PPO4t * x1
+!       WWPSU(i)   = PSU  * x1
+!       WWPSAt(i)  = PSAt * x1
+!       WWPCOD(i)  = PCOD * x1
+!       WWPDO(i)   = PDO  * x1
+!     enddo
+!!--------------------------------------------------------------------------------
+!! QLat(i,1) in cm**3/s & DSN1 in mg/L (DSChl in ug/L)
+!!  and non-point source loadings (WN1) will be divided by Vol;
+!!: WN1 = QLat(cm**3/s) * DSN1(mg/L) / Vol(cm**3) = C mg/L/d (C = 8.64E4)
+!!: need to /B(i,1) in GetWNPS
+!!
+!!       ELSE IF (NDG .EQ. 3)  THEN
+!!        IF (iNPS .EQ. 1) THEN
+!!          iUNPS = 56
+!!          WRITE(18,801)'*3 Daily NPS input through UB in mg/L           '
+!!         ELSE
+!!          iUNPS = 17
+!!          WRITE(18,801)'*3 Constant NPS input through UB in mg/L        '
+!!        END IF
+!!
+!!        DO m=1,NS2
+!!        READ(iUNPS,9000) i, DSQ(i),DSZB1(i),DSZB2(i),&
+!!     &              DSPB1(i),DSPB2(i),DSPB3(i),&
+!!     &              DSRPOC(i),DSLPOC(i),DSDOCA(i),   &
+!!     &              DSRPON(i),DSLPON(i),DSDON(i),DSNH4(i),DSNO3(i),&
+!!     &    DSRPOP(i),DSLPOP(i),DSDOP(i),DSPO4t(i),DSSU(i),DSSAt(i),&
+!!     &              DSCOD(i),DSDO(i)
+!!        WRITE(18,*)'  Q(m**3/s),ZB1 ,ZB2  ,PB1  ,PB2  ,PB3,'&
+!!     &  'RPOC, LPOC, DOCA, RPON,  LPON, DON,  NH4,'&
+!!     &  'NO3,  RPOP, LPOP, DOP,  PO4t, SU,   SAt,'&
+!!     &  'COD,  DO '
+!!        WRITE(18,844) i,':',DSQ(i),DSZB1(i),DSZB2(i),&
+!!     &              DSPB1(i),DSPB2(i),DSPB3(i),&
+!!     &              DSRPOC(i),DSLPOC(i),DSDOCA(i),   &
+!!     &              DSRPON(i),DSLPON(i),DSDON(i),DSNH4(i),DSNO3(i),&
+!!     &    DSRPOP(i),DSLPOP(i),DSDOP(i),DSPO4t(i),DSSU(i),DSSAt(i),&
+!!     &              DSCOD(i),DSDO(i)
+!!
+!!        DSRPOC(i) = DSRPOC(i) * DTD
+!!        DSLPOC(i) = DSLPOC(i) * DTD
+!!        DSDOCA(i) = DSDOCA(i) * DTD
+!!        DSRPON(i) = DSRPON(i) * DTD
+!!        DSLPON(i) = DSLPON(i) * DTD
+!!        DSDON(i)  = DSDON(i)  * DTD
+!!        DSNH4(i)  = DSNH4(i)  * DTD
+!!        DSNO3(i)  = DSNO3(i)  * DTD
+!!        DSRPOP(i) = DSRPOP(i) * DTD
+!!        DSLPOP(i) = DSLPOP(i) * DTD
+!!        DSDOP(i)  = DSDOP(i)  * DTD
+!!        DSPO4t(i) = DSPO4t(i) * DTD
+!!        DSSU(i)   = DSSU(i)   * DTD
+!!        DSSAt(i)  = DSSAt(i)  * DTD
+!!        DSPB1(i)  = DSPB1(i)  * DTD
+!!        DSPB2(i)  = DSPB2(i)  * DTD
+!!        DSPB3(i)  = DSPB3(i)  * DTD
+!!        DSZB1(i)  = DSZB1(i)  * DTD
+!!        DSZB2(i)  = DSZB2(i)  * DTD
+!!        DSCOD(i)  = DSCOD(i)  * DTD
+!!        DSDO(i)   = DSDO(i)   * DTD
+!!        END DO
+!!-----------------------------------------------------------------------------
+!
+!!  Negative values, including sed. oxygen demand (xBnDO), are losses to sed.
+!!  Ben will be divided by h & thus Ben(g/m**2/d) / h(cm) = 100 mg/L/d.
+!    elseif(NDG==4) then
+!      if(NS2==1) then 
+!        !WRITE(18,801)'*4 Uniform Benthic flux rate (g/m**2/d) at 20C  '
+!        !WRITE(18,802)': will be adjusted by Temperature later         '
+!        read(24,*) BRPOC,BLPOC,BDOCA,           &
+!                 & BRPON,BLPON,BDON,BNH4,BNO3,  &
+!                 & BRPOP,BLPOP,BDOP,BPO4t,      &
+!                 & BSU,BSAt,BCOD,BDO
+!        xBRPOC(:) = BRPOC
+!        xBLPOC(:) = BLPOC
+!        xBDOCA(:) = BDOCA
+!        xBRPON(:) = BRPON
+!        xBLPON(:) = BLPON
+!        xBDON(:)  = BDON
+!        xBNH4(:)  = BNH4
+!        xBNO3(:)  = BNO3
+!        xBRPOP(:) = BRPOP
+!        xBLPOP(:) = BLPOP
+!        xBDOP(:)  = BDOP
+!        xBPO4t(:) = BPO4t
+!        xBSU(:)   = BSU
+!        xBSAt(:)  = BSAt
+!        xBCOD(:)  = BCOD
+!        xBDO(:)   = BDO
+!      else  ! NS2.ne.1
+!       ! WRITE(18,801)'*4 Spatial-varying Benthic flux rate (g/m**2/d) at 20C  '
+!       ! WRITE(18,802)': will be adjusted by Temperature later         '
+!        xBRPOC(:) = 0.0
+!        xBLPOC(:) = 0.0
+!        xBDOCA(:) = 0.0
+!        xBRPON(:) = 0.0
+!        xBLPON(:) = 0.0
+!        xBDON(:)  = 0.0
+!        xBNH4(:)  = 0.0
+!        xBNO3(:)  = 0.0
+!        xBRPOP(:) = 0.0
+!        xBLPOP(:) = 0.0
+!        xBDOP(:)  = 0.0
+!        xBPO4t(:) = 0.0
+!        xBSU(:)   = 0.0
+!        xBSAt(:)  = 0.0
+!        xBCOD(:)  = 0.0
+!        xBDO(:)   = 0.0
+!        open(211,file='benthic.bp',status='old')
+!        read(211,*)NS2
+!        do m=1,ne_global
+!          read(211,9023) iegb,t_xBRPOC,t_xBLPOC,t_xBDOCA,           &
+!                       & t_xBRPON,t_xBLPON,t_xBDON,t_xBNH4,t_xBNO3, &
+!                       & t_xBRPOP,t_xBLPOP,t_xBDOP,t_xBPO4t,        &
+!                       & t_xBSU,t_xBSAt,t_xBCOD,t_xBDO
+!          if(iegl(iegb)%rank==myrank) then
+!            xBRPOC(iegl(iegb)%id) = t_xBRPOC
+!            xBLPOC(iegl(iegb)%id) = t_xBLPOC
+!            xBDOCA(iegl(iegb)%id) = t_xBDOCA
+!            xBRPON(iegl(iegb)%id) = t_xBRPON
+!            xBLPON(iegl(iegb)%id) = t_xBLPON
+!            xBDON(iegl(iegb)%id)  = t_xBDON
+!            xBNH4(iegl(iegb)%id)  = t_xBNH4
+!            xBNO3(iegl(iegb)%id)  = t_xBNO3
+!            xBRPOP(iegl(iegb)%id) = t_xBRPOP
+!            xBLPOP(iegl(iegb)%id) = t_xBLPOP
+!            xBDOP(iegl(iegb)%id)  = t_xBDOP
+!            xBPO4t(iegl(iegb)%id) = t_xBPO4t
+!            xBSU(iegl(iegb)%id)   = t_xBSU
+!            xBSAt(iegl(iegb)%id)  = t_xBSAt
+!            xBCOD(iegl(iegb)%id)  = t_xBCOD
+!            xBDO(iegl(iegb)%id)   = t_xBDO
+!          endif
+!        enddo
+!        close(211)
+!      endif  
+!!
+!      xBRPOC(:) = xBRPOC(:) !*  DTD
+!      xBLPOC(:) = xBLPOC(:) !*  DTD
+!      xBDOCA(:) = xBDOCA(:) !*  DTD
+!      xBRPON(:) = xBRPON(:) !*  DTD
+!      xBLPON(:) = xBLPON(:) !*  DTD
+!      xBDON(:)  = xBDON(:)  !*  DTD
+!      xBNH4(:)  = xBNH4(:)  !*  DTD
+!      xBNO3(:)  = xBNO3(:)  !*  DTD
+!      xBRPOP(:) = xBRPOP(:) !*  DTD
+!      xBLPOP(:) = xBLPOP(:) !*  DTD
+!      xBDOP(:)  = xBDOP(:)  !*  DTD
+!      xBPO4t(:) = xBPO4t(:) !*  DTD
+!      xBSU(:)   = xBSU(:)   !*  DTD
+!      xBSAt(:)  = xBSAt(:)  !*  DTD
+!      xBCOD(:)  = xBCOD(:)  !*  DTD
+!      xBDO(:)   = xBDO(:)   !*  DTD   !need check by YC   
+!!
+!      read(24,*) TBRPOC,TBLPOC,TBDOCA,TBRPON,TBLPON,TBDON, &
+!               & TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4t,   &
+!               & TBSU,TBSAt,TBCOD,TBDO
+!      ! WRITE(18,802)': Exp. bases for Temp. correction for Ben. Flux '
+!      read(24,*) SnRPOC,SnLPOC,SnDOCA,SnRPON,SnLPON,SnDON, &    ! read surface loading
+!               & SnNH4,SnNO3,SnRPOP,SnLPOP,SnDOP,SnPO4t,   &
+!               & SnSU,SnSAt,SnCOD,SnDO
+!
+!!.. solar radiation parameters
+!    elseif(NDG==5) then
+!      if(iSun==1) then
+!        iUPS = 26
+!         ! WRITE(18,801)'*5 Daily-varying solar radiation parameters     '
+!      else
+!        iUPS = 24
+!        !  WRITE(18,801)'*5 Constant solar radiation parameters          '
+!      endif
+!      read(24,*)rIa, TU, TD   !YC, ALPHMIN1, ALPHMIN2, ALPHMIN3
+!!-------------------------------------------------------------------------
+!!******	  rIa=rIa*2.065   !convert W/m^2 to langleys/day
+!!org		write(*,*) rIa, TU, TD
+!!org		pause
+!       ! WRITE(18,807)': Hours from midnight to sun rise      = ', TU, &
+!       !&             ':                     to sun set       = ', TD, &
+!       !&             ': Total daily radiation (langleys/day) = ', rIa
+!!-------------------------------------------------------------------------
+!      PTT = 3.1416/(TD-TU)
+!      !YC, PTT = (TD-TU)/24.    !added by YC fractional daylength (0<=PTT<=1)
+!      do j=1,iA
+!        !    rIn(j) = - 12.0 * PTT * (rIa/rIs(j))
+!        !!YC,rIn(j) = rIa*2.065
+!        rIn(j) = 12.0*PTT*rIa   !new formula    !zhujz
+!      enddo
+!    endif
+!    read(24,9001)NDG,NS2
+!  enddo
+!!
+!  801 FORMAT(/, A48)
+!  802 FORMAT(2A49)
+!  807 FORMAT(/, (A41, F10.5))
+!  834 FORMAT(I6, A1, 20(1x,F8.3))
+! 9000 FORMAT(9x, I5, 20F8.3)
+! 9001 FORMAT(2I5)
+! 9006 FORMAT(9X, 10F8.3)
+! 9022 FORMAT(16F8.3)
+! 9023 FORMAT(I8,16F8.3)
+!      RETURN
+!end subroutine WQinput
+
+!!**********************************************************************C
+!SUBROUTINE WQCO1(dt,rnday,NDTWQ)        !Yi-Cheng Teng
+!!**********************************************************************C
+!! Read in constant parameters from 'wqparam.in'.
+!!: NS2 = # of segments for which parameters will be read.
+!!  Setting NS2=2 establishes uniform values, otherwise NS2 should = MU.
+!!: Since we don't have field data fine enough to see the difference between
+!!  each layer, generally 1-D arraies are used for WQC's.
+!!C1 Parameters related to WQ model control parameter
+!!: iTdep = 1 means time-dependent water quality input conditions.
+!!C2 Parameters related to nutrient transfer.
+!!C3 Parameters related to CBOD decay.
+!!**********************************************************************C
+!  use icm_mod
+!  use schism_glbl, only : np_global,npa,ne_global,nea,ipgl,iegl
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!  save
+!
+!  character*12, allocatable :: WQTSOFN(:)
+!  character*4 :: char
+!  integer :: ie1,ie2,ie3,iflag                                 !zhujz
+!
+!  real(kind=dbl_kind1), intent(in) :: dt,rnday
+!  integer, intent(in) :: NDTWQ
+!
+!  integer :: NTN,NNDTWQ                                       !added by YC
+!  integer :: i, j, M                                          !added by YC
+!
+!   call read_WQParam1
+!
+!  DTD = dt/86400.0
+!!
+!9999 FORMAT(1X)
+!  open(17,file='wqparam.in',status='old')
+!  do i=1,14
+!    read(17,9999)
+!  enddo
+!
+!! READ(17,*) NDTWQ,iTdep,iSun,iBCWQ,iNPS,iWQPS,iWQDBC,iWQNC,iLIGHT
+!! NTN = 24.0/(dt/86400.)
+!  read(17,*) NNDTWQ,iTdep,iSun,iBCWQ,iNPS,iWQPS,iLIGHT,iSed,irea,iZOO
+!  NTN = int4(24.0/DTD)                                        
+!
+!#ifndef USE_SED 
+!  if(iLight==2) then
+!    call parallel_abort('iLight=2,need to turn on SED')
+!  endif
+!#endif
+!
+!  if(mod(NTN,NDTWQ)/=0) then
+!    call parallel_abort('ERROR!!! NDTWQ should be a factor of (24 hr)*dt') !added by YC
+!  endif
+!!  if(NDTWQ==1) then !ZG
+!!    call parallel_about('NDTWQ should be than one')
+!!  endif 
+!
+!  !WRITE(18,*)'# of time steps to update kinetic = ', NDTWQ
+!  if(iTdep==1) then 
+!    !WRITE(18,801)'* Time-varying water quality input conditions.    '
+!  else
+!    !WRITE(18,801)'* Steady water quality input conditions.          '
+!  endif
+!
+!  if(iSun==1) then
+!    !WRITE(18,801)'* Time-varying solar radiation parameters.        '
+!    open(57,FILE='solar.in')
+!  else
+!    !WRITE(18,801)'* Constant solar radiation parameters.            '
+!  endif
+!
+!  if(iBCWQ==1) then
+!    !WRITE(18,801)'* Time-varying up-downstream boundary conditions. '
+!    !OPEN(17,FILE='wqbc1.in')
+!  else
+!    !WRITE(18,801)'* Constant up-downstream boundary conditions.     '
+!  endif
+!
+!  if(iNPS==1) then 
+!    !WRITE(18,801)'* Time-varying non-point source input.            '
+!    !OPEN(56,FILE='nps1.in')
+!    !READ(56,9001) xxF
+!    !WRITE(18,804)'* Time lag (days) to adjust fw discharge =', xxF
+!  else
+!    !WRITE(18,801)'* Constant non-point source input.                '
+!  endif
+!
+!  if(iWQPS==1) then 
+!    !WRITE(18,801)'* Time-varying point source input.                '
+!    open(55,FILE='ps1.in')
+!  else
+!    !WRITE(18,801)'* Constant point source input.                    '
+!  endif
+!
+!  if(iNPS==1.or.iWQPS==1.or.iSun==1.or.iBCWQ==1) then 
+!    if(iTdep/=1) then
+!      !WRITE(11,*)'** iTdep should be 1 (time-varying)'
+!      !stop
+!      call parallel_abort('** iTdep should be 1 (time-varying)')  !add by YC
+!    endif
+!  endif
+!!-------------------------------------------------------------------------
+!!      IF (iWQDBC .EQ. 3)  THEN
+!!      !  WRITE(18,801)'* SUBR WDnBdry calculates C(MU,k,2).              '
+!!       ELSE IF (iSDBC .EQ. 2)  THEN
+!!      !  WRITE(18,801)'* C(MU,k,2) = DnC(k): do not use SUBR WDnBdry.    '
+!!       ELSE
+!!        STOP '** Error in input: iWQDBC should be either 2 or 3 !!'
+!!      END IF
+!!      IF (iWQNC.EQ.2) THEN
+!!      !  WRITE(18,801)'* write a diagnostic output for negative conc     '
+!!        OPEN(26,FILE='dia-newq.log')
+!!      END IF
+!!      IF (iWQNC.EQ.1) THEN
+!!      !  WRITE(18,801)'      set - conc to 0 when ABS(- conc) < COV.    '
+!!      END IF
+!!--------------------------------------------------------------------------
+!  if(iLIGHT==1) then
+!    !WRITE(18,801)'* Use the Ke-Salinity exponential function.       '
+!  else 
+!    !WRITE(18,801)'* Use the Ke-Chlorophyll linear function.         '
+!  endif
+!
+!801 FORMAT(A50)
+!! JZ: read in # of point sources
+!  read(17,*)
+!  read(17,*)nps
+!
+!  do M=1,3
+!    read(17,9999)
+!  enddo
+!  read(17,*) NPWQ,iWQTS
+!  read(17,9999)
+!  read(17,*) (NWQout(m), m=1,NPWQ)
+!
+!  if(NWQout(NPWQ)>rnday) then
+!    !WRITE(11,*)'** NWQout(NPWQ) > max. run time'
+!    !call parallel_abort('** NWQout(NPWQ) > max. run time')      !add by YC
+!    !STOP 
+!  endif
+!
+!3670  FORMAT(1X,A32,2X,A24,2X,A24)
+!3665  FORMAT(1X,I10,1X,I10,1X,E15.7,1X,I5,1X,I5)
+!  do M=1,3
+!    read(17,9999)
+!  enddo
+!
+!  read(17,*) WQTSB,WQTSE,NWQTSL
+!  read(17,9999)
+!  if(iWQTS==1) then
+!    NWQTSB=NINT(FLOAT(WQTSB)/DTD)
+!    NWQTSE=NINT(FLOAT(WQTSE)/DTD)
+!    NWQTSB = NWQTSB - MOD(NWQTSB,NDTWQ)
+!    NWQTSE = NWQTSE + NDTWQ - MOD(NWQTSB,NDTWQ)
+!    if(NWQTSL>30) then
+!      !WRITE(11,*)'NWQTSL should be <= 30'
+!      !STOP
+!      call parallel_abort('NWQTSL should be <= 30')                  !added by YC
+!    endif
+!
+!    allocate(WQTSOFN(NWQTSL))
+!    read(17,505) (IWQTSL(M),KWQTSL(M),WQTSOFN(M),M=1,NWQTSL)
+!    do M=1,NWQTSL
+!      IWQTSOU(M) = 100+M
+!      !OPEN(IWQTSOU(M),FILE=WQTSOFN(M))
+!      !WRITE(IWQTSOU(M),502) IWQTSL(M),KWQTSL(M)
+!    enddo
+!    deallocate(WQTSOFN)
+!  endif
+!
+!505 FORMAT(2I8,1X,A12)
+!502 FORMAT('* Time-series output at element(i,k) ', 2I5)
+!
+!! read in parameters of zooplankton
+!  read(17,9999)
+!  read(17,9999)
+!  do j=1,iB
+!    read(17,*)(GZM(i,j),i=1,8)
+!  enddo
+!  read(17,9999)
+!  do j=1,iB
+!    read(17,*)(rKhGE(i,j),i=1,8)
+!  enddo
+!  read(17,9999)
+!  do j=1,iB
+!    read(17,*)(PPC(i,j),i=1,8)
+!  enddo
+!  read(17,9999)
+!  do j=1,iB
+!    read(17,*) BMZR(j),DRZ(j),TGZ(j),rKTGZ1(j),rKTGZ2(j), &
+!        &  TBZ(j),rKTBZ(j)
+!  enddo
+!  read(17,9999)
+!  do j=1,iB
+!    read(17,*)RZ(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*)Eff,RF,Pf
+!
+!  !WRITE(18,803)'* Parameters related to zooplankton (j=1,iB)     '
+!  !WRITE(18,*)'  :GZM                                             '
+!  do j=1,iB 
+!    !WRITE(18,807) ( GZM(i,j),i=1,8 )
+!  enddo
+!
+!  !WRITE(18,*)'  :rKhGE                                             '
+!  do j=1,iB 
+!    !WRITE(18,807) ( rKhGE(i,j),i=1,8 )
+!  enddo
+!
+!  !WRITE(18,*)'  :PPC                                             '
+!  do j=1,iB 
+!    !WRITE(18,807) ( PPC(i,j),i=1,8 )
+!  enddo
+!  
+!  !WRITE(18,*)'  :BMZR,   DRZ,    TGZ,    rKTGZ1, rKTGZ2, TBZ,    rKTBZ,  RZ  '
+!  do j=1,iB 
+!    !WRITE(18,807) BMZR(j),DRZ(j),TGZ(j),rKTGZ1(j),rKTGZ2(j),TBZ(j),rKTBZ(j),RZ(j)
+!  enddo
+!
+!  !WRITE(18,*)'  :Eff,    RF,     Pf                              '
+!  !WRITE(18,807)Eff,RF,Pf
+!  !end of read in parameters of zooplankton
+!  Ef1 = Eff * (1-RF)
+!  Ef2 = (1-Eff) * (1-RF)
+!  Ef3 = 1 - Ef1
+!  Ef4 = RF + Ef1
+!  Pf  = Pf !* DTD !need check  YC
+!  do j=1,iB
+!    do i=1,8
+!      PPC(i,j) = PPC(i,j)/rKhGE(i,j)
+!      GZM(i,j) = GZM(i,j) !* DTD !need check  YC
+!    enddo
+!    BMZR(j)= BMZR(j)!* DTD !need check  YC
+!    DRZ(j) = DRZ(j) !* DTD !need check  YC
+!    RZ(j)  = RZ(j)  !* DTD !need check  YC
+!  enddo
+!
+!! read in parameters of phytoplankton
+!  read(17,9999)
+!  read(17,9999)
+!  do j=1,iA
+!    read(17,*) GPM(j),BMPR(j),PRR(j),TGP(j),rKTGP1(j),rKTGP2(j),&
+!        &TBP(j),rKTBP(j),CChl(j)
+!  enddo
+!  read(17,9999)
+!  do j=1,iA
+!    read(17,*)rKhN(j),rKhP(j),rIs(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*)rKhS,ST,rKeC1,rKeC2
+!
+!808 FORMAT(A50)
+!  !WRITE(18,803)'* Parameters related to phytoplankton (j=1,iA)   '
+!  !WRITE(18,*)'  :GPM,    BMPR,   PRR,    TGP,    rKTGP1, rKTGP2, TBP,    rKTBP,  CChl'
+!  do j=1,iA 
+!      !WRITE(18,807) GPM(j),BMPR(j),PRR(j),TGP(j),rKTGP1(j),rKTGP2(j),TBP(j),rKTBP(j),CChl(j)
+!  enddo
+!  !WRITE(18,808)'  :rKhN,   rKhP,   rIs                            '
+!  do j=1,iA
+!    !WRITE(18,807)rKhN(j),rKhP(j),rIs(j)
+!  enddo
+!  !WRITE(18,808)'  :rKhS,   ST,     rKeC1,  rKeC2                  '
+!  !WRITE(18,'(F8.3,F8.1,2F8.5,F8.3)')rKhS,ST,rKeC1,rKeC2
+!  !end of read in parameters of phytoplankton
+!  avgKhN = 0.0
+!  avgKhP = 0.0
+!  do j=1,iA
+!    GPM(j) = GPM(j) !* DTD !need check  YC
+!    BMPR(j)= BMPR(j)!* DTD !need check  YC
+!    PRR(j) = PRR(j) !* DTD !need check  YC
+!    avgKhN = avgKhN + rKhN(j)
+!    avgKhP = avgKhP + rKhP(j)
+!  enddo
+!  avgKhN = avgKhN/iA
+!  avgKhP = avgKhP/iA
+!  ST = ST**2
+!
+!! read in parameters of carbon
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) FCRPZ,FCLPZ,FCDPZ,(FCDZ(j),j=1,iB)
+!  read(17,9999)
+!  read(17,*)(rKHRZ(j),j=1,iB)
+!  read(17,9999)
+!  read(17,*) FCRP,FCLP,FCDP,( FCD(j), j=1,iA )
+!  read(17,9999)
+!  read(17,*)rKRC,rKLC,rKDC,rKRCalg,rKLCalg,rKDCalg
+!  read(17,9999)
+!  read(17,*)TRHDR,TRMNL,rKTHDR,rKTMNL
+!  read(17,9999)
+!  read(17,*)rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
+!
+!807 FORMAT(10F8.3)
+!!-------------------------------------------------------------------------
+!!WRITE(18,803)'* Parameters related to carbon                    '
+!!WRITE(18,808)'  :FCRPZ,  FCLPZ,  FCDPZ,  ( FCDZ(j), j=1,iB )    '
+!!WRITE(18,807)FCRPZ,FCLPZ,FCDPZ,( FCDZ(j), j=1,iB )
+!!WRITE(18,808)'  :( rKHRZ(j), j=1,iB )                           '
+!!WRITE(18,807)( rKHRZ(j), j=1,iB )
+!!WRITE(18,808)'  :FCRP,   FCLP,   FCDP,   ( FCD(j), j=1,iA  )    '
+!!WRITE(18,807)FCRP,FCLP,FCDP,( FCD(j), j=1,iA  )
+!!WRITE(18,808)'  :rKRC,   rKLC,   rKDC,   rKRCalg,rKLCalg,rKDCalg,'
+!!WRITE(18,807)rKRC,rKLC,rKDC,rKRCalg,rKLCalg,rKDCalg
+!!WRITE(18,808)'  :TRHDR,  TRMNL,  rKTHDR, rKTMNL,                 '
+!!WRITE(18,807)TRHDR,TRMNL,rKTHDR,rKTMNL
+!!WRITE(18,808)'  :rKHR1,  rKHR2,  rKHR3,  rKHORDO,rKHDNn, AANOX   '
+!!WRITE(18,807)rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
+!!--------------------------------------------------------------------------
+!!  end of read in parameters of carbon
+!  rKRC = rKRC !* DTD !need check  YC
+!  rKLC = rKLC !* DTD !need check  YC
+!  rKDC = rKDC !* DTD !need check  YC
+!  rKRCalg = rKRCalg !* DTD !need check  YC
+!  rKLCalg = rKLCalg !* DTD !need check  YC
+!  rKDCalg = rKDCalg !* DTD !need check  YC
+!
+!!   zhujz  ************************************************
+!!    allocate(ieflag(nea))
+!!  open(10,file='ieflag.2dm',status='old')
+!!  READ(10,*)
+!!	do i=1,ne_global
+!!      read(10,*)char,j,ie1,ie2,ie3,iflag
+!!	  if(iegl(i)%rank==myrank) then
+!!        ieflag(iegl(i)%id)=iflag
+!!      endif
+!!    enddo
+!!  CLOSE(10)
+!!    zhujz  *******************************************
+!!  open(10,file='eflag.2dm',status='old')
+!!  READ(10,*)
+!!	do i=1,ne_global
+!!      read(10,*)char,j,ie1,ie2,ie3,iflag
+!!	  if(iegl(i)%rank==myrank) then
+!!        icflag(iegl(i)%id)=iflag
+!!      endif
+!!    enddo
+!!  CLOSE(10)
+!!    zhujz  *******************************************
+!
+!  do i=1,nea
+!    !if(icflag(i).eq.0)then
+!    !  KKLC(i) = 0.075
+!    !else
+!    !endif
+!    KKLC(i) = rKLC
+!  enddo
+!
+!! read in parameters of nitrogen
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) FNRPZ,FNLPZ,FNDPZ,FNIPZ
+!  read(17,9999)
+!  do j= 1,iB 
+!    read(17,*)FNRZ(j),FNLZ(j),FNDZ(j),FNIZ(j),ANCZ(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*) FNRP,FNLP,FNDP,FNIP,ANDC
+!  read(17,9999)
+!  do j= 1,iA 
+!    read(17,*)FNR(j),FNL(j),FND(j),FNI(j),ANC(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*)rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg
+!  read(17,9999)
+!  read(17,*)rNitM,rKhNitDO,rKhNitN,TNit,rKNit1,rKNit2
+!
+!!--------------------------------------------------------------------
+!!WRITE(18,803)'* Parameters related to nitrogen                  '
+!!WRITE(18,808) '  :FNRPZ,  FNLPZ,  FNDPZ,  FNIPZ,                 '
+!!WRITE(18,807)FNRPZ,FNLPZ,FNDPZ,FNIPZ
+!!WRITE(18,808)'  :FNRZ,   FNLZ,   FNDZ,   FNIZ,   ANCZ,          '
+!  do j= 1,iB 
+!    !WRITE(18,807)FNRZ(j),FNLZ(j),FNDZ(j),FNIZ(j),ANCZ(j)
+!  enddo
+!  !WRITE(18,808)'  :FNRP,   FNLP,   FNDP,   FNIP,   ANDC,          '
+!  !WRITE(18,807)FNRP,FNLP,FNDP,FNIP,ANDC
+!  !WRITE(18,808)'  :FNR,    FNL,    FND,    FNI,    ANC,           '
+!  do j= 1,iA 
+!    !WRITE(18,807)FNR(j),FNL(j),FND(j),FNI(j),ANC(j)
+!  enddo
+!  !WRITE(18,808)'  :rKRN,   rKLN,   rKDN,   rKRNalg,rKLNalg,rKDNalg'
+!  !WRITE(18,807)rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg
+!  !WRITE(18,808)'  :rNitM, rKhNitDO,rKhNitN,TNit,   rKNit1, rKNit2 '
+!  !WRITE(18,'(4F8.3,2F8.4)')rNitM,rKhNitDO,rKhNitN,TNit,rKNit1,rKNit2
+!!-------------------------------------------------------------------
+!!  end of read in parameters of nitrogen
+!
+!  rKRN = rKRN !* DTD !need check  YC
+!  rKLN = rKLN !* DTD !need check  YC
+!  rKDN = rKDN !* DTD !need check  YC
+!  rKRNalg = rKRNalg !* DTD !need check  YC
+!  rKLNalg = rKLNalg !* DTD !need check  YC
+!  rKDNalg = rKDNalg !* DTD !need check  YC
+!  rNitM = rNitM !* DTD !need check  YC
+!!  read in parameters of phosphorus
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*)FPRPZ,FPLPZ,FPDPZ,FPIPZ
+!  read(17,9999)
+!  do j = 1,iB
+!    read(17,*)FPRZ(j),FPLZ(j),FPDZ(j),FPIZ(j),APCZ(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*)FPRP,FPLP,FPDP,FPIP
+!  read(17,9999)
+!  do j = 1,iA
+!    read(17,*)FPR(j),FPL(j),FPD(j),FPI(j),APC(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*)rKPO4p
+!  read(17,9999)
+!  read(17,*)rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg
+!
+!!-------------------------------------------------------------------
+!!WRITE(18,803)'* Parameters related to phosphorus                '
+!!WRITE(18,808)'  :FPRPZ,  FPLPZ,  FPDPZ,  FPIPZ,                 '
+!!WRITE(18,807)FPRPZ,FPLPZ,FPDPZ,FPIPZ
+!!WRITE(18,808)'  :FPRZ,   FPLZ,   FPDZ,   FPIZ,   APCZ,          '
+!  do j=1,iB
+!    !WRITE(18,807)FPRZ(j),FPLZ(j),FPDZ(j),FPIZ(j),APCZ(j)
+!  enddo
+!!WRITE(18,808)'  :FPRP,   FPLP,   FPDP,   FPIP,                  '
+!!WRITE(18,807)FPRP,FPLP,FPDP,FPIP
+!!WRITE(18,808)'  :FPR,    FPL,    FPD,    FPI,    APC,           '
+!  do j =1,iA
+!    !WRITE(18,807)FPR(j),FPL(j),FPD(j),FPI(j),APC(j)
+!  enddo
+!!WRITE(18,808)'  :rKPO4p,                                        '
+!!WRITE(18,807)rKPO4p 
+!!WRITE(18,808)'  :rKRP,   rKLP,   rKDP,   rKRPalg,rKLPalg,rKDPalg'
+!!WRITE(18,807)rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg
+!!------------------------------------------------------------------
+!!  end of read in parameters of phosphorus
+!
+!  rKRP = rKRP !* DTD !need check  YC
+!  rKLP = rKLP !* DTD !need check  YC
+!  rKDP = rKDP !* DTD !need check  YC
+!  rKRPalg = rKRPalg !* DTD !need check  YC
+!  rKLPalg = rKLPalg !* DTD !need check  YC
+!  rKDPalg = rKDPalg !* DTD !need check  YC
+!!  read in parameters of silica
+!  read(17,9999)
+!  read(17,9999)
+!  read(17,*) FSPPZ,FSIPZ
+!  read(17,9999)
+!  do j = 1,iB
+!    read(17,*)FSPZ(j),FSIZ(j),ASCZ(j)
+!  enddo
+!  read(17,9999)
+!  read(17,*) FSPP,FSIP,FSPd,FSId,ASCd,rKSAp,rKSU,TRSUA,rKTSUA
+!
+!!---------------------------------------------------------------------
+!  !WRITE(18,803)'* Parameters related to silica                     '
+!  !WRITE(18,808)'  :FSPPZ,  FSIPZ,                                  '
+!  !WRITE(18,807)FSPPZ,FSIPZ
+!  !WRITE(18,808)'  :FSPZ,   FSIZ,   ASCZ,                           '
+!  do j = 1,iB
+!    !WRITE(18,807)FSPZ(j),FSIZ(j),ASCZ(j)
+!  enddo
+!    !WRITE(18,808)'  :FSPP,   FSIP,   FSPd,   FSId,                   '
+!    !WRITE(18,807)FSPP,FSIP,FSPd,FSId
+!    !WRITE(18,808)'  :ASCd,   rKSAp,  rKSU,   TRSUA,  rKTSUA          '
+!    !WRITE(18,807)ASCd,rKSAp,rKSU,TRSUA,rKTSUA
+!!--------------------------------------------------------------------
+!!  end of read in parameters of silica
+!
+!  rKSU = rKSU !* DTD !need check  YC
+!!
+!  DO j=1,iB
+!    CCZR2(j) = FCRPZ*RZ(j)
+!    CCZL2(j) = FCLPZ*RZ(j)
+!    CCZD2(j) = FCDPZ*RZ(j)
+!
+!    CNZR2(j) = FNRPZ*RZ(j)*ANCZ(j)
+!    CNZL2(j) = FNLPZ*RZ(j)*ANCZ(j)
+!    CNZD2(j) = FNDPZ*RZ(j)*ANCZ(j)
+!    CNZI2(j) = FNIPZ*RZ(j)*ANCZ(j)
+!
+!    CPZR2(j) = FPRPZ*RZ(j)*APCZ(j)
+!    CPZL2(j) = FPLPZ*RZ(j)*APCZ(j)
+!    CPZD2(j) = FPDPZ*RZ(j)*APCZ(j)
+!    CPZI2(j) = FPIPZ*RZ(j)*APCZ(j)
+!
+!    CSZP2(j) = FSPPZ*RZ(j)*ASCZ(j)
+!    CSZI2(j) = FSIPZ*RZ(j)*ASCZ(j)
+!
+!    CCZR3(j) = FCRPZ*DRZ(j)
+!    CCZL3(j) = FCLPZ*DRZ(j)
+!    CCZD3(j) = FCDPZ*DRZ(j)
+!
+!    CNZR3(j) = FNRPZ*DRZ(j)*ANCZ(j)
+!    CNZL3(j) = FNLPZ*DRZ(j)*ANCZ(j)
+!    CNZD3(j) = FNDPZ*DRZ(j)*ANCZ(j)
+!    CNZI3(j) = FNIPZ*DRZ(j)*ANCZ(j)
+!
+!    CPZR3(j) = FPRPZ*DRZ(j)*APCZ(j)
+!    CPZL3(j) = FPLPZ*DRZ(j)*APCZ(j)
+!    CPZD3(j) = FPDPZ*DRZ(j)*APCZ(j)
+!    CPZI3(j) = FPIPZ*DRZ(j)*APCZ(j)
+!
+!    CSZP3(j) = FSPPZ*DRZ(j)*ASCZ(j)
+!    CSZI3(j) = FSIPZ*DRZ(j)*ASCZ(j)
+!  enddo
+!
+!  CCPR = FCRP * Pf
+!  CCPL = FCLP * Pf
+!  CCPD = FCDP * Pf
+!
+!  do j=1,iA
+!    CNPR2(j) = FNRP*Pf*ANC(j)
+!    CNPL2(j) = FNLP*Pf*ANC(j)
+!    CNPD2(j) = FNDP*Pf*ANC(j)
+!    CNPI2(j) = FNIP*Pf*ANC(j)
+!
+!    CPPR2(j) = FPRP*Pf*APC(j)
+!    CPPL2(j) = FPLP*Pf*APC(j)
+!    CPPD2(j) = FPDP*Pf*APC(j)
+!    CPPI2(j) = FPIP*Pf*APC(j)
+!  enddo
+!  CSPP2 = FSPP*Pf*ASCd
+!  CSPI2 = FSIP*Pf*ASCd
+!
+!! read in parameters of COD & DO
+!  read(17,9999)
+!  read(17,*) rKHCOD,rKCD,TRCOD,rKTCOD
+!  read(17,9999)
+!  read(17,*) AOC,AON,rKro,rKTr
+!
+!!--------------------------------------------------------------------
+!  !WRITE(18,803)'* Parameters related to COD                        '
+!  !WRITE(18,808)'  :rKHCOD, rKCD,   TRCOD,  rKTCOD                  '
+!  !WRITE(18,807)rKHCOD,rKCD,TRCOD,rKTCOD
+!  !WRITE(18,803)'* Parameters related to DO                         '
+!  !WRITE(18,808)'  :AOC,    AON,    rKro,   rKTr                    '
+!  !WRITE(18,807)AOC,AON,rKro,rKTr
+!!-------------------------------------------------------------------
+!!  end of read in parameters of COD & DO
+!
+!  rKCD = rKCD !* DTD !need check  YC
+!
+!  close(17)
+!  !call WQM_OUT1
+! 
+!805 FORMAT(I2, A1, 4F13.5)
+!806 FORMAT(I2, A1, F10.5)
+!9001 FORMAT(10F8.0)
+!803 FORMAT(/, A50)
+!804 FORMAT(/, (A42, F10.5))
+!  return
+!end subroutine WQCO1
+
+!!**********************************************************************C
+!subroutine WQM_OUT
+!!**********************************************************************C
+!! output the wqm parameters to check
+!! test by YC
+!!**********************************************************************C
+!  use icm_mod
+!  use schism_glbl, only : NDTWQ
+!  use schism_msgp, only : myrank,parallel_abort
+!  IMPLICIT NONE
+!
+!  INTEGER :: i, j, M                                          !add by YC
+!
+!9999 FORMAT(1X)
+!      
+!  if(myrank==0) then
+!    open(31, file='ecosim.out', status='replace')
+!    write(31,*) 'waterquality model parameter output'
+!    write(31,*)'# of time steps to update kinetic = ', NDTWQ
+!    write(31,*)'iTdep = ', iTdep
+!    write(31,*)'iSun = ', iSun
+!    write(31,*)'iBCWQ = ', iBCWQ
+!    write(31,*)'iNPS = ', iNPS
+!    write(31,*)'iWQPS = ', iWQPS
+!    write(31,*)'iLIGHT = ', iLIGHT
+!    write(31,*)'* WQ spatial dist. will be outputed ', NPWQ, ' times'
+!    write(31,*)'  at days (first day = 1):'
+!    write(31,*) (NWQout(m), m=1,NPWQ)
+!    write(31,*)'WQTSB = ', WQTSB,NWQTSB
+!    write(31,*)'WQTSE = ', WQTSE,NWQTSE
+!    write(31,*)'NWQTSL = ', NWQTSL
+!    write(31,*) (IWQTSL(M),KWQTSL(M),M=1,NWQTSL)
+!    write(31,803)'* Parameters related to zooplankton (j=1,iB)     '
+!    write(31,*)'  :GZM                                             '
+!    do j=1,iB 
+!      write(31,807) ( GZM(i,j),i=1,8 )
+!    enddo 
+!    write(31,*)'  :rKhGE                                             '
+!    do j=1,iB 
+!      write(31,807) ( rKhGE(i,j),i=1,8 )
+!    enddo
+!    write(31,*)'  :PPC                                             '
+!    do j=1,iB 
+!      write(31,807) ( PPC(i,j),i=1,8 )
+!    enddo
+!    write(31,*)'  :BMZR,   DRZ,    TGZ,    rKTGZ1, rKTGZ2, TBZ,    rKTBZ,  RZ  '
+!    do j=1,iB 
+!      write(31,807) BMZR(j),DRZ(j),TGZ(j),rKTGZ1(j),rKTGZ2(j),TBZ(j),rKTBZ(j),RZ(j)
+!    enddo
+!    write(31,*)'  :Eff,    RF,     Pf                              '
+!    write(31,807)Eff,RF,Pf
+!    write(31,803)'* Parameters related to phytoplankton (j=1,iA)   '
+!    write(31,*)'  :GPM,    BMPR,   PRR,    TGP,    rKTGP1, rKTGP2, TBP,    rKTBP,  CChl'
+!    do j=1,iA 
+!      write(31,807) GPM(j),BMPR(j),PRR(j),TGP(j),rKTGP1(j),rKTGP2(j),TBP(j),rKTBP(j),CChl(j)
+!    enddo
+!    write(31,808)'  :rKhN,   rKhP,   rIs                            '
+!    do j=1,iA
+!      write(31,807)rKhN(j),rKhP(j),rIs(j)
+!    enddo
+!    write(31,808)'  :rKhS,   ST,     rKeC1,  rKeC2                  '
+!    write(31,'(F8.3,F8.1,2F8.5,F8.3)')rKhS,ST,rKeC1,rKeC2
+!    write(31,803)'* Parameters related to carbon                    '
+!    write(31,808)'  :FCRPZ,  FCLPZ,  FCDPZ,  ( FCDZ(j), j=1,iB )    '
+!    write(31,807)FCRPZ,FCLPZ,FCDPZ,( FCDZ(j), j=1,iB )
+!    write(31,808)'  :( rKHRZ(j), j=1,iB )                           '
+!    write(31,807)( rKHRZ(j), j=1,iB )
+!    write(31,808)'  :FCRP,   FCLP,   FCDP,   ( FCD(j), j=1,iA  )    '
+!    write(31,807)FCRP,FCLP,FCDP,( FCD(j), j=1,iA  )
+!    write(31,808)'  :rKRC,   rKLC,   rKDC,   rKRCalg,rKLCalg,rKDCalg,'
+!    write(31,807)rKRC,rKLC,rKDC,rKRCalg,rKLCalg,rKDCalg
+!    write(31,808)'  :TRHDR,  TRMNL,  rKTHDR, rKTMNL,                 '
+!    write(31,807)TRHDR,TRMNL,rKTHDR,rKTMNL
+!    write(31,808)'  :rKHR1,  rKHR2,  rKHR3,  rKHORDO,rKHDNn, AANOX   '
+!    write(31,807)rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
+!    write(31,803)'* Parameters related to nitrogen                  '
+!    write(31,808) '  :FNRPZ,  FNLPZ,  FNDPZ,  FNIPZ,                 '
+!    write(31,807)FNRPZ,FNLPZ,FNDPZ,FNIPZ
+!    write(31,808)'  :FNRZ,   FNLZ,   FNDZ,   FNIZ,   ANCZ,          '
+!    do j= 1,iB 
+!      write(31,807)FNRZ(j),FNLZ(j),FNDZ(j),FNIZ(j),ANCZ(j)
+!    enddo
+!    write(31,808)'  :FNRP,   FNLP,   FNDP,   FNIP,   ANDC,          '
+!    write(31,807)FNRP,FNLP,FNDP,FNIP,ANDC
+!    write(31,808)'  :FNR,    FNL,    FND,    FNI,    ANC,           '
+!    do j= 1,iA 
+!      write(31,807)FNR(j),FNL(j),FND(j),FNI(j),ANC(j)
+!    enddo
+!    write(31,808)'  :rKRN,   rKLN,   rKDN,   rKRNalg,rKLNalg,rKDNalg'
+!    write(31,807)rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg
+!    write(31,808)'  :rNitM, rKhNitDO,rKhNitN,TNit,   rKNit1, rKNit2 '
+!    write(31,'(4F8.3,2F8.4)')rNitM,rKhNitDO,rKhNitN,TNit,rKNit1,rKNit2
+!    write(31,803)'* Parameters related to phosphorus                '
+!    write(31,808)'  :FPRPZ,  FPLPZ,  FPDPZ,  FPIPZ,                 '
+!    write(31,807)FPRPZ,FPLPZ,FPDPZ,FPIPZ
+!    write(31,808)'  :FPRZ,   FPLZ,   FPDZ,   FPIZ,   APCZ,          '
+!    do j = 1,iB
+!      write(31,807)FPRZ(j),FPLZ(j),FPDZ(j),FPIZ(j),APCZ(j)
+!    enddo
+!    write(31,808)'  :FPRP,   FPLP,   FPDP,   FPIP,                  '
+!    write(31,807)FPRP,FPLP,FPDP,FPIP
+!    write(31,808)'  :FPR,    FPL,    FPD,    FPI,    APC,           '
+!    do j = 1,iA
+!      write(31,807)FPR(j),FPL(j),FPD(j),FPI(j),APC(j)
+!    enddo
+!    write(31,808)'  :rKPO4p,                                        '
+!    write(31,807)rKPO4p 
+!    write(31,808)'  :rKRP,   rKLP,   rKDP,   rKRPalg,rKLPalg,rKDPalg'
+!    write(31,807)rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg
+!    write(31,803)'* Parameters related to silica                     '
+!    write(31,808)'  :FSPPZ,  FSIPZ,                                  '
+!    write(31,807)FSPPZ,FSIPZ
+!    write(31,808)'  :FSPZ,   FSIZ,   ASCZ,                           '
+!    do j = 1,iB
+!      write(31,807)FSPZ(j),FSIZ(j),ASCZ(j)
+!    enddo
+!    write(31,808)'  :FSPP,   FSIP,   FSPd,   FSId,                   '
+!    write(31,807)FSPP,FSIP,FSPd,FSId
+!    write(31,808)'  :ASCd,   rKSAp,  rKSU,   TRSUA,  rKTSUA          '
+!    write(31,807)ASCd,rKSAp,rKSU,TRSUA,rKTSUA
+!    write(31,803)'* Parameters related to COD                        '
+!    write(31,808)'  :rKHCOD, rKCD,   TRCOD,  rKTCOD                  '
+!    write(31,807)rKHCOD,rKCD,TRCOD,rKTCOD
+!    write(31,803)'* Parameters related to DO                         '
+!    write(31,808)'  :AOC,    AON,    rKro,   rKTr                    '
+!    write(31,807)AOC,AON,rKro,rKTr
+!    ! WRITE(31,'(A90)')'  i : PSQ(m**3/s),RPOC,LPOC,DOCA,RPON,LPON,DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DO '
+!    ! WRITE(31,834) i, ':', xPSQ, PRPOC,PLPOC,PDOCA,PRPON,PLPON,PDON, &
+!    ! &   PNH4,PNO3,PRPOP,PLPOP,PDOP,PPO4t,PSU,PSAt,PCOD,PDO
+!    write(31,801)'*4 Uniform Benthic flux rate (g/m**2/d) at 20C  '
+!    write(31,*)  ': RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DO'
+!    write(31,802)': will be adjusted by Temperature later'
+!    write(31,9022) xBRPOC(1),xBLPOC(1),xBDOCA(1),                  &
+!                 & xBRPON(1),xBLPON(i),xBDON(1),xBNH4(1),xBNO3(1), &
+!                 & xBRPOP(1),xBLPOP(1),xBDOP(1),xBPO4t(1),         &
+!                 & xBSU(1),xBSAt(1),xBCOD(1),xBDO(1)
+!    write(31,802)': Exp. bases for Temp. correction for Ben. Flux '
+!    write(31,9022) TBRPOC,TBLPOC,TBDOCA,TBRPON,TBLPON,TBDON, &
+!                 & TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4t,   &
+!                 & TBSU,TBSAt,TBCOD,TBDO
+!    write(31,801)'*5 Constant solar radiation parameters          '
+!    write(31,810) ': Hours from midnight to sun rise      = ', TU, &
+!                & ':                     to sun set       = ', TD, &
+!                & ': Total daily radiation (langleys/day) = ', rIa
+!    write(31,*)'PTT=',PTT
+!    do j= 1,iA 
+!      write(31,*)rIn(j),rIs(j)
+!    enddo
+!    write(31,*)'DTD=',DTD
+!    close(31)
+!  endif
+!! 
+!505 FORMAT(2I8,1X,A12)
+!805 FORMAT(I2, A1, 4F13.5)
+!806 FORMAT(I2, A1, F10.5)
+!807 FORMAT(10F8.3)
+!808 FORMAT(A50)
+!9001 FORMAT(10F8.0)
+!803 FORMAT(/, A50)
+!804 FORMAT(/, (A42, F10.5))
+!801 FORMAT(/, A48)
+!802 FORMAT(2A49)
+!810 FORMAT(/, (A41, F10.5))
+!834 FORMAT(I6, A1, 20(1x,F8.3))
+!9000 FORMAT(9x, I5, 20F8.3)
+!9002 FORMAT(2I5)
+!9006 FORMAT(9X, 10F8.3)
+!9022 FORMAT(16F8.3)
+!9023 FORMAT(I8,16F8.3)
+!
+!  return
+!end subroutine WQM_OUT

@@ -1,0 +1,17 @@
+macro (mpi_wrap EXEC)
+  target_link_libraries (${EXEC} ${MPI_Fortran_LIBRARIES})
+
+  if(MPI_EXTRA_LIBRARY)
+    target_link_libraries(${EXEC} ${MPI_EXTRA_LIBRARY})
+  endif()
+
+  get_target_property(CURRENT_LINK_FLAGS ${EXEC} LINK_FLAGS)
+  if(CURRENT_LINK_FLAGS)
+    set(MY_MPI_LINK_FLAGS "${CURRENT_LINK_FLAGS};${MPI_Fortran_LINK_FLAGS}")
+  else()
+    set(MY_MPI_LINK_FLAGS "${MPI_Fortran_LINK_FLAGS}")
+  endif()
+  if(MY_MPI_LINK_FLAGS)
+   set_target_properties(${EXEC} PROPERTIES LINK_FLAGS ${MY_MPI_LINK_FLAGS})
+  endif()
+endmacro(mpi_wrap)

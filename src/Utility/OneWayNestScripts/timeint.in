@@ -1,0 +1,4 @@
+2 21 !# of days, # of vertical levels (=1 for elev.61; =nvrt in vgrid.in for 3D scalars (salinity etc); =2*nvrt for hvel.64)
+2 301 14 !'2' boundary segments for *3D.th; 301 and 14 nodes on each segment
+180. ! new time step desired in sec
+0 !iendian; 0: don't convert binary; 1: convert to BIG_ENDIAN

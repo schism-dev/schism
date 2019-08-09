@@ -1,0 +1,43 @@
+!-----------------------------------------------------------------------
+!BOP
+!
+! !MODULE: 
+!
+! !INTERFACE:
+   MODULE
+!
+! !DESCRIPTION: 
+   Please fill out - Latex commands are encouraged.
+!
+! !USE:
+   List of mudules used (can be empty)
+   IMPLICIT NONE
+!
+! !PUBLIC MEMBER FUNCTIONS:
+!
+! !PUBLIC DATA MEMBERS:
+!
+! !REVISION HISTORY:
+!  Author(s): NAME
+!  01Jan2000: Ver. ?.?.? (???): 
+!
+! !LOCAL VARIABLES:
+!
+! !BUGS
+!
+!EOP
+!-----------------------------------------------------------------------
+
+CONTAINS
+
+!-----------------------------------------------------------------------
+
+
+
+!-----------------------------------------------------------------------
+
+   END MODULE
+
+!-----------------------------------------------------------------------
+
+!Copyright (C) 2000 - NAME

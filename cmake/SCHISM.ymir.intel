@@ -1,0 +1,65 @@
+
+
+######################### SELFE COMPONENTS
+#
+#           You can only build one executable at a time. Choose your modules by setting these modules ON
+#
+#   Modules
+set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
+set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
+
+#   Algorithm choices
+set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
+
+
+##########################  LOCATIONS #########################################################
+#
+# LOCATIONS: Set locations for NetCDF (possibly HDF5 if NetCDF links to it), ParMetis, PETSc
+#            You don't need to set these if they are in your environment
+#
+#            Only the library home location is needed and the /lib or /bin part will be inferred.
+#            Generally traditional structure is assumed, but the Parmetis and GOTM libraries
+#            that are included have a slightly different structure
+#
+#            You only need PETSc for WWM
+#            You only need GOTM if you intend to use it with USE_GOTM
+#            GOTM and ParMetis local copies will be found automatically, but also can overridden
+#            You have to build them
+#
+
+
+set(PARMETIS_DIR /Calcul/Apps/parmetis/distrib.ParMetis-3.1.1/ CACHE PATH "Path to ParMetis")
+#set(HDF5_DIR   /some/override/path CACHE PATH "Path to HDF5")
+#set(NetCDF_LIBRARIES /Calcul/Apps/netcdf/fortran-4.2.ifort/lib/:/Calcul/Apps/netcdf/4.2.1.1.ifort/lib/ CACHE PATH "Path to NetCDF C library")
+#set(NetCDF_INCLUDE_DIRS /Calcul/Apps/netcdf/fortran-4.2.ifort/include/ CACHE PATH "Path to NetCDF include files")
+#set(NetCDF_DIR /some/override/path CACHE PATH "Path to NetCDF")
+set(NetCDF_LIBRARY_DIR /Calcul/Apps/netcdf/fortran-4.2.ifort/lib/ CACHE PATH "Path to NetCDF library")
+set(NetCDF_C_LIBRARY_DIR /Calcul/Apps/netcdf/4.2.1.1.ifort/lib/ CACHE PATH "Path to NetCDF C library")
+set(NetCDF_INCLUDE_DIR /Calcul/Apps/netcdf/fortran-4.2.ifort/include/ CACHE PATH "Path to NetCDF include files")
+#set(PETSC_DIR  /Calcul/Apps/PETSc/3.3-p4.intel/ PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
+#set(GOTM_DIR   /some/override/path CACHE PATH "Path to GOTM, (if unset, defaults to pre-built local copy)")
+
+
+
+######################## COMPILE AND BUILD OPTIONS ##############################################
+#
+# BUILD OPTS: Use this to set compiler flags any way you want.For models of how to set flags, 
+#             see SELFECompile.cmake, which are the project defaults.
+#
+#             If you are setting up a new platform/compiler combo rather than customizing, 
+#             you might consider adding to SELFECompile.cmake with the correct "IF" so 
+#             others can profit from your work.
+#             
+#             If what you are doing is debugging, consider using -DBUILD_TYPE=Debug and using the default
+#             debug flags. Note that there is yet another build type for release plus symbols.
+#
+#             So far I have removed -Bstatic because it is causes problems and cmake seems to do enough
+#             magically.
+#
+#################################################################################################
+
+#set(INCLUDE_TIMING CACHE BOOLEAN OFF)
+#set(USE_OPEN64     CACHE BOOLEAN OFF)
+#set(MPI_VERSION    CACHE STRING  "2")
+

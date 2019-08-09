@@ -1,0 +1,60 @@
+SCHISM: Semi-implicit Cross-scale Hydroscience Integrated System Model
+Copyright 2014 College of William and Mary
+
+For further information contact Y. Joseph Zhang [yjzhang@vims.edu]
+
+
+
+SELFE - END USER LICENSE AGREEMENT 
+ 
+License approved by OHSU's Technology & Research Collaborations office on September 4, 2003. Questions regarding this license agreement should be directed to:
+ 
+Technology and Research Collaborations
+ Oregon Health & Science University
+ 2525 SW First Avenue, Suite AD120
+ Portland, Oregon 97201-4753
+www.ohsu.edu/tech-transfer
+ Phone: 503-494-8200 
+
+ 1. Licensed Software: The Software covered by this agreement (the "Software") is SELFE. The Software includes the current version, all updates and patches to the current version, and all previously released versions. SELFE is a finite-element computer model for numerical simulation of 3D coastal and estuarine baroclinic circulations, developed by the Center for Coastal and Land-Margin Research ("CCALMR") of the Oregon Health & Science University ("OHSU"). The licensed Software includes source code, compiled object code and accompanying documentation. The Software may include third-party software, identified in the source code and documentation. 
+ 
+2. Grant: OHSU hereby grants to you an irrevocable, nonexclusive, nontransferable, perpetual, royalty-free and worldwide license (the "License") to use the Software and to create derivative works employing the Software, subject to the terms and conditions of this License Agreement (the "Agreement").
+ 
+3. Limitation on Distribution: You may not distribute the Software or allow others to use it.
+ 
+4. Copies: You may copy the Software only as reasonably necessary for your licensed use. You agree to reproduce OHSU's copyright notice on all copies of OHSU copyrighted material. You also agree to reproduce any copyright and related notices associated with any third-party software included in the Software.
+ 
+5. Ownership: The Software is licensed, not sold, to you. OHSU retains all rights not specifically granted to you hereunder, including ownership of all OHSU copyrights, trade secrets or other intellectual property rights in the Software and any accompanying information. OHSU asserts no ownership rights in any third-party software included in the Software.
+ 
+All right, title and interest in and to any original material you contribute in derivative works employing OHSU copyrighted material shall remain with you, and you shall have the sole right to determine the disposition of any such original material, except as limited by provisions of this Agreement. The copyright in your original material is independent of, and does not affect, any copyright protection in the OHSU copyrighted material. You agree to provide to OHSU, upon OHSU's request, the source code for any modifications or enhancements you introduce to the Software. OHSU shall have the right to use such modifications and enhancements for any purpose, including, at it's sole discretion, to distribute them in any future release of the Software.
+ 
+6. Publication Credit and Endorsement: You agree to acknowledge OHSU's Center for Coastal and Land-Margin Research (CCALMR) with appropriate citations in any derivative work and in any publication or presentation, including the World Wide Web, containing research results obtained in whole or in part through the use of the Software.
+ 
+OHSU does not directly or indirectly endorse any product or service provided, or to be provided, by you whether directly or indirectly related to the Software. You shall not state or imply that use of the Software is an endorsement by OHSU or its employees.
+ 
+7. Term of License: The License is effective upon receipt by you of the Software and shall continue until terminated. The License will terminate immediately without notice by OHSU if you fail to comply with the terms and conditions of this Agreement. Upon termination of this License, you shall immediately discontinue all use of the Software provided hereunder, and return to OHSU or destroy the original and all copies of all such Software within 30 days. All of your obligations under this Agreement shall survive the termination of the License.
+ 
+8. Warranty: OHSU makes no representations about the suitability, use or performance of this Software or about any content or information made accessible by the Software, for any purpose. The Software is provided "as is," without express or implied warranties including, but not limited to, any implied warranties of merchantability, fitness for a particular purpose, or noninfringement with respect to the software. OHSU is not obligated to support or issue updates to the Software.
+ 
+9. Indemnification: By clicking on the "I ACCEPT" button below, you agree to indemnify and hold OHSU, its directors, trustees, officers, employees, students, fellows, agents, and consultants harmless from and against all liability, demands, damages, expenses, and losses, including but not limited to death, personal injury, illness, or property damage in connection with or arising out of (a) the use of the Software by or on behalf of you or your directors, employees or third parties, or (b) the design, manufacture, distribution or use of the Software, or materials or other products or processes developed in connection with or arising out of the Software.
+ 
+10. U.S. Government Rights: OHSU reserves on behalf of the U.S. Government an irrevocable, nonexclusive, nontransferable, royalty-free, worldwide license to the Software by or on behalf of the U.S. Government and on behalf of any foreign government or international organization pursuant to any existing or future treaty or agreement to which the U.S. Government is a signatory.
+ 
+11. Export Controls: By clicking on the "I ACCEPT" button below, you agree that the Software will not be shipped, transferred or exported into any country or used in any manner prohibited by the United States Export Administration Act or any other export laws, restrictions or regulations.
+ 
+12. Disputes: You and OHSU agree to attempt to settle amicably any controversy or claim arising under this Agreement or a breach of this Agreement. Thereafter, you or OHSU may exercise any administrative or judicial remedies that may be available. The construction, validity, performance, and effect of this Agreement shall be governed by the laws of the State of Oregon.
+ 
+13. Entire Agreement: This Agreement contains the entire agreement between the parties with respect to the subject matter hereof, and it shall not be modified or amended except by an instrument in writing signed by both parties hereto.
+
+
+ROMS license for EcoSim
+Copyright © 2002-2014 The ROMS/TOMS Group
+This Software is open-source and licensed under the following conditions as stated by MIT/X License: 
+
+(See http://www.opensource.org/licenses/mit-license.php ). 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this Software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: 
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. 
+The Software is provided as is, without warranty of any kind, expressed or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claims, damages or other liabilities, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the Software or the use or other dealings in the Software 
+

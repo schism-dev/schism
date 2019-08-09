@@ -1,0 +1,89 @@
+2006-12-08 07:37  kbk
+
+	* Makefile (v3_2_0): new stable release - v3.2.5
+
+2006-12-08 07:36  kbk
+
+	* release.sh (v3_2_0): also put ChangeLog on server
+
+2006-12-08 07:35  kbk
+
+	* src/airsea/airsea.F90 (v3_2_0): fixed September in yday - Chris
+	  Locke
+
+2006-04-03 14:00  kbk
+
+	* Makefile (v3_2_0): new stable release - v3.2.4
+
+2006-04-03 10:33  lars
+
+	* src/meanflow/: uequation.F90, vequation.F90 (v3_2_0): fixed bug
+	  in relaxation times - Thanks to Adolf Stips
+
+2006-03-23 13:26  kbk
+
+	* Makefile (v3_2_0): new stable release - v3.2.3
+
+2006-03-23 13:03  kbk
+
+	* compilers/compiler.DECFOR, compilers/compiler.FUJITSU,
+	  compilers/compiler.GFORTRAN, compilers/compiler.IFC,
+	  compilers/compiler.IFORT, compilers/compiler.NAG,
+	  compilers/compiler.PGF90, compilers/compiler.XLF, src/Rules.make
+	  (v3_2_0): support form IBMs XLF compiler
+
+2006-03-23 12:49  kbk
+
+	* src/: turbulence/alpha_mnb.F90, util/adv_center.F90 (v3_2_0):
+	  removed explicit double precission dependency
+
+2005-12-15 13:23  kbk
+
+	* release.sh (v3_2_0): changed RHOST and RDIR
+
+2005-12-15 13:19  kbk
+
+	* Makefile (v3_2_0): new stable release - v3.2.2
+
+2005-12-15 13:18  kbk
+
+	* release.sh (v3_2_0): stable should not create a new branch
+
+2005-12-15 12:13  kbk
+
+	* src/: turbulence/dissipationeq.F90, turbulence/genericeq.F90,
+	  turbulence/lengthscaleeq.F90, turbulence/tkeeq.F90,
+	  util/diff_face.F90 (v3_2_0): Patankar trick re-introduced
+
+2005-11-17 14:24  kbk
+
+	* compilers/compiler.GFORTRAN (v3_2_0): added support for GNUs
+	  Fortran Compiler
+
+2005-08-29 13:19  kbk
+
+	* src/meanflow/updategrid.F90 (v3_2_0): merged from trunk
+
+2005-08-18 15:37  kbk
+
+	* release.sh (v3_2_0): hardcoded branch + proper inclusion of
+	  VERSION and include/version.h
+
+2005-08-18 15:17  kbk
+
+	* release.sh (v3_2_0): changed cvs server to gate
+
+2005-08-18 15:12  kbk
+
+	* Makefile (v3_2_0): new stable release - v3.2.1
+
+2005-08-18 15:12  kbk
+
+	* Makefile (v3_2_0): include VERSION and include/version.h in
+	  .tar.gz file
+
+2005-08-18 15:07  kbk
+
+	* src/gotm/gotm.F90 (v3_2_0): moved use output to compile on Intel
+	  compiler v9
+

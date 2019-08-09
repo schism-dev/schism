@@ -1,0 +1,15 @@
+# Set options for the Compaq fort compiler - on alphas.
+ifeq ($(FORTRAN_COMPILER),DECFOR)
+FC=f90
+DEFINES += -DFORTRAN95
+can_do_F90=false
+can_do_F90=true
+MODULES=-module $(MODDIR)
+EXTRAS	=
+DEBUG_FLAGS = -g -arch host -check bounds -check overflow -check nopower -check underflow -std90 -assume gfullpath 
+DEBUG_FLAGS = -g -arch host -check bounds -check overflow -check nopower -assume gfullpath 
+PROF_FLAGS  = -pg -O
+PROD_FLAGS  = -O -fast -inline speed -pipeline
+#PROD_FLAGS  = -O -fast -inline speed -unroll  1 -pipeline
+DEFINES += -DREAL_4B=real\(4\)
+endif

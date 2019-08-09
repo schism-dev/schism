@@ -1,0 +1,1073 @@
+%
+%$Id: turbulenceIntro.tex,v 1.2 2005-07-06 14:11:27 kbk Exp $
+%
+
+\section{The turbulence model \label{sec:turbulenceIntro}}
+
+To close the differential equations for momentum, heat, and salt,
+parameterisations of the turbulent fluxes of momentum, $\mean{u' w'}$, heat
+$\mean{w'\theta'}$, and salinity $\mean{w's'}$ are required. Since
+turbulence `feels' the effects of temperature and salinity
+fluctuations essentially through buoyancy fluctuations, only the
+buoyancy flux, $\mean{w'b'}$, is discussed in the following. The
+assumptions under which one can infer the fluxes of heat and salinity
+from the buoyancy flux are addressed below.
+
+\subsection{Introduction}
+
+There are different types and levels of closure models available in
+GOTM to compute the vertical turbulent fluxes. Simple models rely on
+the idea that theses fluxes can be computed as the product of a
+positive turbulent diffusivity and a mean flow gradient. Contributions
+to the fluxes that are not `down-gradient', are summarized in
+so-called counter-gradient terms. Using these assumptions, the fluxes
+of momentum and buoyancy can be expressed as
+\begin{equation}
+  \label{fluxes}
+  \mean{u' w'}      = - \nu_t  \partder{u}{z}  + \tilde{\Gamma}_U \comma
+  \mean{v' w'}      = - \nu_t  \partder{v}{z}  + \tilde{\Gamma}_V \comma
+  \mean{w' b'}      = - \nu^B_t \partder{B}{z} + \tilde{\Gamma}_B
+\comma
+\end{equation}
+where $\tilde{\Gamma}_{(U,V,B)}$ denote the counter-gradient fluxes.
+They can be important under very strong stratification and in the case
+of convection. Note, that the current version of GOTM identifies the
+diffusivities of heat and salt with $\nu^B_t$ (see
+\sect{sec:temperature} and \sect{sec:salinity}).  
+
+Using an analogy to the kinetic theory of gases, the vertical
+turbulent diffusivities, $\nu_t$ and $\nu^B_t$, are often assumed to be the
+product of a typical velocity scale of turbulence, $q$, times a
+typical length scale, $l$, see \cite{TennekesLumley72}. The velocity
+scale $q$ can e.g.\ be identified with the average value of the
+turbulent fluctuations expressed by the turbulent kinetic energy, $k=
+q^2 /2$.  Then, the diffusivities of momentum and heat can be written
+as
+\begin{equation}
+  \label{nu}
+  \nu_t = c_\mu k^\frac{1}{2} l  \comma   \nu^B_t = c_\mu' k^\frac{1}{2} l  
+  \comma
+\end{equation}
+where the dimensionless quantities $c_\mu$ and ${c_\mu}'$ are usually
+referred to as the `stability functions'.  Depending on the level of
+turbulent closure, these stability functions can be either constants, 
+empirical functions, or functions of some non-dimensional flow parameters
+resulting from a higher-order turbulence model. The same applies to
+the counter-gradient fluxes $\tilde{\Gamma}_{(U,V,B)}$ defined in \eq{fluxes}.
+
+There are different possibilities in GOTM to compute the scales $q$ (or
+$k$) and $l$ appearing in \eq{nu}. According to the level of
+complexity, they are ordered in GOTM in the following fashion.
+
+\begin{enumerate}
+\item Both, $k$ and $l$ are computed from algebraic relations. The
+ algebraic equation for $k$ is based on a simplified form of the
+ transport equation of the turbulent kinetic energy. The
+ equation for the length-scale may result from different approaches. The
+ most simple models assume an empirically motivated, prescribed
+ vertical distribution of the length-scale. This level of closure
+ corresponds to the `level 2' model of \cite{MellorYamada82}, but also
+ to more recent approaches, see \cite{Chengetal2002}. Algebraic models
+ are an over-simplification in numerous situations.
+
+\item At the next level, $k$ is computed from the differential
+ transport equation for the turbulent kinetic energy (`energy models'). As
+ before, the length-scale is computed from an empirically or theoretically
+ based relation. Models of this type are quite popular in geophysical
+ modelling. A description is given in \sect{sec:algebraiclength}.
+
+\item In the so-called two-equation models, both, $k$ and $l$, are computed from
+ differential transport equations. As before, $k$ follows from the
+ transport equation of the turbulent kinetic energy. Now, however, also
+ the length-scale is determined from a differential transport
+ equation. This equation is usually not directly formulated for the
+ length-scale, but for a related, length-scale determining
+ variable. Presently, there are different possibilities for the
+ length-scale determining variables implemented in GOTM, such as the
+ rate of dissipation, $\epsilon$, or the product $kl$. They are
+ discussed in \sect{sec:updateLength}.
+
+ The main advantage of the two-equation models is their greater
+ generality. There are, for example, a number of fundamental flows
+ which cannot be reproduced with an algebraically prescribed
+ length-scale. Examples are the temporal decay of homogeneous
+ turbulence, the behaviour of turbulence in stratified
+ homogeneous shear flows, and the spatial decay of shear-free
+ turbulence from a planar source. A discussion of these points is
+ given in \sect{sec:generate} and \sect{sec:analyse}. Also see
+ \cite{Umlaufetal2003} and \cite{UmlaufBurchard2003}.
+\end{enumerate}
+
+In addition to the hierarchy of turbulence models in terms of their
+methods used to compute the turbulent kinetic energy and the
+length-scale, GOTM also supports an ordering scheme according to the
+extent to which transport equations for the turbulent fluxes are solved.
+\begin{enumerate}
+\item At the lowest level of this scheme, it is postulated that
+ $c_\mu=c_\mu^0$ and $c'_\mu=c'^0_\mu$ are constant. Because these
+ models implicitly assume an isotropic tensor relation between the velocity
+ gradient and the tensor of the Reynolds-stresses, they usually fail
+ in situations of strong anisotropy, most notably in stably
+ stratified, curved or shallow flows. In unstratified flows with
+ balanced aspect ratios (which seldom occur in nature), however, they
+ may compute reasonable results. Models of this type are referred to
+ as the `standard' models in the following.
+\item Some problems associated with standard versions of the models can
+ be ameliorated by making $c_\mu$ and $c'_\mu$ empirical functions of
+ one or several significant non-dimensional flow parameters. At this
+ level, the simplest approach would be to formulate empirical
+ relations suggested from observations in the field or in the
+ laboratory. An example of such a relation is the model of
+ \cite{SchumannGerz95} which has been implemented in GOTM (see
+ \sect{sec:sg}).
+\item Another, more consistent, approach results from the solution of 
+ simplified forms of the transport equations for the Reynolds-stresses
+ and the turbulent heat fluxes in addition to the transport equations
+ for $k$ and the length-scale determining variable.  Surprisingly, it
+ turns out that under some assumptions, and after tedious algebra, the
+ turbulent fluxes computed by these models can be expressed by
+ \eq{nu}. The important difference is, however, that the existence of
+ vertical eddy diffusivities is not a postulate, but a consequence
+ of the model. The stability functions $c_\mu$ and $c'_\mu$ can be
+ shown to become functions of some non-dimensional numbers like
+
+ \begin{equation} 
+   \label{alphaMN} 
+    \alpha_M = \frac{k^2}{\epsilon^2} M^2 \comma 
+    \alpha_N = \frac{k^2}{\epsilon^2} N^2 \comma
+    \alpha_b = \frac{kk_b}{\epsilon^2}    \comma
+ \end{equation}
+
+ with the shear-frequency, $M$, and the buoyancy frequency, $N$,
+ computed as described in \sect{sec:uequation} and
+ \sect{sec:stratification}, respectively. $k$ and $k_b$ are the
+ turbulent kinetic energy and the buoyancy variance, respectively and
+ $\epsilon$ denotes the rate of dissipation.
+
+ The most well-known  models of this type have been
+ implemented into GOTM. An up-to-date account of their derivation can
+ be found in \cite{Canutoetal2001a}. Their evaluation for the oceanic
+ mixed layer has been extensively discussed by
+ \cite{BurchardBolding2001}.
+\item Even more complete models include further differential equations for the
+ buoyancy variance and for some or all of the turbulent fluxes. These
+ models cannot be reduced to the form \eq{nu}. The derivation of models
+ of the type discussed in the latter two points are reviewed in 
+ \sect{sec:secondOrder}
+\end{enumerate}
+
+Evidently, this short introduction cannot serve as an
+introductory text on one-point turbulence modelling. It serves merely
+as a place to define the most important quantities and relations used
+in this manual. Readers not familiar with this subject will certainly
+feel the need for a more in-depth discussion. An excellent introduction
+to turbulence is still the book of \cite{TennekesLumley72}. A modern
+and detailed approach to one and two-equation models for unstratified
+flows is given in the book of \cite{Wilcox98}, and the effects of
+stratification are discussed e.g.\ by \cite{Rodi87} and by
+\cite{Burchard2002a}.
+
+
+
+\subsection{Second-order models\label{sec:secondOrder}}
+
+Since one-point second-order models are an essential part of GOTM,
+this section is devoted to a detailed discussion of the derivation and
+the properties of these models. Second-order models result from the
+full or approximate solution of the transport equations for the
+turbulent fluxes like $\mean{u'u'}$, $\mean{u'w'}$, $\mean{w'b'}$,
+etc. Model equations for the turbulent momentum fluxes follow directly
+from the Navier-Stokes equations. The derivation of these equations
+for stratified and rotating fluids is discussed e.g.\ in
+\cite{Sander98a}.
+
+ Considering the one-point correlations for the velocity fluctuations
+ $u'_i$, the momentum fluxes can be expressed as
+\begin{equation}
+  \label{momentumFlux}
+  \meandot{u'_i u'_j} - {\cal D}_{ij} = 
+  P_{ij} + G_{ij} + F_{ij} + \Phi_{ij} - \epsilon_{ij}
+  \comma 
+\end{equation}
+where ${\cal D}_{ij}$ is the sum of the viscous and turbulent
+transport terms and $\dot{\mean{\cdots}}$ denots the material derivative
+of the ensemble average. The shear-production, $P_{ij}$, and the
+buoyancy production, $G_{ij}$, on the right hand side are defined as
+\begin{equation}
+  \label{PijandGij}
+  P_{ij} = - \mean{u'_i u'_m} \partder{U_j}{x_m} - \mean{u'_j u'_m} \partder{U_i}{x_m} \comma
+  G_{ij} =  \delta_{i3} \mean{u'_j b'}  +  \delta_{j3} \mean{u'_i b'} \comma
+\end{equation}
+where $b'$ is the fluctuating part of the buoyancy, defined
+analogously to the mean buoyancy, $B$, in \eq{DefBuoyancy}. The tensor
+of the dissipation rate is assumed to be isotropic, leading to
+$\epsilon_{ij} = 2/3 \epsilon \delta_{ij}$. $\Phi_{ij}$ denotes the
+pressure redistribution terms discussed below. The influence of the
+Coriolis-acceleration can be summarized in the tensor $F_{ij}$ which
+is, however, neglected in the current version of GOTM.
+
+The contraction of \eq{momentumFlux} yields the equation for the
+turbulent kinetic energy, \eq{tkeA}, with production terms
+defined by 
+\begin{equation}
+  \label{PG}
+   P = \dfrac{1}{2} P_{ii} \comma G = \dfrac{1}{2} G_{ii}
+  \point
+\end{equation}
+
+Similar to \eq{momentumFlux}, the transport equation for the turbulent 
+buoyancy flux is given by
+\begin{equation}
+  \label{buoyancyFlux}
+  \meandot{u'_i b'} - {\cal D}^b_{i} =  
+  - \mean{u'_i u'_m} \partder{B}{x_m} - \mean{u'_m b'} \partder{U_i}{x_m} 
+  + F^b_i + 2 \delta_{i3} k_b + \Phi^b_i - \epsilon^b_{i} 
+  \comma
+\end{equation}
+where $ {\cal D}^b_{i}$ denotes the viscous and turbulent transport
+terms, see \cite{Sander98a}. For the dissipation, one has
+$\epsilon^b_{i}=0$, following from isotropy. The redistribution terms
+$\Phi^b_i$ are discussed below. As in \eq{momentumFlux}, the Coriolis term
+$F^b_i$ is neglected in the current version of GOTM.
+
+Note that $k_b$ is half the buoyancy variance and relates to the
+turbulent potential energy, $E_p$, according to
+\begin{equation}
+  \label{defkb}
+    k_b = \mean{b'^2}/2 = E_p N^2 
+   \comma	
+\end{equation}
+where the square of the buoyancy frequency, $N^2$, is defined in
+\eq{DefBuoyancyFrequency}. 
+
+The crucial point in \eq{momentumFlux} is the model for the
+pressure-strain correlation. The most popular models in engineering
+trace back to suggestions by \cite{Launderetal75} and
+\cite{GibsonLaunder76}. With the modifications suggested of
+\cite{Spezialeetal91}, this model can be written as
+\begin{equation}
+  \label{Phi}
+    \Phi_{ij} = 
+    - c_1 \tau^{-1}_u k \; b_{ij} 
+    + c_2 k S_{ij} + c_3 k \Sigma_{ij} + c_4 k Z_{ij} 
+    + c_5 k N_{ij} +  c_6 \Gamma_{ij}
+   \comma
+\end{equation}
+usually extended by the last term to account for the effects of
+buoyancy, see \cite{GibsonLaunder76}, \cite{GibsonLaunder78}. The
+model \eq{Phi} is expressed here in terms of the dimensionless tensor
+of the stress anisotropies,
+\begin{equation}
+  \label{bij}
+   b_{ij} = \dfrac{\mean{u'_i u'_j}}{2k} - \dfrac{1}{3} \delta_{ij}
+  \comma
+\end{equation}
+and two traceless and symmetric tensors,
+\begin{equation}
+  \label{SigmaZ}
+  \Sigma_{ij} = S_{im} b_{mj} + S_{jm} b_{mi} - \frac{2}{3} S_{mn} b_{mn} \delta_{ij} \comma
+       Z_{ij} = W_{im} b_{mj} + W_{jm} b_{mi}
+   \comma
+\end{equation}
+which depend on the symmetric and the anti-symmetric parts of the velocity gradient,
+\begin{equation}
+  \label{SandW}
+  S_{ij} = \frac{1}{2} \left( L_{ij} + L_{ji} \right) \comma
+  W_{ij} = \frac{1}{2} \left( L_{ij} - L_{ji} \right) 
+  \quad \text{with} \quad
+  L_{ij} =  \partder{U_i}{x_j}
+  \point
+\end{equation}
+Buoyancy enters via the symmetric and traceless tensor
+\begin{equation}
+  \label{Gammaij}
+  \Gamma_{ij} = - \left( G_{ij} - \frac{2}{3} G \delta_{ij} \right) 
+  \comma
+\end{equation}
+with $G_{ij}$ as defined in \eq{PijandGij}. In view of the derivation
+of Explicit Algebraic Models (EASMs), the models implemented in GOTM
+neglect the term $N_{ij}$ on the right hand side of \eq{Phi}, which is
+non-linear in $b_{ij}$, see \cite{Spezialeetal91}. $c_1$--$c_6$ are
+model constants. In geophysical applications, in contrast to
+engineering, virually all authors used $c^*_1=0$ in \eq{Phi}. In GOTM,
+the return-to-isotropy time scale $\tau_u$ is identified with the 
+dynamic dissipation time scale
+\begin{equation}
+  \label{DefTau}
+   \tau = \dfrac{k}{\epsilon}
+   \comma
+\end{equation}
+which is a reasonable model assumption in many applications
+(\cite{Canutoetal2001a}, \cite{Jinetal2003}).
+
+
+For Explicit Algebraic Heat Flux Models, a quite general model for the
+pressure buoyancy-gradient correlation appearing in \eq{buoyancyFlux}
+can be written as
+\begin{equation}
+  \label{Phib}
+  \begin{array}{rcl}
+    \Phi^b_i  &=& - c_{b 1} \tau^{-1}_b \; \mean{u'_i b'} 
+    + c_{b 2} S_{ij} \mean{u'_j b'} + c_{b 3} W_{ij} \mean{u'_j b'} \\[3mm]
+    & & + c_{b 4} \mean{u'_i u'_j} \partder{B}{x_j} - 2 c_{b 5} k_b \delta_{i3}
+  \comma
+  \end{array}
+\end{equation}
+where $\tau_b=\tau$ is adopted for the return-to-isotropy time scale.
+
+The models \eq{Phi} and \eq{Phib} correspond to some recent models
+used in theoretical and engineering studies (\cite{Soetal2003a},
+\cite{Jinetal2003}), and generalize all \emph{explicit} models so far
+adopted by the geophysical community (see \cite{Burchard2002a},
+\cite{BurchardBolding2001}). With all model assumptions inserted,
+\eq{momentumFlux} and \eq{buoyancyFlux} constitute a closed system of 9 coupled
+differential equations, provided the dissipation time scale $\tau$ and 
+the buoyancy variance $k_b$ are known. Models for the latter two quantities
+and simplifying assumptions reducing the differential equations to
+algebraic expressions are discussed in the following subsection.
+
+
+\subsection{Algebraic Models\label{sec:ASM}}
+
+
+The key assumptions in deriving algebraic models have been formulated by 
+\cite{Rodi76} and \cite{GibsonLaunder76}. These authors suggested
+to simplify the right hand sides of \eq{momentumFlux} and \eq{buoyancyFlux}
+according to
+\begin{equation}
+  \label{Rodi}
+    \meandot{u'_i u'_j}  - {\cal D}_{ij} = \dfrac{\mean{u'_i u'_j}}{k} 
+    \left( \dot{k} - {\cal D}_k \right) \comma
+    \meandot{u'_i b'} - {\cal D}^b_{i}   = \dfrac{ \mean{u'_i b'} }{2} 
+    \left( \dfrac{\dot{k} - {\cal D}_k }{k} + \dfrac{\dot{k}_b - {\cal D}_b  }{k_b}  \right) 
+   \comma
+\end{equation}
+which are reasonable approximations in many situations. Moreover, \eq{Rodi}
+can be shown to hold exactly in stably stratified, homogeneous shear flows,
+when the flow approaches the so-called weak-equilibrium limit, see
+\cite{Shihetal2000}. Using \eq{Rodi} and the pressure-strain model
+\eq{Phi}, it can be shown after some algebra that the transport equations
+ for the momentum flux \eq{momentumFlux} reduces to
+\begin{equation}
+  \label{bASM} {\cal N} b_{ij} = - a_1 \overline{S}_{ij} - a_2
+  \overline{\Sigma}_{ij} - a_3 \overline{Z}_{ij} - a_4
+  \overline{N}_{ij} - a_5 \overline{\Gamma}_{ij}
+\end{equation}
+in dimensionless form. The $a_i$ relate to the coefficients used in
+\eq{Phi} according to $a_1 = 2/3 - c_2/2$, $a_2=1 - c_3/2$, 
+$a_3=1 - c_4/2$, $a_4=c_5/2$, and $a_5=1/2 - c_6/2$.  
+The dimensionless, traceless and symmetric tensors appearing on the right hand side of
+\eq{bASM} are defined as
+\begin{equation}
+  \label{Sbar}
+  \overline{S}_{ij}      = \dfrac{k}{\epsilon}      S_{ij}      \comma
+  \overline{\Sigma}_{ij} = \dfrac{k}{\epsilon} \Sigma_{ij}      \comma
+  \overline{Z}_{ij}      = \dfrac{k}{\epsilon}      Z_{ij}      \point
+\end{equation}
+Additionally,
+\begin{equation}
+  \label{Gij}
+  \overline{\Gamma}_{ij} = \Gamma_{ij} / \epsilon = 
+  \begin{pmatrix}
+    - \frac{2}{3} \gamma_3 &           0             &      \gamma_1           \\
+            0              & - \frac{2}{3} \gamma_3  &      \gamma_2           \\
+       \gamma_1            &     \gamma_2            &  \frac{4}{3} \gamma_3  \\
+  \end{pmatrix}
+  \comma
+  \gamma_i = - \dfrac{\mean{u'_i b'}}{\epsilon}
+\end{equation}
+has been introduced in \eq{bASM} for convenience. Here, the $\gamma_i$
+correspond to the \emph{mixing efficiencies} in each coordinate
+direction, respectively.  Note, that the vertical component,
+\begin{equation}
+  \label{gamma}
+   \gamma_3 = \gamma  = - \dfrac{\mean{w'b'}}{\epsilon} 
+  = - \dfrac{G}{\epsilon} = \dfrac{R_f}{1-R_f} \comma R_f = - \dfrac{G}{P}
+  \comma
+\end{equation}
+can be identified with the classical mixing efficiency used in many
+studies of stratified fluids.
+
+
+Most authors proceed know in deriving, with the help of \eq{Rodi}, a
+dimensionless equation for the normalised turbulent buoyancy flux,
+$\zeta_i = \mean{u'_i b'} / \sqrt{(k k_b)}$, see \cite{Soetal2002a},
+\cite{Jinetal2003}. It can be shown, however, that the resulting
+algebraic equations alternatively can be expressed, without further
+assumptions, in the form of equations for the mixing efficiencies,
+\begin{equation}
+  \label{gammaASM}
+  {\cal N}_b \gamma_{i} = 
+  - a_{b 1} \overline{S}_{ij} \gamma_j 
+  - a_{b 2} \overline{W}_{ij} \gamma_j 
+  + a_{b 3} b_{ij} \overline{N}_{j}  + \dfrac{1}{3} a_{b 3} \overline{N}_{i} 
+  - a_{b 4} \overline{T} \delta_{i3}
+  \point 
+\end{equation}
+Since efficiencies $\gamma_i$ are the primary variables appearing on
+the right hand side of \eq{bASM} through the presence of the tensor
+$\overline{\Gamma}_{ij}$ defined in \eq{Gij}, and since they are
+variables with a clear physical interpretation, we prefer
+\eq{gammaASM} to a mathematicall equivalent equation for the
+normalised buoyancy flux, $\zeta_i$.
+
+The new dimensionless quantities entering the problem via \eq{gammaASM} are 
+\begin{equation}
+  \label{Nbar}
+  \overline{N}_i =  \dfrac{k^2}{\epsilon^2} \partder{B}{x_i} \comma
+  \overline{T}   =  \dfrac{k k_b}{\epsilon^2}
+  \point
+\end{equation}
+Note that the vertical component of $\overline{N}_i$ can be identified with
+the square of the buoyancy frequency, $N^2$, made dimensionless with the dynamic 
+dissipation time scale $\tau=k/\epsilon$.
+
+\eq{bASM} and \eq{gammaASM} are linear in $b_{ij}$ and $\gamma_i$, with a non-linear
+coupling introduced by the terms
+\begin{equation}
+  \label{NandNb}
+  \begin{array}{rcl}
+    {\cal N} &=&   \dfrac{P+G}{\epsilon} + \dfrac{c_1}{2} - 1                \\[5mm] 
+    {\cal N}_b &=& \dfrac{1}{2} \left( \dfrac{P+G}{\epsilon}   - 1  \right) 
+    + c_{b 1} + \dfrac{1}{2r}   \left( \dfrac{P_b}{\epsilon_b} -1   \right)
+   \point
+  \end{array}
+\end{equation}
+The production-to-dissipation ratios appearing in these expression are
+exclusively related to known quantities and thus introduce no new
+independent variables. However, the time scale ratio,
+\begin{equation}
+ \label{DefR}
+  r = \dfrac{k_b}{\epsilon_b} \dfrac{\epsilon}{k}
+\end{equation}
+needs to be described. 
+
+\eq{bASM} and \eq{gammaASM} are a system of 9 coupled algebraic 
+equations for the anisotropies $b_{ij}$ and the mixing efficiencies
+$\gamma_i$, depending solely on the non-dimensional tensors $\overline{S}_{ij}$,
+$\overline{W}_{ij}$, the vector $\overline{N}_{i}$, and the scalar 
+$\overline{T}$. This system is linear, if ${\cal N}$ and ${\cal N}_b$ are 
+treated as knowns and if the nonlinear term $N_{ij}$ in
+\eq{bASM} is neglected, $a_4=0$. No closed solution of the complete
+system in three dimensions has been reported so far in the
+literature. Nevertheless, separate solutions in three dimensions for
+\eq{bASM} and \eq{gammaASM}, respectively, have been reported (see \cite{Jinetal2003}
+and the references therein).
+
+In geophysical applications, the system \eq{bASM} and \eq{gammaASM}
+can be considerably simplified by assuming that the fluid is
+horizontally homogeneous (boundary layer approximation), and closed
+solutions can be obtained (see \cite{Chengetal2002}). The procedure to
+obtain such solutions is discussed in the following subsection.
+
+
+\subsection{Explicit models for vertical shear and stratification\label{sec:EASM}}
+
+In the following, we restrict ourselves to flows with vertical shear
+and stratification, and assume that mean quantities are horizontally
+homogeneous.  Under these conditions,
+\eq{Nbar} yiels $\overline{N}_1=\overline{N}_2=0$ and
+\begin{equation}
+  \label{NbarVertical}
+   \overline{N}_3 =  \dfrac{k^2}{\epsilon^2} \partder{B}{z}
+                  =  \dfrac{k^2}{\epsilon^2} N^2
+  \point
+\end{equation}
+The velocity gradient simplifies to
+\begin{equation}
+  \label{LijVertical}
+  L_{ij} = 
+  \begin{pmatrix}
+            0             &           0             &        S_U          \\
+            0             &           0             &        S_V          \\
+            0             &           0             &        0            \\
+  \end{pmatrix}
+  \comma
+\end{equation}
+where $S_U=\partial U / \partial z$ and $S_V=\partial V / \partial z$ 
+are the vertical shear in $U$ and $V$, respectively. 
+
+
+Under these conditions, and using the conventions
+\begin{equation}
+ \label{overlineSN}
+   \overline{S}_U   = \dfrac{k}{\epsilon} S_U \comma
+   \overline{S}_V   = \dfrac{k}{\epsilon} S_V \comma
+   \overline{N}^2   =  \overline{N_3}         \comma
+\end{equation}
+\eq{bASM} reduces to
+\begin{equation}
+ \label{bijVertical}
+ \begin{array}{rcl}
+   {\cal N} b_{11} 
+   &=&
+   - \left( \dfrac{a_2}{3} + a_3 \right) b_{13} \overline{S}_U 
+   +        \dfrac{2}{3} a_2             b_{23} \overline{S}_V 
+   +        \dfrac{2}{3} a_5             \gamma_3                          
+   \comma \\[5mm]
+   {\cal N} b_{22} 
+   &=&
+   - \left( \dfrac{a_2}{3} + a_3 \right) b_{23} \overline{S}_V 
+   +        \dfrac{2}{3} a_2             b_{13} \overline{S}_U 
+   +        \dfrac{2}{3} a_5             \gamma_3    
+   \comma \\[5mm]
+   {\cal N} b_{33} 
+   &=&
+   - \left( \dfrac{a_2}{3} - a_3 \right) b_{13} \overline{S}_U 
+   - \left( \dfrac{a_2}{3} - a_3 \right) b_{23} \overline{S}_V 
+   -        \dfrac{4}{3} a_5             \gamma_3                          
+   \comma \\[5mm]
+   {\cal N} b_{12} 
+   &=&
+   -        \dfrac{a_2 + a_3}{2}         b_{13} \overline{S}_V 
+   -        \dfrac{a_2 + a_3}{2}         b_{23} \overline{S}_U 
+   \comma \\[5mm]
+   {\cal N} b_{13} 
+   &=&
+   -       \dfrac{a_2 - a_3}{2}          b_{11} \overline{S}_U 
+   -       \dfrac{a_2 + a_3}{2}          b_{33} \overline{S}_U 
+   -       \dfrac{a_2 - a_3}{2}          b_{12} \overline{S}_V 
+   -       \dfrac{1}{2} a_1                     \overline{S}_U                                 
+   -                    a_5              \gamma_1
+   \comma \\[5mm]                             
+   {\cal N} b_{23} 
+   &=&
+   -       \dfrac{a_2 - a_3}{2}          b_{22} \overline{S}_V 
+   -       \dfrac{a_2 + a_3}{2}          b_{33} \overline{S}_V 
+   -       \dfrac{a_2 - a_3}{2}          b_{12} \overline{S}_U 
+   -       \dfrac{1}{2} a_1                     \overline{S}_V                                
+   -                    a_5              \gamma_2
+   \point
+ \end{array}
+\end{equation}
+Similarly, for the mixing efficiencies, \eq{gammaASM} yields 
+\begin{equation}
+ \label{giVertical}
+ \begin{array}{rcl}
+  {\cal N}_b \gamma_1
+  &=&
+  - \dfrac{a_{b1} + a_{b2}}{2}           \gamma_3 \overline{S}_U
+  +      a_{b3}                           b_{13}  \overline{N}^2                  
+  \comma \\[5mm] 
+  {\cal N}_b \gamma_2
+  &=&
+  - \dfrac{a_{b1} + a_{b2}}{2}           \gamma_3 \overline{S}_V
+  +      a_{b3}                           b_{23}  \overline{N}^2                  
+  \comma \\[5mm] 
+  {\cal N}_b \gamma_3
+  &=&
+  - \dfrac{a_{b1} - a_{b2}}{2}           \gamma_1 \overline{S}_U
+  - \dfrac{a_{b1} - a_{b2}}{2}           \gamma_2 \overline{S}_V
+  +         a_{b3}                         b_{33} \overline{N}^2                              
+  + \dfrac{a_{b3}}{3}                             \overline{N}^2                              
+  -         a_{b4}                                \overline{T}                          
+ \point
+ \end{array}
+\end{equation}
+
+In geophysical applications, a reasonable assumption is
+$P_b=\epsilon_b$ to elimmate the dependence of \eq{giVertical} on
+$\overline{T}$. From \eq{kbeq}, using
+\eq{gamma} and \eq{DefR}, it follows that $\overline{T}$ can be
+expressed in the form
+\begin{equation}
+ \label{Tequilibrium}
+   \overline{T} = r \gamma_3 \overline{N}^2
+ \point
+\end{equation}
+With the help of \eq{Tequilibrium}, the last of \eq{giVertical} can be
+re-written as
+\begin{equation}
+ \label{giVerticalEq}
+  {\cal N}_b \gamma_3
+  =
+  - \dfrac{a_{b1} - a_{b2}}{2}             \gamma_1 \overline{S}_U
+  - \dfrac{a_{b1} - a_{b2}}{2}             \gamma_2 \overline{S}_V
+  +        a_{b3}                            b_{33} \overline{N}^2                              
+  +     \dfrac{a_{b3}}{3}                           \overline{N}^2                              
+  -        a_{b5}                          \gamma_3 \overline{N}^2               
+ \point
+\end{equation}
+Note that the new parameter $a_{b5} = r a_{b4}$ depends on the time
+scale ratio, $r$, and is, in general, not constant. Nevertheless,
+constant $r=c_b$ is frequently assumed (see below).
+
+In the general case, \eq{bijVertical} and \eq{giVertical} can be
+inverted directly to yield a solution of the form
+\begin{equation}
+\label{b13}
+  b_{13}   = - \dfrac{1}{2} \hat{c}_\mu \overline{S}_U \comma
+  b_{23}   = - \dfrac{1}{2} \hat{c}_\mu \overline{S}_V \comma
+ \gamma_3  = \hat{c}_\mu' \overline{N}^2 - \Gamma
+ \comma
+\end{equation}
+from which, by insertion into \eq{bijVertical} and \eq{giVertical},
+all other quantities can be determined. Since ${\cal N}$ and ${\cal
+N}_b$ defined in \eq{NandNb} have been treated as known, the solution
+is not yet completely explicit. In the numerical scheme of GOTM, they
+are updated from their values at past time steps. By identifying 
+\begin{equation}
+  \label{nuke}
+  \nu_t           = \hat{c}_\mu   \dfrac{k^2}{\epsilon} \comma
+  \nu'_t          = \hat{c}_\mu'  \dfrac{k^2}{\epsilon} \comma
+  \tilde{\Gamma}  = \epsilon \Gamma
+  \comma
+\end{equation}
+\eq{b13} corresponds in form exactly to \eq{fluxes}. Note that, adopting the 
+equilibrium assumption \eq{Tequilibrium}, the dependence on $\Gamma$
+drops in \eq{b13}. From \eq{nu} and \eq{nuke}, and using the definition
+of the dissipation rate \eq{epsilon}, it is clear that 
+\begin{equation}
+  \label{cmuConversion}
+  \hat{c}_\mu = (c^0_\mu)^3  c_\mu \comma
+  \hat{c}_\mu' = (c^0_\mu)^3 c'_\mu \comma
+  \point
+\end{equation}
+
+
+The structure of the dimensionless parameter functions apearing in
+\eq{b13} is given by
+\begin{equation}
+\label{cm}
+  \hat{c}_\mu  = \dfrac{N_n}{D} \comma
+  \hat{c}_\mu' = \dfrac{N_b}{D} \comma  
+  \Gamma = \dfrac{N_\Gamma}{D}
+  \comma
+\end{equation}
+where the numerators and the denominator are polynomials of the square
+of the shear number, $\alpha_M = \overline{S}^2 = \overline{S}^2_U
++\overline{S}^2_V$, the square of the buoyancy number, $\alpha_N =
+\overline{N}^2 $, the mixed scalar, $\alpha_B = \overline{T}$, and the
+functions ${\cal N}$ and ${\cal N}_b$. The latter two functions depend
+on the production-to-dissipation ratios for $k$ and $k_b$, which for
+vertical shear and stratification can be written as
+\begin{equation}
+  \label{PeVertical}
+ \begin{array}{rcl}
+  \dfrac{P}{\epsilon}     &=& - 2 b_{13} \overline{S}_U - 2 b_{23} \overline{S}_V
+                          = \hat{c}_\mu \overline{S}^2 
+   \comma \\[5mm]
+  \dfrac{G}{\epsilon}     &=&  - \gamma_3  = - \hat{c}_\mu' \overline{N}^2 + \Gamma 
+   \comma \\[5mm]
+  \dfrac{P_b}{\epsilon_b} &=&  -\dfrac{G}{\epsilon} \dfrac{\epsilon}{\epsilon_b} N^2 
+                           =   - r \dfrac{G}{\epsilon} \dfrac{\overline{N}^2}{\overline{T}}
+  \end{array}
+  \point
+\end{equation}
+Once $k$ and $k_b$ (and their dissipation ratios, $\epsilon$ and $\epsilon_b$)
+are known, also the time scale ratio $r$ defined in \eq{DefR} can be computed, 
+and the problem can be solved. Different possibilities to derive
+these quantities are discussed in the following.
+
+
+\subsubsection{Equilibrium states}
+
+Some authors use simplifying assumptions to derive more compact forms
+of the expressions for the solution in \eq{b13}. In the following, a
+few examples, which are special cases of the general solution
+discussed here, are reviewed.
+
+In deriving their version of the general solution \eq{b13},
+\cite{Canutoetal2001a} e.g.\ assumed $P_b=\epsilon_b$ and constant
+$r$. Under these conditions, because of \eq{Tequilibrium}, the
+dependence on $\overline{T}$ dissapears, and the counter-gradient term
+$\Gamma_B$ in \eq{b13} drops. It was further assumed that
+$P+G=\epsilon$ in \eq{NandNb} only, leading to ${\cal N} = (c_1 + c_1^*)/2$
+and ${\cal N}_b=c_{b1}$. These particularly simple expressions
+linearize the system, and a fully explicit solution can be obtained, provided
+$k$ and $\epsilon$ are known. \cite{BurchardBolding2001}
+adopted the solution of \cite{Canutoetal2001a} and complemented it by
+$k$ and $\epsilon$ computed from dynamical equations (`$k$-$\epsilon$
+model'). 
+
+In contrast, \cite{Canutoetal2001a} and \cite{Chengetal2002} decided
+for a further simplification.  They solved \eq{b13} with $k$ and
+$\epsilon$ from algebraic expressions. In their case, $k$ followed from the
+approximation $P+G=\epsilon$ of \eq{tkeA} (see
+\sect{sec:tkealgebraic}), and $\epsilon$ from a prescribed length-scale.
+
+Using \eq{b13}, \eq{cm}, and \eq{PeVertical}, it is easy to show that
+the assumption $(P+G)/\epsilon$ leads to
+\begin{equation}
+  \label{FE}
+     N_n \overline{S}^2 - N_b \overline{N}^2 - D = 0   
+   \comma
+\end{equation}
+which is polynomial equation in $\overline{S}$ and
+$\overline{N}$. This expression can be used to replace one of the
+latter two variables by the other. An interesting consequence is the
+fact that all non-dimensional turbulent quantities can be expressed in
+terms of the Richardson number $Ri = \overline{N}^2 / \overline{S}^2$
+only. Replacing $\overline{N}^2$ by $\overline{S}^2 Ri$ in
+\eq{FE}, a quadratic equation for $\alpha_M = \overline{S}^2$ in terms for $Ri$
+can be established (see e.g. \cite{Chengetal2002}. Using the
+definitions given in \sect{sec:cmueC}, this equation can be written as
+\begin{equation}
+ \label{SSEqRi}
+    \alpha_M^2 \left( -d_5 + n_2 - \left( d_3 - n_1 + n_{b2}\right) Ri 
+                                     - \left( d_4 + n_{b1}      \right) Ri^2  
+                   \right)
+  + \alpha_M   \left( -d_2 + n_0 - \left( d_1 + n_{b0}      \right) Ri
+                   \right)
+  - d_0 = 0	
+  \point
+\end{equation}
+The solution for $\alpha_M$ can, via \eq{FE}, be used to expressed also
+$\overline{N}^2$ in terms of $Ri$. This implies that also the stability functions
+and hence the complete solution of the problem only depends on $Ri$. 
+
+Investigating the solution of the quadratic equation \eq{SSEqRi}, it
+can be seen that $\alpha_M$ becomes infinite if the factor in front of
+$\alpha_M^2$ vanishes. This is the case for a certain value of the
+Richardson number, $Ri=Ri_c$, following from 
+\begin{equation}
+ \label{Ric}
+    -d_5 + n_2 - \left( d_3 - n_1 + n_{b2}\right) Ri_c 
+               - \left( d_4 + n_{b1}      \right) Ri_c^2  = 0
+  \point
+\end{equation}
+Solutions of this equation for some popular models are given in
+\tab{tab:Ric}. For $Ri=Ri_c$, equilibrium models predict complete extinction of
+turbulence. For non-equilibrium models solving dynamical equations
+like \eq{tkeA}, however, $Ri_c$ has no direct signifcance, because
+turbulence may be sustainned by turbulent transport and/or the rate
+term.
+\begin{table}[!h]
+ \begin{center}
+  \begin{tabular}{ccccc}                                                   
+    GL78    &  KC94   &  CHCD01A  & CHCD01B  &  CCH02   \\ \hline
+    $0.47$  &  $0.24$ &  $0.85$   & $1.02$   &  $0.96$      
+   \end{tabular}
+  \end{center}
+ \caption{\label{tab:Ric}Critical Richardson number for some models}
+\end{table}
+
+\subsubsection{Stability of explicit models}
+A physically reasonable condition for an explicit second order model
+expressed the fact that increasing (non-dimensional) shear
+$\overline{S}$ should lead to increasing vertical shear-anisotropies
+of turbulence, $b_{13}$ and $b_{23}$. It has been shown by
+\cite{BurchardDeleersnijder2001} that a violation of this condition
+may lead to numerical instabilities of the models.
+
+Mathematically, the shear-condition is expressed by
+\begin{equation}
+  \label{shearCondition}
+  \partder{(b_{13}^2 + b_{23}^2)^\frac{1}{2}}{\overline{S}} 
+   = \dfrac{1}{2} \partder{\tilde{c}_\mu \overline{S}}{\overline{S}}\ge 0
+  \comma
+\end{equation}
+where \eq{b13} has been used. Using the equilibrium form of the stability
+function described in \sect{sec:cmueC}, this condition leads to a
+cubic equation in $\alpha_M=\overline{S}^2$. A simpler condition can
+be obtained, when this equation is solved after terms multiplied by
+$d_5$ and $n_2$, which usually are very small, are neglected.
+
+The resulting approximate condition is
+\begin{equation}
+   \label{simpleShearCondition}
+   \alpha_M \le \dfrac{d_0 n_0 + (d_0 n_1 + d_1 n_0) \alpha_N 
+                          + (d_1 n_1 + d_4 n_0           ) \alpha_N^2
+                          +  d_4 n_1                       \alpha_N^3}{
+                             d_2 n_0 
+                          + (d_2 n_1 + d_3 n_0           ) \alpha_N
+                          +  d_3 n_1                       \alpha_N^2}
+  \point
+\end{equation}
+\cite{BurchardDeleersnijder2001} showed that using \eq{simpleShearCondition}
+the most well-known models yield numerically stable results. However,
+for some models like those of \cite{MellorYamada82} and
+\cite{KanthaClayson94}, the limiter \eq{simpleShearCondition} is
+almost always `active',  and hence replaces the actual turbulence model in a
+questionable way.
+
+
+\subsection{Parameter conversion for other models\label{sec:parameterConversion}}
+Virtually all pressure-redistribution models used in engineering and
+geophysical applications can be considered as special cases of \eq{Phi}
+and \eq{Phib}. However, most authors adopted a different notation and 
+different parameter values. In this section, paramater conversions for the 
+most well-known models are discussed. 
+\subsubsection{The model of \cite{GibsonLaunder78}}
+The pressure-strain model of this important class of engineering models 
+has been originally suggested by \cite{Launderetal75}. It can be written
+as
+\begin{equation}
+  \label{PhiGL78}
+    \Phi_{ij} = - 2 \tilde{c}_1 \epsilon b_{ij} 
+    - \tilde{c}_2 k S_{ij} 
+    - \tilde{c}_3 \left( P_{ij} - \dfrac{2}{3} P \delta_{ij} \right)
+    - \tilde{c}_4 \left( D_{ij} - \dfrac{2}{3} P \delta_{ij} \right)
+    + \tilde{c}_6 \Gamma_{ij}
+   \comma
+\end{equation}
+where that last term has been added by \cite{GibsonLaunder78} to 
+account for the effects of gravity in stratified fluids. This term is
+identical to the last term in \eq{Phi}.
+The new production-of-anisotropy tensor $D_{ij}$ is defined as
+\begin{equation}
+  \label{Dij}
+  D_{ij} = - \mean{u'_i u'_m} \partder{U_m}{x_j} - \mean{u'_j u'_m} \partder{U_m}{x_i}
+  \point
+\end{equation}
+Using the tensor relations
+\begin{equation}
+  \label{PijTensor}
+  \begin{array}{rcl}
+   P_{ij} = - 2 k \Sigma_{ij} - 2 k Z_{ij} + \dfrac{2}{3} P \delta_{ij} 
+            - \dfrac{4}{3} k S_{ij} \comma   \\[4mm]
+   D_{ij} = - 2 k \Sigma_{ij} + 2 k Z_{ij} + \dfrac{2}{3} P \delta_{ij} 
+            - \dfrac{4}{3} k S_{ij} \comma  
+  \end{array}
+\end{equation}
+\eq{PhiGL78} can be re-written in the form
+\begin{equation}
+  \label{PhiGL78new}
+    \Phi_{ij} = - 2 \tilde{c}_1 \epsilon b_{ij} 
+    + \left( \dfrac{4}{3} ( \tilde{c}_3  + \tilde{c}_4 ) - \tilde{c}_2 \right)   k S_{ij} 
+    + 2 \left( \tilde{c}_3  + \tilde{c}_4 \right)   k \Sigma_{ij} 
+    + 2 \left( \tilde{c}_3  - \tilde{c}_4 \right)   k Z_{ij} 
+    + \tilde{c}_6 \Gamma_{ij}
+   \point
+\end{equation}
+Comparting with \eq{Phi}, the following relations can be estabilished: $c_1 = 2 \tilde{c}_1$, 
+$c_2 = 4/3 ( \tilde{c}_3 + \tilde{c}_4 )- \tilde{c}_2$, 
+$c_3 = 2 ( \tilde{c}_3 + \tilde{c}_4 )$, $c_3 = 2 ( \tilde{c}_3 - \tilde{c}_4 )$, 
+$c_5 = 0$, and $c_6 = \tilde{c}_6$.
+
+\cite{GibsonLaunder78} use a slightly different notation for the pressure-scambling 
+model \eq{Phib}. Their model is somewhat simplified form of the model of 
+\cite{Jinetal2003}, which can be written as
+\begin{equation}
+  \label{PhibGL78}
+  \begin{array}{rcl}
+    \Phi^b_i  &=& - \tilde{c}_{b 1} \dfrac{\epsilon}{k} \; \mean{u'_i b'} 
+    + \tilde{c}_{b 2} L_{ij}  \mean{u'_j b'} + \tilde{c}_{b 3} L_{ji} \mean{u'_j b'} \\[3mm]
+    & & + \tilde{c}_{b 4} \mean{u'_i u'_j} \partder{B}{x_j} 
+    - 2 \tilde{c}_{b 5} k_b \delta_{i3}
+  \point
+  \end{array}
+\end{equation}
+Using the decomposition of the velocity gradient in its symmetric and anti-
+symmetric part, \eq{SandW}, the following parameter relation are evident:
+$c_{b1} = \tilde{c}_{b1}$, $c_{b2} = \tilde{c}_{b2} + \tilde{c}_{b3}$,
+$c_{b3} = \tilde{c}_{b2} - \tilde{c}_{b3}$, $c_{b4} = \tilde{c}_{b4}$, 
+$c_{b5} = \tilde{c}_{b5}$. 
+
+
+Parameter values for this model are compiled in \tab{tab:CHCD}. `GLNEW' denotes 
+the revised parameter set for the pressure-strain model given in \cite{Wilcox98} and 
+for the pressure-buoyancy gradient model in \cite{Zhaoetal2001}.
+\begin{table}
+ \begin{tabular}{c|ccccccccccc}                                                   
+        & $\tilde{c}_1$      & $\tilde{c}_2$      &  $\tilde{c}_3$      &  $\tilde{c}_4$  & $\tilde{c}_6$  &   
+          $ \tilde{c}_{b1}$  & $ \tilde{c}_{b2}$  &  $ \tilde{c}_{b3}$  &
+          $ \tilde{c}_{b4}$  & $ \tilde{c}_{b5}$  &  $r$                                               \\ \hline  
+GL78    & $1.8$              & $0$                &  $0.6$              &  $0$            &  $0.5$         & 
+          $3$                & $0.33$             &  $0$                &  
+          $0$                & $0.33$             &  $0.8$                                              \\ 
+GLNEW   & $1.8$              & $0$                &  $0.78$             &  $0.2545$       &  $0.3$         & 
+          $3.28$             & $0.4$              &  $0$                &  
+          $0$                & $0.4$              &  $0.8$                                              \\ 
+ \end{tabular}
+ \caption{\label{tab:LRR}Some parameter sets for the model of \cite{GibsonLaunder78}}
+\end{table}
+
+
+
+
+\subsubsection{The model of \cite{Canutoetal2001a}}
+\cite{Canutoetal2001a} and \cite{Chengetal2002} use a model 
+that is virtually identical to the traditional model of
+\cite{Launderetal75} and \cite{GibsonLaunder78}. The values 
+of their model parameters and their notation, however, are somewhat
+different.
+
+Looking for conversion relations, it should be noted that the
+anisotropy tensor $b^\text{CCHD}_{ij}$ used by \cite{Canutoetal2001a}
+is twice the tensor defined in \eq{bij}, $b^\text{CCHD}_{ij} = 2 k
+b_{ij}$. Also the dissipative time scale $\tau^\text{CCHD}$ of
+\cite{Canutoetal2001a} is twice the time scal defined in \eq{DefTau},
+$\tau^\text{CCHD} = 2 \tau$. If one further notes that the turbulent
+heat flux $h_i=\mean{u'_i \theta'}$ is related to the buoyancy flux
+according to $\mean{u'_i b'} = \alpha g h_i$, relations between the
+model parameters can be found.
+
+With these relations, equation (10a) of \cite{Canutoetal2001a} can be 
+re-written as
+\begin{equation}
+  \label{bASMCHCD2001} 
+    b_{ij} = - \lambda_1  \overline{S}_{ij} 
+            - 2 \lambda_2 \overline{\Sigma}_{ij} 
+            - 2 \lambda_3 \overline{Z}_{ij}
+            -   \lambda_4 \overline{\Gamma}_{ij}
+   \point
+\end{equation}
+The return-to-isotropy part of the pressure-strain model
+of \cite{Canutoetal2001a} reads
+\begin{equation}
+  \label{PhiCHCD2001}
+   \Phi_{ij} = - \dfrac{2}{\lambda} \epsilon b_{ij}
+   \comma
+\end{equation}
+from which, by comparing with \eq{Phi}, it follows that $c_1 =
+2/\lambda$ and $c^*_1 = 0$, and hence from \eq{NandNb} ${\cal N} =
+1/\lambda$. Thus, adopting the relations $a_1 = \lambda_1/\lambda$,
+$a_2 = 2 \lambda_2/\lambda$, $a_3 = 2 \lambda_3/\lambda$, $a_4 = 0$,
+and $a_5 = \lambda_4/\lambda$, \eq{bASMCHCD2001} corresponds exactly
+to \eq{bASM},
+
+Similarly, equation (10a) of \cite{Chengetal2002} can be re-expressed 
+in the form
+\begin{equation}
+  \label{gammaASMCHCD2001}
+  \dfrac{\lambda_5}{2}\gamma_{i} = 
+  - \lambda_6  \overline{S}_{ij} \gamma_j 
+  - \lambda_7  \overline{W}_{ij} \gamma_j 
+  +     2        b_{ij} \overline{N}_{j}  
+  + \dfrac{2}{3} \overline{N}_{i} 
+  - \lambda_0  \overline{T} \delta_{i3}
+  \point 
+\end{equation}
+The somewhat simpler model of \cite{Canutoetal2001a} adopts the
+equilibrium assumption
+\eq{Tequilibrium}, and replaces the last term in \eq{gammaASMCHCD2001} by
+$-\lambda_0 r \gamma_3 \overline{N}^2 \delta_{i3}$ and, assuming
+constant $r$, identifies $\lambda_0 r = \lambda_8$. The time scale
+ratio $r$ is computed in equation (20a) of \cite{Canutoetal2001a}.
+
+The return-to-isotropy part of this model (see equation (6c) of
+\cite{Chengetal2002}) reads
+\begin{equation}
+  \label{PhibCHCD2001}
+   \Phi^b_i = - \dfrac{\lambda_5}{2} \dfrac{\epsilon}{k} \mean{u'_i b'}
+   \comma
+\end{equation}
+from which follows, by comparison with \eq{Phib} and \eq{NandNb}, that 
+${\cal N}_b = c_{b1} = \lambda_5/2$. Comparing \eq{gammaASMCHCD2001} with
+\eq{gammaASM} one finds, by inspection, the relations $a_{b1} = \lambda_6$, 
+$a_{b2} = \lambda_7$, $a_{b3} = 2$, $a_{b4} = 2 \lambda_0$, 
+and $a_{b5} = 2 \lambda_8$. Some parameter sets for this model are compiled in \tab{tab:CHCD}.
+\begin{table}[!h]
+ \begin{tabular}{c|cccccccccc}                                                   
+        & $\lambda$    & $\lambda_0$  &  $\lambda_1$  &  $\lambda_2$  & $\lambda_3$  &   
+          $\lambda_4$  & $\lambda_5$  &  $\lambda_6$  &  $\lambda_7$  & $\lambda_8$     \\ \hline  
+CHCD01A & $0.4$        & $2/3$        &  $0.107$      &  $0.0032$     &  $0.0864$    & 
+          $0.12$       & $11.9$       &  $0.4$        &  $0$          & $0.48$          \\ 
+CHCD01B & $0.4$        & $2/3$        &  $0.127$      &  $0.00336$    & $0.0906$     & 
+          $0.101$      & $11.2$       &  $0.4$        &  $0$          & $0.318$         \\ 
+CCH02   & $0.4$        & $2/3$        &  $0.107$      &  $0.0032$     & $0.0864$     & 
+          $0.1$        & $11.04$      &  $0.786$      &  $0.643$      & $0.547$         \\ 
+ \end{tabular}
+ \caption{\label{tab:CHCD}Some parameter sets for the model of \cite{Canutoetal2001a}}
+\end{table}
+
+
+
+
+
+\subsubsection{The model of \cite{MellorYamada82}}
+The pressure-strain model of \cite{MellorYamada82} is expressed in
+terms of $q^2=2k$ and the dissipation length scale $l=q^3/(B_1
+\epsilon)$, where $B_1$ is a model constant.  The time scale ratio 
+in this model is set to $r=c_b=B_1/B_2$. Using these expression,
+their model can be re-written as
+\begin{equation}
+  \label{PhiMY82}
+   \Phi_{ij} = - \dfrac{B_1}{3 A_1} \epsilon b_{ij} + 4 C_1 k S_{ij}
+   \comma
+\end{equation}
+which, by comparison with \eq{Phi}, yields $c_1 = B_1 / (3 A_1)$ and
+$c_2 = 4 C_1$. All other parameters are zero.
+
+Similarly, the pressure-scrambling model of \cite{MellorYamada82} (using 
+the extensions suggested by \cite{KanthaClayson94} and \cite{Kantha2003}) 
+reads
+\begin{equation}
+  \label{PhibMY82}
+   \Phi^b_i = - \dfrac{B_1}{6 A_2} \dfrac{\epsilon}{k} \mean{u'_i b'} 
+    + C_2 ( S_{ij} + W_{ij} )  \mean{u'_j b'} - 2 C_3 k_b \delta_{i3}
+    \comma
+\end{equation}
+which can be compared to \eq{Phib} to obtain $c_{b1} = B_1 / (6 A_2)$ and
+$c_{b2} = C_2$, $c_{b3} = C_2$, $c_{b5} = C_3$. 
+All other parameters are zero.
+
+Several parameter sets suggested for this model are compiled in \tab{tab:MY}
+\begin{table}[!h]
+ \begin{tabular}{c|ccccccc}                                                   
+      &  $A_1$   &  $A_2$  &  $B_1$  & $B_2$   &   $C_1$  &  $C_2$  &  $C_3$  \\ \hline  
+MY82  & $0.92$   & $0.74$  & $16.55$ & $10.1$  &  $0.08$  & $0$     & $0$     \\ 
+KC94  & $0.92$   & $0.74$  & $16.55$ & $10.1$  &  $0.08$  & $0.7$   & $0.2$   \\ 
+K03   & $0.58$   & $0.62$  & $16.55$ & $11.6$  &  $0.038$ & $0.7$   & $0.2$     
+ \end{tabular}
+ \caption{\label{tab:MY}Some parameter sets for the model of \cite{MellorYamada82}}
+\end{table}
+
+
+\subsection{Numerics}
+
+The numerical approximation of the turbulence equations is in principle
+carried out as explained in section \ref{SectionNumericsMean}. 
+One basic difference is however due to the fact that turbulent
+quantities are generally non-negative such that
+it is necessary that the discretised forms of the physical
+equations retain the principle of non-negativity. 
+A typical model problem would be the following:
+
+\begin{equation}
+ \label{eq:burchard11}
+ \partder{X}{t} =P-QX, \quad P,Q > 0
+\end{equation}
+with $X$ denoting any non-negative quantity, $P$ a non-negative
+source term, $QX$ a non-negative linear sink term, and $t$ denoting
+time. $P$ and $Q$ may depend on $X$ and $t$. It can easily be shown
+that with \eq{eq:burchard11}, $X$ remains non-negative for any
+non-negative initial value $X_0$ and limited $Q$.  For the $q^2
+l$-equation and the $\epsilon$-equation (described in
+\sect{sec:lengthscaleeq} and \sect{sec:dissipationeq}), 
+$Q$ would be proportional to $q/l$ and $\epsilon
+/k¨$, repsectively.
+
+A straight-forward, explicit discretisation in time of \eq{eq:burchard11}
+can be written as
+\begin{equation}
+  \label{eq:burchard12}
+  \frac{X^{n+1}-X^n}{\Delta t}=P^n-Q^nX^n
+\end{equation}
+with the superscripts denoting the old ($n$) and the new ($n+1$) time
+level and $\Delta t$ denoting the time step.  In this case, the
+numerical solution on the new time level would be
+\begin{equation}
+  \label{eq:burchard13}
+  X^{n+1}_i= X^n_i(1-\Delta tQ^n_i)+\Delta t P_i^n
+  \comma
+\end{equation}
+which is negative for negative right hand side of \eq{eq:burchard12},
+provided that
+\begin{equation}
+  \label{eq:burchard14}
+  \Delta t > \frac{X^n}{X^nQ^n-P^n}
+  \point
+\end{equation}
+
+Since it is computationally unreasonable to restrict the time step in
+such a way that \eq{eq:burchard14} is avoided, a numerical procedure
+first published by \cite{Patankar80} is generally applied
+\begin{equation}
+  \label{eq:burchard15}
+  \frac{X^{n+1}-X^n}{\Delta t}=P^n-Q^nX^{n+1}
+  \comma
+\end{equation}
+which yields an always non-negative solution for $X^{n+1}$,
+\begin{equation}
+  \label{eq:burchard16}
+   X^{n+1}= \frac{X^n+\Delta t P^n}{1+\Delta t Q^n}
+   \point
+\end{equation}
+Thus, the so-called quasi-implicit formulation
+\eq{eq:burchard15} by \cite{Patankar80}
+is a sufficient condition for positivity applied in almost all
+numerical turbulence models.
+
+ 

@@ -1,0 +1,153 @@
+%
+%$Id: a4.tex,v 1.5 2007-03-15 07:47:15 kbk Exp $
+%
+
+\documentclass[a4paper,twoside,11pt]{article}
+
+% AMS math and symbols
+\usepackage{amsmath,amsfonts,amssymb,amsbsy,latexsym}
+
+% natural science bibliography
+\usepackage[round]{natbib}
+
+% definitions used in the GOTM-manual
+\input definitions.tex
+
+% graphics
+\usepackage{graphics}
+
+% to make pdf files look OK
+\usepackage{ae}
+
+% set page margins for print
+\setlength{\evensidemargin}{-0.4mm}
+\setlength{\oddsidemargin}{4.6mm}
+\setlength{\textwidth}{155mm}
+
+\pagestyle{myheadings}
+
+\renewcommand{\baselinestretch}{1.0}
+\begin{document}
+
+
+
+% the titlepage
+\begin{titlepage}
+
+
+{\sf \bf \LARGE
+ \begin{center}
+   Lars Umlauf $\bs \cdot$ Hans Burchard $\bs \cdot$ Karsten Bolding
+ \end{center}
+}
+
+\vspace{14mm}
+
+{\sf \bf \Huge
+ \begin{center}
+   GOTM
+ \end{center}
+}
+
+\vspace{6mm}
+
+{\sf \bf \LARGE
+ \begin{center}
+   Sourcecode \\
+      and \\
+Test Case Documentation
+ \end{center}
+}
+
+
+\vspace{5mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Version 4.0
+ \end{center}
+}
+
+\vspace{8mm}
+
+\begin{figure}[!h]
+  \begin{center}
+  \scalebox{0.6}{\includegraphics{figures/mixerA.eps}}
+  \end{center}
+\end{figure}
+
+\vspace{7mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Flow ---  Mixing --- Ecosystem dynamics
+\end{center}
+}
+
+
+\end{titlepage}
+
+% table of contents
+\cleardoublepage
+\tableofcontents
+
+% include the section files
+% the introduction. All files
+% ending with 'Intro.tex' are hand-made,
+% all others come from 'ProTeX'
+
+\cleardoublepage
+
+\include{introduction}
+
+\cleardoublepage
+\include{mainIntro}
+\include{gotm}
+
+\cleardoublepage
+\include{meanflowIntro}
+\include{meanflow}
+
+\cleardoublepage
+\include{turbulenceIntro}
+\include{turbulence}
+
+\cleardoublepage
+\include{airseaIntro}
+\include{airsea}
+
+\cleardoublepage
+\include{observationsIntro}
+\include{observations}
+
+\cleardoublepage
+\include{outputIntro}
+\include{output}
+
+\cleardoublepage
+\include{utilIntro}
+\include{util}
+
+\cleardoublepage
+\include{bioIntro}
+\include{bio}
+
+\cleardoublepage
+\include{extraIntro}
+\include{seagrass}
+\include{sediment}
+
+\cleardoublepage
+\include{guiIntro}
+
+\cleardoublepage
+\include{cases}
+
+% Bibliography with BibTeX:
+\cleardoublepage
+\bibliographystyle{agu}
+\addcontentsline{toc}{section}{Bibliography}
+\bibliography{gotm}
+
+
+\end{document}

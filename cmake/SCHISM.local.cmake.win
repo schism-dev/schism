@@ -1,0 +1,70 @@
+
+
+######################### SELFE COMPONENTS
+#
+#           You can only build one executable at a time. Choose your modules by setting these modules ON
+#
+#   Modules
+set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+set( USE_SED ON   CACHE BOOLEAN "Use sediment module")
+set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
+
+#   Algorithm choices
+set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
+
+
+##########################  LOCATIONS #########################################################
+#
+# LOCATIONS: Set locations for NetCDF (possibly HDF5 if NetCDF links to it), ParMetis, PETSc
+#            You don't need to set these if they are in your environment
+#
+#            Only the library home location is needed and the /lib or /bin part will be inferred.
+#            Generally traditional structure is assumed, but the Parmetis and GOTM libraries
+#            that are included have a slightly different structure
+#
+#            You only need PETSc for WWM
+#            You only need GOTM if you intend to use it with USE_GOTM
+#            GOTM and ParMetis local copies will be found automatically, but also can overridden
+#            You have to build them
+#
+
+
+set(PARMETIS_DIR D:/devtools/parmetis-4.0.3/parmetis-4.0.3 CACHE PATH "Path to ParMetis")
+set(PARMETIS_INCLUDE_DIRS D:/devtools/parmetis-4.0.3/parmetis-4.0.3/include CACHE PATH "Path to ParMetis including file")
+set(PARMETIS_LIBRARY D:/devtools/parmetis-4.0.3/parmetis-4.0.3/lib/parmetis.lib CACHE PATH "Path to ParMetis lib file")
+set(METIS_LIBRARY D:/devtools/parmetis-4.0.3/parmetis-4.0.3/libmetis/Release/metis.lib CACHE PATH "Path to ParMetis lib file")
+set(MPI_Fortran_LIBRARIES "C:/Program Files/Microsoft HPC Pack 2008 R2/Lib/amd64/msmpifec.lib" CACHE STRING "fortran mpi lib")
+set(NetCDF_C_LIBRARY D:/devtools/netCDF432/lib/netcdf.lib CACHE PATH "Path of NetCDF C libs")
+set(NetCDF_INCLUDE_DIR D:/devtools/netCDF432/include CACHE PATH "Path of NetCDF include files")
+set(NetCDF_Fortran_LIBRARY D:/devtools/netCDF432/lib/fortran/ncfortran.lib CACHE PATH "NetCDF fortran lib")
+set(NetCDF_NEEDS_HDF5 ON CACHE BOOLEAN "hdf5 is needed")
+set(HDF5_C_INCLUDE_DIR D:/devtools/netCDF432/deps/x64/include CACHE PATH "HDF5 include folder")
+set(HDF5_INCLUDE_DIRS D:/devtools/netCDF432/deps/x64/include CACHE PATH "HDF5 include folder")
+set(HDF5_hdf5_LIBRARY D:/devtools/netCDF432/deps/x64/lib/hdf5.lib CACHE PATH "HDF5 lib")
+set(HDF5_hdf5_hl_LIBRARY D:/devtools/netCDF432/deps/x64/lib/hdf5_hl.lib CACHE PATH "HDF5 high level lib")
+set(WIN_FORTRAN_OPTIONS "-assume:byterecl /names:lowercase" CACHE STRING "fortran compiler options in win")
+set(WIN_LINKER_OPTIONS "/machine:x64 /STACK:18000000" CACHE STRING "win linker options")
+
+
+
+######################## COMPILE AND BUILD OPTIONS ##############################################
+#
+# BUILD OPTS: Use this to set compiler flags any way you want.For models of how to set flags, 
+#             see SELFECompile.cmake, which are the project defaults.
+#
+#             If you are setting up a new platform/compiler combo rather than customizing, 
+#             you might consider adding to SELFECompile.cmake with the correct "IF" so 
+#             others can profit from your work.
+#             
+#             If what you are doing is debugging, consider using -DBUILD_TYPE=Debug and using the default
+#             debug flags. Note that there is yet another build type for release plus symbols.
+#
+#             So far I have removed -Bstatic because it is causes problems and cmake seems to do enough
+#             magically.
+#
+#################################################################################################
+
+#set(INCLUDE_TIMING CACHE BOOLEAN OFF)
+#set(USE_OPEN64     CACHE BOOLEAN OFF)
+#set(MPI_VERSION    CACHE STRING  "2")
+

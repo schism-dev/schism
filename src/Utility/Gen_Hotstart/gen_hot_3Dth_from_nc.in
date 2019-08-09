@@ -1,0 +1,7 @@
+1 !1: include vel and elev. in hotstart.in (and *[23D].th will start from non-0 values); 0: only T,S
+20 33 !T,S values for estuary points defined in estuary.gr3
+20 33 !T,S values for pts outside bg grid in nc
+86400. !time step in .nc [sec]
+2 1 2 !# of open bnds that need *3D.th; list of IDs
+64 !# of days needed
+1 ! # of HYCOM stacks

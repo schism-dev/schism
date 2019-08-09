@@ -1,0 +1,4 @@
+2 !is_xy
+20000 34000 !nbin,mne_bin
+10 !ar_bgmax
+2.07 !h_off

@@ -1,0 +1,40 @@
+
+The grid2lanxml.pl script converts a .gr3 file to LandXML format, which is readable by 
+ArcGIS/Catalog, using the 3D analyst tool:
+
+ArcToolbox->3D Analyst Tools->Conversion->From Files->LandXML to TIN
+(last step may take a while, but you can launch multiple jobs concurrently)
+
+The grid is imported as a constrained Delauney triangulation. This conversion does not have projection info, 
+that will have to be done with ArcCatalog for the generated TIN (via Property). 
+ The resulting TIN can then be added into ArcMap as a layer.
+
+Obviously the depth values of the grid can be any quantity of interest.
+
+Here is a python script that can be modified to batch convert TINs in LandXML to ArcGIS TINs - works from the ArcMap Python window:
+
+# Batch convert TINs
+import arcpy
+from arcpy import env
+arcpy.CheckOutExtension("3D")
+
+# location of xml files
+inputdir = "inputdir"
+env.workspace = inputdir
+# location of output TINs
+outputdir = "outputdir"
+
+#Loop around all .xml
+year = 2001
+#for var in ["elev", "avgvel", "avgsalt", "avgtmp", "avgcombinedVT", "avgcombinedSVT", "drydays"]:
+for var in ["gridA_1", L1_gridA_1  M1_gridA_1.xml  S1_gridA_1.xml  XL1_gridA_1.xml
+gridA_2.xml  L1_gridA_2.xml  M1_gridA_2.xml  S1_gridA_2.xml  XL1_gridA_2.xml
+gridB_1.xml  L1_gridB_1.xml  M1_gridB_1.xml  S1_gridB_1.xml  XL1_gridB_1.xml
+gridB_2.xml  L1_gridB_2.xml  M1_gridB_2.xml  S1_gridB_2.xml  XL1_gridB_2.xml
+gridC_1.xml  L1_gridC_1.xml  M1_gridC_1.xml  S1_gridC_1.xml  XL1_gridC_1.xml
+gridC_2.xml  L1_gridC_2.xml  M1_gridC_2.xml  S1_gridC_2.xml  XL1_gridC_2.xml]
+        try:
+            d = arcpy.LandXMLToTin_3d(inputdir+"/"+var+".xml", outputdir+"/", var, "hgrid")
+        except:
+            print var+" conversion no good."
+

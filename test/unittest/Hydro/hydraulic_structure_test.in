@@ -1,0 +1,66 @@
+5             ! # of structures
+1.e-2         ! Nudging factor
+1 struct_one  ! block number, name
+6 976 994     ! # of node-pairs, 2 ref. nodes (global indices) for 2 faces
+984 990       !node pair
+983 989
+982 988
+981 987
+980 986
+979 985
+transfer        ! struct type  
+2               ! nduplicate
+5.0             ! prescribed flow per struct
+0               ! time series parameter entry
+2 struct_two    ! block_number, name
+6 1133 1136     ! # of node-pairs,2 ref. nodes (global indices) for 2 faces
+1209 1210
+1159 1160
+1134 1135
+1109 1110
+1084 1085
+1184 1185
+orifice          ! struct type
+1                ! nduplicate
+-1.0  10.1 4.2   ! invert elevation, width, height  per struct
+0.75 0.5  1.2    ! coef, op_downstream, op_upstream
+0                ! time series parameter entry
+3 struct_three   ! block number, name
+6 976 994        ! # of node-pairs, 2 ref. nodes (global indices) for 2 faces
+984 990          !node pair
+983 989
+982 988
+981 987
+980 986
+979 985
+weir           ! struct type  
+2              ! nduplicate
+-1.0  10.1     ! invert elevation, width per weir
+0.75  0.5 1.2  ! coef, op_downstream, op_upstream
+0              ! time series parameter entry
+4 struct_four  ! block number, name
+6 976 994      ! # of node-pairs, 2 ref. nodes (global indices) for 2 faces
+984 990 !node pair
+983 989
+982 988
+981 987
+980 986
+979 985
+culvert       ! struct type  
+1             ! nduplicate
+-1.0 2.0 .    ! invert elevation, radius per struct
+0.75  0.5 1.2 ! coef, op_downstream, op_upstream
+0             ! time series parameter entry
+5 struct_five ! block number, name
+6 976 994     ! # of node-pairs, 2 ref. nodes (global indices) for 2 faces
+984 990       ! node pair
+983 989
+982 988
+981 987
+980 986
+979 985
+radial         ! struct type  
+2              ! nduplicate 
+-1.0  10.1 4.2 ! invert elevation, width per weir
+0.75  0.5 1.2  ! coef, op_downstream, op_upstream
+0              ! time series parameter entry

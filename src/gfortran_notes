@@ -1,0 +1,127 @@
+Message from Kyle Lee about GFORTRAN compilation:
+
+Hi Dharhas,
+
+Thank you for your reply. It's my pleasure to share my makefile.
+As I used ubuntu 10.10 for compilation. It may need some modification before compilation on other unix-like distributions.
+
+======================================
+Compile with GNU compiler
+======================================
+
+1 Execute command "sudo apt-get install gfortran gcc mpich2 libnetcdf-dev" to install packages from ubuntu software source.
+2 Download and extract selfe V3.1d to a directory ( named V3.1d under "/home/kyle/selfe/modified/" for instance ).
+3.1 For gfortran&gcc
+Execute command below:
+"
+  cd V3.1d
+  cp -r ParMetis-3.1-Sep2010 ParMetis-3.1-Sep2010.gnucmp
+  cd ParMetis-3.1-Sep2010.gnucmp
+  make clean
+  gedit Makefile.in
+"
+
+Edit the compiler line to
+"
+   CC = /usr/bin/mpicc.mpich2 -cc=/usr/bin/gcc
+"
+
+Edit the loader line to
+"
+   LD = /usr/bin/mpicc.mpich2 -cc=/usr/bin/gcc
+"
+
+Save&close gedit.
+Execute command below:
+"
+cd ..
+gedit Makefile
+"
+
+Compilation enviroment should be configured like this:
+"
+################################################################################
+# Environment for GCMPICH2 / 64 bit /  GNU Compiler / MPICH2 (GCMPICH2)
+################################################################################
+ifeq ($(ENV),GCMPICH2)
+  FCP = /usr/bin/mpif90.mpich2 -f90=/usr/bin/gfortran #MPI compiler
+  FLD = $(FCP)
+# MPI vserion (1 or 2)
+  PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
+  FCPFLAGS = $(PPFLAGS) -O2 -Bstatic # -assume byterecl  #MPI code
+  FLDFLAGS = -O2   #for final linking of object files
+  #####Libraries
+  MTSLIBS = -L/home/kyle/selfe/modified/V3.1d/ParMetis-3.1-Sep2010.gnucmp -lparmetis -lmetis
+  CDFLIBS = -L/home/kyle/selfe/modified/V3.1d/netcdf/lib -lnetcdf
+  CDFMOD = -I/home/kyle/selfe/modified/V3.1d/netcdf/include # modules for netcdf
+  ifdef USE_GOTM
+    GTMMOD =  -I/home/users/yinglong/GOTM/gotm-3.2.5/32bit/gotm-3.2.5/modules/IFORT/ #modules
+    GTMLIBS = -L/home/users/yinglong/GOTM/gotm-3.2.5/32bit/gotm-3.2.5/lib/IFORT/ -lturbulence_prod  -lutil_prod
+  else
+    GTMMOD =
+    GTMLIBS =
+  endif
+endif
+"
+Note:
+1. I have not define USE_GOTM, so this section will not take effect.
+2. mpich2 installed from ubuntu software source can be used like /usr/bin/mpif90.mpich2 & /usr/bin/mpicc.mpich2, so don't forget to change it to your mpich2 wrapper path ( I don't know whether mpich2 should also be compiled with gfortran&gcc  if you want to compile it yourself ).
+3. -assume byterecl has been commented by me for this is a optimus option for Intel Fortran only.
+4. CDFLIBS&CDFMOD are setted to the path where i compiled my netcdf library. It can be changed to the
+libnetcdf-dev path installed from ubuntu software source like this:
+"
+  CDFLIBS = -L/usr/lib -lnetcdff
+  CDFMOD = -I/usr/include # modules for netcdf
+"
+Note: In the code above -lnetcdf has been changed to -lnetcdff
+I don't recommend you to set netcdf path to the libnetcdf-dev package, because I've found after that selfe binary can't be ported to some other linux distributions even a lower version of ubuntu like 10.04. But I only have succeeded in compiling the right netcdf library suitable for selfe model only once. Perhaps some one can share his/her steps to compile the right netcdf library.
+5. Don't forget to change the ENV to GCMPICH2 to get this configuration work.
+
+
+===============================================
+Compile with PGI compiler
+===============================================
+
+pg90&pgcc compilation steps are similar to the configuration of gfortran&gcc.
+In the Makefile.in under ParMetis-3.1-Sep2010.pgicmp is:
+"
+   CC = /usr/bin/mpicc.mpich2 -cc=pgcc
+"
+and
+
+"
+   LD = /usr/bin/mpicc.mpich2 -cc=pgcc
+"
+
+In the Makefile of Selfe V3.1d is:
+"
+################################################################################
+# Environment for PGIMPICH2 / 64 bit /  PGI Compiler / MPICH2 (PGIMPICH2)
+################################################################################
+ifeq ($(ENV),GCMPICH2)
+  FCP = /usr/bin/mpif90.mpich2 -f90=pgf90 #MPI compiler
+  FLD = $(FCP)
+# MPI vserion (1 or 2)
+  PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
+  FCPFLAGS = $(PPFLAGS) -O2 -Bstatic # -assume byterecl  #MPI code
+  FLDFLAGS = -O2   #for final linking of object files
+  #####Libraries
+  MTSLIBS = -L/home/kyle/selfe/modified/V3.1d/ParMetis-3.1-Sep2010.pgicmp -lparmetis -lmetis
+  CDFLIBS = -L/home/kyle/selfe/modified/V3.1d/netcdf/lib -lnetcdf
+  CDFMOD = -I/home/kyle/selfe/modified/V3.1d/netcdf/include # modules for netcdf
+  ifdef USE_GOTM
+    GTMMOD =  -I/home/users/yinglong/GOTM/gotm-3.2.5/32bit/gotm-3.2.5/modules/IFORT/ #modules
+    GTMLIBS = -L/home/users/yinglong/GOTM/gotm-3.2.5/32bit/gotm-3.2.5/lib/IFORT/ -lturbulence_prod  -lutil_prod
+  else
+    GTMMOD =
+    GTMLIBS =
+  endif
+endif
+"
+
+
+Good Luck!
+
+
+Kyle
+

@@ -1,0 +1,96 @@
+################################################################################
+# Parallel SCHISM Makefile
+#
+# User makes environment settings for particular OS / PLATFORM / COMPILER / MPI
+# below as well as setting flags having to do with included algorithms (e.g. sediment)
+# and the compiler configuration (debug, timing). 
+#
+# The environment settings are based on the following options.
+#
+# Compiler name:
+#   FCS: Serial compiler (for utilities)
+#   FCP: Parallel compiler
+#   FLD: Linker (in general same as parallel compiler)
+#
+# Compilation flags
+#   FCSFLAGS: Flags for serial compilation
+#   FCPFLAGS: Flags for parallel compilation (including all pre-processing flags)
+#   FLDFLAGS: Flags for linker (e.g., -O2)
+#
+# Preprocessor flags:
+#   DEBUG: Enable debugging code
+#   ORDERED_SUM: Enable globally ordered sums & dot-products for bit reproducibility
+#     of state quantities independent of number of processors (note: this can
+#     significantly degrade performance);
+#   INCLUDE_TIMING: Enable wallclock timing of code (note: this can have slight
+#     effect on performance);
+#   MPI_VERSION = 1 or 2: Version of MPI (try 2 first, if compile fails due to mpi
+#     related errors then switch to version 1;
+#
+# Libraries (needed for parallel code)
+#   MTSLIBS: Flags for linking ParMeTiS/MeTiS libaries
+################################################################################
+
+################################################################################
+## Environment for DOE/Anvil
+#################################################################################
+ENV = ANVIL
+
+################################################################################
+# Alternate executable name if you do not want the default. 
+################################################################################
+EXEC   := pschism_$(ENV)
+
+################################################################################
+# COMPILERS
+################################################################################
+
+FCP = mpiifort #MPI compiler
+FCS = ifort #serial compiler
+FLD = $(FCP)
+# MPI vserion (1 or 2)
+PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
+
+FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -init=zero -xCORE-AVX2 -assume buffered_io
+FLDFLAGS = -O2 -mcmodel=medium -init=zero -xCORE-AVX2 -assume buffered_io
+
+#FCPFLAGS = $(PPFLAGS) -O3 -mcmodel=medium 
+#FLDFLAGS = -O3 -mcmodel=medium -shared-intel #for final linking of object files
+
+#####Libraries
+MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
+
+#CDFLIBS = -L/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-4.6.2-b2ikacatjnjjeuwajzmkzz3d4rrh5tr3/lib -L/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-x2wtfpgcyy7g5br6anfyny765db7f2ym/lib/ -lnetcdf -lnetcdff
+#CDFMOD = -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-4.6.2-b2ikacatjnjjeuwajzmkzz3d4rrh5tr3/include/ -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-x2wtfpgcyy7g5br6anfyny765db7f2ym/include/
+
+CDFLIBS= -L/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-yvauamj7vlgck3q36clnmiknrcyhn3cg/lib -L/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/lib -lnetcdf -lnetcdff
+CDFMOD= -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-yvauamj7vlgck3q36clnmiknrcyhn3cg/include -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/include/
+
+################################################################################
+# Algorithm preference flags.
+# Comment out unwanted modules and flags.
+################################################################################
+
+# -DSCHISM is always on and is defined elsewhere
+
+include ../mk/include_modules
+
+# Don't comment out the follow ifdef
+ifdef USE_GOTM
+  GTMMOD =  -I/home1/01621/zhangy/selfe/trunk/src/GOTM3.2.5/modules/IFORT #modules
+  GTMLIBS = -L/home1/01621/zhangy/selfe/trunk/src/GOTM3.2.5/lib/IFORT -lturbulence_prod -lutil_prod
+else
+  GTMMOD =
+  GTMLIBS =
+endif
+
+
+######### Specialty compiler flags and workarounds
+# Add -DNO_TR_15581 like below for allocatable array problem in sflux_subs.F90
+# PPFLAGS := $(PPFLAGS) -DNO_TR_15581
+
+# Obsolete flags: use USE_WRAP flag to avoid problems in ParMetis lib (calling C from FORTRAN)
+# PPFLAGS := $(PPFLAGS) -DUSE_WRAP 
+
+#Temporary fix for Stampede cluster; leave it on
+#  PPFLAGS := $(PPFLAGS) -DSTAMPEDE

@@ -1,0 +1,16 @@
+%
+%$Id: mainIntro.tex,v 1.1 2003-03-10 09:42:24 gotm Exp $
+%
+
+\section{The GOTM main program \label{sec:mainIntro}}
+
+\subsection{Introduction}
+The purpose of the main program and its associated module {\tt gotm}
+is the construction of a solid framework for the interaction of all
+components of GOTM. Almost no actual computations are carried out
+inside this part of the program. However, the most important processes
+are triggered from there: the initialization of all lower-level modules 
+is actuated and the time stepping of the differential equations is managed.
+Also calls to subroutines responsible for the air-sea interaction and
+the ouput of the results are managed. Details for each of the (few) routines
+are given in the following.

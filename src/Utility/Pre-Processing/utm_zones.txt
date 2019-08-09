@@ -1,0 +1,1155 @@
+Datum
+rgf93 - RGF93(Greenwich) degrees - France (no EPSG found)
+DGBB - Datum Geodésico Bessel-Bonne de Lisboa (no EPSG found)
+DSB - Datum São Braz- São Miguel - Azores (no EPSG found)
+DPS1936 - Datum Porto Santo 1936 - Madeira (no EPSG found)
+DF1939 - Datum Flores 1939 - Azores (no EPSG found)
+DG1948 - Datum Graciosa 1948 - Azores (no EPSG found)
+DS1938 - Datum Selvagens 1938 - Madeira (no EPSG found)
+EPSG:4123 - KKJ
+EPSG:4131 - Indian 1960
+EPSG:4201 - Adindan
+EPSG:4202 - AGD66
+EPSG:4203 - AGD84
+EPSG:4204 - Ain el Abd
+EPSG:4205 - Afgooye
+EPSG:4209 - Arc 1950
+EPSG:4210 - Arc 1960
+EPSG:4216 - Bermuda 1957
+EPSG:4219 - Bukit Rimpah
+EPSG:4221 - Campo Inchauspe
+EPSG:4222 - Cape
+EPSG:4223 - Carthage
+EPSG:4225 - Corrego Alegre
+EPSG:4230 - Datum Europeu Internacional ED50
+EPSG:4237 - HD72
+EPSG:4238 - ID74
+EPSG:4239 - Indian 1954
+EPSG:4240 - Indian 1975
+EPSG:4244 - Kandawala
+EPSG:4250 - Leigon
+EPSG:4255 - Herat North
+EPSG:4256 - Mahe 1971
+EPSG:4258 - ETRS89
+EPSG:4261 - Merchich
+EPSG:4262 - Massawa
+EPSG:4263 - Minna
+EPSG:4267 - NAD27
+EPSG:4269 - NAD83
+EPSG:4274 - Datum 73 de Lisboa
+EPSG:4277 - OSGB 1936
+EPSG:4284 - Pulkovo 1942
+EPSG:4287 - Qornoq
+EPSG:4291 - SAD69
+EPSG:4292 - Sapper Hill 1943
+EPSG:4293 - Schwarzeck
+EPSG:4298 - Timbalai 1948
+EPSG:4301 - Tokyo
+EPSG:4307 - Nord Sahara 1959
+EPSG:4309 - Yacare
+EPSG:4311 - Zanderij
+EPSG:4312 - MGI
+EPSG:4322 - WGS 72
+EPSG:4324 - WGS 72BE
+EPSG:4326 - WGS84 (World Geodesic Datum)
+EPSG:4803 - Datum Geodésico Hayford de Lisboa
+EPSG:4807 - NTF (Paris)
+
+Projections
+SHGM - Projecção Gauss do Datum Geodésico Hayford de Lisboa Militar (no EPSG found)
+SBB - Projecção Gauss do Datum Geodésico Bessel-Bonne de Lisboa (no EPSG found)
+SHGA - Projecção Gauss do Datum Geodésico Hayford de Lisboa Antigo (no EPSG found)
+SHG73 - Projecção Gauss do Datum 73 de Lisboa (no EPSG found)
+lambert93 - RGF93(Greenwich)/ Lambert 93 (no EPSG found)
+EPSG:20004 - Pulkovo 1995 / Gauss-Kruger zone 4
+EPSG:20005 - Pulkovo 1995 / Gauss-Kruger zone 5
+EPSG:20006 - Pulkovo 1995 / Gauss-Kruger zone 6
+EPSG:20007 - Pulkovo 1995 / Gauss-Kruger zone 7
+EPSG:20008 - Pulkovo 1995 / Gauss-Kruger zone 8
+EPSG:20009 - Pulkovo 1995 / Gauss-Kruger zone 9
+EPSG:20010 - Pulkovo 1995 / Gauss-Kruger zone 10
+EPSG:20011 - Pulkovo 1995 / Gauss-Kruger zone 11
+EPSG:20012 - Pulkovo 1995 / Gauss-Kruger zone 12
+EPSG:20013 - Pulkovo 1995 / Gauss-Kruger zone 13
+EPSG:20014 - Pulkovo 1995 / Gauss-Kruger zone 14
+EPSG:20015 - Pulkovo 1995 / Gauss-Kruger zone 15
+EPSG:20016 - Pulkovo 1995 / Gauss-Kruger zone 16
+EPSG:20017 - Pulkovo 1995 / Gauss-Kruger zone 17
+EPSG:20018 - Pulkovo 1995 / Gauss-Kruger zone 18
+EPSG:20019 - Pulkovo 1995 / Gauss-Kruger zone 19
+EPSG:20020 - Pulkovo 1995 / Gauss-Kruger zone 20
+EPSG:20021 - Pulkovo 1995 / Gauss-Kruger zone 21
+EPSG:20022 - Pulkovo 1995 / Gauss-Kruger zone 22
+EPSG:20023 - Pulkovo 1995 / Gauss-Kruger zone 23
+EPSG:20024 - Pulkovo 1995 / Gauss-Kruger zone 24
+EPSG:20025 - Pulkovo 1995 / Gauss-Kruger zone 25
+EPSG:20026 - Pulkovo 1995 / Gauss-Kruger zone 26
+EPSG:20027 - Pulkovo 1995 / Gauss-Kruger zone 27
+EPSG:20028 - Pulkovo 1995 / Gauss-Kruger zone 28
+EPSG:20029 - Pulkovo 1995 / Gauss-Kruger zone 29
+EPSG:20030 - Pulkovo 1995 / Gauss-Kruger zone 30
+EPSG:20031 - Pulkovo 1995 / Gauss-Kruger zone 31
+EPSG:20032 - Pulkovo 1995 / Gauss-Kruger zone 32
+EPSG:20064 - Pulkovo 1995 / Gauss-Kruger 4N
+EPSG:20065 - Pulkovo 1995 / Gauss-Kruger 5N
+EPSG:20066 - Pulkovo 1995 / Gauss-Kruger 6N
+EPSG:20067 - Pulkovo 1995 / Gauss-Kruger 7N
+EPSG:20068 - Pulkovo 1995 / Gauss-Kruger 8N
+EPSG:20069 - Pulkovo 1995 / Gauss-Kruger 9N
+EPSG:20070 - Pulkovo 1995 / Gauss-Kruger 10N
+EPSG:20071 - Pulkovo 1995 / Gauss-Kruger 11N
+EPSG:20072 - Pulkovo 1995 / Gauss-Kruger 12N
+EPSG:20073 - Pulkovo 1995 / Gauss-Kruger 13N
+EPSG:20074 - Pulkovo 1995 / Gauss-Kruger 14N
+EPSG:20075 - Pulkovo 1995 / Gauss-Kruger 15N
+EPSG:20076 - Pulkovo 1995 / Gauss-Kruger 16N
+EPSG:20077 - Pulkovo 1995 / Gauss-Kruger 17N
+EPSG:20078 - Pulkovo 1995 / Gauss-Kruger 18N
+EPSG:20079 - Pulkovo 1995 / Gauss-Kruger 19N
+EPSG:20080 - Pulkovo 1995 / Gauss-Kruger 20N
+EPSG:20081 - Pulkovo 1995 / Gauss-Kruger 21N
+EPSG:20082 - Pulkovo 1995 / Gauss-Kruger 22N
+EPSG:20083 - Pulkovo 1995 / Gauss-Kruger 23N
+EPSG:20084 - Pulkovo 1995 / Gauss-Kruger 24N
+EPSG:20085 - Pulkovo 1995 / Gauss-Kruger 25N
+EPSG:20086 - Pulkovo 1995 / Gauss-Kruger 26N
+EPSG:20087 - Pulkovo 1995 / Gauss-Kruger 27N
+EPSG:20088 - Pulkovo 1995 / Gauss-Kruger 28N
+EPSG:20089 - Pulkovo 1995 / Gauss-Kruger 29N
+EPSG:20090 - Pulkovo 1995 / Gauss-Kruger 30N
+EPSG:20091 - Pulkovo 1995 / Gauss-Kruger 31N
+EPSG:20092 - Pulkovo 1995 / Gauss-Kruger 32N
+EPSG=22391 - Carthage / Nord Tunisie
+EPSG=22392 - Carthage / Sud Tunisie
+EPSG=26191 - Merchich / Nord Maroc
+EPSG=26192 - Merchich / Sud Maroc
+EPSG=26193 - Merchich / Sahara
+EPSG=30491 - Voirol 1875 / Nord Algerie (ancienne)
+EPSG=30492 - Voirol 1875 / Sud Algerie (ancienne)
+EPSG=30591 - Voirol Unifie / Nord Algerie
+EPSG=30592 - Voirol Unifie / Sud Algerie
+EPSG:20137 - Adindan / UTM zone 37N
+EPSG:20138 - Adindan / UTM zone 38N
+EPSG:20248 - AGD66 / AMG zone 48
+EPSG:20249 - AGD66 / AMG zone 49
+EPSG:20250 - AGD66 / AMG zone 50
+EPSG:20251 - AGD66 / AMG zone 51
+EPSG:20252 - AGD66 / AMG zone 52
+EPSG:20253 - AGD66 / AMG zone 53
+EPSG:20254 - AGD66 / AMG zone 54
+EPSG:20255 - AGD66 / AMG zone 55
+EPSG:20256 - AGD66 / AMG zone 56
+EPSG:20257 - AGD66 / AMG zone 57
+EPSG:20258 - AGD66 / AMG zone 58
+EPSG:20348 - AGD84 / AMG zone 48
+EPSG:20349 - AGD84 / AMG zone 49
+EPSG:20350 - AGD84 / AMG zone 50
+EPSG:20351 - AGD84 / AMG zone 51
+EPSG:20352 - AGD84 / AMG zone 52
+EPSG:20353 - AGD84 / AMG zone 53
+EPSG:20354 - AGD84 / AMG zone 54
+EPSG:20355 - AGD84 / AMG zone 55
+EPSG:20356 - AGD84 / AMG zone 56
+EPSG:20357 - AGD84 / AMG zone 57
+EPSG:20358 - AGD84 / AMG zone 58
+EPSG:20437 - Ain el Abd / UTM zone 37N
+EPSG:20438 - Ain el Abd / UTM zone 38N
+EPSG:20439 - Ain el Abd / UTM zone 39N
+EPSG:20499 - Ain el Abd / Bahrain Grid
+EPSG:20538 - Afgooye / UTM zone 38N
+EPSG:20539 - Afgooye / UTM zone 39N
+EPSG:20790 - Lisbon (Lisbon)/Portuguese National Grid
+EPSG:20822 - Aratu / UTM zone 22S
+EPSG:20823 - Aratu / UTM zone 23S
+EPSG:20824 - Aratu / UTM zone 24S
+EPSG:20934 - Arc 1950 / UTM zone 34S
+EPSG:20935 - Arc 1950 / UTM zone 35S
+EPSG:20936 - Arc 1950 / UTM zone 36S
+EPSG:2100 - GGRS87 / Greek Grid
+EPSG:21035 - Arc 1960 / UTM zone 35S
+EPSG:21036 - Arc 1960 / UTM zone 36S
+EPSG:21037 - Arc 1960 / UTM zone 37S
+EPSG:21095 - Arc 1960 / UTM zone 35N
+EPSG:21096 - Arc 1960 / UTM zone 36N
+EPSG:21097 - Arc 1960 / UTM zone 37N
+EPSG:21148 - Batavia / UTM zone 48S
+EPSG:21149 - Batavia / UTM zone 49S
+EPSG:21150 - Batavia / UTM zone 50S
+EPSG:21413 - Beijing 1954 / Gauss-Kruger zone 13
+EPSG:21414 - Beijing 1954 / Gauss-Kruger zone 14
+EPSG:21415 - Beijing 1954 / Gauss-Kruger zone 15
+EPSG:21416 - Beijing 1954 / Gauss-Kruger zone 16
+EPSG:21417 - Beijing 1954 / Gauss-Kruger zone 17
+EPSG:21418 - Beijing 1954 / Gauss-Kruger zone 18
+EPSG:21419 - Beijing 1954 / Gauss-Kruger zone 19
+EPSG:21420 - Beijing 1954 / Gauss-Kruger zone 20
+EPSG:21421 - Beijing 1954 / Gauss-Kruger zone 21
+EPSG:21422 - Beijing 1954 / Gauss-Kruger zone 22
+EPSG:21423 - Beijing 1954 / Gauss-Kruger zone 23
+EPSG:21473 - Beijing 1954 / Gauss-Kruger 13N
+EPSG:21474 - Beijing 1954 / Gauss-Kruger 14N
+EPSG:21475 - Beijing 1954 / Gauss-Kruger 15N
+EPSG:21476 - Beijing 1954 / Gauss-Kruger 16N
+EPSG:21477 - Beijing 1954 / Gauss-Kruger 17N
+EPSG:21478 - Beijing 1954 / Gauss-Kruger 18N
+EPSG:21479 - Beijing 1954 / Gauss-Kruger 19N
+EPSG:21480 - Beijing 1954 / Gauss-Kruger 20N
+EPSG:21481 - Beijing 1954 / Gauss-Kruger 21N
+EPSG:21482 - Beijing 1954 / Gauss-Kruger 22N
+EPSG:21483 - Beijing 1954 / Gauss-Kruger 23N
+EPSG:21817 - Bogota / UTM zone 17N
+EPSG:21818 - Bogota / UTM zone 18N
+EPSG:21891 - Bogota / Colombia West zone
+EPSG:21892 - Bogota / Colombia Bogota zone
+EPSG:21893 - Bogota / Colombia East Central zone
+EPSG:21894 - Bogota / Colombia East
+EPSG:22032 - Camacupa / UTM zone 32S
+EPSG:22033 - Camacupa / UTM zone 33S
+EPSG:22091 - Camacupa / TM 11.30 SE
+EPSG:22092 - Camacupa / TM 12 SE
+EPSG:2219 - ATS77 / UTM zone 19N
+EPSG:22191 - Campo Inchauspe / Argentina 1
+EPSG:22192 - Campo Inchauspe / Argentina 2
+EPSG:22193 - Campo Inchauspe / Argentina 3
+EPSG:22194 - Campo Inchauspe / Argentina 4
+EPSG:22195 - Campo Inchauspe / Argentina 5
+EPSG:22196 - Campo Inchauspe / Argentina 6
+EPSG:22197 - Campo Inchauspe / Argentina 7
+EPSG:2220 - ATS77 / UTM zone 20N
+EPSG:22234 - Cape / UTM zone 34S
+EPSG:22235 - Cape / UTM zone 35S
+EPSG:22236 - Cape / UTM zone 36S
+EPSG:22332 - Carthage / UTM zone 32N
+EPSG:22523 - Corrego Alegre / UTM zone 23S
+EPSG:22524 - Corrego Alegre / UTM zone 24S
+EPSG:22832 - Douala / UTM zone 32N
+EPSG:2294 - ATS77 / MTM Nova Scotia zone 4
+EPSG:2295 - ATS77 / MTM Nova Scotia zone 5
+EPSG:22992 - Egypt 1907 / Red Belt
+EPSG:22993 - Egypt 1907 / Purple Belt
+EPSG:22994 - Egypt 1907 / Extended Purple Belt
+EPSG:23028 - ED50 / UTM zone 28N
+EPSG:23029 - ED50 / UTM zone 29N
+EPSG:23030 - ED50 / UTM zone 30N
+EPSG:23031 - ED50 / UTM zone 31N
+EPSG:23032 - ED50 / UTM zone 32N
+EPSG:23033 - ED50 / UTM zone 33N
+EPSG:23034 - ED50 / UTM zone 34N
+EPSG:23035 - ED50 / UTM zone 35N
+EPSG:23036 - ED50 / UTM zone 36N
+EPSG:23037 - ED50 / UTM zone 37N
+EPSG:23038 - ED50 / UTM zone 38N
+EPSG:23090 - ED50 / TM 0 N
+EPSG:23095 - ED50 / TM 5 NE
+EPSG:23239 - Fahud / UTM zone 39N
+EPSG:23240 - Fahud / UTM zone 40N
+EPSG:23433 - Garoua / UTM zone 33N
+EPSG:23846 - ID74 / UTM zone 46N
+EPSG:23847 - ID74 / UTM zone 47N
+EPSG:23848 - ID74 / UTM zone 48N
+EPSG:23849 - ID74 / UTM zone 49N
+EPSG:23850 - ID74 / UTM zone 50N
+EPSG:23851 - ID74 / UTM zone 51N
+EPSG:23852 - ID74 / UTM zone 52N
+EPSG:23853 - ID74 / UTM zone 53N
+EPSG:23886 - ID74 / UTM zone 46S
+EPSG:23887 - ID74 / UTM zone 47S
+EPSG:23888 - ID74 / UTM zone 48S
+EPSG:23889 - ID74 / UTM zone 49S
+EPSG:23890 - ID74 / UTM zone 50S
+EPSG:23891 - ID74 / UTM zone 51S
+EPSG:23892 - ID74 / UTM zone 52S
+EPSG:23893 - ID74 / UTM zone 53S
+EPSG:23894 - ID74 / UTM zone 54S
+EPSG:2391 - KKJ / Finland zone 1
+EPSG:2392 - KKJ / Finland zone 2
+EPSG:2393 - KKJ / Finland Uniform Coordinate System
+EPSG:2394 - KKJ / Finland zone 4
+EPSG:23946 - Indian 1954 / UTM zone 46N
+EPSG:23947 - Indian 1954 / UTM zone 47N
+EPSG:23948 - Indian 1954 / UTM zone 48N
+EPSG:2400 - RT90 2.5 gon W
+EPSG:24047 - Indian 1975 / UTM zone 47N
+EPSG:24048 - Indian 1975 / UTM zone 48N
+EPSG:24547 - Kertau / UTM zone 47N
+EPSG:24548 - Kertau / UTM zone 48N
+EPSG:24720 - La Canoa / UTM zone 20N
+EPSG:24721 - La Canoa / UTM zone 21N
+EPSG:24818 - PSAD56 / UTM zone 18N
+EPSG:24819 - PSAD56 / UTM zone 19N
+EPSG:24820 - PSAD56 / UTM zone 20N
+EPSG:24821 - PSAD56 / UTM zone 21N
+EPSG:24877 - PSAD56 / UTM zone 17S
+EPSG:24878 - PSAD56 / UTM zone 18S
+EPSG:24879 - PSAD56 / UTM zone 19S
+EPSG:24880 - PSAD56 / UTM zone 20S
+EPSG:24891 - PSAD56 / Peru west zone
+EPSG:24892 - PSAD56 / Peru central zone
+EPSG:24893 - PSAD56 / Peru east zone
+EPSG:25000 - Leigon / Ghana Metre Grid
+EPSG:25231 - Lome / UTM zone 31N
+EPSG:25391 - Luzon 1911 / Philippines zone I
+EPSG:25392 - Luzon 1911 / Philippines zone II
+EPSG:25393 - Luzon 1911 / Philippines zone III
+EPSG:25394 - Luzon 1911 / Philippines zone IV
+EPSG:25395 - Luzon 1911 / Philippines zone V
+EPSG:2550 - Samboja / UTM zone 50S
+EPSG:25828 - ETRS89 / UTM zone 28N
+EPSG:25829 - ETRS89 / UTM zone 29N
+EPSG:25830 - ETRS89 / UTM zone 30N
+EPSG:25831 - ETRS89 / UTM zone 31N
+EPSG:25832 - ETRS89 / UTM zone 32N
+EPSG:25833 - ETRS89 / UTM zone 33N
+EPSG:25834 - ETRS89 / UTM zone 34N
+EPSG:25835 - ETRS89 / UTM zone 35N
+EPSG:25836 - ETRS89 / UTM zone 36N
+EPSG:25837 - ETRS89 / UTM zone 37N
+EPSG:25838 - ETRS89 / UTM zone 38N
+EPSG:25932 - Malongo 1987 / UTM zone 32S
+EPSG:2600 - Lietuvos Koordinoei Sistema 1994
+EPSG:26237 - Massawa / UTM zone 37N
+EPSG:26331 - Minna / UTM zone 31N
+EPSG:26332 - Minna / UTM zone 32N
+EPSG:26391 - Minna / Nigeria West Belt
+EPSG:26392 - Minna / Nigeria Mid Belt
+EPSG:26393 - Minna / Nigeria East Belt
+EPSG:26432 - Mhast / UTM zone 32S
+EPSG:26591 - Monte Mario (Rome) / Italy zone 1
+EPSG:26592 - Monte Mario (Rome) / Italy zone 2
+EPSG:26632 - M'poraloko / UTM zone 32N
+EPSG:26692 - M'poraloko / UTM zone 32S
+EPSG:26703 - NAD27 / UTM zone 3N
+EPSG:26704 - NAD27 / UTM zone 4N
+EPSG:26705 - NAD27 / UTM zone 5N
+EPSG:26706 - NAD27 / UTM zone 6N
+EPSG:26707 - NAD27 / UTM zone 7N
+EPSG:26708 - NAD27 / UTM zone 8N
+EPSG:26709 - NAD27 / UTM zone 9N
+EPSG:26710 - NAD27 / UTM zone 10N
+EPSG:26711 - NAD27 / UTM zone 11N
+EPSG:26712 - NAD27 / UTM zone 12N
+EPSG:26713 - NAD27 / UTM zone 13N
+EPSG:26714 - NAD27 / UTM zone 14N
+EPSG:26715 - NAD27 / UTM zone 15N
+EPSG:26716 - NAD27 / UTM zone 16N
+EPSG:26717 - NAD27 / UTM zone 17N
+EPSG:26718 - NAD27 / UTM zone 18N
+EPSG:26719 - NAD27 / UTM zone 19N
+EPSG:26720 - NAD27 / UTM zone 20N
+EPSG:26721 - NAD27 / UTM zone 21N
+EPSG:26722 - NAD27 / UTM zone 22N
+EPSG:26729 - NAD27 / Alabama East
+EPSG:26730 - NAD27 / Alabama West
+EPSG:26732 - NAD27 / Alaska zone 2
+EPSG:26733 - NAD27 / Alaska zone 3
+EPSG:26734 - NAD27 / Alaska zone 4
+EPSG:26735 - NAD27 / Alaska zone 5
+EPSG:26736 - NAD27 / Alaska zone 6
+EPSG:26737 - NAD27 / Alaska zone 7
+EPSG:26738 - NAD27 / Alaska zone 8
+EPSG:26739 - NAD27 / Alaska zone 9
+EPSG:26740 - NAD27 / Alaska zone 10
+EPSG:26741 - NAD27 / California zone I
+EPSG:26742 - NAD27 / California zone II
+EPSG:26743 - NAD27 / California zone III
+EPSG:26744 - NAD27 / California zone IV
+EPSG:26745 - NAD27 / California zone V
+EPSG:26746 - NAD27 / California zone VI
+EPSG:26747 - NAD27 / California zone VII
+EPSG:26748 - NAD27 / Arizona East
+EPSG:26749 - NAD27 / Arizona Central
+EPSG:26750 - NAD27 / Arizona West
+EPSG:26751 - NAD27 / Arkansas North
+EPSG:26752 - NAD27 / Arkansas South
+EPSG:26753 - NAD27 / Colorado North
+EPSG:26754 - NAD27 / Colorado Central
+EPSG:26755 - NAD27 / Colorado South
+EPSG:26756 - NAD27 / Connecticut
+EPSG:26757 - NAD27 / Delaware
+EPSG:26758 - NAD27 / Florida East
+EPSG:26759 - NAD27 / Florida West
+EPSG:26760 - NAD27 / Florida North
+EPSG:26761 - NAD27 / Hawaii zone 1
+EPSG:26762 - NAD27 / Hawaii zone 2
+EPSG:26763 - NAD27 / Hawaii zone 3
+EPSG:26764 - NAD27 / Hawaii zone 4
+EPSG:26765 - NAD27 / Hawaii zone 5
+EPSG:26766 - NAD27 / Georgia East
+EPSG:26767 - NAD27 / Georgia West
+EPSG:26768 - NAD27 / Idaho East
+EPSG:26769 - NAD27 / Idaho Central
+EPSG:26770 - NAD27 / Idaho West
+EPSG:26771 - NAD27 / Illinois East
+EPSG:26772 - NAD27 / Illinois West
+EPSG:26773 - NAD27 / Indiana East
+EPSG:26774 - NAD27 / Indiana West
+EPSG:26775 - NAD27 / Iowa North
+EPSG:26776 - NAD27 / Iowa South
+EPSG:26777 - NAD27 / Kansas North
+EPSG:26778 - NAD27 / Kansas South
+EPSG:26779 - NAD27 / Kentucky North
+EPSG:26780 - NAD27 / Kentucky South
+EPSG:26781 - NAD27 / Louisiana North
+EPSG:26782 - NAD27 / Louisiana South
+EPSG:26783 - NAD27 / Maine East
+EPSG:26784 - NAD27 / Maine West
+EPSG:26785 - NAD27 / Maryland
+EPSG:26786 - NAD27 / Massachusetts Mainland
+EPSG:26787 - NAD27 / Massachusetts Island
+EPSG:26791 - NAD27 / Minnesota North
+EPSG:26792 - NAD27 / Minnesota Central
+EPSG:26793 - NAD27 / Minnesota South
+EPSG:26794 - NAD27 / Mississippi East
+EPSG:26795 - NAD27 / Mississippi West
+EPSG:26796 - NAD27 / Missouri East
+EPSG:26797 - NAD27 / Missouri Central
+EPSG:26798 - NAD27 / Missouri West
+EPSG:26801 - NAD Michigan / Michigan East
+EPSG:26802 - NAD Michigan / Michigan Old Central
+EPSG:26803 - NAD Michigan / Michigan West
+EPSG:26811 - NAD Michigan / Michigan North
+EPSG:26812 - NAD Michigan / Michigan Central
+EPSG:26813 - NAD Michigan / Michigan South
+EPSG:26903 - NAD83 / UTM zone 3N
+EPSG:26904 - NAD83 / UTM zone 4N
+EPSG:26905 - NAD83 / UTM zone 5N
+EPSG:26906 - NAD83 / UTM zone 6N
+EPSG:26907 - NAD83 / UTM zone 7N
+EPSG:26908 - NAD83 / UTM zone 8N
+EPSG:26909 - NAD83 / UTM zone 9N
+EPSG:26910 - NAD83 / UTM zone 10N
+EPSG:26911 - NAD83 / UTM zone 11N
+EPSG:26912 - NAD83 / UTM zone 12N
+EPSG:26913 - NAD83 / UTM zone 13N
+EPSG:26914 - NAD83 / UTM zone 14N
+EPSG:26915 - NAD83 / UTM zone 15N
+EPSG:26916 - NAD83 / UTM zone 16N
+EPSG:26917 - NAD83 / UTM zone 17N
+EPSG:26918 - NAD83 / UTM zone 18N
+EPSG:26919 - NAD83 / UTM zone 19N
+EPSG:26920 - NAD83 / UTM zone 20N
+EPSG:26921 - NAD83 / UTM zone 21N
+EPSG:26922 - NAD83 / UTM zone 22N
+EPSG:26923 - NAD83 / UTM zone 23N
+EPSG:26929 - NAD83 / Alabama East
+EPSG:26930 - NAD83 / Alabama West
+EPSG:26932 - NAD83 / Alaska zone 2
+EPSG:26933 - NAD83 / Alaska zone 3
+EPSG:26934 - NAD83 / Alaska zone 4
+EPSG:26935 - NAD83 / Alaska zone 5
+EPSG:26936 - NAD83 / Alaska zone 6
+EPSG:26937 - NAD83 / Alaska zone 7
+EPSG:26938 - NAD83 / Alaska zone 8
+EPSG:26939 - NAD83 / Alaska zone 9
+EPSG:26940 - NAD83 / Alaska zone 10
+EPSG:26941 - NAD83 / California zone 1
+EPSG:26942 - NAD83 / California zone 2
+EPSG:26943 - NAD83 / California zone 3
+EPSG:26944 - NAD83 / California zone 4
+EPSG:26945 - NAD83 / California zone 5
+EPSG:26946 - NAD83 / California zone 6
+EPSG:26948 - NAD83 / Arizona East
+EPSG:26949 - NAD83 / Arizona Central
+EPSG:26950 - NAD83 / Arizona West
+EPSG:26951 - NAD83 / Arkansas North
+EPSG:26952 - NAD83 / Arkansas South
+EPSG:26953 - NAD83 / Colorado North
+EPSG:26954 - NAD83 / Colorado Central
+EPSG:26955 - NAD83 / Colorado South
+EPSG:26956 - NAD83 / Connecticut
+EPSG:26957 - NAD83 / Delaware
+EPSG:26958 - NAD83 / Florida East
+EPSG:26959 - NAD83 / Florida West
+EPSG:26960 - NAD83 / Florida North
+EPSG:26961 - NAD83 / Hawaii zone 1
+EPSG:26962 - NAD83 / Hawaii zone 2
+EPSG:26963 - NAD83 / Hawaii zone 3
+EPSG:26964 - NAD83 / Hawaii zone 4
+EPSG:26965 - NAD83 / Hawaii zone 5
+EPSG:26966 - NAD83 / Georgia East
+EPSG:26967 - NAD83 / Georgia West
+EPSG:26968 - NAD83 / Idaho East
+EPSG:26969 - NAD83 / Idaho Central
+EPSG:26970 - NAD83 / Idaho West
+EPSG:26971 - NAD83 / Illinois East
+EPSG:26972 - NAD83 / Illinois West
+EPSG:26973 - NAD83 / Indiana East
+EPSG:26974 - NAD83 / Indiana West
+EPSG:26975 - NAD83 / Iowa North
+EPSG:26976 - NAD83 / Iowa South
+EPSG:26977 - NAD83 / Kansas North
+EPSG:26978 - NAD83 / Kansas South
+EPSG:26979 - NAD83 / Kentucky North
+EPSG:26980 - NAD83 / Kentucky South
+EPSG:26981 - NAD83 / Louisiana North
+EPSG:26982 - NAD83 / Louisiana South
+EPSG:26983 - NAD83 / Maine East
+EPSG:26984 - NAD83 / Maine West
+EPSG:26985 - NAD83 / Maryland
+EPSG:26986 - NAD83 / Massachusetts Mainland
+EPSG:26987 - NAD83 / Massachusetts Island
+EPSG:26988 - NAD83 / Michigan North
+EPSG:26989 - NAD83 / Michigan Central
+EPSG:26990 - NAD83 / Michigan South
+EPSG:26991 - NAD83 / Minnesota North
+EPSG:26992 - NAD83 / Minnesota Central
+EPSG:26993 - NAD83 / Minnesota South
+EPSG:26994 - NAD83 / Mississippi East
+EPSG:26995 - NAD83 / Mississippi West
+EPSG:26996 - NAD83 / Missouri East
+EPSG:26997 - NAD83 / Missouri Central
+EPSG:26998 - NAD83 / Missouri West
+EPSG:27038 - Nahrwan 1967 / UTM zone 38N
+EPSG:27039 - Nahrwan 1967 / UTM zone 39N
+EPSG:27040 - Nahrwan 1967 / UTM zone 40N
+EPSG:27120 - Naparima 1972 / UTM zone 20N
+EPSG:27291 - GD49 / North Island Grid
+EPSG:27292 - GD49 / South Island Grid
+EPSG:2736 - Tete / UTM zone 36S
+EPSG:2737 - Tete / UTM zone 37S
+EPSG:27429 - Datum 73 / UTM zone 29N
+EPSG:27581 - NTF(Paris)/Lambert I
+EPSG:27582 - NTF(Paris)/Lambert II (étendu)
+EPSG:27583 - NTF(Paris)/Lambert III
+EPSG:27584 - NTF(Paris)/Lambert IV
+EPSG:27591 - NTF(Paris)/Nord France(Lambert I carto)
+EPSG:27592 - NTF(Paris)/Centre France(Lambert II carto)
+EPSG:27593 - NTF(Paris)/Sud France(Lambert III carto)
+EPSG:27594 - NTF(Paris)/Corse (Lambert IV carto)
+EPSG:27700 - OSGB 1936 / British National Grid
+EPSG:28232 - Pointe Noire / UTM zone 32S
+EPSG:28348 - GDA94 / MGA zone 48
+EPSG:28349 - GDA94 / MGA zone 49
+EPSG:28350 - GDA94 / MGA zone 50
+EPSG:28351 - GDA94 / MGA zone 51
+EPSG:28352 - GDA94 / MGA zone 52
+EPSG:28353 - GDA94 / MGA zone 53
+EPSG:28354 - GDA94 / MGA zone 54
+EPSG:28355 - GDA94 / MGA zone 55
+EPSG:28356 - GDA94 / MGA zone 56
+EPSG:28357 - GDA94 / MGA zone 57
+EPSG:28358 - GDA94 / MGA zone 58
+EPSG:28402 - Pulkovo 1942 / Gauss-Kruger zone 2
+EPSG:28403 - Pulkovo 1942 / Gauss-Kruger zone 3
+EPSG:28404 - Pulkovo 1942 / Gauss-Kruger zone 4
+EPSG:28405 - Pulkovo 1942 / Gauss-Kruger zone 5
+EPSG:28406 - Pulkovo 1942 / Gauss-Kruger zone 6
+EPSG:28407 - Pulkovo 1942 / Gauss-Kruger zone 7
+EPSG:28408 - Pulkovo 1942 / Gauss-Kruger zone 8
+EPSG:28409 - Pulkovo 1942 / Gauss-Kruger zone 9
+EPSG:28410 - Pulkovo 1942 / Gauss-Kruger zone 10
+EPSG:28411 - Pulkovo 1942 / Gauss-Kruger zone 11
+EPSG:28412 - Pulkovo 1942 / Gauss-Kruger zone 12
+EPSG:28413 - Pulkovo 1942 / Gauss-Kruger zone 13
+EPSG:28414 - Pulkovo 1942 / Gauss-Kruger zone 14
+EPSG:28415 - Pulkovo 1942 / Gauss-Kruger zone 15
+EPSG:28416 - Pulkovo 1942 / Gauss-Kruger zone 16
+EPSG:28417 - Pulkovo 1942 / Gauss-Kruger zone 17
+EPSG:28418 - Pulkovo 1942 / Gauss-Kruger zone 18
+EPSG:28419 - Pulkovo 1942 / Gauss-Kruger zone 19
+EPSG:28420 - Pulkovo 1942 / Gauss-Kruger zone 20
+EPSG:28421 - Pulkovo 1942 / Gauss-Kruger zone 21
+EPSG:28422 - Pulkovo 1942 / Gauss-Kruger zone 22
+EPSG:28423 - Pulkovo 1942 / Gauss-Kruger zone 23
+EPSG:28424 - Pulkovo 1942 / Gauss-Kruger zone 24
+EPSG:28425 - Pulkovo 1942 / Gauss-Kruger zone 25
+EPSG:28426 - Pulkovo 1942 / Gauss-Kruger zone 26
+EPSG:28427 - Pulkovo 1942 / Gauss-Kruger zone 27
+EPSG:28428 - Pulkovo 1942 / Gauss-Kruger zone 28
+EPSG:28429 - Pulkovo 1942 / Gauss-Kruger zone 29
+EPSG:28430 - Pulkovo 1942 / Gauss-Kruger zone 30
+EPSG:28431 - Pulkovo 1942 / Gauss-Kruger zone 31
+EPSG:28432 - Pulkovo 1942 / Gauss-Kruger zone 32
+EPSG:28462 - Pulkovo 1942 / Gauss-Kruger 2N
+EPSG:28463 - Pulkovo 1942 / Gauss-Kruger 3N
+EPSG:28464 - Pulkovo 1942 / Gauss-Kruger 4N
+EPSG:28465 - Pulkovo 1942 / Gauss-Kruger 5N
+EPSG:28466 - Pulkovo 1942 / Gauss-Kruger 6N
+EPSG:28467 - Pulkovo 1942 / Gauss-Kruger 7N
+EPSG:28468 - Pulkovo 1942 / Gauss-Kruger 8N
+EPSG:28469 - Pulkovo 1942 / Gauss-Kruger 9N
+EPSG:28470 - Pulkovo 1942 / Gauss-Kruger 10N
+EPSG:28471 - Pulkovo 1942 / Gauss-Kruger 11N
+EPSG:28472 - Pulkovo 1942 / Gauss-Kruger 12N
+EPSG:28473 - Pulkovo 1942 / Gauss-Kruger 13N
+EPSG:28474 - Pulkovo 1942 / Gauss-Kruger 14N
+EPSG:28475 - Pulkovo 1942 / Gauss-Kruger 15N
+EPSG:28476 - Pulkovo 1942 / Gauss-Kruger 16N
+EPSG:28477 - Pulkovo 1942 / Gauss-Kruger 17N
+EPSG:28478 - Pulkovo 1942 / Gauss-Kruger 18N
+EPSG:28479 - Pulkovo 1942 / Gauss-Kruger 19N
+EPSG:28480 - Pulkovo 1942 / Gauss-Kruger 20N
+EPSG:28481 - Pulkovo 1942 / Gauss-Kruger 21N
+EPSG:28482 - Pulkovo 1942 / Gauss-Kruger 22N
+EPSG:28483 - Pulkovo 1942 / Gauss-Kruger 23N
+EPSG:28484 - Pulkovo 1942 / Gauss-Kruger 24N
+EPSG:28485 - Pulkovo 1942 / Gauss-Kruger 25N
+EPSG:28486 - Pulkovo 1942 / Gauss-Kruger 26N
+EPSG:28487 - Pulkovo 1942 / Gauss-Kruger 27N
+EPSG:28488 - Pulkovo 1942 / Gauss-Kruger 28N
+EPSG:28489 - Pulkovo 1942 / Gauss-Kruger 29N
+EPSG:28490 - Pulkovo 1942 / Gauss-Kruger 30N
+EPSG:28491 - Pulkovo 1942 / Gauss-Kruger 31N
+EPSG:28492 - Pulkovo 1942 / Gauss-Kruger 32N
+EPSG:28600 - Qatar / Qatar National Grid
+EPSG:29118 - SAD69 / UTM zone 18N
+EPSG:29119 - SAD69 / UTM zone 19N
+EPSG:29120 - SAD69 / UTM zone 20N
+EPSG:29121 - SAD69 / UTM zone 21N
+EPSG:29122 - SAD69 / UTM zone 22N
+EPSG:29177 - SAD69 / UTM zone 17S
+EPSG:29178 - SAD69 / UTM zone 18S
+EPSG:29179 - SAD69 / UTM zone 19S
+EPSG:29180 - SAD69 / UTM zone 20S
+EPSG:29181 - SAD69 / UTM zone 21S
+EPSG:29182 - SAD69 / UTM zone 22S
+EPSG:29183 - SAD69 / UTM zone 23S
+EPSG:29184 - SAD69 / UTM zone 24S
+EPSG:29185 - SAD69 / UTM zone 25S
+EPSG:29220 - Sapper Hill 1943 / UTM zone 20S
+EPSG:29221 - Sapper Hill 1943 / UTM zone 21S
+EPSG:29333 - Schwarzeck / UTM zone 33S
+EPSG:29635 - Sudan / UTM zone 35N
+EPSG:29636 - Sudan / UTM zone 36N
+EPSG:29738 - Tananarive / UTM zone 38S
+EPSG:29739 - Tananarive / UTM zone 39S
+EPSG:29849 - Timbalai 1948 / UTM zone 49N
+EPSG:29850 - Timbalai 1948 / UTM zone 50N
+EPSG:29900 - TM65 / Irish National Grid
+EPSG:30339 - TC(1948) / UTM zone 39N
+EPSG:30340 - TC(1948) / UTM zone 40N
+EPSG:3036 - Moznet / UTM zone 36S
+EPSG:3037 - Moznet / UTM zone 37S
+EPSG:30729 - Nord Sahara 1959 / UTM zone 29N
+EPSG:30730 - Nord Sahara 1959 / UTM zone 30N
+EPSG:30731 - Nord Sahara 1959 / UTM zone 31N
+EPSG:30732 - Nord Sahara 1959 / UTM zone 32N
+EPSG:30800 - RT38 2.5 gon W
+EPSG:31028 - Yoff / UTM zone 28N
+EPSG:31121 - Zanderij / UTM zone 21N
+EPSG:31291 - MGI (Ferro) / Austria West Zone
+EPSG:31292 - MGI (Ferro) / Austria Central Zone
+EPSG:31293 - MGI (Ferro) / Austria East Zone
+EPSG:3148 - Indian 1960 / UTM zone 48N
+EPSG:3149 - Indian 1960 / UTM zone 49N
+EPSG:31491 - DHDN / Germany zone 1
+EPSG:31492 - DHDN / Germany zone 2
+EPSG:31493 - DHDN / Germany zone 3
+EPSG:31494 - DHDN / Germany zone 4
+EPSG:31495 - DHDN / Germany zone 5
+EPSG:3176 - Indian 1960 / TM 106 NE
+EPSG:31838 - NGN / UTM zone 38N
+EPSG:31839 - NGN / UTM zone 39N
+EPSG:31900 - KUDAMS / KTM
+EPSG:32001 - NAD27 / Montana North
+EPSG:32002 - NAD27 / Montana Central
+EPSG:32003 - NAD27 / Montana South
+EPSG:32005 - NAD27 / Nebraska North
+EPSG:32006 - NAD27 / Nebraska South
+EPSG:32007 - NAD27 / Nevada East
+EPSG:32008 - NAD27 / Nevada Central
+EPSG:32009 - NAD27 / Nevada West
+EPSG:32010 - NAD27 / New Hampshire
+EPSG:32011 - NAD27 / New Jersey
+EPSG:32012 - NAD27 / New Mexico East
+EPSG:32013 - NAD27 / New Mexico Central
+EPSG:32014 - NAD27 / New Mexico West
+EPSG:32015 - NAD27 / New York East
+EPSG:32016 - NAD27 / New York Central
+EPSG:32017 - NAD27 / New York West
+EPSG:32018 - NAD27 / New York Long Island
+EPSG:32019 - NAD27 / North Carolina
+EPSG:32020 - NAD27 / North Dakota North
+EPSG:32021 - NAD27 / North Dakota South
+EPSG:32022 - NAD27 / Ohio North
+EPSG:32023 - NAD27 / Ohio South
+EPSG:32024 - NAD27 / Oklahoma North
+EPSG:32025 - NAD27 / Oklahoma South
+EPSG:32026 - NAD27 / Oregon North
+EPSG:32027 - NAD27 / Oregon South
+EPSG:32028 - NAD27 / Pennsylvania North
+EPSG:32029 - NAD27 / Pennsylvania South
+EPSG:32030 - NAD27 / Rhode Island
+EPSG:32031 - NAD27 / South Carolina North
+EPSG:32033 - NAD27 / South Carolina South
+EPSG:32034 - NAD27 / South Dakota North
+EPSG:32035 - NAD27 / South Dakota South
+EPSG:32036 - NAD27 / Tennessee
+EPSG:32037 - NAD27 / Texas North
+EPSG:32038 - NAD27 / Texas North Central
+EPSG:32039 - NAD27 / Texas Central
+EPSG:32040 - NAD27 / Texas South Central
+EPSG:32041 - NAD27 / Texas South
+EPSG:32042 - NAD27 / Utah North
+EPSG:32043 - NAD27 / Utah Central
+EPSG:32044 - NAD27 / Utah South
+EPSG:32045 - NAD27 / Vermont
+EPSG:32046 - NAD27 / Virginia North
+EPSG:32047 - NAD27 / Virginia South
+EPSG:32048 - NAD27 / Washington North
+EPSG:32049 - NAD27 / Washington South
+EPSG:32050 - NAD27 / West Virginia North
+EPSG:32051 - NAD27 / West Virginia South
+EPSG:32052 - NAD27 / Wisconsin North
+EPSG:32053 - NAD27 / Wisconsin Central
+EPSG:32054 - NAD27 / Wisconsin South
+EPSG:32055 - NAD27 / Wyoming East
+EPSG:32056 - NAD27 / Wyoming East Central
+EPSG:32057 - NAD27 / Wyoming West Central
+EPSG:32058 - NAD27 / Wyoming West
+EPSG:32059 - NAD27 / Puerto Rico
+EPSG:32060 - NAD27 / St. Croix
+EPSG:32074 - NAD27 / BLM 14N (feet)
+EPSG:32075 - NAD27 / BLM 15N (feet)
+EPSG:32076 - NAD27 / BLM 16N (feet)
+EPSG:32077 - NAD27 / BLM 17N (feet)
+EPSG:32080 - NAD27 / SCoPQ zone 2
+EPSG:32081 - NAD27 / MTM zone 1
+EPSG:32082 - NAD27 / MTM zone 2
+EPSG:32083 - NAD27 / MTM zone 3
+EPSG:32084 - NAD27 / MTM zone 4
+EPSG:32085 - NAD27 / MTM zone 5
+EPSG:32086 - NAD27 / MTM zone 6
+EPSG:32087 - NAD27 / MTM zone 7
+EPSG:32088 - NAD27 / MTM zone 8
+EPSG:32089 - NAD27 / MTM zone 9
+EPSG:32090 - NAD27 / MTM zone 10
+EPSG:32091 - NAD27 / MTM zone 11
+EPSG:32092 - NAD27 / MTM zone 12
+EPSG:32093 - NAD27 / MTM zone 13
+EPSG:32094 - NAD27 / MTM zone 14
+EPSG:32095 - NAD27 / MTM zone 15
+EPSG:32096 - NAD27 / MTM zone 16
+EPSG:32097 - NAD27 / MTM zone 17
+EPSG:32100 - NAD83 / Montana
+EPSG:32104 - NAD83 / Nebraska
+EPSG:32107 - NAD83 / Nevada East
+EPSG:32108 - NAD83 / Nevada Central
+EPSG:32109 - NAD83 / Nevada West
+EPSG:32110 - NAD83 / New Hampshire
+EPSG:32111 - NAD83 / New Jersey
+EPSG:32112 - NAD83 / New Mexico East
+EPSG:32113 - NAD83 / New Mexico Central
+EPSG:32114 - NAD83 / New Mexico West
+EPSG:32115 - NAD83 / New York East
+EPSG:32116 - NAD83 / New York Central
+EPSG:32117 - NAD83 / New York West
+EPSG:32118 - NAD83 / New York Long Island
+EPSG:32119 - NAD83 / North Carolina
+EPSG:32120 - NAD83 / North Dakota North
+EPSG:32121 - NAD83 / North Dakota South
+EPSG:32122 - NAD83 / Ohio North
+EPSG:32123 - NAD83 / Ohio South
+EPSG:32124 - NAD83 / Oklahoma North
+EPSG:32125 - NAD83 / Oklahoma South
+EPSG:32126 - NAD83 / Oregon North
+EPSG:32127 - NAD83 / Oregon South
+EPSG:32128 - NAD83 / Pennsylvania North
+EPSG:32129 - NAD83 / Pennsylvania South
+EPSG:32130 - NAD83 / Rhode Island
+EPSG:32133 - NAD83 / South Carolina
+EPSG:32134 - NAD83 / South Dakota North
+EPSG:32135 - NAD83 / South Dakota South
+EPSG:32136 - NAD83 / Tennessee
+EPSG:32137 - NAD83 / Texas North
+EPSG:32138 - NAD83 / Texas North Central
+EPSG:32139 - NAD83 / Texas Central
+EPSG:32140 - NAD83 / Texas South Central
+EPSG:32141 - NAD83 / Texas South
+EPSG:32142 - NAD83 / Utah North
+EPSG:32143 - NAD83 / Utah Central
+EPSG:32144 - NAD83 / Utah South
+EPSG:32145 - NAD83 / Vermont
+EPSG:32146 - NAD83 / Virginia North
+EPSG:32147 - NAD83 / Virginia South
+EPSG:32148 - NAD83 / Washington North
+EPSG:32149 - NAD83 / Washington South
+EPSG:32150 - NAD83 / West Virginia North
+EPSG:32151 - NAD83 / West Virginia South
+EPSG:32152 - NAD83 / Wisconsin North
+EPSG:32153 - NAD83 / Wisconsin Central
+EPSG:32154 - NAD83 / Wisconsin South
+EPSG:32155 - NAD83 / Wyoming East
+EPSG:32156 - NAD83 / Wyoming East Central
+EPSG:32157 - NAD83 / Wyoming West Central
+EPSG:32158 - NAD83 / Wyoming West
+EPSG:32161 - NAD83 / Puerto Rico & Virgin Is.
+EPSG:32180 - NAD83 / SCoPQ zone 2
+EPSG:32181 - NAD83 / MTM zone 1
+EPSG:32182 - NAD83 / MTM zone 2
+EPSG:32183 - NAD83 / MTM zone 3
+EPSG:32184 - NAD83 / MTM zone 4
+EPSG:32185 - NAD83 / MTM zone 5
+EPSG:32186 - NAD83 / MTM zone 6
+EPSG:32187 - NAD83 / MTM zone 7
+EPSG:32188 - NAD83 / MTM zone 8
+EPSG:32189 - NAD83 / MTM zone 9
+EPSG:32190 - NAD83 / MTM zone 10
+EPSG:32191 - NAD83 / MTM zone 11
+EPSG:32192 - NAD83 / MTM zone 12
+EPSG:32193 - NAD83 / MTM zone 13
+EPSG:32194 - NAD83 / MTM zone 14
+EPSG:32195 - NAD83 / MTM zone 15
+EPSG:32196 - NAD83 / MTM zone 16
+EPSG:32197 - NAD83 / MTM zone 17
+EPSG:32201 - WGS 72 / UTM zone 1N
+EPSG:32202 - WGS 72 / UTM zone 2N
+EPSG:32203 - WGS 72 / UTM zone 3N
+EPSG:32204 - WGS 72 / UTM zone 4N
+EPSG:32205 - WGS 72 / UTM zone 5N
+EPSG:32206 - WGS 72 / UTM zone 6N
+EPSG:32207 - WGS 72 / UTM zone 7N
+EPSG:32208 - WGS 72 / UTM zone 8N
+EPSG:32209 - WGS 72 / UTM zone 9N
+EPSG:32210 - WGS 72 / UTM zone 10N
+EPSG:32211 - WGS 72 / UTM zone 11N
+EPSG:32212 - WGS 72 / UTM zone 12N
+EPSG:32213 - WGS 72 / UTM zone 13N
+EPSG:32214 - WGS 72 / UTM zone 14N
+EPSG:32215 - WGS 72 / UTM zone 15N
+EPSG:32216 - WGS 72 / UTM zone 16N
+EPSG:32217 - WGS 72 / UTM zone 17N
+EPSG:32218 - WGS 72 / UTM zone 18N
+EPSG:32219 - WGS 72 / UTM zone 19N
+EPSG:32220 - WGS 72 / UTM zone 20N
+EPSG:32221 - WGS 72 / UTM zone 21N
+EPSG:32222 - WGS 72 / UTM zone 22N
+EPSG:32223 - WGS 72 / UTM zone 23N
+EPSG:32224 - WGS 72 / UTM zone 24N
+EPSG:32225 - WGS 72 / UTM zone 25N
+EPSG:32226 - WGS 72 / UTM zone 26N
+EPSG:32227 - WGS 72 / UTM zone 27N
+EPSG:32228 - WGS 72 / UTM zone 28N
+EPSG:32229 - WGS 72 / UTM zone 29N
+EPSG:32230 - WGS 72 / UTM zone 30N
+EPSG:32231 - WGS 72 / UTM zone 31N
+EPSG:32232 - WGS 72 / UTM zone 32N
+EPSG:32233 - WGS 72 / UTM zone 33N
+EPSG:32234 - WGS 72 / UTM zone 34N
+EPSG:32235 - WGS 72 / UTM zone 35N
+EPSG:32236 - WGS 72 / UTM zone 36N
+EPSG:32237 - WGS 72 / UTM zone 37N
+EPSG:32238 - WGS 72 / UTM zone 38N
+EPSG:32239 - WGS 72 / UTM zone 39N
+EPSG:32240 - WGS 72 / UTM zone 40N
+EPSG:32241 - WGS 72 / UTM zone 41N
+EPSG:32242 - WGS 72 / UTM zone 42N
+EPSG:32243 - WGS 72 / UTM zone 43N
+EPSG:32244 - WGS 72 / UTM zone 44N
+EPSG:32245 - WGS 72 / UTM zone 45N
+EPSG:32246 - WGS 72 / UTM zone 46N
+EPSG:32247 - WGS 72 / UTM zone 47N
+EPSG:32248 - WGS 72 / UTM zone 48N
+EPSG:32249 - WGS 72 / UTM zone 49N
+EPSG:32250 - WGS 72 / UTM zone 50N
+EPSG:32251 - WGS 72 / UTM zone 51N
+EPSG:32252 - WGS 72 / UTM zone 52N
+EPSG:32253 - WGS 72 / UTM zone 53N
+EPSG:32254 - WGS 72 / UTM zone 54N
+EPSG:32255 - WGS 72 / UTM zone 55N
+EPSG:32256 - WGS 72 / UTM zone 56N
+EPSG:32257 - WGS 72 / UTM zone 57N
+EPSG:32258 - WGS 72 / UTM zone 58N
+EPSG:32259 - WGS 72 / UTM zone 59N
+EPSG:32260 - WGS 72 / UTM zone 60N
+EPSG:32301 - WGS 72 / UTM zone 1S
+EPSG:32302 - WGS 72 / UTM zone 2S
+EPSG:32303 - WGS 72 / UTM zone 3S
+EPSG:32304 - WGS 72 / UTM zone 4S
+EPSG:32305 - WGS 72 / UTM zone 5S
+EPSG:32306 - WGS 72 / UTM zone 6S
+EPSG:32307 - WGS 72 / UTM zone 7S
+EPSG:32308 - WGS 72 / UTM zone 8S
+EPSG:32309 - WGS 72 / UTM zone 9S
+EPSG:32310 - WGS 72 / UTM zone 10S
+EPSG:32311 - WGS 72 / UTM zone 11S
+EPSG:32312 - WGS 72 / UTM zone 12S
+EPSG:32313 - WGS 72 / UTM zone 13S
+EPSG:32314 - WGS 72 / UTM zone 14S
+EPSG:32315 - WGS 72 / UTM zone 15S
+EPSG:32316 - WGS 72 / UTM zone 16S
+EPSG:32317 - WGS 72 / UTM zone 17S
+EPSG:32318 - WGS 72 / UTM zone 18S
+EPSG:32319 - WGS 72 / UTM zone 19S
+EPSG:32320 - WGS 72 / UTM zone 20S
+EPSG:32321 - WGS 72 / UTM zone 21S
+EPSG:32322 - WGS 72 / UTM zone 22S
+EPSG:32323 - WGS 72 / UTM zone 23S
+EPSG:32324 - WGS 72 / UTM zone 24S
+EPSG:32325 - WGS 72 / UTM zone 25S
+EPSG:32326 - WGS 72 / UTM zone 26S
+EPSG:32327 - WGS 72 / UTM zone 27S
+EPSG:32328 - WGS 72 / UTM zone 28S
+EPSG:32329 - WGS 72 / UTM zone 29S
+EPSG:32330 - WGS 72 / UTM zone 30S
+EPSG:32331 - WGS 72 / UTM zone 31S
+EPSG:32332 - WGS 72 / UTM zone 32S
+EPSG:32333 - WGS 72 / UTM zone 33S
+EPSG:32334 - WGS 72 / UTM zone 34S
+EPSG:32335 - WGS 72 / UTM zone 35S
+EPSG:32336 - WGS 72 / UTM zone 36S
+EPSG:32337 - WGS 72 / UTM zone 37S
+EPSG:32338 - WGS 72 / UTM zone 38S
+EPSG:32339 - WGS 72 / UTM zone 39S
+EPSG:32340 - WGS 72 / UTM zone 40S
+EPSG:32341 - WGS 72 / UTM zone 41S
+EPSG:32342 - WGS 72 / UTM zone 42S
+EPSG:32343 - WGS 72 / UTM zone 43S
+EPSG:32344 - WGS 72 / UTM zone 44S
+EPSG:32345 - WGS 72 / UTM zone 45S
+EPSG:32346 - WGS 72 / UTM zone 46S
+EPSG:32347 - WGS 72 / UTM zone 47S
+EPSG:32348 - WGS 72 / UTM zone 48S
+EPSG:32349 - WGS 72 / UTM zone 49S
+EPSG:32350 - WGS 72 / UTM zone 50S
+EPSG:32351 - WGS 72 / UTM zone 51S
+EPSG:32352 - WGS 72 / UTM zone 52S
+EPSG:32353 - WGS 72 / UTM zone 53S
+EPSG:32354 - WGS 72 / UTM zone 54S
+EPSG:32355 - WGS 72 / UTM zone 55S
+EPSG:32356 - WGS 72 / UTM zone 56S
+EPSG:32357 - WGS 72 / UTM zone 57S
+EPSG:32358 - WGS 72 / UTM zone 58S
+EPSG:32359 - WGS 72 / UTM zone 59S
+EPSG:32360 - WGS 72 / UTM zone 60S
+EPSG:32401 - WGS 72BE / UTM zone 1N
+EPSG:32402 - WGS 72BE / UTM zone 2N
+EPSG:32403 - WGS 72BE / UTM zone 3N
+EPSG:32404 - WGS 72BE / UTM zone 4N
+EPSG:32405 - WGS 72BE / UTM zone 5N
+EPSG:32406 - WGS 72BE / UTM zone 6N
+EPSG:32407 - WGS 72BE / UTM zone 7N
+EPSG:32408 - WGS 72BE / UTM zone 8N
+EPSG:32409 - WGS 72BE / UTM zone 9N
+EPSG:32410 - WGS 72BE / UTM zone 10N
+EPSG:32411 - WGS 72BE / UTM zone 11N
+EPSG:32412 - WGS 72BE / UTM zone 12N
+EPSG:32413 - WGS 72BE / UTM zone 13N
+EPSG:32414 - WGS 72BE / UTM zone 14N
+EPSG:32415 - WGS 72BE / UTM zone 15N
+EPSG:32416 - WGS 72BE / UTM zone 16N
+EPSG:32417 - WGS 72BE / UTM zone 17N
+EPSG:32418 - WGS 72BE / UTM zone 18N
+EPSG:32419 - WGS 72BE / UTM zone 19N
+EPSG:32420 - WGS 72BE / UTM zone 20N
+EPSG:32421 - WGS 72BE / UTM zone 21N
+EPSG:32422 - WGS 72BE / UTM zone 22N
+EPSG:32423 - WGS 72BE / UTM zone 23N
+EPSG:32424 - WGS 72BE / UTM zone 24N
+EPSG:32425 - WGS 72BE / UTM zone 25N
+EPSG:32426 - WGS 72BE / UTM zone 26N
+EPSG:32427 - WGS 72BE / UTM zone 27N
+EPSG:32428 - WGS 72BE / UTM zone 28N
+EPSG:32429 - WGS 72BE / UTM zone 29N
+EPSG:32430 - WGS 72BE / UTM zone 30N
+EPSG:32431 - WGS 72BE / UTM zone 31N
+EPSG:32432 - WGS 72BE / UTM zone 32N
+EPSG:32433 - WGS 72BE / UTM zone 33N
+EPSG:32434 - WGS 72BE / UTM zone 34N
+EPSG:32435 - WGS 72BE / UTM zone 35N
+EPSG:32436 - WGS 72BE / UTM zone 36N
+EPSG:32437 - WGS 72BE / UTM zone 37N
+EPSG:32438 - WGS 72BE / UTM zone 38N
+EPSG:32439 - WGS 72BE / UTM zone 39N
+EPSG:32440 - WGS 72BE / UTM zone 40N
+EPSG:32441 - WGS 72BE / UTM zone 41N
+EPSG:32442 - WGS 72BE / UTM zone 42N
+EPSG:32443 - WGS 72BE / UTM zone 43N
+EPSG:32444 - WGS 72BE / UTM zone 44N
+EPSG:32445 - WGS 72BE / UTM zone 45N
+EPSG:32446 - WGS 72BE / UTM zone 46N
+EPSG:32447 - WGS 72BE / UTM zone 47N
+EPSG:32448 - WGS 72BE / UTM zone 48N
+EPSG:32449 - WGS 72BE / UTM zone 49N
+EPSG:32450 - WGS 72BE / UTM zone 50N
+EPSG:32451 - WGS 72BE / UTM zone 51N
+EPSG:32452 - WGS 72BE / UTM zone 52N
+EPSG:32453 - WGS 72BE / UTM zone 53N
+EPSG:32454 - WGS 72BE / UTM zone 54N
+EPSG:32455 - WGS 72BE / UTM zone 55N
+EPSG:32456 - WGS 72BE / UTM zone 56N
+EPSG:32457 - WGS 72BE / UTM zone 57N
+EPSG:32458 - WGS 72BE / UTM zone 58N
+EPSG:32459 - WGS 72BE / UTM zone 59N
+EPSG:32460 - WGS 72BE / UTM zone 60N
+EPSG:32501 - WGS 72BE / UTM zone 1S
+EPSG:32502 - WGS 72BE / UTM zone 2S
+EPSG:32503 - WGS 72BE / UTM zone 3S
+EPSG:32504 - WGS 72BE / UTM zone 4S
+EPSG:32505 - WGS 72BE / UTM zone 5S
+EPSG:32506 - WGS 72BE / UTM zone 6S
+EPSG:32507 - WGS 72BE / UTM zone 7S
+EPSG:32508 - WGS 72BE / UTM zone 8S
+EPSG:32509 - WGS 72BE / UTM zone 9S
+EPSG:32510 - WGS 72BE / UTM zone 10S
+EPSG:32511 - WGS 72BE / UTM zone 11S
+EPSG:32512 - WGS 72BE / UTM zone 12S
+EPSG:32513 - WGS 72BE / UTM zone 13S
+EPSG:32514 - WGS 72BE / UTM zone 14S
+EPSG:32515 - WGS 72BE / UTM zone 15S
+EPSG:32516 - WGS 72BE / UTM zone 16S
+EPSG:32517 - WGS 72BE / UTM zone 17S
+EPSG:32518 - WGS 72BE / UTM zone 18S
+EPSG:32519 - WGS 72BE / UTM zone 19S
+EPSG:32520 - WGS 72BE / UTM zone 20S
+EPSG:32521 - WGS 72BE / UTM zone 21S
+EPSG:32522 - WGS 72BE / UTM zone 22S
+EPSG:32523 - WGS 72BE / UTM zone 23S
+EPSG:32524 - WGS 72BE / UTM zone 24S
+EPSG:32525 - WGS 72BE / UTM zone 25S
+EPSG:32526 - WGS 72BE / UTM zone 26S
+EPSG:32527 - WGS 72BE / UTM zone 27S
+EPSG:32528 - WGS 72BE / UTM zone 28S
+EPSG:32529 - WGS 72BE / UTM zone 29S
+EPSG:32530 - WGS 72BE / UTM zone 30S
+EPSG:32531 - WGS 72BE / UTM zone 31S
+EPSG:32532 - WGS 72BE / UTM zone 32S
+EPSG:32533 - WGS 72BE / UTM zone 33S
+EPSG:32534 - WGS 72BE / UTM zone 34S
+EPSG:32535 - WGS 72BE / UTM zone 35S
+EPSG:32536 - WGS 72BE / UTM zone 36S
+EPSG:32537 - WGS 72BE / UTM zone 37S
+EPSG:32538 - WGS 72BE / UTM zone 38S
+EPSG:32539 - WGS 72BE / UTM zone 39S
+EPSG:32540 - WGS 72BE / UTM zone 40S
+EPSG:32541 - WGS 72BE / UTM zone 41S
+EPSG:32542 - WGS 72BE / UTM zone 42S
+EPSG:32543 - WGS 72BE / UTM zone 43S
+EPSG:32544 - WGS 72BE / UTM zone 44S
+EPSG:32545 - WGS 72BE / UTM zone 45S
+EPSG:32546 - WGS 72BE / UTM zone 46S
+EPSG:32547 - WGS 72BE / UTM zone 47S
+EPSG:32548 - WGS 72BE / UTM zone 48S
+EPSG:32549 - WGS 72BE / UTM zone 49S
+EPSG:32550 - WGS 72BE / UTM zone 50S
+EPSG:32551 - WGS 72BE / UTM zone 51S
+EPSG:32552 - WGS 72BE / UTM zone 52S
+EPSG:32553 - WGS 72BE / UTM zone 53S
+EPSG:32554 - WGS 72BE / UTM zone 54S
+EPSG:32555 - WGS 72BE / UTM zone 55S
+EPSG:32556 - WGS 72BE / UTM zone 56S
+EPSG:32557 - WGS 72BE / UTM zone 57S
+EPSG:32558 - WGS 72BE / UTM zone 58S
+EPSG:32559 - WGS 72BE / UTM zone 59S
+EPSG:32560 - WGS 72BE / UTM zone 60S
+EPSG:32601 - WGS 84 / UTM zone 1N
+EPSG:32602 - WGS 84 / UTM zone 2N
+EPSG:32603 - WGS 84 / UTM zone 3N
+EPSG:32604 - WGS 84 / UTM zone 4N
+EPSG:32605 - WGS 84 / UTM zone 5N
+EPSG:32606 - WGS 84 / UTM zone 6N
+EPSG:32607 - WGS 84 / UTM zone 7N
+EPSG:32608 - WGS 84 / UTM zone 8N
+EPSG:32609 - WGS 84 / UTM zone 9N
+EPSG:32610 - WGS 84 / UTM zone 10N
+EPSG:32611 - WGS 84 / UTM zone 11N
+EPSG:32612 - WGS 84 / UTM zone 12N
+EPSG:32613 - WGS 84 / UTM zone 13N
+EPSG:32614 - WGS 84 / UTM zone 14N
+EPSG:32615 - WGS 84 / UTM zone 15N
+EPSG:32616 - WGS 84 / UTM zone 16N
+EPSG:32617 - WGS 84 / UTM zone 17N
+EPSG:32618 - WGS 84 / UTM zone 18N
+EPSG:32619 - WGS 84 / UTM zone 19N
+EPSG:32620 - WGS 84 / UTM zone 20N
+EPSG:32621 - WGS 84 / UTM zone 21N
+EPSG:32622 - WGS 84 / UTM zone 22N
+EPSG:32623 - WGS 84 / UTM zone 23N
+EPSG:32624 - WGS 84 / UTM zone 24N
+EPSG:32625 - WGS 84 / UTM zone 25N
+EPSG:32626 - WGS 84 / UTM zone 26N
+EPSG:32627 - WGS 84 / UTM zone 27N
+EPSG:32628 - WGS 84 / UTM zone 28N
+EPSG:32629 - WGS 84 / UTM zone 29N
+EPSG:32630 - WGS 84 / UTM zone 30N
+EPSG:32631 - WGS 84 / UTM zone 31N
+EPSG:32632 - WGS 84 / UTM zone 32N
+EPSG:32633 - WGS 84 / UTM zone 33N
+EPSG:32634 - WGS 84 / UTM zone 34N
+EPSG:32635 - WGS 84 / UTM zone 35N
+EPSG:32636 - WGS 84 / UTM zone 36N
+EPSG:32637 - WGS 84 / UTM zone 37N
+EPSG:32638 - WGS 84 / UTM zone 38N
+EPSG:32639 - WGS 84 / UTM zone 39N
+EPSG:32640 - WGS 84 / UTM zone 40N
+EPSG:32641 - WGS 84 / UTM zone 41N
+EPSG:32642 - WGS 84 / UTM zone 42N
+EPSG:32643 - WGS 84 / UTM zone 43N
+EPSG:32644 - WGS 84 / UTM zone 44N
+EPSG:32645 - WGS 84 / UTM zone 45N
+EPSG:32646 - WGS 84 / UTM zone 46N
+EPSG:32647 - WGS 84 / UTM zone 47N
+EPSG:32648 - WGS 84 / UTM zone 48N
+EPSG:32649 - WGS 84 / UTM zone 49N
+EPSG:32650 - WGS 84 / UTM zone 50N
+EPSG:32651 - WGS 84 / UTM zone 51N
+EPSG:32652 - WGS 84 / UTM zone 52N
+EPSG:32653 - WGS 84 / UTM zone 53N
+EPSG:32654 - WGS 84 / UTM zone 54N
+EPSG:32655 - WGS 84 / UTM zone 55N
+EPSG:32656 - WGS 84 / UTM zone 56N
+EPSG:32657 - WGS 84 / UTM zone 57N
+EPSG:32658 - WGS 84 / UTM zone 58N
+EPSG:32659 - WGS 84 / UTM zone 59N
+EPSG:32660 - WGS 84 / UTM zone 60N
+EPSG:32701 - WGS 84 / UTM zone 1S
+EPSG:32702 - WGS 84 / UTM zone 2S
+EPSG:32703 - WGS 84 / UTM zone 3S
+EPSG:32704 - WGS 84 / UTM zone 4S
+EPSG:32705 - WGS 84 / UTM zone 5S
+EPSG:32706 - WGS 84 / UTM zone 6S
+EPSG:32707 - WGS 84 / UTM zone 7S
+EPSG:32708 - WGS 84 / UTM zone 8S
+EPSG:32709 - WGS 84 / UTM zone 9S
+EPSG:32710 - WGS 84 / UTM zone 10S
+EPSG:32711 - WGS 84 / UTM zone 11S
+EPSG:32712 - WGS 84 / UTM zone 12S
+EPSG:32713 - WGS 84 / UTM zone 13S
+EPSG:32714 - WGS 84 / UTM zone 14S
+EPSG:32715 - WGS 84 / UTM zone 15S
+EPSG:32716 - WGS 84 / UTM zone 16S
+EPSG:32717 - WGS 84 / UTM zone 17S
+EPSG:32718 - WGS 84 / UTM zone 18S
+EPSG:32719 - WGS 84 / UTM zone 19S
+EPSG:32720 - WGS 84 / UTM zone 20S
+EPSG:32721 - WGS 84 / UTM zone 21S
+EPSG:32722 - WGS 84 / UTM zone 22S
+EPSG:32723 - WGS 84 / UTM zone 23S
+EPSG:32724 - WGS 84 / UTM zone 24S
+EPSG:32725 - WGS 84 / UTM zone 25S
+EPSG:32726 - WGS 84 / UTM zone 26S
+EPSG:32727 - WGS 84 / UTM zone 27S
+EPSG:32728 - WGS 84 / UTM zone 28S
+EPSG:32729 - WGS 84 / UTM zone 29S
+EPSG:32730 - WGS 84 / UTM zone 30S
+EPSG:32731 - WGS 84 / UTM zone 31S
+EPSG:32732 - WGS 84 / UTM zone 32S
+EPSG:32733 - WGS 84 / UTM zone 33S
+EPSG:32734 - WGS 84 / UTM zone 34S
+EPSG:32735 - WGS 84 / UTM zone 35S
+EPSG:32736 - WGS 84 / UTM zone 36S
+EPSG:32737 - WGS 84 / UTM zone 37S
+EPSG:32738 - WGS 84 / UTM zone 38S
+EPSG:32739 - WGS 84 / UTM zone 39S
+EPSG:32740 - WGS 84 / UTM zone 40S
+EPSG:32741 - WGS 84 / UTM zone 41S
+EPSG:32742 - WGS 84 / UTM zone 42S
+EPSG:32743 - WGS 84 / UTM zone 43S
+EPSG:32744 - WGS 84 / UTM zone 44S
+EPSG:32745 - WGS 84 / UTM zone 45S
+EPSG:32746 - WGS 84 / UTM zone 46S
+EPSG:32747 - WGS 84 / UTM zone 47S
+EPSG:32748 - WGS 84 / UTM zone 48S
+EPSG:32749 - WGS 84 / UTM zone 49S
+EPSG:32750 - WGS 84 / UTM zone 50S
+EPSG:32751 - WGS 84 / UTM zone 51S
+EPSG:32752 - WGS 84 / UTM zone 52S
+EPSG:32753 - WGS 84 / UTM zone 53S
+EPSG:32754 - WGS 84 / UTM zone 54S
+EPSG:32755 - WGS 84 / UTM zone 55S
+EPSG:32756 - WGS 84 / UTM zone 56S
+EPSG:32757 - WGS 84 / UTM zone 57S
+EPSG:32758 - WGS 84 / UTM zone 58S
+EPSG:32759 - WGS 84 / UTM zone 59S
+EPSG:32760 - WGS 84 / UTM zone 60S
+EPSG:32766 - WGS 84 / TM 36 SE 

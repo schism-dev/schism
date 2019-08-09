@@ -1,0 +1,71 @@
+%
+%$Id: definitions.tex,v 1.5 2005-08-11 13:55:19 lars Exp $
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%                                                                   %
+%                 Copyright (2003) by The GOTM Team                 %
+%               _______________________________________             %
+%                                                                   %
+%                         LaTeX Definitions                         %
+%                                                                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% figures and tables
+\newcommand{\fig}[1]{figure {\ref{#1}}}
+\newcommand{\tab}[1]{table {\ref{#1}}}
+\newcommand{\sect}[1]{section {\ref{#1}}}
+\newcommand{\sects}[2]{sections {\ref{#1}}--{\ref{#2}}}
+\newcommand{\Fig}[1]{Figure {\ref{#1}}}
+\newcommand{\Tab}[1]{Table {\ref{#1}}}
+\newcommand{\Sect}[1]{Section {\ref{#1}}}
+\newcommand{\Sects}[2]{Sections {\ref{#1}}--{\ref{#2}}}
+\newcommand{\eq}[1]{(\ref{#1})}
+
+% displaystyle
+\newcommand{\dps}[1]{\displaystyle{#1}}
+
+% symbols
+\newcommand{\eps}{\varepsilon}
+
+% boldsymbols
+\newcommand{\bs}[1]{{\boldsymbol #1}}
+
+% vectors / tensors
+\newcommand{\V}[1]{{\boldsymbol #1}}
+\newcommand{\T}[1]{{\boldsymbol #1}}
+
+% partial derivatives with respect to coordinates
+\newcommand{\pderh}[4]{\dfrac{\partial {#1}^{#2}}{\partial {#3}^{#4}}}
+\newcommand{\pderl}[4]{\dfrac{\partial {#1}_{#2}}{\partial {#3}^{#4}}}
+\newcommand{\pder}[2]{\dfrac{\partial}{\partial {#1}^{#2}}}
+\newcommand{\frstder}[1]{\dfrac{\partial}{\partial {#1}}}
+\newcommand{\dfrstder}[1]{\dfrac{\partial}{\partial {#1}}}
+\newcommand{\scndder}[2]{\dfrac{\partial^2 {#1}}{\partial {#2}^2}}
+\newcommand{\dscndder}[2]{\dfrac{\partial^2 {#1}}{\partial {#2}^2}}
+\newcommand{\partder}[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand{\dpartder}[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+
+\newcommand{\deriv}[2]{\dfrac{\text{d} {#1}}{\text{d} {#2}}}
+\newcommand{\frstderiv}[1]{\dfrac{\text{d} }{\text{d} {#1}}}
+
+% turbulence
+\def\mean#1{ {\langle #1 \rangle} }
+\def\meandot#1{ \dot{ \rule{0mm}{4mm} \langle #1 \rangle} }
+
+% Christoffel Symbols 
+\newcommand{\chra}[3]{\left[\; #1#2,#3\; \right]}
+\newcommand{\chrb}[3]{\left\{ #1 \atop #2\;#3 \right\}}
+
+%operators
+\newcommand{\gradient}{{\, \rm grad}}
+\newcommand{\divergence}{{\, \rm div }}
+\newcommand{\rotation}{{\, \rm rot}}
+
+%stuff
+\def\magn#1{| #1 |}
+\newcommand{\comma}{\; , \quad}
+\newcommand{\point}{\quad .}
+
+\newcommand{\centigrade}{{\ensuremath{^\circ\text{C }{}}}}
+\newcommand{\degree}{{\ensuremath{^\circ{\;}}}}

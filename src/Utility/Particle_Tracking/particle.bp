@@ -1,0 +1,15 @@
+Input for ptrack*
+1 nscreen
+0 mod_part (0: passive; 1: oil spill)
+1 ibf
+0 istiff
+1 -122.6 37.38 ics slam0 sfea0
+0.01 140. 120. 30 720 40 !h0,rnday,dtm,nspool,ihfskip,ndeltp
+2 !# of particles
+1   0.432000000E+05   0.334902000E+06   0.293906000E+06  0. !particle ID, starting time in sec, starting x,y,z (<=0, relative to the instantaneous surface)
+2   0.864000000E+05   0.334902000E+06   0.293906000E+06  0.
+!Oil spill parameters
+1  3.0  0.2           !ihdf,hdc,horcon
+1  0                  !ibuoy,iwind
+20.0                  !pbeach
+

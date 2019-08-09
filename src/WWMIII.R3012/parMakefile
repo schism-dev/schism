@@ -1,0 +1,127 @@
+include ${PETSC_DIR}/conf/variables
+PROGwwm = $(HOME)/bin/wwmadv
+#PROG = wwmadv
+
+FFLAGS = -DST42 -DWWM_SETUP
+
+# Put MPI = on for compiling with mpi, nothing if no MPI is wished.
+MPI = on
+# Put PETSC = on for compiling with petsc, nothing if no petsc is wished.
+PETSC = on
+# Put NETCDF = on for compiling with netcdf, nothing if no netcdf is wished.
+NETCDF = on
+# Put OPENMP = on for compiling with openmp, nothing if no openmp is wished.
+OPENMP =
+# Put OPENMP = on for compiling with openmp, nothing if no openmp is wished.
+DARKO =
+# Put OPENMP = on for compiling with openmp, nothing if no openmp is wished.
+SNL4_TSA = 
+# Put GRIB = on for compiling with grib library, nothing if GRIB is not wished
+GRIB =
+# Put TIMINGS = on for timings with
+TIME = on
+# Put PDLIB = on for using the pdlib library.
+PDLIB =
+
+
+#F90 = gfortran
+F90 = mpif90
+#F90 = mpif90-vt
+#F90 = ifort
+#F90 = $(FLINKER)
+#F90 = pgf90
+#F90 = pathf95
+
+#INTEL
+#save opti
+#F90OPTI = -fpp -traceback -g
+#F90OPTI = -O1 -axSSE4.2 -traceback -g  -check uninit -check bounds -check pointers -warn interfaces,nouncalled
+#F90OPTI = -fpp -O2 -stand f03 -assume realloc_lhs -fstack-protector -assume protect_parens
+#F90OPTI = -warn interfaces,nouncalled -fpp -gen-interface -g -traceback -check uninit -check bounds -check pointers
+
+
+#F90OPTI = -ip -O2
+F90OPTI =  -O1 -axSSE4.2 -unroll-aggressive -assume byterecl
+#F90OPTI = -warn interfaces,nouncalled -fpp -gen-interface -g -traceback -check all -fp-model precise
+#F90OPTI =  -O2 -assume realloc_lhs -check all -traceback -warn all -fstack-protector -assume protect_parens -implicitnone
+#F90OPTI =  -traceback -fstack-protector -assume protect_parens -g
+#F90OPTI = -g -traceback -O5 -axSSE4.2 -unroll-aggressive -assume byterecl
+
+#F90OPTI = -fpp -O2 -stand f03 -assume realloc_lhs -check all -traceback -fstack-protector -assume protect_parens -implicitnone
+#extreme aggressive opti ...
+#F90OPTI = -g -traceback -O1 -axSSE4.2 -unroll-aggressive -assume byterecl #-openmp#-check all -warn all
+
+#aggressive opti
+#F90OPTI = -O1 -fp-model fast -opt-multi-version-aggressive -axSSE4.2 -no-heap-arrays -fpp -stack_temps -unroll-aggressive -vec-guard-write -traceback -g
+#aggressive opti no openmp
+#F90OPTI = -O1 -axSSE4.2 -fpp
+#debug 1
+#F90OPTI = -O1 -mp1 -fpp -traceback -g -traceback -check pointers -check bound -check uninit 
+#debug 2
+#F90OPTI =  -fpp -g -traceback -check all
+#aggresive debug openmp
+#F90OPTI = -fpp -g -traceback -check all -openmp
+
+#PGI
+#F90OPTI = -g -O1 -Mprof=dwarf -Mprof=time -Minfo=ccff -mp
+#F90OPTI = -fastsse -Munroll -Minline=reshape -Minline=levels:10 -Mvect -Mipa=fast Mipa=levels:10 -Mlarge_arrays -mp
+#F90OPTI  = -g -Mbounds -Mchkfpstk -Mchkptr -Mchkstk
+
+#GFORTRAN
+#F90OPTI = -g -O3 -ffree-line-length-0 -fbacktrace -Wall
+
+#LDFLAGS = -Mprof=dwarf -Mprof=lines -Mprof=func -Mprof=time Minfo=ccff
+#TCFLAG  = -tcheck
+#LDFLAGS = -lpthread
+
+#ITT_BASE = /home/aron/intel/itt
+
+#LIBS = #libgoto_penrynp-r1.26.a #sparskit_pgi.a libgoto.a #sparskit.a
+
+BINDIR       = Binaries
+GRIBAPI_INC  = $(GRIBPREFIX)/include
+GRIBAPI_LIB  = $(GRIBPREFIX)/lib
+
+CP_OPT      = -DRS6K
+
+SCRATCH_DIR = Build
+
+SFMAKEDEPEND := ../Scripts/sfmakedepend
+SimpleDEPEND := ../Scripts/GetSimpleDepend
+          AR := ar
+     ARFLAGS := r
+      RANLIB := ranlib
+        TEST := test
+       MKDIR := mkdir -p
+
+MDEPFLAGS += --silent --moddir $(SCRATCH_DIR)
+
+SRC = $(wildcard *.F90)
+OBJ = $(addprefix $(SCRATCH_DIR)/, $(patsubst %.F90,%.o, $(notdir $(SRC))))
+
+all: PROGwwm
+
+$(BINDIR)/chief: $(SCRATCH_DIR)/libtotal.a $(SCRATCH_DIR)/chief.o
+	cd $(SCRATCH_DIR) && $(FC) $(FFLAGS) chief.o libtotal.a $(LIBS) -o ../$(BINDIR)/chief
+
+$(SCRATCH_DIR)/libtotal.a: $(SCRATCH_DIR)/MakeDepend $(SCRATCH_DIR)/MakeSimpleWAM $(SCRATCH_DIR)/MakeSimpleMPLf $(OBJwam)
+	$(AR) $(ARFLAGS) $(SCRATCH_DIR)/libtotal.a $(OBJwam) 
+	$(RANLIB) $(SCRATCH_DIR)/libtotal.a
+
+-include $(SCRATCH_DIR)/MakeDepend
+-include $(SCRATCH_DIR)/MakeSimpleWWM
+
+MDEPFLAGS := --file=- --silent --moddir $(SCRATCH_DIR) --objdir=$(SCRATCH_DIR)
+
+$(SCRATCH_DIR)/MakeDepend: $(SCRATCH_DIR)
+	$(SFMAKEDEPEND) $(MDEPFLAGS) *.F90 > $(SCRATCH_DIR)/MakeDepend
+
+$(SCRATCH_DIR)/MakeSimpleWWM: $(SCRATCH_DIR) $(SCRATCH_DIR)/MakeDepend
+	$(SimpleDEPEND) Build/ "cd slk(SCRATCH_DIR) && slk(FC) slk(FFLAGS) -c ../" *.F90 > $(SCRATCH_DIR)/MakeSimpleWWM
+
+$(SCRATCH_DIR):
+	$(shell $(TEST) -d $(SCRATCH_DIR) || $(MKDIR) $(SCRATCH_DIR) )
+
+clean:
+	\rm -f $(SCRATCH_DIR)/*
+	\rm -f $(BINDIR)/*

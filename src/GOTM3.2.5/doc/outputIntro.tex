@@ -1,0 +1,27 @@
+%
+%$Id: outputIntro.tex,v 1.1 2003-03-10 09:42:25 gotm Exp $
+%
+
+\section{Saving the results \label{sec:output} }
+
+GOTM provides an easily extendible interface for storing calculated results.
+The main specifications are given via the {\tt output} namelist in
+{\tt gotmrun.inp}. The most important member in this namelist is
+the integer {\tt out\_fmt}. Changing this variable will select the output format
+--- presently ASCII and NetCDF are supported.
+
+In GOTM output is triggered by {\tt do\_output()}
+called inside the main integration loop (see \sect{sec:gotm}).
+Completely separated from the core of GOTM, a format specific
+subroutine is called to do the actual output.  We strongly recommend
+to use the NetCDF format --- mainly because it is well established and
+save --- but also because a large number of graphical programmes can
+read NetCDF. Another reason is the powerful package `nco' which
+provides some nice programs for manipulating NetCDF files. Information
+about how to install and use NetCDF and nco can be found at 
+\begin{itemize}
+ \item {\tt http://www.unidata.ucar.edu/packages/netcdf} and 
+ \item {\tt http://nco.sourceforge.net}.
+\end{itemize}
+
+

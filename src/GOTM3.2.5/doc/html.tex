@@ -1,0 +1,129 @@
+%
+%$Id: html.tex,v 1.3 2005-08-11 13:56:37 lars Exp $
+%
+
+\documentclass[a4paper,twoside]{article}
+
+% AMS math and symbols
+\usepackage{amsmath,amsfonts,amssymb,amsbsy,latexsym}
+
+% natural science bibliography
+\usepackage[round]{natbib}
+
+% definitions used in the GOTM-manual
+\input definitions.tex
+
+% graphics
+\usepackage{graphics}
+
+% center it on a4-format
+\setlength{\evensidemargin}{4.6mm}
+\setlength{\oddsidemargin}{4.6mm}
+\setlength{\textwidth}{150mm}
+
+\begin{document}
+
+
+
+% the titlepage
+\begin{titlepage}
+
+
+{\sf \bf \LARGE
+ \begin{center}
+   Lars Umlauf $\bs \cdot$ Hans Burchard $\bs \cdot$ Karsten Bolding
+ \end{center}
+}
+
+\vspace{14mm}
+
+{\sf \bf \Huge
+ \begin{center}
+   GOTM
+ \end{center}
+}
+
+\vspace{6mm}
+
+{\sf \bf \LARGE
+ \begin{center}
+   Sourcecode \\
+      and \\
+Test Case Documentation
+ \end{center}
+}
+
+
+\vspace{5mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Version 3.2
+ \end{center}
+}
+
+\vspace{8mm}
+
+\begin{figure}[!h]
+  \begin{center}
+  \scalebox{0.6}{\includegraphics{figures/mixerA.eps}}
+  \end{center}
+\end{figure}
+
+\vspace{7mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Flow ---  Mixing --- Sediment Transport
+\end{center}
+}
+
+
+\end{titlepage}
+
+
+% table of contents
+\tableofcontents
+
+% include the section files
+% the introduction. All files
+% ending with 'Intro.tex' are hand-made,
+% all others come from 'ProTeX'
+
+\include{introduction}
+
+\include{mainIntro}
+\include{gotm}
+
+\include{meanflowIntro}
+\include{meanflow}
+
+\include{turbulenceIntro}
+\include{turbulence}
+
+\include{airseaIntro}
+\include{airsea}
+
+\include{observationsIntro}
+\include{observations}
+
+\include{outputIntro}
+\include{output}
+
+\include{utilIntro}
+\include{util}
+
+\include{extraIntro}
+%\include{sediment}
+\include{seagrass}
+%\include{bio}
+
+\include{cases}
+
+% Bibliography with BibTeX:
+\bibliographystyle{agu}
+\addcontentsline{toc}{section}{Bibliography}
+\bibliography{gotm}
+
+
+\end{document}

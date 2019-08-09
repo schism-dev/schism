@@ -1,0 +1,34 @@
+#!/bin/sh
+##############################################################
+# The following script substitute the date in the            #
+# file *.txt in the current directory for the current date.  #
+# The date is formatted as in '13Aug98'.                     #
+##############################################################
+#
+# gets the old_date
+#
+. old_date_file
+#
+# compute today's date
+#
+day=`date | cut -c9-10`
+month=`date | cut -c5-7`
+year=`date | cut -c31-32`
+new_date=$day$month$year
+#
+# substitute the new date for the old one
+#
+for i in *.txt
+do
+mv $i $i.tmp
+sed -e "s/$old_date/$new_date/" $i.tmp > $i
+rm -f $i.tmp
+done
+#
+# update the old date file
+#
+old_date=$new_date
+[ $day -le 9 ] && old_date=\\$old_date
+cat <<EOF > old_date_file
+old_date=$old_date
+EOF

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<element id="Settings">
+	<element id="Paths">
+		<element id="RecentScenarios">
+			<element id="Path" type="string" maxoccurs="4"/>
+		</element>
+		<element id="RecentResults">
+			<element id="Path" type="string" maxoccurs="4"/>
+		</element>
+	</element>
+	<element id="FigureSettings">
+		<link path="../figure/gotmgui.xml" maxoccurs="1000"/>
+	</element>
+</element>

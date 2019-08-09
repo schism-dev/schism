@@ -1,0 +1,2 @@
+No installation needed; simply use the matlab functions SELFE_* to visualized 
+SELFE outputs. See headers (or inside matlab, help SELFE_*) for input info.

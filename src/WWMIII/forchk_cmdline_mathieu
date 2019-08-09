@@ -1,0 +1,2 @@
+forchk -ninf -nwarn -ff -I /home/mathieu/opt/petsc-3.4.3_mpich3.1_ifort13.1.1_debug,/home/mathieu/opt/mpich-3.1_ifort13.1.1/include -define ST42,NCDF,WWM_MPI,WWM_SOLVER,PDLIB *.F90 /home/mathieu/opt/forcheck-14.3/additional/netcdf.f90 /home/mathieu/opt/forcheck-14.3/additional/typeSizes.f90 /home/mathieu/GIT/pdlib/src/* /home/mathieu/opt/forcheck-14.3/share/forcheck/MPI_fil/MPI.FLB
+

@@ -1,0 +1,12 @@
+One way nesting scripts for serial and MPI SELFE.
+
+The purpose is to generate elev2D.th.nc, SAL_3D.th.nc, TEM_3D.th.nc and/or
+ uv3D.th.nc from a large-domain run to be used in a small-domain run. 
+
+(1) use interpolate_variables*.f90 to generate *D.th.nc for the small-domain run.
+    Since SCHISM does not allow open bnd nodes to become dry, you may need to be careful
+    about the location of the open bnd for the small-domain run.
+(2) use the new *D.th.nc for the small-domain run.
+
+interpolate_variables.in is the sample input. 
+

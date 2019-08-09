@@ -1,0 +1,36 @@
+Below is the format of processed HYCOM files expected by gen_hot_3Dth_from_hycom.f90:
+
+netcdf TS_1 {
+dimensions:
+        time = 12 ;
+        depth = 40 ;
+        lat = 489 ;
+        lon = 488 ;
+variables:
+        float salinity(time, depth, lat, lon) ;
+        float water_temp(time, depth, lat, lon) ;
+        float depth(depth) ;
+}
+(Note: depth() is positive downward)
+
+netcdf SSH_1 {
+dimensions:
+        time = 12 ;
+        lat = 489 ;
+        lon = 501 ;
+variables:
+        float surf_el(time, lat, lon) ;
+        float lat(lat) ;
+        float lon(lon) ;
+}
+
+netcdf UV_1 {
+dimensions:
+        time = 12 ;
+        depth = 40 ;
+        lat = 489 ;
+        lon = 488 ;
+variables:
+        float water_u(time, depth, lat, lon) ;
+        float water_v(time, depth, lat, lon) ;
+}

@@ -1,0 +1,89 @@
+#! /bin/csh
+
+######## define locations and names for utilities ######################
+set util_bin       = /home/workspace/ccalmr/mazulauf/amb10xx/netcdf/bin/
+set nc_verify_csh  = $util_bin'nc_verify.csh'
+set month_day_year = $util_bin'month_day_year'
+set jdate          = $util_bin'jdate'
+########################################################################
+
+
+######## define names for source and destination models ################
+set dst_model = 'narr'
+########################################################################
+
+
+######## define parent directories for data source and destination #####
+set dst_parent = '/home/workspace/ccalmr37/mazulauf/sflux_data/'$dst_model'/'
+set dst_parent = '/home/workspace/ccalmr37/mazulauf/new_data/output/'$dst_model'/'
+########################################################################
+
+
+# if there are no arguments, exit the script
+if ( $1 == "" ) then
+  echo you must provide a year!
+  exit
+endif
+
+# set the date variables from command line
+set year_4 = $1
+set year_2 = (`echo $year_4 | awk '{print substr($1, 3, 2) }'`)
+
+# set the start and stop Julian dates
+set day_start = 1
+set day_stop  = (`$jdate $year_4 12 31`)
+#set day_start = 1
+#set day_stop  = 5
+
+# loop over the Julian dates that we want to include
+set day_num = $day_start
+while ($day_num <= $day_stop)
+  if ($day_num >= 100) then
+    set julday = $day_num
+  else if ($day_num >= 10) then
+    set julday = 0$day_num
+  else
+    set julday = 00$day_num
+  endif
+
+# define the month
+  set month = (`$month_day_year $year_4 $julday | awk '{print $1}'`)
+
+# define the day of the month
+  set day = (`$month_day_year $year_4 $julday | awk '{print $2}'`)
+  echo
+  echo $year_4 $month $day
+
+# define the destination directories
+  set dst_dir = $dst_parent$year_4'_'$month'/'
+
+# loop over the file type
+  foreach type (rad air prc)
+
+# define name for netcdf file
+    set date_tmp = $year_4'_'$month'_'$day
+    set netcdf_file = $dst_model'_'$type'.'$date_tmp'.nc'
+
+# determine if source file exists for this date, if so, proceed
+    foreach infile (`ls $dst_dir$netcdf_file`)
+
+      cd $dst_dir > /dev/null
+      echo $netcdf_file exists
+      $nc_verify_csh $netcdf_file $type 0.875 xxxx $util_bin
+
+      echo
+
+# bottom of file existence branch
+    end
+
+# bottom of loop over type
+  end
+
+# bottom of loop over Julian days
+  @ next_num = $day_num + 1
+  set day_num = $next_num
+end
+
+# exit the script
+exit
+

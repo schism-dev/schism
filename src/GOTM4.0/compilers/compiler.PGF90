@@ -1,0 +1,14 @@
+# Set options for the Portland Group Fortran 90 compiler.
+ifeq ($(FORTRAN_COMPILER),PGF90)
+FC=pgf90
+DEFINES += -DFORTRAN90
+can_do_F90=false
+can_do_F90=true
+F90_to_f90=$(FC) -E $(F90FLAGS) $(EXTRA_FFLAGS) $< > $@
+MODULES=-module $(MODDIR)
+EXTRAS  =
+DEBUG_FLAGS = -g -Ktrap=fp -Mbounds
+PROF_FLAGS  = -Mprof=func
+PROD_FLAGS  = -fast
+DEFINES += -DREAL_4B=real\(4\)
+endif

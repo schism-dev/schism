@@ -1,0 +1,167 @@
+%
+%$Id: introduction.tex,v 1.3 2005-08-11 13:58:17 lars Exp $
+%
+
+\section{Introduction}
+
+\subsection{What is GOTM?}
+GOTM is the abbreviation for `General Ocean Turbulence Model'. It is a
+one-dimensional water column model for the most important hydrodynamic
+and thermodynamic processes related to vertical mixing in natural
+waters. In addition, it has been designed such that it can easily be
+coupled to 3-D circulation models, and used as a module for the
+computation of vertical turbulent mixing. The core of the model
+computes solutions for the one-dimensional versions of the transport
+equations of momentum, salt and heat. The key component in solving
+these equations is the model for the turbulent fluxes of these
+quantities. The strength of GOTM is the vast number of well-tested
+turbulence models that have been implemented in the code. These models
+span the range from simple prescribed expressions for the turbulent
+diffusivities up to complex Reynolds-stress models with several
+differential transport equations to solve. Even though, evidently, not
+all turbulence models published in oceanography could be implemented,
+at least one member of every relevant model family can be found in
+GOTM (empirical models, energy models, two-equation models, Algebraic
+Stress Models, K-profile parameterisations, etc).
+
+Besides the classic combination of the hydrodynamic and turbulent part
+of the model, GOTM has been growing considerably with the years, and
+new parts have been developed. Sediment transport and the dynamics of
+sea grass have been added, state-of-the-art numerical schemes have
+been implemented, and an environment for the assimilation of data and
+the computation of atmosphere-ocean interactions exists now. In
+addition, there is a number of scientific research groups that adopted
+GOTM for their own projects. Even though the modules developed by
+these groups (biological and bio-geochemical components, air-sea
+interaction modules, plotting routines, etc) are not part of the core
+structure of GOTM, as downloadable from our web-site at {\tt
+www.gotm.net}, they are in most cases available directly from these
+groups. In that sense, GOTM is an integrated, community based software
+environment for an almost unlimited range of applications in
+geophysical turbulence modelling.
+
+
+
+\subsection{The idea behind GOTM}
+Computer codes similar to pieces of GOTM can be found at many
+scientific institutions. However, different researchers have different
+goals. Some are interested in the development of turbulence models,
+others in oceanic applications of these models, and yet others want to
+compare the effects of different turbulence models on different
+processes in the ocean or in lakes. The attempt to use one of their
+specialised programs for one's own project resulted in many cases in
+spending weeks of work for deciphering non-documented FORTRAN lines,
+scattered with pre-historic fragments of code from more or, in some
+cases, less talented programmers. Additional time had to be spend for
+providing components for atmospheric forcing, etc, before the own
+research project could finally be attacked.
+
+To overcome these problems, the GOTM project was intiated, its
+purpose being twofold. First, GOTM should provide an integrative
+environment for all researchers interested in the \emph{application}
+of a turbulence model in studies of oceanic processes. Such a software
+should contain a core part for solving transport equations of mean and
+turbulent quantities, but equally well routines to compute the
+atmosphere-ocean fluxes from meteorological or measured data,
+including routines to interpolate and manipulate them. Second,
+however, GOTM should also be a research tool for those interested in
+the \emph{development} of turbulence models and numerical
+algorithms. This implies that GOTM should always contain the
+state-of-the-art models and algorithms in these disciplines. The
+current version of GOTM was developed under these premises.
+
+In both cases, a detailed and comprehensible documentation is crucial,
+and we spent a lot of effort to come close to this goal.  All methods
+and models embedded in GOTM can be traced back to scientific
+publications, a key requirement for the scientific use of a program.
+Also, we took great care to make the FORTRAN95 code as safe, easily
+understandable, and extensible, as possible.
+
+
+\subsection{How to read the documentation}
+This document is the official scientific documentation of GOTM. Due to
+the fast and continuing evolution of GOTM, we have been looking for a
+new and flexible way of giving a comprehensive and up-to-date
+documentation for GOTM. We decided for the following strategy.
+
+Every module of GOTM is accompanied by an introductory text on the
+general theory of the subject, including mathematical derivations,
+bibliographic references, and the definition of the most important
+variables. These introductory parts, which should give the reader a
+brief theoretical overview of what is coded in the modules, are
+expected to be relatively stable. References are given to more
+comprehensive introductory or advanced media for each subject.
+
+For the actual documentation of the FORTRAN95 code, which is more
+likely subject to frequent changes and extensions, a different
+strategy has been followed. For every {\tt module}, internal or
+external {\tt subroutine} or {\tt function}, a short piece of
+documentation in \LaTeX\ has been directly written into the
+code. These fragments of the documentation will be updated every time
+the code changes. We use a software called PROTEX, which looks into
+\emph{every} FORTRAN file of GOTM, extracts the \LaTeX\ parts, and
+compiles some information about the FORTRAN interfaces, public member
+functions, public data members, defined parameters, etc. All these
+pieces of information are assembled by PROTEX to yield a nice
+documentation including table of contents, figures, tables,
+references, and formulae for each part of the program. The largest
+part of the report has been created in this way. Note that PROTEX
+looks for certain key words in the FORTRAN code to organise the
+structure of the final document. Therefore, don't be confused if you
+find things like {\tt !DESCRIPTION:}, {\tt !INTERFACE:}, {\tt !PUBLIC
+DATA MEMBERS:}, etc, in the FORTRAN files. These are always preceded
+by an exclamation mark, and thus invisible for your FORTRAN compiler.
+
+If you are new to GOTM, we recommend to completely go through the core
+parts of GOTM described in \sect{sec:mainIntro}, \sect{sec:meanflowIntro},
+and \sect{sec:turbulenceIntro}. In these sections, you will find also
+references to the relevant introductory literature. The other
+parts of this documentation should be used like an encyclopedia: you
+can look up things fast when you need more information about parts
+of the program. Extra comments can be found in the form of standard
+FORTRAN comments that should help users to find their way through the
+lines of the code.
+
+A special status in this documentation has \sect{sec:cases}
+illustrating particular scenarios prepared for GOTM. This section contains
+useful information about the theoretical background and the
+implementation of each scenario currently available in GOTM. Scenarios
+range from simple test cases, like a turbulent Couette flow, to full
+oceanic applications including meteorological forcing and comparison
+to measured data. The most simple scenarios descibed in \sect{sec:cases}
+serve as a little tutorial, in which the key algorithms of
+GOTM are introduced in a practical way.
+
+This documentation does not contain information about how to download,
+compile and run the code and the test cases. All information necessary
+to run GOTM on a number of well-known platforms is compiled at {\tt
+www.gotm.net}. If you wish to directly contact to the GOTM developers,
+please write an e-mail to {\tt gotm-devel@gotm.net}. All users of GOTM,
+who signed up on the GOTM web page, will be on the users' mailing
+list, {\tt gotm-users@gotm.net}. Information about updates, bug fixes, and
+new versions of GOTM are communicated via this list.
+
+\subsection{Acknowledgements}
+
+The authors of this report are grateful to the former members of the
+GOTM Team for their persisting cooperation. These are particularly
+members from the very first days of GOTM which took place at the Joint
+Research Centre in Ispra (Italy) in 1998: Manuel Ruiz Villarreal who
+worked after the Ispra time in Santiago de Compostela (Spain), Lisboa
+(Portugal), Hamburg (Germany), and Warnem\"unde (Germany) before he
+moved back to his home country for working in A Coru\~na
+(Spain). Pierre-Phillipe Mathieu who went to Reading (U.K.) for some
+time before he arrived in Frascati (Italy) recently.  We further want
+to acknowledge those of the almost 200 subscribed users of GOTM from
+all over the world who helped us to improve GOTM, reported bugs, and
+motivated us to go on with this zero-budget project.  It was also the
+important role which GOTM played in several projects, mostly funded by
+the European Commission, which helped a lot to maintain GOTM.  These
+projects were MAS3-CT96-0053 ('PHASE'), MAS3-CT96-0051 ('MTP
+II-MATER'), MAS3-CT97-0025 ('PROVESS'), and especially CARTUM
+(Comparative Analysis and Rationalisation of Second-Moment Turbulence
+Models), a brainstorming activity (MAS3-CT98-0172), which brought
+together turbulence specialists from all over the world.  We are
+finally grateful to all those other people working on the Public
+Domain Software without which a project like GOTM would be
+unthinkable: \LaTeX, PROTEX, LINUX and many others.

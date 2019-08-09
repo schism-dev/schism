@@ -1,0 +1,304 @@
+!$Id: gotmturb.proto,v 1.1.1.1 2003/03/11 13:38:58 kbk Exp $
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+! What type of equations are solved in the turbulence model?
+!
+! turb_method      -> type of turbulence closure
+!
+!                  0: convective adjustment
+!                  1: analytical eddy visc. and diff. profiles, not coded yet
+!                  2: turbulence Model calculating TKE and length scale
+!                     (specify stability function below)
+!                  3: second-order model (see "scnd" namelist below)
+!                 99: KPP model (requires "kpp.inp" with specifications)
+!
+!
+! tke_method       -> type of equation for TKE
+!
+!                  1: algebraic equation
+!                  2: dynamic equation (k-epsilon style)
+!                  3: dynamic equation (Mellor-Yamada style)
+!
+!
+! len_scale_method -> type of model for dissipative length scale
+!
+!                  1: parabolic shape
+!                  2: triangle shape
+!                  3: Xing and Davies [1995]
+!                  4: Robert and Ouellet [1987]
+!                  5: Blackadar (two boundaries) [1962]
+!                  6: Bougeault and Andre [1986]
+!                  7: Eifler and Schrimpf (ISPRAMIX) [1992]
+!                  8: dynamic dissipation rate equation
+!                  9: dynamic Mellor-Yamada q^2l-equation
+!                 10: generic length scale (GLS)
+!
+!
+! stab_method      -> type of stability function
+!
+!                  1: constant stability functions
+!                  2: Munk and Anderson [1954]
+!                  3: Schumann and Gerz [1995]
+!                  4: Eifler and Schrimpf [1992]
+!
+!-------------------------------------------------------------------------------
+ &turbulence
+  turb_method=     3,
+  tke_method=      2,
+  len_scale_method=8,
+  stab_method=     1
+ /
+
+!-------------------------------------------------------------------------------
+! What boundary conditions are used?
+!
+! k_ubc, k_lbc     -> upper and lower boundary conditions
+!                    for k-equation
+!                  0: prescribed BC
+!                  1: flux BC
+!
+! psi_ubc, psi_lbc -> upper and lower boundary conditions
+!                     for the length-scale equation (e.g.
+!                     epsilon, kl, omega, GLS)
+!                  0: prescribed BC
+!                  1: flux BC
+!
+!
+! ubc_type         -> type of upper boundary layer
+!                  0: viscous sublayer (not yet impl.)
+!                  1: logarithmic law of the wall
+!                  2: tke-injection (breaking waves)
+!
+! lbc_type         -> type of lower boundary layer
+!                  0: viscous sublayer (not yet impl.)
+!                  1: logarithmic law of the wall
+!
+!-------------------------------------------------------------------------------
+ &bc
+  k_ubc=           1,
+  k_lbc=           1,
+  psi_ubc=         1,
+  psi_lbc=         1,
+  ubc_type=        1,
+  lbc_type=        1
+ /
+
+!-------------------------------------------------------------------------------
+! What turbulence parameters have been described?
+!
+! cm0_fix          ->   value of cm0 for turb_method=2
+! Prandtl0_fix     ->   value of the turbulent Prandtl-number for stab_method=1-4
+! cw               ->   constant of the wave-breaking model
+!                       (Craig & Banner (1994) use cw=100)
+! compute_kappa    ->   compute von Karman constant from model parameters
+! kappa            ->   the desired von Karman constant (if compute_kappa=.true.)
+! compute_c3       ->   compute c3 (E3 for Mellor-Yamada) for given Ri_st
+! Ri_st            ->   the desired steady-state Richardson number (if compute_c3=.true.)
+! length_lim       ->   apply length scale limitation (see Galperin et al. 1988)
+! galp             ->   coef. for length scale limitation
+! const_num        ->   minimum eddy diffusivity (only with turb_method=0)
+! const_nuh        ->   minimum heat diffusivity (only with turb_method=0)
+! k_min            ->   minimun TKE
+! eps_min          ->   minimum dissipation rate
+! kb_min           ->  minimun buoyancy variance
+! epsb_min         ->  minimum buoyancy variance destruction rate
+!
+!-------------------------------------------------------------------------------
+ &turb_param
+  cm0_fix=         0.5477,
+  Prandtl0_fix=    0.74,
+  cw=              100.,
+  compute_kappa=   .true.,
+  kappa=           0.4,
+  compute_c3=      .true.,
+  ri_st=           0.25,
+  length_lim=      .false.,
+  galp=            0.53,
+  const_num=       5.e-4,
+  const_nuh=       5.e-4,
+  k_min=           1.e-10,
+  eps_min=         1.e-14
+  kb_min=          1.e-10,
+  epsb_min=        1.e-14
+ /
+
+!-------------------------------------------------------------------------------
+! The generic model (Umlauf & Burchard, J. Mar. Res., 2003)
+!
+! This part is active only, when len_scale_method=10 has been set.
+!
+! compute_param    -> compute the model parameters:
+!                     if this is .false., you have to set all
+!                     model parameters (m,n,cpsi1,...) explicitly
+!                     if this is .true., all model parameters
+!                     set by you (except m) will be ignored and
+!                     re-computed from kappa, d, alpha, etc.
+!                     (see Umlauf&Burchard 2002)
+!
+!  m:              -> exponent for k
+!  n:              -> exponent for l
+!  p:              -> exponent for cm0
+!
+!  Examples:
+!
+!  k-epsilon (Rodi 1987)          :       m=3/2, n=-1, p=3
+!  k-omega (Umlauf et al. 2003)   :       m=1/2, n=-1, p=-1
+!
+! cpsi1            -> emp. coef. in psi equation
+! cpsi2            -> emp. coef. in psi equation
+! cpsi3minus       -> cpsi3 for stable stratification
+! cpsi3plus        -> cpsi3 for unstable stratification
+! sig_kpsi         -> Schmidt number for TKE diffusivity
+! sig_psi          -> Schmidt number for psi diffusivity
+!
+!-------------------------------------------------------------------------------
+ &generic
+  compute_param=   .false.,
+  gen_m=           0.5,
+  gen_n=           -1.0,
+  gen_p=           -1.0,
+  cpsi1=           0.55555,
+  cpsi2=           0.83333,
+  cpsi3minus=      0.0,
+  cpsi3plus =      1.0,
+  sig_kpsi=        2.0,
+  sig_psi=         2.0,
+  gen_d=           -1.2,
+  gen_alpha=       -2.53,
+  gen_l=           0.25
+ /
+
+!-------------------------------------------------------------------------------
+! The k-epsilon model (Rodi 1987)
+!
+! This part is active only, when len_scale_method=8 has been set.
+!
+! ce1              -> emp. coef. in diss. eq.
+! ce2              -> emp. coef. in diss. eq.
+! ce3minus         -> ce3 for stable stratification, overwritten if compute_c3=.true.
+! ce3plus          -> ce3 for unstable stratification (Rodi 1987: ce3plus=1.0)
+! sig_k            -> Schmidt number for TKE diffusivity
+! sig_e            -> Schmidt number for diss. diffusivity
+! sig_peps         -> if .true. -> the wave breaking parameterisation suggested
+!                     by Burchard (JPO 31, 2001, 3133-3145) will be used.
+!-------------------------------------------------------------------------------
+ &keps
+  ce1=             1.44,
+  ce2=             1.92,
+  ce3minus=        0.0,
+  ce3plus=         1.0,
+  sig_k=           1.0,
+  sig_e=           1.3,
+  sig_peps=        .false.
+ /
+
+!-------------------------------------------------------------------------------
+! The Mellor-Yamada model (Mellor & Yamada 1982)
+!
+! This part is active only, when len_scale_method=9 has been set!
+!
+! e1               -> coef. in MY q**2 l equation
+! e2               -> coef. in MY q**2 l equation
+! e3               -> coef. in MY q**2 l equation, overwritten if compute_c3=.true.
+! sq               -> turbulent diffusivities of q**2 (= 2k)
+! sl               -> turbulent diffusivities of q**2 l
+! my_length        -> prescribed barotropic lengthscale in q**2 l equation of MY
+!                  1: parabolic
+!                  2: triangular
+!                  3: lin. from surface
+! new_constr       -> stabilisation of Mellor-Yamada stability functions
+!                     according to Burchard & Deleersnijder (2001)
+!                     (if .true.)
+!
+!-------------------------------------------------------------------------------
+ &my
+  e1=              1.8,
+  e2=              1.33,
+  e3=              1.8,
+  sq=              0.2,
+  sl=              0.2,
+  my_length=       1,
+  new_constr=      .false.
+ /
+
+!-------------------------------------------------------------------------------
+! The second-order model
+!
+! scnd_method      -> type of second-order model
+!                  1: EASM with quasi-equilibrium
+!                  2: EASM with weak equilibrium, buoy.-variance algebraic
+!                  3: EASM with weak equilibrium, buoy.-variance from PDE
+!
+! kb_method        -> type of equation for buoyancy variance
+!
+!                  1: algebraic equation for buoyancy variance
+!                  2: PDE                for buoyancy variance
+!
+!
+! epsb_method      -> type of equation for variance destruction
+!
+!                  1: algebraic equation for variance destruction
+!                  2: PDE                for variance destruction
+!
+!
+! scnd_coeff       -> coefficients of second-order model
+!
+!                  0: read the coefficients from this file
+!                  1: coefficients of Gibson and Launder (1978)
+!                  2: coefficients of Mellor and Yamada (1982)
+!                  3: coefficients of Kantha and Clayson (1994)
+!                  4: coefficients of Luyten et al. (1996)
+!                  5: coefficients of Canuto et al. (2001) (version A)
+!                  6: coefficients of Canuto et al. (2001) (version B)
+!                  7: coefficients of Cheng et al. (2002)
+!
+!-------------------------------------------------------------------------------
+ &scnd
+  scnd_method=     2,
+  kb_method=       1,
+  epsb_method=     1,
+  scnd_coeff=      5,
+  cc1=             5.0,
+  cc2=             0.8000,
+  cc3=             1.9680,
+  cc4=             1.1360,
+  cc5=             0.0000,
+  cc6=             0.4000,
+  ct1=             5.9500,
+  ct2=             0.6000,
+  ct3=             1.0000,
+  ct4=             0.0000,
+  ct5=             0.3333,
+  ctt=             0.7200
+ /
+
+!-------------------------------------------------------------------------------
+! The internal wave model
+!
+! iw_model         -> method to compute internal wave mixing
+!                  0: no internal waves mixing parameterisation
+!                  1: Mellor 1989 internal wave mixing
+!                  2: Large et al. 1994 internal wave mixing
+!
+! alpha            -> coeff. for Mellor IWmodel (0: no IW, 0.7 Mellor 1989)
+!
+! The following six empirical parameters are used for the
+! Large et al. 1994 shear instability and internal wave breaking
+! parameterisations (iw_model = 2, all viscosities are in m**2/s):
+!
+! klimiw           -> critcal value of TKE
+! rich_cr          -> critical Richardson number for shear instability
+! numshear         -> background diffusivity for shear instability
+! numiw            -> background viscosity for internal wave breaking
+! nuhiw            -> background diffusivity for internal wave breaking
+!-------------------------------------------------------------------------------
+ &iw
+  iw_model=        0,
+  alpha=           0.0,
+  klimiw=          1e-6,
+  rich_cr=         0.7,
+  numshear=        5.e-3,
+  numiw=           1.e-4,
+  nuhiw=           1.e-5
+ /

@@ -1,0 +1,253 @@
+!   Copyright 2014 College of William and Mary
+!
+!   Licensed under the Apache License, Version 2.0 (the "License");
+!   you may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+!   Unless required by applicable law or agreed to in writing, software
+!   distributed under the License is distributed on an "AS IS" BASIS,
+!   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+!   See the License for the specific language governing permissions and
+!   limitations under the License.
+
+!===============================================================================
+!===============================================================================
+! Ice transport (simple upwind)
+!
+!  subroutine 
+!
+!===============================================================================
+!===============================================================================
+!
+      subroutine ice_transport
+      use schism_glbl
+      use schism_msgp
+      use misc_modules
+      use ice_module
+
+      implicit none
+      include 'mpif.h'
+
+!     Working temporary arrays in this routine
+      real(rkind) :: iupwind_e(nea) !to mark upwind prisms when TVD is used
+      real(rkind), allocatable :: trel_tmp1(:,:) !tracer @ elements
+      real(rkind), allocatable :: trel_tmp2(:,:) !tracer @ elements
+      real(rkind), allocatable :: flux_adv_hface(:) !horizontal flux (the local x-driection) 
+      real(rkind) :: buf(2,1),buf2(2,1)
+
+      real(rkind) :: adv_tr(ntr_ice),dtb_min3(ne),swild(nea)
+
+      integer :: istat,i,j,k,l,khh2,ie,n1,n2,n3,isd,isd0,isd1,isd2,isd3,j0, &
+                 &nd,it_sub,ntot_v,ntot_vgb,ntot_h,ntot_hgb,kup,kdo,jsj,kb, &
+                 &kb1,iup,ido,ie01,lev01,in_st,jj,ll,lll,ndim,kin,iel,ibnd, &
+                 &ndo,ind1,ind2,nd1,nd2,ibio
+      real(rkind) :: vnor1,vnor2,xcon,ycon,zcon,dot1,sum1,tmp,cwtmp,toth, &
+                     &time_r,psum,rat,dtbl,dtb,vj,bigv,av_df,av_dz,hdif_tmp, &
+                     &av_h,difnum,cwtmp2,dtb_by_bigv,psumtr
+
+      logical     :: same_sign, is_land
+
+      allocate(trel_tmp1(ntr_ice,nea),trel_tmp2(ntr_ice,nea),flux_adv_hface(nsa),stat=istat) 
+      if(istat/=0) call parallel_abort('Ice transport: fail to allocate')
+
+!$OMP parallel default(shared) private(j,is_land,k,vnor1,vnor2,i,nd,toth,kup,kdo,psum,psumtr, &
+!$OMP jsj,ie,tmp,iup,ido,ind1,delta_tr,l,rat,jj,same_sign,vj,ndim,kin,alow,bdia,cupp, &
+!$OMP bigv,dtb_by_bigv,av_df,av_dz,adv_tr,iel,ibnd,nwild,ll,ndo,lll,ind2,rrhs, &
+!$OMP nd1,nd2,hdif_tmp,av_h,difnum,soln,gam)
+
+!     Horizontal fluxes (for ice-free area as well)
+!     Flux=0 at all bnd sides (including open)
+!$OMP do
+      do j=1,nsa
+        vnor1=sum(u_ice(isidenode(:,j)))*0.5*snx(j)+sum(v_ice(isidenode(:,j)))*0.5*sny(j)
+        flux_adv_hface(j)=distj(j)*vnor1 !normal * length = flux (in local x-direction)
+      enddo !j
+!$OMP end do
+
+!$OMP barrier
+
+!     Mark upwind prisms for efficiency
+!      if(ltvd) then
+!!$OMP   workshare
+!        iupwind_e=0
+!!$OMP   end workshare
+!
+!!$OMP   do 
+!        do i=1,nea
+!          if(itvd_e(i)==0) then
+!            iupwind_e(i)=1 
+!          else !itvd_e=1
+!            do j=1,i34(i)
+!              nd=elnode(j,i)
+!              toth=eta2(nd)+dp(nd)
+!              if(toth<h_tvd) then
+!                iupwind_e(i)=1; exit
+!              endif
+!            enddo !j
+!          endif !itvd_e
+!        enddo !i=1,ne
+!!$OMP   end do
+!      endif !ltvd
+
+!     Store last step's values
+!$OMP workshare
+      trel_tmp1(1,:)=h_ice(:)
+      trel_tmp1(2,:)=a_ice(:)
+      trel_tmp1(3,:)=h_snow(:)
+!$OMP end workshare
+
+!$OMP single
+      it_sub=0
+      time_r=dt !time remaining
+!$OMP end single
+      loop13: do
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!$OMP single
+      it_sub=it_sub+1
+!$OMP end single
+
+!     Compute sub time step
+      if(it_sub==1) then !for upwind, only compute dtb for the first step
+!$OMP   workshare
+        dtb_min3(:)=time_r !init
+!$OMP   end workshare
+
+!$OMP   do
+        do i=1,ne
+          !Do transport for all elem (including ice free)
+          psumtr=0.d0 !sum of modified fluxes for all inflow bnds
+          do j=1,i34(i)
+            jsj=elside(j,i) !resident side
+            ie=ic3(j,i)
+            if(ie/=0.and.flux_adv_hface(jsj)*ssign(j,i)>0) then !outflow
+              psumtr=psumtr+abs(flux_adv_hface(jsj))
+            endif !ie
+          enddo !j
+
+          if(psumtr/=0) then
+            tmp=area(i)/psumtr*(1-1.e-6) !safety factor included
+            if(tmp<dtb_min3(i)) then
+              !dtbl=tmp 
+              dtb_min3(i)=tmp
+              !ie01=i; lev01=k; in_st=jj
+            endif
+          endif
+        enddo !i=1,ne
+!$OMP   end do
+
+!$OMP   workshare
+        dtbl=minval(dtb_min3)
+!$OMP   end workshare
+
+!$OMP   master
+        buf(1,1)=dtbl; buf(2,1)=myrank
+        call mpi_allreduce(buf,buf2,1,MPI_2DOUBLE_PRECISION,MPI_MINLOC,comm,ierr)
+        dtb=buf2(1,1)
+
+!       Output time step
+!        if(myrank==int(buf2(2,1)).and.ie01>0) &
+!     &write(12,'(a20,5(1x,i10),1x,f14.3,1x,e22.10)') &
+!     &'TVD-upwind dtb info:',it,it_sub,ielg(ie01),lev01,in_st,dtb,it*dt !,dtb_alt 
+!$OMP   end master
+
+      endif !it_sub==1; compute dtb
+
+!$OMP master
+      dtb=min(dtb,time_r) !for upwind
+      if(dtb<=0) call parallel_abort('Ice transport: dtb<=0')
+      time_r=time_r-dtb
+!$OMP end master
+!$OMP barrier
+
+!$OMP do 
+      do i=1,ne
+        !For all 
+
+        dtb_by_bigv=dtb/area(i)
+        adv_tr=0
+!       Horizontal faces
+        psumtr=0 !sum of fluxes at all outflow bnds 
+        do j=1,i34(i)
+          jsj=elside(j,i) !resident side
+          iel=ic3(j,i)
+          if(iel==0) cycle !skip all bnd sides
+
+          if(ssign(j,i)*flux_adv_hface(jsj)<=0) then !inflow
+            adv_tr(:)=adv_tr(:)+dtb_by_bigv*abs(flux_adv_hface(jsj))*trel_tmp1(:,iel)
+          else !outflow
+            psumtr=psumtr+abs(flux_adv_hface(jsj))
+          endif !ssign
+        enddo !j
+
+!       Check Courant number
+        tmp=1-dtb_by_bigv*psumtr
+        if(tmp<0) then
+          write(errmsg,*)'ice_trans: Courant # condition violated:',i,tmp
+          call parallel_abort(errmsg)
+        endif
+
+        do jj=1,ntr_ice
+          adv_tr(jj)=adv_tr(jj)+trel_tmp1(jj,i)*tmp
+          trel_tmp2(jj,i)=max(0.d0,adv_tr(jj)) !enforce positivity
+        enddo !jj
+        !Impose max for fraction
+        trel_tmp2(2,i)=min(1.d0,trel_tmp2(2,i))
+      enddo !i=1,ne
+!$OMP end do
+
+!$OMP master
+      do jj=1,ntr_ice
+        swild=trel_tmp2(jj,:)
+        call exchange_e2d(swild)
+        trel_tmp2(jj,:)=swild
+      enddo !jj
+!$OMP end master
+!$OMP barrier
+
+      trel_tmp1=trel_tmp2
+
+      if(time_r<1.e-8) exit loop13
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      end do loop13
+
+      !Check NaN
+      do i=1,nea
+        do j=1,ntr_ice
+          if(trel_tmp1(j,i)/=trel_tmp1(j,i)) then
+            write(errmsg,*)'ice_transport, NaN:',ielg(i),j,trel_tmp1(j,i)
+            call parallel_abort(errmsg)
+          endif
+        enddo !j
+      enddo !i
+
+!$OMP workshare
+      h_ice(:)=trel_tmp1(1,:)
+      a_ice(:)=trel_tmp1(2,:)
+      h_snow(:)=trel_tmp1(3,:)
+!$OMP end workshare
+
+!$OMP end parallel
+
+      if(myrank==0) write(20,*)it_main,it_sub
+      
+!Debug
+      !if(it_main==1) then
+      if(abs(time_stamp-rnday*86400)<0.1) then
+        fdb='iceha_0000'
+        lfdb=len_trim(fdb)
+        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+        open(10,file='outputs/'//fdb,status='replace')
+        write(10,*)ne
+        do i=1,ne
+          write(10,*)ielg(i),h_ice(i),a_ice(i)
+        enddo !
+      endif
+      close(10)
+
+!     Deallocate
+      deallocate(trel_tmp1,trel_tmp2,flux_adv_hface)
+
+      end subroutine ice_transport
+

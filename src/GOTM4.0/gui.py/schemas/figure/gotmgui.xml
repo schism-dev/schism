@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<element id="Figure" label="figure">
+
+			<element id="Name" type="string" label="name" hidden="True"/>
+			<element id="Title" type="string" label="title"/>
+			<element id="FontScaling" type="float" label="font scaling" unit="%"/>
+
+			<element id="HasTimeAxis" type="bool" label="time axis" hidden="True"/>
+			<element id="TimeAxis" label="time axis">
+				<condition type="eq" variable="./HasTimeAxis" value="True"/>
+				<element id="Minimum" type="datetime" label="minimum" nodefault="True"/>
+				<element id="Maximum" type="datetime" label="maximum" nodefault="True"/>
+				<element id="Label"   type="string" label="label"/>
+			</element>
+
+			<element id="HasDepthAxis" type="bool" label="depth axis" hidden="True"/>
+			<element id="DepthAxis" label="depth axis">
+				<condition type="eq" variable="./HasDepthAxis" value="True"/>
+				<element id="Minimum" type="float" label="minimum" unit="m" minimum="-5000" maximum="50" nodefault="True"/>
+				<element id="Maximum" type="float" label="maximum" unit="m" minimum="-5000" maximum="50" nodefault="True"/>
+				<element id="Label"   type="string" label="label"/>
+			</element>
+
+			<element id="Data" label="data">
+				<element id="Series" label="series" maxoccurs="10">
+					<element id="Variable"       type="string" label="variable"    readonly="True"/>
+					<element id="Source"         type="string" label="data source" readonly="True"/>
+					<element id="DimensionCount" type="int"    label="dimensions"  hidden="True"/>
+					<element id="Label"          type="string" label="label"/>
+					<element id="Minimum"        type="float"  label="minimum" nodefault="True"/>
+					<element id="Maximum"        type="float"  label="maximum" nodefault="True"/>
+					<element id="LogScale"       type="bool"   label="log-scale"/>
+					<element id="PlotType2D" type="select" label="plot type">
+						<condition type="eq" variable="./DimensionCount" value="1"/>
+						<options>
+							<option label="line" value="0"/>
+						</options>
+					</element>
+					<element id="LineWidth" type="float" label="line width">
+						<condition type="and">
+							<condition type="eq" variable="./DimensionCount" value="1"/>
+							<condition type="eq" variable="./PlotType2D"     value="0"/>
+						</condition>
+					</element>
+					<element id="LineColor" type="color" label="line color">
+						<condition type="and">
+							<condition type="eq" variable="./DimensionCount" value="1"/>
+							<condition type="eq" variable="./PlotType2D"     value="0"/>
+						</condition>
+					</element>
+					<element id="PlotType3D" type="select" label="plot type">
+						<condition type="eq" variable="./DimensionCount" value="2"/>
+						<options>
+							<option label="grid"            value="0"/>
+							<option label="filled contours" value="1"/>
+						</options>
+					</element>
+					<element id="ContourCount" type="int" label="number of contours">
+						<condition type="and">
+							<condition type="eq" variable="./DimensionCount" value="2"/>
+							<condition type="eq" variable="./PlotType3D"     value="1"/>
+						</condition>
+					</element>
+				</element>
+			</element>
+		
+</element>

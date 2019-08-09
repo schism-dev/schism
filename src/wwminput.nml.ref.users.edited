@@ -1,0 +1,281 @@
+! This is the main input for WWM
+! Other mandatory inputs: wwmbnd.gr3 (boundary flag files; see below)
+! Depending on the choices of parameters below you may need additional inputs
+
+&PROC
+ PROCNAME       = 'roms_wwm_2003_test'! Project Name
+ DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SCHISM
+ LSTEA          = F                  ! steady mode; under development
+ LQSTEA         = F                  ! Quasi-Steady Mode; In this case WWM-II is doing subiterations defined as DELTC/NQSITER unless QSCONVI is not reached
+ LSPHE          = F                  ! Spherical coordinates
+ LNAUTIN        = T                  ! Nautical convention for all inputs given in degrees 
+ LNAUTOUT       = T                  ! Output in Nautical convention 
+                                     ! If T, 0 is _from_ north, 90 is from east etc;
+                                     ! If F, maths. convention - 0: to east; 90: going to north
+ BEGTC          = '19980901.000000'  ! Time for start the simulation, ex:yyyymmdd. hhmmss
+ DELTC          = 360                ! Time step (MUST match dt*nstep_wwm in SCHISM!)
+ UNITC          = 'SEC'              ! Unity of time step
+ ENDTC          = '19980902.000000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
+ DMIN           = 0.01               ! Minimum water depth. THis must be same as h0 in selfe
+/
+
+&COUPL
+ LCPL           = T                  ! Couple with current model ... main switch - keep it on for SCHISM-WWM
+ RADFLAG        = 'LON'
+/
+
+&GRID
+ MDC            = 36                 ! Number of directional bins
+ FRLOW          = 0.03               ! Low frequency limit of the discrete wave period (Hz; 1/period)
+ FRHIGH         = 1.                 ! High frequency limit of the discrete wave period.
+ MSC            = 36                 ! Number of frequency bins
+ IGRIDTYPE      = 3                  ! Gridtype used 3 for schism 
+ FILEGRID       = 'hgrid.gr3'        ! Name of the grid file. hgrid.gr3 if IGRIDTYPE = 3 (SCHISM)
+ LOPTSIG        = F                  ! Use optimal distributions of freq. in spectral space ... fi+1 = fi * 1.1. Take care what you high freq. limit is!
+/
+
+&INIT
+ LHOTR          = F                  ! Use hotstart file (see &HOTFILE section)
+ LINID          = F                  ! Initial condition; F for default; use T if using WW3 as i.c. etc
+ INITSTYLE      = 1                  ! 1 - Parametric Jonswap, 2 - Read from Global NETCDF files, work only if IBOUNDFORMAT=3
+/
+
+&BOUC
+ LBCSE          = F                  ! The wave boundary data is time dependent
+ LBINTER        = F                  ! Do interpolation in time if LBCSE=T (not available for quasi-steady mode within the subtime steps)
+ LBCWA          = T                  ! Parametric Wave Spectra
+ LINHOM         = F                  ! Non-uniform wave b.c. in space
+ LBCSP          = F                  ! Specify (non-parametric) wave spectra, specified in 'FILEWAVE' below
+ LINDSPRDEG     = F                  ! If 1-d wave spectra are read this flag defines whether the input for the directional spreading is in degrees (true) or exponent (false)
+ LPARMDIR       = F                  ! If LPARMDIR is true then directional spreading is read from WBDS and must be in exponential format at this time, only valid for 1d Spectra
+ FILEWAVE       = 'wave.bcd'         ! Boundary file including discrete wave spectra
+ LBSP1D         = F                  ! 1D (freq. space only) format for FILEWAVE if LBCSP=T and LINHOM=F
+ LBSP2D         = F                  ! use T if IBOUNDFORMAT = 3
+ BEGTC          = '19980901.000000'  ! Begin time of the wave boundary file (FILEWAVE)
+ DELTC          = 1                  ! Time step in FILEWAVE
+ UNITC          = 'HR'               ! Unit
+ ENDTC          = '19980902.000000'  ! End time
+ FILEBOUND      = 'wwmbnd.gr3'       ! Boundary file defining boundary and Neumann nodes.
+                                     ! Flag 0: not on bnd; 3: Neumann (0 gradient);
+                                     ! 2: active bnd (Direchlet). Bnd flags imported from SCHISM:
+                                     ! 1: exterior bnd; -1: interior (islands)
+ IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 2 ~ FVCOM: 3 ~ WW3. FVCOM and WW3 works only with LBCWA=T.
+                                     ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
+                                     ! LMONO_IN = F ! incident wave is defined as monochromatic wave height, which is Hmono = sqrt(2) * Hs
+                                     ! The following are needed only if LBCWA=T and LINHOM=F
+ WBHS           = 2.                 ! Hs at the boundary for parametric spectra
+ WBSS           = 2                  ! 1 or -1: Pierson-Moskowitz, 2 or -2: JONSWAP, 3 or -3: all in one BIN,
+                                     ! 4: Gauss. The sign decides whether WBTP below is
+                                     ! peak (+) or mean period (-)
+ WBTP           = 8.                 ! Tp at the boundary (sec); mean or peak depending on the sign of WBSS
+ WBDM           = 90.0               ! Avg. Wave Direction at the boundary
+ WBDSMS         = 1                  ! Directional spreading value in degrees (1) or as exponent (2)
+ WBDS           = 10.                ! Directioanl spreading at the boundary (degrees/exponent)
+ WBGAUSS        = 0.1                ! factor for gaussian distribution if WBSS=1
+                                     ! End section for LBCWA=T and LINHOM=F
+ WBPKEN         = 3.3                ! Peak enhancement factor for Jonswap Spectra if WBSS=2
+ NCDF_HS_NAME   = 'hs'               ! NETCDF var. name for the significant wave height (normally it is just 'hs')
+ NCDF_DIR_NAME  = 'dir'              ! NETCDF var. name for the mean wave direction (normally it is just 'dir')
+ NCDF_SPR_NAME  = 'spr'              ! NETCDF var. name for the mean directional spreading (normally it is just 'spr')
+ NCDF_FP_NAME   = 'fp'               ! NETCDF var. name for the peak freq. (normally it is just 'fp')
+ NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
+/
+
+&WIND 
+/
+
+&CURR
+/
+
+&WALV
+/
+
+&ENGS !SOURCE TERMS
+ ISOURCE        = 1                  ! Source Term Formulation for deep water: 1 ~ Ardhuin et al., 2 ~ ECMWF, ~ 3 ~ Komen et al. 1984, (DEFAULT: 1)
+ MESNL          = 1                  ! Nonlinear Interaction NL4 , 1 ~ on, 2 ~ off (DIA), (DEFAULT: 1)
+ MESIN          = 1                  ! Wind input 1 ~ on, 2 ~ off, (DEFAULT: 1)
+ MESBF          = 1                  ! Bottomg friction: 1 ~ on, 2 ~ off (JONSWAP Formulation); (DEFAULT: 1)
+ FRICC          = 0.067              ! Cjon - Bottom friction coefficient (always positive); (DEFAULT: 0.067)
+ MESBR          = 1                  ! Shallow water wave breaking; 0: no; 1: BJ78 same as in SWAN, (DEFAULT: 1)
+ ICRIT          = 1                  ! Wave breaking criterion: set as 1 - SWAN, 2 - Dingemans; (DEFAULT: 2) 
+ ALPBJ          = 0.5                ! Dissipation proportionality coefficient, (DEFAULT: 0.5)
+ BRHD           = 0.78               ! Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-1.1 (suggested 0.78)
+ LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
+ MESDS          = 1                  ! Whitecapping 1 ~ on, 0 ~ off; (DEFAULT: 1)
+ MESTR          = 1                  ! Nonlinear Interaction in shallow water SNL3: 1 ~ on, 0 ~ off (DEFAULT: 0)
+ TRICO          = 0.1                ! proportionality const. (\alpha_EB); default is 0.1; (DEFAULT: 0.1)
+ TRIRA          = 5.                 ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested; (DEFAULT: 2.5)
+ TRIURS         = 0.1                ! critical Ursell number; if Ursell # < TRIURS; triads are not computed; (DEFAULT: 0.1)
+/
+
+&SIN4 ! Input parameter for ST4 source terms do not touch or reach our paper about this ...
+/
+
+&SDS4 ! Input parameter for ST4 dissipation terms do not touch or reach our paper about this ...
+/
+
+&NUMS
+ ICOMP          = 3
+                                     ! This parameter controls the way how the splitting is done and whether implicit or explicit schemes are used for spectral advection
+                                     ! ICOMP = 0
+                                     ! This means that all dimensions are integrated using explicit methods. Similar
+                                     ! to WW3, actually the same schemes are available in WW3 4.1.
+                                     ! ICOMP = 1
+                                     ! This mean that advection in geographical space is done using implicit
+                                     ! Methods, source terms and spectral space are still integrated as done in
+                                     ! WW3.
+                                     ! ICOMP = 2
+                                     ! This means that the advection is done using implicit methods and that the
+                                     ! source terms are integrated semi-implicit using Patankar rules and linearized
+                                     ! source terms as done in SWAN. Spectral part is still a fractional step
+                                     ! ICOMP = 3: fully implicit and no splitting
+
+ AMETHOD        = 7
+                                     ! AMETHOD controls the different Methods in geographical space
+                                     ! AMETHOD = 0
+                                     ! No Advection in geo. Space
+                                     ! AMETHOD = 1
+                                     ! Explicit N-Scheme for ICOMP = 0 and Implicit N-Scheme for ICOMP > 0
+                                     ! AMETHOD = 2
+                                     ! PSI-Scheme for ICOMP = 0 and Implicit
+                                     ! Crank-Nicholson N-Scheme for ICOMP > 0
+                                     ! AMETHOD = 3
+                                     ! LFPSI Scheme for ICOMP = 0 and Implicit two time level N2 scheme for ICOMP > 0
+
+                                     ! AMETHOD = 4
+                                     ! Like AMETHOD = 1 but using PETSc based on small matrices MNP**2. this can be efficient on small to medium scale cluster up to say 128 Nodes.
+
+                                     ! AMETHOD = 5
+                                     ! Like AMETHOD = 1 but using PETSc and assembling the full matrix and the source terms at once (MNP * MDC * MSC)**2. number of equations
+                                     ! this is for large scale applications
+
+                                     ! Remark for AMETHOD = 4 and 5. This methods are new and only tested on a few cases where the results look reasonable and do not depend on the number of CPU's which
+                                     ! valdiates the correct implementation. The scaling performance is anticipated to be "quite poor" at this time. Many different consituents influence the parallel speedup.
+                                     ! Please let me know all the information you have in order to improve and accelarate the developement of implicit parallel WWM-III.
+                                     ! Have fun ... Aron and Thomas.
+                                     ! AMETHOD = 6 - BCGS Solver 
+                                     ! AMETHOD = 7 - GAUSS and JACOBI SOLVER 
+ SMETHOD        = 1
+                                     ! This switch controls the way the source terms are integrated. 0: no source terms;
+                                     ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
+                                     ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
+
+ DMETHOD        = 2
+                                     ! This switch controls the numerical method in directional space.
+                                     ! DMETHOD = 0
+                                     ! No advection in directional space
+                                     ! DMETHOD = 1
+                                     ! Crank-Nicholson (RTHETA = 0.5) or Euler Implicit scheme (RTHETA = 1.0)
+                                     ! DMEHOD = 2
+                                     ! Ultimate Quickest as in WW3 (usually best)
+                                     ! DMETHOD = 3
+                                     ! RK5-WENO
+                                     ! DMETHOD = 4
+                                     ! Explicit FVM Upwind scheme
+
+ FMETHOD        = 1
+                                     ! This switch controls the numerical method used in freq. space
+                                     ! = 0
+                                     ! No Advection in spectral space
+                                     ! = 1
+                                     ! Ultimate Quickest as in WW3 (best)
+ LLIMT          = T                  ! Switch on/off Action limiter, Action limiter must mostly be turned on.
+ MELIM          = 1                  ! Action limiter either off (0) or on (1). Default (1; code will blow up with 0 if snl4 is turned on)
+                                     ! Formulation for the action limiter
+                                     ! MELIM = 1 (default)
+                                     ! Limiter according to the WAM group (1988)
+                                     ! MELIM = 2
+                                     ! Limiter according to Hersbach Janssen (1999)
+                                     ! For MESIN = 1 and MESDS = 1, which represents Cycle 3 formulation or Ardhuin, or other formulations except Cycle4, use MELIM = 1 and LIMFAK = 0.1
+                                     ! For MESIN = 2 and MESDS = 2, which represents Cycle 4 formulation, use MELIM = 3 and LIMFAK = 0.6
+
+ LIMFAK         = 0.1                ! Proportionality coefficient for the action limiter MAX_DAC_DT = Limfak * Limiter; see notes above for value
+ LDIFR          = F                  ! Use phase decoupled diffraction approximation according to Holthuijsen et al. (2003) (usually T; if crash, use F)
+ IDIFFR         = 1                  ! Extended WAE account for higher order effects WAE becomes nonlinear; 1: Holthuijsen et al. ; 2: Liau et al. ; 3: Toledo et al. (in preparation)
+ LCONV          = T                  ! Estimate convergence criterian and write disk (quasi-steady - qstea.out)
+ LCFL           = F                  ! Write out CFL numbers; use F to save time
+ NQSITER        = 1                  ! # of quasi-steady (Q-S) sub-divisions within each WWM time step (trial and errors)
+ QSCONV1        = 0.98               ! Number of grid points [%/100] that have to fulfill abs. wave height criteria EPSH1
+ QSCONV2        = 0.98               ! Number of grid points [%/100] that have to fulfill rel. wave height criteria EPSH2
+ QSCONV3        = 0.98               ! Number of grid points [%/100] that have to fulfill sum. rel. wave action criteria EPSH3
+ QSCONV4        = 0.98               ! Number of grid points [%/100] that have to fulfill rel. avg. wave steepness criteria EPSH4
+ QSCONV5        = 0.98               ! Number of grid points [%/100] that have to fulfill avg. rel. wave period criteria EPSH5
+
+ FREQEXP        = 0.1                ! Minimum frequency for explicit schemes; only used if LEXPIMP=T and ICOMP=0
+ EPSH1          = 0.01               ! Convergence criteria for rel. wave height ! EPSH1 < CONVK1 = REAL(ABS(HSOLD(IP)-HS2)/HS2)
+ EPSH2          = 0.01               ! Convergence criteria for abs. wave height ! EPSH2 < CONVK2 = REAL(ABS(HS2-HSOLD(IP)))
+ EPSH3          = 0.01               ! Convergence criteria for the rel. sum of wave action ! EPSH3 < CONVK3 = REAL(ABS(SUMACOLD(IP)-SUMAC)/SUMAC)
+ EPSH4          = 0.01               ! Convergence criteria for the rel. avg. wave steepness criteria ! EPSH4 < CONVK4 = REAL(ABS(KHS2-KHSOLD(IP))/KHSOLD(IP))
+ EPSH5          = 0.01               ! Convergence criteria for the rel. avg. waveperiod ! EPSH5 < REAL(ABS(TM02-TM02OLD(IP))/TM02OLD(IP))
+ LVECTOR        = F                  ! Use optmized propagation routines for large high performance computers e.g. at least more than 128 CPU. Try LVECTOR=F first.
+ IVECTOR        = 2                  ! USed if LVECTOR=T; Different flavours of communications
+                                     ! LVECTOR = 1; same propagation style as if LVECTOR = F, this is for testing and development
+                                     ! LVECTOR = 2; all spectral bins are propagated with the same time step and communications is done only once per sub-iteration
+                                     ! LVECTOR = 3; all directions with the same freq. are propgated using the same time step the communications is done for each freq.
+                                     ! LVECTOR = 4; 2 but for mixed open-mpi, code has to be compiled with -openmp
+                                     ! LVECTOR = 5; 3 but for mixed open-mpi, code has to be compiled with -openmp
+                                     ! LVECTOR = 6; same as 2 but highly optmizied with respect to memory usage, of course it is must less efficient than 2
+                                     ! remarks: if you are using this routines be aware that the memory amount that is used is approx. for LVECTOR 1-5 arround
+                                     ! 24 * MSC * MDC * MNP, so if you are trying this on 1 CPU you get a segmentation fault if your system has not enough memory or
+                                     ! if your system is not properly configured it may results into the fact that your computer starts blocking since it try's to swap to disk
+                                     ! The total amount of memoery used per CPU = 24 * MSC * MDC * MNP / No.CPU
+ LSOUBOUND      = F                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height 
+                                     ! based on infinie fetch ... good for harbor studies. This is efficiently used for flume experiemnts mostly since in this case one would get a gradient in the crossection due to the effect 
+                                     ! that source terms are not treated there.
+ ZETA_METH      = 0,                 ! 0: use a simple conjugate gradient
+                                     !    preconditioner
+                                     ! 1: use PETSC
+ WAE_SOLVERTHR =  1.e-6,             ! Threshold for the Block-Jacobi or Block-Gauss-Seider solver
+ MAXITER =        1000,              ! Max. number of iterations
+ PMIN    =  1.,                      ! Max. percentage of non-converged grid points
+ LNANINFCHK      = T,                ! Check for NaN and INF
+ LZETA_SETUP     = F,                ! Compute wave setup (simple momentum eq.)
+ ZETA_METH       = 0,                ! Method for wave setup, Mathieu please explain!
+ BLOCK_GAUSS_SEIDEL      = T,        ! Use the Gauss Seidel on each
+/
+
+
+! output of statistical variables over the whole domain at specified times.
+&HISTORY
+/
+
+&STATION
+/
+
+&HOTFILE
+ LHOTF          = F                   ! Write hotfile
+ FILEHOT_OUT    = 'wwm_hot_out'       !'.nc' suffix will be added 
+ BEGTC          = '19980901.000000'   !Starting time of hotfile writing. With ihot!=0 in SCHISM,
+                                      !this will be whatever the new hotstarted time is (even with ihot=2)
+ DELTC          = 86400.              ! time between hotfile writes
+ UNITC          = 'SEC'               ! unit used above
+ ENDTC          = '19980902.000000'   ! Ending time of hotfile writing (adjust with BEGTC)
+ LCYCLEHOT      = T                   ! Applies only to netcdf
+                                      ! If T then hotfile contains 2 last records.
+                                      ! If F then hotfile contains N record if N outputs
+                                      ! have been done
+                                      ! For binary only one record.
+ HOTSTYLE_OUT   = 2                   ! 1: binary hotfile of data as output
+                                      ! 2: netcdf hotfile of data as output (default)
+ MULTIPLEOUT    = 0                   ! 0: hotfile in a single file (binary or netcdf)
+                                      !    MPI_REDUCE is then used and thus you'd avoid too freq. output 
+                                      ! 1: hotfiles in separate files, each associated with one process
+ FILEHOT_IN     = 'wwm_hot_in.nc'     ! (Full) hot file name for input
+ HOTSTYLE_IN    = 2                   ! 1: binary hotfile of data as input
+                                      ! 2: netcdf hotfile of data as input (default)
+ IHOTPOS_IN     = 1                   ! Position in hotfile (only for netcdf)
+                                      ! for reading
+ MULTIPLEIN     = 0                   ! 0: read hotfile from one single file
+                                      ! 1: read hotfile from multiple files (must use same # of CPUS???)
+/
+
+&NESTING
+ L_NESTING = F,                       ! whether to produce nesting data or not
+ L_HOTFILE = F                        ! whether to produce an hotfile as output
+ L_BOUC_PARAM = F                     ! whether to produce a parametric boundary condition to be used by the nested grids
+ L_BOUC_SPEC = F                      ! whether to produce a spectral   boundary condition to be used by the nested grids
+ NB_GRID_NEST = 0                     ! number of nested grids. All lines below must contain NB_GRID_NEST entries.
+/
+
+&PETScOptions
+/

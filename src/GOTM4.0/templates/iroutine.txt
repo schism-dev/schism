@@ -1,0 +1,46 @@
+!
+! GOTM Internal Subroutine template.
+!
+! kbk - v1.0 - 991029.
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: 
+!
+! !INTERFACE:
+   SUBROUTINE 
+!
+! !DESCRIPTION:
+   Please fill out here what happens in this routine - Latex accepted.
+!
+! !USES:
+   List any modules used by this routine.
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   INTEGER, INTENT(IN)
+!
+! !INPUT/OUTPUT PARAMETERS:
+   INTEGER, INTENT(INOUT)
+!
+! !OUTPUT PARAMETERS:
+   INTEGER, INTENT(OUT)
+!
+! !REVISION HISTORY:
+!  Author(s):
+!  01Jan2000: Ver. ?.?.? (
+!
+! !LOCAL VARIABLES:
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+
+   RETURN
+   END SUBROUTINE
+
+!EOC
+
+!Copyright (C) 2000 - NAME
+

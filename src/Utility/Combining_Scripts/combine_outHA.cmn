@@ -1,0 +1,16 @@
+c	module combine_outHA.cmn
+
+c-----------------------------------------------------------------------
+c
+c	AUTHOR:		Andre' Fortunato - 09-07-08
+c
+c	PURPOSE:	parameters used in program combine_outHA
+c
+c-----------------------------------------------------------------------
+
+	implicit none
+	integer*4	MXNOD,MXNODL,MXFREQ
+
+	parameter	(MXNOD  = 200000)
+	parameter	(MXNODL = 100000)
+	parameter	(MXFREQ = 30)

@@ -1,0 +1,5 @@
+tga2fbm <xmv00000.tga | fbquant > 1.fbm
+tga2fbm <xmv00001.tga | fbquant > 2.fbm
+tga2fbm <xmv00002.tga | fbquant > 3.fbm
+tga2fbm <xmv00003.tga | fbquant > 4.fbm
+tga2fbm <xmv00004.tga | fbquant > 5.fbm

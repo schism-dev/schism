@@ -1,0 +1,16 @@
+From Paul T. (Dec 2018):
+
+new cmd option in gredit5 (code changes in bcwin.c and main.c):
+
+xmgredit5 -bc bnd.bp hgrid.gr3
+
+which generates boundary segment file bcs.bnd automatically using an input build point file (bnd.bp), 
+where the list of points correspond to locations nearest to the start/end pairs of each open bnd segment.
+All points should be unique.
+
+The file bcs.bnd has the boundaries in a form that can be appended to hgrid.gr3 
+
+When gredit opens, the open and land boundaries should be displayed as usual for inspection.
+
+
+

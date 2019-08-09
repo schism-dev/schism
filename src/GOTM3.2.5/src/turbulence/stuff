@@ -1,0 +1,92 @@
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c turbulence.F90 -o turbulence.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a turbulence.o
+ar: creating /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a
+a - turbulence.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c kpp.F90 -o kpp.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a kpp.o
+a - kpp.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c gotm_lib_version.F90 -o gotm_lib_version.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a gotm_lib_version.o
+a - gotm_lib_version.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c production.F90 -o production.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a production.o
+a - production.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c alpha_mnb.F90 -o alpha_mnb.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a alpha_mnb.o
+a - alpha_mnb.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c r_ratio.F90 -o r_ratio.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a r_ratio.o
+a - r_ratio.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c tkeeq.F90 -o tkeeq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a tkeeq.o
+a - tkeeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c q2over2eq.F90 -o q2over2eq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a q2over2eq.o
+a - q2over2eq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c tkealgebraic.F90 -o tkealgebraic.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a tkealgebraic.o
+a - tkealgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c kbeq.F90 -o kbeq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a kbeq.o
+a - kbeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c kbalgebraic.F90 -o kbalgebraic.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a kbalgebraic.o
+a - kbalgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c dissipationeq.F90 -o dissipationeq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a dissipationeq.o
+a - dissipationeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c genericeq.F90 -o genericeq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a genericeq.o
+a - genericeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c lengthscaleeq.F90 -o lengthscaleeq.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a lengthscaleeq.o
+a - lengthscaleeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c algebraiclength.F90 -o algebraiclength.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a algebraiclength.o
+a - algebraiclength.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c epsbalgebraic.F90 -o epsbalgebraic.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a epsbalgebraic.o
+a - epsbalgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c variances.F90 -o variances.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a variances.o
+a - variances.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c ispralength.F90 -o ispralength.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a ispralength.o
+a - ispralength.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c potentialml.F90 -o potentialml.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a potentialml.o
+a - potentialml.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_a.F90 -o cmue_a.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_a.o
+a - cmue_a.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_b.F90 -o cmue_b.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_b.o
+a - cmue_b.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_c.F90 -o cmue_c.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_c.o
+a - cmue_c.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_d.F90 -o cmue_d.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_d.o
+a - cmue_d.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_ma.F90 -o cmue_ma.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_ma.o
+a - cmue_ma.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_rf.F90 -o cmue_rf.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_rf.o
+a - cmue_rf.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c cmue_sg.F90 -o cmue_sg.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a cmue_sg.o
+a - cmue_sg.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c compute_cpsi3.F90 -o compute_cpsi3.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a compute_cpsi3.o
+a - compute_cpsi3.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c compute_rist.F90 -o compute_rist.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a compute_rist.o
+a - compute_rist.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c fk_craig.F90 -o fk_craig.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a fk_craig.o
+a - fk_craig.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c internal_wave.F90 -o internal_wave.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libturbulence_prod.a internal_wave.o
+a - internal_wave.o
+rm turbulence.o cmue_d.o fk_craig.o compute_rist.o compute_cpsi3.o r_ratio.o genericeq.o cmue_a.o cmue_ma.o potentialml.o kpp.o ispralength.o lengthscaleeq.o cmue_sg.o cmue_b.o variances.o gotm_lib_version.o cmue_rf.o tkealgebraic.o kbalgebraic.o epsbalgebraic.o q2over2eq.o kbeq.o dissipationeq.o tkeeq.o alpha_mnb.o production.o algebraiclength.o cmue_c.o internal_wave.o

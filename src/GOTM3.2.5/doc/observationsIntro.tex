@@ -1,0 +1,39 @@
+%
+%$Id: observationsIntro.tex,v 1.1 2003-03-10 09:42:25 gotm Exp $
+%
+
+\section{Working with observed data in GOTM}
+
+In the context of GOTM, the term `observations' should be understood
+in a broad sense: it may refer to data either measured in nature or
+generated artificially.  The inclusion of such data into GOTM can
+serve different purposes. Examples are time-series of external
+pressure-gradients, which can be used to drive the model, or observed
+profiles of the temperature to which model results can be relaxed.
+
+Two different types of `observations' are considered so far in GOTM:
+time series of scalar data and time series of profile data. The first
+type is used to introduce, for example, sea surface elevations into
+the model. The latter is used to include, for example, temperature or
+velocity fields.
+
+
+All specifications concerning the `observations' are done via the
+namelist file {\tt obs.inp}.  Each of type of variable has its own
+namelist in {\tt obs.inp}.  Common for all namelists is a member with
+the suffix {\tt
+\_method}, used to specify the action performed to generate or
+acquire the variable, respectively. Observations can be, for example,
+read-in from files or computed according to an analytical expression.
+Some types of observations (e.g.\ turbulent dissipation rates) are not
+used directly during the calculations in GOTM. but can be conveniently 
+interpolated to the numerical grid to allow for an easy comparison
+of measured data and model results.
+
+For all types of observations, one {\tt \_method } is always `from
+file'.  All input-files are in ASCII with a very straight-forward
+format. The necessary interpolation in space is performed as an
+integral part of the general reading routines. Temporal interpolation
+is performed as part of the specific reading routines, e.g.\ {\tt
+get\_s\_profile.F90}.
+

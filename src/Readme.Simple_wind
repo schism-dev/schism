@@ -1,0 +1,26 @@
+Example how to use netCDF input for winds and pressure in SCHISM model
+
+There are 2 options which you can chose in param.in; 
+1) nws = 6 
+This is option to use regridded Uwind, Vwind and Pair variables onto SCHISM grid defined in UVP_direct.nc file.
+Structure is like in UVP_direct.cdl.sample file, all you need to do is update NNODES to number of nodes in your model grid.
+Then use simple ncgen to create netCDF file and after that fill it up with variables using whatever you know (matlab, python, ...).
+It doesn't matter if nodes are making quads or some other structure then triangles, 
+it's your responsibility to interpolate atmo fields correctly onto SCHISM node locations.
+Benefit of this format is to have netCDF compressed/organized file with smaller size then txt. 
+Subroutine is just reading records from netCDF file separated with wtiminc interval, 
+it is not using lon, lat, ele or wind_time variables (they are there for you to have idea about location and time of atmo fields for
+easy plotting).
+
+2) nws = 5 
+This option is using UVP.nc which is holding Uwind, Vwind  and Pair defined on atmospheric model (time,lat,lon). It is using simple bilinear interpolation
+with precomputed weights (interp_atmo.gr3). Computing those weights is easy using make_schism_interp_coef.m (provided).
+Subroutine is reading those weights in schism_init and then use them for each wtiminc interval when reading netCDF file. It is not using wind_time variable, 
+it is just for you to have idea about time, you have to use wtiminc to define time interval between records. Have a look at the UVP.cdl.sample
+
+
+If you have questions send me an email (ivica.jan@gmail.com)
+
+Ivica
+   
+

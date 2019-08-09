@@ -1,0 +1,3689 @@
+!Routines & functions:
+!Tadjust
+!Phyto
+!link (has names for the 23 tracers)
+!SCRNNV
+!sed_readtest
+!SED_READ
+!SED_CALC
+!SED_ZBRENT (function)
+!SEDF (function)
+!SEDTSFNL
+!SEDSSFNL
+!link_sed_input
+!link_sed_output
+
+
+subroutine SCRNNV(nv)
+!--------------------------------------------------------------------C
+! SCREEN NEGATIVE VALUE: SET C = 0 IF ABS(C) < COV
+!---------------------------------------------------------------------C
+  use icm_mod
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+
+  integer, intent(in) :: nv
+  integer :: i,j,k
+
+  do k=1,nv
+    if(RPOC(K,1)<COV) RPOC(K,1)=0.
+    if(LPOC(K,1)<COV) LPOC(K,1)=0.
+    if(DOCA(K,1)<COV) DOCA(K,1)=0.
+    if(RPON(K,1)<COV) RPON(K,1)=0.
+    if(LPON(K,1)<COV) LPON(K,1)=0.
+    if(DON(K,1) <COV) DON(K,1) =0.
+    if(NH4(K,1) <COV) NH4(K,1) =0.
+    if(NO3(K,1) <COV) NO3(K,1) =0.
+    if(RPOP(K,1)<COV) RPOP(K,1)=0.
+    if(LPOP(K,1)<COV) LPOP(K,1)=0.
+    if(DOP(K,1) <COV) DOP(K,1) =0.
+    if(PO4t(K,1)<COV) PO4t(K,1)=0.
+    if(SU(K,1)  <COV) SU(K,1)  =0.
+    if(SAt(K,1) <COV) SAt(K,1) =0.
+    if(PB1(K,1) <COV) PB1(K,1) =0.
+    if(PB2(K,1) <COV) PB2(K,1) =0. !COV
+    if(PB3(K,1) <COV) PB3(K,1) =0. !0.
+    if(ZB1(K,1) <COV) ZB1(K,1) =0.
+    if(ZB2(K,1) <COV) ZB2(K,1) =0.
+    if(COD(K,1) <COV) COD(K,1) =0.
+    if(DOC(K,1) <COV) DOC(K,1) =0.
+
+    if(RPOC(K,2)<COV) RPOC(K,2)=0.0
+    if(LPOC(K,2)<COV) LPOC(K,2)=0.0
+    if(DOCA(K,2)<COV) DOCA(K,2)=0.0
+    if(RPON(K,2)<COV) RPON(K,2)=0.0
+    if(LPON(K,2)<COV) LPON(K,2)=0.0
+    if(DON(K,2) <COV) DON(K,2) =0.0
+    if(NH4(K,2) <COV) NH4(K,2) =0.0
+    if(NO3(K,2) <COV) NO3(K,2) =0.0
+    if(RPOP(K,2)<COV) RPOP(K,2)=0.0
+    if(LPOP(K,2)<COV) LPOP(K,2)=0.0
+    if(DOP(K,2) <COV) DOP(K,2) =0.0
+    if(PO4t(K,2)<COV) PO4t(K,2)=0.0
+    if(SU(K,2)  <COV) SU(K,2)  =0.0
+    if(SAt(K,2) <COV) SAt(K,2) =0.0
+    if(PB1(K,2) <COV) PB1(K,2) =0.0
+    if(PB2(K,2) <COV) PB2(K,2) =0.0 !COV
+    if(PB3(K,2) <COV) PB3(K,2) =0.0 !0.
+    if(ZB1(K,2) <COV) ZB1(K,2) =0.0
+    if(ZB2(K,2) <COV) ZB2(K,2) =0.0
+    if(COD(K,2) <COV) COD(K,2) =0.0
+    if(DOC(K,2) <COV) DOC(K,2) =0.0
+  enddo
+
+  return
+end
+
+subroutine sed_eq(C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,s,KL,w,WS,H2,dt,C0d,j1,j2,k12,k2)
+!-----------------------------------------------------------------------
+!solve mass-balance equations for two layers,written by ZG
+! equations: [a11,a12; a21 a22]*[C1';C2']=[b1;b2]
+! a11=(KL*fd1+w*fp1+WS)+s*fd1+k12/s
+! a12=-(KL*fd2+w*fp2)
+! a21=-(KL*fd1+w*fp1+WS)
+! a22=(KL*fd2+w*fp2)+WS+k2+H2/dt
+! b1=j1+s*fd0*C0
+! b2=j2+H2*C2/dt
+!-----------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  use schism_msgp, only : myrank, parallel_abort
+  implicit none
+  
+  real(kind=rkind),intent(in) :: C0d,C2,j1,j2,pie1,pie2,m1,m2,s,KL,w,WS,k12,k2,H2,dt 
+  real(kind=rkind),intent(out) :: C1td,C2td,C1t,C2t
+  
+  !local variables
+  real(kind=rkind) :: a11,a12,a21,a22,b1,b2,fd1,fd2,fp1,fp2 
+  real(kind=rkind) :: a1,a2,delta 
+
+  !calculate partition coefficents 
+  fd1=1.d0/(1.d0+m1*pie1) 
+  fd2=1.d0/(1.d0+m2*pie2) 
+  fp1=1.d0-fd1; 
+  fp2=1.d0-fd2;  
+  
+  a1=KL*fd1+w*fp1+WS
+  a2=KL*fd2+w*fp2
+  
+  a11=a1+s*fd1+k12/s 
+  a12=-a2
+  a21=-a1
+  a22=a2+WS+k2+H2/dt
+  b1=j1+s*C0d
+  b2=j2+H2*C2/dt
+
+  delta=a11*a22-a12*a21
+  if(delta==0.0) then
+    write(11,*)'ICM: delta=0 in solve sediment equations in two layers'
+    write(11,*)C2,C0d,j1,j2,pie1,pie2,m1,m2,s,KL,w,WS,k12,k2,H2,dt
+    write(errmsg,*)'ICM: delta=0 in solve sediment equations in two layers'
+    call parallel_abort(errmsg)
+  endif
+  
+  C1t=(a22*b1-a12*b2)/delta 
+  C2t=(a11*b2-a21*b1)/delta
+  C1td=C1t*fd1
+  C2td=C2t*fd2
+
+  return
+  
+end subroutine sed_eq
+
+function sed_zbrent(ierr)
+!---------------------------------------------------------------------
+!Brent's method to find SOD value
+!numerical recipes from William H. Press, 1992
+!---------------------------------------------------------------------
+  use schism_glbl, only : rkind
+  use schism_msgp, only : myrank
+  implicit none
+  integer, intent(out) :: ierr
+  integer, parameter :: nloop=100
+  real(kind=rkind), parameter :: eps=3.0d-8, tol=1.d-5,sodmin=1.d-4,sodmax=100.d0
+  !real(kind=rkind),intent(out) :: fout
+  real(kind=rkind), external :: sedf
+  real(kind=rkind) :: sed_zbrent
+  
+  !local variables
+  integer :: i
+  real(kind=rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,s,tol1,xm 
+  real(kind=rkind) :: rtmp
+
+  !initilize upper and lower limits
+  ierr=0
+  a=sodmin
+  b=sodmax
+  fa=sedf(a)
+  fb=sedf(b)
+  !call sedf(fa,a)
+  !call sedf(fb,b)
+ 
+  !root must be bracketed in brent 
+  if(fa*fb>0.d0) then 
+    ierr=1
+    write(*,*)'ZG: sod=',fa,fb,myrank
+    return
+  endif
+
+  fc=fb
+  do i=1,nloop
+    if(fb*fc>0.d0) then
+      c=a
+      fc=fa
+      d=b-a
+      e=d
+    endif !fb*fc>0.d0
+    if(abs(fc)<abs(fb)) then
+      a=b
+      b=c
+      c=a
+      fa=fb
+      fb=fc
+      fc=fa
+    endif !abs(fc)
+    tol1=2.d0*eps*abs(b)+0.5d0*tol !convergence check
+    xm=0.5d0*(c-b)
+    if(abs(xm)<=tol1.or.fb==0.d0) then
+      sed_zbrent=b
+      return
+    endif
+    if(abs(e)>=tol1.and.abs(fa)>abs(fb)) then
+      s=fb/fa
+      if(a==c) then
+        p=2.d0*xm*s
+        q=1.d0-s
+      else
+        q=fa/fc
+        r=fb/fc
+        p=s*(2.d0*xm*q*(q-r)-(b-a)*(r-1.d0))
+        q=(q-1.d0)*(r-1.d0)*(s-1.d0)
+      endif !a==c 
+      if(p>0.d0) q=-q
+      p=abs(p)
+      m1=3.d0*xm*q-abs(tol1*q)
+      m2=abs(e*q)
+      if(2.d0*p<min(m1,m2)) then
+        e=d
+        d=p/q
+      else
+        d=xm
+        e=d
+      endif !2.d0*p<min
+    else
+      d=xm
+      e=d
+    endif !abs(e)
+    a=b;
+    fa=fb
+    if(abs(d)>tol1) then
+      b=b+d
+    else
+      b=b+sign(tol1,xm)
+    endif !abs(d)
+    fb=sedf(b)
+    !call sedf(fb,b)
+  enddo !i
+ 
+  ierr=2
+  sed_zbrent=b
+
+  return
+
+end function sed_zbrent
+
+
+subroutine read_icm_sed_param
+!---------------------------------------------------------------------C
+!read sediment flux model parameters
+!---------------------------------------------------------------------C
+  use icm_sed_mod
+  use schism_glbl, only : rkind,ihot,nea,errmsg
+  use schism_msgp, only : myrank, parallel_abort
+  use icm_mod, only : iCheck
+  implicit none
+  
+  !local variables
+  integer :: ispvars,ispvarb,ispvarlr
+  integer :: i,j,itmp
+  real(kind=rkind) :: rtmp
+  character(len=10) :: stmp
+   
+  !General parameters 
+  call get_param_icm('icm_sed.in','HSEDALL',2,itmp,HSEDALL,stmp,1,1)
+  !call get_param_icm('icm_sed.in','INTSEDC',1,INTSEDC,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','iSteady',1,iSteady,rtmp,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','DIFFT',2,itmp,DIFFT,stmp,1,1)
+  call get_param_icm('icm_sed.in','SALTSW',2,itmp,SALTSW,stmp,1,1)
+  call get_param_icm('icm_sed.in','SALTND',2,itmp,SALTND,stmp,1,1)
+  call get_param_icm('icm_sed.in','FRPPH',2,itmp,FRPPH,stmp,3,3)
+  call get_param_icm('icm_sed.in','FRNPH',2,itmp,FRNPH,stmp,3,3)
+  call get_param_icm('icm_sed.in','FRCPH',2,itmp,FRCPH,stmp,3,3)
+  call get_param_icm('icm_sed.in','FRPPHB',2,itmp,FRPPHB,stmp,3,1)
+  call get_param_icm('icm_sed.in','FRNPHB',2,itmp,FRNPHB,stmp,3,1)
+  call get_param_icm('icm_sed.in','FRCPHB',2,itmp,FRCPHB,stmp,3,1)
+
+  !call get_param_icm('icm_sed.in','FRPPH1',2,itmp,FRPPH1,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRPPH2',2,itmp,FRPPH2,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRPPH3',2,itmp,FRPPH3,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRNPH1',2,itmp,FRNPH1,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRNPH2',2,itmp,FRNPH2,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRNPH3',2,itmp,FRNPH3,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRCPH1',2,itmp,FRCPH1,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRCPH2',2,itmp,FRCPH2,stmp,3,1)
+  !call get_param_icm('icm_sed.in','FRCPH3',2,itmp,FRCPH3,stmp,3,1)
+
+  call get_param_icm('icm_sed.in','KPDIAG',2,itmp,KPDIAG,stmp,3,1)
+  call get_param_icm('icm_sed.in','KNDIAG',2,itmp,KNDIAG,stmp,3,1)
+  call get_param_icm('icm_sed.in','KCDIAG',2,itmp,KCDIAG,stmp,3,1)
+  call get_param_icm('icm_sed.in','DPTHTA',2,itmp,DPTHTA,stmp,3,1)
+  call get_param_icm('icm_sed.in','DNTHTA',2,itmp,DNTHTA,stmp,3,1)
+  call get_param_icm('icm_sed.in','DCTHTA',2,itmp,DCTHTA,stmp,3,1)
+  call get_param_icm('icm_sed.in','KSI',2,itmp,KSI,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTASI',2,itmp,THTASI,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','M1',2,itmp,M1,stmp,1,1)
+  call get_param_icm('icm_sed.in','M2',2,itmp,M2,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTADP',2,itmp,THTADP,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTADD',2,itmp,THTADD,stmp,1,1)
+
+  !nitrification
+  call get_param_icm('icm_sed.in','KAPPNH4F',2,itmp,KAPPNH4F,stmp,1,1)
+  call get_param_icm('icm_sed.in','KAPPNH4S',2,itmp,KAPPNH4S,stmp,1,1)
+  call get_param_icm('icm_sed.in','PIENH4',2,itmp,PIENH4,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTANH4',2,itmp,THTANH4,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMNH4',2,itmp,KMNH4,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMNH4O2',2,itmp,KMNH4O2,stmp,1,1)
+
+  !denitrification
+  call get_param_icm('icm_sed.in','KAPPNO3F',2,itmp,KAPPNO3F,stmp,1,1)
+  call get_param_icm('icm_sed.in','KAPPNO3S',2,itmp,KAPPNO3S,stmp,1,1)
+  call get_param_icm('icm_sed.in','K2NO3',2,itmp,K2NO3,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTANO3',2,itmp,THTANO3,stmp,1,1)
+
+  !HS2 (particulate and dissolve) oxidation
+  call get_param_icm('icm_sed.in','KAPPD1',2,itmp,KAPPD1,stmp,1,1)
+  call get_param_icm('icm_sed.in','KAPPP1',2,itmp,KAPPP1,stmp,1,1)
+  call get_param_icm('icm_sed.in','PIE1S',2,itmp,PIE1S,stmp,1,1)
+  call get_param_icm('icm_sed.in','PIE2S',2,itmp,PIE2S,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTAPD1',2,itmp,THTAPD1,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMHSO2',2,itmp,KMHSO2,stmp,1,1)
+
+  !Silica dissolution
+  call get_param_icm('icm_sed.in','CSISAT',2,itmp,CSISAT,stmp,1,1)
+  call get_param_icm('icm_sed.in','DPIE1SI',2,itmp,DPIE1SI,stmp,1,1)
+  call get_param_icm('icm_sed.in','PIE2SI',2,itmp,PIE2SI,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMPSI',2,itmp,KMPSI,stmp,1,1)
+  call get_param_icm('icm_sed.in','O2CRITSI',2,itmp,O2CRITSI,stmp,1,1)
+  call get_param_icm('icm_sed.in','JSIDETR',2,itmp,JSIDETR,stmp,1,1)
+  
+  !PO4
+  call get_param_icm('icm_sed.in','DPIE1PO4F',2,itmp,DPIE1PO4F,stmp,1,1)
+  call get_param_icm('icm_sed.in','DPIE1PO4S',2,itmp,DPIE1PO4S,stmp,1,1)
+  call get_param_icm('icm_sed.in','PIE2PO4',2,itmp,PIE2PO4,stmp,1,1)
+  call get_param_icm('icm_sed.in','O2CRIT',2,itmp,O2CRIT,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMO2DP',2,itmp,KMO2DP,stmp,1,1)
+
+  !SAV
+  call get_param_icm('icm_sed.in','iSAV',1,iSAV,rtmp,stmp,1,1)
+
+  !benthic stress
+  call get_param_icm('icm_sed.in','TEMPBEN',2,itmp,TEMPBEN,stmp,1,1)
+  call get_param_icm('icm_sed.in','KBENSTR',2,itmp,KBENSTR,stmp,1,1)
+  call get_param_icm('icm_sed.in','KLBNTH',2,itmp,KLBNTH,stmp,1,1)
+  call get_param_icm('icm_sed.in','DPMIN',2,itmp,DPMIN,stmp,1,1)
+
+  !CH4 reaction 
+  call get_param_icm('icm_sed.in','KAPPCH4',2,itmp,KAPPCH4,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTACH4',2,itmp,THTACH4,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMCH4O2',2,itmp,KMCH4O2,stmp,1,1)
+  call get_param_icm('icm_sed.in','KMSO4',2,itmp,KMSO4,stmp,1,1)
+
+  !initial concentration
+  call get_param_icm('icm_sed.in','CTEMPI',2,itmp,CTEMPI,stmp,1,1)
+  call get_param_icm('icm_sed.in','CPOPI',2,itmp,CPOPI,stmp,3,1)
+  call get_param_icm('icm_sed.in','CPONI',2,itmp,CPONI,stmp,3,1)
+  call get_param_icm('icm_sed.in','CPOCI',2,itmp,CPOCI,stmp,3,1)
+  call get_param_icm('icm_sed.in','CPOSI',2,itmp,CPOSI,stmp,1,1)
+  call get_param_icm('icm_sed.in','PO4T2I',2,itmp,PO4T2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','NH4T2I',2,itmp,NH4T2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','NO3T2I',2,itmp,NO3T2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','HST2I',2,itmp,HST2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','CH4T2I',2,itmp,CH4T2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','CH41TI',2,itmp,CH41TI,stmp,1,1)
+  call get_param_icm('icm_sed.in','SO4T2I',2,itmp,SO4T2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','SIT2I',2,itmp,SIT2I,stmp,1,1)
+  call get_param_icm('icm_sed.in','BENSTI',2,itmp,BENSTI,stmp,1,1)
+  call get_param_icm('icm_sed.in','BBMI',2,itmp,BBMI,stmp,1,1)
+
+  !benthic algae
+  call get_param_icm('icm_sed.in','iBalg',1,iBalg,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','PMB',2,itmp,PMB,stmp,1,1)
+  call get_param_icm('icm_sed.in','ANCB',2,itmp,ANCB,stmp,1,1)
+  call get_param_icm('icm_sed.in','APCB',2,itmp,APCB,stmp,1,1)
+  call get_param_icm('icm_sed.in','KTGB1',2,itmp,KTGB1,stmp,1,1)
+  call get_param_icm('icm_sed.in','KTGB2',2,itmp,KTGB2,stmp,1,1)
+  call get_param_icm('icm_sed.in','TMB',2,itmp,TMB,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','ALPHB',2,itmp,ALPHB,stmp,1,1)
+  call get_param_icm('icm_sed.in','CCHLB',2,itmp,CCHLB,stmp,1,1)
+  call get_param_icm('icm_sed.in','KESED',2,itmp,KESED,stmp,1,1)
+  call get_param_icm('icm_sed.in','KEBALG',2,itmp,KEBALG,stmp,1,1)
+  call get_param_icm('icm_sed.in','KHNB',2,itmp,KHNB,stmp,1,1)
+  call get_param_icm('icm_sed.in','KHPB',2,itmp,KHPB,stmp,1,1)
+  call get_param_icm('icm_sed.in','KHRB',2,itmp,KHRB,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','BMRB',2,itmp,BMRB,stmp,1,1)
+  call get_param_icm('icm_sed.in','BPRB',2,itmp,BPRB,stmp,1,1)
+  call get_param_icm('icm_sed.in','KTBB',2,itmp,KTBB,stmp,1,1)
+  call get_param_icm('icm_sed.in','TRB',2,itmp,TRB,stmp,1,1)
+  call get_param_icm('icm_sed.in','BALGMIN',2,itmp,BALGMIN,stmp,1,1)
+  call get_param_icm('icm_sed.in','FNIB',2,itmp,FNIB,stmp,1,1)
+  call get_param_icm('icm_sed.in','FPIB',2,itmp,FPIB,stmp,1,1)
+
+  !deposit feeder
+  call get_param_icm('icm_sed.in','idf',1,idf,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','ihypox',1,ihypox,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','XKMI0',2,itmp,XKMI0,stmp,1,1)
+  call get_param_icm('icm_sed.in','ING0',2,itmp,ING0,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTAI0',2,itmp,THTAI0,stmp,1,1)
+  call get_param_icm('icm_sed.in','R',2,itmp,R,stmp,1,1)
+  call get_param_icm('icm_sed.in','THTAR',2,itmp,THTAR,stmp,1,1)
+  call get_param_icm('icm_sed.in','BETA',2,itmp,BETA,stmp,1,1)
+  call get_param_icm('icm_sed.in','THBETA',2,itmp,THBETA,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','AMCN',2,itmp,AMCN,stmp,1,1)
+  call get_param_icm('icm_sed.in','AMCP',2,itmp,AMCP,stmp,1,1)
+  call get_param_icm('icm_sed.in','AA1',2,itmp,AA1,stmp,1,1)
+  call get_param_icm('icm_sed.in','AA2',2,itmp,AA2,stmp,1,1)
+  call get_param_icm('icm_sed.in','XKMG1',2,itmp,XKMG1,stmp,1,1)
+  call get_param_icm('icm_sed.in','XKMG2',2,itmp,XKMG2,stmp,1,1)
+
+  call get_param_icm('icm_sed.in','XKBO2',2,itmp,XKBO2,stmp,1,1)
+  call get_param_icm('icm_sed.in','TDD',2,itmp,TDD,stmp,1,1)
+  call get_param_icm('icm_sed.in','DOLOW',2,itmp,DOLOW,stmp,1,1)
+  call get_param_icm('icm_sed.in','DFDOH',2,itmp,DFDOH,stmp,1,1)
+  call get_param_icm('icm_sed.in','DFDOQ',2,itmp,DFDOQ,stmp,1,1)
+
+  
+  !------------------------------------- 
+  !spatially varying variables
+  !------------------------------------- 
+  call get_param_icm('icm_sed.in','iSet',1,iSet,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','ispvars',1,ispvars,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','ispvarb',1,ispvarb,rtmp,stmp,1,1)
+  call get_param_icm('icm_sed.in','ispvarlr',1,ispvarlr,rtmp,stmp,1,1)
+  
+  !settling velocity
+  if(ispvars==1) then
+    call get_param_icm('icm_sed.in','WSSBNET',2,itmp,WSSBNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WSLBNET',2,itmp,WSLBNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WSRBNET',2,itmp,WSRBNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WS1BNET',2,itmp,WS1BNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WS2BNET',2,itmp,WS2BNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WS3BNET',2,itmp,WS3BNET(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','WSUBNET',2,itmp,WSUBNET(1),stmp,1,1)
+    do i=2,nea
+      WSSBNET(i)=WSSBNET(1)
+      WSLBNET(i)=WSLBNET(1)
+      WSRBNET(i)=WSRBNET(1)
+      WS1BNET(i)=WS1BNET(1)
+      WS2BNET(i)=WS2BNET(1)
+      WS3BNET(i)=WS3BNET(1)
+      WSUBNET(i)=WSUBNET(1)
+    enddo !i
+  elseif(ispvars==2) then
+    !more work needed, similar to read 'settling.gr3'
+    open(31,file='nsettling.gr3',status='old')
+    close(31)
+  else
+    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvars
+    call parallel_abort(errmsg)
+  endif!ispvars
+
+  !Sediment burial and mixing rates
+  if(ispvarb==1) then
+    call get_param_icm('icm_sed.in','VSED',2,itmp,VSED(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','VPMIX',2,itmp,VPMIX(1),stmp,1,1)
+    call get_param_icm('icm_sed.in','VDMIX',2,itmp,VDMIX(1),stmp,1,1)
+    do i=1,nea
+      VSED(i)=VSED(1)
+      VPMIX(i)=VPMIX(1)
+      VDMIX(i)=VDMIX(1)
+    enddo !i
+  elseif(ispvarb==2) then
+   !more work needed, similar to read 'settling.gr3'
+   open(31,file='vbm.gr3',status='old')
+   close(31)
+  else
+    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvarb
+    call parallel_abort(errmsg)
+  endif !ispvarb
+
+  !splits of refracotry matter (water column) into G2 and G3 (sediment)
+  if(ispvarlr==1) then
+    call get_param_icm('icm_sed.in','FRPOP',2,itmp,FRPOP(1,2:3),stmp,2,1)
+    call get_param_icm('icm_sed.in','FRPON',2,itmp,FRPON(1,2:3),stmp,2,1)
+    call get_param_icm('icm_sed.in','FRPOC',2,itmp,FRPOC(1,2:3),stmp,2,1)
+    do i=1,nea
+      FRPOP(i,2:3)=FRPOP(1,2:3)
+      FRPON(i,2:3)=FRPON(1,2:3)
+      FRPOC(i,2:3)=FRPOC(1,2:3)
+    enddo !i
+  elseif(ispvarlr==2) then
+   !more work needed, similar to read 'settling.gr3'
+   open(31,file='frac_pom.gr3',status='old')
+   close(31)
+  else
+    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvarlr
+    call parallel_abort(errmsg)
+  endif !ispvarlr
+  
+  !--------------------------------------------------------------------
+  !pre-poccess parameters
+  !--------------------------------------------------------------------
+  !turn off deposit feeders
+  if(idf==0) then 
+    ING0=0.0
+    R=0.0
+    BETA=0.0
+  endif
+  
+  !cold start
+  if(ihot==0) then  
+    do i=1,nea
+      CTEMP(i)=CTEMPI
+      do j=1,3
+        CPOP(i,j)=CPOPI(j)
+        CPON(i,j)=CPONI(j)
+        CPOC(i,j)=CPOCI(j)
+      enddo !j
+      BBM(i)=BBMI  !benthic algae
+      CPOS(i)=CPOSI
+      PO4T2TM1S(i)=PO4T2I
+      NH4T2TM1S(i)=NH4T2I
+      NO3T2TM1S(i)=NO3T2I
+      HST2TM1S(i) =HST2I
+      CH4T2TM1S(i)=CH4T2I
+      CH41TM1S(i) =CH41TI
+      SO4T2TM1S(i)=SO4T2I
+      SIT2TM1S(i) =SIT2I
+      BENSTR1S(i) =BENSTI
+    enddo
+  endif !ihot
+
+  !turn off settling velocity if iSet=0
+  if(iSet==0) then
+    do i=1,nea
+      WSSBNET(i)=0.0
+      WSLBNET(i)=0.0
+      WSRBNET(i)=0.0
+      WS1BNET(i)=0.0
+      WS2BNET(i)=0.0
+      WS3BNET(i)=0.0
+      WSUBNET(i)=0.0
+    enddo
+  endif !iSet
+
+  if(iCheck==1) call check_icm_sed_param
+
+  !---------------initialization of sediment flux model----------------
+  !TSS calculation
+  do i=1,nea
+    SSI(i)=(35.d0-SED_SALT(i))
+    SSI(i)=(SED_LPOC(i)+SED_RPOC(i))*6.0d0
+  enddo !
+
+  !conversion
+  DIFFT=1.0d-4*DIFFT
+  do i=1,nea
+    HSED(i)=HSEDALL*1.0d-2
+    VSED(i)=VSED(i)*2.73791d-5
+  enddo
+
+  !initialize variables
+  !these variabes should be defined by sub-models, need further work, ZG
+  FRPSAV=0.0
+  FRNSAV=0.0 
+  FRCSAV=0.0 
+  do i=1,nea
+    PATCH(i)=0.0
+    sh(i)=0.0
+    SFLUXP(i)=0.0
+    SFLUXN(i)=0.0
+    SFLUXC(i)=0.0
+    JSUSF(i)=0.0
+    SF_RPOP(i)=0.0
+    SF_RPON(i)=0.0
+    SF_RPOC(i)=0.0
+    SF_SU(i)=0.0
+    SEDCSAV(i)=0.0
+    SEDNSAV(i)=0.0
+    SEDPSAV(i)=0.0
+  enddo
+ 
+  !set sediment concentration to initial concentration 
+  do i=1,nea
+    POP1TM1S(i)=CPOP(i,1)
+    POP2TM1S(i)=CPOP(i,2)
+    POP3TM1S(i)=CPOP(i,3)
+    PON1TM1S(i)=CPON(i,1)
+    PON2TM1S(i)=CPON(i,2)
+    PON3TM1S(i)=CPON(i,3)
+    POC1TM1S(i)=CPOC(i,1)
+    POC2TM1S(i)=CPOC(i,2)
+    POC3TM1S(i)=CPOC(i,3)
+    PSITM1S(i) =CPOS(i)
+  enddo
+
+  !set up look-up table for reaction rates
+  do i=1,350
+    TEMP5        = dble(i-1)/10.0+0.05d0
+    TEMP20       = TEMP5-20.0
+    TEMP202      = TEMP20/2.0
+    ZHTANH4F(i) = KAPPNH4F*THTANH4**TEMP202 !nitrification in 1st layer
+    ZHTANH4S(i) = KAPPNH4S*THTANH4**TEMP202 !nitrificaiton in 1st layer
+    ZHTANO3F(i) = KAPPNO3F*THTANO3**TEMP202 !denitrification in the 1st layer
+    ZHTANO3S(i) = KAPPNO3S*THTANO3**TEMP202 !denitrification in the 1st layer
+    ZHTAD1(i)   = KAPPD1*THTAPD1**TEMP202 !dissolved H2S
+    ZHTAP1(i)   = KAPPP1*THTAPD1**TEMP202 !particulate H2S
+    ZHTA2NO3(i) = K2NO3*THTANO3**TEMP20 !denitrification in the 2nd layer 
+    ZL12NOM(i)  = THTADD**TEMP20 !diffusion KL
+    ZW12NOM(i)  = THTADP**TEMP20 !P mixing, W 
+    ZHTAPON1(i) = KNDIAG(1)*DNTHTA(1)**TEMP20
+    ZHTAPON2(i) = KNDIAG(2)*DNTHTA(2)**TEMP20
+    ZHTAPON3(i) = KNDIAG(3)*DNTHTA(3)**TEMP20
+    ZHTAPOC1(i) = KCDIAG(1)*DCTHTA(1)**TEMP20
+    ZHTAPOC2(i) = KCDIAG(2)*DCTHTA(2)**TEMP20
+    ZHTAPOC3(i) = KCDIAG(3)*DCTHTA(3)**TEMP20
+    ZHTAPOP1(i) = KPDIAG(1)*DPTHTA(1)**TEMP20
+    ZHTAPOP2(i) = KPDIAG(2)*DPTHTA(2)**TEMP20
+    ZHTAPOP3(i) = KPDIAG(3)*DPTHTA(3)**TEMP20
+    ZHTASI(i)   = KSI*THTASI**TEMP20  !Si
+    ZHTACH4(i)  = KAPPCH4*THTACH4**TEMP202 !CH4
+    ZHTAI0(i)   = ING0*THTAI0**TEMP20           ! DEPOSIT FEEDERS
+    ZHTAR(i)    = R*THTAR**TEMP20               ! DEPOSIT FEEDERS
+    ZHTABETA(i) = BETA*THBETA**TEMP20           ! DEPOSIT FEEDERS
+  enddo
+
+  !INITIALIZE ACCUMULATORS FOR STEADY-STATE COMPUTATIONS
+  !if(iSteady==1) then
+  !  TINTIM=0.0
+  !  do i=1,nea
+  !    AG3CFL(i)=0.0
+  !    AG3NFL(i)=0.0
+  !    AG3PFL(i)=0.0
+  !    ASDTMP(i)=0.0
+  !  enddo !i
+  !endif
+
+  return
+end subroutine read_icm_sed_param
+
+subroutine check_icm_sed_param
+!-----------------------------------------------------------------------
+! Outputs sediment parameter to check
+!-----------------------------------------------------------------------
+  use icm_sed_mod
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+   
+  !local variables
+  integer :: i, j
+  
+  if(myrank==0) then
+    open(31,file='ecosim_2.out',status='replace')
+    write(31,*) 'Sediment flux model parameters:'
+
+    write(31,*)
+    write(31,*)'!----General parameters----------------------------------'
+    write(31,809)'HSEDALL','iSteady','DIFFT','SALTSW','SALTND' 
+    write(31,'(f10.5,x,(I10,x),5(f10.5,x))')HSEDALL,iSteady,DIFFT,SALTSW,SALTND 
+    !write(31,809)'HSEDALL','INTSEDC','iSteady','DIFFT','SALTSW','SALTND' 
+    !write(31,'(f10.5,x,2(I10,x),5(f10.5,x))')HSEDALL,INTSEDC,iSteady,DIFFT,SALTSW,SALTND 
+    !write(31,809)'FRPPH1','FRPPH2','FRPPH3','FRPPHB','FRNPH1','FRNPH2','FRNPH3','FRNPHB','FRCPH1','FRCPH2','FRCPH3','FRCPHB'
+    write(31,809)'FRPPH(:,1)','FRPPH(:,2)','FRPPH(:,3)','FRPPHB','FRNPH(:,1)','FRNPH(:,2)','FRNPH(:,3)','FRNPHB','FRCPH(:,1)','FRCPH(:,2)','FRCPH(:,3)','FRCPHB'
+    do i=1,3
+      !write(31,810)FRPPH1(i),FRPPH2(i),FRPPH3(i),FRPPHB(i),FRNPH1(i),FRNPH2(i),FRNPH3(i),FRNPHB(i),FRCPH1(i),FRCPH2(i),FRCPH3(i),FRCPHB(i)
+      write(31,810)FRPPH(i,1),FRPPH(i,2),FRPPH(i,3),FRPPHB(i),FRNPH(i,1),FRNPH(i,2),FRNPH(i,3),FRNPHB(i),FRCPH(i,1),FRCPH(i,2),FRCPH(i,3),FRCPHB(i)
+    enddo
+    write(31,809)'KPDIAG','KNDIAG','KCDIAG','DPTHTA','DNTHTA','DCTHTA'
+    do i=1,3
+      write(31,810)KPDIAG(i),KNDIAG(i),KCDIAG(i),DPTHTA(i),DNTHTA(i),DCTHTA(i)
+    enddo
+    write(31,809)'KSI','THTASI','M1','M2','THTADP','THTADD'
+    write(31,810)KSI,THTASI,M1,M2,THTADP,THTADD
+
+    write(31,*)
+    write(31,*)'-----------------------------------------------------------------'
+    write(31,*)'!nitrification, denitrification, H2S, Silica, PO4, benthic stress'
+    write(31,*)'-----------------------------------------------------------------'
+    write(31,809)'KAPPNH4F','KAPPNH4S','PIENH4','THTANH4','KMNH4','KMNH4O2'
+    write(31,810)KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2
+    write(31,809)'KAPPNO3F','KAPPNO3S','K2NO3','THTANO3'
+    write(31,810)KAPPNO3F,KAPPNO3S,K2NO3,THTANO3
+    write(31,809)'KAPPD1','KAPPP1','PIE1S','PIE2S','THTAPD1','KMHSO2'
+    write(31,810)KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2
+    write(31,809)'CSISAT','DPIE1SI','PIE2SI','O2CRITSI','JSIDETR'
+    write(31,810)CSISAT,DPIE1SI,PIE2SI,O2CRITSI,JSIDETR
+    write(31,809)'DPIE1PO4F','DPIE1PO4S','O2CRIT','KMO2DP'
+    write(31,810)DPIE1PO4F,DPIE1PO4S,O2CRIT,KMO2DP
+    write(31,809)'iSAV'
+    write(31,'(I10)')iSAV
+    write(31,809)'TEMPBEN','KBENSTR','KLBNTH','DPMIN'
+    write(31,810)TEMPBEN,KBENSTR,KLBNTH,DPMIN
+    write(31,809)'KAPPCH4','THTACH4','KMCH4O2','KMSO4'
+    write(31,810)KAPPCH4,THTACH4,KMCH4O2,KMSO4
+   
+    write(31,*)
+    write(31,*)'----Initial concentration----------------------------------'
+    write(31,809)'CTEMPI','CPOPI(1)','CPOPI(2)','CPOPI(3)','CPONI(1)','CPONI(2)','CPONI(3)','CPOCI(1)','CPOCI(2)','CPOCI(3)'
+    write(31,'(100(f10.2,x))')CTEMPI,CPOPI,CPONI,CPOCI
+    write(31,809)'PO4T2I','NH4T2I','HST2I','CH4T2I','CH41TI','SO4T2I','SIT2I','BENSTI','BBMI'
+    write(31,810)PO4T2I,NH4T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI,BBMI
+   
+    write(31,*)
+    write(31,*)'----benthic algae-----------------------------------------'
+    !write(31,809)'BALC'
+    !write(31,809)BALC
+    write(31,809)'iBalg'
+    write(31,'(I10)')iBalg
+    write(31,809)'PMB','ANCB','APCB','KTGB1','KTGB2','TMB','ALPHB','CCHLB','KESED','KEBALG','KHNB','KHPB','KHRB'
+    write(31,810)PMB,ANCB,APCB,KTGB1,KTGB2,TMB,ALPHB,CCHLB,KESED,KEBALG,KHNB,KHPB,KHRB
+    write(31,809)'BMRB','BPRB','KTBB','TRB','BALGMIN','FNIB','FPIB'
+    write(31,810)BMRB,BPRB,KTBB,TRB,BALGMIN,FNIB,FPIB
+
+    write(31,*)
+    write(31,*)'----deposit feeders----------------------------------------'
+    write(31,809)'idf','ihypox','XKMI0','ING0','THTAI0','R','THTAR','BETA','THBETA'
+    write(31,'(2(I10,x),100(f10.5,x))')idf,ihypox,XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA
+    write(31,809)'AMCN','AMCP','AA1','AA2','XKMG1','XKMG2'
+    write(31,'(4(f10.5,x),2(f10.2,x))')AMCN,AMCP,AA1,AA2,XKMG1,XKMG2
+    write(31,809)'XKBO2','TDD','DOLOW','DFDOH','DFDOQ'
+    write(31,810)XKBO2,TDD,DOLOW,DFDOH,DFDOQ
+
+    write(31,*)
+    write(31,*)'----spatially varying variables----------------------------'
+    write(31,809)'iSet','WSSBNET(1)','WSLBNET(1)','WSRBNET(1)','WS1BNET(1)','WS2BNET(1)','WS3BNET(1)','WSUBNET(1)'
+    write(31,'(i10,x,100(f10.5,x))')iSet,WSSBNET(1),WSLBNET(1),WSRBNET(1),WS1BNET(1),WS2BNET(1),WS3BNET(1),WSUBNET(1)
+    write(31,809)'VSED(1)','VPMIX(1)','VDMIX(1)'
+    write(31,810)VSED(1),VPMIX(1),VDMIX(1)
+    write(31,809)'FRPOP(1,2)','FRPOP(1,3)','FRPON(1,2)','FRPON(1,3)','FRPOC(1,2)','FRPOC(1,3)'
+    write(31,810)FRPOP(1,2:3),FRPON(1,2:3),FRPOC(1,2:3)
+    close(31) 
+  endif !myrank==0
+  return
+
+809 format(100(a10,x))
+810 format(100(f10.5,x))
+
+end subroutine check_icm_sed_param
+
+subroutine sed_calc(id)
+!-----------------------------------------------------------------------
+! 1) calculate sediment flux
+! 2) included sub-models: a)deposit feeder, b)SAV
+!-----------------------------------------------------------------------
+  use schism_glbl, only : rkind, errmsg
+  use schism_msgp, only : myrank, parallel_abort
+  use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC
+  use icm_sed_mod
+  implicit none
+  integer,intent(in) :: id
+  real(kind=rkind),external :: sedf,sed_zbrent
+  !real(kind=rkind),external :: sedf
+
+  !local variables
+  integer :: i,j,k,itmp,ind,ierr
+  real(kind=rkind) :: pie1,pie2,j1,j2,fd2
+  real(kind=rkind) :: rtmp,rat,xlim1,xlim2,C0d,k12,k2 
+  real(kind=rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
+
+  !calculate bottom layer TSS. Need more work, ZG
+  if(iLight==2) then
+    SSI(id)=SED_TSS(id)
+  else
+    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*6.d0
+  endif
+
+  !if(iSteady==1) tintim=tintim+dtw
+  
+  !initial sediment nutrient mass 
+  !sedmn=0.0; sedmp=0.0; sedmc=0.0
+
+  rat=1000.0
+  !flux rate (mm/day)
+  flxs=rat*WSSBNET(id)
+  flxr=rat*WSRBNET(id)
+  flxl=rat*WSLBNET(id)
+  flxp(1)=rat*WS1BNET(id)
+  flxp(2)=rat*WS2BNET(id)
+  flxp(3)=rat*WS3BNET(id)
+  flxu=rat*WSUBNET(id)
+
+  !adjust flux rate (net settling velocity) for SAV effect
+  if(iSAV==1) then
+    flxs=flxs+rat*WSSSAV*patch(id)*sh(id)
+    flxr=flxr+rat*WSRSAV*patch(id)*sh(id)
+    flxl=flxl+rat*WSLSAV*patch(id)*sh(id)
+    flxp(1)=flxp(1)+rat*WS1SAV*patch(id)*sh(id) !diatom
+    flxp(2)=flxp(2)+rat*WS2SAV*patch(id)*sh(id) !green algae
+    flxp(3)=flxp(2)+rat*WS3SAV*patch(id)*sh(id) !cyanobacteria
+    flxu=flxu+rat*WSUSAV*patch(id)*sh(id)
+  endif !iSAV==1
+
+  !calculate POM fluxes
+  flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0
+  do i=1,3 !for 3 classes of POM
+    do j=1,3 !for 3 phytoplankton species
+      flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*APC(j)*SED_B(id,j)
+      flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*ANC(j)*SED_B(id,j)
+      flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
+    enddo !j
+  enddo !i
+  flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxu*SED_SU(id)
+
+  !split settling POM from water column
+  flxpop(id,1)=flxpop(id,1)+flxl*SED_LPOP(id)
+  flxpop(id,2)=flxpop(id,2)+flxr*SED_RPOP(id)*FRPOP(id,2)/(FRPOP(id,2)+FRPOP(id,3))
+  flxpop(id,3)=flxpop(id,3)+flxr*SED_RPOP(id)*FRPOP(id,3)/(FRPOP(id,2)+FRPOP(id,3))
+  flxpon(id,1)=flxpon(id,1)+flxl*SED_LPON(id)
+  flxpon(id,2)=flxpon(id,2)+flxr*SED_RPON(id)*FRPON(id,2)/(FRPON(id,2)+FRPON(id,3))
+  flxpon(id,3)=flxpon(id,3)+flxr*SED_RPON(id)*FRPON(id,3)/(FRPON(id,2)+FRPON(id,3))
+  flxpoc(id,1)=flxpoc(id,1)+flxl*SED_LPOC(id)
+  flxpoc(id,2)=flxpoc(id,2)+flxr*SED_RPOC(id)*FRPOC(id,2)/(FRPOC(id,2)+FRPOC(id,3))
+  flxpoc(id,3)=flxpoc(id,3)+flxr*SED_RPOC(id)*FRPOC(id,3)/(FRPOC(id,2)+FRPOC(id,3))
+  
+  !SAV root mortality into sediment POM
+  if(iSAV==1) then
+    do i=1,3
+      flxpoc(id,i)=flxpoc(id,i)+rat*SEDCSAV(id)*FRCSAV(i)
+      flxpon(id,i)=flxpon(id,i)+rat*SEDNSAV(id)*FRNSAV(i)
+      flxpop(id,i)=flxpop(id,i)+rat*SEDPSAV(id)*FRPSAV(i)
+    enddo
+  endif
+
+  !deposit feeder influence on sediment POM 
+  if(idf==1) then
+    !assume it has the same fraction as green algae
+    flxpop(id,1)=flxpop(id,1)+SFLUXP(id)*FRPPH(1,2)
+    flxpop(id,2)=flxpop(id,2)+SFLUXP(id)*FRPPH(2,2)
+    flxpop(id,3)=flxpop(id,3)+SFLUXP(id)*FRPPH(3,2)+SF_RPOP(id)
+    flxpon(id,1)=flxpon(id,1)+SFLUXN(id)*FRNPH(1,2)
+    flxpon(id,2)=flxpon(id,2)+SFLUXN(id)*FRNPH(2,2)
+    flxpon(id,3)=flxpon(id,3)+SFLUXN(id)*FRNPH(3,2)+SF_RPON(id)
+    flxpoc(id,1)=flxpoc(id,1)+SFLUXC(id)*FRCPH(1,2)
+    flxpoc(id,2)=flxpoc(id,2)+SFLUXC(id)*FRCPH(2,2)
+    flxpoc(id,3)=flxpoc(id,3)+SFLUXC(id)*FRCPH(3,2)+SF_RPOC(id)
+    flxpos(id)=flxpos(id)+SF_SU(id)+JSUSF(id)
+  endif
+
+  !assign previous timestep POM concentration 
+  CPOP(id,1)=POP1TM1S(id)
+  CPOP(id,2)=POP2TM1S(id)
+  CPOP(id,3)=POP3TM1S(id)
+  CPON(id,1)=PON1TM1S(id)
+  CPON(id,2)=PON2TM1S(id)
+  CPON(id,3)=PON3TM1S(id)
+  CPOC(id,1)=POC1TM1S(id)
+  CPOC(id,2)=POC2TM1S(id)
+  CPOC(id,3)=POC3TM1S(id) 
+  CPOS(id)  =PSITM1S(id)
+
+  !assign previous timestep sediment concentration
+  NH41TM1  = NH41TM1S(id)
+  NO31TM1  = NO31TM1S(id)
+  HS1TM1   = HS1TM1S(id)
+  SI1TM1   = SI1TM1S(id)
+  PO41TM1  = PO41TM1S(id)
+  BENSTR1  = BENSTR1S(id) !benthic stress
+  NH4T2TM1 = NH4T2TM1S(id)
+  NO3T2TM1 = NO3T2TM1S(id)
+  HST2TM1  = HST2TM1S(id)
+  SIT2TM1  = SIT2TM1S(id)
+  PO4T2TM1 = PO4T2TM1S(id)
+  PON1TM1  = PON1TM1S(id)
+  PON2TM1  = PON2TM1S(id)
+  PON3TM1  = PON3TM1S(id)
+  POC1TM1  = POC1TM1S(id)
+  POC1     = POC1TM1
+  POC2TM1  = POC2TM1S(id)
+  POC3TM1  = POC3TM1S(id)
+  POP1TM1  = POP1TM1S(id)
+  POP2TM1  = POP2TM1S(id)
+  POP3TM1  = POP3TM1S(id)
+  PSITM1   = PSITM1S(id)
+  ROOTDO   = 0.0
+  DFEEDM1  = DFEEDM1S(id)
+  CH4T2TM1 = CH4T2TM1S(id)           ! CH4
+  CH41TM1  = CH41TM1S(id)            ! CH4
+  SO4T2TM1 = SO4T2TM1S(id)           ! CH4
+
+  !account for SAV nutrient uptake, DO transferred to roots
+  if(iSAV==1) then
+    NH4T2TM1=NH4T2TM1-1000.0*SEDNH4SAV(id)*dtw/HSED(id)
+    PO4T2TM1=PO4T2TM1-1000.0*SEDPO4SAV(id)*dtw/HSED(id)
+    ROOTDO=SEDDOSAV(id)
+  endif
+
+  BFORMAX=BFORMAXS(id)
+  ISWBEN=ISWBENS(id)
+  H2=HSED(id)
+
+  !sedimentation, mixing rates, and sediment temperature
+  W2=VSED(id)
+  !DP=VPMIX(id)
+  !DD=VDMIX(id)
+  TEMPD=CTEMP(id)
+  
+  !water column concentrations
+  PO40=rat*SED_PO4(id)/(1.0+rKPO4p*SSI(id))
+  NH40=rat*SED_NH4(id)
+  NO30=rat*SED_NO3(id)
+  SI0=rat*SED_SA(id)/(1.0+rKSAp*SSI(id))
+  O20=max(SED_DO(id),1.d-2)
+  HS0=SED_COD(id)
+  SAL0=SED_SALT(id)
+
+  !regression to get SO4 concentration from Salinity
+  if(SAL0>0.0099) then
+    SO40MG=20.0+86.321*SAL0
+  else
+    SO40MG=20.0
+  endif
+
+  !Methane saturation
+  CH4SAT=0.099*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0)
+
+  !index for reaction rates
+  ind=int(10.0*TEMPD+1)
+  !XAPPCH4 = ZHTACH4(ind)
+  !XAPPD1  = ZHTAD1(ind) !d H2S
+  !XAPPP1  = ZHTAP1(ind) !p H2S
+  !if(SAL0<=SALTND) then 
+  !  XAPPNH4  = ZHTANH4F(ind)
+  !  XAPP1NO3 = ZHTANO3F(ind)
+  !else
+  !  XAPPNH4  = ZHTANH4S(ind)
+  !  XAPP1NO3 = ZHTANO3S(ind)
+  !endif
+  !XK2NO3  = ZHTA2NO3(ind)*H2
+  !DLTS=dtw
+
+  !benthic stress. This part is not totally right, need further modification ,ZG
+  if(ISWBEN==0) then
+    if(TEMPD>=TEMPBEN) then
+      ISWBEN=1
+      BFORMAX=0.0
+    endif
+    BFOR=KMO2DP/(KMO2DP+O20)
+  else
+    if(TEMPD<TEMPBEN) then
+      ISWBEN=0
+    endif
+    BFORMAX=max(KMO2DP/(KMO2DP+O20),BFORMAX)
+    BFOR=BFORMAX
+  endif
+  BENSTR=(BENSTR1+dtw*BFOR)/(1.0+KBENSTR*dtw)
+ 
+  !partical mixing and diffusion mixing velocity 
+  W12=(VPMIX(id)*ZW12NOM(ind)/H2)*(POC1/1.0e5)*(1.0-KBENSTR*BENSTR)+DPMIN/H2
+  KL12=(VDMIX(id)*ZL12NOM(ind)/H2)+KLBNTH*W12
+
+  !calculate sediment concentration
+  PON1=(flxpon(id,1)*dtw/H2+PON1TM1)/(1.0+dtw*(W2/H2+ZHTAPON1(ind)))
+  PON2=(flxpon(id,2)*dtw/H2+PON2TM1)/(1.0+dtw*(W2/H2+ZHTAPON2(ind)))
+  PON3=(flxpon(id,3)*dtw/H2+PON3TM1)/(1.0+dtw*(W2/H2+ZHTAPON3(ind)))
+  POC1=(flxpoc(id,1)*dtw/H2+POC1TM1)/(1.0+dtw*(W2/H2+ZHTAPOC1(ind)))
+  POC2=(flxpoc(id,2)*dtw/H2+POC2TM1)/(1.0+dtw*(W2/H2+ZHTAPOC2(ind)))
+  POC3=(flxpoc(id,3)*dtw/H2+POC3TM1)/(1.0+dtw*(W2/H2+ZHTAPOC3(ind)))
+  POP1=(flxpop(id,1)*dtw/H2+POP1TM1)/(1.0+dtw*(W2/H2+ZHTAPOP1(ind)))
+  POP2=(flxpop(id,2)*dtw/H2+POP2TM1)/(1.0+dtw*(W2/H2+ZHTAPOP2(ind)))
+  POP3=(flxpop(id,3)*dtw/H2+POP3TM1)/(1.0+dtw*(W2/H2+ZHTAPOP3(ind)))
+
+  rtmp=ZHTASI(ind)*(CSISAT-SIT2TM1/(1.0+M2*PIE2SI))/(PSITM1+KMPSI)
+  PSI=((flxpos(id)+JSIDETR)*dtw/H2+PSITM1)/(1.0+dtw*(W2/H2+rtmp))
+   
+  !assign diagenesis fluxes
+  XJP=(ZHTAPOP1(ind)*POP1+ZHTAPOP2(ind)*POP2+ZHTAPOP3(ind)*POP3)*H2
+  XJN=(ZHTAPON1(ind)*PON1+ZHTAPON2(ind)*PON2+ZHTAPON3(ind)*PON3)*H2
+  XJC=(ZHTAPOC1(ind)*POC1+ZHTAPOC2(ind)*POC2+ZHTAPOC3(ind)*POC3)*H2
+
+  !------------------------------------------------------------------------
+  !deposit feeder calculation and its effects
+  !------------------------------------------------------------------------
+  if(idf==1) then
+    !ingestion rate
+    XKI0=ZHTAI0(ind)
+    !respiration rate
+    XKR=ZHTAR(ind)
+    !quadratic predation
+    XKBETA=ZHTABETA(ind) 
+
+    !hypoxic effects on rates
+    RMORT=0.0
+    if(ihypox==1) then
+      rtmp=1.0/(1.0+exp(max(1.1d0*(DFDOH-O20)/(DFDOH-DFDOQ),-25.d0)))
+      
+      !reduce ingestion rate when O2 is low 
+      XKI0=XKI0*rtmp
+
+      !mortality due to hypoxia (add to sediment POM pools)
+      RMORT=(1.0-rtmp)*4.6/TDD
+      
+      !reduce predation when O2 is low
+      XKBETA=XKBETA*O20/(O20+XKBO2)
+    endif !ihypox
+
+    !growth rate limitation
+    xlim1=(XKMG1/(POC1TM1+XKMG1))*AA1*XKI0/(M2*1.0e9)
+    xlim2=(XKMG2/(POC2TM1+XKMG2))*AA2*XKI0/(M2*1.0e9)
+
+    !calculate deposit feeders biomass
+    DFEED=DFEEDM1+dtw*DFEEDM1*(POC1TM1*xlim1+POC2TM1*xlim2--XKR-XKBETA*DFEEDM1-RMORT)
+    !DF_GROW(id)=DFEEDM1*(POC1TM1*xlim1+POC2TM2*xlim2)
+    !DF_RESP(id)=XKR*DFEEDM1
+    !DF_PRED(id)=XKBETA*DFEEDM1*DFEEDM1
+    !DF_MORT(id)=RMORT*DFEEDM1
+    
+    !don't let go negative
+    DFEED=max(DFEED,0.1d0)
+
+    !effect of deposit feeders on POM pool
+    rtmp=1.0-FRPON(id,2)-FRPON(id,3)
+    PON1=PON1+(rtmp*(RMORT+XKBETA*DFEEDM1)-xlim1*POC1TM1)*DFEEDM1*dtw/H2/AMCN
+    PON2=PON2+(FRPON(id,2)*(RMORT+XKBETA*DFEEDM1)-xlim2*POC2TM1)*DFEEDM1*dtw/H2/AMCN
+
+    rtmp=1.0-FRPOC(id,2)-FRPOC(id,3)
+    POC1=POC1+(rtmp*(RMORT+XKBETA*DFEEDM1)-xlim1*POC1TM1)*DFEEDM1*dtw/H2
+    POC2=POC2+(FRPOC(id,2)*(RMORT+XKBETA*DFEEDM1)-xlim1*POC1TM1)*DFEEDM1*dtw/H2
+
+    rtmp=1.0-FRPOP(id,2)-FRPOP(id,3)
+    POP1=POP1+(rtmp*(RMORT+XKBETA*DFEEDM1)-xlim1*POC1TM1)*DFEEDM1*dtw/H2/AMCP
+    POP2=POP2+(FRPOP(id,2)*(RMORT+XKBETA*DFEEDM1)-xlim1*POC1TM1)*DFEEDM1*dtw/H2/AMCP
+    
+    !adjust diagenesis flux
+    XJN=XJN+XKR*DFEEDM1/AMCN
+    XJP=XJP+XKR*DFEEDM1/AMCP
+  endif !idf==1
+  !------------------------------------------------------------------------
+
+  !don't go negative
+  if(PON1<0.0) PON1=0.0
+  if(PON2<0.0) PON2=0.0
+  if(PON3<0.0) PON3=0.0
+  if(POC1<0.0) POC1=0.0
+  if(POC2<0.0) POC2=0.0
+  if(POC3<0.0) POC3=0.0
+  if(POP1<0.0) POP1=0.0
+  if(POP2<0.0) POP2=0.0
+  if(POP3<0.0) POP3=0.0
+
+  !calculate SOD by evaluating NH4, NO3 and SOD equations
+  SOD=sed_zbrent(ierr)
+  !call sed_zbrent(ierr,SOD)
+  
+  !debug if SOD calculation fails, need more work,ZG
+  if(ierr==1) then
+    write(*,*)'ZG: id=',id,myrank
+    call parallel_abort('sediment flux model: SOD (1)')
+  elseif(ierr==2) then
+    call parallel_abort('sediment flux model: SOD (2)')
+  endif
+
+  !accumulate remaining sums for steady-state computation
+  !if(iSteady==1) then
+  !  ASDTMP(id)=ASDTMP(id)-TEMPD*dtw
+  !endif
+
+  !mass balance equation for Si
+  if(O20<O2CRITSI) then
+    pie1=PIE2SI*DPIE1SI**(O20/O2CRITSI)
+  else
+    pie1=PIE2SI*DPIE1SI
+  endif
+  pie2=PIE2SI
+
+  C0d=SI0
+  j1=0.0
+  j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*rKSAp*SSI(id)/(1.0+rKSAp*SSI(id))
+  k12=0.0
+  k2=ZHTASI(ind)*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
+  
+  call sed_eq(SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2) 
+  JSI=s*(SI1-SI0)
+  
+  !mass balance equation for PO4
+  !salinity dependence of pie1
+  if(SAL0<=SALTSW) then
+    rtmp=DPIE1PO4F
+  else
+    rtmp=DPIE1PO4S
+  endif
+  !oxygen dependence of pie1
+  if(O20<O2CRIT) then
+    pie1=PIE2PO4*rtmp**(O20/O2CRIT)
+  else
+    pie1=PIE2PO4*rtmp
+  endif
+  pie2=PIE2PO4
+
+  C0d=PO40
+  j1=0.0
+  j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
+  k12=0.0
+  k2=0.0
+  call sed_eq(PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+  JPO4=s*(PO41-PO40)
+
+  !assign flux arrays
+  SED_BENDO(id)=-SOD
+  SED_BENNH4(id)=JNH4/rat
+  SED_BENNO3(id)=JNO3/rat
+  SED_BENPO4(id)=JPO4/rat
+  SED_BENDOC(id)=0.0
+  SED_BENCOD(id)=JHS+JCH4AQ
+  SED_BENSA(id)=JSI/rat
+
+  !write(*,*)'ZG:',SOD,JNH4,JNO3,JPO4,JHS,JCH4AQ,JSI
+  !benthic algae algorithm
+  if(iBalg==1) then
+    !mean light
+    BLITE=sbLight(id)*exp(-KESED)*(1.0-exp(-KEBALG*BBM(id)))/KEBALG/BBM(id)
+
+    !temperature effects
+    if(SED_T(id)<TMB) then
+      FTB=exp(-KTGB1*(SED_T(id)-TMB)*(SED_T(id)-TMB))
+    else
+      FTB=exp(-KTGB2*(SED_T(id)-TMB)*(SED_T(id)-TMB))
+    endif
+    
+    !light effect
+    rtmp=PMB*FTB/ALPHB !IK=rtmp
+    FIB=BLITE/sqrt(rtmp*rtmp+BLITE*BLITE+1.0d-20)
+
+    !N limitation
+    NH4AVL=max(SED_BENNH4(id)*dtw+SED_NH4(id)*SED_BL(id),0.d0)
+    NO3AVL=max(SED_BENNO3(id)*dtw+SED_NO3(id)*SED_BL(id),0.d0)
+    NLB=(NH4AVL+NO3AVL)/(KHNB+NH4AVL+NO3AVL)
+
+    !nitrogen preference
+    PRNB=NH4AVL*NO3AVL/((KHNB+NH4AVL)*(KHNB+NO3AVL)) &
+         & +NH4AVL*KHNB/((1.d-20+NH4AVL+NO3AVL)*(KHNB+NO3AVL))
+
+    !P limitation
+    PO4AVL=max(SED_BENPO4(id)*dtw+SED_PO4(id)*SED_BL(id)/(1.0+rKPO4p*SSI(id)),0.d0)
+    PLB=PO4AVL/(KHPB+PO4AVL)
+
+    !base metabolism
+    if(BBM(id)>BALGMIN) then
+      BMB=BMRB*exp(KTBB*(SED_T(id)-TRB))
+    else
+      BMB=0.0
+    endif
+   
+    !production
+    PB=PMB*FTB*min(FIB,NLB,PLB)/CCHLB
+
+    !Net primary production
+    NPPB=(PB-BMB)*BBM(id)
+    
+    !predation
+    if(BBM(id)>BALGMIN) then
+      PRB=BPRB*exp(KTBB*(SED_T(id)-TRB))
+    else
+      PRB=0.0
+    endif
+    
+    !adjust predation, dimension not right, ZG
+    PRB=min(PRB,PB-BMB+0.99/dtw)
+   
+    !modify benthic fluxes
+    SED_BENNH4(id)=SED_BENNH4(id)+ANCB*(FNIB*(BMB+PRB)-PRNB*PB)*BBM(id)
+    SED_BENNO3(id)=SED_BENNO3(id)-(1.0-PRNB)*PB*ANCB*BBM(id)
+    SED_BENPO4(id)=SED_BENPO4(id)+APCB*(FPIB*(BMB+PRB)-PB)*BBM(id)
+    SED_BENDO(id)=SED_BENDO(id)+AOC*((1.3-0.3*PRNB)*PB-BMB*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
+    SED_BENDOC(id)=SED_BENDOC(id)+BMB*BBM(id)*KHRB/(SED_DO(id)+KHRB)
+    
+    !modify sediment POM (mg/m3)
+    BAPOC=PRB*BBM(id)
+    BAPON=ANCB*(1.0-FNIB)*(BMB+PRB)*BBM(id)
+    BAPOP=APCB*(1.0-FPIB)*(BMB+PRB)*BBM(id)
+    POC1=POC1+rat*BAPOC*FRCPHB(1)*dtw/H2
+    POC2=POC2+rat*BAPOC*FRCPHB(2)*dtw/H2
+    POC3=POC3+rat*BAPOC*FRCPHB(3)*dtw/H2
+    PON1=PON1+rat*BAPON*FRNPHB(1)*dtw/H2
+    PON2=PON2+rat*BAPON*FRNPHB(2)*dtw/H2
+    PON3=PON3+rat*BAPON*FRNPHB(3)*dtw/H2
+    POP1=POP1+rat*BAPOP*FRPPHB(1)*dtw/H2
+    POP2=POP2+rat*BAPOP*FRPPHB(2)*dtw/H2
+    POP3=POP3+rat*BAPOP*FRPPHB(3)*dtw/H2
+
+    !update benthic algae biomass
+    BBM(id)=BBM(id)*(1.0+dtw*(PB-BMB-PRB))
+  endif !iBalg==1
+
+  !update sediment concentration
+  NH41TM1S(id)  = NH41
+  NO31TM1S(id)  = NO31
+  HS1TM1S(id)   = HS1
+  SI1TM1S(id)   = SI1
+  PO41TM1S(id)  = PO41
+  BENSTR1S(id)  = BENSTR
+  NH4T2TM1S(id) = NH4T2
+  NO3T2TM1S(id) = NO3T2
+  HST2TM1S(id)  = HST2
+  SIT2TM1S(id)  = SIT2
+  PO4T2TM1S(id) = PO4T2
+  PON1TM1S(id)  = PON1
+  PON2TM1S(id)  = PON2
+  PON3TM1S(id)  = PON3
+  POC1TM1S(id)  = POC1
+  POC2TM1S(id)  = POC2
+  POC3TM1S(id)  = POC3
+  POP1TM1S(id)  = POP1
+  POP2TM1S(id)  = POP2
+  POP3TM1S(id)  = POP3
+  PSITM1S(id)   = PSI
+  BFORMAXS(id)  = BFORMAX
+  ISWBENS(id)   = ISWBEN
+  DFEEDM1S(id)  = DFEED
+  CH4T2TM1S(id) = CH4T2               ! CH4
+  CH41TM1S(id)  = CH41                ! CH4
+  SO4T2TM1S(id) = SO4T2               ! CH4
+
+  !update concentration   
+  CPON(id,1) = PON1TM1S(id)
+  CPON(id,2) = PON2TM1S(id)
+  CPON(id,3) = PON3TM1S(id)
+  CNH4(id)   = NH4T2TM1S(id)
+  CNO3(id)   = NO3T2TM1S(id)
+  CPOP(id,1) = POP1TM1S(id)
+  CPOP(id,2) = POP2TM1S(id)
+  CPOP(id,3) = POP3TM1S(id)
+  CPIP(id)   = PO4T2TM1S(id)
+  CPOC(id,1) = POC1TM1S(id)
+  CPOC(id,2) = POC2TM1S(id)
+  CPOC(id,3) = POC3TM1S(id)
+  CPOS(id)   = PSITM1S(id)
+  CCH4(id)   = CH4T2TM1S(id)
+  CSO4(id)   = SO4T2TM1S(id)
+  
+  !update sediment temperature
+  CTEMP(id)=CTEMP(id)+dtw*DIFFT*(SED_T(id)-CTEMP(id))/H2/H2
+
+  return
+end subroutine sed_calc
+
+function sedf(sod1)
+!------------------------------------------------------------------------------
+!calculate SOD, rewritten by ZG based ICM (Carl Cerco) 
+!------------------------------------------------------------------------------
+  use icm_sed_mod, only : SOD,s,m1,m2,KL12,W12,W2,H2,O20,SAL0,SALTND,TEMPD,KMNH4, &
+      & ZHTANH4F,ZHTANH4S,PIENH4,XJN,KMNH4O2,NH41TM1,NH40,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,JNH4,& !NH4 
+      & ZHTANO3F,ZHTANO3S,ZHTA2NO3,NO30,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,JNO3,XJC, & !NO3
+     & SO40MG,SO4T2TM1,HS0,HST2TM1,KMSO4,HS1,HS2,HST1,HST2,JHS,ZHTACH4,KMCH4O2,CH41,CH42,CH4T1,CH4T2, & !H2S,CH4
+     & PIE1S,PIE2S,ZHTAP1,ZHTAD1,ZL12NOM,KMHSO2,CH4T2TM1,CH4SAT,JCH4,JCH4AQ,JCH4G,SO41,SO42,SO4T1,SO4T2, & !H2S,CH4 
+      & idf,iSAV,XKR,DFEEDM1,ROOTDO
+  !use icm_sed_mod
+  use icm_mod, only : dtw,AON,AOC,ANDC
+  use schism_glbl, only : rkind
+  implicit none 
+  real(kind=rkind) :: sod1
+  !real(kind=rkind),intent(out) :: fsod1
+  real(kind=rkind) :: sedf
+  
+  !local variables
+  real(kind=rkind) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
+  real(kind=rkind) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
+  real(kind=rkind) :: XJC1,SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
+  real(kind=rkind) :: HS2AV,SO42AV,XJ2,XJ2CH4,CSODHS,CH42AV,CH4T2AV,CH40
+  real(kind=rkind) :: X1J2,DCH4T2,DHST2,CSODCH4,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
+  integer :: ind
+
+  ind=int(10.0*TEMPD+1)
+  rat=1000.0
+
+  !surface transfer coefficient 
+  s=sod1/O20
+
+  !NH4 flux
+  pie1=PIENH4; pie2=PIENH4
+  C0d=NH40
+  j1=0.0
+  j2=XJN
+  if(SAL0<=SALTND) then 
+    k12=ZHTANH4F(ind)**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+  else
+    k12=ZHTANH4S(ind)**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+  endif
+  k2=0.0
+  call sed_eq(NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+  JNH4=s*(NH41-NH40)
+
+  !oxygen consumed by nitrification
+  JO2NH4=AON*k12*NH41/(s*rat)
+
+  !NO3 flux
+  pie1=0.0; pie2=0.0
+  C0d=NO30
+  j1=k12*NH41/s
+  j2=0.0
+  if(SAL0<=SALTND) then
+    k12=ZHTANO3F(ind)**2
+  else
+    k12=ZHTANO3S(ind)**2
+  endif
+  k2=ZHTA2NO3(ind)
+  call sed_eq(NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+  JNO3=s*(NO31-NO30)
+
+  !convert carbon diagensis flux to O2 unit
+  rtmp=(k12*NO31/s+k2*NO32)/ANDC
+  XJC1=max(AOC*(XJC-rtmp)/rat,1.d-10)
+
+  !-------------------------------------------------------------------
+  !code for methane and sulfide, CH4 starts when SO4 is used up 
+  !sulfate and sulfide in O2 unit
+  ! A(SO4=>O2)=0.65306122
+  !-------------------------------------------------------------------
+
+  SO40=SO40MG*0.65306122
+
+  if(XJC1>0.0) then
+    HSO4=sqrt(2.0*ZL12NOM(ind)*SO40/XJC1)*H2
+  else
+    HSO4=2.0*H2
+  endif
+  if(HSO4>H2) HSO4=H2
+  KL12SO4=KL12*H2/HSO4
+
+  !fractions and overall decay reaction velocity
+  fd1=1.0/(1.0+m1*pie1s)
+  fp1=1.0-fd1
+  fd2=1.0/(1.0+m2*pie2s)
+  fp2=1.0-fd2
+  KHS_1=(fp1*ZHTAP1(ind)**2+fd1*ZHTAD1(ind)**2)*O20/KMHSO2/s
+
+  BX=0.0; AD=0.0; H=0.0;
+  BX(1)=s*SO40
+  BX(2)=H2*SO4T2TM1/dtw
+  BX(3)=s*HS0
+  BX(4)=H2*HST2TM1/dtw
+
+  AD(1,1)=-s-KL12SO4
+  AD(1,2)=KL12SO4
+  AD(1,3)=KHS_1
+  AD(2,1)=KL12SO4
+  AD(2,2)=-(dtw*KL12SO4+H2)/dtw
+  AD(3,3)=-W2-fp1*W12-fd1*s-fd1*KL12SO4-KHS_1
+  AD(3,4)=fp2*W12+fd2*KL12SO4
+  AD(4,3)=W2+fp1*W12+fd1*KL12SO4
+  AD(4,4)=-(dtw*fp2*W12+dtw*fd2*KL12SO4+dtw*W2+H2)/dtw 
+
+  G(1) = ((BX(1)*AD(3,3)-AD(1,3)*BX(3))*AD(4,4)- &
+         & BX(1)*AD(3,4)*AD(4,3)+AD(1,3)*AD(3,4)*BX(4)+AD(1,3)*BX(2)*AD(3,4))/(AD(1,3)*AD(3,4))
+
+  G(2) = ((BX(1)*AD(3,3) - AD(1,3)*BX(3))*AD(4,4)- &
+         & BX(1)*AD(3,4)*AD(4,3) + AD(1,3)*AD(3,4)*BX(4))/(AD(1,3)*AD(3,4))
+
+  H(1,1)=(AD(1,1)*AD(3,3)*AD(4,4)-AD(1,1)*AD(3,4)*AD(4,3)+AD(1,3)*AD(2,1)*AD(3,4))/(AD(1,3)*AD(3,4))
+  H(1,2)=(AD(1,2)*AD(3,3)*AD(4,4)-AD(1,2)*AD(3,4)*AD(4,3)+AD(1,3)*AD(2,2)*AD(3,4))/(AD(1,3)*AD(3,4))
+  H(2,1)=(AD(1,1)*AD(3,3)*AD(4,4)-AD(1,1)*AD(3,4)*AD(4,3))/(AD(1,3)*AD(3,4))
+  H(2,2)=(AD(1,2)*AD(3,3)*AD(4,4)-AD(1,2)*AD(3,4)*AD(4,3))/(AD(1,3)*AD(3,4))
+
+  RA0 = (H(1,1)*G(2)-G(1)*H(2,1))*KMSO4
+  RA1 = - G(1)*H(2,1) + H(1,1)*G(2)+(H(1,1)*H(2,2)-H(1,2)*H(2,1))*KMSO4+H(1,1)*XJC1
+  RA2 = H(1,1)*H(2,2)-H(1,2)*H(2,1)
+
+  !solution of A2*Q^2+A1*X+A0
+  disc=-(RA1+sign(1.d0,RA1)*sqrt(RA1**2-4.0*RA0*RA2))/2.0
+
+  DBLSO42=disc/RA2
+  if(DBLSO42<0.0) DBLSO42=RA0/disc
+
+  DBLSO41=-(H(1,2)*DBLSO42+G(1))/H(1,1)
+  HST1=-(AD(1,2)*DBLSO42+AD(1,1)*DBLSO41+BX(1))/AD(1,3)
+  HST2=(AD(1,2)*AD(3,3)*DBLSO42+AD(1,1)*AD(3,3)*DBLSO41+BX(1)*AD(3,3)-AD(1,3)*BX(3))/(AD(1,3)*AD(3,4))
+  HS1=fd1*HST1
+  HS2=fd2*HST2
+  HS2AV=fd2*HST2
+  SO42=DBLSO42
+  SO42AV=SO42
+  SO4T2 = SO42
+  SO41=DBLSO41
+  XJ2=XJC1*KMSO4/(SO42+KMSO4)
+  XJ2CH4=XJ2
+  X1J2=XJC1*DBLSO42/(SO42+KMSO4)
+  JHS=S*(HS1-HS0)
+  CSODHS=(ZHTAD1(ind)**2*fd1+ZHTAP1(ind)**2*fp1)*(O20/KMHSO2)*HST1/s
+
+  !methane
+  pie1=0.0; pie2=0.0
+  C0d=0.0
+  j1=0.0
+  j2=XJ2
+  k12=ZHTACH4(ind)**2*(O20/(KMCH4O2+O20))
+  k2=0.0
+  call sed_eq(CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+  CH42AV=CH42
+  CH4T2AV=CH4T2
+
+  if(CH42>CH4SAT) then
+    CH42=CH4SAT
+    CH41=(CH40*S**2+CH42*KL12*S)/(S**2+KL12*S+ZHTACH4(ind)**2*(O20/(KMCH4O2+O20)))
+  endif
+
+  !calculate changes in CH4 and HS stored in sediment
+  DCH4T2=(CH4T2-CH4T2TM1)*H2/dtw
+  DHST2=(HST2-HST2TM1)*H2/dtw
+
+  !calculate CSOD
+  CSODCH4=k12*CH41/s
+  CSOD=CSODCH4+CSODHS
+
+  !calculate fluxes
+  JCH4=s*(CH41-CH40)
+  JCH4AQ=s*CH41
+  FLUXHS=s*FD1*HS1
+  FLUXHSCH4=JCH4AQ+FLUXHS
+
+  !------debug, ZG-----------------
+  !JCH4AQ=JCH4AQ
+  !rtmp=JCH4AQ
+
+  ! IF NOT FLUX OR SOD OR STORED THEN IT MUST ESCAPE AS GAS FLUX
+  JCH4G=0.0
+  if(CH42>CH4SAT) then
+    JCH4G=XJC1-DCH4T2-DHST2-CSOD-FLUXHSCH4
+  endif
+
+  ! VOLUMETRIC METHANE AND TOTAL GAS FLUX (L/M2-D)
+  VJCH4G=22.4/64.0*JCH4G
+  ! JGAS=JN2GAS+VJCH4G                   ! JN2GAS NOT COMPUTED
+
+  ! SOD FUNCTION
+  SOD=CSOD+JO2NH4
+  if(idf==1) then
+    SOD=SOD+XKR*DFEEDM1*2.667E-3
+  endif
+  if(iSAV==1) then
+    SOD=SOD-ROOTDO
+  endif
+
+  sedf=SOD-SOD1
+  return
+end function sedf
+
+subroutine link_sed_input(id,nv)
+!---------------------------------------------------------------------------------------
+!initializ sediment 
+!---------------------------------------------------------------------------------------
+  use schism_glbl, only: rkind,errmsg,dpe,eta2,elnode,i34,area
+  use icm_mod, only : dep,Temp,Sal,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOCA,RPON,LPON, &
+                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOC
+  use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &
+                    & SED_LPOP,SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD, &
+                    & SED_TSS,SED_SALT,SED_T,SFA,ZD
+  implicit none 
+  integer, intent(in) :: id,nv
+
+  !area
+  SFA(id)=area(id)
+
+  !total depth 
+  ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0) 
+
+  SED_BL=dep(nv) 
+  SED_T(id)   =Temp(nv) 
+  SED_SALT(id)=Sal(nv)
+  SED_B(id,1) =PB1(nv,1)
+  SED_B(id,2) =PB2(nv,1)
+  SED_B(id,3) =PB3(nv,1)
+  SED_RPOC(id)=RPOC(nv,1) 
+  SED_LPOC(id)=LPOC(nv,1) 
+  SED_RPON(id)=RPON(nv,1)
+  SED_LPON(id)=LPON(nv,1)
+  SED_RPOP(id)=RPOP(nv,1) 
+  SED_LPOP(id)=LPOP(nv,1) 
+  SED_SU(id)  =SU(nv,1) 
+  SED_PO4(id) =PO4t(nv,1) 
+  SED_NH4(id) =NH4(nv,1) 
+  SED_NO3(id) =NO3(nv,1) 
+  SED_SA(id)  =SAt(nv,1) 
+  SED_DO(id)  =DOC(nv,1)
+  SED_COD(id) =COD(nv,1)
+
+  SED_TSS(id) =TSED(nv)
+ 
+  return
+end subroutine link_sed_input
+
+
+subroutine link_sed_output(id)
+!---------------------------------------------------------------------------------------
+!sediment flux
+!---------------------------------------------------------------------------------------
+  use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD
+  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA
+  implicit none
+  integer, intent(in) :: id
+
+  BnDOC  = SED_BENDOC(id)
+  BnNH4  = SED_BENNH4(id)
+  BnNO3  = SED_BENNO3(id)
+  BnPO4t = SED_BENPO4(id)
+  BnCOD  = SED_BENCOD(id)
+  BnDO   = SED_BENDO(id)
+  BnSAt  = SED_BENSA(id)
+  return
+
+end subroutine link_sed_output
+
+!Subroutine Phyto(id,nv,Hour,turb)
+!!**********************************************************************C
+!! Calculate pp growth term (/day) in main channel, 
+!!           and preference of pp for N2 (PR2) & N3 (PR3) 
+!!: G = /output/ G=0 during night.
+!!: PR2 = /output/ preference for NH4
+!!: PR3 = /output/ preference for NO3
+!!: Since PR occurs only with G, don't care about these during night.
+!!**********************************************************************C
+!  use icm_mod
+!  use icm_sed_mod, only : IATBOT
+!  use schism_msgp, only : myrank,parallel_abort
+!  use schism_glbl,only : ielg,errmsg
+!  implicit none
+!
+!  integer, intent(in) :: id,nv
+!  real(kind=dbl_kind1), intent(in) :: Hour,turb
+!  integer :: i,j,k
+!  real(kind=dbl_kind1) :: rke,Chl,xN,lighttest
+!  real(kind=dbl_kind1),dimension(iA) :: rNutN,rNutP,SNutP,rNutS,SNutS,FI
+!  real(kind=dbl_kind1),dimension(3)  :: SNutN
+!  real(kind=dbl_kind1),dimension(iA) :: rLite,ELite,TLite,BLite,IAVG,IKI
+!  real(kind=dbl_kind1),dimension(3)  :: rLight, rtmp 
+!
+!  if(Hour>TU.and.Hour<TD) then !rIn=12.0*pi*rIa/(TD-TU),rIa is input 
+!    do k=1,nv
+!      do i=1,3
+!        rtmp=Temp(k)-TGP(i)
+!        if(rtmp>0.0) then
+!          GP(i,k)=GPM(i)*exp(-rKTGP1(i)*rtmp*rtmp)
+!        else
+!          GP(i,k)=GPM(i)*exp(-rKTGP2(i)*rtmp*rtmp)
+!        endif      
+!      enddo !i
+!    enddo !k=1,nv
+!
+!    rLite(:)=rIn(:)*sin(PTT*(Hour-TU))
+!    DSSR=(Hour-TU)/24.0 !added by YC Phase of daylight
+!    TLite(:)=rLite(:)
+!    do k=1,nv
+!      if(iLight==1) then
+!        rKe=rKeC1*exp(-rKeC2*Sal(k))
+!      elseif(iLight==2) then
+!        Chl=PB1(k,1)/CChl(1)+PB2(k,1)/CChl(2)+PB3(k,1)/CChl(3)
+!        if(Chl<0.0.or.TSED(k)<0.0) then
+!          write(errmsg,*)'chl<0.0 or tss <0.0',chl, TSED(k)
+!          call parallel_abort(errmsg)
+!        endif
+!        rKe=turb+rKeC2*Chl+0.07*TSED(k)
+!      elseif(iLight==3) then
+!        Chl=PB1(k,1)/CChl(1)+PB2(k,1)/CChl(2)+PB3(k,1)/CChl(3)
+!        if(Chl<0.0) then
+!          write(errmsg,*)'chl<0.0' ,chl
+!          call parallel_abort(errmsg)
+!        endif
+!        rKe=turb+rKeC2*Chl+0.07*(LPOC(k,1)+RPOC(k,1))*PC2TSS(id)
+!      else
+!        Chl=PB1(k,1)/CChl(1)+PB2(k,1)/CChl(2)+PB3(k,1)/CChl(3)
+!        write(errmsg,*)'chl<0.0 ',chl
+!        call parallel_abort(errmsg)
+!        rKe=turb+rKeC2*Chl+0.07*((LPOC(k,1)+RPOC(k,1))*6.0)  !YC,ZG, need check
+!      endif
+!
+!      OPTDEPTH=rKe*dep(k)    !added by YC
+!      BLite(:)=TLite(:)*exp(-OPTDEPTH) 
+!      if(k==nv) IATBOT(id)=BLite(1)      !fixed light for BMA !YC
+!!     IAVG(:) = (TLite(:)-BLite(:))/OPTDEPTH 
+!!     BLite(:) = TLite(:) * EXP(-rKe*dep(k))
+!      IAVG(:)=(TLite(:)+BLite(:))/2.  
+!      rKe=rKe*dep(k)
+!      if(NH4(k,1)>0.0) then 
+!        if(NO3(k,1)>0.0) then 
+!          xN=NH4(k,1)+NO3(k,1)
+!          rNutN(:)=xN/(xN+rKhN(:))
+!          PR2(:,k)=(NO3(k,1)/(NH4(k,1)+rKhN(:))+rKhN(:)/xN)* &
+!                   & NH4(k,1)/(NO3(k,1)+rKhN(:))
+!        else
+!          rNutN(:)=NH4(k,1)/(NH4(k,1)+rKhN(:))
+!          PR2(:,k)=1.0
+!        endif
+!      else
+!        PR2(:,k)=0.0
+!        if(NO3(k,1)>0.0) then 
+!          rNutN(:)=NO3(k,1)/(NO3(k,1)+rKhN(:))
+!        else
+!          rNutN(:)=0.0
+!        endif
+!      endif
+!      PR3(:,k)=1.0-PR2(:,k)
+!      if(iLight/=2) then
+!        if(iLight==3) then
+!          TSED(k)=max((LPOC(k,1)+RPOC(k,1))*PC2TSS(id),0.d0) 
+!        else
+!          TSED(k)=max((LPOC(k,1)+RPOC(k,1))*6.0,0.d0) 
+!        endif
+!      endif
+!
+!      if(PO4t(k,1)>0.0) then 
+!        PO4d(k,1)=PO4t(k,1)/( 1+rKPO4p*TSED(k))
+!        rNutP(:)=PO4d(k,1)/(PO4d(k,1)+rKhP(:))
+!      else
+!        rNutP(:)=0.0
+!      endif
+!
+!!     silica limitation factor for PB1:diatom
+!      if(SAt(k,1)>0.0) then
+!        SAd(k,1)=SAt(k,1)/( 1+rKSAp*TSED(k)) !!zhujz??????????????
+!        rNutS(1)=SAd(k,1)/(SAd(k,1)+rKhS)
+!      else
+!        rNutS(1)=0.0
+!      endif
+!
+!!     light limitation factor
+!!     G(:,k)= GP(:,k) * 2.718/rKe*( exp(BLite(:)) - exp(TLite(:)) )   !modified by YC
+!      rLight(:)=2.718/rKe*(exp(BLite(:))-exp(TLite(:)))   !modified by YC
+!      ALPHMIN1=2.0
+!      ALPHMIN2=2.0
+!      ALPHMIN3=2.0
+!      IKI(1)=GP(1,k)*100/ALPHMIN1
+!      IKI(2)=GP(2,k)*100/ALPHMIN2
+!      IKI(3)=GP(3,k)*100/ALPHMIN3
+!      FI(:)=IAVG(:)/(SQRT(IKI(:)*IKI(:)+IAVG(:)*IAVG(:))+1.0E-10)
+!      G(:,k)=GP(:,k)*FI(:)
+!
+!!     salinity limitation factor for PB2:green algae
+!      G(3,k) = G(3,k) * ST / ( ST + (Sal(k)+0.5) * (Sal(k)+0.5) )    !zhujz
+!      G(1,k) = G(1,k) * DMIN1( rNutN(1) , rNutP(1) , rNutS(1) )
+!      G(2,k) = G(2,k) * DMIN1( rNutN(2) , rNutP(2) )
+!      G(3,k) = G(3,k) * DMIN1( rNutN(3) , rNutP(3) )
+!      TLite(:) = BLite(:)
+!    enddo 
+!  else 
+!    G(:,:)=0.0
+!    IATBOT(id)=0.0  !ZG, added for sed hotstart
+!  endif !Hour
+!  return 
+!end
+!
+!
+!subroutine link(imode,id,nea,ntr_local,nvrt,nv,kf,hz,wqc1,wqc2)
+!!***********************************************************************
+!! Copy between wqc[1,2] (originally from tr_el()) and various
+!! internal arrays (along vertical column only).
+!!***********************************************************************
+!  use icm_mod
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!
+!  integer, intent(in) :: imode,id,nea,ntr_local,nvrt,nv,kf
+!  real(kind=dbl_kind1), dimension(ntr_local,nea,nvrt), intent(inout) :: wqc1,wqc2
+!  real(kind=dbl_kind1), dimension(nvrt), intent(in) :: hz
+!  integer :: i,j,k,klev
+!  real(kind=dbl_kind1) :: rtmp
+!
+!  if(imode/=1.and.imode/=2) then
+!    call parallel_abort('Unknown imode in link')   !add by YC
+!  endif
+!
+!
+!  if(imode==1) then
+!    do k=1,nv+1 !!YC02042013   
+!!     klev=kfe(id)+1-k
+!      klev=kf-k  
+!      dep(k)=hz(klev)
+!      Sal(k)=wqc1(1,id,klev)
+!      Temp(k)=wqc1(2,id,klev)
+!      if(iLight==2) then
+!        TSED(k)=TSS(klev,id)
+!      endif
+!      if(ntr_local>2) then
+!        ZB1 (k,1)=wqc1( 3,id,klev)
+!        ZB2 (k,1)=wqc1( 4,id,klev)
+!        PB1 (k,1)=wqc1( 5,id,klev)
+!        PB2 (k,1)=wqc1( 6,id,klev)
+!        PB3 (k,1)=wqc1( 7,id,klev)
+!        RPOC(k,1)=wqc1( 8,id,klev)
+!        LPOC(k,1)=wqc1( 9,id,klev)
+!        DOCA(k,1)=wqc1(10,id,klev) !DOC
+!        RPON(k,1)=wqc1(11,id,klev)
+!        LPON(k,1)=wqc1(12,id,klev)
+!        DON (k,1)=wqc1(13,id,klev)
+!        NH4 (k,1)=wqc1(14,id,klev)
+!        NO3 (k,1)=wqc1(15,id,klev)
+!        RPOP(k,1)=wqc1(16,id,klev)
+!        LPOP(k,1)=wqc1(17,id,klev)
+!        DOP (k,1)=wqc1(18,id,klev)
+!        PO4t(k,1)=wqc1(19,id,klev)
+!        SU  (k,1)=wqc1(20,id,klev) !Si -biogenic
+!        SAt (k,1)=wqc1(21,id,klev) !Si -avaible
+!        COD (k,1)=wqc1(22,id,klev) !Chemical oxygen demand
+!        DOC (k,1)=wqc1(23,id,klev) !DO
+!      endif 
+!    enddo
+!  else  !imode=2
+!    do k=1,nv+1
+!!     klev=kfe(id)+1-k
+!      klev=kf-k
+!      if(ntr_local>2) then
+!        wqc1( 3,id,klev)=ZB1 (k,1)
+!        wqc1( 4,id,klev)=ZB2 (k,1)
+!        wqc1( 5,id,klev)=PB1 (k,1)
+!        wqc1( 6,id,klev)=PB2 (k,1)
+!        wqc1( 7,id,klev)=PB3 (k,1)
+!        wqc1( 8,id,klev)=RPOC(k,1)
+!        wqc1( 9,id,klev)=LPOC(k,1)
+!        wqc1(10,id,klev)=DOCA(k,1)
+!        wqc1(11,id,klev)=RPON(k,1)
+!        wqc1(12,id,klev)=LPON(k,1)
+!        wqc1(13,id,klev)=DON (k,1)
+!        wqc1(14,id,klev)=NH4 (k,1)
+!        wqc1(15,id,klev)=NO3 (k,1)
+!        wqc1(16,id,klev)=RPOP(k,1)
+!        wqc1(17,id,klev)=LPOP(k,1)
+!        wqc1(18,id,klev)=DOP (k,1)
+!        wqc1(19,id,klev)=PO4t(k,1)
+!        wqc1(20,id,klev)=SU  (k,1)
+!        wqc1(21,id,klev)=SAt (k,1)
+!        wqc1(22,id,klev)=COD (k,1)
+!        wqc1(23,id,klev)=DOC (k,1)
+!        
+!        wqc2( 3,id,klev)=ZB1 (k,2)
+!        wqc2( 4,id,klev)=ZB2 (k,2)
+!        wqc2( 5,id,klev)=PB1 (k,2)
+!        wqc2( 6,id,klev)=PB2 (k,2)
+!        wqc2( 7,id,klev)=PB3 (k,2)
+!        wqc2( 8,id,klev)=RPOC(k,2)
+!        wqc2( 9,id,klev)=LPOC(k,2)
+!        wqc2(10,id,klev)=DOCA(k,2)
+!        wqc2(11,id,klev)=RPON(k,2)
+!        wqc2(12,id,klev)=LPON(k,2)
+!        wqc2(13,id,klev)=DON (k,2)
+!        wqc2(14,id,klev)=NH4 (k,2)
+!        wqc2(15,id,klev)=NO3 (k,2)
+!        wqc2(16,id,klev)=RPOP(k,2)
+!        wqc2(17,id,klev)=LPOP(k,2)
+!        wqc2(18,id,klev)=DOP (k,2)
+!        wqc2(19,id,klev)=PO4t(k,2)
+!        wqc2(20,id,klev)=SU  (k,2)
+!        wqc2(21,id,klev)=SAt (k,2)
+!        wqc2(22,id,klev)=COD (k,2)
+!        wqc2(23,id,klev)=DOC (k,2)
+!        if(DOC(k,2)/=DOC(k,2)) then
+!          write(*,*)id,DOC(k,2),k
+!          stop
+!        endif
+!      endif
+!    enddo
+!  endif  !imode.eq.1
+!  
+!  return
+!end
+
+!!----------------------------------------------------------------------------------------
+!subroutine link_sed_input(id,nea,ntr_local,nvrt,nv,kf,dt,day,area,dpe,eta2,hz,wqc1,elnode)
+!!----------------------------------------------------------------------------------------
+!  use schism_glbl, only : rkind,npa,i34
+!  use icm_sed_mod
+!  use schism_msgp, only : myrank,parallel_abort
+!  use icm_mod, only :iLight,TSS
+!  implicit none
+!  save
+!  integer, intent(in) :: id,nea,ntr_local,nvrt,nv,kf
+!  integer, dimension(4,nea), intent(in) :: elnode
+!  real(kind=rkind), dimension(npa), intent(in) :: eta2
+!  real(kind=rkind), dimension(nea), intent(in) :: area,dpe
+!  real(kind=rkind), dimension(ntr_local,nea,nvrt), intent(in) :: wqc1
+!  real(kind=rkind), intent(in) :: dt,day
+!  real(kind=rkind), dimension(nvrt), intent(in) :: hz
+!  integer :: klev, n1, n2, n3
+!
+!  SED_IWC  = id
+!
+!  SFA(id)   = area(id)
+!
+!  klev = kf - nv
+!
+!!  n1=elnode(1,id)
+!!  n2=elnode(2,id)
+!!  n3=elnode(3,id)
+!  !ZD(id)=dpe(id)+((eta2(n1)+eta2(n2)+eta2(n3))/3.0) !+eta2(id)
+!  ZD(id)=dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id)
+!  if(ZD(id)<0.0) ZD(id)=0.0
+!
+!  SED_BL(id) = Hz(klev)
+!
+!! in SCHISM: k=1 means bottom layer
+!  SED_B(id,1)=wqc1(5,id,klev)
+!  SED_B(id,2)=wqc1(6,id,klev)
+!  SED_B(id,3)=wqc1(7,id,klev)
+!  SED_LPOP(id) = wqc1(17,id,klev)
+!  SED_RPOP(id) = wqc1(16,id,klev)
+!  SED_LPON(id) = wqc1(12,id,klev)
+!  SED_RPON(id) = wqc1(11,id,klev)
+!  SED_LPOC(id) = wqc1( 9,id,klev)
+!  SED_RPOC(id) = wqc1( 8,id,klev)
+!  SED_SU(id)   = wqc1(20,id,klev)
+!  SED_PO4(id)  = wqc1(19,id,klev)
+!  SED_NH4(id)  = wqc1(14,id,klev)
+!  SED_NO3(id)  = wqc1(15,id,klev)
+!  SED_SA(id)   = wqc1(21,id,klev)
+!  SED_DO(id)   = wqc1(23,id,klev)
+!  SED_COD(id)  = wqc1(22,id,klev)
+!  SED_SALT(id) = wqc1( 1,id,klev)
+!  SED_T(id)    = wqc1( 2,id,klev)
+!  if(iLight==2) then
+!    SED_TSS(id)=TSS(klev,id)
+!  endif
+!
+!  return
+!end
+!
+!!**********************************************************************
+!subroutine link_sed_output(id,nea,ntr_local,nvrt,nv,kf)
+!!**********************************************************************
+!  use icm_sed_mod
+!  use icm_mod, only : BnDOCA,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!  save
+!  integer, intent(in) :: id,nea,ntr_local,nvrt,nv,kf
+!
+!  SED_IWC  = id
+!
+!  BnDOC  = SED_BENDOC(id) 
+!  BnNH4  = SED_BENNH4(id)
+!  BnNO3  = SED_BENNO3(id)
+!  BnPO4t = SED_BENPO4(id)
+!  BnCOD  = SED_BENCOD(id)
+!  BnDO   = SED_BENDO(id)
+!  BnSAt  = SED_BENSA(id)
+!  return
+!end subroutine link_sed_output
+
+!Subroutine Tadjust(id,nv)
+!!**********************************************************************C
+!! Temperature should be read in after reading benthic fluxes since these
+!! parameters must be temperature corrected.
+!!: id = /input/ elem. id to provide the benthic flux before temp. adjusted
+!!: nv = /input/ number of layers
+!!: kb = /input/ bottom layer id
+!!: kf = /input/ surface layer id
+!!: Temp(1:nv) = /input/ temperature @prism center
+!!**********************************************************************C
+!  use icm_mod
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!
+!  integer, intent(in) :: id,nv
+!  integer :: i,j,k
+!
+!  do k=1,nv
+!!   reaeration coefficient only apply to surface layer, coefficient from
+!!   Chi-Fang Wang
+!    if(k==1)then
+!      TDOs=14.6244-0.367134*Temp(k)+4.497E-3*Temp(k)*Temp(k)
+!      STDOs=-9.66E-2+2.05E-3*Temp(k)
+!      TDOaer=rKTr**(Temp(k)- 20.0) !need check  YC
+!    endif
+!
+!!   parameters adjusted to temperature
+!!   Hydrolysis coefficient for POM, Minerzliztion coefficient for DOM
+!    rKRPOC(k)= exp(rKTHDR*(Temp(k)-TRHDR))
+!    rKLPOC(k)= rKRPOC(k)
+!    rKDOCA(k)= exp(rKTMNL*(Temp(k)-TRMNL))
+!    rKRPON(k)= rKRPOC(k)
+!    rKLPON(k)= rKRPOC(k)
+!    rKDON(k) = rKDOCA(k)
+!    rKRPOP(k)= rKRPOC(k)
+!    rKLPOP(k)= rKRPOC(k)
+!    rKDOP(k) = rKDOCA(k)
+!    xTemp    = Temp(k)-TNit
+!    if(xTemp>0.0) then  !nitrification coefficient
+!      rNitN(k)=rNitM*exp(-rKNit1*(xTemp*xTemp))
+!    else
+!      rNitN(k)=rNitM*exp(-rKNit2*(xTemp*xTemp))
+!    endif
+!    rKSUA(k)=rKSU*exp(rKTSUA*(Temp(k)-TRSUA))
+!    rrKCOD(k)=rKCD*exp(rKTCOD*(Temp(k)-TRCOD))
+!
+!!   Zooplankton
+!    do j=1,iB
+!      BMZ(j,k)   = BMZR(j)*exp(rKTBZ(j)*(Temp(k)-TBZ(j)))
+!      CCZD1(j,k) = FCDZ(j)*BMZ(j,k)
+!      CCZD0(j,k) = (1.0-FCDZ(j))*BMZ(j,k)
+!      CNZR1(j,k) = FNRZ(j)*BMZ(j,k)*ANCZ(j)
+!      CNZL1(j,k) = FNLZ(j)*BMZ(j,k)*ANCZ(j)
+!      CNZD1(j,k) = FNDZ(j)*BMZ(j,k)*ANCZ(j)
+!      CNZI1(j,k) = FNIZ(j)*BMZ(j,k)*ANCZ(j)
+!      CPZR1(j,k) = FPRZ(j)*BMZ(j,k)*APCZ(j)
+!      CPZL1(j,k) = FPLZ(j)*BMZ(j,k)*APCZ(j)
+!      CPZD1(j,k) = FPDZ(j)*BMZ(j,k)*APCZ(j)
+!      CPZI1(j,k) = FPIZ(j)*BMZ(j,k)*APCZ(j)
+!      CSZP1(j,k) = FSPZ(j)*BMZ(j,k)*ASCZ(j)
+!      CSZI1(j,k) = FSIZ(j)*BMZ(j,k)*ASCZ(j)
+!      xTemp=Temp(k)-TGZ(j)
+!      if(xTemp>0.0) then 
+!        do i=1,8
+!          GZ(k,i,j)=GZM(i,j)*exp(-rKTGZ1(j)*xTemp*xTemp)
+!        enddo
+!      else
+!        do i=1,8
+!          GZ(k,i,j)=GZM(i,j)*exp(-rKTGZ2(j)*xTemp*xTemp)
+!        enddo
+!      endif
+!    enddo !j=1,iB
+!
+!!   phytoplankton
+!    do j=1,iA
+!      BMP(j,k)=BMPR(j)*exp(rKTBP(j)*(Temp(k)-TBP(j)))
+!      BPR(j,k)=PRR(j)*exp(rKTBP(j)*(Temp(k)-TBP(j)))
+!      CCPD1(j,k) = FCD(j)*BMP(j,k)
+!      CCPD0(j,k) = (1.0-FCD(j))*BMP(j,k)
+!      CNPR1(j,k) = FNR(j)*BMP(j,k)*ANC(j)
+!      CNPL1(j,k) = FNL(j)*BMP(j,k)*ANC(j)
+!      CNPD1(j,k) = FND(j)*BMP(j,k)*ANC(j)
+!      CNPI1(j,k) = FNI(j)*BMP(j,k)*ANC(j)
+!      CPPR1(j,k) = FPR(j)*BMP(j,k)*APC(j)
+!      CPPL1(j,k) = FPL(j)*BMP(j,k)*APC(j)
+!      CPPD1(j,k) = FPD(j)*BMP(j,k)*APC(j)
+!      CPPI1(j,k) = FPI(j)*BMP(j,k)*APC(j)
+!      xTemp=Temp(k)-TGP(j)
+!      if(xTemp>0.0) then 
+!        GP(j,k)=GPM(j)*exp(-rKTGP1(j)*xTemp*xTemp)
+!      else
+!        GP(j,k)=GPM(j)*exp(-rKTGP2(j)*xTemp*xTemp)
+!      endif
+!    enddo !j=1,iA
+!
+!    if(iZOO==1) then
+!      BPR=0.0
+!    endif
+!!
+!    CSPP1(k) = FSPd*BMP(1,k)*ASCd
+!    CSPI1(k) = FSId*BMP(1,k)*ASCd
+!
+!!   Benthic flux only apply to bottom layer
+!    if(k==nv)then
+!      x20 = Temp(k) - 20.0
+!      xBnRPOC = xBRPOC(id)*TBRPOC**x20
+!      xBnLPOC = xBLPOC(id)*TBLPOC**x20
+!      xBnDOCA = xBDOCA(id)*TBDOCA**x20
+!      xBnRPON = xBRPON(id)*TBRPON**x20
+!      xBnLPON = xBLPON(id)*TBLPON**x20
+!      xBnDON  = xBDON(id)*TBDON**x20
+!      xBnNH4  = xBNH4(id)*TBNH4**x20
+!      xBnNO3  = xBNO3(id)*TBNO3**x20
+!      xBnRPOP = xBRPOP(id)*TBRPOP**x20
+!      xBnLPOP = xBLPOP(id)*TBLPOP**x20
+!      xBnDOP  = xBDOP(id)*TBDOP**x20
+!      xBnPO4t = xBPO4t(id)*TBPO4t**x20
+!      xBnSU   = xBSU(id)*TBSU**x20
+!      xBnSAt  = xBSAt(id)*TBSAt**x20
+!      xBnCOD  = xBCOD(id)*TBCOD**x20
+!      xBnDO   = xBDO(id)*TBDO**x20
+!    endif
+!  enddo !k=1,nv
+!
+!  return
+!end
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                          F U N C T I O N   S E D F                         !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!function SEDF(SOD1)
+!  use icm_sed_mod
+!  use icm_mod, only : dtw
+!  use schism_glbl, only : rkind
+!  implicit none
+!  save
+!  real(kind=8) :: SEDF,SOD1,k12,k2
+!  real(kind=8) :: FD1,FP1,FP2
+!  REAL*8 AD(4,4), BX(4), G(2), H(2,2)
+!  REAL*8 DBLSO41, DBLSO42, RA0, RA1, RA2, R1, R2, DISC, SN1
+!  real(kind=rkind) :: rtmp
+!!  real(kind=8), external :: SEDF
+!
+!! COMPUTE THE NH4, NO3, AND SOD FLUXES
+!  S = SOD1/O20
+!
+!! AMMONIA FLUX
+!  K0H1P = 0.0
+!  K1H1P = 0.0
+!  K2H2D = 0.0
+!  K2H2P = 0.0
+!  if(KMNH4/=0.0) then
+!    K0H1D = XAPPNH4**2/S*KMNH4*(O20/(KMNH4O2+O20))
+!    K1H1D = S
+!  else
+!    K1H1D = XAPPNH4**2/S*(O20/(KMNH4O2+O20))+S
+!    K0H1D = 0.0
+!  endif
+!  J1   = S*NH40
+!  K3   = 0.
+!  J2   = XJN
+!  PIE1 = PIENH4
+!  PIE2 = PIENH4
+!  KMC1 = KMNH4
+!  
+!  !maybe better to put KMC1, PIE1, PIE2 into SEDTSFNL function
+!!  call SEDTSFNL (NH41,NH42,NH4T1,NH4T2,NH41TM1,NH4T2TM1)
+!  k12=XAPPNH4**2*KMNH4*O20/(KMNH4O2+O20)/(KMNH4+NH41TM1)/(1.0+m1*pie1) !no fd1 ? ZG
+!  call sed_eq(NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!            & NH40,0.d0,j2,k12,0.0)
+!!  if(dabs(NH41-rtmp)>1d-10) then
+!!    write(*,*)'NH41: ',NH41,rtmp
+!!    stop
+!!  endif
+!  JNH4 = S*(NH41-NH40)
+!
+!! OXYGEN CONSUMED BY NITRIFICATION
+!  A1 = 0.0045714
+!  if(KMNH4/=0.0) then 
+!    JO2NH4 = A1*K0H1D*NH41/(KMNH4+NH41TM1)
+!  else
+!    JO2NH4 = A1*(K1H1D-S)*NH41
+!  endif
+!
+!! DENITRIFICATION
+!  K0H1D = 0.0
+!  K0H1P = 0.0
+!  KMC1  = 0.0
+!  K1H1D = XAPP1NO3**2/S+S
+!  K1H1P = 0.0
+!  K2H2D = XK2NO3
+!  K2H2P = 0.0
+!  if(KMNH4/=0.0) then 
+!    !why S*NO30 is added ? ZG
+!    J1 = S*NO30+XAPPNH4**2/S*KMNH4*(O20/(KMNH4O2+O20))*NH41/(KMNH4+NH41TM1)
+!  else
+!    J1 = S*NO30+XAPPNH4**2/S*(O20/(KMNH4O2+O20))*NH41
+!  endif
+!  K3 = 0.0
+!  J2   = 0.0
+!  PIE1 = 0.0
+!  PIE2 = 0.0
+!!  call SEDTSFNL(NO31,NO32,NO3T1,NO3T2,NO31TM1,NO3T2TM1)
+!  j1=XAPPNH4**2/s*KMNH4*(O20/(KMNH4O2+O20))*NH41/(KMNH4+NH41TM1)
+!  k12=XAPP1NO3**2
+!  k2=XK2NO3/H2
+!  call sed_eq(NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!            & NO30,j1,0.d0,k12,k2)
+!!  if(dabs(NO31-rtmp)>1d-10) then
+!!    write(*,*)'NO31: ',NO31,rtmp
+!!    stop
+!!  endif
+!  !write(*,*)'T:',j1,XAPPNH4,KMNH4,O20,KMNH4O2,NH41TM1,NH41,s
+!  !write(*,*)'T:',NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!  !          & NO30,j1,0.d0,k12,k2
+!
+!  JNO3 = S*(NO31-NO30)
+!
+!! SULFIDE/METHANE OXIDATION
+!  A2      = 0.00285714
+!  XJCNO31 = A2*XAPP1NO3**2/S*NO31
+!  XJCNO3  = A2*XK2NO3*NO32
+!
+!! ADD THE AEROBIC AND FIRST ANAEROBIC LAYER TO KEEP MASS BALANCE
+!  XJCNO3 = XJCNO31+XJCNO3
+!
+!! CONVERT CARBON DIAGENESIS FLUX TO O2 UNITS
+!  XJC1 = max(2.667d-3*XJC-XJCNO3,1.0d-10) !changed by YC AMAX1 to max
+!  !write(*,*)'T:',XJC,XJCNO3
+!  !write(*,*)'T:',XAPP1NO3**2,NO31,s,XK2NO3/H2,NO32,H2
+!         
+!!-----------------------------------------------------------------
+!!     NEW CODE FOR METHANE FORMATION.  CH4 STARTS FORMING
+!!     ONCE ALL SULFATE IS USED UP.
+!!----------------------------------------------------------------
+!!     SULFIDE AND SULFATE IN O2 EQUIVALENTS
+!!     UNITS: SO4 IN O2 EQUIVALENTS
+!!     SO4 (MG SO4/L)* 1 MMOL SO4 /98 MG SO4 * 2 MMOL O2/ 1 MMOL SO4
+!!     * 32 MG O2 / MMOL O2= 0.65306122
+!!-----------------------------------------------------------------
+!
+!  SO40=SO40MG*0.65306122
+!  K0H1D=0.
+!  K0H1P=0.
+!  KMC1=0.0
+!  K1H1D=XAPPD1**2/S*(O20/KMHSO2) + S
+!  K1H1P=XAPPP1**2/S*(O20/KMHSO2)
+!  K2H2D=0.
+!  K2H2P=0.
+!  J1=0.
+!  K3=0.0
+!  J2=XJC1
+!  PIE1=PIE1S
+!  PIE2=PIE2S
+!
+!! SET KL12 USING H FOR SO4
+!  ITEMP = 10.*TEMPD+1
+!  DDSO4 = ZL12NOM(ITEMP)*H2
+!! HSO4  =SQRT(2.*DDSO4*SO40*H2/XJC1)
+!! KLUDGE FOR NOW
+!  if(XJC1>0.0) then 
+!     HSO4 =sqrt(2.0*DDSO4*SO40*H2/XJC1)
+!  else
+!     HSO4 = 2.0*H2
+!  endif
+!
+!
+!! NO DEEPER THAN H2
+!  if(HSO4>H2) HSO4=H2
+!  KL12SO4=KL12*H2/HSO4
+! 
+!
+!! FRACTIONS AND OVERALL DECAY REACTION VELOCITY
+!  FD1=1.0/(1.0+M1*PIE1)
+!  FP1=M1*PIE1/(1.0+M1*PIE1)
+!  FD2=1.0/(1.0+M2*PIE2)
+!  FP2=M2*PIE2/(1.0+M2*PIE2)
+!  FP1SO4=FP1
+!  FP2SO4=FP2
+!  KHS_1=FP1*XAPPP1**2/S*(O20/KMHSO2)+FD1*XAPPD1**2/S*(O20/KMHSO2)
+!
+!  BX(1) = DBLE(S)*DBLE(SO40)
+!  BX(2) = DBLE(H2)*DBLE(SO4T2TM1)/DBLE(DLTS)
+!  BX(3) = DBLE(HS0)*DBLE(S)
+!  BX(4) = DBLE(H2)*DBLE(HST2TM1)/DBLE(DLTS)
+!
+!  AD(1,1) = -DBLE(S)-DBLE(KL12SO4)
+!  AD(1,2) = DBLE(KL12SO4)
+!  AD(1,3) = DBLE(KHS_1)
+!  AD(2,1) = DBLE(KL12SO4)
+!  AD(2,2) = -(DBLE(DLTS)*DBLE(KL12SO4)+DBLE(H2))/DBLE(DLTS)
+!  AD(3,3) = -DBLE(W2)-DBLE(FP1)*DBLE(W12)-DBLE(FD1)*DBLE(S)-DBLE(FD1)*DBLE(KL12SO4)-DBLE(KHS_1)
+!  AD(3,4) = DBLE(FP2)*DBLE(W12)+DBLE(FD2)*DBLE(KL12SO4)
+!  AD(4,3) = DBLE(W2)+DBLE(FP1)*DBLE(W12)+DBLE(FD1)*DBLE(KL12SO4)
+!  AD(4,4) = -(DBLE(DLTS)*DBLE(FP2)*DBLE(W12) &
+!          & +DBLE(DLTS)*DBLE(FD2)*DBLE(KL12SO4)+DBLE(DLTS)*DBLE(W2)+DBLE(H2)) /DBLE(DLTS)
+!
+!  G(1) = ((BX(1)*AD(3,3)-AD(1,3)*BX(3))*AD(4,4)- &
+!         & BX(1)*AD(3,4)*AD(4,3)+AD(1,3)*AD(3,4)*BX(4)+AD(1,3)*BX(2)*AD(3,4))/(AD(1,3)*AD(3,4))
+!
+!  G(2) = ((BX(1)*AD(3,3) - AD(1,3)*BX(3))*AD(4,4)- &
+!         & BX(1)*AD(3,4)*AD(4,3) + AD(1,3)*AD(3,4)*BX(4))/(AD(1,3)*AD(3,4))
+!
+!  H(1,1)=(AD(1,1)*AD(3,3)*AD(4,4)-AD(1,1)*AD(3,4)*AD(4,3)+AD(1,3)*AD(2,1)*AD(3,4))/(AD(1,3)*AD(3,4))                  
+!  H(1,2)=(AD(1,2)*AD(3,3)*AD(4,4)-AD(1,2)*AD(3,4)*AD(4,3)+AD(1,3)*AD(2,2)*AD(3,4))/(AD(1,3)*AD(3,4))
+!  H(2,1)=(AD(1,1)*AD(3,3)*AD(4,4)-AD(1,1)*AD(3,4)*AD(4,3))/(AD(1,3)*AD(3,4))
+!  H(2,2)=(AD(1,2)*AD(3,3)*AD(4,4)-AD(1,2)*AD(3,4)*AD(4,3))/(AD(1,3)*AD(3,4))
+!
+!  RA0 = (H(1,1)*G(2)-G(1)*H(2,1))*DBLE(KMSO4)
+!  RA1 = - G(1)*H(2,1) + H(1,1)*G(2)+(H(1,1)*H(2,2)-H(1,2)*H(2,1))*DBLE(KMSO4) + H(1,1)*J2
+!  RA2 = H(1,1)*H(2,2)-H(1,2)*H(2,1)
+!
+! ! write(*,*)RA0,RA1,RA2,H,AD(1,3),AD(3,4)
+! ! write(*,*)AD(1,1),AD(1,2),AD(1,3),AD(2,1),AD(2,2),AD(3,3),AD(4,4),AD(3,4),AD(4,3)
+! ! write(*,*)DLTS,KL12SO4,H2
+! !write(*,*)'T:',RA1,G(1),H(2,1),H(1,1),G(2),H(1,1),H(2,2),H(1,2),KMSO4,J2
+! !write(*,*)'T:',XJC1
+!
+!!VJP
+!! SN1 = 1.                          !SOLUTION OF A2*Q^2+A1*X+A0
+!! IF (RA1.LE.0.0) SN1 = -1.         !SEE NUM REC P178
+!  SN1 = 1.0D0                       !SOLUTION OF A2*Q^2+A1*X+A0
+!  if(RA1<=0.0D0) SN1 = -1.0D0       !SEE NUM REC P178
+!
+!! REMOVED THE DBLE CALLS IN ORIGINAL CODE TO AVOID COMPILER ERROR ON T3E.
+!! DISC = -(RA1+SN1*DSQRT(DBLE(RA1)**2-DBLE(RA2)*DBLE(RA0)*4.) )/2.
+!  DISC = -(RA1+SN1*DSQRT(RA1**2-RA2*RA0*4.0D0) )/2.0D0
+!
+!! R1 = DISC / RA2
+!! R2 = RA0 / DISC
+!! DBLSO42 = R1
+!! IF (DBLSO42 .LT. 0.) DBLSO42 = R2
+!  DBLSO42 = DISC/RA2
+!  if(DBLSO42<0.0D0) DBLSO42 = RA0/DISC
+!
+!  DBLSO41 = -(H(1,2)*DBLSO42+G(1))/H(1,1)
+!  HST1=-(AD(1,2)*DBLSO42+AD(1,1)*DBLSO41+BX(1))/AD(1,3)
+!  HST2=(AD(1,2)*AD(3,3)*DBLSO42+AD(1,1)*AD(3,3)*DBLSO41+BX(1)*AD(3,3)-AD(1,3)*BX(3))/(AD(1,3)*AD(3,4))
+!  HS1=FD1*HST1
+!  HS2=FD2*HST2
+!  HS2AV=FD2*HST2
+!  SO42=DBLSO42
+!  SO42AV=SO42
+!  SO4T2 = SO42
+!  SO41=DBLSO41
+!  XJ2=J2*KMSO4/(SO42+KMSO4)
+!  XJ2CH4=XJ2
+!  X1J2=J2*DBLSO42/(SO42+KMSO4)
+!  JHS=S*(HS1-HS0)
+!  CSODHS=(XAPPD1**2/S*FD1+XAPPP1**2/S*FP1)*(O20/KMHSO2)*HST1
+!  !write(*,*)'T:',CSODHS,XAPPD1,XAPPP1,fd1,fp1,O20,KMHSO2,HST1,s
+!  !write(*,*)'T:',HST1,AD(1,2),DBLSO42,AD(1,1),DBLSO41,BX(1),AD(1,3)
+!  !write(*,*)'T:',DBLSO42,DISC,RA2,H(1,2),G(1),H(1,1)
+!  !write(*,*)'T:',RA0,RA1,RA2
+! 
+!  !write(*,*)'T:',XJ2,J2,KMSO4,SO42
+!  !write(*,*)DBLSO41,DBLSO42,DISC,RA2,RA0
+!  !stop
+!
+!! METHANE
+!  CH40 =0.0
+!  K0H1P=0.0
+!  K1H1P=0.0
+!  K2H2D=0.0
+!  K2H2P=0.0
+!  K1H1D=XAPPCH4**2/S*(O20/(KMCH4O2+O20))+S
+!  K0H1D=0.0
+!  J1=S*CH40
+!  K3=0.0
+!  J2=XJ2
+!  PIE1=0.0
+!  PIE2=0.0
+!  KMC1=0.0
+!
+!!  call SEDSSFNL(CH41,CH42,CH42AV,CH4T1,CH4T2,CH4T2AV,CH41TM1,CH4T2TM1,1)
+!  k12=XAPPCH4**2*(O20/(KMCH4O2+O20))
+!  call sed_eq(CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!            & 0.d0,0.d0,J2,k12,0.0)
+!  CH42AV=CH42
+!  CH4T2AV=CH4T2
+!!  if(dabs(CH41-rtmp)>1d-10) then
+!!   write(*,*)'CH41: ',CH41,rtmp
+!!    stop
+!!  endif
+!!  write(*,*)CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!!            & 0.d0,0.d0,J2,k12,0.0
+!!  write(*,*)'test:',
+!!  stop
+!  !write(*,*)'T:',CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!  !          & 0.d0,0.d0,J2,k12,0.0
+!
+!  if(CH42>CH4SAT) then
+!     CH42=CH4SAT
+!     CH41 = (CH40*S**2+CH42*KL12*S)/(S**2+KL12*S+XAPPCH4**2*(O20/(KMCH4O2+O20)))
+!  endif
+!
+!! CALCULATE CHANGES IN CH4 AND HS STORED IN THE SEDIMENT
+!  DCH4T2 = (CH4T2 - CH4T2TM1)*H2/DLTS
+!  DHST2  = (HST2 - HST2TM1)*H2/DLTS
+!
+!! CALCULATE CSOD
+!  CSODCH4 = XAPPCH4**2/S*(O20/(KMCH4O2+O20))*CH41
+!  CSOD    = CSODCH4+CSODHS
+!  !write(*,*)'T:',CSODCH4,CSODHS
+!  !write(*,*)'T:',XAPPCH4,O20,KMCH4O2,CH41
+!
+!! CALCULATE FLUXES
+!  JCH4      = S*(CH41-CH40)
+!  JCH4AQ    = S*CH41
+!  FLUXHS    = S*FD1*HS1
+!  FLUXHSCH4 = JCH4AQ + FLUXHS
+!
+!! IF NOT FLUX OR SOD OR STORED THEN IT MUST ESCAPE AS GAS FLUX
+!  JCH4G = 0.0
+!  if(CH42==CH4SAT) then
+!    JCH4G = XJC1-DCH4T2-DHST2-CSOD-FLUXHSCH4
+!  endif
+!
+!! VOLUMETRIC METHANE AND TOTAL GAS FLUX (L/M2-D)
+!  VJCH4G=22.4/64.*JCH4G
+!! JGAS=JN2GAS+VJCH4G                   ! JN2GAS NOT COMPUTED
+!
+!! SOD FUNCTION
+!  DFSOD = XKR*DFEEDM1*2.667E-3       ! DEPOSIT FEEDERS
+!  SOD  = CSOD+JO2NH4-ROOTDO+ DFSOD                         ! DEPOSIT FEEDERS
+!  SEDF = SOD-SOD1
+!  !write(*,*)CSODCH4,CSODHS
+!  !write(*,*)XAPPCH4,s,O20,KMCH4O2,CH41
+!  !write(*,*)XAPPD1,s,fd1,XAPPP1,s,fp1,KMHSO2,HST1
+!  !write(*,*)AD(1,2),DBLSO42,AD(1,1),DBLSO41,BX(1),AD(1,3)
+!  !write(*,*)HSO4,KL12,H2
+!  !write(*,*)DDSO4,SO40,XJC1
+!  !stop
+!  !write(2008,*)'T:',CSOD,JO2NH4
+!  return
+!end function SEDF
+
+!!---------------------------------------------------------------------C
+!subroutine SED_CALC
+!!---------------------------------------------------------------------C
+!! subroutine for calc sediment flux   !added by YC
+!!---------------------------------------------------------------------C
+!  use icm_sed_mod
+!  use icm_mod, only : dtw, iLight,ACTEMP,ACPOP,ACPON,ACPOC,ACPOS,APO4T2,ANH4T2,&
+!          &ANO3T2,AHST2,ACH4T2,ACH41T,ASO4T2,ASIT2,ABENST,ABBM,AzA1,AzA2,AzA3    
+!  use schism_msgp, only : myrank,parallel_abort
+!  use schism_glbl, only : rkind,errmsg
+!  implicit none
+!  integer :: i,itmp,BB,JG,JSF
+!  real(kind=dbl_kind2) :: ERROR
+!  real(kind=rkind), external :: SEDF,sed_zbrent
+!  real(kind=dbl_kind2) :: FLX1WC,FLX2WC,FLX3WC,FLX4WC,FLX5WC,FLX6WC,FLX7WC !flux
+!  real(kind=rkind) :: rtmp
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                           SEDIMENT CALCULATIONS                            !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!! YLI+ FOR TSS CALCULATION
+!! SSI(SED_IWC)=( 35.0 - SED_SALT(SED_IWC) )    !Sal(SED_IWC) )         !zhujz
+!! SSI(SED_IWC)=(sed_B1(SED_IWC)+sed_B2(SED_IWC)+sed_B3(SED_IWC))*20.0
+!  if(iLight==2) then
+!    SSI(SED_IWC)=SED_TSS(SED_IWC)
+!  else
+!    SSI(SED_IWC)=(sed_LPOC(SED_IWC)+sed_RPOC(SED_IWC))*6.0
+!  endif
+!    
+!! PASS WQM TIME-STEP (IN DAYS) TO SEDIMENT SUBR
+!  DLTS=DLT/86400.0
+!  !STEADY_STATE_SED = .TRUE.   !zhujz
+!  if(iSteady==1) TINTIM = TINTIM+DLTS
+!! INITIALIZE SEDIMENT NUTRIENT MASSES
+!  SEDMN=0.0
+!  SEDMP=0.0
+!  SEDMC=0.0
+!
+!! CALCULATE FLUXES
+!! ADJUST NET SETTLING FOR SAV EFFECT
+!  !WSSSAV not defined
+!  if (SSI(SED_IWC)<100.0) then 
+!    WSSNET(SED_IWC) = WSSBNET(SED_IWC)+WSSSAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  else 
+!    WSSNET(SED_IWC) = 5.0+WSSSAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  endif
+!  WSLNET(SED_IWC)=WSLBNET(SED_IWC)+WSLSAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  WSRNET(SED_IWC)=WSRBNET(SED_IWC)+WSRSAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  WS1NET(SED_IWC)=WS1BNET(SED_IWC)+WS1SAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  WS2NET(SED_IWC)=WS2BNET(SED_IWC)+WS2SAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  WS3NET(SED_IWC)=WS3BNET(SED_IWC)+WS3SAV*PATCH(SED_IWC)*SH(SED_IWC)
+!  WSUNET(SED_IWC)=WSUBNET(SED_IWC)+WSUSAV*PATCH(SED_IWC)*SH(SED_IWC)
+!
+!! FLUX RATE (mm/day)
+!  FLX1WC=1000.0*WSSNET(SED_IWC)
+!  FLX2WC=1000.0*WSLNET(SED_IWC)
+!  FLX3WC=1000.0*WSRNET(SED_IWC)
+!  FLX4WC=1000.0*WS1NET(SED_IWC) !cyanobacteria
+!  FLX5WC=1000.0*WS2NET(SED_IWC) !diatom
+!  FLX6WC=1000.0*WS3NET(SED_IWC) !green algea
+!  FLX7WC=1000.0*WSUNET(SED_IWC)
+!
+!! FLUXES !FLX4WC order is wrong
+!  FLXPOP(SED_IWC,1)=FLX4WC*APC1*FRPPH1(1)*sed_B1(SED_IWC)+FLX5WC*APC2*FRPPH2(1)*sed_B2(SED_IWC) &
+!     & +FLX6WC*APC3*FRPPH3(1)*sed_B3(SED_IWC)+FLX2WC*sed_LPOP(SED_IWC)+SFLUXP(SED_IWC)*FRPPH3(1) !SUSPENSION FEEDERS
+!  FLXPOP(SED_IWC,2)=FLX4WC*APC1*FRPPH1(2)*sed_B1(SED_IWC)+FLX5WC*APC2*FRPPH2(2)*sed_B2(SED_IWC)+FLX6WC*APC3*FRPPH3(2)*sed_B3(SED_IWC) &
+!     & +FLX1WC*sed_RPOP(SED_IWC)*FRPOP(SED_IWC,2)/(FRPOP(SED_IWC,2)+FRPOP(SED_IWC,3))+SFLUXP(SED_IWC)*FRPPH3(2) !SUSPENSION FEEDERS
+!  FLXPOP(SED_IWC,3)=FLX4WC*APC1*FRPPH1(3)*sed_B1(SED_IWC)+FLX5WC*APC2*FRPPH2(3)*sed_B2(SED_IWC) &
+!     & +FLX6WC*APC3*FRPPH3(3)*sed_B3(SED_IWC)+FLX1WC*sed_RPOP(SED_IWC)*FRPOP(SED_IWC,3)/(FRPOP(SED_IWC,2)+FRPOP(SED_IWC,3)) &
+!     & +SF_RPOP(SED_IWC)+SFLUXP(SED_IWC)*FRPPH3(3) !SUSPENSION FEEDERS
+!  FLXPON(SED_IWC,1)=FLX4WC*ANC1*FRNPH1(1)*sed_B1(SED_IWC)+FLX5WC*ANC2*FRNPH2(1)*sed_B2(SED_IWC) &
+!     & +FLX6WC*ANC3*FRNPH3(1)*sed_B3(SED_IWC)+FLX2WC*sed_LPON(SED_IWC)+SFLUXN(SED_IWC)*FRNPH3(1) !SUSPENSION FEEDERS
+!  FLXPON(SED_IWC,2)=FLX4WC*ANC1*FRNPH1(2)*sed_B1(SED_IWC)+FLX5WC*ANC2*FRNPH2(2)*sed_B2(SED_IWC) &
+!     & +FLX6WC*ANC3*FRNPH3(2)*sed_B3(SED_IWC)+FLX3WC*sed_RPON(SED_IWC)*FRPON(SED_IWC,2)/(FRPON(SED_IWC,2)+FRPON(SED_IWC,3)) &
+!     & +SFLUXN(SED_IWC)*FRNPH3(2) !SUSPENSION FEEDERS
+!  FLXPON(SED_IWC,3)=FLX4WC*ANC1*FRNPH1(3)*sed_B1(SED_IWC)+FLX5WC*ANC2*FRNPH2(3)*sed_B2(SED_IWC)+FLX6WC*ANC3*FRNPH3(3)*sed_B3(SED_IWC) &
+!     & +FLX3WC*sed_RPON(SED_IWC)*FRPON(SED_IWC,3)/(FRPON(SED_IWC,2)+FRPON(SED_IWC,3))+SF_RPON(SED_IWC)+SFLUXN(SED_IWC)*FRNPH3(3) !SUSPENSION FEEDERS
+!  FLXPOC(SED_IWC,1)=FLX4WC*FRCPH1(1)*sed_B1(SED_IWC)+FLX5WC*FRCPH2(1)*sed_B2(SED_IWC)+FLX6WC*FRCPH3(1)*sed_B3(SED_IWC) &
+!     & +FLX2WC*sed_LPOC(SED_IWC)+SFLUXC(SED_IWC)*FRCPH3(1) !SUSPENSION FEEDERS
+!  FLXPOC(SED_IWC,2)=FLX4WC*FRCPH1(2)*sed_B1(SED_IWC)+FLX5WC*FRCPH2(2)*sed_B2(SED_IWC)+FLX6WC*FRCPH3(2)*sed_B3(SED_IWC) &
+!     & +FLX3WC*sed_RPOC(SED_IWC)*FRPOC(SED_IWC,2)/(FRPOC(SED_IWC,2)+FRPOC(SED_IWC,3))+SFLUXC(SED_IWC)*FRCPH3(2) !SUSPENSION FEEDERS
+!  FLXPOC(SED_IWC,3)=FLX4WC*FRCPH1(3)*sed_B1(SED_IWC)+FLX5WC*FRCPH2(3)*sed_B2(SED_IWC) &
+!     & +FLX6WC*FRCPH3(3)*sed_B3(SED_IWC)+FLX3WC*sed_RPOC(SED_IWC)*FRPOC(SED_IWC,3)/(FRPOC(SED_IWC,2)+FRPOC(SED_IWC,3)) &
+!     & +SF_RPOC(SED_IWC)+SFLUXC(SED_IWC)*FRCPH3(3) !SUSPENSION FEEDERS
+!
+!! SUM PARTICULATE FLUXES TO SEDIMENTS, NEGATIVE INTO SEDIMENTS
+!  PPFWS(SED_IWC)=-0.001*(FLXPOP(SED_IWC,1)+FLXPOP(SED_IWC,2)+FLXPOP(SED_IWC,3))
+!  PNFWS(SED_IWC)=-0.001*(FLXPON(SED_IWC,1)+FLXPON(SED_IWC,2)+FLXPON(SED_IWC,3))
+!  PCFWS(SED_IWC)=-0.001*(FLXPOC(SED_IWC,1)+FLXPOC(SED_IWC,2)+FLXPOC(SED_IWC,3))
+!  PSFWS(SED_IWC)=-0.001*FLXPOS(SED_IWC)
+!  SSFWS(SED_IWC)=-WSSNET(SED_IWC)*SSI(SED_IWC)-0.001*SF_SSI(SED_IWC) !SF_SSI undefined ?
+!
+!! ADD IN THE FLUX FROM ROOT MORTALITY
+!  if(SAV_CALC) then
+!    do i=1,3
+!      FLXPOC(SED_IWC,i) = FLXPOC(SED_IWC,i)+1000.0*SEDCSAV(SED_IWC)*FRCSAV(i) !FRCSAV undefined
+!      FLXPON(SED_IWC,i) = FLXPON(SED_IWC,i)+1000.0*SEDNSAV(SED_IWC)*FRNSAV(i)
+!      FLXPOP(SED_IWC,i) = FLXPOP(SED_IWC,i)+1000.0*SEDPSAV(SED_IWC)*FRPSAV(i)
+!    enddo
+!  endif
+!  AzA2=SFLUXC(SED_IWC)  !zhujz for output
+!  AzA3=SEDCSAV(SED_IWC) 
+!
+!  FLXPOS(SED_IWC)=FLX4WC*ASC1*sed_B1(SED_IWC)+FLX5WC*ASC2*sed_B2(SED_IWC)+FLX6WC*ASC3*sed_B3(SED_IWC)+FLX7WC*sed_SU(SED_IWC) &
+!                 & +SF_SU(SED_IWC) + JSUSF(SED_IWC) ! SUSPENSION FEEDERS
+!
+!! ACCUMULATE FLUXES FOR STEADY-STATE COMPUTATION
+!  if(iSteady==1) then 
+!!   DO BB=1,SED_NBBA
+!    AG3CFL(SED_IWC) = AG3CFL(SED_IWC)+FLXPOC(SED_IWC,3)*DLTS
+!    AG3NFL(SED_IWC) = AG3NFL(SED_IWC)+FLXPON(SED_IWC,3)*DLTS
+!    AG3PFL(SED_IWC) = AG3PFL(SED_IWC)+FLXPOP(SED_IWC,3)*DLTS
+!    AzA1=AG3CFL(SED_IWC)  !zhujz for output
+!!   ENDDO
+!  endif
+!
+!! ASSIGN PREVIOUS TIMESTEP CONCENTRATIONS TO PARTICULATE ORGANICS
+!  CPOP(SED_IWC,1)=POP1TM1S(SED_IWC)
+!  CPOP(SED_IWC,2)=POP2TM1S(SED_IWC)
+!  CPOP(SED_IWC,3)=POP3TM1S(SED_IWC)
+!  CPON(SED_IWC,1)=PON1TM1S(SED_IWC)
+!  CPON(SED_IWC,2)=PON2TM1S(SED_IWC)
+!  CPON(SED_IWC,3)=PON3TM1S(SED_IWC)
+!  CPOC(SED_IWC,1)=POC1TM1S(SED_IWC)
+!  CPOC(SED_IWC,2)=POC2TM1S(SED_IWC)
+!  CPOC(SED_IWC,3)=POC3TM1S(SED_IWC)
+!  CPOS(SED_IWC)  =PSITM1S(SED_IWC)
+!
+!! UPDATE SEDIMENT CONCENTRATIONS
+!! ASSIGN PREVIOUS TIMESTEP CONCENTRATIONS
+!  NH41TM1  = NH41TM1S(SED_IWC)
+!  NO31TM1  = NO31TM1S(SED_IWC)
+!  HS1TM1   = HS1TM1S(SED_IWC)
+!  SI1TM1   = SI1TM1S(SED_IWC)
+!  PO41TM1  = PO41TM1S(SED_IWC)
+!  BENSTR1  = BENSTR1S(SED_IWC) !benthic stress
+!  NH4T2TM1 = NH4T2TM1S(SED_IWC)
+!  NO3T2TM1 = NO3T2TM1S(SED_IWC)
+!  HST2TM1  = HST2TM1S(SED_IWC)
+!  SIT2TM1  = SIT2TM1S(SED_IWC)
+!  PO4T2TM1 = PO4T2TM1S(SED_IWC)
+!  PON1TM1  = PON1TM1S(SED_IWC)
+!  PON2TM1  = PON2TM1S(SED_IWC)
+!  PON3TM1  = PON3TM1S(SED_IWC)
+!  POC1TM1  = POC1TM1S(SED_IWC)
+!  POC1     = POC1TM1
+!  POC2TM1  = POC2TM1S(SED_IWC)
+!  POC3TM1  = POC3TM1S(SED_IWC)
+!  POP1TM1  = POP1TM1S(SED_IWC)
+!  POP2TM1  = POP2TM1S(SED_IWC)
+!  POP3TM1  = POP3TM1S(SED_IWC)
+!  PSITM1   = PSITM1S(SED_IWC)
+!  ROOTDO   = 0.0
+!  DFEEDM1  = DFEEDM1S(SED_IWC)
+!  CH4T2TM1 = CH4T2TM1S(SED_IWC)           ! CH4
+!  CH41TM1  = CH41TM1S(SED_IWC)            ! CH4
+!  SO4T2TM1 = SO4T2TM1S(SED_IWC)           ! CH4
+!
+!! ACCOUNT FOR SAV NUTRIENT UPTAKE, DO TRANSFERRED TO ROOTS
+!  if(SAV_CALC) then !SEDNH4SAV, SEDPO4SAV, SEDDOSAV not defined
+!    NH4T2TM1 = NH4T2TM1-1000.0*SEDNH4SAV(SED_IWC)*DLTS/HSED(SED_IWC)
+!    PO4T2TM1 = PO4T2TM1-1000.0*SEDPO4SAV(SED_IWC)*DLTS/HSED(SED_IWC)
+!    ROOTDO   = SEDDOSAV(SED_IWC)
+!  endif
+!  BFORMAX = BFORMAXS(SED_IWC)
+!  ISWBEN  = ISWBENS(SED_IWC)
+!  H2      = HSED(SED_IWC)
+!
+!! SEDIMENTATION, MIXING RATES, AND SEDIMENT TEMPERATURE
+!  W2    = VSED(SED_IWC)
+!  DP    = VPMIX(SED_IWC)
+!  DD    = VDMIX(SED_IWC)
+!  TEMPD = CTEMP(SED_IWC)
+!  STP20 = TEMPD-20.0
+!
+!! CONVERT OVERLYING WATER COLUMN CONCENTRATIONS INTO MG/M**3
+!  !KADPO4 not defined,should be rKPO4p
+!  DF     = 1.0/(1.0+KADPO4*SSI(SED_IWC))
+!  PO4AVL = DF*sed_PO4(SED_IWC)
+!  PO40   = PO4AVL*1000.0
+!  NH40   = sed_NH4(SED_IWC)*1000.0
+!  NO30   = sed_NO3(SED_IWC)*1000.0
+!  !KADSA not defined,should be rKSAp 
+!  DF     = 1.0/(1.0+KADSA*SSI(SED_IWC))
+!  SI0    = DF*sed_SA(SED_IWC)*1000.0
+!  O20    = DMAX1(sed_DO(SED_IWC),0.010)
+!  HS0    = sed_COD(SED_IWC)
+!  SAL5   = sed_SALT(SED_IWC)
+!
+!! LETS FLAG DO IF IT STARTS NEAR ZERO AS IT MAY CAUSE ROOT FINDER PROBLEMS
+!! WITH SUSPENSION AND DEPOSIT FEEDERS ON.
+!  if(myrank==0) then
+!!    if(sed_DO(SED_IWC)<0.1.and.JDAY<0.01) write(*,*)'INITIAL DO BOX',SED_IWC,' IS ',sed_DO(SED_IWC)   !YC
+!!   if(sed_iwc.eq.1) write(997,*) jday,NO30,sed_no3(sed_iwc)
+!  endif
+!
+!! REGRESSION FUNCTION TO GET SO4 CONCENTRATION FROM SAL
+!! [SO4] = 20 MG/L          FOR        [CL] < 6 MG/L
+!!       = (10/3)[CL]       FOR        [CL] > 6 MG/L
+!! 1 PPT = 607.445 MG/L CL
+!  if(SAL5> 0.0099) then 
+!     SO40MG = 20.0+(27.0/190.0)*607.445*SAL5
+!  else 
+!     SO40MG = 20.0
+!  endif
+!
+!! METHANE SATURATION
+!! CH4SAT = 0.099*(1.+(ZD(SED_IWC)+sed_BL(SED_IWC,3)+HSED(SED_IWC))/10.)*0.9759**STP20
+!  CH4SAT = 0.099*(1.0+(ZD(SED_IWC)+HSED(SED_IWC))/10.0)*0.9759**STP20 !!YC091309
+!
+!! EVALUATE THE TEMPERATURE DEPENDENT COEFFICIENTS
+!  ITEMP = 10.0*TEMPD+1
+!
+!! SALINITY DEPENDENCE OF NITRIFICATION AND DENITRIFICATION
+!  if(SAL5<=SALTND) then 
+!    XAPPNH4  = ZHTANH4F(IDINT(ITEMP))
+!    XAPP1NO3 = ZHTANO3F(IDINT(ITEMP))
+!  else
+!    XAPPNH4  = ZHTANH4S(IDINT(ITEMP))
+!    XAPP1NO3 = ZHTANO3S(IDINT(ITEMP))
+!  endif
+!  XAPPD1  = ZHTAD1(IDINT(ITEMP)) !d H2S
+!  XAPPP1  = ZHTAP1(IDINT(ITEMP)) !p H2S
+!  XK2NO3  = ZHTA2NO3(IDINT(ITEMP))*H2
+!  XKSI    = ZHTASI(IDINT(ITEMP))*H2
+!  XAPPCH4 = ZHTACH4(IDINT(ITEMP))
+!  KL12NOM = DD/H2*ZL12NOM(IDINT(ITEMP))
+!  W12NOM  = DP/H2*ZW12NOM(IDINT(ITEMP))*POC1/1.0e5
+!  if(ISWBEN==0) then !ISWBEN not defined
+!    if(TEMPD>=TEMPBEN) then
+!      ISWBEN  = 1
+!      BFORMAX = 0.0
+!    endif
+!    BFOR = KMO2DP/(KMO2DP+O20)
+!  else
+!    if(TEMPD<TEMPBEN) then
+!      ISWBEN = 0
+!    endif
+!    BFORMAX = DMAX1(KMO2DP/(KMO2DP+O20),BFORMAX)
+!    BFOR    = BFORMAX
+!  endif
+!  BENSTR = (BENSTR1+DLTS*BFOR)/(1.+KBENSTR*DLTS)
+! 
+!! ADD MINIMUM MIXING TERM AND BIO-IRRIGATION FORMULATION
+!! W12    = W12NOM*(1.-KBENSTR*BENSTR)
+!! KL12   = KL12NOM
+!! W12MIN= DPMIN/H2 IS MINIMUM PARTICLE MIXING
+!  W12MIN = DPMIN/H2
+!  W12    = W12NOM*(1.0-KBENSTR*BENSTR)+W12MIN
+!
+!! KLBNTH IS RATIO OF BIO-IRRIGATION TO BIO-PARTICLE MIXING
+!  KL12   = KL12NOM + KLBNTH*W12
+!
+!! LOOKUP REACTION RATES
+!  ITEMP  = 10.0*TEMPD+1
+!  XKPOP1 = ZHTAPOP1(IDINT(ITEMP))*H2
+!  XKPOP2 = ZHTAPOP2(IDINT(ITEMP))*H2
+!  XKPOP3 = ZHTAPOP3(IDINT(ITEMP))*H2
+!  XKPON1 = ZHTAPON1(IDINT(ITEMP))*H2
+!  XKPON2 = ZHTAPON2(IDINT(ITEMP))*H2
+!  XKPON3 = ZHTAPON3(IDINT(ITEMP))*H2
+!  XKPOC1 = ZHTAPOC1(IDINT(ITEMP))*H2
+!  XKPOC2 = ZHTAPOC2(IDINT(ITEMP))*H2
+!  XKPOC3 = ZHTAPOC3(IDINT(ITEMP))*H2
+!
+!! DEPOSIT FEEDER CALCULATION
+!
+!! DEPOSIT FEEDING INGESTION RATE 
+!  XKI0=ZHTAI0(IDINT(ITEMP))
+!
+!! RESPIRATION RATE
+!  XKR=ZHTAR(IDINT(ITEMP)) !DEPOSIT FEEDERS
+!
+!! QUADRATIC PREDATION
+!  XKBETA=ZHTABETA(IDINT(ITEMP)) !DEPOSIT FEEDERS
+!
+!! MBM 970109 CONTROL SWITCH FOR HYPOXIC EFFECTS
+!  !HYPOXFX not defined
+!  if(HYPOXFX) then
+!    LOGICT=1.0/(1.0+exp(DMAX1(1.1*(DFDOH-O20)/(DFDOH-DFDOQ),-25.0)))
+!
+!!   REDUCE INGESTION WHEN O2 IS LOW
+!!   XKI0=XKI0*(O20/(O20+XKMI0))
+!    XKI0=XKI0*LOGICT
+!
+!!   MORTALITY DUE TO HYPOXIA (ADDS TO SEDIMENT POM POOLS)
+!    RDD=4.6/TDD !LN(1/100) FOR 99% KILL IN TIME TDD
+!    RMORT=RDD*(1.0-LOGICT)
+!
+!!   REDUCE PREDATION WHEN O2 LOW
+!    XKBETA=XKBETA*O20/(O20+XKBO2)
+!  endif
+!
+!! GROWTH RATE LIMITATION
+!  XPOC1LIM=XKMG1/(POC1TM1+XKMG1) ! DEPOSIT FEEDERS
+!  XPOC2LIM=XKMG2/(POC2TM1+XKMG2) ! DEPOSIT FEEDERS
+!
+!! CALCULATE DEPOSIT FEEDERS BIOMASS
+!  DFEED=DFEEDM1+DLTS*(AA1*XKI0/(M2*1E+09)*POC1TM1*XPOC1LIM*DFEEDM1 &  !DEPOSIT FEEDERS
+!       &  +AA2*XKI0/(M2*1E+09)*POC2TM1*XPOC2LIM*DFEEDM1-XKR*DFEEDM1 &
+!       &  -XKBETA*DFEEDM1*DFEEDM1-RMORT*DFEEDM1)
+!
+!  DF_GROW(SED_IWC)=AA1*XKI0/(M2*1E+09)*POC1TM1*XPOC1LIM*DFEEDM1+AA2*XKI0/(M2*1E+09)*POC2TM1*XPOC2LIM*DFEEDM1
+!  DF_RESP(SED_IWC)=XKR*DFEEDM1 
+!  DF_PRED(SED_IWC)=XKBETA*DFEEDM1*DFEEDM1
+!  DF_MORT(SED_IWC)=RMORT*DFEEDM1
+!
+!! DONT LET GO NEGATIVE
+!! NOEL  CHANGED FROM 10.0 TO 0.001 PER MARK MEYERS INSTRUCTIONS
+!  DFEED=max(DFEED,0.10)
+!
+!! CALCULATE SEDIMENT CONCENTRATIONS
+!  DOH2=DLTS/H2
+!  FRPON1=1.0-(FRPON(SED_IWC,2)+FRPON(SED_IWC,3))
+!  FRPOP1=1.0-(FRPOP(SED_IWC,2)+FRPOP(SED_IWC,3))
+!  FRPOC1=1.0-(FRPOC(SED_IWC,2)+FRPOC(SED_IWC,3))
+!  FD2  = 1.0/(1.0+M2*PIE2SI)
+!  K3   = XKSI*(CSISAT-FD2*SIT2TM1)/(PSITM1+KMPSI)
+!
+!  PON1 = (FLXPON(SED_IWC,1)*DOH2+PON1TM1-AA1*XKI0/(M2*1E+09)*POC1TM1*XPOC1LIM*DFEEDM1  &       ! DEPOSIT FEEDERS
+!   &  *DLTS/H2/AMCN+FRPON1*(RMORT*DFEEDM1 + XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2/AMCN)/(1.+(XKPON1+W2)*DOH2)
+!     IF(PON1.LT.0.0)PON1=0.0
+!
+!  PON2 = (FLXPON(SED_IWC,2)*DOH2+PON2TM1-AA2*XKI0/(M2*1E+09)*POC2TM1*XPOC2LIM*DFEEDM1  &        ! DEPOSIT FEEDERS
+!   &  *DLTS/H2/AMCN+FRPON(SED_IWC,2)*(RMORT*DFEEDM1+XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2/AMCN)/(1.+(XKPON2+W2)*DOH2) 
+!     IF(PON2.LT.0.0)PON2=0.0
+!
+!  PON3 = (FLXPON(SED_IWC,3)*DOH2+PON3TM1)/(1.+(XKPON3+W2)*DOH2)
+!
+!  POC1 = (FLXPOC(SED_IWC,1)*DOH2+POC1TM1-AA1*XKI0/(M2*1E+09)*POC1TM1*XPOC1LIM*DFEEDM1   &     ! DEPOSIT FEEDERS
+!   &  *DLTS/H2+FRPOC1*(RMORT*DFEEDM1 + XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2)/(1.+(XKPOC1+W2)*DOH2) 
+!     IF(POC1.LT.0.0)POC1=0.0
+!
+!  POC2 = (FLXPOC(SED_IWC,2)*DOH2+POC2TM1-AA2*XKI0/(M2*1E+09)*POC2TM1*XPOC2LIM*DFEEDM1    &    ! DEPOSIT FEEDERS
+!   &  *DLTS/H2+FRPOC(SED_IWC,2)*(RMORT*DFEEDM1 + XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2)/(1.+(XKPOC2+W2)*DOH2) 
+!     IF(POC2.LT.0.0)POC2=0.0
+!
+!  POC3 = (FLXPOC(SED_IWC,3)*DOH2+POC3TM1)/(1.+(XKPOC3+W2)*DOH2)
+!
+!  POP1 = (FLXPOP(SED_IWC,1)*DOH2+POP1TM1-AA1*XKI0/(M2*1E+09)*POC1TM1*XPOC1LIM*DFEEDM1   &       ! DEPOSIT FEEDERS
+!   &  *DLTS/H2/AMCP+FRPOP1*(RMORT*DFEEDM1 + XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2/AMCP)/(1.+(XKPOP1+W2)*DOH2)  
+!     IF(POP1.LT.0.0)POP1=0.0
+!
+!  POP2 = (FLXPOP(SED_IWC,2)*DOH2+POP2TM1-AA2*XKI0/(M2*1E+09)*POC2TM1*XPOC2LIM*DFEEDM1     &   ! DEPOSIT FEEDERS
+!   &  *DLTS/H2/AMCP+FRPOP(SED_IWC,2)*(RMORT*DFEEDM1 + XKBETA*DFEEDM1*DFEEDM1)*DLTS/H2/AMCP)/(1.+(XKPOP2+W2)*DOH2)
+!     IF(POP2.LT.0.0)POP2=0.0
+!
+!  POP3 = (FLXPOP(SED_IWC,3)*DOH2+POP3TM1)/(1.+(XKPOP3+W2)*DOH2)
+!
+!! MODIFICATION FOR DETRITAL SI INPUT TO SEDIMENT
+!! PSI  = (FLXPOS(BB)*DLTS/H2+PSITM1)/(1.+(K3+W2)*DLTS/H2)
+!  PSI = ((FLXPOS(SED_IWC)+JSIDETR)*DOH2+PSITM1)/(1.0+(K3+W2)*DOH2)
+!
+!! ASSIGN DIAGENESIS VALUES FOR SEDIMENT MODEL
+!  XJN = XKPON1*PON1+XKPON2*PON2+XKPON3*PON3+XKR*DFEEDM1*(1.0/AMCN)                         !DEPOSIT FEEDERS
+!  XJC = XKPOC1*POC1+XKPOC2*POC2+XKPOC3*POC3
+!  XJP = XKPOP1*POP1+XKPOP2*POP2+XKPOP3*POP3+XKR*DFEEDM1*(1.0/AMCP)                         !DEPOSIT FEEDERS
+!
+!! TEMPORARY BYPASS OF FLUX ALGORITHMS
+!
+!! EVALUATE THE NH4, NO3, AND SOD EQUATIONS
+!!  SOD = SED_ZBRENT(IERR)
+!  SOD= sed_zbrent(ierr)
+!!  if(abs(sod-rtmp)>1.d-5) then
+!!    write(errmsg,*)'icm: sed_brent is wrong',sod,rtmp,ierr,itmp
+!!    call parallel_abort(errmsg)
+!!  endif
+!
+!! IF (IERR.NE.0.AND.BENTHIC_OUTPUT) WRITE(BFO,3000) IERR,BB
+!  if(IERR/=0) then 
+!     DFSOD = XKR*DFEEDM1*2.667E-3       ! DEPOSIT FEEDERS RESP.
+!     SODMIN = 0.0001
+!     SODMAX = 100.0
+!     write(12,9000)JDAY,IERR,BB,SAL5,SO40MG,DFEED &
+!                  & ,(SFEED(BB,JSF),JSF=1,3),SODMIN,SODMAX
+!     write(12,9911) CSODHS, CSODCH4, CSOD
+!     write(12,9910)  CH41,CH42,HST1,HS1,HS2
+!9911 format(/1X,' CSODHS, CSODCH4, CSOD'/3E10.3)
+!9910 format(/1X,' CH41   CH42   HST1   HS1   HS2'/5E10.3)
+!     if(IERR==2) then 
+!       write(12,9900) JDAY,CTEMP(BB),POP1,POP2,POP3
+!       write(12,9901) PON1,PON2,PON3,POC1,POC2,POC3
+!       write(12,9902) PO4T2,HST2,SIT2,PSI
+!       write(12,9903) &
+!            &  (FLXPOP(BB,1)+FLXPOP(BB,2)+FLXPOP(BB,3)) &
+!            & ,(FLXPON(BB,1)+FLXPON(BB,2)+FLXPON(BB,3)) &
+!            & ,(FLXPOC(BB,1)+FLXPOC(BB,2)+FLXPOC(BB,3))
+!       write(12,9904) O20,CSOD,DFSOD,ROOTDO,SOD,S &
+!            & ,H2,HSED(BB),VSED(BB)
+!       write(12,9905) XJP,XJN,XJC,JO2NH4,XJC1
+!       write(12,9906) JPO4,JNH4,JNO3,JHS,JSI,JCH4AQ,JCH4G,BENSTR
+!       write(12,9907) PO40,PO41,PO42,PO4T2,NH40,NH41,NH42,NH4T2
+!       write(12,9908) NO30,NO31,NO32,NO3T2,HS1,HS2,HST2
+!       write(12,9909) SI0,SI1,SI2,SIT2
+!       call parallel_abort('ICM (1)')
+!     else
+!       ERROR=SEDF(SODMIN)
+!       write(12,9889) JDAY,SODMIN,ERROR
+!       write(12,9900) JDAY,CTEMP(BB),POP1,POP2,POP3
+!       write(12,9901) PON1,PON2,PON3,POC1,POC2,POC3
+!       write(12,9902) PO4T2,HST2,SIT2,PSI
+!       write(12,9903)   &
+!             &  (FLXPOP(BB,1)+FLXPOP(BB,2)+FLXPOP(BB,3)) &
+!             & ,(FLXPON(BB,1)+FLXPON(BB,2)+FLXPON(BB,3)) &
+!             & ,(FLXPOC(BB,1)+FLXPOC(BB,2)+FLXPOC(BB,3))    
+!       write(12,9904) O20,CSOD,DFSOD,ROOTDO,SOD,S &
+!             & ,H2,HSED(BB),VSED(BB)
+!       write(12,9911) CSODHS, CSODCH4, CSOD
+!       write(12,9905) XJP,XJN,XJC,JO2NH4,XJC1
+!       write(12,9906) JPO4,JNH4,JNO3,JHS,JSI,JCH4AQ,JCH4G,BENSTR
+!       write(12,9907) PO40,PO41,PO42,PO4T2,NH40,NH41,NH42,NH4T2
+!       write(12,9908) NO30,NO31,NO32,NO3T2,HS1,HS2,HST2
+!       write(12,9909) SI0,SI1,SI2,SIT2
+!       ERROR=SEDF(SODMAX)
+!       write(12,9889) JDAY,SODMAX,ERROR
+!       write(12,9900) JDAY,CTEMP(BB),POP1,POP2,POP3
+!       write(12,9901) PON1,PON2,PON3,POC1,POC2,POC3
+!       write(12,9902) PO4T2,HST2,SIT2,PSI
+!       write(12,9903) &
+!            &  (FLXPOP(BB,1)+FLXPOP(BB,2)+FLXPOP(BB,3)) &
+!            & ,(FLXPON(BB,1)+FLXPON(BB,2)+FLXPON(BB,3)) &
+!            & ,(FLXPOC(BB,1)+FLXPOC(BB,2)+FLXPOC(BB,3))     
+!       write(12,9904) O20,CSOD,DFSOD,ROOTDO,SOD,S &
+!            & ,H2,HSED(BB),VSED(BB)
+!       write(12,9911) CSODHS, CSODCH4, CSOD
+!       write(12,9905) XJP,XJN,XJC,JO2NH4,XJC1
+!       write(12,9906) JPO4,JNH4,JNO3,JHS,JSI,JCH4AQ,JCH4G,BENSTR
+!       write(12,9907) PO40,PO41,PO42,PO4T2,NH40,NH41,NH42,NH4T2
+!       write(12,9908) NO30,NO31,NO32,NO3T2,HS1,HS2,HST2
+!       write(12,9909) SI0,SI1,SI2,SIT2
+!        call parallel_abort('ICM (2)')
+!     endif
+!   endif
+!9889   format(/5X,'ZBRENT DIAGNOSTICS AT TIME =',F8.3, &
+!             &  ' FOR SOD =',F8.4,' ERROR =',E12.3/)
+!9000   format(/                                           &
+!             &  5X,'ZBRENT FAILURE AT TIME =',F8.3,' WITH IERR=',I2/  &
+!             &  5X,'IN SEDIMENT SEGMENT IR=',I5/                      &
+!             &  5X,'WITH SALT, SO40MG     =',2E10.3/                  &
+!             &  5X,'DFEED=',F10.3,' SFEED=',3F11.3/                   &
+!             &  5X,'(SODMIN,SODMAX=',F6.4,F6.1,')'/                   &
+!             &  5X,'PROGRAM TERMINATION FOLLOWS DIAGNOSTIC DUMPS')
+!9900   format(/1X,' TIME,CTEMP,POP1,POP2,POP3'/8E10.3)
+!9901   format(/1X,' PON1,PON2,PON3,POC1,POC2,POC3'/  &
+!             &  8E10.3)
+!9902   format(/1X,' PO4T2,HST2,SIT2,PSI'/8E10.3)
+!9903   format(/1X,' FLXPOP,FLXPON,FLXPOC'/8E10.3)
+!9904   format(/1X,' O20,CSOD,DFSOD,ROOTDO,SOD,S,H2'  &
+!             &   ,',HSED,VSED'/10E10.3)
+!9905   format(/1X,' JP,JN,JC,JO2NH4,XJC1'/8E10.3)
+!9906   format(/1X,' JPO4,JNH4,JNO3,JHS,JSI,JCH4AQ,JCH4G,BENSTR'/  &
+!             &  8E10.3)
+!9907   format(/1X,' PO40,PO41,PO42,PO4T2,NH40,NH41,NH42,NH4T2'/8E10.3)
+!9908   format(/1X,' NO30,NO31,NO32,NO3T2,HS1,HS2,HST2'/8E10.3)
+!9909   format(/1X,' SI0,SI1,SI2,SIT2'/8E10.3)
+!
+!! ACCUMULATE REMAINING SUMS FOR STEADY-STATE COMPUTATION
+!  if(iSteady==1) then 
+!    ASDTMP(SED_IWC) = ASDTMP(SED_IWC)+TEMPD*DLTS
+!  endif
+!
+!! EVALUATE THE PO4 AND SI EQUATIONS
+!  K0H1D = 0.0
+!  K0H1P = 0.0
+!  KMC1  = 0.0
+!  K1H1D = S
+!  K1H1P = 0.0
+!  K2H2D = 0.0
+!  K2H2P = 0.0
+!  J1    = S*SI0
+!
+!! OXYGEN DEPENDENCY OF PIE1
+!  if(O20<O2CRITSI) then
+!    PIE1 = PIE2SI*DPIE1SI**(O20/O2CRITSI)
+!  else
+!    PIE1 = PIE2SI*DPIE1SI
+!  endif
+!  PIE2 = PIE2SI
+!
+!! SILICA DISSOLUTION KINETICS
+!  FD2 = 1.0/(1.0+M2*PIE2)
+!  K3  = XKSI*PSI/(PSI+KMPSI)*FD2
+!  PF  = KADSA*SSI(SED_IWC)/(1.0+KADSA*SSI(SED_IWC))
+!  J2  = XKSI*PSI/(PSI+KMPSI)*CSISAT+FLX1WC*PF*sed_SA(SED_IWC) !org+SF_SA(SED_IWC)  ! SUSPENSION FEEDERS
+!!  CALL SEDTSFNL (SI1,SI2,SIT1,SIT2,SI1TM1,SIT2TM1)
+!  call sed_eq(SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!            & SI0,0.d0,j2,0.d0,k3)
+!!  if(dabs(SI1-rtmp)>1d-10) then
+!!    write(*,*)'SI: ',SI1,rtmp
+!!    stop
+!!  endif
+!  JSI = S*(SI1-SI0)
+!
+!! PHOSPHATE
+!  K0H1D = 0.0
+!  K0H1P = 0.0
+!  KMC1  = 0.0
+!  K1H1D = S
+!  K1H1P = 0.0
+!  K2H2D = 0.0
+!  K2H2P = 0.0
+!  J1    = S*PO40
+!  K3    = 0.0
+!  PF    = KADPO4*SSI(SED_IWC)/(1.0+KADPO4*SSI(SED_IWC))
+!  PIP   = PF*sed_PO4(SED_IWC)
+!  J2    = XJP+FLX1WC*PIP !org+ SF_PIP(SED_IWC)
+!
+!! SALINITY DEPENDENCE OF PIE1
+!  if(SAL5<=SALTSW) then
+!    DPIE1PO4=DPIE1PO4F
+!  else
+!    DPIE1PO4=DPIE1PO4S
+!  endif
+!
+!! OXYGEN DEPENDENCY OF PIE1
+!  if(O20<O2CRIT) then
+!    PIE1 = PIE2PO4*DPIE1PO4**(O20/O2CRIT)
+!  else
+!    PIE1 = PIE2PO4*DPIE1PO4
+!  endif
+!  PIE2 = PIE2PO4
+!!  CALL SEDTSFNL (PO41,PO42,PO4T1,PO4T2,PO41TM1,PO4T2TM1)
+!  call sed_eq(PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,s,KL12,W12,W2,H2,dtw, &
+!            & PO40,0.d0,j2,0.d0,0.d0)
+!!  if(dabs(PO41-rtmp)>1d-10) then
+!!    write(*,*)'PO4: ',PO41,rtmp
+!!    stop
+!!  endif
+!  JPO4 = S*(PO41-PO40)
+!
+!! ASSIGN FLUX-FLUX RESULTS TO WQM ARRAYS
+!  ITEMP = 10*TEMPD+1
+!  if(SAL5<=SALTND) then
+!    XAPP1NO3 = ZHTANO3F(ITEMP)
+!  else
+!    XAPP1NO3 = ZHTANO3S(ITEMP)
+!  endif
+!  XK2NO3 = ZHTA2NO3(ITEMP)*H2
+!  sed_BENDO(SED_IWC) = -SOD !org- SODSF(SED_IWC)          ! SUSPENSION FEEDERS
+!  MTVEL(SED_IWC) = SOD/O20
+!  sed_BENNH4(SED_IWC) = JNH4/1000.0 !org+ JNH4SF(SED_IWC)/1000.     ! SUSPENSION FEEDERS
+!  sed_BENNO3(SED_IWC) = JNO3/1000.0 
+!  BENPO4(SED_IWC) = JPO4/1000.0 !org+ JPO4SF(SED_IWC)/1000.     ! SUSPENSION FEEDERS
+!  BENDOC(SED_IWC) = 0.0
+!  sed_BENCOD(SED_IWC) = JHS+JCH4AQ
+!  BENCH4G(SED_IWC) = JCH4G 
+!  BENCH4A(SED_IWC) = JCH4AQ
+!  BENSA(SED_IWC)  = JSI/1000.0 !org+ JSASF(SED_IWC)/1000.      ! SUSPENSION FEEDERS
+!  BENDEN(SED_IWC) = (XAPP1NO3*XAPP1NO3*NO31/S+XK2NO3*NO32)/1000.0
+!
+!! FLUXES DUE TO SED_BURIAL OF PARTICULATES
+!  SED_BURIALN(SED_IWC) = (PON1+PON2+PON3+NO3T2+NH4T2)*W2
+!  SED_BURIALP(SED_IWC) = (POP1+POP2+POP3+PO4T2)*W2
+!  SED_BURIALC(SED_IWC) = (POC1+POC2+POC3)*W2
+!
+!! DIAGENESIS OF CARBON FORMS
+!  DIAGENC(SED_IWC) = XJC/1000.0
+!  !if(BALGAE_CALC) then
+!  if(iBalg==1) then
+!!   BENTHIC ALGAE ALGORITHMS START HERE        
+!!   CALCULATE MEAN LIGHT IN ALGAL MAT
+!
+!!   LITE(BB) = IATBOT(SED_IWC)*EXP(-KESED)/(KEBALG+1.0E-8)/BBM(BB)  & !YC
+!!           &  *(1. - EXP(-(KEBALG+1.0E-8)*BBM(BB)))
+!    BLITE(SED_IWC) = IATBOT(SED_IWC)*exp(-KESED)/(KEBALG+1.0E-8)/BBM(SED_IWC)  &
+!          &  *(1.0-exp(-(KEBALG+1.0E-8)*BBM(SED_IWC)))
+!        
+!!   TEMPERATURE EFFECTS
+!    if(sed_T(SED_IWC)<TMB) then 
+!      FTB = exp(-KTGB1*(sed_T(SED_IWC)-TMB)**2) 
+!    else
+!      FTB = exp(-KTGB2*(TMB-sed_T(SED_IWC))**2)
+!    endif
+!
+!!   LIGHT EFFECTS
+!    IK = PMB*FTB/ALPHB
+!    FIB(SED_IWC) = BLITE(SED_IWC)/SQRT(IK*IK+BLITE(SED_IWC)*BLITE(SED_IWC)+1.0E-8)
+!        
+!!   NUTRIENT LIMITATIONS
+!
+!!   COMPUTE AVAILABLE AMMONIUM AND NITRATE
+!    NH4AVL = sed_BENNH4(SED_IWC)*DLTS+sed_NH4(SED_IWC)*sed_BL(SED_IWC,3)
+!    NH4AVL = max(0.0,NH4AVL)
+!    NO3AVL = sed_BENNO3(SED_IWC)*DLTS+sed_NO3(SED_IWC)*sed_BL(SED_IWC,3)
+!    NO3AVL = max(0.0,NO3AVL)
+!
+!!   COMPUTE NITROGEN LIMITATION 
+!    NLB(SED_IWC) = (NH4AVL+NO3AVL)/(KHNB+NH4AVL+NO3AVL)
+!
+!!   COMPUTE NITROGEN PREFERENCE
+!    PRNB = NH4AVL*NO3AVL/((KHNB+NH4AVL)*(KHNB+NO3AVL))   &
+!         & +NH4AVL*KHNB/((1.E-30+NH4AVL+NO3AVL)*(KHNB+NO3AVL))
+!
+!!   PHOSPHORUS AVAILABLE FOR ALGAL GROWTH
+!    DF     = 1.0/(1.0+KADPO4*SSI(SED_IWC))
+!    PO4AVL = DF*sed_PO4(SED_IWC)*sed_BL(SED_IWC,3)
+!    PO4AVL = PO4AVL+BENPO4(SED_IWC)*DLTS
+!    PO4AVL = max(0.0,PO4AVL)
+!    PLB(SED_IWC) = PO4AVL/(KHPB+PO4AVL)
+!
+!!   BASE METABOLISM
+!
+!!   IF BIOMASS IS LESS THAN ALLOWED MINIMUM, SET METABOLISM TO ZERO
+!    if(BBM(SED_IWC)>BALGMIN) then
+!      BMB(SED_IWC) = BMRB*exp(KTBB*(sed_T(SED_IWC)-TRB))
+!    else
+!      BMB(SED_IWC) = 0.0
+!    endif
+!
+!!   PRODUCTION
+!    PB(SED_IWC) = PMB*FTB*min(FIB(SED_IWC),NLB(SED_IWC),PLB(SED_IWC))/CCHLB !changed by YC amin1 to min
+!
+!!   NET PRIMARY PRODUCTION
+!    NPPB(SED_IWC) = (PB(SED_IWC)-BMB(SED_IWC))*BBM(SED_IWC)                     
+! 
+!!   PREDATION
+!
+!!   IF BIOMASS IS LESS THAN ALLOWED MINIMUM, SET PREDATION TO ZERO
+!    if(BBM(SED_IWC)>BALGMIN) then
+!      PRB(SED_IWC) = BBM(SED_IWC)*BPRB*exp(KTBB*(sed_T(SED_IWC)-TRB))
+!    else
+!      PRB(SED_IWC) = 0.0
+!    endif
+!
+!!   ADJUST PREDATION SO BIOMASS DOESN'T GO NEGATIVE
+!    PRB(SED_IWC) = min(PRB(SED_IWC),PB(SED_IWC)-BMB(SED_IWC)+0.99/DLTS)              
+!
+!!   COMPUTE EFFECTS OF ALGAL ACTIVITY ON BENTHIC FLUX
+!    BANH4(SED_IWC) = ANCB*(BMB(SED_IWC)*FNIB-PRNB*PB(SED_IWC)+PRB(SED_IWC)*FNIB)*BBM(SED_IWC)
+!    BANO3(SED_IWC) = -(1.0-PRNB)*PB(SED_IWC)*ANCB*BBM(SED_IWC)
+!    BAPO4(SED_IWC) = APCB*(BMB(SED_IWC)*FPIB-PB(SED_IWC)+PRB(SED_IWC)*FPIB)*BBM(SED_IWC)
+!    FRDOB          = 1.0-KHRB/(sed_DO(SED_IWC)+KHRB)
+!    BADO(SED_IWC)  = ((1.3-0.3*PRNB)*PB(SED_IWC)-FRDOB*BMB(SED_IWC))* AOCR*BBM(SED_IWC)
+!    BADOC(SED_IWC) = (1.0-FRDOB)*BMB(SED_IWC)*BBM(SED_IWC)
+!     
+!!   TEMPORARY FIX UP WHEN BENTHIC ALGAE ARE RUN WITHOUT DIAGENESIS
+!    sed_BENNH4(SED_IWC) = sed_BENNH4(SED_IWC)+BANH4(SED_IWC)
+!    sed_BENNO3(SED_IWC) = sed_BENNO3(SED_IWC)+BANO3(SED_IWC)
+!    BENPO4(SED_IWC)     = BENPO4(SED_IWC)+BAPO4(SED_IWC)
+!    BENDOC(SED_IWC)     = BENDOC(SED_IWC)+BADOC(SED_IWC)
+!    sed_BENDO(SED_IWC)  = sed_BENDO(SED_IWC)+BADO(SED_IWC)
+!
+!!   COMPUTE EFFECTS OF ALGAL ACTIVITY ON ORGANIC PARTICULATES (MG/M**3)
+!    BAPOC(SED_IWC) = PRB(SED_IWC)*BBM(SED_IWC)
+!    BAPON(SED_IWC) = ANCB*(1.0-FNIB)*(BMB(SED_IWC)+PRB(SED_IWC))*BBM(SED_IWC)
+!    BAPOP(SED_IWC) = APCB*(1.0-FPIB)*(BMB(SED_IWC)+PRB(SED_IWC))*BBM(SED_IWC)
+!    POC1 = POC1+1000.0*BAPOC(SED_IWC)*FRCPHB(1)*DLTS/H2
+!    POC2 = POC2+1000.0*BAPOC(SED_IWC)*FRCPHB(2)*DLTS/H2
+!    POC3 = POC3+1000.0*BAPOC(SED_IWC)*FRCPHB(3)*DLTS/H2
+!    PON1 = PON1+1000.0*BAPON(SED_IWC)*FRNPHB(1)*DLTS/H2
+!    PON2 = PON2+1000.0*BAPON(SED_IWC)*FRNPHB(2)*DLTS/H2
+!    PON3 = PON3+1000.0*BAPON(SED_IWC)*FRNPHB(3)*DLTS/H2
+!    POP1 = POP1+1000.0*BAPOP(SED_IWC)*FRPPHB(1)*DLTS/H2
+!    POP2 = POP2+1000.0*BAPOP(SED_IWC)*FRPPHB(2)*DLTS/H2
+!    POP3 = POP3+1000.0*BAPOP(SED_IWC)*FRPPHB(3)*DLTS/H2
+!
+!!   ACCUMULATE FLUXES FOR STEADY-STATE COMPUTATION
+!    if(iSteady==1) then        
+!       AG3CFL(SED_IWC) = AG3CFL(SED_IWC)+1000. * PRB(SED_IWC)*FRCPHB(3)*BBM(SED_IWC)*DLTS
+!       AG3NFL(SED_IWC) = AG3NFL(SED_IWC)+1000. * PRB(SED_IWC)*FRNPHB(3)*ANCB*BBM(SED_IWC)*DLTS
+!       AG3PFL(SED_IWC) = AG3PFL(SED_IWC)+1000. * PRB(SED_IWC)*FRPPHB(3)*APCB*BBM(SED_IWC)*DLTS     
+!       AzA1=AG3CFL(SED_IWC)  !zhujz for output
+!    endif
+!        
+!!   CHANGE IN BENTHIC ALGAL BIOMASS
+!    BBM(SED_IWC) = BBM(SED_IWC)*(1.0+DLTS*(PB(SED_IWC)-BMB(SED_IWC)-PRB(SED_IWC)))
+!
+!  endif
+!
+!! TEMPORARY FIX UP TO EXAMINE EFFECT OF SAV ON SEDIMENTS
+!! 66666   CONTINUE
+!
+!! TOTAL SEDIMENT NUTRIENT MASS
+!  SEDMN = SEDMN+(PON1+PON2+PON3+NH4T2+NO3T2)*SFA(SED_IWC)*H2/1.E6
+!  SEDMP = SEDMP+(POP1+POP2+POP3+PO4T2)*SFA(SED_IWC)*H2/1.E6
+!  SEDMC = SEDMC+(POC1+POC2+POC3)*SFA(SED_IWC)*H2/1.E6
+!
+!! REPLACE THE T MINUS 1 CONCENTRATIONS
+!  NH41TM1S(SED_IWC)  = NH41
+!  NO31TM1S(SED_IWC)  = NO31
+!  HS1TM1S(SED_IWC)   = HS1
+!  SI1TM1S(SED_IWC)   = SI1
+!  PO41TM1S(SED_IWC)  = PO41
+!  BENSTR1S(SED_IWC)  = BENSTR
+!  NH4T2TM1S(SED_IWC) = NH4T2
+!  NO3T2TM1S(SED_IWC) = NO3T2
+!  HST2TM1S(SED_IWC)  = HST2
+!  SIT2TM1S(SED_IWC)  = SIT2
+!  PO4T2TM1S(SED_IWC) = PO4T2
+!  PON1TM1S(SED_IWC)  = PON1
+!  PON2TM1S(SED_IWC)  = PON2
+!  PON3TM1S(SED_IWC)  = PON3
+!  POC1TM1S(SED_IWC)  = POC1
+!  POC2TM1S(SED_IWC)  = POC2
+!  POC3TM1S(SED_IWC)  = POC3
+!  POP1TM1S(SED_IWC)  = POP1
+!  POP2TM1S(SED_IWC)  = POP2
+!  POP3TM1S(SED_IWC)  = POP3
+!  PSITM1S(SED_IWC)   = PSI
+!  BFORMAXS(SED_IWC)  = BFORMAX
+!  ISWBENS(SED_IWC)   = ISWBEN
+!  DFEEDM1S(SED_IWC)  = DFEED
+!  CH4T2TM1S(SED_IWC) = CH4T2               ! CH4
+!  CH41TM1S(SED_IWC)  = CH41                ! CH4
+!  SO4T2TM1S(SED_IWC) = SO4T2               ! CH4
+!
+!! ASSIGN CONCENTRATIONS TO PLOT VARIABLES
+!  CPON(SED_IWC,1) = PON1TM1S(SED_IWC)
+!  CPON(SED_IWC,2) = PON2TM1S(SED_IWC)
+!  CPON(SED_IWC,3) = PON3TM1S(SED_IWC)
+!  CNH4(SED_IWC)   = NH4T2TM1S(SED_IWC)
+!  CNO3(SED_IWC)   = NO3T2TM1S(SED_IWC)
+!  CPOP(SED_IWC,1) = POP1TM1S(SED_IWC)
+!  CPOP(SED_IWC,2) = POP2TM1S(SED_IWC)
+!  CPOP(SED_IWC,3) = POP3TM1S(SED_IWC)
+!  CPIP(SED_IWC)   = PO4T2TM1S(SED_IWC)
+!  CPOC(SED_IWC,1) = POC1TM1S(SED_IWC)
+!  CPOC(SED_IWC,2) = POC2TM1S(SED_IWC)
+!  CPOC(SED_IWC,3) = POC3TM1S(SED_IWC)
+!  CPOS(SED_IWC)   = PSITM1S(SED_IWC)
+!  CCH4(SED_IWC)   = CH4T2TM1S(SED_IWC)
+!  CSO4(SED_IWC)   = SO4T2TM1S(SED_IWC)
+!
+!! TAKE TEMPERATURE INTEGRATION STEP
+!  CTEMP(SED_IWC) = CTEMP(SED_IWC)+DLT*DIFFT/HSED(SED_IWC)/HSED(SED_IWC)*(sed_T(SED_IWC)-CTEMP(SED_IWC)) !YC
+!
+!! if(SED_IWC.eq.1) then
+!!   write(998,*) jday,SED_IWC,NH41TM1,NO31TM1,HS1TM1,SI1TM1,PO41TM1,BENSTR1,NH4T2TM1,NO3T2TM1,HST2TM1, &
+!!        & SIT2TM1,PO4T2TM1,PON1TM1,PON2TM1,PON3TM1,POC1,POC2TM1,POC3TM1,POP1TM1,POP2TM1,POP3TM1,PSITM1, &
+!!        & ROOTDO,DFEEDM1,CH4T2TM1,CH41TM1,SO4T2TM1 
+!!   write(998,*) jday,SED_IWC,zd(SED_IWC),IDINT(ITEMP),XAPPNH4,XAPP1NO3,XAPPD1,XAPPP1,XK2NO3,XKSI,XAPPCH4,&
+!!        &KL12NOM,W12NOM,DD,DP,POC1,H2
+!!   write(997,*) jday,SED_IWC,sed_BENNO3(SED_IWC),sed_NO3(SED_IWC),NO30
+!!   write(998,*) jday,SED_IWC,JHS,JCH4AQ
+!! endif
+!
+!! OUTPUT FOR INITIAL VALUE BY Zhujz
+!  ACTEMP = CTEMP(SED_IWC)
+!  do JG=1, 3
+!    ACPOP(JG)  =   CPOP(SED_IWC,JG)  
+!    ACPON(JG)  =   CPON(SED_IWC,JG)  
+!    ACPOC(JG)  =   CPOC(SED_IWC,JG)  
+!  enddo   
+!  ACPOS  = CPOS(SED_IWC)       
+!  APO4T2 = PO4T2TM1S(SED_IWC)  
+!  ANH4T2 = NH4T2TM1S(SED_IWC)  
+!  ANO3T2 = NO3T2TM1S(SED_IWC)  
+!  AHST2  = HST2TM1S(SED_IWC)   
+!  ACH4T2 = CH4T2TM1S(SED_IWC)  
+!  ACH41T = CH41TM1S(SED_IWC)   
+!  ASO4T2 = SO4T2TM1S(SED_IWC)  
+!  ASIT2  = SIT2TM1S(SED_IWC)   
+!  ABENST = BENSTR1S(SED_IWC)   
+!  ABBM   = BBM(SED_IWC)        
+!
+!! if(SED_IWC.eq.1) then
+!!   write(998,*) jday,CTEMP(SED_IWC),CPOP(SED_IWC,1),CPOP(SED_IWC,2),CPOP(SED_IWC,3),CPON(SED_IWC,1),&
+!!        & CPON(SED_IWC,2),CPON(SED_IWC,3),CPOC(SED_IWC,1),CPOC(SED_IWC,2),CPOC(SED_IWC,3),&
+!!        & CPOS(SED_IWC),PO4T2TM1S(SED_IWC),NH4T2TM1S(SED_IWC),NO3T2TM1S(SED_IWC),HST2TM1S(SED_IWC), &
+!!        & CH4T2TM1S(SED_IWC),CH41TM1S(SED_IWC),SO4T2TM1S(SED_IWC),SIT2TM1S(SED_IWC),BENSTR1S(SED_IWC),BBM(SED_IWC)
+!!   write(998,*) jday,ACTEMP,ACPOP,ACPON,ACPOC,ACPOS,APO4T2,ANH4T2,ANO3T2,AHST2,ACH4T2,ACH41T,ASO4T2,ASIT2,ABENST,ABBM
+!! endif
+!
+!  return
+!end
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                        F U N C T I O N   Z B R E N T                       !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!function SED_ZBRENT(IERR)
+!  implicit none
+!  integer :: I
+!  integer, INTENT(inout) :: IERR
+!  integer, parameter :: IMAX=100
+!  real(kind=8), parameter :: EPS=3.E-8
+!  real(kind=8), parameter :: TOL=1.E-5
+!  real(kind=8), parameter :: SODMIN=1.E-4
+!  real(kind=8), parameter :: SODMAX = 100.
+!  real(kind=8) :: A,B,C,D,E,FA,FB,FC,TOL1,XM,S,Q,P,R
+!  real(kind=8) :: SED_ZBRENT
+!  real(kind=8), external :: SEDF
+!! PARAMETER (IMAX=100,EPS=3.E-8,TOL=1.E-5,SODMIN=1.E-4)
+!! SODMAX = 100.
+!
+!! INITIALIZE UPPER AND LOWER LIMITS FOR SOLUTION
+!  IERR = 0
+!  A    = SODMIN
+!  B    = SODMAX
+!  FA   = SEDF(A)
+!  FB   = SEDF(B)
+!
+!! ROOT MUST BRACKET ZBRENT
+!  if(FB*FA>0.0) then
+!    IERR = 1
+!    return
+!  endif
+!  FC = FB
+!  do I=1,IMAX
+!    if(FB*FC>0.0) then
+!      C  = A
+!      FC = FA
+!      D  = B-A
+!      E  = D
+!    endif
+!    if(ABS(FC)<ABS(FB)) then
+!      A  = B
+!      B  = C
+!      C  = A
+!      FA = FB
+!      FB = FC
+!      FC = FA
+!    endif
+!    TOL1 = 2.0*EPS*ABS(B)+0.5*TOL
+!    XM   = 0.5*(C-B)
+!    if(ABS(XM)<=TOL1.or.FB==0.0) then
+!      SED_ZBRENT = B
+!      return
+!    endif 
+!    if(ABS(E)>=TOL1.and.ABS(FA)>ABS(FB)) then
+!      S = FB/FA
+!      if(A==C) then 
+!        P = 2.0*XM*S
+!        Q = 1.0-S
+!      else
+!        Q = FA/FC
+!        R = FB/FC
+!        P = S*(2.0*XM*Q*(Q-R)-(B-A)*(R-1.0))
+!        Q = (Q-1.0)*(R-1.0)*(S-1.0)
+!      endif
+!      if(P>0.0) Q = -Q
+!      P = abs(P)
+!      if(2.0*P<min(3.0*XM*Q-abs(TOL1*Q),abs(E*Q))) then 
+!        E = D
+!        D = P/Q
+!      else
+!        D = XM
+!        E = D
+!      endif
+!    else
+!      D = XM
+!      E = D
+!    endif
+!    A  = B
+!    FA = FB
+!    if(abs(D)>TOL1) then
+!       B = B+D
+!    else
+!       B = B+SIGN(TOL1,XM)
+!    endif
+!    FB = SEDF(B)
+!  enddo
+!  IERR = 2
+!  SED_ZBRENT = B
+!
+!  return
+!end function SED_ZBRENT
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                    S U B R O U T I N E   S E D T S F N L                   !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!subroutine SEDTSFNL(C1S,C2S,CT1S,CT2S,C1TM1S,CT2TM1S)
+!  use icm_sed_mod
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!  save
+!  real(kind=8) :: C1S,C2S,CT1S,CT2S,C1TM1S,CT2TM1S
+!  real(kind=8) :: FD1,FP1,FP2,F12,F21
+!  real(kind=8) :: XK0,XK1,XK2,A11,A21,A12,B_1,A22,B_2,DELTA
+!  
+!
+!! INITIALIZE CONSTANTS
+!  FD1 = 1.0/(1.0+M1*PIE1)
+!  FP1 = M1*PIE1/(1.0+M1*PIE1)
+!  FD2 = 1.0/(1.0+M2*PIE2/
+!  FP2 = M2*PIE2/(1.0+M2*PIE2)
+!  F12 = W12*FP1+KL12*FD1
+!  F21 = W12*FP2+KL12*FD2
+!
+!! EVALUATE THE MM TERM AT TIME LEVEL T-1
+!  if(KMC1/=0.0) then
+!    XK0 = (K0H1D*FD1+K0H1P*FP1)/(KMC1+C1TM1S)
+!  else
+!    XK0 = 0.0
+!  endif
+!  XK1 = XK0+K1H1D*FD1+K1H1P*FP1
+!  XK2 = K2H2D*FD2+K2H2P*FP2
+!  A11 = -F12-XK1-W2
+!  A21 = F12+W2
+!  A12 = F21
+!  B_1 = -J1
+!  A22 = -F21-XK2-W2-K3-H2/DLTS
+!  B_2 = -J2-H2/DLTS*CT2TM1S
+!  
+!! SOLVE THE 2X2 SET OF LINEAR EQUATIONS
+!  DELTA = A11*A22-A12*A21
+!  if(DELTA==0.0) then
+!    write(12,*) 'ICM: TWOD IS SINGULAR: A11,A12,A21,A22'
+!    write(12,*) A11,A12,A21,A22
+!    write(12,*) K0H1D,K0H1P,KMC1,C1TM1S
+!    call parallel_abort('ICM (3)')
+!  endif
+!
+!! ASSIGN RESULTS
+!  CT1S = (B_1*A22-B_2*A12)/DELTA
+!  CT2S = (B_2*A11-B_1*A21)/DELTA
+!  C1S  = FD1*CT1S
+!  C2S  = FD2*CT2S
+!
+!  return
+!end subroutine SEDTSFNL
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                    S U B R O U T I N E   S E D S S F N L                   !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!subroutine SEDSSFNL(C1,C2,C2AV,CT1,CT2,CT2AV,C1TM1,CT2TM1,ITYPE)
+!  implicit none
+!  save
+!  integer :: ITYPE
+!  real(kind=8) :: C1,C2,C2AV,CT1,CT2,CT2AV,C1TM1,CT2TM1
+!      
+!! THIS SUBROUTINE TRANSLATES BETWEEN SEDTSFNL AND SEDF
+!! THIS IS CALLED BY SOME SECTIONS OF THE NEW CODE
+!
+!  call SEDTSFNL (C1,C2,CT1,CT2,C1TM1,CT2TM1)
+!  C2AV  = C2
+!  CT2AV = CT2
+!
+!  return
+!end subroutine SEDSSFNL
+
+!!---------------------------------------------------------------------C
+!subroutine sed_readtest
+!!---------------------------------------------------------------------C
+!! subroutine for seiment input test   !added by YC
+!!---------------------------------------------------------------------
+!
+!!----------------------------------------------------------------------
+!!org  CHARACTER FRNAME(14)*24, BALC*3, SPVARS*8, SPVARLR*8, SPVARB*8,      &
+!!org      &     PRINTS*8, PRINTLR*8, PRINTB*8
+!!org  DATA FRNAME                                                          & 
+!!org      &     /'GROUP 1 ALGAL PHOSPHORUS', 'GROUP 2 ALGAL PHOSPHORUS',   &
+!!org      &      'GROUP 3 ALGAL PHOSPHORUS', 'DETRITAL ORG PHOSPHORUS ',   &
+!!org      &      'GROUP 1 ALGAL NITROGEN  ', 'GROUP 2 ALGAL NITROGEN  ',   &
+!!org      &      'GROUP 3 ALGAL NITROGEN  ', 'DETRITAL ORG NITROGEN   ',   &
+!!org      &      'GROUP 1 ALGAL CARBON    ', 'GROUP 2 ALGAL CARBON    ',   &
+!!org      &      'GROUP 3 ALGAL CARBON    ', 'BENTHIC ALGAL CARBON    ',   &
+!!org      &      'BENTHIC ALGAL NITROGEN  ', 'BENTHIC ALGAL PHOSPHORUS'/
+!!---------------------------------------------------------------------C
+!  use icm_sed_mod
+!  use schism_msgp, only : myrank,parallel_abort
+!  implicit none
+!
+!  integer :: JG
+!
+!  call SED_READ
+!  if(myrank==0) then
+!    write(*,*)            HSEDALL, INTSEDC
+!    write(*,'(30F12.8)')  DIFFT
+!    write(*,'(30F10.4)')  SALTSW, SALTND
+!    write(*,'(30F10.4)')  FRPPH1
+!    write(*,'(30F10.4)')  FRPPH2
+!    write(*,'(30F10.4)')  FRPPH3
+!    write(*,'(30F10.4)')  FRPPHB    
+!    write(*,'(30F10.4)')  FRNPH1
+!    write(*,'(30F10.4)')  FRNPH2
+!    write(*,'(30F10.4)')  FRNPH3
+!    write(*,'(30F10.4)')  FRNPHB
+!    write(*,'(30F10.4)')  FRCPH1
+!    write(*,'(30F10.4)')  FRCPH2
+!    write(*,'(30F10.4)')  FRCPH3
+!    write(*,'(30F10.4)')  FRCPHB
+!    write(*,'(30F10.4)') (KPDIAG(JG),JG=1,3),(DPTHTA(JG),JG=1,3)
+!    write(*,'(30F10.4)') (KNDIAG(JG),JG=1,3),(DNTHTA(JG),JG=1,3)
+!    write(*,'(30F10.4)') (KCDIAG(JG),JG=1,3),(DCTHTA(JG),JG=1,3)
+!    write(*,'(30F10.4)')  KSI,THTASI
+!    write(*,'(30F10.4)')  M1,M2,THTADP,THTADD
+!    write(*,'(30F10.4)')  KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2
+!    write(*,'(30F10.4)')  KAPPNO3F,KAPPNO3S,K2NO3,THTANO3
+!    write(*,'(30F10.4)')  KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2
+!    write(*,*)            CSISAT,DPIE1SI,PIE2SI,KMPSI
+!    write(*,'(30F10.4)')  O2CRITSI,JSIDETR
+!    write(*,'(30F10.4)')  DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT,KMO2DP
+!    write(*,*)            TEMPBEN,KBENSTR,KLBNTH,DPMIN
+!    write(*,'(30F10.4)')  KAPPCH4,THTACH4,KMCH4O2,KMSO4
+!      
+!!   DEPOSIT FEEDERS   
+!    write(*,*) XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA 
+!    write(*,*) AMCN,AMCP,AA1,AA2,XKMG1,XKMG2 
+!    write(*,*) XKBO2,TDD,DOLOW,DFDOH,DFDOQ
+!
+!!   BENTHIC ALGAE 
+!    write(*,*)            BALC
+!    write(*,'(30F10.4)')  PMB, ANCB, APCB, KTGB1, KTGB2, TMB
+!    write(*,'(30F10.4)')  ALPHB, CCHLB, KESED, KEBALG, KHNB, KHPB, KHRB
+!    write(*,'(30F10.4)')  BMRB, BPRB, KTBB, TRB, BALGMIN
+!    write(*,'(30F10.4)')  FNIB, FPIB
+!
+!!   NET SETTLING RATES
+!    write(*,'(30F10.4)') WSSBNET(1),WSLBNET(1),WSRBNET(1),WS1BNET(1),WS2BNET(1),WS3BNET(1),WSUBNET(1)
+!
+!!   SED_BURIAL AND MIXING RATES
+!    write(*,'(30F10.4)') VSED(1),VPMIX(1),VDMIX(1)
+!
+!!   SPLITS OF REFRACTORY WATER COLUMN INTO G2, G3 SEDIMENTS 
+!    write(*,'(30F10.4)') FRPOP(1,2),FRPOP(1,3),FRPON(1,2),FRPON(1,3),FRPOC(1,2),FRPOC(1,3)
+!    write(*,'(30F8.2)')  CTEMPI
+!    write(*,'(30F12.4)') (CPOPI(JG),JG=1,3)
+!    write(*,'(30F12.4)') (CPONI(JG),JG=1,3)
+!    write(*,'(30F12.4)') (CPOCI(JG),JG=1,3)
+!    write(*,'(30F12.4)') CPOSI, PO4T2I, NH4T2I, NO3T2I
+!    write(*,'(30F12.4)') HST2I, CH4T2I, CH41TI, SO4T2I, SIT2I, BENSTI 
+!    write(*,'(30F12.4)') BBMI
+!    write(*,*) SETTLING
+!
+!!   test by YC
+!    write(*,*) sed_NBBA,sed_NBB
+!    write(*,*) DLT,Jday
+!    write(*,'(30F12.4)') ANC1,ANC2,ANC3,APC1,APC2,APC3
+!    write(*,*) SED_T(1),SED_SALT(1)
+!  endif  !myrank
+!
+!  return
+!end 
+!
+!!---------------------------------------------------------------------C
+!subroutine SED_READ
+!!---------------------------------------------------------------------C
+!! subroutine for reading sediment input files   !added by YC
+!!---------------------------------------------------------------------C
+!  use icm_sed_mod
+!  use schism_glbl, only : ihot
+!  use schism_msgp, only : myrank,parallel_abort
+!  use icm_mod, only : ACTEMP,ACPOP,ACPON,ACPOC,ACPOS,APO4T2,ANH4T2,ANO3T2,&
+!                    & AHST2,ACH4T2,ACH41T,ASO4T2,ASIT2,ABENST,ABBM,AzA1,AzA2,AzA3   
+!  implicit none
+!  real :: Tday  
+!  integer :: I,JG,BB,JT
+!  integer :: Tmyrank,k 
+!  character(len=3) :: nam   
+!
+!!org  CHARACTER FRNAME(14)*24, BALC*3, SPVARS*8, SPVARLR*8, SPVARB*8,      &
+!!org      &     PRINTS*8, PRINTLR*8, PRINTB*8      
+!!!!! DATA DECLARATIONS
+!!org  DATA FRNAME                                                     & 
+!!org      &     /'GROUP 1 ALGAL PHOSPHORUS', 'GROUP 2 ALGAL PHOSPHORUS',   & !org      &      'GROUP 3 ALGAL PHOSPHORUS', 'DETRITAL ORG PHOSPHORUS ',   &
+!!org      &      'GROUP 1 ALGAL NITROGEN  ', 'GROUP 2 ALGAL NITROGEN  ',   &
+!!org      &      'GROUP 3 ALGAL NITROGEN  ', 'DETRITAL ORG NITROGEN   ',   &
+!!org      &      'GROUP 1 ALGAL CARBON    ', 'GROUP 2 ALGAL CARBON    ',   &
+!!org      &      'GROUP 3 ALGAL CARBON    ', 'BENTHIC ALGAL CARBON    ',   &
+!!org      &      'BENTHIC ALGAL NITROGEN  ', 'BENTHIC ALGAL PHOSPHORUS'/
+!!org  DATA SSNAME /'SEDIMENT TEMPERATURE', 'SEDIMENT POP        ',&
+!!org      &        'SEDIMENT PON        ', 'SEDIMENT POC        ',&
+!!org      &        'SEDIMENT PBS        ', 'SEDIMENT PO4        ',&
+!!org      &        'SEDIMENT NH4        ', 'SEDIMENT NO3        ',&
+!!org      &        'SEDIMENT HS         ', 'SEDIMENT CH4        ',&
+!!org      &        'SEDIMENT CH4        ', 'SEDIMENT SO4        ',&
+!!org      &        'SEDIMENT DSIL       ', 'BENTHIC STRESS      ',&
+!!org      &        'BENTHIC ALGAE       ', 'DEPOSIT FEEDERS     ',&
+!!org      &        'SUSPENSION FEEDERS  '/
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                                  INPUTS                                    !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!  open(32,file='icm_sed_old.in', status='old')
+!  do i=1,4
+!    read(32,*)
+!  enddo
+!      
+!  read(32,*)  HSEDALL, INTSEDC
+!  read(32,*)  DIFFT
+!  read(32,*)  SALTSW, SALTND
+!  read(32,*) (FRPPH1(JG),JG=1,3)
+!  read(32,*) (FRPPH2(JG),JG=1,3)
+!  read(32,*) (FRPPH3(JG),JG=1,3)
+!  read(32,*) (FRPPHB(JG),JG=1,3)   
+!  read(32,*) (FRNPH1(JG),JG=1,3)
+!  read(32,*) (FRNPH2(JG),JG=1,3)
+!  read(32,*) (FRNPH3(JG),JG=1,3)
+!  read(32,*) (FRNPHB(JG),JG=1,3)
+!  read(32,*) (FRCPH1(JG),JG=1,3)
+!  read(32,*) (FRCPH2(JG),JG=1,3)
+!  read(32,*) (FRCPH3(JG),JG=1,3)
+!  read(32,*) (FRCPHB(JG),JG=1,3)
+!  read(32,*) (KPDIAG(JG),DPTHTA(JG),JG=1,3)  !YC82709
+!  read(32,*) (KNDIAG(JG),DNTHTA(JG),JG=1,3)  !YC82709
+!  read(32,*) (KCDIAG(JG),DCTHTA(JG),JG=1,3)  !YC82709
+!  read(32,*)  KSI,THTASI
+!
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) M1,M2,THTADP,THTADD
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) KAPPNO3F,KAPPNO3S,K2NO3,THTANO3
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) CSISAT,DPIE1SI,PIE2SI,KMPSI
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) O2CRITSI,JSIDETR
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT,KMO2DP
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) TEMPBEN,KBENSTR,KLBNTH,DPMIN
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) KAPPCH4,THTACH4,KMCH4O2,KMSO4
+!      
+!! DEPOSIT FEEDERS
+!  read(32,*)
+!  read(32,*)    
+!  read(32,*) XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA
+!  read(32,*)
+!  read(32,*) 
+!  read(32,*) AMCN,AMCP,AA1,AA2,XKMG1,XKMG2
+!  read(32,*)
+!  read(32,*) 
+!  read(32,*) XKBO2,TDD,DOLOW,DFDOH,DFDOQ
+!
+!! OPTION TO TURN OFF DEPOSIT FEEDERS
+!  if(.NOT.DEPFEED) then
+!    ING0=0.0
+!    R=0.0
+!    BETA=0.0
+!  endif
+!
+!! BENTHIC ALGAE 
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) BALC
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) PMB, ANCB, APCB, KTGB1, KTGB2, TMB
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) ALPHB, CCHLB, KESED, KEBALG, KHNB, KHPB, KHRB
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) BMRB, BPRB, KTBB, TRB, BALGMIN
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) FNIB, FPIB
+!
+!! NET SETTLING RATES
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) SPVARS,PRINTS
+!  if(SPVARS .eq. 'CONSTANT') then 
+!    read(32,*)
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) WSSBNET(1),WSLBNET(1),WSRBNET(1),WS1BNET(1),WS2BNET(1),WS3BNET(1),WSUBNET(1)
+!    do BB=2,SED_NBBA         !!!YCtest09082009  BB=2 change to 1
+!       WSSBNET(BB)=WSSBNET(1)
+!       WSLBNET(BB)=WSLBNET(1)
+!       WSRBNET(BB)=WSRBNET(1)
+!       WS1BNET(BB)=WS1BNET(1)
+!       WS2BNET(BB)=WS2BNET(1)
+!       WS3BNET(BB)=WS3BNET(1)
+!       WSUBNET(BB)=WSUBNET(1)
+!    enddo
+!  else 
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) 
+!    read(32,*) (WSSBNET(BB),WSLBNET(BB),WSRBNET(BB),WS1BNET(BB),WS2BNET(BB),WS3BNET(BB),WSUBNET(BB),BB=1,SED_NBB)
+!  endif 
+!
+!! SED_BURIAL AND MIXING RATES
+!  read(32,*)
+!  read(32,*)
+!  read(32,*)  SPVARB,PRINTB
+!  if(SPVARB .eq. 'CONSTANT') then 
+!    read(32,*)
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) VSED(1),VPMIX(1),VDMIX(1)
+!    do BB=2,SED_NBBA      !!!YCtest09082009  BB=2 change to 1
+!      VSED(BB)=VSED(1)
+!      VPMIX(BB)=VPMIX(1)
+!      VDMIX(BB)=VDMIX(1)
+!    enddo
+!  else
+!    read(32,*)
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) (VSED(BB),VPMIX(BB),VDMIX(BB),BB=1,SED_NBB)
+!  endif
+!
+!! SPLITS OF REFRACTORY WATER COLUMN INTO G2, G3 SEDIMENTS 
+!  read(32,*)
+!  read(32,*)
+!  read(32,*)  SPVARLR,PRINTLR
+!  if(SPVARLR .EQ. 'CONSTANT') then 
+!    read(32,*)
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) FRPOP(1,2),FRPOP(1,3),FRPON(1,2),FRPON(1,3),FRPOC(1,2),FRPOC(1,3)
+!    do BB=2,SED_NBBA     !!!YCtest09082009  BB=2 change to 1
+!      FRPOP(BB,2)=FRPOP(1,2)
+!      FRPOP(BB,3)=FRPOP(1,3)
+!      FRPON(BB,2)=FRPON(1,2)
+!      FRPON(BB,3)=FRPON(1,3)
+!      FRPOC(BB,2)=FRPOC(1,2)
+!      FRPOC(BB,3)=FRPOC(1,3)
+!    enddo
+!  else    
+!    read(32,*)
+!    read(32,*)
+!    read(32,*)
+!    read(32,*) (FRPOP(BB,2),FRPOP(BB,3),FRPON(BB,2),FRPON(BB,3),FRPOC(BB,2),FRPOC(BB,3),BB=1,SED_NBB)
+!  endif
+!
+!  if(ihot==0) then !cold start
+!  read(32,*) !SPVARLR
+!  read(32,*)
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) CTEMPI
+!
+!  read(32,*)
+!  read(32,*)
+!  read(32,*) (CPOPI(JG),JG=1,3)
+!
+!  read(32,*) 
+!  read(32,*) 
+!  read(32,*) (CPONI(JG),JG=1,3)
+!
+!  read(32,*) 
+!  read(32,*) 
+!  read(32,*) (CPOCI(JG),JG=1,3)
+!
+!  read(32,*) 
+!  read(32,*) 
+!  read(32,*) CPOSI,PO4T2I,NH4T2I,NO3T2I  
+!
+!  read(32,*) 
+!  read(32,*) 
+!  read(32,*) HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI
+!
+!  read(32,*) 
+!  read(32,*) 
+!  read(32,*) BBMI 
+!  
+!  read(32,*) 
+!  read(32,*)
+!  read(32,*) STLC
+!  if(STLC==1) SETTLING=1
+!    BALGAE_CALC = BALC.eq.'ON'
+!
+!!   INITIIALIZE THE STATE VARIABLE USING THE INITIAL CONDITION           
+!    do BB=1,SED_NBBA
+!      CTEMP(BB) = CTEMPI
+!      do JG=1,3
+!        CPOP(BB,JG) = CPOPI(JG)
+!        CPON(BB,JG) = CPONI(JG)
+!        CPOC(BB,JG) = CPOCI(JG)
+!      enddo
+!      BBM(BB)       = BBMI !benthic algae
+!      CPOS(BB)      = CPOSI
+!      PO4T2TM1S(BB) = PO4T2I
+!      NH4T2TM1S(BB) = NH4T2I
+!      NO3T2TM1S(BB) = NO3T2I
+!      HST2TM1S(BB)  = HST2I
+!      CH4T2TM1S(BB) = CH4T2I
+!      CH41TM1S(BB)  = CH41TI
+!      SO4T2TM1S(BB) = SO4T2I
+!      SIT2TM1S(BB)  = SIT2I
+!      BENSTR1S(BB)  = BENSTI
+!    enddo
+!  else ! hostart
+!    SETTLING=1
+!    BALGAE_CALC = BALC.eq.'ON'   !ZG 
+!  endif !cold/hotstart            
+!  !if(BALGAE_CALC) write(*,*)' benthic algae is on'
+!  !if(DEPFEED) write(*,*)' deposit feeder is on'
+!
+!  do  BB=1,SED_NBBA
+!    ACTEMP=CTEMP(BB)
+!    do JG=1,3
+!      ACPOP(JG) = CPOP(BB,JG)  
+!      ACPON(JG) = CPON(BB,JG)  
+!      ACPOC(JG) = CPOC(BB,JG)  
+!    enddo   
+!    ACPOS  = CPOS(BB)       
+!    APO4T2 = PO4T2TM1S(BB)  
+!    ANH4T2 = NH4T2TM1S(BB)  
+!    ANO3T2 = NO3T2TM1S(BB)  
+!    AHST2  = HST2TM1S(BB)   
+!    ACH4T2 = CH4T2TM1S(BB)  
+!    ACH41T = CH41TM1S(BB)   
+!    ASO4T2 = SO4T2TM1S(BB)  
+!    ASIT2  = SIT2TM1S(BB)   
+!    ABENST = BENSTR1S(BB)   
+!    ABBM   = BBM(BB)        
+!
+!!    write(16,*)'ICM:',BB,jday,ACTEMP,ACPOP,ACPON,ACPOC,ACPOS,APO4T2,ANH4T2,ANO3T2,AHST2,ACH4T2,ACH41T,ASO4T2,ASIT2,ABENST,ABBM
+!  enddo     
+!  close(32)
+!!  call check_icm_sed_param
+!
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!                             INITIALIZATIONS                                !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!! CONVERT CELL HEIGHTS AND SED_BURIAL VELOCITIES TO SEDIMENT UNITS
+!
+!! YLI+ FOR TSS CALCULATION
+!  do BB=1,SED_NBBA
+!    SSI(BB)=(35.0-SED_SALT(BB))    !Sal(SED_IWC) )  
+!!   SSI(BB)=(sed_B1(BB)+sed_B2(BB)+sed_B3(BB))*20.0
+!    SSI(SED_IWC)=(sed_LPOC(SED_IWC)+sed_RPOC(SED_IWC))*6.0  !need to be corrected,ZG
+!  enddo     
+!
+!! YLI- FOR TSS CALCULATION
+!  DIFFT = 0.0001*DIFFT
+!  do BB=1,SED_NBBA
+!    HSED(BB) = HSEDALL*0.01
+!    VSED(BB) = VSED(BB)*2.73791E-5
+!  enddo
+!
+!! INITIALIZE VARIABLES
+!  do BB=1,SED_NBBA
+!    PATCH(BB)=0.0
+!    sh(BB)=0.0
+!    SFLUXP(BB)=0.0
+!    SFLUXN(BB)=0.0
+!    SFLUXC(BB)=0.0
+!    JSUSF(BB)=0.0
+!    SF_RPOP(BB)=0.0
+!    SF_RPON(BB)=0.0
+!    SF_RPOC(BB)=0.0
+!    SF_SU(BB)=0.0
+!    SEDCSAV(BB)=0.0
+!    SEDNSAV(BB)=0.0
+!    SEDPSAV(BB)=0.0
+!    FRPSAV(1)=0.0
+!    FRPSAV(2)=0.0
+!    FRPSAV(3)=0.0
+!  enddo
+!
+!! INITIALIZE MASS BALANCE VARIABLES
+!  ISEDMN = 0.
+!  ISEDMP = 0.
+!  ISEDMC = 0.
+!  do BB=1,SED_NBBA
+!    CPIP(BB)=PO4T2TM1S(BB)
+!    CNO3(BB)=NO3T2TM1S(BB)
+!    CNH4(BB)=NH4T2TM1S(BB)
+!    ISEDMN=ISEDMN+(CPON(BB,1)+CPON(BB,2)+CPON(BB,3)+CNH4(BB)+CNO3(BB))*SFA(BB)*HSED(BB)/1.E6
+!    ISEDMP=ISEDMP+(CPOP(BB,1)+CPOP(BB,2)+CPOP(BB,3)+CPIP(BB))*SFA(BB)*HSED(BB)/1.E6
+!    ISEDMC=ISEDMC+(CPOC(BB,1)+CPOC(BB,2)+CPOC(BB,3))*SFA(BB)*HSED(BB)/1.E6
+!  enddo
+!
+!! SET SEDIMENT CONCENTRATIONS TO INITIAL CONCENTRATIONS
+!  do BB=1,SED_NBBA
+!    POP1TM1S(BB) = CPOP(BB,1)
+!    POP2TM1S(BB) = CPOP(BB,2)
+!    POP3TM1S(BB) = CPOP(BB,3)
+!    PON1TM1S(BB) = CPON(BB,1)
+!    PON2TM1S(BB) = CPON(BB,2)
+!    PON3TM1S(BB) = CPON(BB,3)
+!    POC1TM1S(BB) = CPOC(BB,1)
+!    POC2TM1S(BB) = CPOC(BB,2)
+!    POC3TM1S(BB) = CPOC(BB,3)
+!    PSITM1S(BB)  = CPOS(BB)
+!  enddo
+!
+!!!!! SET UP REACTION RATES IN TABLE LOOK-UP FORM
+!  do JT=1,350
+!    TEMP5        = FLOAT(JT-1)/10.0+0.05
+!    TEMP20       = TEMP5-20.0
+!    TEMP202      = TEMP20/2.0
+!    ZHTANH4F(JT) = KAPPNH4F*THTANH4**TEMP202 !nitrification in 1st layer
+!    ZHTANH4S(JT) = KAPPNH4S*THTANH4**TEMP202 !nitrificaiton in 1st layer
+!    ZHTANO3F(JT) = KAPPNO3F*THTANO3**TEMP202 !denitrification in the 1st layer
+!    ZHTANO3S(JT) = KAPPNO3S*THTANO3**TEMP202 !denitrification in the 1st layer
+!    ZHTAD1(JT)   = KAPPD1*THTAPD1**TEMP202 !dissolved H2S
+!    ZHTAP1(JT)   = KAPPP1*THTAPD1**TEMP202 !particulate H2S
+!    ZHTA2NO3(JT) = K2NO3*THTANO3**TEMP20 !denitrification in the 2nd layer 
+!    ZL12NOM(JT)  = THTADD**TEMP20 !diffusion KL
+!    ZW12NOM(JT)  = THTADP**TEMP20 !P mixing, W 
+!    ZHTAPON1(JT) = KNDIAG(1)*DNTHTA(1)**TEMP20
+!    ZHTAPON2(JT) = KNDIAG(2)*DNTHTA(2)**TEMP20
+!    ZHTAPON3(JT) = KNDIAG(3)*DNTHTA(3)**TEMP20
+!    ZHTAPOC1(JT) = KCDIAG(1)*DCTHTA(1)**TEMP20
+!    ZHTAPOC2(JT) = KCDIAG(2)*DCTHTA(2)**TEMP20
+!    ZHTAPOC3(JT) = KCDIAG(3)*DCTHTA(3)**TEMP20
+!    ZHTAPOP1(JT) = KPDIAG(1)*DPTHTA(1)**TEMP20
+!    ZHTAPOP2(JT) = KPDIAG(2)*DPTHTA(2)**TEMP20
+!    ZHTAPOP3(JT) = KPDIAG(3)*DPTHTA(3)**TEMP20
+!    ZHTASI(JT)   = KSI*THTASI**TEMP20  !Si
+!    ZHTACH4(JT)  = KAPPCH4*THTACH4**TEMP202 !CH4
+!    ZHTAI0(JT)   = ING0*THTAI0**TEMP20           ! DEPOSIT FEEDERS
+!    ZHTAR(JT)    = R*THTAR**TEMP20               ! DEPOSIT FEEDERS
+!    ZHTABETA(JT) = BETA*THBETA**TEMP20           ! DEPOSIT FEEDERS
+!  enddo
+!
+!! TURN OFF SETTLING
+!  if(SETTLING==0) then 
+!    do BB=1,SED_NBBA
+!       WSSBNET(BB) = 0.0
+!       WSLBNET(BB) = 0.0
+!       WSRBNET(BB) = 0.0
+!       WS1BNET(BB) = 0.0
+!       WS2BNET(BB) = 0.0
+!       WS3BNET(BB) = 0.0
+!       WSUBNET(BB) = 0.0
+!    enddo
+!  endif
+!
+!!!!! INITIALIZE ACCUMULATORS FOR STEADY-STATE COMPUTATIONS
+!  STEADY_STATE_SED = .TRUE.
+!  if(STEADY_STATE_SED) then 
+!    TINTIM = 0.0
+!    do BB=1,SED_NBBA
+!      AG3CFL(BB) = 0.0
+!      AG3NFL(BB) = 0.0
+!      AG3PFL(BB) = 0.0
+!      ASDTMP(BB) = 0.0
+!    enddo
+!  endif
+!
+!  return
+!end

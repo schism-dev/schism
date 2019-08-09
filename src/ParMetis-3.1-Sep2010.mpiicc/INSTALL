@@ -1,0 +1,12 @@
+
+INSTALLATION
+------------
+
+    To build ParMetis you need to edit the Makefile.in and set the appropriate
+    parameters for 'CC'. The default is to use mpicc from MPICH.
+    After that just type 'make' to build the libraries (libmetis.a and 
+    libparmetis.a).
+
+    The header file parmetis.h can be used to provided the prototypes for
+    the various routines in ParMetis.
+

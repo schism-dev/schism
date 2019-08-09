@@ -1,0 +1,5 @@
+Inputs for different closure models. May need to fine tune some constants inside.
+
+MY, kepsilon and komega from couette/
+generic from wave_breaking/
+2nd order closure from channel/

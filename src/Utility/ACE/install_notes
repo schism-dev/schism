@@ -1,0 +1,45 @@
+(1) Install sequence:
+
+    elio
+    lib
+    xmgredit5
+    xmvis6
+    xmgr5
+
+(2) needs libs (64 bit version): X11, Xm (open motif), gd; must have dev packages (i.e. with include/) for last 2.
+    xmgr5 may also need postgres, netcdf (comment out in Makefile if not needed)
+
+(3) Install steps on linux:
+    14	15:03	cd ACE/
+    20	15:04	cd elio/
+                make
+    23	15:04	cd ../lib
+                make
+    26	15:05	cp */*.a .
+    29	15:05	cp ../elio/*.a .
+    30	15:05	mkdir ../include
+    31	15:05	cp */*.h ../include
+    32	15:06	cp ../elio/*.h ../include
+    33	15:06	ll ../include
+    16	15:03	cd ../xmgredit5/  (need to increase MAXBOUNDS and MAXGRIDBOUNDS in defines.h for very large grid)
+                make (can remove -Xp if it doesn't exist)
+    36	15:06	cd ../xmvis6/ (need to increase MAXBOUNDS and MAXGRIDBOUNDS in defines.h for very large grid)
+    41	15:07	vi Makefile (change some paths to the install dir; right now we used local dir)
+    43	15:08	make clean
+
+    46	15:09	make
+                (If the make causes a problem, do:
+    44	15:08	ls -al gram*
+    45	15:09	rm gram.c gram.h (this is related to bison parsing util)
+     (Note: bison (parsing util) should be available)
+                )
+
+     cd ../xmgr5
+     rm -f pars.c pars.h 
+     make pars.c (generate new pars.c with bison)
+     vi Makefile (make sure NETCDF and PGSQL are commented out)
+     make clean
+     make
+
+(4) The steps above can be followed for windows running cygwin and a X server (Xming, Exceed etc).
+    You need to do a FULL installation of cygwin (with all packages).

@@ -1,0 +1,33 @@
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE:  
+! 
+! !INTERFACE:
+   SUBROUTINE 
+!
+! !DESCRIPTION: 
+!
+! !USES:
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   INTEGER, INTENT(IN)					:: N
+   DOUBLE PRECISION, INTENT(IN)				::
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+! !OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Author(s): 
+!  01Jan2000: Ver. ?.?.? (
+!
+! !LOCAL VARIABLES:
+! 
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+      RETURN
+      END SUBROUTINE
+!EOC

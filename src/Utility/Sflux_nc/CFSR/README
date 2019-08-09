@@ -1,0 +1,10 @@
+m-lab scripts used to process CFSR files to sflux*.nc
+CFSR files can be downloaded from rda.ucar.edu
+Choose CFSRv2 hourly (from 1979) and use subset; select prmsl first as it's the pickiest, followed
+ by wind, humidity, air T (select 'at 2m'), and then radiation fluxes @surface, then precip.
+ Make sure time step is same for all vars (usually 6 hourly or analysis).
+ Save as .zip. 
+
+Beware that the atmos files may start from 06:00 and so you may want to have 1 extra month
+ before the start of SCHISM run, to ensure proper time interpolation.
+

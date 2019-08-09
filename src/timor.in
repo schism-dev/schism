@@ -1,0 +1,13 @@
+Parameter inputs for TIMOR
+2  !ithick: # of bottom levels for init. & dump mud; can be <=0 (no mud)
+6e-6  !dm0: primary floc diameter [m]
+20e-6  !dm1: init. floc size [m]
+100  !mudref: init. mud conc [g/l]; used with ithick for i.c.
+.true. !laddmud_d: include mud in density calculation
+.false. !laddmud_v: include mud in viscosity (not diffusivity) calculation
+.false. !ldumpmud: ramp-up mud in the i.c.
+.false. !lhindws: settling vel. with hindrance (otherise: Stokes's law only)
+.false.  !lfloc: call floc routine
+.true.   !ldebug: debug flag for mud module
+1000   !testnode: test node # for outputs
+

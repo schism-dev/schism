@@ -1,0 +1,3195 @@
+!----------------------------------------------------------------------c
+!                          S P A R S K I T                             c
+!----------------------------------------------------------------------c
+!         Basic Iterative Solvers with Reverse Communication           c
+!----------------------------------------------------------------------c
+!     This file currently has several basic iterative linear system    c
+!     solvers. They are:                                               c
+!     CG       -- Conjugate Gradient Method                            c
+!     CGNR     -- Conjugate Gradient Method (Normal Residual equation) c
+!     BCG      -- Bi-Conjugate Gradient Method                         c
+!     DBCG     -- BCG with partial pivoting                            c
+!     BCGSTAB  -- BCG stabilized                                       c
+!     TFQMR    -- Transpose-Free Quasi-Minimum Residual method         c
+!     FOM      -- Full Orthogonalization Method                        c
+!     GMRES    -- Generalized Minimum RESidual method                  c
+!     FGMRES   -- Flexible version of Generalized Minimum              c
+!                 RESidual method                                      c
+!     DQGMRES  -- Direct versions of Quasi Generalize Minimum          c
+!                 Residual method                                      c
+!----------------------------------------------------------------------c
+!     They all have the following calling sequence:
+!      subroutine solver(n, rhs, sol, ipar, fpar, w)
+!      integer n, ipar(16)
+!      real(rkind) rhs(n), sol(n), fpar(16), w(*)
+!     Where
+!     (1) 'n' is the size of the linear system,
+!     (2) 'rhs' is the right-hand side of the linear system,
+!     (3) 'sol' is the solution to the linear system,
+!     (4) 'ipar' is an integer parameter array for the reverse
+!     communication protocol,
+!     (5) 'fpar' is an floating-point parameter array storing
+!     information to and from the iterative solvers.
+!     (6) 'w' is the work space (size is specified in ipar)
+!
+!     They are preconditioned iterative solvers with reverse
+!     communication. The preconditioners can be applied from either
+!     from left or right or both (specified by ipar(2), see below).
+!
+!     Author: Kesheng John Wu (kewu@mail.cs.umn.edu) 1993
+!
+!     NOTES:
+!
+!     (1) Work space required by each of the iterative solver
+!     routines is as follows:
+!       CG      == 5 * n
+!       CGNR    == 5 * n
+!       BCG     == 7 * n
+!       DBCG    == 11 * n
+!       BCGSTAB == 8 * n
+!       TFQMR   == 11 * n
+!       FOM     == (n+3)*(m+2) + (m+1)*m/2 (m = ipar(5), default m=15)
+!       GMRES   == (n+3)*(m+2) + (m+1)*m/2 (m = ipar(5), default m=15)
+!       FGMRES  == 2*n*(m+1) + (m+1)*m/2 + 3*m + 2 (m = ipar(5),
+!                  default m=15)
+!       DQGMRES == n + lb * (2*n+4) (lb=ipar(5)+1, default lb = 16)
+!
+!     (2) ALL iterative solvers require a user-supplied DOT-product
+!     routine named DISTDOT. The prototype of DISTDOT is
+!
+!     real(rkind) function distdot(n,x,ix,y,iy)
+!     integer n, ix, iy
+!     real(rkind) x(1+(n-1)*ix), y(1+(n-1)*iy)
+!
+!     This interface of DISTDOT is exactly the same as that of
+!     DDOT (or SDOT if real == real(rkind)) from BLAS-1. It should have
+!     same functionality as DDOT on a single processor machine. On a
+!     parallel/distributed environment, each processor can perform
+!     DDOT on the data it has, then perform a summation on all the
+!     partial results.
+!
+!     (3) To use this set of routines under SPMD/MIMD program paradigm,
+!     several things are to be noted: (a) 'n' should be the number of
+!     vector elements of 'rhs' that is present on the local processor.
+!     (b) if RHS(i) is on processor j, it is expected that SOL(i)
+!     will be on the same processor, i.e. the vectors are distributed
+!     to each processor in the same way. (c) the preconditioning and
+!     stopping criteria specifications have to be the same on all
+!     processor involved, ipar and fpar have to be the same on each
+!     processor. (d) DISTDOT should be replaced by a distributed
+!     dot-product function.
+!
+!     ..................................................................
+!     Reverse Communication Protocols
+!
+!     When a reverse-communication routine returns, it could be either
+!     that the routine has terminated or it simply requires the caller
+!     to perform one matrix-vector multiplication. The possible matrices
+!     that involve in the matrix-vector multiplications are:
+!     A       (the matrix of the linear system),
+!     A^T     (A transposed),
+!     Ml^{-1} (inverse of the left preconditioner),
+!     Ml^{-T} (inverse of the left preconditioner transposed),
+!     Mr^{-1} (inverse of the right preconditioner),
+!     Mr^{-T} (inverse of the right preconditioner transposed).
+!     For all the matrix vector multiplication, v = A u. The input and
+!     output vectors are supposed to be part of the work space 'w', and
+!     the starting positions of them are stored in ipar(8:9), see below.
+!
+!     The array 'ipar' is used to store the information about the solver.
+!     Here is the list of what each element represents:
+!
+!     ipar(1) -- status of the call/return.
+!     A call to the solver with ipar(1) == 0 will initialize the
+!     iterative solver. On return from the iterative solver, ipar(1)
+!     carries the status flag which indicates the condition of the
+!     return. The status information is divided into two categories,
+!     (1) a positive value indicates the solver requires a matrix-vector
+!     multiplication,
+!     (2) a non-positive value indicates termination of the solver.
+!     Here is the current definition:
+!       1 == request a matvec with A,
+!       2 == request a matvec with A^T,
+!       3 == request a left preconditioner solve (Ml^{-1}),
+!       4 == request a left preconditioner transposed solve (Ml^{-T}),
+!       5 == request a right preconditioner solve (Mr^{-1}),
+!       6 == request a right preconditioner transposed solve (Mr^{-T}),
+!      10 == request the caller to perform stopping test,
+!       0 == normal termination of the solver, satisfied the stopping
+!            criteria,
+!      -1 == termination because iteration number is greater than the
+!            preset limit,
+!      -2 == return due to insufficient work space,
+!      -3 == return due to anticipated break-down / divide by zero,
+!            in the case where Arnoldi procedure is used, additional
+!            error code can be found in ipar(12), where ipar(12) is
+!            the error code of orthogonalization procedure MGSRO:
+!               -1: zero input vector
+!               -2: input vector contains abnormal numbers
+!               -3: input vector is a linear combination of others
+!               -4: trianguler system in GMRES/FOM/etc. has nul rank
+!      -4 == the values of fpar(1) and fpar(2) are both <= 0, the valid
+!            ranges are 0 <= fpar(1) < 1, 0 <= fpar(2), and they can
+!            not be zero at the same time
+!      -9 == while trying to detect a break-down, an abnormal number is
+!            detected.
+!     -10 == return due to some non-numerical reasons, e.g. invalid
+!            floating-point numbers etc.
+!
+!     ipar(2) -- status of the preconditioning:
+!       0 == no preconditioning
+!       1 == left preconditioning only
+!       2 == right preconditioning only
+!       3 == both left and right preconditioning
+!
+!     ipar(3) -- stopping criteria (details of this will be
+!     discussed later).
+!
+!     ipar(4) -- number of elements in the array 'w'. if this is less
+!     than the desired size, it will be over-written with the minimum
+!     requirement. In which case the status flag ipar(1) = -2.
+!
+!     ipar(5) -- size of the Krylov subspace (used by GMRES and its
+!     variants), e.g. GMRES(ipar(5)), FGMRES(ipar(5)),
+!     DQGMRES(ipar(5)).
+!
+!     ipar(6) -- maximum number of matrix-vector multiplies, if not a
+!     positive number the iterative solver will run till convergence
+!     test is satisfied.
+!
+!     ipar(7) -- current number of matrix-vector multiplies. It is
+!     incremented after each matrix-vector multiplication. If there
+!     is preconditioning, the counter is incremented after the
+!     preconditioning associated with each matrix-vector multiplication.
+!
+!     ipar(8) -- pointer to the input vector to the requested matrix-
+!     vector multiplication.
+!
+!     ipar(9) -- pointer to the output vector of the requested matrix-
+!     vector multiplication.
+!
+!     To perform v = A * u, it is assumed that u is w(ipar(8):ipar(8)+n-1)
+!     and v is stored as w(ipar(9):ipar(9)+n-1).
+!
+!     ipar(10) -- the return address (used to determine where to go to
+!     inside the iterative solvers after the caller has performed the
+!     requested services).
+!
+!     ipar(11) -- the result of the external convergence test
+!     On final return from the iterative solvers, this value
+!     will be reflected by ipar(1) = 0 (details discussed later)
+!
+!     ipar(12) -- error code of MGSRO, it is
+!                  1 if the input vector to MGSRO is linear combination
+!                    of others,
+!                  0 if MGSRO was successful,
+!                 -1 if the input vector to MGSRO is zero,
+!                 -2 if the input vector contains invalid number.
+!
+!     ipar(13) -- number of initializations. During each initilization
+!                 residual norm is computed directly from M_l(b - A x).
+!
+!     ipar(14) to ipar(16) are NOT defined, they are NOT USED by
+!     any iterative solver at this time.
+!
+!     Information about the error and tolerance are stored in the array
+!     FPAR. So are some internal variables that need to be saved from
+!     one iteration to the next one. Since the internal variables are
+!     not the same for each routine, we only define the common ones.
+!
+!     The first two are input parameters:
+!     fpar(1) -- the relative tolerance,
+!     fpar(2) -- the absolute tolerance (details discussed later),
+!
+!     When the iterative solver terminates,
+!     fpar(3) -- initial residual/error norm,
+!     fpar(4) -- target residual/error norm,
+!     fpar(5) -- current residual norm (if available),
+!     fpar(6) -- current residual/error norm,
+!     fpar(7) -- convergence rate,
+!
+!     fpar(8:10) are used by some of the iterative solvers to save some
+!     internal information.
+!
+!     fpar(11) -- number of floating-point operations. The iterative
+!     solvers will add the number of FLOPS they used to this variable,
+!     but they do NOT initialize it, nor add the number of FLOPS due to
+!     matrix-vector multiplications (since matvec is outside of the
+!     iterative solvers). To insure the correct FLOPS count, the
+!     caller should set fpar(11) = 0 before invoking the iterative
+!     solvers and account for the number of FLOPS from matrix-vector
+!     multiplications and preconditioners.
+!
+!     fpar(12:16) are not used in current implementation.
+!
+!     Whether the content of fpar(3), fpar(4) and fpar(6) are residual
+!     norms or error norms depends on ipar(3). If the requested
+!     convergence test is based on the residual norm, they will be
+!     residual norms. If the caller want to test convergence based the
+!     error norms (estimated by the norm of the modifications applied
+!     to the approximate solution), they will be error norms.
+!     Convergence rate is defined by (Fortran 77 statement)
+!     fpar(7) = log10(fpar(3) / fpar(6)) / (ipar(7)-ipar(13))
+!     If fpar(7) = 0.5, it means that approximately every 2 (= 1/0.5)
+!     steps the residual/error norm decrease by a factor of 10.
+!
+!     ..................................................................
+!     Stopping criteria,
+!
+!     An iterative solver may be terminated due to (1) satisfying
+!     convergence test; (2) exceeding iteration limit; (3) insufficient
+!     work space; (4) break-down. Checking of the work space is
+!     only done in the initialization stage, i.e. when it is called with
+!     ipar(1) == 0. A complete convergence test is done after each
+!     update of the solutions. Other conditions are monitored
+!     continuously.
+!
+!     With regard to the number of iteration, when ipar(6) is positive,
+!     the current iteration number will be checked against it. If
+!     current iteration number is greater the ipar(6) than the solver
+!     will return with status -1. If ipar(6) is not positive, the
+!     iteration will continue until convergence test is satisfied.
+!
+!     Two things may be used in the convergence tests, one is the
+!     residual 2-norm, the other one is 2-norm of the change in the
+!     approximate solution. The residual and the change in approximate
+!     solution are from the preconditioned system (if preconditioning
+!     is applied). The DQGMRES and TFQMR use two estimates for the
+!     residual norms. The estimates are not accurate, but they are
+!     acceptable in most of the cases. Generally speaking, the error
+!     of the TFQMR's estimate is less accurate.
+!
+!     The convergence test type is indicated by ipar(3). There are four
+!     type convergence tests: (1) tests based on the residual norm;
+!     (2) tests based on change in approximate solution; (3) caller
+!     does not care, the solver choose one from above two on its own;
+!     (4) caller will perform the test, the solver should simply continue.
+!     Here is the complete definition:
+!      -2 == || dx(i) || <= rtol * || rhs || + atol
+!      -1 == || dx(i) || <= rtol * || dx(1) || + atol
+!       0 == solver will choose test 1 (next)
+!       1 == || residual || <= rtol * || initial residual || + atol
+!       2 == || residual || <= rtol * || rhs || + atol
+!     999 == caller will perform the test
+!     where dx(i) denote the change in the solution at the ith update.
+!     ||.|| denotes 2-norm. rtol = fpar(1) and atol = fpar(2).
+!
+!     If the caller is to perform the convergence test, the outcome
+!     should be stored in ipar(11).
+!     ipar(11) = 0 -- failed the convergence test, iterative solver
+!     should continue
+!     ipar(11) = 1 -- satisfied convergence test, iterative solver
+!     should perform the clean up job and stop.
+!
+!     Upon return with ipar(1) = 10,
+!     ipar(8)  points to the starting position of the change in
+!              solution Sx, where the actual solution of the step is
+!              x_j = x_0 + M_r^{-1} Sx.
+!              Exception: ipar(8) < 0, Sx = 0. It is mostly used by
+!              GMRES and variants to indicate (1) Sx was not necessary,
+!              (2) intermediate result of Sx is not computed.
+!     ipar(9)  points to the starting position of a work vector that
+!              can be used by the caller.
+!
+!     NOTE: the caller should allow the iterative solver to perform
+!     clean up job after the external convergence test is satisfied,
+!     since some of the iterative solvers do not directly
+!     update the 'sol' array. A typical clean-up stage includes
+!     performing the final update of the approximate solution and
+!     computing the convergence information (e.g. values of fpar(3:7)).
+!
+!     NOTE: fpar(4) and fpar(6) are not set by the accelerators (the
+!     routines implemented here) if ipar(3) = 999.
+!
+!     ..................................................................
+!     Usage:
+!
+!     To start solving a linear system, the user needs to specify
+!     first 6 elements of the ipar, and first 2 elements of fpar.
+!     The user may optionally set fpar(11) = 0 if one wants to count
+!     the number of floating-point operations. (Note: the iterative
+!     solvers will only add the floating-point operations inside
+!     themselves, the caller will have to add the FLOPS from the
+!     matrix-vector multiplication routines and the preconditioning
+!     routines in order to account for all the arithmetic operations.)
+!
+!     Here is an example:
+!     ipar(1) = 0       ! always 0 to start an iterative solver
+!     ipar(2) = 2       ! right preconditioning
+!     ipar(3) = 1       ! use convergence test scheme 1
+!     ipar(4) = 10000   ! the 'w' has 10,000 elements
+!     ipar(5) = 10      ! use *GMRES(10) (e.g. FGMRES(10))
+!     ipar(6) = 100     ! use at most 100 matvec's
+!     fpar(1) = 1.0E-6  ! relative tolerance 1.0E-6
+!     fpar(2) = 1.0E-10 ! absolute tolerance 1.0E-10
+!     fpar(11) = 0.0    ! clearing the FLOPS counter
+!
+!     After the above specifications, one can start to call an iterative
+!     solver, say BCG. Here is a piece of pseudo-code showing how it can
+!     be done,
+!
+! 10   call bcg(n,rhs,sol,ipar,fpar,w)
+!      if (ipar(1).eq.1) then
+!         call amux(n,w(ipar(8)),w(ipar(9)),a,ja,ia)
+!         goto 10
+!      else if (ipar(1).eq.2) then
+!         call atmux(n,w(ipar(8)),w(ipar(9)),a,ja,ia)
+!         goto 10
+!      else if (ipar(1).eq.3) then
+!         left preconditioner solver
+!         goto 10
+!      else if (ipar(1).eq.4) then
+!         left preconditioner transposed solve
+!         goto 10
+!      else if (ipar(1).eq.5) then
+!         right preconditioner solve
+!         goto 10
+!      else if (ipar(1).eq.6) then
+!         right preconditioner transposed solve
+!         goto 10
+!      else if (ipar(1).eq.10) then
+!         call my own stopping test routine
+!         goto 10
+!      else if (ipar(1).gt.0) then
+!         ipar(1) is an unspecified code
+!      else
+!         the iterative solver terminated with code = ipar(1)
+!      endif
+!
+!     This segment of pseudo-code assumes the matrix is in CSR format,
+!     AMUX and ATMUX are two routines from the SPARSKIT MATVEC module.
+!     They perform matrix-vector multiplications for CSR matrices,
+!     where w(ipar(8)) is the first element of the input vectors to the
+!     two routines, and w(ipar(9)) is the first element of the output
+!     vectors from them. For simplicity, we did not show the name of
+!     the routine that performs the preconditioning operations or the
+!     convergence tests.
+!-----------------------------------------------------------------------
+      subroutine bcgstab(n, rhs, sol, ipar, fpar, w)
+      use datapool, only : rkind
+      implicit none
+      integer, intent(inout) :: n, ipar(16)
+      real(rkind), intent(inout)  :: rhs(n), sol(n), fpar(16), w(n,8)
+!-----------------------------------------------------------------------
+!     BCGSTAB --- Bi Conjugate Gradient stabilized (BCGSTAB)
+!     This is an improved BCG routine. (1) no matrix transpose is
+!     involved. (2) the convergence is smoother.
+!
+!
+!     Algorithm:
+!     Initialization - r = b - A x, r0 = r, p = r, rho = (r0, r),
+!     Iterate -
+!     (1) v = A p
+!     (2) alpha = rho / (r0, v)
+!     (3) s = r - alpha v
+!     (4) t = A s
+!     (5) omega = (t, s) / (t, t)
+!     (6) x = x + alpha * p + omega * s
+!     (7) r = s - omega * t
+!     convergence test goes here
+!     (8) beta = rho, rho = (r0, r), beta = rho * alpha / (beta * omega)
+!         p = r + beta * (p - omega * v)
+!
+!     in this routine, before successful return, the fpar's are
+!     fpar(3) == initial (preconditionied-)residual norm
+!     fpar(4) == target (preconditionied-)residual norm
+!     fpar(5) == current (preconditionied-)residual norm
+!     fpar(6) == current residual norm or error
+!     fpar(7) == current rho (rhok = <r, r0>)
+!     fpar(8) == alpha
+!     fpar(9) == omega
+!
+!     Usage of the work space W
+!     w(:, 1) = r0, the initial residual vector
+!     w(:, 2) = r, current residual vector
+!     w(:, 3) = s
+!     w(:, 4) = t
+!     w(:, 5) = v
+!     w(:, 6) = p
+!     w(:, 7) = tmp, used in preconditioning, etc.
+!     w(:, 8) = delta x, the correction to the answer is accumulated
+!               here, so that the right-preconditioning may be applied
+!               at the end
+!-----------------------------------------------------------------------
+!     external routines used
+!
+      real(rkind) distdot
+      logical stopbis, brkdn
+      external distdot, stopbis, brkdn
+!
+      real(rkind) one
+      parameter(one=1.0_rkind)
+!
+!     local variables
+!
+      integer i
+      real(rkind) alpha,beta,rho,omega
+      logical lp, rp
+      save lp, rp
+!
+!     where to go
+!
+      if (ipar(1).gt.0) then
+         goto (10, 20, 40, 50, 60, 70, 80, 90, 100, 110) ipar(10)
+      else if (ipar(1).lt.0) then
+         goto 900
+      endif
+!
+!     call the initialization routine
+!
+      call bisinit(ipar,fpar,8*n,1,lp,rp,w)
+      if (ipar(1).lt.0) return
+!
+!     perform a matvec to compute the initial residual
+!
+      ipar(1) = 1
+      ipar(8) = 1
+      ipar(9) = 1 + n
+      do i = 1, n
+         w(i,1) = sol(i)
+      enddo
+      ipar(10) = 1
+      return
+ 10   ipar(7) = ipar(7) + 1
+      ipar(13) = ipar(13) + 1
+      do i = 1, n
+         w(i,1) = rhs(i) - w(i,2)
+      enddo
+      fpar(11) = fpar(11) + n
+      if (lp) then
+         ipar(1) = 3
+         ipar(10) = 2
+         return
+      endif
+!
+ 20   if (lp) then
+         do i = 1, n
+            w(i,1) = w(i,2)
+            w(i,6) = w(i,2)
+         enddo
+      else
+         do i = 1, n
+            w(i,2) = w(i,1)
+            w(i,6) = w(i,1)
+         enddo
+      endif
+!
+      fpar(7) = distdot(n,w,1,w,1)
+      fpar(11) = fpar(11) + 2 * n
+      fpar(5) = sqrt(fpar(7))
+      fpar(3) = fpar(5)
+      if (abs(ipar(3)).eq.2) then
+         fpar(4) = fpar(1) * sqrt(distdot(n,rhs,1,rhs,1)) + fpar(2)
+         fpar(11) = fpar(11) + 2 * n
+      else if (ipar(3).ne.999) then
+         fpar(4) = fpar(1) * fpar(3) + fpar(2)
+      endif
+      if (ipar(3).ge.0) fpar(6) = fpar(5)
+      if (ipar(3).ge.0 .and. fpar(5).le.fpar(4) .and. ipar(3).ne.999) then
+         goto 900
+      endif
+!
+!     beginning of the iterations
+!
+!     Step (1), v = A p
+ 30   if (rp) then
+         ipar(1) = 5
+         ipar(8) = 5*n+1
+         if (lp) then
+            ipar(9) = 4*n + 1
+         else
+            ipar(9) = 6*n + 1
+         endif
+         ipar(10) = 3
+         return
+      endif
+!
+ 40   ipar(1) = 1
+      if (rp) then
+         ipar(8) = ipar(9)
+      else
+         ipar(8) = 5*n+1
+      endif
+      if (lp) then
+         ipar(9) = 6*n + 1
+      else
+         ipar(9) = 4*n + 1
+      endif
+      ipar(10) = 4
+      return
+ 50   if (lp) then
+         ipar(1) = 3
+         ipar(8) = ipar(9)
+         ipar(9) = 4*n + 1
+         ipar(10) = 5
+         return
+      endif
+!
+ 60   ipar(7) = ipar(7) + 1
+!
+!     step (2)
+      alpha = distdot(n,w(1,1),1,w(1,5),1)
+      fpar(11) = fpar(11) + 2 * n
+      if (brkdn(alpha, ipar)) goto 900
+      alpha = fpar(7) / alpha
+      fpar(8) = alpha
+!
+!     step (3)
+      do i = 1, n
+         w(i,3) = w(i,2) - alpha * w(i,5)
+      enddo
+      fpar(11) = fpar(11) + 2 * n
+!
+!     Step (4): the second matvec -- t = A s
+!
+      if (rp) then
+         ipar(1) = 5
+         ipar(8) = n+n+1
+         if (lp) then
+            ipar(9) = ipar(8)+n
+         else
+            ipar(9) = 6*n + 1
+         endif
+         ipar(10) = 6
+         return
+      endif
+!
+ 70   ipar(1) = 1
+      if (rp) then
+         ipar(8) = ipar(9)
+      else
+         ipar(8) = n+n+1
+      endif
+      if (lp) then
+         ipar(9) = 6*n + 1
+      else
+         ipar(9) = 3*n + 1
+      endif
+      ipar(10) = 7
+      return
+ 80   if (lp) then
+         ipar(1) = 3
+         ipar(8) = ipar(9)
+         ipar(9) = 3*n + 1
+         ipar(10) = 8
+         return
+      endif
+ 90   ipar(7) = ipar(7) + 1
+!
+!     step (5)
+      omega = distdot(n,w(1,4),1,w(1,4),1)
+      fpar(11) = fpar(11) + n + n
+      if (brkdn(omega,ipar)) goto 900
+      omega = distdot(n,w(1,4),1,w(1,3),1) / omega
+      fpar(11) = fpar(11) + n + n
+      if (brkdn(omega,ipar)) goto 900
+      fpar(9) = omega
+      alpha = fpar(8)
+!
+!     step (6) and (7)
+      do i = 1, n
+         w(i,7) = alpha * w(i,6) + omega * w(i,3)
+         w(i,8) = w(i,8) + w(i,7)
+         w(i,2) = w(i,3) - omega * w(i,4)
+      enddo
+      fpar(11) = fpar(11) + 6 * n + 1
+!
+!     convergence test
+      if (ipar(3).eq.999) then
+         ipar(1) = 10
+         ipar(8) = 7*n + 1
+         ipar(9) = 6*n + 1
+         ipar(10) = 9
+         return
+      endif
+      if (stopbis(n,ipar,2,fpar,w(1,2),w(1,7),one))  goto 900
+ 100  if (ipar(3).eq.999.and.ipar(11).eq.1) goto 900
+!
+!     step (8): computing new p and rho
+!
+      rho = fpar(7)
+      fpar(7) = distdot(n,w(1,2),1,w(1,1),1)
+      omega = fpar(9)
+      beta = fpar(7) * fpar(8) / (fpar(9) * rho)
+      do i = 1, n
+         w(i,6) = w(i,2) + beta * (w(i,6) - omega * w(i,5))
+      enddo
+      fpar(11) = fpar(11) + 6 * n + 3
+      if (brkdn(fpar(7),ipar)) goto 900
+!
+!     end of an iteration
+!
+      goto 30
+!
+!     some clean up job to do
+!
+ 900  if (rp) then
+         if (ipar(1).lt.0) ipar(12) = ipar(1)
+         ipar(1) = 5
+         ipar(8) = 7*n + 1
+         ipar(9) = ipar(8) - n
+         ipar(10) = 10
+         return
+      endif
+
+ 110  if (rp) then
+         call tidycg(n,ipar,fpar,sol,w(1,7))
+      else
+         call tidycg(n,ipar,fpar,sol,w(1,8))
+      endif
+!
+      return
+!-----end-of-bcgstab
+      end
+!-----------------------------------------------------------------------
+      subroutine gmres(n, rhs, sol, ipar, fpar, w)
+      USE DATAPOOL, only : rkind
+      implicit none
+      integer n, ipar(16)
+      real(rkind) rhs(n), sol(n), fpar(16), w(*)
+!-----------------------------------------------------------------------
+!     This a version of GMRES implemented with reverse communication.
+!     It is a simple restart version of the GMRES algorithm.
+!
+!     ipar(5) == the dimension of the Krylov subspace
+!     after every ipar(5) iterations, the GMRES will restart with
+!     the updated solution and recomputed residual vector.
+!
+!     the space of the `w' is used as follows:
+!     (1) the basis for the Krylov subspace, size n*(m+1);
+!     (2) the Hessenberg matrix, only the upper triangular
+!     portion of the matrix is stored, size (m+1)*m/2 + 1
+!     (3) three vectors, all are of size m, they are
+!     the cosine and sine of the Givens rotations, the third one holds
+!     the residuals, it is of size m+1.
+!
+!     TOTAL SIZE REQUIRED == (n+3)*(m+2) + (m+1)*m/2
+!     Note: m == ipar(5). The default value for this is 15 if
+!     ipar(5) <= 1.
+!-----------------------------------------------------------------------
+!     external functions used
+!
+      real(rkind) distdot
+      external distdot
+!
+      real(rkind) one, zero
+      parameter(one=1.0_rkind, zero=0.0_rkind)
+!
+!     local variables, ptr and p2 are temporary pointers,
+!     hess points to the Hessenberg matrix,
+!     vc, vs point to the cosines and sines of the Givens rotations
+!     vrn points to the vectors of residual norms, more precisely
+!     the right hand side of the least square problem solved.
+!
+      integer i,ii,idx,k,m,ptr,p2,hess,vc,vs,vrn
+      real(rkind) alpha, c, s
+      logical lp, rp
+      save
+!
+!     check the status of the call
+!
+      if (ipar(1).le.0) ipar(10) = 0
+      goto (10, 20, 30, 40, 50, 60, 70) ipar(10)
+!
+!     initialization
+!
+      if (ipar(5).le.1) then
+         m = 15
+      else
+         m = ipar(5)
+      endif
+      idx = n * (m+1)
+      hess = idx + n
+      vc = hess + (m+1) * m / 2 + 1
+      vs = vc + m
+      vrn = vs + m
+      i = vrn + m + 1
+      call bisinit(ipar,fpar,i,1,lp,rp,w)
+      if (ipar(1).lt.0) return
+!
+!     request for matrix vector multiplication A*x in the initialization
+!
+ 100  ipar(1) = 1
+      ipar(8) = n+1
+      ipar(9) = 1
+      ipar(10) = 1
+      k = 0
+      do i = 1, n
+         w(n+i) = sol(i)
+      enddo
+      return
+ 10   ipar(7) = ipar(7) + 1
+      ipar(13) = ipar(13) + 1
+      if (lp) then
+         do i = 1, n
+            w(n+i) = rhs(i) - w(i)
+         enddo
+         ipar(1) = 3
+         ipar(10) = 2
+         return
+      else
+         do i = 1, n
+            w(i) = rhs(i) - w(i)
+         enddo
+      endif
+      fpar(11) = fpar(11) + n
+!
+ 20   alpha = sqrt(distdot(n,w,1,w,1))
+      fpar(11) = fpar(11) + 2*n
+      if (ipar(7).eq.1 .and. ipar(3).ne.999) then
+         if (abs(ipar(3)).eq.2) then
+            fpar(4) = fpar(1) * sqrt(distdot(n,rhs,1,rhs,1)) + fpar(2)
+            fpar(11) = fpar(11) + 2*n
+         else
+            fpar(4) = fpar(1) * alpha + fpar(2)
+         endif
+         fpar(3) = alpha
+      endif
+      fpar(5) = alpha
+      w(vrn+1) = alpha
+      if (alpha.le.fpar(4) .and. ipar(3).ge.0 .and. ipar(3).ne.999) then
+         ipar(1) = 0
+         fpar(6) = alpha
+         goto 300
+      endif
+      alpha = one / alpha
+      do ii = 1, n
+         w(ii) = alpha * w(ii)
+      enddo
+      fpar(11) = fpar(11) + n
+!
+!     request for (1) right preconditioning
+!     (2) matrix vector multiplication
+!     (3) left preconditioning
+!
+ 110  k = k + 1
+      if (rp) then
+         ipar(1) = 5
+         ipar(8) = k*n - n + 1
+         if (lp) then
+            ipar(9) = k*n + 1
+         else
+            ipar(9) = idx + 1
+         endif
+         ipar(10) = 3
+         return
+      endif
+!
+ 30   ipar(1) = 1
+      if (rp) then
+         ipar(8) = ipar(9)
+      else
+         ipar(8) = (k-1)*n + 1
+      endif
+      if (lp) then
+         ipar(9) = idx + 1
+      else
+         ipar(9) = 1 + k*n
+      endif
+      ipar(10) = 4
+      return
+!
+ 40   if (lp) then
+         ipar(1) = 3
+         ipar(8) = ipar(9)
+         ipar(9) = k*n + 1
+         ipar(10) = 5
+         return
+      endif
+!
+!     Modified Gram-Schmidt orthogonalization procedure
+!     temporary pointer 'ptr' is pointing to the current column of the
+!     Hessenberg matrix. 'p2' points to the new basis vector
+!
+ 50   ipar(7) = ipar(7) + 1
+      ptr = k * (k - 1) / 2 + hess
+      p2 = ipar(9)
+      call mgsro(.false.,n,n,k+1,k+1,fpar(11),w,w(ptr+1), &
+     &     ipar(12))
+      if (ipar(12).lt.0) goto 200
+!
+!     apply previous Givens rotations and generate a new one to eliminate
+!     the subdiagonal element.
+!
+      p2 = ptr + 1
+      do i = 1, k-1
+         ptr = p2
+         p2 = p2 + 1
+         alpha = w(ptr)
+         c = w(vc+i)
+         s = w(vs+i)
+         w(ptr) = c * alpha + s * w(p2)
+         w(p2) = c * w(p2) - s * alpha
+      enddo
+      call givens(w(p2), w(p2+1), c, s)
+      w(vc+k) = c
+      w(vs+k) = s
+      p2 = vrn + k
+      alpha = - s * w(p2)
+      w(p2) = c * w(p2)
+      w(p2+1) = alpha
+!
+!     end of one Arnoldi iteration, alpha will store the estimated
+!     residual norm at current stage
+!
+      fpar(11) = fpar(11) + 6*k + 2
+      alpha = abs(alpha)
+      fpar(5) = alpha
+      if (k.lt.m .and. .not.(ipar(3).ge.0 .and. alpha.le.fpar(4)) &
+     &     .and. (ipar(6).le.0 .or. ipar(7).lt.ipar(6))) goto 110
+!
+!     update the approximate solution, first solve the upper triangular
+!     system, temporary pointer ptr points to the Hessenberg matrix,
+!     p2 points to the right-hand-side (also the solution) of the system.
+!
+ 200  ptr = hess + k * (k + 1) / 2
+      p2 = vrn + k
+      if (w(ptr).eq.zero) then
+!
+!     if the diagonal elements of the last column is zero, reduce k by 1
+!     so that a smaller trianguler system is solved [It should only
+!     happen when the matrix is singular, and at most once!]
+!
+         k = k - 1
+         if (k.gt.0) then
+            goto 200
+         else
+            ipar(1) = -3
+            ipar(12) = -4
+            goto 300
+         endif
+      endif
+      w(p2) = w(p2) / w(ptr)
+      do i = k-1, 1, -1
+         ptr = ptr - i - 1
+         do ii = 1, i
+            w(vrn+ii) = w(vrn+ii) - w(p2) * w(ptr+ii)
+         enddo
+         p2 = p2 - 1
+         w(p2) = w(p2) / w(ptr)
+      enddo
+!
+      do ii = 1, n
+         w(ii) = w(ii) * w(p2)
+      enddo
+      do i = 1, k-1
+         ptr = i*n
+         p2 = p2 + 1
+         do ii = 1, n
+            w(ii) = w(ii) + w(p2) * w(ptr+ii)
+         enddo
+      enddo
+      fpar(11) = fpar(11) + 2*k*n - n + k*(k+1)
+!
+      if (rp) then
+         ipar(1) = 5
+         ipar(8) = 1
+         ipar(9) = idx + 1
+         ipar(10) = 6
+         return
+      endif
+!
+ 60   if (rp) then
+         do i = 1, n
+            sol(i) = sol(i) + w(idx+i)
+         enddo
+      else
+         do i = 1, n
+            sol(i) = sol(i) + w(i)
+         enddo
+      endif
+      fpar(11) = fpar(11) + n
+!
+!     process the complete stopping criteria
+!
+      if (ipar(3).eq.999) then
+         ipar(1) = 10
+         ipar(8) = -1
+         ipar(9) = idx + 1
+         ipar(10) = 7
+         return
+      else if (ipar(3).lt.0) then
+         if (ipar(7).le.m+1) then
+            fpar(3) = abs(w(vrn+1))
+            if (ipar(3).eq.-1) fpar(4) = fpar(1)*fpar(3)+fpar(2)
+         endif
+         fpar(6) = abs(w(vrn+k))
+      else
+         fpar(6) = fpar(5)
+      endif
+!
+!     do we need to restart ?
+!
+ 70   if (ipar(12).ne.0) then
+         ipar(1) = -3
+         goto 300
+      endif
+      if ((ipar(7).lt.ipar(6) .or. ipar(6).le.0) .and.                  &
+     &      ((ipar(3).eq.999.and.ipar(11).eq.0) .or.                    &
+     &     (ipar(3).ne.999.and.fpar(6).gt.fpar(4)))) goto 100
+!
+!     termination, set error code, compute convergence rate
+!
+      if (ipar(1).gt.0) then
+         if (ipar(3).eq.999 .and. ipar(11).eq.1) then
+            ipar(1) = 0
+         else if (ipar(3).ne.999 .and. fpar(6).le.fpar(4)) then
+            ipar(1) = 0
+         else if (ipar(7).ge.ipar(6) .and. ipar(6).gt.0) then
+            ipar(1) = -1
+         else
+            ipar(1) = -10
+         endif
+      endif
+ 300  if (fpar(3).ne.zero .and. fpar(6).ne.zero .and.                   &
+     &     ipar(7).gt.ipar(13)) then
+         fpar(7) = log10(fpar(3) / fpar(6)) / dble(ipar(7)-ipar(13))
+      else
+         fpar(7) = zero
+      endif
+      return
+      end
+!-----end-of-gmres
+!-----------------------------------------------------------------------
+      subroutine implu(np,umm,beta,ypiv,u,permut,full)
+      USE DATAPOOL, ONLY : rkind
+      real(rkind) umm,beta,ypiv(*),u(*),x, xpiv
+      logical full, perm, permut(*)
+      integer np,k,npm1
+!-----------------------------------------------------------------------
+!     performs implicitly one step of the lu factorization of a
+!     banded hessenberg matrix.
+!-----------------------------------------------------------------------
+      if (np .le. 1) goto 12
+      npm1 = np - 1
+!
+!     -- perform  previous step of the factorization-
+!
+      do 6 k=1,npm1
+         if (.not. permut(k)) goto 5
+         x=u(k)
+         u(k) = u(k+1)
+         u(k+1) = x
+ 5       u(k+1) = u(k+1) - ypiv(k)*u(k)
+ 6    continue
+!-----------------------------------------------------------------------
+!     now determine pivotal information to be used in the next call
+!-----------------------------------------------------------------------
+ 12   umm = u(np)
+      perm = (beta .gt. abs(umm))
+      if (.not. perm) goto 4
+      xpiv = umm / beta
+      u(np) = beta
+      goto 8
+ 4    xpiv = beta/umm
+ 8    permut(np) = perm
+      ypiv(np) = xpiv
+      if (.not. full) return
+!     shift everything up if full...
+      do 7 k=1,npm1
+         ypiv(k) = ypiv(k+1)
+         permut(k) = permut(k+1)
+ 7    continue
+      return
+!-----end-of-implu
+      end
+!-----------------------------------------------------------------------
+      subroutine uppdir(n,p,np,lbp,indp,y,u,usav,flops)
+      use datapool, only : rkind
+      implicit none
+
+      integer   :: k,np,n,npm1,j,ju,indp,lbp
+      real(rkind)    :: p(n,lbp), y(*), u(*), usav(*), x, flops
+      
+!-----------------------------------------------------------------------
+!     updates the conjugate directions p given the upper part of the
+!     banded upper triangular matrix u.  u contains the non zero
+!     elements of the column of the triangular matrix..
+!-----------------------------------------------------------------------
+      real(rkind) zero
+      parameter(zero=0.0_rkind)
+!
+      npm1=np-1
+      if (np .le. 1) goto 12
+      j=indp
+      ju = npm1
+ 10   if (j .le. 0) j=lbp
+      x = u(ju) /usav(j)
+      if (x .eq. zero) goto 115
+      do 11 k=1,n
+         y(k) = y(k) - x*p(k,j)
+ 11   continue
+      flops = flops + 2*n
+ 115  j = j-1
+      ju = ju -1
+      if (ju .ge. 1) goto 10
+ 12   indp = indp + 1
+      if (indp .gt. lbp) indp = 1
+      usav(indp) = u(np)
+      do 13 k=1,n
+         p(k,indp) = y(k)
+ 13   continue
+      return
+!-----------------------------------------------------------------------
+!-------end-of-uppdir---------------------------------------------------
+      end
+
+      subroutine givens(x,y,c,s)
+      use datapool, only : rkind
+      implicit none
+
+      real(rkind)   :: x,y,c,s
+!-----------------------------------------------------------------------
+!     Given x and y, this subroutine generates a Givens' rotation c, s.
+!     And apply the rotation on (x,y) ==> (sqrt(x**2 + y**2), 0).
+!     (See P 202 of "matrix computation" by Golub and van Loan.)
+!-----------------------------------------------------------------------
+      real(rkind)   :: t,one,zero
+      parameter (zero=0.0_rkind,one=1.0_rkind)
+!
+      if (x.eq.zero .and. y.eq.zero) then
+         c = one
+         s = zero
+      else if (abs(y).gt.abs(x)) then
+         t = x / y
+         x = sqrt(one+t*t)
+         s = sign(one / x, y)
+         c = t*s
+      else if (abs(y).le.abs(x)) then
+         t = y / x
+         y = sqrt(one+t*t)
+         c = sign(one / y, x)
+         s = t*c
+      else
+!
+!     X or Y must be an invalid floating-point number, set both to zero
+!
+         x = zero
+         y = zero
+         c = one
+         s = zero
+      endif
+      x = abs(x*y)
+!
+!     end of givens
+!
+      return
+      end
+!-----end-of-givens
+!-----------------------------------------------------------------------
+      logical function stopbis(n,ipar,mvpi,fpar,r,delx,sx)
+      use datapool, only : rkind
+      implicit none
+      integer n,mvpi,ipar(16)
+      real(rkind) fpar(16), r(n), delx(n), sx, distdot
+      external distdot
+!-----------------------------------------------------------------------
+!     function for determining the stopping criteria. return value of
+!     true if the stopbis criteria is satisfied.
+!-----------------------------------------------------------------------
+      if (ipar(11) .eq. 1) then
+         stopbis = .true.
+      else
+         stopbis = .false.
+      endif
+      if (ipar(6).gt.0 .and. ipar(7).ge.ipar(6)) then
+         ipar(1) = -1
+         stopbis = .true.
+      endif
+      if (stopbis) return
+!
+!     computes errors
+!
+      fpar(5) = sqrt(distdot(n,r,1,r,1))
+      fpar(11) = fpar(11) + 2 * n
+      if (ipar(3).lt.0) then
+!
+!     compute the change in the solution vector
+!
+         fpar(6) = sx * sqrt(distdot(n,delx,1,delx,1))
+         fpar(11) = fpar(11) + 2 * n
+         if (ipar(7).lt.mvpi+mvpi+1) then
+!
+!     if this is the end of the first iteration, set fpar(3:4)
+!
+            fpar(3) = fpar(6)
+            if (ipar(3).eq.-1) then
+               fpar(4) = fpar(1) * fpar(3) + fpar(2)
+            endif
+         endif
+      else
+         fpar(6) = fpar(5)
+      endif
+!
+!     .. the test is struct this way so that when the value in fpar(6)
+!       is not a valid number, STOPBIS is set to .true.
+!
+      if (fpar(6).gt.fpar(4)) then
+         stopbis = .false.
+         ipar(11) = 0
+      else
+         stopbis = .true.
+         ipar(11) = 1
+      endif
+!
+      return
+      end
+!-----end-of-stopbis
+!-----------------------------------------------------------------------
+      subroutine tidycg(n,ipar,fpar,sol,delx)
+      use datapool, only : rkind
+      implicit none
+      integer i,n,ipar(16)
+      real(rkind) fpar(16),sol(n),delx(n)
+!-----------------------------------------------------------------------
+!     Some common operations required before terminating the CG routines
+!-----------------------------------------------------------------------
+      real(rkind) zero
+      parameter(zero=0.0_rkind)
+!
+      if (ipar(12).ne.0) then
+         ipar(1) = ipar(12) 
+      else if (ipar(1).gt.0) then
+         if ((ipar(3).eq.999 .and. ipar(11).eq.1) .or. &
+     &        fpar(6).le.fpar(4)) then
+            ipar(1) = 0
+         else if (ipar(7).ge.ipar(6) .and. ipar(6).gt.0) then
+            ipar(1) = -1
+         else
+            ipar(1) = -10
+         endif
+      endif
+      if (fpar(3).gt.zero .and. fpar(6).gt.zero .and. ipar(7).gt.ipar(13)) then 
+        fpar(7) = log10(fpar(3) / fpar(6)) / dble(ipar(7)-ipar(13))
+      else
+         fpar(7) = zero
+      endif
+      do i = 1, n
+         sol(i) = sol(i) + delx(i)
+      enddo
+      return
+      end
+!-----end-of-tidycg
+!-----------------------------------------------------------------------
+      logical function brkdn(alpha, ipar)
+      use datapool, only : rkind
+      implicit none
+      integer ipar(16)
+      real(rkind) alpha, beta, zero, one
+      parameter (zero=0.0_rkind, one=1.0_rkind)
+!-----------------------------------------------------------------------
+!     test whether alpha is zero or an abnormal number, if yes,
+!     this routine will return .true.
+!
+!     If alpha == 0, ipar(1) = -3,
+!     if alpha is an abnormal number, ipar(1) = -9.
+!-----------------------------------------------------------------------
+      brkdn = .false.
+      if (alpha.gt.zero) then
+         beta = one / alpha
+         if (.not. beta.gt.zero) then
+            brkdn = .true.
+            ipar(1) = -9
+         endif
+      else if (alpha.lt.zero) then
+         beta = one / alpha
+         if (.not. beta.lt.zero) then
+            brkdn = .true.
+            ipar(1) = -9
+         endif
+      else if (alpha.eq.zero) then
+         brkdn = .true.
+         ipar(1) = -3
+      else
+         brkdn = .true.
+         ipar(1) = -9
+      endif
+      return
+      end
+!-----end-of-brkdn
+!-----------------------------------------------------------------------
+      subroutine bisinit(ipar,fpar,wksize,dsc,lp,rp,wk)
+      use datapool, only : rkind
+      implicit none
+      integer, intent(in)   :: wksize,dsc
+      integer, intent(inout):: ipar(16)
+      real(rkind), intent(inout) :: fpar(16),wk(wksize)
+      logical,intent(inout) :: lp,rp
+      integer i
+!-----------------------------------------------------------------------
+!     some common initializations for the iterative solvers
+!-----------------------------------------------------------------------
+      real(rkind) zero, one
+      parameter(zero=0.0_rkind, one=1.0_rkind)
+!
+!     ipar(1) = -2 inidcate that there are not enough space in the work
+!     array
+!
+      if (ipar(4).lt.wksize) then
+         ipar(1) = -2
+         ipar(4) = wksize
+         return
+      endif
+!
+      if (ipar(2).gt.2) then
+         lp = .true.
+         rp = .true.
+      else if (ipar(2).eq.2) then
+         lp = .false.
+         rp = .true.
+      else if (ipar(2).eq.1) then
+         lp = .true.
+         rp = .false.
+      else
+         lp = .false.
+         rp = .false.
+      endif
+      if (ipar(3).eq.0) ipar(3) = dsc
+!     .. clear the ipar elements used
+      ipar(7) = 0
+      ipar(8) = 0
+      ipar(9) = 0
+      ipar(10) = 0
+      ipar(11) = 0
+      ipar(12) = 0
+      ipar(13) = 0
+!
+!     fpar(1) must be between (0, 1), fpar(2) must be positive,
+!     fpar(1) and fpar(2) can NOT both be zero
+!     Normally return ipar(1) = -4 to indicate any of above error
+!
+      if (fpar(1).lt.zero .or. fpar(1).ge.one .or. fpar(2).lt.zero .or. &
+     &     (fpar(1).eq.zero .and. fpar(2).eq.zero)) then
+         if (ipar(1).eq.0) then
+            ipar(1) = -4
+            return
+         else
+            fpar(1) = 1.0D-6
+            fpar(2) = 1.0D-16
+         endif
+      endif
+!     .. clear the fpar elements
+      do i = 3, 10
+         fpar(i) = zero
+      enddo
+      if (fpar(11).lt.zero) fpar(11) = zero
+!     .. clear the used portion of the work array to zero
+      do i = 1, wksize
+         wk(i) = zero
+      enddo
+!
+      return
+!-----end-of-bisinit
+      end
+!-----------------------------------------------------------------------
+      subroutine mgsro(full,lda,n,m,ind,ops,vec,hh,ierr)
+      use datapool, only : rkind
+      implicit none
+      logical full
+      integer lda,m,n,ind,ierr
+      real(rkind)  ops,hh(m),vec(lda,m)
+!-----------------------------------------------------------------------
+!     MGSRO  -- Modified Gram-Schmidt procedure with Selective Re-
+!               Orthogonalization
+!     The ind'th vector of VEC is orthogonalized against the rest of
+!     the vectors.
+!
+!     The test for performing re-orthogonalization is performed for
+!     each indivadual vectors. If the cosine between the two vectors
+!     is greater than 0.99 (REORTH = 0.99**2), re-orthogonalization is
+!     performed. The norm of the 'new' vector is kept in variable NRM0,
+!     and updated after operating with each vector.
+!
+!     full   -- .ture. if it is necessary to orthogonalize the ind'th
+!               against all the vectors vec(:,1:ind-1), vec(:,ind+2:m)
+!               .false. only orthogonalize againt vec(:,1:ind-1)
+!     lda    -- the leading dimension of VEC
+!     n      -- length of the vector in VEC
+!     m      -- number of vectors can be stored in VEC
+!     ind    -- index to the vector to be changed
+!     ops    -- operation counts
+!     vec    -- vector of LDA X M storing the vectors
+!     hh     -- coefficient of the orthogonalization
+!     ierr   -- error code
+!               0 : successful return
+!               -1: zero input vector
+!               -2: input vector contains abnormal numbers
+!               -3: input vector is a linear combination of others
+!
+!     External routines used: real(rkind) distdot
+!-----------------------------------------------------------------------
+      integer i,k
+      real(rkind)  nrm0, nrm1, fct, thr, distdot, zero, one, reorth
+      parameter (zero=0.0_rkind, one=1.0_rkind, reorth=0.98_rkind)
+      external distdot
+!
+!     compute the norm of the input vector
+!
+      nrm0 = distdot(n,vec(1,ind),1,vec(1,ind),1)
+      ops = ops + n + n
+      thr = nrm0 * reorth
+      if (nrm0.le.zero) then
+         ierr = - 1
+         return
+      else if (nrm0.gt.zero .and. one/nrm0.gt.zero) then
+         ierr = 0
+      else
+         ierr = -2
+         return
+      endif
+!
+!     Modified Gram-Schmidt loop
+!
+      if (full) then
+         do 40 i = ind+1, m
+            fct = distdot(n,vec(1,ind),1,vec(1,i),1)
+            hh(i) = fct
+            do 20 k = 1, n
+               vec(k,ind) = vec(k,ind) - fct * vec(k,i)
+ 20         continue
+            ops = ops + 4 * n + 2
+            if (fct*fct.gt.thr) then
+               fct = distdot(n,vec(1,ind),1,vec(1,i),1)
+               hh(i) = hh(i) + fct
+               do 30 k = 1, n
+                  vec(k,ind) = vec(k,ind) - fct * vec(k,i)
+ 30            continue
+               ops = ops + 4*n + 1
+            endif
+            nrm0 = nrm0 - hh(i) * hh(i)
+            if (nrm0.lt.zero) nrm0 = zero
+            thr = nrm0 * reorth
+ 40      continue
+      endif
+!
+      do 70 i = 1, ind-1
+         fct = distdot(n,vec(1,ind),1,vec(1,i),1)
+         hh(i) = fct
+         do 50 k = 1, n
+            vec(k,ind) = vec(k,ind) - fct * vec(k,i)
+ 50      continue
+         ops = ops + 4 * n + 2
+         if (fct*fct.gt.thr) then
+            fct = distdot(n,vec(1,ind),1,vec(1,i),1)
+            hh(i) = hh(i) + fct
+            do 60 k = 1, n
+               vec(k,ind) = vec(k,ind) - fct * vec(k,i)
+ 60         continue
+            ops = ops + 4*n + 1
+         endif
+         nrm0 = nrm0 - hh(i) * hh(i)
+         if (nrm0.lt.zero) nrm0 = zero
+         thr = nrm0 * reorth
+ 70   continue
+!
+!     test the resulting vector
+!
+      nrm1 = sqrt(distdot(n,vec(1,ind),1,vec(1,ind),1))
+      ops = ops + n + n
+      hh(ind) = nrm1    ! statement label 75 
+      if (nrm1.le.zero) then
+         ierr = -3
+         return
+      endif
+!
+!     scale the resulting vector
+!
+      fct = one / nrm1
+      do 80 k = 1, n
+         vec(k,ind) = vec(k,ind) * fct
+ 80   continue
+      ops = ops + n + 1
+!
+!     normal return
+!
+      ierr = 0
+      return
+!     end surbotine mgsro
+      end
+!----------------------------------------------------------------------c
+!                          S P A R S K I T                             c
+!----------------------------------------------------------------------c
+!          BASIC MATRIX-VECTOR OPERATIONS - MATVEC MODULE              c
+!         Matrix-vector Mulitiplications and Triang. Solves            c
+!----------------------------------------------------------------------c
+! contents: (as of Nov 18, 1991)                                       c
+!----------                                                            c
+! 1) Matrix-vector products:                                           c
+!---------------------------                                           c
+! amux  : A times a vector. Compressed Sparse Row (CSR) format.        c
+! amuxms: A times a vector. Modified Compress Sparse Row format.       c
+! atmux : Transp(A) times a vector. CSR format.                        c
+! atmuxr: Transp(A) times a vector. CSR format. A rectangular.         c
+! amuxe : A times a vector. Ellpack/Itpack (ELL) format.               c
+! amuxd : A times a vector. Diagonal (DIA) format.                     c
+! amuxj : A times a vector. Jagged Diagonal (JAD) format.              c
+! vbrmv : Sparse matrix-full vector product, in VBR format             c
+!                                                                      c
+! 2) Triangular system solutions:                                      c
+!-------------------------------                                       c
+! lsol  : Unit Lower Triang. solve. Compressed Sparse Row (CSR) format.c
+! ldsol : Lower Triang. solve.  Modified Sparse Row (MSR) format.      c
+! lsolc : Unit Lower Triang. solve. Comp. Sparse Column (CSC) format.  c
+! ldsolc: Lower Triang. solve. Modified Sparse Column (MSC) format.    c
+! ldsoll: Lower Triang. solve with level scheduling. MSR format.       c
+! usol  : Unit Upper Triang. solve. Compressed Sparse Row (CSR) format.c
+! udsol : Upper Triang. solve.  Modified Sparse Row (MSR) format.      c
+! usolc : Unit Upper Triang. solve. Comp. Sparse Column (CSC) format.  c
+! udsolc: Upper Triang. solve.  Modified Sparse Column (MSC) format.   c
+!----------------------------------------------------------------------c
+! 1)     M A T R I X    B Y    V E C T O R     P R O D U C T S         c
+!----------------------------------------------------------------------c
+      subroutine amux(n, x, y, a,ja,ia) 
+      use datapool, only : rkind
+      real(rkind)  x(*), y(*), a(*) 
+      integer n, ja(*), ia(*)
+!-----------------------------------------------------------------------
+!         A times a vector
+!----------------------------------------------------------------------- 
+! multiplies a matrix by a vector using the dot product form
+! Matrix A is stored in compressed sparse row storage.
+!
+! on entry:
+!----------
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! a, ja,
+!    ia = input matrix in compressed sparse row format.
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=Ax
+!
+!-----------------------------------------------------------------------
+! local variables
+!
+      real(rkind) t
+      integer i, k
+!-----------------------------------------------------------------------
+      do i = 1,n
+!
+!     compute the inner product of row i with vector x
+! 
+         t = 0.0_rkind
+         do k=ia(i), ia(i+1)-1
+            t = t + a(k)*x(ja(k))
+         end do
+!
+!     store result in y(i) 
+!
+         y(i) = t
+      end do
+!
+      return
+!---------end-of-amux---------------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine amuxms (n, x, y, a,ja)
+      use datapool, only : rkind
+      real(rkind)  x(*), y(*), a(*)
+      integer n, ja(*)
+!-----------------------------------------------------------------------
+!         A times a vector in MSR format
+!-----------------------------------------------------------------------
+! multiplies a matrix by a vector using the dot product form
+! Matrix A is stored in Modified Sparse Row storage.
+!
+! on entry:
+!----------
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! a, ja,= input matrix in modified compressed sparse row format.
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=Ax
+!
+!-----------------------------------------------------------------------
+! local variables
+!
+      integer i, k
+!-----------------------------------------------------------------------
+        do 10 i=1, n
+        y(i) = a(i)*x(i)
+ 10     continue
+      do 100 i = 1,n
+!
+!     compute the inner product of row i with vector x
+!
+         do 99 k=ja(i), ja(i+1)-1
+            y(i) = y(i) + a(k) *x(ja(k))
+ 99      continue
+ 100  continue
+!
+      return
+!---------end-of-amuxm--------------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine atmux (n, x, y, a, ja, ia)
+      use datapool, only : rkind
+      real(rkind) x(*), y(*), a(*) 
+      integer n, ia(*), ja(*)
+!-----------------------------------------------------------------------
+!         transp( A ) times a vector
+!----------------------------------------------------------------------- 
+! multiplies the transpose of a matrix by a vector when the original
+! matrix is stored in compressed sparse row storage. Can also be
+! viewed as the product of a matrix by a vector when the original
+! matrix is stored in the compressed sparse column format.
+!-----------------------------------------------------------------------
+!
+! on entry:
+!----------
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! a, ja,
+!    ia = input matrix in compressed sparse row format.
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=transp(A)*x
+!
+!-----------------------------------------------------------------------
+!     local variables 
+!
+      integer i, k 
+!-----------------------------------------------------------------------
+!
+!     zero out output vector
+! 
+      do 1 i=1,n
+         y(i) = 0.0
+ 1    continue
+!
+! loop over the rows
+!
+      do 100 i = 1,n
+         do 99 k=ia(i), ia(i+1)-1 
+            y(ja(k)) = y(ja(k)) + x(i)*a(k)
+ 99      continue
+ 100  continue
+!
+      return
+!-------------end-of-atmux---------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------- 
+      subroutine atmuxr (m, n, x, y, a, ja, ia)
+      use datapool, only : rkind
+      real(rkind) x(*), y(*), a(*) 
+      integer m, n, ia(*), ja(*)
+!-----------------------------------------------------------------------
+!         transp( A ) times a vector, A can be rectangular
+!----------------------------------------------------------------------- 
+! See also atmux.  The essential difference is how the solution vector
+! is initially zeroed.  If using this to multiply rectangular CSC 
+! matrices by a vector, m number of rows, n is number of columns.
+!-----------------------------------------------------------------------
+!
+! on entry:
+!----------
+! m     = column dimension of A
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! a, ja,
+!    ia = input matrix in compressed sparse row format.
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=transp(A)*x
+!
+!-----------------------------------------------------------------------
+!     local variables 
+!
+      integer i, k 
+!-----------------------------------------------------------------------
+!
+!     zero out output vector
+! 
+      do 1 i=1,m
+         y(i) = 0.0
+ 1    continue
+!
+! loop over the rows
+!
+      do 100 i = 1,n
+         do 99 k=ia(i), ia(i+1)-1 
+            y(ja(k)) = y(ja(k)) + x(i)*a(k)
+ 99      continue
+ 100  continue
+!
+      return
+!-------------end-of-atmuxr--------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------- 
+      subroutine amuxe (n,x,y,na,ncol,a,ja)
+      use datapool, only : rkind
+      implicit none
+
+      integer     :: n, na, ncol, ja(na,*)
+      real(rkind)      :: x(n), y(n), a(na,*)
+      
+!-----------------------------------------------------------------------
+!        A times a vector in Ellpack Itpack format (ELL)               
+!----------------------------------------------------------------------- 
+! multiplies a matrix by a vector when the original matrix is stored 
+! in the ellpack-itpack sparse format.
+!-----------------------------------------------------------------------
+!
+! on entry:
+!----------
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! na    = integer. The first dimension of arrays a and ja
+!         as declared by the calling program.
+! ncol  = integer. The number of active columns in array a.
+!         (i.e., the number of generalized diagonals in matrix.)
+! a, ja = the real and integer arrays of the itpack format
+!         (a(i,k),k=1,ncol contains the elements of row i in matrix
+!          ja(i,k),k=1,ncol contains their column numbers) 
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=y=A*x
+!
+!-----------------------------------------------------------------------
+! local variables
+!
+      integer i, j 
+!-----------------------------------------------------------------------
+      do 1 i=1, n
+         y(i) = 0.0 
+ 1    continue
+      do 10 j=1,ncol
+         do 25 i = 1,n
+            y(i) = y(i)+a(i,j)*x(ja(i,j))
+ 25      continue
+ 10   continue
+!
+      return
+!--------end-of-amuxe--------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine amuxd (n,x,y,diag,ndiag,idiag,ioff) 
+      use datapool, only : rkind
+      integer n, ndiag, idiag, ioff(idiag) 
+      real(rkind) x(n), y(n), diag(ndiag,idiag)
+!-----------------------------------------------------------------------
+!        A times a vector in Diagonal storage format (DIA) 
+!----------------------------------------------------------------------- 
+! multiplies a matrix by a vector when the original matrix is stored 
+! in the diagonal storage format.
+!-----------------------------------------------------------------------
+!
+! on entry:
+!----------
+! n     = row dimension of A
+! x     = real array of length equal to the column dimension of
+!         the A matrix.
+! ndiag  = integer. The first dimension of array adiag as declared in
+!         the calling program.
+! idiag  = integer. The number of diagonals in the matrix.
+! diag   = real array containing the diagonals stored of A.
+! idiag  = number of diagonals in matrix.
+! diag   = real array of size (ndiag x idiag) containing the diagonals
+!          
+! ioff   = integer array of length idiag, containing the offsets of the
+!          diagonals of the matrix:
+!          diag(i,k) contains the element a(i,i+ioff(k)) of the matrix.
+!
+! on return:
+!-----------
+! y     = real array of length n, containing the product y=A*x
+!
+!-----------------------------------------------------------------------
+!       local variables 
+!
+      integer j, k, io, i1, i2 
+!-----------------------------------------------------------------------
+      do 1 j=1, n
+         y(j) = 0.0_rkind
+ 1    continue
+      do 10 j=1, idiag
+         io = ioff(j)
+         i1 = max0(1,1-io)
+         i2 = min0(n,n-io)
+         do 9 k=i1, i2
+            y(k) = y(k)+diag(k,j)*x(k+io)
+ 9       continue
+ 10   continue
+! 
+      return
+!----------end-of-amuxd-------------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine amuxj (n, x, y, jdiag, a, ja, ia)
+      use datapool, only : rkind
+      integer n, jdiag, ja(*), ia(*)
+      real(rkind) x(n), y(n), a(*)
+!-----------------------------------------------------------------------
+!        A times a vector in Jagged-Diagonal storage format (JAD) 
+!----------------------------------------------------------------------- 
+! multiplies a matrix by a vector when the original matrix is stored 
+! in the jagged diagonal storage format.
+!-----------------------------------------------------------------------
+!
+! on entry:
+!----------
+! n      = row dimension of A
+! x      = real array of length equal to the column dimension of
+!         the A matrix.
+! jdiag  = integer. The number of jadded-diagonals in the data-structure.
+! a      = real array containing the jadded diagonals of A stored
+!          in succession (in decreasing lengths) 
+! j      = integer array containing the colum indices of the 
+!          corresponding elements in a.
+! ia     = integer array containing the lengths of the  jagged diagonals
+!
+! on return:
+!-----------
+! y      = real array of length n, containing the product y=A*x
+!
+! Note:
+!------- 
+! Permutation related to the JAD format is not performed.
+! this can be done by:
+!     call permvec (n,y,y,iperm) 
+! after the call to amuxj, where iperm is the permutation produced
+! by csrjad.
+!-----------------------------------------------------------------------
+! local variables 
+!
+      integer i, ii, k1, ilen, j 
+!-----------------------------------------------------------------------
+      do 1 i=1, n
+         y(i) = 0.0_rkind
+ 1    continue
+      do 70 ii=1, jdiag
+         k1 = ia(ii)-1
+         ilen = ia(ii+1)-k1-1
+         do 60 j=1,ilen
+            y(j)= y(j)+a(k1+j)*x(ja(k1+j)) 
+ 60      continue
+ 70   continue
+!
+      return
+!----------end-of-amuxj------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine vbrmv(nr, nc, ia, ja, ka, a, kvstr, kvstc, x, b)
+      use datapool, only : rkind
+!-----------------------------------------------------------------------
+      integer nr, nc, ia(nr+1), ja(*), ka(*), kvstr(nr+1), kvstc(*)
+      real(rkind)  a(*), x(*), b(*)
+!-----------------------------------------------------------------------
+!     Sparse matrix-full vector product, in VBR format.
+!-----------------------------------------------------------------------
+!     On entry:
+!--------------
+!     nr, nc  = number of block rows and columns in matrix A
+!     ia,ja,ka,a,kvstr,kvstc = matrix A in variable block row format
+!     x       = multiplier vector in full format
+!
+!     On return:
+!---------------
+!     b = product of matrix A times vector x in full format
+!
+!     Algorithm:
+!---------------
+!     Perform multiplication by traversing a in order.
+!
+!-----------------------------------------------------------------------
+!-----local variables
+      integer n, i, j, ii, jj, k, istart, istop
+      real(rkind)  xjj
+!---------------------------------
+      n = kvstc(nc+1)-1
+      do i = 1, n
+         b(i) = 0.0_rkind
+      enddo
+!---------------------------------
+      k = 1
+      do i = 1, nr
+         istart = kvstr(i)
+         istop  = kvstr(i+1)-1
+         do j = ia(i), ia(i+1)-1
+            do jj = kvstc(ja(j)), kvstc(ja(j)+1)-1
+               xjj = x(jj)
+               do ii = istart, istop
+                  b(ii) = b(ii) + xjj*a(k)
+                  k = k + 1
+               enddo
+            enddo
+         enddo
+      enddo
+!---------------------------------
+      return
+      end
+!-----------------------------------------------------------------------
+!----------------------end-of-vbrmv-------------------------------------
+!-----------------------------------------------------------------------
+!----------------------------------------------------------------------c
+! 2)     T R I A N G U L A R    S Y S T E M    S O L U T I O N S       c
+!----------------------------------------------------------------------c
+      subroutine lsol (n,x,y,al,jal,ial)
+      use datapool, only : rkind
+      integer n, jal(*),ial(n+1) 
+      real(rkind)  x(n), y(n), al(*) 
+!-----------------------------------------------------------------------
+!   solves    L x = y ; L = lower unit triang. /  CSR format
+!----------------------------------------------------------------------- 
+! solves a unit lower triangular system by standard (sequential )
+! forward elimination - matrix stored in CSR format. 
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right side.
+!
+! al,
+! jal,
+! ial,    = Lower triangular matrix stored in compressed sparse row
+!          format. 
+!
+! On return:
+!----------- 
+!          x  = The solution of  L x  = y.
+!--------------------------------------------------------------------
+! local variables 
+!
+      integer k, j 
+      real(rkind)  t
+!-----------------------------------------------------------------------
+      x(1) = y(1) 
+      do 150 k = 2, n
+         t = y(k) 
+         do 100 j = ial(k), ial(k+1)-1
+            t = t-al(j)*x(jal(j))
+ 100     continue
+         x(k) = t 
+ 150  continue
+!
+      return
+!----------end-of-lsol-------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------- 
+      subroutine ldsol (n,x,y,al,jal) 
+      use datapool, only : rkind
+      integer n, jal(*) 
+      real(rkind) x(n), y(n), al(*) 
+!----------------------------------------------------------------------- 
+!     Solves L x = y    L = triangular. MSR format 
+!-----------------------------------------------------------------------
+! solves a (non-unit) lower triangular system by standard (sequential) 
+! forward elimination - matrix stored in MSR format 
+! with diagonal elements already inverted (otherwise do inversion,
+! al(1:n) = 1.0/al(1:n),  before calling ldsol).
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right hand side.
+!
+! al,
+! jal,   = Lower triangular matrix stored in Modified Sparse Row 
+!          format. 
+!
+! On return:
+!----------- 
+!        x = The solution of  L x = y .
+!--------------------------------------------------------------------
+! local variables 
+!
+      integer k, j 
+      real(rkind) t 
+!-----------------------------------------------------------------------
+      x(1) = y(1)*al(1) 
+      do 150 k = 2, n
+         t = y(k) 
+         do 100 j = jal(k), jal(k+1)-1
+            t = t - al(j)*x(jal(j))
+ 100     continue
+         x(k) = al(k)*t 
+ 150  continue
+      return
+!----------end-of-ldsol-------------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine lsolc (n,x,y,al,jal,ial)
+      use datapool, only : rkind
+      integer n, jal(*),ial(*) 
+      real(rkind)  x(n), y(n), al(*) 
+!-----------------------------------------------------------------------
+!       SOLVES     L x = y ;    where L = unit lower trang. CSC format
+!-----------------------------------------------------------------------
+! solves a unit lower triangular system by standard (sequential )
+! forward elimination - matrix stored in CSC format. 
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real(rkind) array containg the right side.
+!
+! al,
+! jal,
+! ial,    = Lower triangular matrix stored in compressed sparse column 
+!          format. 
+!
+! On return:
+!----------- 
+!         x  = The solution of  L x  = y.
+!-----------------------------------------------------------------------
+! local variables 
+!
+      integer k, j
+      real(rkind) t
+!-----------------------------------------------------------------------
+      do 140 k=1,n
+         x(k) = y(k) 
+ 140  continue
+      do 150 k = 1, n-1
+         t = x(k) 
+         do 100 j = ial(k), ial(k+1)-1
+            x(jal(j)) = x(jal(j)) - t*al(j) 
+ 100     continue
+ 150  continue
+!
+      return
+!----------end-of-lsolc------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine ldsolc (n,x,y,al,jal) 
+      use datapool, only : rkind
+      integer n, jal(*)
+      real(rkind) x(n), y(n), al(*)
+!-----------------------------------------------------------------------
+!    Solves     L x = y ;    L = nonunit Low. Triang. MSC format 
+!----------------------------------------------------------------------- 
+! solves a (non-unit) lower triangular system by standard (sequential) 
+! forward elimination - matrix stored in Modified Sparse Column format 
+! with diagonal elements already inverted (otherwise do inversion,
+! al(1:n) = 1.0/al(1:n),  before calling ldsol).
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right hand side.
+!
+! al,
+! jal,
+! ial,    = Lower triangular matrix stored in Modified Sparse Column
+!           format.
+!
+! On return:
+!----------- 
+!         x = The solution of  L x = y .
+!--------------------------------------------------------------------
+! local variables
+!
+      integer k, j
+      real(rkind) t 
+!-----------------------------------------------------------------------
+      do 140 k=1,n
+         x(k) = y(k) 
+ 140  continue
+      do 150 k = 1, n 
+         x(k) = x(k)*al(k) 
+         t = x(k) 
+         do 100 j = jal(k), jal(k+1)-1
+            x(jal(j)) = x(jal(j)) - t*al(j) 
+ 100     continue
+ 150  continue
+!
+      return
+!----------end-of-lsolc------------------------------------------------ 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------  
+      subroutine ldsoll (n,x,y,al,jal,nlev,lev,ilev) 
+      use datapool, only : rkind
+      integer n, nlev, jal(*), ilev(nlev+1), lev(n), k
+      real(rkind) x(n), y(n), al(*)
+!-----------------------------------------------------------------------
+!    Solves L x = y    L = triangular. Uses LEVEL SCHEDULING/MSR format 
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right hand side.
+!
+! al,
+! jal,   = Lower triangular matrix stored in Modified Sparse Row 
+!          format. 
+! nlev   = number of levels in matrix
+! lev    = integer array of length n, containing the permutation
+!          that defines the levels in the level scheduling ordering.
+! ilev   = pointer to beginning of levels in lev.
+!          the numbers lev(i) to lev(i+1)-1 contain the row numbers
+!          that belong to level number i, in the level shcheduling
+!          ordering.
+!
+! On return:
+!----------- 
+!        x = The solution of  L x = y .
+!--------------------------------------------------------------------
+      integer ii, jrow, i 
+      real(rkind) t 
+!     
+!     outer loop goes through the levels. (SEQUENTIAL loop)
+!     
+      do 150 ii=1, nlev
+!     
+!     next loop executes within the same level. PARALLEL loop
+!     
+         do 100 i=ilev(ii), ilev(ii+1)-1 
+            jrow = lev(i)
+!
+! compute inner product of row jrow with x
+! 
+            t = y(jrow) 
+            do 130 k=jal(jrow), jal(jrow+1)-1 
+               t = t - al(k)*x(jal(k))
+ 130        continue
+            x(jrow) = t*al(jrow) 
+ 100     continue
+ 150  continue
+      return
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine usol (n,x,y,au,jau,iau)
+      use datapool, only : rkind
+      integer n, jau(*),iau(n+1) 
+      real(rkind)  x(n), y(n), au(*) 
+!----------------------------------------------------------------------- 
+!             Solves   U x = y    U = unit upper triangular. 
+!-----------------------------------------------------------------------
+! solves a unit upper triangular system by standard (sequential )
+! backward elimination - matrix stored in CSR format. 
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right side.
+!
+! au,
+! jau,
+! iau,    = Lower triangular matrix stored in compressed sparse row
+!          format. 
+!
+! On return:
+!----------- 
+!         x = The solution of  U x = y . 
+!-------------------------------------------------------------------- 
+! local variables 
+!
+      integer k, j 
+      real(rkind)  t
+!-----------------------------------------------------------------------
+      x(n) = y(n) 
+      do 150 k = n-1,1,-1 
+         t = y(k) 
+         do 100 j = iau(k), iau(k+1)-1
+            t = t - au(j)*x(jau(j))
+ 100     continue
+         x(k) = t 
+ 150  continue
+!
+      return
+!----------end-of-usol-------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------- 
+      subroutine udsol (n,x,y,au,jau) 
+      use datapool, only : rkind
+      integer n, jau(*) 
+      real(rkind)  x(n), y(n),au(*) 
+!----------------------------------------------------------------------- 
+!             Solves   U x = y  ;   U = upper triangular in MSR format
+!-----------------------------------------------------------------------
+! solves a non-unit upper triangular matrix by standard (sequential )
+! backward elimination - matrix stored in MSR format. 
+! with diagonal elements already inverted (otherwise do inversion,
+! au(1:n) = 1.0/au(1:n),  before calling).
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real array containg the right side.
+!
+! au,
+! jau,    = Lower triangular matrix stored in modified sparse row
+!          format. 
+!
+! On return:
+!----------- 
+!         x = The solution of  U x = y .
+!--------------------------------------------------------------------
+! local variables 
+!
+      integer k, j
+      real(rkind) t
+!-----------------------------------------------------------------------
+      x(n) = y(n)*au(n)
+      do 150 k = n-1,1,-1
+         t = y(k) 
+         do 100 j = jau(k), jau(k+1)-1
+            t = t - au(j)*x(jau(j))
+ 100     continue
+         x(k) = au(k)*t 
+ 150  continue
+!
+      return
+!----------end-of-udsol-------------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------- 
+      subroutine usolc (n,x,y,au,jau,iau)
+      use datapool, only : rkind
+      real(rkind)  x(*), y(*), au(*) 
+      integer n, jau(*),iau(*)
+!-----------------------------------------------------------------------
+!       SOUVES     U x = y ;    where U = unit upper trang. CSC format
+!-----------------------------------------------------------------------
+! solves a unit upper triangular system by standard (sequential )
+! forward elimination - matrix stored in CSC format. 
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real(rkind) array containg the right side.
+!
+! au,
+! jau,
+! iau,    = Uower triangular matrix stored in compressed sparse column 
+!          format. 
+!
+! On return:
+!----------- 
+!         x  = The solution of  U x  = y.
+!-----------------------------------------------------------------------
+! local variables 
+!     
+      integer k, j
+      real(rkind) t
+!-----------------------------------------------------------------------
+      do 140 k=1,n
+         x(k) = y(k) 
+ 140  continue
+      do 150 k = n,1,-1
+         t = x(k) 
+         do 100 j = iau(k), iau(k+1)-1
+            x(jau(j)) = x(jau(j)) - t*au(j) 
+ 100     continue
+ 150  continue
+!
+      return
+!----------end-of-usolc------------------------------------------------- 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+      subroutine udsolc (n,x,y,au,jau)   
+      use datapool, only : rkind
+      integer n, jau(*) 
+      real(rkind) x(n), y(n), au(*)  
+!-----------------------------------------------------------------------
+!    Solves     U x = y ;    U = nonunit Up. Triang. MSC format 
+!----------------------------------------------------------------------- 
+! solves a (non-unit) upper triangular system by standard (sequential) 
+! forward elimination - matrix stored in Modified Sparse Column format 
+! with diagonal elements already inverted (otherwise do inversion,
+! auuuul(1:n) = 1.0/au(1:n),  before calling ldsol).
+!-----------------------------------------------------------------------
+!
+! On entry:
+!---------- 
+! n      = integer. dimension of problem.
+! y      = real(rkind) array containg the right hand side.
+!
+! au,
+! jau,   = Upper triangular matrix stored in Modified Sparse Column
+!          format.
+!
+! On return:
+!----------- 
+!         x = The solution of  U x = y .
+!--------------------------------------------------------------------
+! local variables 
+! 
+      integer k, j
+      real(rkind) t
+!----------------------------------------------------------------------- 
+      do 140 k=1,n
+         x(k) = y(k) 
+ 140  continue
+      do 150 k = n,1,-1
+         x(k) = x(k)*au(k) 
+         t = x(k) 
+         do 100 j = jau(k), jau(k+1)-1
+            x(jau(j)) = x(jau(j)) - t*au(j) 
+ 100     continue
+ 150  continue
+!
+      return
+!----------end-of-udsolc------------------------------------------------ 
+!-----------------------------------------------------------------------
+      end
+!-----------------------------------------------------------------------
+        subroutine lusol(n, y, x, alu, jlu, ju)
+        use datapool, only : rkind
+        implicit none
+
+        integer    :: n, jlu(*), ju(*)
+        real(rkind)     :: x(n), y(n), alu(*)
+        
+!-----------------------------------------------------------------------
+        integer    :: i,k
+!
+! forward solve
+!
+        do i = 1, n
+          x(i) = y(i)
+          do k=jlu(i),ju(i)-1
+            x(i) = x(i) - alu(k)* x(jlu(k))
+          end do
+        end do
+        do i = n, 1, -1
+          do k=ju(i),jlu(i+1)-1
+            x(i) = x(i) - alu(k)*x(jlu(k))
+          end do
+          x(i) = alu(i)*x(i)
+        end do
+        return
+        end
+!-----------------------------------------------------------------------
+        subroutine lutsol(n, y, x, alu, jlu, ju) 
+        use datapool, only : rkind
+          implicit none
+
+        integer     :: n, jlu(*), ju(*)
+        real(rkind)      :: x(n), y(n), alu(*)
+        
+!-----------------------------------------------------------------------
+! local variables
+!
+        integer      :: i,k
+!
+        do 10 i = 1, n
+           x(i) = y(i)
+ 10     continue
+!
+! forward solve (with U^T)
+!
+        do 20 i = 1, n
+           x(i) = x(i) * alu(i)
+           do 30 k=ju(i),jlu(i+1)-1
+              x(jlu(k)) = x(jlu(k)) - alu(k)* x(i)
+ 30        continue
+ 20     continue
+!     
+!     backward solve (with L^T)
+!     
+        do 40 i = n, 1, -1 
+           do 50 k=jlu(i),ju(i)-1
+              x(jlu(k)) = x(jlu(k)) - alu(k)*x(i)
+ 50        continue
+ 40     continue
+!
+        return
+!----------------end of lutsol -----------------------------------------
+!-----------------------------------------------------------------------
+         end
+!----------------------------------------------------------------------- 
+        subroutine qsplit(a,ind,n,ncut)
+        use datapool, only : rkind
+          implicit none
+
+        integer    :: n, ind(n), ncut
+        real(rkind)     :: a(n)
+        
+!-----------------------------------------------------------------------
+!     does a quick-sort split of a real array.
+!     on input a(1:n). is a real array
+!     on output a(1:n) is permuted such that its elements satisfy:
+!
+!     abs(a(i)) .ge. abs(a(ncut)) for i .lt. ncut and
+!     abs(a(i)) .le. abs(a(ncut)) for i .gt. ncut
+!
+!     ind(1:n) is an integer array which permuted in the same way as a(*).
+!-----------------------------------------------------------------------
+        real(rkind)     :: tmp, abskey
+        integer    :: itmp, first, last, j, mid
+!-----
+        first = 1
+        last = n
+        if (ncut .lt. first .or. ncut .gt. last) return
+!
+!     outer loop -- while mid .ne. ncut do
+!
+ 1      mid = first
+        abskey = abs(a(mid))
+        do 2 j=first+1, last
+           if (abs(a(j)) .gt. abskey) then
+              mid = mid+1
+!     interchange
+              tmp = a(mid)
+              itmp = ind(mid)
+              a(mid) = a(j)
+              ind(mid) = ind(j)
+              a(j)  = tmp
+              ind(j) = itmp
+           endif
+ 2      continue
+!
+!     interchange
+!
+        tmp = a(mid)
+        a(mid) = a(first)
+        a(first)  = tmp
+!
+        itmp = ind(mid)
+        ind(mid) = ind(first)
+        ind(first) = itmp
+!
+!     test for while loop
+!
+        if (mid .eq. ncut) return
+        if (mid .gt. ncut) then
+           last = mid-1
+        else
+           first = mid+1
+        endif
+        goto 1
+!----------------end-of-qsplit------------------------------------------
+!-----------------------------------------------------------------------
+        end
+      subroutine runrc(n,nnz,rhs,sol,ipar,fpar,wk,guess,a,ja,ia,au,jau,ju,solver)
+      use datapool, only : rkind
+      implicit none
+      integer, intent (in)    :: n, nnz, ia(n+1)
+      integer, intent (inout) :: ipar(16)
+      integer, intent (in)    :: ja(nnz),ju(n),jau(nnz+1)
+      real(rkind), intent(inout)   :: fpar(16),rhs(n),sol(n)
+      real(rkind), intent(in)      :: wk(100*n),a(nnz),au(nnz+1),guess(n)
+      external solver
+!-----------------------------------------------------------------------
+!     the actual tester. It starts the iterative linear system solvers
+!     with a initial guess suppied by the user.
+!
+!     The structure {au, jau, ju} is assumed to have the output from
+!     the ILU* routines in ilut.f.
+!-----------------------------------------------------------------------
+!     local variables
+!
+      integer       :: its
+!      real          :: dtime, dt(2), time
+!     external dtime
+      save its
+!
+!     ipar(2) can be 0, 1, 2, please don't use 3
+!
+      if (ipar(2).gt.2) then
+         print *, 'I can not do both left and right preconditioning.'
+         return
+      endif
+
+      its = 0
+      sol = guess
+      ipar(1) = 0
+!     time = dtime(dt)
+
+ 10   call solver(n,rhs,sol,ipar,fpar,wk)
+
+      if (ipar(7).ne.its) then
+         its = ipar(7)
+      endif
+      if (ipar(1).eq.1) then
+         call amux(n, wk(ipar(8)), wk(ipar(9)), a, ja, ia)
+         goto 10
+      else if (ipar(1).eq.2) then
+         call atmux(n, wk(ipar(8)), wk(ipar(9)), a, ja, ia)
+         goto 10
+      else if (ipar(1).eq.3 .or. ipar(1).eq.5) then
+         call lusol(n,wk(ipar(8)),wk(ipar(9)),au,jau,ju)
+         goto 10
+      else if (ipar(1).eq.4 .or. ipar(1).eq.6) then
+         call lutsol(n,wk(ipar(8)),wk(ipar(9)),au,jau,ju)
+         goto 10
+      else if (ipar(1).le.0) then
+         if (ipar(1).eq.0) then
+!            print *, 'Iterative sovler has satisfied convergence test.'
+         else if (ipar(1).eq.-1) then
+             print *, 'Iterative solver has iterated too many times.'
+         else if (ipar(1).eq.-2) then
+            print *, 'Iterative solver was not given enough work space.'
+            print *, 'The work space should at least have ', ipar(4), &
+     &           ' elements.'
+         else if (ipar(1).eq.-3) then
+            print *, 'Iterative sovler is facing a break-down.'
+         else
+            print *, 'Iterative solver terminated. code =', ipar(1)
+         endif
+      endif
+      end
+!-----end-of-runrc
+!----------------------------------------------------------------------c
+!                          S P A R S K I T                             c
+!----------------------------------------------------------------------c
+!                   ITERATIVE SOLVERS MODULE                           c
+!----------------------------------------------------------------------c
+! This Version Dated: August 13, 1996. Warning: meaning of some        c
+! ============ arguments have changed w.r.t. earlier versions. Some    c
+!              Calling sequences may also have changed                 c
+!
+      subroutine ilut(n,a,ja,ia,lfil,droptol,alu,jlu,ju,iwk,w,jw,ierr)
+      use datapool, only : rkind
+!-----------------------------------------------------------------------
+      implicit none 
+      integer n 
+      real(rkind) a(*),alu(*),w(n+1),droptol
+      integer ja(*),ia(n+1),jlu(*),ju(n),jw(2*n),lfil,iwk,ierr
+!----------------------------------------------------------------------*
+!                      *** ILUT preconditioner ***                     *
+!      incomplete LU factorization with dual truncation mechanism      *
+!----------------------------------------------------------------------*
+!     Author: Yousef Saad *May, 5, 1990, Latest revision, August 1996  *
+!----------------------------------------------------------------------*
+! PARAMETERS                                                           
+!-----------                                                           
+!
+! on entry:
+!========== 
+! n       = integer. The row dimension of the matrix A. The matrix 
+!
+! a,ja,ia = matrix stored in Compressed Sparse Row format.              
+!
+! lfil    = integer. The fill-in parameter. Each row of L and each row
+!           of U will have a maximum of lfil elements (excluding the 
+!           diagonal element). lfil must be .ge. 0.
+!           ** WARNING: THE MEANING OF LFIL HAS CHANGED WITH RESPECT TO
+!           EARLIER VERSIONS. 
+!
+! droptol = real(rkind). Sets the threshold for dropping small terms in the
+!           factorization. See below for details on dropping strategy.
+!
+!  
+! iwk     = integer. The lengths of arrays alu and jlu. If the arrays
+!           are not big enough to store the ILU factorizations, ilut
+!           will stop with an error message. 
+!
+! On return:
+!===========
+!
+! alu,jlu = matrix stored in Modified Sparse Row (MSR) format containing
+!           the L and U factors together. The diagonal (stored in
+!           alu(1:n) ) is inverted. Each i-th row of the alu,jlu matrix
+!           contains the i-th row of L (excluding the diagonal entry=1)
+!           followed by the i-th row of U.
+!
+! ju      = integer array of length n containing the pointers to
+!           the beginning of each row of U in the matrix alu,jlu.
+!
+! ierr    = integer. Error message with the following meaning.
+!           ierr  = 0    --> successful return.
+!           ierr .gt. 0  --> zero pivot encountered at step number ierr.
+!           ierr  = -1   --> Error. input matrix may be wrong.
+!                            (The elimination process has generated a
+!                            row in L or U whose length is .gt.  n.)
+!           ierr  = -2   --> The matrix L overflows the array al.
+!           ierr  = -3   --> The matrix U overflows the array alu.
+!           ierr  = -4   --> Illegal value for lfil.
+!           ierr  = -5   --> zero row encountered.
+!
+! work arrays:
+!=============
+! jw      = integer work array of length 2*n.
+! w       = real work array of length n+1.
+!  
+!----------------------------------------------------------------------
+! w, ju (1:n) store the working array [1:ii-1 = L-part, ii:n = u] 
+! jw(n+1:2n)  stores nonzero indicators
+! 
+! Notes:
+! ------
+! The diagonal elements of the input matrix must be  nonzero (at least
+! 'structurally'). 
+!
+!----------------------------------------------------------------------* 
+!---- Dual drop strategy works as follows.                             *
+!                                                                      *
+!     1) Theresholding in L and U as set by droptol. Any element whose *
+!        magnitude is less than some tolerance (relative to the abs    *
+!        value of diagonal element in u) is dropped.                   *
+!                                                                      *
+!     2) Keeping only the largest lfil elements in the i-th row of L   * 
+!        and the largest lfil elements in the i-th row of U (excluding *
+!        diagonal elements).                                           *
+!                                                                      *
+! Flexibility: one  can use  droptol=0  to get  a strategy  based on   *
+! keeping  the largest  elements in  each row  of L  and U.   Taking   *
+! droptol .ne.  0 but lfil=n will give  the usual threshold strategy   *
+! (however, fill-in is then mpredictible).                             *
+!----------------------------------------------------------------------*
+!     locals
+      integer ju0,k,j1,j2,j,ii,i,lenl,lenu,jj,jrow,jpos,lenn 
+      real(rkind) tnorm, t, abs, s, fact 
+      if (lfil .lt. 0) goto 998
+!-----------------------------------------------------------------------
+!     initialize ju0 (points to next element to be added to alu,jlu)
+!     and pointer array.
+!-----------------------------------------------------------------------
+      ju0 = n+2
+      jlu(1) = ju0
+!
+!     initialize nonzero indicator array. 
+!
+      do 1 j=1,n
+         jw(n+j)  = 0
+ 1    continue
+!-----------------------------------------------------------------------
+!     beginning of main loop.
+!-----------------------------------------------------------------------
+      do 500 ii = 1, n
+
+         j1 = ia(ii)
+         j2 = ia(ii+1) - 1
+
+         tnorm = 0.0_rkind
+         do 501 k=j1,j2
+            tnorm = tnorm+abs(a(k))
+ 501     continue
+         if (abs(tnorm) .lt. tiny(1.)) goto 999
+
+         tnorm = tnorm/real(j2-j1+1)
+!     
+!     unpack L-part and U-part of row of A in arrays w 
+!     
+         lenu = 1
+         lenl = 0
+         jw(ii) = ii
+         w(ii) = 0.0
+         jw(n+ii) = ii
+!
+         do 170  j = j1, j2
+            k = ja(j)
+            t = a(j)
+            if (k .lt. ii) then
+               lenl = lenl+1
+               jw(lenl) = k
+               w(lenl) = t
+               jw(n+k) = lenl
+            else if (k .eq. ii) then
+               w(ii) = t
+            else
+               lenu = lenu+1
+               jpos = ii+lenu-1 
+               jw(jpos) = k
+               w(jpos) = t
+               jw(n+k) = jpos
+            endif
+ 170     continue
+         jj = 0
+         lenn = 0 
+!     
+!     eliminate previous rows
+!     
+ 150     jj = jj+1
+         if (jj .gt. lenl) goto 160
+!-----------------------------------------------------------------------
+!     in order to do the elimination in the correct order we must select
+!     the smallest column index among jw(k), k=jj+1, ..., lenl.
+!-----------------------------------------------------------------------
+         jrow = jw(jj)
+         k = jj
+!     
+!     determine smallest column index
+!     
+         do 151 j=jj+1,lenl
+            if (jw(j) .lt. jrow) then
+               jrow = jw(j)
+               k = j
+            endif
+ 151     continue
+!
+         if (k .ne. jj) then
+!     exchange in jw
+            j = jw(jj)
+            jw(jj) = jw(k)
+            jw(k) = j
+!     exchange in jr
+            jw(n+jrow) = jj
+            jw(n+j) = k
+!     exchange in w
+            s = w(jj)
+            w(jj) = w(k)
+            w(k) = s
+         endif
+!
+!     zero out element in row by setting jw(n+jrow) to zero.
+!     
+         jw(n+jrow) = 0
+!
+!     get the multiplier for row to be eliminated (jrow).
+!     
+         fact = w(jj)*alu(jrow)
+         if (abs(fact) .le. droptol) goto 150
+!     
+!     combine current row and row jrow
+!
+         do 203 k = ju(jrow), jlu(jrow+1)-1
+            s = fact*alu(k)
+            j = jlu(k)
+            jpos = jw(n+j)
+            if (j .ge. ii) then
+!     
+!     dealing with upper part.
+!     
+               if (jpos .eq. 0) then
+!
+!     this is a fill-in element
+!     
+                  lenu = lenu+1
+                  if (lenu .gt. n) goto 995
+                  i = ii+lenu-1
+                  jw(i) = j
+                  jw(n+j) = i
+                  w(i) = - s
+               else
+!
+!     this is not a fill-in element 
+!
+                  w(jpos) = w(jpos) - s
+
+               endif
+            else
+!     
+!     dealing  with lower part.
+!     
+               if (jpos .eq. 0) then
+!
+!     this is a fill-in element
+!     
+                  lenl = lenl+1
+                  if (lenl .gt. n) goto 995
+                  jw(lenl) = j
+                  jw(n+j) = lenl
+                  w(lenl) = - s
+               else
+!     
+!     this is not a fill-in element 
+!     
+                  w(jpos) = w(jpos) - s
+               endif
+            endif
+ 203     continue
+!     
+!     store this pivot element -- (from left to right -- no danger of
+!     overlap with the working elements in L (pivots). 
+!     
+         lenn = lenn+1 
+         w(lenn) = fact
+         jw(lenn)  = jrow
+         goto 150
+ 160     continue
+!     
+!     reset double-pointer to zero (U-part)
+!     
+         do 308 k=1, lenu
+            jw(n+jw(ii+k-1)) = 0
+ 308     continue
+!     
+!     update L-matrix
+!     
+         lenl = lenn 
+         lenn = min0(lenl,lfil)
+!     
+!     sort by quick-split
+!
+         call qsplit (w,jw,lenl,lenn)
+!
+!     store L-part
+! 
+         do 204 k=1, lenn 
+            if (ju0 .gt. iwk) goto 996
+            alu(ju0) =  w(k)
+            jlu(ju0) =  jw(k)
+            ju0 = ju0+1
+ 204     continue
+!     
+!     save pointer to beginning of row ii of U
+!     
+         ju(ii) = ju0
+!
+!     update U-matrix -- first apply dropping strategy 
+!
+         lenn = 0
+         do k=1, lenu-1
+            if (abs(w(ii+k)) .gt. droptol*tnorm) then 
+               lenn = lenn+1
+               w(ii+lenn) = w(ii+k) 
+               jw(ii+lenn) = jw(ii+k) 
+            endif
+         enddo
+         lenu = lenn+1
+         lenn = min0(lenu,lfil)
+!
+         call qsplit (w(ii+1), jw(ii+1), lenu-1,lenn)
+!
+!     copy
+! 
+         t = abs(w(ii))
+         if (lenn + ju0 .gt. iwk) goto 997
+         do 302 k=ii+1,ii+lenn-1 
+            jlu(ju0) = jw(k)
+            alu(ju0) = w(k)
+            t = t + abs(w(k) )
+            ju0 = ju0+1
+ 302     continue
+!     
+!     store inverse of diagonal element of u
+!     
+!2do check if it works ... after correction ...
+         if (abs(w(ii)) .lt.  tiny(1.0_rkind)) w(ii) = (0.0001_rkind + droptol)*tnorm
+!     
+         alu(ii) = 1.0_rkind/ w(ii) 
+!     
+!     update pointer to beginning of next row of U.
+!     
+         jlu(ii+1) = ju0
+!-----------------------------------------------------------------------
+!     end main loop
+!-----------------------------------------------------------------------
+ 500  continue
+      ierr = 0
+      return
+!
+!     incomprehensible error. Matrix must be wrong.
+!     
+ 995  ierr = -1
+      return
+!     
+!     insufficient storage in L.
+!     
+ 996  ierr = -2
+      return
+!     
+!     insufficient storage in U.
+!     
+ 997  ierr = -3
+      return
+!     
+!     illegal lfil entered.
+!     
+ 998  ierr = -4
+      return
+!     
+!     zero row encountered
+!     
+ 999  ierr = -5
+      return
+!----------------end-of-ilut--------------------------------------------
+!-----------------------------------------------------------------------
+      end
+!----------------------------------------------------------------------
+!       subroutine ilu0(n, a, ja, ia, alu, jlu, ju, iw, ipoint1, ipoint2, ierr)
+        subroutine ilu0(n, a, ja, ia, alu, jlu, ju, iw, ierr)
+        use datapool, only : rkind
+
+        implicit real(rkind) (a-h,o-z)
+        integer, intent(in) :: n
+        real(rkind) a(*), alu(*)
+        integer, intent(in) :: ja(*), ia(*)
+        integer, intent(inout) :: ju(*), jlu(*), iw(n)
+        integer ju0, ii, js, j, jcol, jf, jm, jrow, jj, jw, i, ierr
+        real(rkind) tl
+        ju0 = n+2
+        jlu(1) = ju0 !!!
+        iw = 0
+        do ii = 1, n
+           js = ju0
+           do j=ia(ii),ia(ii+1)-1
+              jcol = ja(j)
+              if (jcol .eq. ii) then
+                 alu(ii) = a(j)
+                 iw(jcol) = ii
+                 ju(ii)  = ju0 !!!
+              else
+                 alu(ju0) = a(j)
+                 jlu(ju0) = ja(j)
+                 iw(jcol) = ju0
+                 ju0 = ju0+1
+              endif
+           end do
+           jlu(ii+1) = ju0 !!!
+           jf = ju0-1
+           jm = ju(ii)-1
+!     exit if diagonal element is reached.
+           do j=js, jm
+              jrow = jlu(j)
+              tl = alu(j)*alu(jrow)
+              alu(j) = tl
+!     perform  linear combination
+              do jj = ju(jrow), jlu(jrow+1)-1
+                 jw = iw(jlu(jj))
+                 if (jw .ne. 0) then
+                   alu(jw) = alu(jw) - tl*alu(jj)
+!                   write(DBG%FHNDL,*) ii, jw, jj
+                 end if
+              end do
+           end do
+!     invert  and store diagonal element.
+           if (abs(alu(ii)) .lt. tiny(1.)) goto 600
+           alu(ii) = 1.0_rkind/alu(ii)
+!     reset pointer iw to zero
+           iw(ii) = 0
+           do i = js, jf
+             iw(jlu(i)) = 0
+           end do
+        end do
+
+        ierr = 0
+        return
+
+!     zero pivot :
+ 600    ierr = ii
+      return
+      end
+!-----------------------------------------------------------------------
+!  Mathieu Dutour Sikiric: Add the SOR preconditioner as a matter of
+!  consistency
+        subroutine sor(n, a, ja, ia, alu, jlu, ju, iw, ierr)
+        use datapool, only : rkind
+
+        implicit real(rkind) (a-h,o-z)
+        integer, intent(in) :: n
+        real(rkind) a(*), alu(*)
+        integer, intent(in) :: ja(*), ia(*)
+        integer, intent(inout) :: ju(*), jlu(*), iw(n)
+        integer ju0, ii, js, j, jcol, ierr
+        integer istat
+        integer, allocatable :: ListJ(:)
+        ju0 = n+2
+        jlu(1) = ju0
+        iw = 0
+        allocate(ListJ(n), stat=istat)
+        IF (istat /= 0) CALL WWM_ABORT('wwm_sparskit, allocate error 1')
+        do ii = 1, n
+          do j=ia(ii),ia(ii+1)-1
+            jcol = ja(j)
+            if (jcol .eq. ii) then
+              ListJ(ii)=j
+            end if
+          end do
+        end do
+        do ii = 1, n
+           js = ju0
+           do j=ia(ii),ia(ii+1)-1
+              jcol = ja(j)
+              if (jcol .eq. ii) then
+                 alu(ii) = 1.0_rkind/a(j)
+                 ju(ii)  = ju0 !!!
+              else
+                 if (jcol .lt. ii) then
+                   alu(ju0) = a(j)/a(ListJ(ii))
+                   jlu(ju0) = ja(j)
+                 else
+                   alu(ju0) = a(j)
+                   jlu(ju0) = ja(j)
+                 end if
+                 ju0 = ju0+1
+              endif
+           end do
+           jlu(ii+1) = ju0 !!!
+        end do
+        deallocate(ListJ)
+      end
+!-----------------------------------------------------------------------
+!       subroutine pgmres(n, im, rhs, sol, eps, maxits, ierr)
+!        subroutine pgmres(n, im, rhs, sol, eps, maxits, aspar, ierr)
+        subroutine pgmres(n, im, rhs, sol, eps, maxits, aspar, nnz, ia, ja, alu, jlu, ju, vv, ierr)
+!-----------------------------------------------------------------------
+!       use datapool, only : nnz, ia, ja, alu, jlu, ju, vv, aspar!, rhs, sol
+       use datapool, only : rkind, DBG
+       implicit none
+
+       integer :: n, im, maxits, ierr, nnz
+
+       integer :: ja(nnz), ia(n+1)
+       integer :: jlu(nnz+1), ju(n)
+       real(rkind)  :: vv(n,im+1), alu(nnz+1)
+       real(rkind)  :: aspar(nnz)
+
+       real(rkind)  :: rhs(*), sol(*)
+
+       real(rkind)  :: eps
+       real(rkind)  :: eps1, epsmac, gam, t, ddot, dnrm2, ro, tl
+
+       integer :: i,i1,j,jj,k,k1,iii,ii,ju0
+       integer :: its,jrow,jcol,jf,jm,js,jw
+
+       real(rkind)  :: hh(im+1,im), c(im), s(im), rs(im+1)
+       real(rkind)  :: iw(n)
+
+       logical :: lblas = .false.      ! use sparskit matvec and external blas libs (true), don't use them (false)
+       logical :: lilu  = .true.      ! use simple ilu preconditioner
+
+       data epsmac/1.d-16/
+
+! ilu0 preconditioner
+
+       if (lilu) then
+         ju0 = n+2
+         jlu(1) = ju0 !!!
+         iw = 0
+         do ii = 1, n
+            js = ju0
+            do j=ia(ii),ia(ii+1)-1
+               jcol = ja(j)
+               if (jcol .eq. ii) then
+                  alu(ii) = aspar(j)
+                  iw(jcol) = ii
+                  ju(ii)  = ju0 !!!
+               else
+                  alu(ju0) = aspar(j)
+                  jlu(ju0) = ja(j)
+                  iw(jcol) = ju0
+                  ju0 = ju0+1
+               endif
+            end do
+            jlu(ii+1) = ju0 !!!
+            jf = ju0-1
+            jm = ju(ii)-1
+! exit if diagonal element is reached.
+            do j=js, jm
+               jrow = jlu(j)
+               tl = alu(j)*alu(jrow)
+               alu(j) = tl
+! perform  linear combination
+               do jj = ju(jrow), jlu(jrow+1)-1
+                  jw = int(iw(jlu(jj)))
+                  if (jw .ne. 0) then
+                      alu(jw) = alu(jw) - tl*alu(jj)
+!                    write(DBG%FHNDL,*) ii, jw, jj
+                  end if
+               end do
+            end do
+!     invert  and store diagonal element.
+            if (abs(alu(ii)) .lt. epsmac) then
+              write(DBG%FHNDL,*) 'zero pivot'
+              stop 'wwm_sparskit l.3000'
+            end if
+            alu(ii) = 1.0_rkind/alu(ii)
+!     reset pointer iw to zero
+            iw(ii) = 0
+            do i = js, jf
+              iw(jlu(i)) = 0
+            end do
+         end do
+! end preconditioner
+       end if
+!-------------------------------------------------------------
+       its = 0
+! outer loop starts here..
+       if (lblas) then
+         call amux (n, sol, vv, aspar, ja, ia)
+       else
+         do iii = 1, n
+           t = 0.0_rkind
+           do k = ia(iii), ia(iii+1)-1
+              t = t + aspar(k) * sol(ja(k))
+           end do
+           vv(iii,1) = t
+         end do
+       end if
+       do j=1,n
+          vv(j,1) = rhs(j) - vv(j,1)
+       end do
+ 20    if (lblas) then
+         ro = dnrm2(n, vv, 1)
+       else
+         ro = sqrt(sum(vv(:,1)*vv(:,1)))
+       end if
+       if (abs(ro) .lt. epsmac) goto 999
+       t = 1.0_rkind / ro
+       do j=1, n
+          vv(j,1) = vv(j,1)*t
+       end do
+       if (its .eq. 0) eps1=eps*ro
+!      initialize 1-st term  of rhs of hessenberg system..
+       rs(1) = ro
+       i = 0
+ 4     i=i+1
+       its = its + 1
+       i1 = i + 1
+       if (lblas) then
+         call lusol (n, vv(1,i), rhs, alu, jlu, ju)
+         call amux (n, rhs, vv(1,i1), aspar, ja, ia)
+       else
+         do iii = 1, n !- lusol
+           rhs(iii) = vv(iii,i)
+           do k=jlu(iii),ju(iii)-1
+             rhs(iii) = rhs(iii) - alu(k)* rhs(jlu(k))
+           end do
+         end do
+         do iii = n, 1, -1
+           do k=ju(iii),jlu(iii+1)-1
+              rhs(iii) = rhs(iii) - alu(k)*rhs(jlu(k))
+           end do
+           rhs(iii) = alu(iii)*rhs(iii)
+         end do
+         do iii = 1, n !- amux
+           t = 0.0_rkind
+           do k = ia(iii), ia(iii+1)-1
+             t = t + aspar(k) * rhs(ja(k))
+           end do
+           vv(iii,i1) = t
+         end do
+       end if
+!      modified gram - schmidt...
+       if (lblas) then
+         do j=1, i
+           t = ddot(n, vv(1,j),1,vv(1,i1),1)
+           hh(j,i) = t
+           call daxpy(n, -t, vv(1,j), 1, vv(1,i1), 1)
+           t = dnrm2(n, vv(1,i1), 1)
+         end do
+       else
+         do j=1, i
+           t = 0.0_rkind
+           do iii = 1,n
+             t = t + vv(iii,j)*vv(iii,i1)
+           end do
+           hh(j,i) = t
+           vv(:,i1) = vv(:,i1) - t * vv(:,j)
+           t = sqrt(sum(vv(:,i1)*vv(:,i1)))
+         end do
+       end if
+       hh(i1,i) = t
+       if ( abs(t) .lt. epsmac) goto 58
+       t = 1.0_rkind/t
+       do k=1,n
+          vv(k,i1) = vv(k,i1)*t
+       end do
+!     done with modified gram schimd and arnoldi step.. now  update factorization of hh
+58     if (i .eq. 1) goto 121
+       do k=2,i
+          k1 = k-1
+          t = hh(k1,i)
+          hh(k1,i) = c(k1)*t + s(k1)*hh(k,i)
+          hh(k,i) = -s(k1)*t + c(k1)*hh(k,i)
+       end do
+121    gam = sqrt(hh(i,i)**2 + hh(i1,i)**2)
+       if (abs(gam) .lt. epsmac) gam = epsmac
+!      get  next plane rotation
+       c(i) = hh(i,i)/gam
+       s(i) = hh(i1,i)/gam
+       rs(i1) = -s(i)*rs(i)
+       rs(i) =  c(i)*rs(i)
+!      detrermine residual norm and test for convergence-
+       hh(i,i) = c(i)*hh(i,i) + s(i)*hh(i1,i)
+       ro = abs(rs(i1))
+       if (i .lt. im .and. (ro .gt. eps1))  goto 4
+!      now compute solution. first solve upper triangular system.
+       rs(i) = rs(i)/hh(i,i)
+       do ii=2,i
+          k=i-ii+1
+          k1 = k+1
+          t=rs(k)
+          do j=k1,i
+             t = t-hh(k,j)*rs(j)
+          end do
+          rs(k) = t/hh(k,k)
+       end do
+!      form linear combination of v(*,i)'s to get solution
+       t = rs(1)
+       do k=1, n
+          rhs(k) = vv(k,1)*t
+       end do
+       do j = 2, i
+          t = rs(j)
+          do k=1, n
+             rhs(k) = rhs(k)+t*vv(k,j)
+          end do
+       end do
+!      call preconditioner.
+       if (lblas) then
+         call lusol (n, rhs, rhs, alu, jlu, ju)
+       else
+         do iii = 1, n
+            do k=jlu(iii),ju(iii)-1
+              rhs(iii) = rhs(iii) - alu(k)* rhs(jlu(k))
+            end do
+         end do
+         do iii = n, 1, -1
+           do k=ju(iii),jlu(iii+1)-1
+              rhs(iii) = rhs(iii) - alu(k)*rhs(jlu(k))
+           end do
+           rhs(iii) = alu(iii)*rhs(iii)
+         end do
+       end if
+       do k=1, n
+          sol(k) = sol(k) + rhs(k)
+       end do
+!      restart outer loop  when necessary
+       if (ro .le. eps1) goto 990
+       if (its .ge. maxits) goto 991
+!      else compute residual vector and continue..
+       do j=1,i
+          jj = i1-j+1
+          rs(jj-1) = -s(jj-1)*rs(jj)
+          rs(jj) = c(jj-1)*rs(jj)
+       end do
+       do j=1,i1
+          t = rs(j)
+          if (j .eq. 1)  t = t-1.0_rkind
+          if (lblas) then
+            call daxpy (n, t, vv(1,j), 1,  vv, 1)
+          else
+            vv(:,j) = vv(:,j) + t * vv(:,1)
+          end if
+       end do
+! 199   format('   its =', i4, ' res. norm =', d20.6)
+!      restart outer loop.
+       goto 20
+ 990   ierr = 0
+       return
+ 991   ierr = 1
+       return
+ 999   continue
+       ierr = -1
+       return
+!--------------------------------------------------------------------- 
+       end
+!-----------------------------------------------------------------------
+      function distdot(n,x,ix,y,iy)
+      use datapool, only : rkind
+      integer n, ix, iy
+      real(rkind) distdot, x(*), y(*), ddot
+      external ddot
+      distdot = ddot(n,x,ix,y,iy)
+      return
+      end
+!-----------------------------------------------------------------------
+

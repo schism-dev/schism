@@ -1,0 +1,153 @@
+Date:   2007_01_01
+script_parent:
+/home/mazulauf/amb10xx/netcdf/cvs_stuff/forecasts/bin/atmos_nc/
+grid_source:
+/home/mazulauf/amb10xx/netcdf/cvs_stuff/forecasts/bin/atmos_nc/data/narr_grid_221
+ 
+dst_parent:
+/home/workspace/ccalmr43/NARR/narr/
+work_dir:
+/home/workspace/ccalmr43/NARR/narr/work/
+ 
+`narr_air.2007_01_01.nc' -> `narr_rad.2007_01_01.nc'
+`narr_air.2007_01_01.nc' -> `narr_prc.2007_01_01.nc'
+`narr_air.2007_01_01.nc' -> `narr_apcp.2007_01_01.nc'
+ 
+2007010100 200701.tar
+200701/NARR.2007010100.10m
+1:0:d=07010100:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010100:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010100.PRMSL
+1:0:d=07010100:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010100.2m
+1:0:d=07010100:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010100:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010100.DLWRF
+1:0:d=07010100:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010100.DSWRF
+1:0:d=07010100:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010100.APCP
+1:0:d=07010100:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+0 1.5
+ 
+2007010103 200701.tar
+200701/NARR.2007010103.10m
+1:0:d=07010103:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010103:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010103.PRMSL
+1:0:d=07010103:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010103.2m
+1:0:d=07010103:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010103:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010103.DLWRF
+1:0:d=07010103:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010103.DSWRF
+1:0:d=07010103:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010103.APCP
+1:0:d=07010103:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+3 4.5
+ 
+2007010106 200701.tar
+200701/NARR.2007010106.10m
+1:0:d=07010106:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010106:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010106.PRMSL
+1:0:d=07010106:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010106.2m
+1:0:d=07010106:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010106:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010106.DLWRF
+1:0:d=07010106:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010106.DSWRF
+1:0:d=07010106:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010106.APCP
+1:0:d=07010106:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+6 7.5
+ 
+2007010109 200701.tar
+200701/NARR.2007010109.10m
+1:0:d=07010109:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010109:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010109.PRMSL
+1:0:d=07010109:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010109.2m
+1:0:d=07010109:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010109:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010109.DLWRF
+1:0:d=07010109:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010109.DSWRF
+1:0:d=07010109:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010109.APCP
+1:0:d=07010109:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+9 10.5
+ 
+2007010112 200701.tar
+200701/NARR.2007010112.10m
+1:0:d=07010112:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010112:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010112.PRMSL
+1:0:d=07010112:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010112.2m
+1:0:d=07010112:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010112:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010112.DLWRF
+1:0:d=07010112:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010112.DSWRF
+1:0:d=07010112:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010112.APCP
+1:0:d=07010112:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+12 13.5
+ 
+2007010115 200701.tar
+200701/NARR.2007010115.10m
+1:0:d=07010115:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010115:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010115.PRMSL
+1:0:d=07010115:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010115.2m
+1:0:d=07010115:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010115:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010115.DLWRF
+1:0:d=07010115:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010115.DSWRF
+1:0:d=07010115:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010115.APCP
+1:0:d=07010115:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+15 16.5
+ 
+2007010118 200701.tar
+200701/NARR.2007010118.10m
+1:0:d=07010118:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010118:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010118.PRMSL
+1:0:d=07010118:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010118.2m
+1:0:d=07010118:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010118:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010118.DLWRF
+1:0:d=07010118:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010118.DSWRF
+1:0:d=07010118:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010118.APCP
+1:0:d=07010118:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+18 19.5
+ 
+2007010121 200701.tar
+200701/NARR.2007010121.10m
+1:0:d=07010121:UGRD:kpds5=33:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+2:166652:d=07010121:VGRD:kpds5=34:kpds6=105:kpds7=10:TR=0:P1=0:P2=0:TimeU=1:10 m above gnd:anl:NAve=0
+200701/NARR.2007010121.PRMSL
+1:0:d=07010121:PRMSL:kpds5=2:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+200701/NARR.2007010121.2m
+1:0:d=07010121:TMP:kpds5=11:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+2:142846:d=07010121:SPFH:kpds5=51:kpds6=105:kpds7=2:TR=0:P1=0:P2=0:TimeU=1:2 m above gnd:anl:NAve=0
+200701/NARR.2007010121.DLWRF
+1:0:d=07010121:DLWRF:kpds5=205:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010121.DSWRF
+1:0:d=07010121:DSWRF:kpds5=204:kpds6=1:kpds7=0:TR=3:P1=0:P2=3:TimeU=1:sfc:0-3hr ave:NAve=0
+200701/NARR.2007010121.APCP
+1:0:d=07010121:APCP:kpds5=61:kpds6=1:kpds7=0:TR=4:P1=0:P2=3:TimeU=1:sfc:0-3hr acc:NAve=0
+21 22.5
+
+completing processing and saving output at hour_num = 21
+

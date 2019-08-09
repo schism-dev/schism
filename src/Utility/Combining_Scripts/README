@@ -1,0 +1,5 @@
+Scripts for combining process-specific binary outputs.
+
+autocombine_MPI_elfe.pl can be used to automatically combine
+ all binary output types for you during or after the run.
+ It drives combine_output* (use appropriate version yourself) 

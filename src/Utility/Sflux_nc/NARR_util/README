@@ -1,0 +1,25 @@
+Steps for grabbing NARR files (prepared by Dr. Shih of UCAR) and processing them:
+
+After Feb 2014, inside Process2:
+(1) cd Grib_data/, and grab files with wget (see grab) from Dr. Shih's dir, 
+    and mkdir [YYYYMM]/ and tar xf inside, to get files like NARR.2014010615.2m - these are grib1 files; 
+(2) edit do_process.sh and go (in this dir). Outputs are in NARR_out/ (organized
+    in directories yyyy_mm/narr_air.yyyy_mm_dd.nc).
+
+-----------------------------------------------------------------------------
+Before Feb 2014, in Process:
+(1) cd Grib_data/, and grab files with grab_data.csh (see header for more info); rename as yyyymm.tar 
+    (an e.g. in /sciclone/vims20/yinglong/narr/Process/Grib_data/200701.tar; note that format has been
+     changed over the years and the latest format works);
+(2) Prepare scripts in all directories in src/; use makefile there. Also
+    you'll need wgrib utility downloadable from web. Copy all executibles (including
+    wgrib) to NARR_util/bin/;
+(3) Process: cd ..; narr_full_year.csh <year> (works for partial year also);
+(4) The final nc files are found in NARR_out/ (organized
+    in directories yyyy_mm/narr_air.yyyy_mm_dd.nc).
+
+(some of Mike's scripts are in /home/workspace/ccalmr/mazulauf/amb10xx/netcdf/
+  and /home/workspace/ccalmr43/NARR/; the latter also has raw grib data from UCAR).
+
+To prepare .nc file for a single day, use:
+./get_nc_narr.01.csh <year> <month> <day>

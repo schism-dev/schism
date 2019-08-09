@@ -1,0 +1,39 @@
+#! /bin/csh
+
+# set the start and stop years
+if ( $1 == "" ) then
+  echo you must specify the start_year!
+  exit
+else
+  set start_year = $1
+endif
+
+if ( $2 == "" ) then
+  echo you must specify the stop_year!
+  exit
+else
+  set stop_year = $2
+endif
+
+set year_start = $start_year
+set year_stop  = $stop_year
+
+# loop over the years
+set year_num = $year_start
+while ($year_num <= $year_stop)
+
+  set out_file = 'verify_nnrp.'$year_num'.out'
+
+  echo
+  echo $year_num $out_file
+
+  /home/workspace/ccalmr37/mazulauf/new_data/scripts/verify_nnrp $year_num |& tee $out_file
+
+# bottom of loop over years
+  @ next_year = $year_num + 1
+  set year_num = $next_year
+end
+
+# exit the script
+exit
+

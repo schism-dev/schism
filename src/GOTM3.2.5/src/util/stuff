@@ -1,0 +1,29 @@
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c util.F90 -o util.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a util.o
+ar: creating /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a
+a - util.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c time.F90 -o time.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a time.o
+a - time.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c tridiagonal.F90 -o tridiagonal.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a tridiagonal.o
+a - tridiagonal.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c eqstate.F90 -o eqstate.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a eqstate.o
+a - eqstate.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c gridinterpol.F90 -o gridinterpol.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a gridinterpol.o
+a - gridinterpol.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c convert_fluxes.F90 -o convert_fluxes.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a convert_fluxes.o
+a - convert_fluxes.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c diff_center.F90 -o diff_center.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a diff_center.o
+a - diff_center.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c diff_face.F90 -o diff_face.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a diff_face.o
+a - diff_face.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//include -I/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//modules/IFORT -w95 -e95  -c adv_center.F90 -o adv_center.o
+ar rv /disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5//lib/IFORT/libutil_prod.a adv_center.o
+a - adv_center.o
+rm gridinterpol.o diff_face.o eqstate.o adv_center.o time.o diff_center.o tridiagonal.o util.o convert_fluxes.o

@@ -1,0 +1,46 @@
+netcdf UVP_direct {
+dimensions:
+	time = UNLIMITED ; // (65 currently)
+	node = NNODES ;
+        ne   = NELEMS ;
+        face = 3; 
+variables:
+	double lat(node) ;
+		lat:long_name = "latitude" ;
+		lat:units = "degrees_north" ;
+	double lon(node) ;
+		lon:long_name = "longitude" ;
+		lon:units = "degrees_east" ;
+        int ele(ne, face) ;
+                ele:units = "non-dimensional" ;
+		ele:long_name = "elements" ;
+	double wind_time(time) ;
+		wind_time:long_name = "wind time" ;
+		wind_time:units = "days since 1978-01-01 00:00:00 GMT" ;
+	short Uwind(time, node) ;
+		Uwind:long_name = "East-West wind component at 10m" ;
+		Uwind:units = "m s-1" ;
+		Uwind:field = "Uwind, scalar, series" ;
+		Uwind:coordinates = "node" ;
+		Uwind:scale_factor= 0.01 ;
+	short Vwind(time, node) ;
+		Vwind:long_name = "North-South -wind component at 10m" ;
+		Vwind:units = "m s-1" ;
+		Vwind:field = "Vwind, scalar, series" ;
+		Vwind:coordinates = "node" ;
+		Vwind:scale_factor= 0.01 ;
+	short Pair(time, node) ;
+		Pair:long_name = "Sea level pressure" ;
+		Pair:units = "hPa" ;
+		Pair:field = "Pair, scalar, series" ;
+		Pair:coordinates = "node" ;
+		Pair:scale_factor= 0.001 ;
+		Pair:add_offset = 1013.25 ;
+
+// global attributes:
+		:title = "nc Wind Forcing Data" ;
+		:author = "ivica.jan@gmail.com" ;
+		:type = "JRA55 Bianca data for forcing STORM SURGE" ;
+		:Conventions = "CF-1.0" ;
+		:history = "Regrided using natural option on the FEM" ;
+}

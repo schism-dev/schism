@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<element id="Result">
+	<element id="FigureSettings">
+		<link path="../figure/gotmgui.xml" maxoccurs="1000"/>
+	</element>
+	<link path="../report/gotmgui.xml"/>
+</element>

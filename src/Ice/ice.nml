@@ -1,0 +1,33 @@
+!parameter inputs via namelist convention.
+!(1)Use '' for chars; (2) integer values are fine for real vars/arrays;
+!(3) if multiple entries for a parameter are found, the last one wins - please avoid this
+!(4) array inputs follow column major and can spill to multiple lines
+!(5) space allowed before/after '='
+!(6) Not all required variables need to be present, but all that are present must belong to the list below. Best to list _all_ parameters.
+
+&ice_in
+  ice_tests = 0  !box test flag
+  ice_advection = 1 !advection on/off
+  ice_therm_on = 1 !ice thermodynamics on/off flag
+  ievp=2 !1: EVP; 2: mEVP
+  ice_cutoff=1.e-3 !cut-off thickness [m] or fraction for ice. No ice velocity if *<=ice_cuttoff
+  evp_rheol_steps=500  ! the number of sybcycling steps in EVP
+  mevp_rheol_steps=500  ! the number of iterations in mEVP
+  delta_min=2.0e-9     ! (1/s) Limit for minimum divergence (Hibler, Hunke
+                       ! normally use 2.0e-9, which does much stronger
+                       ! limiting; valid for both VP and EVP
+  theta_io=0.       ! ice/ocean rotation angle. [degr]
+  mevp_alpha1=200. !const used in mEVP (constitutive eq)
+  mevp_alpha2=200. !const used in mEVP for momentum eq
+  pstar=15000. ![N/m^2]
+  ellipse=2.  !ellipticity
+  c_pressure=20.0  !C [-]
+  !FCT
+  niter_fct=3 !# of iterartions in higher-order solve
+  ice_gamma_fct=0.25 ! smoothing parameter
+
+  !Thermodynamics
+  h_ml0=0.1 !ocean mixed layer depth [m]
+  salt_ice=5. !salinity for ice [PSU] (>=0)
+  salt_water=34. !salinity for water [PSU] (>=0)
+/

@@ -1,0 +1,48 @@
+netcdf UVP {
+dimensions:
+	time = UNLIMITED ; // (1 currently)
+	dim1 = 167 ;
+	dim2 = 335 ;
+variables:
+	double time(time) ;
+		time:long_name = "time" ;
+		time:units = "days since 2000-01-01 00:00:00 GMT" ;
+		time:field = "time, scalar, series" ;
+	float lon(dim2) ;
+		lon:long_name = "Longitude" ;
+		lon:units = "degree_east" ;
+		lon:field = "lon, scalar" ;
+	float lat(dim1) ;
+		lat:long_name = "Latitude" ;
+		lat:units = "degree_north" ;
+		lat:field = "lat, scalar" ;
+	double wind_time(time) ;
+		wind_time:long_name = "wind time" ;
+		wind_time:units = "days since 2000-01-01 00:00:00 GMT" ;
+	short Uwind(time, dim1, dim2) ;
+		Uwind:long_name = "East-West wind component at 10m" ;
+		Uwind:units = "m s-1" ;
+		Uwind:time = "wind_time" ;
+		Uwind:field = "Uwind, scalar, series" ;
+		Uwind:add_offset = 0. ;
+		Uwind:scale_factor = 0.01 ;
+	short Vwind(time, dim1, dim2) ;
+		Vwind:long_name = "North-South wind component at 10m" ;
+		Vwind:units = "m s-1" ;
+		Vwind:scale_factor = 0.01 ;
+		Vwind:add_offset = 0. ;
+		Vwind:time = "wind_time" ;
+		Vwind:field = "Vwind, scalar, series" ;
+	short Pair(time, dim1, dim2) ;
+		Pair:long_name = "Sea level pressure" ;
+		Pair:units = "hPa" ;
+		Pair:scale_factor = 0.01 ;
+		Pair:add_offset = 800 ;
+		Pair:time = "wind_time" ;
+		Pair:field = "Pair, scalar, series" ;
+
+// global attributes:
+		:title = "WRF Forecast File 2015 / Mar / 01 start" ;
+		:author = "Ivica Janekovic ivica.jan@gmail.com" ;
+		:type = "SCHISM Forcing File" ;
+}

@@ -1,0 +1,84 @@
+Joseph's notes on openMP
+(1) The pseudo code below shows major constructs and clauses of OMP
+
+!$OMP parallel if() default() private|shared(,,) &
+!$OMP [cont'ed]
+
+!$   nth=omp_get_num_threads() !#  of threads in this region
+!$   tid=omp_get_thread_num() !thread ID
+
+!$OMP do reduction(<op>: ,,) [schedule(static,guided,dynamic,runtime)]
+      do i=1,n
+        do j=1,m !j-loop not parallelized
+          ....  
+        enddo !j
+
+!$OMP   critical  <-1 thread at a time
+...
+!$OMP   end critical
+
+!$OMP   atomic
+        icount=icount+1 <-only 1 statement after atomic; no 'end'
+
+      end do !i
+!$OMP end do [nowait]
+
+!$OMP master
+...
+!$OMP end master
+!$OMP barrier <-master construct has no implied barrier
+
+!$OMP single
+....
+!$OMP end single <-implied barrier
+
+!$OMP end parallel
+
+(2) '!$OMP parallel' spawns threads, and corresponding 'end' destroys threads and only master threads remains after that.
+   The spawning/destruction is costly (and implies sync) and so try to have a large parallel region. If however there is only 1
+    loop inside the region (and no other parallel construct), it's better to use combined construct like
+!$OMP parallel do default()...
+...
+!$OMP end parallel do 
+
+   Most OMP 'end' clauses imply barrier (sync) and use 'nowait' to bypass. Inside the parallel region all threads 'see' the code 
+ (except of course in master or single constructs). Since each thread needs to have its own stack, you might need to increase stack size;
+
+(3) Generally, all of the iteration variables (including those not associated with a parallel do) are 'private' (to a thread),
+ and other varialbes are 'shared' (among all threads). Variables inside routines invoked inside a parallel region are private 
+ by default (however, global variables declared in modules are shared). Users can change this by explicitly declaring variables
+ with private|share clauses (highly recommended!). Note that private variables are undefined outside the parallel region
+  while shared variables persist (but updating of shared variables is only guarenteed at the next sync point - most of 'end').
+ I found the best way is to imagine yourself as a thread going into a loop and routines inside; this way you can clearly see
+ data race condition if say, a routine tries to write to a shared variable!
+
+(4) Each construct generally needs to be followed by corresponding FORTRAN statement; e.g. !$OMP do by do...
+(*5*) Data race condition is a serious bug that can be tricky to debug if a thread consistently 'wins' the race. So
+ be careful the 1st time when you write the code! Note the race condition is due to writing to a shared variable (but reading
+ a shared variable is OK);
+(7) Nested parallel construct (i.e. each thread spawning a new group of threads) is allowed, but not beneficial for our code;
+(8) The openMP compiler replaces '!$' with 2 spaces, and so this is a neat way of writing a common code that can skip OMP;
+
+(9) workshare construct can be used for FORTRAN array operations (including array functions like: matmul,dot_product,sum, 
+    product, maxval, minval, count, any, all, spread, pack, unpack, reshape, transpose, eoshift, cshift, minloc and maxloc):
+   !$OMP workshare
+      a(:)=b(:)-c
+      d=maxval(a)   !d must be shared variable
+   !$OMP end workshare
+
+(10) reduction clause:
+  !$OMP do reduction(<op>: list_of_var)
+
+  where <op>= +, -, *, .and., .or., max, min
+  list_of_var is always shared, and can be arrays (in which case, each entry is similar to a scalar reduction), but cannot be
+  of deferred type or assumed-shaped (the sync overhead may be large if the array size is large). 
+  Also it cannot be an entry of an array like rmax(3).
+
+  The reduction statement can only be of form:
+    x = x<op>expr
+  or x = max|min (x,expr1,expr2,...)
+  
+  where expr* must NOT involve x! The statement can be anywhere inside the parallel loop.
+
+(11) Further reading:  Using OpenMP portable shared memory parallel programming
+by Chapman, Barbara, Published 2008. 

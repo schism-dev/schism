@@ -1,0 +1,144 @@
+%
+%$Id: letter.tex,v 1.3 2005-08-11 13:56:37 lars Exp $
+%
+
+\documentclass[letter,twoside]{article}
+
+% AMS math and symbols
+\usepackage{amsmath,amsfonts,amssymb,amsbsy,latexsym}
+
+% natural science bibliography
+\usepackage[round]{natbib}
+
+% definitions used in the GOTM-manual
+\input definitions.tex
+
+% graphics
+\usepackage{graphics}
+
+% to make pdf files look OK
+\usepackage{ae}
+
+% center it on letter-format
+\setlength{\evensidemargin}{7.5mm}
+\setlength{\oddsidemargin}{7.5mm}
+\setlength{\textwidth}{150mm}
+
+\begin{document}
+
+
+
+% the titlepage
+\begin{titlepage}
+
+
+{\sf \bf \LARGE
+ \begin{center}
+   Lars Umlauf $\bs \cdot$ Hans Burchard $\bs \cdot$ Karsten Bolding
+ \end{center}
+}
+
+\vspace{14mm}
+
+{\sf \bf \Huge
+ \begin{center}
+   GOTM
+ \end{center}
+}
+
+\vspace{6mm}
+
+{\sf \bf \LARGE
+ \begin{center}
+   Sourcecode \\
+      and \\
+Test Case Documentation
+ \end{center}
+}
+
+
+\vspace{5mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Version 3.2
+ \end{center}
+}
+
+\vspace{8mm}
+
+\begin{figure}[!h]
+  \begin{center}
+  \scalebox{0.55}{\includegraphics{figures/mixerA.eps}}
+  \end{center}
+\end{figure}
+
+\vspace{7mm}
+
+{\sf \bf \Large
+ \begin{center}
+  Flow ---  Mixing --- Sediment Transport
+\end{center}
+}
+
+
+\end{titlepage}
+
+
+% table of contents
+\cleardoublepage
+\tableofcontents
+
+% include the section files
+% the introduction. All files
+% ending with 'Intro.tex' are hand-made,
+% all others come from 'ProTeX'
+
+\cleardoublepage
+
+\include{introduction}
+
+\cleardoublepage
+\include{mainIntro}
+\include{gotm}
+
+\cleardoublepage
+\include{meanflowIntro}
+\include{meanflow}
+
+\cleardoublepage
+\include{turbulenceIntro}
+\include{turbulence}
+
+\include{airseaIntro}
+\include{airsea}
+
+\cleardoublepage
+\include{observationsIntro}
+\include{observations}
+
+\cleardoublepage
+\include{outputIntro}
+\include{output}
+
+\cleardoublepage
+\include{utilIntro}
+\include{util}
+
+\cleardoublepage
+\include{extraIntro}
+%\include{sediment}
+\include{seagrass}
+%\include{bio}
+
+\cleardoublepage
+\include{cases}
+
+% Bibliography with BibTeX:
+\cleardoublepage
+\bibliographystyle{agu}
+\addcontentsline{toc}{section}{Bibliography}
+\bibliography{gotm}
+
+
+\end{document}

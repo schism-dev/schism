@@ -1,0 +1,9 @@
+2   ! total # of elements with sources
+100     !global element # for 1st source 
+101     !global element # for 2nd source
+!blank line for more readability
+3 ! total # of elements with sinks
+99 !global element # for 1st sink
+100
+105
+

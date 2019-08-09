@@ -1,0 +1,148 @@
+(Copied from the SELFE Wiki, hence the wiki-like markup)     
+
+
+== Introduction ==
+CMake is one option currently available for building SELFE. This documentation covers the SELFE cmake build system under Linux. While CMake is highly portable and probably could be made to work under Windows and Mac, no one has tested it under those operating systems. For more information on cmake and documentation, see the [http://www.cmake.org cmake] web site.
+
+== User Documentation ==
+
+=== Basic CMake Usage ===
+On Linux, Cmake is just a preprocessor for Make much like a typical ''configure'' script. There are also generators for Eclipse and some other native build systems including Windows and Mac. When you reconfigure the project a lot by swapping modules, compiler options, build type (debug/release) or changing compilers, you re-run cmake ... but most of the time you just use ''make'' or some other build tool. You can create an out-of-source build from the /selfe directory by doing the following:
+
+ (make sure you have the following directories: src/ test/unittest/ besides the cmake/ dir)
+ > mkdir build
+ > cd build
+ > setenv FC ifort/pgf90    # Might be shell-dependent. The default (no action needed) is gfortran
+                      # on bash, use export FC=ifort
+ > cmake ../src (or: cmake -C ../cmake/SELFE.local.cmake ../src; see below)
+ > make -j8
+ (executables are stored in bin/)
+
+If you have the prerequisites in typical places or set up your environment as recommended below this sequence will produce a Hydro-only build with default options including the selfe executable and all utilities. More realistically, you will probably have to set some library locations. Configuration is considered in more detail below.
+
+In this case CMake is really just building a Makefile. The Makefile that gets produced has the following targets:
+* all (default)
+* individual libraries: sediment, ecosim, wwm (assuming you configured CMAKE with USE_XXX)
+* pelfe (with whatever features you toggled on)
+* utility (all utility scripts)
+* pyutil (all python utilities)
+* install (installs the system to the "usual" spots /usr/bin etc. The install location is configurable and respects DESTDIR. See cmake docs.
+
+The Makefile is robust if you make source file changes, and can manage complex Fortran module dependencies. If you add a file or alter the project you will have to re-run Cmake so that the new addition gets included. CMake does this well and you can run it with the very simple 'cmake ../src' command. The Makefile scales very well to 8 threads.
+
+There are cases where you should make clean and rebuild all the source. If you toggle compiler define options (-D), you are effectively changing the source code that reaches the compiler net of the preprocessor, yet not actually touching the text of the source file.  The GNU Makefile system does not recognize such a change. There is a best practice for making sure that configuration changes are source changes -- configuration "include files" -- but we are not there yet. '''If you change #definitions, make clean'''.
+
+If you change the library or compiler options -- or run into problems -- you should consider blowing away the whole /build directory and starting over:
+ selfe$ rm -rf build/*
+ selfe$ cd build
+ selfe$ cmake ../src
+
+=== SELFE Prerequisites === 
+To build the model, you will need the following libraries:
+;CMake:  The build system is tested against version 2.6 and 2.8
+;Parmetis: Domain decomposition and sparse matrix ordering library
+* Required for Hydro.
+* Included in distro. 
+* If you build the included one, linking is automatic.
+* You can also set the environment PARMETIS_DIR to locate another build.
+* Location can also be given by a full path in configuration. See below.
+;GOTM:  Optional turbulence closure for Hydro. 
+* Included in distro. 
+* If you build the included one, linking is automatic.
+* You can also set the environment GOTM_DIR to locate another build
+* Location can also be hard coded in configuration. See below.          
+;NetCDF: File format library for Hydro. 
+* Assumed to be installed separately
+* If you set the environment variable NETCDF_DIR (all caps) or put it in /usr/lib /usr/include detection is automatic. 
+* Location can also be hard coded in configuration. See below.
+;HDF5: Parallel backend for some NetCDF 4 (parallel) builds. CMake will tell you if it is needed.
+* If you set HDF5_DIR environment variable or put it in usr/lib usr/include, detection automatic. 
+* Location can also be hard coded in configuration. See below.
+;PETSc: Numerical algorithm library required for the Wind-wave module. 
+* If you set PETSC_DIR environment variable or put it in usr/lib usr/include, detection automatic. 
+* Location can also be hard coded in configuration. See below.          
+;MPI: Message passing library used for parallel processing
+* MPI wrappers (mpif90) are needed to locate the MPI tools and dependencies (but are not used for the build)
+
+
+If you use a Linux "environment module" system, the XXX_DIR etc may be automatically set (just watch out for case). Alternatively, the libraries should be found if they are in system lib and include directories as well (e.g. /usr/lib). Finally, XXX_DIR is not the only environment variable that can be used as a hint to cmake. You can also set up pointers to the libraries and includes individually. See the file FindNetCDF.cmake for examples ... but the easiest way is just NetCDF_DIR.
+
+=== Configuration === 
+==== Examples of things you will want to configure====
+*  custom compiler flags (but see below!!!!)
+*  the name of the compiler 
+*  custom library locations, 
+*  choosing selfe modules to include in the driver
+*  performance/build parameters (BUILD_TYPE=Debug, MPIVERSION=2, USE_TIMING)
+
+'''Custom compiler flags''': Flag choices are often re-usable across similar systems.  If you are setting up flags that should be the standard for your architecture, I would urge you to contribute to selfe/cmake/SELFECompile.cmake so that others can make use of your work and so that your personal configuration is not mixed up with stuff that is just standard for your architecture. If you are tweaking the flags for real then you should follow the directions below. 
+
+One class of flags that seems to be a bit of a special case are the flags that force static linking such as '''-Bstatic''' or '''-static'''. I am pretty open to fixing the cmake files so that they will do what you want, but rather than instinctively adding these flags you should investigate first whether maybe CMake already will do what you want ... it generally favors static linking, although MPI can be an exception.
+
+The '''compiler''' can be identified with the '''FC''' environmental variable or the CMAKE_Fortran_COMPILER variable -- case sensitive. Almost everyone seems to do it using the environent, and if you are using the linux [http://linux.die.net/man/1/module module system].
+
+==== Options for configuring CMake ====
+Please do not edit the CMakeLists.txt file to add your own directories and configuration info. User-specific data does not belong in CMakeLists.txt. There are two ways to get user selections and variables into CMake, which are not mutually exclusive:
+
+
+===== METHOD #1: Use the -D option and a shell/batch file =====
+
+The CMake -D option forcibly defines a variable. It might be more immediately intuitive for GNU make users who set a variable 
+and expect their orders to be followed.  To use the -D method, create a shell script in /selfe that looks like this:
+ mkdir build
+ cd build
+ cmake -DUSE_ECO=1 \
+      -DMPIVERSION=1 \
+      ...
+ make
+ cd ..
+
+The only unintuitive part is that you need an argument for all the variables (ON/TRUE/1 all work for turning something on).
+
+===== METHOD #2 Use -C <cache-init-file> to populate the cmake cache. =====
+The notion of the CMake cache takes some getting used to.  The first time you run cmake, a number of compiler and build options will be placed in a file called CMakeCache.txt. The -C option allows you to specify an input cmake script that has nothing but SET statements that the user can use to populate options ... an example of such a file is /selfe/cmake/SELFE.local.cmake
+
+After the first run, the cache can be manipulated with text, cursor or graphical tools (ccmake or QT based) or by repeating the cmake invocation with new -D options. I don't use the graphical tools much, but ccmake in non-advanced view is nice because it shows you an all-encompassing view of user-configurable variables. 
+
+Now here is the funny thing about SET (whether in your <init-cache> file or in the build system): once the cache is initialized, any variable that SETs the value of a cached variable will no longer be evaluated unless the FORCE tag is used. As a consequence the -C <init-file> will not be influential ever again unless 
+# you use FORCE in your SET statements or 
+# you blow away the cache and rebuild it.
+
+My experience is that if you are making a single well-managed change like turning on Sediment, then this persistence is actually nice because you can set one change (perhaps -DUSE_SEDIMENT=1) and not worry about the rest of your setup falling apart. When you toggle multiple options it is often safer to blow away the whole build directory and start again with CMake and a <cache-init> file:
+ $ rm -rf build
+ $ cd build
+ $ cmake -C ../cmake/SELFE.local.cmake ../src
+
+== Developer Documentation ==
+In contrast to users, developers will use the CMakeLists.txt in /src and its subdirectories. I'll keep this short, because most folks will learn by mimicking examples anyway and there is documentation at [http://www.cmake.org|cmake].
+
+Here are common use cases:
+=== Modifying SELFE modules ===
+Here are some common cases:
+==== Adding a file to an existing module ====
+Just add the name of the file to the pre-existing list in CMakeLists.txt.
+==== Adding an algorithmic option to an existing module. ====
+Please do this at the module directory (not /src) level CMakeLists.txt. You may need the following components to create your addition:
+# either the OPTION cmake command or the SET command. OPTION is an easy way to set up boolean options, SET is used for boolean, strings, paths. If your option is to be user configurable, the SET call has include the CACHE keyword.
+# to pass the option to the compiler using the cmake add_definitions. Good examples to follow include MPIVERSION, USE_TIMER
+# you may want code it so that an environment variable is passed on to the system. See MPI_VERSION.
+
+==== Adding a utility module or file ==== 
+If you are creating a new directory, you will need to add_directory() in the /utility level CMakeLists.txt. The rest happens at the directory level of the script. Make sure to create a dependency of "utility" on your new script so that "make utility" works correctly.
+
+==== Adding a new selfe module ====
+Again, learning by example is a good way to tackle this. There is a macro for CMakeLists.txt in the /src level CMakeLists.txt. It will help you bind together:
+# a directory name (usually capitalized)
+# a USE_XXX variable and 
+# a (lower case) library name.
+# creation of a dependency of the main driver on your module
+# cause cmake to recurse into your directory and configure it IF the USE_XXX option is enabled
+
+That should be all you need at the /src CMakeLists.txt level. After that, you just add a subdirectory for the module under /src, add the source files and a CMakeLists.txt and copy the style of CMakeLists.txt from an existing module such as /EcoSim or /Sediment. This will create a library and estabish dependencies. In general, you want to depend on the /Core library but not on any of the other modules. 
+
+=== Library dependencies ===
+First one obvious caveat -- extra libraries should be avoided if possible. 
+
+Dependencies should also be introduced to cmake at the lowest level they are needed. You can introduce the dependency in the /src level CMakeLists.txt if it is going to be used by several modules including Hydro (e.g. NetCDF). However, if it is only going to be used by one module for the moment, (as PETSc is needed by WWM) try to keep it in the module directory. Among other things, you then do not have to put an IF block around it to check if the selfe module is being used because the whole directory will be skipped if the module is toggled off. Someone who isn't using your module can skip the dependency entirely.
+
+The first step with dependent libraries is to get a FindXXX.cmake script for the library if one is not already included in CMake 2.6 and put it in selfe/cmake/modules. You may be tempted to avoid this and try to figure another way, but a suitable script is almost always available on the web and I have found that subverting this feature of CMake makes it fragile. There are some slight tricks making it compatible with cmake 2.6 (specifically the way you include other scripts). The names of the scripts that are included are usually always about the same, so you can probably just look at a script that is already in selfe/cmake/modules. If you have any issues feel free to email me (eli@water.ca.gov).

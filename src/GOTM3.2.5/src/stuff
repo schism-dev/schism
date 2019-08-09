@@ -1,0 +1,282 @@
+mkdir -p /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT
+make -C util
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/util'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c util.F90 -o util.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a util.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a
+a - util.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c time.F90 -o time.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a time.o
+a - time.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c tridiagonal.F90 -o tridiagonal.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a tridiagonal.o
+a - tridiagonal.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c eqstate.F90 -o eqstate.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a eqstate.o
+a - eqstate.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c gridinterpol.F90 -o gridinterpol.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a gridinterpol.o
+a - gridinterpol.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c convert_fluxes.F90 -o convert_fluxes.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a convert_fluxes.o
+a - convert_fluxes.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c diff_center.F90 -o diff_center.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a diff_center.o
+a - diff_center.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c diff_face.F90 -o diff_face.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a diff_face.o
+a - diff_face.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c adv_center.F90 -o adv_center.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libutil_prod.a adv_center.o
+a - adv_center.o
+rm gridinterpol.o diff_face.o eqstate.o adv_center.o time.o diff_center.o tridiagonal.o util.o convert_fluxes.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/util'
+make -C observations
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/observations'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c observations.F90 -o observations.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a observations.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a
+a - observations.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_s_profile.F90 -o get_s_profile.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_s_profile.o
+a - get_s_profile.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_t_profile.F90 -o get_t_profile.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_t_profile.o
+a - get_t_profile.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_ext_pressure.F90 -o get_ext_pressure.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_ext_pressure.o
+a - get_ext_pressure.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_int_pressure.F90 -o get_int_pressure.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_int_pressure.o
+a - get_int_pressure.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c read_extinction.F90 -o read_extinction.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a read_extinction.o
+a - read_extinction.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_w_adv.F90 -o get_w_adv.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_w_adv.o
+a - get_w_adv.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_zeta.F90 -o get_zeta.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_zeta.o
+a - get_zeta.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_vel_profile.F90 -o get_vel_profile.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_vel_profile.o
+a - get_vel_profile.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c get_eps_profile.F90 -o get_eps_profile.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a get_eps_profile.o
+a - get_eps_profile.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c analytical_profile.F90 -o analytical_profile.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a analytical_profile.o
+a - analytical_profile.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c const_NNT.F90 -o const_NNT.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a const_NNT.o
+a - const_NNT.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c const_NNS.F90 -o const_NNS.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libobservations_prod.a const_NNS.o
+a - const_NNS.o
+rm observations.o analytical_profile.o get_t_profile.o get_vel_profile.o const_NNS.o get_ext_pressure.o get_s_profile.o get_int_pressure.o const_NNT.o get_eps_profile.o get_zeta.o read_extinction.o get_w_adv.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/observations'
+make -C airsea
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/airsea'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c airsea.F90 -o airsea.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libairsea_prod.a airsea.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libairsea_prod.a
+a - airsea.o
+rm airsea.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/airsea'
+make -C meanflow
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/meanflow'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c meanflow.F90 -o meanflow.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a meanflow.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a
+a - meanflow.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c updategrid.F90 -o updategrid.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a updategrid.o
+a - updategrid.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c coriolis.F90 -o coriolis.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a coriolis.o
+a - coriolis.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c uequation.F90 -o uequation.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a uequation.o
+a - uequation.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c vequation.F90 -o vequation.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a vequation.o
+a - vequation.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c extpressure.F90 -o extpressure.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a extpressure.o
+a - extpressure.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c intpressure.F90 -o intpressure.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a intpressure.o
+a - intpressure.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c friction.F90 -o friction.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a friction.o
+a - friction.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c temperature.F90 -o temperature.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a temperature.o
+a - temperature.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c salinity.F90 -o salinity.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a salinity.o
+a - salinity.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c stratification.F90 -o stratification.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a stratification.o
+a - stratification.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c shear.F90 -o shear.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a shear.o
+a - shear.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c buoyancy.F90 -o buoyancy.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a buoyancy.o
+a - buoyancy.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c convectiveadjustment.F90 -o convectiveadjustment.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libmeanflow_prod.a convectiveadjustment.o
+a - convectiveadjustment.o
+rm temperature.o convectiveadjustment.o stratification.o uequation.o buoyancy.o vequation.o coriolis.o meanflow.o extpressure.o shear.o friction.o intpressure.o updategrid.o salinity.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/meanflow'
+make -C turbulence
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/turbulence'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c turbulence.F90 -o turbulence.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a turbulence.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a
+a - turbulence.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c kpp.F90 -o kpp.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a kpp.o
+a - kpp.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c gotm_lib_version.F90 -o gotm_lib_version.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a gotm_lib_version.o
+a - gotm_lib_version.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c production.F90 -o production.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a production.o
+a - production.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c alpha_mnb.F90 -o alpha_mnb.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a alpha_mnb.o
+a - alpha_mnb.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c r_ratio.F90 -o r_ratio.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a r_ratio.o
+a - r_ratio.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c tkeeq.F90 -o tkeeq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a tkeeq.o
+a - tkeeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c q2over2eq.F90 -o q2over2eq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a q2over2eq.o
+a - q2over2eq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c tkealgebraic.F90 -o tkealgebraic.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a tkealgebraic.o
+a - tkealgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c kbeq.F90 -o kbeq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a kbeq.o
+a - kbeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c kbalgebraic.F90 -o kbalgebraic.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a kbalgebraic.o
+a - kbalgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c dissipationeq.F90 -o dissipationeq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a dissipationeq.o
+a - dissipationeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c genericeq.F90 -o genericeq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a genericeq.o
+a - genericeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c lengthscaleeq.F90 -o lengthscaleeq.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a lengthscaleeq.o
+a - lengthscaleeq.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c algebraiclength.F90 -o algebraiclength.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a algebraiclength.o
+a - algebraiclength.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c epsbalgebraic.F90 -o epsbalgebraic.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a epsbalgebraic.o
+a - epsbalgebraic.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c variances.F90 -o variances.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a variances.o
+a - variances.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c ispralength.F90 -o ispralength.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a ispralength.o
+a - ispralength.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c potentialml.F90 -o potentialml.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a potentialml.o
+a - potentialml.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_a.F90 -o cmue_a.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_a.o
+a - cmue_a.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_b.F90 -o cmue_b.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_b.o
+a - cmue_b.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_c.F90 -o cmue_c.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_c.o
+a - cmue_c.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_d.F90 -o cmue_d.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_d.o
+a - cmue_d.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_ma.F90 -o cmue_ma.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_ma.o
+a - cmue_ma.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_rf.F90 -o cmue_rf.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_rf.o
+a - cmue_rf.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c cmue_sg.F90 -o cmue_sg.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a cmue_sg.o
+a - cmue_sg.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c compute_cpsi3.F90 -o compute_cpsi3.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a compute_cpsi3.o
+a - compute_cpsi3.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c compute_rist.F90 -o compute_rist.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a compute_rist.o
+a - compute_rist.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c fk_craig.F90 -o fk_craig.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a fk_craig.o
+a - fk_craig.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c internal_wave.F90 -o internal_wave.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libturbulence_prod.a internal_wave.o
+a - internal_wave.o
+rm turbulence.o cmue_d.o fk_craig.o compute_rist.o compute_cpsi3.o r_ratio.o genericeq.o kpp.o cmue_a.o cmue_ma.o potentialml.o ispralength.o lengthscaleeq.o cmue_b.o variances.o gotm_lib_version.o cmue_rf.o cmue_sg.o tkealgebraic.o kbalgebraic.o epsbalgebraic.o q2over2eq.o kbeq.o dissipationeq.o tkeeq.o alpha_mnb.o production.o algebraiclength.o cmue_c.o internal_wave.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/turbulence'
+make -C output
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/output'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c asciiout.F90 -o asciiout.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/liboutput_prod.a asciiout.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/liboutput_prod.a
+a - asciiout.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c ncdfout.F90 -o ncdfout.o
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 225: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_inq_libvers
+----------------^
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 228: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_strerror
+----------------^
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 225: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_inq_libvers
+----------------^
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 228: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_strerror
+----------------^
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/liboutput_prod.a ncdfout.o
+a - ncdfout.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c output.F90 -o output.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/liboutput_prod.a output.o
+a - output.o
+rm asciiout.o ncdfout.o output.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/output'
+make -C extras/seagrass
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/extras/seagrass'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c seagrass.F90 -o seagrass.o
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 225: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_inq_libvers
+----------------^
+fortcom: Warning: /usr/local/netcdf//include/netcdf.inc, line 228: The CHARACTER* form of a CHARACTER declaration is an obsolescent feature in Fortran 95.
+      character*80   nf_strerror
+----------------^
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libseagrass_prod.a seagrass.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libseagrass_prod.a
+a - seagrass.o
+rm seagrass.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/extras/seagrass'
+set -e; for i in  extras/seagrass; do make -C $i; done
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/extras/seagrass'
+make[1]: `all' is up to date.
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/extras/seagrass'
+make -C gotm all
+make[1]: Entering directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/gotm'
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c gotm.F90 -o gotm.o
+ar rv /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libgotm_prod.a gotm.o
+ar: creating /home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT/libgotm_prod.a
+a - gotm.o
+ifort -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95  -c main.F90 -o main.o
+rm gotm.o
+make[1]: Leaving directory `/disk/ambcs01/0/yinglong/GOTM/gotm-3.2.5/src/gotm'
+ifort -o gotm_prod_IFORT ./gotm/main.o  -DIFORT -DNETCDF_FMT -DSEAGRASS -DPRODUCTION  -DFORTRAN95 -DREAL_4B=real\(4\) -O3  -module /home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT  -I/usr/local/netcdf//include -I/usr/local/include -I/home/users/yinglong/GOTM/gotm-3.2.5/include -I/home/users/yinglong/GOTM/gotm-3.2.5/modules/IFORT -w95 -e95 -L/home/users/yinglong/GOTM/gotm-3.2.5/lib/IFORT -lgotm_prod  -lseagrass_prod -lairsea_prod -lmeanflow_prod -lturbulence_prod -lobservations_prod -loutput_prod -lutil_prod  /usr/local/netcdf//lib/libnetcdf.a
+rm -f ./gotm/main.o

@@ -1,0 +1,33 @@
+
+# Which compiler to use
+CC = /home/yinglong/mpich2/bin/mpicc
+
+
+# What optimization level to use
+OPTFLAGS = -O2 
+
+# Include directories for the compiler
+INCDIR =
+
+# What options to be used by the compiler
+COPTIONS = -fPIC #to fix problem with mpich2
+#COPTIONS = 
+
+# Which loader to use
+LD = /home/yinglong/mpich2/bin/mpicc
+
+# In which directories to look for any additional libraries
+LIBDIR =
+
+# What additional libraries to link the programs with (eg., -lmpi)
+#XTRALIBS = -lefence
+#XTRALIBS = -ldmalloc
+
+# What archiving to use
+AR = ar rv
+
+# What to use for indexing the archive
+#RANLIB = ranlib
+RANLIB = ar -ts
+
+VERNUM = 

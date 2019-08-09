@@ -1,0 +1,73 @@
+To build GOTM lib:
+
+On tcsh:
+setenv NETCDFHOME /usr/local/intel64/nehalem/intel-2016/netcdf-4.3.2/ (so that NETCDFLIBNAME below points to right netcdf lib)
+setenv NETCDFINC /sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/netcdf_include (WARNING: use
+  files in this dir, not in the netcdf include dir!!!!)
+setenv NETCDFLIBNAME $NETCDFHOME/lib/libnetcdf.a
+setenv GOTMDIR /sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/
+setenv FORTRAN_COMPILER IFORT (Note: see $GOTMDIR/compilers/ for names "IFORT" etc)
+
+On bash: export NETCDFHOME=/usr/local/ etc.
+
+then cd src, make realclean and make. The libs and modules are found in $GOTMDIR/lib/$FORTRAN_COMPILER and modules/$FORTRAN_COMPILER.
+To change precision to double, edit netcdf_include/cppdefs.h (halfway thru the file) -
+ I have done that.
+
+For more installation instructions see www.gotm.net
+---------------------------------------------------------------------------
+To use gotm inside ELCIRC or SELFE, the following message is from K. Bolding.
+Make library inside src/turbulence/Makefile.
+
+Hello
+
+Here comes - most of - the interfacing code using gotm in a 3D model.
+
+This is only from the time-loop. In addition initialisation must be
+done:
+
+   do j=jjmin,jjmax
+      do i=iimin,iimax
+
+         if (az(i,j) .eq. 1 ) then
+
+            u_taus = sqrt(taus(i,j)) 
+            u_taub = sqrt(taub(i,j))
+
+            h = hn(i,j,:)
+            SS1d = SS(i,j,:)
+            NN1d = NN(i,j,:)
+
+            tke1d=tke(i,j,:)
+            eps1d=eps(i,j,:)
+            L1d=cde*tke1d**1.5/eps1d
+            num1d=num(i,j,:)
+            nuh1d=nuh(i,j,:)
+
+            z0s = 0.1
+            z0b=0.5*(max(zub(i-1,j),zub(i,j))+max(zvb(i,j-1),zvb(i,j)))
+            if (z0s .gt. D(i,j)/10.) z0s=D(i,j)/10.
+
+            call do_turbulence(kmax,dt,D(i,j),u_taus,u_taub,z0s,z0b,h, &
+                               NN1d,SS1d,xP)
+
+            tke(i,j,:) = tke1d
+            eps(i,j,:) = eps1d
+            num(i,j,:) = num1d + avmback
+            nuh(i,j,:) = nuh1d + avhback
+         end if
+
+      end do
+   end do
+
+A  few comments:
+
+Loop over the entire domain
+Only do the calculation for water-points.
+Copy 3D variables for a given water column to 1D arrays.
+Calculatte roughnesses
+Do the turbulence calcuations
+Copy back from 1D to 3D
+
+Thats all.
+

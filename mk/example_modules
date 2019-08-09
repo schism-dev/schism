@@ -1,0 +1,7 @@
+The version requires netcdf 4.4* and above. PETSc module is optional.
+Below is my env on Pleiades:
+
+  1) comp-intel/2016.2.181   4) hdf4/4.2.12             7) netcdf/4.4.1.1_serial
+  2) mpi-sgi/mpt.2.14r19     5) szip/2.1.1              8) petsc/3.7.5_intel_mpt
+  3) mpi-sgi/mpt             6) hdf5/1.8.18_serial      
+

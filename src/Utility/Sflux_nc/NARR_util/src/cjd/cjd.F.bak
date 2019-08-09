@@ -1,0 +1,128 @@
+!-----------------------------------------------------------------------
+! cjd_bin - calculates the Chronological Julian Date
+!
+! Mike Zulauf, January 2007
+
+      program cjd_bin
+
+! modules, implicit none, etc
+#ifdef NEED_F2KCLI
+      use f2kcli  ! if compiler doesn't implement f2003 CLI capability
+#endif
+      implicit none
+
+! variables needed for command line options
+      integer, parameter :: max_args = 20
+      character(len=40)  :: arg(max_args)
+      integer            :: num_args, i_arg
+
+! time variables
+      integer yyyy, mm, dd, jd
+
+! determine how many command-line arguments there are
+      num_args = command_argument_count()
+
+      if (num_args .lt. 3) then
+        write(*,*)
+        write(*,*) 'you need to supply: YYYY MM DD'
+        stop
+      endif
+
+! store command line arguments
+      do i_arg = 1, num_args
+        call get_command_argument(i_arg, arg(i_arg))
+      end do
+      
+! extract inputs from command line arguments
+      read(arg(1),*) yyyy
+      read(arg(2),*) mm
+      read(arg(3),*) dd
+
+! output the Chronological Julian Date
+      write(*,*) jd(yyyy, mm, dd)
+
+      end
+!-----------------------------------------------------------------------
+      INTEGER FUNCTION JD(YYYY,MM,DD)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: YYYY,MM,DD
+!              DATE ROUTINE JD(YYYY,MM,DD) CONVERTS CALENDER DATE TO
+!              JULIAN DATE.  SEE CACM 1968 11(10):657, LETTER TO THE
+!              EDITOR BY HENRY F. FLIEGEL AND THOMAS C. VAN FLANDERN.
+!    EXAMPLE JD(1970,1,1)=2440588
+      JD=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4 
+     &         +367*(MM-2-((MM-14)/12)*12)/12-3* 
+     &         ((YYYY+4900+(MM-14)/12)/100)/4
+      RETURN
+      END
+!-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+      FUNCTION JD(YYYY,MM,DD)
+      INTEGER YYYY,MM,DD
+!              DATE ROUTINE JD(YYYY,MM,DD) CONVERTS CALENDER DATE TO
+!              JULIAN DATE.  SEE CACM 1968 11(10):657, LETTER TO THE
+!              EDITOR BY HENRY F. FLIEGEL AND THOMAS C. VAN FLANDERN.
+!    EXAMPLE JD(1970,1,1)=2440588
+      JD=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4
+     ,         +367*(MM-2-((MM-14)/12)*12)/12-3*
+     ,         ((YYYY+4900+(MM-14)/12)/100)/4
+      RETURN
+      END
+!-----------------------------------------------------------------------
+      SUBROUTINE DAYSUB(JD,YYYY,MM,DD,WD,DDD)
+!========GIVEN JD, A JULIAN DAY # (SEE ASF JD), THIS ROUTINE
+!        CALCULATES DD, THE DAY NUMBER OF THE MONTH; MM, THE MONTH
+!        NUMBER; YYYY THE YEAR; WD THE WEEKDAY NUMBER, AND DDD
+C        THE DAY NUMBER OF THE YEAR.
+C        ARITHMETIC STATEMENT FUNCTIONS 'IZLR' AND 'IDAY' ARE TAKEN
+C        FROM REMARK ON ALGORITHM 398, BY J. DOUGLAS ROBERTSON,
+C        CACM 15(10):918.
+C
+C   EXAMPLE: CALL DAYSUB(2440588,YYYY,MM,DD,WD,DDD) YIELDS 1970 1 1 4 1.
+C
+      INTEGER JD,YYYY,MM,DD,WD,DDD
+C
+C------IZLR(YYYY,MM,DD) GIVES THE WEEKDAY NUMBER 0=SUNDAY, 1=MONDAY,
+C      ... 6=SATURDAY.  EXAMPLE: IZLR(1970,1,1)=4=THURSDAY
+C
+      IZLR(YYYY,MM,DD)=MOD((13*(MM+10-(MM+10)/13*12)-1)/5+DD+77
+     ,            +5*(YYYY+(MM-14)/12-(YYYY+(MM-14)/12)/100*100)/4
+     ,            + (YYYY+(MM-14)/12)/400-(YYYY+(MM-14)/12)/100*2,7)
+C
+C------IDAY IS A COMPANION TO CALEND; GIVEN A CALENDAR DATE, YYYY, MM,
+C           DD, IDAY IS RETURNED AS THE DAY OF THE YEAR.
+C           EXAMPLE: IDAY(1984,4,22)=113
+C
+      IDAY(YYYY,MM,DD)=3055*(MM+2)/100-(MM+10)/13*2-91
+     ,                 +(1-(MOD(YYYY,4)+3)/4+(MOD(YYYY,100)+99)/100
+     ,                 -(MOD(YYYY,400)+399)/400)*(MM+10)/13+DD
+C
+      CALL CDATE(JD,YYYY,MM,DD)
+      WD=IZLR(YYYY,MM,DD)
+      DDD=IDAY(YYYY,MM,DD)
+      RETURN
+      END
+C-----------------------------------------------------------------------
+      SUBROUTINE CDATE(JD,YYYY,MM,DD)
+C=======GIVEN A JULIAN DAY NUMBER, NNNNNNNN, YYYY,MM,DD ARE RETURNED AS
+C              AS THE CALENDAR DATE. JD=NNNNNNNN IS THE JULIAN DATE
+C              FROM AN EPOCK IN THE VERY DISTANT PAST.  SEE CACM
+C              1968 11(10):657, LETTER TO THE EDITOR BY FLIEGEL AND
+C              VAN FLANDERN.
+C    EXAMPLE CALL CDATE(2440588,YYYY,MM,DD) RETURNS 1970 1 1 .
+C
+      INTEGER JD,YYYY,MM,DD,L,N
+      L=JD+68569
+      N=4*L/146097
+      L=L-(146097*N + 3)/4
+      YYYY=4000*(L+1)/1461001
+      L=L-1461*YYYY/4+31
+      MM=80*L/2447
+      DD=L-2447*MM/80
+      L=MM/11
+      MM=MM + 2 - 12*L
+      YYYY=100*(N-49) + YYYY + L
+      RETURN
+      END
+C-----------------------------------------------------------------------
