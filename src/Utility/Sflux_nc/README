@@ -1,2 +1,0 @@
-Sample matlab scripts that can read/write netcdf files for
- SCHICM's sflux/ inputs. Must use newer matlab version to access nc toolbox.
