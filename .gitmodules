@@ -4,6 +4,3 @@
 [submodule "third_party/gotm"]
 	path = src/gotm
 	url = https://github.com/gotm-model/code.git
-[submodule "src/WWMIII"]
-	path = src/WWMIII
-	url = https://github.com/ivicajan/WWM.git
