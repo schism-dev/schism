@@ -1,0 +1,2 @@
+forchk -ninf -nwarn -ff -I /home/aron/opt/netcdf3/include,/home/aron/opt/mpich2_1.3_intel/include -define ST42,NCDF,WWM_MPI,WWM_SOLVER,SNL4_TSA /home/aron/Work/Quellen/Bibliotheken/NETCDF/netcdf-3.6.3/f90/netcdf.f90 /home/aron/Work/Quellen/Bibliotheken/NETCDF/netcdf-3.6.3/f90/typeSizes.f90 *.F90 
+

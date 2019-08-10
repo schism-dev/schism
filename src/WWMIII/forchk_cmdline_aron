@@ -1,0 +1,2 @@
+forchk -ninf -nwarn -ff -allc -I /home/aron/opt/netcdf3/include,/home/aron/opt/mpich2_1.4_intel/include,/home/aron/opt/petsc_withSuperLU/include,/home/aron/GIT/pdlib/src -define ST42,NCDF,WWM_MPI,WWM_SOLVER,PDLIB *.F90 /home/aron/Work/Quellen/Bibliotheken/NETCDF/netcdf-3.6.3/f90/netcdf.f90 /home/aron/Work/Quellen/Bibliotheken/NETCDF/netcdf-3.6.3/f90/typeSizes.f90 /home/aron/GIT/pdlib/src/*.F90 /home/aron/config/Software/Linux/Forchk/newforchk/forcheck.nl/libraries/MPI.flb 
+
