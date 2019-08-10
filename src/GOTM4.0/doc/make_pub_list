@@ -1,6 +1,0 @@
-#bibtex2html -s siam -r -d gotm_pub.bib 
-bibtex2html -nodoc -noheader -s ieeetr -r -d gotm_pub.bib 
-#bibtex2html -nodoc -noheader -s ieeetr -a gotm_pub.bib 
-scp gotm_pub.html gotm_pub_bib.html  bolding@gotm.net:/data/kamel/domains/gotm.net/pages/documentation/
-rm gotm_pub.html gotm_pub_bib.html
-

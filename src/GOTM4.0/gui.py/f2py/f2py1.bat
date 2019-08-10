@@ -1,1 +1,0 @@
-f2py.py -h gotm.pyf ../../src/gotm/gotm.F90 only: init_gotm time_loop clean_up : ../../src/util/time.F90 only: minn maxn : ../gui_util.f90 only: redirectoutput resetoutput getversion : -m gotm

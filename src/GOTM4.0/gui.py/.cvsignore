@@ -1,8 +1,0 @@
-*.pyd
-*.pyc
-win32bin
-build
-dist
-*.sln
-*.suo
-*.pythonproj
