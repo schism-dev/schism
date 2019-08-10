@@ -4,3 +4,6 @@
 [submodule "third_party/gotm"]
 	path = third_party/gotm
 	url = https://github.com/gotm-model/code.git
+[submodule "third_party/wwmiii"]
+	path = third_party/wwmiii
+	url = https://github.com/schism-dev/WWMIII-SCHISM.git
