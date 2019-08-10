@@ -4,3 +4,9 @@
 [submodule "third_party/gotm"]
 	path = src/gotm
 	url = https://github.com/gotm-model/code.git
+[submodule "src/GOTM"]
+	path = src/GOTM
+	url = https://github.com/gotm-model/code.git
+[submodule "src/parmetis"]
+	path = src/parmetis
+	url = https://github.com/scibuilder/parmetis.git
