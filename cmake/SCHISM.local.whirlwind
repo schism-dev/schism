@@ -29,10 +29,10 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #
 
 
-set(PARMETIS_DIR  /home/eli/myscratch/schism-dev/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
+set(PARMETIS_DIR  /sciclone/home10/yinglong/git/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
 #set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
-set(NetCDF_FORTRAN_DIR ${NETCDF_FORTRAN} CACHE PATH "Path to NetCDF Fortran library")
-set(NetCDF_C_DIR  ${NETCDF}  CACHE PATH "Path to NetCDF C library")
+set(NetCDF_FORTRAN_DIR /usr/local/intel64/nehalem/intel-2016/netcdf-fortran-4.2 CACHE PATH "Path to NetCDF Fortran library")
+set(NetCDF_C_DIR  /usr/local/intel64/nehalem/intel-2016/netcdf-4.3.2/  CACHE PATH "Path to NetCDF C library")
 
 #set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
 #set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation")
