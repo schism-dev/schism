@@ -22,21 +22,21 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #            Generally traditional structure is assumed, but the Parmetis and GOTM libraries
 #            that are included have a slightly different structure
 #
-#            You only need PETSc for WWM
 #            You only need GOTM if you intend to use it with USE_GOTM
 #            GOTM and ParMetis local copies will be found automatically, but also can overridden
 #            You have to build them
 #
 
-
+###Relative paths won't work
 set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
 set(PARMETIS_DIR  /sciclone/home10/yinglong/git/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
-#set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
 set(NetCDF_FORTRAN_DIR /usr/local/intel64/nehalem/intel-2016/netcdf-fortran-4.2 CACHE PATH "Path to NetCDF Fortran library")
 set(NetCDF_C_DIR  /usr/local/intel64/nehalem/intel-2016/netcdf-4.3.2/  CACHE PATH "Path to NetCDF C library")
-
-#set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
+###MPI_ROOT is only needed when cmake is having trouble finding write MPI wrapper
 #set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation")
+
+#set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
+#set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
 
 # PETSC hasn't been maintained, not sure of status (Eli).
 #set(PETSC_DIR  /Calcul/Apps/PETSc/3.3-p4.intel/ PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
@@ -65,6 +65,10 @@ set(NetCDF_C_DIR  /usr/local/intel64/nehalem/intel-2016/netcdf-4.3.2/  CACHE PAT
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 
 set(MPI_VERSION CACHE STRING  "2")
+###Compile flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STRING "Fortran flags" FORCE)
-##For final linking
-set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
+##For final linking: this is only needed in exordinary cases
+#set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
+
+
+###In build, the usual cmd is: cmake -C ../cmake/SCHISM.local.<cluster> ../src; then make -j8
