@@ -66,7 +66,7 @@ set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation"
 #set(MPI_VERSION    CACHE STRING  "2")
 
 
-# For Joseph
+# More complex override
 #set( CMAKE_Fortran_FLAGS_RELEASE "${SCHISM_INTEL_OPTIONS} -O3 -no-prec-div -mcmodel=medium  -Bstatic -assume byterecl -ipo -axCORE-AVX512 -xSSE4.23 -shared-intel" CACHE STRING "Fortran flags" FORCE)
 
 
