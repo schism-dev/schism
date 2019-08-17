@@ -64,7 +64,9 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 #set(INCLUDE_TIMING CACHE BOOLEAN OFF)
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 
-set(MPI_VERSION CACHE STRING  "2")
+###MPI_VERSION cannot be set here; use -DMPIVERSION=XX in cmake cmd instead
+#set(MPI_VERSION CACHE STRING  "1")
+#set(MPIVERSION CACHE STRING  "1")
 ###Compile flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 ##For final linking: this is only needed in exordinary cases
