@@ -71,4 +71,4 @@ set(NetCDF_C_DIR  /nasa/netcdf/4.4.1.1_serial/  CACHE PATH "Path to NetCDF C lib
 ##set(MPI_VERSION CACHE STRING 1 FORCE)
 set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -no-prec-div -mcmodel=medium -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2" CACHE STRING "Fortran flags" FORCE)
 ##For final linking: this is only needed in exordinary cases
-#set(CMAKE_EXE_LINKER_FLAGS "-O3 -no-prec-div -mcmodel=medium  -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2 -lmpi" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS "-O3 -no-prec-div -mcmodel=medium  -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2 -lmpi++ -lmpi -lstdc++ -lcpuset -lbitmask" CACHE STRING "Link flags" FORCE)
