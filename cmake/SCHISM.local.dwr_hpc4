@@ -35,12 +35,12 @@ set(NetCDF_FORTRAN_DIR /opt/netcdf/netcdf-fortran/4.4.4-intel64 CACHE PATH "Path
 set(NetCDF_C_DIR      /opt/netcdf/netcdf-c/4.6.2-intel64 CACHE PATH "Path to NetCDF C library")
 
 set(HDF5_DIR /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
-set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library)
-set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation)
+set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
+set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation")
 
 # PETSC hasn't been maintained, not sure of status (Eli).
 #set(PETSC_DIR  /Calcul/Apps/PETSc/3.3-p4.intel/ PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
-set(GOTM_HOME  /home/eli/myscratch/gotm_v5.2 CACHE PATH "Path to GOTM")
+#set(GOTM_HOME  /home/eli/myscratch/gotm_v5.2 CACHE PATH "Path to GOTM")
 
 
 
@@ -65,5 +65,8 @@ set(GOTM_HOME  /home/eli/myscratch/gotm_v5.2 CACHE PATH "Path to GOTM")
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 #set(MPI_VERSION    CACHE STRING  "2")
 
+
+# For Joseph
+#set( CMAKE_Fortran_FLAGS_RELEASE "${SCHISM_INTEL_OPTIONS} -O3 -no-prec-div -mcmodel=medium  -Bstatic -assume byterecl -ipo -axCORE-AVX512 -xSSE4.23 -shared-intel" CACHE STRING "Fortran flags" FORCE)
 
 
