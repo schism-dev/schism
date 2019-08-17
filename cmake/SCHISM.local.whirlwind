@@ -1,3 +1,4 @@
+####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.whirlwind ../src/
 
 ###W&M Whirlwind cluster
 ######################### SCHISM COMPONENTS
@@ -70,7 +71,7 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 ###Compile flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 ##For final linking: this is only needed in exordinary cases
-#set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
+#set(CMAKE_EXE_LINKER_FLAGS "" CACHE STRINg "linker" FORCE)
 
 
 ###In build, the usual cmd is: cd build/; cmake -C ../cmake/SCHISM.local.<cluster> ../src; then make -j8

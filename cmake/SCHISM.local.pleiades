@@ -1,4 +1,4 @@
-##cmake cmd: cmake -DMPIVERSION=1 -C ../cmake/SCHISM.local.pleiades ../src/
+##cmake cmd in build/: cmake -DMPIVERSION=1 -C ../cmake/SCHISM.local.pleiades ../src/
 
 
 ###NASA Pleiades

@@ -1,3 +1,4 @@
+####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.bora ../src/
 
 ###W&M Bora cluster
 ######################### SCHISM COMPONENTS
@@ -64,13 +65,7 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 #set(INCLUDE_TIMING CACHE BOOLEAN OFF)
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 
-set(MPI_VERSION CACHE STRING  "2")
+##set(MPI_VERSION CACHE STRING  "2")
 ###Compile flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2" CACHE STRING "Fortran flags" FORCE)
-##For final linking: this is only needed in exordinary cases
-#set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
 
-
-###In build, the usual cmd is: cd build/; cmake -C ../cmake/SCHISM.local.<cluster> ../src; then make -j8
-###To see the actual cmd used, use make VERBOSE=1 (note that cmake expands MPI compiler to serial+lib+inc)
-###For MPI compiler used, search for 'MPI_Fortran_COMPILER' and 'MPI_C_COMPILER' in build/CMakeCache.txt
