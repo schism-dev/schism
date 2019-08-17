@@ -1,6 +1,6 @@
 
 
-######################### SELFE COMPONENTS
+######################### SCHISM COMPONENTS
 #
 #           You can only build one executable at a time. Choose your modules by setting these modules ON
 #
@@ -11,6 +11,7 @@ set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
 
 #   Algorithm choices
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
+set (TVD_LIM VL CACHE STRING "Flux limiter")
 
 
 ##########################  LOCATIONS #########################################################
@@ -28,11 +29,11 @@ set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
 #            You have to build them
 #
 
-
+#set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
 #set(PARMETIS_DIR /sciclone/home04/wangzg/data20/ParMetis-3.1-64bit CACHE PATH "Path to ParMetis")
-#set(HDF5_DIR   /some/override/path CACHE PATH "Path to HDF5")
 #set(NetCDF_DIR /some/override/path CACHE PATH "Path to NetCDF")
 #set(NetCDF_BIN_DIR  /usr/local/dms/pkg/intel/netcdf/4.3.1/serial/bin/ CACHE PATH "Path to NetCDF bin and config")
+#set(HDF5_DIR   /some/override/path CACHE PATH "Path to HDF5")
 #set(PETSC_DIR  /some/override/path CACHE PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
 #set(GOTM_DIR   /some/override/path CACHE PATH "Path to GOTM, (if unset, defaults to pre-built local copy)")
 
@@ -57,4 +58,9 @@ set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
 #set(INCLUDE_TIMING CACHE BOOLEAN OFF)
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 #set(MPI_VERSION    CACHE STRING  "2")
+
+###Compile flags
+#set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+###For final linking: this is only needed in exordinary cases
+##set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
 

@@ -71,4 +71,6 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STR
 #set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
 
 
-###In build, the usual cmd is: cmake -C ../cmake/SCHISM.local.<cluster> ../src; then make -j8
+###In build, the usual cmd is: cd build/; cmake -C ../cmake/SCHISM.local.<cluster> ../src; then make -j8
+###To see the actual cmd used, use make VERBOSE=1 (note that cmake expands MPI compiler to serial+lib+inc)
+###For MPI compiler used, search for 'MPI_Fortran_COMPILER' and 'MPI_C_COMPILER' in build/CMakeCache.txt

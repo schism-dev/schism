@@ -14,9 +14,12 @@ On Linux, Cmake is just a preprocessor for Make much like a typical ''configure'
  > cd build
  > setenv FC ifort/pgf90    # Might be shell-dependent. The default (no action needed) is gfortran
                       # on bash, use export FC=ifort
- > cmake ../src (or: cmake -C ../cmake/SELFE.local.cmake ../src; see below)
+ > cmake ../src (or: cmake -C ../cmake/SELFE.local.<name> ../src; see below)
  > make -j8
  (executables are stored in bin/)
+ (To see actual compile commands used, use make VERBOSE=1. Also cmake likes to expands MPI 
+ compiler to serial+lib+inc, so to see the actual MPI compiler name, 
+ search for 'MPI_Fortran_COMPILER' and 'MPI_C_COMPILER' in build/CMakeCache.txt)
 
 If you have the prerequisites in typical places or set up your environment as recommended below this sequence will produce a Hydro-only build with default options including the selfe executable and all utilities. More realistically, you will probably have to set some library locations. Configuration is considered in more detail below.
 
