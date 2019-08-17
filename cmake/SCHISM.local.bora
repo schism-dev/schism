@@ -1,5 +1,5 @@
 
-###W&M Whirlwind cluster
+###W&M Bora cluster
 ######################### SCHISM COMPONENTS
 #
 #           You can only build one executable at a time. Choose your modules by setting these modules ON
@@ -66,7 +66,7 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 
 set(MPI_VERSION CACHE STRING  "2")
 ###Compile flags
-set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2" CACHE STRING "Fortran flags" FORCE)
 ##For final linking: this is only needed in exordinary cases
 #set(CMAKE_EXE_LINKER_FLAGS "" FORCE)
 
