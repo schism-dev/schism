@@ -202,7 +202,6 @@ subroutine read_icm_sed_param
   implicit none
   
   !local variables
-  !integer :: ispvars,ispvarb,ispvarlr
   integer :: ispvarb,ispvarlr
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
   real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1)
@@ -369,37 +368,8 @@ subroutine read_icm_sed_param
   !------------------------------------- 
   !spatially varying variables
   !------------------------------------- 
-  !call get_param('icm_sed.in','iSet',1,iSet,rtmp,stmp)
-  !call get_param('icm_sed.in','ispvars',1,ispvars,rtmp,stmp)
   call get_param('icm_sed.in','ispvarb',1,ispvarb,rtmp,stmp)
   call get_param('icm_sed.in','ispvarlr',1,ispvarlr,rtmp,stmp)
-  
-  !!settling velocity
-  !if(ispvars==1) then
-  !  call get_param('icm_sed.in','WSSBNET',2,itmp,WSSBNET(1),stmp)
-  !  call get_param('icm_sed.in','WSLBNET',2,itmp,WSLBNET(1),stmp)
-  !  call get_param('icm_sed.in','WSRBNET',2,itmp,WSRBNET(1),stmp)
-  !  call get_param('icm_sed.in','WS1BNET',2,itmp,WS1BNET(1),stmp)
-  !  call get_param('icm_sed.in','WS2BNET',2,itmp,WS2BNET(1),stmp)
-  !  call get_param('icm_sed.in','WS3BNET',2,itmp,WS3BNET(1),stmp)
-  !  call get_param('icm_sed.in','WSUBNET',2,itmp,WSUBNET(1),stmp)
-  !  do i=2,nea
-  !    WSSBNET(i)=WSSBNET(1)
-  !    WSLBNET(i)=WSLBNET(1)
-  !    WSRBNET(i)=WSRBNET(1)
-  !    WS1BNET(i)=WS1BNET(1)
-  !    WS2BNET(i)=WS2BNET(1)
-  !    WS3BNET(i)=WS3BNET(1)
-  !    WSUBNET(i)=WSUBNET(1)
-  !  enddo !i
-  !elseif(ispvars==2) then
-  !  !more work needed, similar to read 'settling.gr3'
-  !  open(31,file='nsettling.gr3',status='old')
-  !  close(31)
-  !else
-  !  write(errmsg,*)'unknown ispvars in sediment parameters:',ispvars
-  !  call parallel_abort(errmsg)
-  !endif!ispvars
 
   !Sediment burial and mixing rates
   if(ispvarb==1) then
@@ -416,7 +386,7 @@ subroutine read_icm_sed_param
    open(31,file='vbm.gr3',status='old')
    close(31)
   else
-    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvarb
+    write(errmsg,*)'unknown ispvarb in sediment parameters:',ispvarb
     call parallel_abort(errmsg)
   endif !ispvarb
 
@@ -445,7 +415,7 @@ subroutine read_icm_sed_param
    open(31,file='frac_pom.gr3',status='old')
    close(31)
   else
-    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvarlr
+    write(errmsg,*)'unknown ispvalr in sediment parameters:',ispvarlr
     call parallel_abort(errmsg)
   endif !ispvarlr
   
@@ -499,19 +469,6 @@ subroutine read_icm_sed_param
       SI1TM1S(i)= SIT2I/2
     enddo
   endif !ihot
-
-  !!turn off settling velocity if iSet=0
-  !if(iSet==0) then
-  !  do i=1,nea
-  !    WSSBNET(i)=0.0
-  !    WSLBNET(i)=0.0
-  !    WSRBNET(i)=0.0
-  !    WS1BNET(i)=0.0
-  !    WS2BNET(i)=0.0
-  !    WS3BNET(i)=0.0
-  !    WSUBNET(i)=0.0
-  !  enddo
-  !endif !iSet
 
   if(iCheck==1) call check_icm_sed_param
 
@@ -690,8 +647,6 @@ subroutine check_icm_sed_param
 
     write(31,*)
     write(31,*)'----spatially varying variables----------------------------'
-    !write(31,809)'iSet','WSSBNET(1)','WSLBNET(1)','WSRBNET(1)','WS1BNET(1)','WS2BNET(1)','WS3BNET(1)','WSUBNET(1)'
-    !write(31,'(i10,x,100(f10.5,x))')iSet,WSSBNET(1),WSLBNET(1),WSRBNET(1),WS1BNET(1),WS2BNET(1),WS3BNET(1),WSUBNET(1)
     write(31,809)'VSED(1)','VPMIX(1)','VDMIX(1)'
     write(31,810)VSED(1),VPMIX(1),VDMIX(1)
     write(31,809)'FRPOP(1,2)','FRPOP(1,3)','FRPON(1,2)','FRPON(1,3)','FRPOC(1,2)','FRPOC(1,3)'
@@ -715,7 +670,7 @@ subroutine sed_calc(id)
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
                       &isav_icm,patchsav,&
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav,&
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,WSUBNET
+                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
@@ -827,7 +782,6 @@ subroutine sed_calc(id)
   flxp(1)=WS1BNET(id)
   flxp(2)=WS2BNET(id)
   flxp(3)=WS3BNET(id)
-  flxu=WSUBNET(id)
 
   !ncai
   !net settling velocity is going to be transfered from advanced hydrodynamics

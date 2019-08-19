@@ -58,10 +58,6 @@ module icm_sed_mod
   real(kind=rkind),save :: CTEMPI,BBMI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI
   real(kind=rkind),save,dimension(3) :: CPOPI,CPONI,CPOCI
 
-  !!settling velocity !unit:m/day
-  !integer, save :: iSet
-  !real(kind=rkind), save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,WSUBNET 
-  
   !Sediment thickness, burial and mixing rates
   real(kind=rkind),save,allocatable,dimension(:) :: HSED,VSED,VPMIX,VDMIX
   real(kind=rkind),save :: W12,W12MIN,KL12

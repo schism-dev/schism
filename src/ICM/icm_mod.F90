@@ -40,7 +40,7 @@ module icm_mod
   integer,save :: iSed,iRea,iBen,iTBen
   integer,save :: iZoo,iPh
   integer,save :: iAtm,iCheck,iout_icm
-  integer,save :: iSet,ispvars,iTurb,iWRea,iTSS 
+  integer,save :: iSet,iTurb,iWRea,iTSS 
   integer,save :: isav_icm 
  
 !  !ICM region
@@ -170,7 +170,7 @@ module icm_mod
   real(kind=rkind),save,allocatable,dimension(:) :: WSRP,WSLP,WSPB1,WSPB2,WSPB3,turb,WRea
 
   !net settling velocity !unit:m/day
-  real(kind=rkind),save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,WSUBNET
+  real(kind=rkind),save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
 
   !benthic flux from sediment flux model
   real(kind=rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO
