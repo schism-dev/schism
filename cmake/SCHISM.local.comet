@@ -1,4 +1,4 @@
-###cmake cmd: cmake -C ../cmake/SCHISM.local.mistral ../src/
+###cmake cmd: cmake -C ../cmake/SCHISM.local.comet ../src/
 
 ###EXSEDE Comet
 ######################### SCHISM COMPONENTS
