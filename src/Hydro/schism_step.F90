@@ -44,7 +44,7 @@
 #ifdef USE_ICM
       use icm_mod, only : iSun,iRea,WMS,wqc,PH_nd,lfsav,stsav,rtsav, &
                          &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm
-      USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S, &
+      USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                             &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                             &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
                             &NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -7653,8 +7653,26 @@
      &'ICM_CSO4',4,1,nea,CSO4)
         if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+30), &
      &'ICM_CH2S',4,1,nea,CH2S)
-        noutput=noutput+26
-        icount=26 !offset
+        if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+31), &
+     &'ICM_PON1',4,1,nea,CPON(:,1)
+        if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+32), &
+     &'ICM_PON2',4,1,nea,CPON(:,2)
+        if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+33), &
+     &'ICM_PON3',4,1,nea,CPON(:,3)
+        if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+34), &
+     &'ICM_POP1',4,1,nea,CPOP(:,1)
+        if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+35), &
+     &'ICM_POP2',4,1,nea,CPOP(:,2)
+        if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+36), &
+     &'ICM_POP3',4,1,nea,CPOP(:,3)
+        if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+37), &
+     &'ICM_POC1',4,1,nea,CPOC(:,1)
+        if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+38), &
+     &'ICM_POC2',4,1,nea,CPOC(:,2)
+        if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+39), &
+     &'ICM_POC3',4,1,nea,CPOC(:,3)
+        noutput=noutput+35
+        icount=35 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

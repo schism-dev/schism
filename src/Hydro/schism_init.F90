@@ -402,7 +402,7 @@
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
       allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(60),iof_cos(20),iof_fib(5), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(65),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: iof failure')
 
