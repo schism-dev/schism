@@ -7654,23 +7654,23 @@
         if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+30), &
      &'ICM_CH2S',4,1,nea,CH2S)
         if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+31), &
-     &'ICM_PON1',4,1,nea,CPON(:,1)
+     &'ICM_PON1',4,1,nea,CPON(:,1))
         if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+32), &
-     &'ICM_PON2',4,1,nea,CPON(:,2)
+     &'ICM_PON2',4,1,nea,CPON(:,2))
         if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+33), &
-     &'ICM_PON3',4,1,nea,CPON(:,3)
+     &'ICM_PON3',4,1,nea,CPON(:,3))
         if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+34), &
-     &'ICM_POP1',4,1,nea,CPOP(:,1)
+     &'ICM_POP1',4,1,nea,CPOP(:,1))
         if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+35), &
-     &'ICM_POP2',4,1,nea,CPOP(:,2)
+     &'ICM_POP2',4,1,nea,CPOP(:,2))
         if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+36), &
-     &'ICM_POP3',4,1,nea,CPOP(:,3)
+     &'ICM_POP3',4,1,nea,CPOP(:,3))
         if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+37), &
-     &'ICM_POC1',4,1,nea,CPOC(:,1)
+     &'ICM_POC1',4,1,nea,CPOC(:,1))
         if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+38), &
-     &'ICM_POC2',4,1,nea,CPOC(:,2)
+     &'ICM_POC2',4,1,nea,CPOC(:,2))
         if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+39), &
-     &'ICM_POC3',4,1,nea,CPOC(:,3)
+     &'ICM_POC3',4,1,nea,CPOC(:,3))
         noutput=noutput+35
         icount=35 !offset
 
