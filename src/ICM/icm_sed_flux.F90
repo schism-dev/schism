@@ -1257,11 +1257,7 @@ subroutine sed_calc(id)
   !************************************************************************
   if(iERO==1)then
     !calculate bottom shear stress for elem #id
-    tau_bot_elem=0
-    do j=1,i34(id)
-      rtmp=(tau_bot_node(1,elnode(j,id))**2+tau_bot_node(2,elnode(j,id))**2)**0.5
-      tau_bot_elem=tau_bot_elem+rtmp/i34(id)
-    enddo !j::i34(id)
+    tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
 
     !calculate sediemnt erosion > nutrient erosion flux
     if ((tau_bot_elem-tau_c_elem(id))>10.e-8)then
