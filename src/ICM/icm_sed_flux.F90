@@ -195,7 +195,7 @@ subroutine read_icm_sed_param
 !read sediment flux model parameters
 !---------------------------------------------------------------------C
   use icm_sed_mod
-  use schism_glbl, only : rkind,ihot,nea,errmsg
+  use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod, only : iCheck,isav_icm,iTBen
   use misc_modules
@@ -203,8 +203,11 @@ subroutine read_icm_sed_param
   
   !local variables
   integer :: ispvarb,ispvarlr
+  integer :: npgb,negb,ip,nd,ne
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
-  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1)
+  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),xtmp,ytmp
+  real(kind=rkind) :: ttau_c_elem
+  real(kind=rkind),dimension(npa) :: ttau_c_elems
   character(len=10) :: stmp
    
   !General parameters 
@@ -293,6 +296,15 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','THTACH4',2,itmp,THTACH4,stmp)
   call get_param('icm_sed.in','KMCH4O2',2,itmp,KMCH4O2,stmp)
   call get_param('icm_sed.in','KMSO4',2,itmp,KMSO4,stmp)
+
+  !erosion flux
+  call get_param('icm_sed.in','iERO',1,iERO,rtmp,stmp)
+  if(iERO==1) then
+    call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
+    call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
+    call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
+  endif !iERO
+
 
   !initial concentration
   call get_param('icm_sed.in','CTEMPI',2,itmp,CTEMPI,stmp)
@@ -418,7 +430,29 @@ subroutine read_icm_sed_param
     write(errmsg,*)'unknown ispvalr in sediment parameters:',ispvarlr
     call parallel_abort(errmsg)
   endif !ispvarlr
-  
+ 
+  !erosion flux
+  !read in spatial-varying critical shear stress
+  if(iERO==1) then
+    open(31,file='tau_c_elem.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check tau_c_elem.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,ttau_c_elem
+      if(ipgl(ip)%rank==myrank) then
+        ttau_c_elems(ipgl(ip)%id)=ttau_c_elem
+      endif !ipgl(ip)%rank
+    enddo !i
+    close(31)
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        tau_c_elem(i)=tau_c_elem(i)+ttau_c_elems(nd)/i34(i)
+      enddo
+    enddo !i
+  endif !iERO
+
+ 
   !--------------------------------------------------------------------
   !pre-poccess parameters
   !--------------------------------------------------------------------
@@ -665,7 +699,7 @@ subroutine sed_calc(id)
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder, b)SAV
 !-----------------------------------------------------------------------
-  use schism_glbl, only : dt,rkind, errmsg, ielg
+  use schism_glbl, only : dt,rkind, errmsg, ielg, tau_bot_node,nea,i34,elnode
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
                       &isav_icm,patchsav,&
@@ -1217,6 +1251,37 @@ subroutine sed_calc(id)
 !  endif !iBalg==1
 !  !************************************************************************
 
+
+  !************************************************************************
+  !erosion flux
+  !************************************************************************
+  if(iERO==1)then
+    !calculate bottom shear stress for elem #id
+    tau_bot_elem=0
+    do j=1,i34(id)
+      rtmp=(tau_bot_node(1,elnode(j,id))**2+tau_bot_node(2,elnode(j,id))**2)**0.5
+      tau_bot_elem=tau_bot_elem+rtmp/i34(id)
+    enddo !j::i34(id)
+
+    !calculate sediemnt erosion > nutrient erosion flux
+    if ((tau_bot_elem-tau_c_elem(id))>10.e-8)then
+      SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+      SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+      SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+    else
+      SED_EROH2S(id)=0
+      SED_EROLPOC(id)=0
+      SED_ERORPOC(id)=0
+    endif !tau_bot_elem
+
+    !minus erosion in sediment for mass balance
+    HST2TM1S(id)=max(1.0d-10,HST2TM1S(id)-SED_EROH2S(id)*dtw/HSED(id))
+    POC1TM1S(id)=max(1.0d-10,POC1TM1S(id)-SED_EROLPOC(id)*dtw/HSED(id))
+    POC2TM1S(id)=max(1.0d-10,POC2TM1S(id)-SED_ERORPOC(id)*dtw/HSED(id))
+  endif !iERO
+  !************************************************************************
+
+
   !update sediment concentration
   NH41TM1S(id)  = NH41        !dissolved NH4 in 1st layer
   NO31TM1S(id)  = NO31        !dissolved NO3 in 1st layer
@@ -1583,8 +1648,8 @@ subroutine link_sed_output(id)
 !---------------------------------------------------------------------------------------
 !sediment flux
 !---------------------------------------------------------------------------------------
-  use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD
-  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA
+  use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD,EROH2S,EROLPOC,ERORPOC
+  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC
   implicit none
   integer, intent(in) :: id
 
@@ -1597,6 +1662,14 @@ subroutine link_sed_output(id)
   BnSAt  = SED_BENSA(id)
 
   !nan checked when applied to water column
+
+  !erosion flux, H2S>S
+  if(iERO==1)then
+    EROH2S(id)=SED_EROH2S(id)/2
+    EROLPOC(id)=SED_EROLPOC(id)/2
+    ERORPOC(id)=SED_ERORPOC(id)/2
+  endif !iERO
+
 
   return
 

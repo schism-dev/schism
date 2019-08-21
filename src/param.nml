@@ -766,33 +766,36 @@
 !  iof_icm(33) = 1 !bottom POC g1 conc {CPOC(:,1)}
 !  iof_icm(34) = 1 !bottom POC g2 conc {CPOC(:,2)}
 !  iof_icm(35) = 1 !bottom POC g3 conc {CPOC(:,3)}
+!  iof_icm(36) = 1 !erosion flux H2S {EROH2S}
+!  iof_icm(37) = 1 !ersoion flux LPOC {EROLPOC}
+!  iof_icm(38) = 1 !ersoion flux RPOC {ERORPOC}
 !water column foundamental tracers @nodes
-!  iof_icm(36) = 1 !Zoo. #1 {ICM_1}
-!  iof_icm(37) = 1 !Zoo. #2 {ICM_2}
-!  iof_icm(38) = 1 !phyto #1 {ICM_3}
-!  iof_icm(39) = 1 !phyto #2 {ICM_4}
-!  iof_icm(40) = 1 !phyto #3 {ICM_5}
-!  iof_icm(41) = 1 !RPOC {ICM_6}
-!  iof_icm(42) = 1 !LPOC {ICM_7}
-!  iof_icm(43) = 1 !DOC {ICM_8}
-!  iof_icm(44) = 1 !RPON {ICM_9}
-!  iof_icm(45) = 1 !LPON {ICM_10}
-!  iof_icm(46) = 1 !DON {ICM_11}
-!  iof_icm(47) = 1 !NH4 {ICM_12}
-!  iof_icm(48) = 1 !NO3 {ICM_13}
-!  iof_icm(49) = 1 !RPOP {ICM_14}
-!  iof_icm(50) = 1 !LPOP {ICM_15}
-!  iof_icm(51) = 1 !DOP {ICM_16}
-!  iof_icm(52) = 1 !PO4t {ICM_17}
-!  iof_icm(53) = 1 !Si- biogenic {ICM_18}
-!  iof_icm(54) = 1 !available Si {ICM_19}
-!  iof_icm(55) = 1 !COD: Chemical oxygen demand {ICM_20}
-!  iof_icm(56) = 1 !DO {ICM_21}
+!  iof_icm(39) = 0 !Zoo. #1 {ICM_1}
+!  iof_icm(40) = 0 !Zoo. #2 {ICM_2}
+!  iof_icm(41) = 1 !phyto #1 {ICM_3}
+!  iof_icm(42) = 1 !phyto #2 {ICM_4}
+!  iof_icm(43) = 1 !phyto #3 {ICM_5}
+!  iof_icm(44) = 1 !RPOC {ICM_6}
+!  iof_icm(45) = 1 !LPOC {ICM_7}
+!  iof_icm(46) = 1 !DOC {ICM_8}
+!  iof_icm(47) = 1 !RPON {ICM_9}
+!  iof_icm(48) = 1 !LPON {ICM_10}
+!  iof_icm(49) = 1 !DON {ICM_11}
+!  iof_icm(50) = 1 !NH4 {ICM_12}
+!  iof_icm(51) = 1 !NO3 {ICM_13}
+!  iof_icm(52) = 1 !RPOP {ICM_14}
+!  iof_icm(53) = 1 !LPOP {ICM_15}
+!  iof_icm(54) = 1 !DOP {ICM_16}
+!  iof_icm(55) = 1 !PO4t {ICM_17}
+!  iof_icm(56) = 0 !Si- biogenic {ICM_18}
+!  iof_icm(57) = 0 !available Si {ICM_19}
+!  iof_icm(58) = 1 !COD: Chemical oxygen demand {ICM_20}
+!  iof_icm(59) = 1 !DO {ICM_21}
 !! following requires ICM_PH on
-!  iof_icm(57) = 1 !TIC {ICM_22}
-!  iof_icm(58) = 1 !ALK {ICM_23}
-!  iof_icm(59) = 1 !CA {ICM_24}
-!  iof_icm(60) = 1 !CACO3 {ICM_25}
+!  iof_icm(60) = 1 !TIC {ICM_22}
+!  iof_icm(61) = 1 !ALK {ICM_23}
+!  iof_icm(62) = 1 !CA {ICM_24}
+!  iof_icm(63) = 1 !CACO3 {ICM_25}
 
 !-----------------------------------------------------------------------
 ! CoSINE outputs

@@ -46,6 +46,7 @@ subroutine icm_init
     & TGP1(nea),TGP2(nea),TGP3(nea),CChl1(nea),CChl2(nea),CChl3(nea), & 
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
     & rIavg_save(nea), &!rad_ncai
+    & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea), & !region !ncai
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai !sav
     & plfsav(nvrt),bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
@@ -57,6 +58,8 @@ subroutine icm_init
 
   !icm_sed_mod
   allocate(SFA(nea),SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
+      & tau_c_elem(nea), &!erosion, ncai
+      & SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), & 
       & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
       & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea), &
       & SSI(nea), AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea), WSSBNET(nea),WSLBNET(nea),WSRBNET(nea), &
@@ -97,7 +100,12 @@ subroutine icm_init
 
   !rad_ncai
   rIavg_save=0.0
-  
+ 
+  !erosion ncai
+  tau_c_elem=0.0
+  EROH2S=0.0; EROLPOC=0.0; ERORPOC=0.0
+  SED_EROH2S=0.0; SED_EROLPOC=0.0; SED_ERORPOC=0.0
+
   !ncai
   lfsav=1.0;    stsav=1.0;      rtsav=0.3; !init for each layer whole domain
   tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;  

@@ -43,7 +43,8 @@
 
 #ifdef USE_ICM
       use icm_mod, only : iSun,iRea,WMS,wqc,PH_nd,lfsav,stsav,rtsav, &
-                         &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm
+                         &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm, &
+                         &EROH2S, EROLPOC,ERORPOC
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                             &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                             &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -7671,8 +7672,14 @@
      &'ICM_POC2',4,1,nea,CPOC(:,2))
         if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+39), &
      &'ICM_POC3',4,1,nea,CPOC(:,3))
-        noutput=noutput+35
-        icount=35 !offset
+        if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+40), &
+     &'ICM_EROH2S',4,1,nea,EROH2S)
+        if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+41), &
+     &'ICM_EROLPOC',4,1,nea,EROLPOC)
+        if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+42), &
+     &'ICM_ERORPOC',4,1,nea,ERORPOC)
+        noutput=noutput+38
+        icount=38 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

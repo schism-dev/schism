@@ -1744,6 +1744,11 @@ subroutine calkwq(id,nv,ure,it)
       b=b+fcrpsav*((bmlfsav(k)+plfsav(k)*famsav)*lfsav(k,id)+bmstsav(k)*stsav(k,id))
     endif
 
+    !erosion
+    if(k==nv) then
+      b=b+EROLPOC(id)/dep(k)
+    endif !k==nv
+
     RPOC(k,2)=((1.0+a*dtw2)*RPOC(k,1)+b*dtw)/(1.0-a*dtw2)
     RPOC(k,1)=0.5*(RPOC(k,1)+RPOC(k,2))
     RPOC0=RPOC(k,1)
@@ -1769,6 +1774,11 @@ subroutine calkwq(id,nv,ure,it)
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
       b=b+fclpsav*((bmlfsav(k)+plfsav(k)*famsav)*lfsav(k,id)+bmstsav(k)*stsav(k,id))
     endif
+
+    !erosion
+    if(k==nv) then
+      b=b+EROLPOC(id)/dep(k)
+    endif !k==nv
 
     LPOC(k,2)=((1.0+a*dtw2)*LPOC(k,1)+b*dtw)/(1.0-a*dtw2)
     LPOC(k,1)=0.5*(LPOC(k,1)+LPOC(k,2))
@@ -2151,6 +2161,10 @@ subroutine calkwq(id,nv,ure,it)
     !rKCOD=(DOO(k,1)/(rKHCOD+DOO(k,1)))*rKCD*exp(rKTCOD*(Temp(k)-TRCOD))
     a=-rKCOD
     b=nCOD/dep(k)+WPCOD+WCOD
+    !erosion flux
+    if(k==nv) then
+      b=b+EROH2S(id)/dep(k)
+    endif !k==nv
     COD(k,2)=((1.0+a*dtw2)*COD(k,1)+b*dtw)/(1.0-a*dtw2)
     COD(k,1)=0.5*(COD(k,1)+COD(k,2))
   

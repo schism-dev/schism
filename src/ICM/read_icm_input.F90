@@ -173,7 +173,7 @@ subroutine read_icm_param2
 !---------------------------------------------------------------------
 !read spatially varying paramters 
 !---------------------------------------------------------------------
-  use schism_glbl, only : rkind,np_global,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
+  use schism_glbl, only : rkind,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
                    & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod

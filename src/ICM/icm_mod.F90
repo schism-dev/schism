@@ -163,6 +163,8 @@ module icm_mod
   real(kind=rkind),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=rkind),save :: AOC,AON,AONO,rKro,rKTr         
   !--------------------------------------------------------------------------------------
+  !erosion
+  real(kind=rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !nea
 
   !settling
   integer,save :: iReg_WS,iWS
