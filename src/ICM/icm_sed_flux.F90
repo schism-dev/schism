@@ -1661,9 +1661,9 @@ subroutine link_sed_output(id)
 
   !erosion flux, H2S>S
   if(iERO==1)then
-    EROH2S(id)=SED_EROH2S(id)/2
-    EROLPOC(id)=SED_EROLPOC(id)/2
-    ERORPOC(id)=SED_ERORPOC(id)/2
+    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
+    EROLPOC(id)=SED_EROLPOC(id)
+    ERORPOC(id)=SED_ERORPOC(id)
   endif !iERO
 
 
