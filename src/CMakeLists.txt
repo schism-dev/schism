@@ -174,6 +174,8 @@ add_module(WWMII    USE_WWM   OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 
+add_subdirectory(ParMetis-3.1-Sep2010)
+
 # Now recurse them and process the contents. 
 # In the process, we accumulate a (global) list of compile options and libraries
 foreach (moddir ${schismmoddirs})
