@@ -452,16 +452,17 @@ WSSED= 1.00
 
 !-----------------------------------------------------------------------
 !Net settling velocity to sediment
+!iSet=0: no re-suspension; 
+!iSet=1: spatial constant net settling velocity; 
+!iSet=2: spatial varying, requires netsettling.gr3, in order as follwing
 !-----------------------------------------------------------------------
-iSet=     1
-ispvars=  1 !1: constant (2: not working)
+iSet= 1 
 WSSBNET=  0.2
 WSLBNET=  1.0
 WSRBNET=  1.0
 WS1BNET=  0.2
 WS2BNET=  0.10
 WS3BNET=  0.00
-WSUBNET=  1.0
 
 !-----------------------------------------------------------------------
 !coefficients for Light extinction coefficient(1/m)

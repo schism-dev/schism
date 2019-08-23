@@ -1645,7 +1645,7 @@ subroutine calkwq(id,nv,ure,it)
     enddo
 
     !PB1
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=GP(k,1)-BMP(1)-WS1BNET(id)/dep(k)
     else
       a=GP(k,1)-BMP(1)-WSPB1(id)/dep(k)
@@ -1662,7 +1662,7 @@ subroutine calkwq(id,nv,ure,it)
     PB10=PB1(k,1)
 
     !PB2
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=GP(k,2)-BMP(2)-WS2BNET(id)/dep(k)
     else
       a=GP(k,2)-BMP(2)-WSPB2(id)/dep(k)
@@ -1679,7 +1679,7 @@ subroutine calkwq(id,nv,ure,it)
     PB20=PB2(k,1)
 
     !PB3
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=GP(k,3)-BMP(3)-WS3BNET(id)/dep(k)
     else
       a=GP(k,3)-BMP(3)-WSPB3(id)/dep(k)
@@ -1725,7 +1725,7 @@ subroutine calkwq(id,nv,ure,it)
     !RPOC
     rKRPOC=(rKRC(id)+rKRCalg*sumAPB)*rKTPOM
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKRPOC-WSRBNET(id)/dep(k)
     else
       a=-rKRPOC-WSRP(id)/dep(k) 
@@ -1752,7 +1752,7 @@ subroutine calkwq(id,nv,ure,it)
     !LPOC 
     rKLPOC=(rKLC(id)+rKLCalg*sumAPB)*rKTPOM
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKLPOC-WSLBNET(id)/dep(k)
     else
       a=-rKLPOC-WSLP(id)/dep(k)
@@ -1816,7 +1816,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !RPON
     rKRPON=(rKRN+rKRNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKRPON-WSRBNET(id)/dep(k)
     else
       a=-rKRPON-WSRP(id)/dep(k)
@@ -1842,7 +1842,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !LPON
     rKLPON=(rKLN+rKLNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKLPON-WSLBNET(id)/dep(k)
     else
       a=-rKLPON-WSLP(id)/dep(k)
@@ -1973,7 +1973,7 @@ subroutine calkwq(id,nv,ure,it)
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
     rKRPOP=(rKRP(id)+rKRPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKRPOP-WSRBNET(id)/dep(k)
     else
       a=-rKRPOP-WSRP(id)/dep(k)
@@ -2001,7 +2001,7 @@ subroutine calkwq(id,nv,ure,it)
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
     rKLPOP=(rKLP(id)+rKLPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKLPOP-WSLBNET(id)/dep(k)
     else
       a=-rKLPOP-WSLP(id)/dep(k)
@@ -2051,7 +2051,7 @@ subroutine calkwq(id,nv,ure,it)
     !PO4t
     fp=rKPO4p*TSED(k)/(1.0+rKPO4p*TSED(k))
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-fp*WSSBNET(id)/dep(k)
     else
       a=-fp*WSSED/dep(k)
@@ -2101,7 +2101,7 @@ subroutine calkwq(id,nv,ure,it)
     rKSUA=rKSU*exp(rval)
     !rKSUA=rKSU*exp(rKTSUA*(Temp(k)-TRSUA))
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-rKSUA-WS1BNET(id)/dep(k)
     else
       a=-rKSUA-WSPB1(id)/dep(k)
@@ -2122,7 +2122,7 @@ subroutine calkwq(id,nv,ure,it)
     !SAt
     fp=rKSAp*TSED(k)/(1.0+rKSAp*TSED(k))
 
-    if(k==nv.and.iSet==1)then
+    if(k==nv.and.iSet/=0)then
       a=-fp*WSSBNET(id)/dep(k)
     else
       a=-fp*WSSED/dep(k)

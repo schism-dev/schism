@@ -184,8 +184,10 @@ subroutine read_icm_param2
   integer :: i,j,ie,ip,npgb,negb,nd,ne,itmp,itmp1(1),itmp2(1,1),k,k2,m,n,q
   real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp
-  real(kind=rkind) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS 
+  real(kind=rkind) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
+  real(kind=rkind) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
   real(kind=rkind),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
+  real(kind=rkind),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
   real(kind=rkind),allocatable :: swild2(:,:),ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
 
 
@@ -377,18 +379,16 @@ subroutine read_icm_param2
 
 
   !-----------------read in net settling velocity-----------------
-  WSSBNET=0.0;    WSLBNET=0.0;   WSRBNET=0.0; WS1BNET=0.0;   WS2BNET=0.0;    WS3BNET=0.0;    WSUBNET=0.0;
+  WSSBNET=0.0;    WSLBNET=0.0;   WSRBNET=0.0; WS1BNET=0.0;   WS2BNET=0.0;    WS3BNET=0.0;   
   call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
-  call get_param('icm.in','ispvars',1,ispvars,rtmp,stmp)
   !net settling velocity
-  if(ispvars==1.and.iSet==1) then
+  if(iSet==1) then
     call get_param('icm.in','WSSBNET',2,itmp,WSSBNET(1),stmp)
     call get_param('icm.in','WSLBNET',2,itmp,WSLBNET(1),stmp)
     call get_param('icm.in','WSRBNET',2,itmp,WSRBNET(1),stmp)
     call get_param('icm.in','WS1BNET',2,itmp,WS1BNET(1),stmp)
     call get_param('icm.in','WS2BNET',2,itmp,WS2BNET(1),stmp)
     call get_param('icm.in','WS3BNET',2,itmp,WS3BNET(1),stmp)
-    call get_param('icm.in','WSUBNET',2,itmp,WSUBNET(1),stmp)
     do i=2,nea
       WSSBNET(i)=WSSBNET(1)
       WSLBNET(i)=WSLBNET(1)
@@ -396,16 +396,53 @@ subroutine read_icm_param2
       WS1BNET(i)=WS1BNET(1)
       WS2BNET(i)=WS2BNET(1)
       WS3BNET(i)=WS3BNET(1)
-      WSUBNET(i)=WSUBNET(1)
     enddo !i
-  elseif(ispvars==2.and.iSet==1) then
-    !more work needed, similar to read 'settling.gr3'
-    open(31,file='nsettling.gr3',status='old')
+    do i=1,nea
+      WSSBNET(i)=min(WSSBNET(i),WSSED)
+      WSLBNET(i)=min(WSLBNET(i),WSLP(i))
+      WSRBNET(i)=min(WSRBNET(i),WSRP(i))
+      WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
+      WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
+      WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
+    enddo !i
+
+  elseif(iSet==2) then
+    open(31,file='netsettling.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check netsettling.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET
+      if(ipgl(ip)%rank==myrank) then
+        tWSSBNETs(ipgl(ip)%id)=tWSSBNET
+        tWSLBNETs(ipgl(ip)%id)=tWSLBNET
+        tWSRBNETs(ipgl(ip)%id)=tWSRBNET
+        tWS1BNETs(ipgl(ip)%id)=tWS1BNET
+        tWS2BNETs(ipgl(ip)%id)=tWS2BNET
+        tWS3BNETs(ipgl(ip)%id)=tWS3BNET
+      endif !ipgl(ip)%rank
+    enddo !i
     close(31)
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        WSSBNET(i)=WSSBNET(i)+tWSSBNETs(nd)/i34(i)
+        WSLBNET(i)=WSLBNET(i)+tWSLBNETs(nd)/i34(i)
+        WSRBNET(i)=WSRBNET(i)+tWSRBNETs(nd)/i34(i)
+        WS1BNET(i)=WS1BNET(i)+tWS1BNETs(nd)/i34(i)
+        WS2BNET(i)=WS2BNET(i)+tWS2BNETs(nd)/i34(i)
+        WS3BNET(i)=WS3BNET(i)+tWS3BNETs(nd)/i34(i)
+      enddo
+      WSSBNET(i)=min(WSSBNET(i),WSSED)
+      WSLBNET(i)=min(WSLBNET(i),WSLP(i))
+      WSRBNET(i)=min(WSRBNET(i),WSRP(i))
+      WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
+      WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
+      WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
+    enddo !i
   else
-    write(errmsg,*)'unknown ispvars in sediment parameters:',ispvars
+    write(errmsg,*)'unknown iSet in sediment parameters:',iSet
     call parallel_abort(errmsg)
-  endif!ispvars
+  endif!iSet
 
 
   !-----------------read in parameters of phytoplankton growth-----------------
