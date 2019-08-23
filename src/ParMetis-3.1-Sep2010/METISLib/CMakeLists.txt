@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 2.8)
-project(METIS)
+#cmake_minimum_required(VERSION 2.8)
+#project(METIS)
+
+
+# Add flags known to be needed for library. Assume that DEBUG has potentially lower optimization
+add_compile_options(-O2)
 
 # Create libparmetis
 add_library(metis  coarsen.c fm.c initpart.c match.c ccgraph.c
@@ -14,6 +18,9 @@ add_library(metis  coarsen.c fm.c initpart.c match.c ccgraph.c
        kvmetis.c kwayvolrefine.c kwayvolfm.c subdomains.c
        mfm.c memory.c mrefine.c checkgraph.c)
 
+
+
+target_compile_definitions(metis PRIVATE -D_Float128=__float128)
 
 
 # Add include directories.
