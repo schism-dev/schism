@@ -126,10 +126,10 @@ KMSO4=    1.08
 !-----------------------------------------------------------------------
 !erosion flux
 !-----------------------------------------------------------------------
-iERO=	1 !1: turn on erosion flux, requires tau_c_elem.gr3
+iERO=	0 !1: turn on erosion flux, requires tau_c_elem.gr3
 eroporo=0.9 
 erorate=864 !kg/m2/day
-erofrac=0.8 !0~1
+erofrac=0.05 !0~1
 
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
