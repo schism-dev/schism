@@ -125,8 +125,12 @@ KMSO4=    1.08
 
 !-----------------------------------------------------------------------
 !erosion flux
+!iERO >0: turn on erosion flux, requires tau_c_elem.gr3
+!iERO =1: turn on erosion flux for sulfur
+!iERO =2: turn on erosion flux for POC
+!iERO =3: turn on erosion flux for both sulfur and POC
 !-----------------------------------------------------------------------
-iERO=	0 !1: turn on erosion flux, requires tau_c_elem.gr3
+iERO=	0 
 eroporo=0.9 
 erorate=864 !kg/m2/day
 erofrac=0.05 !0~1

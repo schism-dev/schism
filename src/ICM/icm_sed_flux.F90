@@ -433,7 +433,7 @@ subroutine read_icm_sed_param
  
   !erosion flux
   !read in spatial-varying critical shear stress
-  if(iERO==1) then
+  if(iERO>0) then
     open(31,file='tau_c_elem.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check tau_c_elem.gr3')
@@ -1255,7 +1255,7 @@ subroutine sed_calc(id)
   !************************************************************************
   !erosion flux
   !************************************************************************
-  if(iERO==1)then
+  if(iERO>0)then
     !calculate bottom shear stress for elem #id
     tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
 
@@ -1661,6 +1661,14 @@ subroutine link_sed_output(id)
 
   !erosion flux, H2S>S
   if(iERO==1)then
+    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
+    EROLPOC(id)=0
+    ERORPOC(id)=0
+  elseif(iERO==2)then
+    EROH2S(id)=0
+    EROLPOC(id)=SED_EROLPOC(id)
+    ERORPOC(id)=SED_ERORPOC(id)
+  elseif(iERO==3)then
     EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
