@@ -352,7 +352,7 @@ module schism_glbl
                                   &qthcon(:),uth(:,:),vth(:,:),uthnd(:,:,:),vthnd(:,:,:), &
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
                                   &dir_block(:,:),q_block_lcl(:),ath3(:,:,:,:)
-  real(4),save,allocatable :: ath2(:,:,:,:,:)
+  real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
 
   ! Land boundary segment data
   integer,save :: nland_global                 ! Global number of land bndry segments
