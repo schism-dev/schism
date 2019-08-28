@@ -1645,7 +1645,7 @@ subroutine link_sed_output(id)
 !sediment flux
 !---------------------------------------------------------------------------------------
   use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD,EROH2S,EROLPOC,ERORPOC
-  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC
+  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC,PIE1S,m1
   implicit none
   integer, intent(in) :: id
 
@@ -1661,7 +1661,7 @@ subroutine link_sed_output(id)
 
   !erosion flux, H2S>S
   if(iERO==1)then
-    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
+    EROH2S(id)=SED_EROH2S(id)/(2*(1.d0+m1*PIE1S)) !S to 0.5*O2
     EROLPOC(id)=0
     ERORPOC(id)=0
   elseif(iERO==2)then
@@ -1669,7 +1669,7 @@ subroutine link_sed_output(id)
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
   elseif(iERO==3)then
-    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
+    EROH2S(id)=SED_EROH2S(id)/(2*(1.d0+m1*PIE1S)) !S to 0.5*O2
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
   endif !iERO
