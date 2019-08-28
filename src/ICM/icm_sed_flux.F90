@@ -1148,7 +1148,7 @@ subroutine sed_calc(id)
   SED_BENPO4(id)=JPO4
 !Error: DOC
   SED_BENDOC(id)=0.0
-  SED_BENCOD(id)=JHS+JCH4AQ
+  SED_BENCOD(id)=JHS !+JCH4AQ
   SED_BENSA(id)=JSI
 
   !************************************************************************
