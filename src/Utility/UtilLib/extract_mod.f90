@@ -200,8 +200,11 @@
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
+      print*, 'File=',trim(adjustl(file_char)),ics,istack,irec,varname
       iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      if(iret/=nf90_NoErr) stop 'get_outvar: cannot open'
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
+      if(iret/=nf90_NoErr) stop 'get_outvar: cannot find elev'
 
       start_2d(1)=1; start_2d(2)=irec
       count_2d(2)=1

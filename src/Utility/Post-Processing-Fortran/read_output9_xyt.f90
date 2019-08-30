@@ -29,7 +29,7 @@
 !                   window (hours) b4 and after the cast, stride (hrs) - used to 
 !                   examine the phase error. If window=0, each cast is repeated twice 
 !                   there are no other extra casts. \n
-!                   icomb:
+!                   icomb: 0 (uncombined nc); 1 (combined nc)
 !                (4) vgrid.in (in this dir or ../)
 !       Outputs: fort.1[89]; fort.11 (fatal errors); fort.12: nonfatal errors.
 !                The total # of 'virtual' casts for each actual cast is 2*window/stride+2
