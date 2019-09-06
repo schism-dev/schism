@@ -54,7 +54,7 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -mcmodel=medium -CB -assume byterecl -O2 -o ptrack3.WW ptrack3.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -DUSE_DOUBLE -mcmodel=medium -CB -assume byterecl -O2 -o ptrack3.WW ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -83,7 +83,7 @@
 !...  	Important variables
         integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig
       	real(kind=dbl_kind), save :: h0,rho0,dt
-        real,save :: h_c,theta_b,theta_f,h_s !s_con1
+        real(kind=dbl_kind), save :: h_c,theta_b,theta_f,h_s !s_con1
 
 !...    Output handles
         character(len=48), save :: start_time,version
@@ -99,7 +99,7 @@
 
         real(kind=dbl_kind),save, allocatable :: zpar0(:)
         !For interface with util routines
-        real,save, allocatable :: ztot(:),sigma(:),xcj(:),ycj(:),sigma_lcl(:,:)
+        real(kind=dbl_kind),save, allocatable :: ztot(:),sigma(:),xcj(:),ycj(:),sigma_lcl(:,:)
 
         integer,save, allocatable :: i34(:),elnode(:,:),ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
         integer,save, allocatable :: icum1(:,:),icum2(:,:,:)
@@ -115,6 +115,8 @@
       program ptrack
       use global
       use netcdf
+      use compute_zcor
+      use schism_geometry_mod
 
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -127,7 +129,7 @@
       character(len=25), allocatable :: idp(:)
       real*8 :: vxl(4,2),vyl(4,2),vzl(4,2),vxn(4),vyn(4),vzn(4),arco(3), &
      &dx(10),dy(10),dz(10),val(4,2),vbl(4,2),vcl(4,2),vdl(4,2),van(4),vcn(4),vdn(4),vwx(4),vwy(4)
-      real, allocatable :: zlcl(:),real_ar(:,:)
+      real, allocatable :: real_ar(:,:)
       integer :: nodel2(3)
       integer :: varid1,varid2,dimids(3),istat,nvtx,iret
 
@@ -484,7 +486,7 @@
       rewind(19)
       allocate(sigma_lcl(nvrt,np),z(np,nvrt),icum1(np,nvrt),icum2(np,nvrt,2), &
      &uu1(np,nvrt),vv1(np,nvrt),ww1(np,nvrt),uu2(np,nvrt),vv2(np,nvrt),ww2(np,nvrt), &
-     &ztmp(nvrt),ztmp2(nvrt),zlcl(nvrt),sigma(nvrt),ztot(nvrt),hf1(np,nvrt), &
+     &ztmp(nvrt),ztmp2(nvrt),sigma(nvrt),ztot(nvrt),hf1(np,nvrt), &
      &hf2(np,nvrt),vf1(np,nvrt),vf2(np,nvrt),hvis_e(ne,nvrt),stat=istat)
       if(istat/=0) stop 'Failed to alloc (3)'
       call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
@@ -534,7 +536,7 @@
       if(istat/=0) stop 'Failed to alloc (4)'
 !     Then compute the rest of side related arrays with additional
 !     inputs (xnd,ynd) (x,y coordinates of each node)
-      call schism_geometry(np,ne,ns,real(x),real(y),i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+      call schism_geometry(np,ne,ns,x,y,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
 
       !Remaining side arrays
       do i=1,ns
@@ -1330,10 +1332,11 @@
 !
       subroutine levels
       use global
+      use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
       dimension idry_new(np) !,out2(12+mnv)
-      real :: zlcl(nvrt)
+      real(dbl_kind) :: zlcl(nvrt)
 
 !...  z-coor. for nodes
 !...  
@@ -1349,7 +1352,7 @@
           idry_new(i)=0
 
           if(ivcor==2) then
-            call zcor_SZ(real(dp(i)),real(eta3(i)),real(h0),h_s,h_c,theta_b, &
+            call zcor_SZ(dp(i),eta3(i),h0,h_s,h_c,theta_b, &
      &theta_f,kz,nvrt,ztot,sigma,zlcl,idry_tmp,kbpl)
             if(idry_tmp==1) then
               write(11,*)'Impossible dry (7):',i,idry_tmp,dp(i),eta1(i),eta2(i),eta3(i),kbpl
@@ -1411,6 +1414,7 @@
      &nodel2,arco,zrat,nfl,etal,dp_p,ztmp,kbpl,ist2,inbr2,rnds,pbeach)
 
       use global
+      use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
       integer, intent(in) :: iloc,idt,ipar,nnel0,jlev0
@@ -1420,7 +1424,7 @@
       real(kind=dbl_kind), intent(out) :: arco(3),zrat,etal,dp_p,ztmp(nvrt)
 
       !Local
-      real :: zlcl(nvrt)
+      real(dbl_kind) :: zlcl(nvrt)
       logical ::  ltmp1,ltmp2
 
       if(iloc>1) then
@@ -1673,7 +1677,7 @@
 
 !     Compute z-levels
       if(ivcor==2) then
-        call zcor_SZ(real(dep),real(etal),real(h0),h_s,h_c,theta_b, &
+        call zcor_SZ(dep,etal,h0,h_s,h_c,theta_b, &
      &theta_f,kz,nvrt,ztot,sigma,zlcl,idry_tmp,kbpl)
         ztmp(kbpl:nvrt)=zlcl(kbpl:nvrt)
       else if(ivcor==1) then

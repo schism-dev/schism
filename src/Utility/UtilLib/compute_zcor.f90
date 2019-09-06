@@ -1,5 +1,6 @@
 !====================================================================
-!  Routines to calculate various types of z-coord. in SCHISM
+!  Routines to calculate various types of z-coord. in SCHISM (single or
+!  double precision)
 !  zcor_SZ
 !  get_vgrid
 
@@ -7,9 +8,20 @@
 !  pgf90 -O2 -mcmodel=medium  -Bstatic -c compute_zcor.f90
 !====================================================================
 !====================================================================
+  module compute_zcor
+
+#ifdef USE_DOUBLE
+    integer,parameter,private :: RKIND=8
+#else
+    integer,parameter,private :: RKIND=4
+#endif
+
+    public 
+
+    contains
 
       subroutine zcor_SZ(dp,eta,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma,zcor,idry,kbp)
-!     (Single-precision) Routine to compute z coordinates for SCHISM's SZ vertical system
+!     Routine to compute z coordinates for SCHISM's SZ vertical system
 !     Inputs:
 !             dp: depth;
 !             eta: elevation;
@@ -25,14 +37,15 @@
 !             idry: wet (0) or dry (1) flag;
 !             kbp: bottom index (0 if dry);
 !             zcor(kbp:nvrt): z coordinates (junk if dry);    
-!      implicit real*8(a-h,o-z)
+      implicit real(RKIND)(a-h,o-z)
+
       integer, intent(in) :: kz,nvrt
-      real, intent(in) :: dp,eta,h0,h_s,h_c,theta_b,theta_f,ztot(nvrt),sigma(nvrt)
+      real(RKIND), intent(in) :: dp,eta,h0,h_s,h_c,theta_b,theta_f,ztot(nvrt),sigma(nvrt)
       integer, intent(out) :: idry,kbp
-      real, intent(out) :: zcor(nvrt)
+      real(RKIND), intent(out) :: zcor(nvrt)
 
       !Local
-      real :: s_con1,cs(nvrt)
+      real(RKIND) :: s_con1,cs(nvrt)
 
 !     Sanity check done before
 !     Pre-compute constants
@@ -102,13 +115,14 @@
 
 !====================================================================
       subroutine get_vgrid(vgrid,np,nvrt1,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
-!     (Single-precision) Routine to read in vgrid.in (either in the current dir or ../) 
+!     Routine to read in vgrid.in (either in the current dir or ../) 
 !     Not all outputs have meaningful values, depending on ivcor.
-!      implicit real*8(a-h,o-z)
+      implicit real(RKIND)(a-h,o-z)
+
       character(len=*), intent(in) :: vgrid
       integer, intent(in) :: np,nvrt1
       integer, intent(out) :: ivcor,kz,kbp(np)
-      real, intent(out) :: h_s,h_c,theta_b,theta_f,ztot(nvrt1),sigma(nvrt1),sigma_lcl(nvrt1,np)
+      real(RKIND), intent(out) :: h_s,h_c,theta_b,theta_f,ztot(nvrt1),sigma(nvrt1),sigma_lcl(nvrt1,np)
 
       !local
       logical :: lexist
@@ -201,3 +215,4 @@
       end subroutine get_vgrid
 
 !====================================================================
+  end module compute_zcor

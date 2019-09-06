@@ -22,12 +22,13 @@
 !       Input: schout*.nc (combined or uncombined); vgrid.in; screen
 !       Output: average.out (gredit for scalar or xmgr5 format for vector)
 !										
-!       ifort -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3 ../UtilLib/extract_mod.f90 compute_average3.f90 ../UtilLib/compute_zcor.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!       ifort -cpp -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3 ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 compute_average3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
 !
       program read_out
       use netcdf
       use extract_mod
+      use compute_zcor
       parameter(nbyte=4)
       character(len=30) :: file63,varname
       character(len=12) :: it_char

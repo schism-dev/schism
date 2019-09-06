@@ -17,16 +17,22 @@
 !                xcj(ns),ycj(ns): x,y of each side center
 
 !     Common data used in 2 routines
-      module schism_geometry_mod
-      implicit none
+    module schism_geometry_mod
+#ifdef USE_DOUBLE
+      integer,parameter,private :: RKIND=8
+#else
+      integer,parameter,private :: RKIND=4
+#endif
+
+      integer,save,private :: nx(4,4,3)
+      integer,save,allocatable,private :: nne(:),indel(:,:),ic3(:,:)
       public
-      integer,save :: nx(4,4,3)
-      integer,save,allocatable :: nne(:),indel(:,:),ic3(:,:)
-      end module schism_geometry_mod
+
+      contains
 
       subroutine compute_nside(np,ne,i34,elnode,ns)
-      use schism_geometry_mod
-      implicit real(4)(a-h,o-z),integer(i-n)
+      !use schism_geometry
+      implicit real(RKIND)(a-h,o-z),integer(i-n)
       integer, intent(in) :: np,ne,i34(ne),elnode(4,ne)
       integer, intent(out) :: ns !,ic3(3,ne)
 !      integer, allocatable :: indel(:,:)
@@ -100,12 +106,12 @@
 
       subroutine schism_geometry(np,ne,ns0,xnd,ynd,i34,elnode,ic3_out,&
      &elside,isdel,isidenode,xcj,ycj)
-      use schism_geometry_mod
-      implicit real(4)(a-h,o-z),integer(i-n)
+!      use schism_geometry
+      implicit real(RKIND)(a-h,o-z),integer(i-n)
       integer, intent(in) :: np,ne,ns0,i34(ne),elnode(4,ne)
-      real, intent(in) :: xnd(np),ynd(np)
+      real(RKIND), intent(in) :: xnd(np),ynd(np)
       integer, intent(out) :: ic3_out(4,ne),elside(4,ne),isdel(2,ns0),isidenode(2,ns0)
-      real, intent(out) :: xcj(ns0),ycj(ns0)
+      real(RKIND), intent(out) :: xcj(ns0),ycj(ns0)
       
       ic3_out=ic3
 
@@ -150,3 +156,5 @@
       if(ns/=ns0) stop 'Side count mismatch'
 
       end subroutine schism_geometry
+
+    end module schism_geometry_mod

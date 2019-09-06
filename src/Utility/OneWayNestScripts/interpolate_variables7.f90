@@ -26,12 +26,13 @@
 !          (1) *[23]D.th.nc, depending on the choice in interpolate_variables.in
 !          (2) fort.11: fatal errors; fort.12: non-fatal errors.
 !
-! ifort -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.WW ../UtilLib/extract_mod.f90 interpolate_variables7.f90 ../UtilLib/compute_zcor.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.WW ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 interpolate_variables7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
 !
       program interpolate
       use netcdf
       use extract_mod
+      use compute_zcor
 
 !      implicit real*8(a-h,o-z)
       character(len=30) :: file63,varname(2),varname2

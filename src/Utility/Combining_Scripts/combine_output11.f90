@@ -12,7 +12,7 @@
 ! Output: combined nc file
 !
 
-!  ifort -cpp -O2 -assume byterecl -o combine_output11.WW ../UtilLib/argparse.f90 combine_output11.f90 ../UtilLib/schism_geometry.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!  ifort -cpp -O2 -assume byterecl -o combine_output11.WW ../UtilLib/argparse.f90 ../UtilLib/schism_geometry.f90 combine_output11.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !  History: 
 !          2018-1      Richard Hofmeister changed the combine method (all vars read in at a
@@ -35,6 +35,7 @@
 subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 !-------------------------------------------------------------------------------
   use netcdf
+  use schism_geometry_mod
   implicit real(4)(a-h,o-z),integer(i-n)
   
 !  integer                              :: nfile  !< number of file base names

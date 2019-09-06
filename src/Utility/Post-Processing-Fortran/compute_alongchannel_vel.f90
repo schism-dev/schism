@@ -22,13 +22,13 @@
 !       Inputs: station.xy; screen inputs
 !       Outputs: fort.20 (along channel vel.); fort.18 (channel angle)
 
-!       ifort -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel compute_alongchannel_vel.f90
-!       pgf90 -O2 -mcmodel=medium -Mbounds -Bstatic -o compute_alongchannel_vel compute_alongchannel_vel.f90 ~/SCHISM/svn/trunk/src/Utility/UtilLib/compute_zcor.f90 ~/SCHISM/svn/trunk/src/Utility/UtilLib/pt_in_poly.f90
+!       ifort -cpp -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 compute_alongchannel_vel.f90
 
 !											*
 !****************************************************************************************
 !
       program read_out
+      use compute_zcor
       parameter(nbyte=4)
       character*30 file63
       character*12 it_char
