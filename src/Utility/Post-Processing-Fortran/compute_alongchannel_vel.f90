@@ -22,7 +22,7 @@
 !       Inputs: station.xy; screen inputs
 !       Outputs: fort.20 (along channel vel.); fort.18 (channel angle)
 
-!       ifort -cpp -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 compute_alongchannel_vel.f90
+!       ifort -cpp -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel.WW ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 compute_alongchannel_vel.f90
 
 !											*
 !****************************************************************************************

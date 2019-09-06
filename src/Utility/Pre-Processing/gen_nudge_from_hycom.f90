@@ -20,7 +20,7 @@
 ! The code will do all it can to extrapolate: below bottom/above surface.
 ! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled. 
 !
-! ifort -cpp -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom.WW ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !   Input: 
 !     (1) hgrid.gr3;

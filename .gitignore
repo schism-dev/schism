@@ -12,6 +12,7 @@ build/
 *.mod
 *.so
 *.a
+*.WW
 
 # Packages #
 ############

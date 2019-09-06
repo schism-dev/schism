@@ -25,7 +25,7 @@
 !       Outputs: fluxes.out (if the difference between region #s=1, and neith=-1)
 !       History: 
 !****************************************************************************************
-!     ifort -cpp -O2 -mcmodel=medium -CB -Bstatic -o compute_fluxes_ns ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 compute_fluxes_ns.f90
+!     ifort -cpp -O2 -mcmodel=medium -CB -Bstatic -o compute_fluxes_ns.WW ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 compute_fluxes_ns.f90
       program read_out
       use compute_zcor
       use schism_geometry_mod

@@ -9,7 +9,7 @@
 !            (3) transect.bp (depths denote seg #)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
-!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs ../UtilLib/schism_geometry.f90 gen_vqs_1.f90
+!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs_1.WW ../UtilLib/schism_geometry.f90 gen_vqs_1.f90
 
       use schism_geometry_mod
       implicit real*8(a-h,o-z)

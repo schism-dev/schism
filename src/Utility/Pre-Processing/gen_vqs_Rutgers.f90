@@ -15,7 +15,7 @@
 !            (3) screen; (4) transect.bp (optional transect bp file; depths denote seg #)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
-!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -o gen_vqs_Rutgers ../UtilLib/schism_geometry.f90 gen_vqs_Rutgers.f90
+!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -o gen_vqs_Rutgers.WW ../UtilLib/schism_geometry.f90 gen_vqs_Rutgers.f90
 
       program gen_vqs_rutgers
       use schism_geometry_mod
