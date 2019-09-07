@@ -24,7 +24,7 @@
 !               added quads (Nov. 2014) (4) changed to nc outputs (Sept
 !               2017); (5) added uncombined option (Feb 2019)
 !****************************************************************************************
-!     ifort -cpp -O2 -assume byterecl -o read_output8_allnodes.WW ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!     ifort -cpp -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
       program read_out
       use netcdf
       use extract_mod

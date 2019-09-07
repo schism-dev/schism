@@ -45,7 +45,7 @@
 !   Second, download HYCOM to only cover the open boundary segments to
 !   generate .th.nc (hotstart would be junk).
 
-! ifort -cpp -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.WW ../UtilLib/compute_zcor.f90 gen_hot_3Dth_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe ../UtilLib/compute_zcor.f90 gen_hot_3Dth_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
       use netcdf

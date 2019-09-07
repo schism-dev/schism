@@ -19,7 +19,7 @@
 !        hotstart.in (unformatted binary); screen inputs.
 ! Output: hotstart.nc 
 !
-!  ifort -O2 -CB -mcmodel=medium -assume byterecl -o convert_hotstart_nc.WW convert_hotstart_nc.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!  ifort -O2 -CB -mcmodel=medium -assume byterecl -o convert_hotstart_nc.exe convert_hotstart_nc.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !===============================================================================
 

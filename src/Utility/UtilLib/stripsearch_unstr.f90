@@ -107,12 +107,3 @@
 
       end subroutine stripsearch_unstr
 
-!      function signa(x1,x2,x3,y1,y2,y3)
-!!...  Compute signed area formed by pts 1,2,3
-!      implicit real(8)(a-h,o-z)
-!      real(8) :: signa
-!
-!      signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
-!      
-!      end function signa
-

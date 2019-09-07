@@ -23,7 +23,7 @@
 !        screen: ntracers; it_char (iteration #)
 ! Output: hotstart_it=[time step].nc 
 !
-!  ifort -O2 -cpp -CB -mcmodel=medium -assume byterecl -g -traceback -o combine_hotstart7.XX ../UtilLib/argparse.f90 combine_hotstart7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!  ifort -O2 -cpp -CB -mcmodel=medium -assume byterecl -g -traceback -o combine_hotstart7.exe ../UtilLib/argparse.f90 combine_hotstart7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 ! Revisions: v6 with nc
 !================================================================================

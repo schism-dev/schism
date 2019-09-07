@@ -27,7 +27,7 @@
 !               (4) vgrid.in: in this dir or ../ 
 !       Outputs: fort.1[89]; fort.11 (fatal errors); fort.12: nonfatal errors.
 !											
-! ifort -cpp -mcmodel=medium -CB -O2 -o read_output9_xyzt.WW ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 read_output9_xyzt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -mcmodel=medium -CB -O2 -o read_output9_xyzt.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 read_output9_xyzt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out

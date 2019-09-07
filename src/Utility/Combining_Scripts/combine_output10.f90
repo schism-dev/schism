@@ -12,7 +12,7 @@
 ! Output: combined nc file
 !
 
-!  ifort -cpp -O2 -assume byterecl -o combine_output10.WW ../UtilLib/argparse.f90 ../UtilLib/schism_geometry.f90 combine_output10.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!  ifort -cpp -O2 -assume byterecl -o combine_output10.exe ../UtilLib/argparse.f90 ../UtilLib/schism_geometry.f90 combine_output10.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !  History: 
 !          2017-9      revamped whole thing (all-in-1 pre- and post-combine
