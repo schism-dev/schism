@@ -284,7 +284,7 @@ subroutine link_icm(imode,id,nv)
       tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1),0.d0)
       tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1),0.d0)
       Chl_el(k,id)=max(PB1(m,1),0.d0)/CChl1(id)+max(PB2(m,1),0.d0)/CChl2(id)+max(PB3(m,1),0.d0)/CChl3(id)
-      PrmPrdt(k,id)=PB1(m,1)*GP(m,1)+PB2(m,2)*GP(m,2)+PB3(m,2)*GP(m,3)
+      PrmPrdt(k,id)=PB1(m,1)*GP(m,id,1)+PB2(m,2)*GP(m,id,2)+PB3(m,2)*GP(m,id,3)
       DIN_el(k,id)=max(NH4(m,1),0.d0)+max(NO3(m,1),0.d0)
       PON_el(k,id)=max(RPON(m,1),0.d0)+max(LPON(m,1),0.d0)
 
@@ -726,7 +726,7 @@ subroutine photosynthesis(id,hour,nv,it)
   !endif !id
 
   !init
-  GP=0.0
+  GP(:,id,:)=0.0
   sbLight(id)=0.0
 
 
@@ -931,21 +931,21 @@ subroutine photosynthesis(id,hour,nv,it)
             SAtd=SAt(k,1)/(1.0+rKSAp*TSED(k)) 
             rFS=SAtd/(SAtd+rKhS) 
             if(irSi==1) then
-              GP(k,i)=GPT(i)*rFI*min(rFN,rFP,rFS) 
+              GP(k,id,i)=GPT(i)*rFI*min(rFN,rFP,rFS) 
             else
-              GP(k,i)=GPT(i)*rFI*min(rFN,rFP)
+              GP(k,id,i)=GPT(i)*rFI*min(rFN,rFP)
             endif 
           endif 
 
           !green alage
           if(i==2) then 
-            GP(k,i)=GPT(i)*rFI*min(rFN,rFP) 
+            GP(k,id,i)=GPT(i)*rFI*min(rFN,rFP) 
           endif 
 
           !cyanobacteria
           if(i==3) then 
             rFSal=ST/(ST+Sal(k)*Sal(k))
-            GP(k,i)=GPT(i)*rFI*min(rFN,rFP)*rFSal 
+            GP(k,id,i)=GPT(i)*rFI*min(rFN,rFP)*rFSal 
           endif 
   
           !TIC limitation
@@ -953,7 +953,7 @@ subroutine photosynthesis(id,hour,nv,it)
 !          if(iPh==1.and.iphgb(id)/=0) then
           if(iphgb(id)/=0) then
             rtmp=TIC(k,1)**2.d0
-            GP(k,i)=GP(k,i)*rtmp/(rtmp+25.d0)
+            GP(k,id,i)=GP(k,id,i)*rtmp/(rtmp+25.d0)
           endif
 #endif
 
@@ -964,21 +964,21 @@ subroutine photosynthesis(id,hour,nv,it)
             SAtd=SAt(k,1)/(1.0+rKSAp*TSED(k))
             rFS=SAtd/(SAtd+rKhS)
             if(irSi==1) then
-              GP(k,i)=GPT(i)*min(rFI,rFN,rFP,rFS)
+              GP(k,id,i)=GPT(i)*min(rFI,rFN,rFP,rFS)
             else
-              GP(k,i)=GPT(i)*min(rFI,rFN,rFP)
+              GP(k,id,i)=GPT(i)*min(rFI,rFN,rFP)
             endif
           endif
 
           !green alage
           if(i==2) then
-            GP(k,i)=GPT(i)*min(rFI,rFN,rFP)
+            GP(k,id,i)=GPT(i)*min(rFI,rFN,rFP)
           endif
 
           !cyanobacteria
           if(i==3) then
             rFSal=ST/(ST+Sal(k)*Sal(k))
-            GP(k,i)=GPT(i)*min(rFI,rFN,rFP)*rFSal
+            GP(k,id,i)=GPT(i)*min(rFI,rFN,rFP)*rFSal
           endif
 
           !TIC limitation
@@ -986,7 +986,7 @@ subroutine photosynthesis(id,hour,nv,it)
 !          if(iPh==1.and.iphgb(id)/=0) then
           if(iphgb(id)/=0) then
             rtmp=TIC(k,1)**2.d0
-            GP(k,i)=GP(k,i)*rtmp/(rtmp+25.d0)
+            GP(k,id,i)=GP(k,id,i)*rtmp/(rtmp+25.d0)
           endif
 #endif
         endif !iLimit
@@ -1646,9 +1646,9 @@ subroutine calkwq(id,nv,ure,it)
 
     !PB1
     if(k==nv.and.iSet/=0)then
-      a=GP(k,1)-BMP(1)-WS1BNET(id)/dep(k)
+      a=GP(k,id,1)-BMP(1)-WS1BNET(id)/dep(k)
     else
-      a=GP(k,1)-BMP(1)-WSPB1(id)/dep(k)
+      a=GP(k,id,1)-BMP(1)-WSPB1(id)/dep(k)
     endif !iSet
     b=WSPB1(id)*PB10/dep(k)+WPB1
     if(iZoo==1) then
@@ -1663,9 +1663,9 @@ subroutine calkwq(id,nv,ure,it)
 
     !PB2
     if(k==nv.and.iSet/=0)then
-      a=GP(k,2)-BMP(2)-WS2BNET(id)/dep(k)
+      a=GP(k,id,2)-BMP(2)-WS2BNET(id)/dep(k)
     else
-      a=GP(k,2)-BMP(2)-WSPB2(id)/dep(k)
+      a=GP(k,id,2)-BMP(2)-WSPB2(id)/dep(k)
     endif
     b=WSPB2(id)*PB20/dep(k)+WPB2
     if(iZoo==1) then
@@ -1680,9 +1680,9 @@ subroutine calkwq(id,nv,ure,it)
 
     !PB3
     if(k==nv.and.iSet/=0)then
-      a=GP(k,3)-BMP(3)-WS3BNET(id)/dep(k)
+      a=GP(k,id,3)-BMP(3)-WS3BNET(id)/dep(k)
     else
-      a=GP(k,3)-BMP(3)-WSPB3(id)/dep(k)
+      a=GP(k,id,3)-BMP(3)-WSPB3(id)/dep(k)
     endif
     b=WSPB3(id)*PB30/dep(k)+WPB3
     if(iZoo==1) then
@@ -1926,7 +1926,7 @@ subroutine calkwq(id,nv,ure,it)
        b= FNIP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1))  !predation
     endif
     b=b+FNI(1)*ANC(1)*BMP(1)*PB1(k,1)+FNI(2)*ANC(2)*BMP(2)*PB2(k,1)+FNI(3)*ANC(3)*BMP(3)*PB3(k,1) & !PB metabolism
-      &-ANC(1)*PrefN(k,1)*GP(k,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(k,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(k,3)*PB3(k,1)+ & !nutrient uptake
+      &-ANC(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1)+ & !nutrient uptake
       & rKDON*DON(k,1)+nNH4/dep(k)+WPNH4+WNH4
 
     !ncai
@@ -1955,7 +1955,7 @@ subroutine calkwq(id,nv,ure,it)
    
     !NO3
     a=0.0
-    b=-ANC(1)*(1.0-PrefN(k,1))*GP(k,1)*PB1(k,1)-ANC(2)*(1.0-PrefN(k,2))*GP(k,2)*PB2(k,1)-ANC(3)*(1.0-PrefN(k,3))*GP(k,3)*PB3(k,1)+ & !PB uptake
+    b=-ANC(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)-ANC(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)-ANC(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1)+ & !PB uptake
      & xNit*NH4(k,1)-ANDC*xDenit*DOC(k,1)+nNO3/dep(k)+WPNO3+WNO3
 
     !ncai
@@ -2073,7 +2073,7 @@ subroutine calkwq(id,nv,ure,it)
       b= FPIP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1))  !predation
     endif
     b=b+ FPI(1)*APC(1)*BMP(1)*PB1(k,1)+FPI(2)*APC(2)*BMP(2)*PB2(k,1)+FPI(3)*APC(3)*BMP(3)*PB3(k,1) & !PB metabolism
-      & -APC(1)*GP(k,1)*PB1(k,1)-APC(2)*GP(k,2)*PB2(k,1)-APC(3)*GP(k,3)*PB3(k,1)+ & !nutrient uptake
+      & -APC(1)*GP(k,id,1)*PB1(k,1)-APC(2)*GP(k,id,2)*PB2(k,1)-APC(3)*GP(k,id,3)*PB3(k,1)+ & !nutrient uptake
       & rKDOP*DOP(k,1)+fp*WSSED*PO4t0/dep(k)+nPO4t/dep(k)+WPPO4t+WPO4t
 
     !ncai
@@ -2144,7 +2144,7 @@ subroutine calkwq(id,nv,ure,it)
       b= FSIP*ASCd*BPR(1)*PB1(k,1) !predation
     endif
     b=b+FSId*ASCd*BMP(1)*PB1(k,1) & !PB metabolism
-      & -ASCd*GP(k,1)*PB1(k,1)+ &  !PB1 uptake
+      & -ASCd*GP(k,id,1)*PB1(k,1)+ &  !PB1 uptake
       & rKSUA*SU(k,1)+WSSED*SAt0/dep(k)+nSAt/dep(k)+WPSAt+WSAt
 
     SAt(k,2)=((1.0+a*dtw2)*SAt(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2205,9 +2205,9 @@ subroutine calkwq(id,nv,ure,it)
     b=b-((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
        &-((1.0-FCD(2))*DOO(k,1)/(DOO(k,1)+rKHR2))*AOC*BMP(2)*PB2(k,1) & !PB2 metabolism
        &-((1.0-FCD(3))*DOO(k,1)/(DOO(k,1)+rKHR3))*AOC*BMP(3)*PB3(k,1) & !PB3 metabolism
-       &+(1.3-0.3*PrefN(k,1))*AOC*GP(k,1)*PB1(k,1) & !PB1 photosynthesis
-       &+(1.3-0.3*PrefN(k,2))*AOC*GP(k,2)*PB2(k,1) & !PB2 photosynthesis
-       &+(1.3-0.3*PrefN(k,3))*AOC*GP(k,3)*PB3(k,1) & !PB3 photosynthesis
+       &+(1.3-0.3*PrefN(k,1))*AOC*GP(k,id,1)*PB1(k,1) & !PB1 photosynthesis
+       &+(1.3-0.3*PrefN(k,2))*AOC*GP(k,id,2)*PB2(k,1) & !PB2 photosynthesis
+       &+(1.3-0.3*PrefN(k,3))*AOC*GP(k,id,3)*PB3(k,1) & !PB3 photosynthesis
        &-AON*xNit*NH4(k,1)-AOC*xKHR*DOC(k,1)-rKCOD*COD(k,1)+ &
        & rKr*DOsat+nDO/dep(k)+WPDO+WDO
 
@@ -2216,6 +2216,8 @@ subroutine calkwq(id,nv,ure,it)
       b=b-aocrsav*fdosav*((bmlfsav(k)+plfsav(k)*famsav)*lfsav(k,id)+bmstsav(k)*stsav(k,id))+& !sav metabolism
          &aocrsav*plfsav(k)*lfsav(k,id) !sav photosynthesis
     endif
+
+    DO_consmp(k,id)=-b !consumption rate in positive
 
     DOO(k,2)=((1.0+a*dtw2)*DOO(k,1)+b*dtw)/(1.0-a*dtw2)
     DOO(k,1)=0.5*(DOO(k,1)+DOO(k,2))
@@ -2291,7 +2293,7 @@ subroutine calkwq(id,nv,ure,it)
       b=b+((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ & !PB1 metabolism
         & ((1.0-FCD(2))*DOO(k,1)/(DOO(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ & !PB2 metabolism
         & ((1.0-FCD(3))*DOO(k,1)/(DOO(k,1)+rKHR3))*BMP(3)*PB3(k,1)  & !PB3 metabolism
-        &-GP(k,1)*PB1(k,1)-GP(k,2)*PB2(k,1)-GP(k,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
+        &-GP(k,id,1)*PB1(k,1)-GP(k,id,2)*PB2(k,1)-GP(k,id,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
         & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+nDO/(AOC*dep(k))
 
       TIC(k,2)=((1.0+a*dtw2)*TIC(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2299,8 +2301,8 @@ subroutine calkwq(id,nv,ure,it)
 
       !ALK unit in Mg[CaCO3]/L
       a=0.0
-      b=(0.5*mCACO3/mN)*((15.d0/14.d0)*(-ANC(1)*PrefN(k,1)*GP(k,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(k,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(k,3)*PB3(k,1))+ & !PB uptake NH4
-       & (17.d0/16.d0)*(ANC(1)*(1.0-PrefN(k,1))*GP(k,1)*PB1(k,1)+ANC(2)*(1.0-PrefN(k,2))*GP(k,2)*PB2(k,1)+ANC(3)*(1.0-PrefN(k,3))*GP(k,3)*PB3(k,1)) & !PB uptake NO3
+      b=(0.5*mCACO3/mN)*((15.d0/14.d0)*(-ANC(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1))+ & !PB uptake NH4
+       & (17.d0/16.d0)*(ANC(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)+ANC(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)+ANC(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1)) & !PB uptake NO3
        &-2.0*xNit*NH4(k,1))+xKCACO3+xKCA
 
       ALK(k,2)=((1.0+a*dtw2)*ALK(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2405,9 +2407,9 @@ subroutine calkwq(id,nv,ure,it)
           rtmp=max(min(depsta(m,iid),zdep(nv)),0.d0)
           if((k==1.and.rtmp<=zdep(k).and.rtmp>=0.0).or.(k>1.and.rtmp>zdep(max(1,(k-1))).and.rtmp<=zdep(k))) then
             write(410)time,stanum(m,iid),Sal(k),Temp(k),&
-     & PB1(k,1),GP(k,1),BMP(1),WSPB1(id),PB10,&
-     & PB2(k,1),GP(k,2),BMP(2),WSPB2(id),PB20,&
-     & PB3(k,1),GP(k,3),BMP(3),WSPB3(id),PB30,&
+     & PB1(k,1),GP(k,id,1),BMP(1),WSPB1(id),PB10,&
+     & PB2(k,1),GP(k,id,2),BMP(2),WSPB2(id),PB20,&
+     & PB3(k,1),GP(k,id,3),BMP(3),WSPB3(id),PB30,&
      & RPOC(k,1),rKRPOC,WSRP(id),FCRP(1),FCRP(2),FCRP(3),RPOC0,nRPOC,&
      & LPOC(k,1),rKLPOC,WSLP(id),FCLP(1),FCLP(2),FCLP(3),RPOC0,nLPOC,&
      & DOC(k,1),xKHR,xDenit,rKDOC,rKHORDO,rKDC(id),rKTDOM,FCDP(1),FCDP(2),FCDP(3),rKHR1,rKHR2,rKHR3,nDOC,&

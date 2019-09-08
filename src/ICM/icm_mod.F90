@@ -52,7 +52,7 @@ module icm_mod
   real(kind=rkind),save,allocatable,dimension(:) :: dep,Sal,Temp,TSED 
   real(kind=rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(kind=rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
-  real(kind=rkind),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el !(nvrt,nea), 1 to nvrt: bottom to surface
+  real(kind=rkind),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,DO_consmp !(nvrt,nea), 1 to nvrt: bottom to surface
 
   !(nvrt,nea)
   real(kind=rkind),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav
@@ -81,7 +81,8 @@ module icm_mod
 
   !phyto. growth rate
   real(kind=rkind),save :: TU,TD,rIa,rIavg,Daylen
-  real(kind=rkind),save,allocatable,dimension(:,:) :: GP,PrefN
+  real(kind=rkind),save,allocatable,dimension(:,:) :: PrefN
+  real(kind=rkind),save,allocatable,dimension(:,:,:) :: GP
   real(kind=rkind),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
  

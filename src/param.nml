@@ -735,6 +735,7 @@
 !  iof_icm(3) = 1 !ICM primary production @elem [gC/m^3/day] {ICM_PrmPrdt}
 !  iof_icm(4) = 1 !ICM totoal inorganic nitrogen (DIN) @elem [gN/m^3] {ICM_DIN}
 !  iof_icm(5) = 1 !ICM paticulate organic nitrogen (PON) @elem [gN/m^3] {ICM_PON}
+!  sediment flux @elem
 !  iof_icm(6) = 1 !ICM bed sediment flux arrays: SED_BENDOC (output name:ICM_SED_BENDOC) @elem [gC/(m^2 day)] {ICM_SED_BENDOC}
 !  iof_icm(7) = 1 !ICM bed sediment flux arrays: SED_BENNH4 (output name:ICM_SED_BENNH4) @elem [gC/(m^2 day)] {ICM_SED_BENNH4}
 !  iof_icm(8) = 1 !ICM bed sediment flux arrays: SED_BENNO3 (output name:ICM_SED_BENNO3)@elem [gC/(m^2 day)] {ICM_SED_BENNO3}
@@ -742,6 +743,7 @@
 !  iof_icm(10) = 1 !ICM bed sediment flux arrays: SED_BENCOD (output name:ICM_SED_BENCOD) @elem [gC/(m^2 day)] {ICM_SED_BENCOD}
 !  iof_icm(11) = 1 !ICM bed sediment flux arrays: SED_BENDO (output name:ICM_SED_BENDO) @elem [gC/(m^2 day)] {ICM_SED_BENDO}
 !  iof_icm(12) = 1 !ICM bed sediment flux arrays: SED_BENSA (output name:ICM_SED_BENSA) @elem [gC/(m^2 day)] {ICM_SED_BENSA}
+!  sav @elem
 !  iof_icm(13) = 1 !ICM SAV leaf biomass @elem [gC/m^3] (k=1 is surface) {ICM_lfsav}
 !  iof_icm(14) = 1 !ICM SAV stem biomass @elem [gC/m^3] {ICM_stsav}
 !  iof_icm(15) = 1 !ICM SAV root biomass @elem [gC/m^3] {ICM_rtsav}
@@ -769,33 +771,38 @@
 !  iof_icm(36) = 1 !erosion flux H2S {ICM_EROH2S}
 !  iof_icm(37) = 1 !ersoion flux LPOC {ICM_EROLPOC}
 !  iof_icm(38) = 1 !ersoion flux RPOC {ICM_ERORPOC}
-!water column foundamental tracers @nodes
-!  iof_icm(39) = 0 !Zoo. #1 {ICM_1}
-!  iof_icm(40) = 0 !Zoo. #2 {ICM_2}
-!  iof_icm(41) = 1 !phyto #1 {ICM_3}
-!  iof_icm(42) = 1 !phyto #2 {ICM_4}
-!  iof_icm(43) = 1 !phyto #3 {ICM_5}
-!  iof_icm(44) = 1 !RPOC {ICM_6}
-!  iof_icm(45) = 1 !LPOC {ICM_7}
-!  iof_icm(46) = 1 !DOC {ICM_8}
-!  iof_icm(47) = 1 !RPON {ICM_9}
-!  iof_icm(48) = 1 !LPON {ICM_10}
-!  iof_icm(49) = 1 !DON {ICM_11}
-!  iof_icm(50) = 1 !NH4 {ICM_12}
-!  iof_icm(51) = 1 !NO3 {ICM_13}
-!  iof_icm(52) = 1 !RPOP {ICM_14}
-!  iof_icm(53) = 1 !LPOP {ICM_15}
-!  iof_icm(54) = 1 !DOP {ICM_16}
-!  iof_icm(55) = 1 !PO4t {ICM_17}
-!  iof_icm(56) = 0 !Si- biogenic {ICM_18}
-!  iof_icm(57) = 0 !available Si {ICM_19}
-!  iof_icm(58) = 1 !COD: Chemical oxygen demand {ICM_20}
-!  iof_icm(59) = 1 !DO {ICM_21}
+!  water column rates @elem
+!  iof_icm(39) = 1 !DO consumption {ICM_DO_consumption}
+!  iof_icm(40) = 1 !PB growth #1 {ICM_GP1}
+!  iof_icm(41) = 1 !PB growth #2 {ICM_GP2}
+!  iof_icm(42) = 1 !PB growth #3 {ICM_GP3}
+!  water column foundamental tracers @nodes
+!  iof_icm(43) = 0 !Zoo. #1 {ICM_1}
+!  iof_icm(44) = 0 !Zoo. #2 {ICM_2}
+!  iof_icm(45) = 1 !phyto #1 {ICM_3}
+!  iof_icm(46) = 1 !phyto #2 {ICM_4}
+!  iof_icm(47) = 1 !phyto #3 {ICM_5}
+!  iof_icm(48) = 1 !RPOC {ICM_6}
+!  iof_icm(49) = 1 !LPOC {ICM_7}
+!  iof_icm(50) = 1 !DOC {ICM_8}
+!  iof_icm(51) = 1 !RPON {ICM_9}
+!  iof_icm(52) = 1 !LPON {ICM_10}
+!  iof_icm(53) = 1 !DON {ICM_11}
+!  iof_icm(54) = 1 !NH4 {ICM_12}
+!  iof_icm(55) = 1 !NO3 {ICM_13}
+!  iof_icm(56) = 1 !RPOP {ICM_14}
+!  iof_icm(57) = 1 !LPOP {ICM_15}
+!  iof_icm(58) = 1 !DOP {ICM_16}
+!  iof_icm(59) = 1 !PO4t {ICM_17}
+!  iof_icm(60) = 0 !Si- biogenic {ICM_18}
+!  iof_icm(61) = 0 !available Si {ICM_19}
+!  iof_icm(62) = 1 !COD: Chemical oxygen demand {ICM_20}
+!  iof_icm(63) = 1 !DO {ICM_21}
 !! following requires ICM_PH on
-!  iof_icm(60) = 1 !TIC {ICM_22}
-!  iof_icm(61) = 1 !ALK {ICM_23}
-!  iof_icm(62) = 1 !CA {ICM_24}
-!  iof_icm(63) = 1 !CACO3 {ICM_25}
+!  iof_icm(64) = 1 !TIC {ICM_22}
+!  iof_icm(65) = 1 !ALK {ICM_23}
+!  iof_icm(66) = 1 !CA {ICM_24}
+!  iof_icm(67) = 1 !CACO3 {ICM_25}
 
 !-----------------------------------------------------------------------
 ! CoSINE outputs

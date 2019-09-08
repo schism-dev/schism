@@ -28,11 +28,12 @@ subroutine icm_init
   !icm_mod
   allocate(wqc(ntrs(7),nvrt,nea),TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), & !PH model variables 
     & CAsat(nvrt),CO2(nvrt),PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
-    & TIC_el(nvrt,nea),ALK_el(nvrt,nea),Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
+    & TIC_el(nvrt,nea),ALK_el(nvrt,nea), &
+    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DO_consmp(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
     & dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
-    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),GP(nvrt,3),PrefN(nvrt,3),PC2TSS(nea), &
+    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),GP(nvrt,nea,3),PrefN(nvrt,3),PC2TSS(nea), &
     & rKRC(nea),rKLC(nea),rKDC(nea),& 
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
@@ -78,7 +79,8 @@ subroutine icm_init
 !$OMP parallel workshare default(shared)
   wqc=0.0;     TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0
   CAsat=0.0;   CO2=0.0;     PH_el=0.0;   PH_nd=0.0;   ph_nudge=0.0; ph_nudge_nd=0.0 
-  TIC_el=0.0;  ALK_el=0.0;  Chl_el=0.0;  PrmPrdt=0.0; DIN_el=0.0; PON_el=0.0
+  TIC_el=0.0;  ALK_el=0.0;  
+  Chl_el=0.0;  PrmPrdt=0.0; DO_consmp=0.0; DIN_el=0.0; PON_el=0.0
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;   RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
