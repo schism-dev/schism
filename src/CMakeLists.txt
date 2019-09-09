@@ -170,7 +170,7 @@ add_module(Fabm     USE_FABM  OFF)
 add_module(EcoSim   USE_ECO   OFF)
 add_module(Sediment USE_SED   OFF)
 add_module(Sed2d    USE_SED2D OFF)
-add_module(WWMII    USE_WWM   OFF)
+add_module(WWMIII    USE_WWM   OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 
