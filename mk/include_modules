@@ -27,8 +27,8 @@
 # EXEC := $(EXEC)_GOTM
 
 # Wind wave model WWM
- USE_WWM = yes
- EXEC := $(EXEC)_WWM
+# USE_WWM = yes
+# EXEC := $(EXEC)_WWM
 
 # Harmonic analysis tool
 # USE_HA = yes

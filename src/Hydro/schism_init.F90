@@ -206,9 +206,9 @@
 !     All ranks open error message and other global output files
       call parallel_rrsync(1)
       if(myrank==0) then !open as replace
-        open(11,file='fort.11',status='replace') !fatal errors
+        open(11,file='fatal.error',status='replace') !fatal errors
       else !open as old
-        open(11,file='fort.11',status='old') !fatal errors
+        open(11,file='fatal.error',status='old') !fatal errors
       endif
       call parallel_rrsync(-1)
 

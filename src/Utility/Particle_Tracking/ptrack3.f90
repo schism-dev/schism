@@ -54,7 +54,9 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -cpp -DUSE_DOUBLE -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! pgf90 -mcmodel=medium -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! gfortran -O2 -ffree-line-length-none  -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
