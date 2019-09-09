@@ -54,7 +54,7 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -cpp -DUSE_DOUBLE -mcmodel=medium -CB -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -cpp -DUSE_DOUBLE -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -298,6 +298,7 @@
       ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
       file63='schout_'//ifile_char(1:len_char)//'.nc'
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      if(iret/=nf90_NoErr) stop '1st stack not opened'
       iret=nf90_inq_varid(ncid,'elev',ielev_id)
       if(iret/=nf90_NoErr) stop 'elev not found'
       iret=nf90_inq_varid(ncid,'hvel',luv)
@@ -308,7 +309,7 @@
         iret=nf90_inq_varid(ncid,'wind_speed',lwind)
         if(iret/=nf90_NoErr) stop 'wind not found'
         iret=nf90_inq_varid(ncid,'diffusivity',ltdff)
-        if(iret/=nf90_NoErr) stop 'elev not found'
+        if(iret/=nf90_NoErr) stop 'tdiff not found'
       endif !mod_part
 
 !      open(60,file=trim(ifile_char)//'_elev.61',access='direct',recl=nbyte)
@@ -320,17 +321,28 @@
 !      endif !mod_part
 
       iret=nf90_inq_dimid(ncid,'nSCHISM_vgrid_layers',i)
+      if(iret/=nf90_NoErr) stop 'nSCHISM_vgrid_layers not found'
       iret=nf90_Inquire_Dimension(ncid,i,len=nvrt)
+      if(iret/=nf90_NoErr) stop 'read error(1)'
       iret=nf90_inq_varid(ncid,'SCHISM_hgrid_face_nodes',varid1)
+      if(iret/=nf90_NoErr) stop 'read error(2)'
       iret=nf90_Inquire_Variable(ncid,varid1,dimids=dimids(1:2))
+      if(iret/=nf90_NoErr) stop 'read error(3)'
       iret=nf90_Inquire_Dimension(ncid,dimids(1),len=nvtx)
+      if(iret/=nf90_NoErr) stop 'read error(4)'
       iret=nf90_Inquire_Dimension(ncid,dimids(2),len=ne)
+      if(iret/=nf90_NoErr) stop 'read error(5)'
       if(nvtx/=4) stop 'vtx/=4'
       iret=nf90_inq_varid(ncid,'SCHISM_hgrid_node_x',varid2)
+      if(iret/=nf90_NoErr) stop 'read error(6)'
       iret=nf90_Inquire_Variable(ncid,varid2,dimids=dimids)
+      if(iret/=nf90_NoErr) stop 'read error(7)'
       iret=nf90_Inquire_Dimension(ncid,dimids(1),len=np)
+      if(iret/=nf90_NoErr) stop 'read error(8)'
       iret=nf90_inq_varid(ncid,'time',itime_id)
+      if(iret/=nf90_NoErr) stop 'read error(9)'
       iret=nf90_Inquire_Variable(ncid,itime_id,dimids=dimids)
+      if(iret/=nf90_NoErr) stop 'read error(10)'
       iret=nf90_Inquire_Dimension(ncid,dimids(1),len=nrec)
       if(iret.ne.NF90_NOERR) then
         print*, nf90_strerror(iret) 
@@ -344,13 +356,21 @@
       if(istat/=0) stop 'failed to allocate (3)'
 
       iret=nf90_get_var(ncid,varid1,elnode)
+      if(iret/=nf90_NoErr) stop 'read error(11)'
       iret=nf90_get_var(ncid,varid2,x)
+      if(iret/=nf90_NoErr) stop 'read error(12)'
       iret=nf90_inq_varid(ncid,'SCHISM_hgrid_node_y',varid1)
+      if(iret/=nf90_NoErr) stop 'read error(13)'
       iret=nf90_get_var(ncid,varid1,y)
+      if(iret/=nf90_NoErr) stop 'read error(14)'
       iret=nf90_inq_varid(ncid,'depth',varid1)
+      if(iret/=nf90_NoErr) stop 'read error(15)'
       iret=nf90_get_var(ncid,varid1,dp)
+      if(iret/=nf90_NoErr) stop 'read error(16)'
       iret=nf90_inq_varid(ncid,'node_bottom_index',varid1)
+      if(iret/=nf90_NoErr) stop 'read error(17)'
       iret=nf90_get_var(ncid,varid1,kbp00)
+      if(iret/=nf90_NoErr) stop 'kbp00 not found'
 
       !Leave it open as this is the 1st stack to read from
 !      iret=nf90_close(ncid)
@@ -658,9 +678,12 @@
         ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
         file63='schout_'//ifile_char(1:len_char)//'.nc'
         iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        if(iret/=nf90_NoErr) stop 'schout not opened (2)'
         !time is double
         iret=nf90_inq_varid(ncid,'time',itime_id)
+        if(iret/=nf90_NoErr) stop 'itime_id'
         iret=nf90_get_var(ncid,itime_id,timeout,(/1/),(/nrec/))
+        if(iret/=nf90_NoErr) stop 'time not read'
 
         !Reset record #
         if(ibf==1) then
@@ -691,18 +714,24 @@
       if(irec1<1.or.irec1>nrec) stop 'record out of bound'
 
       iret=nf90_get_var(ncid,ielev_id,real_ar(1,1:np),(/1,irec1/),(/np,1/))
+      if(iret/=nf90_NoErr) stop 'elev not read'
       eta2=real_ar(1,1:np)
       iret=nf90_get_var(ncid,luv,real_ar(1:nvrt,1:np),(/1,1,1,irec1/),(/1,nvrt,np,1/))
+      if(iret/=nf90_NoErr) stop 'uu2 not read'
       uu2(:,:)=transpose(real_ar(1:nvrt,1:np))
       iret=nf90_get_var(ncid,luv,real_ar(1:nvrt,1:np),(/2,1,1,irec1/),(/1,nvrt,np,1/))
+      if(iret/=nf90_NoErr) stop 'vv2 not read'
       vv2(:,:)=transpose(real_ar(1:nvrt,1:np))
       iret=nf90_get_var(ncid,lw,real_ar(1:nvrt,1:np),(/1,1,irec1/),(/nvrt,np,1/))
+      if(iret/=nf90_NoErr) stop 'ww2 not read'
       ww2(:,:)=transpose(real_ar(1:nvrt,1:np))
       if(mod_part==1) then
         iret=nf90_get_var(ncid,lwind,real_ar(1:2,1:np),(/1,1,irec1/),(/2,np,1/))
+        if(iret/=nf90_NoErr) stop 'wind not read'
         wnx2(:)=real_ar(1,1:np)
         wny2(:)=real_ar(2,1:np)
         iret=nf90_get_var(ncid,ltdff,real_ar(1:nvrt,1:np),(/1,1,irec1/),(/nvrt,np,1/))
+        if(iret/=nf90_NoErr) stop 'tdiff not read'
         vf2(:,:)=transpose(real_ar(1:nvrt,1:np))
       endif !mod_part
 
@@ -726,7 +755,7 @@
 !...  Deal with junks
       do i=1,np
         if(idry(i)==1) then
-          uu2=0; vv2=0; ww2=0; vf2=0
+          uu2(i,:)=0; vv2(i,:)=0; ww2(i,:)=0; vf2(i,:)=0
         else !note that the fill values in nc are based on init bottom, which may be different from kbp
           do k=1,nvrt
             if(k<=kbp(i)-1.or.abs(uu2(i,k))>1.e8) then
