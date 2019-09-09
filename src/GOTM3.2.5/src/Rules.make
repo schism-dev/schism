@@ -33,14 +33,15 @@ LDFLAGS		=
 ifdef NETCDFINC
 INCDIRS		+= -I$(NETCDFINC)
 endif
-ifdef NETCDFLIBNAME
-NETCDFLIB	= $(NETCDFLIBNAME)
-else
-NETCDFLIB	= -lnetcdf
-ifdef NETCDFLIBDIR
-LDFLAGS		+= -L$(NETCDFLIBDIR)
-endif
-endif
+##ifdef NETCDFLIBNAME
+#NETCDFLIB	= $(NETCDFLIBNAME)
+#else
+#NETCDFLIB	= -lnetcdf
+##ifdef NETCDFLIBDIR
+###LDFLAGS		+= -L$(NETCDFLIBDIR)
+LDFLAGS		+= -L$(NETCDF_FORTRAN)/lib -L$(NETCDF)/lib -lnetcdf -lnetcdff
+##endif
+#endif
 
 #
 # phony targets
