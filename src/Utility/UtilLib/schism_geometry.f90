@@ -18,11 +18,11 @@
 
 !     Common data used in 2 routines
     module schism_geometry_mod
-#ifdef USE_DOUBLE
-      integer,parameter,private :: RKIND=8
-#else
-      integer,parameter,private :: RKIND=4
-#endif
+!#ifdef USE_DOUBLE
+!      integer,parameter,private :: RKIND=8
+!#else
+!      integer,parameter,private :: RKIND=4
+!#endif
 
       integer,save,private :: nx(4,4,3)
       integer,save,allocatable,private :: nne(:),indel(:,:),ic3(:,:)
@@ -31,8 +31,8 @@
       contains
 
       subroutine compute_nside(np,ne,i34,elnode,ns)
-      !use schism_geometry
-      implicit real(RKIND)(a-h,o-z),integer(i-n)
+      !This routine deals only with int; no real
+      implicit real(8)(a-h,o-z),integer(i-n)
       integer, intent(in) :: np,ne,i34(ne),elnode(4,ne)
       integer, intent(out) :: ns !,ic3(3,ne)
 !      integer, allocatable :: indel(:,:)
@@ -104,57 +104,17 @@
 
       end subroutine compute_nside
 
-      subroutine schism_geometry(np,ne,ns0,xnd,ynd,i34,elnode,ic3_out,&
+      !Double precision version
+      subroutine schism_geometry_double(np,ne,ns0,xnd,ynd,i34,elnode,ic3_out,&
      &elside,isdel,isidenode,xcj,ycj)
-!      use schism_geometry
-      implicit real(RKIND)(a-h,o-z),integer(i-n)
+      implicit real(8)(a-h,o-z),integer(i-n)
       integer, intent(in) :: np,ne,ns0,i34(ne),elnode(4,ne)
-      real(RKIND), intent(in) :: xnd(np),ynd(np)
+      real(8), intent(in) :: xnd(np),ynd(np)
       integer, intent(out) :: ic3_out(4,ne),elside(4,ne),isdel(2,ns0),isidenode(2,ns0)
-      real(RKIND), intent(out) :: xcj(ns0),ycj(ns0)
+      real(8), intent(out) :: xcj(ns0),ycj(ns0)
       
-      ic3_out=ic3
+      include 'schism_geometry.txt'
 
-      ns=0 !# of sides
-      do i=1,ne
-        do j=1,i34(i)
-          nd1=elnode(nx(i34(i),j,1),i)
-          nd2=elnode(nx(i34(i),j,2),i)
-          if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
-            ns=ns+1
-            if(ns>ns0) then
-              write(*,*)'Too many sides'
-              stop
-            endif
-            elside(j,i)=ns
-            isdel(1,ns)=i
-            isidenode(1,ns)=nd1
-            isidenode(2,ns)=nd2
-            xcj(ns)=(xnd(nd1)+xnd(nd2))/2
-            ycj(ns)=(ynd(nd1)+ynd(nd2))/2
-
-            isdel(2,ns)=ic3(j,i) !bnd element => bnd side
-!           Corresponding side in element ic3(j,i)
-            if(ic3(j,i)/=0) then !old internal side
-              iel=ic3(j,i)
-              index=0
-              do k=1,i34(iel)
-                if(ic3(k,iel)==i) then
-                  index=k
-                  exit
-                endif
-              enddo !k
-              if(index==0) then
-                write(*,*)'Wrong ball info',i,j
-                stop
-              endif
-              elside(index,iel)=ns
-            endif !ic3(j,i).ne.0
-          endif !ic3(j,i)==0.or.i<ic3(j,i)
-        enddo !j
-      enddo !i=1,ne
-      if(ns/=ns0) stop 'Side count mismatch'
-
-      end subroutine schism_geometry
+      end subroutine schism_geometry_double
 
     end module schism_geometry_mod
