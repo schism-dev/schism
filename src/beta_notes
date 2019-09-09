@@ -1,3 +1,5 @@
+Github versions:
+f69ca44: updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 Changes in param.in and main parameter inputs for other modules:
 R5217: repalced bottom friction coefficient output with bottom stress vector output;
