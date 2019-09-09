@@ -735,7 +735,7 @@
 !  iof_icm(3) = 1 !ICM primary production @elem [gC/m^3/day] {ICM_PrmPrdt}
 !  iof_icm(4) = 1 !ICM totoal inorganic nitrogen (DIN) @elem [gN/m^3] {ICM_DIN}
 !  iof_icm(5) = 1 !ICM paticulate organic nitrogen (PON) @elem [gN/m^3] {ICM_PON}
-!  sediment flux @elem
+!!  sediment flux @elem
 !  iof_icm(6) = 1 !ICM bed sediment flux arrays: SED_BENDOC (output name:ICM_SED_BENDOC) @elem [gC/(m^2 day)] {ICM_SED_BENDOC}
 !  iof_icm(7) = 1 !ICM bed sediment flux arrays: SED_BENNH4 (output name:ICM_SED_BENNH4) @elem [gC/(m^2 day)] {ICM_SED_BENNH4}
 !  iof_icm(8) = 1 !ICM bed sediment flux arrays: SED_BENNO3 (output name:ICM_SED_BENNO3)@elem [gC/(m^2 day)] {ICM_SED_BENNO3}
@@ -743,7 +743,7 @@
 !  iof_icm(10) = 1 !ICM bed sediment flux arrays: SED_BENCOD (output name:ICM_SED_BENCOD) @elem [gC/(m^2 day)] {ICM_SED_BENCOD}
 !  iof_icm(11) = 1 !ICM bed sediment flux arrays: SED_BENDO (output name:ICM_SED_BENDO) @elem [gC/(m^2 day)] {ICM_SED_BENDO}
 !  iof_icm(12) = 1 !ICM bed sediment flux arrays: SED_BENSA (output name:ICM_SED_BENSA) @elem [gC/(m^2 day)] {ICM_SED_BENSA}
-!  sav @elem
+!!  sav @elem
 !  iof_icm(13) = 1 !ICM SAV leaf biomass @elem [gC/m^3] (k=1 is surface) {ICM_lfsav}
 !  iof_icm(14) = 1 !ICM SAV stem biomass @elem [gC/m^3] {ICM_stsav}
 !  iof_icm(15) = 1 !ICM SAV root biomass @elem [gC/m^3] {ICM_rtsav}
@@ -751,7 +751,7 @@
 !  iof_icm(17) = 1 !ICM SAV total stem biomass @elem [gC/m^2] {ICM_tstsav}
 !  iof_icm(18) = 1 !ICM SAV total root biomass @elem [gC/m^2] {ICM_trtsav}
 !  iof_icm(19) = 1 !ICM SAV canopy height @elem [m] {ICM_hcansav}
-!  sediment conc @elem
+!!  sediment conc @elem
 !  iof_icm(20) = 1 !bottom NH4 conc {ICM_CNH4}
 !  iof_icm(21) = 1 !bottom NO3 conc {ICM_CNH3}
 !  iof_icm(22) = 1 !bottom P conc {ICM_CPIP}
@@ -771,7 +771,7 @@
 !  iof_icm(36) = 1 !erosion flux H2S {ICM_EROH2S}
 !  iof_icm(37) = 1 !ersoion flux LPOC {ICM_EROLPOC}
 !  iof_icm(38) = 1 !ersoion flux RPOC {ICM_ERORPOC}
-!  water column rates @elem
+!!  water column rates @elem
 !  iof_icm(39) = 1 !DO consumption {ICM_DO_consumption}
 !  iof_icm(40) = 1 !PB growth #1 {ICM_GP1}
 !  iof_icm(41) = 1 !PB growth #2 {ICM_GP2}

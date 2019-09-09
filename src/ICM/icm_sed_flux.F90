@@ -299,7 +299,7 @@ subroutine read_icm_sed_param
 
   !erosion flux
   call get_param('icm_sed.in','iERO',1,iERO,rtmp,stmp)
-  if(iERO==1) then
+  if(iERO>0) then
     call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
     call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
     call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
