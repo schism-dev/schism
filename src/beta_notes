@@ -394,7 +394,7 @@ for ivcor=1.
             (set vel=0 and exit). Goal is to eventually use this as default;
 
 git versions:
-(96) b1caaf2: fixed an efficiency issue and added nc checks in ptrack3 (c/o Marcel Rieker)
+(96) 64b7181: fixed an efficiency issue and added nc checks in ptrack3 (c/o Marcel Rieker)
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
