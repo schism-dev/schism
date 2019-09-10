@@ -55,6 +55,7 @@
       end subroutine
 
       subroutine create_zcor(hgrid,vgrid,eta)
+      use compute_zcor
       character(len=*),intent(in) :: hgrid
       character(len=*),intent(in) :: vgrid
       real,intent(in)  :: eta
