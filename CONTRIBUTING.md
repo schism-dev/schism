@@ -1,7 +1,9 @@
-# Contributing
+# Contributing developers: please read
+
 ## SCHISM github Workflow (Trunk Based Development)
 
 The following is tested on linux git. Should work same on other platforms.
+
 ### Clone
 In git, there are multiple repositories (repos), one local and multiple ‘remotes’. Different git commands are used for these. The local is your private repo, and until you publish your changes there (e.g. via ‘push’), others cannot access it.
 

@@ -41,7 +41,7 @@
         rr=(xnew-x0_new)**2/rx/rx+(ynew-y0_new)**2/ry/ry
         tnu=rmax*(rr-1)/(rat*rat-1)
         tnu=dmax1(0.d0,dmin1(rmax,tnu))
-        write(13,'(i10,2(1x,e24.10),1x,e12.6)')i,x,y,tnu
+        write(13,'(i10,2(1x,e24.10),1x,e14.6)')i,x,y,tnu
       enddo !i
 
       do i=1,ne

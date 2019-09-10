@@ -1,4 +1,3 @@
-add_definitions("-DUSE_DOUBLE")
 add_executable(ptrack3 ptrack3.f90)
 
 add_dependencies(utility ptrack3)
