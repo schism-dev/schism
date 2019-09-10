@@ -114,9 +114,8 @@ module icm_sed_mod
   !erosion fluxes
   real(kind=rkind),save,allocatable,dimension(:) :: SED_EROH2S,SED_EROLPOC,SED_ERORPOC !nea
   real(kind=rkind),save,allocatable,dimension(:) :: tau_c_elem !nea
-  real(kind=rkind),save :: eroporo, erorate,erofrac,depofrac !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand;[]
-  real(kind=rkind),save :: tau_bot_elem
-  integer, save :: iERO
+  real(kind=rkind),save :: eroporo, erorate,erofrac,depofracR,depofracL !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand;[]
+  integer, save :: iERO,iDEPO
 
   !bottom Light (nea)
   real(kind=rkind),save,allocatable,dimension(:) :: sbLight

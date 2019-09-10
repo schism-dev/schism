@@ -303,7 +303,9 @@ subroutine read_icm_sed_param
     call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
     call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
     call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
-    call get_param('icm_sed.in','depofrac',2,itmp,depofrac,stmp)
+    call get_param('icm_sed.in','iDEPO',1,iDEPO,rtmp,stmp)
+    call get_param('icm_sed.in','depofracR',2,itmp,depofracR,stmp)
+    call get_param('icm_sed.in','depofracL',2,itmp,depofracL,stmp)
   endif !iERO
 
 
@@ -705,7 +707,8 @@ subroutine sed_calc(id)
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
                       &isav_icm,patchsav,&
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav,&
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
+                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,&
+                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
@@ -717,6 +720,7 @@ subroutine sed_calc(id)
   real(kind=rkind) :: pie1,pie2,j1,j2,fd2,rval
   real(kind=rkind) :: rtmp,tmp1,rat,xlim1,xlim2,C0d,k12,k2 
   real(kind=rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
+  real(kind=rkind) :: tau_bot_elem,ero_elem
 
   !if(iSteady==1) tintim=tintim+dtw
 
@@ -1260,32 +1264,35 @@ subroutine sed_calc(id)
     !calculate bottom shear stress for elem #id
     tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
 
-    !calculate sediemnt erosion > nutrient erosion flux
+    !calculate erosion rate for elem #id
     if ((tau_bot_elem-tau_c_elem(id))>10.e-8)then
-      if(iERO==1)then
-        SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)*(1.d0+m1*PIE1S))
-        SED_EROLPOC(id)=0
-        SED_ERORPOC(id)=0
-      elseif(iERO==2)then
-        SED_EROH2S(id)=0
-        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-      elseif(iERO==3)then
-        SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)*(1.d0+m1*PIE1S))
-        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
-          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-      endif !iERO
+      ero_elem=erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)) !erosion rate /day
     else
-      SED_EROH2S(id)=0
+      ero_elem=0
+    endif !tau_bot_elem
+
+    !calculate depostion fraction for elem #id :: E/(k+W) 
+    if(iDEPO==2)then
+      rtmp=exp(rKTHDR*(SED_T(id)-TRHDR))
+      depofracL=ero_elem/(WSLP(id)/SED_BL(id)+rKLP(id)*rtmp)
+      depofracR=ero_elem/(WSRP(id)/SED_BL(id)+rKRP(id)*rtmp)
+    endif !iDEPO
+
+    !sediemnt erosion >> nutrient erosion flux
+    !dissolved sulfur + resuspended POM
+    if(iERO==1)then
+      SED_EROH2S(id)=HST2TM1S(id)*ero_elem/(1.d0+m1*PIE1S)
       SED_EROLPOC(id)=0
       SED_ERORPOC(id)=0
-    endif !tau_bot_elem
+    elseif(iERO==2)then
+      SED_EROH2S(id)=0
+      SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
+      SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
+    elseif(iERO==3)then
+      SED_EROH2S(id)=HST2TM1S(id)*ero_elem/(1.d0+m1*PIE1S)
+      SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
+      SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
+    endif !iERO
 
     !minus erosion in sediment for mass balance
     HST2TM1S(id)=max(1.0d-10,HST2TM1S(id)-SED_EROH2S(id)*dtw/HSED(id))
