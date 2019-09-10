@@ -303,6 +303,7 @@ subroutine read_icm_sed_param
     call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
     call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
     call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
+    call get_param('icm_sed.in','depofrac',2,itmp,depofrac,stmp)
   endif !iERO
 
 
@@ -1268,16 +1269,16 @@ subroutine sed_calc(id)
         SED_ERORPOC(id)=0
       elseif(iERO==2)then
         SED_EROH2S(id)=0
-        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*&
+        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
           &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
           &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
       elseif(iERO==3)then
         SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*&
           &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)*(1.d0+m1*PIE1S))
-        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*&
+        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
           &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*depofrac*&
           &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
       endif !iERO
     else
