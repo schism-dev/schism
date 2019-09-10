@@ -1,5 +1,6 @@
 Github versions:
 
+: fort.11-> fatal.error
 f69ca44: updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 Changes in param.in and main parameter inputs for other modules:

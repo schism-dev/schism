@@ -54,7 +54,9 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -cpp -DUSE_DOUBLE -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! pgf90 -mcmodel=medium -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! gfortran -O2 -ffree-line-length-none  -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -509,7 +511,7 @@
      &ztmp(nvrt),ztmp2(nvrt),sigma(nvrt),ztot(nvrt),hf1(np,nvrt), &
      &hf2(np,nvrt),vf1(np,nvrt),vf2(np,nvrt),hvis_e(ne,nvrt),stat=istat)
       if(istat/=0) stop 'Failed to alloc (3)'
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
+      call get_vgrid_double('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
       !kbp has been assigned for ivcor=1
 
 !     Init some arrays (for below bottom etc)
@@ -556,7 +558,7 @@
       if(istat/=0) stop 'Failed to alloc (4)'
 !     Then compute the rest of side related arrays with additional
 !     inputs (xnd,ynd) (x,y coordinates of each node)
-      call schism_geometry(np,ne,ns,x,y,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+      call schism_geometry_double(np,ne,ns,x,y,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
 
       !Remaining side arrays
       do i=1,ns
@@ -1381,7 +1383,7 @@
           idry_new(i)=0
 
           if(ivcor==2) then
-            call zcor_SZ(dp(i),eta3(i),h0,h_s,h_c,theta_b, &
+            call zcor_SZ_double(dp(i),eta3(i),h0,h_s,h_c,theta_b, &
      &theta_f,kz,nvrt,ztot,sigma,zlcl,idry_tmp,kbpl)
             if(idry_tmp==1) then
               write(11,*)'Impossible dry (7):',i,idry_tmp,dp(i),eta1(i),eta2(i),eta3(i),kbpl
@@ -1706,7 +1708,7 @@
 
 !     Compute z-levels
       if(ivcor==2) then
-        call zcor_SZ(dep,etal,h0,h_s,h_c,theta_b, &
+        call zcor_SZ_double(dep,etal,h0,h_s,h_c,theta_b, &
      &theta_f,kz,nvrt,ztot,sigma,zlcl,idry_tmp,kbpl)
         ztmp(kbpl:nvrt)=zlcl(kbpl:nvrt)
       else if(ivcor==1) then
