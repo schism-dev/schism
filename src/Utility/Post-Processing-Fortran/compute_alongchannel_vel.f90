@@ -22,13 +22,14 @@
 !       Inputs: station.xy; screen inputs
 !       Outputs: fort.20 (along channel vel.); fort.18 (channel angle)
 
-!       ifort -cpp -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel.WW ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 compute_alongchannel_vel.f90
+!       ifort -Bstatic -assume byterecl -O3 -o compute_alongchannel_vel.exe ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 compute_alongchannel_vel.f90
 
 !											*
 !****************************************************************************************
 !
       program read_out
       use compute_zcor
+      use pt_in_poly_test
       parameter(nbyte=4)
       character*30 file63
       character*12 it_char
@@ -164,7 +165,7 @@
 
 !     Read in vgrid.in
       allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np))
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
       allocate(ztmp(nvrt),ztmp2(nvrt,3))
 
 !...  Find parent element for (x00,y00)
@@ -173,7 +174,7 @@
         do l=1,nxy
           if(iep(l)/=0) cycle
 
-          call pt_in_poly(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
+          call pt_in_poly_single(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
           if(inside==1) then
             iep(l)=i
             !print*, 'Found:',l,arco(l,1:3),nodel
@@ -341,7 +342,7 @@
                 enddo !k
 
               else if(ivcor==2) then !SZ
-                call zcor_SZ(dep,etal,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+                call zcor_SZ_single(dep,etal,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
      &sigma,ztmp(:),idry2,kbpl)
               endif
 

@@ -22,7 +22,7 @@
 !       Input: schout*.nc (combined or uncombined); vgrid.in; screen
 !       Output: average.out (gredit for scalar or xmgr5 format for vector)
 !										
-!       ifort -cpp -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3.WW ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 compute_average3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!       ifort -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 compute_average3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
 !
       program read_out
@@ -102,7 +102,7 @@
      &outvar(2,nvrt,last_dim,nrec3),eta2(np,nrec3),ztmp(nvrt,np),residual(np,2),icounter(np),idry(np))
       outvar=-huge(1.0) !test mem
 
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
 
       print*, 'last element',elnode(1:i34(ne),ne)
 
@@ -169,7 +169,7 @@
                 enddo !k
               endif !dp
             else if(ivcor==2) then !SZ
-              call zcor_SZ(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+              call zcor_SZ_single(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
      &sigma,ztmp(:,i),idry(i),kbpl)
               kbp(i)=kbpl
             endif !ivcor

@@ -15,7 +15,7 @@
 !            (3) screen; (4) transect.bp (optional transect bp file; depths denote seg #)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
-!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -o gen_vqs_Rutgers.exe ../UtilLib/schism_geometry.f90 gen_vqs_Rutgers.f90
+!    ifort -O2 -mcmodel=medium -CB -o gen_vqs_Rutgers.exe ../UtilLib/schism_geometry.f90 gen_vqs_Rutgers.f90
 
       program gen_vqs_rutgers
       use schism_geometry_mod
@@ -264,7 +264,7 @@
       print*, 'ns=',ns
       allocate(ic3(4,ne),elside(4,ne),isdel(2,ns))
       allocate(isidenode(2,ns),xcj(ns,2),ycj(ns,2))
-      call schism_geometry(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+      call schism_geometry_double(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
       !deallocate()
 
 ! Preparation 

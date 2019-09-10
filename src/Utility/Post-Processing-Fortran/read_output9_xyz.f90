@@ -35,13 +35,14 @@
 !       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
-!   ifort -cpp -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyz.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly.f90 read_output9_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyz.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out
       use netcdf
       use extract_mod
       use compute_zcor
+      use pt_in_poly_test
 
       character(len=30) :: file63,varname
       character(len=12) :: it_char
@@ -145,7 +146,7 @@
       allocate(timeout(nrec),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np), &
      &kbp(np),outvar(2,nvrt,last_dim,nrec3),eta2(np,nrec3),out2(nxy,nvrt,2),out3(nxy,2), &
      &out(nxy,3,nvrt,2),node3(nxy,3),arco(nxy,3),iep(nxy))
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b, &
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b, &
      &theta_f,ztot,sigma,sigma_lcl,kbp)
       allocate(ztmp(nvrt),ztmp2(nvrt,3),stat=istat)
       outvar=-huge(1.0) !test mem
@@ -157,7 +158,7 @@
       else
         do i=1,np
           !Use large eta to get true bottom
-          call zcor_SZ(dp(i),1.e8,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
+          call zcor_SZ_single(dp(i),1.e8,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
      &ztmp(:),idry2,kbp00(i))
         enddo !i
       endif !ivcor
@@ -168,7 +169,7 @@
         do i=1,ne
           do l=1,nxy
             if(iep(l)/=0) cycle
-            call pt_in_poly(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
+            call pt_in_poly_single(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
             if(inside==1) then
               iep(l)=i
               !print*, 'Found:',l,arco(l,1:3),nodel
@@ -388,7 +389,7 @@
                   enddo !j
                 enddo !k
               else if(ivcor==2) then !SZ
-                call zcor_SZ(dep(i),etal,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
+                call zcor_SZ_single(dep(i),etal,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
      &ztmp(:),idry2,kbpl)
               endif
 

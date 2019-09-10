@@ -12,7 +12,7 @@
 !            for h<=100m)
 !    Outputs: vgrid.in; vgrid_master*.out;  transect1.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master*.out, transect1.out
-!    ifort -cpp -DUSE_DOUBLE -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs_2masters.exe ../UtilLib/schism_geometry.f90 gen_vqs_2masters.f90
+!    ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs_2masters.exe ../UtilLib/schism_geometry.f90 gen_vqs_2masters.f90
 
       use schism_geometry_mod
       implicit real*8(a-h,o-z)
@@ -172,7 +172,7 @@
       call compute_nside(np,ne,i34,elnode,ns)
       print*, 'ns=',ns
       allocate(ic3(4,ne),elside(4,ne),isdel(2,ns),isidenode(2,ns),xcj(ns),ycj(ns))
-      call schism_geometry(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+      call schism_geometry_double(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
       !deallocate()
 
 !     Compute zcoor

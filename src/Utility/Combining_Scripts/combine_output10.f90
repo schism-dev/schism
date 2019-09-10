@@ -204,7 +204,7 @@ subroutine combine_output10(ibgn,iend,iwetdry)
   if(istat/=0) stop 'Allocation error: side(0)'
   ! Initialize outb for invalid pts (below bottom etc)
   outb=-9999.
-  call schism_geometry(np_global,ne_global,ns2,x,y,i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
+  call schism_geometry_single(np_global,ne_global,ns2,x,y,i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
   &elside(1:4,1:ne_global),isdel,isidenode,xcj,ycj)
 
   if(ns2/=ns_global) then

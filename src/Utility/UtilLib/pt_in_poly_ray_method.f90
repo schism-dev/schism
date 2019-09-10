@@ -1,5 +1,4 @@
 !  pt_in_poly_ray_method: point-in-polygon test using ray tracing method (double prevision). 
-!  signa: signed area (double prevision)
 !====================================================================
 !====================================================================
 
@@ -139,14 +138,6 @@
 
       end subroutine pt_in_poly_ray_method
 
-!====================================================================
-      function signa(x1,x2,x3,y1,y2,y3)
-!...  Compute signed area formed by pts 1,2,3
-      implicit real*8(a-h,o-z)
-
-      signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
-
-      end
 !====================================================================
 
 !     Test driver

@@ -26,13 +26,14 @@
 !          (1) *[23]D.th.nc, depending on the choice in interpolate_variables.in
 !          (2) fort.11: fatal errors; fort.12: non-fatal errors.
 !
-! ifort -cpp -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 interpolate_variables7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 interpolate_variables7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
 !
       program interpolate
       use netcdf
       use extract_mod
       use compute_zcor
+      use pt_in_poly_test
 
 !      implicit real*8(a-h,o-z)
       character(len=30) :: file63,varname(2),varname2
@@ -120,10 +121,10 @@
           endif
         enddo !i
       else !3D
-        call get_vgrid('vgrid.bg',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma2,sigma_lcl,kbp)
+        call get_vgrid_single('vgrid.bg',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma2,sigma_lcl,kbp)
         do i=1,np
           if(ivcor==2) then
-            call zcor_SZ(dp(i),0.,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma2,z(i,:),idry,kbp(i))
+            call zcor_SZ_single(dp(i),0.,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma2,z(i,:),idry,kbp(i))
           else if(ivcor==1) then
             if(dp(i)<=h0) then
               kbp(i)=0
@@ -232,7 +233,7 @@
           endif
         enddo !i
       else !3D
-        call get_vgrid('vgrid.fg',np_fg,nvrt_fg,ivcor_fg,kz_fg,h_s_fg,h_c_fg, &
+        call get_vgrid_single('vgrid.fg',np_fg,nvrt_fg,ivcor_fg,kz_fg,h_s_fg,h_c_fg, &
      &theta_b_fg,theta_f_fg,ztot_fg,sigma_fg,sigma_lcl_fg,kbp_fg)
 
         !zcor
@@ -244,7 +245,7 @@
 
           if(ivcor_fg==2) then !SZ
             !Use h0 from bg run
-            call zcor_SZ(dpfg(i),0.,h0,h_s_fg,h_c_fg,theta_b_fg,theta_f_fg,kz_fg, &
+            call zcor_SZ_single(dpfg(i),0.,h0,h_s_fg,h_c_fg,theta_b_fg,theta_f_fg,kz_fg, &
      &nvrt_fg,ztot_fg,sigma_fg,zfg(i,:),idry2,kbpfg(i))
           else !=1
             nd=imap(i)
@@ -287,11 +288,11 @@
               nwild(1:3)=(/1,3,4/)
             endif !j
             n1=elnode(nwild(1),ie); n2=elnode(nwild(2),ie); n3=elnode(nwild(3),ie)
-            ar1=signa(xfg(i),x(n2),x(n3),yfg(i),y(n2),y(n3))  
-            ar2=signa(x(n1),xfg(i),x(n3),y(n1),yfg(i),y(n3))
-            ar3=signa(x(n1),x(n2),xfg(i),y(n1),y(n2),yfg(i))
+            ar1=signa_single(xfg(i),x(n2),x(n3),yfg(i),y(n2),y(n3))  
+            ar2=signa_single(x(n1),xfg(i),x(n3),y(n1),yfg(i),y(n3))
+            ar3=signa_single(x(n1),x(n2),xfg(i),y(n1),y(n2),yfg(i))
             bb=abs(ar1)+abs(ar2)+abs(ar3)
-            aa=abs(signa(x(n1),x(n2),x(n3),y(n1),y(n2),y(n3)))
+            aa=abs(signa_single(x(n1),x(n2),x(n3),y(n1),y(n2),y(n3)))
             rat=abs(bb-aa)/aa
             if(rat<ratmin(i)) then
               ratmin(i)=rat

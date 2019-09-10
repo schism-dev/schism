@@ -5,8 +5,6 @@ add_executable( gen_nudge gen_nudge.f90 )
 add_executable( convert_3Dth_nc convert_3Dth_nc.f90 )
 add_executable( viz_source_sink viz_source_sink.f90 )
 add_executable( create_dummy_zcor create_dummy_zcor.f90)
-
-add_definitions("-DUSE_DOUBLE")
 add_executable( gen_vqs_1 gen_vqs_1.f90 )
 add_executable( gen_vqs_2 gen_vqs_2.f90 )
 add_executable( gen_vqs_2masters gen_vqs_2masters.f90 )

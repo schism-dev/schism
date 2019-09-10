@@ -217,7 +217,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   allocate(ic3(4,ne_global),elside(4,ne_global),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2), &
   &worka(2,nvrt,ns2),stat=istat)
   if(istat/=0) stop 'Allocation error: side(0)'
-  call schism_geometry(np_global,ne_global,ns2,x,y,i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
+  call schism_geometry_single(np_global,ne_global,ns2,x,y,i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
   &elside(1:4,1:ne_global),isdel,isidenode,xcj,ycj)
 
   if(ns2/=ns_global) then

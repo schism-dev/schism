@@ -196,7 +196,7 @@
       print*, 'done compute_nside'
       allocate(ic3(4,ne),elside(4,ne),isdel(2,ns),isidenode(2,ns),xcj(ns),ycj(ns),stat=istat)
       if(istat/=0) stop 'Allocation error: side(7)'
-      call schism_geometry(np,ne,ns2,x,y,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+      call schism_geometry_single(np,ne,ns2,x,y,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
       print*, 'done schism_geometry'
 
       print*, 'last element',(elnode(j,ne),j=1,i34(ne))
@@ -204,7 +204,7 @@
 !     Read vgrid.in
       allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np),stat=istat)
       if(istat/=0) stop 'Falied to allocate (1)'
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
 
 !     Read in fluxflag.prop
       allocate(iflux_e(ne),stat=istat)
@@ -277,7 +277,7 @@
               enddo !k
             endif !wet/dry
           else if(ivcor==2) then !SZ
-            call zcor_SZ(dp(i),eta2(i),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+            call zcor_SZ_single(dp(i),eta2(i),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
      &sigma,ztmp(:,i),idry(i),kbpl)
             if(kbpl/=kbp(i)) stop 'mismatch (2)'
           endif

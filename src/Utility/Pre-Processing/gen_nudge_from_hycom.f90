@@ -20,7 +20,7 @@
 ! The code will do all it can to extrapolate: below bottom/above surface.
 ! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled. 
 !
-! ifort -cpp -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom.exe ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom.exe ../UtilLib/pt_in_poly_test.f90 ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !   Input: 
 !     (1) hgrid.gr3;
@@ -41,6 +41,7 @@
       program gen_hot
       use netcdf
       use compute_zcor
+      use pt_in_poly_test
 
 !      implicit none
 
@@ -150,12 +151,12 @@
       read(19,*)nvrt
       rewind(19)
       allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),z(np,nvrt),kbp2(np),tempout(nvrt,np),saltout(nvrt,np))
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp2)
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp2)
 
 !     Compute z-coord.
       do i=1,np
         if(ivcor==2) then
-          call zcor_SZ(max(0.11,dp(i)),0.,0.1,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma,z(i,:),idry,kbp2(i))
+          call zcor_SZ_single(max(0.11,dp(i)),0.,0.1,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma,z(i,:),idry,kbp2(i))
         else if(ivcor==1) then !impose min h
           z(i,kbp2(i):nvrt)=max(0.11,dp(i))*sigma_lcl(kbp2(i):nvrt,i)
         else
@@ -423,21 +424,21 @@
               do iy=1,iylen-1 
                 x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
                 y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                a1=abs(signa(xl(i),x1,x2,yl(i),y1,y2))
-                a2=abs(signa(xl(i),x2,x3,yl(i),y2,y3))
-                a3=abs(signa(xl(i),x3,x4,yl(i),y3,y4))
-                a4=abs(signa(xl(i),x4,x1,yl(i),y4,y1))
-                b1=abs(signa(x1,x2,x3,y1,y2,y3))
-                b2=abs(signa(x1,x3,x4,y1,y3,y4))
+                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
                 rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
                 if(rat<small1) then
                   ixy(i,1)=ix; ixy(i,2)=iy
 !                 Find a triangle
                   in=0 !flag
                   do l=1,2 !split quad
-                    ap=abs(signa(xl(i),x1,x3,yl(i),y1,y3))
+                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
                     if(l==1) then !nodes 1,2,3
-                      bb=abs(signa(x1,x2,x3,y1,y2,y3))
+                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
                       wild(l)=abs(a1+a2+ap-bb)/bb
                       if(wild(l)<small1*5) then
                         in=1
@@ -446,7 +447,7 @@
                         exit
                       endif
                     else !nodes 1,3,4
-                      bb=abs(signa(x1,x3,x4,y1,y3,y4))
+                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
                       wild(l)=abs(a3+a4+ap-bb)/bb
                       if(wild(l)<small1*5) then
                         in=2
@@ -696,11 +697,4 @@
       end subroutine check  
 
       end program gen_hot
-
-      function signa(x1,x2,x3,y1,y2,y3)
-
-      signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
-
-      return
-      end
 

@@ -24,7 +24,7 @@
 !               added quads (Nov. 2014) (4) changed to nc outputs (Sept
 !               2017); (5) added uncombined option (Feb 2019)
 !****************************************************************************************
-!     ifort -cpp -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!     ifort -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
       program read_out
       use netcdf
       use extract_mod
@@ -95,14 +95,14 @@
       outvar=-huge(1.0) !test mem
 
 !     Read vgrid.in
-      call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
+      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
 
 !     Calculate kbp00
       if(ivcor==1) then
         kbp00=kbp
       else
         do i=1,np
-          call zcor_SZ(dp(i),1.e8,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
+          call zcor_SZ_single(dp(i),1.e8,h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma, &
      &ztmp(:,i),idry2,kbp00(i))
         enddo !i
       endif !ivcor
@@ -165,7 +165,7 @@
                 enddo !k
               endif !wet/dry
             else if(ivcor==2) then !SZ
-              call zcor_SZ(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+              call zcor_SZ_single(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
      &sigma,ztmp(:,i),idry(i),kbpl)
             endif
 

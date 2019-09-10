@@ -11,7 +11,7 @@
 !              the results are combined.
 !              fort.11: fatal errors.
 !
-!     pgf90 -O2 -mcmodel=medium -Mbounds -Bstatic -o gen_source gen_source.f90
+!     ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_source gen_source.f90
 
 !     Sample interpolate_unstructured.in
 !     1 !is_xy

@@ -5,7 +5,6 @@
 !  Date: Sept 2017
 
 !  Routines in this module
-!  function signa
 !  subroutine readheader (combined nc)
 !  subroutine get_timeout (combined or uncombined nc)
 !  subroutine get_elev (combined nc)
@@ -32,15 +31,6 @@
     character(len=30) :: file_char
 
       contains
-!================================================================
-!================================================================
-      function signa(x1,x2,x3,y1,y2,y3)
-!...  Compute signed area formed by pts 1,2,3
-      real :: signa,x1,x2,x3,y1,y2,y3
-
-      signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
-
-      end function signa
 
 !================================================================
 !     Read in static info from _combined_ nc

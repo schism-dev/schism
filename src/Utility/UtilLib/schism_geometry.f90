@@ -7,7 +7,7 @@
 !     Allocate side-related arrays
 !     allocate(ic3(4,ne),elside(4,ne),isdel(2,ns),isidenode(2,ns),xcj(ns),ycj(ns))
 !     Then compute the rest of side related arrays with additional inputs (xnd,ynd) (x,y coordinates of each node)
-!     call schism_geometry(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
+!     call schism_geometry_[single,double](np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
 !     The outputs:
 !                ns: # of sides
 !                ic3(4,ne): neighboring elements of an element
@@ -16,7 +16,6 @@
 !                isidenode(2,ns): 2 end nodes of a side
 !                xcj(ns),ycj(ns): x,y of each side center
 
-!     Common data used in 2 routines
     module schism_geometry_mod
 !#ifdef USE_DOUBLE
 !      integer,parameter,private :: RKIND=8
@@ -116,5 +115,18 @@
       include 'schism_geometry.txt'
 
       end subroutine schism_geometry_double
+
+      !Single precision version
+      subroutine schism_geometry_single(np,ne,ns0,xnd,ynd,i34,elnode,ic3_out,&
+     &elside,isdel,isidenode,xcj,ycj)
+      implicit real(4)(a-h,o-z),integer(i-n)
+      integer, intent(in) :: np,ne,ns0,i34(ne),elnode(4,ne)
+      real(4), intent(in) :: xnd(np),ynd(np)
+      integer, intent(out) :: ic3_out(4,ne),elside(4,ne),isdel(2,ns0),isidenode(2,ns0)
+      real(4), intent(out) :: xcj(ns0),ycj(ns0)
+      
+      include 'schism_geometry.txt'
+
+      end subroutine schism_geometry_single
 
     end module schism_geometry_mod
