@@ -109,6 +109,7 @@ $ git pull origin master   #or:  git reset --hard origin/master  (bring it up to
 $ git merge --squash new_branch #merge ‘new_branch’ to master; resolve conflict if necessary; 
 #write a single commit message
 $ git push origin master #push to master branch of remote repo
+```
 
 Clean up: 
 (need to switch to another branch than ‘new_branch’’ first by using git checkout...)
@@ -132,17 +133,21 @@ Use PR function to manage merge.
 
 ### Other useful commands
 #### To checkout a specific commit
+```bash
 1) Need to know the commit number (SHA1 aka hash); first 7 digits are sufficient (e.g. 40b5ad0cbd26d026caf934bff9c12723e7773f65)
 2) git clone into a separate dir. Better rename the dir to some meaningful name
 3) git describe 40b5ad0 #(outputs a SHA1 that can be used to checkout)
 r5255-43-g40b5ad0
 4) git checkout r5255-43-g40b5ad0 
+```
 
 #### Misc
-git log --pretty=format:"%h %s" --graph --all #(useful for examining branch)
+```bash
+ git log --pretty=format:"%h %s" --graph --all #(useful for examining branch)
  git log -p #(show all changes in all files)
  git log --since=2.weeks
  git rm -f ... and then commit #(remove a file/dir; push will remove working copy as well as repository
 copy)
  git mv f1 f2 #rename
  git checkout -- <files> #(like svn revert (overwrite working copy with repo copy; <files> can be a dir)
+```
