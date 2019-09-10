@@ -82,7 +82,6 @@ $ pwd
 
 schism
 ```
-```
 $ git checkout master #starting from master branch
 $ git pull #update from repo
 $ git branch new_branch master #create a new branch ‘new_branch’ based on master
@@ -106,8 +105,7 @@ When ready to merge your branch with master, there are two approaches: via pull 
 ```bash
 $ git checkout master #switch to master branch
 $ git pull origin master   #or:  git reset --hard origin/master  (bring it up to date)
-$ git merge --squash new_branch #merge ‘new_branch’ to master; resolve conflict if necessary; 
-#write a single commit message
+$ git merge --squash new_branch #merge ‘new_branch’ to master; resolve conflict if necessary; write a single commit message
 $ git push origin master #push to master branch of remote repo
 ```
 
@@ -143,11 +141,10 @@ r5255-43-g40b5ad0
 
 #### Misc
 ```bash
- git log --pretty=format:"%h %s" --graph --all #(useful for examining branch)
- git log -p #(show all changes in all files)
- git log --since=2.weeks
- git rm -f ... and then commit #(remove a file/dir; push will remove working copy as well as repository
-copy)
- git mv f1 f2 #rename
- git checkout -- <files> #(like svn revert (overwrite working copy with repo copy; <files> can be a dir)
+$ git log --pretty=format:"%h %s" --graph --all #(useful for examining branch)
+$ git log -p #(show all changes in all files)
+$ git log --since=2.weeks
+$ git rm -f ... and then commit #(remove a file/dir; push will remove working copy as well as repository copy)
+$ git mv f1 f2 #rename
+$ git checkout -- <files> #(like svn revert (overwrite working copy with repo copy; <files> can be a dir)
 ```
