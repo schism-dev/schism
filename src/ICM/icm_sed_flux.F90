@@ -1261,9 +1261,25 @@ subroutine sed_calc(id)
 
     !calculate sediemnt erosion > nutrient erosion flux
     if ((tau_bot_elem-tau_c_elem(id))>10.e-8)then
-      SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-      SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
-      SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+      if(iERO==1)then
+        SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)*(1.d0+m1*PIE1S))
+        SED_EROLPOC(id)=0
+        SED_ERORPOC(id)=0
+      elseif(iERO==2)then
+        SED_EROH2S(id)=0
+        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+      elseif(iERO==3)then
+        SED_EROH2S(id)=HST2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id)*(1.d0+m1*PIE1S))
+        SED_EROLPOC(id)=POC1TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+        SED_ERORPOC(id)=POC2TM1S(id)*erorate*(1-eroporo)*erofrac*&
+          &(tau_bot_elem-tau_c_elem(id))/(2650*tau_c_elem(id))
+      endif !iERO
     else
       SED_EROH2S(id)=0
       SED_EROLPOC(id)=0
@@ -1660,16 +1676,8 @@ subroutine link_sed_output(id)
   !nan checked when applied to water column
 
   !erosion flux, H2S>S
-  if(iERO==1)then
-    EROH2S(id)=SED_EROH2S(id)/(2*(1.d0+m1*PIE1S)) !S to 0.5*O2
-    EROLPOC(id)=0
-    ERORPOC(id)=0
-  elseif(iERO==2)then
-    EROH2S(id)=0
-    EROLPOC(id)=SED_EROLPOC(id)
-    ERORPOC(id)=SED_ERORPOC(id)
-  elseif(iERO==3)then
-    EROH2S(id)=SED_EROH2S(id)/(2*(1.d0+m1*PIE1S)) !S to 0.5*O2
+  if(iERO>0)then
+    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
   endif !iERO
