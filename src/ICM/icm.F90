@@ -1746,7 +1746,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !erosion
     if(k==nv) then
-      b=b+EROLPOC(id)/dep(k)
+      b=b+ERORPOC(id)/dep(k)
     endif !k==nv
 
     RPOC(k,2)=((1.0+a*dtw2)*RPOC(k,1)+b*dtw)/(1.0-a*dtw2)

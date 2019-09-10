@@ -135,6 +135,9 @@ eroporo=0.6 !(1-eroporo) in erosion formula
 erorate=864 !kg/m2/day
 erofrac=0.64 !0~1
 
+iDEPO=  1 !1:constant fraction; 2:calculated fraction
+depofracR=0.02 !0~1
+depofracL=0.02
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !initial concentration
