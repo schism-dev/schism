@@ -18,7 +18,7 @@
 !===============================================================================
 !===============================================================================
 
-      subroutine schism_init(iths,ntime)
+      subroutine schism_init(indir,iths,ntime)
 
 !     Most mpi fortran compiler has mpif.h
 !#ifdef USE_MPIMODULE
@@ -96,6 +96,7 @@
       include 'mpif.h'
 !#endif
 
+      character(len=*), intent(in) :: indir
       integer, intent(out) :: iths,ntime
 
 !     Functions
@@ -156,7 +157,7 @@
 #endif
 
 !     Name list
-      integer :: ntracer_gen,ntracer_age,sed_class,eco_class,flag_fib
+      integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
      &nspool,ihfskip,msc2,mdc2,dt,rnday
 
@@ -203,19 +204,26 @@
       wtimer(1,1)=wtmp1 !init section
 #endif
 
+!     Broadcast in/out dirs to all modules
+      in_dir=adjustl(indir//'/')
+      len_in_dir=len_trim(in_dir)
+      out_dir=adjustl(in_dir(1:len_in_dir)//'outputs/')
+      len_out_dir=len_trim(out_dir)
+
 !     All ranks open error message and other global output files
       call parallel_rrsync(1)
       if(myrank==0) then !open as replace
-        open(11,file='fatal.error',status='replace') !fatal errors
+        open(11,file=out_dir(1:len_out_dir)//'fatal.error',status='replace') !fatal errors
       else !open as old
-        open(11,file='fatal.error',status='old') !fatal errors
+        open(11,file=out_dir(1:len_out_dir)//'fatal.error',status='old') !fatal errors
       endif
       call parallel_rrsync(-1)
 
       fdb='nonfatal_0000'
       lfdb=len_trim(fdb)
       write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      open(12,file='outputs/'//fdb,status='replace') !non-fatal errors
+      !open(12,file='outputs/'//fdb,status='replace') !non-fatal errors
+      open(12,file=out_dir(1:len_out_dir)//fdb,status='replace') !non-fatal errors
 
 !     Temp.
 !      fdb='shapiro_0000'
@@ -228,10 +236,13 @@
 
 !...  Rank 0 writes mirror.out, global & local volume, energy etc data
       if(myrank==0) then
-        open(16,file='mirror.out',status='replace')
-        open(25,file='total_TR.dat',status='replace')
-        open(9,file='flux.dat',status='replace')
-        open(13,file='total.dat',status='replace')
+        open(16,file=out_dir(1:len_out_dir)//'mirror.out',status='replace')
+        open(25,file=out_dir(1:len_out_dir)//'total_TR.out',status='replace')
+        open(9,file=out_dir(1:len_out_dir)//'flux.out',status='replace')
+        open(13,file=out_dir(1:len_out_dir)//'total.out',status='replace')
+        open(33,file=out_dir(1:len_out_dir)//'JCG.out',status='replace')
+!        open(29,file=out_dir(1:len_out_dir)//'qnon.out',status='replace')
+        open(17,file=out_dir(1:len_out_dir)//'subcycling.out',status='replace')
 
         write(16,'(4a)')'Run begins at ',date,', ',timestamp
         write(13,'(a200)')'Time (hours), volume, mass, potential E, kinetic E, total E, friction loss (Joule), energy leak (Joule)'
@@ -257,7 +268,7 @@
       ibc=itmp; ibtp=itmp; ntracer_gen=itmp; ntracer_age=itmp; sed_class=itmp;
       eco_class=itmp; msc2=itmp; mdc2=itmp; nspool=0; ihfskip=0; ipre=0
       dt=tmp2; rnday=tmp2
-      open(15,file='param.nml',delim='apostrophe',status='old')
+      open(15,file=in_dir(1:len_in_dir)//'param.nml',delim='apostrophe',status='old')
       read(15,nml=CORE)
 
       !Check core parameters
@@ -446,7 +457,7 @@
 
 !...  Dump param.nml for checking
       if(myrank==0) then
-        open(15,file='param.out.nml',status='replace')
+        open(15,file=out_dir(1:len_out_dir)//'param.out.nml',status='replace')
         write(15,nml=CORE)
         write(15,nml=OPT)
         write(15,nml=SCHOUT)
@@ -1829,7 +1840,7 @@
         allocate(iflux_e(nea),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: iflux_e alloc')
 
-        open(32,file='fluxflag.prop',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
         max_flreg=-1
         do i=1,ne_global
           read(32,*)j,tmp1
@@ -1975,7 +1986,7 @@
 
 !...  Read in sigma coord. and kbp from vgrid.in if ivcor=1
       if(ivcor==1) then
-        open(19,file='vgrid.in',status='old')
+        open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
         read(19,*); read(19,*) nvrt
         do i=1,np_global
           read(19,*)j,itmp,swild(itmp:nvrt)
@@ -2201,7 +2212,7 @@
 
 !...  Compute lat/lon at element center for EcoSim 
 #if defined USE_ECO || defined USE_COSINE 
-      open(32,file='hgrid.ll',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
       read(32,*)
       read(32,*) !ne,np
       do i=1,np_global
@@ -2223,8 +2234,8 @@
 
 #ifdef USE_MARSH
 !...  Inputs for marsh migration model
-      open(10,file='marsh_init.prop',status='old')
-      open(32,file='marsh_barrier.prop',status='old')
+      open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
       do i=1,ne_global
         read(10,*)j,tmp1
         read(32,*)j,tmp2
@@ -2246,9 +2257,9 @@
 
 !... Read lat/lon for spectral spatial interpolation  in WWM
 #ifdef USE_WWM
-      inquire(file='hgrid.ll',exist=lexist)
+      inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
       if(lexist) then
-        open(32,file='hgrid.ll',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*)
         read(32,*) !ne,np
         do i=1,np_global
@@ -2271,7 +2282,7 @@
 !'     read interpolation weights from interp_atmo.gr3 created with external routine
 !      1 314 62  0.00232  0.09108 -0.07610  0.16515  0.00832
        if(myrank==0) WRITE(16,*)'Reading interp_atmo.gr3 for ', np_global, ' nodes'
-       open(32,file='interp_atmo.gr3',status='old')
+       open(32,file=in_dir(1:len_in_dir)//'interp_atmo.gr3',status='old')
        read(32,*)
         do i=1,np_global
           read(32,*)itmp,j,k,tmp1,tmp2,tmp3,tmp4,tmp5
@@ -2302,7 +2313,7 @@
           if(isbnd(1,i)/=0) ibnd_ext_int(i)=1 !weed out island nodes later
         enddo!i
 !       Identify island nodes
-        open(14,file='hgrid.gr3',status='old')
+        open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old')
         rewind(14)
         do i=1,2+np_global+ne_global; read(14,*); enddo;
         read(14,*); read(14,*);
@@ -2331,7 +2342,7 @@
 !-------------------------------------------------------------------------------
 ! Read in boundary condition and tidal info
 !-------------------------------------------------------------------------------
-      open(31,file='bctides.in',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'bctides.in',status='old')
       read(31,*) !start_time
 !...  Earth tidal potential
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
@@ -2339,7 +2350,7 @@
         allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: allocation failure for tamp etc')
 !'
-        open(32,file='hgrid.ll',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*)
         read(32,*) !ne,np
         do i=1,np_global
@@ -2529,7 +2540,7 @@
                 ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
                 inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
 !'
-                open(300+m,file=inputfile,status='old')
+                open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
               enddo !m
             else if(itrtype(i,k)==3) then !nudge to i.c.
               read(31,*) trobc(i,k) !nudging factor
@@ -2641,7 +2652,7 @@
           enddo !i
           deallocate(swild99,ibuf1,ibuf2)
 
-          !open(49,file='flux_blocks.th',status='old')
+          !open(49,file=in_dir(1:len_in_dir)//'flux_blocks.th',status='old')
           !Build message passing arrays for 2 ref. nodes
           !The proc that has ref. node 1 will calculate the flux first before broadcasting
           allocate(nhtrecv1(0:nproc-1),nhtsend1(0:nproc-1), &
@@ -2760,7 +2771,7 @@
 
 !     Read in source_sink.in and open t.h. files
       if(if_source==1) then
-        open(31,file='source_sink.in',status='old')
+        open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
         read(31,*)nsources
         allocate(ieg_source(max(1,nsources)),stat=istat)
         if(istat/=0) call parallel_abort('INIT: ieg_source failure')
@@ -2824,7 +2835,7 @@
 !     Initialize variables used in tsunami model (but bdef[1,2] and ibdef are available for all models)
       bdef=0 !total deformation
       if(imm==1) then !read in deformation at all nodes
-        open(32,file='bdef.gr3',status='old') !connectivity part not used
+        open(32,file=in_dir(1:len_in_dir)//'bdef.gr3',status='old') !connectivity part not used
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2844,7 +2855,7 @@
       if(ishapiro==1) then
         shapiro(:)=shapiro0
       else if(ishapiro==-1) then
-        open(32,file='shapiro.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2865,7 +2876,7 @@
 !...  Horizontal viscosity option
 !     ihorcon =0 means horizontal viscosity term=0
 !      if(ihorcon==1) then
-!        open(32,file='hvis_coef.gr3',status='old')
+!        open(32,file=in_dir(1:len_in_dir)//'hvis_coef.gr3',status='old')
 !        read(32,*)
 !        read(32,*) itmp1,itmp2
 !        if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2889,7 +2900,7 @@
       if(ihdif==0) then
         hdif=0
       else
-        open(32,file='hdif.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hdif.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2907,7 +2918,7 @@
       
 !     Advection flags
       if(nadv==0) then
-        open(10,file='adv.gr3',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'adv.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2927,7 +2938,7 @@
 
 !...  Bottom friction
       if(nchi==-1) then !read in Manning's n for 2D model
-        open(32,file='manning.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'manning.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2942,7 +2953,7 @@
         enddo
         close(32)
       else if(nchi==0) then !read in drag coefficients for 3D model
-        open(32,file='drag.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'drag.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2964,7 +2975,7 @@
         enddo
         close(32)
       else if(nchi==1) then !read in roughness in meters (3D)
-        open(32,file='rough.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'rough.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -2987,7 +2998,7 @@
       else !ncor=1
         if(ics==1.and.myrank==0) write(16,*)'Check slam0 and sfea0 as variable Coriolis is used'
 !'
-        open(32,file='hgrid.ll',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*)
         read(32,*) !ne,np
         do i=1,np_global
@@ -3002,7 +3013,7 @@
 
         fc=2*omega_e*sin(sfea0)
         beta=2*omega_e*cos(sfea0)
-        if(myrank==0) open(31,file='coriolis.out',status='replace')
+        if(myrank==0) open(31,file=out_dir(1:len_out_dir)//'coriolis.out',status='replace')
 !$OMP parallel do default(shared) private(i,id1,id2,sphi)
         do i=1,nsa
           id1=isidenode(1,i)
@@ -3021,7 +3032,7 @@
 
 !     Wind 
       if(nws>=2.and.nws<=3) then !CORIE mode; read in hgrid.ll and open debug outputs
-        open(32,file='hgrid.ll',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*)
         read(32,*) !ne,np
         do i=1,np_global
@@ -3038,14 +3049,14 @@
         fdb='sflux_0000'
         lfdb=len_trim(fdb)
         write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-        open(38,file='outputs/'//fdb,status='replace')
+        open(38,file=out_dir(1:len_out_dir)//fdb,status='replace')
 #endif
       endif
 
       windfactor=1 !intialize for default
       if(nws>0) then
         if(iwindoff/=0) then
-          open(32,file='windfactor.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
           read(32,*)
           read(32,*) itmp1,itmp2
           if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3076,7 +3087,7 @@
         endif
 
 !       Read in albedo
-        open(32,file='albedo.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'albedo.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3100,7 +3111,7 @@
 !       5: 0.78 1.40 7.9 (Jerlov type III)
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
-        open(32,file='watertype.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3120,7 +3131,7 @@
       if(itur==0) then
         dfv=dfv0; dfh=dfh0
       else if(itur==-1) then !VVD
-        open(10,file='vvd.in',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'vvd.in',status='old')
         read(10,*) !nvrt
         do j=1,nvrt
           read(10,*)k,dfv0,dfh0
@@ -3129,8 +3140,8 @@
         enddo !j
         close(10)
       else if(itur==-2) then !HVD
-        open(10,file='hvd.mom',status='old')
-        open(32,file='hvd.tran',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'hvd.mom',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'hvd.tran',status='old')
         read(10,*)
         read(10,*) !np
         read(32,*)
@@ -3151,8 +3162,8 @@
 !       Common variables for both models
         cmiu0=sqrt(0.3d0)
 !       read in mixing limits
-        open(31,file='diffmin.gr3',status='old')
-        open(32,file='diffmax.gr3',status='old')
+        open(31,file=in_dir(1:len_in_dir)//'diffmin.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'diffmax.gr3',status='old')
         read(31,*)
         read(31,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) & 
@@ -3301,7 +3312,7 @@
 !      if(lq/=0) then
 !        lqk=lq
 !      else !lq==0
-!        open(32,file='lqk.gr3',status='old')
+!        open(32,file=in_dir(1:len_in_dir)//'lqk.gr3',status='old')
 !        read(32,*)
 !        read(32,*) itmp1,itmp2
 !        if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3325,7 +3336,7 @@
       if(inter_mom/=-1) then
         krvel=inter_mom
       else !-1
-        open(32,file='krvel.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'krvel.gr3',status='old')
         read(32,*)
         read(32,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3355,7 +3366,7 @@
 
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv -similar to T,S)
       if(inu_elev==1) then
-        open(10,file='elev_nudge.gr3',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'elev_nudge.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3372,7 +3383,7 @@
       endif !inu_elev
 
       if(inu_uv==1) then
-        open(10,file='uv_nudge.gr3',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'uv_nudge.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3394,7 +3405,7 @@
         if(ntrs(k)<=0) cycle
 
         if(inu_tr(k)/=0) then
-          open(10,file=tr_mname(k)//'_nudge.gr3',status='old')
+          open(10,file=in_dir(1:len_in_dir)//tr_mname(k)//'_nudge.gr3',status='old')
           read(10,*)
           read(10,*) itmp1,itmp2
           if(itmp1/=ne_global.or.itmp2/=np_global) &
@@ -3411,7 +3422,7 @@
         endif !inu_tr(k)/=0
 
         if(inu_tr(k)==2) then
-          j=nf90_open(tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
           if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
           !Static info
           j=nf90_inq_dimid(ncid_nu(k),'node',mm)
@@ -3445,10 +3456,10 @@
       sav_di=0 !D [m]
       if(isav==1) then
         !\lambda=D*Nv [1/m]
-        open(10,file='sav_D.gr3',status='old')
-        open(31,file='sav_N.gr3',status='old')
+        open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
+        open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
         !SAV height [m]
-        open(32,file='sav_h.gr3',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         read(31,*); read(31,*)k,m
@@ -3505,7 +3516,7 @@
 !     and some parts of the code are bypassed for efficiency
       itvd_e=0 !init. for upwind
       if(itr_met>=2) then
-        open(32,file='tvd.prop',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
         do i=1,ne_global
           read(32,*)j,tmp
           itmp=nint(tmp)
@@ -3524,7 +3535,7 @@
         nvar_sta=9 !# of output variables
         allocate(iof_sta(nvar_sta),stat=istat)
         if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
-        open(32,file='station.in',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
 !       Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
         read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
         read(32,*)nout_sta
@@ -3604,9 +3615,9 @@
             ifile_char=adjustl(ifile_char)  !place blanks at end
             ifile_len=len_trim(ifile_char)
             if(ihot==2) then
-              open(250+i,file='outputs/staout_'//ifile_char(1:ifile_len),status='old')
+              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
             else
-              open(250+i,file='outputs/staout_'//ifile_char(1:ifile_len),status='replace')
+              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
             endif
           enddo !i
           write(16,*)'done preparing station outputs'
@@ -3617,7 +3628,7 @@
 #ifdef USE_HA
 !...  Read harmonic analysis information (Adapted from ADCIRC)
       if(iharind/=0) then
-        open(31,file='harm.in',status='old')
+        open(31,file=in_dir(1:len_in_dir)//'harm.in',status='old')
 !...
 !...  READ AND CHECK INFORMATION ABOUT HARMONIC ANALYSIS OF MODEL RESULTS
 !...  
@@ -3950,7 +3961,7 @@
       if(ic_elev==0) then
         eta2=0
       else    
-        open(32,file='elev.ic',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'elev.ic',status='old')
         read(32,*)
         read(32,*)
         do i=1,np_global
@@ -3992,7 +4003,7 @@
 !...  at nodes and elements as well (which will be over-written for other cases)
       if(ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2) then !T,S share same i.c. flag
 !       Read in intial mean S,T
-        open(32,file='ts.ic',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'ts.ic',status='old')
         read(32,*)nz_r
         if(nz_r<2) then
           write(errmsg,*)'Change nz_r:',nz_r
@@ -4123,8 +4134,8 @@
         tr_nd0(1,:,:)=10; tr_nd0(2,:,:)=0; tr_el(1,:,:)=10; tr_el(2,:,:)=0
       else !read in S,T
         if(flag_ic(1)==1) then !T,S share flag
-          open(31,file='temp.ic',status='old')
-          open(32,file='salt.ic',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'salt.ic',status='old')
           read(31,*) 
           read(31,*) !np
           do i=1,np_global
@@ -4198,7 +4209,7 @@
       endif
 
       if(nws==1) then
-        open(22,file='wind.th',status='old')
+        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
         read(22,*)tmp1,wx1,wy1
         read(22,*)tmp2,wx2,wy2
         if(abs(tmp1)>1.e-4.or.abs(tmp2-wtiminc)>1.e-4) &
@@ -4214,7 +4225,7 @@
       endif
 
       if(nws==4) then
-        open(22,file='wind.th',status='old')
+        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
         read(22,*)tmp1,rwild(:,:)
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
@@ -4279,7 +4290,7 @@
 !       starts from t=0,dt,2*dt ... (format: windu,windv; similar to nws=1).
 !       Overwrite wind with wind.th
 
-!        open(22,file='wind.th',status='old')
+!        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
 !        read(22,*)tmp,wx1,wy1
 !        windx1=wx1; windx2=wx1
 !        windy1=wy1; windy2=wy1
@@ -4287,7 +4298,7 @@
 
 !        if(nws==3) then
 !!         Open sflux.th (time interval is dt, not wtiminc!)
-!          open(23,file='sflux.th',status='old')
+!          open(23,file=in_dir(1:len_in_dir)//'sflux.th',status='old')
 !          read(23,*) !t=0
 !!         To heat up water, fluxsu00<0, srad00>0
 !          read(23,*) tmp,fluxsu00,srad00 !time, total surface flux, solar radiation
@@ -4307,7 +4318,7 @@
 !      !May want to use heat exchange instead
 !      if(iSun==2) then
 !        if(myrank==0) write(16,*)'start reading ICM surface T...'
-!        open(62,file='surface_t.th',status='old')
+!        open(62,file=in_dir(1:len_in_dir)//'surface_t.th',status='old')
 !        read(62,*)
 !        read(62,*)
 !        read(62,*)
@@ -4434,7 +4445,7 @@
 
 !...  Writes tracers indices for output
       if(myrank==0) then
-        open(31, file='ecosim.out', status='replace')
+        open(31, file=out_dir(1:len_out_dir)//'ecosim.out', status='replace')
         write(31,*) 'Ecological model output'
         write(31,*) 'Output identifiers'
 !        write(31,*) 'itemp', itemp
@@ -4513,7 +4524,7 @@
       if(nws/=2) then
         call parallel_abort('EcoSim must use nws=2')
 !      else !nws=0
-!        open(31,file='atmos.in', status='old')
+!        open(31,file=in_dir(1:len_in_dir)//'atmos.in', status='old')
 !        if(myrank==0) write(16,*) 'Reading atmospheric parameters from atmos.in...'
 !'       
 !        read(31,*)(swild(i),i=1,6) !Uwind(1),Vwind(1),Pair(1),Hair(1),Tair(1),cloud(1)
@@ -4553,8 +4564,8 @@
       if(flag_fib==2.and.nws/=2) call parallel_abort('FIB model: Canteras model must use nws=2')
 
       if(nvrt>2)then ! 3D model is used, and sinking is computed
-         open(31,file='sinkfib.gr3',status='old')
-         open(32,file='fraction_fib.gr3',status='old')
+         open(31,file=in_dir(1:len_in_dir)//'sinkfib.gr3',status='old')
+         open(32,file=in_dir(1:len_in_dir)//'fraction_fib.gr3',status='old')
 
          read(31,*)
          read(31,*) !np
@@ -4580,8 +4591,8 @@
       end if !nvrt > 2
 
       if(flag_fib==1)then
-         open(31,file='kkfib_1.gr3',status='old')
-         open(32,file='kkfib_2.gr3',status='old')
+         open(31,file=in_dir(1:len_in_dir)//'kkfib_1.gr3',status='old')
+         open(32,file=in_dir(1:len_in_dir)//'kkfib_2.gr3',status='old')
   
          read(31,*)
          read(31,*) !np
@@ -4619,7 +4630,7 @@
               write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
               ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
               inputfile=tr_mname(mm)//'_hvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=inputfile,status='old')
+              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
               read(10,*)
               read(10,*) !np
               do j=1,np_global
@@ -4640,7 +4651,7 @@
               ifile_char=adjustl(ifile_char) 
               ifile_len=len_trim(ifile_char)
               inputfile=tr_mname(mm)//'_vvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=inputfile,status='old')
+              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
               read(10,*)nz_r2
               if(nz_r2<2) then
                 write(errmsg,*)'Change nz_r2:',nz_r2
@@ -4836,7 +4847,7 @@
         allocate(buf3(ns_global),stat=istat)
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
-        j=nf90_open('hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
 !'      Sanity check dims
@@ -5681,7 +5692,7 @@
 !...  find position in the wind input file for nws=1,2, and read in wind[x,y][1,2]
 !...  Wind vector always in lat/lon frame
         if(nws==1) then
-          open(22,file='wind.th',status='old')
+          open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
           rewind(22)
           ninv=time/wtiminc
           wtime1=ninv*wtiminc 
@@ -5697,7 +5708,7 @@
         endif
 
         if(nws==4) then
-          open(22,file='wind.th',status='old')
+          open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
           rewind(22)
           ninv=time/wtiminc
           wtime1=ninv*wtiminc
@@ -5738,25 +5749,6 @@
             shum1=0; shum2=0
           endif
 
-!         Overwrite wind with wind.th
-!          open(22,file='wind.th',status='old')
-!          rewind(22)
-!          do it=0,iths
-!            read(22,*)tmp,wx1,wy1
-!          enddo !it
-!          windx1=wx1; windx2=wx1
-!          windy1=wy1; windy2=wy1
-!         End
-
-!          if(nws==3) then
-!!           Read sflux.th
-!            open(23,file='sflux.th',status='old')
-!            rewind(23)
-!            do it=0,iths
-!              read(23,*)
-!            enddo
-!            read(23,*)tmp,fluxsu00,srad00
-!          endif !nws==3
         endif !nws
 
 #ifdef USE_SIMPLE_WIND
@@ -5789,7 +5781,7 @@
 !        !VIMS surface temperature mode added by YC02062013
 !        if(iSun==2) then
 !          if(myrank==0) write(16,*)'doing ICM hotstart surface T..'
-!          open(62,file='surface_t.th',status='old')
+!          open(62,file=in_dir(1:len_in_dir)//'surface_t.th',status='old')
 !          rewind(62)
 !          read(62,*)
 !          read(62,*)
@@ -5902,7 +5894,7 @@
 
 !...  Init reading t.h. files 
       if(nettype>0) then
-        open(50,file='elev.th',status='old')
+        open(50,file=in_dir(1:len_in_dir)//'elev.th',status='old')
         !Get dt 1st
         read(50,*)tmp !,ath(1:nettype,1,1,1)
         read(50,*)th_dt(1,1) !,ath(1:nettype,1,2,1)
@@ -5918,7 +5910,7 @@
       endif !nettype
 
       if(nfltype>0) then 
-        open(51,file='flux.th',status='old')
+        open(51,file=in_dir(1:len_in_dir)//'flux.th',status='old')
         read(51,*) tmp !,ath(1:nfltype,1,1,2)
         read(51,*) th_dt(1,2) !
         if(abs(tmp)>1.e-6.or.th_dt(1,2)<dt) call parallel_abort('INIT: check flux.th')
@@ -5961,7 +5953,7 @@
 !      nrecl_tr2(:)=nbyte*(1+nnode_tr2(:)*nvrt*ntrs(:))
 
       if(nettype2>0) then
-        j=nf90_open('elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('init: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
@@ -5987,7 +5979,7 @@
       endif !nettype2
 
       if(nfltype2>0) then
-        j=nf90_open('uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
+        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
         if(j/=NF90_NOERR) call parallel_abort('init: uv3D.th.nc')
         j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
@@ -6018,7 +6010,7 @@
       do i=1,natrm
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
-          j=nf90_open(tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
           if(j/=NF90_NOERR) call parallel_abort('init: tr3D.th')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
@@ -6057,7 +6049,7 @@
 
       if(if_source==1) then
         if(nsources>0) then
-          open(63,file='vsource.th',status='old') !values (>=0) in m^3/s
+          open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
           read(63,*)tmp,ath3(1:nsources,1,1,1)
           read(63,*)th_dt3(1),ath3(1:nsources,1,2,1)
           if(abs(tmp)>1.d-6.or.th_dt3(1)<dt) call parallel_abort('INIT: vsource.th start time wrong')
@@ -6072,7 +6064,7 @@
 
           !msource.th: values in concentration dimension (psu etc)
           !Use -9999 to injet ambient values
-          open(65,file='msource.th',status='old')
+          open(65,file=in_dir(1:len_in_dir)//'msource.th',status='old')
           read(65,*)tmp,ath3(1:nsources,1:ntracers,1,3)
           read(65,*)th_dt3(3),ath3(1:nsources,1:ntracers,2,3)
           if(abs(tmp)>1.d-6.or.th_dt3(3)<dt) call parallel_abort('INIT: msource.th start time wrong')
@@ -6087,7 +6079,7 @@
         endif !nsources
    
         if(nsinks>0) then
-          open(64,file='vsink.th',status='old') !values (<=0) in m^3/s
+          open(64,file=in_dir(1:len_in_dir)//'vsink.th',status='old') !values (<=0) in m^3/s
           read(64,*)tmp,ath3(1:nsinks,1,1,2)
           read(64,*)th_dt3(2),ath3(1:nsinks,1,2,2)
           if(abs(tmp)>1.e-6.or.th_dt3(2)<dt) call parallel_abort('INIT: vsink.th start time wrong')
@@ -6157,7 +6149,7 @@
       fdb='local_to_global_0000'
       lfdb=len_trim(fdb)
       write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      open(10,file='outputs/'//fdb,status='replace')
+      open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
 
 !     header info (except ivs, i23d; the 1st two can be inferred from output names and 
 !     last two are not important)

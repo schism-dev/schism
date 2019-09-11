@@ -95,7 +95,7 @@ subroutine schism_main
   use schism_msgp, only: myrank !! debug only
   implicit none
   integer :: it,iths,ntime
-  call schism_init(iths,ntime)
+  call schism_init('./',iths,ntime)
   do it=iths+1,ntime
     call schism_step(it)
   enddo !it

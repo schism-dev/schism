@@ -240,7 +240,8 @@ CONTAINS
 ! 04/2017 - T.Guerin: Added user-defined dryslope and wetslope
 !--------------------------------------------------------------------
 
-  USE schism_glbl, ONLY: dldxy,idry,nea,elnode,npa,rkind,xnd,ynd
+  USE schism_glbl, ONLY: dldxy,idry,nea,elnode,npa,rkind,xnd,ynd, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
   USE schism_msgp, ONLY: comm,exchange_p2d,ierr,itype,myrank,nproc,    &
                        parallel_abort
 
@@ -267,7 +268,7 @@ CONTAINS
 !--------------------------------------------------------------------
 
 !- Check if user file is provided -----------------------------------
-  INQUIRE(FILE='slope_cr.gr3',EXIST=lexist)
+  INQUIRE(FILE=in_dir(1:len_in_dir)//'slope_cr.gr3',EXIST=lexist)
 
 !Error: YJZ - not working with quads
 !- Start iterative procedure ----------------------------------------

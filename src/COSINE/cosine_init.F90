@@ -42,7 +42,8 @@ subroutine read_cosine_param
 !---------------------------------------------------------------------------
 !read parameters in cosine.in
 !---------------------------------------------------------------------------
-  use schism_glbl, only : rkind,npa,nea,ne_global,np_global,ipgl,iegl,elnode,i34
+  use schism_glbl, only : rkind,npa,nea,ne_global,np_global,ipgl,iegl,elnode,i34, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,parallel_abort
   use cosine_mod
   use misc_modules
@@ -160,7 +161,7 @@ subroutine read_cosine_param
   !read bottom grazing information
   if(ibgraze==1) then
     bgraze=0.0
-    open(454,file='bgraze.prop',status='old')
+    open(454,file=in_dir(1:len_in_dir)//'bgraze.prop',status='old')
     do i=1,ne_global
       read(454,*)itmp,ytmp
       if(iegl(itmp)%rank==myrank) then
@@ -169,7 +170,7 @@ subroutine read_cosine_param
     enddo
     close(454)
   elseif(ibgraze==2) then !temporally and spatially varying inputs
-    open(455,file='bgraze.th',status='old') 
+    open(455,file=in_dir(1:len_in_dir)//'bgraze.th',status='old') 
     bgraze=0.0
     time_cosine(2)=-999.0
   elseif(ibgraze/=0) then
@@ -181,7 +182,7 @@ subroutine read_cosine_param
   if(iclam==1) then
     nclam=nclam0  
   elseif (iclam==2) then
-    open(452,file='nclam.gr3',status='old')
+    open(452,file=in_dir(1:len_in_dir)//'nclam.gr3',status='old')
     read(452,*);read(452,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check nclam.gr3')
     do i=1,np_global
@@ -200,7 +201,7 @@ subroutine read_cosine_param
       nclam(i)=nclam(i)/i34(i)
     enddo
   elseif (iclam==3) then
-    open(456,file='nclam.th',status='old') 
+    open(456,file=in_dir(1:len_in_dir)//'nclam.th',status='old') 
     time_cosine(3)=-999.0
   endif 
 
@@ -209,7 +210,7 @@ subroutine read_cosine_param
   if(ispm==0) then !constant
     SPM=spm0
   elseif(ispm==1) then !spatial varying
-    open(452,file='SPM.gr3',status='old')
+    open(452,file=in_dir(1:len_in_dir)//'SPM.gr3',status='old')
     read(452,*); read(452,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check SPM.gr3')
     do i=1,np_global
@@ -231,7 +232,7 @@ subroutine read_cosine_param
     call parallel_abort('ispm=2, need to turn on SED module')
 #endif 
   elseif(ispm==3) then !use spatial and temporal varying SPM
-    open(453,file='SPM.th',status='old')
+    open(453,file=in_dir(1:len_in_dir)//'SPM.th',status='old')
     time_cosine(1)=-999.0
   else
     call parallel_abort
@@ -292,7 +293,8 @@ subroutine read_cosine_stainfo
 !output cosine parameters to check
 !---------------------------------------------------------------------------
   use cosine_mod, only : nsta,ista,depsta,stanum,nspool_cosine
-  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode
+  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,nproc,parallel_abort
   implicit none
 
@@ -304,7 +306,7 @@ subroutine read_cosine_stainfo
   logical :: lexist
 
   !read station info.
-  open(450,file='cstation.in',status='old')
+  open(450,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
   read(450,*)
   read(450,*)nstation
   do i=1,nstation
@@ -356,12 +358,12 @@ subroutine read_cosine_stainfo
 
   !open a station output file
   write(fn,'(i4.4)')myrank
-  inquire(file='outputs/cstation_'//fn//'.out',exist=lexist)
+  inquire(file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',exist=lexist)
   if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
-    open(451,file='outputs/cstation_'//fn//'.out',form='unformatted',status='replace')
+    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',status='replace')
     write(451)sum(nsta),dt*nspool_cosine
   elseif(ihot==2.and.lexist) then
-    open(451,file='outputs/cstation_'//fn//'.out',form='unformatted',access='append',status='old')
+    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',access='append',status='old')
   else
     call parallel_abort('unknown ihot, CoSiNE')
   endif
@@ -375,12 +377,13 @@ subroutine check_cosine_param
 !---------------------------------------------------------------------------
   use cosine_mod
   use schism_msgp, only : myrank,parallel_abort
+  use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
   implicit none
 
   !local variables
   integer :: i,j
   if(myrank==0) then
-    open(31,file='cosine_param.out',status='replace')
+    open(31,file=out_dir(1:len_out_dir)//'cosine_param.out',status='replace')
     write(31,*) 'Cosine Parameters used in the model'
 
     write(31,*)

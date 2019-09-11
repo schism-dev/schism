@@ -37,7 +37,8 @@
 !                                                                    !
 !--------------------------------------------------------------------!
 
-      USE schism_glbl, ONLY: rkind,ntrs,iwsett,wsett,irange_tr,ddensed,grav,rho0,errmsg
+      USE schism_glbl, ONLY: rkind,ntrs,iwsett,wsett,irange_tr,ddensed, &
+   &grav,rho0,errmsg,in_dir,out_dir,len_in_dir,len_out_dir
       USE schism_msgp, ONLY: myrank,parallel_abort
       USE sed_mod      
 
@@ -77,7 +78,7 @@
       ised_dump=-100
       ierosion=-100
 
-      OPEN(5,FILE='sediment.in',STATUS='old')
+      OPEN(5,FILE=in_dir(1:len_in_dir)//'sediment.in',STATUS='old')
       IF(myrank==0) WRITE(16,*)'reading sediment.in'
       IF(myrank==0) WRITE(16,'(A,A,I2,A)')'##### Number of Tracers',  &
       &             ' / Sediment Classes required in sediment.in: ', &

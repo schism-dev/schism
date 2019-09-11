@@ -1725,7 +1725,7 @@
 !          fdb='Cd_0000'
 !          lfdb=len_trim(fdb)
 !          write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!          open(32,file='outputs/'//trim(fdb),status='unknown')
+!          open(32,file=out_dir(1:len_out_dir)//trim(fdb),status='unknown')
 !          !write(32,*)'Drag coefficents for nchi=1 or -1'
 !          !write(32,*)nsa
 !          do i=1,nsa
@@ -1971,8 +1971,6 @@
 !      fdb='MY_0000'
 !      lfdb=len_trim(fdb)
 !      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!      open(32,file=trim(fdb),status='unknown')
-!      rewind(32)
 
 !$OMP do
       do j=1,npa
@@ -2317,8 +2315,6 @@
 !      fdb='MY_0000'
 !      lfdb=len_trim(fdb)
 !      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!      open(32,file=trim(fdb),status='unknown')
-!      rewind(32)
 
 !!$OMP do
       kppian=0
@@ -3113,7 +3109,7 @@
       if(ibtrack_test==1) then !implies ibc==1.and.ibtp==0
         !For first step, generate vertical profiles for T,S
         if(it==iths_main+1) then
-          open(31,file='temp.ic',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
           read(31,*)
           read(31,*)
           do i=1,np_global
@@ -3165,7 +3161,6 @@
 !      fdb='btrack_0000'
 !      lfdb=len_trim(fdb)
 !      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!      open(10,file='outputs/'//fdb,status='unknown')
 
 !     temp fix
 !      if(ics==2) call zonal_flow
@@ -8450,16 +8445,6 @@
 !      enddo !it
 
       first_call=.false.
-
-!     Temp. fix for Stampede cluster problem
-#ifdef STAMPEDE
-      if(myrank==0) then
-        open(32,file='die.stam',status='old')
-        read(32,*)istat
-        if(istat/=0) call parallel_abort('Aborting due to die.stam')
-        close(32)
-      endif
-#endif
 
 !     Deallocate temp. arrays to avoid memory leak
       if(if_source==1) deallocate(msource)

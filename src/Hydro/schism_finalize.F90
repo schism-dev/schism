@@ -54,7 +54,7 @@
       fdb='maxelev_0000'
       lfdb=len_trim(fdb)
       write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      open(10,file='outputs/'//fdb,status='replace')
+      open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
         write(10,'(i11,3(1x,e20.12))')iplg(i),xnd(i),ynd(i),elevmax(i)
@@ -64,7 +64,7 @@
       fdb='maxdahv_0000'
       lfdb=len_trim(fdb)
       write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      open(10,file='outputs/'//fdb,status='replace')
+      open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
         write(10,'(i11,5(1x,e20.12))')iplg(i),xnd(i),ynd(i),dav_maxmag(i),dav_max(1:2,i)
@@ -94,7 +94,7 @@
             END DO
             TIMEBEG=ITMV*dt
             write(it_char(1:4),'(i4.4)') myrank
-            open(55,file='outputs/harme.55'//it_char(1:4))
+            open(55,file=out_dir(1:len_out_dir)//'harme.55'//it_char(1:4))
             WRITE(55,*) np
           ENDIF
         endif

@@ -91,7 +91,8 @@
 !***********************************************************************
 !
       MODULE HARM
-      USE schism_glbl, only: rkind,pi,MNHARF,CHARMV,ipgl
+      USE schism_glbl, only: rkind,pi,MNHARF,CHARMV,ipgl,in_dir,out_dir, &
+     &len_in_dir,len_out_dir
 !
 !     REAL(8),PRIVATE,PARAMETER :: PI=3.141592653589793D0
       INTEGER NFREQ
@@ -412,7 +413,7 @@
 !**** Open velocity station harmonic output file and write header information
 !
       write(DIRNAME(1:4),'(i4.4)') myrank
-      open(53,file='outputs/harme.53'//DIRNAME(1:4))
+      open(53,file=out_dir(1:len_out_dir)//'harme.53'//DIRNAME(1:4))
       write(53,*) nfreq+nf
       do j=1,nfreq+nf
          write(53,3679) hafreq(j),HAFF(j),HAFACE(j),namefr(j)
@@ -584,7 +585,7 @@
 !**** Open velocity station harmonic output file and write header information
 !
       write(DIRNAME(1:4),'(i4.4)') myrank
-      open(54,file='outputs/harmv.54'//DIRNAME(1:4))
+      open(54,file=out_dir(1:len_out_dir)//'harmv.54'//DIRNAME(1:4))
       write(54,*) nfreq+nf
       do j=1,nfreq+nf
          write(54,3679) hafreq(j),HAFF(j),HAFACE(j),namefr(j)

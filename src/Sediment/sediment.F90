@@ -94,12 +94,12 @@
 
       USE sed_mod
       USE schism_glbl, ONLY : rkind,nvrt,ne,nea,npa,np,irange_tr,ntrs,idry_e,   &
-     &                      idry,area,znl,dt,i34,elnode,xctr,yctr,   &
-     &                      kbe,ze,pi,nne,indel,tr_el,flx_bt,    &
-     &                      errmsg,ielg,iplg,nond_global,iond_global,&
-     &                      ipgl,nope_global,np_global,dp,h0,dpe,    &
-     &                      iegl,out_wwm,pi,eta2,dp00,dldxy,we,time_stamp, &
-     &                      itur,Phai
+     & idry,area,znl,dt,i34,elnode,xctr,yctr,   &
+     & kbe,ze,pi,nne,indel,tr_el,flx_bt,    &
+     & errmsg,ielg,iplg,nond_global,iond_global,&
+     & ipgl,nope_global,np_global,dp,h0,dpe,    &
+     & iegl,out_wwm,pi,eta2,dp00,dldxy,we,time_stamp, &
+     & itur,Phai,in_dir,out_dir,len_in_dir,len_out_dir
                             !Tsinghua group:+alphd,im_pick_up,Two_phase_mix
                             !phai_m !1120:-alphd,im_pick_up,Two_phase_mix,phai_m  +itur,Phai
       USE schism_msgp
@@ -241,7 +241,7 @@
         !For 1st call (including hot), init. read
         if(first_call) then
           !!Time stamps in this file must be one of the time steps
-          open(18,file='sed_dump.in',status='old')
+          open(18,file=in_dir(1:len_in_dir)//'sed_dump.in',status='old')
           read(18,*)
           do 
             read(18,*,iostat=k)t_dump,ne_dump !time in sec

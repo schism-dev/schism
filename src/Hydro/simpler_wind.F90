@@ -34,7 +34,8 @@
       SUBROUTINE READ_REC_ATMO_FD(rec, windx, windy, pr)
 !      input is record in netcdf that you want to read, outputs are U10,V10,MSLP     
       USE NETCDF
-      USE schism_glbl, only : npa, rkind, cf_x2, cf_x1, cf_y2, cf_y1, cf_i, cf_j, cf_denom
+      USE schism_glbl, only : npa, rkind, cf_x2, cf_x1, cf_y2, cf_y1, cf_i, cf_j, cf_denom, &
+     &in_dir,out_dir,len_in_dir,len_out_dir
 !      those are already computed weights externaly and read in the schism_init 
       USE schism_msgp, only : parallel_abort, myrank
 
@@ -56,7 +57,7 @@
         
 ! Open NC file
 ! hardcoded WIND MSLP file name to UVP.nc !
-      istat = NF90_OPEN('UVP.nc', nf90_nowrite, fid)
+      istat = NF90_OPEN(in_dir(1:len_in_dir)//'UVP.nc', nf90_nowrite, fid)
 	IF (istat /= 0) THEN
             CALL PARALLEL_ABORT('READ_REC_ATMO_FD: missing UVP.nc file as defined nws = 5 in param.in')
 	ENDIF
@@ -194,7 +195,7 @@
 ! Schism grid. All dimensions are size of number of nodes in the grid. Input is record that you wish to read
 ! and outputs are windx, windy, pressure for the record at nodes for the tile.
       USE NETCDF
-      USE schism_glbl, only : npa, np_global, ipgl, rkind
+      USE schism_glbl, only : npa, np_global, ipgl,rkind,in_dir,out_dir,len_in_dir,len_out_dir
       USE schism_msgp, only : myrank, parallel_abort
        
       IMPLICIT NONE
@@ -207,7 +208,7 @@
       REAL(rkind)                   :: pin(1:np_global), uin(1:np_global), vin(1:np_global)
 
 ! open NC file, the name is hardcoded
-      istat = NF90_OPEN('UVP_direct.nc', NF90_NOWRITE, fid)
+      istat = NF90_OPEN(in_dir(1:len_in_dir)//'UVP_direct.nc', NF90_NOWRITE, fid)
 	IF (istat /= 0) THEN
             CALL PARALLEL_ABORT('READ_REC_ATMO_FD: missing UVP_direct.nc file')
 	ENDIF

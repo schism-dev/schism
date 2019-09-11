@@ -7,7 +7,10 @@
 
 module fabm_schism
 
-  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np,bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy,ze,kbe,wsett,ielg,iplg,xnd,ynd,rkind,xlon,ylat,lreadll,iwsett,irange_tr,epsf,dfv
+  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np, &
+&bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy,ze,kbe,wsett,ielg,iplg, &
+&xnd,ynd,rkind,xlon,ylat,lreadll,iwsett,irange_tr,epsf,dfv,in_dir,out_dir, &
+&len_in_dir,len_out_dir
   use schism_msgp
   use misc_modules, only: get_param
   use fabm
@@ -112,7 +115,7 @@ module fabm_schism
   fs%fabm_ready=.false.
  
   ! read driver parameters
-  inquire(file='schism_fabm.in',exist=file_exists)
+  inquire(file=in_dir(1:len_in_dir)//'schism_fabm.in',exist=file_exists)
   if (file_exists) then
     call get_param('schism_fabm.in','external_spm_extinction',2,tmp_int,fs%external_spm_extinction,tmp_string)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
@@ -124,9 +127,9 @@ module fabm_schism
   ! build model tree
   if (configuration_method==-1) then
     configuration_method = 1
-    inquire(file='fabm.yaml',exist=file_exists)
+    inquire(file=in_dir(1:len_in_dir)//'fabm.yaml',exist=file_exists)
     if (.not.file_exists) then
-      inquire(file='fabm.nml',exist=file_exists)
+      inquire(file=in_dir(1:len_in_dir)//'fabm.nml',exist=file_exists)
       if (file_exists) configuration_method = 0
     end if
   end if
@@ -681,7 +684,7 @@ module fabm_schism
   integer                         :: time_dimid,time_id,ntime,time_index
 
   ! open netcdf
-  status = nf90_open(ncfilename, nf90_nowrite, ncid)
+  status = nf90_open(in_dir(1:len_in_dir)//ncfilename, nf90_nowrite, ncid)
   if (status /= nf90_noerr) then
     if (myrank==0) write(16,*) 'init_fabm: read from file skipped, file not found: ',trim(ncfilename)
     return

@@ -43,7 +43,7 @@
       USE schism_glbl, only : bdy_frc,flx_sf,flx_bt,nea,nvrt,tr_el,& !tsel,
                             &idry_e,kbe,ze,npa,dt,eta2,dp,&
                             &ielg,errmsg,irange_tr,&
-                            &iwater_type,srad,elnode,i34  !ntracers
+                            &iwater_type,srad,elnode,i34,flag_fib
       USE schism_msgp, only : myrank,parallel_abort
       USE fib_param
 
@@ -435,4 +435,4 @@
 ! ---------------------------------------------------------------------------------------
 
       RETURN
-      END SUBROUTINE
+      END SUBROUTINE fib

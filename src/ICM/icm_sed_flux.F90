@@ -195,7 +195,8 @@ subroutine read_icm_sed_param
 !read sediment flux model parameters
 !---------------------------------------------------------------------C
   use icm_sed_mod
-  use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode
+  use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod, only : iCheck,isav_icm,iTBen
   use misc_modules
@@ -398,7 +399,7 @@ subroutine read_icm_sed_param
     enddo !i
   elseif(ispvarb==2) then
    !more work needed, similar to read 'settling.gr3'
-   open(31,file='vbm.gr3',status='old')
+   open(31,file=in_dir(1:len_in_dir)//'vbm.gr3',status='old')
    close(31)
   else
     write(errmsg,*)'unknown ispvarb in sediment parameters:',ispvarb
@@ -427,7 +428,7 @@ subroutine read_icm_sed_param
     enddo !i
   elseif(ispvarlr==2) then
    !more work needed, similar to read 'settling.gr3'
-   open(31,file='frac_pom.gr3',status='old')
+   open(31,file=in_dir(1:len_in_dir)//'frac_pom.gr3',status='old')
    close(31)
   else
     write(errmsg,*)'unknown ispvalr in sediment parameters:',ispvarlr
@@ -437,7 +438,7 @@ subroutine read_icm_sed_param
   !erosion flux
   !read in spatial-varying critical shear stress
   if(iERO>0) then
-    open(31,file='tau_c_elem.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'tau_c_elem.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check tau_c_elem.gr3')
     do i=1,np_global
@@ -603,6 +604,7 @@ subroutine check_icm_sed_param
 !-----------------------------------------------------------------------
   use icm_sed_mod
   use schism_msgp, only : myrank,parallel_abort
+  use schism_glbl, only: in_dir,out_dir,len_in_dir,len_out_dir
   use icm_mod, only : isav_icm
 
   implicit none
@@ -612,7 +614,7 @@ subroutine check_icm_sed_param
   integer :: i, j
   
   if(myrank==0) then
-    open(31,file='ecosim_2.out',status='replace')
+    open(31,file=out_dir(1:len_out_dir)//'ecosim_2.out',status='replace')
     write(31,*) 'Sediment flux model parameters:'
 
     write(31,*)

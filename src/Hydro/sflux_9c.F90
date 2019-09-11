@@ -462,7 +462,7 @@
 
 ! reset flux values if the nws flag is set
 !        if (nws .eq. 3) then
-!          open(31,file=grid_file, status='old')
+!          open(31,file=in_dir(1:len_in_dir)//grid_file, status='old')
 !          read(31,*)
 !          read(31,*) ne_global,np_global
 !          do i_node = 1, np_global
@@ -1002,7 +1002,7 @@
 !-----------------------------------------------------------------------
       subroutine rotate_winds (u, v, num_nodes_out)
 
-        use schism_glbl, only : rkind,ipgl
+        use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir
         use schism_msgp, only : myrank
         implicit none
 
@@ -1032,7 +1032,7 @@
           call check_allocation('rotate_angle', 'rotate_winds', &
      &                          alloc_stat)
 
-          open(10, file=rot_file, status='old')
+          open(10, file=in_dir(1:len_in_dir)//rot_file, status='old')
           read(10,*) ! header
           read(10,*)ne_global,np_global
 
@@ -1219,7 +1219,7 @@
 !          fdb='sflux2_0000'
 !          lfdb=len_trim(fdb)
 !          write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!          open(39,file='outputs/'//fdb,status='replace')
+!          open(39,file=out_dir(1:len_out_dir)//fdb,status='replace')
         
           call get_sflux_inputs ()
           
@@ -1371,7 +1371,7 @@
 !        fdb='sflux3_0000'
 !        lfdb=len_trim(fdb)
 !        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!        open(40,file='outputs/'//fdb,status='unknown')
+!        open(40,file=out_dir(1:len_out_dir)//fdb,status='unknown')
 !        rewind(40)
 
 ! output info to debug file
@@ -1502,7 +1502,7 @@
 !        fdb='sflux4_0000'
 !        lfdb=len_trim(fdb)
 !        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!        open(41,file='outputs/'//fdb,status='unknown')
+!        open(41,file=out_dir(1:len_out_dir)//fdb,status='unknown')
 !        rewind(41)
 
 ! output info to debug file
@@ -1898,7 +1898,7 @@
      &                           file_julian_date, max_file_times, &
      &                           num_file_times)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
         implicit none
         include 'netcdf.inc'
 
@@ -1917,7 +1917,7 @@
         integer day, month, year, jd, n_base_date, allocate_stat
 
 ! open file_name and enter read-only mode
-        iret = nf_open(file_name, NF_NOWRITE, ncid)
+        iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
         call check_err(iret)
 
 ! get the variable id for the time variable
@@ -2008,6 +2008,7 @@
       end
 !-----------------------------------------------------------------------
       subroutine get_dims (file_name, nx, ny)
+        use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
         implicit none
         include 'netcdf.inc'
         character, intent(in) ::  file_name*50
@@ -2017,7 +2018,7 @@
         character, parameter :: test_variable*50 = 'lat'
 
 ! open file_name and enter read-only mode
-        iret = nf_open(file_name, NF_NOWRITE, ncid)
+        iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
         call check_err(iret)
 
 ! get the variable ID for the test variable
@@ -2057,7 +2058,7 @@
       subroutine read_coord (file_name, data_name, coord, &
      &                       nx, ny)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
         use schism_msgp, only : myrank,comm
 !        use mpi
         implicit none
@@ -2074,7 +2075,7 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf_open(file_name, NF_NOWRITE, ncid)
+          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
           call check_err(iret)
 
 ! get the variable id for this variable
@@ -2104,7 +2105,7 @@
       subroutine read_data (file_name, data_name, data, &
      &                      nx, ny, time_num)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,len_in_dir,len_out_dir,in_dir,out_dir
         use schism_msgp, only : myrank,comm
 !        use mpi
         implicit none
@@ -2131,7 +2132,7 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf_open(file_name, NF_NOWRITE, ncid)
+          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
           call check_err(iret)
 
 ! get the variable id for this variable
@@ -2492,7 +2493,7 @@
 !-----------------------------------------------------------------------
       subroutine get_sflux_inputs ()
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
         use netcdf_io
         implicit none
         
@@ -2513,7 +2514,7 @@
      &      call halt_error ('you must have sflux_inputs_file!')
 
 ! open input deck, and read in namelist
-          open(31, file=sflux_inputs_file, status='old')
+          open(31, file=in_dir(1:len_in_dir)//sflux_inputs_file, status='old')
           read(31, nml=sflux_inputs)
           close(31)
 !         write(*,nml=sflux_inputs)

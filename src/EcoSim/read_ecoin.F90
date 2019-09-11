@@ -1173,7 +1173,7 @@ subroutine read_inputs (varname,vartype,ivarvalue,varvalue1,varvalue2)
   ! (3) value is an integer, double, or 2-char string; for double, any of the format is acceptable:
   !     40 40. 4.e1
   !     Use of decimal point in integers is OK but discouraged.
-  use schism_glbl, only : rkind,errmsg
+  use schism_glbl, only : rkind,errmsg,in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : parallel_abort,myrank
   use bio_param
   use biology
@@ -1192,7 +1192,7 @@ subroutine read_inputs (varname,vartype,ivarvalue,varvalue1,varvalue2)
 !  print*, varname ,str_tmp2(1:lstr_tmp2)
 
   ! Scan param.in
-  open(5,file='ecosim.in',status='old')
+  open(5,file=in_dir(1:len_in_dir)//'ecosim.in',status='old')
   rewind(5)
   line=0
   do

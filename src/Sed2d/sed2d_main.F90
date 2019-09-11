@@ -62,7 +62,8 @@ SUBROUTINE sed2d_main(it)
                          &ipgl,indel,iplg,isdel,isidenode,isidenei2,        &
                          &elside,nea,nne,i34,elnode,np,npa,ns,nsa,pi,       &
                          &out_wwm,su2,sv2,timer_ns,rhosed,rkind,kbs,zs,nvrt,&
-                         &ihydraulics,isblock_sd,errmsg,time_stamp,area
+                         &ihydraulics,isblock_sd,errmsg,time_stamp,area, &
+                         &in_dir,out_dir,len_in_dir,len_out_dir
   USE schism_msgp, ONLY : comm,exchange_e2d,exchange_p2d,exchange_s2d,      &
                          &ierr,myrank,parallel_abort,rtype,parallel_finalize
   USE hydraulic_structures, ONLY : nhtblocks
@@ -207,7 +208,7 @@ SUBROUTINE sed2d_main(it)
     !For 1st call (including hot), init. read
     if(first_call) then
       !Time stamps in this file must be one of the time steps
-      open(18,file='sed_dump.in',status='old')
+      open(18,file=in_dir(1:len_in_dir)//'sed_dump.in',status='old')
       read(18,*)
       do 
         read(18,*,iostat=k)t_dump,ne_dump !time in sec

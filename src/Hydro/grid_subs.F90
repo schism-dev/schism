@@ -49,7 +49,7 @@ subroutine aquire_vgrid
 !    sigma(1)=-1 !bottom
 !    sigma(nsig)=0 !surface
 !  else !3D
-  open(19,file='vgrid.in',status='old',iostat=stat)
+  open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old',iostat=stat)
   if(stat/=0) call parallel_abort('AQUIRE_VGIRD: open(19) failure')
   read(19,*)ivcor
   if(ivcor==2) then !SZ coordinates
@@ -198,7 +198,7 @@ subroutine partition_hgrid
 !-------------------------------------------------------------------------------
 
   ! Open global grid file and read global grid size
-  open(14,file='hgrid.gr3',status='old')
+  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old')
   read(14,*); read(14,*) ne_global,np_global
   close(14)
 
@@ -265,7 +265,7 @@ subroutine partition_hgrid
   !done
   if(ivcor==1) then
     allocate(kbp(npa))
-    open(19,file='vgrid.in',status='old')
+    open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
     read(19,*); read(19,*)nvrt
     do i=1,np_global
       read(19,*)j,kbetmp
@@ -581,7 +581,7 @@ subroutine aquire_hgrid(full_aquire)
   !-----------------------------------------------------------------------------
   ! Open global grid file
   !-----------------------------------------------------------------------------
-  open(14,file='hgrid.gr3',status='old',iostat=stat)
+  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
 
   !-----------------------------------------------------------------------------
@@ -1615,7 +1615,7 @@ subroutine aquire_hgrid(full_aquire)
   if(allocated(ylat)) deallocate(ylat); allocate(ylat(npa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: ylat allocation failure')
 
-  open(14,file='hgrid.gr3',status='old',iostat=stat)
+  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
   read(14,*); read(14,*);
   do i=1,np_global
@@ -2370,7 +2370,7 @@ subroutine dump_hgrid
   fdb='helem_0000'
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-  open(10,file='outputs/'//fdb,status='unknown')
+  open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',nea,ne,neg
   do ie=1,nea
     j=0
@@ -2430,7 +2430,7 @@ subroutine dump_hgrid
   fdb='hnode_0000'
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-  open(10,file='outputs/'//fdb,status='unknown')
+  open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',npa,np,npg
   do ip=1,npa
     j=0
@@ -2505,7 +2505,7 @@ subroutine dump_hgrid
   fdb='hside_0000'
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-  open(10,file='outputs/'//fdb,status='unknown')
+  open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',nsa,ns,nsg
   do isd=1,nsa
     isdgb=islg(isd)
@@ -2552,7 +2552,7 @@ subroutine dump_hgrid
   fdb='bndinfo_0000'
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-  open(10,file='outputs/'//fdb,status='unknown')
+  open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,i10)') 'Open bnd:',nope
   do i=1,nope
     write(10,*)'open bnd #',i,iopelg(i),(iplg(iond(i,j)),j=1,nond(i))
@@ -2567,7 +2567,7 @@ subroutine dump_hgrid
 
   ! Rank 0 writes global to local element info
   if(myrank==0) then
-    open(32,file='outputs/global_to_local.prop',status='unknown')
+    open(32,file=out_dir(1:len_out_dir)//'global_to_local.prop',status='unknown')
     write(32,'(i8,1x,i4)')(ie,iegrpv(ie),ie=1,ne_global)
     close(32)
   endif

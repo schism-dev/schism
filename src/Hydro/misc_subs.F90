@@ -59,7 +59,7 @@
 ! subroutine inverse 
 ! subroutine matmul1 (not used)
 ! subroutine insidetriangle (not used)
-! function weno_diag 
+! subroutine weno_diag 
 ! function M33DET 
 ! function M66DET 
 ! subroutine GetSten1 
@@ -271,7 +271,7 @@
 !          fdb='tmp_0000'
 !          lfdb=len_trim(fdb)
 !          write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!          open(10,file='outputs/'//fdb,status='replace')
+!          open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
 !          write(10,*)np
 !          do i=1,np
 !            write(10,*)iplg(i),real(eta2(i))
@@ -3666,7 +3666,7 @@
       !ftest='a1_xxxx'
       !lftest=len_trim(ftest)
       !write(ftest(lftest-3:lftest),'(i4.4)') myrank
-      !open(95,file='outputs/'//ftest,status='replace')
+      !open(95,file=out_dir(1:len_out_dir)//ftest,status='replace')
       !<debug
 
       do ie=1,ne
@@ -4638,10 +4638,10 @@
       end subroutine insidetriangle
 
 !==============================================================================
-!     output weno diagnostic files:
+!     output weno diagnostic files (nproc=1 only):
 !     (1) weno_accuracy_out.prop;
 !     (2) weno_stencil.out;
-    !     weno_stencil_all.out;
+!     weno_stencil_all.out;
 !     (3) removed_stencil1.out;
 !     (4) removed_stencil1.prop;
 !     (5) removed_stencil2.out;
@@ -4654,14 +4654,14 @@
       use schism_glbl,only: ne,ip_weno,nweno2,nweno1,isten_qual2,isbe,isten1,isten2&
       &,mnweno2,mnweno1,iremove1,iremove2,nremove1,nremove2,rremove1,rremove2&
       &,n_all_stencils1,n_all_stencils2,det_all_stencils1,det_all_stencils2&
-      &,ie_all_stencils1,ie_all_stencils2
+      &,ie_all_stencils1,ie_all_stencils2,in_dir,out_dir,len_in_dir,len_out_dir
       implicit none
       integer :: ie,nrow,i,ifill(500),j
       ifill=0
 
       !Write order of accuracy for each element in *.prop format
       !(1) upwind; (2) 2nd-order weno; (3) 3rd-order weno
-      open(32,file='weno_accuracy_out.prop')
+      open(32,file=out_dir(1:len_out_dir)//'weno_accuracy_out.prop')
       do ie=1,ne
         if(ip_weno==2 .and. nweno2(ie)>0 .and. isten_qual2(ie) .and. isbe(ie)==0) then !p2 weno method
           write(32,'(2(i10))') ie,3
@@ -4678,7 +4678,7 @@
       !   element_index   order_of_accuracy   number_of_stencils   element_idx_in_stencils (multiple columns)
       !for "element_idx_in_stencils", delimiters are not used between two stencils,
       !since the first element in each stencil is always ie
-      open(32,file='weno_stencil.out')
+      open(32,file=out_dir(1:len_out_dir)//'weno_stencil.out')
       nrow=max(mnweno2*6,mnweno1*3)
       do ie=1,ne
         if(ip_weno==2 .and. nweno2(ie)>0 .and. isten_qual2(ie) .and. isbe(ie)==0) then !p2 weno method
@@ -4696,7 +4696,7 @@
       !   element_index   order_of_accuracy   number_of_stencils   element_idx_in_stencils (multiple columns)
       !for "element_idx_in_stencils", delimiters are not used between two stencils,
       !since the first element in each stencil is always ie
-      open(32,file='weno_stencil_all.out')
+      open(32,file=out_dir(1:len_out_dir)//'weno_stencil_all.out')
       do ie=1,ne
         write(32,*) '------------------------------'
         write(32,*) 'ie: ',ie,'; number of linear stencils: ',n_all_stencils1(ie)
@@ -4722,7 +4722,7 @@
       !col 3-6: determinant, 3 element IDs of the first removed stencil;
       !col 7-10: determinant, 3 element IDs of the 2nd removed stencil; ...
       !nan values are filled with "0"
-      open(32,file='removed_stencil1.prop')
+      open(32,file=out_dir(1:len_out_dir)//'removed_stencil1.prop')
       do ie=1,ne
         if (nremove1(ie)+nweno1(ie)>0) then
           write(32,'((i10),(f25.12,x))') ie,nremove1(ie)/float(nremove1(ie)+nweno1(ie))
@@ -4731,7 +4731,7 @@
         endif
       enddo 
       close(32)
-      open(32,file='removed_stencil1.out')
+      open(32,file=out_dir(1:len_out_dir)//'removed_stencil1.out')
       do ie=1,ne
         if (nremove1(ie)>0) then
           write(32,'(2(i10))') ie,nremove1(ie)
@@ -4757,7 +4757,7 @@
       !col 10-16: determinant, 6 element IDs of the 2nd removed stencil; ...
       !nan values are filled with "0"
       if (ip_weno==2) then
-        open(32,file='removed_stencil2.prop')
+        open(32,file=out_dir(1:len_out_dir)//'removed_stencil2.prop')
         do ie=1,ne
           if (nremove2(ie)+nweno2(ie)>0) then
             write(32,'((i10),(f25.12,x))') ie,nremove2(ie)/float(nremove2(ie)+nweno2(ie))
@@ -4766,7 +4766,7 @@
           endif
         enddo 
         close(32)
-        open(32,file='removed_stencil2.out')
+        open(32,file=out_dir(1:len_out_dir)//'removed_stencil2.out')
         do ie=1,ne
           if (nremove2(ie)>0) then
             write(32,'(2(i10))') ie,nremove2(ie)
@@ -5062,7 +5062,7 @@
         !  zs(2,j)=0.0d0
         !enddo !j
 
-        !open(95,file='outputs/trelm',status='replace')
+        !open(95,file=out_dir(1:len_out_dir)//'trelm',status='replace')
         !write(95,'(f8.1,x,360000(f15.8,x))') 0.0 ,tr_el(1,2,1:ne)
         !flush(95)
       !<weno_debug

@@ -174,7 +174,8 @@ subroutine read_icm_param2
 !read spatially varying paramters 
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
-                   & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e
+                   & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e,in_dir,out_dir, &
+                   &len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod
   use misc_modules
@@ -193,7 +194,7 @@ subroutine read_icm_param2
 
 !  !-----------------read regions-----------------
 !  if(iReg==1) then
-!    open(31,file='region_icm.prop',status='old')
+!    open(31,file=in_dir(1:len_in_dir)//'region_icm.prop',status='old')
 !    do i=1,ne_global
 !      read(31,*)j,tmp
 !      itmp=nint(tmp)
@@ -231,7 +232,7 @@ subroutine read_icm_param2
     enddo !i
   elseif(iWS==2) then !spatially varying
 
-!!    open(31,file='settling.gr3',status='old')
+!!    open(31,file=in_dir(1:len_in_dir)//'settling.gr3',status='old')
 !!    read(31,*); read(31,*)negb,npgb
 !!    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling.gr3')
 !!    do i=1,np_global
@@ -256,7 +257,7 @@ subroutine read_icm_param2
 !!      enddo
 !!    enddo !i
 
-    open(31,file='settling_RP.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'settling_RP.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_RP.gr3')
     do i=1,np_global
@@ -273,7 +274,7 @@ subroutine read_icm_param2
       enddo
     enddo !i
 
-    open(31,file='settling_LP.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'settling_LP.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_LP.gr3')
     do i=1,np_global
@@ -290,7 +291,7 @@ subroutine read_icm_param2
       enddo
     enddo !i
 
-    open(31,file='settling_PB1.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'settling_PB1.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB1.gr3')
     do i=1,np_global
@@ -307,7 +308,7 @@ subroutine read_icm_param2
       enddo
     enddo !i
 
-    open(31,file='settling_PB2.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'settling_PB2.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB2.gr3')
     do i=1,np_global
@@ -324,7 +325,7 @@ subroutine read_icm_param2
       enddo
     enddo !i
 
-    open(31,file='settling_PB3.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'settling_PB3.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB3.gr3')
     do i=1,np_global
@@ -344,7 +345,7 @@ subroutine read_icm_param2
   elseif (iWS==3) then !iReg_WS>=2
     !reg_WS(nea) is init to be 1 in icm_init
     !read in mapping file, renew reg_WS
-    open(31,file='region_WS.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'region_WS.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -407,7 +408,7 @@ subroutine read_icm_param2
     enddo !i
 
   elseif(iSet==2) then
-    open(31,file='netsettling.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'netsettling.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check netsettling.gr3')
     do i=1,np_global
@@ -451,7 +452,7 @@ subroutine read_icm_param2
   !reg_GP(nea) is init to be 1 in icm_init
   if (iReg_GP>1) then !spatially distributed 
   !read in mapping file, renew reg_GP
-    open(31,file='region_GP.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'region_GP.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -528,7 +529,7 @@ subroutine read_icm_param2
       PRR3(i)=PRR3(1)
     enddo !i=2:nea
   elseif(iPRR==2) then
-    open(31,file='grazing1.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'grazing1.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing1.gr3')
     do i=1,np_global
@@ -544,7 +545,7 @@ subroutine read_icm_param2
     !re-init
     tPRR=0.0
 
-    open(31,file='grazing2.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'grazing2.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing2.gr3')
     do i=1,np_global
@@ -560,7 +561,7 @@ subroutine read_icm_param2
     !re-init
     tPRR=0.0
 
-    open(31,file='grazing3.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'grazing3.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing3.gr3')
     do i=1,np_global
@@ -579,7 +580,7 @@ subroutine read_icm_param2
   elseif(iPRR==3) then !iReg_PR>=2
     !reg_PR(nea) is init to be 1 in icm_init
     !read in mapping file, renew reg_PR
-    open(31,file='region_PR.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'region_PR.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -613,7 +614,7 @@ subroutine read_icm_param2
   !reg_KC(nea) is init to be 1 in icm_init
   if (iReg_KC>1) then !spatially distributed 
   !read in mapping file, renew reg_KC
-    open(31,file='region_KC.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'region_KC.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -653,7 +654,7 @@ subroutine read_icm_param2
   !reg_PO4(nea) is init to be 1 in icm_init
   if (iReg_PO4>1) then !spatially distributed 
   !read in mapping file, renew reg_PO4
-    open(31,file='region_PO4.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'region_PO4.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -702,7 +703,7 @@ subroutine read_icm_param2
       Turb(i)=tTurb
     enddo !i
   elseif(iTurb==2) then !spatially varying
-    open(31,file='Turb.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'Turb.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check Turb.gr3')
     do i=1,np_global
@@ -733,7 +734,7 @@ subroutine read_icm_param2
       WRea(i)=tWRea
     enddo !i
   elseif(iWRea==2) then !spatially varying
-    open(31,file='WRea.gr3',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'WRea.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check WRea.gr3')
     do i=1,np_global
@@ -765,7 +766,7 @@ subroutine read_icm_param2
         PC2TSS(i)=tPC2TSS
       enddo !i
     elseif(iTSS==2) then !spatially varying
-      open(31,file='PC2TSS.gr3',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'PC2TSS.gr3',status='old')
       read(31,*); read(31,*)negb,npgb
       if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check PC2TSS.gr3')
       do i=1,np_global
@@ -792,7 +793,7 @@ subroutine read_icm_param2
 !  if(iPh==1) then
 #ifdef ICM_PH
     iphgb=0
-    open(31,file='ph.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'ph.prop',status='old')
     do i=1,ne_global
       read(31,*)ie,itmp
       if(iegl(ie)%rank==myrank) then
@@ -804,7 +805,7 @@ subroutine read_icm_param2
 
     !-----------------read in PH nudge flag-----------------
     if(inu_ph==1) then
-      open(31,file='ph_nudge.gr3',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'ph_nudge.gr3',status='old')
       read(31,*); read(31,*)
       do i=1,np_global
         read(31,*)ip,xtmp,ytmp,ztmp
@@ -831,7 +832,7 @@ subroutine read_icm_param2
 
   !-----------------read in sav patch flag-----------------
   if(isav_icm==1) then
-    open(31,file='patchsav.prop',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'patchsav.prop',status='old')
     do i=1,ne_global
       read(31,*)j,tmp
       itmp=nint(tmp)
@@ -848,9 +849,9 @@ subroutine read_icm_param2
   !-----------------read in sav initial biomass for cold start-----------------
   if(isav_icm==1.and.ihot==0) then
     if(initsav==1)then
-      open(10,file='sav_icm_lf.prop',status='old')
-      open(31,file='sav_icm_st.prop',status='old')
-      open(32,file='sav_icm_rt.prop',status='old')
+      open(10,file=in_dir(1:len_in_dir)//'sav_icm_lf.prop',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'sav_icm_st.prop',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'sav_icm_rt.prop',status='old')
 
       do i=1,ne_global
         read(10,*)j,tmp
@@ -875,9 +876,9 @@ subroutine read_icm_param2
     elseif(initsav==2) then
       allocate(swild2(4,npa),stat=i)
       if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
-      open(10,file='sav_icm_lf.gr3',status='old')
-      open(31,file='sav_icm_st.gr3',status='old')
-      open(32,file='sav_icm_rt.gr3',status='old')
+      open(10,file=in_dir(1:len_in_dir)//'sav_icm_lf.gr3',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'sav_icm_st.gr3',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'sav_icm_rt.gr3',status='old')
       read(10,*); read(10,*) n,q
       read(31,*); read(31,*)k,m
       read(32,*); read(32,*)i,j
@@ -985,7 +986,8 @@ subroutine read_icm_param
 !---------------------------------------------------------------------
 !read paramters in icm.in
 !---------------------------------------------------------------------
-   use schism_glbl, only : rkind,dt,NDTWQ,nvrt,ne_global,ihconsv,nws
+   use schism_glbl, only : rkind,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
    use schism_msgp, only : parallel_abort
    use icm_mod
    use misc_modules
@@ -1049,13 +1051,13 @@ subroutine read_icm_param
 
   !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
   if(iAtm==1) then
-    open(401,file='ICM_atm.th',status='old')
+    open(401,file=in_dir(1:len_in_dir)//'ICM_atm.th',status='old')
   endif 
   if(iBen/=0) then
-    open(402,file='ICM_ben.th',status='old')
+    open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
   endif 
   if(iRad==2) then
-    open(403,file='ICM_rad.th',status='old')
+    open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
   elseif(iRad/=1.and.iRad/=2) then
     call parallel_abort('error: iRad')
   endif
@@ -1310,7 +1312,7 @@ subroutine read_icm_param
 
   !PH nudge for TIC and ALK
   if(iPh==1.and.inu_ph==1) then
-    open(406,file='ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
+    open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
     time_ph=-999.d0
     irec_ph=1
   endif
@@ -1402,7 +1404,8 @@ subroutine read_icm_stainfo
 !read in ICM station output information
 !-----------------------------------------------------------------------
   use icm_mod, only : nsta,ista,depsta,stanum,nspool_icm
-  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode
+  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
+ &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,nproc,parallel_abort
   implicit none
 
@@ -1414,7 +1417,7 @@ subroutine read_icm_stainfo
   logical :: lexist
 
   !read station info.
-  open(31,file='cstation.in',status='old')
+  open(31,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
   read(31,*)
   read(31,*)nstation
   do i=1,nstation
@@ -1466,12 +1469,12 @@ subroutine read_icm_stainfo
 
   !open a station output file
   write(fn,'(i4.4)')myrank
-  inquire(file='outputs/cstation_'//fn//'.out',exist=lexist)
+  inquire(file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',exist=lexist)
   if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
-    open(410,file='outputs/cstation_'//fn//'.out',form='unformatted',status='replace')
+    open(410,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',status='replace')
     write(410)sum(nsta),dt*nspool_icm
   elseif(ihot==2..and.lexist) then
-    open(410,file='outputs/cstation_'//fn//'.out',form='unformatted',access='append',status='old')
+    open(410,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',access='append',status='old')
   else
     call parallel_abort('unknown ihot, ICM')
   endif
@@ -1486,14 +1489,14 @@ subroutine check_icm_param
 ! Outputs water quality parameter to check
 !-----------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : NDTWQ
+  use schism_glbl, only : NDTWQ,in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 
   integer :: i,j 
       
   if(myrank==0) then
-    open(31, file='ecosim_1.out', status='replace')
+    open(31, file=out_dir(1:len_out_dir)//'ecosim_1.out', status='replace')
     write(31,*) 'Water Quality Model Parameter output2'
 
     write(31,*)

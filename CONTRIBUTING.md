@@ -51,6 +51,8 @@ $ git branch -a
 After cloning as explained above your working directory (local HEAD) will be pointing to origin/master.
 In principle, you can create changes and push directly to the master. 
 
+Since git uses distributed repos, ‘pull’ from remote (i.e. fetch and merge with your local copy) will incorporate changes from others into your local repo, which is considered a ‘delta’ that will be recorded in commit history log when you try to ‘push’ back into remote. This is burdensome for reviewers because the merge does not represent your own commits. One way to squash this ‘delta’ is to rebase, which carries its own risk of entangling commit history and thus divergence when multiple users are working on a same branch. Therefore, as a general rule, if git asks you for a commit message during pull, please indicate it as ‘PULL MERGE’ so reviewers can safely ignore.
+
 Option 1: Direct push
 
 This option is good for small incremental/non-controversial  changes.
@@ -81,15 +83,15 @@ Suppose you want to collaborate with another colleague on some complex code chan
 $ pwd
 
 schism
-```
 $ git checkout master #starting from master branch
 $ git pull #update from repo
 $ git branch new_branch master #create a new branch ‘new_branch’ based on master
 $ git checkout new_branch #switch to new_branch
 $ git status #examine
-
 # On branch new_branch
 nothing to commit (working directory clean)
+```
+
 (Push to remote to establish your new branch in remote repo so others can access it)
 
 `$ git push --set-upstream origin new_branch`

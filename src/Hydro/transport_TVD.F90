@@ -1101,8 +1101,8 @@
 
 !     Debug output of time steps allowed at each element
 #ifdef DEBUG
-      call schism_output_custom(istat,5,1,205,'dtbe',1,ne,dtb_min3)
-      if(myrank==0.and.istat==1) write(16,*)'done outputting dtbe.66'
+!      call schism_output_custom(istat,5,1,205,'dtbe',1,ne,dtb_min3)
+!      if(myrank==0.and.istat==1) write(16,*)'done outputting dtbe.66'
 #endif
 
       end subroutine do_transport_tvd

@@ -38,7 +38,7 @@ module schism_msgp
                        &np_global,np,npg,npa,iplg,ipgl,nne,indel,dp, &
                        &ns_global,ns,nsg,nsa,islg,isgl,isdel,isidenode, &
                        &errmsg,fdb,lfdb,ntracers,msc2,mdc2,i34,nea2, &
-                       &ielg2,iegl2,is_inter,iside_table
+                       &ielg2,iegl2,is_inter,iside_table,in_dir,out_dir,len_in_dir,len_out_dir
   implicit none
 !#ifndef USE_MPIMODULE
   include 'mpif.h'
@@ -559,7 +559,7 @@ subroutine msgp_tables
   fdb='ctbl_0000'
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-  open(10,file='outputs/'//fdb,status='unknown')
+  open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
 #endif
 
   !-----------------------------------------------------------------------------

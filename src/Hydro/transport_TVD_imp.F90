@@ -192,12 +192,12 @@
 !      ftest='trelm_xxxx'
 !      lftest=len_trim(ftest)
 !      write(ftest(lftest-3:lftest),'(i4.4)') myrank
-!      open(95,file='outputs/'//ftest,status='replace')
+!      open(95,file=out_dir(1:len_out_dir)//ftest,status='replace')
 !      ftest='order_xxxx'
 !      lftest=len_trim(ftest)
 !      if (it==1) then
 !        write(ftest(lftest-3:lftest),'(i4.4)') myrank
-!        open(96,file='outputs/'//ftest,status='replace')
+!        open(96,file=out_dir(1:len_out_dir)//ftest,status='replace')
 !      endif
 !#endif
 

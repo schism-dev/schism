@@ -31,36 +31,36 @@
 # EXEC := $(EXEC)_WWM
 
 # Harmonic analysis tool
-# USE_HA = yes
-# EXEC := $(EXEC)_HA
+ USE_HA = yes
+ EXEC := $(EXEC)_HA
 
 #####Tracer models 
 # Generic (user defined) tracer model
-# USE_GEN = yes
-# EXEC := $(EXEC)_GEN
+ USE_GEN = yes
+ EXEC := $(EXEC)_GEN
 
 # Age
-# USE_AGE = yes
-# EXEC := $(EXEC)_AGE
+ USE_AGE = yes
+ EXEC := $(EXEC)_AGE
 
 # Sediment model (3D)
-# USE_SED = yes
-# EXEC := $(EXEC)_SED
+ USE_SED = yes
+ EXEC := $(EXEC)_SED
 
 # Ecological model (EcoSim)
 # USE_ECO = yes
 # EXEC := $(EXEC)_ECO
 
 # CE-QUAL-ICM
- USE_ICM = yes
- EXEC := $(EXEC)_ICM
+# USE_ICM = yes
+# EXEC := $(EXEC)_ICM
 #  ### Flags that go with USE_ICM
 # ICM_PH = yes
 # EXEC := $(EXEC)_PH
 
 # CoSINE
-# USE_COSINE = yes
-# EXEC := $(EXEC)_COS
+ USE_COSINE = yes
+ EXEC := $(EXEC)_COS
 
 # Fecal Indicator bacteria model
 # USE_FIB = yes
@@ -82,20 +82,20 @@
 ####End of tracer models
 
 # Ice module
-# USE_ICE = yes
-# EXEC := $(EXEC)_ICE
+ USE_ICE = yes
+ EXEC := $(EXEC)_ICE
 
 # Sediment model (2D)
 # USE_SED2D = yes
 # EXEC := $(EXEC)_SED2D
 
 # Marsh migration model
-# USE_MARSH = yes
-# EXEC := $(EXEC)_MARSH
+ USE_MARSH = yes
+ EXEC := $(EXEC)_MARSH
 
 # Analysis module
-# USE_ANALYSIS = yes
-# EXEC := $(EXEC)_ANALYSIS
+ USE_ANALYSIS = yes
+ EXEC := $(EXEC)_ANALYSIS
 
 #########  Compiler configuration related flags
 

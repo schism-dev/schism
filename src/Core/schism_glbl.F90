@@ -50,6 +50,10 @@ module schism_glbl
   !you can change # of threads in some loops (after that, it should revert to default)
   integer,save :: nthreads
 
+  !In/out dirs
+  character(len=1000) :: in_dir,out_dir
+  integer,save :: len_in_dir,len_out_dir
+
   ! For timing
   integer,parameter :: mxtimer=20          ! Max number of wallclock timers
   real(rkind),save :: wtimer(0:mxtimer,2)  ! Array of wallclock timers
@@ -80,7 +84,7 @@ module schism_glbl
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
-                  &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd
+                  &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh

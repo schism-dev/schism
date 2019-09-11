@@ -147,9 +147,9 @@ subroutine inter_btrack(itime,nbt,btlist)
   lfdb=len_trim(fdb)
   write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
   if(ncalls==1) then
-    open(30,file='outputs/'//fdb,status='replace')
+    open(30,file=out_dir(1:len_out_dir)//fdb,status='replace')
   else
-    open(30,file='outputs/'//fdb,status='old',position='append')
+    open(30,file=out_dir(1:len_out_dir)//fdb,status='old',position='append')
   endif
   write(30,'(a,3i6)') 'INTER_BTRACK START: ',itime,nbt
 #endif
@@ -1142,7 +1142,7 @@ end subroutine inter_btrack
 !      fdb='qs_0000'
 !      lfdb=len_trim(fdb)
 !      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!      open(98,file='outputs/'//fdb,status='unknown')
+!      open(98,file=out_dir(1:len_out_dir)//fdb,status='unknown')
 
 !     Save for debug
       xt00=xt

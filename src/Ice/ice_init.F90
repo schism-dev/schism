@@ -19,7 +19,7 @@
 subroutine ice_init
   use schism_glbl, only : rkind,pi,np,npa,ne,nea,mnei,mnei_p,nne,indel,xctr,yctr,area, &
  &nstep_ice,fresh_wa_flux,net_heat_flux,xlon,ylat,rearth_eq,elnode,nnp,indnd,iplg,dt, &
- &xnd,ynd,errmsg,lice_free_gb
+ &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
   use ice_module
   use ice_therm_mod
@@ -41,7 +41,7 @@ subroutine ice_init
   ellipse=-huge(1.d0); c_pressure=-huge(1.d0); ice_gamma_fct=-huge(1.d0);
   h_ml0=-huge(1.d0); salt_ice=-huge(1.d0); salt_water=-huge(1.d0)
 
-  open(10,file='ice.nml',status='old')
+  open(10,file=in_dir(1:len_in_dir)//'ice.nml',status='old')
   read(10,nml=ice_in)
   close(10)
 

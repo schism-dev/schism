@@ -1,6 +1,8 @@
 Github versions:
 
-: fort.11-> fatal.error
+: pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
+  fort.11-> fatal.error, flux.dat ->flux.out, total.dat->total.out, total_TR.dat->total_TR.out
+  fort.33->JCG.out, fort.17->subcycling.out;
 f69ca44: updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 Changes in param.in and main parameter inputs for other modules:

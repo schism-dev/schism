@@ -17,7 +17,7 @@
 ! SCHISM HYDRAULIC SUBROUTINES
 
       module hydraulic_structures
-      use schism_glbl, only : rkind,grav
+      use schism_glbl, only : rkind,grav,in_dir,out_dir,len_in_dir,len_out_dir
       use schism_msgp, only : parallel_abort
       implicit none
 
@@ -86,7 +86,7 @@
       character(LEN=NAME_LEN) :: struct_name
 
 !...  Read in hydraulics.in,ipair
-      open(31,file=filename,status='old')
+      open(31,file=in_dir(1:len_in_dir)//filename,status='old')
       
       !Specify blocks for hydraulic transfer structures (where fluxes are specified,
       !and tracers are conserved)
@@ -180,7 +180,7 @@
           if (structures(istruct)%is_local ) then
             fort_unit = struct_base_unit + istruct
             structures(istruct)%ts_unit = fort_unit
-            open(fort_unit,file=trim(structures(istruct)%struct_name) // '.th',status='old')
+            open(fort_unit,file=in_dir(1:len_in_dir)//trim(structures(istruct)%struct_name) // '.th',status='old')
             call irreg_time_history_advance(fort_unit, time, time_next)
             structures(istruct)%next_read_time = time
           end if

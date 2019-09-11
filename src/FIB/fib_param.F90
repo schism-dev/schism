@@ -44,9 +44,9 @@
         
       IMPLICIT NONE
      
-        integer :: flag_fib
+!        integer :: flag_fib
         integer, parameter :: r8 = 8
         real(r8), allocatable  :: kk_fib(:,:)
-	real(r8),allocatable :: sink_fib(:), fraction_fib(:)
+        real(r8),allocatable :: sink_fib(:), fraction_fib(:)
       
       END MODULE fib_param

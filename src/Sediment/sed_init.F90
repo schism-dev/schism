@@ -306,8 +306,9 @@
       USE sed_mod
 
       USE schism_glbl, ONLY: nea,npa,mnei_p,ntrs,irange_tr,ipgl,ielg,i34,elnode,np_global,  &
-     &                     ifile_char,ifile_len,area,np,nne,indel,iself,nnp,indnd,nxq,     &
-     & isbnd,rough_p,errmsg,ihot,xnd,ynd,xcj,ycj,xctr,yctr,elside,ics,xel,yel
+     & ifile_char,ifile_len,area,np,nne,indel,iself,nnp,indnd,nxq,     &
+     & isbnd,rough_p,errmsg,ihot,xnd,ynd,xcj,ycj,xctr,yctr,elside,ics,xel,yel, &
+     &in_dir,out_dir,len_in_dir,len_out_dir
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_p2d
 
       IMPLICIT NONE
@@ -451,7 +452,7 @@
       CALL exchange_p2d(vc_area)
 
 !     Read in total bed thickness at nodes
-      OPEN(10,FILE='bedthick.ic',STATUS='OLD')
+      OPEN(10,FILE=in_dir(1:len_in_dir)//'bedthick.ic',STATUS='OLD')
       READ(10,*); READ(10,*)
       DO i = 1,np_global
         READ(10,*) itmp,xtmp,ytmp,tmp1
@@ -474,7 +475,7 @@
           WRITE(ifile_char,'(i03)')ised
           ifile_char=ADJUSTL(ifile_char); ifile_len=LEN_TRIM(ifile_char)
           inputfile='bed_frac_'//ifile_char(1:ifile_len)//'.ic'
-          OPEN(10,FILE=inputfile,STATUS='OLD')
+          OPEN(10,FILE=in_dir(1:len_in_dir)//inputfile,STATUS='OLD')
           READ(10,*) !read in first line, no need to store it
           READ(10,*) !read in second line, no need to store it
           DO i = 1,np_global
