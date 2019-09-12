@@ -280,7 +280,7 @@
 
 !...  Read in header (if quads r split in binary, the hgrid read in here
 !     has different conn table from hgrid.gr3)
-      ntime=rnday*86400/dt !total # of records
+      ntime=nint(rnday*86400/dt) !total # of records
       ifile=1 !for st_m=0; starting stack #
       do i=1,ntime/nrec+1
         if(st_m/dt>(i-1)*nrec.and.st_m/dt<=i*nrec) then
