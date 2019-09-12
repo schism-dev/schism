@@ -15,7 +15,7 @@
 !										
 !	SCHISM Particle tracking code for nc outputs. Works for mixed
 !	tri/quads, but may not work if the bottom is moving (as the fill values in
-!	nc outputs are based on initial bottom)
+!	nc outputs are based on initial bottom). Euler tracking only.
 !	Routines adpated from SCHISM:						
 !	cpp, quicksearch, intersect2, signa, area_coord, levels			
 !       Warning: indices in 2D arrays are not swapped (i.e., (np,nv)).	

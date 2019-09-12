@@ -5,6 +5,7 @@ Github versions:
          fort.33->JCG.out, fort.17->subcycling.out;
 f69ca44: updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
+SVN versions:
 Changes in param.in and main parameter inputs for other modules:
 R5217: repalced bottom friction coefficient output with bottom stress vector output;
 R5204: added an option 'ibtrack_openbnd' - ibtrack_openbnd=0 recovers old results, but try '1';
