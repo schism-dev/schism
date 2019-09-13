@@ -757,7 +757,7 @@ module fabm_schism
 
 
   subroutine fabm_schism_create_output_netcdf()
-  character(len=*),parameter  :: filename='outputs/fabm_state'
+  character(len=*),parameter  :: filename='fabm_state'
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
   character(len=*),parameter  :: elements_dim_name = 'ielement'
@@ -780,7 +780,7 @@ module fabm_schism
   integer(8)           :: tmp2(4,1)
 
   write(rankstr,fmt='(I0.6)') myrank
-  ncfile = trim(filename)//'_'//rankstr//'.nc'
+  ncfile = trim(out_dir)//trim(filename)//'_'//rankstr//'.nc'
 
   ! create file and add dimensions
   call nccheck( nf90_create(ncfile, nf90_hdf5, ncid), 'create output file' )
