@@ -304,6 +304,7 @@ subroutine read_icm_sed_param
     call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
     call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
     call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
+    call get_param('icm_sed.in','erodiso',2,itmp,erofrac,stmp)
     call get_param('icm_sed.in','iDEPO',1,iDEPO,rtmp,stmp)
     call get_param('icm_sed.in','depofracR',2,itmp,depofracR,stmp)
     call get_param('icm_sed.in','depofracL',2,itmp,depofracL,stmp)
@@ -1283,7 +1284,7 @@ subroutine sed_calc(id)
     !sediemnt erosion >> nutrient erosion flux
     !dissolved sulfur + resuspended POM
     if(iERO==1)then
-      SED_EROH2S(id)=HST2TM1S(id)*ero_elem/(1.d0+m1*PIE1S)
+      SED_EROH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.d0+m1*PIE1S)
       SED_EROLPOC(id)=0
       SED_ERORPOC(id)=0
     elseif(iERO==2)then
@@ -1291,7 +1292,7 @@ subroutine sed_calc(id)
       SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
       SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
     elseif(iERO==3)then
-      SED_EROH2S(id)=HST2TM1S(id)*ero_elem/(1.d0+m1*PIE1S)
+      SED_EROH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.d0+m1*PIE1S)
       SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
       SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
     endif !iERO

@@ -131,9 +131,10 @@ KMSO4=    1.08
 !iERO =3: turn on erosion flux for both sulfur and POC
 !-----------------------------------------------------------------------
 iERO=	0 
-eroporo=0.6 !(1-eroporo) in erosion formula
+eroporo=0.2 !(1-eroporo) in erosion formula
 erorate=864 !kg/m2/day
-erofrac=0.64 !0~1
+erofrac=0.5 !0~1
+erodiso=2.5
 
 iDEPO=  1 !1:constant fraction; 2:calculated fraction
 depofracR=0.02 !0~1
