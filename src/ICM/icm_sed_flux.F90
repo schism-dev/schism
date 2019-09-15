@@ -304,10 +304,12 @@ subroutine read_icm_sed_param
     call get_param('icm_sed.in','eroporo',2,itmp,eroporo,stmp)
     call get_param('icm_sed.in','erorate',2,itmp,erorate,stmp)
     call get_param('icm_sed.in','erofrac',2,itmp,erofrac,stmp)
-    call get_param('icm_sed.in','erodiso',2,itmp,erofrac,stmp)
+    call get_param('icm_sed.in','erodiso',2,itmp,erodiso,stmp)
     call get_param('icm_sed.in','iDEPO',1,iDEPO,rtmp,stmp)
     call get_param('icm_sed.in','depofracR',2,itmp,depofracR,stmp)
     call get_param('icm_sed.in','depofracL',2,itmp,depofracL,stmp)
+    call get_param('icm_sed.in','depoWSR',2,itmp,depoWSR,stmp)
+    call get_param('icm_sed.in','depoWSL',2,itmp,depoWSL,stmp)
   endif !iERO
 
 
@@ -1277,8 +1279,8 @@ subroutine sed_calc(id)
     !calculate depostion fraction for elem #id :: E/(k+W) 
     if(iDEPO==2)then
       rtmp=exp(rKTHDR*(SED_T(id)-TRHDR))
-      depofracL=ero_elem/(WSLP(id)/SED_BL(id)+rKLP(id)*rtmp)
-      depofracR=ero_elem/(WSRP(id)/SED_BL(id)+rKRP(id)*rtmp)
+      depofracL=ero_elem/(WSLP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKLP(id)*rtmp)
+      depofracR=ero_elem/(WSRP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKRP(id)*rtmp)
     endif !iDEPO
 
     !sediemnt erosion >> nutrient erosion flux
