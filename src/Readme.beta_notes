@@ -7,7 +7,7 @@ f69ca44: updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 SVN versions:
 Changes in param.in and main parameter inputs for other modules:
-R5217: repalced bottom friction coefficient output with bottom stress vector output;
+R5217: replaced bottom friction coefficient output with bottom stress vector output;
 R5204: added an option 'ibtrack_openbnd' - ibtrack_openbnd=0 recovers old results, but try '1';
 R5191: fixed a bug in iwind_form;
 R5183: Allowed junk values (-9999) in .nc under inu_[MOD]=2 - code will not nudge tracers 
