@@ -2217,7 +2217,7 @@ subroutine calkwq(id,nv,ure,it)
          &aocrsav*plfsav(k)*lfsav(k,id) !sav photosynthesis
     endif
 
-    DO_consmp(k,id)=-b !consumption rate in positive
+    DO_consmp(k,id)=-b+rKr*DOsat+WPDO+WDO !consumption rate in positive
 
     DOO(k,2)=((1.0+a*dtw2)*DOO(k,1)+b*dtw)/(1.0-a*dtw2)
     DOO(k,1)=0.5*(DOO(k,1)+DOO(k,2))
