@@ -245,7 +245,7 @@
 !=====================================================================
 !=====================================================================
 
-      SUBROUTINE sed_init()
+      SUBROUTINE sed_init(ireset)
 !--------------------------------------------------------------------!
 ! This subroutine initialize variables and arrays for the sediment   ! 
 ! model:                                                             !
@@ -307,11 +307,13 @@
 
       USE schism_glbl, ONLY: nea,npa,mnei_p,ntrs,irange_tr,ipgl,ielg,i34,elnode,np_global,  &
      & ifile_char,ifile_len,area,np,nne,indel,iself,nnp,indnd,nxq,     &
-     & isbnd,rough_p,errmsg,ihot,xnd,ynd,xcj,ycj,xctr,yctr,elside,ics,xel,yel, &
+     & isbnd,rough_p,errmsg,xnd,ynd,xcj,ycj,xctr,yctr,elside,ics,xel,yel, &
      &in_dir,out_dir,len_in_dir,len_out_dir
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_p2d
 
       IMPLICIT NONE
+
+      integer, intent(in) :: ireset !>0: reset/calculate some dynamic vars     
 
       real(rkind) :: signa
 
@@ -462,7 +464,8 @@
       CLOSE(10)
 
 !     For cold start only
-      if(ihot==0) then
+      !if(ihot==0) then
+      if(ireset>0) then
 !========================================================
 !--------------------------------------------------------------------!
 ! - Reading bed_frac files and convert bed_fraction from nodes to 
@@ -528,7 +531,7 @@
           ENDDO ! End loop Nbed
         ENDDO !End loop nea
 !========================================================
-      endif !ihot==0
+      endif !ireset
 
 !--------------------------------------------------------------------!
 ! - Initialize the bed mass ([kg/m2]=[m]*[kg.m-3]*[-])

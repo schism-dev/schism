@@ -15,7 +15,7 @@
 !===============================================================================
 !===============================================================================
 ! SCHISM MISCELLANEOUS SUBROUTINES
-!
+! subroutine other_hot_init
 ! subroutine zcoor
 ! subroutine levels1
 ! subroutine levels0
@@ -64,6 +64,680 @@
 ! function M66DET 
 ! subroutine GetSten1 
 !<weno
+
+!===============================================================================
+!===============================================================================
+   
+      subroutine other_hot_init(time,init_modules)
+!     This routine finishes up init'ing remaining vars. It can be called
+!     at t=time to 'rewind' clock, assuming parameters and hotstart vars
+!     have been init'ed. In theory, this part should be added to hotstart part,
+!     but since these vars are 'derived' from main state vars, this simplifies
+!     the hotstart somewhat.
+
+      use schism_glbl
+      use schism_msgp
+      use netcdf
+      use hydraulic_structures
+#ifdef USE_SED
+       USE sed_mod, only : Srho,Nbed,MBEDP,bed,bed_frac,Wsed,Sd50
+#endif
+
+      implicit none
+
+      include 'mpif.h'
+
+      real(rkind), intent(in) :: time
+      !init_modules is used to overwrite vars from modules that may or may not be read in from
+      !hotstart. This is used e.g. for cold start
+      integer, intent(in) :: init_modules !1: overwrite
+
+      integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp,istat,ip,icount,n1,n2,kl
+      real :: floatout 
+      real(rkind) :: tmp,wx1,wx2,wy1,wy2,wtratio,ttt,dep,eqstate
+      real(rkind), allocatable :: swild(:),rwild(:,:)
+      real(4), allocatable :: swild9(:,:) !used in tracer nudging
+
+      allocate(swild9(nvrt,mnu_pts),swild(nsa+nvrt+12+ntracers),stat=istat)
+      if(istat/=0) call parallel_abort('INIT: swild9')
+      if(nws==4) then
+        allocate(rwild(np_global,3),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: failed to alloc. (71)')
+      endif !nws=4
+
+!...  Finish init variables
+      it_now=nint(time/dt) !current time step
+
+      if(itur==3.or.itur==5) then !Tsinghua group:0822+itur==5
+!$OMP parallel do default(shared) private(i,j)
+        do i=1,npa
+          do j=1,nvrt
+            q2(j,i)=max(q2min,q2(j,i))
+            xl(j,i)=max(xlmin2(i),xl(j,i))
+          enddo
+        enddo
+!$OMP end parallel do
+          
+#ifdef USE_SED 
+        if(itur==5) then
+          do i=1,npa
+            do j=1,nvrt
+              epsf(j,i)=max(cmiu0**3*q2(j,i)**1.5*xl(j,i)**(-1),psimin) !0918 1012
+              q2f(j,i)=q2(j,i) 
+              q2p(j,i)=q2(j,i) 
+              q2fp(j,i)=2*q2(j,i) 
+              dfhm(j,:,i)=dfh(j,i) !1007
+            enddo
+          enddo
+        endif !itur==5 0825 Tsinghua group
+#endif
+      endif !itur
+
+! 0917 tsinghua group------------
+#ifdef USE_SED 
+!     Init arrays used in 2-phase flow
+      if(itur==5) then
+        ntr_l=ntrs(5)
+        tmp=sum(Srho(1:ntr_l))/ntr_l
+        taup=tmp/(tmp-rho0)*sum(Wsed(1:ntr_l))/ntr_l/grav
+        ws=sum(Wsed(1:ntr_l))/ntr_l
+        SDav=sum(Sd50(1:ntr_l))/ntr_l
+        Srhoav=sum(Srho(1:ntr_l))/ntr_l
+        do i=1,npa
+          do k=kbp(i),nvrt 
+            trndtot(k,i)=sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i)/Srho(1:ntr_l))
+          enddo !k=kbp(i),nvrt
+            
+          do k=kbp(i),nvrt 
+            g0(k,i)=(1+2.5*trndtot(k,i)+4.5904*trndtot(k,i)**2+4.515439*trndtot(k,i)**3)/ &
+       &(1-(trndtot(k,i)/Cv_max)**3)**0.678021
+            if(trndtot(k,i)>1.e-10) then !0918
+              ws(k,i)=sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i)*Wsed(1:ntr_l))/ &
+         &sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i))
+              SDav(k,i)=sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i)*Sd50(1:ntr_l))/ &
+         &sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i))
+              Srhoav(k,i)=sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i)*Srho(1:ntr_l))/ &
+         &sum(tr_nd(irange_tr(1,5):irange_tr(2,5),k,i))
+              taup_c(k,i)=SDav(k,i)/(24*g0(k,i)*trndtot(k,i))*(3*pi/(2*q2p(k,i)))**0.5d0
+              taup(k,i)=Srhoav(k,i)/(Srhoav(k,i)-rho0)*ws(k,i)/grav*(1-trndtot(k,i))**1.7d0
+            endif
+            taufp_t(k,i)=(1+Cbeta*sqrt(3*ws(k,i)**2/(2*q2f(k,i))))**(-0.5d0)* &
+       &(1.5*c_miu*q2f(k,i)/epsf(k,i))
+            if(taup(k,i)>taufp_t(k,i)) taup(k,i)=taufp_t(k,i) !1014              
+            miuft(k,i)=min(diffmax(j),max(diffmin(j),c_miu*q2f(k,i)**2/epsf(k,i))) !0924.2 1011
+
+!... miup
+!              if(taup(k,i)>taufp_t(k,i)) then !1013 1016:close
+!                miup_t(k,i)=(q2fp(k,i)*taufp_t(k,i)/3+taufp_t(k,i)*q2p(k,i)/3*(1+trndtot(k,i)*g0(k,i)*Acol))/ &
+!           &(1+sig_s*taup(k,i)/(2*taup_c(k,i)))
+!                Kp_t(k,i)=(taufp_t(k,i)*q2fp(k,i)/3+10./27.*taufp_t(k,i)*q2p(k,i)*(1+trndtot(k,i)*g0(k,i)*fi_c))/ &
+!           &(1+5./9.*taup(k,i)*ksi_c/taup_c(k,i)) !1011
+!              else
+            miup_t(k,i)=(q2fp(k,i)*taufp_t(k,i)/3+taup(k,i)*q2p(k,i)/3*(1+trndtot(k,i)*g0(k,i)*Acol))/ &
+       &(1+sig_s*taup(k,i)/(2*taup_c(k,i)))
+!                Kp_t(k,i)=(taufp_t(k,i)*q2fp(k,i)/3+10./27.*taup(k,i)*q2p(k,i)*(1+trndtot(k,i)*g0(k,i)*fi_c))/ &
+!           &(1+5./9.*taup(k,i)*ksi_c/taup_c(k,i)) !1011
+!              endif
+            miup_c(k,i)=0.8d0*trndtot(k,i)*g0(k,i)*(1+ecol)*(miup_t(k,i)+SDav(k,i)*sqrt(2*q2p(k,i)/(3*pi)))
+            miup(k,i)=min(diffmax(j),max(diffmin(j),miup_t(k,i)+miup_c(k,i))) !0924.2
+!... kesi_tau
+            tmp=trndtot(k,i)*Srhoav(k,i)/(1-trndtot(k,i))/rho0
+            kesit(k,i)=(2/taup(k,i)*(1-tmp)+(1-ecol**2)/(3*taup_c(k,i)))*taup(k,i)/(2*(1+tmp))
+!... Kp_tc, Kp_t, Kp_c
+            Kp_t(k,i)=(taufp_t(k,i)*q2fp(k,i)/3+10./27.*taup(k,i)*q2p(k,i)*(1+trndtot(k,i)*g0(k,i)*fi_c))/ &
+       &(1+5./9.*taup(k,i)*ksi_c/taup_c(k,i)) !1011 1013:close 1016:open
+            Kp_c(k,i)=trndtot(k,i)*g0(k,i)*(1+ecol)*(6*Kp_t(k,i)/5+4./3.*SDav(k,i)*sqrt(2*q2p(k,i)/(3*pi))) !1011
+            Kp_tc(k,i)=min(diffmax(j),max(diffmin(j),Kp_t(k,i)+Kp_c(k,i))) !0924.2 
+!... Kft
+            Kft(k,i)=min(diffmax(j),max(diffmin(j),1.d-6+miuft(k,i)/sigf)) !0924.2  
+!... miuepsf
+            miuepsf(k,i)=min(diffmax(j),max(diffmin(j),1.d-6+miuft(k,i)/sigepsf)) !0924.2   
+          enddo !k=kbp(i),nvrt
+        enddo
+      endif !itur==5
+#endif /*USE_SED*/
+! 0917 tsinghua group------------
+
+!----------------------------------------------------------------------
+!     Init time history in/outputs
+!----------------------------------------------------------------------
+!     Station output
+      if(iout_sta/=0.and.myrank==0) then
+        do i=1,nvar_sta
+          rewind(250+i)    
+          do it=1,it_now !iths_main
+            if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then
+              read(250+i,*)
+            endif
+          enddo !it
+        enddo !i
+      endif !myrank
+
+!     Read ICM parameters 
+#ifdef USE_ICM 
+      call WQinput(time)
+#endif /*USE_ICM*/
+
+!...  Find position in the wind input file for nws=1,2, and read in wind[x,y][1,2]
+!...  Wind vector always in lat/lon frame
+      if(nws==0) then
+        windx1 = 0
+        windy1 = 0
+        windy2 = 0
+        windx2 = 0
+        windx  = 0
+        windy  = 0
+      endif
+
+      if(nws==1) then
+        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
+        rewind(22)
+        ninv=time/wtiminc
+        wtime1=ninv*wtiminc 
+        wtime2=(ninv+1)*wtiminc 
+        do it=0,ninv
+          read(22,*)tmp,wx1,wy1
+          if(it==0.and.abs(tmp)>1.e-4) &
+     &call parallel_abort('check time stamp in wind.th')
+          if(it==1.and.abs(tmp-wtiminc)>1.e-4) &
+     &call parallel_abort('check time stamp in wind.th(2)')
+        enddo !it
+        read(22,*)tmp,wx2,wy2
+        windx1=wx1
+        windy1=wy1
+        windx2=wx2
+        windy2=wy2
+      endif
+
+      if(nws==4) then
+        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
+        rewind(22)
+        ninv=time/wtiminc
+        wtime1=ninv*wtiminc
+        wtime2=(ninv+1)*wtiminc
+        do it=0,ninv
+          read(22,*)tmp,rwild(:,:)
+          if(it==0.and.abs(tmp)>1.e-4) &
+     &call parallel_abort('check time stamp in wind.th(4.1)')
+          if(it==1.and.abs(tmp-wtiminc)>1.e-4) &
+     &call parallel_abort('check time stamp in wind.th(4.2)')
+        enddo !it
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            windx1(nd)=rwild(i,1)
+            windy1(nd)=rwild(i,2)
+            pr1(nd)=rwild(i,3)
+          endif
+        enddo !i
+
+        read(22,*)tmp,rwild(:,:)
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            windx2(nd)=rwild(i,1)
+            windy2(nd)=rwild(i,2)
+            pr2(nd)=rwild(i,3)
+          endif
+        enddo !i
+      endif !nws=4
+
+      if(nws>=2.and.nws<=3) then
+        ninv=time/wtiminc
+        wtime1=ninv*wtiminc 
+        wtime2=(ninv+1)*wtiminc 
+        if(nws==2) then
+          call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
+          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
+        else
+          windx1=0; windy1=0; windx2=0; windy2=0
+          pr1=1.e5; pr2=1.e5
+          airt1=20; airt2=20
+          shum1=0; shum2=0
+        endif
+
+      endif !nws
+
+#ifdef USE_SIMPLE_WIND
+      if(nws==5.or.nws==6) then
+        ninv=time/wtiminc
+        wtime1=ninv*wtiminc
+        wtime2=(ninv+1)*wtiminc
+        itmp1=floor(time/wtiminc)+1
+        if(nws==5) then
+           CALL READ_REC_ATMO_FD(itmp1,   windx1, windy1, pr1)
+           CALL READ_REC_ATMO_FD(itmp1+1, windx2, windy2, pr2)
+        endif
+        if(nws==6) then 
+           CALL READ_REC_ATMO_FEM(itmp1,   windx1, windy1, pr1)
+           CALL READ_REC_ATMO_FEM(itmp1+1, windx2, windy2, pr2)
+        endif
+      endif !5|6
+#endif
+
+!...  Initialize heat budget model
+      if(ihconsv/=0.and.nws==2) then
+        call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
+     &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &                   fluxprc,fluxevp, &
+#endif
+     &                   nws) !,fluxsu00,srad00)
+!#endif
+!       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
+!       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
+!       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)
+!       hradd: downwelling infrared (longwave) radiative fluxes at surface (W/m^2)
+!       srad: solar radiation (W/m^2)
+!       tauxz,tauyz: wind stress (in true E-N direction if ics=2)
+!$OMP parallel do default(shared) private(i)
+        !If nws=3, sflux is init'ed as 0
+        do i=1,npa
+          sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i))
+          !fluxprc is net flux P-E if impose_net_flux/=0
+        enddo
+!$OMP end parallel do
+        if(myrank==0) write(16,*)'heat budge model completes...'
+      endif !nws==2
+
+!-------------------------------------------------------------------------------
+!   Initialize wind wave model (WWM)
+!-------------------------------------------------------------------------------
+#ifdef USE_WWM
+      !Init. windx,y for WWM 
+      if(nws==0) then
+        windx=0
+        windy=0
+      else
+        wtratio=(time-wtime1)/(wtime2-wtime1)
+        windx=windx1+wtratio*(windx2-windx1)
+        windy=windy1+wtratio*(windy2-windy1)
+      endif
+      CALL INITIALIZE_WWM
+#endif      
+
+!...  Nudging 
+      !Shared variables for inu_tr=2 (not used if none of inu_tr=2)
+      ntmp=time/step_nu_tr+1
+      time_nu_tr=ntmp*step_nu_tr !points to next time pt
+      trnd_nu1=-9999.d0; trnd_nu2=-9999.d0 !init
+      do k=1,natrm 
+        if(ntrs(k)<=0) cycle
+
+        if(inu_tr(k)==2) then
+          itmp1=irange_tr(1,k) 
+          itmp2=irange_tr(2,k) 
+          j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nudging(1)')
+
+          do m=itmp1,itmp2
+            swild9=-9999.
+            if(myrank==0) then
+              j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
+     &(/m-itmp1+1,1,1,ntmp/),(/1,nvrt,nnu_pts(k),1/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nudging nc(2)')
+            endif !myrank
+            call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
+            do i=1,nnu_pts(k)
+              nd=inu_pts_gb(i,k)
+              if(ipgl(nd)%rank==myrank) then
+                ip=ipgl(nd)%id
+                trnd_nu1(m,:,ip)=swild9(:,i)
+!                if(swild9(1,i)<-999.) then
+!                  write(errmsg,*) 'INIT: trnd_nu1,',i,nd,swild9(:,i)
+!                  call parallel_abort(errmsg)
+!                endif
+              endif 
+            enddo !i
+
+            swild9=-9999.
+            if(myrank==0) then
+              j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
+     &(/m-itmp1+1,1,1,ntmp+1/),(/1,nvrt,nnu_pts(k),1/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nudging nc(2.2)')
+            endif !myrank
+            call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
+            do i=1,nnu_pts(k)
+              nd=inu_pts_gb(i,k)
+              if(ipgl(nd)%rank==myrank) then
+                ip=ipgl(nd)%id
+                trnd_nu2(m,:,ip)=swild9(:,i)
+!                if(swild9(1,i)<-999.) then
+!                  write(errmsg,*) 'INIT: trnd_nu2,',i,nd,swild9(:,i)
+!                  call parallel_abort(errmsg)
+!                endif
+              endif
+            enddo !i
+          enddo !m
+        endif !inu_tr(k)
+      enddo !k
+
+!...  Init reading t.h. files 
+      if(nettype>0) then
+        open(50,file=in_dir(1:len_in_dir)//'elev.th',status='old')
+        !Get dt 1st
+        read(50,*)tmp !,ath(1:nettype,1,1,1)
+        read(50,*)th_dt(1,1) !,ath(1:nettype,1,2,1)
+        if(abs(tmp)>1.e-6.or.th_dt(1,1)<dt) call parallel_abort('INIT: check elev.th')
+        rewind(50)
+        ninv=time/th_dt(1,1)
+        do it=0,ninv
+          read(50,*)ttt,ath(1:nettype,1,1,1)
+        enddo
+        th_time(1,1,1)=ttt
+        read(50,*)ttt,ath(1:nettype,1,2,1)
+        th_time(1,2,1)=ttt
+      endif !nettype
+
+      if(nfltype>0) then 
+        open(51,file=in_dir(1:len_in_dir)//'flux.th',status='old')
+        read(51,*) tmp !,ath(1:nfltype,1,1,2)
+        read(51,*) th_dt(1,2) !
+        if(abs(tmp)>1.e-6.or.th_dt(1,2)<dt) call parallel_abort('INIT: check flux.th')
+        rewind(51)
+        ninv=time/th_dt(1,2)
+        do it=0,ninv
+          read(51,*)ttt,ath(1:nfltype,1,1,2)
+        enddo 
+        th_time(1,1,2)=ttt
+        read(51,*) ttt,ath(1:nfltype,1,2,2)
+        th_time(1,2,2)=ttt
+      endif !nfltype
+
+      do i=1,natrm
+        if(ntrs(i)>0.and.ntrtype1(i)>0) then !type I
+          do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
+            read(300+m,*)tmp !,ath(1:ntrtype1(i),m,1,5)
+            read(300+m,*)th_dt(m,5) !
+            if(abs(tmp)>1.e-6.or.th_dt(m,5)<dt) call parallel_abort('INIT: check type I')
+            rewind(300+m)
+            ninv=time/th_dt(m,5)
+            do it=0,ninv
+              read(300+m,*) ttt,ath(1:ntrtype1(i),m,1,5)
+            enddo
+            th_time(m,1,5)=ttt
+            read(300+m,*) ttt,ath(1:ntrtype1(i),m,2,5)
+            th_time(m,2,5)=ttt
+          enddo
+        endif 
+      enddo !i
+
+!     Check dimension of ath2
+      if(max(nnode_et,nnode_fl,maxval(nnode_tr2))>neta_global) then
+        write(errmsg,*) 'INIT: Dimension overflow for ath2:',nnode_et,nnode_fl,nnode_tr2(:)
+        call parallel_abort(errmsg)
+      endif
+!     Binary record length for *3D.th at each time step
+!      nrecl_et=nbyte*(1+nnode_et) !single precision
+!      nrecl_fl=nbyte*(1+nnode_fl*2*nvrt)
+!      nrecl_tr2(:)=nbyte*(1+nnode_tr2(:)*nvrt*ntrs(:))
+
+      if(nettype2>0) then
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+        if(j/=NF90_NOERR) call parallel_abort('init: elev2D.th.nc')
+        j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
+        j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
+        if(itmp/=nnode_et) call parallel_abort('init: # of open nodes(1)')
+        j=nf90_inq_varid(ncid_elev2D, "time_step",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc dt1')
+        j=nf90_get_var(ncid_elev2D,mm,floatout);
+        if(j/=NF90_NOERR) call parallel_abort('init: nc dt2')
+        if(floatout<dt) call parallel_abort('INIT: elev2D.th dt wrong')
+        th_dt2(1)=floatout
+        ninv=time/th_dt2(1)
+        th_time2(1,1)=ninv*th_dt2(1)
+        th_time2(2,1)=th_time2(1,1)+th_dt2(1)
+
+        j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series')
+        j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
+    &(/1,1,1,ninv+1/),(/1,1,nnode_et,1/))
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series1')
+        j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
+    &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series2')
+      endif !nettype2
+
+      if(nfltype2>0) then
+        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
+        if(j/=NF90_NOERR) call parallel_abort('init: uv3D.th.nc')
+        j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
+        j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
+        if(itmp/=nnode_fl) call parallel_abort('init: # of open nodes(2)')
+        j=nf90_inq_varid(ncid_uv3D, "time_step",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc dt3')
+        j=nf90_get_var(ncid_uv3D,mm,floatout);
+        if(j/=NF90_NOERR) call parallel_abort('init: nc dt4')
+        if(floatout<dt) call parallel_abort('INIT: uv3D.th dt wrong')
+        th_dt2(2)=floatout
+        ninv=time/th_dt2(2)
+        th_time2(1,2)=ninv*th_dt2(2)
+        th_time2(2,2)=th_time2(1,2)+th_dt2(2)
+
+        j=nf90_inq_varid(ncid_uv3D, "time_series",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series3')
+        j=nf90_get_var(ncid_uv3D,mm,ath2(1:2,1:nvrt,1:nnode_fl,1,2), &
+     &(/1,1,1,ninv+1/),(/2,nvrt,nnode_fl,1/))
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series4')
+        j=nf90_get_var(ncid_uv3D,mm,ath2(1:2,1:nvrt,1:nnode_fl,2,2), &
+     &(/1,1,1,ninv+2/),(/2,nvrt,nnode_fl,1/))
+        if(j/=NF90_NOERR) call parallel_abort('init: time_series4')
+      endif !nfltype2
+
+!     All tracer models share time step etc
+      icount=0
+      th_dt2(5)=0 !init
+      do i=1,natrm
+        if(ntrs(i)>0.and.nnode_tr2(i)>0) then
+          icount=icount+1
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
+          if(j/=NF90_NOERR) call parallel_abort('init: tr3D.th')
+          j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
+          j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
+          if(itmp/=nnode_tr2(i)) call parallel_abort('init: # of open nodes(3)')
+          j=nf90_inq_varid(ncid_tr3D(i), "time_step",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc dt5')
+          j=nf90_get_var(ncid_tr3D(i),mm,floatout);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc dt6')
+          if(floatout<dt) call parallel_abort('INIT: tr3D.th dt wrong')
+          if(icount==1) then
+            th_dt2(5)=floatout
+          else if(abs(th_dt2(5)-floatout)>1.d-4) then
+            write(errmsg,*)'INIT: tracer models must share dt for tr3D.th:',i,th_dt2(5),floatout
+            call parallel_abort(errmsg)
+          endif
+
+          ninv=time/th_dt2(5) !same among all tracers
+          th_time2(1,5)=ninv*th_dt2(5)
+          th_time2(2,5)=th_time2(1,5)+th_dt2(5)
+
+          j=nf90_inq_varid(ncid_tr3D(i), "time_series",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_series5')
+          itmp=irange_tr(2,i)-irange_tr(1,i)+1
+          j=nf90_get_var(ncid_tr3D(i),mm, &
+     &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),1,5), &
+     &(/1,1,1,ninv+1/),(/itmp,nvrt,nnode_tr2(i),1/))
+          if(j/=NF90_NOERR) call parallel_abort('init: time_series6')
+          j=nf90_get_var(ncid_tr3D(i),mm, &
+     &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5), &
+     &(/1,1,1,ninv+2/),(/itmp,nvrt,nnode_tr2(i),1/))
+          if(j/=NF90_NOERR) call parallel_abort('init: time_series7')
+        endif !ntrs
+      enddo !i
+
+      if(if_source==1) then
+        if(nsources>0) then
+          open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
+          read(63,*)tmp,ath3(1:nsources,1,1,1)
+          read(63,*)th_dt3(1),ath3(1:nsources,1,2,1)
+          if(abs(tmp)>1.d-6.or.th_dt3(1)<dt) call parallel_abort('INIT: vsource.th start time wrong')
+          ninv=time/th_dt3(1)
+          rewind(63)
+          do it=0,ninv
+            read(63,*)tmp,ath3(1:nsources,1,1,1)
+          enddo !it
+          th_time3(1,1)=tmp
+          read(63,*)tmp,ath3(1:nsources,1,2,1)
+          th_time3(2,1)=tmp
+
+          !msource.th: values in concentration dimension (psu etc)
+          !Use -9999 to injet ambient values
+          open(65,file=in_dir(1:len_in_dir)//'msource.th',status='old')
+          read(65,*)tmp,ath3(1:nsources,1:ntracers,1,3)
+          read(65,*)th_dt3(3),ath3(1:nsources,1:ntracers,2,3)
+          if(abs(tmp)>1.d-6.or.th_dt3(3)<dt) call parallel_abort('INIT: msource.th start time wrong')
+          ninv=time/th_dt3(3)
+          rewind(65)
+          do it=0,ninv
+            read(65,*)tmp,ath3(1:nsources,1:ntracers,1,3)
+          enddo !it
+          th_time3(1,3)=tmp
+          read(65,*)tmp,ath3(1:nsources,1:ntracers,2,3)
+          th_time3(2,3)=tmp
+        endif !nsources
+   
+        if(nsinks>0) then
+          open(64,file=in_dir(1:len_in_dir)//'vsink.th',status='old') !values (<=0) in m^3/s
+          read(64,*)tmp,ath3(1:nsinks,1,1,2)
+          read(64,*)th_dt3(2),ath3(1:nsinks,1,2,2)
+          if(abs(tmp)>1.e-6.or.th_dt3(2)<dt) call parallel_abort('INIT: vsink.th start time wrong')
+!'
+          ninv=time/th_dt3(2)
+          rewind(64)
+          do it=0,ninv
+            read(64,*)tmp,ath3(1:nsinks,1,1,2)
+          enddo !it
+          th_time3(1,2)=tmp
+          read(64,*)tmp,ath3(1:nsinks,1,2,2)
+          th_time3(2,2)=tmp
+        endif !nsinks
+      endif !if_source
+
+#ifdef USE_SED
+!...  Sediment model initialization
+      call sed_init(init_modules)
+#endif /*USE_SED*/
+
+!     Initialize time series for hydraulic structures that use them, including 
+!     opening files and "fast forwarding" to the restart time
+      if(ihydraulics/=0.and.nhtblocks>0) then
+        call init_struct_time_series(time)
+      endif
+
+      if(myrank==0) write(16,'(a)')'Done initializing time history...'
+
+
+!      if(ihot==0) iths=0
+!...  Compute initial bed deformation and update depths info
+!$OMP parallel default(shared) private(i,dep,swild,n1,n2)
+
+!$OMP do
+      do i=1,npa
+        bdef1(i)=bdef(i)/ibdef*min0(it_now,ibdef)
+        if(imm==1) then
+          !Add conditional to avoid conflict with sediment morph model
+          dp(i)=dp00(i)-bdef1(i)
+        else if(imm==2) then
+          call update_bdef(time,xnd(i),ynd(i),dep,swild)
+          dp(i)=dep 
+        endif
+        if(ivcor==2) hmod(i)=min(dp(i),h_s)
+      enddo !i
+!$OMP end do
+
+!$OMP do
+      do i=1,nsa
+        n1=isidenode(1,i)
+        n2=isidenode(2,i)
+        dps(i)=(dp(n1)+dp(n2))/2
+      enddo !i
+!$OMP end do
+
+!$OMP do
+      do i=1,nea
+        dpe(i)=minval(dp(elnode(1:i34(i),i)))
+      enddo !i=1,ne
+!$OMP end do
+!$OMP end parallel
+
+!...  Compute initial vgrid
+      if(inunfl==0) then
+        call levels0(it_now,it_now)
+      else
+        call levels1(it_now,it_now)
+      endif
+
+      if(myrank==0) write(16,*)'done computing initial vgrid...'
+
+!...  Compute nodal vel. 
+      call nodalvel
+      if(myrank==0) write(16,*)'done computing initial nodal vel...'
+
+!$OMP parallel default(shared) private(i,k,kl)
+
+!...  Compute initial density at nodes or elements
+!$OMP workshare
+      prho=-99
+      erho=-99
+!$OMP end workshare
+
+!$OMP do
+      do i=1,npa
+        if(idry(i)==1) cycle
+        do k=1,nvrt
+          kl=max(k,kbp(i))
+          prho(k,i)=eqstate(1,iplg(i),tr_nd(1,k,i),tr_nd(2,k,i),znl(kl,i)  &
+#ifdef USE_SED
+     &                     ,ntrs(5),tr_nd(irange_tr(1,5):irange_tr(2,5),k,i),Srho(:) &
+#endif /*USE_SED*/
+#ifdef USE_TIMOR
+!     &                      ,tr_nd(irange_tr(1,5):,kl,i),rhomud(1:ntracers,kl,i),laddmud_d &
+#endif
+     &                      )
+        enddo !k
+      enddo !i
+!$OMP end do
+
+!$OMP do
+      do i=1,nea
+        if(idry_e(i)==1) cycle
+
+        do k=1,nvrt
+          kl=max(k,kbe(i))
+#ifdef USE_TIMOR
+!          do m=1,ntracers
+!            swild(m)=sum(rhomud(m,kl,elnode(1:3,i)))/3
+!          enddo !m
+#endif
+          erho(k,i)=eqstate(2,ielg(i),tr_el(1,k,i),tr_el(2,k,i),ze(kl,i)      &
+!LLP
+#ifdef USE_SED
+     &                    ,ntrs(5),tr_el(irange_tr(1,5):irange_tr(2,5),k,i),Srho(:)         &
+#endif /*USE_SED*/
+#ifdef USE_TIMOR
+!     &                        ,tr_el(:,k,i),swild(1:ntracers),laddmud_d &
+#endif
+!LLP end
+     &                       )
+        enddo !k
+      enddo !i
+!$OMP end do
+!$OMP end parallel
+
+!...  Compute mean density profile at nodes or elements (using current z-coord.)
+      if(ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2) then
+        call mean_density
+      else !other cases
+        rho_mean=0
+      endif
+
+      if(myrank==0) write(16,*)'done computing initial density...'
+
+
+      if(allocated(rwild)) deallocate(rwild)
+      deallocate(swild,swild9)
+
+      end subroutine other_hot_init
 
 !===============================================================================
 !===============================================================================
