@@ -68,10 +68,10 @@
 !===============================================================================
 !===============================================================================
    
-      subroutine other_hot_init(time,init_modules)
-!     This routine finishes up init'ing remaining vars. It can be called
+      subroutine other_hot_init(time)
+!     This routine finishes up initializing remaining vars. It can be called
 !     at t=time to 'rewind' clock, assuming parameters and hotstart vars
-!     have been init'ed. In theory, this part should be added to hotstart part,
+!     have been init'ed. In theory, this part could be added to hotstart part,
 !     but since these vars are 'derived' from main state vars, this simplifies
 !     the hotstart somewhat.
 
@@ -88,9 +88,6 @@
       include 'mpif.h'
 
       real(rkind), intent(in) :: time
-      !init_modules is used to overwrite vars from modules that may or may not be read in from
-      !hotstart. This is used e.g. for cold start
-      integer, intent(in) :: init_modules !1: overwrite
 
       integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp,istat,ip,icount,n1,n2,kl
       real :: floatout 
@@ -615,7 +612,7 @@
 
 #ifdef USE_SED
 !...  Sediment model initialization
-      call sed_init(init_modules)
+      call sed_init
 #endif /*USE_SED*/
 
 !     Initialize time series for hydraulic structures that use them, including 

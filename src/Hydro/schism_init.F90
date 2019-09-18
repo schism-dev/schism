@@ -5522,12 +5522,7 @@
 
 
       !Finish other init
-      if(ihot==0) then
-        itmp=1
-      else
-        itmp=0
-      endif
-      call other_hot_init(time,itmp)
+      call other_hot_init(time)
 
       if(myrank==0) then
         write(16,*)'time stepping begins...',iths_main+1,ntime
