@@ -76,13 +76,13 @@
 !      print*, varname !,str_tmp2(1:lstr_tmp2)
 
       ! Scan param.in
-      open(15,file=in_dir(1:len_in_dir)//fname,status='old')
+      open(31,file=in_dir(1:len_in_dir)//trim(fname),status='old')
 
-      rewind(15)
+      rewind(31)
       line=0
       do
         line=line+1
-        read(15,'(a)',end=99)line_str
+        read(31,'(a)',end=99)line_str
         line_str=adjustl(line_str) !place blanks at end
         len_str=len_trim(line_str)
         if(len_str==0.or.line_str(1:1)=='!') cycle
@@ -143,10 +143,10 @@
       enddo !scan param.in
   
 !     print*, 'Found it on line: ',line
-      close(15)
+      close(31)
       return
 
-99    close(15)
+99    close(31)
 #ifdef USE_FABM
         if (varname(1:3)=='fab') then
           ivarvalue=1
