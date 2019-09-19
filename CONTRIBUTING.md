@@ -102,12 +102,13 @@ nothing to commit (working directory clean)
 
 When ready to merge your branch with master, there are two approaches: via pull request (PR) or local merge+push
 
-3.1 Local merge + push
+2.1 Local merge + push
 
 ```bash
 $ git checkout master #switch to master branch
 $ git pull origin master   #or:  git reset --hard origin/master  (bring it up to date)
 $ git merge --squash new_branch #merge ‘new_branch’ to master; resolve conflict if necessary; write a single commit message
+$ git commit -av 
 $ git push origin master #push to master branch of remote repo
 ```
 
@@ -120,7 +121,7 @@ $ git push origin --delete new_branch #remove from remote repo
 ```
 To make the commit log clean, a useful way is to rebase (i.e. move HEAD around) so that commits into new_branch are squashed in the log. The best way to rebase is to use github’s PR.
 
-3.2 Pull request
+2.2 Pull request
 
 On github, submit a PR, so other developers can examine the changes and provide feedback. When consensus is reached, some developer can do final merge on github as well, with optional rebase. The GUI there provides good help on all of these tasks.
 
