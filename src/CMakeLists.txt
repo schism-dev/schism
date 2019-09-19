@@ -7,6 +7,11 @@ endif(POLICY CMP0017)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
+# This policy has to do with variables called <module>_ROOT
+# and possible collisions with module-finding.
+cmake_policy(SET CMP0074 OLD)
+
+
 enable_testing()
 
 ############ Include paths for CMake ####
@@ -22,23 +27,7 @@ message(STATUS "In-source builds not allowed")
 project(SCHISM C CXX Fortran)
 add_definitions("-DSCHISM")
 
-option(DEBUG "Enable debug option")
-if(DEBUG)
-  add_definitions(-DDEBUG)
-endif()
-unset(DEBUG CACHE)
 
-option(USE_ANALYSIS "Enable analysis output")
-if(USE_ANALYSIS)
-  add_definitions(-DUSE_ANALYSIS)
-endif()
-unset(USE_ANALYSIS CACHE)
-
-option(USE_PREC_EVAP "Use  precipitation/evaporation option" OFF)
-if (USE_PREC_EVAP)
-  add_definitions("-DPREC_EVAP")
-endif (USE_PREC_EVAP)
-unset(USE_PREC_EVAP CACHE)
 
 
 ########### Announce compiler #####
@@ -53,26 +42,91 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 
+########### C Preprocessor #####
+# The thought is to enable this globally, since it is needed for all
+# of SCHISM and several Utilities
+if (NOT DEFINED C_PREPROCESS_FLAG)
+  message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI is not set")
+endif()
+add_compile_options(${C_PREPROCESS_FLAG})
+
+
+######### Algorithmic switches and build options involving functionality
+
+message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
+
+
+if(NOT DEFINED TVD_LIM)
+  message(WARNING "TVD_LIM must be provided, either in the cache. It must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher. Default is VL")
+endif()
+set(TVD_LIM VL CACHE STRING "Flux limiter. SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher")
+
+option(DEBUG "Enable debug option" OFF)
+if(DEBUG)
+  add_compile_definitions(DEBUG)
+  message(STATUS "Debug option is enabled! This is a diagnostic option not suitable for production simulations")
+endif()
+
+option(USE_ANALYSIS "Enable analysis output" OFF)
+if(USE_ANALYSIS)
+  add_compile_definitions(USE_ANALYSIS)
+  message(STATUS "ANALYSIS OPTION IS ENABLED. This triggers detailed calculations and output options")
+endif()
+
+option(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
+if(INCLUDE_TIMING)
+  add_compile_definitions(INCLUDE_TIMING)
+  message(STATUS "TIMING IS ENABLED. This times sections of code")
+endif()
+
+
+option(USE_PREC_EVAP "Use  precipitation/evaporation option" OFF)
+if (USE_PREC_EVAP)
+  add_compile_definitions(PREC_EVAP)
+  message(STAT "PREC_EVAP option is enabled")
+endif (USE_PREC_EVAP)
+
+option(USE_HA "Enable Harmonic Analysis output" OFF)
+if (USE_HA)
+  add_compile_definitions(USE_HA)
+  message(STATUS "Harmonic analysis (HA) is enabled")
+endif (USE_HA)
+
+option(USE_SIMPLE_WIND "Use simple wind option, an alternate input" OFF)
+if (USE_SIMPLE_WIND)  
+  add_compile_definitions(USE_SIMPLE_WIND)
+  message(STATUS "SIMLE_WIND is enabled")
+endif (USE_SIMPLE_WIND)
+
+
+option(USE_GOTM "Enable compiling with GOTM turbulence closure" OFF)
+if (USE_GOTM)
+  add_compile_definitions(USE_GOTM)
+  message(STATUS "GOTM is enabled")
+endif(USE_GOTM)
+
 
 ########### MPI Library ########
 # The typical pattern with cmake is to use the mpi wrapper (e.g. mpif90)
 # to infer flags and locations for the compiler
-message(STATUS "\n### Configuring MPI Library") 
-if (NOT MPIVERSION)
-   if ($ENV{MPI_VERSION})
-      set(MPIVERSION $ENV{MPI_VERSION} CACHE STRING "Version of MPI (1 or 2)")
-   else()
-      set(MPIVERSION "2" CACHE STRING "Version of MPI (1 or 2)")
-    endif()
+message(STATUS "\n### Configuring MPI Library")
+if ($ENV{MPI_VERSION})
+   set(MPIVERSION_DEFAULT $ENV{MPI_VERSION})
+else ($ENV{MPI_VERSION})
+   set(MPIVERSION_DEFAULT 2)
 endif()
+set(MPIVERSION ${MPIVERSION_DEFAULT} CACHE STRING "Version of MPI API (1 or 2)") 
+
 find_package(MPI REQUIRED)
-set_property(GLOBAL APPEND PROPERTY DEFINE-LIST "MPIVERSION=${MPIVERSION}")
+message(STATUS "MPIVERSION = ${MPIVERSION}")
+add_compile_definitions(MPIVERSION=${MPIVERSION})
+
+#set_property(GLOBAL APPEND PROPERTY DEFINE-LIST "MPIVERSION=${MPIVERSION}")
 
 add_definitions(${MPI_Fortran_COMPILE_FLAGS})
 if (CMAKE_Fortran_FLAGS)
   set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS})
 endif (CMAKE_Fortran_FLAGS)
-
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 
@@ -164,6 +218,9 @@ macro( add_module name option_name  default)
   endif(${option_name})
 endmacro(add_module)
 
+
+
+
 # Create list of modules
 add_module(Ice      USE_ICE   OFF)
 add_module(Fabm     USE_FABM  OFF)
@@ -185,6 +242,13 @@ foreach (moddir ${schismmoddirs})
    # endif()
     message(STATUS "Added ${moddir}")
 endforeach()
+
+######## Executable Name
+
+# Create string to append to executable name with module names for the executable name
+string(CONCAT mod_tag ${all_use_mod_defs})
+string(REPLACE USE_ _ mod_tag_rev ${mod_tag})
+string(REPLACE _HYDRO_SCHISM "" mod_tag_rev ${mod_tag_rev})
 
 
 ######## Tests ##################
