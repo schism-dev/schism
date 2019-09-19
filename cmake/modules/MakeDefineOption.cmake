@@ -1,7 +1,6 @@
 ## Create an cmake option associated with a compiler option (-D on compile line)
 ## Preference is given to CMake variables, but an attempt is made to look at the environment
-## If extra code is passed in conditional on the variable, it is appended to a variable called local_extra_code
-## These definitions are accumulated and will be made available via a global list called all_define_options
+## in which case the variable is not cached. 
 
 macro (make_define_option name doc default extra_code)
   if(DEFINED ${name})

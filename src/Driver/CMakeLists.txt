@@ -1,25 +1,6 @@
 #####  Main Driver CMake File
 
-
-#####  Options 
-
-make_define_option("USE_GOTM"  "Use the GOTM library for turbulence" OFF "")
-make_define_option("INCLUDE_TIMING" "Add timing profile instrumentation to simulation" OFF "")
-make_define_option("USE_OPEN64"     "Flag to get compiler going" OFF "")
-
-
-
 #####  Dependencies
-#if (NOT PARMETIS_DIR)
-#  if (DEFINED $ENV{PARMETIS_DIR})
-#    set(PARMETIS_DIR ${PARMETIS_DIR} CACHE PATH "Path to ParMetis Library")
-#  else (DEFINED $ENV{PARMETIS_DIR})
-#    message(STATUS "PARMETIS_DIR not in the environment, setting to local copy -- should be pre built")
-#    set(PARMETIS_DIR "${PROJECT_SOURCE_DIR}/ParMetis-3.1-Sep2010" CACHE PATH "Path to ParMetis")
-#  endif (DEFINED $ENV{PARMETIS_DIR})
-#endif (NOT PARMETIS_DIR)
-#find_package(Parmetis REQUIRED)
-#message(STATUS "Full ParMetis CMake features coming soon: don't worry about errors that only involve PARMETIS_TEST_RUNS")
 list(APPEND schism_libs ${NetCDFLIBS})
 list(APPEND schism_libs parmetis)
 
@@ -36,6 +17,21 @@ add_dependencies( pschism ${schismmodlibs})
 message("Using schism module libraries ${schismmodlibs}")
 target_link_libraries (pschism ${schismmodlibs} ${schism_libs} )
 mpi_wrap( pschism )
+
+
+# This provides a default base name. You can override it in the CACHE/init files or with the -D option
+set (SCHISM_EXE_BASENAME pschism CACHE STRING "Base name (modules and file extension to be added)")
+string(REGEX MATCH "pschism.+" STARTSWITHPSCHISM ${SCHISM_EXE_BASENAME})
+message(STATUS "START: ${SCHISM_EXE_BASENAME}:${STARTSWITHPSCHISM}")
+if (NOT STARTSWITHPSCHISM)
+  message(FATAL_ERROR "SCHISM_EXE_BASENAME must start with pschism. Default is just pschism ... It could be something like pschism_pleiades")
+endif(NOT STARTSWITHPSCHISM)
+
+
+set(exe_name "${SCHISM_EXE_BASENAME}${mod_tag_rev}")
+message(STATUS "Executable name with this configuration will be ${exe_name}")
+set_target_properties(pschism PROPERTIES OUTPUT_NAME ${exe_name})
+
 
 
 

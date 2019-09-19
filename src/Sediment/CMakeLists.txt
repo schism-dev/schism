@@ -1,13 +1,6 @@
 set(schismmodlibs sediment ${schismmodlibs} PARENT_SCOPE)
 
-##### Algorithmic options.Everything done using make_define_options will be applied globally. #####
-# Adds the options to a local list plus a cumulative $all_define_options variable 
-#make_define_option("BEDLOAD_VR" "Bedload sediment option" OFF "")
-#make_define_option("BEDLOAD_MPM" "MPM model bedload sediment option" OFF "")
-#make_define_option("SUSPLOAD" "Suspended load option sediment option" OFF "")
-#make_define_option("SED_MORPH" "Sediment-induced morphology sediment option" OFF "")
-#make_define_option("UV_LOGDRAG" "Log drag formulation sediment option" ON "")
-#make_define_option("UV_QDRAG" "Quadratic drag formulation sediment option" OFF "")
+
 #make_define_option("UV_LDRAG" "Linear drag formulation sediment option" OFF "")
 
 

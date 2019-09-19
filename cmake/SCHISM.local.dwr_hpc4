@@ -1,17 +1,31 @@
 
-
-######################### SCHISM COMPONENTS
+######################### SCHISM Local Compiler and System Settings
 #
-#           You can only build one executable at a time. Choose your modules by setting these modules ON
 #
-#   Modules
-set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
-set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
+#   This file contains the local compiler settings and system choices such as MPI_VERSION
+#   It is meant to be used as a cache init file with the -C option. 
 
-#   Algorithm choices
-set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
-set (TVD_LIM VL CACHE STRING "Flux limiter")
+#   For purposes of clarity and re-usability, the configuration examples have been separated into
+#   system locations and compilers (this file) and module/algorithm choices (e.g. USE_SED,TVD_LIM). 
+#   An example of the latter is given in SCHISM.build.build.sample
+
+#   I practice, these can be separate (for people who don't like repeating system settings) or 
+#   together. In the latter case, cmake works fine with two init files: cmake -C<init1> -C<init2>
+#####################################################################
+
+
+# Compiler choice and any unusual flags. 
+# Defaults for Intel, GFortran and PGI are provided in SCHISM.Compile.cmake, so technically you do not need to set them
+# if you have one of these.  However correct/optimal flags are often very specific to 
+# an HPC architecture. This is where you set this type of information
+
+#set(MPI_VERSION CACHE STRING 2 "Version of MPI Interface, which is the default usually 2 but pleiades is 1")
+#set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -cpp -assume byterecl CACHE STRING "Fortran flags")
+#set(CPREPRO_FLAG -cpp CACHE STRING "Vendor-specific flag to force use of the C Preprocessor")
+#set(USE_OPEN64     CACHE BOOLEAN OFF )   #Might be needed if you are using this compiler
+set(MPI_VERSION    CACHE STRING  "2")
+
+
 
 ##########################  LOCATIONS #########################################################
 #
@@ -28,45 +42,18 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #            You have to build them
 #
 
+# This cannot be set by hardwiring, the default pointing to the internal copy should be correct
+# set(PARMETIS_DIR  path/to/Parmetis CACHE PATH "Path to ParMetis")
 
-set(PARMETIS_DIR  /home/eli/myscratch/schism-dev/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
 set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
-set(NetCDF_FORTRAN_DIR /opt/netcdf/netcdf-fortran/4.4.4-intel64 CACHE PATH "Path to NetCDF Fortran library")
-set(NetCDF_C_DIR      /opt/netcdf/netcdf-c/4.6.2-intel64 CACHE PATH "Path to NetCDF C library")
+set(NETCDF_FORTRAN_DIR /opt/netcdf/netcdf-fortran/4.4.4-intel64 CACHE PATH "Path to NetCDF Fortran library")
+set(NETCDF_C_DIR  /opt/netcdf/netcdf-c/4.6.2-intel64 CACHE PATH "Path to NetCDF C library")
 
 set(HDF5_DIR /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
-set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
-set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation")
+set(SZIP_DIR /opt/szip/2.1.1-intel64  CACHE PATH "Path to SZip compression library")
+#set(MPI_ROOT /opt/mvapich2/2.3-intel  CACHE PATH "Root dir of MPI implementation")
 
 # PETSC hasn't been maintained, not sure of status (Eli).
 #set(PETSC_DIR  /Calcul/Apps/PETSc/3.3-p4.intel/ PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
 #set(GOTM_HOME  /home/eli/myscratch/gotm_v5.2 CACHE PATH "Path to GOTM")
-
-
-
-######################## COMPILE AND BUILD OPTIONS ##############################################
-#
-# BUILD OPTS: Use this to set compiler flags any way you want.For models of how to set flags, 
-#             see SCHISMCompile.cmake, which are the project defaults.
-#
-#             If you are setting up a new platform/compiler combo rather than customizing, 
-#             you might consider adding to SCHISMCompile.cmake with the correct "IF" so 
-#             others can profit from your work.
-#             
-#             If what you are doing is debugging, consider using -DBUILD_TYPE=Debug and using the default
-#             debug flags. Note that there is yet another build type for release plus symbols.
-#
-#             So far I have removed -Bstatic because it is causes problems and cmake seems to do enough
-#             magically.
-#
-#################################################################################################
-
-#set(INCLUDE_TIMING CACHE BOOLEAN OFF)
-#set(USE_OPEN64     CACHE BOOLEAN OFF)
-#set(MPI_VERSION    CACHE STRING  "2")
-
-
-# More complex override
-#set( CMAKE_Fortran_FLAGS_RELEASE "${SCHISM_INTEL_OPTIONS} -O3 -no-prec-div -mcmodel=medium  -Bstatic -assume byterecl -ipo -axCORE-AVX512 -xSSE4.23 -shared-intel" CACHE STRING "Fortran flags" FORCE)
-
 
