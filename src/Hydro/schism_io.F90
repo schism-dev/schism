@@ -378,7 +378,7 @@
       ifile_len=len_trim(ifile_char)  !length without trailing blanks
       fgb='0000' 
       write(fgb,'(i4.4)') myrank
-      fname='outputs/'//('schout_'//fgb//'_'//ifile_char(1:ifile_len)//'.nc')
+      fname=out_dir(1:len_out_dir)//('schout_'//fgb//'_'//ifile_char(1:ifile_len)//'.nc')
 !'
 
       if(iopen==1) iret=nf90_close(ncid)

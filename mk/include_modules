@@ -44,8 +44,8 @@
 # EXEC := $(EXEC)_AGE
 
 # Sediment model (3D)
- USE_SED = yes
- EXEC := $(EXEC)_SED
+# USE_SED = yes
+# EXEC := $(EXEC)_SED
 
 # Ecological model (EcoSim)
 # USE_ECO = yes

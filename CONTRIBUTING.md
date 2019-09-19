@@ -98,6 +98,7 @@ nothing to commit (working directory clean)
 
 (now do similar things as in Option 1, edit and commit to this branch locally. Push to remote when ready)
 
+`$ git push --set-upstream origin new_branch`
 `$ git push` (publish your changes to the remote origin/new_branch)
 
 When ready to merge your branch with master, there are two approaches: via pull request (PR) or local merge+push

@@ -8076,7 +8076,7 @@
         write(it_char,'(i72)')it
         it_char=adjustl(it_char)
         lit=len_trim(it_char)
-        it_char='outputs/hotstart_'//a_4//'_'//it_char(1:lit)//'.nc'
+        it_char=out_dir(1:len_out_dir)//'hotstart_'//a_4//'_'//it_char(1:lit)//'.nc'
         j=nf90_create(trim(adjustl(it_char)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_hot)
         j=nf90_def_dim(ncid_hot,'nResident_node',np,node_dim)
         j=nf90_def_dim(ncid_hot,'nResident_elem',ne,elem_dim)
