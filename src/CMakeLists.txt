@@ -222,6 +222,9 @@ endmacro(add_module)
 
 
 # Create list of modules
+add_module(COSINE USE_COSINE OFF)
+add_module(ICM      USE_ICM OFF)
+add_module(FIB      USE_FIB OFF)
 add_module(Ice      USE_ICE   OFF)
 add_module(Fabm     USE_FABM  OFF)
 add_module(EcoSim   USE_ECO   OFF)
