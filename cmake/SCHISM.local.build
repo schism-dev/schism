@@ -18,24 +18,31 @@
 #  or the list of enabled modules, both of which will be automatically appended.
 set (SCHISM_EXE_BASENAME pschism_hpc4 CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
-
-#   Enable/Disable Modules
-set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_SED ON    CACHE BOOLEAN "Use sediment module")
-set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
-set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
-set( USE_FABM OFF  CACHE BOOLEAN "FABM BGC model interface")
-set( USE_ICE OFF   CACHE BOOLEAN "Use ICE module")
-
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
 set (USE_PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")   # Not implemented yet
+set( USE_MARSH OFF   CACHE BOOLEAN "Use marsh module")
+
+#   Enable/Disable Modules
+set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
+set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
+set( USE_ICE OFF   CACHE BOOLEAN "Use ICE module")
+
+#Tracer models
+set( USE_GEN OFF   CACHE BOOLEAN "Use generic tracer module")
+set( USE_AGE OFF   CACHE BOOLEAN "Use age module")
+set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+set( USE_ICM OFF   CACHE BOOLEAN "Use ICM module")
+set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
+set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
+set( USE_SED ON    CACHE BOOLEAN "Use sediment module")
+set( USE_FABM OFF  CACHE BOOLEAN "FABM BGC model interface")
 
 set (DEBUG CACHE BOOLEAN "Enable diagnostic output")
-set (ANALYSIS CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
+set (USE_ANALYSIS CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
 
 
 

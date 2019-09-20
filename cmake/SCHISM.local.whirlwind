@@ -1,4 +1,4 @@
-####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.whirlwind ../src/
+####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.whirlwind -C ../cmake/SCHISM.local.build ../src/
 
 ###W&M Whirlwind cluster
 ######################### SCHISM COMPONENTS
@@ -6,9 +6,9 @@
 #           You can only build one executable at a time. Choose your modules by setting these modules ON
 #
 #   Modules
-set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_SED OFF CACHE BOOLEAN "Use sediment module")
-set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
+#set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+#set( USE_SED OFF CACHE BOOLEAN "Use sediment module")
+#set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 #set( USE_ICM ON CACHE BOOLEAN "Use ICM module")
 #set( USE_ICM ON CACHE BOOLEAN "Use ICM module")
 #set( USE_HA ON CACHE BOOLEAN "Use HA module")
@@ -23,8 +23,8 @@ set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 #set( USE_ANALYSIS ON CACHE BOOLEAN "Use Analysis module")
 
 #   Algorithm choices
-set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
-set (TVD_LIM VL CACHE STRING "Flux limiter")
+#set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
+#set (TVD_LIM VL CACHE STRING "Flux limiter")
 
 ##########################  LOCATIONS #########################################################
 #
