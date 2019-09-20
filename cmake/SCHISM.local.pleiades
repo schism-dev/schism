@@ -1,4 +1,4 @@
-##cmake cmd in build/: cmake -DMPIVERSION=1 -C ../cmake/SCHISM.local.pleiades ../src/
+##cmake cmd in build/: cmake -DMPIVERSION=1 -C ../cmake/SCHISM.local.pleiades -C ../cmake/SCHISM.local.build ../src/
 
 
 ###NASA Pleiades
@@ -7,13 +7,13 @@
 #           You can only build one executable at a time. Choose your modules by setting these modules ON
 #
 #   Modules
-set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
-set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
+#set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+#set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
+#set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
 
 #   Algorithm choices
-set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
-set (TVD_LIM VL CACHE STRING "Flux limiter")
+#set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
+#set (TVD_LIM VL CACHE STRING "Flux limiter")
 
 ##########################  LOCATIONS #########################################################
 #
