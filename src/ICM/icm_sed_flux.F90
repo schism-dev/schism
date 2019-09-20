@@ -111,7 +111,7 @@ function sed_zbrent(ierr)
   !call sedf(fb,b)
  
   !root must be bracketed in brent 
-  if(abs(fa)<1.d-7) then
+  if(abs(fa)<2.d-6) then
     sed_zbrent=a
     return
   endif !fa
@@ -1413,7 +1413,7 @@ function sedf(sod1)
   ZHTACH4  = KAPPCH4*THTACH4**TEMP202 !CH4
 
   !surface transfer coefficient 
-  stc=sod1/O20
+  stc=sod1/O20 !O20=max(SED_DO(id),1.d-2)
 
   !NH4 flux
   pie1=PIENH4; pie2=PIENH4
