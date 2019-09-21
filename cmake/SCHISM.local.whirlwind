@@ -1,5 +1,3 @@
-####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.whirlwind -C ../cmake/SCHISM.local.build ../src/
-
 ###W&M Whirlwind cluster
 #  Set the base name of the executable.
 #  The main reason for this is to include something like a cluster/architecture name.

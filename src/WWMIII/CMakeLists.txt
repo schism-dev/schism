@@ -18,5 +18,5 @@ endif()
 # The next line depends perhaps too much on the order of operations -- I'll try to fix it so that it is more intuitive.
 # 1. hydro was added to schismmodlibs at PARENT_SCOPE so the local copy doesn't include hydro
 # 2. hydro is added last except for core, so that all the modules that were used got here.
-add_dependencies(wwmIII core) 
-target_link_libraries(wwmIII core) 
+add_dependencies(wwmIII core ${schismmodlibs}) 
+target_link_libraries(wwmIII core ${schismmodlibs}) 

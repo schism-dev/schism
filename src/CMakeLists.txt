@@ -63,6 +63,10 @@ define_opt(USE_HA "Enable Harmonic Analysis output" OFF)
 define_opt(USE_SIMPLE_WIND "Simplified wind data interface" OFF)
 define_opt(USE_GOTM  "Enable compiling with GOTM turbulence closure" OFF)
 define_opt(USE_MARSH "Enable Marsh module" OFF)
+define_opt(DEBUG "Enable debug mode" OFF)
+define_opt(USE_GEN "Enable generic tracer module" OFF)
+define_opt(USE_AGE "Enable age tracer module" OFF)
+define_opt(ICM_PH "Enable pH module in ICM" OFF)
 
 
 
