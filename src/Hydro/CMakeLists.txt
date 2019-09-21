@@ -1,7 +1,21 @@
+
 #set_source_files_properties(transport.F90 PROPERTIES COMPILE_FLAGS -vec-report2)
 set(schismmodlibs hydro ${schismmodlibs} PARENT_SCOPE)
 
-add_definitions(-DTVD_${TVD_LIM})
+add_compile_definitions(TVD_${TVD_LIM})
+
+### Incorporate code that is dependent on options
+set(hydro_extra_src "")
+if(${USE_SIMPLE_WIND})
+  set (hydro_extra_src ${hydro_extra_src} simpler_wind.F90)
+endif()
+if(${USE_HA})
+  set (hydro_extra_src ${hydro_extra_src} harm.F90)
+endif()
+
+message(STATUS "hydro_extra_src=${hydro_extra_src}")
+
+
 add_library(hydro hydraulic_structures.F90
                   schism_init.F90
                   schism_step.F90
@@ -15,11 +29,10 @@ add_library(hydro hydraulic_structures.F90
                   solver_subs.F90 
                   transport_TVD.F90
                   transport_TVD_imp.F90
+                  ${hydro_extra_src}
                   )
 
-if(${USE_SIMPLE_WIND})
-  add_library(hydro simpler_wind.F90)
-endif()
+
 list( APPEND locallibs hydro)
 
 # The next line depends perhaps too much on the order of operations -- I'll try to fix it so that it is more intuitive.

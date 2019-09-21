@@ -235,7 +235,6 @@ else(NetCDF_LIBRARIES AND NetCDF_INCLUDE_DIRS)
           endif()
               
           if(NetCDF_FORTRAN_DIR)
-message("Here")
             if (EXISTS "${NetCDF_FORTRAN_DIR}")
                 find_library(NetCDF_Fortran_LIBRARY
                              NAMES netcdff

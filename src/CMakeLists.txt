@@ -46,7 +46,7 @@ endif()
 # The thought is to enable this globally, since it is needed for all
 # of SCHISM and several Utilities
 if (NOT DEFINED C_PREPROCESS_FLAG)
-  message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI is not set")
+  message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI0 is not set")
 endif()
 add_compile_options(${C_PREPROCESS_FLAG})
 
@@ -55,55 +55,28 @@ add_compile_options(${C_PREPROCESS_FLAG})
 
 message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
 
+define_opt(DEBUG "Enable diagnostics (slow and not suitable for production simulations" OFF)
+define_opt(USE_ANALYSIS "Triggers detailed calculations and output options" OFF)
+define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
+define_opt(USE_PREC_EVAP "Use  precipitation/evaporation option" OFF)
+define_opt(USE_HA "Enable Harmonic Analysis output" OFF)
+define_opt(USE_SIMPLE_WIND "Simplified wind data interface" OFF)
+define_opt(USE_GOTM  "Enable compiling with GOTM turbulence closure" OFF)
+define_opt(USE_MARSH "Enable Marsh module" OFF)
+
+
 
 if(NOT DEFINED TVD_LIM)
   message(WARNING "TVD_LIM must be provided, either in the cache. It must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher. Default is VL")
 endif()
 set(TVD_LIM VL CACHE STRING "Flux limiter. SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher")
+list(APPEND def_tags _TVD-${TVD_LIM})
 
-option(DEBUG "Enable debug option" OFF)
-if(DEBUG)
-  add_compile_definitions(DEBUG)
-  message(STATUS "Debug option is enabled! This is a diagnostic option not suitable for production simulations")
-endif()
+string(CONCAT all_def_tags ${def_tags})
+string(REPLACE USE_ "" def_tag_rev ${all_def_tags})
+string(REPLACE INCLUDE_ "" def_tag_rev ${def_tag_rev})
 
-option(USE_ANALYSIS "Enable analysis output" OFF)
-if(USE_ANALYSIS)
-  add_compile_definitions(USE_ANALYSIS)
-  message(STATUS "ANALYSIS OPTION IS ENABLED. This triggers detailed calculations and output options")
-endif()
-
-option(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
-if(INCLUDE_TIMING)
-  add_compile_definitions(INCLUDE_TIMING)
-  message(STATUS "TIMING IS ENABLED. This times sections of code")
-endif()
-
-
-option(USE_PREC_EVAP "Use  precipitation/evaporation option" OFF)
-if (USE_PREC_EVAP)
-  add_compile_definitions(PREC_EVAP)
-  message(STAT "PREC_EVAP option is enabled")
-endif (USE_PREC_EVAP)
-
-option(USE_HA "Enable Harmonic Analysis output" OFF)
-if (USE_HA)
-  add_compile_definitions(USE_HA)
-  message(STATUS "Harmonic analysis (HA) is enabled")
-endif (USE_HA)
-
-option(USE_SIMPLE_WIND "Use simple wind option, an alternate input" OFF)
-if (USE_SIMPLE_WIND)  
-  add_compile_definitions(USE_SIMPLE_WIND)
-  message(STATUS "SIMLE_WIND is enabled")
-endif (USE_SIMPLE_WIND)
-
-
-option(USE_GOTM "Enable compiling with GOTM turbulence closure" OFF)
-if (USE_GOTM)
-  add_compile_definitions(USE_GOTM)
-  message(STATUS "GOTM is enabled")
-endif(USE_GOTM)
+message(STATUS "Build definition tags set to ${def_tag_rev}")
 
 
 ########### MPI Library ########

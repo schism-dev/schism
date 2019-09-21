@@ -21,3 +21,13 @@ macro (make_define_option name doc default extra_code)
   endif()
 endmacro(make_define_option)
 
+macro (define_opt name default doc)
+  option(${name} ${doc} ${default})
+  if(${name})
+    add_compile_definitions(${name})
+    message(STATUS "${name} OPTION IS ${${name}}")
+    list(APPEND def_tags _${name})
+  endif()
+
+endmacro()
+

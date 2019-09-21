@@ -1,10 +1,5 @@
 
-### Algorithm options. Everything done using make_define_options will be applied globally.
-make_define_option("USE_HA"  "Use the Harmonic Analsis option" OFF "harm.F90")
-
-if(DEFINED SIMPLE_WIND)
-  add_definitions(-DUSE_SIMPLE_WIND=${SIMPLE_WIND})
-endif()
+## Algorithm options. Everything done using make_define_options will be applied globally.
 
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 

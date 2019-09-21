@@ -32,7 +32,7 @@ set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
 set( USE_ICM OFF   CACHE BOOLEAN "Use ICM module")
 set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
 set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
-set( USE_SED ON    CACHE BOOLEAN "Use sediment module")
+set( USE_SED OFF    CACHE BOOLEAN "Use sediment module")
 set( USE_FABM OFF  CACHE BOOLEAN "FABM BGC model interface")
 
 set (DEBUG CACHE BOOLEAN "Enable diagnostic output")
