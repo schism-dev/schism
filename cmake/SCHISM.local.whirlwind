@@ -1,30 +1,13 @@
 ####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.whirlwind -C ../cmake/SCHISM.local.build ../src/
 
 ###W&M Whirlwind cluster
-######################### SCHISM COMPONENTS
-#
-#           You can only build one executable at a time. Choose your modules by setting these modules ON
-#
-#   Modules
-#set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-#set( USE_SED OFF CACHE BOOLEAN "Use sediment module")
-#set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
-#set( USE_ICM ON CACHE BOOLEAN "Use ICM module")
-#set( USE_ICM ON CACHE BOOLEAN "Use ICM module")
-#set( USE_HA ON CACHE BOOLEAN "Use HA module")
-#set( USE_GEN ON CACHE BOOLEAN "Use GEN module")
-#set( USE_AGE ON CACHE BOOLEAN "Use AGE module")
-#set( USE_COS ON CACHE BOOLEAN "Use CoSiNE module")
-#set( USE_FIB ON CACHE BOOLEAN "Use FIB module")
-#set( USE_FABM ON CACHE BOOLEAN "Use FABM module")
-#set( USE_ICE ON CACHE BOOLEAN "Use ICE module")
-#set( USE_SED2D ON CACHE BOOLEAN "Use SED2D module")
-#set( USE_MARSH ON CACHE BOOLEAN "Use Marsh module")
-#set( USE_ANALYSIS ON CACHE BOOLEAN "Use Analysis module")
+#  Set the base name of the executable.
+#  The main reason for this is to include something like a cluster/architecture name.
+#  Do not add the file extension (none for linux, .exe for Windows etc)
+#  or the list of enabled modules, both of which will be automatically appended.
+  set (SCHISM_EXE_BASENAME pschism_WW CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
-#   Algorithm choices
-#set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
-#set (TVD_LIM VL CACHE STRING "Flux limiter")
+
 
 ##########################  LOCATIONS #########################################################
 #
