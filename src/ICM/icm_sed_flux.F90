@@ -1151,7 +1151,7 @@ subroutine sed_calc(id)
   JPO4=stc*(PO41-PO40)
 
   !assign flux arrays, in unit of g/m^2 day
-  !with all state variables in unit of g/*, no need to transfer
+  !with all state variables in unit of g/\*, no need to transfer
   SED_BENDO(id)=-SOD !negatvie
   SED_BENNH4(id)=JNH4
   SED_BENNO3(id)=JNO3

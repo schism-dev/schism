@@ -199,6 +199,7 @@ endmacro(add_module)
 
 
 # Create list of modules
+add_module(WWMIII    USE_WWM   OFF)
 add_module(COSINE USE_COSINE OFF)
 add_module(ICM      USE_ICM OFF)
 add_module(FIB      USE_FIB OFF)
@@ -207,7 +208,6 @@ add_module(Fabm     USE_FABM  OFF)
 add_module(EcoSim   USE_ECO   OFF)
 add_module(Sediment USE_SED   OFF)
 add_module(Sed2d    USE_SED2D OFF)
-add_module(WWMIII    USE_WWM   OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 

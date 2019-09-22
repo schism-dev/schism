@@ -254,7 +254,7 @@
 #endif
         endif
       end subroutine
-#endif
+#endif /*MPI_PARALL_GRID*/
 
       !> set the sover tolerances. arguments are optional
       !> @param[in,out] solver KSP Solver
@@ -686,7 +686,7 @@
 !           write(DBG%FHNDL,*) rank, "Local Number of ghost + interface nodes", nghost
 !         end if
       end subroutine
-#endif
+#endif /*MPI_PARALL_GRID*/
 
       !> initialize some variables. You never need to call this function by hand. It will automaticly called by PETSC_INIT()
       subroutine petscpoolInit()
@@ -881,4 +881,4 @@
 
     end module
 
-#endif 
+#endif /*PETSC*/

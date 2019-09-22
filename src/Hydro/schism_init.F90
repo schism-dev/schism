@@ -5008,6 +5008,7 @@
 !          write(88,*)swild99(1,1:np_global)
 !        endif
 
+        !gfortran requires all chars have same length
         ar_name(1:6)=(/'q2  ','xl  ','dfv ','dfh ','dfq1','dfq2'/)
         do m=1,6 !# of 2D node arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(m))),mm)
@@ -5066,11 +5067,13 @@
        !   enddo
        ! enddo
 
-        ar_name(1:32)=(/'SED_BENDO','CTEMP','BBM','CPOS','PO4T2TM1S', &
-     &'NH4T2TM1S','NO3T2TM1S','HST2TM1S','CH4T2TM1S','CH41TM1S','SO4T2TM1S', &
-     &'SIT2TM1S','BENSTR1S','NH41TM1S','NO31TM1S','HS1TM1S','SI1TM1S','PO41TM1S', &
-     &'PON1TM1S','PON2TM1S','PON3TM1S','POC1TM1S','POC2TM1S','POC3TM1S','POP1TM1S', &
-     &'POP2TM1S','POP3TM1S','PSITM1S','BFORMAXS','ISWBENS','DFEEDM1S','hcansav'/)
+        !gfortran requires all chars have same length
+        ar_name(1:32)=(/'SED_BENDO','CTEMP    ','BBM      ','CPOS     ','PO4T2TM1S', &
+     &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
+     &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
+     &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
+     &'POC3TM1S ','POP1TM1S ','POP2TM1S ','POP3TM1S ','PSITM1S  ','BFORMAXS ', &
+     &'ISWBENS  ','DFEEDM1S ','hcansav  '/)
 !'
         do k=1,32 !# of 1D arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
@@ -5149,7 +5152,8 @@
           enddo !i
         enddo !k=1,31
 
-        ar_name(1:6)=(/'CPOP','CPON','CPOC','lfsav','stsav','rtsav'/)
+        !gfortran requires all chars have same length
+        ar_name(1:6)=(/'CPOP ','CPON ','CPOC ','lfsav','stsav','rtsav'/)
         do k=1,3 !# of 2D arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
           if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
@@ -5205,6 +5209,7 @@
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
+        !gfortran requires all chars have same length
         ar_name(1:4)=(/'COS_mS2','COS_mDN','COS_mZ1','COS_mZ2'/)
         do l=1,4 !# of 3D arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(l))),mm)
@@ -5232,7 +5237,8 @@
           enddo !k
         enddo !l
 
-        ar_name(1:5)=(/'COS_sS2','COS_sDN','COS_sZ1','COS_sZ2','COS_nstep'/)
+        !gfortran requires all chars have same length
+        ar_name(1:5)=(/'COS_sS2  ','COS_sDN  ','COS_sZ1  ','COS_sZ2  ','COS_nstep'/)
 !'
         do l=1,5 !# of 2D arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(l))),mm)
@@ -5353,7 +5359,8 @@
         endif
         if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
 
-        ar_name(1:5)=(/'ice_surface_T','ice_water_flux','ice_heat_flux','ice_velocity_x','ice_velocity_y'/)
+        !gfortran requires all chars have same length
+        ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
         do k=1,5 !# of 1D node arrays
           j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
           if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
