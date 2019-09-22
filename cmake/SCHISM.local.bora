@@ -1,5 +1,3 @@
-####cmake cmd in build/: cmake -C ../cmake/SCHISM.local.bora ../src/
-
 ###W&M Bora cluster
 ######################### SCHISM COMPONENTS
 #

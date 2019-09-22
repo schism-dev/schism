@@ -1,5 +1,3 @@
-####cmake cmd in build/: cmake3 -C ../cmake/SCHISM.local.james ../src/
-
 ###VIMS James cluster
 ######################### SCHISM COMPONENTS
 #

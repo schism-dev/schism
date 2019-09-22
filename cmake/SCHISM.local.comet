@@ -1,5 +1,3 @@
-###cmake cmd: cmake -C ../cmake/SCHISM.local.comet ../src/
-
 ###EXSEDE Comet
 ######################### SCHISM COMPONENTS
 #

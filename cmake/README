@@ -1,3 +1,15 @@
+To build SCHISM system:
+mkdir ../build 
+cd ../build; rm -rf *
+(Edit the 2 cache files below first and then)
+cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.<cluster> ../src/
+(On Pleiades: cmake -DMPIVERSION -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.pleiades ../src/)
+
+make -j8 or make VERBOSE=1 >& tmp
+
+(Executables are in bin/; libs in lib/)
+
+-------------------------------------------------------------
 (Copied from the SCHISM Wiki, hence the wiki-like markup)     
 
 

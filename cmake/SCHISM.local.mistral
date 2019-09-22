@@ -1,5 +1,3 @@
-###cmake cmd: cmake -C ../cmake/SCHISM.local.mistral -C ../cmake/SCHISM.local.build ../src/
-
 ###DKRZ mistral
 ######################### SCHISM COMPONENTS
 #
