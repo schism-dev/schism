@@ -19,13 +19,13 @@ if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
     
 endif()
 
-if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Pgi")
+if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
     #message(STATUS "Overriding default cmake Portland Group compiler flags")
     set (SCHISM_PG_OPTIONS "-mcmodel=medium")
     set( CMAKE_Fortran_FLAGS_RELEASE_INIT "-O2 ${SCHISM_PG_OPTIONS}")
     set( CMAKE_Fortran_FLAGS_DEBUG_INIT "-g ${SCHISM_PG_OPTIONS}")
     set( CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT "-O2 -g ${SCHISM_PG_OPTIONS}")
-    set( C_PREPROCESS_FLAG "-MPreprocess" CACHE STRING "C Preprocessor Flag")
+    set( C_PREPROCESS_FLAG "-Mpreprocess" CACHE STRING "C Preprocessor Flag")
 endif()
 
 if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")

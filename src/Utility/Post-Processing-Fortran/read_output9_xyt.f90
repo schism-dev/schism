@@ -34,7 +34,9 @@
 !       Outputs: fort.1[89]; fort.11 (fatal errors); fort.12: nonfatal errors.
 !                The total # of 'virtual' casts for each actual cast is 2*window/stride+2
 !									
-! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyt.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_xyt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyt.exe ../UtilLib/extract_mod.f90 \
+!../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_xyt.f90 -I$NETCDF/include \
+!-I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out

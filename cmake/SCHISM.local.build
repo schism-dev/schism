@@ -20,7 +20,7 @@ set( USE_MARSH ON CACHE BOOLEAN "Use marsh module")
 
 #   Enable/Disable Modules
 set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
-set( USE_WWM ON CACHE BOOLEAN "Use wind-wave module")
+set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 set( USE_ICE ON CACHE BOOLEAN "Use ICE module")
 
 #Tracer models
