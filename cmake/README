@@ -1,4 +1,4 @@
-To build SCHISM system:
+To build SCHISM system using cmake version 3.12 or higher:
 mkdir ../build 
 cd ../build; rm -rf *
 (Edit the 2 cache files below first and then)
