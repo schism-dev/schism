@@ -1,16 +1,6 @@
 ###VIMS James cluster
-######################### SCHISM COMPONENTS
-#
-#           You can only build one executable at a time. Choose your modules by setting these modules ON
-#
-#   Modules
-set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
-set( USE_WWM OFF   CACHE BOOLEAN "Use wind-wave module")
 
-#   Algorithm choices
-set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
-set (TVD_LIM VL CACHE STRING "Flux limiter")
+set (SCHISM_EXE_BASENAME pschism_JAMES CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
 ##########################  LOCATIONS #########################################################
 #
