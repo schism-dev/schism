@@ -10,11 +10,19 @@ add_custom_target(
 
 set_source_files_properties(${versionfile} PROPERTIES GENERATED TRUE)
 
+set(core_extra_src "")
+if(${USE_HA})
+  set (core_extra_src ${core_extra_src} harm.F90)
+endif()
+
 add_library(core ${local_extra_code}
                  schism_glbl.F90
                  schism_msgp.F90
                  schism_assert.F90
+                 schism_io.F90
 		 misc_modules.F90
+                 hydraulic_structures.F90
+                 ${core_extra_src}
                  ${versionfile}
            )
 

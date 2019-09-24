@@ -3204,7 +3204,7 @@
 #ifdef USE_WWM
 !$OMP ,stokes_w_nd
 #endif
-!$OMP) 
+!$OMP ) 
 
 !$OMP workshare
       swild98=0 !init
@@ -7742,7 +7742,7 @@
         if(iof_sed2d(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'SED2D_cflsed',1,1,npa,cflsed)
         if(iof_sed2d(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'SED2D_d50',1,1,npa,d50moy)
+     &'SED2D_d50',1,1,npa,d50(:,1))
         if(iof_sed2d(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'SED2D_total_transport',1,1,npa,qtot(:,1),qtot(:,2))
         if(iof_sed2d(6)==1) call writeout_nc(id_out_var(noutput+10), &

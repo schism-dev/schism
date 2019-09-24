@@ -9,20 +9,18 @@ set(hydro_extra_src "")
 if(${USE_SIMPLE_WIND})
   set (hydro_extra_src ${hydro_extra_src} simpler_wind.F90)
 endif()
-if(${USE_HA})
-  set (hydro_extra_src ${hydro_extra_src} harm.F90)
-endif()
+#if(${USE_HA})
+#  set (hydro_extra_src ${hydro_extra_src} harm.F90)
+#endif()
 
 message(STATUS "hydro_extra_src=${hydro_extra_src}")
 
 
-add_library(hydro hydraulic_structures.F90
-                  schism_init.F90
+add_library(hydro schism_init.F90
                   schism_step.F90
                   schism_finalize.F90
                   bktrk_subs.F90 
                   grid_subs.F90 
-                  schism_io.F90 
                   lap.F90 
                   misc_subs.F90
                   sflux_9c.F90 
