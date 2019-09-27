@@ -5,8 +5,8 @@
 # EXEC := $(EXEC)_PETSC
 
 # Precip/evaporation model
-# USE_PREC_EVAP = yes
-# EXEC := $(EXEC)_EVAP
+ USE_PREC_EVAP = yes
+ EXEC := $(EXEC)_EVAP
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -63,8 +63,8 @@
 # EXEC := $(EXEC)_COS
 
 # Fecal Indicator bacteria model
- USE_FIB = yes
- EXEC := $(EXEC)_FIB
+# USE_FIB = yes
+# EXEC := $(EXEC)_FIB
 
 # Oil spill model (not active)
 # USE_OIL = yes
