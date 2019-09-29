@@ -43,6 +43,8 @@
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:)
       real*8,allocatable :: timeout(:)
 
+      pi=3.1415926
+
 !...  Set max array size for system memory
       print*, 'Input max array size (e.g., <=2.e9):'
       read(*,*)max_array_size
@@ -227,7 +229,7 @@
       open(65,file='average.out')
 
       !For wave dir
-      if(varname(1:len_var).eq.'wwm_16') then
+      if(varname(1:len_var).eq.'WWM_18') then
         !Read in sub-samples
         open(20,file='nodeflags.bp',status='old')
         read(20,*); read(20,*)
