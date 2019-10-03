@@ -312,31 +312,6 @@
       endif !5|6
 #endif
 
-!...  Initialize heat budget model
-      if(ihconsv/=0.and.nws==2) then
-        call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
-     &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
-#ifdef PREC_EVAP
-     &                   fluxprc,fluxevp, &
-#endif
-     &                   nws) !,fluxsu00,srad00)
-!#endif
-!       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
-!       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
-!       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)
-!       hradd: downwelling infrared (longwave) radiative fluxes at surface (W/m^2)
-!       srad: solar radiation (W/m^2)
-!       tauxz,tauyz: wind stress (in true E-N direction if ics=2)
-!$OMP parallel do default(shared) private(i)
-        !If nws=3, sflux is init'ed as 0
-        do i=1,npa
-          sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
-          !fluxprc is net flux P-E if impose_net_flux/=0
-        enddo
-!$OMP end parallel do
-        if(myrank==0) write(16,*)'heat budge model completes...'
-      endif !nws==2
-
 !-------------------------------------------------------------------------------
 !   Initialize wind wave model (WWM)
 !-------------------------------------------------------------------------------
@@ -729,6 +704,31 @@
       endif
 
       if(myrank==0) write(16,*)'done computing initial density...'
+
+!...  Initialize heat budget model
+      if(ihconsv/=0.and.nws==2) then
+        call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
+     &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &                   fluxprc,fluxevp, &
+#endif
+     &                   nws) !,fluxsu00,srad00)
+!#endif
+!       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
+!       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
+!       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)
+!       hradd: downwelling infrared (longwave) radiative fluxes at surface (W/m^2)
+!       srad: solar radiation (W/m^2)
+!       tauxz,tauyz: wind stress (in true E-N direction if ics=2)
+!$OMP parallel do default(shared) private(i)
+        !If nws=3, sflux is init'ed as 0
+        do i=1,npa
+          sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
+          !fluxprc is net flux P-E if impose_net_flux/=0
+        enddo
+!$OMP end parallel do
+        if(myrank==0) write(16,*)'heat budge model completes...'
+      endif !nws==2
 
 
       if(allocated(rwild)) deallocate(rwild)
