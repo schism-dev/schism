@@ -399,6 +399,7 @@ for ivcor=1.
 
 git versions:
 (96) 64b7181: fixed an efficiency issue and added nc checks in ptrack3 (c/o Marcel Rieker)
+(97) 2138e77: Fixed a major bug introduced during reshuffling of _init for PDAF: need to call nodavel before sflux, as (uu2,vv20 are needed there.
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
