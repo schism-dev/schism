@@ -276,7 +276,7 @@ module schism_glbl
   integer,save,allocatable :: ibnd_ext_int(:)        ! interior (-1) /exterior (1) bnd node flag for an aug. node (0: not on bnd) 
 !  real(rkind),save,allocatable :: edge_angle(:,:) !angles (orientation) at a bnd node of 2 adjacent sides
 !  integer,save,allocatable :: isbnd_global(:) ! Node to open bndry segment flags (global)
-  integer,save,allocatable :: kfp(:),kbp(:),kbp00(:),kbp_e(:) ! Node surface & bottom vertical indices; kfp used only for sflux routines
+  integer,save,allocatable :: kbp(:),kbp00(:),kbp_e(:) ! Node surface & bottom vertical indices
   integer,save,allocatable :: idry(:)        ! wet/dry flag
 !  integer,save,allocatable :: iback(:)        ! back-up flag for abnormal cases in S-coord.
   real(rkind),save,allocatable :: hmod(:)        ! constrained depth
@@ -650,7 +650,7 @@ module schism_glbl
   REAL(rkind),save,ALLOCATABLE :: taufp_t(:,:)  !at nodes & whole levels 
   REAL(rkind),save,ALLOCATABLE :: ws(:,:)       !Ws at nodes & whole levels
   REAL(rkind),save,ALLOCATABLE :: epsf(:,:)     !epsf at nodes & whole levels
-  REAL(rkind),save,ALLOCATABLE :: q2fp(:,:)     !kfp at nodes & whole levels
+  REAL(rkind),save,ALLOCATABLE :: q2fp(:,:)     !at nodes & whole levels
   REAL(rkind),save,ALLOCATABLE :: q2p(:,:)      !kp at nodes & whole levels
   REAL(rkind),save,ALLOCATABLE :: q2f(:,:)      !kp at nodes & whole levels
   REAL(rkind),save,ALLOCATABLE :: kppian(:,:)   !at nodes & whole levels

@@ -42,7 +42,6 @@
 !       uu2
 !       vv2
 !       tr_nd
-!       kfp
 !       idry
 !       nvrt
 !       ivcor
@@ -343,7 +342,7 @@
      &                   nws) !, fluxsu00, srad00)
 
         use schism_glbl, only : rkind, npa, uu2, vv2, tr_nd, & !tnd, snd, &
-     &                     kfp, idry, nvrt, ivcor,ipgl,fdb,lfdb
+     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb
         use schism_msgp, only : myrank,parallel_abort
         implicit none
 
@@ -400,11 +399,11 @@
         do i_node = 1, num_nodes !=npa
 
 ! specify the surface level at this node (depends on coordinate system)
-          if (ivcor .eq. -1) then         ! z
-            sfc_lev = kfp(i_node)
-          else                            ! sigma
-            sfc_lev = nvrt
-          endif
+!          if (ivcor .eq. -1) then         ! z
+!            sfc_lev = kfp(i_node)
+!          else                            ! sigma
+          sfc_lev = nvrt
+!          endif
 
 #ifdef DEBUG
           if (mod(i_node-1,printit) .eq. 0) then
@@ -448,11 +447,11 @@
         do i_node = 1, num_nodes !npa
 
 ! specify the surface level at this node (depends on coordinate system)
-          if (ivcor .eq. -1) then         ! z
-            sfc_lev = kfp(i_node)
-          else                            ! sigma
-            sfc_lev = nvrt
-          endif
+!          if (ivcor .eq. -1) then         ! z
+!            sfc_lev = kfp(i_node)
+!          else                            ! sigma
+          sfc_lev = nvrt
+!          endif
 
           longwave_u(i_node) = emissivity * stefan * &
      &( t_freeze + tr_nd(1,sfc_lev,i_node) ) ** 4
@@ -488,10 +487,10 @@
           if (mod(i_node-1,printit) .eq. 0) then
 
 ! define whether this node is dry or not (depends on coordinate system)
-            dry = &
-     &          ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
-     &        .or. &
-     &          ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
+            dry = idry(i_node) .eq. 1
+!     &          ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
+!     &        .or. &
+!     &          ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
 
             if (.not. dry) then
               write(38,*)
@@ -541,7 +540,7 @@
      &                        tau_xz, tau_yz)
 
         use schism_glbl, only : rkind, uu2, vv2,tr_nd, & !tnd, snd, &
-     &                     kfp, idry, nvrt, ivcor,errmsg
+     &                      idry, nvrt, ivcor,errmsg
         use schism_msgp, only : myrank,parallel_abort
         implicit none
 
@@ -611,20 +610,20 @@
 #endif
 
 ! define whether this node is dry or not (depends on coordinate system)
-          dry = &
-     &        ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
-     &      .or. &
-     &        ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
+          dry = idry(i_node) .eq. 1
+!     &        ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
+!     &      .or. &
+!     &        ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
 
 ! if this point isn't dry, then calculate fluxes (if dry, then skip)
         if (.not. dry) then
 
 ! specify the surface level at this node (depends on coordinate system)
-          if (ivcor .eq. -1) then         ! z
-            sfc_lev = kfp(i_node)
-          else                            ! sigma
-            sfc_lev = nvrt
-          endif
+!          if (ivcor .eq. -1) then         ! z
+!            sfc_lev = kfp(i_node)
+!          else                            ! sigma
+          sfc_lev = nvrt
+!          endif
 
 ! calculate q_sfc from e_sfc
 ! (e_sfc reduced for salinity using eqn from Smithsonian Met Tables)
@@ -664,14 +663,13 @@
 ! excessive values
           speed_air = sqrt( u_air(i_node)*u_air(i_node) + &
      &                      v_air(i_node)*v_air(i_node) )
-          speed_water &
-#ifndef SCHISM
-     &      = sqrt( uu2(i_node, sfc_lev)*uu2(i_node, sfc_lev) + &
-     &              vv2(i_node, sfc_lev)*vv2(i_node, sfc_lev) )
-#else /* SCHISM */
-     &      = sqrt( uu2(sfc_lev,i_node)*uu2(sfc_lev,i_node) + &
-     &              vv2(sfc_lev,i_node)*vv2(sfc_lev,i_node) )
-#endif /* SCHISM */
+!          speed_water &
+!#ifndef SCHISM
+!     &      = sqrt( uu2(i_node, sfc_lev)*uu2(i_node, sfc_lev) + &
+!     &              vv2(i_node, sfc_lev)*vv2(i_node, sfc_lev) )
+!#else /* SCHISM */
+          speed_water=sqrt(uu2(sfc_lev,i_node)*uu2(sfc_lev,i_node)+vv2(sfc_lev,i_node)*vv2(sfc_lev,i_node))
+!#endif /* SCHISM */
 
           if (speed_air .gt. speed_air_stop) then
             write(errmsg,*) 'speed_air exceeds ', speed_air_stop
@@ -692,27 +690,26 @@
 ! begin with initial values of u_star, w_star, and speed
           u_star = 0.06
           w_star = 0.5
-          if (delta_theta_v .ge. 0) then                    ! stable
-            speed = &
-     &        max( sqrt( &
-#ifndef SCHISM
-     &               (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-     &               (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
-#else /* SCHISM */
-     &               (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-     &               (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
-#endif /* SCHISM */
-     &             0.1_rkind)
-          else                                              ! unstable
-            speed = &
-#ifndef SCHISM
-     &        sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-     &              (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
-#else /* SCHISM */
-     &        sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-     &              (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
-#endif /* SCHISM */
-     &              (beta * w_star)**2 )
+          if (delta_theta_v .ge. 0) then  ! stable
+            speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind)
+!#ifndef SCHISM
+!     &               (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
+!     &               (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
+!#else /* SCHISM */
+!     &               (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
+!     &               (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
+!#endif /* SCHISM */
+!     &             0.1_rkind)
+          else  ! unstable
+            speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2) 
+!#ifndef SCHISM
+!     &        sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
+!     &              (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
+!#else /* SCHISM */
+!     &        sqrt((u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
+!     &              (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
+!#endif /* SCHISM */
+!     &              (beta * w_star)**2)
           endif
 
 ! now loop to obtain good initial values for u_star and z_0
@@ -823,32 +820,31 @@
 ! depending on surface layer stability, calculate the effective
 ! near-surface wind speed
 ! (ie relative to the flowing water surface)
-            if (delta_theta_v .ge. 0.0) then                  ! stable
-              speed = &
-     &          max( sqrt( &
-#ifndef SCHISM
-     &                 (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-     &                 (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
-#else /* SCHISM */
-     &                 (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-     &                 (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
-#endif /* SCHISM */
-     &               0.1_rkind)
+            if (delta_theta_v .ge. 0.0) then ! stable
+              speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind) 
+!#ifndef SCHISM
+!     &                 (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
+!     &                 (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
+!#else /* SCHISM */
+!     &                 (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
+!     &                 (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
+!#endif /* SCHISM */
+!     &               0.1_rkind)
 
-            else                                              ! unstable
+            else ! unstable
 
 ! calculate the convective velocity scale
               w_star = (-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
 
-              speed = &
-#ifndef SCHISM
-     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
-#else /* SCHISM */
-     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
-#endif /* SCHISM */
-     &                (beta * w_star)**2 )
+              speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2)
+!#ifndef SCHISM
+!     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
+!     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
+!#else /* SCHISM */
+!     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
+!     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
+!#endif /* SCHISM */
+!     &                (beta * w_star)**2 )
 
             endif
 
@@ -874,30 +870,31 @@
 #endif
 
 ! calculate wind stresses
-          speed_res = &
-#ifndef SCHISM
-     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 )
-#else /* SCHISM */
-     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 )
-#endif /* SCHISM */
+          speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2)
+!#ifndef SCHISM
+!     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
+!     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 )
+!#else /* SCHISM */
+!     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
+!     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 )
+!#endif /* SCHISM */
+
           if (speed_res .gt. 0.0) then
             tau = rho_air * u_star * u_star * speed_res / speed
-            tau_xz(i_node) = - tau &
-#ifndef SCHISM
-     &                     * (u_air(i_node) - uu2(i_node, sfc_lev)) &
-#else /* SCHISM */
-     &                     * (u_air(i_node) - uu2(sfc_lev,i_node)) &
-#endif /* SCHISM */
-     &                     / speed_res
-            tau_yz(i_node) = - tau &
-#ifndef SCHISM
-     &                     * (v_air(i_node) - vv2(i_node, sfc_lev)) &
-#else /* SCHISM */
-     &                     * (v_air(i_node) - vv2(sfc_lev,i_node)) &
-#endif /* SCHISM */
-     &                     / speed_res
+            tau_xz(i_node) =-tau*(u_air(i_node)-uu2(sfc_lev,i_node))/speed_res
+!#ifndef SCHISM
+!     &                     * (u_air(i_node) - uu2(i_node, sfc_lev)) &
+!#else /* SCHISM */
+!     &                     * (u_air(i_node) - uu2(sfc_lev,i_node)) &
+!#endif /* SCHISM */
+!     &                     / speed_res
+            tau_yz(i_node) =-tau*(v_air(i_node)-vv2(sfc_lev,i_node))/speed_res
+!#ifndef SCHISM
+!     &                     * (v_air(i_node) - vv2(i_node, sfc_lev)) &
+!#else /* SCHISM */
+!     &                     * (v_air(i_node) - vv2(sfc_lev,i_node)) &
+!#endif /* SCHISM */
+!     &                     / speed_res
           else
             tau_xz(i_node) = 0.0
             tau_yz(i_node) = 0.0

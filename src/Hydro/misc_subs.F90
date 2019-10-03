@@ -705,15 +705,15 @@
 
       if(myrank==0) write(16,*)'done computing initial density...'
 
-!...  Initialize heat budget model
+!...  Initialize heat budget model - this needs to be called after nodalvel as
+!     (uu2,vv2) are needed
       if(ihconsv/=0.and.nws==2) then
         call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
      &                   fluxprc,fluxevp, &
 #endif
-     &                   nws) !,fluxsu00,srad00)
-!#endif
+     &                   nws) 
 !       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
 !       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
 !       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)

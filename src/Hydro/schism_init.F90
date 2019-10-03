@@ -1592,7 +1592,7 @@
 
 !     Allocate the remaining grid geometry arrays held in schism_glbl
       allocate(kbe(nea),idry_e(nea),idry_e_2t(nea2),ie_kr(nea), &
-     &krvel(nea),itvd_e(nea),ze(nvrt,nea),dldxy(4,2,nea),dp00(npa),kfp(npa),kbp(npa), &
+     &krvel(nea),itvd_e(nea),ze(nvrt,nea),dldxy(4,2,nea),dp00(npa),kbp(npa), &
      &kbp00(npa),kbp_e(np),idry(npa),hmod(npa),znl(nvrt,npa), &
      &kbs(nsa),idry_s(nsa),isidenei2(4,ns),zs(nvrt,nsa), &
      &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
