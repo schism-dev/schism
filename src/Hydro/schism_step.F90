@@ -512,7 +512,7 @@
 
 !$OMP parallel do default(shared) private(i)
             do i=1,npa
-              sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i))
+              sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
               if(impose_net_flux/=0) then
                 sflux(i)=hradd(i) 
                 !fluxprc is net P-E 
