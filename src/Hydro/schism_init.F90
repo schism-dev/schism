@@ -4631,6 +4631,7 @@
 
           case(0)
             !Model sets own i.c.
+!Error: wrong if both ECO and FABM on
 #ifdef USE_ECO
             call bio_init !init. tr_nd
 #else
