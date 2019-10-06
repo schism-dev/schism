@@ -1,12 +1,12 @@
 # Use PetSc as solver for FE eq
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
- PETSC_VERSION = v2
- USE_PETSC = yes
- EXEC := $(EXEC)_PETSC
+# PETSC_VERSION = v2
+# USE_PETSC = yes
+# EXEC := $(EXEC)_PETSC
 
 # Precip/evaporation model
-# USE_PREC_EVAP = yes
-# EXEC := $(EXEC)_EVAP
+ USE_PREC_EVAP = yes
+ EXEC := $(EXEC)_EVAP
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -52,8 +52,8 @@
 # EXEC := $(EXEC)_ECO
 
 # CE-QUAL-ICM
-# USE_ICM = yes
-# EXEC := $(EXEC)_ICM
+ USE_ICM = yes
+ EXEC := $(EXEC)_ICM
 #  ### Flags that go with USE_ICM
 # ICM_PH = yes
 # EXEC := $(EXEC)_PH

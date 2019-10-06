@@ -108,6 +108,10 @@ module icm_sed_mod
   !SOD calculation
   real(kind=rkind),save :: SOD,stc
 
+  !diffusion under hypoxia
+  real(kind=rkind),save :: O2CRITdif,stc0
+  real(kind=rkind),save :: thtaTdif,alphaTdif
+
   !sediment fluxes
   real(kind=rkind),save,allocatable,dimension(:) :: SED_BENDO,SED_BENCOD,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENDOC,SED_BENSA
 
