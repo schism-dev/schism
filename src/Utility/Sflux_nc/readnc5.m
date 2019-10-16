@@ -79,7 +79,7 @@ for day=1:366 %2003
   hours=(day-1)*24:(day-1)*24+23; %hourly from Jan. 1
   ntimes=length(hours);
 %  disp(strcat('Outputting Day: ',num2str(day)));
-  day_str=sprintf('%3.3d',day);
+  day_str=sprintf('%4.4d',day);
   filenm=strcat('sflux_air_2.',day_str,'.nc');
   ncid2 = netcdf.create(filenm,'CLOBBER');
   dims(1)=netcdf.defDim(ncid2,'n1',n1);
