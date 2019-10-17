@@ -23,6 +23,7 @@
 
 ###Relative paths won't work
 set(CMAKE_Fortran_COMPILER gfortran CACHE PATH "Path to serial Fortran compiler")
+set(CMAKE_C_COMPILER gcc CACHE PATH "Path to serial C compiler")
 set(PARMETIS_DIR  /sciclone/home10/yinglong/git/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
 set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN}" CACHE PATH "Path to NetCDF Fortran library")
 set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
