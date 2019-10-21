@@ -234,6 +234,10 @@
       real(rkind),allocatable :: Bio_bdefp(:,:),tr_tc(:,:),tr_tl(:,:),tsd(:,:)
 !      real(rkind),allocatable :: mix_ds(:,:,:),mix_dfv(:,:) !Tsinghua group !1120:close
 
+!     variable used for w correction 
+      real(rkind) :: wflux_correct, surface_flux_ratio
+
+
 #ifdef USE_WWM
       CHARACTER(LEN=3) :: RADFLAG
 #endif /*USE_WWM*/
@@ -5955,6 +5959,32 @@
 !          if(i==24044.and.it==2) write(97,*)l,tmp1,tmp2,tmp1+tmp2
 
         enddo !l=kbe(i),nvrt-1
+!    add a correct of w according to the flux across free surface computed from the u,v,w  
+    if ((vclose_surf_frac.ge.0.0).and.(vclose_surf_frac.lt.1.0)) then 
+       surface_flux_ratio = 1.0-vclose_surf_frac 
+       wflux_correct = 0.0
+       l=nvrt
+       ubar=0.0
+       vbar=0.0
+       do j=1,i34(i)
+          jsj=elside(j,i)
+          ubar=ubar+su2(l,jsj)*i34inv 
+          vbar=vbar+sv2(l,jsj)*i34inv  
+       enddo !j
+     
+       wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l)
+
+       !adjust vertcial v by the correction
+ 
+        do l=kbe(i)+1,nvrt
+           we(l,i)=we(l,i)-wflux_correct/sne(3,l)/area_e(l)
+        enddo
+
+        do l=kbe(i),nvrt !adjust tracer advection flux  by the correction
+           flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
+        enddo 
+       end if !end vertical flux correction
+
       enddo !i=1,nea
 !$OMP end do
 !$OMP end parallel
