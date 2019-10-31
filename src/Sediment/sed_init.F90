@@ -17,7 +17,7 @@
 ! MORSELFE INITIALIZATION SUBROUTINES
 !
 ! subroutine sed_alloc
-! subroutine sed_init_phase[12]
+! subroutine sed_init
 !
 !=====================================================================
 !=====================================================================
