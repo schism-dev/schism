@@ -40,7 +40,7 @@
 #
 
 if ( @ARGV < 3 ) {
-    print "Usage: $0 [SMS version (0: before 9.; 1: 10.xx; 2: 11.xx)] 
+    print "Usage: $0 [SMS version (0: before 9.; 1: 10.xx, 13.0.10 ; 2: 11.xx & above)] 
     [SMS grid file in meter with boundary information] [.gr3 file in meters] [river1] ... [riverN]\n";
     print "River name is checked against boundary types.\n";
     exit(1);
@@ -54,9 +54,9 @@ $outfile = $ARGV[2];
 #Determine # of line to skip at the beginning
 if($vers==0) #before 9.xx
   {$i=1;}   
-elsif($vers==1) #v10.xx
+elsif($vers==1) #v10.xx, v13.0.10
   {$i=2;}   
-elsif($vers==2) #v11.xx
+elsif($vers==2) #v11.xx, and above
   {$i=3;}   
 else
   {die "Unknown SMS version $vers\n";}
