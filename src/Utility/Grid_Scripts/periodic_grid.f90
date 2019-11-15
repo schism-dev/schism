@@ -1,4 +1,4 @@
-!     Generate a simple rectangular lon/lat grid, and add wrap-around elem. for sphere
+!     Given a rectangular cartesian grid, generate a simple rectangular lon/lat grid, and add wrap-around elem. for sphere
 !     (a virtual 'earth') so the grid can be used for periodic b.c.
 !     After this is done, use ics=2 (and a constant Coriolis if
 !     desired), and set rearth_pole and rearth_eq to be r_pole,r_eq below. 
