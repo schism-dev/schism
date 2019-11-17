@@ -6554,7 +6554,7 @@
 
 !       Deal with AGE: clamp source elem @ i.c.
 #ifdef USE_AGE
-!$OMP master
+!$OMP single
         do m=1,ntrs(4)/2 !first half only
           indx=irange_tr(1,4)+m-1 !into global tracer array
           do i=1,nelem_age(m)
@@ -6567,7 +6567,7 @@
             tr_el(indx,klev,ie)=1
           enddo !i
         enddo !m
-!$OMP end master
+!$OMP end single
 #endif /*USE_AGE*/
 
 !       Convert to nodes and whole levels
