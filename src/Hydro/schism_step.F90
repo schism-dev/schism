@@ -6221,11 +6221,9 @@
           !Element wet
           do j=itmp1,itmp2 !1,ntracers
             do k=kbe(i)+1,nvrt !all prisms along vertical
-              !if(j<=ntracers/2) then
               if(j-itmp1+1<=ntrs(4)/2) then
                 bdy_frc(j,k,i)=0
               else
-                !bdy_frc(j,k,i)=tr_el(j-ntracers/2,k,i)
                 bdy_frc(j,k,i)=tr_el(j-ntrs(4)/2,k,i)
               endif
             enddo !k
@@ -6554,6 +6552,24 @@
 !Debug
 !        write(12,*)'stage 1'
 
+!       Deal with AGE: clamp source elem @ i.c.
+#ifdef USE_AGE
+!$OMP master
+        do m=1,ntrs(4)/2 !first half only
+          indx=irange_tr(1,4)+m-1 !into global tracer array
+          do i=1,nelem_age(m)
+            ie=ielem_age(i,m) 
+            if(idry_e(ie)==1) then
+              klev=nvrt !arbitrary
+            else
+              klev=max(kbe(ie)+1,min(nvrt,level_age(m)))
+            endif
+            tr_el(indx,klev,ie)=1
+          enddo !i
+        enddo !m
+!$OMP end master
+#endif /*USE_AGE*/
+
 !       Convert to nodes and whole levels
 !$OMP   do 
         do i=1,nea
@@ -6633,19 +6649,6 @@
                 ta=ta+area(ie)
                 kin=max0(k,kbe(ie))
                 swild(1:ntracers)=swild(1:ntracers)+swild98(1:ntracers,kin,ie)*area(ie)
-!Tsinghua group-------------------------------
-!#ifdef USE_SED !1120:close
-!              if(Two_phase_mix==1) then
-!                swild_m(1,1:ntracers)=swild_m(1,1:ntracers)+drfv_m(nnew,1,kin,1:ntracers,ie)*area(ie)
-!                swild_m(2,1:ntracers)=swild_m(2,1:ntracers)+drfv_m(nnew,2,kin,1:ntracers,ie)*area(ie)
-!                swild_m(3,1:ntracers)=swild_m(3,1:ntracers)+drfv_m(nnew,3,kin,1:ntracers,ie)*area(ie)
-!                swild_m(4,1:ntracers)=swild_m(4,1:ntracers)+vsed_m(1,kin,1:ntracers,ie)*area(ie)
-!                swild_m(5,1:ntracers)=swild_m(5,1:ntracers)+vsed_m(2,kin,1:ntracers,ie)*area(ie)
-!                swild_m(6,1:ntracers)=swild_m(6,1:ntracers)+vsed_m(3,kin,1:ntracers,ie)*area(ie)
-!                swild_w(1:3)=swild_w(1:3)+vwater_m(1:3,kin,ie)*area(ie)
-!              endif
-!#endif 
-!Tsinghua group-------------------------------
               endif
             enddo !j
             if(ta==0) then !from levels(), a node is wet if and only if at least one surrounding element is wet
@@ -6653,21 +6656,6 @@
               call parallel_abort(errmsg)
             else
               tr_nd(1:ntracers,k,i)=swild(1:ntracers)/ta
-!Tsinghua group-------------------------------
-!#ifdef USE_SED !1120:close
-!              if(Two_phase_mix==1) then
-!                drfvx_nd(1:ntracers,k,i)=swild_m(1,1:ntracers)/ta
-!                drfvy_nd(1:ntracers,k,i)=swild_m(2,1:ntracers)/ta
-!                drfvz_nd(1:ntracers,k,i)=swild_m(3,1:ntracers)/ta
-!                vsedx_nd(1:ntracers,k,i)=swild_m(4,1:ntracers)/ta
-!                vsedy_nd(1:ntracers,k,i)=swild_m(5,1:ntracers)/ta
-!                vsedz_nd(1:ntracers,k,i)=swild_m(6,1:ntracers)/ta
-!                vwaterx_nd(k,i)=swild_w(1)/ta
-!                vwatery_nd(k,i)=swild_w(2)/ta
-!                vwaterz_nd(k,i)=swild_w(3)/ta
-!              endif
-!#endif 
-!Tsinghua group-------------------------------
             endif
           enddo !k
         enddo !i=1,np

@@ -565,6 +565,9 @@ module schism_glbl
   INTEGER :: ddensed ! activation key for sediment density effects on water density
 !#endif
 
+!USE_AGE
+  integer,save,allocatable :: nelem_age(:),ielem_age(:,:),level_age(:)
+  
 !NAPZD
 !#ifdef USE_NAPZD
   real(rkind),save,allocatable :: Bio_bdef(:,:)  ! biological deficit for NAPZD model
@@ -604,41 +607,10 @@ module schism_glbl
 ! SAV
   real(rkind),save,allocatable     :: sav_alpha(:),sav_h(:),sav_nv(:),sav_di(:)
 
-!Tsinghua group for 2-phase-mixture flow 
-!  integer,save :: inflow_mth                  !Tsinghua group !1120:close
-!  INTEGER,save :: im_pick_up                  !Tsinghua group:bottom pick-up option flag
-!  INTEGER,save :: Two_phase_mix               !TWO PHASE MIXTURE THEORY OPTION
-!  REAL(rkind),save :: diffmin_m               ! Minimum diff of sediment flow   
-!  REAL(rkind),save :: diffmax_m               ! Maximum diff of sediment flow
-!  REAL(rkind),save :: alphd                   ! alphd is correction coefficient of sed deposition
-!  REAL(rkind),save :: refht                   ! *D50   reference height of pick-up flux for zhong formulation
-!  REAL(rkind),save :: Tbp                     ! Nodimesional bursting period Cao(1997) 
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 
   REAL(rkind),save,ALLOCATABLE :: Tpzz(:,:)     !at nodes & whole levels 
-!0825
-!  REAL(rkind),save,ALLOCATABLE :: phai_m(:,:,:)         !tsinghua-lxn-setteing factor !1120:close
-!  REAL(rkind),save,ALLOCATABLE :: beta_m(:,:,:)         !diffusion factor
-!  REAL(rkind),save,ALLOCATABLE :: Tpxyz_m(:,:,:,:)      !stress of mixture 
-!  REAL(rkind),save,ALLOCATABLE :: Dpxyz_m(:,:,:,:)      !diffusion coefficient of particle
-!  REAL(rkind),save,ALLOCATABLE :: Vpxyz_m(:,:,:)        !viscous coefficient of mixture in horizontal
-!  REAL(rkind),save,ALLOCATABLE :: drfv_m(:,:,:,:,:)     !drift velocity at element in three directions at n/n-1 step
-!  REAL(rkind),save,ALLOCATABLE :: volv_m(:,:,:,:,:)     !volume velocity at element in three directions at n/n-1 step
-!  REAL(rkind),save,ALLOCATABLE :: vwater_m(:,:,:)       !water velocity in three directions
-!  REAL(rkind),save,ALLOCATABLE :: vsed_m(:,:,:,:)       !sediment velocity in three directions
-!  REAL(rkind),save,ALLOCATABLE :: drfvx_nd(:,:,:)       !drift velocity at node in x
-!  REAL(rkind),save,ALLOCATABLE :: drfvy_nd(:,:,:)       !drift velocity at node in y
-!  REAL(rkind),save,ALLOCATABLE :: drfvz_nd(:,:,:)       !drift velocity at node in z
-!  REAL(rkind),save,ALLOCATABLE :: vwaterx_nd(:,:)       !water velocity at node in x
-!  REAL(rkind),save,ALLOCATABLE :: vwatery_nd(:,:)       !water velocity at node in y
-!  REAL(rkind),save,ALLOCATABLE :: vwaterz_nd(:,:)       !water velocity at node in z
-!  REAL(rkind),save,ALLOCATABLE :: vsedx_nd(:,:,:)       !sediment velocity at node in x
-!  REAL(rkind),save,ALLOCATABLE :: vsedy_nd(:,:,:)       !sediment velocity at node in y
-!  REAL(rkind),save,ALLOCATABLE :: vsedz_nd(:,:,:)       !sediment velocity at node in z
-!  REAL(rkind),save,ALLOCATABLE :: dis_m(:,:)            !element center to side center (i34,nea)
-!  REAL(rkind),save,ALLOCATABLE :: ratiodis_m(:,:)       !weight of dis_m 
-!0821    
   REAL(rkind),save,ALLOCATABLE :: Vpx(:,:)      !x drift velocity at side centers & whole levels 
   REAL(rkind),save,ALLOCATABLE :: Vpy(:,:)      !y drift velocity at side centers & whole levels
   REAL(rkind),save,ALLOCATABLE :: Vpx2(:,:),Vpy2(:,:),Vpz2(:,:) !x,y,z drift velocity at nodes & whole levels 0927.1 1006

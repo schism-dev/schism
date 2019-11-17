@@ -274,7 +274,7 @@
 !    (i.e. level #, z-coord., tracer value). Verically varying i.c. is used for each tracer.
 ! 0: model sets own i.c. (EcoSim; TIMOR)
   flag_ic(3) = 1 !GEN (user defined module)
-  flag_ic(4) = 1 !Age
+!  flag_ic(4) = 1 !Age i.c. flag set inside code
   flag_ic(5) = 1 !SED3D
   flag_ic(6) = 1 !EcoSim
   flag_ic(7) = 1 !ICM
@@ -577,6 +577,12 @@
 !----------------------------------------------------------------------
   nstep_ice = 1 !call ice module every nstep_ice steps of SCHISM
 
+
+!----------------------------------------------------------------------
+! Specify level #'s if age module is invoked (USE_AGE), for 1st half of tracers only
+!----------------------------------------------------------------------
+  level_age = 9, -999 !defauly: -999 (all levels)
+
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Physical constants
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -695,8 +701,8 @@
 !-----------------------------------------------------------------------
 ! Outputs for (age). Indices from "1" to "ntracer_age/2"; [days]
 !-----------------------------------------------------------------------
-!  iof_age(1) = 1 {AGE_1}
-!  iof_age(2) = 1 {AGE_2}
+!  iof_age(1) = 1 !{AGE_1}
+!  iof_age(2) = 1 !{AGE_2}
 
 !-----------------------------------------------------------------------
 ! Specific outputs in SED3D (USE_SED must be on in Makefile;

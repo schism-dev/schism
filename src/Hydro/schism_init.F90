@@ -178,7 +178,7 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd
+     &ibtrack_openbnd,level_age
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh, &
@@ -406,7 +406,7 @@
       !To add new outputs, simply make sure the iof_* has sufficient size, and
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
-      allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)), &
+      allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(70),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: iof failure')
@@ -439,7 +439,7 @@
       slr_rate=120; rho0=1000.d0; shw=4184.d0; isav=0; sav_cd=1.13; nstep_ice=1; h1_bcc=50; h2_bcc=100
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
  
-      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; iof_sed=1; iof_eco=1;
+      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1
       iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1;
@@ -1677,6 +1677,12 @@
       allocate(imarsh(nea),ibarrier_m(nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: MARSH allocation failure')
 #endif
+
+#ifdef USE_AGE
+      allocate(nelem_age(ntrs(4)/2),ielem_age(nea,ntrs(4)/2),stat=istat)
+      if(istat/=0) call parallel_abort('INIT: AGE allocation failure')
+#endif
+
 
 !     Wave model arrays
 #ifdef  USE_WWM
@@ -4326,6 +4332,8 @@
       !Tracer age
       !Method: all i.c. =0; conc=1 at relevant bnd(s), and itrtype=0 at ocean bnd 
       if(myrank==0) write(16,*)'tracer age calculation evoked'
+      nelem_age(:)=0 !init count for # of non-0 age tracers
+      flag_ic(4)=1 !AGE must have type 1 i.c.
 #endif
 
 #ifdef USE_SED
@@ -4568,7 +4576,7 @@
               do j=1,np_global
                 read(10,*) num,xtmp,ytmp,tr_tmp1
                 if(tr_tmp1<0) then
-                  write(errmsg,*)'Initial invalid tracer at:',j,tr_tmp1
+                  write(errmsg,*)'INIT: Initial invalid tracer at:',j,tr_tmp1,inputfile
                   call parallel_abort(errmsg)
                 endif
                 if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=tr_tmp1
@@ -4657,23 +4665,52 @@
 !#ifdef USE_TIMOR
 !        ltmp=.true.
 !#endif
-!        if(ltmp)then
-        do m=irange_tr(1,mm),irange_tr(2,mm) !1,ntracers
+        do m=irange_tr(1,mm),irange_tr(2,mm) 
           do i=1,nea
             do k=2,nvrt
               tr_el(m,k,i)=sum(tr_nd(m,k,elnode(1:i34(i),i))+tr_nd(m,k-1,elnode(1:i34(i),i)))/2/i34(i)
             enddo !k
             tr_el(m,1,i)=tr_el(m,2,i) !mainly for hotstart format
-          enddo !i
-        enddo !m
-!        endif !ltmp
+          enddo !i=1,nea
+
+#ifdef USE_AGE
+          !AGE: deal with first half of tracers only (2nd half=0). Mark non-0
+          !elem
+          indx2=m-irange_tr(1,mm)+1 !local tracer index
+          !If level_age=-999, the init above is good (1 for all levels)
+          if(mm==4.and.indx2<=ntrs(4)/2.and.level_age(indx2)/=-999) then
+            do i=1,nea
+              if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then
+                nelem_age(indx2)=nelem_age(indx2)+1
+                if(nelem_age(indx2)>nea) call parallel_abort('INIT: increase dim of ielem_age')
+                ielem_age(nelem_age(indx2),indx2)=i
+
+                if(idry_e(i)==1) then
+                  kl=nvrt !arbitrary
+                else
+                  kl=max(kbe(i)+1,min(nvrt,level_age(indx2)))
+                endif
+                tr_el(m,:,i)=0 !reset 
+                tr_el(m,kl,i)=1
+                !tr_nd i.c. is not correct but this will be corrected during
+                !time loop
+                !tr_nd(m,1:kl-1,elnode(1:i34(i),i))=0
+                !tr_nd(m,kl+1:nvrt,elnode(1:i34(i),i))=0
+              endif !abs()
+            enddo !i=1,nea
+
+            !Debug
+            write(12,*)nelem_age(indx2),' found for AGE #',indx2
+          endif !mm==4.and.
+#endif /*USE_AGE*/
+
+        enddo !m=irange_tr
 
         if(irouse_test==1) then
 !          tr_el=0
 !          tr_el(:,1:2,:)=1
         endif
 
-        !tr_el(irange_tr(1,mm):irange_tr(2,mm),:,1:nea)=trel0(irange_tr(1,mm):irange_tr(2,mm),:,1:nea)
       enddo !mm=3,natrm
 
 #ifdef USE_ICM
