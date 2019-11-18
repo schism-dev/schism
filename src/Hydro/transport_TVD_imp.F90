@@ -1130,7 +1130,7 @@
 !$OMP   end master
 !$OMP   barrier
 
-!       Store last step's S,T
+!       Store last iteration's S,T
 !$OMP   workshare
         trel_tmp(1:ntr,:,1:nea)=tr_el(1:ntr,:,1:nea)
 !$OMP   end workshare
@@ -1139,7 +1139,7 @@
         do i=1,ne
           if(idry_e(i)==1) cycle
 
-!         Wet elements with 3 wet nodes
+!         Wet elements with wet nodes
           do k=kbe(i)+1,nvrt
             bigv=area(i)*(ze(k,i)-ze(k-1,i)) !volume
             dtb_by_bigv = dtb/bigv
