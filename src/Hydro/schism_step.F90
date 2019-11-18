@@ -1442,7 +1442,7 @@
             carea(k)=buf2(k,1)
             clen(k)=buf2(k,2)
             if(clen(k)<=0) then
-             write(errmsg,*)'cross lenth<=0:',k,clen(k)
+             write(errmsg,*)'wetted cross section length on open bnd <=0; boundary ndx=',k,', length=',clen(k)
              call parallel_abort(errmsg)
             endif
           endif
