@@ -1,6 +1,6 @@
 Github versions:
 
-5ff2198: added 'level_age(:)' if USE_AGE (GAGE module revamped);
+5ff2198: added 'level_age(:)' if USE_AGE (AGE module revamped);
 05b0099: pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
          fort.11-> fatal.error, flux.dat ->flux.out, total.dat->total.out, total_TR.dat->total_TR.out,
          fort.33->JCG.out, fort.17->subcycling.out;
