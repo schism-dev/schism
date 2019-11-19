@@ -20,6 +20,12 @@
 ! The code will do all it can to extrapolate: below bottom/above surface.
 ! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled (from gen_hot_3Dth_from_nc.in) 
 !
+! Add checking vertical layer for each 3D var from HYCOM nc, and some easy remedy for nc file error  
+! Wet-dry points are defined by ssh.
+! For U,V, if nan values in the middle of water, simply fill with 0 and record in fort.20
+! For S,T, if nan values in the middle of water, simply fill with lowest value, and record in fort.20
+! If elevation is not consitent in time, search nearby 2 points to fill. If none found, fill 0, and record in fort.20
+! Check HYCOM nc files with ncview or other tools.
 
 !   Input: 
 !     (1) hgrid.gr3;
@@ -103,7 +109,7 @@
 !     integer :: i,j,k,i1,i2,i3,j1,j2,j3
       integer :: elnode(4,mne)
       integer :: elside(4,mne)
-      integer :: isdel(2,mns)
+      integer :: isdel(2,mns),klev(4)
       integer :: indel(mnei,mnp),idry_s(mns)
       dimension xl(mnp),yl(mnp),dp(mnp),i34(mne)
       dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,3),arco(3,mnp)
@@ -516,21 +522,65 @@
           ndrypt=0 !# of dry nodes in nc
           do i=1,ixlen
             do j=1,iylen
-              if(salt(i,j,ilen)<rjunk+0.1) then
+!             if(salt(i,j,ilen)<rjunk+0.1) then
+              if(ssh(i,j)<rjunk+0.1) then !use ssh to judge
                 kbp(i,j)=-1 !dry
                 ndrypt=ndrypt+1
               else !wet
                 !Extend near bottom
                 klev0=-1 !flag
-                do k=1,ilen
-                  if(salt(i,j,k)>rjunk) then
-                    klev0=k; exit
+                klev=-1 !flag
+                do k=1,ilen !uvel
+                  if(uvel(i,j,k)>rjunk) then
+                    klev(1)=k; exit
                   endif
                 enddo !k
-                if(klev0<=0) then
-                  write(11,*)'Impossible (1):',i,j,salt(i,j,ilen)
+                do k=1,ilen !vvel
+                  if(vvel(i,j,k)>rjunk) then
+                    klev(2)=k; exit
+                  endif
+                enddo !k
+                do k=1,ilen !temp
+                  if(temp(i,j,k)>rjunk) then
+                    klev(3)=k; exit
+                  endif
+                enddo !k
+                do k=1,ilen !salt
+                  if(salt(i,j,k)>rjunk) then
+                    klev(4)=k; exit
+                  endif
+                enddo !k
+                klev0=maxval(klev)
+                
+!               if(klev0<=0) then
+                if(minval(klev)<=0) then
+                  write(11,*)'Impossible (1):',i,j,klev!salt(i,j,ilen)
                   stop
                 endif !klev0
+
+!               Fill NAN uvel, vvel with zero to easy eliminate HYCOM nc error
+                do k=klev0,ilen
+                   if (uvel(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
+                       uvel(i,j,k)=0.
+                   end if
+                   if (vvel(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
+                       vvel(i,j,k)=0.
+                   end if
+                end do
+!               Fill NAN salt ,temp with lowest value
+                do k=klev0,ilen
+                   if (temp(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
+                       temp(i,j,k)=temp(i,j,klev0)
+                   end if
+                   if (salt(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
+                       salt(i,j,k)=salt(i,j,klev0)
+                   end if
+                end do
+
                 salt(i,j,1:klev0-1)=salt(i,j,klev0)
                 temp(i,j,1:klev0-1)=temp(i,j,klev0)
                 uvel(i,j,1:klev0-1)=uvel(i,j,klev0)
@@ -707,17 +757,77 @@
           do i=1,ixlen
             do j=1,iylen
               if(kbp(i,j)>0) then !valid
+!               Check ssh consistency by kbp
+!               If not consistent, seek nearby 2 points to fill
+!               Force ssh = 0 if none are found
+                if (ssh(i,j)<rjunk+0.1) then
+                   do ii=1,2
+                      do jj=1,2
+                         if (ssh(i+ii,j+jj)>rjunk) then
+                             ssh(i,j)=ssh(i+ii,j+jj);exit
+                         end if
+                      end do
+                   end do
+                   if (ssh(i,j)<rjunk+0.1) then
+                       write(20,*) 'Warn! SSH Junk, fill with 0: ',it2,i,j
+                       ssh(i,j)=0. !fill with 0 if no finding
+                   end if
+                end if
+
                 !Extend bottom (kbp changes over time)
                 klev0=-1 !flag
-                do k=1,ilen
-                  if(salt(i,j,k)>rjunk) then
-                    klev0=k; exit
+                klev=-1 !flag
+                do k=1,ilen !uvel
+                  if(uvel(i,j,k)>rjunk) then
+                    klev(1)=k; exit
                   endif
                 enddo !k
-                if(klev0<=0) then
-                  write(11,*)'Impossible (4):',i,j,salt(i,j,ilen)
+                do k=1,ilen !vvel
+                  if(vvel(i,j,k)>rjunk) then
+                    klev(2)=k; exit
+                  endif
+                enddo !k
+                do k=1,ilen !temp
+                  if(temp(i,j,k)>rjunk) then
+                    klev(3)=k; exit
+                  endif
+                enddo !k
+                do k=1,ilen !salt
+                  if(salt(i,j,k)>rjunk) then
+                    klev(4)=k; exit
+                  endif
+                enddo !k
+                klev0=maxval(klev)
+
+!               if(klev0<=0) then
+                if(minval(klev)<=0) then
+                  write(11,*)'Impossible (4):',i,j,klev !salt(i,j,ilen)
                   stop
                 endif !klev0
+
+!               Fill NAN uvel, vvel with zero to easy eliminate HYCOM nc error
+                do k=klev0,ilen
+                   if (uvel(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
+                       uvel(i,j,k)=0.
+                   end if
+                   if (vvel(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
+                       vvel(i,j,k)=0.
+                   end if
+                end do
+!               Fill NAN salt ,temp with lowest value
+                do k=klev0,ilen
+                   if (temp(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
+                       temp(i,j,k)=temp(i,j,klev0)
+                   end if
+                   if (salt(i,j,k)<rjunk) then
+                       write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
+                       salt(i,j,k)=salt(i,j,klev0)
+                   end if
+                end do
+
                 salt(i,j,1:klev0-1)=salt(i,j,klev0)
                 temp(i,j,1:klev0-1)=temp(i,j,klev0)
                 uvel(i,j,1:klev0-1)=uvel(i,j,klev0)
