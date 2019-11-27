@@ -5808,7 +5808,8 @@
 
 !$OMP parallel default(shared) private(i,i34inv,n1,n2,n3,n4,av_bdef1,av_bdef2,l, &
 !$OMP xcon,ycon,zcon,area_e,sne,ubar,vbar,m,isd,dhdx,dhdy,dep,swild,ubed,vbed,wbed, &
-!$OMP bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux)
+!$OMP !bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux,surface_flux_ratio, &
+!$OMP wflux_correct)
 
 !$OMP workshare
       we=0 !for dry and below bottom levels; in eframe if ics=2
