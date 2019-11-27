@@ -45,10 +45,17 @@ ENV = ubuntu.gnu.mpich
 #
 # Note: use /usr/bin/mpirun.mpich2 (Ubuntu 12.04) or /usr/bin/mpirun.mpich (Ubuntu 14.04)
 #       to run compiled SCHISM executable
+#
+# On Ubuntu 18.04 onwards, mpich2 suffix is replaced with mpich
+# Check /etc/alternatives to check which executable (mpi/openmpi) is linked to
+# provide default mpich functionality
+# -f90 flag in older version is replaced with -fc which allows mpich to use 
+# different fortran compiler. For mpich install from repository in ubuntu >18.04
+# it should always be gfortran. 
 ################################################################################
 
 FCS = gfortran
-FCP = /usr/bin/mpif90.mpich2 -f90=gfortran -ffree-line-length-none
+FCP = /usr/bin/mpif90.mpich -fc=gfortran -ffree-line-length-none
 FLD = $(FCP)
 # MPI vserion (1 or 2) 
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
