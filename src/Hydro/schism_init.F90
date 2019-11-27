@@ -178,7 +178,7 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd,level_age
+     &ibtrack_openbnd,level_age,vclose_surf_frac
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh, &
@@ -438,8 +438,9 @@
       iwbl=0; if_source=0; nramp_ss=1; dramp_ss=2; ieos_type=0; ieos_pres=0; eos_a=-0.1; eos_b=1001;
       slr_rate=120; rho0=1000.d0; shw=4184.d0; isav=0; sav_cd=1.13; nstep_ice=1; h1_bcc=50; h2_bcc=100
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
- 
       iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
+      vclose_surf_frac=1.0
+
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1
       iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1;
@@ -566,6 +567,9 @@
 !      call get_param('param.in','ihdif',1,ihdif,tmp,stringvalue)
 !...  Implicitness factor
 !      call get_param('param.in','thetai',2,itmp,thetai,stringvalue)
+
+!...  surface vertical flux correct ratio
+      if(myrank==0) write(16,*)'surface vertical flux correct ratio is:',vclose_surf_frac 
 
 !...  Baroclinic flags
 !      call get_param('param.in','ibcc',1,ibc,tmp,stringvalue)
@@ -4114,6 +4118,9 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
+      
+
+
 !								   
 !*******************************************************************
 !								   
@@ -4315,7 +4322,7 @@
 
 !------------------------------------------------------------------
       endif !ihot=0
-
+     
 !...  Finish off init. for both cold and hotstart
 !...  Init. tracer models
 !     This part needs T,S i.c. 
@@ -4731,7 +4738,7 @@
 
 !     Store i.c. 
       tr_nd0(3:ntracers,:,:)=tr_nd(3:ntracers,:,:)
-
+      
       if(myrank==0) write(16,*)'done init. tracers..'
 !     end user-defined tracer part
 !     At this point, these arrays have been init'ed: tr_nd(3:end,:,:), tr_nd0(3:end,:,:), tr_el(3:end,:,:)
@@ -4784,7 +4791,7 @@
           call init_tridiagonal(nvrt-1)
 #endif
       endif
-
+     
 #ifdef USE_SED2D
 #ifdef INCLUDE_TIMING
       cwtmp2=mpi_wtime() !start of timer
@@ -4848,7 +4855,7 @@
       close(10)
       
       if(myrank==0) write(16,*)'done initializing cold start'
-
+      
       
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -5510,7 +5517,7 @@
 #endif
 
       if(myrank==0) write(16,'(a)')'Done initializing outputs'
-
+      
 !...  init. eta1 (for some routines like WWM) and i.c. (for ramp function)
       eta1=eta2 
       etaic=eta2

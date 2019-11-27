@@ -542,6 +542,9 @@ module schism_glbl
 ! ANALYSIS
   real(rkind),save,allocatable :: dtbe(:)
 
+! vertical surface flux  ratio
+  real(rkind) :: vclose_surf_frac       ! 1.0:no correct, 0.5:half of top surface vertical flux
+
 ! WWM
 !#ifdef USE_WWM
   integer,save :: msc2,mdc2

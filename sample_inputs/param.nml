@@ -601,6 +601,12 @@
 ! Reference water density for Boussinesq approximation
 !-----------------------------------------------------------------------
   rho0 = 1000.d0 !kg/m^3
+
+!-----------------------------------------------------------------------
+! ratio of surface vertical flux used for vertical flux closure adjustment
+!-----------------------------------------------------------------------
+  vclose_surf_frac=1.0
+
 /
 
 &SCHOUT
