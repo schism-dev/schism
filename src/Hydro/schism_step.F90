@@ -5926,14 +5926,6 @@
 !     &flux_adv_vface(l,j,i)=flux_adv_vface(l,j,i)-wsett(j,nvrt,i)*area(i)
 !          enddo !j
 
-!#ifdef USE_SED !171217 close
-!          if(itur==5) then !1018:itur==5 1128:Wsed
-!            flux_adv_vface(l,irange_tr(1,5):irange_tr(2,5),i)=bflux*area_e(l)- &
-!       &sum(Phai(l,1:ntrs(5),elnode(1:i34(i),i)),2)/i34(i)*Wsed(1:ntrs(5))*area(i) 
-!          endif   
-!#endif
-!1007
-
           !Add surface value as well
           if(l==nvrt-1) then
             flux_adv_vface(l+1,1:ntracers,i)=(ubar1*sne(1,l+1)+vbar1*sne(2,l+1)+ &
@@ -5942,15 +5934,6 @@
 !              if(iwsett(j)==1) &
 !     &flux_adv_vface(l+1,j,i)=flux_adv_vface(l+1,j,i)-wsett(j,nvrt,i)*area(i)
 !            enddo !j
-
-!#ifdef USE_SED !171217 close
-!            if(itur==5) then !1018:itur==5 1128:Wsed
-!              flux_adv_vface(l+1,irange_tr(1,5):irange_tr(2,5),i)=(ubar1*sne(1,l+1)+vbar1*sne(2,l+1)+ &
-!       &we(l+1,i)*sne(3,l+1))*area_e(l+1)-sum(Phai(l+1,1:ntrs(5),elnode(1:i34(i),i)),2)/i34(i)* &
-!       &Wsed(1:ntrs(5))*area(i) 
-!            endif
-!#endif
-!1007
           endif !l
 
 !         Debug
@@ -5959,34 +5942,31 @@
 !          if(i==24044.and.it==2) write(97,*)l,tmp1,tmp2,tmp1+tmp2
 
         enddo !l=kbe(i),nvrt-1
-!    add a correct of w according to the flux across free surface computed from the u,v,w  
 
-    if ((vclose_surf_frac.ge.0.0).and.(vclose_surf_frac.lt.1.0)) then 
-       surface_flux_ratio = 1.0-vclose_surf_frac 
-       wflux_correct = 0.0
-       l=nvrt
-       ubar=0.0
-       vbar=0.0
-       do j=1,i34(i)
-          jsj=elside(j,i)
-          ubar=ubar+su2(l,jsj)*i34inv 
-          vbar=vbar+sv2(l,jsj)*i34inv  
-       enddo !j
-     
-       wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l)
+        !Optionally add a correct of w according to the flux across free surface computed from the u,v,w  
+        if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
+          surface_flux_ratio = 1.d0-vclose_surf_frac 
+          wflux_correct = 0.d0
+          l=nvrt
+          ubar=0.d0
+          vbar=0.d0
+          do j=1,i34(i)
+            jsj=elside(j,i)
+            ubar=ubar+su2(l,jsj)*i34inv 
+            vbar=vbar+sv2(l,jsj)*i34inv  
+          enddo !j
+          wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l)
 
+          !adjust vertcial vel by the correction
+          do l=kbe(i)+1,nvrt
+            we(l,i)=we(l,i)-wflux_correct/sne(3,l)/area_e(l)
+          enddo
 
-       !adjust vertcial v by the correction
- 
-        do l=kbe(i)+1,nvrt
-           we(l,i)=we(l,i)-wflux_correct/sne(3,l)/area_e(l)
-        enddo
-
-        do l=kbe(i),nvrt !adjust tracer advection flux  by the correction
-           flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
-        enddo 
-       end if !end vertical flux correction
-
+          !adjust tracer advection flux  by the correction
+          do l=kbe(i),nvrt
+            flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
+          enddo 
+        end if !end vertical flux correction
       enddo !i=1,nea
 !$OMP end do
 !$OMP end parallel

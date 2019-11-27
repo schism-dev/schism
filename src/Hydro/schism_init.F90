@@ -439,6 +439,7 @@
       slr_rate=120; rho0=1000.d0; shw=4184.d0; isav=0; sav_cd=1.13; nstep_ice=1; h1_bcc=50; h2_bcc=100
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
       iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
+      !vclose_surf_frac \in [0,1]: correction factor for vertical vel. 1: no correction
       vclose_surf_frac=1.0
 
       !Output elev, hvel by detault

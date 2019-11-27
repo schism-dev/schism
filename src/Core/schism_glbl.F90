@@ -96,7 +96,7 @@ module schism_glbl
                       &vnh1,vnh2,vnf1,vnf2,rnday,btrack_nudge,hmin_man, &
                       &prmsl_ref,hmin_radstress,dzb_decay,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
-                      &slr_rate,rho0,shw,sav_cd,gen_wsett,turbinj,h1_bcc,h2_bcc
+                      &slr_rate,rho0,shw,sav_cd,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -543,7 +543,7 @@ module schism_glbl
   real(rkind),save,allocatable :: dtbe(:)
 
 ! vertical surface flux  ratio
-  real(rkind) :: vclose_surf_frac       ! 1.0:no correct, 0.5:half of top surface vertical flux
+!  real(rkind) :: vclose_surf_frac       ! 1.0:no correct, 0.5:half of top surface vertical flux
 
 ! WWM
 !#ifdef USE_WWM
