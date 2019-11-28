@@ -542,8 +542,8 @@ module schism_glbl
 ! ANALYSIS
   real(rkind),save,allocatable :: dtbe(:)
 
-! vertical surface flux  ratio
-!  real(rkind) :: vclose_surf_frac       ! 1.0:no correct, 0.5:half of top surface vertical flux
+! vertical flux diversion closure fraction applied at surface
+!  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
 ! WWM
 !#ifdef USE_WWM

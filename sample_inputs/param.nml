@@ -603,8 +603,9 @@
   rho0 = 1000.d0 !kg/m^3
 
 !-----------------------------------------------------------------------
-! Ratio of surface vertical flux used for vertical flux closure adjustment
-! 1: no correction; 0: zero out surface vertical flux 
+! Fraction of vertical flux closure adjustment applied at surface
+! 0.0 <= vclose_surf_frac < 1.0
+! 1: fully from surface; 0: fully from bottom 
 !-----------------------------------------------------------------------
   vclose_surf_frac=1.0
 

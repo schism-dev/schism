@@ -569,8 +569,11 @@
 !...  Implicitness factor
 !      call get_param('param.in','thetai',2,itmp,thetai,stringvalue)
 
-!...  surface vertical flux correct ratio
-      if(myrank==0) write(16,*)'surface vertical flux correct ratio is:',vclose_surf_frac 
+!...  vclose_surf_frac is the fraction of divergence error correction 
+!     (artificial flux due to closure error) that is applied at the surface. 
+!     Up to v5.7, this has been all of the flux error, equivalent to 
+!     vclose_surf_frac = 1.0.       
+      if(myrank==0) write(16,*)'vclose_surf_frac is:',vclose_surf_frac 
 
 !...  Baroclinic flags
 !      call get_param('param.in','ibcc',1,ibc,tmp,stringvalue)
