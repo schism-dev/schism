@@ -5944,7 +5944,7 @@
 
         enddo !l=kbe(i),nvrt-1
 
-        !Optionally correct w and vertical flux according to the flux across free surface computed from the u,v,w  
+        !Optionally correct w and vertical flux according to the flux across free surface for T,S only
         if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
           surface_flux_ratio = 1.d0-vclose_surf_frac 
           wflux_correct = 0.d0
@@ -5965,7 +5965,8 @@
 
           !adjust tracer advection flux  by the correction
           do l=kbe(i),nvrt
-            flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
+            !flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
+            flux_adv_vface(l,1:2,i)=flux_adv_vface(l,1:2,i)-wflux_correct
           enddo 
         end if !end vertical flux correction
       enddo !i=1,nea

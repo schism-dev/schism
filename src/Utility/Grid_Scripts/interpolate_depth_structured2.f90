@@ -19,6 +19,7 @@
 !     Output: hgrid.new (for pts outside the structured grid or the depth is junk there, 
 !                        the original depths are preserved).
 !     ifort -Bstatic -O3 -o interpolate_depth_structured2 interpolate_depth_structured2.f90
+!     ifort -Bstatic -O3 -qopenmp -o interpolate_depth_structured2 interpolate_depth_structured2.f90
       implicit real*8(a-h,o-z)
 !      parameter(mnx=9073) !max. # of pts in x
 !      parameter(mny=12961)
@@ -26,8 +27,16 @@
       character*9 cha2
       character*12 cha3
       dimension nm(4)
-      allocatable :: dp1(:,:)
+      allocatable :: dp1(:,:),dpout(:),xnd(:),ynd(:)
       
+!     Get # of threads for openMP
+!$OMP parallel default(shared)
+!$OMP master
+!$    nthreads=omp_get_num_threads()
+!$OMP end master
+!$OMP end parallel
+!$    write(*,*)'openMP with # of threads=',nthreads
+
       print*, 'Reverse the sign of the depth? (1: no; -1: yes; say yes)'
 !'
       read*, ih
@@ -57,24 +66,35 @@
       xmax=xmin+(nx-1)*dx
 
 !     .asc starts from upper left corner and goes along x
+!$OMP parallel default(shared) private(iy,i,j,x,y,dp,x2,y2,ix,xrat,yrat,hy1,hy2,h)
+!$OMP do
       do iy=1,ny
-        read(62,*)(dp1(ix,ny-iy+1),ix=1,nx)
-        write(99,*)'line read in:',iy+6
+        read(62,*)dp1(1:nx,ny-iy+1) !,ix=1,nx)
+        !write(99,*)'line read in:',iy+6
       enddo !iy
-      close(62)
+!$OMP end do
    
+!$OMP master
+      close(62)
       open(14,file='hgrid.old',status='old')
       open(13,file='hgrid.new')
       read(14,*)
       read(14,*)ne,np
       write(13,*)'Bathymetry loaded grid'
       write(13,*)ne,np
+      allocate(dpout(np),xnd(np),ynd(np))
+!$OMP end master 
+!$OMP barrier
+
+!$OMP do
       do i=1,np
         read(14,*)j,x,y,dp
+        xnd(i)=x; ynd(i)=y
+        dpout(i)=dp !default
 
 !       Interpolate
         if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
-          write(13,101)j,x,y,dp
+!          write(13,101)j,x,y,dp
         else !inside structured grid
           x2=x 
           y2=y 
@@ -104,15 +124,21 @@
  
           if(abs(dp1(ix,iy)-fill_value)<1.e-2.or.abs(dp1(ix+1,iy)-fill_value)<1.e-2.or. &
      &abs(dp1(ix,iy+1)-fill_value)<1.e-2.or.abs(dp1(ix+1,iy+1)-fill_value)<1.e-2) then
-            write(13,101)j,x,y,dp
+!            write(13,101)j,x,y,dp
           else !all valid
             hy1=dp1(ix,iy)*(1-xrat)+xrat*dp1(ix+1,iy)
             hy2=dp1(ix,iy+1)*(1-xrat)+xrat*dp1(ix+1,iy+1)
             h=hy1*(1-yrat)+hy2*yrat
-            write(13,101)j,x,y,h*ih+vshift
+            dpout(i)=h*ih+vshift
+!            write(13,101)j,x,y,h*ih+vshift
           endif !junk
+        endif !inside
+      enddo !i=1,np
+!$OMP end do
+!$OMP end parallel
 
-        endif
+      do i=1,np
+        write(13,101)i,xnd(i),ynd(i),dpout(i)
       enddo !i
 101   format(i9,2(1x,e24.16),1x,f13.6)
 
@@ -124,6 +150,8 @@
           stop
         endif
       enddo !i
+
+      deallocate(dp1,dpout,xnd,ynd)
 
       stop
       end
