@@ -604,7 +604,7 @@
 
 !-----------------------------------------------------------------------
 ! Fraction of vertical flux closure adjustment applied at surface, then subtracted
-! from all vetical fluxes.
+! from all vertical fluxes. This is currently done for T,S only
 ! 0.0 <= vclose_surf_frac < 1.0
 ! 1: fully from surface (i.e. no correction as before); 0: fully from bottom 
 !-----------------------------------------------------------------------
