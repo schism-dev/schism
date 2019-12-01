@@ -5944,7 +5944,7 @@
 
         enddo !l=kbe(i),nvrt-1
 
-        !Optionally add a correct of w according to the flux across free surface computed from the u,v,w  
+        !Optionally correct w and vertical flux according to the flux across free surface computed from the u,v,w  
         if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
           surface_flux_ratio = 1.d0-vclose_surf_frac 
           wflux_correct = 0.d0
@@ -5956,7 +5956,7 @@
             ubar=ubar+su2(l,jsj)*i34inv 
             vbar=vbar+sv2(l,jsj)*i34inv  
           enddo !j
-          wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l)
+          wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l) !fraction of surface flux
 
           !adjust vertcial vel by the correction
           do l=kbe(i)+1,nvrt

@@ -603,9 +603,10 @@
   rho0 = 1000.d0 !kg/m^3
 
 !-----------------------------------------------------------------------
-! Fraction of vertical flux closure adjustment applied at surface
+! Fraction of vertical flux closure adjustment applied at surface, then subtracted
+! from all vetical fluxes.
 ! 0.0 <= vclose_surf_frac < 1.0
-! 1: fully from surface; 0: fully from bottom 
+! 1: fully from surface (i.e. no correction as before); 0: fully from bottom 
 !-----------------------------------------------------------------------
   vclose_surf_frac=1.0
 
