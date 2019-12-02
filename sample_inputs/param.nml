@@ -114,7 +114,7 @@
 !-----------------------------------------------------------------------
   ishapiro = 1 !on/off flag. Default: 0
   shapiro0 = 0.5 !Shapiro filter strength, needed only if ishapiro=1; max is 0.5 
-  niter_shap = 1 !needed of ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
+  niter_shap = 1 !needed if ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
 
 !-----------------------------------------------------------------------
 ! Implicitness factor (0.5<thetai<=1).
