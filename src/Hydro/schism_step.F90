@@ -6520,7 +6520,6 @@
 
           do jj=1,natrm
             if(ntrs(jj)>0.and.inu_tr(jj)/=0) then
-              if(minval(tr_nudge(jj,elnode(1:i34(i),i)))<=0.0) cycle
               itmp1=irange_tr(1,jj)
               itmp2=irange_tr(2,jj)
               tmp0=sum(tr_nudge(jj,elnode(1:i34(i),i)))/i34(i)
@@ -6539,6 +6538,7 @@
                   write(errmsg,*)'Nudging factor out of bound (2):',trnu
                   call parallel_abort(errmsg)
                 endif
+                if(trnu==0) cycle
 
                 if(inu_tr(jj)==1) then !to i.c.
                   do mm=itmp1,itmp2
