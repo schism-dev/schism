@@ -31,8 +31,8 @@
 # EXEC := $(EXEC)_WWM
 
 # Harmonic analysis tool
- USE_HA = yes
- EXEC := $(EXEC)_HA
+# USE_HA = yes
+# EXEC := $(EXEC)_HA
 
 #####Tracer models 
 # Generic (user defined) tracer model

@@ -52,7 +52,6 @@ set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF includ
 #
 #################################################################################################
 
-###Compile flags; may also try: -xCORE-AVX2
-set(CMAKE_Fortran_FLAGS_RELEASE "-xCORE-AVX512 -O2 -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-axCORE-AVX2 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 
 
