@@ -234,6 +234,10 @@
       real(rkind),allocatable :: Bio_bdefp(:,:),tr_tc(:,:),tr_tl(:,:),tsd(:,:)
 !      real(rkind),allocatable :: mix_ds(:,:,:),mix_dfv(:,:) !Tsinghua group !1120:close
 
+!     variable used for w correction 
+      real(rkind) :: wflux_correct, surface_flux_ratio
+
+
 #ifdef USE_WWM
       CHARACTER(LEN=3) :: RADFLAG
 #endif /*USE_WWM*/
@@ -1442,7 +1446,7 @@
             carea(k)=buf2(k,1)
             clen(k)=buf2(k,2)
             if(clen(k)<=0) then
-             write(errmsg,*)'cross lenth<=0:',k,clen(k)
+             write(errmsg,*)'wetted cross section length on open bnd <=0; boundary ndx=',k,', length=',clen(k)
              call parallel_abort(errmsg)
             endif
           endif
@@ -5804,7 +5808,8 @@
 
 !$OMP parallel default(shared) private(i,i34inv,n1,n2,n3,n4,av_bdef1,av_bdef2,l, &
 !$OMP xcon,ycon,zcon,area_e,sne,ubar,vbar,m,isd,dhdx,dhdy,dep,swild,ubed,vbed,wbed, &
-!$OMP bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux)
+!$OMP !bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux,surface_flux_ratio, &
+!$OMP wflux_correct)
 
 !$OMP workshare
       we=0 !for dry and below bottom levels; in eframe if ics=2
@@ -5922,14 +5927,6 @@
 !     &flux_adv_vface(l,j,i)=flux_adv_vface(l,j,i)-wsett(j,nvrt,i)*area(i)
 !          enddo !j
 
-!#ifdef USE_SED !171217 close
-!          if(itur==5) then !1018:itur==5 1128:Wsed
-!            flux_adv_vface(l,irange_tr(1,5):irange_tr(2,5),i)=bflux*area_e(l)- &
-!       &sum(Phai(l,1:ntrs(5),elnode(1:i34(i),i)),2)/i34(i)*Wsed(1:ntrs(5))*area(i) 
-!          endif   
-!#endif
-!1007
-
           !Add surface value as well
           if(l==nvrt-1) then
             flux_adv_vface(l+1,1:ntracers,i)=(ubar1*sne(1,l+1)+vbar1*sne(2,l+1)+ &
@@ -5938,15 +5935,6 @@
 !              if(iwsett(j)==1) &
 !     &flux_adv_vface(l+1,j,i)=flux_adv_vface(l+1,j,i)-wsett(j,nvrt,i)*area(i)
 !            enddo !j
-
-!#ifdef USE_SED !171217 close
-!            if(itur==5) then !1018:itur==5 1128:Wsed
-!              flux_adv_vface(l+1,irange_tr(1,5):irange_tr(2,5),i)=(ubar1*sne(1,l+1)+vbar1*sne(2,l+1)+ &
-!       &we(l+1,i)*sne(3,l+1))*area_e(l+1)-sum(Phai(l+1,1:ntrs(5),elnode(1:i34(i),i)),2)/i34(i)* &
-!       &Wsed(1:ntrs(5))*area(i) 
-!            endif
-!#endif
-!1007
           endif !l
 
 !         Debug
@@ -5955,6 +5943,32 @@
 !          if(i==24044.and.it==2) write(97,*)l,tmp1,tmp2,tmp1+tmp2
 
         enddo !l=kbe(i),nvrt-1
+
+        !Optionally correct w and vertical flux according to the flux across free surface for T,S only
+        if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
+          surface_flux_ratio = 1.d0-vclose_surf_frac 
+          wflux_correct = 0.d0
+          l=nvrt
+          ubar=0.d0
+          vbar=0.d0
+          do j=1,i34(i)
+            jsj=elside(j,i)
+            ubar=ubar+su2(l,jsj)*i34inv 
+            vbar=vbar+sv2(l,jsj)*i34inv  
+          enddo !j
+          wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l) !fraction of surface flux
+
+          !adjust vertcial vel by the correction
+          do l=kbe(i)+1,nvrt
+            we(l,i)=we(l,i)-wflux_correct/sne(3,l)/area_e(l)
+          enddo
+
+          !adjust tracer advection flux  by the correction
+          do l=kbe(i),nvrt
+            !flux_adv_vface(l,1:ntracers,i)=flux_adv_vface(l,1:ntracers,i)-wflux_correct
+            flux_adv_vface(l,1:2,i)=flux_adv_vface(l,1:2,i)-wflux_correct
+          enddo 
+        end if !end vertical flux correction
       enddo !i=1,nea
 !$OMP end do
 !$OMP end parallel
@@ -6221,11 +6235,9 @@
           !Element wet
           do j=itmp1,itmp2 !1,ntracers
             do k=kbe(i)+1,nvrt !all prisms along vertical
-              !if(j<=ntracers/2) then
               if(j-itmp1+1<=ntrs(4)/2) then
                 bdy_frc(j,k,i)=0
               else
-                !bdy_frc(j,k,i)=tr_el(j-ntracers/2,k,i)
                 bdy_frc(j,k,i)=tr_el(j-ntrs(4)/2,k,i)
               endif
             enddo !k
@@ -6526,6 +6538,7 @@
                   write(errmsg,*)'Nudging factor out of bound (2):',trnu
                   call parallel_abort(errmsg)
                 endif
+                if(trnu==0) cycle
 
                 if(inu_tr(jj)==1) then !to i.c.
                   do mm=itmp1,itmp2
@@ -6553,6 +6566,24 @@
 
 !Debug
 !        write(12,*)'stage 1'
+
+!       Deal with AGE: clamp source elem @ i.c.
+#ifdef USE_AGE
+!$OMP single
+        do m=1,ntrs(4)/2 !first half only
+          indx=irange_tr(1,4)+m-1 !into global tracer array
+          do i=1,nelem_age(m)
+            ie=ielem_age(i,m) 
+            if(idry_e(ie)==1) then
+              klev=nvrt !arbitrary
+            else
+              klev=max(kbe(ie)+1,min(nvrt,level_age(m)))
+            endif
+            tr_el(indx,klev,ie)=1
+          enddo !i
+        enddo !m
+!$OMP end single
+#endif /*USE_AGE*/
 
 !       Convert to nodes and whole levels
 !$OMP   do 
@@ -6633,19 +6664,6 @@
                 ta=ta+area(ie)
                 kin=max0(k,kbe(ie))
                 swild(1:ntracers)=swild(1:ntracers)+swild98(1:ntracers,kin,ie)*area(ie)
-!Tsinghua group-------------------------------
-!#ifdef USE_SED !1120:close
-!              if(Two_phase_mix==1) then
-!                swild_m(1,1:ntracers)=swild_m(1,1:ntracers)+drfv_m(nnew,1,kin,1:ntracers,ie)*area(ie)
-!                swild_m(2,1:ntracers)=swild_m(2,1:ntracers)+drfv_m(nnew,2,kin,1:ntracers,ie)*area(ie)
-!                swild_m(3,1:ntracers)=swild_m(3,1:ntracers)+drfv_m(nnew,3,kin,1:ntracers,ie)*area(ie)
-!                swild_m(4,1:ntracers)=swild_m(4,1:ntracers)+vsed_m(1,kin,1:ntracers,ie)*area(ie)
-!                swild_m(5,1:ntracers)=swild_m(5,1:ntracers)+vsed_m(2,kin,1:ntracers,ie)*area(ie)
-!                swild_m(6,1:ntracers)=swild_m(6,1:ntracers)+vsed_m(3,kin,1:ntracers,ie)*area(ie)
-!                swild_w(1:3)=swild_w(1:3)+vwater_m(1:3,kin,ie)*area(ie)
-!              endif
-!#endif 
-!Tsinghua group-------------------------------
               endif
             enddo !j
             if(ta==0) then !from levels(), a node is wet if and only if at least one surrounding element is wet
@@ -6653,21 +6671,6 @@
               call parallel_abort(errmsg)
             else
               tr_nd(1:ntracers,k,i)=swild(1:ntracers)/ta
-!Tsinghua group-------------------------------
-!#ifdef USE_SED !1120:close
-!              if(Two_phase_mix==1) then
-!                drfvx_nd(1:ntracers,k,i)=swild_m(1,1:ntracers)/ta
-!                drfvy_nd(1:ntracers,k,i)=swild_m(2,1:ntracers)/ta
-!                drfvz_nd(1:ntracers,k,i)=swild_m(3,1:ntracers)/ta
-!                vsedx_nd(1:ntracers,k,i)=swild_m(4,1:ntracers)/ta
-!                vsedy_nd(1:ntracers,k,i)=swild_m(5,1:ntracers)/ta
-!                vsedz_nd(1:ntracers,k,i)=swild_m(6,1:ntracers)/ta
-!                vwaterx_nd(k,i)=swild_w(1)/ta
-!                vwatery_nd(k,i)=swild_w(2)/ta
-!                vwaterz_nd(k,i)=swild_w(3)/ta
-!              endif
-!#endif 
-!Tsinghua group-------------------------------
             endif
           enddo !k
         enddo !i=1,np

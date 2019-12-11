@@ -1,6 +1,6 @@
 
 ############# CMake versioning and backward compatibility #####
-cmake_minimum_required (VERSION 3.0) 
+cmake_minimum_required (VERSION 3.12)
 if(POLICY CMP0017)
   cmake_policy(SET CMP0017 OLD)
 endif(POLICY CMP0017)

@@ -1,5 +1,5 @@
 %From YC
-%Read in an existing netcdf files (convert from grib2) and output SCHISM nc input; need to 
+%Read in an existing netcdf files (converted from grib2) and output SCHISM nc input; need to 
 % add file names below; modify other parts as approx. (e.g. start time stamp)
 clear all; close all;
 %scrsz = get(0,'ScreenSize'); %screen size

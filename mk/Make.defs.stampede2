@@ -61,13 +61,12 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
 #FLDFLAGS = $TACC_VEC_FLAGS -O2 -assume buffered_io -assume byterecl #for final linking of object files
 
 #On SKY nodes only
-##May try: -xCORE-AVX2
 EXEC := $(EXEC)_SKX
-FCPFLAGS = $(PPFLAGS) -xCORE-AVX512 -O2 -assume buffered_io -assume byterecl #MPI code
-FLDFLAGS = -xCORE-AVX512 -O2 -assume buffered_io -assume byterecl #for final linking of object files
+FCPFLAGS = $(PPFLAGS) -axCORE-AVX2 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl #MPI code
+FLDFLAGS = -axCORE-AVX2 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl #for final linking of object files
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc -lparmetis -lmetis
 
 CDFLIBS = -Wl,-rpath,${TACC_NETCDF_LIB} -L${TACC_NETCDF_LIB} -lnetcdf -lnetcdff
 CDFMOD = -I${TACC_NETCDF_INC} # modules for netcdf

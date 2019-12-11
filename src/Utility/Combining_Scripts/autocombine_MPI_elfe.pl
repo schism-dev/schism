@@ -26,7 +26,7 @@ if(!-e "outputs") {die "No outputs dir!";}
 ##open(FL,"<outputs/local_to_global_0000"); @all=<FL>; close(FL);
 ##($_,$_,$_,$nproc,@ntr[0..9])=split(" ",$all[0]);
 
-$code="~yinglong/bin/combine_output11.WW";
+$code="~yinglong/bin/combine_output11";
 
 for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
 {

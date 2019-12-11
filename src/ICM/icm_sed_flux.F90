@@ -88,6 +88,7 @@ function sed_zbrent(ierr)
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
+  use icm_sed_mod, only : O20,SOD,stc
   implicit none
   integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
@@ -105,8 +106,18 @@ function sed_zbrent(ierr)
   ierr=0
   a=sodmin
   b=sodmax
-  fa=sedf(a)
-  fb=sedf(b)
+
+  !surface transfer coefficient 
+  stc=a/O20 !O20=max(SED_DO(id),1.d-2)
+  call sedsod
+  fa=SOD-a
+
+  stc=b/O20
+  call sedsod
+  fb=SOD-b
+
+  !fa=sedf(a)
+  !fb=sedf(b)
   !call sedf(fa,a)
   !call sedf(fb,b)
  
@@ -116,10 +127,16 @@ function sed_zbrent(ierr)
     return
   endif !fa
 
-  if(fa*fb>0.d0) then 
-    ierr=1
-    write(12,*)'sed_zbrent: sod=',fa,fb,myrank
-    return
+  if(fa*fb>0.d0) then
+    if(O20<0.02)then
+      sed_zbrent=a
+      return
+    else
+      ierr=1
+      write(12,*)'sed_zbrent: sod=',fa,fb,myrank
+      return
+    endif !water column hypoxia
+
   endif
 
   fc=fb
@@ -180,7 +197,11 @@ function sed_zbrent(ierr)
     else
       b=b+sign(tol1,xm)
     endif !abs(d)
-    fb=sedf(b)
+
+    stc=b/O20
+    call sedsod
+    fb=SOD-b
+    !fb=sedf(b)
     !call sedf(fb,b)
   enddo !i=nloop=100
  
@@ -241,6 +262,12 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','m2',2,itmp,m2,stmp)
   call get_param('icm_sed.in','THTADP',2,itmp,THTADP,stmp)
   call get_param('icm_sed.in','THTADD',2,itmp,THTADD,stmp)
+
+  !diffusion under hypoxia
+  call get_param('icm_sed.in','O2CRITdif',2,itmp,O2CRITdif,stmp)
+  call get_param('icm_sed.in','stc0',2,itmp,stc0,stmp)
+  call get_param('icm_sed.in','thtaTdif',2,itmp,thtaTdif,stmp)
+  call get_param('icm_sed.in','alphaTdif',2,itmp,alphaTdif,stmp)
 
   !nitrification
   call get_param('icm_sed.in','KAPPNH4F',2,itmp,KAPPNH4F,stmp)
@@ -705,7 +732,7 @@ end subroutine check_icm_sed_param
 subroutine sed_calc(id)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
-! 2) included sub-models: a)deposit feeder, b)SAV
+! 2) included sub-models: a)deposit feeder
 !-----------------------------------------------------------------------
   use schism_glbl, only : dt,rkind, errmsg, ielg, tau_bot_node,nea,i34,elnode
   use schism_msgp, only : myrank, parallel_abort
@@ -717,13 +744,12 @@ subroutine sed_calc(id)
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
-  real(kind=rkind),external :: sedf,sed_zbrent
-  !real(kind=rkind),external :: sedf
+  real(kind=rkind),external :: sed_zbrent
 
   !local variables
   integer :: i,j,k,itmp,ind,ierr
   real(kind=rkind) :: pie1,pie2,j1,j2,fd2,rval
-  real(kind=rkind) :: rtmp,tmp1,rat,xlim1,xlim2,C0d,k12,k2 
+  real(kind=rkind) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2 
   real(kind=rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
   real(kind=rkind) :: tau_bot_elem,ero_elem
 
@@ -1064,19 +1090,19 @@ subroutine sed_calc(id)
   !put POC or G(poc,r) unit back to g/m^3
   W12=(VPMIX(id)*ZW12NOM/H2)*(POC1/1.0e2)*(1.0-KBENSTR*BENSTR)+DPMIN/H2
 
-  !diffusion mixing velocity [g/m^3]
+  !diffusion mixing velocity [m/day]
   KL12=(VDMIX(id)*ZL12NOM/H2)+KLBNTH*W12
 
 
 
   !pre-calculation before SOD
   !************************************************************************
-  !regression to get SO4 concentration from Salinity
-  if(SAL0>0.0099) then
-    SO40MG=20.0+86.321*SAL0
-  else
-    SO40MG=20.0
-  endif
+  !!regression to get SO4 concentration from Salinity
+  !if(SAL0>0.0099) then
+  !  SO40MG=20.0+86.321*SAL0
+  !else
+  !  SO40MG=20.0
+  !endif
   !************************************************************************
 
   !Methane saturation
@@ -1089,9 +1115,16 @@ subroutine sed_calc(id)
   !SOD calculation
   !------------------
   !calculate SOD by evaluating NH4, NO3 and SOD equations
-  SOD=sed_zbrent(ierr)
-  !call sed_zbrent(ierr,SOD)
-  
+  if(O20<O2CRITdif) then
+    !surface transfer coefficient 
+    rtmp1=alphaTdif*(TEMPD-20.0)
+    !not include velocity for now
+    stc=stc0*thtaTdif**rtmp1
+    call sedsod
+  else
+    SOD=sed_zbrent(ierr)
+  endif !hypoxia diffusion with little SOD, negalectable first layer 
+
   !debug if SOD calculation fails, need more work,ZG
   if(ierr==1) then
     write(errmsg,*)'icm_sed_flux: elem=',ielg(id)
@@ -1151,7 +1184,7 @@ subroutine sed_calc(id)
   JPO4=stc*(PO41-PO40)
 
   !assign flux arrays, in unit of g/m^2 day
-  !with all state variables in unit of g/\*, no need to transfer
+  !with all state variables in unit of g/*, no need to transfer
   SED_BENDO(id)=-SOD !negatvie
   SED_BENNH4(id)=JNH4
   SED_BENNO3(id)=JNO3
@@ -1370,26 +1403,14 @@ subroutine sed_calc(id)
 
 end subroutine sed_calc
 
-function sedf(sod1)
-!------------------------------------------------------------------------------
-!calculate SOD, rewritten by ZG based ICM (Carl Cerco) 
-!------------------------------------------------------------------------------
-!  use icm_sed_mod, only : SOD,s,m1,m2,KL12,W12,W2,H2,O20,SAL0,SALTND,TEMPD, & 
-!    & KMNH4,ZHTANH4F,ZHTANH4S,PIENH4,XJN,KMNH4O2,NH41TM1,NH40,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,JNH4,& !NH4 
-!    & ZHTANO3F,ZHTANO3S,ZHTA2NO3,NO30,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,JNO3,XJC,JN2GAS, & !NO3
-!    & SO41,SO42,SO4T1,SO4T2,SO40MG,SO4T2TM1,KMSO4,ZL12NOM, & !SO4, unused
-!    & HS0,HST2TM1,HS1,HS2,HST1,HST2,JHS,PIE1S,PIE2S,KMHSO2,ZHTAP1,ZHTAD1, & !H2S
-!    & ZHTACH4,KMCH4O2,CH41,CH42,CH4T1,CH4T2,CH4T2TM1,CH4SAT,JCH4,JCH4AQ,JCH4G,JGAS, & !CH4 
-!    & idf,XKR,DFEEDM1,ROOTDO
+
+subroutine sedsod
   use icm_sed_mod
   use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm
   use schism_glbl, only : errmsg,rkind
   use schism_msgp, only : myrank,parallel_abort
-  implicit none 
-  real(kind=rkind), intent(in) :: sod1
-  !real(kind=rkind),intent(out) :: fsod1
-  real(kind=rkind) :: sedf !change in SOD solution
-  
+  implicit none
+
   !local variables
   real(kind=rkind) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
   real(kind=rkind) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
@@ -1412,15 +1433,12 @@ function sedf(sod1)
   ZHTA2NO3 = K2NO3*THTANO3**TEMP20 !denitrification in the 2nd layer
   ZHTACH4  = KAPPCH4*THTACH4**TEMP202 !CH4
 
-  !surface transfer coefficient 
-  stc=sod1/O20 !O20=max(SED_DO(id),1.d-2)
-
   !NH4 flux
   pie1=PIENH4; pie2=PIENH4
   C0d=NH40
   j1=0.0
   j2=XJN
-  if(SAL0<=SALTND) then 
+  if(SAL0<=SALTND) then
     k12=ZHTANH4F**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
   else
     k12=ZHTANH4S**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
@@ -1447,8 +1465,6 @@ function sedf(sod1)
   call sed_eq(4,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
   JNO3=stc*(NO31-NO30)
   JN2GAS=k12*NO31/stc+k2*NO32
-
-
 
 
 !  !convert carbon diagensis flux to O2 unit
@@ -1545,11 +1561,11 @@ function sedf(sod1)
     call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
     JHS=stc*(HS1-HS0)
     !oxygen consumption
-    CSODHS=k12*HS1/stc 
+    CSODHS=k12*HS1/stc
     CSOD=CSODHS
     if(CSODHS<0.d0) then
       write(errmsg,*)'icm_sed_flux, CSODHS<0:',CSODHS,k12,HS1,stc
-      call parallel_abort(errmsg) 
+      call parallel_abort(errmsg)
     endif
 
   else !fresh water 
@@ -1577,7 +1593,6 @@ function sedf(sod1)
     !************************************************************************
     !calculation on Gas flux
     !************************************************************************
-
 !    !calculate changes in CH4 and HS stored in sediment
 !    DCH4T2=(CH4T2-CH4T2TM1)*H2/dtw
 !    DHST2=(HST2-HST2TM1)*H2/dtw
@@ -1597,8 +1612,8 @@ function sedf(sod1)
 !    ! VOLUMETRIC METHANE AND TOTAL GAS FLUX (L/M2-D)
 !    VJCH4G=22.4/64.0*JCH4G
 !    JGAS=JN2GAS+VJCH4G                   
-
     !************************************************************************
+
     !calculate CSOD
     CSODCH4=k12*CH41/stc !unit: g/m^2 day
     CSOD=CSODCH4
@@ -1617,9 +1632,9 @@ function sedf(sod1)
     SOD=SOD+ROOTDO !consume DO by root metabolism
   endif
 
-  sedf=SOD-sod1
+end subroutine sedsod
 
-end function sedf
+
 
 subroutine link_sed_input(id,nv)
 !---------------------------------------------------------------------------------------

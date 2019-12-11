@@ -32,30 +32,19 @@
 ################################################################################
 
 
-ENV = ubuntu.gnu.mpich
+ENV = CentOS.gnu.mpi
 
 ################################################################################
-# Environment for Ubuntu with GNU compilers and mpich
+# Environment for CentOS with GNU compilers and openmpi
 #
-# Packages requirement: gfortran, gcc, libnetcdf-dev, mpich2, libcr-dev
-# which can be installed with the command below:
-# "sudo apt-get install gfortran gcc libnetcdf-dev mpich2 libcr-dev"
+# Repository requirement: EPEL, Software Collections
+# sudo yum install epel-release
 #
-# Tests are passed on Ubuntu 12.04 64bit and Ubuntu 14.04 64bit
-#
-# Note: use /usr/bin/mpirun.mpich2 (Ubuntu 12.04) or /usr/bin/mpirun.mpich (Ubuntu 14.04)
-#       to run compiled SCHISM executable
-#
-# On Ubuntu 18.04 onwards, mpich2 suffix is replaced with mpich
-# Check /etc/alternatives to check which executable (mpi/openmpi) is linked to
-# provide default mpich functionality
-# -f90 flag in older version is replaced with -fc which allows mpich to use 
-# different fortran compiler. For mpich install from repository in ubuntu >18.04
-# it should always be gfortran. 
+# Also install gcc gcc-gfortran netcdf netcdf-fortran netcdf-devel netcdf-fortran-develmpich-devel mpich
 ################################################################################
 
-FCS = gfortran
-FCP = /usr/bin/mpif90.mpich -fc=gfortran -ffree-line-length-none
+FCS = gfortran -ffree-line-length-none
+FCP = mpif90 -ffree-line-length-none
 FLD = $(FCP)
 # MPI vserion (1 or 2) 
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
@@ -63,11 +52,10 @@ OPTFLAGS = -O2
 FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -static -static-libgfortran #-g -fbacktrace #-finit-real=nan -fbounds-check #MPI code
 FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
-#####Libraries
-#MTSLIBS = -L/usr/lib/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
-CDFLIBS = -L/usr/lib/ -lnetcdf -lnetcdff
-CDFMOD = -I/usr/include/ # modules for netcdf
+  #####Libraries
+MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+CDFLIBS = -L/usr/lib64/ -lnetcdff
+CDFMOD = -I/usr/include/ -I/usr/lib64/gfortran/modules/ # modules for netcdf
 
 ################################################################################
 # Alternate executable name if you do not want the default. 

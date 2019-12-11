@@ -1,5 +1,6 @@
 Github versions:
 
+5ff2198: added 'level_age(:)' if USE_AGE (AGE module revamped);
 05b0099: pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
          fort.11-> fatal.error, flux.dat ->flux.out, total.dat->total.out, total_TR.dat->total_TR.out,
          fort.33->JCG.out, fort.17->subcycling.out;
@@ -400,6 +401,10 @@ for ivcor=1.
 git versions:
 (96) 64b7181: fixed an efficiency issue and added nc checks in ptrack3 (c/o Marcel Rieker)
 (97) 2138e77: Fixed a major bug introduced during reshuffling of _init for PDAF: need to call nodavel before sflux, as (uu2,vv20 are needed there.
+(98) 5ff2198: revamped AGE module. B.C. now all should use 0. Only 0 and 1 should be used in AGE_hvar_[1:ntr/2].ic, 
+              where ntr is @ of age tracers, and the code will 'hold' concentration at 1 at those prisms 
+              (level specified in param.nml) that have 1 as i.c. I.C. in AGE_hvar_[ntr/2+1:ntr].ic should =0.
+              Injecting '1' at dry elem's is allowed but results may be harder to interpret.
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);

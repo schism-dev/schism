@@ -32,47 +32,31 @@
 ################################################################################
 
 
-ENV = ubuntu.gnu.mpich
+ENV = idris.jeanzay
 
 ################################################################################
-# Environment for Ubuntu with GNU compilers and mpich
-#
-# Packages requirement: gfortran, gcc, libnetcdf-dev, mpich2, libcr-dev
-# which can be installed with the command below:
-# "sudo apt-get install gfortran gcc libnetcdf-dev mpich2 libcr-dev"
-#
-# Tests are passed on Ubuntu 12.04 64bit and Ubuntu 14.04 64bit
-#
-# Note: use /usr/bin/mpirun.mpich2 (Ubuntu 12.04) or /usr/bin/mpirun.mpich (Ubuntu 14.04)
-#       to run compiled SCHISM executable
-#
-# On Ubuntu 18.04 onwards, mpich2 suffix is replaced with mpich
-# Check /etc/alternatives to check which executable (mpi/openmpi) is linked to
-# provide default mpich functionality
-# -f90 flag in older version is replaced with -fc which allows mpich to use 
-# different fortran compiler. For mpich install from repository in ubuntu >18.04
-# it should always be gfortran. 
-################################################################################
+# Environment for IDRIS Jean Zay system built on Redhat linux
+# Using Intel 2019.4.243 module
+# ################################################################################
 
-FCS = gfortran
-FCP = /usr/bin/mpif90.mpich -fc=gfortran -ffree-line-length-none
+FCS = ifort 
+FCP = mpiifort
 FLD = $(FCP)
 # MPI vserion (1 or 2) 
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
 OPTFLAGS = -O2
-FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -static -static-libgfortran #-g -fbacktrace #-finit-real=nan -fbounds-check #MPI code
+FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -static #-g -fbacktrace #-finit-real=nan -fbounds-check #MPI code
 FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
-#####Libraries
-#MTSLIBS = -L/usr/lib/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
-CDFLIBS = -L/usr/lib/ -lnetcdf -lnetcdff
-CDFMOD = -I/usr/include/ # modules for netcdf
+  #####Libraries
+MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+CDFLIBS = -L/gpfslocalsup/spack_soft/netcdf-fortran/4.4.5/intel-19.0.4-nm7vlsr6edc7yqkb2v7l4p6mu4dcgkoy/lib -lnetcdff -L/gpfslocalsup/spack_soft/netcdf/4.7.0/intel-19.0.4-vtvxqookplcvgsso4wqgy4neczdipgfg/lib -lnetcdf -lnetcdf -lhdf5_hl -lhdf5 -lz -lm # from nc-config
+CDFMOD = -I/gpfslocalsup/spack_soft/netcdf-fortran/4.4.5/intel-19.0.4-nm7vlsr6edc7yqkb2v7l4p6mu4dcgkoy/include # modules for netcdf
 
 ################################################################################
 # Alternate executable name if you do not want the default. 
 ################################################################################
-#EXEC   := othername.ex
+EXEC   := schism
 
 ################################################################################
 # Algorithm preference flags.
