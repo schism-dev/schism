@@ -1,1 +1,0 @@
-../HYCOM_IRENE_PERIOD/ST_1.nc
