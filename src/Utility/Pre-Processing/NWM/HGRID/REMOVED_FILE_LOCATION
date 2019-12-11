@@ -1,0 +1,10 @@
+The sample grid files are save at:
+http://ccrm.vims.edu/yinglong/feiye/Workshop_20190701/HGRID/
+
+This *.map was created under the map module of "generic 2D model" in SMS 11.
+To read it in SMS 13's community edition that does not have the module, do
+
+>> cat old.map | sed '/^COVERAGE_MODEL_NAME/d' |  sed '/^GENMESHARC/d' | sed 's/2DMESH/MESH_GENERATION/g' >  new.map
+
+, which removes/replaces some strings in the map (ascii) file
+
