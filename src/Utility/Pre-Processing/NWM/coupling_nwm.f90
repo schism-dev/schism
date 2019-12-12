@@ -16,13 +16,13 @@
 !      vsource.th       : input of the stream flows of source elements.
 !      vsind.th         : input of the stream flows of sink elements.
 !
+!Author: Wei Huang
 !
-!ifort coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include
-!-L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
-!~/git/schism/src/Utility/UtilLib/pt_in_poly_test.f90
+!ifort -O2 -CB -o coupling_nwm ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
 
       program coupling_nwm
        use netcdf
+       use schism_geometry_mod
        use pt_in_poly_test
        implicit real*8(a-h,o-z)
       
@@ -48,10 +48,10 @@
        integer,allocatable ::featureID(:),origID(:),isbnd(:),lndid(:)
        integer,allocatable::segn(:),seg_sink(:),seg_source(:),source_bnd(:),source_seg(:)
        integer,allocatable::bnd_sink(:),bnd_source(:),sink_bnd(:),sink_seg(:)
-       integer,allocatable::eid(:),n1(:),n2(:),n3(:)
+       integer,allocatable::eid(:),i34(:),elnode(:,:),ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
        integer,allocatable::uniso_ele(:),uniso_nwm(:),eleso_uni(:),nwmso_uni(:)
        integer,allocatable::unisi_ele(:),unisi_nwm(:),elesi_uni(:),nwmsi_uni(:)
-       real*8,allocatable :: lats(:),lons(:),gx(:),gy(:)
+       real*8,allocatable :: lats(:),lons(:),gx(:),gy(:),xcj(:),ycj(:)
        real*8,allocatable :: tstep(:)
        integer :: sf_varid,t_varid,tm1
        integer,allocatable :: tm2(:),td1(:),td2(:),th1(:),th2(:)
@@ -66,12 +66,12 @@
        read(14,*)ne,np
        write(*,*)'# of elements',ne,'# of nodes',np
        allocate(gx(np),gy(np),isbnd(np))
-       allocate(eid(ne),n1(ne),n2(ne),n3(ne))       
+       allocate(eid(ne),i34(ne),elnode(4,ne))
         do i=1,np
         read(14,*)j,gx(i),gy(i),dp
         enddo     
         do i=1,ne
-        read(14,*)eid(i),j,n1(i),n2(i),n3(i)
+        read(14,*)eid(i),i34(i),elnode(1:i34(i),i)
         enddo
         !     Bnd
         isbnd=0
@@ -86,6 +86,7 @@
          enddo !i
         enddo !k
        !write(*,*)gx(1),gy(1) 
+       !Error: add >1 land seg to account for islands
        !     Land bnds
         read(14,*) nland !total # of land segments
         read(14,*) nvel !total # of nodes for all land boundaries
@@ -101,7 +102,14 @@
 
        write(*,*)'# of the first land boundary',nlnd
        write(*,*)'islands are excluded'
-       
+
+       ! Compute geometry
+       call compute_nside(np,ne,i34,elnode(1:4,1:ne),ns2)
+       allocate(ic3(4,ne),elside(4,ne),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2),stat=istat)
+       if(istat/=0) stop 'Allocation error: side(0)'
+       call schism_geometry_single(np,ne,ns2,gx,gy,i34,elnode(1:4,1:ne),ic3(1:4,1:ne), &
+     &elside(1:4,1:ne),isdel,isidenode,xcj,ycj)
+
        call check(nf90_open(FILE_NAME, nf90_nowrite,ncid))      
        !get the size of the featureID
        call check(nf90_inq_dimid(ncid,'RecordID', latdimid))   
@@ -152,23 +160,42 @@
         x22=gx(lndid(k+1)); y22=gy(lndid(k+1));
         !write(*,*)p2(1)%x,p2(2)%x,p2(1)%y,p2(2)%y
         !Find bnd elem
-        do m=1,ne
-         if(n1(m).eq.lndid(k).and.n2(m).eq.lndid(k+1)) then
-          x3=gx(n3(m));y3=gy(n3(m));ele=m;
-         elseif(n1(m).eq.lndid(k+1).and.n2(m).eq.lndid(k)) then
-          x3=gx(n3(m));y3=gy(n3(m));ele=m; 
-         elseif(n3(m).eq.lndid(k).and.n2(m).eq.lndid(k+1)) then
-          x3=gx(n1(m));y3=gy(n1(m));ele=m;
-         elseif(n3(m).eq.lndid(k+1).and.n2(m).eq.lndid(k)) then
-          x3=gx(n1(m));y3=gy(n1(m));ele=m;
-         elseif(n3(m).eq.lndid(k).and.n1(m).eq.lndid(k+1)) then
-          x3=gx(n2(m));y3=gy(n2(m));ele=m;
-         elseif(n3(m).eq.lndid(k+1).and.n1(m).eq.lndid(k)) then
-          x3=gx(n2(m));y3=gy(n2(m));ele=m;
-         else
-          ! stop 'no element found'
-         endif
-        enddo !m
+        nd1=lndid(k); nd2=lndid(k+1)
+        loop1: do m=1,nne(nd1) !ball
+          ie=indel(m,nd1)
+          ele=0 !init as flag
+          do mm=1,i34(ie)
+            isd=elside(mm,ie)
+            if(isidenode(1,isd)==nd2.or.isidenode(2,isd)==nd2) then
+              nd3=sum(elnode(1:i34(ie),ie))-nd1-nd2
+              ele=ie
+              exit loop1
+            endif
+          enddo !mm
+        enddo loop1 !m
+        if(ele==0) then
+          write(*,*)'failed to find an elem'
+          stop
+        endif
+        x3=gx(nd3); y3=gy(nd3)
+
+!        do m=1,ne
+!         if(n1(m).eq.lndid(k).and.n2(m).eq.lndid(k+1)) then
+!          x3=gx(n3(m));y3=gy(n3(m));ele=m;
+!         elseif(n1(m).eq.lndid(k+1).and.n2(m).eq.lndid(k)) then
+!          x3=gx(n3(m));y3=gy(n3(m));ele=m; 
+!         elseif(n3(m).eq.lndid(k).and.n2(m).eq.lndid(k+1)) then
+!          x3=gx(n1(m));y3=gy(n1(m));ele=m;
+!         elseif(n3(m).eq.lndid(k+1).and.n2(m).eq.lndid(k)) then
+!          x3=gx(n1(m));y3=gy(n1(m));ele=m;
+!         elseif(n3(m).eq.lndid(k).and.n1(m).eq.lndid(k+1)) then
+!          x3=gx(n2(m));y3=gy(n2(m));ele=m;
+!         elseif(n3(m).eq.lndid(k+1).and.n1(m).eq.lndid(k)) then
+!          x3=gx(n2(m));y3=gy(n2(m));ele=m;
+!         else
+!          ! stop 'no element found'
+!         endif
+!        enddo !m
               
         dx2 = x21-x22
         dy2 = y21-y22        
