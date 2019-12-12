@@ -18,7 +18,7 @@
 !
 !Author: Wei Huang
 !
-!ifort -O2 -CB -o coupling_nwm ../../UtilLib/schism_geometry.f90 ../../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
+!ifort -O2 -o coupling_nwm ../../../UtilLib/schism_geometry.f90 ../../../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
 
       program coupling_nwm
        use netcdf
@@ -30,7 +30,7 @@
        &DELAWARE_REPO/00_TWL_Shared/01_data/01-NWM-4-isabel-irene-sandy-&
        &13sep2018/NetCDF_HDF/Irene_output/'  
         
-       character(len=*),parameter::FILE_NAME='nwm_channels_0-30m_LCC.nc'!'nwm_channels_0-30m_LCC.nc'
+       character(len=*),parameter::FILE_NAME='NWM_shp_LCC.nc'
        integer :: ncid
        character(len =*), parameter :: lat_NAME = 'y'
        character(len =*), parameter :: lon_NAME = 'x'
@@ -54,12 +54,19 @@
        real*8,allocatable :: lats(:),lons(:),gx(:),gy(:),xcj(:),ycj(:)
        real*8,allocatable :: tstep(:)
        integer :: sf_varid,t_varid,tm1
+       integer,parameter::ntime=80*24
        integer,allocatable :: tm2(:),td1(:),td2(:),th1(:),th2(:)
        real*8::x11,x12,y11,y12,x21,x22,y21,y22,x3,y3
-       real*8::xp(3),yp(3),arco(3)
+       real*8::arco(3),x4,y4
        integer:: inside,nodel(3)
        real*8,allocatable :: salt(:),temp(:),streamflow(:) 
        real*8,allocatable :: SF_so(:,:),SF_si(:,:)
+
+       !Read in epsilon (nudging ratio from side center to downstream pt
+       !of NWM)
+       print*, 'Input nudging ratio (suggest 1.e-3):'
+       read*, epsilon
+  
 
        open(14,file='hgrid.lcc',status='old')!lambert projection, NWM has shorter precision
        read(14,*)
@@ -157,7 +164,7 @@
        call check(nf90_close(ncid))
        id=size(lats)
        id1=maxval(origID)
-       write(*,*)'# line segments=',id1+1
+       write(*,*)'# NWM line segments=',id1+1
        !write(*,*)lons(1),lats(1)
        
        allocate(segn(id1+1)) !total # of line segments
@@ -181,28 +188,32 @@
        allocate(seg_source(max_len))
        allocate(bnd_source(max_len))
       do k=1,nlnd-1 !hgrid land seg      
-        x21=gx(lndid(k));   y21=gy(lndid(k));
-        x22=gx(lndid(k+1)); y22=gy(lndid(k+1));
+        nd1=lndid(k); nd2=lndid(k+1)
+        x21=gx(nd1);  y21=gy(nd1)
+        x22=gx(nd2); y22=gy(nd2)
         !write(*,*)p2(1)%x,p2(2)%x,p2(1)%y,p2(2)%y
         !Find bnd elem
-        nd1=lndid(k); nd2=lndid(k+1)
+        ele=0 !init as flag
+        isd0=0
         loop1: do m=1,nne(nd1) !ball
           ie=indel(m,nd1)
-          ele=0 !init as flag
           do mm=1,i34(ie)
             isd=elside(mm,ie)
-            if(isidenode(1,isd)==nd2.or.isidenode(2,isd)==nd2) then
-              nd3=sum(elnode(1:i34(ie),ie))-nd1-nd2
+            if((isidenode(1,isd)==nd1.and.isidenode(2,isd)==nd2).or.(isidenode(1,isd)==nd2.and.isidenode(2,isd)==nd1)) then
+!              nd3=sum(elnode(1:i34(ie),ie))-nd1-nd2
+              isd0=isd
               ele=ie
               exit loop1
             endif
           enddo !mm
         enddo loop1 !m
-        if(ele==0) then
+        if(ele==0.or.isd0==0) then
           write(*,*)'failed to find an elem'
           stop
         endif
-        x3=gx(nd3); y3=gy(nd3)
+        
+        write(99,*) 'Found bnd elem:',k,nd1,nd2,ele,isd0
+!        x3=gx(nd3); y3=gy(nd3)
 
 !        do m=1,ne
 !         if(n1(m).eq.lndid(k).and.n2(m).eq.lndid(k+1)) then
@@ -250,13 +261,13 @@
            a1=dy1/dx1 !dacter(len=*),parameterx1
            b1=y11-a1*x11
          endif
-         x=(b2-b1)/(a1-a2)
-         y=a1*x+b1
-         !write(*,*)x,y,p1(1)%x,p2(1)%x,p1(1)%y,p2(1)%y       
-         if(a1.ne.a2.and.x.ge.min(x21,x22).and.x.le.max(x21,x22).and.&
-                         y.ge.min(y21,y22).and.y.le.max(y21,y22).and.&
-                         x.ge.min(x11,x12).and.x.le.max(x11,x12).and.&
-                         y.ge.min(y11,y12).and.y.le.max(y11,y12)) then 
+         x_inter=(b2-b1)/(a1-a2)
+         y_inter=a1*x_inter+b1
+!         write(*,*)x_inter,y_inter       
+         if(a1.ne.a2.and.x_inter.ge.min(x21,x22).and.x_inter.le.max(x21,x22).and.&
+                         y_inter.ge.min(y21,y22).and.y_inter.le.max(y21,y22).and.&
+                         x_inter.ge.min(x11,x12).and.x_inter.le.max(x11,x12).and.&
+                         y_inter.ge.min(y11,y12).and.y_inter.le.max(y11,y12)) then 
             ninseg=ninseg+1
         !-----determine the source or sink by triangle area-------!
         !calculating area of the triangle in the land boundary
@@ -279,38 +290,51 @@
         !--determine the source or sink by point in a poly-------!        
         !--select the fourth point which is calculated by adding
         ! a short distance towards the second point of NWM stream
-            x4=x+(x12-x)*1.e-8; y4=y+(y12-y)*1.e-8;
-            xp(1)=x21;xp(2)=x22;xp(3)=x3;
-            yp(1)=y21;yp(2)=y22;yp(3)=y3;
-            !write(*,*)lndid(k),lndid(k+1),ele
-            call pt_in_poly_double(3,xp,yp,x12,y12,inside,arco,nodel)
+            x4=xcj(isd0)*(1-epsilon)+epsilon*x12
+            y4=ycj(isd0)*(1-epsilon)+epsilon*y12
+!            x4=x_inter+(x12-x_inter)*1.e-8; y4=y_inter+(y12-y_inter)*1.e-8;
+!            xp(1)=x21;xp(2)=x22;xp(3)=x3;
+!            yp(1)=y21;yp(2)=y22;yp(3)=y3;
+          !   x4=x12;  y4=y12;
+            write(*,*)lndid(k),lndid(k+1),ele
+            call pt_in_poly_double(i34(ele),gx(elnode(1:i34(ele),ele)),gy(elnode(1:i34(ele),ele)),x4,y4,inside,arco,nodel)
+            !if (ele.eq.3409243)then
+            !  write(*,*)gx(elnode(1:i34(ele),ele))
+            !  write(*,*)gy(elnode(1:i34(ele),ele))
+            !  write(*,*)x4,y4,inside
+            !  write(*,*)x12,y12
+            !  write(*,*)arco
+            !  stop 'this is a missing sink ele'
+            !endif
             if(inside.eq.1) then
                n_source=n_source+1
+               if(n_source.gt.max_len) then
+                  stop 'n_source exceeds max_len'
+               endif
                seg_source(n_source)=featureID(n)
                bnd_source(n_source)=ele
             else
                n_sink=n_sink+1
+               if(n_sink.gt.max_len) then
+                  stop 'n_sink exceeds max_len'
+               endif
                seg_sink(n_sink)=featureID(n)
                bnd_sink(n_sink)=ele
             endif
 
             write(*,*)featureID(n),ele,ninseg
-         else
-         
-         endif
+         endif !inside bounding box
         
-        enddo !i
+        enddo !i: vertices
        !write(*,*)n
-       n=n+segn(j)
-       enddo !j
-        if(n_source.gt.max_len.or.n_sink.gt.max_len)then
-        stop 'n_source or n_sink is exceeds max_len'
-        endif
-      enddo !k
+         n=n+segn(j)
+       enddo !j !NWM seg
+
+      enddo !k: SCHISM land bnd
      
-      
       !write(*,*)'k=',k,'j',j,'i',i
       write(*,*)'intersection#',ninseg,'sink#',n_sink,'source#',n_source
+
       allocate(sink_seg(max(1,n_sink))) 
       allocate(sink_bnd(max(1,n_sink)))
 !      if (n_sink.ne.0) then
@@ -428,10 +452,10 @@
         write(13,*)0
       endif
 !define time 
-      allocate(tstep(80*24))
+      allocate(tstep(ntime))
       tstep(1)=0
-      do i=1,80*24
-      tstep(i+1)=3600*i
+      do i=2,ntime
+      tstep(i)=3600*(i-1)
       enddo
       !write(*,*)tstep(1),tstep(2)
 !write msource.th file
@@ -441,7 +465,7 @@
          temp(i)=-9999
       enddo
       open(15,file='msource.th')
-      do i=1,80*24
+      do i=1,ntime
       write(15,'(10000F15.3)')tstep(i),(temp(k),k=1,nso),(salt(k),k=1,nso)
      
       enddo
@@ -450,11 +474,11 @@
 
  
 !following is to read in the NWM output            
-      allocate(tm2(80*24),&
-               td1(80*24),td2(80*24),&
-               th1(80*24),th2(80*24))
+      allocate(tm2(ntime),&
+               td1(ntime),td2(ntime),&
+               th1(ntime),th2(ntime))
       tm1=0
-      do i=1,80*24
+      do i=1,ntime
          if(i<=31*24) then
           tm2(i)=7
          elseif (i>31*24.and.i<=62*24) then 
@@ -510,18 +534,20 @@
        enddo
       
 
-      allocate(SF_so(80*24,max(1,nso)))
-      allocate(SF_si(80*24,max(1,nsi)))
-!      if(n_source.ne.0) then
-!      else
-!         allocate(SF_so(1,1))
-!      endif
-!      if(n_sink.ne.0) then
-!      else
-!         allocate(SF_si(1,1))
-!      endif
+!      allocate(SF_so(ntime,max(1,nso)))
+!      allocate(SF_si(ntime,max(1,nsi)))
+      if(n_source.ne.0) then
+         allocate(SF_so(ntime,max(1,nso)))
+      else
+         allocate(SF_so(1,1))
+      endif
+      if(n_sink.ne.0) then
+         allocate(SF_si(ntime,max(1,nsi)))
+      else
+         allocate(SF_si(1,1))
+      endif
               
-      do i=1,80*24
+      do i=1,ntime
         write(yy,'(i4)')2011
         write(dd1,'(i1)')td1(i)
         write(dd2,'(i1)')td2(i)
@@ -579,7 +605,7 @@
 !write vsource.th file
       open(16,file='vsource.th')
       if (n_source.ne.0) then
-       do i=1,80*24
+       do i=1,ntime
        write(16,'(10000F15.3)')tstep(i),(SF_so(i,k),k=1,nso)
        end do
       else
@@ -589,7 +615,7 @@
 !write vsink.th
       open(17,file='vsink.th')
       if (n_sink.ne.0) then
-       do i=1,80*24
+       do i=1,ntime
        write(17,'(10000F15.8)')tstep(i),(SF_si(i,k),k=1,nsi)
        end do
       else
