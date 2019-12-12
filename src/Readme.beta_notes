@@ -1,5 +1,6 @@
 Github versions:
 
+4e2eb86: add optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
 5ff2198: added 'level_age(:)' if USE_AGE (AGE module revamped);
 05b0099: pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
          fort.11-> fatal.error, flux.dat ->flux.out, total.dat->total.out, total_TR.dat->total_TR.out,

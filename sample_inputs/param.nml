@@ -610,6 +610,22 @@
 !-----------------------------------------------------------------------
   vclose_surf_frac=1.0
 
+!-----------------------------------------------------------------------
+! Option to enforce strict mass conservation for each tracer model (only works with itr_met=3,4)
+! At moment the scheme has not accounted for bottom 'leaking' (e.g. in SED), 
+! so iadjust_mass_consv0(5) must =0
+!-----------------------------------------------------------------------
+  iadjust_mass_consv0(1)=0 !T
+  iadjust_mass_consv0(2)=0 !S
+  iadjust_mass_consv0(3)=0 !GEN
+  iadjust_mass_consv0(4)=0 !AGE
+  iadjust_mass_consv0(5)=0 !SED3D
+  iadjust_mass_consv0(6)=0 !EcoSim
+  iadjust_mass_consv0(7)=0 !ICM
+  iadjust_mass_consv0(8)=0 !CoSiNE
+  iadjust_mass_consv0(9)=0 !Feco
+  iadjust_mass_consv0(10)=0 !TIMOR
+  iadjust_mass_consv0(11)=0 !FABM
 /
 
 &SCHOUT

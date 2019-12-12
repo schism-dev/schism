@@ -137,7 +137,7 @@
                 &jblock,jface,isd,n1,n2,n3,ndgb,ndgb1,ndgb2,irank, &
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
-                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now
+                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now,iadjust_mass_consv0(natrm)
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -178,7 +178,7 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd,level_age,vclose_surf_frac
+     &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh, &
@@ -441,6 +441,7 @@
       iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
+      iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
 
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1
@@ -468,9 +469,8 @@
         call parallel_abort(errmsg)
       endif
 
-!     Radii of ellipsoid
-!      call get_param('param.in','rearth_pole',2,itmp,rearth_pole,stringvalue) 
-!      call get_param('param.in','rearth_eq',2,itmp,rearth_eq,stringvalue) 
+!     Mass consv adjustment not working for SED
+      if(iadjust_mass_consv0(5)>0) call parallel_abort('INIT: SED cannot use mass adjustment')
 
 !'    Some modules are not available in lon/lat mode yet
 !!#if defined USE_SED2D || defined USE_ICM || defined USE_TIMOR
@@ -1616,7 +1616,8 @@
           & uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
           & bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           & xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
-          &wsett(ntracers,nvrt,nea),iwsett(ntracers),stat=istat)
+          &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
+          &iadjust_mass_consv(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -1691,6 +1692,17 @@
       if(istat/=0) call parallel_abort('INIT: AGE allocation failure')
 #endif
 
+!     Adjust mass for conservation flags
+      iadjust_mass_consv=0
+      do i=1,natrm
+        if(ntrs(i)>0) then
+          do j=irange_tr(1,i),irange_tr(2,i)
+            iadjust_mass_consv(j)=iadjust_mass_consv0(i)
+          enddo !j
+        endif
+      enddo !i
+      max_iadjust_mass_consv=maxval(iadjust_mass_consv)
+      if(myrank==0) write(16,*)'Mass correction flags=',max_iadjust_mass_consv,iadjust_mass_consv(:)
 
 !     Wave model arrays
 #ifdef  USE_WWM

@@ -45,7 +45,7 @@
       integer, intent(in) :: it !time stepping #; info only
       logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine
 !      character(len=2), intent(in) :: flimiter
-      integer, intent(in) :: ntr !# of tracers
+      integer, intent(in) :: ntr !# of tracers (=ntracers)
 !      integer, intent(in) :: nvrt1 !,npa1 !for dimensioning
 !      real(rkind), intent(in) :: dfh1(nvrt1,npa1) 
       real(rkind), intent(out) :: difnum_max_l !max. horizontal diffusion number reached by this process (check stability)
@@ -84,7 +84,7 @@
 !      real(rkind) :: vdf_c2(nvrt) !coefficients related to vertical diffusive flux
       real(rkind) :: r_s(nvrt),r_s0(nvrt) !local Courant number
 
-      real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr), &
+      real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr),tmass(ntr),h_mass_in(ntr), &
      &alow(nvrt),bdia(nvrt),cupp(nvrt),rrhs(1,nvrt),soln(1,nvrt),gam(nvrt), &
      &swild(max(3,nvrt)),swild4(3,2),trel_tmp_outside(ntr),swild5(3)
       integer :: nwild(2)
@@ -113,21 +113,20 @@
       !integer :: lftest       ! Length of debugging file name
       !integer :: iorder !temporary identifier for order of accuracy
 
-#ifdef DEBUG
-!debug conservation
-      psumtr=0
-      do i=1,ne
-        if(idry_e(i)==1) cycle
+!     Total mass (for conservation)
+      if(max_iadjust_mass_consv>0) then
+        psumtr=0
+        do i=1,ne
+          if(idry_e(i)==1) cycle
 
-        do k=kbe(i)+1,nvrt
-          vol=(ze(k,i)-ze(k-1,i))*area(i)
-          psumtr(1:ntr)=psumtr(1:ntr)+vol*tr_el(1:ntr,k,i)
-        enddo !k
-      enddo !i=1,ne
-      call mpi_allreduce(psumtr,adv_tr,ntr,rtype,MPI_SUM,comm,ierr)
-      if(myrank==0) write(25,*)'mass entering transport:',real(time_stamp/86400),adv_tr(1:ntr)
-#endif
-
+          do k=kbe(i)+1,nvrt
+            vol=(ze(k,i)-ze(k-1,i))*area(i)
+            psumtr(1:ntr)=psumtr(1:ntr)+vol*tr_el(1:ntr,k,i)
+          enddo !k
+        enddo !i=1,ne
+        call mpi_allreduce(psumtr,tmass,ntr,rtype,MPI_SUM,comm,ierr)
+!        if(myrank==0) write(25,*)'mass entering transport:',real(time_stamp/86400),adv_tr(1:ntr)
+      endif !max_iadjust_mass_consv
 
 !#define weno_debug
       !<weno
@@ -258,6 +257,9 @@
 
 !$OMP end parallel
 
+
+!     Init horizontal mass influx (m^3*concentration) for conservation 
+      h_mass_in(1:ntr)=0 !positive in
 
 !weno>
       if(itr_met==4) then 
@@ -1135,7 +1137,7 @@
         trel_tmp(1:ntr,:,1:nea)=tr_el(1:ntr,:,1:nea)
 !$OMP   end workshare
 
-!$OMP   do 
+!$OMP   do reduction(+: h_mass_in)
         do i=1,ne
           if(idry_e(i)==1) cycle
 
@@ -1159,7 +1161,16 @@
                 if(idry_e(iel)==1) cycle
                 trel_tmp_outside(:)=trel_tmp(:,k,iel)
               else !bnd side
-                if(isbs(jsj)<=0.or.k>=kbs(jsj)+1.and.ssign(j,i)*flux_mod_hface(1,k,jsj)>=0) cycle
+
+                if(isbs(jsj)<=0.or.k>=kbs(jsj)+1.and.ssign(j,i)*flux_mod_hface(1,k,jsj)>=0) then
+                  !For outflow open bnd side, estimate mass in (open
+                  !side cannot be interface side)
+                  if(max_iadjust_mass_consv>0.and.isbs(jsj)>0) then !outflow @open bnd
+                    h_mass_in(:)=h_mass_in(:)-trel_tmp(1:ntr,k,i)*flux_adv_hface(k,jsj)*dtb
+                  endif
+
+                  cycle
+                endif
        
                 !Open bnd side with _inflow_; compute trel_tmp from outside and save it as trel_tmp_outside(1:ntr)
                 ibnd=isbs(jsj) !global bnd #
@@ -1202,6 +1213,9 @@
                     endif !itrtype
                   enddo !ll
                 enddo !jj
+
+                !Tally horizontal mass in fro inflow case
+                if(max_iadjust_mass_consv>0) h_mass_in(:)=h_mass_in(:)-trel_tmp_outside(1:ntr)*flux_adv_hface(k,jsj)*dtb
               endif !iel
 
               if(k>=kbs(jsj)+1.and.ssign(j,i)*flux_mod_hface(1,k,jsj)<0) then !inflow
@@ -1293,12 +1307,6 @@
 !-------------------------------------------------------------------------------------
       endif !itr_met=3,4
       
-!     Debug output of time steps allowed at each element
-#ifdef DEBUG
-!!     Output tr_el before implicit vertical solver next
-!      call schism_output_custom(istat,9,1,221,'trel',nvrt,nea,tr_el(1,:,:))
-#endif
-
 !'    Save the final array from horizontal part as trel_tmp
 !$OMP parallel default(shared) private(i,k,bigv_m,r_s,r_s0,m,iterK,rrat,phi,kup,kdo,psumtr, &
 !$OMP tmp,flux_mod_v1,flux_mod_v2,psum,l,srat,psi1,kin,ndim,alow,bdia,cupp,dt_by_bigv,denom, &
@@ -1309,12 +1317,8 @@
 !$OMP end workshare
 
 !...  2nd step, vertical advection: Fei's addition
-!!!$OMP single
-!!      iterK_MAX=0 !max over all tracers and elem.
-!      it_sum1=0 !sum of iterations (to compute average # of iterations per elem. and tracer)
-!!!$OMP end single
 
-!!!!$OMP do reduction(+: it_sum1) 
+!      adv_tr(:)=0
 !$OMP do 
       do i=1,nea 
         if(idry_e(i)==1) cycle
@@ -1540,7 +1544,10 @@
               endif !denom
 
               !Reset to upwind for upwind elem. or abnormal case
-              if(iupwind_e(i)==1.or.iterK==iter_back) denom=1
+              if(iupwind_e(i)==1.or.iterK==iter_back) then
+                denom=1
+                psi1(:)=0 !reset for conservation check
+              endif
 
               !DEBUG; new23
               !denom=1
@@ -1605,6 +1612,11 @@
 !            iele_max=ielg(i)
 !          endif   
           !it_sum1=it_sum1+iterK
+
+          !Tally mass flux @ F.S.
+!          if(i<=ne) adv_tr(m)=adv_tr(m)+dt*flux_adv_vface(nvrt,m,i)*(tr_el(m,nvrt,i)* &
+!     &(1-psi1(nvrt)/2)+psi1(nvrt)/2*trel_tmp(m,nvrt,i))
+
         enddo !m: tracers
 
 !       Extend
@@ -1621,20 +1633,24 @@
 !      if(myrank==0) write(20,*)it,real(it_sum2)/ne_global/ntr !,jj
 !!!$OMP end master
 
-#ifdef DEBUG
-!debug conservation
-      psumtr=0
-      do i=1,ne
-        if(idry_e(i)==1) cycle
+!$OMP master
+!     conservation
+      if(max_iadjust_mass_consv>0) then
+        psumtr=0 !adv_tr
+        do i=1,ne
+          if(idry_e(i)==1) cycle
 
-        do k=kbe(i)+1,nvrt
-          vol=(ze(k,i)-ze(k-1,i))*area(i)
-          psumtr(1:ntr)=psumtr(1:ntr)+vol*tr_el(1:ntr,k,i)
-        enddo !k
-      enddo !i=1,ne
-      call mpi_allreduce(psumtr,adv_tr,ntr,rtype,MPI_SUM,comm,ierr)
-      if(myrank==0) write(25,*)'mass after 2 steps:',real(time_stamp/86400),adv_tr(1:ntr)
-#endif
+          do k=kbe(i)+1,nvrt
+            vol=(ze(k,i)-ze(k-1,i))*area(i)
+            psumtr(1:ntr)=psumtr(1:ntr)+vol*tr_el(1:ntr,k,i)
+          enddo !k
+        enddo !i=1,ne
+        call mpi_allreduce(psumtr,adv_tr,ntr,rtype,MPI_SUM,comm,ierr)
+        !Mass 'error' after advection step
+        total_mass_error=adv_tr-tmass-h_mass_in 
+!        if(myrank==0) write(25,*)'mass after 2 steps with correction:',real(time_stamp/86400),adv_tr(1:ntr)+total_mass_error(1:ntr)
+      endif
+!$OMP end master
 
 !     3rd step: non-advection terms 
 !     Save the final array from previous step as trel_tmp
@@ -1803,11 +1819,7 @@
       cwtmp=mpi_wtime()
       timer_ns(1)=timer_ns(1)+cwtmp-cwtmp2
 #endif
-!      if(ltvd) then !extend to 2-tier aug.
       call exchange_e3d_2t_tr(tr_el)
-!      else !pure upwind
-!        call exchange_e3d_tr2(tr_el)
-!      endif
 #ifdef INCLUDE_TIMING
       cwtmp2=mpi_wtime()
       wtimer(9,2)=wtimer(9,2)+cwtmp2-cwtmp
