@@ -12,28 +12,22 @@ Pre-processing scripts used for coupling SCHISM to National Water Model (NWM) fo
 
 
 ./Grid_manipulation/*.cpp
-
 ./Grid_manipulation/*.f90
-
 ./Elev_IC/gen_elev.f90
-
 ./Shapiro/gen_slope_filter.f90
-
 ./HYCOM_nudge/gen_nudge_from_hycom.f90  
-
 ./Vgrid/gen_vqs.f90
-
 ./Hot/gen_hot_3Dth_from_hycom.f90  
-
 ./Rough3/gen_source2.f90
-
 ./DEM/interpolate_depth_structured2.f90
-
 ./DEM_USGS/interpolate_depth_structured2.f90
 
 
 A sample compiling cmd is provided in the beginning few lines in each source code.
-The binaries provided here are compiled with ifort and gcc.
+The sample binaries provided here were compiled with ifort and gcc.
+
+Also, make sure you have appropriate netcdf libraries; as a test, see if you can successfully compile:
+/HYCOM_nudge/gen_nudge_from_hycom.f90
 
 
 (4) When setting up a new run from scratch, it is recommended to copy the following sub-folders to your run directory:
@@ -52,4 +46,22 @@ The binaries provided here are compiled with ifort and gcc.
   Look for the "dirs" section in each "auto.pl".
 
 
-(5) Load_bathy does not work on Stampede2, because the module 'proj' (PROJ.4 - Cartographic Projections Library) is not available
+(5) If you get these scripts from Github, then you have to mannually download some large data files.
+    The download links are provided in:
+
+    DEM_USGS/REMOVED_FILE_LOCATION (not necessay if you are not working on the hgrid)
+
+    Hot/REMOVED_FILE_LOCATION 
+
+    HYCOM_IRENE_PERIOD/REMOVED_FILE_LOCATION
+
+    If wget doesn't work on some clusters, just paste the link in your web browser.
+
+
+(6) Specifically for Stampede2:
+    (6.1) Load_bathy does not work on Stampede2, because the module 'proj' (PROJ.4 - Cartographic Projections Library) is not available
+    (6.2) request an interative session for Hot/ and HYCOM_nudge/, since they can take a while;
+    (6.3) You can also submit any "auto.pl" to queue.
+
+
+

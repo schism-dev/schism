@@ -7,6 +7,12 @@ use Cwd;
 
 print("You may need to recompile 'gen_source2.f90'\n");
 print("e.g: ifort -O2 -mcmodel=medium -assume byterecl -o gen_hot_3Dth_from_hycom gen_hot_3Dth_from_hycom.f90 ../UtilLib/compute_zcor.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff\n\n\n");
+print("Make sure you have netcdf libraries\n");
+#{
+#  local( $| ) = ( 1 );
+#  print "Press <Enter> or <Return> to continue: \n";
+#  my $resp = <STDIN>;
+#}
 
 #dirs
 $script_dir="../Grid_manipulation/";
@@ -35,12 +41,6 @@ system("$script_dir/auto_edit_region 0 DB.reg estuary.gr3 2");
 move("out.gr3","estuary.gr3");
 
 #generate hotstart.nc and *D.th.nc
-print("Make sure you have netcdf libraries\n");
-{
-  local( $| ) = ( 1 );
-  print "Press <Enter> or <Return> to continue: \n";
-  my $resp = <STDIN>;
-}
 system("./gen_hot_3Dth_from_hycom");
 
 unlink("../hotstart.nc");
