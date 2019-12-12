@@ -18,7 +18,7 @@
 !
 !Author: Wei Huang
 !
-!ifort -O2 -CB -o coupling_nwm ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
+!ifort -O2 -CB -o coupling_nwm ../../UtilLib/schism_geometry.f90 ../../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
 
       program coupling_nwm
        use netcdf
@@ -48,7 +48,7 @@
        integer,allocatable ::featureID(:),origID(:),isbnd(:),lndid(:)
        integer,allocatable::segn(:),seg_sink(:),seg_source(:),source_bnd(:),source_seg(:)
        integer,allocatable::bnd_sink(:),bnd_source(:),sink_bnd(:),sink_seg(:)
-       integer,allocatable::eid(:),i34(:),elnode(:,:),ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
+       integer,allocatable::eid(:),i34(:),elnode(:,:),ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:), nne(:),indel(:,:)
        integer,allocatable::uniso_ele(:),uniso_nwm(:),eleso_uni(:),nwmso_uni(:)
        integer,allocatable::unisi_ele(:),unisi_nwm(:),elesi_uni(:),nwmsi_uni(:)
        real*8,allocatable :: lats(:),lons(:),gx(:),gy(:),xcj(:),ycj(:)
@@ -65,7 +65,7 @@
        read(14,*)
        read(14,*)ne,np
        write(*,*)'# of elements',ne,'# of nodes',np
-       allocate(gx(np),gy(np),isbnd(np))
+       allocate(gx(np),gy(np),isbnd(np),nne(np))
        allocate(eid(ne),i34(ne),elnode(4,ne))
         do i=1,np
         read(14,*)j,gx(i),gy(i),dp
@@ -103,11 +103,36 @@
        write(*,*)'# of the first land boundary',nlnd
        write(*,*)'islands are excluded'
 
+!     We also need elem ball
+      nne=0
+      do i=1,ne
+        do j=1,i34(i)
+          nd=elnode(j,i)
+          nne(nd)=nne(nd)+1
+        enddo
+      enddo
+      mnei=maxval(nne)
+
+      allocate(indel(mnei,np),stat=istat)
+      if(istat/=0) stop 'Failed to alloc. indel'
+      nne=0
+      do i=1,ne
+        do j=1,i34(i)
+          nd=elnode(j,i)
+          nne(nd)=nne(nd)+1
+          if(nne(nd)>mnei) then
+            write(*,*)'Too many neighbors',nd
+            stop
+          endif
+          indel(nne(nd),nd)=i
+        enddo
+      enddo !i
+
        ! Compute geometry
        call compute_nside(np,ne,i34,elnode(1:4,1:ne),ns2)
        allocate(ic3(4,ne),elside(4,ne),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2),stat=istat)
        if(istat/=0) stop 'Allocation error: side(0)'
-       call schism_geometry_single(np,ne,ns2,gx,gy,i34,elnode(1:4,1:ne),ic3(1:4,1:ne), &
+       call schism_geometry_double(np,ne,ns2,gx,gy,i34,elnode(1:4,1:ne),ic3(1:4,1:ne), &
      &elside(1:4,1:ne),isdel,isidenode,xcj,ycj)
 
        call check(nf90_open(FILE_NAME, nf90_nowrite,ncid))      
