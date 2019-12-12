@@ -4,7 +4,7 @@
 !It assumes the land boundary is the 1st land boundary and there is only
 !one land boundary.
 !Inputs files: 
-!      *.nc : which is converted from the shape file using the NWM streams. 
+!      NWM_shp_ll.nc : which is converted from the shape file using the NWM streams. 
 !      hgrid.lcc: the gr3 format SCHISM grid; please only keep land
 !      bnd segments that need for coupling (islands are OK).
 !             Note that the input files are in the same projection.
@@ -31,10 +31,10 @@
        &DELAWARE_REPO/00_TWL_Shared/01_data/01-NWM-4-isabel-irene-sandy-&
        &13sep2018/NetCDF_HDF/Irene_output/'  
         
-       character(len=*),parameter::FILE_NAME='NWM_shp_LCC.nc'
+       character(len=*),parameter::FILE_NAME='NWM_shp_ll.nc'
        integer :: ncid
-       character(len =*), parameter :: lat_NAME = 'y'
-       character(len =*), parameter :: lon_NAME = 'x'
+       character(len =*), parameter :: lat_NAME = 'lat'
+       character(len =*), parameter :: lon_NAME = 'lon'
        character(len =*), parameter :: featureID_NAME = 'featureID'
        character(len =*), parameter :: origID_NAME = 'ORIG_FID'
        character(len=154)::NWMfile
@@ -69,7 +69,7 @@
        read*, epsilon
   
 
-       open(14,file='hgrid.lcc',status='old')!lambert projection, NWM has shorter precision
+       open(14,file='hgrid.ll',status='old')!lambert projection, NWM has shorter precision
        read(14,*)
        read(14,*)ne,np
        write(*,*)'# of elements',ne,'# of nodes',np
