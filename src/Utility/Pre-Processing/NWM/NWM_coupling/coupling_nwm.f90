@@ -6,7 +6,7 @@
 !Inputs files: 
 !      NWM_shp_ll.nc : which is converted from the shape file using the NWM streams. 
 !      hgrid.lcc: the gr3 format SCHISM grid; please only keep land
-!      bnd segments that need for coupling (islands are OK).
+!      bnd segments needed for coupling (islands are OK).
 !             Note that the input files are in the same projection.
 !Outputs files: 
 !      source_sink.in   : contains the element ID for each
