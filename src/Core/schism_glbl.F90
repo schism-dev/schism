@@ -87,7 +87,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
-     &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh
+     &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iadjust_mass_consv
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
                       &surf_time1,surf_time2,time_nu,step_nu,time_nu_tr,step_nu_tr,dzb_min,vdmax_pp1, &
@@ -105,7 +105,7 @@ module schism_glbl
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
                   &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
-                  &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm
+                  &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm,max_iadjust_mass_consv
 
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
@@ -392,6 +392,7 @@ module schism_glbl
   !model, this is the same as we(); for non-hydrostatic model, this is only used in upwind transport
 !  real(rkind),save,allocatable :: we_fv(:,:) 
   real(rkind),save,allocatable :: flux_adv_vface(:,:,:) !unmodified vertical fluxes (positive upward)
+  real(rkind),save,allocatable :: total_mass_error(:) !(ntracers) Total mass error after advection step for mass correction
   !x & y-component of velocity at side centers & whole levels
   !For ics=1, these are defined in the global frame
   !For ics=2, these are defined in the ll frame

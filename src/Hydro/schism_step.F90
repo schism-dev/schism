@@ -6874,19 +6874,19 @@
 #endif /*USE_MARSH*/
 !$OMP end parallel
 
-!!new22
-!!     Compute mass before level change
-!      allocate(swild99(ntracers,nea))
-!      swild99=0
-!      do i=1,nea
-!        if(idry_e(i)==1) cycle
-!
-!        do k=kbe(i)+1,nvrt
-!          vol=(ze(k,i)-ze(k-1,i))*area(i)
-!          swild99(1:ntracers,i)=swild99(1:ntracers,i)+vol*tr_el(1:ntracers,k,i)
-!        enddo !k
-!      enddo !i=1,nea
-!!new22
+!     Compute mass @ column before level change for adjusting mass
+      if(max_iadjust_mass_consv>0) then
+        allocate(swild99(ntracers,ne),swild98(ntracers,1,1))
+        swild99=0
+        do i=1,ne
+          if(idry_e(i)==1) cycle
+
+          do k=kbe(i)+1,nvrt
+            vol=(ze(k,i)-ze(k-1,i))*area(i)
+            swild99(1:ntracers,i)=swild99(1:ntracers,i)+vol*tr_el(1:ntracers,k,i)
+          enddo !k
+        enddo !i=1,ne
+      endif
 
 !...  Recompute vgrid and calculate rewetted pts
       if(inunfl==0) then
@@ -6896,27 +6896,49 @@
       endif
       if(myrank==0) write(16,*) 'done recomputing levels...'
 
-!!new22
-!!     Adjust mass after level change
-!      do i=1,nea
-!        if(idry_e(i)==1) cycle
-!
-!        swild(:)=0
-!        do k=kbe(i)+1,nvrt
-!          vol=(ze(k,i)-ze(k-1,i))*area(i)
-!          swild(1:ntracers)=swild(1:ntracers)+vol*tr_el(1:ntracers,k,i)
-!        enddo !k
-!
-!        do j=1,ntracers
-!          if(swild(j)/=0) then
-!            zrat=swild99(j,i)/swild(j)
-!            tr_el(j,:,i)=tr_el(j,:,i)*zrat
-!          endif
-!        enddo !j
-!      enddo !i=1,nea
-!
-!      deallocate(swild99)
-!!new22
+!     Adjust mass after level change
+      if(max_iadjust_mass_consv>0) then
+        swild3=0 !total mass change
+        swild98=0 !total mass for each tracer in whole domain
+        do i=1,ne
+          if(idry_e(i)==1) cycle
+
+          swild=0 !total mass @column
+          do k=kbe(i)+1,nvrt
+            vol=(ze(k,i)-ze(k-1,i))*area(i)
+            swild(1:ntracers)=swild(1:ntracers)+vol*tr_el(1:ntracers,k,i)
+          enddo !k
+          swild98(1:ntracers,1,1)=swild98(1:ntracers,1,1)+swild(1:ntracers)
+
+          swild3(1:ntracers)=swild3(1:ntracers)+swild(1:ntracers)-swild99(1:ntracers,i)
+        enddo !i=1,ne
+
+        call mpi_allreduce(swild3,swild,ntracers,rtype,MPI_SUM,comm,ierr)
+
+        !Sum of 'deficit', i.e. net error due to advection scheme and F.S.
+        !movement. Removing it would conserve mass
+        !Error: should also add bottom exchange (as in sediment)
+        swild(1:ntracers)=swild(1:ntracers)+total_mass_error(:)
+
+        call mpi_allreduce(swild98(:,1,1),swild3,ntracers,rtype,MPI_SUM,comm,ierr)
+
+        !Re-distribute the deficits to each prism
+        do j=1,ntracers
+          if(swild3(j)/=0) then
+            rat=1-swild(j)/swild3(j)
+            if(myrank==0) write(16,*)'Mass correction ratio for tracer #',j,rat
+
+            if(rat>0.and.iadjust_mass_consv(j)>0) then
+              do i=1,nea2
+                if(idry_e(i)==0) then
+                  tr_el(j,:,i)=tr_el(j,:,i)*rat
+                endif
+              enddo !i
+            endif !rat
+          endif !swild3
+        enddo !j
+        deallocate(swild99,swild98)
+      endif !mass correction
 
 !...  Compute nodal vel. for output and next backtracking
       call nodalvel
