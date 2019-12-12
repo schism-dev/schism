@@ -1,3 +1,6 @@
+Pre-processing scripts used for coupling SCHISM to National Water Model (NWM) in NOAA's Water Initiative project
+
+
 (1) Also refer to the online documentation: http://ccrm.vims.edu/yinglong/feiye/Workshop_20190701/TEMP/Doc/main.html
 
 (2) hgrid and vgrid are needed for most scripts
