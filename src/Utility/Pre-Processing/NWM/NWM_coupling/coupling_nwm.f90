@@ -5,7 +5,8 @@
 !one land boundary.
 !Inputs files: 
 !      *.nc : which is converted from the shape file using the NWM streams. 
-!      hgrid: which is the gr3 format SCHISM grid.
+!      hgrid.lcc: the gr3 format SCHISM grid; please only keep land
+!      bnd segments that need for coupling (islands are OK).
 !             Note that the input files are in the same projection.
 !Outputs files: 
 !      source_sink.in   : contains the element ID for each
@@ -45,7 +46,7 @@
        integer :: nwmID_varid
        integer,parameter::max_len=100000
        integer,allocatable :: nwmID(:)         
-       integer,allocatable ::featureID(:),origID(:),isbnd(:),lndid(:)
+       integer,allocatable ::featureID(:),origID(:),isbnd(:),nlnd(:),lndid(:,:)
        integer,allocatable::segn(:),seg_sink(:),seg_source(:),source_bnd(:),source_seg(:)
        integer,allocatable::bnd_sink(:),bnd_source(:),sink_bnd(:),sink_seg(:)
        integer,allocatable::eid(:),i34(:),elnode(:,:),ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:), nne(:),indel(:,:)
@@ -93,22 +94,23 @@
          enddo !i
         enddo !k
        !write(*,*)gx(1),gy(1) 
-       !Error: add >1 land seg to account for islands
-       !     Land bnds
+       !Land bnds
         read(14,*) nland !total # of land segments
         read(14,*) nvel !total # of nodes for all land boundaries
-        !do k=1,nland
-         read(14,*)nlnd !total # of nodes on the first land boundary
-         allocate(lndid(nlnd))
-         do i=1,nlnd
-          read(14,*)lndid(i)
-         enddo !i
-        !enddo !k
-       close(14)
+        if(nland<=0.or.nvel<=0) stop 'nland<=0.or.nvel<=0'
+        allocate(nlnd(nland),lndid(nvel,nland))
+
+        do k=1,nland
+          read(14,*)nlnd(k) !total # of nodes on the land boundary
+          if(nlnd(k)>nvel) stop 'check # of land nodes'
+          do i=1,nlnd(k)
+            read(14,*)lndid(i,k)
+          enddo !i
+        enddo !k
+        close(14)
        
 
-       write(*,*)'# of the first land boundary',nlnd
-       write(*,*)'islands are excluded'
+       write(*,*)'# of nodes on land boundary=',nlnd(:),nland
 
 !     We also need elem ball
       nne=0
@@ -187,8 +189,10 @@
        allocate(bnd_sink(max_len))
        allocate(seg_source(max_len))
        allocate(bnd_source(max_len))
-      do k=1,nlnd-1 !hgrid land seg      
-        nd1=lndid(k); nd2=lndid(k+1)
+
+      do k1=1,nland !loop over all land segments of hgrid
+      do k2=1,nlnd(k1)-1 !land seg      
+        nd1=lndid(k2,k1); nd2=lndid(k2+1,k1)
         x21=gx(nd1);  y21=gy(nd1)
         x22=gx(nd2); y22=gy(nd2)
         !write(*,*)p2(1)%x,p2(2)%x,p2(1)%y,p2(2)%y
@@ -212,7 +216,7 @@
           stop
         endif
         
-        write(99,*) 'Found bnd elem:',k,nd1,nd2,ele,isd0
+        write(99,*) 'Found bnd elem:',k1,k2,nd1,nd2,ele,isd0
 !        x3=gx(nd3); y3=gy(nd3)
 
 !        do m=1,ne
@@ -289,14 +293,14 @@
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !--determine the source or sink by point in a poly-------!        
         !--select the fourth point which is calculated by adding
-        ! a short distance towards the second point of NWM stream
+        ! a short distance from side center towards the second point of NWM stream
             x4=xcj(isd0)*(1-epsilon)+epsilon*x12
             y4=ycj(isd0)*(1-epsilon)+epsilon*y12
 !            x4=x_inter+(x12-x_inter)*1.e-8; y4=y_inter+(y12-y_inter)*1.e-8;
 !            xp(1)=x21;xp(2)=x22;xp(3)=x3;
 !            yp(1)=y21;yp(2)=y22;yp(3)=y3;
           !   x4=x12;  y4=y12;
-            write(*,*)lndid(k),lndid(k+1),ele
+            write(*,*)nd1,nd2,ele
             call pt_in_poly_double(i34(ele),gx(elnode(1:i34(ele),ele)),gy(elnode(1:i34(ele),ele)),x4,y4,inside,arco,nodel)
             !if (ele.eq.3409243)then
             !  write(*,*)gx(elnode(1:i34(ele),ele))
@@ -330,9 +334,9 @@
          n=n+segn(j)
        enddo !j !NWM seg
 
-      enddo !k: SCHISM land bnd
+      enddo !k2: each land seg 
+      enddo !k1: SCHISM land bnd seg
      
-      !write(*,*)'k=',k,'j',j,'i',i
       write(*,*)'intersection#',ninseg,'sink#',n_sink,'source#',n_source
 
       allocate(sink_seg(max(1,n_sink))) 
@@ -599,27 +603,24 @@
        endif
       ! write(*,*)'next step',i
        deallocate(streamflow,nwmID)
-      enddo
+      enddo !i=1,ntime
+
       !write(*,*)'next step'      
       !write(*,*)size(SF_so),SF_so(1,1),SF_so(10,10)
 !write vsource.th file
-      open(16,file='vsource.th')
       if (n_source.ne.0) then
-       do i=1,ntime
-       write(16,'(10000F15.3)')tstep(i),(SF_so(i,k),k=1,nso)
-       end do
-      else
-       write(16,*)0
+        open(16,file='vsource.th')
+        do i=1,ntime
+         write(16,'(10000F15.3)')tstep(i),(SF_so(i,k),k=1,nso)
+        end do
       endif
       
 !write vsink.th
-      open(17,file='vsink.th')
       if (n_sink.ne.0) then
-       do i=1,ntime
-       write(17,'(10000F15.8)')tstep(i),(SF_si(i,k),k=1,nsi)
-       end do
-      else
-       write(17,*)0
+        open(17,file='vsink.th')
+        do i=1,ntime
+          write(17,'(10000F15.8)')tstep(i),(SF_si(i,k),k=1,nsi)
+        end do
       endif
 
 
