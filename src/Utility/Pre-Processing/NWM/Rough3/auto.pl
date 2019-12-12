@@ -11,7 +11,7 @@ print("e.g: ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_source2 gen_source2.f9
 
 #dirs
 #$rundir = cwd();
-$script_dir="./";
+$script_dir="../Grid_manipulation/";
 
 #set Delaware Bay =1 in include.gr3
 system("ln -sf ../hgrid.gr3 .");

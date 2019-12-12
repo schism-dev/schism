@@ -7,7 +7,7 @@ use Cwd;
 
 #dirs
 #$rundir = cwd();
-$script_dir="./";
+$script_dir="../Grid_manipulation/";
 
 #UTM grid
 system("ln -sf ../hgrid.* .");

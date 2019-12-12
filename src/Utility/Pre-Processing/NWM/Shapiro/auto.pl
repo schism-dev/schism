@@ -12,7 +12,7 @@ print("e.g: ifort -O2 -CB -o gen_slope_filter gen_slope_filter.f90\n\n\n");
 
 #dirs
 #$rundir = cwd();
-$script_dir="./";
+$script_dir="../Grid_manipulation/";
 
 #UTM grid
 system("ln -sf ../hgrid.utm.26918 hgrid.gr3");

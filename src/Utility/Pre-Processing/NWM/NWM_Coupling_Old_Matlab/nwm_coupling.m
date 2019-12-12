@@ -216,7 +216,8 @@ else
                 P_inter{i,5}=[P_inter{i,5} size(P,2)]; %record number of intersections with this ele
 
 		%Temporary (not really used): add a point in the ocean to close the polygon of the Delaware Bay
-                in_poly=inpolygon(seg.X(1:end-1),seg.Y(1:end-1),[node(bnd_node,2); -73.685884], [node(bnd_node,3); 37.639312]);
+		%Use the intersecting element as the polygon in the future
+                %in_poly=inpolygon(seg.X(1:end-1),seg.Y(1:end-1),[node(bnd_node,2); -73.685884], [node(bnd_node,3); 37.639312]);
 
                 n_inout=0; %record in/out flow
                 %second screening on each sub-segment (between two adjacent vertices
@@ -227,10 +228,11 @@ else
 
                     if (size(P0,2)==1)
 
-                        %nudge intersection toward seg node m by a little bit (1e-4 times the subseg's length)
+                        %nudge intersection toward seg node m by a little bit (1e-4 degree)
                         dp=([seg.X(m); seg.Y(m)] - P0) ;
                         dp_mag=sqrt(dp(1)^2+dp(2)^2);
                         P0_n=dp/dp_mag * 1e-4 + P0;
+			%Use the intersecting element as the polygon in the future
                         if inpolygon(P0_n(1),P0_n(2),[node(bnd_node,2); -73.685884], [node(bnd_node,3); 37.639312])
                             n_inout=n_inout-1; %inflow
                         else

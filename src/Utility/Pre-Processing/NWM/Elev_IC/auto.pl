@@ -11,7 +11,7 @@ print("e.g: ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_elev gen_elev.f90\n\n\
 
 #dirs
 #$rundir = cwd();
-$script_dir="./";
+$script_dir="../Grid_manipulation/";
 
 #UTM grid
 system("ln -sf ../hgrid.utm.26918 hgrid.gr3");

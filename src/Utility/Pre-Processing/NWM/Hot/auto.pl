@@ -9,7 +9,8 @@ print("You may need to recompile 'gen_source2.f90'\n");
 print("e.g: ifort -O2 -mcmodel=medium -assume byterecl -o gen_hot_3Dth_from_hycom gen_hot_3Dth_from_hycom.f90 ../UtilLib/compute_zcor.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff\n\n\n");
 
 #dirs
-$script_dir="./";
+$script_dir="../Grid_manipulation/";
+$hycom_dir="../HYCOM_IRENE_PERIOD/";
 
 $thisdir=cwd();
 chdir("..");
@@ -18,6 +19,7 @@ chdir($thisdir);
 #UTM grid
 system("ln -sf ../hgrid.* .");
 system("ln -sf ../vgrid.in .");
+system("ln -sf $hycom_dir/*.nc .");
 
 chdir("Elev_IC");
 system("./auto.pl");

@@ -5,12 +5,15 @@ use File::Copy qw(copy);
 use File::Copy qw(move);
 use Cwd;
 
+$script_dir="../Grid_manipulation/";
+$hycom_dir="../HYCOM_IRENE_PERIOD/";
+
 #dirs
 $thisdir=cwd();
 chdir("..");
 $rundir = cwd();
 chdir($thisdir);
-$script_dir="./";
+system("ln -sf $hycom_dir/*.nc .");
 
 #UTM grid
 system("ln -sf ../hgrid.gr3 .");
