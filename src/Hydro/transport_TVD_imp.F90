@@ -591,7 +591,7 @@
 
 !         Do advection; conc @ dry elem will not be changed
 !         Follows the style of explicit TVD, but using WENO correction instead of TVD correction
-!$OMP     do 
+!$OMP     do reduction(+: h_mass_in)
           do i=1,ne
             if(idry_e(i)==1) cycle
 
@@ -625,8 +625,15 @@
                 else !land or open bnd side
                   !skip land bnd and outflowing open bnd, 
                   !in this case iweno is not changed from initial value (.true.), but won't be used
-                  !JZ: check TVD also
-                  if(isbs(jsj)<=0.or.k>=kbs(jsj)+1.and.ssign(j,i)*flux_adv_hface(k,jsj)>=0) cycle
+                  if(isbs(jsj)<=0.or.k>=kbs(jsj)+1.and.ssign(j,i)*flux_adv_hface(k,jsj)>=0) then
+                    !For outflow open bnd side, estimate mass in (open
+                    !side cannot be interface side)
+                    if(max_iadjust_mass_consv>0.and.isbs(jsj)>0) then !outflow @open bnd
+                      h_mass_in(:)=h_mass_in(:)-trel_tmp(1:ntr,k,i)*flux_adv_hface(k,jsj)*dtb
+                    endif
+
+                    cycle
+                  endif
 
                   !Open bnd side with inflow (must be wet elem)
                   iweno=.false.  !reset to upwind
@@ -667,6 +674,9 @@
                     enddo !ll
 
                   enddo !jj
+
+                  !Tally horizontal mass in for inflow case
+                  if(max_iadjust_mass_consv>0) h_mass_in(:)=h_mass_in(:)-trel_tmp_outside(1:ntr)*flux_adv_hface(k,jsj)*dtb
                 endif !iel
 
                 !!upwind part
