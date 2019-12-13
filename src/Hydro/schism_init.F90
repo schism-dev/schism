@@ -1703,6 +1703,8 @@
       enddo !i
       max_iadjust_mass_consv=maxval(iadjust_mass_consv)
       if(myrank==0) write(16,*)'Mass correction flags=',max_iadjust_mass_consv,iadjust_mass_consv(:)
+      if(max_iadjust_mass_consv>0.and.itr_met/=3.and.itr_met/=4) &
+     &call parallel_abort('INIT: mass correction needs itr_met=3 or 4')
 
 !     Wave model arrays
 #ifdef  USE_WWM
