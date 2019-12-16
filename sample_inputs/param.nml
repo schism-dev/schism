@@ -619,7 +619,7 @@
   iadjust_mass_consv0(2)=0 !S
   iadjust_mass_consv0(3)=0 !GEN
   iadjust_mass_consv0(4)=0 !AGE
-  iadjust_mass_consv0(5)=0 !SED3D
+  iadjust_mass_consv0(5)=0 !SED3D (code won't allow non-0 for this module)
   iadjust_mass_consv0(6)=0 !EcoSim
   iadjust_mass_consv0(7)=0 !ICM
   iadjust_mass_consv0(8)=0 !CoSiNE
