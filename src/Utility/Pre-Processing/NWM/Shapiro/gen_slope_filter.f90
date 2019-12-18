@@ -6,12 +6,14 @@
 !     ifort -O2 -CB -o gen_slope_filter gen_slope_filter.f90
 
       implicit real*8(a-h,o-z)
-      parameter(mnp=1000000)
-      parameter(mne=2000000)
-      parameter(mnei=30)
-      integer :: i34(mne),elnode(4,mne),nwild(3)
-      dimension x(mnp),y(mnp),dp(mnp),area(mne),dldxy(2,3),slope(mne)
-      dimension nne(mnp),indel(mnei,mnp),hdif(mnp),hdif_e(mne),rlh(4)
+      !parameter(mnp=1000000)
+      !parameter(mne=2000000)
+      parameter(mnei=50)
+
+      integer,allocatable :: i34(:),elnode(:,:),nwild(:)
+      real*8,allocatable :: x(:),y(:),dp(:),area(:),dldxy(:,:)
+      real*8,allocatable :: slope(:),hdif(:),hdif_e(:),rlh(:)
+      integer,allocatable :: nne(:),indel(:,:)
 
       !Formula: depth=hdif_max*tanh(2*gam/threshold_slope), where gam is
       !slope
@@ -24,10 +26,14 @@
       open(13,file='slope_filter.gr3',status='replace')
       read(14,*)
       read(14,*) ne,np
-      if(ne>mne.or.np>mnp) then
-        write(*,*)'Increase mne/mnp',mne,mnp,ne,np
-        stop
-      endif
+      !if(ne>mne.or.np>mnp) then
+      !  write(*,*)'Increase mne/mnp',mne,mnp,ne,np
+      !  stop
+      !endif
+      allocate(i34(ne),elnode(4,ne),nwild(3), &
+             & x(np),y(np),dp(np),area(ne),dldxy(2,3), &
+             & slope(ne),hdif(np),hdif_e(ne),rlh(4), &
+             & nne(np),indel(mnei,np),stat=istat)
 
       do i=1,np
         read(14,*) j,x(i),y(i),dp(i)

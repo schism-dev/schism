@@ -61,12 +61,12 @@
 
 !      integer, parameter :: debug=1
 
-      integer, parameter :: mnp=784493
-      integer, parameter :: mne=1522520 
-      integer, parameter :: mns=2840000
-      integer, parameter :: mnv=68
+      !integer, parameter :: mnp=784493
+      !integer, parameter :: mne=1522520 
+      !integer, parameter :: mns=2840000
+      !integer, parameter :: mnv=68
       integer, parameter :: mnope=10 !max # of open bnd segments
-      integer, parameter :: mnond=1000 !max # of open bnd nodes in each segment
+      integer, parameter :: mnond=10000 !max # of open bnd nodes in each segment
       integer, parameter :: mnei=20 !neighbor
       integer, parameter :: nbyte=4
       real, parameter :: small1=1.e-2 !used to check area ratios
@@ -101,32 +101,33 @@
       character(len=1) :: char1,char2
       character(len=20) :: char3,char4
 !     external function for number of command line arguments
-      integer :: iargc
+      integer :: iargc,nv
 
       integer :: status ! netcdf local status variable
-      integer :: ier ! allocate error return.
+      integer :: ier, istat ! allocate error return.
       integer :: ixlen, iylen, ilen ! sampled lengths in each coordinate direction
       integer :: ixlen1, iylen1,ixlen2, iylen2 !reduced indices for CORIE grid to speed up interpolation
 !     integer :: i,j,k,i1,i2,i3,j1,j2,j3
-      integer :: elnode(4,mne)
-      integer :: elside(4,mne)
-      integer :: isdel(2,mns)
-      integer :: indel(mnei,mnp),idry_s(mns)
-      dimension xl(mnp),yl(mnp),dp(mnp),i34(mne)
-      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,3),arco(3,mnp)
+      integer,allocatable :: elnode(:,:)
+      integer,allocatable :: elside(:,:)
+      integer,allocatable :: isdel(:,:),iest(:),ixy(:,:)
+      integer, allocatable :: indel(:,:),idry_s(:),i34(:)
+      real*8, allocatable :: xl(:),yl(:),dp(:)
+      real*8, allocatable :: ztot(:),sigma(:),cs(:),arco(:,:)
       dimension wild(100),wild2(100,2)
-      dimension tempout(mnv,mnp), saltout(mnv,mnp),month_day(12)
-      dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
-      dimension tsel(2,mnv,mne),zeros(mnv,max(mne,mnp))
-      dimension nne(mnp),ic3(4,mne),nx(4,4,3),isidenode(2,mns)
-      dimension xcj(mns),ycj(mns),nond(mnope),iond(mnope,mnond),iob(mnope),iond2(mnope*mnond)
-      allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
+      real*8, allocatable :: tempout(:,:), saltout(:,:)
+      real*8, allocatable :: uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:),eout_tmp(:)
+      real*8, allocatable :: tsel(:,:,:),zeros(:,:)
+      integer, allocatable :: nond(:),iond(:,:),iond2(:)
+      integer, allocatable :: nne(:),ic3(:,:),isidenode(:,:),kbp2(:),iparen_of_dry(:,:)
+      real*8, allocatable :: xcj(:),ycj(:)
+      real*8, allocatable :: z(:,:),sigma_lcl(:,:),temp2(:)
       real*8 :: aa1(1)
+      dimension month_day(12), iob(100), nx(4,4,3)
 
       !FY
       integer, parameter :: maxST=40
       dimension x0(maxST),y0(maxST),z0(maxST,100),val(maxST,100),nDepth(200), nn(2), temp1(2), iTest(maxST)
-      dimension temp2(mnv) 
       character(Len = 1000) :: stName 
       integer :: i_obs = -999
       !YF
@@ -156,14 +157,18 @@
       open(11,file='fort.11',status='replace')
       read(14,*)
       read(14,*)ne,np
-      if(np.gt.mnp.or.ne.gt.mne) then
-        write(*,*)'Increase mnp/mne'
-        stop
-      endif
+      !if(np.gt.mnp.or.ne.gt.mne) then
+      !  write(*,*)'Increase mnp/mne'
+      !  stop
+      !endif
       read(16,*)
       read(16,*)
       read(17,*)
       read(17,*)
+
+      allocate(dp(np),xl(np),yl(np),iest(np),stat=istat)
+      if(istat/=0) stop 'Failed to allocate (1)'
+
       do i=1,np
         read(14,*)j,xtmp,ytmp,dp(i)
         read(16,*)j,xl(i),yl(i) 
@@ -174,6 +179,10 @@
           stop
         endif
       enddo !i
+
+      allocate(i34(ne),elnode(4,ne),stat=istat)
+      if(istat/=0) stop 'Failed to allocate (2)'
+
       do i=1,ne
         read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
       enddo !i
@@ -181,7 +190,11 @@
       read(14,*) nope
       read(14,*) neta
       ntot=0
-      if(nope>mnope) stop 'Increase mnope (2)'
+      !if(nope>mnope) stop 'Increase mnope (2)'
+
+      allocate(nond(nope),iond(nope,mnond),iond2(nope*mnond),stat=istat)
+      if(istat/=0) stop 'Failed to allocate (2)'
+
       do k=1,nope
         read(14,*) nond(k)
         if(nond(k)>mnond) stop 'Increase mnond'
@@ -205,11 +218,20 @@
 !     V-grid
       read(19,*)ivcor
       read(19,*)nvrt
-      if(nvrt>mnv) stop 'increase mnv'
+
+      !if(nvrt>mnv) stop 'increase mnv'
+      nv=nvrt 
+      allocate(elside(4,ne),ixy(np,3), &
+        & indel(mnei,np),ztot(0:nv), &
+        & sigma(nv),cs(nv),arco(3,np),tempout(nv,np),saltout(nv,np), &
+        & uout(nv,np),vout(nv,np),eout(np),eout_tmp(np), &
+        & tsel(2,nv,ne),zeros(nv,max(ne,np)), &
+        & nne(np),ic3(4,ne),stat=istat)
+      if(istat/=0) stop 'Failed to allocate (3)'
+
       rewind(19)
       allocate(sigma_lcl(nvrt,np),z(np,nvrt),kbp2(np))
       call get_vgrid('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp2)
-
 !     Compute z-coord.
       do i=1,np
         if(ivcor==2) then
@@ -275,10 +297,23 @@
           nd2=elnode(nx(i34(i),j,2),i)
           if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
             ns=ns+1
-            if(ns>mns) then
-              write(11,*)'Too many sides'
-              stop
-            endif
+          endif !ic3(j,i)==0.or.i<ic3(j,i)
+        enddo !j=1,i34
+      enddo !i=1,ne
+      allocate(isdel(2,ns),idry_s(ns),su2(ns,nv),sv2(ns,nv),isidenode(2,ns),xcj(ns),ycj(ns),stat=istat)
+      if(istat/=0) stop 'Failed to allocate (4)'
+
+      ns=0 !# of sides
+      do i=1,ne
+        do j=1,i34(i)
+          nd1=elnode(nx(i34(i),j,1),i)
+          nd2=elnode(nx(i34(i),j,2),i)
+          if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
+            ns=ns+1
+            !if(ns>mns) then
+            !  write(11,*)'Too many sides'
+            !  stop
+            !endif
             elside(j,i)=ns
             isdel(1,ns)=i
             isidenode(1,ns)=nd1
