@@ -22,6 +22,9 @@
 !                 Also interpolation is along S-coord in tracking; no
 !                 bilinear interp for quads.
 !                 Assume the quads are not split in the nc outputs.
+!
+!       Behavior when particles hit horizontal bnd or dry interface:
+!       reflect off like LTRAN
 !										
 !	Inputs: 
 !          a) hgrid.ll (if ics=2 in particle.bp) or hgrid.gr3 (if ics=1 in
