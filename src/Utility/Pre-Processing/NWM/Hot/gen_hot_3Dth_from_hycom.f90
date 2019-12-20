@@ -61,9 +61,9 @@
 
 !      integer, parameter :: debug=1
 
-      integer, parameter :: mnp=784493
-      integer, parameter :: mne=1522520 
-      integer, parameter :: mns=2840000
+      integer, parameter :: mnp=784493*4
+      integer, parameter :: mne=1522520*4
+      integer, parameter :: mns=2840000*4
       integer, parameter :: mnv=68
       integer, parameter :: mnope=10 !max # of open bnd segments
       integer, parameter :: mnond=1000 !max # of open bnd nodes in each segment
@@ -1198,8 +1198,8 @@
         irecout=irecout+1
         timeout=timeout+dtout !sec
 
-!        write(20,*)'done time:',timeout/86400
-!        call flush(20)
+        write(*,*)'done time:',timeout/86400
+        !call flush(20)
 
         if(timeout/86400>nndays) stop 'finished'
 

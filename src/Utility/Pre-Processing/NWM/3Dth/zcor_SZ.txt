@@ -1,0 +1,67 @@
+!for zcor_SZ_*
+
+!     Sanity check done before
+!     Pre-compute constants
+      s_con1=sinh(theta_f)
+      nsig=nvrt-kz+1 !# of S levels 
+      do k=1,nsig
+        cs(k)=(1-theta_b)*sinh(theta_f*sigma(k))/sinh(theta_f)+ &
+     &theta_b*(tanh(theta_f*(sigma(k)+0.5))-tanh(theta_f*0.5))/2/tanh(theta_f*0.5)
+      enddo !k
+
+      zcor=-99
+      if(eta<=h0-h_s) then
+        stop 'Deep depth dry'
+      else if(eta+dp<=h0) then
+        idry=1; kbp=0
+      else !wet
+!       S-levels
+        idry=0
+        hmod=min(h_s,dp)
+        do k=kz,nvrt
+          kin=k-kz+1
+          if(hmod<=h_c) then
+            zcor(k)=sigma(kin)*(hmod+eta)+eta
+          else if(eta<=-h_c-(hmod-h_c)*theta_f/s_con1) then !hmod(i)>h_c>=0
+            print*, 'Pls choose a larger h_c (2):',eta,h_c
+            stop
+          else
+            zcor(k)=eta*(1+sigma(kin))+h_c*sigma(kin)+(hmod-h_c)*cs(kin)
+          endif
+        enddo !k=kz,nvrt
+
+!       z-levels
+        if(dp<=h_s) then
+          kbp=kz
+        else !bottom index 
+          kbp=0 !flag
+          do k=1,kz-1
+            if(-dp>=ztot(k).and.-dp<ztot(k+1)) then
+              kbp=k
+              exit
+            endif
+          enddo !k
+          if(kbp==0) then
+            print*, 'Cannot find a bottom level for node (3):',i
+            stop
+          endif
+
+          if(kbp>=kz.or.kbp<1) then
+            print*, 'Impossible 92:',kbp,kz
+            stop
+          endif
+          zcor(kbp)=-dp
+          do k=kbp+1,kz-1
+            zcor(k)=ztot(k)
+          enddo !k
+        endif
+
+        do k=kbp+1,nvrt
+          if(zcor(k)-zcor(k-1)<=0) then
+            write(*,*)'Inverted z-levels at:',i,k,zcor(k)-zcor(k-1),eta,hmod
+            stop
+          endif
+        enddo !k
+      endif !wet ot dry
+
+

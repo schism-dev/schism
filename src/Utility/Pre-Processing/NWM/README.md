@@ -11,28 +11,36 @@ Pre-processing scripts used for coupling SCHISM to National Water Model (NWM) fo
     some of them may need to be recomplied, including:
 
 
-./Grid_manipulation/*.cpp
-./Grid_manipulation/*.f90
-./Elev_IC/gen_elev.f90
-./Shapiro/gen_slope_filter.f90
-./HYCOM_nudge/gen_nudge_from_hycom.f90  
-./Vgrid/gen_vqs.f90
-./Hot/gen_hot_3Dth_from_hycom.f90  
-./Rough3/gen_source2.f90
-./DEM/interpolate_depth_structured2.f90
-./DEM_USGS/interpolate_depth_structured2.f90
+"./Grid_manipulation/*.cpp",
 
+"./Grid_manipulation/*.f90",
+
+"./Elev_IC/gen_elev.f90",
+
+"./Shapiro/gen_slope_filter.f90",
+
+"./HYCOM_nudge/gen_nudge_from_hycom.f90",
+
+"./Vgrid/gen_vqs.f90",
+
+"./Hot/gen_hot_3Dth_from_hycom.f90",
+
+"./Rough3/gen_source2.f90",
+
+"./DEM/interpolate_depth_structured2.f90",
+
+"./DEM_USGS/interpolate_depth_structured2.f90"
 
 A sample compiling cmd is provided in the beginning few lines in each source code.
 The sample binaries provided here were compiled with ifort and gcc.
 
 Also, make sure you have appropriate netcdf libraries; as a test, see if you can successfully compile:
-/HYCOM_nudge/gen_nudge_from_hycom.f90
+./HYCOM_nudge/gen_nudge_from_hycom.f90
 
 
 (4) When setting up a new run from scratch, it is recommended to copy the following sub-folders to your run directory:
 
-	[$your_script_dir] cp -r Grid_manipulation/ Prop/ Shapiro/ Rough3/ Elev_IC/ Hot/ Vgrid/ NWM_Coupling/ Load_Bathy/ $your_run_dir 
+	[$your_script_dir] cp -r Grid_manipulation/ Prop/ Shapiro/ HYCOM_nudge/ Rough3/ Elev_IC/ Hot/ Vgrid/ NWM_Coupling/ Load_Bathy/ $your_run_dir 
 
   , and creat symbolic links for a few large data files:
 
@@ -59,8 +67,11 @@ Also, make sure you have appropriate netcdf libraries; as a test, see if you can
 
 
 (6) Specifically for Stampede2:
-    (6.1) Load_bathy does not work on Stampede2, because the module 'proj' (PROJ.4 - Cartographic Projections Library) is not available
+
+    (6.1) Load_bathy does not work on Stampede2, because the module 'proj' (PROJ.4 - Cartographic Projections Library) is not available;
+
     (6.2) request an interative session for Hot/ and HYCOM_nudge/, since they can take a while;
+
     (6.3) You can also submit any "auto.pl" to queue.
 
 

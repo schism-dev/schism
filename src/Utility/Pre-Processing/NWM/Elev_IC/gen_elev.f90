@@ -55,10 +55,14 @@
       open(15,file='vgrid.in')
       read(15,*) ivcor
       read(15,*) nvrt
-      do i=1,np
-        read(15,*) j,kbp
-        nlayers(i)=nvrt-kbp
-      enddo
+      if (ivcor==2) then !s-layer
+        nlayers=nvrt-1
+      elseif (ivcor==1) then
+        do i=1,np
+          read(15,*) j,kbp
+          nlayers(i)=nvrt-kbp
+        enddo
+      endif
       close(15)
 
       total_area=sum(area)
@@ -142,7 +146,7 @@
         if (iDB(i) ==0 ) then
           write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i))
         else
-          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i))+0.02
+          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i)-1e-6)
         endif
       enddo 
       do i=1,ne
