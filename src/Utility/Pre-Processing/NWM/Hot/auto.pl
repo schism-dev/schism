@@ -63,7 +63,7 @@ move("out.gr3","estuary.gr3");
 system("./gen_hot_3Dth_from_hycom");
 
 unlink("../hotstart.nc");
-unlink("./*D.th.nc");
+system("rm ./*D.th.nc");
 
 copy("hotstart.nc","../hotstart.nc");
 

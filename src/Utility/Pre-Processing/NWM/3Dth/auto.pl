@@ -17,7 +17,7 @@ print("Make sure you have netcdf libraries\n");
 #dirs
 $hycom_dir="../HYCOM_IRENE_PERIOD/";
 
-$thisdir=cwd();
+#$thisdir=cwd();
 
 #UTM grid
 system("ln -sf ../hgrid.* .");
@@ -30,9 +30,9 @@ system("./gen_gr3.pl");
 #generate hotstart.nc and *D.th.nc
 system("./gen_hot_3Dth_from_hycom");
 
-unlink("../*D.th.nc");
+unlink glob "../*D.th.nc";
 unlink("./hotstart.nc");
 
-copy("*D.th.nc","../");
+system("cp *D.th.nc ../");
 
 print("Done.\n")
