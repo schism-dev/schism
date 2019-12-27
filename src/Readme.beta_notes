@@ -1,11 +1,12 @@
 Github versions:
 
-4e2eb86: add optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
-5ff2198: added 'level_age(:)' if USE_AGE (AGE module revamped);
-05b0099: pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
+4e2eb86 (Dec 11, 2019): added optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
+2648090 (Dec 1, 2019): added 'vclose_surf_frac' for correcting vertical vel/flux;
+5ff2198 (Nov 17, 2019): added 'level_age(:)' if USE_AGE (AGE module revamped);
+05b0099 (Sep 11, 2019): pre-pended in/out dirs, and all outputs are now in outputs/. Name changes: 
          fort.11-> fatal.error, flux.dat ->flux.out, total.dat->total.out, total_TR.dat->total_TR.out,
          fort.33->JCG.out, fort.17->subcycling.out;
-f69ca44: updated nc libs in GOTM3 make;
+f69ca44 (Sep 9, 2019): updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 SVN versions:
 Changes in param.in and main parameter inputs for other modules:
