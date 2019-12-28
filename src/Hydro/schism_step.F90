@@ -814,8 +814,11 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: nudging(0)')
             j=nf90_get_var(ncid_nu(k),mm,dbleout2,(/icount3/),(/1/)) !in days
             if(j/=NF90_NOERR) call parallel_abort('STEP: time2')
-            if(abs(dbleout2(1)*86400-time_nu_tr-step_nu_tr)>0.01) then
-              write(errmsg,*)'STEP, wrong nudging time (2):',dbleout2(1)*86400,time_nu_tr+step_nu_tr
+            if(abs(dbleout2(1)*86400.d0-time_nu_tr-step_nu_tr)>1.d-2) then
+              ! This is a severe for data stored in single precision
+              ! and then multiplied by 86400. Reasonable time steps (e.g. 1/6 of a day) might
+              ! not pass if they are not representable in real*4
+              write(errmsg,*)'STEP, wrong nudging time (2):',dbleout2(1)*86400.d0,time_nu_tr+step_nu_tr
               call parallel_abort(errmsg)
             endif
 
