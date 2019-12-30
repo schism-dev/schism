@@ -81,6 +81,12 @@ for day=1:366 %2003
 %  disp(strcat('Outputting Day: ',num2str(day)));
   day_str=sprintf('%4.4d',day);
   filenm=strcat('sflux_air_2.',day_str,'.nc');
+
+%IMPORTANT: use nc4 to avoid file size limit!!
+%cmode = netcdf.getConstant('NETCDF4');
+%cmode = bitor(cmode,netcdf.getConstant('CLASSIC_MODEL'));
+%ncid2 = netcdf.create(filenm,cmode);
+
   ncid2 = netcdf.create(filenm,'CLOBBER');
   dims(1)=netcdf.defDim(ncid2,'n1',n1);
   dims(2)=netcdf.defDim(ncid2,'n2',n2);
