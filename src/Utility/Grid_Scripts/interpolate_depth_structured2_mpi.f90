@@ -14,8 +14,7 @@
 
 !     Interpolate depths from a structured grid to unstructured grid in
 !     parallel (assuming no substantial overlaps btw DEMs; in
-!     overlapping regions, the depth is arbitrarily assigned from 1 of
-!     DEMs).
+!     overlapping regions, the depth from largest rank/DEM prevails)
 !     Inputs: 1st few lines of inputs below; dem_????.asc;
 !             hgrid.old (unstructured grid, mixed tri and quads)
 !     Output: hgrid.new (for pts outside the structured grid or the depth is junk there, 
@@ -44,7 +43,7 @@
 !      read*, vshift
       ndems=20 !# of DEMs
       if(nproc+1<ndems) then
-        print*, 'Use more cores than DEMs:',nproc+1,ndems
+        print*, 'Please use more cores than DEMs:',nproc+1,ndems
         call mpi_abort(comm,0,j)
       endif
       ih=-1
@@ -178,9 +177,9 @@
           write(13,*)j,k,(nm(l),l=1,k)
         enddo !i
         close(13)
-        close(14)
       endif !myrank=0
 101   format(i9,2(1x,e24.16),1x,f13.6)
+      close(14)
 
       call MPI_FINALIZE(errcode)
       end program
