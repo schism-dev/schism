@@ -12,12 +12,12 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-!     Interpolate depths from a structured grid to unstructured grid in
-!     parallel (assuming no substantial overlaps btw DEMs; in
-!     overlapping regions, the depth from largest rank/DEM prevails)
-!     Inputs: 1st few lines of inputs below; dem_????.asc;
+!     Interpolate depths from structured grid DEMs (.asc) to unstructured grid in
+!     parallel (in overlapping regions, the depth from larger rank/DEM prevails)
+!     Inputs: 1st few lines of inputs below; 
+!             dem_????.asc (ordered properly for precedence);
 !             hgrid.old (unstructured grid, mixed tri and quads)
-!     Output: hgrid.new (for pts outside the structured grid or the depth is junk there, 
+!     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
 !     mpif90 -O2 -mcmodel=medium -CB -g -traceback -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
 
@@ -149,7 +149,7 @@
 
       call mpi_barrier(comm,ierr)
 
-      !Combine 
+      !Combine on rank 0
       if(myrank==0) then
         do irank=0,ndems-1
           fdb='dem_0000'
