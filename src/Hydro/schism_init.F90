@@ -2608,6 +2608,9 @@
 
           ! Convert global nodes to local data structure
           do i=1,nhtblocks
+            ! is_local means relevant locally because up/down ref node or node pairs are resident
+            if (ipgl(structures(i)%upnode)%rank==myrank)structures(i)%is_local=.true.
+            if (ipgl(structures(i)%upnode)%rank==myrank)structures(i)%is_local=.true.
             do j=1,structures(i)%npair
               do k=1,2
                 nd_gb=structures(i)%node_pairs(k,j)
