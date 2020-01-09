@@ -14,8 +14,9 @@
 
 !     Interpolate depths from structured grid DEMs (.asc) to unstructured grid in
 !     parallel (in overlapping regions, the depth from larger rank/DEM prevails)
-!     Inputs: 1st few lines of inputs below; 
-!             dem_????.asc (ordered properly for precedence);
+!     Inputs: dems.in (# of DEMs)
+!             dem_????.asc (ordered properly for precedence, starting
+!             from 0000. Depth negative for water);
 !             hgrid.old (unstructured grid, mixed tri and quads)
 !     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
@@ -34,20 +35,18 @@
       call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
       call mpi_comm_size(comm,nproc,ierr)
       call MPI_COMM_RANK(comm, myrank, errcode)
-      print *, 'Hello from ', myrank
+!      print *, 'Hello from ', myrank
 
-!     Inputs
-!      print*, 'Reverse the sign of the depth? (1: no; -1: yes; say yes)'
-!      read*, ih
-!      print*, 'Add vertical const. to outputs (i.e. change of vdatum):'
-!      read*, vshift
-      ndems=20 !# of DEMs
+      ih=-1 !sign change
+      vshift=0 !vertical datum diff
+      open(10,file='dems.in',status='old')
+      read(10,*)ndems
+      close(10)
+
       if(nproc+1<ndems) then
         print*, 'Please use more cores than DEMs:',nproc+1,ndems
         call mpi_abort(comm,0,j)
       endif
-      ih=-1
-      vshift=0
 
       open(14,file='hgrid.old',status='old')
       read(14,*)
