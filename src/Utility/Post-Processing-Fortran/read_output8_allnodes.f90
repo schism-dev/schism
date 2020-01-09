@@ -18,16 +18,17 @@
 !	Read (combined or uncombined) nc outputs for multiple files at all nodes 
 !       Works for mixed tri/quad outputs on NODE based vars only.
 !       Inputs: screen; combined or uncombined nc file; vgrid.in (in this dir or ../)
-!       Outputs: extract.out (ascii)
+!       Outputs: extract.out (ascii); optional: max 2D output
 !       History: (1) added non-standard outputs (April 2012) - transparent to most scripts
 !               as format is same; (2) added ivcor=1 (Dec 2013); (3)
 !               added quads (Nov. 2014) (4) changed to nc outputs (Sept
 !               2017); (5) added uncombined option (Feb 2019)
 !****************************************************************************************
-!     ifort -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!     ifort -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
       program read_out
       use netcdf
       use extract_mod
+      use schism_geometry_mod
       use compute_zcor
 
 !      parameter(nbyte=4)
@@ -36,11 +37,13 @@
 !      character*48 data_format
   
 !      integer,allocatable :: i34(:),elnode(:,:)
+      integer :: nx(4,4,3)
       allocatable :: sigma(:),cs(:),ztot(:)
       allocatable :: outvar(:,:,:,:),out(:,:,:),icum(:,:,:),eta2(:,:),ztmp(:,:)
       allocatable :: xcj(:),ycj(:),dps(:),kbs(:),xctr(:),yctr(:),dpe(:),kbe(:)
-      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:)
+      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rmax2d(:)
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:)
+      integer, allocatable :: elside(:,:),idry_e(:),nne(:),indel(:,:)
       real*8,allocatable :: timeout(:)
 
       print*, 'Do you work on uncombined (0) or combined (1) nc?'
@@ -65,9 +68,17 @@
 !'
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
+      if(varname(1:len_var).eq.'elev') then
+        is_elev=1 
+      else
+        is_elev=0 
+      endif
       
       print*, 'Input start and end stack # to read:'
       read(*,*) iday1,iday2
+
+      print*, 'Do you want to compute max for 2D var? (0: no; 1:yes)'
+      read(*,*) icomp_max
 
       open(65,file='extract.out')
       
@@ -85,12 +96,64 @@
       print*, 'After header:',ne,np,nrec,i34(ne), &
      &elnode(1:i34(ne),ne),nvrt,h0,x(np),y(np),dp(np) !,start_time
 
+      ! Compute geometry
+      allocate(nne(np))
+      do k=3,4
+        do i=1,k
+          do j=1,k-1
+            nx(k,i,j)=i+j
+            if(nx(k,i,j)>k) nx(k,i,j)=nx(k,i,j)-k
+            if(nx(k,i,j)<1.or.nx(k,i,j)>k) then
+              write(*,*)'nx wrong',i,j,k,nx(k,i,j)
+              stop
+            endif
+          enddo !j
+        enddo !i
+      enddo !k
+
+      nne=0
+      do i=1,ne
+        do j=1,i34(i)
+          nd=elnode(j,i)
+          nne(nd)=nne(nd)+1
+        enddo
+      enddo
+      mnei=maxval(nne)
+
+      allocate(indel(mnei,np),stat=istat)
+      if(istat/=0) stop 'Failed to alloc. indel'
+      nne=0
+      do i=1,ne
+        do j=1,i34(i)
+          nd=elnode(j,i)
+          nne(nd)=nne(nd)+1
+          if(nne(nd)>mnei) then
+            write(*,*)'Too many neighbors',nd
+            stop
+          endif
+          indel(nne(nd),nd)=i
+        enddo
+      enddo !i
+
+      call compute_nside(np,ne,i34,elnode(1:4,1:ne),ns2)
+      if(ns2/=ns) then
+        write(*,*)'Mismatch in side:',ns2,ns
+        stop
+      endif
+      allocate(ic3(4,ne),elside(4,ne),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2),stat=istat)
+      if(istat/=0) stop 'Allocation error: side(0)'
+      call schism_geometry_single(np,ne,ns2,x,y,i34,elnode(1:4,1:ne),ic3(1:4,1:ne), &
+     &elside(1:4,1:ne),isdel,isidenode,xcj,ycj)
+
+      !For dimensioning purpose
+      if(np>ns.or.ne>ns) stop 'ns is not largest'
+
       last_dim=np
 !     nrec specified if ispec_max=2
       if(ispec_max==1) nrec3=max_array_size/(2*nvrt*last_dim)-1
       nrec3=min(nrec,max(nrec3,1))
 
-      allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np), &
+      allocate(idry_e(ne),rmax2d(np),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np), &
      &outvar(2,nvrt,last_dim,nrec3),eta2(np,nrec3),idry(np),ztmp(nvrt,np),timeout(nrec))
       outvar=-huge(1.0) !test mem
 
@@ -111,6 +174,11 @@
 !...
       outvar=-99 !init.
       ztmp=-99
+      if(is_elev==1) then
+        rmax2d=-dp !for elev, min is -h
+      else
+        rmax2d=-huge(1.0)
+      endif
       do iday=iday1,iday2 !1,ndays
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !      write(it_char,'(i12)')iday
@@ -127,9 +195,8 @@
         call get_timeout(iday,nrec,timeout)
       endif
 
-!      print*, 'time=',timeout
+      print*, 'doing stack # ',iday
 
-!      do irec=1,nrec
       irec1=1 !start record
       loop1: do
         irec2=min(nrec,irec1+nrec3-1)
@@ -146,45 +213,59 @@
         !outvar(2,nvrt,np|ne,irec2-irec1+1),i23d,ivs,eta2(np,irec2-irec1+1)
 
         do irec=1,irec2-irec1+1 !offeset record #
-!----------------------------------------------------------------------------
-        irec_real=irec1+irec-1 !actual record #
+          irec_real=irec1+irec-1 !actual record #
 
-        if(mod(i23d-1,3)==0) then !2D
-!         Output: time, 2D variable at all nodes
-          write(65,'(e14.6,1000000(1x,e14.4))')time/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
-        else !if(i23d==3) then !3D 
-          !Compute z coordinates
-          do i=1,np
-            if(ivcor==1) then !localized
-              if(dp(i)+eta2(i,irec)<=h0) then
-                idry(i)=1
-              else !wet
-                idry(i)=0
-                do k=kbp(i),nvrt
-                  ztmp(k,i)=(eta2(i,irec)+dp(i))*sigma_lcl(k,i)+eta2(i,irec)
-                enddo !k
-              endif !wet/dry
-            else if(ivcor==2) then !SZ
-              call zcor_SZ_single(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
-     &sigma,ztmp(:,i),idry(i),kbpl)
+          if(mod(i23d-1,3)==0) then !2D
+!           Output: time, 2D variable at all nodes
+!            write(65,'(e14.6,1000000(1x,e14.4))')time/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
+
+            !Compute max (magnitude for vectors)
+            if(icomp_max/=0) then
+              do i=1,np
+                if(ivs==2) then
+                  tmp=sqrt(outvar(1,1,i,irec)**2+outvar(2,1,i,irec)**2)
+                else
+                  tmp=outvar(1,1,i,irec)
+                endif
+
+                if(is_elev==1) then
+                  if(tmp+dp(i)>0) rmax2d(i)=max(rmax2d(i),tmp)
+                else
+                  rmax2d(i)=max(rmax2d(i),tmp)
+                endif
+              enddo !i 
             endif
-
-            do k=max0(1,kbp00(i)),nvrt
-!             Output: time, node #, level #, z-coordinate, 3D variable 
-              if(idry(i)==1) then
-                write(65,*)timeout(irec_real)/86400,i,k,-1.e6,(outvar(m,k,i,irec),m=1,ivs)
-              else
-                write(65,*)timeout(irec_real)/86400,i,k,ztmp(k,i),(outvar(m,k,i,irec),m=1,ivs)
+          else !if(i23d==3) then !3D 
+            !Compute z coordinates
+            do i=1,np
+              if(ivcor==1) then !localized
+                if(dp(i)+eta2(i,irec)<=h0) then
+                  idry(i)=1
+                else !wet
+                  idry(i)=0
+                  do k=kbp(i),nvrt
+                    ztmp(k,i)=(eta2(i,irec)+dp(i))*sigma_lcl(k,i)+eta2(i,irec)
+                  enddo !k
+                endif !wet/dry
+              else if(ivcor==2) then !SZ
+                call zcor_SZ_single(dp(i),eta2(i,irec),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+     &sigma,ztmp(:,i),idry(i),kbpl)
               endif
-            enddo !k
 
-            !Debug
-            !write(65,*)x(i),y(i),out(i,1,1:ivs) 
+              do k=max0(1,kbp00(i)),nvrt
+!               Output: time, node #, level #, z-coordinate, 3D variable 
+                if(idry(i)==1) then
+                  write(65,*)timeout(irec_real)/86400,i,k,-1.e6,(outvar(m,k,i,irec),m=1,ivs)
+                else
+                  write(65,*)timeout(irec_real)/86400,i,k,ztmp(k,i),(outvar(m,k,i,irec),m=1,ivs)
+                endif
+              enddo !k
+ 
+              !Debug
+              !write(65,*)x(i),y(i),out(i,1,1:ivs) 
 
-          enddo !i
-        endif !i23d
-      !enddo !irec=1,nrec
-!----------------------------------------------------------------------------
+            enddo !i
+          endif !i23d
         enddo !irec
 
         if(irec2==nrec) exit loop1
@@ -193,6 +274,52 @@
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday
+
+!     Further processsing for max elev (e.g. to weed out isolated wet
+!     etc)
+      if(icomp_max/=0.and.is_elev==1) then
+        !Mark wet elem
+        do i=1,ne
+          if(minval(rmax2d(elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
+            idry_e(i)=0
+          else
+            idry_e(i)=1
+          endif 
+        enddo !i
+
+        do i=1,ne
+          if(idry_e(i)==0) then !wet
+            ifl=1 !isolated wet
+            loop2: do j=1,i34(i)
+              nd=elnode(j,i)
+              do m=1,nne(nd)
+                ie=indel(m,nd)
+                if(i/=ne.and.idry_e(ie)==0) then
+                  ifl=0
+                  exit loop2
+                endif
+              enddo !m
+            enddo loop2 !j
+
+            if(ifl==1) then
+              rmax2d(elnode(1:i34(i),i))=-dp(elnode(1:i34(i),i))
+            endif 
+          endif !idry_e
+        enddo !i=1,ne 
+      endif !icomp_max/
+
+      if(icomp_max/=0) then
+        open(12,file='max2d.gr3',status='replace')
+        write(12,*)iday1,iday2
+        write(12,*)ne,np
+        do i=1,np
+          write(12,*)i,x(i),y(i),rmax2d(i)
+        enddo !i
+        do i=1,ne
+          write(12,*)i,i34(i),elnode(1:i34(i),i)
+        enddo !i
+        close(12)
+      endif !icomp_max/
 
       print*, 'Finished!'
 
