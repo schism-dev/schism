@@ -1,5 +1,6 @@
 Github versions:
 
+:     added another pre-proc flag 'ipre2' for more diagnostic outputs;
 4e2eb86 (Dec 11, 2019): added optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
 2648090 (Dec 1, 2019): added 'vclose_surf_frac' for correcting vertical vel/flux;
 5ff2198 (Nov 17, 2019): added 'level_age(:)' if USE_AGE (AGE module revamped);

@@ -1705,6 +1705,23 @@
 #endif /*USE_WWM*/
       endif !nchi==1
 
+!     Dump Cdp for diagnostics
+      if(ipre2/=0) then
+        fdb='Cdp_0000'
+        lfdb=len_trim(fdb)
+        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+        open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
+        write(10,*)np,nproc
+        do i=1,np
+          write(10,'(i11,3(1x,e20.12))')iplg(i),xnd(i),ynd(i),Cdp(i)
+        enddo !i
+        close(10)
+        if(myrank==0) write(16,*)'Cdp_ output done...'
+        
+        call parallel_finalize
+        stop
+      endif
+
 !     SAV const
       sav_cfk=0.07 !Shimizu & Tsujimoto (1994)
       sav_cfpsi=0.16

@@ -78,7 +78,7 @@ module schism_glbl
 
   integer,parameter :: natrm=11 !# of _available_ tracer models at the moment (including T,S)
   !Parameters from param.nml
-  integer,save :: ipre,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
+  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
                   &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
