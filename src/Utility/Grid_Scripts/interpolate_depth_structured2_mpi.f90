@@ -73,6 +73,7 @@
       enddo !irank
 
       call bubble_sort(-1,ndems,dims,indx_sorted)
+      if(myrank==0) print*, 'Sorted DEM indices:',indx_sorted
 
 !     Distribute ranks, assuming scheduler orders the ranks sequentially
       ngroups=ndems/ncompute+1
