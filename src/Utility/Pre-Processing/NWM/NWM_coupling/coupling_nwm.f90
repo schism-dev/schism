@@ -10,6 +10,10 @@
 !      bnd nodes is only used for dimensioning so give it a large number
 !      if you want.
 !             Note that the input files are in the same projection.
+!             Here we use lat/lon projection
+!      Epsilon: a small distance used to nudge the intersection point towards the downstream vetices
+!               suggested value is 1.e-3, which is about 100m when using
+!               lat/lon projection.  
 !Outputs files: 
 !      source_sink.in   : contains the element ID for each
 !                         intersection of the NWM streams and the land boundary.
@@ -18,6 +22,8 @@
 !                         Salinity is set to be 0, temp = -9999.
 !      vsource.th       : input of the stream flows of source elements.
 !      vsind.th         : input of the stream flows of sink elements.
+!      fort.95 fort.96  : output the maximum and average stream flow for
+!      sourch and sink nodes.
 !
 !Author: Wei Huang
 !
@@ -29,9 +35,7 @@
        use pt_in_poly_test
        implicit real*8(a-h,o-z)
       
-       character(len=*),parameter::REPODir='/sciclone/data10/feiye/&
-       &DELAWARE_REPO/00_TWL_Shared/01_data/01-NWM-4-isabel-irene-sandy-&
-       &13sep2018/NetCDF_HDF/Irene_output/'  
+       character(len=*),parameter::REPODir='/sciclone/home20/whuang07/data10/NWM/CHRTOUT/'
         
        character(len=*),parameter::FILE_NAME='NWM_shp_ll.nc'
        integer :: ncid
@@ -64,6 +68,7 @@
        integer:: inside,nodel(3)
        real*8,allocatable :: salt(:),temp(:),streamflow(:) 
        real*8,allocatable :: SF_so(:,:),SF_si(:,:),sflow(:)
+       integer,parameter::nodata=-999900 !nodata value in nwm stream flows
 
        !Read in epsilon (nudging ratio from side center to downstream pt
        !of NWM)
@@ -606,16 +611,23 @@
        allocate(sflow(ilow:ihigh))
        write(98,*)'ilow,ihigh:', ilow,ihigh
 
-       if(nso.ne.0) then
-         do k=1,n_nwm
-           itmp=nwmID(k)
-           if(itmp<ilow.or.itmp>ihigh) then
-             print*, 'Overflow(2):',itmp,ilow,ihigh
-             stop
-           endif
-           sflow(itmp)=streamflow(k)     
-         enddo !k
+       do k=1,n_nwm
+         itmp=nwmID(k)
+         if(itmp<ilow.or.itmp>ihigh) then
+           print*, 'Overflow(2):',itmp,ilow,ihigh
+           stop
+         endif
+         if (streamflow(k)==nodata)then
+           streamflow(k)=0
+         endif 
+         sflow(itmp)=0.01*streamflow(k)   
+         !if(nwmID(k)==2590185)then
+         !  write(96,*)streamflow(k)
+         !endif  
+       enddo !k
+       !write(96,*)2590185,860,sflow(2590185)
 
+       if(nso.ne.0) then
          do j=1,nso
            if(nwmso_uni(j)<ilow.or.nwmso_uni(j)>ihigh) then
              write(97,*)'Overflow(3):',nwmso_uni(j),ilow,ihigh
@@ -634,7 +646,7 @@
              write(97,*)'Overflow(4):',nwmsi_uni(j),ilow,ihigh
              SF_si(i,j)=0
            else
-             SF_si(i,j)=sflow(nwmsi_uni(j))
+             SF_si(i,j)=-sflow(nwmsi_uni(j))
            endif
          enddo !j
        else
@@ -643,6 +655,20 @@
        !write(*,*)'next step 2'
        deallocate(streamflow,nwmID,sflow)
       enddo !i=1,ntime
+      
+      !print out statistics of streamflows
+      if(nso.ne.0) then
+        do i=1,nso
+          write(96,*)maxval(SF_so(1:ntime,i),dim=1),sum(SF_so(1:ntime,i),dim=1)/ntime  
+        enddo
+      endif
+      if(nsi.ne.0) then
+        do i=1,nsi
+          write(95,*)maxval(SF_si(1:ntime,i),dim=1),sum(SF_si(1:ntime,i),dim=1)/ntime
+        enddo    
+      endif
+
+
 
 !       write(*,*)'next step 3'      
       !write(*,*)size(SF_so),SF_so(1,1),SF_so(10,10)
