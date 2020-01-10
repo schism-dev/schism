@@ -14,13 +14,14 @@
 
 !     Interpolate depths from structured grid DEMs (.asc) to unstructured grid in
 !     parallel (in overlapping regions, the depth from larger rank/DEM prevails)
-!     Inputs: dems.in (# of DEMs)
+!     Inputs: dems.in (# of DEMs; # of compute nodes (for load balancing
+!     purpose))
 !             dem_????.asc (ordered properly for precedence, starting
 !             from 0000. Depth negative for water);
 !             hgrid.old (unstructured grid, mixed tri and quads)
 !     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
-!     mpif90 -O2 -mcmodel=medium -CB -g -traceback -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
+!     mpif90 -O2 -mcmodel=medium -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
 
       program load_dems
       implicit real*8(a-h,o-z)
@@ -29,18 +30,19 @@
       character*9 cha2
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
-      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:)
+      integer, allocatable :: indx_sorted(:),imap(:)
+      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims(:)
 
       call MPI_INIT(errcode)
       call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
       call mpi_comm_size(comm,nproc,ierr)
       call MPI_COMM_RANK(comm, myrank, errcode)
-!      print *, 'Hello from ', myrank
 
       ih=-1 !sign change
       vshift=0 !vertical datum diff
       open(10,file='dems.in',status='old')
       read(10,*)ndems
+      read(10,*)ncompute !# of compute nodes
       close(10)
 
       if(nproc+1<ndems) then
@@ -51,16 +53,60 @@
       open(14,file='hgrid.old',status='old')
       read(14,*)
       read(14,*)ne,np
-      allocate(x0(np),y0(np),dp0(np))
+      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems))
       do i=1,np
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
 
+!     Read in dimensions from DEMs and remap to balance the load,
+!     assuming the sequential ordering of ranks by scheduler
+      do irank=0,ndems-1
+        fdb='dem_0000'
+        lfdb=len_trim(fdb)
+        write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+
+        open(62,file=trim(adjustl(fdb))//'.asc',status='old')
+        read(62,*) cha1,nx !# of nodes in x
+        read(62,*) cha1,ny !# of nodes in y
+        close(62)
+        dims(irank+1)=nx*ny
+      enddo !irank
+
+      call bubble_sort(-1,ndems,dims,indx_sorted)
+
+!     Distribute ranks, assuming scheduler orders the ranks sequentially
+      ngroups=ndems/ncompute+1
+      ncores=(nproc+1)/ncompute
+      icount=0
+      do j=1,ngroups
+        do i=1,ncompute
+          icount=icount+1
+          if(icount<=ndems) then
+            itmp=(i-1)*ncores+(j-1) !rank
+            if(itmp>nproc-1) then
+              print*, 'Rank overflow:',itmp
+              call mpi_abort(comm,0,k)
+            endif
+            imap(icount)=itmp
+          endif
+        enddo !i
+      enddo !j
+
+      if(icount<ndems) then
+        print*, 'Didnot cover all ranks:',icount,ndems
+        call mpi_abort(comm,0,k)
+      endif
+   
+      if(myrank==0) print*, 'mapping to ranks:',ngroups,ncores,imap
+      call MPI_FINALIZE(errcode)
+      stop
+
+!     Process DEMs and interpolate
       do irank=0,ndems-1
         if(irank==myrank) then
           fdb='dem_0000'
           lfdb=len_trim(fdb)
-          write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+          write(fdb(lfdb-3:lfdb),'(i4.4)') imap(irank+1)
 
           open(62,file=trim(adjustl(fdb))//'.asc',status='old')
           open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank
@@ -92,7 +138,6 @@
           close(62)
        
           do i=1,np
-!            read(14,*)j,x,y,dp
             x=x0(i); y=y0(i)
     
             !Interpolate
@@ -138,13 +183,19 @@
 
                 !Write temp output (in 'valid' region only)
                 write(19,*)i,h
+!                call flush(19)
               endif !junk
     
             endif
           enddo !i=1,np
+
+          deallocate(dp1)
         endif !irank==myrank
       enddo !irank
       close(19)
+
+!Debug
+!      print*, 'rank ',myrank, 'waiting...'
 
       call mpi_barrier(comm,ierr)
 
@@ -182,3 +233,41 @@
 
       call MPI_FINALIZE(errcode)
       end program
+
+!     Inefficient bubble sort routine for sorting into ascending or descending order
+!     If there are equal entries in the list the sorted indices (indx_var)
+!     is the same as the original indices for those entries.
+!     Input
+!     sort_type: 1: ascending order; -1: descending order;
+!     ndim:  dimension parameter;
+!     In/Out
+!     var(ndim): list to be sorted
+!     Output
+!     indx_var(ndim):  list of original indices after sorting.      
+      subroutine bubble_sort(sort_type,ndim,var,indx_var)
+      implicit none
+      integer, parameter :: rkind=8
+      integer, intent(in) :: sort_type,ndim
+      real(rkind), intent(inout) :: var(ndim)
+      integer, intent(out) :: indx_var(ndim)
+
+      integer :: i,j,itmp
+      real(rkind) :: tmp
+      
+      if(iabs(sort_type)/=1) stop 'bubble_sort: Wrong sort_type'
+      indx_var(:)=(/(i,i=1,ndim)/)
+      do i=1,ndim-1
+        do j=i+1,ndim
+          if(sort_type*var(i)>sort_type*var(j)) then !swap
+            tmp=var(i)
+            var(i)=var(j)
+            var(j)=tmp
+            itmp=indx_var(i)
+            indx_var(i)=indx_var(j)
+            indx_var(j)=itmp
+          endif
+        enddo !j
+      enddo !i
+
+      end subroutine bubble_sort
+
