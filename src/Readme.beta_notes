@@ -1,5 +1,6 @@
 Github versions:
 
+73f7451 (Jan 14, 2020): changed ifltyp=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
 59741d4 (Jan 9, 2020): added another pre-proc flag 'ipre2' for more diagnostic outputs (can be used with >1 CPU; stops
                        after outputs);
 4e2eb86 (Dec 11, 2019): added optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
