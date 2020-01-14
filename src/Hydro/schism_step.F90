@@ -1519,14 +1519,27 @@
           enddo !k
 
         else if(ifltype(ibnd)==3) then
-          vnth0=0 !normal vel.
-          do jfr=1,nbfr
-            ncyc=int(amig(jfr)*time/2/pi)
-            arg=amig(jfr)*time-ncyc*2*pi+face(jfr)-vfa(ibnd,1,jfr)
-            vnth0=vnth0+ramp*ff(jfr)*vmo(ibnd,1,jfr)*cos(arg)
-          enddo !jfr=1,nbfr
-          uth(:,i)=vnth0*snx(i) !sframe(1,1,i)
-          vth(:,i)=vnth0*sny(i) !sframe(2,1,i)
+!          vnth0=0 !normal vel.
+!          do jfr=1,nbfr
+!            ncyc=int(amig(jfr)*time/2/pi)
+!            arg=amig(jfr)*time-ncyc*2*pi+face(jfr)-vfa(ibnd,1,jfr)
+!            vnth0=vnth0+ramp*ff(jfr)*vmo(ibnd,1,jfr)*cos(arg)
+!          enddo !jfr=1,nbfr
+!          uth(:,i)=vnth0*snx(i) !sframe(1,1,i)
+!          vth(:,i)=vnth0*sny(i) !sframe(2,1,i)
+
+          ubar1=0
+          vbar1=0
+          do j=1,2 !2 nodes
+            do jfr=1,nbfr
+              arg=amig(jfr)*time+face(jfr)-ufa(ibnd,nwild(j),jfr)
+              ubar1=ubar1+ff(jfr)*umo(ibnd,nwild(j),jfr)*cos(arg)
+              arg=amig(jfr)*time+face(jfr)-vfa(ibnd,nwild(j),jfr)
+              vbar1=vbar1+ff(jfr)*vmo(ibnd,nwild(j),jfr)*cos(arg)
+            enddo !jfr=1,nbfr
+          enddo !j
+          uth(:,i)=ramp*ubar1/2
+          vth(:,i)=ramp*vbar1/2
         else if(iabs(ifltype(ibnd))==4.or.iabs(ifltype(ibnd))==5) then
           do k=1,nvrt
             if(uthnd(k,nwild(1),ibnd)<-98.or.uthnd(k,nwild(2),ibnd)<-98.or. &

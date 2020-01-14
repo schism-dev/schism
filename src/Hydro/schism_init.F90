@@ -2489,8 +2489,13 @@
         else if(ifltype(k)==3) then
           do i=1,nbfr
             read(31,*)
-            read(31,*) vmo(k,1,i),vfa(k,1,i) !uniform amp. and phase along each segment
-            vfa(k,1,i)=vfa(k,1,i)*pi/180
+            !read(31,*) vmo(k,1,i),vfa(k,1,i) !uniform amp. and phase along each segment
+            !vfa(k,1,i)=vfa(k,1,i)*pi/180
+            do j=1,nond_global(k)
+              read(31,*)umo(k,j,i),ufa(k,j,i),vmo(k,j,i),vfa(k,j,i)
+              ufa(k,j,i)=ufa(k,j,i)*pi/180
+              vfa(k,j,i)=vfa(k,j,i)*pi/180
+            enddo !j
           enddo
         else if(iabs(ifltype(k))==4.or.iabs(ifltype(k))==5) then
 !         For radiation b.c. eta must be specified
