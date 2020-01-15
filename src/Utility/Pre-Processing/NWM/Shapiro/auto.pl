@@ -21,15 +21,15 @@ system("ln -sf ../hgrid.utm.26918 hgrid.gr3");
 system("./gen_slope_filter < gen_slope_filter.in");
 move("slope_filter.gr3","shapiro.gr3");
 
-#set shapiro inside Delaware Bay and Chesapeake Bay
-system("$script_dir/auto_edit_region 1 0.1.reg shapiro.gr3 0.1");
-move("out.gr3","shapiro.gr3");
-system("$script_dir/auto_edit_region 1 0.2.reg shapiro.gr3 0.2");
-move("out.gr3","shapiro.gr3");
-
-#set max shapiro = 0.5 inside Chesapeake Bay
-system("$script_dir/auto_edit_region 1 CB_0.5.reg shapiro.gr3 0.5");
-move("out.gr3","shapiro.gr3");
+##set shapiro inside Delaware Bay and Chesapeake Bay
+#system("$script_dir/auto_edit_region 1 0.1.reg shapiro.gr3 0.1");
+#move("out.gr3","shapiro.gr3");
+#system("$script_dir/auto_edit_region 1 0.2.reg shapiro.gr3 0.2");
+#move("out.gr3","shapiro.gr3");
+#
+##set max shapiro = 0.5 inside Chesapeake Bay
+#system("$script_dir/auto_edit_region 1 CB_0.5.reg shapiro.gr3 0.5");
+#move("out.gr3","shapiro.gr3");
 
 unlink("../shapiro.gr3");
 copy("shapiro.gr3","../shapiro.gr3");

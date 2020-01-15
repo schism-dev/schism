@@ -221,20 +221,52 @@
 
             !Compute max (magnitude for vectors)
             if(icomp_max/=0) then
-              do i=1,np
-                if(ivs==2) then
-                  tmp=sqrt(outvar(1,1,i,irec)**2+outvar(2,1,i,irec)**2)
-                else
-                  tmp=outvar(1,1,i,irec)
-                endif
+              if(is_elev==1) then
 
-                if(is_elev==1) then
-                  if(tmp+dp(i)>0) rmax2d(i)=max(rmax2d(i),tmp)
-                else
+                !Mark wet elem
+                do i=1,ne
+                  if(minval(outvar(1,1,elnode(1:i34(i),i),irec)+dp(elnode(1:i34(i),i)))>0) then
+                    idry_e(i)=0
+                  else
+                    idry_e(i)=1
+                  endif 
+                enddo !i
+                do i=1,ne
+                  if(idry_e(i)==0) then !wet
+                    ifl=1 !isolated wet
+                    loop2: do j=1,i34(i)
+                      nd=elnode(j,i)
+                      do m=1,nne(nd)
+                        ie=indel(m,nd)
+                        if(i/=ne.and.idry_e(ie)==0) then
+                          ifl=0
+                          exit loop2
+                        endif
+                      enddo !m
+                    enddo loop2 !j
+
+                    if(ifl==0) then ! not isolated wet
+                      do j=1,i34(i)
+                        nd=elnode(j,i)
+                        tmp=outvar(1,1,nd,irec)
+                        if(tmp+dp(nd)>0) rmax2d(nd)=max(rmax2d(nd),tmp)
+                      enddo
+                    endif 
+                  endif !idry_e
+                enddo !i=1,ne 
+              else !other variables
+                do i=1,np
+                  if(ivs==2) then
+                    tmp=sqrt(outvar(1,1,i,irec)**2+outvar(2,1,i,irec)**2)
+                  else
+                    tmp=outvar(1,1,i,irec)
+                  endif
+
                   rmax2d(i)=max(rmax2d(i),tmp)
-                endif
-              enddo !i 
-            endif
+
+                enddo !i 
+              endif !is_elev
+            endif ! icomp_max
           else !if(i23d==3) then !3D 
             !Compute z coordinates
             do i=1,np
@@ -275,38 +307,6 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday
 
-!     Further processsing for max elev (e.g. to weed out isolated wet
-!     etc)
-      if(icomp_max/=0.and.is_elev==1) then
-        !Mark wet elem
-        do i=1,ne
-          if(minval(rmax2d(elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
-            idry_e(i)=0
-          else
-            idry_e(i)=1
-          endif 
-        enddo !i
-
-        do i=1,ne
-          if(idry_e(i)==0) then !wet
-            ifl=1 !isolated wet
-            loop2: do j=1,i34(i)
-              nd=elnode(j,i)
-              do m=1,nne(nd)
-                ie=indel(m,nd)
-                if(i/=ne.and.idry_e(ie)==0) then
-                  ifl=0
-                  exit loop2
-                endif
-              enddo !m
-            enddo loop2 !j
-
-            if(ifl==1) then
-              rmax2d(elnode(1:i34(i),i))=-dp(elnode(1:i34(i),i))
-            endif 
-          endif !idry_e
-        enddo !i=1,ne 
-      endif !icomp_max/
 
       if(icomp_max/=0) then
         open(12,file='max2d.gr3',status='replace')

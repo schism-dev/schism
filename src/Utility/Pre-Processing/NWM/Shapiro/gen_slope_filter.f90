@@ -106,6 +106,16 @@
         hdif(i)=hdif_max*tanh(2*slopemax/threshold_slope)
       enddo !i
 
+      !set coastal values:
+      !(0.05~0.2) when dp=50m~20m; 0.2 when dp<20m
+      do i=1,np
+        if (dp(i)<20) then !shallow
+          hdif(i)=0.2
+        elseif (dp(i)<50) then
+          hdif(i)=max(hdif(i),0.2-0.15*(dp(i)-20)/30)
+        endif      
+      enddo
+
       write(13,*)'threshold_slope=',threshold_slope
       write(13,*)ne,np
       do i=1,np

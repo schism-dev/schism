@@ -17,10 +17,13 @@ Pre-processing scripts used for coupling SCHISM to National Water Model (NWM) fo
 "./HYCOM_nudge/gen_nudge_from_hycom.f90",
 "./Vgrid/gen_vqs.f90",
 "./Hot/gen_hot_3Dth_from_hycom.f90",
-"./Rough3/gen_source2.f90",
+"./Manning/gen_source2.f90",
+"./Rough2D/gen_source2.f90",
+"./Rough3D/gen_source2.f90",
 "./DEM/interpolate_depth_structured2.f90",
 "./DEM_USGS/interpolate_depth_structured2.f90"
 ```
+(Rough2D and Rough3D will be replaced by Roughness and Drag in the future)
 
 A sample compiling cmd is provided in the beginning few lines in each source code.
 The sample binaries provided here were compiled with ifort and gcc.
