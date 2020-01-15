@@ -22,6 +22,7 @@
 !     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
 !     mpif90 -O2 -mcmodel=medium -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
+!     mpiifort -O2 -mcmodel=medium -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
 
       program load_dems
       implicit real*8(a-h,o-z)
@@ -31,7 +32,7 @@
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
       integer, allocatable :: indx_sorted(:),imap(:)
-      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims(:)
+      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:)
 
       call MPI_INIT(errcode)
       call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
@@ -45,8 +46,12 @@
       read(10,*)ncompute !# of compute nodes
       close(10)
 
-      if(nproc+1<ndems) then
-        print*, 'Please use more cores than DEMs:',nproc+1,ndems
+      if(mod(nproc,ncompute)/=0) then
+        print*, 'Plz use whole node:',nproc,ncompute
+        call mpi_abort(comm,0,j)
+      endif
+      if(nproc<ndems) then
+        print*, 'Please use more cores than DEMs:',nproc,ndems
         call mpi_abort(comm,0,j)
       endif
 
@@ -60,35 +65,38 @@
 
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
-      do irank=0,ndems-1
+      do idem=0,ndems-1
         fdb='dem_0000'
         lfdb=len_trim(fdb)
-        write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+        write(fdb(lfdb-3:lfdb),'(i4.4)') idem
 
         open(62,file=trim(adjustl(fdb))//'.asc',status='old')
         read(62,*) cha1,nx !# of nodes in x
         read(62,*) cha1,ny !# of nodes in y
         close(62)
-        dims(irank+1)=nx*ny
-      enddo !irank
+        dims(idem+1)=nx*ny
+      enddo !idem
+      dims0=dims !save a copy as bubble_sort will change this
 
       call bubble_sort(-1,ndems,dims,indx_sorted)
-      if(myrank==0) print*, 'Sorted DEM indices:',indx_sorted
+      if(myrank==0) print*, 'Sorted DEM indices:',indx_sorted-1
+      call mpi_barrier(comm,ierr)
 
 !     Distribute ranks, assuming scheduler orders the ranks sequentially
       ngroups=ndems/ncompute+1
-      ncores=(nproc+1)/ncompute
-      icount=0
+      ncores=nproc/ncompute
+      icount=0 !index in the sorted list
       do j=1,ngroups
         do i=1,ncompute
           icount=icount+1
           if(icount<=ndems) then
             itmp=(i-1)*ncores+(j-1) !rank
-            if(itmp>nproc-1) then
+            if(itmp<0.or.itmp>nproc-1) then
               print*, 'Rank overflow:',itmp
               call mpi_abort(comm,0,k)
             endif
-            imap(icount)=itmp
+            !Index of imap uses original DEM index; outputs rank #
+            imap(indx_sorted(icount))=itmp 
           endif
         enddo !i
       enddo !j
@@ -99,15 +107,18 @@
       endif
    
       if(myrank==0) print*, 'mapping to ranks:',ngroups,ncores,imap
-      call MPI_FINALIZE(errcode)
-      stop
+      call mpi_barrier(comm,ierr)
+!      call MPI_FINALIZE(errcode)
+!      stop
 
 !     Process DEMs and interpolate
-      do irank=0,ndems-1
+      do idem=0,ndems-1
+        irank=imap(idem+1)
         if(irank==myrank) then
           fdb='dem_0000'
           lfdb=len_trim(fdb)
-          write(fdb(lfdb-3:lfdb),'(i4.4)') imap(irank+1)
+          write(fdb(lfdb-3:lfdb),'(i4.4)') idem
+          print*, 'Rank ',myrank,' is doing DEM # ',idem, '; DEM size=',dims0(idem+1)
 
           open(62,file=trim(adjustl(fdb))//'.asc',status='old')
           open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank
@@ -192,11 +203,11 @@
 
           deallocate(dp1)
         endif !irank==myrank
-      enddo !irank
+      enddo !idem
       close(19)
 
 !Debug
-!      print*, 'rank ',myrank, 'waiting...'
+      print*, 'rank ',myrank, 'waiting...'
 
       call mpi_barrier(comm,ierr)
 
