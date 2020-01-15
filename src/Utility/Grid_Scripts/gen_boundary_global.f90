@@ -1,5 +1,6 @@
-! Analyze global grid, assuming north pole is inside grid, and the only exteriod
-! land bnd is in the Southern Ocean.
+! Analyze global grid (w/o south pole; no land bnd near north pole), and the only exterior
+! land bnd is in the Southern Ocean. This is b/cos gredit has large distortions
+! in hi latitudes.
 ! Inputs: node index below; hgrid.ll (tri only)
 ! Outputs: bnd.out (b.c. part of hgrid.ll)
 ! ifort -Bstatic -O2 -mcmodel=medium -o gen_boundary_global gen_boundary_global.f90
@@ -155,7 +156,7 @@
         !Find bnd near North pole
         ytmp=maxval(ynd(elnode(:,ie)))
         if(ytmp>84) then
-          write(*,*)'North pole is outside grid:',nd1,nd2
+          write(*,*)'Plz no land bnd near North pole:',nd1,nd2
           stop 
         endif
 

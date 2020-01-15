@@ -97,7 +97,7 @@
         skew=maxval(swild(1:3))/sqrt(area(i)/pi)
         if(skew>skew_max) write(99,*)'Skew_elem:',i,xlon(i),ylat(i)
       endif !ifl
-    else if(i34(i)==4) then !quad
+    !else if(i34(i)==4) then !quad
       
     else 
       stop 'unknown elem type'
