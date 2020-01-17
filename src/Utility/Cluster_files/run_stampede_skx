@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH -J CORIE # Job name
+#SBATCH -o err2.o%j       # Name of stdout output file
+#SBATCH -e err2.e%j       # Name of stderr error file
+###'normal': 128 nodes x 48 hrs. 'skx-dev': 4 nodes x 2 hrs
+#SBATCH -p skx-dev
+###SBATCH -p skx-normal      # Queue (partition) name
+#SBATCH -N 2               # Total # of nodes 
+#SBATCH -n 96              # Total # of mpi tasks (48 cores/node)
+#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
+##SBATCH --mail-user=yjzhang@vims.edu
+##SBATCH --mail-type=all    # Send email at begin and 'end' of job
+#SBATCH -A NOAA_CSDL_NWI_SCHISM  # Allocation name (req'd if you have more than 1)
+
+# Other commands must follow all #SBATCH directives...
+
+module list
+pwd
+date
+
+# Launch MPI code... 
+
+ibrun ./pschism_STAM2_TVD-VL
