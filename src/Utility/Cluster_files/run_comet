@@ -1,0 +1,17 @@
+#!/bin/bash  
+#SBATCH --job-name="R210g"  
+#SBATCH --output="my.%j.%N.out"  
+##queues: 'compute' (up to 72 nodes, 48hrs); 'shared' for serial jobs; 'debug' (upt to 2 nodes, 30min) 
+#SBATCH --partition=compute
+#SBATCH --nodes=25
+#SBATCH --ntasks-per-node=24 ##haswell nodes 
+#SBATCH --export=ALL  
+#SBATCH -t 10:00:00  
+#SBATCH -A TG-OCE130032
+#SBATCH --mail-user=yjzhang@vims.edu
+#SBATCH --mail-type=ALL  #send email for start, end and fail
+
+#This job runs with 2 nodes, 24 cores per node for a total of 48 cores.  
+#ibrun in verbose mode will give binding detail  
+
+mpirun -np 600 -v ./pschism_COMET_VL
