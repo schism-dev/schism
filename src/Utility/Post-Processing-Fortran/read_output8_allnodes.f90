@@ -175,7 +175,7 @@
       outvar=-99 !init.
       ztmp=-99
       if(is_elev==1) then
-        rmax2d=-9999 !for elev, min is -h
+        rmax2d=-dp !for elev, min is -h
       else
         rmax2d=-huge(1.0)
       endif
