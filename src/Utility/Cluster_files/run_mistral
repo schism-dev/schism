@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=R14e
+#SBATCH --partition=compute2
+#SBATCH --nodes=20
+#SBATCH --ntasks-per-node=36
+###Max 8 hrs
+#SBATCH --time=08:00:00
+#SBATCH --mail-type=all
+#SBATCH --account=gg0028
+#SBATCH --output=my_job.o%j
+#SBATCH --error=my_job.e%j
+
+# limit stacksize ... adjust to your programs need
+ulimit -s 102400
+
+# Environment settings to run a MPI parallel program 
+# compiled with Intel MPI
+module load intel
+module load intelmpi
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+
+# Use srun (not mpirun or mpiexec) command to launch
+# programs compiled with any MPI library
+srun -l --propagate=STACK --cpu_bind=cores \
+  --distribution=block:cyclic ./pschism_mistral_VL
