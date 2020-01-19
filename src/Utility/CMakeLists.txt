@@ -8,6 +8,7 @@ add_subdirectory( Tides )
 add_subdirectory( OneWayNestScripts )
 add_subdirectory( Particle_Tracking )
 add_subdirectory( Gen_Hotstart )
+add_subdirectory( Grid_Scripts)
 
 add_dependencies(utility utillib)
 

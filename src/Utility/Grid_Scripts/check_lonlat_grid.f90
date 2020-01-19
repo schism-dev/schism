@@ -1,4 +1,4 @@
-! Check quality of lon/lat grid (including global with poles), b/cos
+! Check quality of lon/lat grid (including global with or w/o poles), b/cos
 ! gredit has issues (e.g. hi distortion near poles), using SCHISM's 3D coordinates on an ellipsoid.
 ! Fix negative elements and output list of skew elem.
 !
@@ -84,6 +84,7 @@
       ifl=0
       if(area(i)<0) then
         write(*,*)'Fixing negative area at elem:',i,area(i)
+        write(99,*)'Fixing negative area at elem:',i,area(i)
         elnode_new(1,i)=elnode(2,i)
         elnode_new(2,i)=elnode(1,i)
         area(i)=-area(i)

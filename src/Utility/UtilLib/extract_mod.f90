@@ -179,6 +179,9 @@
       character(len=4) :: a_4
       real, allocatable :: worka(:,:,:),workb(:)
 
+      if(allocated(worka)) deallocate(worka) 
+      if(allocated(workb)) deallocate(workb)
+
       varname=adjustl(varname); len_var=len_trim(varname)
 
       write(stack_char,'(i12)')istack
@@ -303,6 +306,9 @@
       if(allocated(np_lcl)) deallocate(np_lcl)
       if(allocated(ne_lcl)) deallocate(ne_lcl)
       if(allocated(ns_lcl)) deallocate(ns_lcl)
+      if(allocated(nm2)) deallocate(nm2)
+      if(allocated(ztot)) deallocate(ztot)
+      if(allocated(sigma)) deallocate(sigma)
     
       allocate(x(np),y(np),dp(np),kbp00(np),i34(ne),elnode(4,ne), &
   &np_lcl(0:nproc-1),ns_lcl(0:nproc-1),ne_lcl(0:nproc-1),nm2(4,ne), &
@@ -419,6 +425,9 @@
       integer :: iret,i,npes,len_var,ivarid1,ndims,dimids(100),idims(100),ncid2,ielev_id,nrec4
       character(len=4) :: a_4
       real, allocatable :: worka(:,:,:,:),workb(:,:)
+
+      if(allocated(worka)) deallocate(worka)
+      if(allocated(workb)) deallocate(workb)
 
       nrec4=irec2-irec1+1
       if(nrec4<=0.or.nrec4>nrec3) stop 'get_outvar_multirecord: nrec4<=0'

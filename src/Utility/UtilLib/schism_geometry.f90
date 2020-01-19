@@ -34,7 +34,10 @@
       implicit real(8)(a-h,o-z),integer(i-n)
       integer, intent(in) :: np,ne,i34(ne),elnode(4,ne)
       integer, intent(out) :: ns !,ic3(3,ne)
-!      integer, allocatable :: indel(:,:)
+
+      if(allocated(nne)) deallocate(nne)
+      if(allocated(ic3)) deallocate(ic3)
+      if(allocated(indel)) deallocate(indel)
 
       allocate(nne(np),ic3(4,ne),stat=istat)
       if(istat/=0) stop 'Failed to alloc. nne'
