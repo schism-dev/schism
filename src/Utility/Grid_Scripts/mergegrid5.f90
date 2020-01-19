@@ -241,12 +241,12 @@
       map=0
       do i=1,nbd1
         nd1=ibd1(i)
-        if(x1(nd1)<xmin2.or.x1(nd1)>xmax2.or.y1(nd1)<ymin2.or.y1(nd1)>ymax2) cycle
+        if(x1(nd1)<xmin2-eps*2.or.x1(nd1)>xmax2+eps*2.or.y1(nd1)<ymin2-eps*2.or.y1(nd1)>ymax2+eps*2) cycle
 
         do j=1,nbd2
           nd2=ibd2(j)
           dist=(x1(nd1)-x2(nd2))**2+(y1(nd1)-y2(nd2))**2
-          if(dist<eps) then
+          if(dist<eps*eps) then
             if(map(np1+nd2)/=0) then
               write(*,*)'Duplicate red node in grid2',nd2
               stop
@@ -259,7 +259,7 @@
 !     Done with some arrays 
       deallocate(x1,y1,x2,y2,ibd1,ibd2)
 
-!     Order all red nodes
+!     Order all redundant nodes to be removed
       nred=0 !# of red nodes
       do i=np1+1,np
         if(map(i)/=0) then
