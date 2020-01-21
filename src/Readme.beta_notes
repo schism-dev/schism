@@ -365,7 +365,7 @@ for ivcor=1.
      Without it the results won't match. Reinstated nramp_elev and applied same fix to v5.4.
 (66) R4116: (from Hai) changed the deposition mass calculation wrt age in SED3D
 (67) R4118: finished netcdf related changes to I/O and scripts
-(68) R4212: rest tempmin to -5C for ice module.
+(68) R4212: reset tempmin to -5C for ice module.
 (69) R4273: added evap&precip into volume source.
 (70) R4309: implicit treatment for vertical migration in itr_met>2
 (71) R4407: bug fixes related to vortex force (wet/dry; index)
@@ -380,7 +380,7 @@ for ivcor=1.
 (77) R4812: fixed a bug in wwm_bdcons.F90 (array VAL out of bound)
 (78) R4815: fixd a bug in SED3D output (bed_fracn)
 (79) R4825: fixd a bug in compute_average3.f90 (Nicole Cai)
-(80) R4831: removed w_s* in btrack in vortex forrce
+(80) R4831: removed w_s* in btrack in vortex force
 (81) R4861: WWM reverted to R3012; trunk version moved to branch;
 (82) R4947: analysis module added
 (83) R4968: quads added for WWM
