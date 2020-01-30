@@ -3,31 +3,52 @@
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
-      SUBROUTINE SPHERICAL_COORDINATE_DISTANCE(LON1, LON2, LAT1, LAT2, DIST)
+      SUBROUTINE SPHERICAL_COORDINATE_DISTANCE(PT1_LON, PT2_LON, PT1_LAT, PT2_LAT, DIST)
       USE DATAPOOL
       IMPLICIT NONE
-      REAL(rkind), intent(in) :: LON1, LON2, LAT1, LAT2
+      REAL(rkind), intent(in)  :: PT1_LON, PT2_LON, PT1_LAT, PT2_LAT
       REAL(rkind), intent(out) :: DIST
-      REAL(rkind) :: lon1rad, lon2rad, lat1rad, lat2rad
+      REAL(rkind) :: PT1_LON_LOC, PT2_LON_LOC, PT1_LAT_LOC, PT2_LAT_LOC
+      REAL(rkind) :: PT1_LON_RAD, PT2_LON_RAD, PT1_LAT_RAD, PT2_LAT_RAD
       REAL(rkind) :: COEFF
       REAL(rkind) :: x1, y1, z1, x2, y2, z2
       REAL(rkind) :: scalprod
-      COEFF=PI/180.0_rkind
-      lon1rad=LON1*COEFF
-      lon2rad=LON2*COEFF
-      lat1rad=LAT1*COEFF
-      lat2rad=LAT2*COEFF
-      x1=cos(lon1rad)*cos(lat1rad)
-      y1=sin(lon1rad)*cos(lat1rad)
-      z1=sin(lat1rad)
-      x2=cos(lon2rad)*cos(lat2rad)
-      y2=sin(lon2rad)*cos(lat2rad)
-      z2=sin(lat2rad)
-      scalprod=x1*x2+y1*y2+z1*z2;
+
+      ! Point coordinates in a Cartesian grid
+      COEFF = PI/180.0_rkind
+
+      ! Storing input coordinates, that won't be affected without elements overlapping dateline
+      PT1_LON_LOC = PT1_LON
+      PT1_LAT_LOC = PT1_LAT
+      PT2_LON_LOC = PT2_LON
+      PT2_LAT_LOC = PT2_LAT
+
+      ! Special treatment for elements overpassing the dateline
+      ! NB: this does not affect the node position as read by WWM
+      IF ((PT1_LON.LE.180.0).AND.(PT1_LON.GT.160.0) .AND. (PT2_LON.GE.-180.0).AND.(PT2_LON.LT.-160.0)) THEN
+        ! We "bring back" PT2 towards the West
+        PT2_LON_LOC = 180.0_rkind + ABS(-180.0_rkind - PT2_LON)
+      ELSE IF ((PT2_LON.LE.180.0).AND.(PT2_LON.GT.160.0) .AND. (PT1_LON.GE.-180.0).AND.(PT1_LON.LT.-160.0)) THEN
+        ! We "bring back" PT1 towards the West
+        PT1_LON_LOC = 180.0_rkind + ABS(-180.0_rkind - PT1_LON)
+      END IF
+
+      ! Computing the distance
+      PT1_LON_RAD = PT1_LON_LOC*COEFF
+      PT2_LON_RAD = PT2_LON_LOC*COEFF
+      PT1_LAT_RAD = PT1_LAT_LOC*COEFF
+      PT2_LAT_RAD = PT2_LAT_LOC*COEFF
+      x1 = COS(PT1_LON_RAD)*COS(PT1_LAT_RAD)
+      y1 = SIN(PT1_LON_RAD)*COS(PT1_LAT_RAD)
+      z1 = SIN(PT1_LAT_RAD)
+      x2 = COS(PT2_LON_RAD)*COS(PT2_LAT_RAD)
+      y2 = SIN(PT2_LON_RAD)*COS(PT2_LAT_RAD)
+      z2 = SIN(PT2_LAT_RAD)
+      scalprod = x1*x2+y1*y2+z1*z2;
       IF (scalprod .ge. 1) THEN
-        DIST=0;
+        DIST = 0;
       ELSE
-        DIST=acos(scalprod)
+        DIST = ACOS(scalprod)
       END IF
       END SUBROUTINE
 !********************************************************************************
@@ -76,6 +97,7 @@
          REAL(rkind) :: TMPTLMIN
          REAL(rkind) :: TMPTLMAX 
          REAL(rkind) :: DBLTMP, DXP1, DXP2, DXP3, DYP1, DYP2, DYP3
+         REAL(rkind) :: P1_XLOC, P2_XLOC, P3_XLOC
          REAL(rkind) :: PROV1, PROV2, PROV3
          REAL(rkind) :: AREA, AREA_RAD
          INTEGER           :: I1, I2, I3, TMPINE, NI(3)
@@ -136,13 +158,51 @@
                    I2 = INE(2,IE)
                    I3 = INE(3,IE)
                    NI = INE(:,IE)
-                   IF (IGRIDTYPE.ne.2) THEN
 
-                     DXP1 = XP(I2) - XP(I1)
+                   ! Special treatment for elements overpassing the dateline
+                   P1_XLOC = XP(I1);
+                   P2_XLOC = XP(I2);
+                   P3_XLOC = XP(I3);
+                   IF (LSPHE) THEN
+                     IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
+                       & .AND. (P3_XLOC.LE.180.0)  .AND. (P3_XLOC.GT.160.0)  & 
+                       & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN                       
+                       ! In this case, P2 is 'isolated' to the East of the dateline; we "bring it back" towards the West
+                       P2_XLOC = 180.0_rkind + ABS(-180.0_rkind - P2_XLOC)
+                     ELSE IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
+                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
+                            & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN
+                       ! In this case, P1 is 'isolated' to the West of the dateline; we "bring it back" towards the East
+                       P1_XLOC = -180.0_rkind - ABS(180.0_rkind - P1_XLOC)
+                     ELSE IF (      (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)  & 
+                            & .AND. (P3_XLOC.LE.180.0)  .AND. (P3_XLOC.GT.160.0)  & 
+                            & .AND. (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  ) THEN
+                       ! In this case, P1 is 'isolated' to the East of the dateline; we "bring it back" towards the West
+                       P1_XLOC = 180.0_rkind + ABS(-180.0_rkind - P1_XLOC)
+                     ELSE IF (      (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)  & 
+                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
+                            & .AND. (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  ) THEN
+                       ! In this case, P2 is 'isolated' to the West of the dateline; we "bring it back" towards the East
+                       P2_XLOC = -180.0_rkind - ABS(180.0_rkind - P2_XLOC)
+                     ELSE IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
+                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
+                            & .AND. (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)   ) THEN
+                       ! In this case, P3 is 'isolated' to the East of the dateline; we "bring it back" towards the West
+                       P3_XLOC = 180.0_rkind + ABS(-180.0_rkind - P3_XLOC)
+                     ELSE IF (      (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  & 
+                            & .AND. (P3_XLOC.LE.180.0) .AND. (P3_XLOC.GT.160.0) & 
+                            & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN
+                       ! In this case, P3 is 'isolated' to the West of the dateline; we "bring it back" towards the East
+                       P3_XLOC = -180.0_rkind - ABS(180.0_rkind - P3_XLOC)
+                     END IF
+                   END IF
+
+                   IF (IGRIDTYPE.ne.2) THEN
+                     DXP1 = P2_XLOC - P1_XLOC
                      DYP1 = YP(I2) - YP(I1)
-                     DXP2 = XP(I3) - XP(I2)
+                     DXP2 = P3_XLOC - P2_XLOC
                      DYP2 = YP(I3) - YP(I2)
-                     DXP3 = XP(I1) - XP(I3)
+                     DXP3 = P1_XLOC - P3_XLOC
                      DYP3 = YP(I1) - YP(I3)
 
                      IF (APPLY_DXP_CORR) THEN
