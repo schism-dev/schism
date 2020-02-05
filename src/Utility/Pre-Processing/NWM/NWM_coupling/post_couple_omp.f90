@@ -19,10 +19,14 @@
 !Output files
 !      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
 !
-!ifort -CB -O2 -o post_couple post_couple.f90 
+!ifort -CB -O2 -qopenmp -o post_couple_omp post_couple_omp.f90 
+!pgf90 -O2 -mp -o post_couple_omp post_couple_omp.f90 
+!export OMP_NUM_TREADS=8
+!setenv OMP_NUM_TREADS 8
 
       program coupling_nwm
 
+       use omp_lib
        implicit none
       
 
@@ -32,13 +36,22 @@
        real(8), allocatable :: temp(:),xx(:),yy(:),xel(:),yel(:)
        integer, allocatable :: elnode(:,:),i34(:),indel(:,:),n_sink_source(:), &
          & i_sink_source(:,:),ntier1(:),ele_source(:),ele_sink(:),is_source_ele(:), &
-         & tier1(:,:),tier_n(:,:),ntier_n(:),nne(:),nxq(:,:,:),ic3(:,:),isbnd(:)
+         & tier1(:,:),tier_n(:,:),ntier_n(:),nne(:),nxq(:,:,:),ic3(:,:),isbnd(:), &
+         & ncount(:)
        integer :: mnei,inbr,i,j,k,nsource,nsink,itmp,nt,istat,nd,ntracer,n_tier_dist
        integer :: ne,np,id,id1,ie,ie_nbr,isource,kk,k0,nope,nland,nn,n1,n2,l, &
-         & ip,je,new,ii,icount
+         & ip,je,new,ii,icount,tid,nthreads
        real(8), allocatable :: vsource(:,:),vsink(:,:),msource(:,:,:), &
          & time_stamp(:)
 
+       !$omp parallel
+       tid = omp_get_thread_num()
+       if (tid==0) then
+         nthreads= omp_get_num_threads()
+         print*,'Number 0f threads=',nthreads
+         allocate(ncount(0:nthreads-1))
+       endif
+       !$omp end parallel
 
        !Read in cmd line inputs
        print*, 'Input search option (0: distance-based; 1: neighboring element based):'
@@ -56,9 +69,10 @@
        !distance=1
   
        !read hgrid
-       call cpu_time(start_time)
-       !start_time=omp_get_wtime();
+       !call cpu_time(start_time)
+       start_time=omp_get_wtime();
        print*, 'reading inputs ...'
+
        open(14,file='hgrid.cpp',status='old')!lambert projection, NWM has shorter precision
        read(14,*)
        read(14,*)ne,np
@@ -143,14 +157,14 @@
        enddo
        close(15)
 
-       call cpu_time(end_time)
-       !end_time=omp_get_wtime();
+       !call cpu_time(end_time)
+       end_time=omp_get_wtime();
        print*, 'reading inputs takes ',(end_time-start_time)/60d0,' minutes'
 !------done reading inputs-----------------------------------
 
 
-       call cpu_time(start_time)
-       !start_time=omp_get_wtime();
+       !call cpu_time(start_time)
+       start_time=omp_get_wtime();
        print*, 'calculating geometry ...'
        if (inbr==1) then
   !      elem ball
@@ -308,8 +322,12 @@
            stop
          endif
 
-         ntier1=0 !number of tier 1 elements
+         ncount=0
+!$omp parallel do private (ie,j,k,n1,k0,kk,tid)
          do ie=1,ne
+           tid = omp_get_thread_num()
+           ncount(tid)=ncount(tid)+1
+           ntier1(ie)=0 !number of tier 1 elements
            do j=1,i34(ie)
              n1=elnode(j,ie)
              !find position of ie in the nodal ball
@@ -336,6 +354,9 @@
              enddo !k
            enddo
          enddo !ie
+!$omp end parallel do
+
+         print*, ncount
 
          !mark sources
          allocate(is_source_ele(ne))
@@ -345,20 +366,28 @@
          enddo
 
          tier_n=0; ntier_n=0
+!$omp parallel do private (i,ie)
          do i=1,nsink
            ie=ele_sink(i)
            tier_n(0,i)=ie !self
            call mark_neighbors(i,ie,0,n_tier_dist)
          enddo
+!$omp end parallel do
+
+       !call cpu_time(end_time)
+       end_time=omp_get_wtime();
+       print*, 'calculating geometry takes ',(end_time-start_time)/60d0,' minutes'
 
 !---------------------------------------------------------------
        endif !inbr
 !---------------------------------------------------------------
 
-       call cpu_time(start_time)
-       !start_time=omp_get_wtime();
-       !$omp parallel do private (j,k,isource)
+       !call cpu_time(start_time)
+       start_time=omp_get_wtime();
+       print*, 'redistributing sinks ...'
+
 !      redistribute vsink to neighboring vsources
+!$omp parallel do private (i,j,k,isource)
        do i=1,nsink
          if (n_sink_source(i)>0) then
            do k=1,nt
@@ -376,10 +405,11 @@
            enddo !k=1,nt
          endif
        enddo !i=1,nsink
-       !$omp end parallel do
-       call cpu_time(end_time)
-       !end_time=omp_get_wtime();
-       print*, 'parallel region takes ',(end_time-start_time)/60d0,' minutes'
+!$omp end parallel do
+
+       !call cpu_time(end_time)
+       end_time=omp_get_wtime();
+       print*, 'redistributing sinks takes ',(end_time-start_time)/60d0,' minutes'
 
       
 !!write source_sink.in file
