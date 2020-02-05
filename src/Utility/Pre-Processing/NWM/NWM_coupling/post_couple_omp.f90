@@ -295,6 +295,40 @@
            yel(i)=sum(yy(elnode(1:i34(i),i)))/dble(i34(i))
          enddo
 
+         !<<<<<<< Output sources/sinks as bpfiles<<<<<<<<<
+         open(24,file='sources_sinks.bp',status='replace')
+         write(24,*)
+         write(24,*) nsource+nsink
+         do i=1,nsource
+           ie=ele_source(i)
+           write(24,*) i,xel(ie),yel(ie),ie
+         enddo
+         do i=1,nsink
+           ie=ele_sink(i)
+           write(24,*) i,xel(ie),yel(ie),-ie
+         enddo
+         close(24)
+
+         open(24,file='sources.bp',status='replace')
+         write(24,*)
+         write(24,*) nsource
+         do i=1,nsource
+           ie=ele_source(i)
+           write(24,*) i,xel(ie),yel(ie),ie
+         enddo
+         close(24)
+
+         open(24,file='sinks.bp',status='replace')
+         write(24,*)
+         write(24,*) nsink
+         do i=1,nsink
+           ie=ele_sink(i)
+           write(24,*) i,xel(ie),yel(ie),ie
+         enddo
+         close(24)
+         print*, 'done outputing bpfiles for sources/sinks'
+         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
          max_dist=distance**2
 
          do i=1,nsink
@@ -382,12 +416,17 @@
        endif !inbr
 !---------------------------------------------------------------
 
-       !call cpu_time(start_time)
-       start_time=omp_get_wtime();
        print*, 'redistributing sinks ...'
 
-!      redistribute vsink to neighboring vsources
-!$omp parallel do private (i,j,k,isource)
+       !debug
+       do i=1,nsink
+         write(33,*) 'sink ',i,': ',n_sink_source(i),': ',i_sink_source(1:n_sink_source(i),i)
+       enddo
+
+!      Redistribute vsink to neighboring vsources
+!      Do not use omp on this loop, serial mode assumes smaller i is
+!      treated (distributed to nearby sources) first, which is not true for omp.
+!      This step takes little time anyway.
        do i=1,nsink
          if (n_sink_source(i)>0) then
            do k=1,nt
@@ -405,11 +444,9 @@
            enddo !k=1,nt
          endif
        enddo !i=1,nsink
-!$omp end parallel do
 
        !call cpu_time(end_time)
-       end_time=omp_get_wtime();
-       print*, 'redistributing sinks takes ',(end_time-start_time)/60d0,' minutes'
+       print*, 'Done redistributing sinks'
 
       
 !!write source_sink.in file
