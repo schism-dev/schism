@@ -10,7 +10,7 @@ if(icomb==0)
   fclose(fid);
 
   ns=first(1); ne=first(2); np=first(3); nvrt=first(4); nproc=first(5);
-  nm=NaN(4,ne); i34=zeros(ne); xy00=zeros(np,2); iegl_rank=NaN(ne);
+  nm=NaN(4,ne); i34=zeros(ne,1); xy00=zeros(np,2); iegl_rank=NaN(ne,1);
 
   for irank=0:nproc-1
     fid=fopen([base '/outputs/local_to_global_' num2str(irank,'%04.f')],'r');
