@@ -53,8 +53,7 @@ set(HDF5_DIR /sw/rhel6-x64/hdf5/hdf5-1.8.14-threadsafe-gcc48/  CACHE PATH "Path 
 #set(INCLUDE_TIMING CACHE BOOLEAN OFF)
 #set(USE_OPEN64     CACHE BOOLEAN OFF)
 
-##set(MPI_VERSION CACHE STRING  "2")
-###Compile flags
+###Compile flags. Note that intelmpi usually dislikes 'mcmodel=medium'
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -xCORE-AVX2" CACHE STRING "Fortran flags" FORCE)
 
 
