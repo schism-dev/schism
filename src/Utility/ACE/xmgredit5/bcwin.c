@@ -38,7 +38,9 @@ int check_boundary_overlap(int gridno);
 void accept_adcircbound(Widget w, XtPointer cd);
 void adcirc_defineland_proc(void);
 void adcirc_defineopen_proc(void);
-void adcirc_deleteopen_proc(void);
+void adcirc_removeland_proc(void);
+void adcirc_removeopen_proc(void);
+void adcirc_clearall_proc(void);
 void create_adcircbound_frame(void);
 void define_adcirc_landb(int gridno, int ind1, int ind2);
 void define_adcirc_openb(int gridno, int ind1, int ind2);
@@ -80,10 +82,22 @@ void create_adcircbound_frame(void)
 		      (XtCallbackProc) adcirc_defineland_proc,
 		      (XtPointer) NULL);
 	wbut =
+	    XtVaCreateManagedWidget("Remove last open boundary segment",
+				    xmPushButtonWidgetClass, rc2, NULL);
+	XtAddCallback(wbut, XmNactivateCallback,
+		      (XtCallbackProc) adcirc_removeopen_proc,
+		      (XtPointer) NULL);
+	wbut =
+	    XtVaCreateManagedWidget("Remove last land boundary segment",
+				    xmPushButtonWidgetClass, rc2, NULL);
+	XtAddCallback(wbut, XmNactivateCallback,
+		      (XtCallbackProc) adcirc_removeland_proc,
+		      (XtPointer) NULL);
+	wbut =
 	    XtVaCreateManagedWidget("Clear all", xmPushButtonWidgetClass,
 				    rc2, NULL);
 	XtAddCallback(wbut, XmNactivateCallback,
-		      (XtCallbackProc) adcirc_deleteopen_proc,
+		      (XtCallbackProc) adcirc_clearall_proc,
 		      (XtPointer) NULL);
 	wbut =
 	    XtVaCreateManagedWidget("Write open/land boundary segments",
@@ -123,6 +137,18 @@ void adcirc_defineopen_proc(void)
 }
 
 /*
+ * remove last open boundary
+*/
+void adcirc_removeopen_proc(void)
+{
+    set_action(0);
+    if (nopenb > 0)
+    {
+        nopenb--;
+        do_drawgrid();
+    }
+}
+/*
  * select land boundary
  */
 void adcirc_defineland_proc(void)
@@ -131,10 +157,23 @@ void adcirc_defineland_proc(void)
     set_action(LANDB1ST);
 }
 
+
 /*
- * delete open boundary
+ * remove last land boundary
+*/
+void adcirc_removeland_proc(void)
+{
+    set_action(0);
+    if (nlandb > 0)
+    {
+        nlandb--;
+        do_drawgrid();
+    }
+}
+/*
+ * clear all open and land boundary
  */
-void adcirc_deleteopen_proc(void)
+void adcirc_clearall_proc(void)
 {
     nopenb = 0;
     nlandb = 0;
