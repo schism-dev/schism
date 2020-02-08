@@ -177,6 +177,7 @@ void adcirc_clearall_proc(void)
 {
     nopenb = 0;
     nlandb = 0;
+    do_drawgrid();
 }
 
 /*
