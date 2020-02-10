@@ -3239,7 +3239,7 @@
 !$OMP swild98,ibtrack_test,tsd,dt,dtb_min,dtb_max,ndelt_min,ndelt_max,elnode,i34,dldxy,btrack_nudge, &
 !$OMP xnd,ynd,l,nbtrk,mxnbt,btlist,myrank,ielg &
 #ifdef USE_WWM
-!$OMP ,stokes_w_nd
+!$OMP ,stokes_w_nd &
 #endif
 !$OMP ) 
 
