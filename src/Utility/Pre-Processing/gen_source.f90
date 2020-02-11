@@ -1,7 +1,7 @@
 !     Given a list of pts, find parent elements in hgrid.gr3 (tri or quad), and generate source_sink.in etc 
 !     Search for parent elements along x- or y- strips (use small mne_bin for efficiency)
 !     Works for mixed tri/quad
-!     Inputs: ss_pt.bp (list of pts, with z maybe related to volume; see line 217 onwards)
+!     Inputs: ss_pt.bp (list of pts, with z related to volume rate (positive for sinks); see line 217 onwards)
 !             hgrid.gr3 
 !             gen_source.in (see sample below): 
 !                                         (1) is_xy: search along x (1) or y (2);
@@ -217,7 +217,7 @@
       total_r=0
       ifl_el=0 !flag for each bg elem.
       do i=1,npfg
-        read(12,*)j,xfg,yfg,vrate(i) !vrate: m/year
+        read(12,*)j,xfg,yfg,vrate(i) !vrate: m/year (positive ->sink)
         if(vrate(i)==0) cycle
 
         call binsearch(i,xfg,yfg,iparen(i),arco)
@@ -239,7 +239,7 @@
       nsource=0
       nsink=0
       do i=1,nebg
-        if(total_r(i)>0) then
+        if(total_r(i)>0) then !if positive values are source, change here
           nsink=nsink+1
           imap_sink(nsink)=i
         endif
