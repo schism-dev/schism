@@ -123,6 +123,10 @@
       real*8 :: aa1(1)
 
 !     First statement
+!     Currently we assume rectangular grid in HYCOM
+!     (interp_mode=0). interp_mode=1 uses generic UG search (splitting
+!     quads) and is kept for more generic cases
+      interp_mode=0
 
       open(10,file='gen_hot_3Dth_from_nc.in',status='old')
       read(10,*) iuv !1: include vel and elev. in hotstart.in; 0: only T,S
@@ -700,56 +704,91 @@
           call cpu_time(tt0)
           loop4: do i=1,np
             ixy(i,1:2)=0
-            do ix=1,ixlen-1 
-              do iy=1,iylen-1 
-                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
-                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
-                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
-                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
-                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
-                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
-                if(rat<small1) then
-                  ixy(i,1)=ix; ixy(i,2)=iy
+
+            if(interp_mode==0) then !SG search
+              do ix=1,ixlen-1
+                if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
+                  !Lower left corner index
+                  ixy(i,1)=ix
+                  xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
+                  exit
+                endif
+              enddo !ix
+              do iy=1,iylen-1
+                if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
+                  !Lower left corner index
+                  ixy(i,2)=iy
+                  yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
+                  exit
+                endif
+              enddo !ix
+
+              if(ixy(i,1)==0.or.ixy(i,2)==0) then
+                write(11,*)'Did not find parent:',i,ixy(i,1:2)
+                stop
+              endif
+              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+                write(11,*)'Ratio out of bound:',i,xrat,yrat
+                stop
+              endif
+
+              !Bilinear shape function
+              arco(1,i)=(1-xrat)*(1-yrat)
+              arco(2,i)=xrat*(1-yrat)
+              arco(4,i)=(1-xrat)*yrat
+              arco(3,i)=xrat*yrat
+            else !interp_mode=1; generic search with UG
+              do ix=1,ixlen-1 
+                do iy=1,iylen-1 
+                  x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
+                  y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
+                  a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+                  a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+                  a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+                  a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+                  b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                  b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                  rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
+                  if(rat<small1) then
+                    ixy(i,1)=ix; ixy(i,2)=iy
 !                 Find a triangle
-                  in=0 !flag
-                  do l=1,2
-                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
-                    if(l==1) then !nodes 1,2,3
-                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                      wild(l)=abs(a1+a2+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=1
-                        arco(1,i)=max(0.,min(1.,a2/bb))
-                        arco(2,i)=max(0.,min(1.,ap/bb))
-                        arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
-                        arco(4,i)=0.
-                        exit
+                    in=0 !flag
+                    do l=1,2
+                      ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
+                      if(l==1) then !nodes 1,2,3
+                        bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                        wild(l)=abs(a1+a2+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=1
+                          arco(1,i)=max(0.,min(1.,a2/bb))
+                          arco(2,i)=max(0.,min(1.,ap/bb))
+                          arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                          arco(4,i)=0.
+                          exit
+                        endif
+                      else !nodes 1,3,4
+                        bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                        wild(l)=abs(a3+a4+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=2
+                          arco(1,i)=max(0.,min(1.,a3/bb))
+                          arco(3,i)=max(0.,min(1.,a4/bb))
+                          arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+                          arco(2,i)=0.
+                          exit
+                        endif
                       endif
-                    else !nodes 1,3,4
-                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                      wild(l)=abs(a3+a4+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=2
-                        arco(1,i)=max(0.,min(1.,a3/bb))
-                        arco(3,i)=max(0.,min(1.,a4/bb))
-                        arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
-                        arco(2,i)=0.
-                        exit
-                      endif
+                    enddo !l=1,2
+                    if(in==0) then
+                      write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
+                      stop
                     endif
-                  enddo !l=1,2
-                  if(in==0) then
-                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
-                    stop
-                  endif
-                  !ixy(i,3)=in
-                  cycle loop4
-                endif !rat<small1
-              enddo !iy=iylen1,iylen2-1
-            enddo !ix=ixlen1,ixlen2-1
+                    !ixy(i,3)=in
+                    cycle loop4
+                  endif !rat<small1
+                enddo !iy=iylen1,iylen2-1
+              enddo !ix=ixlen1,ixlen2-1
+            endif !interp_mode
           end do loop4 !i=1,np
 
           call cpu_time(tt1)
