@@ -112,7 +112,7 @@
       integer :: isdel(2,mns),klev(4)
       integer :: indel(mnei,mnp),idry_s(mns)
       dimension xl(mnp),yl(mnp),dp(mnp),i34(mne)
-      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,3),arco(3,mnp)
+      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,2),arco(4,mnp)
       dimension wild(100),wild2(100,2)
       dimension tempout(mnv,mnp), saltout(mnv,mnp),month_day(12)
       dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
@@ -699,7 +699,7 @@
 !         Find parent elements for hgrid.ll
           call cpu_time(tt0)
           loop4: do i=1,np
-            ixy(i,1:3)=0
+            ixy(i,1:2)=0
             do ix=1,ixlen-1 
               do iy=1,iylen-1 
                 x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
@@ -724,6 +724,8 @@
                         in=1
                         arco(1,i)=max(0.,min(1.,a2/bb))
                         arco(2,i)=max(0.,min(1.,ap/bb))
+                        arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                        arco(4,i)=0.
                         exit
                       endif
                     else !nodes 1,3,4
@@ -732,7 +734,9 @@
                       if(wild(l)<small1*5) then
                         in=2
                         arco(1,i)=max(0.,min(1.,a3/bb))
-                        arco(2,i)=max(0.,min(1.,a4/bb))
+                        arco(3,i)=max(0.,min(1.,a4/bb))
+                        arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+                        arco(2,i)=0.
                         exit
                       endif
                     endif
@@ -741,8 +745,7 @@
                     write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
                     stop
                   endif
-                  ixy(i,3)=in
-                  arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                  !ixy(i,3)=in
                   cycle loop4
                 endif !rat<small1
               enddo !iy=iylen1,iylen2-1
@@ -921,7 +924,7 @@
             vout(:,i)=0
             eout(i)=0
           else !found parent
-            ix=ixy(i,1); iy=ixy(i,2); in=ixy(i,3)
+            ix=ixy(i,1); iy=ixy(i,2) !; in=ixy(i,3)
             !Find vertical level
             do k=1,nvrt
               if(kbp(ix,iy)==-1) then
@@ -968,19 +971,27 @@
               wild2(7,2)=vvel(ix+1,iy+1,lev)*(1-vrat)+vvel(ix+1,iy+1,lev+1)*vrat
               wild2(8,1)=uvel(ix,iy+1,lev)*(1-vrat)+uvel(ix,iy+1,lev+1)*vrat
               wild2(8,2)=vvel(ix,iy+1,lev)*(1-vrat)+vvel(ix,iy+1,lev+1)*vrat
-              if(in==1) then
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
-                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(6,1)*arco(2,i)+wild2(7,1)*arco(3,i)
-                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(6,2)*arco(2,i)+wild2(7,2)*arco(3,i)
-                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)
-              else
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
-                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(7,1)*arco(2,i)+wild2(8,1)*arco(3,i)
-                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(7,2)*arco(2,i)+wild2(8,2)*arco(3,i)
-                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy+1)*arco(2,i)+ssh(ix,iy+1)*arco(3,i)
-              endif
+
+              tempout(k,i)=dot_product(wild2(1:4,1),arco(1:4,i))
+              saltout(k,i)=dot_product(wild2(1:4,2),arco(1:4,i))
+              uout(k,i)=dot_product(wild2(5:8,1),arco(1:4,i))
+              vout(k,i)=dot_product(wild2(5:8,2),arco(1:4,i))
+              eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)+ssh(ix,iy+1)*arco(4,i)
+
+
+!              if(in==1) then
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
+!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(6,1)*arco(2,i)+wild2(7,1)*arco(3,i)
+!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(6,2)*arco(2,i)+wild2(7,2)*arco(3,i)
+!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)
+!              else
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
+!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(7,1)*arco(2,i)+wild2(8,1)*arco(3,i)
+!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(7,2)*arco(2,i)+wild2(8,2)*arco(3,i)
+!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy+1)*arco(2,i)+ssh(ix,iy+1)*arco(3,i)
+!              endif
 
               !Check
               if(tempout(k,i)<tempmin.or.tempout(k,i)>tempmax.or. &
