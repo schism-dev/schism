@@ -34,7 +34,8 @@
 !                     3rd line: # of nc files
 !     (6) HYCOM files: TS_[1,2,..nfiles].nc (includes lon/lat; beware scaling etc)
 !                      The extent the HYCOM files cover needs to be
-!                      larger than the region specified in include.gr3
+!                      larger than the region specified in include.gr3,
+!                      and lon/lat coord monotonically increasing.
 !   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only)
 !   Debug outputs: fort.11 (fatal errors); fort.*
 
@@ -87,9 +88,6 @@
       integer :: ier ! allocate error return.
       integer :: ixlen, iylen, ilen ! sampled lengths in each coordinate direction
       integer :: ixlen1, iylen1,ixlen2, iylen2 !reduced indices for CORIE grid to speed up interpolation
-!      integer :: elnode(4,mne)
-!      dimension xl(mnp),yl(mnp),dp(mnp),i34(mne),include2(mnp)
-!      dimension ztot(0:mnv),sigma(mnv),ixy(mnp,3),arco(3,mnp)
       real, allocatable :: xl(:),yl(:),dp(:),tempout(:,:),saltout(:,:),ztot(:),sigma(:),arco(:,:)
       integer, allocatable :: i34(:),elnode(:,:),include2(:),ixy(:,:),imap(:)
       dimension wild(100),wild2(100,2)
@@ -99,6 +97,11 @@
       real*8 :: aa1(1)
 
 !     First statement
+!     Currently we assume rectangular grid in HYCOM
+!     (interp_mode=0). interp_mode=1 uses generic UG search (splitting
+!     quads) and is kept for future extension
+      interp_mode=1
+
       ndays_mon=(/31,28,31,30,31,30,31,31,30,31,30,31/)  !# of days in each month for non-leap yr
 !      hr_char=(/'03','09','15','21'/) !each day has 4 starting hours in ROMS
 
@@ -117,7 +120,7 @@
       open(11,file='fort.11',status='replace')
       read(14,*)
       read(14,*)ne,np
-      allocate(xl(np),yl(np),dp(np),i34(ne),elnode(4,ne),include2(np),ixy(np,3),arco(3,np),imap(np))
+      allocate(xl(np),yl(np),dp(np),i34(ne),elnode(4,ne),include2(np),ixy(np,2),arco(4,np),imap(np))
       read(16,*); read(16,*)
       read(15,*); read(15,*)
       do i=1,np
@@ -232,6 +235,8 @@
         status = nf90_get_var(sid, yvid, yind)
 
 !       processing static info
+!       lon/lat as 2D arrays mostly for potential extension to
+!       non-rectangular grids
         do i=1,ixlen
           lon(i,:)=xind(i)
         enddo !i
@@ -419,54 +424,91 @@
             !won't work across dateline
             if(xl(i)<xlmin.or.xl(i)>xlmax.or.yl(i)<ylmin.or.yl(i)>ylmax) cycle loop4
             if(include2(i)==0) cycle loop4
+            
+            if(interp_mode==0) then !SG search
+              do ix=1,ixlen-1
+                if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
+                  !Lower left corner index
+                  ixy(i,1)=ix 
+                  xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
+                  exit
+                endif
+              enddo !ix
+              do iy=1,iylen-1
+                if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
+                  !Lower left corner index
+                  ixy(i,2)=iy 
+                  yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
+                  exit
+                endif
+              enddo !ix
 
-            do ix=1,ixlen-1 
-              do iy=1,iylen-1 
-                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
-                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
-                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
-                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
-                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
-                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
-                if(rat<small1) then
-                  ixy(i,1)=ix; ixy(i,2)=iy
-!                 Find a triangle
-                  in=0 !flag
-                  do l=1,2 !split quad
-                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
-                    if(l==1) then !nodes 1,2,3
-                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                      wild(l)=abs(a1+a2+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=1
-                        arco(1,i)=max(0.,min(1.,a2/bb))
-                        arco(2,i)=max(0.,min(1.,ap/bb))
-                        exit
+              if(ixy(i,1)==0.or.ixy(i,2)==0) then
+                write(11,*)'Did not find parent:',i,ixy(i,1:2)
+                stop
+              endif
+              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+                write(11,*)'Ratio out of bound:',i,xrat,yrat
+                stop
+              endif
+
+              !Bilinear shape function
+              arco(1,i)=(1-xrat)*(1-yrat)
+              arco(2,i)=xrat*(1-yrat)
+              arco(4,i)=(1-xrat)*yrat
+              arco(3,i)=xrat*yrat
+            else !interp_mode=1; generic search with UG
+              do ix=1,ixlen-1 
+                do iy=1,iylen-1 
+                  x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
+                  y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
+                  a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+                  a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+                  a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+                  a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+                  b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                  b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                  rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
+                  if(rat<small1) then
+                    ixy(i,1)=ix; ixy(i,2)=iy
+!                   Find a triangle
+                    in=0 !flag
+                    do l=1,2 !split quad
+                      ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
+                      if(l==1) then !nodes 1,2,3
+                        bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                        wild(l)=abs(a1+a2+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=1
+                          arco(1,i)=max(0.,min(1.,a2/bb))
+                          arco(2,i)=max(0.,min(1.,ap/bb))
+                          arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                          arco(4,i)=0.
+                          exit
+                        endif
+                      else !nodes 1,3,4
+                        bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                        wild(l)=abs(a3+a4+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=2
+                          arco(1,i)=max(0.,min(1.,a3/bb))
+                          arco(3,i)=max(0.,min(1.,a4/bb))
+                          arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+                          arco(2,i)=0.
+                          exit
+                        endif
                       endif
-                    else !nodes 1,3,4
-                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                      wild(l)=abs(a3+a4+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=2
-                        arco(1,i)=max(0.,min(1.,a3/bb))
-                        arco(2,i)=max(0.,min(1.,a4/bb))
-                        exit
-                      endif
+                    enddo !l=1,2
+                    if(in==0) then
+                      write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
+                      stop
                     endif
-                  enddo !l=1,2
-                  if(in==0) then
-                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
-                    stop
-                  endif
-                  ixy(i,3)=in
-                  arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
-                  cycle loop4
-                endif !rat<small1
-              enddo !iy=iylen1,iylen2-1
-            enddo !ix=ixlen1,ixlen2-1
+                    !ixy(i,3)=in
+                    cycle loop4
+                  endif !rat<small1
+                enddo !iy=iylen1,iylen2-1
+              enddo !ix=ixlen1,ixlen2-1
+            endif !interp_mode
           end do loop4 !i=1,np
 
           call cpu_time(tt1)
@@ -548,7 +590,7 @@
           else !found parent 
             npout=npout+1
             imap(npout)=i
-            ix=ixy(i,1); iy=ixy(i,2); in=ixy(i,3)
+            ix=ixy(i,1); iy=ixy(i,2) !in=ixy(i,3)
             !Find vertical level
             do k=1,nvrt
               if(kbp(ix,iy)==-1) then
@@ -582,21 +624,15 @@
               wild2(4,1)=temp(ix,iy+1,lev)*(1-vrat)+temp(ix,iy+1,lev+1)*vrat
               wild2(4,2)=salt(ix,iy+1,lev)*(1-vrat)+salt(ix,iy+1,lev+1)*vrat
 
-!              wild2(5,1)=uvel(ix,iy,lev)*(1-vrat)+uvel(ix,iy,lev+1)*vrat
-!              wild2(5,2)=vvel(ix,iy,lev)*(1-vrat)+vvel(ix,iy,lev+1)*vrat
-!              wild2(6,1)=uvel(ix+1,iy,lev)*(1-vrat)+uvel(ix+1,iy,lev+1)*vrat
-!              wild2(6,2)=vvel(ix+1,iy,lev)*(1-vrat)+vvel(ix+1,iy,lev+1)*vrat
-!              wild2(7,1)=uvel(ix+1,iy+1,lev)*(1-vrat)+uvel(ix+1,iy+1,lev+1)*vrat
-!              wild2(7,2)=vvel(ix+1,iy+1,lev)*(1-vrat)+vvel(ix+1,iy+1,lev+1)*vrat
-!              wild2(8,1)=uvel(ix,iy+1,lev)*(1-vrat)+uvel(ix,iy+1,lev+1)*vrat
-!              wild2(8,2)=vvel(ix,iy+1,lev)*(1-vrat)+vvel(ix,iy+1,lev+1)*vrat
-              if(in==1) then
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
-              else
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
-              endif
+              tempout(k,i)=dot_product(wild2(1:4,1),arco(1:4,i))
+              saltout(k,i)=dot_product(wild2(1:4,2),arco(1:4,i))
+!              if(in==1) then
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
+!              else
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
+!              endif
 
               !Check
               if(tempout(k,i)<tempmin.or.tempout(k,i)>tempmax.or. &
