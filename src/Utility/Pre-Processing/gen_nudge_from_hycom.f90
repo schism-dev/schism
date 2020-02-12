@@ -100,7 +100,7 @@
 !     Currently we assume rectangular grid in HYCOM
 !     (interp_mode=0). interp_mode=1 uses generic UG search (splitting
 !     quads) and is kept for more generic cases
-      interp_mode=1
+      interp_mode=0
 
       ndays_mon=(/31,28,31,30,31,30,31,31,30,31,30,31/)  !# of days in each month for non-leap yr
 !      hr_char=(/'03','09','15','21'/) !each day has 4 starting hours in ROMS
