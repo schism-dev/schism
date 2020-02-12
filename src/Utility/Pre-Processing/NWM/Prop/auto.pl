@@ -15,8 +15,8 @@ system("ln -sf ../hgrid.* .");
 #set tvd.prop
 system("$script_dir/auto_edit_prop tvd.rgn hgrid.ll 0 1");
 move("out.prop","tvd.prop");
-unlink("../tvd.gr3");
-copy("tvd.gr3","../tvd.gr3");
+unlink("../tvd.prop");
+copy("tvd.prop","../tvd.prop");
 
 #set fluxflag.prop
 system("$script_dir/auto_edit_prop fluxflag/0.reg hgrid.ll 0 -1");
@@ -54,7 +54,7 @@ move("out.prop","default.prop");
 system("$script_dir/auto_edit_prop fluxflag/8.reg hgrid.ll 8 -9999");
 move("out.prop","fluxflag.prop");
 
-unlink("../fluxflag.gr3");
-copy("fluxflag.gr3","../fluxflag.gr3");
+unlink("../fluxflag.prop");
+copy("fluxflag.prop","../fluxflag.prop");
 
 print("Done.\n")
