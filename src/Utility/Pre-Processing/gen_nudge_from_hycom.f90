@@ -239,9 +239,17 @@
 !       non-rectangular grids
         do i=1,ixlen
           lon(i,:)=xind(i)
+          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+            stop 
+          endif; endif;
         enddo !i
         do j=1,iylen
           lat(:,j)=yind(j)
+          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+            stop 
+          endif; endif;
         enddo !j
 !        lon=lon-360 !convert to our long.
 
