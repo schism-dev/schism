@@ -10,6 +10,7 @@ function []=SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % used thin layers to mimic shaved cells.
 % May need to adjust some parameters inside (e.g. caxis) to get right appearance of images
 % (search for 'Adjust')
+% Requires get_global_info.m (in thsi dir)
 % 
 % SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % Inputs: 
@@ -133,7 +134,7 @@ for ii=1:nbp
     ifl=1;
   end
   ie=iparen(ii).ie;
-  fprintf(fid2,'Reading from ranks: %d\n',iegl_rank(ie));
+  if(icomb==0); fprintf(fid2,'Reading from ranks: %d\n',iegl_rank(ie)); end;
 end %ii
 if(ifl==1); error('Check parents.out for errors'); end;
 fclose(fid2);
