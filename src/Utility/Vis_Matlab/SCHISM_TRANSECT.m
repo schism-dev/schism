@@ -10,8 +10,8 @@ function []=SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % used thin layers to mimic shaved cells.
 % May need to adjust some parameters inside (e.g. caxis) to get right appearance of images
 % (search for 'Adjust')
-% Requires get_global_info.m (in thsi dir)
-% 
+% Requires get_global_info.m (in this dir)
+ 
 % SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % Inputs: 
 %         icomb: work with uncombined (0) or combined (1) nc
@@ -238,13 +238,16 @@ for day=stacks2
 
     %Pad extra thin layers for pcolor
     kbout=min(kbp_e(1:nbp));
+    if(kbout<1); kbout=1; end;
+%    kbout
+%    kbp_e(1:nbp)
     for i=1:nbp
       for j=1:ivs
-        uout(j,kbout:kbp_e(i)-1,i)=uout(j,kbp_e(i),i);
+        uout(j,kbout:kbp_e(i)-1,i)=uout(j,max([1 kbp_e(i)]),i);
       end %j
       clear tmp;
       tmp=(kbout-kbp_e(i)):-1;
-      zout(kbout:kbp_e(i)-1,i)=zout(kbp_e(i),i)+tmp*1.e-7;
+      zout(kbout:kbp_e(i)-1,i)=zout(max([1 kbp_e(i)]),i)+tmp*1.e-7;
     end %for i=1:nbp
 
     %Define ymin
@@ -266,8 +269,9 @@ for day=stacks2
       v2=axis;
       % Write time stamp info
       loc_info_x=(v2(2)+v2(1))/2;
-      loc_info_y=v2(4)*1.05-v2(3)*0.05;
-      text(loc_info_x,loc_info_y,{'Time (DD:HH:MM:SS)'; num2str([time_d time_h time_m time_s])});
+      loc_info_y=v2(4)*0.95+v2(3)*0.05;
+%      text(loc_info_x,loc_info_y,{'Time (DD:HH:MM:SS)'; num2str([time_d time_h time_m time_s])});
+      title(['Time (DD:HH:MM:SS): ' num2str([time_d time_h time_m time_s])]);
 
       vmag=squeeze(uout(1,:,:));
       if(ivs==2)
