@@ -286,6 +286,9 @@ for day=stacks2
       xlabel('Along transect distance (m)');
       ylabel('z (m)');
 
+      %Plot out transect grid here if desired
+      %plot(trLen,zout','k.');
+
       set(gca,'nextplot','replacechildren');
       currFrame = getframe(gcf);
       writeVideo(vidObj,currFrame);
