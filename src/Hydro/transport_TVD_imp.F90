@@ -364,7 +364,11 @@
               vj=area(i)*(ze(k,i)-ze(k-1,i))
 
               if(psumtr(1)/=0) then
-                tmp=vj/psumtr(1)*courant_weno*(1-1.e-6) !safety factor 1.e-6 included
+                if (iupwind_e(i)==1) then !upwind
+                  tmp=vj/psumtr(1)*(1-1.e-6) !safety factor included
+                else !weno
+                  tmp=vj/psumtr(1)*courant_weno*(1-1.e-6) !safety factor 1.e-6 included
+                endif
 
                 if(tmp<dtbl2) then
                   dtbl2=tmp
