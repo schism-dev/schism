@@ -88,28 +88,28 @@ subroutine aquire_vgrid
     nsig=nvrt-kz+1 !# of S levels (including "bottom" & f.s.)
     read(19,*) !for adding comment "S levels"
     read(19,*)h_c,theta_b,theta_f
-    if(h_c<5.or.h_c>=h_s) then !large h_c to avoid 2nd type abnormaty
+    if(h_c<5._rkind.or.h_c>=h_s) then !large h_c to avoid 2nd type abnormaty
       write(errmsg,*)'h_c needs to be larger:',h_c
       call parallel_abort(errmsg)
     endif
-    if(theta_b<0.or.theta_b>1) then
+    if(theta_b<0._rkind.or.theta_b>1._rkind) then
       write(errmsg,*)'Wrong theta_b:',theta_b
       call parallel_abort(errmsg)
     endif
-    if(theta_f<=0) then
+    if(theta_f<=0._rkind) then
       write(errmsg,*)'Wrong theta_f:',theta_f
       call parallel_abort(errmsg)
     endif
     !Pre-compute constants
     s_con1=sinh(theta_f)
 
-    sigma(1)=-1 !bottom
-    sigma(nsig)=0 !surface
+    sigma(1)=-1._rkind !bottom
+    sigma(nsig)=0._rkind !surface
     read(19,*) !level kz
     do k=kz+1,nvrt-1
       kin=k-kz+1
       read(19,*) j,sigma(kin)
-      if(sigma(kin)<=sigma(kin-1).or.sigma(kin)>=0) then
+      if(sigma(kin)<=sigma(kin-1).or.sigma(kin)>=0._rkind) then
         write(errmsg,*)'Check sigma levels at:',k,sigma(kin),sigma(kin-1)
         call parallel_abort(errmsg)
       endif
@@ -122,8 +122,8 @@ subroutine aquire_vgrid
     allocate(ztot(nvrt),sigma(nvrt),stat=stat)
     if(stat/=0) call parallel_abort('AQUIRE_VGIRD: ztot allocation failure (2)')
     !for output only - remove later
-    ztot=0; sigma=0 
-    kz=1; h_s=0; h_c=0; theta_b=0; theta_f=0
+    ztot=0._rkind; sigma=0._rkind 
+    kz=1; h_s=0._rkind; h_c=0._rkind; theta_b=0._rkind; theta_f=0._rkind
   else
     call parallel_abort('VGRID: Unknown ivcor')
   endif !ivcor
@@ -132,10 +132,10 @@ subroutine aquire_vgrid
   if(ivcor==2) then
     ! Compute C(s) and C'(s)
     do k=1,nsig
-      cs(k)=(1-theta_b)*sinh(theta_f*sigma(k))/sinh(theta_f)+ &
-       &theta_b*(tanh(theta_f*(sigma(k)+0.5))-tanh(theta_f*0.5))/2/tanh(theta_f*0.5)
-      dcs(k)=(1-theta_b)*theta_f*cosh(theta_f*sigma(k))/sinh(theta_f)+ &
-       &theta_b*theta_f/2/tanh(theta_f*0.5)/cosh(theta_f*(sigma(k)+0.5))**2
+      cs(k)=(1._rkind-theta_b)*sinh(theta_f*sigma(k))/sinh(theta_f)+ &
+       &theta_b*(tanh(theta_f*(sigma(k)+0.5_rkind))-tanh(theta_f*0.5_rkind))/2._rkind/tanh(theta_f*0.5_rkind)
+      dcs(k)=(1._rkind-theta_b)*theta_f*cosh(theta_f*sigma(k))/sinh(theta_f)+ &
+       &theta_b*theta_f/2._rkind/tanh(theta_f*0.5_rkind)/cosh(theta_f*(sigma(k)+0.5_rkind))**2._rkind
     enddo !k
   endif !ivcor==2
 
@@ -251,12 +251,12 @@ subroutine partition_hgrid
     do i=1,npa
       !Stereographic projection for partition only
       !Center is at south pole and plane is at north pole; must remove south pole
-      if(rearth_pole+znd(i)<=0) then
+      if(rearth_pole+znd(i)<=0._rkind) then
         write(errmsg,*)'PARTITION: remove south pole:',i,rearth_pole+znd(i)
         call parallel_abort(errmsg)
       endif
-      xproj(i)=2*rearth_eq*xnd(i)/(rearth_pole+znd(i))
-      yproj(i)=2*rearth_eq*ynd(i)/(rearth_pole+znd(i))
+      xproj(i)=2._rkind*rearth_eq*xnd(i)/(rearth_pole+znd(i))
+      yproj(i)=2._rkind*rearth_eq*ynd(i)/(rearth_pole+znd(i))
     enddo !i=1,npa
   endif !ics
 
@@ -337,13 +337,13 @@ subroutine partition_hgrid
   ! Assign vertex coordinates & weights
   ! Weights based on estimated number of active levels
   do ie=1,nea
-    xtmp=0d0 !xctr
-    ytmp=0d0
-    dtmp=5.d10 !min. depth
+    xtmp=0._rkind !xctr
+    ytmp=0._rkind
+    dtmp=real(5.d10,rkind) !min. depth
     do j=1,i34(ie)
       ip=elnode(j,ie)
-      xtmp=xtmp+xproj(ip)/dble(i34(ie))
-      ytmp=ytmp+yproj(ip)/dble(i34(ie))
+      xtmp=xtmp+real(xproj(ip),rkind)/real(i34(ie),rkind)
+      ytmp=ytmp+real(yproj(ip),rkind)/real(i34(ie),rkind)
       if(dp(ip)<dtmp) dtmp=dp(ip)
     enddo !j
     xyz(2*(ie-1)+1)=xtmp
@@ -352,7 +352,7 @@ subroutine partition_hgrid
       if(ivcor==1) then
         kbetmp=minval(kbp(elnode(1:i34(ie),ie)))
       else if(ivcor==2) then !SZ (including 2D)
-        if(dtmp<=0) then
+        if(dtmp<=0._rkind) then
           kbetmp=nvrt !only for estimating nlev
         else 
           if(dtmp<=h_s) then
@@ -370,19 +370,19 @@ subroutine partition_hgrid
       endif !ivcor
 
       nlev(ie)=max(1,nvrt-kbetmp) !estimate of number of active levels (excluding bottom as most procedures do not use it)
-      etmp=1d0; ptmp=0d0; stmp=0d0;
+      etmp=1._rkind; ptmp=0._rkind; stmp=0._rkind
       do j=1,i34(ie)
         ip=elnode(j,ie)
-        ptmp=ptmp+1d0/dble(nne(ip)) !each node contributes 1/nne
+        ptmp=ptmp+1._rkind/real(nne(ip),rkind) !each node contributes 1/nne
         if(ic3(j,ie)/=0) then
-          stmp=stmp+0.5d0 !each side contributes 1/2
+          stmp=stmp+0.5_rkind !each side contributes 1/2
         else
-          stmp=stmp+1.0d0 !bndry sides contribute 1
+          stmp=stmp+1.0_rkind !bndry sides contribute 1
         endif
       enddo
-      etmp=etmp*dble(nlev(ie))
-      ptmp=ptmp*dble(nlev(ie))
-      stmp=stmp*dble(nlev(ie))
+      etmp=etmp*real(nlev(ie),rkind)
+      ptmp=ptmp*real(nlev(ie),rkind)
+      stmp=stmp*real(nlev(ie),rkind)
       vwgt(ncon*(ie-1)+1)=nint(etmp)   !weight 1: 3D element ctr
       vwgt(ncon*(ie-1)+2)=nint(ptmp)   !weight 2: 3D vertical edge; less weight for nodes with more neighbors (so more of those nodes will be put into a sub-domain to prevent edge cuts)
       vwgt(ncon*(ie-1)+3)=nint(stmp)   !weight 3: 3D vertical face (put more internal sides in one sub-domain)
@@ -536,7 +536,7 @@ subroutine aquire_hgrid(full_aquire)
   real(rkind),allocatable :: dbuf1(:),dbuf2(:)
   type(llist_type),pointer :: llp,node,nodep,side,sidep
   logical :: found,local1,local2,found1,found2
-  real(rkind),parameter :: deg2rad=pi/180.
+  real(rkind),parameter :: deg2rad=pi/180._rkind
   integer :: n1,n2,n3,n4,jsj,nt,nn,nscnt,nsgcnt
   real(rkind) :: ar1,ar2,ar3,ar4,signa !slam0,sfea0,
   real(rkind) :: xtmp,ytmp,dptmp,thetan,egb1,egb2,egb
@@ -1663,7 +1663,7 @@ subroutine aquire_hgrid(full_aquire)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: area allocation failure')
   if(allocated(radiel)) deallocate(radiel); allocate(radiel(nea),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: radiel allocation failure')
-  zctr=0 !for ics=1
+  zctr=0._rkind !for ics=1
   if(allocated(dpe)) deallocate(dpe); allocate(dpe(nea),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: dpe allocation failure')
   if(allocated(eframe)) deallocate(eframe); allocate(eframe(3,3,nea),stat=stat);
@@ -1673,18 +1673,18 @@ subroutine aquire_hgrid(full_aquire)
   if(allocated(yel)) deallocate(yel); allocate(yel(4,nea),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: yel allocation failure')
 
-  eframe=0 !for ics=1
-  thetan=-1.e10 !max. dot product for checking only
+  eframe=0._rkind !for ics=1
+  thetan=-1.d10 !max. dot product for checking only
   found=.false. !check quad areas
   do ie=1,nea
-    xctr(ie)=0d0
-    yctr(ie)=0d0
-    dpe(ie)=1.d10
+    xctr(ie)=0._rkind
+    yctr(ie)=0._rkind
+    dpe(ie)=real(1.d10,rkind)
     do j=1,i34(ie)
-      xctr(ie)=xctr(ie)+xnd(elnode(j,ie))/dble(i34(ie))
-      yctr(ie)=yctr(ie)+ynd(elnode(j,ie))/dble(i34(ie))
+      xctr(ie)=xctr(ie)+xnd(elnode(j,ie))/real(i34(ie),rkind)
+      yctr(ie)=yctr(ie)+ynd(elnode(j,ie))/real(i34(ie),rkind)
       !zctr initialized
-      if(ics==2) zctr(ie)=zctr(ie)+znd(elnode(j,ie))/dble(i34(ie))
+      if(ics==2) zctr(ie)=zctr(ie)+znd(elnode(j,ie))/real(i34(ie),rkind)
       if(dp(elnode(j,ie))<dpe(ie)) dpe(ie)=dp(elnode(j,ie))
     enddo !j
 
@@ -1697,7 +1697,7 @@ subroutine aquire_hgrid(full_aquire)
       !1: zonal axis; 2: meridional axis; 3: outward radial
       eframe(1,1,ie)=-sin(ar1)
       eframe(2,1,ie)=cos(ar1)
-      eframe(3,1,ie)=0
+      eframe(3,1,ie)=0._rkind
       eframe(1,2,ie)=-cos(ar1)*sin(ar2)
       eframe(2,2,ie)=-sin(ar1)*sin(ar2)
       eframe(3,2,ie)=cos(ar2)
@@ -1718,7 +1718,7 @@ subroutine aquire_hgrid(full_aquire)
       ytmp=dot_product(eframe(1:3,1,ie),eframe(1:3,2,ie))
       dptmp=dot_product(eframe(1:3,3,ie),eframe(1:3,2,ie))
       ar1=max(abs(xtmp),abs(ytmp),abs(dptmp))
-      if(ar1>1.e-7) then
+      if(ar1>real(1.e-7,rkind)) then
         write(errmsg,*)'AQUIRE_HGRID: axes wrong',ielg(ie),xtmp,ytmp,dptmp
         call parallel_abort(errmsg)
       endif
@@ -1735,7 +1735,7 @@ subroutine aquire_hgrid(full_aquire)
     endif !ics
 
     area(ie)=signa(xel(1,ie),xel(2,ie),xel(3,ie),yel(1,ie),yel(2,ie),yel(3,ie))
-    if(area(ie)<=0.d0) then
+    if(area(ie)<=0._rkind) then
       found=.true.
       write(12,'(a,2i8)') 'AQUIRE_HGRID: negative area at',ielg(ie)
     endif 
@@ -1746,7 +1746,7 @@ subroutine aquire_hgrid(full_aquire)
       !Also check other diagonal
       ar2=signa(xel(1,ie),xel(2,ie),xel(4,ie),yel(1,ie),yel(2,ie),yel(4,ie))
       ar3=signa(xel(2,ie),xel(3,ie),xel(4,ie),yel(2,ie),yel(3,ie),yel(4,ie))
-      if(min(ar1,ar2,ar3)<=0.d0) then
+      if(min(ar1,ar2,ar3)<=0._rkind) then
         found=.true.
         write(12,*) 'AQUIRE_HGRID: concave quad at ',ielg(ie)
       endif
@@ -1776,7 +1776,7 @@ subroutine aquire_hgrid(full_aquire)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: ycj allocation failure')
   if(allocated(zcj)) deallocate(zcj); allocate(zcj(nsa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: zcj allocation failure')
-  zcj=0 !for ics=1
+  zcj=0._rkind !for ics=1
   if(allocated(dps)) deallocate(dps); allocate(dps(nsa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: dps allocation failure')
   if(allocated(distj)) deallocate(distj); allocate(distj(nsa),stat=stat);
@@ -1801,12 +1801,12 @@ subroutine aquire_hgrid(full_aquire)
         isidenode(1,jsj)=n2
         isidenode(2,jsj)=n1
       endif !ic3(j,ie)==0....
-      xcj(jsj)=(xnd(n1)+xnd(n2))/2d0
-      ycj(jsj)=(ynd(n1)+ynd(n2))/2d0
-      if(ics==2) zcj(jsj)=(znd(n1)+znd(n2))/2
-      dps(jsj)=(dp(n1)+dp(n2))/2d0
-      distj(jsj)=sqrt((xnd(n2)-xnd(n1))**2+(ynd(n2)-ynd(n1))**2+(znd(n2)-znd(n1))**2)
-      if(distj(jsj)==0) then
+      xcj(jsj)=(xnd(n1)+xnd(n2))/2._rkind
+      ycj(jsj)=(ynd(n1)+ynd(n2))/2._rkind
+      if(ics==2) zcj(jsj)=(znd(n1)+znd(n2))/2._rkind
+      dps(jsj)=(dp(n1)+dp(n2))/2._rkind
+      distj(jsj)=sqrt((xnd(n2)-xnd(n1))**2._rkind+(ynd(n2)-ynd(n1))**2._rkind+(znd(n2)-znd(n1))**2._rkind)
+      if(distj(jsj)==0._rkind) then
         write(errmsg,*) 'AQUIRE_HGRID: Zero side',jsj
         call parallel_abort(errmsg)
       endif
@@ -1831,9 +1831,9 @@ subroutine aquire_hgrid(full_aquire)
         jegb=-je
       endif
       if(iegb==jegb) then
-        ssign(j,ie)=1
+        ssign(j,ie)=1._rkind
       else
-        ssign(j,ie)=-1
+        ssign(j,ie)=-1._rkind
       endif    
     enddo !j
   enddo !ie
@@ -1844,9 +1844,9 @@ subroutine aquire_hgrid(full_aquire)
   if(allocated(sframe)) deallocate(sframe); allocate(sframe(3,3,nsa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: sframe allocation failure')
 
-  thetan=-1.e10 !max. deviation between ze and zs axes
-  realvalue=-1.e10 !max. dot product of zs and ys axes
-  sframe=0 !for ics=1
+  thetan=-1.d10 !max. deviation between ze and zs axes
+  realvalue=-1.d10 !max. dot product of zs and ys axes
+  sframe=0._rkind !for ics=1
   do j=1,nsa
     n1=isidenode(1,j)
     n2=isidenode(2,j)
@@ -1862,7 +1862,7 @@ subroutine aquire_hgrid(full_aquire)
       ar2=ynd(n2)-ynd(n1)
       ar3=znd(n2)-znd(n1)
       ar4=sqrt(ar1*ar1+ar2*ar2+ar3*ar3)
-      if(ar4==0) then
+      if(ar4==0._rkind) then
         write(errmsg,*)'AQUIRE_HGRID: 0 ys-vector',iplg(isidenode(1:2,j))
         call parallel_abort(errmsg)
       endif
@@ -1872,7 +1872,7 @@ subroutine aquire_hgrid(full_aquire)
 
       !zs axis
       ar4=sqrt(xcj(j)**2+ycj(j)**2+zcj(j)**2)
-      if(ar4==0) then
+      if(ar4==0._rkind) then
         write(errmsg,*)'AQUIRE_HGRID: 0 zs-vector',iplg(isidenode(1:2,j))
         call parallel_abort(errmsg)
       endif
@@ -1888,7 +1888,7 @@ subroutine aquire_hgrid(full_aquire)
       call cross_product(sframe(1,2,j),sframe(2,2,j),sframe(3,2,j), &
      &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j),ar1,ar2,ar3)
       ar4=sqrt(ar1*ar1+ar2*ar2+ar3*ar3)
-      if(ar4==0) then
+      if(ar4==0._rkind) then
         write(errmsg,*)'AQUIRE_HGRID: 0 xs-vector',iplg(isidenode(1:2,j))
         call parallel_abort(errmsg)
       endif
@@ -2344,7 +2344,7 @@ function signa(x1,x2,x3,y1,y2,y3)
   real(rkind) :: signa
   real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
 
-  signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2d0
+  signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
   
 end function signa
 
