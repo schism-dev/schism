@@ -6,6 +6,12 @@ use File::Copy qw(move);
 use Cwd;
 
 print("Make sure you have netcdf libraries\n");
+print("Make sure the following excutables work on your machine:\n");
+print("    ./Nudge_gr3/gen_nudge2\n");
+print("    ./gen_nudge_from_hycom\n");
+print("Recompile them if necessary;\n");
+print("see an example compiling cmd in each source code.\n");
+print("\n");
 #{
 #  local( $| ) = ( 1 );
 #  print "Press <Enter> or <Return> to continue: \n";
