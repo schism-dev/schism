@@ -332,7 +332,7 @@
       !Shared variables for inu_tr=2 (not used if none of inu_tr=2)
       ntmp=time/step_nu_tr+1
       time_nu_tr=real(ntmp,rkind)*step_nu_tr !points to next time pt
-      trnd_nu1=-9999._rkind; trnd_nu2=-9999._rkind !init
+      trnd_nu1=-9999.; trnd_nu2=-9999. !init
       do k=1,natrm 
         if(ntrs(k)<=0) cycle
 
