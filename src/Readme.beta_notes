@@ -1,7 +1,5 @@
 Github versions:
 
-c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
-d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
 73f7451 (Jan 14, 2020): changed ifltyp=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
 59741d4 (Jan 9, 2020): added another pre-proc flag 'ipre2' for more diagnostic outputs (can be used with >1 CPU; stops
                        after outputs);
@@ -413,6 +411,8 @@ git versions:
               (level specified in param.nml) that have 1 as i.c. I.C. in AGE_hvar_[ntr/2+1:ntr].ic should =0.
               Injecting '1' at dry elem's is allowed but results may be harder to interpret.
 (99) 6cec698: bug fix for spherical coord in WWM (around dateline);
+(100) c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
+(101) d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);

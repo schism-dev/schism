@@ -809,17 +809,17 @@
             itmp2=irange_tr(2,k)
             trnd_nu1(itmp1:itmp2,:,:)=trnd_nu2(itmp1:itmp2,:,:)
 
-            j=nf90_inq_varid(ncid_nu(k), "time",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: nudging(0)')
-            j=nf90_get_var(ncid_nu(k),mm,dbleout2,(/icount3/),(/1/)) !in days
-            if(j/=NF90_NOERR) call parallel_abort('STEP: time2')
-            if(abs(dbleout2(1)*86400.d0-time_nu_tr-step_nu_tr)>1.d-2) then
-              ! This is a severe for data stored in single precision
-              ! and then multiplied by 86400. Reasonable time steps (e.g. 1/6 of a day) might
-              ! not pass if they are not representable in real*4
-              write(errmsg,*)'STEP, wrong nudging time (2):',dbleout2(1)*86400.d0,time_nu_tr+step_nu_tr
-              call parallel_abort(errmsg)
-            endif
+!            j=nf90_inq_varid(ncid_nu(k), "time",mm)
+!            if(j/=NF90_NOERR) call parallel_abort('STEP: nudging(0)')
+!            j=nf90_get_var(ncid_nu(k),mm,dbleout2,(/icount3/),(/1/)) !in days
+!            if(j/=NF90_NOERR) call parallel_abort('STEP: time2')
+!            if(abs(dbleout2(1)*86400.d0-time_nu_tr-step_nu_tr)>1.d-2) then
+!              ! This is a severe for data stored in single precision
+!              ! and then multiplied by 86400. Reasonable time steps (e.g. 1/6 of a day) might
+!              ! not pass if they are not representable in real*4
+!              write(errmsg,*)'STEP, wrong nudging time (2):',dbleout2(1)*86400.d0,time_nu_tr+step_nu_tr
+!              call parallel_abort(errmsg)
+!            endif
 
             j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
             if(j/=NF90_NOERR) call parallel_abort('STEP: nudging(1)')
