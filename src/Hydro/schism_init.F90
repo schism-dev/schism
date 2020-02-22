@@ -4893,45 +4893,55 @@
         allocate(buf3(ns_global),stat=istat)
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
+        !All ranks open .nc but rank 0 reads most of data 
         j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
-!'      Sanity check dims
-        nwild=-999 !init
-        j=nf90_inq_dimid(ncid2,'node',mm)
-        j=nf90_inquire_dimension(ncid2,mm,len=nwild(1))
-        j=nf90_inq_dimid(ncid2,'elem',mm)
-        j=nf90_inquire_dimension(ncid2,mm,len=nwild(2))
-        j=nf90_inq_dimid(ncid2,'side',mm)
-        j=nf90_inquire_dimension(ncid2,mm,len=nwild(3))
-        j=nf90_inq_dimid(ncid2,'nVert',mm)
-        j=nf90_inquire_dimension(ncid2,mm,len=nwild(4))
-        j=nf90_inq_dimid(ncid2,'ntracers',mm)
-        j=nf90_inquire_dimension(ncid2,mm,len=nwild(5))
-        if(nwild(1)/=np_global.or.nwild(2)/=ne_global.or.nwild(3)/=ns_global.or. &
+        if(myrank==0) then
+          !Sanity check dims
+          nwild=-999 !init
+          j=nf90_inq_dimid(ncid2,'node',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(1))
+          j=nf90_inq_dimid(ncid2,'elem',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(2))
+          j=nf90_inq_dimid(ncid2,'side',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(3))
+          j=nf90_inq_dimid(ncid2,'nVert',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(4))
+          j=nf90_inq_dimid(ncid2,'ntracers',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(5))
+          if(nwild(1)/=np_global.or.nwild(2)/=ne_global.or.nwild(3)/=ns_global.or. &
      &nwild(4)/=nvrt.or.nwild(5)/=ntracers) then
-          write(errmsg,*)'init: nc dim mismatch,',nwild(1:5),np_global,ne_global,ns_global,nvrt,ntracers
-          call parallel_abort(errmsg)
-        endif
+            write(errmsg,*)'init: nc dim mismatch,',nwild(1:5),np_global,ne_global,ns_global,nvrt,ntracers
+            call parallel_abort(errmsg)
+          endif
 
-        j=nf90_inq_varid(ncid2, "time",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc time1')
-        j=nf90_get_var(ncid2,mm,time);
-        if(j/=NF90_NOERR) call parallel_abort('init: nc time2')
-        j=nf90_inq_varid(ncid2, "iths",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc iths1')
-        j=nf90_get_var(ncid2,mm,iths)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc iths2')
-        j=nf90_inq_varid(ncid2, "ifile",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ifile1')
-        j=nf90_get_var(ncid2,mm,ifile);
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ifile2')
+          j=nf90_inq_varid(ncid2, "time",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc time1')
+          j=nf90_get_var(ncid2,mm,time);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc time2')
+          j=nf90_inq_varid(ncid2, "iths",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc iths1')
+          j=nf90_get_var(ncid2,mm,iths)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc iths2')
+          j=nf90_inq_varid(ncid2, "ifile",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ifile1')
+          j=nf90_get_var(ncid2,mm,ifile);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ifile2')
+        endif !myrank==0
+        call mpi_bcast(time,1,rtype,0,comm,istat)
+        call mpi_bcast(iths,1,itype,0,comm,istat)
+        call mpi_bcast(ifile,1,itype,0,comm,istat)
 
         ! Element data
-        j=nf90_inq_varid(ncid2, "idry_e",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e')
-        j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ne_global/))
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e2')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry_e",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ne_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e2')
+        endif !myrank==0
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat) !nwilds(ns_global)
+
         do i=1,ne_global
           if(iegl(i)%rank==myrank) then
             ie=iegl(i)%id
@@ -4942,11 +4952,17 @@
 !        allocate(swild98(ntracers,nvrt,ne_global),swild99(nvrt,ns_global),stat=istat)
 !        if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 !        swild99(nvrt,ns_global)=0 !touch memory
-        j=nf90_inq_varid(ncid2, "we",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc we')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "we",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc we')
+        endif
         do k=1,nvrt
-          j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/k,1/),(/1,ne_global/))
-          if(j/=NF90_NOERR) call parallel_abort('init: nc we2')
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/k,1/),(/1,ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc we2')
+          endif !myrank==0) 
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
           do i=1,ne_global
             if(iegl(i)%rank==myrank) then
               ie=iegl(i)%id
@@ -4955,6 +4971,7 @@
           enddo !i
         enddo !k
 
+        !Error: this could be a bottleneck
         j=nf90_inq_varid(ncid2, "tr_el",mm)
         if(j/=NF90_NOERR) call parallel_abort('init: nc tr_el')
         do i=1,ne_global
@@ -4975,10 +4992,14 @@
 !        endif
 
         ! Side data
-        j=nf90_inq_varid(ncid2, "idry_s",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s')
-        j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ns_global/))
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s2')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry_s",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ns_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s2')
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
+
         do i=1,ns_global
           if(isgl(i)%rank==myrank) then
             iside=isgl(i)%id
@@ -4986,11 +5007,17 @@
           endif
         enddo !i
 
-        j=nf90_inq_varid(ncid2, "su2",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc su2')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "su2",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc su2')
+        endif
         do k=1,nvrt
-          j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
-          if(j/=NF90_NOERR) call parallel_abort('init: nc su2b')
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc su2b')
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)         
+
           do i=1,ns_global
             if(isgl(i)%rank==myrank) then
               iside=isgl(i)%id
@@ -5006,11 +5033,17 @@
 !          write(88,*)swild99(:,1:ns_global)
 !        endif
 
-        j=nf90_inq_varid(ncid2, "sv2",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc sv2')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "sv2",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc sv2')
+        endif
         do k=1,nvrt
-          j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
-          if(j/=NF90_NOERR) call parallel_abort('init: nc sv2b')
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc sv2b')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
           do i=1,ns_global
             if(isgl(i)%rank==myrank) then
               iside=isgl(i)%id
@@ -5025,6 +5058,7 @@
 !        endif
 
         ! Node data
+        !Error: this could be a bottlenceck
         j=nf90_inq_varid(ncid2, "tr_nd",mm)
         if(j/=NF90_NOERR) call parallel_abort('init: nc tr_nd')
         do i=1,np_global
@@ -5056,14 +5090,19 @@
 !          write(88,*)swild98(:,:,1:np_global)
 !        endif
 
-        j=nf90_inq_varid(ncid2, "idry",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry')
-        j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/np_global/))
-        if(j/=NF90_NOERR) call parallel_abort('init: nc idry2')
-        j=nf90_inq_varid(ncid2, "eta2",mm);
-        if(j/=NF90_NOERR) call parallel_abort('init: nc eta2')
-        j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
-        if(j/=NF90_NOERR) call parallel_abort('init: nc eta2b')
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry2')
+          j=nf90_inq_varid(ncid2, "eta2",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc eta2')
+          j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc eta2b')
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)        
+
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             ip=ipgl(i)%id
@@ -5081,12 +5120,18 @@
         !gfortran requires all chars have same length
         ar_name(1:6)=(/'q2  ','xl  ','dfv ','dfh ','dfq1','dfq2'/)
         do m=1,6 !# of 2D node arrays
-          j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(m))),mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc node1')
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(m))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc node1')
+          endif
 
           do k=1,nvrt
-            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/k,1/),(/1,np_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc node2')
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/k,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc node2')
+            endif !myrank
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
             do i=1,np_global
               if(ipgl(i)%rank==myrank) then
                 ip=ipgl(i)%id
