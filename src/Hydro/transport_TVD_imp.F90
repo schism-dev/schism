@@ -19,6 +19,7 @@
 ! in the horizontal.
 !
 !  subroutine do_transport_tvd_imp
+!  function flux_lim
 !
 !===============================================================================
 !===============================================================================
@@ -487,11 +488,16 @@
                   b3=(4.d0*b3*b3+b4*b4+4.d0*b5*b5)*area(ie)
                   !-----------------Hu and Shu (1999)'s method----------------
                   b4=b1+b2+b3
+
+!Error: add PRODUCTION CPP
+#ifdef DEBUG
                   if(b4<0.d0.and.abs(b4)>1.0d-50) then
                     write(errmsg,*)'b4<0',b1,b2,b3,b4
                     call parallel_abort(errmsg)
                   endif
-                  wm(i)=1.0/((epsilon2+b4)*(epsilon2+b4))
+#endif
+
+                  wm(i)=1.0d0/((epsilon2+b4)*(epsilon2+b4))
                   !----test-------------- 
                   !wm1(i)=1.0/((epsilon2+b1+b2)*(epsilon2+b1+b2)); ! sum1=sum1+wm1(i)
                   !wm2(i)=1.0/((epsilon3+b3)*(epsilon3+b3)); 
@@ -532,10 +538,15 @@
                   sum1=sum1+b2
                   !wm(i)=1.d0
                   !sum1=sum1+1.d0
+
+!Error: PRODUCTION
+#ifdef DEBUG
                   if(.not.(wm(i)>=0.d0.or.wm(i)<0.d0)) then
                     write(errmsg,*)'wm(i)=nan',wts1(:,:,i,ie),tr_el(m,k,isten1(1:3,i,ie))
                     call parallel_abort(errmsg)
                   endif
+#endif
+
                 enddo !i
                 wm=wm/sum1 !final weight
 
@@ -639,7 +650,7 @@
                     cycle
                   endif
 
-                  !Open bnd side with inflow (must be wet elem)
+                  !Open bnd side with inflow (must be wet elem) or k<kbs(jsj)+1
                   iweno=.false.  !reset to upwind
                   ibnd=isbs(jsj) !global bnd #
                   !Find node indices on bnd segment for the 2 nodes (for type 4 b.c.)
@@ -658,24 +669,30 @@
                   do jj=1,natrm
                     if(ntrs(jj)<=0) cycle
 
-                    do ll=irange_tr(1,jj),irange_tr(2,jj)
-                      if(itrtype(jj,ibnd)==0) then !set to be same as interior (so cancel out below)
+                    if(itrtype(jj,ibnd)==0) then !set to be same as interior (so cancel out below)
+                      do ll=irange_tr(1,jj),irange_tr(2,jj)
                         trel_tmp_outside(ll)=trel_tmp(ll,k,i)
-                      else if(itrtype(jj,ibnd)==1.or.itrtype(jj,ibnd)==2) then
+                      enddo !ll
+                    else if(itrtype(jj,ibnd)==1.or.itrtype(jj,ibnd)==2) then
+                      do ll=irange_tr(1,jj),irange_tr(2,jj)
                         trel_tmp_outside(ll)=trobc(jj,ibnd)*trth(ll,1,1,ibnd)+(1-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                      else if(itrtype(jj,ibnd)==3) then
+                      enddo !ll
+                    else if(itrtype(jj,ibnd)==3) then
+                      do ll=irange_tr(1,jj),irange_tr(2,jj)
                         tmp=sum(tr_nd0(ll,k,elnode(1:i34(i),i))+tr_nd0(ll,k-1,elnode(1:i34(i),i)))/2.d0/real(i34(i),rkind)
                         trel_tmp_outside(ll)=trobc(jj,ibnd)*tmp+(1.d0-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                      else if(itrtype(jj,ibnd)==4) then
+                      enddo !ll
+                    else if(itrtype(jj,ibnd)==4) then
+                      do ll=irange_tr(1,jj),irange_tr(2,jj)
                         trel_tmp_outside(ll)=trobc(jj,ibnd)* &
        &(trth(ll,k,ind1,ibnd)+trth(ll,k,ind2,ibnd)+trth(ll,k-1,ind1,ibnd)+trth(ll,k-1,ind2,ibnd))/4.d0+ &
        &(1.d0-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                      else
-                        write(errmsg,*)'TRASNPORT: INVALID VALUE FOR ITRTYPE:',jj,ibnd
+                      enddo !ll
+                    else
+                      write(errmsg,*)'TRASNPORT: INVALID VALUE FOR ITRTYPE:',jj,ibnd
   !'
-                        call parallel_abort(errmsg)
-                      endif !itrtype
-                    enddo !ll
+                      call parallel_abort(errmsg)
+                    endif !itrtype
 
                   enddo !jj
 
@@ -871,16 +888,24 @@
 #endif
                 if(ie<0) then !outside 1-tier aug. domain
                   ie=iabs(ie) !global elem.
-!Error: eventually into DEBUG or assert mode
+
+!Error: add PRODUCTION CPP for the following 2 checks?
+#ifdef DEBUG
                   if(iegl2(1,ie)/=myrank) then
                     write(errmsg,*)'TVD: element outside:',ie
                     call parallel_abort(errmsg)
                   endif
+#endif
+
                   ind1=iegl2(2,ie) !local elem. index in 2-tier aug. domain
+
+#ifdef DEBUG
                   if(ind1<=nea.or.ind1>nea2) then
                     write(errmsg,*)'TVD: element wrong:',ind1,nea,nea2
                     call parallel_abort(errmsg)
                   endif
+#endif
+
                   ie=ind1
                 endif !ie<0
 
@@ -1186,7 +1211,7 @@
                   cycle
                 endif
        
-                !Open bnd side with _inflow_; compute trel_tmp from outside and save it as trel_tmp_outside(1:ntr)
+                !Open bnd side with _inflow_ or k<kbs(jsj)+1; compute trel_tmp from outside and save it as trel_tmp_outside(1:ntr)
                 ibnd=isbs(jsj) !global bnd #
                 !Find node indices on bnd segment for the 2 nodes (for type 4 b.c.)
                 nwild(1:2)=0
@@ -1208,24 +1233,30 @@
                 do jj=1,natrm
                   if(ntrs(jj)<=0) cycle
 
-                  do ll=irange_tr(1,jj),irange_tr(2,jj)
-                    if(itrtype(jj,ibnd)==0) then !set to be same as interior (so cancel out below)
+                  if(itrtype(jj,ibnd)==0) then !set to be same as interior (so cancel out below)
+                    do ll=irange_tr(1,jj),irange_tr(2,jj)
                       trel_tmp_outside(ll)=trel_tmp(ll,k,i)
-                    else if(itrtype(jj,ibnd)==1.or.itrtype(jj,ibnd)==2) then
+                    enddo !ll
+                  else if(itrtype(jj,ibnd)==1.or.itrtype(jj,ibnd)==2) then
+                    do ll=irange_tr(1,jj),irange_tr(2,jj)
                       trel_tmp_outside(ll)=trobc(jj,ibnd)*trth(ll,1,1,ibnd)+(1.d0-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                    else if(itrtype(jj,ibnd)==3) then
+                    enddo
+                  else if(itrtype(jj,ibnd)==3) then
+                    do ll=irange_tr(1,jj),irange_tr(2,jj)
                       tmp=sum(tr_nd0(ll,k,elnode(1:i34(i),i))+tr_nd0(ll,k-1,elnode(1:i34(i),i)))/2.d0/real(i34(i),rkind)
                       trel_tmp_outside(ll)=trobc(jj,ibnd)*tmp+(1.d0-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                    else if(itrtype(jj,ibnd)==4) then
+                    enddo
+                  else if(itrtype(jj,ibnd)==4) then
+                    do ll=irange_tr(1,jj),irange_tr(2,jj)
                       trel_tmp_outside(ll)=trobc(jj,ibnd)* &
      &(trth(ll,k,ind1,ibnd)+trth(ll,k,ind2,ibnd)+trth(ll,k-1,ind1,ibnd)+trth(ll,k-1,ind2,ibnd))/4.d0+ &
      &(1.d0-trobc(jj,ibnd))*trel_tmp(ll,k,i)
-                    else
-                      write(errmsg,*)'TRASNPORT: INVALID VALUE FOR ITRTYPE:',jj,ibnd
+                    enddo
+                  else
+                    write(errmsg,*)'TRASNPORT: INVALID VALUE FOR ITRTYPE:',jj,ibnd
 !'
-                      call parallel_abort(errmsg)
-                    endif !itrtype
-                  enddo !ll
+                    call parallel_abort(errmsg)
+                  endif !itrtype
                 enddo !jj
 
                 !Tally horizontal mass in fro inflow case
@@ -1265,10 +1296,13 @@
 !                call parallel_abort(errmsg)
 !              endif
 
+!Error: PRODUCTION
+#ifdef DEBUG
               if(1.d0-dtb_by_bigv*psumtr(jj)<0.d0) then
                 write(errmsg,*)'Courant # condition violated:',ielg(i),k,1-dtb_by_bigv*psumtr(jj),jj,dtb,bigv
                 call parallel_abort(errmsg)
               endif
+#endif
             enddo !jj
 
             tr_el(1:ntr,k,i)=adv_tr(1:ntr) 
@@ -1863,3 +1897,35 @@
 !      deallocate(psum2)
 
       end subroutine do_transport_tvd_imp
+
+!===============================================================================
+!     Flux limiter functions used in TVD schemes
+!===============================================================================
+      function flux_lim(ss)
+      use schism_glbl, only : rkind,errmsg
+      use schism_msgp, only : parallel_abort
+      implicit none
+   
+      real(rkind) :: flux_lim
+      real(rkind), intent(in) :: ss !upwind ratio
+!      character(len=2), intent(in) :: flimiter
+
+#ifdef TVD_SB
+      !Superbee
+      flux_lim=max(0.d0,min(1.d0,2.0d0*ss),min(2.d0,ss))
+#elif TVD_VL
+      !Van Leer
+      flux_lim=(ss+abs(ss))/(1.0d0+abs(ss))
+#elif TVD_MM
+      !MINMOD
+      flux_lim=max(0.d0,min(1.d0,ss))
+#elif TVD_OS
+      !OSHER
+      flux_lim=max(0.d0,min(2.d0,ss))
+#else
+      write(errmsg,*)'TVD limiter not defined'
+      call parallel_abort(errmsg)
+#endif
+
+      end function flux_lim
+

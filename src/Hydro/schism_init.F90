@@ -101,7 +101,7 @@
 
 !     Functions
       integer :: lindex_s,omp_get_num_threads,omp_get_thread_num
-      real(rkind) :: covar,signa,eqstate
+      real(rkind) :: covar,signa3,eqstate
 
 !     Output handles
       character(len=2) :: stringvalue
@@ -2190,10 +2190,10 @@
           enddo !j
           
           !Area of the 'quad'
-          ar1=signa(swild10(1,1),swild10(1,2),swild10(1,3),swild10(2,1),swild10(2,2),swild10(2,3))
-          ar2=signa(swild10(1,1),swild10(1,3),swild10(1,4),swild10(2,1),swild10(2,3),swild10(2,4))
-          ar3=signa(swild10(1,1),swild10(1,2),swild10(1,4),swild10(2,1),swild10(2,2),swild10(2,4))
-          ar4=signa(swild10(1,2),swild10(1,3),swild10(1,4),swild10(2,2),swild10(2,3),swild10(2,4))
+          ar1=signa3(swild10(1,1),swild10(1,2),swild10(1,3),swild10(2,1),swild10(2,2),swild10(2,3))
+          ar2=signa3(swild10(1,1),swild10(1,3),swild10(1,4),swild10(2,1),swild10(2,3),swild10(2,4))
+          ar3=signa3(swild10(1,1),swild10(1,2),swild10(1,4),swild10(2,1),swild10(2,2),swild10(2,4))
+          ar4=signa3(swild10(1,2),swild10(1,3),swild10(1,4),swild10(2,2),swild10(2,3),swild10(2,4))
           if(min(ar1,ar2,ar3,ar4)<=0.d0) then
 !$OMP       critical
             iabort=1
@@ -5744,3 +5744,19 @@
 !      deallocate(swild9)
 
       end subroutine schism_init
+
+!     Repeat signa to force inlining/vectorization
+!dir$ attributes forceinline :: signa3
+function signa3(x1,x2,x3,y1,y2,y3)
+!-------------------------------------------------------------------------------
+! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!-------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  implicit none
+  real(rkind) :: signa3
+  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+
+  signa3=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
+  
+end function signa3
+

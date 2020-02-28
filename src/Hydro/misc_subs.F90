@@ -3889,7 +3889,7 @@
       real(rkind), intent(out) :: arco(3)
  
       !Function
-      real(rkind) :: signa
+      real(rkind) :: signa2
       !Local
       integer :: j,nd,indx
       real(rkind) :: tmp,tmpmin,tmpmax,tmpsum
@@ -3922,8 +3922,8 @@
 !        endif !ics
 !      enddo !j
 
-      arco(1)=signa(xt,wild(2,1),wild(3,1),yt,wild(2,2),wild(3,2))/area(nnel)
-      arco(2)=signa(wild(1,1),xt,wild(3,1),wild(1,2),yt,wild(3,2))/area(nnel)
+      arco(1)=signa2(xt,wild(2,1),wild(3,1),yt,wild(2,2),wild(3,2))/area(nnel)
+      arco(2)=signa2(wild(1,1),xt,wild(3,1),wild(1,2),yt,wild(3,2))/area(nnel)
       arco(3)=1._rkind-arco(1)-arco(2)
       tmpmin=minval(arco)
 
@@ -4133,7 +4133,7 @@
       integer, intent(out) :: inside !/=0: inside -matters only if ifl=0
       real(rkind), intent(out) :: shapef(4)
 
-      real(rkind) :: signa
+      real(rkind) :: signa2
 
       integer :: i,in1,in2,nd,icaseno
       real(rkind) :: swild2(4),xi,eta,tmp
@@ -4156,7 +4156,7 @@
         do i=1,4
           in1=nxq(1,i,i34(ie))
           in2=nxq(2,i,i34(ie))
-          swild2(i)=signa(xel(in1,ie),xel(in2,ie),x,yel(in1,ie),yel(in2,ie),y)
+          swild2(i)=signa2(xel(in1,ie),xel(in2,ie),x,yel(in1,ie),yel(in2,ie),y)
         enddo !i
         tmp=minval(swild2(1:4))/area(ie)
         if(tmp>-small2) then
@@ -4474,7 +4474,7 @@
 
       !local variables
       real(rkind) :: a1(6,6),a2(6,6),p2(6),det,a3(6,6),xy_max,tmp
-      real(rkind) :: signa,x1,x2,x3,x4,y1,y2,y3,y4,xctr1,xctr2,yctr1,yctr2,s1,s2,wts(5,2)
+      real(rkind) :: signa2,x1,x2,x3,x4,y1,y2,y3,y4,xctr1,xctr2,yctr1,yctr2,s1,s2,wts(5,2)
       integer :: i,j,k,ie,je,je1,je2,jsj,istat,ntmp
       logical :: iremove
 
@@ -4678,7 +4678,7 @@
         wts(3,1)=(x1*x1+x2*x2+x3*x3+x1*x2+x2*x3+x3*x1)/6._rkind
         wts(4,1)=(x1*y1+x2*y2+x3*y3)/6._rkind+(x1*y2+x2*y1+x2*y3+x3*y2+x3*y1+x1*y3)/12._rkind
         wts(5,1)=(y1*y1+y2*y2+y3*y3+y1*y2+y2*y3+y3*y1)/6._rkind
-        s1=signa(x1,x2,x3,y1,y2,y3)
+        s1=signa2(x1,x2,x3,y1,y2,y3)
         
         if(i34(ie)==4) then
           wts(1,2)=(x1+x3+x4)/3._rkind
@@ -4686,7 +4686,7 @@
           wts(3,2)=(x1*x1+x3*x3+x4*x4+x1*x3+x3*x4+x4*x1)/6._rkind
           wts(4,2)=(x1*y1+x3*y3+x4*y4)/6._rkind+(x1*y3+x3*y1+x3*y4+x4*y3+x4*y1+x1*y4)/12._rkind
           wts(5,2)=(y1*y1+y3*y3+y4*y4+y1*y3+y3*y4+y4*y1)/6._rkind
-          s2=signa(x1,x3,x4,y1,y3,y4)
+          s2=signa2(x1,x3,x4,y1,y3,y4)
         endif
         if(abs((s1+s2-area(ie))/area(ie))>1d-8) then
           write(errmsg,*)'s1+s2/=area(ie)',s1+s2,area(ie),ie
@@ -5126,10 +5126,10 @@
 !      real(kind=8),intent(in) :: x1,x2,x3,y1,y2,y3 
 !      
 !      !local variables
-!      real(kind=8) :: sa,pl,signa,dist
+!      real(kind=8) :: sa,pl,signa2,dist
 !     
 !      iflag=0 
-!      sa=signa(x1,x2,x3,y1,y2,y3)
+!      sa=signa2(x1,x2,x3,y1,y2,y3)
 !      pl=(dist(x1,x2,y1,y2)+dist(x2,x3,y2,y3)+dist(x3,x1,y3,y1))/3d0
 !      if(abs(sa)<0.01*pl) then
 !        iflag=1
@@ -5300,12 +5300,12 @@
     
       !local variables
       integer :: i,j,k,icount
-      real(rkind) :: s1,s2,s3,signa
+      real(rkind) :: s1,s2,s3,signa2
     
       iflag=0
-      s1=signa(xi,xnd(1),xnd(2),yi,ynd(1),ynd(2))
-      s2=signa(xi,xnd(2),xnd(3),yi,ynd(2),ynd(3))
-      s3=signa(xi,xnd(3),xnd(1),yi,ynd(3),ynd(1))
+      s1=signa2(xi,xnd(1),xnd(2),yi,ynd(1),ynd(2))
+      s2=signa2(xi,xnd(2),xnd(3),yi,ynd(2),ynd(3))
+      s3=signa2(xi,xnd(3),xnd(1),yi,ynd(3),ynd(1))
       if(s1==0._rkind.or.s2==0._rkind.or.s3==0._rkind) then !pt is on side
         iflag=1
       endif
@@ -5760,3 +5760,18 @@
 ! End: SUBROUTINES AND FUNCTIONS FOR WENO 
 !===============================================================================
 !<weno
+
+!dir$ attributes forceinline :: signa2
+function signa2(x1,x2,x3,y1,y2,y3)
+!-------------------------------------------------------------------------------
+! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!-------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  implicit none
+  real(rkind) :: signa2
+  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+
+  signa2=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
+  
+end function signa2
+

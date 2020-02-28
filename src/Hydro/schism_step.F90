@@ -102,7 +102,7 @@
 
 !     External functions
       integer :: kronecker,lindex_s,omp_get_num_threads,omp_get_thread_num
-      real(rkind) :: eqstate,quad_int,signa
+      real(rkind) :: eqstate,quad_int !,signa
 
 !     Local variables
       integer :: istat,i,j,k,l,m,kk,mm,jj,ll,lll,nd,nd0,ie,ie0,iegb,icount, &

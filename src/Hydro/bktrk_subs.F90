@@ -732,7 +732,7 @@ end subroutine inter_btrack
 
       !Local
       !Function
-      real(rkind) :: covar,signa
+      real(rkind) :: covar,signa1
 
       integer :: idt,iflqs1,kbpl,iadptive,nnel0,jlev0,ie,npp,nd,ifl,i,n1, &
                  &n2,n3,kbb,ibelow,isd,in1,in2,j,jj
@@ -1124,7 +1124,7 @@ end subroutine inter_btrack
       real(rkind), intent(out) :: trm,arco(4),zrat,ztmp(nvrt),uuint,vvint,wwint
 
       !Function
-      real(rkind) :: signa
+      real(rkind) :: signa1
 
       !Local
       integer :: jk(4)
@@ -1241,8 +1241,8 @@ end subroutine inter_btrack
             call project_pt('g2l',xnd(jd2),ynd(jd2),znd(jd2),gcor0,frame0,xn2,yn2,zn2)
           endif !ics
           wild3(j,1)=xn1; wild3(j,2)=yn1 !save for computing centroid and nudging later
-          ar1=signa(xcg,xn1,xt,ycg,yn1,yt)    
-          ar2=signa(xcg,xt,xn2,ycg,yt,yn2)    
+          ar1=signa1(xcg,xn1,xt,ycg,yn1,yt)    
+          ar2=signa1(xcg,xt,xn2,ycg,yt,yn2)    
           wild2(j,1)=ar1; wild2(j,2)=ar2
           if(ar1>0._rkind.and.ar2>0._rkind) then
             call intersect2(xcg,xt,xn1,xn2,ycg,yt,yn1,yn2,iflag,xin,yin,tt1,tt2)
@@ -1458,7 +1458,7 @@ end subroutine inter_btrack
 !          call project_pt('g2l',xnd(k1),ynd(k1),znd(k1),gcor0,frame0,xn1,yn1,tmp)
 !          call project_pt('g2l',xnd(k2),ynd(k2),znd(k2),gcor0,frame0,xn2,yn2,tmp)
 !        endif !ics
-!        wild(i,1)=signa(xn1,xn2,xt,yn1,yn2,yt)
+!        wild(i,1)=signa1(xn1,xn2,xt,yn1,yn2,yt)
 !        !Save for debugging later
 !        xy_l(i,1)=xn1; xy_l(i,2)=yn1
 !      enddo !i
@@ -1516,8 +1516,8 @@ end subroutine inter_btrack
           call project_pt('g2l',xnd(jd1),ynd(jd1),znd(jd1),gcor0,frame0,xn1,yn1,tmp)
           call project_pt('g2l',xnd(jd2),ynd(jd2),znd(jd2),gcor0,frame0,xn2,yn2,tmp)
         endif !ics
-        ar1=signa(xcg,xn1,xt,ycg,yn1,yt)
-        ar2=signa(xcg,xt,xn2,ycg,yt,yn2)
+        ar1=signa1(xcg,xn1,xt,ycg,yn1,yt)
+        ar2=signa1(xcg,xt,xn2,ycg,yt,yn2)
         wild2(j,1)=ar1; wild2(j,2)=ar2
 !        if(ar1>=0.and.ar2>=0) then
         if(ar1>0._rkind.and.ar2>0._rkind) then
@@ -1755,3 +1755,18 @@ end subroutine inter_btrack
 ! END ELCIRC BACKTRACKING SUBROUTINES
 !===============================================================================
 !===============================================================================
+
+!dir$ attributes forceinline :: signa1
+function signa1(x1,x2,x3,y1,y2,y3)
+!-------------------------------------------------------------------------------
+! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!-------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  implicit none
+  real(rkind) :: signa1
+  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+
+  signa1=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
+  
+end function signa1
+
