@@ -1358,7 +1358,7 @@
 !'    Save the final array from horizontal part as trel_tmp
 !$OMP parallel default(shared) private(i,k,bigv_m,r_s,r_s0,m,iterK,rrat,phi,kup,kdo,psumtr, &
 !$OMP tmp,flux_mod_v1,flux_mod_v2,psum,l,srat,psi1,kin,ndim,alow,bdia,cupp,dt_by_bigv,denom, &
-!$OMP rrhs,soln,gam,term1,term6,strat1,strat2,bigv,av_df,av_dz,j,jsj,iel,nd1,nd2,hdif_tmp,av_h,difnum)
+!$OMP rrhs,soln,gam,term1,term6,strat1,strat2,bigv,av_df,av_dz,swild,j,jsj,iel,nd1,nd2,hdif_tmp,av_h,difnum)
 
 !$OMP workshare
       trel_tmp(1:ntr,:,1:nea)=tr_el(1:ntr,:,1:nea)
@@ -1717,6 +1717,18 @@
 !       Wet elements with 3 wet nodes
         ndim=nvrt-kbe(i) !# of eqs/unknowns
         do m=1,ntr !cycle through tracers
+          ! Vertical movement of POM (by Richard Hofmeister)
+          ! for vertically varying velocities of vertical movement.
+          ! If iwsett=0 (default), set wsett(nvrt|kbe)=0 (actually bypassed below with if) and use wsett(kbe(i)+1:nvrt-1) for
+          ! vertical velocities at whole levels
+          ! Limit wsett to avoid char line out of boundary 
+          do k=kbe(i),nvrt 
+            tmp=0.9*(ze(nvrt,i)-ze(kbe(i),i))/dt !>0; safety factor added
+!Error: to assert
+            if(tmp<=0) call parallel_abort('Transport:tmp<=0')
+            swild(k)=max(-tmp,min(tmp,wsett(m,k,i)))
+          enddo !k
+
           !Matrix
           alow=0.d0; bdia=1.d0; cupp=0.d0
           do k=kbe(i)+1,nvrt !prism
@@ -1724,15 +1736,6 @@
             bigv=area(i)*(ze(k,i)-ze(k-1,i)) !volume
             dt_by_bigv = dt/bigv
   
-            !Diffusivity & settling
-            ! Vertical movement of POM (by Richard Hofmeister)
-            ! for vertically varying velocities of vertical movement.
-            ! If iwsett=0 (default), set wsett(nvrt|kbe)=0 and use wsett(kbe(i)+1:nvrt-1) for
-            ! vertical velocities at whole levels
-   
-            !new22: set wsett=0 at some levels
-            !if(iwsett(m)==0.and.k>=nvrt/2) wsett(m,k,i)=max(0.d0,wsett(m,k,i))
-
             if(k<nvrt) then
               if(itur==5.and.m>=irange_tr(1,5).and.m<=irange_tr(1,5)) then !1018:itur==5
                 av_df=sum(dfhm(k,m-irange_tr(1,5)+1,elnode(1:i34(i),i)))/real(i34(i),rkind) !1007
@@ -1744,10 +1747,11 @@
               cupp(kin)=cupp(kin)-tmp
               bdia(kin)=bdia(kin)+tmp
 
-              if(wsett(m,k,i)<=0.0d0) then !upwinding for conc
-                bdia(kin) = bdia(kin) - area(i)*dt_by_bigv*wsett(m,k,i)
+              !if(wsett(m,k,i)<=0.0d0) then !upwinding for conc
+              if(swild(k)<=0.0d0) then !upwinding for conc
+                bdia(kin) = bdia(kin) - area(i)*dt_by_bigv*swild(k) !wsett(m,k,i)
               else
-                cupp(kin) = cupp(kin) - area(i)*dt_by_bigv*wsett(m,k,i)
+                cupp(kin) = cupp(kin) - area(i)*dt_by_bigv*swild(k) !wsett(m,k,i)
               endif
             endif !k<nvrt
 
@@ -1762,20 +1766,22 @@
               alow(kin)=alow(kin)-tmp
               bdia(kin)=bdia(kin)+tmp
 
-              if(wsett(m,k-1,i)<=0.0d0) then
-                alow(kin) = alow(kin) + area(i)*dt_by_bigv*wsett(m,k-1,i)
+              !if(wsett(m,k-1,i)<=0.0d0) then
+              if(swild(k-1)<=0.0d0) then
+                alow(kin) = alow(kin) + area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
               else
-                bdia(kin) = bdia(kin) + area(i)*dt_by_bigv*wsett(m,k-1,i)
+                bdia(kin) = bdia(kin) + area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
               endif
             endif !k>
 
             !Extra terms for sediment at bottom
             if(iwsett(m)==1.and.k==kbe(i)+1) then
-              if(wsett(m,k-1,i)<0.0d0) then
-                write(errmsg,*)'TRAN_IMP: wsett<0,',m,k,ielg(i),wsett(m,k-1,i)
+              !if(wsett(m,k-1,i)<0.0d0) then
+              if(swild(k-1)<0.0d0) then
+                write(errmsg,*)'TRAN_IMP: wsett<0,',m,k,ielg(i),swild(k-1) !wsett(m,k-1,i)
                 call parallel_abort(errmsg)   
               endif
-              bdia(kin)=bdia(kin)+area(i)*dt_by_bigv*wsett(m,k-1,i)
+              bdia(kin)=bdia(kin)+area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
             endif !k==kbe(i)+1
          
             !# of column=1 as tracer loop is outside

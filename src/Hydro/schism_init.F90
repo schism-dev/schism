@@ -4377,6 +4377,7 @@
       CALL read_sed_input
 !     Allocation of sediment arrays
       CALL sed_alloc
+!Error: the following is redundant with read_sed_input
       if(itur==5) iwsett(irange_tr(1,5):irange_tr(2,5))=1 !171217
 #endif /*USE_SED*/
 
