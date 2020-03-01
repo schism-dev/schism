@@ -1,3 +1,5 @@
+Changes in param.in and main parameter inputs for other modules:
+
 Github versions:
 
 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
@@ -13,7 +15,6 @@ Github versions:
 f69ca44 (Sep 9, 2019): updated nc libs in GOTM3 make;
 ---------------------------------------------------------------
 SVN versions:
-Changes in param.in and main parameter inputs for other modules:
 R5217: replaced bottom friction coefficient output with bottom stress vector output;
 R5204: added an option 'ibtrack_openbnd' - ibtrack_openbnd=0 recovers old results, but try '1';
 R5191: fixed a bug in iwind_form;
@@ -414,6 +415,8 @@ git versions:
 (99) 6cec698: bug fix for spherical coord in WWM (around dateline);
 (100) c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
 (101) d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
+(102) 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
+
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
