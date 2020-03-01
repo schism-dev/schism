@@ -232,7 +232,7 @@
       uorbp  = 0.0d0
 
       ! RUNTIME
-      time=dt*it
+      time=dt*dble(it)
 
 !---------------------------------------------------------------------
 !     Dumping/dredging
@@ -256,7 +256,7 @@
           enddo
         endif !first_call
  
-        if(ised_dump/=0.and.abs(t_dump-time)<1.e-4) then !in case end of file
+        if(ised_dump/=0.and.abs(t_dump-time)<1.d-4) then !in case end of file
           allocate(ie_dump(ne_dump),vol_dump(ne_dump),stat=l)
           if(l/=0) call parallel_abort('SED: alloc (9)')
           read(18,*)(ie_dump(l),vol_dump(l),l=1,ne_dump)
@@ -269,7 +269,7 @@
               i=iegl(ie)%id !local index
               cff=vol_dump(l)/area(i) !m
               tmp=bed(top,i,ithck)+cff
-              if(tmp>0) then !enough sed on top
+              if(tmp>0.d0) then !enough sed on top
                 bed(top,i,ithck)=tmp
               else !re-init.
                 tmp=max(0.d0,sum(bed(:,i,ithck))+cff)
@@ -305,10 +305,10 @@
         kpeak = 0.0d0
         DO j = 1,i34(i)
 !          htot      = htot + (dp(elnode(j,i))+eta2(elnode(j,i)))/i34(i)
-          hs(i)     = hs(i) + out_wwm(elnode(j,i),1)/i34(i)
-          tp(i)     = tp(i) + out_wwm(elnode(j,i),12)/i34(i)
-          wlpeak(i) = wlpeak(i) + out_wwm(elnode(j,i),17)/i34(i) !Peak wave length
-          uorb(i)   = uorb(i) + out_wwm(elnode(j,i),22)/i34(i) !orbital vel.
+          hs(i)     = hs(i) + out_wwm(elnode(j,i),1)/dble(i34(i))
+          tp(i)     = tp(i) + out_wwm(elnode(j,i),12)/dble(i34(i))
+          wlpeak(i) = wlpeak(i) + out_wwm(elnode(j,i),17)/dble(i34(i)) !Peak wave length
+          uorb(i)   = uorb(i) + out_wwm(elnode(j,i),22)/dble(i34(i)) !orbital vel.
         ENDDO !j 
         ! * FG - Uorbp unused now
         !kpeak    = 2.0d0*pi/wlpeak(i)
@@ -344,20 +344,20 @@
       IF (sed_morph.GE.1) THEN
 
         ! Identify open boundaries and impose flux of 0 for JCG
-        bc_sed = -9999 !flags
+        bc_sed = -9999.d0 !flags
         DO i=1,nope_global
           DO j=1,nond_global(i)
             nd = iond_global(i,j) !global
             IF(ipgl(nd)%rank==myrank) THEN
               ip = ipgl(nd)%id
-              bc_sed(ip) = 0
+              bc_sed(ip) = 0.d0
             ENDIF !ipgl(nd)%rank==myrank
           ENDDO !End loop nond_global
         ENDDO !End loop nope_global
 
         ! Compute b.c. flag for all nodes for the matrix
         DO i=1,npa
-          IF(bc_sed(i)>-9998) THEN
+          IF(bc_sed(i)>-9998.d0) THEN
             lbc_sed(i)=.TRUE.
           ELSE
             lbc_sed(i)=.FALSE.
@@ -373,7 +373,7 @@
 
         !Use in some routines
         smgd  = (Srho(ised)/rhom-1.0d0)*g*Sd50(ised)
-        if(smgd<=0) call parallel_abort('SED3D: smgd<=0')
+        if(smgd<=0.d0) call parallel_abort('SED3D: smgd<=0')
         osmgd = 1.0d0/smgd
         smgdr = SQRT(smgd)*Sd50(ised)
 
@@ -447,8 +447,8 @@
 !---------------------------------------------------------------------
 ! - Diffusive fluxes in flow direction (Fortunato et al., 2009; eq 2)
 !---------------------------------------------------------------------
-          FX_r(i) = FX_r(i)+bdldiffu*(1.0-porosity)*DABS(FX_r(i))*dzdx
-          FY_r(i) = FY_r(i)+bdldiffu*(1.0-porosity)*DABS(FY_r(i))*dzdy
+          FX_r(i) = FX_r(i)+bdldiffu*(1.0d0-porosity)*DABS(FX_r(i))*dzdx
+          FY_r(i) = FY_r(i)+bdldiffu*(1.0d0-porosity)*DABS(FY_r(i))*dzdy
 
 !---------------------------------------------------------------------
 ! - Consistency check
@@ -499,8 +499,8 @@
           ENDDO ! End loop nne
 
           if(ks==0) call parallel_abort('SED3D: (4)')
-          bedldu(i,ised) = bedldu(i,ised)/ks
-          bedldv(i,ised) = bedldv(i,ised)/ks
+          bedldu(i,ised) = bedldu(i,ised)/dble(ks)
+          bedldv(i,ised) = bedldv(i,ised)/dble(ks)
         ENDDO !End loop np
 
 
@@ -551,10 +551,10 @@
         ENDDO !End loop ntracer
 
         ! Update mean bottom properties
-        if(cff5<0) then
+        if(cff5<0.d0) then
           WRITE(errmsg,*)'SED3D: cff5<0 (2); ',cff5
           call parallel_abort(errmsg)
-        else if(cff5==0) then
+        else if(cff5==0.d0) then
           !WRITE(12,*)'SED3D: all eroded at elem. ',ielg(i),it
           !Care takers
           bottom(i,itauc) = tau_ce(1)
@@ -616,21 +616,21 @@
 
                 !aref=ta*we(kbe(i)+1,i) !w-vel. at ref. height                
                 !Estimate the starting pt
-                cff8=(ze(kbe(i)+1,i)+ze(kbe(i),i))/2 !bottom half cell -starting pt of ELM
+                cff8=(ze(kbe(i)+1,i)+ze(kbe(i),i))/2.d0 !bottom half cell -starting pt of ELM
                 cff9=cff8+Wsed(ised)*dt !>cff8; foot of char.
                 if(cff9<=cff8) call parallel_abort('SED: (9)')
                 Ksed=nvrt+1 !init. for abnormal case
                 do k=kbe(i)+2,nvrt
-                  if(cff9<=(ze(k,i)+ze(k-1,i))/2) then
+                  if(cff9<=(ze(k,i)+ze(k-1,i))/2.d0) then
                     Ksed=k
                     exit
                   endif
                 enddo !k
 
-                depo_mss=0 !(min(cff9,cff8)-ze(kbe(i),i))*tr_el(indx,kbe(i)+1,i)
+                depo_mss=0.d0 !(min(cff9,cff8)-ze(kbe(i),i))*tr_el(indx,kbe(i)+1,i)
                 do k=kbe(i)+2,min(nvrt,Ksed)
-                  cff7=(ze(k-2,i)+ze(k-1,i))/2
-                  cff8=(ze(k,i)+ze(k-1,i))/2
+                  cff7=(ze(k-2,i)+ze(k-1,i))/2.d0
+                  cff8=(ze(k,i)+ze(k-1,i))/2.d0
                   if(cff9<cff7) then
                     WRITE(errmsg,*)'SED, wrong cff9:',cff9,cff7,ielg(i),ised,k
                     CALL parallel_abort(errmsg)
@@ -638,22 +638,22 @@
 
                   if(cff9<cff8) then
                     cff5=(cff9-cff7)/(cff8-cff7) !ratio
-                    if(cff5<0.or.cff5>1) then
+                    if(cff5<0.d0.or.cff5>1.d0) then
                       WRITE(errmsg,*)'SED, wrong ratio:',cff5,ielg(i),ised,k 
                       CALL parallel_abort(errmsg)
                     endif
-                    cff6=(1-cff5)*tr_el(indx,k-1,i)+cff5*tr_el(indx,k,i) !conc @upper layer
+                    cff6=(1.d0-cff5)*tr_el(indx,k-1,i)+cff5*tr_el(indx,k,i) !conc @upper layer
                   else
                     cff6=tr_el(indx,k,i)
                   endif
 
-                  depo_mss=depo_mss+(cff6+tr_el(indx,k-1,i))/2*(min(cff9,cff8)-cff7) !>=0
+                  depo_mss=depo_mss+(cff6+tr_el(indx,k-1,i))/2.d0*(min(cff9,cff8)-cff7) !>=0
                   !depo_mss=depo_mss+cff6*(min(cff9,cff8)-cff7) !>=0 (lower depos. flux)
                 enddo !k
 
                 !Deal with above F.S. case
                 if(Ksed==nvrt+1) then
-                  cff7=(ze(nvrt,i)+ze(nvrt-1,i))/2
+                  cff7=(ze(nvrt,i)+ze(nvrt-1,i))/2.d0
                   depo_mss=depo_mss+(min(ze(nvrt,i),cff9)-cff7)*tr_el(indx,nvrt,i)
                 endif
 
@@ -669,12 +669,12 @@
                 else if(ierosion==1) then 
                   !Winterwerp et al. (JGR, vol 117, 2012, C10020); eq. (15)
                   cff2=tau_wc(i)/tau_ce(ised) !tau_b/tau_cr [-]
-                  if(cff2<0.52) then
-                    cff4=0
-                  else if(cff2<=1.7) then
-                    cff4=-0.144*cff2**3+0.904*cff2*cff2-0.823*cff2+0.204 ![-]
+                  if(cff2<0.52d0) then
+                    cff4=0.d0
+                  else if(cff2<=1.7d0) then
+                    cff4=-0.144d0*cff2**3.d0+0.904d0*cff2*cff2-0.823d0*cff2+0.204d0 ![-]
                   else
-                    cff4=cff2-1 ![-]
+                    cff4=cff2-1.d0 ![-]
                   endif !cff2
                   cff3=tau_ce(ised)*rhom ![Pa]; tau_ce: critical shear stress in m^2/s/s
                   eros_mss=Erate(ised)*cff3*cff4 !kg/m/m/s; Erate (M_E in original paper) in [s/m]
@@ -699,7 +699,7 @@
                   depo_mss=depo_mss*morph_fac(ised)
 
 ! - Depth change due to erosion/deposition of suspended sediment
-                  if(bed(top,i,iporo)==1) then
+                  if(bed(top,i,iporo)==1.d0) then
                     WRITE(errmsg,*)'SED3D: bed(top,i,iporo)==1; ',top,i,iporo
                     CALL parallel_abort(errmsg)
                   endif
@@ -721,7 +721,7 @@
                 bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)-eros_mss+depo_mss,0.0d0)
                 DO k=2,Nbed
                   bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
-                  if(bed_mass(k,i,nnew,ised)<0) then
+                  if(bed_mass(k,i,nnew,ised)<0.d0) then
                     WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
                     CALL parallel_abort(errmsg)
                   endif
@@ -761,7 +761,7 @@
                   depo_mss=depo_mss*morph_fac(ised)
 
                   ! - Depth change due to erosion/deposition of suspended sediment
-                  if(bed(top,i,iporo)==1) then
+                  if(bed(top,i,iporo)==1.d0) then
                     WRITE(errmsg,*)'SED3D: bed(top,i,iporo)==1; ',top,i,iporo
                     CALL parallel_abort(errmsg)
                   endif
@@ -782,7 +782,7 @@
                 bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)-eros_mss+depo_mss,0.0d0)
                 DO k=2,Nbed
                   bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
-                  if(bed_mass(k,i,nnew,ised)<0) then
+                  if(bed_mass(k,i,nnew,ised)<0.d0) then
                     WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
                     CALL parallel_abort(errmsg)
                   endif
@@ -843,7 +843,7 @@
 
               ! Set new top layer parameters.
               DO ised=1,ntr_l
-                if(dep_mass(i,ised)<0) then
+                if(dep_mass(i,ised)<0.d0) then
                   WRITE(errmsg,*)'SED3D: dep_mass(i,ised)<0; ',dep_mass(i,ised),i,ised
                   CALL parallel_abort(errmsg)
                 endif
@@ -862,7 +862,7 @@
           DO k=1,Nbed
             cff3=0.0d0 !total mass
             DO ised=1,ntr_l
-              if(bed_mass(k,i,nnew,ised)<0) then
+              if(bed_mass(k,i,nnew,ised)<0.d0) then
                 WRITE(errmsg,*)'SED3D, mass<0(3):',bed_mass(k,i,nnew,ised),k,ielg(i),ised 
                 CALL parallel_abort(errmsg)
               endif
@@ -871,7 +871,7 @@
 
             cff3=max(cff3,eps)
             bed(k,i,ithck) = 0.0d0
-            if(bed(k,i,iporo)==1) call parallel_abort('SED3D: div. by 0 (6)')
+            if(bed(k,i,iporo)==1.d0) call parallel_abort('SED3D: div. by 0 (6)')
 !'
             DO ised=1,ntr_l
               bed_frac(k,i,ised)=bed_mass(k,i,nnew,ised)/cff3
@@ -936,16 +936,16 @@
               ENDIF
             ENDDO !k
 
-            IF(thck_avail<0) THEN
+            IF(thck_avail<0.d0) THEN
               write(errmsg,*)'SED3D: thck_avail<0:',ielg(i),thck_avail
               CALL parallel_abort(errmsg)
-            ELSE IF(thck_avail==0) THEN
+            ELSE IF(thck_avail==0.d0) THEN
               write(12,*)'SED3D: not enough sed; likely all eroded:', &
      &ielg(i),thck_avail,thck_to_add,bed(:,i,ithck),it
               bottom(i,iactv)=bed(top,i,ithck) !0326
-              bed(2:Nbed,i,ithck)=0
-              bed_frac(2:Nbed,i,:)=0
-              bed_mass(2:Nbed,i,nnew,:)=0
+              bed(2:Nbed,i,ithck)=0.d0
+              bed_frac(2:Nbed,i,:)=0.d0
+              bed_mass(2:Nbed,i,nnew,:)=0.d0
 
 !              bed(:,i,ithck)=0
 !              bed_frac(:,i,:)=0
@@ -970,7 +970,7 @@
                   cff1 = cff1+bed_mass(k,i,nnew,ised)
                 ENDDO
                 cff3 = cff2*bed_mass(Ksed,i,nnew,ised) !what's left there
-                if(cff1-cff3<0) then
+                if(cff1-cff3<0.d0) then
                   write(errmsg,*)'SED3D, cff1-cff3<0:',ielg(i),cff1-cff3
                   CALL parallel_abort(errmsg)
                 endif
@@ -1010,7 +1010,7 @@
 ! Split bottom-most layer to make Nbed layers in total and
 ! conserve total mass
               if(ks+1==0) call parallel_abort('SED3D: ks+1==0')
-              cff=1.0d0/(ks+1) !fraction
+              cff=1.0d0/dble(ks+1) !fraction
               DO k=Nbed,Nbed-ks,-1
                 bed(k,i,ithck) = bed(Nbed-ks,i,ithck)*cff
                 bed(k,i,iaged) = bed(Nbed-ks,i,iaged)
@@ -1049,10 +1049,10 @@
           cff5 = cff5+bed_frac(top,i,ised)
         ENDDO !ntr_l
 
-        if(cff5<0) then
+        if(cff5<0.d0) then
           WRITE(errmsg,*)'SED3D: cff5<0 (1); ',cff5
           call parallel_abort(errmsg)
-        else if(cff5==0) then
+        else if(cff5==0.d0) then
           !WRITE(12,*)'SED3D: all eroded at elem. (2):',ielg(i),it
           !Caretakers
           bottom(i,itauc) = tau_ce(1)
@@ -1095,13 +1095,13 @@
           bed_d50n(i)=bed_d50n(i)+bottom(ie,isd50)*area(ie)
           DO ised=1,ntr_l
             bed_fracn(i,ised)=bed_fracn(i,ised)+bed_frac(1,ie,ised)*area(ie)
-            if(bed_frac(1,ie,ised)<0) then
+            if(bed_frac(1,ie,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D, frac<0 (1):',bed_frac(1,ie,ised),ielg(ie)
               CALL parallel_abort(errmsg)
             endif
           ENDDO !ised
         ENDDO !j
-        IF(ta.EQ.0) THEN
+        IF(ta.EQ.0.d0) THEN
           CALL parallel_abort('SEDIMENT: elem2nod (1)')
         ELSE
           bed_d50n(i)=bed_d50n(i)/ta
@@ -1145,7 +1145,7 @@
           bed(1,i,ithck)=tmp !bedthick_overall
           DO ised=1,ntr_l
             bed_mass(1,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(1,i,iporo))*bed_frac(1,i,ised)
-            if(bed_mass(1,i,nnew,ised)<0) then
+            if(bed_mass(1,i,nnew,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D: mass<0; ',bed_mass(1,i,nnew,ised),i,nnew,ised
               CALL parallel_abort(errmsg)
             endif
@@ -1175,8 +1175,8 @@
         DO i=1,np
           IF(idry(i)==1) CYCLE
   
-          tmp = 0
-          ta = 0
+          tmp = 0.d0
+          ta = 0.d0
           DO j=1,nne(i)
             ie=indel(j,i)
             IF(idry_e(ie)==0) THEN
@@ -1185,7 +1185,7 @@
             ENDIF
           ENDDO !j
 
-          IF(ta==0) THEN
+          IF(ta==0.d0) THEN
             CALL parallel_abort('SEDIMENT: (4)')
           ELSE
             hdep_nd(i)=tmp/ta
@@ -1222,7 +1222,7 @@
 ! Only if sed_morph==1, else, no application of depth changes:
 ! no morphology or BCG
 !---------------------------------------------------------------------
-        IF(sed_morph==1.and.time_stamp>=sed_morph_time*86400) THEN
+        IF(sed_morph==1.and.time_stamp>=sed_morph_time*86400.d0) THEN
           DO i=1,np
             dp(i)=dp(i)+dhnd(i)
 !           Impose bare rock limit
@@ -1236,7 +1236,7 @@
       ENDIF ! End sed_morph >=1 (Morpho or BCG)
 
 !     Output to main routine the total bed mass (kg)
-      cff=0
+      cff=0.d0
       do i=1,ne
         do k=1,Nbed
           do ised=1,ntr_l
@@ -1269,7 +1269,7 @@
    
       real(rkind) :: ERF
       real(rkind), intent(in) ::x
-      ERF=2.d0/SQRT(pi)*(x-x**3.0/3.d0+x**5.0/10.d0-x**7.d0/42.d0+x**9.d0/216.d0)
+      ERF=2.d0/SQRT(pi)*(x-x**3.0d0/3.d0+x**5.0d0/10.d0-x**7.d0/42.d0+x**9.d0/216.d0)
       END FUNCTION ERF
 
 
@@ -1339,8 +1339,8 @@
           indx=isand(ised) !into 1:ntracers
           if(cff0.LE.Thero_ustar) cff0=Thero_ustar
           s=Srho(ised)/rho0
-          cff5=((s-1)*grav*Sd50(ised))**0.5d0
-          theta(ised)=min(10.d0,max(1.d-14,cff0*cff0/(grav*Sd50(ised)*(s-1))))            !Shields number
+          cff5=((s-1.d0)*grav*Sd50(ised))**0.5d0
+          theta(ised)=min(10.d0,max(1.d-14,cff0*cff0/(grav*Sd50(ised)*(s-1.d0))))            !Shields number
           thetal=4.d0/(3.d0*Clift)
           Rep(ised)=cff0*Sd50(ised)/nuf                                !Sediment reynolds number
           if (Rep(ised).LE.1.d-14) THEN
@@ -1352,9 +1352,9 @@
           theta_cr(ised)=thetacr(Dstar(ised))
           Dpm(ised)=1.2d0*(1.d0-exp(-0.095d0*Dstar(ised)))                             !Dp
 !********************************************************************* above is the 
-          tau_p(ised)=s*Wsed(ised)/((s-1)*grav)                      
+          tau_p(ised)=s*Wsed(ised)/((s-1.d0)*grav)                      
           tau_f(ised)=0.4d0*kf*refht*Sd50(ised)/muf/cff0
-          cff1=tau_f(ised)/tau_p(ised)*(1+2.d0*s)                                       !beta
+          cff1=tau_f(ised)/tau_p(ised)*(1.d0+2.d0*s)                                       !beta
           cff2=(3.d0+cff1)/(1.d0+cff1+2.d0*s)                                           !Ct
           Keci(ised)=2.d0*cff2*cff2*Dpm(ised)/(3.d0*muf)
           if (Keci(ised).LE.1.d-10) THEN
@@ -1372,13 +1372,13 @@
           select case(flag)
             case(0) !Zhong
               upstmp=Spmax*Prob(ised)*sqrt(Keci(ised))*cff0
-              downstmp=sqrt(2.d0*pi)*(1+3.d0*Scdp(ised)*refht/(2.d0*s))
+              downstmp=sqrt(2.d0*pi)*(1.d0+3.d0*Scdp(ised)*refht/(2.d0*s))
               FAI=exp(-1.d0*(1.d0/theta(ised)-1.d0/thetal)*refht/(s*Keci(ised)))
               sedcaty(i,ised)=Erate(ised)*upstmp*FAI/downstmp
             case(1) !Van
               cff3=cff5*(theta_cr(ised))**0.5d0
               upstmp=max(0.d0,(cff0*cff0/cff3/cff3-1.d0))
-              sedcaty(i,ised)=Erate(ised)*0.00033*Dstar(ised)**0.3d0*upstmp**1.5d0*cff5
+              sedcaty(i,ised)=Erate(ised)*0.00033d0*Dstar(ised)**0.3d0*upstmp**1.5d0*cff5
             case(2) !Cao
               cff3=cff5*(theta_cr(ised))**0.5d0
               upstmp=max(0.d0,(cff0*cff0/cff3/cff3-1.d0))
@@ -1435,9 +1435,9 @@
    
       real(rkind) :: thetacr
       real(rkind), intent(in) ::D
-      if(D.LE.4.0) thetacr=0.24d0/D
-      if((D.GT.4.0).AND.(D.LE.10.0)) thetacr=0.14d0/(D**0.64d0)
-      if((D.GT.10.0).AND.(D.LE.20.0)) thetacr=0.04d0/(D**0.10d0)
-      if((D.GT.20.0).AND.(D.LE.150.0)) thetacr=0.013d0/(D**0.29d0)
-      if(D.GT.150.0) thetacr=0.055d0
+      if(D.LE.4.0d0) thetacr=0.24d0/D
+      if((D.GT.4.d0).AND.(D.LE.10.d0)) thetacr=0.14d0/(D**0.64d0)
+      if((D.GT.10.d0).AND.(D.LE.20.d0)) thetacr=0.04d0/(D**0.10d0)
+      if((D.GT.20.d0).AND.(D.LE.150.d0)) thetacr=0.013d0/(D**0.29d0)
+      if(D.GT.150.d0) thetacr=0.055d0
       end function thetacr 
