@@ -6,49 +6,32 @@
       SUBROUTINE SPHERICAL_COORDINATE_DISTANCE(PT1_LON, PT2_LON, PT1_LAT, PT2_LAT, DIST)
       USE DATAPOOL
       IMPLICIT NONE
-      REAL(rkind), intent(in)  :: PT1_LON, PT2_LON, PT1_LAT, PT2_LAT
-      REAL(rkind), intent(out) :: DIST
-      REAL(rkind) :: PT1_LON_LOC, PT2_LON_LOC, PT1_LAT_LOC, PT2_LAT_LOC
-      REAL(rkind) :: PT1_LON_RAD, PT2_LON_RAD, PT1_LAT_RAD, PT2_LAT_RAD
-      REAL(rkind) :: COEFF
-      REAL(rkind) :: x1, y1, z1, x2, y2, z2
-      REAL(rkind) :: scalprod
+      REAL(RKIND), intent(in)  :: PT1_LON, PT2_LON, PT1_LAT, PT2_LAT
+      REAL(RKIND), intent(out) :: DIST
+      REAL(RKIND) :: PT1_LON_RAD, PT2_LON_RAD, PT1_LAT_RAD, PT2_LAT_RAD
+      REAL(RKIND) :: COEFF
+      REAL(RKIND) :: X1, Y1, Z1, X2, Y2, Z2
+      REAL(RKIND) :: SCALPROD
 
       ! Point coordinates in a Cartesian grid
       COEFF = PI/180.0_rkind
 
-      ! Storing input coordinates, that won't be affected without elements overlapping dateline
-      PT1_LON_LOC = PT1_LON
-      PT1_LAT_LOC = PT1_LAT
-      PT2_LON_LOC = PT2_LON
-      PT2_LAT_LOC = PT2_LAT
-
-      ! Special treatment for elements overpassing the dateline
-      ! NB: this does not affect the node position as read by WWM
-      IF ((PT1_LON.LE.180.0).AND.(PT1_LON.GT.160.0) .AND. (PT2_LON.GE.-180.0).AND.(PT2_LON.LT.-160.0)) THEN
-        ! We "bring back" PT2 towards the West
-        PT2_LON_LOC = 180.0_rkind + ABS(-180.0_rkind - PT2_LON)
-      ELSE IF ((PT2_LON.LE.180.0).AND.(PT2_LON.GT.160.0) .AND. (PT1_LON.GE.-180.0).AND.(PT1_LON.LT.-160.0)) THEN
-        ! We "bring back" PT1 towards the West
-        PT1_LON_LOC = 180.0_rkind + ABS(-180.0_rkind - PT1_LON)
-      END IF
-
       ! Computing the distance
-      PT1_LON_RAD = PT1_LON_LOC*COEFF
-      PT2_LON_RAD = PT2_LON_LOC*COEFF
-      PT1_LAT_RAD = PT1_LAT_LOC*COEFF
-      PT2_LAT_RAD = PT2_LAT_LOC*COEFF
-      x1 = COS(PT1_LON_RAD)*COS(PT1_LAT_RAD)
-      y1 = SIN(PT1_LON_RAD)*COS(PT1_LAT_RAD)
-      z1 = SIN(PT1_LAT_RAD)
-      x2 = COS(PT2_LON_RAD)*COS(PT2_LAT_RAD)
-      y2 = SIN(PT2_LON_RAD)*COS(PT2_LAT_RAD)
-      z2 = SIN(PT2_LAT_RAD)
-      scalprod = x1*x2+y1*y2+z1*z2;
-      IF (scalprod .ge. 1) THEN
+      PT1_LON_RAD = PT1_LON*COEFF
+      PT2_LON_RAD = PT2_LON*COEFF
+      PT1_LAT_RAD = PT1_LAT*COEFF
+      PT2_LAT_RAD = PT2_LAT*COEFF
+      X1 = COS(PT1_LON_RAD)*COS(PT1_LAT_RAD)
+      Y1 = SIN(PT1_LON_RAD)*COS(PT1_LAT_RAD)
+      Z1 = SIN(PT1_LAT_RAD)
+      X2 = COS(PT2_LON_RAD)*COS(PT2_LAT_RAD)
+      Y2 = SIN(PT2_LON_RAD)*COS(PT2_LAT_RAD)
+      Z2 = SIN(PT2_LAT_RAD)
+      SCALPROD = X1*X2+Y1*Y2+Z1*Z2;
+      if (SCALPROD .GE. 1) THEN
         DIST = 0;
       ELSE
-        DIST = ACOS(scalprod)
+        DIST = ACOS(SCALPROD)
       END IF
       END SUBROUTINE
 !********************************************************************************
@@ -164,34 +147,34 @@
                    P2_XLOC = XP(I2);
                    P3_XLOC = XP(I3);
                    IF (LSPHE) THEN
-                     IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
-                       & .AND. (P3_XLOC.LE.180.0)  .AND. (P3_XLOC.GT.160.0)  & 
-                       & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN                       
+                     ! Kevin Martins' fix to close the mesh at the
+                     ! dateline: understand whether an element has a single node
+                     ! isolated on the other side, and bring it
+                     ! back. This approach does nothing with the element
+                     ! that contains the pole, and apparently is stable
+                     ! there.
+                     IF (    (P1_XLOC - P2_XLOC).GT.180 .AND. & 
+                           & (P3_XLOC - P2_XLOC).GT.180 ) THEN
                        ! In this case, P2 is 'isolated' to the East of the dateline; we "bring it back" towards the West
                        P2_XLOC = 180.0_rkind + ABS(-180.0_rkind - P2_XLOC)
-                     ELSE IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
-                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
-                            & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN
-                       ! In this case, P1 is 'isolated' to the West of the dateline; we "bring it back" towards the East
-                       P1_XLOC = -180.0_rkind - ABS(180.0_rkind - P1_XLOC)
-                     ELSE IF (      (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)  & 
-                            & .AND. (P3_XLOC.LE.180.0)  .AND. (P3_XLOC.GT.160.0)  & 
-                            & .AND. (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  ) THEN
+                     ELSE IF (    (P2_XLOC - P1_XLOC).GT.180 .AND. &
+                                & (P3_XLOC - P1_XLOC).GT.180  ) THEN
                        ! In this case, P1 is 'isolated' to the East of the dateline; we "bring it back" towards the West
                        P1_XLOC = 180.0_rkind + ABS(-180.0_rkind - P1_XLOC)
-                     ELSE IF (      (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)  & 
-                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
-                            & .AND. (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  ) THEN
-                       ! In this case, P2 is 'isolated' to the West of the dateline; we "bring it back" towards the East
-                       P2_XLOC = -180.0_rkind - ABS(180.0_rkind - P2_XLOC)
-                     ELSE IF (      (P1_XLOC.LE.180.0)  .AND. (P1_XLOC.GT.160.0)  & 
-                            & .AND. (P3_XLOC.GE.-180.0) .AND. (P3_XLOC.LT.-160.0) & 
-                            & .AND. (P2_XLOC.LE.180.0)  .AND. (P2_XLOC.GT.160.0)   ) THEN
+                     ELSE IF (    (P1_XLOC - P3_XLOC).GT.180 .AND. &
+                                & (P2_XLOC - P3_XLOC).GT.180  ) THEN
                        ! In this case, P3 is 'isolated' to the East of the dateline; we "bring it back" towards the West
                        P3_XLOC = 180.0_rkind + ABS(-180.0_rkind - P3_XLOC)
-                     ELSE IF (      (P1_XLOC.GE.-180.0) .AND. (P1_XLOC.LT.-160.0)  & 
-                            & .AND. (P3_XLOC.LE.180.0) .AND. (P3_XLOC.GT.160.0) & 
-                            & .AND. (P2_XLOC.GE.-180.0) .AND. (P2_XLOC.LT.-160.0)  ) THEN
+                     ELSE IF (    (P1_XLOC - P2_XLOC).GT.180 .AND. &  
+                                & (P1_XLOC - P3_XLOC).GT.180  ) THEN
+                       ! In this case, P1 is 'isolated' to the West of the dateline; we "bring it back" towards the East
+                       P1_XLOC = -180.0_rkind - ABS(180.0_rkind - P1_XLOC)
+                     ELSE IF (    (P2_XLOC - P1_XLOC).GT.180 .AND. &  
+                                & (P2_XLOC - P3_XLOC).GT.180  ) THEN
+                       ! In this case, P2 is 'isolated' to the West of the dateline; we "bring it back" towards the East
+                       P2_XLOC = -180.0_rkind - ABS(180.0_rkind - P2_XLOC)
+                     ELSE IF (    (P3_XLOC - P1_XLOC).GT.180 .AND. &  
+                                & (P3_XLOC - P2_XLOC).GT.180  ) THEN
                        ! In this case, P3 is 'isolated' to the West of the dateline; we "bring it back" towards the East
                        P3_XLOC = -180.0_rkind - ABS(180.0_rkind - P3_XLOC)
                      END IF
@@ -206,6 +189,20 @@
                      DYP3 = YP(I1) - YP(I3)
 
                      IF (APPLY_DXP_CORR) THEN
+                       ! the option APPLY_DXP_CORR does something
+                       ! similar to Kevin Martin's approach to close the
+                       ! mesh at the dateline. If the longitudinal
+                       ! distance DXP is >180deg or <-180deg it is
+                       ! adjusted subtracting or adding 360deg. This
+                       ! approach also acts on the element containing
+                       ! the pole, correcting a single longitudinal
+                       ! disnance of the three, making this element
+                       ! unstable.
+                       ! This option could be a substitute of Kevin
+                       ! Martin's fix if a special treatment of the
+                       ! element containing the pole is introduced.
+                       ! This option could be removed if it is a
+                       ! duplication of Kevin Martin's fix.
                        CALL CORRECT_SINGLE_DXP(DXP1)
                        CALL CORRECT_SINGLE_DXP(DXP2)
                        CALL CORRECT_SINGLE_DXP(DXP3)

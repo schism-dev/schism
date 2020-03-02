@@ -13,7 +13,7 @@
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
-set (PREC_EVAP ON CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")   # Not implemented yet
 set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
@@ -32,7 +32,7 @@ set( USE_ICM OFF   CACHE BOOLEAN "Use ICM module")
 set( ICM_PH OFF   CACHE BOOLEAN "Use pH module inside ICM")
 set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
 set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
-set( USE_SED OFF    CACHE BOOLEAN "Use sediment module")
+set( USE_SED ON    CACHE BOOLEAN "Use sediment module")
 set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
 #If FABM is on, need to set FABM_BASE (after cloning from Joseph's fork: https://github.com/josephzhang8/fabm.git)
 set( FABM_BASE /sciclone/home10/yinglong/git/fabm CACHE  STRING "Path to FABM base")

@@ -64,8 +64,8 @@
         if(ics==1) then
           write(32,*) i,real(xcj(i)),real(ycj(i)),real(dps(i))
         else
-          tmp1=sum(xlon(isidenode(1:2,i)))/2
-          tmp2=sum(ylat(isidenode(1:2,i)))/2
+          tmp1=sum(xlon(isidenode(1:2,i)))/2._rkind
+          tmp2=sum(ylat(isidenode(1:2,i)))/2._rkind
           write(32,*) i,real(tmp1),real(tmp2),real(dps(i))
         endif
       enddo !ics
@@ -79,8 +79,8 @@
         if(ics==1) then
           write(32,'(i12,2(1x,e22.14),e12.4)') i,xctr(i),yctr(i),dpe(i)
         else
-          tmp1=sum(xlon(elnode(1:i34(i),i)))/i34(i)
-          tmp2=sum(ylat(elnode(1:i34(i),i)))/i34(i)
+          tmp1=sum(xlon(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          tmp2=sum(ylat(elnode(1:i34(i),i)))/real(i34(i),rkind)
           write(32,*) i,real(tmp1),real(tmp2),real(dpe(i))
         endif !ics
       enddo !i
