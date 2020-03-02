@@ -309,6 +309,7 @@
         endif
 
         !Available now: outvar(2,nvrt,np|ne,irec2-irec1+1),i23d,ivs,eta2(np,irec2-irec1+1)
+        !However, for uncombined nc, values in untouched ranks are junk
 
         do irec=1,irec2-irec1+1 !offeset record #
 !----------------------------------------------------------------------------

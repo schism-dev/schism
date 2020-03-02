@@ -112,7 +112,7 @@
       integer :: isdel(2,mns),klev(4)
       integer :: indel(mnei,mnp),idry_s(mns)
       dimension xl(mnp),yl(mnp),dp(mnp),i34(mne)
-      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,3),arco(3,mnp)
+      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,2),arco(4,mnp)
       dimension wild(100),wild2(100,2)
       dimension tempout(mnv,mnp), saltout(mnv,mnp),month_day(12)
       dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
@@ -123,6 +123,10 @@
       real*8 :: aa1(1)
 
 !     First statement
+!     Currently we assume rectangular grid in HYCOM
+!     (interp_mode=0). interp_mode=1 uses generic UG search (splitting
+!     quads) and is kept for more generic cases
+      interp_mode=0
 
       open(10,file='gen_hot_3Dth_from_nc.in',status='old')
       read(10,*) iuv !1: include vel and elev. in hotstart.in; 0: only T,S
@@ -460,9 +464,17 @@
 !       processing static info
         do i=1,ixlen
           lon(i,:)=xind(i)
+          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+            stop
+          endif; endif;
         enddo !i
         do j=1,iylen
           lat(:,j)=yind(j)
+          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+            stop
+          endif; endif;
         enddo !j
 !        lon=lon-360 !convert to our long.
 
@@ -699,54 +711,92 @@
 !         Find parent elements for hgrid.ll
           call cpu_time(tt0)
           loop4: do i=1,np
-            ixy(i,1:3)=0
-            do ix=1,ixlen-1 
-              do iy=1,iylen-1 
-                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
-                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
-                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
-                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
-                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
-                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
-                if(rat<small1) then
-                  ixy(i,1)=ix; ixy(i,2)=iy
+            ixy(i,1:2)=0
+
+            if(interp_mode==0) then !SG search
+              do ix=1,ixlen-1
+                if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
+                  !Lower left corner index
+                  ixy(i,1)=ix
+                  xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
+                  exit
+                endif
+              enddo !ix
+              do iy=1,iylen-1
+                if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
+                  !Lower left corner index
+                  ixy(i,2)=iy
+                  yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
+                  exit
+                endif
+              enddo !ix
+
+              if(ixy(i,1)==0.or.ixy(i,2)==0) then
+                write(11,*)'Did not find parent:',i,ixy(i,1:2)
+                stop
+              endif
+              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+                write(11,*)'Ratio out of bound:',i,xrat,yrat
+                stop
+              endif
+
+              !Bilinear shape function
+              arco(1,i)=(1-xrat)*(1-yrat)
+              arco(2,i)=xrat*(1-yrat)
+              arco(4,i)=(1-xrat)*yrat
+              arco(3,i)=xrat*yrat
+            else !interp_mode=1; generic search with UG
+              do ix=1,ixlen-1 
+                do iy=1,iylen-1 
+                  x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
+                  y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
+                  a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+                  a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+                  a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+                  a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+                  b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                  b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                  rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
+                  if(rat<small1) then
+                    ixy(i,1)=ix; ixy(i,2)=iy
 !                 Find a triangle
-                  in=0 !flag
-                  do l=1,2
-                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
-                    if(l==1) then !nodes 1,2,3
-                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                      wild(l)=abs(a1+a2+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=1
-                        arco(1,i)=max(0.,min(1.,a2/bb))
-                        arco(2,i)=max(0.,min(1.,ap/bb))
-                        exit
+                    in=0 !flag
+                    do l=1,2
+                      ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
+                      if(l==1) then !nodes 1,2,3
+                        bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                        wild(l)=abs(a1+a2+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=1
+                          arco(1,i)=max(0.,min(1.,a2/bb))
+                          arco(2,i)=max(0.,min(1.,ap/bb))
+                          arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                          arco(4,i)=0.
+                          exit
+                        endif
+                      else !nodes 1,3,4
+                        bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                        wild(l)=abs(a3+a4+ap-bb)/bb
+                        if(wild(l)<small1*5) then
+                          in=2
+                          arco(1,i)=max(0.,min(1.,a3/bb))
+                          arco(3,i)=max(0.,min(1.,a4/bb))
+                          arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+                          arco(2,i)=0.
+                          exit
+                        endif
                       endif
-                    else !nodes 1,3,4
-                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                      wild(l)=abs(a3+a4+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=2
-                        arco(1,i)=max(0.,min(1.,a3/bb))
-                        arco(2,i)=max(0.,min(1.,a4/bb))
-                        exit
-                      endif
+                    enddo !l=1,2
+                    if(in==0) then
+                      write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
+                      stop
                     endif
-                  enddo !l=1,2
-                  if(in==0) then
-                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
-                    stop
-                  endif
-                  ixy(i,3)=in
-                  arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
-                  cycle loop4
-                endif !rat<small1
-              enddo !iy=iylen1,iylen2-1
-            enddo !ix=ixlen1,ixlen2-1
+                    !ixy(i,3)=in
+                    cycle loop4
+                  endif !rat<small1
+                enddo !iy=iylen1,iylen2-1
+              enddo !ix=ixlen1,ixlen2-1
+            endif !interp_mode
           end do loop4 !i=1,np
 
           call cpu_time(tt1)
@@ -921,7 +971,7 @@
             vout(:,i)=0
             eout(i)=0
           else !found parent
-            ix=ixy(i,1); iy=ixy(i,2); in=ixy(i,3)
+            ix=ixy(i,1); iy=ixy(i,2) !; in=ixy(i,3)
             !Find vertical level
             do k=1,nvrt
               if(kbp(ix,iy)==-1) then
@@ -968,19 +1018,27 @@
               wild2(7,2)=vvel(ix+1,iy+1,lev)*(1-vrat)+vvel(ix+1,iy+1,lev+1)*vrat
               wild2(8,1)=uvel(ix,iy+1,lev)*(1-vrat)+uvel(ix,iy+1,lev+1)*vrat
               wild2(8,2)=vvel(ix,iy+1,lev)*(1-vrat)+vvel(ix,iy+1,lev+1)*vrat
-              if(in==1) then
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
-                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(6,1)*arco(2,i)+wild2(7,1)*arco(3,i)
-                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(6,2)*arco(2,i)+wild2(7,2)*arco(3,i)
-                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)
-              else
-                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
-                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
-                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(7,1)*arco(2,i)+wild2(8,1)*arco(3,i)
-                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(7,2)*arco(2,i)+wild2(8,2)*arco(3,i)
-                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy+1)*arco(2,i)+ssh(ix,iy+1)*arco(3,i)
-              endif
+
+              tempout(k,i)=dot_product(wild2(1:4,1),arco(1:4,i))
+              saltout(k,i)=dot_product(wild2(1:4,2),arco(1:4,i))
+              uout(k,i)=dot_product(wild2(5:8,1),arco(1:4,i))
+              vout(k,i)=dot_product(wild2(5:8,2),arco(1:4,i))
+              eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)+ssh(ix,iy+1)*arco(4,i)
+
+
+!              if(in==1) then
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
+!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(6,1)*arco(2,i)+wild2(7,1)*arco(3,i)
+!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(6,2)*arco(2,i)+wild2(7,2)*arco(3,i)
+!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)
+!              else
+!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
+!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
+!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(7,1)*arco(2,i)+wild2(8,1)*arco(3,i)
+!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(7,2)*arco(2,i)+wild2(8,2)*arco(3,i)
+!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy+1)*arco(2,i)+ssh(ix,iy+1)*arco(3,i)
+!              endif
 
               !Check
               if(tempout(k,i)<tempmin.or.tempout(k,i)>tempmax.or. &

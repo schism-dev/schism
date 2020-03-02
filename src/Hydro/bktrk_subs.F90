@@ -732,7 +732,7 @@ end subroutine inter_btrack
 
       !Local
       !Function
-      real(rkind) :: covar,signa
+      real(rkind) :: covar,signa1
 
       integer :: idt,iflqs1,kbpl,iadptive,nnel0,jlev0,ie,npp,nd,ifl,i,n1, &
                  &n2,n3,kbb,ibelow,isd,in1,in2,j,jj
@@ -763,7 +763,7 @@ end subroutine inter_btrack
       iexit=.false.
 
 !...  Euler tracking (including left-over from RK2; in this case do Euler only once)
-      lrk=iadvf==2.and.time_rm2>0
+      lrk=iadvf==2.and.time_rm2>0._rkind
 
       if(iadvf==1.or.iadvf==0.or.lrk) then
 !------------------------------------------------------------------------------------------------
@@ -776,11 +776,11 @@ end subroutine inter_btrack
         if(time_rm2>0) then
           !Finish left-over
           dtb=time_rm2
-          time_rm2=-99 !reset flag
+          time_rm2=-99._rkind !reset flag
         else !normal
           dtb=min(dtbk,time_rm)
         endif
-        if(dtb<=0) then
+        if(dtb<=0._rkind) then
           write(errmsg,*)'BTRACK: dtb<=0,',dtb,dtbk,time_rm,time_rm2,lrk,iadvf
           call parallel_abort(errmsg)
         endif
@@ -794,16 +794,16 @@ end subroutine inter_btrack
 
 !       Check aug. exit
         if(iflqs1==2) then !exit upon entry into quicksearch
-          if(time_rm2>0) call parallel_abort('BTRACK: just in')
+          if(time_rm2>0._rkind) call parallel_abort('BTRACK: just in')
 !         Pt (xt,yt,zt) reset, which is inside nnel. 
 !         jlev, uuint,vvint,wwint are unchanged (to avoid CPU dependency)
-          time_rm2=-99
+          time_rm2=-99._rkind
           iexit=.true.; return
         endif !iflqs1==2
 
         if(iflqs1==3) then 
 !         Exit during iteration in quicksearch; make sure vel. pointing away from nnel
-          if(trm<=0) call parallel_abort('BTRACK: trm<=0')
+          if(trm<=0._rkind) call parallel_abort('BTRACK: trm<=0')
           time_rm2=trm
           time_rm=time_rm-(dtb-trm)
           iexit=.true.; return
@@ -812,9 +812,9 @@ end subroutine inter_btrack
         uuint=uuint1; vvint=vvint1; wwint=wwint1
 !       Check if vel. is too small to continue
 !       This avoids 0 vel case (e.g. hits the no-slip bottom)
-        vmag=sqrt(uuint**2+vvint**2)
+        vmag=sqrt(uuint*uuint+vvint*vvint)
         if(vmag<=velmin_btrack.or.iflqs1==1) then
-          time_rm=0; exit
+          time_rm=0._rkind; exit
         endif
 
         if(lrk) then !left-over from RK2; only once
@@ -824,7 +824,7 @@ end subroutine inter_btrack
 
 !       Update time_rm
         time_rm=time_rm-(dtb-trm)
-        if(time_rm<=1.e-6*dt) exit
+        if(time_rm<=real(1.e-6,rkind)*dt) exit
 
         x0=xt
         y0=yt
@@ -837,7 +837,7 @@ end subroutine inter_btrack
 !     Results may vary with # of processors due to crossing of aug. domain
 !     but at least error ->0 as more CPUs are used
 
-      if(iadvf==2.and.time_rm>=1.e-6*dt) then
+      if(iadvf==2.and.time_rm>=real(1.e-6,rkind)*dt) then
 !------------------------------------------------------------------------------------------------
 !     (xt,yt,zt),(uuint etc),nnel,jlev may be carried over from Euler
       x0=xt
@@ -846,15 +846,15 @@ end subroutine inter_btrack
       iadptive=0 !# of times when dtb is reduced
       idt=0 !iteration #
       dtb=min(dtbk,time_rm) !init.
-      if(dtb<=0) call parallel_abort('BTRACK: dtb<=0 (2a)')
+      if(dtb<=0._rkind) call parallel_abort('BTRACK: dtb<=0 (2a)')
       nnel0=nnel; jlev0=jlev !save 
       do 
         idt=idt+1
-        xt=x0-0.5*dtb*uuint
-        yt=y0-0.5*dtb*vvint
-        zt=z0-0.5*dtb*wwint
+        xt=x0-0.5_rkind*dtb*uuint
+        yt=y0-0.5_rkind*dtb*vvint
+        zt=z0-0.5_rkind*dtb*wwint
         nnel=nnel0; jlev=jlev0 !reset
-        call quicksearch(2,idt,l_ns,ipsgb,gcor0,frame0,0.5*dtb,x0,y0,z0,nnel,jlev, &
+        call quicksearch(2,idt,l_ns,ipsgb,gcor0,frame0,0.5_rkind*dtb,x0,y0,z0,nnel,jlev, &
      &xt,yt,zt,trm,iflqs1,kbpl,arco,zrat,ztmp,vis_coe,uuint,vvint,wwint, &
      &uuint1,vvint1,wwint1)
 
@@ -862,7 +862,7 @@ end subroutine inter_btrack
 !         Pt (xt,yt,zt) reset, which is inside nnel 
 !         jlev, uuint,vvint,wwint are unchanged (to avoid CPU dependency)
           if(iadptive/=0) call parallel_abort('BTRACK: adp. wrong')
-          time_rm2=-99
+          time_rm2=-99._rkind
           iexit=.true.; return
         endif !iflqs1==2
 
@@ -870,12 +870,12 @@ end subroutine inter_btrack
 !         Exit during iteration in quicksearch; reduce time step and retry
           !if(iadptive>=1) then
           if(iadptive>=5) then
-            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5*dtb,trm
+            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5_rkind*dtb,trm
             call parallel_abort(errmsg)
           endif !iadptive
           if(trm<=0) call parallel_abort('BTRACK: trm<=0 (2a)')
-          dtb=dtb-2*trm
-          dtb=dtb*(1-1.e-3) !add safety
+          dtb=dtb-2._rkind*trm
+          dtb=dtb*real(1-1.e-3,rkind) !add safety
           if(dtb<=0) call parallel_abort('BTRACK: dtb<=0 (2b)')
           iadptive=iadptive+1
           !write(12,*)'BTRACK:',iadptive,trm,dtb,dtbk
@@ -888,7 +888,7 @@ end subroutine inter_btrack
 !       Check if vel. is too small to continue
 !       This avoids 0 vel case (e.g. hits the no-slip bottom)
         uuint=uuint1; vvint=vvint1; wwint=wwint1
-        vmag=sqrt(uuint**2+vvint**2)
+        vmag=sqrt(uuint*uuint+vvint*vvint)
         if(vmag<=velmin_btrack.or.iflqs1==1) exit
 
         xt=x0-dtb*uuint
@@ -904,7 +904,7 @@ end subroutine inter_btrack
 !         Exit upon entry into quicksearch 
 !         Pt (xt,yt,zt) reset, which is inside nnel; jlev reset to original
 !         Forfeit the 1st half step but use the new vel. (uuint etc)
-          time_rm2=-99
+          time_rm2=-99._rkind
           iexit=.true.; return
         endif !iflqs1==2
 
@@ -920,13 +920,13 @@ end subroutine inter_btrack
 !       Check if vel. is too small to continue
 !       This avoids 0 vel case (e.g. hits the no-slip bottom)
         uuint=uuint1; vvint=vvint1; wwint=wwint1
-        vmag=sqrt(uuint**2+vvint**2)
+        vmag=sqrt(uuint*uuint+vvint*vvint)
         if(vmag<=velmin_btrack.or.iflqs1==1) exit
 
 
 !       Update time_rm
         time_rm=time_rm-dtb
-        if(time_rm<=1.e-6*dt) exit
+        if(time_rm<=real(1.e-6,rkind)*dt) exit
 
         dtb=min(dtbk,time_rm) !reset
         x0=xt
@@ -944,25 +944,25 @@ end subroutine inter_btrack
 !     Calc max/min for ELAD
 !     If inter_mom/=0, sclr() will be updated below
       if(ibtrack_test==1) then
-        sclr(1)=0
+        sclr(1)=0._rkind
         do j=1,i34(nnel)
           nd=elnode(j,nnel)
-          tmp=tr_nd(1,jlev,nd)*(1-zrat)+tr_nd(1,jlev-1,nd)*zrat
+          tmp=tr_nd(1,jlev,nd)*(1._rkind-zrat)+tr_nd(1,jlev-1,nd)*zrat
           sclr(1)=sclr(1)+tmp*arco(j)
         enddo !j
 
-        sclr(2)=-huge(1.d0) !max
-        sclr(3)=huge(1.d0) !min
+        sclr(2)=-huge(1._rkind) !max
+        sclr(3)=huge(1._rkind) !min
         do j=1,i34(nnel)
           nd=elnode(j,nnel)
           sclr(2)=max(sclr(2),tr_nd(1,jlev,nd),tr_nd(1,jlev-1,nd))
           sclr(3)=min(sclr(3),tr_nd(1,jlev,nd),tr_nd(1,jlev-1,nd))
         enddo !j
       else !not btrack test
-        sclr(1)=-huge(1.d0) !u max
-        sclr(2)=huge(1.d0) !u min
-        sclr(3)=-huge(1.d0) !v max
-        sclr(4)=huge(1.d0) !v min
+        sclr(1)=-huge(1._rkind) !u max
+        sclr(2)=huge(1._rkind) !u min
+        sclr(3)=-huge(1._rkind) !v max
+        sclr(4)=huge(1._rkind) !v min
         do j=1,i34(nnel)
           nd=elnode(j,nnel)
           sclr(1)=max(sclr(1),uu2(jlev,nd),uu2(jlev-1,nd))
@@ -978,10 +978,10 @@ end subroutine inter_btrack
 !       Do more inter-domain btrack if necessary to make sure the ending element is resident
         if(nnel>ne) then 
           !Check final vel. for trap
-          vmag=sqrt(uuint**2+vvint**2)
+          vmag=sqrt(uuint*uuint+vvint*vvint)
           if(vmag>velmin_btrack) then 
             !Nudge the final point a little; this may create variation using different # of processors
-            time_rm=1.e-4*dt
+            time_rm=real(1.e-4,rkind)*dt
             iexit=.true.; return
           endif !vmag
         else !nnel resident
@@ -995,8 +995,8 @@ end subroutine inter_btrack
           do i=1,npp
             nd=itier_nd(i,ie)
             if(idry(nd)==1) then !i.c.
-              uvdata(i,1)=0
-              uvdata(i,2)=0
+              uvdata(i,1)=0._rkind
+              uvdata(i,2)=0._rkind
             else !wet
 !              if(ics==1) then
               vxl(1,1)=uu2(jlev,nd); vxl(1,2)=uu2(jlev-1,nd)
@@ -1005,15 +1005,15 @@ end subroutine inter_btrack
 !                call project_hvec(uu2(jlev,nd),vv2(jlev,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,1),vxl(2,1))
 !                call project_hvec(uu2(jlev-1,nd),vv2(jlev-1,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,2),vxl(2,2))
 !              endif !ics
-              uvdata(i,1)=vxl(1,1)*(1-zrat)+vxl(1,2)*zrat
-              uvdata(i,2)=vxl(2,1)*(1-zrat)+vxl(2,2)*zrat
+              uvdata(i,1)=vxl(1,1)*(1._rkind-zrat)+vxl(1,2)*zrat
+              uvdata(i,2)=vxl(2,1)*(1._rkind-zrat)+vxl(2,2)*zrat
               !For ibtrack_test only
-              uvdata(i,3)=tr_nd(1,jlev,nd)*(1-zrat)+tr_nd(1,jlev-1,nd)*zrat
+              uvdata(i,3)=tr_nd(1,jlev,nd)*(1._rkind-zrat)+tr_nd(1,jlev-1,nd)*zrat
             endif
           enddo !all ball nodes
 
           do i=1,npp+3
-            al_beta(i,1:3)=0
+            al_beta(i,1:3)=0._rkind
             do j=1,npp
               al_beta(i,1:3)=al_beta(i,1:3)+akrmat_nd(i,j,ie)*uvdata(j,1:3)
             enddo !j
@@ -1023,7 +1023,7 @@ end subroutine inter_btrack
           if(ics==1) then
             xn2=xt; yn2=yt
           else
-            call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xn1,yn1,tmp)
+            call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xn1,yn1,tmp)
             call project_pt('g2l',xn1,yn1,tmp,(/xctr(nnel),yctr(nnel),zctr(nnel)/), &
      &eframe(:,:,nnel),xn2,yn2,aa1)
           endif !ics
@@ -1035,11 +1035,11 @@ end subroutine inter_btrack
           do i=1,npp
             nd=itier_nd(i,ie)
             if(ics==1) then
-              rr=sqrt((xnd(nd)-xt)**2+(ynd(nd)-yt)**2)
+              rr=sqrt((xnd(nd)-xt)*(xnd(nd)-xt)+(ynd(nd)-yt)*(ynd(nd)-yt))
             else
               call project_pt('g2l',xnd(nd),ynd(nd),znd(nd),(/xctr(nnel),yctr(nnel),zctr(nnel)/), &
      &eframe(:,:,nnel),xn3,yn3,tmp)
-              rr=sqrt((xn2-xn3)**2+(yn2-yn3)**2)
+              rr=sqrt((xn2-xn3)*(xn2-xn3)+(yn2-yn3)*(yn2-yn3))
             endif !ics
             covar2=covar(kr_co,rr)
             uuint=uuint+al_beta(i,1)*covar2 !dir assumed to be same as frame0 (ll)
@@ -1058,7 +1058,7 @@ end subroutine inter_btrack
       endif !Kriging
 
 !     nnel wet
-      if(zrat<0.or.zrat>1) then
+      if(zrat<0._rkind.or.zrat>1._rkind) then
         write(errmsg,*)'BTRACK: zrat wrong:',jlev,zrat
         call parallel_abort(errmsg)
       endif
@@ -1124,7 +1124,7 @@ end subroutine inter_btrack
       real(rkind), intent(out) :: trm,arco(4),zrat,ztmp(nvrt),uuint,vvint,wwint
 
       !Function
-      real(rkind) :: signa
+      real(rkind) :: signa1
 
       !Local
       integer :: jk(4)
@@ -1167,8 +1167,8 @@ end subroutine inter_btrack
       trm=time !time remaining
       nel=nnel
       xcg=x0; ycg=y0
-      pathl=sqrt((xt-xcg)**2+(yt-ycg)**2)
-      if(pathl==0.or.trm==0) then
+      pathl=sqrt((xt-xcg)*(xt-xcg)+(yt-ycg)*(yt-ycg))
+      if(pathl==0._rkind.or.trm==0._rkind) then
 !        write(12,*)'Last QUICKSEARCH: nodes'
 !        do i=1,npa
 !          do k=1,nvrt
@@ -1196,7 +1196,7 @@ end subroutine inter_btrack
           !Fix A.C. for 0/negative
           if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco)
           nnel=nel
-          trm=0
+          trm=0._rkind
           go to 400
         endif
       else !quad
@@ -1205,9 +1205,9 @@ end subroutine inter_btrack
           xn1=xcg; yn1=ycg
           xn2=xt; yn2=yt
         else !ll
-          call project_pt('l2g',xcg,ycg,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
+          call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn1,yn1,zn1)
-          call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
+          call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
         !call quad_shape(0,1,nel,xcg,ycg,inside1,arco) !info only
@@ -1218,7 +1218,7 @@ end subroutine inter_btrack
         ar_min2=minval(arco)
         if(inside2/=0) then
           nnel=nel
-          trm=0
+          trm=0._rkind
           go to 400
         endif
       endif !i34
@@ -1228,7 +1228,7 @@ end subroutine inter_btrack
 !     Try this twice to account for underflow (e.g. inter-btrack etc),
 !     the 2nd try may create CPU dependency but it occurs very rarely
       loop6: do i=1,2
-        wild=0; wild2=0 !initialize for debugging output
+        wild=0._rkind; wild2=0._rkind !initialize for debugging output
         nel_j=0
         do j=1,i34(nel) !sides
           jd1=elnode(nxq(1,j,i34(nel)),nel)
@@ -1241,18 +1241,18 @@ end subroutine inter_btrack
             call project_pt('g2l',xnd(jd2),ynd(jd2),znd(jd2),gcor0,frame0,xn2,yn2,zn2)
           endif !ics
           wild3(j,1)=xn1; wild3(j,2)=yn1 !save for computing centroid and nudging later
-          ar1=signa(xcg,xn1,xt,ycg,yn1,yt)    
-          ar2=signa(xcg,xt,xn2,ycg,yt,yn2)    
+          ar1=signa1(xcg,xn1,xt,ycg,yn1,yt)    
+          ar2=signa1(xcg,xt,xn2,ycg,yt,yn2)    
           wild2(j,1)=ar1; wild2(j,2)=ar2
-          if(ar1>0.and.ar2>0) then
+          if(ar1>0._rkind.and.ar2>0._rkind) then
             call intersect2(xcg,xt,xn1,xn2,ycg,yt,yn1,yn2,iflag,xin,yin,tt1,tt2)
             wild(j,1)=tt1; wild(j,2)=tt2; wild(3+j,1)=xin; wild(3+j,2)=yin
             if(iflag/=1) then
               if(ics==1) then
-                xcg2=xcg; ycg2=ycg; zcg2=0; xt2=xt; yt2=yt; zt2=0
+                xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
               else !lat/lon
-                call project_pt('l2g',xcg,ycg,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
-                call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xt2,yt2,zt2)
+                call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
+                call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
               endif !ics
               write(errmsg,*)'QUICKSEARCH: Found no intersecting edges (1):',idx,itr, &
      &ielg(nel),xcg2,ycg2,zcg2,xt2,yt2,zt2,ar_min1,ar_min2,wild(1:3,1:2),wild(4:6,1:2),ar1,ar2, &
@@ -1266,10 +1266,10 @@ end subroutine inter_btrack
 
         if(nel_j==0) then
           if(ics==1) then
-            xcg2=xcg; ycg2=ycg; zcg2=0; xt2=xt; yt2=yt; zt2=0
+            xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
           else !lat/lon
-            call project_pt('l2g',xcg,ycg,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
-            call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xt2,yt2,zt2)
+            call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
+            call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
           endif !ics
 
           if(i==1) then !1st try
@@ -1283,15 +1283,16 @@ end subroutine inter_btrack
      &idx,itr,jlev00
             !Nudge (xcg,ycg) to off centroid (to escape some tricky underflow)
             if(i34(nel)==3) then
-              wild(1,1)=1./3-1.12e-2; wild(2,1)=1./3-1.09e-2; wild(3,1)=1-wild(1,1)-wild(2,1) !A.C.
+              wild(1,1)=real(1./3.-1.12e-2,rkind); wild(2,1)=real(1./3.-1.09e-2,rkind); wild(3,1)=1._rkind-wild(1,1)-wild(2,1) !A.C.
             else
-              wild(1,1)=0.25-1.12e-2; wild(2,1)=0.25-1.09e-2; wild(3,1)=0.25+0.937e-2; wild(4,1)=1-sum(wild(1:3,1))
+              wild(1,1)=real(0.25-1.12e-2,rkind); wild(2,1)=real(0.25-1.09e-2,rkind); 
+              wild(3,1)=real(0.25+0.937e-2,rkind); wild(4,1)=1._rkind-sum(wild(1:3,1))
             endif !i34
             xtmp=dot_product(wild(1:i34(nel),1),wild3(1:i34(nel),1))
             ytmp=dot_product(wild(1:i34(nel),1),wild3(1:i34(nel),2))
-            eps=1.019e-2
-            xcg=(1-eps)*xcg+eps*xtmp
-            ycg=(1-eps)*ycg+eps*ytmp
+            eps=real(1.019e-2,rkind)
+            xcg=(1._rkind-eps)*xcg+eps*xtmp
+            ycg=(1._rkind-eps)*ycg+eps*ytmp
 
             if(i34(nel)==3) then
               call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco)
@@ -1338,19 +1339,19 @@ end subroutine inter_btrack
         yt=yin
         zt=zin
         nnel=nel
-        trm=0 !min(trm,time)
+        trm=0._rkind !min(trm,time)
         exit loop4
       endif
       md1=elnode(nxq(1,nel_j,i34(nel)),nel)
       md2=elnode(nxq(2,nel_j,i34(nel)),nel)
       
 !     Compute z position 
-      dist=sqrt((xin-xt)**2+(yin-yt)**2)
+      dist=sqrt((xin-xt)*(xin-xt)+(yin-yt)*(yin-yt))
       tmp=min(1._rkind,dist/pathl)
       zin=zt-tmp*(zt-zin)
       trm=trm*tmp !time remaining
       pathl=dist !sqrt((xin-xt)**2+(yin-yt)**2)
-      if(dist==0.or.trm==0) then
+      if(dist==0._rkind.or.trm==0._rkind) then
 !        write(errmsg,*)'QUICKSEARCH: end pt on side:',idx,itr,l_ns,ipsgb,dist,it, &
 !     &ielg(nnel00),ielg(nel),zin,time,x0,y0,xt00,yt00,xin,yin,xt,yt, &
 !     &uuint0,vvint0,wwint0,ar_min2,jlev00,vis_coe
@@ -1363,7 +1364,7 @@ end subroutine inter_btrack
           if(ics==1) then
             xn2=xt; yn2=yt
           else !ll
-            call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
+            call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
             call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
           endif !ics
 
@@ -1371,7 +1372,7 @@ end subroutine inter_btrack
           call quad_shape(1,4,nel,xn2,yn2,inside2,arco)
         endif
         nnel=nel
-        trm=0
+        trm=0._rkind
         exit loop4
       endif
 
@@ -1409,36 +1410,36 @@ end subroutine inter_btrack
         endif
 
 !       Nudge intersect (xin,yin), and update starting pt
-        eps=1.e-2 !100*small2
+        eps=real(1.e-2,rkind) !100*small2
         if(ics==1) then
           xctr3=xctr(nel); yctr3=yctr(nel)
         else !lat/lon
 !          eps=small2 !need more accuracy for south pole region
           call project_pt('g2l',xctr(nel),yctr(nel),zctr(nel),gcor0,frame0,xctr3,yctr3,tmp)
         endif !ics
-        xin=(1-eps)*xin+eps*xctr3 !xctr(nel)
-        yin=(1-eps)*yin+eps*yctr3 !yctr(nel)
+        xin=(1._rkind-eps)*xin+eps*xctr3 !xctr(nel)
+        yin=(1._rkind-eps)*yin+eps*yctr3 !yctr(nel)
         xcg=xin
         ycg=yin
    
         vtan=-su2(jlev,isd)*sny(isd)+sv2(jlev,isd)*snx(isd)
         !If open bnd is hit, optionally stop with nfl=1
-        if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0
+        if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0._rkind
         xvel=-vtan*sny(isd)
         yvel=vtan*snx(isd)
 
-        zvel=(ww2(jlev,md1)+ww2(jlev,md2))/2
+        zvel=(ww2(jlev,md1)+ww2(jlev,md2))/2._rkind
         xt=xin-xvel*trm
         yt=yin-yvel*trm
         zt=zin-zvel*trm
-        hvel=sqrt(xvel**2+yvel**2)
+        hvel=sqrt(xvel*xvel+yvel*yvel)
         if(hvel<=velmin_btrack) then
           nfl=1
           xt=xin
           yt=yin
           zt=zin
           nnel=nel
-          trm=0
+          trm=0._rkind
           exit loop4
         endif
         pathl=hvel*trm
@@ -1457,7 +1458,7 @@ end subroutine inter_btrack
 !          call project_pt('g2l',xnd(k1),ynd(k1),znd(k1),gcor0,frame0,xn1,yn1,tmp)
 !          call project_pt('g2l',xnd(k2),ynd(k2),znd(k2),gcor0,frame0,xn2,yn2,tmp)
 !        endif !ics
-!        wild(i,1)=signa(xn1,xn2,xt,yn1,yn2,yt)
+!        wild(i,1)=signa1(xn1,xn2,xt,yn1,yn2,yt)
 !        !Save for debugging later
 !        xy_l(i,1)=xn1; xy_l(i,2)=yn1
 !      enddo !i
@@ -1476,7 +1477,7 @@ end subroutine inter_btrack
           !arco will be fixed immediately outside loop4
           !if(ar_min1<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco) !Fix
           nnel=nel
-          trm=0
+          trm=0._rkind
           exit loop4
         endif
       else !quad
@@ -1484,7 +1485,7 @@ end subroutine inter_btrack
         if(ics==1) then
           xn2=xt; yn2=yt
         else !ll
-          call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
+          call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
 
@@ -1495,13 +1496,13 @@ end subroutine inter_btrack
           !arco will be fixed immediately outside loop4
           !call quad_shape(1,?,nel,xt,yt,inside2,arco) !force the pt inside
           nnel=nel
-          trm=0
+          trm=0._rkind
           exit loop4
         endif
       endif !i34
 
 !     Next intersecting edge
-      wild=0; wild2=0 !initialize for output
+      wild=0._rkind; wild2=0._rkind !initialize for output
       nel_j=0
       do j=1,i34(nel)
         jd1=elnode(nxq(1,j,i34(nel)),nel)
@@ -1515,19 +1516,19 @@ end subroutine inter_btrack
           call project_pt('g2l',xnd(jd1),ynd(jd1),znd(jd1),gcor0,frame0,xn1,yn1,tmp)
           call project_pt('g2l',xnd(jd2),ynd(jd2),znd(jd2),gcor0,frame0,xn2,yn2,tmp)
         endif !ics
-        ar1=signa(xcg,xn1,xt,ycg,yn1,yt)
-        ar2=signa(xcg,xt,xn2,ycg,yt,yn2)
+        ar1=signa1(xcg,xn1,xt,ycg,yn1,yt)
+        ar2=signa1(xcg,xt,xn2,ycg,yt,yn2)
         wild2(j,1)=ar1; wild2(j,2)=ar2
 !        if(ar1>=0.and.ar2>=0) then
-        if(ar1>0.and.ar2>0) then
+        if(ar1>0._rkind.and.ar2>0._rkind) then
           call intersect2(xcg,xt,xn1,xn2,ycg,yt,yn1,yn2,iflag,xin,yin,tt1,tt2)
           wild(j,1)=tt1; wild(j,2)=tt2; wild(3+j,1)=xin; wild(3+j,2)=yin
           if(iflag/=1) then
             if(ics==1) then
-              xcg2=xcg; ycg2=ycg; zcg2=0; xt2=xt; yt2=yt; zt2=0
+              xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
             else !lat/lon
-              call project_pt('l2g',xcg,ycg,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
-              call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xt2,yt2,zt2)
+              call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
+              call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
             endif !ics      
             write(errmsg,*)'QUICKSEARCH: Failed to find next edge (2):',lit,idx,itr,l_ns,ipsgb, &
      &xcg2,ycg2,zcg2,xt2,yt2,zt2,ielg(nel),iplg(md1),iplg(md2),ar_min1, &
@@ -1542,10 +1543,10 @@ end subroutine inter_btrack
 
       if(nel_j==0) then
         if(ics==1) then
-          xcg2=xcg; ycg2=ycg; zcg2=0; xt2=xt; yt2=yt; zt2=0
+          xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
         else !lat/lon
-          call project_pt('l2g',xcg,ycg,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
-          call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xt2,yt2,zt2)
+          call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
+          call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
         endif !ics   
         write(errmsg,*)'QUICKSEARCH: no intersecting edge (2): ',idx,itr,l_ns,ipsgb,ielg(nel), &
      &xcg2,ycg2,zcg2,xt2,yt2,zt2,wild2(1:i34(nel),1:2),xcg,ycg,xt,yt,time,trm,uuint0,vvint0,wwint0,lit
@@ -1570,7 +1571,7 @@ end subroutine inter_btrack
         if(ics==1) then
           xn2=xt; yn2=yt
         else !ll
-          call project_pt('l2g',xt,yt,0.d0,gcor0,frame0,xcg2,ycg2,zcg2)
+          call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nnel),yctr(nnel),zctr(nnel)/),eframe(:,:,nnel),xn2,yn2,zn2)
         endif !ics
 
@@ -1585,7 +1586,7 @@ end subroutine inter_btrack
       enddo !j
       kbpl=minval(jk(1:i34(nnel))) !min. bottom index
 
-      ztmp(kbpl:nvrt)=0
+      ztmp(kbpl:nvrt)=0._rkind
       do j=1,i34(nnel)
         do k=kbpl,nvrt
           ztmp(k)=ztmp(k)+ztmp2(max(k,jk(j)),j)*arco(j)
@@ -1596,7 +1597,7 @@ end subroutine inter_btrack
       do k=kbpl+1,nvrt
         !todo: assert
         !Warning: can be 0 for degenerate case
-        if(ztmp(k)-ztmp(k-1)<0) then
+        if(ztmp(k)-ztmp(k-1)<0._rkind) then
           write(errmsg,*)'QUICKSEARCH: Inverted z-level in quicksearch:', &
      &ielg(nnel),k,ztmp(k),ztmp(k-1),kbpl,jk(:),ztmp(kbpl:nvrt),';', &
      &arco(1:i34(nnel)),(ztmp2(jk(j):nvrt,j),j=1,i34(nnel)), &
@@ -1608,11 +1609,11 @@ end subroutine inter_btrack
 
       if(zt<=ztmp(kbpl)) then
         zt=ztmp(kbpl)
-        zrat=1
+        zrat=1._rkind
         jlev=kbpl+1
       else if(zt>=ztmp(nvrt)) then
         zt=ztmp(nvrt)
-        zrat=0
+        zrat=0._rkind
         jlev=nvrt
       else
         jlev=0
@@ -1654,20 +1655,20 @@ end subroutine inter_btrack
           nd=elnode(j,nnel)
           isd=elside(j,nnel)
 !          if(ics==1) then
-          vxn(j)=su2(jlev,isd)*(1-zrat)+su2(jlev-1,isd)*zrat
-          vyn(j)=sv2(jlev,isd)*(1-zrat)+sv2(jlev-1,isd)*zrat !side
+          vxn(j)=su2(jlev,isd)*(1._rkind-zrat)+su2(jlev-1,isd)*zrat
+          vyn(j)=sv2(jlev,isd)*(1._rkind-zrat)+sv2(jlev-1,isd)*zrat !side
 !          else !lat/lon
 !            call project_hvec(su2(jlev,isd),sv2(jlev,isd),sframe(:,:,isd),frame0,uj,vj)
 !            call project_hvec(su2(jlev-1,isd),sv2(jlev-1,isd),sframe(:,:,isd),frame0,uj1,vj1)
 !            vxn(j)=uj*(1-zrat)+uj1*zrat
 !            vyn(j)=vj*(1-zrat)+vj1*zrat
 !          endif !ics
-          vzn(j)=ww2(jlev,nd)*(1-zrat)+ww2(jlev-1,nd)*zrat !node
+          vzn(j)=ww2(jlev,nd)*(1._rkind-zrat)+ww2(jlev-1,nd)*zrat !node
         enddo !j=1,3
 
 !       Interpolate in horizontal
-        uuint=vxn(1)*(1-2*arco(1))+vxn(2)*(1-2*arco(2))+vxn(3)*(1-2*arco(3))
-        vvint=vyn(1)*(1-2*arco(1))+vyn(2)*(1-2*arco(2))+vyn(3)*(1-2*arco(3))
+        uuint=vxn(1)*(1._rkind-2._rkind*arco(1))+vxn(2)*(1._rkind-2._rkind*arco(2))+vxn(3)*(1._rkind-2._rkind*arco(3))
+        vvint=vyn(1)*(1._rkind-2._rkind*arco(1))+vyn(2)*(1._rkind-2._rkind*arco(2))+vyn(3)*(1._rkind-2._rkind*arco(3))
         wwint=vzn(1)*arco(1)+vzn(2)*arco(2)+vzn(3)*arco(3)
 
       else !indvel>=0; interpolated hvel using P_1
@@ -1689,9 +1690,9 @@ end subroutine inter_btrack
 
 !       Interpolate in vertical 
         do j=1,i34(nnel)
-          vxn(j)=vxl(j,2)*(1-zrat)+vxl(j,1)*zrat
-          vyn(j)=vyl(j,2)*(1-zrat)+vyl(j,1)*zrat
-          vzn(j)=vzl(j,2)*(1-zrat)+vzl(j,1)*zrat
+          vxn(j)=vxl(j,2)*(1._rkind-zrat)+vxl(j,1)*zrat
+          vyn(j)=vyl(j,2)*(1._rkind-zrat)+vyl(j,1)*zrat
+          vzn(j)=vzl(j,2)*(1._rkind-zrat)+vzl(j,1)*zrat
         enddo !j
 
 !       Interpolate in horizontal
@@ -1720,7 +1721,7 @@ end subroutine inter_btrack
 !
       use schism_glbl, only: rkind 
       implicit none
-      real(rkind), parameter :: small=0.0 !small positive number or 0
+      real(rkind), parameter :: small=0._rkind !small positive number or 0
 
       real(rkind), intent(in) :: x1,x2,x3,x4,y1,y2,y3,y4
       integer, intent(out) :: iflag
@@ -1728,19 +1729,19 @@ end subroutine inter_btrack
 
       real(rkind) :: delta,delta1,delta2
 
-      tt1=-1000
-      tt2=-1000
-      xin=-1.e25; yin=xin
+      tt1=-1000._rkind
+      tt2=-1000._rkind
+      xin=real(-1.e25,rkind); yin=xin
       iflag=0
       delta=(x2-x1)*(y3-y4)-(y2-y1)*(x3-x4)
       delta1=(x3-x1)*(y3-y4)-(y3-y1)*(x3-x4)
       delta2=(x2-x1)*(y3-y1)-(y2-y1)*(x3-x1)
 
-      if(delta/=0) then
+      if(delta/=0._rkind) then
         tt1=delta1/delta
         tt2=delta2/delta
         !if(tt1>=-small.and.tt1<=1+small.and.tt2>=-small.and.tt2<=1+small) then
-        if(tt2>=-small.and.tt2<=1+small) then
+        if(tt2>=-small.and.tt2<=1._rkind+small) then
           iflag=1
           xin=x3+(x4-x3)*tt2
           yin=y3+(y4-y3)*tt2
@@ -1754,3 +1755,18 @@ end subroutine inter_btrack
 ! END ELCIRC BACKTRACKING SUBROUTINES
 !===============================================================================
 !===============================================================================
+
+!dir$ attributes forceinline :: signa1
+function signa1(x1,x2,x3,y1,y2,y3)
+!-------------------------------------------------------------------------------
+! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!-------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg
+  implicit none
+  real(rkind) :: signa1
+  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+
+  signa1=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
+  
+end function signa1
+

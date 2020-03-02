@@ -1,0 +1,489 @@
+!-----------------------------------------------------------------------
+! ICM model parameter inputs.
+! Format rules
+! (1) Lines beginning with "!" are comments; blank lines are ignored;
+! (2) one line for each parameter in the format: keywords= (value1,value2,...);
+!     keywords are case sensitive; spaces allowed between keywords and "=" and value;
+!     comments starting with "!"  allowed after value;
+! (3) value is an integer, double, or string (no single quote needed); for double, any of the format is acceptable:
+!     40 40. 4.e1
+!     Use of decimal point in integers is OK but discouraged.
+!-----------------------------------------------------------------------
+!---------------------------state variables in ICM----------------------
+!-----------------------------------------------------------------------
+! 1  ZB1   :  1st zooplankton                            g/m^3 
+! 2  ZB2   :  2nd zooplankton                            g/m^3 
+! 3  PB1   :  Diatom                                     g/m^3
+! 4  PB2   :  Green Algae                                g/m^3
+! 5  PB3   :  Cyanobacteria                              g/m^3
+! 6  RPOC  :  Refractory Particulate Organic Carbon      g/m^3
+! 7  LPOC  :  Labile Particulate Organic Carbon          g/m^3
+! 8  DOC   :  Dissolved Orgnaic Carbon                   g/m^3
+! 9  RPON  :  Refractory Particulate Organic Nitrogen    g/m^3
+! 10 LPON  :  Labile Particulate Organic Nitrogen        g/m^3
+! 11 DON   :  Dissolved Orgnaic Nitrogen                 g/m^3
+! 12 NH4   :  Ammonium Nitrogen                          g/m^3
+! 13 NO3   :  Nitrate Nitrogen                           g/m^3
+! 14 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
+! 15 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
+! 16 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
+! 17 PO4t  :  Total Phosphate                            g/m^3
+! 18 SU    :  Particulate Biogenic Silica                g/m^3
+! 19 SAt   :  Available Silica                           g/m^3
+! 20 COD   :  Chemical Oxygen Demand                     g/m^3
+! 21 DOO   :  Dissolved Oxygen                           g/m^3
+! 22 TIC   :  Total Inorganic Carbon                     g/m^3
+! 23 ALK   :  Alkalinity                                 g[CaCO3]/m^3
+! 24 CA    :  Dissolved Calcium                          g[CaCO3]/m^3
+! 25 CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!-----------------------------------------------------------------------
+
+
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!global switches
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+!-----------------------------------------------------------------------
+!light attenuation formuation for rKe
+!iLight=1: rKe=rKeC1*exp(-rKeC2*Sal(k)) 
+!iLight=2: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is from sediment model 
+!iLight=3: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is related to PC,PC2TSS is needed in this case
+!iLight=4: Ke=rke0+rKeChl*Chl+rKeSal*Sal(k); Here TSS is related to Sal
+!-----------------------------------------------------------------------
+iLight = 3
+
+!-----------------------------------------------------------------------
+!method to caluclate FI
+!jLight=1: (Chapra S.C., Page 611), PAR is needed in ICM_rad.th, unit: ly/day, iRad=2 
+!jLight=2: (Carl Cerco), unit: E/m^2
+!-----------------------------------------------------------------------
+jLight = 2 
+
+!!-----------------------------------------------------------------------
+!!Temperature specifiation: use specified temperature for whole domain
+!! when iSun=2
+!!-----------------------------------------------------------------------
+!iSun = 0
+
+!!-----------------------------------------------------------------------
+!!VIMS' old way of adding load
+!!Right now, iNPS and iWQPS are not used in the code. To add load, one has
+!! to use if_source function of SCHISM
+!!-----------------------------------------------------------------------
+!iNPS = 0
+!iPS = 0
+
+!-----------------------------------------------------------------------
+!wind induced DO reareation. iRea=1: Use air reareation
+!-----------------------------------------------------------------------
+iRea = 1
+
+!-----------------------------------------------------------------------
+!Zooplankton(iZoo=1: use zooplankton dynamics; iZoo=0: don't use)
+!-----------------------------------------------------------------------
+iZoo = 0
+
+!-----------------------------------------------------------------------
+!PH model switch (plz use ICM_PH)
+!-----------------------------------------------------------------------
+!iPh = 0 
+
+!-----------------------------------------------------------------------
+!Submerged Aquatic Vegetation switch
+!-----------------------------------------------------------------------
+isav_icm = 0 
+
+!-----------------------------------------------------------------------
+!Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
+!-----------------------------------------------------------------------
+iAtm = 0 
+
+!-----------------------------------------------------------------------
+!Sediment module switch. iSed=1: Use sediment flux model
+!benthic flux provided by sed_flux_model
+!-----------------------------------------------------------------------
+iSed = 1 
+
+!-----------------------------------------------------------------------
+!time series of benthic flux(iBen=0: no time series of manually added benthic flux; 
+!iBen=1: add uniform benthic flux time series for the whole domain; iBen=2; spatially varying )
+!it is allowed to have iSed=1.and.iBen/=0
+!-----------------------------------------------------------------------
+iBen = 0
+
+!-----------------------------------------------------------------------
+!simplified benthic flux as funtion of temperature (iTBen=0: no benthic flux estimations;
+!iTben=1: read horizontally uniform adjusting coefficent thata_tben and magnitude *_tben;
+!iTben=2: spatially varying sets of thata_tben and *_tben, currently unavailable
+!it is not allowed to have iTBen=1 with iSed=1.or.iBen/=0 at the same time
+!-----------------------------------------------------------------------
+iTBen = 0
+thata_tben = 1.06
+SOD_tben = 2.0
+DOC_tben = 0.0
+NH4_tben = 0.1
+NO3_tben = 0.1
+PO4t_tben = 0.01
+SAt_tben = 0.0
+
+!-----------------------------------------------------------------------
+!solar radiation
+!iRad=1: short wave from sflux; require ihconsv =1, nws=2
+!iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day
+!-----------------------------------------------------------------------
+iRad = 1
+
+!-----------------------------------------------------------------------
+!Check parameter(iCheck=1: output all parameter for check)
+!-----------------------------------------------------------------------
+iCheck = 1
+
+!-----------------------------------------------------------------------
+!iout_icm (iout_icm=1: ICM station output)
+!nspool_icm: output ICM variables every nspool_icm steps
+!-----------------------------------------------------------------------
+iout_icm=0
+nspool_icm=30
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!wqparam1.in
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+!-----------------------------------------------------------------------
+!Zooplankton parameters
+!-----------------------------------------------------------------------
+GZM =   1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  !dim(8,2) 
+rKhGE=  0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 !dim(8,2)
+PPC=    0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   !dim(8,2)
+BMZR=   0.254    0.186
+DRZ=    0.02     0.02
+TGZ=    25.0     25.0 
+rKTGZ1= 0.0035   0.008
+rKTGZ2= 0.025    0.030
+TBZ=    20.0     20.0 
+rKTBZ=  0.0693   0.0693
+RZ=     2.0      2.0
+Eff=    0.0
+RF=     0.0
+Pf=     0.0
+
+!-----------------------------------------------------------------------
+!Phytoplankton parameters
+!CChl: carbon to Chl ratio g[C]/mg[Chl]
+!alpha_PB: initial slope between photosynthetic rate and irradiance g[C]*m2/g[Chl]/E
+!-----------------------------------------------------------------------
+!-growth curve-------------
+iReg_GP=  7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_GP>=maxvar(<#region>)
+GPM1=   3.0   3.0   3.0   3.0   3.0   3.0   3.0
+GPM2=   3.0   3.0   3.0   3.0   3.0   3.0   3.0 
+GPM3=   2.5   2.5   2.5   2.5   2.5   2.5   2.5
+TGP1=   15.0   15.0   15.0   15.0   15.0   15.0   15.0
+TGP2=   22.0   22.0   22.0   22.0   22.0   22.0   22.0
+TGP3=   27.0   27.0   27.0   27.0   27.0   27.0   27.0
+rKTGP11= 0.004 0.004 0.004 0.004 0.004 0.004 0.004
+rKTGP12= 0.008 0.008 0.008 0.008 0.008 0.008 0.008  
+rKTGP13= 0.005 0.005 0.005 0.005 0.005 0.005 0.005
+rKTGP21= 0.006 0.006 0.006 0.006 0.006 0.006 0.006  
+rKTGP22= 0.010 0.010 0.010 0.010 0.010 0.010 0.010  
+rKTGP23= 0.004 0.004 0.004 0.004 0.004 0.004 0.004
+
+CChl1=   0.059   0.059   0.059   0.059   0.059   0.059   0.059  
+CChl2=   0.059   0.059   0.059   0.059   0.059   0.059   0.059  
+CChl3=   0.059   0.059   0.059   0.059   0.059   0.059   0.059
+
+!-grazing rate--------------------
+iPRR= 1 !1:uniform; 2:*.gr2; 3:regional
+iReg_PR=  7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_PR>=maxvar(<#region>)
+PRR1=   0.215   0.215   0.215   0.215   0.215   0.215   0.215
+PRR2=   0.215   0.215   0.215   0.215   0.215   0.215   0.215
+PRR3=   0.01    0.01    0.01    0.01    0.01    0.01    0.01
+
+!--------------
+BMPR=   0.01   0.01   0.04
+TBP=    20.0   20.0   20.0 
+rKTBP=  0.0322 0.0322 0.0322
+rKhN=   0.01   0.01   0.01
+rKhP=   0.001  0.001  0.001
+rIm=    40.0   40.0   40.0
+alpha_PB= 8.0  10.0   3.15 
+iLimit= 1 !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
+irSi= 0 !irSi=0: no Si limitation; irSi=1: Si limitation 
+rKhS=   0.05
+ST=     0.1
+rKeC1=  5.82
+rKeC2=  0.017
+rKeChl=  0.017
+rKeTSS=  0.07
+rKeSal=  -0.02
+Dopt= 1.0
+!STB=    0.05
+
+!-----------------------------------------------------------------------
+!Carbon parameters
+!-----------------------------------------------------------------------
+FCRPZ=  0.35
+FCLPZ=  0.55
+FCDPZ=  0.1
+FCDZ=   0.0  0.0
+rKHRZ=  0.5  0.5
+
+FCRP=   0.35 0.35 0.35
+FCLP=   0.55 0.55 0.55
+FCDP=   0.1 0.1 0.1
+FCD=    0.0  0.0  0.0 
+
+!regional carbon dissolution, may delete once inducing multiple groups of DOCA
+iReg_KC=7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_KC>=maxvar(<#region>)
+rKRC=   0.005 0.005 0.005 0.005 0.005 0.005 0.005
+rKLC=   0.075 0.075 0.075 0.075 0.075 0.075 0.075
+rKDC=   0.2 0.2 0.2 0.2 0.2 0.2 0.2
+rKRCalg= 0.0
+rKLCalg= 0.0
+rKDCalg= 0.0
+TRHDR=  20.0
+TRMNL=  20.0 
+rKTHDR= 0.069
+rKTMNL= 0.069
+
+rKHR1= 0.5
+rKHR2= 0.5
+rKHR3= 0.5
+
+rKHORDO= 0.5
+rKHDNn=  0.1
+AANOX=   0.5
+
+!-----------------------------------------------------------------------
+!Nitrogen parameters
+!-----------------------------------------------------------------------
+FNRPZ=  0.35
+FNLPZ=  0.5
+FNDPZ=  0.1
+FNIPZ=  0.05
+FNRZ=   0.35   0.35
+FNLZ=   0.5    0.5
+FNDZ=   0.1    0.1
+FNIZ=   0.05   0.05
+ANCZ=   0.2    0.2
+
+FNRP=   0.35
+FNLP=   0.5
+FNDP=   0.1
+FNIP=   0.05
+ANDC=   0.933
+FNR=    0.0    0.0    0.0
+FNL=    0.0    0.0    0.0
+FND=    1.0    1.0    1.0 
+FNI=    0.0    0.0    0.0
+ANC=    0.167  0.167  0.167
+
+rKRN=   0.005
+rKLN=   0.075
+rKDN=   0.015
+rKRNalg= 0.0
+rKLNalg= 0.0
+rKDNalg= 0.0
+
+rNitM=  0.07
+rKhNitDO= 1.0
+rKhNitN=  1.0
+TNit=     27.0
+rKNit1=  0.0045
+rKNit2=  0.0045
+
+!-----------------------------------------------------------------------
+!Phosphorus parameters
+!-----------------------------------------------------------------------
+FPRPZ=  0.1
+FPLPZ=  0.2
+FPDPZ=  0.5
+FPIPZ=  0.2
+FPRZ=   0.35   0.35
+FPLZ=   0.5    0.5
+FPDZ=   0.1    0.1  
+FPIZ=   0.05   0.05
+APCZ=   0.02   0.02
+
+FPRP=   0.10
+FPLP=   0.20
+FPDP=   0.50
+FPIP=   0.20
+FPR=    0.0    0.0   0.0
+FPL=    0.0    0.0   0.0
+FPD=    1.0    1.0   1.0 
+FPI=    0.0    0.0   0.0 
+APC=    0.02   0.02  0.02
+
+rKPO4p=  0.0 !PO4p partition coefficient
+
+!regional biochemical process of PO4
+iReg_PO4= 7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_PO4>=maxvar(<#region>) 
+rKRP=   0.005 0.005 0.005 0.005 0.005 0.005 0.005
+rKLP=   0.075 0.075 0.075 0.075 0.075 0.075 0.075
+rKDP=   0.10 0.10 0.10 0.10 0.10 0.10 0.10
+rKRPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+rKLPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+rKDPalg= 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+
+!-----------------------------------------------------------------------
+!Silica parameters
+!-----------------------------------------------------------------------
+FSPPZ= 0.75
+FSIPZ= 0.25
+FSPZ=  0.45   0.45
+FSIZ=  0.55   0.55
+ASCZ=  0.5    0.5
+
+FSPP=  1.00
+FSIP=  0.00
+FSPd=  1.00 
+FSId=  0.00
+
+ASCd=  0.5
+rKSAp= 0.0 
+rKSU=  0.03
+TRSUA= 20.0
+rKTSUA= 0.092
+
+!-----------------------------------------------------------------------
+!COD and DO parameters
+!-----------------------------------------------------------------------
+rKHCOD=  1.5
+rKCD=    1.0
+TRCOD=   20.0
+rKTCOD=  0.041
+AOC=     2.67
+AON=     4.33
+AONO=    2.86
+rKro=    3.933
+rKTr=    1.024
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!PH model parameter
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+inu_ph= 0 
+WSCACO3 = 0.1
+rKCACO3 = 60.0 !dissulution bewteen CaCO3 and Ca++
+rKCA = 60.0 !sediment surface transfer coefficient from CaCO3 to Ca++
+rKa = 1.0  !reaeration rate
+
+!-----------------------------------------------------------------------
+!SAV parameters
+!-----------------------------------------------------------------------
+initsav=2 !initsav=1:prop; initsav=2:gr3
+famsav=  0.2 !fraction for active metabolism
+fplfsav= 0.6 !fraction for leaf biomass
+fpstsav= 0.3 !fraction for stem biomass
+fprtsav= 0.1 !fraction for root biomass
+acdwsav= 0.38 !carbon to dry weight ratio
+pmbssav= 0.1 !coefficient for maximum growth rate function
+toptsav= 32 !optimal temperature
+ktg1sav= 0.003 !shape function of temperature adjustment
+ktg2sav= 0.005 !shape function of temperature adjustment
+
+!metabolism parameters
+bmlfrsav=0.02 !reference metabolism rate of lf
+bmstrsav=0.02
+bmrtrsav=0.02
+ktblfsav=0.069 !shape coefficient for temp impact
+ktbstsav=0.069
+ktbrtsav=0.069
+trlfsav= 20 !reference temperature for metabolism
+trstsav= 20
+trrtsav= 20
+
+!light parameters
+alphasav=0.006
+rkshsav= 0.045 !light attenuation from sav absorption
+rlf=     0.0036!??
+rst=     0.0036!??
+rrt=     0!0.1!??
+hcansav0=0.054!1!??
+hcansav_limit=2.0!maximium canopy height
+
+!nitrogen parameters
+ancsav=  0.09 !nitrogen to carbon ratio
+khnwsav= 0.01 !nitrogen half saturation in water column
+khnssav= 0.1 !nitrogen half saturation in sediments
+khnprsav=0.1!?? !half NH4 concentration
+fnisav=  0.5 !fraction of N to 4 groups in metabolism
+fndsav=  0.3
+fnlpsav= 0.15
+fnrpsav= 0.05
+
+!phosphorus parameters
+apcsav=  0.01 !phosphorus to carbon ratio
+khpwsav= 0.001 !phosphorus half saturation in water column
+khpssav= 0.01 !phosphorus half saturation in sediments
+fpisav=  0.5 !fraction of P to 4 groups in metabolism
+fpdsav=  0.35
+fplpsav= 0.1
+fprpsav= 0.05
+
+!oxygen parameters
+aocrsav= 2.67 !oxygen to carbon ratio
+fdosav=  0.5 !fraction of to DO, in metabolism
+fcdsav=  0.3
+fclpsav= 0.15
+fcrpsav= 0.05
+
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!wqparam2.in
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+!-----------------------------------------------------------------------
+!coefficients for settling velocity(m/day)
+!iWS=1: uniform settling velocity 
+!iWS=2: spatially varying settling velocity, requiring 5 *.gr3
+!iWS=3: regional varying settling velocity, reuqiring region_WS.prop
+!-----------------------------------------------------------------------
+iWS=3
+iReg_WS= 7 ! >=2:spatial distributed,requires mapping file, iReg_WS>=maxvar(<#region>)
+WSRP=  1.0  1.0  1.0  1.0  1.0  1.0  1.0
+WSLP=  1.0  1.0  1.0  1.0  1.0  1.0  1.0
+WSPB1= 0.35 0.35 0.35 0.35 0.35 0.35 0.35
+WSPB2= 0.10 0.10 0.10 0.10 0.10 0.10 0.10
+WSPB3= 0.00 0.00 0.00 0.00 0.00 0.00 0.00
+
+!uniform
+WSSED= 1.00
+
+!-----------------------------------------------------------------------
+!Net settling velocity to sediment
+!iSet=0: no re-suspension; 
+!iSet=1: spatial constant net settling velocity; 
+!iSet=2: spatial varying, requires netsettling.gr3, in order as follwing
+!-----------------------------------------------------------------------
+iSet= 1 
+WSSBNET=  0.2
+WSLBNET=  1.0
+WSRBNET=  1.0
+WS1BNET=  0.2
+WS2BNET=  0.10
+WS3BNET=  0.00
+
+!-----------------------------------------------------------------------
+!coefficients for Light extinction coefficient(1/m)
+!iTurb=1: uniform coefficient; iTurb=2: spatially varying
+!-----------------------------------------------------------------------
+iTurb= 1
+Turb=  0.26
+
+!-----------------------------------------------------------------------
+!coefficients for Wind-induced reaeration of DO
+!iWRea=1: uniform coefficient; iWRea=2: spatially varying
+!-----------------------------------------------------------------------
+iWRea= 1
+WRea= 0.0
+
+!-----------------------------------------------------------------------
+!coefficients for the relation between TSS and PC 
+!iTSS=1: uniform coefficient; iTSS=2: spatially varying
+!-----------------------------------------------------------------------
+iTSS= 1
+PC2TSS= 3.0
+!PC2TSS_a= 3.0
+!PC2TSS_b= 2.0
+

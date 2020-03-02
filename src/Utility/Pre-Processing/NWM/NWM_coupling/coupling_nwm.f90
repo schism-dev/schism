@@ -24,10 +24,11 @@
 !      vsind.th         : input of the stream flows of sink elements.
 !      fort.95 fort.96  : output the maximum and average stream flow for
 !      sourch and sink nodes.
+!starting date has been fixed to be 07/10/2011 for hurricane Irene
 !
 !Author: Wei Huang
 !
-!ifort -O2 -CB -g -traceback -o coupling_nwm ../../../UtilLib/schism_geometry.f90 ../../../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
+!ifort -O2 -CB -g -traceback -o coupling_nwm ~/git/schism/src/Utility/UtilLib/schism_geometry.f90 ~/git/schism/src/Utility/UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
 
       program coupling_nwm
        use netcdf
@@ -60,11 +61,11 @@
        integer,allocatable::unisi_ele(:),unisi_nwm(:),elesi_uni(:),nwmsi_uni(:)
        real*8,allocatable :: lats(:),lons(:),gx(:),gy(:),xcj(:),ycj(:)
        real*8,allocatable :: tstep(:)
-       integer :: sf_varid,t_varid,tm1
+       integer :: sf_varid,t_varid,tm1,n
        integer,parameter::ntime=80*24
        integer,allocatable :: tm2(:),td1(:),td2(:),th1(:),th2(:)
        real*8::x11,x12,y11,y12,x21,x22,y21,y22,x3,y3
-       real*8::arco(3),x4,y4
+       real*8::arco(3),x4,y4,dup
        integer:: inside,nodel(3)
        real*8,allocatable :: salt(:),temp(:),streamflow(:) 
        real*8,allocatable :: SF_so(:,:),SF_si(:,:),sflow(:)
@@ -369,53 +370,36 @@
 
       allocate(sink_seg(max(1,n_sink))) 
       allocate(sink_bnd(max(1,n_sink)))
-!      if (n_sink.ne.0) then
+
       do i=1,n_sink
         sink_seg(i)=seg_sink(i)
         sink_bnd(i)=bnd_sink(i)
       enddo
-!      else
-!         allocate(sink_seg(0))
-!         allocate(sink_bnd(0))
-!         write(*,*)'no sink element'
-!      endif 
+
       allocate(source_seg(max(1,n_source)))
       allocate(source_bnd(max(1,n_source)))
-!      if  (n_source.ne.0) then
+
       do i=1,n_source
         source_seg(i)=seg_source(i)
         source_bnd(i)=bnd_source(i)
       enddo
-!      else
-!         allocate(source_seg(0))
-!         allocate(source_bnd(0))
-!         write(*,*)'no source element'
-!      endif
       
       deallocate(seg_sink,bnd_sink,seg_source,bnd_source)
-!unique the element id
-           
+!count unique number of sink and source elements
+
       if (n_sink.ne.0) then
         allocate(unisi_ele(max_len))
         allocate(unisi_nwm(max_len))
         j=0;nsi=0;
         do i=1,n_sink-1
-          
           if (sink_bnd(i).eq.sink_bnd(i+1)) then !remove duplicate
             j=j+1
           else
             nsi=nsi+1
             unisi_ele(nsi)=sink_bnd(i) !unique hgrid elem ID
             unisi_nwm(nsi)=sink_seg(i) !NWM feature ID
-          ! write(*,*)unisi_ele(nsi),unisi_nwm(nsi),nsi,j
           endif
         enddo
-!       if (sink_bnd(n_sink-1).eq.sink_bnd(n_sink)) then
-!          nsi=nsi-1
-!       else
-!          unisi_ele(nsi)=sink_bnd(n_sink)
-!          unisi_nwm(nsi)=sink_seg(n_sink)
-!       endif 
         allocate(elesi_uni(nsi),nwmsi_uni(nsi))
         do i=1,nsi
           elesi_uni(i)=unisi_ele(i) !element id is unique now
@@ -426,64 +410,35 @@
         allocate(unisi_nwm(1))
         unisi_ele(1)=0
         unisi_nwm(1)=0
+        nsi=0
       endif
-     ! write(*,*)'next step'
-      deallocate(unisi_ele,unisi_nwm)
-     ! write(*,*)'next step'
-
       if (n_source.ne.0) then
         allocate(uniso_ele(max_len))
         allocate(uniso_nwm(max_len))
         j=0;nso=0;
         do i=1,n_source-1
- 
-          if (source_bnd(i).eq.source_bnd(i+1)) then
+          if (source_bnd(i).eq.source_bnd(i+1)) then !remove duplicate
             j=j+1
           else
             nso=nso+1
             uniso_ele(nso)=source_bnd(i)
             uniso_nwm(nso)=source_seg(i)
-       !   write(*,*)uniso_ele(nso),uniso_nwm(nso),nso,j
           endif
         enddo
-!       if (source_bnd(n_source-1).eq.source_bnd(n_source)) then
-!          nso=nso-1
-!       else
-!          uniso_ele(nso)=source_bnd(n_source)
-!          uniso_nwm(nso)=source_seg(n_source)
-!       endif
         allocate(eleso_uni(nso),nwmso_uni(nso))
         do i=1,nso
           eleso_uni(i)=uniso_ele(i) !element id is unique now
           nwmso_uni(i)=uniso_nwm(i) !nwm featureID is not necessarily unique
         enddo
       else
+        nso=0
         allocate(uniso_ele(1))
         allocate(uniso_nwm(1))
         uniso_ele(1)=0
         uniso_nwm(1)=0
-      endif
+      endif 
       deallocate(uniso_ele,uniso_nwm)
       
-!write source_sink.in file
-      open(13,file='source_sink.in') 
-      if (n_source.ne.0) then
-        write(13,*)nso
-        do i=1,nso
-           write(13,*)eleso_uni(i)
-        enddo
-      else
-        write(13,*)0
-      endif
-      write(13,*)
-      if (n_sink.ne.0) then
-        write(13,*)nsi
-        do i=1,nsi
-           write(13,*)elesi_uni(i)
-        enddo
-      else
-        write(13,*)0
-      endif
 !define time 
       allocate(tstep(ntime))
       tstep(1)=0
@@ -512,26 +467,26 @@
                th1(ntime),th2(ntime))
       tm1=0
       do i=1,ntime
-         if(i<=31*24) then
+         if(i<=22*24) then
           tm2(i)=7
-         elseif (i>31*24.and.i<=62*24) then 
+         elseif (i>22*24.and.i<=53*24) then 
           tm2(i)=8
          else 
           tm2(i)=9
          endif
       enddo
       
-       do j=1,31*24
-            if(int((j-1)/24)<9) then
-            td1(j)=0
-            td2(j)=1+int((j-1)/24)
-            else
-            td=int((j-1)/24)+1
+       do j=1,22*24
+            !if(int((j-1)/24)<9) then
+            !td1(j)=0
+            !td2(j)=1+int((j-1)/24)
+            !else
+            td=int((j-1)/24)+9+1
             td1(j)=int(td/10)
             td2(j)=td-10*td1(j)
-            endif
+            !endif
        enddo
-       k=31*24
+       k=22*24
        do j=k+1,k+31*24
             if(int((j-k-1)/24)<9) then
             td1(j)=0
@@ -542,8 +497,8 @@
             td2(j)=td-10*td1(j)
             endif
        enddo
-       k=31*24+31*24
-       do j=k+1,k+18*24
+       k=22*24+31*24
+       do j=k+1,k+27*24
             if(int((j-k-1)/24)<9) then
             td1(j)=0
             td2(j)=1+int((j-k-1)/24)
@@ -627,26 +582,42 @@
        enddo !k
        !write(96,*)2590185,860,sflow(2590185)
 
-       if(nso.ne.0) then
-         do j=1,nso
-           if(nwmso_uni(j)<ilow.or.nwmso_uni(j)>ihigh) then
-             write(97,*)'Overflow(3):',nwmso_uni(j),ilow,ihigh
-             SF_so(i,j)=0
-           else 
-             SF_so(i,j)=sflow(nwmso_uni(j))
+!unique the element id during following process
+!combine flux if there are muptiple streams going through one element
+
+       if(n_source.ne.0) then
+         dup=0;nso=0;
+         do j=1,n_source-1
+           if(source_seg(j)<ilow.or.source_seg(j)>ihigh) then
+             write(97,*)'Overflow(3):',source_seg(j),ilow,ihigh
+             SF_so(i,nso)=0
+           !sum streams from same source elements
+           else if (source_bnd(j).eq.source_bnd(j+1)) then
+             dup=dup+sflow(source_seg(j))
+           else
+             nso=nso+1
+             SF_so(i,nso)=dup+sflow(source_seg(j))
+             dup=0
            endif
          enddo !j
        else
          SF_so(1,1)=0
        endif
        !write(*,*)'next step 1'
-       if(nsi.ne.0) then
-         do j=1,nsi
-           if(nwmsi_uni(j)<ilow.or.nwmsi_uni(j)>ihigh) then
-             write(97,*)'Overflow(4):',nwmsi_uni(j),ilow,ihigh
-             SF_si(i,j)=0
+       if(n_sink.ne.0) then
+         dup=0;nsi=0;
+         do j=1,n_sink-1
+           if(sink_seg(j)<ilow.or.sink_seg(j)>ihigh) then
+             write(97,*)'Overflow(4):',sink_seg(j),ilow,ihigh
+             SF_si(i,nsi)=0
+           ! sum the flux from same sink elements
+           else if (sink_bnd(j).eq.sink_bnd(j+1)) then
+             dup=dup+sflow(sink_seg(j))
            else
-             SF_si(i,j)=-sflow(nwmsi_uni(j))
+             nsi=nsi+1
+             SF_si(i,nsi)=dup+sflow(sink_seg(j))
+             SF_si(i,nsi)=-SF_si(i,nsi)
+             dup=0
            endif
          enddo !j
        else
@@ -668,10 +639,29 @@
         enddo    
       endif
 
+!write source_sink.in file
+      open(13,file='source_sink.in')
+      if (n_source.ne.0) then
+        write(13,*)nso
+        do i=1,nso
+           write(13,*)eleso_uni(i)
+        enddo
+      else
+        write(13,*)0
+      endif
+      write(13,*)
+      if (n_sink.ne.0) then
+        write(13,*)nsi
+        do i=1,nsi
+           write(13,*)elesi_uni(i)
+        enddo
+      else
+        write(13,*)0
+      endif
 
 
-!       write(*,*)'next step 3'      
-      !write(*,*)size(SF_so),SF_so(1,1),SF_so(10,10)
+
+
 !write vsource.th file
       if (n_source.ne.0) then
         open(16,file='vsource.th',status='replace')

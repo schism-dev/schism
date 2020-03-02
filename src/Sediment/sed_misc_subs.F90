@@ -56,14 +56,14 @@
 
 ! - Settling velocity (in m.s-1)
       tmp=10.36d0**2.d0+1.049d0*dstar**3.d0
-      if(tmp<0) then
+      if(tmp<0.d0) then
         write(errmsg,*)'SED3D; sed_misc_subs: tmp<0;',tmp
         call parallel_abort(errmsg)
       endif
       !Wsed(ised) = (nu/Sd50(ised)) * ((10.36d0**2.d0 + 1.049d0*      &
       !&                                dstar**3.d0)**0.5d0 - 10.36d0)
       Wsed(ised) = (nu/Sd50(ised)) * ( sqrt(tmp) - 10.36d0)
-      if(Wsed(ised)<=0) then
+      if(Wsed(ised)<=0.d0) then
         write(errmsg,*)'SED3D; sed_misc_subs: Wsed<=0; ',Wsed(ised)
         call parallel_abort(errmsg)
       endif
@@ -105,14 +105,14 @@
 ! - Preliminary parameters
       ratio    = Srho(ised)/rhom
       dstar    = Sd50(ised) * (g*(ratio-1.d0)/nu**2.d0)**(1.d0/3d0)
-      if(1.d0+1.2d0*dstar==0) call parallel_abort('SED3D; sed_misc_subs: dev. by 0')
+      if(1.d0+1.2d0*dstar==0.d0) call parallel_abort('SED3D; sed_misc_subs: dev. by 0')
       theta_cr = 0.3d0/(1.d0+1.2d0*dstar) + 0.055d0 *                &
       &         (1.d0-EXP(-0.02d0*dstar))
 
 !'- Critical shear stress (N.m-2) - will be scaled to m^2/s/s in read_sed_input
       tau_ce(ised) = theta_cr*g*(Srho(ised)-rhom)*Sd50(ised)
 
-      if(tau_ce(ised)<=0) then
+      if(tau_ce(ised)<=0.d0) then
         write(errmsg,*)'SED3D; sed_misc_subs: tau_ce(ised)<=0; ',tau_ce(ised)
         call parallel_abort(errmsg)      
       endif
