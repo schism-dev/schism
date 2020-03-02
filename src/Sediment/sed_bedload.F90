@@ -94,7 +94,7 @@
 !---------------------------------------------------------------------
 
       !dpe is the min of nodes
-      htot = dpe(inea)+sum(eta2(elnode(1:i34(inea),inea)))/dble(i34(inea))
+      htot = dpe(inea)+sum(eta2(elnode(1:i34(inea),inea)))/i34(inea) 
 
       IF (Sd50(ised)>5.0d-5.AND.Sd50(ised)<5.0d-4) THEN
 
@@ -183,7 +183,7 @@
       !sed_angle=TAN(\phi)
       cff1 = MIN(ABS(cff),0.9d0*sed_angle)*SIGN(1.0d0,cff)
       cff2 = ATAN(cff1) !\beta_s
-      if(COS(cff2)==0.d0.or.sed_angle-cff1==0.d0) call parallel_abort('SED3D,sed_bedload_vr; div. by 0 (12)')
+      if(COS(cff2)==0.or.sed_angle-cff1==0) call parallel_abort('SED3D,sed_bedload_vr; div. by 0 (12)')
 !'
       a_slopex = 1.0d0+alpha_bs*((sed_angle/(COS(cff2)*(sed_angle-cff1)))-1.0d0) !\alpha_s
 
@@ -203,7 +203,7 @@
 
       ! - Test used to prevent Inf & NaNs with very small bustr/bvstr 
       !   May still produce unrealistic values 
-      IF(cff1<1.d-10) THEN
+      IF(cff1<1d-10) THEN
         a_slopey = 0.d0
       ELSE
         cff2 = SQRT(tau_ce(ised)/cff1)
@@ -402,10 +402,10 @@
           else !ll
             id1=nxq(1,id,i34(ie))
             id3=nxq(i34(ie)-1,id,i34(ie))
-            cff1=(xel(id,ie)+xel(id1,ie))/2.d0 !xcj(isd2)-> between i and id1   
-            cff2=(yel(id,ie)+yel(id1,ie))/2.d0 !ycj(isd2)-> between i and id1   
-            cff3=(xel(id,ie)+xel(id3,ie))/2.d0 !xcj(isd1)-> between i and id3   
-            cff4=(yel(id,ie)+yel(id3,ie))/2.d0 !ycj(isd1)-> between i and id3   
+            cff1=(xel(id,ie)+xel(id1,ie))/2 !xcj(isd2)-> between i and id1   
+            cff2=(yel(id,ie)+yel(id1,ie))/2 !ycj(isd2)-> between i and id1   
+            cff3=(xel(id,ie)+xel(id3,ie))/2 !xcj(isd1)-> between i and id3   
+            cff4=(yel(id,ie)+yel(id3,ie))/2 !ycj(isd1)-> between i and id3   
             qsan(i)=qsan(i)+FX_r(ie)*(cff4-cff2)+FY_r(ie)*(cff1-cff3) !m^3
           endif !ics
         enddo !j
@@ -429,7 +429,7 @@
         ENDDO ! End loop nne
         
         IF(ks==0) CALL parallel_abort('SEDIMENT: (2)')
-        bed_poro(i) = bed_poro(i)/dble(ks)
+        bed_poro(i) = bed_poro(i)/ks
       ENDDO ! End loop np
 
       ! Exchange ghosts
@@ -445,11 +445,11 @@
 !    [m2]   [m]        = [m3]
 !---------------------------------------------------------------------
 !jl. Why is qsan divided by (1-porosity)?  Doesn't this magically
-!   add volume? I think the idea is to scale the value by (1-porosity).
+!   dd volume? I think the idea is to scale the value by (1-porosity).
 !FG. qsan is divided by (1-porosity) to take account for empty space
 !    between grain (i.e. porosity) on bed level change
 
-      qsan(1:np) = qsan(1:np)/(1.d0-bed_poro(1:np))
+      qsan(1:np) = qsan(1:np)/(1-bed_poro(1:np))
 
       ! Use JCG solver to calc hbed_ised
       hbed_ised=0.0d0 !initial guess
@@ -477,7 +477,7 @@
         IF(idry_e(i)==1) CYCLE
 
         ! Average bed change in element [m]
-        cff=sum(hbed_ised(elnode(1:i34(i),i)))/dble(i34(i))
+        cff=sum(hbed_ised(elnode(1:i34(i),i)))/i34(i)
         ! Average bed change in element [kg/m2]
         cff1=cff*Srho(ised)
 

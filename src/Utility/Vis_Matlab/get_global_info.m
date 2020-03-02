@@ -80,7 +80,7 @@ if(icomb==0)
   vid_eta=netcdf.inqVarID(ncid0,'elev'); 
   netcdf.close(ncid0);
 
-else %combined nc
+else %combibed nc
   %Return junks for vars for icomb=0
   nproc=0; np_lcl=0; ne_lcl=0; ns_lcl=0; iplg=0; ielg=0; iegl_rank=0;
 

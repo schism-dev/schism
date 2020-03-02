@@ -300,7 +300,6 @@
 !          endif !ivs
 
           !Available now: outvar(2,nvrt,np|ne)
-          !However, for uncombined nc, values in untouched ranks are junk
 
           out2(l,:,:)=0
           if(mod(i23d-1,3)==0) then !2D

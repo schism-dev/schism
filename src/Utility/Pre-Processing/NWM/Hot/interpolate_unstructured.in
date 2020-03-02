@@ -1,0 +1,4 @@
+2 !is_xy (search bins varies along x (1) or y (2) axis)
+160000 10000 !nbin,mne_bin (# of bins & max # of elements in each bin)
+10 !ar_bgmax (threshold for aspect ratio)
+0. !h_off (Offset in depth in m)

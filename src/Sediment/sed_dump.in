@@ -1,0 +1,6 @@
+!Time stamps in this file must be one of the time steps!
+86400. 2 !time to dump [sec],# of elements
+2 101 1.2 1001 -2.1 !elem #, volume (positive for dumping, negative for dredging) [m^3],..
+172800. 3 !time, # of elements
+2 1.5 9 0.5 11 2.2
+....

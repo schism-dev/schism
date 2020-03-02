@@ -69,7 +69,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !$OMP do
   do ip=1,np
     if(lbc(ip)) then !nnz(ip)=0: no non-zero entries besides diagonal
-      if(bc(ip)<-9998.d0) call parallel_abort('JCG: wrong b.c.')
+      if(bc(ip)<-9998) call parallel_abort('JCG: wrong b.c.')
       snz(0,ip)=1 !modified sparsem
       x(ip)=bc(ip)
       bb(ip)=bc(ip) !modified rrhs (qel)
@@ -79,7 +79,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
       do j=1,nnp(ip)
         jp=indnd(j,ip)
         if(lbc(jp)) then
-          if(bc(jp)<-9998.d0) call parallel_abort('JCG: wrong b.c. (2)')
+          if(bc(jp)<-9998) call parallel_abort('JCG: wrong b.c. (2)')
           bb(ip)=bb(ip)-s(j,ip)*bc(jp)
         else
           nnz(ip)=nnz(ip)+1
@@ -106,7 +106,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !$OMP end single
 !$OMP do 
   do ip=1,np
-    if(snz(0,ip)==0.d0) call parallel_abort('JCG: zero diagonal')
+    if(snz(0,ip)==0) call parallel_abort('JCG: zero diagonal')
     sp(ip)=snz(0,ip)*x(ip)+sum(snz(1:nnz(ip),ip)*x(inz(1:nnz(ip),ip)))
 !    do j=1,nnz(ip) 
 !      sp(ip)=sp(ip)+snz(j,ip)*x(inz(j,ip))
@@ -121,7 +121,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !$OMP end do
 
 !$OMP workshare
-  rdotrl=sum(r(:)*r(:)*real(icolor_intf_node(:),rkind))
+  rdotrl=sum(r(:)*r(:)*icolor_intf_node(:))
 !$OMP end workshare
 
 !$OMP master
@@ -136,7 +136,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 ! Convergence based on square of 2norm
   rtol2=rtol*rtol
   rdotr0=rdotr !initial 2norm of residual
-  if(rdotr0<0.d0) then
+  if(rdotr0<0) then
     write(errmsg,*)'JCG: 0 initial error:',rdotr0
     call parallel_abort(errmsg)
   endif
@@ -145,7 +145,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 
 !  if(rdotr0==0) return
 !  Illegal to branch in/out of parallel region
-  if(rdotr0/=0.d0) then
+  if(rdotr0/=0) then
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !$OMP master
@@ -187,7 +187,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !#endif
 
 !$OMP single
-    rdotzl=0.d0
+    rdotzl=0
 !$OMP end single
 
 !!!$OMP do reduction(+: rdotzl)
@@ -200,7 +200,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !!!$OMP end do
 
 !$OMP workshare
-    rdotzl=sum(r(:)*z(:)*real(icolor_intf_node(:),rkind))
+    rdotzl=sum(r(:)*z(:)*icolor_intf_node(:))
 !$OMP end workshare
 
 !$OMP master
@@ -221,7 +221,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !$OMP end workshare
     else
 !$OMP single
-      if(old_rdotz==0.d0) call parallel_abort('JCG: old_rdotz=0')
+      if(old_rdotz==0) call parallel_abort('JCG: old_rdotz=0')
       beta=rdotz/old_rdotz 
 !$OMP end single
 
@@ -239,7 +239,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
     wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
 #endif
 
-    alphal=0.d0 !temporarily used for the denominator
+    alphal=0 !temporarily used for the denominator
 !$OMP end master
 !$OMP barrier
 
@@ -257,7 +257,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !$OMP end do
 
 !$OMP workshare
-    alphal=sum(p(1:np)*sp(:)*real(icolor_intf_node(:),rkind))
+    alphal=sum(p(1:np)*sp(:)*icolor_intf_node(:))
 !$OMP end workshare
 
 !$OMP master
@@ -270,10 +270,10 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
     wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
 #endif
 
-    if(alpha==0.d0) call parallel_abort('JCG: division by zero')
+    if(alpha==0) call parallel_abort('JCG: division by zero')
     alpha=rdotz/alpha
     old_rdotz=rdotz 
-    rdotrl=0.d0
+    rdotrl=0
 !$OMP end master
 !$OMP barrier
 
@@ -292,7 +292,7 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !!$OMP end do
 
 !$OMP workshare
-    rdotrl=sum(r(:)*r(:)*real(icolor_intf_node(:),rkind))
+    rdotrl=sum(r(:)*r(:)*icolor_intf_node(:))
 !$OMP end workshare
 
 !$OMP master
@@ -355,25 +355,25 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
   enddo !ip
 
 ! Block-Jacobi pre-conditioner
-  rat_max2=-1.d0 !max. horizontal-vertical ratio
-  threshold_rat=0.4d0 !threshold for grid aspect ratio (dz/dx)
+  rat_max2=-1 !max. horizontal-vertical ratio
+  threshold_rat=0.4 !threshold for grid aspect ratio (dz/dx)
   large_rat(:)=.false.
   do ip=1,np
     if(lhbc(ip)) cycle
     
     !Compute horizontal-vertical ratio
-    dx_min2=1.d25
+    dx_min2=1.e25
     do j=1,nnp(ip)
       nd=indnd(j,ip)
-      dist2=(xnd(ip)-xnd(nd))**2.d0+(ynd(ip)-ynd(nd))**2.d0
+      dist2=(xnd(ip)-xnd(nd))**2+(ynd(ip)-ynd(nd))**2 
       dx_min2=min(dx_min2,dist2)
     enddo !j
     dz_max2=-1
     do k=kbp(ip),nvrt-1
-      dist2=(znl(k+1,ip)-znl(k,ip))**2.d0
+      dist2=(znl(k+1,ip)-znl(k,ip))**2
       dz_max2=max(dz_max2,dist2)
     enddo !k
-    if(dx_min2<=0.d0) call parallel_abort('CG2: dx_min2<=0')
+    if(dx_min2<=0) call parallel_abort('CG2: dx_min2<=0')
     tmp=dz_max2/dx_min2
     rat_max2=max(rat_max2,tmp)
     if(sqrt(tmp)>=threshold_rat) large_rat(ip)=.true.
@@ -388,9 +388,9 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
       cupp(kin)=qmatr(k,1,0,ip)
     enddo !k
     !RHS
-    rrhs=0.d0
+    rrhs=0
     do l=1,ndim
-      rrhs(l,l)=1.d0
+      rrhs(l,l)=1
     enddo !l
 
     call tridag(nvrt,nvrt,ndim,ndim,alow,bdia,cupp,rrhs,soln,gam)
@@ -400,7 +400,7 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
     do k=kbp_e(ip),nvrt-1
       !Check symmetry
       do l=kbp_e(ip),nvrt-1
-        if(abs(blockj(k,l,ip)-blockj(l,k,ip))>1.d-4) then
+        if(abs(blockj(k,l,ip)-blockj(l,k,ip))>1.e-4) then
           write(errmsg,*)'Not symmetric:',iplg(ip),k,l,blockj(k,l,ip)-blockj(l,k,ip)
           call parallel_abort(errmsg)
         endif
@@ -424,14 +424,14 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
 #endif
   
 ! Residual
-  qhat=0.d0 !initial guess
-  rdotrl=0.d0
-  rr=0.d0 !for b.c. pts etc
+  qhat=0 !initial guess
+  rdotrl=0
+  rr=0 !for b.c. pts etc
   do ip=1,np
     if(lhbc(ip)) cycle
 
     do k=kbp_e(ip),nvrt-1 !no F.S.
-      if(qmatr(k,0,0,ip)<=0.d0) call parallel_abort('JCG2: zero diagonal')
+      if(qmatr(k,0,0,ip)<=0) call parallel_abort('JCG2: zero diagonal')
       rr(k,ip)=qir(k,ip) !residual since qhat=0
       if(associated(ipgl(iplg(ip))%next)) then !interface node
         if(ipgl(iplg(ip))%next%rank<myrank) cycle !already in the sum so skip
@@ -451,8 +451,8 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
 ! Convergence based on square of 2norm
   rtol2=rtol*rtol
   rdotr0=rdotr !initial 2norm of residual
-  if(rdotr0<0.d0) call parallel_abort('JCG2: 0 initial error')
-  if(rdotr0==0.d0) return
+  if(rdotr0<0) call parallel_abort('JCG2: 0 initial error')
+  if(rdotr0==0) return
 
   itn=0
   if(myrank==0) then
@@ -470,7 +470,7 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
       exit
     endif
 
-    zz=0.d0 !for b.c. pts
+    zz=0 !for b.c. pts
     do ip=1,np 
       if(lhbc(ip)) cycle
 
@@ -486,7 +486,7 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
       enddo !k
     enddo !ip
 
-    rdotzl=0.d0
+    rdotzl=0
     do ip=1,np
       if(lhbc(ip)) cycle
       if(associated(ipgl(iplg(ip))%next)) then !interface node
@@ -507,7 +507,7 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
     if(itn==1) then 
       pp(:,1:np)=zz(:,1:np)
     else
-      if(old_rdotz==0.d0) call parallel_abort('JCG: old_rdotz=0')
+      if(old_rdotz==0) call parallel_abort('JCG: old_rdotz=0')
       beta=rdotz/old_rdotz 
       pp(:,1:np)=zz(:,1:np)+beta*pp(:,1:np)
     endif
@@ -520,8 +520,8 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
     wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
 #endif
 
-    alphal=0.d0 !temporarily used for the denominator
-    sp=0.d0 !for b.c. pts and initialize
+    alphal=0 !temporarily used for the denominator
+    sp=0 !for b.c. pts and initialize
     do ip=1,np
       if(lhbc(ip)) cycle
 
@@ -554,13 +554,13 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
     wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
 #endif
 
-    if(alpha==0.d0) call parallel_abort('JCG2: division by zero')
+    if(alpha==0) call parallel_abort('JCG2: division by zero')
     alpha=rdotz/alpha
 
     qhat=qhat+alpha*pp !augmented update
     rr=rr-alpha*sp !non-augmented update
     old_rdotz=rdotz 
-    rdotrl=0.d0
+    rdotrl=0
     do ip=1,np 
       !if(idry(ip)==1.or.isbnd(1,ip)>0) cycle
       if(lhbc(ip)) cycle

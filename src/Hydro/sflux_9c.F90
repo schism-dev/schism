@@ -362,9 +362,9 @@
 ! local variables
         integer num_nodes, i_node, sfc_lev,ne_global,np_global,itmp
         logical dry
-        real(rkind), parameter :: t_freeze = 273.15d0
-        real(rkind), parameter :: stefan = 5.67d-8
-        real(rkind), parameter :: emissivity = 1.0d0
+        real(rkind), parameter :: t_freeze = 273.15
+        real(rkind), parameter :: stefan = 5.67e-8
+        real(rkind), parameter :: emissivity = 1.0
         integer, parameter :: printit = 1000
         character, parameter :: grid_file*50 = 'sflux.gr3'
         real(rkind) :: x_tmp, y_tmp, sflux_frac
@@ -454,7 +454,7 @@
 !          endif
 
           longwave_u(i_node) = emissivity * stefan * &
-     &( t_freeze + tr_nd(1,sfc_lev,i_node) ) ** 4.d0
+     &( t_freeze + tr_nd(1,sfc_lev,i_node) ) ** 4
 
         enddo !i_node
 !$OMP end parallel do 
@@ -554,29 +554,29 @@
 
 ! local variables
         integer, parameter :: max_iter = 10
-        real(rkind), parameter :: speed_air_warn = 50.0d0
-        real(rkind), parameter :: speed_air_stop = 100.0d0
-        real(rkind), parameter :: speed_water_warn = 5.0d0
-        real(rkind), parameter :: speed_water_stop = 20.0d0
-        real(rkind), parameter :: z_t = 2.0d0
-        real(rkind), parameter :: z_u = 10.0d0
-        real(rkind), parameter :: a1 = 0.013d0
-        real(rkind), parameter :: a2 = 0.11d0
-        real(rkind), parameter :: b1 = 2.67d0
-        real(rkind), parameter :: b2 = -2.57d0
-        real(rkind), parameter :: nu = 1.46d-5
-        real(rkind), parameter :: beta = 1.0d0
-        real(rkind), parameter :: g = 9.81d0
-        real(rkind), parameter :: z_i = 1000.0d0
-        real(rkind), parameter :: karman = 0.4d0
-        real(rkind), parameter :: zeta_m = -1.574d0
-        real(rkind), parameter :: zeta_h = -0.465d0
-        real(rkind), parameter :: t_freeze = 273.15d0
-        real(rkind), parameter :: epsilon_r = 0.6220d0
-        real(rkind), parameter :: c_p_air = 1004.0d0
-        real(rkind), parameter :: latent = 2.501d6
-        real(rkind), parameter :: r_air = 287.0d0
-        integer, parameter :: printit = 1000.d0
+        real(rkind), parameter :: speed_air_warn = 50.0
+        real(rkind), parameter :: speed_air_stop = 100.0
+        real(rkind), parameter :: speed_water_warn = 5.0
+        real(rkind), parameter :: speed_water_stop = 20.0
+        real(rkind), parameter :: z_t = 2.0
+        real(rkind), parameter :: z_u = 10.0
+        real(rkind), parameter :: a1 = 0.013
+        real(rkind), parameter :: a2 = 0.11
+        real(rkind), parameter :: b1 = 2.67
+        real(rkind), parameter :: b2 = -2.57
+        real(rkind), parameter :: nu = 1.46e-5
+        real(rkind), parameter :: beta = 1.0
+        real(rkind), parameter :: g = 9.81
+        real(rkind), parameter :: z_i = 1000.0
+        real(rkind), parameter :: karman = 0.4
+        real(rkind), parameter :: zeta_m = -1.574
+        real(rkind), parameter :: zeta_h = -0.465
+        real(rkind), parameter :: t_freeze = 273.15
+        real(rkind), parameter :: epsilon_r = 0.6220
+        real(rkind), parameter :: c_p_air = 1004.0
+        real(rkind), parameter :: latent = 2.501e6
+        real(rkind), parameter :: r_air = 287.0
+        integer, parameter :: printit = 1000
 
         integer :: i_node, iter, sfc_lev
         real(rkind) :: u_star, theta_star, q_star, z_0, monin
@@ -593,7 +593,7 @@
 #endif
 
 ! precalculate constants
-        one_third = 1.0d0 / 3.0d0
+        one_third = 1.0 / 3.0
 
 ! now loop over all points
 !$OMP parallel do default(shared) private(i_node,dry,sfc_lev,e_sfc,q_sfc,mix_ratio, &
@@ -627,24 +627,24 @@
 
 ! calculate q_sfc from e_sfc
 ! (e_sfc reduced for salinity using eqn from Smithsonian Met Tables)
-          e_sfc = (1.0d0 - 0.000537d0 * tr_nd(2,sfc_lev,i_node)) &
+          e_sfc = (1.0 - 0.000537 * tr_nd(2,sfc_lev,i_node)) &
      &          * esat_flat_r(tr_nd(1,sfc_lev,i_node) + t_freeze)
           q_sfc = epsilon_r * e_sfc &
-     &          / ( p_air(i_node) - e_sfc * (1.0d0 - epsilon_r) )
+     &          / ( p_air(i_node) - e_sfc * (1.0 - epsilon_r) )
 
 ! calculate the water vapor mixing ratio of the air
-          mix_ratio = q_air(i_node) / (1.0d0 - q_air(i_node))
+          mix_ratio = q_air(i_node) / (1.0 - q_air(i_node))
 
 ! calculate theta_air, theta_v_air, delta_theta, delta_q,
 ! and delta_theta_v
-          theta_air = (t_air(i_node) + t_freeze) + 0.0098d0*z_t
-          theta_v_air = theta_air * (1.0d0 + 0.608d0 * mix_ratio)
+          theta_air = (t_air(i_node) + t_freeze) + 0.0098*z_t
+          theta_v_air = theta_air * (1.0 + 0.608 * mix_ratio)
           delta_theta = theta_air -(tr_nd(1,sfc_lev,i_node) + t_freeze)
           delta_q = q_air(i_node) - q_sfc
-          delta_theta_v = delta_theta * (1.0d0 + 0.608d0 * mix_ratio)+0.608 * theta_air * delta_q
+          delta_theta_v = delta_theta * (1.0 + 0.608 * mix_ratio)+0.608 * theta_air * delta_q
 
 ! calculate the air virtual temperature and density
-          t_v = (t_air(i_node) + t_freeze) * (1.0d0 + 0.608d0 * mix_ratio)
+          t_v = (t_air(i_node) + t_freeze) * (1.0 + 0.608 * mix_ratio)
           rho_air = p_air(i_node) / (r_air * t_v)
 
 #ifdef DEBUG
@@ -688,11 +688,10 @@
           endif
 
 ! begin with initial values of u_star, w_star, and speed
-          u_star = 0.06d0
-          w_star = 0.5d0
+          u_star = 0.06
+          w_star = 0.5
           if (delta_theta_v .ge. 0) then  ! stable
-            speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                          &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind)
+            speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind)
 !#ifndef SCHISM
 !     &               (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &               (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
@@ -723,9 +722,9 @@
           rb = g * z_u * delta_theta_v / (theta_v_air * speed * speed)
 
 ! calculate initial values for zeta_u, monin, zeta_t
-          if (rb .ge. 0.d0) then                      ! neutral or stable
+          if (rb .ge. 0) then                      ! neutral or stable
             zeta_u = rb * log(z_u/z_0) &
-     &             / (1.0d0 - 0.5d0*min(rb,0.19_rkind))
+     &             / (1.0 - 0.5*min(rb,0.19_rkind))
           else
             zeta_u = rb * log(z_u/z_0)
           endif
@@ -750,7 +749,7 @@
 ! Calculate the roughness lengths
             z_0 = a1 * u_star * u_star / g + a2 * nu / u_star
             re = u_star * z_0 / nu
-            z_0_t = z_0 / exp(b1 * (re**0.25d0) + b2)
+            z_0_t = z_0 / exp(b1 * (re**0.25) + b2)
 
 #ifdef DEBUG
             if (mod(i_node-1,printit) .eq. 0) then
@@ -764,9 +763,9 @@
             zeta_t = z_t / monin
 
 ! apply asymptotic limit to stable conditions
-            if (zeta_t .gt. 2.5d0) then
+            if (zeta_t .gt. 2.5) then
               converged = .true.
-              zeta_t = 2.5d0
+              zeta_t = 2.5
               monin = z_t / zeta_t
               zeta_u = z_u / monin
 
@@ -780,33 +779,33 @@
             if(zeta_u .lt. zeta_m) then ! very unstable
 ! extra term?
               u_star = speed * karman/(log(zeta_m*monin/z_0)-psi_m(zeta_m)+ psi_m(z_0/monin) &
-     &+1.14d0*((-zeta_u)**(one_third)-(-zeta_m)**(one_third)))
-            else if (zeta_u .lt. 0.0d0) then ! unstable
+     &+1.14*((-zeta_u)**(one_third)-(-zeta_m)**(one_third)))
+            else if (zeta_u .lt. 0.0) then ! unstable
               u_star = speed*karman/(log(z_u/z_0)-psi_m(zeta_u)+psi_m(z_0/monin))
-            else if (zeta_u .le. 1.0d0) then ! neutral/stable
-              u_star = speed*karman/(log(z_u/z_0)+5.0d0*zeta_u-5.0d0*z_0/monin)
+            else if (zeta_u .le. 1.0) then ! neutral/stable
+              u_star = speed*karman/(log(z_u/z_0)+5.0*zeta_u-5.0*z_0/monin)
             else  ! very stable
-              u_star = speed*karman/(log(monin/z_0)+5.0d0+5.0d0*log(zeta_u)-5.0d0*z_0/monin+zeta_u-1.0d0)
+              u_star = speed*karman/(log(monin/z_0)+5.0+5.0*log(zeta_u)-5.0*z_0/monin+zeta_u-1.0)
             endif
 
 ! caulculate theta_star and q_star, depending on zeta
             if(zeta_t.lt.zeta_h) then ! very unstable
               tmp=karman/(log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
-     &+ psi_h(z_0_t/monin)+0.8d0*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
+     &+ psi_h(z_0_t/monin)+0.8*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
 !              theta_star = karman*delta_theta/(log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
 !     &+ psi_h(z_0_t/monin)+0.8*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
 !              q_star = karman*delta_q/(log(zeta_h*monin/z_0_t)- psi_h(zeta_h) &
 !     &+ psi_h(z_0_t/monin)+0.8*((-zeta_h)**(-one_third) -(-zeta_t)**(-one_third)))
-            else if(zeta_t.lt.0.0d0) then ! unstable
+            else if(zeta_t.lt.0.0) then ! unstable
               tmp=karman/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
 !              theta_star = karman * delta_theta/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
 !              q_star = karman*delta_q/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
-            else if(zeta_t.lt.1.0d0) then ! neutral/stable
-              tmp=karman/(log(z_t/z_0_t)+5.0d0*zeta_t-5.0d0*z_0_t/monin)
+            else if(zeta_t.lt.1.0) then ! neutral/stable
+              tmp=karman/(log(z_t/z_0_t)+5.0*zeta_t-5.0*z_0_t/monin)
 !              theta_star = karman * delta_theta/(log(z_t/z_0_t)+5.0*zeta_t-5.0*z_0_t/monin)
 !              q_star = karman*delta_q/(log(z_t/z_0_t)+5.0*zeta_t-5.0*z_0_t/monin)
             else ! very stable
-              tmp=karman/(log(monin/z_0_t) + 5.0d0+5.0d0*log(zeta_t)-5.0d0*z_0_t/monin+zeta_t-1.0d0)
+              tmp=karman/(log(monin/z_0_t) + 5.0+5.0*log(zeta_t)-5.0*z_0_t/monin+zeta_t-1.0)
 !              theta_star = karman * delta_theta/(log(monin/z_0_t) + 5.0+5.0*log(zeta_t)-5.0*z_0_t/monin+zeta_t-1.0)
 !              q_star = karman*delta_q/(log(monin/z_0_t)+5.0+5.0*log(zeta_t)-5.0*z_0_t/monin+zeta_t-1.0)
             endif
@@ -815,15 +814,14 @@
             q_star=tmp*delta_q
 
 ! calculate theta_v_star and monin
-            theta_v_star = theta_star*(1.0d0+0.608d0*mix_ratio)+0.608d0*theta_air*q_star
+            theta_v_star = theta_star*(1.0+0.608*mix_ratio)+0.608*theta_air*q_star
             monin = theta_v_air*u_star*u_star/(karman*g*theta_v_star)
 
 ! depending on surface layer stability, calculate the effective
 ! near-surface wind speed
 ! (ie relative to the flowing water surface)
-            if (delta_theta_v .ge. 0.0d0) then ! stable
-              speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                             &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind) 
+            if (delta_theta_v .ge. 0.0) then ! stable
+              speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind) 
 !#ifndef SCHISM
 !     &                 (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &                 (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
@@ -838,8 +836,7 @@
 ! calculate the convective velocity scale
               w_star = (-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
 
-              speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                         &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0+(beta * w_star)**2.d0)
+              speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2)
 !#ifndef SCHISM
 !     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
@@ -873,7 +870,7 @@
 #endif
 
 ! calculate wind stresses
-          speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0)
+          speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2)
 !#ifndef SCHISM
 !     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 )
@@ -882,7 +879,7 @@
 !     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 )
 !#endif /* SCHISM */
 
-          if (speed_res .gt. 0.0d0) then
+          if (speed_res .gt. 0.0) then
             tau = rho_air * u_star * u_star * speed_res / speed
             tau_xz(i_node) =-tau*(u_air(i_node)-uu2(sfc_lev,i_node))/speed_res
 !#ifndef SCHISM
@@ -899,8 +896,8 @@
 !#endif /* SCHISM */
 !     &                     / speed_res
           else
-            tau_xz(i_node) = 0.0d0
-            tau_yz(i_node) = 0.0d0
+            tau_xz(i_node) = 0.0
+            tau_yz(i_node) = 0.0
           endif
 
 #ifdef DEBUG
@@ -939,16 +936,16 @@
         real(rkind), intent(in) :: t
         real(rkind)             :: t_eff
         real(rkind), parameter :: &
-     &        c0= 6.11583699d+02,  c1= 0.444606896d+02, &
-     &        c2= 0.143177157d+01, c3= 0.264224321d-01, &
-     &        c4= 0.299291081d-03, c5= 0.203154182d-05, &
-     &        c6= 0.702620698d-08, c7= 0.379534310d-11, &
-     &        c8=-0.321582393d-13
+     &        c0= 6.11583699e+02,  c1= 0.444606896e+02, &
+     &        c2= 0.143177157e+01, c3= 0.264224321e-01, &
+     &        c4= 0.299291081e-03, c5= 0.203154182e-05, &
+     &        c6= 0.702620698e-08, c7= 0.379534310e-11, &
+     &        c8=-0.321582393e-13
 
 ! t     : temperature in K
 ! t_eff : effective temperature in C
 
-        t_eff = max(-85._rkind,t-273.16_rkind)
+        t_eff = max(-85._rkind,t-273.16)
 
         esat_flat_r = c0+t_eff*(c1+t_eff*(c2+t_eff*(c3+t_eff*(c4+t_eff*&
      &                         (c5+t_eff*(c6+t_eff*(c7+t_eff*c8)))))))
@@ -963,11 +960,11 @@
         real(rkind), intent(in) :: zeta
         real(rkind) :: chi, half_pi
 
-        half_pi = 2.0d0 * atan(1._rkind)
-        chi = (1.0d0 - 16.0d0 * zeta)**0.25d0
-        psi_m = 2.0d0 * log( 0.5d0 * (1.0d0 + chi) ) + &
-     &          log( 0.5d0 * (1.0d0 + chi*chi) ) - &
-     &          2.0d0 * atan(chi) + half_pi
+        half_pi = 2.0 * atan(1._rkind)
+        chi = (1.0 - 16.0 * zeta)**0.25
+        psi_m = 2.0 * log( 0.5 * (1.0 + chi) ) + &
+     &          log( 0.5 * (1.0 + chi*chi) ) - &
+     &          2.0 * atan(chi) + half_pi
 
       return
       end
@@ -979,8 +976,8 @@
         real(rkind), intent(in) :: zeta
         real(rkind) :: chi
 
-        chi = (1.0d0 - 16.0d0 * zeta)**0.25d0
-        psi_h = 2.0d0 * log( 0.5d0 * (1.0d0 + chi*chi) )
+        chi = (1.0 - 16.0 * zeta)**0.25
+        psi_h = 2.0 * log( 0.5 * (1.0 + chi*chi) )
 
       return
       end
@@ -1019,7 +1016,7 @@
         character, parameter :: rot_file*50 = 'windrot_geo2proj.gr3'
         logical, save :: first_call = .true.
 
-        pi = 4.0d0 * atan(1.0_rkind)
+        pi = 4.0 * atan(1.0_rkind)
         deg_to_rad = pi / 180.0_rkind
 
 ! if this is the first call to this subroutine, then read in the angles
@@ -1132,13 +1129,13 @@
 !        real(rkind) :: start_hour  = -9999.0
 !        real(rkind) :: utc_start   = -9999.0
         integer             :: start_jdate
-        real(rkind) :: start_frac_jdate = -9999.0d0
+        real(rkind) :: start_frac_jdate = -9999.0
 
         !relative weights for air; can be >1 (will be weight-averaged)
-        real(rkind) :: air_1_relative_weight = 1.0d0
-        real(rkind) :: air_2_relative_weight = 99.0d0
-        real(rkind) :: air_1_max_window_hours = 120.0d0
-        real(rkind) :: air_2_max_window_hours = 120.0d0
+        real(rkind) :: air_1_relative_weight = 1.0
+        real(rkind) :: air_2_relative_weight = 99.0
+        real(rkind) :: air_1_max_window_hours = 120.0
+        real(rkind) :: air_2_max_window_hours = 120.0
         logical             :: air_1_fail_if_missing = .true.
         logical             :: air_2_fail_if_missing = .false.
         character (len=50)  :: air_1_file = 'sflux_air_1'
@@ -1149,10 +1146,10 @@
         character (len=50)  :: stmp_name  = 'stmp'
         character (len=50)  :: spfh_name  = 'spfh'
 
-        real(rkind) :: rad_1_relative_weight = 1.0d0
-        real(rkind) :: rad_2_relative_weight = 99.0d0
-        real(rkind) :: rad_1_max_window_hours = 120.0d0
-        real(rkind) :: rad_2_max_window_hours = 24.0d0
+        real(rkind) :: rad_1_relative_weight = 1.0
+        real(rkind) :: rad_2_relative_weight = 99.0
+        real(rkind) :: rad_1_max_window_hours = 120.0
+        real(rkind) :: rad_2_max_window_hours = 24.0
         logical             :: rad_1_fail_if_missing = .true.
         logical             :: rad_2_fail_if_missing = .false.
         character (len=50)  :: rad_1_file = 'sflux_rad_1'
@@ -1160,10 +1157,10 @@
         character (len=50)  :: dlwrf_name = 'dlwrf'
         character (len=50)  :: dswrf_name = 'dswrf'
        
-        real(rkind) :: prc_1_relative_weight = 1.0d0
-        real(rkind) :: prc_2_relative_weight = 99.0d0
-        real(rkind) :: prc_1_max_window_hours = 120.0d0
-        real(rkind) :: prc_2_max_window_hours = 24.0d0
+        real(rkind) :: prc_1_relative_weight = 1.0
+        real(rkind) :: prc_2_relative_weight = 99.0
+        real(rkind) :: prc_1_max_window_hours = 120.0
+        real(rkind) :: prc_2_max_window_hours = 24.0
         logical             :: prc_1_fail_if_missing = .true.
         logical             :: prc_2_fail_if_missing = .false.
         character (len=50)  :: prc_1_file = 'sflux_prc_1'
@@ -1207,8 +1204,8 @@
         logical, save :: first_call = .true.
         type(dataset_info), save :: dataset_1, dataset_2
         real(rkind) time_now
-        real(rkind), parameter :: secs_per_day = 86400.0d0
-        real(rkind), parameter :: t_freeze = 273.15d0
+        real(rkind), parameter :: secs_per_day = 86400.0
+        real(rkind), parameter :: t_freeze = 273.15
         character data_name*50
 
 ! define the local variables num_nodes_out
@@ -1362,7 +1359,7 @@
         type(dataset_info), save :: dataset_1, dataset_2
         real(rkind) time_now
 !        real(rkind), dimension(npa) :: albedo
-        real(rkind), parameter :: secs_per_day = 86400.0d0
+        real(rkind), parameter :: secs_per_day = 86400.0
         character data_name*50
 
 ! define the local variables num_nodes_out
@@ -1468,7 +1465,7 @@
 #endif
 !new21
         do i_node = 1, num_nodes_out
-          shortwave_d(i_node)=max((1.0d0-albedo(i_node))*shortwave_d(i_node),0.0_rkind)
+          shortwave_d(i_node)=max((1.0-albedo(i_node))*shortwave_d(i_node),0.0_rkind)
         enddo
 
 ! set first_call to false, so subsequent calls will know that they're
@@ -1493,7 +1490,7 @@
         logical, save :: first_call = .true.
         type(dataset_info), save :: dataset_1, dataset_2
         real(rkind) time_now
-        real(rkind), parameter :: secs_per_day = 86400.0d0
+        real(rkind), parameter :: secs_per_day = 86400.0
         character data_name*50
 
 ! define the local variables num_nodes_out
@@ -1991,7 +1988,7 @@
         logical, intent(out) :: repeat, at_end
         integer, intent(out) :: repeat_num
 
-        real(rkind), parameter :: time_eps = 0.001d0
+        real(rkind), parameter :: time_eps = 0.001
         integer i_time
         
         repeat = .false.
@@ -2002,7 +1999,7 @@
           endif
         enddo
         
-        at_end = ((test_time - (times(num_times) + time_eps)) .gt. 0.0d0)
+        at_end = ((test_time - (times(num_times) + time_eps)) .gt. 0.0)
         
       return
       end
@@ -2243,8 +2240,8 @@
         real(rkind) x1, y1, x2, y2, x3, y3, x4, y4
         real(rkind) a1, a2, a3, aa, ae
         real(rkind) ae_min
-        real(rkind), parameter :: epsilon = 1.0d-10
-        real(rkind), parameter :: bad_point_flag = -9.9d20
+        real(rkind), parameter :: epsilon = 1.0e-10
+        real(rkind), parameter :: bad_point_flag = -9.9e20
         logical zero_ae, completed_check
 
 ! calculate and store the areas of the input grid elements
@@ -2263,7 +2260,7 @@
           j3 = node_j(elem_nodes(i_elem,3))
           x3 = x_in(i3,j3)
           y3 = y_in(i3,j3)
-          area_in(i_elem)=0.5d0*((x1-x3)*(y2-y3)+(x3-x2)*(y1-y3))
+          area_in(i_elem)=0.5*((x1-x3)*(y2-y3)+(x3-x2)*(y1-y3))
         enddo
 
 ! now loop over the nodes of the output grid, searching for the
@@ -2277,7 +2274,7 @@
 !cannot use OMP due to dependency   
         do i_node = 1, num_nodes_out !npa
 
-          ae_min = 1.0d25
+          ae_min = 1.0e25
           in_elem_for_out_node(i_node) = 0
 
 ! initialize flag which indicates that we've found correct element
@@ -2354,11 +2351,11 @@
             a2 = (x4-x1)*(y3-y1) - (y4-y1)*(x3-x1)
             a3 = (y4-y1)*(x2-x1) - (x4-x1)*(y2-y1)
             aa = abs(a1) + abs(a2) + abs(a3)
-            if (area_in(i_elem) .gt. 0.0d0) then
-              ae = abs(aa - 2.0d0*area_in(i_elem)) &
-     &           / (2.0d0*area_in(i_elem))
+            if (area_in(i_elem) .gt. 0.0) then
+              ae = abs(aa - 2.0*area_in(i_elem)) &
+     &           / (2.0*area_in(i_elem))
             else
-              ae = 1.0d25
+              ae = 1.0e25
             endif
 
 ! if ae equals zero (within epsilon) then we've found correct element
@@ -2430,11 +2427,11 @@
 
 ! now calculate the weighting functions, which may be <0!
           weight(i_node,1) = ( (x4-x3)*(y2-y3) + (x2-x3)*(y3-y4) ) &
-     &                     / ( 2.0d0*area_in(i_elem) )
+     &                     / ( 2.0*area_in(i_elem) )
           weight(i_node,2) = ( (x4-x1)*(y3-y1) - (y4-y1)*(x3-x1) ) &
-     &                     / ( 2.0d0*area_in(i_elem) )
+     &                     / ( 2.0*area_in(i_elem) )
           weight(i_node,3) = ( -(x4-x1)*(y2-y1) + (y4-y1)*(x2-x1) ) &
-     &                     / ( 2.0d0*area_in(i_elem) )
+     &                     / ( 2.0*area_in(i_elem) )
 
 ! this node is done, reset top and floor so next iteration is informed
           top = 0
@@ -2470,13 +2467,13 @@
         real(rkind) pi, deg_to_rad
         integer i, j
 
-        pi = 4.0d0 * atan(1.0_rkind)
-        deg_to_rad = pi / 180.0d0
+        pi = 4.0 * atan(1.0_rkind)
+        deg_to_rad = pi / 180.0
 
 ! confine lon to -180->180 range
         do j = 1, ny
           do i = 1, nx
-            if (lon(i,j) .gt. 180.0d0) lon(i,j) = lon(i,j) - 360.0d0
+            if (lon(i,j) .gt. 180.0) lon(i,j) = lon(i,j) - 360.0
           enddo
         enddo
 
@@ -2499,7 +2496,7 @@
         
         character, parameter :: &
      &    sflux_inputs_file*50 = 'sflux/sflux_inputs.txt'
-        real(rkind), parameter :: hours_per_day = 24.0d0
+        real(rkind), parameter :: hours_per_day = 24.0
         integer jd
         logical, save :: first_call = .true.
         logical exst
@@ -2526,9 +2523,9 @@
      &      ('sflux_inputs_file: you must supply a value for start_month')
           if (start_day .lt. -9000) call halt_error &
      &      ('sflux_inputs_file: you must supply a value for start_day')
-          if (start_hour .lt. -9000.0d0) call halt_error &
+          if (start_hour .lt. -9000.0) call halt_error &
      &      ('sflux_inputs_file: you must supply a value for start_hour')
-          if (utc_start .lt. -9000.0d0) call halt_error &
+          if (utc_start .lt. -9000.0) call halt_error &
      &      ('sflux_inputs_file: you must supply a value for utc_start')
 
 !'
@@ -2585,7 +2582,7 @@
      &    data_out
         logical, intent(out) :: got_suitable_bracket
         
-        real(rkind), parameter :: hours_per_day = 24.0d0
+        real(rkind), parameter :: hours_per_day = 24.0
         real(rkind), dimension(info%nx,info%ny) :: data_tmp
         real(rkind) window_hours
         integer time_num_1, time_num_2
@@ -2804,16 +2801,17 @@
             do i_node = 1, num_nodes_out !npa
 ! determine if this node is within grid for data_2
               bad_node_2 = ( &
-     &            info_2%weight(i_node,1) .lt. 0.0d0 .or. &
-     &            info_2%weight(i_node,1) .gt. 1.0d0 .or. &
-     &            info_2%weight(i_node,2) .lt. 0.0d0 .or. &
-     &            info_2%weight(i_node,2) .gt. 1.0d0 .or. &
-     &            info_2%weight(i_node,3) .lt. 0.0d0 .or. &
-     &            info_2%weight(i_node,3) .gt. 1.0d0)
+     &            info_2%weight(i_node,1) .lt. 0.0 .or. &
+     &            info_2%weight(i_node,1) .gt. 1.0 .or. &
+     &            info_2%weight(i_node,2) .lt. 0.0 .or. &
+     &            info_2%weight(i_node,2) .gt. 1.0 .or. &
+     &            info_2%weight(i_node,3) .lt. 0.0 .or. &
+     &            info_2%weight(i_node,3) .gt. 1.0 &
+     &                 )
 
 ! if this is a bad node for data_2, then don't weight data_2
               if (bad_node_2) then
-                local_weight_2 = 0.0d0
+                local_weight_2 = 0.0
               else
                 local_weight_2 = info_2%relative_weight
               endif

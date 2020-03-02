@@ -245,7 +245,7 @@
       endif !file63
 
       if(ivs==1) then
-        write(65,*)iday1,iday2
+        write(65,*)
         write(65,*)ne,np
         do i=1,np
           write(65,*)i,x(i),y(i),residual(i,1)

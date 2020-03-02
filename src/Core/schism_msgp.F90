@@ -3449,7 +3449,7 @@ subroutine exchange_s3dw(s3dw_data)
 end subroutine exchange_s3dw
 
 !-------------------------------------------------------------------------------
-! Following are 3D array (:,:,:) exchanges
+! Following are 3D arrasy (:,:,:) exchanges
 !-------------------------------------------------------------------------------
 
 subroutine exchange_s3d_5(s3d_5_data)

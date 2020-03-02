@@ -17,6 +17,7 @@
 ! SCHISM transport models
 !
 !  subroutine do_transport_tvd
+!  function flux_lim
 !
 !===============================================================================
 !===============================================================================
@@ -1105,4 +1106,35 @@
 #endif
 
       end subroutine do_transport_tvd
+
+!===============================================================================
+!     Flux limiter functions used in TVD schemes
+!===============================================================================
+      function flux_lim(ss)
+      use schism_glbl, only : rkind,errmsg
+      use schism_msgp, only : parallel_abort
+      implicit none
+   
+      real(rkind) :: flux_lim
+      real(rkind), intent(in) :: ss !upwind ratio
+!      character(len=2), intent(in) :: flimiter
+
+#ifdef TVD_SB
+      !Superbee
+      flux_lim=max(0.d0,min(1.d0,2.0d0*ss),min(2.d0,ss))
+#elif TVD_VL
+      !Van Leer
+      flux_lim=(ss+abs(ss))/(1.0d0+abs(ss))
+#elif TVD_MM
+      !MINMOD
+      flux_lim=max(0.d0,min(1.d0,ss))
+#elif TVD_OS
+      !OSHER
+      flux_lim=max(0.d0,min(2.d0,ss))
+#else
+      write(errmsg,*)'TVD limiter not defined'
+      call parallel_abort(errmsg)
+#endif
+
+      end function flux_lim
 

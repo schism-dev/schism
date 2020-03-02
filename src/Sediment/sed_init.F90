@@ -233,7 +233,7 @@
       bed_rough(:) = IniVal
 
       !Special initializations
-      bc_sed(:)    = -9999.d0
+      bc_sed(:)    = -9999
       lbc_sed(:)   = .FALSE.
 
       !--------------------------------------------------------------!
@@ -262,7 +262,7 @@
 ! - Computes matrix coefficients for the JCG solver
 ! Used for the computation of depth variation induced by bedload
 !--------------------------------------------------------------------!
-      mcoefd = 0.d0
+      mcoefd = 0
       aux1=22.0d0/108.0d0
       aux2=7.0d0/108.0d0
       DO i=1,np !residents
@@ -298,18 +298,17 @@
               ar1=signa(xnd(i),xcj(elside(id3,ie)),xctr(ie),ynd(i),ycj(elside(id3,ie)),yctr(ie)) 
               ar2=signa(xnd(i),xctr(ie),xcj(elside(id2,ie)),ynd(i),yctr(ie),ycj(elside(id2,ie)))
             else !ll
-              cff1=(xel(id,ie)+xel(id1,ie))/2.d0 !xcj(elside(id3,ie))
-              cff2=(yel(id,ie)+yel(id1,ie))/2.d0 !ycj(elside(id3,ie))
-              cff3=sum(xel(1:4,ie))/4.d0 !xctr
-              cff4=sum(yel(1:4,ie))/4.d0 !yctr
-              cff5=(xel(id,ie)+xel(id3,ie))/2.d0 !xcj(elside(id2,ie))
-              cff6=(yel(id,ie)+yel(id3,ie))/2.d0 !ycj(elside(id2,ie))
+              cff1=(xel(id,ie)+xel(id1,ie))/2 !xcj(elside(id3,ie))
+              cff2=(yel(id,ie)+yel(id1,ie))/2 !ycj(elside(id3,ie))
+              cff3=sum(xel(1:4,ie))/4 !xctr
+              cff4=sum(yel(1:4,ie))/4 !yctr
+              cff5=(xel(id,ie)+xel(id3,ie))/2 !xcj(elside(id2,ie))
+              cff6=(yel(id,ie)+yel(id3,ie))/2 !ycj(elside(id2,ie))
               ar1=signa(xel(id,ie),cff1,cff3,yel(id,ie),cff2,cff4)
               ar2=signa(xel(id,ie),cff3,cff5,yel(id,ie),cff4,cff6)
             endif !ics
-            if(ar1<=0.d0.or.ar2<=0.d0) call parallel_abort('SED_INIT:area<=0')
-!'
-            mcoefd(0,i)=mcoefd(0,i)+(ar1+ar2)*7.d0/12.d0 !diagonal
+            if(ar1<=0.or.ar2<=0) call parallel_abort('SED_INIT:area<=0')
+            mcoefd(0,i)=mcoefd(0,i)+(ar1+ar2)*7./12 !diagonal
 
             !Find indices
             do jj=1,3
@@ -324,9 +323,9 @@
               nwild(jj)=indx
             enddo !jj
 
-            mcoefd(nwild(1),i)=mcoefd(nwild(1),i)+ar1/4.d0+ar2/12.d0
-            mcoefd(nwild(3),i)=mcoefd(nwild(3),i)+ar1/12.d0+ar2/4.d0
-            mcoefd(nwild(2),i)=mcoefd(nwild(2),i)+ar1/12.d0+ar2/12.d0
+            mcoefd(nwild(1),i)=mcoefd(nwild(1),i)+ar1/4+ar2/12
+            mcoefd(nwild(3),i)=mcoefd(nwild(3),i)+ar1/12+ar2/4
+            mcoefd(nwild(2),i)=mcoefd(nwild(2),i)+ar1/12+ar2/12
           endif !i34
         ENDDO ! END loop nne
       ENDDO ! END loop np
@@ -346,22 +345,21 @@
           !nwild(3)=elnode(4,i)
           !ar2=signa(xnd(nwild(1)),xnd(nwild(2)),xnd(nwild(3)),ynd(nwild(1)),ynd(nwild(2)),ynd(nwild(3)))
           ar2=signa(xel(1,i),xel(3,i),xel(4,i),yel(1,i),yel(3,i),yel(4,i))
-          if(ar1<=0.d0.or.ar2<=0.d0) call parallel_abort('SED_INIT:area2<=0')
-!'
+          if(ar1<=0.or.ar2<=0) call parallel_abort('SED_INIT:area2<=0')
         endif
 
         DO j=1,3
           if(i34(i)==3) then
             nd=elnode(j,i)
-            vc_area(nd)=vc_area(nd)+area(i)/3.d0
+            vc_area(nd)=vc_area(nd)+area(i)/3
           else !quad
             !1st tri
             nd=elnode(j,i)
-            vc_area(nd)=vc_area(nd)+ar1/3.d0
+            vc_area(nd)=vc_area(nd)+ar1/3
 
             !2nd tri
             nd=elnode(nwild2(j),i)
-            vc_area(nd)=vc_area(nd)+ar2/3.d0
+            vc_area(nd)=vc_area(nd)+ar2/3
           endif !i34(i)
         ENDDO !j
       ENDDO ! i
@@ -396,7 +394,7 @@
           READ(10,*) !read in second line, no need to store it
           DO i = 1,np_global
             READ(10,*) itmp,xtmp,ytmp,tmp1
-            IF(tmp1<0.d0.or.tmp1>1.d0) CALL parallel_abort('Sed: bed_frac wrong!')
+            IF(tmp1<0.or.tmp1>1) CALL parallel_abort('Sed: bed_frac wrong!')
             IF(ipgl(i)%rank==myrank) swild98(:,ipgl(i)%id,ised) = tmp1
           ENDDO !i=1,np_global
           CLOSE(10)
@@ -408,7 +406,7 @@
         DO ised = 1,ntr_l
           DO k = 1,Nbed
             DO i = 1,nea
-              bed_frac(k,i,ised) = sum(swild98(k,elnode(1:i34(i),i),ised))/dble(i34(i))
+              bed_frac(k,i,ised) = sum(swild98(k,elnode(1:i34(i),i),ised))/i34(i)
             ENDDO ! END loop nea
           ENDDO ! END loop Nbed
         ENDDO ! END loop ntr_l
@@ -438,7 +436,7 @@
 !--------------------------------------------------------------------!
         DO i=1,Nbed
           DO j=1,nea
-            bed(i,j,ithck) = sum(bedthick_overall(elnode(1:i34(j),j)))/dble(i34(j))/dble(Nbed) !>=0
+            bed(i,j,ithck) = sum(bedthick_overall(elnode(1:i34(j),j)))/i34(j)/real(Nbed) !>=0
             bed(i,j,iaged) = 0.0d0
             bed(i,j,iporo) = porosity
           ENDDO ! End loop Nbed
@@ -576,9 +574,9 @@
           cff5 = cff5+bed_frac(1,j,ised)
         ENDDO ! End loop ntr_l
 
-        if(cff5<0.d0) then
+        if(cff5<0) then
           call parallel_abort('SED_INIT: cff5<0 (1)')
-        else if(cff5==0.d0) then !care-takers for all-eroded case
+        else if(cff5==0) then !care-takers for all-eroded case
           WRITE(12,*)'SED_INIT: all eroded at elem. ',ielg(j)
           bottom(j,isd50) = Sd50(1)
           bottom(j,idens) = Srho(1)
@@ -613,7 +611,7 @@
         ! Nikurasde roughness length
         bottom(i,izNik) = bottom(i,isd50)/12.0d0
         ! Default roughness
-        bottom(i,izdef) = sum(rough_p(elnode(1:i34(i),i)))/dble(i34(i)) 
+        bottom(i,izdef) = sum(rough_p(elnode(1:i34(i),i)))/i34(i) 
         ! Apparent initial roughness
         bottom(i,izapp) = bottom(i,izdef)
         ! Roughness length effectively used (even if bedform predictor is not used)
@@ -653,7 +651,7 @@
         ENDDO !j
       ENDDO !i
       DO i=1,np
-        if(bdfc(i)==0.d0) call parallel_abort('SED_INIT: bdfc(i)==0')
+        if(bdfc(i)==0) call parallel_abort('SED_INIT: bdfc(i)==0')
         DO ised=1,ntr_l
           bed_fracn(i,ised) = bed_fracn(i,ised)/bdfc(i)
         ENDDO !ised

@@ -70,7 +70,7 @@
       !Take some old parameters out of sediment.in
       g=grav
       rhom=rho0
-      vonKar=0.4d0
+      vonKar=0.4
 
       !Init. new parameters to make sure they are read in
       ised_bc_bot=-100

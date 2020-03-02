@@ -39,7 +39,7 @@
       real(rkind) :: wtmp2
 
 !...  Output max. diffusion number reached
-      if(difnum_max_l2>0.5_rkind) write(12,*)'MAIN: max. diffusion # exceeds 0.5:',difnum_max_l2
+      if(difnum_max_l2>0.5) write(12,*)'MAIN: max. diffusion # exceeds 0.5:',difnum_max_l2
 !'
 
 !...  Output max. # of iterations for all ranks for WBL (Grant-Madsen formulation)
@@ -83,7 +83,7 @@
 !...Compute means and variances for checking the harmonic analysis results
 !...Accumulate mean and variance at each node.
         if (CHARMV) then
-          IF (FMV.NE.0._rkind) THEN
+          IF (FMV.NE.0.) THEN
             DO I=1,np
               ELAV(I)   = ELAV(I)/NTSTEPS
               XVELAV(I) = XVELAV(I)/NTSTEPS

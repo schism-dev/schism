@@ -17,6 +17,7 @@
 ! MORSELFE FILTER SUBROUTINES
 !
 ! subroutine sed_avalanching
+! subroutine sed_bedmass_filter
 !
 !=====================================================================
 !=====================================================================
@@ -146,11 +147,11 @@
               nwild2(1:3)=elnode(nwild(1:3),i) !3 nodes of the tri
 !              ar2=signa(xnd(nwild2(1)),xnd(nwild2(2)),xnd(nwild2(3)),ynd(nwild2(1)),ynd(nwild2(2)),ynd(nwild2(3)))
               ar2=signa(xel(nwild(1),i),xel(nwild(2),i),xel(nwild(3),i),yel(nwild(1),i),yel(nwild(2),i),yel(nwild(3),i))
-              if(ar2<=0.d0) call parallel_abort('SED_FILTER: ar2<=0')
+              if(ar2<=0) call parallel_abort('SED_FILTER: ar2<=0')
               do jj=1,3
                 !Elem. type is 3 not 4!!
-                dldxy2(jj,1)=(yel(nwild(nxq(1,jj,3)),i)-yel(nwild(nxq(2,jj,3)),i))/2.d0/ar2 !dL/dx
-                dldxy2(jj,2)=(xel(nwild(nxq(2,jj,3)),i)-xel(nwild(nxq(1,jj,3)),i))/2.d0/ar2 !dL/dy
+                dldxy2(jj,1)=(yel(nwild(nxq(1,jj,3)),i)-yel(nwild(nxq(2,jj,3)),i))/2/ar2 !dL/dx
+                dldxy2(jj,2)=(xel(nwild(nxq(2,jj,3)),i)-xel(nwild(nxq(1,jj,3)),i))/2/ar2 !dL/dy
               enddo !jj
             endif !i34
 

@@ -275,7 +275,6 @@
 !          endif !ivs
 
           !Available now: outvar(2,nvrt,np|ne),eta2(np)
-          !However, for uncombined nc, values in untouched ranks are junk
     
           !Debug
 !          write(98,*)i,l

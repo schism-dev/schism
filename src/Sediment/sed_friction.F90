@@ -68,7 +68,7 @@
 ! - Set kinematic bottom momentum flux (m2/s2).
 !---------------------------------------------------------------------
 
-      bustr=0.d0; bvstr=0.d0; tau_c=0.d0 !init.
+      bustr=0; bvstr=0; tau_c=0 !init.
 
       IF (drag_formulation == 1) THEN
       ! - Set logarithmic bottom stress.
@@ -90,7 +90,7 @@
           kb1 = kbe(i)+1
           hh  = ze(kb1,i)-ze(kb0,i)
           IF(hh>Zob(i)) THEN
-            IF(hh<=0.d0.OR.Zob(i)<=0.d0) THEN
+            IF(hh<=0.OR.Zob(i)<=0) THEN
               CALL parallel_abort('SED-current_stress: Cd failed')
             ENDIF
             cff1 = 1.0d0/LOG(hh/Zob(i))
@@ -100,11 +100,11 @@
             wrk=Cdb_max
           endif !hh
 
-          cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
-          cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
+          cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
+          cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
 
           !Limit vel. in shallows - need better approach
-          if(dpe(i)<=1.d0) then
+          if(dpe(i)<=1) then
             cff3=min(cff3,1.d0)
             cff4=min(cff4,1.d0)
           endif
@@ -261,8 +261,8 @@
 ! - Computes mean wave-current bottom stress (Soulsby, 1997, eq. 69)
 !---------------------------------------------------------------------
 
-        if(tau_c(i)+tau_w(i)==0.d0) then
-          tau_wc(i)=0.d0
+        if(tau_c(i)+tau_w(i)==0) then
+          tau_wc(i)=0
         else
           tau_wc(i) = tau_c(i)*(1.0d0+1.2d0*(tau_w(i)/(tau_c(i)+tau_w(i)))**3.2d0)
         endif
@@ -364,7 +364,7 @@
         d50      = bottom(i,isd50)      ! Median grain size (m)
         s        = rhosed/rho0
 
-        if(d50<=0.d0.or.s<=1.d0) then
+        if(d50<=0.or.s<=1) then
           write(errmsg,*)'sed_roughness: d50<=0,',d50,s,rhosed,rho0,bottom(i,:),ielg(i)
           call parallel_abort(errmsg)
         endif
@@ -389,7 +389,7 @@
           z0bld = 0.0d0
         ELSE !wet
           ! Water depth
-          hwat = dpe(i)+sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))
+          hwat = dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
 
 ! ** Current-induced bed shear stress (skin friction only) 
 !Error: limit shallows
@@ -400,24 +400,24 @@
             IF((hh.LE.0.0d0).OR.(z0s.LE.0.0d0)) THEN
               CALL parallel_abort('SED-Roughness: Cd failed')
             ENDIF
-            cff1 = 1.0d0/LOG(hh/z0s)
+            cff1 = 1.0d0/DLOG(hh/z0s)
             cff2 = vonKar*vonKar*cff1*cff1 !Cd
             wrk  = MIN(Cdb_max,MAX(Cdb_min,cff2)) !Cd
-            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
-            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
+            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
+            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
             !cff5 = DSQRT(cff4*cff4+cff3*cff3)
             ! Bottom stress [m^2/s/s]
             !tau_c2 = wrk*DSQRT((cff4*cff5)**2.0d0+(cff3*cff5)**2.0d0)
             tau_c2 = wrk*(cff3*cff3+cff4*cff4)
           ELSE !use approx.
 !            kb2 = kbe(i)+2
-            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i)) - &
-            &      sum(vv2(kb0,elnode(1:i34(i),i)))/dble(i34(i))
-            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i)) - &
-            &      sum(uu2(kb0,elnode(1:i34(i),i)))/dble(i34(i)) 
-            cff5 = sum(dfv(kb1,elnode(1:i34(i),i))+dfv(kb0,elnode(1:i34(i),i)))/2.d0/dble(i34(i))
+            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i) - &
+            &      sum(vv2(kb0,elnode(1:i34(i),i)))/i34(i)
+            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i) - &
+            &      sum(uu2(kb0,elnode(1:i34(i),i)))/i34(i) 
+            cff5 = sum(dfv(kb1,elnode(1:i34(i),i))+dfv(kb0,elnode(1:i34(i),i)))/2/i34(i)
             !hh = ze(kb1,i)-ze(kb0,i)
-            IF(hh<=0.d0) CALL parallel_abort('SED-Roughness: div. by 0')
+            IF(hh<=0) CALL parallel_abort('SED-Roughness: div. by 0')
             ! Bottom stress
             tau_c2 = cff5*SQRT((cff4/hh)**2.0d0+(cff3/hh)**2.0d0)
           ENDIF ! End test on hh>z0s
@@ -447,12 +447,12 @@
             tau_wash = 26.0d0*tau_cr
             IF(tau_c2.LT.tau_wash)THEN
               ! Current ripples dimensions (Soulsby, 1997, eq. 83a-d)
-              if(tau_cr==0.d0) call parallel_abort('SED3D, sed_roughness; tau_cr==0')
+              if(tau_cr==0) call parallel_abort('SED3D, sed_roughness; tau_cr==0')
 !'
               Ts   = (tau_c2-tau_cr)/tau_cr
               Lsw  = 7.3d0*hwat
               Hsw  = MAX(0.0d0 , 0.11d0*hwat*(d50*hwat)**3.0d0*    &
-              &      (1.0d0-EXP(-0.5d0*Ts))*(25.0d0-Ts))
+              &      (1.0d0-DEXP(-0.5d0*Ts))*(25.0d0-Ts))
               z0sw = MAX(1.d0*Hsw*Hsw/Lsw , z0sw0)
             ELSE !Wash-out
               Hsw  = 0.0d0
@@ -472,7 +472,7 @@
             IF(r.LE.1.57d0)THEN
               fwr = 0.3d0
             ELSE
-              fwr = 0.00251d0*EXP(5.21d0*r**(-0.19d0))
+              fwr = 0.00251d0*DEXP(5.21d0*r**(-0.19d0))
             ENDIF
             tau_w = 0.5d0*rho0*fwr*uorb(i)*uorb(i)
           ELSE
@@ -500,7 +500,7 @@
                 !z0wr = MAX(0.923d0*Hwr*Hwr/Lwr , z0wr0)
               ENDIF
 
-              if(Lwr==0.d0) then
+              if(Lwr==0) then
                 z0wr =z0wr0
               else
                 z0wr = MAX(0.923d0*Hwr*Hwr/Lwr , z0wr0)
@@ -531,7 +531,7 @@
                 if(0.182d0-0.24d0*theta_w**1.5d0==0) call parallel_abort('SED3D,sed_roughness; div. by 0 (11)')
 !'
                 Lwr = Hwr/(0.182d0-0.24d0*theta_w**1.5d0)
-                if(Lwr==0.d0) then
+                if(Lwr==0) then
                   z0wr=z0wr0
                 else
                   z0wr=max(0.267d0*Hwr*Hwr/Lwr,z0wr0)
@@ -545,7 +545,7 @@
 
               ! Sediment transport component (Soulsby, 1997 eq. 92)
               IF(irough_bdld.EQ.1)THEN
-                if(theta_w<0.05d0) then
+                if(theta_w<0.05) then
                   write(12,*)'sed_roughness: theta_w<0.05:', &
      &theta_w,theta_cr,psi,Hwr,Lwr,d50,hwat,tau_c2,uorb(i),tp(i),tau_w
                   !call parallel_abort(errmsg)
