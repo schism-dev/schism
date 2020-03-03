@@ -7646,92 +7646,92 @@
 
 #ifdef USE_ICM
         if(iof_icm(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ICM_Chl',5,nvrt,nea,Chl_el)
+     &'ICM_Chl',5,nvrt,nea,dble(Chl_el))
         if(iof_icm(2)==1) call writeout_nc(id_out_var(noutput+6), &
-     &'ICM_pH',2,nvrt,npa,PH_nd)
+     &'ICM_pH',2,nvrt,npa,dble(PH_nd))
         if(iof_icm(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ICM_PrmPrdt',5,nvrt,nea,PrmPrdt)
+     &'ICM_PrmPrdt',5,nvrt,nea,dble(PrmPrdt))
         if(iof_icm(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ICM_DIN',5,nvrt,nea,DIN_el)
+     &'ICM_DIN',5,nvrt,nea,dble(DIN_el))
         if(iof_icm(5)==1) call writeout_nc(id_out_var(noutput+9), &
-     &'ICM_PON',5,nvrt,nea,PON_el)
+     &'ICM_PON',5,nvrt,nea,dble(PON_el))
 
         if(iof_icm(6)==1) call writeout_nc(id_out_var(noutput+10), &
-     &'ICM_SED_BENDOC',4,1,nea,SED_BENDOC)
+     &'ICM_SED_BENDOC',4,1,nea,dble(SED_BENDOC))
         if(iof_icm(7)==1) call writeout_nc(id_out_var(noutput+11), &
-     &'ICM_SED_BENNH4',4,1,nea,SED_BENNH4)
+     &'ICM_SED_BENNH4',4,1,nea,dble(SED_BENNH4))
         if(iof_icm(8)==1) call writeout_nc(id_out_var(noutput+12), &
-     &'ICM_SED_BENNO3',4,1,nea,SED_BENNO3)
+     &'ICM_SED_BENNO3',4,1,nea,dble(SED_BENNO3))
         if(iof_icm(9)==1) call writeout_nc(id_out_var(noutput+13), &
-     &'ICM_SED_BENPO4',4,1,nea,SED_BENPO4)
+     &'ICM_SED_BENPO4',4,1,nea,dble(SED_BENPO4))
         if(iof_icm(10)==1) call writeout_nc(id_out_var(noutput+14), &
-     &'ICM_SED_BENCOD',4,1,nea,SED_BENCOD)
+     &'ICM_SED_BENCOD',4,1,nea,dble(SED_BENCOD))
         if(iof_icm(11)==1) call writeout_nc(id_out_var(noutput+15), &
-     &'ICM_SED_BENDO',4,1,nea,SED_BENDO)
+     &'ICM_SED_BENDO',4,1,nea,dble(SED_BENDO))
         if(iof_icm(12)==1) call writeout_nc(id_out_var(noutput+16), &
-     &'ICM_SED_BENSA',4,1,nea,SED_BENSA)
+     &'ICM_SED_BENSA',4,1,nea,dble(SED_BENSA))
 
         if(iof_icm(13)==1) call writeout_nc(id_out_var(noutput+17), &
-     &'ICM_lfsav',6,nvrt,nea,lfsav)
+     &'ICM_lfsav',6,nvrt,nea,dble(lfsav))
         if(iof_icm(14)==1) call writeout_nc(id_out_var(noutput+18), &
-     &'ICM_stsav',6,nvrt,nea,stsav)
+     &'ICM_stsav',6,nvrt,nea,dble(stsav))
         if(iof_icm(15)==1) call writeout_nc(id_out_var(noutput+19), &
-     &'ICM_rtsav',6,nvrt,nea,rtsav)
+     &'ICM_rtsav',6,nvrt,nea,dble(rtsav))
         if(iof_icm(16)==1) call writeout_nc(id_out_var(noutput+20), &
-     &'ICM_tlfsav',4,1,nea,tlfsav)
+     &'ICM_tlfsav',4,1,nea,dble(tlfsav))
         if(iof_icm(17)==1) call writeout_nc(id_out_var(noutput+21), &
-     &'ICM_tstsav',4,1,nea,tstsav)
+     &'ICM_tstsav',4,1,nea,dble(tstsav))
         if(iof_icm(18)==1) call writeout_nc(id_out_var(noutput+22), &
-     &'ICM_trtsav',4,1,nea,trtsav)
+     &'ICM_trtsav',4,1,nea,dble(trtsav))
         if(iof_icm(19)==1) call writeout_nc(id_out_var(noutput+23), &
-     &'ICM_hcansav',4,1,nea,hcansav)
+     &'ICM_hcansav',4,1,nea,dble(hcansav))
 
         if(iof_icm(20)==1) call writeout_nc(id_out_var(noutput+24), &
-     &'ICM_CNH4',4,1,nea,CNH4)
+     &'ICM_CNH4',4,1,nea,dble(CNH4))
         if(iof_icm(21)==1) call writeout_nc(id_out_var(noutput+25), &
-     &'ICM_CNO3',4,1,nea,CNO3)
+     &'ICM_CNO3',4,1,nea,dble(CNO3))
         if(iof_icm(22)==1) call writeout_nc(id_out_var(noutput+26), &
-     &'ICM_CPIP',4,1,nea,CPIP)
+     &'ICM_CPIP',4,1,nea,dble(CPIP))
         if(iof_icm(23)==1) call writeout_nc(id_out_var(noutput+27), &
-     &'ICM_CPOS',4,1,nea,CPOS)
+     &'ICM_CPOS',4,1,nea,dble(CPOS))
         if(iof_icm(24)==1) call writeout_nc(id_out_var(noutput+28), &
-     &'ICM_CCH4',4,1,nea,CCH4)
+     &'ICM_CCH4',4,1,nea,dble(CCH4))
         if(iof_icm(25)==1) call writeout_nc(id_out_var(noutput+29), &
-     &'ICM_CSO4',4,1,nea,CSO4)
+     &'ICM_CSO4',4,1,nea,dble(CSO4))
         if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+30), &
-     &'ICM_CH2S',4,1,nea,CH2S)
+     &'ICM_CH2S',4,1,nea,dble(CH2S))
         if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+31), &
-     &'ICM_SEDPON1',4,1,nea,CPON(:,1))
+     &'ICM_SEDPON1',4,1,nea,dble(CPON(:,1)))
         if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+32), &
-     &'ICM_SEDPON2',4,1,nea,CPON(:,2))
+     &'ICM_SEDPON2',4,1,nea,dble(CPON(:,2)))
         if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+33), &
-     &'ICM_SEDPON3',4,1,nea,CPON(:,3))
+     &'ICM_SEDPON3',4,1,nea,dble(CPON(:,3)))
         if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+34), &
-     &'ICM_SEDPOP1',4,1,nea,CPOP(:,1))
+     &'ICM_SEDPOP1',4,1,nea,dble(CPOP(:,1)))
         if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+35), &
-     &'ICM_SEDPOP2',4,1,nea,CPOP(:,2))
+     &'ICM_SEDPOP2',4,1,nea,dble(CPOP(:,2)))
         if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+36), &
-     &'ICM_SEDPOP3',4,1,nea,CPOP(:,3))
+     &'ICM_SEDPOP3',4,1,nea,dble(CPOP(:,3)))
         if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+37), &
-     &'ICM_SEDPOC1',4,1,nea,CPOC(:,1))
+     &'ICM_SEDPOC1',4,1,nea,dble(CPOC(:,1)))
         if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+38), &
-     &'ICM_SEDPOC2',4,1,nea,CPOC(:,2))
+     &'ICM_SEDPOC2',4,1,nea,dble(CPOC(:,2)))
         if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+39), &
-     &'ICM_SEDPOC3',4,1,nea,CPOC(:,3))
+     &'ICM_SEDPOC3',4,1,nea,dble(CPOC(:,3)))
         if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+40), &
-     &'ICM_EROH2S',4,1,nea,EROH2S)
+     &'ICM_EROH2S',4,1,nea,dble(EROH2S))
         if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+41), &
-     &'ICM_EROLPOC',4,1,nea,EROLPOC)
+     &'ICM_EROLPOC',4,1,nea,dble(EROLPOC))
         if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+42), &
-     &'ICM_ERORPOC',4,1,nea,ERORPOC)
+     &'ICM_ERORPOC',4,1,nea,dble(ERORPOC))
         if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+43), &
-     &'ICM_DO_consumption',5,nvrt,nea,DO_consmp)
+     &'ICM_DO_consumption',5,nvrt,nea,dble(DO_consmp))
         if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+44), &
-     &'ICM_GP1',5,nvrt,nea,GP(:,:,1))
+     &'ICM_GP1',5,nvrt,nea,dble(GP(:,:,1)))
         if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+45), &
-     &'ICM_GP2',5,nvrt,nea,GP(:,:,2))
+     &'ICM_GP2',5,nvrt,nea,dble(GP(:,:,2)))
         if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+46), &
-     &'ICM_GP3',5,nvrt,nea,GP(:,:,3))
+     &'ICM_GP3',5,nvrt,nea,dble(GP(:,:,3)))
 
         noutput=noutput+42
         icount=42 !offset
@@ -7745,7 +7745,7 @@
         enddo !i
         noutput=noutput+ntrs(7)
 
-#endif
+#endif /*USE_ICM*/
 
 #ifdef USE_COSINE
         do i=1,ntrs(8)
@@ -8279,45 +8279,45 @@
         j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+39))
         j=nf90_enddef(ncid_hot)
 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),SED_BENDO,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),CTEMP,(/1/),(/ne/))  
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),BBM,(/1/),(/ne/))        
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),CPOS,(/1/),(/ne/))        
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),PO4T2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),NH4T2TM1S,(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),NO3T2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),HST2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),CH4T2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),CH41TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),SO4T2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),SIT2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),BENSTR1S,(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),NH41TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+15),NO31TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+16),HS1TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+17),SI1TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+18),PO41TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+19),PON1TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+20),PON2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+21),PON3TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+22),POC1TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+23),POC2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+24),POC3TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+25),POP1TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+26),POP2TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+27),POP3TM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+28),PSITM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+29),BFORMAXS,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+30),ISWBENS,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),DFEEDM1S,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),hcansav,(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),transpose(CPOP(1:ne,1:3)),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),transpose(CPON(1:ne,1:3)),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),transpose(CPOC(1:ne,1:3)),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),lfsav(1:nvrt,1:ne),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),stsav(1:nvrt,1:ne),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),rtsav(1:nvrt,1:ne),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),wqc(1:ntrs(7),1:nvrt,1:ne),(/1,1,1/),(/ntrs(7),nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(SED_BENDO),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),dble(CTEMP),(/1/),(/ne/))  
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),dble(BBM),(/1/),(/ne/))        
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),dble(CPOS),(/1/),(/ne/))        
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),dble(PO4T2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),dble(NH4T2TM1S),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),dble(NO3T2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),dble(HST2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(CH4T2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(CH41TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(SO4T2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(SIT2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(BENSTR1S),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(NH41TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+15),dble(NO31TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+16),dble(HS1TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+17),dble(SI1TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+18),dble(PO41TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+19),dble(PON1TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+20),dble(PON2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+21),dble(PON3TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+22),dble(POC1TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+23),dble(POC2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+24),dble(POC3TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+25),dble(POP1TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+26),dble(POP2TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+27),dble(POP3TM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+28),dble(PSITM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+29),dble(BFORMAXS),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+30),dble(ISWBENS),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),dble(DFEEDM1S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(hcansav),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(lfsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(stsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(rtsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
         
         nvars_hot=nvars_hot+39 !update
 #endif /*USE_ICM*/

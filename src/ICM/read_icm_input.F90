@@ -20,6 +20,8 @@
 !check_icm_param: Output ICM parameters to check
 !get_param_1D: read 1D array parameters
 !get_param_2D: read 2D array parameters
+!pt_in_poly
+!Function signa_icm
 
 subroutine WQinput(time)
 !---------------------------------------------------------------------
@@ -28,18 +30,18 @@ subroutine WQinput(time)
 !4) non-point source load, 5) point source load
 !---------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : errmsg,rkind,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
+  use schism_glbl, only : errmsg,iwp,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 
-  real(kind=rkind),intent(in) :: time
+  real(8),intent(in) :: time !double
   
   
   !local variable
   integer :: i,j,k,ie,iegb,neben
-  real(kind=rkind) :: rtmp
-  real(kind=rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
-  real(kind=rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+  real(kind=iwp) :: rtmp
+  real(kind=iwp) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
+  real(kind=iwp) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
                    &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO 
 
   !read atmospheric loading (unit: g/m2/day)
@@ -125,7 +127,7 @@ subroutine WQinput(time)
       if(iRad==2) then !uniform solar radiation
         read(403,*)rtmp,rIa,TU,TD !time, radiation, time of sunrise and sunset, rIa in unit of ly/day
         time_icm(3)=rtmp
-        if(time==0.d0) rIavg=rIa
+        if(time==0.0) rIavg=rIa
         rIavg=0.7*rIa+0.3*rIavg
       elseif(iRad==3) then !spatially varying solar radiation
         ! need more work if necessary 
@@ -173,7 +175,7 @@ subroutine read_icm_param2
 !---------------------------------------------------------------------
 !read spatially varying paramters 
 !---------------------------------------------------------------------
-  use schism_glbl, only : rkind,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
+  use schism_glbl, only : iwp,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
                    & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e,in_dir,out_dir, &
                    &len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
@@ -183,13 +185,14 @@ subroutine read_icm_param2
  
   !local variables
   integer :: i,j,ie,ip,npgb,negb,nd,ne,itmp,itmp1(1),itmp2(1,1),k,k2,m,n,q
-  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
+  real(8) :: rtmp
+  real(kind=iwp) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp
-  real(kind=rkind) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
-  real(kind=rkind) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
-  real(kind=rkind),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
-  real(kind=rkind),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
-  real(kind=rkind),allocatable :: swild2(:,:),ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
+  real(kind=iwp) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
+  real(kind=iwp) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
+  real(kind=iwp),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
+  real(kind=iwp),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
+  real(kind=iwp),allocatable :: swild2(:,:),ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
 
 
 !  !-----------------read regions-----------------
@@ -384,12 +387,18 @@ subroutine read_icm_param2
   call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
   !net settling velocity
   if(iSet==1) then
-    call get_param('icm.in','WSSBNET',2,itmp,WSSBNET(1),stmp)
-    call get_param('icm.in','WSLBNET',2,itmp,WSLBNET(1),stmp)
-    call get_param('icm.in','WSRBNET',2,itmp,WSRBNET(1),stmp)
-    call get_param('icm.in','WS1BNET',2,itmp,WS1BNET(1),stmp)
-    call get_param('icm.in','WS2BNET',2,itmp,WS2BNET(1),stmp)
-    call get_param('icm.in','WS3BNET',2,itmp,WS3BNET(1),stmp)
+    call get_param('icm.in','WSSBNET',2,itmp,rtmp,stmp)
+    WSSBNET(1)=rtmp
+    call get_param('icm.in','WSLBNET',2,itmp,rtmp,stmp)
+    WSLBNET(1)=rtmp
+    call get_param('icm.in','WSRBNET',2,itmp,rtmp,stmp)
+    WSRBNET(1)=rtmp
+    call get_param('icm.in','WS1BNET',2,itmp,rtmp,stmp)
+    WS1BNET(1)=rtmp
+    call get_param('icm.in','WS2BNET',2,itmp,rtmp,stmp)
+    WS2BNET(1)=rtmp
+    call get_param('icm.in','WS3BNET',2,itmp,rtmp,stmp)
+    WS3BNET(1)=rtmp
     do i=2,nea
       WSSBNET(i)=WSSBNET(1)
       WSLBNET(i)=WSLBNET(1)
@@ -698,7 +707,8 @@ subroutine read_icm_param2
   Turb=0.0
   call get_param('icm.in','iTurb',1,iTurb,rtmp,stmp)
   if(iTurb==1) then !uniform
-    call get_param('icm.in','Turb',2,itmp,tTurb,stmp)
+    call get_param('icm.in','Turb',2,itmp,rtmp,stmp)
+    tTurb=rtmp
     do i=1,nea
       Turb(i)=tTurb
     enddo !i
@@ -729,7 +739,8 @@ subroutine read_icm_param2
   WRea=0.0
   call get_param('icm.in','iWRea',1,iWRea,rtmp,stmp)
   if(iWRea==1) then !uniform
-    call get_param('icm.in','WRea',2,itmp,tWRea,stmp)
+    call get_param('icm.in','WRea',2,itmp,rtmp,stmp)
+    tWRea=rtmp
     do i=1,nea
       WRea(i)=tWRea
     enddo !i
@@ -761,7 +772,8 @@ subroutine read_icm_param2
   call get_param('icm.in','iTSS',1,iTSS,rtmp,stmp)
   if(iLight==3) then !read PC2TSS 
     if(iTSS==1) then !uniform
-      call get_param('icm.in','PC2TSS',2,itmp,tPC2TSS,stmp)
+      call get_param('icm.in','PC2TSS',2,itmp,rtmp,stmp)
+      tPC2TSS=rtmp
       do i=1,nea
         PC2TSS(i)=tPC2TSS
       enddo !i
@@ -934,7 +946,7 @@ subroutine read_icm_param2
 
       else !wet elem
         hcansavori(i)=rlf*tlfsav(i)+rst*tstsav(i)+rrt*trtsav(i)+hcansav0
-        hcansav(i)=min(hcansavori(i),(ze(nvrt,i)-ze(kbe(i),i)),hcansav_limit)
+        hcansav(i)=min(hcansavori(i),real(ze(nvrt,i)-ze(kbe(i),i),iwp),hcansav_limit)
         !Biomass at each layer (0 if above canopy)
         do k=kbe(i)+1,nvrt
           if(kbe(i)<1) then
@@ -986,7 +998,7 @@ subroutine read_icm_param
 !---------------------------------------------------------------------
 !read paramters in icm.in
 !---------------------------------------------------------------------
-   use schism_glbl, only : rkind,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
+   use schism_glbl, only : iwp,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
  &in_dir,out_dir,len_in_dir,len_out_dir
    use schism_msgp, only : parallel_abort
    use icm_mod
@@ -997,7 +1009,8 @@ subroutine read_icm_param
 
   !local variables
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
-  real(kind=rkind) :: rtmp,rtmp1(1),rtmp2(1,1),tmp
+  real(8) :: rtmp
+  real(kind=iwp) :: rtmp1(1),rtmp2(1,1),tmp
   character(len=2) :: stmp
   
   !read glocal swtiches  
@@ -1061,18 +1074,27 @@ subroutine read_icm_param
   elseif(iRad/=1.and.iRad/=2) then
     call parallel_abort('error: iRad')
   endif
-  time_icm=-999.d0  !initializing time stamp
+  time_icm=-999.0  !initializing time stamp
  
   if(iTBen/=0)then
-    call get_param('icm.in','thata_tben',2,itmp,thata_tben,stmp)
-    call get_param('icm.in','SOD_tben',2,itmp,SOD_tben,stmp)
-    call get_param('icm.in','DOC_tben',2,itmp,DOC_tben,stmp)
-    call get_param('icm.in','NH4_tben',2,itmp,NH4_tben,stmp)
-    call get_param('icm.in','NO3_tben',2,itmp,NO3_tben,stmp)
-    call get_param('icm.in','PO4t_tben',2,itmp,PO4t_tben,stmp)
-    call get_param('icm.in','SAt_tben',2,itmp,SAt_tben,stmp)
-    call get_param('icm_sed.in','NH4T2I',2,itmp,NH4T2I,stmp)
-    call get_param('icm_sed.in','PO4T2I',2,itmp,PO4T2I,stmp)
+    call get_param('icm.in','thata_tben',2,itmp,rtmp,stmp)
+    thata_tben=rtmp
+    call get_param('icm.in','SOD_tben',2,itmp,rtmp,stmp)
+    SOD_tben=rtmp
+    call get_param('icm.in','DOC_tben',2,itmp,rtmp,stmp)
+    DOC_tben=rtmp
+    call get_param('icm.in','NH4_tben',2,itmp,rtmp,stmp)
+    NH4_tben=rtmp
+    call get_param('icm.in','NO3_tben',2,itmp,rtmp,stmp)
+    NO3_tben=rtmp
+    call get_param('icm.in','PO4t_tben',2,itmp,rtmp,stmp)
+    PO4t_tben=rtmp
+    call get_param('icm.in','SAt_tben',2,itmp,rtmp,stmp)
+    SAt_tben=rtmp
+    call get_param('icm_sed.in','NH4T2I',2,itmp,rtmp,stmp)
+    NH4T2I=rtmp
+    call get_param('icm_sed.in','PO4T2I',2,itmp,rtmp,stmp)
+    PO4T2I=rtmp
   endif!iTBen=1
 
  
@@ -1090,9 +1112,12 @@ subroutine read_icm_param
   call get_param_1D('icm.in','rKTBZ',2,itmp1,rKTBZ,stmp,2)
   call get_param_1D('icm.in','RZ',2,itmp1,RZ,stmp,2)
 
-  call get_param('icm.in','Eff',2,itmp,Eff,stmp)
-  call get_param('icm.in','RF',2,itmp,RF,stmp)
-  call get_param('icm.in','Pf',2,itmp,Pf,stmp)
+  call get_param('icm.in','Eff',2,itmp,rtmp,stmp)
+  Eff=rtmp
+  call get_param('icm.in','RF',2,itmp,rtmp,stmp)
+  RF=rtmp
+  call get_param('icm.in','Pf',2,itmp,rtmp,stmp)
+  Pf=rtmp
 
   !read phytoplankton parameters
 !  call get_param_1D('icm.in','GPM',2,itmp1,GPM,stmp,3)
@@ -1108,101 +1133,176 @@ subroutine read_icm_param
   call get_param_1D('icm.in','rKhP',2,itmp1,rKhP,stmp,3)
   call get_param_1D('icm.in','rIm',2,itmp1,rIm,stmp,3)
   call get_param_1D('icm.in','alpha_PB',2,itmp1,alpha_PB,stmp,3)
+
   call get_param('icm.in','irSi',1,irSi,rtmp,stmp)
   call get_param('icm.in','iLimit',1,iLimit,rtmp,stmp)
   if(iLimit>2) call parallel_abort('read_icm: iLimit>2')
-  call get_param('icm.in','rKhS',2,itmp,rKhS,stmp)
-  call get_param('icm.in','ST',2,itmp,ST,stmp)
-  call get_param('icm.in','rKeC1',2,itmp,rKeC1,stmp)
-  call get_param('icm.in','rKeC2',2,itmp,rKeC2,stmp)
-  call get_param('icm.in','rKeChl',2,itmp,rKeChl,stmp)
-  call get_param('icm.in','rKeTSS',2,itmp,rKeTSS,stmp)
-  call get_param('icm.in','rKeSal',2,itmp,rKeSal,stmp)
-  call get_param('icm.in','Dopt',2,itmp,Dopt,stmp)
+  call get_param('icm.in','rKhS',2,itmp,rtmp,stmp)
+  rKhS=rtmp
+  call get_param('icm.in','ST',2,itmp,rtmp,stmp)
+  ST=rtmp
+  call get_param('icm.in','rKeC1',2,itmp,rtmp,stmp)
+  rKeC1=rtmp
+  call get_param('icm.in','rKeC2',2,itmp,rtmp,stmp)
+  rKeC2=rtmp
+  call get_param('icm.in','rKeChl',2,itmp,rtmp,stmp)
+  rKeChl=rtmp
+  call get_param('icm.in','rKeTSS',2,itmp,rtmp,stmp)
+  rKeTSS=rtmp
+  call get_param('icm.in','rKeSal',2,itmp,rtmp,stmp)
+  rKeSal=rtmp
+  call get_param('icm.in','Dopt',2,itmp,rtmp,stmp)
+  Dopt=rtmp
+
   !call get_param('icm.in','STB',2,itmp,STB,stmp)
 
   !read sav parameters
 !  if(isav_icm==1) then
     call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
-    call get_param('icm.in','famsav',2,itmp,famsav,stmp)
-    call get_param('icm.in','fplfsav',2,itmp,fplfsav,stmp)
-    call get_param('icm.in','fpstsav',2,itmp,fpstsav,stmp)
-    call get_param('icm.in','fprtsav',2,itmp,fprtsav,stmp)
-    call get_param('icm.in','acdwsav',2,itmp,acdwsav,stmp)
-    call get_param('icm.in','ancsav',2,itmp,ancsav,stmp)
-    call get_param('icm.in','apcsav',2,itmp,apcsav,stmp)
-    call get_param('icm.in','aocrsav',2,itmp,aocrsav,stmp)
-    call get_param('icm.in','pmbssav',2,itmp,pmbssav,stmp)
-    call get_param('icm.in','toptsav',2,itmp,toptsav,stmp)
-    call get_param('icm.in','ktg1sav',2,itmp,ktg1sav,stmp)
-    call get_param('icm.in','ktg2sav',2,itmp,ktg2sav,stmp)
-    call get_param('icm.in','bmlfrsav',2,itmp,bmlfrsav,stmp)
-    call get_param('icm.in','bmstrsav',2,itmp,bmstrsav,stmp)
-    call get_param('icm.in','bmrtrsav',2,itmp,bmrtrsav,stmp)
-    call get_param('icm.in','ktblfsav',2,itmp,ktblfsav,stmp)
-    call get_param('icm.in','ktbstsav',2,itmp,ktbstsav,stmp)
-    call get_param('icm.in','ktbrtsav',2,itmp,ktbrtsav,stmp)
-    call get_param('icm.in','trlfsav',2,itmp,trlfsav,stmp)
-    call get_param('icm.in','trstsav',2,itmp,trstsav,stmp)
-    call get_param('icm.in','trrtsav',2,itmp,trrtsav,stmp)
-    call get_param('icm.in','alphasav',2,itmp,alphasav,stmp)
-    call get_param('icm.in','rkshsav',2,itmp,rkshsav,stmp)
-    call get_param('icm.in','rlf',2,itmp,rlf,stmp)
-    call get_param('icm.in','rst',2,itmp,rst,stmp)
-    call get_param('icm.in','rrt',2,itmp,rrt,stmp)
-    call get_param('icm.in','hcansav0',2,itmp,hcansav0,stmp)
-    call get_param('icm.in','hcansav_limit',2,itmp,hcansav_limit,stmp)
-    call get_param('icm.in','khnwsav',2,itmp,khnwsav,stmp)
-    call get_param('icm.in','khnssav',2,itmp,khnssav,stmp)
-    call get_param('icm.in','khnprsav',2,itmp,khnprsav,stmp)
-    call get_param('icm.in','fnisav',2,itmp,fnisav,stmp)
-    call get_param('icm.in','fndsav',2,itmp,fndsav,stmp)
-    call get_param('icm.in','fnlpsav',2,itmp,fnlpsav,stmp)
-    call get_param('icm.in','fnrpsav',2,itmp,fnrpsav,stmp)
-    call get_param('icm.in','khpwsav',2,itmp,khpwsav,stmp)
-    call get_param('icm.in','khpssav',2,itmp,khpssav,stmp)
-    call get_param('icm.in','fpisav',2,itmp,fpisav,stmp)
-    call get_param('icm.in','fpdsav',2,itmp,fpdsav,stmp)
-    call get_param('icm.in','fplpsav',2,itmp,fplpsav,stmp)
-    call get_param('icm.in','fprpsav',2,itmp,fprpsav,stmp)
-    call get_param('icm.in','fdosav',2,itmp,fdosav,stmp)
-    call get_param('icm.in','fcdsav',2,itmp,fcdsav,stmp)
-    call get_param('icm.in','fclpsav',2,itmp,fclpsav,stmp)
-    call get_param('icm.in','fcrpsav',2,itmp,fcrpsav,stmp)
+    call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
+    famsav=rtmp
+    call get_param('icm.in','fplfsav',2,itmp,rtmp,stmp)
+    fplfsav=rtmp
+    call get_param('icm.in','fpstsav',2,itmp,rtmp,stmp)
+    fpstsav=rtmp
+    call get_param('icm.in','fprtsav',2,itmp,rtmp,stmp)
+    fprtsav=rtmp
+    call get_param('icm.in','acdwsav',2,itmp,rtmp,stmp)
+    acdwsav=rtmp
+    call get_param('icm.in','ancsav',2,itmp,rtmp,stmp)
+    ancsav=rtmp
+    call get_param('icm.in','apcsav',2,itmp,rtmp,stmp)
+    apcsav=rtmp
+    call get_param('icm.in','aocrsav',2,itmp,rtmp,stmp)
+    aocrsav=rtmp
+    call get_param('icm.in','pmbssav',2,itmp,rtmp,stmp)
+    pmbssav=rtmp
+    call get_param('icm.in','toptsav',2,itmp,rtmp,stmp)
+    toptsav=rtmp
+    call get_param('icm.in','ktg1sav',2,itmp,rtmp,stmp)
+    ktg1sav=rtmp
+    call get_param('icm.in','ktg2sav',2,itmp,rtmp,stmp)
+    ktg2sav=rtmp
+    call get_param('icm.in','bmlfrsav',2,itmp,rtmp,stmp)
+    bmlfrsav=rtmp
+    call get_param('icm.in','bmstrsav',2,itmp,rtmp,stmp)
+    bmstrsav=rtmp
+    call get_param('icm.in','bmrtrsav',2,itmp,rtmp,stmp)
+    bmrtrsav=rtmp
+    call get_param('icm.in','ktblfsav',2,itmp,rtmp,stmp)
+    ktblfsav=rtmp
+    call get_param('icm.in','ktbstsav',2,itmp,rtmp,stmp)
+    ktbstsav=rtmp
+    call get_param('icm.in','ktbrtsav',2,itmp,rtmp,stmp)
+    ktbrtsav=rtmp
+    call get_param('icm.in','trlfsav',2,itmp,rtmp,stmp)
+    trlfsav=rtmp
+    call get_param('icm.in','trstsav',2,itmp,rtmp,stmp)
+    trstsav=rtmp
+    call get_param('icm.in','trrtsav',2,itmp,rtmp,stmp)
+    trrtsav=rtmp
+    call get_param('icm.in','alphasav',2,itmp,rtmp,stmp)
+    alphasav=rtmp
+    call get_param('icm.in','rkshsav',2,itmp,rtmp,stmp)
+    rkshsav=rtmp
+    call get_param('icm.in','rlf',2,itmp,rtmp,stmp)
+    rlf=rtmp
+    call get_param('icm.in','rst',2,itmp,rtmp,stmp)
+    rst=rtmp
+    call get_param('icm.in','rrt',2,itmp,rtmp,stmp)
+    rrt=rtmp
+    call get_param('icm.in','hcansav0',2,itmp,rtmp,stmp)
+    hcansav0=rtmp
+    call get_param('icm.in','hcansav_limit',2,itmp,rtmp,stmp)
+    hcansav_limit=rtmp
+    call get_param('icm.in','khnwsav',2,itmp,rtmp,stmp)
+    khnwsav=rtmp
+    call get_param('icm.in','khnssav',2,itmp,rtmp,stmp)
+    khnssav=rtmp
+    call get_param('icm.in','khnprsav',2,itmp,rtmp,stmp)
+    khnprsav=rtmp
+    call get_param('icm.in','fnisav',2,itmp,rtmp,stmp)
+    fnisav=rtmp
+    call get_param('icm.in','fndsav',2,itmp,rtmp,stmp)
+    fndsav=rtmp
+    call get_param('icm.in','fnlpsav',2,itmp,rtmp,stmp)
+    fnlpsav=rtmp
+    call get_param('icm.in','fnrpsav',2,itmp,rtmp,stmp)
+    fnrpsav=rtmp
+    call get_param('icm.in','khpwsav',2,itmp,rtmp,stmp)
+    khpwsav=rtmp
+    call get_param('icm.in','khpssav',2,itmp,rtmp,stmp)
+    khpssav=rtmp
+    call get_param('icm.in','fpisav',2,itmp,rtmp,stmp)
+    fpisav=rtmp
+    call get_param('icm.in','fpdsav',2,itmp,rtmp,stmp)
+    fpdsav=rtmp
+    call get_param('icm.in','fplpsav',2,itmp,rtmp,stmp)
+    fplpsav=rtmp
+    call get_param('icm.in','fprpsav',2,itmp,rtmp,stmp)
+    fprpsav=rtmp
+    call get_param('icm.in','fdosav',2,itmp,rtmp,stmp)
+    fdosav=rtmp
+    call get_param('icm.in','fcdsav',2,itmp,rtmp,stmp)
+    fcdsav=rtmp
+    call get_param('icm.in','fclpsav',2,itmp,rtmp,stmp)
+    fclpsav=rtmp
+    call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
+    fcrpsav=rtmp
 !  endif !isav_icm
 
   !read Carbon parameters
-  call get_param('icm.in','FCRPZ',2,itmp,FCRPZ,stmp)
-  call get_param('icm.in','FCLPZ',2,itmp,FCLPZ,stmp)
-  call get_param('icm.in','FCDPZ',2,itmp,FCDPZ,stmp)
+  call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
+  FCRPZ=rtmp
+  call get_param('icm.in','FCLPZ',2,itmp,rtmp,stmp)
+  FCLPZ=rtmp
+  call get_param('icm.in','FCDPZ',2,itmp,rtmp,stmp)
+  FCDPZ=rtmp
+
   call get_param_1D('icm.in','FCDZ',2,itmp1,FCDZ,stmp,2)
   call get_param_1D('icm.in','rKHRZ',2,itmp1,rKHRZ,stmp,2)
-
   call get_param_1D('icm.in','FCRP',2,itmp,FCRP,stmp,2)
   call get_param_1D('icm.in','FCLP',2,itmp,FCLP,stmp,2)
   call get_param_1D('icm.in','FCDP',2,itmp,FCDP,stmp,2)
   call get_param_1D('icm.in','FCD',2,itmp1,FCD,stmp,2)
 
-  call get_param('icm.in','rKRCalg',2,itmp,rKRCalg,stmp)
-  call get_param('icm.in','rKLCalg',2,itmp,rKLCalg,stmp)
-  call get_param('icm.in','rKDCalg',2,itmp,rKDCalg,stmp)
-  call get_param('icm.in','TRHDR',2,itmp,TRHDR,stmp)
-  call get_param('icm.in','TRMNL',2,itmp,TRMNL,stmp)
-  call get_param('icm.in','rKTHDR',2,itmp,rKTHDR,stmp)
-  call get_param('icm.in','rKTMNL',2,itmp,rKTMNL,stmp)
+  call get_param('icm.in','rKRCalg',2,itmp,rtmp,stmp)
+  rKRCalg=rtmp
+  call get_param('icm.in','rKLCalg',2,itmp,rtmp,stmp)
+  rKLCalg=rtmp
+  call get_param('icm.in','rKDCalg',2,itmp,rtmp,stmp)
+  rKDCalg=rtmp
+  call get_param('icm.in','TRHDR',2,itmp,rtmp,stmp)
+  TRHDR=rtmp
+  call get_param('icm.in','TRMNL',2,itmp,rtmp,stmp)
+  TRMNL=rtmp
+  call get_param('icm.in','rKTHDR',2,itmp,rtmp,stmp)
+  rKTHDR=rtmp
+  call get_param('icm.in','rKTMNL',2,itmp,rtmp,stmp)
+  rKTMNL=rtmp
 
-  call get_param('icm.in','rKHR1',2,itmp,rKHR1,stmp)
-  call get_param('icm.in','rKHR2',2,itmp,rKHR2,stmp)
-  call get_param('icm.in','rKHR3',2,itmp,rKHR3,stmp)
-  call get_param('icm.in','rKHORDO',2,itmp,rKHORDO,stmp)
-  call get_param('icm.in','rKHDNn',2,itmp,rKHDNn,stmp)
-  call get_param('icm.in','AANOX',2,itmp,AANOX,stmp)
+  call get_param('icm.in','rKHR1',2,itmp,rtmp,stmp)
+  rKHR1=rtmp
+  call get_param('icm.in','rKHR2',2,itmp,rtmp,stmp)
+  rKHR2=rtmp
+  call get_param('icm.in','rKHR3',2,itmp,rtmp,stmp)
+  rKHR3=rtmp
+  call get_param('icm.in','rKHORDO',2,itmp,rtmp,stmp)
+  rKHORDO=rtmp
+  call get_param('icm.in','rKHDNn',2,itmp,rtmp,stmp)
+  rKHDNn=rtmp
+  call get_param('icm.in','AANOX',2,itmp,rtmp,stmp)
+  AANOX=rtmp
 
   !read Nitrogen parameters
-  call get_param('icm.in','FNRPZ',2,itmp,FNRPZ,stmp)
-  call get_param('icm.in','FNLPZ',2,itmp,FNLPZ,stmp)
-  call get_param('icm.in','FNDPZ',2,itmp,FNDPZ,stmp)
-  call get_param('icm.in','FNIPZ',2,itmp,FNIPZ,stmp)
+  call get_param('icm.in','FNRPZ',2,itmp,rtmp,stmp)
+  FNRPZ=rtmp
+  call get_param('icm.in','FNLPZ',2,itmp,rtmp,stmp)
+  FNLPZ=rtmp
+  call get_param('icm.in','FNDPZ',2,itmp,rtmp,stmp)
+  FNDPZ=rtmp
+  call get_param('icm.in','FNIPZ',2,itmp,rtmp,stmp)
+  FNIPZ=rtmp
 
   call get_param_1D('icm.in','FNRZ',2,itmp1,FNRZ,stmp,2)
   call get_param_1D('icm.in','FNLZ',2,itmp1,FNLZ,stmp,2)
@@ -1210,11 +1310,16 @@ subroutine read_icm_param
   call get_param_1D('icm.in','FNIZ',2,itmp1,FNIZ,stmp,2)
   call get_param_1D('icm.in','ANCZ',2,itmp1,ANCZ,stmp,2)
   
-  call get_param('icm.in','FNRP',2,itmp,FNRP,stmp)
-  call get_param('icm.in','FNLP',2,itmp,FNLP,stmp)
-  call get_param('icm.in','FNDP',2,itmp,FNDP,stmp)
-  call get_param('icm.in','FNIP',2,itmp,FNIP,stmp)
-  call get_param('icm.in','ANDC',2,itmp,ANDC,stmp)
+  call get_param('icm.in','FNRP',2,itmp,rtmp,stmp)
+  FNRP=rtmp
+  call get_param('icm.in','FNLP',2,itmp,rtmp,stmp)
+  FNLP=rtmp
+  call get_param('icm.in','FNDP',2,itmp,rtmp,stmp)
+  FNDP=rtmp
+  call get_param('icm.in','FNIP',2,itmp,rtmp,stmp)
+  FNIP=rtmp
+  call get_param('icm.in','ANDC',2,itmp,rtmp,stmp)
+  ANDC=rtmp
 
   call get_param_1D('icm.in','FNR',2,itmp1,FNR,stmp,3)
   call get_param_1D('icm.in','FNL',2,itmp1,FNL,stmp,3)
@@ -1222,24 +1327,40 @@ subroutine read_icm_param
   call get_param_1D('icm.in','FNI',2,itmp1,FNI,stmp,3)
   call get_param_1D('icm.in','ANC',2,itmp1,ANC,stmp,3)
 
-  call get_param('icm.in','rKRN',2,itmp,rKRN,stmp)
-  call get_param('icm.in','rKLN',2,itmp,rKLN,stmp)
-  call get_param('icm.in','rKDN',2,itmp,rKDN,stmp)
-  call get_param('icm.in','rKRNalg',2,itmp,rKRNalg,stmp)
-  call get_param('icm.in','rKLNalg',2,itmp,rKLNalg,stmp)
-  call get_param('icm.in','rKDNalg',2,itmp,rKDNalg,stmp)
-  call get_param('icm.in','rNitM',2,itmp,rNitM,stmp)
-  call get_param('icm.in','rKhNitDO',2,itmp,rKhNitDO,stmp)
-  call get_param('icm.in','rKhNitN',2,itmp,rKhNitN,stmp)
-  call get_param('icm.in','TNit',2,itmp,TNit,stmp)
-  call get_param('icm.in','rKNit1',2,itmp,rKNit1,stmp)
-  call get_param('icm.in','rKNit2',2,itmp,rKNit2,stmp)
+  call get_param('icm.in','rKRN',2,itmp,rtmp,stmp)
+  rKRN=rtmp
+  call get_param('icm.in','rKLN',2,itmp,rtmp,stmp)
+  rKLN=rtmp
+  call get_param('icm.in','rKDN',2,itmp,rtmp,stmp)
+  rKDN=rtmp
+  call get_param('icm.in','rKRNalg',2,itmp,rtmp,stmp)
+  rKRNalg=rtmp
+  call get_param('icm.in','rKLNalg',2,itmp,rtmp,stmp)
+  rKLNalg=rtmp
+  call get_param('icm.in','rKDNalg',2,itmp,rtmp,stmp)
+  rKDNalg=rtmp
+  call get_param('icm.in','rNitM',2,itmp,rtmp,stmp)
+  rNitM=rtmp
+  call get_param('icm.in','rKhNitDO',2,itmp,rtmp,stmp)
+  rKhNitDO=rtmp
+  call get_param('icm.in','rKhNitN',2,itmp,rtmp,stmp)
+  rKhNitN=rtmp
+  call get_param('icm.in','TNit',2,itmp,rtmp,stmp)
+  TNit=rtmp
+  call get_param('icm.in','rKNit1',2,itmp,rtmp,stmp)
+  rKNit1=rtmp
+  call get_param('icm.in','rKNit2',2,itmp,rtmp,stmp)
+  rKNit2=rtmp
  
   !read Phosphorus parameters
-  call get_param('icm.in','FPRPZ',2,itmp,FPRPZ,stmp)
-  call get_param('icm.in','FPLPZ',2,itmp,FPLPZ,stmp)
-  call get_param('icm.in','FPDPZ',2,itmp,FPDPZ,stmp)
-  call get_param('icm.in','FPIPZ',2,itmp,FPIPZ,stmp)
+  call get_param('icm.in','FPRPZ',2,itmp,rtmp,stmp)
+  FPRPZ=rtmp
+  call get_param('icm.in','FPLPZ',2,itmp,rtmp,stmp)
+  FPLPZ=rtmp
+  call get_param('icm.in','FPDPZ',2,itmp,rtmp,stmp)
+  FPDPZ=rtmp
+  call get_param('icm.in','FPIPZ',2,itmp,rtmp,stmp)
+  FPIPZ=rtmp
 
   call get_param_1D('icm.in','FPRZ',2,itmp1,FPRZ,stmp,2)
   call get_param_1D('icm.in','FPLZ',2,itmp1,FPLZ,stmp,2)
@@ -1247,10 +1368,14 @@ subroutine read_icm_param
   call get_param_1D('icm.in','FPIZ',2,itmp1,FPIZ,stmp,2)
   call get_param_1D('icm.in','APCZ',2,itmp1,APCZ,stmp,2)
 
-  call get_param('icm.in','FPRP',2,itmp,FPRP,stmp)
-  call get_param('icm.in','FPLP',2,itmp,FPLP,stmp)
-  call get_param('icm.in','FPDP',2,itmp,FPDP,stmp)
-  call get_param('icm.in','FPIP',2,itmp,FPIP,stmp)
+  call get_param('icm.in','FPRP',2,itmp,rtmp,stmp)
+  FPRP=rtmp
+  call get_param('icm.in','FPLP',2,itmp,rtmp,stmp)
+  FPLP=rtmp
+  call get_param('icm.in','FPDP',2,itmp,rtmp,stmp)
+  FPDP=rtmp
+  call get_param('icm.in','FPIP',2,itmp,rtmp,stmp)
+  FPIP=rtmp
 
   call get_param_1D('icm.in','FPR',2,itmp1,FPR,stmp,3)
   call get_param_1D('icm.in','FPL',2,itmp1,FPL,stmp,3)
@@ -1258,44 +1383,71 @@ subroutine read_icm_param
   call get_param_1D('icm.in','FPI',2,itmp1,FPI,stmp,3)
   call get_param_1D('icm.in','APC',2,itmp1,APC,stmp,3)
 
-  call get_param('icm.in','rKPO4p',2,itmp,rKPO4p,stmp)
+  call get_param('icm.in','rKPO4p',2,itmp,rtmp,stmp)
+  rKPO4p=rtmp
 
   !read Silica parameters
-  call get_param('icm.in','FSPPZ',2,itmp,FSPPZ,stmp)
-  call get_param('icm.in','FSIPZ',2,itmp,FSIPZ,stmp)
+  call get_param('icm.in','FSPPZ',2,itmp,rtmp,stmp)
+  FSPPZ=rtmp
+  call get_param('icm.in','FSIPZ',2,itmp,rtmp,stmp)
+  FSIPZ=rtmp
+
   call get_param_1D('icm.in','FSPZ',2,itmp1,FSPZ,stmp,2)
   call get_param_1D('icm.in','FSIZ',2,itmp1,FSIZ,stmp,2)
   call get_param_1D('icm.in','ASCZ',2,itmp1,ASCZ,stmp,2)
 
-  call get_param('icm.in','FSPP',2,itmp,FSPP,stmp)
-  call get_param('icm.in','FSIP',2,itmp,FSIP,stmp)
-  call get_param('icm.in','FSPd',2,itmp,FSPd,stmp)
-  call get_param('icm.in','FSId',2,itmp,FSId,stmp)
-  call get_param('icm.in','ASCd',2,itmp,ASCd,stmp)
-  call get_param('icm.in','rKSAp',2,itmp,rKSAp,stmp)
-  call get_param('icm.in','rKSU',2,itmp,rKSU,stmp)
-  call get_param('icm.in','TRSUA',2,itmp,TRSUA,stmp)
-  call get_param('icm.in','rKTSUA',2,itmp,rKTSUA,stmp)
+  call get_param('icm.in','FSPP',2,itmp,rtmp,stmp)
+  FSPP=rtmp
+  call get_param('icm.in','FSIP',2,itmp,rtmp,stmp)
+  FSIP=rtmp
+  call get_param('icm.in','FSPd',2,itmp,rtmp,stmp)
+  FSPd=rtmp
+  call get_param('icm.in','FSId',2,itmp,rtmp,stmp)
+  FSId=rtmp
+  call get_param('icm.in','ASCd',2,itmp,rtmp,stmp)
+  ASCd=rtmp
+  call get_param('icm.in','rKSAp',2,itmp,rtmp,stmp)
+  rKSAp=rtmp
+  call get_param('icm.in','rKSU',2,itmp,rtmp,stmp)
+  rKSU=rtmp
+  call get_param('icm.in','TRSUA',2,itmp,rtmp,stmp)
+  TRSUA=rtmp
+  call get_param('icm.in','rKTSUA',2,itmp,rtmp,stmp)
+  rKTSUA=rtmp
   
   !read COD and DO parameters
-  call get_param('icm.in','rKHCOD',2,itmp,rKHCOD,stmp)
-  call get_param('icm.in','rKCD',2,itmp,rKCD,stmp)
-  call get_param('icm.in','TRCOD',2,itmp,TRCOD,stmp)
-  call get_param('icm.in','rKTCOD',2,itmp,rKTCOD,stmp)
-  call get_param('icm.in','AOC',2,itmp,AOC,stmp)
-  call get_param('icm.in','AONO',2,itmp,AONO,stmp)
-  call get_param('icm.in','AON',2,itmp,AON,stmp)
-  call get_param('icm.in','rKro',2,itmp,rKro,stmp)
-  call get_param('icm.in','rKTr',2,itmp,rKTr,stmp)
+  call get_param('icm.in','rKHCOD',2,itmp,rtmp,stmp)
+  rKHCOD=rtmp
+  call get_param('icm.in','rKCD',2,itmp,rtmp,stmp)
+  rKCD=rtmp
+  call get_param('icm.in','TRCOD',2,itmp,rtmp,stmp)
+  TRCOD=rtmp
+  call get_param('icm.in','rKTCOD',2,itmp,rtmp,stmp)
+  rKTCOD=rtmp
+  call get_param('icm.in','AOC',2,itmp,rtmp,stmp)
+  AOC=rtmp
+  call get_param('icm.in','AONO',2,itmp,rtmp,stmp)
+  AONO=rtmp
+  call get_param('icm.in','AON',2,itmp,rtmp,stmp)
+  AON=rtmp
+  call get_param('icm.in','rKro',2,itmp,rtmp,stmp)
+  rKro=rtmp
+  call get_param('icm.in','rKTr',2,itmp,rtmp,stmp)
+  rKTr=rtmp
 
   !for TSS settling
-  call get_param('icm.in','WSSED',2,itmp,WSSED,stmp)
+  call get_param('icm.in','WSSED',2,itmp,rtmp,stmp)
+  WSSED=rtmp
 
   !for CACO3 settling
-  call get_param('icm.in','WSCACO3',2,itmp,WSCACO3,stmp)
-  call get_param('icm.in','rKCACO3',2,itmp,rKCACO3,stmp)
-  call get_param('icm.in','rKCA',2,itmp,rKCA,stmp)
-  call get_param('icm.in','rKa',2,itmp,rKa,stmp)
+  call get_param('icm.in','WSCACO3',2,itmp,rtmp,stmp)
+  WSCACO3=rtmp
+  call get_param('icm.in','rKCACO3',2,itmp,rtmp,stmp)
+  rKCACO3=rtmp
+  call get_param('icm.in','rKCA',2,itmp,rtmp,stmp)
+  rKCA=rtmp
+  call get_param('icm.in','rKa',2,itmp,rtmp,stmp)
+  rKa=rtmp
   call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
 
   !Check for sav
@@ -1313,13 +1465,13 @@ subroutine read_icm_param
   !PH nudge for TIC and ALK
   if(iPh==1.and.inu_ph==1) then
     open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
-    time_ph=-999.d0
+    time_ph=-999.0
     irec_ph=1
   endif
 
   !---------------preprocess parameters----------------------------
   dtw=NDTWQ*dt/86400.0 !days
-  dtw2=dtw/2.d0
+  dtw2=dtw/2.0
 
   !zooplankton
 !  Ef1=Eff*(1-RF)
@@ -1336,8 +1488,8 @@ subroutine read_icm_param
   mKhN=0.0
   mKhP=0.0
   do i=1,3
-    mKhN=mKhN+rKhN(i)/3.d0
-    mKhP=mKhP+rKhP(i)/3.d0
+    mKhN=mKhN+rKhN(i)/3.0
+    mKhP=mKhP+rKhP(i)/3.0
   enddo
   ST=ST*ST
 
@@ -1395,7 +1547,6 @@ subroutine read_icm_param
 !  CSPP2 = FSPP*Pf*ASCd
 !  CSPI2 = FSIP*Pf*ASCd
 
-  return 
   
 end subroutine read_icm_param
 
@@ -1404,7 +1555,7 @@ subroutine read_icm_stainfo
 !read in ICM station output information
 !-----------------------------------------------------------------------
   use icm_mod, only : nsta,ista,depsta,stanum,nspool_icm
-  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
+  use schism_glbl, only : iwp,dt,ihot,ne,i34,xnd,ynd,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,nproc,parallel_abort
   implicit none
@@ -1412,7 +1563,7 @@ subroutine read_icm_stainfo
   !local variables
   integer,parameter :: maxsta=10000,maxl=100 !maximum station
   integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
-  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
+  real(iwp) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
   character(len=4) :: fn
   logical :: lexist
 
@@ -1478,8 +1629,6 @@ subroutine read_icm_stainfo
   else
     call parallel_abort('unknown ihot, ICM')
   endif
-
-  return
 
 end subroutine read_icm_stainfo
 
@@ -1631,7 +1780,7 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
 !--------------------------------------------------------------------
 !Read a one-Dimensional ICM parameter
 !--------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
+  use schism_glbl, only : iwp,errmsg
   use schism_msgp, only : parallel_abort,myrank
   use misc_modules
   implicit none
@@ -1641,12 +1790,12 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
   integer,intent(in) :: vartype
   integer,intent(in) :: idim1
   integer,intent(out) :: ivar(idim1)
-  real(rkind),intent(out) :: rvar(idim1)
+  real(iwp),intent(out) :: rvar(idim1)
   character(len=2),intent(out) :: svar
   
   !local variables
   integer :: itmp,iarray(10000)
-  real(rkind) :: rtmp,rarray(10000)
+  real(8) :: rtmp,rarray(10000) !interface with main code
   character(len=2) :: stmp
 
   svar='  '
@@ -1661,14 +1810,13 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
     call parallel_abort(errmsg)
   endif
 
-  return
 end subroutine get_param_1D
 
 subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
 !--------------------------------------------------------------------
 !Read a 2-Dimensional ICM parameter
 !--------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
+  use schism_glbl, only : iwp,errmsg
   use schism_msgp, only : parallel_abort,myrank
   use misc_modules
   implicit none
@@ -1678,14 +1826,15 @@ subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
   integer,intent(in) :: vartype
   integer,intent(in) :: idim1,idim2
   integer,intent(out) :: ivar(idim1,idim2)
-  real(rkind),intent(out) :: rvar(idim1,idim2)
+  real(iwp),intent(out) :: rvar(idim1,idim2)
   character(len=2),intent(out) :: svar
   
   !local variables
   integer :: itmp,iarray(10000),i,j,irec
-  real(rkind) :: rtmp,rarray(10000)
+  real(8) :: rtmp,rarray(10000) !main code in double
   character(len=2) :: stmp
 
+  svar='  '
   irec=idim1*idim2
 
   if(vartype==1) then  !read 2D integer array
@@ -1699,14 +1848,13 @@ subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
     call parallel_abort(errmsg)
   endif
 
-  return
 end subroutine get_param_2D
 
 subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
 !---------------------------------------------------------------------------
 !subroutine from Utility/UtilLib
 !---------------------------------------------------------------------------
-!     (Single-precision) Routine to perform point-in-polygon
+!     Routine to perform point-in-polygon
 !     (triangle/quads) test and if it's inside, calculate the area coord.
 !     (for quad, split it into 2 triangles and return the 3 nodes and
 !     area coord.)
@@ -1718,23 +1866,27 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
 !            inside: 0, outside; 1, inside
 !            arco(3), nodel(3) : area coord. and 3 local node indices (valid
 !            only if inside)
-      implicit real*8(a-h,o-z)
+      use schism_glbl, only : iwp,errmsg
+      use schism_msgp, only : myrank,parallel_abort
+
+      implicit none 
       integer, intent(in) :: i34
-      real(kind=8), intent(in) :: x(i34),y(i34),xp,yp
+      real(iwp), intent(in) :: x(i34),y(i34),xp,yp
       integer, intent(out) :: inside,nodel(3)
-      real(kind=8), intent(out) :: arco(3)
+      real(iwp), intent(out) :: arco(3)
 
       !Local
-      integer :: list(3)
-      real(kind=8) :: ar(2),swild(2,3)
+      real(iwp) :: signa_icm
+      integer :: m,j,j1,j2,list(3)
+      real(iwp) :: aa,ae,ar(2),swild(2,3)
 
       !Areas
-      ar(1)=signa(x(1),x(2),x(3),y(1),y(2),y(3))
+      ar(1)=signa_icm(x(1),x(2),x(3),y(1),y(2),y(3))
       ar(2)=0 !init
-      if(i34==4) ar(2)=signa(x(1),x(3),x(4),y(1),y(3),y(4))
+      if(i34==4) ar(2)=signa_icm(x(1),x(3),x(4),y(1),y(3),y(4))
       if(ar(1)<=0.or.i34==4.and.ar(2)<=0) then
-        print*, 'Negative area:',i34,ar,x,y
-        stop
+        write(errmsg,*)'Negative area:',i34,ar,x,y
+        call parallel_abort(errmsg)
       endif
 
       inside=0
@@ -1750,7 +1902,7 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
           j2=j+2
           if(j1>3) j1=j1-3
           if(j2>3) j2=j2-3
-          swild(m,j)=signa(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp)
+          swild(m,j)=signa_icm(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp)
           !temporary storage
           aa=aa+abs(swild(m,j))
         enddo !j=1,3
@@ -1760,9 +1912,9 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
           inside=1
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
-          arco(1)=max(0.,min(1.,arco(1)))
-          arco(2)=max(0.,min(1.,arco(2)))
-          if(arco(1)+arco(2)>1) then
+          arco(1)=max(0._iwp,min(1._iwp,arco(1)))
+          arco(2)=max(0._iwp,min(1._iwp,arco(2)))
+          if(arco(1)+arco(2)>1.) then
             arco(3)=0
             arco(2)=1-arco(1)
           else
@@ -1774,6 +1926,16 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
 
 end subroutine pt_in_poly
 
+!dir$ attributes forceinline :: signa_icm
+function signa_icm(x1,x2,x3,y1,y2,y3)
+!-------------------------------------------------------------------------------
+! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!-------------------------------------------------------------------------------
+  use schism_glbl, only : iwp,errmsg
+  implicit none
+  real(iwp) :: signa_icm
+  real(iwp),intent(in) :: x1,x2,x3,y1,y2,y3
 
+  signa_icm=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._iwp
 
-
+end function signa_icm

@@ -25,6 +25,10 @@ module schism_glbl
 !  integer,parameter :: rkind = 4  
 !#else
   integer,parameter :: rkind = 8      ! Default real datatype
+
+!iwp*: working precision of single/double real option for some code
+  integer,parameter :: iwp= 8      ! for ICM
+
 !#endif
 #ifdef DOUBLE_REAL_OUT
   integer,parameter::out_rkind=8
@@ -585,12 +589,6 @@ module schism_glbl
   real(rkind),save,allocatable :: XVELAV(:),YVELAV(:),XVELVA(:),YVELVA(:),ELAV(:),ELVA(:)
 !#endif
 
-!ICM added by YC
-!#ifdef USE_ICM
-! arrays for waterquality model added by YC
-!  real(rkind),save,allocatable :: WSRP(:),WSLP(:),WSPB1(:),WSPB2(:),WSPB3(:),turb(:),WRea(:),PSQ(:)
-!  integer,save,allocatable :: PSK(:)
-!#endif
 
 !#ifdef USE_ECO 
 !...  MFR, Nov/2015 - Updated, ECO uses nws=2 

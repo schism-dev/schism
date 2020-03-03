@@ -16,7 +16,7 @@ subroutine icm_init
 !--------------------------------------------------------------------------------
 !allocate ICM arrays and initialize
 !--------------------------------------------------------------------------------
-  use schism_glbl, only : nea,npa,nvrt,ntrs,ne_global
+  use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
   use icm_sed_mod

@@ -1653,7 +1653,7 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
 !          Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
          &  nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &  swild3(50+ntracers),swild4(nvrt,1+ntracers),&
+         &  swild3(50+ntracers),swild4(ntracers,nvrt),&
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
          & sav_h(npa),sav_nv(npa),sav_di(npa),stat=istat)
@@ -1807,9 +1807,6 @@
 !     Allocate TIMOR arrays
 #endif 
 
-!#ifdef USE_ICM
-!      call icm_init
-!#endif 
 #ifdef USE_COSINE
       call get_param('cosine.in','ndelay',1,ndelay,tmp,stringvalue)
       call cosine_init
@@ -5174,15 +5171,6 @@
 
 
 #ifdef USE_ICM
-       ! !temportary fix, need to write wqc in hotstart, ZG
-       ! do i=1,nea
-       !   do k=1,nvrt
-       !     do j=1,ntrs(7)
-       !       wqc(j,k,i)=tr_el(j-1+irange_tr(1,7),k,i)
-       !     enddo
-       !   enddo
-       ! enddo
-
         !gfortran requires all chars have same length
         ar_name(1:32)=(/'SED_BENDO','CTEMP    ','BBM      ','CPOS     ','PO4T2TM1S', &
      &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
@@ -5334,7 +5322,9 @@
         do i=1,ne_global
           if(iegl(i)%rank==myrank) then
             ie=iegl(i)%id
-            j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
+            !j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
+            j=nf90_get_var(ncid2,mm,swild4(1:ntrs(7),:),(/1,1,i/),(/ntrs(7),nvrt,1/))
+            wqc(:,:,ie)=swild4(1:ntrs(7),:)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM8')
           endif!iegl
         enddo !i
