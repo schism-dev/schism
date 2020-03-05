@@ -228,7 +228,7 @@ endif
 ifdef USE_SED
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_SED
   OBJS := $(OBJS) sed_mod.o sed_misc_subs.o \
-                  read_sed_input.o sed_init.o  \
+                  read_sed_input.o sed_poro.o sed_init.o  \
                   sed_friction.o sed_filter.o \
                   sediment.o sed_bedload.o
 

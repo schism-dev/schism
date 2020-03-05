@@ -60,14 +60,92 @@ sed_debug == 0
 !- 0 = Disabled
 !- 1 = van rijn (2007)
 !- 2 = Meyer-Peter and Mueller (1948) - not active
+!- 3 = Soulsby and Damgaard (2005)
+!- 4 = Wu and Lin (2014)
 !------------------------------------------------------------------------------
 bedload == 1
+
+
+!- FILTER and LIMITER for bedload fluxes --------------------------------------
+!- > bedload_filter: a diffusive filter (sed2d_filter_diffu) is applied 
+!-   to bedload fluxes
+!-   0 = Disabled
+!-   1 = Enabled
+!- > bedload_limiter: limitation of the bedload flux components
+!-   according to the sediment mass available within the active layer
+!-   0 = Disabled
+!-   1 = Enabled  
+!------------------------------------------------------------------------------
+bedload_filter == 0
+bedload_limiter == 0
+
 
 !- SUSPENDED LOAD -------------------------------------------------------------
 !- 0 = Disabled
 !- 1 = Enabled
 !------------------------------------------------------------------------------
 suspended_load == 1
+
+
+!- WAVE ASYMMETRY AND BEDLOAD TRANSPORT DUE TO WAVE ACCELERATION-SKEWNESS ----- 
+!- > iasym
+!-    0 = Disabled
+!-    1 = Enabled (based on Elfrink et al., Coastal Engineering, 2006)
+!- > w_asym_max: Maximum asymmetry coefficient considered for waves
+!- > elfrink_filter (diffusive filter based on SED2D)
+!-    0 = Disabled
+!-    1 = Enabled
+!- > ech_uorb
+!-    Number of bins considered to reconstitute orbital velocity temporal
+!-    series along a wave period (Elfrink et al., 2006)
+!- > bedload_acc
+!-    Methods to compute bedload transport caused by acceleration-skewness Qacc
+!-    0 = Disabled 
+!-    1 = Hoefel and Elgar, Science, 2003
+!-    2 = Dubarbier et al., Coastal Engineering, 2015
+!- > bedload_acc_filter (diffusive filter based on SED2D)
+!-    0 = Disabled
+!-    1 = Enabled 
+!- > kacc_hoe (only used if bedload_acc=1)
+!-    Constant [m.s] used in Hoefel and Elgar formulation (default 1.4d-4)
+!- > kacc_dub (only used if bedload_acc=2)
+!-    Constant [m.s] used in Dubarbier et al. formulation (default 0.631d-4)
+!- > thresh_acc_opt
+!-    Method to compute the critical mobility parameter that must be exceeded
+!-    for the initiation of sediment transport caused by acceleration-skewness
+!-    0 = No threshold
+!-    1 = criterion is a Shields mobility parameter
+!-    2 = criterion is a critical acceleration [m.s-2], acrit parameter
+!- > acrit
+!-    critical acceleration [m.s-2] for Qacc, used if thresh_acc_opt == 2
+!-    Default value used by Hoefel and Elgar (2003) is 0.2 m.s-2
+!------------------------------------------------------------------------------
+iasym == 0
+w_asym_max == 0.4d0
+elfrink_filter == 0
+ech_uorb == 200
+bedload_acc == 0
+bedload_acc_filter == 0
+kacc_hoe == 1.4d-4
+kacc_dub == 0.631d-4
+thresh_acc_opt == 2
+acrit == 0.2d0
+
+
+!- BOTTOM SHEAR STRESS --------------------------------------------------------
+!- > tau_option: controls at which height above the bed the current-induced
+!-               bottom shear stress is derived
+!-   1 = at the first vertical level above the bed 
+!-   2 = at a given and constant height of the bed, zstress (in m)
+!-   3 = mix of 1 and 2: if the near-bed layer thickness is higher than zstress,
+!-       the current-induced stress is derived at the first vertical level.
+!-       Otherwise, it is derived at zstress.
+!- > tau_max: maximum shear stress value authorised for current and waves (in Pa) 
+!------------------------------------------------------------------------------
+tau_option == 1
+tau_max == 10.0d0
+zstress == 0.2d0
+
 
 !- Erosional formulations
 !- 0 = Ariathurai & Arulanandan (1978)
@@ -76,18 +154,29 @@ suspended_load == 1
 !------------------------------------------------------------------------------
 ierosion == 0
 
+
 !- Dumping/dredging option
 !- 0: no; 1: needs input sed_dump.in
 ------------------------------------------------------------------------------
 ised_dump == 0 
 
+
 !- SLOPE FORMULATION ----------------------------------------------------------
-!  Inactive at the moment
-!- 1 = Damgaard et al. (1997)
-!- 2 = Delft
-!- 3 = Carmo
+!- To account for contributions of transversal and longitudinal slopes to 
+!- bedload fluxes
+!- 0 = No bed slope effects
+!- 1 = Damgaard et al. (1997) ! inactive
+!- 2 = Delft                  ! inactive
+!- 3 = Carmo                  ! inactive
+!- 4 = Lesser et al. (2004)   ! operational
+!-     2 coefficients involved in this formulation:
+!-       alpha_bs: coefficient for longitudinal slopes (default 1.0)
+!-       alpha_bn: coefficient for transversal slopes (default 1.5)
 !------------------------------------------------------------------------------
 slope_formulation == 0
+alpha_bs == 1.0d0
+alpha_bn == 1.5d0
+
 
 !- BOTTOM BOUNDARY CONDITION OPTION
 !- 1 = Warner (2008)
@@ -133,10 +222,14 @@ im_pick_up == 4
 !- 0 = Disabled
 !- 1 = Fully Enabled (Bed characteristics + bathymetry are updated)
 !- 2 = Partially Enabled (Only bed characteristics are updated for BCG purpose)
-!  If sed_morph=1, sed_morph_time (in days) is the time after which active morphology is turned on.
+!- > If sed_morph=1, sed_morph_time (in days) is the time after which active morphology is turned on.
+!- > sed_morph_fac: Morphological time-scale factor (>= 1.)
+!                   A value of 1.0 leads to no scale effect.
 !------------------------------------------------------------------------------
 sed_morph == 1
-sed_morph_time == 5.d0 
+sed_morph_time == 0.1d0 
+sed_morph_fac == 1.0d0
+
 
 !- DRAG FORMULATION -----------------------------------------------------------
 !- 1 = Logarithmic
@@ -212,10 +305,6 @@ bedmass_threshold == 0.025
 !==============================================================================
 !-                        GENERAL AND CONSTANT PARAMETERS                     -
 !==============================================================================
-!- POROSITY (0.-1.) -----------------------------------------------------------
-!------------------------------------------------------------------------------
-porosity == 0.4
-
 !- BEDLOAD DIFFUSION COEFFICIENT (-) (>=0.0) ----------------------------------
 !------------------------------------------------------------------------------
 bdldiffu == 0.5
@@ -229,6 +318,15 @@ BEDLOAD_COEFF == 1.0d0
 !------------------------------------------------------------------------------
 Cdb_min == 0.000001
 Cdb_max == 0.01
+
+
+!- ACTIVE LAYER THICKNESS -----------------------------------------------------
+!- > actv_max [m]: Maximum thickness of sediment remobilised  
+!-   during one time step (typically a few centimeters). A large value is 
+!-   equivalent to no limitation of the active layer thickness computed 
+!-   according to Harris and Wiberg (1997)
+!------------------------------------------------------------------------------
+actv_max == 0.05d0
 
 !==============================================================================
 !-               SEDIMENT CHARACTERISTICS FOR EACH CLASS                      -
@@ -277,10 +375,6 @@ SAND_ERATE == 1.6d-3 1.6d-3 1.6d-3 1.6d-3 1.6d-3 !ierosion=0
 !------------------------------------------------------------------------------
 SAND_TAU_CE == 0.15d0 0.17d0 0.23d0 0.3d0 0.6d0
 
-!- MORPHOLOGICAL TIME-SCALE FACTOR (>= 1.) - [1:Ntracers] ---------------------
-!- A value of 1.0 lead to no scale effect.
-!------------------------------------------------------------------------------
-SAND_MORPH_FAC == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 
 !==============================================================================
 !-                             BED SEDIMENT PARAMETERS                        -
@@ -289,6 +383,19 @@ SAND_MORPH_FAC == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 !------------------------------------------------------------------------------
 Nbed == 1
 
+!- INITIAL VERTICAL DISCRETISATION OF SEDIMENT LAYERS -------------------------
+!- > sedlay_ini_opt refers to the following options:
+!-   0 = the overall bed compartment is discretised in Nbed layers of equivalent 
+!-       thickness
+!-   1 = Top layer thickness = toplay_inithick
+!-       Thickness of layers 2:Nbed = (bedthick_overall-toplay_inithick)/(Nbed-1)
+!-       Require Nbed > 1       
+!- > toplay_inithick (m):  Initial top layer thickness, only used for 
+!-   sedlay_ini_opt == 1
+!------------------------------------------------------------------------------
+sedlay_ini_opt == 0
+toplay_inithick == 10.0d-2
+
 !- BED LAYER THICKNESS THRESHOLD (m) ------------------------------------------
 !- If deposition exceed this value, a new layer is created
 !  but the active layer thickness is given in bottom(:,:,iactv)
@@ -296,4 +403,32 @@ Nbed == 1
 !------------------------------------------------------------------------------
 !NEWLAYER_THICK == 0.001d0
 NEWLAYER_THICK == 100.d0
+
+!- EXNER EQUATION -------------------------------------------------------------
+!- Numerical method for the resolution of the sediment continuity equation to
+!- simulate the bed evolution resulting from bedload transport
+!- 1 = basic node-centered ﬁnite volume method
+!- 2 = Weighted Essentially Non-Oscillatory (WENO) formalism
+!------------------------------------------------------------------------------
+IMETH_BED_EVOL == 2
+
+!- SEDIMENT POROSITY [-] (0.-1.) ----------------------------------------------
+!- > poro_option
+!-   1: constant porosity in space and time --> porosity=poro_cst
+!-   2: the porosity is computed according to  Wooster et al. (2008), as a
+!-      function of the grain diameter heterogeneity (geometric standard 
+!-      deviation). In this case, two coefficients need to be defined, Awooster
+!-      and Bwooster.
+!-      The Awooster parameter corresponds to the average porosity of a well-sorted
+!-      non-cohesive sediment. According to Table 5 in Soulsby (1997), a good
+!-      value can be 0.42. Bwooster represents the porosity decrease when
+!-      the sediment mixture becomes more heteregeneous. It must be defined 
+!-      in accordance with Awooster to mimic Wooster's relation (i.e. 
+!-      porosity around 0.25 for a very high grain diameter heterogeneity).
+!-      With Awooster=0.42, Bwooster=-0.46 is fine.
+!------------------------------------------------------------------------------
+poro_option == 1
+poro_cst == 0.4
+Awooster == 0.42
+Bwooster == -0.458
 

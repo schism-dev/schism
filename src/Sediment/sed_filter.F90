@@ -18,6 +18,7 @@
 !
 ! subroutine sed_avalanching
 ! subroutine sed_bedmass_filter
+! subroutine sed2d_filter_diffu
 !
 !=====================================================================
 !=====================================================================
@@ -78,7 +79,7 @@
                                      dph(npa)
       REAL(rkind), DIMENSION(:,:) :: dpdxy_el(nea,2)
 !- User-defined parameters ------------------------------------------      
-      INTEGER,PARAMETER :: maxiter = 10 !Maximum number of iterations
+      INTEGER,PARAMETER :: maxiter = 30 !Maximum number of iterations
       !REAL(rkind), PARAMETER :: epsi  = 0.01d0 !too large??
       REAL(rkind), PARAMETER :: epsi  = 1.e-4
 
@@ -239,5 +240,105 @@
       END SUBROUTINE sed_avalanching
 
 !=====================================================================
+
+!--------------------------------------------------------------------
+      SUBROUTINE sed2d_filter_diffu(var1,var2,ndim)
+!--------------------------------------------------------------------
+! This subroutine applies a diffusive filter on any variable by
+! interpolating from node (resp. side, resp. element) to element
+! (resp. node, resp. node) and vice-versa.
+!
+! Author: guillaume dodet (gdodet01@univ-lr.fr, gdodet@lnec.pt)
+! Date:   23/01/2013
+!
+! History:
+! 04/2013 - G.Dodet: Extended the filter to all kind of variables
+!                    (eg. defined on node, side, elment).
+! 02/2020 - B.Mengual: implementation in SED3D
+!--------------------------------------------------------------------
+
+      USE schism_glbl, ONLY : indel,isidenode,nea,nne,i34,elnode,np,npa,nsa,rkind
+      USE schism_msgp, ONLY : exchange_e2d,exchange_p2d,exchange_s2d,      &
+                           parallel_abort
+   
+      IMPLICIT NONE
+
+!- Arguments --------------------------------------------------------
+      INTEGER, INTENT(IN) :: ndim
+      REAL(rkind), DIMENSION(ndim), INTENT(IN)  :: var1
+      REAL(rkind), DIMENSION(ndim), INTENT(OUT) :: var2
+!- Local variables --------------------------------------------------
+      INTEGER :: i,iel,inode,j
+      REAL(rkind), DIMENSION(nea) :: tmp_e
+      REAL(rkind), DIMENSION(nsa) :: tmp_s
+      REAL(rkind), DIMENSION(npa) :: neigh,tmp_n
+!--------------------------------------------------------------------
+      var2 = 0.D0
+      IF(ndim == npa) THEN !Node-element-node interpolation
+        tmp_e = 0.D0
+        DO i = 1,nea
+           DO j = 1,i34(i)
+              inode = elnode(j,i)
+              tmp_e(i) = tmp_e(i)+var1(inode)/i34(i)
+           ENDDO
+        ENDDO
+        CALL exchange_e2d(tmp_e)
+    
+        DO i = 1,np
+           DO j = 1,nne(i)
+              iel = indel(j,i)
+              var2(i) = var2(i)+tmp_e(iel)/nne(i)
+           ENDDO
+        ENDDO
+        CALL exchange_p2d(var2)
+    
+      ELSEIF(ndim == nea) THEN !Element-node-element interpolation
+        tmp_n = 0.d0
+        DO i = 1,np
+           DO j = 1,nne(i)
+              iel = indel(j,i)
+              tmp_n(i) = tmp_n(i)+var1(iel)/nne(i)
+           ENDDO
+        ENDDO
+        CALL exchange_p2d(tmp_n)
+    
+        DO i = 1,nea
+           DO j = 1,i34(i)
+              inode = elnode(j,i)
+              var2(i) = var2(i)+tmp_n(inode)/i34(i)
+           ENDDO
+        ENDDO
+        CALL exchange_e2d(var2)
+    
+      ELSEIF(ndim == nsa) THEN !Side-node-side interpolation
+        tmp_n = 0.d0
+        neigh = 0.d0
+        DO i = 1,nsa
+           DO j = 1,2
+              inode = isidenode(j,i)
+              tmp_n(inode) = tmp_n(inode)+var1(i)
+              neigh(inode) = neigh(inode)+1
+           ENDDO
+        ENDDO
+        DO i = 1,npa
+           tmp_n(i) = tmp_n(i)/neigh(i)
+        ENDDO
+        CALL exchange_p2d(tmp_n)
+    
+        DO i = 1,nsa
+           DO j = 1,2
+              inode = isidenode(j,i)
+              var2(i) = var2(i)+tmp_n(inode)/2.d0
+           ENDDO
+        ENDDO
+        CALL exchange_s2d(var2)
+      ELSE
+        CALL parallel_abort('Wrong dimension in sed2d_filter_diffu')
+      ENDIF
+   
+      END SUBROUTINE sed2d_filter_diffu
+!--------------------------------------------------------------------
+
+
 !=====================================================================
 
