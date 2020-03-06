@@ -19,7 +19,7 @@
 !      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
 !
 !serial:
-!ifort -CB -O2 -o add_precip add_precip.F90 
+!ifort -CB -O2 -o add_precip add_precip.f90 
 !
 !openmp:
 !ifort -CB -O2 -qopenmp -o add_precip add_precip.F90 
@@ -45,7 +45,7 @@
        integer :: ne,np,id,id1,ie,ie_nbr,isource,kk,k0,nope,nland,nn,n1,n2,n3,n4,l, &
          & ip,je,new,ii,icount,tid,nthreads,ntmp
        real(8), allocatable :: vsource(:,:),vsink(:,:),msource(:,:,:), &
-         & time_stamp(:),area(:),vsource_precip(:),max_source_precip(:)
+         & time_stamp(:),area(:),vsource_precip(:),vsource_no_precip(:),max_source_precip(:)
 
        !$omp parallel
        !tid = omp_get_thread_num()
@@ -156,8 +156,9 @@
 
 
 !     add precipitation to all elements
-      allocate(vsource_precip(ne),max_source_precip(ne),stat=istat)
+      allocate(vsource_precip(ne),vsource_no_precip(ne),max_source_precip(ne),stat=istat)
       if (istat/=0) stop 'Failed to alloc. vsource_precip'
+      vsource_no_precip=0d0
       allocate(area(ne),stat=istat)
       if (istat/=0) stop 'Failed to alloc. area'
       do i=1,ne
@@ -191,6 +192,7 @@
       do i=1,nsource
         ie=ele_source(i)
         vsource_precip(ie)=vsource_precip(ie)+maxval(vsource(i,:))
+        vsource_no_precip(ie)=maxval(vsource(i,:))
       enddo
 
 
@@ -213,8 +215,8 @@
       open(16,file='vsource.th.1',status='replace')
       write(16,'(10000000F15.3)')0.0,(vsource_precip(k),k=1,ne)
       write(16,'(10000000F15.3)')43200.0,(vsource_precip(k),k=1,ne)
-      write(16,'(10000000F15.3)')86400.0,(0d0,k=1,ne)
-      write(16,'(10000000F15.3)')1000000.0,(0d0,k=1,ne)
+      write(16,'(10000000F15.3)')86400.0,(vsource_no_precip(k),k=1,ne)
+      write(16,'(10000000F15.3)')1000000.0,(vsource_no_precip(k),k=1,ne)
       close(16)
 
 !     write msource.th file
