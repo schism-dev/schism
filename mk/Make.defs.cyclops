@@ -47,7 +47,7 @@ FCS = $(FCP)
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 
 FCPFLAGS = $(PPFLAGS) -O2 -xCORE-AVX2 #-qopenmp
 #FCSFLAGS = $(FFCPFLAGS)
-FLDFLAGS = -O3 -xCORE-AVX2 -fma -align array64byte -finline-functions
+FLDFLAGS = -O2 -xCORE-AVX2 -fma -align array64byte -finline-functions 
 #####Libraries
 MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF_FORTRAN)/lib -L$(NETCDF)/lib -lnetcdf -lnetcdff
