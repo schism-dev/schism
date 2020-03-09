@@ -96,6 +96,7 @@ subroutine schism_main
   implicit none
   integer :: it,iths,ntime
   call schism_init('./',iths,ntime)
+
   do it=iths+1,ntime
     call schism_step(it)
   enddo !it
