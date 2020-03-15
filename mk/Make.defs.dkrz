@@ -41,7 +41,7 @@ ENV = mistral
 # Environment 
 ################################################################################
 
-FCP = mpiifort
+FCP = mpif90
 FLD = $(FCP)
 FCS = $(FCP)
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 
