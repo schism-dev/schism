@@ -22,7 +22,7 @@ print("\n");
 
 #dirs
 $script_dir="../Grid_manipulation/";
-$hycom_dir="../HYCOM_KATRINA_PERIOD/";
+$hycom_dir="../HYCOM_FLORENCE_PERIOD/";
 
 $thisdir=cwd();
 chdir("..");
@@ -61,15 +61,21 @@ chdir($thisdir);
 system("ln -sf Elev_IC/elev.ic DB_elev_ic.gr3");
 
 #set salt.ic
-print(">>>>>>>>>>>>Interpolating salinity i.c. in Delaware Bay>>>>>>>>>>>>>\n");
+print(">>>>>>>>>>>>Preparing i.c. for S >>>>>>>>>>>>>\n");
 system("ln -sf DelawareBay_Data/DB_surf_S_ic.subset.gr3 bg.gr3");
 system("rm fg.gr3"); 
 #make fg.gr3, to be interpolated on
 system("./gen_gr3.pl");
-#set initial sal to 0 in DB before interpolation
-system("$script_dir/auto_edit_region 0 DB.reg fg.gr3 0");
+#
+#set initial sal to 0 in coastal zones before interpolation
+system("$script_dir/auto_edit_region 0 ic_S_0.reg fg.gr3 0");
 move("out.gr3","fg.gr3");
-#make include.gr3 for salt interp
+#set initial sal to 0 in Missi. R.
+system("$script_dir/auto_edit_region 0 ic_S_0_Missi.reg fg.gr3 0");
+move("out.gr3","fg.gr3");
+print(">>>>>>>>>>>>Done Setting 0 salinity i.c. in coastal zones>>>>>>>>>>>>>\n");
+
+#make include.gr3 for salt interp inside DB
 system("$script_dir/auto_edit_region 0 DB.reg hgrid.gr3 1 0");
 move("out.gr3","include.gr3");
 #do interp between 2 *.gr3
@@ -77,8 +83,15 @@ system("$script_dir/interpolate_unstructured");
 system("mv fg.new DB_surf_S_ic.gr3");
 print(">>>>>>>>>>>>Done interpolating salinity i.c. in Delaware Bay>>>>>>>>>>>>>\n");
 
-#set CB=1 and DB=1 in estuary.gr3
+#set CB=1 in estuary.gr3
+system("$script_dir/auto_edit_region 0 CB.reg hgrid.gr3 1 0");
+move("out.gr3","estuary.gr3");
+#set "Other coastal zones"=2 in estuary.gr3
 system("$script_dir/auto_edit_region 0 DB.reg estuary.gr3 2");
+move("out.gr3","estuary.gr3");
+system("$script_dir/auto_edit_region 0 ic_S_0.reg estuary.gr3 2");
+move("out.gr3","estuary.gr3");
+system("$script_dir/auto_edit_region 0 ic_S_0_Missi.reg estuary.gr3 2");
 move("out.gr3","estuary.gr3");
 
 system("./modify_hot");
