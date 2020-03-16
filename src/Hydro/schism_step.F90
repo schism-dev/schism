@@ -65,7 +65,7 @@
        USE sed_mod, only : Wsed,Srho,Nbed,MBEDP,bedldu,bedldv,bed,bottom,    &
                           &bed_frac,mcoefd,bed_fracn,bed_d50n,bed_taun,&
                           &bedforms_rough,bed_rough,izcr,izsw,izwr,izbld, &
-                          &bed,ithck,iaged,ntr_l,Sd50 !0821+ntr_l,Sd50
+                          &bed,ithck,iaged,ntr_l,Sd50,eroflxn,depflxn,poron,Qaccun,Qaccvn 
 #endif
 
 #ifdef USE_SED2D
@@ -7615,8 +7615,17 @@
         if(iof_sed(11)==1) call writeout_nc(id_out_var(noutput+15), &
      &'z0wr',4,1,nea,bottom(:,izwr))
 
-        noutput=noutput+11
-        icount=11 !offset
+        if(iof_sed(12)==1) call writeout_nc(id_out_var(noutput+16), &
+     &'SED_poro',1,1,npa,poron) ![-]
+        if(iof_sed(13)==1) call writeout_nc(id_out_var(noutput+17), &
+     &'SED_eroflx',1,1,npa,eroflxn) ![kg/m/m/s]
+        if(iof_sed(14)==1) call writeout_nc(id_out_var(noutput+18), &
+     &'SED_depflx',1,1,npa,depflxn) ![kg/m/m/s]
+        if(iof_sed(15)==1) call writeout_nc(id_out_var(noutput+19), &
+     &'SED_qbdl_acc',1,1,npa,Qaccun,Qaccvn) ![[kg/m/s]]
+
+        noutput=noutput+15
+        icount=15 !offset
 
         do i=1,ntrs(5)
           write(it_char,'(i72)')i

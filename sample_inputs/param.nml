@@ -750,14 +750,18 @@
 !  iof_sed(9) = 1 !current-ripples roughness length @elem (m) (z0cr_elem) {z0cr}
 !  iof_sed(10) = 1 !sand-waves roughness length (m) @elem (z0sw_elem) {z0sw}
 !  iof_sed(11) = 1 !wave-ripples roughness length @elem (m) (z0wr_elem) {z0wr}
+!  iof_sed(12) = 1 ! sediment porosity in the top layer (-) {SED_poro}
+!  iof_sed(13) = 1 ! erosion flux for suspended transport (kg/m/m/s) {SED_eroflx}
+!  iof_sed(14) = 1 ! deposition flux for suspended transport (kg/m/m/s) {SED_depflx}
+!  iof_sed(15) = 1 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {SED_qbdl_acc}
 
 !  Example of using 2 classes
-!  iof_sed(12) = 1 !conc. of 1st class (one output need by each class) [g/L] {SED3D_1}
-!  iof_sed(13) = 1 !Bedload transport rate vector (kg.m-1.s-1) for 1st tracer (one output need by tracer) {SED_bdld_1}
-!  iof_sed(14) = 1 !Bed fraction 1st tracer (one output need by each class) [-] {SED_bedfrac_1}
-!  iof_sed(15) = 1 !conc. of 2nd class {SED3D_2}
-!  iof_sed(16) = 1 !Bedload transport of 2nd class {SED_bdld_2}
-!  iof_sed(17) = 1 !Bed fraction of 2nd class {SED_bedfrac_3}
+!  iof_sed(16) = 1 !conc. of 1st class (one output need by each class) [g/L] {SED3D_1}
+!  iof_sed(17) = 1 !Bedload transport rate vector (kg.m-1.s-1) for 1st tracer (one output need by tracer) {SED_bdld_1}
+!  iof_sed(18) = 1 !Bed fraction 1st tracer (one output need by each class) [-] {SED_bedfrac_1}
+!  iof_sed(19) = 1 !conc. of 2nd class {SED3D_2}
+!  iof_sed(20) = 1 !Bedload transport of 2nd class {SED_bdld_2}
+!  iof_sed(21) = 1 !Bed fraction of 2nd class {SED_bedfrac_3}
 
 !-----------------------------------------------------------------------
 ! EcoSim outputs 

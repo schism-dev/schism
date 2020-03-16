@@ -34,7 +34,34 @@
 !                                - MUD-like or SAND-like             !
 !          2013/05 - F.Ganthy : Re-introduction of the number of bed !
 !                               sediment layers within sediment.in   !
-!                                                                    !
+!          2020/02 - B.Mengual                                       !
+!                  * Implementation of a method to compute and update!
+!                    a porosity representative of non-cohesive       !
+!                    matrix (poro_option,poro_cst,Awooster,Bwooster) !
+!                  * Implementation of several methods to compute    !
+!                    the current-induced bottom shear stress         !
+!                    (tau_option,tau_max,zstress)                    !
+!                  * Wave asymmetry computations: restructuration    !
+!                    and introduction of filtering possibilities     !
+!                    (iasym,w_asym_max,elfrink_filter,ech_uorb)      !
+!                  * Implementation of bedload flux caused by        !
+!                    wave acceleration skewness                      !
+!                    (bedload_acc,kacc_hoe,                          !
+!                    kacc_dub,thresh_acc_opt,acrit)                  !
+!                  * Add the possibility to filter and limit         !
+!                    bedload fluxes (bedload_filter,bedload_limiter, !
+!                    bedload_acc_filter)
+!                  * Add the possibility to use different methods    !
+!                    to solve the Exner equation in bedchange_bedload!
+!                    (IMETH_BED_EVOL)                                !
+!                  * Introduction of a maximum active layer thickness!
+!                    (actv_max)                                      !
+!                  * Morphodynamics: common morph_fac over all       !
+!                    sediment classes (morph_fac)                    !
+!                  * Initialisation of the vertical discretisation of!
+!                    sediment layers (sedlay_ini_opt,toplay_inithick)!
+!                  * Bed slope effects for bedload fluxes            !
+!                    (slope_formulation=4 with alpha_bs,alpha_bn)    !
 !--------------------------------------------------------------------!
 
       USE schism_glbl, ONLY: rkind,ntrs,iwsett,wsett,irange_tr,ddensed, &
@@ -60,7 +87,7 @@
       IF(myrank==0) write(16,*)'Entering read_sed_input routine'
 
       ALLOCATE(Sd50(ntr_l),Srho(ntr_l),Wsed(ntr_l),Erate(ntr_l),tau_ce(ntr_l), &
-     &poros(ntr_l),morph_fac(ntr_l),iSedtype(ntr_l),stat=i)
+     &poros(ntr_l),iSedtype(ntr_l),stat=i)
       IF(i/=0) CALL parallel_abort('main: Sd50 allocation failure')
        
 !--------------------------------------------------------------------
@@ -70,7 +97,7 @@
       !Take some old parameters out of sediment.in
       g=grav
       rhom=rho0
-      vonKar=0.4d0
+      vonKar=0.4
 
       !Init. new parameters to make sure they are read in
       ised_bc_bot=-100
@@ -124,6 +151,7 @@
 
           CASE('NEWLAYER_THICK')
             READ(line_str,*) var1, var2, newlayer_thick
+
           CASE('BEDLOAD_COEFF')
             READ(line_str,*) var1, var2, bedload_coeff
 
@@ -141,9 +169,6 @@
 
           CASE('SAND_TAU_CE')
             READ(line_str,*) var1, var2, (tau_ce(i), i=1,ntr_l)
-
-          CASE('SAND_MORPH_FAC')
-            READ(line_str,*) var1, var2, (morph_fac(i), i=1,ntr_l)
 
           CASE('SED_TYPE')
             READ(line_str,*) var1, var2, (iSedtype(i), i=1,ntr_l)
@@ -163,11 +188,29 @@
           CASE('Cdb_max')
             READ(line_str,*) var1, var2, Cdb_max
 
+          CASE('actv_max')
+            READ(line_str,*) var1, var2, actv_max
+
 !          CASE('rhom')
 !            READ(line_str,*) var1, var2, rhom
 
-          CASE('porosity')
+          CASE('poro_option')
+            READ(line_str,*) var1, var2, poro_option
+
+          CASE('poro_cst')
             READ(line_str,*) var1, var2, porosity
+
+          CASE('Awooster')
+            READ(line_str,*) var1, var2, Awooster
+
+          CASE('Bwooster')
+            READ(line_str,*) var1, var2, Bwooster
+
+          CASE('sedlay_ini_opt')
+            READ(line_str,*) var1, var2, sedlay_ini_opt
+
+          CASE('toplay_inithick')
+            READ(line_str,*) var1, var2, toplay_inithick
 
           CASE('bdldiffu')
             READ(line_str,*) var1, var2, bdldiffu
@@ -178,11 +221,23 @@
           CASE('bedload')
             READ(line_str,*) var1, var2, bedload
 
+          CASE('bedload_filter')
+            READ(line_str,*) var1, var2, bedload_filter
+
+          CASE('bedload_limiter')
+            READ(line_str,*) var1, var2, bedload_limiter
+
           CASE('suspended_load')
             READ(line_str,*) var1, var2, suspended_load
 
           CASE('slope_formulation')
             READ(line_str,*) var1, var2, slope_formulation
+
+          CASE('alpha_bs')
+            READ(line_str,*) var1, var2, alpha_bs
+
+          CASE('alpha_bn')
+            READ(line_str,*) var1, var2, alpha_bn
 
           CASE('ised_bc_bot')
             READ(line_str,*) var1, var2, ised_bc_bot
@@ -195,6 +250,9 @@
 
           CASE('sed_morph_time')
             READ(line_str,*) var1, var2, sed_morph_time !in days
+
+          CASE('sed_morph_fac')
+            READ(line_str,*) var1, var2, morph_fac ! morphological factor [-]
 
           CASE('drag_formulation')
             READ(line_str,*) var1, var2, drag_formulation
@@ -253,6 +311,48 @@
           CASE('im_pick_up')
             READ(line_str,*) var1, var2, im_pick_up
 
+          CASE('IMETH_BED_EVOL')
+            READ(line_str,*) var1, var2, imeth_bed_evol
+
+          CASE('iasym')
+            READ(line_str,*) var1, var2, iasym
+
+          CASE('w_asym_max')
+            READ(line_str,*) var1, var2, w_asym_max
+
+          CASE('elfrink_filter')
+            READ(line_str,*) var1, var2, elfrink_filter
+
+          CASE('ech_uorb')
+            READ(line_str,*) var1, var2, ech_uorb
+
+          CASE('bedload_acc')
+            READ(line_str,*) var1, var2, bedload_acc
+
+          CASE('bedload_acc_filter')
+            READ(line_str,*) var1, var2, bedload_acc_filter
+
+          CASE('kacc_hoe')
+            READ(line_str,*) var1, var2, kacc_hoe
+
+          CASE('kacc_dub')
+            READ(line_str,*) var1, var2, kacc_dub
+
+          CASE('thresh_acc_opt')
+            READ(line_str,*) var1, var2, thresh_acc_opt
+
+          CASE('acrit')
+            READ(line_str,*) var1, var2, acrit
+
+          CASE('tau_option')
+            READ(line_str,*) var1, var2, tau_option
+
+          CASE('tau_max')
+            READ(line_str,*) var1, var2, tau_max
+
+          CASE('zstress')
+            READ(line_str,*) var1, var2, zstress
+
         END SELECT
 
       ENDDO !scan sediment.in
@@ -275,6 +375,14 @@
         write(errmsg,*)'READ_SED, some pars. not read in:',ised_bc_bot,ised_dump,ierosion
         call parallel_abort(errmsg)
       endif 
+
+! BM: check
+      IF ((tau_option .EQ. 0) .OR. (tau_option .GT. 3)) THEN
+        WRITE(errmsg,*)'READ_SED: Invalid tau_option (from 1 to 3)'
+        CALL parallel_abort(errmsg)
+      END IF
+
+
 
 !---------------------------------------------------------------------
 ! - Scale input parameters
@@ -319,16 +427,25 @@
          WRITE(16,*) '--------------------'
          WRITE(16,*) 'sed_debug: ', sed_debug
          WRITE(16,*) 'Nbed: ',Nbed
-         WRITE(16,*) 'porosity: ',porosity
+         IF (poro_option .EQ. 1) THEN
+           WRITE(16,*) 'Constant porosity: ',porosity
+         ELSE
+           WRITE(16,*) 'Variable porosity poro_option > 1'
+         END IF
+         IF (sed_morph .EQ. 1) THEN
+           WRITE(16,*) 'Accounting for morphodynamics'
+           WRITE(16,*) ' > sed_morph_time (ramp in days)=',sed_morph_time
+           WRITE(16,*) ' > morphological factor: ',morph_fac
+         END IF
 !         WRITE(16,*) 'bedthick_overall(1): ',bedthick_overall(1)
          WRITE(16,*) 'New layer thickness',newlayer_thick
          WRITE(16,*) '----------------------------------------------'
          WRITE(16,*) 'Sed type  ;  Sd50 [m]  ;  Srho [kg/m3]  ;',     &
          &          '  Wsed [m/s]  ;  Erate ;  tau_ce', &
-         &          ' [Pa]  ;  morph_fac ; ierosion '
+         &          ' [Pa]  ;  ierosion '
          DO i = 1,ntr_l !ntracers
            WRITE(16,*) iSedtype(i),Sd50(i),Srho(i),Wsed(i),Erate(i),   &
-           &           tau_ce(i)*rhom,morph_fac(i),ierosion
+           &           tau_ce(i)*rhom,ierosion
          ENDDO
          WRITE(16,*)
        ENDIF
