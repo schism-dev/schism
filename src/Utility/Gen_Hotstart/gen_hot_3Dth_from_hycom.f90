@@ -51,7 +51,7 @@
 !   Second, download HYCOM to only cover the open boundary segments to
 !   generate .th.nc (hotstart would be junk).
 
-! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_3Dth_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe extract_mod.f90 compute_zcor.f90 pt_in_poly_test.f90 gen_hot_3Dth_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
       use netcdf
@@ -61,9 +61,9 @@
 !      implicit none
 
 !      integer, parameter :: debug=1
-      integer, parameter :: mnp=480000
-      integer, parameter :: mne=960000
-      integer, parameter :: mns=1440000
+      integer, parameter :: mnp=480000*6
+      integer, parameter :: mne=960000*6
+      integer, parameter :: mns=1440000*6
       integer, parameter :: mnv=50
       integer, parameter :: mnope=10 !max # of open bnd segments
       integer, parameter :: mnond=5000 !max # of open bnd nodes in each segment
