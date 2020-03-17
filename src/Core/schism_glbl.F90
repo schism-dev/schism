@@ -27,7 +27,7 @@ module schism_glbl
   integer,parameter :: rkind = 8      ! Default real datatype
 
 !iwp*: working precision of single/double real option for some code
-  integer,parameter :: iwp= 4      ! for ICM
+  integer,parameter :: iwp= 8      ! for ICM
 
 !#endif
 #ifdef DOUBLE_REAL_OUT

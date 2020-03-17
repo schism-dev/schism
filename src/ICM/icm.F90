@@ -824,7 +824,7 @@ subroutine photosynthesis(id,hour,nv,it)
       Chl=PB1(k,1)/CChl1(id)+PB2(k,1)/CChl2(id)+PB3(k,1)/CChl3(id)
       if(Chl<0.0) then
 !Error: 1.e-15 too small?
-        if(abs(Chl)>1.e-6) then
+        if(abs(Chl)>1.e-12) then
          write(errmsg,*)'chl<0.0 :',Chl,PB1(k,1),PB2(k,1),PB3(k,1)
          call parallel_abort(errmsg)
         else
@@ -917,12 +917,12 @@ subroutine photosynthesis(id,hour,nv,it)
             rIK=(1.d3*CChl3(id))*GPT(i)/alpha_PB(i)
           endif !i
 !Error: 1.e-20
-          rFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-6)
+          rFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
           call parallel_abort('unknown jLight in icm.F90')
         endif
 
-        if(rFI-1>1.e-6.or.rFI<0.or.rFI/=rFI) then
+        if(rFI-1>1.e-12.or.rFI<0.or.rFI/=rFI) then
           write(errmsg,*)'FI>1.or.FI<0: ',rFI,bLight,sLight,rKeh,rKe
           call parallel_abort(errmsg)
         endif 
