@@ -419,7 +419,7 @@ git versions:
 (100) c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
 (101) d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
 (102) 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
-(103) : PR from Baptiste mengual for SED3D.
+(103) 5665418 (Mar 18, 2020): PR from Baptiste mengual for SED3D (sed_frition.F90 merged after the rest).
 
 ---------------------------------------------------------------
 Auto-test history:
