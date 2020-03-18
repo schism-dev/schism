@@ -210,6 +210,21 @@
         enddo !i
       endif !myrank
 
+!     Rewind flux.out
+      if(iflux/=0.and.myrank==0) then
+        do it=1,it_now 
+          read(9,*)
+#ifdef USE_ANALYSIS
+          read(9,*)
+          read(9,*)
+          do m=1,ntracers
+            read(9,*)
+            read(9,*)
+          enddo !m
+#endif
+        enddo !it
+      endif !iflux/=0
+
 !     Read ICM parameters 
 #ifdef USE_ICM 
       call WQinput(time)
