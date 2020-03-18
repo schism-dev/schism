@@ -2,8 +2,9 @@ Changes in param.in and main parameter inputs for other modules:
 
 Github versions:
 
-(): added iof_sed(12:15) for new SED code. In sediment.in: new options for various parameters and a few new parameters;
-        sed_morph=1 requires imorphogrid.gr3 (a scale applied to depth change at each node);
+cd9664a (Mar 16, 2020): [1st PR from Baptiste Mengual] added iof_sed(12:15) for new SED code. In sediment.in: 
+                        new options for various parameters and a few new parameters;
+                        sed_morph=1 requires imorphogrid.gr3 (a scale applied to depth change at each node);
 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
 73f7451 (Jan 14, 2020): changed ifltyp=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
 59741d4 (Jan 9, 2020): added another pre-proc flag 'ipre2' for more diagnostic outputs (can be used with >1 CPU; stops
@@ -418,6 +419,7 @@ git versions:
 (100) c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
 (101) d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
 (102) 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
+(103) : PR from Baptiste mengual for SED3D.
 
 ---------------------------------------------------------------
 Auto-test history:

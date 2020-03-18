@@ -43,13 +43,18 @@
 !                               implementation of wave-current bottom!
 !                               stress and bedforms predictor        !
 !          2013/05 - F.Ganthy : Further cleaning                     !
+!          2020/02 - X.Bertin, B.Mengual : shear stress estimates    !
+!                               based on the skin roughness          !
+!                  - B.Mengual : > introduction of tau_option        !
+!                                > tau_c limited by tau_max          !
 !                                                                    !
 !--------------------------------------------------------------------!
 
       USE sed_mod,   ONLY: Cdb_min,Cdb_max,Zob,vonKar,bustr,bvstr,   &
-                           tau_c,drag_formulation
+                           tau_c,drag_formulation,isd50,bottom, &
+                           ustress,vstress,zstress,tau_max,tau_option
       USE schism_glbl, ONLY: rkind,nvrt,nea,dfv,idry_e,kbe,i34,elnode, &
-     &uu2,vv2,ze,dpe,isbnd,ifltype
+     &uu2,vv2,ze,dpe,isbnd,ifltype,errmsg,rho0,eta2
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_e2d
 
       IMPLICIT NONE
@@ -61,6 +66,7 @@
       INTEGER     :: kb0,kb1,kb2
       REAL(rkind) :: cff1, cff2, cff3, cff4, cff5, hh
       REAL(rkind) :: wrk
+      REAL(rkind) :: htot,d50,z0s
 
 !- Start Statement --------------------------------------------------!
 
@@ -68,7 +74,7 @@
 ! - Set kinematic bottom momentum flux (m2/s2).
 !---------------------------------------------------------------------
 
-      bustr=0.d0; bvstr=0.d0; tau_c=0.d0 !init.
+      bustr=0; bvstr=0; tau_c=0 !init.
 
       IF (drag_formulation == 1) THEN
       ! - Set logarithmic bottom stress.
@@ -88,23 +94,38 @@
 
           kb0 = kbe(i)
           kb1 = kbe(i)+1
-          hh  = ze(kb1,i)-ze(kb0,i)
-          IF(hh>Zob(i)) THEN
-            IF(hh<=0.d0.OR.Zob(i)<=0.d0) THEN
+          htot = dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
+
+          IF (tau_option .EQ. 1) THEN
+            hh  = ze(kb1,i)-ze(kb0,i)
+          ELSE IF (tau_option .EQ. 2) THEN
+            hh  = zstress
+          ELSE IF (tau_option .EQ. 3) THEN
+            hh  = MAX(ze(kb1,i)-ze(kb0,i),zstress)
+          END IF
+
+          d50      = bottom(i,isd50)      ! Median grain size (m)         
+          z0s    = d50/12.0d0             ! Nikuradse roughness  (m)
+
+          IF(hh>z0s) THEN
+          !IF(hh>Zob(i)) THEN
+            !IF(hh<=0.d0.OR.Zob(i)<=0.d0) THEN
+            IF(hh<=0.OR.z0s<=0) THEN
               CALL parallel_abort('SED-current_stress: Cd failed')
             ENDIF
-            cff1 = 1.0d0/LOG(hh/Zob(i))
+            cff1 = 1.0d0/LOG(hh/z0s)
+            !cff1 = 1.0d0/LOG(hh/Zob(i))
             cff2 = vonKar*vonKar*cff1*cff1
             wrk  = MIN(Cdb_max,MAX(Cdb_min,cff2))
           else
             wrk=Cdb_max
           endif !hh
 
-          cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
-          cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
+          cff3 = vstress(i)
+          cff4 = ustress(i)
 
           !Limit vel. in shallows - need better approach
-          if(dpe(i)<=1.d0) then
+          if(htot<=0.5d0) then
             cff3=min(cff3,1.d0)
             cff4=min(cff4,1.d0)
           endif
@@ -126,8 +147,19 @@
 !            bustr(i) = cff5*cff4/hh
 !            bvstr(i) = cff5*cff3/hh
 !          ENDIF ! End test on Zob>ze
+
           ! Bottom stress mag. [m^2/s/s]
           tau_c(i) = SQRT(bustr(i)*bustr(i)+bvstr(i)*bvstr(i))
+
+          ! BM: Limitation of current-induced shear stress
+          tau_c(i) = MIN(tau_c(i),tau_max/rho0)
+
+          IF (tau_c(i)/=tau_c(i)) THEN
+            WRITE(errmsg,*)'Sed current bot. stress is NaN',myrank,i,&
+            &              tau_c(i),bustr(i),bvstr(i),cff3,cff4
+            CALL parallel_abort(errmsg)
+          ENDIF
+
         END DO !i
 
 !      ELSEIF (drag_formulation == 2) THEN
@@ -193,12 +225,15 @@
 ! Date: 2013/03/27                                                   !
 !                                                                    !
 ! History:                                                           !
+!          2020/02 - X.Bertin, B.Mengual : fw based on Swart (1974)  !
+!                    using the skin friction                         !
+!                  - B.Mengual : tau_w limited by tau_max            !
 !                                                                    !
 !--------------------------------------------------------------------!
 
       USE sed_mod,   ONLY: uorb,tp,Zob,bustr,bvstr,tau_c,      &
-     &                      tau_w,tau_wc
-      USE schism_glbl, ONLY: rkind,pi,nea,idry_e,errmsg
+     &                      tau_w,tau_wc,isd50,bottom,tau_max 
+      USE schism_glbl, ONLY: rkind,pi,nea,idry_e,errmsg,rho0
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_e2d
 
       IMPLICIT NONE
@@ -206,7 +241,7 @@
 
 !- Local variables --------------------------------------------------!
       INTEGER     :: i
-      REAL(rkind) :: abskb,fw
+      REAL(rkind) :: abskb,fw,ks,d50
 !- Start Statement --------------------------------------------------!
 
 !---------------------------------------------------------------------
@@ -236,20 +271,35 @@
 !           (3) Computes the wave bottom stress
 !---------------------------------------------------------------------
         ! * Ratio Ab/kb
-        if(Zob(i)==0) call parallel_abort('sed_current_stress: Zob=0')
-        abskb = uorb(i)*tp(i)/(30.0d0*Zob(i)*2.0d0*pi)
+        !if(Zob(i)==0) call parallel_abort('sed_current_stress: Zob=0')
+        !abskb = uorb(i)*tp(i)/(30.0d0*Zob(i)*2.0d0*pi)
 
-        ! * Friction factor
-        IF (abskb.LE.0.2d0) THEN
+        !! * Friction factor
+        !IF (abskb.LE.0.2d0) THEN
+        !  fw = 0.3d0
+        !ELSEIF ((abskb.GT.0.2d0).AND.(abskb.LE.100.0d0)) THEN
+        !  fw = EXP(-8.82d0 + 7.02d0*abskb**(-0.078d0))
+        !ELSE
+        !  fw = EXP(-7.30d0 + 5.61d0*abskb**(-0.109d0))
+        !ENDIF ! End test on abskb value
+
+! XB: compute fw based on Swart (1974) using the skin friction
+        d50 = bottom(i,isd50)      ! Median grain size (m)
+        ks  = 2.5d0*d50
+        abskb = uorb(i)*tp(i)/2.0d0/pi/ks ! * Ratio Ab/kb
+        IF (abskb.LE.1.57d0) THEN
           fw = 0.3d0
-        ELSEIF ((abskb.GT.0.2d0).AND.(abskb.LE.100.0d0)) THEN
-          fw = EXP(-8.82d0 + 7.02d0*abskb**(-0.078d0))
         ELSE
-          fw = EXP(-7.30d0 + 5.61d0*abskb**(-0.109d0))
-        ENDIF ! End test on abskb value
+          fw = 0.00251d0*EXP(5.21*abskb**(-0.19d0))
+        ENDIF !
+! end XB
 
         ! * Wave bottom stress (in m2.s-2)
         tau_w(i) = 0.5d0*fw*uorb(i)*uorb(i)
+
+        !BM: same limitation than for tau_c
+        tau_w(i)=MIN(tau_w(i),tau_max/rho0)
+
         ! * Consistency check
         IF (tau_w(i)/=tau_w(i)) THEN
           WRITE(errmsg,*)'Sed wave bot. stress is NaN',myrank,i,     &
@@ -261,8 +311,8 @@
 ! - Computes mean wave-current bottom stress (Soulsby, 1997, eq. 69)
 !---------------------------------------------------------------------
 
-        if(tau_c(i)+tau_w(i)==0.d0) then
-          tau_wc(i)=0.d0
+        if(tau_c(i)+tau_w(i)==0) then
+          tau_wc(i)=0
         else
           tau_wc(i) = tau_c(i)*(1.0d0+1.2d0*(tau_w(i)/(tau_c(i)+tau_w(i)))**3.2d0)
         endif
@@ -315,6 +365,8 @@
 !                                 roughness computation              !
 !                               - Add wave-ripple computation from   !
 !                                 Nielsen (1992)                     !
+!          2020/02 - B.Mengual : Correction of the Hsw expression    !
+!                                for current sand waves              !
 !                                                                    !
 !--------------------------------------------------------------------!
 
@@ -326,7 +378,7 @@
      &                     tp,bedforms_rough,iwave_ripple,           &
      &                     irough_bdld,bottom,isd50,idens,itauc,     &
      &                     izdef,izNik,izcr,izsw,izwr,izbld,izapp,   &
-     &                     bed_rough
+     &                     bed_rough,sed_debug
 
 
       IMPLICIT NONE
@@ -364,7 +416,7 @@
         d50      = bottom(i,isd50)      ! Median grain size (m)
         s        = rhosed/rho0
 
-        if(d50<=0.d0.or.s<=1.d0) then
+        if(d50<=0.or.s<=1) then
           write(errmsg,*)'sed_roughness: d50<=0,',d50,s,rhosed,rho0,bottom(i,:),ielg(i)
           call parallel_abort(errmsg)
         endif
@@ -389,7 +441,7 @@
           z0bld = 0.0d0
         ELSE !wet
           ! Water depth
-          hwat = dpe(i)+sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))
+          hwat = dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
 
 ! ** Current-induced bed shear stress (skin friction only) 
 !Error: limit shallows
@@ -400,24 +452,24 @@
             IF((hh.LE.0.0d0).OR.(z0s.LE.0.0d0)) THEN
               CALL parallel_abort('SED-Roughness: Cd failed')
             ENDIF
-            cff1 = 1.0d0/LOG(hh/z0s)
+            cff1 = 1.0d0/DLOG(hh/z0s)
             cff2 = vonKar*vonKar*cff1*cff1 !Cd
             wrk  = MIN(Cdb_max,MAX(Cdb_min,cff2)) !Cd
-            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
-            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i))
+            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
+            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
             !cff5 = DSQRT(cff4*cff4+cff3*cff3)
             ! Bottom stress [m^2/s/s]
             !tau_c2 = wrk*DSQRT((cff4*cff5)**2.0d0+(cff3*cff5)**2.0d0)
             tau_c2 = wrk*(cff3*cff3+cff4*cff4)
           ELSE !use approx.
 !            kb2 = kbe(i)+2
-            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/dble(i34(i)) - &
-            &      sum(vv2(kb0,elnode(1:i34(i),i)))/dble(i34(i))
-            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/dble(i34(i)) - &
-            &      sum(uu2(kb0,elnode(1:i34(i),i)))/dble(i34(i)) 
-            cff5 = sum(dfv(kb1,elnode(1:i34(i),i))+dfv(kb0,elnode(1:i34(i),i)))/2.d0/dble(i34(i))
+            cff3 = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i) - &
+            &      sum(vv2(kb0,elnode(1:i34(i),i)))/i34(i)
+            cff4 = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i) - &
+            &      sum(uu2(kb0,elnode(1:i34(i),i)))/i34(i) 
+            cff5 = sum(dfv(kb1,elnode(1:i34(i),i))+dfv(kb0,elnode(1:i34(i),i)))/2/i34(i)
             !hh = ze(kb1,i)-ze(kb0,i)
-            IF(hh<=0.d0) CALL parallel_abort('SED-Roughness: div. by 0')
+            IF(hh<=0) CALL parallel_abort('SED-Roughness: div. by 0')
             ! Bottom stress
             tau_c2 = cff5*SQRT((cff4/hh)**2.0d0+(cff3/hh)**2.0d0)
           ENDIF ! End test on hh>z0s
@@ -447,12 +499,15 @@
             tau_wash = 26.0d0*tau_cr
             IF(tau_c2.LT.tau_wash)THEN
               ! Current ripples dimensions (Soulsby, 1997, eq. 83a-d)
-              if(tau_cr==0.d0) call parallel_abort('SED3D, sed_roughness; tau_cr==0')
+              if(tau_cr==0) call parallel_abort('SED3D, sed_roughness; tau_cr==0')
 !'
               Ts   = (tau_c2-tau_cr)/tau_cr
               Lsw  = 7.3d0*hwat
-              Hsw  = MAX(0.0d0 , 0.11d0*hwat*(d50*hwat)**3.0d0*    &
-              &      (1.0d0-EXP(-0.5d0*Ts))*(25.0d0-Ts))
+              !Hsw  = MAX(0.0d0 , 0.11d0*hwat*(d50*hwat)**3.0d0*    &
+              !&      (1.0d0-DEXP(-0.5d0*Ts))*(25.0d0-Ts))
+              !BM
+              Hsw  = MAX(0.0d0 , 0.11d0*hwat*(d50/hwat)**0.3d0*    &
+              &      (1.0d0-DEXP(-0.5d0*Ts))*(25.0d0-Ts)) 
               z0sw = MAX(1.d0*Hsw*Hsw/Lsw , z0sw0)
             ELSE !Wash-out
               Hsw  = 0.0d0
@@ -472,7 +527,7 @@
             IF(r.LE.1.57d0)THEN
               fwr = 0.3d0
             ELSE
-              fwr = 0.00251d0*EXP(5.21d0*r**(-0.19d0))
+              fwr = 0.00251d0*DEXP(5.21d0*r**(-0.19d0))
             ENDIF
             tau_w = 0.5d0*rho0*fwr*uorb(i)*uorb(i)
           ELSE
@@ -500,7 +555,7 @@
                 !z0wr = MAX(0.923d0*Hwr*Hwr/Lwr , z0wr0)
               ENDIF
 
-              if(Lwr==0.d0) then
+              if(Lwr==0) then
                 z0wr =z0wr0
               else
                 z0wr = MAX(0.923d0*Hwr*Hwr/Lwr , z0wr0)
@@ -531,7 +586,7 @@
                 if(0.182d0-0.24d0*theta_w**1.5d0==0) call parallel_abort('SED3D,sed_roughness; div. by 0 (11)')
 !'
                 Lwr = Hwr/(0.182d0-0.24d0*theta_w**1.5d0)
-                if(Lwr==0.d0) then
+                if(Lwr==0) then
                   z0wr=z0wr0
                 else
                   z0wr=max(0.267d0*Hwr*Hwr/Lwr,z0wr0)
@@ -545,9 +600,13 @@
 
               ! Sediment transport component (Soulsby, 1997 eq. 92)
               IF(irough_bdld.EQ.1)THEN
-                if(theta_w<0.05d0) then
-                  write(12,*)'sed_roughness: theta_w<0.05:', &
-     &theta_w,theta_cr,psi,Hwr,Lwr,d50,hwat,tau_c2,uorb(i),tp(i),tau_w
+                if(theta_w<0.05) then
+                  !BM: add test on sed_debug to prevent too big nonfatal
+                  !output files ...
+                  IF (sed_debug .EQ. 1) THEN
+                    write(12,*)'sed_roughness: theta_w<0.05:', &
+       &theta_w,theta_cr,psi,Hwr,Lwr,d50,hwat,tau_c2,uorb(i),tp(i),tau_w
+                  END IF
                   !call parallel_abort(errmsg)
                   z0bld = 0.0d0
                 else
