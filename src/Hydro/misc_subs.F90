@@ -212,6 +212,7 @@
 
 !     Rewind flux.out
       if(iflux/=0.and.myrank==0) then
+        rewind(9)
         do it=1,it_now 
           read(9,*)
 #ifdef USE_ANALYSIS

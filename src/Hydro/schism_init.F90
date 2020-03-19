@@ -228,14 +228,12 @@
 !     Echo date and time
       call date_and_time(date,timestamp)
 
-!...  Rank 0 writes mirror.out, global & local volume, energy etc data
+!...  Rank 0 writes mirror.out, global & local volume, energy etc data (more later)
       if(myrank==0) then
         open(16,file=out_dir(1:len_out_dir)//'mirror.out',status='replace')
         open(25,file=out_dir(1:len_out_dir)//'total_TR.out',status='replace')
-        open(9,file=out_dir(1:len_out_dir)//'flux.out',status='replace')
         open(13,file=out_dir(1:len_out_dir)//'total.out',status='replace')
         open(33,file=out_dir(1:len_out_dir)//'JCG.out',status='replace')
-!        open(29,file=out_dir(1:len_out_dir)//'qnon.out',status='replace')
         open(17,file=out_dir(1:len_out_dir)//'subcycling.out',status='replace')
 
         write(16,'(4a)')'Run begins at ',date,', ',timestamp
@@ -1471,6 +1469,15 @@
 !'
 !-----------------------------------------------------------------
 !...  End reading param.nml
+
+!...  Finish prep outputs to take care of hot start
+      if(myrank==0) then
+        if(ihot==2) then
+          open(9,file=out_dir(1:len_out_dir)//'flux.out',status='old')
+        else
+          open(9,file=out_dir(1:len_out_dir)//'flux.out',status='replace')
+        endif
+      endif
 
 !     Setup cyclic node index (used in decomp.)
 !     This part is kept for other modules only - nx() is not used in Hydro
