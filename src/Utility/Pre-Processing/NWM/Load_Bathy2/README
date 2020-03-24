@@ -1,0 +1,13 @@
+You need have a input hgrid.old
+Put all DEM files in DEM under current folder.
+1 cd DEM, run sym*_part1.pl.
+2 cd ../
+3 ln -sf DEM/dem_*.asc .
+4 edit dems.in, the first number is the total number of dem_*.asc
+the second number is the total nodes you want to use.
+5 submit run_james
+6 mv hgrid.new hgrid.old
+7 then repeat step 1 with sym*_part2.pl
+8 repeat steps from 2-5
+9 your hgrid.new will be the final one with all DEMs loaded.
+
