@@ -38,7 +38,7 @@ set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
 set( FABM_BASE /sciclone/home10/yinglong/git/fabm CACHE  STRING "Path to FABM base")
 
 set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
-set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
+set (USE_ANALYSIS ON CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
 
 
 

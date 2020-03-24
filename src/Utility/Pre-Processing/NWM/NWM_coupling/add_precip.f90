@@ -194,7 +194,7 @@
         vsource_precip(ie)=vsource_precip(ie)+maxval(vsource(i,:))
         vsource_no_precip(ie)=maxval(vsource(i,:))
       enddo
-
+!      print*,vsource_no_precip(ie)
 
 !     write source_sink.in
       open(16,file='source_sink.in.1',status='replace')
