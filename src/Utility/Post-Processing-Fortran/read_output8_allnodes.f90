@@ -83,18 +83,12 @@
       print*, '<<<<<inode_ele: ',inode_ele
 
       varname=adjustl(varname); len_var=len_trim(varname)
-      if(varname(1:len_var).eq.'elev') then
-        is_elev=1 
-        print*, '<<<<<special treatment will be implemented for elev'
-      else
-        is_elev=0 
-      endif
       
       print*, 'Input start and end stack # to read:'
       read(*,*) iday1,iday2
       print*, '<<<<<start and end stack #: ',iday1,iday2
 
-      print*, 'Do you want to compute stats for 2D var? (0/1:max; 0/1:min; 0/1:time avg)'
+      print*, 'Do you want to compute stats for 2D var? (0/1:min; 0/1:max; 0/1:time avg)'
       read(*,*) icomp_stats(1),icomp_stats(2),icomp_stats(3)
       print*, '<<<<<icomp_stats: ',icomp_stats
       outname(1)='min';outname(2)='max';outname(3)='avg'
@@ -102,6 +96,21 @@
       print*, 'Input a threshold: values below the threshold will be output as a bp file.'
       read(*,*) thres
       print*, '<<<<<threshold: ',thres
+
+      print*, 'How do you want to initialize the variable values for min/max?'
+      print*, '0: do nothing;  1: intialized to -dp (useful for maxelev)'
+      read(*,*) iinitial
+      print*, '<<<<<initialization flag: ',iinitial
+      if (iinitial.ne.0 .and. iinitial.ne.1) stop 'wrong initialization flag'
+
+
+      if(varname(1:len_var).eq.'elev' .and. iinitial==1) then
+        is_elev=1 
+        print*, '<<<<<special treatment will be implemented for elev'
+      else
+        is_elev=0 
+      endif
+
 
       open(65,file='extract.out')
       
@@ -205,7 +214,7 @@
 !...
       outvar=-99 !init.
       ztmp=-99
-      if(is_elev==1) then
+      if(iinitial==1) then
         print*,'setting initial elev = -dp for all (dry and wet) nodes'
         rstat2d(1,1:np)=-dp !for elev, min is -h
         rstat2d(2,1:np)=-dp !for elev, min is -h
