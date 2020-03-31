@@ -20,7 +20,7 @@ system("ln -sf ../vgrid.in .");
 #system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
 #move("out.gr3","include.gr3");
 #
-system("./gen_source2");
+system("./gen_source2 < gen.in");
 
 unlink("../manning.gr3");
 copy("bottom_friction.gr3","../manning.gr3");

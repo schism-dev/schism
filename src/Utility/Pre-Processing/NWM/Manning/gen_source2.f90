@@ -8,7 +8,19 @@
       integer, allocatable :: i34(:),elnode(:,:),i_rain(:),isource(:),iDB(:)
       real(8) :: slope(4)
 
-!     Rain rate
+      print*, 'Input two hgrid depths to distinguish river, land, and the transition zone :'
+      read(*,*) depth1,depth2
+      print*,'<<<<<river: lower than ',depth1,' m;'
+      print*,'<<<<<transition zone: ',depth1,'~',depth2,' m'
+      print*,'<<<<<watershed: higher than ',depth2,' m;'
+
+      print*, 'Input roughness in the ocean, estuary, and watershed respectively:'
+      read(*,*) r_rough_river,r_rough_land
+      print*,'<<<<<r_rough_river',r_rough_river,'; r_rough_land: ',r_rough_land
+
+      slope_thres=999999.; 
+
+!     Rain rate, not used
       rain_rate= 0.001 !m/hour
       h0=1e-6
 
@@ -73,19 +85,13 @@
       write(8,*); write(8,*)ne,np
       write(9,*); write(9,*)ne,np
 
-      r_rough_ocean=0.019
-      r_rough_bay=0.019
-      r_rough_land=0.5
-
-
-      slope_thres=999999.; depth2=-3.0; depth1=-1.0
       !init
-      r_rough = r_rough_ocean
+      r_rough = r_rough_river
 
       !based on bathymetry
       do i=1,np
-        r_rough(i)=r_rough_bay+(r_rough_land-r_rough_bay)*(depth1-dp(i))/(depth1-depth2)
-        r_rough(i)=max(r_rough_bay,min(r_rough_land,r_rough(i)))
+        r_rough(i)=r_rough_river+(r_rough_land-r_rough_river)*(depth1-dp(i))/(depth1-depth2)
+        r_rough(i)=max(r_rough_river,min(r_rough_land,r_rough(i)))
       enddo !i
 
       !multi-layers use small r_rough
@@ -95,7 +101,7 @@
             n1=elnode(j,i)
             if(abs(r_rough(n1)-r_rough_land)<1.d-7) then
 !              write(99,*)i,r_rough(i)
-              r_rough(n1) = r_rough_bay
+              r_rough(n1) = r_rough_river
             endif
           enddo
         endif
