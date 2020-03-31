@@ -288,6 +288,7 @@
   flag_ic(9) = 1 !FIB
   flag_ic(10) = 1 !TIMOR
   flag_ic(11) = 1 !FABM
+  flag_ic(12) = 0 !DVD (must=0)
 
 !  ic_GEN = 1 !user defined module
 !  ic_AGE = 1 !Age
@@ -493,6 +494,7 @@
   inu_tr(9) = 0 !FIB
   inu_tr(10) = 0 !TIMOR 
   inu_tr(11) = 0 !FABM 
+  inu_tr(12) = 0 !DVD (must=0)
 
   vnh1 = 400 !vertical nudging depth 1
   vnf1 = 0. !vertical relax \in [0,1]
@@ -632,6 +634,7 @@
   iadjust_mass_consv0(9)=0 !Feco
   iadjust_mass_consv0(10)=0 !TIMOR
   iadjust_mass_consv0(11)=0 !FABM
+  iadjust_mass_consv0(12)=0 !DVD (must=0)
 /
 
 &SCHOUT
@@ -689,6 +692,12 @@
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! Outputs from DVD (USE_DVD must be on in Makefile)
+!-----------------------------------------------------------------------
+!  iof_dvd(1) = 1 !num mixing for S (PSU^2/s) {DVD_1}
+
 !-----------------------------------------------------------------------
 ! Outputs from WWM (USE_WWM must be on in Makefile)
 !-----------------------------------------------------------------------

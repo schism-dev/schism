@@ -2,6 +2,7 @@ Changes in param.in and main parameter inputs for other modules:
 
 Github versions:
 
+: add 12th tracer model (USE_DVD of Klingbeit); if invoked, make sure: flag_ic(12)=0, and set b.c. flag and nudging option to 0;
 cd9664a (Mar 16, 2020): [1st PR from Baptiste Mengual] added iof_sed(12:15) for new SED code. In sediment.in: 
                         new options for various parameters and a few new parameters;
                         sed_morph=1 requires imorphogrid.gr3 (a scale applied to depth change at each node);

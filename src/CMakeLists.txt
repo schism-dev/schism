@@ -67,6 +67,7 @@ define_opt(DEBUG "Enable debug mode" OFF)
 define_opt(USE_GEN "Enable generic tracer module" OFF)
 define_opt(USE_AGE "Enable age tracer module" OFF)
 define_opt(ICM_PH "Enable pH module in ICM" OFF)
+define_opt(USE_DVD "Enable DVD module" OFF)
 
 
 

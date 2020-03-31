@@ -80,7 +80,7 @@ module schism_glbl
                       ubs0,ubs1,ubs2,ubs4,ubs5,ubs6, &
                       a2_cm03,schk,schpsi
 
-  integer,parameter :: natrm=11 !# of _available_ tracer models at the moment (including T,S)
+  integer,parameter :: natrm=12 !# of _available_ tracer models at the moment (including T,S)
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
                   &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
@@ -91,7 +91,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
-     &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iadjust_mass_consv
+     &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
                       &surf_time1,surf_time2,time_nu,step_nu,time_nu_tr,step_nu_tr,dzb_min,vdmax_pp1, &
@@ -388,6 +388,7 @@ module schism_glbl
   real(rkind),save,allocatable :: flx_bt(:,:) !bottom b.c.
   real(rkind),save,allocatable :: hdif(:,:) !horizontal diffusivity
   real(rkind),save,allocatable :: tr_nd0(:,:,:) ! Initial tracer conc. at nodes
+  real(rkind),save,allocatable :: rkai_num(:,:,:) !DVD (numerical mixing) [C^2]/sec
   real(rkind),save,allocatable :: eta1(:)   ! Elevation at nodes at previous timestep
   real(rkind),save,allocatable :: eta2(:)   ! Elevation at nodes at current timestep
   !Vertical velocity at element centers & whole levels, along local vertical direction (element frame)

@@ -256,6 +256,12 @@
       enddo !i=1,nea
 !$OMP end do
 
+#ifdef USE_DVD
+      !Init rkai_num. Use it to first store the value of RHS
+!$OMP workshare
+      rkai_num(1:ntrs(12),:,1:ne)=tr_el(irange_tr(1,12):irange_tr(2,12),:,1:ne) 
+!$OMP end workshare
+#endif
 !$OMP end parallel
 
 
@@ -1278,9 +1284,13 @@
                   psumtr(jj)=psumtr(jj)+abs(flux_mod_hface(jj,k,jsj))
                   adv_tr(jj)=adv_tr(jj)+dtb_by_bigv*abs(flux_adv_hface(k,jsj))*(trel_tmp_outside(jj)-trel_tmp(jj,k,i))
                 enddo !jj
+
+#ifdef USE_DVD
+                rkai_num(1:ntrs(12),k,i)=rkai_num(1:ntrs(12),k,i)+dtb_by_bigv*flux_mod_hface(irange_tr(1,12):irange_tr(2,12),k,jsj)* &
+     &(trel_tmp_outside(irange_tr(1,12):irange_tr(2,12))-trel_tmp(irange_tr(1,12):irange_tr(2,12),k,i))
+#endif
               endif !inflow
 
-              !if(ltvd.and.k>=kbs(jsj)+1) then
               if(h_tvd<1.d5.and.k>=kbs(jsj)+1) then
                 do jj=1,ntr
                   adv_tr(jj)=adv_tr(jj)+dtb_by_bigv*abs(flux_adv_hface(k,jsj))*(trel_tmp(jj,k,i)-trel_tmp_outside(jj))* &
@@ -1640,20 +1650,43 @@
             if(iterK==iter_back-1) strat1=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
 
             !Done upwind for abnormal cases and exit
-            if(iterK==iter_back) then
-              strat2=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
+            if(iterK==iter_back.or.term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
+              !strat2=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
               !DEBUG
               !write(12,*)'TRANS_IMP, strat loss:',real(strat1),real(strat2),real(strat2-strat1),ielg(i),m,it
+#ifdef USE_DVD
+!Error: did not add time limiter yet due to complication @F.S.
+              if(i<=ne.and.m>=irange_tr(1,12).and.m<=irange_tr(2,12)) then
+                l=m-irange_tr(1,12)+1
+                do k=kbe(i)+1,nvrt !prism
+                  if(k/=nvrt.and.flux_adv_vface(k,m,i)<0.d0) then !inflow at upper face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)+dt_by_bigv* &
+     &abs(flux_adv_vface(k,m,i))*(tr_el(m,k+1,i)-tr_el(m,k,i))*(1.d0-0.5d0*phi(k))
+                  else if(k/=nvrt.and.flux_adv_vface(k,m,i)>0.d0) then !outflow at upper face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)-0.5d0*dt_by_bigv* &
+     &abs(flux_adv_vface(k,m,i))*(tr_el(m,k+1,i)-tr_el(m,k,i))*phi(k)
+                  endif
+
+                  if(k-1/=kbe(i).and.flux_adv_vface(k-1,m,i)>0.d0) then !inflow at lower face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)+dt_by_bigv* &
+     &abs(flux_adv_vface(k-1,m,i))*(tr_el(m,k-1,i)-tr_el(m,k,i))*(1.d0-0.5d0*phi(k-1))
+                  else if(k-1/=kbe(i).and.flux_adv_vface(k-1,m,i)<0.d0) then !outflow at lower
+                    rkai_num(l,k,i)=rkai_num(l,k,i)-0.5d0*dt_by_bigv* &
+     &abs(flux_adv_vface(k-1,m,i))*(tr_el(m,k-1,i)-tr_el(m,k,i))*phi(k-1)
+                  endif
+               enddo !k
+             endif !i<=ne etc
+#endif /*USE_DVD*/
+
               exit
             endif !iterK
 
-            !if(term1<=eps1*term6+eps2) then
-            if(term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
-              !DEBUG
-              !write(12,*) "converged in ", iterK,i,ielg(i),m,it
-              exit
-            endif   
-          enddo !iteration
+!            if(term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
+!              !DEBUG
+!              !write(12,*) "converged in ", iterK,i,ielg(i),m,it
+!              exit
+!            endif   
+          enddo !nonlinear iteration
 
 !          if(iterK>=iterK_MAX) then
 !            iterK_MAX=iterK
@@ -1680,6 +1713,14 @@
 !      call mpi_reduce(it_sum1,it_sum2,1,itype,MPI_SUM,0,comm,ierr)
 !      if(myrank==0) write(20,*)it,real(it_sum2)/ne_global/ntr !,jj
 !!!$OMP end master
+
+!     Finalize DVD
+#ifdef USE_DVD
+!$OMP workshare
+      !Dim= [C^2]/sec
+      rkai_num(1:ntrs(12),:,1:ne)=(rkai_num(1:ntrs(12),:,1:ne)-tr_el(irange_tr(1,12):irange_tr(2,12),:,1:ne))/dt
+!$OMP end workshare
+#endif /*USE_DVD*/
 
 !$OMP master
 !     conservation

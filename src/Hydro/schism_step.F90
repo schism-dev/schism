@@ -7793,6 +7793,12 @@
         noutput=noutput+ubound(fs%bottom_state,2)
 #endif
 
+#ifdef USE_DVD
+        if(iof_dvd(1)==1) call writeout_nc(id_out_var(noutput+5),'DVD_1',6,nvrt,ne,rkai_num(1,:,:))
+        noutput=noutput+1
+#endif
+
+
 #ifdef USE_SED2D
         if(iof_sed2d(1)==1) call writeout_nc(id_out_var(noutput+5), &
      &'SED2D_depth_change',1,1,npa,dp-dp00)
@@ -7850,7 +7856,7 @@
 #endif
 
 #ifdef USE_MARSH
-        if(iof_marsh(noutput+1)==1) call writeout_nc(id_out_var(noutput+5), &
+        if(iof_marsh(1)==1) call writeout_nc(id_out_var(noutput+5), &
      &'marsh_flag',4,1,nea,dble(imarsh))
         noutput=noutput+1
 #endif

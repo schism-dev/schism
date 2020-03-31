@@ -181,7 +181,7 @@
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
-     &iof_sed2d,iof_ice,iof_ana,iof_marsh, &
+     &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
 !-------------------------------------------------------------------------------
@@ -303,6 +303,7 @@
 !     9: Feco
 !    10: TIMOR
 !    11: FABM
+!    12: DVD numerical mixing analysis of Klingbeit
 
       !Init. # of tracers in models 1:natrm
       !A tracer model is activated iff ntrs()>0
@@ -358,7 +359,6 @@
 #ifdef USE_FIB
       ntrs(9)=2
       tr_mname(9)='FIB'
-!      call get_param('param.in','flag_fib',1,flag_fib,tmp,stringvalue)
 #endif
 
 #ifdef USE_TIMOR
@@ -376,6 +376,11 @@
       call fabm_schism_init_model(ntracers=ntrs(11))
       fabm_istart=sum(ntrs(1:10))+1
       tr_mname(11)='FBM' !3-char
+#endif
+
+#ifdef USE_DVD
+      ntrs(12)=1 !S variance at the time. Remember to update: i.c., outputs, transport
+      tr_mname(12)='DVD'
 #endif
 
       !Total # of tracers (including T,S)
@@ -406,7 +411,7 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(70),iof_cos(20),iof_fib(5), &
-     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),stat=istat)
+     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),stat=istat)
       if(istat/=0) call parallel_abort('INIT: iof failure')
 
       !Init defaults
@@ -436,7 +441,7 @@
       iwbl=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
-      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
+      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1; iof_dvd=1
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
@@ -444,7 +449,7 @@
 
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1
-      iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1;
+      iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1; iof_marsh=1
       nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
@@ -882,6 +887,10 @@
           call parallel_abort(errmsg)
         endif
       enddo !i
+
+#ifdef USE_DVD
+      if(inu_tr(12)/=0) call parallel_abort('INIT: nudging for DVD/=0')
+#endif
 
       !All tracers share time steps etc.
 !      call get_param('param.in','step_nu_tr',2,itmp,step_nu_tr,stringvalue)
@@ -1667,11 +1676,15 @@
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
-      allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat) !trel(ntracers,nvrt,nea)
+      allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
-      allocate(trnd_nu1(ntracers,nvrt,npa), &
-     &trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
+      allocate(trnd_nu1(ntracers,nvrt,npa),trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
       if(itmp/=0) call parallel_abort('INIT: alloc failed (56)')
+
+#ifdef USE_DVD
+     allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
+     if(istat/=0) call parallel_abort('INIT: alloc rkai_num')
+#endif
 
 #ifdef USE_ANALYSIS
       allocate(dtbe(ne),stat=istat)
@@ -2583,7 +2596,7 @@
             else if(itrtype(i,k)/=0) then
               write(errmsg,*)'Wrong itrtype:',k,itrtype(i,k)
               call parallel_abort(errmsg)
-            endif
+            endif !itrtype
 
             if(trobc(i,k)<0.d0.or.trobc(i,k)>1.d0) then
               write(errmsg,*)'Tr. obc nudging factor wrong:',trobc(i,k),k
@@ -4678,14 +4691,22 @@
             !Model sets own i.c.
 !Error: wrong if both ECO and FABM on
 #ifdef USE_ECO
-            call bio_init !init. tr_nd
-#else
-#ifdef USE_FABM
-            call fabm_schism_init_concentrations()
-#else
-            write(errmsg,*)'INIT: type 0 i.c.:',mm
-            call parallel_abort(errmsg)
+            if(mm==6) call bio_init !init. tr_nd
 #endif
+#ifdef USE_FABM
+            if(mm==11) call fabm_schism_init_concentrations()
+!#else
+!            write(errmsg,*)'INIT: type 0 i.c.:',mm
+!            call parallel_abort(errmsg)
+!#endif
+#endif
+
+#ifdef USE_DVD
+            if(mm==12) then
+              do i=1,npa  
+                tr_nd(irange_tr(1,mm),:,i)=tr_nd(2,:,i)*tr_nd(2,:,i)
+              enddo !i
+            endif !mm
 #endif
 
 !#ifdef USE_TIMOR

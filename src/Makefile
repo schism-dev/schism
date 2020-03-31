@@ -242,6 +242,10 @@ ifdef USE_FABM
   FCPFLAGS += -I$(FABMINSTALLDIR)/include
 endif
 
+ifdef USE_DVD
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_DVD
+endif
+
 ifdef USE_OIL
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_OIL
 endif
