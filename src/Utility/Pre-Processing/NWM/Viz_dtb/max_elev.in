@@ -1,0 +1,10 @@
+0       !0: uncombined; 1:combined
+1       !for uncombined nc, specify max array size (e.g., <=2.e9); for combined nc, specify # of records to read each time.
+2.e9    !max array size or # of records
+elev
+0       !switch for node/ele based vars: 0,node; 1,ele
+17 23   !start and end stacks
+0 1 1   !switches for min, max, avg
+-999999 !threshold for outputing violators.bp, where violaters are nodes/eles with var values < threshold
+1       !initialization flag: (0) do nothing;  (1) intialized to -dp (useful for maxelev)
+
