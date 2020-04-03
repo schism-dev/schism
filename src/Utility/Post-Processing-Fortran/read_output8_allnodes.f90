@@ -28,6 +28,8 @@
 !               2020)
 !****************************************************************************************
 !     ifort -O2 -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!     ifort -g -assume byterecl -o read_output8_allnodes.exe ../UtilLib/extract_mod.f90 ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 read_output8_allnodes.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+
       program read_out
       use netcdf
       use extract_mod
@@ -60,6 +62,7 @@
       endif
 
 !...  Set max array size for system memory
+!...
       print*, 'Recommendation: for uncombined nc, specify max array size (e.g., <=2.e9);'
       print*, 'for combined nc, specify # of records to read each time.'
       print*, 'Do you want to specify max array size (1) or # of records (2)'
@@ -71,15 +74,17 @@
       else
         print*, 'Input # of records:'
         read(*,*)nrec3
-        print*, '<<<<<# of records=',max_array_size
+        print*, '<<<<<# of records=',nrec3
       endif
 
       print*, 'Input NODE-based variable name to read from nc (e.g. elev):'
       read(*,'(a30)')varname
+!!'
       print*, '<<<<<var name: ',varname
 
       print*, 'Is the var node-based or ele-based? 0: node based; 1: element based'
       read(*,*)inode_ele
+!!'
       print*, '<<<<<inode_ele: ',inode_ele
 
       varname=adjustl(varname); len_var=len_trim(varname)
@@ -89,21 +94,26 @@
       print*, '<<<<<start and end stack #: ',iday1,iday2
 
       print*, 'Do you want to compute stats for 2D var? (0/1:min; 0/1:max; 0/1:time avg)'
+!!'
       read(*,*) icomp_stats(1),icomp_stats(2),icomp_stats(3)
       print*, '<<<<<icomp_stats: ',icomp_stats
       outname(1)='min';outname(2)='max';outname(3)='avg'
 
       print*, 'Input a threshold: values below the threshold will be output as a bp file.'
+!!'
       read(*,*) thres
       print*, '<<<<<threshold: ',thres
 
       print*, 'How do you want to initialize the variable values for min/max?'
+!!'
       print*, '0: do nothing;  1: intialized to -dp (useful for maxelev)'
+!!'
       read(*,*) iinitial
+!!
       print*, '<<<<<initialization flag: ',iinitial
       if (iinitial.ne.0 .and. iinitial.ne.1) stop 'wrong initialization flag'
 
-
+!!'
       if(varname(1:len_var).eq.'elev' .and. iinitial==1) then
         is_elev=1 
         print*, '<<<<<special treatment will be implemented for elev'
@@ -267,7 +277,7 @@
 
           if(mod(i23d-1,3)==0) then !2D
 !           Output: time, 2D variable at all nodes
-!            write(65,'(e14.6,1000000(1x,e14.4))')time/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
+            write(65,'(e14.6,1000000(1x,e14.4))')time/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
 
             !Compute stats (magnitude for vectors)
             if(sum(icomp_stats(:))/=0) then
