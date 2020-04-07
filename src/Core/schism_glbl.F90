@@ -81,6 +81,8 @@ module schism_glbl
                       a2_cm03,schk,schpsi
 
   integer,parameter :: natrm=12 !# of _available_ tracer models at the moment (including T,S)
+  integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
+
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
                   &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
@@ -88,7 +90,7 @@ module schism_glbl
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
-                  &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib
+                  &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib,ielm_transport,max_subcyc
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv
@@ -114,7 +116,9 @@ module schism_glbl
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,fluxsu00,srad00,cmiu0, &
-                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0
+                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0, &
+                      &dtb_min_transport
+
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
   logical,save :: lflbc !flag to indicate existence of ifltype/=0
@@ -172,7 +176,7 @@ module schism_glbl
     real(rkind) :: rt2        ! time remaining from left-over from previous subdomain 
     real(rkind) :: ut,vt,wt  ! Current backtracking sub-step velocity
     real(rkind) :: xt,yt,zt  ! Current backtracking sub-step point
-    real(rkind) :: sclr(4)     ! Backtracked values for some tracers
+    real(rkind) :: sclr(4+mntracers)     ! Backtracked values for tracers etc
     real(rkind) :: gcor0(3)  ! global coord. of the starting pt (for ics=2)
     real(rkind) :: frame0(3,3) ! frame tensor at starting pt (for ics=2)
   end type bt_type

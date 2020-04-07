@@ -401,6 +401,10 @@
   eps1_tvd_imp = 1.e-4 !suggested value is 1.e-4, but for large suspended load, need to use a smaller value (e.g. 1.e-9)
   eps2_tvd_imp = 1.e-14  
 
+  !Optional hybridized ELM transport for efficiency
+  ielm_transport = 0 !1: turn on. Used only with itr_met>=3
+  max_subcyc = 10 !used only if ielm_transport/=0. Max # of subcycling per time step in transport allowed
+
   !if itr_met = 4, the following parameters are needed
   !if itr_met=4 and ipre=1, diagnostic outputs are generated for weno accuracy and stencil quality, 
   !  see subroutine weno_diag in src/Hydro/misc_subs.F90 for details

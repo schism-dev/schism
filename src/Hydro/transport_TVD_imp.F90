@@ -88,7 +88,7 @@
       real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr),tmass(ntr),h_mass_in(ntr), &
      &alow(nvrt),bdia(nvrt),cupp(nvrt),rrhs(1,nvrt),soln(1,nvrt),gam(nvrt), &
      &swild(max(3,nvrt)),swild4(3,2),trel_tmp_outside(ntr),swild5(3)
-      integer :: nwild(2)
+      integer :: nwild(2),ielem_elm(ne)
 
       integer :: istat,i,j,k,kk,l,m,khh2,ie,n1,n2,n3,n4,isd,isd0,isd1,isd2,isd3,j0,je, &
                  &nd,it_sub,ntot_v,ntot_vgb,kup,kdo,jsj,jsj0,kb, &
@@ -329,6 +329,10 @@
         dtb_min3(:)=time_r !init 
 !$OMP   end workshare
 
+!$OMP     workshare
+        ielem_elm=0
+!$OMP     end workshare
+
         if (it_sub==1) then !only compute dtb for the first step, not related to scalar field
 !$OMP     do 
           do i=1,ne
@@ -385,7 +389,17 @@
 
             enddo !k=kbe(i)+1,nvrt
 
+            !Hybrid ELM
+            if(ielm_transport/=0) then
+              if(dtbl2<dtb_min_transport) then
+                !write(99,*) iplg(i)
+                ielem_elm(i)=1
+                dtbl2=dt !unlimited
+              endif
+            endif
+
             dtb_min3(i)=dtbl2
+
 
 #ifdef USE_ANALYSIS
             dtbe(i)=dtb_min3(i) !only calculate during 1st iteration
@@ -433,7 +447,7 @@
 !$OMP     end master
 !$OMP     barrier
 
-        endif !if it_sub==1; compute dtb
+        endif !if it_sub==1; compute dtb, todo: see if it's necessary to compute dtb for each sub_step
 
 !debug>
 !#ifdef DEBUG
@@ -753,6 +767,29 @@
               tr_el(1:ntr,k,i)=adv_tr(1:ntr) 
             enddo !k=kbe(i)+1,nvrt
 
+            !Overwrite with ELM value if enabled.
+            if(ielem_elm(i)/=0) then
+              rat=time_r/dt !time ratio
+              rat=max(0.d0,min(1.d0,rat))
+              do k=kbe(i)+1,nvrt
+                do jj=1,ntr
+                  psumtr(jj)=0.d0
+                  do j=1,i34(i)
+                    jsj=elside(j,i)
+                    n1=isidenode(1,jsj); n2=isidenode(2,jsj)
+                    swild4(1,1)=0.5d0*(tr_nd(jj,k,n1)+tr_nd(jj,k,n2))
+                    swild4(2,1)=0.5d0*(tr_nd(jj,k-1,n1)+tr_nd(jj,k-1,n2))
+  
+                    swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
+                    swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
+                    psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) !(sdbt(3:2+ntr,max(k,kbs(jsj)),jsj)+sdbt(3:2+ntr,max(k-1,kbs(jsj)),jsj))*0.5d0
+                  enddo !j
+                enddo !jj
+                tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))
+              enddo !k
+            endif !ielem_elm(i)/=0
+
+
 !           Extend
             do k=1,kbe(i)
               tr_el(1:ntr,k,i)=tr_el(1:ntr,kbe(i)+1,i)
@@ -816,7 +853,7 @@
 
 !$OMP parallel default(shared) private(i,k,iup,ido,psum,psumtr,j,jsj,ie,ind1,ind2,tmp, &
 !$OMP delta_tr,jj,rat,ref_flux,same_sign,vj,bigv,dtb_by_bigv,adv_tr,iel,trel_tmp_outside, &
-!$OMP ibnd,nwild,ll,ndo,lll,dtbl2,ie02,lev02,in_st2)
+!$OMP ibnd,nwild,ll,ndo,lll,dtbl2,ie02,lev02,in_st2,n1,n2,swild4)
 
 #ifdef USE_ANALYSIS
 !$OMP workshare
@@ -1039,7 +1076,7 @@
 !       Implicit vertical flux for upwind; explicit for TVD
 
 !        if(ltvd.or.it_sub==1) then !for upwind, only compute dtb for the first step
-        if(h_tvd<1.d5.or.it_sub==1) then !for upwind, only compute dtb for the first step
+        if(h_tvd<1.d5.or.it_sub==1) then !for upwind in entire domain, only compute dtb for the first step
 !$OMP     single
           dtbl=time_r !init
           ie01=0 !element # where the exteme is attained (local)
@@ -1054,6 +1091,10 @@
 !!!$OMP     workshare
 !          psum2=-1.e34
 !!!$OMP     end workshare
+
+!$OMP     workshare
+          ielem_elm=0
+!$OMP     end workshare
 
 !$OMP     do 
           do i=1,ne
@@ -1122,6 +1163,12 @@
 !            if(qj/=0) dtb_altl=min(dtb_altl,vj/(1+nplus)/qj*(1-1.e-10)) !safety factor included
             enddo !k=kbe(i)+1,nvrt
 
+            if(ielm_transport/=0) then
+              if(dtbl2<dtb_min_transport) then
+                ielem_elm(i)=1
+                dtbl2=dt !unlimited
+              endif
+            endif
             dtb_min3(i)=dtbl2
 
 #ifdef USE_ANALYSIS
@@ -1325,6 +1372,29 @@
 !                stop
 !              endif
 !            endif !TVD
+
+          !Overwrite with ELM value if enabled. The previous sections
+          !are necessary for diagnostics like DVD etc
+          if(ielem_elm(i)/=0) then
+            rat=time_r/dt !time ratio
+            rat=max(0.d0,min(1.d0,rat))
+            do k=kbe(i)+1,nvrt
+              do jj=1,ntr
+                psumtr(jj)=0.d0
+                do j=1,i34(i)
+                  jsj=elside(j,i)
+                  n1=isidenode(1,jsj); n2=isidenode(2,jsj)
+                  swild4(1,1)=0.5d0*(tr_nd(jj,k,n1)+tr_nd(jj,k,n2))
+                  swild4(2,1)=0.5d0*(tr_nd(jj,k-1,n1)+tr_nd(jj,k-1,n2))
+
+                  swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
+                  swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
+                  psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) !(sdbt(3:2+ntr,max(k,kbs(jsj)),jsj)+sdbt(3:2+ntr,max(k-1,kbs(jsj)),jsj))*0.5d0
+                enddo !j
+              enddo !jj
+              tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))
+            enddo !k
+          endif !ielem_elm(i)/=0
 
 !         Extend
           do k=1,kbe(i)

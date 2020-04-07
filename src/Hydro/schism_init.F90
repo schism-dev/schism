@@ -178,7 +178,8 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2
+     &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
+     &ielm_transport,max_subcyc
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -387,6 +388,7 @@
       !The big tracer arrays are: tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa)
       !The order of each tracer modules can be seen above
       ntracers=sum(ntrs(:)) !including T,S
+     if(mntracers<ntracers) call parallel_abort('INIT: mntracers<ntracers')
 
       !'Init. ranges for each model. These index into 1:ntracers
       do i=1,natrm !# of _available_ tracer models at the moment
@@ -446,6 +448,7 @@
       vclose_surf_frac=1.0
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
+      ielm_transport=0; max_subcyc=10
 
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1
@@ -1473,6 +1476,11 @@
       endif      
 !...  TWO-PHASE-MIXTURE TSINGHUA GROUP------------------
 
+      if(ielm_transport/=0) then
+        if(max_subcyc<=0) call parallel_abort('INIT: max_subcyc<=0')
+        dtb_min_transport=dt/max_subcyc !min dt for transport allowed
+      endif 
+
 !...  Check parameter read in from param.in
       if(myrank==0) write(16,*)'done reading param.nml'
 !'
@@ -1655,7 +1663,7 @@
 !'
 
 !     All other arrays
-      allocate(sdbt(4,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
+      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
          &  windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
          &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),windfactor(npa),pr1(npa),airt1(npa),shum1(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &

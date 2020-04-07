@@ -100,6 +100,9 @@ nothing to commit (working directory clean)
 
 `$ git push --set-upstream origin new_branch`
 
+(Get updates from other with pull)
+`$ git pull origin new_branch`
+
 When ready to merge your branch with master, there are two approaches: via pull request (PR) or local merge+push
 
 2.1 Local merge + push

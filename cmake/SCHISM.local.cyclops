@@ -55,5 +55,5 @@ set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN}" CACHE PATH "Path to NetCDF Fortran
 
 ##set(MPI_VERSION CACHE STRING  "2")
 ###Compile flags
-set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -xCORE-AVX2 -fma -align array64byte -finline-functions" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -xCORE-AVX2 -fma -align array64byte -finline-functions -mcmodel medium -shared-intel" CACHE STRING "Fortran flags" FORCE)
 

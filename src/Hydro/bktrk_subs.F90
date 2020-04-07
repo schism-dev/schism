@@ -64,9 +64,9 @@ subroutine init_inter_btrack
   if(ierr/=MPI_SUCCESS) call parallel_abort('INIT_INTER_BTRACK: mpi_get_address',ierr)
   types(1)=itype
 
-  ! Second part of bt_type is block of 26 doubles (including arrays)
+  ! Second part of bt_type is block of 26+mntracers doubles (including arrays)
   ! (starting at bttmp%dtbk)
-  blockl(2)=26
+  blockl(2)=26+mntracers
 #if MPIVERSION==1
   call mpi_address(bttmp%dtbk,displ(2),ierr)
 #elif MPIVERSION==2
@@ -710,7 +710,7 @@ end subroutine inter_btrack
 !             nnel,jlev: initial and final element and level;
 !
 !       Output:
-!             sclr(4): btrack'ed values of some variables;
+!             sclr(4+mntracers): btrack'ed values of some variables;
 !             iexit: logical flag indicating backtracking exits augmented subdomain. If
 !                    iexit=.true., nnel is inside the aug. domain and should also be inside
 !                    one of the neighboring processes. (xt,yt) is inside nnel.
@@ -727,7 +727,7 @@ end subroutine inter_btrack
       real(rkind), intent(in) :: gcor0(3),frame0(3,3),dtbk,vis_coe
       real(rkind), intent(inout) :: time_rm,time_rm2,uuint,vvint,wwint,xt,yt,zt
       integer, intent(inout) :: nnel,jlev
-      real(rkind), intent(out) :: sclr(4)
+      real(rkind), intent(out) :: sclr(4+mntracers)
       logical, intent(out) :: iexit
 
       !Local
@@ -941,6 +941,11 @@ end subroutine inter_btrack
 !     Error: Kriging for wvel as well?
       if(l_ns==3) return
 
+      if(zrat<0._rkind.or.zrat>1._rkind) then
+        write(errmsg,*)'BTRACK: zrat wrong:',jlev,zrat
+        call parallel_abort(errmsg)
+      endif
+
 !     Calc max/min for ELAD
 !     If inter_mom/=0, sclr() will be updated below
       if(ibtrack_test==1) then
@@ -970,6 +975,18 @@ end subroutine inter_btrack
           sclr(3)=max(sclr(3),vv2(jlev,nd),vv2(jlev-1,nd))
           sclr(4)=min(sclr(4),vv2(jlev,nd),vv2(jlev-1,nd))
         enddo !j
+
+        !Interp tracers
+        sclr(5:4+ntracers)=0.d0 
+        do i=1,ntracers
+          do j=1,i34(nnel)
+            nd=elnode(j,nnel)
+            !tmp=tr_nd(i,jlev,nd)*(1._rkind-zrat)+tr_nd(i,jlev-1,nd)*zrat
+            !Transport uses split, so keep vertical level at original
+            tmp=tr_nd(i,j0,nd)
+            sclr(4+i)=sclr(4+i)+tmp*arco(j)
+          enddo !j
+        enddo !i=1,ntracers
       endif !ibtrack_test
 
 !     Kriging for vel. (excluding bnd sides)
@@ -1058,11 +1075,6 @@ end subroutine inter_btrack
       endif !Kriging
 
 !     nnel wet
-      if(zrat<0._rkind.or.zrat>1._rkind) then
-        write(errmsg,*)'BTRACK: zrat wrong:',jlev,zrat
-        call parallel_abort(errmsg)
-      endif
-
       end subroutine btrack
 
 !===============================================================================

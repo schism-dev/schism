@@ -197,7 +197,7 @@
                      &xlmax(nvrt),cpsi3(2:nvrt),cpsi2p(2:nvrt),q2ha(2:nvrt),xlha(2:nvrt), &
                      &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa)
       real(rkind) :: swild(max(100,nsa+nvrt+12+ntracers)),swild2(nvrt,12),swild10(max(4,nvrt),12), &
-     &swild3(20+ntracers),swild4(2,4)
+     &swild3(20+mntracers),swild4(2,4)
 !#ifdef USE_SED
       real(rkind) :: swild_m(6,ntracers),swild_w(3),q2fha(2:nvrt),q2fpha(2:nvrt),epsftmp(nvrt), &
                      &Tpzzntr(nvrt),Dpzzntr(nvrt)  
@@ -3137,7 +3137,7 @@
 !     swild96(1:2,nvrt,nsa): \epsilon (over/under-shoots in ELAD) for u,v (if ibtrack_test=1, 1->T and 2 is not used)
 !     swild97(1:2,nvrt,nsa): u,v in the next iteration (ELAD). If ibtrack_test=1, 1->T (2 not used)
 !     swild98(1:4,nvrt,nsa): 1:2 max/min for u; 3:4 for v (only 1:2 are used for T)
-      allocate(swild96(2,nvrt,nsa),swild97(2,nvrt,nsa),swild98(4,nvrt,nsa),stat=istat)
+      allocate(swild98(4,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('MAIN: fail to allocate swild98 (3.2)')
 
 !'    Debug: test backtracking alone
@@ -3324,6 +3324,7 @@
           if(vmag<=velmin_btrack) then !No activity 
             sdbt(1,j,isd0)=su2(j,isd0)
             sdbt(2,j,isd0)=sv2(j,isd0)
+            sdbt(3:2+ntracers,j,isd0)=(tr_nd(1:ntracers,j,n1)+tr_nd(1:ntracers,j,n2))*0.5d0
             swild98(1:2,j,isd0)=su2(j,isd0) !max/min
             swild98(3:4,j,isd0)=sv2(j,isd0)
 
@@ -3426,6 +3427,7 @@
                 swild98(2,j,isd0)=swild3(3) !min
               else
                 swild98(1:4,j,isd0)=swild3(1:4) 
+                sdbt(3:2+ntracers,j,isd0)=swild3(5:4+ntracers) 
               endif
 
                   !Check for ics=2 and zonal flow
@@ -3557,6 +3559,7 @@
                 swild98(2,j,isd0)=btlist(ibt)%sclr(3) !min
               else
                 swild98(1:4,j,isd0)=btlist(ibt)%sclr(1:4)
+                sdbt(3:2+ntracers,j,isd0)=btlist(ibt)%sclr(5:4+ntracers)
               endif
 
 !              xyzs(isd0,j,1)=btlist(ibt)%xt; xyzs(isd0,j,2)=btlist(ibt)%yt; xyzs(isd0,j,3)=btlist(ibt)%zt;
@@ -3588,9 +3591,22 @@
 #ifdef INCLUDE_TIMING
       cwtmp=mpi_wtime()
 #endif
-      call exchange_s3d_4(sdbt)
+!      call exchange_s3d_4(sdbt)
       call exchange_s3d_4(swild98)
-!      call exchange_e3dw(webt)
+
+      allocate(swild96(2,nvrt,nsa),stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.2)')
+      swild96=sdbt(1:2,:,:)
+      call exchange_s3d_2(swild96)
+      sdbt(1:2,:,:)=swild96
+      deallocate(swild96)
+
+      allocate(swild96(ntracers,nvrt,nsa),stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.3)')
+      swild96=sdbt(3:2+ntracers,:,:)
+      call exchange_s3d_tr2(swild96)
+      sdbt(3:2+ntracers,:,:)=swild96
+      deallocate(swild96)
 
       if(ibtrack_test==1) call exchange_s3dw(tsd)
 
@@ -3600,6 +3616,9 @@
 
 !     ELAD for kriging
       if(inter_mom/=0) then
+        allocate(swild96(2,nvrt,nsa),swild97(2,nvrt,nsa),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (2.2)')
+
 !$OMP parallel default(shared) private(iter,i,ie,k,suru,surv,ll,j,id,kin)
         do iter=1,15 !100
           !Calc epsilon
@@ -3689,6 +3708,7 @@
         enddo !iter
 
 !$OMP end parallel
+        deallocate(swild96,swild97)
       endif !inter_mom; ELAD
 
 !     Debug
@@ -3830,7 +3850,7 @@
       wtmp1=wtmp2
 #endif
  
-      deallocate(swild96,swild97,swild98)
+      deallocate(swild98)
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       else
