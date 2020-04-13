@@ -18,7 +18,7 @@
 !===============================================================================
 !===============================================================================
 
-      subroutine schism_init(indir,iths,ntime)
+      subroutine schism_init(iorder,indir,iths,ntime)
 
 !     Most mpi fortran compiler has mpif.h
 !#ifdef USE_MPIMODULE
@@ -95,7 +95,10 @@
 !#ifndef USE_MPIMODULE
       include 'mpif.h'
 !#endif
-
+ 
+      !iorder: 0: normal; 1: bypass alloc and domain decomp (in this case we
+      !assume the domain decomp did not change)
+      integer, intent(in) :: iorder 
       character(len=*), intent(in) :: indir
       integer, intent(out) :: iths,ntime
 
@@ -411,10 +414,18 @@
       !To add new outputs, simply make sure the iof_* has sufficient size, and
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
-      allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
+      if(iorder==0) then
+        allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(70),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: iof failure')
+        if(istat/=0) call parallel_abort('INIT: iof failure')
+        !Global output on/off flags
+        !Array to index into global output file # for modules (only used by
+        !single_netcdf.F90 and out of date)
+        !indx_out(i,j): i is model id (SED, NAPZD etc); j=1:2 is the start and end indices of each model
+        allocate(indx_out(12,2),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: indx_out failure')
+      endif !iorder
 
       !Init defaults
       indvel=1; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=0; shapiro0=0.5_rkind; niter_shap=1
@@ -912,12 +923,6 @@
         call parallel_abort(errmsg)
       endif
 
-!     Global output on/off flags
-!     Array to index into global output file # for modules (only used by
-!     single_netcdf.F90 and out of date)
-!     indx_out(i,j): i is model id (SED, NAPZD etc); j=1:2 is the start and end indices of each model
-      allocate(indx_out(12,2),stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: indx_out failure')
 
 !      !Hydro first
 !      outfile(1)='elev'
@@ -1523,17 +1528,18 @@
         enddo !i
       enddo !k
 
-!     Aquire vertical grid
-      call aquire_vgrid
+      if(iorder==0) then
+!       Aquire vertical grid
+        call aquire_vgrid
 
-!     Partition horizontal grid into subdomains
-      call partition_hgrid
+!       Partition horizontal grid into subdomains
+        call partition_hgrid
 
-!     Aquire full horizontal grid based on partition
-      call aquire_hgrid(.true.) 
+!       Aquire full horizontal grid based on partition
+        call aquire_hgrid(.true.) 
 
-!     Dump horizontal grid
-      call dump_hgrid
+!       Dump horizontal grid
+        call dump_hgrid
 
 #ifdef DEBUG
 !     Test if ipgl and isgl are in ascending rank order for _residents_;
@@ -1571,14 +1577,15 @@
       enddo !i
 #endif
 
-!     Construct parallel message-passing tables
-      call msgp_tables
+!       Construct parallel message-passing tables
+        call msgp_tables
 
-!     Initialize parallel message-passing datatypes
-      call msgp_init
+!       Initialize parallel message-passing datatypes
+        call msgp_init
 
-!     Synchronize
-      call parallel_barrier
+!       Synchronize
+        call parallel_barrier
+      endif !iorder=0
 
 !     Debug
 !      fdb='list_0000'
@@ -1613,6 +1620,13 @@
       if(npa>nsa.or.nea>nsa) call parallel_abort('npa>nsa.or.nea>nsa')
 !      if(np>ns.or.ne>ns) call parallel_abort('np>ns.or.ne>ns')
 
+!     Alloc arrays that are used only in this routine. Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
+      allocate(nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
+         &swild3(50+ntracers),swild4(ntracers,nvrt),stat=istat)
+      if(istat/=0) call parallel_abort('INIT: alloc wild')
+
+      if(iorder==0) then
+!===========================================================================
 !     Allocate message passing arrays
       allocate(rrqst(0:nproc-1),stat=istat)
       if(istat/=0) call parallel_abort('INIT: rrqst allocation failure')
@@ -1675,9 +1689,6 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
 !         &  tnd_nu1(nvrt,npa),snd_nu1(nvrt,npa),tnd_nu2(nvrt,npa),snd_nu2(nvrt,npa),tnd_nu(nvrt,npa),snd_nu(nvrt,npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
-!          Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
-         &  nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &  swild3(50+ntracers),swild4(ntracers,nvrt),&
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
          & sav_h(npa),sav_nv(npa),sav_di(npa),stat=istat)
@@ -1720,6 +1731,8 @@
       allocate(nelem_age(ntrs(4)/2),ielem_age(nea,ntrs(4)/2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: AGE allocation failure')
 #endif
+!===========================================================================
+      endif !iorder=0
 
 !     Adjust mass for conservation flags
       iadjust_mass_consv=0
@@ -1737,10 +1750,12 @@
 
 !     Wave model arrays
 #ifdef  USE_WWM
-      allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10), &
-             & stokes_vel(2,nvrt,npa), jpress(npa), sbr(2,npa), sbf(2,npa), &
-             & stokes_w_nd(nvrt,npa), stokes_vel_sd(2,nvrt,nsa),nne_wwm(np), stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
+      if(iorder==0) then
+        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10), &
+               & stokes_vel(2,nvrt,npa), jpress(npa), sbr(2,npa), sbf(2,npa), &
+               & stokes_w_nd(nvrt,npa), stokes_vel_sd(2,nvrt,nsa),nne_wwm(np), stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
+      endif !iorder
       wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0
       stokes_vel=0.d0; jpress=0.d0; sbr=0.d0; sbf=0.d0; stokes_w_nd=0.d0; stokes_vel_sd=0.d0
 
@@ -1771,8 +1786,10 @@
         nea_wwm=nea_wwm+itmp
         ne_wwm=ne_wwm+itmp1
         neg_wwm=neg_wwm+itmp2
-        allocate(elnode_wwm(3,nea_wwm),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm(0)')
+        if(iorder==0) then
+          allocate(elnode_wwm(3,nea_wwm),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm(0)')
+        endif
         
         ntmp=maxval(nne_wwm)
         call mpi_allreduce(ntmp,mnei_wwm,1,itype,MPI_MAX,comm,ierr)
@@ -1825,8 +1842,10 @@
 !        enddo !i
 
       else !pure tri's
-        allocate(elnode_wwm(3,nea),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm')
+        if(iorder==0) then
+          allocate(elnode_wwm(3,nea),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm')
+        endif
         elnode_wwm(1:3,:)=elnode(1:3,:)
       endif !lhas_quad
 #endif /*USE_WWM*/
@@ -1840,12 +1859,13 @@
       call cosine_init
 #endif
 
+      if(iorder==0) then
 !Tsinghua group
 #ifdef USE_SED 
-      allocate(total_sus_conc(nvrt,npa),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: total_sus_conc')     
-      if(itur==5) then ! 0821 1018
-        allocate(Vpx(nvrt,nsa),Vpy(nvrt,nsa),Vpx2(nvrt,npa),Vpy2(nvrt,npa),Dpxz(nvrt,npa),Dpyz(nvrt,npa), & 
+        allocate(total_sus_conc(nvrt,npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: total_sus_conc')     
+        if(itur==5) then ! 0821 1018
+          allocate(Vpx(nvrt,nsa),Vpy(nvrt,nsa),Vpx2(nvrt,npa),Vpy2(nvrt,npa),Dpxz(nvrt,npa),Dpyz(nvrt,npa), & 
             &taufp_t(nvrt,npa),ws(nvrt,npa),epsf(nvrt,npa),miuft(nvrt,npa),trndtot(nvrt,npa), &
             &miup(nvrt,npa),miup_t(nvrt,npa),miup_c(nvrt,npa),q2fp(nvrt,npa),q2p(nvrt,npa),q2f(nvrt,npa), &
             &taup(nvrt,npa),g0(nvrt,npa),taup_c(nvrt,npa),SDav(nvrt,npa),Srhoav(nvrt,npa),kesit(nvrt,npa), &
@@ -1855,38 +1875,34 @@
             ! 0821+Vpx,Vpy,Dpxz,Dpyz,taufp_t,ws,epsf,miuft,miup,miup_t,miup_c,kfp_m,taup,q2p,g0,taup_c,SDav
             ! 0821+Srhoav,kesit,Kp_tc,Kp_t,Kp_c,Kft,miuepsf,q2f,kppian,Dpzz,Tpzz
             ! 0927.1+Vpx2,Vpy2 !1006+TDxz,TDyz,Vpz2,Phai !1007+dfhm
-        if(istat/=0) call parallel_abort('MAIN: TWO-PHASE-MIX TURB allocation failure')
-      endif !itur==5 0821
-
+          if(istat/=0) call parallel_abort('MAIN: TWO-PHASE-MIX TURB allocation failure')
+        endif !itur==5 0821
 #endif /*USE_SED*/
 
 #ifdef USE_FIB
-     allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
-     allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
+       allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
+       allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
 
 #ifdef USE_ICE
-      allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa),lhas_ice(npa),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: ice allocation failure')
+        allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa),lhas_ice(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: ice allocation failure')
 #endif
 
-!     Non-hydrostatic arrays
-!     Keep qnon for the time being due to hotstart
-      allocate(qnon(nvrt,npa),stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
-!'
+!       Non-hydrostatic arrays
+!       Keep qnon for the time being due to hotstart
+        allocate(qnon(nvrt,npa),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
+      endif !iorder
+
       qnon=0.d0 !initialize
-!
-!      if(nonhydro==1) then
-!        allocate(ihydro(npa),stat=istat) 
-!        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure')
-!!'
-!      endif
 
 !     Alloc flux output arrays
       if(iflux/=0) then
-        allocate(iflux_e(nea),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: iflux_e alloc')
+        if(iorder==0) then
+          allocate(iflux_e(nea),stat=istat)
+          if(istat/=0) call parallel_abort('MAIN: iflux_e alloc')
+        endif !iorder
 
         open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
         max_flreg=-1
@@ -2395,8 +2411,10 @@
 !...  Earth tidal potential
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
       if(ntip>0) then
-        allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: allocation failure for tamp etc')
+        if(iorder==0) then
+          allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+          if(istat/=0) call parallel_abort('MAIN: allocation failure for tamp etc')
+        endif !iorder
 !'
         open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*)
@@ -2432,11 +2450,13 @@
       read(31,*) nbfr
 
       if(nbfr>0) then
-        allocate(amig(nbfr),ff(nbfr),face(nbfr),emo(nope_global,mnond_global,nbfr), &
+        if(iorder==0) then
+          allocate(amig(nbfr),ff(nbfr),face(nbfr),emo(nope_global,mnond_global,nbfr), &
      &efa(nope_global,mnond_global,nbfr),umo(nope_global,mnond_global,nbfr), &
      &ufa(nope_global,mnond_global,nbfr),vmo(nope_global,mnond_global,nbfr), &
      &vfa(nope_global,mnond_global,nbfr),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: allocation failure for amig etc')
+          if(istat/=0) call parallel_abort('MAIN: allocation failure for amig etc')
+        endif !iorder
 !'
         do i=1,nbfr
           read(31,*) !tag
@@ -2627,13 +2647,15 @@
         if(block_nudge<0.or.block_nudge>=1) call parallel_abort('MAIN: wrong block_nudge')
 !'
         if(nhtblocks>0) then
-          allocate(isblock_nd(2,npa), &
+          if(iorder==0) then
+            allocate(isblock_nd(2,npa), &
                   &dir_block(3,nhtblocks), &
                   &isblock_sd(2,nsa), &
                   &isblock_el(nea),q_block(nhtblocks),vnth_block(2,nhtblocks), &
                   &q_block_lcl(nhtblocks),iq_block_lcl(nhtblocks), &
                   &iq_block(nhtblocks),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: Alloc failed (9)')
+            if(istat/=0) call parallel_abort('MAIN: Alloc failed (9)')
+          endif !iorder
 
           isblock_nd=0 !init.
 
@@ -2711,12 +2733,14 @@
           !open(49,file=in_dir(1:len_in_dir)//'flux_blocks.th',status='old')
           !Build message passing arrays for 2 ref. nodes
           !The proc that has ref. node 1 will calculate the flux first before broadcasting
-          allocate(nhtrecv1(0:nproc-1),nhtsend1(0:nproc-1), &
+          if(iorder==0) then
+            allocate(nhtrecv1(0:nproc-1),nhtsend1(0:nproc-1), &
      &ihtrecv1_ndgb(nhtblocks,0:nproc-1),ihtsend1_ndgb(nhtblocks,0:nproc-1), &
      &ihtrecv1(nhtblocks,0:nproc-1),ihtsend1(nhtblocks,0:nproc-1), &
      &block_refnd2_eta(nhtblocks),recv_bsize(nhtblocks),send_bsize(nhtblocks), &
      &htrecv_type(0:nproc-1),htsend_type(0:nproc-1),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: Failed to alloc (17)')
+            if(istat/=0) call parallel_abort('MAIN: Failed to alloc (17)')
+          endif !iorder
           nhtrecv1=0 !# of recvs
           do i=1,nhtblocks
             ndgb1=structures(i)%upnode
@@ -2829,16 +2853,20 @@
       if(if_source==1) then
         open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
         read(31,*)nsources
-        allocate(ieg_source(max(1,nsources)),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: ieg_source failure')
+        if(iorder==0) then
+          allocate(ieg_source(max(1,nsources)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_source failure')
+        endif
         do i=1,nsources
           read(31,*)ieg_source(i) !global elem. #
         enddo !i
 
         read(31,*) !blank line
         read(31,*)nsinks
-        allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+        if(iorder==0) then
+          allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+        endif
         do i=1,nsinks
           read(31,*)ieg_sink(i)
         enddo !i
@@ -3492,8 +3520,10 @@
       mnu_pts=maxval(nnu_pts)
       if(myrank==0) write(16,*)'Max # of points in type II nudging=',mnu_pts
       mnu_pts=max(1,mnu_pts) !for dim only
-      allocate(inu_pts_gb(mnu_pts,natrm),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: inu_pts_gb')
+      if(iorder==0) then
+        allocate(inu_pts_gb(mnu_pts,natrm),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: inu_pts_gb')
+      endif
       do k=1,natrm
         if(ntrs(k)<=0) cycle
 
@@ -3589,8 +3619,10 @@
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
       if(iout_sta/=0) then
         nvar_sta=9 !# of output variables
-        allocate(iof_sta(nvar_sta),stat=istat)
-        if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
+        if(iorder==0) then
+          allocate(iof_sta(nvar_sta),stat=istat)
+          if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
+        endif
         open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
 !       Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
         read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
@@ -3600,11 +3632,13 @@
 !'
 
 !       Allocate: zstal is vertical up; xsta, ysta, zsta are global coord. if ics=2
-        allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
+        if(iorder==0) then
+          allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &zta_out3d(nvrt,nout_sta,nvar_sta),zta_out3d_gb(nvrt,nout_sta,nvar_sta),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
+          if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
+        endif
 
         do i=1,nout_sta
           read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
@@ -3830,9 +3864,10 @@
       write(12,*)'Max. # of Kriging points = ',mnei_kr
 
 !     Allocate arrays
-      allocate(itier_nd(0:mnei_kr,ne_kr),akrmat_nd(mnei_kr+3,mnei_kr+3,ne_kr), &
-              &akr(mnei_kr+3,mnei_kr+3),akrp((mnei_kr+3)*(mnei_kr+4)/2), &
+      allocate(akr(mnei_kr+3,mnei_kr+3),akrp((mnei_kr+3)*(mnei_kr+4)/2), &
               &xy_kr(2,mnei_kr),ipiv(mnei_kr+3),work4(mnei_kr+3))
+
+      if(iorder==0) allocate(itier_nd(0:mnei_kr,ne_kr),akrmat_nd(mnei_kr+3,mnei_kr+3,ne_kr))
 
       err_max=0.d0 !max. error in computing the inverse matices
 !$OMP parallel default(shared) private(i,nei_kr,j,nd,m,nd2,l,ie,k,npp,n1,n2, &
@@ -4065,7 +4100,7 @@
           write(errmsg,*)'Change nz_r:',nz_r
           call parallel_abort(errmsg)
         endif
-        allocate(z_r(nz_r),tem1(nz_r),sal1(nz_r),cspline_ypp(nz_r,2),stat=istat)
+        if(iorder==0) allocate(z_r(nz_r),tem1(nz_r),sal1(nz_r),cspline_ypp(nz_r,2),stat=istat)
         deallocate(swild,swild2,stat=istat)
         allocate(swild(max(nsa+nvrt+12+ntracers,nz_r)),swild2(max(nvrt,nz_r),12),stat=istat)
         do k=1,nz_r
