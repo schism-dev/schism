@@ -6,6 +6,7 @@ use File::Copy qw(move);
 use Cwd;
 
 print(">>>>>>>>>>>>Make sure you have netcdf libraries>>>>>>>>>>>>>\n");
+print(">>>>>>>>>>>>Make you set the hycom data dir correctly:>>>>>>>>>>>>>\n");
 print(">>>>>>>>>>>>Make sure the following excutables work on your machine:>>>>>>>>>>>>>\n");
 print(">>>>>>>>>>>>    ./gen_hot_3Dth_from_hycom>>>>>>>>>>>>>\n");
 print(">>>>>>>>>>>>    ./modify_hot>>>>>>>>>>>>>\n");

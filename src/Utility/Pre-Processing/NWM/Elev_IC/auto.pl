@@ -23,7 +23,7 @@ move("out.gr3","include.gr3");
 system("./gen_elev");
 unlink("source_sink.in","vsource.th","msource.th","rough.gr3");
 
-#unlink("../elev.ic");
-#copy("elev.ic","../elev.ic");
+unlink("../elev.ic");
+copy("elev.ic","../elev.ic");
 
 print("Done.\n")
