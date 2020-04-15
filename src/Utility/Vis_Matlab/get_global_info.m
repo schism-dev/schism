@@ -5,7 +5,7 @@ function [ne,np,nvrt,nm,xy00,i23d,ivs,vzcor,vid5,vdry_e,h0,dp,kbp00,vid_eta,npro
 
 if(icomb==0)
   fid=fopen([base '/outputs/local_to_global_0000'],'r');
-  first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',17);
+  first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',18);
   %disp(first);
   fclose(fid);
 
@@ -14,7 +14,7 @@ if(icomb==0)
 
   for irank=0:nproc-1
     fid=fopen([base '/outputs/local_to_global_' num2str(irank,'%04.f')],'r');
-    first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',17);
+    first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',18);
     %char=fscanf(fid,'%s\n')
     ne_lcl(irank+1)=fscanf(fid,'local to global mapping: %d\n',1);
     clear tmp2;
