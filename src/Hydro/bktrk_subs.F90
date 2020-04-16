@@ -868,10 +868,14 @@ end subroutine inter_btrack
 
         if(iflqs1==3) then 
 !         Exit during iteration in quicksearch; reduce time step and retry
-          !if(iadptive>=1) then
           if(iadptive>=5) then
-            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5_rkind*dtb,trm
-            call parallel_abort(errmsg)
+!            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5_rkind*dtb,trm
+!            call parallel_abort(errmsg)
+            !Desperate measure
+            if(trm<=0) call parallel_abort('BTRACK: trm<=0 (2d)')
+            time_rm2=trm
+            time_rm=time_rm-(dtb-trm)
+            iexit=.true.; return
           endif !iadptive
           if(trm<=0) call parallel_abort('BTRACK: trm<=0 (2a)')
           dtb=dtb-2._rkind*trm
