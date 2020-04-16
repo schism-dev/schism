@@ -424,6 +424,7 @@ git versions:
 (103) 5665418 (Mar 18, 2020): PR from Baptiste mengual for SED3D (sed_frition.F90 merged after the rest).
 (104) eb00a00 (Mar 31, 2020): added 12th tracer model (USE_DVD of Klingbeil)
 (105) aaf1306 (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);
+(106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
 
 ---------------------------------------------------------------
 Auto-test history:
