@@ -11,7 +11,6 @@ function []=SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % May need to adjust some parameters inside (e.g. caxis) to get right appearance of images
 % (search for 'Adjust')
 % Requires get_global_info.m (in this dir)
- 
 % SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % Inputs: 
 %         icomb: work with uncombined (0) or combined (1) nc

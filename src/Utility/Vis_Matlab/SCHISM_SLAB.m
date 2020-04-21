@@ -6,7 +6,6 @@ function []=SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test
 % For a fixed z level, nan is used for above surface/below bottom.
 % Works for mixed grid.
 % Requires get_global_info.m (in this dir)
-
 % SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test)
 % Inputs: 
 %         icomb: work with uncombined (0) or combined (1) nc 
