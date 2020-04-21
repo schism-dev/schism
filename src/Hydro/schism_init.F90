@@ -5787,6 +5787,9 @@
         write(16,*)'time stepping begins...',iths_main+1,ntime
         call flush(16) ! flush "mirror.out"
       endif
+     
+      !Set global time stamp
+      time_stamp=iths_main*dt
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
