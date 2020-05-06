@@ -425,7 +425,7 @@ git versions:
 (104) eb00a00 (Mar 31, 2020): added 12th tracer model (USE_DVD of Klingbeil)
 (105) aaf1306 (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);
 (106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
-(107) (April 24, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
+(107) e703189 (May 6, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
 
 ---------------------------------------------------------------
 Auto-test history:
