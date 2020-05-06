@@ -4585,7 +4585,7 @@
           if(itur==5) then !1018:itur==5
             bigf1=bigf1+(TDxz(nvrt,isd)-TDxz(kbs(isd)+1,isd)) !/i34(i)
             bigf2=bigf2+(TDyz(nvrt,isd)-TDyz(kbs(isd)+1,isd)) !/i34(i)
-!Error: Hai, shouldn't there be botf[1,2] also?
+            !Assume botf1=botf2
           endif
 #endif /*USE_SED*/
 

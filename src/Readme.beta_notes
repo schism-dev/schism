@@ -7,8 +7,8 @@ eb00a00 (Mar 31, 2020): add 12th tracer model (USE_DVD of Klingbeil); if invoked
 cd9664a (Mar 16, 2020): [1st PR from Baptiste Mengual] added iof_sed(12:15) for new SED code. In sediment.in: 
                         new options for various parameters and a few new parameters;
                         sed_morph=1 requires imorphogrid.gr3 (a scale applied to depth change at each node);
-7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
-73f7451 (Jan 14, 2020): changed ifltyp=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
+                        also morp factors are replaced by a single 'sed_morph_fac' fro all classes;
+73f7451 (Jan 14, 2020): changed ifltype=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
 59741d4 (Jan 9, 2020): added another pre-proc flag 'ipre2' for more diagnostic outputs (can be used with >1 CPU; stops
                        after outputs);
 4e2eb86 (Dec 11, 2019): added optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
@@ -425,6 +425,7 @@ git versions:
 (104) eb00a00 (Mar 31, 2020): added 12th tracer model (USE_DVD of Klingbeil)
 (105) aaf1306 (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);
 (106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
+(107) (April 24, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
 
 ---------------------------------------------------------------
 Auto-test history:
