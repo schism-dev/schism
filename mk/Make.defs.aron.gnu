@@ -58,7 +58,7 @@ FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
 #####Libraries
 #MTSLIBS = -L/usr/lib/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L/home/aron/opt/netcdf_gfortran/lib/ -lnetcdf -lnetcdff
 CDFMOD = -I/home/aron/opt/netcdf_gfortran/include/ # modules for netcdf
 

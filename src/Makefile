@@ -354,23 +354,21 @@ o/$(config)/autosrc.mk: o/$(config)/.dummy
 .PHONY: pschism psc
 
 pschism: $(EXEC) o/$(config)/.dummy 
-	touch $(PARMETISDIR)/Makefile
 
 psc: $(EXEC) o/$(config)/.dummy 
-	touch $(PARMETISDIR)/Makefile
 
 .PHONY: all
 all: pschism utility
 
 
 # This is the main executable target
-$(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a $(PARMETISDIR)/metis.a
+$(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a 
 	$(FLD) $(FLDFLAGS) $(CONFIG_OBJS) $(LIBS) ${MODULEOUTDIR}. -I. -o $@
 	ar -ru libschism.a $(CONFIG_OBJS)
 
 
-$(PARMETISDIR)/%.a:
-	+$(MAKE) distclean --directory=$(PARMETISDIR)
+$(PARMETISDIR)/parmetis.a:
+##	+$(MAKE) distclean --directory=$(PARMETISDIR)
 	+$(MAKE) config --directory=$(PARMETISDIR)
 	+$(MAKE) --directory=$(PARMETISDIR)
 
@@ -523,7 +521,7 @@ clean:
 	$(QUIET)rm -rf ../bin/*
 	$(QUIET)rm -rf WWMIII/*.mod
 	$(QUIET)rm -rf WWMIII/*.o
-	(cd $(PARMETISDIR); make distclean )
+	(cd $(PARMETISDIR); make distclean; rm -f *.a )
 	##(cd $(PARMETISDIR)/ParMETISLib ; make realclean )
 	$(QUIET)rm -rf $(FABMINSTALLDIR)
 

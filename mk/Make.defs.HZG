@@ -48,7 +48,7 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=1
 FCPFLAGS = $(PPFLAGS) -O2 -assume byterecl #MPI code
 FLDFLAGS = -O2
 #####Libraries
-MTSLIBS = -L/home/zhangj/SELFE/svn/tags/v3.2.0/ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L/home/zhangj/SELFE/svn/tags/v3.2.0/ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L/opt/intel/netcdf-3.6.3/lib/ -lnetcdf #-L/opt/intel/fce/10.1.015/lib/ -lirc
 CDFMOD = -I/opt/intel/netcdf-3.6.3/include/ # modules for netcdf
   

@@ -65,7 +65,7 @@ FLDFLAGS = -g -O2 -align array64byte -no-prec-div -mcmodel=medium -shared-intel 
 #EXEC := $(EXEC)_OMP
 
 #Libraries
-MTSLIBS = -L/nasa/parmetis/3.1.1/lib/ -lparmetis -lmetis
+##MTSLIBS = -L/nasa/parmetis/3.1.1/lib/ -lparmetis -lmetis
 CDFLIBS = -L/nasa/netcdf/4.4.1_serial/lib/ -lnetcdf -lnetcdff
 CDFMOD = -I/nasa/netcdf/4.4.1_serial/include/ # modules for netcdf
 

@@ -56,7 +56,7 @@ FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -init=zero -xCORE-AVX2 -assume buffere
 FLDFLAGS = -O2 -mcmodel=medium -init=zero -xCORE-AVX2 -assume buffered_io  #-shared-intel
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
 
 CDFLIBS = -L/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/lib/ -L/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-nc364y7zbv3mhr3l6bcn6ansthqabu5x/lib/ -lnetcdf -lnetcdff
 CDFMOD = -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/include/ -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-nc364y7zbv3mhr3l6bcn6ansthqabu5x/include/

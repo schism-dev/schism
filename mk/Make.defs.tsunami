@@ -60,8 +60,7 @@ FLDFLAGS = -O2 -mcmodel=medium #for final linking of object files
 #EXEC := $(EXEC)_OMP
 
 #####Libraries
-##MTSLIBS = -L/share/apps/ParMetis-3.1-Sep2010/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L/share/apps/netcdf/lib/ -lnetcdf
 CDFMOD = -I/share/apps/netcdf/include/ # modules for netcdf
 

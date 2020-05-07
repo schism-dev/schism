@@ -49,7 +49,7 @@ FCPFLAGS = $(PPFLAGS) -O2 -xCORE-AVX2 #-qopenmp
 #FCSFLAGS = $(FFCPFLAGS)
 FLDFLAGS = -O2 -xCORE-AVX2 -fma -align array64byte -finline-functions -mcmodel medium -shared-intel #-fPIC  
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF_FORTRAN)/lib -L$(NETCDF)/lib -lnetcdf -lnetcdff
 CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include
 

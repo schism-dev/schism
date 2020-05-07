@@ -63,7 +63,7 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
 ##########################################################################################
 #####Libraries
 #From my own dir
-MTSLIBS = -L$(METIS_PATH)/lib -lparmetis -lmetis 
+#MTSLIBS = -L$(METIS_PATH)/lib -lparmetis -lmetis 
 #From Harry's dir
 #MTSLIBS = -L/work/01555/harryw/ParMetis-3.1-64bit/ -lparmetis -lmetis
 

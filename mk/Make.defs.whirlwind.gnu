@@ -65,8 +65,7 @@ FLDFLAGS = -O2 #for final linking of object files
 #EXEC := $(EXEC)_OMP
 
 #####Libraries
-##MTSLIBS = -L/sciclone/home04/yinglong/ParMetis-3.1-Sep2010 -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF_FORTRAN)/lib -L$(NETCDF)/lib -lnetcdf -lnetcdff
 CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
 

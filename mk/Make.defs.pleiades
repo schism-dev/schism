@@ -67,7 +67,7 @@ FLDFLAGS = -O3 -no-prec-div -mcmodel=medium -shared-intel -ipo -axCORE-AVX512 -x
 #EXEC := $(EXEC)_OMP
 
 #Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 ##SLES12
 CDFLIBS = -L/nasa/netcdf/4.4.1.1_serial/lib -lnetcdf -lnetcdff 
 CDFMOD = -I/nasa/netcdf/4.4.1.1_serial/include/ # modules for netcdf

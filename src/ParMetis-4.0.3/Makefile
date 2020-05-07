@@ -63,11 +63,13 @@ mkdir -p $(BUILDDIR)
 cd $(BUILDDIR) && cmake $(CURDIR) $(CONFIG_FLAGS)
 endef
 
+#YJZ: cp final libs to this dir for SCHISM gnu make
 all clean install:
 	@if [ ! -f $(BUILDDIR)/Makefile ]; then \
 		more BUILD.txt; \
 	else \
 	  	make -C $(BUILDDIR) $@ $(MAKEFLAGS); \
+ 		cp -f $(BUILDDIR)/libmetis/libmetis.a $(BUILDDIR)/libparmetis/libparmetis.a . ; \
 	fi
 
 uninstall:

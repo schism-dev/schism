@@ -49,7 +49,7 @@ FCPFLAGS = $(PPFLAGS) -O2 -xCORE-AVX2 #-qopenmp
 #FCSFLAGS = $(FFCPFLAGS)
 FLDFLAGS = -O2 -xCORE-AVX2  #-qopenmp
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/lib -lnetcdff -Wl,-rpath,/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/lib -L/sw/rhel6-x64/netcdf/netcdf_c-4.3.2-gcc48/lib -Wl,-rpath,/sw/rhel6-x64/netcdf/netcdf_c-4.3.2-gcc48/lib -L/sw/rhel6-x64/hdf5/hdf5-1.8.14-threadsafe-gcc48/lib -Wl,-rpath,/sw/rhel6-x64/hdf5/hdf5-1.8.14-threadsafe-gcc48/lib -L/sw/rhel6-x64/sys/libaec-0.3.2-gcc48/lib -Wl,-rpath,/sw/rhel6-x64/sys/libaec-0.3.2-gcc48/lib -lnetcdf -lhdf5_hl -lhdf5 -lsz -lcurl -lz -lnetcdf
 CDFMOD = -I/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/include
 

@@ -62,7 +62,7 @@ FLDFLAGS = $(OPTFLAGS)
 ################################################################################
 # Parmetis
 METIS_PATH=../src/ParMetis-3.1-Sep2010/
-MTSLIBS = -L$(METIS_PATH) -lparmetis -lmetis
+##MTSLIBS = -L$(METIS_PATH) -lparmetis -lmetis
 
 
 ################################################################################

@@ -49,7 +49,7 @@ FCPFLAGS = $(PPFLAGS) -Kfast,autoobjstack -O2 -V -Qa,d,i,p,t,x -Koptmsg=2 -Nlst 
 FLDFLAGS = -O2 -Kfast,autoobjstack  #for final linking of object files
 
   #####Libraries
-MTSLIBS = -L$(PWD)/ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L$(PWD)/ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L/package/fx100/netcdf-3.6.3/lib -lnetcdf
 CDFMOD = -I/package/fx100/netcdf-3.6.3/include # modules for netcdf
 
