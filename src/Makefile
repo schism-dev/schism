@@ -303,10 +303,31 @@ CONFIG_OBJS :=  $(addprefix o/$(config)/, $(OBJS))
 # Names of source files with relative path as found on $VPATH
 FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%=%$f) not-found:$f)))
 
+##PARMETISDIR := ./ParMetis-3.1-Sep2010
+PARMETISDIR := ./ParMetis-4.0.3
+ifeq ($(ENV),EDISON)
+    PARMETISDIR := $(PARMETISDIR).cray
+endif
+ifeq ($(ENV),CORI2)
+    PARMETISDIR := $(PARMETISDIR).cray
+endif
+ifeq ($(ENV),BEBOP)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),ANVIL)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),COMET)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),STAMPEDE2)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
 
 ################################################################################
 # Library list
 ################################################################################
+MTSLIBS= -L$(PARMETISDIR) -lparmetis -lmetis
 LIBS = $(MTSLIBS) $(FABMLIBS) $(CDFLIBS) $(GTMLIBS) $(PETSCLIBS)
 
 ################################################################################
@@ -333,32 +354,14 @@ o/$(config)/autosrc.mk: o/$(config)/.dummy
 .PHONY: pschism psc
 
 pschism: $(EXEC) o/$(config)/.dummy 
+	touch $(PARMETISDIR)/Makefile
 
 psc: $(EXEC) o/$(config)/.dummy 
+	touch $(PARMETISDIR)/Makefile
 
 .PHONY: all
 all: pschism utility
 
-
-PARMETISDIR := ./ParMetis-3.1-Sep2010
-ifeq ($(ENV),EDISON)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.cray
-endif
-ifeq ($(ENV),CORI2)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.cray
-endif
-ifeq ($(ENV),BEBOP)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),ANVIL)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),COMET)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),STAMPEDE2)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
 
 # This is the main executable target
 $(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a $(PARMETISDIR)/metis.a
@@ -367,12 +370,14 @@ $(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a $(PARMETISDIR)/metis.a
 
 
 $(PARMETISDIR)/%.a:
+	+$(MAKE) distclean --directory=$(PARMETISDIR)
+	+$(MAKE) config --directory=$(PARMETISDIR)
 	+$(MAKE) --directory=$(PARMETISDIR)
 
-.PHONY: parmetis
-parmetis:
-	+$(MAKE) clean --directory=$(PARMETISDIR)
-	+$(MAKE) --directory=$(PARMETISDIR)
+#.PHONY: parmetis
+#parmetis:
+#	+$(MAKE) clean --directory=$(PARMETISDIR)
+#	+$(MAKE) --directory=$(PARMETISDIR)
 
 
 .PHONY: depend
@@ -518,8 +523,7 @@ clean:
 	$(QUIET)rm -rf ../bin/*
 	$(QUIET)rm -rf WWMIII/*.mod
 	$(QUIET)rm -rf WWMIII/*.o
-###	$(QUIET)rm -rf $(PARMETISDIR)/*.a
-	(cd $(PARMETISDIR)/METISLib ; make realclean )
-	(cd $(PARMETISDIR)/ParMETISLib ; make realclean )
+	(cd $(PARMETISDIR); make distclean )
+	##(cd $(PARMETISDIR)/ParMETISLib ; make realclean )
 	$(QUIET)rm -rf $(FABMINSTALLDIR)
 
