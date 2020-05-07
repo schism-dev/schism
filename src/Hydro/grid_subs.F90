@@ -445,7 +445,7 @@ subroutine partition_hgrid
   if(stat/=0) call parallel_abort('partition: tpwgts allocation failure')
   tpwgts=1.0/real(nproc)
 
-  ! Imbalance tolerance
+  ! Imbalance tolerance (1: perfect balance; nproc: perfect imbalance)
   allocate(ubvec(ncon),stat=stat)
   if(stat/=0) call parallel_abort('partition: ubvec allocation failure')
   ubvec=1.01
@@ -471,6 +471,12 @@ subroutine partition_hgrid
 !  p: # of processors;
 !  n: total # of vertices (local) in graph sense;
 !  m: total # of neighboring vertices ("edges"); double counted between neighboring vertice u and v.
+
+!  ParMETIS_V3_PartGeomKway (idx_t *vtxdist, idx_t *xadj, idx_t *adjncy, idx_t *vwgt, 
+!    idx_t *adjwgt, idx_t *wgtflag, idx_t *numflag, idx_t *ndims, real_t *xyz, 
+!    idx_t *ncon, idx_t *nparts, real_t *tpwgts, real_t *ubvec, idx_t *options, 
+!    idx_t *edgecut, idx_t *part, MPI Comm *comm)
+
 !  ncon: # of weights for each vertex;
 !  int(in) vtxdist(p+1): Processor j stores vertices vtxdist(j):vtxdist(j+1)-1
 !  int (in) xadj(n+1), adjncy(m): locally, vertex j's neighboring vertices are adjncy(xadj(j):xadj(j+1)-1). adjncy points to global index;
@@ -493,7 +499,7 @@ subroutine partition_hgrid
   ! Change partition numbering to start from 0
   part=part-1
 
-  ! Construct global element-to-resident-processor assignment vector
+  ! Construct global element-to-resident-processor assignment vector (iegrpv)
   call mpi_allgatherv(part,ne,itype,iegrpv,neproc,neprocsum,itype,comm,ierr)
   if(ierr/=MPI_SUCCESS) call parallel_abort('partition: mpi_allgatherv',ierr)
 
