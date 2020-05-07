@@ -1,4 +1,4 @@
-Changes in param.in and main parameter inputs for other modules:
+Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
@@ -426,6 +426,7 @@ git versions:
 (105) aaf1306 (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);
 (106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
 (107) e703189 (May 6, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
+(108) 14e201f (May 7, 2020): switched to ParMETIS v4.0.3;
 
 ---------------------------------------------------------------
 Auto-test history:
