@@ -18,13 +18,14 @@ set (SCHISM_EXE_BASENAME pschism_PLEIADES CACHE STRING "Base name (modules and f
 
 ###Relative paths won't work
 set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
+set(CMAKE_CXX_COMPILER icpc CACHE PATH "C++ compiler" FORCE)
+set(CMAKE_C_COMPILER icc CACHE PATH "C compiler" FORCE)
 ##set(PARMETIS_DIR /home3/yjzhang/git/schism/src/ParMetis-3.1-Sep2010/ CACHE PATH "Path to ParMetis")
 set(PARMETIS_DIR /home3/yjzhang/git/schism/src/ParMetis-4.0.3/ CACHE PATH "Path to ParMetis")
 set(NetCDF_FORTRAN_DIR /nasa/netcdf/4.4.1.1_serial/ CACHE PATH "Path to NetCDF Fortran library")
 set(NetCDF_C_DIR  /nasa/netcdf/4.4.1.1_serial/  CACHE PATH "Path to NetCDF C library")
 ###MPI_ROOT is only needed when cmake is having trouble finding write MPI wrapper
 #set(MPI_ROOT /nasa/hpe/mpt/2.17r13 CACHE PATH "MPI root")
-#set(MPI_Fortran_COMPILER ifort CACHE PATH "MPI Fortran compiler" FORCE)
 
 #set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
 #set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
@@ -58,5 +59,6 @@ set(NetCDF_C_DIR  /nasa/netcdf/4.4.1.1_serial/  CACHE PATH "Path to NetCDF C lib
 ###Compile flags
 ##set(MPI_VERSION CACHE STRING 1 FORCE)
 set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -no-prec-div -mcmodel=medium -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2" CACHE STRING "Fortran flags" FORCE)
-##For final linking: this is only needed in exordinary cases
-set(CMAKE_EXE_LINKER_FLAGS "-O3 -no-prec-div -mcmodel=medium  -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2 -lmpi++ -lmpi -lstdc++ -lcpuset -lbitmask" CACHE STRING "Link flags" FORCE)
+##For final linking: this is only needed in exordinary cases (byterecl caused problem with icc)
+##set(CMAKE_EXE_LINKER_FLAGS "-O3 -no-prec-div -mcmodel=medium  -assume byterecl -ipo -axCORE-AVX512 -xSSE4.2 -lmpi++ -lmpi -lstdc++ -lcpuset -lbitmask" CACHE STRING "Link flags" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS "-O3 -no-prec-div -mcmodel=medium  -ipo -axCORE-AVX512 -xSSE4.2 -lmpi++ -lmpi -lstdc++ -lcpuset -lbitmask" CACHE STRING "Link flags" FORCE)
