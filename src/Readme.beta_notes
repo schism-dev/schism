@@ -2,6 +2,10 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+ (): changed sediment.in to sediment.nml (and made parameters lower case: BEDLOAD_COEFF, 
+      NEWLAYER_THICK,IMETH_BED_EVOL, SAND_SD50=>Sd50, SAND_ERATE=>Erate, SED_TYPE=>iSedtype,
+      SAND_SRHO=>Srho, SAND_WSED=>Wsed, SAND_TAU_CE=>tau_ce, sed_morph_fac=>morph_fac,
+      poro_cst=>porosity);
 aaf1306 (April 4, 2020): added hybrid ELM transport parameters: ielm_transport, max_subcyc;
 eb00a00 (Mar 31, 2020): add 12th tracer model (USE_DVD of Klingbeil); if invoked, make sure: flag_ic(12)=0, and set b.c. flag and nudging option to 0;
 cd9664a (Mar 16, 2020): [1st PR from Baptiste Mengual] added iof_sed(12:15) for new SED code. In sediment.in: 

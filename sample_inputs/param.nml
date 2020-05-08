@@ -2,7 +2,7 @@
 !(1) Use ' ' (single quotes) for chars;
 !(2) integer values are fine for real vars/arrays;
 !(3) if multiple entries for a parameter are found, the last one wins - please avoid this
-!(4) array inputs follow column major (like FORTRAN) and can spill to multiple lines
+!(4) array inputs follow column major (like FORTRAN) and can spill to multiple lines. Values can be separated by commas
 !(5) space allowed before/after '='
 
 &CORE

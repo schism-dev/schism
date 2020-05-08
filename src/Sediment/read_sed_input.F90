@@ -80,14 +80,31 @@
       INTEGER :: line, len_str, loc, loc2, lstr_tmp
       CHARACTER(len=90) :: line_str,str_tmp,str_tmp2
 
+      namelist /SED_CORE/Sd50,Erate
+      namelist /SED_OPT/Wsed,tau_ce,Srho,iSedtype,newlayer_thick,bedload_coeff, &
+     &sed_debug,Cdb_min,Cdb_max,actv_max,poro_option,porosity,Awooster,Bwooster, &
+     &sedlay_ini_opt,toplay_inithick,bdldiffu,Nbed,bedload,bedload_filter, &
+     &bedload_limiter,suspended_load,slope_formulation,alpha_bs,alpha_bn, &
+     &ised_bc_bot,sed_morph,sed_morph_time,morph_fac,drag_formulation, &
+     &ddensed,comp_ws,comp_tauce,bedforms_rough,iwave_ripple,irough_bdld, &
+     &slope_avalanching,dry_slope_cr,wet_slope_cr,bedmass_filter,bedmass_threshold, &
+     &ised_dump,ierosion,alphd,refht,Tbp,im_pick_up,imeth_bed_evol,iasym, &
+     &w_asym_max,elfrink_filter,ech_uorb,bedload_acc,bedload_acc_filter, &
+     &kacc_hoe,kacc_dub,thresh_acc_opt,acrit,tau_option,tau_max,zstress
+
 !- Start Statement --------------------------------------------------!
       !defined # of classes (in sed_mod) for all routines
       ntr_l=ntrs(5) 
 
       IF(myrank==0) write(16,*)'Entering read_sed_input routine'
+      IF(myrank==0) WRITE(16,*)'reading sediment.nml'
+      IF(myrank==0) WRITE(16,'(A,A,I2,A)')'##### Number of Tracers',  &
+      &             ' / Sediment Classes required in sediment.in: ', &
+      &             ntr_l,' #####'
+
 
       ALLOCATE(Sd50(ntr_l),Srho(ntr_l),Wsed(ntr_l),Erate(ntr_l),tau_ce(ntr_l), &
-     &poros(ntr_l),iSedtype(ntr_l),stat=i)
+     &iSedtype(ntr_l),stat=i)
       IF(i/=0) CALL parallel_abort('main: Sd50 allocation failure')
        
 !--------------------------------------------------------------------
@@ -99,82 +116,111 @@
       rhom=rho0
       vonKar=0.4
 
-      !Init. new parameters to make sure they are read in
-      ised_bc_bot=-100
-      !depo_scale=-100
-      ised_dump=-100
-      ierosion=-100
+      !Init default parameters. Not init'ed are (which will be computed below): Wsed,tau_ce
+      Sd50=-huge(1.d0); Erate=-huge(1.d0)
 
-      OPEN(5,FILE=in_dir(1:len_in_dir)//'sediment.in',STATUS='old')
-      IF(myrank==0) WRITE(16,*)'reading sediment.in'
-      IF(myrank==0) WRITE(16,'(A,A,I2,A)')'##### Number of Tracers',  &
-      &             ' / Sediment Classes required in sediment.in: ', &
-      &             ntr_l,' #####'
+      Srho(:)=2650.d0; iSedtype(:)=1; 
+      newlayer_thick=100.d0; bedload_coeff=1
+      sed_debug=0; Cdb_min=1.d-6; Cdb_max=1.d-2; actv_max=1.d0 
+      poro_option=1; porosity=0.4d0; Awooster=0.42d0; Bwooster=-0.458d0
+      sedlay_ini_opt=0; toplay_inithick=10.0d-2; bdldiffu=0.5d0; Nbed=1
+      bedload=1; bedload_filter=0; bedload_limiter=0; suspended_load=1
+      slope_formulation=4; alpha_bs=1.0d0; alpha_bn=1.5d0; ised_bc_bot=1
+      sed_morph=0; sed_morph_time=1.d0; morph_fac=1.d0; drag_formulation=1
+      ddensed=0; comp_ws=1; comp_tauce=1; bedforms_rough=0; iwave_ripple=1;
+      irough_bdld=1; slope_avalanching=1; dry_slope_cr=1.d0; wet_slope_cr=0.3d0
+      bedmass_filter=0; bedmass_threshold=0.025d0; ised_dump=0; ierosion=0
+      alphd=1.d0; refht=0.75d0; Tbp=1.d2; im_pick_up=4 
+      imeth_bed_evol=2; iasym=0; w_asym_max=0.4d0; elfrink_filter=0;
+      ech_uorb=200; bedload_acc=0; bedload_acc_filter=0; kacc_hoe=1.4d-4
+      kacc_dub=0.631d-4; thresh_acc_opt=2; acrit=0.2d0; tau_option=1
+      tau_max=10.d0; zstress=0.2d0
 
-      REWIND(5) !go to beginning of file
-      line=0
+      OPEN(32,file=in_dir(1:len_in_dir)//'sediment.nml',delim='apostrophe',status='old')
+      REWIND(32) !go to beginning of file
+      read(32,nml=SED_CORE)
+      read(32,nml=SED_OPT)
+      CLOSE(32)
 
-      ! - PS: start reading
-      DO
-        ! - PS: read line an break on '!'
-        line=line+1
-        READ(5,'(a)',END=99)line_str
-        line_str=ADJUSTL(line_str)
-        len_str=LEN_TRIM(line_str)
-        IF(len_str==0.OR.line_str(1:1)=='!') CYCLE
+!     Check core parameters
+      if(minval(Sd50)<0.d0.or.minval(Erate)<0.d0) then
+        write(errmsg,*)'READ_SED, core pars. not read in:',Sd50,Erate
+        call parallel_abort(errmsg)
+      endif
 
-        ! - PS: locate '==' and '!'
-        loc=INDEX(line_str,'==')
-        loc2=INDEX(line_str,'!')
-        IF(loc2/=0.AND.loc2-1<loc+1)THEN
-          CALL parallel_abort('READ_PARAM: ! before =')
-        ENDIF
+!     Check optional parameters (incomplete)
+      if(ised_bc_bot<0.or.ised_dump<0.or.ierosion<0) then
+        write(errmsg,*)'READ_SED, some pars. not rite:',ised_bc_bot,ised_dump,ierosion
+        call parallel_abort(errmsg)
+      endif 
 
-        ! - PS: get name of the variable
-        str_tmp=''
-        str_tmp(1:loc-1)=line_str(1:loc-1)
-        str_tmp=TRIM(str_tmp)
-        lstr_tmp=LEN_TRIM(str_tmp)
+      IF ((tau_option .EQ. 0) .OR. (tau_option .GT. 3)) THEN
+        WRITE(errmsg,*)'READ_SED: Invalid tau_option (from 1 to 3)'
+        CALL parallel_abort(errmsg)
+      END IF
 
-        ! PS: get the value
-        !if(loc2/=0) then
-        !  str_tmp2=line_str(loc+2:loc2-1)
-        !else
-        !  str_tmp2=line_str(loc+2:len_str)
-        !endif
+!      line=0
+!      ! - PS: start reading
+!      DO
+!        ! - PS: read line an break on '!'
+!        line=line+1
+!        READ(5,'(a)',END=99)line_str
+!        line_str=ADJUSTL(line_str)
+!        len_str=LEN_TRIM(line_str)
+!        IF(len_str==0.OR.line_str(1:1)=='!') CYCLE
 
-        !str_tmp2=adjustl(str_tmp2)
-        !str_tmp2=trim(str_tmp2)
+!        ! - PS: locate '==' and '!'
+!        loc=INDEX(line_str,'==')
+!        loc2=INDEX(line_str,'!')
+!        IF(loc2/=0.AND.loc2-1<loc+1)THEN
+!          CALL parallel_abort('READ_PARAM: ! before =')
+!        ENDIF
 
-        ! - PS: switch between variables and set values
-        SELECT CASE(str_tmp)
+!        ! - PS: get name of the variable
+!        str_tmp=''
+!        str_tmp(1:loc-1)=line_str(1:loc-1)
+!        str_tmp=TRIM(str_tmp)
+!        lstr_tmp=LEN_TRIM(str_tmp)
 
-          CASE('NEWLAYER_THICK')
-            READ(line_str,*) var1, var2, newlayer_thick
+!        ! PS: get the value
+!        !if(loc2/=0) then
+!        !  str_tmp2=line_str(loc+2:loc2-1)
+!        !else
+!        !  str_tmp2=line_str(loc+2:len_str)
+!        !endif
 
-          CASE('BEDLOAD_COEFF')
-            READ(line_str,*) var1, var2, bedload_coeff
+!        !str_tmp2=adjustl(str_tmp2)
+!        !str_tmp2=trim(str_tmp2)
 
-          CASE('SAND_SD50')
-            READ(line_str,*) var1, var2, (Sd50(i), i=1,ntr_l)
+!        ! - PS: switch between variables and set values
+!        SELECT CASE(str_tmp)
 
-          CASE('SAND_SRHO')
-            READ(line_str,*) var1, var2, (Srho(i), i=1,ntr_l)
+!          CASE('NEWLAYER_THICK')
+!            READ(line_str,*) var1, var2, newlayer_thick
 
-          CASE('SAND_WSED')
-            READ(line_str,*) var1, var2, (Wsed(i), i=1,ntr_l)
+!          CASE('BEDLOAD_COEFF')
+!            READ(line_str,*) var1, var2, bedload_coeff
 
-          CASE('SAND_ERATE')
-            READ(line_str,*) var1, var2, (Erate(i), i=1,ntr_l)
+!          CASE('SAND_SD50')
+!            READ(line_str,*) var1, var2, (Sd50(i), i=1,ntr_l)
 
-          CASE('SAND_TAU_CE')
-            READ(line_str,*) var1, var2, (tau_ce(i), i=1,ntr_l)
+!          CASE('SAND_SRHO')
+!            READ(line_str,*) var1, var2, (Srho(i), i=1,ntr_l)
 
-          CASE('SED_TYPE')
-            READ(line_str,*) var1, var2, (iSedtype(i), i=1,ntr_l)
+!          CASE('SAND_WSED')
+!            READ(line_str,*) var1, var2, (Wsed(i), i=1,ntr_l)
 
-          CASE('sed_debug')
-            READ(line_str,*) var1, var2, sed_debug
+!          CASE('SAND_ERATE')
+!            READ(line_str,*) var1, var2, (Erate(i), i=1,ntr_l)
+
+!          CASE('SAND_TAU_CE')
+!            READ(line_str,*) var1, var2, (tau_ce(i), i=1,ntr_l)
+
+!          CASE('SED_TYPE')
+!            READ(line_str,*) var1, var2, (iSedtype(i), i=1,ntr_l)
+
+!          CASE('sed_debug')
+!            READ(line_str,*) var1, var2, sed_debug
 
 !          CASE('g')
 !            READ(line_str,*) var1, var2, g
@@ -182,206 +228,188 @@
 !          CASE('vonKar')
 !            READ(line_str,*) var1, var2, vonKar
 
-          CASE('Cdb_min')
-            READ(line_str,*) var1, var2, Cdb_min
+!          CASE('Cdb_min')
+!            READ(line_str,*) var1, var2, Cdb_min
 
-          CASE('Cdb_max')
-            READ(line_str,*) var1, var2, Cdb_max
+!          CASE('Cdb_max')
+!            READ(line_str,*) var1, var2, Cdb_max
 
-          CASE('actv_max')
-            READ(line_str,*) var1, var2, actv_max
+!          CASE('actv_max')
+!            READ(line_str,*) var1, var2, actv_max
 
 !          CASE('rhom')
 !            READ(line_str,*) var1, var2, rhom
 
-          CASE('poro_option')
-            READ(line_str,*) var1, var2, poro_option
+!          CASE('poro_option')
+!            READ(line_str,*) var1, var2, poro_option
 
-          CASE('poro_cst')
-            READ(line_str,*) var1, var2, porosity
+!          CASE('poro_cst')
+!            READ(line_str,*) var1, var2, porosity
 
-          CASE('Awooster')
-            READ(line_str,*) var1, var2, Awooster
+!          CASE('Awooster')
+!            READ(line_str,*) var1, var2, Awooster
 
-          CASE('Bwooster')
-            READ(line_str,*) var1, var2, Bwooster
+!          CASE('Bwooster')
+!            READ(line_str,*) var1, var2, Bwooster
 
-          CASE('sedlay_ini_opt')
-            READ(line_str,*) var1, var2, sedlay_ini_opt
+!          CASE('sedlay_ini_opt')
+!            READ(line_str,*) var1, var2, sedlay_ini_opt
 
-          CASE('toplay_inithick')
-            READ(line_str,*) var1, var2, toplay_inithick
+!          CASE('toplay_inithick')
+!            READ(line_str,*) var1, var2, toplay_inithick
 
-          CASE('bdldiffu')
-            READ(line_str,*) var1, var2, bdldiffu
+!          CASE('bdldiffu')
+!            READ(line_str,*) var1, var2, bdldiffu
 
-          CASE('Nbed')
-            READ(line_str,*) var1, var2, Nbed
+!          CASE('Nbed')
+!            READ(line_str,*) var1, var2, Nbed
 
-          CASE('bedload')
-            READ(line_str,*) var1, var2, bedload
+!          CASE('bedload')
+!            READ(line_str,*) var1, var2, bedload
 
-          CASE('bedload_filter')
-            READ(line_str,*) var1, var2, bedload_filter
+!          CASE('bedload_filter')
+!            READ(line_str,*) var1, var2, bedload_filter
 
-          CASE('bedload_limiter')
-            READ(line_str,*) var1, var2, bedload_limiter
+!          CASE('bedload_limiter')
+!            READ(line_str,*) var1, var2, bedload_limiter
 
-          CASE('suspended_load')
-            READ(line_str,*) var1, var2, suspended_load
+!          CASE('suspended_load')
+!            READ(line_str,*) var1, var2, suspended_load
 
-          CASE('slope_formulation')
-            READ(line_str,*) var1, var2, slope_formulation
+!          CASE('slope_formulation')
+!            READ(line_str,*) var1, var2, slope_formulation
 
-          CASE('alpha_bs')
-            READ(line_str,*) var1, var2, alpha_bs
+!          CASE('alpha_bs')
+!            READ(line_str,*) var1, var2, alpha_bs
 
-          CASE('alpha_bn')
-            READ(line_str,*) var1, var2, alpha_bn
+!          CASE('alpha_bn')
+!            READ(line_str,*) var1, var2, alpha_bn
 
-          CASE('ised_bc_bot')
-            READ(line_str,*) var1, var2, ised_bc_bot
+!          CASE('ised_bc_bot')
+!            READ(line_str,*) var1, var2, ised_bc_bot
 
-          CASE('sed_morph')
-            READ(line_str,*) var1, var2, sed_morph
+!          CASE('sed_morph')
+!            READ(line_str,*) var1, var2, sed_morph
 
-          !CASE('depo_scale')
-          !  READ(line_str,*) var1, var2, depo_scale
+!          !CASE('depo_scale')
+!          !  READ(line_str,*) var1, var2, depo_scale
 
-          CASE('sed_morph_time')
-            READ(line_str,*) var1, var2, sed_morph_time !in days
+!          CASE('sed_morph_time')
+!            READ(line_str,*) var1, var2, sed_morph_time !in days
 
-          CASE('sed_morph_fac')
-            READ(line_str,*) var1, var2, morph_fac ! morphological factor [-]
+!          CASE('sed_morph_fac')
+!            READ(line_str,*) var1, var2, morph_fac ! morphological factor [-]
 
-          CASE('drag_formulation')
-            READ(line_str,*) var1, var2, drag_formulation
+!          CASE('drag_formulation')
+!            READ(line_str,*) var1, var2, drag_formulation
 
-          CASE('ddensed')
-            READ(line_str,*) var1, var2, ddensed
+!          CASE('ddensed')
+!            READ(line_str,*) var1, var2, ddensed
 
-          CASE('comp_ws')
-            READ(line_str,*) var1, var2, comp_ws
+!          CASE('comp_ws')
+!            READ(line_str,*) var1, var2, comp_ws
 
-          CASE('comp_tauce')
-            READ(line_str,*) var1, var2, comp_tauce
+!          CASE('comp_tauce')
+!            READ(line_str,*) var1, var2, comp_tauce
 
-          CASE('bedforms_rough')
-            READ(line_str,*) var1, var2, bedforms_rough
+!          CASE('bedforms_rough')
+!            READ(line_str,*) var1, var2, bedforms_rough
 
-          CASE('iwave_ripple')
-            READ(line_str,*) var1, var2, iwave_ripple
+!          CASE('iwave_ripple')
+!            READ(line_str,*) var1, var2, iwave_ripple
 
-          CASE('irough_bdld')
-            READ(line_str,*) var1, var2, irough_bdld
+!          CASE('irough_bdld')
+!            READ(line_str,*) var1, var2, irough_bdld
 
-          CASE('slope_avalanching')
-            READ(line_str,*) var1, var2, slope_avalanching
+!          CASE('slope_avalanching')
+!            READ(line_str,*) var1, var2, slope_avalanching
 
-          CASE('dry_slope_cr')
-            READ(line_str,*) var1, var2, dry_slope_cr
- 
-          CASE('wet_slope_cr')
-            READ(line_str,*) var1, var2, wet_slope_cr
+!          CASE('dry_slope_cr')
+!            READ(line_str,*) var1, var2, dry_slope_cr
+! 
+!          CASE('wet_slope_cr')
+!            READ(line_str,*) var1, var2, wet_slope_cr
 
-          CASE('bedmass_filter')
-            READ(line_str,*) var1, var2, bedmass_filter
+!          CASE('bedmass_filter')
+!            READ(line_str,*) var1, var2, bedmass_filter
 
-          CASE('bedmass_threshold')
-            READ(line_str,*) var1, var2, bedmass_threshold  
+!          CASE('bedmass_threshold')
+!            READ(line_str,*) var1, var2, bedmass_threshold  
 
 !          CASE('relath')
 !            READ(line_str,*) var1, var2, relath
 
-          CASE('ised_dump')
-            READ(line_str,*) var1, var2, ised_dump
+!          CASE('ised_dump')
+!            READ(line_str,*) var1, var2, ised_dump
 
-          CASE('ierosion')
-            READ(line_str,*) var1, var2, ierosion
+!          CASE('ierosion')
+!            READ(line_str,*) var1, var2, ierosion
 
-          CASE('alphd') !1120:+alphd,refht,Tbp,im_pick_up
-            READ(line_str,*) var1, var2, alphd
+!          CASE('alphd') !1120:+alphd,refht,Tbp,im_pick_up
+!            READ(line_str,*) var1, var2, alphd
 
-          CASE('refht')
-            READ(line_str,*) var1, var2, refht
+!          CASE('refht')
+!            READ(line_str,*) var1, var2, refht
 
-          CASE('Tbp')
-            READ(line_str,*) var1, var2, Tbp
+!          CASE('Tbp')
+!            READ(line_str,*) var1, var2, Tbp
 
-          CASE('im_pick_up')
-            READ(line_str,*) var1, var2, im_pick_up
+!          CASE('im_pick_up')
+!            READ(line_str,*) var1, var2, im_pick_up
 
-          CASE('IMETH_BED_EVOL')
-            READ(line_str,*) var1, var2, imeth_bed_evol
+!          CASE('IMETH_BED_EVOL')
+!            READ(line_str,*) var1, var2, imeth_bed_evol
 
-          CASE('iasym')
-            READ(line_str,*) var1, var2, iasym
+!          CASE('iasym')
+!            READ(line_str,*) var1, var2, iasym
 
-          CASE('w_asym_max')
-            READ(line_str,*) var1, var2, w_asym_max
+!          CASE('w_asym_max')
+!            READ(line_str,*) var1, var2, w_asym_max
 
-          CASE('elfrink_filter')
-            READ(line_str,*) var1, var2, elfrink_filter
+!          CASE('elfrink_filter')
+!            READ(line_str,*) var1, var2, elfrink_filter
 
-          CASE('ech_uorb')
-            READ(line_str,*) var1, var2, ech_uorb
+!          CASE('ech_uorb')
+!            READ(line_str,*) var1, var2, ech_uorb
 
-          CASE('bedload_acc')
-            READ(line_str,*) var1, var2, bedload_acc
+!          CASE('bedload_acc')
+!            READ(line_str,*) var1, var2, bedload_acc
 
-          CASE('bedload_acc_filter')
-            READ(line_str,*) var1, var2, bedload_acc_filter
+!          CASE('bedload_acc_filter')
+!            READ(line_str,*) var1, var2, bedload_acc_filter
 
-          CASE('kacc_hoe')
-            READ(line_str,*) var1, var2, kacc_hoe
+!          CASE('kacc_hoe')
+!            READ(line_str,*) var1, var2, kacc_hoe
 
-          CASE('kacc_dub')
-            READ(line_str,*) var1, var2, kacc_dub
+!          CASE('kacc_dub')
+!            READ(line_str,*) var1, var2, kacc_dub
 
-          CASE('thresh_acc_opt')
-            READ(line_str,*) var1, var2, thresh_acc_opt
+!          CASE('thresh_acc_opt')
+!            READ(line_str,*) var1, var2, thresh_acc_opt
 
-          CASE('acrit')
-            READ(line_str,*) var1, var2, acrit
+!          CASE('acrit')
+!            READ(line_str,*) var1, var2, acrit
 
-          CASE('tau_option')
-            READ(line_str,*) var1, var2, tau_option
+!          CASE('tau_option')
+!            READ(line_str,*) var1, var2, tau_option
 
-          CASE('tau_max')
-            READ(line_str,*) var1, var2, tau_max
+!          CASE('tau_max')
+!            READ(line_str,*) var1, var2, tau_max
 
-          CASE('zstress')
-            READ(line_str,*) var1, var2, zstress
+!          CASE('zstress')
+!            READ(line_str,*) var1, var2, zstress
 
-        END SELECT
+!        END SELECT
 
-      ENDDO !scan sediment.in
-99    CLOSE(5)
+!      ENDDO !scan sediment.in
+!99    CLOSE(5)
 
 
-!---------------------
 !      g = g*1.0d0
 !      vonKar = vonKar*1.0d0
 !      Cdb_min = Cdb_min*1.0d0
 !      Cdb_max = Cdb_max*1.0d0
 !      rhom = rhom*1.0d0
-
-      ! Conversion of threshold from mm to m
-      bedmass_threshold = bedmass_threshold/1000.0d0
-!---------------------
-
-!     Catch unread parameters (for new additions only)
-      if(ised_bc_bot<0.or.ised_dump<0.or.ierosion<0) then
-        write(errmsg,*)'READ_SED, some pars. not read in:',ised_bc_bot,ised_dump,ierosion
-        call parallel_abort(errmsg)
-      endif 
-
-! BM: check
-      IF ((tau_option .EQ. 0) .OR. (tau_option .GT. 3)) THEN
-        WRITE(errmsg,*)'READ_SED: Invalid tau_option (from 1 to 3)'
-        CALL parallel_abort(errmsg)
-      END IF
-
 
 
 !---------------------------------------------------------------------
@@ -391,6 +419,9 @@
 ! Median sediment grain diameter (Sd50) input is in [mm]
 ! Critical shear for erosion and deposition (Tau_ce) input is in [N/m2]
 !---------------------------------------------------------------------
+
+      ! Conversion of threshold from mm to m
+      bedmass_threshold = bedmass_threshold/1000.0d0
 
       DO i=1,ntr_l !ntracers
         Sd50(i) = Sd50(i)*0.001d0 !to [m]
@@ -420,38 +451,40 @@
 !---------------------------------------------------------------------
 ! - Screen output of sediment-model parameters
 !---------------------------------------------------------------------
+      if(myrank==0) then
+        open(32,file=out_dir(1:len_out_dir)//'sediment.out.nml',status='replace')
+        write(32,nml=SED_CORE)
+        write(32,nml=SED_OPT)
+        close(32)
 
-       IF(myrank==0) THEN
-         WRITE(16,*)
-         WRITE(16,*) 'Sediment Parameters:'
-         WRITE(16,*) '--------------------'
-         WRITE(16,*) 'sed_debug: ', sed_debug
-         WRITE(16,*) 'Nbed: ',Nbed
-         IF (poro_option .EQ. 1) THEN
-           WRITE(16,*) 'Constant porosity: ',porosity
-         ELSE
-           WRITE(16,*) 'Variable porosity poro_option > 1'
-         END IF
-         IF (sed_morph .EQ. 1) THEN
-           WRITE(16,*) 'Accounting for morphodynamics'
-           WRITE(16,*) ' > sed_morph_time (ramp in days)=',sed_morph_time
-           WRITE(16,*) ' > morphological factor: ',morph_fac
-         END IF
-!         WRITE(16,*) 'bedthick_overall(1): ',bedthick_overall(1)
-         WRITE(16,*) 'New layer thickness',newlayer_thick
-         WRITE(16,*) '----------------------------------------------'
-         WRITE(16,*) 'Sed type  ;  Sd50 [m]  ;  Srho [kg/m3]  ;',     &
-         &          '  Wsed [m/s]  ;  Erate ;  tau_ce', &
-         &          ' [Pa]  ;  ierosion '
-         DO i = 1,ntr_l !ntracers
-           WRITE(16,*) iSedtype(i),Sd50(i),Srho(i),Wsed(i),Erate(i),   &
-           &           tau_ce(i)*rhom,ierosion
-         ENDDO
-         WRITE(16,*)
-       ENDIF
+        WRITE(16,*)
+        WRITE(16,*) 'Sediment Parameters:'
+        WRITE(16,*) '--------------------'
+        WRITE(16,*) 'sed_debug: ', sed_debug
+        WRITE(16,*) 'Nbed: ',Nbed
+        IF (poro_option .EQ. 1) THEN
+          WRITE(16,*) 'Constant porosity: ',porosity
+        ELSE
+          WRITE(16,*) 'Variable porosity poro_option > 1'
+        END IF
+        IF (sed_morph .EQ. 1) THEN
+          WRITE(16,*) 'Accounting for morphodynamics'
+          WRITE(16,*) ' > sed_morph_time (ramp in days)=',sed_morph_time
+          WRITE(16,*) ' > morphological factor: ',morph_fac
+        END IF
+!        WRITE(16,*) 'bedthick_overall(1): ',bedthick_overall(1)
+        WRITE(16,*) 'New layer thickness',newlayer_thick
+        WRITE(16,*) '----------------------------------------------'
+        WRITE(16,*) 'Sed type  ;  Sd50 [m]  ;  Srho [kg/m3]  ;',     &
+        &          '  Wsed [m/s]  ;  Erate ;  tau_ce', &
+        &          ' [Pa]  ;  ierosion '
+        DO i = 1,ntr_l !ntracers
+          WRITE(16,*) iSedtype(i),Sd50(i),Srho(i),Wsed(i),Erate(i),   &
+          &           tau_ce(i)*rhom,ierosion
+        ENDDO
+        WRITE(16,*)
+      ENDIF
 
-
-       IF(myrank==0) WRITE(16,*)'Leaving read_sed_input routine'
-       RETURN
+      IF(myrank==0) WRITE(16,*)'Leaving read_sed_input routine'
 !--------------------------------------------------------------------!
        END SUBROUTINE read_sed_input

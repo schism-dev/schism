@@ -199,7 +199,7 @@
        REAL(rkind), ALLOCATABLE :: Sd50(:)      ! mediam grain diameter; Sd50(ntr_l) [m]
        REAL(rkind), ALLOCATABLE :: Srho(:)      ! Sed grain density; Srho(ntr_l) [kg/m^3]
        REAL(rkind), ALLOCATABLE :: Wsed(:)      ! settling velocity (>0); Wsed(ntr_l) [m/s]
-       REAL(rkind), ALLOCATABLE :: poros(:)     ! porosity \in [0,1]; not used at the moment
+!       REAL(rkind), ALLOCATABLE :: poros(:)     ! porosity \in [0,1]; not used at the moment
        REAL(rkind), ALLOCATABLE :: tau_ce(:)    ! critical shear stress for erosion (>0); tau_ce(ntr_l) [m^2/s/s]
        INTEGER, ALLOCATABLE :: iSedtype(:)   ! Sediment type; iSedtype(ntr_l)
 !        REAL(rkind), ALLOCATABLE :: tau_cd(:)   ! critical shear stress for deposition - not used
