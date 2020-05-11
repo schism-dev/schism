@@ -15,10 +15,11 @@
 ! Modify hotstart.nc based on available data within certain regions
 
 ! Inputs:
-! hotstart.nc
+! hotstart.nc.0     (original)
+! hotstart.nc.1     (model-generated)
 
 ! Outputs:
-! hostart.nc.1
+! hotstart.nc
 
 
 ! ifort -O2 -mcmodel=medium -assume byterecl -o replace_hot_in_region compute_zcor.f90 replace_hot_in_region.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -226,7 +227,7 @@
   close(28)
 
 
-!-------------------modify sal/tem------------------------------
+!-------------------modify sal/tem, but not eta------------------------------
   !!DB
   iTest=0
   do i=1,np
@@ -275,23 +276,31 @@
 
   iret=nf90_close(sid)
 
+  write(*,*) "hotstart.nc updated and ready to use; the script will continue to generate diagnostic outputs, which will take some more time."
+
 !--------------diagnostic outputs---------------------
+  open(37,file='eout.gr3',status='replace')
   open(27,file='temp_surf.gr3',status='replace')
   open(28,file='salt_bot.gr3',status='replace')
 
+  write(37,*)
   write(27,*)
   write(28,*)
+  write(37,*) ne,np
   write(27,*) ne,np
   write(28,*) ne,np
   do i=1,np
+    write(37,*)i,xl(i),yl(i),eout(i)
     write(27,*)i,xl(i),yl(i),tempout(nvrt,i)
     write(28,*)j,xl(i),yl(i),saltout(1,i)
   enddo !i
   do i=1,ne
+    write(37,*)j,i34(i),(elnode(l,i),l=1,i34(i))
     write(27,*)j,i34(i),(elnode(l,i),l=1,i34(i))
     write(28,*)j,i34(i),(elnode(l,i),l=1,i34(i))
   enddo !i
 
+  close(37)
   close(27)
   close(28)
 

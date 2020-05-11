@@ -18,7 +18,7 @@
 ! hotstart.nc
 
 ! Outputs:
-! hostart.nc.1
+! hotstart.nc (overwrite original)
 
 
 ! ifort -O2 -mcmodel=medium -assume byterecl -o modify_hot compute_zcor.f90 modify_hot.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -295,8 +295,8 @@
   do i=1,np
     read(27,*) j,xtmp,ytmp,tmp1
     read(28,*) j,xtmp,ytmp,tmp2
+    eout(i)=tmp1
     if (iest(i)==2) then !in DB
-      eout(i)=tmp1
       saltout(1,i)=tmp2
       tempout(1,i)=21.0 !set 21 oC in DB
       do k=2,nvrt
