@@ -15,15 +15,15 @@
 ! Modify hotstart.nc based on available data within certain regions
 
 ! Inputs:
-! hotstart.nc     (original, but will be overwritten, better to make a copy)
-! hotstart.nc.1     (model-generated, must be on the same hgrid/vgrid as hotstart.nc)
-! estuary.gr3 (regions in which the values will be updated; set regions with depth = 2)
-
-! Outputs:
 ! hotstart.nc
 
+! Outputs:
+! salt_bot.gr3, salt_surf.gr3
+! temp_surf.gr3, temp_surf.gr3
+! elev.gr3
 
-! ifort -O2 -mcmodel=medium -assume byterecl -o replace_hot_in_region compute_zcor.f90 replace_hot_in_region.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+
+! ifort -O2 -mcmodel=medium -assume byterecl -o hotstart2gr3 compute_zcor.f90 hotstart2gr3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
   program gen_hot
   use netcdf
@@ -121,7 +121,7 @@
   print*, 'min/max z: ',minval(z),maxval(z)
 
 
-! -----------------Open old hotstart.nc (original, to be updated)------------------------
+! -----------------Open old hotstart.nc ------------------------
   status = nf90_open('hotstart.nc', nf90_nowrite, sid)
   call check(status)
 
@@ -161,151 +161,35 @@
   print*, 'min/max sal: ',minval(tr_nd(2,:,:)),maxval(tr_nd(2,:,:))
 
 
-  allocate(tempout(nvrt,np),saltout(nvrt,np),stat=ierr)
-  if(ierr/=0) stop 'Allocation failed (5)'
-  tempout=tr_nd(1,:,:); saltout=tr_nd(2,:,:)
-
-  iret=nf90_close(sid)
-
-! -----------------Open another hotstart.nc (#1: contains values to update the original hotstart.nc with)------------------------
-  status = nf90_open('hotstart.nc.1', nf90_nowrite, sid)
-  call check(status)
-
-  status = nf90_inq_varid(sid, "eta2", evid); call check(status)
-  print*, 'Done reading eout variable ID'
-  status = nf90_Inquire_Variable(sid, evid, dimids = dids); call check(status)
-  print*, dids(1),dids(2),dids(3),dids(4)
-
-  status = nf90_Inquire_Dimension(sid, dids(1), len = np0); call check(status)
-  if (np0.ne.np) then
-    print*, 'inconsistent np'
-    stop
-  endif
-  print*, 'np: ',np
-
-  allocate(eout1(np),stat=ier)
-  if(ierr/=0) stop 'Allocation failed (3)'
-  status = nf90_get_var(sid, evid, eout1); call check(status)
-  print*, 'Done reading eout'
-  print*, 'eout(1): ',eout1(1)
-  print*, 'eout(np): ',eout1(np)
-  print*, 'min/max eout: ',minval(eout1),maxval(eout1)
-
-
-  status = nf90_inq_varid(sid, "tr_nd", svid); call check(status)
-  print*, 'Done reading tr_nd variable ID'
-  status = nf90_Inquire_Variable(sid, svid, dimids = dids); call check(status)
-  print*, dids(1),dids(2),dids(3),dids(4)
-
-  allocate(tr_nd1(2,nvrt,np),stat=ierr)
-  if(ierr/=0) stop 'Allocation failed (4)'
-  status = nf90_get_var(sid, svid, tr_nd1); call check(status)
-  print*, 'Done reading tr_nd1'
-  print*, 'tr_nd1(1,1,1): ',tr_nd1(1,1,1)
-  print*, 'tr_nd1(2,nvrt,np): ',tr_nd1(2,nvrt,np)
-  print*, 'min/max tem: ',minval(tr_nd1(1,:,:)),maxval(tr_nd1(1,:,:))
-  print*, 'min/max sal: ',minval(tr_nd1(2,:,:)),maxval(tr_nd1(2,:,:))
-
   iret=nf90_close(sid)
 
 
 !--------------diagnostic outputs---------------------
-  open(27,file='temp_surf.0.gr3',status='replace')
-  open(28,file='salt_bot.0.gr3',status='replace')
-
-  write(27,*)
-  write(28,*)
-  write(27,*) ne,np
-  write(28,*) ne,np
-  do i=1,np
-    write(27,*)i,xl(i),yl(i),tempout(nvrt,i)
-    write(28,*)j,xl(i),yl(i),saltout(1,i)
-  enddo !i
-  do i=1,ne
-    write(27,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-    write(28,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-  enddo !i
-
-  close(27)
-  close(28)
-
-
-!-------------------modify sal/tem, but not eta------------------------------
-  !!DB
-  iTest=0
-  do i=1,np
-    if (iest(i)==2) then !in DB
-      !eout(i)=eout1(i)
-      saltout(:,i)=tr_nd1(2,:,i)
-      tempout(:,i)=tr_nd1(1,:,i)
-      if (iTest==0.and.dp(i)>5) then
-        iTest=1
-        !print *,'eout in DB at: ',i,xl(i),yl(i),eout(i)
-        print *,'saltout in DB: ',i,saltout(:,i)
-        print *,'tempout in DB: ',i,tempout(:,i)
-        !pause
-      endif
-    endif
-  enddo !i
-
-  !node to element 
-  allocate(tsel(2,nvrt,ne),stat=ierr)
-  if(ierr/=0) stop 'Allocation failed (8)'
-  do i=1,ne
-    do k=2,nvrt
-      tsel(1,k,i)=(sum(tempout(k,elnode(1:i34(i),i)))+sum(tempout(k-1,elnode(1:i34(i),i))))/2/i34(i) 
-      tsel(2,k,i)=(sum(saltout(k,elnode(1:i34(i),i)))+sum(saltout(k-1,elnode(1:i34(i),i))))/2/i34(i)
-    enddo !k
-    tsel(1,1,i)=tsel(1,2,i) !mainly for hotstart format
-    tsel(2,1,i)=tsel(2,2,i)
-  enddo !i
-
-
-!------------write new values for eta2, tr_nd, tr_nd0, tr_el-----------------
-  status = nf90_open('hotstart.nc',nf90_write, sid); call check(status)
-
-  status = nf90_inq_varid(sid, "eta2", evid); call check(status)
-  iret=nf90_put_var(sid,evid,dble(eout(1:np)),(/1/),(/np/))
-
-  status = nf90_inq_varid(sid, "tr_nd", svid); call check(status)
-  iret=nf90_put_var(sid,svid,dble(tempout(1:nvrt,1:np)),(/1,1,1/),(/1,nvrt,np/))
-  iret=nf90_put_var(sid,svid,dble(saltout(1:nvrt,1:np)),(/2,1,1/),(/1,nvrt,np/))
-  status = nf90_inq_varid(sid, "tr_nd0", svid); call check(status)
-  iret=nf90_put_var(sid,svid,dble(tempout(1:nvrt,1:np)),(/1,1,1/),(/1,nvrt,np/))
-  iret=nf90_put_var(sid,svid,dble(saltout(1:nvrt,1:np)),(/2,1,1/),(/1,nvrt,np/))
-
-  status = nf90_inq_varid(sid, "tr_el", svid); call check(status)
-  iret=nf90_put_var(sid,svid,dble(tsel(1:2,1:nvrt,1:ne)))
-
-  iret=nf90_close(sid)
-
-  write(*,*) "hotstart.nc updated and ready to use; the script will continue to generate diagnostic outputs, which will take some more time."
-
-!--------------diagnostic outputs---------------------
-  open(37,file='eout.gr3',status='replace')
   open(27,file='temp_surf.gr3',status='replace')
-  open(28,file='salt_bot.gr3',status='replace')
+  open(28,file='temp_bot.gr3',status='replace')
+  open(37,file='salt_surf.gr3',status='replace')
+  open(38,file='salt_bot.gr3',status='replace')
+  open(29,file='elev.gr3',status='replace')
 
-  write(37,*)
-  write(27,*)
-  write(28,*)
-  write(37,*) ne,np
-  write(27,*) ne,np
-  write(28,*) ne,np
+  write(27,*); write(28,*); write(37,*); write(38,*); write(29,*)
+  write(27,*) ne,np; write(28,*) ne,np; write(37,*) ne,np; write(38,*) ne,np; write(29,*) ne,np
   do i=1,np
-    write(37,*)i,xl(i),yl(i),eout(i)
-    write(27,*)i,xl(i),yl(i),tempout(nvrt,i)
-    write(28,*)j,xl(i),yl(i),saltout(1,i)
+    write(27,*)i,xl(i),yl(i),tr_nd(1,nvrt,i)
+    write(28,*)i,xl(i),yl(i),tr_nd(1,1,i)
+    write(37,*)j,xl(i),yl(i),tr_nd(2,nvrt,i)
+    write(38,*)j,xl(i),yl(i),tr_nd(2,1,i)
+    write(29,*)j,xl(i),yl(i),eout(i)
   enddo !i
   do i=1,ne
-    write(37,*)j,i34(i),(elnode(l,i),l=1,i34(i))
     write(27,*)j,i34(i),(elnode(l,i),l=1,i34(i))
     write(28,*)j,i34(i),(elnode(l,i),l=1,i34(i))
+    write(37,*)j,i34(i),(elnode(l,i),l=1,i34(i))
+    write(38,*)j,i34(i),(elnode(l,i),l=1,i34(i))
+    write(29,*)j,i34(i),(elnode(l,i),l=1,i34(i))
   enddo !i
 
-  close(37)
-  close(27)
-  close(28)
+  close(27); close(28); close(37); close(38); close(29)
+
 
 !---------------subroutines--------------------
   contains

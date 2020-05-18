@@ -48,6 +48,9 @@ system("./gen_hot_3Dth_from_hycom.exe");
 
 
 
+
+
+
 #--------------------modify---------------------
 print("-------------------------------\n");
 print(">>>>>>>>>>>>Additional data>>>>>>>>>>>>>\n");
@@ -58,16 +61,19 @@ system("./auto.pl");
 
 chdir($thisdir);
 
+
+
+#set initial elev and salt on *.gr3, which will be later put into hotstart.nc 
+
 #set elev.ic
 system("ln -sf Elev_IC/elev.ic DB_elev_ic.gr3");
 
+
 #set salt.ic
 print(">>>>>>>>>>>>Preparing i.c. for S >>>>>>>>>>>>>\n");
-system("ln -sf DelawareBay_Data/DB_surf_S_ic.subset.gr3 bg.gr3");
 system("rm fg.gr3"); 
-#make fg.gr3, to be interpolated on
+#make fg.gr3 (same as the current hgrid.gr3 except that depth=33, i.e., ocean sal) to be interpolated on
 system("./gen_gr3.pl");
-#
 #set initial sal to 0 in coastal zones before interpolation
 system("$script_dir/auto_edit_region 0 ic_S_0.reg fg.gr3 0");
 move("out.gr3","fg.gr3");
@@ -76,14 +82,18 @@ system("$script_dir/auto_edit_region 0 ic_S_0_Missi.reg fg.gr3 0");
 move("out.gr3","fg.gr3");
 print(">>>>>>>>>>>>Done Setting 0 salinity i.c. in coastal zones>>>>>>>>>>>>>\n");
 
-#make include.gr3 for salt interp inside DB
+#For the Delaware Bay: initial S is saved in DB_surf_S_ic.subset.gr3,
+#which is a previsouly prepared estimation.
+system("ln -sf DelawareBay_Data/DB_surf_S_ic.subset.gr3 bg.gr3");
+#make include.gr3 for salt interp
 system("$script_dir/auto_edit_region 0 DB.reg hgrid.gr3 1 0");
 move("out.gr3","include.gr3");
-#do interp between 2 *.gr3
+#do interp from bg.gr3 to fg.gr3
 system("$script_dir/interpolate_unstructured");
 system("mv fg.new DB_surf_S_ic.gr3");
 print(">>>>>>>>>>>>Done interpolating salinity i.c. in Delaware Bay>>>>>>>>>>>>>\n");
 
+#For the Chespeake Bay: initial S/T is from OBS
 #set CB=1 in estuary.gr3
 system("$script_dir/auto_edit_region 0 CB.reg hgrid.gr3 1 0");
 move("out.gr3","estuary.gr3");
@@ -98,6 +108,7 @@ move("out.gr3","estuary.gr3");
 system("./modify_hot");
 
 
+#------------------clean up---------------------------
 system("rm ../hotstart.nc");
 system("mv  hotstart.nc ../hotstart.nc");
 system("rm ../*.th.nc");
