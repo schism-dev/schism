@@ -7956,8 +7956,8 @@
 
 !     Open new global output files and write header data
       if(mod(it,ihfskip)==0) then
-        !i=nf90_close(ncid)
-        ifile=ifile+1                   !output file #
+        ifile=ifile+1  !output file #
+        !ifile=it/ihfskip+1
         call fill_nc_header(1)
       endif !it==ifile*ihfskip
 
