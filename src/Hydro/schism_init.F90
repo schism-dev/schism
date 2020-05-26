@@ -88,6 +88,7 @@
       use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
       use ice_therm_mod, only: t_oi
+
 #endif
 
       implicit none
@@ -121,16 +122,16 @@
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
-!      real(rkind), allocatable :: swild4(:,:) !double precision for hotstart.in (only)
+      real(rkind), allocatable :: swild4(:,:) !double precision for hotstart.in (only)
       real(rkind), allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange etc (deallocate immediately afterwards)
-!      real(rkind), allocatable :: buf3(:)
+      real(rkind), allocatable :: buf3(:)
 !      real(4), allocatable :: swild9(:,:) !used in tracer nudging
 
 
 !     Local variables
       type(llist_type),pointer :: llp
       logical :: ltmp,ltmp1,ltmp2,lexist
-      character(len=48) :: inputfile
+      character(len=48) :: inputfile,ar_name(100)
 
       integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
@@ -1621,7 +1622,7 @@
 
 !     Alloc arrays that are used only in this routine. Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
       allocate(nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &swild3(50+ntracers),stat=istat)
+         &swild3(50+ntracers),swild4(ntracers,nvrt),stat=istat)
       if(istat/=0) call parallel_abort('INIT: alloc wild')
 
       if(iorder==0) then
@@ -4955,22 +4956,772 @@
 ! Hot start section
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
-!      time=0.d0
+      time=0.d0
       iths=0
+      if(ihot/=0) then
+        allocate(buf3(ns_global),stat=istat)
+        if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
-      !Other init that can be called from another driver program (e.g. ESMF, PDAF)
-      call other_hot_init(iths)
+        !All ranks open .nc but rank 0 reads most of data 
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
-!     Broadcast to global module and save
+        if(myrank==0) then
+          !Sanity check dims
+          nwild=-999 !init
+          j=nf90_inq_dimid(ncid2,'node',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(1))
+          j=nf90_inq_dimid(ncid2,'elem',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(2))
+          j=nf90_inq_dimid(ncid2,'side',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(3))
+          j=nf90_inq_dimid(ncid2,'nVert',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(4))
+          j=nf90_inq_dimid(ncid2,'ntracers',mm)
+          j=nf90_inquire_dimension(ncid2,mm,len=nwild(5))
+          if(nwild(1)/=np_global.or.nwild(2)/=ne_global.or.nwild(3)/=ns_global.or. &
+     &nwild(4)/=nvrt.or.nwild(5)/=ntracers) then
+            write(errmsg,*)'init: nc dim mismatch,',nwild(1:5),np_global,ne_global,ns_global,nvrt,ntracers
+            call parallel_abort(errmsg)
+          endif
+
+          j=nf90_inq_varid(ncid2, "time",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc time1')
+          j=nf90_get_var(ncid2,mm,time);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc time2')
+          j=nf90_inq_varid(ncid2, "iths",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc iths1')
+          j=nf90_get_var(ncid2,mm,iths)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc iths2')
+          j=nf90_inq_varid(ncid2, "ifile",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ifile1')
+          j=nf90_get_var(ncid2,mm,ifile);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ifile2')
+        endif !myrank==0
+        call mpi_bcast(time,1,rtype,0,comm,istat)
+        call mpi_bcast(iths,1,itype,0,comm,istat)
+        call mpi_bcast(ifile,1,itype,0,comm,istat)
+
+        ! Element data
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry_e",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ne_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_e2')
+        endif !myrank==0
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat) !nwilds(ns_global)
+
+        do i=1,ne_global
+          if(iegl(i)%rank==myrank) then
+            ie=iegl(i)%id
+            idry_e(ie)=nwild2(i)
+          endif
+        enddo !i
+
+!        allocate(swild98(ntracers,nvrt,ne_global),swild99(nvrt,ns_global),stat=istat)
+!        if(istat/=0) call parallel_abort('Init: alloc(9.1)')
+!        swild99(nvrt,ns_global)=0 !touch memory
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "we",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc we')
+        endif
+        do k=1,nvrt
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/k,1/),(/1,ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc we2')
+          endif !myrank==0) 
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ne_global
+            if(iegl(i)%rank==myrank) then
+              ie=iegl(i)%id
+              we(k,ie)=buf3(i) !swild99(:,i)
+            endif
+          enddo !i
+        enddo !k
+
+        !Error: this could be a bottleneck
+        j=nf90_inq_varid(ncid2, "tr_el",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc tr_el')
+        do i=1,ne_global
+          if(iegl(i)%rank==myrank) then
+            ie=iegl(i)%id
+            j=nf90_get_var(ncid2,mm,tr_el(:,:,ie),(/1,1,i/),(/ntracers,nvrt,1/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc tr_el2')
+          endif
+        enddo
+
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)'Elem data:'
+!          write(88,*)nwild2(1:ne_global)
+!          write(88,*)swild99(:,1:ne_global)
+!          write(88,*)swild98(:,:,1:ne_global)
+!        endif
+
+        ! Side data
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry_s",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ns_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry_s2')
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
+
+        do i=1,ns_global
+          if(isgl(i)%rank==myrank) then
+            iside=isgl(i)%id
+            idry_s(iside)=nwild2(i)
+          endif
+        enddo !i
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "su2",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc su2')
+        endif
+        do k=1,nvrt
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc su2b')
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)         
+
+          do i=1,ns_global
+            if(isgl(i)%rank==myrank) then
+              iside=isgl(i)%id
+              su2(k,iside)=buf3(i)
+            endif
+          enddo !i
+        enddo !k
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)'side data:'
+!          write(88,*)nwild2(1:ns_global)
+!          write(88,*)swild99(:,1:ns_global)
+!        endif
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "sv2",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc sv2')
+        endif
+        do k=1,nvrt
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ns_global),(/k,1/),(/1,ns_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc sv2b')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ns_global
+            if(isgl(i)%rank==myrank) then
+              iside=isgl(i)%id
+              sv2(k,iside)=buf3(i)
+            endif
+          enddo !i
+        enddo !k
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)swild99(:,1:ns_global)
+!        endif
+
+        ! Node data
+        !Error: this could be a bottlenceck
+        j=nf90_inq_varid(ncid2, "tr_nd",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc tr_nd')
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            j=nf90_get_var(ncid2,mm,tr_nd(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc tr_nd2')
+          endif
+        enddo
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)'Node data:'
+!          write(88,*)swild98(:,:,1:np_global)
+!        endif
+
+        j=nf90_inq_varid(ncid2, "tr_nd0",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc tr_nd0')
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc tr_nd0b')
+          endif
+        enddo
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)swild98(:,:,1:np_global)
+!        endif
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "idry",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc idry2')
+          j=nf90_inq_varid(ncid2, "eta2",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc eta2')
+          j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc eta2b')
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)        
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            eta2(ip)=buf3(i)
+            idry(ip)=nwild2(i)
+          endif
+        enddo !i
+
+        !Debug: dump
+!        if(myrank==0) then
+!          write(88,*)nwild2(1:np_global)
+!          write(88,*)swild99(1,1:np_global)
+!        endif
+
+        !gfortran requires all chars have same length
+        ar_name(1:6)=(/'q2  ','xl  ','dfv ','dfh ','dfq1','dfq2'/)
+        do m=1,6 !# of 2D node arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(m))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc node1')
+          endif
+
+          do k=1,nvrt
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/k,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc node2')
+            endif !myrank
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                if(m==1) then
+                  q2(k,ip)=buf3(i)
+                else if(m==2) then
+                  xl(k,ip)=buf3(i)
+                else if(m==3) then
+                  dfv(k,ip)=buf3(i)
+                else if(m==4) then
+                  dfh(k,ip)=buf3(i)
+                else if(m==5) then
+                  dfq1(k,ip)=buf3(i)
+                else if(m==6) then
+                  dfq2(k,ip)=buf3(i)
+                endif
+              endif !ipgl
+            enddo !i
+          enddo !k
+        enddo !m
+
+        qnon=0.d0
+
+!        write(12,*)'elem after hot'
+!        do i=1,nea
+!          write(12,*)ielg(i),tr_el(:,nvrt,i),idry_e(i)
+!        enddo !
+!        write(12,*)'side after hot'
+!        do i=1,nsa
+!          write(12,*)'u',islg(i),su2(:,i)
+!          write(12,*)'v',islg(i),sv2(:,i)
+!        enddo !
+!        write(12,*)'node after hot'
+!        do i=1,npa
+!          write(12,*)iplg(i),eta2(i),dfv(:,i)
+!        enddo !
+!        call parallel_finalize
+!        stop
+
+
+#ifdef USE_ICM
+        !gfortran requires all chars have same length
+        ar_name(1:32)=(/'SED_BENDO','CTEMP    ','BBM      ','CPOS     ','PO4T2TM1S', &
+     &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
+     &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
+     &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
+     &'POC3TM1S ','POP1TM1S ','POP2TM1S ','POP3TM1S ','PSITM1S  ','BFORMAXS ', &
+     &'ISWBENS  ','DFEEDM1S ','hcansav  '/)
+!'
+        do k=1,32 !# of 1D arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ne_global
+            if(iegl(i)%rank==myrank) then
+              ie=iegl(i)%id
+              if(k==1) then
+                SED_BENDO(ie)=buf3(i)
+              else if(k==2) then
+                CTEMP(ie)=buf3(i)
+              else if(k==3) then
+                BBM(ie)=buf3(i)
+              else if(k==4) then
+                CPOS(ie)=buf3(i)
+              else if(k==5) then
+                PO4T2TM1S(ie)=buf3(i)
+              else if(k==6) then
+                NH4T2TM1S(ie)=buf3(i)
+              else if(k==7) then
+                NO3T2TM1S(ie)=buf3(i)
+              else if(k==8) then
+                HST2TM1S(ie)=buf3(i)
+              else if(k==9) then
+                CH4T2TM1S(ie)=buf3(i)
+              else if(k==10) then
+                CH41TM1S(ie)=buf3(i)
+              else if(k==11) then
+                SO4T2TM1S(ie)=buf3(i)
+              else if(k==12) then
+                SIT2TM1S(ie)=buf3(i)
+              else if(k==13) then
+                BENSTR1S(ie)=buf3(i)
+              else if(k==14) then
+                NH41TM1S(ie)=buf3(i)
+              else if(k==15) then
+                NO31TM1S(ie)=buf3(i)
+              else if(k==16) then
+                HS1TM1S(ie)=buf3(i)
+              else if(k==17) then
+                SI1TM1S(ie)=buf3(i)
+              else if(k==18) then
+                PO41TM1S(ie)=buf3(i)
+              else if(k==19) then
+                PON1TM1S(ie)=buf3(i)
+              else if(k==20) then
+                PON2TM1S(ie)=buf3(i)
+              else if(k==21) then
+                PON3TM1S(ie)=buf3(i)
+              else if(k==22) then
+                POC1TM1S(ie)=buf3(i)
+              else if(k==23) then
+                POC2TM1S(ie)=buf3(i)
+              else if(k==24) then
+                POC3TM1S(ie)=buf3(i)
+              else if(k==25) then
+                POP1TM1S(ie)=buf3(i)
+              else if(k==26) then
+                POP2TM1S(ie)=buf3(i)
+              else if(k==27) then
+                POP3TM1S(ie)=buf3(i)
+              else if(k==28) then
+                PSITM1S(ie)=buf3(i)
+              else if(k==29) then
+                BFORMAXS(ie)=buf3(i)
+              else if(k==30) then
+                ISWBENS(ie)=buf3(i)
+              else if(k==31) then
+                DFEEDM1S(ie)=buf3(i)
+              else if(k==32) then
+                hcansav(ie)=buf3(i)
+              endif
+            endif !iegl
+          enddo !i
+        enddo !k=1,31
+
+        !gfortran requires all chars have same length
+        ar_name(1:6)=(/'CPOP ','CPON ','CPOC ','lfsav','stsav','rtsav'/)
+        do k=1,3 !# of 2D arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
+          endif
+
+          do m=1,3
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                if(k==1) then
+                  CPOP(ie,m)=buf3(i)
+                else if(k==2) then
+                  CPON(ie,m)=buf3(i)
+                else if(k==3) then
+                  CPOC(ie,m)=buf3(i)
+                endif
+              endif !iegl
+            enddo !i
+          enddo !m
+        enddo !k
+
+        do k=4,6 !# of 2D arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
+          endif
+          do m=1,nvrt
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM6')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                if(k==4) then
+                  lfsav(m,ie)=buf3(i)
+                else if(k==5) then
+                  stsav(m,ie)=buf3(i)
+                else if(k==6) then
+                  rtsav(m,ie)=buf3(i)
+                endif
+              endif !iegl
+            enddo !i
+          enddo !m
+        enddo !k
+
+        j=nf90_inq_varid(ncid2,'wqc',mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ICM7')
+        do i=1,ne_global
+          if(iegl(i)%rank==myrank) then
+            ie=iegl(i)%id
+            !j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
+            j=nf90_get_var(ncid2,mm,swild4(1:ntrs(7),:),(/1,1,i/),(/ntrs(7),nvrt,1/))
+            wqc(:,:,ie)=swild4(1:ntrs(7),:)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM8')
+          endif!iegl
+        enddo !i
+
+#endif /*USE_ICM*/
+
+#ifdef USE_COSINE
+        !gfortran requires all chars have same length
+        ar_name(1:4)=(/'COS_mS2','COS_mDN','COS_mZ1','COS_mZ2'/)
+        do l=1,4 !# of 3D arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(l))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc COS1')
+          endif
+
+          do k=1,nvrt
+            do m=1,ndelay
+              if(myrank==0) then
+                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,k,1/),(/1,1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('init: nc COS2')
+              endif
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  ie=iegl(i)%id
+                  if(l==1) then
+                    mS2(m,k,ie)=buf3(i)
+                  else if(l==2) then
+                    mDN(m,k,ie)=buf3(i)
+                  else if(l==3) then
+                    mZ1(m,k,ie)=buf3(i)
+                  else if(l==4) then
+                    mZ2(m,k,ie)=buf3(i)
+                  endif
+                endif !iegl
+              enddo !i
+            enddo !m
+          enddo !k
+        enddo !l
+
+        !gfortran requires all chars have same length
+        ar_name(1:5)=(/'COS_sS2  ','COS_sDN  ','COS_sZ1  ','COS_sZ2  ','COS_nstep'/)
+!'
+        do l=1,5 !# of 2D arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(l))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc COS3')
+          endif
+
+          do k=1,nvrt
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/k,1/),(/1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc COS4')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                if(l==1) then
+                  sS2(k,ie)=buf3(i)
+                else if(l==2) then
+                  sDN(k,ie)=buf3(i)
+                else if(l==3) then
+                  sZ1(k,ie)=buf3(i)
+                else if(l==4) then
+                  sZ2(k,ie)=buf3(i)
+                else if(l==5) then
+                  nstep(k,ie)=nint(buf3(i))
+                endif
+              endif !iegl
+            enddo !i
+          enddo !k
+        enddo !l
+#endif /*USE_COSINE*/
+
+#ifdef USE_SED2D 
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"SED2D_dp",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED2D')
+          j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED2D2')
+        endif
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            dp(ip)=buf3(i)
+          endif
+        enddo !i
+#endif
+
+#ifdef USE_SED
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"SED3D_dp",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_dp')
+          j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_dp2')
+        endif
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            dp(ip)=buf3(i)
+          endif
+        enddo !i
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"SED3D_rough",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_rough')
+          j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_rough2')
+        endif
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            rough_p(ip)=buf3(i)
+          endif
+        enddo !i
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"SED3D_bed",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_bed0')
+        endif
+        do k=1,Nbed
+          do m=1,MBEDP
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,k,1/),(/1,1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_bed')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                bed(k,ie,m)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
+        enddo !k
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"SED3D_bedfrac",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc SED3D_bedfrac')
+        endif
+        do k=1,Nbed
+          do m=1,ntrs(5)
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,k,1/),(/1,1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc bedfrac')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                bed_frac(k,ie,m)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
+        enddo !k
+#endif /*USE_SED*/
+
+#ifdef USE_MARSH
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2, "marsh_flag",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc marsh_flag')
+          j=nf90_get_var(ncid2,mm,nwild2,(/1/),(/ne_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc marsh_flag2')
+        endif
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
+
+        do i=1,ne_global
+          if(iegl(i)%rank==myrank) then
+            ie=iegl(i)%id
+            imarsh(ie)=nwild2(i)
+          endif
+        enddo !i
+#endif /*USE_MARSH*/
+
+#ifdef USE_ICE
+        j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
+        j=nf90_get_var(ncid2,mm,itmp)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
+        if(itmp==0) then
+          lice_free_gb=.false.
+        else
+          lice_free_gb=.true.
+        endif
+        if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
+
+        !gfortran requires all chars have same length
+        ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
+        do k=1,5 !# of 1D node arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              if(k==1) then
+                t_oi(ip)=buf3(i)
+              else if(k==2) then
+                fresh_wa_flux(ip)=buf3(i)
+              else if(k==3) then
+                net_heat_flux(ip)=buf3(i)
+              else if(k==4) then
+                u_ice(ip)=buf3(i)
+              else if(k==5) then
+                v_ice(ip)=buf3(i)
+              endif
+            endif !ipgl
+          enddo !i
+        enddo !k
+
+        ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
+        do k=1,3 !# of 1D elem arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ne_global
+            if(iegl(i)%rank==myrank) then
+              ie=iegl(i)%id
+              if(k==1) then
+                sigma11(ie)=buf3(i)
+              else if(k==2) then
+                sigma12(ie)=buf3(i)
+              else if(k==3) then
+                sigma22(ie)=buf3(i)
+              endif
+            endif !ipgl
+          enddo !i
+        enddo !k
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
+        endif
+        do m=1,2
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              tau_oi(m,ip)=buf3(i)
+            endif !iegl
+          enddo !i
+        enddo !m
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"ice_tracers",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
+        endif
+        do m=1,ntr_ice
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ice_tr(m,ip)=buf3(i)
+            endif !iegl
+          enddo !i
+        enddo !m
+#endif /*USE_ICE*/
+
+#ifdef USE_HA
+        call parallel_abort('init: hot option for HA diabled')
+#endif /*USE_HA*/
+
+        deallocate(buf3)
+        j=nf90_close(ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc close')
+
+#ifdef USE_FABM
+        call fabm_schism_read_horizontal_state_from_netcdf('fabm_schism_hotstart.nc',time=time)
+!'
+#endif
+
+! removed: itur
+
+!...    change time and iteration for forecast mode
+!...    Causion: this affects all t.h. files (fort.5[0-3]) and wind files
+        if(ihot==1) then
+          time=0.d0
+          iths=0
+        endif
+
+        if(myrank==0) write(16,*)'hot start at time=',time,iths,' ; stack #=',ifile
+
+!     end hot start section
+      endif !ihot/=0
+
+!     Broadcast to global module
       iths_main=iths
  
 !     Open global output files and write header data
-!      if(ihot<=1) ifile=1 !reset output file #
-!      call fill_nc_header(0)
-!
-!#ifdef SINGLE_NETCDF_OUTPUT
-!      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
-!#endif
+      if(ihot<=1) ifile=1 !reset output file #
+      call fill_nc_header(0)
+
+#ifdef SINGLE_NETCDF_OUTPUT
+      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
+#endif
 
       if(myrank==0) write(16,'(a)')'Done initializing outputs'
       
@@ -5001,10 +5752,10 @@
       endif !itur==4 etc
 
 !...  Impose limit for diffusivities for cold & hot starts
-!      do j=1,npa
-!        dfv(:,j)=min(diffmax(j),max(diffmin(j),dfv(:,j)))
-!        dfh(:,j)=min(diffmax(j),max(diffmin(j),dfh(:,j)))
-!      enddo !j
+      do j=1,npa
+        dfv(:,j)=min(diffmax(j),max(diffmin(j),dfv(:,j)))
+        dfh(:,j)=min(diffmax(j),max(diffmin(j),dfh(:,j)))
+      enddo !j
 
 !     Set essential b.c. flags (needed by PetSc)
       lelbc=.false.
@@ -5029,6 +5780,9 @@
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 
 
 
+      !Finish other init
+      call other_hot_init(time)
+
       if(myrank==0) then
         write(16,*)'time stepping begins...',iths_main+1,ntime
         call flush(16) ! flush "mirror.out"
@@ -5050,7 +5804,9 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild10)
+      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10)
+!      if(allocated(rwild)) deallocate(rwild)
+!      deallocate(swild9)
 
       end subroutine schism_init
 
