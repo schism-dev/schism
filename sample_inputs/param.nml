@@ -667,7 +667,7 @@
   iof_hydro(2) = 0 !air pressure [Pa]  {air_pressure}
   iof_hydro(3) = 0 !air temperature [C] {air_temperature}
   iof_hydro(4) = 0 !Specific humidity [-] {specific_humidity}
-  iof_hydro(5) = 0 !solar (shortwave) radiation [W/m/m] {solar_radiation}
+  iof_hydro(5) = 0 !Net downward solar (shortwave) radiation after albedo [W/m/m] {solar_radiation}
   iof_hydro(6) = 0 !sensible flux (positive upward) [W/m/m]  {sensible_flux}
   iof_hydro(7) = 0 !latent heat flux (positive upward) [W/m/m] {latent_heat}
   iof_hydro(8) = 0 !upward longwave radiation (positive upward) [W/m/m] {upward_longwave}
