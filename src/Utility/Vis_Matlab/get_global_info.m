@@ -2,6 +2,7 @@ function [ne,np,nvrt,nm,xy00,i23d,ivs,vzcor,vid5,vdry_e,h0,dp,kbp00,vid_eta,npro
 %Get basic info before reading (combined or uncombined) nc outputs 
 %Outputs starting from npoc are only defined if icomb=0 (uncombined)
 %vzcor,vis5,vdry_e: IDs for zcor and varname, and wetdry_elem
+%xy00(np,2); nm(4,ne)
 
 if(icomb==0)
   fid=fopen([base '/outputs/local_to_global_0000'],'r');
