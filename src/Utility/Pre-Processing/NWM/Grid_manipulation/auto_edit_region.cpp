@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 
   cout << "option = " << iMaxMin << endl;
   cout << "in_value = " << in_value << endl;
-  cout << "out_value = " << out_value << endl;
+  if (i_default) cout << "out_value = " << out_value << endl;
 
 
   //read polygon from *.reg

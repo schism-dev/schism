@@ -16,9 +16,16 @@
 
 ! Inputs:
 ! hotstart.nc
+! elev_ic.gr3
+! sal_ic.gr3
+! sal_ic_reg.gr3
+! tem_ic.gr3
+! tem_ic_reg.gr3
+! Inputs for Chesapeake Bay obs (come with the script, no need to change)
 
 ! Outputs:
-! hotstart.nc (overwrite original)
+! hotstart.nc (overwrite original values with *_ic.gr3 inside *.reg,
+! and overwrite original values with Chesapeake Bay obs)
 
 
 ! ifort -O2 -mcmodel=medium -assume byterecl -o modify_hot compute_zcor.f90 modify_hot.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -41,12 +48,13 @@
   real(4), allocatable :: eout(:),xl(:),yl(:),dp(:), &
     & sigma_lcl(:,:),z(:,:),ztot(:),sigma(:),x0(:),y0(:),val(:,:),z0(:,:),temp1(:), &
     & temp2(:),saltout(:,:),tempout(:,:),tr_nd(:,:,:),tsel(:,:,:)
-  integer, allocatable :: iest(:),elnode(:,:),i34(:),kbp2(:),nDepth(:),nn(:), &
+  integer, allocatable :: i_ic_tem(:),i_ic_sal(:),elnode(:,:),i34(:),kbp2(:),nDepth(:),nn(:), &
     & iTest(:)
   character(Len = 1000),allocatable :: stName(:)
   
 ! -----------------Read grids------------------------
-  open(17,file='estuary.gr3',status='old')
+  open(17,file='sal_ic_reg.gr3',status='old')
+  open(13,file='tem_ic_reg.gr3',status='old')
   open(16,file='hgrid.ll',status='old')
   open(14,file='hgrid.gr3',status='old') !only need depth info and connectivity
   open(19,file='vgrid.in',status='old')
@@ -54,21 +62,26 @@
   read(14,*)
   read(14,*)ne,np
 
-  allocate(iest(np),xl(np),yl(np),dp(np),stat=ierr)
+  allocate(i_ic_tem(np),i_ic_sal(np),xl(np),yl(np),dp(np),stat=ierr)
   allocate(elnode(4,ne),i34(ne),stat=ierr)
   if(ierr/=0) stop 'Allocation failed (1)'
 
-  read(16,*)
-  read(16,*)
-  read(17,*)
-  read(17,*)
+  read(16,*); read(16,*); read(17,*); read(17,*); read(13,*); read(13,*)
   do i=1,np
     read(14,*)j,xtmp,ytmp,dp(i)
     read(16,*)j,xl(i),yl(i) 
+
     read(17,*)j,xtmp,ytmp,tmp
-    iest(i)=nint(tmp)
-    if(iest(i)<0.and.iest(i)>2) then
-      write(11,*)'Estuary flag wrong:',i,iest(i)
+    i_ic_sal(i)=nint(tmp)
+    read(13,*)j,xtmp,ytmp,tmp
+    i_ic_tem(i)=nint(tmp)
+
+    if(i_ic_sal(i)<0.and.i_ic_sal(i)>2) then
+      write(11,*)'sal ic flag wrong:',i,i_ic_sal(i)
+      stop
+    endif
+    if(i_ic_tem(i)<0.and.i_ic_tem(i)>2) then
+      write(11,*)'tem ic flag wrong:',i,i_ic_tem(i)
       stop
     endif
   enddo !i
@@ -76,8 +89,7 @@
     read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
   enddo !i
 
-  close(14)
-  close(16)
+  close(14); close(16); close(17); close(13)
 
   print*, 'xl(1): ',xl(1)
   print*, 'xl(np): ',xl(np)
@@ -226,9 +238,9 @@
           cycle
       endif
       ! find lat between two CB*.* stations
-      if(iest(i).ne.1) then !outside Ches Bay
+      if(i_ic_sal(i).ne.1 .and. i_ic_tem(i).ne.1) then !outside Ches Bay
         cycle
-      else !main stem
+      else !Chesapeake Bay main stem
           if (yl(i)>=y0(1)) then
               nn(1)=1; nn(2)=1
           elseif (yl(i)<y0(nSt)) then
@@ -286,27 +298,30 @@
     enddo !i=1,np
   enddo ! iter sal tem
 
-  !!DB
+  ! other coastal regions
   iTest=0
-  open(27,file='DB_elev_ic.gr3',status='old')
-  open(28,file='DB_surf_S_ic.gr3',status='old')
-  read(27,*); read(28,*)
-  read(27,*); read(28,*)
+  open(27,file='elev_ic.gr3',status='old')
+  open(28,file='sal_ic.gr3',status='old')
+  open(29,file='tem_ic.gr3',status='old')
+  read(27,*); read(29,*); read(28,*)
+  read(27,*); read(29,*); read(28,*)
   do i=1,np
     read(27,*) j,xtmp,ytmp,tmp1
     read(28,*) j,xtmp,ytmp,tmp2
+    read(29,*) j,xtmp,ytmp,tmp3
     eout(i)=tmp1
-    if (iest(i)==2) then !in DB
+    if (i_ic_sal(i)==2) then !in other coastal regions
       saltout(1,i)=tmp2
-      tempout(1,i)=21.0 !set 21 oC in DB
       do k=2,nvrt
         tmp=abs( (z(i,k)-z(i,1))/(z(i,nvrt)-z(i,1))  )
         saltout(k,i)=max(0.0,-2.5*tmp+saltout(1,i))
-        tempout(k,i)=max(0.0,2.0*tmp+tempout(1,i))
-        !if (iTest(1)==0.and.dp(i)>15) then
-        !  print *,'k,tmp,z: ',k,tmp,z(i,k),z(i,1),z(i,nvrt)
-        !endif
       enddo
+    endif
+    if (i_ic_tem(i)==2) then !in other coastal regions
+      tempout(:,i)=tmp3
+    endif
+
+    if (i_ic_sal(i)==2.or.i_ic_tem(i)==2) then !in other coastal regions
       if (iTest(1)==0.and.dp(i)>15) then
         iTest(1)=1
         print *,'eout in DB at: ',i,xl(i),yl(i),eout(i)
@@ -323,7 +338,7 @@
       endif
     endif
   enddo !i
-  close(27); close(28)
+  close(27); close(29); close(28)
 
   !node to element 
   allocate(tsel(2,nvrt,ne),stat=ierr)

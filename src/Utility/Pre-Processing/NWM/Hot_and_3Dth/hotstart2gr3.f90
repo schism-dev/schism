@@ -43,12 +43,11 @@
   real(4), allocatable :: eout(:),eout1(:),xl(:),yl(:),dp(:), &
     & sigma_lcl(:,:),z(:,:),ztot(:),sigma(:),x0(:),y0(:),val(:,:),z0(:,:),temp1(:), &
     & temp2(:),saltout(:,:),tempout(:,:),tr_nd(:,:,:),tr_nd1(:,:,:),tsel(:,:,:)
-  integer, allocatable :: iest(:),elnode(:,:),i34(:),kbp2(:),nDepth(:),nn(:)
+  integer, allocatable :: elnode(:,:),i34(:),kbp2(:),nDepth(:),nn(:)
     
   character(Len = 1000),allocatable :: stName(:)
   
 ! -----------------Read grids------------------------
-  open(17,file='estuary.gr3',status='old')
   open(16,file='hgrid.ll',status='old')
   open(14,file='hgrid.gr3',status='old') !only need depth info and connectivity
   open(19,file='vgrid.in',status='old')
@@ -56,24 +55,16 @@
   read(14,*)
   read(14,*)ne,np
 
-  allocate(iest(np),xl(np),yl(np),dp(np),stat=ierr)
+  allocate(xl(np),yl(np),dp(np),stat=ierr)
   allocate(elnode(4,ne),i34(ne),stat=ierr)
   if(ierr/=0) stop 'Allocation failed (1)'
 
-  write(*,*) "Reading hgrid and estuary.gr3"
+  write(*,*) "Reading hgrid"
   read(16,*)
   read(16,*)
-  read(17,*)
-  read(17,*)
   do i=1,np
     read(14,*)j,xtmp,ytmp,dp(i)
     read(16,*)j,xl(i),yl(i) 
-    read(17,*)j,xtmp,ytmp,tmp
-    iest(i)=nint(tmp)
-    if(iest(i)<0.and.iest(i)>2) then
-      write(11,*)'Estuary flag wrong:',i,iest(i)
-      stop
-    endif
   enddo !i
   do i=1,ne
     read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
