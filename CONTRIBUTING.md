@@ -147,9 +147,9 @@ r5255-43-g40b5ad0
 
 #### Cherry pick merge
 To merge a specific (or a few) commits from one branch to another. E.g. from an dev branch to master:
-1. Find the sha of the commit, with git log in the branch where the commit was made
+1. Find the sha of the commit(s), with git log in the branch where the commit was made
 2. checkout to master - $ git checkout master
-3. cherry-pick the commit to master $ git cherry-pick <sha>
+3. cherry-pick the commit(s) to master $ git cherry-pick <sha> (<sha2>...)
 4. git push ...
 
 
