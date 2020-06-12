@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ParMETIS)
+project(ParMETIS C CXX)
 
 ##set(GKLIB_PATH METIS/GKlib CACHE PATH "path to GKlib")
 ##set(METIS_PATH METIS CACHE PATH "path to METIS")
@@ -38,7 +38,7 @@ include_directories(BEFORE ${METIS_PATH}/include)
 add_subdirectory(${METIS_PATH}/libmetis ${CMAKE_BINARY_DIR}/libmetis)
 add_subdirectory(include)
 add_subdirectory(libparmetis)
-add_subdirectory(programs)
+#add_subdirectory(programs)
 
 # This is for testing during development and is not being distributed
 #add_subdirectory(test)
