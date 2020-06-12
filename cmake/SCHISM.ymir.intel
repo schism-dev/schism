@@ -29,7 +29,7 @@ set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
 #
 
 
-set(PARMETIS_DIR /Calcul/Apps/parmetis/distrib.ParMetis-3.1.1/ CACHE PATH "Path to ParMetis")
+##set(PARMETIS_DIR /Calcul/Apps/parmetis/distrib.ParMetis-3.1.1/ CACHE PATH "Path to ParMetis")
 #set(HDF5_DIR   /some/override/path CACHE PATH "Path to HDF5")
 #set(NetCDF_LIBRARIES /Calcul/Apps/netcdf/fortran-4.2.ifort/lib/:/Calcul/Apps/netcdf/4.2.1.1.ifort/lib/ CACHE PATH "Path to NetCDF C library")
 #set(NetCDF_INCLUDE_DIRS /Calcul/Apps/netcdf/fortran-4.2.ifort/include/ CACHE PATH "Path to NetCDF include files")
