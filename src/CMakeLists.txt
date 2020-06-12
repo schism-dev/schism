@@ -212,8 +212,9 @@ add_module(Sed2d    USE_SED2D OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 
-##add_subdirectory(ParMetis-3.1-Sep2010)
-add_subdirectory(ParMetis-4.0.3)
+set(PARMETIS_VER ParMetis-4.0.3 CACHE STRING "Version and relative path to Parmetis library inside /src.")
+set(PARMETIS_DIR "${CMAKE_SOURCE_DIR}/${PARMETIS_VER}/" CACHE PATH "Path to ParMetis which defaults to /src/PARMETIS_VER in the schism source directory. Support for other locations not tested." FORCE)
+add_subdirectory( ${PARMETIS_VER} )
 
 # Now recurse them and process the contents. 
 # In the process, we accumulate a (global) list of compile options and libraries
