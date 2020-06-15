@@ -98,8 +98,8 @@ def gen_version(versionfile_path=None):
        if git_version is None: git_version = "unavailable"
   
     print(git_version)
-    print(' SCHISM version:  {}'.format(schism_version))
-    print(' GIT commit       {}'.format(git_version))
+    print(' SCHISM version:  {0:s}'.format(schism_version))
+    print(' GIT commit       {0:s}'.format(git_version))
     with open(template_path,"r") as template:
         templatetxt = template.read()
     versiontxt = templatetxt.replace("@{VERSION_GIT}", git_version).replace("@{VERSION_SCHISM}",schism_version)
