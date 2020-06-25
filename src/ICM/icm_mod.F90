@@ -82,14 +82,9 @@ module icm_mod
   !phyto. growth rate
   real(kind=iwp),save :: TU,TD,rIa,rIavg,Daylen
   real(kind=iwp),save,allocatable,dimension(:,:) :: PrefN
-  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP
+  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,rFI,rFN,rFP,rFS,rFSal,GPT
   real(kind=iwp),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
- 
-  !sav growth rate and metabolism rate
-  real(kind=iwp),save,allocatable,dimension(:) :: plfsav !plfsav(nvrt); 1/day
-  real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day
-                                                    !bmlfsav(nvrt)
   
   !TSED
   real(kind=iwp),save,allocatable,dimension(:) :: PC2TSS 
@@ -125,10 +120,13 @@ module icm_mod
   real(kind=iwp),save :: fnisav, fndsav, fnlpsav, fnrpsav
   real(kind=iwp),save :: khpwsav,khpssav !phosphorus
   real(kind=iwp),save :: fpisav, fpdsav, fplpsav, fprpsav
+  !sav growth rate and metabolism rate
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav !plfsav(nea,nvrt); 1/day
+  real(kind=iwp),save,allocatable,dimension(:,:) :: pmaxsav,fisav,fnsav,fpsav!growth;(nea,nvrt)
+  real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; bmlfsav(nvrt)
   real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
-  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav 
+  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
   real(kind=iwp),save :: trlfsav,trstsav,trrtsav
-  real(kind=iwp) :: pmaxsav,fisav,fnsav,fpsav !growth
 
   !carbon parameters 
   real(kind=iwp),save :: FCRPZ,FCLPZ,FCDPZ

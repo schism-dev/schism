@@ -33,7 +33,9 @@ subroutine icm_init
     & dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
-    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),GP(nvrt,nea,3),PrefN(nvrt,3),PC2TSS(nea), &
+    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea), &
+    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
+    & rFS(nvrt,nea,3),rFSal(nvrt,nea,3),&
     & rKRC(nea),rKLC(nea),rKDC(nea),& 
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
@@ -50,7 +52,8 @@ subroutine icm_init
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea), & !region !ncai
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai !sav
-    & plfsav(nvrt),bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
+    & plfsav(nea,nvrt),pmaxsav(nea,nvrt),fisav(nea,nvrt),fnsav(nea,nvrt),fpsav(nea,nvrt), &
+    & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
     & rtpocsav(nvrt),rtponsav(nvrt),rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt), &
     & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea),hcansav(nea), &
     & tlfNH4sav(nea),tlfPO4sav(nea),trtpocsav(nea),trtponsav(nea),trtpopsav(nea),trtdosav(nea),stat=istat)
@@ -82,9 +85,10 @@ subroutine icm_init
   TIC_el=0.0;  ALK_el=0.0;  
   Chl_el=0.0;  PrmPrdt=0.0; DO_consmp=0.0; DIN_el=0.0; PON_el=0.0
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
-  PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;   RPON=0.0;   LPON=0.0
+  PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
-  SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     GP=0.0;     PrefN=0.0;  PC2TSS=0.0
+  SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
+  GP=0.0;      GPT=0.0;     rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
@@ -112,7 +116,8 @@ subroutine icm_init
   lfsav=1.0;    stsav=1.0;      rtsav=0.3; !init for each layer whole domain
   tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;  
   hcansavori=0.0;   hcansav=0.0
-  rtpocsav=0.0; rtponsav=0.0;   rtpopsav=0.0;   rtdosav=0.0
+  plfsav=0.0;   pmaxsav=0.0;    fisav=1.0;        fnsav=1.0;      fpsav=1.0;
+  rtpocsav=0.0; rtponsav=0.0;   rtpopsav=0.0;     rtdosav=0.0
   trtpocsav=0.0;trtponsav=0.0;  trtpopsav=0.0;    trtdosav=0.0
   lfNH4sav=0.0; lfPO4sav=0.0
   tlfNH4sav=0.0;tlfPO4sav=0.0
