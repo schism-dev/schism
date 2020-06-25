@@ -657,7 +657,8 @@ subroutine photosynthesis(id,hour,nv,it)
   real(kind=iwp) :: tmp0,tmp,xtsav,zt0,dzt,hdep
   integer :: lyrinit,klev,kcnpy
 
-  !init 
+  !--------------------------------------------------------------------------------
+  !sav::init 
   if(isav_icm==1.and.patchsav(id)==1) then
 !    if(it==iths_main) then
 !     !Biomass at each layer (0 if above canopy)
@@ -674,7 +675,6 @@ subroutine photosynthesis(id,hour,nv,it)
 !        endif
 !      enddo !k
 !    endif !it==
-
 
     !calculate the total lf,st biomass from canopy down to a lower level
     !Init negatve mass above canopy
@@ -717,9 +717,10 @@ subroutine photosynthesis(id,hour,nv,it)
     enddo !k
 
   endif !isav_icm
+  !--------------------------------------------------------------------------------
 
 
-  !ncai
+  !sav+PB::combined init for light 
   rKeh0=0.0
   rKeh1=0.0
   rKeh2=0.0
@@ -731,17 +732,9 @@ subroutine photosynthesis(id,hour,nv,it)
     CPIP = PO4T2I*thata_tben**xT
   endif !iTBen
 
-
-!new24 !xcai !read out sed conc
-  !if(id==163)then
-  !  write(91,*)it,id,CNH4(id)
-  ! write(91,*)it,id,CPIP(id)
-  !endif !id
-
-  !init
+  !PB::init
   GP(:,id,:)=0.0
   sbLight(id)=0.0
-
 
   !rad_ncai
   !if(hour>TU.and.hour<TD) then
@@ -856,7 +849,6 @@ subroutine photosynthesis(id,hour,nv,it)
         rKe=rKe0
       endif !ze
       !uptil now, rKe for any layer calculated
-
 
       !hdep and rKeh0 calculated with the ifstatement from surface to layer above canopy
       if(isav_icm==1.and.ze(klev-1,id)>=hcansav(id)+ze(kbe(id),id).and.patchsav(id)==1) then
@@ -1011,6 +1003,7 @@ subroutine photosynthesis(id,hour,nv,it)
       sLight=bLight
 
 
+      !--------------------------------------------------------------------------------
       !ncai: sav limitation functions-----------------------------------
       if (isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
 
@@ -1100,19 +1093,8 @@ subroutine photosynthesis(id,hour,nv,it)
 
         !calculation of lf growth rate [1/day] as function of temp, light, N/P
         plfsav(k)=pmaxsav*min(fisav,fnsav,fpsav)/acdwsav !acdwsav checked !>=0 with seeds, =0 for no seeds
-
       endif !isav_icm
-
-!new22
-      !if(id==163) then
-      !  write(93,*)it,id,k,fnsav
-      !  write(93,*)it,id,k,fpsav
-      !  write(93,*)it,id,k,NH4(k,1)
-      !  write(93,*)it,id,k,NO3(k,1)
-      !  write(93,*)it,id,k,CNH4(id)
-      !  write(93,*)it,id,k,PO4t(k,1)
-      !  write(93,*)it,id,k,CPIP(id)
-      !endif!id
+      !--------------------------------------------------------------------------------
 
     enddo !k=1,nv
 
