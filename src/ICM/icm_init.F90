@@ -52,7 +52,7 @@ subroutine icm_init
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea), & !region !ncai
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai !sav
-    & plfsav(nea,nvrt),pmaxsav(nea,nvrt),fisav(nea,nvrt),fnsav(nea,nvrt),fpsav(nea,nvrt), &
+    & plfsav(nvrt,nea),pmaxsav(nvrt,nea),fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea), &
     & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
     & rtpocsav(nvrt),rtponsav(nvrt),rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt), &
     & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea),hcansav(nea), &
