@@ -1098,19 +1098,23 @@ subroutine photosynthesis(id,hour,nv,it)
 
     enddo !k=1,nv
 
+    !--------------------------------------------------------------------------------
+    !fulfill growth rate for biomass above
     if(isav_icm==1.and.patchsav(id)==1.and.kcnpy>=2)then 
       do k=1,kcnpy-1
         if(lfsav(k,id)>1.e-3)then
-          plfsav(k,id)=plfsav(id,kcnpy)
+          plfsav(k,id)=plfsav(kcnpy,id)
         endif !lfsav>0
       enddo !k
     endif !kcnpy
+    !--------------------------------------------------------------------------------
 
-
+    !renew light supply to next layer
     sbLight(id)=bLight
   endif !rIa>30 
 
 end subroutine photosynthesis
+
 
 subroutine calkwq(id,nv,ure,it)
 !----------------------------------------------------------------------------
@@ -1448,6 +1452,7 @@ subroutine calkwq(id,nv,ure,it)
 ! st or rt: dC/dt=-a*C+b, a>0, b>0 =implicit=> C1=(b*dt+C0)/(1.0+a*dt), init>=0, checked
 !--------------------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------------------
     !sav mass
     if(isav_icm==1.and.patchsav(id)==1) then
 
@@ -1524,7 +1529,7 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif
 
-!new23!xcai
+!new23
       !write(99,*)'rtsav for id and it on layer:',id,it,k,lfsav(k,id),stsav(k,id),rtsav(k,id)
       !if (id==163) then
       !  !write(99,*)'sav leaf biomass for id and it on layer:',id,it,k,lfsav(k,id),stsav(k,id),rtsav(k,id)
@@ -1534,6 +1539,7 @@ subroutine calkwq(id,nv,ure,it)
       !endif!id,k
 
     endif !isav_icm
+    !--------------------------------------------------------------------------------------
 
 
 !--------------------------------------------------------------------------------------
@@ -2313,11 +2319,10 @@ subroutine calkwq(id,nv,ure,it)
     endif !iphgb(id)/=0
 #endif/*ICM_PH*/
 
-    !ncai
+
+    !--------------------------------------------------------------------------------------
     !sav-nutrient flux to sed
     if(isav_icm==1.and.patchsav(id)==1) then
-
-!new23: debug
 
       !sediment flux/uptake from this layer
       lfNH4sav(k)=ancsav*fnsedsav*plfsav(k,id)*lfsav(k,id)!unit:g/m^3 day
@@ -2362,6 +2367,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
     endif !isav_icm
+    !--------------------------------------------------------------------------------------
 
 !new22
     !if(id==163)then
@@ -2374,7 +2380,6 @@ subroutine calkwq(id,nv,ure,it)
     !  write(97,*)it,id,k,fnsedsav
     !  write(97,*)it,id,k,fpsedsav
     !endif !id   
-
 
 !new22
     !if(id==163)then
@@ -2389,8 +2394,7 @@ subroutine calkwq(id,nv,ure,it)
     !endif !id   
 
 
-
-!--------------------------------------------------------------------------------------
+    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     !station output for ICM
     if(id<=ne.and.iout_icm==1.and.mod(it,nspool_icm)==0) then
       if(ista(id)/=0) then
@@ -2418,18 +2422,17 @@ subroutine calkwq(id,nv,ure,it)
      & SAt(k,1),rKSAp,FSIP,FSId,SAt0,nSAt,&
      & COD(k,1),rKCOD,rKHCOD,rKCD,rKTCOD,nCOD,&
      & DOO(k,1),DOsat,rKr,AOC,AON,nDO,&
-     & lfsav(k,id),stsav(k,id),rtsav(k,id),plfsav(k,id),bmlfsav(k),bmstsav(k),bmrtsav(k),&
-     & dep(k),&
+     & lfsav(k,id),stsav(k,id),rtsav(k,id),dep(k),&
      & plfsav(k,id),bmlfsav(k),bmstsav(k),bmrtsav(k),pmaxsav(k,id),fisav(k,id),fnsav(k,id),fpsav(k,id), &
      & tlfsav(id),tstsav(id),trtsav(id),hcansav(id)
           endif !rtmp
         enddo !m
       endif !ista(i)/=0
     endif !i<=ne
-
   enddo !k=1,nv
 
-!--------------------------------------------------------------------------------------
+
+  !--------------------------------------------------------------------------------------
   !calculate SAV height
   if (isav_icm==1.and.patchsav(id)==1) then
     !These arrays won't be used until 1 step later
@@ -2486,9 +2489,8 @@ subroutine calkwq(id,nv,ure,it)
     !  write(96,*)it,id,trtdosav(id)
     !endif !id
 
-
-
   endif !isav_icm
+  !--------------------------------------------------------------------------------------
 
 end subroutine calkwq
 
