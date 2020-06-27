@@ -52,23 +52,20 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: dep,Sal,Temp,TSED 
   real(kind=iwp),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(kind=iwp),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
-  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,DO_consmp !(nvrt,nea), 1 to nvrt: bottom to surface
+  !(nvrt,nea)>> 1 to nvrt: bottom to surface
+  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,DO_consmp 
 
-  !(nvrt,nea)
-  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav
-                                                    !tlfsav(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: hcansav,hcansavori !hcansav(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav
-                                                    !rtpocsav(nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: rtdosav
-                                                    !rtdosav(nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav
-                                                    !trtpocsav(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav
-                                                    !lfNH4sav(nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav
-                                                    !tlfNH4sav(nea)
+  !ncai_sav
+  !(nvrt,nea)>> bottom to surface
+  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea) 
+  !(nvrt)<< surface to bottom
+  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt)
+  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt)
+  !(nea)<<depth integrated, true outputs
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: hcansav,hcansavori!(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea)
 
 
   !PH model
@@ -82,6 +79,7 @@ module icm_mod
   !phyto. growth rate
   real(kind=iwp),save :: TU,TD,rIa,rIavg,Daylen
   real(kind=iwp),save,allocatable,dimension(:,:) :: PrefN
+  !(nvrt,nea),>>> 1 to nvrt: bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,rFI,rFN,rFP,rFS,rFSal,GPT
   real(kind=iwp),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
@@ -121,9 +119,9 @@ module icm_mod
   real(kind=iwp),save :: khpwsav,khpssav !phosphorus
   real(kind=iwp),save :: fpisav, fpdsav, fplpsav, fprpsav
   !sav growth rate and metabolism rate
-  real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav !plfsav(nea,nvrt); 1/day
-  real(kind=iwp),save,allocatable,dimension(:,:) :: pmaxsav,fisav,fnsav,fpsav!growth;(nea,nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; bmlfsav(nvrt)
+  !(nea,nvrt)>> bottom to surface
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nea,nvrt)
+  real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
   real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
   real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
   real(kind=iwp),save :: trlfsav,trstsav,trrtsav
@@ -137,12 +135,18 @@ module icm_mod
   real(kind=iwp),save :: rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
   real(kind=iwp),save,dimension(3) :: FCD,FCRP,FCLP,FCDP
   real(kind=iwp),save,dimension(2) :: FCDZ,rKHRZ
+  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
+  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
   real(kind=iwp),save :: rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg,rNitM,TNit,rKNit1,rKNit2,rKhNitDO,rKhNitN
   real(kind=iwp),save,dimension(3) :: FNR,FNL,FND,FNI,ANC
   real(kind=iwp),save,dimension(2) :: FNRZ,FNLZ,FNDZ,FNIZ,ANCZ
+  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPON,disoLPON,HRDON
+  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPON,predLPON,predDON,predNH4
+  real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
+  real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
 
   !phosphorus parameters 
   real(kind=iwp),save :: FPRPZ,FPLPZ,FPDPZ,FPIPZ,FPRP,FPLP,FPDP,FPIP
@@ -152,6 +156,10 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
   real(kind=iwp),save,dimension(3) :: FPR,FPL,FPD,FPI,APC
   real(kind=iwp),save,dimension(2) :: FPRZ,FPLZ,FPDZ,FPIZ,APCZ
+  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOP,disoLPOP,HRDOP
+  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOP,predLPOP,predDOP,predPO4
+  real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
+  real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA

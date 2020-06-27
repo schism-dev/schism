@@ -26,17 +26,30 @@ subroutine icm_init
   integer :: istat
 
   !icm_mod
-  allocate(wqc(ntrs(7),nvrt,nea),TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), & !PH model variables 
+  allocate(TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), & !PH model variables 
     & CAsat(nvrt),CO2(nvrt),PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
     & TIC_el(nvrt,nea),ALK_el(nvrt,nea), &
-    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DO_consmp(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
+    !(nvrt)<< surface to bottom
     & dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
     & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea), &
-    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
+    !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
+    & wqc(ntrs(7),nvrt,nea), &
+    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DO_consmp(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
+    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3), &
     & rFS(nvrt,nea,3),rFSal(nvrt,nea,3),&
-    & rKRC(nea),rKLC(nea),rKDC(nea),& 
+    & disoRPOC(nvrt,nea),disoLPOC(nvrt,nea),HRDOC(nvrt,nea),DenitDOC(nvrt,nea), &
+    & predRPOC(nvrt,nea),predLPOC(nvrt,nea),predDOC(nvrt,nea),basalDOC(nvrt,nea), &
+    & disoRPON(nvrt,nea),disoLPON(nvrt,nea),HRDON(nvrt,nea), &
+    & predRPON(nvrt,nea),predLPON(nvrt,nea),predDON(nvrt,nea),predNH4(nvrt,nea), &
+    & basalRPON(nvrt,nea),basalLPON(nvrt,nea),basalDON(nvrt,nea),basalNH4(nvrt,nea), &
+    & NitNH4(nvrt,nea),absNH4(nvrt,nea),DenitNO3(nvrt,nea),absNO3(nvrt,nea), &
+    & disoRPOP(nvrt,nea),disoLPOP(nvrt,nea),HRDOP(nvrt,nea),absPO4(nvrt,nea), &
+    & predRPOP(nvrt,nea),predLPOP(nvrt,nea),predDOP(nvrt,nea),predPO4(nvrt,nea), &
+    & basalRPOP(nvrt,nea),basalLPOP(nvrt,nea),basalDOP(nvrt,nea),basalPO4(nvrt,nea), &
+
+    & rKRC(nea),rKLC(nea),rKDC(nea),&
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
@@ -51,8 +64,10 @@ subroutine icm_init
     & rIavg_save(nea), &!rad_ncai
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea), & !region !ncai
-    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai !sav
+    !(nvrt,nea)>> 1 to nvrt: bottom to surface
+    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai_sav
     & plfsav(nvrt,nea),pmaxsav(nvrt,nea),fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea), &
+    !(nvrt)<< surface to bottom
     & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
     & rtpocsav(nvrt),rtponsav(nvrt),rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt), &
     & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea),hcansav(nea), &
@@ -90,6 +105,8 @@ subroutine icm_init
   SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
   GP=0.0;      GPT=0.0;     rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
+  disoRPOC=0.0;disoLPOC=0.0;HRDOC=0.0;   DenitDOC=0.0
+  predRPOC=0.0;predLPOC=0.0;predDOC=0.0; basalDOC=0.0
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
@@ -112,7 +129,7 @@ subroutine icm_init
   EROH2S=0.0; EROLPOC=0.0; ERORPOC=0.0
   SED_EROH2S=0.0; SED_EROLPOC=0.0; SED_ERORPOC=0.0
 
-  !ncai
+  !sav
   lfsav=1.0;    stsav=1.0;      rtsav=0.3; !init for each layer whole domain
   tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;  
   hcansavori=0.0;   hcansav=0.0
@@ -122,6 +139,7 @@ subroutine icm_init
   lfNH4sav=0.0; lfPO4sav=0.0
   tlfNH4sav=0.0;tlfPO4sav=0.0
 
+  !sed_flux
   SFA=0.0;       SED_BL=0.0;     ZD=0.0;         SED_B=0.0;      SED_LPOP=0.0;   SED_RPOP=0.0;   SED_LPON=0.0;  SED_RPON=0.0;
   SED_LPOC=0.0;  SED_RPOC=0.0;   SED_TSS=0.0;    SED_SU=0.0;     SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;  
   SED_SA=0.0;    SED_DO=0.0;     SED_COD=0.0;    SED_SALT=0.0;   SED_T=0.0; 
