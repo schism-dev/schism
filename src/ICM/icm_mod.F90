@@ -169,6 +169,8 @@ module icm_mod
   !COD&DO parameters 
   real(kind=iwp),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
+  real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,reaDOO
+
   !--------------------------------------------------------------------------------------
   !erosion
   real(kind=iwp),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !nea
@@ -196,7 +198,7 @@ module icm_mod
 
   !loading
   real(kind=iwp),save,allocatable,dimension(:) :: WWPRPOC,WWPLPOC,WWPDOC,WWPRPON,WWPLPON,WWPDON,WWPNH4,WWPNO3,&
-                                                   & WWPRPOP,WWPLPOP,WWPDOP,WWPPO4t,WWPSU,WWPSAt,WWPCOD,WWPDO,WWPSalt 
+                                                 & WWPRPOP,WWPLPOP,WWPDOP,WWPPO4t,WWPSU,WWPSAt,WWPCOD,WWPDO,WWPSalt 
   real(kind=iwp),save :: WPRPOC,WPLPOC,WPDOC,WPRPON,WPLPON,WPDON,WPNH4,WPNO3,WPRPOP,WPLPOP,WPDOP,WPPO4t,WPSU,WPSAt,WPCOD,WPDO 
   real(kind=iwp),save :: WZB1,WZB2,WPB1,WPB2,WPB3,WRPOC,WLPOC,WDOC,WRPON,WLPON,WDON,WNH4,WNO3,WRPOP,WLPOP,WDOP,WPO4t,WSU,WSAt,WCOD,WDO      
 

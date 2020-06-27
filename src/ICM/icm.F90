@@ -1159,7 +1159,7 @@ subroutine calkwq(id,nv,ure,it)
   rtpopsav=0
   rtdosav=0
 
-  !calculate depth at the bottom of each layer
+  !calculate depth at the bottom of each layer (from surface)
   zdep(1)=dep(1)
   do i=2,nv
     zdep(i)=zdep(i-1)+dep(i)
@@ -1379,71 +1379,6 @@ subroutine calkwq(id,nv,ure,it)
     nSAt =znSAt(k)
     nCOD =znCOD(k)
     nDO  =znDO(k)
-
-    !!initialize surface or benthic fluxes
-    !nRPOC=0.0
-    !nLPOC=0.0
-    !nDOC =0.0
-    !nRPON=0.0
-    !nLPON=0.0
-    !nDON =0.0
-    !nNH4 =0.0
-    !nNO3 =0.0
-    !nRPOP=0.0
-    !nLPOP=0.0
-    !nDOP =0.0
-    !nPO4t=0.0
-    !nSU  =0.0
-    !nSAt =0.0
-    !nCOD =0.0
-    !nDO  =0.0
-    !if(k==1.and.iAtm/=0) then !with surface nutrient fluxes
-    !  nRPOC = SRPOC
-    !  nLPOC = SLPOC
-    !  nDOC  = SDOC
-    !  nRPON = SRPON
-    !  nLPON = SLPON
-    !  nDON  = SDON
-    !  nNH4  = SNH4
-    !  nNO3  = SNO3
-    !  nRPOP = SRPOP
-    !  nLPOP = SLPOP
-    !  nDOP  = SDOP
-    !  nPO4t = SPO4t
-    !  nSU   = SSU
-    !  nSAt  = SSAt
-    !  nCOD  = SCOD
-    !  nDO   = SDO
-    !endif
-    !if(k==nv.and.iBen/=0) then !sediment fluxes from ICM_ben.th
-    !  xT=Temp(k)-20.d0
-    !  nRPOC = BRPOC(id)*TBRPOC**xT
-    !  nLPOC = BLPOC(id)*TBLPOC**xT
-    !  nDOC =  BDOC(id)*TBDOC**xT
-    !  nRPON = BRPON(id)*TBRPON**xT
-    !  nLPON = BLPON(id)*TBLPON**xT
-    !  nDON  = BDON(id)*TBDON**xT
-    !  nNH4  = BNH4(id)*TBNH4**xT
-    !  nNO3  = BNO3(id)*TBNO3**xT
-    !  nRPOP = BRPOP(id)*TBRPOP**xT
-    !  nLPOP = BLPOP(id)*TBLPOP**xT
-    !  nDOP  = BDOP(id)*TBDOP**xT
-    !  nPO4t = BPO4t(id)*TBPO4t**xT
-    !  nSU   = BSU(id)*TBSU**xT
-    !  nSAt  = BSAt(id)*TBSAt**xT
-    !  nCOD  = BCOD(id)*TBCOD**xT
-    !  nDO   = BDO(id)*TBDO**xT
-    !endif !k==nv.and.iBen/=0
-
-    !if(k==nv.and.iSed==1) then !sediment fluxes
-    !  nDOC =nDOC +BnDOC
-    !  nNH4 =nNH4 +BnNH4
-    !  nNO3 =nNO3 +BnNO3
-    !  nPO4t=nPO4t+BnPO4t
-    !  nSAt =nSAt +BnSAt
-    !  nCOD =nCOD +BnCOD
-    !  nDO  =nDO  +BnDO
-    !endif
 
 
 !--------------------------------------------------------------------------------------

@@ -48,7 +48,7 @@ subroutine icm_init
     & disoRPOP(nvrt,nea),disoLPOP(nvrt,nea),HRDOP(nvrt,nea),absPO4(nvrt,nea), &
     & predRPOP(nvrt,nea),predLPOP(nvrt,nea),predDOP(nvrt,nea),predPO4(nvrt,nea), &
     & basalRPOP(nvrt,nea),basalLPOP(nvrt,nea),basalDOP(nvrt,nea),basalPO4(nvrt,nea), &
-
+    & basalDOO(nvrt,nea),predDOO(nvrt,nea),NitDOO(nvrt,nea),HRDOO(nvrt,nea),chemDOO(nvrt,nea),reaDOO(nvrt,nea), &
     & rKRC(nea),rKLC(nea),rKDC(nea),&
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
@@ -107,6 +107,14 @@ subroutine icm_init
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   disoRPOC=0.0;disoLPOC=0.0;HRDOC=0.0;   DenitDOC=0.0
   predRPOC=0.0;predLPOC=0.0;predDOC=0.0; basalDOC=0.0
+  disoRPON=0.0;disoLPON=0.0;HRDON=0.0; 
+  predRPON=0.0;predLPON=0.0;predDON=0.0;predNH4=0.0;
+  basalRPON=0.0;basalLPON=0.0;basalDON=0.0;basalNH4=0.0; 
+  NitNH4=0.0; absNH4=0.0;DenitNO3=0.0;absNO3=0.0; 
+  disoRPOP=0.0;disoLPOP=0.0;HRDOP=0.0;absPO4=0.0; 
+  predRPOP=0.0;predLPOP=0.0;predDOP=0.0;predPO4=0.0;
+  basalRPOP=0.0;basalLPOP=0.0;basalDOP=0.0;basalPO4=0.0;
+  basalDOO=0.0;predDOO=0.0;NitDOO=0.0;HRDOO=0.0;chemDOO=0.0;reaDOO=0.0; 
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
