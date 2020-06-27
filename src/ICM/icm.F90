@@ -170,12 +170,10 @@ subroutine ecosystem(it)
       PH_nd=swild(:,1:npa)
       deallocate(swild)
 #endif
-
   endif !mod(it,NDTWQ)==0
 
   !inquire(410,opened=lopened)
   !if(lopened.and.mod(it,nspool_icm)==0) flush(410)
-
 
 end subroutine ecosystem
 
@@ -634,9 +632,7 @@ subroutine photosynthesis(id,hour,nv,it)
 !subroutine photosynthesis(id,nv,it)
 !----------------------------------------------------------------------------
 !calculate phytoplankton and sav growth rates
-
 !inputs: TSED and tracers from link mode 1, checked; rIa from sflux, checked here
-
 !----------------------------------------------------------------------------
   use icm_mod
   use icm_sed_mod, only : sbLight,CPIP,CNH4,NH4T2I,PO4T2I
@@ -681,7 +677,6 @@ subroutine photosynthesis(id,hour,nv,it)
     zlfsav=-99; zstsav=-99
     !do k=kbe(id)+1,nvrt
     do k=1,nv
-      !i=nvrt-k+1
       klev=nvrt-k+1
       if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
       if(ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
@@ -690,13 +685,6 @@ subroutine photosynthesis(id,hour,nv,it)
       endif !ze
     enddo !k
 
-!    zlfsav(nv+1)=sum(lfsav(1:nv,id))
-!    zstsav(nv+1)=sum(stsav(1:nv,id))
-!    do i=nv,1,-1
-!      if(lfsav(i,id)>1.d-20) zlfsav(i)=zlfsav(i+1)-lfsav(i,id)
-!      if(stsav(i,id)>1.d-20) zstsav(i)=zstsav(i+1)-stsav(i,id)
-!    enddo
-    
     !Init for every layer and timestep 
     plfsav(:,:)=0.0
     hdep=0.0
@@ -816,7 +804,6 @@ subroutine photosynthesis(id,hour,nv,it)
       !calculate CHLA
       Chl=PB1(k,1)/CChl1(id)+PB2(k,1)/CChl2(id)+PB3(k,1)/CChl3(id)
       if(Chl<0.0) then
-!Error: 1.e-15 too small?
         if(abs(Chl)>1.e-12) then
          write(errmsg,*)'chl<0.0 :',Chl,PB1(k,1),PB2(k,1),PB3(k,1)
          call parallel_abort(errmsg)
@@ -908,7 +895,6 @@ subroutine photosynthesis(id,hour,nv,it)
           else
             rIK=(1.d3*CChl3(id))*GPT(klev,id,i)/alpha_PB(i)
           endif !i
-!Error: 1.e-20
           rFI(klev,id,i)=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
           call parallel_abort('unknown jLight in icm.F90')
@@ -1165,8 +1151,7 @@ subroutine calkwq(id,nv,ure,it)
     zdep(i)=zdep(i-1)+dep(i)
   enddo
  
-  !redistribute surface or bottom fluxes in case the surface or bottom layer is
-  !too thin.
+  !redistribute surface or bottom fluxes in case the surface or bottom layer is too thin.
   tdep=sum(dep(1:nv))
   rdep=min(tdep,1._iwp)
 
@@ -1362,7 +1347,7 @@ subroutine calkwq(id,nv,ure,it)
       !call zeroWPS
     endif! k==1
 
-    !variable reuse, changing from total flux to flux to certain layer
+    !variable <<reuse>>, changing from total flux to flux to certain layer
     nRPOC=znRPOC(k)
     nLPOC=znLPOC(k)
     nDOC =znDOC(k)

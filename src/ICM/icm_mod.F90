@@ -137,6 +137,7 @@ module icm_mod
   real(kind=iwp),save,dimension(2) :: FCDZ,rKHRZ
   real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
@@ -147,6 +148,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPON,predLPON,predDON,predNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON
 
   !phosphorus parameters 
   real(kind=iwp),save :: FPRPZ,FPLPZ,FPDPZ,FPIPZ,FPRP,FPLP,FPDP,FPIP
@@ -160,6 +162,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOP,predLPOP,predDOP,predPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
@@ -170,6 +173,7 @@ module icm_mod
   real(kind=iwp),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,reaDOO
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO
 
   !--------------------------------------------------------------------------------------
   !erosion
