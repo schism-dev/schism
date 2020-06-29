@@ -784,80 +784,159 @@
 
 !-----------------------------------------------------------------------
 ! ICM outputs 
+! 1:5--
+! 6:12--sediment flux @elem
+! 13:19--sav @elem
+! 20:38--sediment conc @elem
+! 39:58--growth parameters; **hint: to choose only one PB group for limiting factors is enough for most cases
+! 59:69--C group parameters; **hint: to choose only one POC group is enough for most cases
+! 70:90--N group parameters; 
+! 91:107--P group parameters;
+! 108:116--Oxygen parameters;
+! 117:141--water column foundamental tracers @nodes
 !-----------------------------------------------------------------------
-!  iof_icm(1) = 1 !Chlorophyll {ICM_Chl}
-!  iof_icm(2) = 1 !PH values (ICM_PH on) {ICM_pH}
-!  iof_icm(3) = 1 !ICM primary production @elem [gC/m^3/day] {ICM_PrmPrdt}
-!  iof_icm(4) = 1 !ICM totoal inorganic nitrogen (DIN) @elem [gN/m^3] {ICM_DIN}
-!  iof_icm(5) = 1 !ICM paticulate organic nitrogen (PON) @elem [gN/m^3] {ICM_PON}
-!!  sediment flux @elem
-!  iof_icm(6) = 1 !ICM bed sediment flux arrays: SED_BENDOC (output name:ICM_SED_BENDOC) @elem [gC/(m^2 day)] {ICM_SED_BENDOC}
-!  iof_icm(7) = 1 !ICM bed sediment flux arrays: SED_BENNH4 (output name:ICM_SED_BENNH4) @elem [gC/(m^2 day)] {ICM_SED_BENNH4}
-!  iof_icm(8) = 1 !ICM bed sediment flux arrays: SED_BENNO3 (output name:ICM_SED_BENNO3)@elem [gC/(m^2 day)] {ICM_SED_BENNO3}
-!  iof_icm(9) = 1 !ICM bed sediment flux arrays: SED_BENPO4 (output name:ICM_SED_BENPO4) @elem [gC/(m^2 day)] {ICM_SED_BENPO4}
-!  iof_icm(10) = 1 !ICM bed sediment flux arrays: SED_BENCOD (output name:ICM_SED_BENCOD) @elem [gC/(m^2 day)] {ICM_SED_BENCOD}
-!  iof_icm(11) = 1 !ICM bed sediment flux arrays: SED_BENDO (output name:ICM_SED_BENDO) @elem [gC/(m^2 day)] {ICM_SED_BENDO}
-!  iof_icm(12) = 1 !ICM bed sediment flux arrays: SED_BENSA (output name:ICM_SED_BENSA) @elem [gC/(m^2 day)] {ICM_SED_BENSA}
-!!  sav @elem
-!  iof_icm(13) = 1 !ICM SAV leaf biomass @elem [gC/m^3] (k=1 is surface) {ICM_lfsav}
-!  iof_icm(14) = 1 !ICM SAV stem biomass @elem [gC/m^3] {ICM_stsav}
-!  iof_icm(15) = 1 !ICM SAV root biomass @elem [gC/m^3] {ICM_rtsav}
-!  iof_icm(16) = 1 !ICM SAV total leaf biomass @elem [gC/m^2] {ICM_tlfsav}
-!  iof_icm(17) = 1 !ICM SAV total stem biomass @elem [gC/m^2] {ICM_tstsav}
-!  iof_icm(18) = 1 !ICM SAV total root biomass @elem [gC/m^2] {ICM_trtsav}
-!  iof_icm(19) = 1 !ICM SAV canopy height @elem [m] {ICM_hcansav}
-!!  sediment conc @elem
-!  iof_icm(20) = 1 !bottom NH4 conc {ICM_CNH4}
-!  iof_icm(21) = 1 !bottom NO3 conc {ICM_CNH3}
-!  iof_icm(22) = 1 !bottom P conc {ICM_CPIP}
-!  iof_icm(23) = 1 !bottom Si conc {ICM_CPOS}
-!  iof_icm(24) = 1 !bottom CH4 conc {ICM_CCH4}
-!  iof_icm(25) = 1 !bottom SO4 conc {ICM_CSO4}
-!  iof_icm(26) = 1 !bottom H2S conc {ICM_CH2S}
-!  iof_icm(27) = 1 !bottom PON g1 conc {ICM_SEDPON1}
-!  iof_icm(28) = 1 !bottom PON g2 conc {ICM_SEDPON2}
-!  iof_icm(29) = 1 !bottom PON g3 conc {ICM_SEDPON3}
-!  iof_icm(30) = 1 !bottom POP g1 conc {ICM_SEDPOP1}
-!  iof_icm(31) = 1 !bottom POP g2 conc {ICM_SEDPOP2}
-!  iof_icm(32) = 1 !bottom POP g3 conc {ICM_SEDPOP3}
-!  iof_icm(33) = 1 !bottom POC g1 conc {ICM_SEDPOC1}
-!  iof_icm(34) = 1 !bottom POC g2 conc {ICM_SEDPOC2}
-!  iof_icm(35) = 1 !bottom POC g3 conc {ICM_SEDPOC3}
-!  iof_icm(36) = 1 !erosion flux H2S {ICM_EROH2S}
-!  iof_icm(37) = 1 !ersoion flux LPOC {ICM_EROLPOC}
-!  iof_icm(38) = 1 !ersoion flux RPOC {ICM_ERORPOC}
-!!  water column rates @elem
-!  iof_icm(39) = 1 !DO consumption {ICM_DO_consumption}
-!  iof_icm(40) = 1 !PB growth #1 {ICM_GP1}
-!  iof_icm(41) = 1 !PB growth #2 {ICM_GP2}
-!  iof_icm(42) = 1 !PB growth #3 {ICM_GP3}
-!  water column foundamental tracers @nodes
-!  iof_icm(43) = 0 !Zoo. #1 {ICM_1}
-!  iof_icm(44) = 0 !Zoo. #2 {ICM_2}
-!  iof_icm(45) = 1 !phyto #1 {ICM_3}
-!  iof_icm(46) = 1 !phyto #2 {ICM_4}
-!  iof_icm(47) = 1 !phyto #3 {ICM_5}
-!  iof_icm(48) = 1 !RPOC {ICM_6}
-!  iof_icm(49) = 1 !LPOC {ICM_7}
-!  iof_icm(50) = 1 !DOC {ICM_8}
-!  iof_icm(51) = 1 !RPON {ICM_9}
-!  iof_icm(52) = 1 !LPON {ICM_10}
-!  iof_icm(53) = 1 !DON {ICM_11}
-!  iof_icm(54) = 1 !NH4 {ICM_12}
-!  iof_icm(55) = 1 !NO3 {ICM_13}
-!  iof_icm(56) = 1 !RPOP {ICM_14}
-!  iof_icm(57) = 1 !LPOP {ICM_15}
-!  iof_icm(58) = 1 !DOP {ICM_16}
-!  iof_icm(59) = 1 !PO4t {ICM_17}
-!  iof_icm(60) = 0 !Si- biogenic {ICM_18}
-!  iof_icm(61) = 0 !available Si {ICM_19}
-!  iof_icm(62) = 1 !COD: Chemical oxygen demand {ICM_20}
-!  iof_icm(63) = 1 !DO {ICM_21}
-!! following requires ICM_PH on
-!  iof_icm(64) = 1 !TIC {ICM_22}
-!  iof_icm(65) = 1 !ALK {ICM_23}
-!  iof_icm(66) = 1 !CA {ICM_24}
-!  iof_icm(67) = 1 !CACO3 {ICM_25}
+  iof_icm(1) = 1 !Chlorophyll {ICM_Chl}
+  iof_icm(2) = 0 !PH values (ICM_PH on) {ICM_pH}
+  iof_icm(3) = 1 !ICM primary production @elem [gC/m^3/day] {ICM_PrmPrdt}
+  iof_icm(4) = 1 !ICM totoal inorganic nitrogen (DIN) @elem [gN/m^3] {ICM_DIN}
+  iof_icm(5) = 1 !ICM paticulate organic nitrogen (PON) @elem [gN/m^3] {ICM_PON}
+  iof_icm(6) = 1 !ICM bed sediment flux arrays: SED_BENDOC (output name:ICM_SED_BENDOC) @elem [gC/(m^2 day)] {ICM_SED_BENDOC}
+  iof_icm(7) = 1 !ICM bed sediment flux arrays: SED_BENNH4 (output name:ICM_SED_BENNH4) @elem [gC/(m^2 day)] {ICM_SED_BENNH4}
+  iof_icm(8) = 1 !ICM bed sediment flux arrays: SED_BENNO3 (output name:ICM_SED_BENNO3)@elem [gC/(m^2 day)] {ICM_SED_BENNO3}
+  iof_icm(9) = 1 !ICM bed sediment flux arrays: SED_BENPO4 (output name:ICM_SED_BENPO4) @elem [gC/(m^2 day)] {ICM_SED_BENPO4}
+  iof_icm(10) = 1 !ICM bed sediment flux arrays: SED_BENCOD (output name:ICM_SED_BENCOD) @elem [gC/(m^2 day)] {ICM_SED_BENCOD}
+  iof_icm(11) = 1 !ICM bed sediment flux arrays: SED_BENDO (output name:ICM_SED_BENDO) @elem [gC/(m^2 day)] {ICM_SED_BENDO}
+  iof_icm(12) = 1 !ICM bed sediment flux arrays: SED_BENSA (output name:ICM_SED_BENSA) @elem [gC/(m^2 day)] {ICM_SED_BENSA}
+  iof_icm(13) = 0 !ICM SAV leaf biomass @elem [gC/m^3] (k=1 is surface) {ICM_lfsav}
+  iof_icm(14) = 0 !ICM SAV stem biomass @elem [gC/m^3] {ICM_stsav}
+  iof_icm(15) = 0 !ICM SAV root biomass @elem [gC/m^3] {ICM_rtsav}
+  iof_icm(16) = 0 !ICM SAV total leaf biomass @elem [gC/m^2] {ICM_tlfsav}
+  iof_icm(17) = 0 !ICM SAV total stem biomass @elem [gC/m^2] {ICM_tstsav}
+  iof_icm(18) = 0 !ICM SAV total root biomass @elem [gC/m^2] {ICM_trtsav}
+  iof_icm(19) = 0 !ICM SAV canopy height @elem [m] {ICM_hcansav}
+  iof_icm(20) = 1 !bottom NH4 conc {ICM_CNH4}
+  iof_icm(21) = 1 !bottom NO3 conc {ICM_CNH3}
+  iof_icm(22) = 1 !bottom P conc {ICM_CPIP}
+  iof_icm(23) = 1 !bottom Si conc {ICM_CPOS}
+  iof_icm(24) = 1 !bottom CH4 conc {ICM_CCH4}
+  iof_icm(25) = 1 !bottom SO4 conc {ICM_CSO4}
+  iof_icm(26) = 1 !bottom H2S conc {ICM_CH2S}
+  iof_icm(27) = 1 !bottom PON g1 conc {ICM_SEDPON1}
+  iof_icm(28) = 1 !bottom PON g2 conc {ICM_SEDPON2}
+  iof_icm(29) = 1 !bottom PON g3 conc {ICM_SEDPON3}
+  iof_icm(30) = 1 !bottom POP g1 conc {ICM_SEDPOP1}
+  iof_icm(31) = 1 !bottom POP g2 conc {ICM_SEDPOP2}
+  iof_icm(32) = 1 !bottom POP g3 conc {ICM_SEDPOP3}
+  iof_icm(33) = 1 !bottom POC g1 conc {ICM_SEDPOC1}
+  iof_icm(34) = 1 !bottom POC g2 conc {ICM_SEDPOC2}
+  iof_icm(35) = 1 !bottom POC g3 conc {ICM_SEDPOC3}
+  iof_icm(36) = 1 !erosion flux H2S {ICM_EROH2S}
+  iof_icm(37) = 1 !ersoion flux LPOC {ICM_EROLPOC}
+  iof_icm(38) = 1 !ersoion flux RPOC {ICM_ERORPOC}
+  iof_icm(39) = 1 !PB growth #1 [/day] {ICM_GP1}
+  iof_icm(40) = 1 !PB growth #2 [/day] {ICM_GP2}
+  iof_icm(41) = 1 !PB growth #3 [/day] {ICM_GP3}
+  iof_icm(42) = 1 !PB max growth #1 [/day] {ICM_GPT1}
+  iof_icm(43) = 1 !PB max growth #2 [/day] {ICM_GPT2}
+  iof_icm(44) = 1 !PB max growth #3 [/day] {ICM_GPT3}
+  iof_icm(45) = 1 !PB net growth #1 [g/m^3/day] {ICM_netGP1}
+  iof_icm(46) = 1 !PB net growth #2 [g/m^3/day] {ICM_netGP2}
+  iof_icm(47) = 1 !PB net growth #3 [g/m^3/day] {ICM_netGP3}
+  iof_icm(48) = 1 !light limiting #1 {ICM_rFI1} 
+  iof_icm(49) = 0 !light limiting #2 {ICM_rFI2}
+  iof_icm(50) = 0 !light limiting #3 {ICM_rFI3}
+  iof_icm(51) = 1 !nitrogen limiting #1 {ICM_rFN1}
+  iof_icm(52) = 0 !nitrogen limiting #2 {ICM_rFN2}
+  iof_icm(53) = 0 !nitrogen limiting #3 {ICM_rFN3}
+  iof_icm(54) = 1 !phosphorus limiting #1 {ICM_rFP1}
+  iof_icm(55) = 0 !phosphorus limiting #2 {ICM_rFP2}
+  iof_icm(56) = 0 !phosphorus limiting #3 {ICM_rFP3}
+  iof_icm(57) = 0 !sillica limiting #1 {ICM_rS}
+  iof_icm(58) = 1 !salinity stress #3 {ICM_rSal}
+  iof_icm(59) = 0 !RPOC dissolution rate [g/m^3/day] {ICM_disoRPOC}
+  iof_icm(60) = 1 !LPOC dissolution rate [g/m^3/day] {ICM_disoLPOC}
+  iof_icm(61) = 1 !DOC heterotrophic respiration rate [g/m^3/day] {ICM_HRDOC}
+  iof_icm(62) = 1 !DOC flux for denitrofication [g/m^3/day] {ICM_DenitDOC}
+  iof_icm(63) = 0 !RPOC flux from predation [g/m^3/day] {ICM_predRPOC}
+  iof_icm(64) = 1 !LPOC flux from predation [g/m^3/day] {ICM_predLPOC}
+  iof_icm(65) = 1 !DOC flux from predation [g/m^3/day] {ICM_predDOC}
+  iof_icm(66) = 1 !DOC flux from PB basal metabolism [g/m^3/day] {ICM_basalDOC}
+  iof_icm(67) = 0 !RPOC flux from SAV metabolism [g/m^3/day] {ICM_savmtRPOC}
+  iof_icm(68) = 0 !LPOC flux from SAV metabolism [g/m^3/day] {ICM_savmtLPOC}
+  iof_icm(69) = 0 !DOC flux from SAV metabolism [g/m^3/day] {ICM_savmtDOC}
+  iof_icm(70) = 0 !RPON dissolution rate [g/m^3/day] {ICM_disoRPON}
+  iof_icm(71) = 1 !LPON dissolution rate [g/m^3/day] {ICM_disoLPON}
+  iof_icm(72) = 1 !DON mineralization rate [g/m^3/day] {ICM_NRDON}
+  iof_icm(73) = 0 !RPON flux from predation [g/m^3/day] {ICM_predRPON}
+  iof_icm(74) = 1 !LPON flux from predation [g/m^3/day] {ICM_predLPON}
+  iof_icm(75) = 1 !DON flux from predation [g/m^3/day] {ICM_predDON}
+  iof_icm(76) = 1 !NH4 flux from predation [g/m^3/day] {ICM_predNH4}
+  iof_icm(77) = 0 !RPON flux from PB basal metabolism [g/m^3/day] {ICM_basalRPON}
+  iof_icm(78) = 1 !LPON flux from PB basal metabolism [g/m^3/day] {ICM_basalLPON}
+  iof_icm(79) = 1 !DON flux from PB basal metabolism [g/m^3/day] {ICM_basalDON}
+  iof_icm(80) = 1 !NH4 flux from PB basal metabolism [g/m^3/day] {ICM_basalNH4}
+  iof_icm(81) = 1 !NH4 flux for nitrofication [g/m^3/day] {ICM_NitNH4}
+  iof_icm(82) = 1 !NH4 uptake for PB growth [g/m^3/day] {ICM_absNH4}
+  iof_icm(83) = 1 !NO3 flux for denitrofication [g/m^3/day] {ICM_DenitNO3}
+  iof_icm(84) = 1 !NO3 uptake for PB growth [g/m^3/day] {ICM_absNO3}
+  iof_icm(85) = 0 !RPON flux from SAV metabolism [g/m^3/day] {ICM_savmtRPON}
+  iof_icm(86) = 0 !LPON flux from SAV metabolism [g/m^3/day] {ICM_savmtLPON}
+  iof_icm(87) = 0 !DON flux from SAV metabolism [g/m^3/day] {ICM_savmtDON}
+  iof_icm(88) = 0 !NH4 flux from SAV metabolism [g/m^3/day] {ICM_savmtNH4}
+  iof_icm(89) = 0 !NH4 uptake for SAV growth [g/m^3/day] {ICM_savgrNH4}
+  iof_icm(90) = 0 !NO3 uptake for SAV growth [g/m^3/day] {ICM_savgrNO3}
+  iof_icm(91) = 0 !RPOP dissolution rate [g/m^3/day] {ICM_disoRPOP}
+  iof_icm(92) = 1 !LPOP dissolution rate [g/m^3/day] {ICM_disoLPOP}
+  iof_icm(93) = 1 !DOP mineralization rate [g/m^3/day] {ICM_NRDOP}
+  iof_icm(94) = 1 !PO4 uptake for PB growth [g/m^3/day] {ICM_absPO4}
+  iof_icm(95) = 0 !RPOP flux from predation [g/m^3/day] {ICM_predRPOP}
+  iof_icm(96) = 1 !LPOP flux from predation [g/m^3/day] {ICM_predLPOP}
+  iof_icm(97) = 1 !DOP flux from predation [g/m^3/day] {ICM_predDOP}
+  iof_icm(98) = 1 !PO4 flux from predation [g/m^3/day] {ICM_predPO4}
+  iof_icm(99) = 0 !RPOP flux from PB basal metabolism [g/m^3/day] {ICM_basalRPOP}
+  iof_icm(100) = 1 !LPOP flux from PB basal metabolism [g/m^3/day] {ICM_basalLPOP}
+  iof_icm(101) = 1 !DOP flux from PB basal metabolism [g/m^3/day] {ICM_basalDOP}
+  iof_icm(102) = 1 !PO4  flux from PB basal metabolism [g/m^3/day] {ICM_basalPO4}
+  iof_icm(103) = 0 !RPOP flux from SAV metabolism [g/m^3/day] {ICM_savmtRPOP}
+  iof_icm(104) = 0 !LPOP flux from SAV metabolism [g/m^3/day] {ICM_savmtLPOP}
+  iof_icm(105) = 0 !DOP flux from SAV metabolism [g/m^3/day] {ICM_savmtDOP}
+  iof_icm(106) = 0 !PO4 flux from SAV metabolism [g/m^3/day] {ICM_savmtPO4}
+  iof_icm(107) = 0 !PO4 uptake for SAV growth [g/m^3/day] {ICM_savgrPO4}
+  iof_icm(108) = 1 !DO consumption for PB basal metabolism [g/m^3/day] {ICM_basalDOO}
+  iof_icm(109) = 1 !DO consumption for predation [g/m^3/day] {ICM_predDOO}
+  iof_icm(110) = 1 !DO consumption for nitrofication [g/m^3/day] {ICM_NitDOO}
+  iof_icm(111) = 1 !DO consumption for DOC heterotrophic respiration [g/m^3/day] {ICM_HRDOO}
+  iof_icm(112) = 1 !DO flux for COD [g/m^3/day] {ICM_chemDOO}
+  iof_icm(113) = 1 !DO production from PB phytosynthesis [g/m^3/day] {ICM_phoDOO}
+  iof_icm(114) = 1 !DO reaeration [g/m^3/day] {ICM_reaDOO}
+  iof_icm(115) = 0 !DO consumption for SAV metabolism [g/m^3/day] {ICM_savmtDOO}
+  iof_icm(116) = 0 !DO production from SAV growth [g/m^3/day] {ICM_savgrDOO}
+
+  iof_icm(117) = 0 !Zoo. #1 {ICM_1}
+  iof_icm(118) = 0 !Zoo. #2 {ICM_2}
+  iof_icm(119) = 1 !phyto #1 {ICM_3}
+  iof_icm(120) = 1 !phyto #2 {ICM_4}
+  iof_icm(121) = 1 !phyto #3 {ICM_5}
+  iof_icm(122) = 1 !RPOC {ICM_6}
+  iof_icm(123) = 1 !LPOC {ICM_7}
+  iof_icm(124) = 1 !DOC {ICM_8}
+  iof_icm(125) = 1 !RPON {ICM_9}
+  iof_icm(126) = 1 !LPON {ICM_10}
+  iof_icm(127) = 1 !DON {ICM_11}
+  iof_icm(128) = 1 !NH4 {ICM_12}
+  iof_icm(129) = 1 !NO3 {ICM_13}
+  iof_icm(130) = 1 !RPOP {ICM_14}
+  iof_icm(131) = 1 !LPOP {ICM_15}
+  iof_icm(132) = 1 !DOP {ICM_16}
+  iof_icm(133) = 1 !PO4t {ICM_17}
+  iof_icm(134) = 0 !Si- biogenic {ICM_18}
+  iof_icm(135) = 0 !available Si {ICM_19}
+  iof_icm(136) = 1 !COD: Chemical oxygen demand {ICM_20}
+  iof_icm(137) = 1 !DO {ICM_21}
+  iof_icm(138) = 0 !TIC {ICM_22} !following requires ICM_PH on
+  iof_icm(139) = 0 !ALK {ICM_23}
+  iof_icm(140) = 0 !CA {ICM_24}
+  iof_icm(141) = 0 !CACO3 {ICM_25}
 
 !-----------------------------------------------------------------------
 ! CoSINE outputs

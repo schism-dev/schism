@@ -36,9 +36,9 @@ subroutine icm_init
     & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea), &
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
     & wqc(ntrs(7),nvrt,nea), &
-    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DO_consmp(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
-    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3), &
-    & rFS(nvrt,nea,3),rFSal(nvrt,nea,3),&
+    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
+    & GP(nvrt,nea,3),GPT(nvrt,nea,3),netGP(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
+    & rFS(nvrt,nea),rFSal(nvrt,nea),&
     & disoRPOC(nvrt,nea),disoLPOC(nvrt,nea),HRDOC(nvrt,nea),DenitDOC(nvrt,nea), &
     & predRPOC(nvrt,nea),predLPOC(nvrt,nea),predDOC(nvrt,nea),basalDOC(nvrt,nea), &
     & savmtRPOC(nvrt,nea),savmtLPOC(nvrt,nea),savmtDOC(nvrt,nea), &
@@ -51,8 +51,8 @@ subroutine icm_init
     & predRPOP(nvrt,nea),predLPOP(nvrt,nea),predDOP(nvrt,nea),predPO4(nvrt,nea), &
     & basalRPOP(nvrt,nea),basalLPOP(nvrt,nea),basalDOP(nvrt,nea),basalPO4(nvrt,nea), &
     & savmtPO4(nvrt,nea),savgrPO4(nvrt,nea),savmtRPOP(nvrt,nea),savmtLPOP(nvrt,nea),savmtDOP(nvrt,nea), &
-    & basalDOO(nvrt,nea),predDOO(nvrt,nea),NitDOO(nvrt,nea),HRDOO(nvrt,nea),chemDOO(nvrt,nea),reaDOO(nvrt,nea), &
-    & savmtDOO(nvrt,nea),savgrDOO(nvrt,nea), &
+    & basalDOO(nvrt,nea),predDOO(nvrt,nea),NitDOO(nvrt,nea),HRDOO(nvrt,nea),chemDOO(nvrt,nea), &
+    & phoDOO(nvrt,nea),reaDOO(nvrt,nea),savmtDOO(nvrt,nea),savgrDOO(nvrt,nea), &
 
     & rKRC(nea),rKLC(nea),rKDC(nea),&
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
@@ -103,12 +103,12 @@ subroutine icm_init
   wqc=0.0;     TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0
   CAsat=0.0;   CO2=0.0;     PH_el=0.0;   PH_nd=0.0;   ph_nudge=0.0; ph_nudge_nd=0.0 
   TIC_el=0.0;  ALK_el=0.0;  
-  Chl_el=0.0;  PrmPrdt=0.0; DO_consmp=0.0; DIN_el=0.0; PON_el=0.0
+  Chl_el=0.0;  PrmPrdt=0.0; DIN_el=0.0; PON_el=0.0
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
   SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
-  GP=0.0;      GPT=0.0;     rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
+  GP=0.0;      GPT=0.0;     netGP=0.0;   rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   disoRPOC=0.0;disoLPOC=0.0;HRDOC=0.0;   DenitDOC=0.0
   predRPOC=0.0;predLPOC=0.0;predDOC=0.0; basalDOC=0.0
@@ -122,7 +122,7 @@ subroutine icm_init
   predRPOP=0.0;predLPOP=0.0;predDOP=0.0;predPO4=0.0;
   basalRPOP=0.0;basalLPOP=0.0;basalDOP=0.0;basalPO4=0.0;
   savmtPO4=0.0;savgrPO4=0.0;savmtRPOP=0.0;savmtLPOP=0.0;savmtDOP=0.0;
-  basalDOO=0.0;predDOO=0.0;NitDOO=0.0;HRDOO=0.0;chemDOO=0.0;reaDOO=0.0; 
+  basalDOO=0.0;predDOO=0.0;NitDOO=0.0;HRDOO=0.0;chemDOO=0.0;phoDOO=0.0;reaDOO=0.0; 
   savmtDOO=0.0;savgrDOO=0.0;
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0

@@ -53,7 +53,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(kind=iwp),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
   !(nvrt,nea)>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,DO_consmp 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el
 
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
@@ -80,7 +80,8 @@ module icm_mod
   real(kind=iwp),save :: TU,TD,rIa,rIavg,Daylen
   real(kind=iwp),save,allocatable,dimension(:,:) :: PrefN
   !(nvrt,nea),>>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,rFI,rFN,rFP,rFS,rFSal,GPT
+  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,GPT,netGP,rFI,rFN,rFP
+  real(kind=iwp),save,allocatable,dimension(:,:) :: rFS,rFSal
   real(kind=iwp),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
   
@@ -172,7 +173,7 @@ module icm_mod
   !COD&DO parameters 
   real(kind=iwp),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
-  real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,reaDOO
+  real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO
 
   !--------------------------------------------------------------------------------------
