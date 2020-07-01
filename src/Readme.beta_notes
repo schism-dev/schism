@@ -1,7 +1,7 @@
 Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
-??????? (Jun 30, 2020): fixed a bug in ielm_transport.
+33fb37f (Jun 30, 2020): fixed a bug in ielm_transport.
 
 2f7bab1 (Jun 28,2020): reorganized BGC process (rates/fluxes) and added output flag in param.nm.
 
