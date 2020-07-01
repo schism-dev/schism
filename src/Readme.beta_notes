@@ -1,8 +1,9 @@
 Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
+??????? (Jun 30, 2020): fixed a bug in ielm_transport.
 
-??????? (Jun 28,2020): reorganized BGC process (rates/fluxes) and added output flag in param.nm.
+2f7bab1 (Jun 28,2020): reorganized BGC process (rates/fluxes) and added output flag in param.nm.
 
 1477780 (May 8, 2020): changed sediment.in to sediment.nml (and made parameters lower case: BEDLOAD_COEFF, 
       NEWLAYER_THICK,IMETH_BED_EVOL, SAND_SD50=>Sd50, SAND_ERATE=>Erate, SED_TYPE=>iSedtype,

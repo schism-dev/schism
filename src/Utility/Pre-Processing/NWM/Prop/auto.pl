@@ -26,7 +26,7 @@ foreach (@reg_list) {
     $downstream_reg =~ s/\+/\-/g;
     print("$upstream_reg $downstream_reg\n");
 
-    print("setting $downstream_reg to $n and $upstream_reg to $m\n");
+    print("setting $downstream_reg to $n and $upstream_reg to $n\n");
     print("$script_dir/auto_edit_prop $downstream_reg hgrid.ll $n -9999\n");
     system("$script_dir/auto_edit_prop $downstream_reg hgrid.ll $n -9999");
     move("out.prop","default.prop");

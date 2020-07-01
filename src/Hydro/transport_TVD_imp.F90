@@ -329,11 +329,12 @@
         dtb_min3(:)=time_r !init 
 !$OMP   end workshare
 
+        if (it_sub==1) then !only compute dtb for the first step, not related to scalar field
+
 !$OMP     workshare
-        ielem_elm=0
+          ielem_elm=0
 !$OMP     end workshare
 
-        if (it_sub==1) then !only compute dtb for the first step, not related to scalar field
 !$OMP     do 
           do i=1,ne
             if(idry_e(i)==1) cycle
