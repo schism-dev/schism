@@ -1,9 +1,8 @@
 Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
-33fb37f (Jun 30, 2020): fixed a bug in ielm_transport.
 
-2f7bab1 (Jun 28,2020): reorganized ICM process (rates/fluxes) and added output flag in param.nm.
+2f7bab1 (Jun 28,2020): reorganized ICM process (rates/fluxes) and added output flag in param.nml.
 
 1477780 (May 8, 2020): changed sediment.in to sediment.nml (and made parameters lower case: BEDLOAD_COEFF, 
       NEWLAYER_THICK,IMETH_BED_EVOL, SAND_SD50=>Sd50, SAND_ERATE=>Erate, SED_TYPE=>iSedtype,
@@ -434,6 +433,7 @@ git versions:
 (106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
 (107) e703189 (May 6, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
 (108) 14e201f (May 7, 2020): switched to ParMETIS v4.0.3;
+(109) 33fb37f (Jun 30, 2020): fixed a bug in ielm_transport (Fei Y.).
 
 ---------------------------------------------------------------
 Auto-test history:
