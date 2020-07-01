@@ -16,7 +16,7 @@ subroutine icm_init
 !--------------------------------------------------------------------------------
 !allocate ICM arrays and initialize
 !--------------------------------------------------------------------------------
-  use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global
+  use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global,iof_icm
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
   use icm_sed_mod
@@ -37,23 +37,8 @@ subroutine icm_init
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
     & wqc(ntrs(7),nvrt,nea), &
     & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
-    & GP(nvrt,nea,3),GPT(nvrt,nea,3),netGP(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
+    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
     & rFS(nvrt,nea),rFSal(nvrt,nea),&
-    & disoRPOC(nvrt,nea),disoLPOC(nvrt,nea),HRDOC(nvrt,nea),DenitDOC(nvrt,nea), &
-    & predRPOC(nvrt,nea),predLPOC(nvrt,nea),predDOC(nvrt,nea),basalDOC(nvrt,nea), &
-    & savmtRPOC(nvrt,nea),savmtLPOC(nvrt,nea),savmtDOC(nvrt,nea), &
-    & disoRPON(nvrt,nea),disoLPON(nvrt,nea),HRDON(nvrt,nea), &
-    & predRPON(nvrt,nea),predLPON(nvrt,nea),predDON(nvrt,nea),predNH4(nvrt,nea), &
-    & basalRPON(nvrt,nea),basalLPON(nvrt,nea),basalDON(nvrt,nea),basalNH4(nvrt,nea), &
-    & NitNH4(nvrt,nea),absNH4(nvrt,nea),DenitNO3(nvrt,nea),absNO3(nvrt,nea), &
-    & savmtNH4(nvrt,nea),savgrNH4(nvrt,nea),savgrNO3(nvrt,nea),savmtRPON(nvrt,nea),savmtLPON(nvrt,nea),savmtDON(nvrt,nea), &
-    & disoRPOP(nvrt,nea),disoLPOP(nvrt,nea),HRDOP(nvrt,nea),absPO4(nvrt,nea), &
-    & predRPOP(nvrt,nea),predLPOP(nvrt,nea),predDOP(nvrt,nea),predPO4(nvrt,nea), &
-    & basalRPOP(nvrt,nea),basalLPOP(nvrt,nea),basalDOP(nvrt,nea),basalPO4(nvrt,nea), &
-    & savmtPO4(nvrt,nea),savgrPO4(nvrt,nea),savmtRPOP(nvrt,nea),savmtLPOP(nvrt,nea),savmtDOP(nvrt,nea), &
-    & basalDOO(nvrt,nea),predDOO(nvrt,nea),NitDOO(nvrt,nea),HRDOO(nvrt,nea),chemDOO(nvrt,nea), &
-    & phoDOO(nvrt,nea),reaDOO(nvrt,nea),savmtDOO(nvrt,nea),savgrDOO(nvrt,nea), &
-
     & rKRC(nea),rKLC(nea),rKDC(nea),&
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
@@ -67,18 +52,352 @@ subroutine icm_init
     & TGP1(nea),TGP2(nea),TGP3(nea),CChl1(nea),CChl2(nea),CChl3(nea), & 
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
     & rIavg_save(nea), &!rad_ncai
+    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
-    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea), & !region !ncai
+    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region !ncai
+  if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
+
+
+  !----------------------------------------------------------------
+  !ncai_sav::
+  !----------------------------------------------------------------
+  if(isav_icm==1) then
+    !base case
     !(nvrt,nea)>> 1 to nvrt: bottom to surface
-    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea), & !ncai_sav
-    & plfsav(nvrt,nea),pmaxsav(nvrt,nea),fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea), &
+    allocate(plfsav(nvrt,nea),pmaxsav(nvrt,nea),fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea), &
     !(nvrt)<< surface to bottom
     & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
     & rtpocsav(nvrt),rtponsav(nvrt),rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt), &
-    & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea),hcansav(nea), &
+    & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea), &
     & tlfNH4sav(nea),tlfPO4sav(nea),trtpocsav(nea),trtponsav(nea),trtpopsav(nea),trtdosav(nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. icm_sav variables')
 
-  if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
+    !init
+    tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;       hcansavori=0.0;   
+    plfsav=0.0;   pmaxsav=0.0;    fisav=1.0;        fnsav=1.0;      fpsav=1.0;
+    rtpocsav=0.0; rtponsav=0.0;   rtpopsav=0.0;     rtdosav=0.0
+    trtpocsav=0.0;trtponsav=0.0;  trtpopsav=0.0;    trtdosav=0.0
+    lfNH4sav=0.0; lfPO4sav=0.0
+    tlfNH4sav=0.0;tlfPO4sav=0.0
+
+    if(iof_icm(67)==1) then
+      allocate(savmtRPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.67')
+      savmtRPOC=0.0
+    endif
+    if(iof_icm(68)==1) then
+      allocate(savmtLPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.68')
+      savmtLPOC=0.0
+    endif
+    if(iof_icm(69)==1) then
+      allocate(savmtDOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.69')
+      savmtDOC=0.0
+    endif
+
+    if(iof_icm(85)==1) then
+      allocate(savmtRPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.85')
+      savmtRPON=0.0
+    endif
+    if(iof_icm(86)==1) then
+      allocate(savmtLPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.86')
+      savmtLPON=0.0
+    endif
+    if(iof_icm(87)==1) then
+      allocate(savmtDON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.87')
+      savmtDON=0.0
+    endif
+    if(iof_icm(88)==1) then
+      allocate(savmtNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.88')
+      savmtNH4=0.0
+    endif
+    if(iof_icm(89)==1) then
+      allocate(savgrNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.89')
+      savgrNH4=0.0
+    endif
+    if(iof_icm(90)==1) then
+      allocate(savgrNO3(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.90')
+      savgrNO3=0.0
+    endif
+
+    if(iof_icm(103)==1) then
+      allocate(savmtRPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.103')
+      savmtRPOP=0.0
+    endif
+    if(iof_icm(104)==1) then
+      allocate(savmtLPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.104')
+      savmtLPOP=0.0
+    endif
+    if(iof_icm(105)==1) then
+      allocate(savmtDOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.105')
+      savmtDOP=0.0
+    endif
+    if(iof_icm(106)==1) then
+      allocate(savmtPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.106')
+      savmtPO4=0.0
+    endif
+    if(iof_icm(107)==1) then
+      allocate(savgrPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.107')
+      savgrPO4=0.0
+    endif
+
+    if(iof_icm(115)==1) then
+      allocate(savmtDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.115')
+      savmtDOO=0.0
+    endif
+    if(iof_icm(116)==1) then
+      allocate(savgrDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.116')
+      savgrDOO=0.0
+    endif
+
+  endif !isav_icm
+
+
+
+  !----------------------------------------------------------------
+  !optional outputs allocation
+  !----------------------------------------------------------------
+  if(iof_icm(45)/=0.or.iof_icm(46)/=0.or.iof_icm(47)/=0) then 
+    allocate(netGP(nvrt,nea,3),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 45/46/47')
+    netGP=0.0 
+  endif 
+
+  !Carbon
+  if(iof_icm(59)==1) then 
+    allocate(disoRPOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 59')
+    disoRPOC=0.0
+  endif
+  if(iof_icm(60)==1) then
+    allocate(disoLPOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 60')
+    disoLPOC=0.0
+  endif
+  if(iof_icm(61)==1) then
+    allocate(HRDOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 61')
+    HRDOC=0.0
+  endif
+  if(iof_icm(62)==1) then
+    allocate(DenitDOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 62')
+    DenitDOC=0.0
+  endif
+  if(iof_icm(63)==1) then
+    allocate(predRPOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 63')
+    predRPOC=0.0
+  endif
+  if(iof_icm(64)==1) then
+    allocate(predLPOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 64')
+    predLPOC=0.0
+  endif
+  if(iof_icm(65)==1) then
+    allocate(predDOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 65')
+    predDOC=0.0
+  endif
+  if(iof_icm(66)==1) then
+    allocate(basalDOC(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 66')
+    basalDOC=0.0
+  endif
+
+  !Nitrogen
+  if(iof_icm(70)==1) then
+    allocate(disoRPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 70')
+    disoRPON=0.0
+  endif
+  if(iof_icm(71)==1) then
+    allocate(disoLPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 71')
+    disoLPON=0.0
+  endif
+  if(iof_icm(72)==1) then
+    allocate(HRDON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 72')
+    HRDON=0.0
+  endif
+  if(iof_icm(73)==1) then
+    allocate(predRPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 73')
+    predRPON=0.0
+  endif
+  if(iof_icm(74)==1) then
+    allocate(predLPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 74')
+    predLPON=0.0
+  endif
+  if(iof_icm(75)==1) then
+    allocate(predDON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 75')
+    predDON=0.0
+  endif
+  if(iof_icm(76)==1) then
+    allocate(predNH4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 76')
+    predNH4=0.0
+  endif
+  if(iof_icm(77)==1) then
+    allocate(basalRPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 77')
+    basalRPON=0.0
+  endif
+  if(iof_icm(78)==1) then
+    allocate(basalLPON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 78')
+    basalLPON=0.0
+  endif
+  if(iof_icm(79)==1) then
+    allocate(basalDON(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 79')
+    basalDON=0.0
+  endif
+  if(iof_icm(80)==1) then
+    allocate(basalNH4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 80')
+    basalNH4=0.0
+  endif
+  if(iof_icm(81)==1) then
+    allocate(NitNH4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 81')
+    NitNH4=0.0
+  endif
+  if(iof_icm(82)==1) then
+    allocate(absNH4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 82')
+    absNH4=0.0
+  endif
+  if(iof_icm(83)==1) then
+    allocate(DenitNO3(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 83')
+    DenitNO3=0.0
+  endif
+  if(iof_icm(84)==1) then
+    allocate(absNO3(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 84')
+    absNO3=0.0
+  endif
+
+  !Phosphorus
+  if(iof_icm(91)==1) then
+    allocate(disoRPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 91')
+    disoRPOP=0.0
+  endif
+  if(iof_icm(92)==1) then
+    allocate(disoLPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 92')
+    disoLPOP=0.0
+  endif
+  if(iof_icm(93)==1) then
+    allocate(HRDOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 93')
+    HRDOP=0.0
+  endif
+  if(iof_icm(94)==1) then
+    allocate(absPO4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 94')
+    absPO4=0.0
+  endif
+  if(iof_icm(95)==1) then
+    allocate(predRPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 95')
+    predRPOP=0.0
+  endif
+  if(iof_icm(96)==1) then
+    allocate(predLPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 96')
+    predLPOP=0.0
+  endif
+  if(iof_icm(97)==1) then
+    allocate(predDOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 97')
+    predDOP=0.0
+  endif
+  if(iof_icm(98)==1) then
+    allocate(predPO4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 98')
+    predPO4=0.0
+  endif
+  if(iof_icm(99)==1) then
+    allocate(basalRPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 99')
+    basalRPOP=0.0
+  endif
+  if(iof_icm(100)==1) then
+    allocate(basalLPOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 100')
+    basalLPOP=0.0
+  endif
+  if(iof_icm(101)==1) then
+    allocate(basalDOP(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 101')
+    basalDOP=0.0
+  endif
+  if(iof_icm(102)==1) then
+    allocate(basalPO4(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 102')
+    basalPO4=0.0
+  endif
+
+  !Oxygen
+  if(iof_icm(108)==1) then
+    allocate(basalDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 108')
+    basalDOO=0.0
+  endif
+  if(iof_icm(109)==1) then
+    allocate(predDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 109')
+    predDOO=0.0
+  endif
+  if(iof_icm(110)==1) then
+    allocate(NitDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 110')
+    NitDOO=0.0
+  endif
+  if(iof_icm(111)==1) then
+    allocate(HRDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 111')
+    HRDOO=0.0
+  endif
+  if(iof_icm(112)==1) then
+    allocate(chemDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 112')
+    chemDOO=0.0
+  endif
+  if(iof_icm(113)==1) then
+    allocate(phoDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 113')
+    phoDOO=0.0
+  endif
+  if(iof_icm(114)==1) then
+    allocate(reaDOO(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 114')
+    reaDOO=0.0
+  endif
+
+
+
+
 
   !icm_sed_mod
   allocate(SFA(nea),SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
@@ -108,22 +427,8 @@ subroutine icm_init
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
   SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
-  GP=0.0;      GPT=0.0;     netGP=0.0;   rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
+  GP=0.0;      GPT=0.0;     rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
-  disoRPOC=0.0;disoLPOC=0.0;HRDOC=0.0;   DenitDOC=0.0
-  predRPOC=0.0;predLPOC=0.0;predDOC=0.0; basalDOC=0.0
-  savmtRPOC=0.0;savmtLPOC=0.0;savmtDOC=0.0;
-  disoRPON=0.0;disoLPON=0.0;HRDON=0.0; 
-  predRPON=0.0;predLPON=0.0;predDON=0.0;predNH4=0.0;
-  basalRPON=0.0;basalLPON=0.0;basalDON=0.0;basalNH4=0.0; 
-  NitNH4=0.0; absNH4=0.0;DenitNO3=0.0;absNO3=0.0;
-  savmtNH4=0.0;savgrNH4=0.0;savgrNO3=0.0;savmtRPON=0.0;savmtLPON=0.0;savmtDON=0.0; 
-  disoRPOP=0.0;disoLPOP=0.0;HRDOP=0.0;absPO4=0.0; 
-  predRPOP=0.0;predLPOP=0.0;predDOP=0.0;predPO4=0.0;
-  basalRPOP=0.0;basalLPOP=0.0;basalDOP=0.0;basalPO4=0.0;
-  savmtPO4=0.0;savgrPO4=0.0;savmtRPOP=0.0;savmtLPOP=0.0;savmtDOP=0.0;
-  basalDOO=0.0;predDOO=0.0;NitDOO=0.0;HRDOO=0.0;chemDOO=0.0;phoDOO=0.0;reaDOO=0.0; 
-  savmtDOO=0.0;savgrDOO=0.0;
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
@@ -140,21 +445,14 @@ subroutine icm_init
 
   !rad_ncai
   rIavg_save=0.0
- 
+
+  !ncai_sav
+  lfsav=1.0;    stsav=1.0;      rtsav=0.3;      hcansav=0.0 !init for each layer whole domain 
+
   !erosion ncai
   tau_c_elem=0.0
   EROH2S=0.0; EROLPOC=0.0; ERORPOC=0.0
   SED_EROH2S=0.0; SED_EROLPOC=0.0; SED_ERORPOC=0.0
-
-  !sav
-  lfsav=1.0;    stsav=1.0;      rtsav=0.3; !init for each layer whole domain
-  tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;  
-  hcansavori=0.0;   hcansav=0.0
-  plfsav=0.0;   pmaxsav=0.0;    fisav=1.0;        fnsav=1.0;      fpsav=1.0;
-  rtpocsav=0.0; rtponsav=0.0;   rtpopsav=0.0;     rtdosav=0.0
-  trtpocsav=0.0;trtponsav=0.0;  trtpopsav=0.0;    trtdosav=0.0
-  lfNH4sav=0.0; lfPO4sav=0.0
-  tlfNH4sav=0.0;tlfPO4sav=0.0
 
   !sed_flux
   SFA=0.0;       SED_BL=0.0;     ZD=0.0;         SED_B=0.0;      SED_LPOP=0.0;   SED_RPOP=0.0;   SED_LPON=0.0;  SED_RPON=0.0;

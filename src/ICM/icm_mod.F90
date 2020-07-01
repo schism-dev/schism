@@ -17,7 +17,7 @@ module icm_mod
 !parameter definition for ICM
 !Warning: most column arrays index from surface to bottom!
 !-------------------------------------------------------------------------------
-  use schism_glbl,only: iwp,nea,nvrt
+  use schism_glbl,only: iwp,nvrt,nea
   implicit none
 
   !integer, parameter ::iT=2
@@ -120,8 +120,8 @@ module icm_mod
   real(kind=iwp),save :: khpwsav,khpssav !phosphorus
   real(kind=iwp),save :: fpisav, fpdsav, fplpsav, fprpsav
   !sav growth rate and metabolism rate
-  !(nea,nvrt)>> bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nea,nvrt)
+  !(nvrt,nea)>> bottom to surface
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
   real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
   real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav

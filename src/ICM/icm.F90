@@ -636,7 +636,7 @@ subroutine photosynthesis(id,hour,nv,it)
 !----------------------------------------------------------------------------
   use icm_mod
   use icm_sed_mod, only : sbLight,CPIP,CNH4,NH4T2I,PO4T2I
-  use schism_glbl, only : iwp,errmsg,pi,ielg,iths_main,kbe,nvrt,ze
+  use schism_glbl, only : iwp,errmsg,pi,ielg,iths_main,kbe,nvrt,ze,iof_icm
   use schism_msgp, only : myrank,parallel_abort
   implicit none
   !id: (wet) elem index
@@ -1107,7 +1107,7 @@ subroutine calkwq(id,nv,ure,it)
 !calculate the mass balance equation in water column
 !----------------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg
+  use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,iof_icm
   use schism_msgp, only : myrank, parallel_abort
   use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav
   implicit none
@@ -1574,7 +1574,7 @@ subroutine calkwq(id,nv,ure,it)
     else
       a=a-BPR(1)
     endif
-    netGP(klev,id,1)=GP(klev,id,1)*PB1(k,1)
+    if(iof_icm(45)==1) netGP(klev,id,1)=GP(klev,id,1)*PB1(k,1)
     PB1(k,2)=((1.0+a*dtw2)*PB1(k,1)+b*dtw)/(1.0-a*dtw2)
     PB1(k,1)=0.5*(PB1(k,1)+PB1(k,2))
     PB10=PB1(k,1)
@@ -1592,7 +1592,7 @@ subroutine calkwq(id,nv,ure,it)
     else
       a=a-BPR(2)
     endif
-    netGP(klev,id,2)=GP(klev,id,2)*PB2(k,1)
+    if(iof_icm(46)==1) netGP(klev,id,2)=GP(klev,id,2)*PB2(k,1)
     PB2(k,2)=((1.0+a*dtw2)*PB2(k,1)+b*dtw)/(1.0-a*dtw2)
     PB2(k,1)=0.5*(PB2(k,1)+PB2(k,2))
     PB20=PB2(k,1)
@@ -1610,7 +1610,7 @@ subroutine calkwq(id,nv,ure,it)
     else
       a=a-BPR(3)
     endif
-    netGP(klev,id,3)=GP(klev,id,3)*PB3(k,1)
+    if(iof_icm(47)==1) netGP(klev,id,3)=GP(klev,id,3)*PB3(k,1)
     PB3(k,2)=((1.0+a*dtw2)*PB3(k,1)+b*dtw)/(1.0-a*dtw2)
     PB3(k,1)=0.5*(PB3(k,1)+PB3(k,2))
     PB30=PB3(k,1)
@@ -1646,7 +1646,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !RPOC
     rKRPOC=(rKRC(id)+rKRCalg*sumAPB)*rKTPOM
-    disoRPOC(klev,id)=-rKRPOC*RPOC(k,1)
+    if(iof_icm(59)==1) disoRPOC(klev,id)=-rKRPOC*RPOC(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKRPOC-WSRBNET(id)/dep(k)
@@ -1659,13 +1659,14 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FCRP(1)*BPR(1)*PB1(k,1)+FCRP(2)*BPR(2)*PB2(k,1)+FCRP(3)*BPR(3)*PB3(k,1) !predation
     endif
-    predRPOC(klev,id)=b
+    if(iof_icm(63)==1) predRPOC(klev,id)=b
     b=b+WSRP(id)*RPOC0/dep(k)+nRPOC/dep(k)+WPRPOC+WRPOC
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtRPOC(klev,id)=fcrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
-      b=b+savmtRPOC(klev,id)
+      rtmp=fcrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
+      b=b+rtmp
+      if(iof_icm(67)==1) savmtRPOC(klev,id)=rtmp
     endif
     
     !erosion
@@ -1680,7 +1681,7 @@ subroutine calkwq(id,nv,ure,it)
  
     !LPOC 
     rKLPOC=(rKLC(id)+rKLCalg*sumAPB)*rKTPOM
-    disoLPOC(klev,id)=-rKLPOC*LPOC(k,1)
+    if(iof_icm(60)==1) disoLPOC(klev,id)=-rKLPOC*LPOC(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKLPOC-WSLBNET(id)/dep(k)
@@ -1693,13 +1694,14 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FCLP(1)*BPR(1)*PB1(k,1)+FCLP(2)*BPR(2)*PB2(k,1)+FCLP(3)*BPR(3)*PB3(k,1)
     endif
-    predLPOC(klev,id)=b
+    if(iof_icm(64)==1) predLPOC(klev,id)=b
     b=b+WSLP(id)*LPOC0/dep(k)+nLPOC/dep(k)+WPLPOC+WLPOC !settling, surface or benthic flux, PS load, NPS load    
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtLPOC(klev,id)=fclpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
-      b=b+savmtLPOC(klev,id)
+      rtmp=fclpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
+      b=b+rtmp
+      if(iof_icm(68)==1) savmtLPOC(klev,id)=rtmp
     endif
 
     !erosion
@@ -1717,8 +1719,8 @@ subroutine calkwq(id,nv,ure,it)
     xKHR=rKDOC*DOO(k,1)/(rKHORDO+DOO(k,1))
     xDenit=AANOX*rKDOC*rKHORDO*NO3(k,1)/(rKHORDO+DOO(k,1))/(rKHDNn+NO3(k,1))
 
-    HRDOC(klev,id)=xKHR*DOC(k,1)
-    DenitDOC(klev,id)=xDenit*DOC(k,1)
+    if(iof_icm(61)==1) HRDOC(klev,id)=xKHR*DOC(k,1)
+    if(iof_icm(62)==1) DenitDOC(klev,id)=xDenit*DOC(k,1)
     a=-xKHR-xDenit
 
     if(iZoo==1) then
@@ -1729,17 +1731,19 @@ subroutine calkwq(id,nv,ure,it)
     else
       b=FCDP(1)*BPR(1)*PB1(k,1)+FCDP(2)*BPR(2)*PB2(k,1)+FCDP(3)*BPR(3)*PB3(k,1)
     endif
-    predDOC(klev,id)=b
-    basalDOC(klev,id)=(FCD(1)+(1.0-FCD(1))*rKHR1/(DOO(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ &         !PB1 metabolism
+    if(iof_icm(65)==1) predDOC(klev,id)=b
+    rtmp=(FCD(1)+(1.0-FCD(1))*rKHR1/(DOO(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ &         !PB1 metabolism
       & (FCD(2)+(1.0-FCD(2))*rKHR2/(DOO(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ &         !PB2 metabolism
       & (FCD(3)+(1.0-FCD(3))*rKHR3/(DOO(k,1)+rKHR3))*BMP(3)*PB3(k,1)            !PB3 metabolism
-    b=b+basalDOC(klev,id)
+    b=b+rtmp
+    if(iof_icm(66)==1) basalDOC(klev,id)=rtmp
     b=b+rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+nDOC/dep(k)+WPDOC+WDOC       !dissolution, surface or benthic flux, PS load, NPS load
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtDOC(klev,id)=fcdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
-      b=b+savmtDOC(klev,id)
+      rtmp=fcdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+bmstsav(k)*stsav(klev,id))
+      b=b+rtmp
+      if(iof_icm(69)==1) savmtDOC(klev,id)=rtmp
     endif
 
     DOC(k,2)=((1.0+a*dtw2)*DOC(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1760,7 +1764,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !RPON
     rKRPON=(rKRN+rKRNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
-    disoRPON(klev,id)=-rKRPON*RPON(k,1)
+    if(iof_icm(70)==1) disoRPON(klev,id)=-rKRPON*RPON(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKRPON-WSRBNET(id)/dep(k)
@@ -1773,16 +1777,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b=FNRP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predRPON(klev,id)=b
-    basalRPON(klev,id)=FNR(1)*ANC(1)*BMP(1)*PB1(k,1)+FNR(2)*ANC(2)*BMP(2)*PB2(k,1)+FNR(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
-    b=b+basalRPON(klev,id)
+    if(iof_icm(73)==1) predRPON(klev,id)=b
+    rtmp=FNR(1)*ANC(1)*BMP(1)*PB1(k,1)+FNR(2)*ANC(2)*BMP(2)*PB2(k,1)+FNR(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
+    b=b+rtmp
+    if(iof_icm(77)==1) basalRPON(klev,id)=rtmp
     b=b+WSRP(id)*RPON0/dep(k)+nRPON/dep(k)+WPRPON+WRPON
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtRPON(klev,id)=ancsav*fnrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=ancsav*fnrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtRPON(klev,id)
+      b=b+rtmp
+      if(iof_icm(85)==1) savmtRPON(klev,id)=rtmp
     endif
 
     RPON(k,2)=((1.0+a*dtw2)*RPON(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1792,7 +1798,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !LPON
     rKLPON=(rKLN+rKLNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
-    disoLPON(klev,id)=-rKLPON*LPON(k,1)
+    if(iof_icm(71)==1) disoLPON(klev,id)=-rKLPON*LPON(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKLPON-WSLBNET(id)/dep(k)
@@ -1805,16 +1811,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FNLP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predLPON(klev,id)=b
-    basalLPON(klev,id)=FNL(1)*ANC(1)*BMP(1)*PB1(k,1)+FNL(2)*ANC(2)*BMP(2)*PB2(k,1)+FNL(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
-    b=b+basalLPON(klev,id)
+    if(iof_icm(74)==1) predLPON(klev,id)=b
+    rtmp=FNL(1)*ANC(1)*BMP(1)*PB1(k,1)+FNL(2)*ANC(2)*BMP(2)*PB2(k,1)+FNL(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
+    b=b+rtmp
+    if(iof_icm(78)==1) basalLPON(klev,id)=rtmp
     b=b+WSLP(id)*LPON0/dep(k)+nLPON/dep(k)+WPLPON+WLPON
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtLPON(klev,id)=ancsav*fnlpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=ancsav*fnlpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtLPON(klev,id)
+      b=b+rtmp
+      if(iof_icm(86)==1) savmtLPON(klev,id)=rtmp
     endif
 
     LPON(k,2)=((1.0+a*dtw2)*LPON(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1824,7 +1832,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !DON
     rKDON=(rKDN+rKDNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTDOM
-    HRDON(klev,id)=-rKDON*DON(k,1)
+    if(iof_icm(72)==1) HRDON(klev,id)=-rKDON*DON(k,1)
 
     a=-rKDON
     if(iZoo==1) then
@@ -1833,16 +1841,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FNDP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predDON(klev,id)=b
-    basalDON(klev,id)=FND(1)*ANC(1)*BMP(1)*PB1(k,1)+FND(2)*ANC(2)*BMP(2)*PB2(k,1)+FND(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
-    b=b+basalDON(klev,id)
+    if(iof_icm(75)==1) predDON(klev,id)=b
+    rtmp=FND(1)*ANC(1)*BMP(1)*PB1(k,1)+FND(2)*ANC(2)*BMP(2)*PB2(k,1)+FND(3)*ANC(3)*BMP(3)*PB3(k,1) !PB metabolism
+    b=b+rtmp
+    if(iof_icm(79)==1) basalDON(klev,id)=rtmp
     b=b+rKRPON*RPON(k,1)+rKLPON*LPON(k,1)+nDON/dep(k)+WPDON+WDON
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtDON(klev,id)=ancsav*fndsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=ancsav*fndsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtDON(klev,id)
+      b=b+rtmp
+      if(iof_icm(87)==1) savmtDON(klev,id)=rtmp
     endif
 
     DON(k,2)=((1.0+a*dtw2)*DON(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1868,7 +1878,7 @@ subroutine calkwq(id,nv,ure,it)
       xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
       !xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rKNit2*xT*xT)
     endif
-    NitNH4(klev,id)=-xNit*NH4(k,1)
+    if(iof_icm(81)==1) NitNH4(klev,id)=-xNit*NH4(k,1)
     a=-xNit
     
     if(iZoo==1) then
@@ -1877,10 +1887,13 @@ subroutine calkwq(id,nv,ure,it)
     else
        b= FNIP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1))  !predation
     endif
-    predNH4(klev,id)=b
-    basalNH4(klev,id)=FNI(1)*ANC(1)*BMP(1)*PB1(k,1)+FNI(2)*ANC(2)*BMP(2)*PB2(k,1)+FNI(3)*ANC(3)*BMP(3)*PB3(k,1)
-    absNH4(klev,id)=-ANC(1)*PrefN(k,1)*GP(klev,id,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(klev,id,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(klev,id,3)*PB3(k,1)
-    b=b+basalNH4(klev,id)+absNH4(klev,id)
+    if(iof_icm(76)==1) predNH4(klev,id)=b
+    rtmp=FNI(1)*ANC(1)*BMP(1)*PB1(k,1)+FNI(2)*ANC(2)*BMP(2)*PB2(k,1)+FNI(3)*ANC(3)*BMP(3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(80)==1) basalNH4(klev,id)=rtmp
+    rtmp=-ANC(1)*PrefN(k,1)*GP(klev,id,1)*PB1(k,1)-ANC(2)*PrefN(k,2)*GP(klev,id,2)*PB2(k,1)-ANC(3)*PrefN(k,3)*GP(klev,id,3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(82)==1) absNH4(klev,id)=rtmp
     b=b+rKDON*DON(k,1)+nNH4/dep(k)+WPNH4+WNH4
 
     !ncai_sav
@@ -1899,10 +1912,13 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif !fnsedsav
 
-      savmtNH4(klev,id)=ancsav*fnisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=ancsav*fnisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      savgrNH4(klev,id)=-ancsav*(1-fnsedsav)*nprsav*plfsav(klev,id)*lfsav(klev,id)
-      b=b+savmtNH4(klev,id)+savgrNH4(klev,id)
+      b=b+rtmp
+      if(iof_icm(88)==1) savmtNH4(klev,id)=rtmp
+      rtmp=-ancsav*(1-fnsedsav)*nprsav*plfsav(klev,id)*lfsav(klev,id)
+      b=b+rtmp
+      if(iof_icm(89)==1) savgrNH4(klev,id)=rtmp
     endif !isav_icm
 
     NH4(k,2)=((1.0+a*dtw2)*NH4(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1911,15 +1927,19 @@ subroutine calkwq(id,nv,ure,it)
    
     !NO3
     a=0.0
-    absNO3(klev,id)=-ANC(1)*(1.0-PrefN(k,1))*GP(klev,id,1)*PB1(k,1)-ANC(2)*(1.0-PrefN(k,2))*GP(klev,id,2)*PB2(k,1)-ANC(3)*(1.0-PrefN(k,3))*GP(klev,id,3)*PB3(k,1)
-    DenitNO3(klev,id)=-ANDC*xDenit*DOC(k,1)
-    b=b+absNO3(klev,id)+DenitNO3(klev,id)
+    rtmp=-ANC(1)*(1.0-PrefN(k,1))*GP(klev,id,1)*PB1(k,1)-ANC(2)*(1.0-PrefN(k,2))*GP(klev,id,2)*PB2(k,1)-ANC(3)*(1.0-PrefN(k,3))*GP(klev,id,3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(84)==1) absNO3(klev,id)=rtmp
+    rtmp=-ANDC*xDenit*DOC(k,1)
+    b=b+rtmp
+    if(iof_icm(83)==1) DenitNO3(klev,id)=rtmp
     b=b+xNit*NH4(k,1)+nNO3/dep(k)+WPNO3+WNO3
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savgrNO3(klev,id)=-ancsav*(1-fnsedsav)*(1-nprsav)*plfsav(klev,id)*lfsav(klev,id) !uptake for growth
-      b=b+savgrNO3(klev,id)
+      rtmp=-ancsav*(1-fnsedsav)*(1-nprsav)*plfsav(klev,id)*lfsav(klev,id) !uptake for growth
+      b=b+rtmp
+      if(iof_icm(90)==1) savgrNO3(klev,id)=rtmp
     endif
 
     NO3(k,2)=NO3(k,1)+b*dtw
@@ -1941,7 +1961,7 @@ subroutine calkwq(id,nv,ure,it)
     !RPOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
     rKRPOP=(rKRP(id)+rKRPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
-    disoRPOP(klev,id)=-rKRPOP*RPOP(k,1)
+    if(iof_icm(91)==1) disoRPOP(klev,id)=-rKRPOP*RPOP(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKRPOP-WSRBNET(id)/dep(k)
@@ -1954,16 +1974,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FPRP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predRPOP(klev,id)=b
-    basalRPOP(klev,id)=FPR(1)*APC(1)*BMP(1)*PB1(k,1)+FPR(2)*APC(2)*BMP(2)*PB2(k,1)+FPR(3)*APC(3)*BMP(3)*PB3(k,1)
-    b=b+basalRPOP(klev,id)
+    if(iof_icm(95)==1) predRPOP(klev,id)=b
+    rtmp=FPR(1)*APC(1)*BMP(1)*PB1(k,1)+FPR(2)*APC(2)*BMP(2)*PB2(k,1)+FPR(3)*APC(3)*BMP(3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(99)==1) basalRPOP(klev,id)=rtmp
     b=b+WSRP(id)*RPOP0/dep(k)+nRPOP/dep(k)+WPRPOP+WRPOP
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtRPOP(klev,id)=apcsav*fprpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=apcsav*fprpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtRPOP(klev,id)
+      b=b+rtmp
+      if(iof_icm(103)==1) savmtRPOP(klev,id)=rtmp
     endif
 
     RPOP(k,2)=((1.0+a*dtw2)*RPOP(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1974,7 +1996,7 @@ subroutine calkwq(id,nv,ure,it)
     !LPOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
     rKLPOP=(rKLP(id)+rKLPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
-    disoLPOP(klev,id)=-rKLPOP*LPOP(k,1)
+    if(iof_icm(92)==1) disoLPOP(klev,id)=-rKLPOP*LPOP(k,1)
 
     if(k==nv.and.iSet/=0)then
       a=-rKLPOP-WSLBNET(id)/dep(k)
@@ -1987,16 +2009,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FPLP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predLPOP(klev,id)=b
-    basalLPOP(klev,id)=FPL(1)*APC(1)*BMP(1)*PB1(k,1)+FPL(2)*APC(2)*BMP(2)*PB2(k,1)+FPL(3)*APC(3)*BMP(3)*PB3(k,1)
-    b=b+basalLPOP(klev,id)
+    if(iof_icm(96)==1) predLPOP(klev,id)=b
+    rtmp=FPL(1)*APC(1)*BMP(1)*PB1(k,1)+FPL(2)*APC(2)*BMP(2)*PB2(k,1)+FPL(3)*APC(3)*BMP(3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(100)==1) basalLPOP(klev,id)=rtmp
     b=b+WSLP(id)*LPOP0/dep(k)+nLPOP/dep(k)+WPLPOP+WLPOP
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtLPOP(klev,id)=apcsav*fplpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=apcsav*fplpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtLPOP(klev,id)
+      b=b+rtmp
+      if(iof_icm(104)==1) savmtLPOP(klev,id)=rtmp
     endif
 
     LPOP(k,2)=((1.0+a*dtw2)*LPOP(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2007,7 +2031,7 @@ subroutine calkwq(id,nv,ure,it)
     !DOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
     rKDOP=(rKDP(id)+rKDPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTDOM
-    HRDOP(klev,id)=-rKDOP*DOP(k,1)
+    if(iof_icm(93)==1) HRDOP(klev,id)=-rKDOP*DOP(k,1)
 
     a=-rKDOP
     if(iZoo==1) then
@@ -2016,15 +2040,18 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FPDP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
     endif
-    predDOP(klev,id)=b
-    basalDOP(klev,id)=FPD(1)*APC(1)*BMP(1)*PB1(k,1)+FPD(2)*APC(2)*BMP(2)*PB2(k,1)+FPD(3)*APC(3)*BMP(3)*PB3(k,1)
+    if(iof_icm(97)==1) predDOP(klev,id)=b
+    rtmp=FPD(1)*APC(1)*BMP(1)*PB1(k,1)+FPD(2)*APC(2)*BMP(2)*PB2(k,1)+FPD(3)*APC(3)*BMP(3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(101)==1) basalDOP(klev,id)=rtmp
     b=b+rKRPOP*RPOP(k,1)+rKLPOP*LPOP(k,1)+nDOP/dep(k)+WPDOP+WDOP
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtDOP(klev,id)=apcsav*fpdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=apcsav*fpdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id))
-      b=b+savmtDOP(klev,id)
+      b=b+rtmp
+      if(iof_icm(105)==1) savmtDOP(klev,id)=rtmp
     endif
 
     DOP(k,2)=((1.0+a*dtw2)*DOP(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2045,10 +2072,13 @@ subroutine calkwq(id,nv,ure,it)
     else
       b= FPIP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1))  !predation
     endif
-    predPO4(klev,id)=b
-    basalPO4(klev,id)=FPI(1)*APC(1)*BMP(1)*PB1(k,1)+FPI(2)*APC(2)*BMP(2)*PB2(k,1)+FPI(3)*APC(3)*BMP(3)*PB3(k,1)
-    absPO4(klev,id)=-APC(1)*GP(klev,id,1)*PB1(k,1)-APC(2)*GP(klev,id,2)*PB2(k,1)-APC(3)*GP(klev,id,3)*PB3(k,1) 
-    b=b+basalPO4(klev,id)+absPO4(klev,id)
+    if(iof_icm(98)==1) predPO4(klev,id)=b
+    rtmp=FPI(1)*APC(1)*BMP(1)*PB1(k,1)+FPI(2)*APC(2)*BMP(2)*PB2(k,1)+FPI(3)*APC(3)*BMP(3)*PB3(k,1)
+    b=b+rtmp
+    if(iof_icm(102)==1) basalPO4(klev,id)=rtmp
+    rtmp=-APC(1)*GP(klev,id,1)*PB1(k,1)-APC(2)*GP(klev,id,2)*PB2(k,1)-APC(3)*GP(klev,id,3)*PB3(k,1) 
+    b=b+rtmp
+    if(iof_icm(94)==1) absPO4(klev,id)=rtmp
     b=b+rKDOP*DOP(k,1)+fp*WSSED*PO4t0/dep(k)+nPO4t/dep(k)+WPPO4t+WPO4t
 
     !ncai_sav
@@ -2061,10 +2091,13 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif !fnsedsav
 
-      savmtPO4(klev,id)=apcsav*fpisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=apcsav*fpisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id)) !basal metabolism
-      savgrPO4(klev,id)=-apcsav*(1-fpsedsav)*plfsav(klev,id)*lfsav(klev,id) !uptake for growth
-      b=b+savmtPO4(klev,id)+savgrPO4(klev,id)
+      b=b+rtmp
+      if(iof_icm(106)==1) savmtPO4(klev,id)=rtmp
+      rtmp=-apcsav*(1-fpsedsav)*plfsav(klev,id)*lfsav(klev,id) !uptake for growth
+      b=b+rtmp
+      if(iof_icm(106)==1) savgrPO4(klev,id)=rtmp
     endif !ncai_sav effect
 
     PO4t(k,2)=((1.0+a*dtw2)*PO4t(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2178,7 +2211,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !k==1
 
     a=-rKr
-    reaDOO(klev,id)=rKr*DOsat-rKr*DOO(k,1)
+    if(iof_icm(114)==1) reaDOO(klev,id)=rKr*DOsat-rKr*DOO(k,1)
 
     if(iZoo==1) then
       b=-((1.0-FCDZ(1))*DOO(k,1)/(DOO(k,1)+rKHRZ(1)))*AOC*BMZ(1)*ZB1(k,1) & !ZB1 metabolism
@@ -2186,25 +2219,37 @@ subroutine calkwq(id,nv,ure,it)
     else
       b=0.0
     endif
-    predDOO(klev,id)=b
-    basalDOO(klev,id)=-((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
+    if(iof_icm(109)==1) predDOO(klev,id)=b
+    rtmp=-((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
        &-((1.0-FCD(2))*DOO(k,1)/(DOO(k,1)+rKHR2))*AOC*BMP(2)*PB2(k,1) & !PB2 metabolism
        &-((1.0-FCD(3))*DOO(k,1)/(DOO(k,1)+rKHR3))*AOC*BMP(3)*PB3(k,1)   !PB3 metabolism
-    phoDOO(klev,id)=(1.3-0.3*PrefN(k,1))*AOC*GP(klev,id,1)*PB1(k,1) & !PB1 photosynthesis
+    b=b+rtmp
+    if(iof_icm(108)==1) basalDOO(klev,id)=rtmp
+    rtmp=(1.3-0.3*PrefN(k,1))*AOC*GP(klev,id,1)*PB1(k,1) & !PB1 photosynthesis
        &+(1.3-0.3*PrefN(k,2))*AOC*GP(klev,id,2)*PB2(k,1) & !PB2 photosynthesis
        &+(1.3-0.3*PrefN(k,3))*AOC*GP(klev,id,3)*PB3(k,1)   !PB3 photosynthesis
-    NitDOO(klev,id)=-AON*xNit*NH4(k,1)
-    HRDOO(klev,id)=-AOC*xKHR*DOC(k,1)
-    chemDOO(klev,id)=-rKCOD*COD(k,1)
-    b=b+basalDOO(klev,id)+phoDOO(klev,id)+NitDOO(klev,id)+HRDOO(klev,id)+chemDOO(klev,id)
+    b=b+rtmp
+    if(iof_icm(113)==1) phoDOO(klev,id)=rtmp
+    rtmp=-AON*xNit*NH4(k,1)
+    b=b+rtmp
+    if(iof_icm(110)==1) NitDOO(klev,id)=rtmp
+    rtmp=-AOC*xKHR*DOC(k,1)
+    b=b+rtmp
+    if(iof_icm(111)==1) HRDOO(klev,id)=rtmp
+    rtmp=-rKCOD*COD(k,1)
+    b=b+rtmp
+    if(iof_icm(112)==1) chemDOO(klev,id)=rtmp
     b=b+rKr*DOsat+nDO/dep(k)+WPDO+WDO
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-      savmtDOO(klev,id)=-aocrsav*fdosav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
+      rtmp=-aocrsav*fdosav*((bmlfsav(k)+plfsav(klev,id)*famsav)*lfsav(klev,id)+ &
                                 &bmstsav(k)*stsav(klev,id)) !metabolism
-      savgrDOO(klev,id)=aocrsav*plfsav(klev,id)*lfsav(klev,id) !photosynthesis
-      b=b+savmtDOO(klev,id)+savmtDOO(klev,id)
+      b=b+rtmp
+      if(iof_icm(115)==1) savmtDOO(klev,id)=rtmp
+      rtmp=aocrsav*plfsav(klev,id)*lfsav(klev,id) !photosynthesis
+      b=b+rtmp
+      if(iof_icm(116)==1) savgrDOO(klev,id)=rtmp
     endif
 
     DOO(k,2)=((1.0+a*dtw2)*DOO(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2412,10 +2457,7 @@ subroutine calkwq(id,nv,ure,it)
      & SU(k,1),rKSUA,rKSU,rKTSUA,WSPB1(id),FSPP,ASCd,FSPd,SU0,nSU,&
      & SAt(k,1),rKSAp,FSIP,FSId,SAt0,nSAt,&
      & COD(k,1),rKCOD,rKHCOD,rKCD,rKTCOD,nCOD,&
-     & DOO(k,1),DOsat,rKr,AOC,AON,nDO,&
-     & lfsav(klev,id),stsav(klev,id),rtsav(klev,id),dep(k),&
-     & plfsav(klev,id),bmlfsav(k),bmstsav(k),bmrtsav(k),pmaxsav(klev,id),fisav(klev,id),fnsav(klev,id),fpsav(klev,id), &
-     & tlfsav(id),tstsav(id),trtsav(id),hcansav(id)
+     & DOO(k,1),DOsat,rKr,AOC,AON,nDO
           endif !rtmp
         enddo !m
       endif !ista(i)/=0

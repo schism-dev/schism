@@ -7714,19 +7714,19 @@
         if(iof_icm(12)==1) call writeout_nc(id_out_var(noutput+16), &
      &'ICM_SED_BENSA',4,1,nea,dble(SED_BENSA))
 
-        if(iof_icm(13)==1) call writeout_nc(id_out_var(noutput+17), &
+        if(iof_icm(13)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+17), &
      &'ICM_lfsav',6,nvrt,nea,dble(lfsav))
-        if(iof_icm(14)==1) call writeout_nc(id_out_var(noutput+18), &
+        if(iof_icm(14)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+18), &
      &'ICM_stsav',6,nvrt,nea,dble(stsav))
-        if(iof_icm(15)==1) call writeout_nc(id_out_var(noutput+19), &
+        if(iof_icm(15)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+19), &
      &'ICM_rtsav',6,nvrt,nea,dble(rtsav))
-        if(iof_icm(16)==1) call writeout_nc(id_out_var(noutput+20), &
+        if(iof_icm(16)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+20), &
      &'ICM_tlfsav',4,1,nea,dble(tlfsav))
-        if(iof_icm(17)==1) call writeout_nc(id_out_var(noutput+21), &
+        if(iof_icm(17)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+21), &
      &'ICM_tstsav',4,1,nea,dble(tstsav))
-        if(iof_icm(18)==1) call writeout_nc(id_out_var(noutput+22), &
+        if(iof_icm(18)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+22), &
      &'ICM_trtsav',4,1,nea,dble(trtsav))
-        if(iof_icm(19)==1) call writeout_nc(id_out_var(noutput+23), &
+        if(iof_icm(19)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+23), &
      &'ICM_hcansav',4,1,nea,dble(hcansav))
 
         if(iof_icm(20)==1) call writeout_nc(id_out_var(noutput+24), &
@@ -7823,11 +7823,11 @@
      &'ICM_predDOC',5,nvrt,nea,dble(predDOC))
         if(iof_icm(66)==1) call writeout_nc(id_out_var(noutput+70), &
      &'ICM_basalDOC',5,nvrt,nea,dble(basalDOC))
-        if(iof_icm(67)==1) call writeout_nc(id_out_var(noutput+71), &
+        if(iof_icm(67)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+71), &
      &'ICM_savmtRPOC',5,nvrt,nea,dble(savmtRPOC))
-        if(iof_icm(68)==1) call writeout_nc(id_out_var(noutput+72), &
+        if(iof_icm(68)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+72), &
      &'ICM_savmtLPOC',5,nvrt,nea,dble(savmtLPOC))
-        if(iof_icm(69)==1) call writeout_nc(id_out_var(noutput+73), &
+        if(iof_icm(69)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+73), &
      &'ICM_savmtDOC',5,nvrt,nea,dble(savmtDOC))
         if(iof_icm(70)==1) call writeout_nc(id_out_var(noutput+74), &
      &'ICM_disoRPON',5,nvrt,nea,dble(disoRPON))
@@ -7859,17 +7859,17 @@
      &'ICM_DenitNO3',5,nvrt,nea,dble(DenitNO3))
         if(iof_icm(84)==1) call writeout_nc(id_out_var(noutput+88), &
      &'ICM_absNO3',5,nvrt,nea,dble(absNO3))
-        if(iof_icm(85)==1) call writeout_nc(id_out_var(noutput+89), &
+        if(iof_icm(85)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+89), &
      &'ICM_savmtRPON',5,nvrt,nea,dble(savmtRPON))
-        if(iof_icm(86)==1) call writeout_nc(id_out_var(noutput+90), &
+        if(iof_icm(86)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+90), &
      &'ICM_savmtLPON',5,nvrt,nea,dble(savmtLPON))
-        if(iof_icm(87)==1) call writeout_nc(id_out_var(noutput+91), &
+        if(iof_icm(87)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+91), &
      &'ICM_savmtDON',5,nvrt,nea,dble(savmtDON))
-        if(iof_icm(88)==1) call writeout_nc(id_out_var(noutput+92), &
+        if(iof_icm(88)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+92), &
      &'ICM_savmtNH4',5,nvrt,nea,dble(savmtNH4))
-        if(iof_icm(89)==1) call writeout_nc(id_out_var(noutput+93), &
+        if(iof_icm(89)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+93), &
      &'ICM_savgrNH4',5,nvrt,nea,dble(savgrNH4))
-        if(iof_icm(90)==1) call writeout_nc(id_out_var(noutput+94), &
+        if(iof_icm(90)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+94), &
      &'ICM_savgrNO3',5,nvrt,nea,dble(savgrNO3))
         if(iof_icm(91)==1) call writeout_nc(id_out_var(noutput+95), &
      &'ICM_disoRPOP',5,nvrt,nea,dble(disoRPOP))
@@ -7895,15 +7895,15 @@
      &'ICM_basalDOP',5,nvrt,nea,dble(basalDOP))
         if(iof_icm(102)==1) call writeout_nc(id_out_var(noutput+106), &
      &'ICM_basalPO4',5,nvrt,nea,dble(basalPO4))
-        if(iof_icm(103)==1) call writeout_nc(id_out_var(noutput+107), &
+        if(iof_icm(103)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+107), &
      &'ICM_savmtRPOP',5,nvrt,nea,dble(savmtRPOP))
-        if(iof_icm(104)==1) call writeout_nc(id_out_var(noutput+108), &
+        if(iof_icm(104)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+108), &
      &'ICM_savmtLPOP',5,nvrt,nea,dble(savmtLPOP))
-        if(iof_icm(105)==1) call writeout_nc(id_out_var(noutput+109), &
+        if(iof_icm(105)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+109), &
      &'ICM_savmtDOP',5,nvrt,nea,dble(savmtDOP))
-        if(iof_icm(106)==1) call writeout_nc(id_out_var(noutput+110), &
+        if(iof_icm(106)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+110), &
      &'ICM_savmtPO4',5,nvrt,nea,dble(savmtPO4))
-        if(iof_icm(107)==1) call writeout_nc(id_out_var(noutput+111), &
+        if(iof_icm(107)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+111), &
      &'ICM_savgrPO4',5,nvrt,nea,dble(savgrPO4))
         if(iof_icm(108)==1) call writeout_nc(id_out_var(noutput+112), &
      &'ICM_basalDOO',5,nvrt,nea,dble(basalDOO))
@@ -7919,9 +7919,9 @@
      &'ICM_phoDOO',5,nvrt,nea,dble(phoDOO))
         if(iof_icm(114)==1) call writeout_nc(id_out_var(noutput+118), &
      &'ICM_reaDOO',5,nvrt,nea,dble(reaDOO))
-        if(iof_icm(115)==1) call writeout_nc(id_out_var(noutput+119), &
+        if(iof_icm(115)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+119), &
      &'ICM_savmtDOO',5,nvrt,nea,dble(savmtDOO))
-        if(iof_icm(116)==1) call writeout_nc(id_out_var(noutput+120), &
+        if(iof_icm(116)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+120), &
      &'ICM_savgrDOO',5,nvrt,nea,dble(savgrDOO))
 
         noutput=noutput+116
