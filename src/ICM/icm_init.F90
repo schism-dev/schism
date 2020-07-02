@@ -26,19 +26,13 @@ subroutine icm_init
   integer :: istat
 
   !icm_mod
-  allocate(TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), & !PH model variables 
-    & CAsat(nvrt),CO2(nvrt),PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
-    & TIC_el(nvrt,nea),ALK_el(nvrt,nea), &
-    !(nvrt)<< surface to bottom
-    & dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
+  !(nvrt)<< surface to bottom
+  allocate(dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
     & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea), &
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
-    & wqc(ntrs(7),nvrt,nea), &
-    & Chl_el(nvrt,nea),PrmPrdt(nvrt,nea),DIN_el(nvrt,nea),PON_el(nvrt,nea), &
-    & GP(nvrt,nea,3),GPT(nvrt,nea,3),rFI(nvrt,nea,3),rFN(nvrt,nea,3),rFP(nvrt,nea,3),&
-    & rFS(nvrt,nea),rFSal(nvrt,nea),&
+    & wqc(ntrs(7),nvrt,nea),GP(nvrt,nea,3),&
     & rKRC(nea),rKLC(nea),rKDC(nea),&
     & rKRP(nea),rKLP(nea),rKDP(nea),rKRPalg(nea),rKLPalg(nea),rKDPalg(nea),&
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
@@ -57,6 +51,19 @@ subroutine icm_init
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region !ncai
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
 
+  !----------------------------------------------------------------
+  !PH model
+  !----------------------------------------------------------------
+#ifdef ICM_PH
+  allocate(TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), & !PHmodel variables 
+    & CAsat(nvrt),CO2(nvrt),PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
+    & TIC_el(nvrt,nea),ALK_el(nvrt,nea),stat=istat)
+  if(istat/=0) call parallel_abort('Failed in alloc. icm PH')
+  TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0
+  CAsat=0.0;   CO2=0.0;     PH_el=0.0;   PH_nd=0.0;   ph_nudge=0.0;
+  ph_nudge_nd=0.0 TIC_el=0.0;  ALK_el=0.0;
+
+#endif
 
   !----------------------------------------------------------------
   !ncai_sav::
@@ -171,11 +178,98 @@ subroutine icm_init
   !----------------------------------------------------------------
   !optional outputs allocation
   !----------------------------------------------------------------
+  !variable @elem
+  if(iof_icm(1)==1) then
+    allocate(Chl_el(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 1')
+    Chl_el=0.0
+  endif
+  if(iof_icm(3)==1) then
+    allocate(PrmPrdt(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 3')
+    PrmPrdt =0.0
+  endif
+  if(iof_icm(4)==1) then
+    allocate(DIN_el(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 4')
+    DIN_el=0.0
+  endif
+  if(iof_icm(5)==1) then
+    allocate(PON_el(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 5')
+    PON_el=0.0
+  endif
+
+  !PB growth
+  if(iof_icm(42)/=0.or.iof_icm(43)/=0.or.iof_icm(44)/=0) then
+    allocate(GPT(nvrt,nea,3),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 42/43/44')
+    GPT=0.0
+  endif
   if(iof_icm(45)/=0.or.iof_icm(46)/=0.or.iof_icm(47)/=0) then 
     allocate(netGP(nvrt,nea,3),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. 45/46/47')
     netGP=0.0 
+  endif
+  if(iof_icm(48)/=0) then
+    allocate(rFI1(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 48')
+    rFI1=1.0
+  endif
+  if(iof_icm(49)/=0) then
+    allocate(rFI2(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 49')
+    rFI2=1.0
+  endif
+  if(iof_icm(50)/=0) then
+    allocate(rFI3(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 50')
+    rFI3=1.0
+  endif
+  if(iof_icm(51)/=0) then
+    allocate(rFN1(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 51')
+    rFN1=1.0
+  endif
+  if(iof_icm(52)/=0) then
+    allocate(rFN2(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 52')
+    rFN2=1.0
+  endif
+  if(iof_icm(53)/=0) then
+    allocate(rFN3(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 53')
+    rFN3=1.0
+  endif
+  if(iof_icm(54)/=0) then
+    allocate(rFP1(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 54')
+    rFP1=1.0
+  endif
+  if(iof_icm(55)/=0) then
+    allocate(rFP2(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 55')
+    rFP2=1.0
+  endif
+  if(iof_icm(56)/=0) then
+    allocate(rFP3(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 56')
+    rFP3=1.0
+  endif
+  if(iof_icm(57)==1) then
+    allocate(rFS(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 57')
+    rFS=1.0
   endif 
+  if(iof_icm(58)==1) then
+    allocate(rFSal(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 58')
+    rFSal=1.0
+  endif
+
+
+
+
 
   !Carbon
   if(iof_icm(59)==1) then 
@@ -419,15 +513,12 @@ subroutine icm_init
   if(istat/=0) call parallel_abort('Failed in alloc. icm_sed_mod variables')
 
 !$OMP parallel workshare default(shared)
-  wqc=0.0;     TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0
-  CAsat=0.0;   CO2=0.0;     PH_el=0.0;   PH_nd=0.0;   ph_nudge=0.0; ph_nudge_nd=0.0 
-  TIC_el=0.0;  ALK_el=0.0;  
-  Chl_el=0.0;  PrmPrdt=0.0; DIN_el=0.0; PON_el=0.0
+  wqc=0.0;
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
   SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
-  GP=0.0;      GPT=0.0;     rFI=1.0;     rFN=1.0;     rFP=1.0;    rFS=1.0;    rFSal=1.0;
+  GP=0.0;      
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0

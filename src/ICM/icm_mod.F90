@@ -80,8 +80,8 @@ module icm_mod
   real(kind=iwp),save :: TU,TD,rIa,rIavg,Daylen
   real(kind=iwp),save,allocatable,dimension(:,:) :: PrefN
   !(nvrt,nea),>>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,GPT,netGP,rFI,rFN,rFP
-  real(kind=iwp),save,allocatable,dimension(:,:) :: rFS,rFSal
+  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,GPT,netGP
+  real(kind=iwp),save,allocatable,dimension(:,:) :: rFI1,rFN1,rFP1,rFI2,rFN2,rFP2,rFI3,rFN3,rFP3,rFS,rFSal
   real(kind=iwp),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
   
