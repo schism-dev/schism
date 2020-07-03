@@ -42,10 +42,9 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,lfsav,stsav,rtsav, &
+      use icm_mod, only : iSun,iRea,WMS,wqc,PH_nd,lfsav,stsav,rtsav, &
                          &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm, &
-                         &EROH2S,EROLPOC,ERORPOC,GP,GPT,netGP, &
-                         &rFI1,rFN1,rFP1,rFI2,rFN2,rFP2,rFI3,rFN3,rFP3,rFS,rFSal, &
+                         &EROH2S,EROLPOC,ERORPOC,GP,GPT,netGP,rFI,rFN,rFP,rFS,rFSal, &
                          &disoRPOC,disoLPOC,HRDOC,DenitDOC, &
                          &predRPOC,predLPOC,predDOC,basalDOC, &
                          &savmtRPOC,savmtLPOC,savmtDOC, &
@@ -7691,7 +7690,7 @@
 #ifdef USE_ICM
         if(iof_icm(1)==1) call writeout_nc(id_out_var(noutput+5), &
      &'ICM_Chl',5,nvrt,nea,dble(Chl_el))
-        if(iof_icm(2)==1.and.iPh/=0) call writeout_nc(id_out_var(noutput+6), &
+        if(iof_icm(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ICM_pH',2,nvrt,npa,dble(PH_nd))
         if(iof_icm(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ICM_PrmPrdt',5,nvrt,nea,dble(PrmPrdt))
@@ -7787,23 +7786,23 @@
         if(iof_icm(47)==1) call writeout_nc(id_out_var(noutput+51), &
      &'ICM_netGP3',5,nvrt,nea,dble(netGP(:,:,3)))
         if(iof_icm(48)==1) call writeout_nc(id_out_var(noutput+52), &
-     &'ICM_rFI1',5,nvrt,nea,dble(rFI1))
+     &'ICM_rFI1',5,nvrt,nea,dble(rFI(:,:,1)))
         if(iof_icm(49)==1) call writeout_nc(id_out_var(noutput+53), &
-     &'ICM_rFI2',5,nvrt,nea,dble(rFI2))
+     &'ICM_rFI2',5,nvrt,nea,dble(rFI(:,:,2)))
         if(iof_icm(50)==1) call writeout_nc(id_out_var(noutput+54), &
-     &'ICM_rFI3',5,nvrt,nea,dble(rFI3))
+     &'ICM_rFI3',5,nvrt,nea,dble(rFI(:,:,3)))
         if(iof_icm(51)==1) call writeout_nc(id_out_var(noutput+55), &
-     &'ICM_rFN1',5,nvrt,nea,dble(rFN1))
+     &'ICM_rFN1',5,nvrt,nea,dble(rFN(:,:,1)))
         if(iof_icm(52)==1) call writeout_nc(id_out_var(noutput+56), &
-     &'ICM_rFN2',5,nvrt,nea,dble(rFN2))
+     &'ICM_rFN2',5,nvrt,nea,dble(rFN(:,:,2)))
         if(iof_icm(53)==1) call writeout_nc(id_out_var(noutput+57), &
-     &'ICM_rFN3',5,nvrt,nea,dble(rFN3))
+     &'ICM_rFN3',5,nvrt,nea,dble(rFN(:,:,3)))
         if(iof_icm(54)==1) call writeout_nc(id_out_var(noutput+58), &
-     &'ICM_rFP1',5,nvrt,nea,dble(rFP1))
+     &'ICM_rFP1',5,nvrt,nea,dble(rFP(:,:,1)))
         if(iof_icm(55)==1) call writeout_nc(id_out_var(noutput+59), &
-     &'ICM_rFP2',5,nvrt,nea,dble(rFP2))
+     &'ICM_rFP2',5,nvrt,nea,dble(rFP(:,:,2)))
         if(iof_icm(56)==1) call writeout_nc(id_out_var(noutput+60), &
-     &'ICM_rFP3',5,nvrt,nea,dble(rFP3))
+     &'ICM_rFP3',5,nvrt,nea,dble(rFP(:,:,3)))
         if(iof_icm(57)==1) call writeout_nc(id_out_var(noutput+61), &
      &'ICM_rFS',5,nvrt,nea,dble(rFS))
         if(iof_icm(58)==1) call writeout_nc(id_out_var(noutput+62), &

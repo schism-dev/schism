@@ -203,6 +203,16 @@ subroutine link_icm(imode,id,nv)
       dep(m)=ze(k,id)-ze(k-1,id)
       Temp(m)=tr_el(1,k,id)
       Sal(m)=tr_el(2,k,id)    
+  
+      !check
+      if(Temp(m)<-20.or.Temp(m)>50) then
+        write(errmsg,*)'temp in ICM: ',Temp(m),m,ielg(id)
+          call parallel_abort(errmsg)
+      endif
+      if(Sal(m)<0.or.Sal(m)>45) then
+        write(errmsg,*)'salt in ICM: ',Sal(m),m,ielg(id)
+          call parallel_abort(errmsg)
+      endif
 
       ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id),0.d0)
       ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id),0.d0)
@@ -365,11 +375,6 @@ subroutine link_icm(imode,id,nv)
           call parallel_abort(errmsg)
         endif
       endif
-
-
-
-
-
     enddo!k::kbe(id)+1,nvrt
 
     !extend
@@ -798,14 +803,14 @@ subroutine photosynthesis(id,hour,nv,it)
       if(xT>0.0) then
         rval=rKTGP11(id)*xT*xT
         if(rval>50.0.or.rKTGP11(id)<0.0) then
-          write(errmsg,*)'check PB growth rKTGP11, xT: ',xT,rKTGP11(id),rval
+          write(errmsg,*)'check PB growth rKTGP11, xT:',xT,rKTGP11(id),rval,TGP1(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(1)=GPM1(id)*exp(-rval)
       else
         rval=rKTGP21(id)*xT*xT
         if(rval>50.0.or.rKTGP21(id)<0.) then
-          write(errmsg,*)'check PB growth rKTGP21, xT: ',xT,rKTGP21(id),rval
+          write(errmsg,*)'check PB growth rKTGP21, xT:',xT,rKTGP21(id),rval,TGP1(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(1)=GPM1(id)*exp(-rval)
@@ -817,14 +822,14 @@ subroutine photosynthesis(id,hour,nv,it)
       if(xT>0.0) then
         rval=rKTGP12(id)*xT*xT
         if(rval>50.0.or.rKTGP12(id)<0.) then
-          write(errmsg,*)'check PB growth rKTGP12, xT: ',xT,rKTGP12(id),rval
+          write(errmsg,*)'check PB growth rKTGP12, xT:',xT,rKTGP12(id),rval,TGP2(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(2)=GPM2(id)*exp(-rval)
       else
         rval=rKTGP22(id)*xT*xT
         if(rval>50.0.or.rKTGP22(id)<0.) then
-          write(errmsg,*)'check PB growth rKTGP22, xT: ',xT,rKTGP22(id),rval
+          write(errmsg,*)'check PB growth rKTGP22, xT:',xT,rKTGP22(id),rval,TGP2(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(2) =GPM2(id)*exp(-rval)
@@ -836,14 +841,14 @@ subroutine photosynthesis(id,hour,nv,it)
       if(xT>0.0) then
         rval=rKTGP13(id)*xT*xT
         if(rval>50.0.or.rKTGP13(id)<0.) then
-          write(errmsg,*)'check PB growth rKTGP13, xT: ',xT,rKTGP13(id),rval
+          write(errmsg,*)'check PB growth rKTGP13, xT:',xT,rKTGP13(id),rval,TGP3(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(3)=GPM3(id)*exp(-rval)
       else
         rval=rKTGP23(id)*xT*xT
         if(rval>50.0.or.rKTGP23(id)<0.) then
-          write(errmsg,*)'check PB growth rKTGP23, xT: ',xT,rKTGP23(id),rval
+          write(errmsg,*)'check PB growth rKTGP23, xT:',xT,rKTGP23(id),rval,TGP3(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
         GPT0(3)=GPM3(id)*exp(-rval)
@@ -925,8 +930,8 @@ subroutine photosynthesis(id,hour,nv,it)
             write(errmsg,*)'check ICM iLight rFI: ',bLight,sLight,rIs(i)
             call parallel_abort(errmsg)
           endif
-          rlFI =2.718*(exp(-rval)-exp(-rval2))/rKeh
-          !rlFI =2.718*(exp(-bLight/rIs(i))-exp(-sLight/rIs(i)))/rKeh
+          rlFI=2.718*(exp(-rval)-exp(-rval2))/rKeh
+          !rlFI=2.718*(exp(-bLight/rIs(i))-exp(-sLight/rIs(i)))/rKeh
         elseif(jLight==2) then !Cerco, convert rIa to E/m^2/day 
           !rat=2.42 !ly/day to uE/m2/s
           if(iRad==2) then 
@@ -944,17 +949,17 @@ subroutine photosynthesis(id,hour,nv,it)
           else
             rIK=(1.d3*CChl3(id))*GPT0(i)/alpha_PB(i)
           endif !i
-          rlFI =mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
+          rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
           call parallel_abort('unknown jLight in icm.F90')
         endif
 
-        if(rlFI -1>1.e-12.or.rlFI <0.or.rlFI /=rlFI ) then
-          write(errmsg,*)'FI>1.or.FI<0: ',rlFI ,bLight,sLight,rKeh,rKe
+        if(rlFI-1>1.e-12.or.rlFI<0.or.rlFI/=rlFI) then
+          write(errmsg,*)'FI>1.or.FI<0: ',rlFI,bLight,sLight,rKeh,rKe
           call parallel_abort(errmsg)
         endif 
         if(iof_icm(48)/=0.and.i==1) rFI1(klev,id)=rlFI
-        if(iof_icm(49)/=0.and.i==2) rFI2(klev,id)=rlFI 
+        if(iof_icm(49)/=0.and.i==2) rFI2(klev,id)=rlFI
         if(iof_icm(50)/=0.and.i==3) rFI3(klev,id)=rlFI
 
         !Nitrogen Limitation function for PB
@@ -984,20 +989,20 @@ subroutine photosynthesis(id,hour,nv,it)
             if(irSi==1) then
               GP(klev,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP,rlFS) 
             else
-              GP(klev,id,i)=GPT0(i)*rlFI *min(rlFN,rlFP)
+              GP(klev,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)
             endif 
             if(iof_icm(57)==1) rFS(klev,id)=rlFS 
           endif 
 
           !green alage
           if(i==2) then 
-            GP(klev,id,i)=GPT0(i)*rlFI *min(rlFN,rlFP) 
+            GP(klev,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP) 
           endif 
 
           !cyanobacteria
           if(i==3) then 
             rlFSal=ST/(ST+Sal(k)*Sal(k))
-            GP(klev,id,i)=GPT0(i)*rlFI *min(rlFN,rlFP)*rlFSal 
+            GP(klev,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)*rlFSal 
             if(iof_icm(58)==1) rFSal(klev,id)=rlFSal
           endif 
   
@@ -1017,22 +1022,22 @@ subroutine photosynthesis(id,hour,nv,it)
             SAtd=SAt(k,1)/(1.0+rKSAp*TSED(k))
             rlFS=SAtd/(SAtd+rKhS)
             if(irSi==1) then
-              GP(klev,id,i)=GPT0(i)*min(rlFI ,rlFN,rlFP,rlFS)
+              GP(klev,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP,rlFS)
             else
-              GP(klev,id,i)=GPT0(i)*min(rlFI ,rlFN,rlFP)
+              GP(klev,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
             endif
             if(iof_icm(57)==1) rFS(klev,id)=rlFS
           endif
 
           !green alage
           if(i==2) then
-            GP(klev,id,i)=GPT0(i)*min(rlFI ,rlFN,rlFP)
+            GP(klev,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
           endif
 
           !cyanobacteria
           if(i==3) then
             rlFSal=ST/(ST+Sal(k)*Sal(k))
-            GP(klev,id,i)=GPT0(i)*min(rlFI ,rlFN,rlFP)*rlFSal
+            GP(klev,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)*rlFSal
             if(iof_icm(58)==1) rFSal(klev,id)=rlFSal
           endif
 
