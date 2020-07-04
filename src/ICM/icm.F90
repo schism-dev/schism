@@ -1155,6 +1155,7 @@ subroutine photosynthesis(id,hour,nv,it)
     !fulfill growth rate for biomass above
     if(isav_icm==1.and.patchsav(id)==1.and.kcnpy>=2)then 
       do k=1,kcnpy-1
+        klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
         if(lfsav(klev,id)>1.e-3)then
           plfsav(klev,id)=plfsav(kcnpy,id)
         endif !lfsav>0
@@ -2537,19 +2538,19 @@ subroutine calkwq(id,nv,ure,it)
   if (isav_icm==1.and.patchsav(id)==1) then
     !These arrays won't be used until 1 step later
     !total sav biomass and canopy height
-    tlfsav(id)=sum(lfsav(1:nv,id))
-    tstsav(id)=sum(stsav(1:nv,id))
-    trtsav(id)=sum(rtsav(1:nv,id))
+    tlfsav(id)=sum(lfsav((kbe(i)+1):nvrt,id))
+    tstsav(id)=sum(stsav((kbe(i)+1):nvrt,id))
+    trtsav(id)=sum(rtsav((kbe(i)+1):nvrt,id))
     hcansavori(id)=rlf*tlfsav(id)+rst*tstsav(id)+rrt*trtsav(id)+hcansav0
     hcansav(id)=min(hcansavori(id),tdep,hcansav_limit)
 
     do k=kbe(id)+1,nvrt
       if(ze(k-1,id)<hcansav(id)+ze(kbe(id),id)) then
         !add seeds
-        i=nvrt-k+1 !ICM convention
-        lfsav(i,id)=max(lfsav(i,id),1.e-5_iwp)
-        stsav(i,id)=max(stsav(i,id),1.e-5_iwp)
-        rtsav(i,id)=max(rtsav(i,id),1.e-5_iwp)
+        !i=nvrt-k+1 !ICM convention
+        lfsav(k,id)=max(lfsav(k,id),1.e-5_iwp)
+        stsav(k,id)=max(stsav(k,id),1.e-5_iwp)
+        rtsav(k,id)=max(rtsav(k,id),1.e-5_iwp)
       endif !ze
     enddo !k
 

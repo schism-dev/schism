@@ -20,10 +20,13 @@ subroutine icm_init
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
   use icm_sed_mod
+  use misc_modules
   implicit none
   
   !local variables
   integer :: istat
+  real(8) :: rtmp
+  character(len=2) :: stmp
 
   !icm_mod
   !(nvrt)<< surface to bottom
@@ -46,7 +49,7 @@ subroutine icm_init
     & TGP1(nea),TGP2(nea),TGP3(nea),CChl1(nea),CChl2(nea),CChl3(nea), & 
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
     & rIavg_save(nea), &!rad_ncai
-    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav
+    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region !ncai
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
@@ -68,6 +71,8 @@ subroutine icm_init
   !----------------------------------------------------------------
   !ncai_sav::
   !----------------------------------------------------------------
+  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
+  if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
   if(isav_icm==1) then
     !base case
     !(nvrt,nea)>> 1 to nvrt: bottom to surface

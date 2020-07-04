@@ -938,10 +938,10 @@ subroutine read_icm_param2
           call parallel_abort(errmsg)
         endif
         do k=1,nvrt
-          k2=nvrt-k+1
-          lfsav(k2,i)=tlfsav(i)/nvrt
-          stsav(k2,i)=tstsav(i)/nvrt
-          rtsav(k2,i)=trtsav(i)/nvrt
+          !k2=nvrt-k+1
+          lfsav(k,i)=tlfsav(i)/nvrt
+          stsav(k,i)=tstsav(i)/nvrt
+          rtsav(k,i)=trtsav(i)/nvrt
         enddo !k
 
       else !wet elem
@@ -959,10 +959,10 @@ subroutine read_icm_param2
               write(errmsg,*)'read_icm: hcansav<=0',i,k,tmp,hcansav(i),hcansavori(i),ze(k,i),ze(k-1,i),ze(kbe(i),i)
               call parallel_abort(errmsg)
             endif
-            k2=nvrt-k+1 !ICM convention
-            lfsav(k2,i)=tlfsav(i)*tmp/hcansav(i)
-            stsav(k2,i)=tstsav(i)*tmp/hcansav(i)
-            rtsav(k2,i)=trtsav(i)*tmp/hcansav(i)
+            !k2=nvrt-k+1 !ICM convention
+            lfsav(k,i)=tlfsav(i)*tmp/hcansav(i)
+            stsav(k,i)=tstsav(i)*tmp/hcansav(i)
+            rtsav(k,i)=trtsav(i)*tmp/hcansav(i)
           endif !ze
         enddo !k=kbe(i)+1,nvrt
       endif !wet elem
@@ -976,10 +976,10 @@ subroutine read_icm_param2
 !          if(ze(k-1,i)<hcansav(i)+ze(kbe(i),i)) then
 !            tmp=min(ze(k,i),hcansav(i)+ze(kbe(i),i))-ze(k-1,i) !>0
 !            if(hcansav(i)<=0.or.tmp<=0) call parallel_abort('read_icm: hcansav<=0')
-!            k2=nvrt-k+1 !ICM convention
-!            lfsav(k2,i)=tlfsav(i)*tmp/hcansav(i)
-!            stsav(k2,i)=tstsav(i)*tmp/hcansav(i)
-!            rtsav(k2,i)=trtsav(i)*tmp/hcansav(i)
+!            !k2=nvrt-k+1 !ICM convention
+!            lfsav(k,i)=tlfsav(i)*tmp/hcansav(i)
+!            stsav(k,i)=tstsav(i)*tmp/hcansav(i)
+!            rtsav(k,i)=trtsav(i)*tmp/hcansav(i)
 !          endif !ze
 !
 !          !write(12,*)'init sav leaf biomass for id and it on
