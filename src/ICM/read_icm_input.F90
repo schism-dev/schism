@@ -1031,14 +1031,14 @@ subroutine read_icm_param
   call get_param('icm.in','iCheck',1,iCheck,rtmp,stmp)
   call get_param('icm.in','iout_icm',1,iout_icm,rtmp,stmp)
   call get_param('icm.in','nspool_icm',1,nspool_icm,rtmp,stmp)
-  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
+  !call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
 
   !ncai 
   !check iLight
   if(jLight>2) call parallel_abort('read_icm: jLight>2')
   if(iRea>1) call parallel_abort('read_icm: iRea>1')
   if(max(iAtm,iSed,iBen,iRad)>2) call parallel_abort('read_icm: iAtm,iSed,iBen,iRad')
-  if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
+  !if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
   if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('read_icm: iRad=1 needs heat exchange')
   if(jLight==1.and.(iRad/=2)) call parallel_abort('read_icm: iRad=2 is required for jLight=1')
 !  if(iReg/=0.and.iReg/=1) call parallel_abort('read_icm: invalid iReg')

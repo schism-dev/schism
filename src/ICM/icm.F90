@@ -832,7 +832,7 @@ subroutine photosynthesis(id,hour,nv,it)
           write(errmsg,*)'check PB growth rKTGP22, xT:',xT,rKTGP22(id),rval,TGP2(id),Temp(k),ielg(id)
           call parallel_abort(errmsg)
         endif
-        GPT0(2) =GPM2(id)*exp(-rval)
+        GPT0(2)=GPM2(id)*exp(-rval)
       endif !xT
       if(iof_icm(43)==1) GPT(klev,id,2)=GPT0(2)
 
