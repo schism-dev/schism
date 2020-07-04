@@ -1157,7 +1157,7 @@ subroutine photosynthesis(id,hour,nv,it)
       do k=1,kcnpy-1
         klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
         if(lfsav(klev,id)>1.e-3)then
-          plfsav(klev,id)=plfsav(kcnpy,id)
+          plfsav(klev,id)=plfsav(nvrt-kcnpy+2,id)
         endif !lfsav>0
       enddo !k
     endif !kcnpy
