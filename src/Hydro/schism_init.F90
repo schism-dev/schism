@@ -182,7 +182,7 @@
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
-     &ielm_transport,max_subcyc
+     &ielm_transport,max_subcyc,hmin_airsea_ex
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -460,6 +460,7 @@
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
       ielm_transport=0; max_subcyc=10
+      hmin_airsea_ex=-2.d0
 
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1

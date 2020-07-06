@@ -457,6 +457,8 @@
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
   isconsv = 0 !evaporation/precipitation model
+! Min depth for applying heat/salt exchange (i.e. off if the local depth h<hmin_airsea_ex)
+  hmin_airsea_ex = -2. ![m]
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.

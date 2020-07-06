@@ -102,7 +102,8 @@ module schism_glbl
                       &vnh1,vnh2,vnf1,vnf2,rnday,btrack_nudge,hmin_man, &
                       &prmsl_ref,hmin_radstress,dzb_decay,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
-                      &slr_rate,rho0,shw,sav_cd,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac
+                      &slr_rate,rho0,shw,sav_cd,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac, &
+                      &hmin_airsea_ex
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -225,7 +226,7 @@ module schism_glbl
   ! Cartesian coordinates of element centers; see comments for xnd
   real(rkind),save,allocatable :: xctr(:),yctr(:),zctr(:) 
   real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in degrees
-  real(rkind),save,allocatable :: dpe(:)          ! Depth at element centers
+  real(rkind),save,allocatable :: dpe(:)          ! Depth at element (min of all nodes)
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
   integer,save,allocatable :: idry_e(:)       ! wet/dry flag
   integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone

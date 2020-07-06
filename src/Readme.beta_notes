@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+ (July 6, 2020): added a new parameter 'hmin_airsea_ex' (min depth for heat/salt exchange);
 2f7bab1 (Jun 28,2020): reorganized ICM process (rates/fluxes) and added output flag in param.nml.
 
 1477780 (May 8, 2020): changed sediment.in to sediment.nml (and made parameters lower case: BEDLOAD_COEFF, 
