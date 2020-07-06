@@ -298,7 +298,7 @@ subroutine link_icm(imode,id,nv)
       tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1),0._iwp)
       tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1),0._iwp)
       if(iof_icm(1)==1) Chl_el(k,id)=max(PB1(m,1),0._iwp)/CChl1(id)+max(PB2(m,1),0._iwp)/CChl2(id)+max(PB3(m,1),0._iwp)/CChl3(id)
-      if(iof_icm(3)==1) PrmPrdt(k,id)=PB1(m,1)*GP(m,id,1)+PB2(m,2)*GP(m,id,2)+PB3(m,2)*GP(m,id,3)
+      if(iof_icm(3)==1) PrmPrdt(k,id)=PB1(m,1)*GP(k,id,1)+PB2(m,2)*GP(k,id,2)+PB3(m,2)*GP(k,id,3)
       if(iof_icm(4)==1) DIN_el(k,id)=max(NH4(m,1),0._iwp)+max(NO3(m,1),0._iwp)
       if(iof_icm(5)==1) PON_el(k,id)=max(RPON(m,1),0._iwp)+max(LPON(m,1),0._iwp)
 
