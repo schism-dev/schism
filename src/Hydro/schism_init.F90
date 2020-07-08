@@ -460,7 +460,7 @@
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
       ielm_transport=0; max_subcyc=10
-      hmin_airsea_ex=-2.d0
+      hmin_airsea_ex=0.2d0
 
       !Output elev, hvel by detault
       iof_hydro(1)=1; iof_hydro(25)=1

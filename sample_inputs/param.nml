@@ -457,7 +457,7 @@
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
   isconsv = 0 !evaporation/precipitation model
-! Min depth for applying heat/salt exchange (i.e. off if the local water depth h<hmin_airsea_ex)
+! Min total water depth for applying heat/salt exchange (i.e. off if the local water depth <hmin_airsea_ex)
   hmin_airsea_ex = 0.2 ![m]
 
 !-----------------------------------------------------------------------

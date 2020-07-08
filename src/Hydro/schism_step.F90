@@ -6151,7 +6151,8 @@
         if(isconsv/=0) then
 !$OMP     do 
           do i=1,nea
-            if( idry_e(i)==1 .or. (ze(nvrt,i)-ze(kbe(i),i))<hmin_airsea_ex ) cycle
+            if(idry_e(i)==1) cycle
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
             if(impose_net_flux/=0) then !imposed net 
               precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
@@ -6169,7 +6170,8 @@
         if(ihconsv/=0) then
 !$OMP     do 
           do i=1,nea
-            if( idry_e(i)==1 .or. (ze(nvrt,i)-ze(kbe(i),i))<hmin_airsea_ex ) cycle
+            if(idry_e(i)==1) cycle
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
 !           Wet element (not shallow)
 !           Surface flux
