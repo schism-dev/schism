@@ -117,7 +117,7 @@
       real(rkind) :: double1 !for hotstart.in
 
 !     Misc. arrays
-      integer, allocatable :: ipiv(:),iwild(:)
+      integer, allocatable :: ipiv(:) !,iwild(:)
       integer, allocatable :: nwild(:),nwild2(:),ibuf1(:,:),ibuf2(:,:)
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
@@ -5808,6 +5808,10 @@
       deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10)
 !      if(allocated(rwild)) deallocate(rwild)
 !      deallocate(swild9)
+
+#ifdef USE_FIB
+       deallocate(sink0,fraction0,kk10,kk20)
+#endif
 
       end subroutine schism_init
 
