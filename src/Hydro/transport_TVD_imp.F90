@@ -840,6 +840,8 @@
 
 !     Deallocate temp. arrays
       deallocate(trsd_tmp,trsd_tmp0,wm1,wm2,wm)
+      if(allocated(trel_tmp0)) deallocate(trel_tmp0)
+
 !     write number of sub steps
       if(myrank==0) then
         write(17,*)it,it_sub
@@ -2011,8 +2013,7 @@
 #endif
 
 !     Deallocate temp. arrays
-      deallocate(trel_tmp,flux_adv_hface,flux_mod_hface,up_rat_hface)
-!      deallocate(psum2)
+      deallocate(trel_tmp,flux_adv_hface,flux_mod_hface,up_rat_hface,tr_min_max)
 
       end subroutine do_transport_tvd_imp
 
