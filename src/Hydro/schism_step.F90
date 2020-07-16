@@ -272,7 +272,7 @@
 
 !     Alloc
       allocate(hp_int(nvrt,nea,2),uth(nvrt,nsa),vth(nvrt,nsa),d2uv(2,nvrt,nsa), &
-     &dr_dxy(2,nvrt,nsa),bcc(2,nvrt,nsa),stat=istat)
+     &dr_dxy(2,nvrt,nea),bcc(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('STEP: other allocation failure')
 
       allocate(swild9(nvrt,mnu_pts),stat=istat)
