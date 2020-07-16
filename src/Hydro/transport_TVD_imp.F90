@@ -783,7 +783,7 @@
   
                     swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
                     swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
-                    psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) !(sdbt(3:2+ntr,max(k,kbs(jsj)),jsj)+sdbt(3:2+ntr,max(k-1,kbs(jsj)),jsj))*0.5d0
+                    psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) 
                   enddo !j
                 enddo !jj
                 tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))
@@ -1392,7 +1392,7 @@
 
                   swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
                   swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
-                  psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) !(sdbt(3:2+ntr,max(k,kbs(jsj)),jsj)+sdbt(3:2+ntr,max(k-1,kbs(jsj)),jsj))*0.5d0
+                  psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) 
                 enddo !j
               enddo !jj
               tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))

@@ -2165,7 +2165,10 @@
       !don't change dimension of swild2
       integer :: nwild(4)
       real(rkind) :: swild(2),swild2(nvrt,2),swild3(nvrt),swild5(4,2)
-      real(rkind), allocatable :: swild4(:,:,:) !swild4 used for exchange
+      real(rkind), allocatable :: swild4(:,:,:),ufg(:,:,:),vfg(:,:,:) !swild4 used for exchange
+
+      allocate(ufg(4,nvrt,nea),vfg(4,nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('nodalvel: alloc')
 
 !$OMP parallel default(shared) private(i,k,j,isd,isd2,isd3,swild5,ud1,ud2, &
 !$OMP vd1,vd2,weit_w,icount,ie,id,weit,l,nfac0,ltmp,ltmp2,nfac)
@@ -2444,6 +2447,8 @@
       vv2(:,:)=swild4(2,:,:)
       ww2(:,:)=swild4(3,:,:)
       deallocate(swild4)
+
+      deallocate(ufg,vfg)
 
 !...  Compute discrepancy between avergaed and elemental vel. vectors 
 !      do i=1,np

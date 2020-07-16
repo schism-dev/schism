@@ -158,8 +158,8 @@
                      &tmpxs,tmpys,tmpx1,tmpy1,tmpx2,tmpy2,tmpx3,tmpy3, &
                      &tmpx1s,tmpy1s,tmpx2s,tmpy2s,tmpx3s,tmpy3s,taux2,tauy2, &
                      &taux2s,tauy2s,uths,vths,vtan,suru,surv,dhdx,dhdy,ubar1, &
-                     &ubar2,vbar1,vbar2,ubar,vbar,eta1_bar,eta2_bar,qnon_e1, &
-                     &qnon_e2,xcon,ycon,zcon,vnor1,vnor2,bflux,bflux0,top, &
+                     &ubar2,vbar1,vbar2,ubar,vbar,eta1_bar,eta2_bar, &
+                     &xcon,ycon,zcon,vnor1,vnor2,bflux,bflux0,top, &
                      &deta_dx,deta_dy,hmin,dzds_av,css,dsigma,dgam0,dgam1, &
                      &hat_i0,dzds,dsdx,dsdy,dsig2,hat_ir,vol,dz,tmp_max, &
                      &tmp_max_gb,dia_min,dia_min_gb,df_max,qhat_e1,qhat_e2,dqdz,uvnu, &
@@ -198,9 +198,6 @@
       real(rkind) :: alow(max(4,nvrt)),bdia(max(4,nvrt)),cupp(max(4,nvrt)),rrhs(2,nvrt), &
                     &soln(2,nvrt),gam(nvrt),gam2(nvrt),soln2(nvrt)
 
-!     Non-hydrostatic arrays
-!      real(rkind),allocatable :: qhat(:,:),dqnon_dxy(:,:,:),qmatr(:,:,:,:),qir(:,:)
-
 !     Misc 
       integer :: nwild(nea+300),nwild2(ne_global)
 !                 &jcoef(npa*(mnei+1)),ibt_p(npa),ibt_s(nsa)
@@ -230,7 +227,7 @@
 !#endif
       
       real(4),allocatable :: swild9(:,:) !used in tracer nudging
-      real(rkind),allocatable :: rwild(:,:) 
+      real(rkind),allocatable :: rwild(:,:),uth(:,:),vth(:,:),d2uv(:,:,:),dr_dxy(:,:,:),bcc(:,:,:)
       real(rkind),allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange (deallocate immediately afterwards)
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
       real(rkind),allocatable :: swild95(:,:,:) !for analysis module
@@ -273,14 +270,9 @@
 #endif
 
 
-!      if(nonhydro==1) then
-!        allocate(qhat(nvrt,npa),dqnon_dxy(2,nvrt,nsa),qmatr(nvrt,-1:1,0:(mnei+1),np), &
-!     &qir(nvrt,np),stat=istat)
-!        if(istat/=0) call parallel_abort('STEP: Nonhydro allocation failure')
-!!'
-!      endif
-
-      allocate(hp_int(nvrt,nea,2),stat=istat)
+!     Alloc
+      allocate(hp_int(nvrt,nea,2),uth(nvrt,nsa),vth(nvrt,nsa),d2uv(2,nvrt,nsa), &
+     &dr_dxy(2,nvrt,nsa),bcc(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('STEP: other allocation failure')
 
       allocate(swild9(nvrt,mnu_pts),stat=istat)
@@ -3339,7 +3331,7 @@
           if(vmag<=velmin_btrack) then !No activity 
             sdbt(1,j,isd0)=su2(j,isd0)
             sdbt(2,j,isd0)=sv2(j,isd0)
-            sdbt(3:2+ntracers,j,isd0)=(tr_nd(1:ntracers,j,n1)+tr_nd(1:ntracers,j,n2))*0.5d0
+            if(ielm_transport/=0) sdbt(3:2+ntracers,j,isd0)=(tr_nd(1:ntracers,j,n1)+tr_nd(1:ntracers,j,n2))*0.5d0
             swild98(1:2,j,isd0)=su2(j,isd0) !max/min
             swild98(3:4,j,isd0)=sv2(j,isd0)
 
@@ -3442,7 +3434,7 @@
                 swild98(2,j,isd0)=swild3(3) !min
               else
                 swild98(1:4,j,isd0)=swild3(1:4) 
-                sdbt(3:2+ntracers,j,isd0)=swild3(5:4+ntracers) 
+                if(ielm_transport/=0) sdbt(3:2+ntracers,j,isd0)=swild3(5:4+ntracers) 
               endif
 
                   !Check for ics=2 and zonal flow
@@ -3574,7 +3566,7 @@
                 swild98(2,j,isd0)=btlist(ibt)%sclr(3) !min
               else
                 swild98(1:4,j,isd0)=btlist(ibt)%sclr(1:4)
-                sdbt(3:2+ntracers,j,isd0)=btlist(ibt)%sclr(5:4+ntracers)
+                if(ielm_transport/=0) sdbt(3:2+ntracers,j,isd0)=btlist(ibt)%sclr(5:4+ntracers)
               endif
 
 !              xyzs(isd0,j,1)=btlist(ibt)%xt; xyzs(isd0,j,2)=btlist(ibt)%yt; xyzs(isd0,j,3)=btlist(ibt)%zt;
@@ -3606,7 +3598,6 @@
 #ifdef INCLUDE_TIMING
       cwtmp=mpi_wtime()
 #endif
-!      call exchange_s3d_4(sdbt)
       call exchange_s3d_4(swild98)
 
       allocate(swild96(2,nvrt,nsa),stat=istat)
@@ -3616,12 +3607,14 @@
       sdbt(1:2,:,:)=swild96
       deallocate(swild96)
 
-      allocate(swild96(ntracers,nvrt,nsa),stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.3)')
-      swild96=sdbt(3:2+ntracers,:,:)
-      call exchange_s3d_tr2(swild96)
-      sdbt(3:2+ntracers,:,:)=swild96
-      deallocate(swild96)
+      if(ielm_transport/=0) then
+        allocate(swild96(ntracers,nvrt,nsa),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.3)')
+        swild96=sdbt(3:2+ntracers,:,:)
+        call exchange_s3d_tr2(swild96)
+        sdbt(3:2+ntracers,:,:)=swild96
+        deallocate(swild96)
+      endif !ielm_transport/=0
 
       if(ibtrack_test==1) call exchange_s3dw(tsd)
 
@@ -3990,7 +3983,7 @@
 !$OMP parallel default(shared) private(i,alow,icount,j,ie,tmp1,tmp2,swild,swild2,n1,n2,k)
 
 !$OMP workshare
-      sdbt=0.d0
+      sdbt(1:2,:,:)=0.d0
 !$OMP end workshare
 
 !$OMP do 
@@ -4043,7 +4036,14 @@
 #ifdef INCLUDE_TIMING
       cwtmp=mpi_wtime()
 #endif
-      call exchange_s3d_4(sdbt)
+!      call exchange_s3d_4(sdbt)
+      allocate(swild96(2,nvrt,nsa),stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.4)')
+      swild96=sdbt(1:2,:,:)
+      call exchange_s3d_2(swild96)
+      sdbt(1:2,:,:)=swild96
+      deallocate(swild96)
+
 #ifdef INCLUDE_TIMING
       wtimer(4,2)=wtimer(4,2)+mpi_wtime()-cwtmp
 #endif
@@ -8698,8 +8698,7 @@
 
 !     Deallocate temp. arrays to avoid memory leak
       if(if_source==1) deallocate(msource)
-!      if(nonhydro==1) deallocate(qhat,dqnon_dxy,qmatr,qir)
-      deallocate(hp_int)
+      deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       deallocate(swild9)
 

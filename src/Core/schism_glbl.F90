@@ -362,7 +362,7 @@ module schism_glbl
                                   &tnf(:),tfreq(:),tear(:),amig(:),ff(:),face(:), &
                                   &emo(:,:,:),efa(:,:,:),umo(:,:,:),ufa(:,:,:), &
                                   &vmo(:,:,:),vfa(:,:,:),eth(:,:), &
-                                  &qthcon(:),uth(:,:),vth(:,:),uthnd(:,:,:),vthnd(:,:,:), &
+                                  &qthcon(:),uthnd(:,:,:),vthnd(:,:,:), &
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
                                   &dir_block(:,:),q_block_lcl(:),ath3(:,:,:,:)
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
@@ -409,7 +409,7 @@ module schism_glbl
   real(rkind),save,allocatable :: su2(:,:),sv2(:,:) 
   !velocity at nodes in an element. In ll if ics=2
   !ufg(1:4,1:nvrt,1:nea)
-  real(rkind),save,allocatable :: ufg(:,:,:),vfg(:,:,:)
+  !real(rkind),save,allocatable :: ufg(:,:,:),vfg(:,:,:)
   real(rkind),save,allocatable :: prho(:,:) ! Density at whole levels and either nodes or elements
   real(rkind),save,allocatable :: q2(:,:)   ! Turbulent kinetic energy at sides & half levels
   real(rkind),save,allocatable :: xl(:,:)   ! Turbulent mixing length at sides & half levels
@@ -442,9 +442,9 @@ module schism_glbl
                                   &shum1(:),pr2(:),airt2(:),shum2(:),pr(:), &
                                   &sflux(:),srad(:),tauxz(:),tauyz(:),fluxsu(:), &
                                   &fluxlu(:),hradu(:),hradd(:),cori(:), & !chi(:)
-                                  &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:),d2uv(:,:,:), &
-                                  &sparsem(:,:),bcc(:,:,:), & !t_nudge(:),s_nudge(:), &
-                                  &tr_nudge(:,:),dr_dxy(:,:,:),fun_lat(:,:), &
+                                  &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:), &
+                                  &sparsem(:,:), & 
+                                  &tr_nudge(:,:),fun_lat(:,:), &
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
                                   &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
                                   &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:) 
@@ -514,7 +514,7 @@ module schism_glbl
   !<weno
 
   ! Non-hydrostatic arrays (not used)
-  real(rkind),save,allocatable :: qnon(:,:)   
+!  real(rkind),save,allocatable :: qnon(:,:)   
 !  integer,save,allocatable :: ihydro(:)
 
   ! Station and other output arrays

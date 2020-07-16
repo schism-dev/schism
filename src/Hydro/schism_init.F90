@@ -1651,11 +1651,11 @@
 !     Allocate the remaining arrays held in schism_glbl, except for Kriging related arrays 
       !allocate(tem0(nvrt,npa),sal0(nvrt,npa),eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
       allocate(eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
-          & we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa),ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
-          & prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
-          & uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
-          & bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
-          & xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
+          &we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa), & !ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
+          &prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
+          &uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
+          &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
+          &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
           &iadjust_mass_consv(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
@@ -1669,7 +1669,7 @@
           & eth(mnond_global,nope_global), & 
           & qthcon(nope_global),carea(nope_global),clen(nope_global), &
           & th_dt(ntracers,nthfiles),th_time(ntracers,2,nthfiles), &
-          & uth(nvrt,nsa),vth(nvrt,nsa),ath(nope_global,ntracers,2,nthfiles), &
+          & ath(nope_global,ntracers,2,nthfiles), &
           & ath2(ntracers,nvrt,neta_global,2,nthfiles2), &
           & uthnd(nvrt,mnond_global,nope_global),vthnd(nvrt,mnond_global,nope_global), &
           & eta_mean(npa),trth(ntracers,nvrt,mnond_global,max(1,nope_global)),stat=istat)
@@ -1678,17 +1678,16 @@
 !'
 
 !     All other arrays
-      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
-         &  windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
+!      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
+       allocate(windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
          &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),windfactor(npa),pr1(npa),airt1(npa),shum1(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         &  hdif(nvrt,npa),shapiro(nsa),d2uv(2,nvrt,nsa),fluxprc(npa),fluxevp(npa), & 
-         &  bcc(2,nvrt,nsa),sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
-         &  tr_nudge(natrm,npa),dr_dxy(2,nvrt,nsa), & !t_nudge(npa),s_nudge(npa)
+         &  hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa), & 
+         &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
+         &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
-!         &  tnd_nu1(nvrt,npa),snd_nu1(nvrt,npa),tnd_nu2(nvrt,npa),snd_nu2(nvrt,npa),tnd_nu(nvrt,npa),snd_nu(nvrt,npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
@@ -1700,6 +1699,14 @@
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
       allocate(trnd_nu1(ntracers,nvrt,npa),trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
       if(itmp/=0) call parallel_abort('INIT: alloc failed (56)')
+
+!     Conditional alloc to save mem
+      if(ielm_transport==0) then  
+        allocate(sdbt(2,nvrt,nsa),stat=istat)
+      else
+        allocate(sdbt(2+ntracers,nvrt,nsa),stat=istat)
+      endif
+      if(istat/=0) call parallel_abort('INIT: alloc sdbt failure')
 
 #ifdef USE_DVD
      allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
@@ -1892,11 +1899,11 @@
 
 !       Non-hydrostatic arrays
 !       Keep qnon for the time being due to hotstart
-        allocate(qnon(nvrt,npa),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
+!        allocate(qnon(nvrt,npa),stat=istat)
+!        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
       endif !iorder
 
-      qnon=0.d0 !initialize
+!      qnon=0.d0 !initialize
 
 !     Alloc flux output arrays
       if(iflux/=0) then
@@ -1931,7 +1938,7 @@
 !     Initialize some arrays and constants
       tempmin=-5.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
-      uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; uth=-99.d0; vth=-99.d0; !flags
+      uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
       elevmax=-1.d34; dav_maxmag=-1.d0; dav_max=0.d0
       tr_el=0.d0
       timer_ns=0.d0
@@ -5223,7 +5230,7 @@
           enddo !k
         enddo !m
 
-        qnon=0.d0
+        !qnon=0.d0
 
 !        write(12,*)'elem after hot'
 !        do i=1,nea

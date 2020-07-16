@@ -756,7 +756,7 @@
               else if(j==25) then
                 CALL DEFINE_NVRT_VAR_SINGLE(ncid, "znl")
               else if(j==26) then
-                CALL DEFINE_NVRT_VAR_SINGLE(ncid, "qnon")
+!                CALL DEFINE_NVRT_VAR_SINGLE(ncid, "qnon")
               endif
             endif
           else if(j==27) then
@@ -835,7 +835,7 @@
       SUBROUTINE WRITE_SINGLE_OUTPUT_DATA(it)
       USE schism_glbl, only : eta2, pr, airt1, shum1, srad, fluxsu, fluxlu, hradu, hradd
       USE schism_glbl, only : sflux, fluxevp, fluxprc, Cdp, windx, windy, tau, dav
-      USE schism_glbl, only : q2, uu2, vv2, ww2, prho, dfh, dfv, xl, znl, qnon, tr_nd
+      USE schism_glbl, only : q2, uu2, vv2, ww2, prho, dfh, dfv, xl, znl,  tr_nd
       USE schism_glbl, only : idry, kbp00
       IMPLICIT NONE
       integer, intent(in) :: it
@@ -920,7 +920,7 @@
               else if(j==25) then
                 CALL WRITE_NVRT_KBP_DRY_SINGLE(ncid, "znl", REAL(znl, rkind))
               else if(j==26) then
-                CALL WRITE_NVRT_KBP_SINGLE(ncid, "qnon", qnon)
+!                CALL WRITE_NVRT_KBP_SINGLE(ncid, "qnon", qnon)
               endif
             endif
           else if(j==27) then
