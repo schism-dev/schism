@@ -1,0 +1,13 @@
+Currently Loaded Modulefiles:
+1) modules/3.2.11.4                                  8) ugni/6.0.14.0-7.0.1.1_7.33__ge78e5b0.ari         15) alps/6.6.58-7.0.1.1_6.4__g437d88db.ari           22) cray-netcdf/4.6.3.2
+2) altd/2.0                                          9) pmi/5.0.14                                       16) rca/2.2.20-7.0.1.1_4.46__g8e3fb5b.ari            23) openmpi/4.0.2
+3) intel/19.0.3.199                                 10) dmapp/7.1.1-7.0.1.1_4.48__g38cf134.ari           17) atp/2.1.3                                        24) allinea-forge/20.1-Suse-15.0-x86_64
+4) craype-network-aries                             11) gni-headers/5.0.12.0-7.0.1.1_6.28__g3b1768f.ari  18) PrgEnv-intel/6.0.5                               25) Base-opts/2.4.139-7.0.1.1_4.75__gbb799dd.ari
+5) craype/2.6.2                                     12) xpmem/2.2.20-7.0.1.1_4.10__g0475745.ari          19) craype-mic-knl
+6) cray-libsci/19.06.1                              13) job/2.2.4-7.0.1.1_3.36__g36b56f4.ari             20) cray-mpich/7.7.10
+7) udreg/2.3.2-7.0.1.1_3.31__g8175d3d.ari           14) dvs/2.12_2.2.156-7.0.1.1_8.9__g5aab709e          21) craype-hugepages2M
+
+Comment:
+ 1-18, 20, 21: default
+ 19: knl
+ 24: parallel debugger and profiler

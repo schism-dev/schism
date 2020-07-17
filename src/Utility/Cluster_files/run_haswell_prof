@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH --qos=debug
+#SBATCH --time=00:30:00
+#SBATCH --nodes=2
+#SBATCH --tasks-per-node=32
+#SBATCH --constraint=haswell
+
+## performance report, less informative than map
+# perf-report -o lammps_64.html srun -n 64 ./pschism_CORI2_EVAP_VL
+
+## map profiling
+map --profile srun -n 64 ./pschism_CORI2_EVAP_VL
