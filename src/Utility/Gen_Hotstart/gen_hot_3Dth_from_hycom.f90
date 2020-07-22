@@ -24,8 +24,8 @@
 ! Wet-dry points are defined by ssh.
 ! For U,V, if nan values in the middle of water, simply fill with 0 and record in fort.20
 ! For S,T, if nan values in the middle of water, simply fill with lowest value, and record in fort.20
-! If elevation is not consitent in time, search nearby 2 points to fill. If none found, fill 0, and record in fort.20
-! Check HYCOM nc files with ncview or other tools.
+! If SSH shows wet/dry in time, search nearby points to fill. If none found, fill 0, and record in fort.20
+! Consider checking HYCOM nc files with ncview or other tools.
 
 !   Input: 
 !     (1) hgrid.gr3;
@@ -51,23 +51,26 @@
 !   Second, download HYCOM to only cover the open boundary segments to
 !   generate .th.nc (hotstart would be junk).
 
-! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_3Dth_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe ../UtilLib/schism_geometry.f90 \
+! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_3Dth_from_hycom.f90 \
+!-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
       use netcdf
+      use schism_geometry_mod
       use compute_zcor
       use pt_in_poly_test, only: signa_single
 
 !      implicit none
 
 !      integer, parameter :: debug=1
-      integer, parameter :: mnp=480000*6
-      integer, parameter :: mne=960000*6
-      integer, parameter :: mns=1440000*6
-      integer, parameter :: mnv=50
-      integer, parameter :: mnope=10 !max # of open bnd segments
-      integer, parameter :: mnond=5000 !max # of open bnd nodes in each segment
-      integer, parameter :: mnei=20 !neighbor
+!      integer, parameter :: mnp=480000*6
+!      integer, parameter :: mne=960000*6
+!      integer, parameter :: mns=1440000*6
+!      integer, parameter :: mnv=50
+!      integer, parameter :: mnope=10 !max # of open bnd segments
+!      integer, parameter :: mnond=5000 !max # of open bnd nodes in each segment
+!      integer, parameter :: mnei=20 !neighbor
       integer, parameter :: nbyte=4
       real, parameter :: small1=1.e-2 !used to check area ratios
   
@@ -100,25 +103,27 @@
       character(len=1) :: char1,char2
       character(len=20) :: char3,char4
 !     external function for number of command line arguments
-      integer :: iargc
+!      integer :: iargc
 
       integer :: status ! netcdf local status variable
       integer :: ier ! allocate error return.
       integer :: ixlen, iylen, ilen ! sampled lengths in each coordinate direction
       integer :: ixlen1, iylen1,ixlen2, iylen2 !reduced indices for CORIE grid to speed up interpolation
-!     integer :: i,j,k,i1,i2,i3,j1,j2,j3
-      integer :: elnode(4,mne)
-      integer :: elside(4,mne)
-      integer :: isdel(2,mns),klev(4)
-      integer :: indel(mnei,mnp),idry_s(mns)
-      dimension xl(mnp),yl(mnp),dp(mnp),i34(mne)
-      dimension ztot(0:mnv),sigma(mnv),cs(mnv),iest(mnp),ixy(mnp,2),arco(4,mnp)
-      dimension wild(100),wild2(100,2)
-      dimension tempout(mnv,mnp), saltout(mnv,mnp),month_day(12)
-      dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
-      dimension tsel(2,mnv,mne),zeros(mnv,max(mne,mnp))
-      dimension nne(mnp),ic3(4,mne),nx(4,4,3),isidenode(2,mns)
-      dimension xcj(mns),ycj(mns),nond(mnope),iond(mnope,mnond),iob(mnope),iond2(mnope*mnond)
+      integer :: klev(4)
+      real :: wild(100),wild2(100,2)
+
+      integer, allocatable :: elnode(:,:),elside(:,:),isdel(:,:),idry_s(:),i34(:),iest(:), &
+     &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:)
+      !integer :: indel(mnei,mnp),idry_s(mns)
+      !integer :: idry_s(mns)
+      real, allocatable :: xl(:),yl(:),dp(:),ztot(:),sigma(:),arco(:,:), &
+     &tempout(:,:),saltout(:,:),uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:), &
+     &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:)
+!      dimension ztot(0:mnv),sigma(mnv),cs(mnv),arco(4,mnp)
+!      dimension tempout(mnv,mnp), saltout(mnv,mnp) !,month_day(12)
+!      dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
+!      dimension tsel(2,mnv,mne),zeros(mnv,max(mne,mnp))
+!      dimension xcj(mns),ycj(mns) !,nond(mnope),iond(mnope,mnond),iob(mnope),iond2(mnope*mnond)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
       real*8 :: aa1(1)
 
@@ -133,9 +138,14 @@
       read(10,*) tem_es,sal_es !T,S values for estuary points defined in estuary.gr3
       read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc
       read(10,*) dtout !time step in .nc [sec]
-      read(10,*) nob,iob(1:nob) !# of open bnds that need *3D.th; list of IDs
+      read(10,*) nob !,iob(1:nob) !# of open bnds that need *3D.th; list of IDs
       read(10,*) nndays !# of days needed in output
       read(10,*) nfiles !# of stacks of HYCOM files
+
+      allocate(iob(nob))
+      rewind(10)
+      do i=1,4; read(10,*); enddo
+      read(10,*) nob,iob(1:nob)
       close(10)
       if(tem_es<0.or.sal_es<0.or.tem_outside<0.or.sal_outside<0) &
      &stop 'Invalid T,S constants'
@@ -148,10 +158,8 @@
       open(11,file='fort.11',status='replace')
       read(14,*)
       read(14,*)ne,np
-      if(np.gt.mnp.or.ne.gt.mne) then
-        write(*,*)'Increase mnp/mne'
-        stop
-      endif
+      allocate(xl(np),yl(np),dp(np),i34(ne),elnode(4,ne),iest(np),ixy(np,3),stat=istat)
+      if(istat/=0) stop 'Failed to alloc. (0)'
       read(16,*)
       read(16,*)
       read(17,*)
@@ -173,141 +181,163 @@
       read(14,*) nope
       read(14,*) neta
       ntot=0
-      if(nope>mnope) stop 'Increase mnope (2)'
+      allocate(nond(max(1,nope)))
+!      if(nope>mnope) stop 'Increase mnope (2)'
       do k=1,nope
         read(14,*) nond(k)
-        if(nond(k)>mnond) stop 'Increase mnond'
         do i=1,nond(k)
-          read(14,*) iond(k,i)
+          read(14,*) !iond(k,i)
         enddo
       enddo
+
+      rewind(14)
+      mnope=maxval(nond)
+      if(mnope<=0) stop 'need open bnd'
+      allocate(iond(mnope,nope),iond2(mnope*nope))
+      do i=1,2+np+ne+2; read(14,*); enddo
+      do k=1,nope
+        read(14,*) !nond(k)
+        do i=1,nond(k)
+          read(14,*)iond(i,k)
+        enddo
+      enddo
+      close(14)
 
       nond0=0
       do i=1,nob
         ibnd=iob(i)
         do j=1,nond(ibnd)
           nond0=nond0+1
-          iond2(nond0)=iond(ibnd,j)
+          iond2(nond0)=iond(j,ibnd)
         enddo !j
       enddo !i
 
-      close(14)
       close(16)
 
 !     V-grid
       read(19,*)ivcor
       read(19,*)nvrt
-      if(nvrt>mnv) stop 'increase mnv'
+!      if(nvrt>mnv) stop 'increase mnv'
       rewind(19)
-      allocate(sigma_lcl(nvrt,np),z(np,nvrt),kbp2(np))
+      allocate(sigma_lcl(nvrt,np),z(nvrt,np),kbp2(np),ztot(0:nvrt),sigma(nvrt),arco(4,np), &
+     &tempout(nvrt,np),saltout(nvrt,np),uout(nvrt,np),vout(nvrt,np),eout(np), &
+     &eout_tmp(np),tsel(2,nvrt,ne),zeros(nvrt,max(ne,np)),stat=istat)
+      if(istat/=0) stop 'Failed to alloc. (1)'
       call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp2)
 
 !     Compute z-coord.
       do i=1,np
         if(ivcor==2) then
-          call zcor_SZ_single(max(0.11,dp(i)),0.,0.1,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma,z(i,:),idry,kbp2(i))
+          call zcor_SZ_single(max(0.11,dp(i)),0.,0.1,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot,sigma,z(:,i),idry,kbp2(i))
         else if(ivcor==1) then
-          z(i,kbp2(i):nvrt)=max(0.11,dp(i))*sigma_lcl(kbp2(i):nvrt,i)
+          z(kbp2(i):nvrt,i)=max(0.11,dp(i))*sigma_lcl(kbp2(i):nvrt,i)
         else
           write(11,*)'Unknown ivcor:',ivcor
           stop
         endif
 
         !Extend below bottom for interpolation later
-        z(i,1:kbp2(i)-1)=z(i,kbp2(i))
+        z(1:kbp2(i)-1,i)=z(kbp2(i),i)
       enddo !i
 
 !     Compute geometry
-      do k=3,4
-        do i=1,k
-          do j=1,k-1
-            nx(k,i,j)=i+j
-            if(nx(k,i,j)>k) nx(k,i,j)=nx(k,i,j)-k
-            if(nx(k,i,j)<1.or.nx(k,i,j)>k) then
-              write(*,*)'nx wrong',i,j,k,nx(k,i,j)
-              stop
-            endif
-          enddo !j
-        enddo !i
-      enddo !k
+      call compute_nside(np,ne,i34,elnode,ns)
+      allocate(ic3(4,ne),elside(4,ne),isdel(2,ns),isidenode(2,ns),xcj(ns),ycj(ns), &
+     &idry_s(ns),su2(nvrt,ns),sv2(nvrt,ns),stat=istat)
+      if(istat/=0) stop 'Failed to alloc. (2)'
 
-      do i=1,np
-        nne(i)=0
-      enddo
+      call schism_geometry_single(np,ne,ns,xl,yl,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
 
-      do i=1,ne
-        do j=1,i34(i)
-          nd=elnode(j,i)
-          nne(nd)=nne(nd)+1
-          if(nne(nd)>mnei) then
-            write(11,*)'Too many neighbors',nd
-            stop
-          endif
-          indel(nne(nd),nd)=i
-        enddo
-      enddo
-
-!     Compute ball info; this won't be affected by re-arrangement below
-      do i=1,ne
-        do j=1,i34(i)
-          ic3(j,i)=0 !index for bnd sides
-          nd1=elnode(nx(i34(i),j,1),i)
-          nd2=elnode(nx(i34(i),j,2),i)
-          do k=1,nne(nd1)
-            ie=indel(k,nd1)
-            if(ie/=i.and.(elnode(1,ie)==nd2.or.elnode(2,ie)==nd2.or.elnode(3,ie)==nd2.or.(i34(ie)==4.and.elnode(4,ie)==nd2))) ic3(j,i)=ie
-          enddo !k
-        enddo !j
-      enddo !i
-
-      ns=0 !# of sides
-      do i=1,ne
-        do j=1,i34(i)
-          nd1=elnode(nx(i34(i),j,1),i)
-          nd2=elnode(nx(i34(i),j,2),i)
-          if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
-            ns=ns+1
-            if(ns>mns) then
-              write(11,*)'Too many sides'
-              stop
-            endif
-            elside(j,i)=ns
-            isdel(1,ns)=i
-            isidenode(1,ns)=nd1
-            isidenode(2,ns)=nd2
-            xcj(ns)=(xl(nd1)+xl(nd2))/2
-            ycj(ns)=(yl(nd1)+yl(nd2))/2
-!            dps(ns)=(dp(nd1)+dp(nd2))/2
-!            distj(ns)=dsqrt((x(nd2)-x(nd1))**2+(y(nd2)-y(nd1))**2)
-!            if(distj(ns)==0) then
-!              write(11,*)'Zero side',ns
+!      do k=3,4
+!        do i=1,k
+!          do j=1,k-1
+!            nx(k,i,j)=i+j
+!            if(nx(k,i,j)>k) nx(k,i,j)=nx(k,i,j)-k
+!            if(nx(k,i,j)<1.or.nx(k,i,j)>k) then
+!              write(*,*)'nx wrong',i,j,k,nx(k,i,j)
 !              stop
 !            endif
-!            thetan=datan2(x(nd1)-x(nd2),y(nd2)-y(nd1))
-!            snx(ns)=dcos(thetan)
-!            sny(ns)=dsin(thetan)
-
-            isdel(2,ns)=ic3(j,i) !bnd element => bnd side
-!           Corresponding side in element ic3(j,i)
-            if(ic3(j,i)/=0) then !old internal side
-              iel=ic3(j,i)
-              index=0
-              do k=1,i34(iel)
-                if(ic3(k,iel)==i) then
-                  index=k
-                  exit
-                endif
-              enddo !k
-              if(index==0) then
-                write(11,*)'Wrong ball info',i,j
-                stop
-              endif
-              elside(index,iel)=ns
-            endif !ic3(j,i).ne.0
-          endif !ic3(j,i)==0.or.i<ic3(j,i)
-        enddo !j=1,i34
-      enddo !i=1,ne
-
+!          enddo !j
+!        enddo !i
+!      enddo !k
+!
+!      do i=1,np
+!        nne(i)=0
+!      enddo
+!
+!      do i=1,ne
+!        do j=1,i34(i)
+!          nd=elnode(j,i)
+!          nne(nd)=nne(nd)+1
+!          if(nne(nd)>mnei) then
+!            write(11,*)'Too many neighbors',nd
+!            stop
+!          endif
+!          indel(nne(nd),nd)=i
+!        enddo
+!      enddo
+!
+!!     Compute ball info; this won't be affected by re-arrangement below
+!      do i=1,ne
+!        do j=1,i34(i)
+!          ic3(j,i)=0 !index for bnd sides
+!          nd1=elnode(nx(i34(i),j,1),i)
+!          nd2=elnode(nx(i34(i),j,2),i)
+!          do k=1,nne(nd1)
+!            ie=indel(k,nd1)
+!            if(ie/=i.and.(elnode(1,ie)==nd2.or.elnode(2,ie)==nd2.or.elnode(3,ie)==nd2.or.(i34(ie)==4.and.elnode(4,ie)==nd2))) ic3(j,i)=ie
+!          enddo !k
+!        enddo !j
+!      enddo !i
+!
+!      ns=0 !# of sides
+!      do i=1,ne
+!        do j=1,i34(i)
+!          nd1=elnode(nx(i34(i),j,1),i)
+!          nd2=elnode(nx(i34(i),j,2),i)
+!          if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
+!            ns=ns+1
+!            if(ns>mns) then
+!              write(11,*)'Too many sides'
+!              stop
+!            endif
+!            elside(j,i)=ns
+!            isdel(1,ns)=i
+!            isidenode(1,ns)=nd1
+!            isidenode(2,ns)=nd2
+!            xcj(ns)=(xl(nd1)+xl(nd2))/2
+!            ycj(ns)=(yl(nd1)+yl(nd2))/2
+!!            dps(ns)=(dp(nd1)+dp(nd2))/2
+!!            distj(ns)=dsqrt((x(nd2)-x(nd1))**2+(y(nd2)-y(nd1))**2)
+!!            if(distj(ns)==0) then
+!!              write(11,*)'Zero side',ns
+!!              stop
+!!            endif
+!!            thetan=datan2(x(nd1)-x(nd2),y(nd2)-y(nd1))
+!!            snx(ns)=dcos(thetan)
+!!            sny(ns)=dsin(thetan)
+!
+!            isdel(2,ns)=ic3(j,i) !bnd element => bnd side
+!!           Corresponding side in element ic3(j,i)
+!            if(ic3(j,i)/=0) then !old internal side
+!              iel=ic3(j,i)
+!              index=0
+!              do k=1,i34(iel)
+!                if(ic3(k,iel)==i) then
+!                  index=k
+!                  exit
+!                endif
+!              enddo !k
+!              if(index==0) then
+!                write(11,*)'Wrong ball info',i,j
+!                stop
+!              endif
+!              elside(index,iel)=ns
+!            endif !ic3(j,i).ne.0
+!          endif !ic3(j,i)==0.or.i<ic3(j,i)
+!        enddo !j=1,i34
+!      enddo !i=1,ne
+!
       if(ns<ne.or.ns<np) then
         write(11,*)'Weird grid with ns < ne or ns < np',np,ne,ns
         stop
@@ -570,28 +600,36 @@
                   stop
                 endif !klev0
 
-!               Fill NAN uvel, vvel with zero to easy eliminate HYCOM nc error
+!               Fill NAN uvel, vvel with zero to eliminate HYCOM nc error
                 do k=klev0,ilen
-                   if (uvel(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
-                       uvel(i,j,k)=0.
+                  if (uvel(i,j,k)<rjunk) then
+                    write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
+                    uvel(i,j,k)=0.
+                  end if
+                  if (vvel(i,j,k)<rjunk) then
+                    write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
+                    vvel(i,j,k)=0.
                    end if
-                   if (vvel(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
-                       vvel(i,j,k)=0.
-                   end if
-                end do
+                end do !k
 !               Fill NAN salt ,temp with lowest value
                 do k=klev0,ilen
-                   if (temp(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
-                       temp(i,j,k)=temp(i,j,klev0)
-                   end if
-                   if (salt(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
-                       salt(i,j,k)=salt(i,j,klev0)
-                   end if
-                end do
+                  if (temp(i,j,k)<rjunk) then
+                    if(k==klev0) then
+                      write(11,*)'Bottom T is junk:',it2,i,j,k,temp(i,j,k) 
+                      stop
+                    endif
+                    write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
+                    temp(i,j,k)=temp(i,j,klev0)
+                  end if
+                  if (salt(i,j,k)<rjunk) then
+                    if(k==klev0) then
+                      write(11,*)'Bottom S is junk:',it2,i,j,k,salt(i,j,k) 
+                      stop
+                    endif
+                    write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
+                    salt(i,j,k)=salt(i,j,klev0)
+                  end if
+                end do !k
 
                 salt(i,j,1:klev0-1)=salt(i,j,klev0)
                 temp(i,j,1:klev0-1)=temp(i,j,klev0)
@@ -808,20 +846,20 @@
             do j=1,iylen
               if(kbp(i,j)>0) then !valid
 !               Check ssh consistency by kbp
-!               If not consistent, seek nearby 2 points to fill
+!               If not consistent, seek nearby points to replace
 !               Force ssh = 0 if none are found
                 if (ssh(i,j)<rjunk+0.1) then
-                   do ii=1,2
-                      do jj=1,2
-                         if (ssh(i+ii,j+jj)>rjunk) then
-                             ssh(i,j)=ssh(i+ii,j+jj);exit
-                         end if
-                      end do
-                   end do
-                   if (ssh(i,j)<rjunk+0.1) then
-                       write(20,*) 'Warn! SSH Junk, fill with 0: ',it2,i,j
-                       ssh(i,j)=0. !fill with 0 if no finding
-                   end if
+                  do ii=1,2
+                    do jj=1,2
+                      if (ssh(i+ii,j+jj)>rjunk) then
+                        ssh(i,j)=ssh(i+ii,j+jj);exit
+                      end if
+                    end do
+                  end do !ii
+                  if (ssh(i,j)<rjunk+0.1) then
+                    write(20,*) 'Warning! SSH Junk, fill with 0: ',it2,i,j
+                    ssh(i,j)=0. !fill with 0 if no finding
+                  end if
                 end if
 
                 !Extend bottom (kbp changes over time)
@@ -857,25 +895,34 @@
 
 !               Fill NAN uvel, vvel with zero to easy eliminate HYCOM nc error
                 do k=klev0,ilen
-                   if (uvel(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
-                       uvel(i,j,k)=0.
-                   end if
-                   if (vvel(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
-                       vvel(i,j,k)=0.
-                   end if
+                  if (uvel(i,j,k)<rjunk) then
+                    write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
+                    uvel(i,j,k)=0.
+                  end if
+                  if (vvel(i,j,k)<rjunk) then
+                    write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
+                    vvel(i,j,k)=0.
+                  end if
                 end do
 !               Fill NAN salt ,temp with lowest value
                 do k=klev0,ilen
-                   if (temp(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
-                       temp(i,j,k)=temp(i,j,klev0)
-                   end if
-                   if (salt(i,j,k)<rjunk) then
-                       write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
-                       salt(i,j,k)=salt(i,j,klev0)
-                   end if
+                  if (temp(i,j,k)<rjunk) then
+                    if(k==klev0) then
+                      write(11,*)'Bottom T is junk(2):',it2,i,j,k,temp(i,j,k)
+                      stop
+                    endif
+                    write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
+                    temp(i,j,k)=temp(i,j,klev0)
+                  end if
+                  if (salt(i,j,k)<rjunk) then
+                    if(k==klev0) then
+                      write(11,*)'Bottom S is junk(2):',it2,i,j,k,salt(i,j,k)
+                      stop
+                    endif
+
+                    write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
+                    salt(i,j,k)=salt(i,j,klev0)
+                  end if
                 end do
 
                 salt(i,j,1:klev0-1)=salt(i,j,klev0)
@@ -924,11 +971,7 @@
                     &abs(ssh(i,j))>ssh_max) then
                     write(11,*)'Warning: no valid values after searching(2):',it2,i,j,k,salt(i,j,k), &
      &temp(i,j,k),uvel(i,j,k),vvel(i,j,k),ssh(i,j),i1,j1,'; ',salt(i1,j1,:),temp(i1,j1,:),uvel(i1,j1,:)
-!'                    salt(i,j,k)=salt0(i,j,k)
-!                    temp(i,j,k)=temp0(i,j,k)
-!                    uvel(i,j,k)=uvel0(i,j,k)
-!                    vvel(i,j,k)=vvel0(i,j,k)
-!                    ssh(i,j)=ssh0(i,j)
+!'
                     stop
                   endif
                 enddo !k
@@ -956,7 +999,7 @@
         endif
 
         tempout=-99; saltout=-99
-        do ii=1,iup !np
+        do ii=1,iup
           if(ifile==1.and.it2==ilo) then
             i=ii
           else
@@ -976,29 +1019,29 @@
             do k=1,nvrt
               if(kbp(ix,iy)==-1) then
                 lev=ilen-1; vrat=1
-              else if(z(i,k)<=zm(ix,iy,kbp(ix,iy))) then
+              else if(z(k,i)<=zm(ix,iy,kbp(ix,iy))) then
                 !lev=kbp(ix,iy); vrat=0
                 lev=1; vrat=0
-              else if(z(i,k)>=zm(ix,iy,ilen)) then !above f.s.
+              else if(z(k,i)>=zm(ix,iy,ilen)) then !above f.s.
                 lev=ilen-1; vrat=1
               else
                 lev=-99 !flag
                 do kk=1,ilen-1
-                  if(z(i,k)>=zm(ix,iy,kk).and.z(i,k)<=zm(ix,iy,kk+1)) then
+                  if(z(k,i)>=zm(ix,iy,kk).and.z(k,i)<=zm(ix,iy,kk+1)) then
                     lev=kk
-                    vrat=(zm(ix,iy,kk)-z(i,k))/(zm(ix,iy,kk)-zm(ix,iy,kk+1))
+                    vrat=(zm(ix,iy,kk)-z(k,i))/(zm(ix,iy,kk)-zm(ix,iy,kk+1))
                     exit
                   endif
                 enddo !kk
                 if(lev==-99) then
-                  write(11,*)'Cannot find a level:',i,k,z(i,k),(zm(ix,iy,l),l=1,kbp(ix,iy))
+                  write(11,*)'Cannot find a level:',i,k,z(k,i),(zm(ix,iy,l),l=1,kbp(ix,iy))
                   stop
                 endif
               endif
           
 !              write(18,*)i,k,ix,iy,lev,vrat,kbp(ix,iy)
               if(lev>=ilen) then
-                write(11,*)'lev:',lev,ix,iy,k,i,ilen,vrat,kbp(ix,iy),z(i,k),zm(ix,iy,1:ilen)
+                write(11,*)'lev:',lev,ix,iy,k,i,ilen,vrat,kbp(ix,iy),z(k,i),zm(ix,iy,1:ilen)
                 stop
               endif
               wild2(1,1)=temp(ix,iy,lev)*(1-vrat)+temp(ix,iy,lev+1)*vrat
@@ -1054,7 +1097,7 @@
               saltout(k,i)=min(40.,saltout(k,i))
 
 !             Enforce lower bound for salt (this is the only occurence in the code)
-!             if(z(i,k)<=-ht) saltout(k,i)=max(saltout(k,i),smin)
+!             if(z(k,i)<=-ht) saltout(k,i)=max(saltout(k,i),smin)
             enddo !k=1,nvrt
 
             !Estuary pts
@@ -1077,10 +1120,10 @@
 !              tsd(i,k)=(tempout(n1,k)+tempout(n2,k))/2
 !              ssd(i,k)=(saltout(n1,k)+saltout(n2,k))/2
               if(iuv==0) then
-                su2(i,k)=0; sv2(i,k)=0
+                su2(k,i)=0; sv2(k,i)=0
               else
-                su2(i,k)=(uout(k,n1)+uout(k,n2))/2
-                sv2(i,k)=(vout(k,n1)+vout(k,n2))/2
+                su2(k,i)=(uout(k,n1)+uout(k,n2))/2
+                sv2(k,i)=(vout(k,n1)+vout(k,n2))/2
               endif !iuv
             enddo !k
 !           write(88,*)i,xcj(i),ycj(i),ssd(i,1),ssd(i,nvrt)
@@ -1111,7 +1154,7 @@
             write(25,*)i,xl(i),yl(i),eout(i)
             write(29,*)'T profile at node ',i,dp(i)
             do k=1,nvrt
-              write(29,*)k,z(i,k),tempout(k,i)
+              write(29,*)k,z(k,i),tempout(k,i)
             enddo !k
           enddo !i
           do i=1,ne
@@ -1126,7 +1169,7 @@
 !            write(36) i,0,(0.d0,dble(tsel(1:2,j,i)),j=1,nvrt)
 !          enddo !i
 !          do i=1,ns
-!            write(36) i,0,(dble(su2(i,j)),dble(sv2(i,j)),dble(tsd(i,j)),dble(ssd(i,j)),j=1,nvrt)
+!            write(36) i,0,(dble(su2(j,i)),dble(sv2(j,i)),dble(tsd(i,j)),dble(ssd(i,j)),j=1,nvrt)
 !          enddo !i
 !          do i=1,np
 !            write(36) i,dble(eout_tmp(i)),0,(dble(tempout(j,i)),dble(saltout(j,i)), &
@@ -1186,8 +1229,8 @@
           iret=nf90_put_var(ncids(4),ivarid(10),dble(saltout(1:nvrt,1:np)),(/2,1,1/),(/1,nvrt,np/))
           iret=nf90_put_var(ncids(4),ivarid(11),dble(tempout(1:nvrt,1:np)),(/1,1,1/),(/1,nvrt,np/))
           iret=nf90_put_var(ncids(4),ivarid(11),dble(saltout(1:nvrt,1:np)),(/2,1,1/),(/1,nvrt,np/))
-          iret=nf90_put_var(ncids(4),ivarid(12),dble(transpose(su2(1:ns,1:nvrt))))
-          iret=nf90_put_var(ncids(4),ivarid(13),dble(transpose(sv2(1:ns,1:nvrt))))
+          iret=nf90_put_var(ncids(4),ivarid(12),dble(su2(1:nvrt,1:ns)))
+          iret=nf90_put_var(ncids(4),ivarid(13),dble(sv2(1:nvrt,1:ns)))
           iret=nf90_put_var(ncids(4),ivarid(14),dble(zeros(1:nvrt,1:np)))
           iret=nf90_put_var(ncids(4),ivarid(15),dble(zeros(1:nvrt,1:np)))
           iret=nf90_put_var(ncids(4),ivarid(16),dble(zeros(1:nvrt,1:np)))
@@ -1199,7 +1242,7 @@
 
 !          stop
 
-        endif !ifile; hotstart.in
+        endif !ifile; hotstart
 
 !       *[23D].th
 !        write(54,rec=irecout)timeout,eout(iond2(1:nond0))
