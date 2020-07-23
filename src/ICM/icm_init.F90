@@ -543,7 +543,7 @@ subroutine icm_init
   rIavg_save=0.0
 
   !ncai_sav
-  lfsav=1.0;    stsav=1.0;      rtsav=0.3;      hcansav=0.0 !init for each layer whole domain 
+  lfsav=0.0;    stsav=0.0;      rtsav=0.0;      hcansav=0.0 !init for each layer whole domain 
 
   !erosion ncai
   tau_c_elem=0.0
