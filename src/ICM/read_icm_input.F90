@@ -963,7 +963,7 @@ subroutine read_icm_param2
             lfsav(k,i)=tlfsav(i)*tmp/hcansav(i)
             stsav(k,i)=tstsav(i)*tmp/hcansav(i)
             rtsav(k,i)=trtsav(i)*tmp/hcansav(i)
-          elseif (ze(k-3,i)<hcansav(i)+ze(kbe(i),i)) then !leave seed for two layers on top
+          elseif ((k>=kbe(i)+3.and.ze(k-3,i)<hcansav(i)+ze(kbe(i),i)).or.(k>=kbe(i)+2.and.ze(k-2,i)<hcansav(i)+ze(kbe(i),i))) then !leave seed for two layers on top
             lfsav(k,i)=1
             stsav(k,i)=1
             rtsav(k,i)=0.3
