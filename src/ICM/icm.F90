@@ -2538,9 +2538,9 @@ subroutine calkwq(id,nv,ure,it)
   if (isav_icm==1.and.patchsav(id)==1) then
     !These arrays won't be used until 1 step later
     !total sav biomass and canopy height
-    tlfsav(id)=sum(lfsav((kbe(i)+1):nvrt,id))
-    tstsav(id)=sum(stsav((kbe(i)+1):nvrt,id))
-    trtsav(id)=sum(rtsav((kbe(i)+1):nvrt,id))
+    tlfsav(id)=sum(lfsav((kbe(id)+1):nvrt,id))
+    tstsav(id)=sum(stsav((kbe(id)+1):nvrt,id))
+    trtsav(id)=sum(rtsav((kbe(id)+1):nvrt,id))
     hcansavori(id)=rlf*tlfsav(id)+rst*tstsav(id)+rrt*trtsav(id)+hcansav0
     hcansav(id)=min(hcansavori(id),tdep,hcansav_limit)
 
