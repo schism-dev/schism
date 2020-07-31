@@ -435,6 +435,7 @@ git versions:
 (107) e703189 (May 6, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
 (108) 14e201f (May 7, 2020): switched to ParMETIS v4.0.3;
 (109) 33fb37f (Jun 30, 2020): fixed a bug in ielm_transport (Fei Y.).
+(110) (July 31, 2020): reverted the change in schism_io (close/open nc output after/b4 each write), as this has caused a lot of mem leaking
 
 ---------------------------------------------------------------
 Auto-test history:

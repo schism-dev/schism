@@ -253,23 +253,9 @@
       logical :: lex1,lex2
       integer :: i,k,iret,irec,len_var,idim2p,iret2,ivs
       real*4 :: a1d(1) 
-      character(len=140) :: fname
-      character(len=4) :: fgb
-
+      
 !     Return if not output step
       if(mod(it_main,nspool)/=0) return
-
-      write(ifile_char,'(i12)') ifile !convert ifile to a string
-      ifile_char=adjustl(ifile_char)  !place blanks at end
-      ifile_len=len_trim(ifile_char)  !length without trailing blanks
-      fgb='0000'
-      write(fgb,'(i4.4)') myrank
-      fname=out_dir(1:len_out_dir)//('schout_'//fgb//'_'//ifile_char(1:ifile_len)//'.nc')
-      
-!     Open to write (and get ncid)
-!      iret=nf90_open(fname,NF90_WRITE,ncid)
-      iret=nf90_open(fname,OR(NF90_NETCDF4,NF90_WRITE),ncid)
-      if(iret/=nf90_noerr) call parallel_abort('writeout_nc: failed to open')
 
       ivs=1
       if(present(outvar2)) ivs=2
@@ -412,7 +398,6 @@
 !'
       iret=nf90_put_att(ncid,itime_id,'i23d',0) !set i23d flag
       iret=nf90_enddef(ncid)
-      iret=nf90_close(ncid)
 
       end subroutine fill_nc_header
 !===============================================================================
