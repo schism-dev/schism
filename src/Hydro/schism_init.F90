@@ -428,7 +428,7 @@
       endif !iorder
 
       !Init defaults
-      indvel=1; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=0; shapiro0=0.5_rkind; niter_shap=1
+      indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
       gen_wsett=real(1.d-4,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
@@ -453,8 +453,7 @@
       iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind; 
       iwbl=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
-      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
-      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1; iof_dvd=1
+      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
@@ -463,8 +462,9 @@
       hmin_airsea_ex=1.d-3
 
       !Output elev, hvel by detault
+      iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25)=1
-      iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1; iof_marsh=1
+      iof_icm=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
       nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
