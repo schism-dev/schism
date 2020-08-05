@@ -65,6 +65,8 @@
 !                        porosity                                    !
 !                        > Different porosity initialization         !
 !                        depending on poro_option                    !
+!  2020/07 - M.Pezerat,B.Mengual : introduction of tau_m for         !
+!                        bottom shear stress computations            !
 !                                                                    !
 !--------------------------------------------------------------------!
 
@@ -132,6 +134,9 @@
         IF(i/=0) CALL parallel_abort('Sed: uorbp allocation failure')
       ALLOCATE(dirpeak(nea),stat=i) !Anouk
         IF(i/=0) CALL parallel_abort('Sed: dirpeak allocation failure')
+
+      ALLOCATE(tau_m(nea),stat=i)
+        IF(i/=0) CALL parallel_abort('Sed: tau_m allocation failure')
       ALLOCATE(tau_c(nea),stat=i)
         IF(i/=0) CALL parallel_abort('Sed: tau_c allocation failure')
       ALLOCATE(tau_w(nea),stat=i)
@@ -266,6 +271,7 @@
       wlpeak(:)    = IniVal
       uorb(:)      = IniVal
       uorbp(:)     = IniVal
+      tau_m(:)     = IniVal
       tau_c(:)     = IniVal
       tau_w(:)     = IniVal
       tau_wc(:)    = IniVal

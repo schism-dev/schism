@@ -46,6 +46,7 @@
 !                         introduction of a limiter w_asym_max       !
 !                       > bed slope effects: now under option with   !
 !                         an external call to a new subroutine       !
+!          2020/07 - M.Pezerat,B.Mengual : tau_wc replaced by tau_m  !
 !                                                                    !
 !--------------------------------------------------------------------!
 
@@ -165,7 +166,7 @@
       theta_w = 0.d0
 #endif
          
-      theta_m = tau_wc(inea)*osmgd ! component due to the waves+current 
+      theta_m = tau_m(inea)*osmgd ! component due to the waves+current 
       cff1 = theta_w*(1.0d0+w_asym)
       cff2 = theta_w*(1.0d0-w_asym)
 

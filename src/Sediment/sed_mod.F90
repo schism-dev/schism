@@ -57,6 +57,8 @@
 !                               > Bed compartment: top layer init.,  !
 !                                 porosity computations              !
 !                               > New outputs                        !
+!          2020/07 - M.Pezerat,B.Mengual : introduction of tau_m for !
+!                               bottom shear stress computations     !
 !                                                                    !
 !--------------------------------------------------------------------!
 !                                                                    !
@@ -253,9 +255,10 @@
        ! Variable shared by sed_friction subroutines
        REAL(rkind), ALLOCATABLE  :: bustr(:)       !Current-induced bottom stress in direction x (m^2/s/s)
        REAL(rkind), ALLOCATABLE  :: bvstr(:)       !Current-induced bottom stress in direction y (m^2/s/s)
+       REAL(rkind), ALLOCATABLE  :: tau_m(:)       !Wave-current mean bottom stress (m^2/s/s)
        REAL(rkind), ALLOCATABLE  :: tau_c(:)       !Current-induced bottom stress (m^2/s/s) =|(bustr,bvstr)|
        REAL(rkind), ALLOCATABLE  :: tau_w(:)       !Wave-induced bottom stres (m^2/s/s)
-       REAL(rkind), ALLOCATABLE  :: tau_wc(:)      !Wave-current mean bottom stress (m^2/s/s)
+       REAL(rkind), ALLOCATABLE  :: tau_wc(:)      !Wave-current max bottom stress (m^2/s/s)
 
        ! Bed variables defined at nodes
        REAL(rkind), ALLOCATABLE :: vc_area(:)      !Volume control area (vc_area(npa))
