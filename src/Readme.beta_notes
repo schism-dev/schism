@@ -438,6 +438,8 @@ git versions:
 (110) 55910d1 (July 31, 2020; via branch mem_leak_nc4): reverted the change in schism_io (close/open 
                nc output after/b4 each write, to accommodate PDAF's flexible mode), as this has caused a 
                lot of mem leaking (discovered by Nicole C. when testing ICM).
+(111) eaf9093 (Aug 2020): Baptiste M. modified the computation of the bottom shear stress 
+              under combined waves and currents in SED3D
 
 ---------------------------------------------------------------
 Auto-test history:
