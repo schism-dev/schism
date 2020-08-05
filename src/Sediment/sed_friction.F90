@@ -108,13 +108,10 @@
           z0s    = d50/12.0d0             ! Nikuradse roughness  (m)
 
           IF(hh>z0s) THEN
-          !IF(hh>Zob(i)) THEN
-            !IF(hh<=0.d0.OR.Zob(i)<=0.d0) THEN
             IF(hh<=0.OR.z0s<=0) THEN
               CALL parallel_abort('SED-current_stress: Cd failed')
             ENDIF
             cff1 = 1.0d0/LOG(hh/z0s)
-            !cff1 = 1.0d0/LOG(hh/Zob(i))
             cff2 = vonKar*vonKar*cff1*cff1
             wrk  = MIN(Cdb_max,MAX(Cdb_min,cff2))
           else
@@ -228,12 +225,17 @@
 !          2020/02 - X.Bertin, B.Mengual : fw based on Swart (1974)  !
 !                    using the skin friction                         !
 !                  - B.Mengual : tau_w limited by tau_max            !
+!          2020/07 - M.Pezerat, B.Mengual : tau_wc computed from     !
+!                    tau_m and tau_w, by including the angle between !
+!                    current and wave directions                     !
 !                                                                    !
 !--------------------------------------------------------------------!
 
       USE sed_mod,   ONLY: uorb,tp,Zob,bustr,bvstr,tau_c,      &
-     &                      tau_w,tau_wc,isd50,bottom,tau_max 
-      USE schism_glbl, ONLY: rkind,pi,nea,idry_e,errmsg,rho0
+     &                      tau_w,tau_wc,isd50,bottom,tau_max, &
+     &                      tau_m,ustress,vstress,wdir 
+      USE schism_glbl, ONLY: rkind,pi,nea,idry_e,errmsg,rho0, &
+     &                       elnode,i34,out_wwm
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_e2d
 
       IMPLICIT NONE
@@ -242,6 +244,8 @@
 !- Local variables --------------------------------------------------!
       INTEGER     :: i
       REAL(rkind) :: abskb,fw,ks,d50
+      ! Variables for tau_wc
+      REAL(rkind) :: phi,udir
 !- Start Statement --------------------------------------------------!
 
 !---------------------------------------------------------------------
@@ -308,13 +312,21 @@
         ENDIF
 
 !---------------------------------------------------------------------
-! - Computes mean wave-current bottom stress (Soulsby, 1997, eq. 69)
+! - Computes mean wave-current bottom stress, tau_m (Soulsby, 1997, eq. 69)
+! - MP,BM update: tau_wc is computed from tau_m and tau_w, by including 
+!   the angle between current and wave directions (Soulsby, 1997, eq. 70)
 !---------------------------------------------------------------------
 
+        ! Angle between current and wave directions (phi)                        
+        udir = ATAN2(vstress(i),ustress(i))
+        phi = wdir(i) - udir
+
         if(tau_c(i)+tau_w(i)==0) then
-          tau_wc(i)=0
+          tau_m(i) = 0
+          tau_wc(i) = 0
         else
-          tau_wc(i) = tau_c(i)*(1.0d0+1.2d0*(tau_w(i)/(tau_c(i)+tau_w(i)))**3.2d0)
+          tau_m(i)  = tau_c(i)*(1.0d0+1.2d0*(tau_w(i)/(tau_c(i)+tau_w(i)))**3.2d0)
+          tau_wc(i) = SQRT((tau_m(i) + tau_w(i)*ABS(COS(phi)))**2.0d0 + (tau_w(i)*SIN(phi))**2.0d0)
         endif
 
       ENDDO !i = 1,nea
@@ -322,6 +334,7 @@
 #else 
       ! No wave model
       DO i = 1,nea
+        tau_m(i) = tau_c(i)
         tau_wc(i)  = tau_c(i)
       ENDDO ! End loop nea
 #endif
