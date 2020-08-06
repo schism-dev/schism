@@ -1659,6 +1659,11 @@
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
           &iadjust_mass_consv(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
+      ufg = 0.0_rkind
+      uu2 = 0.0_rkind
+      vfg = 0.0_rkind
+      vv2 = 0.0_rkind
+      ww2 = 0.0_rkind
 !'
 
 !     Allocate boundary forcings 
@@ -1697,6 +1702,7 @@
 !     Tracers
       allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
+      tr_nd0=0
       allocate(trnd_nu1(ntracers,nvrt,npa),trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
       if(itmp/=0) call parallel_abort('INIT: alloc failed (56)')
 
@@ -2050,6 +2056,14 @@
       ixi_n=(/-1,1,1,-1/)
       iet_n=(/-1,-1,1,1/)
 
+!...  Modified depth
+!      dpmax=-1.e25 !max. depth
+!$OMP workshare
+      dpmax=maxval(dp(1:npa))
+!     Save intial depth for bed deformation case
+      dp00=dp
+!$OMP end workshare
+
 !...  Vgrid
       if(ivcor==2) then; if(ztot(1)>=-dpmax) then
         write(errmsg,*)'1st z-level must be below max. depth:',dpmax
@@ -2160,14 +2174,6 @@
         enddo !i
 !$OMP   end do
       endif !ics
-
-!...  Modified depth
-!      dpmax=-1.e25 !max. depth
-!$OMP workshare
-      dpmax=maxval(dp(1:npa))
-!     Save intial depth for bed deformation case
-      dp00=dp
-!$OMP end workshare
 
 !$OMP do
       do i=1,npa
@@ -3646,6 +3652,10 @@
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &zta_out3d(nvrt,nout_sta,nvar_sta),zta_out3d_gb(nvrt,nout_sta,nvar_sta),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
+          iep_flag=0
+          sta_out=0.0_rkind
+          sta_out3d=0.0_rkind
+          zta_out3d=0.0_rkind
         endif
 
         do i=1,nout_sta

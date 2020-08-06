@@ -1291,6 +1291,7 @@
          END IF
 
          IF (LBCWA .OR. LBCSP) THEN
+           PGIVE = 0.0
            IF (PGIVE(7) .LT. THR) THEN
              PGIVE(7) = 0.1
            ELSE IF (PGIVE(8) .LT. THR) THEN

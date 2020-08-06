@@ -87,7 +87,7 @@
          REAL(rkind), INTENT(IN)       :: DT_SCHISM0
          CHARACTER(LEN=3), INTENT(OUT) :: RADFLAG2
 
-         REAL(rkind), SAVE  :: SIMUTIME
+         REAL(rkind), SAVE  :: SIMUTIME=0.0_rkind
          REAL(rkind)        :: T1, T2
          REAL(rkind)        :: TIME1, TIME2, TIME3, TIME4, TIME5, TIME6, TIME7
 
