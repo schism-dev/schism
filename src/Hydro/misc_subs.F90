@@ -460,7 +460,7 @@
 !      nrecl_fl=nbyte*(1+nnode_fl*2*nvrt)
 !      nrecl_tr2(:)=nbyte*(1+nnode_tr2(:)*nvrt*ntrs(:))
 
-      th_time2=0.0
+      th_time2=0.d0
 
       if(nettype2>0) then
         j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)

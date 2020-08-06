@@ -1659,11 +1659,6 @@
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
           &iadjust_mass_consv(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
-      ufg = 0.0_rkind
-      uu2 = 0.0_rkind
-      vfg = 0.0_rkind
-      vv2 = 0.0_rkind
-      ww2 = 0.0_rkind
 !'
 
 !     Allocate boundary forcings 
@@ -1702,7 +1697,6 @@
 !     Tracers
       allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
-      tr_nd0=0
       allocate(trnd_nu1(ntracers,nvrt,npa),trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
       if(itmp/=0) call parallel_abort('INIT: alloc failed (56)')
 
@@ -1951,6 +1945,10 @@
       iwsett=0; wsett=0.d0 !settling vel.
       rough_p=1.d-4 !>0 for SED
       tau_bot_node=0.d0
+      uu2 = 0.0_rkind
+      vv2 = 0.0_rkind
+      ww2 = 0.0_rkind
+      tr_nd0=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -2057,12 +2055,9 @@
       iet_n=(/-1,-1,1,1/)
 
 !...  Modified depth
-!      dpmax=-1.e25 !max. depth
-!$OMP workshare
       dpmax=maxval(dp(1:npa))
 !     Save intial depth for bed deformation case
       dp00=dp
-!$OMP end workshare
 
 !...  Vgrid
       if(ivcor==2) then; if(ztot(1)>=-dpmax) then
@@ -2178,7 +2173,6 @@
 !$OMP do
       do i=1,npa
         if(ivcor==2) hmod(i)=min(dp(i),h_s)
-!        if(dp(i)>dpmax) dpmax=dp(i)
       enddo !i=1,npa
 !$OMP end do
 
