@@ -1018,6 +1018,7 @@ end subroutine inter_btrack
             if(idry(nd)==1) then !i.c.
               uvdata(i,1)=0._rkind
               uvdata(i,2)=0._rkind
+              uvdata(i,3)=0._rkind
             else !wet
 !              if(ics==1) then
               vxl(1,1)=uu2(jlev,nd); vxl(1,2)=uu2(jlev-1,nd)

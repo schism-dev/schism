@@ -388,6 +388,8 @@
         SSDSC(5)   = SSDSC5
         SSDSC(6)   = SSDSC6
         SSDSC(7)   = WHITECAPWIDTH
+        SSDSC(8)   = 0.0_rkind
+        SSDSC(9)   = 0.0_rkind
 
         FXFM3   = 2.5_rkind
         FXFMAGE = ZERO
