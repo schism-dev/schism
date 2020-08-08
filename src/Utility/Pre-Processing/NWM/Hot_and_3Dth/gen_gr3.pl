@@ -2,8 +2,8 @@
 
 $hgrid="hgrid.gr3";
 
-@gr3_files=("fg.gr3");
-@val=      ("33");
+@gr3_files=("sal_ic_reg.gr3", "fg_sal.gr3", "tem_ic_reg.gr3", "fg_tem.gr3");
+@val=      ("0","33","0","30");
 
 $iFile=0;
 

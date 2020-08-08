@@ -12,6 +12,25 @@ $script_dir="../Grid_manipulation/";
 #UTM grid
 system("ln -sf ../hgrid.* .");
 
+
+#-----------------------tvd-------------------
+#set tvd.prop
+@reg_list = glob("tvd/*.r*");
+$dummy_reg = $reg_list[0];
+# initialize to 1 (i.e., use tvd)
+system("$script_dir/auto_edit_prop $dummy_reg hgrid.ll 1 1"); 
+move("out.prop","default.prop");
+# set local regions to 0
+foreach (@reg_list) {
+  $this_reg = $_;
+  print("$script_dir/auto_edit_prop $this_reg hgrid.ll 0 -9999\n");
+  system("$script_dir/auto_edit_prop $this_reg hgrid.ll 0 -9999");
+  move("out.prop","default.prop");
+}
+move("default.prop","tvd.prop");
+unlink("../tvd.prop");
+copy("tvd.prop","../tvd.prop");
+
 #-----------------------fluxflag-------------------
 @reg_list = glob("fluxflag/*+.reg");
 $dummy_reg = $reg_list[0];
@@ -40,14 +59,6 @@ move("default.prop","fluxflag.prop");
 
 unlink("../fluxflag.prop");
 copy("fluxflag.prop","../fluxflag.prop");
-
-
-#-----------------------tvd-------------------
-#set tvd.prop
-system("$script_dir/auto_edit_prop tvd.rgn hgrid.ll 0 1");
-move("out.prop","tvd.prop");
-unlink("../tvd.prop");
-copy("tvd.prop","../tvd.prop");
 
 
 print("Done.\n")

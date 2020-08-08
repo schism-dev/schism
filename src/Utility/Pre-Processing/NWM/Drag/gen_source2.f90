@@ -82,9 +82,9 @@
       write(9,*); write(9,*)ne,np
       !write(10,*); write(10,*)ne,np
 
-      r_rough_ocean=0.0025
-      r_rough_bay=0.0025
-      r_rough_land=1.0
+      r_rough_ocean=0.003
+      r_rough_bay=0.003
+      r_rough_land=0.025
 
 
       slope_thres=999999.; depth2=-3.0; depth1=-1.0

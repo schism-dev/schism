@@ -233,10 +233,10 @@
 
     !inside ChesBay, interpolate from CBP casts, FY
     do i=1,np
-      if(dp(i)<=0) then
-          temp2(:)=0; !stop 'Dry'
-          cycle
-      endif
+      !if(dp(i)<=0) then
+      !    temp2(:)=0; !stop 'Dry'
+      !    cycle
+      !endif
       ! find lat between two CB*.* stations
       if(i_ic_sal(i).ne.1 .and. i_ic_tem(i).ne.1) then !outside Ches Bay
         cycle
@@ -339,6 +339,16 @@
     endif
   enddo !i
   close(27); close(29); close(28)
+  
+  !set salinity above 3m NAVD to be 0
+  do i=1,np
+    if (dp(i)<-3)then
+      saltout(:,i)=0.0
+    elseif (dp(i)<0)then
+      rat=max(min(1.0, (dp(i)+3.0)/3.0), 0.0)
+      saltout(:,i)=saltout(:,i) * rat
+    endif
+  enddo!i
 
   !node to element 
   allocate(tsel(2,nvrt,ne),stat=ierr)
