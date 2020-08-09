@@ -16,6 +16,12 @@ system("ln -sf ../hgrid.* .");
 #-----------------------tvd-------------------
 #set tvd.prop
 @reg_list = glob("tvd/*.r*");
+$list_size = @reg_list;
+if ($list_size == 0){
+  print("No regions are provided in Prop/tvd/. See samples in Prop/Sample_tvd/\n");
+  print("Inside the provided regions, high-order transport schemes are not used.\n");
+  exit
+}
 $dummy_reg = $reg_list[0];
 # initialize to 1 (i.e., use tvd)
 system("$script_dir/auto_edit_prop $dummy_reg hgrid.ll 1 1"); 
@@ -33,6 +39,11 @@ copy("tvd.prop","../tvd.prop");
 
 #-----------------------fluxflag-------------------
 @reg_list = glob("fluxflag/*+.reg");
+$list_size = @reg_list;
+if ($list_size == 0){
+  print("Fluxflag regions not provided. See samples in Prop/Sample_fluxflag_*/\n");
+  exit
+}
 $dummy_reg = $reg_list[0];
 #initialize background as -1
 system("$script_dir/auto_edit_prop $dummy_reg hgrid.ll -1 -1");

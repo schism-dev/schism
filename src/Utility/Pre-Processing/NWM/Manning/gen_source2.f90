@@ -81,9 +81,7 @@
       print*, 'Init volume=',vol0
 
       open(8,file='bottom_friction.gr3',status='replace')
-      open(9,file='elev.ic',status='replace')
       write(8,*); write(8,*)ne,np
-      write(9,*); write(9,*)ne,np
 
       !init
       r_rough = r_rough_river
@@ -100,7 +98,6 @@
           do j=1,i34(i)
             n1=elnode(j,i)
             if(abs(r_rough(n1)-r_rough_land)<1.d-7) then
-!              write(99,*)i,r_rough(i)
               r_rough(n1) = r_rough_river
             endif
           enddo
@@ -141,18 +138,11 @@
 
       do i=1,np
         write(8,'(i8,3(1x,f15.6))')i,x(i),y(i),r_rough(i)
-        if (iDB(i) ==0 ) then
-          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i))
-        else
-          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i))+0.02
-        endif
       enddo 
       do i=1,ne
         write(8,*)i,i34(i),elnode(1:i34(i),i)
-        write(9,*)i,i34(i),elnode(1:i34(i),i)
       enddo
       close(8)
-      close(9)
 
       stop
       end

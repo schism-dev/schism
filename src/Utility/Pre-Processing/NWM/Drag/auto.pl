@@ -20,7 +20,12 @@ system("ln -sf ../vgrid.in .");
 #system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
 #move("out.gr3","include.gr3");
 #
-system("./gen_source2");
+unless (-e "bottom_fric.in") {
+  print ("'bottom_fric.in' not found in the current dir, see examples in Sample_*/\n");
+  exit;
+}
+
+system("./gen_source2 < bottom_fric.in");
 
 unlink("../drag.gr3");
 copy("bottom_friction.gr3","../drag.gr3");
