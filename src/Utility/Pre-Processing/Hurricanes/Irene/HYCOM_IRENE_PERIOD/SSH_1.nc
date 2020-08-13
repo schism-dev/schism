@@ -1,0 +1,1 @@
+/sciclone/home10/feiye/Gulf_Stream/RUN30a/HYCOM_IRENE_PERIOD/SSH_1.nc

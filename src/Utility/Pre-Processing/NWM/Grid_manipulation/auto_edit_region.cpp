@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
   if ( argc < 5 || argc > 6 || !is_digits(argv[1]) ) {
     cout << "wrong number of arguments" << endl;
-    cout << "usage: ptNpoly 0 input.reg hgrid.gr3 in_value [out_value]" <<endl;
+    cout << "usage: $this_script 0 input.reg hgrid.gr3 in_value [out_value]" <<endl;
     cout << "the default outside-region value is the original z in the input grid" << endl;
     cout << "options:" << endl;
     cout << "first argument (0): inside region: z=value" << endl;

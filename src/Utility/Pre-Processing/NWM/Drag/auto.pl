@@ -16,7 +16,7 @@ $script_dir="../Grid_manipulation/";
 system("ln -sf ../hgrid.gr3 .");
 system("ln -sf ../vgrid.in .");
 
-#set Delaware Bay =1 in include.gr3
+#set whole domain=1 in include.gr3
 #system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
 #move("out.gr3","include.gr3");
 #
