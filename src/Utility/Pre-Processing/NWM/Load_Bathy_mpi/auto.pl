@@ -5,6 +5,7 @@ use POSIX ();
 use File::Copy qw(copy);
 use File::Copy qw(move);
 use Cwd;
+use Cwd 'abs_path';
 
 $pwd = cwd();
 
@@ -40,10 +41,13 @@ print("running on $host\n");
 
 if ($host =~ /cyclops/) {
     $cores_per_node = 24;
+    $nodes_bloat = 2.75;  #use more nodes to secure enough memory
 }elsif ($host =~ /(james)/){
     $cores_per_node = `pbsnodes | grep -A 3 jm01 | grep np`;
+    $nodes_bloat = 1.3;  #use more nodes to secure enough memory
 }elsif ($host =~ /chesapeake/){
     $cores_per_node = `pbsnodes | grep -A 3 pt01 | grep np`;
+    $nodes_bloat = 1.1;  #use more nodes to secure enough memory
 }elsif($host =~ /stampede2/) {
     #$cores_per_socket=`scontrol show node  | grep -B 9  skx-dev | head -n 10 | grep CoresPerSocket`
     #$n_sockets=`scontrol show node  | grep -B 9  skx-dev | head -n 10 | grep Sockets`
@@ -61,13 +65,23 @@ if ($host =~ /cyclops/) {
 $cores_per_node=~s/[^0-9]//g;
 print "cores_per_node=$cores_per_node\n";
 
-# !!!temporary fix before the dem_* naming is fixed
+# !!!not copying symlink*pl,
+# which is a temporary fix before the dem_* naming is fixed
 #prepare DEM folder
 #system("rm -rf ./DEM/");
 #system("mkdir DEM");
 chdir("DEM");
 system("rm -rf ./DEM/*.asc");
-system("ln -sf $DEM_dir/*.asc .");
+
+# system("ln -sf $DEM_dir/*.asc .");
+# link absolute path
+(@asc_files)=glob "$DEM_dir/*.asc";
+foreach (@asc_files) {
+    $file=$_;
+    $fullPN=abs_path($file);
+    system "ln -sf $fullPN .";
+}
+system "rm dem_[0-9][0-9][0-9][0-9].asc";
 # system("cp $DEM_dir/*.pl .");
 chdir($pwd);
 
@@ -110,8 +124,10 @@ for ($i=1;$i<=3;$i++){
     print "Number of DEMs for Batch $i: $ndems\n";
 
 #calculate how many nodes ($nodes) are required.
-    $nodes = POSIX::ceil($ndems/$cores_per_node*1.3);
-    print "Number of nodes requested for Batch $i: $nodes\n";
+    $nodes_min = POSIX::ceil($ndems/$cores_per_node);
+    print "Minimal number of nodes for Batch $i: $nodes_min\n";
+    $nodes = POSIX::ceil($ndems/$cores_per_node*$nodes_bloat);
+    print "Number of nodes actually requested for Batch $i: $nodes\n";
 
 #write dems.in
     open(my $fh, '>', 'dems.in');
@@ -127,7 +143,7 @@ for ($i=1;$i<=3;$i++){
       print PW "module list\n";
       print PW "cd $pwd/\n";
       print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
-      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:c18:ppn=$cores_per_node  -l walltime=00:30:00";
+      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:c18:ppn=$cores_per_node  -l walltime=00:50:00";
     }elsif ($host =~ /(james)/){
       open PW, "> ./run_submit";
       print PW "#!/usr/bin/tcsh\n";
@@ -136,13 +152,13 @@ for ($i=1;$i<=3;$i++){
       print PW "module list\n";
       print PW "cd $pwd/\n";
       print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
-      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:james:ppn=$cores_per_node  -l walltime=00:30:00";
+      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:james:ppn=$cores_per_node  -l walltime=00:50:00";
     }elsif ($host =~ /cyclops/) {
       open PW, "> ./run_submit";
       print PW "#!/usr/bin/tcsh\n";
       print PW "#SBATCH --nodes=$nodes --ntasks-per-node=$cores_per_node\n";
       print PW "#SBATCH --constraint=cyclops\n";
-      print PW "#SBATCH -t 00:30:00\n";
+      print PW "#SBATCH -t 00:50:00\n";
       print PW "module list\n";
       print PW "cd $pwd/\n";
       print PW "srun ./interpolate_depth_structured2_mpi > err2.out\n";
@@ -167,6 +183,7 @@ for ($i=1;$i<=3;$i++){
 system("mv hgrid.old hgrid.new");
 system("rm *.out");
 system("rm *.asc");
+system("rm DEM/*.asc");
 # system("rm -rf ./DEM/");
 
  
