@@ -1306,7 +1306,7 @@
 !     Read in volume/mass sources/sinks
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
       if(if_source==1) then
-        msource=0 !init; dimension same as concentration (psu etc)
+        msource=-9999.d0 !init as flags; dimension same as concentration (psu etc)
         if(nsources>0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
@@ -1398,6 +1398,9 @@
             vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
           enddo !i
         endif !impose_net_flux
+
+        !msource not updated: if a value (valid or junk) is read in from .th, use same
+        !value; if not, msource=-9999 (init)
       endif !isconsv/=0
 
 !     Calculation of cross-section areas and length for flow b.c.
