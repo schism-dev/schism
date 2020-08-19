@@ -188,7 +188,7 @@ module icm_mod
   !net settling velocity !unit:m/day
   real(kind=iwp),save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
 
-  !benthic flux from sediment flux model
+  !benthic flux from sediment flux model, positive refer to from sediment to water column
   real(kind=iwp),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO
 
   !additional time series of benthic flux 
