@@ -23,7 +23,7 @@
 !     (2) sflux*.nc files;
 !     (3) station.bp: x,y are lon., lat in degrees; z is not used;
 !   Output: (1) fort.18 (time series; time in days from the base time in
-!   1st stack)
+!   1st stack - in UTC)
 !           (2) fort.11: fatal and non-fatal errors; fort.99: debug info
 
       program readNCOM
@@ -43,9 +43,9 @@
       real, allocatable :: varin(:,:,:),timeout(:)
 
 !     File names for netcdf files
-      character(len=3) :: day_char
+      character(len=4) :: day_char
       character(len=5) :: fname
-      character(len=18) :: sfile,varname
+      character(len=30) :: sfile,varname
 
       integer :: status ! netcdf local status variable
       integer :: ier ! allocate error return.
@@ -86,8 +86,8 @@
 !     Loop over all stacks
       do iday=1,ndays !stacks
 !------------------------------------------------------------------------------------------------
-      day_char='000'
-      write(day_char(1:3),'(i3.3)') iday
+      day_char='0000'
+      write(day_char(1:4),'(i4.4)') iday
 
 !     Create nc file names for this date.
       sfile='sflux_'//fname//'.'//day_char//'.nc'
