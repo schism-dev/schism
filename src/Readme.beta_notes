@@ -2,7 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
-hash # (Aug 20, 2020): added two options (selected by 'i_hmin_airsea_ex') for locally turning off heat/salt exchange.
+7e9ff0a (Aug 20, 2020): added two options (selected by 'i_hmin_airsea_ex') for locally turning off heat/salt exchange.
       i_hmin_airsea_ex=1: exchange turned off if local grid depth<hmin_airsea_ex
       i_hmin_airsea_ex=2: exchange turned off if local water depth<hmin_airsea_ex
       This replaces the change made by adde1aa (July 8, 2020): added a new parameter 'hmin_airsea_ex' (min total water depth for heat/salt exchange);
