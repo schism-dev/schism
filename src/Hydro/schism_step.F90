@@ -6155,7 +6155,12 @@
 !$OMP     do 
           do i=1,nea
             if(idry_e(i)==1) cycle
-            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+!           Skip air-sea exchange for certain elements
+            if(i_hmin_airsea_ex==1) then
+              if(dpe(i)<hmin_airsea_ex) cycle
+            elseif(i_hmin_airsea_ex==2) then
+              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+            endif
 
             if(impose_net_flux/=0) then !imposed net 
               precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
@@ -6174,7 +6179,12 @@
 !$OMP     do 
           do i=1,nea
             if(idry_e(i)==1) cycle
-            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+!           Skip air-sea exchange for certain elements
+            if(i_hmin_airsea_ex==1) then
+              if(dpe(i)<hmin_airsea_ex) cycle
+            elseif(i_hmin_airsea_ex==2) then
+              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+            endif
 
 !           Wet element (not shallow)
 !           Surface flux

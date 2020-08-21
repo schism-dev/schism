@@ -107,7 +107,7 @@ module schism_glbl
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
-                  &ihconsv,isconsv,ihdif,ntracers, & 
+                  &ihconsv,isconsv,i_hmin_airsea_ex,ihdif,ntracers, & 
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &

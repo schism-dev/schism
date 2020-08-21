@@ -182,7 +182,7 @@
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
-     &ielm_transport,max_subcyc,hmin_airsea_ex
+     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -435,7 +435,7 @@
       nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind; dzb_decay=0._rkind;  
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=-1; nrampwind=1; 
-      drampwind=1; iwindoff=0; ihconsv=0; isconsv=0; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1; iwindoff=0; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -459,7 +459,7 @@
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
       ielm_transport=0; max_subcyc=10
-      hmin_airsea_ex=1.d-3
+      hmin_airsea_ex=0.2_rkind
 
       !Output elev, hvel by detault
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
@@ -724,6 +724,13 @@
       if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
 !'
       if(ihconsv/=0.and.(nws<2.or.nws>3)) call parallel_abort('Heat budge model must have nws>=2')
+
+      if(isconsv/=0.or.ihconsv/=0) then
+        if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
+          write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
+          call parallel_abort(errmsg)
+        endif 
+      endif
 !'
       if(isconsv/=0) then
 #ifndef PREC_EVAP
