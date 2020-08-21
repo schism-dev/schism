@@ -444,7 +444,8 @@ git versions:
 (111) eaf9093 (Aug 2020): Baptiste M. modified the computation of the bottom shear stress 
               under combined waves and currents in SED3D
 (112) 4ac56df (Aug 2020): Paul Ryan and Claire Trenham (CSIRO) fixed some init array issues in hydro and WWM.
-(113)  (Aug. 2020): msource bug
+(113) 7e9ff0a (Aug 20, 2020): Fei Y fixed a msource bug (init of msource at 0 at elem's not in source_sink.in
+                              led to ice rain;
 
 ---------------------------------------------------------------
 Auto-test history:
