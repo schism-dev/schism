@@ -83,14 +83,14 @@
        print*, 'Input nudging ratio (suggest 1.e-3):'
        read*, epsilon
 
-       print*, 'Input rain_rate:'
-       rain_rate=0.03 !m/hour
+       !print*, 'Input rain_rate:'
+       !rain_rate=0.03 !m/hour
        
        print*, 'Input number of days'
        read*,nday
        ntime=nday*24
 
-       print*, 'Enter start time - dd,mm,yyyy (e.g. 1 1 1992)'
+       print*, 'Enter start time - dd mm yyyy (e.g. 24 07 1988)'
        read(*,*) idd,imm,iyy
 
 
