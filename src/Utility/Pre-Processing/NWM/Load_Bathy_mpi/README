@@ -1,0 +1,11 @@
+Loading DEMs to horizontal grid:
+1)You need have DEM tiles ready. On sciclone or james, you can find them under:
+# sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
+# sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+
+2)you need have a input hgrid.old: the old hgrid.gr3 that the DEMs to be loaded, note that the projection must be lat/lon
+
+3)All DEMs should be linked under the current DEM folder
+
+4) ./auto.pl
+
