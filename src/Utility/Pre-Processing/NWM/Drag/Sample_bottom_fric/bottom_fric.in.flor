@@ -1,2 +1,3 @@
 -1 -3  !two hgrid depths (m) to distinguish river, land, and the transition zone
-0.003 0.025
+0.003 0.025 ! bottom friction values
+0         ! 1: force small friction on multi-layer nodes; 0: not forcing small friction

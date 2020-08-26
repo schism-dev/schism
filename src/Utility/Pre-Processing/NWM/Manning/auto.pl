@@ -5,8 +5,9 @@ use File::Copy qw(copy);
 use File::Copy qw(move);
 use Cwd;
 
-print("You may need to recompile 'gen_source2.f90'\n");
-print("e.g: ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_source2 gen_source2.f90\n\n\n");
+print("You are responsible for providing 'bottom_fric.in', see a sample in this dir\n");
+print("You may need to recompile 'gen_bottom_fric.f90'\n");
+print("e.g: ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_bottom_fric gen_bottom_fric.f90\n\n\n");
 
 
 #dirs
@@ -24,7 +25,7 @@ unless (-e "bottom_fric.in") {
   print ("'bottom_fric.in' not found in the current dir, see examples in Sample_*/\n");
   exit;
 }
-system("./gen_source2 < bottom_fric.in");
+system("./gen_bottom_fric < bottom_fric.in");
 
 unlink("../manning.gr3");
 copy("bottom_friction.gr3","../manning.gr3");

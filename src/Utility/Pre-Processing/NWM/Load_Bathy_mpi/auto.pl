@@ -11,7 +11,6 @@ $pwd = cwd();
 
 #-------------------inputs------------------------------
 my $DEM_dir = "";
-$DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
 # sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
 # sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
 #-------------------end inputs--------------------------

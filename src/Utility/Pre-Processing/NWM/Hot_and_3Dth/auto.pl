@@ -123,8 +123,8 @@ print(">>>>>>>>>>>>see an example compiling cmd in each source code.>>>>>>>>>>>>
 print("\n");
 
 
-#UTM grid
-system("ln -sf ../hgrid.* .");
+#grid
+system("ln -sf ../hgrid.gr3 .");
 system("ln -sf ../vgrid.in .");
 system("ln -sf $hycom_dir/*.nc .");
 
