@@ -1304,9 +1304,21 @@
       enddo !i
 
 !     Read in volume/mass sources/sinks
+!     Notes on msource: while vsource may be updated after this loop (e.g. precip), msource 
+!     is not updated. So msource will take the value from msource.th if an elem
+!     is in source_sink.in; if not, the init values given below are used, and different tracers 
+!     may require different init. T,S: -9999 (junk) so ambient values will be
+!     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
+!     values in msource.th will be used. If outside, ambient values are used and
+!     note that evap/precip is handled separately for S outside source method).
+!     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
+!     water) 
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
       if(if_source==1) then
-        msource=-9999.d0 !init as flags; dimension same as concentration (psu etc)
+        !init all first; dimension same as concentration (psu etc)
+        msource=0.d0 
+        !Exceptions
+        msource(1:2,:)=-9999.d0 !junk so ambient values will be used
         if(nsources>0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
@@ -1398,9 +1410,6 @@
             vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
           enddo !i
         endif !impose_net_flux
-
-        !msource not updated: if a value (valid or junk) is read in from .th, use same
-        !value; if not, msource=-9999 (init)
       endif !isconsv/=0
 
 !     Calculation of cross-section areas and length for flow b.c.
