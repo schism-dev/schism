@@ -447,7 +447,7 @@ git versions:
 (113) 7e9ff0a (Aug 20, 2020): Fei Y fixed a msource bug (init of msource at 0 at elem's not in source_sink.in
                               led to ice rain;
 (114) f311026 (Aug. 27, 2020): reverted init of msource to 0 for tracers other than T,S, 
-      c/o Nicole Cai. Using ambient values for other tracers can lead to slow accumulation of nutrients e.g.
+      c/o Nicole Cai. Using ambient values for other tracers can lead to artifitial and additional accumulation of nutrients e.g.
 
 ---------------------------------------------------------------
 Auto-test history:
