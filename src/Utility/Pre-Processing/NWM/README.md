@@ -113,7 +113,7 @@ Appendix A. Updates since the 2019 Delaware Bay setup
          3.Based on local regions: 0.5 in all coastal bays with a small transition zone of max(0.2, shapiro)
 
     · hotstart.nc:
-         The procdure itself is not changed, but more local regions are added.
+         The procedure itself is not changed, but more local regions are added.
          Three Steps:
          1. HYCOM
          2. Modifications 
