@@ -124,7 +124,7 @@ print("\n");
 
 
 #grid
-system("ln -sf ../hgrid.gr3 .");
+system("ln -sf ../hgrid.* .");
 system("ln -sf ../vgrid.in .");
 system("ln -sf $hycom_dir/*.nc .");
 
