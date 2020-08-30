@@ -328,14 +328,14 @@
       SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
         USE DATAPOOL
         use schism_glbl, only: errmsg,hmin_radstress,kbs,kbe,npa,nsa,ns,ne,nea,idry_e,idry_s, & 
-                             & nne,isidenode,isdel,indel,elnode,elside,i34,area,dldxy,dr_dxy, &
+                             & nne,isidenode,isdel,indel,elnode,elside,i34,area,dldxy, &
                              &cori,zs,su2,sv2
         USE schism_msgp
         implicit none
 
         integer     :: IP, ID, IS, IE, isd, k, j, l, n1, n2, n3, icount
         real(rkind) :: tmp0, tmp1, tmp2, ztmp, ubar, vbar, dhdx, dhdy
-        real(rkind) :: stokes_w(nvrt,nea), stokes_w_sd(nvrt,nsa), ws_tmp1(nvrt,nsa), ws_tmp2(nvrt,nsa)
+        real(rkind) :: stokes_w(nvrt,nea), stokes_w_sd(nvrt,nsa), ws_tmp1(nvrt,nsa), ws_tmp2(nvrt,nsa),dr_dxy(2,nvrt,nsa)
 
 !YJZ: init here for better readability
         WWAVE_FORCE=0.d0
@@ -543,7 +543,7 @@
       SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
         USE DATAPOOL
         USE schism_glbl, only: errmsg,hmin_radstress,kbs,kbe,nsa,ns,np,ne,nea,idry_e, & 
-                             & idry_s,isidenode,isbs,i34,dps,dldxy,dr_dxy,h0,out_wwm,zs 
+                             & idry_s,isidenode,isbs,i34,dps,dldxy,h0,out_wwm,zs 
         USE schism_msgp 
         IMPLICIT NONE
 

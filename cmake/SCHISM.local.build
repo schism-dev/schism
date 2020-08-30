@@ -13,14 +13,14 @@
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
-set (PREC_EVAP ON CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")   # Not implemented yet
 set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
 
 #   Enable/Disable Modules
 set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
-set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
+set( USE_WWM ON CACHE BOOLEAN "Use wind-wave module")
 set( USE_ICE OFF CACHE BOOLEAN "Use ICE module")
 
 #Tracer models
