@@ -1,0 +1,13 @@
+GAP REPORT LOG OPENED ON Sat Feb  1 20:26:29 2014
+
+wwm_main.F90(506): remark #30525: (PAR) Insert a "!dir$ loop count min(512)" statement right before the loop at line 506 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 512 iterations.
+wwm_main.F90(507): remark #30525: (PAR) Insert a "!dir$ loop count min(512)" statement right before the loop at line 507 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 512 iterations.
+wwm_main.F90(585): remark #30525: (PAR) Insert a "!dir$ loop count min(16)" statement right before the loop at line 585 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 16 iterations.
+wwm_main.F90(590): remark #30525: (PAR) Insert a "!dir$ loop count min(32)" statement right before the loop at line 590 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 32 iterations.
+wwm_main.F90(595): remark #30525: (PAR) Insert a "!dir$ loop count min(256)" statement right before the loop at line 595 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 256 iterations.
+wwm_main.F90(596): remark #30525: (PAR) Insert a "!dir$ loop count min(256)" statement right before the loop at line 596 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 256 iterations.
+wwm_main.F90(597): remark #30525: (PAR) Insert a "!dir$ loop count min(32)" statement right before the loop at line 597 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 32 iterations.
+wwm_main.F90(628): remark #30525: (PAR) Insert a "!dir$ loop count min(32)" statement right before the loop at line 628 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 32 iterations.
+wwm_main.F90(629): remark #30525: (PAR) Insert a "!dir$ loop count min(256)" statement right before the loop at line 629 to parallelize the loop. [VERIFY] Make sure that the loop has a minimum of 256 iterations.
+Number of advice-messages emitted for this compilation session: 9.
+END OF GAP REPORT LOG
