@@ -277,7 +277,7 @@
 
           if(mod(i23d-1,3)==0) then !2D
 !           Output: time, 2D variable at all nodes
-            write(65,'(e14.6,1000000(1x,e14.4))')time/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
+            write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec_real)/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
 
             !Compute stats (magnitude for vectors)
             if(sum(icomp_stats(:))/=0) then
