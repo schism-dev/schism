@@ -14,7 +14,7 @@ if (@ARGV != 7) {
           [full path to qsub batch script] [full path to tidal_const.dat] [# of tasks] [start stack]
           [end stack]\n";
     print "Example: $0 /sciclone/home10/yinglong/bin/read_output8_allnodes_simple /sciclone/home10/yinglong/bin/tidal_analysis 
-          /sciclone/home10/yinglong/run_comb /sciclone/home10/yinglong/tidal_const.dat
+          /sciclone/home10/yinglong/run_comb /sciclone/home10/yinglong/Scripts/Harmonic_Analysis/SCHISM/NCOutputs/tidal_const.dat.days
           3 2 4\n";
     exit(1);
 }
