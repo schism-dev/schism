@@ -594,6 +594,36 @@
 !-------------------------------------------------------------------------------
 #ifdef USE_WWM
 
+      !BM: coupling current for WWM
+      if (cur_wwm==0) then ! surface currents
+        curx_wwm(:)=uu2(nvrt,:)
+        cury_wwm(:)=vv2(nvrt,:)
+      else if (cur_wwm==1) then ! depth-integrated currents
+        do i=1,npa
+          curx_wwm(i) = 0.d0 ; cury_wwm(i) = 0.d0
+          if(idry(i)==1) cycle
+          do k=kbp(i),nvrt-1
+            curx_wwm(i)=curx_wwm(i)+(uu2(k+1,i)+uu2(k,i))/2*(znl(k+1,i)-znl(k,i))
+            cury_wwm(i)=cury_wwm(i)+(vv2(k+1,i)+vv2(k,i))/2*(znl(k+1,i)-znl(k,i))
+          enddo !k
+          htot=eta2(i)+dp(i)
+          if(htot<=h0) then
+            curx_wwm(i)=0.0d0
+            cury_wwm(i)=0.0d0
+          else
+            curx_wwm(i)=curx_wwm(i)/htot
+            cury_wwm(i)=cury_wwm(i)/htot
+          endif
+        enddo !i=1,npa
+      else if (cur_wwm==2) then ! Kirby and Chen (1989)
+        call current2wave_KC89
+      end if
+      if (cur_wwm < 2) then
+        call exchange_p2d(curx_wwm)
+        call exchange_p2d(cury_wwm)
+      end if
+
+
       if(mod(it,nstep_wwm)==0) then
         wtmp1=mpi_wtime()
         if(myrank==0) write(16,*)'starting WWM'

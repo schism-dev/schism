@@ -149,6 +149,10 @@
   nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
   drampwafo = 1.      !needed if nrampwafo=1; ramp-up period in days
   turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence (default: 0.15 (15%), as proposed by Feddersen, 2012)
+  cur_wwm = 2         ! coupling current in WWM
+                      ! 0: surface layer current
+                      ! 1: depth-integrated current
+                      ! 2: computed according to Kirby and Chen (1989)
 
 !-----------------------------------------------------------------------
 ! Bed deformation option (0: off; 1: vertical deformation only; 2: 3D bed deformation). 

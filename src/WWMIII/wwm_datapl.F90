@@ -61,6 +61,7 @@
 !     &                         idry_s,                       & ! wet/dry for a side
      &                         eta1,eta2,                    & ! elevation at 2 time steps
      &                         uu2,vv2,                      & ! horizontal vel.
+     &                         curx_wwm,cury_wwm,             & ! BM:coupling current from SCHISM
      &                         KZ,THETA_F,                   & !vertical coord. parameters
      &                         SIGMACOR=>SIGMA,              & !sigma coord.
      &                         WINDX0=>WINDX,                & !x-wind

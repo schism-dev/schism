@@ -145,8 +145,8 @@
            WATLEV      = ETA2
            WATLEVOLD   = ETA1
            DEP         = MAX(ZERO,WLDEP + WATLEV)
-           CURTXY(:,1) = UU2(NVRT,:)
-           CURTXY(:,2) = VV2(NVRT,:)
+           CURTXY(:,1) = CURX_WWM(:) ! BM, initially UU2(NVRT,:)
+           CURTXY(:,2) = CURY_WWM(:) ! BM, initially VV2(NVRT,:)
            IF (.NOT. LWINDFROMWWM) THEN
              WINDXY(:,1) = WINDX0
              WINDXY(:,2) = WINDY0
@@ -173,8 +173,8 @@
            WATLEV      = ETA2
            WATLEVOLD   = ETA1
            DEP         = MAX(ZERO, WLDEP + WATLEV)
-           CURTXY(:,1) = UU2(NVRT,:)
-           CURTXY(:,2) = VV2(NVRT,:)
+           CURTXY(:,1) = CURX_WWM(:) ! BM, initially UU2(NVRT,:)
+           CURTXY(:,2) = CURY_WWM(:) ! BM, initially VV2(NVRT,:)
            IF (.NOT. LWINDFROMWWM) THEN
              WINDXY(:,1) = WINDX0
              WINDXY(:,2) = WINDY0
@@ -215,8 +215,8 @@
            WATLEV      = ZERO 
            WATLEVOLD   = ZERO 
            DEP         = WLDEP
-           CURTXY(:,1) = UU2(NVRT,:) 
-           CURTXY(:,2) = VV2(NVRT,:) 
+           CURTXY(:,1) = CURX_WWM(:) ! BM, initially UU2(NVRT,:)
+           CURTXY(:,2) = CURY_WWM(:) ! BM, initially VV2(NVRT,:)
            IF (.NOT. LWINDFROMWWM) THEN
              WINDXY(:,1) = WINDX0
              WINDXY(:,2) = WINDY0
@@ -229,8 +229,8 @@
            WATLEV      = ZERO
            WATLEVOLD   = ZERO
            DEP         = WLDEP
-           CURTXY(:,1) = UU2(NVRT,:)
-           CURTXY(:,2) = UU2(NVRT,:)
+           CURTXY(:,1) = CURX_WWM(:) ! BM, initially UU2(NVRT,:)
+           CURTXY(:,2) = CURY_WWM(:) ! BM, initially VV2(NVRT,:)
            IF (.NOT. LWINDFROMWWM) THEN
              WINDXY(:,1) = WINDX0
              WINDXY(:,2) = WINDY0

@@ -41,6 +41,7 @@
 ! subroutine zonal_flow
 ! subroutine wbl_GM
 ! subroutine wbl_Soulsby97
+! subroutine current2wave_KC89 ! BM test
 ! subroutine area_coord
 ! subroutine ibilinear
 ! subroutine quad_shape
@@ -3894,6 +3895,85 @@
       endif
 
       end subroutine wbl_Soulsby97
+
+!====================================================================================|
+      subroutine current2wave_KC89
+   
+!--------------------------------------------------------------------!
+! Compute the coupling current for the wave model, based on Kirby and
+! Chen (1989)
+!
+! References
+! Waves and Strongly Sheared Currents: Extensions to Coastal Ocean
+! Models
+! Kirby, J. T., Jr.; Dong, Z.; Banihashemi, S.  Dec 2018
+!
+! see COAWST-master/Master/mct_roms_swan.h, section Compute the
+! coupling current according to Kirby and Chen (1989).  and comments
+! form the Kirky and Chen implementation from last paper above
+!--------------------------------------------------------------------!
+   
+       use schism_glbl, only: iplg,errmsg,hmin_radstress,kbp,idry,nvrt, &
+                              dp,eta2,znl,npa,uu2,vv2,pi,               &
+                              rkind,out_wwm,curx_wwm,cury_wwm
+       use schism_msgp, only: exchange_p2d,parallel_abort
+
+       IMPLICIT NONE
+   
+!- Local declarations --------------------------------------------------
+       INTEGER     :: i,k
+       REAL(rkind) :: htot,wlen,wnum,h_r
+       REAL(rkind) :: cff1,cff2,cffu,cffv
+       REAL(rkind) :: z_r(1:nvrt)
+       REAL(rkind) :: hz(1:nvrt)
+       REAL(rkind), PARAMETER :: wlen_min = 0.01_rkind
+!--------------------------------------------------------------------
+   
+      DO i=1,npa
+   
+        ! Init
+        curx_wwm(i) = 0.d0 ; cury_wwm(i) = 0.d0
+   
+        IF(idry(i)==1) CYCLE ! dry cell
+        IF(out_wwm(i,6) < wlen_min) CYCLE ! no wave ..
+   
+        ! Define vertical grid properties
+        z_r = 0.d0 ! mid layer coordinates, positive upward from sea surface
+        hz = 0.d0  ! layer thickness
+   
+        DO k = kbp(i)+1,nvrt
+          hz(k)  = znl(k,i)-znl(k-1,i) ! >0
+          z_r(k) = 0.5d0*(znl(k,i)+znl(k-1,i))-znl(nvrt,i)
+          IF (hz(k).LE.0.d0) call parallel_abort('(1)CURRENT2WAVE_KIRBY')
+        END DO
+   
+        ! Compute the coupling current according to Kirby and Chen (1989).
+        htot = MAX(dp(i) + eta2(i),hmin_radstress)
+        wlen = MAX(out_wwm(i,6),wlen_min) ! Mean wave length
+        wnum = 2.0d0*pi/wlen
+        cff1=(2.d0*wnum)/(sinh(2.d0*wnum*htot))
+   
+        cffu=0.d0
+        cffv=0.d0
+   
+        DO k=kbp(i)+1,nvrt
+          h_r=htot+z_r(k)
+          cff2=cosh(2.d0*wnum*h_r)*hz(k)
+          cffu=cffu+cff2*uu2(k,i)
+          cffv=cffv+cff2*vv2(k,i)
+        END DO ! kbp(i)+1,nvrt
+   
+        curx_wwm(i)=cff1*cffu
+        cury_wwm(i)=cff1*cffv
+   
+      END DO ! npa
+   
+      call exchange_p2d(curx_wwm)
+      call exchange_p2d(cury_wwm)
+   
+      end subroutine current2wave_KC89
+!====================================================================================|
+
 
 !===============================================================================
 !     Compute area coordinates for a given pt w.r.t. to a triangular element

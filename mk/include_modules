@@ -5,8 +5,8 @@
 # EXEC := $(EXEC)_PETSC
 
 # Precip/evaporation model
- USE_PREC_EVAP = yes
- EXEC := $(EXEC)_EVAP
+# USE_PREC_EVAP = yes
+# EXEC := $(EXEC)_EVAP
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -27,8 +27,8 @@
 # EXEC := $(EXEC)_GOTM
 
 # Wind wave model WWM
-# USE_WWM = yes
-# EXEC := $(EXEC)_WWM
+ USE_WWM = yes
+ EXEC := $(EXEC)_WWM
 
 # Harmonic analysis tool
 # USE_HA = yes
