@@ -32,7 +32,7 @@
 !
 ! 
 !
-!ifort -O2 -CB -g -traceback -o coupling_nwm  ~/git/schism/src/Utility/UtilLib/julian_date.f90 ~/git/schism/src/Utility/UtilLib/schism_geometry.f90 ~/git/schism/src/Utility/UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff 
+!ifort -O2 -CB -traceback -o coupling_nwm julian_date.f90 schism_geometry.f90 pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/ide -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
        program coupling_nwm
        use netcdf
@@ -41,8 +41,7 @@
        use ifport
        implicit real*8(a-h,o-z)
       
-       character(len=*),parameter::REPODir='/sciclone/home20/whuang07/&
-                                             data10/NWM/CHRTOUT/'
+       character(len=*),parameter::REPODir='./NWM_DATA/'
         
        character(len=*),parameter::FILE_NAME='NWM_shp_ll.nc'
        integer :: ncid

@@ -5,7 +5,7 @@ The main purpose of coupling_nwm.f90 is to look for the intersections between SC
 To run this script, 3 inputs are required:
 1) hgrid.ll (SCHISM horizontal grid)
 2) NWM_shp_ll.nc (shape file containing NWM segments)
-3) NWM outputs
+3) NWM outputs: a directory or symbolic link named "NWM_DATA" containing NWM outputs (e.g. 200508080900.CHRTOUT_DOMAIN1.comp) convering the simulation period.
 Some parameters are also required:
 1) Input nudging ratio (suggest 1.e-3)
 2) Input number of days
