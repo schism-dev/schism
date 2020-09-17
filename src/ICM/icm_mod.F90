@@ -106,7 +106,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,GPM1,GPM2,GPM3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
   real(kind=iwp),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
 
-  !ncai !sav parameters 
+  !ncai_sav parameters 
   integer,save,allocatable :: patchsav(:) !(nea)
   integer,save :: initsav
   real(kind=iwp),save :: famsav,fplfsav,fpstsav,fprtsav
