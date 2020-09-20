@@ -7,7 +7,7 @@
 #combined schout_*.nc, and drives ha_sub.pl (in each parallel task)
 #And also arguments to this script. 
 #Make sure the batch script, compiled executables are for same system
-#Outputs: amp_[m2,k2].gr3, pha_[m2,k2].gr3
+#Outputs: amp_[m2,k1].gr3, pha_[m2,k1].gr3
 
 if (@ARGV != 7) {
     print "Usage: $0 [full path to read_output8_allnodes_simple] [full path to tidal_analysis] 
