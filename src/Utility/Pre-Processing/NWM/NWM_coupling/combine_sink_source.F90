@@ -63,7 +63,7 @@
        print*, 'Input search option (0: distance-based; 1: neighboring element based):'
        read*, inbr
        !inbr=1
-       print*, 'Input search radius (if inbr=0: distance; if inbr=1: neighboring tiers):'
+       print*, 'Input search radius (if inbr=0: distance (m); if inbr=1: number of neighboring tiers):'
        if (inbr==0) then
          read*, distance
        elseif (inbr==1) then

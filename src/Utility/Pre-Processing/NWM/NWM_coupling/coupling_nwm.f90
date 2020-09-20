@@ -4,7 +4,8 @@
 !It assumes the land boundary is the 1st land boundary and there is only
 !one land boundary.
 !Inputs files: 
-!      NWM_shp_ll.nc : which is converted from the shape file using the NWM streams. 
+!      NWM_shp_ll.nc: which is converted from the shape file using the NWM streams. 
+!      NWM_DATA: A folder or symlink containing NWM model outputs 
 !      hgrid.ll: the gr3 format SCHISM grid; please only keep land
 !      bnd segments needed for coupling (islands are OK). The # of land
 !      bnd nodes is only used for dimensioning so give it a large number
@@ -81,16 +82,19 @@
        !of NWM)
        print*, 'Input nudging ratio (suggest 1.e-3):'
        read*, epsilon
+       write(*,*) "Nudging ratio: ", epsilon
 
        !print*, 'Input rain_rate:'
        !rain_rate=0.03 !m/hour
        
        print*, 'Input number of days'
        read*,nday
+       write(*,*) "Number of days: ", nday
        ntime=nday*24
 
        print*, 'Enter start time - dd mm yyyy (e.g. 24 07 1988)'
        read(*,*) idd,imm,iyy
+       write(*,*) "start time: ", idd, imm, iyy
 
 
        open(14,file='hgrid.ll',status='old')!lambert projection, NWM has shorter precision
@@ -500,6 +504,7 @@
 
         NWMfile=REPODir//yy//mm1//dd1&
                      //hh1//hh2//'00.CHRTOUT_DOMAIN1.comp'
+        write(*,*)'reading ', NWMfile
         write(98,*)'Inside time iteration:',i,NWMfile 
       
       
