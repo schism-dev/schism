@@ -841,7 +841,7 @@ subroutine read_icm_param2
 !  endif !iPh
 #endif /*ICM_PH*/
 
-
+  !ncai_sav
   !-----------------read in sav patch flag-----------------
   if(isav_icm==1) then
     open(31,file=in_dir(1:len_in_dir)//'patchsav.prop',status='old')
@@ -998,6 +998,11 @@ subroutine read_icm_param2
 !    enddo !i
 !  endif !ihot&isav_icm
 
+
+  !ncai_veg
+
+
+
   if(iCheck==1) call check_icm_param
 
 end subroutine read_icm_param2
@@ -1039,10 +1044,9 @@ subroutine read_icm_param
   call get_param('icm.in','iCheck',1,iCheck,rtmp,stmp)
   call get_param('icm.in','iout_icm',1,iout_icm,rtmp,stmp)
   call get_param('icm.in','nspool_icm',1,nspool_icm,rtmp,stmp)
-  !call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
+  !call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp) !read in ahead of allocations
 
-  !ncai 
-  !check iLight
+  !check 
   if(jLight>2) call parallel_abort('read_icm: jLight>2')
   if(iRea>1) call parallel_abort('read_icm: iRea>1')
   if(max(iAtm,iSed,iBen,iRad)>2) call parallel_abort('read_icm: iAtm,iSed,iBen,iRad')
@@ -1164,7 +1168,7 @@ subroutine read_icm_param
 
   !call get_param('icm.in','STB',2,itmp,STB,stmp)
 
-  !read sav parameters
+  !ncai_sav parameters
 !  if(isav_icm==1) then
     call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
     call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
@@ -1258,6 +1262,10 @@ subroutine read_icm_param
     call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
     fcrpsav=rtmp
 !  endif !isav_icm
+
+  !ncai_veg parameters
+
+
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
@@ -1458,7 +1466,7 @@ subroutine read_icm_param
   rKa=rtmp
   call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
 
-  !Check for sav
+  !ncai_sav :: check
   if(isav_icm==1) then
     if(alphasav<=0) call parallel_abort('read_icm_input: alphasav')
     if(pmbssav<=0) call parallel_abort('read_icm_input: pmbssav')
@@ -1469,6 +1477,9 @@ subroutine read_icm_param
     if(acdwsav<=0) call parallel_abort('read_icm_input: acdwsav')
     if(bmlfrsav<=0.or.bmstrsav<=0.or.bmrtrsav<=0) call parallel_abort('read_icm_input: bmlfrsav')
   endif
+
+  !ncai_veg :: check
+
 
   !PH nudge for TIC and ALK
   if(iPh==1.and.inu_ph==1) then

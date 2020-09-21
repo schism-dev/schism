@@ -220,7 +220,7 @@ subroutine read_icm_sed_param
   use schism_glbl, only : iwp,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
-  use icm_mod, only : iCheck,isav_icm,iTBen
+  use icm_mod, only : iCheck,isav_icm,iTBen !,iveg_icm
   use misc_modules
   implicit none
   
@@ -347,11 +347,18 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','O2CRIT',2,itmp,rtmp,stmp)
   O2CRIT=rtmp
 
-  !sav 
+  !ncai_sav 
   if(isav_icm==1) then
     call get_param_1D('icm_sed.in','frnsav',2,itmp1,frnsav,stmp,3)
     call get_param_1D('icm_sed.in','frpsav',2,itmp1,frpsav,stmp,3)
     call get_param_1D('icm_sed.in','frcsav',2,itmp1,frcsav,stmp,3)
+  endif
+
+  !ncai_veg
+  if(iveg_icm==1) then
+    call get_param_2D('icm_sed.in','frnveg',2,itmp2,frnveg,stmp,3,3)
+    call get_param_2D('icm_sed.in','frpveg',2,itmp2,frpveg,stmp,3,3)
+    call get_param_2D('icm_sed.in','frcveg',2,itmp2,frpveg,stmp,3,3)
   endif
 
   !benthic stress
@@ -749,7 +756,7 @@ subroutine check_icm_sed_param
   use icm_sed_mod
   use schism_msgp, only : myrank,parallel_abort
   use schism_glbl, only: in_dir,out_dir,len_in_dir,len_out_dir
-  use icm_mod, only : isav_icm
+  use icm_mod, only : isav_icm !,iveg_icm
 
   implicit none
 
@@ -794,8 +801,8 @@ subroutine check_icm_sed_param
     write(31,810)CSISAT,DPIE1SI,PIE2SI,O2CRITSI,JSIDETR
     write(31,809)'DPIE1PO4F','DPIE1PO4S','O2CRIT','KMO2DP'
     write(31,810)DPIE1PO4F,DPIE1PO4S,O2CRIT,KMO2DP
-    write(31,809)'isav_icm'
-    write(31,'(I10)')isav_icm
+    write(31,809)'isav_icm'!,'iveg_icm'
+    write(31,'(I10)')isav_icm!,iveg_icm
     write(31,809)'TEMPBEN','KBENSTR','KLBNTH','DPMIN'
     write(31,810)TEMPBEN,KBENSTR,KLBNTH,DPMIN
     write(31,809)'KAPPCH4','THTACH4','KMCH4O2','KMSO4'
@@ -851,10 +858,13 @@ subroutine sed_calc(id)
   use schism_glbl, only : dt,iwp, errmsg, ielg, tau_bot_node,nea,i34,elnode
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
-                      &isav_icm,patchsav,&
+                      &isav_icm,patchsav,& !ncai_sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav,&
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,&
-                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
+                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,& !ncai_erosion
+                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR, &
+                      &iveg_icm,patchveg,& !ncai_veg
+                      &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg
+
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
@@ -940,18 +950,25 @@ subroutine sed_calc(id)
   CH41TM1  = CH41TM1S(id)            ! CH4
   SO4T2TM1 = SO4T2TM1S(id)           ! CH4
 
-  !ncai
-  !sav rt uptake of NH4, PO4, DO
+  !rt uptake of NH4, PO4, DO
   !calculate flux amount on N/P, while account concentration of DO directly 
-  !put sav effect dirctly ahead after assign previous dt, before start going to
+  !put vegetation effect dirctly ahead after assign previous dt, before start going to
   !RHS of mass balance of layer 2 in sedimentation flux 
 
-  !unit: g/m^3
+  !ncai_sav !unit: g/m^3
   if(isav_icm==1.and.patchsav(id)==1)then
     NH4T2TM1=max(1.0e-10_iwp,NH4T2TM1-tlfNH4sav(id)*dtw/HSED(id))
     PO4T2TM1=max(1.0e-10_iwp,PO4T2TM1-tlfPO4sav(id)*dtw/HSED(id))
-    ROOTDO=trtdosav(id) !unit: g/m^2 day
+    ROOTDO=ROOTDO+trtdosav(id) !unit: g/m^2 day
   endif !isav_icm
+
+  !ncai_veg
+  if(iveg_icm==1.and.patchveg(id)==1)then
+    NH4T2TM1=max(1.0e-10_iwp,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
+    PO4T2TM1=max(1.0e-10_iwp,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
+    ROOTDO=ROOTDO+sum(trtdoveg(id,3)) !unit: g/m^2 day
+  endif !iveg_icm
+
 
 
   !------------------------------------------------------------------------
@@ -967,9 +984,8 @@ subroutine sed_calc(id)
   flxp(2)=WS2BNET(id)
   flxp(3)=WS3BNET(id)
 
-  !ncai
-  !net settling velocity is going to be transfered from advanced hydrodynamics
-  !model, more work later on
+  !error
+  !net settling velocity is going to be transfered from advanced hydrodynamics model, more work later on
 
   !calculate POM fluxes
   flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0
@@ -999,8 +1015,9 @@ subroutine sed_calc(id)
   flxpoc(id,2)=flxpoc(id,2)+flxr*SED_RPOC(id)*FRPOC(id,2)
   flxpoc(id,3)=flxpoc(id,3)+flxr*SED_RPOC(id)*FRPOC(id,3)
 
-  !sav rt metaolism adding the RHS of mass balance of POM on layer 2
+  !rt metaolism adding the RHS of mass balance of POM on layer 2
   !trtpo?sav in unit of g/m^2 day
+  !ncai_sav
   if(isav_icm==1.and.patchsav(id)==1) then
     do i=1,3
       flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
@@ -1008,6 +1025,19 @@ subroutine sed_calc(id)
       flxpop(id,i)=flxpop(id,i)+trtpopsav(id)*frpsav(i)
     enddo
   endif
+
+  !ncai_veg
+  if(iveg_icm==1.and.patchveg(id)==1) then
+    do i=1,3
+      do j=1,3
+        flxpoc(id,i)=flxpoc(id,i)+trtpocveg(id,j)*frcveg(i,j)
+        flxpon(id,i)=flxpon(id,i)+trtponveg(id,j)*frnveg(i,j)
+        flxpop(id,i)=flxpop(id,i)+trtpopveg(id,j)*frpveg(i,j)
+      enddo !j::veg species
+    enddo !i::POM group
+  endif
+
+
 
   !************************************************************************
   !deposit feeder influence on sediment POM 
@@ -1221,7 +1251,7 @@ subroutine sed_calc(id)
 
   !Methane saturation
   !CH4SAT=0.099*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0)
-  !CSOD_ncai
+  !ncai_CSOD
   CH4SAT=100*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0) !in unit of g/m^3
 
 
@@ -1521,7 +1551,7 @@ end subroutine sed_calc
 
 subroutine sedsod
   use icm_sed_mod
-  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm
+  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm !,iveg_icm
   use schism_glbl, only : errmsg,iwp
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -1740,10 +1770,14 @@ subroutine sedsod
 
   ! SOD FUNCTION: SOD=CSOD+NSOD
   SOD=CSOD+JO2NH4
+
+!  !deposit feeder
 !  if(idf==1) then
 !    SOD=SOD+XKR*DFEEDM1*2.667E-3
 !  endif
-  if(isav_icm==1) then
+
+  !ncai_sav, ncai_veg
+  if(isav_icm==1.or.isav_icm==1) then
     SOD=SOD+ROOTDO !consume DO by root metabolism
   endif
 

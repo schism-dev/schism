@@ -41,9 +41,10 @@ module icm_sed_mod
   real(kind=iwp),save,dimension(3) :: FRPPHB,FRNPHB,FRCPHB
   real(kind=iwp),save,dimension(3) :: KPDIAG,KNDIAG,KCDIAG,DPTHTA,DNTHTA,DCTHTA
   real(kind=iwp),save :: W2,H2,m1,m2,KSI,THTASI,THTADP,THTADD
-  !ncai !sav related
+  !ncai_sav 
   real(kind=iwp),save,dimension(3) :: frnsav,frpsav,frcsav
-
+  !ncai_veg
+  real(kind=iwp),vege,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
 
   !nutrients, parameters
   real(kind=iwp),save :: KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2 !!nitrification
