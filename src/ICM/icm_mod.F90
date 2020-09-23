@@ -69,7 +69,7 @@ module icm_mod
 
   !ncai_veg
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
-  real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg,ztcveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg,rtdoveg !(nvrt,3)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
@@ -137,17 +137,21 @@ module icm_mod
   !ncai_veg parameters
   integer,save,allocatable :: patchveg(:) !nea
   integer,save :: initveg !decide init mapping format
+  integer,save :: nkveg(3) !# of layers veg occupy, >=1
   real(kind=iwp),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
   real(kind=iwp),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
   real(kind=iwp),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
-  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg,mhtveg,hcanveg_limit!height
+  real(kind=iwp),save,dimension(3) :: saltveg !salt
+  real(kind=iwp),save,dimension(3) ::  !inundation
+  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg,hcanveg_limit!height
+  real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
   real(kind=iwp),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
   real(kind=iwp),save,dimension(3) :: khpwveg,khpsveg !phosphorus
   real(kind=iwp),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
-  real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
@@ -166,7 +170,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
+  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
@@ -178,7 +182,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
+  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
 
 
   !phosphorus parameters 
@@ -194,7 +198,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
+  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
@@ -206,7 +210,7 @@ module icm_mod
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
+  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
 
 
   !--------------------------------------------------------------------------------------

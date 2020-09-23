@@ -220,7 +220,7 @@ subroutine read_icm_sed_param
   use schism_glbl, only : iwp,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
-  use icm_mod, only : iCheck,isav_icm,iTBen !,iveg_icm
+  use icm_mod, only : iCheck,isav_icm,iTBen,iveg_icm
   use misc_modules
   implicit none
   
@@ -756,7 +756,7 @@ subroutine check_icm_sed_param
   use icm_sed_mod
   use schism_msgp, only : myrank,parallel_abort
   use schism_glbl, only: in_dir,out_dir,len_in_dir,len_out_dir
-  use icm_mod, only : isav_icm !,iveg_icm
+  use icm_mod, only : isav_icm,iveg_icm
 
   implicit none
 
@@ -801,8 +801,8 @@ subroutine check_icm_sed_param
     write(31,810)CSISAT,DPIE1SI,PIE2SI,O2CRITSI,JSIDETR
     write(31,809)'DPIE1PO4F','DPIE1PO4S','O2CRIT','KMO2DP'
     write(31,810)DPIE1PO4F,DPIE1PO4S,O2CRIT,KMO2DP
-    write(31,809)'isav_icm'!,'iveg_icm'
-    write(31,'(I10)')isav_icm!,iveg_icm
+    write(31,809)'isav_icm','iveg_icm'
+    write(31,'(I10)')isav_icm,iveg_icm
     write(31,809)'TEMPBEN','KBENSTR','KLBNTH','DPMIN'
     write(31,810)TEMPBEN,KBENSTR,KLBNTH,DPMIN
     write(31,809)'KAPPCH4','THTACH4','KMCH4O2','KMSO4'
@@ -1551,7 +1551,7 @@ end subroutine sed_calc
 
 subroutine sedsod
   use icm_sed_mod
-  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm !,iveg_icm
+  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm,iveg_icm
   use schism_glbl, only : errmsg,iwp
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -1777,7 +1777,7 @@ subroutine sedsod
 !  endif
 
   !ncai_sav, ncai_veg
-  if(isav_icm==1.or.isav_icm==1) then
+  if(isav_icm==1.or.iveg_icm==1) then
     SOD=SOD+ROOTDO !consume DO by root metabolism
   endif
 
