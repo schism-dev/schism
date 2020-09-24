@@ -429,7 +429,7 @@
 
       !Init defaults
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
-      gen_wsett=real(1.d-4,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
+      gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
       nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind; dzb_decay=0._rkind;  
