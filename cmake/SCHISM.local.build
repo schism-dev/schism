@@ -22,6 +22,8 @@ set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
 set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
 set( USE_WWM ON CACHE BOOLEAN "Use wind-wave module")
 set( USE_ICE OFF CACHE BOOLEAN "Use ICE module")
+set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
+set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
 
 #Tracer models
 set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")
@@ -38,8 +40,6 @@ set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
 set( FABM_BASE /sciclone/home10/yinglong/git/fabm CACHE  STRING "Path to FABM base")
 set( USE_DVD OFF CACHE BOOLEAN "DVD module interface")
 
-set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
-set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
 
 
 

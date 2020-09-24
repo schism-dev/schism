@@ -4441,7 +4441,8 @@
 
 #ifdef USE_AGE
       !Tracer age
-      !Method: all i.c. =0; conc=1 at relevant bnd(s), and itrtype=0 at ocean bnd 
+      !Method: all i.c. =0 except 1 in specific regions (e.g. near each bnd) for 
+      !1st half of tracers (=0 for 2nd half). Generally set itrtype=0 at all bnd's 
       if(myrank==0) write(16,*)'tracer age calculation evoked'
       nelem_age(:)=0 !init count for # of non-0 age tracers
       flag_ic(4)=1 !AGE must have type 1 i.c.
@@ -4820,7 +4821,7 @@
             enddo !i=1,nea
 
             !Debug
-            write(12,*)nelem_age(indx2),' found for AGE #',indx2
+            write(12,*)nelem_age(indx2),' elements found for AGE #',indx2
           endif !mm==4.and.
 #endif /*USE_AGE*/
 
