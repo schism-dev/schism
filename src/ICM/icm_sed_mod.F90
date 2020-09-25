@@ -81,7 +81,7 @@ module icm_sed_mod
   real(kind=iwp),save :: TEMPD,PON1,PON2,PON3,POC2,POC3,POP1,POP2,POP3,PSI
   real(kind=iwp),save :: NH41TM1,NO31TM1,HS1TM1,SI1TM1,PO41TM1,NH4T2TM1,NO3T2TM1,HST2TM1,SIT2TM1,PO4T2TM1,CH4T2TM1,CH41TM1,SO4T2TM1
   real(kind=iwp),save :: PON1TM1,PON2TM1,PON3TM1,POC1TM1,POC1,POC2TM1,POC3TM1,POP1TM1,POP2TM1,POP3TM1,PSITM1
-  real(kind=iwp),save :: ROOTDO  !SAV
+  real(kind=iwp),save :: ROOTDO !ncai_sav
   real(kind=iwp),save :: DFEED,DFEEDM1 !deposit feeder 
   real(kind=iwp),save :: BENSTR1 !benthic stress
 
