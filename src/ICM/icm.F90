@@ -101,6 +101,7 @@ subroutine ecosystem(it)
         !ncai_veg
         call landplant(i,hour,it) !growth rate, biomass, and nutrient fluxes to sediment
 
+        !ncai_dry
         !kinetic sed diagenesis for dry land condition
         if(iSed==1) then
           call link_sed_dry_input(id)
@@ -708,7 +709,7 @@ subroutine landplant(id,hour,it)
 !calculate marsh growth, biomass, nutient fluxes to sediment when elem is dry
 !----------------------------------------------------------------------------
   use icm_mod
-  use icm_sed_mod 
+  use icm_sed_mod, only : CNH4,CPIP 
   use schism_glbl, only : airt1,elnode,i34 
   use schism_msgp, only : parallel_abort 
   implicit none
@@ -722,13 +723,15 @@ subroutine landplant(id,hour,it)
 
 
   !--------------------------------------------------------------------------------
-  !veg :: growth rate
-  !--------------------------------------------------------------------------------
   !init for each time step at current elem
   plfveg(id,:)=0.0 !(nea,1:3)
-  airtveg=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
+  airtveg=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step; used in dry sed too
 
   do j=1,3
+
+    !--------------------------------------------------------------------------------
+    !veg :: growth rate
+    !--------------------------------------------------------------------------------
 
     !----------tempreture on max growth rate----------
     xtveg=airtveg-toptveg(j)
@@ -765,15 +768,15 @@ subroutine landplant(id,hour,it)
 
 
 
-  !--------------------------------------------------------------------------------
-  !veg :: mortality rate 
-  !--------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
+    !veg :: mortality rate 
+    !--------------------------------------------------------------------------------
 
 
 
-  !--------------------------------------------------------------------------------
-  !veg :: metablism rate 
-  !--------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
+    !veg :: metablism rate 
+    !--------------------------------------------------------------------------------
     rtmp=ktblfveg(j)*(airtveg-trlfveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
       write(errmsg,*)'calkwq: check veg lf dry metabolism:',airtveg,trlfveg(j),ktblfveg(j),rtmp,j
@@ -796,9 +799,9 @@ subroutine landplant(id,hour,it)
     bmrtveg(j)=bmrtrveg(j)*exp(rtmp)
 
 
-  !--------------------------------------------------------------------------------
-  !veg :: biomass
-  !--------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
+    !veg :: biomass + height
+    !--------------------------------------------------------------------------------
     !lfveg(j)
     a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j) !1/day
     rtmp=a*dtw
@@ -834,9 +837,27 @@ subroutine landplant(id,hour,it)
     endif
 
 
-  !--------------------------------------------------------------------------------
-  !veg :: nutrient fluxes to sediment
-  !--------------------------------------------------------------------------------
+    !height function (Morris, 2002)
+!--------------------------------------------------------------------------------------       
+!solve formula of (lf+st)=a*ztc+b*ztc^2+c, where ztc=mht-hcan
+!ztc=-a/2b-[(lf+st)/b+a^2/4b^4-c/b]^0.5    
+!requires check when read in a,b,c (a>0,b<0,c<0; -a/2b~[40,55]
+!ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
+!ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
+!--------------------------------------------------------------------------------------
+    rtmp=(tlfveg(id,j)+tstveg(id,j))/bveg(j)+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
+!error, to add control under excessive biomass
+    if(rtmp<0.) then
+      ztcveg(id,j)=-aveg(j)/(2*bveg(j))
+    else
+      ztcveg(id,j)=-aveg(j)/(2*bveg(j))-sqrt(rtmp)
+    endif
+    hcanveg(id,j)=mhtveg(id)-ztcveg(id,j)
+
+
+    !--------------------------------------------------------------------------------
+    !veg :: nutrient fluxes to sediment
+    !--------------------------------------------------------------------------------
 
     !----------inorganic nutrient uptake----------
     tlfNH4veg(id,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j)
@@ -871,33 +892,7 @@ subroutine landplant(id,hour,it)
       call parallel_abort(errmsg)
     endif
 
-!    flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0 !init
-!    do i=1,3
-!        flxpoc(id,i)=flxpoc(id,i)+trtpocveg(id,j)*frcveg(i,j)
-!        flxpon(id,i)=flxpon(id,i)+trtponveg(id,j)*frnveg(i,j)
-!        flxpop(id,i)=flxpop(id,i)+trtpopveg(id,j)*frpveg(i,j)
-!    enddo !1::POM group
-
   enddo !j::veg species
-
-!  !----------inorganic nutrient uptake----------
-!  NH4T2TM1S=max(1.0e-10_iwp,NH4T2TM1S-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
-!  PO4T2TM1S=max(1.0e-10_iwp,PO4T2TM1S-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
-!
-!
-!  !----------release of POM----------
-!  !layer 2 depth: 10cm
-!  H2=HSED(id) !unit: m
-!
-!  !sedimentation/burial rates: 0.25~0.5cm/yr
-!  W2=VSED(id) !unit: m/day
-!
-!  !sediment temp
-!  TEMPD=CTEMP(id)
-
-
-
-
 
 end subroutine landplant
 
@@ -1468,19 +1463,9 @@ subroutine photosynthesis(id,hour,nv,it)
 
 
         !----------inundation stress in wet elem----------
-        !ratio of tdep versus hcanveg
-
-
-
-
-
-
-
-
-
-
-
-
+        !ratio of tdep versus hcanveg, tdep>0 checked 
+        rdephcanveg(id,j)=hcanveg(id,j)/tdep
+        ffveg(id,j)=rdephcanveg(id,j)/(tinunveg(j)+rdephcanveg(id,j))
 
 
         !----------light supply----------
@@ -1539,7 +1524,7 @@ subroutine calkwq(id,nv,ure,it)
   use icm_mod
   use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,iof_icm
   use schism_msgp, only : myrank, parallel_abort
-  use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav
+  use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav,frnveg,frpveg
   implicit none
   !id is (wet) elem index
   integer, intent(in) :: id,nv,it
@@ -1797,7 +1782,16 @@ subroutine calkwq(id,nv,ure,it)
     mtemp=tmp/max(tdep,1.e-2_iwp)!tdep checked at init
 
     do j=1,3
-      !pre-calculation for metabolism rate; !no relation with light, alweys respire
+
+      !mortality rate
+
+
+
+
+
+
+
+      !metabolism rate
       rtmp=ktblfveg(j)*(mtemp-trlfveg(j))
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j

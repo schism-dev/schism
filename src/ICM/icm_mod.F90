@@ -143,8 +143,9 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
   real(kind=iwp),save,dimension(3) :: saltveg !salt
-  real(kind=iwp),save,dimension(3) ::  !inundation
-  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg,hcanveg_limit!height
+  real(kind=iwp),save,dimension(3) :: tinunveg !inundation
+  real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
+  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg !height
   real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
