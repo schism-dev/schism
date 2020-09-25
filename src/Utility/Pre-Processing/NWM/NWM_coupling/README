@@ -29,7 +29,8 @@ Inputs files:
       dist: distance in meters if inbr=0
       [inbr=0 and dist=4000 is recommended]
 Output files
-      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
+      vsource.th.1, vsink.th.1
+msource.th and source_sink.in will not change.
 
 To run those scripts, after compile. simply by
 ./coupling_nwm
