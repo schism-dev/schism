@@ -156,6 +156,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
+  real(kind=iwp),save :: airtveg
 
 
   !carbon parameters 

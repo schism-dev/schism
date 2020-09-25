@@ -99,8 +99,13 @@ subroutine ecosystem(it)
 
       if(idry_e(i)==1) then !marsh exposure; (iveg_icm==1.and.patchveg(i)==1)
         !ncai_veg
-        !dry marsh 
         call landplant(i,hour,it) !growth rate, biomass, and nutrient fluxes to sediment
+
+        !kinetic sed diagenesis for dry land condition
+        if(iSed==1) then
+          call link_sed_dry_input(id)
+          call sed_calc(i)
+        endif
 
         !ncai_sav
         !no sav presense for intertidal zone >> once dry, no sav any longer
@@ -712,7 +717,7 @@ subroutine landplant(id,hour,it)
 
   !local variables
   integer :: i,j
-  real(kind=iwp) :: airtveg,xtveg 
+  real(kind=iwp) :: xtveg 
 
 
 

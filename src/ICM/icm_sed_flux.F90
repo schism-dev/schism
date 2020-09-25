@@ -81,6 +81,68 @@ subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0
 
 end subroutine sed_eq
 
+
+!ncai_dry
+subroutine sed_dry_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,j1,j2,k12,k2)
+!-----------------------------------------------------------------------
+!solve mass-balance equations for two layers,written by ZG
+! equations: [a11,a12; a21 a22]*[C1';C2']=[b1;b2]
+! a11=(KL*fd1+w*fp1+WS)+s*fd1+k12/s
+! a12=-(KL*fd2+w*fp2)
+! a21=-(KL*fd1+w*fp1+WS)
+! a22=(KL*fd2+w*fp2)+WS+k2+H2/dt
+! b1=j1+s*fd0*C0
+! b2=j2+H2*C2/dt
+!-----------------------------------------------------------------------
+  use schism_glbl, only : iwp,errmsg
+  use schism_msgp, only : myrank, parallel_abort
+  implicit none
+
+  integer, intent(in) :: itag !debug info only
+  real(kind=iwp),intent(in) :: C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt
+  real(kind=iwp),intent(out) :: C1td,C2td,C1t,C2t
+
+  !local variables
+  real(kind=iwp) :: a11,a12,a21,a22,b1,b2,fd1,fd2,fp1,fp2
+  real(kind=iwp) :: a1,a2,delta
+
+  !calculate partition coefficents 
+  fd1=1.0/(1.0+m1*pie1)
+  fd2=1.0/(1.0+m2*pie2)
+  fp1=1.0-fd1;
+  fp2=1.0-fd2;
+
+  a1=KL*fd1+w*fp1+WS
+  a2=KL*fd2+w*fp2
+
+  a11=a1+k12/stc
+  a12=-a2
+  a21=-a1
+  a22=a2+WS+k2+H2/dt
+  b1=j1
+  b2=j2+H2*C2/dt
+
+  delta=a11*a22-a12*a21
+  if(delta==0.0) then
+!    write(11,*)'ICM: delta=0 in solve sediment equations in two layers'
+!    write(11,*)C2,j1,j2,pie1,pie2,m1,m2,s,KL,w,WS,k12,k2,H2,dt
+    write(errmsg,*)'icm_sed_flux: delta=0 in solve sediment equations in two layers,', &
+    &C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
+    call parallel_abort(errmsg)
+  endif
+
+  C1t=(a22*b1-a12*b2)/delta
+  C2t=(a11*b2-a21*b1)/delta
+  if(C1t<0.0.or.C2t<0.0) then
+    write(errmsg,*)'icm_sed_flux: conc<0,',C1t,C2t,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
+    call parallel_abort(errmsg)
+  endif
+  C1td=C1t*fd1
+  C2td=C2t*fd2
+
+end subroutine sed_dry_eq
+
+
 function sed_zbrent(ierr)
 !---------------------------------------------------------------------
 !Brent's method to find SOD value
@@ -855,8 +917,8 @@ subroutine sed_calc(id)
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
 !-----------------------------------------------------------------------
-  use schism_glbl, only : dt,iwp, errmsg, ielg, tau_bot_node,nea,i34,elnode
-  use schism_msgp, only : myrank, parallel_abort
+  use schism_glbl, only : dt,iwp,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
+  use schism_msgp, only : myrank,parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
                       &isav_icm,patchsav,& !ncai_sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav,&
@@ -899,7 +961,6 @@ subroutine sed_calc(id)
   O20=max(SED_DO(id),1.e-2)
   HS0=SED_COD(id)
   SAL0=SED_SALT(id)
-
 
   !assign previous timestep POM concentration 
   !CPOP(id,1)=POP1TM1S(id)
@@ -989,42 +1050,45 @@ subroutine sed_calc(id)
 
   !calculate POM fluxes
   flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0
-  do i=1,3 !for 3 classes of POM
-    do j=1,3 !for 3 phytoplankton species
-      flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*APC(j)*SED_B(id,j)
-      flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*ANC(j)*SED_B(id,j)
-      flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
-    enddo !j
-  enddo !i
-  !combination of PB1 and two groups of Si, need future work for SAt
-  !flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxu*SED_SU(id)
-  flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxp(1)*SED_SU(id)
 
-  !split settling POM from water column
-  !SED_???? in unit of g/m^3, flx? in unit of m/day, flxpo? in unit of g/m^2 day
-  !future: mapping flag
-  flxpop(id,1)=flxpop(id,1)+flxl*SED_LPOP(id)
-  flxpop(id,2)=flxpop(id,2)+flxr*SED_RPOP(id)*FRPOP(id,2)
-  flxpop(id,3)=flxpop(id,3)+flxr*SED_RPOP(id)*FRPOP(id,3)
-
-  flxpon(id,1)=flxpon(id,1)+flxl*SED_LPON(id)
-  flxpon(id,2)=flxpon(id,2)+flxr*SED_RPON(id)*FRPON(id,2)
-  flxpon(id,3)=flxpon(id,3)+flxr*SED_RPON(id)*FRPON(id,3)
-
-  flxpoc(id,1)=flxpoc(id,1)+flxl*SED_LPOC(id)
-  flxpoc(id,2)=flxpoc(id,2)+flxr*SED_RPOC(id)*FRPOC(id,2)
-  flxpoc(id,3)=flxpoc(id,3)+flxr*SED_RPOC(id)*FRPOC(id,3)
-
-  !rt metaolism adding the RHS of mass balance of POM on layer 2
-  !trtpo?sav in unit of g/m^2 day
-  !ncai_sav
-  if(isav_icm==1.and.patchsav(id)==1) then
-    do i=1,3
-      flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
-      flxpon(id,i)=flxpon(id,i)+trtponsav(id)*frnsav(i)
-      flxpop(id,i)=flxpop(id,i)+trtpopsav(id)*frpsav(i)
-    enddo
-  endif
+  if(idry_e(i)/=1)then
+    do i=1,3 !for 3 classes of POM
+      do j=1,3 !for 3 phytoplankton species
+        flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*APC(j)*SED_B(id,j)
+        flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*ANC(j)*SED_B(id,j)
+        flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
+      enddo !j
+    enddo !i
+    !combination of PB1 and two groups of Si, need future work for SAt
+    !flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxu*SED_SU(id)
+    flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxp(1)*SED_SU(id)
+ 
+    !split settling POM from water column
+    !SED_???? in unit of g/m^3, flx? in unit of m/day, flxpo? in unit of g/m^2 day
+    !future: mapping flag
+    flxpop(id,1)=flxpop(id,1)+flxl*SED_LPOP(id)
+    flxpop(id,2)=flxpop(id,2)+flxr*SED_RPOP(id)*FRPOP(id,2)
+    flxpop(id,3)=flxpop(id,3)+flxr*SED_RPOP(id)*FRPOP(id,3)
+ 
+    flxpon(id,1)=flxpon(id,1)+flxl*SED_LPON(id)
+    flxpon(id,2)=flxpon(id,2)+flxr*SED_RPON(id)*FRPON(id,2)
+    flxpon(id,3)=flxpon(id,3)+flxr*SED_RPON(id)*FRPON(id,3)
+ 
+    flxpoc(id,1)=flxpoc(id,1)+flxl*SED_LPOC(id)
+    flxpoc(id,2)=flxpoc(id,2)+flxr*SED_RPOC(id)*FRPOC(id,2)
+    flxpoc(id,3)=flxpoc(id,3)+flxr*SED_RPOC(id)*FRPOC(id,3)
+ 
+    !rt metaolism adding the RHS of mass balance of POM on layer 2
+    !trtpo?sav in unit of g/m^2 day
+    !ncai_sav
+    if(isav_icm==1.and.patchsav(id)==1) then
+      do i=1,3
+        flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
+        flxpon(id,i)=flxpon(id,i)+trtponsav(id)*frnsav(i)
+        flxpop(id,i)=flxpop(id,i)+trtpopsav(id)*frpsav(i)
+      enddo
+    endif
+  endif !idry_e
 
   !ncai_veg
   if(iveg_icm==1.and.patchveg(id)==1) then
@@ -1292,18 +1356,27 @@ subroutine sed_calc(id)
   endif
   pie2=PIE2SI
 
-  C0d=SI0
-  j1=0.0
-  !j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*rKSAp*SSI(id)/(1.0+rKSAp*SSI(id))
-  !from init transfer: SI0=SED_SA(id)/(1.0+rKSAp*SSI(id)
-  j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*rKSAp*SSI(id) !rKSAp ==0,future app with TSS
-
-  k12=0.0
-  k2=ZHTASI*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
-  
-  call sed_eq(1,SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2) 
-  JSI=stc*(SI1-SI0)
-  
+  !ncai_dry
+  if(idry_e(i)==1)then
+    j1=0.0
+    j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*rKSAp*SSI(id) !rKSAp ==0,future app with TSS
+    k12=0.0
+    k2=ZHTASI*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
+    call sed_dry_eq(1,SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
+    JSI=0.0
+  else
+    C0d=SI0
+    j1=0.0
+    !j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*rKSAp*SSI(id)/(1.0+rKSAp*SSI(id))
+    !from init transfer: SI0=SED_SA(id)/(1.0+rKSAp*SSI(id)
+    j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*rKSAp*SSI(id) !rKSAp ==0,future app with TSS
+ 
+    k12=0.0
+    k2=ZHTASI*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
+    call sed_eq(1,SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2) 
+    JSI=stc*(SI1-SI0)
+  endif !idry_e 
+ 
   !mass balance equation for PO4
   !salinity dependence of pie1
   if(SAL0<=SALTSW) then
@@ -1319,13 +1392,23 @@ subroutine sed_calc(id)
   endif
   pie2=PIE2PO4
 
-  C0d=PO40
-  j1=0.0
-  j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
-  k12=0.0
-  k2=0.0
-  call sed_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JPO4=stc*(PO41-PO40)
+  !ncai_dry
+  if(idry_e(i)==1)then
+    j1=0.0
+    j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
+    k12=0.0
+    k2=0.0
+    call sed_dry_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,,j1,j2,k12,k2)
+    JPO4=0.0
+  else
+    C0d=PO40
+    j1=0.0
+    j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
+    k12=0.0
+    k2=0.0
+    call sed_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+    JPO4=stc*(PO41-PO40)
+  endif !idry_e
 
   !assign flux arrays, in unit of g/m^2 day
   !with all state variables in unit of g/*, no need to transfer
@@ -1442,7 +1525,7 @@ subroutine sed_calc(id)
   !************************************************************************
   !erosion flux
   !************************************************************************
-  if(iERO>0)then
+  if(iERO>0.and.idry_e(i)/=1)then
     !calculate bottom shear stress for elem #id
     tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
 
@@ -1552,7 +1635,7 @@ end subroutine sed_calc
 subroutine sedsod
   use icm_sed_mod
   use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm,iveg_icm
-  use schism_glbl, only : errmsg,iwp
+  use schism_glbl, only : errmsg,iwp,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 
@@ -1580,37 +1663,67 @@ subroutine sedsod
 
   !NH4 flux
   pie1=PIENH4; pie2=PIENH4
-  C0d=NH40
-  j1=0.0
-  j2=XJN
-  if(SAL0<=SALTND) then
-    k12=ZHTANH4F**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+
+  !ncai_dry
+  if(idry_e(i)==1)then
+    j1=0.0
+    j2=XJN
+    if(SAL0<=SALTND) then
+      k12=ZHTANH4F**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+    else
+      k12=ZHTANH4S**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+    endif
+    if(k12<0.) call parallel_abort('icm_sed_flux, k12<0')
+    k2=0.0
+    call sed_dry_eq(3,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
+    JNH4=0.0
   else
-    k12=ZHTANH4S**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
-  endif
-  if(k12<0.) call parallel_abort('icm_sed_flux, k12<0')
-  k2=0.0
-  call sed_eq(3,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNH4=stc*(NH41-NH40)
+    C0d=NH40
+    j1=0.0
+    j2=XJN
+    if(SAL0<=SALTND) then
+      k12=ZHTANH4F**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+    else
+      k12=ZHTANH4S**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+    endif
+    if(k12<0.) call parallel_abort('icm_sed_flux, k12<0')
+    k2=0.0
+    call sed_eq(3,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+    JNH4=stc*(NH41-NH40)
+  endif !idry_e
 
   !oxygen consumed by nitrification
   JO2NH4=AON*k12*NH41/stc !unit: g/m^2/day
 
   !NO3 flux
   pie1=0.0; pie2=0.0 !W12=0 for no particle exits, no need to switch W12 because fp1=fp2=0
-  C0d=NO30
-  j1=k12*NH41/stc
-  j2=0.0
-  if(SAL0<=SALTND) then
-    k12=ZHTANO3F**2
-  else
-    k12=ZHTANO3S**2
-  endif
-  k2=ZHTA2NO3
-  call sed_eq(4,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNO3=stc*(NO31-NO30)
-  JN2GAS=k12*NO31/stc+k2*NO32
 
+  !ncai_dry
+  if(idry_e(i)==1)then
+    j1=k12*NH41/stc
+    j2=0.0
+    if(SAL0<=SALTND) then
+      k12=ZHTANO3F**2
+    else
+      k12=ZHTANO3S**2
+    endif
+    k2=ZHTA2NO3
+    call sed_dry_eq(4,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
+    JNO3=0.0
+  else
+    C0d=NO30
+    j1=k12*NH41/stc
+    j2=0.0
+    if(SAL0<=SALTND) then
+      k12=ZHTANO3F**2
+    else
+      k12=ZHTANO3S**2
+    endif
+    k2=ZHTA2NO3
+    call sed_eq(4,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+    JNO3=stc*(NO31-NO30)
+  endif !idry_e
+  JN2GAS=k12*NO31/stc+k2*NO32
 
 !  !convert carbon diagensis flux to O2 unit
 !  rtmp=(k12*NO31/s+k2*NO32)/ANDC
@@ -1698,13 +1811,25 @@ subroutine sedsod
     pie1=PIE1S; pie2=PIE2S
     fd1=1./(1.+m1*pie1)
     fp1=1.-fd1;
-    C0d=HS0 !unit: g/m^3
-    j1=0.0
-    j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
-    k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
-    k2=0.0
-    call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-    JHS=stc*(HS1-HS0)
+
+    !ncai_dry
+    if(idry_e(i)==1)then
+      j1=0.0
+      j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+      k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
+      k2=0.0
+      call sed_dry_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
+      JHS=0.0
+    else
+      C0d=HS0 !unit: g/m^3
+      j1=0.0
+      j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+      k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
+      k2=0.0
+      call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+      JHS=stc*(HS1-HS0)
+    endif !idry_e
+
     !oxygen consumption
     CSODHS=k12*HS1/stc
     CSOD=CSODHS
@@ -1717,14 +1842,26 @@ subroutine sedsod
     !methane
     CH40=0.0
     pie1=0.0; pie2=0.0
-    C0d=CH40
-    j1=0.0
-    !j2=XJ2 !need future work
-    j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
-!Error: different from manual
-    k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
-    k2=0.0
-    call sed_eq(6,CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+
+    !ncai_dry
+    if(idry_e(i)==1)then
+      j1=0.0
+      !j2=XJ2 !need future work
+      j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+      !Error: different from manual
+      k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
+      k2=0.0
+      call sed_dry_eq(6,CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
+    else
+      C0d=CH40
+      j1=0.0
+      !j2=XJ2 !need future work
+      j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+      !Error: different from manual
+      k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
+      k2=0.0
+      call sed_eq(6,CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
+    endif !idry_e
     !CH42AV=CH42!no use
     !CH4T2AV=CH4T2
 
@@ -1831,6 +1968,48 @@ subroutine link_sed_input(id,nv)
 
 end subroutine link_sed_input
 
+!ncai_dry
+subroutine link_sed_dry_input(id)
+!---------------------------------------------------------------------------------------
+!initializ sediment 
+!---------------------------------------------------------------------------------------
+  use schism_glbl, only: iwp,errmsg,dpe,eta2,elnode,i34,area,ielg,tr_el,kbe
+  use icm_mod, only : airtveg 
+  use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &
+                    & SED_LPOP,SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD, &
+                    & SED_TSS,SED_SALT,SED_T,SFA,ZD
+  implicit none
+  integer, intent(in) :: id
+
+
+  !total depth 
+  ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
+
+  SED_BL      =0.0
+  SED_T(id)   =airtveg
+  SED_SALT(id)=tr_el(2,kbe(id)+1,id) !keep most recent wet salinity
+  SED_B(id,1) =0.0
+  SED_B(id,2) =0.0
+  SED_B(id,3) =0.0
+  SED_RPOC(id)=0.0
+  SED_LPOC(id)=0.0
+  SED_RPON(id)=0.0
+  SED_LPON(id)=0.0
+  SED_RPOP(id)=0.0
+  SED_LPOP(id)=0.0
+  SED_SU(id)  =0.0
+  SED_PO4(id) =0.0
+  SED_NH4(id) =0.0
+  SED_NO3(id) =0.0
+  SED_SA(id)  =0.0
+  !saturated DO
+  SED_DO(id)  =14.5532-0.38217*airtveg+5.4258e-3*airtveg*airtveg- &
+           & Sal(k)*(1.665e-4-5.866e-6*airtveg+9.796e-8*airtveg*airtveg)/1.80655
+  SED_COD(id) =0.0
+  SED_TSS(id) =0.0
+
+end subroutine link_sed_dry_input
+
 
 subroutine link_sed_output(id)
 !---------------------------------------------------------------------------------------
@@ -1852,7 +2031,7 @@ subroutine link_sed_output(id)
   !nan checked when applied to water column
 
   !erosion flux, H2S>S
-  if(iERO>0)then
+  if(iERO>0.and.idry_e(i)/=1)then
     EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
