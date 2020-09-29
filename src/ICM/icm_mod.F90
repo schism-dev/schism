@@ -138,6 +138,7 @@ module icm_mod
   integer,save,allocatable :: patchveg(:) !nea
   integer,save :: initveg !decide init mapping format
   integer,save :: nkveg(3) !# of layers veg occupy, >=1
+  integer,save :: iMortveg !flag of vegetation mortality
   real(kind=iwp),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
   real(kind=iwp),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
   real(kind=iwp),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
@@ -154,6 +155,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
+  real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg

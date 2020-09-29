@@ -718,7 +718,7 @@ subroutine landplant(id,hour,it)
 
   !local variables
   integer :: i,j
-  real(kind=iwp) :: xtveg 
+  real(kind=iwp) :: xtveg,sLight0,sdveg,rat,iatcnpyveg,ikveg,iwcveg 
 
 
 
@@ -727,51 +727,96 @@ subroutine landplant(id,hour,it)
   plfveg(id,:)=0.0 !(nea,1:3)
   airtveg=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step; used in dry sed too
 
+  !pre-calc total shading effects
+  sdveg=0.0
+  do j=1,3
+    sdveg=sdvev+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
+    if(sdveg>100.0.or.sdveg<=0.) then
+      write(errmsg,*)'plantland: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j)
+      call parallel_abort(errmsg)
+    endif
+  enddo !j::veg species 
+
   do j=1,3
 
     !--------------------------------------------------------------------------------
     !veg :: growth rate
     !--------------------------------------------------------------------------------
+    if(rIa>30.or.(hour>TU.and.hour<TD)) then !photosynthesis critia, in unit of W/m^2, for case iRad=1
 
-    !----------tempreture on max growth rate----------
-    xtveg=airtveg-toptveg(j)
-    if(xtveg<=0.0)then
-      rtmp=ktg1veg(j)*xtveg*xtveg
-      if(rtmp>50.0.or.rtmp<0.)then
-        write(errmsg,*)'photosynthesis: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j
+      !----------tempreture on max growth rate----------
+      xtveg=airtveg-toptveg(j)
+      if(xtveg<=0.0)then
+        rtmp=ktg1veg(j)*xtveg*xtveg
+        if(rtmp>50.0.or.rtmp<0.)then
+          write(errmsg,*)'photosynthesis: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j
+          call parallel_abort(errmsg)
+        endif
+        pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
+      else
+        rtmp=ktg2veg(j)*xtveg*xtveg
+        if(rtmp>50.0.or.rtmp<0.)then
+          write(errmsg,*)'photosynthesis: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j
+          call parallel_abort(errmsg)
+        endif
+        pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
+      endif !xtveg
+ 
+      !----------light supply----------
+      !same case as non-submergency
+
+      !nan check
+      if(.not.(rIa>0.or.rIa<=0))then
+        write(errmsg,*)'nan found in rIa:',rIa,ielg(id)
         call parallel_abort(errmsg)
       endif
-      pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
-    else
-      rtmp=ktg2veg(j)*xtveg*xtveg
-      if(rtmp>50.0.or.rtmp<0.)then
-        write(errmsg,*)'photosynthesis: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j
+ 
+      !sLight0 keeps the memery of surface light intensity
+      if(iRad==1)then
+        sLight0=rIa !unit: W/m^2
+      elseif(iRad==2) then
+        sLight0=max(real(rIa*sin(pi*(hour-TU)/Daylen),iwp),0._iwp) !unit: ly/day
+      else
+        call parallel_abort('unknown iRad in icm.F90')
+      endif!iRad
+      iatcnpyveg=sLight0
+ 
+      if(iRad==2) then
+        rat=0.21 !ly/day to E/m2/day
+      elseif(iRad==1) then !iRad check in read_icm
+        rat=0.397 !W/m2 to E/m2/day
+      else
+        call parallel_abort('unknown iRad in icm.F90')
+      endif ! 
+
+      iwcveg=iatcnpyveg*rat*(1-exp(-sdveg))/sdveg
+      ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0, error
+
+      fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
+
+      if(fiveg(id,j)>1.or.fiveg(id,j)<0.or.fiveg(id)/=fiveg(id,j)) then
+        write(errmsg,*)'plantland: fiveg(id,j)>1.or.fiveg(id,j)<0:',fiveg(id,j),ikveg,iwcveg, &
+     &iatcnpyveg,tdep,hcanveg(id,j)
         call parallel_abort(errmsg)
       endif
-      pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
-    endif !xtveg
 
+      !----------nutrient supplies----------
+      fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
+      fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
+ 
+      !----------growth function----------
+      plfveg(id,j)=pmaxveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/acdw(j)
 
-    !----------light supply----------
-    !same case as non-submergency
-
-
-
-
-    !----------nutrient supplies----------
-    fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
-    fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
-
-
-    !----------growth function----------
-    plfveg(id,j)=pmaxveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/acdw(j)
-
+    endif !rIa .or. hour
 
 
     !--------------------------------------------------------------------------------
     !veg :: mortality rate 
     !--------------------------------------------------------------------------------
+    mtlfveg=0.0; mtstveg=0.0; mtrtveg=0.0 !init
+    if(iMortveg==1) then
 
+    endif !
 
 
     !--------------------------------------------------------------------------------
@@ -803,7 +848,7 @@ subroutine landplant(id,hour,it)
     !veg :: biomass + height
     !--------------------------------------------------------------------------------
     !lfveg(j)
-    a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j) !1/day
+    a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
     rtmp=a*dtw
     if(rtmp>50.0.or.rtmp<-50.0) then
       write(errmsg,*)'calkwq: check veg lf dry growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
@@ -817,7 +862,7 @@ subroutine landplant(id,hour,it)
     endif
 
     !stveg
-    a=bmstveg(j)
+    a=bmstveg(j)+mtstveg(j)
     b=plfveg(id,j)*(1.-famveg(j))*fpstveg(j)*tlfveg(id,j)
     tstveg(id,j)=(b*dtw+tstveg(id,j))/(1.0+a*dtw)
     !nan check
@@ -827,7 +872,7 @@ subroutine landplant(id,hour,it)
     endif
 
     !rtveg
-    a=bmrtveg(j)
+    a=bmrtveg(j)+mtrtveg(j)
     b=plfveg(id,j)*(1.-famveg(j))*fprtveg(j)*tlfveg(id,j)
     trtveg(id,j)=(b*dtw+trtveg(id,j))/(1.0+a*dtw)
     !nan check
@@ -925,7 +970,8 @@ subroutine photosynthesis(id,hour,nv,it)
   integer :: klev,kcnpy
   !ncai_veg
   real(kind=iwp) :: xtveg,xtveg0
-
+  real(kind=iwp) :: iabvcnpyveg,iatcnpyveg,ikveg,iwcveg
+  real(kind=iwp) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
 
 
   !--------------------------------------------------------------------------------
@@ -986,19 +1032,24 @@ subroutine photosynthesis(id,hour,nv,it)
     enddo !k
 
   endif !isav_icm
+
+  !ncai_sav :: init for light attenuation for sav  
+  rKeh0=0.0 !above canopy
+  rKeh1=0.0 !new half layer under canopy
+  rKeh2=0.0 !accumulated above current layer under canopy
   !--------------------------------------------------------------------------------
 
 
   !--------------------------------------------------------------------------------
   !ncai_veg::init 
   if(iveg_icm==1.and.patchveg(id)==1) then
-    !init for each time step at current elem
+    !growth rate :: init for each time step at current elem
     plfveg(id,:)=0.0 !(nea,1:3)
 
     !renew occupied # of layers at this step
     nkveg(:)=nv !init, wet elem 
-    if(tdep-hcanveg(id,j)>1.e-5) then
-      do j=1,3
+    do j=1,3
+      if(tdep-hcanveg(id,j)>1.e-5) then
         do k=1,nv
           klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
           if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.ze(klev,id)>=hcanveg(id,j)+ze(kbe(id),id)) then
@@ -1006,17 +1057,26 @@ subroutine photosynthesis(id,hour,nv,it)
             exit
           endif !canopy top
         enddo !k
-      enddo !j::veg species
-    endif !submergency
+      endif !submergency
+    enddo !j::veg species
+
+    !pre-calc total shading effects
+    sdveg=0.0
+    do j=1,3
+      sdveg=sdvev+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
+      if(sdveg>100.0.or.sdveg<=0.) then
+        write(errmsg,*)'photo-veg: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j)
+        call parallel_abort(errmsg)
+      endif
+    enddo !j::veg species 
+
   endif !iveg_icm
+
+  !init :: light attenuation for veg growth
+  rKehabveg(:)=0.0
+  rKehblveg(:)=0.0
   !--------------------------------------------------------------------------------
 
-
-  !ncai_veg, to add
-  !ncai_sav+PB::combined init for light 
-  rKeh0=0.0
-  rKeh1=0.0
-  rKeh2=0.0
 
   !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
   if(iTBen/=0) then !simplified sediment fluxes
@@ -1138,28 +1198,33 @@ subroutine photosynthesis(id,hour,nv,it)
         rKe0=Turb(id)+rKeChl*Chl+rKeSal*Sal(k)
       endif !iLight
 
-      !ncai_sav impact on light shading
-      !rKe0 and rKeh0 is only for SAV
+
+      !---------------------
+      !ncai_veg, ncai_sav
+      !rKeveg (for marsh) based on rKe (for PB)
+      if(isav_icm==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id).and.patchsav(id)==1) then
+        rKeveg=rKe0+rkshsav*(lfsav(klev,id)+stsav(klev,id))
+      else
+        rKeveg=rKe0
+      endif !ze
+
+      !renew rKe0 (for sav)
+      do j=1,3
+        if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
+          rKe0=rKe0+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/(nkveg(j)*dep(k))
+        endif !ze 
+      enddo !j::veg species
+
+
+      !init and renew rKe (for PB)
+      !rKe0 and rKeh0 is only for SAV, where rKe0 contains attenuation from PB+marsh
       if(isav_icm==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id).and.patchsav(id)==1) then
         rKe=rKe0+rkshsav*(lfsav(klev,id)+stsav(klev,id))
       else
         rKe=rKe0
       endif !ze
 
-      !ncai_veg impact on light shading, to add for following too
-
-
-      !uptil now, rKe for any layer calculated
-
-      !hdep and rKeh0 calculated with the ifstatement from surface to layer above canopy
-      if(isav_icm==1.and.ze(klev-1,id)>=hcansav(id)+ze(kbe(id),id).and.patchsav(id)==1) then
-        !rKeh0 accumulate basic water column attenuation from surface to layer above canopy 
-        rKeh0=min(20._iwp,rKeh0+rKe0*dep(k))
-        !total distance from surface to the bottom level of the layer above canopy
-        hdep=hdep+dep(k)
-      endif !ze
-
-      !rKeh for chla accumulate the light attenuation for layer k, include shading for layer under canopy
+      !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh 
       rKeh=min(rKe*dep(k),20._iwp)
       if(rKeh<0) then
         write(errmsg,*)'check ICM iLight rKeh:',rKe,dep(k),rKeh,rKeChl,Chl,rKeTSS,TSED(k),iLight
@@ -1167,7 +1232,40 @@ subroutine photosynthesis(id,hour,nv,it)
       endif
       bLight=sLight*exp(-rKeh)
 
- 
+      !uptil now, rKe and rKeh (for PB) for current layer calculated
+
+      !---------------------
+      !ncai_sav
+      !hdep and rKeh0 (for sav) calculated with the ifstatement from surface to layer above canopy
+      if(isav_icm==1.and.ze(klev-1,id)>=hcansav(id)+ze(kbe(id),id).and.patchsav(id)==1) then
+        !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
+        rKeh0=rKeh0+rKe0*dep(k)
+        !total distance from surface to the bottom level of the layer above sav canopy
+        hdep=hdep+dep(k)
+      endif !ze
+
+
+      !---------------------
+      !ncai_veg
+      if(iveg_icm==1.and.patchveg(id)==1) then
+        do j=1,3
+          if(ze(klev-1,id)>=hcanveg(id,j)+ze(kbe(id),id))
+            !if there are layers above canopy 
+            rKehabveg(j)=rKehabveg(j)+rKeveg*dep(k)
+          elseif(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.ze(klev,id)>=hcanveg(id,j)+ze(kbe(id),id)) then 
+            !if canopy is in this layer
+            cndep=hcanveg(id,j)+ze(kbe(id),id)-ze(klev-1,id)
+            rKehabveg(j)=rKehabveg(j)+rKeveg*cndep
+            rKehblveg(j)=rKehblveg(j)+rKeveg*(dep(k)-cndep)
+          else 
+            !if this layer is under canopy 
+            rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k) 
+          endif !ze
+       
+        enddo !j::veg species
+      endif !iveg_icm
+
+
       !calculate optimal light intensity for PB
       if(jLight==1.and.k==1) then
         do i=1,3
@@ -1469,14 +1567,32 @@ subroutine photosynthesis(id,hour,nv,it)
 
 
         !----------light supply----------
-        if(tdep-hcanveg(id,j)>1.e-5) then
+        if(iRad==2) then
+          rat=0.21 !ly/day to E/m2/day
+        elseif(iRad==1) then !iRad check in read_icm
+          rat=0.397 !W/m2 to E/m2/day
+        else
+          call parallel_abort('unknown iRad in icm.F90')
+        endif ! 
 
+        iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
 
+        tmp=sdveg+rKehblveg(j)
+        if(tmp>100.0.or.tmp<=0.) then
+          write(errmsg,*)'photo-veg: check light attenuation on leaf:',rKehblveg(j),j,tmp,tlfveg(id,j),tstveg(id,j)
+          call parallel_abort(errmsg)
+        endif
 
+        iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
+        ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0, error
 
-        else !no light limitation once canopy top is out of water
-          fiveg(id,j)=1
-        endif !submergence
+        fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
+
+        if(fiveg(id,j)>1.or.fiveg(id,j)<0.or.fiveg(id)/=fiveg(id,j)) then
+          write(errmsg,*)'photo_veg: fiveg(id,j)>1.or.fiveg(id,j)<0:',fiveg(id,j),ikveg,iwcveg, &
+        &iatcnpyveg,tdep,hcanveg(id,j)
+          call parallel_abort(errmsg)
+        endif
 
 
         !----------nutrient supplies----------
@@ -1783,15 +1899,14 @@ subroutine calkwq(id,nv,ure,it)
 
     do j=1,3
 
-      !mortality rate
+      !----------mortality rate----------
+      mtlfveg=0.0; mtstveg=0.0; mtrtveg=0.0 !init
+      if(iMortveg==1) then
+
+      endif !iMortvey
 
 
-
-
-
-
-
-      !metabolism rate
+      !----------metabolism rate----------
       rtmp=ktblfveg(j)*(mtemp-trlfveg(j))
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j
@@ -1815,7 +1930,7 @@ subroutine calkwq(id,nv,ure,it)
 
       !calculation of biomass
       !lfveg(j)
-      a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j) !1/day
+      a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
       rtmp=a*dtw
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
@@ -1829,7 +1944,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       !stveg
-      a=bmstveg(j)
+      a=bmstveg(j)+mtstveg(j)
       b=plfveg(id,j)*(1.-famveg(j))*fpstveg(j)*tlfveg(id,j)
       tstveg(id,j)=(b*dtw+tstveg(id,j))/(1.0+a*dtw)
       !nan check
@@ -1839,7 +1954,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       !rtveg
-      a=bmrtveg(j)
+      a=bmrtveg(j)+mtrtveg(j)
       b=plfveg(id,j)*(1.-famveg(j))*fprtveg(j)*tlfveg(id,j)
       trtveg(id,j)=(b*dtw+trtveg(id,j))/(1.0+a*dtw)
       !nan check
@@ -2199,11 +2314,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
     
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+fcrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+fcrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtRPOC(klev,id)=rtmp
@@ -2245,11 +2360,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+fclpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+fclpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtLPOC(klev,id)=rtmp
@@ -2298,11 +2413,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+fcdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+fcdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtDOC(klev,id)=rtmp
@@ -2354,11 +2469,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+ancveg(j)*fnrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+ancveg(j)*fnrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtRPON(klev,id)=rtmp
@@ -2399,11 +2514,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+ancveg(j)*fnlpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+ancveg(j)*fnlpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtLPON(klev,id)=rtmp
@@ -2439,11 +2554,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+ancveg(j)*fndveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+ancveg(j)*fndveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtDON(klev,id)=rtmp
@@ -2517,12 +2632,12 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav_icm
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       !release from metabolism
       rtmp=0.0 !init
       do j=1,3
-        rtmp=rtmp+ancveg(j)*fniveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+ancveg(j)*fniveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtNH4(klev,id)=rtmp
@@ -2545,7 +2660,7 @@ subroutine calkwq(id,nv,ure,it)
           call parallel_abort(errmsg)
         endif !fnsedveg(j)
 
-        rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*nprveg(j)*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
+        rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*nprveg(j)*plfveg(id,j)*tlfveg(id,j)/(nkveg(j)*dep(k))
       enddo !j::veg species
       b=b+rtmp
       !if() veggrNH4(klev,id)=rtmp
@@ -2574,10 +2689,10 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*(1-nprveg(j))*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
+        rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*(1-nprveg(j))*plfveg(id,j)*tlfveg(id,j)/(nkveg(j)*dep(k))
       enddo !j::veg species
       b=b+rtmp
       !if() veggrNO3(klev,id)=rtmp
@@ -2630,11 +2745,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+apcveg(j)*fprpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+apcveg(j)*fprpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtRPOP(klev,id)=rtmp
@@ -2676,11 +2791,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+apcveg(j)*fplpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+apcveg(j)*fplpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtLPOP(klev,id)=rtmp
@@ -2717,11 +2832,11 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+apcveg(j)*fpdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+apcveg(j)*fpdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtDOP(klev,id)=rtmp
@@ -2774,12 +2889,12 @@ subroutine calkwq(id,nv,ure,it)
     endif !ncai_sav effect
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       !release from metabolism
       rtmp=0.0 !init
       do j=1,3
-        rtmp=rtmp+apcveg(j)*fpiveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp+apcveg(j)*fpiveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtPO4(klev,id)=rtmp
@@ -2795,7 +2910,7 @@ subroutine calkwq(id,nv,ure,it)
           call parallel_abort(errmsg)
         endif !fpsedveg(j)
 
-        rtmp=rtmp-apcveg(j)*(1-fpsedveg(j))*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
+        rtmp=rtmp-apcveg(j)*(1-fpsedveg(j))*plfveg(id,j)*tlfveg(id,j)/(nkveg(j)*dep(k))
       enddo !j::veg species
       b=b+rtmp
       !if() veggrPO4(klev,id)=rtmp
@@ -2953,12 +3068,12 @@ subroutine calkwq(id,nv,ure,it)
     endif
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       !consume from metabolism
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp-aocrveg(j)*fdoveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/nkveg(j)+ &
-                                        &bmstveg(j)*tstveg(id,j)/nkveg(j))
+        rtmp=rtmp-aocrveg(j)*fdoveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)/(nkveg(j)*dep(k))+ &
+                                        &bmstveg(j)*tstveg(id,j)/(nkveg(j)*dep(k)))
       enddo !j::veg species
       b=b+rtmp
       !if() vegmtDOO(klev,id)=rtmp
@@ -2966,7 +3081,7 @@ subroutine calkwq(id,nv,ure,it)
       !release from photosynthesis
       rtmp=0.0
       do j=1,3
-        rtmp=rtmp+aocrveg(j)*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
+        rtmp=rtmp+aocrveg(j)*plfveg(id,j)*tlfveg(id,j)/(nkveg(j)*dep(k))
       enddo !j::veg species
       b=b+rtmp
       !if() veggrDOO(klev,id)=rtmp
@@ -3153,9 +3268,9 @@ subroutine calkwq(id,nv,ure,it)
 
     !--------------------------------------------------------------------------------------
     !ncai_veg::nutrient flux to sed
-    if(iveg_icm==1.and.patchveg(id)==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id))
+    if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1)
       do j=1,3
-        !sediment flux/uptake from this layer
+        !sediment flux/uptake from this layer, unit: g/m^2/day
         lfNH4veg(k,j)=ancveg(j)*fnsedveg(j)*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
         lfPO4veg(k,j)=apcveg(j)*fpsedveg(j)*plfveg(id,j)*tlfveg(id,j)/nkveg(j)
       
@@ -3169,7 +3284,7 @@ subroutine calkwq(id,nv,ure,it)
           call parallel_abort(errmsg)
         endif
       
-        !produce of POM by rt metabolism rate for this dt for each layer
+        !produce of POM by rt metabolism rate for this dt for each layer, unit: g/m^2/day
         rtpocveg(k,j)=(1-fdoveg(j))*bmrtveg(j)*trtveg(id,j)/nkveg(j)
         rtponveg(k,j)=ancveg(j)*bmrtveg(j)*trtveg(id,j)/nkveg(j)
         rtpopveg(k,j)=apcveg(j)*bmrtveg(j)*trtveg(id,j)/nkveg(j)
@@ -3236,13 +3351,38 @@ subroutine calkwq(id,nv,ure,it)
   !--------------------------------------------------------------------------------------
   !ncai_sav::calculate SAV height + intergrated nutrient fluxes
   if (isav_icm==1.and.patchsav(id)==1) then
+
     !These arrays won't be used until 1 step later
     !total sav biomass and canopy height
-    tlfsav(id)=sum(lfsav((kbe(id)+1):nvrt,id))
-    tstsav(id)=sum(stsav((kbe(id)+1):nvrt,id))
-    trtsav(id)=sum(rtsav((kbe(id)+1):nvrt,id))
-    hcansavori(id)=rlf*tlfsav(id)+rst*tstsav(id)+rrt*trtsav(id)+hcansav0
-    hcansav(id)=min(hcansavori(id),tdep,hcansav_limit)
+    tlfsav=0.0
+    tstsav=0.0
+    trtsav=0.0
+    tlfNH4sav=0.0
+    tlfPO4sav=0.0
+    trtpocsav=0.0
+    trtponsav=0.0
+    trtpopsav=0.0
+    trtdosav=0.0
+    do k=1,nv
+      klev=nvrt-k+1
+      tlfsav(id)=tlfsav(id)+lfsav(klev,id)*dep(k)
+      tstsav(id)=tstsav(id)+stsav(klev,id)*dep(k) 
+      trtsav(id)=trtsav(id)+rtsav(klev,id)*dep(k)
+      hcansavori(id)=rlf*tlfsav(id)+rst*tstsav(id)+rrt*trtsav(id)+hcansav0
+      hcansav(id)=min(hcansavori(id),tdep,hcansav_limit)
+ 
+      !total N/P uptake rate from sediemnt by lf photosynthesis
+      tlfNH4sav(id)=tlfNH4sav(id)+lfNH4sav(k)*dep(k) !unit:g/m^2 day
+      tlfPO4sav(id)=tlfPO4sav(id)+lfPO4sav(k)*dep(k)
+ 
+      !total POM adding rate to sediment from rt metabolism
+      trtpocsav(id)=trtpocsav(id)+rtpocsav(k)*dep(k)
+      trtponsav(id)=trtponsav(id)+rtponsav(k)*dep(k)
+      trtpopsav(id)=trtpopsav(id)+rtpopsav(k)*dep(k)
+ 
+      !total DO comsumption rate from sediemtn by rt metabolism
+      trtdosav(id)=trtdosav(id)+rtdosav(k)*dep(k) !>0 
+    enddo !k=1,nv
 
     do k=kbe(id)+1,nvrt
       if(ze(k-1,id)<hcansav(id)+ze(kbe(id),id)) then
@@ -3254,17 +3394,6 @@ subroutine calkwq(id,nv,ure,it)
       endif !ze
     enddo !k
 
-    !total N/P uptake rate from sediemnt by lf photosynthesis
-    tlfNH4sav(id)=sum(lfNH4sav(1:nv)) !unit:g/m^2 day
-    tlfPO4sav(id)=sum(lfPO4sav(1:nv)) 
-
-    !total POM adding rate to sediment from rt metabolism
-    trtpocsav(id)=sum(rtpocsav(1:nv))
-    trtponsav(id)=sum(rtponsav(1:nv)) 
-    trtpopsav(id)=sum(rtpopsav(1:nv)) 
-
-    !total DO comsumption rate from sediemtn by rt metabolism
-    trtdosav(id)=sum(rtdosav(1:nv))!>0 
 
 !new23!xcai
     !write(94,*)it,id,tlfsav(id)
@@ -3320,7 +3449,7 @@ subroutine calkwq(id,nv,ure,it)
       tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
       trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
      
-      !nutrient fluxes
+      !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=sum(lfNH4veg(1:nv,j))
       tlfPO4veg(id,j)=sum(lfPO4veg(1:nv,j))
       trtpocveg(id,j)=sum(rtpocveg(1:nv,j))
