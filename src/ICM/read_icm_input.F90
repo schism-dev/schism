@@ -886,7 +886,7 @@ subroutine read_icm_param2
       close(32)
 
     elseif(initsav==2) then
-      allocate(swild2(4,npa),stat=i)
+      allocate(swild2(3,npa),stat=i)
       if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
       open(10,file=in_dir(1:len_in_dir)//'sav_icm_lf.gr3',status='old')
       open(31,file=in_dir(1:len_in_dir)//'sav_icm_st.gr3',status='old')
@@ -912,7 +912,6 @@ subroutine read_icm_param2
           swild2(1,nd)=tmp
           swild2(2,nd)=tmp1
           swild2(3,nd)=tmp2
-          swild2(4,nd)=rlf*tmp+rst*tmp1+rrt*tmp2+hcansav0
         endif
       enddo!i=np_global
       close(10)
@@ -1000,7 +999,162 @@ subroutine read_icm_param2
 
 
   !ncai_veg
+  !-----------------read in veg patch flag-----------------
+  if(iveg_icm==1) then
+    open(31,file=in_dir(1:len_in_dir)//'patchveg.prop',status='old')
+    do i=1,ne_global
+      read(31,*)j,tmp
+      itmp=nint(tmp)
+      if(itmp/=0.and.itmp/=1) then
+        write(errmsg,*)'Unknown patchveg flag at elem:',i,tmp
+        call parallel_abort(errmsg)
+      endif
+      if(iegl(i)%rank==myrank) patchveg(iegl(i)%id)=itmp
+      enddo !i
+    close(31)
+  endif !iveg_icm
 
+
+  !-----------------read in mean high water level for each elem-----------------
+  if(iveg_icm==1) then
+    if(initveg==1)then
+      open(31,file=in_dir(1:len_in_dir)//'mhtveg.prop',status='old')
+      do i=1,ne_global
+        read(31,*)j,tmp
+        if(tmp<0.or.tmp>=0) then
+          write(errmsg,*)'ICM_init: illegal mhtveg.prop:',i,tmp
+          call parallel_abort(errmsg)
+        endif
+        if(iegl(i)%rank==myrank) then
+           ne=iegl(i)%id
+           mhtveg(ne)=tmp
+        endif
+      enddo !i=ne_global
+      close(31)
+    elseif(initveg==2) then
+      allocate(ptmp1(npa),stat=i)
+      if(i/=0) call parallel_abort('read_icm_input: alloc(0)')
+      open(10,file=in_dir(1:len_in_dir)//'mhtveg.gr3',status='old')
+      read(10,*); read(10,*) n,q
+      if(n/=ne_global.or.q/=np_global) then
+        call parallel_abort('ICM_init: Check mhtveg.gr3')
+      endif
+
+      do i=1,np_global
+        read(10,*)j,xtmp,ytmp,tmp
+        if(tmp<0.or.tmp>=0) then
+          write(errmsg,*)'ICM_init: illegal mhtveg.gr3:',i,tmp
+          call parallel_abort(errmsg)
+        endif
+        if(ipgl(i)%rank==myrank) then
+          nd=ipgl(i)%id
+          ptmp1(nd)=tmp
+        endif
+      enddo!i=np_global
+      close(10)
+
+      do i=1,nea
+        mhtveg(i)=sum(ptmp1(1,elnode(1:i34(i),i)))/i34(i)
+      enddo !i
+      deallocate(ptmp1)
+
+    else
+      write(errmsg,*)'ICM_init: illegal initveg:',initveg
+      call parallel_abort(errmsg)
+    endif !initveg
+  endif !iveg_icm
+
+
+  !-----------------read in veg initial biomass for cold start-----------------
+  if(iveg_icm==1.and.ihot==0) then
+    if(initveg==1)then
+      open(10,file=in_dir(1:len_in_dir)//'veg_icm_lf.prop',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'veg_icm_st.prop',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'veg_icm_rt.prop',status='old')
+
+      do i=1,ne_global
+        read(10,*)j,tmp
+        read(31,*)j,tmp1
+        read(32,*)j,tmp2
+        if(tmp<0.or.tmp1<0.or.tmp2<0) then
+          write(errmsg,*)'ICM_init: illegal veg_*:',i,tmp,tmp1,tmp2
+          call parallel_abort(errmsg)
+        endif
+
+        if(iegl(i)%rank==myrank) then
+          ne=iegl(i)%id
+          do j=1,3
+            tlfveg(ne,j)=tmp
+            tstveg(ne,j)=tmp1
+            trtveg(ne,j)=tmp2
+          enddo !j::veg species
+        endif
+      enddo !i=ne_global
+      close(10)
+      close(31)
+      close(32)
+
+    elseif(initveg==2) then
+      allocate(swild2(3,npa),stat=i)
+      if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
+      open(10,file=in_dir(1:len_in_dir)//'veg_icm_lf.gr3',status='old')
+      open(31,file=in_dir(1:len_in_dir)//'veg_icm_st.gr3',status='old')
+      open(32,file=in_dir(1:len_in_dir)//'veg_icm_rt.gr3',status='old')
+      read(10,*); read(10,*) n,q
+      read(31,*); read(31,*)k,m
+      read(32,*); read(32,*)i,j
+      if(n/=ne_global.or.q/=np_global.or.i/=ne_global.or.j/=np_global.or.k/=ne_global.or.m/=np_global) then
+        call parallel_abort('ICM_init: Check veg_*.gr3')
+      endif
+
+      do i=1,np_global
+        read(10,*)j,xtmp,ytmp,tmp
+        read(31,*)j,xtmp,ytmp,tmp1
+        read(32,*)j,xtmp,ytmp,tmp2
+        if(tmp<0.or.tmp1<0.or.tmp2<0) then
+          write(errmsg,*)'ICM_init: illegal veg_*:',i,tmp,tmp1,tmp2
+          call parallel_abort(errmsg)
+        endif
+
+        if(ipgl(i)%rank==myrank) then
+          nd=ipgl(i)%id
+          swild2(1,nd)=tmp
+          swild2(2,nd)=tmp1
+          swild2(3,nd)=tmp2
+        endif
+      enddo!i=np_global
+      close(10)
+      close(31)
+      close(32)
+
+      do j=1,3
+        do i=1,nea
+          tlfveg(i,j)=sum(swild2(1,elnode(1:i34(i),i)))/i34(i)
+          tstveg(i,j)=sum(swild2(2,elnode(1:i34(i),i)))/i34(i)
+          trtveg(i,j)=sum(swild2(3,elnode(1:i34(i),i)))/i34(i)
+        enddo !i::nea
+      enddo !j::veg species
+      deallocate(swild2)
+    else
+      write(errmsg,*)'ICM_init: illegal initveg:',initveg
+      call parallel_abort(errmsg)
+    endif !initveg
+
+    !calc canopy height
+    do j=1,3
+      do i=1,nea
+        !calc canopy height
+        rtmp=(tlfveg(i,j)+tstveg(i,j))/bveg(j)+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
+        if(rtmp<0.) then
+          ztcveg(i,j)=-aveg(j)/(2*bveg(j))
+        else
+          ztcveg(i,j)=-aveg(j)/(2*bveg(j))-sqrt(rtmp)
+        endif
+        hcanveg(i,j)=mhtveg(i)-ztcveg(i,j)
+      enddo !i::nea
+    enddo !j::veg species
+
+  endif !ihot&iveg_icm
 
 
   if(iCheck==1) call check_icm_param
@@ -1169,102 +1323,146 @@ subroutine read_icm_param
   !call get_param('icm.in','STB',2,itmp,STB,stmp)
 
   !ncai_sav parameters
-!  if(isav_icm==1) then
-    call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
-    call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
-    famsav=rtmp
-    call get_param('icm.in','fplfsav',2,itmp,rtmp,stmp)
-    fplfsav=rtmp
-    call get_param('icm.in','fpstsav',2,itmp,rtmp,stmp)
-    fpstsav=rtmp
-    call get_param('icm.in','fprtsav',2,itmp,rtmp,stmp)
-    fprtsav=rtmp
-    call get_param('icm.in','acdwsav',2,itmp,rtmp,stmp)
-    acdwsav=rtmp
-    call get_param('icm.in','ancsav',2,itmp,rtmp,stmp)
-    ancsav=rtmp
-    call get_param('icm.in','apcsav',2,itmp,rtmp,stmp)
-    apcsav=rtmp
-    call get_param('icm.in','aocrsav',2,itmp,rtmp,stmp)
-    aocrsav=rtmp
-    call get_param('icm.in','pmbssav',2,itmp,rtmp,stmp)
-    pmbssav=rtmp
-    call get_param('icm.in','toptsav',2,itmp,rtmp,stmp)
-    toptsav=rtmp
-    call get_param('icm.in','ktg1sav',2,itmp,rtmp,stmp)
-    ktg1sav=rtmp
-    call get_param('icm.in','ktg2sav',2,itmp,rtmp,stmp)
-    ktg2sav=rtmp
-    call get_param('icm.in','bmlfrsav',2,itmp,rtmp,stmp)
-    bmlfrsav=rtmp
-    call get_param('icm.in','bmstrsav',2,itmp,rtmp,stmp)
-    bmstrsav=rtmp
-    call get_param('icm.in','bmrtrsav',2,itmp,rtmp,stmp)
-    bmrtrsav=rtmp
-    call get_param('icm.in','ktblfsav',2,itmp,rtmp,stmp)
-    ktblfsav=rtmp
-    call get_param('icm.in','ktbstsav',2,itmp,rtmp,stmp)
-    ktbstsav=rtmp
-    call get_param('icm.in','ktbrtsav',2,itmp,rtmp,stmp)
-    ktbrtsav=rtmp
-    call get_param('icm.in','trlfsav',2,itmp,rtmp,stmp)
-    trlfsav=rtmp
-    call get_param('icm.in','trstsav',2,itmp,rtmp,stmp)
-    trstsav=rtmp
-    call get_param('icm.in','trrtsav',2,itmp,rtmp,stmp)
-    trrtsav=rtmp
-    call get_param('icm.in','alphasav',2,itmp,rtmp,stmp)
-    alphasav=rtmp
-    call get_param('icm.in','rkshsav',2,itmp,rtmp,stmp)
-    rkshsav=rtmp
-    call get_param('icm.in','rlf',2,itmp,rtmp,stmp)
-    rlf=rtmp
-    call get_param('icm.in','rst',2,itmp,rtmp,stmp)
-    rst=rtmp
-    call get_param('icm.in','rrt',2,itmp,rtmp,stmp)
-    rrt=rtmp
-    call get_param('icm.in','hcansav0',2,itmp,rtmp,stmp)
-    hcansav0=rtmp
-    call get_param('icm.in','hcansav_limit',2,itmp,rtmp,stmp)
-    hcansav_limit=rtmp
-    call get_param('icm.in','khnwsav',2,itmp,rtmp,stmp)
-    khnwsav=rtmp
-    call get_param('icm.in','khnssav',2,itmp,rtmp,stmp)
-    khnssav=rtmp
-    call get_param('icm.in','khnprsav',2,itmp,rtmp,stmp)
-    khnprsav=rtmp
-    call get_param('icm.in','fnisav',2,itmp,rtmp,stmp)
-    fnisav=rtmp
-    call get_param('icm.in','fndsav',2,itmp,rtmp,stmp)
-    fndsav=rtmp
-    call get_param('icm.in','fnlpsav',2,itmp,rtmp,stmp)
-    fnlpsav=rtmp
-    call get_param('icm.in','fnrpsav',2,itmp,rtmp,stmp)
-    fnrpsav=rtmp
-    call get_param('icm.in','khpwsav',2,itmp,rtmp,stmp)
-    khpwsav=rtmp
-    call get_param('icm.in','khpssav',2,itmp,rtmp,stmp)
-    khpssav=rtmp
-    call get_param('icm.in','fpisav',2,itmp,rtmp,stmp)
-    fpisav=rtmp
-    call get_param('icm.in','fpdsav',2,itmp,rtmp,stmp)
-    fpdsav=rtmp
-    call get_param('icm.in','fplpsav',2,itmp,rtmp,stmp)
-    fplpsav=rtmp
-    call get_param('icm.in','fprpsav',2,itmp,rtmp,stmp)
-    fprpsav=rtmp
-    call get_param('icm.in','fdosav',2,itmp,rtmp,stmp)
-    fdosav=rtmp
-    call get_param('icm.in','fcdsav',2,itmp,rtmp,stmp)
-    fcdsav=rtmp
-    call get_param('icm.in','fclpsav',2,itmp,rtmp,stmp)
-    fclpsav=rtmp
-    call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
-    fcrpsav=rtmp
-!  endif !isav_icm
+  call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
+  call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
+  famsav=rtmp
+  call get_param('icm.in','fplfsav',2,itmp,rtmp,stmp)
+  fplfsav=rtmp
+  call get_param('icm.in','fpstsav',2,itmp,rtmp,stmp)
+  fpstsav=rtmp
+  call get_param('icm.in','fprtsav',2,itmp,rtmp,stmp)
+  fprtsav=rtmp
+  call get_param('icm.in','acdwsav',2,itmp,rtmp,stmp)
+  acdwsav=rtmp
+  call get_param('icm.in','ancsav',2,itmp,rtmp,stmp)
+  ancsav=rtmp
+  call get_param('icm.in','apcsav',2,itmp,rtmp,stmp)
+  apcsav=rtmp
+  call get_param('icm.in','aocrsav',2,itmp,rtmp,stmp)
+  aocrsav=rtmp
+  call get_param('icm.in','pmbssav',2,itmp,rtmp,stmp)
+  pmbssav=rtmp
+  call get_param('icm.in','toptsav',2,itmp,rtmp,stmp)
+  toptsav=rtmp
+  call get_param('icm.in','ktg1sav',2,itmp,rtmp,stmp)
+  ktg1sav=rtmp
+  call get_param('icm.in','ktg2sav',2,itmp,rtmp,stmp)
+  ktg2sav=rtmp
+  call get_param('icm.in','bmlfrsav',2,itmp,rtmp,stmp)
+  bmlfrsav=rtmp
+  call get_param('icm.in','bmstrsav',2,itmp,rtmp,stmp)
+  bmstrsav=rtmp
+  call get_param('icm.in','bmrtrsav',2,itmp,rtmp,stmp)
+  bmrtrsav=rtmp
+  call get_param('icm.in','ktblfsav',2,itmp,rtmp,stmp)
+  ktblfsav=rtmp
+  call get_param('icm.in','ktbstsav',2,itmp,rtmp,stmp)
+  ktbstsav=rtmp
+  call get_param('icm.in','ktbrtsav',2,itmp,rtmp,stmp)
+  ktbrtsav=rtmp
+  call get_param('icm.in','trlfsav',2,itmp,rtmp,stmp)
+  trlfsav=rtmp
+  call get_param('icm.in','trstsav',2,itmp,rtmp,stmp)
+  trstsav=rtmp
+  call get_param('icm.in','trrtsav',2,itmp,rtmp,stmp)
+  trrtsav=rtmp
+  call get_param('icm.in','alphasav',2,itmp,rtmp,stmp)
+  alphasav=rtmp
+  call get_param('icm.in','rkshsav',2,itmp,rtmp,stmp)
+  rkshsav=rtmp
+  call get_param('icm.in','rlf',2,itmp,rtmp,stmp)
+  rlf=rtmp
+  call get_param('icm.in','rst',2,itmp,rtmp,stmp)
+  rst=rtmp
+  call get_param('icm.in','rrt',2,itmp,rtmp,stmp)
+  rrt=rtmp
+  call get_param('icm.in','hcansav0',2,itmp,rtmp,stmp)
+  hcansav0=rtmp
+  call get_param('icm.in','hcansav_limit',2,itmp,rtmp,stmp)
+  hcansav_limit=rtmp
+  call get_param('icm.in','khnwsav',2,itmp,rtmp,stmp)
+  khnwsav=rtmp
+  call get_param('icm.in','khnssav',2,itmp,rtmp,stmp)
+  khnssav=rtmp
+  call get_param('icm.in','khnprsav',2,itmp,rtmp,stmp)
+  khnprsav=rtmp
+  call get_param('icm.in','fnisav',2,itmp,rtmp,stmp)
+  fnisav=rtmp
+  call get_param('icm.in','fndsav',2,itmp,rtmp,stmp)
+  fndsav=rtmp
+  call get_param('icm.in','fnlpsav',2,itmp,rtmp,stmp)
+  fnlpsav=rtmp
+  call get_param('icm.in','fnrpsav',2,itmp,rtmp,stmp)
+  fnrpsav=rtmp
+  call get_param('icm.in','khpwsav',2,itmp,rtmp,stmp)
+  khpwsav=rtmp
+  call get_param('icm.in','khpssav',2,itmp,rtmp,stmp)
+  khpssav=rtmp
+  call get_param('icm.in','fpisav',2,itmp,rtmp,stmp)
+  fpisav=rtmp
+  call get_param('icm.in','fpdsav',2,itmp,rtmp,stmp)
+  fpdsav=rtmp
+  call get_param('icm.in','fplpsav',2,itmp,rtmp,stmp)
+  fplpsav=rtmp
+  call get_param('icm.in','fprpsav',2,itmp,rtmp,stmp)
+  fprpsav=rtmp
+  call get_param('icm.in','fdosav',2,itmp,rtmp,stmp)
+  fdosav=rtmp
+  call get_param('icm.in','fcdsav',2,itmp,rtmp,stmp)
+  fcdsav=rtmp
+  call get_param('icm.in','fclpsav',2,itmp,rtmp,stmp)
+  fclpsav=rtmp
+  call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
+  fcrpsav=rtmp
 
   !ncai_veg parameters
-
+  call get_param('icm.in','initveg',1,initveg,rtmp,stmp)
+  call get_param('icm.in','iMortveg',1,iMortveg,rtmp,stmp)
+  call get_param_1D('icm.in','famveg',2,itmp1,famveg,stmp,3)
+  call get_param_1D('icm.in','fplfveg',2,itmp1,fplfveg,stmp,3)
+  call get_param_1D('icm.in','fpstveg',2,itmp1,fpstveg,stmp,3)
+  call get_param_1D('icm.in','fprtveg',2,itmp1,fprtveg,stmp,3)
+  call get_param_1D('icm.in','acdwveg',2,itmp1,acdwveg,stmp,3)
+  call get_param_1D('icm.in','ancveg',2,itmp1,ancveg,stmp,3)
+  call get_param_1D('icm.in','apcveg',2,itmp1,apcveg,stmp,3)
+  call get_param_1D('icm.in','aocrveg',2,itmp1,aocrveg,stmp,3)
+  call get_param_1D('icm.in','pmbsveg',2,itmp1,pmbsveg,stmp,3)
+  call get_param_1D('icm.in','toptveg',2,itmp1,toptveg,stmp,3)
+  call get_param_1D('icm.in','ktg1veg',2,itmp1,ktg1veg,stmp,3)
+  call get_param_1D('icm.in','ktg2veg',2,itmp1,ktg2veg,stmp,3)
+  call get_param_1D('icm.in','alphaveg',2,itmp1,alphaveg,stmp,3)
+  call get_param_1D('icm.in','rkshveg',2,itmp1,rkshveg,stmp,3)
+  call get_param_1D('icm.in','saltveg',2,itmp1,saltveg,stmp,3)
+  call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
+  call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
+  call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
+  call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
+  call get_param_1D('icm.in','fdoveg',2,itmp1,fdoveg,stmp,3)
+  call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
+  call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)
+  call get_param_1D('icm.in','fcrpveg',2,itmp1,fcrpveg,stmp,3)
+  call get_param_1D('icm.in','khnwveg',2,itmp1,khnwveg,stmp,3)
+  call get_param_1D('icm.in','khnsveg',2,itmp1,khnsveg,stmp,3)
+  call get_param_1D('icm.in','khnprveg',2,itmp1,khnprveg,stmp,3)
+  call get_param_1D('icm.in','fniveg',2,itmp1,fniveg,stmp,3)
+  call get_param_1D('icm.in','fndveg',2,itmp1,fndveg,stmp,3)
+  call get_param_1D('icm.in','fnlpveg',2,itmp1,fnlpveg,stmp,3)
+  call get_param_1D('icm.in','fnrpveg',2,itmp1,fnrpveg,stmp,3)
+  call get_param_1D('icm.in','khpwveg',2,itmp1,khpwveg,stmp,3)
+  call get_param_1D('icm.in','khpsveg',2,itmp1,khpsveg,stmp,3)
+  call get_param_1D('icm.in','fpiveg',2,itmp1,fpiveg,stmp,3)
+  call get_param_1D('icm.in','fpdveg',2,itmp1,fpdveg,stmp,3)
+  call get_param_1D('icm.in','fplpveg',2,itmp1,fplpveg,stmp,3)
+  call get_param_1D('icm.in','fprpveg',2,itmp1,fprpveg,stmp,3)
+  call get_param_1D('icm.in','bmlfrveg',2,itmp1,bmlfrveg,stmp,3)
+  call get_param_1D('icm.in','bmstrveg',2,itmp1,bmstrveg,stmp,3)
+  call get_param_1D('icm.in','bmrtrveg',2,itmp1,bmrtrveg,stmp,3)
+  call get_param_1D('icm.in','ktblfveg',2,itmp1,ktblfveg,stmp,3)
+  call get_param_1D('icm.in','ktbstveg',2,itmp1,ktbstveg,stmp,3)
+  call get_param_1D('icm.in','ktbrtveg',2,itmp1,ktbrtveg,stmp,3)
+  call get_param_1D('icm.in','trlfveg',2,itmp1,trlfveg,stmp,3)
+  call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
+  call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
 
 
   !read Carbon parameters
@@ -1466,6 +1664,7 @@ subroutine read_icm_param
   rKa=rtmp
   call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
 
+!error, to add
   !ncai_sav :: check
   if(isav_icm==1) then
     if(alphasav<=0) call parallel_abort('read_icm_input: alphasav')
@@ -1476,9 +1675,19 @@ subroutine read_icm_param
     if(khpwsav<=0) call parallel_abort('read_icm_input: khpwsav')
     if(acdwsav<=0) call parallel_abort('read_icm_input: acdwsav')
     if(bmlfrsav<=0.or.bmstrsav<=0.or.bmrtrsav<=0) call parallel_abort('read_icm_input: bmlfrsav')
-  endif
+  endif !isav_icm
 
   !ncai_veg :: check
+  if(iveg_icm==1) then
+    if(alphaveg<=0) call parallel_abort('read_icm_input: alphaveg')
+    if(pmbsveg<=0) call parallel_abort('read_icm_input: pmbsveg')
+    if(khnsveg<=0) call parallel_abort('read_icm_input: khnsveg')
+    if(khnwveg<=0) call parallel_abort('read_icm_input: khnwveg')
+    if(khpsveg<=0) call parallel_abort('read_icm_input: khpsveg')
+    if(khpwveg<=0) call parallel_abort('read_icm_input: khpwveg')
+    if(acdwveg<=0) call parallel_abort('read_icm_input: acdwveg')
+    if(bmlfrveg<=0.or.bmstrveg<=0.or.bmrtrveg<=0) call parallel_abort('read_icm_input: bmlfrveg')
+  endif !iveg_icm
 
 
   !PH nudge for TIC and ALK

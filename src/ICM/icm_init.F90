@@ -13,9 +13,9 @@
 !   limitations under the License.
 
 subroutine icm_init
-!--------------------------------------------------------------------------------
-!allocate ICM arrays and initialize
-!--------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------
+  !allocate ICM arrays and initialize
+  !--------------------------------------------------------------------------------
   use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global,iof_icm
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
@@ -50,7 +50,7 @@ subroutine icm_init
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
     & rIavg_save(nea), &!ncai_rad
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
-    !ncai_veg, to add
+    & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!ncai_veg
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !ncai_region
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
@@ -182,12 +182,26 @@ subroutine icm_init
   !----------------------------------------------------------------
   !ncai_veg:: parameters + outputs
   !----------------------------------------------------------------
+  call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
+  if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
+  if(iveg_icm==1) then
+    allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
+    & patchveg(nea),rdephcanveg(nea,3),mhtveg(nea), &
+    & plfveg(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3),fpveg(nea,3),fsveg(nea,3),ffveg(nea,3),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. icm_veg variables')
+
+    !init
+    ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
+    lfNH4veg=0.0;       lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0
+    patchveg=0; rdephcanveg=0.0;        mhtveg=0.0;     
+    plfveg=0.0; pmaxveg=0.0; fiveg=1.0; fnveg=1.0;      fpveg=1.0
+    fsveg=1.0;      ffveg=1.0
+
+    !options to output veg-related terms
 
 
-
-
-
-
+  endif !iveg_icm
 
 
   !----------------------------------------------------------------
@@ -507,8 +521,9 @@ subroutine icm_init
 
 
 
-
+  !----------------------------------------------------------------
   !icm_sed_mod
+  !----------------------------------------------------------------
   allocate(SFA(nea),SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
       & tau_c_elem(nea), &!ncai_erosion
       & SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), & 
@@ -528,6 +543,9 @@ subroutine icm_init
   if(istat/=0) call parallel_abort('Failed in alloc. icm_sed_mod variables')
 
 !$OMP parallel workshare default(shared)
+  !----------------------------------------------------------------
+  !array init
+  !----------------------------------------------------------------
   wqc=0.0;
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
@@ -556,7 +574,7 @@ subroutine icm_init
   lfsav=0.0;    stsav=0.0;      rtsav=0.0;      hcansav=0.0 !init for each layer whole domain 
 
   !ncai_veg
-
+  tlfveg=0.0;   tstveg=0.0;     trtveg=0.0;     hcanveg=0.0
 
   !ncai_erosion
   tau_c_elem=0.0

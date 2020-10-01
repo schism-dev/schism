@@ -1563,7 +1563,7 @@ subroutine photosynthesis(id,hour,nv,it)
         !----------inundation stress in wet elem----------
         !ratio of tdep versus hcanveg, tdep>0 checked 
         rdephcanveg(id,j)=hcanveg(id,j)/tdep
-        ffveg(id,j)=rdephcanveg(id,j)/(tinunveg(j)+rdephcanveg(id,j))
+        ffveg(id,j)=rdephcanveg(id,j)/(max((tinunveg(j)+rdephcanveg(id,j)),1.e-2_iwp))
 
 
         !----------light supply----------
@@ -1685,10 +1685,6 @@ subroutine calkwq(id,nv,ure,it)
   !ncai_veg
   lfNH4veg=0
   lfPO4veg=0
-  rtpocveg=0
-  rtponveg=0
-  rtpopveg=0
-  rtdoveg=0
 
 
   !calculate depth at the bottom of each layer (from surface)
@@ -3284,30 +3280,6 @@ subroutine calkwq(id,nv,ure,it)
           call parallel_abort(errmsg)
         endif
       
-        !produce of POM by rt metabolism rate for this dt for each layer, unit: g/m^2/day
-        rtpocveg(k,j)=(1-fdoveg(j))*bmrtveg(j)*trtveg(id,j)/nkveg(j)
-        rtponveg(k,j)=ancveg(j)*bmrtveg(j)*trtveg(id,j)/nkveg(j)
-        rtpopveg(k,j)=apcveg(j)*bmrtveg(j)*trtveg(id,j)/nkveg(j)
-        rtdoveg(k,j)=aocrveg(j)*fdoveg(j)*bmrtveg(j)*trtveg(id,j)/nkveg(j)
-      
-        !nan check
-        if(.not.(rtpocveg(k,j)>0.or.rtpocveg(k,j)<=0))then
-          write(errmsg,*)'nan found in rtpocveg:',rtpocveg(k,j),ielg(id),k,it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(rtponveg(k,j)>0.or.rtponveg(k,j)<=0))then
-          write(errmsg,*)'nan found in rtponveg:',rtponveg(k,j),ielg(id),k,it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(rtpopveg(k,j)>0.or.rtpopveg(k,j)<=0))then
-          write(errmsg,*)'nan found in rtpopveg:',rtpopveg(k,j),ielg(id),k,it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(rtdoveg(k,j)>0.or.rtdoveg(k,j)<=0))then
-          write(errmsg,*)'nan found in rtdoveg:',rtdoveg(k,j),ielg(id),k,it,j
-          call parallel_abort(errmsg)
-        endif
-
       enddo !j::veg species
     endif !iveg_icm
     !--------------------------------------------------------------------------------------
@@ -3452,10 +3424,30 @@ subroutine calkwq(id,nv,ure,it)
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=sum(lfNH4veg(1:nv,j))
       tlfPO4veg(id,j)=sum(lfPO4veg(1:nv,j))
-      trtpocveg(id,j)=sum(rtpocveg(1:nv,j))
-      trtponveg(id,j)=sum(rtponveg(1:nv,j))
-      trtpopveg(id,j)=sum(rtpopveg(1:nv,j))
-      trtdoveg(id,j)=sum(rtdoveg(1:nv,j))
+
+      !produce of POM by rt metabolism rate for this dt, unit: g/m^2/day
+      trtpocveg(id,j)=(1-fdoveg(j))*bmrtveg(j)*trtveg(id,j)
+      trtponveg(id,j)=ancveg(j)*bmrtveg(j)*trtveg(id,j)
+      trtpopveg(id,j)=apcveg(j)*bmrtveg(j)*trtveg(id,j)
+      trtdoveg(id,j)=aocrveg(j)*fdoveg(j)*bmrtveg(j)*trtveg(id,j)
+
+      !nan check
+      if(.not.(trtpocveg(id,j)>0.or.trtpocveg(id,j)<=0))then
+        write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),k,it,j
+        call parallel_abort(errmsg)
+      endif
+      if(.not.(trtponveg(id,j)>0.or.trtponveg(id,j)<=0))then
+        write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),k,it,j
+        call parallel_abort(errmsg)
+      endif
+      if(.not.(trtpopveg(id,j)>0.or.trtpopveg(id,j)<=0))then
+        write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),k,it,j
+        call parallel_abort(errmsg)
+      endif
+      if(.not.(trtdoveg(id,j)>0.or.trtdoveg(id,j)<=0))then
+        write(errmsg,*)'nan found in trtdoveg:',trtdoveg(id,j),ielg(id),k,it,j
+        call parallel_abort(errmsg)
+      endif
 
     enddo !j::veg species
   endif !iveg_icm

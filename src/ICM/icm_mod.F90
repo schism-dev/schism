@@ -71,7 +71,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg,ztcveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
-  real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg,rtdoveg !(nvrt,3)<< surface to bottom
+  real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
 
   !PH model
@@ -112,7 +112,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,GPM1,GPM2,GPM3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
   real(kind=iwp),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
 
-  !ncai_sav parameters 
+  !ncai_sav readin parameters 
   integer,save,allocatable :: patchsav(:) !(nea)
   integer,save :: initsav
   real(kind=iwp),save :: famsav,fplfsav,fpstsav,fprtsav
@@ -125,19 +125,19 @@ module icm_mod
   real(kind=iwp),save :: fnisav, fndsav, fnlpsav, fnrpsav
   real(kind=iwp),save :: khpwsav,khpssav !phosphorus
   real(kind=iwp),save :: fpisav, fpdsav, fplpsav, fprpsav
+  real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
+  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
+  real(kind=iwp),save :: trlfsav,trstsav,trrtsav
+  !intermediate variables
   !sav growth rate and metabolism rate
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
-  real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
-  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
-  real(kind=iwp),save :: trlfsav,trstsav,trrtsav
 
 
-  !ncai_veg parameters
+  !ncai_veg readin parameters
   integer,save,allocatable :: patchveg(:) !nea
   integer,save :: initveg !decide init mapping format
-  integer,save :: nkveg(3) !# of layers veg occupy, >=1
   integer,save :: iMortveg !flag of vegetation mortality
   real(kind=iwp),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
   real(kind=iwp),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
@@ -145,20 +145,22 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
   real(kind=iwp),save,dimension(3) :: saltveg !salt
   real(kind=iwp),save,dimension(3) :: tinunveg !inundation
-  real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg !height
-  real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !water level
+  real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
   real(kind=iwp),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
   real(kind=iwp),save,dimension(3) :: khpwveg,khpsveg !phosphorus
   real(kind=iwp),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
-  real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
-  real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
-  real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
+  !intermediate variables
+  integer,save :: nkveg(3) !# of layers veg occupy, >=1
+  real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
+  real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
+  real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save :: airtveg
 
 

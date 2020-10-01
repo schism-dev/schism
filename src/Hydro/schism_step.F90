@@ -43,8 +43,10 @@
 
 #ifdef USE_ICM
       use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,lfsav,stsav,rtsav, &
-                         &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm, &
-                         &EROH2S,EROLPOC,ERORPOC,GP,GPT,netGP, &
+                         &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm, & !ncai_sav
+                         &tlfveg,tstveg,trtveg,hcanveg,iveg_icm, & !ncai_veg
+                         &EROH2S,EROLPOC,ERORPOC, & !ncai_erosion
+                         &GP,GPT,netGP, &
                          &rFI1,rFN1,rFP1,rFI2,rFN2,rFP2,rFI3,rFN3,rFP3,rFS,rFSal, &
                          &disoRPOC,disoLPOC,HRDOC,DenitDOC, &
                          &predRPOC,predLPOC,predDOC,basalDOC, &
@@ -59,13 +61,13 @@
                          &basalRPOP,basalLPOP,basalDOP,basalPO4,absPO4, &
                          &savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP, &
                          &basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO, &
-                         &savmtDOO,savgrDOO
+                         &savmtDOO,savgrDOO 
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
-                            &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
-                            &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
-                            &NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
-                            &POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, &  !added by wangzg
-                            &SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
+                         &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                         &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
+                         &NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
+                         &POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
+                         &SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
 #endif
 
 #ifdef USE_COSINE
@@ -7949,8 +7951,34 @@
         if(iof_icm(116)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+120), &
      &'ICM_savgrDOO',5,nvrt,nea,dble(savgrDOO))
 
-        noutput=noutput+116
-        icount=116 !offset
+        !ncai_veg
+        if(iof_icm(117==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+121), &
+     &'ICM_tlfveg1',4,1,nea,dble(tlfveg(:,1))
+        if(iof_icm(118==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+122), &
+     &'ICM_tlfveg2',4,1,nea,dble(tlfveg(:,2))
+        if(iof_icm(119==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+123), &
+     &'ICM_tlfveg3',4,1,nea,dble(tlfveg(:,3))
+        if(iof_icm(120==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+124), &
+     &'ICM_tstveg1',4,1,nea,dble(tstveg(:,1))
+        if(iof_icm(121==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+125), &
+     &'ICM_tstveg2',4,1,nea,dble(tstveg(:,2))
+        if(iof_icm(122==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+126), &
+     &'ICM_tstveg3',4,1,nea,dble(tstveg(:,3))
+        if(iof_icm(123==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+127), &
+     &'ICM_trtveg1',4,1,nea,dble(trtveg(:,1))
+        if(iof_icm(124==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+128), &
+     &'ICM_trtveg2',4,1,nea,dble(trtveg(:,2))
+        if(iof_icm(125==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+129), &
+     &'ICM_trtveg3',4,1,nea,dble(trtveg(:,3))
+        if(iof_icm(126==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+130), &
+     &'ICM_hcanveg1',4,1,nea,dble(hcanveg(:,1))
+        if(iof_icm(127==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+131), &
+     &'ICM_hcanveg2',4,1,nea,dble(hcanveg(:,2))
+        if(iof_icm(128==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+132), &
+     &'ICM_hcanveg3',4,1,nea,dble(hcanveg(:,3))
+
+        noutput=noutput+128
+        icount=128 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i
@@ -8492,13 +8520,17 @@
         j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
         j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+34))
         j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+35))
+        j=nf90_def_var(ncid_hot,'tlfveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+36))
+        j=nf90_def_var(ncid_hot,'tstveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+37))
+        j=nf90_def_var(ncid_hot,'trtveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+38))
+        j=nf90_def_var(ncid_hot,'hcanveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+39))
         var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'lfsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+36))
-        j=nf90_def_var(ncid_hot,'stsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+37))
-        j=nf90_def_var(ncid_hot,'rtsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+38))
+        j=nf90_def_var(ncid_hot,'lfsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+40))
+        j=nf90_def_var(ncid_hot,'stsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+41))
+        j=nf90_def_var(ncid_hot,'rtsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+42))
         !3D arrays
         var3d_dim(1)=ICM_ntr_dim; var3d_dim(2)=nvrt_dim; var3d_dim(3)=elem_dim
-        j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+39))
+        j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+43))
         j=nf90_enddef(ncid_hot)
 
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(SED_BENDO),(/1/),(/ne/))
@@ -8536,12 +8568,16 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(lfsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(stsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(rtsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(transpose(tlfveg(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(transpose(tstveg(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(transpose(trtveg(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(transpose(hcanveg(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+40),dble(lfsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+41),dble(stsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+42),dble(rtsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+43),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
         
-        nvars_hot=nvars_hot+39 !update
+        nvars_hot=nvars_hot+43 !update
 #endif /*USE_ICM*/
 
         !write(12,*)'After hot trcr:',it,real(trel),real(tr_nd0)
