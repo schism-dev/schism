@@ -1,0 +1,15 @@
+This file contains the steps making NWM_shp_ll.nc, a input file required by coupling_nwm.f90
+
+1 download the geo-database (gdb) package, NWM_channel_hydrofabric.tar.gz, from NWM website:
+http://www.nohrsc.noaa.gov/pub/staff/keicher/NWM_live/web/data_tools/NWM_channel_hydrofabric.tar.gz
+
+2 Open the gdb using ArcGIS and add the nwm_reaches_conus to the map layer
+ 
+3 Use "Feature Vertices to Points" tool convert the stream feature to point feature class
+(convert the whole area will be too large and trigger issue in ArcGIS, you may want to clip and save the segments only for the area you are interested)
+
+4 Then use "Feature to NetCDF" tool to write lat, lon, ORIG_FID, and FeatureID into netcdf file and name it as NWM_shp_ll.nc
+
+
+
+

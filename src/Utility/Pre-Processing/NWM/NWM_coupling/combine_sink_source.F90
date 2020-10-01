@@ -10,14 +10,11 @@
 !      hgrid.cpp        : hgrid in cpp projection
 !      source_sink.in   : contains the element ID for each
 !                         intersection of the NWM streams and the land boundary.
-!      msource.th       : contains the salinity and temprature
-!                         of the source element along the land boundary.
-!                         Salinity is set to be 0, temp = -9999.
 !      vsource.th       : input of the stream flows of source elements.
 !      vsink.th         : input of the stream flows of sink elements.
 !
 !Output files
-!      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
+!      vsource.th.1, vsink.th.1
 !
 !serial:
 !ifort -CB -O2 -o combine_sink_source combine_sink_source.F90 
