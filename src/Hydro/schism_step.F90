@@ -42,8 +42,9 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,lfsav,stsav,rtsav, &
-                         &tlfsav,tstsav,trtsav,hcansav,Chl_el,PrmPrdt,DIN_el,PON_el,isav_icm, & !ncai_sav
+      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,Chl_el,PrmPrdt,DIN_el,PON_el, &
+                         &tthcan,ttdens, & !ncai_sav + ncai_veg
+                         &tlfsav,tstsav,trtsav,hcansav,lfsav,stsav,rtsav,isav_icm, & !ncai_sav
                          &tlfveg,tstveg,trtveg,hcanveg,iveg_icm, & !ncai_veg
                          &EROH2S,EROLPOC,ERORPOC, & !ncai_erosion
                          &GP,GPT,netGP, &
@@ -6773,6 +6774,13 @@
 
         if(myrank==0) write(16,*)'calculating ICM kinetic source/sink'
         call ecosystem(it)
+
+
+        !ncai_sav, ncai_veg
+        !hcan_uni for a cell
+
+
+
 
         !feedback from ICM to Hydro 
         if(isav==1.and.isav_icm==1)then

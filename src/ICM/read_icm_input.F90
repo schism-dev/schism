@@ -1414,6 +1414,9 @@ subroutine read_icm_param
   fclpsav=rtmp
   call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
   fcrpsav=rtmp
+  call get_param('icm.in','rdenssav',2,itmp,rtmp,stmp)
+  rdenssav=rtmp
+
 
   !ncai_veg parameters
   call get_param('icm.in','initveg',1,initveg,rtmp,stmp)
@@ -1463,6 +1466,7 @@ subroutine read_icm_param
   call get_param_1D('icm.in','trlfveg',2,itmp1,trlfveg,stmp,3)
   call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
   call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
+  call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
 
 
   !read Carbon parameters
@@ -1679,14 +1683,20 @@ subroutine read_icm_param
 
   !ncai_veg :: check
   if(iveg_icm==1) then
-    if(alphaveg<=0) call parallel_abort('read_icm_input: alphaveg')
-    if(pmbsveg<=0) call parallel_abort('read_icm_input: pmbsveg')
-    if(khnsveg<=0) call parallel_abort('read_icm_input: khnsveg')
-    if(khnwveg<=0) call parallel_abort('read_icm_input: khnwveg')
-    if(khpsveg<=0) call parallel_abort('read_icm_input: khpsveg')
-    if(khpwveg<=0) call parallel_abort('read_icm_input: khpwveg')
-    if(acdwveg<=0) call parallel_abort('read_icm_input: acdwveg')
-    if(bmlfrveg<=0.or.bmstrveg<=0.or.bmrtrveg<=0) call parallel_abort('read_icm_input: bmlfrveg')
+    do j=1,3
+      if(alphaveg(j)<=0) call parallel_abort('read_icm_input: alphaveg')
+      if(pmbsveg(j)<=0) call parallel_abort('read_icm_input: pmbsveg')
+      if(khnsveg(j)<=0) call parallel_abort('read_icm_input: khnsveg')
+      if(khnwveg(j)<=0) call parallel_abort('read_icm_input: khnwveg')
+      if(khpsveg(j)<=0) call parallel_abort('read_icm_input: khpsveg')
+      if(khpwveg(j)<=0) call parallel_abort('read_icm_input: khpwveg')
+      if(acdwveg(j)<=0) call parallel_abort('read_icm_input: acdwveg')
+      if(bmlfrveg(j)<=0.or.bmstrveg(j)<=0.or.bmrtrveg(j)<=0) call parallel_abort('read_icm_input: bmlfrveg')
+      if(bveg(j)>0) call parallel_abort('read_icm_input: bveg')
+      if(aveg(j)<0) call parallel_abort('read_icm_input: aveg')
+      tmp=-aveg(j)/2bveg(j)
+      if(tmp<20.or.tmp>65) call parallel_abort('read_icm_input: a/bveg')
+    enddo !j::veg species
   endif !iveg_icm
 
 

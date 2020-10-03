@@ -919,14 +919,13 @@ subroutine sed_calc(id)
 !-----------------------------------------------------------------------
   use schism_glbl, only : dt,iwp,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC,&
-                      &isav_icm,patchsav,& !ncai_sav
-                      &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav,&
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET,& !ncai_erosion
-                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR, &
-                      &iveg_icm,patchveg,& !ncai_veg
-                      &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg
-
+  use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC, &
+                      &isav_icm,patchsav, & !ncai_sav
+                      &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
+                      &iveg_icm,patchveg, & !ncai_veg
+                      &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
+                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET, & !ncai_erosion
+                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #

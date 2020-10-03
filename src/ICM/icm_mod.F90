@@ -55,6 +55,9 @@ module icm_mod
   !(nvrt,nea)>> 1 to nvrt: bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el
 
+  !ncai_sav + ncai_veg :: uniformed vegetation height, density
+  real(kind=iwp),save,allocatable,dimension(:) :: tthcan,ttdens !(nea) 
+
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea) 
@@ -133,6 +136,7 @@ module icm_mod
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
+  real(kind=iwp),save :: rdenssav !density
 
 
   !ncai_veg readin parameters
@@ -162,6 +166,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save :: airtveg
+  real(kind=iwp),save,dimension(3) :: rdensveg
 
 
   !carbon parameters 

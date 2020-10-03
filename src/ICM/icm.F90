@@ -790,7 +790,7 @@ subroutine landplant(id,hour,it)
       endif ! 
 
       iwcveg=iatcnpyveg*rat*(1-exp(-sdveg))/sdveg
-      ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0, error
+      ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0 
 
       fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
 
@@ -824,21 +824,21 @@ subroutine landplant(id,hour,it)
     !--------------------------------------------------------------------------------
     rtmp=ktblfveg(j)*(airtveg-trlfveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'calkwq: check veg lf dry metabolism:',airtveg,trlfveg(j),ktblfveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg lf dry metabolism:',airtveg,trlfveg(j),ktblfveg(j),rtmp,j
       call parallel_abort(errmsg)
     endif
     bmlfveg(j)=bmlfrveg(j)*exp(rtmp)
 
     rtmp=ktbstveg(j)*(airtveg-trstveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'calkwq: check veg st dry metabolism:',airtveg,trstveg(j),ktbstveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg st dry metabolism:',airtveg,trstveg(j),ktbstveg(j),rtmp,j
       call parallel_abort(errmsg)
     endif
     bmstveg(j)=bmstrveg(j)*exp(rtmp)
 
     rtmp=ktbrtveg(j)*(airtveg-trrtveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'calkwq: check veg rt dry metabolism:',airtveg,trrtveg(j),ktbrtveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg rt dry metabolism:',airtveg,trrtveg(j),ktbrtveg(j),rtmp,j
       call parallel_abort(errmsg)
     endif
     bmrtveg(j)=bmrtrveg(j)*exp(rtmp)
@@ -851,7 +851,7 @@ subroutine landplant(id,hour,it)
     a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
     rtmp=a*dtw
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'calkwq: check veg lf dry growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg lf dry growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
       call parallel_abort(errmsg)
     endif
     tlfveg(id,j)=tlfveg(id,j)*exp(rtmp)
@@ -886,7 +886,7 @@ subroutine landplant(id,hour,it)
 !--------------------------------------------------------------------------------------       
 !solve formula of (lf+st)=a*ztc+b*ztc^2+c, where ztc=mht-hcan
 !ztc=-a/2b-[(lf+st)/b+a^2/4b^4-c/b]^0.5    
-!requires check when read in a,b,c (a>0,b<0,c<0; -a/2b~[40,55]
+!requires check when read in a,b,c (a>0,b<0; -a/2b~[40,55]
 !ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
 !ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
 !--------------------------------------------------------------------------------------
@@ -1584,7 +1584,7 @@ subroutine photosynthesis(id,hour,nv,it)
         endif
 
         iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
-        ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0, error
+        ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0
 
         fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
 
@@ -1606,7 +1606,7 @@ subroutine photosynthesis(id,hour,nv,it)
         xtveg=tmp/max(tdep,1.e-2_iwp)
         xtveg0=tmp0/max(tdep,1.e-2_iwp)
         fnveg(id,j)=(xtveg+xtveg0+CNH4(id)*khnwveg(j)/khnsveg(j))/ &
-                        &(khnwveg(j)+xtveg+xtveg0+CNH4(id)*khnwveg(j)/khnsveg(j)) !add check, error
+                        &(khnwveg(j)+xtveg+xtveg0+CNH4(id)*khnwveg(j)/khnsveg(j)) 
 
         !depth-averaged P
         tmp=0.0
@@ -1615,7 +1615,7 @@ subroutine photosynthesis(id,hour,nv,it)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.e-2_iwp)
         fpveg(id,j)=(xtveg+CPIP(id)*khpwveg(j)/khpsveg(j))/ &
-                        &(khpwveg(j)+xtveg+CPIP(id)*khpwveg(j)/khpsveg(j)) !add check, error
+                        &(khpwveg(j)+xtveg+CPIP(id)*khpwveg(j)/khpsveg(j)) 
 
 
         !--------------------
@@ -1663,9 +1663,9 @@ subroutine calkwq(id,nv,ure,it)
   real(kind=iwp) :: pK0,CO2sat,xKCA,xKCACO3
 
   !ncai_sav 
-  real(kind=iwp) :: nprsav,fnsedsav,fpsedsav
+  real(kind=iwp) :: nprsav,fnsedsav,fpsedsav,denssav
   !ncai_veg
-  real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3)
+  real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3),densveg(3)
   real(kind=iwp) :: tmp,mtemp
 
 
@@ -3451,6 +3451,35 @@ subroutine calkwq(id,nv,ure,it)
 
     enddo !j::veg species
   endif !iveg_icm
+  !--------------------------------------------------------------------------------------
+
+
+  !--------------------------------------------------------------------------------------
+  !ncai_sav + ncai_veg
+  !calculate uniformed canopy height and density feedback to flow field
+  !--------------------------------------------------------------------------------------
+  !init
+  denssav=0.0
+  densveg(:)=0.0
+  if(isav_icm==1.and.patchsav(i)==1)then
+    denssav=(tlfsav(id)+tstsav(id))/(rdenssav*max(hcansav(id),1.e-4))
+  endif !isav_icm
+
+  if(iveg_icm==1.and.patchveg(id)==1) then
+    do j=1,3
+      densveg(j)=(tlfveg(id,j)+tstveg(id,j))/(rdensveg(j)*max(hcanveg(id,j),1.e-4))  
+    enddo !j::veg species
+  endif !iveg_icm
+
+  ttdens(id)=denssav+sum(densveg(1:3))
+
+  if(ttdens(id)>1.e-8) then
+    rtmp=hcansav(id)*denssav
+    do j=1,3
+      rtmp=rtmp+hcanveg(id,j)*densveg(j)
+    enddo !j::veg species
+    tthcan=rtmp/ttdens(id)
+  endif !vegetation
   !--------------------------------------------------------------------------------------
 
 end subroutine calkwq

@@ -51,6 +51,7 @@ subroutine icm_init
     & rIavg_save(nea), &!ncai_rad
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
     & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!ncai_veg
+    & tthcan(nea),ttdens(nea), &!ncai_sav + ncai_veg
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !ncai_region
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
@@ -295,10 +296,6 @@ subroutine icm_init
     if(istat/=0) call parallel_abort('Failed in alloc. 58')
     rFSal=1.0
   endif
-
-
-
-
 
   !Carbon
   if(iof_icm(59)==1) then 
@@ -575,6 +572,9 @@ subroutine icm_init
 
   !ncai_veg
   tlfveg=0.0;   tstveg=0.0;     trtveg=0.0;     hcanveg=0.0
+
+  !ncai_sav + ncai_veg
+  tthcan=0.0;   ttdens=0.0;
 
   !ncai_erosion
   tau_c_elem=0.0
