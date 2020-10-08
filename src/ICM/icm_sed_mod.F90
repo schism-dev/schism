@@ -44,7 +44,7 @@ module icm_sed_mod
   !ncai_sav 
   real(kind=iwp),save,dimension(3) :: frnsav,frpsav,frcsav
   !ncai_veg
-  real(kind=iwp),vege,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
+  real(kind=iwp),save,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
 
   !nutrients, parameters
   real(kind=iwp),save :: KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2 !!nitrification

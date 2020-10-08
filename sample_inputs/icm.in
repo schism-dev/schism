@@ -95,9 +95,9 @@ iZoo = 0
 isav_icm = 0 
 
 !-----------------------------------------------------------------------
-!Inter tidal vegetation switch
+!Intertidal vegetation switch
 !-----------------------------------------------------------------------
-iveg_icm=0
+iveg_icm = 0
 
 !-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )

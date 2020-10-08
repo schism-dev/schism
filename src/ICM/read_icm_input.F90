@@ -1042,7 +1042,7 @@ subroutine read_icm_param2
 
       do i=1,np_global
         read(10,*)j,xtmp,ytmp,tmp
-        if(tmp<0.or.tmp>=0) then
+        if(.not.(tmp<0.or.tmp>=0)) then
           write(errmsg,*)'ICM_init: illegal mhtveg.gr3:',i,tmp
           call parallel_abort(errmsg)
         endif
@@ -1054,7 +1054,7 @@ subroutine read_icm_param2
       close(10)
 
       do i=1,nea
-        mhtveg(i)=sum(ptmp1(1,elnode(1:i34(i),i)))/i34(i)
+        mhtveg(i)=sum(ptmp1(elnode(1:i34(i),i)))/i34(i)
       enddo !i
       deallocate(ptmp1)
 
@@ -1694,7 +1694,7 @@ subroutine read_icm_param
       if(bmlfrveg(j)<=0.or.bmstrveg(j)<=0.or.bmrtrveg(j)<=0) call parallel_abort('read_icm_input: bmlfrveg')
       if(bveg(j)>0) call parallel_abort('read_icm_input: bveg')
       if(aveg(j)<0) call parallel_abort('read_icm_input: aveg')
-      tmp=-aveg(j)/2bveg(j)
+      tmp=-aveg(j)/(2*bveg(j))
       if(tmp<20.or.tmp>65) call parallel_abort('read_icm_input: a/bveg')
     enddo !j::veg species
   endif !iveg_icm

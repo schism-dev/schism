@@ -143,7 +143,7 @@ subroutine sed_dry_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,d
 end subroutine sed_dry_eq
 
 
-function sed_zbrent(ierr)
+function sed_zbrent(id,ierr)
 !---------------------------------------------------------------------
 !Brent's method to find SOD value
 !numerical recipes from William H. Press, 1992
@@ -152,6 +152,7 @@ function sed_zbrent(ierr)
   use schism_msgp, only : myrank,parallel_abort
   use icm_sed_mod, only : O20,SOD,stc
   implicit none
+  integer,intent(in) :: id !elem #
   integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
 !Error: tweak single
@@ -172,11 +173,11 @@ function sed_zbrent(ierr)
 
   !surface transfer coefficient 
   stc=a/O20 !O20=max(SED_DO(id),1.d-2)
-  call sedsod
+  call sedsod(id)
   fa=SOD-a
 
   stc=b/O20
-  call sedsod
+  call sedsod(id)
   fb=SOD-b
 
   !fa=sedf(a)
@@ -262,7 +263,7 @@ function sed_zbrent(ierr)
     endif !abs(d)
 
     stc=b/O20
-    call sedsod
+    call sedsod(id)
     fb=SOD-b
     !fb=sedf(b)
     !call sedf(fb,b)
@@ -1026,7 +1027,7 @@ subroutine sed_calc(id)
   if(iveg_icm==1.and.patchveg(id)==1)then
     NH4T2TM1=max(1.0e-10_iwp,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
     PO4T2TM1=max(1.0e-10_iwp,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
-    ROOTDO=ROOTDO+sum(trtdoveg(id,3)) !unit: g/m^2 day
+    ROOTDO=ROOTDO+sum(trtdoveg(id,1:3)) !unit: g/m^2 day
   endif !iveg_icm
 
 
@@ -1050,7 +1051,7 @@ subroutine sed_calc(id)
   !calculate POM fluxes
   flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0
 
-  if(idry_e(i)/=1)then
+  if(idry_e(id)/=1)then
     do i=1,3 !for 3 classes of POM
       do j=1,3 !for 3 phytoplankton species
         flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*APC(j)*SED_B(id,j)
@@ -1327,9 +1328,9 @@ subroutine sed_calc(id)
     rtmp1=alphaTdif*(TEMPD-20.0)
     !not include velocity for now
     stc=stc0*thtaTdif**rtmp1
-    call sedsod
+    call sedsod(id)
   else
-    SOD=sed_zbrent(ierr)
+    SOD=sed_zbrent(id,ierr)
   endif !hypoxia diffusion with little SOD, negalectable first layer 
 
   !debug if SOD calculation fails, need more work,ZG
@@ -1356,7 +1357,7 @@ subroutine sed_calc(id)
   pie2=PIE2SI
 
   !ncai_dry
-  if(idry_e(i)==1)then
+  if(idry_e(id)==1)then
     j1=0.0
     j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*rKSAp*SSI(id) !rKSAp ==0,future app with TSS
     k12=0.0
@@ -1392,7 +1393,7 @@ subroutine sed_calc(id)
   pie2=PIE2PO4
 
   !ncai_dry
-  if(idry_e(i)==1)then
+  if(idry_e(id)==1)then
     j1=0.0
     j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
     k12=0.0
@@ -1524,7 +1525,7 @@ subroutine sed_calc(id)
   !************************************************************************
   !erosion flux
   !************************************************************************
-  if(iERO>0.and.idry_e(i)/=1)then
+  if(iERO>0.and.idry_e(id)/=1)then
     !calculate bottom shear stress for elem #id
     tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
 
@@ -1631,13 +1632,13 @@ subroutine sed_calc(id)
 end subroutine sed_calc
 
 
-subroutine sedsod
+subroutine sedsod(id)
   use icm_sed_mod
   use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm,iveg_icm
   use schism_glbl, only : errmsg,iwp,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
-
+  integer,intent(in) :: id !elem #
   !local variables
   real(kind=iwp) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
   real(kind=iwp) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
@@ -1664,7 +1665,7 @@ subroutine sedsod
   pie1=PIENH4; pie2=PIENH4
 
   !ncai_dry
-  if(idry_e(i)==1)then
+  if(idry_e(id)==1)then
     j1=0.0
     j2=XJN
     if(SAL0<=SALTND) then
@@ -1698,7 +1699,7 @@ subroutine sedsod
   pie1=0.0; pie2=0.0 !W12=0 for no particle exits, no need to switch W12 because fp1=fp2=0
 
   !ncai_dry
-  if(idry_e(i)==1)then
+  if(idry_e(id)==1)then
     j1=k12*NH41/stc
     j2=0.0
     if(SAL0<=SALTND) then
@@ -1812,7 +1813,7 @@ subroutine sedsod
     fp1=1.-fd1;
 
     !ncai_dry
-    if(idry_e(i)==1)then
+    if(idry_e(id)==1)then
       j1=0.0
       j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
       k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
@@ -1843,7 +1844,7 @@ subroutine sedsod
     pie1=0.0; pie2=0.0
 
     !ncai_dry
-    if(idry_e(i)==1)then
+    if(idry_e(id)==1)then
       j1=0.0
       !j2=XJ2 !need future work
       j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
@@ -2003,7 +2004,7 @@ subroutine link_sed_dry_input(id)
   SED_SA(id)  =0.0
   !saturated DO
   SED_DO(id)  =14.5532-0.38217*airtveg+5.4258e-3*airtveg*airtveg- &
-           & Sal(k)*(1.665e-4-5.866e-6*airtveg+9.796e-8*airtveg*airtveg)/1.80655
+           & SED_SALT(id)*(1.665e-4-5.866e-6*airtveg+9.796e-8*airtveg*airtveg)/1.80655
   SED_COD(id) =0.0
   SED_TSS(id) =0.0
 
@@ -2014,6 +2015,7 @@ subroutine link_sed_output(id)
 !---------------------------------------------------------------------------------------
 !sediment flux
 !---------------------------------------------------------------------------------------
+  use schism_glbl, only : idry_e
   use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD,EROH2S,EROLPOC,ERORPOC
   use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC,PIE1S,m1
   implicit none
@@ -2030,7 +2032,7 @@ subroutine link_sed_output(id)
   !nan checked when applied to water column
 
   !erosion flux, H2S>S
-  if(iERO>0.and.idry_e(i)/=1)then
+  if(iERO>0.and.idry_e(id)/=1)then
     EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
     EROLPOC(id)=SED_EROLPOC(id)
     ERORPOC(id)=SED_ERORPOC(id)
