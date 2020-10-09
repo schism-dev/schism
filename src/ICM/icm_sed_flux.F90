@@ -1398,7 +1398,7 @@ subroutine sed_calc(id)
     j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
     k12=0.0
     k2=0.0
-    call sed_dry_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,,j1,j2,k12,k2)
+    call sed_dry_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,j1,j2,k12,k2)
     JPO4=0.0
   else
     C0d=PO40

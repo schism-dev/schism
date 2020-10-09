@@ -167,7 +167,7 @@ subroutine ecosystem(it)
         call calkwq(i,nv,ure,it)  
         call link_icm(2,i,nv)
 
-      endif 
+      endif !wet vs. dry+plant 
      
     enddo !i=1,nea
 
@@ -751,14 +751,14 @@ subroutine landplant(id,hour,it)
       if(xtveg<=0.0)then
         rtmp=ktg1veg(j)*xtveg*xtveg
         if(rtmp>50.0.or.rtmp<0.)then
-          write(errmsg,*)'photosynthesis: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j
+          write(errmsg,*)'plantland: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j
           call parallel_abort(errmsg)
         endif
         pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
       else
         rtmp=ktg2veg(j)*xtveg*xtveg
         if(rtmp>50.0.or.rtmp<0.)then
-          write(errmsg,*)'photosynthesis: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j
+          write(errmsg,*)'plantland: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j
           call parallel_abort(errmsg)
         endif
         pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
