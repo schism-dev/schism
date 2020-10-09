@@ -199,7 +199,7 @@
                                      ! 5 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**8.D0)
                                      ! 6 - Sink of momentum applied in the two surface layers (IF (k .GE. NVRT-1) swild_3D(k)=1.D0)
  BC_BREAK       = 1                  ! Apply depth-limited breaking at the boundaries: 1 - On; 0 - Off
- IROLLER        = 1                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
+ IROLLER        = 0                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
  ALPROL         = 0.85               ! Alpha coefficient for the wave roller model (between 0 and 1): 1 - full conversion; 0 - no energy transferred to the roller
  MEVEG          = 0                  ! Vegetation on/off
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
