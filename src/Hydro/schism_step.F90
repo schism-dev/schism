@@ -632,9 +632,10 @@
 !       Outputs (via datapool):
 !       sbr(2,npa): momentum flux vector due to wave breaking (nearshore depth-induced breaking; see Bennis 2011)
 !       sbf(2,npa): momentum lost by waves due to the bottom friction (not used for the moment)
-!       stokes_vel(2,nvrt,npa): Stokes velocity at nodes and whole levels
-!       stokes_vel_sd(2,nvrt,nsa): Stokes velocity at sides and whole levels
-!       stokes_w_nd(nvrt,npa): Stokes vertical velocity at nodes and whole levels
+!       stokes_hvel(2,nvrt,npa): Stokes velocity at nodes and whole levels
+!       stokes_hvel_side(2,nvrt,nsa): Stokes velocity at sides and whole levels
+!       stokes_wvel(nvrt,npa): Stokes vertical velocity at nodes and whole levels
+!       stokes_wvel_side(nvrt,nsa): Stokes vertical velocity at sides and whole levels
 !       jpress(npa): waved-induced pressure
 !       wwave_force(2,nvrt,nsa): =0 if icou_elfe_wwm=0. In [e,p]frame (not sframe!).
 !       wwave_force(1:2,:,1:nsa) = Rsx, Rsy in my notes (the terms in momen. eq.)
@@ -1947,7 +1948,16 @@
           endif
       
 !         Friction velocity: [\niu*|du/dz|]^0.5 (m/s)
+!BM Notes: [sbr]:m2.s-2
+!          turbinj: partial sink of momentum, fixed at 15% by Feddersen (2012),
+!          but can be adjusted in param.in depending on the wave breaking type.
+#ifdef USE_WWM
+          u_taus=sqrt( turbinj*sqrt(sbr(1,j)**2.d0+sbr(2,j)**2.d0)     &
+              &        + turbinj*sqrt(srol(1,j)**2.d0+srol(2,j)**2.d0) &
+              &        + sqrt(tau(1,j)**2+tau(2,j)**2) )
+#else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
+#endif
           u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
           nlev=nvrt-kbp(j) !>1
           do k=0,nlev 
@@ -1999,7 +2009,12 @@
 !          h1d(0)=h1d(1)
           toth=eta2(j)+dp(j)
 !         surface and bottom roughness length (m)
+!BM
+#ifdef USE_WWM
+          z0s=0.3d0*out_wwm(j,1) ! according to Moghimi et al. (OM, 2013)
+#else
           z0s=min(0.1d0,toth/10.d0)
+#endif
           if(Cdp(j)==0.d0) then
             z0b=0.d0
           else
@@ -3285,9 +3300,6 @@
 !$OMP idry_e,iplg,isidenode,xcj,ycj,zcj,pframe,nvrt,islg,iadv,ics,xctr,yctr,zctr,zs,isbs,velmin_btrack, &
 !$OMP swild98,ibtrack_test,tsd,dt,dtb_min,dtb_max,ndelt_min,ndelt_max,elnode,i34,dldxy,btrack_nudge, &
 !$OMP xnd,ynd,l,nbtrk,mxnbt,btlist,myrank,ielg &
-#ifdef USE_WWM
-!$OMP ,stokes_w_nd &
-#endif
 !$OMP ) 
 
 !$OMP workshare
@@ -3306,7 +3318,7 @@
 !#ifdef USE_WWM
 !      if(RADFLAG.eq.'VOR') then
 !!$OMP workshare
-!        ww2=ww2+stokes_w_nd
+!        ww2=ww2+stokes_wvel
 !!$OMP end workshare
 !      endif
 !#endif
@@ -3884,7 +3896,7 @@
 !      if(RADFLAG.eq.'VOR') then
 !!$OMP parallel default(shared)
 !!$OMP   workshare
-!        ww2=ww2-stokes_w_nd
+!        ww2=ww2-stokes_wvel
 !!$OMP   end workshare
 !!$OMP end parallel
 !      endif
@@ -4941,8 +4953,8 @@
             do m=1,3 !wet sides
               isd=elside(m,ie)
               do k=kbs(isd),nvrt-1
-                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_vel_sd(1,k+1,isd)+stokes_vel_sd(1,k,isd))/2.d0/3.d0
-                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_vel_sd(2,k+1,isd)+stokes_vel_sd(2,k,isd))/2.d0/3.d0
+                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0/3.d0
+                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0/3.d0
               enddo !k
             enddo !m
             dot3=dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2
@@ -5049,8 +5061,8 @@
                 sum1=0.d0 !integral; x-comp.
                 sum2=0.d0 !integral
                 do k=kbs(isd),nvrt-1 !isd is wet
-                  sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_vel_sd(1,k+1,isd)+stokes_vel_sd(1,k,isd))/2.d0
-                  sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_vel_sd(2,k+1,isd)+stokes_vel_sd(2,k,isd))/2.d0
+                  sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0
+                  sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0
                 enddo !k
                 Unbar=sum1*snx(isd)+sum2*sny(isd)
                 tmp0=thetai*dt*distj(isd)*Unbar/2.d0
@@ -5696,7 +5708,7 @@
               !Normal component from vortex formulation
 #ifdef USE_WWM
               if(RADFLAG.eq.'VOR') then
-                vnorm=stokes_vel_sd(1,k,j)*snx(j)+stokes_vel_sd(2,k,j)*sny(j)
+                vnorm=stokes_hvel_side(1,k,j)*snx(j)+stokes_hvel_side(2,k,j)*sny(j)
               endif !RADFLAG
 #endif               
 

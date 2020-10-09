@@ -19,6 +19,9 @@
  UNITC          = 'SEC'              ! Unity of time step
  ENDTC          = '20031008.000000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
  DMIN           = 0.01              ! Minimum water depth. THis must be same as h0 in SCHISM
+ WRITEDBGFLAG   = 0                  ! Write debug comments in separated files (1: on; 0: off)
+ WRITESTATFLAG  = 0                  ! Write stat comments in separated files (1: on; 0: off)
+ WRITEWINDBGFLAG = 0                 ! Write wind debug comments in separated files (1: on; 0: off)
 /
 
 &COUPL
@@ -33,7 +36,7 @@
                                      ! LETOT = .T., is only for testing and developers!
  NLVT           = 10                 ! Number of vertical Layers; not used with SCHISM
  DTCOUP         = 600.               ! Couple time step - not used when coupled to SCHISM
-! IMET_DRY       = 0                  ! 
+ IMET_DRY       = 0                  ! 
 /
 
 &GRID
@@ -166,10 +169,38 @@
  MESBF          = 1                  ! Bottom friction: JONSWAP(1) (Default at 1); 2 - Madsen
  FRICC          = 0.067              ! Cjon - Bottom friction coefficient (always positive)
  MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
- ICRIT          = 1                  ! Wave breaking criterion: set as 1 - Constant gamma, 2 - Dingemans-type criterion, 3 - Miche-type criterion
- IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978), 2 - Thornton and Guza (1983), 3 - Church and Thornton (1993)
- ALPBJ          = 0.5                ! Dissipation proportionality coefficient, (DEFAULT: 0.5)
- BRHD           = 0.78               ! Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-1.1 (note: divide it by sqrt(2) for TG83)
+ IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978)
+                                     !                            2 - Thornton and Guza (1983) - Constant weighting function
+                                     !                            3 - Thornton and Guza (1983) - Skewed weighting function
+                                     !                            4 - van der Westhuysen (2010)
+                                     !                            5 - Baldock et al (1998) modified by Janssen and Battjes (2007)
+                                     !                            6 - Church and Thornton (1993)
+ ICRIT          = 1                  ! Wave breaking criterion: 1   - Constant breaker index (gamma) or gamma_TG defined with BRCR
+                                     !                          2,6 - gamma computed with local steepness adapted from Battjes and Stive (1985)
+                                     !                          3   - Biphase threshold (intended for IBREAK=4)
+                                     !                          4   - gamma_TG = a_BRCR * slope + b_BRCR / min_BRCR < gamma_TG < max_BRCR
+                                     !                                e.g. Sallenger and Holman 1985
+                                     !                          5   - gamma = a_BRCR * k_ph + b_BRCR / min_BRCR < gamma < max_BRCR
+                                     !                                e.g. Ruessink et al (2003) with a_BRCR=0.76 and b_BRCR=0.29
+ BRCR           = 0.73               ! constant gamma;  default is 0.73 for IBREAK=1; default is 0.42 for IBREAK=2,3; default is -4pi/9 = -1.3963 for IBREAK=4 (Biphase)
+ a_BRCR         = 0.76               ! cf ICRIT = 4, 5
+ b_BRCR         = 0.29               ! cf ICRIT = 4, 5
+ min_BRCR       = 0.25               ! cf ICRIT = 4, 5
+ max_BRCR       = 0.8                ! cf ICRIT = 4, 5
+ a_BIPH         = 0.2                ! Biphase coefficient, default 0.2 (intended for IBREAK=3)
+ BR_COEF_METHOD = 1                  ! Method for the breaking coefficient: 1 - constant, 2 - adaptive
+ B_ALP          = 1                  ! breaking coefficient. If BR_COEF_METHOD = 2, B_ALP ~ 40
+ ZPROF_BREAK    = 2                  ! Vertical distribution function of wave breaking source term, only used in 3D run
+                                     ! IS: side index, k: vertical layer index, dps: depth, zs: z vertical coordinate (/MSL), tmp0: Hs
+                                     ! 1 - Homogeneous vertical distribution (swild_3D(k) = 1)
+                                     ! 2 - swild_3D(k) = cosh((dps(IS)+zs(k,IS))/(0.2D0*tmp0))
+                                     ! 3 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**2.D0)
+                                     ! 4 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**4.D0)
+                                     ! 5 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**8.D0)
+                                     ! 6 - Sink of momentum applied in the two surface layers (IF (k .GE. NVRT-1) swild_3D(k)=1.D0)
+ BC_BREAK       = 1                  ! Apply depth-limited breaking at the boundaries: 1 - On; 0 - Off
+ IROLLER        = 1                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
+ ALPROL         = 0.85               ! Alpha coefficient for the wave roller model (between 0 and 1): 1 - full conversion; 0 - no energy transferred to the roller
  MEVEG          = 0                  ! Vegetation on/off
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
  MESDS          = 1                  ! Formulation for the whitecapping source function; same value as MESIN
@@ -222,10 +253,13 @@
                                      ! Have fun ... Aron and Thomas.
                                      ! AMETHOD = 6 - BCGS Solver 
                                      ! AMETHOD = 7 - GAUSS and JACOBI SOLVER 
- SMETHOD        = 1
+ SMETHOD        = 6
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
+                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS)
+
+ ROLMETHOD      = 2                  ! Roller source term integration (1 or 2)
 
  DMETHOD        = 2
                                      ! This switch controls the numerical method in directional space.

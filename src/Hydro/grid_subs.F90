@@ -2583,6 +2583,81 @@ end subroutine dump_hgrid
 
 !===============================================================================
 !===============================================================================
+
+subroutine compute_bed_slope
+!-------------------------------------------------------------------------------
+! MP from KM
+! Compute the bed slope for use in the wave model
+!-------------------------------------------------------------------------------
+  use schism_glbl
+  implicit none
+  integer     :: icount, inne, ip, ie
+  real(rkind) :: depel_x, depel_y, tmp_x, tmp_y
+  real(rkind) :: tanbeta_x_tmp(npa), tanbeta_y_tmp(npa), dp_tmp(npa)
+  
+  ! Initialization
+  tanbeta_x = 0; tanbeta_y = 0 
+  
+  ! Smoothing water depth
+  dp_tmp = dp
+  call smooth_2dvar(dp_tmp,npa)
+  
+  ! Estimation of the bed slopes at nodes by averaging the value found at the surrounding element centers
+  do ip = 1, npa
+    depel_x = 0.d0; depel_y = 0.d0 ! Spatial derivative of the bed elevation at element centers
+    tmp_x = 0.d0;   tmp_y = 0.d0   ! Local sum of spatial derivatives of the bed elevation 
+    icount = 0
+    do inne = 1, nne(ip)
+      ie = indel(inne,ip)
+      if (ie>0) then
+        icount = icount + 1
+        depel_x = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,1,ie))
+        depel_y = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,2,ie))
+        tmp_x = tmp_x + depel_x
+        tmp_y = tmp_y + depel_y
+      endif
+    enddo
+    if (icount>0) then
+      tanbeta_x(ip) = tmp_x/icount
+      tanbeta_y(ip) = tmp_y/icount
+    endif
+  enddo
+  
+end subroutine compute_bed_slope
+
+
+subroutine smooth_2dvar(glbvar,array_size)
+!-------------------------------------------------------------------------------
+! MP from KM
+! Routine to smooth a 2d variable at nodes
+!-------------------------------------------------------------------------------
+  use schism_glbl, only: nnp, indnd, rkind
+  implicit none
+  integer, intent(in) :: array_size
+  real(rkind), intent(inout) :: glbvar(array_size)
+  integer     :: icount, inne, ip, ie
+  real(rkind) :: locvar(array_size)
+	  
+  ! We re-pass everywhere to smooth out the bed slope (avoid spurious effects in the wave breaking thresholds)
+  locvar = glbvar; icount = 0
+  glbvar = 0D0;
+  do ip = 1, array_size
+    icount = 0
+    do inne = 1, nnp(ip)
+      ie = indnd(inne,ip)
+      if (ie>0) then
+         icount = icount + 1
+         glbvar(ip) = glbvar(ip) + locvar(ie)
+      endif
+    enddo
+    if (icount>0) then
+      glbvar(ip) = glbvar(ip)/icount
+    endif
+  enddo  
+end subroutine smooth_2dvar
+
+!===============================================================================
+!===============================================================================
 ! END GRID SUBROUTINES
 !===============================================================================
 !===============================================================================

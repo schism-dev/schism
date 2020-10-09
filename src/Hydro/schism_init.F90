@@ -179,6 +179,7 @@
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
+     &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
@@ -450,7 +451,8 @@
       ibtrack_test=0; irouse_test=0;  
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
-      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind; 
+      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
+      fwvor_advxy_stokes=0; fwvor_advz_stokes=0; fwvor_gradpress=0; fwvor_breaking=0; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
@@ -1773,17 +1775,28 @@
 !     Wave model arrays
 #ifdef  USE_WWM
       if(iorder==0) then
-        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10), &
-               & stokes_vel(2,nvrt,npa), jpress(npa), sbr(2,npa), sbf(2,npa), &
-               & stokes_w_nd(nvrt,npa), stokes_vel_sd(2,nvrt,nsa),nne_wwm(np), stat=istat)
+        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10),   &
+               & out_wwm_rol(npa,35), &
+               & stokes_hvel(2,nvrt,npa), stokes_wvel(nvrt,npa),stokes_hvel_side(2,nvrt,nsa), stokes_wvel_side(nvrt,nsa), &
+               & roller_stokes_hvel(2,nvrt,npa), roller_stokes_hvel_side(2,nvrt,nsa), &
+               & jpress(npa), sbr(2,npa), sbf(2,npa), srol(2,npa),                    &
+               & nne_wwm(np), stat=istat)
         if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
       endif !iorder
-      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0
-      stokes_vel=0.d0; jpress=0.d0; sbr=0.d0; sbf=0.d0; stokes_w_nd=0.d0; stokes_vel_sd=0.d0
+      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0
+      jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0
+      stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0
       !BM: coupling current for WWM
       allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
-      curx_wwm=0.d0; cury_wwm=0.d0
       if(istat/=0) call parallel_abort('MAIN: (2) WWM alloc failure')
+      curx_wwm=0.d0; cury_wwm=0.d0
+      !BM: ramp on wwave_force at open boundary
+      allocate(wafo_opbnd_ramp(nsa), stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: (2.1) WWM alloc failure')
+      wafo_opbnd_ramp=1.0d0
+
+
 
 !...  Modified some geometry vars for WWM for quads (split)
 !...  Because WWM mostly uses node-based vars, we only need to update a small set of vars:
@@ -5741,6 +5754,21 @@
 
 !     end hot start section
       endif !ihot/=0
+
+! MP from KM
+#ifdef USE_WWM
+      ! Computation of the bed slope at nodes
+      allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
+      call compute_bed_slope !iof(198) = 1
+  
+      ! Exchanges between ghost zones and smoothing
+      call exchange_p2d(tanbeta_x)
+      call exchange_p2d(tanbeta_y)
+      do i = 1,2
+        call smooth_2dvar(tanbeta_x,npa)
+        call smooth_2dvar(tanbeta_y,npa)
+      enddo
+#endif
 
 !     Broadcast to global module
       iths_main=iths

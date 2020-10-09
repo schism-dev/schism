@@ -22,7 +22,7 @@
          REAL(rkind)                :: SSBF(MSC,MDC),DSSBF(MSC,MDC)
          REAL(rkind)                :: SSBRL(MSC,MDC),DSSBRL(MSC,MDC)
          REAL(rkind)                :: SSLIM(MSC,MDC), DSSLIM(MSC,MDC)
-         REAL(rkind)                :: ETOT,SME01,SME10,KME01,KMWAM,KMWAM2,HS,WIND10
+         REAL(rkind)                :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS,WIND10
          REAL(rkind)                :: ETAIL,EFTAIL,EMAX,LIMAC,NEWDAC,MAXDAC,FPM,WINDTH
          REAL(rkind)                :: RATIO,LIMFAC,LIMDAC
 
@@ -41,7 +41,7 @@
          TESTNODE = 339
          TESTNODE = -1
 
-         CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2) 
+         CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2) 
 
          IF (MESIN .GT. 0) THEN
            CALL SET_WIND( IP, WIND10, WINDTH )
@@ -82,7 +82,8 @@
            NEWAC = ACLOC + IMATRA*DT4A/MAX((ONE-DT4A*IMATDA),ONE)
            EFTAIL = ONE / (PTAIL(1)-ONE)
            HS = 4._rkind*SQRT(ETOT)
-           EMAX = 1._rkind/16._rkind * (HMAX(IP))**2 ! HMAX is defined in the breaking routine or has some default value
+           !EMAX = 1._rkind/16._rkind * (HMAX(IP))**2 ! HMAX is defined in the breaking routine or has some default value
+           EMAX = 1._rkind/16._rkind * (1.6*DEP(IP))**2 ! MP : Same as in BREAK_LIMIT
            IF (ETOT .GT. EMAX) THEN
              RATIO  = EMAX/ETOT
              SSBRL  = ACLOC*(RATIO-ONE)/DT4A

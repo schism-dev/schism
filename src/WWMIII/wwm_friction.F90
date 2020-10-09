@@ -50,7 +50,8 @@
             IF ( ABS(CDUM - ADUM) .LT. 1.E-4 ) THEN 
               EXIT 
             ELSE
-              WRITE(DBG%FHNDL,*) ' error in iteration fw: Madsen formulation'
+              !BM comment to prevent very huge fort.30 file ...
+              !WRITE(DBG%FHNDL,*) ' error in iteration fw: Madsen formulation'
             END IF
           END DO
           FW = 1. / (16. * ADUM**2)
@@ -75,20 +76,30 @@
         END DO
       END DO
 
+    END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
 #ifdef SCHISM
-      DO IS=1,MSC
-        DO ID=1,MDC
-          COST = COSTH(ID)
-          SINT = SINTH(ID)
-          SBF(1,IP)=SBF(1,IP)+SINT*(WK(IS,IP)/SPSIG(IS))*SSBF(IS,ID)*DS_INCR(IS)*DDIR
-          SBF(2,IP)=SBF(2,IP)+COST*(WK(IS,IP)/SPSIG(IS))*SSBF(IS,ID)*DS_INCR(IS)*DDIR
-        ENDDO
-      ENDDO
+     SUBROUTINE COMPUTE_SBF(IP,SSBF)
+       USE DATAPOOL
+       IMPLICIT NONE
+       INTEGER                 :: IS, ID
+       INTEGER, INTENT(IN)     :: IP
+       REAL(rkind), INTENT(IN) :: SSBF(MSC,MDC)
+ 
+       ! Initialization
+       SBF(:,IP) = ZERO
+ 
+       ! Loop over frequencies and directions
+       DO IS = 1, MSC
+         DO ID = 1, MDC
+           SBF(1,IP) = SBF(1,IP) + COSTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
+           SBF(2,IP) = SBF(2,IP) + SINTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
+         END DO
+       END DO
+     END SUBROUTINE
 #endif
-#ifdef DEBUG
-      WRITE(DBG%FHNDL,*) 'THE NORMS OF FRICTION', TMP_X, TMP_Y
-#endif
-      END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************

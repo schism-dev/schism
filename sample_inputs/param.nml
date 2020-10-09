@@ -139,6 +139,9 @@
 !       6: no elevation but currents in wwm, wave force in SCHISM;
 !       7: no elevation but currents in wwm, no wave force in SCHISM;
 ! Note that all these parameters must be present in this file (even though not used).
+! If WWM is used and RADFLAG='VOR' in wwminput.nml, some parameters (fwvor_*)
+! are added to take into account (1) or not (0) the different terms in vortex
+! force expression.
 !-----------------------------------------------------------------------
   icou_elfe_wwm = 0 
   nstep_wwm = 1  !call WWM every this many time steps. If /=1, consider using quasi-steady mode in WWM
@@ -149,10 +152,19 @@
   nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
   drampwafo = 1.      !needed if nrampwafo=1; ramp-up period in days
   turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence (default: 0.15 (15%), as proposed by Feddersen, 2012)
-  cur_wwm = 2         ! coupling current in WWM
-                      ! 0: surface layer current
-                      ! 1: depth-integrated current
-                      ! 2: computed according to Kirby and Chen (1989)
+                         ! Vortex Force terms (off/on:0/1)
+  fwvor_advxy_stokes = 1 !  --> Stokes drift advection (xy), Coriolis
+  fwvor_advz_stokes = 1  !  --> Stokes drift advection (z) , Coriolis
+  fwvor_gradpress = 1    !  --> Pressure term
+  fwvor_breaking = 1     !  --> Wave breaking
+  cur_wwm = 2            ! Coupling current in WWM
+                         ! 0: surface layer current
+                         ! 1: depth-integrated current
+                         ! 2: computed according to Kirby and Chen (1989)
+  wafo_obcramp = 0       ! Ramp on wave forces at open boundary (1: on / 0: off)
+                         !  --> this option requires the input file wafo_ramp.gr3
+                         !      which defines the ramp value (between 0 and 1)
+                         !      at nodes over the whole domain
 
 !-----------------------------------------------------------------------
 ! Bed deformation option (0: off; 1: vertical deformation only; 2: 3D bed deformation). 

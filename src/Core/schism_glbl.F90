@@ -86,7 +86,8 @@ module schism_glbl
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
                   &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
-                  &cur_wwm,iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
+                  &cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
@@ -559,10 +560,14 @@ module schism_glbl
 ! WWM
 !#ifdef USE_WWM
   integer,save :: msc2,mdc2
-  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:)
-  real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
-  real,save,allocatable :: out_wwm(:,:), out_wwm_windpar(:,:)
+  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:)
+  real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
+  real(rkind),save,allocatable :: roller_stokes_hvel(:,:,:), roller_stokes_hvel_side(:,:,:)
+  !real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
+  real,save,allocatable :: out_wwm(:,:), out_wwm_rol(:,:), out_wwm_windpar(:,:)
+  real(rkind),save,allocatable :: tanbeta_x(:), tanbeta_y(:) ! MP from KM: bottom slope
   real(rkind),save,allocatable :: curx_wwm(:),cury_wwm(:)  !BM: coupling current
+  real(rkind),save,allocatable :: wafo_opbnd_ramp(:) !BM: ramp on wave forces at open boundary
 !#endif
 
 ! TIMOR
