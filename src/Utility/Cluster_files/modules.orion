@@ -1,3 +1,3 @@
-module load intel openmpi netcdf
+module load intel/2020 impi/2020 netcdf/4.7.2-parallel
 module load cmake
 
