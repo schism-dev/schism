@@ -149,7 +149,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
   real(kind=iwp),save,dimension(3) :: saltveg !salt
   real(kind=iwp),save,dimension(3) :: tinunveg !inundation
-  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg !height
+  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg,critveg,dveg,eveg !height
   real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
@@ -166,7 +166,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save :: airtveg
-  real(kind=iwp),save,dimension(3) :: rdensveg
+  real(kind=iwp),save,dimension(3) :: rdensveg,hcanveg_limit
 
 
   !carbon parameters 

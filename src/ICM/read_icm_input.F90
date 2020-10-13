@@ -177,7 +177,7 @@ subroutine read_icm_param2
 !---------------------------------------------------------------------
   use schism_glbl, only : iwp,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
                    & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e,in_dir,out_dir, &
-                   &len_in_dir,len_out_dir
+                   &len_in_dir,len_out_dir,dpe,ielg
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod
   use misc_modules
@@ -1140,17 +1140,52 @@ subroutine read_icm_param2
       call parallel_abort(errmsg)
     endif !initveg
 
-    !calc canopy height
+    !remove init biomass in deep zone (deep: mht+dp>hcan+1.2, 1.2 comes from Morris, 2013)
+    do j=1,3
+      do i=1,nea
+        rtmp=mhtveg(i)+dpe(i)
+        if(rtmp<0.) then
+          tlfveg(i,j)=0.0
+          tstveg(i,j)=0.0
+          trtveg(i,j)=0.0
+          patchveg(i)=-1
+        endif !total dry land
+        rtmp=mhtveg(i)+dpe(i)-hcanveg_limit(j)-1.2
+        if(rtmp>0.) then
+          tlfveg(i,j)=0.0
+          tstveg(i,j)=0.0
+          trtveg(i,j)=0.0
+          patchveg(i)=-1
+        endif !open water with no survival potential 
+      enddo !i::nea
+    enddo !j::veg species
+
+    !calc canopy height 
     do j=1,3
       do i=1,nea
         !calc canopy height
-        rtmp=(tlfveg(i,j)+tstveg(i,j))/bveg(j)+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
-        if(rtmp<0.) then
-          ztcveg(i,j)=-aveg(j)/(2*bveg(j))
-        else
-          ztcveg(i,j)=-aveg(j)/(2*bveg(j))-sqrt(rtmp)
+        if(tlfveg(i,j)+tstveg(i,j)-critveg<0) then
+          hcanveg(i,j)=dveg(j)*(tlfveg(i,j)+tstveg(i,j))+eveg(j)
+        else !stable marsh with large biomass/production
+          rtmp=(tlfveg(i,j)+tstveg(i,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
+          if(rtmp<0.) then
+            ztcveg(i,j)=-aveg(j)/(200*bveg(j))
+          else 
+            if() then
+
+            else
+              ztcveg(i,j)=-aveg(j)/(200*bveg(j))+sqrt(rtmp)/100
+            endif !location
+
+          endif
+          hcanveg(i,j)=mhtveg(i)+dpe(i)-ztcveg(i,j)
+        endif !above-ground biomass
+
+        if(hcanveg(i,j)<0.) then
+          write(errmsg,*)'illegal veg height:',hcanveg(i,j),mhtveg(i),ztcveg(i,j),ielg(i),j
+          call parallel_abort(errmsg)
         endif
-        hcanveg(i,j)=mhtveg(i)-ztcveg(i,j)
+
       enddo !i::nea
     enddo !j::veg species
 
@@ -1440,6 +1475,9 @@ subroutine read_icm_param
   call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
   call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
   call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
+  call get_param_1D('icm.in','dveg',2,itmp1,dveg,stmp,3)
+  call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)
+  call get_param_1D('icm.in','critveg',2,itmp1,critveg,stmp,3)
   call get_param_1D('icm.in','fdoveg',2,itmp1,fdoveg,stmp,3)
   call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
   call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)
@@ -1467,7 +1505,7 @@ subroutine read_icm_param
   call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
   call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
   call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
-
+  call get_param_1D('icm.in','hcanveg_limit',2,itmp1,hcanveg_limit,stmp,3)
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)

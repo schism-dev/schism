@@ -708,7 +708,7 @@ subroutine landplant(id,hour,it)
 !----------------------------------------------------------------------------
 !calculate marsh growth, biomass, nutient fluxes to sediment when elem is dry
 !----------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg,ielg,pi
+  use schism_glbl, only : iwp,errmsg,ielg,pi,dpe
   use icm_mod
   use icm_sed_mod, only : CNH4,CPIP 
   use schism_glbl, only : airt1,elnode,i34 
@@ -734,7 +734,7 @@ subroutine landplant(id,hour,it)
   do j=1,3
     sdveg=sdveg+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
     if(sdveg>100.0.or.sdveg<=0.) then
-      write(errmsg,*)'plantland: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j)
+      write(errmsg,*)'plantland: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j),ielg(id)
       call parallel_abort(errmsg)
     endif
   enddo !j::veg species 
@@ -751,14 +751,14 @@ subroutine landplant(id,hour,it)
       if(xtveg<=0.0)then
         rtmp=ktg1veg(j)*xtveg*xtveg
         if(rtmp>50.0.or.rtmp<0.)then
-          write(errmsg,*)'plantland: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j
+          write(errmsg,*)'plantland: check veg max growth rate plant (1):',ktg1veg(j),xtveg,rtmp,j,ielg(id)
           call parallel_abort(errmsg)
         endif
         pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
       else
         rtmp=ktg2veg(j)*xtveg*xtveg
         if(rtmp>50.0.or.rtmp<0.)then
-          write(errmsg,*)'plantland: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j
+          write(errmsg,*)'plantland: check veg max growth rate plant (2):',ktg2veg(j),xtveg,rtmp,j,ielg(id)
           call parallel_abort(errmsg)
         endif
         pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
@@ -798,7 +798,7 @@ subroutine landplant(id,hour,it)
 
       if(fiveg(id,j)>1.or.fiveg(id,j)<0.or.fiveg(id,j)/=fiveg(id,j)) then
         write(errmsg,*)'plantland: fiveg(id,j)>1.or.fiveg(id,j)<0:',fiveg(id,j),ikveg,iwcveg, &
-     &iatcnpyveg,hcanveg(id,j)
+     &iatcnpyveg,hcanveg(id,j),ielg(id)
         call parallel_abort(errmsg)
       endif
 
@@ -826,21 +826,21 @@ subroutine landplant(id,hour,it)
     !--------------------------------------------------------------------------------
     rtmp=ktblfveg(j)*(airtveg-trlfveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'landplant: check veg lf dry metabolism:',airtveg,trlfveg(j),ktblfveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg lf dry metabolism:',airtveg,trlfveg(j),ktblfveg(j),rtmp,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     bmlfveg(j)=bmlfrveg(j)*exp(rtmp)
 
     rtmp=ktbstveg(j)*(airtveg-trstveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'landplant: check veg st dry metabolism:',airtveg,trstveg(j),ktbstveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg st dry metabolism:',airtveg,trstveg(j),ktbstveg(j),rtmp,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     bmstveg(j)=bmstrveg(j)*exp(rtmp)
 
     rtmp=ktbrtveg(j)*(airtveg-trrtveg(j))
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'landplant: check veg rt dry metabolism:',airtveg,trrtveg(j),ktbrtveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg rt dry metabolism:',airtveg,trrtveg(j),ktbrtveg(j),rtmp,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     bmrtveg(j)=bmrtrveg(j)*exp(rtmp)
@@ -853,13 +853,13 @@ subroutine landplant(id,hour,it)
     a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
     rtmp=a*dtw
     if(rtmp>50.0.or.rtmp<-50.0) then
-      write(errmsg,*)'landplant: check veg lf dry growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
+      write(errmsg,*)'landplant: check veg lf dry growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     tlfveg(id,j)=tlfveg(id,j)*exp(rtmp)
     !nan check
     if(.not.(tlfveg(id,j)>0.or.tlfveg(id,j)<=0))then
-      write(errmsg,*)'nan found in lfveg:',tlfveg(id,j),ielg(id),j,it
+      write(errmsg,*)'nan found in lfveg:',tlfveg(id,j),ielg(id),j,it,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -869,7 +869,7 @@ subroutine landplant(id,hour,it)
     tstveg(id,j)=(b*dtw+tstveg(id,j))/(1.0+a*dtw)
     !nan check
     if(.not.(tstveg(id,j)>0.or.tstveg(id,j)<=0))then
-      write(errmsg,*)'nan found in stveg:',tstveg(id,j),ielg(id),j,it
+      write(errmsg,*)'nan found in stveg:',tstveg(id,j),ielg(id),j,it,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -879,7 +879,7 @@ subroutine landplant(id,hour,it)
     trtveg(id,j)=(b*dtw+trtveg(id,j))/(1.0+a*dtw)
     !nan check
     if(.not.(trtveg(id,j)>0.or.trtveg(id,j)<=0))then
-      write(errmsg,*)'nan found in rtveg:',trtveg(id,j),ielg(id),j,it
+      write(errmsg,*)'nan found in rtveg:',trtveg(id,j),ielg(id),j,it,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -892,15 +892,18 @@ subroutine landplant(id,hour,it)
 !ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
 !ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
 !--------------------------------------------------------------------------------------
-    rtmp=(tlfveg(id,j)+tstveg(id,j))/bveg(j)+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
+    rtmp=(tlfveg(id,j)+tstveg(id,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
 !error, to add control under excessive biomass
     if(rtmp<0.) then
-      ztcveg(id,j)=-aveg(j)/(2*bveg(j))
-    else
-      ztcveg(id,j)=-aveg(j)/(2*bveg(j))-sqrt(rtmp)
+      ztcveg(id,j)=-aveg(j)/(200*bveg(j))
+    else !left side value for intertidal zones
+      ztcveg(id,j)=-aveg(j)/(200*bveg(j))-sqrt(rtmp)/100
     endif
-    hcanveg(id,j)=mhtveg(id)-ztcveg(id,j)
-
+    hcanveg(id,j)=mhtveg(id)+dpe(id)-ztcveg(id,j)
+    if(hcanveg(id,j)<1.e-8)then
+      write(errmsg,*)'illegal veg height:',hcanveg(id,j),mhtveg(id),ztcveg(id,j),id,j,ielg(id)
+      call parallel_abort(errmsg)
+    endif
 
     !--------------------------------------------------------------------------------
     !veg :: nutrient fluxes to sediment
@@ -912,11 +915,11 @@ subroutine landplant(id,hour,it)
 
     !nan check
     if(.not.(tlfNH4veg(id,j)>0.or.tlfNH4veg(id,j)<=0))then
-      write(errmsg,*)'nan found in tlfNH4veg:',tlfNH4veg(id,j),ielg(id),it,j
+      write(errmsg,*)'nan found in tlfNH4veg:',tlfNH4veg(id,j),ielg(id),it,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     if(.not.(tlfPO4veg(id,j)>0.or.tlfPO4veg(id,j)<=0))then
-      write(errmsg,*)'nan found in tlfPO4veg:',tlfPO4veg(id,j),ielg(id),it,j
+      write(errmsg,*)'nan found in tlfPO4veg:',tlfPO4veg(id,j),ielg(id),it,j,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -927,15 +930,15 @@ subroutine landplant(id,hour,it)
 
     !nan check
     if(.not.(trtpocveg(id,j)>0.or.trtpocveg(id,j)<=0))then
-      write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),it,j
+      write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),it,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     if(.not.(trtponveg(id,j)>0.or.trtponveg(id,j)<=0))then
-      write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),it,j
+      write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),it,j,ielg(id)
       call parallel_abort(errmsg)
     endif
     if(.not.(trtpopveg(id,j)>0.or.trtpopveg(id,j)<=0))then
-      write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),it,j
+      write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),it,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -1067,7 +1070,7 @@ subroutine photosynthesis(id,hour,nv,it)
     do j=1,3
       sdveg=sdveg+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
       if(sdveg>100.0.or.sdveg<=0.) then
-        write(errmsg,*)'photo-veg: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j)
+        write(errmsg,*)'photo-veg: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j),ielg(id)
         call parallel_abort(errmsg)
       endif
     enddo !j::veg species 
@@ -1177,7 +1180,7 @@ subroutine photosynthesis(id,hour,nv,it)
       Chl=PB1(k,1)/CChl1(id)+PB2(k,1)/CChl2(id)+PB3(k,1)/CChl3(id)
       if(Chl<0.0) then
         if(abs(Chl)>1.e-12) then
-         write(errmsg,*)'chl<0.0 :',Chl,PB1(k,1),PB2(k,1),PB3(k,1)
+         write(errmsg,*)'chl<0.0 :',Chl,PB1(k,1),PB2(k,1),PB3(k,1),ielg(id)
          call parallel_abort(errmsg)
         else
           Chl=0.0
@@ -1189,7 +1192,7 @@ subroutine photosynthesis(id,hour,nv,it)
       if(iLight==1) then
         rval=rKeC2*Sal(k)
         if(rval>50.0.or.rKeC2<0.) then
-          write(errmsg,*)'check ICM iLight rKeC2*Sal: ',rKeC2,Sal(k),rval
+          write(errmsg,*)'check ICM iLight rKeC2*Sal:',rKeC2,Sal(k),rval,ielg(id)
           call parallel_abort(errmsg)
         endif
         rKe0=rKeC1*exp(-rval)
@@ -1229,7 +1232,7 @@ subroutine photosynthesis(id,hour,nv,it)
       !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh 
       rKeh=min(rKe*dep(k),20._iwp)
       if(rKeh<0) then
-        write(errmsg,*)'check ICM iLight rKeh:',rKe,dep(k),rKeh,rKeChl,Chl,rKeTSS,TSED(k),iLight
+        write(errmsg,*)'check ICM iLight rKeh:',rKe,dep(k),rKeh,rKeChl,Chl,rKeTSS,TSED(k),iLight,ielg(id),k
         call parallel_abort(errmsg)
       endif
       bLight=sLight*exp(-rKeh)
@@ -1273,7 +1276,7 @@ subroutine photosynthesis(id,hour,nv,it)
         do i=1,3
           rval=rKe*Dopt
           if(rval>50.or.rKe<0) then
-            write(errmsg,*)'check ICM iLight rKe*Dopt: ',rKe,Dopt,rval
+            write(errmsg,*)'check ICM iLight rKe*Dopt:',rKe,Dopt,rval,ielg(id),k
             call parallel_abort(errmsg)
           endif
           rIs(i)=max(rIavg*exp(-rval),rIm(i))
@@ -1287,7 +1290,7 @@ subroutine photosynthesis(id,hour,nv,it)
         if(jLight==1) then !Chapra S.C., where iRad=2, rIa in unit of ly/day
           rval=bLight/rIs(i); rval2=sLight/rIs(i)
           if(abs(rval)>50.0.or.abs(rval2)>50.0) then
-            write(errmsg,*)'check ICM iLight rFI: ',bLight,sLight,rIs(i)
+            write(errmsg,*)'check ICM iLight rFI:',bLight,sLight,rIs(i),ielg(id),k
             call parallel_abort(errmsg)
           endif
           rlFI=2.718*(exp(-rval)-exp(-rval2))/rKeh
@@ -1315,7 +1318,7 @@ subroutine photosynthesis(id,hour,nv,it)
         endif
 
         if(rlFI-1>1.e-12.or.rlFI<0.or.rlFI/=rlFI) then
-          write(errmsg,*)'FI>1.or.FI<0: ',rlFI,bLight,sLight,rKeh,rKe
+          write(errmsg,*)'FI>1.or.FI<0: ',rlFI,bLight,sLight,rKeh,rKe,ielg(id),k
           call parallel_abort(errmsg)
         endif 
         if(iof_icm(48)/=0.and.i==1) rFI1(klev,id)=rlFI
@@ -1425,22 +1428,22 @@ subroutine photosynthesis(id,hour,nv,it)
         if(xtsav<=0.0) then
           rtmp=ktg1sav*xtsav*xtsav
           if(rtmp>50.0.or.rtmp<0.) then
-            write(errmsg,*)'photosynthesis: check max growth rate (1):',ktg1sav,xtsav,rtmp
+            write(errmsg,*)'photosynthesis: check max growth rate (1):',ktg1sav,xtsav,rtmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
           pmaxsav(klev,id)=pmbssav*exp(-rtmp)
         else
           rtmp=ktg2sav*xtsav*xtsav
           if(rtmp>50.0.or.rtmp<0.) then
-            write(errmsg,*)'photosynthesis: check max growth rate(2):',ktg2sav,xtsav,rtmp
+            write(errmsg,*)'photosynthesis: check max growth rate(2):',ktg2sav,xtsav,rtmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
           pmaxsav(klev,id)=pmbssav*exp(-rtmp)
         endif!xtsav
 
         !light on the bottom level of the layer above canopy (iabvcnpysav)
-        if(rKeh0>50.0.or.rKeh0<0.) then
-          write(errmsg,*)'photosynthesis: check light attenuation:',rKeh0
+        if(rKeh0>100.0.or.rKeh0<0.) then
+          write(errmsg,*)'photosynthesis: check light attenuation:',rKeh0,ielg(id),k
           call parallel_abort(errmsg)
         endif
         iabvcnpysav=sLight0*exp(-rKeh0) !account from light at water surface 
@@ -1448,7 +1451,7 @@ subroutine photosynthesis(id,hour,nv,it)
         if (k==kcnpy) then!k from surface downwards, kcnpy is the first, so no need to over init
           rtmp=rKe0*(ztcsav-hdep)
           if(rtmp>50.0.or.rtmp<0.) then
-            write(errmsg,*)'photosynthesis: check max light attenuation on canopy:',rKe0,ztcsav,hdep,rtmp
+            write(errmsg,*)'photosynthesis: check max light attenuation on canopy:',rKe0,ztcsav,hdep,rtmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
           iatcnpysav=iabvcnpysav*exp(-rtmp)
@@ -1473,7 +1476,7 @@ subroutine photosynthesis(id,hour,nv,it)
           endif !kcnpy
 
           if(tmp>50.0.or.tmp<=0.) then
-            write(errmsg,*)'photosynthesis: check light attenuation on leaf:',k,rKeh1,rKeh2,rkshsav,zlfsav(k+1),zstsav(k+1),lfsav(klev,id),stsav(klev,id),tmp
+            write(errmsg,*)'photosynthesis: check light attenuation on leaf:',k,rKeh1,rKeh2,rkshsav,zlfsav(k+1),zstsav(k+1),lfsav(klev,id),stsav(klev,id),tmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
 
@@ -1492,7 +1495,7 @@ subroutine photosynthesis(id,hour,nv,it)
 
           if(fisav(klev,id)>1.or.fisav(klev,id)<0.or.fisav(klev,id)/=fisav(klev,id)) then
             write(errmsg,*)'photosynthesis: fisav(klev,id)>1.or.fisav(klev,id)<0:',fisav(klev,id),rKe0,rKe,iksav,iwcsav, &
-     &iatcnpysav,ztcsav,tdep,hcansav(id)
+     &iatcnpysav,ztcsav,tdep,hcansav(id),ielg(id),k
             call parallel_abort(errmsg)
           endif
         else
@@ -1538,14 +1541,14 @@ subroutine photosynthesis(id,hour,nv,it)
         if(xtveg<=0.0)then
           rtmp=ktg1veg(j)*xtveg*xtveg
           if(rtmp>50.0.or.rtmp<0.)then
-            write(errmsg,*)'photosynthesis: check veg max growth rate (1):',ktg1veg(j),xtveg,rtmp,j
+            write(errmsg,*)'photosynthesis: check veg max growth rate (1):',ktg1veg(j),xtveg,rtmp,j,ielg(id)
             call parallel_abort(errmsg)
           endif 
           pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
         else
           rtmp=ktg2veg(j)*xtveg*xtveg
           if(rtmp>50.0.or.rtmp<0.)then
-            write(errmsg,*)'photosynthesis: check veg max growth rate (2):',ktg2veg(j),xtveg,rtmp,j
+            write(errmsg,*)'photosynthesis: check veg max growth rate (2):',ktg2veg(j),xtveg,rtmp,j,ielg(id)
             call parallel_abort(errmsg)
           endif
           pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
@@ -1581,7 +1584,7 @@ subroutine photosynthesis(id,hour,nv,it)
 
         tmp=sdveg+rKehblveg(j)
         if(tmp>100.0.or.tmp<=0.) then
-          write(errmsg,*)'photo-veg: check light attenuation on leaf:',rKehblveg(j),j,tmp,tlfveg(id,j),tstveg(id,j)
+          write(errmsg,*)'photo-veg: check light attenuation on leaf:',rKehblveg(j),j,tmp,tlfveg(id,j),tstveg(id,j),ielg(id)
           call parallel_abort(errmsg)
         endif
 
@@ -1592,7 +1595,7 @@ subroutine photosynthesis(id,hour,nv,it)
 
         if(fiveg(id,j)>1.or.fiveg(id,j)<0.or.fiveg(id,j)/=fiveg(id,j)) then
           write(errmsg,*)'photo_veg: fiveg(id,j)>1.or.fiveg(id,j)<0:',fiveg(id,j),ikveg,iwcveg, &
-        &iatcnpyveg,tdep,hcanveg(id,j)
+        &iatcnpyveg,tdep,hcanveg(id,j),ielg(id)
           call parallel_abort(errmsg)
         endif
 
@@ -1641,7 +1644,7 @@ subroutine calkwq(id,nv,ure,it)
 !calculate the mass balance equation in water column
 !----------------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,iof_icm
+  use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,iof_icm,dpe
   use schism_msgp, only : myrank, parallel_abort
   use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav,frnveg,frpveg
   implicit none
@@ -1908,21 +1911,21 @@ subroutine calkwq(id,nv,ure,it)
       !----------metabolism rate----------
       rtmp=ktblfveg(j)*(mtemp-trlfveg(j))
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j
+        write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
       bmlfveg(j)=bmlfrveg(j)*exp(rtmp)
 
       rtmp=ktbstveg(j)*(mtemp-trstveg(j)) 
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check veg st metabolism:',mtemp,trstveg(j),ktbstveg(j),rtmp,j
+        write(errmsg,*)'calkwq: check veg st metabolism:',mtemp,trstveg(j),ktbstveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
       bmstveg(j)=bmstrveg(j)*exp(rtmp)
 
       rtmp=ktbrtveg(j)*(mtemp-trrtveg(j))
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check veg rt metabolism:',mtemp,trrtveg(j),ktbrtveg(j),rtmp,j
+        write(errmsg,*)'calkwq: check veg rt metabolism:',mtemp,trrtveg(j),ktbrtveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
       bmrtveg(j)=bmrtrveg(j)*exp(rtmp)
@@ -1932,13 +1935,13 @@ subroutine calkwq(id,nv,ure,it)
       a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
       rtmp=a*dtw
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j
+        write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
       tlfveg(id,j)=tlfveg(id,j)*exp(rtmp) 
       !nan check
       if(.not.(tlfveg(id,j)>0.or.tlfveg(id,j)<=0))then
-        write(errmsg,*)'nan found in lfveg:',tlfveg(id,j),ielg(id),j,it
+        write(errmsg,*)'nan found in lfveg:',tlfveg(id,j),ielg(id),j,it,ielg(id)
         call parallel_abort(errmsg)
       endif
 
@@ -1948,7 +1951,7 @@ subroutine calkwq(id,nv,ure,it)
       tstveg(id,j)=(b*dtw+tstveg(id,j))/(1.0+a*dtw)
       !nan check
       if(.not.(tstveg(id,j)>0.or.tstveg(id,j)<=0))then
-        write(errmsg,*)'nan found in stveg:',tstveg(id,j),ielg(id),j,it
+        write(errmsg,*)'nan found in stveg:',tstveg(id,j),ielg(id),j,it,ielg(id)
         call parallel_abort(errmsg)
       endif
 
@@ -1958,7 +1961,7 @@ subroutine calkwq(id,nv,ure,it)
       trtveg(id,j)=(b*dtw+trtveg(id,j))/(1.0+a*dtw)
       !nan check
       if(.not.(trtveg(id,j)>0.or.trtveg(id,j)<=0))then
-        write(errmsg,*)'nan found in rtveg:',trtveg(id,j),ielg(id),j,it
+        write(errmsg,*)'nan found in rtveg:',trtveg(id,j),ielg(id),j,it,ielg(id)
         call parallel_abort(errmsg)
       endif
 
@@ -2024,21 +2027,21 @@ subroutine calkwq(id,nv,ure,it)
       !no relation with light, alweys respire
       rtmp=ktblfsav*(Temp(k)-trlfsav)
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check sav lf metabolism:',Temp(k),trlfsav,ktblfsav,rtmp
+        write(errmsg,*)'calkwq: check sav lf metabolism:',Temp(k),trlfsav,ktblfsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
       bmlfsav(k)=bmlfrsav*exp(rtmp) !1/day
 
       rtmp=ktbstsav*(Temp(k)-trstsav)
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check sav st metabolism:',Temp(k),trstsav,ktbstsav,rtmp
+        write(errmsg,*)'calkwq: check sav st metabolism:',Temp(k),trstsav,ktbstsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
       bmstsav(k)=bmstrsav*exp(rtmp) !1/day
 
       rtmp=ktbrtsav*(Temp(k)-trrtsav)
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check sav rt metabolism:',Temp(k),trrtsav,ktbrtsav,rtmp
+        write(errmsg,*)'calkwq: check sav rt metabolism:',Temp(k),trrtsav,ktbrtsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
       bmrtsav(k)=bmrtrsav*exp(rtmp) !1/day
@@ -2049,14 +2052,14 @@ subroutine calkwq(id,nv,ure,it)
       a=plfsav(klev,id)*(1-famsav)*fplfsav-bmlfsav(k) !1/day
       rtmp=a*dtw
       if(rtmp>50.0.or.rtmp<-50.0) then
-        write(errmsg,*)'calkwq: check sav lf growth:',a,plfsav(klev,id),bmlfsav(k),famsav,fplfsav,rtmp
+        write(errmsg,*)'calkwq: check sav lf growth:',a,plfsav(klev,id),bmlfsav(k),famsav,fplfsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
       lfsav(klev,id)=lfsav(klev,id)*exp(rtmp) !lfsav>0 with seeds, =0 for no seeds with rtmp/=0
 
       !nan check
       if(.not.(lfsav(klev,id)>0.or.lfsav(klev,id)<=0))then
-        write(errmsg,*)'nan found in lfsav:',lfsav(klev,id),ielg(id),k,it
+        write(errmsg,*)'nan found in lfsav:',lfsav(klev,id),ielg(id),k,it,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
@@ -2077,7 +2080,7 @@ subroutine calkwq(id,nv,ure,it)
 
       !nan check
       if(.not.(stsav(klev,id)>0.or.stsav(klev,id)<=0))then
-        write(errmsg,*)'nan found in stsav:',stsav(klev,id),ielg(id),k,it
+        write(errmsg,*)'nan found in stsav:',stsav(klev,id),ielg(id),k,it,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
@@ -2089,7 +2092,7 @@ subroutine calkwq(id,nv,ure,it)
 
       !nan check
       if(.not.(rtsav(klev,id)>0.or.rtsav(klev,id)<=0))then
-        write(errmsg,*)'nan found in rtsav:',rtsav(klev,id),ielg(id),k,it
+        write(errmsg,*)'nan found in rtsav:',rtsav(klev,id),ielg(id),k,it,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
@@ -2135,7 +2138,7 @@ subroutine calkwq(id,nv,ure,it)
         if(xT>0.0) then
           rval=rKTGZ1(i)*xT*xT
           if(rval>50.0.or.rKTGZ1(i)<0.) then
-            write(errmsg,*)'check ICM ZB growth rKTGZ1, xT: ',xT,rKTGZ1,rval
+            write(errmsg,*)'check ICM ZB growth rKTGZ1, xT: ',xT,rKTGZ1,rval,ielg(id),k
             call parallel_abort(errmsg)
           endif
           ZBG(:,i)=ZBG(:,i)*exp(-rval)/sum1
@@ -2143,7 +2146,7 @@ subroutine calkwq(id,nv,ure,it)
         else
           rval=rKTGZ2(i)*xT*xT
           if(rval>50.0.or.rKTGZ2(i)<0.) then
-            write(errmsg,*)'check ICM ZB growth rKTGZ2, xT: ',xT,rKTGZ2,rval
+            write(errmsg,*)'check ICM ZB growth rKTGZ2, xT: ',xT,rKTGZ2,rval,ielg(id),k
             call parallel_abort(errmsg)
           endif
           ZBG(:,i)=ZBG(:,i)*exp(-rval)/sum1
@@ -2153,7 +2156,7 @@ subroutine calkwq(id,nv,ure,it)
         
         rval=rKTBZ(i)*(Temp(k)-TBZ(i))
         if(abs(rval)>50.0.or.rKTBZ(i)<-50.0) then
-          write(errmsg,*)'check ICM ZB rKTBZ:  ',rKTBZ(i),Temp(k),TBZ(i),rval
+          write(errmsg,*)'check ICM ZB rKTBZ: ',rKTBZ(i),Temp(k),TBZ(i),rval,ielg(id),k
           call parallel_abort(errmsg)
         endif
         BMZ(i)=BMZR(i)*exp(rval) !metabolism
@@ -2187,7 +2190,7 @@ subroutine calkwq(id,nv,ure,it)
     do i=1,3
       rval=rKTBP(i)*(Temp(k)-TBP(i))
       if(abs(rval)>50.0.or.rKTBP(i)<-50.0) then
-        write(errmsg,*)'check ICM PB rKTBP:  ',rKTBP(i),Temp(k),TBP(i),rval
+        write(errmsg,*)'check ICM PB rKTBP: ',rKTBP(i),Temp(k),TBP(i),rval,ielg(id),k
         call parallel_abort(errmsg)
       endif
       BMP(i)=BMPR(i)*exp(rval)
@@ -2269,7 +2272,7 @@ subroutine calkwq(id,nv,ure,it)
     endif
     rval=rKTHDR*(Temp(k)-TRHDR); rval2=rKTMNL*(Temp(k)-TRMNL)
     if(abs(rval)>50.0.or.abs(rval2)>50.0) then
-      write(errmsg,*)'check ICM rKTHDR rKTMNL:',rKTHDR,rKTMNL,Temp(k),TRHDR,TRMNL,rval,rval2
+      write(errmsg,*)'check ICM rKTHDR rKTMNL:',rKTHDR,rKTMNL,Temp(k),TRHDR,TRMNL,rval,rval2,ielg(id),k
       call parallel_abort(errmsg)
     endif
     rKTPOM=exp(rval)
@@ -2573,7 +2576,7 @@ subroutine calkwq(id,nv,ure,it)
     if(xT>0.0) then
       rval=rKNit1*xT*xT;
       if(rval>50.0.or.rval<0.0) then
-        write(errmsg,*)'check ICM rKNit1 :',rKNit1,xT,Temp(k),TNit,rval
+        write(errmsg,*)'check ICM rKNit1 :',rKNit1,xT,Temp(k),TNit,rval,ielg(id),k
         call parallel_abort(errmsg)
       endif
       xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
@@ -2581,7 +2584,7 @@ subroutine calkwq(id,nv,ure,it)
     else
       rval=rKNit2*xT*xT;
       if(rval>50.0.or.rval<0.) then
-        write(errmsg,*)'check ICM rKNit2 :',rKNit2,xT,Temp(k),TNit,rval
+        write(errmsg,*)'check ICM rKNit2: ',rKNit2,xT,Temp(k),TNit,rval,ielg(id),k
         call parallel_abort(errmsg)
       endif
       xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
@@ -2612,12 +2615,12 @@ subroutine calkwq(id,nv,ure,it)
       fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*khnssav/khnwsav+1.e-8)
 
       if(nprsav<0) then
-        write(errmsg,*)'npr<0.0 :',id,NH4(k,1),khnprsav,NO3(k,1)
+        write(errmsg,*)'npr<0.0 :',id,NH4(k,1),khnprsav,NO3(k,1),ielg(id),k
         call parallel_abort(errmsg)
       endif !nprsav
 
       if(fnsedsav<=0) then
-        write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnssav,khnwsav
+        write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnssav,khnwsav,ielg(id),k
         call parallel_abort(errmsg)
       endif !fnsedsav
 
@@ -2654,12 +2657,12 @@ subroutine calkwq(id,nv,ure,it)
         fnsedveg(j)=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*khnsveg(j)/khnwveg(j)+1.e-8)
 
         if(nprveg(j)<0) then
-          write(errmsg,*)'npr<0.0 :',id,NH4(k,1),khnprveg(j),NO3(k,1),j
+          write(errmsg,*)'npr<0.0: ',id,NH4(k,1),khnprveg(j),NO3(k,1),j,ielg(id),k
           call parallel_abort(errmsg)
         endif !nprveg(j)
        
         if(fnsedveg(j)<=0) then
-          write(errmsg,*)'fnsedveg<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnsveg(j),khnwveg(j),j
+          write(errmsg,*)'fnsedveg<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnsveg(j),khnwveg(j),j,ielg(id),k
           call parallel_abort(errmsg)
         endif !fnsedveg(j)
 
@@ -2879,7 +2882,7 @@ subroutine calkwq(id,nv,ure,it)
       fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*khpssav/khpwsav+1.e-8)
 
       if(fpsedsav<=0.) then
-        write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),khpssav,khpwsav
+        write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),khpssav,khpwsav,ielg(id),k
         call parallel_abort(errmsg)
       endif !fpsedsav
 
@@ -2912,7 +2915,7 @@ subroutine calkwq(id,nv,ure,it)
         fpsedveg(j)=CPIP(id)/(CPIP(id)+PO4t(k,1)*khpsveg(j)/khpwveg(j)+1.e-8)
 
         if(fpsedveg(j)<=0) then
-          write(errmsg,*)'fpsedveg<0.0:',id,PO4t(k,1),CPIP(id),khpsveg(j),khpwveg(j),j
+          write(errmsg,*)'fpsedveg<0.0:',id,PO4t(k,1),CPIP(id),khpsveg(j),khpwveg(j),j,ielg(id),k
           call parallel_abort(errmsg)
         endif !fpsedveg(j)
 
@@ -2939,7 +2942,7 @@ subroutine calkwq(id,nv,ure,it)
     !SU
     rval=rKTSUA*(Temp(k)-TRSUA)
     if(abs(rval)>50.0) then
-      write(errmsg,*)'check ICM rKTSUA:',rKTSUA,Temp(k),TRSUA,rval
+      write(errmsg,*)'check ICM rKTSUA:',rKTSUA,Temp(k),TRSUA,rval,ielg(id),k
       call parallel_abort(errmsg)
     endif
     rKSUA=rKSU*exp(rval)
@@ -2990,7 +2993,7 @@ subroutine calkwq(id,nv,ure,it)
     !COD
     rval=rKTCOD*(Temp(k)-TRCOD)
     if(abs(rval)>50.0) then
-      write(errmsg,*)'check ICM rKTCOD:',rKTCOD,Temp(k),TRCOD,rval
+      write(errmsg,*)'check ICM rKTCOD:',rKTCOD,Temp(k),TRCOD,rval,ielg(id),k
       call parallel_abort(errmsg)
     endif
     rKCOD=(DOO(k,1)/(rKHCOD+DOO(k,1)))*rKCD*exp(rval)
@@ -3155,7 +3158,7 @@ subroutine calkwq(id,nv,ure,it)
         if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
         pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+Sal(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
         if(abs(pK0)>50.0) then
-          write(errmsg,*)'check ICM pH model pK0:',pK0,T,Sal(k)
+          write(errmsg,*)'check ICM pH model pK0:',pK0,T,Sal(k),ielg(id),k
           call parallel_abort(errmsg)
         endif
         CO2sat=exp(pK0)*4.8 !Henry's law, assuming CO2atm=400 ppm , 400d-6*12.011d3=4.8 
@@ -3420,19 +3423,27 @@ subroutine calkwq(id,nv,ure,it)
 !ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
 !ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
 !--------------------------------------------------------------------------------------
-      rtmp=(tlfveg(id,j)+tstveg(id,j))/bveg(j)+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
+      rtmp=(tlfveg(id,j)+tstveg(id,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
 !error, to add control under excessive biomass
       if(rtmp<0.) then
-        ztcveg(id,j)=-aveg(j)/(2*bveg(j))  
+        ztcveg(id,j)=-aveg(j)/(200*bveg(j))  
       else
-        ztcveg(id,j)=-aveg(j)/(2*bveg(j))-sqrt(rtmp)
+        ztcveg(id,j)=-aveg(j)/(200*bveg(j))-sqrt(rtmp)/100
       endif 
-      hcanveg(id,j)=mhtveg(id)-ztcveg(id,j)
+      hcanveg(id,j)=min(hcanveg_limit(j),mhtveg(id)+dpe(id)-ztcveg(id,j))
+      if(tlfveg(id,j)+tstveg(id,j)<1.e-5) then
+        hcanveg(id,j)=0.0
+        !patchveg(id)=-1
+      endif
+      if(hcanveg(id,j)<1.e-8)then
+        write(errmsg,*)'illegal veg height:',hcanveg(id,j),mhtveg(id),ztcveg(id,j),j,ielg(id)
+        call parallel_abort(errmsg)
+      endif
 
-      !seeds
-      tlfveg(id,j)=max(tlfveg(id,j),1.e-5_iwp)
-      tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
-      trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
+      !!seeds
+      !tlfveg(id,j)=max(tlfveg(id,j),1.e-5_iwp)
+      !tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
+      !trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
      
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=sum(lfNH4veg(1:nv,j))
@@ -3446,19 +3457,19 @@ subroutine calkwq(id,nv,ure,it)
 
       !nan check
       if(.not.(trtpocveg(id,j)>0.or.trtpocveg(id,j)<=0))then
-        write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),k,it,j
+        write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),it,j
         call parallel_abort(errmsg)
       endif
       if(.not.(trtponveg(id,j)>0.or.trtponveg(id,j)<=0))then
-        write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),k,it,j
+        write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),it,j
         call parallel_abort(errmsg)
       endif
       if(.not.(trtpopveg(id,j)>0.or.trtpopveg(id,j)<=0))then
-        write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),k,it,j
+        write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),it,j
         call parallel_abort(errmsg)
       endif
       if(.not.(trtdoveg(id,j)>0.or.trtdoveg(id,j)<=0))then
-        write(errmsg,*)'nan found in trtdoveg:',trtdoveg(id,j),ielg(id),k,it,j
+        write(errmsg,*)'nan found in trtdoveg:',trtdoveg(id,j),ielg(id),it,j
         call parallel_abort(errmsg)
       endif
 
