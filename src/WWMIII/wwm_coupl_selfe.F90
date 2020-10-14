@@ -526,6 +526,10 @@
         REAL(rkind) :: swild_2D(NVRT), swild_3D(NVRT)
 
 
+        ! Apply lpp_filter
+        IF (LPP_FILT_FLAG) CALL LPP_FILT(SBR(1,:))  
+		IF (LPP_FILT_FLAG) CALL LPP_FILT(SBR(2,:))
+
         ! Compute sink of momentum due to wave breaking 
         DO IS = 1, ns
           ! Check IF dry segment or open bnd segment

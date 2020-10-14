@@ -181,7 +181,7 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &rho0,shw,isav,rsav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex
 
@@ -454,7 +454,7 @@
       iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
       fwvor_advxy_stokes=0; fwvor_advz_stokes=0; fwvor_gradpress=0; fwvor_breaking=0; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; rsav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -1454,12 +1454,21 @@
 
 !     SAV
 !      call get_param('param.in','isav',1,isav,tmp,stringvalue)
-      if(isav==1) then
+      !if(isav==1) then
 !        call get_param('param.in','sav_cd',2,itmp,sav_cd,stringvalue)
-        if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
-      else if(isav/=0) then
-        write(errmsg,*)'INIT: illegal isav',isav
-        call parallel_abort(errmsg)
+        !if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
+      !else if(isav/=0) then
+        !write(errmsg,*)'INIT: illegal isav',isav
+        !call parallel_abort(errmsg)
+      !endif
+
+      if(isav/=0.and.isav/=1) then !LLa
+       write(errmsg,*)'INIT: illegal isav',isav
+       call parallel_abort(errmsg)
+      endif
+      if(rsav/=0.and.rsav/=1) then !LLa	
+       write(errmsg,*)'INIT: illegal rsav',rsav
+       call parallel_abort(errmsg)
       endif
 
 !     Ice
@@ -1707,7 +1716,7 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),stat=istat)
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -3579,59 +3588,67 @@
       sav_h=0.d0 !veg height; not used at 2D sides
       sav_nv=0.d0 !Nv: # of stems per m^2
       sav_di=0.d0 !D [m]
-      if(isav==1) then
+      sav_cd=0.d0 !Cdv : drag coefficient
+      if(isav==1.or.rsav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
         !\lambda=D*Nv [1/m]
         open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
         open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
         !SAV height [m]
         open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+        !Drag coefficient
+        open(33,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         read(31,*); read(31,*)k,m
         read(32,*); read(32,*)i,j
+		read(33,*); read(33,*)l,mm
         if(itmp1/=ne_global.or.itmp2/=np_global.or.i/=ne_global.or.j/=np_global.or. &
-     &k/=ne_global.or.m/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+     &k/=ne_global.or.m/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
 !'
         do i=1,np_global
           read(10,*)j,xtmp,ytmp,tmp
           read(31,*)j,xtmp,ytmp,tmp1
           read(32,*)j,xtmp,ytmp,tmp2
-          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0) then
-            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2
+          read(33,*)j,xtmp,ytmp,tmp3
+          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0.or.tmp3<0) then
+            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2,tmp3
             call parallel_abort(errmsg)
           endif
           !Make D, Nv and h consistent at no SAV places
-          if(tmp*tmp1*tmp2==0.d0) then
-            tmp=0.d0; tmp1=0.d0; tmp2=0.d0
+          if(tmp*tmp1*tmp2*tmp3==0.d0) then
+            tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
           endif
          
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=tmp*tmp1*sav_cd/2.d0
+            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
             sav_nv(nd)=tmp1
             sav_h(nd)=tmp2
             sav_di(nd)=tmp
+            sav_cd(nd)=tmp3
           endif
         enddo !i
         close(10)
         close(31)
         close(32)
+        close(33)
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1
+        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1; sav_cd0=tmp3
         !Reset
-        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
+        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
             sav_di(elnode(1:i34(i),i))=sav_di0 
             sav_h(elnode(1:i34(i),i))=sav_h0 
             sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd/2.d0
+            sav_cd(elnode(1:i34(i),i))=sav_cd0
+            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
           endif
         enddo !i
 #endif
-      endif !isav=1
+      endif !isav=1 or rsav = 1
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00

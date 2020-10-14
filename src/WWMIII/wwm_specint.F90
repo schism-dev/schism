@@ -61,7 +61,7 @@
                  CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBR,  NDYNITER_SBR  , ACLOC, NIT_SBR, 5) ! Sbr
                  CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBF,  NDYNITER_SBF  , ACLOC, NIT_SBF, 6) ! Sbf
                ELSE IF (SMETHOD == 6) THEN
-                  IF ((MESBR .GT. 0 .OR. MESBF .GT. 0) .AND. ISHALLOW(IP).EQ. 1) CALL INT_SHALLOW_SOURCETERMS(IP,DT4S,ACLOC)
+                  IF ((MESBR .GT. 0 .OR. MESBF .GT. 0 .OR. MEVEG .GT. 0) .AND. ISHALLOW(IP).EQ. 1) CALL INT_SHALLOW_SOURCETERMS(IP,DT4S,ACLOC)
                   IF (LSOURCESWAM) THEN
                     CALL SOURCE_INT_EXP_WAM(IP, ACLOC)
                   ELSE
@@ -618,7 +618,9 @@
          REAL(rkind) :: HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2, SUMACLOC
          REAL(rkind) :: CFL_LOC, DT_LOC, NEWDAC
          REAL(rkind) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
-         REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC), SSBF(MSC,MDC), DSSBF(MSC,MDC)
+         REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC)
+         REAL(rkind) :: SSBF(MSC,MDC), DSSBF(MSC,MDC)
+         REAL(rkind) :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)	
 
          ! Depth-induced breaking
          IF (MESBR .EQ. 1) THEN
@@ -717,6 +719,39 @@
            ! Compute SBF for SCHISM
            CALL COMPUTE_SBF(IP,SSBF)
          END IF
+
+         ! Dissipation by vegetation !LLa
+         IF (MEVEG .GE. 1) THEN
+           ! Initialization
+           IMATRA = ZERO; IMATDA = ZERO
+           CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+           CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
+
+           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
+           CFL_LOC = 0.9D0; DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           IF (DT_LOC > DT) THEN
+             NB_SUBITE = 1                  ! we keep the time step in use
+             DT_LOC    = DT     
+           ELSE
+             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
+             DT_LOC    = DT/NB_SUBITE
+           END IF
+
+           ! Integration with sub-cycles
+           DO TI = 1, NB_SUBITE
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+             CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
+             DO IS = 1, MSC
+               DO ID = 1, MDC
+                 NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                 ! Updating the wave action spectrum
+                 ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+               END DO
+             END DO
+           END DO
+         END IF
+
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *

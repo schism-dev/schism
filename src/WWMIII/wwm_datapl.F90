@@ -903,6 +903,8 @@
          LOGICAL                          :: LMONO_OUT = .FALSE.
 
          CHARACTER(LEN=3)                 :: RADFLAG  = 'LON'
+         LOGICAL                          :: LPP_FILT_FLAG = .FALSE.
+         REAL(rkind)                      :: LPP_FRAC = 0.50
 
          INTEGER                          :: ICPLT = 1
          INTEGER                          :: NLVT

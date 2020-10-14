@@ -597,14 +597,16 @@
 
 !----------------------------------------------------------------------
 ! Vegetation model
-! If isav=1, need 3 extra inputs: (1) sav_D.gr3 (depth is stem diameter in meters);
+! If isav=1, need 4 extra inputs: (1) sav_D.gr3 (depth is stem diameter in meters);
 ! (2) sav_N.gr3 (depth is # of stems per m^2);
-! (3) sav_h.gr3 (height of canopy in meters). 
+! (3) sav_h.gr3 (height of canopy in meters);
+! (4) sav_cd.gr3 (drag coefficient).									
 ! If one of these depths=0 at a node, the code will set all to 0. 
 ! If USE_MARSH is on and isav=1, all .gr3 must have constant depths!
 !----------------------------------------------------------------------
   isav = 0 !on/off flag
-  sav_cd = 1.13 !only needed if isav=1. Drag coefficient
+  rsav = 0 !on/off flag - Wave dissipation by vegetation (MEVEG = 1 in wwminput.nml)
+! rsav = 1 is required when MEVEG = 1 as sav_*.gr3 inputs are used in the formulation of wave diss. by veg.
 
 !----------------------------------------------------------------------
 ! Coupling step with ICE module.

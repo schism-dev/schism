@@ -30,6 +30,9 @@
  LTIMOR         = F                  ! TIMOR (set as F)
  LSHYFEM        = F                  ! SHYFEM (set as F)
  RADFLAG        = 'LON'              ! LON: Longuet-Higgin; VOR: vortex formulation
+ LPP_FILT_FLAG = F                   ! Filter option applied to the non-conservative terms due to depth-induced breaking in vortex formulation (RADFLAG = VOR). At each node, spatial averaging is made 
+                                     ! within a circle whose the radius corresponds to a fraction of the peak wave length (LPP_FRAC).    
+ LPP_FRAC =  0.5                     ! Fraction of peak wave length considered in LPP_FILT_FLAG
  LETOT          = F                  ! Option to compute the wave induced radiation stress. If .T. the radiation stress is based on the integrated wave spectrum
                                      ! e.g. Etot = Int,0,inf;Int,0,2*pi[N(sigma,theta)]dsigma,dtheta. If .F. the radiation stress is estimated as given in Roland et al. (2008) based
                                      ! on the directional spectra itself. It is always desirable to use .F., since otherwise the spectral informations are truncated and therefore
