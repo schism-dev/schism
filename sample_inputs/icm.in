@@ -467,13 +467,11 @@ iMortveg= 0 !1: ture on die-off term for veg !error, to add
 !light & height parameters
 alphaveg= 0.006  0.006  0.006    
 rkshveg=  0.045  0.045  0.045  !light attenuation from veg absorption
-aveg=     155    155    155
-bveg=     -1.855 -1.855 -1.855
-cveg=     -1364  -1364  -1364
+aveg=     -0.001 -0.001 -0.001 
+bveg=     1.0    1.0    1.0  
 dveg=     0.0036 0.0036 0.0036     
 eveg=     0.054  0.054  0.054
-critveg=  200    200    200
-hcanveg_limit=2    2    2
+critveg=  250    250    250
 
 !salt parameter
 saltveg=  35     15     0

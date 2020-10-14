@@ -883,25 +883,14 @@ subroutine landplant(id,hour,it)
       call parallel_abort(errmsg)
     endif
 
-
-    !height function (Morris, 2002)
-!--------------------------------------------------------------------------------------       
-!solve formula of (lf+st)=a*ztc+b*ztc^2+c, where ztc=mht-hcan
-!ztc=-a/2b-[(lf+st)/b+a^2/4b^4-c/b]^0.5    
-!requires check when read in a,b,c (a>0,b<0; -a/2b~[40,55]
-!ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
-!ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
-!--------------------------------------------------------------------------------------
-    rtmp=(tlfveg(id,j)+tstveg(id,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
-!error, to add control under excessive biomass
-    if(rtmp<0.) then
-      ztcveg(id,j)=-aveg(j)/(200*bveg(j))
-    else !left side value for intertidal zones
-      ztcveg(id,j)=-aveg(j)/(200*bveg(j))-sqrt(rtmp)/100
-    endif
-    hcanveg(id,j)=mhtveg(id)+dpe(id)-ztcveg(id,j)
+    !calc canopy height
+    if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
+      hcanveg(id,j)=dveg(j)*(tlfveg(i,j)+tstveg(i,j))+eveg(j)
+    else
+      hcanveg(id,j)=aveg(j)*(tlfveg(i,j)+tstveg(i,j))+bveg(j)
+    endif !
     if(hcanveg(id,j)<1.e-8)then
-      write(errmsg,*)'illegal veg height:',hcanveg(id,j),mhtveg(id),ztcveg(id,j),id,j,ielg(id)
+      write(errmsg,*)'illegal veg height:',hcanveg(id,j),j,ielg(id)
       call parallel_abort(errmsg)
     endif
 
@@ -3415,35 +3404,21 @@ subroutine calkwq(id,nv,ure,it)
   !ncai_veg::height+density + nutrient fluxes
   if (iveg_icm==1.and.patchveg(id)==1) then
     do j=1,3
-      !height function (Morris, 2002)
-!--------------------------------------------------------------------------------------       
-!solve formula of (lf+st)=a*ztc+b*ztc^2+c, where ztc=mht-hcan
-!ztc=-a/2b-[(lf+st)/b+a^2/4b^4-c/b]^0.5    
-!requires check when read in a,b,c (a>0,b<0,c<0; -a/2b~[40,55]
-!ref: a=155，b=-1.855, c=-1364 (Morris, 2002)
-!ref: a=14.8, b=-0.157, c=598 (Morris, 2013) 
-!--------------------------------------------------------------------------------------
-      rtmp=(tlfveg(id,j)+tstveg(id,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
-!error, to add control under excessive biomass
-      if(rtmp<0.) then
-        ztcveg(id,j)=-aveg(j)/(200*bveg(j))  
+      !calc canopy height
+      if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
+        hcanveg(id,j)=dveg(j)*(tlfveg(i,j)+tstveg(i,j))+eveg(j)
       else
-        ztcveg(id,j)=-aveg(j)/(200*bveg(j))-sqrt(rtmp)/100
-      endif 
-      hcanveg(id,j)=min(hcanveg_limit(j),mhtveg(id)+dpe(id)-ztcveg(id,j))
-      if(tlfveg(id,j)+tstveg(id,j)<1.e-5) then
-        hcanveg(id,j)=0.0
-        !patchveg(id)=-1
-      endif
+        hcanveg(id,j)=aveg(j)*(tlfveg(i,j)+tstveg(i,j))+bveg(j)
+      endif !
       if(hcanveg(id,j)<1.e-8)then
-        write(errmsg,*)'illegal veg height:',hcanveg(id,j),mhtveg(id),ztcveg(id,j),j,ielg(id)
+        write(errmsg,*)'illegal veg height:',hcanveg(id,j),j,ielg(id)
         call parallel_abort(errmsg)
       endif
 
-      !!seeds
-      !tlfveg(id,j)=max(tlfveg(id,j),1.e-5_iwp)
-      !tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
-      !trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
+      !seeds
+      tlfveg(id,j)=max(tlfveg(id,j),1.e-5_iwp)
+      tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
+      trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
      
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=sum(lfNH4veg(1:nv,j))

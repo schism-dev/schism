@@ -72,7 +72,7 @@ module icm_mod
 
   !ncai_veg
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
-  real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg,ztcveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg !,ztcveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
@@ -149,8 +149,8 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
   real(kind=iwp),save,dimension(3) :: saltveg !salt
   real(kind=iwp),save,dimension(3) :: tinunveg !inundation
-  real(kind=iwp),save,dimension(3) :: aveg,bveg,cveg,critveg,dveg,eveg !height
-  real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
+  real(kind=iwp),save,dimension(3) :: aveg,bveg,critveg,dveg,eveg !height
+  !real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
   real(kind=iwp),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
@@ -166,7 +166,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(kind=iwp),save :: airtveg
-  real(kind=iwp),save,dimension(3) :: rdensveg,hcanveg_limit
+  real(kind=iwp),save,dimension(3) :: rdensveg
 
 
   !carbon parameters 

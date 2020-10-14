@@ -186,16 +186,18 @@ subroutine icm_init
   call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
   if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
   if(iveg_icm==1) then
-    allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    !allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    allocate(trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
     & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
-    & patchveg(nea),rdephcanveg(nea,3),mhtveg(nea), &
+    & patchveg(nea),rdephcanveg(nea,3), & !mhtveg(nea), &
     & plfveg(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3),fpveg(nea,3),fsveg(nea,3),ffveg(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. icm_veg variables')
 
     !init
-    ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
+    !ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
+    trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
     lfNH4veg=0.0;       lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0
-    patchveg=0; rdephcanveg=0.0;        mhtveg=0.0;     
+    patchveg=0; rdephcanveg=0.0;        !mhtveg=0.0;     
     plfveg=0.0; pmaxveg=0.0; fiveg=1.0; fnveg=1.0;      fpveg=1.0
     fsveg=1.0;      ffveg=1.0
 

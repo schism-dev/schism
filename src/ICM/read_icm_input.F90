@@ -1013,56 +1013,56 @@ subroutine read_icm_param2
       enddo !i
     close(31)
   endif !iveg_icm
-
-
-  !-----------------read in mean high water level for each elem-----------------
-  if(iveg_icm==1) then
-    if(initveg==1)then
-      open(31,file=in_dir(1:len_in_dir)//'mhtveg.prop',status='old')
-      do i=1,ne_global
-        read(31,*)j,tmp
-        if(tmp<0.or.tmp>=0) then
-          write(errmsg,*)'ICM_init: illegal mhtveg.prop:',i,tmp
-          call parallel_abort(errmsg)
-        endif
-        if(iegl(i)%rank==myrank) then
-           ne=iegl(i)%id
-           mhtveg(ne)=tmp
-        endif
-      enddo !i=ne_global
-      close(31)
-    elseif(initveg==2) then
-      allocate(ptmp1(npa),stat=i)
-      if(i/=0) call parallel_abort('read_icm_input: alloc(0)')
-      open(10,file=in_dir(1:len_in_dir)//'mhtveg.gr3',status='old')
-      read(10,*); read(10,*) n,q
-      if(n/=ne_global.or.q/=np_global) then
-        call parallel_abort('ICM_init: Check mhtveg.gr3')
-      endif
-
-      do i=1,np_global
-        read(10,*)j,xtmp,ytmp,tmp
-        if(.not.(tmp<0.or.tmp>=0)) then
-          write(errmsg,*)'ICM_init: illegal mhtveg.gr3:',i,tmp
-          call parallel_abort(errmsg)
-        endif
-        if(ipgl(i)%rank==myrank) then
-          nd=ipgl(i)%id
-          ptmp1(nd)=tmp
-        endif
-      enddo!i=np_global
-      close(10)
-
-      do i=1,nea
-        mhtveg(i)=sum(ptmp1(elnode(1:i34(i),i)))/i34(i)
-      enddo !i
-      deallocate(ptmp1)
-
-    else
-      write(errmsg,*)'ICM_init: illegal initveg:',initveg
-      call parallel_abort(errmsg)
-    endif !initveg
-  endif !iveg_icm
+ 
+ 
+ ! !-----------------read in mean high water level for each elem-----------------
+ ! if(iveg_icm==1) then
+ !   if(initveg==1)then
+ !     open(31,file=in_dir(1:len_in_dir)//'mhtveg.prop',status='old')
+ !     do i=1,ne_global
+ !       read(31,*)j,tmp
+ !       if(tmp<0.or.tmp>=0) then
+ !         write(errmsg,*)'ICM_init: illegal mhtveg.prop:',i,tmp
+ !         call parallel_abort(errmsg)
+ !       endif
+ !       if(iegl(i)%rank==myrank) then
+ !          ne=iegl(i)%id
+ !          mhtveg(ne)=tmp
+ !       endif
+ !     enddo !i=ne_global
+ !     close(31)
+ !   elseif(initveg==2) then
+ !     allocate(ptmp1(npa),stat=i)
+ !     if(i/=0) call parallel_abort('read_icm_input: alloc(0)')
+ !     open(10,file=in_dir(1:len_in_dir)//'mhtveg.gr3',status='old')
+ !     read(10,*); read(10,*) n,q
+ !     if(n/=ne_global.or.q/=np_global) then
+ !       call parallel_abort('ICM_init: Check mhtveg.gr3')
+ !     endif
+ !
+ !     do i=1,np_global
+ !       read(10,*)j,xtmp,ytmp,tmp
+ !       if(.not.(tmp<0.or.tmp>=0)) then
+ !         write(errmsg,*)'ICM_init: illegal mhtveg.gr3:',i,tmp
+ !         call parallel_abort(errmsg)
+ !       endif
+ !       if(ipgl(i)%rank==myrank) then
+ !         nd=ipgl(i)%id
+ !         ptmp1(nd)=tmp
+ !       endif
+ !     enddo!i=np_global
+ !     close(10)
+ !
+ !     do i=1,nea
+ !       mhtveg(i)=sum(ptmp1(elnode(1:i34(i),i)))/i34(i)
+ !     enddo !i
+ !     deallocate(ptmp1)
+ !
+ !   else
+ !     write(errmsg,*)'ICM_init: illegal initveg:',initveg
+ !     call parallel_abort(errmsg)
+ !   endif !initveg
+ ! endif !iveg_icm
 
 
   !-----------------read in veg initial biomass for cold start-----------------
@@ -1140,52 +1140,39 @@ subroutine read_icm_param2
       call parallel_abort(errmsg)
     endif !initveg
 
-    !remove init biomass in deep zone (deep: mht+dp>hcan+1.2, 1.2 comes from Morris, 2013)
-    do j=1,3
-      do i=1,nea
-        rtmp=mhtveg(i)+dpe(i)
-        if(rtmp<0.) then
-          tlfveg(i,j)=0.0
-          tstveg(i,j)=0.0
-          trtveg(i,j)=0.0
-          patchveg(i)=-1
-        endif !total dry land
-        rtmp=mhtveg(i)+dpe(i)-hcanveg_limit(j)-1.2
-        if(rtmp>0.) then
-          tlfveg(i,j)=0.0
-          tstveg(i,j)=0.0
-          trtveg(i,j)=0.0
-          patchveg(i)=-1
-        endif !open water with no survival potential 
-      enddo !i::nea
-    enddo !j::veg species
-
+ !   !remove init biomass in deep zone (deep: mht+dp>hcan+1.2, 1.2 comes from Morris, 2013)
+ !   do j=1,3
+ !     do i=1,nea
+ !       rtmp=mhtveg(i)+dpe(i)
+ !       if(rtmp<0.) then
+ !         tlfveg(i,j)=0.0
+ !         tstveg(i,j)=0.0
+ !         trtveg(i,j)=0.0
+ !         patchveg(i)=-1
+ !       endif !total dry land
+ !       rtmp=mhtveg(i)+dpe(i)-10
+ !       if(rtmp>0.) then
+ !         tlfveg(i,j)=0.0
+ !         tstveg(i,j)=0.0
+ !         trtveg(i,j)=0.0
+ !         patchveg(i)=-1
+ !       endif !open water with no survival potential 
+ !     enddo !i::nea
+ !   enddo !j::veg species
+ 
     !calc canopy height 
     do j=1,3
       do i=1,nea
         !calc canopy height
-        if(tlfveg(i,j)+tstveg(i,j)-critveg<0) then
+        if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
           hcanveg(i,j)=dveg(j)*(tlfveg(i,j)+tstveg(i,j))+eveg(j)
-        else !stable marsh with large biomass/production
-          rtmp=(tlfveg(i,j)+tstveg(i,j))/(acdwveg(j)*bveg(j))+aveg(j)*aveg(j)/(4*bveg(j)*bveg(j))-cveg(j)/bveg(j)
-          if(rtmp<0.) then
-            ztcveg(i,j)=-aveg(j)/(200*bveg(j))
-          else 
-            if() then
-
-            else
-              ztcveg(i,j)=-aveg(j)/(200*bveg(j))+sqrt(rtmp)/100
-            endif !location
-
-          endif
-          hcanveg(i,j)=mhtveg(i)+dpe(i)-ztcveg(i,j)
-        endif !above-ground biomass
-
+        else
+          hcanveg(i,j)=aveg(j)*(tlfveg(i,j)+tstveg(i,j))+bveg(j)
+        endif 
         if(hcanveg(i,j)<0.) then
-          write(errmsg,*)'illegal veg height:',hcanveg(i,j),mhtveg(i),ztcveg(i,j),ielg(i),j
+          write(errmsg,*)'illegal veg height:',hcanveg(i,j),ielg(i),j
           call parallel_abort(errmsg)
         endif
-
       enddo !i::nea
     enddo !j::veg species
 
@@ -1474,7 +1461,7 @@ subroutine read_icm_param
   call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
   call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
   call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
-  call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
+  !call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
   call get_param_1D('icm.in','dveg',2,itmp1,dveg,stmp,3)
   call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)
   call get_param_1D('icm.in','critveg',2,itmp1,critveg,stmp,3)
@@ -1505,7 +1492,6 @@ subroutine read_icm_param
   call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
   call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
   call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
-  call get_param_1D('icm.in','hcanveg_limit',2,itmp1,hcanveg_limit,stmp,3)
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
@@ -1730,10 +1716,6 @@ subroutine read_icm_param
       if(khpwveg(j)<=0) call parallel_abort('read_icm_input: khpwveg')
       if(acdwveg(j)<=0) call parallel_abort('read_icm_input: acdwveg')
       if(bmlfrveg(j)<=0.or.bmstrveg(j)<=0.or.bmrtrveg(j)<=0) call parallel_abort('read_icm_input: bmlfrveg')
-      if(bveg(j)>0) call parallel_abort('read_icm_input: bveg')
-      if(aveg(j)<0) call parallel_abort('read_icm_input: aveg')
-      tmp=-aveg(j)/(2*bveg(j))
-      if(tmp<20.or.tmp>65) call parallel_abort('read_icm_input: a/bveg')
     enddo !j::veg species
   endif !iveg_icm
 
