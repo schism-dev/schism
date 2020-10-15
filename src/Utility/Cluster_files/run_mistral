@@ -2,6 +2,7 @@
 #SBATCH --job-name=RUN33b
 #SBATCH --partition=compute2
 #SBATCH --nodes=30
+###36 cores/node for compute2 (but can use fewer for large grids)
 #SBATCH --ntasks-per-node=36
 ###Max 8 hrs
 #SBATCH --time=01:00:00
