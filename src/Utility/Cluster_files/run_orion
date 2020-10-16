@@ -1,0 +1,22 @@
+#!/bin/bash --login
+
+#SBATCH -D .
+#SBATCH -J CORIE
+#SBATCH -A nosofs
+#SBATCH -p orion
+##queues: 'windfall' max 450 nodes (no walltime limit but lower priority; for quick turn-around try <=8 hrs)
+###40 cores/node (mem 192GB/node)
+#SBATCH -n 40
+#SBATCH --exclusive
+#SBATCH -t 02:00:00  
+#SBATCH -o myout
+#SBATCH -e err2.out
+##SBATCH --mail-user=yjzhang@vims.edu
+##SBATCH --mail-type=all  #send email for start, end and fail
+
+set -e
+ulimit -s unlimited 
+
+module load intel/2020 impi/2020 netcdf/4.7.2-parallel
+
+srun ./pschism_ORION_TVD-VL
