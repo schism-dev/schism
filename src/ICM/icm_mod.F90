@@ -60,15 +60,15 @@ module icm_mod
 
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea) 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
   !(nvrt)<< surface to bottom
-  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt)
+  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
+  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
   !(nea)<<depth integrated, true outputs
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea), unit: g/m^2 
   real(kind=iwp),save,allocatable,dimension(:) :: hcansav,hcansavori!(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
 
   !ncai_veg
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
@@ -160,7 +160,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
   !intermediate variables
-  integer,save :: nkveg(3) !# of layers veg occupy, >=1
+  integer,save :: knveg(3) !index of top layer with canopy occupied, knveg=0 for emergency
   real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
@@ -181,7 +181,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC !ncai_sav
-  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
@@ -193,7 +193,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON !ncai_sav
-  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
 
 
   !phosphorus parameters 
@@ -209,7 +209,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP !ncai_sav
-  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
@@ -221,7 +221,7 @@ module icm_mod
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO
   real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO !ncai_sav
-  !real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
 
 
   !--------------------------------------------------------------------------------------

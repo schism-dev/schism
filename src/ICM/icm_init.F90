@@ -202,7 +202,89 @@ subroutine icm_init
     fsveg=1.0;      ffveg=1.0
 
     !options to output veg-related terms
+    if(iof_icm(129)==1) then
+      allocate(vegmtRPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.129')
+      vegmtRPOC=0.0
+    endif
+    if(iof_icm(130)==1) then
+      allocate(vegmtLPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.130')
+      vegmtLPOC=0.0
+    endif
+    if(iof_icm(131)==1) then
+      allocate(vegmtDOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.131')
+      vegmtDOC=0.0
+    endif
 
+    if(iof_icm(132)==1) then
+      allocate(vegmtRPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.132')
+      vegmtRPON=0.0
+    endif
+    if(iof_icm(133)==1) then
+      allocate(vegmtLPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.133')
+      vegmtLPON=0.0
+    endif
+    if(iof_icm(134)==1) then
+      allocate(vegmtDON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.134')
+      vegmtDON=0.0
+    endif
+    if(iof_icm(135)==1) then
+      allocate(vegmtNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.135')
+      vegmtNH4=0.0
+    endif
+    if(iof_icm(136)==1) then
+      allocate(veggrNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.136')
+      veggrNH4=0.0
+    endif
+    if(iof_icm(137)==1) then
+      allocate(veggrNO3(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.137')
+      veggrNO3=0.0
+    endif
+
+    if(iof_icm(138)==1) then
+      allocate(vegmtRPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.138')
+      vegmtRPOP=0.0
+    endif
+    if(iof_icm(139)==1) then
+      allocate(vegmtLPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.139')
+      vegmtLPOP=0.0
+    endif
+    if(iof_icm(140)==1) then
+      allocate(vegmtDOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.140')
+      vegmtDOP=0.0
+    endif
+    if(iof_icm(141)==1) then
+      allocate(vegmtPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.141')
+      vegmtPO4=0.0
+    endif
+    if(iof_icm(142)==1) then
+      allocate(veggrPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.142')
+      veggrPO4=0.0
+    endif
+
+    if(iof_icm(143)==1) then
+      allocate(vegmtDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.143')
+      vegmtDOO=0.0
+    endif
+    if(iof_icm(144)==1) then
+      allocate(veggrDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.144')
+      veggrDOO=0.0
+    endif
 
   endif !iveg_icm
 

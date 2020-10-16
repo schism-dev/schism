@@ -62,7 +62,13 @@
                          &basalRPOP,basalLPOP,basalDOP,basalPO4,absPO4, &
                          &savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP, &
                          &basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO, &
-                         &savmtDOO,savgrDOO 
+                         &savmtDOO,savgrDOO,&
+                         &vegmtRPOC,vegmtLPOC,vegmtDOC, &
+                         &vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON, &
+                         &vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP, & 
+                         &vegmtDOO,veggrDOO,&
+                         &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
+                         &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -7985,8 +7991,92 @@
         if(iof_icm(128)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+132), &
      &'ICM_hcanveg3',4,1,nea,dble(hcanveg(:,3)))
 
-        noutput=noutput+128
-        icount=128 !offset
+        !veg-related process to nutrient dynamics in water column
+        if(iof_icm(129)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+133), &
+     &'ICM_vegmtRPOC',5,nvrt,nea,dble(vegmtRPOC))
+        if(iof_icm(130)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+134), &
+     &'ICM_vegmtLPOC',5,nvrt,nea,dble(vegmtLPOC))
+        if(iof_icm(131)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+135), &
+     &'ICM_vegmtDOC',5,nvrt,nea,dble(vegmtDOC))
+        if(iof_icm(132)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+136), &
+     &'ICM_vegmtRPON',5,nvrt,nea,dble(vegmtRPON))
+        if(iof_icm(133)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+137), &
+     &'ICM_vegmtLPON',5,nvrt,nea,dble(vegmtLPON))
+        if(iof_icm(134)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+138), &
+     &'ICM_vegmtDON',5,nvrt,nea,dble(vegmtDON))
+        if(iof_icm(135)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+139), &
+     &'ICM_vegmtNH4',5,nvrt,nea,dble(vegmtNH4))
+        if(iof_icm(136)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+140), &
+     &'ICM_veggrNH4',5,nvrt,nea,dble(veggrNH4))
+        if(iof_icm(137)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+141), &
+     &'ICM_veggrNO3',5,nvrt,nea,dble(veggrNO3))
+        if(iof_icm(138)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+142), &
+     &'ICM_vegmtRPOP',5,nvrt,nea,dble(vegmtRPOP))
+        if(iof_icm(139)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+143), &
+     &'ICM_vegmtLPOP',5,nvrt,nea,dble(vegmtLPOP))
+        if(iof_icm(140)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+144), &
+     &'ICM_vegmtDOP',5,nvrt,nea,dble(vegmtDOP))
+        if(iof_icm(141)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+145), &
+     &'ICM_vegmtPO4',5,nvrt,nea,dble(vegmtPO4))
+        if(iof_icm(142)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+146), &
+     &'ICM_veggrPO4',5,nvrt,nea,dble(veggrPO4))
+        if(iof_icm(143)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+147), &
+     &'ICM_vegmtDOO',5,nvrt,nea,dble(vegmtDOO))
+        if(iof_icm(144)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+148), &
+     &'ICM_veggrDOO',5,nvrt,nea,dble(veggrDOO))
+
+        !savand veg -induced nutrient fluxes to sediment
+        if(iof_icm(145)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+149), &
+     &'ICM_tlfNH4sav',4,1,nea,dble(tlfNH4sav))
+        if(iof_icm(146)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+150), &
+     &'ICM_tlfPO4sav',4,1,nea,dble(tlfPO4sav))
+        if(iof_icm(147)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+151), &
+     &'ICM_trtpocsav',4,1,nea,dble(trtpocsav))
+        if(iof_icm(148)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+152), &
+     &'ICM_trtponsav',4,1,nea,dble(trtponsav))
+        if(iof_icm(149)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+153), &
+     &'ICM_trtpopsav',4,1,nea,dble(trtpopsav))
+        if(iof_icm(150)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+154), &
+     &'ICM_trtdosav',4,1,nea,dble(trtdosav))
+        if(iof_icm(151)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+155), &
+     &'ICM_tlfNH4veg1',4,1,nea,dble(tlfNH4veg(:,1)))
+        if(iof_icm(152)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+156), &
+     &'ICM_tlfNH4veg2',4,1,nea,dble(tlfNH4veg(:,2)))
+        if(iof_icm(153)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+157), &
+     &'ICM_tlfNH4veg3',4,1,nea,dble(tlfNH4veg(:,3)))
+        if(iof_icm(154)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+158), &
+     &'ICM_tlfPO4veg1',4,1,nea,dble(tlfPO4veg(:,1)))
+        if(iof_icm(155)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+159), &
+     &'ICM_tlfPO4veg2',4,1,nea,dble(tlfPO4veg(:,2)))
+        if(iof_icm(156)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+160), &
+     &'ICM_tlfPO4veg3',4,1,nea,dble(tlfPO4veg(:,3)))
+        if(iof_icm(157)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+161), &
+     &'ICM_trtpocveg1',4,1,nea,dble(trtpocveg(:,1)))
+        if(iof_icm(158)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+162), &
+     &'ICM_trtpocveg2',4,1,nea,dble(trtpocveg(:,2)))
+        if(iof_icm(159)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+163), &
+     &'ICM_trtpocveg3',4,1,nea,dble(trtpocveg(:,3)))
+        if(iof_icm(160)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+164), &
+     &'ICM_trtponveg1',4,1,nea,dble(trtponveg(:,1)))
+        if(iof_icm(161)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+165), &
+     &'ICM_trtponveg2',4,1,nea,dble(trtponveg(:,2)))
+        if(iof_icm(162)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+166), &
+     &'ICM_trtponveg3',4,1,nea,dble(trtponveg(:,3)))
+        if(iof_icm(163)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+167), &
+     &'ICM_trtpopveg1',4,1,nea,dble(trtpopveg(:,1)))
+        if(iof_icm(164)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+168), &
+     &'ICM_trtpopveg2',4,1,nea,dble(trtpopveg(:,2)))
+        if(iof_icm(165)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+169), &
+     &'ICM_trtpopveg3',4,1,nea,dble(trtpopveg(:,3)))
+        if(iof_icm(166)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+170), &
+     &'ICM_trtdoveg1',4,1,nea,dble(trtdoveg(:,1)))
+        if(iof_icm(167)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+171), &
+     &'ICM_trtdoveg2',4,1,nea,dble(trtdoveg(:,2)))
+        if(iof_icm(168)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+172), &
+     &'ICM_trtdoveg3',4,1,nea,dble(trtdoveg(:,3)))
+
+        noutput=noutput+168
+        icount=168 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

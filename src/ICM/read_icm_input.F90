@@ -937,12 +937,11 @@ subroutine read_icm_param2
           call parallel_abort(errmsg)
         endif
         do k=1,nvrt
-          !k2=nvrt-k+1
-          lfsav(k,i)=tlfsav(i)/nvrt
-          stsav(k,i)=tstsav(i)/nvrt
-          rtsav(k,i)=trtsav(i)/nvrt
+          lfsav(k,i)=1.e-5
+          stsav(k,i)=1.e-5
+          rtsav(k,i)=1.e-5
         enddo !k
-
+        patchsav(i)=-1 !non-sav habitat
       else !wet elem
         hcansavori(i)=rlf*tlfsav(i)+rst*tstsav(i)+rrt*trtsav(i)+hcansav0
         hcansav(i)=min(hcansavori(i),real(ze(nvrt,i)-ze(kbe(i),i),iwp),hcansav_limit)
@@ -958,14 +957,12 @@ subroutine read_icm_param2
               write(errmsg,*)'read_icm: hcansav<=0',i,k,tmp,hcansav(i),hcansavori(i),ze(k,i),ze(k-1,i),ze(kbe(i),i)
               call parallel_abort(errmsg)
             endif
-            !k2=nvrt-k+1 !ICM convention
+
+            !unit of lfsav etc: g/m^2
             lfsav(k,i)=tlfsav(i)*tmp/hcansav(i)
             stsav(k,i)=tstsav(i)*tmp/hcansav(i)
             rtsav(k,i)=trtsav(i)*tmp/hcansav(i)
-          elseif ((k>=kbe(i)+3.and.ze(k-3,i)<hcansav(i)+ze(kbe(i),i)).or.(k>=kbe(i)+2.and.ze(k-2,i)<hcansav(i)+ze(kbe(i),i))) then !leave seed for two layers on top
-            lfsav(k,i)=1
-            stsav(k,i)=1
-            rtsav(k,i)=0.3
+
           else
             lfsav(k,i)=1.e-5
             stsav(k,i)=1.e-5
