@@ -713,6 +713,24 @@ subroutine read_icm_sed_param
       SIT2TM1S(i) =SIT2I
       BENSTR1S(i) =BENSTI
 
+      !update concentration   
+      CPON(i,1) = PON1TM1S(i)
+      CPON(i,2) = PON2TM1S(i)
+      CPON(i,3) = PON3TM1S(i)
+      CNH4(i)   = NH4T2TM1S(i)
+      CNO3(i)   = NO3T2TM1S(i)
+      CPOP(i,1) = POP1TM1S(i)
+      CPOP(i,2) = POP2TM1S(i)
+      CPOP(i,3) = POP3TM1S(i)
+      CPIP(i)   = PO4T2TM1S(i)
+      CPOC(i,1) = POC1TM1S(i)
+      CPOC(i,2) = POC2TM1S(i)
+      CPOC(i,3) = POC3TM1S(i)
+      CPOS(i)   = PSITM1S(i)
+      CCH4(i)   = CH4T2TM1S(i)
+      CSO4(i)   = SO4T2TM1S(i)
+      CH2S(i)   = HST2TM1S(i)
+
       !layer 1
       PO41TM1S(i)= PO4T2I/2.
       NH41TM1S(i)= NH4T2I/2.

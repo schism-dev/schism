@@ -1058,10 +1058,6 @@ subroutine photosynthesis(id,hour,nv,it)
     sdveg=0.0
     do j=1,3
       sdveg=sdveg+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
-      if(sdveg>100.0.or.sdveg<=0.) then
-        write(errmsg,*)'photo-veg: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j),ielg(id)
-        call parallel_abort(errmsg)
-      endif
     enddo !j::veg species 
 
   endif !iveg_icm
@@ -1564,7 +1560,7 @@ subroutine photosynthesis(id,hour,nv,it)
         do k=1,nv
           tmp=tmp+Sal(k)*dep(k)
         enddo !k::nv
-        xtveg=tmp/max(tdep,1.e-2_iwp)
+        xtveg=tmp/max(tdep,1.e-2_iwp)-saltoptveg(j)
         fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.e-2_iwp))
 
 
@@ -1586,12 +1582,16 @@ subroutine photosynthesis(id,hour,nv,it)
         iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
 
         tmp=sdveg+rKehblveg(j)
-        if(tmp>100.0.or.tmp<=0.) then
+        if(tmp<=0.) then
           write(errmsg,*)'photo-veg: check light attenuation on leaf:',rKehblveg(j),j,tmp,tlfveg(id,j),tstveg(id,j),ielg(id)
           call parallel_abort(errmsg)
         endif
 
-        iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
+        if(tmp>20) then
+          iwcveg=iatcnpyveg*rat/tmp
+        else
+          iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
+        endif
         ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0
 
         fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
@@ -1613,8 +1613,10 @@ subroutine photosynthesis(id,hour,nv,it)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.e-2_iwp)
         xtveg0=tmp0/max(tdep,1.e-2_iwp)
-        fnveg(id,j)=(xtveg+xtveg0+CNH4(id)*khnwveg(j)/khnsveg(j))/ &
-                        &(khnwveg(j)+xtveg+xtveg0+CNH4(id)*khnwveg(j)/khnsveg(j)) 
+        tmp=max(1.e-2_iwp,xtveg) !re-use
+        tmp0=max(1.e-2_iwp,xtveg0)
+        fnveg(id,j)=(tmp+tmp0+CNH4(id)*khnwveg(j)/khnsveg(j))/ &
+                        &(khnwveg(j)+tmp+tmp0+CNH4(id)*khnwveg(j)/khnsveg(j)) 
 
         !depth-averaged P
         tmp=0.0
@@ -1623,8 +1625,9 @@ subroutine photosynthesis(id,hour,nv,it)
           tmp=tmp+PO4td*dep(k)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.e-2_iwp)
-        fpveg(id,j)=(xtveg+CPIP(id)*khpwveg(j)/khpsveg(j))/ &
-                        &(khpwveg(j)+xtveg+CPIP(id)*khpwveg(j)/khpsveg(j)) 
+        tmp=max(1.e-2_iwp,xtveg)
+        fpveg(id,j)=(tmp+CPIP(id)*khpwveg(j)/khpsveg(j))/ &
+                        &(khpwveg(j)+tmp+CPIP(id)*khpwveg(j)/khpsveg(j)) 
 
 
         !--------------------

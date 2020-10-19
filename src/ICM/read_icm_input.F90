@@ -1455,6 +1455,7 @@ subroutine read_icm_param
   call get_param_1D('icm.in','alphaveg',2,itmp1,alphaveg,stmp,3)
   call get_param_1D('icm.in','rkshveg',2,itmp1,rkshveg,stmp,3)
   call get_param_1D('icm.in','saltveg',2,itmp1,saltveg,stmp,3)
+  call get_param_1D('icm.in','saltoptveg',2,itmp1,saltoptveg,stmp,3)
   call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
   call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
   call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)

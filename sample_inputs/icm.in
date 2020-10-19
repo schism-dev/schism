@@ -474,7 +474,8 @@ eveg=     0.054  0.054  0.054
 critveg=  250    250    250
 
 !salt parameter
-saltveg=  35     15     0
+saltveg=  35	 35	35
+saltoptveg=  35     15     0
 
 !inundation parameter
 tinunveg= 1      1      1

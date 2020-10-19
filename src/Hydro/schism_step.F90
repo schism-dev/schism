@@ -68,7 +68,8 @@
                          &vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP, & 
                          &vegmtDOO,veggrDOO,&
                          &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
-                         &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg
+                         &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg, &
+                         &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -8075,8 +8076,80 @@
         if(iof_icm(168)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+172), &
      &'ICM_trtdoveg3',4,1,nea,dble(trtdoveg(:,3)))
 
-        noutput=noutput+168
-        icount=168 !offset
+        if(iveg_icm/=0) then
+          if(iof_icm(169)==1) call writeout_nc(id_out_var(noutput+173), &
+       &'ICM_plfveg',4,1,nea,dble(plfveg(:,1)))
+          if(iof_icm(169)==2) call writeout_nc(id_out_var(noutput+173), &
+       &'ICM_plfveg',4,1,nea,dble(plfveg(:,2)))
+          if(iof_icm(169)==3) call writeout_nc(id_out_var(noutput+173), &
+       &'ICM_plfveg',4,1,nea,dble(plfveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(170)==1) call writeout_nc(id_out_var(noutput+174), &
+       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,1)))
+          if(iof_icm(170)==2) call writeout_nc(id_out_var(noutput+174), &
+       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,2)))
+          if(iof_icm(170)==3) call writeout_nc(id_out_var(noutput+174), &
+       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(171)==1) call writeout_nc(id_out_var(noutput+175), &
+       &'ICM_fiveg',4,1,nea,dble(fiveg(:,1)))
+          if(iof_icm(171)==2) call writeout_nc(id_out_var(noutput+175), &
+       &'ICM_fiveg',4,1,nea,dble(fiveg(:,2)))
+          if(iof_icm(171)==3) call writeout_nc(id_out_var(noutput+175), &
+       &'ICM_fiveg',4,1,nea,dble(fiveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(172)==1) call writeout_nc(id_out_var(noutput+176), &
+       &'ICM_fnveg',4,1,nea,dble(fnveg(:,1)))
+          if(iof_icm(172)==2) call writeout_nc(id_out_var(noutput+176), &
+       &'ICM_fnveg',4,1,nea,dble(fnveg(:,2)))
+          if(iof_icm(172)==3) call writeout_nc(id_out_var(noutput+176), &
+       &'ICM_fnveg',4,1,nea,dble(fnveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(173)==1) call writeout_nc(id_out_var(noutput+177), &
+       &'ICM_fpveg',4,1,nea,dble(fpveg(:,1)))
+          if(iof_icm(173)==2) call writeout_nc(id_out_var(noutput+177), &
+       &'ICM_fpveg',4,1,nea,dble(fpveg(:,2)))
+          if(iof_icm(173)==3) call writeout_nc(id_out_var(noutput+177), &
+       &'ICM_fpveg',4,1,nea,dble(fpveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(174)==1) call writeout_nc(id_out_var(noutput+178), &
+       &'ICM_fsveg',4,1,nea,dble(fsveg(:,1)))
+          if(iof_icm(174)==2) call writeout_nc(id_out_var(noutput+178), &
+       &'ICM_fsveg',4,1,nea,dble(fsveg(:,2)))
+          if(iof_icm(174)==3) call writeout_nc(id_out_var(noutput+178), &
+       &'ICM_fsveg',4,1,nea,dble(fsveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(175)==1) call writeout_nc(id_out_var(noutput+179), &
+       &'ICM_ffveg',4,1,nea,dble(ffveg(:,1)))
+          if(iof_icm(175)==2) call writeout_nc(id_out_var(noutput+179), &
+       &'ICM_ffveg',4,1,nea,dble(ffveg(:,2)))
+          if(iof_icm(175)==3) call writeout_nc(id_out_var(noutput+179), &
+       &'ICM_ffveg',4,1,nea,dble(ffveg(:,3)))
+        endif
+
+        if(iveg_icm/=0) then
+          if(iof_icm(176)==1) call writeout_nc(id_out_var(noutput+180), &
+       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,1)))
+          if(iof_icm(176)==2) call writeout_nc(id_out_var(noutput+180), &
+       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,2)))
+          if(iof_icm(176)==3) call writeout_nc(id_out_var(noutput+180), &
+       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,3)))
+        endif
+
+        noutput=noutput+176
+        icount=176 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i
