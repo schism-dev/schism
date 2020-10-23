@@ -149,7 +149,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel
+                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel,sav_cd0
 
 
 #ifdef USE_FIB
@@ -181,7 +181,7 @@
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,rsav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex
 
@@ -452,9 +452,9 @@
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
       iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
-      fwvor_advxy_stokes=0; fwvor_advz_stokes=0; fwvor_gradpress=0; fwvor_breaking=0; wafo_obcramp=0;
+      fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; rsav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -1466,10 +1466,10 @@
        write(errmsg,*)'INIT: illegal isav',isav
        call parallel_abort(errmsg)
       endif
-      if(rsav/=0.and.rsav/=1) then !LLa	
-       write(errmsg,*)'INIT: illegal rsav',rsav
-       call parallel_abort(errmsg)
-      endif
+!      if(rsav/=0.and.rsav/=1) then !LLa	
+!       write(errmsg,*)'INIT: illegal rsav',rsav
+!       call parallel_abort(errmsg)
+!      endif
 
 !     Ice
 #ifdef USE_ICE
@@ -3589,19 +3589,19 @@
       sav_nv=0.d0 !Nv: # of stems per m^2
       sav_di=0.d0 !D [m]
       sav_cd=0.d0 !Cdv : drag coefficient
-      if(isav==1.or.rsav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
+      if(isav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
         !\lambda=D*Nv [1/m]
         open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
         open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
         !SAV height [m]
         open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
         !Drag coefficient
-        open(33,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
+        open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         read(31,*); read(31,*)k,m
         read(32,*); read(32,*)i,j
-		read(33,*); read(33,*)l,mm
+        read(30,*); read(30,*)l,mm
         if(itmp1/=ne_global.or.itmp2/=np_global.or.i/=ne_global.or.j/=np_global.or. &
      &k/=ne_global.or.m/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
 !'
@@ -3609,7 +3609,7 @@
           read(10,*)j,xtmp,ytmp,tmp
           read(31,*)j,xtmp,ytmp,tmp1
           read(32,*)j,xtmp,ytmp,tmp2
-          read(33,*)j,xtmp,ytmp,tmp3
+          read(30,*)j,xtmp,ytmp,tmp3
           if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0.or.tmp3<0) then
             write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2,tmp3
             call parallel_abort(errmsg)
@@ -3631,7 +3631,7 @@
         close(10)
         close(31)
         close(32)
-        close(33)
+        close(30)
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
@@ -3648,7 +3648,7 @@
           endif
         enddo !i
 #endif
-      endif !isav=1 or rsav = 1
+      endif !isav=1 
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
@@ -5778,9 +5778,9 @@
       allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
       call compute_bed_slope !iof(198) = 1
   
-      ! Exchanges between ghost zones and smoothing
-      call exchange_p2d(tanbeta_x)
-      call exchange_p2d(tanbeta_y)
+!      ! Exchanges between ghost zones and smoothing
+!      call exchange_p2d(tanbeta_x)
+!      call exchange_p2d(tanbeta_y)
       do i = 1,2
         call smooth_2dvar(tanbeta_x,npa)
         call smooth_2dvar(tanbeta_y,npa)

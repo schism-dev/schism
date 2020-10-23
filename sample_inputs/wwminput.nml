@@ -39,7 +39,6 @@
                                      ! LETOT = .T., is only for testing and developers!
  NLVT           = 10                 ! Number of vertical Layers; not used with SCHISM
  DTCOUP         = 600.               ! Couple time step - not used when coupled to SCHISM
- IMET_DRY       = 0                  ! 
 /
 
 &GRID

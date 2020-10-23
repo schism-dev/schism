@@ -137,9 +137,9 @@
                     RSXX(IP) = RSXX(IP) + 2 * COSE2 * ErLOC  ! Units = [ 1/s+ 1/s - 1/s ] * m²s = m²
                     RSXY(IP) = RSXY(IP) + 2 * COSI2 * ErLOC  ! For the '2' factor, check Stive and de Vriend (1994) and the Appendix by Rolf Deigaard
                     RSYY(IP) = RSYY(IP) + 2 * SINE2 * ErLOC
-                  END IF
-                END DO
-              END DO
+                  END IF !IROLLER
+                END DO !IS
+              END DO !ID
 
             ELSE IF (LETOT) THEN
               RSXX(IP) =  ETOT(IP) * (EWN(IP)*((EWK(IP)*SIN(MDIR(IP)))**TWO/EWK(IP)**TWO+ONE)-0.5_rkind)
@@ -152,8 +152,6 @@
         ELSE
           call parallel_abort('R.S.: unknown R.S. model') 
         END IF !RADFLAG 
-
-
 
         ! Transforming into depth-averaged radiation stress terms,
         ! varying in the vertical (unit: m^2/s/s)
@@ -371,7 +369,7 @@
 !Stokes z-vel.)
         ws_tmp1 = 0.D0; ws_tmp2 = 0.D0
         CALL hgrad_nodes(2,0,NVRT,MNP,MNS,STOKES_HVEL(1,:,:),dr_dxy_loc)
-        ws_tmp1(:,:) = dr_dxy_loc(1,:,:)
+        ws_tmp1(:,:) = dr_dxy_loc(1,:,:) !valid only in resident
         CALL hgrad_nodes(2,0,NVRT,MNP,MNS,STOKES_HVEL(2,:,:),dr_dxy_loc)
         ws_tmp2(:,:) = dr_dxy_loc(2,:,:)
 
@@ -528,7 +526,7 @@
 
         ! Apply lpp_filter
         IF (LPP_FILT_FLAG) CALL LPP_FILT(SBR(1,:))  
-		IF (LPP_FILT_FLAG) CALL LPP_FILT(SBR(2,:))
+        IF (LPP_FILT_FLAG) CALL LPP_FILT(SBR(2,:))
 
         ! Compute sink of momentum due to wave breaking 
         DO IS = 1, ns
@@ -592,7 +590,7 @@
             END DO !NVRT-1
             !IF(sum_2D*sum_3D == 0) CALL parallel_abort('Vertical profile in wave breaking-induced force: integral=0')
             IF(sum_3D == 0) CALL parallel_abort('Vertical profile in wave breaking-induced force: integral=0')
-
+!'
 
             DO k = kbs(IS), NVRT
               ! Breaking acceleration
@@ -702,15 +700,15 @@
 
         INTEGER      :: IS,k
 
-        DO IS = 1,ns !resident
+        DO IS = 1,nsa 
           IF(idry_s(IS) == 1) CYCLE
           DO k = kbs(IS),NVRT
             WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS)*wafo_opbnd_ramp(IS)
             WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS)*wafo_opbnd_ramp(IS)
           END DO ! NVRT
-        END DO ! ns
+        END DO ! nsa
 
-        CALL exchange_s3d_2(WWAVE_FORCE)
+!        CALL exchange_s3d_2(WWAVE_FORCE)
 
       END SUBROUTINE APPLY_WAFO_OPBND_RAMP
 

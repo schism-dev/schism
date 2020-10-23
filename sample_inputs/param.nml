@@ -157,9 +157,9 @@
   fwvor_advz_stokes = 1  !  --> Stokes drift advection (z) , Coriolis
   fwvor_gradpress = 1    !  --> Pressure term
   fwvor_breaking = 1     !  --> Wave breaking
-  cur_wwm = 2            ! Coupling current in WWM
+  cur_wwm = 0            ! Coupling current in WWM
                          ! 0: surface layer current
-                         ! 1: depth-integrated current
+                         ! 1: depth-averaged current
                          ! 2: computed according to Kirby and Chen (1989)
   wafo_obcramp = 0       ! Ramp on wave forces at open boundary (1: on / 0: off)
                          !  --> this option requires the input file wafo_ramp.gr3
@@ -605,8 +605,6 @@
 ! If USE_MARSH is on and isav=1, all .gr3 must have constant depths!
 !----------------------------------------------------------------------
   isav = 0 !on/off flag
-  rsav = 0 !on/off flag - Wave dissipation by vegetation (MEVEG = 1 in wwminput.nml)
-! rsav = 1 is required when MEVEG = 1 as sav_*.gr3 inputs are used in the formulation of wave diss. by veg.
 
 !----------------------------------------------------------------------
 ! Coupling step with ICE module.

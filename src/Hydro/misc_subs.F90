@@ -46,6 +46,8 @@
 ! subroutine ibilinear
 ! subroutine quad_shape
 ! function quad_int
+! subroutine compute_bed_slope
+! subroutine smooth_2dvar
 
 !weno>
 ! subroutine weno1_coef 
@@ -3966,10 +3968,10 @@
         curx_wwm(i)=cff1*cffu
         cury_wwm(i)=cff1*cffv
    
-      END DO ! npa
+      END DO !i=1, npa
    
-      call exchange_p2d(curx_wwm)
-      call exchange_p2d(cury_wwm)
+!      call exchange_p2d(curx_wwm)
+!      call exchange_p2d(cury_wwm)
    
       end subroutine current2wave_KC89
 !====================================================================================|
@@ -5863,6 +5865,88 @@
 ! End: SUBROUTINES AND FUNCTIONS FOR WENO 
 !===============================================================================
 !<weno
+
+subroutine compute_bed_slope
+!-------------------------------------------------------------------------------
+! MP from KM
+! Compute the bed slope for use in the wave model
+!-------------------------------------------------------------------------------
+  use schism_glbl
+  use schism_msgp
+  implicit none
+  integer     :: icount, inne, ip, ie
+  real(rkind) :: depel_x, depel_y, tmp_x, tmp_y
+  real(rkind) :: dp_tmp(npa) !tanbeta_x_tmp(npa), tanbeta_y_tmp(npa), dp_tmp(npa)
+  
+  ! Initialization
+  tanbeta_x = 0; tanbeta_y = 0 
+  
+  ! Smoothing water depth
+  dp_tmp = dp
+  call smooth_2dvar(dp_tmp,npa)
+  
+  ! Estimation of the bed slopes at nodes by averaging the value found at the surrounding element centers
+  do ip = 1, np
+    depel_x = 0.d0; depel_y = 0.d0 ! Spatial derivative of the bed elevation at element centers
+    tmp_x = 0.d0;   tmp_y = 0.d0   ! Local sum of spatial derivatives of the bed elevation 
+    icount = 0
+    do inne = 1, nne(ip)
+      ie = indel(inne,ip)
+      if (ie>0) then
+        icount = icount + 1
+        depel_x = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,1,ie))
+        depel_y = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,2,ie))
+        tmp_x = tmp_x + depel_x
+        tmp_y = tmp_y + depel_y
+      endif
+    enddo !inne
+    if (icount>0) then
+      tanbeta_x(ip) = tmp_x/icount !global array
+      tanbeta_y(ip) = tmp_y/icount
+    endif
+  enddo !ip
+ 
+! Exchanges between ghost zones and smoothing
+  call exchange_p2d(tanbeta_x)
+  call exchange_p2d(tanbeta_y)
+  
+end subroutine compute_bed_slope
+
+subroutine smooth_2dvar(glbvar,array_size)
+!-------------------------------------------------------------------------------
+! MP from KM
+! Routine to smooth a 2d variable at nodes
+!-------------------------------------------------------------------------------
+  use schism_glbl, only: np,npa,nnp, indnd, rkind
+  use schism_msgp
+  implicit none
+  integer, intent(in) :: array_size
+  real(rkind), intent(inout) :: glbvar(array_size)
+  integer     :: icount, inne, ip, ip2
+  real(rkind) :: locvar(array_size)
+
+  if(array_size/=npa) call parallel_abort('smooth_2dvar: wrong array size')
+
+  ! We re-pass everywhere to smooth out the bed slope (avoid spurious effects in the wave breaking thresholds)
+  locvar = glbvar; icount = 0
+  glbvar = 0.D0
+  do ip = 1,np !array_size
+    icount = 0
+    do inne = 1, nnp(ip)
+      ip2 = indnd(inne,ip)
+      if (ip2>0) then
+         icount = icount + 1
+         glbvar(ip) = glbvar(ip) + locvar(ip2)
+      endif
+    enddo
+    if (icount>0) then
+      glbvar(ip) = glbvar(ip)/icount
+    endif
+  enddo !ip 
+
+  call exchange_p2d(glbvar)
+
+end subroutine smooth_2dvar
 
 !dir$ attributes forceinline :: signa2
 function signa2(x1,x2,x3,y1,y2,y3)
