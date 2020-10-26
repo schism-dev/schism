@@ -598,7 +598,7 @@
       if (cur_wwm==0) then ! surface currents
         curx_wwm(:)=uu2(nvrt,:)
         cury_wwm(:)=vv2(nvrt,:)
-      else if (cur_wwm==1) then ! depth-integrated currents
+      else if (cur_wwm==1) then ! depth-averaged currents
         do i=1,npa
           curx_wwm(i) = 0.d0 ; cury_wwm(i) = 0.d0
           if(idry(i)==1) cycle
@@ -618,10 +618,10 @@
       else if (cur_wwm==2) then ! Kirby and Chen (1989)
         call current2wave_KC89
       end if
-      if (cur_wwm < 2) then
-        call exchange_p2d(curx_wwm)
-        call exchange_p2d(cury_wwm)
-      end if
+!      if (cur_wwm < 2) then
+!        call exchange_p2d(curx_wwm)
+!        call exchange_p2d(cury_wwm)
+!      end if
 
 
       if(mod(it,nstep_wwm)==0) then

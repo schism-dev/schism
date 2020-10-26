@@ -90,7 +90,7 @@ module schism_glbl
                   &cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
-                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav,rsav, &
+                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
                   &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib,ielm_transport,max_subcyc
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
@@ -119,7 +119,7 @@ module schism_glbl
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,fluxsu00,srad00,cmiu0, &
                       &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0, &
-                      &sav_cd0,dtb_min_transport
+                      &dtb_min_transport
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads

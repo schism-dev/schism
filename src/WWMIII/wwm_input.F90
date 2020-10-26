@@ -644,7 +644,7 @@
 #endif
          USE DATAPOOL
 #ifdef SCHISM
-         use schism_glbl, only : ics
+         use schism_glbl, only : ics,isav
 #endif
          IMPLICIT NONE
 
@@ -1163,6 +1163,11 @@
          wwm_print_namelist(NESTING)
          FLUSH(CHK%FHNDL)
          
+! Check consistency with SCHISM inputs here
+#ifdef SCHISM
+         IF(MEVEG/=0.and.isav==0) CALL WWM_ABORT('WWM: MEVEG/=0.and.isav==0')
+#endif
+
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *

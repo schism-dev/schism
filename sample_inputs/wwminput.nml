@@ -39,7 +39,6 @@
                                      ! LETOT = .T., is only for testing and developers!
  NLVT           = 10                 ! Number of vertical Layers; not used with SCHISM
  DTCOUP         = 600.               ! Couple time step - not used when coupled to SCHISM
- IMET_DRY       = 0                  ! 
 /
 
 &GRID
@@ -204,7 +203,7 @@
  BC_BREAK       = 1                  ! Apply depth-limited breaking at the boundaries: 1 - On; 0 - Off
  IROLLER        = 0                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
  ALPROL         = 0.85               ! Alpha coefficient for the wave roller model (between 0 and 1): 1 - full conversion; 0 - no energy transferred to the roller
- MEVEG          = 0                  ! Vegetation on/off
+ MEVEG          = 0                  ! Vegetation on/off. If on, isav must =1 in param.nml
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
  MESDS          = 1                  ! Formulation for the whitecapping source function; same value as MESIN
  MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA) like SWAN) (Default at 1)
