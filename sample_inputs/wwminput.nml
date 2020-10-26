@@ -169,8 +169,8 @@
                       ! for ECMWF physics (2); Makin & Stam (3); Babanin et al. (4); Cycle 3 (5); 
                       !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
  IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=5); only used if cycle 3 is switched on
- MESBF          = 1                  ! Bottom friction: JONSWAP(1) (Default at 1); 2 - Madsen
- FRICC          = 0.067              ! Cjon - Bottom friction coefficient (always positive)
+ MESBF          = 3                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
+ FRICC          = 200E-6             ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50
  MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
  IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978)
                                      !                            2 - Thornton and Guza (1983) - Constant weighting function
@@ -185,7 +185,7 @@
                                      !                                e.g. Sallenger and Holman 1985
                                      !                          5   - gamma = a_BRCR * k_ph + b_BRCR / min_BRCR < gamma < max_BRCR
                                      !                                e.g. Ruessink et al (2003) with a_BRCR=0.76 and b_BRCR=0.29
- BRCR           = 0.73               ! constant gamma;  default is 0.73 for IBREAK=1; default is 0.42 for IBREAK=2,3; default is -4pi/9 = -1.3963 for IBREAK=4 (Biphase)
+ BRCR           = 0.73               ! either gamma, default is 0.73 for IBREAK=1,5 or gamma_TG, default is 0.42 for IBREAK=2,3 or biphase_ref, default is -4pi/9 = -1.3963 for IBREAK=4
  a_BRCR         = 0.76               ! cf ICRIT = 4, 5
  b_BRCR         = 0.29               ! cf ICRIT = 4, 5
  min_BRCR       = 0.25               ! cf ICRIT = 4, 5

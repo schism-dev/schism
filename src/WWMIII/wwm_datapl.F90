@@ -191,6 +191,21 @@
          INTEGER                            :: NMAX
          REAL(rkind), PARAMETER             :: DEPFAC   = 6.d0
          REAL(rkind)                        :: DSIGTAB
+
+		 ! MP: the following parameters are used for erf function tabulation
+		 ! within SHOWEX bottom friction source term
+		 INTEGER, PARAMETER                 :: SIZEERFTABLE=300         
+         REAL(rkind)                        :: ERFTABLE(0:SIZEERFTABLE) 
+         REAL(rkind)                        :: DELXERF                  
+         REAL(rkind), PARAMETER             :: XERFMAX =  4.
+		 ! MP: the following parameters are used for fw tabulation
+		 ! within SHOWEX bottom friction source term and W3SRC4MD (wwm_ardhuin_new.F90) 
+	     INTEGER, PARAMETER                 :: SIZEFWTABLE=300  
+         REAL(rkind)                        :: FWTABLE(0:SIZEFWTABLE)
+         REAL(rkind)                        :: DELAB
+         REAL(rkind), PARAMETER             :: ABMIN = -1. 
+         REAL(rkind), PARAMETER             :: ABMAX = 8.
+         
 !
 ! Fundamental data types 
 !
@@ -942,7 +957,7 @@
          REAL(rkind)             :: TRIURS = 0.1
          REAL(rkind)             :: B_ALP = 1
          REAL(rkind)             :: ALPROL = 0.65
-         REAL(rkind)             :: BRCR = 0.78
+         REAL(rkind)             :: BRCR = 0.73
          ! MP: Coefficient for BRCR adaptative
          REAL(rkind)             :: a_BRCR
          REAL(rkind)             :: b_BRCR
