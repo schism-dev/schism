@@ -7,7 +7,7 @@
 !            (3) screen; (4) transect.bp (optional transect bp file)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
-!    pgf90 -O2 -mcmodel=medium -Mbounds -Bstatic -o gen_vqs gen_vqs.f90 ~/SELFE/svn/trunk/src/Utility/UtilLib/schism_geometry.f90
+!    Sample compilation command:
 !    ifort -Bstatic -O2 -CB -o gen_vqs gen_vqs.f90 schism_geometry.f90
 
       implicit real*8(a-h,o-z)
@@ -20,11 +20,18 @@
 
 !     Read  vgrid.in
       !m_vqs: # of master grids
-      m_vqs=13; n_sd=9
-      dz_bot_min=0.5 !min. bottom layer thickness [m]
+      m_vqs=22; n_sd=18
+      dz_bot_min=0.1 !min. bottom layer thickness [m]
       allocate(hsm(m_vqs),nv_vqs(m_vqs),a_vqs(m_vqs))
-      hsm=(/0.5,2.,3.,4.,5.,10.,50.,100.,350.,1050.,2000.,5000.,8500./)
-      nv_vqs(1:n_sd)=(/2,4,5,6,7,8,10,12,21/) !# of levels for each master grid (increasing with depth)
+      hsm=(/1., 2., 3., &
+          & 4., 6., 8., 12., 18., &
+          & 25., 33., 42., 52., 67., &
+          & 83., 100., 150., 230., 350., &
+          & 1050., 2000., 5000., 8500./)
+      nv_vqs(1:n_sd)=(/2,3,5, &
+                     & 7,9,11,13,15, &
+                     & 17,17,18,18,19, &
+                     & 20,21,22,24,26/) !# of levels for each master grid (increasing with depth) 
       nv_vqs(n_sd+1)=nv_vqs(n_sd)+9
       nv_vqs(n_sd+2)=nv_vqs(n_sd+1)+5
       nv_vqs(n_sd+3)=nv_vqs(n_sd+2)+5
@@ -59,27 +66,24 @@
       print*, 'nvrt in master vgrid=',nvrt_m
       allocate(z_mas(nvrt_m,m_vqs))
       z_mas=-1.e5
+      theta_b=0.0
       do m=1,n_sd !m_vqs
+        if (m<=7) then
+          theta_f=0.0001
+        elseif (m<=17) then
+          theta_f=min(1.0,max(0.0001, (m-4)/10.0)) * 3.0
+        else
+          theta_f=4.4
+        endif
+        if (m==14) theta_f=theta_f-0.1
+        if (m==15) theta_f=theta_f+0.1
+        if (m==16) theta_f=theta_f+0.55
+        if (m==17) theta_f=theta_f+0.97
         do k=1,nv_vqs(m)
           sigma=(k-1.0)/(1.0-nv_vqs(m))
-
-!         Alternative transformations below
-!         Option 1: quadratic 
-!          a_vqs(m)=max(-1.d0,a_vqs0-(m-1)*0.03)
-!          tmp=a_vqs(m)*sigma*sigma+(1+a_vqs(m))*sigma !transformed sigma
-!          z_mas(k,m)=tmp*(etal+hsm(m))+etal
-
-!          Option 2: S
-          theta_b=0
-          if(m<=4) then
-            theta_f=2.5
-          else if(m==5) then
-            theta_f=2.65
-          endif
           cs=(1-theta_b)*sinh(theta_f*sigma)/sinh(theta_f)+ &
-     &theta_b*(tanh(theta_f*(sigma+0.5))-tanh(theta_f*0.5))/2/tanh(theta_f*0.5)
+            &theta_b*(tanh(theta_f*(sigma+0.5))-tanh(theta_f*0.5))/2/tanh(theta_f*0.5)
           z_mas(k,m)=etal*(1+sigma)+hsm(1)*sigma+(hsm(m)-hsm(1))*cs
-
         enddo !k
       enddo !m
 
