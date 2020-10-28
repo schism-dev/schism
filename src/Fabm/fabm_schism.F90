@@ -11,7 +11,7 @@ module fabm_schism
 &bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy,ze,kbe,wsett,ielg,iplg, &
 &xnd,ynd,rkind,xlon,ylat,lreadll,iwsett,irange_tr,epsf,dfv,in_dir,out_dir, &
 &len_in_dir,len_out_dir
-  use schism_msgp
+  use schism_msgp, only: myrank
   use misc_modules, only: get_param
   use fabm
   use fabm_types
@@ -221,6 +221,12 @@ module fabm_schism
     iwsett(istart+i-1)=0
 #endif
   end do
+
+  if (myrank == 0) then  
+    do i=1,fs%nvar
+       write(*,'(A,I2,A)') 'Tracer id:', istart+i-1, ' '//trim(fs%model%state_variables(i)%long_name)
+    enddo
+  endif
 
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
