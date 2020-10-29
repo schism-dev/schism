@@ -456,7 +456,7 @@
           ! 2 - Term of the spatial variation de the wave-induced
           ! pressure (J)
           ! 3 - Term -w_s*(du/dz,dv/dz)
-          du_loc = 0; dv_loc = 0
+          du_loc = 0; dv_loc = 0; dz_loc = 1
           DO k = kbs(IS),NVRT
 
             IF (fwvor_advz_stokes == 1) THEN ! BM
