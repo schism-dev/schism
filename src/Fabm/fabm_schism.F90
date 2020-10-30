@@ -1,24 +1,42 @@
-!> FABM-SCHISM driver
-!!
-!> @brief 3D driver for the Framework for Aquatic Biogeochemical Models
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
-!> @copyright Copyright 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+!> FABM host for SCHISM
 !
-
+! This code is part of the the Semi-implicit Cross-scale Hydroscience Integrated
+! System Model (SCHISM) and part of the Modular System for Shelves and Coasts
+! (MOSSCO).  It defines a FABM host specification for the hydrodynamic SCHISM
+! core.
+!
+!> @author Richard Hofmeister
+!> @author  Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright Copyright 2017, 2018, 2019, 2020 Helmholtz-Zentrum Geesthacht
+!
+! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
+! Public License Version 3.0
+!
 module fabm_schism
 
-  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np, &
-&bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy,ze,kbe,wsett,ielg,iplg, &
-&xnd,ynd,rkind,xlon,ylat,lreadll,iwsett,irange_tr,epsf,dfv,in_dir,out_dir, &
-&len_in_dir,len_out_dir
+  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
+  use schism_glbl, only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
+  use schism_glbl, only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
+  use schism_glbl, only: lreadll,iwsett,irange_tr,epsf,dfv
+  use schism_glbl, only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_msgp, only: myrank
   use misc_modules, only: get_param
+
   use fabm
   use fabm_types
   use fabm_config
   use fabm_expressions
-  use fabm_standard_variables
+  use fabm_driver, only: type_base_driver
+#if _FABM_API_VERSION_ > 0
+  !> @todo remove this compatibility in the long-term, it takes care of the
+  !> renaming from FABM v0.9 to v1.0
+  use fabm_v0_compatibility
+#else
+  use fabm_standard_variables, only: standard_variables
+#endif
+
   use netcdf
+
   implicit none
   private
 
@@ -34,7 +52,16 @@ module fabm_schism
   integer, parameter, public :: fabm_schism_rk = selected_real_kind(13)
   integer :: i
   integer :: namlst_unit=53
+
+  !> @todo this assumes that FABM is the first BGC model to be loaded, just
+  !> after temperature and salinity.
   integer, public :: istart=3
+
+  type,extends(type_base_driver) :: type_schism_driver
+    contains
+    procedure :: fatal_error => schism_driver_fatal_error
+    procedure :: log_message => schism_driver_log_message
+  end type
 
   type, public :: fabm_schism_bulk_diagnostic_variable
     real(rk), dimension(:,:), pointer :: data => null()
@@ -55,7 +82,12 @@ module fabm_schism
   end type
 
   type, public :: type_fabm_schism
-    type(type_model), pointer     :: model => null()
+#if _FABM_API_VERSION_ > 0
+  type(type_fabm_model), pointer     :: model => null()
+#else
+  type(type_model), pointer     :: model => null()
+#endif
+
     integer                       :: day_of_year, seconds_of_day
     logical                       :: fabm_ready
     logical                       :: repair_allowed=.true.
@@ -99,21 +131,30 @@ module fabm_schism
   integer  :: ncid=-1 ! ncid of hotstart variables
   real     :: missing_value=-9999. ! missing_value for netcdf variables
 
-  contains
+contains
 
+!> Initialize FABM model setup, i.e. read the `fabm.yaml` and `schism_fabm.in`
+!> configuration files and return the number of tracers
+subroutine fabm_schism_init_model(ntracers)
 
-  !> initialize FABM model setup
-  subroutine fabm_schism_init_model(ntracers)
   integer, intent(out), optional :: ntracers
   integer                        :: i
   integer                        :: configuration_method=-1
   logical                        :: file_exists=.false.
   character(len=2)               :: tmp_string
-  integer                        :: tmp_int  
+  integer                        :: tmp_int
   real(rkind)                    :: tmp_real
 
+#if _FABM_API_VERSION_ < 1
+#else
+  !> Need to allocate the driver class for error and log handling
+  allocate(type_schism_driver::driver)
+#endif
+
   fs%fabm_ready=.false.
- 
+
+  !if (myrank==0) write(*,*) 'Using FABM API '//_FABM_API_VERSION_
+
   ! read driver parameters
   inquire(file=in_dir(1:len_in_dir)//'schism_fabm.in',exist=file_exists)
   if (file_exists) then
@@ -123,7 +164,7 @@ module fabm_schism
   else
     if (myrank==0) write(16,*) 'init_fabm: skip reading schism_fabm.in, file does not exist'
   end if
- 
+
   ! build model tree
   if (configuration_method==-1) then
     configuration_method = 1
@@ -222,7 +263,7 @@ module fabm_schism
 #endif
   end do
 
-  if (myrank == 0) then  
+  if (myrank == 0) then
     do i=1,fs%nvar
        write(*,'(A,I2,A)') 'Tracer id:', istart+i-1, ' '//trim(fs%model%state_variables(i)%long_name)
     enddo
@@ -291,6 +332,8 @@ module fabm_schism
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
 
+
+#if _FABM_API_VERSION_ < 1
   call fs%get_light()
   call fabm_link_bulk_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
   call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
@@ -299,8 +342,17 @@ module fabm_schism
   call fabm_link_bulk_data(fs%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(fs%model,standard_variables%density,erho(:,:))
   call fabm_link_bulk_data(fs%model,standard_variables%cell_thickness,fs%layer_height)
- 
-   
+#else
+  call fs%get_light() ! has been removed, how do we get the light then?
+  call fabm_link_bulk_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
+  call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
+  call fabm_link_horizontal_data(fs%model,standard_variables%bottom_stress,fs%tau_bottom)
+  call fabm_link_bulk_data(fs%model,standard_variables%practical_salinity,tr_el(2,:,:))
+  call fabm_link_bulk_data(fs%model,standard_variables%temperature,tr_el(1,:,:))
+  call fabm_link_bulk_data(fs%model,standard_variables%density,erho(:,:))
+  call fabm_link_bulk_data(fs%model,standard_variables%cell_thickness,fs%layer_height)
+#endif
+
   ! The dissipation of the turbulent kinetic energy is usually abbreviated as
   ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
   ! equivalently m2 s-3.
@@ -371,7 +423,7 @@ module fabm_schism
   end do
   fs%time_since_last_output=0.0_rk
   end subroutine
-  
+
   subroutine get_horizontal_diagnostics_for_output(fs)
   class (type_fabm_schism) :: fs
   integer :: n
@@ -512,19 +564,19 @@ module fabm_schism
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
-     fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i) 
+     fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
   end do
   call fs%get_light()
- 
-  ! Interpolate momentum diffusivity (num) and tke dissipation (eps) 
+
+  ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
-  if (allocated(epsf)) then 
+  if (allocated(epsf)) then
     do i=1,nea
         fs%eps(1:nvrt,i) = sum(epsf(1:nvrt,elnode(1:i34(i),i)),dim=2)/i34(i)
     enddo
   endif
 
-  if (allocated(dfv)) then 
+  if (allocated(dfv)) then
   do i=1,nea
     do k=1,nvrt
       fs%num(k,i) = sum(dfv(k,elnode(1:i34(i),i)))/i34(i)
@@ -535,7 +587,7 @@ module fabm_schism
   ! update time stepping information
   fs%tidx = fs%tidx+1
   call fabm_update_time(fs%model, fs%tidx)
- 
+
   ! get rhs and put tendencies into schism-array
   do i=1,nea
 !write(0,*) 'fabm: get rhs'
@@ -721,7 +773,7 @@ module fabm_schism
   allocate(el_dict(maxval(element_ids)))
   do i=1,nelements
     el_dict(element_ids(i)) = i
-  end do  
+  end do
 
   ! read data from file
   do n=1,fs%nvar_bot
@@ -810,7 +862,7 @@ module fabm_schism
   call nccheck( nf90_def_var(ncid, nv_name, nf90_int64, (/ surrnodes_dim_id, elements_dim_id /), nv_id) )
   call nccheck( nf90_put_att(ncid, nv_id, 'long_name', 'element-node connectivity') )
   call nccheck( nf90_put_att(ncid, nv_id, 'missing_value', -9999), 'set missing value' )
- 
+
   call nccheck( nf90_def_var(ncid, x_name, nf90_double, (/ nodes_dim_id /), x_id) )
   call nccheck( nf90_put_att(ncid, x_id, 'long_name', 'node x-coordinate') )
 
@@ -936,8 +988,23 @@ module fabm_schism
 
   end subroutine fabm_schism_write_output_netcdf
 
+!> Custom routines for log and error handling, see
+!> https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling
 
+subroutine schism_driver_log_message(self, message)
+  class (type_schism_driver), intent(inout) :: self
+  character(len=*),  intent(in)             :: message
 
+  if (myrank == 0) write (*,*) trim(message)
+end subroutine schism_driver_log_message
+
+subroutine schism_driver_fatal_error(self, location, message)
+  class (type_schism_driver), intent(inout) :: self
+  character(len=*),  intent(in)             :: location, message
+
+  write(0,*) trim(location)//': '//trim(message)
+  stop 1
+end subroutine schism_driver_fatal_error
 
   subroutine fabm_schism_close_output_netcdf()
   call nccheck( nf90_close(ncid) )
@@ -946,12 +1013,12 @@ module fabm_schism
   subroutine nccheck(status,optstr)
     integer, intent ( in)     :: status
     character(len=*),optional :: optstr
-    
+
     if(status /= nf90_noerr) then
-      if (present(optstr)) print *, optstr 
+      if (present(optstr)) print *, optstr
       print *, trim(nf90_strerror(status))
       stop "Stopped"
     end if
-  end subroutine nccheck 
+  end subroutine nccheck
 
 end module fabm_schism
