@@ -12,21 +12,23 @@
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
 !
+#include "fabm_version.h"
+
 module fabm_schism
 
-  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl, only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
-  use schism_glbl, only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
-  use schism_glbl, only: lreadll,iwsett,irange_tr,epsf,dfv
-  use schism_glbl, only: in_dir,out_dir, len_in_dir,len_out_dir
-  use schism_msgp, only: myrank
+  use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
+  use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
+  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
+  use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
+  use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
+  use schism_msgp,  only: myrank, parallel_abort
   use misc_modules, only: get_param
 
   use fabm
   use fabm_types
   use fabm_config
   use fabm_expressions
-  use fabm_driver, only: type_base_driver
+  use fabm_driver, only: type_base_driver, driver
 #if _FABM_API_VERSION_ > 0
   !> @todo remove this compatibility in the long-term, it takes care of the
   !> renaming from FABM v0.9 to v1.0
@@ -57,7 +59,7 @@ module fabm_schism
   !> after temperature and salinity.
   integer, public :: istart=3
 
-  type,extends(type_base_driver) :: type_schism_driver
+  type, extends(type_base_driver) :: type_schism_driver
     contains
     procedure :: fatal_error => schism_driver_fatal_error
     procedure :: log_message => schism_driver_log_message
@@ -126,7 +128,6 @@ module fabm_schism
     procedure :: integrate_vertical_movement
   end type
 
-
   type(type_fabm_schism), public :: fs ! the main module object
   integer  :: ncid=-1 ! ncid of hotstart variables
   real     :: missing_value=-9999. ! missing_value for netcdf variables
@@ -145,24 +146,23 @@ subroutine fabm_schism_init_model(ntracers)
   integer                        :: tmp_int
   real(rkind)                    :: tmp_real
 
-#if _FABM_API_VERSION_ < 1
-#else
-  !> Need to allocate the driver class for error and log handling
+  !> Need to allocate the driver class for error and log handling, use with
+  !> driver%log_message() and driver%fatal_error()
   allocate(type_schism_driver::driver)
-#endif
 
   fs%fabm_ready=.false.
 
-  !if (myrank==0) write(*,*) 'Using FABM API '//_FABM_API_VERSION_
+  !> @todo get the define macro into a string
+  !call driver%log_message('using API version '//_FABM_API_VERSION_)
 
-  ! read driver parameters
+  !> Read driver parameters from the optional file 'schism_fabm.in'
   inquire(file=in_dir(1:len_in_dir)//'schism_fabm.in',exist=file_exists)
   if (file_exists) then
     call get_param('schism_fabm.in','external_spm_extinction',2,tmp_int,fs%external_spm_extinction,tmp_string)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
     call get_param('schism_fabm.in','par_fraction',2,tmp_int,fs%par_fraction,tmp_string)
   else
-    if (myrank==0) write(16,*) 'init_fabm: skip reading schism_fabm.in, file does not exist'
+    call driver%log_message('skipped reading non-existent "schism_fabm.in"')
   end if
 
   ! build model tree
@@ -178,11 +178,12 @@ subroutine fabm_schism_init_model(ntracers)
     case (0)
       ! From namelists in fabm.nml
       fs%model => fabm_create_model_from_file(namlst_unit)
-   case (1)
+  case (1)
       ! From YAML file fabm.yaml
       allocate(fs%model)
       call fabm_create_model_from_yaml_file(fs%model)
-   end select
+  end select
+
   fs%nvar = size(fs%model%state_variables)
   fs%nvar_bot = size(fs%model%bottom_state_variables)
   fs%nvar_sf = size(fs%model%surface_state_variables)
@@ -192,6 +193,8 @@ subroutine fabm_schism_init_model(ntracers)
   ! check real kind
   !write(0,*) 'fabm realkind=',rk,', schism realkind=',rkind
 
+  !> The diagnostic variables are allocated here in the host, whereas the
+  !> state variables are allocated by schism itself
   allocate(fs%diagnostic_variables(1:fs%ndiag))
   do i=1,fs%ndiag
     fs%diagnostic_variables(i)%short_name = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
@@ -213,22 +216,21 @@ subroutine fabm_schism_init_model(ntracers)
   fs%tidx = 0
 
   if (present(ntracers)) ntracers = fs%nvar
-  end subroutine fabm_schism_init_model
+end subroutine fabm_schism_init_model
 
+!> Initialize FABM internal fields
+subroutine fabm_schism_init_stage2
 
-
-  !> initialize FABM internal fields
-  subroutine fabm_schism_init_stage2
   integer :: ntracer,n,i
   integer,save,allocatable,target :: bottom_idx(:)
   integer,save,allocatable,target :: surface_idx(:)
+  character(len=256)              :: message
 
   ! check size of tracer field
   ntracer = ubound(tr_el,1)
   if (ntracer-istart+1 < fs%nvar) then
-    write(0,*) 'fabm_schism: incorrect number of tracers:',ntracer,', number required by fabm_schism:',fs%nvar
-    ! halt model
-    stop
+    write(message,*) 'incorrect number of tracers:',ntracer,', number required by fabm_schism:',fs%nvar
+    call driver%fatal_error('fabm_schism_init_stage2',message)
   end if
 
   ! set domain size
@@ -263,11 +265,10 @@ subroutine fabm_schism_init_model(ntracers)
 #endif
   end do
 
-  if (myrank == 0) then
-    do i=1,fs%nvar
-       write(*,'(A,I2,A)') 'Tracer id:', istart+i-1, ' '//trim(fs%model%state_variables(i)%long_name)
-    enddo
-  endif
+  do i=1,fs%nvar
+    write(message,'(A,I2,A)') 'Tracer id ', istart+i-1, ' is '//trim(fs%model%state_variables(i)%long_name)
+    call driver%log_message(message)
+  enddo
 
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
@@ -378,15 +379,15 @@ subroutine fabm_schism_init_model(ntracers)
 
   call fabm_update_time(fs%model, fs%tidx)
 
-  end subroutine fabm_schism_init_stage2
+end subroutine fabm_schism_init_stage2
 
+!> Integrate the diagnostics that hav the output_averaged property
+subroutine integrate_diagnostics(fs,timestep)
 
-
-  subroutine integrate_diagnostics(fs,timestep)
   class (type_fabm_schism) :: fs
-  integer           :: n
-  real(rk),optional :: timestep
-  real(rk)          :: eff_timestep
+  integer                  :: n
+  real(rk),optional        :: timestep
+  real(rk)                 :: eff_timestep
 
   if (present(timestep)) then
     eff_timestep = timestep
@@ -403,17 +404,21 @@ subroutine fabm_schism_init_model(ntracers)
   do n=1,size(fs%hor_diagnostic_variables)
     if (.not.(fs%hor_diagnostic_variables(n)%do_output)) cycle
     if (fs%hor_diagnostic_variables(n)%output_averaged) then
-      fs%hor_diagnostic_variables(n)%data = fs%hor_diagnostic_variables(n)%data + (eff_timestep * fabm_get_horizontal_diagnostic_data(fs%model,n))
+      fs%hor_diagnostic_variables(n)%data = fs%hor_diagnostic_variables(n)%data &
+        + (eff_timestep * fabm_get_horizontal_diagnostic_data(fs%model,n))
     end if
   end do
 
   fs%time_since_last_output = fs%time_since_last_output + eff_timestep
   fs%time_since_last_hor_output = fs%time_since_last_hor_output + eff_timestep
-  end subroutine
 
-  subroutine get_diagnostics_for_output(fs)
+end subroutine
+
+subroutine get_diagnostics_for_output(fs)
+
   class (type_fabm_schism) :: fs
   integer :: n
+
   do n=1,fs%ndiag
     if (fs%diagnostic_variables(n)%output_averaged) then
       fs%diagnostic_variables(n)%data = fs%diagnostic_variables(n)%data / fs%time_since_last_output
@@ -422,9 +427,10 @@ subroutine fabm_schism_init_model(ntracers)
     end if
   end do
   fs%time_since_last_output=0.0_rk
-  end subroutine
 
-  subroutine get_horizontal_diagnostics_for_output(fs)
+end subroutine
+
+subroutine get_horizontal_diagnostics_for_output(fs)
   class (type_fabm_schism) :: fs
   integer :: n
   do n=1,size(fs%hor_diagnostic_variables)
@@ -435,36 +441,35 @@ subroutine fabm_schism_init_model(ntracers)
     end if
   end do
   fs%time_since_last_hor_output=0.0_rk
-  end subroutine
+end subroutine
 
-
-  !> initialize concentrations from namelist
-  subroutine fabm_schism_init_concentrations()
+!> initialize concentrations from namelist
+subroutine fabm_schism_init_concentrations()
   integer :: n
 
-  do n=1,fs%nvar
-    ! set tracer values on the nodes, will be interpolated to the elements
-    ! in schism_init
+  ! set tracer values on the nodes, will be interpolated to the elements
+  ! in schism_init
+  do n=1, fs%nvar
     tr_nd(istart+n-1,:,:) = fs%model%state_variables(n)%initial_value
   end do
 
-  do n=1,fs%nvar_bot
+  do n=1, fs%nvar_bot
     fs%bottom_state(:,n) = fs%model%bottom_state_variables(n)%initial_value
     call fabm_link_bottom_state_data(fs%model,n,fs%bottom_state(:,n))
   end do
 
-  do n=1,fs%nvar_sf
+  do n=1, fs%nvar_sf
     fs%surface_state(:,n) = fs%model%surface_state_variables(n)%initial_value
     call fabm_link_surface_state_data(fs%model,n,fs%surface_state(:,n))
   end do
 
   call fabm_schism_read_horizontal_state_from_netcdf('fabm_schism_init.nc',time=0.0_rk)
 
-  end subroutine fabm_schism_init_concentrations
+end subroutine fabm_schism_init_concentrations
 
-
-  !> get light conditions
-  subroutine get_light(fs)
+!> get light conditions
+!> @todo this routine is superseded in FABM 1.0
+subroutine get_light(fs)
   class(type_fabm_schism) :: fs
   integer :: k,nel
   real(rk) :: intext
@@ -491,40 +496,43 @@ subroutine fabm_schism_init_model(ntracers)
     call fabm_get_light(fs%model,1,nvrt,nel)
   end do
 
-  end subroutine get_light
+end subroutine get_light
 
+!> get name of state variable by index
+function state_variable_name_by_idx(fs,idx) result(varname)
 
-  !> get name of state variable by index
-  function state_variable_name_by_idx(fs,idx) result(varname)
   class (type_fabm_schism) :: fs
   integer, intent(in)      :: idx
   character(len=256)       :: varname
 
   varname = trim(fs%model%state_variables(idx)%long_name)
-  end function state_variable_name_by_idx
+end function state_variable_name_by_idx
 
+!> repair state
+subroutine repair_state(fs)
 
-  !> repair state
-  subroutine repair_state(fs)
+  use schism_glbl, only: nea, nvrt
+  implicit none
+
   class(type_fabm_schism) :: fs
   integer                 :: k,nel
   logical                 :: had_valid_state=.true.
 
-  do nel=1,nea
+  do nel=1, nea
     call fabm_check_state(fs%model,1,nvrt,nel,fs%repair_allowed,had_valid_state)
     !evtl. clip values below zero
   end do
-  do nel=1,nea
+
+  do nel=1, nea
     call fabm_check_surface_state(fs%model,nel,fs%repair_allowed,had_valid_state)
     call fabm_check_bottom_state(fs%model,nel,fs%repair_allowed,had_valid_state)
   end do
-  end subroutine
 
+end subroutine
 
+!> do FABM timestep
+subroutine fabm_schism_do()
 
-
-  !> do FABM timestep
-  subroutine fabm_schism_do()
   real(rk),dimension(:,:),pointer,save :: rhs => null()
   real(rk),dimension(:,:),pointer,save :: w => null()
   real(rk),dimension(:,:),pointer,save :: upper_flux => null()
@@ -551,7 +559,7 @@ subroutine fabm_schism_init_model(ntracers)
   call fs%repair_state()
 
   ! calculate layer height
-  do i=1,nea
+  do i=1, nea
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
@@ -681,10 +689,10 @@ subroutine fabm_schism_init_model(ntracers)
   ! integrate time-averaged diagnostic data arrays
   call fs%integrate_diagnostics(timestep=dt)
 
-  end subroutine fabm_schism_do
+end subroutine fabm_schism_do
 
 
-  subroutine integrate_vertical_movement(fs)
+subroutine integrate_vertical_movement(fs)
   ! integrate vertical movement with simple upwind method.
   ! this routine is a backup implementation, not used/called by default
   class(type_fabm_schism) :: fs
@@ -722,11 +730,12 @@ subroutine fabm_schism_init_model(ntracers)
     end do
     end if ! idry_e==0
   end do
-  end subroutine integrate_vertical_movement
+end subroutine integrate_vertical_movement
 
 
 
-  subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename,time)
+subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
+
   character(len=*), intent(in)    :: ncfilename
   real(rk), intent(in),optional   :: time
   integer                         :: status
@@ -740,15 +749,19 @@ subroutine fabm_schism_init_model(ntracers)
   real(rk)                        :: tmp, time_eff
   real(rk),allocatable            :: time_vector(:)
   integer                         :: time_dimid,time_id,ntime,time_index
+  character(len=256)              :: message
 
-  ! open netcdf
+  ! Try to open netcdf file with forcing for horizontal states.  This is
+  ! optional and the routine returns on file not found or error.
   status = nf90_open(in_dir(1:len_in_dir)//ncfilename, nf90_nowrite, ncid)
   if (status /= nf90_noerr) then
-    if (myrank==0) write(16,*) 'init_fabm: read from file skipped, file not found: ',trim(ncfilename)
+    write(message,'(A)') 'Skipped reading horizontal state from non-existent'// &
+      'file '//trim(ncfilename)
+    call driver%log_message(message)
     return
   end if
 
-  ! get time vector and find closest time
+  ! Get time vector and find closest time
   time_eff = 0.0_rk
   if (present(time)) time_eff=time
 
@@ -809,12 +822,10 @@ subroutine fabm_schism_init_model(ntracers)
   ! close netcdf
   call nccheck( nf90_close(ncid) )
 
-  end subroutine fabm_schism_read_horizontal_state_from_netcdf
+end subroutine fabm_schism_read_horizontal_state_from_netcdf
 
+subroutine fabm_schism_create_output_netcdf()
 
-
-
-  subroutine fabm_schism_create_output_netcdf()
   character(len=*),parameter  :: filename='fabm_state'
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
@@ -923,27 +934,25 @@ subroutine fabm_schism_init_model(ntracers)
 
   status = nf90_sync(ncid)
 
-  end subroutine fabm_schism_create_output_netcdf
+end subroutine fabm_schism_create_output_netcdf
 
-
-  subroutine mask_nan2d(a)
+subroutine mask_nan2d(a)
   real(rk), pointer :: a(:,:)
 
   where (a /= a) a=missing_value
   where (abs(a) > huge(missing_value)) a=missing_value
 
-  end subroutine mask_nan2d
+end subroutine mask_nan2d
 
-  subroutine mask_nan1d(a)
+subroutine mask_nan1d(a)
   real(rk), pointer :: a(:)
 
   where (a /= a) a=missing_value
   where (abs(a) > huge(missing_value)) a=missing_value
 
-  end subroutine mask_nan1d
+end subroutine mask_nan1d
 
-
-  subroutine fabm_schism_write_output_netcdf(time)
+subroutine fabm_schism_write_output_netcdf(time)
   real(rk), optional        :: time
   real(rk)                  :: time_value=0.0
   integer                   :: time_id, var_id
@@ -986,39 +995,53 @@ subroutine fabm_schism_init_model(ntracers)
   next_time_index = next_time_index+1
   status = nf90_sync(ncid)
 
-  end subroutine fabm_schism_write_output_netcdf
+end subroutine fabm_schism_write_output_netcdf
 
 !> Custom routines for log and error handling, see
 !> https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling
-
 subroutine schism_driver_log_message(self, message)
+
+  use schism_msgp, only: myrank
+  implicit none
+
   class (type_schism_driver), intent(inout) :: self
   character(len=*),  intent(in)             :: message
 
-  if (myrank == 0) write (*,*) trim(message)
+  ! Instead of stdout, the preferred place for logging progress is 'mirror.out'
+  ! which is unit 16, we only do this on rank 0
+  if (myrank == 0) write (16, '(A)') 'FABM/SCHISM: '//trim(message)
+
 end subroutine schism_driver_log_message
 
 subroutine schism_driver_fatal_error(self, location, message)
+
+  use schism_msgp, only: parallel_abort
+  implicit none
+
   class (type_schism_driver), intent(inout) :: self
   character(len=*),  intent(in)             :: location, message
 
-  write(0,*) trim(location)//': '//trim(message)
-  stop 1
+  call parallel_abort('FABM/SCHISM: '//trim(location)//' '//trim(message))
+
 end subroutine schism_driver_fatal_error
 
-  subroutine fabm_schism_close_output_netcdf()
+subroutine fabm_schism_close_output_netcdf()
   call nccheck( nf90_close(ncid) )
-  end subroutine fabm_schism_close_output_netcdf
+end subroutine fabm_schism_close_output_netcdf
 
-  subroutine nccheck(status,optstr)
-    integer, intent ( in)     :: status
-    character(len=*),optional :: optstr
+subroutine nccheck(status, optstr)
 
-    if(status /= nf90_noerr) then
-      if (present(optstr)) print *, optstr
-      print *, trim(nf90_strerror(status))
-      stop "Stopped"
-    end if
-  end subroutine nccheck
+  use netcdf, only: nf90_strerror
+  integer, intent (in)       :: status
+  character(len=*), optional :: optstr
+
+  if(status /= nf90_noerr) then
+    if (.not.present(optstr)) then
+      call driver%fatal_error('Unknown NetCDF error', nf90_strerror(status))
+    else
+      call driver%fatal_error(optstr, nf90_strerror(status))
+    endif
+  endif
+end subroutine nccheck
 
 end module fabm_schism
