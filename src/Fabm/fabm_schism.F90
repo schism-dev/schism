@@ -322,13 +322,22 @@ subroutine fabm_schism_init_stage2
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
     fs%bottom_state(:,i) = fs%model%bottom_state_variables(i)%initial_value
-    call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+#if _FABM_API_VERSION_ < 1
+     call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+#else
+    call fs%model%link_bottom_state_data(i,fs%bottom_state(:,i))
+#endif
+
   end do
 
   allocate(fs%surface_state(nea,fs%nvar_sf))
   do i=1,fs%nvar_sf
     fs%surface_state(:,i) = fs%model%surface_state_variables(i)%initial_value
+#if _FABM_API_VERSION_ < 1
     call fabm_link_surface_state_data(fs%model,i,fs%surface_state(:,i))
+#else
+    call fs%model%link_surface_state_data(i,fs%surface_state(:,i))
+#endif
   end do
 
   do n=1,fs%ndiag
@@ -390,7 +399,6 @@ subroutine fabm_schism_init_stage2
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
 
-
 #if _FABM_API_VERSION_ < 1
   call fs%get_light()
   call fabm_link_bulk_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
@@ -402,13 +410,13 @@ subroutine fabm_schism_init_stage2
   call fabm_link_bulk_data(fs%model,standard_variables%cell_thickness,fs%layer_height)
 #else
   call fs%model%prepare_inputs()
-  call fs%model%link_interior_state_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
-  call fs%model%link_interior_state_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
-  call fs%model%link_interior_state_data(fabm_standard_variables%bottom_stress,fs%tau_bottom)
-  call fs%model%link_interior_state_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
-  call fs%model%link_interior_state_data(fabm_standard_variables%temperature,tr_el(1,:,:))
-  call fs%model%link_interior_state_data(fabm_standard_variables%density,erho(:,:))
-  call fs%model%link_interior_state_data(fabm_standard_variables%cell_thickness,fs%layer_height)
+  call fs%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
+  call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
+  call fs%model%link_horizontal_data(fabm_standard_variables%bottom_stress,fs%tau_bottom)
+  call fs%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%density,erho(:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%cell_thickness,fs%layer_height)
 #endif
 
   ! The dissipation of the turbulent kinetic energy is usually abbreviated as
@@ -417,18 +425,31 @@ subroutine fabm_schism_init_stage2
   ! @todo what is the exact representation of this quantity in SCHISM? We assume
   ! `epsf` here for now.
   !call fabm_link_bulk_data(fs%model,standard_variables%turbulent_kinetic_energy_dissipation,fs%eps)
+#if _FABM_API_VERSION_ < 1
   call fabm_link_bulk_data(fs%model, &
     type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
     units='W kg-1', &
     cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
+#else
+  call fs%model%link_interior_data( &
+    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+    units='W kg-1', &
+    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
+#endif
 
   ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
   ! represented in the dfv(1:nvrt,1:npa) variable.
   !call fabm_link_bulk_data(fs%model,standard_variables%momentum_diffusivity,fs%num)
+#if _FABM_API_VERSION_ < 1
   call fabm_link_bulk_data(fs%model, &
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
+#else
+  call fs%model%link_interior_data( &
+    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+    cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
+#endif
 
 #if _FABM_API_VERSION_ < 1
   call fabm_check_ready(fs%model)
@@ -536,12 +557,20 @@ subroutine fabm_schism_init_concentrations()
 
   do n=1, fs%nvar_bot
     fs%bottom_state(:,n) = fs%model%bottom_state_variables(n)%initial_value
+#if _FABM_API_VERSION_ < 1
     call fabm_link_bottom_state_data(fs%model,n,fs%bottom_state(:,n))
+#else
+    call fs%model%link_bottom_state_data(n,fs%bottom_state(:,n))
+#endif
   end do
 
   do n=1, fs%nvar_sf
     fs%surface_state(:,n) = fs%model%surface_state_variables(n)%initial_value
-    call fabm_link_surface_state_data(fs%model,n,fs%surface_state(:,n))
+#if _FABM_API_VERSION_ < 1
+    call fabm_link_surface_state_data(fs%model, n, fs%surface_state(:,n))
+#else
+    call fs%model%link_surface_state_data(n, fs%surface_state(:,n))
+#endif
   end do
 
   call fabm_schism_read_horizontal_state_from_netcdf('fabm_schism_init.nc',time=0.0_rk)
