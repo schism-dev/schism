@@ -102,7 +102,7 @@
       END SELECT
 
       !! Conversion to monochromatic waves if needed
-      !IF (LMONO_IN) HMAX(IP) = HMAX(IP) * SQRT(TWO)
+      IF (LMONO_IN) HMAX(IP) = HMAX(IP) * SQRT(TWO)
       
 !-----------------------------------------
 !     2. Defining the breaking coefficient
