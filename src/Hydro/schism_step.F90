@@ -37,6 +37,7 @@
 #endif
 
 #ifdef USE_FABM
+#include "fabm_version.h"
       USE fabm_schism, only: fabm_schism_do, fs, fabm_istart => istart
       USE fabm_schism, only: fabm_schism_write_output_netcdf
 #endif
@@ -7990,7 +7991,11 @@
 
 #ifdef USE_FABM
         do i=1,ntrs(11)
+#if _FABM_API_VERSION_ < 1
           call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
+#else
+          call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%interior_state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
+#endif
         end do
         noutput=noutput+ntrs(11)
 
