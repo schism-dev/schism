@@ -733,7 +733,7 @@ subroutine landplant(id,hour,it)
   sdveg=0.0
   do j=1,3
     sdveg=sdveg+rkshveg(j)*(tlfveg(id,j)+tstveg(id,j))/2
-    if(sdveg>100.0.or.sdveg<=0.) then
+    if(sdveg<=0.) then
       write(errmsg,*)'plantland: check light attenuation on leaf:',rkshveg(j),j,sdveg,tlfveg(id,j),tstveg(id,j),ielg(id)
       call parallel_abort(errmsg)
     endif
@@ -790,8 +790,11 @@ subroutine landplant(id,hour,it)
       else
         call parallel_abort('unknown iRad in icm.F90')
       endif ! 
-
-      iwcveg=iatcnpyveg*rat*(1-exp(-sdveg))/sdveg
+      if(sdveg>100) then !>0, checked
+        iwcveg=iatcnpyveg*rat/sdveg
+      else
+        iwcveg=iatcnpyveg*rat*(1-exp(-sdveg))/sdveg
+      endif
       ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0 
 
       fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
@@ -887,20 +890,26 @@ subroutine landplant(id,hour,it)
     if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
       hcanveg(id,j)=dveg(j)*(tlfveg(id,j)+tstveg(id,j))+eveg(j)
     else
-      hcanveg(id,j)=aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j)
+      hcanveg(id,j)=max(8.e-1,aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j))
     endif !
     if(hcanveg(id,j)<1.e-8)then
-      write(errmsg,*)'illegal veg height:',hcanveg(id,j),j,ielg(id)
+      write(errmsg,*)'illegal veg height:',hcanveg(id,j),tlfveg(id,j),tstveg(id,j),j,ielg(id)
       call parallel_abort(errmsg)
     endif
 
     !--------------------------------------------------------------------------------
     !veg :: nutrient fluxes to sediment
+    !use constant name, but containing more sources for mass balance
+    !simplified assumption, lf >> inorganic; st+rt >> organic
     !--------------------------------------------------------------------------------
 
     !----------inorganic nutrient uptake----------
     tlfNH4veg(id,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j) !unit: g/m^2/day
     tlfPO4veg(id,j)=apcveg(j)*plfveg(id,j)*tlfveg(id,j)
+
+    !----------inorganic nutrient release (minus)----------
+    tlfNH4veg(id,j)=tlfNH4veg(id,j)-ancveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j))
+    tlfPO4veg(id,j)=tlfPO4veg(id,j)-apcveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j))
 
     !nan check
     if(.not.(tlfNH4veg(id,j)>0.or.tlfNH4veg(id,j)<=0))then
@@ -913,9 +922,9 @@ subroutine landplant(id,hour,it)
     endif
 
     !----------release of POM---------- 
-    trtpocveg(id,j)=(1-fdoveg(j))*bmrtveg(j)*trtveg(id,j)
-    trtponveg(id,j)=ancveg(j)*bmrtveg(j)*trtveg(id,j)
-    trtpopveg(id,j)=apcveg(j)*bmrtveg(j)*trtveg(id,j)
+    trtpocveg(id,j)=(1-fdoveg(j))*(bmrtveg(j)*trtveg(id,j)+bmstveg(j)*tstveg(id,j))
+    trtponveg(id,j)=ancveg(j)*(bmrtveg(j)*trtveg(id,j)+bmstveg(j)*tstveg(id,j))
+    trtpopveg(id,j)=apcveg(j)*(bmrtveg(j)*trtveg(id,j)+bmstveg(j)*tstveg(id,j))
 
     !nan check
     if(.not.(trtpocveg(id,j)>0.or.trtpocveg(id,j)<=0))then
@@ -3442,10 +3451,10 @@ subroutine calkwq(id,nv,ure,it)
       if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
         hcanveg(id,j)=dveg(j)*(tlfveg(id,j)+tstveg(id,j))+eveg(j)
       else
-        hcanveg(id,j)=aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j)
+        hcanveg(id,j)=max(8.e-1,aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j))
       endif !
       if(hcanveg(id,j)<1.e-8)then
-        write(errmsg,*)'illegal veg height:',hcanveg(id,j),j,ielg(id)
+        write(errmsg,*)'illegal veg height:',hcanveg(id,j),tlfveg(id,j),tstveg(id,j),j,ielg(id)
         call parallel_abort(errmsg)
       endif
 
