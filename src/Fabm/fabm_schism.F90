@@ -21,6 +21,7 @@ module fabm_schism
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
+  use schism_glbl,  only: xlon_el, ylat_el
   use schism_msgp,  only: myrank, parallel_abort
 
   use fabm
@@ -29,7 +30,8 @@ module fabm_schism
   use fabm_types
   use fabm_config
   use fabm_expressions
-  use fabm_standard_variables, only: standard_variables
+  use fabm_standard_variables, only: standard_variables, type_bulk_standard_variable
+  use fabm_standard_variables, only: type_horizontal_standard_variable
 #else
   !> @todo remove this compatibility in the long-term, it takes care of the
   !> renaming from FABM v0.9 to v1.0
@@ -52,6 +54,9 @@ module fabm_schism
   !public :: rk
   ! real kind imported from fabm
   integer, parameter, public :: fabm_schism_rk = selected_real_kind(13)
+  integer, parameter, dimension(12) :: month_offsets = &
+    (/0,31,59,90,120,151,181,212,243,273,304,334/)
+
   integer :: i
   integer :: namlst_unit=53
 
@@ -82,6 +87,7 @@ module fabm_schism
     logical                           :: do_output
     logical                           :: output_averaged=.true.
   end type
+
 
   type, public :: type_fabm_schism
 #if _FABM_API_VERSION_ > 0
@@ -142,6 +148,7 @@ contains
 subroutine fabm_schism_init_model(ntracers)
 
   use misc_modules, only: get_param
+  use schism_glbl, only: start_day, start_year, start_month, start_hour
   implicit none
 
   integer, intent(out), optional :: ntracers
@@ -240,6 +247,10 @@ subroutine fabm_schism_init_model(ntracers)
   end do
 
   fs%tidx = 0
+
+  fs%day_of_year = start_day + month_offsets(start_month)
+  fs%seconds_of_day = start_hour * 3600
+  !> @todo add leap year algorithm
 
   if (present(ntracers)) ntracers = fs%nvar
 end subroutine fabm_schism_init_model
@@ -693,6 +704,24 @@ subroutine fabm_schism_do()
     end if
   end do
 
+  ! update time stepping information
+  fs%tidx = fs%tidx+1
+
+  fs%seconds_of_day = fs%seconds_of_day + int(dt)
+  if (fs%seconds_of_day >= 86400) then
+    fs%seconds_of_day = fs%seconds_of_day - 86400
+    fs%day_of_year = fs%day_of_year + 1
+  endif
+  if (fs%day_of_year > 365) then
+    fs%day_of_year = 1
+  endif
+
+
+#if _FABM_API_VERSION_ < 1
+  call fabm_update_time(fs%model, fs%tidx)
+#endif
+
+
 !write(0,*) 'fabm: get light'
   ! get light
   do i=1,nea
@@ -722,15 +751,6 @@ subroutine fabm_schism_do()
     enddo
   enddo
   endif
-
-  ! update time stepping information
-  fs%tidx = fs%tidx+1
-
-#if _FABM_API_VERSION_ < 1
-  call fabm_update_time(fs%model, fs%tidx)
-#else
-  call fs%model%prepare_inputs(fs%tidx)
-#endif
 
   ! get rhs and put tendencies into schism-array
   do i=1,nea
@@ -1202,15 +1222,25 @@ subroutine link_environmental_data(self, rc)
     type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
     units='W kg-1', &
     cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call fabm_link_horizontal_data(self%model, &
+      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+      units='Wm kg-1'), self%eps(1,:))
   call fabm_link_bulk_data(self%model, &
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
   call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+  call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
+  call fabm_link_horizontal_data(self%model,standard_variables%latitude,ylat_el)
+  !> @todo enable for models that need this,
+  !call fabm_link_scalar(self%model,standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+
 #else
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_horizontal_data(fabm_standard_variables%longitude,xlon_el)
+  call self%model%link_horizontal_data(fabm_standard_variables%latitude,ylat_el)
   call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
   call self%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
   call self%model%link_interior_data(fabm_standard_variables%density,erho)
@@ -1220,8 +1250,12 @@ subroutine link_environmental_data(self, rc)
       cf_names='ocean_vertical_momentum_diffusivity'),self%num)
   call self%model%link_interior_data( &
     type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-    units='W kg-1', &
-    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+      units='W kg-1', &
+      cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call self%model%link_horizontal_data( &
+      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+          units='Wm kg-1'), self%eps(1,:))
+  call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
 #endif
 
 end subroutine link_environmental_data
