@@ -128,6 +128,7 @@ module fabm_schism
     procedure :: get_diagnostics_for_output
     procedure :: get_horizontal_diagnostics_for_output
     procedure :: integrate_vertical_movement
+    procedure :: link_environmental_data
   end type
 
   type(type_fabm_schism), public :: fs ! the main module object
@@ -1166,6 +1167,65 @@ subroutine fabm_schism_write_output_netcdf(time)
   status = nf90_sync(ncid)
 
 end subroutine fabm_schism_write_output_netcdf
+
+!> Point FABM to environmental data, the target array is assumed to be
+!> allocated, this should be done for all variables on FABM's standard variable
+!> list that the model can provide and must be done for all variables that are
+!> dependencies of the models used.
+subroutine link_environmental_data(self, rc)
+
+  implicit none
+
+  class(type_fabm_schism), intent(inout) :: self
+  integer, intent(out), optional         :: rc
+
+  if (present(rc)) rc = 0
+
+  !> The dissipation of the turbulent kinetic energy is usually abbreviated as
+  ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
+  ! equivalently m2 s-3.
+  ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
+  ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
+  ! represented in the dfv(1:nvrt,1:npa) variable.
+  ! @todo what is the exact representation of this quantity in SCHISM? We assume
+  ! `epsf` here for now.
+  ! @todo make this call to $\nu_m$ and $\epsilon$ to standard variables, i.e.
+  ! expand the controlled vocabulary if they do not exist.
+
+#if _FABM_API_VERSION_ < 1
+  call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
+  call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
+  call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+  call fabm_link_bulk_data(self%model,standard_variables%density,erho)
+  call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
+  call fabm_link_bulk_data(self%model, &
+    type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+    units='W kg-1', &
+    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call fabm_link_bulk_data(self%model, &
+     type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+     cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+#else
+  call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
+  call self%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
+  call self%model%link_interior_data(fabm_standard_variables%density,erho)
+  call self%model%link_interior_data(fabm_standard_variables%cell_thickness,self%layer_height)
+  call self%model%link_interior_data( &
+    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  call self%model%link_interior_data( &
+    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+    units='W kg-1', &
+    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+#endif
+
+end subroutine link_environmental_data
+
 
 !> Custom routines for log and error handling, see
 !> https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling
