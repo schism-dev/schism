@@ -130,7 +130,7 @@
       USE sed_mod
       USE schism_glbl, ONLY : rkind,nvrt,ne,nea,npa,np,irange_tr,ntrs,idry_e,   &
      & idry,area,znl,dt,i34,elnode,xctr,yctr,   &
-     & kbe,ze,pi,nne,indel,tr_el,flx_bt,    &
+     & kbp,kbe,ze,pi,nne,indel,tr_el,flx_bt,    &
      & errmsg,ielg,iplg,nond_global,iond_global,&
      & ipgl,nope_global,np_global,dp,h0,dpe,    &
      & iegl,out_wwm,pi,eta2,dp00,dldxy,we,time_stamp, &
@@ -405,30 +405,38 @@
         dzb=ze(kb1,i)-ze(kb0,i)
 
         IF ((tau_option .EQ. 1) .OR. (tau_option .EQ. 3 .AND. dzb .GE. zstress)) THEN
-            ustress(i) = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
-            vstress(i) = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
+          DO j=1,i34(i)
+            nd=elnode(j,i)
+            kb1=kbp(nd)
+            ustress(i)=ustress(i)+uu2(min(kb0,kb1),nd)
+            vstress(i)=vstress(i)+vv2(min(kb0,kb1),nd)
+          END DO
+          ustress(i) = ustress(i)/i34(i)
+          vstress(i) = vstress(i)/i34(i)
+            !ustress(i) = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
+            !vstress(i) = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
 
         ELSE IF ((tau_option .EQ. 2) .OR. (tau_option .EQ. 3 .AND. dzb .LT. zstress)) THEN
           DO j=1,i34(i)
             nd=elnode(j,i)
-            kk=nvrt
+            kk=nvrt+1
+            kb0=kbp(nd)
+            kb1=kb0+1
             DO k=kb1,nvrt
               IF (znl(k,nd)-znl(kb0,nd) .GE. zstress) THEN
                 kk=k
                 EXIT
               END IF
             END DO
-  
-            IF (kk .LT. nvrt) THEN
+
+            IF (kk .GT. nvrt) THEN
+              ustress(i)=ustress(i)+dav(1,nd)
+              vstress(i)=vstress(i)+dav(2,nd)
+            ELSE
               wkk=(zstress+znl(kb0,nd)-znl(kk-1,nd))/(znl(kk,nd)-znl(kk-1,nd))
               wkkm1=(znl(kk,nd)-zstress-znl(kb0,nd))/(znl(kk,nd)-znl(kk-1,nd))
               ustress(i)=ustress(i)+(wkkm1*uu2(kk-1,nd) + wkk*uu2(kk,nd))
               vstress(i)=vstress(i)+(wkkm1*vv2(kk-1,nd) + wkk*vv2(kk,nd))
-   
-            ELSE
-              ustress(i)=ustress(i)+dav(1,nd)
-              vstress(i)=vstress(i)+dav(2,nd)
-  
             END IF
           END DO
           ustress(i) = ustress(i)/i34(i)
