@@ -1624,6 +1624,30 @@
       endif !nchi==-1
 
 !$OMP end parallel
+
+!new28: bypass solver for transport only option
+      if(itransport_only/=0) then
+!=================================================================================
+      !Read in schout (hydro outputs), and update new soln: eta2, s[uv]2, dfh (zcor and
+      !dry flags are computed either from schism_init or from levels*() after
+      !transport solver)
+
+      !dir=in_dir(1:len_in_dir)//'hydro_out/'
+
+      !!Check dt==multiple of dtout
+  
+!      !Recompute level to be consistent
+!      if(inunfl==0) then
+!        call levels0(iths_main,it)
+!      else
+!        call levels1(iths_main,it)
+!      endif
+!      if(myrank==0) write(16,*) 'done recomputing levels after reading schout...'
+
+!=================================================================================
+      else !normal: not bypass solver
+!=================================================================================
+
       if(nchi==1) then 
 #ifdef USE_SED
         !Roughness predictor
@@ -5873,7 +5897,12 @@
       !Advection terms (u \cdot \nabla) u [m/s/s]
       swild95(:,:,5)=(su2(:,:)-sdbt(1,:,:))/dt
       swild95(:,:,6)=(sv2(:,:)-sdbt(2,:,:))/dt
-#endif
+#endif /*USE_ANALYSIS*/
+
+
+!=================================================================================
+!new28: end of bypassing solver for transport only option
+      endif !itransport_only
 
 !...  solve for vertical velocities using F.V.
 !...  For hydrostatic model, this is the vertical vel; for non-hydrostatic

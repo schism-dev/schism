@@ -182,7 +182,7 @@
      &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
-     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex
+     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only
 
      namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -460,6 +460,7 @@
       ipre2=0
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind
+      itransport_only=0
 
       !Output elev, hvel by detault
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
@@ -487,6 +488,9 @@
         write(errmsg,*) 'Unknown ics',ics
         call parallel_abort(errmsg)
       endif
+
+      if(itransport_only/=0.and.ielm_transport/=0) &
+     &call parallel_abort('INIT: ielm_transport not available for itransport_only')
 
 !     Mass consv adjustment not working for SED
       if(iadjust_mass_consv0(5)>0) call parallel_abort('INIT: SED cannot use mass adjustment')

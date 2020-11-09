@@ -92,11 +92,9 @@
           DO j=1,i34(i)
             nd=elnode(j,i)
             kb1=kbp(nd)+1
-            !max to ensure dzb>=zstress
-            ubott(i)=ubott(i)+uu2(max(kbe(i)+1,kb1),nd)
-            vbott(i)=vbott(i)+vv2(max(kbe(i)+1,kb1),nd)
-            !ubott(i)=ubott(i)+uu2(min(kbe(i)+1,kb1),nd)
-            !vbott(i)=vbott(i)+vv2(min(kbe(i)+1,kb1),nd)
+            !kb1>=kbe(i)+1
+            ubott(i)=ubott(i)+uu2(kb1,nd)
+            vbott(i)=vbott(i)+vv2(kb1,nd)
           END DO !j
           ubott(i) = ubott(i)/i34(i)
           vbott(i) = vbott(i)/i34(i)

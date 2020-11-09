@@ -45,6 +45,15 @@
 !-----------------------------------------------------------------------
   ipre2 = 0
 
+!-----------------------------------------------------------------------
+! Option to only solve tracer transport (and bypass most b-tropic solver)
+! Usage: turn the flag on and turn on your tracer modules and make sure 
+! your inputs are consistent with the original hydro-only run (with additional tracers
+! of course); make sure dt above is multiple of _output_ step used in the 
+! original hydro-only run (as found in in hydro_out/schout*.nc).
+!-----------------------------------------------------------------------
+  itransport_only = 0
+
 ! Starting time
   start_year = 2000 !int
   start_month = 1 !int
