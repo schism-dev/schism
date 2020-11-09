@@ -932,7 +932,7 @@
          INTEGER                :: BR_COEF_METHOD = 1
          INTEGER                :: IFRIC = 1
          INTEGER                :: BC_BREAK = 1
-         INTEGER                :: IROLLER = 1
+         INTEGER                :: IROLLER = 0
          INTEGER                :: ZPROF_BREAK = 1
           
 
