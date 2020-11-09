@@ -449,7 +449,7 @@ git versions:
 (114) f311026 (Aug. 27, 2020): reverted init of msource to 0 for tracers other than T,S, 
       c/o Nicole Cai. Using ambient values for other tracers can lead to artifitial and additional accumulation of nutrients e.g.
 
-(115) (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for LSC2.
+(115) 00b6f16 (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for LSC2.
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
