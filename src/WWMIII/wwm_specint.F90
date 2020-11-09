@@ -40,7 +40,7 @@
            IF (IOBP(IP) .EQ. 0) THEN
                ACLOC  = AC2(:,:,IP)
                IF (SMETHOD == 1) THEN
-                 IF (MESBR .GT. 0 .OR. MESBF .GT. 0) CALL RKS_SP3(IP,DT4S,.FALSE.,ACLOC,30)
+                 IF (MESBR .GT. 0 .OR. MESBF .GT. 0 .OR. MEVEG .GT. 0) CALL RKS_SP3(IP,DT4S,.FALSE.,ACLOC,30)
                  IF (LSOURCESWAM) THEN
                    CALL SOURCE_INT_EXP_WAM(IP, ACLOC)  
                  ELSE
