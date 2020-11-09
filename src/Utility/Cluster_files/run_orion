@@ -6,7 +6,8 @@
 #SBATCH -p orion
 ##queues: 'windfall' max 450 nodes (no walltime limit but lower priority; for quick turn-around try <=8 hrs)
 ###40 cores/node (mem 192GB/node)
-#SBATCH -n 40
+#SBATCH -N 2
+#SBATCH -n 80
 #SBATCH --exclusive
 #SBATCH -t 02:00:00  
 #SBATCH -o myout
