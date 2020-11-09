@@ -41,7 +41,7 @@
 !          routines                                                  !
 !          2013/03 - F.Ganthy : implement wave effects on bedload    !
 !          2017/06 - A. de Bakker: couple to schism                  !
-!          2020/02 - B.Mengual: > use of ustress/vstress, wdir       !
+!          2020/02 - B.Mengual: > use of [uv]bott, wdir       !
 !                       > wave asymmetry effect: rewritten and       !
 !                         introduction of a limiter w_asym_max       !
 !                       > bed slope effects: now under option with   !
@@ -118,8 +118,8 @@
       !cff2 = sum(vv2(kb1,elnode(1:i34(inea),inea)))/i34(inea)
       !udir = DATAN2(cff2,cff1)
 
-      ! BM: see ustress, vstress estimates in sediment.F90
-      udir = ATAN2(vstress(inea),ustress(inea))
+      ! BM: see [uv]bott estimates in sediment.F90
+      udir = ATAN2(vbott(inea),ubott(inea))
 
 !--------------------------------------------------------------------
 !- Angle between current and wave directions                         
@@ -537,7 +537,7 @@
 !
 ! History: - 2019/02 - B.Mengual : Implementation of the original code
 !                                  of T.Guerin in Sed2d
-!          - 2020/02 - B.Mengual: > use of ustress/vstress, wdir       
+!          - 2020/02 - B.Mengual: > use of [uv]bott, wdir       
 !                         > wave asymmetry effect: rewritten and       
 !                           introduction of a limiter w_asym_max       
 !                         > bed slope effects: now under option with   
@@ -607,9 +607,9 @@
       !cff1 = sum(uu2(kb1,elnode(1:i34(inea),inea)))/i34(inea)
       !cff2 = sum(vv2(kb1,elnode(1:i34(inea),inea)))/i34(inea)
 
-      ! BM: see ustress, vstress estimates in sediment.F90
-      cff1 = ustress(inea)
-      cff2 = vstress(inea)
+      ! BM: see [uv]bott estimates in sediment.F90
+      cff1 = ubott(inea)
+      cff2 = vbott(inea)
 
       Uc = dsqrt(cff1*cff1+cff2*cff2)
       udir = DATAN2(cff2,cff1)

@@ -293,9 +293,9 @@
       T_trough = 0.d0
       Uorbi_elfrink = 0.0d0
 
-      ! Bottom shear stress
-      ustress=0.0d0
-      vstress=0.0d0
+      ! Near bottom vel
+!      ubott=0.0d0
+!      vbott=0.0d0
 
       ! RUNTIME
       time=dt*it
@@ -388,68 +388,6 @@
       ENDDO ! End loop nea
 #endif
 
-!---------------------------------------------------------------------
-! - Compute bottom stress
-!   Test of whether WWM is used or not is performed within the subroutine
-!---------------------------------------------------------------------
-
-!BM: Several methods to compute current-induced bottom shear stress 
-!    (tau_option, see sediment.in).
-!    Current components (ustress, vstress) are then used in sed_current_stress 
-!    to compute BSS, or in sed_bedload routines to derive current direction.
-  
-      DO i=1,nea
-        IF (idry_e(i)==1) CYCLE  
-        kb0 = kbe(i)
-        kb1 = kbe(i)+1
-        dzb=ze(kb1,i)-ze(kb0,i)
-
-        IF ((tau_option .EQ. 1) .OR. (tau_option .EQ. 3 .AND. dzb .GE. zstress)) THEN
-          DO j=1,i34(i)
-            nd=elnode(j,i)
-            kb1=kbp(nd)
-            ustress(i)=ustress(i)+uu2(min(kb0,kb1),nd)
-            vstress(i)=vstress(i)+vv2(min(kb0,kb1),nd)
-          END DO
-          ustress(i) = ustress(i)/i34(i)
-          vstress(i) = vstress(i)/i34(i)
-            !ustress(i) = sum(uu2(kb1,elnode(1:i34(i),i)))/i34(i)
-            !vstress(i) = sum(vv2(kb1,elnode(1:i34(i),i)))/i34(i)
-
-        ELSE IF ((tau_option .EQ. 2) .OR. (tau_option .EQ. 3 .AND. dzb .LT. zstress)) THEN
-          DO j=1,i34(i)
-            nd=elnode(j,i)
-            kk=nvrt+1
-            kb0=kbp(nd)
-            kb1=kb0+1
-            DO k=kb1,nvrt
-              IF (znl(k,nd)-znl(kb0,nd) .GE. zstress) THEN
-                kk=k
-                EXIT
-              END IF
-            END DO
-
-            IF (kk .GT. nvrt) THEN
-              ustress(i)=ustress(i)+dav(1,nd)
-              vstress(i)=vstress(i)+dav(2,nd)
-            ELSE
-              wkk=(zstress+znl(kb0,nd)-znl(kk-1,nd))/(znl(kk,nd)-znl(kk-1,nd))
-              wkkm1=(znl(kk,nd)-zstress-znl(kb0,nd))/(znl(kk,nd)-znl(kk-1,nd))
-              ustress(i)=ustress(i)+(wkkm1*uu2(kk-1,nd) + wkk*uu2(kk,nd))
-              vstress(i)=vstress(i)+(wkkm1*vv2(kk-1,nd) + wkk*vv2(kk,nd))
-            END IF
-          END DO
-          ustress(i) = ustress(i)/i34(i)
-          vstress(i) = vstress(i)/i34(i)
-  
-        ELSE
-          call parallel_abort('SED: unknown tau_option')
-        END IF ! test on tau_option and dzb
-      END DO
-  
-      CALL exchange_e2d(ustress)
-      CALL exchange_e2d(vstress)
- 
       ! Compute current/wave-induced and total shear stresses
       CALL sed_wavecurrent_stress()
 
