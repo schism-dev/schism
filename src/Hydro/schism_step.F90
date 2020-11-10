@@ -1630,9 +1630,9 @@
 !new28: bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
-      !Read in schout (hydro outputs), and update new soln: eta2, s[uv]2, dfh (zcor and
-      !dry flags are computed either from schism_init or from levels*() after
-      !transport solver; similarly for tr_nd*)
+      !Read in schout (saved hydro outputs), and update new soln: eta2, s[uv]2, dfh.
+      !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
+      !transport solver; similarly for tr_nd*
 
       !Read time from 1st stack and check dt==multiple of dtout
       if(it==iths_main+1) then
