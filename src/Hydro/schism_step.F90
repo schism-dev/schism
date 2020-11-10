@@ -232,6 +232,7 @@
       real(rkind),allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange (deallocate immediately afterwards)
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
       real(rkind),allocatable :: swild95(:,:,:) !for analysis module
+      real(rkind),allocatable :: swild11(:)
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
       logical :: ltmp,ltmp1(1),ltmp2(1)
@@ -1632,7 +1633,29 @@
       !dry flags are computed either from schism_init or from levels*() after
       !transport solver)
 
-      !dir=in_dir(1:len_in_dir)//'hydro_out/'
+      allocate(swild11(ns_global))
+      if(myrank==0) then
+        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'// //'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found')
+
+        j=nf90_inq_varid(ncid2, "elev",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc elev')
+        j=nf90_get_var(ncid2,mm,swild11(1:np_global),(/1/),(/np_global/));
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get eta2')
+      endif !myrank=0
+      call mpi_bcast(swild11,ns_global,itype,0,comm,istat) 
+      do i=1,np_global
+        if(ipgl(i)%rank==myrank) then
+          ip=ipgl(i)%id
+          eta2(ip)=swild11(i)
+        endif
+      enddo !i
+
+      if(myrank==0) then
+        j=nf90_close(ncid2)
+        deallocate(swild11)
+      endif !myrank=0
+
 
       !!Check dt==multiple of dtout
   
