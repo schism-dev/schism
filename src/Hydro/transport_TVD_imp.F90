@@ -1438,6 +1438,9 @@
 !-------------------------------------------------------------------------------------
       endif !itr_met=3,4
       
+!new28
+!      write(12,*)'done 1st transport step...'
+
 !'    Save the final array from horizontal part as trel_tmp
 !$OMP parallel default(shared) private(i,k,bigv_m,r_s,r_s0,m,iterK,rrat,phi,kup,kdo,psumtr, &
 !$OMP tmp,flux_mod_v1,flux_mod_v2,psum,l,srat,psi1,kin,ndim,alow,bdia,cupp,dt_by_bigv,denom, &
@@ -1813,6 +1816,9 @@
 !        if(myrank==0) write(25,*)'mass after 2 steps with correction:',real(time_stamp/86400),adv_tr(1:ntr)+total_mass_error(1:ntr)
       endif
 !$OMP end master
+
+!new28
+!      write(12,*)'done 2nd transport step...'
 
 !     3rd step: non-advection terms 
 !     Save the final array from previous step as trel_tmp

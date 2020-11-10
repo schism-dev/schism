@@ -1960,6 +1960,7 @@
       vv2 = 0.0_rkind
       ww2 = 0.0_rkind
       tr_nd0=0.d0
+      istack0_schout=0
 
 !Tsinghua group
 #ifdef USE_SED 
