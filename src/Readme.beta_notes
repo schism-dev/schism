@@ -2,6 +2,10 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+ (merge with LRU branch wwm_lr): removed 'sav_cd' (isav=1 now requires sav_cd.gr3). 
+      New parameters related to WWM: fwvor_advxy_stokes,fwvor_advz_stokes,
+      fwvor_advz_stokes,fwvor_breaking,cur_wwm,wafo_obcramp; 
+      Changes in WWM: ALPBJ ->B_ALP, BRHD->BRCR. 
 7e9ff0a (Aug 20, 2020): added two options (selected by 'i_hmin_airsea_ex') for locally turning off heat/salt exchange.
       i_hmin_airsea_ex=1: exchange turned off if local grid depth<hmin_airsea_ex
       i_hmin_airsea_ex=2: exchange turned off if local water depth<hmin_airsea_ex

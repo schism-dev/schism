@@ -57,7 +57,7 @@
 !/
 !/ ------------------------------------------------------------------- /
 !/
-      USE DATAPOOL, ONLY : rkind
+      USE DATAPOOL, ONLY : rkind,SIZEFWTABLE,DELAB,ABMIN,ABMAX,FWTABLE
       SAVE
       PUBLIC
 !/
@@ -71,7 +71,6 @@
       REAL(rkind),    PARAMETER      :: nu_air  = 1.4E-5        
       INTEGER, PARAMETER      :: ITAUMAX=200,JUMAX=200
       INTEGER, PARAMETER      :: IUSTAR=100,IALPHA=200, ILEVTAIL=50
-      INTEGER, PARAMETER      :: SIZEFWTABLE=300
       INTEGER, PARAMETER      :: IAB=200  
       REAL(rkind)             :: TAUT(0:ITAUMAX,0:JUMAX), DELTAUW, DELU
       ! Table for H.F. stress as a function of 2 variables
@@ -81,12 +80,8 @@
       ! Table for swell damping 
       REAL(rkind)                    :: SWELLFT(0:IAB)
       REAL(rkind)                    :: DELTAIL
-      REAL(rkind)                    :: DELAB
       REAL(rkind),    PARAMETER      :: UMAX    = 50._rkind
       REAL(rkind),    PARAMETER      :: TAUWMAX = 2.2361 !SQRT(5.)
-      REAL(rkind),    PARAMETER      :: ABMIN = 0.3_rkind
-      REAL(rkind),    PARAMETER      :: ABMAX = 8._rkind
-      REAL(rkind)                    :: FWTABLE(0:SIZEFWTABLE)
       REAL(rkind), ALLOCATABLE       :: XSTRESS(:),YSTRESS(:)
       REAL(rkind), ALLOCATABLE       :: DCKI(:,:), SATWEIGHTS(:,:)
       REAL(rkind), ALLOCATABLE       :: CUMULW(:,:),QBI(:,:)

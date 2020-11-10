@@ -14,7 +14,7 @@
       USE DATAPOOL, ONLY : SPSIG, SPDIR, FRINTF, ONE, RHOA, RHOAW, TAUHF
       USE DATAPOOL, ONLY : TAUW, FR, MESNL, MESIN, MESDS, MESBF, MESBR
       USE DATAPOOL, ONLY : MESTR, ISHALLOW, DS_INCR, IOBP, IOBPD, MEVEG
-      USE DATAPOOL, ONLY : LNANINFCHK, DBG, IFRIC, RTIME, DISSIPATION
+      USE DATAPOOL, ONLY : LNANINFCHK, DBG, WRITEDBGFLAG, IFRIC, RTIME, DISSIPATION
       USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP
 #ifdef WWM_MPI
       USE DATAPOOL, ONLY : myrank
@@ -42,7 +42,7 @@
          INTEGER        :: IS, ID, IS0, IK, ITH, IDISP, JU, NZZ
          REAL(rkind)    :: WIND10, WINDTH
          REAL(rkind)    :: FPM
-         REAL(rkind)    :: SME01, SME10, KME01, KMWAM, KMWAM2
+         REAL(rkind)    :: SME01, SME10, SMECP, KME01, KMWAM, KMWAM2
          REAL(rkind)    :: SME01WS, SME10WS
          REAL(rkind)    :: HS, ETOT, FPMH,FPM4 
          REAL(rkind)    :: LPOW, MPOW, a1, a2, ETOTWS
@@ -91,7 +91,7 @@
 
          IF (.NOT. LRECALC) THEN
            ACLOC1 = AC1(:,:,IP)
-           CALL MEAN_WAVE_PARAMETER(IP,ACLOC1,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2) ! 1st guess ... 
+           CALL MEAN_WAVE_PARAMETER(IP,ACLOC1,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2) ! 1st guess ... 
          END IF
 
          SUMACLOC    = SUM(ACLOC)
@@ -175,7 +175,7 @@
                  CALL W3SPR4 ( AWW3, CG(:,IP), WK(:,IP), EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, WIND10, WINDTH, UFRIC(IP), USTDIR(IP), TAUWX(IP), TAUWY(IP), CD(IP), Z0(IP), ALPHA_CH(IP), LLWS, FMEANWS)  
                  CALL W3SIN4 ( IP, AWW3, CG(:,IP), WN2, WIND10, UFRIC(IP), RHOAW, AS, WINDTH, Z0(IP), CD(IP), TAUWX(IP), TAUWY(IP), TAUWAX, TAUWAY, IMATRA1D, IMATDA1D, LLWS, BRLAMBDA) 
 #else
-                 WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
+                 IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
                  CALL WWM_ABORT('stop wwm_sourceterms l.176')
 #endif
                  CALL ONED2TWOD(IMATRA1D,IMATRAWW3)
@@ -188,7 +188,7 @@
                END IF
                IF (LNANINFCHK) THEN
                  IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-                   WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT NORMAL', IP, 'DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
+                   IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT NORMAL', IP, 'DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
                    CALL WWM_ABORT('NAN AT wwm_sourceterms.F90 l.189')
                  END IF
                ENDIF
@@ -229,7 +229,7 @@
 #endif 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
              CALL WWM_ABORT('NAN in wwm_sourceterm.F90 l.311')
            END IF
          ENDIF
@@ -286,7 +286,7 @@
 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, 'DUE TO SNL4'
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, 'DUE TO SNL4'
              CALL WWM_ABORT('NAN at wwm_sourceterms.F90 l.368')
            END IF
          ENDIF
@@ -424,7 +424,7 @@
 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SBF' 
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SBF' 
              CALL WWM_ABORT('NAN in wwm_sourceterms.F90 at l.419')
            END IF
          ENDIF
@@ -452,7 +452,7 @@
              CALL W3SIN4 ( IP, AWW3, CG(:,IP), WN2,  WIND10, UFRIC(IP), RHOAW, AS, WINDTH, Z0(IP), CD(IP), TAUWX(IP), TAUWY(IP), TAUWAX, TAUWAY, IMATRA1D, IMATDA1D, LLWS, BRLAMBDA)
              CALL W3SPR4 ( AWW3, CG(:,IP), WK(:,IP), EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, WIND10, WINDTH, UFRIC(IP), USTDIR(IP), TAUWX(IP), TAUWY(IP), CD(IP), Z0(IP), ALPHA_CH(IP), LLWS, FMEANWS)
 #else
-             WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
              CALL WWM_ABORT('stop wwm_sourceterms l.186')
 #endif
            ELSEIF (MESIN == 2) THEN
@@ -481,18 +481,21 @@
 #else 
          IF (IP == MNP) THEN
 #endif
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '-----SOURCE TIMINGS-----'
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPARATION        ', TIME2-TIME1
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SIN                ', TIME3-TIME2
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SDS                ', TIME4-TIME3
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL4               ', TIME5-TIME4
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL3               ', TIME6-TIME5
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBR                ', TIME7-TIME6
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBF                ', TIME8-TIME7
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'RECALC             ', TIME9-TIME8
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'TOTAL              ', TIME9-TIME1
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '------END-TIMINGS-  ---'
-         ENDIF
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '-----SOURCE TIMINGS-----'
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPARATION        ', TIME2-TIME1
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SIN                ', TIME3-TIME2
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SDS                ', TIME4-TIME3
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL4               ', TIME5-TIME4
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL3               ', TIME6-TIME5
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBR                ', TIME7-TIME6
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBF                ', TIME8-TIME7
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'RECALC             ', TIME9-TIME8
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'TOTAL              ', TIME9-TIME1
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '------END-TIMINGS-  ---'
+             FLUSH(STAT%FHNDL)
+           END IF
+         END IF
 #endif 
 
       END SUBROUTINE
