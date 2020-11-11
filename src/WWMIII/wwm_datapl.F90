@@ -1148,7 +1148,6 @@
 
          REAL(rkind), ALLOCATABLE ::   RSXX(:), RSXY(:), RSYY(:), FORCEXY(:,:)
          REAL(rkind), ALLOCATABLE ::   SXX3D(:,:), SXY3D(:,:), SYY3D(:,:)
-         REAL(rkind), ALLOCATABLE ::   BETAROLLER(:)
 !
 ! switch for the numerics ... wwmDnumsw.mod
 !
