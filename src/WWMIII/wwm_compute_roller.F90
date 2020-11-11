@@ -409,7 +409,7 @@
          INTEGER                    :: IS, ID, TI, NB_SUBITE
          REAL(rkind)                :: SBRROL(MSC,MDC), SDISROL(MSC,MDC), SROL_TOTAL(MSC,MDC)
          REAL(rkind)                :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS
-         REAL(rkind)                :: C(2), Ur, BETA_R, SIN_BETA_R
+         REAL(rkind)                :: C(2), Ur, sinBeta
          REAL(rkind)                :: DT_LOC, C_LOC, CFL_LOC, ALPHA_LOC, CRIT_LOC, DISSIP_LOC
 
          ! Initialisation
@@ -420,22 +420,21 @@
          ! Computing mean wave parameters
          CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2)
 
-         ! Roller angle 
-         ! 1 - Formulation by Zhang et al., 2017))
-         !CALL URSELL_NUMBER( HS, SME01, DEP(IP), Ur) 
-         !IF ( Ur .LE. 1 ) THEN
-         !  BETA_R = MIN(MAX(ATAN(2.*Hs/(PI2/KME01)),0.08),0.7)
-         !ELSE
-         !  BETA_R = MIN(MAX(atand((2. + 0.6*(log(Ur))**3)*Hs/(PI2/KME01)),0.08),0.7)
-         !END IF
-         !SIN_BETA_R = sind(BETA_R)         
-         ! 2 - Constant value, as used in most papers so far
-         SIN_BETA_R = 0.1 ! Corresponds to theta = 5.7 deg
+         ! Roller parameters (we use the formulation by Zhang et al., 2017))
+         CALL URSELL_NUMBER( HS, SME01, DEP(IP), Ur) 
+         IF ( Ur .LE. 1 ) THEN
+           BETAROLLER(IP) = MIN(MAX(atand(2*Hs/(PI2/KME01)),5.D0),35.D0)
+         ELSE
+           BETAROLLER(IP) = MIN(MAX(atand((2 + 0.6D0*(log(Ur))**3)*Hs/(PI2/KME01)),5.D0),35.D0)
+         END IF
+         sinBeta = sind(BETAROLLER(IP))
+         !sinBeta = 0.15 ! Corresponds to theta = 8.6°
+         !sinBeta = 0.1 ! Corresponds to theta = 6°
 
          ! Local timestep depending on the equivalent CFL
          ! We follow the recommendations of Hargreaves and Annan (2001)
          CFL_LOC   = 0.80D0
-         CRIT_LOC  = CFL_LOC/(2.D0*G9*SIN_BETA_R)
+         CRIT_LOC  = CFL_LOC/(2.D0*G9*sinBeta)
 
          ! Integration of the roller source terms
          DO IS = 1, MSC
@@ -455,7 +454,7 @@
              END IF
 
              ! Integration with sub time steps
-             DISSIP_LOC = 2.D0*G9*SIN_BETA_R/C_LOC
+             DISSIP_LOC = 2.D0*G9*sinBeta/C_LOC
              DO TI = 1, NB_SUBITE
                SBRROL(IS,ID)      =   DT_LOC*ALPROL*SSBR_TOTAL(IS,ID,IP)
                SDISROL(IS,ID)     = - DT_LOC*DISSIP_LOC*RACLOC(IS,ID) / (1 + DT_LOC*DISSIP_LOC)
@@ -508,7 +507,7 @@
          INTEGER                    :: IS, ID, TI, NB_SUBITE
          REAL(rkind)                :: SBRROL(MSC,MDC), SDISROL(MSC,MDC), SROL_TOTAL(MSC,MDC)
          REAL(rkind)                :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS
-         REAL(rkind)                :: C(2), Ur, BETA_R, SIN_BETA_R
+         REAL(rkind)                :: C(2), Ur, sinBeta
          REAL(rkind)                :: DT_STAR, DT_LOC, C_LOC, CFL_LOC, ALPHA_LOC, CRIT_LOC, DISSIP_LOC
 
          ! Initialisation
@@ -520,22 +519,22 @@
          ! Computing mean wave parameters
          CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2)
 
-         ! Roller angle 
-         ! 1 - Formulation by Zhang et al., 2017))
-         !CALL URSELL_NUMBER( HS, SME01, DEP(IP), Ur) 
-         !IF ( Ur .LE. 1 ) THEN
-         !  BETA_R = MIN(MAX(ATAN(2.*Hs/(PI2/KME01)),0.08),0.7)
-         !ELSE
-         !  BETA_R = MIN(MAX(atand((2. + 0.6*(log(Ur))**3)*Hs/(PI2/KME01)),0.08),0.7)
-         !END IF
-         !SIN_BETA_R = sind(BETA_R)         
-         ! 2 - Constant value, as used in most papers so far
-         SIN_BETA_R = 0.1 ! Corresponds to theta = 5.7 deg
+         ! Roller parameters (we use the formulation by Zhang et al.,
+         ! 2017))
+         CALL URSELL_NUMBER( HS, SME01, DEP(IP), Ur)
+         IF ( Ur .LE. 1 ) THEN
+           BETAROLLER(IP) = MIN(MAX(atand(2*Hs/(PI2/KME01)),5.D0),35.D0)
+         ELSE
+           BETAROLLER(IP) = MIN(MAX(atand((2 + 0.6D0*(log(Ur))**3)*Hs/(PI2/KME01)),5.D0),35.D0)
+         END IF
+         sinBeta = sind(BETAROLLER(IP))
+         !sinBeta = 0.15 ! Corresponds to theta = 8.6°
+         !sinBeta = 0.1 ! Corresponds to theta = 6°
 
          ! Local timestep depending on the equivalent CFL
          ! We follow the recommendations of Hargreaves and Annan (2001)
          CFL_LOC   = 0.80D0
-         CRIT_LOC  = CFL_LOC/(2.D0*G9*SIN_BETA_R)
+         CRIT_LOC  = CFL_LOC/(2.D0*G9*sinBeta)
 
          ! Integration of the roller source terms
          DO IS = 1, MSC
@@ -562,7 +561,7 @@
 
              ! Second step: integration of the dissipation source terms
              ! with sub cycles over DT/2
-             DISSIP_LOC = 2.D0*G9*SIN_BETA_R/C_LOC
+             DISSIP_LOC = 2.D0*G9*sinBeta/C_LOC
              DO TI = 1, NB_SUBITE
                SDISROL(IS,ID)     = - DT_LOC*DISSIP_LOC*RACLOC(IS,ID) / (1 + DT_LOC*DISSIP_LOC)
                SROL_TOTAL(IS,ID)  = SROL_TOTAL(IS,ID)  - ABS(SDISROL(IS,ID)/DT_STAR) ! NB: SDISROL(IS,ID) < 0

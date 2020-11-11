@@ -150,7 +150,7 @@
 !
 ! phase velocity, wave number, group velocity, dwdh, kh
 !
-       ALLOCATE( WK(MSC,MNP), CG(MSC,MNP), WC(MSC,MNP), stat=istat)
+       ALLOCATE( WK(MSC,MNP), CG(MSC,MNP), WC(MNP,MSC), stat=istat)
        IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 16')
        WK = ZERO 
        CG = ZERO 

@@ -149,7 +149,7 @@ acrit = 0.2d0
 !- > tau_max: maximum shear stress value authorised for current and waves (in Pa) 
 !------------------------------------------------------------------------------
 tau_option = 1
-tau_max = 10.0d0 ![Pa]
+tau_max = 10.0d0 [Pa]
 zstress = 0.2d0 ![m]; only used if tau_option/=1
 
 !- Erosional formulations
