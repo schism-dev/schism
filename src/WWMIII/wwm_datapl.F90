@@ -49,10 +49,9 @@
      
 # endif
 # ifdef SCHISM
-     use schism_glbl, only :   &  !NE_RES => ne,                 & ! Local number of resident elements
+     use schism_glbl, only :   &  
      &                         DMIN_SCHISM => h0,            & ! Dmin
      &                         NNE => nne,                   & !
-!     &                         ISELF => iself,               & !
      &                         NVRT => nvrt,                 & ! Max. Number of vertical Layers ...
      &                         KBP  => kbp,                  & ! Bottom index
      &                         IDRY => idry,                 & ! Dry/Wet flag
