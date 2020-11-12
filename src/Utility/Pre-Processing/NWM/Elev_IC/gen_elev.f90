@@ -4,9 +4,9 @@
 !     ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_elev gen_elev.f90
       implicit real*8(a-h,o-z)
       allocatable :: x(:),y(:),dp(:),area(:),vso(:),r_rough(:),nlayers(:)
-      integer, allocatable :: i34(:),elnode(:,:),i_rain(:),isource(:),iDB(:)
+      integer, allocatable :: i34(:),elnode(:,:),i_rain(:),isource(:),i_region(:)
 
-      h0=1e-6
+      h0=1e-4
 
       open(10,file='include.gr3',status='old')
       read(10,*); read(10,*)
@@ -14,10 +14,10 @@
       open(14,file='hgrid.gr3')
       read(14,*)
       read(14,*)ne,np
-      allocate(x(np),y(np),dp(np),r_rough(np),nlayers(np),iDB(np),i_rain(np),isource(ne),i34(ne),elnode(4,ne),area(ne),vso(ne))
+      allocate(x(np),y(np),dp(np),r_rough(np),nlayers(np),i_region(np),i_rain(np),isource(ne),i34(ne),elnode(4,ne),area(ne),vso(ne))
       do i=1,np
         read(14,*)j,x(i),y(i),dp(i)
-        read(10,*)dummy,dummy,dummy,iDB(i)
+        read(10,*)dummy,dummy,dummy,i_region(i)
       enddo !i
       close(10)
 
@@ -29,10 +29,10 @@
       open(9,file='elev.ic',status='replace')
       write(9,*); write(9,*)ne,np
       do i=1,np
-        if (iDB(i) ==0 ) then
+        if (i_region(i) ==0 ) then
           write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i))
         else
-          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i)-1e-6)
+          write(9,'(i8,3(1x,f15.6))')i,x(i),y(i),max(0.d0,-dp(i)-h0)
         endif
       enddo 
       do i=1,ne

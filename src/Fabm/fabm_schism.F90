@@ -1,24 +1,46 @@
-!> FABM-SCHISM driver
-!!
-!> @brief 3D driver for the Framework for Aquatic Biogeochemical Models
-!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
-!> @copyright Copyright 2017, 2018, 2019 Helmholtz-Zentrum Geesthacht
+!> FABM host for SCHISM
 !
+! This code is part of the the Semi-implicit Cross-scale Hydroscience Integrated
+! System Model (SCHISM) and part of the Modular System for Shelves and Coasts
+! (MOSSCO).  It defines a FABM host specification for the hydrodynamic SCHISM
+! core.
+!
+!> @author Richard Hofmeister
+!> @author  Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @copyright Copyright 2017, 2018, 2019, 2020 Helmholtz-Zentrum Geesthacht
+!
+! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
+! Public License Version 3.0
+!
+#include "fabm_version.h"
 
 module fabm_schism
 
-  use schism_glbl, only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np, &
-&bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy,ze,kbe,wsett,ielg,iplg, &
-&xnd,ynd,rkind,xlon,ylat,lreadll,iwsett,irange_tr,epsf,dfv,in_dir,out_dir, &
-&len_in_dir,len_out_dir
-  use schism_msgp
-  use misc_modules, only: get_param
+  use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
+  use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
+  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
+  use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
+  use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
+  use schism_glbl,  only: xlon_el, ylat_el
+  use schism_msgp,  only: myrank, parallel_abort
+
   use fabm
+  use fabm_driver, only: type_base_driver, driver
+#if _FABM_API_VERSION_ < 1
   use fabm_types
   use fabm_config
   use fabm_expressions
-  use fabm_standard_variables
+  use fabm_standard_variables, only: standard_variables, type_bulk_standard_variable
+  use fabm_standard_variables, only: type_horizontal_standard_variable
+#else
+  !> @todo remove this compatibility in the long-term, it takes care of the
+  !> renaming from FABM v0.9 to v1.0
+  use fabm_types, only: rk, output_none
+  use fabm_v0_compatibility
+#endif
+
   use netcdf
+
   implicit none
   private
 
@@ -32,9 +54,21 @@ module fabm_schism
   !public :: rk
   ! real kind imported from fabm
   integer, parameter, public :: fabm_schism_rk = selected_real_kind(13)
+  integer, parameter, dimension(12) :: month_offsets = &
+    (/0,31,59,90,120,151,181,212,243,273,304,334/)
+
   integer :: i
   integer :: namlst_unit=53
+
+  !> @todo this assumes that FABM is the first BGC model to be loaded, just
+  !> after temperature and salinity.
   integer, public :: istart=3
+
+  type, extends(type_base_driver) :: type_schism_driver
+    contains
+    procedure :: fatal_error => schism_driver_fatal_error
+    procedure :: log_message => schism_driver_log_message
+  end type
 
   type, public :: fabm_schism_bulk_diagnostic_variable
     real(rk), dimension(:,:), pointer :: data => null()
@@ -54,8 +88,14 @@ module fabm_schism
     logical                           :: output_averaged=.true.
   end type
 
+
   type, public :: type_fabm_schism
-    type(type_model), pointer     :: model => null()
+#if _FABM_API_VERSION_ > 0
+  type(type_fabm_model), pointer     :: model => null()
+#else
+  type(type_model), pointer     :: model => null()
+#endif
+
     integer                       :: day_of_year, seconds_of_day
     logical                       :: fabm_ready
     logical                       :: repair_allowed=.true.
@@ -70,7 +110,7 @@ module fabm_schism
     real(rk), dimension(:,:,:), pointer :: conc => null()
     real(rk), dimension(:,:), pointer   :: bottom_state => null()
     real(rk), dimension(:,:), pointer   :: surface_state => null()
-    real(rk), dimension(:,:,:), pointer :: initial_conc => null()
+    real(rk), dimension(:,:,:), pointer :: interior_initial_concentration => null()
     real(rk), dimension(:,:), pointer   :: light_extinction => null()
     real(rk), dimension(:,:), pointer   :: layer_height => null()
     real(rk), dimension(:,:), pointer   :: eps => null()
@@ -79,51 +119,67 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: I_0 => null()
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
-    type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: diagnostic_variables
-    type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: hor_diagnostic_variables
+    type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
+    type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: horizontal_diagnostic_variables
     real(rk)                            :: tidx
     real(rk)                            :: time_since_last_output = 0.0_rk
     real(rk)                            :: time_since_last_hor_output = 0.0_rk
     contains
+#if _FABM_API_VERSION_ < 1
     procedure :: get_light
+#endif
     procedure :: repair_state
     procedure :: state_variable_name_by_idx
     procedure :: integrate_diagnostics
     procedure :: get_diagnostics_for_output
     procedure :: get_horizontal_diagnostics_for_output
     procedure :: integrate_vertical_movement
+    procedure :: link_environmental_data
   end type
-
 
   type(type_fabm_schism), public :: fs ! the main module object
   integer  :: ncid=-1 ! ncid of hotstart variables
   real     :: missing_value=-9999. ! missing_value for netcdf variables
 
-  contains
+contains
 
+!> Initialize FABM model setup, i.e. read the `fabm.yaml` and `schism_fabm.in`
+!> configuration files and return the number of tracers
+subroutine fabm_schism_init_model(ntracers)
 
-  !> initialize FABM model setup
-  subroutine fabm_schism_init_model(ntracers)
+  use misc_modules, only: get_param
+  use schism_glbl, only: start_day, start_year, start_month, start_hour
+  implicit none
+
   integer, intent(out), optional :: ntracers
   integer                        :: i
   integer                        :: configuration_method=-1
   logical                        :: file_exists=.false.
   character(len=2)               :: tmp_string
-  integer                        :: tmp_int  
+  integer                        :: tmp_int
   real(rkind)                    :: tmp_real
 
+  !> Need to allocate the driver class for error and log handling, use with
+  !> driver%log_message() and driver%fatal_error()
+  allocate(type_schism_driver::driver)
+
   fs%fabm_ready=.false.
- 
-  ! read driver parameters
+
+  !> @todo get the define macro into a string
+  !call driver%log_message('using API version '//_FABM_API_VERSION_)
+
+  !> Read driver parameters from the optional file 'schism_fabm.in'
   inquire(file=in_dir(1:len_in_dir)//'schism_fabm.in',exist=file_exists)
   if (file_exists) then
     call get_param('schism_fabm.in','external_spm_extinction',2,tmp_int,fs%external_spm_extinction,tmp_string)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
     call get_param('schism_fabm.in','par_fraction',2,tmp_int,fs%par_fraction,tmp_string)
   else
-    if (myrank==0) write(16,*) 'init_fabm: skip reading schism_fabm.in, file does not exist'
+    call driver%log_message('skipped reading non-existent "'// &
+      in_dir(1:len_in_dir)//'schism_fabm.in"')
   end if
- 
+
+#if _FABM_API_VERSION_ < 1
   ! build model tree
   if (configuration_method==-1) then
     configuration_method = 1
@@ -137,80 +193,124 @@ module fabm_schism
     case (0)
       ! From namelists in fabm.nml
       fs%model => fabm_create_model_from_file(namlst_unit)
-   case (1)
+  case (1)
       ! From YAML file fabm.yaml
       allocate(fs%model)
       call fabm_create_model_from_yaml_file(fs%model)
-   end select
+  end select
+#else
+  ! from version 1, only .yaml is supported
+  fs%model => fabm_create_model(in_dir(1:len_in_dir)//'fabm.yaml')
+#endif
+
+#if _FABM_API_VERSION_ < 1
   fs%nvar = size(fs%model%state_variables)
+  fs%ndiag = size(fs%model%diagnostic_variables)
+#else
+  fs%nvar = size(fs%model%interior_state_variables)
+  fs%ndiag = size(fs%model%interior_diagnostic_variables)
+#endif
+
   fs%nvar_bot = size(fs%model%bottom_state_variables)
   fs%nvar_sf = size(fs%model%surface_state_variables)
-  fs%ndiag = size(fs%model%diagnostic_variables)
   fs%ndiag_hor = size(fs%model%horizontal_diagnostic_variables)
 
-  ! check real kind
+  !> @todo check real kind
   !write(0,*) 'fabm realkind=',rk,', schism realkind=',rkind
 
-  allocate(fs%diagnostic_variables(1:fs%ndiag))
+  !> The diagnostic variables are allocated here in the host, whereas the
+  !> state variables are allocated by schism itself
+  allocate(fs%interior_diagnostic_variables(1:fs%ndiag))
   do i=1,fs%ndiag
-    fs%diagnostic_variables(i)%short_name = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
-    fs%diagnostic_variables(i)%long_name = fs%model%diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%long_name)))
-    fs%diagnostic_variables(i)%units = fs%model%diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%diagnostic_variables(i)%units)))
-    fs%diagnostic_variables(i)%do_output = fs%model%diagnostic_variables(i)%output /= output_none
-    fs%diagnostic_variables(i)%data=>null()
+#if _FABM_API_VERSION_ < 1
+    fs%interior_diagnostic_variables(i)%short_name = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
+    fs%interior_diagnostic_variables(i)%long_name = fs%model%diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%long_name)))
+    fs%interior_diagnostic_variables(i)%units = fs%model%diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%diagnostic_variables(i)%units)))
+    fs%interior_diagnostic_variables(i)%do_output = fs%model%diagnostic_variables(i)%output /= output_none
+#else
+    fs%interior_diagnostic_variables(i)%short_name = fs%model%interior_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%name)))
+    fs%interior_diagnostic_variables(i)%long_name = fs%model%interior_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%long_name)))
+    fs%interior_diagnostic_variables(i)%units = fs%model%interior_diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%units)))
+    fs%interior_diagnostic_variables(i)%do_output = fs%model%interior_diagnostic_variables(i)%output /= output_none
+#endif
+    fs%interior_diagnostic_variables(i)%data=>null()
+
   end do
 
-  allocate(fs%hor_diagnostic_variables(1:fs%ndiag_hor))
+  allocate(fs%horizontal_diagnostic_variables(1:fs%ndiag_hor))
   do i=1,fs%ndiag_hor
-    fs%hor_diagnostic_variables(i)%short_name = fs%model%horizontal_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%name)))
-    fs%hor_diagnostic_variables(i)%long_name = fs%model%horizontal_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%long_name)))
-    fs%hor_diagnostic_variables(i)%units = fs%model%horizontal_diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%units)))
-    fs%hor_diagnostic_variables(i)%do_output = fs%model%horizontal_diagnostic_variables(i)%output /= output_none
-    fs%hor_diagnostic_variables(i)%data=>null()
+    fs%horizontal_diagnostic_variables(i)%short_name = fs%model%horizontal_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%name)))
+    fs%horizontal_diagnostic_variables(i)%long_name = fs%model%horizontal_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%long_name)))
+    fs%horizontal_diagnostic_variables(i)%units = fs%model%horizontal_diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%units)))
+    fs%horizontal_diagnostic_variables(i)%do_output = fs%model%horizontal_diagnostic_variables(i)%output /= output_none
+    fs%horizontal_diagnostic_variables(i)%data=>null()
   end do
 
   fs%tidx = 0
 
+  fs%day_of_year = start_day + month_offsets(start_month)
+  fs%seconds_of_day = start_hour * 3600
+  !> @todo add leap year algorithm
+
   if (present(ntracers)) ntracers = fs%nvar
-  end subroutine fabm_schism_init_model
+end subroutine fabm_schism_init_model
 
+!> Initialize FABM internal fields
+subroutine fabm_schism_init_stage2
 
-
-  !> initialize FABM internal fields
-  subroutine fabm_schism_init_stage2
-  integer :: ntracer,n,i
-  integer,save,allocatable,target :: bottom_idx(:)
-  integer,save,allocatable,target :: surface_idx(:)
+  integer :: ntracer, n, i
+  integer, save, allocatable, target :: bottom_idx(:)
+  integer, save, allocatable, target :: surface_idx(:)
+  character(len=256)                 :: message
 
   ! check size of tracer field
-  ntracer = ubound(tr_el,1)
+  !> @todo this assumes that only FABM BGC is run and not another model
+  ntracer = ubound(tr_el, 1)
   if (ntracer-istart+1 < fs%nvar) then
-    write(0,*) 'fabm_schism: incorrect number of tracers:',ntracer,', number required by fabm_schism:',fs%nvar
-    ! halt model
-    stop
+    write(message,*) 'incorrect number of tracers:', ntracer, &
+      ', number required by fabm_schism:',fs%nvar
+    call driver%fatal_error('fabm_schism_init_stage2',message)
   end if
 
   ! set domain size
   fs%tidx = 0
-  call fabm_set_domain(fs%model,nvrt,nea,dt)
+
+#if _FABM_API_VERSION_ < 1
+  call fabm_set_domain(fs%model, nvrt, nea, dt)
+#else
+  call fs%model%set_domain(nvrt, nea, dt)
+  ! SCHISM has no mask, so we do not need to set one.
+  ! call fs%model%set_mask(mask)
+#endif
+
   allocate(bottom_idx(1:nea))
   allocate(surface_idx(1:nea))
   bottom_idx(:) = kbe(:)+1
   surface_idx(:) = nvrt
+
   call fs%model%set_bottom_index(bottom_idx)
+#if _FABM_API_VERSION_ < 1
   call fs%model%set_surface_index(nvrt)
+#endif
 
   ! allocate and initialize state variables
-  allocate(fs%initial_conc(ntracers,nvrt,nea))
+  allocate(fs%interior_initial_concentration(ntracers, nvrt, nea))
 
-  do i=1,fs%nvar
+  do i=1, fs%nvar
     !> link state data
     !!@todo slicing is inefficient, maybe allocates new memory for interface
+    !>@todo initialization should be done by schism's routines
+#if _FABM_API_VERSION_ < 1
     call fabm_link_bulk_state_data(fs%model,i,tr_el(istart+i-1,:,:))
     tr_el(istart+i-1,:,:) = fs%model%state_variables(i)%initial_value
-
-    !>@todo initialization should be done by schism's routines
-    fs%initial_conc(i,:,:) = fs%model%state_variables(i)%initial_value
+    fs%interior_initial_concentration(i,:,:) = &
+      fs%model%state_variables(i)%initial_value
+#else
+    call fs%model%link_interior_state_data(i,tr_el(istart+i-1,:,:))
+    tr_el(istart+i-1,:,:) = fs%model%interior_state_variables(i)%initial_value
+    fs%interior_initial_concentration(i,:,:) = &
+      fs%model%interior_state_variables(i)%initial_value
+#endif
 
     ! set settling velocity method
 #define BDY_FRC_SINKING 0
@@ -222,35 +322,61 @@ module fabm_schism
 #endif
   end do
 
+  do i=1,fs%nvar
+#if _FABM_API_VERSION_ < 1
+    write(message,'(A,I2,A)') 'Tracer id ', istart+i-1, ' is '//trim(fs%model%state_variables(i)%long_name)
+#else
+    write(message,'(A,I2,A)') 'Tracer id ', istart+i-1, ' is '//trim(fs%model%interior_state_variables(i)%long_name)
+#endif
+    call driver%log_message(message)
+  enddo
+
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
     fs%bottom_state(:,i) = fs%model%bottom_state_variables(i)%initial_value
-    call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+#if _FABM_API_VERSION_ < 1
+     call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+#else
+    call fs%model%link_bottom_state_data(i,fs%bottom_state(:,i))
+#endif
+
   end do
 
   allocate(fs%surface_state(nea,fs%nvar_sf))
   do i=1,fs%nvar_sf
     fs%surface_state(:,i) = fs%model%surface_state_variables(i)%initial_value
+#if _FABM_API_VERSION_ < 1
     call fabm_link_surface_state_data(fs%model,i,fs%surface_state(:,i))
+#else
+    call fs%model%link_surface_state_data(i,fs%surface_state(:,i))
+#endif
   end do
 
   do n=1,fs%ndiag
-    if (fs%diagnostic_variables(n)%output_averaged) then
-      allocate(fs%diagnostic_variables(n)%data(nvrt,nea))
+    if (fs%interior_diagnostic_variables(n)%output_averaged) then
+      allocate(fs%interior_diagnostic_variables(n)%data(nvrt,nea))
     else
-      fs%diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
+#if _FABM_API_VERSION_ < 1
+      fs%interior_diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
+#else
+      fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
+#endif
     end if
-    fs%diagnostic_variables(n)%data = 0.0_rk
+    fs%interior_diagnostic_variables(n)%data = 0.0_rk
     fs%time_since_last_output = 0.0_rk
   end do
 
   do n=1,fs%ndiag_hor
-    if (fs%hor_diagnostic_variables(n)%output_averaged) then
-      allocate(fs%hor_diagnostic_variables(n)%data(nea))
+    if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
+      allocate(fs%horizontal_diagnostic_variables(n)%data(nea))
     else
-      fs%hor_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
+#if _FABM_API_VERSION_ < 1
+      fs%horizontal_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
+#else
+      fs%horizontal_diagnostic_variables(n)%data => fs%model%get_horizontal_diagnostic_data(n)
+#endif
     end if
-    fs%hor_diagnostic_variables(n)%data = 0.0_rk
+    fs%horizontal_diagnostic_variables(n)%data = 0.0_rk
     fs%time_since_last_hor_output = 0.0_rk
   end do
 
@@ -285,6 +411,7 @@ module fabm_schism
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
 
+#if _FABM_API_VERSION_ < 1
   call fs%get_light()
   call fabm_link_bulk_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
   call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
@@ -293,42 +420,67 @@ module fabm_schism
   call fabm_link_bulk_data(fs%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(fs%model,standard_variables%density,erho(:,:))
   call fabm_link_bulk_data(fs%model,standard_variables%cell_thickness,fs%layer_height)
- 
-   
+#else
+  call fs%model%prepare_inputs()
+  call fs%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
+  call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
+  call fs%model%link_horizontal_data(fabm_standard_variables%bottom_stress,fs%tau_bottom)
+  call fs%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%density,erho(:,:))
+  call fs%model%link_interior_data(fabm_standard_variables%cell_thickness,fs%layer_height)
+#endif
+
   ! The dissipation of the turbulent kinetic energy is usually abbreviated as
   ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
   ! equivalently m2 s-3.
   ! @todo what is the exact representation of this quantity in SCHISM? We assume
   ! `epsf` here for now.
   !call fabm_link_bulk_data(fs%model,standard_variables%turbulent_kinetic_energy_dissipation,fs%eps)
+#if _FABM_API_VERSION_ < 1
   call fabm_link_bulk_data(fs%model, &
     type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
     units='W kg-1', &
     cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
+#else
+  call fs%model%link_interior_data( &
+    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+    units='W kg-1', &
+    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
+#endif
 
   ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
   ! represented in the dfv(1:nvrt,1:npa) variable.
   !call fabm_link_bulk_data(fs%model,standard_variables%momentum_diffusivity,fs%num)
+#if _FABM_API_VERSION_ < 1
   call fabm_link_bulk_data(fs%model, &
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
+#else
+  call fs%model%link_interior_data( &
+    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+    cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
+#endif
 
-  ! check ready
+#if _FABM_API_VERSION_ < 1
   call fabm_check_ready(fs%model)
+  call fabm_update_time(fs%model, fs%tidx)
+#else
+  call fs%model%start()
+  call fs%model%prepare_inputs(fs%tidx)
+#endif
   fs%fabm_ready=.true.
 
-  call fabm_update_time(fs%model, fs%tidx)
+end subroutine fabm_schism_init_stage2
 
-  end subroutine fabm_schism_init_stage2
+!> Integrate the diagnostics that hav the output_averaged property
+subroutine integrate_diagnostics(fs,timestep)
 
-
-
-  subroutine integrate_diagnostics(fs,timestep)
   class (type_fabm_schism) :: fs
-  integer           :: n
-  real(rk),optional :: timestep
-  real(rk)          :: eff_timestep
+  integer                  :: n
+  real(rk),optional        :: timestep
+  real(rk)                 :: eff_timestep
 
   if (present(timestep)) then
     eff_timestep = timestep
@@ -337,76 +489,110 @@ module fabm_schism
   end if
 
   do n=1,fs%ndiag
-    if (fs%diagnostic_variables(n)%output_averaged) then
-      fs%diagnostic_variables(n)%data = fs%diagnostic_variables(n)%data + (eff_timestep * fabm_get_bulk_diagnostic_data(fs%model,n))
+    if (fs%interior_diagnostic_variables(n)%output_averaged) then
+      fs%interior_diagnostic_variables(n)%data = fs%interior_diagnostic_variables(n)%data  &
+#if _FABM_API_VERSION_ < 1
+      + (eff_timestep * fabm_get_bulk_diagnostic_data(fs%model,n))
+#else
+      + (eff_timestep * fs%model%get_interior_diagnostic_data(n))
+#endif
     end if
   end do
 
-  do n=1,size(fs%hor_diagnostic_variables)
-    if (.not.(fs%hor_diagnostic_variables(n)%do_output)) cycle
-    if (fs%hor_diagnostic_variables(n)%output_averaged) then
-      fs%hor_diagnostic_variables(n)%data = fs%hor_diagnostic_variables(n)%data + (eff_timestep * fabm_get_horizontal_diagnostic_data(fs%model,n))
+  do n=1,size(fs%horizontal_diagnostic_variables)
+    if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
+    if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
+      fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data &
+#if _FABM_API_VERSION_ < 1
+        + (eff_timestep * fabm_get_horizontal_diagnostic_data(fs%model,n))
+#else
+        + (eff_timestep * fs%model%get_horizontal_diagnostic_data(n))
+#endif
     end if
   end do
 
   fs%time_since_last_output = fs%time_since_last_output + eff_timestep
   fs%time_since_last_hor_output = fs%time_since_last_hor_output + eff_timestep
-  end subroutine
 
-  subroutine get_diagnostics_for_output(fs)
+end subroutine
+
+subroutine get_diagnostics_for_output(fs)
+
   class (type_fabm_schism) :: fs
   integer :: n
+
   do n=1,fs%ndiag
-    if (fs%diagnostic_variables(n)%output_averaged) then
-      fs%diagnostic_variables(n)%data = fs%diagnostic_variables(n)%data / fs%time_since_last_output
+    if (fs%interior_diagnostic_variables(n)%output_averaged) then
+      fs%interior_diagnostic_variables(n)%data = fs%interior_diagnostic_variables(n)%data / fs%time_since_last_output
     else
-      fs%diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
+#if _FABM_API_VERSION_ < 1
+      fs%interior_diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
+#else
+      fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
+#endif
     end if
   end do
   fs%time_since_last_output=0.0_rk
-  end subroutine
-  
-  subroutine get_horizontal_diagnostics_for_output(fs)
+
+end subroutine
+
+subroutine get_horizontal_diagnostics_for_output(fs)
   class (type_fabm_schism) :: fs
   integer :: n
-  do n=1,size(fs%hor_diagnostic_variables)
-    if (fs%hor_diagnostic_variables(n)%output_averaged) then
-      fs%hor_diagnostic_variables(n)%data = fs%hor_diagnostic_variables(n)%data / fs%time_since_last_hor_output
+  do n=1,size(fs%horizontal_diagnostic_variables)
+    if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
+      fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data / fs%time_since_last_hor_output
     else
-      fs%hor_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
+#if _FABM_API_VERSION_ < 1
+      fs%horizontal_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
+#else
+      fs%horizontal_diagnostic_variables(n)%data => fs%model%get_horizontal_diagnostic_data(n)
+#endif
     end if
   end do
   fs%time_since_last_hor_output=0.0_rk
-  end subroutine
+end subroutine
 
-
-  !> initialize concentrations from namelist
-  subroutine fabm_schism_init_concentrations()
+!> initialize concentrations from namelist
+subroutine fabm_schism_init_concentrations()
   integer :: n
 
-  do n=1,fs%nvar
-    ! set tracer values on the nodes, will be interpolated to the elements
-    ! in schism_init
+  ! set tracer values on the nodes, will be interpolated to the elements
+  ! in schism_init
+  do n=1, fs%nvar
+#if _FABM_API_VERSION_ < 1
     tr_nd(istart+n-1,:,:) = fs%model%state_variables(n)%initial_value
+#else
+    tr_nd(istart+n-1,:,:) = fs%model%interior_state_variables(n)%initial_value
+#endif
   end do
 
-  do n=1,fs%nvar_bot
+  do n=1, fs%nvar_bot
     fs%bottom_state(:,n) = fs%model%bottom_state_variables(n)%initial_value
+#if _FABM_API_VERSION_ < 1
     call fabm_link_bottom_state_data(fs%model,n,fs%bottom_state(:,n))
+#else
+    call fs%model%link_bottom_state_data(n,fs%bottom_state(:,n))
+#endif
   end do
 
-  do n=1,fs%nvar_sf
+  do n=1, fs%nvar_sf
     fs%surface_state(:,n) = fs%model%surface_state_variables(n)%initial_value
-    call fabm_link_surface_state_data(fs%model,n,fs%surface_state(:,n))
+#if _FABM_API_VERSION_ < 1
+    call fabm_link_surface_state_data(fs%model, n, fs%surface_state(:,n))
+#else
+    call fs%model%link_surface_state_data(n, fs%surface_state(:,n))
+#endif
   end do
 
   call fabm_schism_read_horizontal_state_from_netcdf('fabm_schism_init.nc',time=0.0_rk)
 
-  end subroutine fabm_schism_init_concentrations
+end subroutine fabm_schism_init_concentrations
 
-
-  !> get light conditions
-  subroutine get_light(fs)
+!> get light conditions
+!> @todo this routine is superseded in FABM 1.0
+#if _FABM_API_VERSION_ < 1
+subroutine get_light(fs)
   class(type_fabm_schism) :: fs
   integer :: k,nel
   real(rk) :: intext
@@ -433,40 +619,57 @@ module fabm_schism
     call fabm_get_light(fs%model,1,nvrt,nel)
   end do
 
-  end subroutine get_light
+end subroutine get_light
+#endif
 
+!> get name of state variable by index
+function state_variable_name_by_idx(fs, idx) result(varname)
 
-  !> get name of state variable by index
-  function state_variable_name_by_idx(fs,idx) result(varname)
   class (type_fabm_schism) :: fs
   integer, intent(in)      :: idx
   character(len=256)       :: varname
 
+#if _FABM_API_VERSION_ < 1
   varname = trim(fs%model%state_variables(idx)%long_name)
-  end function state_variable_name_by_idx
+#else
+  varname = trim(fs%model%interior_state_variables(idx)%long_name)
+#endif
+end function state_variable_name_by_idx
 
+!> repair state
+subroutine repair_state(fs)
 
-  !> repair state
-  subroutine repair_state(fs)
+  use schism_glbl, only: nea, nvrt
+  implicit none
+
   class(type_fabm_schism) :: fs
-  integer                 :: k,nel
+  integer                 :: k, nel
   logical                 :: had_valid_state=.true.
 
-  do nel=1,nea
-    call fabm_check_state(fs%model,1,nvrt,nel,fs%repair_allowed,had_valid_state)
+  do nel=1, nea
+#if _FABM_API_VERSION_ < 1
+    call fabm_check_state(fs%model, 1, nvrt, nel, fs%repair_allowed, had_valid_state)
+#else
+    call fs%model%check_interior_state(1, nvrt, nel, fs%repair_allowed, had_valid_state)
+#endif
     !evtl. clip values below zero
   end do
-  do nel=1,nea
-    call fabm_check_surface_state(fs%model,nel,fs%repair_allowed,had_valid_state)
-    call fabm_check_bottom_state(fs%model,nel,fs%repair_allowed,had_valid_state)
+
+  do nel=1, nea
+#if _FABM_API_VERSION_ < 1
+    call fabm_check_surface_state(fs%model, nel, fs%repair_allowed, had_valid_state)
+    call fabm_check_bottom_state(fs%model, nel, fs%repair_allowed, had_valid_state)
+#else
+    call fs%model%check_bottom_state(nel, fs%repair_allowed, had_valid_state)
+    call fs%model%check_surface_state(nel, fs%repair_allowed, had_valid_state)
+#endif
   end do
-  end subroutine
 
+end subroutine
 
+!> do FABM timestep
+subroutine fabm_schism_do()
 
-
-  !> do FABM timestep
-  subroutine fabm_schism_do()
   real(rk),dimension(:,:),pointer,save :: rhs => null()
   real(rk),dimension(:,:),pointer,save :: w => null()
   real(rk),dimension(:,:),pointer,save :: upper_flux => null()
@@ -493,7 +696,7 @@ module fabm_schism
   call fs%repair_state()
 
   ! calculate layer height
-  do i=1,nea
+  do i=1, nea
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
@@ -501,24 +704,47 @@ module fabm_schism
     end if
   end do
 
+  ! update time stepping information
+  fs%tidx = fs%tidx+1
+
+  fs%seconds_of_day = fs%seconds_of_day + int(dt)
+  if (fs%seconds_of_day >= 86400) then
+    fs%seconds_of_day = fs%seconds_of_day - 86400
+    fs%day_of_year = fs%day_of_year + 1
+  endif
+  if (fs%day_of_year > 365) then
+    fs%day_of_year = 1
+  endif
+
+
+#if _FABM_API_VERSION_ < 1
+  call fabm_update_time(fs%model, fs%tidx)
+#endif
+
+
 !write(0,*) 'fabm: get light'
   ! get light
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
-     fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i) 
+     fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
   end do
+
+#if _FABM_API_VERSION_ < 1
   call fs%get_light()
- 
-  ! Interpolate momentum diffusivity (num) and tke dissipation (eps) 
+#else
+  call fs%model%prepare_inputs()
+#endif
+
+  ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
-  if (allocated(epsf)) then 
+  if (allocated(epsf)) then
     do i=1,nea
         fs%eps(1:nvrt,i) = sum(epsf(1:nvrt,elnode(1:i34(i),i)),dim=2)/i34(i)
     enddo
   endif
 
-  if (allocated(dfv)) then 
+  if (allocated(dfv)) then
   do i=1,nea
     do k=1,nvrt
       fs%num(k,i) = sum(dfv(k,elnode(1:i34(i),i)))/i34(i)
@@ -526,15 +752,15 @@ module fabm_schism
   enddo
   endif
 
-  ! update time stepping information
-  fs%tidx = fs%tidx+1
-  call fabm_update_time(fs%model, fs%tidx)
- 
   ! get rhs and put tendencies into schism-array
   do i=1,nea
 !write(0,*) 'fabm: get rhs'
     rhs = 0.0_rk
+#if _FABM_API_VERSION_ < 1
     call fabm_do(fs%model,1,nvrt,i,rhs)
+#else
+    call fs%model%get_interior_sources(1,nvrt,i,rhs)
+#endif
     do n=1,fs%nvar
       do k=kbe(i)+1,nvrt
         bdy_frc(istart+n-1,k,i) = rhs(k,n)
@@ -547,7 +773,11 @@ module fabm_schism
     if (idry_e(i) == 0) then
     ! make sure not to use wsett
       wsett(istart:istart+fs%nvar-1,:,i) = 0.0d0
+#if _FABM_API_VERSION_ < 1
     call fabm_get_vertical_movement(fs%model,1,nvrt,i,w)
+#else
+    call fs%model%get_vertical_movement(1,nvrt,i,w)
+#endif
     lower_flux(1:kbe(i)+1,1:fs%nvar) = 0.0_rk
     upper_flux(1:nvrt,1:fs%nvar) = 0.0_rk
     h_inv = 0.0_rk
@@ -577,7 +807,11 @@ module fabm_schism
     ! implementation of vertical movement through 3d wsett
     wsett(istart:istart+fs%nvar-1,:,i) = 0.0d0
     if (idry_e(i)==0) then
-      call fabm_get_vertical_movement(fs%model,1,nvrt,i,w)
+#if _FABM_API_VERSION_ < 1
+      call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
+#else
+      call fs%model%get_vertical_movement(1, nvrt, i, w)
+#endif
 
       do k=kbe(i)+1,nvrt-1
         wsett(istart:istart+fs%nvar-1,k,i) = -0.5d0*(w(k,1:fs%nvar)+w(k+1,1:fs%nvar))
@@ -595,7 +829,11 @@ module fabm_schism
     rhs2d = 0.0_rk
     if (fs%nvar_bot>0) rhs_bt = 0.0_rk
     if (idry_e(i)==0) then
+#if _FABM_API_VERSION_ < 1
       call fabm_do_bottom(fs%model,i,rhs2d,rhs_bt)
+#else
+      call fs%model%get_bottom_sources(i,rhs2d,rhs_bt)
+#endif
       if (fs%nvar_bot>0) then
         fs%bottom_state(i,:) = fs%bottom_state(i,:) + dt*rhs_bt
       end if
@@ -609,7 +847,11 @@ module fabm_schism
     rhs2d = 0.0_rk
     if (fs%nvar_sf>0) rhs_sf = 0.0_rk
     if (idry_e(i)==0) then
+#if _FABM_API_VERSION_ < 1
       call fabm_do_surface(fs%model,i,rhs2d,rhs_sf)
+#else
+      call fs%model%get_surface_sources(i,rhs2d,rhs_sf)
+#endif
       if (fs%nvar_sf>0) then
         fs%surface_state(i,:) = fs%surface_state(i,:) + dt*rhs_sf
       end if
@@ -623,10 +865,10 @@ module fabm_schism
   ! integrate time-averaged diagnostic data arrays
   call fs%integrate_diagnostics(timestep=dt)
 
-  end subroutine fabm_schism_do
+end subroutine fabm_schism_do
 
 
-  subroutine integrate_vertical_movement(fs)
+subroutine integrate_vertical_movement(fs)
   ! integrate vertical movement with simple upwind method.
   ! this routine is a backup implementation, not used/called by default
   class(type_fabm_schism) :: fs
@@ -638,7 +880,12 @@ module fabm_schism
 
   do i=1,nea
     if (idry_e(i) == 0) then
-    call fabm_get_vertical_movement(fs%model,1,nvrt,i,w)
+#if _FABM_API_VERSION_ < 1
+      call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
+#else
+      call fs%model%get_vertical_movement(1, nvrt, i, w)
+#endif
+
     lower_flux(1:kbe(i)+1,1:fs%nvar) = 0.0_rk
     upper_flux(nvrt,1:fs%nvar) = 0.0_rk
     h_inv = 0.0_rk
@@ -664,11 +911,12 @@ module fabm_schism
     end do
     end if ! idry_e==0
   end do
-  end subroutine integrate_vertical_movement
+end subroutine integrate_vertical_movement
 
 
 
-  subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename,time)
+subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
+
   character(len=*), intent(in)    :: ncfilename
   real(rk), intent(in),optional   :: time
   integer                         :: status
@@ -682,15 +930,19 @@ module fabm_schism
   real(rk)                        :: tmp, time_eff
   real(rk),allocatable            :: time_vector(:)
   integer                         :: time_dimid,time_id,ntime,time_index
+  character(len=256)              :: message
 
-  ! open netcdf
+  ! Try to open netcdf file with forcing for horizontal states.  This is
+  ! optional and the routine returns on file not found or error.
   status = nf90_open(in_dir(1:len_in_dir)//ncfilename, nf90_nowrite, ncid)
   if (status /= nf90_noerr) then
-    if (myrank==0) write(16,*) 'init_fabm: read from file skipped, file not found: ',trim(ncfilename)
+    write(message,'(A)') 'Skipped reading horizontal state from non-existent'// &
+      'file '//trim(ncfilename)
+    call driver%log_message(message)
     return
   end if
 
-  ! get time vector and find closest time
+  ! Get time vector and find closest time
   time_eff = 0.0_rk
   if (present(time)) time_eff=time
 
@@ -715,7 +967,7 @@ module fabm_schism
   allocate(el_dict(maxval(element_ids)))
   do i=1,nelements
     el_dict(element_ids(i)) = i
-  end do  
+  end do
 
   ! read data from file
   do n=1,fs%nvar_bot
@@ -751,12 +1003,10 @@ module fabm_schism
   ! close netcdf
   call nccheck( nf90_close(ncid) )
 
-  end subroutine fabm_schism_read_horizontal_state_from_netcdf
+end subroutine fabm_schism_read_horizontal_state_from_netcdf
 
+subroutine fabm_schism_create_output_netcdf()
 
-
-
-  subroutine fabm_schism_create_output_netcdf()
   character(len=*),parameter  :: filename='fabm_state'
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
@@ -804,7 +1054,7 @@ module fabm_schism
   call nccheck( nf90_def_var(ncid, nv_name, nf90_int64, (/ surrnodes_dim_id, elements_dim_id /), nv_id) )
   call nccheck( nf90_put_att(ncid, nv_id, 'long_name', 'element-node connectivity') )
   call nccheck( nf90_put_att(ncid, nv_id, 'missing_value', -9999), 'set missing value' )
- 
+
   call nccheck( nf90_def_var(ncid, x_name, nf90_double, (/ nodes_dim_id /), x_id) )
   call nccheck( nf90_put_att(ncid, x_id, 'long_name', 'node x-coordinate') )
 
@@ -826,7 +1076,7 @@ module fabm_schism
   end do
 
   do n=1,fs%ndiag_hor
-    if (.not.(fs%hor_diagnostic_variables(n)%do_output)) cycle
+    if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
     call nccheck( nf90_def_var(ncid, trim(fs%model%horizontal_diagnostic_variables(n)%name), nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%horizontal_diagnostic_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%horizontal_diagnostic_variables(n)%long_name)) )
@@ -834,10 +1084,16 @@ module fabm_schism
   end do
 
   do n=1,fs%ndiag
-    if (.not.(fs%diagnostic_variables(n)%do_output)) cycle
+    if (.not.(fs%interior_diagnostic_variables(n)%do_output)) cycle
+#if _FABM_API_VERSION_ < 1
     call nccheck( nf90_def_var(ncid, trim(fs%model%diagnostic_variables(n)%name), nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%diagnostic_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%diagnostic_variables(n)%long_name)) )
+#else
+    call nccheck( nf90_def_var(ncid, trim(fs%model%interior_diagnostic_variables(n)%name), nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
+    call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%interior_diagnostic_variables(n)%units)) )
+    call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%interior_diagnostic_variables(n)%long_name)) )
+#endif
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
   end do
 
@@ -865,27 +1121,25 @@ module fabm_schism
 
   status = nf90_sync(ncid)
 
-  end subroutine fabm_schism_create_output_netcdf
+end subroutine fabm_schism_create_output_netcdf
 
-
-  subroutine mask_nan2d(a)
+subroutine mask_nan2d(a)
   real(rk), pointer :: a(:,:)
 
   where (a /= a) a=missing_value
   where (abs(a) > huge(missing_value)) a=missing_value
 
-  end subroutine mask_nan2d
+end subroutine mask_nan2d
 
-  subroutine mask_nan1d(a)
+subroutine mask_nan1d(a)
   real(rk), pointer :: a(:)
 
   where (a /= a) a=missing_value
   where (abs(a) > huge(missing_value)) a=missing_value
 
-  end subroutine mask_nan1d
+end subroutine mask_nan1d
 
-
-  subroutine fabm_schism_write_output_netcdf(time)
+subroutine fabm_schism_write_output_netcdf(time)
   real(rk), optional        :: time
   real(rk)                  :: time_value=0.0
   integer                   :: time_id, var_id
@@ -911,41 +1165,148 @@ module fabm_schism
   ! write bulk diagnostic variables
   ! this is done in schism_step: call fs%get_diagnostics_for_output()
   do n=1,fs%ndiag
-    if (.not.(fs%diagnostic_variables(n)%do_output)) cycle
-    call mask_nan2d(fs%diagnostic_variables(n)%data)
+    if (.not.(fs%interior_diagnostic_variables(n)%do_output)) cycle
+    call mask_nan2d(fs%interior_diagnostic_variables(n)%data)
+#if _FABM_API_VERSION_ < 1
     call nccheck( nf90_inq_varid(ncid, trim(fs%model%diagnostic_variables(n)%name), var_id) )
-    call nccheck( nf90_put_var(ncid, var_id, fs%diagnostic_variables(n)%data(1:nvrt,1:ne), start=(/1,1,next_time_index/),count=(/nvrt,ne,1/)) )
+#else
+    call nccheck( nf90_inq_varid(ncid, trim(fs%model%interior_diagnostic_variables(n)%name), var_id) )
+#endif
+    call nccheck( nf90_put_var(ncid, var_id, fs%interior_diagnostic_variables(n)%data(1:nvrt,1:ne), start=(/1,1,next_time_index/),count=(/nvrt,ne,1/)) )
   end do
 
   ! write horizontal diagnostic variables
   call fs%get_horizontal_diagnostics_for_output()
   do n=1,fs%ndiag_hor
-    if (.not.(fs%hor_diagnostic_variables(n)%do_output)) cycle
-    call mask_nan1d(fs%hor_diagnostic_variables(n)%data)
+    if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
+    call mask_nan1d(fs%horizontal_diagnostic_variables(n)%data)
     call nccheck( nf90_inq_varid(ncid, trim(fs%model%horizontal_diagnostic_variables(n)%name), var_id) )
-    call nccheck( nf90_put_var(ncid, var_id, fs%hor_diagnostic_variables(n)%data(1:ne), start=(/1,next_time_index,1/),count=(/ne,1/)) )
+    call nccheck( nf90_put_var(ncid, var_id, fs%horizontal_diagnostic_variables(n)%data(1:ne), start=(/1,next_time_index,1/),count=(/ne,1/)) )
   end do
   next_time_index = next_time_index+1
   status = nf90_sync(ncid)
 
-  end subroutine fabm_schism_write_output_netcdf
+end subroutine fabm_schism_write_output_netcdf
+
+!> Point FABM to environmental data, the target array is assumed to be
+!> allocated, this should be done for all variables on FABM's standard variable
+!> list that the model can provide and must be done for all variables that are
+!> dependencies of the models used.
+subroutine link_environmental_data(self, rc)
+
+  implicit none
+
+  class(type_fabm_schism), intent(inout) :: self
+  integer, intent(out), optional         :: rc
+
+  if (present(rc)) rc = 0
+
+  !> The dissipation of the turbulent kinetic energy is usually abbreviated as
+  ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
+  ! equivalently m2 s-3.
+  ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
+  ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
+  ! represented in the dfv(1:nvrt,1:npa) variable.
+  ! @todo what is the exact representation of this quantity in SCHISM? We assume
+  ! `epsf` here for now.
+  ! @todo make this call to $\nu_m$ and $\epsilon$ to standard variables, i.e.
+  ! expand the controlled vocabulary if they do not exist.
+
+#if _FABM_API_VERSION_ < 1
+  call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
+  call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
+  call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+  call fabm_link_bulk_data(self%model,standard_variables%density,erho)
+  call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
+  call fabm_link_bulk_data(self%model, &
+    type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+    units='W kg-1', &
+    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call fabm_link_horizontal_data(self%model, &
+      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+      units='Wm kg-1'), self%eps(1,:))
+  call fabm_link_bulk_data(self%model, &
+     type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+     cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+  call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
+  call fabm_link_horizontal_data(self%model,standard_variables%latitude,ylat_el)
+  !> @todo enable for models that need this,
+  !call fabm_link_scalar(self%model,standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+
+#else
+  call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_horizontal_data(fabm_standard_variables%longitude,xlon_el)
+  call self%model%link_horizontal_data(fabm_standard_variables%latitude,ylat_el)
+  call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
+  call self%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
+  call self%model%link_interior_data(fabm_standard_variables%density,erho)
+  call self%model%link_interior_data(fabm_standard_variables%cell_thickness,self%layer_height)
+  call self%model%link_interior_data( &
+    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  call self%model%link_interior_data( &
+    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+      units='W kg-1', &
+      cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call self%model%link_horizontal_data( &
+      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+          units='Wm kg-1'), self%eps(1,:))
+  call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+#endif
+
+end subroutine link_environmental_data
 
 
+!> Custom routines for log and error handling, see
+!> https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling
+subroutine schism_driver_log_message(self, message)
 
+  use schism_msgp, only: myrank
+  implicit none
 
-  subroutine fabm_schism_close_output_netcdf()
+  class (type_schism_driver), intent(inout) :: self
+  character(len=*),  intent(in)             :: message
+
+  ! Instead of stdout, the preferred place for logging progress is 'mirror.out'
+  ! which is unit 16, we only do this on rank 0
+  if (myrank == 0) write (16, '(A)') 'FABM/SCHISM: '//trim(message)
+
+end subroutine schism_driver_log_message
+
+subroutine schism_driver_fatal_error(self, location, message)
+
+  use schism_msgp, only: parallel_abort
+  implicit none
+
+  class (type_schism_driver), intent(inout) :: self
+  character(len=*),  intent(in)             :: location, message
+
+  call parallel_abort('FABM/SCHISM: '//trim(location)//' '//trim(message))
+
+end subroutine schism_driver_fatal_error
+
+subroutine fabm_schism_close_output_netcdf()
   call nccheck( nf90_close(ncid) )
-  end subroutine fabm_schism_close_output_netcdf
+end subroutine fabm_schism_close_output_netcdf
 
-  subroutine nccheck(status,optstr)
-    integer, intent ( in)     :: status
-    character(len=*),optional :: optstr
-    
-    if(status /= nf90_noerr) then
-      if (present(optstr)) print *, optstr 
-      print *, trim(nf90_strerror(status))
-      stop "Stopped"
-    end if
-  end subroutine nccheck 
+subroutine nccheck(status, optstr)
+
+  use netcdf, only: nf90_strerror
+  integer, intent (in)       :: status
+  character(len=*), optional :: optstr
+
+  if(status /= nf90_noerr) then
+    if (.not.present(optstr)) then
+      call driver%fatal_error('Unknown NetCDF error', nf90_strerror(status))
+    else
+      call driver%fatal_error(optstr, nf90_strerror(status))
+    endif
+  endif
+end subroutine nccheck
 
 end module fabm_schism
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
