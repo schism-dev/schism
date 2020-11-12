@@ -52,9 +52,9 @@
 
       USE sed_mod,   ONLY: Cdb_min,Cdb_max,Zob,vonKar,bustr,bvstr,   &
                            tau_c,drag_formulation,isd50,bottom, &
-                           ustress,vstress,zstress,tau_max,tau_option
-      USE schism_glbl, ONLY: rkind,nvrt,nea,dfv,idry_e,kbe,i34,elnode, &
-     &uu2,vv2,ze,dpe,isbnd,ifltype,errmsg,rho0,eta2
+                           ubott,vbott,zstress,tau_max,tau_option
+      USE schism_glbl, ONLY: rkind,nvrt,nea,dfv,idry_e,kbe,kbp,i34,elnode, &
+     &uu2,vv2,ze,dpe,isbnd,ifltype,errmsg,rho0,eta2,dav,znl
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_e2d
 
       IMPLICIT NONE
@@ -62,14 +62,76 @@
 
 !- Local variables --------------------------------------------------!
 
-      INTEGER     :: i,j,n1,n2,n3,itmp,ibnd
+      INTEGER     :: i,j,k,kk,n1,n2,n3,nd,itmp,ibnd
       INTEGER     :: kb0,kb1,kb2
       REAL(rkind) :: cff1, cff2, cff3, cff4, cff5, hh
-      REAL(rkind) :: wrk
+      REAL(rkind) :: wrk,dzb
       REAL(rkind) :: htot,d50,z0s
 
 !- Start Statement --------------------------------------------------!
 
+!---------------------------------------------------------------------
+! - Compute near bottom vel
+!   Test of whether WWM is used or not is performed within the subroutine
+!---------------------------------------------------------------------
+
+!BM: Several methods to compute current-induced bottom shear stress 
+!    (tau_option, see sediment.in).
+!    Near bottom vel components (ubott, vbott) are then used in sed_current_stress 
+!    to compute BSS, or in sed_bedload routines to derive current direction.
+  
+      ubott=0.0d0
+      vbott=0.0d0
+      DO i=1,nea
+        IF (idry_e(i)==1) CYCLE  
+!        kb0 = kbe(i)
+!        kb1 = kbe(i)+1
+        dzb=ze(kbe(i)+1,i)-ze(kbe(i),i)
+
+        IF ((tau_option .EQ. 1) .OR. (tau_option .EQ. 3 .AND. dzb .GE. zstress)) THEN
+          DO j=1,i34(i)
+            nd=elnode(j,i)
+            kb1=kbp(nd)+1
+            !kb1>=kbe(i)+1
+            ubott(i)=ubott(i)+uu2(kb1,nd)
+            vbott(i)=vbott(i)+vv2(kb1,nd)
+          END DO !j
+          ubott(i) = ubott(i)/i34(i)
+          vbott(i) = vbott(i)/i34(i)
+        ELSE IF ((tau_option .EQ. 2) .OR. (tau_option .EQ. 3 .AND. dzb .LT. zstress)) THEN
+          DO j=1,i34(i)
+            nd=elnode(j,i)
+            kk=nvrt+1 !init
+            kb0=kbp(nd)
+            !kb1=kb0+1
+            DO k=kb0+1,nvrt
+              IF (znl(k,nd)-znl(kb0,nd) .GE. zstress) THEN
+                kk=k
+                EXIT
+              END IF
+            END DO
+
+            IF (kk .GT. nvrt) THEN !too shallow
+              ubott(i)=ubott(i)+dav(1,nd)
+              vbott(i)=vbott(i)+dav(2,nd)
+            ELSE
+              wrk=(zstress+znl(kb0,nd)-znl(kk-1,nd))/(znl(kk,nd)-znl(kk-1,nd))
+              !wkkm1=(znl(kk,nd)-zstress-znl(kb0,nd))/(znl(kk,nd)-znl(kk-1,nd))
+              ubott(i)=ubott(i)+(1-wrk)*uu2(kk-1,nd) + wrk*uu2(kk,nd)
+              vbott(i)=vbott(i)+(1-wrk)*vv2(kk-1,nd) + wrk*vv2(kk,nd)
+            END IF
+          END DO !j
+          ubott(i) = ubott(i)/i34(i)
+          vbott(i) = vbott(i)/i34(i)
+  
+        ELSE
+          call parallel_abort('SED: unknown tau_option')
+        END IF ! test on tau_option and dzb
+      END DO !i=1,nea
+  
+!      CALL exchange_e2d(ubott)
+!      CALL exchange_e2d(vbott)
+ 
 !---------------------------------------------------------------------
 ! - Set kinematic bottom momentum flux (m2/s2).
 !---------------------------------------------------------------------
@@ -118,8 +180,8 @@
             wrk=Cdb_max
           endif !hh
 
-          cff3 = vstress(i)
-          cff4 = ustress(i)
+          cff3 = vbott(i)
+          cff4 = ubott(i)
 
           !Limit vel. in shallows - need better approach
           if(htot<=0.5d0) then
@@ -233,7 +295,7 @@
 
       USE sed_mod,   ONLY: uorb,tp,Zob,bustr,bvstr,tau_c,      &
      &                      tau_w,tau_wc,isd50,bottom,tau_max, &
-     &                      tau_m,ustress,vstress,wdir 
+     &                      tau_m,ubott,vbott,wdir 
       USE schism_glbl, ONLY: rkind,pi,nea,idry_e,errmsg,rho0, &
      &                       elnode,i34,out_wwm
       USE schism_msgp, ONLY: myrank,parallel_abort,exchange_e2d
@@ -318,7 +380,7 @@
 !---------------------------------------------------------------------
 
         ! Angle between current and wave directions (phi)                        
-        udir = ATAN2(vstress(i),ustress(i))
+        udir = ATAN2(vbott(i),ubott(i))
         phi = wdir(i) - udir
 
         if(tau_c(i)+tau_w(i)==0) then
