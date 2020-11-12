@@ -58,6 +58,26 @@
        IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9')
        AC1 = zero
 
+       ALLOCATE(SSBR_TOTAL(MSC,MDC,MNP), stat=istat)
+       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.1')
+       SSBR_TOTAL = zero
+
+       IF (IROLLER == 1) THEN
+         ALLOCATE(RAC1(MSC,MDC,MNP), stat=istat)
+         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.2')
+         RAC1 = zero
+
+         ALLOCATE(RAC2(MSC,MDC,MNP), stat=istat)
+         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.3')
+         RAC2 = zero
+       END IF
+
+       ALLOCATE( A_BR_COEF(MNP), BRCRIT(MNP), stat=istat)
+       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 25b')
+       A_BR_COEF = zero
+       BRCRIT = zero
+
+
        IF ((.NOT. BLOCK_GAUSS_SEIDEL).and.(AMETHOD .eq. 7)) THEN
          ALLOCATE (U_JACOBI(MSC,MDC,MNP), stat=istat)
          IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9a')
@@ -337,8 +357,10 @@
          CALL WWM_ABORT('UKNOWN PHYSICS SELECTION') 
       ENDIF ! IPHYS
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'LEAVING INIT_ARRAYS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'LEAVING INIT_ARRAYS'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -367,6 +389,7 @@
         DEALLOCATE (U_JACOBI)
       END IF
       DEALLOCATE (AC2, AC1)
+      IF (IROLLER == 1) DEALLOCATE (RAC2, RAC1)
       IF (ICOMP .GE. 2) THEN
         DEALLOCATE (IMATRAA, IMATDAA)
       END IF
@@ -500,12 +523,18 @@
       enddo
 #endif
       CALL INIT_FILE_HANDLES
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'DONE SETTING FHNDL'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'DONE SETTING FHNDL'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       CALL READ_WWMINPUT
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'DONE READING NAMELIST'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'DONE READING NAMELIST'
+        FLUSH(STAT%FHNDL)
+      END IF
+
+
       CALL READ_SPATIAL_GRID_TOTAL
 
 #ifndef MPI_PARALL_GRID
@@ -522,11 +551,13 @@
       IF (IGRIDTYPE .eq. 2) THEN
         CALL WWM_ABORT('Not yet support for PDLIB and IGRIDTYPE=2')
       END IF
-      write(DBG%FHNDL,*) 'sum(XPtotal)=', sum(XPtotal)
-      write(DBG%FHNDL,*) 'sum(YPtotal)=', sum(YPtotal)
-      write(DBG%FHNDL,*) 'sum(DEPtotal)=', sum(DEPtotal)
-      write(DBG%FHNDL,*) 'sum(INEtotal)=', sum(INEtotal)
-      write(DBG%FHNDL,*) NP_TOTAL, NE_TOTAL, MDC, MSC
+      IF (WRITEDBGFLAG == 1) THEN
+        WRITE(DBG%FHNDL,*) 'sum(XPtotal)=', sum(XPtotal)
+        WRITE(DBG%FHNDL,*) 'sum(YPtotal)=', sum(YPtotal)
+        WRITE(DBG%FHNDL,*) 'sum(DEPtotal)=', sum(DEPtotal)
+        WRITE(DBG%FHNDL,*) 'sum(INEtotal)=', sum(INEtotal)
+        WRITE(DBG%FHNDL,*) NP_TOTAL, NE_TOTAL, MDC, MSC
+      END IF
       CALL initFromGridDim(NP_TOTAL, XPtotal, YPtotal, DEPtotal, NE_TOTAL, INEtotal, MDC, MSC, comm)
       call fillPublicVars
       CALL INIT_ARRAYS
@@ -567,21 +598,27 @@
         CALL  WWM_ABORT('CART2LATLON .AND. LATLON2CART cannot be T')
       ENDIF 
       CALL INIT_SPATIAL_GRID
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT SPATIAL GRID'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT SPATIAL GRID'
+        FLUSH(STAT%FHNDL)
+      END IF      
       !
       ! Main inits done, now the secondary ones.
       !
 #ifdef VDISLIN
       CALL INIT_DISLIN()
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT DISLIN                '
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT DISLIN                '
+        FLUSH(STAT%FHNDL)
+      END IF
 #endif
 
       CALL CHECK_LOGICS
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'CHECK LOGICS                '
-      FLUSH(STAT%FHNDL)
-      !
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'CHECK LOGICS                '
+        FLUSH(STAT%FHNDL)
+      END IF
+
       IF (LADVTEST) THEN
         ALLOCATE(UTEST(MNP), stat=istat)
         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 33')
@@ -598,27 +635,37 @@
       CALL BUILD_IPSTATUS
       CALL BUILD_TRIANGLE_CORRESPONDENCES
       CALL SET_IOBPD_BY_DEP
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET DEPTH POINTER'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET DEPTH POINTER'
+        FLUSH(STAT%FHNDL)
+      END IF
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE SPECTRAL GRID'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE SPECTRAL GRID'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL INIT_SPECTRAL_GRID
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE BOUNDARY POINTER 1/2'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE BOUNDARY POINTER 1/2'
+        FLUSH(STAT%FHNDL)
+      END IF
 #if defined SCHISM
 !AR: let dmin free ...
 !      DMIN = DMIN_SCHISM
 #endif
       CALL SET_IOBP_NEXTGENERATION
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE BOUNDARY POINTER 2/2'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE BOUNDARY POINTER 2/2'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL SET_IOBPD
 
       IF (DIMMODE .EQ. 2) THEN
-        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'THE FLUCTUATION SPLITTING PREPROCESSOR HAS STARTED'
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A)') 'THE FLUCTUATION SPLITTING PREPROCESSOR HAS STARTED'
+          FLUSH(STAT%FHNDL)
+        END IF
         CALL INIT_FLUCT_ARRAYS
         CALL INIT_FLUCT
 
@@ -632,8 +679,10 @@
           CALL WWM_SOLVER_INIT
 #endif
         END IF
-        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'THE FLUCTUATION SPLITTING PREPROCESSOR HAS ENDED'
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A)') 'THE FLUCTUATION SPLITTING PREPROCESSOR HAS ENDED'
+          FLUSH(STAT%FHNDL)
+        END IF
       END IF
 
       IF (LZETA_SETUP) THEN
@@ -644,9 +693,10 @@
 #endif
       END IF
 
-
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE WIND CURRENT WATERLEVEL'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE WIND CURRENT WATERLEVEL'
+        FLUSH(STAT%FHNDL)
+      END IF
 #if !defined ROMS_WWM_PGMCL_COUPLING && !defined MODEL_COUPLING_ATM_WAV && !defined MODEL_COUPLING_OCN_WAV
       IF (LWINDFROMWWM) THEN
         CALL INIT_WIND_INPUT
@@ -657,6 +707,11 @@
         WINDXY(:,1) = WINDX0
         WINDXY(:,2) = WINDY0
       END IF
+      ! BM: compute a ramp for wave forces starting
+      !     from the open boundary
+      IF (wafo_obcramp==1) THEN
+        CALL READ_WAFO_OPBND_RAMP
+      END IF
 #endif
 #if !defined ROMS_WWM_PGMCL_COUPLING && !defined MODEL_COUPLING_OCN_WAV
       IF (.NOT. LCPL) THEN
@@ -666,8 +721,10 @@
 #endif
      
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'COMPUTE THE WAVE PARAMETER'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'COMPUTE THE WAVE PARAMETER'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL INITIATE_WAVE_PARAMETER
       CALL SETSHALLOW
       CALL SET_HMAX
@@ -677,8 +734,10 @@
       END IF
 
       IF ( (MESIN .EQ. 1 .OR. MESDS .EQ. 1) .AND. SMETHOD .GT. 0 .AND. .NOT. (LSOURCESWAM .OR. LSOURCESWWIII)) THEN
-        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT ARDHUIN et al.'
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT ARDHUIN et al.'
+          FLUSH(STAT%FHNDL)
+        END IF
 #ifdef ST41
         CALL PREPARE_ARDHUIN_OLD
 #elif ST42
@@ -686,18 +745,29 @@
 #endif
       ENDIF
       
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET THE INITIAL WAVE BOUNDARY CONDITION'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET THE INITIAL WAVE BOUNDARY CONDITION'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL INIT_WAVE_BOUNDARY_CONDITION
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET THE INITIAL CONDITION'
-      FLUSH(STAT%FHNDL)
+
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SET THE INITIAL CONDITION'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL INITIAL_CONDITION
 !      CALL Print_SumAC2("After INITIAL_CONDITION")
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT STATION OUTPUT'
-      FLUSH(STAT%FHNDL)
+
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INIT STATION OUTPUT'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL INIT_STATION_OUTPUT
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'WRITING INITIAL TIME STEP'
-      FLUSH(STAT%FHNDL)
+
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'WRITING INITIAL TIME STEP'
+        FLUSH(STAT%FHNDL)
+      END IF
 #ifdef MPI_PARALL_GRID
       CALL EXCHANGE_P4D_WWM(AC2)
 #endif
@@ -709,8 +779,10 @@
       END IF
 #if !defined SCHISM && !defined ROMS_WWM_PGMCL_COUPLING && !defined MODEL_COUPLING_ATM_WAV && !defined MODEL_COUPLING_OCN_WAV
       IF (LCPL) THEN
-        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'OPEN PIPES FOR COUPLING'
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A)') 'OPEN PIPES FOR COUPLING'
+          FLUSH(STAT%FHNDL)
+        END IF
         IF (LTIMOR) THEN
           CALL INIT_PIPES_TIMOR()
 #ifdef SHYFEM_COUPLING
@@ -723,19 +795,27 @@
       END IF
 #endif
 #ifdef ROMS_WWM_PGMCL_COUPLING
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'Before ROMS_COUPL_INITIALIZE'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'Before ROMS_COUPL_INITIALIZE'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL WWM_common_coupl_initialize
       CALL WWM_a_OCN_COUPL_INITIALIZE
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'After ROMS_COUPL_INITIALIZE'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'After ROMS_COUPL_INITIALIZE'
+        FLUSH(STAT%FHNDL)
+      END IF
 #endif
 #if defined MODEL_COUPLING_ATM_WAV || defined MODEL_COUPLING_OCN_WAV
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'Before WAV_common_initialize'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'Before WAV_common_initialize'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL WAV_common_initialize
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'After WAV_common_initialize'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)') 'After WAV_common_initialize'
+        FLUSH(STAT%FHNDL)
+      END IF
 #endif
 #ifdef TIMINGS
       CALL WAV_MY_WTIME(TIME2)
@@ -743,21 +823,24 @@
 
 #if defined SCHISM
       IF (MSC_SCHISM .NE. MSC .OR. MDC_SCHISM .NE. MDC) THEN
-        WRITE(DBG%FHNDL,*) 'MSC_SCHISM', MSC_SCHISM
-        WRITE(DBG%FHNDL,*) 'MSC', MSC
-        WRITE(DBG%FHNDL,*) 'MDC_SCHISM', MDC_SCHISM
-        WRITE(DBG%FHNDL,*) 'MDC', MDC
-        FLUSH(DBG%FHNDL)
+        IF (WRITEDBGFLAG == 1) THEN
+          WRITE(DBG%FHNDL,*) 'MSC_SCHISM', MSC_SCHISM
+          WRITE(DBG%FHNDL,*) 'MSC', MSC
+          WRITE(DBG%FHNDL,*) 'MDC_SCHISM', MDC_SCHISM
+          WRITE(DBG%FHNDL,*) 'MDC', MDC
+          FLUSH(DBG%FHNDL)
+        END IF        
         CALL PARALLEL_ABORT('THERE IS AND ERROR IN MSC2 OR MDC2 IN PARAM.IN')
       END IF
 #endif
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE_WWM'
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)') 'INITIALIZE_WWM'
 #ifdef TIMINGS
-      WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'CPU Time for the preprocessing', TIME2-TIME1
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'CPU Time for the preprocessing', TIME2-TIME1
 #endif
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) FLUSH(STAT%FHNDL)
       AC1 = AC2
+      IF (IROLLER == 1) RAC1 = RAC2
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -991,7 +1074,7 @@
          USE DATAPOOL, ONLY: STAT, LSTCU, LSECU, MESNL, SPSIG, SPDIR, MSC, MDC, DELALP
          USE DATAPOOL, ONLY: G9, DEP, MNP, MESTR, LSOURCESWWIII, LSOURCESWAM, DELTAIL
          USE DATAPOOL, ONLY: LPRECOMP_EXIST, TAUHFT, TAUHFT2, TAUT, DELU, DELTAUW, DELUST
-         USE DATAPOOL, ONLY: IPHYS, MESIN, SMETHOD
+         USE DATAPOOL, ONLY: IPHYS, MESIN, SMETHOD, WRITESTATFLAG
 #ifdef MPI_PARALL_GRID
          USE DATAPOOL, ONLY: MYRANK,COMM
 #endif
@@ -1002,21 +1085,35 @@
          IMPLICIT NONE
          INTEGER IQGRID, INODE, IERR
 
-         WRITE(STAT%FHNDL,*) 'START WAVE PARAMETER'
-         FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'START WAVE PARAMETER'
+           FLUSH(STAT%FHNDL)
+         END IF
+
          CALL GRADDEP
-         WRITE(STAT%FHNDL,*) 'GRADDEP'
-         FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'GRADDEP'
+           FLUSH(STAT%FHNDL)
+         END IF
+
          IF (LSTCU .OR. LSECU) CALL GRADCURT
-         WRITE(STAT%FHNDL,*) 'GRADCURT'
-         FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'GRADCURT'
+           FLUSH(STAT%FHNDL)
+         END IF
+
          CALL BASIC_PARAMETER
-         WRITE(STAT%FHNDL,*) 'BASIC'
-         FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'BASIC'
+           FLUSH(STAT%FHNDL)
+         END IF
+
          CALL MAKE_WAVE_TABLE
          CALL WAVE_K_C_CG
-         WRITE(STAT%FHNDL,*) 'WAVEKCG'
-         FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'WAVEKCG'
+           FLUSH(STAT%FHNDL)
+         END IF
 
          IF (.NOT. (LSOURCESWAM .OR. LSOURCESWWIII) .AND. SMETHOD .GT. 0) THEN
            IF (MESNL .LT. 5) THEN
@@ -1030,16 +1127,16 @@
              IF (IERR .GT. 0) CALL WWM_ABORT('IERR XNL_INIT')
            ENDIF
          ELSE IF (LSOURCESWAM .AND. .NOT. LSOURCESWWIII) THEN
-           WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING NONLINEAR COEFFICIENTS' 
+           IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING NONLINEAR COEFFICIENTS' 
            CALL NLWEIGT
-           WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING NONLINEAR COEFFICIENTS'
+           IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING NONLINEAR COEFFICIENTS'
            CALL INISNONLIN
            INQUIRE(FILE='fort.5011',EXIST=LPRECOMP_EXIST)
 #ifdef MPI_PARALL_GRID
            CALL MPI_BARRIER(COMM, ierr)
 #endif
            IF (LPRECOMP_EXIST) THEN
-             WRITE(STAT%FHNDL,'("+TRACE...",A)')'READING STRESS TABLES'
+             IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)')'READING STRESS TABLES'
              OPEN(5011, FILE='fort.5011', FORM='UNFORMATTED') 
              IF (IPHYS == 0) THEN
                READ(5011) DELU, DELTAUW
@@ -1056,14 +1153,17 @@
              !WRITE(*,*) SIZE(TAUT)
              !WRITE(*,*) SIZE(TAUHFT)
              IF (MESIN .GT. 0) THEN 
-               WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING STRESS TABLES'
+               IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING STRESS TABLES'
                CALL STRESS
-               WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING HF TABLES'
+               IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A)')'COMPUTING HF TABLES'
                CALL TAUHF_WAM(MSC)
              ENDIF
            ENDIF
 
-           WRITE(STAT%FHNDL,'("+TRACE...",A)')'INITIALIZING STRESS ARRAYS'
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,'("+TRACE...",A)')'INITIALIZING STRESS ARRAYS'
+             FLUSH(STAT%FHNDL)
+           END IF           
            IF (MESIN .GT. 0) CALL BUILDSTRESS
          ELSE IF (LSOURCESWWIII .AND. .NOT. LSOURCESWAM) THEN
          ENDIF
@@ -1225,18 +1325,24 @@
          open(SRCDBG%FHNDL,file='srcdbg.out',status='unknown') !non-fatal errors
 #else
 # ifdef SCHISM
-         FDB  ='wwmdbg_0000'
-         LFDB =len_trim(FDB)
-         write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
-         open(DBG%FHNDL,file='outputs/'//fdb,status='replace') 
-         FDB  ='wwmstat_0000'
-         LFDB =len_trim(FDB)
-         write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
-         open(STAT%FHNDL,file='outputs/'//fdb,status='replace') 
-         FDB  ='windbg_0000'
-         LFDB =len_trim(FDB)
-         write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
-         open(WINDBG%FHNDL,file='outputs/'//fdb,status='replace') 
+         IF (WRITEDBGFLAG == 1) THEN
+           FDB  ='wwmdbg_0000'
+           LFDB =len_trim(FDB)
+           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           open(DBG%FHNDL,file='outputs/'//fdb,status='replace')
+         END IF
+         IF (WRITESTATFLAG == 1) THEN
+           FDB  ='wwmstat_0000'
+           LFDB =len_trim(FDB)
+           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           open(STAT%FHNDL,file='outputs/'//fdb,status='replace') 
+         END IF
+         IF (WRITEWINDBGFLAG == 1) THEN
+           FDB  ='windbg_0000'
+           LFDB =len_trim(FDB)
+           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           open(WINDBG%FHNDL,file='outputs/'//fdb,status='replace') 
+         END IF
 # else
          FDB  ='wwmdbg_0000'
          LFDB =len_trim(FDB)
@@ -1253,21 +1359,28 @@
 # endif
 #endif
 
-
-         WRITE(DBG%FHNDL, *) 'THR=', THR
-         WRITE(DBG%FHNDL, *) 'THR8=', THR8
+         IF (WRITEDBGFLAG == 1) THEN
+           WRITE(DBG%FHNDL, *) 'THR=', THR
+           WRITE(DBG%FHNDL, *) 'THR8=', THR8
+         END IF
          CALL TEST_FILE_EXIST_DIE("Missing input file : ", TRIM(INP%FNAME))
 #ifdef MPIP_PARALL_GRID
          IF (myrank == 0) THEN
 #endif
-         WRITE(STAT%FHNDL,*) 'Input Filename   =', TRIM(INP%FNAME)
-         WRITE(STAT%FHNDL,*) 'Check Filename   =', TRIM(CHK%FNAME)
-         WRITE(STAT%FHNDL,*) 'Qstea Filename   =', TRIM(QSTEA%FNAME)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'Input Filename   =', TRIM(INP%FNAME)
+           WRITE(STAT%FHNDL,*) 'Check Filename   =', TRIM(CHK%FNAME)
+           WRITE(STAT%FHNDL,*) 'Qstea Filename   =', TRIM(QSTEA%FNAME)
+         END IF         
 #if defined DEBUG && defined IOBPDOUT
-         WRITE(STAT%FHNDL,*) 'Iobp Filename    =', TRIM(IOBPOUT%FNAME)
-         WRITE(STAT%FHNDL,*) 'Iobpd Filename   =', TRIM(IOBPDOUT%FNAME)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'Iobp Filename    =', TRIM(IOBPOUT%FNAME)
+           WRITE(STAT%FHNDL,*) 'Iobpd Filename   =', TRIM(IOBPDOUT%FNAME)
+         END IF         
 #endif
-         WRITE(STAT%FHNDL,*) 'WindDbg Filename =', TRIM(WINDBG%FNAME)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'WindDbg Filename =', TRIM(WINDBG%FNAME)
+         END IF         
 #ifdef MPIP_PARALL_GRID
          ENDIF
 #endif
@@ -1350,7 +1463,7 @@
 #ifdef MPI_PARALL_GRID
         XYTMP(1,:) = XP
         XYTMP(2,:) = YP
-        WRITE(DBG%FHNDL,*) 'SEARCHING FOR STATION ACROSS RANKS', myrank
+        IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'SEARCHING FOR STATION ACROSS RANKS', myrank
         DO I = 1, IOUTS
           STATION(I)%ELEMENT=0
           CALL FIND_ELE ( MNE,MNP,INE,XYTMP,STATION(I)%XCOORD, STATION(I)%YCOORD,STATION(I)%ELEMENT )
@@ -1360,23 +1473,29 @@
             STATION(I)%XELE(:) = XP(NI)
             STATION(I)%YELE(:) = YP(NI)
             CALL INTELEMENT_COEF(XP(NI),YP(NI), STATION(I)%XCOORD,STATION(I)%YCOORD, STATION(I)%WI)
-            !WRITE(DBG%FHNDL,'(A10,I10,A20,I10,A15,2I10)') 'MYRANK', MYRANK, 'STATION =',I, 'IN ELEMENT =', IELG(STATION(I)%ELEMENT), STATION(I)%IFOUND
-            WRITE(DBG%FHNDL,'(A10,I10,A20,I10,A15,2I10)') 'MYRANK', MYRANK, 'STATION =',I, 'IN ELEMENT =',STATION(I)%IFOUND
-            FLUSH(DBG%FHNDL)
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,'(A10,I10,A20,I10,A15,2I10)') 'MYRANK', MYRANK, 'STATION =',I, 'IN ELEMENT =',STATION(I)%IFOUND
+              FLUSH(DBG%FHNDL)
+            END IF
           ELSE
             STATION(I)%IFOUND  = 0
             NI                 = 0
             STATION(I)%XELE(:) = 0.
             STATION(I)%YELE(:) = 0.
-            WRITE(DBG%FHNDL,'(A10,I10,A20,I10,A15,2I10)') 'MYRANK', MYRANK, 'STATION =',I, 'IN ELEMENT =', STATION(I)%ELEMENT, STATION(I)%IFOUND
-            FLUSH(DBG%FHNDL)
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,'(A10,I10,A20,I10,A15,2I10)') 'MYRANK', MYRANK, 'STATION =',I, 'IN ELEMENT =', &
+                            & STATION(I)%ELEMENT, STATION(I)%IFOUND
+              FLUSH(DBG%FHNDL)
+            END IF
           END IF
         END DO
         DO I = 1, IOUTS
           CALL MPI_REDUCE(STATION(I)%IFOUND,STATION(I)%ISUM,1, itype,MPI_SUM,0,COMM,IERR)
           IF (myrank == 0) THEN
-            WRITE(DBG%FHNDL,'(A30,3I10)') 'SUM OF THE FOUND STATIONS MYRANK', MYRANK, I, STATION(I)%ISUM
-            FLUSH(DBG%FHNDL)
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,'(A30,3I10)') 'SUM OF THE FOUND STATIONS MYRANK', MYRANK, I, STATION(I)%ISUM
+              FLUSH(DBG%FHNDL)
+            END IF
             rbuf_int(1)=STATION(I)%ISUM
             DO iProc=2,nproc
               CALL MPI_SEND(rbuf_int,1,itype, iProc-1, 144, COMM, ierr)
@@ -1386,7 +1505,7 @@
             STATION(I)%ISUM=rbuf_int(1)
           END IF
         END DO
-        IF (myrank == 0) THEN
+        IF (myrank == 0 .AND. WRITEDBGFLAG == 1) THEN
           DO I = 1, IOUTS
             IF (STATION(I)%ISUM .EQ. 0) THEN
               WRITE(DBG%FHNDL,'(A20,I10,A10,2F15.8)') 'STATION NOT FOUND', I, STATION(I)%NAME, STATION(I)%XCOORD, STATION(I)%YCOORD
@@ -1411,20 +1530,20 @@
         XYTMP(1,:) = XP
         XYTMP(2,:) = YP
         IF (DIMMODE .EQ. 2) THEN
-          WRITE(STAT%FHNDL,*) 'FINDING ELEMENT CONNECTED TO STATION'
+          IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'FINDING ELEMENT CONNECTED TO STATION'
           DO I = 1, IOUTS
             STATION(I)%ELEMENT=0
             CALL FIND_ELE ( MNE,MNP,INE,XYTMP,STATION(I)%XCOORD, STATION(I)%YCOORD,STATION(I)%ELEMENT )
             IF (STATION(I)%ELEMENT == 0) THEN
               STATION(I)%IFOUND = 0
-              WRITE(STAT%FHNDL,*) STATION(I)%NAME, STATION(I)%XCOORD, STATION(I)%YCOORD, ' is out of mesh !'
+              IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) STATION(I)%NAME, STATION(I)%XCOORD, STATION(I)%YCOORD, ' is out of mesh !'
             ELSE
               STATION(I)%IFOUND = 1
               NI = INE(:,STATION(I)%ELEMENT)
               STATION(I)%XELE(:) = XP(NI)
               STATION(I)%YELE(:) = YP(NI)
               CALL INTELEMENT_COEF(XP(NI),YP(NI), STATION(I)%XCOORD,STATION(I)%YCOORD, STATION(I)%WI)
-              WRITE(STAT%FHNDL,*)'Site    ',STATION(I)%NAME, STATION(I)%XCOORD,STATION(I)%YCOORD,STATION(I)%IFOUND
+              IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*)'Site    ',STATION(I)%NAME, STATION(I)%XCOORD,STATION(I)%YCOORD,STATION(I)%IFOUND
             END IF
           END DO
         END IF
@@ -1438,11 +1557,14 @@
                 EXIT
               END IF
             END DO
-            WRITE(DBG%FHNDL,*) 'CUT-OFF FREQ. OF STATION =', IP, STATION(IP)%CUTOFF, 'RAD - IS =', STATION(IP)%ISMAX
+            IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'CUT-OFF FREQ. OF STATION =', IP, STATION(IP)%CUTOFF, 'RAD - IS =', STATION(IP)%ISMAX
           END DO
         END IF
       END IF
-      WRITE(STAT%FHNDL,'("+TRACE...",A)')'FINISHED WITH INIT_STATION_OUTPUT'
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A)')'FINISHED WITH INIT_STATION_OUTPUT'
+        FLUSH(STAT%FHNDL)
+      END IF      
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1537,7 +1659,7 @@
       SUBROUTINE SET_HMAX
         USE DATAPOOL
 
-        HMAX = BRHD * DEP
+        HMAX = BRCR * DEP
 
         IF (LMONO_IN) HMAX = HMAX * SQRT(TWO)
 
@@ -1578,6 +1700,62 @@
 # endif
 #endif
       END SUBROUTINE
+
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+!* This routine reads a ramp (between 0 and 1) for wave forces starting
+!  from the open boundary, as defined in wafo_ramp.gr3.
+!  Activation: wafo_obcramp (0/1:off/on).
+!  Subroutine called at the initialization only (in INITIALIZE_WWM).
+!  Then, wafo_opbnd_ramp is applied to wave forces at each time step in
+!  wwm_main.
+!  Authors: X. Bertin & B. Mengual (05/2020)
+!**********************************************************************
+#ifdef SCHISM
+      SUBROUTINE READ_WAFO_OPBND_RAMP
+
+        USE DATAPOOL
+        USE schism_glbl, ONLY : xcj,ycj,xnd,ynd,ns,np_global
+        USE schism_msgp, ONLY : exchange_s2d
+
+        IMPLICIT NONE
+        LOGICAL      :: lexist
+        INTEGER      :: IS,n1,n2,icount,IB,IP,j,itmp
+        REAL(rkind)  :: dx,dy,xtmp,ytmp,tmp1
+        REAL(rkind)  :: dist(IWBMNP),ramp_wafop(np_global)
+
+        ! Init: no ramp
+        wafo_opbnd_ramp=1.0d0 ! at sides
+
+        ! Open wafo_ramp.gr3 and read ramp at nodes
+        INQUIRE(FILE='wafo_ramp.gr3',EXIST=lexist)
+        IF (lexist) THEN
+          OPEN(10,FILE='wafo_ramp.gr3',STATUS='OLD')
+          READ(10,*)
+          READ(10,*) j,itmp
+          IF(itmp/=np_global) CALL parallel_abort('WWM: Check np_global in wafo_ramp.gr3.gr3')
+          DO IP = 1,np_global
+            READ(10,*) itmp,xtmp,ytmp,tmp1
+            IF(tmp1<0.or.tmp1>1) CALL parallel_abort('WWM: ramp_wafo <0 or >1!')
+            IF(ipgl(IP)%rank == myrank) ramp_wafop(ipgl(IP)%id) = tmp1
+          ENDDO !np_global
+          CLOSE(10)
+        ELSE
+          CALL parallel_abort('wafo_obcramp=1 requires wafo_ramp.gr3')
+        ENDIF !lexist
+
+
+        ! Compute ramp at sides
+        DO IS = 1,ns
+!JZ Error: WWM cannot handle quads so do not use connectivity info from
+!SCHISM!
+          n1 = isidenode(1,IS); n2 = isidenode(2,IS)
+          wafo_opbnd_ramp(IS)=(ramp_wafop(n1)+ramp_wafop(n2))/2
+        ENDDO
+
+      END SUBROUTINE READ_WAFO_OPBND_RAMP
+#endif
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************

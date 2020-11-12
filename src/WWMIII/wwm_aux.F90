@@ -614,7 +614,7 @@
 !             CALL WAVEKCG(DEPLOC,SPSIGLOC,WVN,WVC,WVK,WVCG)
              WK(IS,IP) = WVK
              CG(IS,IP) = WVCG
-             WC(IP,IS) = WVC
+             WC(IS,IP) = WVC
            END DO
          END DO
       END SUBROUTINE

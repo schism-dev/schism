@@ -1995,7 +1995,6 @@ subroutine calkwq(id,nv,ure,it)
    
     !NO3
     a=0.0
-    b=0.0
     rtmp=-ANC(1)*(1.0-PrefN(k,1))*GP(klev,id,1)*PB1(k,1)-ANC(2)*(1.0-PrefN(k,2))*GP(klev,id,2)*PB2(k,1)-ANC(3)*(1.0-PrefN(k,3))*GP(klev,id,3)*PB3(k,1)
     b=b+rtmp
     if(iof_icm(84)==1) absNO3(klev,id)=rtmp

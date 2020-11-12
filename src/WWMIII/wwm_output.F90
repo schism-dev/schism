@@ -1220,8 +1220,8 @@
          OUTPAR    = 0.
 
 #ifdef SCHISM
-         OUTPAR(1) = UU2(NVRT,IP)         ! Current in X-direction
-         OUTPAR(2) = VV2(NVRT,IP)         ! Current in Y-direction
+         OUTPAR(1) = CURTXY(IP,1)         ! Current in X-direction (BM, initially UU2(NVRT,IP))
+         OUTPAR(2) = CURTXY(IP,2)         ! Current in Y-direction (BM, initially VV2(NVRT,IP))
          OUTPAR(3) = ETA2(IP)             ! Water Level
          OUTPAR(4) = ETA1(IP)             ! Water Level in last time step
          OUTPAR(5) = MAX(ZERO,WLDEP(IP) + ETA2(IP)) ! Total water depth

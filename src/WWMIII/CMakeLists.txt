@@ -14,7 +14,8 @@ add_library(wwmIII  wwm_datapl.F90 ${wwm_extra_src} wwm_petsc_seriell.F90 wwm_pe
        wwm_specparam.F90 wwm_windinput.F90 wwm_dissipation.F90 wwm_snl3.F90 wwm_snl4.F90 wwm_snl42.F90 wwm_babanin.F90 wwm_sourceterms.F90 
        wwm_specint.F90 wwm_nums1d.F90 wwm_numtheta.F90 wwm_numsigma.F90 wwm_fluctsplit.F90 
        wwm_snonlin.F90 wwm_snonlin_local.F90 wwm_stress.F90 wwm_stresso.F90 wwm_stresso_local.F90 wwm_sbottom.F90 wwm_sdiss_ardh_vec.F90 wwm_sdiss_ardh_vec_local.F90 wwm_sinput.F90 wwm_sinput_local.F90 wwm_sinput_ard.F90 wwm_sinput_ard_local.F90 wwm_wsigstar.F90 wwm_wsigstar_local.F90 wwm_tauhf.F90 wwm_airsea.F90 wwm_airsea_local.F90 wwm_jafu.F90 wwm_nlweigt.F90 wwm_buildstress.F90 wwm_inisnonlin.F90 wwm_fkmean.F90 wwm_fkmean_local.F90 wwm_frcutindex.F90 wwm_frcutindex_local.F90 wwm_femeanws.F90 wwm_femeanws_local.F90 wwm_sdissip.F90 wwm_sdissip_local.F90 wwm_implsch.F90 wwm_implsch_local.F90 wwm_implsch2.F90 
-       wwm_output.F90 wwm_compute.F90 wwm_diffrac.F90 wwm_coupl_roms_pipe.F90 wwm_coupl_roms_pgmcl.F90 wwm_jacobi.F90 wwm_coupl_shyfem.F90 wwm_coupl_selfe.F90 wwm_coupl_timor.F90 wwm_vegdiss.F90 wwm_main.F90 
+       wwm_output.F90 wwm_compute.F90 wwm_diffrac.F90 wwm_coupl_roms_pipe.F90 wwm_coupl_roms_pgmcl.F90 wwm_jacobi.F90 
+       wwm_coupl_shyfem.F90 wwm_coupl_selfe.F90 wwm_coupl_timor.F90 wwm_vegdiss.F90 wwm_compute_roller.F90  wwm_lpp_filter.F90 wwm_main.F90 
                   )
 
 if(DEFINED USE_WWM)

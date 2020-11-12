@@ -262,7 +262,7 @@ ifdef USE_WWM
        wwm_specparam.o wwm_windinput.o wwm_dissipation.o wwm_snl3.o wwm_snl4.o wwm_snl42.o wwm_babanin.o wwm_sourceterms.o \
        wwm_specint.o wwm_nums1d.o wwm_numtheta.o wwm_numsigma.o wwm_fluctsplit.o \
        wwm_snonlin.o wwm_snonlin_local.o wwm_stress.o wwm_stresso.o wwm_stresso_local.o wwm_sbottom.o wwm_sdiss_ardh_vec.o wwm_sdiss_ardh_vec_local.o wwm_sinput.o wwm_sinput_local.o wwm_sinput_ard.o wwm_sinput_ard_local.o wwm_wsigstar.o wwm_wsigstar_local.o wwm_tauhf.o wwm_airsea.o wwm_airsea_local.o wwm_jafu.o wwm_nlweigt.o wwm_buildstress.o wwm_inisnonlin.o wwm_fkmean.o wwm_fkmean_local.o wwm_frcutindex.o wwm_frcutindex_local.o wwm_femeanws.o wwm_femeanws_local.o wwm_sdissip.o wwm_sdissip_local.o wwm_implsch.o wwm_implsch_local.o wwm_implsch2.o \
-       wwm_output.o wwm_compute.o wwm_diffrac.o wwm_coupl_roms_pipe.o wwm_coupl_roms_pgmcl.o wwm_jacobi.o wwm_coupl_shyfem.o wwm_coupl_selfe.o wwm_coupl_timor.o wwm_vegdiss.o wwm_main.o
+       wwm_output.o wwm_compute.o wwm_compute_roller.o wwm_diffrac.o wwm_coupl_roms_pipe.o wwm_coupl_roms_pgmcl.o wwm_jacobi.o wwm_coupl_shyfem.o wwm_coupl_selfe.o wwm_coupl_timor.o wwm_vegdiss.o wwm_main.o wwm_lpp_filter.o
 endif
 
 ifdef USE_ICE
@@ -303,7 +303,7 @@ CONFIG_OBJS :=  $(addprefix o/$(config)/, $(OBJS))
 # Names of source files with relative path as found on $VPATH
 FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%=%$f) not-found:$f)))
 
-##PARMETISDIR := ./ParMetis-3.1-Sep2010
+#PARMETISDIR := ./ParMetis-3.1-Sep2010
 PARMETISDIR := ./ParMetis-4.0.3
 ifeq ($(ENV),EDISON)
     PARMETISDIR := $(PARMETISDIR).cray

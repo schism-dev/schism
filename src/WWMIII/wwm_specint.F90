@@ -30,13 +30,17 @@
 !$OMP&         NIT_SNL4,NIT_SNL3,NIT_SBR,NIT_SBF,NIT_ALL,SSBRL2,&
 !$OMP&         IMATRA,IMATDA,VEC2RAD)
 !$OMP DO SCHEDULE(DYNAMIC,1)
+
+         ! Computing spatially varying breaking coefficient if required
+         IF (BR_COEF_METHOD == 2) CALL COMPUTE_BREAKING_COEFFICIENT
+
          DO IP = 1, MNP
 !           IF (IP_IS_STEADY(IP) .EQ. 1) CYCLE
            IF (DEP(IP) .LT. DMIN) CYCLE
            IF (IOBP(IP) .EQ. 0) THEN
                ACLOC  = AC2(:,:,IP)
                IF (SMETHOD == 1) THEN
-                 IF (MESBR .GT. 0 .OR. MESBF .GT. 0) CALL RKS_SP3(IP,DT4S,.FALSE.,ACLOC,30)
+                 IF (MESBR .GT. 0 .OR. MESBF .GT. 0 .OR. MEVEG .GT. 0) CALL RKS_SP3(IP,DT4S,.FALSE.,ACLOC,30)
                  IF (LSOURCESWAM) THEN
                    CALL SOURCE_INT_EXP_WAM(IP, ACLOC)  
                  ELSE
@@ -53,9 +57,17 @@
                  CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SIN,  NDYNITER_SIN  , ACLOC, NIT_SIN, 1) ! Sin
                  CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SNL4,  NDYNITER_SNL4 , ACLOC, NIT_SNL4, 2)! Snl4b
                  CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SDS,  NDYNITER_SDS  , ACLOC, NIT_SDS, 3) ! Sds
-                 CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SNL3,  NDYNITER_SNL3 , ACLOC, NIT_SNL3, 4)! Snl3
-                 CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBR,  NDYNITER_SBR  , ACLOC, NIT_SBR, 5) ! Sbr
-                 CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBF,  NDYNITER_SBF  , ACLOC, NIT_SBF, 6) ! Sbf
+                 CALL INT_IP_DYN(IP, DT4S, .FALSE., DTMIN_SNL3,  NDYNITER_SNL3 , ACLOC, NIT_SNL3, 4)! Snl3
+                 CALL INT_IP_DYN(IP, DT4S, .FALSE., DTMIN_SBR,  NDYNITER_SBR  , ACLOC, NIT_SBR, 5) ! Sbr
+                 CALL INT_IP_DYN(IP, DT4S, .FALSE., DTMIN_SBF,  NDYNITER_SBF  , ACLOC, NIT_SBF, 6) ! Sbf
+               ELSE IF (SMETHOD == 6) THEN
+                  IF ((MESBR .GT. 0 .OR. MESBF .GT. 0 .OR. MEVEG .GT. 0) .AND. ISHALLOW(IP).EQ. 1) CALL INT_SHALLOW_SOURCETERMS(IP,DT4S,ACLOC)
+                  IF (LSOURCESWAM) THEN
+                    CALL SOURCE_INT_EXP_WAM(IP, ACLOC)
+                  ELSE
+                    CALL INT_IP_STAT(IP,DT4S,LLIMT,ACLOC,20)
+                  ENDIF
+                  IF (MESTR .GT. 0) CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_DYN, NDYNITER, ACLOC, NIT_ALL, 4)
                END IF
                CALL SOURCETERMS(IP, ACLOC, IMATRA, IMATDA, .TRUE.,1,'RECALC DOMAIN') ! Update everything based on the new spectrum ...
                IF (LMAXETOT .AND. .NOT. LADVTEST .AND. ISHALLOW(IP) .EQ. 1) THEN
@@ -256,7 +268,7 @@
          REAL(rkind)  :: SSNL3(MSC,MDC),DSSNL3(MSC,MDC), DSSVEG(MSC,MDC)
          REAL(rkind)  :: SSBR(MSC,MDC),DSSBR(MSC,MDC), SSVEG(MSC,MDC)
          REAL(rkind)  :: SSBF(MSC,MDC),DSSBF(MSC,MDC), SSINL(MSC,MDC)
-         REAL(rkind)  :: ETOT,SME01,SME10,KME01,KMWAM,KMWAM2,HS,WIND10
+         REAL(rkind)  :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS,WIND10
          REAL(rkind)  :: ETAIL,EFTAIL,EMAX,LIMAC,NEWDAC,FPM,WINDTH,TEMP,GTEMP1
          REAL(rkind)  :: RATIO,LIMFAC,LIMDAC,GTEMP2,FLHAB,DELFL,USFM, NEWDACDT
          REAL(rkind)  :: MAXDAC, MAXDACDT, MAXDACDTDA, SC, SP, DNEWDACDTDA, JAC, FF
@@ -371,7 +383,7 @@
                IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSINL
              ENDIF
              IF (ISHALLOW(IP) .EQ. 1) THEN
-               CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2)
+               CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2)
                IF (MESTR .GT. 0) THEN
                  CALL TRIAD_ELDEBERKY(IP, HS, SME01, ACLOC, IMATRA, IMATDA, SSNL3, DSSNL3)
                  DO IS = 1, MSC
@@ -438,7 +450,7 @@
                    IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSINL
                  ENDIF
                  IF (ISHALLOW(IP) .EQ. 1) THEN
-                   CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2)
+                   CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2)
                    IF (MESTR .GT. 0) THEN
                      CALL TRIAD_ELDEBERKY(IP, HS, SME01, ACLOC, IMATRA, IMATDA, SSNL3, DSSNL3)
                      DO IS = 1, MSC
@@ -594,6 +606,156 @@
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
+      SUBROUTINE INT_SHALLOW_SOURCETERMS(IP,DT,ACLOC)
+         USE DATAPOOL
+         IMPLICIT NONE
+
+         INTEGER, INTENT(IN)        :: IP
+         REAL(rkind), INTENT(IN)    :: DT
+         REAL(rkind), INTENT(INOUT) :: ACLOC(MSC,MDC)
+
+         INTEGER     :: IS, ID, NB_SUBITE, TI
+         REAL(rkind) :: HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2, SUMACLOC
+         REAL(rkind) :: CFL_LOC, DT_LOC, NEWDAC
+         REAL(rkind) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
+         REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC)
+         REAL(rkind) :: SSBF(MSC,MDC), DSSBF(MSC,MDC)
+         REAL(rkind) :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)	
+
+         ! Depth-induced breaking
+         IF (MESBR .EQ. 1) THEN
+           ! Initializing the time-averaged wave breaking-induced source term for the roller
+           SSBR_TOTAL(:,:,IP) = 0
+
+           ! Computing the source term
+           IMATRA = ZERO; IMATDA = ZERO
+           CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+           IF (IBREAK .EQ. 1) THEN
+               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+           ELSE IF (IBREAK .EQ. 4) THEN
+               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+           ELSE
+               CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+           ENDIF
+           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
+           CFL_LOC = 0.9D0 ! ref 0.9D0
+           DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           IF (DT_LOC > DT) THEN
+             NB_SUBITE = 1                  ! we keep the time step in use
+             DT_LOC    = DT     
+           ELSE
+             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
+             DT_LOC    = DT/NB_SUBITE
+           END IF
+
+           ! Integration with sub-cycles
+           DO TI = 1, NB_SUBITE
+             IMATRA = ZERO; IMATDA = ZERO
+
+             ! Computing source term
+             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+             IF (IBREAK .EQ. 1) THEN
+               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+             ELSE IF (IBREAK .EQ. 4) THEN
+               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+             ELSE
+               CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+             ENDIF
+
+             ! Time-integration
+             DO IS = 1, MSC
+                DO ID = 1, MDC
+                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                  ! Updating the wave action spectrum
+                  ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+                END DO
+             END DO
+           END DO
+               
+           ! Storing the wave breaking-induced source term for the roller
+           ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSBR
+           SSBR_TOTAL(:,:,IP) = (AC2(:,:,IP) - ACLOC)/DT
+
+           ! Compute SBR for SCHISM
+           ! NB: SBR needs to enter with its real sign, which is '-', see wwm_breaking.F90 to check that out
+           IF (IROLLER == 1) THEN
+             CALL COMPUTE_SBR(IP, -(1.D0-ALPROL)*SSBR_TOTAL(:,:,IP))
+           ELSE
+             CALL COMPUTE_SBR(IP, -SSBR_TOTAL(:,:,IP))
+           END IF
+
+         END IF
+
+         ! Bottom friction
+         IF (MESBF .GE. 1) THEN
+           ! Initialization
+           IMATRA = ZERO; IMATDA = ZERO
+           CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
+         
+           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
+           CFL_LOC = 0.9D0; DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           IF (DT_LOC > DT) THEN
+             NB_SUBITE = 1                  ! we keep the time step in use
+             DT_LOC    = DT     
+           ELSE
+             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
+             DT_LOC    = DT/NB_SUBITE
+           END IF
+
+           ! Integration with sub-cycles
+           DO TI = 1, NB_SUBITE
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
+           
+             DO IS = 1, MSC
+                DO ID = 1, MDC
+                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                  ! Updating the wave action spectrum
+                  ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+                END DO
+             END DO
+           END DO
+
+           ! Compute SBF for SCHISM
+           CALL COMPUTE_SBF(IP,SSBF)
+         END IF
+
+         ! Dissipation by vegetation !LLa
+         IF (MEVEG .GE. 1) THEN
+           ! Initialization
+           IMATRA = ZERO; IMATDA = ZERO
+           CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+           CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
+
+           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
+           CFL_LOC = 0.9D0; DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           IF (DT_LOC > DT) THEN
+             NB_SUBITE = 1                  ! we keep the time step in use
+             DT_LOC    = DT     
+           ELSE
+             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
+             DT_LOC    = DT/NB_SUBITE
+           END IF
+
+           ! Integration with sub-cycles
+           DO TI = 1, NB_SUBITE
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+             CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
+             DO IS = 1, MSC
+               DO ID = 1, MDC
+                 NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                 ! Updating the wave action spectrum
+                 ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+               END DO
+             END DO
+           END DO
+         END IF
+
+      END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
       SUBROUTINE RKS_SP3(IP,DTSII,LIMITER,ACLOC,ISELECT)
 
          USE DATAPOOL
@@ -662,6 +824,14 @@
              ACLOC(IS,ID) = MAX( ZERO, ONE/THREE * ACOLD(IS,ID) + TWO/THREE * ACLOC(IS,ID) + TWO/THREE * NEWDAC)
            END DO
          END DO
+
+         !BM
+         IF (SMETHOD .LT. 6) THEN
+           CALL COMPUTE_SBR(IP,IMATRA)
+         ELSE
+           CALL COMPUTE_SBR(IP, -((ACOLD-ACLOC)/DTSII))
+         END IF
+
 
          !IF (IP == 1701) WRITE(*,*) SUM(IMATRA), SUM(IMATDA), SUM(ACLOC)
 
@@ -955,7 +1125,16 @@
 
          !IF (LMONO_IN) HMAX(IP) = HMAX(IP) * SQRT(2.)
 
-         EMAX = 1./16. * (HMAX(IP))**2
+         !EMAX = 1./16. * (HMAX(IP))**2
+
+         !MP : Depending on depth-induced breaking formulation the HMAX
+         !value
+         !should not be considered as a physical limit. The relation
+         !used below
+         !is the implemented one in WW3.
+
+         EMAX = 1./16. * (1.6*DEP(IP))**2
+
 
          IF (ETOT .GT. EMAX .AND. ETOT .GT. THR) THEN
            RATIO = EMAX/ETOT
@@ -981,10 +1160,20 @@
            IF (ISHALLOW(IP) .EQ. 0) CYCLE
            ETOT = DINTSPEC(IP,ACLOC)
            HS = 4.*SQRT(ETOT)
-           EMAX = 1./16. * (HMAX(IP))**2
+           !EMAX = 1./16. * (HMAX(IP))**2
+
+           !MP : Depending on depth-induced breaking formulation the
+           !HMAX value
+           !should not be considered as a physical limit. The relation
+           !used below
+           !is the implemented one in WW3.
+
+           EMAX = 1./16. * (1.6*DEP(IP))**2
+
+
 !        WRITE(300,*) 'IP=', IP, ' HMAX=', HMAX(IP), ' DEP=', DEP(IP)
 !        WRITE(300,*) '   ', IP, ' EMAX=', EMAX, ' ETOT=', ETOT
-!        WRITE(300,*) '   ', IP, ' HS=', HS, ' BRHD=', BRHD
+!        WRITE(300,*) '   ', IP, ' HS=', HS, ' BRCR=', BRCR
 
            IF (ETOT .GT. EMAX) THEN
              if(myrank==0) WRITE(300,*) '   break XP=', XP(IP)
@@ -1042,11 +1231,47 @@
          INTEGER :: IP
 
          DO IP = 1, MNP
-           IF (WK(1,IP)*DEP(IP) .LT. PI) THEN
+           IF (WK(1,IP)*DEP(IP) .LT. PI2/2) THEN
              ISHALLOW(IP) = 1
            ELSE
              ISHALLOW(IP) = 0
            END IF
+         END DO
+         END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+         SUBROUTINE COMPUTE_BREAKING_COEFFICIENT
+         !
+         ! MP : Adaptive breaking coefficient
+         ! A_BR_COEF = B_ALP * slope with B_ALP is around 40
+         ! (Pezerat et al., 2020 - under review)
+         !
+         USE DATAPOOL, ONLY : AC2, PI, MNP, MSC, tanbeta_x, tanbeta_y, A_BR_COEF, rkind, B_ALP
+         IMPLICIT NONE
+         INTEGER     :: IP
+         REAL(rkind) :: FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD
+         REAL(rkind) :: WAVEDIR,TANBETA
+
+         DO IP = 1, MNP
+           ! Computation of the bed slope in the wave direction
+           CALL PEAK_PARAMETER(IP,AC2(:,:,IP),MSC,FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD)
+           ! Conversion from nautical to mathematical convention, and
+           ! units in radian
+           WAVEDIR = PEAKDM*PI/180.d0 + PI/2.d0
+           ! NB 1 : Although B is theoretically bound to 1,
+           !        air entrainment and other processes may induce
+           !        enhanced breaking, so we allow A_BR_COEF > 1
+           TANBETA = tanbeta_x(IP)*COS(WAVEDIR) + tanbeta_y(IP)*SIN(WAVEDIR)
+           IF (TANBETA .LT. 0.d0) THEN
+             A_BR_COEF(IP) = 0.1d0 !Manage negative slopes
+           ELSE
+             A_BR_COEF(IP) = MIN(B_ALP*TANBETA, 1.2D0)
+           ENDIF
+         END DO
+
+         DO IP = 1, 5
+           CALL smooth_2dvar(A_BR_COEF,MNP)
          END DO
          END SUBROUTINE
 !**********************************************************************

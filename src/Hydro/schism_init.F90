@@ -149,7 +149,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel
+                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel,sav_cd0
 
 
 #ifdef USE_FIB
@@ -179,8 +179,9 @@
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
      &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
-     &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
+     &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
+     &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only
 
@@ -429,7 +430,7 @@
 
       !Init defaults
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
-      gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
+      gen_wsett=real(1.d-4,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
       nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind; dzb_decay=0._rkind;  
@@ -450,9 +451,10 @@
       ibtrack_test=0; irouse_test=0;  
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
-      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind; 
-      iwbl=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
+      fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
+      iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -1413,6 +1415,13 @@
         call parallel_abort(errmsg)
       endif
 
+! BM: coupling current for WWM
+      if(cur_wwm<0.or.cur_wwm>2) then
+        write(errmsg,*)'Wrong coupling current:',cur_wwm
+        call parallel_abort(errmsg)
+      endif
+
+
 !     Volume and mass sources/sinks option
 !      call get_param('param.in','if_source',1,if_source,tmp,stringvalue)
       if(if_source/=0.and.if_source/=1) call parallel_abort('Wrong if_source')
@@ -1449,13 +1458,22 @@
 
 !     SAV
 !      call get_param('param.in','isav',1,isav,tmp,stringvalue)
-      if(isav==1) then
+      !if(isav==1) then
 !        call get_param('param.in','sav_cd',2,itmp,sav_cd,stringvalue)
-        if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
-      else if(isav/=0) then
-        write(errmsg,*)'INIT: illegal isav',isav
-        call parallel_abort(errmsg)
+        !if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
+      !else if(isav/=0) then
+        !write(errmsg,*)'INIT: illegal isav',isav
+        !call parallel_abort(errmsg)
+      !endif
+
+      if(isav/=0.and.isav/=1) then !LLa
+       write(errmsg,*)'INIT: illegal isav',isav
+       call parallel_abort(errmsg)
       endif
+!      if(rsav/=0.and.rsav/=1) then !LLa	
+!       write(errmsg,*)'INIT: illegal rsav',rsav
+!       call parallel_abort(errmsg)
+!      endif
 
 !     Ice
 #ifdef USE_ICE
@@ -1702,7 +1720,7 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),stat=istat)
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1770,13 +1788,28 @@
 !     Wave model arrays
 #ifdef  USE_WWM
       if(iorder==0) then
-        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10), &
-               & stokes_vel(2,nvrt,npa), jpress(npa), sbr(2,npa), sbf(2,npa), &
-               & stokes_w_nd(nvrt,npa), stokes_vel_sd(2,nvrt,nsa),nne_wwm(np), stat=istat)
+        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10),   &
+               & out_wwm_rol(npa,35), &
+               & stokes_hvel(2,nvrt,npa), stokes_wvel(nvrt,npa),stokes_hvel_side(2,nvrt,nsa), stokes_wvel_side(nvrt,nsa), &
+               & roller_stokes_hvel(2,nvrt,npa), roller_stokes_hvel_side(2,nvrt,nsa), &
+               & jpress(npa), sbr(2,npa), sbf(2,npa), srol(2,npa),                    &
+               & nne_wwm(np), stat=istat)
         if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
       endif !iorder
-      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0
-      stokes_vel=0.d0; jpress=0.d0; sbr=0.d0; sbf=0.d0; stokes_w_nd=0.d0; stokes_vel_sd=0.d0
+      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0
+      jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0
+      stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0
+      !BM: coupling current for WWM
+      allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: (2) WWM alloc failure')
+      curx_wwm=0.d0; cury_wwm=0.d0
+      !BM: ramp on wwave_force at open boundary
+      allocate(wafo_opbnd_ramp(nsa), stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: (2.1) WWM alloc failure')
+      wafo_opbnd_ramp=1.0d0
+
+
 
 !...  Modified some geometry vars for WWM for quads (split)
 !...  Because WWM mostly uses node-based vars, we only need to update a small set of vars:
@@ -3560,59 +3593,67 @@
       sav_h=0.d0 !veg height; not used at 2D sides
       sav_nv=0.d0 !Nv: # of stems per m^2
       sav_di=0.d0 !D [m]
-      if(isav==1) then
+      sav_cd=0.d0 !Cdv : drag coefficient
+      if(isav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
         !\lambda=D*Nv [1/m]
         open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
         open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
         !SAV height [m]
         open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+        !Drag coefficient
+        open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
         read(10,*)
         read(10,*) itmp1,itmp2
         read(31,*); read(31,*)k,m
         read(32,*); read(32,*)i,j
+        read(30,*); read(30,*)l,mm
         if(itmp1/=ne_global.or.itmp2/=np_global.or.i/=ne_global.or.j/=np_global.or. &
-     &k/=ne_global.or.m/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+     &k/=ne_global.or.m/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
 !'
         do i=1,np_global
           read(10,*)j,xtmp,ytmp,tmp
           read(31,*)j,xtmp,ytmp,tmp1
           read(32,*)j,xtmp,ytmp,tmp2
-          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0) then
-            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2
+          read(30,*)j,xtmp,ytmp,tmp3
+          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0.or.tmp3<0) then
+            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2,tmp3
             call parallel_abort(errmsg)
           endif
           !Make D, Nv and h consistent at no SAV places
-          if(tmp*tmp1*tmp2==0.d0) then
-            tmp=0.d0; tmp1=0.d0; tmp2=0.d0
+          if(tmp*tmp1*tmp2*tmp3==0.d0) then
+            tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
           endif
          
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=tmp*tmp1*sav_cd/2.d0
+            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
             sav_nv(nd)=tmp1
             sav_h(nd)=tmp2
             sav_di(nd)=tmp
+            sav_cd(nd)=tmp3
           endif
         enddo !i
         close(10)
         close(31)
         close(32)
+        close(30)
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1
+        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1; sav_cd0=tmp3
         !Reset
-        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
+        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
             sav_di(elnode(1:i34(i),i))=sav_di0 
             sav_h(elnode(1:i34(i),i))=sav_h0 
             sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd/2.d0
+            sav_cd(elnode(1:i34(i),i))=sav_cd0
+            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
           endif
         enddo !i
 #endif
-      endif !isav=1
+      endif !isav=1 
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
@@ -4446,8 +4487,7 @@
 
 #ifdef USE_AGE
       !Tracer age
-      !Method: all i.c. =0 except 1 in specific regions (e.g. near each bnd) for 
-      !1st half of tracers (=0 for 2nd half). Generally set itrtype=0 at all bnd's 
+      !Method: all i.c. =0; conc=1 at relevant bnd(s), and itrtype=0 at ocean bnd 
       if(myrank==0) write(16,*)'tracer age calculation evoked'
       nelem_age(:)=0 !init count for # of non-0 age tracers
       flag_ic(4)=1 !AGE must have type 1 i.c.
@@ -4826,7 +4866,7 @@
             enddo !i=1,nea
 
             !Debug
-            write(12,*)nelem_age(indx2),' elements found for AGE #',indx2
+            write(12,*)nelem_age(indx2),' found for AGE #',indx2
           endif !mm==4.and.
 #endif /*USE_AGE*/
 
@@ -5736,6 +5776,21 @@
 
 !     end hot start section
       endif !ihot/=0
+
+! MP from KM
+#ifdef USE_WWM
+      ! Computation of the bed slope at nodes
+      allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
+      call compute_bed_slope !iof(198) = 1
+  
+!      ! Exchanges between ghost zones and smoothing
+!      call exchange_p2d(tanbeta_x)
+!      call exchange_p2d(tanbeta_y)
+      do i = 1,2
+        call smooth_2dvar(tanbeta_x,npa)
+        call smooth_2dvar(tanbeta_y,npa)
+      enddo
+#endif
 
 !     Broadcast to global module
       iths_main=iths

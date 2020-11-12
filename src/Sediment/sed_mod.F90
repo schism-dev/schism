@@ -288,8 +288,8 @@
        REAL(rkind), ALLOCATABLE :: poron(:)   ! (npa)
        REAL(rkind), ALLOCATABLE :: Qaccun(:), Qaccvn(:) ! (npa) 
  
-       !Near bottom velocity components used in bottom shear stress estimates
-       REAL(rkind), ALLOCATABLE :: ubott(:), vbott(:) ! (nea)
+       !BM Velocity components used in bottom shear stress estimates
+       REAL(rkind), ALLOCATABLE :: ustress(:), vstress(:) ! (nea)
 
        !BM Wave-induced bedload transport caused by acceleration-skewness
        REAL(rkind), ALLOCATABLE :: Qaccu(:) ! (nea)

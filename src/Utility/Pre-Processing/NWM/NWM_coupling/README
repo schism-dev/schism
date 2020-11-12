@@ -4,8 +4,8 @@ The main purpose of coupling_nwm.f90 is to look for the intersections between SC
 
 To run this script, 3 inputs are required:
 1) hgrid.ll (SCHISM horizontal grid)
-2) NWM_shp_ll.nc (nc format file containing information of NWM segments. It has 4 variables: featureID, lat, lon, and ORIG_FID. It is originated from a geo-database downloaded from https://water.noaa.gov/about/nwm. The process of making this file is described in NWM_nc_note.txt. The NWM_shp_ll.nc provided under this folder only contains East Coast and Gulf of Mexico region.)
-3) NWM outputs: a directory or symbolic link named "NWM_DATA" containing NWM outputs (e.g. 200508080900.CHRTOUT_DOMAIN1.comp) convering the simulation period.
+2) NWM_shp_ll.nc (shape file containing NWM segments)
+3) NWM outputs
 Some parameters are also required:
 1) Input nudging ratio (suggest 1.e-3)
 2) Input number of days
@@ -29,8 +29,7 @@ Inputs files:
       dist: distance in meters if inbr=0
       [inbr=0 and dist=4000 is recommended]
 Output files
-      vsource.th.1, vsink.th.1
-msource.th and source_sink.in will not change.
+      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
 
 To run those scripts, after compile. simply by
 ./coupling_nwm

@@ -15,7 +15,7 @@
      &        ILOUTS, OUT, DAY2SEC, FRHIGH, DBG, LINES, VAROUT_HISTORY, &
      &        VAROUT_STATION, GRIDWRITE, RKIND, LVAR_READ,              &
      &        PARAMWRITE_HIS, PARAMWRITE_STAT, wwmerr, LCFL, myrank,    &
-     &        istat
+     &        istat,WRITEDBGFLAG
 #ifdef NCDF
          USE NETCDF
          USE DATAPOOL, only : USE_SINGLE_OUT_STAT, USE_SINGLE_OUT_HIS,  &
@@ -483,8 +483,10 @@
          ENDIF
          OUT_STATION%FNAME = FILEOUT
          IF ( TRIM(OUT_STATION%FNAME) == TRIM(OUT_HISTORY%FNAME) ) THEN
-           WRITE(DBG%FHNDL,*) 'OUT_STATION%FNAME=', TRIM(OUT_STATION%FNAME)
-           WRITE(DBG%FHNDL,*) 'OUT_HISTORY%FNAME=', TRIM(OUT_HISTORY%FNAME)
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'OUT_STATION%FNAME=', TRIM(OUT_STATION%FNAME)
+             WRITE(DBG%FHNDL,*) 'OUT_HISTORY%FNAME=', TRIM(OUT_HISTORY%FNAME)
+           END IF
            CALL WWM_ABORT('You cannot have same name for history and station')
          END IF
          VAROUT_STATION%AC=AC
@@ -586,12 +588,14 @@
              STATION_P(1:IOUTS)%CUTOFF = FRHIGH
            END IF
 
-           WRITE(DBG%FHNDL,*) 'STATION X and Y Coordinates'
-           WRITE(DBG%FHNDL,*) STATION_P%XCOORD
-           WRITE(DBG%FHNDL,*) STATION_P%YCOORD
-           WRITE(DBG%FHNDL,*) 'STATION Names'
-           WRITE(DBG%FHNDL,*) STATION_P%NAME
-           FLUSH(DBG%FHNDL)
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'STATION X and Y Coordinates'
+             WRITE(DBG%FHNDL,*) STATION_P%XCOORD
+             WRITE(DBG%FHNDL,*) STATION_P%YCOORD
+             WRITE(DBG%FHNDL,*) 'STATION Names'
+             WRITE(DBG%FHNDL,*) STATION_P%NAME
+             FLUSH(DBG%FHNDL)
+           END IF
 
          END IF
 
@@ -620,12 +624,14 @@
              STATION_P(1:IOUTS)%CUTOFF = FRHIGH
            END IF
 
-           WRITE(DBG%FHNDL,*) 'STATION X and Y Coordinates'
-           WRITE(DBG%FHNDL,*) STATION_P%XCOORD
-           WRITE(DBG%FHNDL,*) STATION_P%YCOORD
-           WRITE(DBG%FHNDL,*) 'STATION Names'
-           WRITE(DBG%FHNDL,*) STATION_P%NAME
-           FLUSH(DBG%FHNDL)
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'STATION X and Y Coordinates'
+             WRITE(DBG%FHNDL,*) STATION_P%XCOORD
+             WRITE(DBG%FHNDL,*) STATION_P%YCOORD
+             WRITE(DBG%FHNDL,*) 'STATION Names'
+             WRITE(DBG%FHNDL,*) STATION_P%NAME
+             FLUSH(DBG%FHNDL)
+           END IF
 
          END IF
       END SUBROUTINE
@@ -638,7 +644,7 @@
 #endif
          USE DATAPOOL
 #ifdef SCHISM
-         use schism_glbl, only : ics
+         use schism_glbl, only : ics,isav
 #endif
          IMPLICIT NONE
 
@@ -657,10 +663,11 @@
          LOGICAL     :: EXTRAPOLATION_ALLOWED
          NAMELIST /PROC/ PROCNAME, DIMMODE, LSTEA, LQSTEA, LSPHE,       &
      &      LNAUTIN, LNAUTOUT, LMONO_OUT, LMONO_IN,                     &
-     &      BEGTC, DELTC, UNITC, ENDTC, DMIN, MULTIPLE_OUT_INFO
+     &      BEGTC, DELTC, UNITC, ENDTC, DMIN,                           &
+     &      WRITEDBGFLAG,WRITESTATFLAG,WRITEWINDBGFLAG
 
          NAMELIST /COUPL/ LCPL, LROMS, LTIMOR, LSHYFEM, RADFLAG,        &
-     &      LETOT, NLVT, DTCOUP, IMET_DRY
+     &      LPP_FILT_FLAG, LPP_FRAC, LETOT, NLVT, DTCOUP, IMET_DRY
 
          NAMELIST /GRID/ LCIRD, LSTAG, MINDIR, MAXDIR, MDC, FRLOW,      &
      &      FRHIGH, MSC, FILEGRID, IGRIDTYPE, LSLOP, SLMAX, LVAR1D,     &
@@ -698,11 +705,16 @@
      &      WALVFAC, IWATLVFORMAT, MULTIPLE_IN, LEXPORT_WALV_WW3,       &
      &      EXPORT_WALV_DELTC
 
+     ! MP: Change BRHD into BRCR and ALPBJ into B_ALP
+     !     Add a_BRCR, b_BRCR, min_BRCR, max_BRCR and a_BIPH
          NAMELIST /ENGS/ MESNL, MESIN, IFRIC, MESBF, FRICC,             &
-     &      MESBR, MEVEG, ICRIT, IBREAK, ALPBJ, BRHD,                   &
+     &      MESBR, MEVEG, IBREAK, ICRIT, BRCR,                          &
+     &      a_BRCR, b_BRCR, min_BRCR, max_BRCR, a_BIPH,                 &
+     &      BR_COEF_METHOD, B_ALP,                                      &
+     &      ZPROF_BREAK, BC_BREAK, IROLLER, ALPROL,                     &
      &      LMAXETOT, MESDS, MESTR, TRICO, TRIRA, TRIURS
 
-         NAMELIST /NUMS/ ICOMP, AMETHOD, SMETHOD, DMETHOD,              &
+         NAMELIST /NUMS/ ICOMP, AMETHOD, SMETHOD, ROLMETHOD, DMETHOD,   &
      &      LITERSPLIT, LFILTERTH, MAXCFLTH, LTHBOUND, FMETHOD,         &
      &      LFILTERCXY, MAXCFLCXY, LFILTERSIG, MAXCFLSIG, LSIGBOUND,    &
      &      LLIMT, LIMFAK, MELIM, LDIFR, IDIFFR, LADVTEST, LSOUBOUND,   &
@@ -735,14 +747,18 @@
 #ifdef SCHISM
          IF (LSPHE) THEN
            IF (ics /= 2) THEN
-             WRITE(DBG%FHNDL,*) LSPHE, ICS
-             FLUSH(DBG%FHNDL)
+             IF (WRITEDBGFLAG == 1) THEN
+               WRITE(DBG%FHNDL,*) LSPHE, ICS
+               FLUSH(DBG%FHNDL)
+             END IF
              CALL WWM_ABORT('You set LSPHE=T but then you need ics=2')
            END IF
          ELSE
            IF (ics /= 1) THEN
-             WRITE(DBG%FHNDL,*) LSPHE, ICS
-             FLUSH(DBG%FHNDL)
+             IF (WRITEDBGFLAG == 1) THEN
+               WRITE(DBG%FHNDL,*) LSPHE, ICS
+               FLUSH(DBG%FHNDL)
+             END IF
              CALL WWM_ABORT('You set LSPHE=F but then you need ics=1')
            END IF
          END IF
@@ -823,7 +839,7 @@
          wwm_print_namelist(INIT)
          FLUSH(CHK%FHNDL)
 
-         IF (LHOTR) THEN
+         IF (LHOTR .AND. WRITESTATFLAG == 1) THEN
            WRITE(STAT%FHNDL,'("+TRACE...",A)') 'HOTFILE is used as Initital Condition'
          END IF
 !
@@ -905,7 +921,7 @@
              CALL WWM_ABORT('FRHIGH is too low with respect to WBTP')
            END IF
          END IF
-         WRITE(STAT%FHNDL,'("+TRACE...",A10,I5)') 'BOUNDARY FILE FORMAT IS', IBOUNDFORMAT
+         IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A10,I5)') 'BOUNDARY FILE FORMAT IS', IBOUNDFORMAT
 
          SEBO%BEGT = BEGTC
          SEBO%DELT = DELTC
@@ -1147,6 +1163,11 @@
          wwm_print_namelist(NESTING)
          FLUSH(CHK%FHNDL)
          
+! Check consistency with SCHISM inputs here
+#ifdef SCHISM
+         IF(MEVEG/=0.and.isav==0) CALL WWM_ABORT('WWM: MEVEG/=0.and.isav==0')
+#endif
+
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1160,15 +1181,17 @@
 !        Check timings ...
 
          IF (OUT_HISTORY%BMJD .GE. OUT_HISTORY%EMJD) THEN
-           WRITE(STAT%FHNDL,*) 'MAIN%BEGT=',MAIN%BEGT
-           WRITE(STAT%FHNDL,*) 'MAIN%ENDT=',MAIN%ENDT
-           WRITE(STAT%FHNDL,*) 'MAIN%BMJD=',MAIN%BMJD
-           WRITE(STAT%FHNDL,*) 'MAIN%EMJD=',MAIN%EMJD
-
-           WRITE(STAT%FHNDL,*) 'OUT_HISTORY%BEGT=',OUT_HISTORY%BEGT
-           WRITE(STAT%FHNDL,*) 'OUT_HISTORY%ENDT=',OUT_HISTORY%ENDT
-           WRITE(STAT%FHNDL,*) 'OUT_HISTORY%BMJD=',OUT_HISTORY%BMJD
-           WRITE(STAT%FHNDL,*) 'OUT_HISTORY%EMJD=',OUT_HISTORY%EMJD
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,*) 'MAIN%BEGT=',MAIN%BEGT
+             WRITE(STAT%FHNDL,*) 'MAIN%ENDT=',MAIN%ENDT
+             WRITE(STAT%FHNDL,*) 'MAIN%BMJD=',MAIN%BMJD
+             WRITE(STAT%FHNDL,*) 'MAIN%EMJD=',MAIN%EMJD
+  
+             WRITE(STAT%FHNDL,*) 'OUT_HISTORY%BEGT=',OUT_HISTORY%BEGT
+             WRITE(STAT%FHNDL,*) 'OUT_HISTORY%ENDT=',OUT_HISTORY%ENDT
+             WRITE(STAT%FHNDL,*) 'OUT_HISTORY%BMJD=',OUT_HISTORY%BMJD
+             WRITE(STAT%FHNDL,*) 'OUT_HISTORY%EMJD=',OUT_HISTORY%EMJD
+           END IF
 
 !           Print *, 'OUT_HISTORY%BMJD=', OUT_HISTORY%BMJD
 !           Print *, 'OUT_HISTORY%EMJD=', OUT_HISTORY%EMJD
@@ -1316,10 +1339,12 @@
            TEST = MAIN%DTCOUP - NINT(MAIN%DTCOUP/MAIN%DELT)*MAIN%DELT
 !2do ... check where else you do some nint stuff ... like that one ...
            IF (ABS(TEST) .GT. THR) THEN
-             WRITE(DBG%FHNDL,*) 'MAIN%DTCOUP=', MAIN%DTCOUP
-             WRITE(DBG%FHNDL,*) 'MAIN%DELT=', MAIN%DELT
-             WRITE(DBG%FHNDL,*) 'TEST=', TEST
-             WRITE(DBG%FHNDL,*) 'TIME STEP OF THE WAVEMODELL CANNOT BE DiVIDIED WITHOUT A REST'
+             IF (WRITEDBGFLAG == 1) THEN
+               WRITE(DBG%FHNDL,*) 'MAIN%DTCOUP=', MAIN%DTCOUP
+               WRITE(DBG%FHNDL,*) 'MAIN%DELT=', MAIN%DELT
+               WRITE(DBG%FHNDL,*) 'TEST=', TEST
+               WRITE(DBG%FHNDL,*) 'TIME STEP OF THE WAVEMODELL CANNOT BE DiVIDIED WITHOUT A REST'
+             END IF             
              CALL WWM_ABORT('TIME STEP OF THE WAVEMODELL CANNOT BE DiVIDIED WITHOUT A REST')
            ELSE
              MAIN%ICPLT = INT(MAIN%DTCOUP/MAIN%DELT)
@@ -1328,36 +1353,46 @@
 #ifndef ROMS_WWM_PGMCL_COUPLING
          END IF
 #endif
-         WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SWTICHES FOR THE LIMTER'
-         WRITE(STAT%FHNDL,*) 'LLIMT', LLIMT
-         WRITE(STAT%FHNDL,'("+TRACE...",A)') 'ACTIVATED SOURCE TERMS'
-         WRITE(STAT%FHNDL,*) 'MESIN', MESIN
-         WRITE(STAT%FHNDL,*) 'MESNL', MESNL
-         WRITE(STAT%FHNDL,*) 'MESBR', MESBR
-         WRITE(STAT%FHNDL,*) 'MESDS', MESDS
-         WRITE(STAT%FHNDL,*) 'MESTR', MESTR
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,'("+TRACE...",A)') 'SWTICHES FOR THE LIMTER'
+           WRITE(STAT%FHNDL,*) 'LLIMT', LLIMT
+           WRITE(STAT%FHNDL,'("+TRACE...",A)') 'ACTIVATED SOURCE TERMS'
+           WRITE(STAT%FHNDL,*) 'MESIN', MESIN
+           WRITE(STAT%FHNDL,*) 'MESNL', MESNL
+           WRITE(STAT%FHNDL,*) 'MESBR', MESBR
+           WRITE(STAT%FHNDL,*) 'MESDS', MESDS
+           WRITE(STAT%FHNDL,*) 'MESTR', MESTR
+         END IF
 
          IF (LSEWD .AND. LSTWD) THEN
-           WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY WIND'
-           WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY WIND'
+             WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           END IF
            CALL WWM_ABORT('CHECK LSEWL OR LSTDW')
          END IF
 
          IF (LSTCU .AND. LSECU) THEN
-           WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
-           WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
+             WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           END IF
            CALL WWM_ABORT('CHECK LSTCU .AND. LSECU')
          END IF
 
          IF (LSTCU .AND. LSECU) THEN
-           WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
-           WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
+             WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           END IF
            CALL WWM_ABORT('CHECK LSTCU .AND. LSECU')
          END IF
 
          IF (LSTWL .AND. LSEWL) THEN
-           WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
-           WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           IF (WRITEDBGFLAG == 1) THEN
+             WRITE(DBG%FHNDL,*) 'YOU MUST USE EITHER UNSTEADY OR STEADY CURRENTS'
+             WRITE(DBG%FHNDL,*) 'PLEASE CHECK CODE EXITS'
+           END IF
            CALL WWM_ABORT('CHECK LSTCU .AND. LSECU')
          END IF
 
@@ -1447,8 +1482,10 @@
           SECU%ISTP = NINT( SECU%TOTL / SECU%DELT ) + 1
           SECU%TMJD = SECU%BMJD
           LSECN = .FALSE.
-          WRITE(STAT%FHNDL,*) 'Serial current Condition -----------'
-          WRITE(STAT%FHNDL,*) SECU%BEGT, SECU%ENDT, SECU%ISTP, SECU%TOTL/3600.0, SECU%DELT
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'Serial current Condition -----------'
+            WRITE(STAT%FHNDL,*) SECU%BEGT, SECU%ENDT, SECU%ISTP, SECU%TOTL/3600.0, SECU%DELT
+          END IF
           IF (LERGINP) CALL ERG2WWM(SECU%ISTP)
           CALL TEST_FILE_EXIST_DIE("3: Missing current file : ", CUR%FNAME)
           LSECN = .TRUE.
