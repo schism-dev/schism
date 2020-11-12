@@ -21,7 +21,7 @@
         REAL(rkind)  :: WSTMP, DEPLOC
 
         REAL(rkind)  :: HTOT
-        REAL(rkind)  :: DSXX3D(2,NVRT,MNS), DSYY3D(2,NVRT,MNS),DSXY3D(2,NVRT,MNS)
+        REAL(rkind)  :: DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa)
 
 
 !GD: imet_dry allows to choose between 2 different methods to compute the
@@ -164,17 +164,17 @@
 
         ! Computing gradients of the depth-averaged radiation stress
         ! terms (unit: m^2/s/s)
-        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,MNS,SXX3D,DSXX3D)   ! (dSxx/dx , dSxx/dy )
-        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,MNS,SYY3D,DSYY3D)   ! (dSyy/dx , dSyy/dy )
-        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,MNS,SXY3D,DSXY3D)   ! (dSxy/dx , dSxy/dy )
+        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,nsa,SXX3D,DSXX3D)   ! (dSxx/dx , dSxx/dy )
+        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,nsa,SYY3D,DSYY3D)   ! (dSyy/dx , dSyy/dy )
+        CALL hgrad_nodes(IMET_DRY,0,NVRT,MNP,nsa,SXY3D,DSXY3D)   ! (dSxy/dx , dSxy/dy )
         CALL exchange_s3d_2(DSXX3D)
         CALL exchange_s3d_2(DSYY3D)
         CALL exchange_s3d_2(DSXY3D)
 
         ! Computing the wave forces; these are noted Rsx, Rsy in Rolland
         ! et al. (2012), see Eq. (9)
-        ! These are stored in wwave_force(:,1:MNS,1:2) (unit: m/s/s)
-        DO IS = 1, MNS
+        ! These are stored in wwave_force(:,1:nsa,1:2) (unit: m/s/s)
+        DO IS = 1, nsa
           IF(idry_s(IS) == 1) CYCLE
 
           ! Total water depth at sides
@@ -202,7 +202,8 @@
  
         USE DATAPOOL
         USE schism_glbl, ONLY: errmsg, hmin_radstress, ns, kbs, kbe, nea, idry_e, &
-                            &  isdel, indel, elnode, dldxy, zs, area
+                            &  isdel, indel, elnode, dldxy, zs, area,nsa,idry_s, &
+                            &isidenode
         USE schism_msgp
         IMPLICIT NONE
 
@@ -213,9 +214,9 @@
 
         integer     :: IE, isd, j, l, n1, n2, n3, icount
         real(rkind) :: tmp0, tmp1, tmp2, ztmp, ubar, vbar, dhdx, dhdy
-        real(rkind) :: STOKES_WVEL_ELEM(NVRT,MNE), ws_tmp1(NVRT,MNS),ws_tmp2(NVRT,MNS)
+        real(rkind) :: STOKES_WVEL_ELEM(NVRT,MNE), ws_tmp1(NVRT,nsa),ws_tmp2(NVRT,nsa)
 
-        real(rkind) :: dr_dxy_loc(2,NVRT,MNS)
+        real(rkind) :: dr_dxy_loc(2,NVRT,nsa)
 
 
 !...    Computing Stokes drift horizontal velocities at nodes and
@@ -307,7 +308,7 @@
         ! The average of the values from vertically adjacent nodes is
         ! taken
         STOKES_HVEL_SIDE = 0.D0; ROLLER_STOKES_HVEL_SIDE = 0.D0
-        DO IS = 1,MNS
+        DO IS = 1,nsa
           IF(idry_s(IS) == 1) CYCLE
 
           ! Indexes of surrounding nodes
@@ -323,7 +324,7 @@
               ROLLER_STOKES_HVEL_SIDE(2,k,IS) = (ROLLER_STOKES_HVEL(2,k,n1) + ROLLER_STOKES_HVEL(2,k,n2))/2.D0
             END IF
           END DO
-        END DO !MNS
+        END DO !nsa
 
 !...    Compute bottom Stokes drift z-vel. at elements
         STOKES_WVEL_ELEM = 0.D0
@@ -368,12 +369,12 @@
 !...    Compute horizontal gradient of Stokes x and y-vel. (to compute
 !Stokes z-vel.)
         ws_tmp1 = 0.D0; ws_tmp2 = 0.D0
-        CALL hgrad_nodes(2,0,NVRT,MNP,MNS,STOKES_HVEL(1,:,:),dr_dxy_loc)
+        CALL hgrad_nodes(2,0,NVRT,MNP,nsa,STOKES_HVEL(1,:,:),dr_dxy_loc)
         ws_tmp1(:,:) = dr_dxy_loc(1,:,:) !valid only in resident
-        CALL hgrad_nodes(2,0,NVRT,MNP,MNS,STOKES_HVEL(2,:,:),dr_dxy_loc)
+        CALL hgrad_nodes(2,0,NVRT,MNP,nsa,STOKES_HVEL(2,:,:),dr_dxy_loc)
         ws_tmp2(:,:) = dr_dxy_loc(2,:,:)
 
-!...    Compute Stokes z-vel. at all levels: STOKES_WVEL_SIDE(NVRT,MNS)
+!...    Compute Stokes z-vel. at all levels: STOKES_WVEL_SIDE(NVRT,nsa)
         STOKES_WVEL_SIDE = 0.D0
         DO IS = 1,ns !residents only
           IF(idry_s(IS) == 1) CYCLE
@@ -405,20 +406,20 @@
 !**********************************************************************
       SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
         USE DATAPOOL
-        USE schism_glbl, ONLY: kbs, ns, idry_e, isdel, elnode, dldxy, cori, zs, su2, sv2
+        USE schism_glbl, ONLY: kbs, ns, idry_e, isdel, elnode, dldxy, cori, zs, su2, sv2,nsa,idry_s
         USE schism_msgp
         IMPLICIT NONE
 
         integer     :: IS, IE, k, l, icount
         real(rkind) :: dJ_dx_loc, dJ_dy_loc, du_loc, dv_loc, dz_loc, Ust_loc, Vst_loc
-        real(rkind) :: du_dxy(2,NVRT,MNS), dv_dxy(2,NVRT,MNS)
+        real(rkind) :: du_dxy(2,NVRT,nsa), dv_dxy(2,NVRT,nsa)
 
 !...    Initialisation
         WWAVE_FORCE = 0.D0
 
 !...    Computing the spatial derivative of horizontal velocities
-        CALL hgrad_nodes(2,0,NVRT,MNP,MNS,uu2,du_dxy)
-        CALL hgrad_nodes(2,0,NVRT,MNP,MNS,vv2,dv_dxy)
+        CALL hgrad_nodes(2,0,NVRT,MNP,nsa,uu2,du_dxy)
+        CALL hgrad_nodes(2,0,NVRT,MNP,nsa,vv2,dv_dxy)
 
 !...    Main loop over the sides
         DO IS = 1,ns !resident
@@ -515,7 +516,8 @@
 !**********************************************************************
       SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
         USE DATAPOOL
-        USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm, zs
+        USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm, &
+     &zs,nsa,idry_s,isidenode
         USE schism_msgp 
         IMPLICIT NONE
 
@@ -610,7 +612,7 @@
           ! With this profile, F < 10% of computed F at h < DMIN, and F > 95% of computed F at h > 2.25*DMIN
           IF (htot < 3*DMIN) WWAVE_FORCE(:,:,IS) = WWAVE_FORCE(:,:,IS)*tanh((0.5D0*htot/DMIN)**8.D0)
 
-        END DO !MNS
+        END DO !nsa
 
         ! Exchange between ghost regions
         CALL exchange_s3d_2(WWAVE_FORCE)
@@ -693,7 +695,7 @@
       SUBROUTINE APPLY_WAFO_OPBND_RAMP
 
         USE DATAPOOL
-        USE schism_glbl, only : ns,kbs
+        USE schism_glbl, only : ns,kbs,idry_s,nsa
         USE schism_msgp
 
         IMPLICIT NONE

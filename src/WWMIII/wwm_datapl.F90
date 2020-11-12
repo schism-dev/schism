@@ -22,6 +22,7 @@
 ! CANNOT HANDLE QUADS!
       use schism_glbl, only  : MNE => nea_wwm,       & ! Elements of the augmented domain
      &                         MNP => npa,       & ! Nodes in the augmented domain
+     &                         NP_RES => np,     & ! Local number of resident nodes
      &                         np,               &
      &                         npg,              & ! number of ghost nodes
      &                         MNEI => mnei_wwm,     & ! Max number of neighboring elements surrounding a node, nodes is mnei+1!
