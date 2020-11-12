@@ -18,10 +18,10 @@
 #else
 # if defined(SCHISM) || defined(WWM_MPI)
       use schism_msgp !, only: comm,             & ! MPI communicator
+! WARNING: DO NOT USE SCHISM CONECTIVITY ARRAYS WITHOTU CHECKING, AS WWM
+! CANNOT HANDLE QUADS!
       use schism_glbl, only  : MNE => nea_wwm,       & ! Elements of the augmented domain
      &                         MNP => npa,       & ! Nodes in the augmented domain
-     &                         MNS => nsa,       & ! Sides in the augmented domain
-     &                         NP_RES => np,     & ! Local number of resident nodes
      &                         np,               &
      &                         npg,              & ! number of ghost nodes
      &                         MNEI => mnei_wwm,     & ! Max number of neighboring elements surrounding a node, nodes is mnei+1!
@@ -58,10 +58,6 @@
      &                         IDRY => idry,                 & ! Dry/Wet flag
      &                         ZETA => znl,                  & ! Z-Levels of SCHISM
      &                         ibnd_ext_int => ibnd_ext_int, & ! bounday flag ...
-     &                         nsa,                          & ! Sides in the augmented domain
-     &                         NS_RES => ns,                 & ! Local number of resident sides
-     &                         isidenode,                    & ! 2 nodes of a side
-     &                         idry_s,                       & ! wet/dry for a side
      &                         eta1,eta2,                    & ! elevation at 2 time steps
      &                         uu2,vv2,                      & ! horizontal vel.
      &                         curx_wwm,cury_wwm,             & ! BM:coupling current from SCHISM
@@ -1148,6 +1144,7 @@
 
          REAL(rkind), ALLOCATABLE ::   RSXX(:), RSXY(:), RSYY(:), FORCEXY(:,:)
          REAL(rkind), ALLOCATABLE ::   SXX3D(:,:), SXY3D(:,:), SYY3D(:,:)
+         REAL(rkind), ALLOCATABLE ::   BETAROLLER(:)
 !
 ! switch for the numerics ... wwmDnumsw.mod
 !

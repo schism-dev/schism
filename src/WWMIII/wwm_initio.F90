@@ -150,7 +150,7 @@
 !
 ! phase velocity, wave number, group velocity, dwdh, kh
 !
-       ALLOCATE( WK(MSC,MNP), CG(MSC,MNP), WC(MSC,MNP), stat=istat)
+       ALLOCATE( WK(MSC,MNP), CG(MSC,MNP), WC(MNP,MSC), stat=istat)
        IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 16')
        WK = ZERO 
        CG = ZERO 
@@ -1748,6 +1748,8 @@
 
         ! Compute ramp at sides
         DO IS = 1,ns
+!JZ Error: WWM cannot handle quads so do not use connectivity info from
+!SCHISM!
           n1 = isidenode(1,IS); n2 = isidenode(2,IS)
           wafo_opbnd_ramp(IS)=(ramp_wafop(n1)+ramp_wafop(n2))/2
         ENDDO
