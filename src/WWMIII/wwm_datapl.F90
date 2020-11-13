@@ -52,7 +52,6 @@
 # ifdef SCHISM
      use schism_glbl, only :   &  
      &                         DMIN_SCHISM => h0,            & ! Dmin
-     &                         NNE => nne,                   & !
      &                         NVRT => nvrt,                 & ! Max. Number of vertical Layers ...
      &                         KBP  => kbp,                  & ! Bottom index
      &                         IDRY => idry,                 & ! Dry/Wet flag
@@ -83,8 +82,8 @@
      &                         fwvor_advz_stokes,             & ! terms involved in the vortex force formalism (RADFLAG='VOR')
      &                         fwvor_gradpress,               &
      &                         fwvor_breaking,                &
-     &                         wafo_obcramp,                  & ! BM: flag (0/1:off/on) to apply a ramp on wave forces at open boundary
-     &                         wafo_opbnd_ramp                  ! The corresponding ramp value defined at sides
+     &                         wafo_obcramp                   ! BM: flag (0/1:off/on) to apply a ramp on wave forces at open boundary
+!     &                         wafo_opbnd_ramp                  ! The corresponding ramp value defined at sides
 
 
 # endif

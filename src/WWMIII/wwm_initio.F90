@@ -1709,15 +1709,18 @@
 !  Activation: wafo_obcramp (0/1:off/on).
 !  Subroutine called at the initialization only (in INITIALIZE_WWM).
 !  Then, wafo_opbnd_ramp is applied to wave forces at each time step in
-!  wwm_main.
+!  wwm_main (routine inside wwm_coupl_selfe.F90).
 !  Authors: X. Bertin & B. Mengual (05/2020)
 !**********************************************************************
 #ifdef SCHISM
       SUBROUTINE READ_WAFO_OPBND_RAMP
+!Since the output from this routine is only used in the coupler
+!(wwm_coupl_selfe.F90), geometric arrays from SCHISM are used to account
+!for quads
 
         USE DATAPOOL
-        USE schism_glbl, ONLY : xcj,ycj,xnd,ynd,ns,np_global
-        USE schism_msgp, ONLY : exchange_s2d
+        USE schism_glbl, ONLY : xcj,ycj,xnd,ynd,ns,nsa,np_global,isidenode,wafo_opbnd_ramp
+        USE schism_msgp, ONLY : parallel_abort !exchange_s2d
 
         IMPLICIT NONE
         LOGICAL      :: lexist
@@ -1747,9 +1750,7 @@
 
 
         ! Compute ramp at sides
-        DO IS = 1,ns
-!JZ Error: WWM cannot handle quads so do not use connectivity info from
-!SCHISM!
+        DO IS = 1,nsa
           n1 = isidenode(1,IS); n2 = isidenode(2,IS)
           wafo_opbnd_ramp(IS)=(ramp_wafop(n1)+ramp_wafop(n2))/2
         ENDDO

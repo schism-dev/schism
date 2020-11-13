@@ -203,7 +203,7 @@
         USE DATAPOOL
         USE schism_glbl, ONLY: errmsg, hmin_radstress, ns, kbs, kbe, nea, idry_e, &
                             &  isdel, indel, elnode, dldxy, zs, area,nsa,idry_s, &
-                            &isidenode
+                            &isidenode,nne
         USE schism_msgp
         IMPLICIT NONE
 
@@ -695,7 +695,7 @@
       SUBROUTINE APPLY_WAFO_OPBND_RAMP
 
         USE DATAPOOL
-        USE schism_glbl, only : ns,kbs,idry_s,nsa
+        USE schism_glbl, only : ns,kbs,idry_s,nsa,wafo_opbnd_ramp
         USE schism_msgp
 
         IMPLICIT NONE
@@ -709,8 +709,6 @@
             WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS)*wafo_opbnd_ramp(IS)
           END DO ! NVRT
         END DO ! nsa
-
-!        CALL exchange_s3d_2(WWAVE_FORCE)
 
       END SUBROUTINE APPLY_WAFO_OPBND_RAMP
 
