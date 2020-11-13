@@ -1,0 +1,56 @@
+Changes made by U. La Rochelle group on WWM that were merged into WWMIII in Nov 2020.
+
+
+1.	Option for the coupling current send back from WWM to SCHISM. New parameter cur_wwm in param.in: 
+=0: surface current (original version)
+=1: depth-integrated current
+=2: current computed according to Kirby & Chen (1989) where the integration depth depends on the wave numbers, to possibly account for the influence of sheared currents on wave propagation.
+
+2.	Option ZPROF_BREAK (in wwminput.nml) to manage the vertical distribution function of the wave breaking acceleration term.
+= 1: homogeneous over the water column
+= 2 to 5: functions cosh or 1-tanh (e.g. Uchiyama et al., 2010)
+= 6: only applied in the 2 surface layers of the water column
+
+3.	Correction of formulations of orbital excursion and velocity in the subroutine WAVE_CURRENT_PARAMETER of WWM
+
+4.	Wave breaking:
+ * 2 new formulations implemented in explicit mode (IBREAK = 4 and 5) : Westhuysen (2010)   (breaking criterion based on the biphase) and Baldock et al. (1998) (modified by Janssen and Battjes, 2007)
+* Adaptive breaking coefficient (B) for all formulations (Pezerat et al., under review) 
+BR_COEF_METHOD = 1 → B= cst = ALPBJ
+B_BR_COEF_METHOD = 2 → B = cst*slope = ALPBJ*slope
+* Modification of ICRIT options:
+ICRIT = 1 : constant breaking index gamma
+ICRIT = 2 : gamma based on local steepness (Aron)
+ICRIT = 3 : biphase threshold intended for IBREAK = 4
+ICRIT = 4 : gamma based on bed slope
+ICRIT = 5 : gamma based on local dimensionless depth (Ruessink et al., 2003)
+for ICRIT = 3 prescribed A_BIPH (default is 0.2)
+for ICRIT = 4 and 5 prescribed A_BR and B_BR (gamma = A_BR * slope or kh + B_BR)
+
+5.	Kévin’s work on the source term integration with sub time steps: new SMETHOD case added (=6). 
+
+6.	Kévin’s work on the wave roller: ROLMETHOD (= 1 or 2) parameter added in the wwminput.nml to switch easily between the two methods implemented. 
+
+7.	Filter on WWM inputs/outputs based on the wavelength at the peak frequency. The idea here is that in reality, changes in current/bathy very small compared to the wave length will little impact the wave field while they will in the model as source terms are computed locally. This spatial filter function of the wave length strongly improves stability issues for morphodynamics with waves. 
+
+8.	Options to activate/deactivate the different terms involved in the vortex force (in param.in)
+fwvor = 0/1 ! activate/deactivate wave forces
+fwvor_advxy_stokes = 0/1 ! then activate/deactivate each term
+fwvor_advz_stokes = 0/1
+fwvor_gradpress = 0/1
+fwvor_breaking = 0/1
+
+9.	Less important, new netcdf outputs (flags added in param.in) related to wave forces induced by depth-limited wave breaking and whitecapping [Baptiste]. Plus each source terms (except Snl3 and Snl4) integrated over frequencies and directions (flags added in WWM outputs in param.in) [Marc].
+
+10.	Bottom friction
+* Correction of  a typo in Madsen’s formulation + accounting for variable bed roughness (z0) if prescribed in SCHISM param.in
+* SHOWEX formulation (Ardhuin et al. 2003) if MESBF = 3 accounting for constant or variable median grain size (new flag in param.in + D50.gr3 file eventually)
+
+11.	Wave dissipation by vegetation
+* wwm_vegdiss.F90 : Correction of the implicit solver 
+*Flag added in param.in to read sav_?.gr3 files (vegetation characteristics) used in the formulation of the wave dissipation by vegetation:
+- sav = 1 ! on/off flag wave dissipation by vegetation (need MEVEG = 1 in wwminput.nml)
+- Option added in param.in to read a file with a variable drag coefficient (sav_cd.gr3)
+-  Vegetation-induced dissipation source term can be integrated with sub time steps (case SMETHOD = 6). 
+
+
