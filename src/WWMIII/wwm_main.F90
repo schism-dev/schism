@@ -500,7 +500,8 @@
 #ifdef TIMINGS
       CALL WAV_MY_WTIME(TIME2)
 #endif
-
+      ! Computing spatially varying breaking coefficient if required
+      IF (BR_COEF_METHOD == 2) CALL COMPUTE_BREAKING_COEFFICIENT
 !      CALL Print_SumAC2("Before the advection")
       IF (ICOMP .EQ. 0) THEN
         CALL COMPUTE_SIMPLE_EXPLICIT

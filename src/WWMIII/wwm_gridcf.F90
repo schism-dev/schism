@@ -654,3 +654,39 @@
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
+         SUBROUTINE COMPUTE_BREAKING_COEFFICIENT
+         !
+         ! MP : Adaptive breaking coefficient
+         ! A_BR_COEF = B_ALP * slope with B_ALP is around 40
+         ! (Pezerat et al., 2020 - under review)
+         !
+         USE DATAPOOL, ONLY : AC2, PI, MNP, MSC, tanbeta_x, tanbeta_y, A_BR_COEF, rkind, B_ALP, LNAUTOUT
+         IMPLICIT NONE
+         INTEGER     :: IP
+         REAL(rkind) :: FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD
+         REAL(rkind) :: WAVEDIR,TANBETA,DEG
+
+         DO IP = 1, MNP
+           ! Computation of the bed slope in the wave direction
+           CALL PEAK_PARAMETER(IP,AC2(:,:,IP),MSC,FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD)
+           ! Conversion from nautical to mathematical convention (if LNAUTOUT = TRUE), and units in radian
+           CALL DEG2NAUT (PEAKDM, DEG, LNAUTOUT)
+           WAVEDIR = DEG*PI/180.d0
+           ! NB 1 : Although B is theoretically bound to 1,
+           !        air entrainment and other processes may induce
+           !        enhanced breaking, so we allow A_BR_COEF > 1
+           TANBETA = tanbeta_x(IP)*COS(WAVEDIR) + tanbeta_y(IP)*SIN(WAVEDIR)
+           IF (TANBETA .LT. 0.d0) THEN
+             A_BR_COEF(IP) = 0.1d0 !Manage negative slopes
+           ELSE
+             A_BR_COEF(IP) = MIN(B_ALP*TANBETA, 1.2D0)
+           ENDIF
+         END DO
+
+         DO IP = 1, 5
+           CALL smooth_2dvar(A_BR_COEF,MNP)
+         END DO
+         END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************

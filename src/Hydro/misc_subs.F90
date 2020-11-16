@@ -5901,8 +5901,8 @@ subroutine compute_bed_slope
       endif
     enddo !inne
     if (icount>0) then
-      tanbeta_x(ip) = tmp_x/icount !global array
-      tanbeta_y(ip) = tmp_y/icount
+      tanbeta_x(ip) = -tmp_x/icount !global array, minus sign because dp = -dz
+      tanbeta_y(ip) = -tmp_y/icount
     endif
   enddo !ip
  
