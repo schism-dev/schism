@@ -178,6 +178,12 @@ subroutine icm_init
       savgrDOO=0.0
     endif
 
+    if(iof_icm(178)==1) then
+      allocate(PrmPrdtsav(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.178')
+      PrmPrdtsav=0.0
+    endif
+
   endif !isav_icm
 
   !----------------------------------------------------------------
@@ -284,6 +290,12 @@ subroutine icm_init
       allocate(veggrDOO(nvrt,nea),stat=istat)
       if(istat/=0) call parallel_abort('Failed in alloc.144')
       veggrDOO=0.0
+    endif
+
+    if(iof_icm(177)==1) then
+      allocate(PrmPrdtveg(nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.178')
+      PrmPrdtveg=0.0
     endif
 
   endif !iveg_icm

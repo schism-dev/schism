@@ -708,7 +708,7 @@ subroutine landplant(id,hour,it)
 !----------------------------------------------------------------------------
 !calculate marsh growth, biomass, nutient fluxes to sediment when elem is dry
 !----------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg,ielg,pi,dpe
+  use schism_glbl, only : iwp,errmsg,ielg,pi,dpe,iof_icm
   use icm_mod
   use icm_sed_mod, only : CNH4,CPIP 
   use schism_glbl, only : airt1,elnode,i34 
@@ -887,10 +887,11 @@ subroutine landplant(id,hour,it)
     endif
 
     !calc canopy height
-    if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
+    if(tlfveg(id,j)+tstveg(id,j)-critveg(j)<0) then
       hcanveg(id,j)=dveg(j)*(tlfveg(id,j)+tstveg(id,j))+eveg(j)
     else
-      hcanveg(id,j)=max(8.e-1,aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j))
+      rtmp=dveg(j)*(critveg(j))+eveg(j)
+      hcanveg(id,j)=max(1.e-2,rtmp+aveg(j)*(tlfveg(id,j)+tstveg(id,j)-critveg(j)))
     endif !
     if(hcanveg(id,j)<1.e-8)then
       write(errmsg,*)'illegal veg height:',hcanveg(id,j),tlfveg(id,j),tstveg(id,j),j,ielg(id)
@@ -941,6 +942,13 @@ subroutine landplant(id,hour,it)
     endif
 
   enddo !j::veg species
+
+  if(iof_icm(178)==1) then
+    PrmPrdtveg(id)=0.0 !init
+    do j=1,3
+      PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
+    enddo !j::veg species
+  endif !output production
 
 end subroutine landplant
 
@@ -1979,8 +1987,15 @@ subroutine calkwq(id,nv,ure,it)
         write(errmsg,*)'nan found in rtveg:',trtveg(id,j),ielg(id),j,it,ielg(id)
         call parallel_abort(errmsg)
       endif
-
     enddo !j::veg species
+
+    if(iof_icm(178)==1) then
+      PrmPrdtveg(id)=0.0 !init
+      do j=1,3
+        PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
+      enddo !j::veg species
+    endif !output production
+
   endif !iveg_icm
   !--------------------------------------------------------------------------------------
 
@@ -2071,6 +2086,9 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif
       lfsav(klev,id)=lfsav(klev,id)*exp(rtmp) !lfsav>0 with seeds, =0 for no seeds with rtmp/=0
+      if(iof_icm(177)==1) then
+        PrmPrdtsav(klev,id)=lfsav(klev,id)*plfsav(klev,id)
+      endif !output sav production
 
       !nan check
       if(.not.(lfsav(klev,id)>0.or.lfsav(klev,id)<=0))then
@@ -3448,10 +3466,11 @@ subroutine calkwq(id,nv,ure,it)
   if (iveg_icm==1.and.patchveg(id)==1) then
     do j=1,3
       !calc canopy height
-      if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
+      if(tlfveg(id,j)+tstveg(id,j)-critveg(j)<0) then
         hcanveg(id,j)=dveg(j)*(tlfveg(id,j)+tstveg(id,j))+eveg(j)
       else
-        hcanveg(id,j)=max(8.e-1,aveg(j)*(tlfveg(id,j)+tstveg(id,j))+bveg(j))
+        rtmp=dveg(j)*critveg(j)+eveg(j)
+        hcanveg(id,j)=max(1.e-2,rtmp+aveg(j)*(tlfveg(id,j)+tstveg(id,j)-critveg(j)))
       endif !
       if(hcanveg(id,j)<1.e-8)then
         write(errmsg,*)'illegal veg height:',hcanveg(id,j),tlfveg(id,j),tstveg(id,j),j,ielg(id)

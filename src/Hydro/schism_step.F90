@@ -69,7 +69,8 @@
                          &vegmtDOO,veggrDOO,&
                          &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
                          &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg, &
-                         &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg
+                         &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg, &
+                         &PrmPrdtveg,PrmPrdtsav
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -8148,8 +8149,13 @@
        &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,3)))
         endif
 
-        noutput=noutput+176
-        icount=176 !offset
+        if(iof_icm(177)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+181), &
+     &'ICM_PrmPrdtsav',5,nvrt,nea,dble(PrmPrdtsav))
+        if(iof_icm(178)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+182), &
+     &'ICM_PrmPrdtveg',4,1,nea,dble(PrmPrdtveg))
+
+        noutput=noutput+178
+        icount=178 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

@@ -1164,7 +1164,8 @@ subroutine read_icm_param2
         if(tlfveg(i,j)+tstveg(i,j)-critveg(j)<0) then
           hcanveg(i,j)=dveg(j)*(tlfveg(i,j)+tstveg(i,j))+eveg(j)
         else
-          hcanveg(i,j)=aveg(j)*(tlfveg(i,j)+tstveg(i,j))+bveg(j)
+          rtmp=dveg(j)*critveg(j)+eveg(j)
+          hcanveg(i,j)=max(1.e-2,rtmp+aveg(j)*(tlfveg(i,j)+tstveg(i,j)-critveg(j)))
         endif 
         if(hcanveg(i,j)<0.) then
           write(errmsg,*)'illegal veg height:',hcanveg(i,j),ielg(i),j
@@ -1458,7 +1459,7 @@ subroutine read_icm_param
   call get_param_1D('icm.in','saltoptveg',2,itmp1,saltoptveg,stmp,3)
   call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
   call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
-  call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
+  !call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
   !call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
   call get_param_1D('icm.in','dveg',2,itmp1,dveg,stmp,3)
   call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)

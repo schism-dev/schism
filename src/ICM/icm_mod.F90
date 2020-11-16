@@ -61,6 +61,7 @@ module icm_mod
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: PrmPrdtsav !(nvrt,nea), unit: gC/m^2/day
   !(nvrt)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
   real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
@@ -76,6 +77,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:)   :: PrmPrdtveg !(nea)
 
   !PH model
   integer, save :: inu_ph,irec_ph
@@ -149,7 +151,7 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
   real(kind=iwp),save,dimension(3) :: saltveg,saltoptveg !salt
   real(kind=iwp),save,dimension(3) :: tinunveg !inundation
-  real(kind=iwp),save,dimension(3) :: aveg,bveg,critveg,dveg,eveg !height
+  real(kind=iwp),save,dimension(3) :: aveg,critveg,dveg,eveg !height
   !real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
   real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
