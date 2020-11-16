@@ -13,9 +13,9 @@
 !   limitations under the License.
 
 subroutine icm_init
-!--------------------------------------------------------------------------------
-!allocate ICM arrays and initialize
-!--------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------
+  !allocate ICM arrays and initialize
+  !--------------------------------------------------------------------------------
   use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global,iof_icm
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
@@ -48,10 +48,12 @@ subroutine icm_init
     & GPM1(nea),GPM2(nea),GPM3(nea),& !maximun growth rate
     & TGP1(nea),TGP2(nea),TGP3(nea),CChl1(nea),CChl2(nea),CChl3(nea), & 
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
-    & rIavg_save(nea), &!rad_ncai
+    & rIavg_save(nea), &!ncai_rad
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
+    & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!ncai_veg
+    & tthcan(nea),ttdens(nea), &!ncai_sav + ncai_veg
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
-    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region !ncai
+    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !ncai_region
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
 
   !----------------------------------------------------------------
@@ -69,7 +71,7 @@ subroutine icm_init
 #endif
 
   !----------------------------------------------------------------
-  !ncai_sav::
+  !ncai_sav:: parameters + outputs
   !----------------------------------------------------------------
   call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
   if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
@@ -176,8 +178,127 @@ subroutine icm_init
       savgrDOO=0.0
     endif
 
+    if(iof_icm(178)==1) then
+      allocate(PrmPrdtsav(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.178')
+      PrmPrdtsav=0.0
+    endif
+
   endif !isav_icm
 
+  !----------------------------------------------------------------
+  !ncai_veg:: parameters + outputs
+  !----------------------------------------------------------------
+  call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
+  if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
+  if(iveg_icm==1) then
+    !allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    allocate(trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
+    & patchveg(nea),rdephcanveg(nea,3), & !mhtveg(nea), &
+    & plfveg(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3),fpveg(nea,3),fsveg(nea,3),ffveg(nea,3),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. icm_veg variables')
+
+    !init
+    !ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
+    trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
+    lfNH4veg=0.0;       lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0
+    patchveg=0; rdephcanveg=0.0;        !mhtveg=0.0;     
+    plfveg=0.0; pmaxveg=0.0; fiveg=1.0; fnveg=1.0;      fpveg=1.0
+    fsveg=1.0;      ffveg=1.0
+
+    !options to output veg-related terms
+    if(iof_icm(129)==1) then
+      allocate(vegmtRPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.129')
+      vegmtRPOC=0.0
+    endif
+    if(iof_icm(130)==1) then
+      allocate(vegmtLPOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.130')
+      vegmtLPOC=0.0
+    endif
+    if(iof_icm(131)==1) then
+      allocate(vegmtDOC(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.131')
+      vegmtDOC=0.0
+    endif
+
+    if(iof_icm(132)==1) then
+      allocate(vegmtRPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.132')
+      vegmtRPON=0.0
+    endif
+    if(iof_icm(133)==1) then
+      allocate(vegmtLPON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.133')
+      vegmtLPON=0.0
+    endif
+    if(iof_icm(134)==1) then
+      allocate(vegmtDON(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.134')
+      vegmtDON=0.0
+    endif
+    if(iof_icm(135)==1) then
+      allocate(vegmtNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.135')
+      vegmtNH4=0.0
+    endif
+    if(iof_icm(136)==1) then
+      allocate(veggrNH4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.136')
+      veggrNH4=0.0
+    endif
+    if(iof_icm(137)==1) then
+      allocate(veggrNO3(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.137')
+      veggrNO3=0.0
+    endif
+
+    if(iof_icm(138)==1) then
+      allocate(vegmtRPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.138')
+      vegmtRPOP=0.0
+    endif
+    if(iof_icm(139)==1) then
+      allocate(vegmtLPOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.139')
+      vegmtLPOP=0.0
+    endif
+    if(iof_icm(140)==1) then
+      allocate(vegmtDOP(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.140')
+      vegmtDOP=0.0
+    endif
+    if(iof_icm(141)==1) then
+      allocate(vegmtPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.141')
+      vegmtPO4=0.0
+    endif
+    if(iof_icm(142)==1) then
+      allocate(veggrPO4(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.142')
+      veggrPO4=0.0
+    endif
+
+    if(iof_icm(143)==1) then
+      allocate(vegmtDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.143')
+      vegmtDOO=0.0
+    endif
+    if(iof_icm(144)==1) then
+      allocate(veggrDOO(nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.144')
+      veggrDOO=0.0
+    endif
+
+    if(iof_icm(177)==1) then
+      allocate(PrmPrdtveg(nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc.178')
+      PrmPrdtveg=0.0
+    endif
+
+  endif !iveg_icm
 
 
   !----------------------------------------------------------------
@@ -271,10 +392,6 @@ subroutine icm_init
     if(istat/=0) call parallel_abort('Failed in alloc. 58')
     rFSal=1.0
   endif
-
-
-
-
 
   !Carbon
   if(iof_icm(59)==1) then 
@@ -497,10 +614,11 @@ subroutine icm_init
 
 
 
-
+  !----------------------------------------------------------------
   !icm_sed_mod
+  !----------------------------------------------------------------
   allocate(SFA(nea),SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
-      & tau_c_elem(nea), &!erosion, ncai
+      & tau_c_elem(nea), &!ncai_erosion
       & SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), & 
       & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
       & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea), &
@@ -518,6 +636,9 @@ subroutine icm_init
   if(istat/=0) call parallel_abort('Failed in alloc. icm_sed_mod variables')
 
 !$OMP parallel workshare default(shared)
+  !----------------------------------------------------------------
+  !array init
+  !----------------------------------------------------------------
   wqc=0.0;
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
@@ -539,13 +660,19 @@ subroutine icm_init
   !default regiong id
   reg_PO4=1;   reg_GP=1;     reg_WS=1;   reg_PR=1;      reg_KC=1;
 
-  !rad_ncai
+  !ncai_rad
   rIavg_save=0.0
 
   !ncai_sav
   lfsav=0.0;    stsav=0.0;      rtsav=0.0;      hcansav=0.0 !init for each layer whole domain 
 
-  !erosion ncai
+  !ncai_veg
+  tlfveg=0.0;   tstveg=0.0;     trtveg=0.0;     hcanveg=0.0
+
+  !ncai_sav + ncai_veg
+  tthcan=0.0;   ttdens=0.0;
+
+  !ncai_erosion
   tau_c_elem=0.0
   EROH2S=0.0; EROLPOC=0.0; ERORPOC=0.0
   SED_EROH2S=0.0; SED_EROLPOC=0.0; SED_ERORPOC=0.0

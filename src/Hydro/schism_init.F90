@@ -42,7 +42,8 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav
+      use icm_mod, only : iSun,wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav, & !ncai_sav
+                          & tlfveg,tstveg,trtveg,hcanveg !ncai_veg 
       use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                            & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                            & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -417,7 +418,7 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(180),iof_cos(20),iof_fib(5), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(210),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         !Global output on/off flags
@@ -5398,8 +5399,8 @@
         enddo !k=1,31
 
         !gfortran requires all chars have same length
-        ar_name(1:6)=(/'CPOP ','CPON ','CPOC ','lfsav','stsav','rtsav'/)
-        do k=1,3 !# of 2D arrays
+        ar_name(1:10)=(/'CPOP ','CPON ','CPOC ','tlfveg','tstveg','trtveg','hcanveg','lfsav','stsav','rtsav'/)
+        do k=1,7 !# of 2D arrays
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
@@ -5421,13 +5422,21 @@
                   CPON(ie,m)=buf3(i)
                 else if(k==3) then
                   CPOC(ie,m)=buf3(i)
+                else if(k==4) then
+                  tlfveg(ie,m)=buf3(i)
+                else if(k==5) then
+                  tstveg(ie,m)=buf3(i)
+                else if(k==6) then
+                  trtveg(ie,m)=buf3(i)
+                else if(k==7) then
+                  hcanveg(ie,m)=buf3(i)
                 endif
               endif !iegl
             enddo !i
           enddo !m
         enddo !k
 
-        do k=4,6 !# of 2D arrays
+        do k=8,10 !# of 2D arrays
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
@@ -5442,11 +5451,11 @@
             do i=1,ne_global
               if(iegl(i)%rank==myrank) then
                 ie=iegl(i)%id
-                if(k==4) then
+                if(k==8) then
                   lfsav(m,ie)=buf3(i)
-                else if(k==5) then
+                else if(k==9) then
                   stsav(m,ie)=buf3(i)
-                else if(k==6) then
+                else if(k==10) then
                   rtsav(m,ie)=buf3(i)
                 endif
               endif !iegl

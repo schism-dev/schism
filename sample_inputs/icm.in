@@ -95,6 +95,11 @@ iZoo = 0
 isav_icm = 0 
 
 !-----------------------------------------------------------------------
+!Intertidal vegetation switch
+!-----------------------------------------------------------------------
+iveg_icm = 0
+
+!-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
 !-----------------------------------------------------------------------
 iAtm = 0 
@@ -428,7 +433,82 @@ fcdsav=  0.3
 fclpsav= 0.15
 fcrpsav= 0.05
 
+!density parameters
+rdenssav= 10
 
+!-----------------------------------------------------------------------
+!veg parameters
+!-----------------------------------------------------------------------
+initveg=  2                    !initveg=1:prop; initveg=2:gr3
+famveg=   0.2    0.2    0.2    !fraction for active metabolism
+fplfveg=  0.6    0.6    0.6    !fraction for leaf biomass
+fpstveg=  0.3    0.3    0.3    !fraction for stem biomass
+fprtveg=  0.1    0.1    0.1    !fraction for root biomass
+acdwveg=  0.38   0.38   0.38   !carbon to dry weight ratio
+pmbsveg=  0.1    0.1    0.1    !coefficient for maximum growth rate function
+toptveg=  32     32     32     !optimal temperature
+ktg1veg=  0.003  0.003  0.003  !shape function of temperature adjustment
+ktg2veg=  0.005  0.005  0.005  !shape function of temperature adjustment
+
+!metabolism parameters
+bmlfrveg= 0.02   0.02   0.02   !reference metabolism rate of lf
+bmstrveg= 0.02   0.02   0.02
+bmrtrveg= 0.02   0.02   0.02
+ktblfveg= 0.069  0.069  0.069  !shape coefficient for temp impact
+ktbstveg= 0.069  0.069  0.069
+ktbrtveg= 0.069  0.069  0.069
+trlfveg=  20     20     20     !reference temperature for metabolism
+trstveg=  20     20     20
+trrtveg=  20     20     20
+          
+!mortality parameters
+iMortveg= 0 !1: ture on die-off term for veg !error, to add
+
+!light & height parameters
+alphaveg= 0.006  0.006  0.006    
+rkshveg=  0.045  0.045  0.045  !light attenuation from veg absorption
+aveg=     -0.001 -0.001 -0.001 
+bveg=     1.0    1.0    1.0  
+dveg=     0.0036 0.0036 0.0036     
+eveg=     0.054  0.054  0.054
+critveg=  250    250    250
+
+!salt parameter
+saltveg=  35	 35	35
+saltoptveg=  35     15     0
+
+!inundation parameter
+tinunveg= 1      1      1
+
+!nitrogen parameters
+ancveg=   0.09   0.09   0.09   !nitrogen to carbon ratio
+khnwveg=  0.01   0.01   0.01   !nitrogen half saturation in water column
+khnsveg=  0.1    0.1    0.1    !nitrogen half saturation in sediments
+khnprveg= 0.1    0.1    0.1    !?? !half NH4 concentration
+fniveg=   0.5    0.5    0.5    !fraction of N to 4 groups in metabolism
+fndveg=   0.3    0.3    0.3    
+fnlpveg=  0.15   0.15   0.15   
+fnrpveg=  0.05   0.05   0.05   
+          
+!phosphorus parameters
+apcveg=   0.01   0.01   0.01   !phosphorus to carbon ratio
+khpwveg=  0.001  0.001  0.001  !phosphorus half saturation in water column
+khpsveg=  0.01   0.01   0.01   !phosphorus half saturation in sediments
+fpiveg=   0.5    0.5    0.5    !fraction of P to 4 groups in metabolism
+fpdveg=   0.35   0.35   0.35
+fplpveg=  0.1    0.1    0.1
+fprpveg=  0.05   0.05   0.05
+          
+!oxygen parameters
+aocrveg=  2.67   2.67   2.67   !oxygen to carbon ratio
+fdoveg=   0.5    0.5    0.5    !fraction of to DO, in metabolism
+fcdveg=   0.3    0.3    0.3    
+fclpveg=  0.15   0.15   0.15   
+fcrpveg=  0.05   0.05   0.05   
+
+!density parameters
+rdensveg= 10	 10	10     !density coefficient                         
+                               
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !wqparam2.in
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

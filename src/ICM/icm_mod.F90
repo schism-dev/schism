@@ -41,7 +41,7 @@ module icm_mod
   integer,save :: iZoo,iPh
   integer,save :: iAtm,iCheck,iout_icm
   integer,save :: iSet,iTurb,iWRea,iTSS 
-  integer,save :: isav_icm 
+  integer,save :: isav_icm,iveg_icm !ncai_sav, ncai_veg 
  
 !  !ICM region
 !  integer,save,allocatable :: reg_icm(:) !nea
@@ -55,18 +55,29 @@ module icm_mod
   !(nvrt,nea)>> 1 to nvrt: bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el
 
+  !ncai_sav + ncai_veg :: uniformed vegetation height, density
+  real(kind=iwp),save,allocatable,dimension(:) :: tthcan,ttdens !(nea) 
+
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea) 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
+  real(kind=iwp),save,allocatable,dimension(:,:) :: PrmPrdtsav !(nvrt,nea), unit: gC/m^2/day
   !(nvrt)<< surface to bottom
-  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt)
-  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt)
+  real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
+  real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
   !(nea)<<depth integrated, true outputs
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea), unit: g/m^2 
   real(kind=iwp),save,allocatable,dimension(:) :: hcansav,hcansavori!(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea)
-  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea)
+  real(kind=iwp),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
+  real(kind=iwp),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
 
+  !ncai_veg
+  real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg !,ztcveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
+  real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:)   :: PrmPrdtveg !(nea)
 
   !PH model
   integer, save :: inu_ph,irec_ph
@@ -106,7 +117,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,GPM1,GPM2,GPM3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
   real(kind=iwp),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
 
-  !ncai !sav parameters 
+  !ncai_sav readin parameters 
   integer,save,allocatable :: patchsav(:) !(nea)
   integer,save :: initsav
   real(kind=iwp),save :: famsav,fplfsav,fpstsav,fprtsav
@@ -119,13 +130,46 @@ module icm_mod
   real(kind=iwp),save :: fnisav, fndsav, fnlpsav, fnrpsav
   real(kind=iwp),save :: khpwsav,khpssav !phosphorus
   real(kind=iwp),save :: fpisav, fpdsav, fplpsav, fprpsav
+  real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
+  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
+  real(kind=iwp),save :: trlfsav,trstsav,trrtsav
+  !intermediate variables
   !sav growth rate and metabolism rate
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(kind=iwp),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
-  real(kind=iwp),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
-  real(kind=iwp),save :: ktblfsav,ktbstsav,ktbrtsav
-  real(kind=iwp),save :: trlfsav,trstsav,trrtsav
+  real(kind=iwp),save :: rdenssav !density
+
+
+  !ncai_veg readin parameters
+  integer,save,allocatable :: patchveg(:) !nea
+  integer,save :: initveg !decide init mapping format
+  integer,save :: iMortveg !flag of vegetation mortality
+  real(kind=iwp),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
+  real(kind=iwp),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
+  real(kind=iwp),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
+  real(kind=iwp),save,dimension(3) :: alphaveg,rkshveg !light
+  real(kind=iwp),save,dimension(3) :: saltveg,saltoptveg !salt
+  real(kind=iwp),save,dimension(3) :: tinunveg !inundation
+  real(kind=iwp),save,dimension(3) :: aveg,critveg,dveg,eveg !height
+  !real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
+  real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
+  real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
+  real(kind=iwp),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
+  real(kind=iwp),save,dimension(3) :: khpwveg,khpsveg !phosphorus
+  real(kind=iwp),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
+  real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
+  real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
+  real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
+  !intermediate variables
+  integer,save :: knveg(3) !index of top layer with canopy occupied, knveg=0 for emergency
+  real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
+  real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
+  real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
+  real(kind=iwp),save :: airtveg
+  real(kind=iwp),save,dimension(3) :: rdensveg
+
 
   !carbon parameters 
   real(kind=iwp),save :: FCRPZ,FCLPZ,FCDPZ
@@ -138,7 +182,8 @@ module icm_mod
   real(kind=iwp),save,dimension(2) :: FCDZ,rKHRZ
   real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC !ncai_sav
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
@@ -149,7 +194,9 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPON,predLPON,predDON,predNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
   real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON !ncai_sav
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
+
 
   !phosphorus parameters 
   real(kind=iwp),save :: FPRPZ,FPLPZ,FPDPZ,FPIPZ,FPRP,FPLP,FPDP,FPIP
@@ -163,7 +210,8 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOP,predLPOP,predDOP,predPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
   real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP !ncai_sav
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
@@ -174,7 +222,9 @@ module icm_mod
   real(kind=iwp),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
   real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO
+  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO !ncai_sav
+  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
+
 
   !--------------------------------------------------------------------------------------
   !erosion

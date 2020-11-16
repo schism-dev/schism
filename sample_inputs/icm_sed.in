@@ -194,6 +194,16 @@ frnsav=   0.65    0.300    0.050    !fraction of PON produced by rt metabolism g
 frpsav=   0.65    0.255    0.095    !fraction of POP produced by rt metabolism goes to G1, G2, G3
 frcsav=   0.65    0.255    0.095    !fraction of POC produced by rt metabolism goes to G1, G2, G3
 
+
+!-----------------------------------------------------------------------
+!Marsh
+!-----------------------------------------------------------------------
+!raction of POM produced by rt metabolism goes to G1, G2, G3, (3G,3veg)
+frnveg= 0.65  0.65  0.65  0.300   0.300   0.300  0.050   0.050   0.050  
+frpveg= 0.65  0.65  0.65  0.255   0.255   0.255  0.095   0.095   0.095  
+frcveg= 0.65  0.65  0.65  0.255   0.255   0.255  0.095   0.095   0.095  
+
+
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !benthic algae
 !iBalg=0: Turn off Benthic Algae module
