@@ -1783,7 +1783,7 @@
         integer file_num, num_file_times, nx_test, ny_test
         logical have_file, repeat, at_end
         character file_name*50, get_file_name*50
-        integer, parameter :: max_file_times = 10000 !max. # of time records with each file
+        integer, parameter :: max_file_times = 1000 !max. # of time records with each file
         real(rkind) test_time, file_times(max_file_times)
         integer i_time, repeat_num
 
