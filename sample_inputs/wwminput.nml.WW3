@@ -19,20 +19,11 @@
  UNITC          = 'SEC'              ! Unity of time step
  ENDTC          = '20031008.000000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
  DMIN           = 0.01              ! Minimum water depth. THis must be same as h0 in SCHISM
- WRITEDBGFLAG   = 0                  ! Write debug comments in separated files (1: on; 0: off)
- WRITESTATFLAG  = 0                  ! Write stat comments in separated files (1: on; 0: off)
- WRITEWINDBGFLAG = 0                 ! Write wind debug comments in separated files (1: on; 0: off)
 /
 
 &COUPL
  LCPL           = T                  ! Couple with current model ... main switch - keep it on for SCHISM-WWM
- LROMS          = F                  ! ROMS (set as F)
- LTIMOR         = F                  ! TIMOR (set as F)
- LSHYFEM        = F                  ! SHYFEM (set as F)
  RADFLAG        = 'LON'              ! LON: Longuet-Higgin; VOR: vortex formulation
- LPP_FILT_FLAG = F                   ! Filter option applied to the non-conservative terms due to depth-induced breaking in vortex formulation (RADFLAG = VOR). 
-                                     !At each node, spatial averaging is made within a circle whose the radius corresponds to a fraction of the peak wave length (LPP_FRAC).    
- LPP_FRAC =  0.5                     ! Fraction of peak wave length considered in LPP_FILT_FLAG
  LETOT          = F                  ! Option to compute the wave induced radiation stress. If .T. the radiation stress is based on the integrated wave spectrum
                                      ! e.g. Etot = Int,0,inf;Int,0,2*pi[N(sigma,theta)]dsigma,dtheta. If .F. the radiation stress is estimated as given in Roland et al. (2008) based
                                      ! on the directional spectra itself. It is always desirable to use .F., since otherwise the spectral informations are truncated and therefore
@@ -85,11 +76,12 @@
                                      ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM: ! 1: exterior bnd; -1: interior (islands)
                                      ! exterior and interior boundaries need not to be defined.
  IBOUNDFORMAT   = 3                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only). WW3 works only with LBCWA=T.
- FILEWAVE       = 'bndfiles.dat'     ! Boundary file defining boundary input
+ FILEWAVE       = 'bndfiles.dat'     ! Boundary file defining boundary input from WW3
  LINDSPRDEG     = F                  ! If 1-d wave spectra are read this flag defines whether the input for the directional spreading is in degrees (true) or exponent (false)
  LPARMDIR       = F                  ! If LPARMDIR is true then directional spreading is read from WBDS and must be in exponential format at this time, only valid for 1d Spectra
                                      ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
 
+ !Below are not used with WW3
  WBHS           = 2.                 ! Hs at the boundary for parametric spectra
  WBSS           = 2                  ! 1 or -1: Pierson-Moskowitz, 2 or -2: JONSWAP, 3 or -3: all in one BIN,
                                      ! 4: Gauss. The sign decides whether WBTP below is
@@ -101,11 +93,11 @@
  WBGAUSS        = 0.1                ! factor for gaussian distribution if WBSS=1
                                      ! End section for LBCWA=T and LINHOM=F
  WBPKEN         = 3.3                ! Peak enhancement factor for Jonswap Spectra if WBSS=2
- NCDF_HS_NAME   = 'hs'               ! NETCDF var. name for the significant wave height (normally it is just 'hs')
- NCDF_DIR_NAME  = 'dir'              ! NETCDF var. name for the mean wave direction (normally it is just 'dir')
- NCDF_SPR_NAME  = 'spr'              ! NETCDF var. name for the mean directional spreading (normally it is just 'spr')
- NCDF_FP_NAME   = 'fp'               ! NETCDF var. name for the peak freq. (normally it is just 'fp')
- NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
+! NCDF_HS_NAME   = 'hs'               ! NETCDF var. name for the significant wave height (normally it is just 'hs')
+! NCDF_DIR_NAME  = 'dir'              ! NETCDF var. name for the mean wave direction (normally it is just 'dir')
+! NCDF_SPR_NAME  = 'spr'              ! NETCDF var. name for the mean directional spreading (normally it is just 'spr')
+! NCDF_FP_NAME   = 'fp'               ! NETCDF var. name for the peak freq. (normally it is just 'fp')
+! NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
 /
 
 &WIND ! THIS IS NOW USED IN SCHISM
@@ -168,8 +160,8 @@
                       ! for ECMWF physics (2); Makin & Stam (3); Babanin et al. (4); Cycle 3 (5); 
                       !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
  IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=5); only used if cycle 3 is switched on
- MESBF          = 3                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
- FRICC          = 200E-6             ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50
+ MESBF          = 1                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
+ FRICC          = 0.067             ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50
  MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
  IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978)
                                      !                            2 - Thornton and Guza (1983) - Constant weighting function
@@ -184,7 +176,7 @@
                                      !                                e.g. Sallenger and Holman 1985
                                      !                          5   - gamma = a_BRCR * k_ph + b_BRCR / min_BRCR < gamma < max_BRCR
                                      !                                e.g. Ruessink et al (2003) with a_BRCR=0.76 and b_BRCR=0.29
- BRCR           = 0.73               ! either gamma, default is 0.73 for IBREAK=1,5 or gamma_TG, default is 0.42 for IBREAK=2,3 or biphase_ref, default is -4pi/9 = -1.3963 for IBREAK=4
+ BRCR           = 0.78               ! either gamma, default is 0.73 for IBREAK=1,5 or gamma_TG, default is 0.42 for IBREAK=2,3 or biphase_ref, default is -4pi/9 = -1.3963 for IBREAK=4
  a_BRCR         = 0.76               ! cf ICRIT = 4, 5
  b_BRCR         = 0.29               ! cf ICRIT = 4, 5
  min_BRCR       = 0.25               ! cf ICRIT = 4, 5
@@ -210,8 +202,6 @@
  TRICO          = 0.1                ! proportionality const. (\alpha_EB); default is 0.1
  TRIRA          = 5                  ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
  TRIURS         = 0.1                ! critical Ursell number; if Ursell # < TRIURS; triads are not computed
- !LPRECOMPST4    = T                 ! Precompute the indices and weightings for the Ardhuin et al. formulation and save to disk, if it is .F. then the saved
-                                     ! values are read from disk ! The fiels will be auto-detected, still make sure they correspond to your MSC,MDC,FRLOW,FRHIGH stuff, I add more checks soon and delete the fort.5002 file if u are not sure!
 /
 
 &NUMS
@@ -255,7 +245,7 @@
                                      ! Have fun ... Aron and Thomas.
                                      ! AMETHOD = 6 - BCGS Solver 
                                      ! AMETHOD = 7 - GAUSS and JACOBI SOLVER 
- SMETHOD        = 6
+ SMETHOD        = 1
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
@@ -348,20 +338,18 @@
  NDYNITER_SBR   = 10,        	     !
  NDYNITER_SNL3  = 10,       	     ! 
  NDYNITER_SBF   = 10,        	     !
- ZETA_METH      = 0,                 ! 0: use a simple conjugate gradient
-                                     !    preconditioner
  LSOUBOUND      = F                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height
                                      ! based on infinie fetch ... good for harbor studies. This is efficiently used for flume experiemnts mostly since in this case one would get a gradient in the crossection due to the effect
                                      ! that source terms are not treated there.
                                      ! 1: use PETSC
  WAE_SOLVERTHR =  1.e-6,             ! Threshold for the Block-Jacobi or Block-Gauss-Seider solver
- MAXITER =         100,              ! Max. number of iterations
+ MAXITER =         1000,              ! Max. number of iterations
  PMIN    =  1.,                      ! Max. percentage of non-converged grid points
  LNANINFCHK      = F,                ! Check for NaN and INF; usually turned off for efficiency
  LZETA_SETUP     = F,                ! Compute wave setup (simple momentum eq.)
  ZETA_METH       = 0,                ! Method for wave setup, Mathieu please explain!
- LSOURCESWAM     = F,                ! Use ECMWF WAM formualtion for deep water physics. 
- LSOURCESWWIII   = F,                ! WW3 Ardhuin et al. sources, not working yet in this code- use MESIN=1
+! LSOURCESWAM     = F,                ! Use ECMWF WAM formualtion for deep water physics. 
+! LSOURCESWWIII   = F,                ! WW3 Ardhuin et al. sources, not working yet in this code- use MESIN=1
  BLOCK_GAUSS_SEIDEL = T,             ! Use the Gauss Seidel on each
                                      ! computer block. The result seems
                                      ! to be faster and use less memory
@@ -397,7 +385,7 @@
                                      ! then only one file is generated
                                      ! otherwise, for example for 86400
                                      ! daily output files are created.
- OUTSTYLE       = 'XFN'              ! output option - use 'NO' for no output
+ OUTSTYLE       = 'NO'              ! output option - use 'NO' for no output
                                      ! 'NC' for netcdf output
                                      ! 'XFN' for XFN output (default)
                                      ! 'SHP' for DARKO SHP output

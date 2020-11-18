@@ -3,7 +3,7 @@
 ! Depending on the choices of parameters below you may need additional inputs
 
 &PROC
- PROCNAME       = 'roms_wwm_2003_test'! Project Name
+ PROCNAME       = 'test'             ! Project Name
  DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SCHISM
  LSTEA          = F                  ! steady mode; under development
  LQSTEA         = F                  ! Quasi-Steady Mode; In this case WWM-II is doing subiterations defined as DELTC/NQSITER unless QSCONVI is not reached
@@ -25,13 +25,16 @@
 /
 
 &GRID
+ LCIRD          = T                  ! Full circle in directional space
+ MINDIR         = 0.                 ! Minimum direction for simulation (unit: degrees; nautical convention; 0: from N; 90: from E); not used if LCIRD = .T.
+ MAXDIR         = 360.               ! Maximum direction for simulation (unit: degrees); may be < MINDIR; not used if LCIRD = .T.
  MDC            = 36                 ! Number of directional bins
  FRLOW          = 0.03               ! Low frequency limit of the discrete wave period (Hz; 1/period)
  FRHIGH         = 1.                 ! High frequency limit of the discrete wave period.
  MSC            = 36                 ! Number of frequency bins
  IGRIDTYPE      = 3                  ! Gridtype used 3 for schism 
- FILEGRID       = 'hgrid.gr3'        ! Name of the grid file. hgrid.gr3 if IGRIDTYPE = 3 (SCHISM)
- LOPTSIG        = F                  ! Use optimal distributions of freq. in spectral space ... fi+1 = fi * 1.1. Take care what you high freq. limit is!
+ FILEGRID       = 'hgrid_WWM.gr3'    ! Name of the grid file used by WWM
+! LOPTSIG        = F                  ! Use optimal distributions of freq. in spectral space ... fi+1 = fi * 1.1. Take care what you high freq. limit is!
 /
 
 &INIT
@@ -57,7 +60,7 @@
  ENDTC          = '19980902.000000'  ! End time
  FILEBOUND      = 'wwmbnd.gr3'       ! Boundary file defining boundary and Neumann nodes.
                                      ! Flag 0: not on bnd; 3: Neumann (0 gradient);
-                                     ! 2: active bnd (Direchlet). Bnd flags imported from SCHISM:
+                                     ! 2: active bnd (Direchlet). In addition, bnd flags imported from SCHISM:
                                      ! 1: exterior bnd; -1: interior (islands)
  IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 2 ~ FVCOM: 3 ~ WW3. FVCOM and WW3 works only with LBCWA=T.
                                      ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
@@ -72,13 +75,14 @@
  WBDSMS         = 1                  ! Directional spreading value in degrees (1) or as exponent (2)
  WBDS           = 10.                ! Directioanl spreading at the boundary (degrees/exponent)
  WBGAUSS        = 0.1                ! factor for gaussian distribution if WBSS=1
-                                     ! End section for LBCWA=T and LINHOM=F
  WBPKEN         = 3.3                ! Peak enhancement factor for Jonswap Spectra if WBSS=2
- NCDF_HS_NAME   = 'hs'               ! NETCDF var. name for the significant wave height (normally it is just 'hs')
- NCDF_DIR_NAME  = 'dir'              ! NETCDF var. name for the mean wave direction (normally it is just 'dir')
- NCDF_SPR_NAME  = 'spr'              ! NETCDF var. name for the mean directional spreading (normally it is just 'spr')
- NCDF_FP_NAME   = 'fp'               ! NETCDF var. name for the peak freq. (normally it is just 'fp')
- NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
+                                     ! End section for LBCWA=T and LINHOM=F
+
+! NCDF_HS_NAME   = 'hs'               ! NETCDF var. name for the significant wave height (normally it is just 'hs')
+! NCDF_DIR_NAME  = 'dir'              ! NETCDF var. name for the mean wave direction (normally it is just 'dir')
+! NCDF_SPR_NAME  = 'spr'              ! NETCDF var. name for the mean directional spreading (normally it is just 'spr')
+! NCDF_FP_NAME   = 'fp'               ! NETCDF var. name for the peak freq. (normally it is just 'fp')
+! NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
 /
 
 &WIND 
@@ -91,15 +95,15 @@
 /
 
 &ENGS !SOURCE TERMS
- ISOURCE        = 1                  ! Source Term Formulation for deep water: 1 ~ Ardhuin et al., 2 ~ ECMWF, ~ 3 ~ Komen et al. 1984, (DEFAULT: 1)
- MESNL          = 1                  ! Nonlinear Interaction NL4 , 1 ~ on, 2 ~ off (DIA), (DEFAULT: 1)
- MESIN          = 1                  ! Wind input 1 ~ on, 2 ~ off, (DEFAULT: 1)
- MESBF          = 1                  ! Bottomg friction: 1 ~ on, 2 ~ off (JONSWAP Formulation); (DEFAULT: 1)
+ MESNL          = 1                  ! Nonlinear Interaction NL4 
+ MESIN          = 1                  ! Wind input: Ardhuin etal (1), Cycle 4 (2), Makin & Stam (3); Babanin et al. (4), Cycle 3 (5), no wind (0) (default = 1; all others are just for rearch and explicitly not supported at all!!!)
+ MESBF          = 1                  ! Bottomg friction: JONSWAP(1) (Default at 1); 2 - Madsen
  FRICC          = 0.067              ! Cjon - Bottom friction coefficient (always positive); (DEFAULT: 0.067)
  MESBR          = 1                  ! Shallow water wave breaking; 0: no; 1: BJ78 same as in SWAN, (DEFAULT: 1)
  ICRIT          = 1                  ! Wave breaking criterion: set as 1 - SWAN, 2 - Dingemans; (DEFAULT: 2) 
- ALPBJ          = 0.5                ! Dissipation proportionality coefficient, (DEFAULT: 0.5)
- BRHD           = 0.78               ! Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-1.1 (suggested 0.78)
+ B_ALP          = 0.5                ! Dissipation proportionality coefficient, (DEFAULT: 0.5)
+ BRCR           = 0.78               ! Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-1.1 (suggested 0.78)
+ MEVEG          = 0                  !Vegetation effect. If '1', isav must =1 in SCHISM
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
  MESDS          = 1                  ! Whitecapping 1 ~ on, 0 ~ off; (DEFAULT: 1)
  MESTR          = 1                  ! Nonlinear Interaction in shallow water SNL3: 1 ~ on, 0 ~ off (DEFAULT: 0)
@@ -192,7 +196,7 @@
  LIMFAK         = 0.1                ! Proportionality coefficient for the action limiter MAX_DAC_DT = Limfak * Limiter; see notes above for value
  LDIFR          = F                  ! Use phase decoupled diffraction approximation according to Holthuijsen et al. (2003) (usually T; if crash, use F)
  IDIFFR         = 1                  ! Extended WAE account for higher order effects WAE becomes nonlinear; 1: Holthuijsen et al. ; 2: Liau et al. ; 3: Toledo et al. (in preparation)
- LCONV          = T                  ! Estimate convergence criterian and write disk (quasi-steady - qstea.out)
+ LCONV          = F                  ! Estimate convergence criterian and write disk (quasi-steady - qstea.out)
  LCFL           = F                  ! Write out CFL numbers; use F to save time
  NQSITER        = 1                  ! # of quasi-steady (Q-S) sub-divisions within each WWM time step (trial and errors)
  QSCONV1        = 0.98               ! Number of grid points [%/100] that have to fulfill abs. wave height criteria EPSH1
