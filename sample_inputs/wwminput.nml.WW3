@@ -1,9 +1,9 @@
-! This is the main input for WWM
+! This is the main input for WWM (based on Hurricabe Isabel for Ches Bay test)
 ! Other mandatory inputs: wwmbnd.gr3 (boundary flag files; see below)
 ! Depending on the choices of parameters below you may need additional inputs
 
 &PROC
- PROCNAME       = 'schism_wwm_2003_test' ! Project Name
+ PROCNAME       = 'Isabel'           ! Project Name
  DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SCHISM
  LSTEA          = F                  ! steady mode; under development
  LQSTEA         = F                  ! Quasi-Steady Mode; In this case WWM-II is doing subiterations defined as DELTC/NQSITER unless QSCONVI is not reached
@@ -100,59 +100,15 @@
 ! NCDF_F02_NAME  = 't02'              ! NETCDF var. name for the zero down crossing freq. (normally it is just 't02')
 /
 
-&WIND ! THIS IS NOW USED IN SCHISM
- LWINDFROMWWM   = F                  ! wind is coming from WWM (true) or from SCHISM(false). This is under developement. If F, the following parameters in this section are ignored. For SELFE users, use F.
- LSEWD          = F                  ! Time dependend wind input
- BEGTC          = '20030101.000000'  ! Begin time
- DELTC          = 60.0               ! Time step
- UNITC          = 'MIN'              ! Unit
- ENDTC          = '20030102.000000'  ! End time
- LINTERWD       = T                  ! Interpolate linear within the wind input time step
- LSTWD          = T                  ! Steady wind
- LCWIN          = T                  ! Constant wind
- LWDIR          = T                  ! Define wind using wind direction rather than vel. vectors
- WDIR           = 140.0              ! Wind direction if LWDIR=T
- WVEL           = 10.0               ! Wind velocity ...
- CWINDX         = 30.0               ! wind x-vec if LWDIR=F
- CWINDY         = 0.0                ! wind y-vec
- FILEWIND       = 'wind.dat'         ! wind input data file; input file format: write(*,*) curtx; write(*,*) curty               
- IWINDFORMAT    = 1                  ! kind of wind input
-                                     ! 1 - ASCII,
-                                     ! 2 - DWD_NETCDF
-                                     ! 3 - NOAA CFRS
-                                     ! 4 - NOAA NARR
-                                     ! 5 - netCDF WRF/ROMS forcing (Uwind,Vwind,LON,LAT,wind_time are used), fast bilinear interp 
+&WIND
 /
 
-&CURR !NOT USED WITH SCHISM
- LSECU          = F                  ! Time dependend currents
- BEGTC          = '20030908.000000'  ! Beginn time
- DELTC          = 600               ! Time step
- UNITC          = 'SEC'              ! Unit
- ENDTC          = '20031008.000000'  ! End time
- LINTERCU       = F                  ! Interpolate linear within the wind input time step
- LSTCU          = F                  ! Steady current
- LCCUR          = F                  ! Constant current
- CCURTX         = 0.0                ! current x-vec
- CCURTY         = 0.0                ! current y-vec
- FILECUR        = 'current.dat'      ! Current file name; input file format: write(*,*) curtx; write(*,*) curty
- LERGINP        = F                  ! read timor file for input ... ergzus.bin
- CURFAC         = 1.000000
- ICURRFORMAT    = 1
+&CURR
 /
 
-&WALV !NOT USED WITH SCHISM
- LSEWL          = F                  ! Time dependend elev.
- BEGTC          = '20030908.000000'  ! Begin time
- DELTC          = 1                  ! Time step
- UNITC          = 'HR'               ! Unit
- ENDTC          = '20031008.000000'  ! End time
- LINTERWL       = F                  ! Interpolate linear within the wind input time step
- LSTWL          = T                  ! Steady water level
- LCWLV          = T                  ! Constant water level
- CWATLV         = 0.0                ! elevation of the water level [m]
- FILEWATL       = ' '                ! water level file name; input file format: write(*,*) eta
+&WALV
 /
+
 
 &ENGS !SOURCE TERMS
  MESNL          = 1   ! Nonlinear Interaction NL4 , 1 ~ on, 0 ~ off (Discrete Interaction approx.)
@@ -183,7 +139,7 @@
  max_BRCR       = 0.8                ! cf ICRIT = 4, 5
  a_BIPH         = 0.2                ! Biphase coefficient, default 0.2 (intended for IBREAK=3)
  BR_COEF_METHOD = 1                  ! Method for the breaking coefficient: 1 - constant, 2 - adaptive
- B_ALP          = 1                  ! breaking coefficient. If BR_COEF_METHOD = 2, B_ALP ~ 40
+ B_ALP          = 0.5                  ! breaking coefficient. If BR_COEF_METHOD = 2, B_ALP ~ 40
  ZPROF_BREAK    = 2                  ! Vertical distribution function of wave breaking source term, only used in 3D run
                                      ! IS: side index, k: vertical layer index, dps: depth, zs: z vertical coordinate (/MSL), tmp0: Hs
                                      ! 1 - Homogeneous vertical distribution (swild_3D(k) = 1)
