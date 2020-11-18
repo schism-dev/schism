@@ -68,11 +68,11 @@ sub Interp_Regions {
 #-------------inputs-----------------
 @sub_regions_sal = ('CB.reg','DB.reg', 'Florence_init_sal.gr3.bnd.reg');
 @sub_region_vals_sal=('1','2','2');  # '1': from obs; '2': from *.gr3 as specified below
-@sub_grids_sal=('','DelawareBay_Data/DB_surf_S_ic.subset.gr3','Florence_init_sal.gr3'); #corresponding to each sub_region
+@sub_grids_sal=('','DelawareBay_Data/DB_surf_S_ic.subset.gr3','Florence_init_sal_20180617.gr3'); #corresponding to each sub_region
 
 @sub_regions_tem = ('CB.reg','Florence_init_tem.gr3.bnd.reg');
 @sub_region_vals_tem = ('1','2');
-@sub_grids_tem=('','Florence_init_tem.gr3'); #corresponding to each sub_region
+@sub_grids_tem=('','Florence_init_tem_20180617.gr3'); #corresponding to each sub_region
 
 $script_dir="../Grid_manipulation/";
 $hycom_dir="../HYCOM_FLORENCE_PERIOD/";
