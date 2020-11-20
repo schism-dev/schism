@@ -412,6 +412,8 @@
 ! on an element/prism if the total depth (at all nodes of the elem.)>=h_tvd and the flag in
 ! tvd.prop = 1 for the elem. (tvd.prop is required in this case); 
 ! otherwise upwind is used for efficiency. 
+! IMPORTANT: itr_met=2 (explicit TVD) option is kept mainly for comparison and should NOT 
+! be used normally (use '3' or '4' instead); also it does NOT support any other tracer modules like GEN etc.
 ! itr_met=3 (horizontal TVD) or 4 (horizontal WENO): implicit TVD in the vertical dimension. 
 ! Also if itr_met==3 and h_tvd>=1.e5, some parts of the code are bypassed for efficiency
 ! Controls for WENO are not yet in place
