@@ -5,7 +5,7 @@
 !    WARNING: most variables/arrays in this program use '1' as surface, and nvrt*
 !    as bottom!!!
 
-!    Inputs: (1) consts. inside the code; (2) hgrid.gr3 (in map projection); 
+!    Inputs: (1) consts. inside the code; (2) hgrid.gr3 (in map projection or lon/lat); 
 !            (3) transect.bp (depths denote seg #)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
