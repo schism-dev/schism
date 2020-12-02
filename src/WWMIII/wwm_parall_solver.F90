@@ -955,7 +955,7 @@
       USE DATAPOOL, only : MNP, MDC, MSC, LocalColorInfo, rkind, stat
       USE DATAPOOL, only : wwm_nnbr_send, wwm_nnbr_recv
       USE DATAPOOL, only : wwm_ListNbCommon_send, wwm_ListNbCommon_recv
-      USE DATAPOOL, only : XP, YP, rtype, ierr, myrank, iplg
+      USE DATAPOOL, only : XP, YP, rtype, ierr, myrank, iplg, WRITESTATFLAG
       implicit none
       type(LocalColorInfo), intent(inout) :: LocalColor
       integer, intent(in) :: Nblock
@@ -963,8 +963,10 @@
       integer lenBlock, maxBlockLength
       integer istat
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_BLOCK_FREQDIR'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_BLOCK_FREQDIR'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       Ntot=MSC*MDC
       Hlen=INT(MyREAL(Ntot)/Nblock)
@@ -1007,8 +1009,10 @@
       END DO
       LocalColor % maxBlockLength = maxBlockLength
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING INIT_BLOCK_FREQDIR'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING INIT_BLOCK_FREQDIR'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1019,7 +1023,7 @@
       USE DATAPOOL, only : wwm_ListNbCommon_send, wwm_ListNbCommon_recv
       USE DATAPOOL, only : wwm_ListDspl_send, wwm_ListDspl_recv
       USE DATAPOOL, only : wwm_ListNeigh_send, wwm_ListNeigh_recv
-      USE DATAPOOL, only : XP, YP, rtype, ierr, myrank, iplg
+      USE DATAPOOL, only : XP, YP, rtype, ierr, myrank, iplg, WRITESTATFLAG
       implicit none
       type(LocalColorInfo), intent(inout) :: LocalColor
       integer, allocatable :: ListNeed(:), IdxRev(:)
@@ -1033,8 +1037,10 @@
       integer, allocatable :: dspl_send(:), dspl_recv(:)
       integer istat
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_BLK_L2U_ARRAY'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_BLK_L2U_ARRAY'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       maxBlockLength=LocalColor % maxBlockLength
       ListFirstCommon_send=0
@@ -1137,8 +1143,10 @@
       END DO
       deallocate(ListNeed, IdxRev)
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING INIT_BLK_L2U_ARRAY'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING INIT_BLK_L2U_ARRAY'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       END SUBROUTINE
 !**********************************************************************
@@ -1147,7 +1155,7 @@
       SUBROUTINE SYMM_INIT_COLORING(LocalColor, NbBlock)
       USE DATAPOOL, only : LocalColorInfo, MNP, rkind, XP, YP, stat
       USE DATAPOOL, only : DO_SYNC_UPP_2_LOW, DO_SYNC_LOW_2_UPP, DO_SYNC_FINAL
-      USE datapool, only : myrank, nproc, iplg, Graph
+      USE datapool, only : myrank, nproc, iplg, Graph, WRITESTATFLAG
       implicit none
       type(LocalColorInfo), intent(inout) :: LocalColor
       integer, intent(in) :: NbBlock
@@ -1158,9 +1166,10 @@
 # ifdef DEBUG
       integer TheRes
 # endif
-
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING SYMM_INIT_COLORING'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING SYMM_INIT_COLORING'
+        FLUSH(STAT%FHNDL)
+      END IF
 # ifdef DEBUG
       CALL COMPUTE_TOTAL_INDEX_SHIFT(TheRes)
       WRITE(740+myrank,*) 'Total residual shift=', TheRes
@@ -1224,9 +1233,10 @@
       DO_SYNC_LOW_2_UPP=.TRUE.
       DO_SYNC_FINAL=.TRUE.
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH SYMM_INIT_COLORING'
-      FLUSH(STAT%FHNDL)
-
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH SYMM_INIT_COLORING'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1240,7 +1250,7 @@
       USE DATAPOOL, only : wwm_ListNeigh_send, wwm_ListNeigh_recv
       USE DATAPOOL, only : wwm_ListDspl_recv
       USE datapool, only : myrank, nproc, comm, ierr, nbrrank_p
-      USE datapool, only : MPI_STATUS_SIZE
+      USE datapool, only : MPI_STATUS_SIZE, WRITESTATFLAG
       implicit none
 
       type(LocalColorInfo), intent(inout) :: LocalColor
@@ -1259,8 +1269,10 @@
       integer IP
 # endif
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_LOW_2_UPP_ARRAYS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_LOW_2_UPP_ARRAYS'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       eColor=ListColor(myrank+1)
       nbUpp_send=0
@@ -1363,8 +1375,10 @@
         END DO
       ENDIF
 # endif
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH INIT_LOW_2_UPP_ARRAYS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH INIT_LOW_2_UPP_ARRAYS'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1394,8 +1408,10 @@
       integer nbNeedSend_u2l, nbNeedRecv_u2l
       integer lenMNP
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_COVLOWER_ARRAY'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING INIT_COVLOWER_ARRAY'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       ListFirst=0
       DO iProc=2,nproc
@@ -1862,8 +1878,10 @@
       allocate(LocalColor % ACexch(maxBlockLength, lenMNP), stat=istat)
       IF (istat/=0) CALL WWM_ABORT('wwm_parall_solver, allocate error 65')
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH INIT_COVLOWER_ARRAY'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHED WITH INIT_COVLOWER_ARRAY'
+        FLUSH(STAT%FHNDL)
+      END IF
 
       END SUBROUTINE
 !**********************************************************************
@@ -3022,15 +3040,19 @@
 !*                                                                    *
 !**********************************************************************
       SUBROUTINE WWM_SOLVER_EIMPS(LocalColor, SolDat)
-      USE DATAPOOL, only : LocalColorInfo, I5_SolutionData, stat
+      USE DATAPOOL, only : LocalColorInfo, I5_SolutionData, stat, WRITESTATFLAG
       implicit none
       type(LocalColorInfo), intent(inout) :: LocalColor
       type(I5_SolutionData), intent(inout) :: SolDat
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING WWM_SOLVER_EIMPS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING WWM_SOLVER_EIMPS'
+        FLUSH(STAT%FHNDL)
+      END IF
       CALL I5B_EIMPS(LocalColor, SolDat)
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING WWM_SOLVER_EIMPS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING WWM_SOLVER_EIMPS'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*
@@ -3290,7 +3312,7 @@
       USE DATAPOOL, only : LocalColorInfo, I5_SolutionData
       USE DATAPOOL, only : rkind, MSC, MDC, AC2, MNP, NNZ
       USE DATAPOOL, only : PCmethod, IOBPD, ZERO, STAT
-      USE datapool, only : myrank, exchange_p4d_wwm
+      USE datapool, only : myrank, exchange_p4d_wwm, WRITESTATFLAG
       implicit none
       type(LocalColorInfo), intent(inout) :: LocalColor
       type(I5_SolutionData), intent(inout) :: SolDat
@@ -3302,8 +3324,10 @@
 # endif
       integer IS, ID, IP
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING I5B_EIMPS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'ENTERING I5B_EIMPS'
+        FLUSH(STAT%FHNDL)
+      END IF
 
 # ifdef DEBUG
       WRITE(740+myrank,*) 'Begin I5B_EIMPS'
@@ -3336,13 +3360,15 @@
           AC2(:,ID,IP)=MAX(ZERO, AC2(:,ID,IP))*MyREAL(IOBPD(ID,IP))
         END DO
       END DO
-      WRITE(STAT%FHNDL,*) 'nbIter=', nbIter, 'L2/LINF=', maxval(Norm_L2), maxval(Norm_LINF)
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'nbIter=', nbIter, 'L2/LINF=', maxval(Norm_L2), maxval(Norm_LINF)
 # ifdef DEBUG
       IF (myrank == 1) THEN
         Write(myrank+591,*) 'Clearing ENDING'
       END IF
 # endif
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING I5B_EIMPS'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'FINISHING I5B_EIMPS'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 #endif

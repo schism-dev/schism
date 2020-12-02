@@ -6,12 +6,15 @@
       USE WWM_HOTFILE_MOD
       USE DATAPOOL
       IMPLICIT NONE
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4,L5)') 'WRITING OUTPUT INTERNAL TIME', RTIME, MAIN%TMJD, OUT_HISTORY%TMJD-1.E-8, OUT_HISTORY%EMJD, (MAIN%TMJD .GE. OUT_HISTORY%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_HISTORY%EMJD)
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4,L5)') 'WRITING OUTPUT INTERNAL TIME', RTIME, &
+           &  MAIN%TMJD, OUT_HISTORY%TMJD-1.E-8, OUT_HISTORY%EMJD, & 
+           & (MAIN%TMJD .GE. OUT_HISTORY%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_HISTORY%EMJD)
       !
       ! The history output
       !
       IF ( (MAIN%TMJD .GE. OUT_HISTORY%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_HISTORY%EMJD)) THEN
-        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'WRITING OUTPUT INTERNAL TIME', RTIME, MAIN%TMJD, OUT_HISTORY%TMJD-1.E-8, OUT_HISTORY%EMJD
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'WRITING OUTPUT INTERNAL TIME', RTIME, & 
+           &  MAIN%TMJD, OUT_HISTORY%TMJD-1.E-8, OUT_HISTORY%EMJD
         CALL OUTPUT_HISTORY(RTIME*DAY2SEC,.FALSE.)
         OUT_HISTORY%TMJD = OUT_HISTORY%TMJD + OUT_HISTORY%DELT*SEC2DAY
       END IF
@@ -19,7 +22,8 @@
       ! The station output
       !
       IF ( (MAIN%TMJD .GE. OUT_STATION%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_STATION%EMJD)) THEN
-        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)')  'WRITING OUTPUT INTERNAL TIME', RTIME, MAIN%TMJD, OUT_STATION%TMJD-1.E-8, OUT_STATION%EMJD
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)')  'WRITING OUTPUT INTERNAL TIME', RTIME, & 
+           &  MAIN%TMJD, OUT_STATION%TMJD-1.E-8, OUT_STATION%EMJD
         CALL OUTPUT_STATION(RTIME*DAY2SEC,.FALSE.)
         OUT_STATION%TMJD = OUT_STATION%TMJD + OUT_STATION%DELT*SEC2DAY
       END IF
@@ -28,8 +32,10 @@
       !
       IF (LHOTF) THEN
         IF ( (MAIN%TMJD .GE. HOTF%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. HOTF%EMJD)) THEN
-          WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'WRITING HOTFILE INTERNAL TIME', RTIME
-          FLUSH(STAT%FHNDL)
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'WRITING HOTFILE INTERNAL TIME', RTIME
+            FLUSH(STAT%FHNDL)
+          END IF
           CALL OUTPUT_HOTFILE
           HOTF%TMJD = HOTF%TMJD + HOTF%DELT*SEC2DAY
         END IF
@@ -37,53 +43,77 @@
       !
       ! The wavewatch III exports
       !
-      WRITE(STAT%FHNDL,*) 'Before LEXPORT_BOUC_WW3'
-      FLUSH(STAT%FHNDL)
-      IF (LEXPORT_BOUC_WW3) THEN
-        WRITE(STAT%FHNDL,*) 'Before time test'
-        WRITE(STAT%FHNDL,*) 'MAIN%TMJD=', MAIN%TMJD
-        WRITE(STAT%FHNDL,*) 'OUT_BOUC_WW3%TMJD=', OUT_BOUC_WW3%TMJD
-        WRITE(STAT%FHNDL,*) 'OUT_BOUC_WW3%EMJD=', OUT_BOUC_WW3%EMJD
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Before LEXPORT_BOUC_WW3'
         FLUSH(STAT%FHNDL)
-        IF ( (MAIN%TMJD .GE. OUT_BOUC_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_BOUC_WW3%EMJD)) THEN
-          WRITE(STAT%FHNDL,*) 'After time test'
+      END IF
+      IF (LEXPORT_BOUC_WW3) THEN
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'Before time test'
+          WRITE(STAT%FHNDL,*) 'MAIN%TMJD=', MAIN%TMJD
+          WRITE(STAT%FHNDL,*) 'OUT_BOUC_WW3%TMJD=', OUT_BOUC_WW3%TMJD
+          WRITE(STAT%FHNDL,*) 'OUT_BOUC_WW3%EMJD=', OUT_BOUC_WW3%EMJD
           FLUSH(STAT%FHNDL)
+        END IF
+        IF ( (MAIN%TMJD .GE. OUT_BOUC_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_BOUC_WW3%EMJD)) THEN
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'After time test'
+            FLUSH(STAT%FHNDL)
+          END IF
 !          CALL EXPORT_BOUC_WW3_FORMAT
           OUT_BOUC_WW3%TMJD = OUT_BOUC_WW3%TMJD + OUT_BOUC_WW3%DELT*SEC2DAY
         END IF
       END IF
-      WRITE(STAT%FHNDL,*) 'Before LEXPORT_WIND_WW3'
-      FLUSH(STAT%FHNDL)
-      IF (LEXPORT_WIND_WW3) THEN
-        WRITE(STAT%FHNDL,*) 'Before time test'
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Before LEXPORT_WIND_WW3'
         FLUSH(STAT%FHNDL)
-        IF ( (MAIN%TMJD .GE. OUT_WIND_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_WIND_WW3%EMJD)) THEN
-          WRITE(STAT%FHNDL,*) 'After time test'
+      END IF
+      IF (LEXPORT_WIND_WW3) THEN
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'Before time test'
           FLUSH(STAT%FHNDL)
+        END IF
+        IF ( (MAIN%TMJD .GE. OUT_WIND_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_WIND_WW3%EMJD)) THEN
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'After time test'
+            FLUSH(STAT%FHNDL)
+          END IF
 !          CALL EXPORT_WIND_WW3_FORMAT
           OUT_WIND_WW3%TMJD = OUT_WIND_WW3%TMJD + OUT_WIND_WW3%DELT*SEC2DAY
         END IF
       END IF
-      WRITE(STAT%FHNDL,*) 'Before LEXPORT_CURR_WW3'
-      FLUSH(STAT%FHNDL)
-      IF (LEXPORT_CURR_WW3) THEN
-        WRITE(STAT%FHNDL,*) 'Before time test'
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Before LEXPORT_CURR_WW3'
         FLUSH(STAT%FHNDL)
-        IF ( (MAIN%TMJD .GE. OUT_CURR_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_CURR_WW3%EMJD)) THEN
-          WRITE(STAT%FHNDL,*) 'After time test'
+      END IF
+      IF (LEXPORT_CURR_WW3) THEN
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'Before time test'
           FLUSH(STAT%FHNDL)
+        END IF
+        IF ( (MAIN%TMJD .GE. OUT_CURR_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_CURR_WW3%EMJD)) THEN
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'After time test'
+            FLUSH(STAT%FHNDL)
+          END IF
 !          CALL EXPORT_CURR_WW3_FORMAT
           OUT_CURR_WW3%TMJD = OUT_CURR_WW3%TMJD + OUT_CURR_WW3%DELT*SEC2DAY
         END IF
       END IF
-      WRITE(STAT%FHNDL,*) 'Before LEXPORT_WALV_WW3'
-      FLUSH(STAT%FHNDL)
-      IF (LEXPORT_WALV_WW3) THEN
-        WRITE(STAT%FHNDL,*) 'Before time test'
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Before LEXPORT_WALV_WW3'
         FLUSH(STAT%FHNDL)
-        IF ( (MAIN%TMJD .GE. OUT_WALV_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_WALV_WW3%EMJD)) THEN
-          WRITE(STAT%FHNDL,*) 'After time test'
+      END IF
+      IF (LEXPORT_WALV_WW3) THEN
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'Before time test'
           FLUSH(STAT%FHNDL)
+        END IF
+        IF ( (MAIN%TMJD .GE. OUT_WALV_WW3%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_WALV_WW3%EMJD)) THEN
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'After time test'
+            FLUSH(STAT%FHNDL)
+          END IF
 !          CALL EXPORT_WALV_WW3_FORMAT
           OUT_WALV_WW3%TMJD = OUT_WALV_WW3%TMJD + OUT_WALV_WW3%DELT*SEC2DAY
         END IF
@@ -94,7 +124,8 @@
       IF (BOUC_NETCDF_OUT_PARAM .or. BOUC_NETCDF_OUT_SPECTRA) THEN
 #ifdef NCDF
         IF ( (MAIN%TMJD .GE. OUT_BOUC%TMJD-1.E-8) .AND. (MAIN%TMJD .LE. OUT_BOUC%EMJD)) THEN
-          WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'WRITING OUTPUT INTERNAL TIME', RTIME, MAIN%TMJD, OUT_BOUC%TMJD-1.E-8, OUT_BOUC%EMJD
+          IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'WRITING OUTPUT INTERNAL TIME', &
+             & RTIME, MAIN%TMJD, OUT_BOUC%TMJD-1.E-8, OUT_BOUC%EMJD
           CALL WRITE_NETCDF_BOUNDARY
           OUT_BOUC%TMJD = OUT_BOUC%TMJD + OUT_BOUC%DELT*SEC2DAY
         END IF
@@ -113,8 +144,10 @@
 #endif
       END IF
       !
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH GENERAL_OUTPUT'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH GENERAL_OUTPUT'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -129,8 +162,10 @@
       OUT_HISTORY%TMJD = OUT_HISTORY%TMJD + OUT_HISTORY%DELT*SEC2DAY
       OUT_STATION%TMJD = OUT_STATION%TMJD + OUT_STATION%DELT*SEC2DAY
 
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH WWM OUTPUT'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH WWM OUTPUT'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -156,11 +191,13 @@
           CALL OUTPUT_HISTORY_SHP( TIME )
 #endif
         CASE DEFAULT
-          WRITE(DBG%FHNDL,*) 'IOUTP=', VAROUT_HISTORY%IOUTP
+          IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'IOUTP=', VAROUT_HISTORY%IOUTP
           CALL WWM_ABORT('WRONG NO OUTPUT SPECIFIED')
       END SELECT
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -173,7 +210,7 @@
       CHARACTER(LEN=15)   :: CTIME
       CALL MJD2CT(MAIN%TMJD, CTIME)
       IF ((DIMMODE .GT. 1) .and. LOUTS) THEN
-        WRITE(STAT%FHNDL,*) 'WRITING STATION OUTPUT'
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'WRITING STATION OUTPUT'
         SELECT CASE (VAROUT_STATION%IOUTP)
           CASE (0)
             ! Do nothing ...
@@ -189,8 +226,10 @@
             CALL WWM_ABORT('WRONG NO STATION OUTPUT SPECIFIED')
         END SELECT
       END IF
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY STATION'        
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY STATION'   
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -424,8 +463,10 @@
          
 !$OMP END MASTER
 #endif
-        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH XFN_HISTORY'
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH XFN_HISTORY'
+          FLUSH(STAT%FHNDL)
+        END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -458,14 +499,17 @@
         IP=INE(I,IEfind)
         ACLOC(:,:) = AC2(:,:,IP)
         CALL MEAN_PARAMETER(IP,ACLOC,ISMAX,HS,TM01,TM02,TM10,KLM,WLM)
-        WRITE(DBG%FHNDL,*) 'IP=', IP, 'HS=', HS, 'wi=', WI(I)
+        IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'IP=', IP, 'HS=', HS, 'wi=', WI(I)
         HSinterp=HSinterp+WI(I)*HS
         HSinterpB=HSinterpB + WI(I)*HS*HS
         sumAC=sumAC + WI(I)*sum(ACLOC)
       END DO
       HSinterpB=SQRT(HSinterpB)
-      WRITE(DBG%FHNDL,*) 'HSinterp=', HSinterp, ' HS(b)=', HSinterpB
-      WRITE(DBG%FHNDL,*) 'sumAC=', sumAC
+      IF (WRITEDBGFLAG == 1) THEN
+        WRITE(DBG%FHNDL,*) 'HSinterp=', HSinterp, ' HS(b)=', HSinterpB
+        WRITE(DBG%FHNDL,*) 'sumAC=', sumAC
+        FLUSH(DBG%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -625,7 +669,7 @@
             CDLOC_STATIONS(I)            = -999.
             WINDXLOC_STATIONS(I)         = -999.
             WINDYLOC_STATIONS(I)         = -999.
-            WRITE(DBG%FHNDL,*) 'STATION OUT OF MESH', I
+            IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'STATION OUT OF MESH', I
           ELSE
             TheIsumR=MyREAL(STATION(I)%ISUM)
             DEPLOC_STATIONS(I)       = DEPLOC_SUM(I)      / TheIsumR
@@ -746,8 +790,10 @@
 #ifdef MPI_PARALL_GRID
       END IF
 #endif
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_STE'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_STE'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 !**********************************************************************
 !* The netcdf output outs the most variables and is the most          *
@@ -1123,7 +1169,7 @@
            !WRITE(DBG%FHNDL,*) 'INTERPOLATED MYRANK =', MYRANK, I, DEPLOC(I), CURTXYLOC(I,:), SUM(WKLOC(I,:)), SUM(ACLOC_STATIONS(:,:,I))
          END DO
 
-         WRITE(DBG%FHNDL,*) 'DEPTH OF THE FOUND STATIONS LINE', DEPLOC_STATIONS
+         IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'DEPTH OF THE FOUND STATIONS LINE', DEPLOC_STATIONS
 
          CALL MPI_REDUCE(DEPLOC_STATIONS(:),DEPLOC_SUM(:),IOUTS,rtype,MPI_SUM,0,COMM,IERR)
          CALL MPI_REDUCE(DEPLOC_STATIONS(:),WATLEVLOC_SUM(:),IOUTS,rtype,MPI_SUM,0,COMM,IERR)
@@ -1153,7 +1199,7 @@
                STATION(I)%OUTPAR_NODE(1:24) = -999.
                ACLOC           = -999.
                WKLOC_STATIONS           = -999.
-               WRITE(DBG%FHNDL,*) 'STATION OUT OF MESH', I
+               IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'STATION OUT OF MESH', I
              ELSE
                TheIsumR=MyREAL(STATION(I)%ISUM)
                DEPLOC_STATIONS(I)       = DEPLOC_SUM(I)      / TheIsumR
@@ -1358,7 +1404,7 @@
         SumHS=SumHS + HS
       END DO
       AvgHS=SumHS/MyREAL(MNP)
-      WRITE(DBG%FHNDL,*) 'DEBUG AvgHS=', AvgHS, ' MaxHS=', MaxHS
+      IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'DEBUG AvgHS=', AvgHS, ' MaxHS=', MaxHS
 
       END SUBROUTINE
 !**********************************************************************
@@ -1766,8 +1812,10 @@
 
 110      FORMAT (2X,I10,3(A2,F15.8))
 
-        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY_SHP'
-        FLUSH(STAT%FHNDL)
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY_SHP'
+           FLUSH(STAT%FHNDL)
+         END IF
       END SUBROUTINE
 #endif
 !**********************************************************************
@@ -1888,7 +1936,7 @@
 !**********************************************************************
 #ifdef NCDF
       SUBROUTINE HISTORY_NC_PRINTMMA(eStr, OUTT, NPWORK, NBVAR, I)
-      USE DATAPOOL, only : rkind, MULTIPLEOUT_HIS, MNP, DBG, STAT
+      USE DATAPOOL, only : rkind, MULTIPLEOUT_HIS, MNP, DBG, STAT, WRITESTATFLAG
 #ifdef MPI_PARALL_GRID
       USE DATAPOOL, only : nwild_loc_res, np_global
       USE DATAPOOL, only : COMM, IERR, NPROC, myrank, rtype, istatus, ierr
@@ -1929,7 +1977,7 @@
           CALL MPI_SEND(eVect,3,rtype, 0, 190, comm, ierr)
         ENDIF
       ENDIF
-      IF (myrank.eq.0) THEN
+      IF (myrank.eq.0 .AND. WRITESTATFLAG == 1) THEN
         WRITE(STAT%FHNDL,110) TRIM(eStr), MinV, MaxV, AvgV
       END IF
 # else
@@ -2158,8 +2206,11 @@
           IsInitDone = .FALSE.
         ENDIF
       ENDIF
-      WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY_NC'
-      FLUSH(STAT%FHNDL)
+
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,'("+TRACE...",A,4F15.4)') 'FINISHED WITH OUTPUT_HISTORY_NC'
+        FLUSH(STAT%FHNDL)
+      END IF
       END SUBROUTINE
 #endif
 !**********************************************************************

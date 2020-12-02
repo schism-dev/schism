@@ -108,7 +108,7 @@ subroutine z_intp1(x1,y1,x2,y2,n1,n2,ierr)                                    !
 !   +---+ |   |
 !         +---+
 !
-use datapool,only:stat
+use datapool,only:stat,WRITESTATFLAG
 implicit none
 !
 !  0. Update history
@@ -220,7 +220,7 @@ if(x1(1) < x1(n1)) then             ! data increasing
   do i1=1,n1-1
     if(x1(i1) > x1(i1+1)) then
       ierr=1
-      write(stat%fhndl,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
+      if (WRITESTATFLAG == 1) write(stat%fhndl,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
       goto 9999
     end if
   end do
@@ -228,7 +228,7 @@ if(x1(1) < x1(n1)) then             ! data increasing
   do i2=1,n2-1
     if(x2(i2) > x2(i2+1)) then
       ierr=ierr+10
-      write(stat%fhndl,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
+      if (WRITESTATFLAG == 1) write(stat%fhndl,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
       goto 9999
     end if
   end do
@@ -237,7 +237,7 @@ else                                 ! data decreasing
   do i1=1,n1-1
     if(x1(i1) < x1(i1+1)) then
       ierr=2
-      write(stat%fhndl,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
+      if (WRITESTATFLAG == 1) write(stat%fhndl,*) 'z_intp1: i1 x1(i1) x1(i1+1):',i1,x1(i1),x1(i1+1)
       goto 9999
     end if
   end do
@@ -245,7 +245,7 @@ else                                 ! data decreasing
   do i2=1,n2-1
     if(x2(i2) < x2(i2+1)) then
       ierr=ierr + 20
-      write(stat%fhndl,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
+      if (WRITESTATFLAG == 1) write(stat%fhndl,*) 'z_intp1: i2 x2(i2) x2(i2+1):',i2,x2(i2),x2(i2+1)
       goto 9999
     end if
   end do

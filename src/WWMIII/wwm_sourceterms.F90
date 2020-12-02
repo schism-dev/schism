@@ -461,16 +461,17 @@
            ELSEIF (MESIN == 5) THEN
            ENDIF
 
-           DISSIPATION(IP) = 0.
-           AIRMOMENTUM(IP) = 0.
-           DO ID = 1, MDC
-             TMP_DS = ( SSBR(:,ID) + SSBF(:,ID) + SSDS(:,ID) ) * SPSIG * DDIR
-             TMP_IN = ( SSINE(:,ID) + SSINL(:,ID) ) * SPSIG * DDIR
-             DO IS = 2, MSC
-               DISSIPATION(IP) = DISSIPATION(IP) + ONEHALF * ( TMP_DS(IS) + TMP_DS(IS-1) ) * DS_INCR(IS)
-               AIRMOMENTUM(IP) = AIRMOMENTUM(IP) + ONEHALF * ( TMP_IN(IS) + TMP_IN(IS-1) ) * DS_INCR(IS)
-             END DO
-           END DO
+           ! Only used for nesting, will be removed in the future
+           !DISSIPATION(IP) = 0.
+           !AIRMOMENTUM(IP) = 0.
+           !DO ID = 1, MDC
+           !  TMP_DS = ( SSBR(:,ID) + SSBF(:,ID) + SSDS(:,ID) ) * SPSIG * DDIR
+           !  TMP_IN = ( SSINE(:,ID) + SSINL(:,ID) ) * SPSIG * DDIR
+           !  DO IS = 2, MSC
+           !    DISSIPATION(IP) = DISSIPATION(IP) + ONEHALF * ( TMP_DS(IS) + TMP_DS(IS-1) ) * DS_INCR(IS)
+           !    AIRMOMENTUM(IP) = AIRMOMENTUM(IP) + ONEHALF * ( TMP_IN(IS) + TMP_IN(IS-1) ) * DS_INCR(IS)
+           !  END DO
+           !END DO
 
          ENDIF
 

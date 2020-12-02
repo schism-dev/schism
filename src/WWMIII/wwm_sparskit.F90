@@ -2931,7 +2931,7 @@
         subroutine pgmres(n, im, rhs, sol, eps, maxits, aspar, nnz, ia, ja, alu, jlu, ju, vv, ierr)
 !-----------------------------------------------------------------------
 !       use datapool, only : nnz, ia, ja, alu, jlu, ju, vv, aspar!, rhs, sol
-       use datapool, only : rkind, DBG
+       use datapool, only : rkind, DBG, WRITEDBGFLAG
        implicit none
 
        integer :: n, im, maxits, ierr, nnz
@@ -2997,7 +2997,7 @@
             end do
 !     invert  and store diagonal element.
             if (abs(alu(ii)) .lt. epsmac) then
-              write(DBG%FHNDL,*) 'zero pivot'
+              IF (WRITEDBGFLAG == 1) write(DBG%FHNDL,*) 'zero pivot'
               stop 'wwm_sparskit l.3000'
             end if
             alu(ii) = 1.0_rkind/alu(ii)

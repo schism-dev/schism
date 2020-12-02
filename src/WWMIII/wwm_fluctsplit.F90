@@ -444,7 +444,7 @@
 
          U = AC2(IS,ID,:)
 #ifdef DEBUG_COHERENCY_FLUCT
-         WRITE(STAT%FHNDL,*) 'IS=', IS, ' ID=', ID
+         IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'IS=', IS, ' ID=', ID
          CALL Print_SumScalar(SI, "SI at start of EXPLICIT_N_SCHEME")
          CALL Print_SumScalar(DTSI, "DTSI at start of EXPLICIT_N_SCHEME")
          CALL Print_SumScalar(U, "U at start of EXPLICIT_N_SCHEME")
@@ -472,7 +472,7 @@
          IF (IMETHOD == 1) THEN
            DO IT = 1, ITER_EXP(IS,ID)
 #ifdef DEBUG_COHERENCY_FLUCT
-             WRITE(STAT%FHNDL,*) 'IT=', IT
+             IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,*) 'IT=', IT
 #endif
              ST = ZERO ! Init. ... only used over the residual nodes see IP loop
              DO IE = 1, MNE
@@ -1149,7 +1149,7 @@
                IPGL1 = IWBNDLC(IP)
                ASPAR(I_DIAG(IPGL1)) = SI(IPGL1) ! Set boundary on the diagonal
                B(IPGL1)             = SI(IPGL1) * WBAC(IS,ID,IP)
-            END DO
+             END DO
            ELSE
              DO IP = 1, IWBMNP
                IPGL1 = IWBNDLC(IP)
@@ -2158,7 +2158,7 @@
       POS_TRICK(3,1) = 1
       POS_TRICK(3,2) = 2
 
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'CALCULATE CONNECTED AREA SI '
+      IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A)') 'CALCULATE CONNECTED AREA SI '
 ! The situation is as follows with respect to MNP, NP_RES and friends.
 ! For sparse matrix, it makes sense to compute ASPAR (the sparse matrix
 ! elements) only for IP=1,NP_RES
@@ -2174,7 +2174,7 @@
 !
 ! Calculate the max. number of connected elements count_max
 !
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'MEDIAN DUAL AREA and CCON' 
+      IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A)') 'MEDIAN DUAL AREA and CCON' 
       SI(:)   = 0.0d0 ! Median Dual Patch Area of each Node
 
       CCON(:) = 0     ! Number of connected Elements
@@ -2209,14 +2209,14 @@
 ! check agains SCHISM to make sure that there is no problem
 #ifdef MPI_PARALL_GRID
 # ifndef PDLIB
-      IF (MAXMNECON /= MNEI) THEN
+      IF (MAXMNECON /= MNEI .AND. WRITEDBGFLAG == 1) THEN
         write(DBG%FHNDL,*) "WARNING", __FILE__ , "Line", __LINE__
         write(DBG%FHNDL,*) "MAXMNECON from SCHISM does not match self calc value. This could be problems", MAXMNECON, MNEI
       END IF
 # endif
 #endif
 !
-      WRITE(STAT%FHNDL,'("+TRACE......",A)') 'CALCULATE FLUCTUATION POINTER'
+      IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A)') 'CALCULATE FLUCTUATION POINTER'
       ALLOCATE(CELLVERTEX(MNP,MAXMNECON,2), stat=istat)
       IF (istat/=0) CALL WWM_ABORT('wwm_fluctsplit, allocate error 4')
 !
@@ -2244,8 +2244,8 @@
 
       COUNT_MAX = J ! Max. Number of entries in the pointers used in the calculations
       IF (COUNT_MAX.ne.3*MNE) THEN
-        WRITE(DBG%FHNDL,*) 'COUNT_MAX=', COUNT_MAX
-        WRITE(DBG%FHNDL,*) 'MNE=', MNE
+        IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'COUNT_MAX=', COUNT_MAX
+        IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'MNE=', MNE
         CALL WWM_ABORT('Do Not Sleep Before solving the problem')
       ENDIF
 
@@ -2286,10 +2286,12 @@
                 POS_NEXT=POS_TRICK(POS,1)
                 IP_ADJ_NEXT=INE(POS_NEXT,IE2)
                 IF (IP_ADJ_NEXT .eq. IP_NEXT) THEN
-                  WRITE(DBG%FHNDL,*) 'Combinatorial orientability problem'
-                  WRITE(DBG%FHNDL,*) 'IE=', IE, ' IE2=', IE2
-                  WRITE(DBG%FHNDL,*) 'IP=', IP, ' IP_NEXT=', IP_NEXT
-                  FLUSH(DBG%FHNDL)
+                  IF (WRITEDBGFLAG == 1) THEN
+                    WRITE(DBG%FHNDL,*) 'Combinatorial orientability problem'
+                    WRITE(DBG%FHNDL,*) 'IE=', IE, ' IE2=', IE2
+                    WRITE(DBG%FHNDL,*) 'IP=', IP, ' IP_NEXT=', IP_NEXT
+                    FLUSH(DBG%FHNDL)
+                  END IF
                   CALL WWM_ABORT('Please correct the grid combinatorially 1')
                 END IF
                 POS_PREV=POS_TRICK(POS,2)
@@ -2301,11 +2303,13 @@
               END IF
             END DO
             IF (nbMatch .gt. 1) THEN
-              WRITE(DBG%FHNDL,*) 'nbMatch is too large.'
-              WRITE(DBG%FHNDL,*) 'Should be 0 for boundary edge'
-              WRITE(DBG%FHNDL,*) 'Should be 1 for interior edges'
-              WRITE(DBG%FHNDL,*) 'nbMatch=', nbMatch
-              FLUSH(DBG%FHNDL)
+              IF (WRITEDBGFLAG == 1) THEN
+                WRITE(DBG%FHNDL,*) 'nbMatch is too large.'
+                WRITE(DBG%FHNDL,*) 'Should be 0 for boundary edge'
+                WRITE(DBG%FHNDL,*) 'Should be 1 for interior edges'
+                WRITE(DBG%FHNDL,*) 'nbMatch=', nbMatch
+                FLUSH(DBG%FHNDL)
+              END IF
               CALL WWM_ABORT('Please correct the grid combinatorially 2')
             END IF
           END DO
@@ -2353,7 +2357,7 @@
           END DO
         END DO
 
-        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'SET UP SPARSE MATRIX POINTER ... COUNT NONZERO ENTRY'
+        IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A)') 'SET UP SPARSE MATRIX POINTER ... COUNT NONZERO ENTRY'
 !
 ! Count number of nonzero entries in the matrix ...
 ! Basically, each connected element may have two off-diagonal
@@ -2375,7 +2379,7 @@
           NNZ = NNZ + SUM(ITMP)
         END DO
 
-        WRITE(STAT%FHNDL,'("+TRACE......",A)') 'SET UP SPARSE MATRIX POINTER ... SETUP POINTER'
+        IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A)') 'SET UP SPARSE MATRIX POINTER ... SETUP POINTER'
 !
 ! Allocate sparse matrix pointers using the Compressed Sparse Row Format CSR ... this is now done only of MNP nodes
 ! The next step is to do it for the whole Matrix MNP * MSC * MDC
@@ -2525,9 +2529,9 @@
             ASPAR_JAC = zero
             TMP1 = MyREAL(MSC)*MyREAL(MDC)*MyREAL(NNZ*8)
             TMP2 = 1024**2
-            WRITE(STAT%FHNDL,'("+TRACE......",A,F15.4,A)') 'MAX MEMORY SIZE OF ASPAR_JAC =', TMP1/TMP2, 'MB'
+            IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A,F15.4,A)') 'MAX MEMORY SIZE OF ASPAR_JAC =', TMP1/TMP2, 'MB'
             TMP1 = TMP1 + MyREAL(MSC) * MyREAL(MDC) * MyREAL(MNP) * 4 * 8
-            WRITE(STAT%FHNDL,'("+TRACE......",A,F15.4,A)') 'TOTAL MEMORY SIZE =', TMP1/TMP2, 'MB'
+            IF (WRITEDBGFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE......",A,F15.4,A)') 'TOTAL MEMORY SIZE =', TMP1/TMP2, 'MB'
           END IF
           IF ((ASPAR_LOCAL_LEVEL .ge. 5).and.(ASPAR_LOCAL_LEVEL .le. 7)) THEN
             SUM_CCON = 0
@@ -2537,11 +2541,13 @@
             ALLOCATE(K_CRFS_MSC(12, MSC,SUM_CCON), K_CRFS_U(6,SUM_CCON), stat=istat)
             IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9b')
             SizeAlloc=12*MSC*SUM_CCON
-            WRITE(STAT%FHNDL,*) 'LEVEL 5, nb   =', SizeAlloc
-            SizeAlloc=MDC*MSC*NNZ
-            WRITE(STAT%FHNDL,*) 'ASPAR_JAC, nb =', SizeAlloc
-            SizeAlloc=MDC*MSC*MNP
-            WRITE(STAT%FHNDL,*) 'U_JAC, nb     =', SizeAlloc
+            IF (WRITESTATFLAG == 1) THEN
+              WRITE(STAT%FHNDL,*) 'LEVEL 5, nb   =', SizeAlloc
+              SizeAlloc=MDC*MSC*NNZ
+              WRITE(STAT%FHNDL,*) 'ASPAR_JAC, nb =', SizeAlloc
+              SizeAlloc=MDC*MSC*MNP
+              WRITE(STAT%FHNDL,*) 'U_JAC, nb     =', SizeAlloc
+            END IF
           END IF
           !
           IF ((.NOT. LNONL) .AND. SOURCE_IMPL .AND. (ASPAR_LOCAL_LEVEL.le.1)) THEN
@@ -2820,8 +2826,10 @@
                ITER_MAX = ABS(NINT(CFLXY))
              END IF
            END IF !IVECTOR
-           WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
-           FLUSH(STAT%FHNDL)
+           IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
+            FLUSH(STAT%FHNDL)
+           END IF           
          END IF !LCALC
 
 #ifdef TIMINGS
@@ -3049,8 +3057,10 @@
                END IF
              END DO ! IS
            END DO ! ID
-           WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
-           FLUSH(STAT%FHNDL)
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
+             FLUSH(STAT%FHNDL)
+           END IF
          END IF ! LCALC
 
 #ifdef MPI_PARALL_GRID
@@ -3224,8 +3234,10 @@
                 END IF
               END DO ! IS
             END DO ! ID
-            WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
-            FLUSH(STAT%FHNDL)
+            IF (WRITESTATFLAG == 1) THEN
+              WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX, MAXVAL(ITER_EXP)
+              FLUSH(STAT%FHNDL)
+            END IF            
           END DO
         END DO
       END IF
@@ -3383,9 +3395,10 @@
 
            ITER_MAX = MAXVAL(ITER_EXP)
 
-           WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX
-           FLUSH(STAT%FHNDL)
-
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,*) 'MAX. ITERATIONS USED IN ADV. SCHEME', ITER_MAX
+             FLUSH(STAT%FHNDL)
+           END IF
          END IF
 
 #ifdef TIMINGS

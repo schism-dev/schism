@@ -19,7 +19,7 @@
          REAL(rkind)                :: SSNL4(MSC,MDC),DSSNL4(MSC,MDC)
          REAL(rkind)                :: SSNL3(MSC,MDC),DSSNL3(MSC,MDC)
          REAL(rkind)                :: SSBR(MSC,MDC),DSSBR(MSC,MDC)
-         REAL(rkind)                :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)																							  
+         REAL(rkind)                :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)
          REAL(rkind)                :: SSBF(MSC,MDC),DSSBF(MSC,MDC)
          REAL(rkind)                :: SSBRL(MSC,MDC),DSSBRL(MSC,MDC)
          REAL(rkind)                :: SSLIM(MSC,MDC), DSSLIM(MSC,MDC)
@@ -33,7 +33,7 @@
          SSNL4 = ZERO; DSSNL4 = ZERO
          SSNL3 = ZERO; DSSNL3 = ZERO
          SSBR  = ZERO; DSSBR  = ZERO
-		 SSVEG  = ZERO; DSSVEG  = ZERO											
+         SSVEG  = ZERO; DSSVEG  = ZERO
          SSBF  = ZERO; DSSBF  = ZERO
          SSBRL = ZERO; DSSBRL = ZERO
          SSDS = ZERO; DSSDS = ZERO
@@ -198,7 +198,7 @@
 
          INTEGER                      :: IS, ID
          REAL(rkind)                  :: AUX1, AUX2, AUX3
-         REAL(rkind)                  :: SWINB, CINV, COSDIF, SFIE(MSC,MDC)
+         REAL(rkind)                  :: SWINB, CINV, COSDIF
 
          AUX1 = 0.25_rkind * RHOAW
          AUX2 = 28._rkind * UFRIC(IP)
