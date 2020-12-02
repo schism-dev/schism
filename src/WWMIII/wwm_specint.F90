@@ -297,6 +297,7 @@
            SSNL3 = ZERO; DSSNL3 = ZERO
            SSBR  = ZERO; DSSBR  = ZERO
            SSBF  = ZERO; DSSBF  = ZERO
+           SSVEG  = ZERO; DSSVEG  = ZERO
            SSINL = ZERO
            IF (DEP(IP) .LT. DMIN) THEN
              IMATRAA(:,:,IP) = ZERO
@@ -395,8 +396,15 @@
                    END DO
                  END DO
                ENDIF ! MESTR
-               IF (MESBR .GT. 0) CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+               IF (MESBR .GT. 0) THEN
+                 IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
+                   CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                 ELSE
+                   CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                 ENDIF
+               ENDIF
                IF (MESBF .GT. 0) CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+               IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
                IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG 
                IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG 
              ENDIF ! ISHALLOW(IP) .EQ. 1
@@ -462,8 +470,15 @@
                        END DO
                      END DO
                    ENDIF ! MESTR
-                   IF (MESBR .GT. 0) CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                   IF (MESBR .GT. 0) THEN
+                     IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
+                       CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                     ELSE
+                       CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                     ENDIF
+                   ENDIF
                    IF (MESBF .GT. 0) CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+                   IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
                    IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG
                    IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG
                  ENDIF ! ISHALLOW(IP) .EQ. 1
@@ -627,12 +642,10 @@
            ! Computing the source term
            IMATRA = ZERO; IMATDA = ZERO
            CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
-           IF (IBREAK .EQ. 1) THEN
-               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
-           ELSE IF (IBREAK .EQ. 4) THEN
-               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+           IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
+             CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
            ELSE
-               CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+             CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
            ENDIF
            ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
            CFL_LOC = 0.9D0 ! ref 0.9D0
@@ -651,9 +664,7 @@
 
              ! Computing source term
              CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
-             IF (IBREAK .EQ. 1) THEN
-               CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
-             ELSE IF (IBREAK .EQ. 4) THEN
+             IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
                CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
              ELSE
                CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
