@@ -47,8 +47,8 @@
 
 !      CALL DATE2JD(1968, 5, 23, 0, 0, 0, eJD2)
       CALL DATE2JD(1858, 11, 17, 0, 0, 0, eJD2)
-      eMJD=eJD1-eJD2
-      WRITE(STAT%FHNDL, *) 'eMJD =', eMJD
+      eMJD = eJD1 - eJD2
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL, *) 'eMJD =', eMJD
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -278,7 +278,7 @@
 !*                                                                    *
 !**********************************************************************
       SUBROUTINE CU2SEC(UNITT, DT)
-      USE DATAPOOL, ONLY : DBG, RKIND
+      USE DATAPOOL, ONLY : DBG, RKIND, WRITEDBGFLAG
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN) :: UNITT
       real(rkind), INTENT(INOUT) :: DT
@@ -290,7 +290,7 @@
          CASE ('S', 's', 'SEC', 'sec')
             DT = DT
          CASE DEFAULT
-            WRITE(DBG%FHNDL,*) 'ERROR WRONG UNIT, UNIT = ', UNITT
+            IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'ERROR WRONG UNIT, UNIT = ', UNITT
             DT = 0.0
       END SELECT
       END SUBROUTINE
