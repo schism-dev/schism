@@ -231,12 +231,15 @@
 !-----------------------------------------------------------------------
 ! Point sources/sinks option (0: no; 1: on). If =1, needs source_sink.in (list of elements),
 ! vsource,th, vsink.th, and msource.th. Source/sinks can be specified at an elem more
-! than once, and the code will accumulate the volumes, but for mass conc, one of
-! the specified values will be taken (no summation).
+! than once, and the code will accumulate the volumes; for mass conc, 
+! values are applied at _net_ source elem (no summation for conc).
+! Options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
+! zero out sink if the elem is dry if meth_sink=1
 !-----------------------------------------------------------------------
   if_source = 0
   nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
   dramp_ss = 2 !needed if if_source=1; ramp-up period in days
+  meth_sink = 0 !options to treat sinks @ dry elem
 
 !-----------------------------------------------------------------------
 ! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
