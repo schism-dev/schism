@@ -2,8 +2,8 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
- (Dec 3, 2020): Added a new option to treat net sink: if an elem is dry with a net sink, vsource is reset
-               to 0;
+f8ba470 (Dec 3, 2020): Added a new option to treat net sink: if an elem is dry with a net sink, vsource is reset
+                       to 0;
 f9043e2 (Nov. 12, 2020): merged with LRU branch wwm_lr; removed 'sav_cd' (isav=1 now requires sav_cd.gr3).
       New parameters related to WWM: fwvor_advxy_stokes,fwvor_advz_stokes,
       fwvor_advz_stokes,fwvor_breaking,cur_wwm,wafo_obcramp;
