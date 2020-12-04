@@ -92,7 +92,7 @@ module schism_glbl
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
                   &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib,ielm_transport,max_subcyc, &
-                  &itransport_only
+                  &itransport_only,meth_sink
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv

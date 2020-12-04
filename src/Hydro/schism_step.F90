@@ -1457,6 +1457,11 @@
         endif !impose_net_flux
       endif !isconsv/=0
 
+!...  Option to zero out net sink @dry elem
+      if(meth_sink/=0) then
+        where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
+      endif !meth_sink
+
 !     Calculation of cross-section areas and length for flow b.c.
       if(lflbc) then
         allocate(buf1(nope_global,2),buf2(nope_global,2)); buf1=0.d0;
