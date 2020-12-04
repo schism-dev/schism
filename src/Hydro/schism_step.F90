@@ -1459,7 +1459,10 @@
 
 !...  Option to zero out net sink @dry elem
       if(meth_sink/=0) then
-        where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
+        !where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
+        do i=1,nea
+          if(minval(idry(elnode(1:i34(i),i)))>0.and.vsource(i)<0.d0) vsource=0.d0 !all nodes dry
+        enddo !i
       endif !meth_sink
 
 !     Calculation of cross-section areas and length for flow b.c.
