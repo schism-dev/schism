@@ -418,7 +418,7 @@
         do j=1,ntip
           ncyc=int(tfreq(j)*time/2.d0/pi)
           arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
-          etp(i)=etp(i)+ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
+          etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
         enddo !j
       enddo !i
 !$OMP end do
@@ -4879,8 +4879,10 @@
         ghat1(2,i)=ghat1(2,i)/real(i34(i),rkind)
       
         !Finish off terms in F, F^\alpha and f_b
-        botf1=0.69d0*grav*detpdx-dprdx/rho0 !const in each elem
-        botf2=0.69d0*grav*detpdy-dprdy/rho0
+        botf1=grav*detpdx-dprdx/rho0 !const in each elem
+        botf2=grav*detpdy-dprdy/rho0
+        !botf1=0.69d0*grav*detpdx-dprdx/rho0 !const in each elem
+        !botf2=0.69d0*grav*detpdy-dprdy/rho0
         tmp1=0.d0; tmp2=0.d0 !elem average of all terms; into ghat1
         do j=1,i34(i) !side
           isd=elside(j,i)
@@ -5623,9 +5625,10 @@
           tauy2=(tau(2,node1)+tau(2,node2))/2.d0
 
           !hat_gam_[xy] has a dimension of m/s
-          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav*detp_dx(j)+ &
+          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav*detp_dx(j)+ &
+          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav*detp_dx(j)+ &
      &bcc(1,kbs(j),j)+taux2/htot)-grav*(1-thetai)*dt*deta1_dx(j)-grav*thetai*dt*deta2_dx(j)
-          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+0.69d0*grav*detp_dy(j)+ &
+          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav*detp_dy(j)+ &
      &bcc(2,kbs(j),j)+tauy2/htot)-grav*(1-thetai)*dt*deta1_dy(j)-grav*thetai*dt*deta2_dy(j)
 !         Radiation stress
 #ifdef USE_WWM
@@ -5713,15 +5716,15 @@
 !	  Elevation gradient, atmo. pressure and tidal potential
           if(k<nvrt) then
             rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-0.69d0*grav*detp_dx(j))
+                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
             rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-0.69d0*grav*detp_dy(j))
+                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
           endif
           if(k>kbs(j)+1) then 
             rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-0.69d0*grav*detp_dx(j))
+                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
             rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-0.69d0*grav*detp_dy(j))
+                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
           endif
 
 !	  Coriolis, advection, wind stress, and horizontal viscosity
@@ -8509,9 +8512,9 @@
         if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
         if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ANA_tide_pot_grad_x',7,1,nsa,0.69*grav*detp_dx)
+     &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
         if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ANA_tide_pot_grad_y',7,1,nsa,0.69*grav*detp_dy)
+     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
         if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
         if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &
