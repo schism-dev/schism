@@ -524,6 +524,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     !iret=nf_def_var(ncid,'elev',NF_FLOAT,2,var2d_dims,iu_id(2))
     !write(98,*)'Before:',ncid,var2d_dims,iu_id(2),nvars,iinput,ibgn
 
+    !Define all time-varying vars (all vars from uncombined)
     do m=1,nvars
       iret=nf90_inquire_variable(ncid2,m,name=variable_nm(m)) !,itype,ndims(m),int_buffer,natts)
       variable_nm(m)=trim(adjustl(variable_nm(m))); vlen(m)=len_trim(variable_nm(m))
@@ -810,9 +811,15 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
       enddo !irank
 
       do m=1,nvars
-        if (skip_var(m)) cycle
-        !Compute wet/dry flags
-        if(m==2) then !idry_e
+        if (skip_var(m)) then
+          if(m<=4) stop 'u cannot skip wet/dry outputs'
+          cycle
+        endif
+
+        !Compute wet/dry flags: idry, idry_s are only used to filter 3D outputs
+        !below. There are outputs for these 2 flags independently in comb'ed
+        !output
+        if(m==3) then !idry_e
           idry_e=nint(outd(m)%data(1,1,1:ne_global))
           idry=1 !init as dry
           idry_s=1
@@ -826,7 +833,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
               endif
             enddo !j
           enddo !i
-        endif !m=2
+       endif !m=3
 
 !        !Compute bottom indices based on zcor
 !        if(m==3) then !zcor

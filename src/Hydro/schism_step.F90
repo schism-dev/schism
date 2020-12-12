@@ -7806,9 +7806,9 @@
 
 #ifndef SINGLE_NETCDF_OUTPUT
       if(mod(it,nspool)==0) then
-!        call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
+        call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
-!        call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
+        call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
         !zcor MUST be 1st 3D var output for combine scripts to work!
         call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
         !call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,bcc(1,1:nvrt,1:npa)) !znl(:,:))
