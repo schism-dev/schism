@@ -286,6 +286,9 @@ Changes in outputs:
 (6) R1469; consolidated many output files to reduce I/O footprint;
 (7) R1776: hotstart outputs changed to include SED[23]D arrays; use combine_hotstart5.f90 for combining.
 
+GIT versions:
+(1) e227f8579 (Dec 2020): added wet/dry flags @nodes/sides in nc outputs;
+
 ---------------------------------------------------------------
 Algorithmic changes & bug fixes:
 (1) R97: found a bug in evaluate_cubic_spline

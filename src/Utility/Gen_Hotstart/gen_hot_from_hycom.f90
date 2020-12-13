@@ -12,13 +12,17 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-! Generate hotstart.nc, and *[23]D.th.nc from gridded HYCOM data (nc file)
+! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file); works for global grid.
+! Changed algorithm from gen_hot_3Dth_from_hycom: no longer do
+! horizontal extension but simply fill invalid pts with T,S values outside (0
+! for SSH, U,V).
+
 ! The section on nc read needs to be modified as appropriate- search for
 ! 'start11' and 'end11'
 ! Beware the order of vertical levels in the nc file!!!
 ! Assume elev=0 in interpolation of 3D variables
 ! The code will do all it can to extrapolate: below bottom/above surface.
-! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled (from gen_hot_3Dth_from_nc.in) 
+! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled (from gen_hot_from_nc.in) 
 !
 ! Dan Yu: added checking vertical layer for each 3D var from HYCOM nc, and some easy remedy for nc file error  
 ! Wet-dry points are defined by ssh.
@@ -32,27 +36,17 @@
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R1703 and up);
 !     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside
-!     (5) gen_hot_3Dth_from_nc.in: 
-!                     1st line: 1: include vel and elev. in hotstart.nc (and *[23D].th will start from non-0 values); 0: only T,S
+!     (5) gen_hot_from_nc.in: 
+!                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
-!                     3rd line: T,S values for pts outside bg grid in nc
+!                     3rd line: T,S values for pts outside background grid in nc
 !                     4th line: time step in .nc in sec
-!                     5th line: nob, iob(1:nob) - # of open bnd seg's that need
-!                               *[23D].th; list of seg IDs. All *[23D].th must share same set of bnd seg's
-!                     6th line: # of days needed
-!                     7th line: # of HYCOM file stacks
 !     (6) HYCOM files: [SSH,TS,UV]_[1,2,..nfiles].nc (beware scaling etc)
-!   Output: hotstart.nc; *[23D].th.nc
+!   Output: hotstart.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
-!   Use note: if the domain is large and you wish to download HYCOM
-!   fast, you may want to run this script twice: first to generate
-!   hotstart only (so you need only to download a few HYCOM files); the
-!   .th.nc are junk in this step.
-!   Second, download HYCOM to only cover the open boundary segments to
-!   generate .th.nc (hotstart would be junk).
 
-! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_3Dth_from_hycom.exe ../UtilLib/schism_geometry.f90 \
-! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_3Dth_from_hycom.f90 \
+! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_from_hycom.exe ../UtilLib/schism_geometry.f90 \
+! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_from_hycom.f90 \
 !-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
@@ -63,14 +57,6 @@
 
 !      implicit none
 
-!      integer, parameter :: debug=1
-!      integer, parameter :: mnp=480000*6
-!      integer, parameter :: mne=960000*6
-!      integer, parameter :: mns=1440000*6
-!      integer, parameter :: mnv=50
-!      integer, parameter :: mnope=10 !max # of open bnd segments
-!      integer, parameter :: mnond=5000 !max # of open bnd nodes in each segment
-!      integer, parameter :: mnei=20 !neighbor
       integer, parameter :: nbyte=4
       real, parameter :: small1=1.e-2 !used to check area ratios
   
@@ -114,16 +100,9 @@
 
       integer, allocatable :: elnode(:,:),elside(:,:),isdel(:,:),idry_s(:),i34(:),iest(:), &
      &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:)
-      !integer :: indel(mnei,mnp),idry_s(mns)
-      !integer :: idry_s(mns)
       real, allocatable :: xl(:),yl(:),dp(:),ztot(:),sigma(:),arco(:,:), &
      &tempout(:,:),saltout(:,:),uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:), &
      &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:)
-!      dimension ztot(0:mnv),sigma(mnv),cs(mnv),arco(4,mnp)
-!      dimension tempout(mnv,mnp), saltout(mnv,mnp) !,month_day(12)
-!      dimension uout(mnv,mnp),vout(mnv,mnp),eout(mnp),su2(mns,mnv),sv2(mns,mnv),eout_tmp(mnp)
-!      dimension tsel(2,mnv,mne),zeros(mnv,max(mne,mnp))
-!      dimension xcj(mns),ycj(mns) !,nond(mnope),iond(mnope,mnond),iob(mnope),iond2(mnope*mnond)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
       real*8 :: aa1(1)
 
@@ -133,19 +112,13 @@
 !     quads) and is kept for more generic cases
       interp_mode=0
 
-      open(10,file='gen_hot_3Dth_from_nc.in',status='old')
+      open(10,file='gen_hot_from_nc.in',status='old')
       read(10,*) iuv !1: include vel and elev. in hotstart.in; 0: only T,S
       read(10,*) tem_es,sal_es !T,S values for estuary points defined in estuary.gr3
       read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc
-      read(10,*) dtout !time step in .nc [sec]
-      read(10,*) nob !,iob(1:nob) !# of open bnds that need *3D.th; list of IDs
-      read(10,*) nndays !# of days needed in output
-      read(10,*) nfiles !# of stacks of HYCOM files
-
-      allocate(iob(nob))
-      rewind(10)
-      do i=1,4; read(10,*); enddo
-      read(10,*) nob,iob(1:nob)
+!      read(10,*) dtout !time step in .nc [sec]
+!      read(10,*) nndays !# of days needed in output
+!      read(10,*) nfiles !# of stacks of HYCOM files
       close(10)
       if(tem_es<0.or.sal_es<0.or.tem_outside<0.or.sal_outside<0) &
      &stop 'Invalid T,S constants'
@@ -177,47 +150,13 @@
       do i=1,ne
         read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
       enddo !i
-!     Open bnds
-      read(14,*) nope
-      read(14,*) neta
-      ntot=0
-      allocate(nond(max(1,nope)))
-!      if(nope>mnope) stop 'Increase mnope (2)'
-      do k=1,nope
-        read(14,*) nond(k)
-        do i=1,nond(k)
-          read(14,*) !iond(k,i)
-        enddo
-      enddo
-
-      rewind(14)
-      mnope=maxval(nond)
-      if(mnope<=0) stop 'need open bnd'
-      allocate(iond(mnope,nope),iond2(mnope*nope))
-      do i=1,2+np+ne+2; read(14,*); enddo
-      do k=1,nope
-        read(14,*) !nond(k)
-        do i=1,nond(k)
-          read(14,*)iond(i,k)
-        enddo
-      enddo
       close(14)
-
-      nond0=0
-      do i=1,nob
-        ibnd=iob(i)
-        do j=1,nond(ibnd)
-          nond0=nond0+1
-          iond2(nond0)=iond(j,ibnd)
-        enddo !j
-      enddo !i
-
       close(16)
+      close(17)
 
 !     V-grid
       read(19,*)ivcor
       read(19,*)nvrt
-!      if(nvrt>mnv) stop 'increase mnv'
       rewind(19)
       allocate(sigma_lcl(nvrt,np),z(nvrt,np),kbp2(np),ztot(0:nvrt),sigma(nvrt),arco(4,np), &
      &tempout(nvrt,np),saltout(nvrt,np),uout(nvrt,np),vout(nvrt,np),eout(np), &
@@ -248,189 +187,26 @@
 
       call schism_geometry_single(np,ne,ns,xl,yl,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
 
-!      do k=3,4
-!        do i=1,k
-!          do j=1,k-1
-!            nx(k,i,j)=i+j
-!            if(nx(k,i,j)>k) nx(k,i,j)=nx(k,i,j)-k
-!            if(nx(k,i,j)<1.or.nx(k,i,j)>k) then
-!              write(*,*)'nx wrong',i,j,k,nx(k,i,j)
-!              stop
-!            endif
-!          enddo !j
-!        enddo !i
-!      enddo !k
-!
-!      do i=1,np
-!        nne(i)=0
-!      enddo
-!
-!      do i=1,ne
-!        do j=1,i34(i)
-!          nd=elnode(j,i)
-!          nne(nd)=nne(nd)+1
-!          if(nne(nd)>mnei) then
-!            write(11,*)'Too many neighbors',nd
-!            stop
-!          endif
-!          indel(nne(nd),nd)=i
-!        enddo
-!      enddo
-!
-!!     Compute ball info; this won't be affected by re-arrangement below
-!      do i=1,ne
-!        do j=1,i34(i)
-!          ic3(j,i)=0 !index for bnd sides
-!          nd1=elnode(nx(i34(i),j,1),i)
-!          nd2=elnode(nx(i34(i),j,2),i)
-!          do k=1,nne(nd1)
-!            ie=indel(k,nd1)
-!            if(ie/=i.and.(elnode(1,ie)==nd2.or.elnode(2,ie)==nd2.or.elnode(3,ie)==nd2.or.(i34(ie)==4.and.elnode(4,ie)==nd2))) ic3(j,i)=ie
-!          enddo !k
-!        enddo !j
-!      enddo !i
-!
-!      ns=0 !# of sides
-!      do i=1,ne
-!        do j=1,i34(i)
-!          nd1=elnode(nx(i34(i),j,1),i)
-!          nd2=elnode(nx(i34(i),j,2),i)
-!          if(ic3(j,i)==0.or.i<ic3(j,i)) then !new sides
-!            ns=ns+1
-!            if(ns>mns) then
-!              write(11,*)'Too many sides'
-!              stop
-!            endif
-!            elside(j,i)=ns
-!            isdel(1,ns)=i
-!            isidenode(1,ns)=nd1
-!            isidenode(2,ns)=nd2
-!            xcj(ns)=(xl(nd1)+xl(nd2))/2
-!            ycj(ns)=(yl(nd1)+yl(nd2))/2
-!!            dps(ns)=(dp(nd1)+dp(nd2))/2
-!!            distj(ns)=dsqrt((x(nd2)-x(nd1))**2+(y(nd2)-y(nd1))**2)
-!!            if(distj(ns)==0) then
-!!              write(11,*)'Zero side',ns
-!!              stop
-!!            endif
-!!            thetan=datan2(x(nd1)-x(nd2),y(nd2)-y(nd1))
-!!            snx(ns)=dcos(thetan)
-!!            sny(ns)=dsin(thetan)
-!
-!            isdel(2,ns)=ic3(j,i) !bnd element => bnd side
-!!           Corresponding side in element ic3(j,i)
-!            if(ic3(j,i)/=0) then !old internal side
-!              iel=ic3(j,i)
-!              index=0
-!              do k=1,i34(iel)
-!                if(ic3(k,iel)==i) then
-!                  index=k
-!                  exit
-!                endif
-!              enddo !k
-!              if(index==0) then
-!                write(11,*)'Wrong ball info',i,j
-!                stop
-!              endif
-!              elside(index,iel)=ns
-!            endif !ic3(j,i).ne.0
-!          endif !ic3(j,i)==0.or.i<ic3(j,i)
-!        enddo !j=1,i34
-!      enddo !i=1,ne
-!
       if(ns<ne.or.ns<np) then
         write(11,*)'Weird grid with ns < ne or ns < np',np,ne,ns
         stop
       endif
-     print*, 'Done computing geometry...'
-
-!     open(54,file='elev2D.th',access='direct',recl=nbyte*(1+nond0),status='replace')
-!     open(55,file='uv3D.th',access='direct',recl=nbyte*(1+nond0*nvrt*2),status='replace')
-!     open(56,file='TEM_3D.th',access='direct',recl=nbyte*(1+nond0*nvrt),status='replace')
-!     open(57,file='SAL_3D.th',access='direct',recl=nbyte*(1+nond0*nvrt),status='replace')
-
-      iret=nf90_create('elev2D.th.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncids(5))
-      iret=nf90_def_dim(ncids(5),'nOpenBndNodes',nond0,nond0_dim)
-      iret=nf90_def_dim(ncids(5),'one',1,one_dim)
-      iret=nf90_def_dim(ncids(5),'time', NF90_UNLIMITED,itime_dim)
-      iret=nf90_def_dim(ncids(5),'nLevels',1,nvrt_dim)
-      iret=nf90_def_dim(ncids(5),'nComponents',1,ivs_dim)
-      var1d_dims(1)=one_dim
-      iret=nf90_def_var(ncids(5),'time_step',NF90_FLOAT,var1d_dims,idt)
-      var1d_dims(1)=itime_dim
-      iret=nf90_def_var(ncids(5),'time',NF90_DOUBLE,var1d_dims,itime_id(1))
-      var4d_dims(1)=ivs_dim; var4d_dims(2)=nvrt_dim; var4d_dims(3)=nond0_dim
-      var4d_dims(4)=itime_dim
-      iret=nf90_def_var(ncids(5),'time_series',NF90_FLOAT,var4d_dims,ivarid(51))
-      iret=nf90_enddef(ncids(5))
-      iret=nf90_put_var(ncids(5),idt,dtout)
-
-      iret=nf90_create('uv3D.th.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncids(6))
-      iret=nf90_def_dim(ncids(6),'nOpenBndNodes',nond0,nond0_dim)
-      iret=nf90_def_dim(ncids(6),'one',1,one_dim)
-      iret=nf90_def_dim(ncids(6),'time', NF90_UNLIMITED,itime_dim)
-      iret=nf90_def_dim(ncids(6),'nLevels',nvrt,nvrt_dim)
-      iret=nf90_def_dim(ncids(6),'nComponents',2,ivs_dim)
-      var1d_dims(1)=one_dim
-      iret=nf90_def_var(ncids(6),'time_step',NF90_FLOAT,var1d_dims,idt)
-      var1d_dims(1)=itime_dim
-      iret=nf90_def_var(ncids(6),'time',NF90_DOUBLE,var1d_dims,itime_id(2))
-      var4d_dims(1)=ivs_dim; var4d_dims(2)=nvrt_dim; var4d_dims(3)=nond0_dim
-      var4d_dims(4)=itime_dim
-      iret=nf90_def_var(ncids(6),'time_series',NF90_FLOAT,var4d_dims,ivarid(52))
-      iret=nf90_enddef(ncids(6))
-      iret=nf90_put_var(ncids(6),idt,dtout)
-
-      iret=nf90_create('TEM_3D.th.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncids(7))
-      iret=nf90_def_dim(ncids(7),'nOpenBndNodes',nond0,nond0_dim)
-      iret=nf90_def_dim(ncids(7),'one',1,one_dim)
-      iret=nf90_def_dim(ncids(7),'time', NF90_UNLIMITED,itime_dim)
-      iret=nf90_def_dim(ncids(7),'nLevels',nvrt,nvrt_dim)
-      iret=nf90_def_dim(ncids(7),'nComponents',1,ivs_dim)
-      var1d_dims(1)=one_dim
-      iret=nf90_def_var(ncids(7),'time_step',NF90_FLOAT,var1d_dims,idt)
-      var1d_dims(1)=itime_dim
-      iret=nf90_def_var(ncids(7),'time',NF90_DOUBLE,var1d_dims,itime_id(3))
-      var4d_dims(1)=ivs_dim; var4d_dims(2)=nvrt_dim; var4d_dims(3)=nond0_dim
-      var4d_dims(4)=itime_dim
-      iret=nf90_def_var(ncids(7),'time_series',NF90_FLOAT,var4d_dims,ivarid(53))
-      iret=nf90_enddef(ncids(7))
-      iret=nf90_put_var(ncids(7),idt,dtout)
-
-      iret=nf90_create('SAL_3D.th.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncids(8))
-      iret=nf90_def_dim(ncids(8),'nOpenBndNodes',nond0,nond0_dim)
-      iret=nf90_def_dim(ncids(8),'one',1,one_dim)
-      iret=nf90_def_dim(ncids(8),'time', NF90_UNLIMITED,itime_dim)
-      iret=nf90_def_dim(ncids(8),'nLevels',nvrt,nvrt_dim)
-      iret=nf90_def_dim(ncids(8),'nComponents',1,ivs_dim)
-      var1d_dims(1)=one_dim
-      iret=nf90_def_var(ncids(8),'time_step',NF90_FLOAT,var1d_dims,idt)
-      var1d_dims(1)=itime_dim
-      iret=nf90_def_var(ncids(8),'time',NF90_DOUBLE,var1d_dims,itime_id(4))
-      var4d_dims(1)=ivs_dim; var4d_dims(2)=nvrt_dim; var4d_dims(3)=nond0_dim
-      var4d_dims(4)=itime_dim
-      iret=nf90_def_var(ncids(8),'time_series',NF90_FLOAT,var4d_dims,ivarid(54))
-      iret=nf90_enddef(ncids(8))
-      iret=nf90_put_var(ncids(8),idt,dtout)
+      print*, 'Done computing geometry...'
 
       open(12,file='backup.out',status='replace')
 
 !start11
-!     Set time step # (must be in 1st stack) corresponding to t=0
-      it0=1
-
 !     Define limits for variables for sanity checks
       tempmin=-10 
-      tempmax=40
+      tempmax=50
       saltmin=0
-      saltmax=45
+      saltmax=60
       vmag_max=10 !max. |u| or |v|
       ssh_max=5 !max. of |SSH|
 
 !     Assuming elev, u,v, S,T have same dimensions (and time step) and grids do not change over time
-      timeout=0
-      irecout=1
-      do ifile=1,nfiles
+!      timeout=0
+      do ifile=1,1 !nfiles
 !--------------------------------------------------------------------
       write(char3,'(i20)')ifile
       char3=adjustl(char3); len_char3=len_trim(char3)
@@ -473,11 +249,6 @@
         allocate(salt(ixlen,iylen,ilen),stat=ier)
         allocate(temp(ixlen,iylen,ilen),stat=ier)
         allocate(ssh(ixlen,iylen),stat=ier)
-!        allocate(uvel0(ixlen,iylen,ilen),stat=ier)
-!        allocate(vvel0(ixlen,iylen,ilen),stat=ier)
-!        allocate(ssh0(ixlen,iylen),stat=ier)
-!        allocate(salt0(ixlen,iylen,ilen),stat=ier)
-!        allocate(temp0(ixlen,iylen,ilen),stat=ier)
         uvel=0; vvel=0; ssh=0
   
 !       get static info (lat/lon grids etc) 
@@ -530,14 +301,15 @@
 
 !     Vertical convention follows SCHISM from now on; i.e., 1 is at bottom
 !     Compute bottom indices
-      if(ifile==1) then
-        ilo=it0
-      else
-        ilo=1
-      endif !ifile
+!      if(ifile==1) then
+!        ilo=it0
+!      else
+!        ilo=1
+!      endif !ifile
+      ilo=1
 
-      do it2=ilo,ntime
-        print*, 'Time out (days)=',timeout/86400,it2
+      do it2=1,1 !ntime
+!        print*, 'Time out (days)=',timeout/86400,it2
 
 !       Read T,S,u,v,SSH
 !       WARNING! Make sure the order of vertical indices is 1 
@@ -662,46 +434,53 @@
           do i=1,ixlen
             do j=1,iylen
               if(kbp(i,j)==-1) then !invalid pts  
-                icount=icount+1
-                if(icount>ndrypt) stop 'overflow'
-                !Compute max possible tier # for neighborhood
-                mmax=max(i-1,ixlen-i,j-1,iylen-j)
+                salt(i,j,1:ilen)=sal_outside
+                temp(i,j,1:ilen)=tem_outside
+                uvel(i,j,1:ilen)=0.
+                vvel(i,j,1:ilen)=0.
+                ssh(i,j)=0.
 
-                m=0 !tier #
-                loop6: do
-                  m=m+1
-                  do ii=max(-m,1-i),min(m,ixlen-i)
-                    i3=max(1,min(ixlen,i+ii))
-                    do jj=max(-m,1-j),min(m,iylen-j)
-                      j3=max(1,min(iylen,j+jj))
-                      if(kbp(i3,j3)>0) then !found
-                        i1=i3; j1=j3
-                        exit loop6   
-                      endif
-                    enddo !jj
-                  enddo !ii
 
-                  if(m==mmax) then
-                    write(11,*)'Max. exhausted:',i,j,mmax
-                    write(11,*)'kbp'
-                    do ii=1,ixlen
-                      do jj=1,iylen
-                        write(11,*)ii,jj,kbp(ii,jj)
-                      enddo !jj
-                    enddo !ii
-                    stop
-                  endif
-                end do loop6
-
-                salt(i,j,1:ilen)=salt(i1,j1,1:ilen)
-                temp(i,j,1:ilen)=temp(i1,j1,1:ilen)
-                uvel(i,j,1:ilen)=uvel(i1,j1,1:ilen)
-                vvel(i,j,1:ilen)=vvel(i1,j1,1:ilen)
-                ssh(i,j)=ssh(i1,j1)
-
-                !Save for other steps
-                iparen_of_dry(1,icount)=i1
-                iparen_of_dry(2,icount)=j1
+!                icount=icount+1
+!                if(icount>ndrypt) stop 'overflow'
+!                !Compute max possible tier # for neighborhood
+!                mmax=max(i-1,ixlen-i,j-1,iylen-j)
+!
+!                m=0 !tier #
+!                loop6: do
+!                  m=m+1
+!                  do ii=max(-m,1-i),min(m,ixlen-i)
+!                    i3=max(1,min(ixlen,i+ii))
+!                    do jj=max(-m,1-j),min(m,iylen-j)
+!                      j3=max(1,min(iylen,j+jj))
+!                      if(kbp(i3,j3)>0) then !found
+!                        i1=i3; j1=j3
+!                        exit loop6   
+!                      endif
+!                    enddo !jj
+!                  enddo !ii
+!
+!                  if(m==mmax) then
+!                    write(11,*)'Max. exhausted:',i,j,mmax
+!                    write(11,*)'kbp'
+!                    do ii=1,ixlen
+!                      do jj=1,iylen
+!                        write(11,*)ii,jj,kbp(ii,jj)
+!                      enddo !jj
+!                    enddo !ii
+!                    stop
+!                  endif
+!                end do loop6
+!
+!                salt(i,j,1:ilen)=salt(i1,j1,1:ilen)
+!                temp(i,j,1:ilen)=temp(i1,j1,1:ilen)
+!                uvel(i,j,1:ilen)=uvel(i1,j1,1:ilen)
+!                vvel(i,j,1:ilen)=vvel(i1,j1,1:ilen)
+!                ssh(i,j)=ssh(i1,j1)
+!
+!                !Save for other steps
+!                iparen_of_dry(1,icount)=i1
+!                iparen_of_dry(2,icount)=j1
 
                 !Check 
                 do k=1,ilen
@@ -715,14 +494,14 @@
                   endif
                 enddo !k
 
-                write(12,*)icount,i,j,iparen_of_dry(1:2,icount)
+!                write(12,*)icount,i,j,iparen_of_dry(1:2,icount)
               endif !kbp(i,j)==-1
             enddo !j=iylen1,iylen2
           enddo !i=ixlen1,ixlen2
           call cpu_time(tt1)
-          if(icount/=ndrypt) stop 'mismatch(7)'
-          write(20,*)'extending took (sec):',tt1-tt0,ndrypt
-          call flush(20)
+!          if(icount/=ndrypt) stop 'mismatch(7)'
+!          write(20,*)'extending took (sec):',tt1-tt0,ndrypt
+!          call flush(20)
 
           !Save for abnormal cases later
 !          salt0=salt
@@ -770,11 +549,11 @@
               enddo !ix
 
               if(ixy(i,1)==0.or.ixy(i,2)==0) then
-                write(11,*)'Did not find parent:',i,ixy(i,1:2)
+                write(11,*)'Did not find parent:',i,ixy(i,1:2),xl(i),yl(i)
                 stop
               endif
               if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
-                write(11,*)'Ratio out of bound:',i,xrat,yrat
+                write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
                 stop
               endif
 
@@ -842,6 +621,8 @@
           call flush(20)
 
         else !skip to extend
+          stop 'should not be here'
+
           do i=1,ixlen
             do j=1,iylen
               if(kbp(i,j)>0) then !valid
@@ -991,21 +772,9 @@
           call flush(20)
         endif !ifile==1.and.it2==
     
-!       Do interpolation: all at 1st  step, bnd only for the rest
-        if(ifile==1.and.it2==ilo) then
-          iup=np
-        else
-          iup=nond0
-        endif
-
+!       Do interpolation
         tempout=-99; saltout=-99
-        do ii=1,iup
-          if(ifile==1.and.it2==ilo) then
-            i=ii
-          else
-            i=iond2(ii)
-          endif
-        
+        do i=1,np
           if(ixy(i,1)==0.or.ixy(i,2)==0) then
             write(20,*)'Cannot find a parent element:',i
             tempout(:,i)=tem_outside
@@ -1068,21 +837,6 @@
               vout(k,i)=dot_product(wild2(5:8,2),arco(1:4,i))
               eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)+ssh(ix,iy+1)*arco(4,i)
 
-
-!              if(in==1) then
-!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(2,1)*arco(2,i)+wild2(3,1)*arco(3,i)
-!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(2,2)*arco(2,i)+wild2(3,2)*arco(3,i)
-!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(6,1)*arco(2,i)+wild2(7,1)*arco(3,i)
-!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(6,2)*arco(2,i)+wild2(7,2)*arco(3,i)
-!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy)*arco(2,i)+ssh(ix+1,iy+1)*arco(3,i)
-!              else
-!                tempout(k,i)=wild2(1,1)*arco(1,i)+wild2(3,1)*arco(2,i)+wild2(4,1)*arco(3,i)
-!                saltout(k,i)=wild2(1,2)*arco(1,i)+wild2(3,2)*arco(2,i)+wild2(4,2)*arco(3,i)
-!                uout(k,i)=wild2(5,1)*arco(1,i)+wild2(7,1)*arco(2,i)+wild2(8,1)*arco(3,i)
-!                vout(k,i)=wild2(5,2)*arco(1,i)+wild2(7,2)*arco(2,i)+wild2(8,2)*arco(3,i)
-!                eout(i)=ssh(ix,iy)*arco(1,i)+ssh(ix+1,iy+1)*arco(2,i)+ssh(ix,iy+1)*arco(3,i)
-!              endif
-
               !Check
               if(tempout(k,i)<tempmin.or.tempout(k,i)>tempmax.or. &
                 saltout(k,i)<saltmin.or.saltout(k,i)>saltmax.or. &
@@ -1093,8 +847,8 @@
               endif
 
 !             Enforce lower bound for temp. for eqstate
-              tempout(k,i)=max(0.,tempout(k,i))
-              saltout(k,i)=min(40.,saltout(k,i))
+              tempout(k,i)=max(-10.,tempout(k,i))
+              saltout(k,i)=min(50.,saltout(k,i))
 
 !             Enforce lower bound for salt (this is the only occurence in the code)
 !             if(z(k,i)<=-ht) saltout(k,i)=max(saltout(k,i),smin)
@@ -1106,7 +860,7 @@
               saltout(:,i)=sal_es
             endif
           endif !ixy(i,1)==0.or.
-        enddo !ii
+        enddo !i
 
 !       hotstart.nc
         if(ifile==1.and.it2==ilo) then
@@ -1152,31 +906,15 @@
             write(24,*)xl(i),yl(i),uout(1,i),vout(1,i)
             write(27,*)xl(i),yl(i),uout(nvrt,i),vout(nvrt,i)
             write(25,*)i,xl(i),yl(i),eout(i)
-            write(29,*)'T profile at node ',i,dp(i)
-            do k=1,nvrt
-              write(29,*)k,z(k,i),tempout(k,i)
-            enddo !k
+!            write(29,*)'T profile at node ',i,dp(i)
+!            do k=1,nvrt
+!              write(29,*)k,z(k,i),tempout(k,i)
+!            enddo !k
           enddo !i
           do i=1,ne
             write(22,*)i,tsel(1,nvrt,i) !T
             write(23,*)i,tsel(1,1,i)
           enddo !i
-
-!         Output hotstart 
-!          open(36,file='hotstart.in',form='unformatted',status='replace')
-!          write(36) 0.d0,0,1
-!          do i=1,ne
-!            write(36) i,0,(0.d0,dble(tsel(1:2,j,i)),j=1,nvrt)
-!          enddo !i
-!          do i=1,ns
-!            write(36) i,0,(dble(su2(j,i)),dble(sv2(j,i)),dble(tsd(i,j)),dble(ssd(i,j)),j=1,nvrt)
-!          enddo !i
-!          do i=1,np
-!            write(36) i,dble(eout_tmp(i)),0,(dble(tempout(j,i)),dble(saltout(j,i)), &
-!                      dble(tempout(j,i)),dble(saltout(j,i)),0.d0,0.d0, &
-!                      0.d0,0.d0,0.d0,0.d0,0.d0,j=1,nvrt)
-!          enddo !i
-!          close(36)
 
           iret=nf90_create('hotstart.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncids(4))
           iret=nf90_def_dim(ncids(4),'node',np,node_dim)
@@ -1239,55 +977,25 @@
           iret=nf90_put_var(ncids(4),ivarid(19),dble(zeros(1:nvrt,1:np)))
 
           iret=nf90_close(ncids(4))
-
-!          stop
-
         endif !ifile; hotstart
 
-!       *[23D].th
-!        write(54,rec=irecout)timeout,eout(iond2(1:nond0))
-!        write(55,rec=irecout)timeout,((uout(k,iond2(j)),vout(k,iond2(j)),k=1,nvrt),j=1,nond0)
-!        write(56,rec=irecout)timeout,((tempout(k,iond2(j)),k=1,nvrt),j=1,nond0)
-!        write(57,rec=irecout)timeout,((saltout(k,iond2(j)),k=1,nvrt),j=1,nond0)
-
-        aa1(1)=timeout
-        iret=nf90_put_var(ncids(5),itime_id(1),aa1,(/irecout/),(/1/))
-        iret=nf90_put_var(ncids(6),itime_id(2),aa1,(/irecout/),(/1/))
-        iret=nf90_put_var(ncids(7),itime_id(3),aa1,(/irecout/),(/1/))
-        iret=nf90_put_var(ncids(8),itime_id(4),aa1,(/irecout/),(/1/))
-
-        iret=nf90_put_var(ncids(5),ivarid(51),eout(iond2(1:nond0)),(/1,1,1,irecout/),(/1,1,nond0,1/))
-        iret=nf90_put_var(ncids(6),ivarid(52),uout(1:nvrt,iond2(1:nond0)), &
-     &(/1,1,1,irecout/),(/1,nvrt,nond0,1/))
-        iret=nf90_put_var(ncids(6),ivarid(52),vout(1:nvrt,iond2(1:nond0)), &
-     &(/2,1,1,irecout/),(/1,nvrt,nond0,1/))
-        iret=nf90_put_var(ncids(7),ivarid(53),tempout(1:nvrt,iond2(1:nond0)), &
-     &(/1,1,1,irecout/),(/1,nvrt,nond0,1/))
-        iret=nf90_put_var(ncids(8),ivarid(54),saltout(1:nvrt,iond2(1:nond0)), &
-     &(/1,1,1,irecout/),(/1,nvrt,nond0,1/))
-
-        irecout=irecout+1
-        timeout=timeout+dtout !sec
+!        timeout=timeout+dtout !sec
 
 !        write(20,*)'done time:',timeout/86400
 !        call flush(20)
 
-        if(timeout/86400>nndays) stop 'finished'
+!        if(timeout/86400>nndays) stop 'finished'
 
-      enddo !it2=ilo,ntime
+      enddo !it2=1,1
 
       status = nf90_close(sid)
       status = nf90_close(ncids(1))
       status = nf90_close(ncids(2))
 !end11
       print*, 'done reading nc for file ',ifile
+      stop
 !--------------------------------------------------------------------
-      enddo !ifile=1
-
-      iret=nf90_close(ncids(5))
-      iret=nf90_close(ncids(6))
-      iret=nf90_close(ncids(7))
-      iret=nf90_close(ncids(8))
+      enddo !ifile=1,
 
 !      deallocate(lat,lon,zm,h,kbp,ihope,xind,yind,lind,salt,temp)
 
