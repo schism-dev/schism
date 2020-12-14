@@ -1530,7 +1530,7 @@
 
 !      if(myrank==8) write(99,*)carea
 
-!$OMP parallel default(shared) private(i,n1,n2,ibnd,nwild,j,vnth0,htot,sum1,vnorm,tmp,k,jfr,ncyc,arg,ubar1,vbar1)
+!$OMP parallel default(shared) private(i,n1,n2,ibnd,nwild,j,vnth0,htot,sum1,vnorm,tmp,k,jfr,ncyc,arg,ubar1,vbar1,tmpx,tmpy)
 
 !...  Compute new vel. for flow b.c. (uth,vth)
 !     For ics=1, uth, vth are in global frame
@@ -1636,7 +1636,25 @@
             uth(:,i)=uth(:,i)+ramp*ubar1/2.d0
             vth(:,i)=vth(:,i)+ramp*vbar1/2.d0
           endif !iabs(ifltype(ibnd))==5
-        endif
+        endif !ifltype
+
+        ! Deal with Stokes drift at open boundaries (KM)
+        ! Subtract depth-averaged Stokes drift vel per Bennis et al. (2011) and
+        ! Kevin Martin
+#ifdef USE_WWM
+        if(RADFLAG.eq.'VOR') then
+          tmpx = 0.d0; tmpy = 0.d0;
+          do k=kbs(i),nvrt-1
+            tmpx = tmpx + (zs(k+1,i)-zs(k,i))*(stokes_hvel_side(1,k,i)+stokes_hvel_side(1,k+1,i))/2.d0
+            tmpy = tmpy + (zs(k+1,i)-zs(k,i))*(stokes_hvel_side(2,k,i)+stokes_hvel_side(2,k+1,i))/2.d0
+          enddo !k
+!          n1 = isidenode(1,i); n2 = isidenode(2,i)
+          htot = (eta2(n1)+eta2(n2))/2 + dps(i)
+          uth(:,i) = uth(:,i)-tmpx/max(0.01d0,htot)
+          vth(:,i) = vth(:,i)-tmpy/max(0.01d0,htot)
+        endif !RADFLAG
+#endif
+
       enddo !i=1,nsa
 !$OMP end do
 
@@ -5115,18 +5133,17 @@
           endif !i34       
 
 #ifdef USE_WWM
-!Error: fold into ghat?
           if(RADFLAG.eq.'VOR'.and.idry_e(ie)==0) then
             sum1=0.d0; sum2=0.d0 !in eframe
-            do m=1,3 !wet sides
+            do m=1,i34(ie) !wet sides
               isd=elside(m,ie)
               do k=kbs(isd),nvrt-1
-                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0/3.d0
-                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0/3.d0
+                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0 !/3.d0
+                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0 !/3.d0
               enddo !k
             enddo !m
-            dot3=dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2
-            qel(i)=qel(i)+dt*dot3
+            dot3=(dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2)/dble(i34(ie))
+            qel(i)=qel(i)+dt*dot3*area(ie)
           endif
 #endif
 
