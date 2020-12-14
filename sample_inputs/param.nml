@@ -339,7 +339,7 @@
 ! Max. horizontal velocity magnitude, used mainly to prevent problem in 
 ! bulk aerodynamic module
 !-----------------------------------------------------------------------
-  rmaxvel = 10.
+  rmaxvel = 5.
 
 !-----------------------------------------------------------------------
 !  Following parameters control backtracking
