@@ -461,6 +461,8 @@ git versions:
 
 (115) 00b6f16 (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for LSC2.
 (116) 8083cfa (Nov. 10, 2020): added option for transport solver only (itransport_only)
+(117) 6dc44d3 (Dec 14, 2020): Fixed a bug, thanks to Kevin Kartin, on vortex formulism of wave force (missing a 
+                              factor of area() in I_4);
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
