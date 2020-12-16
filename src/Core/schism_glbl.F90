@@ -92,7 +92,7 @@ module schism_glbl
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
                   &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib,ielm_transport,max_subcyc, &
-                  &itransport_only,meth_sink
+                  &itransport_only,meth_sink,iloadtide
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv
@@ -362,7 +362,7 @@ module schism_glbl
                              &jspc(:)          
   integer,save,allocatable :: isblock_nd(:,:),isblock_el(:),iq_block_lcl(:),iq_block(:)
   real(rkind),save,allocatable :: trobc(:,:),vobc1(:),vobc2(:),tamp(:), &
-                                  &tnf(:),tfreq(:),tear(:),amig(:),ff(:),face(:), &
+                                  &tnf(:),tfreq(:),tear(:),amig(:),ff(:),face(:),rloadtide(:,:,:), &
                                   &emo(:,:,:),efa(:,:,:),umo(:,:,:),ufa(:,:,:), &
                                   &vmo(:,:,:),vfa(:,:,:),eth(:,:), &
                                   &qthcon(:),uthnd(:,:,:),vthnd(:,:,:), &

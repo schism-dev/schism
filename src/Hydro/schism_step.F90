@@ -410,8 +410,8 @@
       enddo !i
 !$OMP end do
 
-!...  Earth tidal potential at nodes: pre-compute to save time
-!...
+!...  Earth tidal potential and loading tide at nodes: pre-compute to save time
+!... 
 !$OMP do
       do i=1,npa
         etp(i)=0.d0
@@ -419,6 +419,10 @@
           ncyc=int(tfreq(j)*time/2.d0/pi)
           arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
           etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
+
+          if(iloadtide/=0) then !loading tide
+            etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
+          endif !iloadtide/
         enddo !j
       enddo !i
 !$OMP end do
