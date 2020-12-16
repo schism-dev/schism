@@ -993,6 +993,7 @@
       status = nf90_close(ncids(2))
 !end11
       print*, 'done reading nc for file ',ifile
+      print*, 'Finished!'
       stop
 !--------------------------------------------------------------------
       enddo !ifile=1,

@@ -10,7 +10,7 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Core (mandatory) parameters; no defaults
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Pre-processing option. Useful for checking grid violations.
+! Pre-processing option. Useful for checking grid errors etc.
   ipre = 0 !Pre-processor flag (1: on; 0: off)
 
 ! Baroclinic/barotropic option. If ibc=0 (baroclinic model), ibtp is not used.

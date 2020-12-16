@@ -1,7 +1,7 @@
 !     Generate .gr3 (e.g. shapiro.gr3)  using bottom slope as a criterion
 !     (more criteria than gen_slope_filter).
 !     Works for mixed tri/quads 
-!     Inputs: hgrid.gr3; consts below
+!     Inputs: hgrid.gr3 (projection or lon/lat); consts below
 !     Output: slope_filter.gr3
 
 !     ifort -O2 -CB -o gen_slope_filter2 gen_slope_filter2.f90
