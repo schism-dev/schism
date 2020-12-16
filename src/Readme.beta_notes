@@ -2,6 +2,8 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides; if iloadtide/=0, need
+                        amp/phases in loadtide_[FREQ].gr3 (freq's shared with tidal potential);
 f8ba470 (Dec 3, 2020): Added a new option (meth_sink) to treat net sink: if an elem is dry with a net sink, vsource is reset
                        to 0;
 f9043e2 (Nov. 12, 2020): merged with LRU branch wwm_lr; removed 'sav_cd' (isav=1 now requires sav_cd.gr3).
@@ -463,6 +465,8 @@ git versions:
 (116) 8083cfa (Nov. 10, 2020): added option for transport solver only (itransport_only)
 (117) 6dc44d3 (Dec 14, 2020): Fixed a bug, thanks to Kevin Kartin, on vortex formulism of wave force (missing a 
                               factor of area() in I_4);
+(118) 28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides. The option shares some constants
+                              with tidal potential: freq names and cut-off depth;
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
