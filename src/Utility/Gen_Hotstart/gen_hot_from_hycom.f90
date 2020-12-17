@@ -14,8 +14,8 @@
 
 ! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file); works for global grid.
 ! Changed algorithm from gen_hot_3Dth_from_hycom: no longer do
-! horizontal extension but simply fill invalid pts with T,S values outside (0
-! for SSH, U,V).
+! horizontal extension but simply fill invalid pts with T,S values from a valid
+! location (0 for SSH, U,V).
 
 ! The section on nc read needs to be modified as appropriate- search for
 ! 'start11' and 'end11'
@@ -102,7 +102,7 @@
      &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:)
       real, allocatable :: xl(:),yl(:),dp(:),ztot(:),sigma(:),arco(:,:), &
      &tempout(:,:),saltout(:,:),uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:), &
-     &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:)
+     &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:),ts_lat(:,:,:)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
       real*8 :: aa1(1)
 
@@ -247,6 +247,7 @@
         allocate(uvel(ixlen,iylen,ilen),stat=ier)
         allocate(vvel(ixlen,iylen,ilen),stat=ier)
         allocate(salt(ixlen,iylen,ilen),stat=ier)
+        allocate(ts_lat(iylen,ilen,2),stat=ier)
         allocate(temp(ixlen,iylen,ilen),stat=ier)
         allocate(ssh(ixlen,iylen),stat=ier)
         uvel=0; vvel=0; ssh=0
@@ -329,116 +330,146 @@
         !Define junk value for sid; the test is salt<rjunk+0.1
         rjunk=-3.e4*1.e-3+20
 
-!       Do sth for 1st step
-        if(ifile==1.and.it2==ilo) then
-!         Assume these won't change over time iteration!!
-!         Find bottom index and extend
-          ndrypt=0 !# of dry nodes in nc
-          do i=1,ixlen
-            do j=1,iylen
+!       Assume these won't change over time iteration!!
+!       Find bottom index and extend
+        ndrypt=0 !# of dry nodes in nc
+        do i=1,ixlen
+          do j=1,iylen
 !             if(salt(i,j,ilen)<rjunk+0.1) then
-              if(ssh(i,j)<rjunk+0.1) then !use ssh to judge
-                kbp(i,j)=-1 !dry
-                ndrypt=ndrypt+1
-              else !wet
-                !Extend near bottom
-                klev0=-1 !flag
-                klev=-1 !flag
-                do k=1,ilen !uvel
-                  if(uvel(i,j,k)>rjunk) then
-                    klev(1)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !vvel
-                  if(vvel(i,j,k)>rjunk) then
-                    klev(2)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !temp
-                  if(temp(i,j,k)>rjunk) then
-                    klev(3)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !salt
-                  if(salt(i,j,k)>rjunk) then
-                    klev(4)=k; exit
-                  endif
-                enddo !k
-                klev0=maxval(klev)
-                
+            if(ssh(i,j)<rjunk+0.1) then !use ssh to judge
+              kbp(i,j)=-1 !dry
+              ndrypt=ndrypt+1
+            else !wet
+              !Extend near bottom
+              klev0=-1 !flag
+              klev=-1 !flag
+              do k=1,ilen !uvel
+                if(uvel(i,j,k)>rjunk) then
+                  klev(1)=k; exit
+                endif
+              enddo !k
+              do k=1,ilen !vvel
+                if(vvel(i,j,k)>rjunk) then
+                  klev(2)=k; exit
+                endif
+              enddo !k
+              do k=1,ilen !temp
+                if(temp(i,j,k)>rjunk) then
+                  klev(3)=k; exit
+                endif
+              enddo !k
+              do k=1,ilen !salt
+                if(salt(i,j,k)>rjunk) then
+                  klev(4)=k; exit
+                endif
+              enddo !k
+              klev0=maxval(klev)
+              
 !               if(klev0<=0) then
-                if(minval(klev)<=0) then
-                  write(11,*)'Impossible (1):',i,j,klev!salt(i,j,ilen)
-                  stop
-                endif !klev0
+              if(minval(klev)<=0) then
+                write(11,*)'Impossible (1):',i,j,klev!salt(i,j,ilen)
+                stop
+              endif !klev0
 
 !               Fill junk uvel, vvel with zero to eliminate HYCOM nc error
-                do k=klev0,ilen
-                  if (uvel(i,j,k)<rjunk) then
-                    write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
-                    uvel(i,j,k)=0.
-                  end if
-                  if (vvel(i,j,k)<rjunk) then
-                    write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
-                    vvel(i,j,k)=0.
-                   end if
-                end do !k
+              do k=klev0,ilen
+                if (uvel(i,j,k)<rjunk) then
+                  write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
+                  uvel(i,j,k)=0.
+                end if
+                if (vvel(i,j,k)<rjunk) then
+                  write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
+                  vvel(i,j,k)=0.
+                 end if
+              end do !k
 !               Fill junk salt ,temp with bottom value
-                do k=klev0,ilen
-                  if (temp(i,j,k)<rjunk) then
-                    if(k==klev0) then
-                      write(11,*)'Bottom T is junk:',it2,i,j,k,temp(i,j,k) 
-                      stop
-                    endif
-                    write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
-                    temp(i,j,k)=temp(i,j,klev0)
-                  end if
-                  if (salt(i,j,k)<rjunk) then
-                    if(k==klev0) then
-                      write(11,*)'Bottom S is junk:',it2,i,j,k,salt(i,j,k) 
-                      stop
-                    endif
-                    write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
-                    salt(i,j,k)=salt(i,j,klev0)
-                  end if
-                end do !k
-
-                salt(i,j,1:klev0-1)=salt(i,j,klev0)
-                temp(i,j,1:klev0-1)=temp(i,j,klev0)
-                uvel(i,j,1:klev0-1)=uvel(i,j,klev0)
-                vvel(i,j,1:klev0-1)=vvel(i,j,klev0)             
-                kbp(i,j)=klev0 !>0; <=ilen
-
-                !Check
-                do k=1,ilen
-                  if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
-                    &temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
-                    &abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
-                    &abs(ssh(i,j))>ssh_max) then
-                    write(11,*)'Fatal: no valid values:',it2,i,j,k,salt(i,j,k), &
-     &temp(i,j,k),uvel(i,j,k),vvel(i,j,k),ssh(i,j)
+              do k=klev0,ilen
+                if (temp(i,j,k)<rjunk) then
+                  if(k==klev0) then
+                    write(11,*)'Bottom T is junk:',it2,i,j,k,temp(i,j,k) 
                     stop
                   endif
-                enddo !k
-              endif !salt
-            enddo !j
-          enddo !i  
-!          print*, 'ndrypt=',ndrypt
+                  write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
+                  temp(i,j,k)=temp(i,j,klev0)
+                end if
+                if (salt(i,j,k)<rjunk) then
+                  if(k==klev0) then
+                    write(11,*)'Bottom S is junk:',it2,i,j,k,salt(i,j,k) 
+                    stop
+                  endif
+                  write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
+                  salt(i,j,k)=salt(i,j,klev0)
+                end if
+              end do !k
 
-!         Compute S,T etc@ invalid pts based on nearest neighbor
-!         Search around neighborhood of a pt
-          allocate(iparen_of_dry(2,max(1,ndrypt)))
-          call cpu_time(tt0)
-        
-          icount=0
+              salt(i,j,1:klev0-1)=salt(i,j,klev0)
+              temp(i,j,1:klev0-1)=temp(i,j,klev0)
+              uvel(i,j,1:klev0-1)=uvel(i,j,klev0)
+              vvel(i,j,1:klev0-1)=vvel(i,j,klev0)             
+              kbp(i,j)=klev0 !>0; <=ilen
+
+              !Check
+              do k=1,ilen
+                if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
+                  &temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
+                  &abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
+                  &abs(ssh(i,j))>ssh_max) then
+                  write(11,*)'Fatal: no valid values:',it2,i,j,k,salt(i,j,k), &
+   &temp(i,j,k),uvel(i,j,k),vvel(i,j,k),ssh(i,j)
+                  stop
+                endif
+              enddo !k
+            endif !salt
+          enddo !j
+        enddo !i  
+!       print*, 'ndrypt=',ndrypt
+
+!       Find a valid T,S at each lat point for extrapolation later
+        ts_lat=-9999 !flag
+        do j=1,iylen
+          ifl=0 !flag
           do i=1,ixlen
-            do j=1,iylen
-              if(kbp(i,j)==-1) then !invalid pts  
-                salt(i,j,1:ilen)=sal_outside
-                temp(i,j,1:ilen)=tem_outside
-                uvel(i,j,1:ilen)=0.
-                vvel(i,j,1:ilen)=0.
-                ssh(i,j)=0.
+            if(salt(i,j,ilen)>rjunk) then
+              ifl=1
+              ts_lat(j,:,1)=temp(i,j,:)
+              ts_lat(j,:,2)=salt(i,j,:)
+              exit
+            endif
+          enddo !i
+          if(ifl==0) write(20,*)'Did not find a valid T,S at lat pt:',j,lat(1,j) !,salt(:,j,ilen)
+        enddo !j
+
+!       Further extend to fill rest of lat pts
+        do j=1,iylen
+          if(ts_lat(j,1,1)<rjunk+0.1) then
+            ifl=0
+            do jj=j+1,iylen
+              if(ts_lat(jj,1,1)>rjunk) then
+                ts_lat(j,:,1:2)=ts_lat(jj,:,1:2) 
+                ifl=1; exit 
+              endif   
+            enddo !jj
+            if(ifl==0) then
+              write(11,*)'Failed to find a valid T,S at lat pt:',j,lat(1,j)
+              stop
+            endif
+          endif !ts_lat
+        enddo !j
+
+!       Compute S,T etc@ invalid pts based on nearest neighbor
+!       Search around neighborhood of a pt
+        allocate(iparen_of_dry(2,max(1,ndrypt)))
+        call cpu_time(tt0)
+      
+        icount=0
+        do i=1,ixlen
+          do j=1,iylen
+            if(kbp(i,j)==-1) then !invalid pts  
+              salt(i,j,1:ilen)=ts_lat(j,:,2)
+              temp(i,j,1:ilen)=ts_lat(j,:,1)
+              uvel(i,j,1:ilen)=0.
+              vvel(i,j,1:ilen)=0.
+              ssh(i,j)=0.
 
 
 !                icount=icount+1
@@ -482,295 +513,137 @@
 !                iparen_of_dry(1,icount)=i1
 !                iparen_of_dry(2,icount)=j1
 
-                !Check 
-                do k=1,ilen
-                  if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
-                     temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
-                     abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
-                     abs(ssh(i,j))>ssh_max) then
-                    write(11,*)'Fatal: no valid values after searching:',it2,i,j,k,salt(i,j,k), &
+              !Check 
+              do k=1,ilen
+                if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
+                   temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
+                   abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
+                   abs(ssh(i,j))>ssh_max) then
+                  write(11,*)'Fatal: no valid values after searching:',it2,i,j,k,salt(i,j,k), &
      &temp(i,j,k),uvel(i,j,k),vvel(i,j,k),ssh(i,j)
-                    stop
-                  endif
-                enddo !k
+                  stop
+                endif
+              enddo !k
 
 !                write(12,*)icount,i,j,iparen_of_dry(1:2,icount)
-              endif !kbp(i,j)==-1
-            enddo !j=iylen1,iylen2
-          enddo !i=ixlen1,ixlen2
-          call cpu_time(tt1)
+            endif !kbp(i,j)==-1
+          enddo !j=iylen1,iylen2
+        enddo !i=ixlen1,ixlen2
+        call cpu_time(tt1)
 !          if(icount/=ndrypt) stop 'mismatch(7)'
 !          write(20,*)'extending took (sec):',tt1-tt0,ndrypt
 !          call flush(20)
 
-          !Save for abnormal cases later
-!          salt0=salt
-!          temp0=temp         
-!          ssh0=ssh
-!          uvel0=uvel
-!          vvel0=vvel
-
 !         Test outputs
-          icount=0
-          do i=1,ixlen
-            do j=1,iylen
-              icount=icount+1
-              write(95,*)icount,lon(i,j),lat(i,j),ssh(i,j)
-              write(96,*)icount,lon(i,j),lat(i,j),uvel(i,j,ilen)
-              write(97,*)icount,lon(i,j),lat(i,j),vvel(i,j,ilen)
-              write(98,*)icount,lon(i,j),lat(i,j),salt(i,j,1) !,i,j
-              write(99,*)icount,lon(i,j),lat(i,j),temp(i,j,ilen)
-              write(100,*)icount,lon(i,j),lat(i,j),temp(i,j,1)
-            enddo !j
-          enddo !i
-          print*, 'done outputting test outputs for nc'
-     
-!         Find parent elements for hgrid.ll
-          call cpu_time(tt0)
-          loop4: do i=1,np
-            ixy(i,1:2)=0
+        icount=0
+        do i=1,ixlen
+          do j=1,iylen
+            icount=icount+1
+            write(95,*)icount,lon(i,j),lat(i,j),ssh(i,j)
+            write(96,*)icount,lon(i,j),lat(i,j),uvel(i,j,ilen)
+            write(97,*)icount,lon(i,j),lat(i,j),vvel(i,j,ilen)
+            write(98,*)icount,lon(i,j),lat(i,j),salt(i,j,1) !,i,j
+            write(99,*)icount,lon(i,j),lat(i,j),temp(i,j,ilen)
+            write(100,*)icount,lon(i,j),lat(i,j),temp(i,j,1)
+          enddo !j
+        enddo !i
+        print*, 'done outputting test outputs for nc'
+   
+!       Find parent elements for hgrid.ll
+        call cpu_time(tt0)
+        loop4: do i=1,np
+          ixy(i,1:2)=0
 
-            if(interp_mode==0) then !SG search
-              do ix=1,ixlen-1
-                if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
-                  !Lower left corner index
-                  ixy(i,1)=ix
-                  xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
-                  exit
-                endif
-              enddo !ix
-              do iy=1,iylen-1
-                if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
-                  !Lower left corner index
-                  ixy(i,2)=iy
-                  yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
-                  exit
-                endif
-              enddo !ix
-
-              if(ixy(i,1)==0.or.ixy(i,2)==0) then
-                write(11,*)'Did not find parent:',i,ixy(i,1:2),xl(i),yl(i)
-                stop
+          if(interp_mode==0) then !SG search
+            do ix=1,ixlen-1
+              if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
+                !Lower left corner index
+                ixy(i,1)=ix
+                xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
+                exit
               endif
-              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
-                write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
-                stop
+            enddo !ix
+            do iy=1,iylen-1
+              if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
+                !Lower left corner index
+                ixy(i,2)=iy
+                yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
+                exit
               endif
+            enddo !ix
 
-              !Bilinear shape function
-              arco(1,i)=(1-xrat)*(1-yrat)
-              arco(2,i)=xrat*(1-yrat)
-              arco(4,i)=(1-xrat)*yrat
-              arco(3,i)=xrat*yrat
-            else !interp_mode=1; generic search with UG
-              do ix=1,ixlen-1 
-                do iy=1,iylen-1 
-                  x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
-                  y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                  a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
-                  a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
-                  a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
-                  a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
-                  b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                  b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                  rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
-                  if(rat<small1) then
-                    ixy(i,1)=ix; ixy(i,2)=iy
+            if(ixy(i,1)==0.or.ixy(i,2)==0) then
+              write(11,*)'Did not find parent:',i,ixy(i,1:2),xl(i),yl(i)
+              stop
+            endif
+            if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+              write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
+              stop
+            endif
+
+            !Bilinear shape function
+            arco(1,i)=(1-xrat)*(1-yrat)
+            arco(2,i)=xrat*(1-yrat)
+            arco(4,i)=(1-xrat)*yrat
+            arco(3,i)=xrat*yrat
+          else !interp_mode=1; generic search with UG
+            do ix=1,ixlen-1 
+              do iy=1,iylen-1 
+                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
+                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
+                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
+                if(rat<small1) then
+                  ixy(i,1)=ix; ixy(i,2)=iy
 !                 Find a triangle
-                    in=0 !flag
-                    do l=1,2
-                      ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
-                      if(l==1) then !nodes 1,2,3
-                        bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                        wild(l)=abs(a1+a2+ap-bb)/bb
-                        if(wild(l)<small1*5) then
-                          in=1
-                          arco(1,i)=max(0.,min(1.,a2/bb))
-                          arco(2,i)=max(0.,min(1.,ap/bb))
-                          arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
-                          arco(4,i)=0.
-                          exit
-                        endif
-                      else !nodes 1,3,4
-                        bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                        wild(l)=abs(a3+a4+ap-bb)/bb
-                        if(wild(l)<small1*5) then
-                          in=2
-                          arco(1,i)=max(0.,min(1.,a3/bb))
-                          arco(3,i)=max(0.,min(1.,a4/bb))
-                          arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
-                          arco(2,i)=0.
-                          exit
-                        endif
+                  in=0 !flag
+                  do l=1,2
+                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
+                    if(l==1) then !nodes 1,2,3
+                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
+                      wild(l)=abs(a1+a2+ap-bb)/bb
+                      if(wild(l)<small1*5) then
+                        in=1
+                        arco(1,i)=max(0.,min(1.,a2/bb))
+                        arco(2,i)=max(0.,min(1.,ap/bb))
+                        arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+                        arco(4,i)=0.
+                        exit
                       endif
-                    enddo !l=1,2
-                    if(in==0) then
-                      write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
-                      stop
+                    else !nodes 1,3,4
+                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
+                      wild(l)=abs(a3+a4+ap-bb)/bb
+                      if(wild(l)<small1*5) then
+                        in=2
+                        arco(1,i)=max(0.,min(1.,a3/bb))
+                        arco(3,i)=max(0.,min(1.,a4/bb))
+                        arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+                        arco(2,i)=0.
+                        exit
+                      endif
                     endif
-                    !ixy(i,3)=in
-                    cycle loop4
-                  endif !rat<small1
-                enddo !iy=iylen1,iylen2-1
-              enddo !ix=ixlen1,ixlen2-1
-            endif !interp_mode
-          end do loop4 !i=1,np
-
-          call cpu_time(tt1)
-          write(20,*)'weights took (sec):',tt1-tt0
-          call flush(20)
-
-        else !skip to extend
-          stop 'should not be here'
-
-          do i=1,ixlen
-            do j=1,iylen
-              if(kbp(i,j)>0) then !valid
-!               Check ssh consistency by kbp
-!               If not consistent, seek nearby points to replace
-!               Force ssh = 0 if none are found
-                if (ssh(i,j)<rjunk+0.1) then
-                  do ii=1,2
-                    do jj=1,2
-                      if (ssh(i+ii,j+jj)>rjunk) then
-                        ssh(i,j)=ssh(i+ii,j+jj);exit
-                      end if
-                    end do
-                  end do !ii
-                  if (ssh(i,j)<rjunk+0.1) then
-                    write(20,*) 'Warning! SSH Junk, fill with 0: ',it2,i,j
-                    ssh(i,j)=0. !fill with 0 if no finding
-                  end if
-                end if
-
-                !Extend bottom (kbp changes over time)
-                klev0=-1 !flag
-                klev=-1 !flag
-                do k=1,ilen !uvel
-                  if(uvel(i,j,k)>rjunk) then
-                    klev(1)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !vvel
-                  if(vvel(i,j,k)>rjunk) then
-                    klev(2)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !temp
-                  if(temp(i,j,k)>rjunk) then
-                    klev(3)=k; exit
-                  endif
-                enddo !k
-                do k=1,ilen !salt
-                  if(salt(i,j,k)>rjunk) then
-                    klev(4)=k; exit
-                  endif
-                enddo !k
-                klev0=maxval(klev)
-
-!               if(klev0<=0) then
-                if(minval(klev)<=0) then
-                  write(11,*)'Impossible (4):',i,j,klev !salt(i,j,ilen)
-                  stop
-                endif !klev0
-
-!               Fill junk uvel, vvel with zero to easy eliminate HYCOM nc error
-                do k=klev0,ilen
-                  if (uvel(i,j,k)<rjunk) then
-                    write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
-                    uvel(i,j,k)=0.
-                  end if
-                  if (vvel(i,j,k)<rjunk) then
-                    write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
-                    vvel(i,j,k)=0.
-                  end if
-                end do
-!               Fill junk salt ,temp with bottom value
-                do k=klev0,ilen
-                  if (temp(i,j,k)<rjunk) then
-                    if(k==klev0) then
-                      write(11,*)'Bottom T is junk(2):',it2,i,j,k,temp(i,j,k)
-                      stop
-                    endif
-                    write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
-                    temp(i,j,k)=temp(i,j,klev0)
-                  end if
-                  if (salt(i,j,k)<rjunk) then
-                    if(k==klev0) then
-                      write(11,*)'Bottom S is junk(2):',it2,i,j,k,salt(i,j,k)
-                      stop
-                    endif
-
-                    write(20,*) 'Warn! Salt Junk in the middle:',it2,i,j,k
-                    salt(i,j,k)=salt(i,j,klev0)
-                  end if
-                end do
-
-                salt(i,j,1:klev0-1)=salt(i,j,klev0)
-                temp(i,j,1:klev0-1)=temp(i,j,klev0)
-                uvel(i,j,1:klev0-1)=uvel(i,j,klev0)
-                vvel(i,j,1:klev0-1)=vvel(i,j,klev0)
-
-                !Check
-                do k=1,ilen
-                  if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
-                    &temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
-                    &abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
-                    &abs(ssh(i,j))>ssh_max) then
-                    write(11,*)'no valid values after searching(1):',it2,i,j,k,salt(i,j,:), &
-     &temp(i,j,:),uvel(i,j,:),vvel(i,j,:),'; SSH:',ssh(i,j)
-!'                   salt(i,j,k)=salt0(i,j,k)
-!                    temp(i,j,k)=temp0(i,j,k)
-!                    uvel(i,j,k)=uvel0(i,j,k)
-!                    vvel(i,j,k)=vvel0(i,j,k)
-!                    ssh(i,j)=ssh0(i,j)
+                  enddo !l=1,2
+                  if(in==0) then
+                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
                     stop
                   endif
-                enddo !k
-              endif
-            enddo !j
-          enddo !i
+                  !ixy(i,3)=in
+                  cycle loop4
+                endif !rat<small1
+              enddo !iy=iylen1,iylen2-1
+            enddo !ix=ixlen1,ixlen2-1
+          endif !interp_mode
+        end do loop4 !i=1,np
 
-          icount=0
-          do i=1,ixlen
-            do j=1,iylen
-              if(kbp(i,j)==-1) then !dry pt
-                icount=icount+1
-                !Use extended parents
-                i1=iparen_of_dry(1,icount); j1=iparen_of_dry(2,icount)
-                salt(i,j,1:ilen)=salt(i1,j1,1:ilen)
-                temp(i,j,1:ilen)=temp(i1,j1,1:ilen)
-                uvel(i,j,1:ilen)=uvel(i1,j1,1:ilen)
-                vvel(i,j,1:ilen)=vvel(i1,j1,1:ilen)
-                ssh(i,j)=ssh(i1,j1)
+        call cpu_time(tt1)
+        write(20,*)'weights took (sec):',tt1-tt0
+        call flush(20)
 
-                !Check
-                do k=1,ilen
-                  if(salt(i,j,k)<saltmin.or.salt(i,j,k)>saltmax.or. &
-                    &temp(i,j,k)<tempmin.or.temp(i,j,k)>tempmax.or. &
-                    &abs(uvel(i,j,k))>vmag_max.or.abs(vvel(i,j,k))>vmag_max.or. &
-                    &abs(ssh(i,j))>ssh_max) then
-                    write(11,*)'Warning: no valid values after searching(2):',it2,i,j,k,salt(i,j,k), &
-     &temp(i,j,k),uvel(i,j,k),vvel(i,j,k),ssh(i,j),i1,j1,'; ',salt(i1,j1,:),temp(i1,j1,:),uvel(i1,j1,:)
-!'
-                    stop
-                  endif
-                enddo !k
-              endif !kbp
-            enddo !j
-          enddo !i
-          if(icount/=ndrypt) stop 'mismatch(8)'
-
-          !Save for abnormal cases later
-!          salt0=salt
-!          temp0=temp
-!          ssh0=ssh
-!          uvel0=uvel
-!          vvel0=vvel
-
-          write(20,*)'done prep for step:',it2
-          call flush(20)
-        endif !ifile==1.and.it2==
     
 !       Do interpolation
         tempout=-99; saltout=-99
