@@ -63,7 +63,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
  &dps(:),eta2s(:),eta2e(:)
   character(len=48),allocatable :: variable_nm(:)
   character(len=1024)           :: to_be_combined
-  character(len=1024)           :: default_variables='time,wetdry_elem,depth'
+  character(len=1024)           :: default_variables='time,wetdry_elem,wetdry_node,wetdry_side,depth'
   character(len=1024)           :: output_prefix
   logical                       :: check_vars=.false.
   logical,allocatable           :: skip_var(:)
@@ -506,6 +506,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     file63='schout_0000_'//it_char(1:it_len)//'.nc'
     file63=adjustl(file63)
     iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+    if(iret/=NF90_NOERR) stop 'Failed to open(1)'
     !iret=nf_inq_nvars(ncid2,nvars)
     iret=nf90_inquire(ncid2,nVariables=nvars)
 !    write(99,*)'nvars=',nvars,file63
@@ -734,6 +735,10 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
         file63='schout_'//a_4//'_'//it_char(1:it_len)//'.nc'
         file63=adjustl(file63)
         iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=NF90_NOERR) then
+          print*, 'Failed to open(2):',irank
+          stop
+        endif
         !write(99,*)'nvars=',nvars,file63
 
         do m=1,nvars
@@ -990,7 +995,7 @@ call cla_register('-e','--end','end day', cla_int  ,'-1')
 call cla_register('-w','--wetdry','dry option (0: last wet value; 1: junk value)', cla_int  ,'0')
 !call cla_register('-n','--nc','combine to NetCDF format (1) or ordinary binary (0)', cla_int  ,'0')
 !call cla_register('-f','--file','base file name like elev.61',  cla_char,'') 
-call cla_register('-v','--vars','comma separated list of variables',  cla_char,'') 
+call cla_register('-v','--vars','comma separated list of variables enclosed in double quotes',  cla_char,'') 
 call cla_register('-o','--output','output file prefix',  cla_char,'schout') 
 call cla_validate
     
