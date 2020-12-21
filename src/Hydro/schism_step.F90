@@ -37,7 +37,7 @@
 #endif
 
 #ifdef USE_FABM
-#include "fabm_version.h"
+!#include "fabm_version.h"
       USE fabm_schism, only: fabm_schism_do, fs, fabm_istart => istart
       USE fabm_schism, only: fabm_schism_write_output_netcdf
 #endif

@@ -12,7 +12,7 @@
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
 !
-#include "fabm_version.h"
+!#include "fabm_version.h"
 
 module fabm_schism
 
