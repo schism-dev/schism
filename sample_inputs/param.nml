@@ -61,7 +61,7 @@
 !-----------------------------------------------------------------------
 ! Option to add self-attrection loading tide (SAL) into tidal potential 
 ! (usually for global model). If /=1, needs inputs: loadtide_[FREQ].gr3, 
-! where [FREQ] are freq names (shared with tidal potential, in upper cases) i
+! where [FREQ] are freq names (shared with tidal potential, in upper cases) 
 ! and the _two_ 'depths' inside are amplitude (m) and phases (degrees behind GMT), 
 ! interpolated from global tide model (e.g. FES2014); also shares some 
 ! parameters with tidal potential in bctides.in (cut-off depth, frequencies).

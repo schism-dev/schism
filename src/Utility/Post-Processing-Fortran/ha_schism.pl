@@ -4,28 +4,35 @@
 #Do harmonic analysis for all nodes; drives read_output8_allnodes_simple and tidal_analysis
 #Run in dir where hgrid.gr3 is.
 #Needs inputs: hgrid.gr3, include.gr3 (hgrid based; to focus on a region or subsample)
-#combined schout_*.nc, and drives ha_sub.pl (in each parallel task)
-#And also arguments to this script. 
-#Make sure the batch script, compiled executables are for same system
-#Outputs: amp_[m2,k2].gr3, pha_[m2,k2].gr3
+#combined or uncombined schout_*.nc, and drives ha_sub.pl (in each parallel task)
+#And also arguments to this script. Tested on hurricane and femto. 
+#Make sure the batch script, compiled executables are for same system: read_output8_allnodes_simple*,
+#   tidal_analysis, run_*
+#Outputs: amp_[m2,k1].gr3, pha_[m2,k1].gr3 (phases in degrees). Screen dump in ha_schism.out
 
-if (@ARGV != 7) {
-    print "Usage: $0 [full path to read_output8_allnodes_simple] [full path to tidal_analysis] 
-          [full path to qsub batch script] [full path to tidal_const.dat] [# of tasks] [start stack]
-          [end stack]\n";
-    print "Example: $0 /sciclone/home10/yinglong/bin/read_output8_allnodes_simple /sciclone/home10/yinglong/bin/tidal_analysis 
-          /sciclone/home10/yinglong/run_comb /sciclone/home10/yinglong/tidal_const.dat
-          3 2 4\n";
-    exit(1);
+open(DB,">ha_schism.out");
+
+if (@ARGV != 8) {
+  print "Usage: $0 [1(combined) or 0(uncombined)] [full path to read_output8_allnodes_simple] [full path to tidal_analysis] 
+        [full path to sample qsub batch script] [full path to tidal_const.dat] [# of tasks (<1000)] [start stack]
+        [end stack]\n";
+  print "Example: $0 0 ~yinglong/bin/read_output8_allnodes_simple.femto ~yinglong/bin/tidal_analysis 
+        ~yinglong/run_serial_femto ~yinglong/Scripts/Harmonic_Analysis/tidal_const.indays
+        3 2 4\n";
+  exit(1);
+}
+else {
+  print DB "$0 @ARGV";   
 }
 
-$extract_code=$ARGV[0];
-$ha_code=$ARGV[1];
-$batch=$ARGV[2];
-$tidal_const=$ARGV[3];
-$tasks=$ARGV[4];
-$start=$ARGV[5];
-$end=$ARGV[6];
+$comb=$ARGV[0];
+$extract_code=$ARGV[1];
+$ha_code=$ARGV[2];
+$batch=$ARGV[3];
+$tidal_const=$ARGV[4];
+$tasks=$ARGV[5];
+$start=$ARGV[6];
+$end=$ARGV[7];
 
 $pi=3.14159267989;
 
@@ -46,45 +53,68 @@ for($i=1;$i<=$np;$i++)
     $count=$count+1; 
   } #if
 } #for $i
-print "# of output pts= $count\n";
+print DB "# of output pts= $count\n";
 $pts_per_task=int($count/$tasks); #except for the last task
 $pts_last_task=$count-($tasks-1)*$pts_per_task;
+print DB "# of pts per stack= $pts_per_task\n";
 
 #Init
 for($t=1;$t<=$tasks;$t++)
 {
-  for($i=1;$i<=$np;$i++) { $filter[$i-1][$t-1]=0;}
+  #Find start/end node # for a task; there are gaps in btw
+  $start_node[$t-1]=0; 
+  $end_node[$t-1]=0;
+#  for($i=1;$i<=$np;$i++) { $filter[$i-1][$t-1]=0;}
   
 } #for $t
 
 $count=0;
+$t0=0; #init
 for($i=1;$i<=$np;$i++)
 {
   if($fl[$i-1]>0.1)
   {
     $count=$count+1;
+    if($count==1) {$start_node[0]=$i;}
     $t=int(($count-1)/$pts_per_task); #task ID (0-based)
     if($t>$tasks-1) {$t=$tasks-1;}
-    $filter[$i-1][$t]=1;
+    $end_node[$t]=$i; #keep updating until the real last one
+    if($t!=$t0) 
+    {
+      $t0=$t;
+      $start_node[$t]=$i;
+    }
+
+#    $filter[$i-1][$t]=1;
     #Creat local-to-global mapping
     $local_index=$count-$t*$pts_per_task; #1 based
     $l2g[$local_index-1][$t]=$i;
   } #if
 } #for $i
 
+print DB "Done distributing nodes...\n";
 
-#Ouptut filter_flag
+#Output filter_flag (include)
 for($t=1;$t<=$tasks;$t++)
 {
   $id=sprintf('%03d',$t);
   $filter_flag="filter_flag_"."$id";
   system "rm -f $filter_flag";
   open(F,">$filter_flag");
-  for($i=1;$i<=$np;$i++) {print F "$filter[$i-1][$t-1]\n"; }
+  for($i=1;$i<=$np;$i++) 
+  {
+    if($fl[$i-1]>0.1 && $i>=$start_node[$t-1] && $i<=$end_node[$t-1]) {$filter=1;}
+    else {$filter=0;};
+
+    print F "$filter\n"; 
+  } #for $i
   close(F);
 } #for $t
 
+print DB "Done filter flag input...\n";
+
 system "rm -f EXTRACT_* scrn.out_*";
+$batch_type=0; #0: QSUB; 1:SBATCH
 for($t=1;$t<=$tasks;$t++)
 {
   $id=sprintf('%03d',$t);
@@ -98,14 +128,18 @@ for($t=1;$t<=$tasks;$t++)
   open(RUN2,">run_$id");
   foreach $a (@run)
   {
-    if($a =~ "mvp" || $a =~ "~/bin") {print RUN2 "./ha_sub.pl $extract_code $ha_code $tidal_const $t $start $end $npts >& scrn.out_$id\n";}
-    elsif($a =~ "#PBS" && $a =~ "-N") {print RUN2 "#PBS -N EXTRACT_$id\n";}
+    if($a =~ "mvp" || $a =~ "~/bin") {print RUN2 "./ha_sub.pl $comb $extract_code $ha_code $tidal_const $t $start $end $npts >& scrn.out_$id\n";}
+    elsif($a =~ "#PBS" && $a =~ "-N") {print RUN2 "#PBS -N $id\_EXTRACT\n";}
+    elsif($a =~ "#SBATCH" && $a =~ "job-name") {print RUN2 "#SBATCH --job-name=$id\_EXTRACT\n"; $batch_type=1;}
     else {print RUN2 $a;}
   }
   close(RUN2);
 
-  system "qsub run_$id";
+  if($batch_type==0) {system "qsub run_$id";}
+  else {system "sbatch run_$id"}
 } #for $t
+
+print DB "Submitted jobs...\n";
 
 #Init final outputs as junk
 for($i=1;$i<=$np;$i++)
@@ -123,7 +157,7 @@ for($t=1;$t<=$tasks;$t++)
   $done=0; #init
   while($done==0)
   {
-    sleep 10; #sec
+#    sleep 10; #sec
     if(-e "scrn.out_$id")
     {
       open(OUT,"<scrn.out_$id") or die "Cannot open scrn.out_$id\n";
@@ -131,9 +165,12 @@ for($t=1;$t<=$tasks;$t++)
       foreach $a (@out)
       {
         if($a =~ "Done ha_sub") { $done=1; }
+        else {sleep 1;} #sec
       } 
     }
   } #while
+
+  print DB "finished ha_sub.pl on task $t\n";
 
   open(OUT1,"<M2_$id") or die "Cannot open M2_$id\n";
   open(OUT2,"<K1_$id") or die "Cannot open K1_$id\n";
@@ -157,16 +194,20 @@ for($t=1;$t<=$tasks;$t++)
   }#foreach 
 } #for $t
 
-print "Done all HA; starting final assembly...\n";
+print DB "Done all HA; starting final assembly...\n";
 
 open(AMP1,">amp_m2.gr3");
 open(PHA1,">pha_m2.gr3");
 open(AMP2,">amp_k1.gr3");
 open(PHA2,">pha_k1.gr3");
-print AMP1 @all_lines[0..1];
-print AMP2 @all_lines[0..1];
-print PHA1 @all_lines[0..1];
-print PHA2 @all_lines[0..1];
+print AMP1 "$start $end\n";
+print AMP2 "$start $end\n";
+print PHA1 "$start $end\n";
+print PHA2 "$start $end\n";
+print AMP1 $all_lines[1];
+print AMP2 $all_lines[1];
+print PHA1 $all_lines[1];
+print PHA2 $all_lines[1];
 
 for($i=1;$i<=$np;$i++)
 {
@@ -181,3 +222,5 @@ print AMP2 @all_lines[$np+2..$ne+$np+1];
 print PHA1 @all_lines[$np+2..$ne+$np+1];
 print PHA2 @all_lines[$np+2..$ne+$np+1];
 close(AMP1); close(PHA1); close(AMP2); close(PHA2);
+
+print DB "Finished ha_schism.pl...\n";
