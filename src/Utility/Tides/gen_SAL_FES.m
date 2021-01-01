@@ -1,7 +1,7 @@
 %Author: Joseph Zhang
 %Generate ampl. and phases for SAL (self-attraction loading tides) from FES2014 using linear interp directly
 %from nc files.
-%Requires inputs: (1) hgrid.ll 
+%Requires inputs: (1) hgrid.ll (depth not used)
 %                 (2) *.nc (under ./fes2014a_loadtide/load_tide/)
 %  Need to first download FES2014 at AVISO site
 %Outputs: loadtide_[FREQ].gr3 (lon in [0,360))
@@ -28,7 +28,7 @@ fclose(fid);
 
 xl0=double(c1{2}(:));
 yl=double(c1{3}(:));
-dp=c1{4}(:);
+%dp=c1{4}(:);
 i34=fix(c2{2}(:));
 
 nm(1:ne,1:4)=nan;

@@ -120,7 +120,7 @@
 !      read(10,*) nndays !# of days needed in output
 !      read(10,*) nfiles !# of stacks of HYCOM files
       close(10)
-      if(tem_es<0.or.sal_es<0.or.tem_outside<0.or.sal_outside<0) &
+      if(tem_es<-6.or.sal_es<0.or.tem_outside<-6.or.sal_outside<0) &
      &stop 'Invalid T,S constants'
 
 !     Read in hgrid and vgrid
@@ -534,7 +534,7 @@
 !          write(20,*)'extending took (sec):',tt1-tt0,ndrypt
 !          call flush(20)
 
-!         Test outputs
+!       Test outputs
         icount=0
         do i=1,ixlen
           do j=1,iylen
@@ -573,19 +573,19 @@
             enddo !ix
 
             if(ixy(i,1)==0.or.ixy(i,2)==0) then
-              write(11,*)'Did not find parent:',i,ixy(i,1:2),xl(i),yl(i)
-              stop
-            endif
-            if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
-              write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
-              stop
-            endif
+              write(20,*)'Did not find parent; will use outside T,S:',i,ixy(i,1:2),xl(i),yl(i)
+            else
+              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+                write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
+                stop
+              endif
 
-            !Bilinear shape function
-            arco(1,i)=(1-xrat)*(1-yrat)
-            arco(2,i)=xrat*(1-yrat)
-            arco(4,i)=(1-xrat)*yrat
-            arco(3,i)=xrat*yrat
+              !Bilinear shape function
+              arco(1,i)=(1-xrat)*(1-yrat)
+              arco(2,i)=xrat*(1-yrat)
+              arco(4,i)=(1-xrat)*yrat
+              arco(3,i)=xrat*yrat
+            endif
           else !interp_mode=1; generic search with UG
             do ix=1,ixlen-1 
               do iy=1,iylen-1 
@@ -649,7 +649,7 @@
         tempout=-99; saltout=-99
         do i=1,np
           if(ixy(i,1)==0.or.ixy(i,2)==0) then
-            write(20,*)'Cannot find a parent element:',i
+            !write(20,*)'Cannot find a parent element:',i
             tempout(:,i)=tem_outside
             saltout(:,i)=sal_outside
             uout(:,i)=0

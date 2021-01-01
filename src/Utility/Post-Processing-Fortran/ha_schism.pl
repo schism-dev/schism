@@ -22,7 +22,7 @@ if (@ARGV != 8) {
   exit(1);
 }
 else {
-  print DB "$0 @ARGV";   
+  print DB "$0 @ARGV\n";   
 }
 
 $comb=$ARGV[0];
