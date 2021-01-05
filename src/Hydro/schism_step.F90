@@ -7826,7 +7826,7 @@
 !      enddo !i
 
 #ifndef SINGLE_NETCDF_OUTPUT
-      if(mod(it,nspool)==0) then
+      if(nc_out>0.and.mod(it,nspool)==0) then
         call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
@@ -8563,7 +8563,7 @@
         if(noutput+4>2000) call parallel_abort('STEP: index over for id_out_var')
 
         !write(12,*)'id_out_var=',it,id_out_var(1:noutput)
-      endif !mod(it,nspool)==0
+      endif !mod(it,nspool)==0 && nc_out>0
 #else /*SINGLE_NETCDF_OUTPUT*/
       IF (mod(it,nspool)==0) THEN
         CALL NETCDF_SINGLE_OUTPUT(it)
@@ -8578,7 +8578,7 @@
 #endif
 
 !     Open new global output files and write header data
-      if(mod(it,ihfskip)==0) then
+      if(nc_out>0.and.mod(it,ihfskip)==0) then
         ifile=ifile+1  !output file #
         !ifile=it/ihfskip+1
         call fill_nc_header(1)

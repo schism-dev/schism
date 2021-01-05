@@ -697,6 +697,14 @@
 ! Output section - all optional. Values shown are default unless otherwise stated,
 ! and default for most global outputs is off
 !-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+! Main switch to control netcdf. If =0, SCHISM won't output nc files 
+! at all (useful for other programs like ESMF to output)
+!-----------------------------------------------------------------------
+  nc_out = 1
+
+!-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------
   nhot = 0 !1: output *_hotstart every 'hotout_write' steps

@@ -189,7 +189,7 @@
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide
 
-     namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
+     namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
@@ -470,6 +470,7 @@
       iloadtide=0
 
       !Output elev, hvel by detault
+      nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25)=1
       iof_icm=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
@@ -5837,7 +5838,7 @@
  
 !     Open global output files and write header data
       if(ihot<=1) ifile=1 !reset output file #
-      call fill_nc_header(0)
+      if(nc_out>0) call fill_nc_header(0)
 
 #ifdef SINGLE_NETCDF_OUTPUT
       CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)

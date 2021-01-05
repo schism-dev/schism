@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+ (Jan 6, 2021): added main switch for nc output 'nc_out' (useful for other programs to control outputs);
 28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides; if iloadtide/=0, need
                         amp/phases in loadtide_[FREQ].gr3 (freq's shared with tidal potential);
 f8ba470 (Dec 3, 2020): Added a new option (meth_sink) to treat net sink: if an elem is dry with a net sink, vsource is reset
