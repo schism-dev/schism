@@ -12,6 +12,11 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
+!   Inputs: outputs/local_to_global*; outputs/harme.53*; dimensioning
+!   max defined in combine_outHA.cmn
+!   Outputs: fort.53. Fatal errors in core
+!   ifort  -O2 -mcmodel=medium -CB -Bstatic -o combine_outHA combine_outHA.f
+
 	program	combine_outHA
 
 !-----------------------------------------------------------------------
@@ -104,7 +109,7 @@ c-----------------------------------------------------------------------
 	integer*4	i,j,nodes,nfreq,n
 	character*10	namefr(MXFREQ)
 	character*20	file
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 	open(unit=53,file=file,status='old',err=1)
 	read(53,*)nfreq
 	if (nfreq .gt. MXFREQ) then
@@ -144,17 +149,17 @@ c-----------------------------------------------------------------------
 
 	return
 	end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	subroutine	r54(uamp,upha,vamp,vpha,freq,fft,facet,nfreq,
      #			    nodes,file)
 
-c-----------------------------------------------------------------------
-c			    ,
-c	AUTHOR:		Andre Fortunato - 02-08-05
-c
-c	PURPOSE:	Read ADCIRC fort.54 files.
-c
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!			    ,
+!	AUTHOR:		Andre Fortunato - 02-08-05
+!
+!	PURPOSE:	Read ADCIRC fort.54 files.
+!
+!-----------------------------------------------------------------------
 	include		'combine_outHA.cmn'
 	real*8		freq(MXFREQ),fft(MXFREQ),facet(MXFREQ)
 	real*8		uamp(MXNODL,MXFREQ),upha(MXNODL,MXFREQ)
@@ -162,7 +167,7 @@ c-----------------------------------------------------------------------
 	character*5	freqname(MXFREQ)
 	integer*4	i,j,nodes,nfreq,n
 	character*20	file
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 	open(unit=54,file=file,status='old',err=1)
 	read(54,*)nfreq
 	if (nfreq .gt. MXFREQ) then
@@ -202,22 +207,22 @@ c-----------------------------------------------------------------------
 	return
 	end
 
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	subroutine	w53(amp,pha,freq,fft,facet,nfreq,nodes,namefr)
 
-c-----------------------------------------------------------------------
-c			    ,
-c	AUTHOR:		Andre Fortunato - 02-08-05
-c
-c	PURPOSE:	Write ADCIRC fort.53 files.
-c
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!			    ,
+!	AUTHOR:		Andre Fortunato - 02-08-05
+!
+!	PURPOSE:	Write ADCIRC fort.53 files.
+!
+!-----------------------------------------------------------------------
 	include		'combine_outHA.cmn'
 	real*8		freq(MXFREQ),fft(MXFREQ),facet(MXFREQ)
 	real*8		amp(MXNOD,MXFREQ),pha(MXNOD,MXFREQ)
 	character*10	namefr(MXFREQ)
 	integer*4	i,j,nodes,nfreq,n
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 	open(unit=53,file='fort.53',status='unknown')
 	write(53,*)nfreq
 	do i = 1, nfreq
@@ -237,24 +242,24 @@ c-----------------------------------------------------------------------
 	return
 
 	end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	subroutine	w54(uamp,upha,vamp,vpha,freq,fft,facet,nfreq,
      #			    nodes)
 
-c-----------------------------------------------------------------------
-c			    ,
-c	AUTHOR:		Andre Fortunato - 02-08-05
-c
-c	PURPOSE:	Write ADCIRC fort.54 files.
-c
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!			    ,
+!	AUTHOR:		Andre Fortunato - 02-08-05
+!
+!	PURPOSE:	Write ADCIRC fort.54 files.
+!
+!-----------------------------------------------------------------------
 	include		'combine_outHA.cmn'
 	real*8		freq(MXFREQ),fft(MXFREQ),facet(MXFREQ)
 	real*8		uamp(MXNOD,MXFREQ),upha(MXNOD,MXFREQ)
 	real*8		vamp(MXNOD,MXFREQ),vpha(MXNOD,MXFREQ)
 	character*5	freqname(MXFREQ)
 	integer*4	i,j,nodes,nfreq,n
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 	open(unit=54,file='fort.54',status='unknown')
 	write(54,*)nfreq
 	do i = 1, nfreq
@@ -275,4 +280,4 @@ c-----------------------------------------------------------------------
 
 	end
 
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
