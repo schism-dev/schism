@@ -1,0 +1,59 @@
+{% set name = "schism" %}
+{% set version = "5.8.0" %}
+
+#{% set data = load_setup_py_data() %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+# path: ..
+  url: https://github.com/schism-dev/schism/archive/v5.8.0.tar.gz
+  sha256: 8644b82083525a26834d073ab515eb32e3e7680feb1a18110d14f8752c160a23
+
+build:
+  number: 0
+  skip: true #[win]
+  script_env:
+
+outputs:
+  - name: pschism
+    script: build_mk.sh
+#   files:
+#     - {{ environ.get('SRC_DIR') }}/README
+
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ compiler('fortran') }}
+      host:
+        - cmake  ##>=3.17
+        - sed
+        - python=3
+        - mpich
+        - mpich-mpifort
+        - mpich-mpicc
+        - netcdf-fortran=4.5.3=mpi_mpich_*
+      run:
+        - mpich
+        - parmetis
+        - metis
+        - netcdf-fortran=4.5.3=mpi_mpich_*
+#   test:
+#     commands:
+#      - echo $BUILD_PREFIX
+#      - echo {{ environ.get('PREFIX') }}
+#      - echo {{ environ.get('SRC_DIR') }}
+
+
+about:
+  home: https://github.com/schism-dev/schism
+  license: Apache-2
+  license_family: APACHE
+  license_file: LICENSE
+  summary: 'Semi-implicit Cross-scale Hydroscience Integrated System Model'
+
+extra:
+  recipe-maintainers:
+#   -     
