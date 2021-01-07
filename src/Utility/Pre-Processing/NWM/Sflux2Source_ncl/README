@@ -1,0 +1,19 @@
+Preprocessing:
+  get_itpXYA.f90
+  Inputs: hgrid.cpp/hgrid.ll 
+  Outputs: itp_X,itp_Y: element center
+           itp_A:element area 
+
+Interpolation:
+  itp2ele.ncl, check configure in script. 
+  Inputs: sflux prc ncfiles, itp_X,itp_Y,itp_A
+  Outputs: vsource.bin,dim.dat
+
+Output vsource.th:
+  cvt2th.f90 (recommend to use ifort) 
+  Inputs: vsource.bin,dim.dat
+  Outputs: vsource.th
+
+Usage:
+  run.sh 
+
