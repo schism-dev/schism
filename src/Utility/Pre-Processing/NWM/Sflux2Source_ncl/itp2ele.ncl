@@ -36,7 +36,7 @@ outd(0)=np
 outd(1)=nt
 
 ic=0
-do l=1,5 ;nt
+do l=1,nt
    if (itpm.eq.0) then
        vsource(:)=linint2_points(prc_x,prc_y,prc(l-1,:,:),False,itp_x,itp_y,0)*itp_area(:)/1000
    else
