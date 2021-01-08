@@ -378,7 +378,7 @@
 !   globally.                                                          *
 !                                                                      *
 !   nf=0  if no steady constituent                                     *
-!   nf=1  if steady constituent                                        *
+!   nf=1  if steady constituent (Z0)
 !                                                                      *
 !                        R.L. 11/8/95                                  *
 !                                                                      *
