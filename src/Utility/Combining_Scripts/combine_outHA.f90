@@ -14,7 +14,7 @@
 
 !   Inputs: hgrid.gr3, outputs/local_to_global*; outputs/harme_*; dimensioning
 !   max defined in module.
-!   Outputs: fort.53. Fatal errors in core
+!   Outputs: harm_[amp,pha].gr3; Fatal errors in core
 !   ifort  -O2 -mcmodel=medium -CB -Bstatic -o combine_outHA combine_outHA.f90
 
    module mod_HA
