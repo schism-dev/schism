@@ -12,8 +12,8 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-!   Inputs: hgrid.gr3, outputs/local_to_global*; outputs/harme.53*; dimensioning
-!   max defined in combine_outHA.cmn
+!   Inputs: hgrid.gr3, outputs/local_to_global*; outputs/harme_*; dimensioning
+!   max defined in module.
 !   Outputs: fort.53. Fatal errors in core
 !   ifort  -O2 -mcmodel=medium -CB -Bstatic -o combine_outHA combine_outHA.f90
 
@@ -97,7 +97,7 @@
        endif
        read(10,*)
 
-       file2='outputs/harme.53'//it_char(1:4)
+       file2='outputs/harme_'//it_char(1:4)
        call r53(ampl,phal,freq,fft,facet,nfreq,np_local,file2,namefr)
 ! Skip element correspondences
 !       write(*,*)'Rank ',i

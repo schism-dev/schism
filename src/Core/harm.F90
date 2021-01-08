@@ -413,7 +413,7 @@
 !**** Open velocity station harmonic output file and write header information
 !
       write(DIRNAME(1:4),'(i4.4)') myrank
-      open(53,file=out_dir(1:len_out_dir)//'harme.53'//DIRNAME(1:4))
+      open(53,file=out_dir(1:len_out_dir)//'harme_'//DIRNAME(1:4))
       write(53,*) nfreq+nf
       do j=1,nfreq+nf
          write(53,3679) hafreq(j),HAFF(j),HAFACE(j),namefr(j)
