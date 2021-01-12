@@ -3,7 +3,7 @@
 ; Input: sflux prc ncfiles, modify path in "dir"  
 ;        itp_X,itp_Y,itp_A from get_itpXYA.f90
 ;
-; Output: vsource.bin
+; Output: vsource.bin, dim.dat
 ;
 ; Itp option: itpm=0, bilinear ; =1, curvilinear (much slower)
 ;             Only use itpm=0 if you are sure lon/lat are actually 1d array.
