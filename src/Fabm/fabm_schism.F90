@@ -24,6 +24,7 @@ module fabm_schism
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: xlon_el, ylat_el
+  use schism_glbl,  only: dh_growth, ice_tr ! Needed for icealgae model
   use schism_msgp,  only: myrank, parallel_abort
 
   use fabm
@@ -119,9 +120,16 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:), pointer     :: I_0 => null()
+    real(rk), dimension(:), pointer     :: par0 => null()
     real(rk), dimension(:), pointer     :: bottom_depth => null()
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
+!! D.Benkort -- Ice module devlopment
+    real(rk), dimension(:), pointer     :: ice_thick => null()
+    real(rk), dimension(:), pointer     :: ice_cover => null()
+    real(rk), dimension(:), pointer     :: snow_thick => null()
+    real(rk), dimension(:), pointer     :: dh_growth => null()
+
     type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
     type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: horizontal_diagnostic_variables
     real(rk)                            :: tidx
@@ -410,6 +418,9 @@ subroutine fabm_schism_init_stage2
   allocate(fs%I_0(nea))
   fs%I_0 = 0.0_rk
 
+  allocate(fs%par0(nea))
+  fs%par0 = 0.0_rk
+
   allocate(fs%bottom_depth(nea))
   fs%bottom_depth = 0.0_rk
 
@@ -421,6 +432,21 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%num(nvrt,nea))
   fs%num = 0.0_rk
+
+
+  ! Link ice environment 
+  !> @todo can we make this conditional?
+  allocate(fs%dh_growth(nea))
+  fs%dh_growth = 0.0_rk
+
+  allocate(fs%ice_thick(nea))
+  fs%ice_thick = 0.0_rk
+
+  allocate(fs%ice_cover(nea))
+  fs%ice_cover = 0.0_rk
+
+  allocate(fs%snow_thick(nea))
+  fs%snow_thick = 0.0_rk
 
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
@@ -684,11 +710,17 @@ subroutine fabm_schism_do()
   call fabm_update_time(fs%model, fs%tidx)
 #endif
 
-  ! get light, wind and depth on elements
+  ! get light, wind and depth on elements, update ice vars
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
      fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
+
+     fs%par0(i) = fs%I_0(i) * fs%par_fraction
+     fs%ice_thick = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
+     fs%ice_cover = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
+     fs%snow_thick = sum(ice_tr(3,elnode(1:i34(i),i)))/i34(i)
+     fs%dh_growth = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
 
      ! Total water depth (or should this be the sum of layer height?
      fs%bottom_depth=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
@@ -1187,6 +1219,7 @@ subroutine link_environmental_data(self, rc)
     type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
     units='W kg-1', &
     cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
       units='m3'), self%eps(1,:))
@@ -1194,10 +1227,15 @@ subroutine link_environmental_data(self, rc)
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
   call driver%log_message('linked bulk variable "momentum diffusivity"')
-  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_shortwave_flux,self%I_0)
+  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
   call driver%log_message('linked horizontal standard variable "surface downwelling photosynthetic radiative flux"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
+  call fabm_link_horizontal_data(self%model,standard_variables%ice_thickness,self%ice_thick)
+  call fabm_link_horizontal_data(self%model,standard_variables%ice_conc,self%ice_cover)
+  call fabm_link_horizontal_data(self%model,standard_variables%snow_thickness,self%snow_thick)
+  call fabm_link_horizontal_data(self%model,standard_variables%dh_growth,self%dh_growth)
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
   call driver%log_message('linked horizontal standard variable "bottom_stress"')
   call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
@@ -1209,8 +1247,13 @@ subroutine link_environmental_data(self, rc)
 
 #else
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
+  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
+  call self%model%link_horizontal_data(fabm_standard_variables%ice_conc,self%ice_cover)
+  call self%model%link_horizontal_data(fabm_standard_variables%snow_thickness,self%snow_thick)
+  call self%model%link_horizontal_data(fabm_standard_variables%dh_growth,self%dh_growth)
   call self%model%link_horizontal_data(fabm_standard_variables%longitude,xlon_el)
   call self%model%link_horizontal_data(fabm_standard_variables%latitude,ylat_el)
   call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
