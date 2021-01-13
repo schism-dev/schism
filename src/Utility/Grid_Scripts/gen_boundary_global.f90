@@ -12,7 +12,9 @@
   &icolor(:),icolor2(:),ibnd(:),isdel(:,:),elside(:,:),isidenode(:,:),ilnd(:)
    
   !Input a node on Antarctica bnd:
-  node_ant=70665
+  print*, 'Input a node on Antarctica bnd:'
+  read*, node_ant 
+  !node_ant=70665
 
   open(14,file='hgrid.ll',status='old')
   read(14,*); read(14,*)ne,np
@@ -294,7 +296,8 @@
     endif
   enddo
 100 print*, nlines,'  lines read from bnd output'
-  
+
+  print*, 'Finished!'
 
   stop
   end

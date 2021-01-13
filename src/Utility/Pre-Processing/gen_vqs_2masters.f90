@@ -3,7 +3,7 @@
 !    WARNING: most variables/arrays in this program use '1' as surface, and nvrt*
 !    as bottom!!!
 
-!    Inputs: (1) consts. inside the code (for max. flexibility); (2) hgrid.gr3 (in map projection); 
+!    Inputs: (1) consts. inside the code (for max. flexibility); (2) hgrid.gr3 (in map projection or lon/lat); 
 !            (3) screen; (4) transect.bp (optional transect bp file; depths can be seg #s); 
 !            (5) v_regions.gr3 (depths define which master grid is used
 !            locally. In this example, '2' is Black Sea, '1' is rest,

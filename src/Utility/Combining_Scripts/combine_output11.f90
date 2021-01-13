@@ -63,7 +63,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
  &dps(:),eta2s(:),eta2e(:)
   character(len=48),allocatable :: variable_nm(:)
   character(len=1024)           :: to_be_combined
-  character(len=1024)           :: default_variables='time,wetdry_elem,depth'
+  character(len=1024)           :: default_variables='time,wetdry_elem,wetdry_node,wetdry_side,depth'
   character(len=1024)           :: output_prefix
   logical                       :: check_vars=.false.
   logical,allocatable           :: skip_var(:)
@@ -506,6 +506,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     file63='schout_0000_'//it_char(1:it_len)//'.nc'
     file63=adjustl(file63)
     iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+    if(iret/=NF90_NOERR) stop 'Failed to open(1)'
     !iret=nf_inq_nvars(ncid2,nvars)
     iret=nf90_inquire(ncid2,nVariables=nvars)
 !    write(99,*)'nvars=',nvars,file63
@@ -524,6 +525,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     !iret=nf_def_var(ncid,'elev',NF_FLOAT,2,var2d_dims,iu_id(2))
     !write(98,*)'Before:',ncid,var2d_dims,iu_id(2),nvars,iinput,ibgn
 
+    !Define all time-varying vars (all vars from uncombined)
     do m=1,nvars
       iret=nf90_inquire_variable(ncid2,m,name=variable_nm(m)) !,itype,ndims(m),int_buffer,natts)
       variable_nm(m)=trim(adjustl(variable_nm(m))); vlen(m)=len_trim(variable_nm(m))
@@ -733,6 +735,10 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
         file63='schout_'//a_4//'_'//it_char(1:it_len)//'.nc'
         file63=adjustl(file63)
         iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=NF90_NOERR) then
+          print*, 'Failed to open(2):',irank
+          stop
+        endif
         !write(99,*)'nvars=',nvars,file63
 
         do m=1,nvars
@@ -810,9 +816,15 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
       enddo !irank
 
       do m=1,nvars
-        if (skip_var(m)) cycle
-        !Compute wet/dry flags
-        if(m==2) then !idry_e
+        if (skip_var(m)) then
+          if(m<=4) stop 'u cannot skip wet/dry outputs'
+          cycle
+        endif
+
+        !Compute wet/dry flags: idry, idry_s are only used to filter 3D outputs
+        !below. There are outputs for these 2 flags independently in comb'ed
+        !output
+        if(m==3) then !idry_e
           idry_e=nint(outd(m)%data(1,1,1:ne_global))
           idry=1 !init as dry
           idry_s=1
@@ -826,7 +838,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
               endif
             enddo !j
           enddo !i
-        endif !m=2
+       endif !m=3
 
 !        !Compute bottom indices based on zcor
 !        if(m==3) then !zcor
@@ -983,7 +995,7 @@ call cla_register('-e','--end','end day', cla_int  ,'-1')
 call cla_register('-w','--wetdry','dry option (0: last wet value; 1: junk value)', cla_int  ,'0')
 !call cla_register('-n','--nc','combine to NetCDF format (1) or ordinary binary (0)', cla_int  ,'0')
 !call cla_register('-f','--file','base file name like elev.61',  cla_char,'') 
-call cla_register('-v','--vars','comma separated list of variables',  cla_char,'') 
+call cla_register('-v','--vars','comma separated list of variables enclosed in double quotes',  cla_char,'') 
 call cla_register('-o','--output','output file prefix',  cla_char,'schout') 
 call cla_validate
     

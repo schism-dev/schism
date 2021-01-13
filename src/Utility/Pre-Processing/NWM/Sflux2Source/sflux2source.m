@@ -1,18 +1,23 @@
 % clear;
-%----------------inputs------------------
+%----------------user inputs------------------
 % make sure wdir has the following files:
 %   sflux2source.prop (use xmgredit to make a ele-based prop for elements that need sources from sflux),
 %   sflux/ 
 %   hgrid.ll (for interpolation) 
 %   hgrid.utm.26918 (for converting precip. to flux);
 
-wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/sfluxprop/';
-sflux_files = dir([wdir '/sflux/sflux*prc_2*.nc'])
+%example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
+wdir='./';
+sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc'])
 start_time_run=datenum('2017-8-4');
 min_val=-0.001; max_val=100;  %values outside this range will be warned
-%----------------end inputs------------------
+%----------------end user inputs------------------
 
 %---------------outputs--------------
+% Please check the figure generated along with the output files 
+% and see if anything is obviously wrong 
+%
+% Output files:
 %  source_sink.in.2
 %  vsource.th.2
 %  msource.th.2
@@ -26,7 +31,7 @@ if exist([wdir 'hgrid.utm.mat'],'file')
     load([wdir 'hgrid.utm.mat']);%plot grid boundary
 else
     display(['reading ' hgrid_name ', this can take several minutes for the first time']);
-    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,2);
+    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
     save([wdir 'hgrid.utm.mat'],'ne', 'np', 'node', 'ele', 'i34', 'bndnode','open_bnds','land_bnds','ilb_island');
 end
 
@@ -106,7 +111,7 @@ for i=1:nf
     for j=1:nt
         this_sflux_time=this_sflux_time+dt/86400;
         if (this_sflux_time >= start_time_run) 
-            prate_interp = interp2(lat,lon,prate(:,:,j),lat_e(iSS),lon_e(iSS));
+            prate_interp = griddata(double(lat),double(lon),double(prate(:,:,j)),lat_e(iSS),lon_e(iSS));
             if ~(max(prate_interp(:)) < max_val & min(prate_interp(:)) > min_val) 
               display(['warning: value out of range']);
             end
@@ -118,7 +123,7 @@ for i=1:nf
                 subplot(1,3,3); 
                 scatter(lon_e(iSS),lat_e(iSS),5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource');
             
-                prate_interp = interp2(lat,lon,prate(:,:,j),lat_e,lon_e);
+                prate_interp = griddata(double(lat),double(lon),double(prate(:,:,j)),double(lat_e),double(lon_e));
                 subplot(1,3,1); 
                 contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux');              
                 subplot(1,3,2); 

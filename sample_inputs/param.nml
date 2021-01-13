@@ -10,7 +10,7 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Core (mandatory) parameters; no defaults
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Pre-processing option. Useful for checking grid violations.
+! Pre-processing option. Useful for checking grid errors etc.
   ipre = 0 !Pre-processor flag (1: on; 0: off)
 
 ! Baroclinic/barotropic option. If ibc=0 (baroclinic model), ibtp is not used.
@@ -57,6 +57,16 @@
 ! when air-sea exchange is involved.
 !-----------------------------------------------------------------------
   itransport_only = 0
+
+!-----------------------------------------------------------------------
+! Option to add self-attrection loading tide (SAL) into tidal potential 
+! (usually for global model). If /=1, needs inputs: loadtide_[FREQ].gr3, 
+! where [FREQ] are freq names (shared with tidal potential, in upper cases) 
+! and the _two_ 'depths' inside are amplitude (m) and phases (degrees behind GMT), 
+! interpolated from global tide model (e.g. FES2014); also shares some 
+! parameters with tidal potential in bctides.in (cut-off depth, frequencies).
+!-----------------------------------------------------------------------
+  iloadtide = 0
 
 ! Starting time
   start_year = 2000 !int
@@ -231,12 +241,15 @@
 !-----------------------------------------------------------------------
 ! Point sources/sinks option (0: no; 1: on). If =1, needs source_sink.in (list of elements),
 ! vsource,th, vsink.th, and msource.th. Source/sinks can be specified at an elem more
-! than once, and the code will accumulate the volumes, but for mass conc, one of
-! the specified values will be taken (no summation).
+! than once, and the code will accumulate the volumes; for mass conc, 
+! values are applied at _net_ source elem (no summation for conc).
+! Options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
+! zero out sink if the elem is dry if meth_sink=1
 !-----------------------------------------------------------------------
   if_source = 0
   nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
   dramp_ss = 2 !needed if if_source=1; ramp-up period in days
+  meth_sink = 0 !options to treat sinks @ dry elem
 
 !-----------------------------------------------------------------------
 ! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
@@ -336,7 +349,7 @@
 ! Max. horizontal velocity magnitude, used mainly to prevent problem in 
 ! bulk aerodynamic module
 !-----------------------------------------------------------------------
-  rmaxvel = 10.
+  rmaxvel = 5.
 
 !-----------------------------------------------------------------------
 !  Following parameters control backtracking
@@ -408,13 +421,16 @@
 
 !-----------------------------------------------------------------------
 ! Transport method. 
-! If itr_met=1, upwind method is used. If itr_met>=2, TVD or WENO method is used
+! If itr_met=1, explicit upwind method is used. If itr_met>=2, TVD or WENO method is used
 ! on an element/prism if the total depth (at all nodes of the elem.)>=h_tvd and the flag in
-! tvd.prop = 1 for the elem. (tvd.prop is required in this case); 
-! otherwise upwind is used for efficiency. 
+! tvd.prop = 1 for the elem (tvd.prop is required in this case); otherwise upwind is used for efficiency. 
+! IMPORTANT: itr_met=1,2 (explicit TVD) option is kept mainly for comparison and should NOT 
+! be used normally (use '3' or '4' instead); also it does NOT support any other tracer modules like GEN etc.
 ! itr_met=3 (horizontal TVD) or 4 (horizontal WENO): implicit TVD in the vertical dimension. 
 ! Also if itr_met==3 and h_tvd>=1.e5, some parts of the code are bypassed for efficiency
-! Controls for WENO are not yet in place
+! Controls for WENO are not yet in place.
+! In short: if you use barotropic model and want to avoid preparing tvd.prop, set itr_met=1;
+! otherwise, use '3' or '4'.
 !-----------------------------------------------------------------------
   itr_met = 3 !Default: 1
   h_tvd = 5. !used only if itr_met>=2; cut-off depth (m) 
@@ -561,8 +577,9 @@
   s2_mxnbt = 3.5
 
 !-----------------------------------------------------------------------
-! Flag for harmonic analysis for elevation. If used , need to turn on cpp flags
-! in Makefile first. Otherwise set it to 0.
+! Flag for harmonic analysis for elevation. If used , need to turn on USE_HA
+! in Makefile, and input harm.in. Otherwise set it to 0. Hotstart is not working with HA
+! Outputs are harme_* and use combine_outHA to combine.
 !-----------------------------------------------------------------------
   iharind = 0
 
@@ -680,6 +697,14 @@
 !-----------------------------------------------------------------------
 ! Output section - all optional. Values shown are default unless otherwise stated,
 ! and default for most global outputs is off
+!-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+! Main switch to control netcdf. If =0, SCHISM won't output nc files 
+! at all (useful for other programs like ESMF to output)
+!-----------------------------------------------------------------------
+  nc_out = 1
+
 !-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------

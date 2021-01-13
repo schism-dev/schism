@@ -134,7 +134,7 @@
 !     *** Fill scaling array (f**11)                           ***
 !     *** compute the radian frequency**11 for IS=ISHGH, ISLOW ***
 !
-         IF (LTEST) THEN
+         IF (LTEST .AND. WRITESTATFLAG == 1) THEN
             WRITE(STAT%FHNDL,*) 'PARAMETER 4 SNL'
             WRITE(STAT%FHNDL,*) IDP, IDP1, IDM, IDM1
             WRITE(STAT%FHNDL,*) ISP, ISP1, ISM, ISM1
@@ -143,6 +143,7 @@
             WRITE(STAT%FHNDL,*) AWG1, AWG2, AWG3, AWG4
             WRITE(STAT%FHNDL,*) AWG5, AWG6, AWG7, AWG8
             WRITE(STAT%FHNDL,*) '---------------------------------------'
+            FLUSH(STAT%FHNDL)
          END IF
 !
          IF (ALLOCATED (AF11)) DEALLOCATE (AF11)

@@ -25,12 +25,14 @@
                END IF
 
                IF (LTEST .AND. ITEST > 100) THEN
-                  WRITE(STAT%FHNDL,*) 'Gradients of depth '
-                  WRITE(STAT%FHNDL,*) '@D/@X '
-                  DO IP = 1, MNP
+                 IF (WRITESTATFLAG == 1) THEN
+                   WRITE(STAT%FHNDL,*) 'Gradients of depth '
+                   WRITE(STAT%FHNDL,*) '@D/@X '
+                   DO IP = 1, MNP
                      WRITE(STAT%FHNDL,'(1X,I5,3F10.5)') IP, DDEP(IP,1)
-                  END DO
-                  FLUSH(STAT%FHNDL)
+                   END DO
+                   FLUSH(STAT%FHNDL)
+                 END IF
                END IF
 
             CASE (2)
@@ -53,10 +55,14 @@
                      IF (GDL > SLMAX) THEN
                         DDEP(IP,1) = SLMAX*COS(GDD)
                         DDEP(IP,2) = SLMAX*SIN(GDD)
-                        WRITE(STAT%FHNDL,*) IP, SLMAX, GDL, GDD , 'MAXSLOPE'
+                        IF (WRITESTATFLAG == 1) THEN
+                          WRITE(STAT%FHNDL,*) IP, SLMAX, GDL, GDD , 'MAXSLOPE'
+                        END IF                        
                      END IF
                   END DO
-                  FLUSH(STAT%FHNDL)
+                  IF (WRITESTATFLAG == 1) THEN
+                    FLUSH(STAT%FHNDL)
+                  END IF                  
                END IF
 
             CASE DEFAULT
@@ -100,12 +106,14 @@
                   END DO
                END IF
                IF (LTEST .AND. ITEST > 100) THEN
-                  WRITE(STAT%FHNDL,*) 'Gradients of depth and current'
-                  WRITE(STAT%FHNDL,*) '@U/@X     @V/@X'
-                  DO IP = 1, MNP
-                     WRITE(STAT%FHNDL,'(1X,I5,3F10.5)') IP, DCUX, DCUY
-                  END DO
-                  FLUSH(STAT%FHNDL)
+                  IF (WRITESTATFLAG == 1) THEN
+                     WRITE(STAT%FHNDL,*) 'Gradients of depth and current'
+                     WRITE(STAT%FHNDL,*) '@U/@X     @V/@X'
+                     DO IP = 1, MNP
+                        WRITE(STAT%FHNDL,'(1X,I5,3F10.5)') IP, DCUX, DCUY
+                     END DO
+                     FLUSH(STAT%FHNDL)
+                  END IF
                END IF
             CASE (2)
                CALL DIFFERENTIATE_XYDIR(CURTXY(:,1),DCUX(:,1),DCUX(:,2))
@@ -119,12 +127,14 @@
                   END DO
                END IF
                IF (LTEST .AND. ITEST > 100) THEN
-                  WRITE(STAT%FHNDL,*) 'The Gradient of Depth and Current'
-                  WRITE(STAT%FHNDL,*) ' @U/@X    @U/@Y    @V/@X    @V/@Y'
-                  DO IP = 1, MNP
-                     WRITE(STAT%FHNDL,'(1X,I5,4F15.7)') IP, DCUX(IP,1), DCUX(IP,2), DCUY(IP,1), DCUY(IP,2)
-                  END DO
-                  FLUSH(STAT%FHNDL)
+                  IF (WRITESTATFLAG == 1) THEN
+                     WRITE(STAT%FHNDL,*) 'The Gradient of Depth and Current'
+                     WRITE(STAT%FHNDL,*) ' @U/@X    @U/@Y    @V/@X    @V/@Y'
+                     DO IP = 1, MNP
+                        WRITE(STAT%FHNDL,'(1X,I5,4F15.7)') IP, DCUX(IP,1), DCUX(IP,2), DCUY(IP,1), DCUY(IP,2)
+                     END DO
+                     FLUSH(STAT%FHNDL)
+                  END IF
                END IF
             CASE DEFAULT
          END SELECT
@@ -794,22 +804,24 @@
         CONV5 = MyREAL(IPCONV5)/MyREAL(MNP)*100.0
 #endif
 
+        IF (WRITESTATFLAG == 1) THEN
 #ifdef MPI_PARALL_GRID
-         IF (myrank == 0) THEN
-           WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 1 REACHED IN', CONV1, '% GRIDPOINTS'
-           WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 2 REACHED IN', CONV2, '% GRIDPOINTS'
-           WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 3 REACHED IN', CONV3, '% GRIDPOINTS'
-           WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 4 REACHED IN', CONV4, '% GRIDPOINTS'
-           WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 5 REACHED IN', CONV5, '% GRIDPOINTS'
-         END IF
+          IF (myrank == 0) THEN
+            WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 1 REACHED IN', CONV1, '% GRIDPOINTS'
+            WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 2 REACHED IN', CONV2, '% GRIDPOINTS'
+            WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 3 REACHED IN', CONV3, '% GRIDPOINTS'
+            WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 4 REACHED IN', CONV4, '% GRIDPOINTS'
+            WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 5 REACHED IN', CONV5, '% GRIDPOINTS'
+          END IF
 #else
-         WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 1 REACHED IN', CONV1, '% GRIDPOINTS'
-         WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 2 REACHED IN', CONV2, '% GRIDPOINTS'
-         WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 3 REACHED IN', CONV3, '% GRIDPOINTS'
-         WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 4 REACHED IN', CONV4, '% GRIDPOINTS'
-         WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 5 REACHED IN', CONV5, '% GRIDPOINTS'
+          WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 1 REACHED IN', CONV1, '% GRIDPOINTS'
+          WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 2 REACHED IN', CONV2, '% GRIDPOINTS'
+          WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 3 REACHED IN', CONV3, '% GRIDPOINTS'
+          WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 4 REACHED IN', CONV4, '% GRIDPOINTS'
+          WRITE(STAT%FHNDL,*) 'CONVERGENCE CRIT. 5 REACHED IN', CONV5, '% GRIDPOINTS'
 #endif
-         FLUSH(STAT%FHNDL)
+          FLUSH(STAT%FHNDL)
+        END IF
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1365,14 +1377,18 @@
 #endif
            IF (LSE) THEN
              READ(NFU,*) HEADLN
-             WRITE(STAT%FHNDL,'("+TRACE...",2A)') 'Reading the header of the serial file ... HEADER ', TRIM(HEADLN)
+             IF (WRITESTATFLAG == 1) THEN
+               WRITE(STAT%FHNDL,'("+TRACE...",2A)') 'Reading the header of the serial file ... HEADER ', TRIM(HEADLN)
+             END IF
              DO IC = 1, DIMS
                READ( NFU, *, IOSTAT = IFSTAT ) SEVAL2(:, IC)
                IF ( IFSTAT /= 0 ) CALL WWM_ABORT('unexpected error reading the serial file in CSEVAL 1')
              END DO
            ELSE
              OPEN( NFU, FILE = TRIM(FILEN), STATUS = 'OLD')
-             WRITE(STAT%FHNDL,'("+TRACE...",2A)') 'Reading the file of the request ... ', TRIM(FILEN)
+             IF (WRITESTATFLAG == 1) THEN
+               WRITE(STAT%FHNDL,'("+TRACE...",2A)') 'Reading the file of the request ... ', TRIM(FILEN)
+             END IF             
              READ(NFU,*) HEADLN
              DO IC = 1, DIMS
                READ( NFU, *, IOSTAT = IFSTAT ) SEVAL2(:, IC)
@@ -2006,16 +2022,18 @@
 !**********************************************************************
       SUBROUTINE WWM_ABORT(string)
 #ifdef MPI_PARALL_GRID
-      USE DATAPOOL, only : parallel_abort, DBG
+      USE DATAPOOL, only : parallel_abort, DBG, WRITEDBGFLAG
 #else
-      USE DATAPOOL, only : DBG
+      USE DATAPOOL, only : DBG, WRITEDBGFLAG
 #endif
 
       IMPLICIT NONE
       character(*), intent(in) :: string
 
-      WRITE(DBG%FHNDL, *) TRIM(string)
-      FLUSH(DBG%FHNDL)
+      IF (WRITEDBGFLAG == 1) THEN
+        WRITE(DBG%FHNDL, *) TRIM(string)
+        FLUSH(DBG%FHNDL)
+      END IF      
 
 #ifdef MPI_PARALL_GRID
       CALL PARALLEL_ABORT(TRIM(string))

@@ -37,7 +37,7 @@
 #endif
 
 #ifdef USE_FABM
-#include "fabm_version.h"
+!#include "fabm_version.h"
       USE fabm_schism, only: fabm_schism_do, fs, fabm_istart => istart
       USE fabm_schism, only: fabm_schism_write_output_netcdf
 #endif
@@ -410,15 +410,19 @@
       enddo !i
 !$OMP end do
 
-!...  Earth tidal potential at nodes: pre-compute to save time
-!...
+!...  Earth tidal potential and loading tide at nodes: pre-compute to save time
+!... 
 !$OMP do
       do i=1,npa
         etp(i)=0.d0
         do j=1,ntip
           ncyc=int(tfreq(j)*time/2.d0/pi)
           arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
-          etp(i)=etp(i)+ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
+          etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
+
+          if(iloadtide/=0) then !loading tide
+            etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
+          endif !iloadtide/
         enddo !j
       enddo !i
 !$OMP end do
@@ -1457,6 +1461,14 @@
         endif !impose_net_flux
       endif !isconsv/=0
 
+!...  Option to zero out net sink @dry elem
+      if(meth_sink/=0) then
+        where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
+!        do i=1,nea
+!          if(minval(idry(elnode(1:i34(i),i)))>0.and.vsource(i)<0.d0) vsource=0.d0 !all nodes dry
+!        enddo !i
+      endif !meth_sink
+
 !     Calculation of cross-section areas and length for flow b.c.
       if(lflbc) then
         allocate(buf1(nope_global,2),buf2(nope_global,2)); buf1=0.d0;
@@ -1522,7 +1534,7 @@
 
 !      if(myrank==8) write(99,*)carea
 
-!$OMP parallel default(shared) private(i,n1,n2,ibnd,nwild,j,vnth0,htot,sum1,vnorm,tmp,k,jfr,ncyc,arg,ubar1,vbar1)
+!$OMP parallel default(shared) private(i,n1,n2,ibnd,nwild,j,vnth0,htot,sum1,vnorm,tmp,k,jfr,ncyc,arg,ubar1,vbar1,tmpx,tmpy)
 
 !...  Compute new vel. for flow b.c. (uth,vth)
 !     For ics=1, uth, vth are in global frame
@@ -1628,7 +1640,25 @@
             uth(:,i)=uth(:,i)+ramp*ubar1/2.d0
             vth(:,i)=vth(:,i)+ramp*vbar1/2.d0
           endif !iabs(ifltype(ibnd))==5
-        endif
+        endif !ifltype
+
+        ! Deal with Stokes drift at open boundaries (KM)
+        ! Subtract depth-averaged Stokes drift vel per Bennis et al. (2011) and
+        ! Kevin Martin
+#ifdef USE_WWM
+        if(RADFLAG.eq.'VOR') then
+          tmpx = 0.d0; tmpy = 0.d0;
+          do k=kbs(i),nvrt-1
+            tmpx = tmpx + (zs(k+1,i)-zs(k,i))*(stokes_hvel_side(1,k,i)+stokes_hvel_side(1,k+1,i))/2.d0
+            tmpy = tmpy + (zs(k+1,i)-zs(k,i))*(stokes_hvel_side(2,k,i)+stokes_hvel_side(2,k+1,i))/2.d0
+          enddo !k
+!          n1 = isidenode(1,i); n2 = isidenode(2,i)
+          htot = (eta2(n1)+eta2(n2))/2 + dps(i)
+          uth(:,i) = uth(:,i)-tmpx/max(0.01d0,htot)
+          vth(:,i) = vth(:,i)-tmpy/max(0.01d0,htot)
+        endif !RADFLAG
+#endif
+
       enddo !i=1,nsa
 !$OMP end do
 
@@ -4871,8 +4901,10 @@
         ghat1(2,i)=ghat1(2,i)/real(i34(i),rkind)
       
         !Finish off terms in F, F^\alpha and f_b
-        botf1=0.69d0*grav*detpdx-dprdx/rho0 !const in each elem
-        botf2=0.69d0*grav*detpdy-dprdy/rho0
+        botf1=grav*detpdx-dprdx/rho0 !const in each elem
+        botf2=grav*detpdy-dprdy/rho0
+        !botf1=0.69d0*grav*detpdx-dprdx/rho0 !const in each elem
+        !botf2=0.69d0*grav*detpdy-dprdy/rho0
         tmp1=0.d0; tmp2=0.d0 !elem average of all terms; into ghat1
         do j=1,i34(i) !side
           isd=elside(j,i)
@@ -5105,18 +5137,17 @@
           endif !i34       
 
 #ifdef USE_WWM
-!Error: fold into ghat?
           if(RADFLAG.eq.'VOR'.and.idry_e(ie)==0) then
             sum1=0.d0; sum2=0.d0 !in eframe
-            do m=1,3 !wet sides
+            do m=1,i34(ie) !wet sides
               isd=elside(m,ie)
               do k=kbs(isd),nvrt-1
-                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0/3.d0
-                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0/3.d0
+                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0 !/3.d0
+                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0 !/3.d0
               enddo !k
             enddo !m
-            dot3=dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2
-            qel(i)=qel(i)+dt*dot3
+            dot3=(dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2)/dble(i34(ie))
+            qel(i)=qel(i)+dt*dot3*area(ie)
           endif
 #endif
 
@@ -5615,9 +5646,10 @@
           tauy2=(tau(2,node1)+tau(2,node2))/2.d0
 
           !hat_gam_[xy] has a dimension of m/s
-          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav*detp_dx(j)+ &
+          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav*detp_dx(j)+ &
+          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav*detp_dx(j)+ &
      &bcc(1,kbs(j),j)+taux2/htot)-grav*(1-thetai)*dt*deta1_dx(j)-grav*thetai*dt*deta2_dx(j)
-          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+0.69d0*grav*detp_dy(j)+ &
+          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav*detp_dy(j)+ &
      &bcc(2,kbs(j),j)+tauy2/htot)-grav*(1-thetai)*dt*deta1_dy(j)-grav*thetai*dt*deta2_dy(j)
 !         Radiation stress
 #ifdef USE_WWM
@@ -5705,15 +5737,15 @@
 !	  Elevation gradient, atmo. pressure and tidal potential
           if(k<nvrt) then
             rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-0.69d0*grav*detp_dx(j))
+                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
             rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-0.69d0*grav*detp_dy(j))
+                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
           endif
           if(k>kbs(j)+1) then 
             rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-0.69d0*grav*detp_dx(j))
+                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
             rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-0.69d0*grav*detp_dy(j))
+                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
           endif
 
 !	  Coriolis, advection, wind stress, and horizontal viscosity
@@ -7794,10 +7826,10 @@
 !      enddo !i
 
 #ifndef SINGLE_NETCDF_OUTPUT
-      if(mod(it,nspool)==0) then
-!        call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
+      if(nc_out>0.and.mod(it,nspool)==0) then
+        call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
-!        call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
+        call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
         !zcor MUST be 1st 3D var output for combine scripts to work!
         call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
         !call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,bcc(1,1:nvrt,1:npa)) !znl(:,:))
@@ -8501,9 +8533,9 @@
         if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
         if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ANA_tide_pot_grad_x',7,1,nsa,0.69*grav*detp_dx)
+     &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
         if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ANA_tide_pot_grad_y',7,1,nsa,0.69*grav*detp_dy)
+     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
         if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
         if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &
@@ -8531,7 +8563,7 @@
         if(noutput+4>2000) call parallel_abort('STEP: index over for id_out_var')
 
         !write(12,*)'id_out_var=',it,id_out_var(1:noutput)
-      endif !mod(it,nspool)==0
+      endif !mod(it,nspool)==0 && nc_out>0
 #else /*SINGLE_NETCDF_OUTPUT*/
       IF (mod(it,nspool)==0) THEN
         CALL NETCDF_SINGLE_OUTPUT(it)
@@ -8546,7 +8578,7 @@
 #endif
 
 !     Open new global output files and write header data
-      if(mod(it,ihfskip)==0) then
+      if(nc_out>0.and.mod(it,ihfskip)==0) then
         ifile=ifile+1  !output file #
         !ifile=it/ihfskip+1
         call fill_nc_header(1)

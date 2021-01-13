@@ -20,10 +20,10 @@
 ! The code will do all it can to extrapolate: below bottom/above surface.
 ! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled (from gen_hot_3Dth_from_nc.in) 
 !
-! Add checking vertical layer for each 3D var from HYCOM nc, and some easy remedy for nc file error  
+! Dan Yu: added checking vertical layer for each 3D var from HYCOM nc, and some easy remedy for nc file error  
 ! Wet-dry points are defined by ssh.
-! For U,V, if nan values in the middle of water, simply fill with 0 and record in fort.20
-! For S,T, if nan values in the middle of water, simply fill with lowest value, and record in fort.20
+! For U,V, if junk values in the middle of water, simply fill with 0 and record in fort.20
+! For S,T, if junk values in the middle of water, simply fill with bottom value, and record in fort.20
 ! If SSH shows wet/dry in time, search nearby points to fill. If none found, fill 0, and record in fort.20
 ! Consider checking HYCOM nc files with ncview or other tools.
 
@@ -33,7 +33,7 @@
 !     (3) vgrid.in (SCHISM R1703 and up);
 !     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside
 !     (5) gen_hot_3Dth_from_nc.in: 
-!                     1st line: 1: include vel and elev. in hotstart.in (and *[23D].th will start from non-0 values); 0: only T,S
+!                     1st line: 1: include vel and elev. in hotstart.nc (and *[23D].th will start from non-0 values); 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
 !                     3rd line: T,S values for pts outside bg grid in nc
 !                     4th line: time step in .nc in sec
@@ -600,7 +600,7 @@
                   stop
                 endif !klev0
 
-!               Fill NAN uvel, vvel with zero to eliminate HYCOM nc error
+!               Fill junk uvel, vvel with zero to eliminate HYCOM nc error
                 do k=klev0,ilen
                   if (uvel(i,j,k)<rjunk) then
                     write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
@@ -611,7 +611,7 @@
                     vvel(i,j,k)=0.
                    end if
                 end do !k
-!               Fill NAN salt ,temp with lowest value
+!               Fill junk salt ,temp with bottom value
                 do k=klev0,ilen
                   if (temp(i,j,k)<rjunk) then
                     if(k==klev0) then
@@ -893,7 +893,7 @@
                   stop
                 endif !klev0
 
-!               Fill NAN uvel, vvel with zero to easy eliminate HYCOM nc error
+!               Fill junk uvel, vvel with zero to easy eliminate HYCOM nc error
                 do k=klev0,ilen
                   if (uvel(i,j,k)<rjunk) then
                     write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
@@ -904,7 +904,7 @@
                     vvel(i,j,k)=0.
                   end if
                 end do
-!               Fill NAN salt ,temp with lowest value
+!               Fill junk salt ,temp with bottom value
                 do k=klev0,ilen
                   if (temp(i,j,k)<rjunk) then
                     if(k==klev0) then

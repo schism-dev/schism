@@ -12,11 +12,12 @@
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
 !
-#include "fabm_version.h"
+!#include "fabm_version.h"
 
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
+  use schism_glbl,  only: eta2, dpe
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
@@ -96,7 +97,7 @@ module fabm_schism
   type(type_model), pointer     :: model => null()
 #endif
 
-    integer                       :: day_of_year, seconds_of_day
+    real(rk)                      :: day_of_year, seconds_of_day
     logical                       :: fabm_ready
     logical                       :: repair_allowed=.true.
     integer                       :: nvar=-1
@@ -117,6 +118,7 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:), pointer     :: I_0 => null()
+    real(rk), dimension(:), pointer     :: bottom_depth => null()
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
     type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
@@ -248,8 +250,8 @@ subroutine fabm_schism_init_model(ntracers)
 
   fs%tidx = 0
 
-  fs%day_of_year = start_day + month_offsets(start_month)
-  fs%seconds_of_day = start_hour * 3600
+  fs%day_of_year = 0.0_rk + start_day + month_offsets(start_month)
+  fs%seconds_of_day = start_hour * 3600.0_rk
   !> @todo add leap year algorithm
 
   if (present(ntracers)) ntracers = fs%nvar
@@ -331,6 +333,7 @@ subroutine fabm_schism_init_stage2
     call driver%log_message(message)
   enddo
 
+
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
     fs%bottom_state(:,i) = fs%model%bottom_state_variables(i)%initial_value
@@ -339,8 +342,9 @@ subroutine fabm_schism_init_stage2
 #else
     call fs%model%link_bottom_state_data(i,fs%bottom_state(:,i))
 #endif
-
   end do
+
+  call driver%log_message('Linked bottom state data')
 
   allocate(fs%surface_state(nea,fs%nvar_sf))
   do i=1,fs%nvar_sf
@@ -351,6 +355,8 @@ subroutine fabm_schism_init_stage2
     call fs%model%link_surface_state_data(i,fs%surface_state(:,i))
 #endif
   end do
+
+  call driver%log_message('Linked surface state data')
 
   do n=1,fs%ndiag
     if (fs%interior_diagnostic_variables(n)%output_averaged) then
@@ -366,6 +372,8 @@ subroutine fabm_schism_init_stage2
     fs%time_since_last_output = 0.0_rk
   end do
 
+  call driver%log_message('Linked interior diagnostics')
+
   do n=1,fs%ndiag_hor
     if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
       allocate(fs%horizontal_diagnostic_variables(n)%data(nea))
@@ -379,6 +387,8 @@ subroutine fabm_schism_init_stage2
     fs%horizontal_diagnostic_variables(n)%data = 0.0_rk
     fs%time_since_last_hor_output = 0.0_rk
   end do
+
+  call driver%log_message('Linked horizontal diagnostics')
 
   ! link environment
   allocate(fs%light_extinction(nvrt,nea))
@@ -399,6 +409,9 @@ subroutine fabm_schism_init_stage2
   allocate(fs%I_0(nea))
   fs%I_0 = 0.0_rk
 
+  allocate(fs%bottom_depth(nea))
+  fs%bottom_depth = 0.0_rk
+
   allocate(fs%par(nvrt,nea))
   fs%par = 0.0_rk
 
@@ -411,57 +424,8 @@ subroutine fabm_schism_init_stage2
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
 
-#if _FABM_API_VERSION_ < 1
-  call fs%get_light()
-  call fabm_link_bulk_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
-  call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
-  call fabm_link_horizontal_data(fs%model,standard_variables%bottom_stress,fs%tau_bottom)
-  call fabm_link_bulk_data(fs%model,standard_variables%practical_salinity,tr_el(2,:,:))
-  call fabm_link_bulk_data(fs%model,standard_variables%temperature,tr_el(1,:,:))
-  call fabm_link_bulk_data(fs%model,standard_variables%density,erho(:,:))
-  call fabm_link_bulk_data(fs%model,standard_variables%cell_thickness,fs%layer_height)
-#else
-  call fs%model%prepare_inputs()
-  call fs%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
-  call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%I_0)
-  call fs%model%link_horizontal_data(fabm_standard_variables%bottom_stress,fs%tau_bottom)
-  call fs%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
-  call fs%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
-  call fs%model%link_interior_data(fabm_standard_variables%density,erho(:,:))
-  call fs%model%link_interior_data(fabm_standard_variables%cell_thickness,fs%layer_height)
-#endif
-
-  ! The dissipation of the turbulent kinetic energy is usually abbreviated as
-  ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
-  ! equivalently m2 s-3.
-  ! @todo what is the exact representation of this quantity in SCHISM? We assume
-  ! `epsf` here for now.
-  !call fabm_link_bulk_data(fs%model,standard_variables%turbulent_kinetic_energy_dissipation,fs%eps)
-#if _FABM_API_VERSION_ < 1
-  call fabm_link_bulk_data(fs%model, &
-    type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-    units='W kg-1', &
-    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
-#else
-  call fs%model%link_interior_data( &
-    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-    units='W kg-1', &
-    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), fs%eps)
-#endif
-
-  ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
-  ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
-  ! represented in the dfv(1:nvrt,1:npa) variable.
-  !call fabm_link_bulk_data(fs%model,standard_variables%momentum_diffusivity,fs%num)
-#if _FABM_API_VERSION_ < 1
-  call fabm_link_bulk_data(fs%model, &
-     type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
-     cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
-#else
-  call fs%model%link_interior_data( &
-    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
-    cf_names='ocean_vertical_momentum_diffusivity'),fs%num)
-#endif
+  call fs%link_environmental_data()
+  call driver%log_message('Linked environmental data')
 
 #if _FABM_API_VERSION_ < 1
   call fabm_check_ready(fs%model)
@@ -471,6 +435,7 @@ subroutine fabm_schism_init_stage2
   call fs%model%prepare_inputs(fs%tidx)
 #endif
   fs%fabm_ready=.true.
+  call driver%log_message('Initialization stage 2 complete')
 
 end subroutine fabm_schism_init_stage2
 
@@ -690,8 +655,6 @@ subroutine fabm_schism_do()
   if (.not.associated(rhs_sf)) allocate(rhs_sf(1:fs%nvar_sf))
   if (.not.associated(h_inv)) allocate(h_inv(1:nvrt))
 
-  ! update pointers for forcing?
-
   ! repair state
   call fs%repair_state()
 
@@ -716,18 +679,18 @@ subroutine fabm_schism_do()
     fs%day_of_year = 1
   endif
 
-
 #if _FABM_API_VERSION_ < 1
   call fabm_update_time(fs%model, fs%tidx)
 #endif
 
-
-!write(0,*) 'fabm: get light'
-  ! get light
+  ! get light, wind and depth on elements
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
      fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
+
+     ! Total water depth (or should this be the sum of layer height?
+     fs%bottom_depth=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
   end do
 
 #if _FABM_API_VERSION_ < 1
@@ -1218,22 +1181,30 @@ subroutine link_environmental_data(self, rc)
   call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   call fabm_link_bulk_data(self%model,standard_variables%density,erho)
   call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
+  !call fabm_link_bulk_data(self%model,standard_variables%turbulence_dissipation,self%eps)
   call fabm_link_bulk_data(self%model, &
     type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
     units='W kg-1', &
     cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-      units='Wm kg-1'), self%eps(1,:))
+      units='m3'), self%eps(1,:))
   call fabm_link_bulk_data(self%model, &
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  call driver%log_message('linked bulk variable "momentum diffusivity"')
   call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%I_0)
+  call driver%log_message('linked horizontal standard variable "surface downwelling photosynthetic radiative flux"')
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
+  call driver%log_message('linked horizontal standard variable "bottom_depth"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+  call driver%log_message('linked horizontal standard variable "bottom_stress"')
   call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
+  call driver%log_message('linked horizontal standard variable "longitude"')
   call fabm_link_horizontal_data(self%model,standard_variables%latitude,ylat_el)
-  !> @todo enable for models that need this,
-  !call fabm_link_scalar(self%model,standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+  call driver%log_message('linked horizontal standard variable "latitude"')
+  call fabm_link_scalar_data(self%model,standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+  call driver%log_message('linked standard variable "number_of_days_since_start_of_the_year"')
 
 #else
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
@@ -1244,18 +1215,21 @@ subroutine link_environmental_data(self, rc)
   call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
   call self%model%link_interior_data(fabm_standard_variables%temperature,tr_el(1,:,:))
   call self%model%link_interior_data(fabm_standard_variables%density,erho)
+  call driver%log_message('linked interior standard variable "density"')
   call self%model%link_interior_data(fabm_standard_variables%cell_thickness,self%layer_height)
-  call self%model%link_interior_data( &
-    type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
-      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
-  call self%model%link_interior_data( &
-    type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-      units='W kg-1', &
-      cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
-  call self%model%link_horizontal_data( &
-      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-          units='Wm kg-1'), self%eps(1,:))
+  call driver%log_message('linked interior standard variable "cell_thickness"')
+  !call self%model%link_interior_data( &
+  !  type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+  !    cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  !call self%model%link_interior_data( &
+  !  type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
+  !    units='W kg-1', &
+  !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  !call self%model%link_horizontal_data( &
+  !    type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+  !        units='Wm kg-1'), self%eps(1,:))
   call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
+  call driver%log_message('linked scalar standard variable "number_of_days_since_start_of_the_year"')
 #endif
 
 end subroutine link_environmental_data

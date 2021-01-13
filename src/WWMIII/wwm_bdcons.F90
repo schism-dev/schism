@@ -2131,7 +2131,7 @@
       REAL(rkind) :: SPEC_WW3(MSC_WW3,MDC_WW3,NP_WW3),SPEC_WWM(MSC,MDC,NP_WW3)
       REAL(rkind) :: DIST(NP_WW3),TMP(NP_WW3), INDBWW3(NP_WW3)
       REAL(rkind) :: SPEC_WW3_TMP(MSC_WW3,MDC_WW3,NP_WW3),SPEC_WW3_UNSORT(MSC_WW3,MDC_WW3,NP_WW3)
-      REAL(rkind) :: JUNK(MDC_WW3),DR_WW3_UNSORT(MDC_WW3),DR_WW3_TMP(MDC_WW3)
+      REAL(rkind) :: JUNK(MDC_WW3),DR_WW3_TMP(MDC_WW3)
       REAL(rkind) :: XP_WWM,YP_WWM
       INTEGER     :: IFILE, IT
 	  
@@ -2561,29 +2561,30 @@
         DO ID=1,MDC 
           CALL INTERLIN (MSC_WW3,MSC,FQ_WW3,FR,SPEC_WW3_TMP(:,ID,IP),SPEC_WWM(:,ID,IP))
         ENDDO
-        M0_WW3 = ZERO; M1_WW3 = ZERO; M2_WW3 = ZERO
-        DO ID = 1,MDC_WW3
-          DO IS = 1,MSC_WW3-1
-            DF = FQ_WW3(IS+1)-FQ_WW3(IS)
-            AM = (SPEC_WW3(IS+1,ID,IP)+SPEC_WW3(IS,ID,IP))/TWO
-            SM = (FQ_WW3(IS+1)+FQ_WW3(IS))/TWO
-            M0_WW3 =M0_WW3+AM*DF*DDIR_WW3
-            M1_WW3 =M1_WW3+AM*SM*DF*DDIR_WW3
-            M2_WW3 =M2_WW3+AM*SM**2*DF*DDIR_WW3
+
+        IF (WRITEDBGFLAG == 1) THEN
+          M0_WW3 = ZERO; M1_WW3 = ZERO; M2_WW3 = ZERO
+          DO ID = 1,MDC_WW3
+            DO IS = 1,MSC_WW3-1
+              DF = FQ_WW3(IS+1)-FQ_WW3(IS)
+              AM = (SPEC_WW3(IS+1,ID,IP)+SPEC_WW3(IS,ID,IP))/TWO
+              SM = (FQ_WW3(IS+1)+FQ_WW3(IS))/TWO
+              M0_WW3 =M0_WW3+AM*DF*DDIR_WW3
+              M1_WW3 =M1_WW3+AM*SM*DF*DDIR_WW3
+              M2_WW3 =M2_WW3+AM*SM**2*DF*DDIR_WW3
+            ENDDO
           ENDDO
-        ENDDO
-        M0_WWM = ZERO; M1_WWM = ZERO; M2_WWM = ZERO 
-        DO ID = 1,MDC
-          DO IS = 1,MSC-1
-            DF = FR(IS+1)-FR(IS)
-            AM = (SPEC_WWM(IS+1,ID,IP)+SPEC_WWM(IS,ID,IP))/TWO
-            SM = (FR(IS+1)+FR(IS))/TWO
-            M0_WWM =M0_WWM+AM*DF*DDIR
-            M1_WWM =M1_WWM+AM*SM*DF*DDIR
-            M2_WWM =M2_WWM+AM*SM**2*DF*DDIR
-          ENDDO
-        ENDDO
-        IF (WRITESTATFLAG == 1) THEN
+          M0_WWM = ZERO; M1_WWM = ZERO; M2_WWM = ZERO 
+          DO ID = 1,MDC
+            DO IS = 1,MSC-1
+              DF = FR(IS+1)-FR(IS)
+              AM = (SPEC_WWM(IS+1,ID,IP)+SPEC_WWM(IS,ID,IP))/TWO
+              SM = (FR(IS+1)+FR(IS))/TWO
+              M0_WWM =M0_WWM+AM*DF*DDIR
+              M1_WWM =M1_WWM+AM*SM*DF*DDIR
+              M2_WWM =M2_WWM+AM*SM**2*DF*DDIR
+            ENDDO
+          ENDDO 
           WRITE(STAT%FHNDL,*) 'POINT NUMBER', IP
           WRITE(STAT%FHNDL,'(A10,2F20.10,A10,2F20.10)') 'M1 = ',M1_WW3, M1_WWM, 'M2 = ',M2_WW3, M2_WWM
         END IF
@@ -2601,28 +2602,30 @@
         END DO              
       END DO
 
-      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*)'CHECKING INTEGRATED PARAMETERS AFTER JACOBIAN'
-      DO IP = 1, NP_WW3
-        M0_WW3 = ZERO; M1_WW3 = ZERO; M2_WW3 = ZERO
-        DO ID = 1,MDC_WW3
-          DO IS = 1,MSC_WW3-1
-            DF = FQ_WW3(IS+1)-FQ_WW3(IS)
-            AM = (SPEC_WW3(IS+1,ID,IP)+SPEC_WW3(IS,ID,IP))/TWO
-            SM = (FQ_WW3(IS+1)+FQ_WW3(IS))/TWO
-            M0_WW3 =M0_WW3+AM*DF*DDIR_WW3
-            M1_WW3 =M1_WW3+AM*SM*DF*DDIR_WW3
-            M2_WW3 =M2_WW3+AM*SM**2*DF*DDIR_WW3
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*)'CHECKING INTEGRATED PARAMETERS AFTER JACOBIAN'
+        DO IP = 1, NP_WW3
+          M0_WW3 = ZERO; M1_WW3 = ZERO; M2_WW3 = ZERO
+          DO ID = 1,MDC_WW3
+            DO IS = 1,MSC_WW3-1
+              DF = FQ_WW3(IS+1)-FQ_WW3(IS)
+              AM = (SPEC_WW3(IS+1,ID,IP)+SPEC_WW3(IS,ID,IP))/TWO
+              SM = (FQ_WW3(IS+1)+FQ_WW3(IS))/TWO
+              M0_WW3 =M0_WW3+AM*DF*DDIR_WW3
+              M1_WW3 =M1_WW3+AM*SM*DF*DDIR_WW3
+              M2_WW3 =M2_WW3+AM*SM**2*DF*DDIR_WW3
+            ENDDO
           ENDDO
-        ENDDO
-        M0_WWM = ZERO; M1_WWM = ZERO; M2_WWM = ZERO
-        DO ID = 1,MDC
-          DO IS = 1,MSC-1
-            DF = SPSIG(IS+1)-SPSIG(IS)
-            SM = (SPSIG(IS+1)+SPSIG(IS))/TWO
-            AM = (SPEC_WWM(IS+1,ID,IP)+SPEC_WWM(IS,ID,IP))/TWO * SM
-            M0_WWM =M0_WWM+AM*DF*DDIR
-            M1_WWM =M1_WWM+AM*SM*DF*DDIR
-            M2_WWM =M2_WWM+AM*SM**2*DF*DDIR
+          M0_WWM = ZERO; M1_WWM = ZERO; M2_WWM = ZERO
+          DO ID = 1,MDC
+            DO IS = 1,MSC-1
+              DF = SPSIG(IS+1)-SPSIG(IS)
+              SM = (SPSIG(IS+1)+SPSIG(IS))/TWO
+              AM = (SPEC_WWM(IS+1,ID,IP)+SPEC_WWM(IS,ID,IP))/TWO * SM
+              M0_WWM =M0_WWM+AM*DF*DDIR
+              M1_WWM =M1_WWM+AM*SM*DF*DDIR
+              M2_WWM =M2_WWM+AM*SM**2*DF*DDIR
+            ENDDO
           ENDDO
         ENDDO
         IF (WRITESTATFLAG == 1) THEN
@@ -2630,7 +2633,7 @@
           WRITE(STAT%FHNDL,'(A10,2F20.10,A10,2F20.10)') 'M1 = ',M1_WW3, M1_WWM, 'M2 = ',M2_WW3, M2_WWM
           FLUSH(STAT%FHNDL)
         END IF
-      END DO
+      END IF
       IF (LNANINFCHK .AND. WRITEDBGFLAG == 1) THEN
         WRITE(DBG%FHNDL,'(A20,I10,3F30.2)') 'AFTER JACOBIAN', IP, SUM(SPEC_WW3), SUM(SPEC_WW3_TMP), SUM(SPEC_WWM)
       ENDIF

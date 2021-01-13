@@ -789,31 +789,31 @@
           DO ITH=1, NTH
              IS=ITH+(IK-1)*NTH
              EB  = EB  + A(IS)
-             END DO   
+          END DO   
           UORBT=UORBT+EB *SIG(IK)**2 * DDEN(IK) / CG(IK)
           AORB= AORB + EB            * DDEN(IK) / CG(IK)  !deep water only
           !WRITE(DBG%FHNDL,*) UORBT, AORB, EB, SIG(IK)**2, DDEN(IK), CG(IK)
-          END DO
+        END DO
 
 !AR: Check the problem with SWELLFT IND beeing wrong e.g. eq. 0
-          UORBT=2*SQRT(UORBT)  ! this is the significant orbital amplitude
-          IF (SSWELLF(6).GT.0) AORB=2*SQRT(AORB)  ! bug but better results without this line
-          RE = 8*UORBT*AORB / NU_AIR ! this is the Reynolds number 
-          IF (SSWELLF(2).EQ.0) THEN 
-            FW=MAX(ABS(SSWELLF(3)),ZERO)
-            FU=0.
-            FUD=0.
-          ELSE
-            FU=ABS(SSWELLF(3))
-            FUD=SSWELLF(2)
-            AORB=2*SQRT(AORB)
-            XI=LOG10(AORB/Z0NOZ)!(ALOG10(MAX(AORB/Z0NOZ,3.)))-ABMIN/DELAB
-            IND  = MIN (IAB-1, INT(XI))
-            DELI1= MIN (ONE ,XI-MyREAL(IND))
-            DELI2= ONE - DELI1
-            FW =SWELLFT(IND)*DELI2+SWELLFT(IND+1)*DELI1
-            END IF
-          UORB=UORBT
+        UORBT=2*SQRT(UORBT)  ! this is the significant orbital amplitude
+        IF (SSWELLF(6).GT.0) AORB=2*SQRT(AORB)  ! bug but better results without this line
+        RE = 8*UORBT*AORB / NU_AIR ! this is the Reynolds number 
+        IF (SSWELLF(2).EQ.0) THEN 
+          FW=MAX(ABS(SSWELLF(3)),ZERO)
+          FU=0.
+          FUD=0.
+        ELSE
+          FU=ABS(SSWELLF(3))
+          FUD=SSWELLF(2)
+          AORB=2*SQRT(AORB)
+          XI=LOG10(AORB/Z0NOZ)!(ALOG10(MAX(AORB/Z0NOZ,3.)))-ABMIN/DELAB
+          IND  = MIN (IAB-1, INT(XI))
+          DELI1= MIN (ONE ,XI-MyREAL(IND))
+          DELI2= ONE - DELI1
+          FW =SWELLFT(IND)*DELI2+SWELLFT(IND+1)*DELI1
+        END IF
+        UORB=UORBT
 
        !WRITE(DBG%FHNDL,*) 'SWELLFT', SWELLFT(IND),DELI2,SWELLFT(IND+1),DELI1, DELAB
        !WRITE(DBG%FHNDL,*) 'URBOT', UORB, AORB, Z0NOZ,XI
@@ -904,7 +904,7 @@
             ELSE
               DSTAB(ISTAB,IS) = 0.
               LLWS(IS)=.FALSE.
-              END IF
+            END IF
 
               !WRITE(DBG%FHNDL,*) DSTAB(ISTAB,IS), CONST,EXP(ZLOG),ZLOG**4,UCN**2,COSWIND,SSINTHP
 !
@@ -912,7 +912,7 @@
 !
             IF (28.*CM*USTAR*COSWIND.GE.1) THEN
               LLWS(IS)=.TRUE.
-              END IF
+            END IF
           ELSE
             DSTAB(ISTAB,IS) = 0.
             LLWS(IS)=.FALSE.
@@ -920,25 +920,25 @@
           IF ((SSWELLF(1).NE.0.AND.DSTAB(ISTAB,IS).LT.1E-7*SIG2(IS))    &
      &         .OR.SSWELLF(3).GT.0) THEN  
             IF (SSWELLF(4).GT.0) THEN 
-                 IF (RE.LE.SSWELLF(4)) THEN 
-                    DSTAB(ISTAB,IS) =  DSTAB(ISTAB,IS)                  &
-     &             - SSWELLF(5)*DRAT*2*K(IK)*SQRT(2*NU_AIR*SIG2(IS))    &
-     &              + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
-                    ELSE 
-                    DSTAB(ISTAB,IS) =  DSTAB(ISTAB,IS)                  &
-     &              -DRAT*SSWELLF(1)*(FW*UORB+(FU+FUD*COSWIND)*USTP)    &
-     &                                     *16*SIG2(IS)**2/G9           &
-     &               + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
-                    END IF
-                 ELSE
-                   DSTAB(ISTAB,IS) = DSTAB(ISTAB,IS)                    &
-     &        -DRAT*MAX(2*SSWELLF(5)*K(IK)*SQRT(2*NU_AIR*SIG2(IS)),     &
-     &                SSWELLF(1)*                                       &
-     &                  (FW*UORB+(FU+FUD*COSWIND)*USTP)                 &
-     &                    *16*SIG2(IS)**2/G9 )                          &
-     &                 + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
-                   END IF 
+              IF (RE.LE.SSWELLF(4)) THEN 
+                DSTAB(ISTAB,IS) =  DSTAB(ISTAB,IS)                   &
+     &          - SSWELLF(5)*DRAT*2*K(IK)*SQRT(2*NU_AIR*SIG2(IS))    &
+     &          + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
+              ELSE 
+                DSTAB(ISTAB,IS) =  DSTAB(ISTAB,IS)                   &
+     &          -DRAT*SSWELLF(1)*(FW*UORB+(FU+FUD*COSWIND)*USTP)     &
+     &                          *16*SIG2(IS)**2/G9                   &
+     &          + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
               END IF
+            ELSE
+              DSTAB(ISTAB,IS) = DSTAB(ISTAB,IS)                      &
+     &          -DRAT*MAX(2*SSWELLF(5)*K(IK)*SQRT(2*NU_AIR*SIG2(IS)),     &
+     &           SSWELLF(1)*                                         &
+     &           (FW*UORB+(FU+FUD*COSWIND)*USTP)                     &
+     &            *16*SIG2(IS)**2/G9 )                          &
+     &          + SSWELLF(7)/SIG2(IS)   ! fudge for low frequency
+            END IF 
+          END IF
 !
 ! Sums up the wave-supported stress
 !
@@ -1005,10 +1005,10 @@
      &    *PI2*SIG(NK) / CG(NK)  !conversion WAM (E(f,theta) to WW3 A(k,theta)
       TEMP=0.
       DO ITH=1,NTH
-         IS=ITH+(NK-1)*NTH
-         COSWIND=(ECOS(IS)*COSU+ESIN(IS)*SINU)
-         TEMP=TEMP+A(IS)*(MAX(COSWIND,ZERO))**3
-         END DO
+        IS=ITH+(NK-1)*NTH
+        COSWIND=(ECOS(IS)*COSU+ESIN(IS)*SINU)
+        TEMP=TEMP+A(IS)*(MAX(COSWIND,ZERO))**3
+      END DO
 
       TAUPX=TAUX-ABS(TTAUWSHELTER)*XSTRESS
       TAUPY=TAUY-ABS(TTAUWSHELTER)*YSTRESS
@@ -1044,7 +1044,7 @@
       ELSE
         TAU1 =(TAUHFT(IND,J)*DELI2+TAUHFT(IND+1,J)*DELI1 )*DELJ2 &
          +(TAUHFT(IND,J+1)*DELI2+TAUHFT(IND+1,J+1)*DELI1)*DELJ1
-        END IF
+      END IF
       TAUHF = CONST0*TEMP*UST**2*TAU1
       TAUWX = XSTRESS+TAUHF*MyCOS(USDIRP)
       TAUWY = YSTRESS+TAUHF*MySIN(USDIRP)
@@ -1967,7 +1967,7 @@
         CHARN = G9*Z0/USTAR**2
       ELSE 
         CHARN = AALPHA
-        END IF
+      END IF
 
 !      write(DBG%FHNDL,*) z0, ustar, windspeed
 !

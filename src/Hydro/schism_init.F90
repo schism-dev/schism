@@ -113,6 +113,8 @@
       character(len=10) :: timestamp
 !      character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
+      character(len=6) :: char6
+      character(len=6), allocatable :: tp_name(:)
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout,floatout2
       real(rkind) :: double1 !for hotstart.in
@@ -184,9 +186,10 @@
      &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
-     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only
+     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
+     &iloadtide
 
-     namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
+     namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
@@ -463,9 +466,11 @@
       ipre2=0
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind
-      itransport_only=0
+      itransport_only=0; meth_sink=0
+      iloadtide=0
 
       !Output elev, hvel by detault
+      nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25)=1
       iof_icm=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
@@ -2466,8 +2471,12 @@
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
       if(ntip>0) then
         if(iorder==0) then
-          allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: allocation failure for tamp etc')
+          allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: allocation failure for tamp etc')
+          if(iloadtide/=0) then !loading tide (SAL)
+            allocate(rloadtide(2,ntip,npa),stat=istat)
+            if(istat/=0) call parallel_abort('INIT: alloc failure for SAL')
+          endif !iloadtide/
         endif !iorder
 !'
         open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
@@ -2489,7 +2498,7 @@
         lreadll=.true.
       
         do i=1,ntip
-          read(31,*) !tag
+          read(31,'(a6)')tp_name(i) !tag
           read(31,*) jspc(i),tamp(i),tfreq(i),tnf(i),tear(i)
           if(jspc(i)<0.or.jspc(i)>2) then
             write(errmsg,*)'Illegal tidal species #',jspc(i)
@@ -2497,6 +2506,28 @@
           endif
           tear(i)=tear(i)*pi/180.d0
         enddo !i
+
+        if(iloadtide/=0) then !loading tide
+          do i=1,ntip
+            char6=adjustl(tp_name(i))
+            itmp=len_trim(char6)
+!Debug
+!            write(12,*)'SAL grid name:',in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3'
+ 
+            !.gr3 has both amp, phase
+            open(32,file=in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3',status='old')
+            read(32,*); read(32,*)
+            do j=1,np_global
+              read(32,*)k,xtmp,ytmp,tmp1,tmp2
+              if(ipgl(j)%rank==myrank) then
+                ii=ipgl(j)%id
+                rloadtide(1,i,ii)=tmp1 !amp [m]
+                rloadtide(2,i,ii)=tmp2*pi/180.d0 !phase [radian]
+              endif
+            enddo !j
+            close(32)
+          enddo !i
+        endif !iloadtide
       endif !ntip>0
 
 !...  Boundary forcing freqs.
@@ -5807,7 +5838,7 @@
  
 !     Open global output files and write header data
       if(ihot<=1) ifile=1 !reset output file #
-      call fill_nc_header(0)
+      if(nc_out>0) call fill_nc_header(0)
 
 #ifdef SINGLE_NETCDF_OUTPUT
       CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)

@@ -2410,7 +2410,7 @@
             AC2(:,:,IP)=eSum
             IF (LNANINFCHK) THEN
               IF (SUM(eSum) .ne. SUM(esum)) THEN
-                WRITE(DBG%FHNDL,*) IP, SUM(ESUM), SUM(IMATDA), SUM(IMATRA), ASPAR_DIAG, DEP(IP)
+                IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) IP, SUM(ESUM), SUM(IMATDA), SUM(IMATRA), ASPAR_DIAG, DEP(IP)
                 CALL WWM_ABORT('NAN IN SOLVER')
               ENDIF
             ENDIF
@@ -2469,7 +2469,8 @@
 !
 ! The termination criterions several can be chosen
 !
-        WRITE(STAT%FHNDL,'(A10,3I10,F30.20,F10.5)') 'solver', nbiter, is_converged, np_total-is_converged, p_is_converged, pmin
+        IF (WRITESTATFLAG == 1)  WRITE(STAT%FHNDL,'(A10,3I10,E30.20,F10.5)') 'solver', nbiter, &
+                                    &  is_converged, np_total-is_converged, p_is_converged, pmin
         !
         ! Number of iterations. If too large the exit.
         !
@@ -2662,7 +2663,7 @@
           END IF
         END IF
       END DO
-      WRITE(STAT%FHNDL,*) 'nbIter=', nbIter
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'nbIter=', nbIter
 
 #ifdef TIMINGS
       CALL WAV_MY_WTIME(TIME4)
@@ -2682,16 +2683,18 @@
 # ifdef MPI_PARALL_GRID
       IF (myrank == 0) THEN
 # endif
-        WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPROCESSING SOURCES AND ADVECTION  ', TIME2-TIME1
-        WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPROCESSING REFRACTION             ', TIME3-TIME2
-        WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'ITERATION                            ', TIME4-TIME3
-        WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'STORE RESULT                         ', TIME5-TIME4
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPROCESSING SOURCES AND ADVECTION  ', TIME2-TIME1
+          WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPROCESSING REFRACTION             ', TIME3-TIME2
+          WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'ITERATION                            ', TIME4-TIME3
+          WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'STORE RESULT                         ', TIME5-TIME4
+          FLUSH(STAT%FHNDL)
+        END IF
 # ifdef MPI_PARALL_GRID
-      ENDIF
+      END IF
 # endif
 #endif
-      WRITE(STAT%FHNDL,*) SUM(AC2), 'AFTER EIMPS_TOTAL_JACOBI_ITERATION subroutine'
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) SUM(AC2), 'AFTER EIMPS_TOTAL_JACOBI_ITERATION subroutine'
 #ifdef DEBUG_ITERATION_LOOP
       iPass=iPass+1
 #endif

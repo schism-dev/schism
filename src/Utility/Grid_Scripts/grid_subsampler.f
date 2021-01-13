@@ -18,7 +18,7 @@
 !     ifort -Bstatic -O3 -o grid_subsampler grid_subsampler.f
       program sample
       implicit real*8(a-h,o-z)
-      parameter(mnp=2200000)
+      parameter(mnp=5000000)
 !      parameter(mne=100000)
       dimension x(mnp),y(mnp),iregion(mnp),map(mnp),icolor(mnp)
       

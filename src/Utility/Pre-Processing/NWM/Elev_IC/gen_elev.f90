@@ -6,7 +6,7 @@
       allocatable :: x(:),y(:),dp(:),area(:),vso(:),r_rough(:),nlayers(:)
       integer, allocatable :: i34(:),elnode(:,:),i_rain(:),isource(:),i_region(:)
 
-      h0=1e-4
+      h0=1e-1
 
       open(10,file='include.gr3',status='old')
       read(10,*); read(10,*)

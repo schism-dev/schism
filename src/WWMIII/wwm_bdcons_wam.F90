@@ -12,9 +12,11 @@
       real(rkind) eCF_COEFF(4)
       LOGICAL EXTRAPO_OUT
       integer nbExtrapolation
-      WRITE(STAT%FHNDL,*) 'Begin COMPUTE_BND_INTERPOLATION_ARRAY'
-      WRITE(STAT%FHNDL,*) 'EXTRAPOLATION_ALLOWED_BOUC=', EXTRAPOLATION_ALLOWED_BOUC
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Begin COMPUTE_BND_INTERPOLATION_ARRAY'
+        WRITE(STAT%FHNDL,*) 'EXTRAPOLATION_ALLOWED_BOUC=', EXTRAPOLATION_ALLOWED_BOUC
+        FLUSH(STAT%FHNDL)
+      END IF
       allocate(CF_IX_BOUC(IWBMNP), CF_IY_BOUC(IWBMNP), CF_COEFF_BOUC(4,IWBMNP), stat=istat)
       IF (istat/=0) CALL WWM_ABORT('CF_*_BOUC allocation error')
       
@@ -31,8 +33,11 @@
           nbExtrapolation=nbExtrapolation + 1
         END IF
       END DO
-      WRITE(STAT % FHNDL, *) 'Computing extrapolation array for boundary'
-      WRITE(STAT % FHNDL, *) 'nbExtrapolation=', nbExtrapolation
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL, *) 'Computing extrapolation array for boundary'
+        WRITE(STAT%FHNDL, *) 'nbExtrapolation=', nbExtrapolation
+        FLUSH(STAT%FHNDL)
+      END IF      
       END SUBROUTINE COMPUTE_BND_INTERPOLATION_ARRAY
 !**********************************************************************
 !*                                                                    *
@@ -68,7 +73,7 @@
       integer M
       CALL TEST_FILE_EXIST_DIE("Missing list of WAM files: ", TRIM(WAV%FNAME))
       OPEN(WAV%FHNDL,FILE=WAV%FNAME,STATUS='OLD')
-      WRITE(STAT%FHNDL,*) WAV%FHNDL, WAV%FNAME, BND%FHNDL, BND%FNAME
+      IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) WAV%FHNDL, WAV%FNAME, BND%FHNDL, BND%FNAME
       STEPRANGE_IN = .TRUE.
 # ifdef MPI_PARALL_GRID
       IF (MULTIPLE_IN_BOUND .or. (myrank .eq. 0)) THEN
@@ -83,7 +88,7 @@
           NUM_WAM_SPEC_FILES = NUM_WAM_SPEC_FILES + 1
         END DO
         REWIND(WAV%FHNDL)
-        WRITE(STAT%FHNDL,*) 'NUM_WAM_SPEC_FILES=', NUM_WAM_SPEC_FILES
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'NUM_WAM_SPEC_FILES=', NUM_WAM_SPEC_FILES
         !
         ! Reading the file names
         !
@@ -127,27 +132,29 @@
                   eDir = eDir - 360
                 END IF
                 ListDir_wam(idir) = eDir
-                WRITE(STAT%FHNDL,*) 'idir=', idir, ' eDir=', eDir
+                IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'idir=', idir, ' eDir=', eDir
               END DO
               DO ifreq=1,nbfreq_wam
                 eFreq = MyREAL(ListFreq_i(ifreq)) / MyREAL(freqScal)
                 ListFreq_wam(ifreq) = eFreq
-                WRITE(STAT%FHNDL,*) 'ifreq=', ifreq, ' eFreq=', eFreq
+                IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'ifreq=', ifreq, ' eFreq=', eFreq
               END DO
               FRATIO = ListFreq_wam(2) / ListFreq_wam(1)
-              WRITE(STAT%FHNDL,*) 'FRATIO=', FRATIO
+              IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'FRATIO=', FRATIO
               DELTH_WAM = PI2 / MyREAL(nbdir_wam)
-              WRITE(STAT%FHNDL,*) 'DELTH_WAM=', DELTH_WAM
+              IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'DELTH_WAM=', DELTH_WAM
               CO1 = 0.5*(FRATIO-1.)*DELTH_WAM
-              WRITE(STAT%FHNDL,*) 'CO1=', CO1
+              IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'CO1=', CO1
               DFIM_wam(1) = CO1 * ListFreq_wam(1)
               DO M=2,nbFreq_wam-1
                  DFIM_wam(M) = CO1 * (ListFreq_wam(M) + ListFreq_wam(M-1))
               ENDDO
               DFIM_wam(nbFreq_wam) = CO1 * ListFreq_wam(nbFreq_wam-1)
-              DO M=1,nbFreq_wam
-                WRITE(STAT%FHNDL,*) 'M=', M, ' DFIM=', DFIM_wam(M)
-              END DO
+              IF (WRITESTATFLAG == 1) THEN
+                DO M=1,nbFreq_wam
+                  WRITE(STAT%FHNDL,*) 'M=', M, ' DFIM=', DFIM_wam(M)
+                END DO
+              END IF
               WETAIL_WAM = 0.25
               DELT25_WAM = WETAIL_WAM*ListFreq_wam(nbFreq_wam)*DELTH_WAM
               deallocate(ListDir_i, ListFreq_i)
@@ -263,10 +270,13 @@
         IF (IsAssigned .eqv. .FALSE.) THEN
           CALL WWM_ABORT('Error in the interpolation direction')
         END IF
-        WRITE(STAT%FHNDL,*) 'ID=', ID, 'eDir=', eDIR
-        WRITE(STAT%FHNDL,*) 'WAM_ID12=', WAM_ID1(ID), WAM_ID2(ID)
-        WRITE(STAT%FHNDL,*) 'WAM_WD12=', WAM_WD1(ID), WAM_WD2(ID)
-        WRITE(STAT%FHNDL,*) 'WAM_eD12=', ListDir_wam(WAM_ID1(ID)), ListDir_wam(WAM_ID2(ID))
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'ID=', ID, 'eDir=', eDIR
+          WRITE(STAT%FHNDL,*) 'WAM_ID12=', WAM_ID1(ID), WAM_ID2(ID)
+          WRITE(STAT%FHNDL,*) 'WAM_WD12=', WAM_WD1(ID), WAM_WD2(ID)
+          WRITE(STAT%FHNDL,*) 'WAM_eD12=', ListDir_wam(WAM_ID1(ID)), ListDir_wam(WAM_ID2(ID))
+          FLUSH(STAT%FHNDL)
+        END IF        
       END DO
       allocate(WAM_IS1(MSC), WAM_IS2(MSC), WAM_WS1(MSC), WAM_WS2(MSC), stat=istat)
       IF (istat/=0) CALL WWM_ABORT('CF_*_BOUC allocation error')
@@ -379,8 +389,10 @@
       real(rkind) ETOT, tmp(msc), DS, ETAIL, HS_WWM, EMwork
       
       CALL READ_GRIB_WAM_BOUNDARY_WBAC_KERNEL_NAKED(WBAC_WAM, IFILE, eTimeSearch)
-      WRITE(STAT%FHNDL,*) 'RETURN: sum(WBAC_WAM)=', sum(WBAC_WAM)
-      WRITE(STAT%FHNDL,*) 'IWBMNP=', IWBMNP
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'RETURN: sum(WBAC_WAM)=', sum(WBAC_WAM)
+        WRITE(STAT%FHNDL,*) 'IWBMNP=', IWBMNP
+      END IF      
       DO IP=1,IWBMNP
         IX=CF_IX_BOUC(IP)
         IY=CF_IY_BOUC(IP)
@@ -388,12 +400,14 @@
         DO J=1,4
           WBAC_WAM_LOC(:,:) = WBAC_WAM_LOC(:,:) + CF_COEFF_BOUC(J,IP)*WBAC_WAM(:,:,IX+SHIFTXY(J,1),IY+SHIFTXY(J,2))
         END DO
-        WRITE(STAT%FHNDL,*) 'sum(WBAC_WAM_LOC)=', sum(WBAC_WAM_LOC)
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'sum(WBAC_WAM_LOC)=', sum(WBAC_WAM_LOC)
         !
         IF (DoHSchecks) THEN
-          DO J=1,4
-            WRITE(STAT%FHNDL,*) 'J=', J, ' eCF=', CF_COEFF_BOUC(J,IP)
-          END DO
+          IF (WRITESTATFLAG == 1) THEN
+            DO J=1,4
+              WRITE(STAT%FHNDL,*) 'J=', J, ' eCF=', CF_COEFF_BOUC(J,IP)
+            END DO
+          END IF
           EM=0
           DO M=1,nbfreq_wam
             eSum=0
@@ -446,9 +460,12 @@
           ETAIL = SUM(ACLOC(MSC,:)) * SIGPOW(MSC,2) * DDIR * DS
           ETOT  = ETOT + PTAIL(6) * ETAIL
           HS_WWM = 4*SQRT(MAX(0.0, ETOT))
-          WRITE(STAT%FHNDL,*) 'BOUND IP=', IP, '/', IWBMNP
-          WRITE(STAT%FHNDL,*) 'ETOT(WAM/WWM)=', EM, ETOT
-          WRITE(STAT%FHNDL,*) 'HS(WAM/WWM)=', HS_WAM, HS_WWM, ETOT
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'BOUND IP=', IP, '/', IWBMNP
+            WRITE(STAT%FHNDL,*) 'ETOT(WAM/WWM)=', EM, ETOT
+            WRITE(STAT%FHNDL,*) 'HS(WAM/WWM)=', HS_WAM, HS_WWM, ETOT
+            FLUSH(STAT%FHNDL)
+          END IF          
         END IF
         WBACOUT(:,:,IP)=ACLOC
       END DO

@@ -10,8 +10,9 @@
 #SBATCH --output=my_job.o%j
 #SBATCH --error=my_job.e%j
 
-# limit stacksize ... adjust to your programs need
-ulimit -s 102400
+# limit stacksize ... adjust to your programs need. Mistral does not suggest unlimited
+#ulimit -s 102400
+ulimit -s 132400
 
 # Environment settings to run a MPI parallel program 
 # compiled with Intel MPI

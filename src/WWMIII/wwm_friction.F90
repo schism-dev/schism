@@ -95,10 +95,8 @@
         ELSE
           FW = 0.3
         END IF
-        !CFBOT =  UBOT * FW / (SQRT(2.) * G9)
-        !MP
-        CFBOT = UBOT * FW / (2. * G9)
-    
+        CFBOT =  UBOT * FW / (SQRT(2.) * G9)
+        
       ELSE IF (MESBF .EQ. 3) THEN ! SHOWEX formulation (Ardhuin et al., 2003), this follows WW3 approach
 	    ! 0. Initialization
 		IF ( FIRST ) THEN

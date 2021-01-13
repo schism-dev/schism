@@ -11,7 +11,7 @@ print "make sure the proj/ module is loaded (module load proj)\n\n";
 system "ln -sf ../hgrid.ll .";
 
 print "converting lon/lat to UTM\n";
-system "~/schism_trunk/src/Utility/Pre-Processing/proj_wrap.pl epsg:26918 2 1 hgrid.ll hgrid.utm.26918 1 0";
+system "./proj_wrap.pl epsg:26918 2 1 hgrid.ll hgrid.utm.26918 1 0";
 
 print "converting lon/lat to cpp\n";
 system "./cpp < cpp.in";

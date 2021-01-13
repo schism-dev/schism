@@ -72,7 +72,7 @@
       eStrTime( 4: 4)=YnameYear( 4: 4)
       !
       ! month
-      WRITE(WINDBG%FHNDL,*) 'YnameMonth=', YnameMonth
+      IF (WRITEWINDBGFLAG == 1) WRITE(WINDBG%FHNDL,*) 'YnameMonth=', YnameMonth
       lenMonth=LEN_TRIM(YnameMonth)
       IF (lenMonth .eq. 2) THEN
         eStrTime( 5: 5)=YnameMonth( 1: 1)
@@ -152,14 +152,16 @@
             eStrTime(14:14)='0'
             eStrTime(15:15)=YnameSec( 1: 1)
           ELSE
-            WRITE(WINDBG%FHNDL,*) 'YnameSec=', TRIM(Ynamesec)
-            WRITE(WINDBG%FHNDL,*) 'lenSec=', lenSec
-            FLUSH(WINDBG%FHNDL)
+            IF (WRITEWINDBGFLAG == 1) THEN
+              WRITE(WINDBG%FHNDL,*) 'YnameSec=', TRIM(Ynamesec)
+              WRITE(WINDBG%FHNDL,*) 'lenSec=', lenSec
+              FLUSH(WINDBG%FHNDL)
+            END IF            
             CALL WWM_ABORT('DIE in trying to get the sec')
           END IF
         END IF
       END IF
-      WRITE(WINDBG%FHNDL,*) 'eStrTime=', eStrTime
+      IF (WRITEWINDBGFLAG == 1) WRITE(WINDBG%FHNDL,*) 'eStrTime=', eStrTime
       CALL CT2MJD(eStrTime, eTimeStart)
       END SUBROUTINE
 !**********************************************************************
@@ -362,18 +364,22 @@
           ListAdjWithDupl(2*pos+1,IP)=IP_N
           ListAdjWithDupl(2*pos+2,IP)=IP_P
           IF ((IP.eq.IP_N).or.(IP.eq.IP_P)) THEN
-            WRITE(DBG%FHNDL,*) 'IE=', IE
-            WRITE(DBG%FHNDL,*) 'I=', I, 'IP=', IP
-            WRITE(DBG%FHNDL,*) 'INEXT=', INEXT, ' IP_N=', IP_N
-            WRITE(DBG%FHNDL,*) 'IPREV=', IPREV, ' IP_P=', IP_P
-            CALL WWM_ABORT("logical error")
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,*) 'IE=', IE
+              WRITE(DBG%FHNDL,*) 'I=', I, 'IP=', IP
+              WRITE(DBG%FHNDL,*) 'INEXT=', INEXT, ' IP_N=', IP_N
+              WRITE(DBG%FHNDL,*) 'IPREV=', IPREV, ' IP_P=', IP_P
+              CALL WWM_ABORT("logical error")
+            END IF            
           END IF
           IEcontain(pos+1,IP)=IE
           ListDegWork(IP)=pos+1
         END DO
       END DO
-      WRITE(STAT%FHNDL,*) 'Stage 1 finished'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Stage 1 finished'
+        FLUSH(STAT%FHNDL)
+      END IF
       allocate(StatusAdj(SatMaxDeg))
       allocate(TheBound % IOBP(np_total))
       NumberAllTwo=0
@@ -401,11 +407,11 @@
             END DO
             IF (nb .eq. 0) CALL WWM_ABORT("Clear bug in code")
             IF (nb .gt. 2) THEN
-              WRITE(DBG%FHNDL,*) 'IP=', IP, 'IPadj=', IPadj
+              IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'IP=', IP, 'IPadj=', IPadj
               DO J=1,eDeg
                 IE=IEcontain(J,IP)
-                WRITE(DBG%FHNDL,*) 'IE=', IE
-                WRITE(DBG%FHNDL,*) 'INE=', INEtotal(1,IE), INEtotal(2,IE), INEtotal(3,IE)
+                IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'IE=', IE
+                IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'INE=', INEtotal(1,IE), INEtotal(2,IE), INEtotal(3,IE)
               END DO
               CALL WWM_ABORT("Hopelessly pathological grid")
             END IF
@@ -429,12 +435,13 @@
           TheBound % nbVertBound=TheBound % nbVertBound+1
         END IF
       END DO
-      WRITE(STAT%FHNDL,*) 'NumberAllTwo      =', NumberAllTwo
-      WRITE(STAT%FHNDL,*) 'NumberBoundary    =', NumberBoundary
-      WRITE(STAT%FHNDL,*) 'NumberPathological=', NumberPathological
-      FLUSH(STAT%FHNDL)
-      WRITE(STAT%FHNDL,*) 'Stage 2 finished'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'NumberAllTwo      =', NumberAllTwo
+        WRITE(STAT%FHNDL,*) 'NumberBoundary    =', NumberBoundary
+        WRITE(STAT%FHNDL,*) 'NumberPathological=', NumberPathological
+        WRITE(STAT%FHNDL,*) 'Stage 2 finished'
+        FLUSH(STAT%FHNDL)
+      END IF
       allocate(TheBound % ListBoundEdge(2, TheBound % nbEdgeBound))
       idxEdgeBound=0
       TheBound % IOBP = 0
@@ -460,8 +467,10 @@
           END IF
         END DO
       END DO
-      WRITE(STAT%FHNDL,*) 'Stage 3 finished'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Stage 3 finished'
+        FLUSH(STAT%FHNDL)
+      END IF
       allocate(TheBound % ListVertBound(TheBound % nbVertBound))
       idx=0
       DO IP=1,np_total
@@ -493,8 +502,10 @@
           ListDegVertBound(IP)=eDeg+1
         END DO
       END DO
-      WRITE(STAT%FHNDL,*) 'Stage 4 finished'
-      FLUSH(STAT%FHNDL)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Stage 4 finished'
+        FLUSH(STAT%FHNDL)
+      END IF
       allocate(TheBound % AdjacencyEdgeBound(2,TheBound % nbEdgeBound))
       allocate(ListDegEdgeBound(TheBound % nbEdgeBound))
       ListDegEdgeBound=0
@@ -684,15 +695,21 @@
           deallocate(ListAdjVert, ListAdjVertBound)
         END IF
       END DO
-      WRITE(STAT%FHNDL,*) 'Stage 5 finished'
-      FLUSH(STAT%FHNDL)
-      DO iEdgeBound=1,TheBound % nbEdgeBound
-        WRITE(DBG%FHNDL,*) 'iEdgeBound/eDeg=', iEdgeBound, ListDegEdgeBound(iEdgeBound)
-      END DO
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'Stage 5 finished'
+        FLUSH(STAT%FHNDL)
+      END IF
+      IF (WRITEDBGFLAG == 1) THEN
+        DO iEdgeBound=1,TheBound % nbEdgeBound
+          WRITE(DBG%FHNDL,*) 'iEdgeBound/eDeg=', iEdgeBound, ListDegEdgeBound(iEdgeBound)
+        END DO
+      END IF
       DO iEdgeBound=1,TheBound % nbEdgeBound
         IF (ListDegEdgeBound(iEdgeBound) .ne. 2) THEN
-          WRITE(DBG%FHNDL,*) 'iEdgeBound=', iEdgeBound
-          WRITE(DBG%FHNDL,*) 'eDeg=', ListDegEdgeBound(iEdgeBound)
+          IF (WRITEDBGFLAG == 1) THEN
+            WRITE(DBG%FHNDL,*) 'iEdgeBound=', iEdgeBound
+            WRITE(DBG%FHNDL,*) 'eDeg=', ListDegEdgeBound(iEdgeBound)
+          END IF
           CALL WWM_ABORT("Degree error")
         END IF
       END DO

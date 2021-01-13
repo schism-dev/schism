@@ -2,7 +2,7 @@
 !*                                                                    *
 !**********************************************************************
       SUBROUTINE SINGLE_READ_SPATIAL_GRID_TOTAL(eGrid, DimMode, LVAR1D, Lsphe, eGRD, iGridType)
-      USE DATAPOOL, only : rkind, istat, GridInformation, FILEDEF, DBG
+      USE DATAPOOL, only : rkind, istat, GridInformation, FILEDEF, DBG, WRITEDBGFLAG
 #ifdef NCDF
       USE NETCDF
 #endif
@@ -171,9 +171,11 @@
 
             ISTAT = nf90_inquire_dimension(ncid, dimidsB(2), name=MNEstr, len=eGrid%ne_total)
             CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 4, ISTAT)
-            WRITE(DBG%FHNDL,*) 'EGRID%NE_TOTAL=', EGRID%NE_TOTAL
-            WRITE(DBG%FHNDL,*) 'MNEstr=', TRIM(MNEstr)
-            FLUSH(DBG%FHNDL)
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,*) 'EGRID%NE_TOTAL=', EGRID%NE_TOTAL
+              WRITE(DBG%FHNDL,*) 'MNEstr=', TRIM(MNEstr)
+              FLUSH(DBG%FHNDL)
+            END IF
 
             ISTAT = nf90_inq_varid(ncid, 'depth', var_id)
             CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 5, ISTAT)
@@ -183,9 +185,11 @@
 
             ISTAT = nf90_inquire_dimension(ncid, dimidsA(1), name=MNPstr, len=eGrid%np_total)
             CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 7, ISTAT)
-            WRITE(DBG%FHNDL,*) 'EGRID%NP_TOTAL=', EGRID%NP_TOTAL
-            WRITE(DBG%FHNDL,*) 'MNPstr=', TRIM(MNPstr)
-            FLUSH(DBG%FHNDL)
+            IF (WRITEDBGFLAG == 1) THEN
+              WRITE(DBG%FHNDL,*) 'EGRID%NP_TOTAL=', EGRID%NP_TOTAL
+              WRITE(DBG%FHNDL,*) 'MNPstr=', TRIM(MNPstr)
+              FLUSH(DBG%FHNDL)
+            END IF
 
             allocate(eGrid % XPtotal(eGrid%np_total), eGrid % YPtotal(eGrid%np_total), eGrid % DEPtotal(eGrid%np_total), eGrid%INEtotal(3, eGrid%ne_total), stat=istat)
             IF (istat/=0) CALL WWM_ABORT('allocate error 9')
@@ -415,8 +419,6 @@
       USE DATAPOOL
       IMPLICIT NONE
       INTEGER nbDirichlet, nbIsland
-      INTEGER :: MapDirect(np_total)
-      INTEGER :: MapRevert(np_total)
       INTEGER, allocatable :: IPbound(:), IPisland(:), ACTIVE(:)
       INTEGER IP, IE2, eVal, IE, idxDirichlet, idxIsland
 #ifdef MPI_PARALL_GRID      
