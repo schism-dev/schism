@@ -6,8 +6,9 @@
 ! core.
 !
 !> @author Richard Hofmeister
-!> @author  Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @copyright Copyright 2017, 2018, 2019, 2020 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Deborah Benkort <deborah.benkort@hzg.de>
+!> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
 !
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
