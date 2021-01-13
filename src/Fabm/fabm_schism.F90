@@ -24,7 +24,10 @@ module fabm_schism
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: xlon_el, ylat_el
-  use schism_glbl,  only: dh_growth, ice_tr ! Needed for icealgae model
+#ifdef USE_ICEBGC
+  use schism_glbl,  only: dh_growth, ice_tr ! Needed for icealgae model, but requires
+    ! patched version of schism and schism_ice models
+#endif
   use schism_msgp,  only: myrank, parallel_abort
 
   use fabm
@@ -124,11 +127,13 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: bottom_depth => null()
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
-!! D.Benkort -- Ice module devlopment
+
+#ifdef USE_ICEBGC
     real(rk), dimension(:), pointer     :: ice_thick => null()
     real(rk), dimension(:), pointer     :: ice_cover => null()
     real(rk), dimension(:), pointer     :: snow_thick => null()
     real(rk), dimension(:), pointer     :: dh_growth => null()
+#endif
 
     type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
     type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: horizontal_diagnostic_variables
@@ -434,8 +439,8 @@ subroutine fabm_schism_init_stage2
   fs%num = 0.0_rk
 
 
-  ! Link ice environment 
-  !> @todo can we make this conditional?
+  ! Link ice environment
+#ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
   fs%dh_growth = 0.0_rk
 
@@ -447,6 +452,7 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%snow_thick(nea))
   fs%snow_thick = 0.0_rk
+#endif
 
   ! calculate initial layer heights
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
@@ -715,12 +721,14 @@ subroutine fabm_schism_do()
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
      fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
-
      fs%par0(i) = fs%I_0(i) * fs%par_fraction
+
+#ifdef USE_ICEBGC
      fs%ice_thick = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
      fs%ice_cover = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
      fs%snow_thick = sum(ice_tr(3,elnode(1:i34(i),i)))/i34(i)
      fs%dh_growth = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
+#endif
 
      ! Total water depth (or should this be the sum of layer height?
      fs%bottom_depth=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
@@ -1232,10 +1240,12 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked horizontal standard variable "surface downwelling photosynthetic radiative flux"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
+#ifdef USE_ICEBGC
   call fabm_link_horizontal_data(self%model,standard_variables%ice_thickness,self%ice_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%ice_conc,self%ice_cover)
   call fabm_link_horizontal_data(self%model,standard_variables%snow_thickness,self%snow_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%dh_growth,self%dh_growth)
+#endif
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
   call driver%log_message('linked horizontal standard variable "bottom_stress"')
   call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
@@ -1250,10 +1260,12 @@ subroutine link_environmental_data(self, rc)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+#ifdef USE_ICEBGC
   call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
   call self%model%link_horizontal_data(fabm_standard_variables%ice_conc,self%ice_cover)
   call self%model%link_horizontal_data(fabm_standard_variables%snow_thickness,self%snow_thick)
   call self%model%link_horizontal_data(fabm_standard_variables%dh_growth,self%dh_growth)
+#endif
   call self%model%link_horizontal_data(fabm_standard_variables%longitude,xlon_el)
   call self%model%link_horizontal_data(fabm_standard_variables%latitude,ylat_el)
   call self%model%link_interior_data(fabm_standard_variables%practical_salinity,tr_el(2,:,:))
