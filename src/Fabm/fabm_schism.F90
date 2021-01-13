@@ -720,18 +720,18 @@ subroutine fabm_schism_do()
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
        sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
-     fs%I_0 = sum(srad(elnode(1:i34(i),i)))/i34(i)
+     fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
      fs%par0(i) = fs%I_0(i) * fs%par_fraction
 
 #ifdef USE_ICEBGC
-     fs%ice_thick = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
-     fs%ice_cover = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
-     fs%snow_thick = sum(ice_tr(3,elnode(1:i34(i),i)))/i34(i)
-     fs%dh_growth = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
+     fs%ice_thick(i) = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
+     fs%ice_cover(i) = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
+     fs%snow_thick(i) = sum(ice_tr(3,elnode(1:i34(i),i)))/i34(i)
+     fs%dh_growth(i) = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
 #endif
 
      ! Total water depth (or should this be the sum of layer height?
-     fs%bottom_depth=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
+     fs%bottom_depth(i)=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
   end do
 
 #if _FABM_API_VERSION_ < 1
