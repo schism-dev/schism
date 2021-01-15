@@ -10,7 +10,7 @@ use Cwd 'abs_path';
 $pwd = cwd();
 
 #-------------------inputs------------------------------
-my $DEM_dir = "";
+my $DEM_dir = "./DEM/";
 # sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
 # sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
 #-------------------end inputs--------------------------
@@ -24,7 +24,7 @@ if ($DEM_dir eq "") {
 
 # copy hgrid
 system('rm hgrid.old*');
-system('cp ../hgrid.ll ./hgrid.old');
+system('cp ./hgrid.ll ./hgrid.old');
 
 while (!(-e 'hgrid.old')) {
     print("hgrid.old not found\n");
@@ -94,12 +94,10 @@ print IN "-1\n -0.000\n";
 close(IN);
 print "loading etopo ...\n";
 system("ln -sf DEM/etopo1.asc struc.grd");
-system("./interpolate_depth_structured2 < etopo.in; mv hgrid.new hgrid.old");
-print "cut off at 5 m ...\n";
-# 5 m cut-off in/outside the dummy region, i.e., depth=max(5, depth) for all nodes
-system("./auto_edit_region 1 dummy.reg hgrid.old 5 5");
-system("cp out.gr3 hgrid.old.etopo_cutoff_5m");
-system("mv out.gr3 hgrid.old");
+system("./interpolate_depth_structured2 < etopo.in");
+system("cp hgrid.new hgrid.old");
+system("cp hgrid.new hgrid.old.etopo");
+system("rm hgrid.new");
 
 #load coastal DEMs in several batches:
 for ($i=1;$i<=3;$i++){
@@ -174,17 +172,28 @@ for ($i=1;$i<=3;$i++){
     system("head -n 2 hgrid.new");
     system("tail -n 1 hgrid.new");
 
+    print "copying hgrid.new to hgrid.old.$i\n";
     system("cp hgrid.new hgrid.old.$i");
-    sleep 30;
-    system("mv hgrid.new hgrid.old");
-    sleep 30;
+    print "done copying hgrid.new to hgrid.old.$i\n";
+    sleep 60;
+    print "copying hgrid.new to hgrid.old\n";
+    system("cp hgrid.new hgrid.old");
+    print "done copying hgrid.new to hgrid.old\n";
+    system("rm hgrid.new");
+    sleep 60;
 }
-system("mv hgrid.old hgrid.new");
+system("cp hgrid.old hgrid.new");
+system("rm hgrid.old");
 system("rm *.out");
 system("rm *.asc");
 system("rm DEM/*.asc");
 # system("rm -rf ./DEM/");
 
+# set minmum depth to be -10m, minimum depth around Caribean Sea to be 5m
+system("./auto_edit_region 1 dummy.reg hgrid.new -10");
+system("cp out.gr3 hgrid.new; rm out.gr3"); # use cp and rm instead of mv, because mv has some weird problem on james
+system("./auto_edit_region 1 min_5m_ll.reg hgrid.new 5");
+system("cp out.gr3 hgrid.new; rm out.gr3");
  
 #sub WaitForKey() {
 #    print "press any key to continue\n";
