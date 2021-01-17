@@ -718,8 +718,8 @@ subroutine fabm_schism_do()
 
   ! get light, wind and depth on elements, update ice vars
   do i=1,nea
-     fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i)))/i34(i)**2 + &
-       sum(windy(elnode(1:i34(i),i)))/i34(i)**2)
+     fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
+       sum(windy(elnode(1:i34(i),i))/i34(i))**2)
      fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
      fs%par0(i) = fs%I_0(i) * fs%par_fraction
 
