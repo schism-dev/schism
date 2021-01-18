@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 
 # Create symlinks for DEMs (in order of loading)
-@order=("crm_3arcs","cdem13_","continetalus_southcarolina","North_Carolina_USGS_3m");
+@order=("crm_","cdem13_","continetalus_southcarolina","North_Carolina_USGS_3m");
 
 system "rm -rf dem_????.asc";
 @files=glob("*.asc");
