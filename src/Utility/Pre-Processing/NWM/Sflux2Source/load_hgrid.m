@@ -1,79 +1,78 @@
 function [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(varargin)
+    
+    ele=[]; i34=[]; bndnode=[]; open_bnds=[]; land_bnds=[]; ilb_island=[];
 
     if nargin==0
-        hdir = '/sciclone/schism10/feiye/work/Gulf_Stream/RUN38/';
-        fname1='hgrid.ll';
-        fname2='hgrid.ll';
-        ibnd=2;
+        return;
     else
         hdir=varargin{1,1};
         fname1=varargin{1,2};
         fname2=varargin{1,3};
         ibnd=varargin{1,4};
     end
-
-    bndnode=[]; open_bnds=[]; land_bnds=[]; ilb_island=[];
     
+    fid=fopen([hdir '/' fname1]);
+    tmp=textscan(fid, '%d%d', 1, 'headerlines', 1);
+    ne=tmp{1}(1); np=tmp{2}(1);
+    i34=zeros(ne,1); ele=nan(ne,4); node=nan(np,4);
     
-    [ne, np]=textread([hdir '/' fname1], '%d %d', 1, 'headerlines', 1);
-    i34=zeros(ne,1); ele=nan.*ones(ne,4);
+    tmp=textscan(fid, '%d %f %f %f',np);
+    node(:,2:4)=cell2mat(tmp(2:4));
     
-    [node(:,1),node(:,2),node(:,3),node(:,4)]=textread([hdir '/' fname2], '%d %f %f %f',np, 'headerlines', 2);
-    
-    fid = fopen([hdir  '/' fname1]);
-
-    for i=1:2+np
-        tline = fgets(fid);
+    if ibnd==-1 %not even reading the elements
+        fclose(fid);
+        return
     end
-    for i=1:ne
-        tline = strtrim(fgets(fid));
-        tmp=strsplit(tline);
-        i34(i)=str2num(tmp{2});
-        for j=1:i34(i)
-            ele(i,j)=str2num(tmp{2+j});
-        end
-    end
-
-    fclose(fid);
     
+    tmp=textscan(fid, '%d %d %d %d %d %d',ne);
+    ele(:,1:4)=cell2mat(tmp(3:end));
+    ele(ele==0)=nan;
+        
     if ibnd==0
         bndnode=[];
+        fclose(fid);
         return;
     end
     
     %bnd
     bndnode=[];
     
-    ptr=np+ne+2;
-    [nope]=textread([hdir '/' fname1], '%d',1, 'headerlines', ptr);  ptr=ptr+1;  
-    [dummy]=textread([hdir  '/' fname1], '%d',1, 'headerlines', ptr);  ptr=ptr+1;
+    tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+    nope=tmp{1};
+    
+    tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+    n_op_nodes=tmp{1};
+    
     open_bnds=cell(nope,1);
     for i=1:nope
-        [nob(i)]=textread([hdir '/' fname1], '%d',1, 'headerlines', ptr); ptr=ptr+1;
-        [tmp]=textread([hdir '/' fname1], '%d',nob(i), 'headerlines', ptr); ptr=ptr+nob(i);
+        tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+        nob(i)=tmp{1};        
+        
+        tmp=textscan(fid,'%d',nob(i));
+        tmp=tmp{1};
         if i==1 
             bndnode=[bndnode; tmp];
         end
         open_bnds{i}=tmp;
     end
+        
+    tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+    nlbe=tmp{1};    
+    tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+    n_lb_nodes=tmp{1};
     
-    ocean0=[];
-    [nlbe]=textread([hdir  '/' fname1], '%d',1, 'headerlines', ptr);  ptr=ptr+1;  
-    [dummy]=textread([hdir  '/' fname1], '%d',1, 'headerlines', ptr);  ptr=ptr+1;   
     land_bnds=cell(nlbe,1); ilb_island=zeros(nlbe,1);
     for i=1:nlbe
-        [nlb(i) ilb_island(i)]=textread([hdir '/' fname1], '%d %d',1, 'headerlines', ptr); ptr=ptr+1;
-        [tmp]=textread([hdir  '/' fname1], '%d',nlb(i), 'headerlines', ptr); ptr=ptr+nlb(i);    
-        if (ilb_island(i)==1 && isempty(ocean0))
-            ocean0=bndnode;
-        end
+        tmp=textscan(fid,'%d',1); dummy = fgetl(fid); %get the rest of the line
+        nlb(i)=tmp{1}; ilb_island(i)=tmp{1};
+        tmp=textscan(fid,'%d',nlb(i));
+        tmp=tmp{1};
+        
         bndnode=[bndnode; tmp];
         land_bnds{i}=tmp;
     end
         
-    bndnode(:,2:4)=node(bndnode(:,1),2:4);
-    ocean=node(ocean0(:,1),2:3);
-    
+    bndnode(:,2:4)=node(bndnode(:,1),2:4);    
 
     if ibnd==2
         %plot grid boundary

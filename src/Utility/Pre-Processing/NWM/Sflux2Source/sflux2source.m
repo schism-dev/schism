@@ -8,8 +8,8 @@
 
 %example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
 wdir='./';
-sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc'])
-start_time_run=datenum('2017-8-4');
+sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
+start_time_run=datenum('2018-6-17');
 min_val=-0.001; max_val=100;  %values outside this range will be warned
 %----------------end user inputs------------------
 
@@ -23,14 +23,17 @@ min_val=-0.001; max_val=100;  %values outside this range will be warned
 %  msource.th.2
 %------------------------------------
 
+display(['converting sflux files from <' sflux_files(1).name '> to <' sflux_files(end).name '>'])
+
 rho_water = 1000; %kg/m^3;
 
 %read hgrid in meters
 hgrid_name=('hgrid.utm.26918');
 if exist([wdir 'hgrid.utm.mat'],'file')
+    display(['loading hgrid.utm.mat']);
     load([wdir 'hgrid.utm.mat']);%plot grid boundary
 else
-    display(['reading ' hgrid_name ', this can take several minutes for the first time']);
+    display(['reading ' hgrid_name]);
     [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
     save([wdir 'hgrid.utm.mat'],'ne', 'np', 'node', 'ele', 'i34', 'bndnode','open_bnds','land_bnds','ilb_island');
 end
@@ -46,6 +49,7 @@ end
 %read hgrid and save a copy
 hgrid_name=('hgrid.ll');
 if exist([wdir 'hgrid.ll.mat'],'file')
+    display(['loading hgrid.ll.mat']);
     load([wdir 'hgrid.ll.mat']);%plot grid boundary
     figure; 
     for i=1:length(open_bnds)
@@ -59,8 +63,8 @@ if exist([wdir 'hgrid.ll.mat'],'file')
         end
     end
 else
-    display(['reading ' hgrid_name ', this can take several minutes for the first time']);
-    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,2);
+    display(['reading ' hgrid_name]);
+    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
     save([wdir 'hgrid.ll.mat'],'ne', 'np', 'node', 'ele', 'i34', 'bndnode','open_bnds','land_bnds','ilb_island');
 end
 
