@@ -9,7 +9,7 @@
 %example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
 wdir='./';
 sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
-start_time_run=datenum('2018-6-17');
+start_time_run=datenum('2018-9-14 12:00:00');
 min_val=-0.001; max_val=100;  %values outside this range will be warned
 %----------------end user inputs------------------
 
@@ -29,45 +29,26 @@ rho_water = 1000; %kg/m^3;
 
 %read hgrid in meters
 hgrid_name=('hgrid.utm.26918');
-if exist([wdir 'hgrid.utm.mat'],'file')
-    display(['loading hgrid.utm.mat']);
-    load([wdir 'hgrid.utm.mat']);%plot grid boundary
-else
-    display(['reading ' hgrid_name]);
-    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
-    save([wdir 'hgrid.utm.mat'],'ne', 'np', 'node', 'ele', 'i34', 'bndnode','open_bnds','land_bnds','ilb_island');
-end
-
+display(['reading ' hgrid_name]);
+[ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
+display(['done reading ' hgrid_name]);
+    
+display(['calculating element area based on ' hgrid_name]);
 area_e=nan(ne,1); precip2flux=area_e;
 for i=1:ne
     xnd_e=node(ele(i,1:i34(i)),2);
     ynd_e=node(ele(i,1:i34(i)),3);
     area_e(i)=polyarea(xnd_e(1:i34(i)),ynd_e(1:i34(i)));
-    precip2flux(i) = 1/rho_water*area_e(i); % convert from  1 kg/m^2/s to m^3/s
 end
+precip2flux = 1/rho_water*area_e; % convert from  1 kg/m^2/s to m^3/s
 
 %read hgrid and save a copy
 hgrid_name=('hgrid.ll');
-if exist([wdir 'hgrid.ll.mat'],'file')
-    display(['loading hgrid.ll.mat']);
-    load([wdir 'hgrid.ll.mat']);%plot grid boundary
-    figure; 
-    for i=1:length(open_bnds)
-        line(node(open_bnds{i},2),node(open_bnds{i},3),'LineWidth',1,'Color','k'); hold on;
-    end
-    for i=1:length(land_bnds)
-        line(node(land_bnds{i},2),node(land_bnds{i},3),'LineWidth',1,'Color','k'); hold on;
-        if ilb_island(i)==1 %island
-            nd1=land_bnds{i}(end); nd2=land_bnds{i}(1);
-            line(node([nd1 nd2],2),node([nd1 nd2],3),'LineWidth',1,'Color','k'); hold on;
-        end
-    end
-else
-    display(['reading ' hgrid_name]);
-    [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
-    save([wdir 'hgrid.ll.mat'],'ne', 'np', 'node', 'ele', 'i34', 'bndnode','open_bnds','land_bnds','ilb_island');
-end
+display(['reading ' hgrid_name]);
+[ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
+display(['done reading ' hgrid_name]);
 
+display(['calculating element center based on ' hgrid_name]);
 lon_e=nan(ne,1); lat_e=nan(ne,1);
 for i=1:ne
     lon_e(i)=mean(node(ele(i,1:i34(i)),2));
@@ -76,8 +57,6 @@ end
 
 %read elements that need source
 iSS=load([wdir 'sflux2source.prop']); iSS=find(iSS(:,2)==1);
-
-
 
 
 nf = length(sflux_files);
@@ -114,10 +93,16 @@ for i=1:nf
     end
     for j=1:nt
         this_sflux_time=this_sflux_time+dt/86400;
-        if (this_sflux_time >= start_time_run) 
-            prate_interp = griddata(double(lat),double(lon),double(prate(:,:,j)),lat_e(iSS),lon_e(iSS));
+        if (this_sflux_time >= start_time_run)
+            
+            this_prate=prate(:,:,j);
+            F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));
+            prate_interp = F_interp(lat_e(iSS),lon_e(iSS));
+            
             if ~(max(prate_interp(:)) < max_val & min(prate_interp(:)) > min_val) 
               display(['warning: value out of range']);
+              max(prate_interp(:)) 
+              min(prate_interp(:)) 
             end
             dlmwrite(fname_out,[time_stamp;max(0,prate_interp).*precip2flux(iSS)]','precision',10,'delimiter',' ','-append');
             time_stamp=time_stamp+dt;
@@ -125,14 +110,17 @@ for i=1:nf
             if this_sflux_time==start_time_run %diagnostic plot
                 figure;
                 subplot(1,3,3); 
-                scatter(lon_e(iSS),lat_e(iSS),5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource');
-            
-                prate_interp = griddata(double(lat),double(lon),double(prate(:,:,j)),double(lat_e),double(lon_e));
+                scatter(lon_e(iSS),lat_e(iSS),5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource, selected region');
+                
                 subplot(1,3,1); 
-                contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux');              
+                this_prate=prate(:,:,j);
+                F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));
+                prate_interp = F_interp(double(lat_e),double(lon_e));
+                contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux');  
+                
                 subplot(1,3,2); 
                 [prate_sorted,II]=sort(prate_interp.*precip2flux,'descend');
-                scatter(lon_e(II),lat_e(II),5,max(0,prate_interp(II)),'filled'); hold on; colormap jet;colorbar;title('vsource');
+                scatter(lon_e(II),lat_e(II),5,max(0,prate_interp(II)),'filled'); hold on; colormap jet;colorbar;title('vsource, whole domain');
                 clearvars prate_interp;
             end
         end

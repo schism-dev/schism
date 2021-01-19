@@ -25,8 +25,8 @@ function [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(
     end
     
     tmp=textscan(fid, '%d %d %d %d %d %d',ne);
-    ele(:,1:4)=cell2mat(tmp(3:end));
-    ele(ele==0)=nan;
+    ele(:,1:4)=cell2mat(tmp(3:end)); ele(ele==0)=nan;
+    i34=cell2mat(tmp(2));
         
     if ibnd==0
         bndnode=[];
@@ -88,5 +88,7 @@ function [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(
             end
         end
     end
+    
+    fclose(fid);
 end
     
