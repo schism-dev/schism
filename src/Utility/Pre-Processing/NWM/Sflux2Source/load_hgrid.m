@@ -14,10 +14,10 @@ function [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(
     fid=fopen([hdir '/' fname1]);
     tmp=textscan(fid, '%d%d', 1, 'headerlines', 1);
     ne=tmp{1}(1); np=tmp{2}(1);
-    i34=zeros(ne,1); ele=nan(ne,4); node=nan(np,4);
+    i34=zeros(ne,1); ele=nan(ne,4); 
     
     tmp=textscan(fid, '%d %f %f %f',np);
-    node(:,2:4)=cell2mat(tmp(2:4));
+    node(1:np,2:4)=cell2mat(tmp(2:4));
     
     if ibnd==-1 %not even reading the elements
         fclose(fid);

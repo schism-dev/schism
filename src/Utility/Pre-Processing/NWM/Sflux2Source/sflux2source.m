@@ -5,12 +5,17 @@
 %   sflux/ 
 %   hgrid.ll (for interpolation) 
 %   hgrid.utm.26918 (for converting precip. to flux);
+% Important! To speed up the interpolation, "i_lonlat_const=true" assumes 
+%   the lon/lat does not change among sflux*prc*.nc.
+%   Slight differences in vsource.th.2 exist between
+%   i_lonlat_const=true and i_lonlat_const=false
 
 %example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
 wdir='./';
 sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
 start_time_run=datenum('2018-9-14 12:00:00');
 min_val=-0.001; max_val=100;  %values outside this range will be warned
+i_lonlat_const=true;
 %----------------end user inputs------------------
 
 %---------------outputs--------------
@@ -23,7 +28,7 @@ min_val=-0.001; max_val=100;  %values outside this range will be warned
 %  msource.th.2
 %------------------------------------
 
-display(['converting sflux files from <' sflux_files(1).name '> to <' sflux_files(end).name '>'])
+disp(['converting sflux files from <' sflux_files(1).name '> to <' sflux_files(end).name '>'])
 
 rho_water = 1000; %kg/m^3;
 
@@ -35,10 +40,11 @@ display(['done reading ' hgrid_name]);
     
 display(['calculating element area based on ' hgrid_name]);
 area_e=nan(ne,1); precip2flux=area_e;
-for i=1:ne
-    xnd_e=node(ele(i,1:i34(i)),2);
-    ynd_e=node(ele(i,1:i34(i)),3);
-    area_e(i)=polyarea(xnd_e(1:i34(i)),ynd_e(1:i34(i)));
+for k=3:4
+    nn = find(i34==k);
+    area_x=reshape(node(ele(nn,1:k)',2),k,length(nn));
+    area_y=reshape(node(ele(nn,1:k)',3),k,length(nn));
+    area_e(nn)=polyarea(area_x,area_y);
 end
 precip2flux = 1/rho_water*area_e; % convert from  1 kg/m^2/s to m^3/s
 
@@ -48,12 +54,13 @@ display(['reading ' hgrid_name]);
 [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
 display(['done reading ' hgrid_name]);
 
+
 display(['calculating element center based on ' hgrid_name]);
-lon_e=nan(ne,1); lat_e=nan(ne,1);
-for i=1:ne
-    lon_e(i)=mean(node(ele(i,1:i34(i)),2));
-    lat_e(i)=mean(node(ele(i,1:i34(i)),3));
-end
+node=[node; [nan nan nan nan]]; % add a dummy node at the end
+ele(isnan(ele))=np+1;
+lon_e=nanmean(reshape(node(ele',2),4,ne)',2);
+lat_e=nanmean(reshape(node(ele',3),4,ne)',2);
+node=node(1:end-1,:); ele(ele==np+1)=nan; %restore node and ele
 
 %read elements that need source
 iSS=load([wdir 'sflux2source.prop']); iSS=find(iSS(:,2)==1);
@@ -85,22 +92,56 @@ end
 
 time_stamp=0;
 this_sflux_time=sflux_base_time;
+F_interp=[]; seq3=[1 2 3 1 2];
 for i=1:nf
     fname = sflux_files(i).name
     prate = ncread([wdir '/sflux/' fname],'prate'); %kg/m^2/s
     if min(prate(:))<-0.001
-        display('Negative Precip');
+        disp('Negative Precip');
     end
     for j=1:nt
         this_sflux_time=this_sflux_time+dt/86400;
         if (this_sflux_time >= start_time_run)
             
             this_prate=prate(:,:,j);
-            F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));
-            prate_interp = F_interp(lat_e(iSS),lon_e(iSS));
+            if isempty(F_interp)
+                F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));                
+                
+                if i_lonlat_const % assuming lon/lat of sflux*.nc does not change
+                    disp('calculating weights for spatial interpolation')
+                    t=delaunayn([double(lat(:)),double(lon(:))]);
+                    f=double(this_prate(:));
+                    i_ele = tsearchn([double(lat(:)),double(lon(:))],t,[lat_e(iSS),lon_e(iSS)]);
+                    i_area_cor=-ones(length(i_ele),3);
+
+                    for k=1:3
+                        area_lat0 = [lat_e(iSS) lat(t(i_ele,seq3(k+1:k+2)))]';
+                        area_lon0 = [lon_e(iSS) lon(t(i_ele,seq3(k+1:k+2)))]';
+                        area_lat = lat(t(i_ele,:))'; area_lon = lon(t(i_ele,:))';
+                        i_area_cor(:,k) = abs(polyarea(area_lat0,area_lon0)./polyarea(area_lat,area_lon));
+                    end
+
+                    II=find(i_area_cor<0 | i_area_cor>1);
+                    if ~isempty(II)
+                        disp('error in area coordinates')
+                    end
+                    disp('done calculating weights for spatial interpolation')
+                end
+            else
+                if ~i_lonlat_const
+                    F_interp.Values=double(this_prate(:));
+                end
+            end
+            if ~i_lonlat_const
+                prate_interp = F_interp(lat_e(iSS),lon_e(iSS));
+            else
+                tmp=this_prate(:);
+                this_prate_inele = tmp(t(i_ele,:));
+                prate_interp = sum(this_prate_inele .* i_area_cor, 2);
+            end
             
-            if ~(max(prate_interp(:)) < max_val & min(prate_interp(:)) > min_val) 
-              display(['warning: value out of range']);
+            if ~(max(prate_interp(:)) < max_val && min(prate_interp(:)) > min_val) 
+              disp(['warning: value out of range']);
               max(prate_interp(:)) 
               min(prate_interp(:)) 
             end
@@ -114,7 +155,7 @@ for i=1:nf
                 
                 subplot(1,3,1); 
                 this_prate=prate(:,:,j);
-                F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));
+                F_interp.Values = double(this_prate(:));
                 prate_interp = F_interp(double(lat_e),double(lon_e));
                 contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux');  
                 
