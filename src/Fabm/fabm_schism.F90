@@ -15,6 +15,9 @@
 ! Public License Version 3.0
 !
 !#include "fabm_version.h"
+#ifndef _FABM_API_VERSION_
+#define _FABM_API_VERSION 0
+#endif
 
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
