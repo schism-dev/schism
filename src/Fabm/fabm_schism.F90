@@ -30,11 +30,12 @@ module fabm_schism
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: xlon_el, ylat_el
+  use schism_msgp,  only: myrank, parallel_abort
+
 #ifdef USE_ICEBGC
-  use schism_glbl,  only: dh_growth, ice_tr ! Needed for icealgae model, but requires
+  use ice_module,  only: dh_growth, ice_tr ! Needed for icealgae model, but requires
     ! patched version of schism and schism_ice models
 #endif
-  use schism_msgp,  only: myrank, parallel_abort
 
   use fabm
   use fabm_driver, only: type_base_driver, driver
