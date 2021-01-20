@@ -28,7 +28,7 @@
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl,  only: eta2, dpe
+  use schism_glbl,  only: eta2, dpe,dp
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
@@ -754,8 +754,8 @@ subroutine fabm_schism_do()
      fs%dh_growth(i) = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
 #endif
 
-     ! Total water depth (or should this be the sum of layer height?
-     fs%bottom_depth(i)=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
+     ! Total water depth
+     fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
 
 
