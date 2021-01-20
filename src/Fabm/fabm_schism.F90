@@ -8,6 +8,7 @@
 !> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Deborah Benkort <deborah.benkort@hzg.de>
+!> @author Jan Kossack <jan.kossack@hzg.de>
 !> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
 !
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
@@ -335,6 +336,9 @@ subroutine fabm_schism_init_stage2
       fs%model%interior_state_variables(i)%initial_value
 #endif
 
+    !>@todo Debate ic versus hotstart vs fabm_init initialization
+    
+
     ! set settling velocity method
 #define BDY_FRC_SINKING 0
 #if BDY_FRC_SINKING
@@ -445,7 +449,6 @@ subroutine fabm_schism_init_stage2
   allocate(fs%num(nvrt,nea))
   fs%num = 0.0_rk
 
-
   ! Link ice environment
 #ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
@@ -476,6 +479,9 @@ subroutine fabm_schism_init_stage2
 #endif
   fs%fabm_ready=.true.
   call driver%log_message('Initialization stage 2 complete')
+
+  !> @todo there was a call to update_time in older versios of this routine
+  !> call fabm_update_time(fs%model, fs%tidx)
 
 end subroutine fabm_schism_init_stage2
 
@@ -694,6 +700,8 @@ subroutine fabm_schism_do()
   if (.not.associated(rhs_bt)) allocate(rhs_bt(1:fs%nvar_bot))
   if (.not.associated(rhs_sf)) allocate(rhs_sf(1:fs%nvar_sf))
   if (.not.associated(h_inv)) allocate(h_inv(1:nvrt))
+
+  ! @todo clarify: update pointers for forcing?
 
   ! repair state
   call fs%repair_state()
@@ -1224,6 +1232,8 @@ subroutine link_environmental_data(self, rc)
   ! expand the controlled vocabulary if they do not exist.
 
 #if _FABM_API_VERSION_ < 1
+  call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! @todo check units, needs m s-1
+ 
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
@@ -1263,6 +1273,8 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked standard variable "number_of_days_since_start_of_the_year"')
 
 #else
+  call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! @todo check units, needs m s-1
+ 
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
