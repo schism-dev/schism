@@ -15,6 +15,12 @@
 !
 !#include "fabm_version.h"
 
+#ifdef USE_ICEBGC
+#ifndef USE_ICE
+#error You need to enable the ice module with -DUSE_ICE as well. 
+#endif
+#endif
+
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
