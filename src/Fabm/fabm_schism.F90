@@ -30,6 +30,7 @@ module fabm_schism
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
+  use schism_glbl,  only: pr, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
   use schism_msgp,  only: myrank, parallel_abort
 
@@ -130,6 +131,7 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: eps => null()
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
+    real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
     real(rk), dimension(:), pointer     :: I_0 => null()
     real(rk), dimension(:), pointer     :: par0 => null()
     real(rk), dimension(:), pointer     :: bottom_depth => null()
@@ -449,6 +451,10 @@ subroutine fabm_schism_init_stage2
   allocate(fs%num(nvrt,nea))
   fs%num = 0.0_rk
 
+  ! todo  if (fabm_variable_needs_values(model,pres_id)) then
+  allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
+  fs%pres = 0.0_rk
+
   ! Link ice environment
 #ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
@@ -748,6 +754,22 @@ subroutine fabm_schism_do()
      ! Total water depth (or should this be the sum of layer height?
      fs%bottom_depth(i)=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
   end do
+
+
+! calculate pres field from density ADDED
+  ! interpolate pr to elements
+  ! todo nope --> if (allocated(fs%pres)) then
+  do i=1,nea
+    fs%pres(nvrt,i) = erho(nvrt,i) * abs(ze(nvrt,i))
+    if (idry_e(i)==0) then !todo why not idry for epsf dfv?
+      do k=nvrt-1,kbe(i),-1
+        fs%pres(k,i) = fs%pres(k+1,i) + erho(k+1,i) * fs%layer_height(k+1,i)
+      enddo
+      fs%pres(kbe(i):nvrt,i) = (sum(pr(elnode(1:i34(i),i)))/i34(i) + & 
+                               fs%pres(kbe(i):nvrt,i) * grav) * 1.e-4_rk
+    endif
+  enddo
+
 
 #if _FABM_API_VERSION_ < 1
   call fs%get_light()
@@ -1232,7 +1254,8 @@ subroutine link_environmental_data(self, rc)
   ! expand the controlled vocabulary if they do not exist.
 
 #if _FABM_API_VERSION_ < 1
-  call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! @todo check units, needs m s-1
+  call fabm_link_bulk_data(self%model,standard_variables%pressure,fs%pres) !ADDED
+  call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
  
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
@@ -1273,7 +1296,8 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked standard variable "number_of_days_since_start_of_the_year"')
 
 #else
-  call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! @todo check units, needs m s-1
+  call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
+  call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
  
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
