@@ -737,10 +737,8 @@ subroutine fabm_schism_do()
      fs%dh_growth(i) = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
 #endif
 
-     ! Total water depth (dpe is max depth in an elem)
-     !fs%bottom_depth(i)=dpe(i)+sum(eta2(elnode(1:i34(i),i)))/i34(i)
-     !Error: elem may be dry so should we impose max(0. )?
-     fs%bottom_depth(i)=sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i)
+     ! Total water depth
+     fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
 
 #if _FABM_API_VERSION_ < 1
