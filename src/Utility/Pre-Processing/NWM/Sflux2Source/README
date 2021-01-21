@@ -1,12 +1,17 @@
 Recommended usage:
-  run scripts in the current dir and set the schism run dir inside the scripts.
 
-sflux2source.m:
-  convert precipitation in sflux to source, see usage in the beginning of the script
+1) "cp -rL" the current dir ("Sflux2Source/") to your run dir and see usage in the first few lines of following script:
+  sflux2source.m
+  merge_source_sink.m
 
-merge_source_sink.m:
+
+2) sflux2source.m:
+  Convert precipitation from sflux to volume source, see usage in the beginning of the script.
+
+
+3) merge_source_sink.m:
   Merge two sets of source/sink files:
-    <Original source/sink>
+    <Original source/sink, e.g. from NWM>
       source_sink.in.1
       vsource.th.1
       msource.th.1
@@ -17,7 +22,15 @@ merge_source_sink.m:
       msource.th.2
       (no sinks, because evaporation is not included)
   See usage in the beginning of the script.
-  This script takes much memory if the grid is big. If matlab is "Killed" for memory issues, run it in an interactive session on Sciclone.
+
+  This script takes much memory if the grid is big. If matlab is "Killed" for memory issues, run it in an interactive session on Sciclone or other clusters.
   You can get more memory by requesting all cores on one node instead of one single core, e.g. on Vortex: qlogin -q matlab -t 1080 1:vortex:compute:ppn=12 
 
+
+4) move the final outputs:
+      source_sink.in
+      vsource.th
+      msource.th
+      vsink.th
+  into your run dir.
 

@@ -1,10 +1,13 @@
 % clear;
 %----------------user inputs------------------
 % make sure wdir has the following files:
-%   sflux2source.prop (use xmgredit to make a ele-based prop for elements that need sources from sflux),
+%   sflux2source.prop
+%     (use xmgredit to make an ele-based prop file for elements (prop value=1) that need sources from sflux,
+%     if you don't have xmgredit, use the alternative method shown in /Sflux2Source/Sample_Prop/)
 %   sflux/ 
 %   hgrid.ll (for interpolation) 
 %   hgrid.utm.26918 (for converting precip. to flux);
+%
 % Important! To speed up the interpolation, "i_lonlat_const=true" assumes 
 %   the lon/lat does not change among sflux*prc*.nc.
 %   Slight differences in vsource.th.2 exist between

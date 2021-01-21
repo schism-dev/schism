@@ -65,15 +65,20 @@ sub Interp_Regions {
 
 
 #-------------main starts-----------------
+print(">>> Important: you are responsible for setting proper inputs by editing the 'inputs' section of this script.\n");
+print(">>>            exisiting inputs only serve as a sample\n");
 #-------------inputs-----------------
-@sub_regions_sal = ('CB.reg','DB.reg', 'Florence_init_sal.gr3.bnd.reg');
-@sub_region_vals_sal=('1','2','2');  # '1': from obs; '2': from *.gr3 as specified below
-@sub_grids_sal=('','DelawareBay_Data/DB_surf_S_ic.subset.gr3','Florence_init_sal.gr3'); #corresponding to each sub_region
+#observed salinity for local regions if any; if not, leave the arrays empty, e.g.: @sub_regions_sal = ();
+@sub_regions_sal = ('CB.reg','DB.reg', 'Florence_init_sal.gr3.bnd.reg'); # regions in which further modifications are applied
+@sub_region_vals_sal=('1','2','2');  # '1': from ChesBay obs; '2': from *.gr3 as specified below
+@sub_grids_sal=('','DelawareBay_Data/DB_surf_S_ic.subset.gr3','Florence_init_sal.gr3'); # background gr3 containing new values to be applied in each sub_region 
 
+#observed temperature for local regions if any; if not, leave the arrays empty, e.g.: @sub_regions_sal = ();
 @sub_regions_tem = ('CB.reg','Florence_init_tem.gr3.bnd.reg');
 @sub_region_vals_tem = ('1','2');
 @sub_grids_tem=('','Florence_init_tem.gr3'); #corresponding to each sub_region
 
+#HYCOM
 $script_dir="../Grid_manipulation/";
 $hycom_dir="../HYCOM_FLORENCE_PERIOD/";
 #-------------end inputs-----------------
