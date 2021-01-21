@@ -76,7 +76,7 @@ do iof=1,nof
     prc=fs[iof-1]->prate ;(:,:,:)
     var      = prc                          ;;
 
-    if (iof.eq.0) then
+    if (iof.eq.1) then
         var_regrid = ESMF_regrid(var,Opt)     ; Do the regridding and output weight file
     else
         var_regrid = ESMF_regrid_with_weights(prc,"curv_to_unstruct.nc",Opt2)     ; Do the regridding
