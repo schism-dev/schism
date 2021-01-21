@@ -1,5 +1,5 @@
-There're 2 differnt ncl tool.
-Both are tested with ncl version 6.6.2.
+There're 2 differnt ncl tools.
+Both were tested with ncl version 6.6.2.
 
 ncl_itp:  use ncl build-in interpolation to convert sflux prc into vsourth.th
           Ideal for shorter length record (< 5 days).
