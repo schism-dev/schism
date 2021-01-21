@@ -6,10 +6,12 @@
       real,allocatable :: vsource_np(:),vsource(:),area(:)
       integer,allocatable :: i34(:),elnode(:,:)
       integer ne,np,nnp
+      real dt
 
       open(10,file='dim.dat')
       read(10,*) nt
       read(10,*) nnp
+      read(10,*) dt
       close(10)
       allocate(vsource_np(nnp))
 
@@ -48,7 +50,7 @@
                vsource(i)=(vsource_np(elnode(1,i))+vsource_np(elnode(2,i))+vsource_np(elnode(3,i))+vsource_np(elnode(4,i)))/4.*area(i)/1000.
             end if
          end do
-         write(21,99) (l-1)*3600.,vsource(:)
+         write(21,99) (l-1)*dt,vsource(:)
       end do
 
       deallocate(vsource,vsource_np)

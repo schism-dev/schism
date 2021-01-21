@@ -25,18 +25,23 @@ ele=onedtond(nv,(/elesize,3/))
 
 dir = "./sflux_nc/"
 files= systemfunc("ls "+ dir + "sflux_prc_1.*nc")
+nof = stringtointeger(systemfunc("ls "+ dir + "sflux_prc_1.*nc | wc -l"))
 fs= addfiles(files,"r")
-prc=fs[:]->prate ;(:,:,:)
 prc_x=fs[0]->lon
 prc_y=fs[0]->lat
+time0=fs[0]->time
+ndim=new(3,"float")
+dt=(time0(1)-time0(0))*86400.
+irec=0
+; Clean file
+system("rm -f ./vsource_np.bin")
+
 
 ;---Data file containing source grid
 
 ;---Get variable to regrid
-    var      = prc                          ;;
     src_lat  = prc_y                        ;;
     src_lon  = prc_x                        ;;
-
 
 ;---Set up regridding options
     Opt                   = True
@@ -62,15 +67,35 @@ prc_y=fs[0]->lat
     Opt@PrintTimings      = True
     Opt@Debug             = True
 
-    var_regrid = ESMF_regrid(var,Opt)     ; Do the regridding and output weight file
+    Opt2                   = True
+    Opt2@ForceOverwrite    = True
+    Opt2@PrintTimings      = True
+    Opt2@Debug             = True
 
-    printVarSummary(var_regrid)
-    system("rm -f ./vsource_np.bin")
-    ndim=dimsizes(var_regrid)
-    do l=1,ndim(0)
-;      printMinMax(var_regrid(l-1,:),False)
+do iof=1,nof
+    prc=fs[iof-1]->prate ;(:,:,:)
+    var      = prc                          ;;
+
+    if (iof.eq.0) then
+        var_regrid = ESMF_regrid(var,Opt)     ; Do the regridding and output weight file
+    else
+        var_regrid = ESMF_regrid_with_weights(prc,"curv_to_unstruct.nc",Opt2)     ; Do the regridding
+    end if
+
+;   printVarSummary(var_regrid)
+    ndim0=dimsizes(var_regrid)
+
+    do l=1,ndim0(0)
+       printMinMax(var_regrid(l-1,:),False)
        fbinrecwrite("vsource_np.bin",-1,var_regrid(l-1,:))
+       irec=irec+1
     end do
-    asciiwrite("dim.dat",ndim)
+end do ; iof
+
+ndim(0)=irec
+ndim(1)=ndim0(1)
+ndim(2)=dt
+print(ndim)
+asciiwrite("dim.dat",ndim)
 
 end

@@ -32,12 +32,13 @@
 !    include 'netcdf.inc'
     private
 
-    integer,save :: ncid,node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
+    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
     &one_dim,two_dim,time_dim,time_dims(1),itime_id,ele_dims(2),x_dims(1), &
     &y_dims(1),z_dims(1),var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
     &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
     &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4)
 
+    integer,save,public :: ncid
     public :: write_obe
     public :: report_timers
     public :: writeout_nc
