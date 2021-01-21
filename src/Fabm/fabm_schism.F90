@@ -33,7 +33,7 @@ module fabm_schism
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
-  use schism_glbl,  only: pr, grav ! for calculating internal pressure
+  use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
   use schism_msgp,  only: myrank, parallel_abort
 
@@ -740,7 +740,7 @@ subroutine fabm_schism_do()
   call fabm_update_time(fs%model, fs%tidx)
 #endif
 
-  ! get light, wind and depth on elements, update ice vars
+  ! get light, wind speed and depth on elements, update ice vars
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
        sum(windy(elnode(1:i34(i),i))/i34(i))**2)
@@ -758,20 +758,16 @@ subroutine fabm_schism_do()
      fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
 
-
-! calculate pres field from density ADDED
-  ! interpolate pr to elements
-  ! todo nope --> if (allocated(fs%pres)) then
+! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
+! todo if (allocated(fs%pres)) then
+! todo add atmo pressure?
   do i=1,nea
-    fs%pres(nvrt,i) = erho(nvrt,i) * abs(ze(nvrt,i))
-    if (idry_e(i)==0) then !todo why not idry for epsf dfv?
-      do k=nvrt-1,kbe(i),-1
-        fs%pres(k,i) = fs%pres(k+1,i) + erho(k+1,i) * fs%layer_height(k+1,i)
-      enddo
-      fs%pres(kbe(i):nvrt,i) = (sum(pr(elnode(1:i34(i),i)))/i34(i) + & 
-                               fs%pres(kbe(i):nvrt,i) * grav) * 1.e-4_rk
-    endif
-  enddo
+    if (idry_e(i)==1) cycle
+    do k=1,nvrt
+      n = max(k,kbe(i))
+      fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
+    end do
+  end do
 
 
 #if _FABM_API_VERSION_ < 1
