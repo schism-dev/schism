@@ -28,7 +28,7 @@
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl,  only: eta2, dpe,dp
+  use schism_glbl,  only: eta2, dpe,dp, pr2
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
@@ -760,13 +760,15 @@ subroutine fabm_schism_do()
 
 ! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
 ! todo if (allocated(fs%pres)) then
-! todo add atmo pressure?
   do i=1,nea
     if (idry_e(i)==1) cycle
     do k=1,nvrt
       n = max(k,kbe(i))
-      fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
+      !fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
+      fs%pres(k,i) = rho0*grav*abs(ze(nvrt,i)-ze(n,i))*1.e-4_rk
     end do
+    ! add atmospheric pressure
+    fs%pres(:,i) = sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
   end do
 
 
