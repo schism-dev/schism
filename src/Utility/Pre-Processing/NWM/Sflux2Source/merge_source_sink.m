@@ -23,9 +23,7 @@ elseif nargin==2
 else
     disp('wrong number of input arguments');
 end
-
 %----------------------------------------------
-
 
 
 [ne,np]=textread([wDir 'hgrid.ll'], '%d%d',1, 'headerlines', 1);
@@ -68,6 +66,9 @@ end
 iso=find(ioSS==1);
 isi=find(iiSS==1);
 
+%---------------------------------------------------------
+%           output source_sink.in
+%---------------------------------------------------------
 fout=fopen([wDir '/source_sink.in'],'wt');
 fprintf(fid,'%d\n',length(iso));
 fprintf(fid,'%d\n',iso);
@@ -77,9 +78,16 @@ fprintf(fid,'%d\n',isi);
 fclose(fout);
 
 %---------------------------------------------------------
+%           output dummy msource.th
+%---------------------------------------------------------
+msource=zeros(2,length(iso)*2+1);
+msource(:,1)=[0 nday*86400*1.1]; %two timestamps: 0 and a large number
+msource(:,2:length(iso)+1)=-9999; %T=-9999 (ambient)
+dlmwrite([wDir 'msource.th'],msource,'precision',15,'delimiter',' ');
+
+%---------------------------------------------------------
 %----------merge sources and sinks----------------------
 %---------------------------------------------------------
-
 fnames={'vsource.th','vsink.th'};
 for iter=1:2
     
@@ -87,14 +95,14 @@ for iter=1:2
     time_stamp=[0:dt0:nday*86400]'; 
     nt0=length(time_stamp);
     
-    if iter==1
-        %map from [12] to combined
+    if iter==1 %source
+        %map from vsource.th.[12] to final vsource.th
         ib=cell(2,1);
         [~, ib{1}]=ismember(soid{1},iso);
         [~, ib{2}]=ismember(soid{2},iso);
         ne_ss=ne_source;
         nrec=length(iso);
-    else
+    else %sink
         if ne_sink(1)==0 || ne_sink(2)==0
             if ne_sink(1)==0 && ne_sink(2)==0
               return
@@ -106,7 +114,7 @@ for iter=1:2
             end
             return
         end
-        %map from [12] to combined
+        %map from vsink.th.[12] to final vsink.th
         ib=cell(2,1);
         [~, ib{1}]=ismember(siid{1},isi);
         [~, ib{2}]=ismember(siid{2},isi);
@@ -120,7 +128,7 @@ for iter=1:2
     fid{2}=fopen([wDir '/' fnames{iter} '.2']);
     delete([wDir '/' fnames{iter}]);
 
-    %read two lines from each file to start the loop
+    %read the first two lines from each file to start the loop
     this_time = 0;
     tmp=cell(2,2); t=zeros(2,2);
     for i=1:2
@@ -129,6 +137,7 @@ for iter=1:2
         tmp(i,2)=textscan(fid{i}, '%f', 1+ne_ss(i)); 
         t(i,2)=tmp{i,2}(1);
     end
+    %loop through time
     while this_time < time_stamp(end)
         out = zeros(1,nrec);
         for i=1:2
@@ -152,15 +161,6 @@ for iter=1:2
     end
 end
 
-
-%---------------------------------------------------------
-%           output dummy msource.th
-%---------------------------------------------------------
-
-msource=zeros(2,length(iso)*2+1);
-msource(:,1)=[0 time_stamp(end)*1.1];
-msource(:,2:length(iso)+1)=-9999;
-dlmwrite([wDir 'msource.th'],msource,'precision',15,'delimiter',' ');
 
 
 end %function
