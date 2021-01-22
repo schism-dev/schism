@@ -34,10 +34,11 @@ add_definitions("-DSCHISM")
 message(STATUS "\n### Your compiler is ${CMAKE_Fortran_COMPILER}")
 
 # @todo this is a tempoary fix for gcc10 and greater until this is 
-# resolved in later versions of gcc
+# resolved in later versions of gcc; currently, we apply this to 
+# C and Fortran, resulting in a warning when compiling the C parts
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
-    add_compile_options(-fallow-argument-mismatch)
+      add_compile_options(-fallow-argument-mismatch)
   endif()
 endif()
 
