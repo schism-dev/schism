@@ -13,9 +13,11 @@ function []=merge_source_sink(varargin)
 
 %------------------inputs-----------------------
 if nargin==0
+    %Sample inputs. You can change the variables here if you want to run this script directly.
     wDir='./';
     nday=1; %Days needed; recommended: 1 day more than the rnday in param.nml
 elseif nargin==2
+    %Run the script like a function
     wDir=varargin{1,1};
     nday=varargin{1,2};
 else

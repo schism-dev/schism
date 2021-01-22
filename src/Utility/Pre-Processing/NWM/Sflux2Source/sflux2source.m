@@ -13,14 +13,22 @@ function []=sflux2source(varargin)
 %   Slight differences in vsource.th.2 exist between
 %   i_lonlat_const=true and i_lonlat_const=false
 
-%example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
 if nargin==0
-    wdir='./';
-    sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
+    %Sample inputs. You can change the variables here if you want to run this script directly.
+    %1) it is recommended to copy (cp -rL) the entire script folder (Sflux2Source) into your run dir to keep a record of the scripts used
+    wdir='./'; 
+    %2) look for sflux files using the 'dir' function. Depending on your needs,
+    %   you may change the path, e.g., sflux_files=dir('../sflux/sflux*prc_1*.nc'),
+    %   or set the sflux dataset number, e.g., sflux_files = dir([some_dir sflux/sflux*prc_2*.nc']); 
+    sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']); 
+    %3) start time of the SCHISM run
     start_time_run=datenum('2018-9-14 12:00:00');
-    min_val=-0.001; max_val=100;  %values outside this range will be warned
+    %4) values outside this range will be warned
+    min_val=-0.001; max_val=100;  
+    %5) true: assuming lon/lat does not change in sflux files (faster); false: otherwise (slower)
     i_lonlat_const=true;
 elseif nargin==6
+    %Run the script like a function
     wdir=varargin{1,1};
     sflux_files=varargin{1,2};
     start_time_run=varargin{1,3};
