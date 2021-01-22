@@ -768,7 +768,7 @@ subroutine fabm_schism_do()
       fs%pres(k,i) = rho0*grav*abs(ze(nvrt,i)-ze(n,i))*1.e-4_rk
     end do
     ! add atmospheric pressure
-    fs%pres(:,i) = sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
+    fs%pres(:,i) = fs%pres(:,i)+sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
   end do
 
 
