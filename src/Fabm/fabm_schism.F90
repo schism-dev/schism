@@ -8,12 +8,16 @@
 !> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Deborah Benkort <deborah.benkort@hzg.de>
+!> @author Jan Kossack <jan.kossack@hzg.de>
 !> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
 !
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
 !
 !#include "fabm_version.h"
+#ifndef _FABM_API_VERSION_
+#define _FABM_API_VERSION 0
+#endif
 
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
@@ -24,11 +28,12 @@
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl,  only: eta2, dpe,dp
+  use schism_glbl,  only: eta2, dpe,dp, pr2
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
+  use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
   use schism_msgp,  only: myrank, parallel_abort
 
@@ -129,6 +134,7 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: eps => null()
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
+    real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
     real(rk), dimension(:), pointer     :: I_0 => null()
     real(rk), dimension(:), pointer     :: par0 => null()
     real(rk), dimension(:), pointer     :: bottom_depth => null()
@@ -335,6 +341,9 @@ subroutine fabm_schism_init_stage2
       fs%model%interior_state_variables(i)%initial_value
 #endif
 
+    !>@todo Debate ic versus hotstart vs fabm_init initialization
+    
+
     ! set settling velocity method
 #define BDY_FRC_SINKING 0
 #if BDY_FRC_SINKING
@@ -445,6 +454,9 @@ subroutine fabm_schism_init_stage2
   allocate(fs%num(nvrt,nea))
   fs%num = 0.0_rk
 
+  ! todo  if (fabm_variable_needs_values(model,pres_id)) then
+  allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
+  fs%pres = 0.0_rk
 
   ! Link ice environment
 #ifdef USE_ICEBGC
@@ -476,6 +488,9 @@ subroutine fabm_schism_init_stage2
 #endif
   fs%fabm_ready=.true.
   call driver%log_message('Initialization stage 2 complete')
+
+  !> @todo there was a call to update_time in older versios of this routine
+  !> call fabm_update_time(fs%model, fs%tidx)
 
 end subroutine fabm_schism_init_stage2
 
@@ -695,6 +710,8 @@ subroutine fabm_schism_do()
   if (.not.associated(rhs_sf)) allocate(rhs_sf(1:fs%nvar_sf))
   if (.not.associated(h_inv)) allocate(h_inv(1:nvrt))
 
+  ! @todo clarify: update pointers for forcing?
+
   ! repair state
   call fs%repair_state()
 
@@ -723,7 +740,7 @@ subroutine fabm_schism_do()
   call fabm_update_time(fs%model, fs%tidx)
 #endif
 
-  ! get light, wind and depth on elements, update ice vars
+  ! get light, wind speed and depth on elements, update ice vars
   do i=1,nea
      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
        sum(windy(elnode(1:i34(i),i))/i34(i))**2)
@@ -740,6 +757,20 @@ subroutine fabm_schism_do()
      ! Total water depth
      fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
+
+! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
+! todo if (allocated(fs%pres)) then
+  do i=1,nea
+    if (idry_e(i)==1) cycle
+    do k=1,nvrt
+      n = max(k,kbe(i))
+      !fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
+      fs%pres(k,i) = rho0*grav*abs(ze(nvrt,i)-ze(n,i))*1.e-4_rk
+    end do
+    ! add atmospheric pressure
+    fs%pres(:,i) = sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
+  end do
+
 
 #if _FABM_API_VERSION_ < 1
   call fs%get_light()
@@ -1224,6 +1255,9 @@ subroutine link_environmental_data(self, rc)
   ! expand the controlled vocabulary if they do not exist.
 
 #if _FABM_API_VERSION_ < 1
+  call fabm_link_bulk_data(self%model,standard_variables%pressure,fs%pres) !ADDED
+  call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
+ 
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
@@ -1263,6 +1297,9 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked standard variable "number_of_days_since_start_of_the_year"')
 
 #else
+  call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
+  call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
+ 
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
