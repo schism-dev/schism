@@ -180,10 +180,9 @@ fprintf(fid,'\n');
 fprintf(fid,'%d\n',0); %number of sinks
 fclose(fid);
 
-total_nt=time_stamp/dt;
-msource=zeros(total_nt,length(iSS)*2+1);
-msource(:,1)=0:dt:(time_stamp-dt);
+msource=zeros(2,length(iSS)*2+1);
+msource(:,1)=[0 time_stamp*1.1];
 msource(:,2:length(iSS)+1)=-9999;
-dlmwrite([wdir 'msource.th.2'],msource,'precision',10,'delimiter',' ');
+dlmwrite([wdir 'msource.th.2'],msource,'precision',15,'delimiter',' ');
             
     

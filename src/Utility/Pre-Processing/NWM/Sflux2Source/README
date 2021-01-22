@@ -23,9 +23,6 @@ Recommended usage:
       (no sinks, because evaporation is not included)
   See usage in the beginning of the script.
 
-  This script takes much memory if the grid is big. If matlab is "Killed" for memory issues, run it in an interactive session on Sciclone or other clusters.
-  You can get more memory by requesting all cores on one node instead of one single core, e.g. on Vortex: qlogin -q matlab -t 1080 1:vortex:compute:ppn=12 
-
 
 4) move the final outputs:
       source_sink.in
@@ -34,3 +31,4 @@ Recommended usage:
       vsink.th
   into your run dir.
 
+5) Visualize final outputs using viz_source.m. See usage in the beginning of the script.
