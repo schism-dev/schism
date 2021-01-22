@@ -1,4 +1,4 @@
-% clear;
+function []=sflux2source(varargin)
 %----------------user inputs------------------
 % make sure wdir has the following files:
 %   sflux2source.prop
@@ -14,11 +14,22 @@
 %   i_lonlat_const=true and i_lonlat_const=false
 
 %example wdir='/sciclone/schism10/feiye/work/Gulf_Stream/RUN19x/Sflux2source/';
-wdir='./';
-sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
-start_time_run=datenum('2018-9-14 12:00:00');
-min_val=-0.001; max_val=100;  %values outside this range will be warned
-i_lonlat_const=true;
+if nargin==0
+    wdir='./';
+    sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
+    start_time_run=datenum('2018-9-14 12:00:00');
+    min_val=-0.001; max_val=100;  %values outside this range will be warned
+    i_lonlat_const=true;
+elseif nargin==6
+    wdir=varargin{1,1};
+    sflux_files=varargin{1,2};
+    start_time_run=varargin{1,3};
+    min_val=varargin{1,4};
+    max_val=varargin{1,5};
+    i_lonlat_const=varargin{1,6};
+else
+    disp('wrong number of input arguments');
+end
 %----------------end user inputs------------------
 
 %---------------outputs--------------

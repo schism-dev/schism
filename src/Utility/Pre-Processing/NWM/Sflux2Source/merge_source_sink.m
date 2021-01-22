@@ -1,4 +1,4 @@
-clear;
+function []=merge_source_sink(varargin)
 %------------------usage-----------------------
 %  Important: only works for T=-9999 and S=0
 %  Make sure wDir has hgrid.ll and two sets of source/sink:
@@ -12,8 +12,16 @@ clear;
 %   vsink.th
 
 %------------------inputs-----------------------
-wDir='./';
-nday=1; %Days needed; recommended: 1 day more than the rnday in param.nml
+if nargin==0
+    wDir='./';
+    nday=1; %Days needed; recommended: 1 day more than the rnday in param.nml
+elseif nargin==2
+    wDir=varargin{1,1};
+    nday=varargin{1,2};
+else
+    disp('wrong number of input arguments');
+end
+
 %----------------------------------------------
 
 
@@ -153,3 +161,4 @@ msource(:,2:length(iso)+1)=-9999;
 dlmwrite([wDir 'msource.th'],msource,'precision',15,'delimiter',' ');
 
 
+end %function
