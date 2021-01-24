@@ -558,7 +558,7 @@
         endif !ntrs
       enddo !i
 
-      if(if_source==1) then
+      if(if_source==1) then !ASCII
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
           read(63,*)tmp,ath3(1:nsources,1,1,1)
@@ -605,6 +605,44 @@
           th_time3(2,2)=tmp
         endif !nsinks
       endif !if_source
+
+      if(if_source==-1) then !nc
+        if(nsources>0) then
+          ninv=time/th_dt3(1)
+          th_time3(1,1)=dble(ninv)*th_dt3(1)
+          th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+          j=nf90_inq_varid(ncid_source, "vsource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsource')
+!Error: consider bcast
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1,1,1),(/1,ninv+1/),(/nsources,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsource(2)')
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1,2,1),(/1,ninv+2/),(/nsources,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsource(3)')
+
+          !msource
+          ninv=time/th_dt3(3)
+          th_time3(1,3)=dble(ninv)*th_dt3(3)
+          th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+          j=nf90_inq_varid(ncid_source, "msource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: msource')
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1:ntracers,1,3),(/1,1,ninv+1/),(/nsources,ntracers,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: msource(2)')
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1:ntracers,2,3),(/1,1,ninv+2/),(/nsources,ntracers,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: msource(2)')
+        endif !nsources>0
+
+        if(nsinks>0) then
+          ninv=time/th_dt3(2)
+          th_time3(1,2)=dble(ninv)*th_dt3(2)
+          th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+          j=nf90_inq_varid(ncid_source, "vsink",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsink')
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsinks,1,1,2),(/1,ninv+1/),(/nsinks,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsink(2)')
+          j=nf90_get_var(ncid_source,mm,ath3(1:nsinks,1,2,2),(/1,ninv+2/),(/nsinks,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: vsink(3)')
+        endif !nsinks>0
+      endif !if_source=-1
 
 #ifdef USE_SED
 !...  Sediment model initialization

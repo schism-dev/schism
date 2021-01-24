@@ -1428,13 +1428,10 @@
       endif
 
 
-!     Volume and mass sources/sinks option
-!      call get_param('param.in','if_source',1,if_source,tmp,stringvalue)
-      if(if_source/=0.and.if_source/=1) call parallel_abort('Wrong if_source')
+!     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
+      if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
-      if(if_source==1) then
-!        call get_param('param.in','nramp_ss',1,nramp_ss,tmp,stringvalue)
-!        call get_param('param.in','dramp_ss',2,itmp,dramp_ss,stringvalue)
+      if(if_source/=0) then
         if(dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
       endif
 
@@ -2934,8 +2931,8 @@
 
       endif !ihydraulics/=0
 
-!     Read in source_sink.in and open t.h. files
-      if(if_source==1) then
+!     Read in source/sink info 
+      if(if_source==1) then !ASCII
         open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
         read(31,*)nsources
         if(iorder==0) then
@@ -2958,6 +2955,60 @@
         close(31)
       endif !if_source
 
+      if(if_source==-1) then !nc
+        j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+        if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
+        j=nf90_inq_dimid(ncid_source,'nsources',mm)
+        j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
+        if(j/=NF90_NOERR) call parallel_abort('init: nsources')
+        j=nf90_inq_dimid(ncid_source,'nsinks',mm)
+        j=nf90_inquire_dimension(ncid_source,mm,len=nsinks)
+        if(j/=NF90_NOERR) call parallel_abort('init: nsinks')
+        j=nf90_inq_dimid(ncid_source,'ntracers',mm)
+        j=nf90_inquire_dimension(ncid_source,mm,len=itmp)
+        if(itmp/=ntracers) call parallel_abort('init: wrong ntracers in source.nc')
+
+        j=nf90_inq_varid(ncid_source, "time_step_vsource",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource')
+        j=nf90_get_var(ncid_source,mm,floatout)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource(2)')
+        if(floatout<dt) call parallel_abort('INIT: dt_vsource wrong')
+        th_dt3(1)=dble(floatout)
+
+        j=nf90_inq_varid(ncid_source, "time_step_msource",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource')
+        j=nf90_get_var(ncid_source,mm,floatout)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource(2)')
+        if(floatout<dt) call parallel_abort('INIT: dt_msource wrong')
+        th_dt3(3)=dble(floatout)
+
+        j=nf90_inq_varid(ncid_source, "time_step_vsink",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink')
+        j=nf90_get_var(ncid_source,mm,floatout)
+        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
+        if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
+        th_dt3(2)=dble(floatout)
+
+        if(iorder==0) then
+          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
+     &ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_source failure(3)')
+        endif
+
+        if(nsources>0) then
+          j=nf90_inq_varid(ncid_source, "source_elem",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
+          j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
+          if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
+        endif !nsources
+
+        if(nsinks>0) then
+          j=nf90_inq_varid(ncid_source, "sink_elem",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
+          j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
+          if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
+        endif !nsinks
+      endif !if_source=-1
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 !  Initialize model for cold and hot start

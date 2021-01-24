@@ -1363,7 +1363,7 @@
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
-      if(if_source==1) then
+      if(if_source/=0) then
         !init all first; dimension same as concentration (psu etc)
         msource=0.d0 
         !Exceptions
@@ -1371,16 +1371,33 @@
         if(nsources>0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
-            read(63,*)tmp,ath3(1:nsources,1,2,1)
             th_time3(1,1)=th_time3(2,1)
             th_time3(2,1)=th_time3(2,1)+th_dt3(1)
+
+            if(if_source==1) then
+              read(63,*)tmp,ath3(1:nsources,1,2,1)
+            else !nc
+              itmp2=time/th_dt3(1)+2
+              j=nf90_inq_varid(ncid_source, "vsource",mm)
+              j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1,2,1),(/1,itmp2/),(/nsources,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: vsource')
+            endif !if_source
           endif !time
 
+          !msource
           if(time>th_time3(2,3)) then !not '>=' to avoid last step
             ath3(:,:,1,3)=ath3(:,:,2,3)  
-            read(65,*)tmp,ath3(1:nsources,1:ntracers,2,3)
             th_time3(1,3)=th_time3(2,3)
             th_time3(2,3)=th_time3(2,3)+th_dt3(3)
+
+            if(if_source==1) then
+              read(65,*)tmp,ath3(1:nsources,1:ntracers,2,3)
+            else !nc
+              itmp2=time/th_dt3(3)+2
+              j=nf90_inq_varid(ncid_source, "msource",mm)
+              j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1:ntracers,2,3),(/1,1,itmp2/),(/nsources,ntracers,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: msource')
+            endif !if_source
           endif !time
  
           rat=(time-th_time3(1,1))/th_dt3(1)
@@ -1390,17 +1407,18 @@
           endif
 
           do i=1,nsources
-            if(ath3(i,1,1,1)<0.d0.or.ath3(i,1,2,1)<0.d0) then
+            if(ath3(i,1,1,1)<0..or.ath3(i,1,2,1)<0.) then
               write(errmsg,*)'STEP: wrong sign vsource',it,i,ath3(i,1,1:2,1)
               call parallel_abort(errmsg)
             endif
 
             if(iegl(ieg_source(i))%rank==myrank) then
               ie=iegl(ieg_source(i))%id
-              vsource(ie)=vsource(ie)+((1-rat)*ath3(i,1,1,1)+rat*ath3(i,1,2,1))*ramp_ss
+              vsource(ie)=vsource(ie)+((1.d0-rat)*ath3(i,1,1,1)+rat*ath3(i,1,2,1))*ramp_ss
             endif !ielg
           enddo !i
 
+          !msource
           rat=(time-th_time3(1,3))/th_dt3(3)
           if(rat<-small1.or.rat>1.d0+small1) then
             write(errmsg,*) 'STEP: rat out in msource.th:',rat,time,th_time3(1:2,3)
@@ -1415,14 +1433,22 @@
               endif !ielg
             enddo !i
           enddo !j
-        endif !nsources
+        endif !nsources>0
 
         if(nsinks>0) then
           if(time>th_time3(2,2)) then !not '>=' to avoid last step
             ath3(:,1,1,2)=ath3(:,1,2,2)
-            read(64,*)tmp,ath3(1:nsinks,1,2,2)
             th_time3(1,2)=th_time3(2,2)
             th_time3(2,2)=th_time3(2,2)+th_dt3(2)
+ 
+            if(if_source==1) then
+              read(64,*)tmp,ath3(1:nsinks,1,2,2)
+            else !nc
+              itmp2=time/th_dt3(2)+2
+              j=nf90_inq_varid(ncid_source, "vsink",mm)
+              j=nf90_get_var(ncid_source,mm,ath3(1:nsinks,1,2,2),(/1,itmp2/),(/nsinks,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: vsink')
+            endif !if_source
           endif !time
 
           rat=(time-th_time3(1,2))/th_dt3(2)
@@ -1432,7 +1458,7 @@
           endif
 
           do i=1,nsinks
-            if(ath3(i,1,1,2)>0.d0.or.ath3(i,1,2,2)>0.d0) then
+            if(ath3(i,1,1,2)>0..or.ath3(i,1,2,2)>0.) then
               write(errmsg,*)'STEP: wrong sign vsink',it,i,ath3(i,1,1:2,2)
               call parallel_abort(errmsg)
             endif
@@ -1442,8 +1468,8 @@
               vsource(ie)=vsource(ie)+((1.d0-rat)*ath3(i,1,1,2)+rat*ath3(i,1,2,2))*ramp_ss
             endif !ielg
           enddo !i
-        endif !nsinks
-      endif !if_source
+        endif !nsinks>0
+      endif !if_source/=0
 
 !...  Volume sources from evap and precip
       if(isconsv/=0) then
@@ -6814,7 +6840,7 @@
 !$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
-!       principle); at bottom layer
+!       principle); imposed at bottom layer.
 !       Do nothing for net sinks
 !Error: need to reconcile with ICM
 

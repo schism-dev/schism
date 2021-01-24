@@ -154,7 +154,7 @@ module schism_glbl
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,ncid_schout, &
- &nstride_schout,nrec2_schout,istack0_schout
+ &nstride_schout,nrec2_schout,istack0_schout,ncid_source
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -367,8 +367,9 @@ module schism_glbl
                                   &vmo(:,:,:),vfa(:,:,:),eth(:,:), &
                                   &qthcon(:),uthnd(:,:,:),vthnd(:,:,:), &
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
-                                  &dir_block(:,:),q_block_lcl(:),ath3(:,:,:,:)
+                                  &dir_block(:,:),q_block_lcl(:)
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
+  real(4),save,allocatable :: ath3(:,:,:,:) !used to read source/sink inputs
 
   ! Land boundary segment data
   integer,save :: nland_global                 ! Global number of land bndry segments
