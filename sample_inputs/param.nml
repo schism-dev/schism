@@ -239,11 +239,16 @@
   ihydraulics = 0
 
 !-----------------------------------------------------------------------
-! Point sources/sinks option (0: no; 1: on). If =1, needs source_sink.in (list of elements),
-! vsource,th, vsink.th, and msource.th. Source/sinks can be specified at an elem more
+! Point sources/sinks option (0: no; 1: ASCII inputs; -1: netcdf). 
+! If =1, needs source_sink.in (list of elements),
+! vsource,th, vsink.th, and msource.th. If =-1, all info is in source.nc
+! and each type of volume/mass source/sink can have its own time step and
+! # of records.
+! Source/sinks can be specified at an elem more
 ! than once, and the code will accumulate the volumes; for mass conc, 
 ! values are applied at _net_ source elem (no summation for conc).
-! Options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
+
+! meth_sink: options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
 ! zero out sink if the elem is dry if meth_sink=1
 !-----------------------------------------------------------------------
   if_source = 0
