@@ -293,7 +293,7 @@
       if(istat/=0) call parallel_abort('STEP: alloc failure (3)')
 
 !     Source
-      if(if_source==1) then
+      if(if_source/=0) then
         allocate(msource(ntracers,nea),stat=istat)
         if(istat/=0) call parallel_abort('STEP: allocation failure (2)')
       endif !if_source
@@ -387,7 +387,7 @@
       endif
 
       !For source/sinks
-      if(if_source==1) then
+      if(if_source/=0) then
         if(nramp_ss==1) then
           ramp_ss=tanh(2.d0*time/86400.d0/dramp_ss)
         else
@@ -6844,7 +6844,7 @@
 !       Do nothing for net sinks
 !Error: need to reconcile with ICM
 
-        if(if_source==1) then
+        if(if_source/=0) then
 !$OMP     do
           do i=1,nea
             if(idry_e(i)==1.or.vsource(i)<=0.d0) cycle
@@ -9189,7 +9189,7 @@
       first_call=.false.
 
 !     Deallocate temp. arrays to avoid memory leak
-      if(if_source==1) deallocate(msource)
+      if(if_source/=0) deallocate(msource)
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       deallocate(swild9)
