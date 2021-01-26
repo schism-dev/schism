@@ -10,7 +10,7 @@ use Cwd 'abs_path';
 $pwd = cwd();
 
 #-------------------inputs------------------------------
-my $DEM_dir = "./DEM/";
+my $DEM_dir = "~/work/stampede2/NWM/DEM/DEM/";
 # sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
 # sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
 #-------------------end inputs--------------------------
@@ -52,9 +52,10 @@ if ($host =~ /cyclops/) {
     #$n_sockets=`scontrol show node  | grep -B 9  skx-dev | head -n 10 | grep Sockets`
     #the above goes too far, but will probably be useful in some cases.
     $cores_per_node=48;
-    print("Automation on Stampede2 not yet tested\n");
-    print("Aborting ...\n");
-    exit;
+    #print("Automation on Stampede2 not yet tested\n");
+    #print("Aborting ...\n");
+    #exit;
+    $nodes_bloat = 1.0;  #use more nodes to secure enough memory
 }else{
     print("The script has not been tested on $host\n");
     print("Aborting ...\n");
@@ -160,27 +161,59 @@ for ($i=1;$i<=3;$i++){
       print PW "cd $pwd/\n";
       print PW "srun ./interpolate_depth_structured2_mpi > err2.out\n";
       system "sbatch run_submit";
+    }elsif ($host =~ m/stampede2/) {
+      $total_cores = $nodes*$cores_per_node;
+      open PW, "> ./run_submit";
+      print PW "#!/bin/bash\n";
+      print PW "#SBATCH -J CORIE # Job name\n";
+      print PW "#SBATCH -o err2.o%j       # Name of stdout output file\n";
+      print PW "#SBATCH -e err2.e%j       # Name of stderr error file\n";
+      print PW "#SBATCH -p skx-dev\n";
+      print PW "#SBATCH -N $nodes \n";
+      print PW "#SBATCH -n $total_cores\n";
+      print PW "#SBATCH -t 1:00:00 \n";
+      print PW "module list\n";
+      print PW "pwd\n";
+      print PW "date\n";
+      print PW "ibrun ./interpolate_depth_structured2_mpi >& err2.out\n";
+      system "sbatch run_submit";
     }
+
 
 #wait for hgrid.new
     while(!-e "./hgrid.new") {sleep 30;}
     print "hgrid.new generated.\n";
 
 #wait another 180s to make sure hgrid.new is fully written
-    sleep 180;
+    $nLines0 = `wc -l < hgrid.old.0 | bc`;
+
+    $nLines = `wc -l < hgrid.new | bc`;
+    while ($nLines0!=$nLines){
+        sleep 10;
+        $nLines = `wc -l < hgrid.new | bc`;
+    }
     print "Head and tail of hgrid.new.\n";
     system("head -n 2 hgrid.new");
     system("tail -n 1 hgrid.new");
 
     print "copying hgrid.new to hgrid.old.$i\n";
     system("cp hgrid.new hgrid.old.$i");
+    $nLines = `wc -l < hgrid.old.$i | bc`;
+    while ($nLines0!=$nLines){
+        sleep 10;
+        $nLines = `wc -l < hgrid.old.$i | bc`;
+    }
     print "done copying hgrid.new to hgrid.old.$i\n";
-    sleep 60;
+
     print "copying hgrid.new to hgrid.old\n";
     system("cp hgrid.new hgrid.old");
+    $nLines = `wc -l < hgrid.old | bc`;
+    while ($nLines0!=$nLines){
+        sleep 10;
+        $nLines = `wc -l < hgrid.old | bc`;
+    }
     print "done copying hgrid.new to hgrid.old\n";
     system("rm hgrid.new");
-    sleep 60;
 }
 system("cp hgrid.old hgrid.new");
 system("rm hgrid.old");
@@ -190,11 +223,20 @@ system("rm DEM/*.asc");
 # system("rm -rf ./DEM/");
 
 # set minmum depth to be -10m, minimum depth around Caribean Sea to be 5m
-system("./auto_edit_region 1 dummy.reg hgrid.new -10");
-system("cp out.gr3 hgrid.new; rm out.gr3"); # use cp and rm instead of mv, because mv has some weird problem on james
-system("./auto_edit_region 1 min_5m_ll.reg hgrid.new 5");
-system("cp out.gr3 hgrid.new; rm out.gr3");
- 
+#system("./auto_edit_region 1 dummy.reg hgrid.new -10");
+#system("cp out.gr3 hgrid.new; rm out.gr3"); # use cp and rm instead of mv, because mv has some weird problem on james
+# system("./auto_edit_region 1 min_5m_ll.reg hgrid.new 5");
+# system("cp out.gr3 hgrid.new; rm out.gr3");
+
+@regions=("min_5m_ll.reg");
+@min_vals=(5);
+for my $i (0..$#regions) {
+    $region=$regions[$i];
+    $min_val=$min_vals[$i];
+    system("./auto_edit_region 1 $region hgrid.new $min_val");
+    system("cp out.gr3 hgrid.new; rm out.gr3");
+}
+
 #sub WaitForKey() {
 #    print "press any key to continue\n";
 #    chomp($key = <STDIN>);

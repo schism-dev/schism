@@ -18,12 +18,14 @@ Loading DEMs to horizontal grid:
   6 mv hgrid.new hgrid.old
   7 then repeat step 1 with sym*_part2.pl
   8 repeat steps from 2-5
-  9 use "./auto_edit_region 1 dummy.reg hgrid.new -10" to set the minimum depth to be -10m
-  10 mv out.gr3 hgrid.new
-  11 use "./auto_edit_region 1 min_5m_ll.reg hgrid.new 5" to set the depth inside region (min_5m_ll.reg) to be 5m
-  12 mv out.gr3 hgrid.new
-  13 your hgrid.new will be the final one with all DEMs loaded.
+  9 your hgrid.new will be the final one with all DEMs loaded.
+  10 set minimum depth to 5 m in the region of min_5m_ll.reg
 
-  or ./auto.pl (see comments inside; not tested on Stampede2)
-  This step only needs to edit the path of DEM tiles and put the hgrid.ll (hgrid needs to be loaded bathymetry) to upper level directory
+  or copy this folder to your dir, e.g.:
+      cp -rL . $somedir 
+      or
+      cp -rL /schism/src/Utility/Pre-Processing/NWM/Load_Bathy_mpi $somedir
+  then, run the automation under $somedir:
+      ./auto.pl (see comments inside; tested on James and Stampede2)
+  
 
