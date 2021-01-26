@@ -131,7 +131,7 @@ for iter=1:2
     %read the first two lines from each file to start the loop
     this_time = 0;
     tmp=cell(2,2); t=zeros(2,2);
-    for i=1:2
+    for i=1:2 % two datasets
         tmp(i,1)=textscan(fid{i}, '%f', 1+ne_ss(i)); 
         t(i,1)=tmp{i,1}(1);
         tmp(i,2)=textscan(fid{i}, '%f', 1+ne_ss(i)); 
@@ -142,14 +142,14 @@ for iter=1:2
         out = zeros(1,nrec);
         for i=1:2
             if t(i,2)< this_time+dt0
-                tmp(i,1)=tmp(i,2);
-                tmp(i,2)=textscan(fid{i}, '%f', 1+ne_ss(i));
+                tmp(i,1)=tmp(i,2); %push record at t2 to record at t1
+                tmp(i,2)=textscan(fid{i}, '%f', 1+ne_ss(i)); %read new record at t2
                 t(i,1)=t(i,2);
                 t(i,2)=tmp{i,2}(1);
             end
-            if i_self_dt(i)
-                out(ib{i})=out(ib{i})+tmp{1,1}(2:end)';
-            else
+            if i_self_dt(i) %output dt is self dt, use directly
+                out(ib{i})=out(ib{i})+tmp{i,1}(2:end)';
+            else %output dt is not self dt, interpolate in time
                 tmp_val = cell2mat(tmp(i,1:2));
                 tmp0 = interp1(t(i,1:2)',tmp_val(2:end,:)',this_time);
                 out(ib{i})=out(ib{i})+tmp0;

@@ -4,7 +4,8 @@ Github versions:
 
 3576c9c (Jan 24, 2021): added new option for source/sink input: if_source=-1 requires source.nc (which
                         includes elem list inside; allows different time steps and # of records for
-                        volume/mass source/sinks;                  
+                        volume/mass source/sinks. Also, now the source/sink values in .th must be single
+                        precision (not double);
 bcdfce6 (Jan 6, 2021): added main switch for nc output 'nc_out' (useful for other programs to control outputs);
 28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides; if iloadtide/=0, need
                         amp/phases in loadtide_[FREQ].gr3 (freq's shared with tidal potential);

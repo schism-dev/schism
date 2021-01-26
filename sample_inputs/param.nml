@@ -241,7 +241,8 @@
 !-----------------------------------------------------------------------
 ! Point sources/sinks option (0: no; 1: ASCII inputs; -1: netcdf). 
 ! If =1, needs source_sink.in (list of elements),
-! vsource,th, vsink.th, and msource.th. If =-1, all info is in source.nc
+! vsource,th, vsink.th, and msource.th (the source/sink values must be single precision). 
+! If =-1, all info is in source.nc
 ! and each type of volume/mass source/sink can have its own time step and
 ! # of records.
 ! Source/sinks can be specified at an elem more
