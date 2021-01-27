@@ -31,7 +31,7 @@
       character*9 cha2
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
-      integer, allocatable :: indx_sorted(:),imap(:)
+      integer, allocatable :: indx_sorted(:),imap(:),ndems_on_rank(:)
       real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:)
 
       call MPI_INIT(errcode)
@@ -50,15 +50,16 @@
         print*, 'Plz use whole node:',nproc,ncompute
         call mpi_abort(comm,0,j)
       endif
-      if(nproc<ndems) then
-        print*, 'Please use more cores than DEMs:',nproc,ndems
-        call mpi_abort(comm,0,j)
-      endif
+!      if(nproc<ndems) then
+!        print*, 'Please use more cores than DEMs:',nproc,ndems
+!        call mpi_abort(comm,0,j)
+!      endif
 
       open(14,file='hgrid.old',status='old')
       read(14,*)
       read(14,*)ne,np
-      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems))
+      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems), &
+     &ndems_on_rank(0:nproc-1))
       do i=1,np
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
@@ -83,14 +84,17 @@
       call mpi_barrier(comm,ierr)
 
 !     Distribute ranks, assuming scheduler orders the ranks sequentially
+!     (may not be optimal if nproc<ndems)
       ngroups=ndems/ncompute+1
       ncores=nproc/ncompute
       icount=0 !index in the sorted list
+      imap=-9999
       do j=1,ngroups
         do i=1,ncompute
           icount=icount+1
           if(icount<=ndems) then
-            itmp=(i-1)*ncores+(j-1) !rank
+            itmp=(i-1)*ncores+(j-1) !rank if nproc>=ndems
+            itmp=mod(itmp,nproc)
             if(itmp<0.or.itmp>nproc-1) then
               print*, 'Rank overflow:',itmp
               call mpi_abort(comm,0,k)
@@ -106,8 +110,29 @@
         call mpi_abort(comm,0,k)
       endif
    
-      if(myrank==0) print*, 'mapping to ranks:',ngroups,ncores,imap
+      !Output # of DEMs to be processed by each rank
+      ndems_on_rank=0
+      do i=1,ndems
+        if(imap(i)<0.or.imap(i)>nproc-1) then
+          print*, 'imap<0:',i,imap(i)
+          call mpi_abort(comm,0,k)   
+        endif
+        ndems_on_rank(imap(i))=ndems_on_rank(imap(i))+1
+      enddo !i
+      if(sum(ndems_on_rank)/=ndems) then
+        print*, 'Some DEM not processed:',sum(ndems_on_rank),ndems
+        call mpi_abort(comm,0,k)
+      endif
+
+      if(myrank==0) then
+        print*, 'mapping to ranks:',ngroups,ncores,imap
+        print*, '# of DEMs to be processed by each rank:'
+        do i=0,nproc-1
+          print*, i,ndems_on_rank(i)
+        enddo !i
+      endif
       call mpi_barrier(comm,ierr)
+
 !      call MPI_FINALIZE(errcode)
 !      stop
 
@@ -212,11 +237,12 @@
       call mpi_barrier(comm,ierr)
 
       !Combine on rank 0
+      print*, 'start final assembly on rank 0...'
       if(myrank==0) then
-        do irank=0,ndems-1
+        do idem=0,ndems-1
           fdb='dem_0000'
           lfdb=len_trim(fdb)
-          write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+          write(fdb(lfdb-3:lfdb),'(i4.4)') idem
           open(19,file=trim(adjustl(fdb))//'.out',status='old')
           lines=0
           do
@@ -224,9 +250,9 @@
             lines=lines+1
           enddo
 
-100       print*, lines,' lines read from rank ',irank
+100       print*, lines,' lines read from DEM # ',idem
           close(19)
-        enddo !irank
+        enddo !idem
 
         open(13,file='hgrid.new',status='replace')
         write(13,*)'Bathymetry loaded grid'
