@@ -15,9 +15,9 @@ def write_manning(grd,depths,mvalues,regions=None,rvalues=None,fname='manning.gr
     '''
     #read hgrid
     if grd.endswith('.npz'):
-        gd=loadz('hgrid.npz').hgrid
+        gd=loadz(grd).hgrid
     else:
-        gd=read_schism_hgrid('hgrid.gr3')
+        gd=read_schism_hgrid(grd)
 
     #compute manning coefficients
     mval=mvalues[0]+(gd.dp-depths[0])*(mvalues[1]-mvalues[0])/(depths[1]-depths[0])
