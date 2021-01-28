@@ -1,1 +1,0 @@
-../../../NWM/Manning/auto.pl
