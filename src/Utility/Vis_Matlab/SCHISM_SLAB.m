@@ -192,6 +192,9 @@ for day=stacks2
     %Construct output uout(ivs,1:np) 
     if(i23d==1 || strcmp(s_or_z,'S'))
       uout=out5;
+      %Mask dry nodes
+      indx=find(eta2+dp<=h0);
+      uout(:,indx)=nan;
     else
       %Interp in vertical @ wet spots only
       uout=NaN(ivs,np);
@@ -234,6 +237,12 @@ for day=stacks2
       y_aug=[xy00(:,2)' loc_scale_y];
       quiver(x_aug,y_aug,[uout(1,:) 1],[uout(2,:) 0]);
       text(loc_scale_x,loc_scale_y,'1 m/s');
+
+      %Alternatively, plot vector magnitude
+%      h1=patch('Faces',nm','Vertices',xy00,'FaceVertexCData',sqrt(uout(1,:).^2+uout(2,:).^2)','FaceColor','interp','EdgeColor','none');
+%      colormap(jet(40));
+%      caxis([0 1]); colorbar;
+
     end %ivs
 
     axis([xmin xmax ymin ymax]);
