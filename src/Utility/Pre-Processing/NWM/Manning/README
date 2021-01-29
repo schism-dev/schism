@@ -1,0 +1,10 @@
+!use python utility library to generate manning coefficient for NWM model 
+
+1). Install Python library on your system: git clone git@github.com:wzhengui/pylibs.git 
+
+2). Add PYTHONPATH environmental variable to the python libaray
+   e.g. on C-Shell: setenv PYTHONPATH 'YourDir/pylibs/Scripts/:YourDir/pylibs/Utility/' 
+
+3). Double check the inputs in write_manning.py (at the bottom of the file)
+
+4). Run the code to generate manning.gr3: ./write_manning.py

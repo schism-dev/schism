@@ -41,7 +41,7 @@ if __name__=="__main__":
     #input
     #------------------------------------------------------------------------------
     #general parameters
-    grd='hgrid.npz'      #grid name (*.gr3 or *.npz, where *.npz is python format)
+    grd='hgrid.gr3'      #grid name (*.gr3 or *.npz, where *.npz is python format)
     depths=[-1,-3]       #two hgrid depth(m) to distinguish river, land and the transition zone
     mvalues=[0.02,0.05]  #lower and upper limits of manning values
 
