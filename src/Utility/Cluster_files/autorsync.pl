@@ -12,7 +12,7 @@
 
 if(@ARGV != 3) 
 { 
-  print "$0 <start # of stacks> <end # of stacks> <remote dir>\n";
+  print "$0 <start # of stacks> <end # of stacks> <remote dir ending with outputs>\n";
   print "e.g.: $0 1 40 /sciclone/home10/yinglong/schism10/RUN02a/outputs\n";
   exit(1);
 }
