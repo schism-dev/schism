@@ -46,7 +46,7 @@ if __name__=="__main__":
     mvalues=[0.02,0.05]  #lower and upper limits of manning values
 
     #regions for certain values
-    regions=('GoME_1.reg','GoME_2.reg','Berwick.reg','BulkTerminal.reg','Pilottown.reg','Wilmington.reg')
-    rvalues=(0.1,0.1,0.005,0.005,0.005,0.005)
+    regions=('GoME_1.reg','GoME_2.reg','Berwick.reg','BulkTerminal.reg','Pilottown.reg')
+    rvalues=(0.2,0.2,0.005,0.005,0.005)
 
-    write_manning(grd,depths,mvalues,regions,rvalues,fname='manning.gr3')
+    write_manning(grd,depths,mvalues,regions,rvalues,fname='../manning.gr3')
