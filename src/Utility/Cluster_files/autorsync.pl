@@ -27,11 +27,11 @@ if(!-e "outputs") {die "No outputs dir!";}
 
 while(!-e "./outputs/local_to_global_0000") {sleep 20;} #sec
 #sleep 10;
-#print "rsync -av ./outputs/*local* $chinook$remote_dir/ \n";
-#system "rsync -av ./outputs/*local* $chinook$remote_dir/ ";
 
+$count=0;
 for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
 {
+  $count=$count+1;
   while(!-e "outputs/schout_0000_$next_stack\.nc") {
     system "touch core.dummy";
     system "rm -rf core.*";
@@ -39,6 +39,9 @@ for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
   } 
   system "touch core.dummy";
   system "rm -rf core.*";
+  if($count==1) {
+   system "rsync -az ./outputs/local* $chinook$remote_dir";
+  }
 
   sleep 180; #wait a little longer to make sure all rank outputs are finished
   $current_stack=$next_stack-1;
