@@ -187,7 +187,7 @@
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
-     &iloadtide,lon_jump_loc
+     &iloadtide
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -467,7 +467,7 @@
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind
       itransport_only=0; meth_sink=0
-      iloadtide=0; lon_jump_loc=1
+      iloadtide=0; 
 
       !Output elev, hvel by detault
       nc_out=1
@@ -511,11 +511,6 @@
         call parallel_abort(errmsg)
       endif
 #endif
-
-      if(lon_jump_loc/=1.and.lon_jump_loc/=2) then
-        write(errmsg,*)'Illegal lon_jump_loc:',lon_jump_loc
-        call parallel_abort(errmsg)
-      endif
 
 !      call get_param('param.in','indvel',1,indvel,tmp,stringvalue)
       if(indvel<-1.or.indvel>1) then

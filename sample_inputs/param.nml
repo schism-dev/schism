@@ -78,14 +78,10 @@
 !-----------------------------------------------------------------------
 ! Coordinate option: 1: Cartesian; 2: lon/lat (hgrid.gr3=hgrid.ll in this case,
 ! and orientation of element is outward of earth)
+! Notes for lon/lat: make sure hgrid.ll and grid in sflux are consistent in 
+! longitude range!
 !-----------------------------------------------------------------------
   ics = 1 !Coordinate option
-
-!-----------------------------------------------------------------------
-! 'Jump' location for longitude (used in sflux etc). =1: @ dateline (i.e. 
-! lon is [-180,180]). =2: @prime meridian (i.e. lon is [0,360]).
-!-----------------------------------------------------------------------
-  lon_jump_loc = 1
 
 !-----------------------------------------------------------------------
 ! Hotstart option. 0: cold start; 1: hotstart with time reset to 0; 2: 
