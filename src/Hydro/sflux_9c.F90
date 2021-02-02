@@ -1648,7 +1648,7 @@
           call read_coord (file_name, data_name, info%lat, &
      &                     info%nx, info%ny)
 
-! confine lon to -180->180 range, convert lon/lat to radians
+! convert lon/lat to radians, and optionally convert to -180->180 for lon
           call fix_coords (info%lon, info%lat, info%nx, info%ny)
 
 ! get the number of nodes and elements for the sflux grid
@@ -2460,7 +2460,7 @@
 !-----------------------------------------------------------------------
       subroutine fix_coords (lon, lat, nx, ny)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,lon_jump_loc
         implicit none
 
         integer, intent(in) :: nx, ny
@@ -2474,11 +2474,13 @@
         deg_to_rad = pi / 180.0d0
 
 ! confine lon to -180->180 range
-        do j = 1, ny
-          do i = 1, nx
-            if (lon(i,j) .gt. 180.0d0) lon(i,j) = lon(i,j) - 360.0d0
+        if(lon_jump_loc==2) then
+          do j = 1, ny
+            do i = 1, nx
+              if (lon(i,j) .gt. 180.0d0) lon(i,j) = lon(i,j) - 360.0d0
+            enddo
           enddo
-        enddo
+        endif !lon_jump_loc
 
 ! convert degrees to radians
         do j = 1, ny
