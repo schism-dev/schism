@@ -5,6 +5,15 @@ if(${PETSC})
   set (wwm_extra_src ${wwm_extra_src} wwm_petscpool.F90)
 endif()
 
+# @todo this is a temporary fix for gcc10 and greater until this is
+# resolved in later versions of gcc
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
+     add_compile_options(-fallow-argument-mismatch)
+  endif()
+endif()
+
+
 add_library(wwmIII  wwm_datapl.F90 ${wwm_extra_src} wwm_petsc_seriell.F90 wwm_petsc_parallel.F90 
        wwm_petsc_block.F90 wwm_petsc_controller.F90 wwm_aux.F90 wwm_aux_parall.F90 wwm_mjdv2.F90 wwm_blasaux.F90 wwm_sparskit.F90 
        wwm_ardhuin_old.F90 wwm_wind.F90 wwm_ardhuin_new.F90 wwm_breaking.F90 wwm_friction.F90 wwm_cycle3.F90  

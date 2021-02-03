@@ -10,6 +10,15 @@ add_custom_target(
 
 set_source_files_properties(${versionfile} PROPERTIES GENERATED TRUE)
 
+# @todo this is a temporary fix for gcc10 and greater until this is
+# resolved in later versions of gcc
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
+	 add_compile_options(-fallow-argument-mismatch)
+  endif()
+endif()
+
+
 set(core_extra_src "")
 if(${USE_HA})
   set (core_extra_src ${core_extra_src} harm.F90)
