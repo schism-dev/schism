@@ -1,6 +1,6 @@
 #! /usr/bin/perl -w
 
-# This script can be run before a parallel SCHISM run (make sure purge outputs/ first), 
+# This script can be launched before/during/after a parallel SCHISM run (make sure outputs/ does not contain old outputs), 
 # to automatically rsync outputs back to a remote system (e.g. Sciclone), assuming 
 # passwdless ssh is set up. It will also create separate dirs for each output stack to reduce file count. 
 # It runs as a daemon. 

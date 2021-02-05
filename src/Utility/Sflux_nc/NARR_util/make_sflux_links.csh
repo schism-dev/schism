@@ -103,7 +103,7 @@ set src_1 = ""
 set src_2 = ""
 set domain_1 = "."
 set domain_2 = "."
-set data_grandparent = '~yinglong/vims20/'
+set data_grandparent = '~yinglong/DISKS/vims20/'
 
 if ($data_source_code == "1") then
   set src_1 = "nam"
