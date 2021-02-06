@@ -586,7 +586,7 @@
 
 !-----------------------------------------------------------------------
 ! Flag for harmonic analysis for elevation. If used , need to turn on USE_HA
-! in Makefile, and input harm.in. Otherwise set it to 0. Hotstart is not working with HA
+! in Makefile, and input harm.in. Otherwise set it to 0. Hotstart ihot=2 is not working with HA
 ! Outputs are harme_* and use combine_outHA to combine.
 !-----------------------------------------------------------------------
   iharind = 0

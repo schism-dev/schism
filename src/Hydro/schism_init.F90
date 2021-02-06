@@ -5843,7 +5843,7 @@
 #endif /*USE_ICE*/
 
 #ifdef USE_HA
-        call parallel_abort('init: hot option for HA diabled')
+        if(ihot==2) call parallel_abort('init: hot option for HA diabled')
 #endif /*USE_HA*/
 
         deallocate(buf3)
