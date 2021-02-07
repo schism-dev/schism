@@ -5,7 +5,7 @@
 #Run in dir where hgrid.gr3 is.
 #Needs inputs: hgrid.gr3, include.gr3 (hgrid based; to focus on a region or subsample)
 #combined or uncombined schout_*.nc, and drives ha_sub.pl (in each parallel task)
-#And also arguments to this script. Tested on hurricane, cyclops and femto. 
+#And also arguments to this script. Tested on hurricane, cyclops, james and femto. 
 #Make sure the batch script, compiled executables are for same system: read_output8_allnodes_simple*,
 #   tidal_analysis, run_*
 #Outputs: amp_[m2,k1].gr3, pha_[m2,k1].gr3 (phases in degrees). Screen dump in ha_schism.out
@@ -18,7 +18,7 @@ if (@ARGV != 8) {
         [end stack]\n";
   print "Example: $0 0 ~yinglong/bin/read_output8_allnodes_simple.femto ~yinglong/bin/tidal_analysis 
         ~yinglong/run_serial_femto ~yinglong/Scripts/Harmonic_Analysis/tidal_const.indays
-        3 2 4\n";
+        128 2 4\n";
   exit(1);
 }
 else {
