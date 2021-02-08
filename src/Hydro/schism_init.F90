@@ -4524,9 +4524,12 @@
 !          shum1=0; shum2=0
 !        endif
 !      endif !nws>=2
+!------------------------------------------------------------------
+      endif !ihot=0
+
+!...  Finish off init. for both cold and hotstart
 
 #ifdef USE_HA
-!...
 !....INITIALIZE HARMONIC ANALYSIS MATRICES, MEAN AND SQUARE VECTORS
 !... Adapted from ADCIRC
       IF (iharind.EQ.1) THEN
@@ -4552,11 +4555,7 @@
         ENDIF
       ENDIF
 #endif /*USE_HA*/
-
-!------------------------------------------------------------------
-      endif !ihot=0
      
-!...  Finish off init. for both cold and hotstart
 !...  Init. tracer models
 !     This part needs T,S i.c. 
       tr_nd(3:ntracers,:,:)=0.d0
