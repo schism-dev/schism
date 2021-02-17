@@ -11,8 +11,9 @@ $pwd = cwd();
 
 #-------------------inputs------------------------------
 my $DEM_dir = "~/work/stampede2/NWM/DEM/DEM/";
-# sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
-# sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+# sample on james: $DEM_dir = "/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/";
+# sample on sciclone: $DEM_dir = "/sciclone/data10/whuang07/NWM/DEM/DEM/";
+# sample on stampede2: $DEM_dir = "~/work/stampede2/NWM/DEM/DEM/";
 #-------------------end inputs--------------------------
 
 if ($DEM_dir eq "") {
@@ -41,12 +42,22 @@ print("running on $host\n");
 if ($host =~ /cyclops/) {
     $cores_per_node = 24;
     $nodes_bloat = 2.75;  #use more nodes to secure enough memory
+    $nodes_min = POSIX::ceil($ndems/$cores_per_node);
+    print "Minimal number of nodes for Batch: $nodes_min\n";
+    $nodes = POSIX::ceil($ndems/$cores_per_node*$nodes_bloat);
+    print "Number of nodes actually requested for Batch: $nodes\n";
 }elsif ($host =~ /(james)/){
     $cores_per_node = `pbsnodes | grep -A 3 jm01 | grep np`;
-    $nodes_bloat = 1.3;  #use more nodes to secure enough memory
+    $nodes_bloat = 1.0;  #use more nodes to secure enough memory
+    $nodes = 10;
+    print "Number of nodes actually requested for Batch: $nodes\n";
 }elsif ($host =~ /chesapeake/){
     $cores_per_node = `pbsnodes | grep -A 3 pt01 | grep np`;
     $nodes_bloat = 1.1;  #use more nodes to secure enough memory
+    $nodes_min = POSIX::ceil($ndems/$cores_per_node);
+    print "Minimal number of nodes for Batch: $nodes_min\n";
+    $nodes = POSIX::ceil($ndems/$cores_per_node*$nodes_bloat);
+    print "Number of nodes actually requested for Batch: $nodes\n";
 }elsif($host =~ /stampede2/) {
     #$cores_per_socket=`scontrol show node  | grep -B 9  skx-dev | head -n 10 | grep CoresPerSocket`
     #$n_sockets=`scontrol show node  | grep -B 9  skx-dev | head -n 10 | grep Sockets`
@@ -56,6 +67,8 @@ if ($host =~ /cyclops/) {
     #print("Aborting ...\n");
     #exit;
     $nodes_bloat = 1.0;  #use more nodes to secure enough memory
+    $nodes = 4;
+    print "Number of nodes actually requested for Batch: $nodes\n";
 }else{
     print("The script has not been tested on $host\n");
     print("Aborting ...\n");
@@ -89,132 +102,115 @@ chdir($pwd);
 system("cp hgrid.old hgrid.old.0");
 system("rm hgrid.new");
 
-#load etopo and cut off at 5 m:
-open(IN,">etopo.in");
-print IN "-1\n -0.000\n";
-close(IN);
-print "loading etopo ...\n";
-system("ln -sf DEM/etopo1.asc struc.grd");
-system("./interpolate_depth_structured2 < etopo.in");
-system("cp hgrid.new hgrid.old");
-system("cp hgrid.new hgrid.old.etopo");
-system("rm hgrid.new");
 
 #load coastal DEMs in several batches:
-for ($i=1;$i<=3;$i++){
-    print "---------Doing DEMs Batch #$i--------------\n";
-    print "head and tail of hgrid.old\n";
-    system("head -n 2 hgrid.old");
-    system("tail -n 1 hgrid.old");
+print "---------Doing DEMs Batch--------------\n";
+print "head and tail of hgrid.old\n";
+system("head -n 2 hgrid.old");
+system("tail -n 1 hgrid.old");
 
 #link batch #i DEMs
-    chdir("DEM");
-    print("Calling ./symlink_dems_part$i.pl\n");
-    system("./symlink_dems_part$i.pl > /dev/null");
-    chdir($pwd);
-    system("rm dem*.asc");
-    system("rm *.out");
-    system("ln -sf DEM/dem_????.asc .");
+chdir("DEM");
+print("Calling ./symlink_dems.pl\n");
+system("./symlink_dems.pl > /dev/null");
+chdir($pwd);
+system("rm dem*.asc");
+system("rm *.out");
+system("ln -sf DEM/dem_????.asc .");
 
 #count number of dems
-    (@dems)=glob "dem*.asc";
-    $ndems = @dems;
-    print "Number of DEMs for Batch $i: $ndems\n";
-
-#calculate how many nodes ($nodes) are required.
-    $nodes_min = POSIX::ceil($ndems/$cores_per_node);
-    print "Minimal number of nodes for Batch $i: $nodes_min\n";
-    $nodes = POSIX::ceil($ndems/$cores_per_node*$nodes_bloat);
-    print "Number of nodes actually requested for Batch $i: $nodes\n";
+(@dems)=glob "dem*.asc";
+$ndems = @dems;
+print "Number of total DEMs tiles: $ndems\n";
 
 #write dems.in
-    open(my $fh, '>', 'dems.in');
-    print $fh "$ndems !# of DEMs\n";
-    print $fh "$nodes !# of compute nodes for load balancing\n";
-    close $fh;
+open(my $fh, '>', 'dems.in');
+print $fh "$ndems !# of DEMs\n";
+print $fh "$nodes !# of compute nodes for load balancing\n";
+close $fh;
 
 #------submit the jobs-----------------
-    system("rm run_submit");
-    if($host =~ /chesapeake/){
-      open PW, "> ./run_submit";
-      print PW "#!/usr/bin/tcsh\n";
-      print PW "module list\n";
-      print PW "cd $pwd/\n";
-      print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
-      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:c18:ppn=$cores_per_node  -l walltime=00:50:00";
-    }elsif ($host =~ /(james)/){
-      open PW, "> ./run_submit";
-      print PW "#!/usr/bin/tcsh\n";
-      print PW "module purge\n";
-      print PW "module load use.own schism2\n";
-      print PW "module list\n";
-      print PW "cd $pwd/\n";
-      print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
-      system "qsub -N Load_Bathy run_submit -l nodes=$nodes:james:ppn=$cores_per_node  -l walltime=00:50:00";
-    }elsif ($host =~ /cyclops/) {
-      open PW, "> ./run_submit";
-      print PW "#!/usr/bin/tcsh\n";
-      print PW "#SBATCH --nodes=$nodes --ntasks-per-node=$cores_per_node\n";
-      print PW "#SBATCH --constraint=cyclops\n";
-      print PW "#SBATCH -t 00:50:00\n";
-      print PW "module list\n";
-      print PW "cd $pwd/\n";
-      print PW "srun ./interpolate_depth_structured2_mpi > err2.out\n";
-      system "sbatch run_submit";
-    }elsif ($host =~ m/stampede2/) {
-      $total_cores = $nodes*$cores_per_node;
-      open PW, "> ./run_submit";
-      print PW "#!/bin/bash\n";
-      print PW "#SBATCH -J CORIE # Job name\n";
-      print PW "#SBATCH -o err2.o%j       # Name of stdout output file\n";
-      print PW "#SBATCH -e err2.e%j       # Name of stderr error file\n";
-      print PW "#SBATCH -p skx-dev\n";
-      print PW "#SBATCH -N $nodes \n";
-      print PW "#SBATCH -n $total_cores\n";
-      print PW "#SBATCH -t 1:00:00 \n";
-      print PW "module list\n";
-      print PW "pwd\n";
-      print PW "date\n";
-      print PW "ibrun ./interpolate_depth_structured2_mpi >& err2.out\n";
-      system "sbatch run_submit";
-    }
+system("rm run_submit");
+if($host =~ /chesapeake/){
+  open PW, "> ./run_submit";
+  print PW "#!/usr/bin/tcsh\n";
+  print PW "module list\n";
+  print PW "cd $pwd/\n";
+  print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
+  system "qsub -N Load_Bathy run_submit -l nodes=$nodes:c18:ppn=$cores_per_node  -l walltime=00:50:00";
+}elsif ($host =~ /(james)/){
+  open PW, "> ./run_submit";
+  print PW "#!/usr/bin/tcsh\n";
+  print PW "module purge\n";
+  print PW "module load use.own schism2\n";
+  print PW "module list\n";
+  print PW "cd $pwd/\n";
+  print PW "mvp2run -v -C 0.05 ./interpolate_depth_structured2_mpi > err2.out\n";
+  system "qsub -N Load_Bathy run_submit -l nodes=$nodes:james:ppn=$cores_per_node  -l walltime=00:50:00";
+}elsif ($host =~ /cyclops/) {
+  open PW, "> ./run_submit";
+  print PW "#!/usr/bin/tcsh\n";
+  print PW "#SBATCH --nodes=$nodes --ntasks-per-node=$cores_per_node\n";
+  print PW "#SBATCH --constraint=cyclops\n";
+  print PW "#SBATCH -t 00:50:00\n";
+  print PW "module list\n";
+  print PW "cd $pwd/\n";
+  print PW "srun ./interpolate_depth_structured2_mpi > err2.out\n";
+  system "sbatch run_submit";
+}elsif ($host =~ m/stampede2/) {
+  $total_cores = $nodes*$cores_per_node;
+  open PW, "> ./run_submit";
+  print PW "#!/bin/bash\n";
+  print PW "#SBATCH -J CORIE # Job name\n";
+  print PW "#SBATCH -o err2.o%j       # Name of stdout output file\n";
+  print PW "#SBATCH -e err2.e%j       # Name of stderr error file\n";
+  print PW "#SBATCH -p skx-dev\n";
+  print PW "#SBATCH -N $nodes \n";
+  print PW "#SBATCH -n $total_cores\n";
+  print PW "#SBATCH -t 1:00:00 \n";
+  print PW "module list\n";
+  print PW "pwd\n";
+  print PW "date\n";
+  print PW "ibrun ./interpolate_depth_structured2_mpi >& err2.out\n";
+  system "sbatch run_submit";
+}
 
 
 #wait for hgrid.new
-    while(!-e "./hgrid.new") {sleep 30;}
-    print "hgrid.new generated.\n";
+while(!-e "./hgrid.new") {sleep 30;}
+print "hgrid.new generated.\n";
 
 #wait another 180s to make sure hgrid.new is fully written
-    $nLines0 = `wc -l < hgrid.old.0 | bc`;
+$nLines0 = `wc -l < hgrid.old.0 | bc`;
 
-    $nLines = `wc -l < hgrid.new | bc`;
-    while ($nLines0!=$nLines){
-        sleep 10;
-        $nLines = `wc -l < hgrid.new | bc`;
-    }
-    print "Head and tail of hgrid.new.\n";
-    system("head -n 2 hgrid.new");
-    system("tail -n 1 hgrid.new");
-
-    print "copying hgrid.new to hgrid.old.$i\n";
-    system("cp hgrid.new hgrid.old.$i");
-    $nLines = `wc -l < hgrid.old.$i | bc`;
-    while ($nLines0!=$nLines){
-        sleep 10;
-        $nLines = `wc -l < hgrid.old.$i | bc`;
-    }
-    print "done copying hgrid.new to hgrid.old.$i\n";
-
-    print "copying hgrid.new to hgrid.old\n";
-    system("cp hgrid.new hgrid.old");
-    $nLines = `wc -l < hgrid.old | bc`;
-    while ($nLines0!=$nLines){
-        sleep 10;
-        $nLines = `wc -l < hgrid.old | bc`;
-    }
-    print "done copying hgrid.new to hgrid.old\n";
-    system("rm hgrid.new");
+$nLines = `wc -l < hgrid.new | bc`;
+while ($nLines0!=$nLines){
+   sleep 10;
+   $nLines = `wc -l < hgrid.new | bc`;
 }
+print "Head and tail of hgrid.new.\n";
+system("head -n 2 hgrid.new");
+system("tail -n 1 hgrid.new");
+
+print "copying hgrid.new to hgrid.old.$i\n";
+system("cp hgrid.new hgrid.old.1");
+$nLines = `wc -l < hgrid.old.1 | bc`;
+while ($nLines0!=$nLines){
+  sleep 10;
+  $nLines = `wc -l < hgrid.old.1 | bc`;
+}
+print "done copying hgrid.new to hgrid.old.1\n";
+
+print "copying hgrid.new to hgrid.old\n";
+system("cp hgrid.new hgrid.old");
+$nLines = `wc -l < hgrid.old | bc`;
+while ($nLines0!=$nLines){
+  sleep 10;
+  $nLines = `wc -l < hgrid.old | bc`;
+}
+print "done copying hgrid.new to hgrid.old\n";
+system("rm hgrid.new");
+
 system("cp hgrid.old hgrid.new");
 system("rm hgrid.old");
 system("rm *.out");
@@ -228,8 +224,8 @@ system("rm DEM/*.asc");
 # system("./auto_edit_region 1 min_5m_ll.reg hgrid.new 5");
 # system("cp out.gr3 hgrid.new; rm out.gr3");
 
-@regions=("min_5m_ll.reg");
-@min_vals=(5);
+@regions=("min_5m_ll.reg","BergenPoint.reg","SabinePass.reg");
+@min_vals=(5,2,7);
 for my $i (0..$#regions) {
     $region=$regions[$i];
     $min_val=$min_vals[$i];

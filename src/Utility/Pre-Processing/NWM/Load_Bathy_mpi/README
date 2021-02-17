@@ -1,28 +1,31 @@
 Loading DEMs to horizontal grid:
 1)You need have DEM tiles ready. On sciclone or james, you can find them under:
-# sample: $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
-# sample: $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+# sample on james    : $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
+# sample on sciclone : $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+# sample on stampede2: $DEM_dir = "~/work/stampede2/NWM/DEM/DEM/";
 
 2)you need have a input hgrid.old: the old hgrid.gr3 that the DEMs to be loaded, note that the projection must be lat/lon
 
 3)All DEMs should be linked under the current DEM folder
 
 4) Follow the steps below:
-  0 interpolate DEM/etopo1.asc to hgrid.old
   1 cd DEM, run sym*_dems.pl.
   2 cd ../
   3 ln -sf DEM/dem_*.asc .
   4 edit dems.in, the first number is the total number of dem_*.asc
     the second number is the total nodes you want to use.
-  5 submit run_james
-  6 your hgrid.new will be the final one with all DEMs loaded.
-  7 set minimum depth to 5 m in the region of min_5m_ll.reg
+  5 submit run_james or other bash files 
+  6 If you need to set some minimum values for certain region without high quality of DEM, you'll need the next steps 7-9. If not, the hgrid.new will be the final one with all DEMs loaded.
+  7 set minimum depth to 5 m in the region of min_5m_ll.reg (sample provided)
+  8 set minimum depth to 2 m in the region of BergenPoint.reg (sample provided)
+  9 set minimum depth to 7 m in the region of SabinePass.reg (sample provided)
 
-  or copy this folder to your dir, e.g.:
-      cp -rL . $somedir 
-      or
-      cp -rL /schism/src/Utility/Pre-Processing/NWM/Load_Bathy_mpi $somedir
+5) alternatively, you can simply run the auto.pl under this folder by the following steps:
+  1 copy this folder to your dir, e.g.:
+  2 cp -rL . $somedir 
+  3 or cp -rL /schism/src/Utility/Pre-Processing/NWM/Load_Bathy_mpi $somedir
   then, run the automation under $somedir:
-      ./auto.pl (see comments inside; tested on James and Stampede2)
+     cp hgrid.old hgrid.ll
+     ./auto.pl (see comments inside; tested on James and Stampede2)
   
 
