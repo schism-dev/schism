@@ -14,7 +14,7 @@ print("e.g: ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_elev gen_elev.f90\n\n\
 $script_dir="../Grid_manipulation/";
 
 #UTM grid
-system("ln -sf ../hgrid.utm.26918 hgrid.gr3");
+system("ln -sf ../hgrid.ll hgrid.gr3");
 
 #set z=1 in the included region
 system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
