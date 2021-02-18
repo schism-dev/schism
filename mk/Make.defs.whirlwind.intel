@@ -51,10 +51,10 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
 #-CB is much slower to compile and run
 #Pure MPI
 #EXEC := $(EXEC)_CB
-#FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl #-CB -g -traceback
-#FLDFLAGS = -O2 -mcmodel=medium #-CB -g -traceback #for final linking of object files
-FCPFLAGS = $(PPFLAGS) -g -mcmodel=medium -assume byterecl -CB -g -traceback
-FLDFLAGS = -g -mcmodel=medium -CB -g -traceback #for final linking of object files
+FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl #-CB -g -traceback
+FLDFLAGS = -O2 -mcmodel=medium #-CB -g -traceback #for final linking of object files
+#FCPFLAGS = $(PPFLAGS) -g -mcmodel=medium -assume byterecl -CB -g -traceback
+#FLDFLAGS = -g -mcmodel=medium -CB -g -traceback #for final linking of object files
 
 
 #Hybrid 
