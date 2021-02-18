@@ -10,10 +10,10 @@ $thisdir=cwd();
 print("You probably need an interactive session if you're on a cluster\n\n");
 
 print("You may need to recompile 'coupling_nwm.f90' upon first use.\n");
-print("e.g: ifort -O2 -CB -g -traceback -o coupling_nwm  ~/git/schism/src/Utility/UtilLib/julian_date.f90 ~/git/schism/src/Utility/UtilLib/schism_geometry.f90 ~/git/schism/src/Utility/UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I\$NETCDF/include -I\$NETCDF_FORTRAN/ include -L\$NETCDF_FORTRAN/lib -L\$NETCDF/lib -L\$NETCDF/lib -lnetcdf -lnetcdff \n\n");
+print("e.g: ifort -O2 -CB -traceback -o coupling_nwm  julian_date.f90 schism_geometry.f90 pt_in_poly_test.f90 coupling_nwm.f90 -I\$NETCDF/include -I\$NETCDF_FORTRAN/include -L\$NETCDF_FORTRAN/lib -L\$NETCDF/lib -L\$NETCDF/lib -lnetcdf -lnetcdff \n\n");
 
 print("You may need to recompile 'combine_sink_source.f90' upon first use.\n");
-print("e.g: ifort -CB -O2 -qopenmp -o combine_sink_source combine_sink_source.F90\n\n");
+print("e.g: ifort -CB -O2 -o combine_sink_source combine_sink_source.F90\n\n");
 
 #grid
 system("ln -sf ../hgrid.ll hgrid.ll");

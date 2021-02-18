@@ -1,10 +1,11 @@
 Loading DEMs to horizontal grid:
-1)You need have DEM tiles ready. On sciclone or james, you can find them under:
-# sample on james    : $DEM_dir = '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
-# sample on sciclone : $DEM_dir = '/sciclone/data10/whuang07/NWM/DEM/DEM/';
-# sample on stampede2: $DEM_dir = "~/work/stampede2/NWM/DEM/DEM/";
+1)You need have DEM tiles ready. You can find them under:
+# james    : '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
+# sciclone : '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+# stampede2: "/work/06923/wendy611/stampede2/NWM/DEM/DEM/";
+# corral3 (designsafe): "/gpfs/corral3/repl/projects/NHERI/projects/8958936882960536041-242ac11a-0001-012/vims_noaa_archive/DEM/"
 
-2)you need have a input hgrid.old: the old hgrid.gr3 that the DEMs to be loaded, note that the projection must be lat/lon
+2)you need an input hgrid.old: the old hgrid.gr3 that the DEMs to be loaded, note that the projection must be lat/lon
 
 3)All DEMs should be linked under the current DEM folder
 
