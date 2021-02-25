@@ -2,6 +2,8 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+084e149 (Feb 25, 2021): Removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
+                        removed option for negative roughness. Fixed race condition for marsh module.
 3576c9c (Jan 24, 2021): added new option for source/sink input: if_source=-1 requires source.nc (which
                         includes elem list inside; allows different time steps and # of records for
                         volume/mass source/sinks. Also, now the source/sink values in .th must be single
