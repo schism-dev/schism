@@ -30,5 +30,5 @@ target_link_libraries (gen_vqs_2 utillib )
 target_link_libraries (gen_vqs_2masters utillib )
 target_link_libraries (gen_nudge_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
 
-add_dependencies(utility check_openbnd convert_3Dth_nc convert_nudge_nc fix_bad_quads find_small_elem gen_hdif gen_vqs_1 gen_vqs_2 gen_vqs_2masters gen_nudge gen_nudge2 gen_nudge_from_hycom gen_slope_filter gen_slope_filter2 gen_source list_bnd_pt manning relocate_wet_source_elem split_quads_wwm viz_source viz_source_sink )
+add_dependencies(utility check_openbnd convert_3Dth_nc convert_nudge_nc fix_bad_quads find_small_elem gen_hdif gen_vqs_1 gen_vqs_2 gen_vqs_2masters gen_nudge gen_nudge2 gen_nudge_from_hycom gen_slope_filter gen_slope_filter2 gen_source list_bnd_pt manning split_quads_wwm viz_source viz_source_sink )
 

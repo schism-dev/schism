@@ -271,14 +271,12 @@
 !           nchi=1: bottom roughness (in meters) specified in rough.gr3 (and in this case, negative
 !           or 0 depths in rough.gr3 indicate time-independent Cd, not roughness!).
 !           Cd is calculated using the log law, when dzb>=dzb_min; when dzb<dzb_min,
-!           Cd=Cdmax*exp[dzb_decay*(1-dzb/dzb_min)], where Cdmax=Cd(dzb=dzb_min),
-!           and dzb_decay (<=0) is a decay const specified below. We recommend dzb_decay=0
-!           and may remove this constant in the future.
+!           Cd=Cdmax, where Cdmax=Cd(dzb=dzb_min).
 !           If iwbl/=0, nchi must =1.
 !-----------------------------------------------------------------------
   nchi = 0 
   dzb_min = 0.5 !needed if nchi=1; min. bottom boundary layer thickness [m].
-  dzb_decay = 0. !needed if nchi=1; a decay const. [-]. should =0
+!  dzb_decay = 0. !needed if nchi=1; a decay const. [-]. should =0
   hmin_man = 1. !needed if nchi=-1: min. depth in Manning's formulation [m]
 
 !-----------------------------------------------------------------------
@@ -377,7 +375,7 @@
 ! Behavior when trajectory hits open bnd. If ibtrack_openbnd=0, slide with
 ! tangential vel; otherwise, stop and exit btrack 
 !-----------------------------------------------------------------------
-  ibtrack_openbnd = 1 
+!  ibtrack_openbnd = 1 !hardwired
 
 !-----------------------------------------------------------------------
 ! Wetting and drying. 
@@ -475,7 +473,6 @@
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
 ! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
-! If nws>0, 'iwindoff' can be used to scale wind speed (with windfactor.gr3).
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
@@ -489,7 +486,7 @@
   wtiminc = 150. !time step for atmos. forcing. Default: same as dt
   nrampwind = 1 !ramp-up option for atmos. forcing
   drampwind = 1. !needed if nrampwind/=0; ramp-up period in days
-  iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
+!  iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = -1 !needed if nws/=0
   !If impose_net_flux/=0 and nws=2, read in net _surface_ heat flux as var 'dlwrf' 
   !(Downward Long Wave) in sflux_rad (solar radiation is still used separately),

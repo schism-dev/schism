@@ -183,7 +183,7 @@
                      &tot_salt_gb,dav_mag,tvol,tmass,tpe,tkne,enerf,ener_ob, &
                      &av_dep,vel_m1,vel_m2,xtmp,ytmp,ftmp,tvol12,fluxbnd, &
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,ramp_ss,Cdmax, &
-                     &wmag_e,wmag_factor, & !wmag_e and wmag_facotr addedy by wangzg
+                     &wmag_e, & !wmag_e and wmag_facotr addedy by wangzg
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
@@ -585,21 +585,21 @@
       endif !nws>=2
 
 !...  Re-scale wind
-      if(nws>0) then; if(iwindoff/=0) then
-        do i=1,npa
-          windx(i)=windx(i)*windfactor(i)
-          windy(i)=windy(i)*windfactor(i)
-        enddo !i
-      endif; endif
+!      if(nws>0) then; if(iwindoff/=0) then
+!        do i=1,npa
+!          windx(i)=windx(i)*windfactor(i)
+!          windy(i)=windy(i)*windfactor(i)
+!        enddo !i
+!      endif; endif
 
 #ifdef USE_ICM
 ! calculating WMS used for reareation,added by wangzg
       if(irea==1) then
-!$OMP parallel do default(shared) private(i,wmag_e,wmag_factor)
+!$OMP parallel do default(shared) private(i,wmag_e)
         do i=1,nea
           if(idry_e(i)==1) cycle
           wmag_e=sum(sqrt(windx(elnode(1:i34(i),i))**2.d0+windy(elnode(1:i34(i),i))**2.d0))/real(i34(i),rkind)
-          wmag_factor=sum(windfactor(elnode(1:i34(i),i)))/real(i34(i),rkind)
+!          wmag_factor=sum(windfactor(elnode(1:i34(i),i)))/real(i34(i),rkind)
           WMS(i)=wmag_e !*wmag_factor !no windfactor for DO reareation
         enddo !i
 !$OMP end parallel do
@@ -759,8 +759,8 @@
             tau(1,i)=0.d0
             tau(2,i)=0.d0
           else !rescale as well
-            tau(1,i)=-tauxz(i)/rho0*rampwind*windfactor(i)**2.d0 !sign and scale difference between stresses tauxz and tau
-            tau(2,i)=-tauyz(i)/rho0*rampwind*windfactor(i)**2.d0
+            tau(1,i)=-tauxz(i)/rho0*rampwind !*windfactor(i)**2.d0 !sign and scale difference between stresses tauxz and tau
+            tau(2,i)=-tauyz(i)/rho0*rampwind !*windfactor(i)**2.d0
           endif
         else !if(nws==1.or.nws>=4.or.nws>=2.and.ihconsv==0.or.iwind_form==-1) then
           wmag=sqrt(windx(i)**2.d0+windy(i)**2.d0)
@@ -1897,8 +1897,12 @@
 
 !         Wet node
           htot=dp(i)+eta2(i)
-          if(rough_p(i)<=0.d0) then !time-independent Cd
-            Cdp(i)=abs(rough_p(i))
+          if(rough_p(i)<0.d0) then 
+            !Cdp(i)=abs(rough_p(i))
+            write(errmsg,*)'STEP: rough_p<0 at node ',iplg(i),rough_p(i)
+            call parallel_abort(errmsg)
+          else if(rough_p(i)==0.d0) then 
+            Cdp(i)=0.d0
           else !roughness >0 
             bthick_ori=znl(kbp(i)+1,i)-znl(kbp(i),i)  !thickness of bottom bnd layer
             bthick=max(dzb_min,bthick_ori)
@@ -1914,9 +1918,9 @@
             else
               Cdp(i)=1.d0/(2.5d0*log(bthick/rough_p(i)))**2.d0
 
-              if(dzb_decay/=0.d0.and.bthick_ori<bthick) then !dzb_decay=0 leads to no decay
-                Cdp(i)=Cdp(i)*exp(dzb_decay*(1.d0-bthick_ori/bthick))
-              endif
+!              if(dzb_decay/=0.d0.and.bthick_ori<bthick) then !dzb_decay=0 leads to no decay
+!                Cdp(i)=Cdp(i)*exp(dzb_decay*(1.d0-bthick_ori/bthick))
+!              endif
               !WBL
 #ifdef USE_WWM
               ! Quantities used in both formulations for the WBL
@@ -7169,10 +7173,9 @@
         if(nwild(i)==1) then !marsh elem
           if(smax>0.5d0) then !drowned
             imarsh(i)=0
-!Error: OMP race
-            Cdp(elnode(1:i34(i),i))=0.001d0
-            Cd(elside(1:i34(i),i))=0.001d0
-            rough_p(elnode(1:i34(i),i))=1.d-4
+!            Cdp(elnode(1:i34(i),i))=0.001d0
+!            Cd(elside(1:i34(i),i))=0.001d0
+!            rough_p(elnode(1:i34(i),i))=1.d-4
           endif !smax
         else !non-marsh elem @last step
           if(smax<=0.d0.and.smin>=-1.d0) then !create marsh
@@ -7192,25 +7195,60 @@
       enddo !i=1,ne
 !$OMP end do
 
-      !Set Cd etc for marsh
+      !Set Cd etc for marsh and also drowned marsh
 !$OMP workshare
       sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
 !$OMP end workshare
 !$OMP do 
-      do i=1,ne
-        if(imarsh(i)==1) then
-          if(isav==0) then
-            Cdp(elnode(1:i34(i),i))=0.05d0
-            Cd(elside(1:i34(i),i))=0.05d0
-            rough_p(elnode(1:i34(i),i))=1.d-2
-          else
-            sav_di(elnode(1:i34(i),i))=sav_di0
-            sav_h(elnode(1:i34(i),i))=sav_h0
-            sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd/2.d0
-          endif !isav
-        endif
+      do i=1,np
+        do j=1,nne(i)
+          ie=indel(j,i)
+          if(imarsh(ie)==1) then
+            if(isav==0) then
+              Cdp(i)=0.05d0
+              rough_p(i)=1.d-2
+            else !isav/=0
+              sav_di(i)=sav_di0
+              sav_h(i)=sav_h0
+              sav_nv(i)=sav_nv0
+              sav_alpha(i)=sav_di0*sav_nv0*sav_cd0/2.d0
+            endif !isav 
+          endif !imarsh
+
+          !drowned marsh
+          if(nwild(ie)==1.and.imarsh(ie)==0) then
+            Cdp(i)=0.001d0
+            rough_p(i)=1.d-4
+          endif
+        enddo !j
       enddo !i
+!$OMP end do
+
+!$OMP do
+      do i=1,ns
+        do j=1,2
+          ie=isdel(j,i)
+          if(isav==0.and.imarsh(ie)==1) Cd(i)=0.05d0
+          if(nwild(ie)==1.and.imarsh(ie)==0) Cd(i)=0.001d0
+        enddo !j
+      enddo !i
+!$OMP end do
+      
+
+!      do i=1,ne
+!        if(imarsh(i)==1) then
+!          if(isav==0) then
+!            Cdp(elnode(1:i34(i),i))=0.05d0
+!            Cd(elside(1:i34(i),i))=0.05d0
+!            rough_p(elnode(1:i34(i),i))=1.d-2
+!          else
+!            sav_di(elnode(1:i34(i),i))=sav_di0
+!            sav_h(elnode(1:i34(i),i))=sav_h0
+!            sav_nv(elnode(1:i34(i),i))=sav_nv0
+!            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
+!          endif !isav
+!        endif
+!      enddo !i
 !$OMP end do
 
 !$OMP master

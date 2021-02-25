@@ -170,9 +170,9 @@
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,nrampbc,drampbc, &
-     &nramp,dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min,dzb_decay, &
+     &nramp,dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form,nrampwind, &
-     &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
+     &drampwind,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
@@ -185,7 +185,7 @@
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
+     &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide
 
@@ -279,8 +279,6 @@
       if(ibtp/=0.and.ibtp/=1) call parallel_abort('Unknown ibtp')
       if(ibc==0) then
         if(myrank==0) write(16,*)'You are using baroclinic model'
-!        call get_param('param.in','nrampbc',1,nrampbc,tmp,stringvalue)
-!        if(nrampbc/=0) call get_param('param.in','drampbc',2,itmp,drampbc,stringvalue)
       else !ibc=1
         if(ibtp==0) then
           if(myrank==0) write(16,*)'Barotropic model without ST calculation'
@@ -437,10 +435,10 @@
       gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
-      nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind; dzb_decay=0._rkind;  
+      nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=-1; nrampwind=1; 
-      drampwind=1; iwindoff=0; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -459,7 +457,7 @@
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
-      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=1; level_age=-999;
+      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
@@ -663,9 +661,7 @@
       
       if(nchi==1) then
 !       dzb_min: min. bottom boundary layer thickness [m]
-!        call get_param('param.in','dzb_min',2,itmp,dzb_min,stringvalue)
-!        call get_param('param.in','dzb_decay',2,itmp,dzb_decay,stringvalue)
-        if(dzb_min<=0._rkind.or.dzb_decay>0._rkind) call parallel_abort('INIT: dzb_min<=0 or dzb_decay>0')
+        if(dzb_min<=0._rkind) call parallel_abort('INIT: dzb_min<=0') 
       endif
       if(nchi==-1) then
 !       Min depth used in Manning formulation
@@ -723,7 +719,6 @@
 !      if(nws>0) then
 !        call get_param('param.in','nrampwind',1,nrampwind,tmp,stringvalue)
 !        call get_param('param.in','drampwind',2,itmp,drampwind,stringvalue)
-!        call get_param('param.in','iwindoff',1,iwindoff,tmp,stringvalue)
 !      endif !nws
 
 !     Heat and salt conservation flags
@@ -1712,7 +1707,7 @@
 !     All other arrays
 !      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
        allocate(windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
-         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),windfactor(npa),pr1(npa),airt1(npa),shum1(npa), &
+         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),pr1(npa),airt1(npa),shum1(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
@@ -3202,6 +3197,10 @@
      &call parallel_abort('Check rough.gr3')
         do i=1,np_global
           read(32,*)j,xtmp,ytmp,tmp
+          if(tmp<0.d0) then
+            write(errmsg,*)'INIT: negative rough at node ',i,tmp
+            call parallel_abort(errmsg)
+          endif
           if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=tmp
         enddo !i
         close(32)
@@ -3273,25 +3272,25 @@
 #endif
       endif
 
-      windfactor=1 !intialize for default
-      if(nws>0) then
-        if(iwindoff/=0) then
-          open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
-          read(32,*)
-          read(32,*) itmp1,itmp2
-          if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check windfactor.gr3')
-          do i=1,np_global
-            read(32,*)j,xtmp,ytmp,tmp
-            if(tmp<0.d0) then
-              write(errmsg,*)'Wind scaling factor must be positive:',i,tmp
-              call parallel_abort(errmsg)
-            endif
-            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=tmp
-          enddo !i
-          close(32)
-        endif
-      endif !nws>0
+!      windfactor=1 !intialize for default
+!      if(nws>0) then
+!        if(iwindoff/=0) then
+!          open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
+!          read(32,*)
+!          read(32,*) itmp1,itmp2
+!          if(itmp1/=ne_global.or.itmp2/=np_global) &
+!     &call parallel_abort('Check windfactor.gr3')
+!          do i=1,np_global
+!            read(32,*)j,xtmp,ytmp,tmp
+!            if(tmp<0.d0) then
+!              write(errmsg,*)'Wind scaling factor must be positive:',i,tmp
+!              call parallel_abort(errmsg)
+!            endif
+!            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=tmp
+!          enddo !i
+!          close(32)
+!        endif
+!      endif !nws>0
 
 !     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
 !      if(nws==4) then

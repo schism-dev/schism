@@ -1441,7 +1441,8 @@ end subroutine inter_btrack
    
         vtan=-su2(jlev,isd)*sny(isd)+sv2(jlev,isd)*snx(isd)
         !If open bnd is hit, optionally stop with nfl=1
-        if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0._rkind
+        !if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0._rkind
+        if(isbs(isd)>0) vtan=0._rkind
         xvel=-vtan*sny(isd)
         yvel=vtan*snx(isd)
 
