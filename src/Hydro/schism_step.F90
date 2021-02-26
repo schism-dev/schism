@@ -7211,7 +7211,7 @@
               sav_di(i)=sav_di0
               sav_h(i)=sav_h0
               sav_nv(i)=sav_nv0
-              sav_alpha(i)=sav_di0*sav_nv0*sav_cd0/2.d0
+              sav_alpha(i)=sav_di0*sav_nv0*sav_cd(i)/2.d0
             endif !isav 
           endif !imarsh
 
