@@ -1426,8 +1426,7 @@
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
-      if(if_source/=0) then
-        if(dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
+      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
       endif
 
 !'    Eq. of State type

@@ -1,11 +1,12 @@
 function []=plot_gr3(fname,caxis_min,caxis_max,num_columns,isphere)
-%plot_gr3(fname,caxis_min,caxis_max,num_columns) 
+%plot_gr3(fname,caxis_min,caxis_max,num_columns,isphere) 
 %Plot depths in .gr3 (tri-quad) in matlab
 % where fname is a cell array (e.g. {'a','b'}
 %caxis_min,caxis_max are min/max used in caxis
 %num_columns: # of columna in subplot
 %isphere: shperical grid option. If /=0, assumes lon discontinuity @dateline, 
 %         and will recast lon to [0,360) and mask out discontinuity @prime meridian
+%e.g. plot_gr3({'hgrid.gr3'},-1,10,1,0)
 
 close all;
 nfiles=length(fname);
@@ -35,7 +36,7 @@ for ifile=1:nfiles
   i34=c2{2}(:);
 
   %Make lon in [0,360)
-  if(isphere/=0)
+  if(isphere~=0)
     indx=find(x<0);
     x(indx)=x(indx)+360;
   end
@@ -47,7 +48,7 @@ for ifile=1:nfiles
     end %for j
 
     %Check discontinuity across prime meridian
-    if(isphere/=0)
+    if(isphere~=0)
       ifl=0; %flag
       for j=1:i34(i)
         n1=nm(i,j);
