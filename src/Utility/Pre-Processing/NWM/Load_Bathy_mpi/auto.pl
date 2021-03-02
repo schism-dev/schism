@@ -224,6 +224,12 @@ system("rm DEM/*.asc");
 # system("./auto_edit_region 1 min_5m_ll.reg hgrid.new 5");
 # system("cp out.gr3 hgrid.new; rm out.gr3");
 
+#----------------------------------------------------------------------------------------
+# The best DEMs we have in the regions around Bergen Point and Sabine Pass and [Ches Bay]
+# show clogged channels which contradicts NOAA navigation charts. This has led to excessive 
+# blockage of tides in these regions. Therefore, we have used the navigation charts and our 
+# best judgement as DEMs in those regions.
+#----------------------------------------------------------------------------------------
 @regions=("min_5m_ll.reg","BergenPoint.reg","SabinePass.reg");
 @min_vals=(5,2,7);
 for my $i (0..$#regions) {
