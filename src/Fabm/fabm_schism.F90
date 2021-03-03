@@ -21,7 +21,7 @@
 
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
-#error You need to enable the ice module with -DUSE_ICE as well. 
+#error You need to enable the ice module with -DUSE_ICE as well.
 #endif
 #endif
 
@@ -80,6 +80,7 @@ module fabm_schism
 
   !> @todo this assumes that FABM is the first BGC model to be loaded, just
   !> after temperature and salinity.
+  !> Let's replace this by sum(ntrs(1:10))+1 !
   integer, public :: istart=3
 
   type, extends(type_base_driver) :: type_schism_driver
@@ -156,6 +157,9 @@ module fabm_schism
     contains
 #if _FABM_API_VERSION_ < 1
     procedure :: get_light
+    !> @todo check how to correctly calculate the light in FABM 1; supposedly
+    !> this is in prepare_inputs(), but we better make sure.  We can also use
+    !> the gotm/light model
 #endif
     procedure :: repair_state
     procedure :: state_variable_name_by_idx
@@ -198,6 +202,8 @@ subroutine fabm_schism_init_model(ntracers)
   !call driver%log_message('using API version '//_FABM_API_VERSION_)
 
   !> Read driver parameters from the optional file 'schism_fabm.in'
+  !> @todo rethink the indir trailing slash.  This is very unusual and could
+  !> confuse developers.
   inquire(file=in_dir(1:len_in_dir)//'schism_fabm.in',exist=file_exists)
   if (file_exists) then
     call get_param('schism_fabm.in','external_spm_extinction',2,tmp_int,fs%external_spm_extinction,tmp_string)
@@ -279,7 +285,9 @@ subroutine fabm_schism_init_model(ntracers)
 
   fs%day_of_year = 0.0_rk + start_day + month_offsets(start_month)
   fs%seconds_of_day = start_hour * 3600.0_rk
-  !> @todo add leap year algorithm
+  !> @todo add leap year algorithm, what exactly is the calendric representation
+  !> of the SCHISM time stepping and how does that draw information for getting
+  !> the (calendric) sflux?
 
   if (present(ntracers)) ntracers = fs%nvar
 end subroutine fabm_schism_init_model
@@ -294,6 +302,7 @@ subroutine fabm_schism_init_stage2
 
   ! check size of tracer field
   !> @todo this assumes that only FABM BGC is run and not another model
+  !> Should be replaced by checking ntrs(11) and then getting rid of this.
   ntracer = ubound(tr_el, 1)
   if (ntracer-istart+1 < fs%nvar) then
     write(message,*) 'incorrect number of tracers:', ntracer, &
@@ -322,7 +331,8 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_surface_index(nvrt)
 #endif
 
-  ! allocate and initialize state variables
+  !> Allocate and initialize state variables.  All state variables have default
+  !> initial values defined at registration.  These can be changed in fabm.yaml
   allocate(fs%interior_initial_concentration(ntracers, nvrt, nea))
 
   do i=1, fs%nvar
@@ -341,8 +351,11 @@ subroutine fabm_schism_init_stage2
       fs%model%interior_state_variables(i)%initial_value
 #endif
 
-    !>@todo Debate ic versus hotstart vs fabm_init initialization
-    
+    !> @todo Check that the schism mechanism for initialization via .ic files
+    !> or hotstart.nc works.  Be careful, currently this mechanism only applies
+    !> to the variables in tr_el(), i.e. interior state variables. Also check
+    !> necessity of dedicated fabm_init subroutine below.
+
 
     ! set settling velocity method
 #define BDY_FRC_SINKING 0
@@ -474,6 +487,7 @@ subroutine fabm_schism_init_stage2
 #endif
 
   ! calculate initial layer heights
+  !> @todo check fs%layer_height(1,:)
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
 
   call fs%link_environmental_data()
@@ -1257,7 +1271,7 @@ subroutine link_environmental_data(self, rc)
 #if _FABM_API_VERSION_ < 1
   call fabm_link_bulk_data(self%model,standard_variables%pressure,fs%pres) !ADDED
   call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
- 
+
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
@@ -1300,7 +1314,7 @@ subroutine link_environmental_data(self, rc)
 !_FABM_API_VERSION_>=1
   call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
   call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
- 
+
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
   !call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
