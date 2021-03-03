@@ -1,4 +1,4 @@
-!> FABM host for SCHISM
+!> FABM host for SCHISM (i.e. cap on SCHISM side)
 !
 ! This code is part of the the Semi-implicit Cross-scale Hydroscience Integrated
 ! System Model (SCHISM) and part of the Modular System for Shelves and Coasts
@@ -16,7 +16,7 @@
 !
 !#include "fabm_version.h"
 #ifndef _FABM_API_VERSION_
-#define _FABM_API_VERSION 0
+#define _FABM_API_VERSION_ 1
 #endif
 
 #ifdef USE_ICEBGC
@@ -1297,11 +1297,13 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked standard variable "number_of_days_since_start_of_the_year"')
 
 #else
+!_FABM_API_VERSION_>=1
   call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
   call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
  
   call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
+  !call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
+  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
 #ifdef USE_ICEBGC

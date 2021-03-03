@@ -8486,11 +8486,11 @@
 #ifdef USE_FABM
         do i=1,ntrs(11)
 !          call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
-#if _FABM_API_VERSION_ < 1
-          call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
-#else
+!#if _FABM_API_VERSION_ < 1
+!          call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
+!#else
           call writeout_nc(id_out_var(noutput+i+4),trim(fs%model%interior_state_variables(i)%name),2,nvrt,npa,tr_nd(i+fabm_istart-1,:,:))
-#endif
+!#endif
         end do
         noutput=noutput+ntrs(11)
 

@@ -1427,7 +1427,6 @@
       if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
       if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
-      endif
 
 !'    Eq. of State type
 !     0: UNESCO 1980 (nonlinear); 1: linear function of T ONLY,
