@@ -5060,16 +5060,16 @@
       write(10,'(1000(1x,i10))')ns_global,ne_global,np_global,nvrt,nproc,ntracers,ntrs(:) !global info
 !     local to global mapping      
       write(10,*)'local to global mapping:'
-      write(10,*)ne
-      do ie=1,ne
+      write(10,*)nea
+      do ie=1,nea
         write(10,*)ie,ielg(ie)
-      enddo
-      write(10,*)np 
-      do ip=1,np
+      enddo 
+      write(10,*)npa 
+      do ip=1,npa
         write(10,*)ip,iplg(ip)
       enddo
-      write(10,*)ns
-      do isd=1,ns
+      write(10,*)nsa
+      do isd=1,nsa
         write(10,*)isd,islg(isd)
       enddo
 
@@ -5079,17 +5079,23 @@
       write(10,*)(real(ztot(k)),k=1,kz-1),(real(sigma(k)),k=1,nvrt-kz+1)
       write(10,*)np,ne
       if(ics==1) then
-        do m=1,np
-          write(10,*)real(xnd(m)),real(ynd(m)),real(dp00(m)),kbp00(m)
+        do m=1,npa
+          write(10,*) xnd(m),ynd(m),real(dp00(m)),kbp00(m)
         enddo !m
       else !lat/lon
-        do m=1,np
-          write(10,*)real(xlon(m)/pi*180.d0),real(ylat(m)/pi*180.d0),real(dp00(m)),kbp00(m)
+        do m=1,npa
+          write(10,*) real(xlon(m)/pi*180.d0),real(ylat(m)/pi*180.d0),real(dp00(m)),kbp00(m)
         enddo !m
       endif !ics
-      do m=1,ne
+      do m=1,nea
         write(10,*)i34(m),(elnode(mm,m),mm=1,i34(m))
       enddo !m
+	  
+	  do i=1,nsa
+          write(10,*) i,(isidenode(mm,i),mm=1,2)
+      enddo 
+      write(10,*) np,ne,ns !out num of non ghost node, ele, and side 
+
 
       close(10)
       
