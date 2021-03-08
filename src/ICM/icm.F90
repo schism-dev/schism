@@ -711,7 +711,7 @@ subroutine landplant(id,hour,it)
   use schism_glbl, only : iwp,errmsg,ielg,pi,dpe,iof_icm
   use icm_mod
   use icm_sed_mod, only : CNH4,CPIP 
-  use schism_glbl, only : airt1,elnode,i34 
+  use schism_glbl, only : airt1,elnode,i34,tr_el,kbe 
   use schism_msgp, only : parallel_abort 
   implicit none
   integer, intent(in) :: id,it
@@ -722,7 +722,7 @@ subroutine landplant(id,hour,it)
   real(kind=iwp) :: rtmp
   real(kind=iwp) :: xtveg,sLight0,sdveg,rat,iatcnpyveg,ikveg,iwcveg 
   real(kind=iwp) :: a,b
-
+  real(kind=iwp) :: botsal
 
   !--------------------------------------------------------------------------------
   !init for each time step at current elem
@@ -790,7 +790,7 @@ subroutine landplant(id,hour,it)
       else
         call parallel_abort('unknown iRad in icm.F90')
       endif ! 
-      if(sdveg>100) then !>0, checked
+      if(sdveg>20) then !>0, checked
         iwcveg=iatcnpyveg*rat/sdveg
       else
         iwcveg=iatcnpyveg*rat*(1-exp(-sdveg))/sdveg
@@ -808,9 +808,16 @@ subroutine landplant(id,hour,it)
       !----------nutrient supplies----------
       fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
       fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
+
+
+      !----------salinity control----------
+      botsal=tr_el(2,kbe(id)+1,id) !most recent bottom salinity value
+      xtveg=botsal-saltoptveg(j)
+      fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.e-2_iwp))
+
  
       !----------growth function----------
-      plfveg(id,j)=pmaxveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/acdwveg(j)
+      plfveg(id,j)=pmaxveg(id,j)*fsveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/acdwveg(j)
 
     endif !rIa .or. hour
 
@@ -1632,8 +1639,8 @@ subroutine photosynthesis(id,hour,nv,it)
         xtveg0=tmp0/max(tdep,1.e-2_iwp)
         tmp=max(1.e-2_iwp,xtveg) !re-use
         tmp0=max(1.e-2_iwp,xtveg0)
-        fnveg(id,j)=(tmp+tmp0+CNH4(id)*khnwveg(j)/khnsveg(j))/ &
-                        &(khnwveg(j)+tmp+tmp0+CNH4(id)*khnwveg(j)/khnsveg(j)) 
+        fnveg(id,j)=(CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))/ &
+                        &(khnsveg(j)+CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))
 
         !depth-averaged P
         tmp=0.0
@@ -1643,9 +1650,8 @@ subroutine photosynthesis(id,hour,nv,it)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.e-2_iwp)
         tmp=max(1.e-2_iwp,xtveg)
-        fpveg(id,j)=(tmp+CPIP(id)*khpwveg(j)/khpsveg(j))/ &
-                        &(khpwveg(j)+tmp+CPIP(id)*khpwveg(j)/khpsveg(j)) 
-
+        fpveg(id,j)=(CPIP(id)+tmp*khpsveg(j)/khpwveg(j))/ &
+                        &(khpsveg(j)+CPIP(id)+tmp*khpsveg(j)/khpwveg(j))
 
         !--------------------
         !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients      
