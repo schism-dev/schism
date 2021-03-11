@@ -18,7 +18,7 @@
 !       Simplified read_output8_allnodes.f90 for 2D vars only, with
 !       flexible inputs to facilitate parallelization.
 !	Read (combined or uncombined) nc outputs for multiple files at all nodes 
-!       Works for mixed tri/quad outputs on NODE/ELEMENT based vars.
+!       Works for mixed tri/quad outputs on NODE based vars.
 !       Inputs: screen; combined or uncombined nc file; filter_flag (for
 !       filtering outputs), output file name
 !       Outputs: time series (ascii); 
@@ -218,10 +218,10 @@
 
         if(icomb==0) then !uncombined
           do irank=0,nproc-1
-            call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
+            call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
           enddo !irank
         else
-          call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
+          call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
         endif
 
         !Available now:

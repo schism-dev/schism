@@ -244,15 +244,14 @@
 !          print*, 'time=',timeout,trim(adjustl(file63))
 
           irec=irecord(l,i)
-!          call get_outvar(1,iday(l,i),irec,varname,np,last_dim,nvrt,outvar,i23d,ivs,eta2)
           if(icomb==0) then !uncombined
             do irank=0,nproc-1
               if(irank_read(irank)>0) then
-                call get_outvar(1,iday(l,i),irec,varname,np,last_dim,nvrt,outvar,i23d,ivs,eta2,irank)
+                call get_outvar(iday(l,i),irec,varname,np,last_dim,nvrt,outvar,i23d,ivs,eta2,irank)
               endif
             enddo !irank
           else
-            call get_outvar(1,iday(l,i),irec,varname,np,last_dim,nvrt,outvar,i23d,ivs,eta2)
+            call get_outvar(iday(l,i),irec,varname,np,last_dim,nvrt,outvar,i23d,ivs,eta2)
           endif
 
 !          !Get elev

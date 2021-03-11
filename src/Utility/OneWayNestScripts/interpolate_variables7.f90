@@ -422,10 +422,10 @@
         if(ifile>1) then !get 3D vars
           do ii=1,n_vars
             if(ifile==2) then !TS
-              call get_outvar(1,iday,it1,varname(ii),np,last_dim,nvrt,outvar0,i23d,ivs,eta2)
+              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar0,i23d,ivs,eta2)
               outvar(ii,:,:)=outvar0(1,:,:)
             else if(ifile==3) then !uv
-              call get_outvar(1,iday,it1,varname(ii),np,last_dim,nvrt,outvar,i23d,ivs,eta2)
+              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar,i23d,ivs,eta2)
             endif !
 
 !            varname2=adjustl(varname(ii))

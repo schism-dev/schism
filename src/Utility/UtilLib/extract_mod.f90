@@ -167,9 +167,8 @@
 !     Returned vars: outvar(2,nvrt,np|ne),i23d,ivs and eta2(np) (on global
 !     indices). For uncombined nc, only subdomain part of arrays will be filled with values
 !================================================================
-      subroutine get_outvar(ics,istack,irec,varname,np2,last_dim,nvrt2,outvar,i23d,ivs,eta2,irank)
-      !use ics=1 if linear interp
-      integer, intent(in) :: ics,istack,irec,np2,last_dim,nvrt2
+      subroutine get_outvar(istack,irec,varname,np2,last_dim,nvrt2,outvar,i23d,ivs,eta2,irank)
+      integer, intent(in) :: istack,irec,np2,last_dim,nvrt2
       character(len=*),intent(inout) :: varname
       real, intent(out) :: outvar(2,nvrt2,last_dim),eta2(np2)
       integer, intent(out) :: i23d,ivs
@@ -193,7 +192,7 @@
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
-      print*, 'File=',trim(adjustl(file_char)),ics,istack,irec,varname
+!      print*, 'Inside get_outvar, file=',trim(adjustl(file_char)),istack,irec,varname
       iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
       if(iret/=nf90_NoErr) stop 'get_outvar: cannot open'
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
@@ -224,16 +223,16 @@
 
       npes=idims(ndims-1) !np|ne|ns
       if(present(irank)) then
-        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank)) stop 'get_outvar: can only handle node- or elem-based'
+        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank).and.npes/=ns_lcl(irank)) stop 'get_outvar: unknown dim'
       else
-        if(npes/=np.and.npes/=ne) stop 'get_outvar: can only handle node- or elem-based'
+        if(npes/=np.and.npes/=ne.and.npes/=ns) stop 'get_outvar: unknown dim'
       endif
 
       allocate(worka(2,nvrt,npes))      
 
       iret=nf90_get_att(ncid2,ivarid1,'i23d',i23d)
-      if(i23d<=0.or.i23d>6) stop 'get_outvar: wrong i23d'
-      if(i23d>3.and.ics==2) stop 'get_outvar: ics=2 with elem-based var'
+      if(i23d<=0.or.i23d>9) stop 'get_outvar: wrong i23d'
+!      if(i23d>3.and.ics==2) stop 'get_outvar: ics=2 with elem-based var'
       iret=nf90_get_att(ncid2,ivarid1,'ivs',ivs)
       !print*, 'i23d:',i23d,ivs,idims(1:ndims)
 
@@ -268,8 +267,8 @@
           outvar(:,:,iplg(irank,1:np_lcl(irank)))=worka
         else if(i23d<=6) then !elem
           outvar(:,:,ielg(irank,1:ne_lcl(irank)))=worka
-        else
-          stop 'get_outvar: cannot be side based'
+        else !side
+          outvar(:,:,islg(irank,1:ns_lcl(irank)))=worka
         endif
       else
         outvar(:,:,1:npes)=worka
@@ -414,9 +413,8 @@
 !     Returned vars: outvar(2,nvrt,np|ne,nrec3),i23d,ivs and eta2(np,nrec3) (on global
 !     indices). For uncombined nc, only subdomain part of arrays will be filled with values
 !================================================================
-      subroutine get_outvar_multirecord(ics,istack,varname,irec1,irec2,np2,last_dim,nvrt2,nrec3,outvar,i23d,ivs,eta2,irank)
-      !use ics=1 if linear interp
-      integer, intent(in) :: ics,istack,irec1,irec2,np2,last_dim,nvrt2,nrec3
+      subroutine get_outvar_multirecord(istack,varname,irec1,irec2,np2,last_dim,nvrt2,nrec3,outvar,i23d,ivs,eta2,irank)
+      integer, intent(in) :: istack,irec1,irec2,np2,last_dim,nvrt2,nrec3
       character(len=*),intent(inout) :: varname
       real, intent(out) :: outvar(2,nvrt2,last_dim,nrec3),eta2(np2,nrec3)
       integer, intent(out) :: i23d,ivs
@@ -470,17 +468,17 @@
 
       npes=idims(ndims-1) !np|ne|ns
       if(present(irank)) then
-        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank)) stop 'get_outvar_multirecord: can only handle node- or elem-based'
+        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank).and.npes/=ns_lcl(irank)) stop 'get_outvar_multirecord: unknown dim'
       else
-        if(npes/=np.and.npes/=ne) stop 'get_outvar_multirecord: can only handle node- or elem-based'
+        if(npes/=np.and.npes/=ne.and.npes/=ns) stop 'get_outvar_multirecord: unknown dim'
       endif
 
       allocate(worka(2,nvrt,npes,nrec4))
       worka(2,nvrt,npes,nrec4)=0 !test mem
 
       iret=nf90_get_att(ncid2,ivarid1,'i23d',i23d)
-      if(i23d<=0.or.i23d>6) stop 'get_outvar_multirecord: wrong i23d'
-      if(i23d>3.and.ics==2) stop 'get_outvar_multirecord: ics=2 with elem-based var'
+      if(i23d<=0.or.i23d>9) stop 'get_outvar_multirecord: wrong i23d'
+!      if(i23d>3.and.ics==2) stop 'get_outvar_multirecord: ics=2 with elem-based var'
       iret=nf90_get_att(ncid2,ivarid1,'ivs',ivs)
       !print*, 'i23d:',i23d,ivs,idims(1:ndims)
 
@@ -515,8 +513,8 @@
           outvar(:,:,iplg(irank,1:np_lcl(irank)),1:nrec4)=worka
         else if(i23d<=6) then !elem
           outvar(:,:,ielg(irank,1:ne_lcl(irank)),1:nrec4)=worka
-        else
-          stop 'get_outvar_multirecord: cannot be side based'
+        else !side
+          outvar(:,:,islg(irank,1:ns_lcl(irank)),1:nrec4)=worka
         endif
       else
         outvar(:,:,1:npes,1:nrec4)=worka
