@@ -60,7 +60,7 @@
   if(ierr/=0) stop 'Allocation failed (1)'
 
   do i=1,np
-    read(14,*)j,xtmp,ytmp,dp(i)
+    read(14,*)j,xl(i),yl(i),dp(i)
   enddo !i
   do i=1,ne
     read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))

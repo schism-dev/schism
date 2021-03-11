@@ -167,16 +167,16 @@
   do i=1,np
     write(27,*)i,xl(i),yl(i),tr_nd(1,nvrt,i)
     write(28,*)i,xl(i),yl(i),tr_nd(1,1,i)
-    write(37,*)j,xl(i),yl(i),tr_nd(2,nvrt,i)
-    write(38,*)j,xl(i),yl(i),tr_nd(2,1,i)
-    write(29,*)j,xl(i),yl(i),eout(i)
+    write(37,*)i,xl(i),yl(i),tr_nd(2,nvrt,i)
+    write(38,*)i,xl(i),yl(i),tr_nd(2,1,i)
+    write(29,*)i,xl(i),yl(i),eout(i)
   enddo !i
   do i=1,ne
-    write(27,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-    write(28,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-    write(37,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-    write(38,*)j,i34(i),(elnode(l,i),l=1,i34(i))
-    write(29,*)j,i34(i),(elnode(l,i),l=1,i34(i))
+    write(27,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+    write(28,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+    write(37,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+    write(38,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+    write(29,*)i,i34(i),(elnode(l,i),l=1,i34(i))
   enddo !i
 
   close(27); close(28); close(37); close(38); close(29)
