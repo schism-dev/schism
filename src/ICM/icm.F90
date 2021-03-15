@@ -1628,30 +1628,33 @@ subroutine photosynthesis(id,hour,nv,it)
 
 
         !----------nutrient supplies----------
-        !depth-averaged N
-        tmp=0.0
-        tmp0=0.0
-        do k=1,nv
-          tmp=tmp+NH4(k,1)*dep(k)
-          tmp0=tmp0+NO3(k,1)*dep(k)
-        enddo !k::nv
-        xtveg=tmp/max(tdep,1.e-2_iwp)
-        xtveg0=tmp0/max(tdep,1.e-2_iwp)
-        tmp=max(1.e-2_iwp,xtveg) !re-use
-        tmp0=max(1.e-2_iwp,xtveg0)
-        fnveg(id,j)=(CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))/ &
-                        &(khnsveg(j)+CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))
+        !!depth-averaged N
+        !tmp=0.0
+        !tmp0=0.0
+        !do k=1,nv
+        !  tmp=tmp+NH4(k,1)*dep(k)
+        !  tmp0=tmp0+NO3(k,1)*dep(k)
+        !enddo !k::nv
+        !xtveg=tmp/max(tdep,1.e-2_iwp)
+        !xtveg0=tmp0/max(tdep,1.e-2_iwp)
+        !tmp=max(1.e-2_iwp,xtveg) !re-use
+        !tmp0=max(1.e-2_iwp,xtveg0)
+        !fnveg(id,j)=(CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))/ &
+        !                &(khnsveg(j)+CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))
+        fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
 
-        !depth-averaged P
-        tmp=0.0
-        do k=1,nv
-          PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-          tmp=tmp+PO4td*dep(k)
-        enddo !k::nv
-        xtveg=tmp/max(tdep,1.e-2_iwp)
-        tmp=max(1.e-2_iwp,xtveg)
-        fpveg(id,j)=(CPIP(id)+tmp*khpsveg(j)/khpwveg(j))/ &
-                        &(khpsveg(j)+CPIP(id)+tmp*khpsveg(j)/khpwveg(j))
+        !!depth-averaged P
+        !tmp=0.0
+        !do k=1,nv
+        !  PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
+        !  tmp=tmp+PO4td*dep(k)
+        !enddo !k::nv
+        !xtveg=tmp/max(tdep,1.e-2_iwp)
+        !tmp=max(1.e-2_iwp,xtveg)
+        !fpveg(id,j)=(CPIP(id)+tmp*khpsveg(j)/khpwveg(j))/ &
+        !                &(khpsveg(j)+CPIP(id)+tmp*khpsveg(j)/khpwveg(j))
+        fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
+
 
         !--------------------
         !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients      
@@ -1700,8 +1703,8 @@ subroutine calkwq(id,nv,ure,it)
   !ncai_sav 
   real(kind=iwp) :: nprsav,fnsedsav,fpsedsav,denssav
   !ncai_veg
-  real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3),densveg(3)
-  real(kind=iwp) :: tmp,mtemp
+  !real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3)
+  real(kind=iwp) :: tmp,mtemp,densveg(3)
 
 
   !--------------------------------------------------------------------------------------
@@ -2697,30 +2700,30 @@ subroutine calkwq(id,nv,ure,it)
       b=b+rtmp
       if(iof_icm(135)==1) vegmtNH4(klev,id)=rtmp
     
-      !uptake for growth
-      rtmp=0.0 !init
-      do j=1,3
-        if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
-          !pre-calculation for NH4, and for NO3
-          nprveg(j)=(NH4(k,1)/(khnprveg(j)+NO3(k,1)))* &
-                          &(NO3(k,1)/(khnprveg(j)+NH4(k,1))+khnprveg(j)/(NH4(k,1)+NO3(k,1)+1.e-6))
-          fnsedveg(j)=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*khnsveg(j)/khnwveg(j)+1.e-8)
-     
-          if(nprveg(j)<0) then
-            write(errmsg,*)'npr<0.0: ',id,NH4(k,1),khnprveg(j),NO3(k,1),j,ielg(id),k
-            call parallel_abort(errmsg)
-          endif !nprveg(j)
-         
-          if(fnsedveg(j)<=0) then
-            write(errmsg,*)'fnsedveg<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnsveg(j),khnwveg(j),j,ielg(id),k
-            call parallel_abort(errmsg)
-          endif !fnsedveg(j)
-     
-          rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*nprveg(j)*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
-        endif
-      enddo !j::veg species
-      b=b+rtmp
-      if(iof_icm(136)==1) veggrNH4(klev,id)=rtmp
+      !!uptake for growth
+      !rtmp=0.0 !init
+      !do j=1,3
+      !  if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
+      !    !pre-calculation for NH4, and for NO3
+      !    nprveg(j)=(NH4(k,1)/(khnprveg(j)+NO3(k,1)))* &
+      !                    &(NO3(k,1)/(khnprveg(j)+NH4(k,1))+khnprveg(j)/(NH4(k,1)+NO3(k,1)+1.e-6))
+      !    fnsedveg(j)=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*khnsveg(j)/khnwveg(j)+1.e-8)
+      ! 
+      !    if(nprveg(j)<0) then
+      !      write(errmsg,*)'npr<0.0: ',id,NH4(k,1),khnprveg(j),NO3(k,1),j,ielg(id),k
+      !      call parallel_abort(errmsg)
+      !    endif !nprveg(j)
+      !   
+      !    if(fnsedveg(j)<=0) then
+      !      write(errmsg,*)'fnsedveg<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnsveg(j),khnwveg(j),j,ielg(id),k
+      !      call parallel_abort(errmsg)
+      !    endif !fnsedveg(j)
+      ! 
+      !    rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*nprveg(j)*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
+      !  endif
+      !enddo !j::veg species
+      !b=b+rtmp
+      !if(iof_icm(136)==1) veggrNH4(klev,id)=rtmp
     endif
 
     NH4(k,2)=((1.0+a*dtw2)*NH4(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -2745,18 +2748,18 @@ subroutine calkwq(id,nv,ure,it)
       if(iof_icm(90)==1) savgrNO3(klev,id)=rtmp/max(1.e-5,dep(k))
     endif
 
-    !ncai_veg
-    if(iveg_icm==1) then
-      rtmp=0.0
-      do j=1,3
-        if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
-          rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*(1-nprveg(j))*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
-        endif
-      enddo !j::veg species
-      b=b+rtmp
-      if(iof_icm(137)==1) veggrNO3(klev,id)=rtmp
-    endif
-
+    !!ncai_veg
+    !if(iveg_icm==1) then
+    !  rtmp=0.0
+    !  do j=1,3
+    !    if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
+    !      rtmp=rtmp-ancveg(j)*(1-fnsedveg(j))*(1-nprveg(j))*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
+    !    endif
+    !  enddo !j::veg species
+    !  b=b+rtmp
+    !  if(iof_icm(137)==1) veggrNO3(klev,id)=rtmp
+    !endif
+    
     NO3(k,2)=NO3(k,1)+b*dtw
     NO3(k,1)=0.5*(NO3(k,1)+NO3(k,2))
 
@@ -2968,22 +2971,22 @@ subroutine calkwq(id,nv,ure,it)
       if(iof_icm(141)==1) vegmtPO4(klev,id)=rtmp
      
       !uptake for growth
-      rtmp=0.0 !init
-      do j=1,3
-        if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
-          !pre-calculation for P
-          fpsedveg(j)=CPIP(id)/(CPIP(id)+PO4t(k,1)*khpsveg(j)/khpwveg(j)+1.e-8)
-     
-          if(fpsedveg(j)<=0) then
-            write(errmsg,*)'fpsedveg<0.0:',id,PO4t(k,1),CPIP(id),khpsveg(j),khpwveg(j),j,ielg(id),k
-            call parallel_abort(errmsg)
-          endif !fpsedveg(j)
-     
-          rtmp=rtmp-apcveg(j)*(1-fpsedveg(j))*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
-        endif
-      enddo !j::veg species
-      b=b+rtmp
-      if(iof_icm(142)==1) veggrPO4(klev,id)=rtmp
+      !rtmp=0.0 !init
+      !do j=1,3
+      !  if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
+      !    !pre-calculation for P
+      !    fpsedveg(j)=CPIP(id)/(CPIP(id)+PO4t(k,1)*khpsveg(j)/khpwveg(j)+1.e-8)
+      !
+      !    if(fpsedveg(j)<=0) then
+      !      write(errmsg,*)'fpsedveg<0.0:',id,PO4t(k,1),CPIP(id),khpsveg(j),khpwveg(j),j,ielg(id),k
+      !      call parallel_abort(errmsg)
+      !    endif !fpsedveg(j)
+      !
+      !    rtmp=rtmp-apcveg(j)*(1-fpsedveg(j))*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,min(tdep,hcanveg(id,j)))
+      !  endif
+      !enddo !j::veg species
+      !b=b+rtmp
+      !if(iof_icm(142)==1) veggrPO4(klev,id)=rtmp
     endif
 
     PO4t(k,2)=((1.0+a*dtw2)*PO4t(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -3347,11 +3350,11 @@ subroutine calkwq(id,nv,ure,it)
       if(iveg_icm==1.and.ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id).and.patchveg(id)==1) then
         !sediment flux/uptake from this layer, unit: g/m^2/day
         if(k==knveg(j)) then
-          lfNH4veg(k,j)=ancveg(j)*fnsedveg(j)*plfveg(id,j)*tlfveg(id,j)*(hcanveg(id,j)-sum(dep((k+1):nv)))/max(1.e-5,min(tdep,hcanveg(id,j)))
-          lfPO4veg(k,j)=apcveg(j)*fpsedveg(j)*plfveg(id,j)*tlfveg(id,j)*(hcanveg(id,j)-sum(dep((k+1):nv)))/max(1.e-5,min(tdep,hcanveg(id,j)))
+          lfNH4veg(k,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j)*(hcanveg(id,j)-sum(dep((k+1):nv)))/max(1.e-5,min(tdep,hcanveg(id,j)))
+          lfPO4veg(k,j)=apcveg(j)*plfveg(id,j)*tlfveg(id,j)*(hcanveg(id,j)-sum(dep((k+1):nv)))/max(1.e-5,min(tdep,hcanveg(id,j)))
         else
-          lfNH4veg(k,j)=ancveg(j)*fnsedveg(j)*plfveg(id,j)*tlfveg(id,j)*dep(k)/max(1.e-5,min(tdep,hcanveg(id,j)))
-          lfPO4veg(k,j)=apcveg(j)*fpsedveg(j)*plfveg(id,j)*tlfveg(id,j)*dep(k)/max(1.e-5,min(tdep,hcanveg(id,j)))
+          lfNH4veg(k,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j)*dep(k)/max(1.e-5,min(tdep,hcanveg(id,j)))
+          lfPO4veg(k,j)=apcveg(j)*plfveg(id,j)*tlfveg(id,j)*dep(k)/max(1.e-5,min(tdep,hcanveg(id,j)))
         endif      
 
         !nan check
