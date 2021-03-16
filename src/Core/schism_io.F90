@@ -282,17 +282,17 @@
         var2d_dims(1)=node_dim
         var3d_dims(2)=node_dim
         var4d_dims(3)=node_dim
-        idim2p=npa !final output dim
+        idim2p=np !final output dim
       else if(i23d<=6) then !elem
         var2d_dims(1)=nele_dim
         var3d_dims(2)=nele_dim
         var4d_dims(3)=nele_dim
-        idim2p=nea
+        idim2p=ne
       else if(i23d<=9) then !side
         var2d_dims(1)=nedge_dim
         var3d_dims(2)=nedge_dim
         var4d_dims(3)=nedge_dim
-        idim2p=nsa
+        idim2p=ns
       else
         call parallel_abort('writeout_nc: unknown i23d')       
       endif
@@ -384,9 +384,9 @@
 
       if(iopen==1) iret=nf90_close(ncid_schism_io)
       iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_io)
-      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_node',npa,node_dim)
-      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',nea,nele_dim)
-      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',nsa,nedge_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_node',np,node_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',ne,nele_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',ns,nedge_dim)
       iret=nf90_def_dim(ncid_schism_io,'nMaxSCHISM_hgrid_face_nodes',4, four_dim)
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_vgrid_layers',nvrt,nv_dim)
       iret=nf90_def_dim(ncid_schism_io,'one',1,one_dim)
