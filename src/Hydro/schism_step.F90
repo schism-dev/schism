@@ -71,7 +71,8 @@
                          &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
                          &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg, &
                          &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg, &
-                         &PrmPrdtveg,PrmPrdtsav
+                         &plfsav,pmaxsav,fisav,fnsav,fpsav, &
+                         &PrmPrdtveg,PrmPrdtsav,rad_el
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &sed_BENDO,CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -8439,13 +8440,28 @@
        &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,3)))
         endif
 
-        if(iof_icm(177)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+181), &
-     &'ICM_PrmPrdtsav',5,nvrt,nea,dble(PrmPrdtsav))
-        if(iof_icm(178)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+182), &
+        if(iof_icm(177)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+181), &
      &'ICM_PrmPrdtveg',4,1,nea,dble(PrmPrdtveg))
+        if(iof_icm(178)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+182), &
+     &'ICM_PrmPrdtsav',5,nvrt,nea,dble(PrmPrdtsav))
 
-        noutput=noutput+178
-        icount=178 !offset
+        if(iof_icm(179)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+183), &
+     &'ICM_plfsav',5,nvrt,nea,dble(plfsav))
+        if(iof_icm(180)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+184), &
+     &'ICM_pmaxsav',5,nvrt,nea,dble(pmaxsav))
+        if(iof_icm(181)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+185), &
+     &'ICM_fisav',5,nvrt,nea,dble(fisav))
+        if(iof_icm(182)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+186), &
+     &'ICM_fnsav',5,nvrt,nea,dble(fnsav))
+        if(iof_icm(183)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+187), &
+     &'ICM_fpsav',5,nvrt,nea,dble(fpsav))
+
+
+        if(iof_icm(184)==1) call writeout_nc(id_out_var(noutput+188), &
+     &'ICM_rad',5,nvrt,nea,dble(rad_el))
+
+        noutput=noutput+184
+        icount=184 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

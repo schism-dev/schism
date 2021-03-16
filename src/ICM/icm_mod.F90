@@ -53,7 +53,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(kind=iwp),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
   !(nvrt,nea)>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el
+  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,rad_el
 
   !ncai_sav + ncai_veg :: uniformed vegetation height, density
   real(kind=iwp),save,allocatable,dimension(:) :: tthcan,ttdens !(nea) 
