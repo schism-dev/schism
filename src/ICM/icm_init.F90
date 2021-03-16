@@ -294,7 +294,7 @@ subroutine icm_init
 
     if(iof_icm(177)==1) then
       allocate(PrmPrdtveg(nea),stat=istat)
-      if(istat/=0) call parallel_abort('Failed in alloc.178')
+      if(istat/=0) call parallel_abort('Failed in alloc.177')
       PrmPrdtveg=0.0
     endif
 
@@ -324,6 +324,12 @@ subroutine icm_init
     allocate(PON_el(nvrt,nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. 5')
     PON_el=0.0
+  endif
+
+  if(iof_icm(184)==1) then
+    allocate(rad_el(nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. 1')
+    rad_el=0.0
   endif
 
   !PB growth

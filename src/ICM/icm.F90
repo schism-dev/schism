@@ -950,7 +950,7 @@ subroutine landplant(id,hour,it)
 
   enddo !j::veg species
 
-  if(iof_icm(178)==1) then
+  if(iof_icm(177)==1) then
     PrmPrdtveg(id)=0.0 !init
     do j=1,3
       PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
@@ -1426,7 +1426,9 @@ subroutine photosynthesis(id,hour,nv,it)
 
       !refresh sLight to next layer
       sLight=bLight
-
+      if(iof_icm(184)==1)then
+        rad_el(klev,id)=sLight
+      endif
 
       !--------------------------------------------------------------------------------
       !ncai_sav limitation functions-----------------------------------
@@ -1998,7 +2000,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
     enddo !j::veg species
 
-    if(iof_icm(178)==1) then
+    if(iof_icm(177)==1) then
       PrmPrdtveg(id)=0.0 !init
       do j=1,3
         PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
@@ -2095,7 +2097,7 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif
       lfsav(klev,id)=lfsav(klev,id)*exp(rtmp) !lfsav>0 with seeds, =0 for no seeds with rtmp/=0
-      if(iof_icm(177)==1) then
+      if(iof_icm(178)==1) then
         PrmPrdtsav(klev,id)=lfsav(klev,id)*plfsav(klev,id)
       endif !output sav production
 
