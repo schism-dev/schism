@@ -283,6 +283,12 @@
         close(13)
       endif !itran
 
+      if(minval(kbp)<2) then
+        print*, '# of levels <2:',minval(kbp)
+        print*, 'Check parameters like dz_bot_min etc'
+        stop
+      endif
+
       nvrt=maxval(kbp)
       print*, 'Final nvrt=',nvrt
 !     # of prisms

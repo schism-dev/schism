@@ -26,17 +26,16 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R3000 and up);
-!     (4) include.gr3: if depth=0, skip the interpolation to speed up.
-!                      Should be larger than the non-0 regions in *_nudge.gr3
+!     (4) TEM_nudge.gr3: used to mark elem's that need nudging (assuming identical to SAL_nudge.gr3!)
 !     (5) gen_nudge_from_nc.in: 
 !                     1st line: T,S values for pts outside bg grid in nc (make sure nudging zone is inside bg grid in nc)
 !                     2nd line: time step in .nc in sec; output stride
 !                     3rd line: # of nc files
 !     (6) HYCOM files: TS_[1,2,..nfiles].nc (includes lon/lat; beware scaling etc)
 !                      The extent the HYCOM files cover needs to be
-!                      larger than the region specified in include.gr3,
+!                      larger than the nudging region specified in TEM_nudge.gr3,
 !                      and lon/lat coord monotonically increasing.
-!   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only)
+!   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only); include3.gr3 (nudging zone)
 !   Debug outputs: fort.11 (fatal errors); fort.*
 
       program gen_hot
@@ -94,7 +93,7 @@
       dimension nx(4,4,3),month_day(12)
       dimension ndays_mon(12)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
-      real*8 :: aa1(1)
+      real*8 :: aa1(1),dtmp
 
 !     First statement
 !     Currently we assume rectangular grid in HYCOM
@@ -106,7 +105,7 @@
 !      hr_char=(/'03','09','15','21'/) !each day has 4 starting hours in ROMS
 
       open(10,file='gen_nudge_from_nc.in',status='old')
-      read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc or include.gr3
+      read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc or TEM_nudge.gr3
       read(10,*) dtout,nt_out !time step in .nc [sec], output stride
       !read(10,*) istart_year,istart_mon,istart_day 
       read(10,*) nndays !# of nc files
@@ -114,7 +113,7 @@
 
 !     Read in hgrid and vgrid
       open(16,file='hgrid.ll',status='old')
-      open(15,file='include.gr3',status='old')
+      open(15,file='TEM_nudge.gr3',status='old')
       open(14,file='hgrid.gr3',status='old') !only need depth info and connectivity
       open(19,file='vgrid.in',status='old')
       open(11,file='fort.11',status='replace')
@@ -126,8 +125,13 @@
       do i=1,np
         read(14,*)j,xtmp,ytmp,dp(i)
         read(16,*)j,xl(i),yl(i) !,dp(i)
-        read(15,*)j,xtmp,ytmp,tmp
-        include2(i)=nint(tmp)
+        read(15,*)j,xtmp,ytmp,dtmp
+        !dtmp is double
+        if(abs(dtmp)>1.d-14) then
+          include2(i)=1 !nint(tmp)
+        else
+          include2(i)=0
+        endif
       enddo !i
       do i=1,ne
         read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
@@ -145,9 +149,32 @@
 !        enddo
 !      enddo
 
+!     Expand nudging marker to neighbors (to account for elem)
+      imap=include2 !temp save
+      do i=1,ne
+        if(maxval(include2(elnode(1:i34(i),i)))>0) then
+          imap(elnode(1:i34(i),i))=1
+        endif
+      enddo !i
+      include2=imap
+
       close(14)
       close(15)
       close(16)
+
+      !Output
+      open(15,file='include3.gr3',status='replace')      
+      write(15,*); write(15,*)ne,np
+      icount=0
+      do i=1,np
+        write(15,*)i,xl(i),yl(i),include2(i)
+        if(include2(i)>0) icount=icount+1
+      enddo !i
+      print*, icount,' nodes included in _nu.nc'
+      do i=1,ne
+        write(15,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+      enddo !i
+      close(15)
 
 !     V-grid
       read(19,*)ivcor
