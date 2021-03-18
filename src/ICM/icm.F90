@@ -953,7 +953,7 @@ subroutine landplant(id,hour,it)
   if(iof_icm(177)==1) then
     PrmPrdtveg(id)=0.0 !init
     do j=1,3
-      PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
+      PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)*(1-famveg(j))-bmlfveg(j)*tlfveg(id,j)-bmstveg(j)*tstveg(id,j)-bmrtveg(j)*trtveg(id,j)
     enddo !j::veg species
   endif !output production
 
@@ -2003,7 +2003,7 @@ subroutine calkwq(id,nv,ure,it)
     if(iof_icm(177)==1) then
       PrmPrdtveg(id)=0.0 !init
       do j=1,3
-        PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)
+        PrmPrdtveg(id)=PrmPrdtveg(id)+plfveg(id,j)*tlfveg(id,j)*(1-famveg(j))-bmlfveg(j)*tlfveg(id,j)-bmstveg(j)*tstveg(id,j)-bmrtveg(j)*trtveg(id,j)
       enddo !j::veg species
     endif !output production
 
@@ -2097,9 +2097,6 @@ subroutine calkwq(id,nv,ure,it)
         call parallel_abort(errmsg)
       endif
       lfsav(klev,id)=lfsav(klev,id)*exp(rtmp) !lfsav>0 with seeds, =0 for no seeds with rtmp/=0
-      if(iof_icm(178)==1) then
-        PrmPrdtsav(klev,id)=lfsav(klev,id)*plfsav(klev,id)
-      endif !output sav production
 
       !nan check
       if(.not.(lfsav(klev,id)>0.or.lfsav(klev,id)<=0))then
@@ -2148,6 +2145,10 @@ subroutine calkwq(id,nv,ure,it)
       !  write(99,*)it,id,k,stsav(klev,id)
       !  write(99,*)it,id,k,rtsav(klev,id)
       !endif!id,k
+
+      if(iof_icm(178)==1) then
+        PrmPrdtsav(klev,id)=lfsav(klev,id)*plfsav(klev,id)*(1-famsav)-lfsav(klev,id)*bmlfsav(k)-stsav(klev,id)*bmstsav(k)-rtsav(klev,id)*bmrtsav(k)
+      endif !output net sav production
 
     endif !isav_icm
     !--------------------------------------------------------------------------------------
