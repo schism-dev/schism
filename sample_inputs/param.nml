@@ -1134,6 +1134,7 @@
 !  iof_ice(6)= 0 !ice volume [m] {ICE_tracer_1}
 !  iof_ice(7)= 0 !ice concentration [-] {ICE_tracer_2}
 !  iof_ice(8)= 0 !snow volume [m] {ICE_tracer_3}
+!  iof_ice(9)= 0 !1st BGC tracer {ICE_tracer_4}
 
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)

@@ -82,7 +82,8 @@ subroutine ice_mevp
 
     !Solve mom eq.
     do i=1,np !resident
-      if(isbnd(1,i)/=0) then !b.c. (including open)
+!JZ Error: this is not strictly right as there is a bnd integral ommitted
+      if(isbnd(1,i)==-1) then !land bnd
         u_ice(i)=0; v_ice(i)=0
         cycle
       endif

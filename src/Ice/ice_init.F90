@@ -27,13 +27,13 @@ subroutine ice_init
   integer :: i,j,ie,istat,nd,nd2,m,mm,indx
   real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
  &det,der_transp(3,2),derivative_stdbf(2,3) 
-  namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
+  namelist /ice_in/ntr_ice,ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
  &delta_min,theta_io,mevp_alpha1,mevp_alpha2,pstar,ellipse,c_pressure,niter_fct, &
  &ice_gamma_fct,h_ml0,salt_ice,salt_water
   
   !Init parameters
   !integers
-  ice_tests=-1e6; ice_advection=-1e6; ice_therm_on=-1e6; ievp=-1e6; evp_rheol_steps=-1e6;
+  ntr_ice=3; ice_tests=-1e6; ice_advection=-1e6; ice_therm_on=-1e6; ievp=-1e6; evp_rheol_steps=-1e6;
   mevp_rheol_steps=-1e6; niter_fct=-1e6; 
   !Doubles
   ice_cutoff=-huge(1.d0); delta_min=-huge(1.d0); theta_io=-huge(1.d0);
@@ -61,6 +61,8 @@ subroutine ice_init
   if(ice_gamma_fct<0) call parallel_abort('ice_init: ice_gamma_fct')
   if(h_ml0<=0) call parallel_abort('ice_init: h_ml0')
   if(salt_ice<0.or.salt_water<0) call parallel_abort('ice_init: salt_water')
+  !iof_ice(100)
+  if(ntr_ice<3.or.ntr_ice+5>100) call parallel_abort('ice_init: ntr_ice<3 | ntr_ice+5>100')
   
   dt_ice=dt*nstep_ice
   cos_io=cos(theta_io/180*pi)
@@ -84,6 +86,14 @@ subroutine ice_init
   if(ice_tests==0) then !normal
     ice_tr=0
     lice_free_gb=.true. !for normal cases, always start from ice free
+
+!YJZ: add i.c. for other BGC tracers here
+    do m=4,ntr_ice
+      do i=1,npa
+        ice_tr(m,i)=0.d0
+      enddo !i
+    enddo !m
+!End YJZ
   else !box test
     xmin_ice=-33.34015; ymin_ice=3334060.
     xmax_ice=1222472.; ymax_ice=4556532.

@@ -6,6 +6,7 @@
 !(6) Not all required variables need to be present, but all that are present must belong to the list below. Best to list _all_ parameters.
 
 &ice_in
+  ntr_ice = 3 !(>=3) # of tracers bound to ice
   ice_tests = 0  !box test flag
   ice_advection = 1 !advection on/off
   ice_therm_on = 1 !ice thermodynamics on/off flag
