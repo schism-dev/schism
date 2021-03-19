@@ -26,7 +26,7 @@
 #SBATCH -J CORIE         # Job name
 #SBATCH -o myjob.o%j       # Name of stdout output file
 #SBATCH -e myjob.e%j       # Name of stderr error file
-##Available partitions and limits in q_limits.txt. 'flex' is greater for back filling
+##Available partitions and limits in q_limits.txt. 'flex' is great for back filling jobs
 ##flex: lower priority, max 128 nodes, preempt_time=1hr; max time=2days. 0.8SU charge rate.
 ##'development': max 40 nodes, 2hrs. Max 1 job
 #SBATCH -p development    # Queue (partition) name
