@@ -31,11 +31,6 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 #set(HDF5_DIR  /opt/hdf5/1.10.4-intel64 CACHE PATH "Path to HDF5")
 #set(SZIP_DIR /opt/szip/2.1.1-intel64 CACHE PATH "Path to SZip compression library")
 
-# PETSC hasn't been maintained, not sure of status (Eli).
-#set(PETSC_DIR  /Calcul/Apps/PETSc/3.3-p4.intel/ PATH "Path to PETC, (if unset, defaults to pre-built local copy)")
-#set(GOTM_HOME  /home/eli/myscratch/gotm_v5.2 CACHE PATH "Path to GOTM")
-
-
 
 ######################## COMPILE AND BUILD OPTIONS ##############################################
 #
