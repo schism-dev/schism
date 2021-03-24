@@ -443,7 +443,7 @@
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=8._rkind;  
-      itr_met=1; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
+      itr_met=3; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
       courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-3; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
@@ -822,36 +822,23 @@
      
 !...  Transport method for all tracers including T,S
 !     1: upwind; 2: TVD (explicit); 3: TVD (implicit vertical); 4: WENO (implicit vertical)
-!      call get_param('param.in','itr_met',1,itr_met,tmp,stringvalue)
       if(itr_met<1.or.itr_met>4) then
         write(errmsg,*)'Unknown tracer method',itr_met
         call parallel_abort(errmsg)
       endif
-!      if(itr_met>=2) then !TVD
-!        call get_param('param.in','h_tvd',2,itmp,h_tvd,stringvalue)
-!      endif
    
-      !For implicit transport, read in tolerances for convergence
-!      if(itr_met==3.or.itr_met==4) then
-!        call get_param('param.in','eps1_tvd_imp',2,itmp,eps1_tvd_imp,stringvalue)
-!        call get_param('param.in','eps2_tvd_imp',2,itmp,eps2_tvd_imp,stringvalue)
-!      endif
-
       !weno>
       if(itr_met==4) then !WENO
-!        call get_param('param.in','ip_weno',1,ip_weno,tmp,stringvalue)
         if(ip_weno<0.or.ip_weno>2) then
           write(errmsg,*)'Illegal ip_weno:',ip_weno
           call parallel_abort(errmsg)
         endif
 
-!        call get_param('param.in','courant_weno',2,itmp,courant_weno,stringvalue)
         if(courant_weno<=0._rkind) then
           write(errmsg,*)'Illegal courant_weno:',courant_weno
           call parallel_abort(errmsg)
         endif
 
-!        call get_param('param.in','ntd_weno',1,ntd_weno,tmp,stringvalue)
         if(ntd_weno.ne.1 .and. ntd_weno.ne.3) then
           write(errmsg,*)'Illegal ntd_weno:',ntd_weno
           call parallel_abort(errmsg)
@@ -3742,7 +3729,7 @@
 !     between T,S and all tracers. Also if h_tvd>=1.e5 and itr_met>=3, then upwind is used for all tracers 
 !     and some parts of the code are bypassed for efficiency
       itvd_e=0 !init. for upwind
-      if(itr_met>=2) then
+      if(itr_met>=2.and.(ibc==0.or.ibtp==1)) then
         open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
         do i=1,ne_global
           read(32,*)j,tmp
