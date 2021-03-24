@@ -215,7 +215,7 @@ subroutine read_icm_param2
   call get_param('icm.in','iWS',1,iWS,rtmp,stmp)
   call get_param('icm.in','iReg_WS',1,iReg_WS,rtmp,stmp)
 
-  if(iWS>3.or.iReg_WS<=1) then
+  if(iWS>3.or.iReg_WS<1) then
     write(errmsg,*)'Illegal ICM paramter iWS, iReg_WS ',iWS,iReg_WS
     call parallel_abort(errmsg)
   endif ! iWS
@@ -523,7 +523,7 @@ subroutine read_icm_param2
   call get_param('icm.in','iPRR',1,iPRR,rtmp,stmp)
   call get_param('icm.in','iReg_PR',1,iReg_PR,rtmp,stmp)
 
-  if(iPRR>3.or.iReg_PR<=1) then
+  if(iPRR>3.or.iReg_PR<1) then
     write(errmsg,*)'Illegal ICM paramter iPRR, iReg_PR ',iPRR,iReg_PR
     call parallel_abort(errmsg)
   endif ! iPRR
