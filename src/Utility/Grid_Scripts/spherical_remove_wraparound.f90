@@ -3,7 +3,7 @@
 !     Input: screen
 !     Output: nowrap_[]
 
-!     ifort -O2 -CB -o display_lonlat_grid display_lonlat_grid.f90
+!     ifort -O2 -CB -o spherical_remove_wraparound spherical_remove_wraparound.f90
 
       implicit real*8(a-h,o-z)
       character*80 fn1
