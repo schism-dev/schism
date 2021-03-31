@@ -561,6 +561,7 @@
       if(if_source==1) then !ASCII
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
+          rewind(63)
           read(63,*)tmp,ath3(1:nsources,1,1,1)
           read(63,*)th_dt3(1),ath3(1:nsources,1,2,1)
           if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(1)<dt) call parallel_abort('INIT: vsource.th start time wrong')
@@ -576,6 +577,7 @@
           !msource.th: values in concentration dimension (psu etc)
           !Use -9999 to injet ambient values
           open(65,file=in_dir(1:len_in_dir)//'msource.th',status='old')
+          rewind(65)
           read(65,*)tmp,ath3(1:nsources,1:ntracers,1,3)
           read(65,*)th_dt3(3),ath3(1:nsources,1:ntracers,2,3)
           if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(3)<dt) call parallel_abort('INIT: msource.th start time wrong')
@@ -591,6 +593,7 @@
    
         if(nsinks>0) then
           open(64,file=in_dir(1:len_in_dir)//'vsink.th',status='old') !values (<=0) in m^3/s
+          rewind(64)
           read(64,*)tmp,ath3(1:nsinks,1,1,2)
           read(64,*)th_dt3(2),ath3(1:nsinks,1,2,2)
           if(abs(tmp)>real(1.e-6,rkind).or.th_dt3(2)<dt) call parallel_abort('INIT: vsink.th start time wrong')
