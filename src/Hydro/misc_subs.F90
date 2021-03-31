@@ -406,6 +406,7 @@
 !...  Init reading t.h. files 
       if(nettype>0) then
         open(50,file=in_dir(1:len_in_dir)//'elev.th',status='old')
+        rewind(50)
         !Get dt 1st
         read(50,*)tmp !,ath(1:nettype,1,1,1)
         read(50,*)th_dt(1,1) !,ath(1:nettype,1,2,1)
@@ -422,6 +423,7 @@
 
       if(nfltype>0) then 
         open(51,file=in_dir(1:len_in_dir)//'flux.th',status='old')
+        rewind(51)
         read(51,*) tmp !,ath(1:nfltype,1,1,2)
         read(51,*) th_dt(1,2) !
         if(abs(tmp)>real(1.e-6,rkind).or.th_dt(1,2)<dt) call parallel_abort('INIT: check flux.th')
