@@ -188,7 +188,7 @@
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
-                     &bigfa1,bigfa2,vnf
+                     &bigfa1,bigfa2,vnf,grav2
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -284,6 +284,12 @@
       tau_bottom_nodes(:)=0.0d0
 #endif
 
+!     SAL option: scale gravity
+      if(iloadtide==2) then
+        grav2=grav*0.9d0
+      else
+        grav2=grav
+      endif
 
 !     Alloc
       allocate(hp_int(nvrt,nea,2),uth(nvrt,nsa),vth(nvrt,nsa),d2uv(2,nvrt,nsa), &
@@ -421,9 +427,9 @@
           arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
           etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
 
-          if(iloadtide/=0) then !loading tide
+          if(iloadtide==1) then !loading tide
             etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
-          endif !iloadtide/
+          endif !iloadtide
         enddo !j
       enddo !i
 !$OMP end do
@@ -4932,10 +4938,10 @@
         ghat1(2,i)=ghat1(2,i)/real(i34(i),rkind)
       
         !Finish off terms in F, F^\alpha and f_b
-        botf1=grav*detpdx-dprdx/rho0 !const in each elem
-        botf2=grav*detpdy-dprdy/rho0
-        !botf1=0.69d0*grav*detpdx-dprdx/rho0 !const in each elem
-        !botf2=0.69d0*grav*detpdy-dprdy/rho0
+        botf1=grav2*detpdx-dprdx/rho0 !const in each elem
+        botf2=grav2*detpdy-dprdy/rho0
+        !botf1=0.69d0*grav2*detpdx-dprdx/rho0 !const in each elem
+        !botf2=0.69d0*grav2*detpdy-dprdy/rho0
         tmp1=0.d0; tmp2=0.d0 !elem average of all terms; into ghat1
         do j=1,i34(i) !side
           isd=elside(j,i)
@@ -5053,9 +5059,9 @@
             dot2=(xel(id3,ie)-xel(id2,ie))*(xel(id,ie)-xel(id3,ie))+ &
      &           (yel(id3,ie)-yel(id2,ie))*(yel(id,ie)-yel(id3,ie))
             dot3=-dot1-dot2
-            tmp0=area(ie)/6.d0+grav*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot1
-            swild(1)=area(ie)/12.d0+grav*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot2 !for node (i,1)
-            swild(2)=area(ie)/12.d0+grav*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot3 !for node (i,2)
+            tmp0=area(ie)/6.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot1
+            swild(1)=area(ie)/12.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot2 !for node (i,1)
+            swild(2)=area(ie)/12.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot3 !for node (i,2)
             sparsem(0,i)=sparsem(0,i)+tmp0
 
             do jj=1,2 !other 2 nodes
@@ -5091,7 +5097,7 @@
               swild10(1,l)=quad_int(1,ie,id,l)
               swild10(2,l)=quad_int(2,ie,id,l)
 
-              sparsem(indx,i)=sparsem(indx,i)+swild10(1,l)+grav*thetai*thetai*dt*dt* &
+              sparsem(indx,i)=sparsem(indx,i)+swild10(1,l)+grav2*thetai*thetai*dt*dt* &
      &hhatb*swild10(2,l)
 
               !Debug
@@ -5152,7 +5158,7 @@
               detadx=dot_product(eta2(elnode(1:3,ie)),dldxy(1:3,1,ie))
               detady=dot_product(eta2(elnode(1:3,ie)),dldxy(1:3,2,ie))
               tmp=dldxy(id,1,ie)*detadx+dldxy(id,2,ie)*detady
-              qel(i)=qel(i)-area(ie)*grav*dt*dt*thetai*(1.d0-thetai)*hhatb*tmp
+              qel(i)=qel(i)-area(ie)*grav2*dt*dt*thetai*(1.d0-thetai)*hhatb*tmp
             endif !idry
 
           else !quad
@@ -5163,7 +5169,7 @@
               else
                 tmp2=bdef2(nd)-bdef1(nd)
               endif !imm 
-              qel(i)=qel(i)+(eta2(nd)+tmp2)*swild10(1,l)-eta2(nd)*grav*thetai*(1.d0-thetai)*dt*dt*hhatb*swild10(2,l)
+              qel(i)=qel(i)+(eta2(nd)+tmp2)*swild10(1,l)-eta2(nd)*grav2*thetai*(1.d0-thetai)*dt*dt*hhatb*swild10(2,l)
             enddo !l
           endif !i34       
 
@@ -5640,8 +5646,8 @@
       swild98(1,:,:)=su2(:,:)
       swild98(2,:,:)=sv2(:,:)
       ! Storing the barotropic gradient for outputting purpose		  
-      bpgr(:,1) = -grav*(1-thetai)*deta1_dx(:)-grav*thetai*deta2_dx(:)
-      bpgr(:,2) = -grav*(1-thetai)*deta1_dy(:)-grav*thetai*deta2_dy(:)
+      bpgr(:,1) = -grav2*(1-thetai)*deta1_dx(:)-grav2*thetai*deta2_dx(:)
+      bpgr(:,2) = -grav2*(1-thetai)*deta1_dy(:)-grav2*thetai*deta2_dy(:)
 !$OMP end workshare
 
 !...  Along each side
@@ -5677,11 +5683,11 @@
           tauy2=(tau(2,node1)+tau(2,node2))/2.d0
 
           !hat_gam_[xy] has a dimension of m/s
-          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav*detp_dx(j)+ &
-          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav*detp_dx(j)+ &
-     &bcc(1,kbs(j),j)+taux2/htot)-grav*(1-thetai)*dt*deta1_dx(j)-grav*thetai*dt*deta2_dx(j)
-          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav*detp_dy(j)+ &
-     &bcc(2,kbs(j),j)+tauy2/htot)-grav*(1-thetai)*dt*deta1_dy(j)-grav*thetai*dt*deta2_dy(j)
+          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav2*detp_dx(j)+ &
+          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav2*detp_dx(j)+ &
+     &bcc(1,kbs(j),j)+taux2/htot)-grav2*(1-thetai)*dt*deta1_dx(j)-grav2*thetai*dt*deta2_dx(j)
+          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav2*detp_dy(j)+ &
+     &bcc(2,kbs(j),j)+tauy2/htot)-grav2*(1-thetai)*dt*deta1_dy(j)-grav2*thetai*dt*deta2_dy(j)
 !         Radiation stress
 #ifdef USE_WWM
           !wwave_force in eframe
@@ -5767,16 +5773,16 @@
           rrhs(2,kin)=0.d0
 !	  Elevation gradient, atmo. pressure and tidal potential
           if(k<nvrt) then
-            rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
-            rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
+            rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav2*thetai*deta2_dx(j)+ &
+                       &grav2*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav2*detp_dx(j))
+            rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav2*thetai*deta2_dy(j)+ &
+                       &grav2*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav2*detp_dy(j))
           endif
           if(k>kbs(j)+1) then 
-            rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dx(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav*detp_dx(j))
-            rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav*thetai*deta2_dy(j)+ &
-                       &grav*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav*detp_dy(j))
+            rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav2*thetai*deta2_dx(j)+ &
+                       &grav2*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav2*detp_dx(j))
+            rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav2*thetai*deta2_dy(j)+ &
+                       &grav2*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav2*detp_dy(j))
           endif
 
 !	  Coriolis, advection, wind stress, and horizontal viscosity
@@ -8613,9 +8619,9 @@
         if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
         if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
+     &'ANA_tide_pot_grad_x',7,1,nsa,grav2*detp_dx)
         if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
+     &'ANA_tide_pot_grad_y',7,1,nsa,grav2*detp_dy)
         if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
         if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &

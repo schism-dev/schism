@@ -2450,10 +2450,10 @@
         if(iorder==0) then
           allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
           if(istat/=0) call parallel_abort('INIT: allocation failure for tamp etc')
-          if(iloadtide/=0) then !loading tide (SAL)
+          if(iloadtide==1) then !loading tide (SAL) interpolated from another model
             allocate(rloadtide(2,ntip,npa),stat=istat)
             if(istat/=0) call parallel_abort('INIT: alloc failure for SAL')
-          endif !iloadtide/
+          endif !iloadtide
         endif !iorder
 !'
         open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
@@ -2484,7 +2484,7 @@
           tear(i)=tear(i)*pi/180.d0
         enddo !i
 
-        if(iloadtide/=0) then !loading tide
+        if(iloadtide==1) then !loading tide
           do i=1,ntip
             char6=adjustl(tp_name(i))
             itmp=len_trim(char6)
