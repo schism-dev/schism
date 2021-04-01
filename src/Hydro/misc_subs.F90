@@ -440,6 +440,7 @@
       do i=1,natrm
         if(ntrs(i)>0.and.ntrtype1(i)>0) then !type I
           do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
+            rewind(300+m)
             read(300+m,*)tmp !,ath(1:ntrtype1(i),m,1,5)
             read(300+m,*)th_dt(m,5) !
             if(abs(tmp)>real(1.e-6,rkind).or.th_dt(m,5)<dt) call parallel_abort('INIT: check ASCII tracer .th')
