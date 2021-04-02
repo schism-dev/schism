@@ -198,7 +198,8 @@
         do i=1,nxy
           iglb=imap(i)
           do ie=1,ne
-            call pt_in_poly_single(i34(ie),x(elnode(1:i34(ie),ie)),y(elnode(1:i34(ie),ie)),x00(iglb),y00(iglb),inside,arco(i,1:3),nodel)
+            call pt_in_poly_single(i34(ie),real(x(elnode(1:i34(ie),ie))), &
+     &real(y(elnode(1:i34(ie),ie))),x00(iglb),y00(iglb),inside,arco(i,1:3),nodel)
             if(inside==1) then
               iep(i)=ie
               print*, 'Found:',i,arco(i,1:3),nodel

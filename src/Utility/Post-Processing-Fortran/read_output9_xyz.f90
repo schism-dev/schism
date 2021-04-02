@@ -171,7 +171,8 @@
         do i=1,ne
           do l=1,nxy
             if(iep(l)/=0) cycle
-            call pt_in_poly_single(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
+            call pt_in_poly_single(i34(i),real(x(elnode(1:i34(i),i))), &
+     &real(y(elnode(1:i34(i),i))),x00(l),y00(l),inside,arco(l,1:3),nodel)
             if(inside==1) then
               iep(l)=i
               !print*, 'Found:',l,arco(l,1:3),nodel

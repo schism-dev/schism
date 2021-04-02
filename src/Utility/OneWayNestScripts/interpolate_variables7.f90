@@ -290,11 +290,11 @@
               nwild(1:3)=(/1,3,4/)
             endif !j
             n1=elnode(nwild(1),ie); n2=elnode(nwild(2),ie); n3=elnode(nwild(3),ie)
-            ar1=signa_single(xfg(i),x(n2),x(n3),yfg(i),y(n2),y(n3))  
-            ar2=signa_single(x(n1),xfg(i),x(n3),y(n1),yfg(i),y(n3))
-            ar3=signa_single(x(n1),x(n2),xfg(i),y(n1),y(n2),yfg(i))
+            ar1=signa_single(xfg(i),real(x(n2)),real(x(n3)),yfg(i),real(y(n2)),real(y(n3)))  
+            ar2=signa_single(real(x(n1)),xfg(i),real(x(n3)),real(y(n1)),yfg(i),real(y(n3)))
+            ar3=signa_single(real(x(n1)),real(x(n2)),xfg(i),real(y(n1)),real(y(n2)),yfg(i))
             bb=abs(ar1)+abs(ar2)+abs(ar3)
-            aa=abs(signa_single(x(n1),x(n2),x(n3),y(n1),y(n2),y(n3)))
+            aa=abs(signa_single(real(x(n1)),real(x(n2)),real(x(n3)),real(y(n1)),real(y(n2)),real(y(n3))))
             rat=abs(bb-aa)/aa
             if(rat<ratmin(i)) then
               ratmin(i)=rat
