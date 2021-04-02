@@ -14,7 +14,7 @@ clear all; close all;
 
 iflag=2;
 %List of open bnd seg's that contain lon/lat of open bnd nodes
-open_ll={'fg.bp.0','fg.bp.1','fg.bp.2'}; 
+open_ll={'fg.bp.1','fg.bp.2','fg.bp.3'}; 
 
 %Output freq's must be first X of original freq's in nc
 const={'m2','s2','n2','k2','k1','o1','p1','q1'}; 
