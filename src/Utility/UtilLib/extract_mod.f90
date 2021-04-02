@@ -20,7 +20,9 @@
     character(len=48), save :: start_time 
     integer, save :: nrec,nspool,nvrt,kz,np,ne,ns,nproc
     real, save :: h0,fill_in,dtout
-    real, save, allocatable :: x(:),y(:),dp(:)
+    !coordinates in double
+    real*8, save, allocatable :: x(:),y(:)
+    real, save, allocatable :: dp(:)
     integer, save, allocatable :: kbp00(:),i34(:),elnode(:,:), &
   &iplg(:,:),ielg(:,:),islg(:,:),np_lcl(:),ne_lcl(:),ns_lcl(:),iegl_rank(:)
 

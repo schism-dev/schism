@@ -58,8 +58,10 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   integer,allocatable :: isdel(:,:),vlen(:),ne(:),np(:),ns(:),ihot_len(:), &
  &i34(:),nm2(:,:),kbp00(:),iplg(:,:),ielg(:,:),islg(:,:),kbs(:),kbe(:), &
  &ic3(:,:),isidenode(:,:),i23d(:),ivs(:),ndims(:),iu_id(:),idry(:),idry_e(:),idry_s(:)
+  !Coordinates in double
+  real*8,allocatable :: x(:),y(:)
   real,allocatable :: ztot(:),sigma(:),cs(:),eta2(:),outeb(:,:,:), &
- &outsb(:,:,:),worka(:,:,:),xctr(:),yctr(:),dpe(:),x(:),y(:),dp(:),xcj(:),ycj(:), &
+ &outsb(:,:,:),worka(:,:,:),xctr(:),yctr(:),dpe(:),dp(:),xcj(:),ycj(:), &
  &dps(:),eta2s(:),eta2e(:)
   character(len=48),allocatable :: variable_nm(:)
   character(len=1024)           :: to_be_combined
@@ -217,7 +219,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   allocate(ic3(4,ne_global),elside(4,ne_global),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2), &
   &worka(2,nvrt,ns2),stat=istat)
   if(istat/=0) stop 'Allocation error: side(0)'
-  call schism_geometry_single(np_global,ne_global,ns2,x,y,i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
+  call schism_geometry_single(np_global,ne_global,ns2,real(x),real(y),i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
   &elside(1:4,1:ne_global),isdel,isidenode,xcj,ycj)
 
   if(ns2/=ns_global) then
@@ -352,13 +354,13 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     iret=nf90_put_att(ncid,iedge_id,'start_index',1) !int_buffer)
       
     x_dims(1)=node_dim
-    iret=nf90_def_var(ncid,'SCHISM_hgrid_node_x',NF90_FLOAT,x_dims,ix_id)
+    iret=nf90_def_var(ncid,'SCHISM_hgrid_node_x',NF90_DOUBLE,x_dims,ix_id)
     iret=nf90_put_att(ncid,ix_id,'long_name','node x-coordinate')
     iret=nf90_put_att(ncid,ix_id,'standard_name',lon_coord_standard_name)
     iret=nf90_put_att(ncid,ix_id,'units',x_units)
     iret=nf90_put_att(ncid,ix_id,'mesh','SCHISM_hgrid')
       
-    iret=nf90_def_var(ncid,'SCHISM_hgrid_node_y',NF90_FLOAT,x_dims,iy_id)
+    iret=nf90_def_var(ncid,'SCHISM_hgrid_node_y',NF90_DOUBLE,x_dims,iy_id)
     iret=nf90_put_att(ncid,iy_id,'long_name','node y-coordinate')
     iret=nf90_put_att(ncid,iy_id,'standard_name',lat_coord_standard_name)
     iret=nf90_put_att(ncid,iy_id,'units',y_units)

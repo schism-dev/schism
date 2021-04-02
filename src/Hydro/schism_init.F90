@@ -5067,16 +5067,20 @@
       write(10,*)np,ne
       if(ics==1) then
         do m=1,np
-          write(10,*)real(xnd(m)),real(ynd(m)),real(dp00(m)),kbp00(m)
+          write(10,*)xnd(m),ynd(m),real(dp00(m)),kbp00(m)
         enddo !m
       else !lat/lon
         do m=1,np
-          write(10,*)real(xlon(m)/pi*180.d0),real(ylat(m)/pi*180.d0),real(dp00(m)),kbp00(m)
+          write(10,*)xlon(m)/pi*180.d0,ylat(m)/pi*180.d0,real(dp00(m)),kbp00(m)
         enddo !m
       endif !ics
       do m=1,ne
         write(10,*)i34(m),(elnode(mm,m),mm=1,i34(m))
       enddo !m
+
+      do i=1,ns
+        write(10,*)i,isidenode(1:2,i)
+      enddo !i
 
       close(10)
       
