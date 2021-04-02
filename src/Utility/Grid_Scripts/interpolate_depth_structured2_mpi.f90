@@ -14,11 +14,12 @@
 
 !     Interpolate depths from structured grid DEMs (.asc) to unstructured grid in
 !     parallel (in overlapping regions, the depth from larger rank/DEM prevails)
-!     Inputs: dems.in (# of DEMs; # of compute nodes (for load balancing
+!     Inputs: (1) dems.in (# of DEMs; # of compute nodes (for load balancing
 !     purpose))
-!             dem_????.asc (ordered properly for precedence, starting
-!             from 0000. Depth negative for water);
-!             hgrid.old (unstructured grid, mixed tri and quads)
+!             (2) dem_????.asc (ordered properly for precedence, starting
+!               from 0000. Depth negative for water);
+!             (3) hgrid.old (unstructured grid, mixed tri and quads)
+!             (4) Also remember to edit min depth and datum diff's to be imposed for each tile below ('new22')
 !     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
 !     mpif90 -O2 -mcmodel=medium -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
@@ -32,7 +33,8 @@
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
       integer, allocatable :: indx_sorted(:),imap(:),ndems_on_rank(:)
-      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:)
+      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:), &
+     &h_min(:),vdatum(:)
 
       call MPI_INIT(errcode)
       call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
@@ -58,11 +60,19 @@
       open(14,file='hgrid.old',status='old')
       read(14,*)
       read(14,*)ne,np
-      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems), &
-     &ndems_on_rank(0:nproc-1))
+      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems),h_min(ndems), &
+     &vdatum(ndems),ndems_on_rank(0:nproc-1))
       do i=1,np
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
+
+!     Prescribe the min depth and vdatum adjustments to be imposed for each tile
+!new22
+      h_min(:)=-20. !init
+      !First 7 are gebco
+      h_min(1:7)=5.
+      !vdatum is [datum]-MSL in meters
+      vdatum(:)=0
 
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
@@ -146,7 +156,7 @@
           print*, 'Rank ',myrank,' is doing DEM # ',idem, '; DEM size=',dims0(idem+1)
 
           open(62,file=trim(adjustl(fdb))//'.asc',status='old')
-          open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank
+          open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank using DEM ID
           read(62,*) cha1,nx !# of nodes in x
           read(62,*) cha1,ny !# of nodes in y
           read(62,*) cha2,xmin
@@ -155,6 +165,8 @@
           read(62,*) cha3,fill_value
           dx=dxy
           dy=dxy
+
+!          if(xmin<0) xmin=xmin+360
     
           allocate(dp1(nx,ny),stat=istat)
           if(istat/=0) then
@@ -219,8 +231,7 @@
                 h=h*ih+vshift
 
                 !Write temp output (in 'valid' region only)
-                write(19,*)i,h
-!                call flush(19)
+                write(19,*)i,max(h-vdatum(idem+1),h_min(idem+1))
               endif !junk
     
             endif
@@ -228,7 +239,7 @@
 
           deallocate(dp1)
         endif !irank==myrank
-      enddo !idem
+      enddo !idem=0,ndems-1
       close(19)
 
 !Debug
