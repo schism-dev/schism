@@ -769,20 +769,21 @@
                 endif
               enddo !ix
 
-              if(ixy(i,1)==0.or.ixy(i,2)==0) then
-                write(11,*)'Did not find parent:',i,ixy(i,1:2)
-                stop
-              endif
-              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
-                write(11,*)'Ratio out of bound:',i,xrat,yrat
-                stop
-              endif
+              if(ixy(i,1)/=0.and.ixy(i,2)/=0) then !found
+!                write(11,*)'Did not find parent:',i,ixy(i,1:2)
+!                stop
+                if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+                  write(11,*)'Ratio out of bound:',i,xrat,yrat
+                  stop
+                endif
 
-              !Bilinear shape function
-              arco(1,i)=(1-xrat)*(1-yrat)
-              arco(2,i)=xrat*(1-yrat)
-              arco(4,i)=(1-xrat)*yrat
-              arco(3,i)=xrat*yrat
+                !Bilinear shape function
+                arco(1,i)=(1-xrat)*(1-yrat)
+                arco(2,i)=xrat*(1-yrat)
+                arco(4,i)=(1-xrat)*yrat
+                arco(3,i)=xrat*yrat
+              endif !ixy
+
             else !interp_mode=1; generic search with UG
               do ix=1,ixlen-1 
                 do iy=1,iylen-1 
@@ -797,7 +798,7 @@
                   rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
                   if(rat<small1) then
                     ixy(i,1)=ix; ixy(i,2)=iy
-!                 Find a triangle
+!                   Find a triangle
                     in=0 !flag
                     do l=1,2
                       ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
