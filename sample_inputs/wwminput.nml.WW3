@@ -54,7 +54,7 @@
 /
 
 &INIT
- LHOTR          = F                  ! Use hotstart file (see &HOTFILE section)
+ LHOTR          = F                  ! Use hotstart file (see &HOTFILE section for input file)
  LINID          = T                  ! Initial condition; F for default; use T if using WW3 as i.c. etc
  INITSTYLE      = 2                  ! 1 - Parametric Jonswap, 2 - Read from Global NETCDF files, work only if IBOUNDFORMAT=2
 /
@@ -509,7 +509,7 @@
 
 &HOTFILE
  LHOTF          = F                  ! Write hotfile
- FILEHOT_OUT    = 'wwm_hot_out'      !'.nc' suffix will be added 
+ FILEHOT_OUT    = 'hotfile_out.nc'      !name of output
  BEGTC          = '20030908.000000'  !Starting time of hotfile writing. With ihot!=0 in SCHISM,
                                      !this will be whatever the new hotstarted time is (even with ihot=2)
  DELTC          = 86400.             ! time between hotfile writes
@@ -526,11 +526,11 @@
                                      !  MPI_REDUCE is then used and thus you'd avoid too freq. output 
                                      ! 1: hotfiles in separate files, each associated
                                      ! with one process
- FILEHOT_IN     = 'wwm_hot_in.nc'    ! (Full) hot file name for input
+ FILEHOT_IN     = 'hotfile_in.nc'    ! (Full) hot file name for input (which can be FILEHOT_OUT above)
  HOTSTYLE_IN    = 2                  ! 1: binary hotfile of data as input
                                      ! 2: netcdf hotfile of data as input (default)
  IHOTPOS_IN     = 1                  ! Position in hotfile (only for netcdf)
-                                     ! for reading
+                                     ! for reading. If LCYCLEHOT=T, this can be 1 or 2
  MULTIPLEIN     = 0                  ! 0: read hotfile from one single file
                                      ! 1: read hotfile from multiple files (must use same # of CPU?)
 /

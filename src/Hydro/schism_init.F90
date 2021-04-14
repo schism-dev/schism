@@ -152,7 +152,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel,sav_cd0
+                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0
 
 
 #ifdef USE_FIB
@@ -571,26 +571,31 @@
 
 !...  Shapiro filter 
 !      call get_param('param.in','ishapiro',1,ishapiro,tmp,stringvalue)
-      if(iabs(ishapiro)>1) then
+      if(ishapiro<-1.or.ishapiro>2) then
         write(errmsg,*)'Illegal ishapiro:',ishapiro
         call parallel_abort(errmsg)
       endif
 
       if(ishapiro==1) then
-!        call get_param('param.in','shapiro',2,itmp,shapiro0,stringvalue)   
         if(shapiro0<0._rkind.or.shapiro0>0.5_rkind) then
           write(errmsg,*)'Illegal shapiro:',shapiro0
           call parallel_abort(errmsg)
         endif
       endif !ishapiro==1
 
+      if(ishapiro==2) then
+        if(shapiro0<0._rkind) then
+          write(errmsg,*)'Illegal shapiro(2):',shapiro0
+          call parallel_abort(errmsg)
+        endif
+      endif !ishapiro
+
       if(ishapiro/=0) then
-!        call get_param('param.in','niter_shap',1,niter_shap,tmp,stringvalue)
         if(niter_shap<0) then
           write(errmsg,*)'Illegal niter_shap:',niter_shap
           call parallel_abort(errmsg)
         endif
-      endif !ishapiro==1
+      endif !ishapiro
 
 !...  Horizontal diffusivity option; only works for upwind/TVD
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
@@ -1656,7 +1661,7 @@
      &kbp00(npa),kbp_e(np),idry(npa),hmod(npa),znl(nvrt,npa), &
      &kbs(nsa),idry_s(nsa),isidenei2(4,ns),zs(nvrt,nsa), &
      &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
-     &snx(nsa),sny(nsa),stat=istat)
+     &snx(nsa),sny(nsa),xs_el(4,nea),ys_el(4,nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: grid geometry arrays allocation failure')
 !'
 
@@ -1696,7 +1701,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         &  hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa), & 
+         &  hdif(nvrt,npa),shapiro(ns),fluxprc(npa),fluxevp(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -2067,6 +2072,16 @@
 !      endif !ics
 
 !...  Finish off some remaining geometric calcualtions
+!     Sidecenter coord in the elem frame
+      do i=1,nea
+        do j=1,i34(i)
+          j1=nxq(1,j,i34(i))
+          j2=nxq(2,j,i34(i))
+          xs_el(j,i)=0.5d0*(xel(j1,i)+xel(j2,i))
+          ys_el(j,i)=0.5d0*(yel(j1,i)+yel(j2,i))
+        enddo !j
+      enddo !i
+
 !      !weno>
       if (itr_met==4) then !WENO
         call set_isbe !identify boundary elements
@@ -3051,7 +3066,7 @@
       slam0=slam0*pi/180.d0
       sfea0=sfea0*pi/180.d0
 
-!...  Read in shaprio.gr3
+!...  Set shapiro(:). For ishapiro=2, this will be done in _step
       if(ishapiro==1) then
         shapiro(:)=shapiro0
       else if(ishapiro==-1) then
@@ -3065,7 +3080,7 @@
           if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
         enddo !i
         close(32)
-        do i=1,nsa
+        do i=1,ns !a
           shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
           !Check range
           if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')

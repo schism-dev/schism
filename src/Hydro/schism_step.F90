@@ -139,7 +139,7 @@
                  &ibnd,jfr,ncyc,iter,nlev,klev,kin,nqdim,limit,jmin, &
                  &ipsgb,iadvf,ifl_bnd,nnel,jlev,ndelt_min,ndelt_max,ii,id, &
                  &id2,id3,ip,ndelt,ibot_fl,ibelow,indx,nj,ind,ind2,lim,in1, &
-                 &in2,irank_s,itmp,itmp1,itmp2,node1,node2,ndim,mk,nd_lam, &
+                 &in2,in3,irank_s,itmp,itmp1,itmp2,node1,node2,ndim,mk,nd_lam, &
                  &iee,idel,irow,icol,ieq,ij,kbb,lwrite,lit,ihot_len,IHOTSTP, &
                  &itmpf,ibt,mmk,ndo,n,ind_tr,n_columns,ncid_hot,node_dim,elem_dim, &
                  &side_dim,nvrt_dim,ntracers_dim,three_dim,two_dim,one_dim, &
@@ -3257,24 +3257,8 @@
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
                 endif !isd/=i
                 swild10(i,1)=swild(1); swild10(i,2)=swild(2)
-
-!                !Project to side and elem. frame for ics=2
-!                if(ics==1) then
-!                  soln(i,1)=swild(1); soln(i,2)=swild(2)
-!                  !Elem frame
-!                  swild10(1,i)=swild(1); swild10(2,i)=swild(2)
-!                else
-!                  call project_hvec(swild(1),swild(2),sframe(:,:,jsj),sframe(:,:,j),soln(i,1),soln(i,2))
-!                  call project_hvec(swild(1),swild(2),sframe(:,:,jsj),eframe(:,:,ie),swild10(1,i),swild10(2,i))
-!                endif
               enddo !i=1,i34(ie)
 
-              !\nabla{u} const. within an elem. (elem. frame)
-!              dudx=dot_product(swild10(1,1:i34(ie)),dldxy_sd(1:i34(ie),1,ie))
-!              dudy=dot_product(swild10(1,1:i34(ie)),dldxy_sd(1:i34(ie),2,ie))
-!              dvdx=dot_product(swild10(2,1:i34(ie)),dldxy_sd(1:i34(ie),1,ie))
-!              dvdy=dot_product(swild10(2,1:i34(ie)),dldxy_sd(1:i34(ie),2,ie))
- 
               !do i=1,2 !i34(ie) !2 sides per elem.
                 !jsj=elside(i,ie)
                 !if(isbs(jsj)==-1) then !deal with land bnd
@@ -3405,6 +3389,94 @@
 
         deallocate(swild98)
       endif !ihorcon/=0
+
+!...  ishapiro=2: Smag-like filter
+      if(ishapiro==2) then
+!$OMP parallel default(shared) private(j,k,l,ie,i,jsj,swild,ibelow,swild10,ll, &
+!$OMP in1,in2,in3,swild2,swild4,delta_wc,vmax,dudx,dudy,dvdx,dvdy)
+
+!$OMP   workshare
+        shapiro=0.d0
+!$OMP   end workshare
+
+!$OMP   do
+        do j=1,ns !residents only
+!          if(isdel(2,j)==0.or.idry_s(j)==1) cycle
+!          if(idry_e(isdel(1,j))==1.or.idry_e(isdel(2,j))==1) cycle
+          if(idry_s(j)==1) cycle
+          if(ihydraulics/=0.and.nhtblocks>0) then
+            if(isblock_sd(1,j)/=0) cycle
+          endif
+  
+          !wet side 
+          vmax=0.d0 !init max gradient
+          do k=kbs(j)+1,nvrt !strength= 0 at bottom
+            do l=1,2 !element
+              ie=isdel(l,j)
+              if(ie<=0) cycle
+              if(idry_e(ie)==1) cycle
+
+              !Wet elem
+              do i=1,i34(ie) !prep. side vel. via vertical interp
+                jsj=elside(i,ie)
+                if(jsj==j) then
+                  swild(1)=su2(k,j)
+                  swild(2)=sv2(k,j)
+                else
+                  call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),su2(:,jsj),swild(1),ibelow)
+                  call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
+                endif !isd/=i
+                !in ll frame if ics=2
+                swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+              enddo !i=1,i34(ie)
+
+              !Reconstruct local gradient
+              ll=lindex_s(j,ie)
+              if(ll==0) then
+                write(errmsg,*)'STEP: Cannot find a side(2)'
+                call parallel_abort(errmsg)
+              endif
+              in1=nxq(1,ll,i34(ie))
+              in2=nxq(i34(ie)-1,ll,i34(ie))
+             
+              !2x2 matrix
+              if(i34(ie)==3) then
+                swild4(1,1)=xs_el(in1,ie)-xs_el(ll,ie)
+                swild4(1,2)=ys_el(in1,ie)-ys_el(ll,ie)
+                swild4(2,1)=xs_el(in2,ie)-xs_el(ll,ie)
+                swild4(2,2)=ys_el(in2,ie)-ys_el(ll,ie)
+                !RHS; 2nd index is (u,v)
+                swild2(1,1:2)=swild10(in1,1:2)-swild10(ll,1:2)
+                swild2(2,1:2)=swild10(in2,1:2)-swild10(ll,1:2)
+              else !quad
+                in3=nxq(2,ll,i34(ie))
+                swild4(1,1)=xs_el(in3,ie)-xs_el(ll,ie)
+                swild4(1,2)=ys_el(in3,ie)-ys_el(ll,ie)
+                swild4(2,1)=xs_el(in2,ie)-xs_el(in1,ie)
+                swild4(2,2)=ys_el(in2,ie)-ys_el(in1,ie)
+                swild2(1,1:2)=swild10(in3,1:2)-swild10(ll,1:2)
+                swild2(2,1:2)=swild10(in2,1:2)-swild10(in1,1:2)
+              endif !i34(ie)
+              delta_wc=swild4(1,1)*swild4(2,2)-swild4(1,2)*swild4(2,1)
+              if(delta_wc==0.d0) then
+                write(errmsg,*)'STEP: delta_wc=0:',delta_wc,ielg(ie)
+                call parallel_abort(errmsg)
+              endif
+         
+              dudx=(swild2(1,1)*swild4(2,2)-swild2(2,1)*swild4(1,2))/delta_wc
+              dudy=(swild2(2,1)*swild4(1,1)-swild2(1,1)*swild4(2,1))/delta_wc
+              dvdx=(swild2(1,2)*swild4(2,2)-swild2(2,2)*swild4(1,2))/delta_wc
+              dvdy=(swild2(2,2)*swild4(1,1)-swild2(1,2)*swild4(2,1))/delta_wc
+
+              !Original Smag; Griffiths used a different one
+              vmax=max(vmax,sqrt(dudx*dudx+dvdy*dvdy+0.5d0*(dudy+dvdx)**2))
+            enddo !l=1,2
+          enddo !k=kbs(j)+1,nvrt 
+
+          shapiro(j)=0.5d0*tanh(vmax*shapiro0)
+        enddo !j=1,ns
+!$OMP   end do
+      endif !ishapiro==2
 
       if(myrank==0) write(16,*)'done hvis... '
 

@@ -145,10 +145,10 @@
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
 ! if indvel=ihorcon=0. To transition between eddying/non-eddying regimes, use
-! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3).
+! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2
 !-----------------------------------------------------------------------
-  ishapiro = 1 !on/off flag
-  shapiro0 = 0.5 !Shapiro filter strength, needed only if ishapiro=1; max is 0.5 
+  ishapiro = 1 !options
+  shapiro0 = 0.5 !Shapiro filter strength, needed only if ishapiro=1 (max is 0.5 ) or 2 (coefficient in tanh())
   niter_shap = 1 !needed if ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
 
 !-----------------------------------------------------------------------
@@ -172,7 +172,7 @@
 ! force expression.
 !-----------------------------------------------------------------------
   icou_elfe_wwm = 0 
-  nstep_wwm = 1  !call WWM every this many time steps. If /=1, consider using quasi-steady mode in WWM
+  nstep_wwm = 1  !call WWM every this many time steps 
   iwbl = 0 !wave boundary layer formulation (used only if USE_WMM and 
            !icou_elfe_wwm/=0 and nchi=1. If icou_elfe_wwm=0, set iwbl=0): 
            !1-modified Grant-Madsen formulation; 2-Soulsby (1997)

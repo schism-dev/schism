@@ -105,7 +105,7 @@ module schism_glbl
                       &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
                       &slr_rate,rho0,shw,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac, &
-                      &hmin_airsea_ex
+                      &hmin_airsea_ex,shapiro0
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -250,9 +250,9 @@ module schism_glbl
   !where j is the axis id, i is the component id, ie is the local element id (aug.)
   !Undefined for ics=1
   real(rkind),save,allocatable :: eframe(:,:,:)
-  !x,y coordinates of each element node in the _element_ frame
-  !xel(4,nea)
-  real(rkind),save,allocatable :: xel(:,:),yel(:,:)
+  !x,y coordinates of each element node/side in the _element_ frame
+  !xel(4,nea), xs_el(4,nea)
+  real(rkind),save,allocatable :: xel(:,:),yel(:,:),xs_el(:,:),ys_el(:,:)
   !shape_c2(4,2,nea)- for quads only. The shape function values for the mid-pts of 2 diagnonals inside
   ! the quad formed by 4 sidecenters
   real(rkind),save,allocatable :: shape_c2(:,:,:)
@@ -325,8 +325,7 @@ module schism_glbl
   real(rkind),save,allocatable :: zs(:,:)         ! z-coord. (local frame - vertical up)
   !Transformation tensor for side frame: sframe(i,j,isd)
   ! where j is the axis id, i is the component id, isd is the local side id (aug.)
-  ! For ics=1, only sframe(1:2,1:2,isd) are used
-  ! x-axis is from adjacent elem 1 to 2.
+  ! For ics=1, only sframe(1:2,1:2,isd) are used. In all cases, x-axis is from adjacent elem 1 to 2.
   real(rkind),save,allocatable :: sframe(:,:,:)
   !cos/sin of side normals. If ics=1, these are same as sframe(1:2,1,isd)
   !If ics=2, these are product of sframe(:,1,:) and local lat/lon frame
@@ -409,7 +408,8 @@ module schism_glbl
   real(rkind),save,allocatable :: total_mass_error(:) !(ntracers) Total mass error after advection step for mass correction
   !x & y-component of velocity at side centers & whole levels
   !For ics=1, these are defined in the global frame
-  !For ics=2, these are defined in the ll frame
+  !For ics=2, these are defined in the ll frame (not local side frame). Note
+  !that these are not defined on sframe()
   real(rkind),save,allocatable :: su2(:,:),sv2(:,:) 
   !velocity at nodes in an element. In ll if ics=2
   !ufg(1:4,1:nvrt,1:nea)
