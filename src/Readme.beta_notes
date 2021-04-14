@@ -2,7 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
-(): added ishapiro=2 - Smagorinsky like filter. In this option, shapiro0 is the coefficient.
+b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
 b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
 9150d86 (Mar 31, 2021): added a new SAL option (iloadtide=2) using scaling;
 084e149 (Feb 25, 2021): Removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
