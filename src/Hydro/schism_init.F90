@@ -1701,7 +1701,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         &  hdif(nvrt,npa),shapiro(ns),fluxprc(npa),fluxevp(npa), & 
+         &  hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -3080,7 +3080,7 @@
           if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
         enddo !i
         close(32)
-        do i=1,ns !a
+        do i=1,nsa
           shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
           !Check range
           if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')

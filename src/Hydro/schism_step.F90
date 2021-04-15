@@ -3392,8 +3392,8 @@
 
 !...  ishapiro=2: Smag-like filter
       if(ishapiro==2) then
-!$OMP parallel default(shared) private(j,k,l,ie,i,jsj,swild,ibelow,swild10,ll, &
-!$OMP in1,in2,in3,swild2,swild4,delta_wc,vmax,dudx,dudy,dvdx,dvdy)
+!$OMP   parallel default(shared) private(j,k,l,ie,i,jsj,swild,ibelow,swild10,ll, &
+!$OMP   in1,in2,in3,swild2,swild4,delta_wc,vmax,dudx,dudy,dvdx,dvdy)
 
 !$OMP   workshare
         shapiro=0.d0
@@ -3469,13 +3469,53 @@
               dvdy=(swild2(2,2)*swild4(1,1)-swild2(1,2)*swild4(2,1))/delta_wc
 
               !Original Smag; Griffiths used a different one
-              vmax=max(vmax,sqrt(dudx*dudx+dvdy*dvdy+0.5d0*(dudy+dvdx)**2))
+              vmax=max(vmax,sqrt(dudx*dudx+dvdy*dvdy+0.5d0*(dudy+dvdx)**2)) !s^(-1)
             enddo !l=1,2
           enddo !k=kbs(j)+1,nvrt 
 
-          shapiro(j)=0.5d0*tanh(vmax*shapiro0)
+          shapiro(j)=0.5d0*tanh(dt*vmax*shapiro0)
+
         enddo !j=1,ns
 !$OMP   end do
+!$OMP   end parallel
+
+        !Smooth shapiro()
+        do mm=1,2
+#ifdef INCLUDE_TIMING
+          cwtmp=mpi_wtime()
+#endif
+          call exchange_s2d(shapiro)
+#ifdef INCLUDE_TIMING
+          wtimer(8,2)=wtimer(8,2)+mpi_wtime()-cwtmp
+#endif
+
+!$OMP     parallel default(shared) private(j)
+          !Use bcc as temp array
+!$OMP     workshare
+          bcc=0.d0
+!$OMP     end workshare
+
+!$OMP     do
+          do j=1,ns
+            bcc(1,1,j)=shapiro(j)+0.5d0/4.d0*(sum(shapiro(isidenei2(1:4,j)))-4*shapiro(j)) 
+          enddo !j=1,ns
+!$OMP     end do
+
+          !Final shapiro() valid in resident only
+!$OMP     workshare
+          shapiro(1:ns)=bcc(1,1,1:ns)
+!$OMP     end workshare
+!$OMP     end parallel
+
+          !Debug
+          if(abs(time/86400-0.5d0)<1.d-3) then
+            do j=1,ns  
+              write(12,'(a,10(1x,e19.9))')'shapiro=',xlon(isidenode(1,j))/pi*180, &
+     &ylat(isidenode(1,j))/pi*180,shapiro(j)
+            enddo !j
+          endif
+
+        enddo !mm
       endif !ishapiro==2
 
       if(myrank==0) write(16,*)'done hvis... '
