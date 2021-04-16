@@ -3479,41 +3479,37 @@
 !$OMP   end do
 !$OMP   end parallel
 
+        call exchange_s2d(shapiro)
+
         !Smooth shapiro()
         do mm=1,2
-#ifdef INCLUDE_TIMING
-          cwtmp=mpi_wtime()
-#endif
-          call exchange_s2d(shapiro)
-#ifdef INCLUDE_TIMING
-          wtimer(8,2)=wtimer(8,2)+mpi_wtime()-cwtmp
-#endif
-
 !$OMP     parallel default(shared) private(j)
           !Use bcc as temp array
-!$OMP     workshare
-          bcc=0.d0
-!$OMP     end workshare
 
 !$OMP     do
           do j=1,ns
-            bcc(1,1,j)=shapiro(j)+0.5d0/4.d0*(sum(shapiro(isidenei2(1:4,j)))-4*shapiro(j)) 
+            if(isdel(2,j)==0) then !isidenei2 not defined
+              bcc(1,1,j)=shapiro(j)
+            else
+              bcc(1,1,j)=shapiro(j)+0.5d0/4.d0*(sum(shapiro(isidenei2(1:4,j)))-4.d0*shapiro(j)) 
+            endif
           enddo !j=1,ns
 !$OMP     end do
 
-          !Final shapiro() valid in resident only
 !$OMP     workshare
           shapiro(1:ns)=bcc(1,1,1:ns)
 !$OMP     end workshare
 !$OMP     end parallel
 
+          call exchange_s2d(shapiro)
+
           !Debug
-          if(abs(time/86400-0.5d0)<1.d-3) then
-            do j=1,ns  
-              write(12,'(a,10(1x,e19.9))')'shapiro=',xlon(isidenode(1,j))/pi*180, &
-     &ylat(isidenode(1,j))/pi*180,shapiro(j)
-            enddo !j
-          endif
+!          if(abs(time/86400.d0-0.5d0)<1.d-3) then
+!            do j=1,ns  
+!              write(12,'(a,10(1x,e19.9))')'shapiro=',xlon(isidenode(1,j))/pi*180, &
+!     &ylat(isidenode(1,j))/pi*180,shapiro(j)
+!            enddo !j
+!          endif
 
         enddo !mm
       endif !ishapiro==2

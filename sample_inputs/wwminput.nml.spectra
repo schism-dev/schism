@@ -2,6 +2,13 @@
 ! Other mandatory inputs: wwmbnd.gr3 (boundary flag files; see below)
 ! Depending on the choices of parameters below you may need additional inputs
 
+!Notes on hotstart: (1) generate hotstart outputs from WWM; see &HOTFILE section. Turn on LHOTF and 
+! match interval (see &HOTFILE) with SCHISM's so the 2 models can be hotstarted together. Use single nc output
+! with last 2 records. Also need to make sure the start/end time info is correct 
+! in &PROC, &HOTFILE; (2) to restart both models, copy the hot out to input (e.g. hotfile_in_WWM.nc),
+! turn on &INIT->LHOTR and input hot input name there. IHOTPOS_IN controls position of the 2 time records.
+! Then do the usual time in SCHISM (ihot>0).
+
 &PROC
  PROCNAME       = 'limon'            ! Project Name
  DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SELFE
@@ -17,7 +24,7 @@
  BEGTC          = '19980901.000000'  ! Time for start the simulation, ex:yyyymmdd. hhmmss
  DELTC          = 5                 ! Time step (MUST match dt*nstep_wwm in SCHISM!)
  UNITC          = 'SEC'              ! Unity of time step
- ENDTC          = '19980901.010000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
+ ENDTC          = '19980901.060000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
  DMIN           = 0.01              ! Minimum water depth. Use 'h0' as in SCHISM
 /
 
@@ -413,11 +420,11 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
 /
 
 &HOTFILE
- LHOTF          = F ! Write hotfile
- BEGTC          = '20000101.000000'   ! Starting time of hotfile writing
- DELTC          = 1      ! time between hotfile writes
+ LHOTF          = T ! Write hotfile
+ BEGTC          = '19980901.000000'   ! Starting time of hotfile writing
+ DELTC          = 3600      ! time between hotfile writes
  UNITC          = 'SEC'  ! unit used above
- ENDTC          = '20000101.100000'  ! Ending time of hotfile writing
+ ENDTC          = '19980901.060000'  ! Ending time of hotfile writing
  LCYCLEHOT      = T ! Applies only to netcdf
                     ! If T then hotfile contains 2 last records.
                     ! If F then hotfile contains N record if N outputs
@@ -429,14 +436,14 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
                      !    MPI_REDUCE is then used.
                      ! 1: hotfiles in separate files, each associated
                      !    with one process
- FILEHOT_OUT    = 'hotfile_out.nc' !name of hot outputs
+ FILEHOT_OUT    = 'hotfile_out_WWM.nc' !name of hot outputs
  HOTSTYLE_IN    = 2  ! 1: binary hotfile of data as input
                      ! 2: netcdf hotfile of data as input (default)
  IHOTPOS_IN        = 1 ! Position in hotfile (only for netcdf)
                        ! for reading. If LCYCLEHOT=T, this can be 1 or 2
  MULTIPLEIN     = 0    ! 0: read hotfile from one single file
                        ! 1: read hotfile from multiple files.
- FILEHOT_IN     = 'hotfile_in.nc' ! Hot file name for input if LHOTR=T in &INIT. This can be simply hotfile_out.nc above
+ FILEHOT_IN     = 'hotfile_in_WWM.nc' ! Hot file name for input if LHOTR=T in &INIT. This can be simply hotfile_out.nc above
 /
 
 &NESTING

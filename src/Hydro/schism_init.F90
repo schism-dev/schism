@@ -3013,9 +3013,9 @@
       ntime=rnday*86400.d0/dt+0.5d0
       nrec=min(ntime,ihfskip)/nspool
 
-!...  Compute neighborhood for internal sides for Shapiro filter
-!...  isidenei2(4,ns): 4 neighboring sides of a _resident_ side
-!...  Info for resident sides only!
+!...  Compute neighborhood for _internal_ sides for Shapiro filter
+!...  isidenei2(4,ns): 4 neighboring sides of a _resident internal_ side
+!...  Info for resident internal sides only!
 !$OMP parallel do default(shared) private(i,j,ie,l0,nwild)
       do i=1,ns !resident sides only
         if(isdel(2,i)==0) cycle 
