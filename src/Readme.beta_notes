@@ -479,7 +479,7 @@ git versions:
                               factor of area() in I_4);
 (118) 28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides. The option shares some constants
                               with tidal potential: freq names and cut-off depth;
-(119) b1bcaa0 (April 20, 2021): removed most of 'goto'. Remaining ones: harm.F90, WWM
+(119) b1bcaa0 (April 20, 2021): removed most of 'goto'. Remaining ones: harm.F90, lap.F90, WWM
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
