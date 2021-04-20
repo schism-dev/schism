@@ -1144,6 +1144,7 @@ end subroutine inter_btrack
       real(rkind) :: signa1
 
       !Local
+      logical :: qsearch_done
       integer :: jk(4)
       real(rkind) :: wild(10,2),wild2(10,2),wild3(4,2) !,xy_l(3,2)
       real(rkind) :: vxl(4,2),vyl(4,2),vzl(4,2),vxn(4),vyn(4),vzn(4),ztmp2(nvrt,4)
@@ -1204,17 +1205,19 @@ end subroutine inter_btrack
       endif
 
 !     Check start and end pts
+      qsearch_done=.false.
       if(i34(nel)==3) then 
         call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco)
         ar_min1=minval(arco(1:3)) !info for debug only
         call area_coord(0,nel,gcor0,frame0,xt,yt,arco)
         ar_min2=minval(arco(1:3))
-        if(ar_min2>-small1) then
+        if(ar_min2>-small1) then !found & finish
           !Fix A.C. for 0/negative
           if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco)
           nnel=nel
           trm=0._rkind
-          go to 400
+!          go to 400
+          qsearch_done=.true.
         endif
       else !quad
         !Reproject pt in eframe of nel for ics=2
@@ -1227,19 +1230,20 @@ end subroutine inter_btrack
           call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
-        !call quad_shape(0,1,nel,xcg,ycg,inside1,arco) !info only
         call quad_shape(0,1,nel,xn1,yn1,inside1,arco) !info only
         ar_min1=minval(arco) !info for debug only
-        !call quad_shape(0,2,nel,xt,yt,inside2,arco)
         call quad_shape(0,2,nel,xn2,yn2,inside2,arco)
         ar_min2=minval(arco)
-        if(inside2/=0) then
+        if(inside2/=0) then !found & finish
           nnel=nel
           trm=0._rkind
-          go to 400
+          !go to 400
+          qsearch_done=.true.
         endif
       endif !i34
 
+      if(.not.qsearch_done) then
+!======================================================================
 !     (xt,yt) not in nel, and thus (x0,y0) and (xt,yt) are distinctive
 !     Find starting edge nel_j
 !     Try this twice to account for underflow (e.g. inter-btrack etc),
@@ -1573,8 +1577,10 @@ end subroutine inter_btrack
 
 !----------------------------------------------------------------------------------------
       end do loop4 
+!======================================================================
+      endif !(.not.qsearch_done) then
 
-400   continue
+!400   continue
 !     No vertical exit from domain
       if(idry_e(nnel)==1) then
         write(errmsg,*)'QUICKSEARCH: Ending element is dry:',ielg(nnel)
