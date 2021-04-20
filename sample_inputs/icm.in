@@ -385,9 +385,9 @@ WS3BNET=  0.00
 WSSBNET=  0.2
 
 !-----------------------------------------------------------------------
-!Turb:   base coefficient for Light extinction coefficient(1/m)
-!WRea:   coefficients for Wind-induced reaeration of DO
-!PC2TSS: coefficient of converting PC to TSS 
+!Turb:   base coefficient for Light extinction coefficient(1/m), (2D variable)
+!WRea:   coefficients for Wind-induced reaeration of DO, (2D variable)
+!PC2TSS: coefficient of converting PC to TSS, (2D variable)
 !-----------------------------------------------------------------------
 Turb=0.26  
 WRea= 0.0
