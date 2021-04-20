@@ -1199,92 +1199,94 @@
             srwt_xchng(1)=ltmp
 
             istop=2
-            go to 991
+!            go to 991
           endif !srwt_xchng_gb; final extrapolation
 
-          istop=1 !stop iteration and go to extrapolation stage; initialize first
-          do i=1,nsdf !aug.
-            isd=isdf(i)
-            do j=1,2
-              nd=isidenode(j,isd)
-              if(eta2(nd)+dp(nd)<=h0) then
+          if(istop/=2) then
+!=========
+            istop=1 !stop iteration and go to extrapolation stage; initialize first
+            do i=1,nsdf !aug.
+              isd=isdf(i)
+              do j=1,2
+                nd=isidenode(j,isd)
+                if(eta2(nd)+dp(nd)<=h0) then
 !Debug
 !                write(12,*)'Make dry:',itr,iplg(nd)
 
-                istop=0
-                do l=1,nne(nd)
-                  ie=indel(l,nd)
-                  if(ie>0) idry_e2(ie)=1
-                enddo !l
+                  istop=0
+                  do l=1,nne(nd)
+                    ie=indel(l,nd)
+                    if(ie>0) idry_e2(ie)=1
+                  enddo !l
+                endif
+              enddo !j=1,2 nodes
+            enddo !i=1,nsdf
+            call exchange_e2di(idry_e2)
+
+!           Wetting
+            inew=0 !for initializing and counting su2 sv2
+            srwt_xchng(1)=.false. !flag for wetting occurring
+            do i=1,nsdf !aug. domain for updating vel. at interfacial sides (between 2 sub-domains)
+              isd=isdf(i) !must be internal side
+              if(isdel(1,isd)<0.or.isdel(2,isd)<0) cycle !neither element can have interfacial sides
+              if(isdel(1,isd)==0.or.isdel(2,isd)==0) then
+                write(errmsg,*)'LEVELS1: bnd side:',isdel(:,isd),iplg(isidenode(1:2,isd))
+                call parallel_abort(errmsg)
               endif
-            enddo !j=1,2 nodes
-          enddo !i=1,nsdf
-          call exchange_e2di(idry_e2)
+              if(idry_e2(isdel(1,isd))+idry_e2(isdel(2,isd))/=1) cycle
+!             2 end nodes have total depths > h0
 
-!         Wetting
-          inew=0 !for initializing and counting su2 sv2
-          srwt_xchng(1)=.false. !flag for wetting occurring
-          do i=1,nsdf !aug. domain for updating vel. at interfacial sides (between 2 sub-domains)
-            isd=isdf(i) !must be internal side
-            if(isdel(1,isd)<0.or.isdel(2,isd)<0) cycle !neither element can have interfacial sides
-            if(isdel(1,isd)==0.or.isdel(2,isd)==0) then
-              write(errmsg,*)'LEVELS1: bnd side:',isdel(:,isd),iplg(isidenode(1:2,isd))
-              call parallel_abort(errmsg)
-            endif
-            if(idry_e2(isdel(1,isd))+idry_e2(isdel(2,isd))/=1) cycle
-!           2 end nodes have total depths > h0
-
-            if(idry_e2(isdel(1,isd))==1) then
-              ie=isdel(1,isd) !>0
-            else
-              ie=isdel(2,isd) !>0
-            endif
-            n1=isidenode(1,isd)
-            n2=isidenode(2,isd)
-            nodeA=elnode(1,ie)+elnode(2,ie)+elnode(3,ie)-n1-n2   ! eli: is the 2,ie one right?
-            l0=lindex(nodeA,ie)
+              if(idry_e2(isdel(1,isd))==1) then
+                ie=isdel(1,isd) !>0
+              else
+                ie=isdel(2,isd) !>0
+              endif
+              n1=isidenode(1,isd)
+              n2=isidenode(2,isd)
+              nodeA=elnode(1,ie)+elnode(2,ie)+elnode(3,ie)-n1-n2   ! eli: is the 2,ie one right?
+              l0=lindex(nodeA,ie)
 !            if(l0==0.or.icolor(nodeA)==1.or.nodeA==n1.or.nodeA==n2) then
-            if(l0==0.or.nodeA==n1.or.nodeA==n2) then
-              write(errmsg,*)'Frontier node outside, or on the interface:', &
-     &l0,iplg(nodeA),iplg(n1),iplg(n2),itr,it,iths !icolor(nodeA)
+              if(l0==0.or.nodeA==n1.or.nodeA==n2) then
+                write(errmsg,*)'Frontier node outside, or on the interface:', &
+       &l0,iplg(nodeA),iplg(n1),iplg(n2),itr,it,iths !icolor(nodeA)
 !'
-              write(12,*)'LEVELS1: fatal error message'
-              do l=1,ns
-                if(icolor2(l)==1) then
-                  write(12,*)l,iplg(isidenode(1:2,l))
-                  write(12,*)l,ielg(isdel(1:2,l)),idry_e2(isdel(1:2,l)),idry_e(isdel(1:2,l))
-                endif
-              enddo !l
-              do l=1,nea
-                write(12,*)l,idry_e2(l),idry_e(l)
-              enddo !l
-              call parallel_abort(errmsg)
-            endif !end fatal
+                write(12,*)'LEVELS1: fatal error message'
+                do l=1,ns
+                  if(icolor2(l)==1) then
+                    write(12,*)l,iplg(isidenode(1:2,l))
+                    write(12,*)l,ielg(isdel(1:2,l)),idry_e2(isdel(1:2,l)),idry_e(isdel(1:2,l))
+                  endif
+                enddo !l
+                do l=1,nea
+                  write(12,*)l,idry_e2(l),idry_e(l)
+                enddo !l
+                call parallel_abort(errmsg)
+              endif !end fatal
 
-            if(eta2(nodeA)+dp(nodeA)>h0) then !all 3 nodes have depths > h0
-!             Check
-              do j=1,3
-                nd=elnode(j,ie)
-                if(eta2(nd)+dp(nd)<=h0) then
-                  write(errmsg,*)'Failed to wet element (13):',ielg(ie),iplg(nd),iplg(nodeA)
-                  call parallel_abort(errmsg)
-                endif
-              enddo !j
+              if(eta2(nodeA)+dp(nodeA)>h0) then !all 3 nodes have depths > h0
+!               Check
+                do j=1,3
+                  nd=elnode(j,ie)
+                  if(eta2(nd)+dp(nd)<=h0) then
+                    write(errmsg,*)'Failed to wet element (13):',ielg(ie),iplg(nd),iplg(nodeA)
+                    call parallel_abort(errmsg)
+                  endif
+                enddo !j
 
 !Debug
 !              write(12,*)'Make wet:',itr,iplg(nodeA),ielg(ie)
 
-              srwt_xchng(1)=.true.
-              istop=0
-              idry_e2(ie)=0
+                srwt_xchng(1)=.true.
+                istop=0
+                idry_e2(ie)=0
 
-              do j=1,2 !sides sharing nodeA
-                id1=elside(nx(l0,j),ie)
-                if(icolor2(id1)==0) then
+                do j=1,2 !sides sharing nodeA
+                  id1=elside(nx(l0,j),ie)
+                  if(icolor2(id1)==0) then
 
 !                  if(ics==1) then
-                  swild2(1,1:nvrt)=su2(1:nvrt,isd)
-                  swild2(2,1:nvrt)=sv2(1:nvrt,isd)
+                    swild2(1,1:nvrt)=su2(1:nvrt,isd)
+                    swild2(2,1:nvrt)=sv2(1:nvrt,isd)
 !                  else !ics=2
 !                    !Assuming plane rotation
 !                    dot11=dot_product(sframe(1:3,1,isd),sframe(1:3,1,id1))
@@ -1295,32 +1297,34 @@
 !                    swild2(2,1:nvrt)=su2(1:nvrt,isd)*dot12+sv2(1:nvrt,isd)*dot22
 !                  endif !ics
 
-                  if(inew(id1)==0) then
-                    !vel. only accurate in resident domain
-                    su2(1:nvrt,id1)=swild2(1,1:nvrt) !su2(1:nvrt,isd)
-                    sv2(1:nvrt,id1)=swild2(2,1:nvrt) !sv2(1:nvrt,isd)
-                    inew(id1)=1
-                  else
-                    su2(1:nvrt,id1)=su2(1:nvrt,id1)+swild2(1,1:nvrt)
-                    sv2(1:nvrt,id1)=sv2(1:nvrt,id1)+swild2(2,1:nvrt)
-                    inew(id1)=inew(id1)+1
-                  endif
-                endif !icolor2(id)==0
-              enddo !j=1,2
-            endif !eta2(nodeA)+dp(nodeA)>h0
-          enddo !i=1,nsdf; shoreline sides
+                    if(inew(id1)==0) then
+                      !vel. only accurate in resident domain
+                      su2(1:nvrt,id1)=swild2(1,1:nvrt) !su2(1:nvrt,isd)
+                      sv2(1:nvrt,id1)=swild2(2,1:nvrt) !sv2(1:nvrt,isd)
+                      inew(id1)=1
+                    else
+                      su2(1:nvrt,id1)=su2(1:nvrt,id1)+swild2(1,1:nvrt)
+                      sv2(1:nvrt,id1)=sv2(1:nvrt,id1)+swild2(2,1:nvrt)
+                      inew(id1)=inew(id1)+1
+                    endif
+                  endif !icolor2(id)==0
+                enddo !j=1,2
+              endif !eta2(nodeA)+dp(nodeA)>h0
+            enddo !i=1,nsdf; shoreline sides
 
 !         Compute average vel. for rewetted sides
 !$OMP parallel do default(shared) private(i)
-          do i=1,ns
-            if(inew(i)/=0) then
-              su2(1:nvrt,i)=su2(1:nvrt,i)/real(inew(i),rkind)
-              sv2(1:nvrt,i)=sv2(1:nvrt,i)/real(inew(i),rkind)
-            endif !inew(i)/=0
-          enddo !i=1,ns
+            do i=1,ns
+              if(inew(i)/=0) then
+                su2(1:nvrt,i)=su2(1:nvrt,i)/real(inew(i),rkind)
+                sv2(1:nvrt,i)=sv2(1:nvrt,i)/real(inew(i),rkind)
+              endif !inew(i)/=0
+            enddo !i=1,ns
 !$OMP end parallel do
 
-991       continue
+!991       continue
+!=========
+          endif !istop/=2
 
           call mpi_allreduce(srwt_xchng,srwt_xchng_gb,1,MPI_LOGICAL,MPI_LOR,comm,ierr)
           if(srwt_xchng_gb(1)) then
