@@ -7,7 +7,7 @@
 ! with last 2 records. Also need to make sure the start/end time info is correct 
 ! in &PROC, &HOTFILE; (2) to restart both models, copy the hot out to input (e.g. hotfile_in_WWM.nc),
 ! turn on &INIT->LHOTR and input hot input name there. IHOTPOS_IN controls position of the 2 time records.
-! Then do the usual time in SCHISM (ihot>0).
+! Then do the usual things in SCHISM (ihot>0).
 
 &PROC
  PROCNAME       = 'limon'            ! Project Name

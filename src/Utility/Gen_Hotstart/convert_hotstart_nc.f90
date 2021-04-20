@@ -52,7 +52,7 @@ program combine_hotstart1
            trnd0(ntracers,nvrt,np),trel(ntracers,nvrt,ne),q2(nvrt,np), &
            xl(nvrt,np),dfv(nvrt,np),dfh(nvrt,np), &
            dfq1(nvrt,np),dfq2(nvrt,np),qnon(nvrt,np), &
-           swild(nvrt1,7+2*ntracers),intv(nvrt1),zrat(nvrt1),stat=istat)
+           swild(nvrt,7+2*ntracers),intv(nvrt),zrat(nvrt),stat=istat)
   if(istat/=0) stop 'Allocation error (2)'
 
 !-------------------------------------------------------------------------------

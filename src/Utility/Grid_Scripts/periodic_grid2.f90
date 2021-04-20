@@ -1,9 +1,9 @@
-!     Generate a one-way slant rectangular grid, and add wrap-around elem. for sphere.
+!     Simpler script to generate a one-way slant rectangular grid, and add wrap-around elem. for sphere.
 !     This is the way to use periodic b.c. along the x-direction in
 !     SCHISM (pay attention to Coriolis as well).
 !     Inputs: constants below
 !     Outputs: hgrid.ll
-!     ifort -Bstatic -O3 -CB -o periodic_grid periodic_grid.f90
+!     ifort -Bstatic -O3 -CB -o periodic_grid2 periodic_grid2.f90
       implicit real*8(a-h,o-z)
       !# of divisions in latitude, min/max latitudes (degrees)
       parameter(ny=3,ymin=-0.15,ymax=0.15,maxdim=9000000)

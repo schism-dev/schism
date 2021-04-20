@@ -64,10 +64,11 @@
 ! If iloadtide=1, needs inputs: loadtide_[FREQ].gr3, 
 ! where [FREQ] are freq names (shared with tidal potential, in upper cases) 
 ! and the _two_ 'depths' inside are amplitude (m) and phases (degrees behind GMT), 
-! interpolated from global tide model (e.g. FES2014).
-! If iloadtide=2, use a simple scaling for gravity approach.
-! iloadtide/=0 also shares some 
-! parameters with tidal potential in bctides.in (cut-off depth, frequencies).
+! interpolated from global tide model (e.g. FES2014). In this option, SAL is 
+! lumped into tidal potential so it shares some parameters with tidal potential 
+! in bctides.in (cut-off depth, frequencies).
+! If iloadtide=2, use a simple scaling for gravity approach (in this option,
+! SAL is applied everywhere and does not share parameters with tidal potential).
 !-----------------------------------------------------------------------
   iloadtide = 0
 
@@ -144,12 +145,15 @@
 
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
-! if indvel=ihorcon=0. To transition between eddying/non-eddying regimes, use
-! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2
+! if indvel=0. To transition between eddying/non-eddying regimes, use
+! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2 (Smagorinsky-like filter)
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
-  shapiro0 = 0.5 !Shapiro filter strength, needed only if ishapiro=1 (max is 0.5 ) or 2 (coefficient in tanh())
-  niter_shap = 1 !needed if ishapiro/=0 - # of iterations with Shapiro filter. Suggested: 1
+  niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter
+  !shapiro0: Shapiro filter strength, needed only if ishapiro=1 or 2 
+  !If ishapiro=1, shapiro0 is the filter strength (max is 0.5).
+  !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest 20
+  shapiro0 = 0.5 
 
 !-----------------------------------------------------------------------
 ! Implicitness factor (0.5<thetai<=1).

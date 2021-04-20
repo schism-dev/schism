@@ -30,7 +30,7 @@
       !x=R_e*cos(\phi)*cos(\lambda)
       !y=R_e*cos(\phi)*sin(\lambda)
       !z=R_p*sin(\phi)
-      ymin=-0.5; ymax=0.5 
+      ymin=-1; ymax=1
 
       !Radius @ pole to match rly
       r_pole=rly/(ymax-ymin)/pi*180
