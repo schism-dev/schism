@@ -2293,9 +2293,11 @@ subroutine sort(n,ra,rb)
   integer :: n, l, ir, rra, rrb, i, j
   integer :: ra(n)
   integer,optional :: rb(n)
-   l = n/2 + 1
-   ir = n
-10 continue
+  l = n/2 + 1
+  ir = n
+!10 continue
+
+  do 
    if (l.gt.1)then
      l=l-1
      rra = ra(l)
@@ -2313,10 +2315,11 @@ subroutine sort(n,ra,rb)
        if(present(rb)) rb(1)=rrb
        return
      endif
-   endif
+   endif !l
    i=l
    j=l+l
-20 if (j.le.ir) then
+!20 if (j.le.ir) then
+   do while(j.le.ir)
      if (j.lt.ir) then
        if(ra(j).lt.ra(j+1)) j=j+1
      endif
@@ -2328,11 +2331,14 @@ subroutine sort(n,ra,rb)
      else
        j=ir+1
      endif
-     go to 20
-   endif
+!     go to 20
+!   endif
+   enddo !while
+
    ra(i)=rra
    if(present(rb)) rb(i)=rrb
-   go to 10
+!   go to 10
+  enddo
 end subroutine sort
 
 
