@@ -713,7 +713,7 @@
 !     &              (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
 !#endif /* SCHISM */
 !     &              (beta * w_star)**2)
-          endif
+          endif !stable
 
 ! now loop to obtain good initial values for u_star and z_0
           do iter = 1, 5
@@ -746,7 +746,9 @@
 ! iterate a maximum of max_iter times
           iter = 0
           converged = .false.
-100       continue
+!100       continue
+
+          do
             iter = iter + 1
 
 ! Calculate the roughness lengths
@@ -851,7 +853,7 @@
 !#endif /* SCHISM */
 !     &                (beta * w_star)**2 )
 
-            endif
+            endif !stable||unstable
 
 #ifdef DEBUG
             if (mod(i_node-1,printit) .eq. 0) then
@@ -865,7 +867,9 @@
 #endif
 
 ! bottom of main iteration loop
-          if (.not. converged .and. iter .lt. max_iter) goto 100
+!          if (.not. converged .and. iter .lt. max_iter) goto 100
+            if (converged.or.iter>= max_iter) exit
+          enddo
 
 ! calculate fluxes
           sen_flux(i_node) = - rho_air * c_p_air * u_star * theta_star
@@ -2250,7 +2254,7 @@
         logical zero_ae, completed_check
 
 ! calculate and store the areas of the input grid elements
-        do i_elem = 1, num_elems !sflux grid
+        do i_elem = 1, num_elems !sflux grid; already split into pair of triangles like .gr3 format
           i1 = node_i(elem_nodes(i_elem,1))
           j1 = node_j(elem_nodes(i_elem,1))
           x1 = x_in(i1,j1)
@@ -2265,7 +2269,7 @@
           j3 = node_j(elem_nodes(i_elem,3))
           x3 = x_in(i3,j3)
           y3 = y_in(i3,j3)
-          area_in(i_elem)=0.5d0*((x1-x3)*(y2-y3)+(x3-x2)*(y1-y3))
+          area_in(i_elem)=0.5d0*((x1-x3)*(y2-y3)+(x3-x2)*(y1-y3)) !tri
         enddo
 
 ! now loop over the nodes of the output grid, searching for the
@@ -2287,7 +2291,9 @@
           zero_ae = .false.
 
 ! search for element, starting with location of previous node
-100       continue
+!100       continue
+
+          do
 
 ! this block implements logic which tells which is the next element
 ! to consider
@@ -2351,8 +2357,8 @@
             x4 = x_out(i_node)
             y4 = y_out(i_node)
 
-! calculate some type of areas
-            a1 = (x4-x3)*(y2-y3) + (x2-x3)*(y3-y4)
+! calculate area coord
+            a1 = (x4-x3)*(y2-y3) + (x2-x3)*(y3-y4) !2x area coord
             a2 = (x4-x1)*(y3-y1) - (y4-y1)*(x3-x1)
             a3 = (y4-y1)*(x2-x1) - (x4-x1)*(y2-y1)
             aa = abs(a1) + abs(a2) + abs(a3)
@@ -2380,7 +2386,9 @@
             last_elem = i_elem
 
 ! loop again if need to
-          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
+!          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
+            if(completed_check.or.zero_ae) exit
+          enddo
 
 ! if we didnt find a good ae_min, then there are problems
 ! Currently, use nearest elem for interpolation even if no parent is found, b/cos
