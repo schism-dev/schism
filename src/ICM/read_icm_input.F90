@@ -15,6 +15,7 @@
 !Routines & functions:
 !WQinput: read time varying input 
 !read_icm_param2: read spatially varying parameter 
+!read_icm_param_2d: function to read spatially varying parameter 
 !read_icm_param: read parameter in icm.in
 !read_icm_stainfo: read in icm station output information
 !check_icm_param: Output ICM parameters to check
@@ -188,12 +189,133 @@ subroutine read_icm_param2
   real(8) :: rtmp
   real(kind=iwp) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp
-  real(kind=iwp) :: tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
+  real(kind=iwp) :: tGPM1,tGPM2,tGPM3,tTGP1,tTGP2,tTGP3,trKTGP11,trKTGP12,trKTGP13, &
+                  & trKTGP21,trKTGP22,trKTGP23,tCChl1,tCChl2,tCChl3,tPRR1,tPRR2,tPRR3
+  real(kind=iwp) :: tWSSED,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
   real(kind=iwp) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
-  real(kind=iwp),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
-  real(kind=iwp),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
-  real(kind=iwp),allocatable :: swild2(:,:),ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
+  real(kind=iwp) :: trKRC,trKLC,trKDC, trKRP,trKLP,trKDP,trKRPalg,trKLPalg,trKDPalg
+  !real(kind=iwp),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
+  !real(kind=iwp),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
+  real(kind=iwp),allocatable :: swild2(:,:) !,ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
 
+  !read phytoplankton parameters
+  call get_param_1D('icm.in','GPM1',2,itmp,tGPM1,stmp,1)
+  call get_param_1D('icm.in','GPM2',2,itmp,tGPM2,stmp,1)
+  call get_param_1D('icm.in','GPM3',2,itmp,tGPM3,stmp,1)
+  call get_param_1D('icm.in','TGP1',2,itmp1,tTGP1,stmp,1)
+  call get_param_1D('icm.in','TGP2',2,itmp1,tTGP2,stmp,1)
+  call get_param_1D('icm.in','TGP3',2,itmp1,tTGP3,stmp,1)
+  call get_param_1D('icm.in','rKTGP11',2,itmp1,trKTGP11,stmp,1)
+  call get_param_1D('icm.in','rKTGP12',2,itmp1,trKTGP12,stmp,1)
+  call get_param_1D('icm.in','rKTGP13',2,itmp1,trKTGP13,stmp,1)
+  call get_param_1D('icm.in','rKTGP21',2,itmp1,trKTGP21,stmp,1)
+  call get_param_1D('icm.in','rKTGP22',2,itmp1,trKTGP22,stmp,1)
+  call get_param_1D('icm.in','rKTGP23',2,itmp1,trKTGP23,stmp,1)
+  call get_param_1D('icm.in','CChl1',2,itmp1,tCChl1,stmp,1)
+  call get_param_1D('icm.in','CChl2',2,itmp1,tCChl2,stmp,1)
+  call get_param_1D('icm.in','CChl3',2,itmp1,tCChl3,stmp,1)
+  call get_param_1D('icm.in','PRR1',2,itmp,tPRR1,stmp,1)
+  call get_param_1D('icm.in','PRR2',2,itmp,tPRR2,stmp,1)
+  call get_param_1D('icm.in','PRR3',2,itmp,tPRR3,stmp,1)
+
+  call read_icm_param_2d('GPM1',GPM1,tGPM1)
+  call read_icm_param_2d('GPM2',GPM2,tGPM2)
+  call read_icm_param_2d('GPM3',GPM3,tGPM3)
+  call read_icm_param_2d('TGP1',TGP1,tTGP1)
+  call read_icm_param_2d('TGP2',TGP2,tTGP2)
+  call read_icm_param_2d('TGP3',TGP3,tTGP3)
+  call read_icm_param_2d('rKTGP11',rKTGP11,trKTGP11)
+  call read_icm_param_2d('rKTGP12',rKTGP12,trKTGP12)
+  call read_icm_param_2d('rKTGP13',rKTGP13,trKTGP13)
+  call read_icm_param_2d('rKTGP21',rKTGP21,trKTGP21)
+  call read_icm_param_2d('rKTGP22',rKTGP22,trKTGP22)
+  call read_icm_param_2d('rKTGP23',rKTGP23,trKTGP23)
+  call read_icm_param_2d('CChl1',CChl1,tCChl1)
+  call read_icm_param_2d('CChl2',CChl2,tCChl2)
+  call read_icm_param_2d('CChl3',CChl3,tCChl3)
+  call read_icm_param_2d('PRR1',PRR1,tPRR1)
+  call read_icm_param_2d('PRR2',PRR2,tPRR2)
+  call read_icm_param_2d('PRR3',PRR3,tPRR3)
+
+  !read carbon parameters
+  call get_param_1D('icm.in','rKRC',2,itmp,trKRC,stmp,1)
+  call get_param_1D('icm.in','rKLC',2,itmp,trKLC,stmp,1)
+  call get_param_1D('icm.in','rKDC',2,itmp,trKDC,stmp,1)
+
+  call read_icm_param_2d('rKRC',rKRC,trKRC)
+  call read_icm_param_2d('rKLC',rKLC,trKLC)
+  call read_icm_param_2d('rKDC',rKDC,trKDC)
+
+  !read Phosphorus parameters
+  call get_param_1D('icm.in','rKRP',2,itmp,trKRC,stmp,1)
+  call get_param_1D('icm.in','rKLP',2,itmp,trKLC,stmp,1)
+  call get_param_1D('icm.in','rKDP',2,itmp,trKDC,stmp,1)
+  call get_param_1D('icm.in','rKRPalg',2,itmp,trKRPalg,stmp,1)
+  call get_param_1D('icm.in','rKLPalg',2,itmp,trKLPalg,stmp,1)
+  call get_param_1D('icm.in','rKDPalg',2,itmp,trKDPalg,stmp,1)
+  call read_icm_param_2d('rKRP',rKRP,trKRP)
+  call read_icm_param_2d('rKLP',rKLP,trKLP)
+  call read_icm_param_2d('rKDP',rKDP,trKDP)
+  call read_icm_param_2d('rKRPalg',rKRPalg,trKRPalg)
+  call read_icm_param_2d('rKLPalg',rKLPalg,trKLPalg)
+  call read_icm_param_2d('rKDPalg',rKDPalg,trKDPalg)
+
+  !read settling velocity
+  call get_param_1D('icm.in','WSSED',2,itmp,tWSSED,stmp,1)
+  call get_param_1D('icm.in','WSRP',2,itmp,tWSRP,stmp,1)
+  call get_param_1D('icm.in','WSLP',2,itmp,tWSLP,stmp,1)
+  call get_param_1D('icm.in','WSPB1',2,itmp,tWSPB1,stmp,1)
+  call get_param_1D('icm.in','WSPB2',2,itmp,tWSPB2,stmp,1)
+  call get_param_1D('icm.in','WSPB3',2,itmp,tWSPB3,stmp,1)
+  
+  call read_icm_param_2d('WSRP',WSRP,tWSRP)
+  call read_icm_param_2d('WSLP',WSLP,tWSLP)
+  call read_icm_param_2d('WSPB1',WSPB1,tWSPB1)
+  call read_icm_param_2d('WSPB2',WSPB2,tWSPB2)
+  call read_icm_param_2d('WSPB3',WSPB3,tWSPB3)
+  call read_icm_param_2d('WSSED',WSSED,tWSSED)
+
+  !read net settling velocity (POM into the sediment)
+  call get_param('icm.in','WSSBNET',2,itmp,tWSSBNET,stmp)
+  call get_param('icm.in','WSLBNET',2,itmp,tWSLBNET,stmp)
+  call get_param('icm.in','WSRBNET',2,itmp,tWSRBNET,stmp)
+  call get_param('icm.in','WS1BNET',2,itmp,tWS1BNET,stmp)
+  call get_param('icm.in','WS2BNET',2,itmp,tWS2BNET,stmp)
+  call get_param('icm.in','WS3BNET',2,itmp,tWS3BNET,stmp)
+
+  call read_icm_param_2d('WSSBNET',WSSBNET,tWSSBNET)
+  call read_icm_param_2d('WSLBNET',WSLBNET,tWSLBNET)
+  call read_icm_param_2d('WSRBNET',WSRBNET,tWSRBNET)
+  call read_icm_param_2d('WS1BNET',WS1BNET,tWS1BNET)
+  call read_icm_param_2d('WS2BNET',WS2BNET,tWS2BNET)
+  call read_icm_param_2d('WS3BNET',WS3BNET,tWS3BNET)
+
+  !read turbidity
+  call get_param('icm.in','Turb',2,itmp,tTurb,stmp)
+  call read_icm_param_2d('Turb',Turb,tTurb)
+
+  !read reareation 
+  call get_param('icm.in','WRea',2,itmp,tWRea,stmp)
+  call read_icm_param_2d('WRea',WRea,tWRea)
+
+  !read PC to TSS
+  if(iLight==3) then
+    call get_param('icm.in','PC2TSS',2,itmp,tPC2TSS,stmp)
+    call read_icm_param_2d('PC2TSS',PC2TSS,tPC2TSS)
+  endif
+
+  !for pH module
+#ifdef ICM_PH
+  !pH flag
+  iphgb=0
+  call read_icm_param_2d('ph',iphgb,-9999)
+
+  !pH nudge flag
+  if(inu_ph==1) then
+    ph_nudge=0.0
+    call read_icm_param_2d('ph_nudge',ph_nudge,-999)
+  endif
+#endif ICM_PH
 
 !  !-----------------read regions-----------------
 !  if(iReg==1) then
@@ -210,636 +332,613 @@ subroutine read_icm_param2
 !    close(31)
 !  endif !reg_icm
 
-  
+  !-----------------------------------------------------------
+  !old method, to be deleted
+  !-----------------------------------------------------------
   !-----------------read in settling velocity----------------- 
-  call get_param('icm.in','iWS',1,iWS,rtmp,stmp)
-  call get_param('icm.in','iReg_WS',1,iReg_WS,rtmp,stmp)
+  !call get_param('icm.in','iWS',1,iWS,rtmp,stmp)
+  !call get_param('icm.in','iReg_WS',1,iReg_WS,rtmp,stmp)
 
-  if(iWS>3.or.iReg_WS<1) then
-    write(errmsg,*)'Illegal ICM paramter iWS, iReg_WS ',iWS,iReg_WS
-    call parallel_abort(errmsg)
-  endif ! iWS
+  !if(iWS>3.or.iReg_WS<1) then
+  !  write(errmsg,*)'Illegal ICM paramter iWS, iReg_WS ',iWS,iReg_WS
+  !  call parallel_abort(errmsg)
+  !endif ! iWS
 
-  if(iWS==1) then !uniform
-    call get_param_1D('icm.in','WSRP',2,itmp,tWSRP,stmp,1)
-    call get_param_1D('icm.in','WSLP',2,itmp,tWSLP,stmp,1)
-    call get_param_1D('icm.in','WSPB1',2,itmp,tWSPB1,stmp,1)
-    call get_param_1D('icm.in','WSPB2',2,itmp,tWSPB2,stmp,1)
-    call get_param_1D('icm.in','WSPB3',2,itmp,tWSPB3,stmp,1)
-    do i=1,nea
-      WSRP(i)=tWSRP
-      WSLP(i)=tWSLP
-      WSPB1(i)=tWSPB1
-      WSPB2(i)=tWSPB2
-      WSPB3(i)=tWSPB3
-    enddo !i
-  elseif(iWS==2) then !spatially varying
+  !if(iWS==1) then !uniform
+  !  call get_param_1D('icm.in','WSRP',2,itmp,tWSRP,stmp,1)
+  !  call get_param_1D('icm.in','WSLP',2,itmp,tWSLP,stmp,1)
+  !  call get_param_1D('icm.in','WSPB1',2,itmp,tWSPB1,stmp,1)
+  !  call get_param_1D('icm.in','WSPB2',2,itmp,tWSPB2,stmp,1)
+  !  call get_param_1D('icm.in','WSPB3',2,itmp,tWSPB3,stmp,1)
+  !  do i=1,nea
+  !    WSRP(i)=tWSRP
+  !    WSLP(i)=tWSLP
+  !    WSPB1(i)=tWSPB1
+  !    WSPB2(i)=tWSPB2
+  !    WSPB3(i)=tWSPB3
+  !  enddo !i
+  !elseif(iWS==2) then !spatially varying
 
-!!    open(31,file=in_dir(1:len_in_dir)//'settling.gr3',status='old')
-!!    read(31,*); read(31,*)negb,npgb
-!!    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling.gr3')
-!!    do i=1,np_global
-!!      read(31,*)ip,xtmp,ytmp,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3
-!!      if(ipgl(ip)%rank==myrank) then
-!!        tWSRPs(ipgl(ip)%id)=tWSRP
-!!        tWSLPs(ipgl(ip)%id)=tWSLP
-!!        tWSPB1s(ipgl(ip)%id)=tWSPB1
-!!        tWSPB2s(ipgl(ip)%id)=tWSPB2
-!!        tWSPB3s(ipgl(ip)%id)=tWSPB3
-!!      endif !ipgl(ip)%rank
-!!    enddo !i
-!!    close(31)
-!!    do i=1,nea
-!!      do j=1,i34(i)
-!!        nd=elnode(j,i)
-!!        WSRP(i)=WSRP(i)+tWSRPs(nd)/i34(i)
-!!        WSLP(i)=WSLP(i)+tWSLPs(nd)/i34(i)
-!!        WSPB1(i)=WSPB1(i)+tWSPB1s(nd)/i34(i)
-!!        WSPB2(i)=WSPB2(i)+tWSPB2s(nd)/i34(i)
-!!        WSPB3(i)=WSPB3(i)+tWSPB3s(nd)/i34(i)
-!!      enddo
-!!    enddo !i
+  !  open(31,file=in_dir(1:len_in_dir)//'settling_RP.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_RP.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSRP
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSRPs(ipgl(ip)%id)=tWSRP
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSRP(i)=WSRP(i)+tWSRPs(nd)/i34(i)
+  !    enddo
+  !  enddo !i
 
-    open(31,file=in_dir(1:len_in_dir)//'settling_RP.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_RP.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSRP
-      if(ipgl(ip)%rank==myrank) then
-        tWSRPs(ipgl(ip)%id)=tWSRP
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSRP(i)=WSRP(i)+tWSRPs(nd)/i34(i)
-      enddo
-    enddo !i
+  !  open(31,file=in_dir(1:len_in_dir)//'settling_LP.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_LP.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSLP
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSLPs(ipgl(ip)%id)=tWSLP
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSLP(i)=WSLP(i)+tWSLPs(nd)/i34(i)
+  !    enddo
+  !  enddo !i
 
-    open(31,file=in_dir(1:len_in_dir)//'settling_LP.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_LP.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSLP
-      if(ipgl(ip)%rank==myrank) then
-        tWSLPs(ipgl(ip)%id)=tWSLP
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSLP(i)=WSLP(i)+tWSLPs(nd)/i34(i)
-      enddo
-    enddo !i
+  !  open(31,file=in_dir(1:len_in_dir)//'settling_PB1.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB1.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSPB1
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSPB1s(ipgl(ip)%id)=tWSPB1
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSPB1(i)=WSPB1(i)+tWSPB1s(nd)/i34(i)
+  !    enddo
+  !  enddo !i
 
-    open(31,file=in_dir(1:len_in_dir)//'settling_PB1.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB1.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSPB1
-      if(ipgl(ip)%rank==myrank) then
-        tWSPB1s(ipgl(ip)%id)=tWSPB1
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSPB1(i)=WSPB1(i)+tWSPB1s(nd)/i34(i)
-      enddo
-    enddo !i
+  !  open(31,file=in_dir(1:len_in_dir)//'settling_PB2.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB2.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSPB2
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSPB2s(ipgl(ip)%id)=tWSPB2
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSPB2(i)=WSPB2(i)+tWSPB2s(nd)/i34(i)
+  !    enddo
+  !  enddo !i
 
-    open(31,file=in_dir(1:len_in_dir)//'settling_PB2.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB2.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSPB2
-      if(ipgl(ip)%rank==myrank) then
-        tWSPB2s(ipgl(ip)%id)=tWSPB2
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSPB2(i)=WSPB2(i)+tWSPB2s(nd)/i34(i)
-      enddo
-    enddo !i
+  !  open(31,file=in_dir(1:len_in_dir)//'settling_PB3.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB3.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSPB3
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSPB3s(ipgl(ip)%id)=tWSPB3
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSPB3(i)=WSPB3(i)+tWSPB3s(nd)/i34(i)
+  !    enddo
+  !  enddo !i
 
-    open(31,file=in_dir(1:len_in_dir)//'settling_PB3.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check settling_PB3.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSPB3
-      if(ipgl(ip)%rank==myrank) then
-        tWSPB3s(ipgl(ip)%id)=tWSPB3
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSPB3(i)=WSPB3(i)+tWSPB3s(nd)/i34(i)
-      enddo
-    enddo !i
+  !elseif (iWS==3) then !iReg_WS>=2
+  !  !reg_WS(nea) is init to be 1 in icm_init
+  !  !read in mapping file, renew reg_WS
+  !  open(31,file=in_dir(1:len_in_dir)//'region_WS.prop',status='old')
+  !  do i=1,ne_global
+  !    read(31,*)j,tmp
+  !    itmp=nint(tmp)
+  !    if(itmp<1) then
+  !      write(errmsg,*)'Unknown region flag at elem:',i,tmp
+  !      call parallel_abort(errmsg)
+  !    endif
+  !    if(iegl(i)%rank==myrank) reg_WS(iegl(i)%id)=itmp
+  !    enddo !i
+  !  close(31)
+  !  itmp=maxval(reg_WS)
+  !  if((itmp-iReg_WS)>0) then !int
+  !    write(errmsg,*)'read_icm: too many regions for WS: ',iReg_WS,itmp
+  !  endif !to many regions
 
-  elseif (iWS==3) then !iReg_WS>=2
-    !reg_WS(nea) is init to be 1 in icm_init
-    !read in mapping file, renew reg_WS
-    open(31,file=in_dir(1:len_in_dir)//'region_WS.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp<1) then
-        write(errmsg,*)'Unknown region flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) reg_WS(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-    itmp=maxval(reg_WS)
-    if((itmp-iReg_WS)>0) then !int
-      write(errmsg,*)'read_icm: too many regions for WS: ',iReg_WS,itmp
-    endif !to many regions
-
-    allocate(ptmp1(iReg_WS),ptmp2(iReg_WS),ptmp3(iReg_WS),ptmp4(iReg_WS),ptmp5(iReg_WS),stat=i)
-    if(i/=0) call parallel_abort('read_icm_input: alloc(4)')
-    call get_param_1D('icm.in','WSRP',2,itmp,ptmp1,stmp,iReg_WS)
-    call get_param_1D('icm.in','WSLP',2,itmp,ptmp2,stmp,iReg_WS)
-    call get_param_1D('icm.in','WSPB1',2,itmp,ptmp3,stmp,iReg_WS)
-    call get_param_1D('icm.in','WSPB2',2,itmp,ptmp4,stmp,iReg_WS)
-    call get_param_1D('icm.in','WSPB3',2,itmp,ptmp5,stmp,iReg_WS)
-    do i=1,nea
-      WSRP(i)=ptmp1(reg_WS(i))
-      WSLP(i)=ptmp2(reg_WS(i))
-      WSPB1(i)=ptmp3(reg_WS(i))
-      WSPB2(i)=ptmp4(reg_WS(i))
-      WSPB3(i)=ptmp5(reg_WS(i))
-    enddo !i=nea
-    deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5)
-  endif ! iWS
+  !  allocate(ptmp1(iReg_WS),ptmp2(iReg_WS),ptmp3(iReg_WS),ptmp4(iReg_WS),ptmp5(iReg_WS),stat=i)
+  !  if(i/=0) call parallel_abort('read_icm_input: alloc(4)')
+  !  call get_param_1D('icm.in','WSRP',2,itmp,ptmp1,stmp,iReg_WS)
+  !  call get_param_1D('icm.in','WSLP',2,itmp,ptmp2,stmp,iReg_WS)
+  !  call get_param_1D('icm.in','WSPB1',2,itmp,ptmp3,stmp,iReg_WS)
+  !  call get_param_1D('icm.in','WSPB2',2,itmp,ptmp4,stmp,iReg_WS)
+  !  call get_param_1D('icm.in','WSPB3',2,itmp,ptmp5,stmp,iReg_WS)
+  !  do i=1,nea
+  !    WSRP(i)=ptmp1(reg_WS(i))
+  !    WSLP(i)=ptmp2(reg_WS(i))
+  !    WSPB1(i)=ptmp3(reg_WS(i))
+  !    WSPB2(i)=ptmp4(reg_WS(i))
+  !    WSPB3(i)=ptmp5(reg_WS(i))
+  !  enddo !i=nea
+  !  deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5)
+  !endif ! iWS
 
 
   !-----------------read in net settling velocity-----------------
-  WSSBNET=0.0;    WSLBNET=0.0;   WSRBNET=0.0; WS1BNET=0.0;   WS2BNET=0.0;    WS3BNET=0.0;   
-  call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
-  !net settling velocity
-  if(iSet==1) then
-    call get_param('icm.in','WSSBNET',2,itmp,rtmp,stmp)
-    WSSBNET(1)=rtmp
-    call get_param('icm.in','WSLBNET',2,itmp,rtmp,stmp)
-    WSLBNET(1)=rtmp
-    call get_param('icm.in','WSRBNET',2,itmp,rtmp,stmp)
-    WSRBNET(1)=rtmp
-    call get_param('icm.in','WS1BNET',2,itmp,rtmp,stmp)
-    WS1BNET(1)=rtmp
-    call get_param('icm.in','WS2BNET',2,itmp,rtmp,stmp)
-    WS2BNET(1)=rtmp
-    call get_param('icm.in','WS3BNET',2,itmp,rtmp,stmp)
-    WS3BNET(1)=rtmp
-    do i=2,nea
-      WSSBNET(i)=WSSBNET(1)
-      WSLBNET(i)=WSLBNET(1)
-      WSRBNET(i)=WSRBNET(1)
-      WS1BNET(i)=WS1BNET(1)
-      WS2BNET(i)=WS2BNET(1)
-      WS3BNET(i)=WS3BNET(1)
-    enddo !i
-    do i=1,nea
-      WSSBNET(i)=min(WSSBNET(i),WSSED)
-      WSLBNET(i)=min(WSLBNET(i),WSLP(i))
-      WSRBNET(i)=min(WSRBNET(i),WSRP(i))
-      WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
-      WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
-      WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
-    enddo !i
+  !WSSBNET=0.0;    WSLBNET=0.0;   WSRBNET=0.0; WS1BNET=0.0;   WS2BNET=0.0;    WS3BNET=0.0;   
+  !call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
+  !!net settling velocity
+  !if(iSet==1) then
+  !  call get_param('icm.in','WSSBNET',2,itmp,rtmp,stmp)
+  !  WSSBNET(1)=rtmp
+  !  call get_param('icm.in','WSLBNET',2,itmp,rtmp,stmp)
+  !  WSLBNET(1)=rtmp
+  !  call get_param('icm.in','WSRBNET',2,itmp,rtmp,stmp)
+  !  WSRBNET(1)=rtmp
+  !  call get_param('icm.in','WS1BNET',2,itmp,rtmp,stmp)
+  !  WS1BNET(1)=rtmp
+  !  call get_param('icm.in','WS2BNET',2,itmp,rtmp,stmp)
+  !  WS2BNET(1)=rtmp
+  !  call get_param('icm.in','WS3BNET',2,itmp,rtmp,stmp)
+  !  WS3BNET(1)=rtmp
+  !  do i=2,nea
+  !    WSSBNET(i)=WSSBNET(1)
+  !    WSLBNET(i)=WSLBNET(1)
+  !    WSRBNET(i)=WSRBNET(1)
+  !    WS1BNET(i)=WS1BNET(1)
+  !    WS2BNET(i)=WS2BNET(1)
+  !    WS3BNET(i)=WS3BNET(1)
+  !  enddo !i
+  !  do i=1,nea
+  !    WSSBNET(i)=min(WSSBNET(i),WSSED)
+  !    WSLBNET(i)=min(WSLBNET(i),WSLP(i))
+  !    WSRBNET(i)=min(WSRBNET(i),WSRP(i))
+  !    WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
+  !    WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
+  !    WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
+  !  enddo !i
 
-  elseif(iSet==2) then
-    open(31,file=in_dir(1:len_in_dir)//'netsettling.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check netsettling.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET
-      if(ipgl(ip)%rank==myrank) then
-        tWSSBNETs(ipgl(ip)%id)=tWSSBNET
-        tWSLBNETs(ipgl(ip)%id)=tWSLBNET
-        tWSRBNETs(ipgl(ip)%id)=tWSRBNET
-        tWS1BNETs(ipgl(ip)%id)=tWS1BNET
-        tWS2BNETs(ipgl(ip)%id)=tWS2BNET
-        tWS3BNETs(ipgl(ip)%id)=tWS3BNET
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WSSBNET(i)=WSSBNET(i)+tWSSBNETs(nd)/i34(i)
-        WSLBNET(i)=WSLBNET(i)+tWSLBNETs(nd)/i34(i)
-        WSRBNET(i)=WSRBNET(i)+tWSRBNETs(nd)/i34(i)
-        WS1BNET(i)=WS1BNET(i)+tWS1BNETs(nd)/i34(i)
-        WS2BNET(i)=WS2BNET(i)+tWS2BNETs(nd)/i34(i)
-        WS3BNET(i)=WS3BNET(i)+tWS3BNETs(nd)/i34(i)
-      enddo
-      WSSBNET(i)=min(WSSBNET(i),WSSED)
-      WSLBNET(i)=min(WSLBNET(i),WSLP(i))
-      WSRBNET(i)=min(WSRBNET(i),WSRP(i))
-      WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
-      WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
-      WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
-    enddo !i
-  else
-    write(errmsg,*)'unknown iSet in sediment parameters:',iSet
-    call parallel_abort(errmsg)
-  endif!iSet
+  !elseif(iSet==2) then
+  !  open(31,file=in_dir(1:len_in_dir)//'netsettling.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check netsettling.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWSSBNETs(ipgl(ip)%id)=tWSSBNET
+  !      tWSLBNETs(ipgl(ip)%id)=tWSLBNET
+  !      tWSRBNETs(ipgl(ip)%id)=tWSRBNET
+  !      tWS1BNETs(ipgl(ip)%id)=tWS1BNET
+  !      tWS2BNETs(ipgl(ip)%id)=tWS2BNET
+  !      tWS3BNETs(ipgl(ip)%id)=tWS3BNET
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WSSBNET(i)=WSSBNET(i)+tWSSBNETs(nd)/i34(i)
+  !      WSLBNET(i)=WSLBNET(i)+tWSLBNETs(nd)/i34(i)
+  !      WSRBNET(i)=WSRBNET(i)+tWSRBNETs(nd)/i34(i)
+  !      WS1BNET(i)=WS1BNET(i)+tWS1BNETs(nd)/i34(i)
+  !      WS2BNET(i)=WS2BNET(i)+tWS2BNETs(nd)/i34(i)
+  !      WS3BNET(i)=WS3BNET(i)+tWS3BNETs(nd)/i34(i)
+  !    enddo
+  !    WSSBNET(i)=min(WSSBNET(i),WSSED)
+  !    WSLBNET(i)=min(WSLBNET(i),WSLP(i))
+  !    WSRBNET(i)=min(WSRBNET(i),WSRP(i))
+  !    WS1BNET(i)=min(WS1BNET(i),WSPB1(i))
+  !    WS2BNET(i)=min(WS2BNET(i),WSPB2(i))
+  !    WS3BNET(i)=min(WS3BNET(i),WSPB3(i))
+  !  enddo !i
+  !else
+  !  write(errmsg,*)'unknown iSet in sediment parameters:',iSet
+  !  call parallel_abort(errmsg)
+  !endif!iSet
 
 
   !-----------------read in parameters of phytoplankton growth-----------------
-  call get_param('icm.in','iReg_GP',1,iReg_GP,rtmp,stmp)
+  !call get_param('icm.in','iReg_GP',1,iReg_GP,rtmp,stmp)
 
-  !reg_GP(nea) is init to be 1 in icm_init
-  if (iReg_GP>1) then !spatially distributed 
-  !read in mapping file, renew reg_GP
-    open(31,file=in_dir(1:len_in_dir)//'region_GP.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp<1) then
-        write(errmsg,*)'Unknown region flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) reg_GP(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-    itmp=maxval(reg_GP)
-    if((itmp-iReg_GP)>0) then !int
-      write(errmsg,*)'read_icm: too many regions for GP: ',iReg_GP,itmp
-    endif !to many regions
+  !!reg_GP(nea) is init to be 1 in icm_init
+  !if (iReg_GP>1) then !spatially distributed 
+  !!read in mapping file, renew reg_GP
+  !  open(31,file=in_dir(1:len_in_dir)//'region_GP.prop',status='old')
+  !  do i=1,ne_global
+  !    read(31,*)j,tmp
+  !    itmp=nint(tmp)
+  !    if(itmp<1) then
+  !      write(errmsg,*)'Unknown region flag at elem:',i,tmp
+  !      call parallel_abort(errmsg)
+  !    endif
+  !    if(iegl(i)%rank==myrank) reg_GP(iegl(i)%id)=itmp
+  !    enddo !i
+  !  close(31)
+  !  itmp=maxval(reg_GP)
+  !  if((itmp-iReg_GP)>0) then !int
+  !    write(errmsg,*)'read_icm: too many regions for GP: ',iReg_GP,itmp
+  !  endif !to many regions
 
-  elseif (iReg_GP<1) then
-    write(errmsg,*)'Unknow ICM paramter iReg_GP ',iReg_GP
-    call parallel_abort(errmsg)
-  endif !iReg_GP
+  !elseif (iReg_GP<1) then
+  !  write(errmsg,*)'Unknow ICM paramter iReg_GP ',iReg_GP
+  !  call parallel_abort(errmsg)
+  !endif !iReg_GP
 
-  allocate(ptmp1(iReg_GP),ptmp2(iReg_GP),ptmp3(iReg_GP),ptmp4(iReg_GP),ptmp5(iReg_GP),ptmp6(iReg_GP),ptmp7(iReg_GP),ptmp8(iReg_GP),ptmp9(iReg_GP),ptmp10(iReg_GP),ptmp11(iReg_GP),ptmp12(iReg_GP),ptmp13(iReg_GP),ptmp14(iReg_GP),ptmp15(iReg_GP),stat=i)
-  if(i/=0) call parallel_abort('read_icm_input: alloc(3)')
-  call get_param_1D('icm.in','GPM1',2,itmp,ptmp1,stmp,iReg_GP)
-  call get_param_1D('icm.in','GPM2',2,itmp,ptmp2,stmp,iReg_GP)
-  call get_param_1D('icm.in','GPM3',2,itmp,ptmp3,stmp,iReg_GP)
-  call get_param_1D('icm.in','TGP1',2,itmp1,ptmp4,stmp,iReg_GP)
-  call get_param_1D('icm.in','TGP2',2,itmp1,ptmp5,stmp,iReg_GP)
-  call get_param_1D('icm.in','TGP3',2,itmp1,ptmp6,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP11',2,itmp1,ptmp7,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP12',2,itmp1,ptmp8,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP13',2,itmp1,ptmp9,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP21',2,itmp1,ptmp10,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP22',2,itmp1,ptmp11,stmp,iReg_GP)
-  call get_param_1D('icm.in','rKTGP23',2,itmp1,ptmp12,stmp,iReg_GP)
-  call get_param_1D('icm.in','CChl1',2,itmp1,ptmp13,stmp,iReg_GP)
-  call get_param_1D('icm.in','CChl2',2,itmp1,ptmp14,stmp,iReg_GP)
-  call get_param_1D('icm.in','CChl3',2,itmp1,ptmp15,stmp,iReg_GP)
-  do i=1,nea
-      GPM1(i)=ptmp1(reg_GP(i))
-      GPM2(i)=ptmp2(reg_GP(i)) 
-      GPM3(i)=ptmp3(reg_GP(i)) 
-      TGP1(i)=ptmp4(reg_GP(i)) 
-      TGP2(i)=ptmp5(reg_GP(i)) 
-      TGP3(i)=ptmp6(reg_GP(i)) 
-      rKTGP11(i)=ptmp7(reg_GP(i)) 
-      rKTGP12(i)=ptmp8(reg_GP(i)) 
-      rKTGP13(i)=ptmp9(reg_GP(i)) 
-      rKTGP21(i)=ptmp10(reg_GP(i)) 
-      rKTGP22(i)=ptmp11(reg_GP(i)) 
-      rKTGP23(i)=ptmp12(reg_GP(i)) 
-      CChl1(i)=ptmp13(reg_GP(i)) 
-      CChl2(i)=ptmp14(reg_GP(i)) 
-      CChl3(i)=ptmp15(reg_GP(i)) 
-  enddo !nea
-  deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5,ptmp6,ptmp7,ptmp8,ptmp9,ptmp10,ptmp11,ptmp12,ptmp13,ptmp14,ptmp15)
+  !allocate(ptmp1(iReg_GP),ptmp2(iReg_GP),ptmp3(iReg_GP),ptmp4(iReg_GP),ptmp5(iReg_GP),ptmp6(iReg_GP),ptmp7(iReg_GP),ptmp8(iReg_GP),ptmp9(iReg_GP),ptmp10(iReg_GP),ptmp11(iReg_GP),ptmp12(iReg_GP),ptmp13(iReg_GP),ptmp14(iReg_GP),ptmp15(iReg_GP),stat=i)
+  !if(i/=0) call parallel_abort('read_icm_input: alloc(3)')
+  !call get_param_1D('icm.in','GPM1',2,itmp,ptmp1,stmp,iReg_GP)
+  !call get_param_1D('icm.in','GPM2',2,itmp,ptmp2,stmp,iReg_GP)
+  !call get_param_1D('icm.in','GPM3',2,itmp,ptmp3,stmp,iReg_GP)
+  !call get_param_1D('icm.in','TGP1',2,itmp1,ptmp4,stmp,iReg_GP)
+  !call get_param_1D('icm.in','TGP2',2,itmp1,ptmp5,stmp,iReg_GP)
+  !call get_param_1D('icm.in','TGP3',2,itmp1,ptmp6,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP11',2,itmp1,ptmp7,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP12',2,itmp1,ptmp8,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP13',2,itmp1,ptmp9,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP21',2,itmp1,ptmp10,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP22',2,itmp1,ptmp11,stmp,iReg_GP)
+  !call get_param_1D('icm.in','rKTGP23',2,itmp1,ptmp12,stmp,iReg_GP)
+  !call get_param_1D('icm.in','CChl1',2,itmp1,ptmp13,stmp,iReg_GP)
+  !call get_param_1D('icm.in','CChl2',2,itmp1,ptmp14,stmp,iReg_GP)
+  !call get_param_1D('icm.in','CChl3',2,itmp1,ptmp15,stmp,iReg_GP)
+  !do i=1,nea
+  !    GPM1(i)=ptmp1(reg_GP(i))
+  !    GPM2(i)=ptmp2(reg_GP(i)) 
+  !    GPM3(i)=ptmp3(reg_GP(i)) 
+  !    TGP1(i)=ptmp4(reg_GP(i)) 
+  !    TGP2(i)=ptmp5(reg_GP(i)) 
+  !    TGP3(i)=ptmp6(reg_GP(i)) 
+  !    rKTGP11(i)=ptmp7(reg_GP(i)) 
+  !    rKTGP12(i)=ptmp8(reg_GP(i)) 
+  !    rKTGP13(i)=ptmp9(reg_GP(i)) 
+  !    rKTGP21(i)=ptmp10(reg_GP(i)) 
+  !    rKTGP22(i)=ptmp11(reg_GP(i)) 
+  !    rKTGP23(i)=ptmp12(reg_GP(i)) 
+  !    CChl1(i)=ptmp13(reg_GP(i)) 
+  !    CChl2(i)=ptmp14(reg_GP(i)) 
+  !    CChl3(i)=ptmp15(reg_GP(i)) 
+  !enddo !nea
+  !deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5,ptmp6,ptmp7,ptmp8,ptmp9,ptmp10,ptmp11,ptmp12,ptmp13,ptmp14,ptmp15)
 
 
   !-----------------read in grazing rate-----------------
-  call get_param('icm.in','iPRR',1,iPRR,rtmp,stmp)
-  call get_param('icm.in','iReg_PR',1,iReg_PR,rtmp,stmp)
+  !call get_param('icm.in','iPRR',1,iPRR,rtmp,stmp)
+  !call get_param('icm.in','iReg_PR',1,iReg_PR,rtmp,stmp)
 
-  if(iPRR>3.or.iReg_PR<1) then
-    write(errmsg,*)'Illegal ICM paramter iPRR, iReg_PR ',iPRR,iReg_PR
-    call parallel_abort(errmsg)
-  endif ! iPRR
+  !if(iPRR>3.or.iReg_PR<1) then
+  !  write(errmsg,*)'Illegal ICM paramter iPRR, iReg_PR ',iPRR,iReg_PR
+  !  call parallel_abort(errmsg)
+  !endif ! iPRR
 
-  if(iPRR==1)then !uniform
-    call get_param_1D('icm.in','PRR1',2,itmp,PRR1(1),stmp,1)
-    call get_param_1D('icm.in','PRR2',2,itmp,PRR2(1),stmp,1)
-    call get_param_1D('icm.in','PRR3',2,itmp,PRR3(1),stmp,1)
-    do i=2,nea
-      PRR1(i)=PRR1(1)
-      PRR2(i)=PRR2(1)
-      PRR3(i)=PRR3(1)
-    enddo !i=2:nea
-  elseif(iPRR==2) then
-    open(31,file=in_dir(1:len_in_dir)//'grazing1.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing1.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
-    enddo !i=1:np_global
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        PRR1(i)=PRR1(i)+tPRR(nd)/i34(i)
-      enddo !j=i34
-    enddo !i=nea
-    !re-init
-    tPRR=0.0
+  !if(iPRR==1)then !uniform
+  !  call get_param_1D('icm.in','PRR1',2,itmp,PRR1(1),stmp,1)
+  !  call get_param_1D('icm.in','PRR2',2,itmp,PRR2(1),stmp,1)
+  !  call get_param_1D('icm.in','PRR3',2,itmp,PRR3(1),stmp,1)
+  !  do i=2,nea
+  !    PRR1(i)=PRR1(1)
+  !    PRR2(i)=PRR2(1)
+  !    PRR3(i)=PRR3(1)
+  !  enddo !i=2:nea
+  !elseif(iPRR==2) then
+  !  open(31,file=in_dir(1:len_in_dir)//'grazing1.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing1.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
+  !  enddo !i=1:np_global
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      PRR1(i)=PRR1(i)+tPRR(nd)/i34(i)
+  !    enddo !j=i34
+  !  enddo !i=nea
+  !  !re-init
+  !  tPRR=0.0
 
-    open(31,file=in_dir(1:len_in_dir)//'grazing2.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing2.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
-    enddo !i=1:np_global
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        PRR2(i)=PRR2(i)+tPRR(nd)/i34(i)
-      enddo !j=i34
-    enddo !i=nea
-    !re-init
-    tPRR=0.0
+  !  open(31,file=in_dir(1:len_in_dir)//'grazing2.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing2.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
+  !  enddo !i=1:np_global
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      PRR2(i)=PRR2(i)+tPRR(nd)/i34(i)
+  !    enddo !j=i34
+  !  enddo !i=nea
+  !  !re-init
+  !  tPRR=0.0
 
-    open(31,file=in_dir(1:len_in_dir)//'grazing3.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing3.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
-    enddo !i=1:np_global
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        PRR3(i)=PRR3(i)+tPRR(nd)/i34(i)
-      enddo !j=i34
-    enddo !i=nea
-    !re-init
-    tPRR=0.0
+  !  open(31,file=in_dir(1:len_in_dir)//'grazing3.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check grazing3.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tPRR(ipgl(ip)%id)
+  !  enddo !i=1:np_global
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      PRR3(i)=PRR3(i)+tPRR(nd)/i34(i)
+  !    enddo !j=i34
+  !  enddo !i=nea
+  !  !re-init
+  !  tPRR=0.0
 
-  elseif(iPRR==3) then !iReg_PR>=2
-    !reg_PR(nea) is init to be 1 in icm_init
-    !read in mapping file, renew reg_PR
-    open(31,file=in_dir(1:len_in_dir)//'region_PR.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp<1) then
-        write(errmsg,*)'Unknown region flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) reg_PR(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-    itmp=maxval(reg_PR)
-    if((itmp-iReg_PR)>0) then !int
-      write(errmsg,*)'read_icm: too many regions for PR: ',iReg_PR,itmp
-    endif !to many regions
+  !elseif(iPRR==3) then !iReg_PR>=2
+  !  !reg_PR(nea) is init to be 1 in icm_init
+  !  !read in mapping file, renew reg_PR
+  !  open(31,file=in_dir(1:len_in_dir)//'region_PR.prop',status='old')
+  !  do i=1,ne_global
+  !    read(31,*)j,tmp
+  !    itmp=nint(tmp)
+  !    if(itmp<1) then
+  !      write(errmsg,*)'Unknown region flag at elem:',i,tmp
+  !      call parallel_abort(errmsg)
+  !    endif
+  !    if(iegl(i)%rank==myrank) reg_PR(iegl(i)%id)=itmp
+  !    enddo !i
+  !  close(31)
+  !  itmp=maxval(reg_PR)
+  !  if((itmp-iReg_PR)>0) then !int
+  !    write(errmsg,*)'read_icm: too many regions for PR: ',iReg_PR,itmp
+  !  endif !to many regions
 
-    allocate(ptmp1(iReg_PR),ptmp2(iReg_PR),ptmp3(iReg_PR),stat=i)
-    if(i/=0) call parallel_abort('read_icm_input: alloc(5)')
-    call get_param_1D('icm.in','PRR1',2,itmp,ptmp1,stmp,iReg_PR)
-    call get_param_1D('icm.in','PRR2',2,itmp,ptmp2,stmp,iReg_PR)
-    call get_param_1D('icm.in','PRR3',2,itmp,ptmp3,stmp,iReg_PR)
-    do i=1,nea
-      PRR1(i)=ptmp1(reg_PR(i))
-      PRR2(i)=ptmp2(reg_PR(i))
-      PRR3(i)=ptmp3(reg_PR(i))
-    enddo !i=nea
-    deallocate(ptmp1,ptmp2,ptmp3)
-  endif !iPRR
+  !  allocate(ptmp1(iReg_PR),ptmp2(iReg_PR),ptmp3(iReg_PR),stat=i)
+  !  if(i/=0) call parallel_abort('read_icm_input: alloc(5)')
+  !  call get_param_1D('icm.in','PRR1',2,itmp,ptmp1,stmp,iReg_PR)
+  !  call get_param_1D('icm.in','PRR2',2,itmp,ptmp2,stmp,iReg_PR)
+  !  call get_param_1D('icm.in','PRR3',2,itmp,ptmp3,stmp,iReg_PR)
+  !  do i=1,nea
+  !    PRR1(i)=ptmp1(reg_PR(i))
+  !    PRR2(i)=ptmp2(reg_PR(i))
+  !    PRR3(i)=ptmp3(reg_PR(i))
+  !  enddo !i=nea
+  !  deallocate(ptmp1,ptmp2,ptmp3)
+  !endif !iPRR
   !-----------------read in paramater of carbon dissolution -----------------
-  call get_param('icm.in','iReg_KC',1,iReg_KC,rtmp,stmp)
+  !call get_param('icm.in','iReg_KC',1,iReg_KC,rtmp,stmp)
 
-  !reg_KC(nea) is init to be 1 in icm_init
-  if (iReg_KC>1) then !spatially distributed 
-  !read in mapping file, renew reg_KC
-    open(31,file=in_dir(1:len_in_dir)//'region_KC.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp<1) then
-        write(errmsg,*)'Unknown region flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) reg_KC(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-    itmp=maxval(reg_KC)
-    if((itmp-iReg_KC)>0) then !int
-      write(errmsg,*)'read_icm: too many regions for KC: ',iReg_KC,itmp
-    endif !to many regions
+  !!reg_KC(nea) is init to be 1 in icm_init
+  !if (iReg_KC>1) then !spatially distributed 
+  !!read in mapping file, renew reg_KC
+  !  open(31,file=in_dir(1:len_in_dir)//'region_KC.prop',status='old')
+  !  do i=1,ne_global
+  !    read(31,*)j,tmp
+  !    itmp=nint(tmp)
+  !    if(itmp<1) then
+  !      write(errmsg,*)'Unknown region flag at elem:',i,tmp
+  !      call parallel_abort(errmsg)
+  !    endif
+  !    if(iegl(i)%rank==myrank) reg_KC(iegl(i)%id)=itmp
+  !    enddo !i
+  !  close(31)
+  !  itmp=maxval(reg_KC)
+  !  if((itmp-iReg_KC)>0) then !int
+  !    write(errmsg,*)'read_icm: too many regions for KC: ',iReg_KC,itmp
+  !  endif !to many regions
 
-  elseif (iReg_KC<1) then
-    write(errmsg,*)'Unknow ICM paramter iReg_KC ',iReg_KC
-    call parallel_abort(errmsg)
-  endif !iReg_KC
+  !elseif (iReg_KC<1) then
+  !  write(errmsg,*)'Unknow ICM paramter iReg_KC ',iReg_KC
+  !  call parallel_abort(errmsg)
+  !endif !iReg_KC
 
-  allocate(ptmp1(iReg_KC),ptmp2(iReg_KC),ptmp3(iReg_KC),stat=i)
-  if(i/=0) call parallel_abort('read_icm_input: alloc(2)')
-  call get_param_1D('icm.in','rKRC',2,itmp,ptmp1,stmp,iReg_KC)
-  call get_param_1D('icm.in','rKLC',2,itmp,ptmp2,stmp,iReg_KC)
-  call get_param_1D('icm.in','rKDC',2,itmp,ptmp3,stmp,iReg_KC)
-  do i=1,nea
-    rKRC(i)=ptmp1(reg_KC(i))
-    rKLC(i)=ptmp2(reg_KC(i))
-    rKDC(i)=ptmp3(reg_KC(i))
-  enddo !i=nea
-  deallocate(ptmp1,ptmp2,ptmp3)
+  !allocate(ptmp1(iReg_KC),ptmp2(iReg_KC),ptmp3(iReg_KC),stat=i)
+  !if(i/=0) call parallel_abort('read_icm_input: alloc(2)')
+  !call get_param_1D('icm.in','rKRC',2,itmp,ptmp1,stmp,iReg_KC)
+  !call get_param_1D('icm.in','rKLC',2,itmp,ptmp2,stmp,iReg_KC)
+  !call get_param_1D('icm.in','rKDC',2,itmp,ptmp3,stmp,iReg_KC)
+  !do i=1,nea
+  !  rKRC(i)=ptmp1(reg_KC(i))
+  !  rKLC(i)=ptmp2(reg_KC(i))
+  !  rKDC(i)=ptmp3(reg_KC(i))
+  !enddo !i=nea
+  !deallocate(ptmp1,ptmp2,ptmp3)
 
 
   !-----------------read in paramater of PO4 hydrolysis-----------------
-  call get_param('icm.in','iReg_PO4',1,iReg_PO4,rtmp,stmp)
+  !call get_param('icm.in','iReg_PO4',1,iReg_PO4,rtmp,stmp)
 
-  !reg_PO4(nea) is init to be 1 in icm_init
-  if (iReg_PO4>1) then !spatially distributed 
-  !read in mapping file, renew reg_PO4
-    open(31,file=in_dir(1:len_in_dir)//'region_PO4.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp<1) then
-        write(errmsg,*)'Unknown region flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) reg_PO4(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-    itmp=maxval(reg_PO4)
-    if((itmp-iReg_PO4)>0) then !int
-      write(errmsg,*)'read_icm: too many regions for PO4: ',iReg_PO4,itmp
-    endif !to many regions
+  !!reg_PO4(nea) is init to be 1 in icm_init
+  !if (iReg_PO4>1) then !spatially distributed 
+  !!read in mapping file, renew reg_PO4
+  !  open(31,file=in_dir(1:len_in_dir)//'region_PO4.prop',status='old')
+  !  do i=1,ne_global
+  !    read(31,*)j,tmp
+  !    itmp=nint(tmp)
+  !    if(itmp<1) then
+  !      write(errmsg,*)'Unknown region flag at elem:',i,tmp
+  !      call parallel_abort(errmsg)
+  !    endif
+  !    if(iegl(i)%rank==myrank) reg_PO4(iegl(i)%id)=itmp
+  !    enddo !i
+  !  close(31)
+  !  itmp=maxval(reg_PO4)
+  !  if((itmp-iReg_PO4)>0) then !int
+  !    write(errmsg,*)'read_icm: too many regions for PO4: ',iReg_PO4,itmp
+  !  endif !to many regions
 
-  elseif (iReg_PO4<1) then
-    write(errmsg,*)'Unknow ICM paramter iReg_PO4 ',iReg_PO4
-    call parallel_abort(errmsg)
-  endif !iReg_PO4
+  !elseif (iReg_PO4<1) then
+  !  write(errmsg,*)'Unknow ICM paramter iReg_PO4 ',iReg_PO4
+  !  call parallel_abort(errmsg)
+  !endif !iReg_PO4
 
-  allocate(ptmp1(iReg_PO4),ptmp2(iReg_PO4),ptmp3(iReg_PO4),ptmp4(iReg_PO4),ptmp5(iReg_PO4),ptmp6(iReg_PO4),stat=i)
-  if(i/=0) call parallel_abort('read_icm_input: alloc(2)')
-  call get_param_1D('icm.in','rKRP',2,itmp,ptmp1,stmp,iReg_PO4)
-  call get_param_1D('icm.in','rKLP',2,itmp,ptmp2,stmp,iReg_PO4)
-  call get_param_1D('icm.in','rKDP',2,itmp,ptmp3,stmp,iReg_PO4)
-  call get_param_1D('icm.in','rKRPalg',2,itmp,ptmp4,stmp,iReg_PO4)
-  call get_param_1D('icm.in','rKLPalg',2,itmp,ptmp5,stmp,iReg_PO4)
-  call get_param_1D('icm.in','rKDPalg',2,itmp,ptmp6,stmp,iReg_PO4)
-  do i=1,nea
-    rKRP(i)=ptmp1(reg_PO4(i))
-    rKLP(i)=ptmp2(reg_PO4(i))
-    rKDP(i)=ptmp3(reg_PO4(i))
-    rKRPalg(i)=ptmp4(reg_PO4(i))
-    rKLPalg(i)=ptmp5(reg_PO4(i))
-    rKDPalg(i)=ptmp6(reg_PO4(i))
-  enddo !i=nea
-  deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5,ptmp6)
+  !allocate(ptmp1(iReg_PO4),ptmp2(iReg_PO4),ptmp3(iReg_PO4),ptmp4(iReg_PO4),ptmp5(iReg_PO4),ptmp6(iReg_PO4),stat=i)
+  !if(i/=0) call parallel_abort('read_icm_input: alloc(2)')
+  !call get_param_1D('icm.in','rKRP',2,itmp,ptmp1,stmp,iReg_PO4)
+  !call get_param_1D('icm.in','rKLP',2,itmp,ptmp2,stmp,iReg_PO4)
+  !call get_param_1D('icm.in','rKDP',2,itmp,ptmp3,stmp,iReg_PO4)
+  !call get_param_1D('icm.in','rKRPalg',2,itmp,ptmp4,stmp,iReg_PO4)
+  !call get_param_1D('icm.in','rKLPalg',2,itmp,ptmp5,stmp,iReg_PO4)
+  !call get_param_1D('icm.in','rKDPalg',2,itmp,ptmp6,stmp,iReg_PO4)
+  !do i=1,nea
+  !  rKRP(i)=ptmp1(reg_PO4(i))
+  !  rKLP(i)=ptmp2(reg_PO4(i))
+  !  rKDP(i)=ptmp3(reg_PO4(i))
+  !  rKRPalg(i)=ptmp4(reg_PO4(i))
+  !  rKLPalg(i)=ptmp5(reg_PO4(i))
+  !  rKDPalg(i)=ptmp6(reg_PO4(i))
+  !enddo !i=nea
+  !deallocate(ptmp1,ptmp2,ptmp3,ptmp4,ptmp5,ptmp6)
 
 
   !-----------------read in light extinction coefficient-----------------
-  Turb=0.0
-  call get_param('icm.in','iTurb',1,iTurb,rtmp,stmp)
-  if(iTurb==1) then !uniform
-    call get_param('icm.in','Turb',2,itmp,rtmp,stmp)
-    tTurb=rtmp
-    do i=1,nea
-      Turb(i)=tTurb
-    enddo !i
-  elseif(iTurb==2) then !spatially varying
-    open(31,file=in_dir(1:len_in_dir)//'Turb.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check Turb.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tTurb
-      if(ipgl(ip)%rank==myrank) then
-        tTurbs(ipgl(ip)%id)=tTurb
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        Turb(i)=Turb(i)+tTurbs(nd)/i34(i)
-      enddo
-    enddo !i
-  else
-    write(errmsg,*)'Unknow ICM paramter iTurb ',iTurb
-    call parallel_abort(errmsg)
-  endif !iTurb
+  !Turb=0.0
+  !call get_param('icm.in','iTurb',1,iTurb,rtmp,stmp)
+  !if(iTurb==1) then !uniform
+  !  call get_param('icm.in','Turb',2,itmp,rtmp,stmp)
+  !  tTurb=rtmp
+  !  do i=1,nea
+  !    Turb(i)=tTurb
+  !  enddo !i
+  !elseif(iTurb==2) then !spatially varying
+  !  open(31,file=in_dir(1:len_in_dir)//'Turb.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check Turb.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tTurb
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tTurbs(ipgl(ip)%id)=tTurb
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      Turb(i)=Turb(i)+tTurbs(nd)/i34(i)
+  !    enddo
+  !  enddo !i
+  !else
+  !  write(errmsg,*)'Unknow ICM paramter iTurb ',iTurb
+  !  call parallel_abort(errmsg)
+  !endif !iTurb
 
 
   !-----------------read in coefficients for Wind-induced reaeration of DO----------------- 
-  WRea=0.0
-  call get_param('icm.in','iWRea',1,iWRea,rtmp,stmp)
-  if(iWRea==1) then !uniform
-    call get_param('icm.in','WRea',2,itmp,rtmp,stmp)
-    tWRea=rtmp
-    do i=1,nea
-      WRea(i)=tWRea
-    enddo !i
-  elseif(iWRea==2) then !spatially varying
-    open(31,file=in_dir(1:len_in_dir)//'WRea.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check WRea.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,tWRea
-      if(ipgl(ip)%rank==myrank) then
-        tWReas(ipgl(ip)%id)=tWRea
-      endif !ipgl(ip)%rank
-    enddo !i
-    close(31)
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        WRea(i)=WRea(i)+tWReas(nd)/i34(i)
-      enddo
-    enddo !i
-  else
-    write(errmsg,*)'Unknow ICM paramter iWRea ',iWRea
-    call parallel_abort(errmsg)
-  endif !iWRea
+  !WRea=0.0
+  !call get_param('icm.in','iWRea',1,iWRea,rtmp,stmp)
+  !if(iWRea==1) then !uniform
+  !  call get_param('icm.in','WRea',2,itmp,rtmp,stmp)
+  !  tWRea=rtmp
+  !  do i=1,nea
+  !    WRea(i)=tWRea
+  !  enddo !i
+  !elseif(iWRea==2) then !spatially varying
+  !  open(31,file=in_dir(1:len_in_dir)//'WRea.gr3',status='old')
+  !  read(31,*); read(31,*)negb,npgb
+  !  if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check WRea.gr3')
+  !  do i=1,np_global
+  !    read(31,*)ip,xtmp,ytmp,tWRea
+  !    if(ipgl(ip)%rank==myrank) then
+  !      tWReas(ipgl(ip)%id)=tWRea
+  !    endif !ipgl(ip)%rank
+  !  enddo !i
+  !  close(31)
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      nd=elnode(j,i)
+  !      WRea(i)=WRea(i)+tWReas(nd)/i34(i)
+  !    enddo
+  !  enddo !i
+  !else
+  !  write(errmsg,*)'Unknow ICM paramter iWRea ',iWRea
+  !  call parallel_abort(errmsg)
+  !endif !iWRea
 
 
   !-----------------read in coefficients for the relation between TSS and PC-----------------
-  PC2TSS=0.0
-  call get_param('icm.in','iTSS',1,iTSS,rtmp,stmp)
-  if(iLight==3) then !read PC2TSS 
-    if(iTSS==1) then !uniform
-      call get_param('icm.in','PC2TSS',2,itmp,rtmp,stmp)
-      tPC2TSS=rtmp
-      do i=1,nea
-        PC2TSS(i)=tPC2TSS
-      enddo !i
-    elseif(iTSS==2) then !spatially varying
-      open(31,file=in_dir(1:len_in_dir)//'PC2TSS.gr3',status='old')
-      read(31,*); read(31,*)negb,npgb
-      if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check PC2TSS.gr3')
-      do i=1,np_global
-        read(31,*)ip,xtmp,ytmp,tPC2TSS
-        if(ipgl(ip)%rank==myrank) then
-          tPC2TSSs(ipgl(ip)%id)=tPC2TSS
-        endif !ipgl(ip)%rank
-      enddo !i
-      close(31)
-      do i=1,nea
-        do j=1,i34(i)
-          nd=elnode(j,i)
-          PC2TSS(i)=PC2TSS(i)+tPC2TSSs(nd)/i34(i)
-        enddo
-      enddo !i
-    else
-      write(errmsg,*)'Unknow ICM paramter iTSS ',iTSS
-      call parallel_abort(errmsg)
-    endif !iTSS
-  endif !iLight
+  !PC2TSS=0.0
+  !call get_param('icm.in','iTSS',1,iTSS,rtmp,stmp)
+  !if(iLight==3) then !read PC2TSS 
+  !  if(iTSS==1) then !uniform
+  !    call get_param('icm.in','PC2TSS',2,itmp,rtmp,stmp)
+  !    tPC2TSS=rtmp
+  !    do i=1,nea
+  !      PC2TSS(i)=tPC2TSS
+  !    enddo !i
+  !  elseif(iTSS==2) then !spatially varying
+  !    open(31,file=in_dir(1:len_in_dir)//'PC2TSS.gr3',status='old')
+  !    read(31,*); read(31,*)negb,npgb
+  !    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check PC2TSS.gr3')
+  !    do i=1,np_global
+  !      read(31,*)ip,xtmp,ytmp,tPC2TSS
+  !      if(ipgl(ip)%rank==myrank) then
+  !        tPC2TSSs(ipgl(ip)%id)=tPC2TSS
+  !      endif !ipgl(ip)%rank
+  !    enddo !i
+  !    close(31)
+  !    do i=1,nea
+  !      do j=1,i34(i)
+  !        nd=elnode(j,i)
+  !        PC2TSS(i)=PC2TSS(i)+tPC2TSSs(nd)/i34(i)
+  !      enddo
+  !    enddo !i
+  !  else
+  !    write(errmsg,*)'Unknow ICM paramter iTSS ',iTSS
+  !    call parallel_abort(errmsg)
+  !  endif !iTSS
+  !endif !iLight
 
 
   !-----------------read in PH flag-----------------
 !  if(iPh==1) then
-#ifdef ICM_PH
-    iphgb=0
-    open(31,file=in_dir(1:len_in_dir)//'ph.prop',status='old')
-    do i=1,ne_global
-      read(31,*)ie,itmp
-      if(iegl(ie)%rank==myrank) then
-        iphgb(iegl(ie)%id)=itmp
-      endif
-    enddo !i
-    close(31)
-  
-
-    !-----------------read in PH nudge flag-----------------
-    if(inu_ph==1) then
-      open(31,file=in_dir(1:len_in_dir)//'ph_nudge.gr3',status='old')
-      read(31,*); read(31,*)
-      do i=1,np_global
-        read(31,*)ip,xtmp,ytmp,ztmp
-        if(ztmp<0.or.ztmp>1) then
-          write(errmsg,*)'Wrong PH nudging factor at node (1):',i,ztmp
-          call parallel_abort(errmsg)
-        endif
-        if(ipgl(ip)%rank==myrank) ph_nudge_nd(ipgl(ip)%id)=ztmp
-      enddo !i
-      close(31)
-
-      ph_nudge=0.0
-      do ie=1,nea
-        do i=1,i34(ie) 
-          ph_nudge(ie)=ph_nudge(ie)+ph_nudge_nd(elnode(i,ie))
-        enddo !i
-        ph_nudge(ie)=ph_nudge(ie)/i34(ie)
-      enddo  !ie
-    endif !inu_ph
- 
-!  endif !iPh
-#endif /*ICM_PH*/
+!#ifdef ICM_PH
+!    iphgb=0
+!    open(31,file=in_dir(1:len_in_dir)//'ph.prop',status='old')
+!    do i=1,ne_global
+!      read(31,*)ie,itmp
+!      if(iegl(ie)%rank==myrank) then
+!        iphgb(iegl(ie)%id)=itmp
+!      endif
+!    enddo !i
+!    close(31)
+!  
+!
+!    !-----------------read in PH nudge flag-----------------
+!    if(inu_ph==1) then
+!      open(31,file=in_dir(1:len_in_dir)//'ph_nudge.gr3',status='old')
+!      read(31,*); read(31,*)
+!      do i=1,np_global
+!        read(31,*)ip,xtmp,ytmp,ztmp
+!        if(ztmp<0.or.ztmp>1) then
+!          write(errmsg,*)'Wrong PH nudging factor at node (1):',i,ztmp
+!          call parallel_abort(errmsg)
+!        endif
+!        if(ipgl(ip)%rank==myrank) ph_nudge_nd(ipgl(ip)%id)=ztmp
+!      enddo !i
+!      close(31)
+!
+!      ph_nudge=0.0
+!      do ie=1,nea
+!        do i=1,i34(ie) 
+!          ph_nudge(ie)=ph_nudge(ie)+ph_nudge_nd(elnode(i,ie))
+!        enddo !i
+!        ph_nudge(ie)=ph_nudge(ie)/i34(ie)
+!      enddo  !ie
+!    endif !inu_ph
+! 
+!!  endif !iPh
+!#endif /*ICM_PH*/
 
   !ncai_sav
   !-----------------read in sav patch flag-----------------
@@ -1181,18 +1280,82 @@ subroutine read_icm_param2
 
 end subroutine read_icm_param2
 
+subroutine read_icm_param_2d(varname,pvar,pvalue)
+!---------------------------------------------------------------------
+!funciton to automatically read spatially varying ICM paramters (*.gr3 or *.prop)
+!Input:
+!    varname: name of parameter
+!    pvar:    variable for the parameter (element based)
+!    pvalue:  parameter value
+!Output:
+!    1). pvalue=-999:  read values in "varname.gr3", and assign to pvar 
+!    2). pvalue=-9999: read values in "varname.prop", and assign to pvar 
+!    3). pvalue=other const: assign const value (pvalue) to pvar 
+!---------------------------------------------------------------------
+  use schism_glbl,only : iwp,nea,npa,np_global,ne_global,in_dir,len_in_dir,&
+                       & i34,elnode,ipgl,iegl
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+  character(len=*),intent(in) :: varname
+  real(kind=iwp),intent(in) :: pvalue
+  real(kind=iwp),dimension(nea),intent(out) :: pvar
+
+  !local variables
+  integer :: i,j,k,negb,npgb,ip,ie,nd
+  real(kind=iwp) :: xtmp,ytmp,rtmp
+  real(kind=iwp),dimension(npa) :: tvar
+  
+  !read spatailly varying parameter values
+  if(pvalue==-999.0) then  !*.gr3
+    open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,rtmp
+      if(ipgl(ip)%rank==myrank) then
+        tvar(ipgl(ip)%id)=rtmp
+      endif
+    enddo
+    close(31) 
+
+    !interp from node to element
+    pvar=0.0
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)    
+        pvar(i)=pvar(i)+tvar(nd)/i34(i)
+      enddo!j
+    enddo!i
+
+  else if(pvalue==-9999.0) then !*.prop
+    open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
+    do i=1,ne_global
+      read(31,*)ie,rtmp 
+      if(iegl(ie)%rank==myrank) then
+        pvar(iegl(ie)%id)=rtmp
+      endif
+    enddo
+
+  else !constant value 
+    do i=1,nea
+       pvar(i)=pvalue
+    enddo
+  endif!pvalue
+  
+end subroutine read_icm_param_2d
+
 subroutine read_icm_param
 !---------------------------------------------------------------------
 !read paramters in icm.in
 !---------------------------------------------------------------------
-   use schism_glbl, only : iwp,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
- &in_dir,out_dir,len_in_dir,len_out_dir
-   use schism_msgp, only : parallel_abort
-   use icm_mod
-   use misc_modules
-   use icm_sed_mod, only : NH4T2I,PO4T2I
+  use schism_glbl, only : iwp,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
+                        & in_dir,out_dir,len_in_dir,len_out_dir
+  use schism_msgp, only : parallel_abort
+  use icm_mod
+  use misc_modules
+  use icm_sed_mod, only : NH4T2I,PO4T2I
 
-   implicit none
+  implicit none
 
   !local variables
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
@@ -1676,10 +1839,6 @@ subroutine read_icm_param
   call get_param('icm.in','rKTr',2,itmp,rtmp,stmp)
   rKTr=rtmp
 
-  !for TSS settling
-  call get_param('icm.in','WSSED',2,itmp,rtmp,stmp)
-  WSSED=rtmp
-
   !for CACO3 settling
   call get_param('icm.in','WSCACO3',2,itmp,rtmp,stmp)
   WSCACO3=rtmp
@@ -1917,10 +2076,10 @@ subroutine check_icm_param
     write(31,'(a10,i5)')'iAtm= ',iAtm
     write(31,'(a10,i5)')'iBen= ',iBen
     write(31,'(a10,i5)')'iSet= ',iSet
-    write(31,'(a10,i5)')'iReg_GP= ',iReg_GP
-    write(31,'(a10,i5)')'iPRR= ',iPRR
-    write(31,'(a10,i5)')'iReg_PR= ',iReg_PR
-    write(31,'(a10,i5)')'iReg_PO4= ',iReg_PO4
+    !write(31,'(a10,i5)')'iReg_GP= ',iReg_GP
+    !write(31,'(a10,i5)')'iPRR= ',iPRR
+    !write(31,'(a10,i5)')'iReg_PR= ',iReg_PR
+    !write(31,'(a10,i5)')'iReg_PO4= ',iReg_PO4
 
     write(31,*)
     write(31,*)'!-------Zooplankton parameter--------------------------'

@@ -39,7 +39,6 @@
 !-----------------------------------------------------------------------
 
 
-
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !global switches
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -152,7 +151,11 @@ iout_icm=0
 nspool_icm=30
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!wqparam1.in
+!ICM parameters for water column 
+!Note for 2D element based parameters  
+!   value=-999:  value read from *.gr3 file   (e.g. need GPM1.gr3 if GPM1=-999) 
+!   value=-9999: value read from *.prop file  (e.g. need GPM1.prop if GPM1=-9999) 
+!   value=other const: const value is applied 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !-----------------------------------------------------------------------
@@ -177,32 +180,28 @@ Pf=     0.0
 !Phytoplankton parameters
 !CChl: carbon to Chl ratio g[C]/mg[Chl]
 !alpha_PB: initial slope between photosynthetic rate and irradiance g[C]*m2/g[Chl]/E
+!2D variables: GPM?,TGP?,rKTGP??,CChl?,PRR?
 !-----------------------------------------------------------------------
-!-growth curve-------------
-iReg_GP=  7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_GP>=maxvar(<#region>)
-GPM1=   3.0   3.0   3.0   3.0   3.0   3.0   3.0
-GPM2=   3.0   3.0   3.0   3.0   3.0   3.0   3.0 
-GPM3=   2.5   2.5   2.5   2.5   2.5   2.5   2.5
-TGP1=   15.0   15.0   15.0   15.0   15.0   15.0   15.0
-TGP2=   22.0   22.0   22.0   22.0   22.0   22.0   22.0
-TGP3=   27.0   27.0   27.0   27.0   27.0   27.0   27.0
-rKTGP11= 0.004 0.004 0.004 0.004 0.004 0.004 0.004
-rKTGP12= 0.008 0.008 0.008 0.008 0.008 0.008 0.008  
-rKTGP13= 0.005 0.005 0.005 0.005 0.005 0.005 0.005
-rKTGP21= 0.006 0.006 0.006 0.006 0.006 0.006 0.006  
-rKTGP22= 0.010 0.010 0.010 0.010 0.010 0.010 0.010  
-rKTGP23= 0.004 0.004 0.004 0.004 0.004 0.004 0.004
+GPM1=   3.0 
+GPM2=   3.0
+GPM3=   2.5   
+TGP1=   15.0  
+TGP2=   22.0  
+TGP3=   27.0  
+rKTGP11= 0.004 
+rKTGP12= 0.008   
+rKTGP13= 0.005 
+rKTGP21= 0.006   
+rKTGP22= 0.010   
+rKTGP23= 0.004 
 
-CChl1=   0.059   0.059   0.059   0.059   0.059   0.059   0.059  
-CChl2=   0.059   0.059   0.059   0.059   0.059   0.059   0.059  
-CChl3=   0.059   0.059   0.059   0.059   0.059   0.059   0.059
+CChl1=   0.059    
+CChl2=   0.059    
+CChl3=   0.059   
 
-!-grazing rate--------------------
-iPRR= 1 !1:uniform; 2:*.gr2; 3:regional
-iReg_PR=  7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_PR>=maxvar(<#region>)
-PRR1=   0.215   0.215   0.215   0.215   0.215   0.215   0.215
-PRR2=   0.215   0.215   0.215   0.215   0.215   0.215   0.215
-PRR3=   0.01    0.01    0.01    0.01    0.01    0.01    0.01
+PRR1=   0.215   
+PRR2=   0.215
+PRR3=   0.01
 
 !--------------
 BMPR=   0.01   0.01   0.04
@@ -212,8 +211,8 @@ rKhN=   0.01   0.01   0.01
 rKhP=   0.001  0.001  0.001
 rIm=    40.0   40.0   40.0
 alpha_PB= 8.0  10.0   3.15 
-iLimit= 1 !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
-irSi= 0 !irSi=0: no Si limitation; irSi=1: Si limitation 
+iLimit= 1                !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
+irSi= 0                  !irSi=0: no Si limitation; irSi=1: Si limitation 
 rKhS=   0.05
 ST=     0.1
 rKeC1=  5.82
@@ -226,6 +225,7 @@ Dopt= 1.0
 
 !-----------------------------------------------------------------------
 !Carbon parameters
+!2D variables: rKRC,rKLC,rKDC 
 !-----------------------------------------------------------------------
 FCRPZ=  0.35
 FCLPZ=  0.55
@@ -238,11 +238,9 @@ FCLP=   0.55 0.55 0.55
 FCDP=   0.1 0.1 0.1
 FCD=    0.0  0.0  0.0 
 
-!regional carbon dissolution, may delete once inducing multiple groups of DOCA
-iReg_KC=7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_KC>=maxvar(<#region>)
-rKRC=   0.005 0.005 0.005 0.005 0.005 0.005 0.005
-rKLC=   0.075 0.075 0.075 0.075 0.075 0.075 0.075
-rKDC=   0.2 0.2 0.2 0.2 0.2 0.2 0.2
+rKRC=   0.005 
+rKLC=   0.075 
+rKDC=   0.2 
 rKRCalg= 0.0
 rKLCalg= 0.0
 rKDCalg= 0.0
@@ -299,6 +297,7 @@ rKNit2=  0.0045
 
 !-----------------------------------------------------------------------
 !Phosphorus parameters
+!2D variables: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
 !-----------------------------------------------------------------------
 FPRPZ=  0.1
 FPLPZ=  0.2
@@ -322,14 +321,12 @@ APC=    0.02   0.02  0.02
 
 rKPO4p=  0.0 !PO4p partition coefficient
 
-!regional biochemical process of PO4
-iReg_PO4= 7 !1:constant; >=2:spatial distributed,requires mapping file, iReg_PO4>=maxvar(<#region>) 
-rKRP=   0.005 0.005 0.005 0.005 0.005 0.005 0.005
-rKLP=   0.075 0.075 0.075 0.075 0.075 0.075 0.075
-rKDP=   0.10 0.10 0.10 0.10 0.10 0.10 0.10
-rKRPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-rKLPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-rKDPalg= 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+rKRP=   0.005 
+rKLP=   0.075 
+rKDP=   0.10
+rKRPalg= 0.0 
+rKLPalg= 0.0 
+rKDPalg= 0.2 
 
 !-----------------------------------------------------------------------
 !Silica parameters
@@ -363,6 +360,38 @@ AON=     4.33
 AONO=    2.86
 rKro=    3.933
 rKTr=    1.024
+
+!-----------------------------------------------------------------------
+!water column settling velocity (m/day):  2D variables
+!-----------------------------------------------------------------------
+WSRP=  1.0  
+WSLP=  1.0  
+WSPB1= 0.35 
+WSPB2= 0.1
+WSPB3= 0.00
+WSSED= 1.00
+
+!-----------------------------------------------------------------------
+!settling velocity into sediment: 2D variables 
+!iSet=0: same as water column settling velocity  
+!iSet=1: spatial constant net settling velocity 
+!-----------------------------------------------------------------------
+iSet= 1 
+WSLBNET=  1.0
+WSRBNET=  1.0
+WS1BNET=  0.35
+WS2BNET=  0.1
+WS3BNET=  0.00
+WSSBNET=  0.2
+
+!-----------------------------------------------------------------------
+!Turb:   base coefficient for Light extinction coefficient(1/m)
+!WRea:   coefficients for Wind-induced reaeration of DO
+!PC2TSS: coefficient of converting PC to TSS 
+!-----------------------------------------------------------------------
+Turb=0.26  
+WRea= 0.0
+PC2TSS= 3.0
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !PH model parameter
@@ -508,62 +537,3 @@ fcrpveg=  0.05   0.05   0.05
 
 !density parameters
 rdensveg= 10	 10	10     !density coefficient                         
-                               
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!wqparam2.in
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-!-----------------------------------------------------------------------
-!coefficients for settling velocity(m/day)
-!iWS=1: uniform settling velocity 
-!iWS=2: spatially varying settling velocity, requiring 5 *.gr3
-!iWS=3: regional varying settling velocity, reuqiring region_WS.prop
-!-----------------------------------------------------------------------
-iWS=3
-iReg_WS= 7 ! >=2:spatial distributed,requires mapping file, iReg_WS>=maxvar(<#region>)
-WSRP=  1.0  1.0  1.0  1.0  1.0  1.0  1.0
-WSLP=  1.0  1.0  1.0  1.0  1.0  1.0  1.0
-WSPB1= 0.35 0.35 0.35 0.35 0.35 0.35 0.35
-WSPB2= 0.10 0.10 0.10 0.10 0.10 0.10 0.10
-WSPB3= 0.00 0.00 0.00 0.00 0.00 0.00 0.00
-
-!uniform
-WSSED= 1.00
-
-!-----------------------------------------------------------------------
-!Net settling velocity to sediment
-!iSet=0: no re-suspension; 
-!iSet=1: spatial constant net settling velocity; 
-!iSet=2: spatial varying, requires netsettling.gr3, in order as follwing
-!-----------------------------------------------------------------------
-iSet= 1 
-WSSBNET=  0.2
-WSLBNET=  1.0
-WSRBNET=  1.0
-WS1BNET=  0.2
-WS2BNET=  0.10
-WS3BNET=  0.00
-
-!-----------------------------------------------------------------------
-!coefficients for Light extinction coefficient(1/m)
-!iTurb=1: uniform coefficient; iTurb=2: spatially varying
-!-----------------------------------------------------------------------
-iTurb= 1
-Turb=  0.26
-
-!-----------------------------------------------------------------------
-!coefficients for Wind-induced reaeration of DO
-!iWRea=1: uniform coefficient; iWRea=2: spatially varying
-!-----------------------------------------------------------------------
-iWRea= 1
-WRea= 0.0
-
-!-----------------------------------------------------------------------
-!coefficients for the relation between TSS and PC 
-!iTSS=1: uniform coefficient; iTSS=2: spatially varying
-!-----------------------------------------------------------------------
-iTSS= 1
-PC2TSS= 3.0
-!PC2TSS_a= 3.0
-!PC2TSS_b= 2.0
-

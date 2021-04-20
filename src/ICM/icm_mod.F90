@@ -40,7 +40,7 @@ module icm_mod
   integer,save :: iSed,iRea,iBen,iTBen
   integer,save :: iZoo,iPh
   integer,save :: iAtm,iCheck,iout_icm
-  integer,save :: iSet,iTurb,iWRea,iTSS 
+  integer,save :: iSet !,iTurb,iWRea,iTSS 
   integer,save :: isav_icm,iveg_icm !ncai_sav, ncai_veg 
  
 !  !ICM region
@@ -97,8 +97,7 @@ module icm_mod
   integer,save :: irSi, iLimit
   
   !TSED
-  real(kind=iwp),save,allocatable,dimension(:) :: PC2TSS 
-  real(kind=iwp),save :: WSSED
+  real(kind=iwp),save,allocatable,dimension(:) :: PC2TSS,WSSED 
   
   !DO
   real(kind=iwp),save,allocatable,dimension(:) :: WMS 
@@ -231,7 +230,7 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !nea
 
   !settling
-  integer,save :: iReg_WS,iWS
+  !integer,save :: iReg_WS,iWS
   integer,save,allocatable :: reg_WS(:) !nea
   real(kind=iwp),save,allocatable,dimension(:) :: WSRP,WSLP,WSPB1,WSPB2,WSPB3,turb,WRea
 

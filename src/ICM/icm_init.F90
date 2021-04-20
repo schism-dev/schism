@@ -33,7 +33,7 @@ subroutine icm_init
   allocate(dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
-    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea), &
+    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea),WSSED(nea), &
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
     & wqc(ntrs(7),nvrt,nea),GP(nvrt,nea,3),&
     & rKRC(nea),rKLC(nea),rKDC(nea),&
@@ -649,7 +649,7 @@ subroutine icm_init
   dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
-  SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0
+  SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0; WSSED=0.0
   GP=0.0;      
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0

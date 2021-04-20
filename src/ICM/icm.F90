@@ -2924,7 +2924,7 @@ subroutine calkwq(id,nv,ure,it)
     if(k==nv.and.iSet/=0)then
       a=-fp*WSSBNET(id)/dep(k)
     else
-      a=-fp*WSSED/dep(k)
+      a=-fp*WSSED(id)/dep(k)
     endif
     if(iZoo==1) then
       b= FPIZ(1)*APCZ(1)*BMZ(1)*ZB1(k,1)+FPIZ(2)*APCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
@@ -2939,7 +2939,7 @@ subroutine calkwq(id,nv,ure,it)
     rtmp=-APC(1)*GP(klev,id,1)*PB1(k,1)-APC(2)*GP(klev,id,2)*PB2(k,1)-APC(3)*GP(klev,id,3)*PB3(k,1) 
     b=b+rtmp
     if(iof_icm(94)==1) absPO4(klev,id)=rtmp
-    b=b+rKDOP*DOP(k,1)+fp*WSSED*PO4t0/dep(k)+nPO4t/dep(k)+WPPO4t+WPO4t
+    b=b+rKDOP*DOP(k,1)+fp*WSSED(id)*PO4t0/dep(k)+nPO4t/dep(k)+WPPO4t+WPO4t
 
     !ncai_sav
     if(isav_icm==1.and.patchsav(id)==1.and.ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
@@ -3039,7 +3039,7 @@ subroutine calkwq(id,nv,ure,it)
     if(k==nv.and.iSet/=0)then
       a=-fp*WSSBNET(id)/dep(k)
     else
-      a=-fp*WSSED/dep(k)
+      a=-fp*WSSED(id)/dep(k)
     endif
     if(iZoo==1) then
       b= FSIZ(1)*ASCZ(1)*BMZ(1)*ZB1(k,1)+FSIZ(2)*ASCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
@@ -3049,7 +3049,7 @@ subroutine calkwq(id,nv,ure,it)
     endif
     b=b+FSId*ASCd*BMP(1)*PB1(k,1) & !PB metabolism
       & -ASCd*GP(klev,id,1)*PB1(k,1)+ &  !PB1 uptake
-      & rKSUA*SU(k,1)+WSSED*SAt0/dep(k)+nSAt/dep(k)+WPSAt+WSAt
+      & rKSUA*SU(k,1)+WSSED(id)*SAt0/dep(k)+nSAt/dep(k)+WPSAt+WSAt
 
     SAt(k,2)=((1.0+a*dtw2)*SAt(k,1)+b*dtw)/(1.0-a*dtw2)
     SAt(k,1)=0.5*(SAt(k,1)+SAt(k,2))
@@ -3096,10 +3096,8 @@ subroutine calkwq(id,nv,ure,it)
       else
         call parallel_abort('Uknown iRea in ICM')
       endif
+      rKr=rKr+WRea(id)
 
-      if(iWRea/=0) then
-        rKr=rKr+WRea(id)
-      endif
     endif !k==1
 
     a=-rKr
@@ -3398,7 +3396,7 @@ subroutine calkwq(id,nv,ure,it)
      & RPOP(k,1),rKRPOP,FPRP,FPR(1),APC(1),FPR(2),APC(2),FPR(3),APC(3),RPOP0,nRPOP,&
      & LPOP(k,1),rKLPOP,FNLP,FPL(1),FPL(2),FPL(3),LPOP0,nLPOP,&
      & DOP(k,1),rKDOP,FPDP,FPD(1),FPD(2),FPD(3),nDOP,&
-     & PO4t(k,1),rKPO4p,TSED(k),WSSED,FPIP,FPI(1),FPI(2),FPI(3),nPO4t,&
+     & PO4t(k,1),rKPO4p,TSED(k),WSSED(id),FPIP,FPI(1),FPI(2),FPI(3),nPO4t,&
      & SU(k,1),rKSUA,rKSU,rKTSUA,WSPB1(id),FSPP,ASCd,FSPd,SU0,nSU,&
      & SAt(k,1),rKSAp,FSIP,FSId,SAt0,nSAt,&
      & COD(k,1),rKCOD,rKHCOD,rKCD,rKTCOD,nCOD,&
