@@ -245,7 +245,7 @@
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
       real(rkind),allocatable :: swild95(:,:,:) !for analysis module
       real(rkind),allocatable :: swild13(:) 
-      real(4),allocatable :: swild11(:),swild12(:,:) !reading schout*
+      real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:),ts_offline(:,:,:) !reading schout*
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
       logical :: ltmp,ltmp1(1),ltmp2(1)
@@ -348,6 +348,12 @@
         if(istat/=0) call parallel_abort('STEP: fluxes_tr alloc')
       endif
 !     End alloc.
+
+!     Offline transport
+      if(itransport_only/=0) then
+        allocate(ts_offline(2,nvrt,nea),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (73)')
+      endif
 
 !      do it=iths+1,ntime
 
@@ -1735,7 +1741,7 @@
 !new28: bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
-      !Read in schout (saved hydro outputs), and update new soln: eta2, s[uv]2, dfh.
+      !Read in schout (saved hydro outputs), and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
       !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
       !transport solver; similarly for tr_nd*
 
@@ -1805,7 +1811,6 @@
         !write(16,*)'done reading elev...'
         j=nf90_inq_varid(ncid_schout, "diffusivity",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
-!      do k=1,nvrt
         !j=nf90_get_var(ncid_schout,mm,swild11(1:np_global),(/k,1,irec2/),(/1,np_global,1/))
         j=nf90_get_var(ncid_schout,mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
@@ -1817,13 +1822,11 @@
           dfh(:,ip)=swild12(:,i)
         endif
       enddo !i
-!      enddo !k
 
       if(myrank==0) then
         !write(16,*)'done reading dfh...'
         j=nf90_inq_varid(ncid_schout, "hvel_side",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvel')
-!      do k=1,nvrt
         j=nf90_get_var(ncid_schout,mm,swild12,(/1,1,1,irec2/),(/1,nvrt,ns_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel')
           !write(16,*)'done reading su2'
@@ -1835,13 +1838,11 @@
           su2(:,isd)=swild12(:,i)
         endif
       enddo !i
-!      enddo !k
 
-!      do k=1,nvrt
       if(myrank==0) then
         j=nf90_get_var(ncid_schout,mm,swild12,(/2,1,1,irec2/),(/1,nvrt,ns_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel2')
-        write(16,*)'finished reading schout...'
+!        write(16,*)'finished reading sv2...'
       endif !myrank=0
       call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
       do i=1,ns_global
@@ -1850,8 +1851,35 @@
           sv2(:,isd)=swild12(:,i)
         endif
       enddo !i
-!      enddo !k
       deallocate(swild12)
+
+!     T,S
+      allocate(swild14(nvrt,ne_global,2),stat=istat)
+      if(istat/=0) call parallel_abort('STEP: alloc swild14')
+      swild14(nvrt,ne_global,2)=0 !test mem
+
+      if(myrank==0) then
+        j=nf90_inq_varid(ncid_schout, "temp_elem",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem')
+        j=nf90_inq_varid(ncid_schout, "salt_elem",jj)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem')
+        j=nf90_get_var(ncid_schout,mm,swild14(:,:,1),(/1,1,irec2/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem')
+        j=nf90_get_var(ncid_schout,jj,swild14(:,:,2),(/1,1,irec2/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem')
+        write(16,*)'done reading T,S and schout_'
+      endif !myrank=0
+      call mpi_bcast(swild14,2*nvrt*ne_global,mpi_real,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('STEP: mpi_bcast in reading T,S')
+      do i=1,ne_global
+        if(iegl(i)%rank==myrank) then
+          ie=iegl(i)%id !up to nea
+          ts_offline(1,:,ie)=swild14(:,i,1)
+          ts_offline(2,:,ie)=swild14(:,i,2)
+        endif
+      enddo !i
+
+      deallocate(swild14)
 
 !     Deal with junks
       where(abs(dfh)>1.d3) dfh=1.d-6
@@ -7051,6 +7079,13 @@
 !$OMP end single
 #endif /*USE_AGE*/
 
+!       Overwrite T,S for offline transport option
+        if(itransport_only/=0) then
+!$OMP     workshare
+          tr_el(1:2,:,1:nea)=ts_offline(1:2,:,:)
+!$OMP     end workshare
+        endif !itransport_only/
+
 !       Convert to nodes and whole levels
 !$OMP   do 
         do i=1,nea
@@ -9361,6 +9396,7 @@
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       deallocate(swild9)
+      if(allocated(ts_offline)) deallocate(ts_offline)
 
 #ifdef USE_NAPZD
       deallocate(Bio_bdefp)
