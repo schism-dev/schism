@@ -1032,37 +1032,36 @@
 
 !         Interface (shoreline) sides
 !$OMP     workshare
-          icolor=0 !nodes on the interface sides
+!          icolor=0 !nodes on the interface sides (not needed)
           icolor2=0 !interface sides
 !$OMP     end workshare
 
 !$OMP     do
           do i=1,ns
             if(isdel(2,i)/=0) then; if(idry_e2(isdel(1,i))+idry_e2(isdel(2,i))==1) then
-!              icolor(isidenode(1:2,i))=1
               icolor2(i)=1
             endif; endif
           enddo !i
 !$OMP     end do
 
-!$OMP     do
-          loopinun: do i=1,np
-            do j=1,nne(i)
-              ie=indel(j,i)
-              id=iself(j,i)
-              do m=1,2 !2 neighboring sides
-                isd=elside(nxq(m+i34(ie)-3,id,i34(ie)),ie)
-                if(icolor2(isd)==1) then
-                  icolor(i)=1
-                  cycle loopinun
-                endif
-              enddo !m
-            enddo !j
-          end do loopinun !i
-!$OMP     end do
+!!$OMP     do
+!          loopinun: do i=1,np
+!            do j=1,nne(i)
+!              ie=indel(j,i)
+!              id=iself(j,i)
+!              do m=1,2 !2 neighboring sides
+!                isd=elside(nxq(m+i34(ie)-3,id,i34(ie)),ie)
+!                if(icolor2(isd)==1) then
+!                  icolor(i)=1
+!                  cycle loopinun
+!                endif
+!              enddo !m
+!            enddo !j
+!          end do loopinun !i
+!!$OMP     end do
 !$OMP end parallel
 
-          call exchange_p2di(icolor)
+!          call exchange_p2di(icolor)
           call exchange_s2di(icolor2)
           
 !         Aug. shoreline sides (must be internal sides)
@@ -1087,25 +1086,35 @@
             inew=0 !for initializing and counting su2 sv2
             do i=1,nsdf !aug.
               isd=isdf(i)
-              if(isdel(1,isd)<0.or.isdel(2,isd)<0) cycle
+!              if(isdel(1,isd)<0.or.isdel(2,isd)<0) cycle
               if(isdel(1,isd)==0.or.isdel(2,isd)==0) then
                 write(errmsg,*)'LEVELS1: bnd side (2):',isdel(:,isd),iplg(isidenode(1:2,isd))
                 call parallel_abort(errmsg)
               endif
-              if(idry_e2(isdel(1,isd))+idry_e2(isdel(2,isd))/=1) cycle
+!              if(idry_e2(isdel(1,isd))+idry_e2(isdel(2,isd))/=1) cycle
 
-              if(idry_e2(isdel(1,isd))==1) then
-                ie=isdel(1,isd)
-              else 
-                ie=isdel(2,isd)
-              endif
+              !Try to find a dry elem (to take care of some odd cases where
+              !nodeA is interface btw sub-domains)
+!              if(idry_e2(isdel(1,isd))==1) then
+!                ie=isdel(1,isd)
+!              else 
+!                ie=isdel(2,isd)
+!              endif
+              ie=0
+              do m=1,2
+                if(isdel(m,isd)>0) then; if(idry_e2(isdel(m,isd))==1) then
+                  ie=isdel(m,isd); exit
+                endif; endif
+              enddo !m
+              if(ie==0) cycle
+
               n1=isidenode(1,isd)
               n2=isidenode(2,isd)
               nodeA=elnode(1,ie)+elnode(2,ie)+elnode(3,ie)-n1-n2
 
               if(icolor(nodeA)==1) cycle !this node is done
 
-              icolor(nodeA)=1 !this node is done
+              icolor(nodeA)=1 !this node will be done
               if(nodeA>np) cycle
 !             nodeA is resident
 
@@ -1191,8 +1200,8 @@
               ltmp=ltmp.or.inew(i)/=0
               if(inew(i)/=0) then
 !                srwt_xchng(1)=.true.
-                su2(1:nvrt,i)=su2(1:nvrt,i)/inew(i)
-                sv2(1:nvrt,i)=sv2(1:nvrt,i)/inew(i)
+                su2(1:nvrt,i)=su2(1:nvrt,i)/dble(inew(i))
+                sv2(1:nvrt,i)=sv2(1:nvrt,i)/dble(inew(i))
               endif
             enddo !i
 !$OMP end parallel do 
