@@ -2166,7 +2166,10 @@
           pframe(3,1,i)=0.d0
           pframe(1,2,i)=-cos(xlon(i))*sin(ylat(i)) !meri. dir.
           pframe(2,2,i)=-sin(xlon(i))*sin(ylat(i))
-          pframe(3,2,i)=cos(ylat(i))
+          pframe(3,2,i)=rearth_pole/rearth_eq*cos(ylat(i))
+          ar1=sqrt(pframe(1,2,i)**2.d0+pframe(2,2,i)**2.d0+pframe(3,2,i)**2.d0)
+          if(ar1==0.d0) call parallel_abort('INIT: 0 y-axis')
+          pframe(1:3,2,i)=pframe(1:3,2,i)/ar1
           call cross_product(pframe(1,1,i),pframe(2,1,i),pframe(3,1,i), &
                             &pframe(1,2,i),pframe(2,2,i),pframe(3,2,i), &
                             &pframe(1,3,i),pframe(2,3,i),pframe(3,3,i))

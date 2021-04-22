@@ -545,7 +545,7 @@ subroutine aquire_hgrid(full_aquire)
   real(rkind),parameter :: deg2rad=pi/180._rkind
   integer :: n1,n2,n3,n4,jsj,nt,nn,nscnt,nsgcnt
   real(rkind) :: ar1,ar2,ar3,ar4,signa !slam0,sfea0,
-  real(rkind) :: xtmp,ytmp,dptmp,thetan,egb1,egb2,egb
+  real(rkind) :: xtmp,ytmp,dptmp,thetan,egb1,egb2,egb,swild(3,3)
 !  integer :: ipre 
 
   integer,allocatable :: neproc(:)   ! Number of resident elements on each processor
@@ -1699,6 +1699,10 @@ subroutine aquire_hgrid(full_aquire)
       yel(1:i34(ie),ie)=ynd(elnode(1:i34(ie),ie))
     else !lat/lon
       call compute_ll(xctr(ie),yctr(ie),zctr(ie),ar1,ar2)
+      !Debug
+!      egb2=ar2*180.d0/pi
+!      write(12,*)'Elem ll=',ielg(ie),ar1*180.d0/pi,ar2*180.d0/pi
+
       !local ll frame
       !1: zonal axis; 2: meridional axis; 3: outward radial
       eframe(1,1,ie)=-sin(ar1)
@@ -1706,13 +1710,22 @@ subroutine aquire_hgrid(full_aquire)
       eframe(3,1,ie)=0._rkind
       eframe(1,2,ie)=-cos(ar1)*sin(ar2)
       eframe(2,2,ie)=-sin(ar1)*sin(ar2)
-      eframe(3,2,ie)=cos(ar2)
+      eframe(3,2,ie)=rearth_pole/rearth_eq*cos(ar2)
+      ar4=sqrt(eframe(1,2,ie)**2.d0+eframe(2,2,ie)**2+eframe(3,2,ie)**2)
+      if(ar4==0.d0) call parallel_abort('GRID: ar4=0')
+      eframe(1:3,2,ie)=eframe(1:3,2,ie)/ar4
+
       call cross_product(eframe(1,1,ie),eframe(2,1,ie),eframe(3,1,ie), &
      &                   eframe(1,2,ie),eframe(2,2,ie),eframe(3,2,ie), &
      &                   eframe(1,3,ie),eframe(2,3,ie),eframe(3,3,ie))
 
       egb1=eframe(1,3,ie)*xctr(ie)+eframe(2,3,ie)*yctr(ie)+eframe(3,3,ie)*zctr(ie) !dot product
-      if(egb1<=0) then
+      ar2=sqrt(xctr(ie)**2+yctr(ie)**2+zctr(ie)**2)
+      if(ar2==0.d0) call parallel_abort('AQUIRE_HGRID: 0 radial')
+      egb1=egb1/ar2
+      !Debug
+!      if(abs(egb2)<1.d-1) write(12,*)'Elem z-axis:',ielg(ie),egb1,eframe(:,:,ie)
+      if(egb1<=0.d0) then
         write(errmsg,*)'AQUIRE_HGRID: orientation wrong:',ielg(ie),egb1,&
      &xlon(elnode(1:i34(ie),ie)),ylat(elnode(1:i34(ie),ie)),&
      &xnd(elnode(1:i34(ie),ie)),ynd(elnode(1:i34(ie),ie)),znd(elnode(1:i34(ie),ie))
@@ -1863,6 +1876,24 @@ subroutine aquire_hgrid(full_aquire)
       sframe(1,2,j)=-sframe(2,1,j)
       sframe(2,2,j)=sframe(1,1,j)
     else !lat/lon
+      !zs axis with help from local ll frame
+      call compute_ll(xcj(j),ycj(j),zcj(j),ar1,ar2)
+      !1: zonal axis; 2: meridional axis; 3: outward of ellipsoid
+      swild(1,1)=-sin(ar1)
+      swild(2,1)=cos(ar1)
+      swild(3,1)=0._rkind
+      swild(1,2)=-cos(ar1)*sin(ar2)
+      swild(2,2)=-sin(ar1)*sin(ar2)
+      swild(3,2)=rearth_pole/rearth_eq*cos(ar2)
+      ar4=sqrt(swild(1,2)**2.d0+swild(2,2)**2+swild(3,2)**2)
+      if(ar4==0.d0) call parallel_abort('GRID: ar4=0')
+      swild(1:3,2)=swild(1:3,2)/ar4
+
+      call cross_product(swild(1,1),swild(2,1),swild(3,1), &
+     &                   swild(1,2),swild(2,2),swild(3,2), &
+     &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j))
+
+
       !ys axis
       ar1=xnd(n2)-xnd(n1)
       ar2=ynd(n2)-ynd(n1)
@@ -1876,15 +1907,15 @@ subroutine aquire_hgrid(full_aquire)
       sframe(2,2,j)=ar2/ar4
       sframe(3,2,j)=ar3/ar4
 
-      !zs axis
-      ar4=sqrt(xcj(j)**2+ycj(j)**2+zcj(j)**2)
-      if(ar4==0._rkind) then
-        write(errmsg,*)'AQUIRE_HGRID: 0 zs-vector',iplg(isidenode(1:2,j))
-        call parallel_abort(errmsg)
-      endif
-      sframe(1,3,j)=xcj(j)/ar4
-      sframe(2,3,j)=ycj(j)/ar4
-      sframe(3,3,j)=zcj(j)/ar4
+!      !zs axis
+!      ar4=sqrt(xcj(j)**2+ycj(j)**2+zcj(j)**2)
+!      if(ar4==0._rkind) then
+!        write(errmsg,*)'AQUIRE_HGRID: 0 zs-vector',iplg(isidenode(1:2,j))
+!        call parallel_abort(errmsg)
+!      endif
+!      sframe(1,3,j)=xcj(j)/ar4
+!      sframe(2,3,j)=ycj(j)/ar4
+!      sframe(3,3,j)=zcj(j)/ar4
 
       !Orthogonality between zs and ys
       egb1=abs(dot_product(sframe(1:3,2,j),sframe(1:3,3,j)))
