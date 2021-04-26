@@ -19,14 +19,15 @@
 
       pi=acos(-1.d0)
       !Lengths in x,y (m)
-      rlx=1100e3 
+      rlx=160e3
       rly=500e3
       !Resolution in x,y (m)
-      !# of divisions in x must >=360
-      nx=1100 !# of divisions in x (including wrap-around seg)
-      if(nx<360) stop 'Make sure # of divisions in x >=360!'
+      !# of divisions in x should be sufficiently large to avoid btrack
+      !issues
+      nx=200 !# of divisions in x (including wrap-around seg)
+!      if(nx<360) stop 'Make sure # of divisions in x >=360!'
       dx=rlx/nx 
-      dy=dx
+      dy=dx/2 !adjust to get desired resolution in y
       ny=rly/dy+0.01 !# of divisions in y
 
       !The global (x,y,z) are calculated via:
@@ -41,14 +42,16 @@
       !Experience suggests that the 2 radii should be same (otherwise
       !code may crash)
       r_eq=rlx/2/pi 
-      r_pole=r_eq !*1.2
 
       !Min/max lat (degr) - use a small meridional band to minimize
       !distorion
-      y_total=rly/pi/r_pole*180
-      ymax=y_total/2; ymin=-ymax
-      print*, 'ymax|min (deg)=',ymin,ymax
-      if(ymax>=90.or.ymin<=-90) stop 'lat wrong'
+!      y_total=rly/pi/r_pole*180
+!      ymax=y_total/2; ymin=-ymax
+!      print*, 'ymax|min (deg)=',ymin,ymax
+!      if(ymax>=90.or.ymin<=-90) stop 'lat wrong'
+      ymax=5; ymin=-ymax
+
+      r_pole=rly*180./2/ymax 
 
       !Resolutions in lon/lat (degr)
       dx_lon=360./nx !(nx+1)
