@@ -50,6 +50,9 @@
       file_char='schout_'//stack_char(1:char_len)//'.nc'
 
       iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      if(iret.ne.NF90_NOERR) then
+        print*, nf90_strerror(iret); stop 'extract_mod: (1)'
+      endif
       iret=nf90_inq_dimid(ncid2,'nSCHISM_hgrid_edge',i)
       iret=nf90_Inquire_Dimension(ncid2,i,len=ns)
       iret=nf90_inq_dimid(ncid2,'nSCHISM_vgrid_layers',i)
@@ -60,7 +63,10 @@
       iret=nf90_Inquire_Variable(ncid2,varid1,dimids=dimids(1:2))
       iret=nf90_Inquire_Dimension(ncid2,dimids(1),len=nvtx)
       iret=nf90_Inquire_Dimension(ncid2,dimids(2),len=ne)
-      if(nvtx/=4) stop 'readheader: vtx/=4'
+      if(nvtx/=4) then
+        print*, 'readheader:',ns,nvrt,ne,h0
+        stop 'readheader: vtx/=4'
+      endif
       iret=nf90_inq_varid(ncid2,'SCHISM_hgrid_node_x',varid2)
       iret=nf90_Inquire_Variable(ncid2,varid2,dimids=dimids)
       iret=nf90_Inquire_Dimension(ncid2,dimids(1),len=np)
@@ -413,7 +419,8 @@
 !     either max array size (usually used for uncombined) or max # of records (
 !     usually for combined) allowed. 
 !     Returned vars: outvar(2,nvrt,np|ne,nrec3),i23d,ivs and eta2(np,nrec3) (on global
-!     indices). For uncombined nc, only subdomain part of arrays will be filled with values
+!     indices), where nrec3 is the max allowed dimension defined in the driver. 
+!     For uncombined nc, only subdomain part of arrays will be filled with values
 !================================================================
       subroutine get_outvar_multirecord(istack,varname,irec1,irec2,np2,last_dim,nvrt2,nrec3,outvar,i23d,ivs,eta2,irank)
       integer, intent(in) :: istack,irec1,irec2,np2,last_dim,nvrt2,nrec3

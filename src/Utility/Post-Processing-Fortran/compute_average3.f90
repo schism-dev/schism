@@ -76,8 +76,8 @@
 !        stop
 !      endif
 
-      file63=adjustl(file63)
-      len_file63=len_trim(file63)
+!      file63=adjustl(file63)
+!      len_file63=len_trim(file63)
 
 !...  Header
       !Returned vars: ne,np,ns,nrec,[x y dp](np),
