@@ -247,9 +247,9 @@ subroutine read_icm_param2
   call read_icm_param_2d('rKDC',rKDC,trKDC)
 
   !read Phosphorus parameters
-  call get_param_1D('icm.in','rKRP',2,itmp,trKRC,stmp,1)
-  call get_param_1D('icm.in','rKLP',2,itmp,trKLC,stmp,1)
-  call get_param_1D('icm.in','rKDP',2,itmp,trKDC,stmp,1)
+  call get_param_1D('icm.in','rKRP',2,itmp,trKRP,stmp,1)
+  call get_param_1D('icm.in','rKLP',2,itmp,trKLP,stmp,1)
+  call get_param_1D('icm.in','rKDP',2,itmp,trKDP,stmp,1)
   call get_param_1D('icm.in','rKRPalg',2,itmp,trKRPalg,stmp,1)
   call get_param_1D('icm.in','rKLPalg',2,itmp,trKLPalg,stmp,1)
   call get_param_1D('icm.in','rKDPalg',2,itmp,trKDPalg,stmp,1)
