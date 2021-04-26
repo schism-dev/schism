@@ -1306,7 +1306,7 @@ subroutine read_icm_param_2d(varname,pvar,pvalue)
   real(kind=iwp),dimension(npa) :: tvar
   
   !read spatailly varying parameter values
-  if(pvalue==-999.0) then  !*.gr3
+  if(int(pvalue)==-999) then  !*.gr3
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
@@ -1327,7 +1327,7 @@ subroutine read_icm_param_2d(varname,pvar,pvalue)
       enddo!j
     enddo!i
 
-  else if(pvalue==-9999.0) then !*.prop
+  else if(int(pvalue)==-9999) then !*.prop
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
     do i=1,ne_global
       read(31,*)ie,rtmp 
