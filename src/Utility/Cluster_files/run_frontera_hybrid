@@ -48,7 +48,7 @@ module list
 pwd
 date
 
-# Set thread count (normally, (MPI proc)x Threads/(# of nodes)=56
+# Set thread count (normally, (MPI proc)x Threads/(# of nodes)=56. No hyperthreading
 export OMP_NUM_THREADS=14
 
 # Launch MPI code... 

@@ -11,4 +11,5 @@ set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF includ
 
 set(CMAKE_Fortran_FLAGS_RELEASE "-axCORE-AVX2 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 
-
+#Hybrid (remember to add OMP in the name above)
+#set(CMAKE_Fortran_FLAGS_RELEASE "-axCORE-AVX2 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl -qopenmp" CACHE STRING "Fortran flags" FORCE)
