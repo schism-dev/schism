@@ -4,14 +4,15 @@
 !           gen_fg.in: 
 !                    1st line: nob - # of open boundary segments that need *3D.th;
 !                    2nd line: iob(1:nob) - list of segment IDs in hgrid.gr3
-!     Output: fg.bp (list of open bnd nodes along the specified segments)
+!     Output: fg.bp.[1,2...] (list of open bnd nodes along the specified segments)
 
-!     ifort -Bstatic -O3 -o gen_fg gen_fg.f90
+!     ifort -Bstatic -O2 -o gen_fg gen_fg.f90
 !     pgf90 -O2 -mcmodel=medium  -Bstatic -o  gen_fg gen_fg.f90
 
       implicit real*8(a-h,o-z)
 !      integer,allocatable :: elnode(:,:)
       allocatable :: x(:),y(:),dp(:),nond(:),iond(:,:),iob(:)
+      character(len=10) :: char1
 
       open(13,file='gen_fg.in',status='old')
       read(13,*)nob
@@ -22,7 +23,6 @@
       close(13)
 
       open(14,file='hgrid.gr3',status='old')
-      open(12,file='fg.bp')
       read(14,*)
       read(14,*) ne,np
       allocate(x(np),y(np),dp(np),stat=istat)
@@ -78,9 +78,14 @@
       close(14)
 
 !     Output
-      write(12,*)'fg.bp'
-      write(12,*)sum(nond(iob(1:nob)))
       do k=1,nob
+        write(char1,'(i10)')k
+        char1=adjustl(char1)
+        itmp=len_trim(char1)
+        print*, 'outputting ','fg.bp.'//char1(1:itmp)
+        open(12,file='fg.bp.'//char1(1:itmp),status='replace')
+        write(12,*)'%fg.bp'//char1(1:itmp)
+        write(12,*)'%',nond(iob(k))
         ibnd=iob(k)
         if(ibnd>nope) then
           write(11,*)'Boundary segment # exceeds max:',ibnd,nope
@@ -91,6 +96,7 @@
           nd=iond(ibnd,i)
           write(12,'(i10,3e17.8)')nd,x(nd),y(nd),dp(nd)
         enddo !i
+        close(12)
       enddo !k
  
       stop

@@ -23,13 +23,14 @@
 #
 #----------------------------------------------------
 
-#SBATCH -J R14f-TMP2 # Job name
+#SBATCH -J R14f    # Job name
 #SBATCH -o myjob.o%j       # Name of stdout output file
 #SBATCH -e myjob.e%j       # Name of stderr error file
 ##Available partitions and limits in q_limits.txt. 'flex' is great for back filling jobs
 ##flex: lower priority, max 128 nodes, preempt_time=1hr; max time=2days. 0.8SU charge rate.
 ##'development': max 40 nodes, 2hrs. Max 1 job
-##'small': 1-2 node for upt to 48 hrs
+##'small': 1-2 node for up to 48 hrs
+##'normal': up to 512 nodes, 48 hrs
 #SBATCH -p flex   # Queue (partition) name
 #SBATCH -N 20               # Total # of nodes (up to 56 cores/node)
 #SBATCH -n 1120              # Total # of mpi tasks
