@@ -7,8 +7,8 @@
 !     ifort -O2 -CB -o gen_slope_filter2 gen_slope_filter2.f90
 
       implicit real*8(a-h,o-z)
-      parameter(mnp=3000000)
-      parameter(mne=6000000)
+      parameter(mnp=5000000)
+      parameter(mne=10000000)
       parameter(mnei=25)
       parameter(rearth_eq=6378206.4d0)
       parameter(rearth_pole=6378206.4d0)
