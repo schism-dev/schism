@@ -2639,7 +2639,7 @@
 #endif /*USE_TIMOR*/
      &                 )
       use schism_glbl, only: rkind,grav,rho0,tempmin,tempmax,saltmin,saltmax,errmsg, &
-     &ddensed,ieos_type,eos_a,eos_b,ieos_pres,itr_met,i_prtnftl_weno
+     &ddensed,ieos_type,eos_a,eos_b,ieos_pres,itr_met,i_prtnftl_weno,itransport_only
       use schism_msgp, only : parallel_abort
       implicit none
 
@@ -2669,7 +2669,7 @@
       if(tem<tempmin.or.tem>tempmax.or.sal<saltmin.or.sal>saltmax) then
 !        if(ifort12(6)==0) then
 !          ifort12(6)=1
-        if ((itr_met.ne.4) .or. (i_prtnftl_weno.eq.1)) then
+        if (itr_met.ne.4.or.i_prtnftl_weno.eq.1.or.itransport_only==0) then
           write(12,*)'Invalid temp. or salinity for density:',tem,sal,indx,igb
         endif
 !        endif

@@ -312,7 +312,7 @@
         do k=1,ne_bin(l)
           ie=ie_bin(l,k)
           suma=0
-          do j=1,3
+          do j=1,3 !compute 3 area coordinates of tri (1,2,3)
             j_1=j+1
             j_2=j+2
             if(j_1>3) j_1=j_1-3
@@ -330,10 +330,10 @@
             exit loop1
           endif
 
-          if(i34bg(ie)==4) then
+          if(i34bg(ie)==4) then 
             nind(1)=1; nind(2)=3; nind(3)=4
             suma=0
-            do j=1,3
+            do j=1,3 !compute 3 area coordinates of tri (1,3,4)
               j_1=j+1
               j_2=j+2
               if(j_1>3) j_1=j_1-3
