@@ -18,17 +18,20 @@
 !   Search for parent elements along x- or y- strips (use small mne_bin for efficiency)
 
 !   Calling sequence
-!   (1) get npfg, npbg,nebg
-!   (2) allocate(xfg(npfg),yfg(npfg),i34bg(nebg),nmbg(4,nebg),iparen(npfg), &
+!   (1) use interpolate_unstructured_module
+!   (2) get npfg, npbg,nebg from fore- and back-ground grids (fg
+!      actually can be list of ponts); 
+!   (3) allocate(xfg(npfg),yfg(npfg),i34bg(nebg),nmbg(4,nebg),iparen(npfg), &
 !     &xbg(npbg),ybg(npbg),dpbg(npbg),arco(4,npfg))
-!   (3) call interpolate_unstructured_weights(bgname,small1,is_xy,nbin,mne_bin,npfg,npbg,nebg,xfg,yfg, &
+!   (4) Obtain xfg(),yfg() from fg;
+!   (5) call interpolate_unstructured_weights(bgname,small1,is_xy,nbin,mne_bin,npfg,npbg,nebg,xfg,yfg, &
 !      &i34bg,nmbg,xbg,ybg,dpbg,iparen,arco)
 
 !     Input arguments:
 !       bgname: background grid name;
 !       small1: small positive number used to check if a pt is inside a polygon (e.g. 1.d-4);
 !       is_xy: search bins varies along x (1) or y (2) axis;
-!       nbin,mne_bin: # of bins & max # of elements in each bin; 
+!       nbin,mne_bin: # of bins & max # of elements in each bin (e.g. 20000 34000); 
 !       npfg: # of points in foreground
 !       npbg,nebg: # of nodes/elements in bg grid (bgname)
 !       xfg(),yfg(): coord for fg pts;
@@ -36,12 +39,12 @@
 !     Output arguments:  
 !       i34bg(),nmbg(:,:): elem type and connectivity table of bg grid;
 !       xbg(),ybg(),dpbg(): coord and depth at bg nodes;
-!       iparen(npfg): parent elem #. =0 if no parent elements are found; 
-!       arco(4,npfg): area coord if a  parent elem is found. Then the
-!         interp'ed value at fg pt i is 
-
+!       iparen(npfg): parent elem #; <0 if no parent elements are found (abs value is the not-so-precise
+!                     nearest elem); 
+!       arco(4,npfg): area coord if a  parent elem is found (iparen>0). 
+!   (6) The interp'ed value at fg pt i can be calculated as:
 !         ie=iparen(i)
-!         if(ie/=0) then
+!         if(ie>0) then
 !           final=0
 !           do j=1,i34bg(ie)
 !             nd=nmbg(j,ie)
@@ -255,45 +258,7 @@
       endif
 !     end bucket sort
 
-!     Foreground build point file
-!      open(12,file='fg.gr3',status='old')
-!      open(14,file='include.gr3',status='old')
-!      open(13,file='fg.new',status='replace')
-!      read(12,*)
-!      read(12,*)nefg,npfg
-!      read(14,*); read(14,*)
-!      write(13,'(a30,2i6,2(1x,f9.3))')'nbin,mne_bin,ar_bgmax,h_off=',nbin,mne_bin,ar_bgmax,h_off
-!      write(13,*)nefg,npfg
-!     Interpolate and output
-!      do i=1,npfg
-!        read(14,*)j,xfg,yfg,weight
-!        read(12,*)j,xfg,yfg,dpfg
-!      call binsearch(npfg,is_xy,i34bg,nmbg,xbg,ybg,xfg,yfg,iparen,arco)
-!        write(19,*)i,iparen,arco(1:4)
-
-!        if(iparen/=0) then
-!          dpfg2=h_off
-!          do j=1,i34bg(iparen)
-!            nd=nmbg(iparen,j)
-!            dpfg2=dpfg2+dpbg(nd)*arco(j)
-!          enddo !j
-!
-!          dpfg=dpfg2*weight+(1-weight)*dpfg
-!        endif
-!        write(13,'(i10,2(1x,e20.12),1x,f12.4)')i,xfg,yfg,dpfg
-!      enddo !i=1,npfg
-
-
-!     Search for parent element of (x0,y0) and compute area coordinates arco(4)
-!     If the parent element cannot be found, iparen=0
-!     Sum of arco may not be exactly 1
-!      subroutine binsearch(node_num,is_xy,i34bg,nmbg,xbg,ybg,x0,y0,iparen,arco)
-!      integer, intent(in) :: node_num,is_xy !node_num for info only
-!      real*8, intent(in) :: xfg,yfg
-!      integer, intent(out) :: iparen
-!      real*8, intent(out) :: arco(4)
-!      integer :: nind(3)
-
+!     Find parent elem
       iparen=0
       do i=1,npfg
         x0=xfg(i)
@@ -304,21 +269,26 @@
           xy=yfg(i)
         endif
        
-        if(xy<xy_min.or.xy>xy_max) return
+        if(xy<xy_min) then
+          ibin1=1; ibin2=1
+        else if(xy>xy_max) then
+          ibin1=nbin; ibin2=nbin
+        else !in [xy_min,xy_max]
+          l=min(nbin,int((xy-xybin(1))/binwid+1))
+          if(xy==xybin(l)) then
+            ibin1=max(l-1,1); ibin2=l
+          else if(xy==xybin(l+1)) then
+            ibin1=l; ibin2=min(l+1,nbin)
+          else if(xy>xybin(l).and.xy<xybin(l+1)) then
+            ibin1=l; ibin2=l
+          else
+            write(11,*)'Cannot find a bin (2):',node_num,x0,y0,xybin(l),xybin(l+1),binwid,l
+            write(11,*)(m,xybin(m),m=1,nbin+1)
+            stop
+          endif
+        endif !xy
 
-        l=min(nbin,int((xy-xybin(1))/binwid+1))
-        if(xy==xybin(l)) then
-          ibin1=max(l-1,1); ibin2=l
-        else if(xy==xybin(l+1)) then
-          ibin1=l; ibin2=min(l+1,nbin)
-        else if(xy>xybin(l).and.xy<xybin(l+1)) then
-          ibin1=l; ibin2=l
-        else
-          write(11,*)'Cannot find a bin (2):',node_num,x0,y0,xybin(l),xybin(l+1),binwid,l
-          write(11,*)(m,xybin(m),m=1,nbin+1)
-          stop
-        endif
-
+        rmin_ac=huge(1.d0) !min area coord sum -1 to find nearest elem
         loop1: do l=ibin1,ibin2
           do k=1,ne_bin(l)
             ie=ie_bin(k,l)
@@ -335,10 +305,14 @@
               arco(j,i)=abs(signa(xbg(n1),xbg(n2),x0,ybg(n1),ybg(n2),y0))/area2
               suma=suma+arco(j,i)
             enddo !j
-            if(abs(suma-1)<small1) then
+            tmp=abs(suma-1.d0)
+            if(tmp<small1) then
               iparen(i)=ie
               arco(4,i)=0
               exit loop1
+            else if(tmp<rmin_ac) then
+              rmin_ac=tmp
+              iparen(i)=-ie
             endif
 
             if(i34bg(ie)==4) then 
@@ -356,20 +330,20 @@
                 arco(nind(j),i)=abs(signa(xbg(n1),xbg(n2),x0,ybg(n1),ybg(n2),y0))/area2
                 suma=suma+arco(nind(j),i)
               enddo !j
-              if(abs(suma-1)<small1) then
+
+              tmp=abs(suma-1.d0)
+              if(tmp<small1) then
                 iparen(i)=ie
                 arco(2,i)=0
                 exit loop1
+              else if(tmp<rmin_ac) then
+                rmin_ac=tmp
+                iparen(i)=-ie
               endif
             endif !quad
           enddo !k=1,ne_bin(l)
         end do loop1 !l
       enddo !i=1,npfg
-
-!      if(iparen==0) then
-!        write(*,*)'Cannot find a parent:',x0,y0
-!        stop
-!      endif
 
       end subroutine interpolate_unstructured_weights
 
