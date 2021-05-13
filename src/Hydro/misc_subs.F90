@@ -2669,7 +2669,7 @@
       if(tem<tempmin.or.tem>tempmax.or.sal<saltmin.or.sal>saltmax) then
 !        if(ifort12(6)==0) then
 !          ifort12(6)=1
-        if (itr_met.ne.4.or.i_prtnftl_weno.eq.1.or.itransport_only==0) then
+        if ((itr_met.ne.4.or.i_prtnftl_weno.eq.1).and.itransport_only==0) then
           write(12,*)'Invalid temp. or salinity for density:',tem,sal,indx,igb
         endif
 !        endif
