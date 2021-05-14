@@ -35,9 +35,7 @@
 !       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
-!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyz.exe ../UtilLib/extract_mod.f90 \
-! ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_xyz.f90 -I$NETCDF/include \
-!-I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_xyz.exe ../UtilLib/extract_mod.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out

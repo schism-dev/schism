@@ -139,6 +139,12 @@ SAt_tben = 0.0
 iRad = 1
 
 !-----------------------------------------------------------------------
+!idry_icm=1: turn on shallow kinetic biochemical process
+!idry_icm=0: jump dry elems, keep last wet value; jump won't happen if iveg_icm is turn on and this elem is veg
+!-----------------------------------------------------------------------
+idry_icm = 0
+
+!-----------------------------------------------------------------------
 !Check parameter(iCheck=1: output all parameter for check)
 !-----------------------------------------------------------------------
 iCheck = 1
