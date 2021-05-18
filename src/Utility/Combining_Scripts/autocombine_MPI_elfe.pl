@@ -18,7 +18,7 @@ if(@ARGV < 2)
 }
 print "$0 @ARGV\n";
 $start_stack=$ARGV[0]; $end_stack=$ARGV[1]; 
-$iwetdry=0;
+$iwetdry=1;
 if(@ARGV==3) {$iwetdry=$ARGV[2];}
 
 if(!-e "outputs") {die "No outputs dir!";}
