@@ -2949,7 +2949,7 @@ subroutine calkwq(id,nv,ure,it)
         write(errmsg,*)'check ICM rKNit1 :',rKNit1,xT,Temp(k),TNit,rval,ielg(id),k
         call parallel_abort(errmsg)
       endif
-      xNit=(DOO(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
+      xNit=(DOO(k,1)*rNitM*NH4(k,1)/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
       !xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rKNit1*xT*xT)
     else
       rval=rKNit2*xT*xT;
@@ -2957,7 +2957,7 @@ subroutine calkwq(id,nv,ure,it)
         write(errmsg,*)'check ICM rKNit2: ',rKNit2,xT,Temp(k),TNit,rval,ielg(id),k
         call parallel_abort(errmsg)
       endif
-      xNit=(DOO(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
+      xNit=(DOO(k,1)*rNitM*NH4(k,1)/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rval)
       !xNit=(DOO(k,1)*rNitM/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rKNit2*xT*xT)
     endif
     if(iof_icm(81)==1) NitNH4(klev,id)=-xNit*NH4(k,1)
