@@ -294,9 +294,9 @@ rKRNalg= 0.0
 rKLNalg= 0.0
 rKDNalg= 0.0
 
-rNitM=  0.07
-rKhNitDO= 1.0
-rKhNitN=  1.0
+rNitM=  0.07   !maximum nitrification rate (1/day)
+rKhNitDO= 1.0  !half DO conc. for nitrif.
+rKhNitN=  1.0  !half NH4 conc. for nitrif. adjust based on your case (larger value: larger of nitrif. upper limit)
 TNit=     27.0
 rKNit1=  0.0045
 rKNit2=  0.0045
