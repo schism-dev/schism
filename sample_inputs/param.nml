@@ -1148,15 +1148,14 @@
 !  iof_ana(2) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {ANA_air_pres_grad_y}
 !  iof_ana(3) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {ANA_tide_pot_grad_x}
 !  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] {ANA_tide_pot_grad_y}
-!  iof_ana(5) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal viscosity) {ANA_hor_viscosity_x}
-!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] {ANA_hor_viscosity_y}
+!  iof_ana(5) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {ANA_hor_viscosity_x}
+!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {ANA_hor_viscosity_y}
 !  iof_ana(7) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {ANA_bclinic_force_x}
 !  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {ANA_bclinic_force_y}
-!  iof_ana(9) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical viscosity) {ANA_vert_viscosity_x}
+!  iof_ana(9) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {ANA_vert_viscosity_x}
 !  iof_ana(10) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {ANA_vert_viscosity_y}
 !  iof_ana(11) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {ANA_mom_advection_x}
 !  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] {ANA_mom_advection_y}
 !  iof_ana(13) = 0 !gradient Richardson number [-] {ANA_Richardson}
-!  iof_ana(14) = 0 !min time step at each element over all 
-                   !subcycles in horizontal transport solver [s]   {ANA_transport_min_dt_elem}
+!  iof_ana(14) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {ANA_transport_min_dt_elem}
 /
