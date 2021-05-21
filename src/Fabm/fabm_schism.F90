@@ -9,6 +9,8 @@
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Deborah Benkort <deborah.benkort@hzg.de>
 !> @author Jan Kossack <jan.kossack@hzg.de>
+!
+!> @copyright Copyright 2021 Helmholtz-Zentrum Hereon
 !> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
 !
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
@@ -508,13 +510,21 @@ subroutine fabm_schism_init_stage2
 
 end subroutine fabm_schism_init_stage2
 
-!> Integrate the diagnostics that hav the output_averaged property
-subroutine integrate_diagnostics(fs,timestep)
+!> Integrate the diagnostics
+!> Diagnostics that have the property output averaged need to be summed over the
+!> output timestep.  Since FABM version one, also automatic diagnostics, i.e. 
+!> sms and w of each state variable, and totals available.  We need to exclude
+!> them here, as those that do not have the %save  property don't have the get()
+!> function.  Optionally, we can configure FABM to output also those diagnostics
+!> by setting their %save property to .true. before calling model%start()
+! Most of these are used by FABM internally to store rates (“sms”) or vertical
+subroutine integrate_diagnostics(fs, timestep)
 
   class (type_fabm_schism) :: fs
   integer                  :: n
   real(rk),optional        :: timestep
   real(rk)                 :: eff_timestep
+  character(len=256)                 :: message
 
   if (present(timestep)) then
     eff_timestep = timestep
@@ -522,27 +532,46 @@ subroutine integrate_diagnostics(fs,timestep)
     eff_timestep = dt
   end if
 
-  do n=1,fs%ndiag
+  do n=1, size(fs%interior_diagnostic_variables)
+
+#if _FABM_API_VERSION_ < 1
     if (fs%interior_diagnostic_variables(n)%output_averaged) then
       fs%interior_diagnostic_variables(n)%data = fs%interior_diagnostic_variables(n)%data  &
-#if _FABM_API_VERSION_ < 1
-      + (eff_timestep * fabm_get_bulk_diagnostic_data(fs%model,n))
+        + (eff_timestep * fabm_get_bulk_diagnostic_data(fs%model,n))
 #else
-      + (eff_timestep * fs%model%get_interior_diagnostic_data(n))
+
+    if (fs%interior_diagnostic_variables(n)%output_averaged .and. &
+      fs%model%interior_diagnostic_variables(n)%save) then
+
+      !write(message,'(A,X,I2,X,A)') 'Integrating averaged interior diagnostic ', n,  &
+      !  trim(fs%interior_diagnostic_variables(n)%short_name)
+      !call driver%log_message(message)
+      
+      fs%interior_diagnostic_variables(n)%data = fs%interior_diagnostic_variables(n)%data  &
+        + (eff_timestep * fs%model%get_interior_diagnostic_data(n))
 #endif
-    end if
+    endif    
   end do
 
   do n=1,size(fs%horizontal_diagnostic_variables)
-    if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
-    if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
-      fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data &
+
 #if _FABM_API_VERSION_ < 1
+    if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
+      fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data  &
         + (eff_timestep * fabm_get_horizontal_diagnostic_data(fs%model,n))
 #else
+
+    if (fs%horizontal_diagnostic_variables(n)%output_averaged .and. &
+      fs%model%horizontal_diagnostic_variables(n)%save) then
+
+      !write(message,'(A,X,I2,X,A)') 'Integrating averaged horizontal diagnostic ', n,  &
+      !  trim(fs%horizontal_diagnostic_variables(n)%short_name)
+      !call driver%log_message(message)
+      
+      fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data  &
         + (eff_timestep * fs%model%get_horizontal_diagnostic_data(n))
 #endif
-    end if
+    endif    
   end do
 
   fs%time_since_last_output = fs%time_since_last_output + eff_timestep
