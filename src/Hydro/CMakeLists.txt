@@ -24,6 +24,11 @@ endif()
 
 message(STATUS "hydro_extra_src=${hydro_extra_src}")
 
+if(USE_FABM)
+  if(FABM_BASE)
+    include_directories(${FABM_BASE}/include)
+  endif()
+endif()
 
 add_library(hydro schism_init.F90
                   schism_step.F90

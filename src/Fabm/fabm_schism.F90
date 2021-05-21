@@ -16,10 +16,7 @@
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
 !
-!#include "fabm_version.h"
-#ifndef _FABM_API_VERSION_
-#define _FABM_API_VERSION_ 1
-#endif
+#include "fabm_version.h"
 
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
@@ -117,6 +114,7 @@ module fabm_schism
   type(type_model), pointer     :: model => null()
 #endif
 
+    character(len=1024)           :: version = 'unknown'
     real(rk)                      :: day_of_year, seconds_of_day
     logical                       :: fabm_ready
     logical                       :: repair_allowed=.true.
@@ -199,6 +197,14 @@ subroutine fabm_schism_init_model(ntracers)
   allocate(type_schism_driver::driver)
 
   fs%fabm_ready=.false.
+  call fabm_get_version(fs%version)
+#if _FABM_API_VERSION_ < 1
+  fs%version = 'API 0 '//trim(fs%version)
+#else
+  fs%version = 'API 1 '//trim(fs%version)
+#endif
+  call driver%log_message('version '//trim(fs%version))
+
 
   !> @todo get the define macro into a string
   !call driver%log_message('using API version '//_FABM_API_VERSION_)
