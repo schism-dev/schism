@@ -10,15 +10,19 @@
 #use Cwd;
 #$pwd=cwd();
 
-if(@ARGV != 3) 
+if(@ARGV < 3) 
 { 
-  print "$0 <start # of stacks> <end # of stacks> <remote dir ending with outputs>\n";
+  print "$0 <start # of stacks> <end # of stacks> <remote dir ending with outputs (not used if nosync)> <optional: no sync (1)>\n";
   print "e.g.: $0 1 40 /sciclone/home10/yinglong/schism10/RUN02a/outputs\n";
   exit(1);
 }
 print "$0 @ARGV\n";
 $start_stack=$ARGV[0]; $end_stack=$ARGV[1]; 
 $remote_dir=$ARGV[2];
+
+#$nosync=1: only create dirs and not sync'ing
+$nosync=0;
+if(@ARGV==4) {$nosync=1;}
 
 #Remote account
 $chinook='yinglong@chinook.sciclone.wm.edu:';
@@ -39,7 +43,7 @@ for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
   } 
   system "touch core.dummy";
   system "rm -rf core.*";
-  if($count==1) {
+  if($count==1 && $nosync==0) {
    system "rsync -az ./outputs/local* $chinook$remote_dir";
   }
 
@@ -47,9 +51,11 @@ for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
   $current_stack=$next_stack-1;
   $cmd="rm -rf outputs.$current_stack; mkdir outputs.$current_stack; mv -f ./outputs/schout_????_$current_stack\.nc outputs.$current_stack";
   system "$cmd";
-  $cmd="rsync -az ./outputs.$current_stack/schout_????_$current_stack\.nc $chinook$remote_dir/";
-  print "$cmd\n";
-  system "$cmd";
+
+  if($nosync==0) {
+    $cmd="rsync -az ./outputs.$current_stack/schout_????_$current_stack\.nc $chinook$remote_dir/";
+    print "$cmd\n";
+    system "$cmd";
 #For autocomb to start
 #  $cmd="rsync -az ./outputs/schout_0000_$next_stack\.nc $chinook$remote_dir/";
 #  print "$cmd\n";
@@ -57,14 +63,17 @@ for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
   #system "rsync -av ./outputs/hot* $chinook$remote_dir/ ";
 #  system "rsync -av ./outputs/mirror.out $chinook$remote_dir/mirror.out.$current_stack ";
 #  system "rsync -av ./outputs/subcycling.out $chinook$remote_dir/subcycling.out.$current_stack ";
-  print "done rsync'ing stack $current_stack...\n";
+    print "done rsync'ing stack $current_stack...\n";
+  } #$nosync
 } #for
 
 #Final sync
-system "rsync -az ./outputs/  $chinook$remote_dir/ ";
-#system "touch core.dummy";
-system "rm -rf core.*";
-#chdir("./outputs/");
-#system "sbatch run_comb";
-# system "mv hotstart_i* $pwd ";
-#if(-e "outputs/$end_stack\_hvel.64") {system "cd outputs/; echo schout_[0-9]???_*.nc | xargs rm -f";}
+if($nosync==0) {
+  system "rsync -az ./outputs/  $chinook$remote_dir/ ";
+  #system "touch core.dummy";
+  system "rm -rf core.*";
+  #chdir("./outputs/");
+  #system "sbatch run_comb";
+  # system "mv hotstart_i* $pwd ";
+  #if(-e "outputs/$end_stack\_hvel.64") {system "cd outputs/; echo schout_[0-9]???_*.nc | xargs rm -f";}
+}
