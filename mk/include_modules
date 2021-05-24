@@ -98,8 +98,8 @@
 # EXEC := $(EXEC)_MARSH
 
 # Analysis module
-# USE_ANALYSIS = yes
-# EXEC := $(EXEC)_ANALYSIS
+ USE_ANALYSIS = yes
+ EXEC := $(EXEC)_ANALYSIS
 
 #########  Compiler configuration related flags
 
