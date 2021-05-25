@@ -72,16 +72,19 @@
 !new21: prescribe the min depth and vdatum adjustments to be imposed for each tile
 !       Note that the indices start from 1, so offset from the indices
 !       in dem_*.asc by 1
-      h_min(:)=-20. !init
+      !h_min(:)=-20. !init
       !First 8 are gebco
-      h_min(1:8)=5.
-      h_min(180:182)=5.
+      !h_min(1:8)=5.
+      !h_min(180:182)=5.
+      h_min(:)=0.
       !vdatum is [datum]-MSL in meters
       vdatum(:)=0
-      vdatum(12)=3.44*0.3048;vdatum(13)=4.65*0.3048;
-      vdatum(23)=1.57*0.3048;vdatum(25)=4.65*0.3048;
-      vdatum(24)=5.85*0.3048;
-      vdatum(27:176)=-2.51*0.3048
+      !vdatum(14)=5.85*0.3048;
+      !vdatum(15)=4.65*0.3048;
+      !vdatum(24)=5.85*0.3048;
+      !vdatum(25)=4.65*0.3048;
+
+      !vdatum(27:176)=-2.51*0.3048
 
 
 !     Read in dimensions from DEMs and remap to balance the load,
@@ -177,8 +180,9 @@
           dy=dxy
 
 !new21
-          if(xmin<0) xmin=xmin+360
-    
+          if(xmin>180) then
+            xmin=xmin-360
+          endif
           allocate(dp1(nx,ny),stat=istat)
           if(istat/=0) then
             print*, 'Failed to allocate (1)'
@@ -199,7 +203,6 @@
        
           do i=1,np
             x=x0(i); y=y0(i)
-    
             !Interpolate
             if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
 !              write(13,101)j,x,y,dp
@@ -246,7 +249,7 @@
                 write(19,*)i,max(h-vdatum(idem+1),h_min(idem+1))
               endif !junk
     
-            endif
+            endif !inside xmax xmin box
           enddo !i=1,np
 
           deallocate(dp1)
