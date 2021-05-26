@@ -8,10 +8,8 @@ import time
 #-----------------------------------------------------------------------------
 #Input
 #-----------------------------------------------------------------------------
-#grd='/sciclone/data10/wangzg/NWM/grid/v7_3D/NWM_3D_v7.ll'  #grid name
-#grdout='hgrid.ll' #grid name with depth loaded
-grd='/sciclone/data10/wangzg/NWM/grid/v17/NWM_2D_v17.ll'  #grid name
-grdout='/sciclone/data10/wangzg/NWM/grid/v17/hgrid.ll' #grid name with depth loaded
+grd='hgrid.ll'  #grid name
+grdout='hgrid.ll.new' #grid name with depth loaded
 
 #parameter
 regions=("min_5m_ll.reg","SabinePass.reg","BergenPoint.reg","Washington_3.reg") #regions for modifying depth
@@ -22,68 +20,34 @@ headers=("etopo1","crm_3arcs","cdem13_","dem_continetalus_southcarolina","North_
 sdir=r'/sciclone/data10/wangzg/DEM/npz'  #directory of DEM data
 reverse_sign=1  #invert depth sign
 
-#job name and time
-jname='load_dem' #job name
-walltime='01:00:00' 
-
 #resource requst 
-#qnode='bora'; nnode=2; ppn=5      #bora, ppn=20
-#qnode='vortex'; nnode=2; ppn=4   #vortex, ppn=12
-qnode='x5672'; nnode=20; ppn=4     #hurricane, ppn=8
+walltime='00:10:00'
+qnode='x5672'; nnode=2; ppn=8      #hurricane, ppn=8
+#qnode='bora'; nnode=2; ppn=20      #bora, ppn=20
+#qnode='vortex'; nnode=2; ppn=12    #vortex, ppn=12
+#qnode='femto'; nnode=2; ppn=12     #femto,ppn=32
 #qnode='potomac'; nnode=4; ppn=8    #ches, ppn=12
 #qnode='james'; nnode=5; ppn=20     #james, ppn=20
-#qnode='femto'; nnode=1; ppn=2      #femto,ppn=32, not working yet
+#qnode='skylake'; nnode=2; ppn=36   #viz3,skylake, ppn=36
+#qnode='haswell'; nnode=2; ppn=2    #viz3,haswell, ppn=24,or 28
 
+jname='load_dem' #job name
+ibatch=1; scrout='screen.out'; bdir=os.path.abspath(os.path.curdir)
 #-----------------------------------------------------------------------------
-#pre-processing
+#on front node: 1). submit jobs first (qsub), 2) running parallel jobs (mpirun) 
 #-----------------------------------------------------------------------------
-nproc=nnode*ppn
-bdir=os.path.abspath(os.path.curdir)
-
-#-----------------------------------------------------------------------------
-#on front node; submit jobs in this section
-#-----------------------------------------------------------------------------
-if os.getenv('param')==None and os.getenv('job_on_node')==None:
-    args=sys.argv
-    param=[bdir,args[0]]
-    
-    #submit job on node
-    if qnode=='femto': 
-        scode='sbatch --export=param="{} {}" -J {} -N {} -n {} -t {} {}'.format(*param,jname,nnode,nproc,walltime,args[0])
-    else:
-        scode='qsub {} -v param="{} {}", -N {} -j oe -l nodes={}:{}:ppn={} -l walltime={}'.format(args[0],*param,jname,nnode,qnode,ppn,walltime)
-    print(scode); os.system(scode)
-    os._exit(0)
-
-#-----------------------------------------------------------------------------
-#still on front node, but in batch mode; running jobs in this section
-#-----------------------------------------------------------------------------
-if os.getenv('param')!=None and os.getenv('job_on_node')==None:
-    param=os.getenv('param').split();
-    param=[int(i) if i.isdigit() else i for i in param]
-    bdir=param[0]; bcode=param[1]
-    os.chdir(bdir)
-
-    if qnode=='bora':
-       rcode="mpiexec -x job_on_node=1 -x bdir='{}' -n {} {} >& screen.out".format(bdir,nproc,bcode)
-    elif qnode=='femto':
-       pypath='/sciclone/home10/wangzg/bin/pylibs/Scripts/:/sciclone/home10/wangzg/bin/pylibs/Utility/'
-       rcode="srun --export=job_on_node=1,bdir='{}',PYTHONPATH='{}' {} >& screen.out".format(bdir,pypath,bcode)
-    elif qnode=='x5672' or qnode=='vortex' or qnode=='potomac' or qnode=='james':
-       rcode="mvp2run -v -e job_on_node=1 -e bdir='{}' {} >& screen.out".format(bdir,bcode)
-    print(rcode); os.system(rcode); sys.stdout.flush()
-    os._exit(0)
+if ibatch==0: os.environ['job_on_node']='1'; os.environ['bdir']=bdir #run locally
+if os.getenv('job_on_node')==None:
+   if os.getenv('param')==None: fmt=0; bcode=sys.argv[0]
+   if os.getenv('param')!=None: fmt=1; bdir,bcode=os.getenv('param').split(); os.chdir(bdir)
+   scode=get_hpc_command(bcode,bdir,jname,qnode,nnode,ppn,walltime,scrout,fmt=fmt)
+   print(scode); os.system(scode); os._exit(0)
 
 #-----------------------------------------------------------------------------
 #on computation node
 #-----------------------------------------------------------------------------
-#enter working dir
-bdir=os.getenv('bdir'); os.chdir(bdir)
-
-#get nproc and myrank
-comm=MPI.COMM_WORLD
-nproc=comm.Get_size()
-myrank=comm.Get_rank()
+bdir=os.getenv('bdir'); os.chdir(bdir) #enter working dir
+comm=MPI.COMM_WORLD; nproc=comm.Get_size(); myrank=comm.Get_rank()
 if myrank==0: t0=time.time()
 
 #-----------------------------------------------------------------------------
@@ -99,20 +63,20 @@ for header in headers:
     if len(fnames_sub)==1: fnames_sort.extend(fnames_sub); continue
 
     #get id number 
-    fid=array([i.replace('.','_')[len(header):].split('_')[-2] for i in fnames_sub]).astype('int')
+    fid=array([i.replace('tif.','').replace('.','_')[len(header):].split('_')[-2] for i in fnames_sub]).astype('int')
     sind=argsort(fid); fnames_sub=fnames_sub[sind]; fnames_sort.extend(fnames_sub)
 fnames_sort=array(fnames_sort)
 
 #to exactly match the order to old method
 #switch the order of (db_ll_1.npz and db_ll1.npz), ('cdem13_DE_navd88_2016' and 'cdem13_PA_navd88_2010')
-dn1='db_ll1.npz'; dn2='db_ll_1.npz'
-if (dn1 in fnames_sort)*(dn2 in fnames_sort):
-    fid1=nonzero(fnames_sort==dn1)[0][0]; fid2=nonzero(fnames_sort==dn2)[0][0]
-    fnames_sort[fid1]=dn2; fnames_sort[fid2]=dn1
-dn1='cdem13_PA_navd88_2010.npz'; dn2='cdem13_DE_navd88_2016.npz'
-if (dn1 in fnames_sort)*(dn2 in fnames_sort):
-    fid1=nonzero(fnames_sort==dn1)[0][0]; fid2=nonzero(fnames_sort==dn2)[0][0]
-    fnames_sort[fid1]=dn2; fnames_sort[fid2]=dn1
+#dn1='db_ll1.npz'; dn2='db_ll_1.npz'
+#if (dn1 in fnames_sort)*(dn2 in fnames_sort):
+#    fid1=nonzero(fnames_sort==dn1)[0][0]; fid2=nonzero(fnames_sort==dn2)[0][0]
+#    fnames_sort[fid1]=dn2; fnames_sort[fid2]=dn1
+#dn1='cdem13_PA_navd88_2010.npz'; dn2='cdem13_DE_navd88_2016.npz'
+#if (dn1 in fnames_sort)*(dn2 in fnames_sort):
+#    fid1=nonzero(fnames_sort==dn1)[0][0]; fid2=nonzero(fnames_sort==dn2)[0][0]
+#    fnames_sort[fid1]=dn2; fnames_sort[fid2]=dn1
 
 #distribute jobs
 fnames=[]; inum=[]
@@ -189,7 +153,4 @@ if myrank==0:
 #-----------------------------------------------------------------------------
 comm.Barrier()
 if myrank==0: dt=time.time()-t0; print('total time used: {} s'.format(dt)); sys.stdout.flush()
-if qnode=='x5672' or qnode=='james':
-   os._exit(0)
-else:
-   sys.exit(0)
+sys.exit(0) if qnode in ['bora'] else os._exit(0)
