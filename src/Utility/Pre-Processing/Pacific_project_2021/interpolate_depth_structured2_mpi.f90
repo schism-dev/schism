@@ -46,6 +46,7 @@
 
       ih=-1 !sign change
       vshift=0 !vertical datum diff
+      iadjust_corner=0 !adjustll corner for corner based .asc
       open(10,file='dems.in',status='old')
       read(10,*)ndems
       read(10,*)ncompute !# of compute nodes
@@ -175,6 +176,11 @@
           read(62,*) cha3,fill_value
           dx=dxy
           dy=dxy
+
+          if(iadjust_corner/=0) then
+            xmin = xmin + dx/2
+            ymin = ymin + dy/2
+          endif
 
 !new21
           if(xmin<0) xmin=xmin+360

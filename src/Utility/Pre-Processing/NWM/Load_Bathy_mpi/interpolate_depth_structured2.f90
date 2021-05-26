@@ -19,6 +19,9 @@
       read*, ih
       print*, 'Add vertical const. to outputs (i.e. change of vdatum):'
       read*, vshift
+      print*, 'Adjust 1/2 cell (for corner based .asc)? 1: yes'
+      read*, iadjust_corner
+
 
       open(62,file='struc.grd',status='old')
       read(62,*) cha1,nx !# of nodes in x
@@ -29,6 +32,12 @@
       read(62,*) cha3,fill_value
       dx=dxy
       dy=dxy
+
+      if(iadjust_corner/=0) then
+        xmin=xmin+dx/2
+        ymin=ymin+dy/2
+      endif
+
 
 !      if(nx.gt.mnx.or.ny.gt.mny) then
 !        print*, 'Increase mnx,y to ',nx,ny

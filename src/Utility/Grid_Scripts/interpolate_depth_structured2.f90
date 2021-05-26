@@ -33,6 +33,8 @@
       read*, ih
       print*, 'Add vertical const. to outputs (i.e. change of vdatum):'
       read*, vshift
+      print*, 'Adjust 1/2 cell (for corner based .asc)? 1: yes'
+      read*, iadjust_corner
 
       open(62,file='struc.grd',status='old')
       read(62,*) cha1,nx !# of nodes in x
@@ -44,19 +46,19 @@
       dx=dxy
       dy=dxy
 
-!      if(nx.gt.mnx.or.ny.gt.mny) then
-!        print*, 'Increase mnx,y to ',nx,ny
-!        stop
-!      endif
+      if(iadjust_corner/=0) then
+        xmin=xmin+dx/2
+        ymin=ymin+dy/2
+      endif
+
       allocate(dp1(nx,ny),stat=istat)
       if(istat/=0) stop 'Failed to allocate (1)'
 
-!     Coordinates for upper left corner (the starting point for *.asc)
+!     Max
       ymax=ymin+(ny-1)*dy
-!     xmax
       xmax=xmin+(nx-1)*dx
 
-!     .asc starts from upper left corner and goes along x
+!     Read starts from upper left corner and goes along x
       do iy=1,ny
         read(62,*)(dp1(ix,ny-iy+1),ix=1,nx)
         write(99,*)'line read in:',iy+6

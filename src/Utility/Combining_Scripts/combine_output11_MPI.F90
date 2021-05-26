@@ -1126,7 +1126,7 @@ call MPI_INIT(errcode)
 call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
 call mpi_comm_size(comm,nproc,ierr)
 call MPI_COMM_RANK(comm, myrank, errcode)
-print *, 'Hello from ', myrank
+!print *, 'Hello from ', myrank
 
 call combine_output11_input(comm,ibgn,iend,iwetdry,to_be_combined,output_prefix)
 
@@ -1142,7 +1142,10 @@ do i=ibgn,iend
     call mpi_abort(comm,0,k)
   endif
 
-  if(myrank==irank) call combine_output11(comm,i,i,iwetdry,to_be_combined,output_prefix)
+  if(myrank==irank) then
+    print *, 'MPI rank ', myrank,' is combining stack ',i
+    call combine_output11(comm,i,i,iwetdry,to_be_combined,output_prefix)
+  endif
 enddo !i
 
 call MPI_FINALIZE(errcode)
