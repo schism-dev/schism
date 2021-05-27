@@ -5,3 +5,8 @@ Some pre-proc and input files for the NOAA Pacific project
 (2) Interp script is interpolate_depth_structured2_mpi.f90
 (3) ~147 tide gauges are in: Pacific_tide_stations.bp
 (4) new*.map are different versions of SMS maps
+      new6: new4a-5 with finer resolution (8-10km) in ocean (@h=4km), 6km along US-Canada west coast. 2.4M nodes
+      new7: from Wei. Refined west coast & AK from new6. ~2.5Mil nodes
+      new10: new7 with a few arcs near Jap Trench removed; Seto Inland Sea, Guam edited to better acommodate
+             tide gauges.
+
