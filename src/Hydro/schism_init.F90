@@ -5079,9 +5079,16 @@
       enddo
 
       write(10,*)'Header:'
-      write(10,*)start_year,start_month,start_day,start_hour,utc_start
-      write(10,*)nrec,real(dt*nspool),nspool,nvrt,kz,real(h0),real(h_s),real(h_c),real(theta_b),real(theta_f),ics
-      write(10,*)(real(ztot(k)),k=1,kz-1),(real(sigma(k)),k=1,nvrt-kz+1)
+      write(10,'(3(1x,i10),2(1x,f14.2))')start_year,start_month,start_day,start_hour,utc_start
+      write(10,'(i10,1x,e14.7,3(1x,i6),5(1x,e17.8),1x,i3)')nrec,real(dt*nspool),nspool,nvrt,kz, &
+     &real(h0),real(h_s),real(h_c),real(theta_b),real(theta_f),ics
+      do k=1,kz-1
+        write(10,*)real(ztot(k))
+      enddo !k
+      do k=1,nvrt-kz+1
+        write(10,*)real(sigma(k))
+      enddo !k
+
       write(10,*)np,ne
       if(ics==1) then
         do m=1,np

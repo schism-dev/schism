@@ -382,7 +382,13 @@
         read(10,*) !'Header:'
         read(10,*) itmp,itmp,itmp,dble2,dble2 !start_year,start_month,start_day,start_hour,utc_start 
         read(10,*)nrec,dtout,nspool,nvrt,kz,h0,h_s,h_c,theta_b,theta_f,itmp !ics
-        read(10,*)(ztot(k),k=1,kz-1),(sigma(k),k=1,nvrt-kz+1)
+        do k=1,kz-1
+          read(10,*)ztot(k)
+        enddo !k
+        do k=1,nvrt-kz+1
+          read(10,*)sigma(k)
+        enddo
+
         read(10,*)np_lcl(irank),ne_lcl(irank),(x(iplg(irank,m)),y(iplg(irank,m)), &
       &dp(iplg(irank,m)),kbp00(iplg(irank,m)),m=1,np_lcl(irank)), &
       &(i34(ielg(irank,m)),(nm2(mm,m),mm=1,i34(ielg(irank,m))),m=1,ne_lcl(irank))
