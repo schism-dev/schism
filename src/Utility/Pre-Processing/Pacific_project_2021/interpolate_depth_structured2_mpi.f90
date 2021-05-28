@@ -69,20 +69,27 @@
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
 
-!new21: prescribe the min depth and vdatum adjustments to be imposed for each tile
-!       Note that the indices start from 1, so offset from the indices
-!       in dem_*.asc by 1
+!new21: prescribe the min depth and vdatum adjustments to be imposed for
+!each tile
       h_min(:)=-20. !init
       !First 8 are gebco
       h_min(1:8)=5.
-      h_min(180:182)=5.
+      h_min(11:14)=5. !Alaska tiles
+      h_min(23:24)=5. !PrinceWilliamSound_83arc_mhhw_ll and SEAlaska_83arc_mhhw_ll
+      !h_min(23:24)=5.!DutchHarbor_1arc_mhw_ll.asc and
+      !AKUTAN_83_mhhw_ll.asc
+      h_min(176:178)=10. !Australian tiles
+      h_min(179:181)=5.  !Taiwan tiles
       !vdatum is [datum]-MSL in meters
       vdatum(:)=0
-      vdatum(12)=3.44*0.3048;vdatum(13)=4.65*0.3048;
-      vdatum(23)=1.57*0.3048;vdatum(25)=4.65*0.3048;
-      vdatum(24)=5.85*0.3048;
-      vdatum(27:176)=-2.51*0.3048
-
+      vdatum(12)=3.44*0.3048;!ColdBay_8arc_mhhw_ll
+      vdatum(13)=5.85*0.3048;!PrinceWilliamSound_8arc_mhhw_ll
+      vdatum(14)=4.65*0.3048;!SEAlaska_8arc_mhhw_ll
+      !vdatum(23:24)=1.57*0.3048;!DutchHarbor_1arc_mhw_ll.asc and
+      !AKUTAN_83_mhhw_ll.asc
+      vdatum(23)=5.85*0.3048;!PrinceWilliamSound_83arc_mhhw_ll
+      vdatum(24)=4.65*0.3048;!SEAlaska_83arc_mhhw_ll
+      vdatum(26:175)=-2.51*0.3048;!SanF CoNED
 
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
