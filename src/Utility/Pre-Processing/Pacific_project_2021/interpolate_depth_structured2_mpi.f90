@@ -45,8 +45,7 @@
       call MPI_COMM_RANK(comm, myrank, errcode)
 
       ih=-1 !sign change
-      vshift=0 !vertical datum diff
-      iadjust_corner=0 !adjustll corner for corner based .asc
+!      iadjust_corner=0 !adjustll corner for corner based .asc
       open(10,file='dems.in',status='old')
       read(10,*)ndems
       read(10,*)ncompute !# of compute nodes
@@ -171,6 +170,13 @@
           read(62,*) cha1,nx !# of nodes in x
           read(62,*) cha1,ny !# of nodes in y
           read(62,*) cha2,xmin
+          cha2=adjustl(cha2)
+          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
+            iadjust_corner=1
+          else !center based
+            iadjust_corner=0
+          endif
+
           read(62,*) cha2,ymin
           read(62,*) cha2,dxy
           read(62,*) cha3,fill_value
@@ -245,7 +251,7 @@
                 hy1=dp1(ix,iy)*(1-xrat)+xrat*dp1(ix+1,iy)
                 hy2=dp1(ix,iy+1)*(1-xrat)+xrat*dp1(ix+1,iy+1)
                 h=hy1*(1-yrat)+hy2*yrat
-                h=h*ih+vshift
+                h=h*ih    !+vshift
 
                 !Write temp output (in 'valid' region only)
 !new21
