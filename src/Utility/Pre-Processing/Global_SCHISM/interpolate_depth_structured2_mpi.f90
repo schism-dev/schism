@@ -1,4 +1,4 @@
-!Modified for Pac project; look for new21
+!Modified for Global project; look for new21
 
 !   Copyright 2014 College of William and Mary
 !
@@ -45,8 +45,8 @@
       call MPI_COMM_RANK(comm, myrank, errcode)
 
       ih=-1 !sign change
-      vshift=0 !vertical datum diff
-      iadjust_corner=0 !adjustll corner for corner based .asc
+!      vshift=0 !vertical datum diff
+!      iadjust_corner=0 !adjustll corner for corner based .asc
       open(10,file='dems.in',status='old')
       read(10,*)ndems
       read(10,*)ncompute !# of compute nodes
@@ -173,23 +173,33 @@
           open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank using DEM ID
           read(62,*) cha1,nx !# of nodes in x
           read(62,*) cha1,ny !# of nodes in y
-          read(62,*) cha2,xmin
-          read(62,*) cha2,ymin
+          read(62,*) cha2,xmin0
+          cha2=adjustl(cha2)
+          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
+            iadjust_corner=1
+          else !center based
+            iadjust_corner=0
+          endif
+
+          read(62,*) cha2,ymin0
           read(62,*) cha2,dxy
           read(62,*) cha3,fill_value
           dx=dxy
           dy=dxy
 
-          if(iadjust_corner/=0) then
-            xmin = xmin + dx/2
-            ymin = ymin + dy/2
-          endif
-
-
 !new21
-          if(xmin>180) then
-            xmin=xmin-360
+          if(xmin0>180) then
+            xmin0=xmin0-360
           endif
+
+          if(iadjust_corner/=0) then
+            xmin = xmin0 + dx/2
+            ymin = ymin0 + dy/2
+          else
+            xmin = xmin0
+            ymin = ymin0
+          endif
+
           allocate(dp1(nx,ny),stat=istat)
           if(istat/=0) then
             print*, 'Failed to allocate (1)'
@@ -211,10 +221,16 @@
           do i=1,np
             x=x0(i); y=y0(i)
             !Interpolate
-            if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
+            if(x.gt.xmax.or.x.lt.xmin0.or.y.gt.ymax.or.y.lt.ymin0) then
 !              write(13,101)j,x,y,dp
 !              dpout(i)=dp0(i)
             else !inside structured grid
+              !1/2 cell shift case: extrap to cover lower&left
+              if(iadjust_corner/=0) then
+                x=max(x,xmin)
+                y=max(y,ymin)
+              endif
+
               x2=x 
               y2=y 
               ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
@@ -249,7 +265,7 @@
                 hy1=dp1(ix,iy)*(1-xrat)+xrat*dp1(ix+1,iy)
                 hy2=dp1(ix,iy+1)*(1-xrat)+xrat*dp1(ix+1,iy+1)
                 h=hy1*(1-yrat)+hy2*yrat
-                h=h*ih+vshift
+                h=h*ih !+vshift
 
                 !Write temp output (in 'valid' region only)
 !new21

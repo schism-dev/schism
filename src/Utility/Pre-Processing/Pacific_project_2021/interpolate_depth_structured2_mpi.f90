@@ -45,8 +45,7 @@
       call MPI_COMM_RANK(comm, myrank, errcode)
 
       ih=-1 !sign change
-      vshift=0 !vertical datum diff
-      iadjust_corner=0 !adjustll corner for corner based .asc
+!      iadjust_corner=0 !adjustll corner for corner based .asc
       open(10,file='dems.in',status='old')
       read(10,*)ndems
       read(10,*)ncompute !# of compute nodes
@@ -70,20 +69,27 @@
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
 
-!new21: prescribe the min depth and vdatum adjustments to be imposed for each tile
-!       Note that the indices start from 1, so offset from the indices
-!       in dem_*.asc by 1
+!new21: prescribe the min depth and vdatum adjustments to be imposed for
+!each tile
       h_min(:)=-20. !init
       !First 8 are gebco
       h_min(1:8)=5.
-      h_min(180:182)=5.
+      h_min(11:14)=5. !Alaska tiles
+      h_min(23:24)=5. !PrinceWilliamSound_83arc_mhhw_ll and SEAlaska_83arc_mhhw_ll
+      !h_min(23:24)=5.!DutchHarbor_1arc_mhw_ll.asc and
+      !AKUTAN_83_mhhw_ll.asc
+      h_min(176:178)=10. !Australian tiles
+      h_min(179:181)=5.  !Taiwan tiles
       !vdatum is [datum]-MSL in meters
       vdatum(:)=0
-      vdatum(12)=3.44*0.3048;vdatum(13)=4.65*0.3048;
-      vdatum(23)=1.57*0.3048;vdatum(25)=4.65*0.3048;
-      vdatum(24)=5.85*0.3048;
-      vdatum(27:176)=-2.51*0.3048
-
+      vdatum(12)=3.44*0.3048;!ColdBay_8arc_mhhw_ll
+      vdatum(13)=5.85*0.3048;!PrinceWilliamSound_8arc_mhhw_ll
+      vdatum(14)=4.65*0.3048;!SEAlaska_8arc_mhhw_ll
+      !vdatum(23:24)=1.57*0.3048;!DutchHarbor_1arc_mhw_ll.asc and
+      !AKUTAN_83_mhhw_ll.asc
+      vdatum(23)=5.85*0.3048;!PrinceWilliamSound_83arc_mhhw_ll
+      vdatum(24)=4.65*0.3048;!SEAlaska_83arc_mhhw_ll
+      vdatum(26:175)=-2.51*0.3048;!SanF CoNED
 
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
@@ -170,21 +176,31 @@
           open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank using DEM ID
           read(62,*) cha1,nx !# of nodes in x
           read(62,*) cha1,ny !# of nodes in y
-          read(62,*) cha2,xmin
-          read(62,*) cha2,ymin
+          read(62,*) cha2,xmin0
+          cha2=adjustl(cha2)
+          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
+            iadjust_corner=1
+          else !center based
+            iadjust_corner=0
+          endif
+
+          read(62,*) cha2,ymin0
           read(62,*) cha2,dxy
           read(62,*) cha3,fill_value
           dx=dxy
           dy=dxy
 
+!new21
+          if(xmin0<0) xmin0=xmin0+360
+    
           if(iadjust_corner/=0) then
-            xmin = xmin + dx/2
-            ymin = ymin + dy/2
+            xmin = xmin0 + dx/2
+            ymin = ymin0 + dy/2
+          else
+            xmin = xmin0 
+            ymin = ymin0 
           endif
 
-!new21
-          if(xmin<0) xmin=xmin+360
-    
           allocate(dp1(nx,ny),stat=istat)
           if(istat/=0) then
             print*, 'Failed to allocate (1)'
@@ -207,10 +223,16 @@
             x=x0(i); y=y0(i)
     
             !Interpolate
-            if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
+            if(x.gt.xmax.or.x.lt.xmin0.or.y.gt.ymax.or.y.lt.ymin0) then
 !              write(13,101)j,x,y,dp
 !              dpout(i)=dp0(i)
             else !inside structured grid
+              !1/2 cell shift case: extrap to cover lower&left
+              if(iadjust_corner/=0) then
+                x=max(x,xmin)
+                y=max(y,ymin)
+              endif
+
               x2=x 
               y2=y 
               ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
@@ -245,7 +267,7 @@
                 hy1=dp1(ix,iy)*(1-xrat)+xrat*dp1(ix+1,iy)
                 hy2=dp1(ix,iy+1)*(1-xrat)+xrat*dp1(ix+1,iy+1)
                 h=hy1*(1-yrat)+hy2*yrat
-                h=h*ih+vshift
+                h=h*ih    !+vshift
 
                 !Write temp output (in 'valid' region only)
 !new21
