@@ -132,6 +132,7 @@ module fabm_schism
     real(rk), dimension(:,:,:), pointer :: interior_initial_concentration => null()
     real(rk), dimension(:,:), pointer   :: light_extinction => null()
     real(rk), dimension(:,:), pointer   :: layer_height => null()
+    real(rk), dimension(:,:), pointer   :: layer_depth => null()
     real(rk), dimension(:,:), pointer   :: eps => null()
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
@@ -449,6 +450,9 @@ subroutine fabm_schism_init_stage2
   fs%layer_height = 0.5_rk
   ! fs%layer_height => schism_layer_height
 
+  allocate(fs%layer_depth(nvrt,nea))
+  fs%layer_depth = -1.0_rk
+
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
   allocate(fs%windvel(nea))
@@ -497,6 +501,7 @@ subroutine fabm_schism_init_stage2
   ! calculate initial layer heights
   !> @todo check fs%layer_height(1,:)
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
+  fs%layer_depth = ze
 
   call fs%link_environmental_data()
   call driver%log_message('Linked environmental data')
@@ -764,11 +769,12 @@ subroutine fabm_schism_do()
   ! repair state
   call fs%repair_state()
 
-  ! calculate layer height
+  ! calculate layer height, and depth
   do i=1, nea
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
+        fs%layer_depth(k,i) = (ze(k,i)+ze(k-1,i))/2.0 
       end do
     end if
   end do
@@ -1368,6 +1374,7 @@ subroutine link_environmental_data(self, rc)
   call self%model%link_interior_data(fabm_standard_variables%density,erho)
   call driver%log_message('linked interior standard variable "density"')
   call self%model%link_interior_data(fabm_standard_variables%cell_thickness,self%layer_height)
+  call self%model%link_interior_data(fabm_standard_variables%depth,self%layer_depth)
   call driver%log_message('linked interior standard variable "cell_thickness"')
   !call self%model%link_interior_data( &
   !  type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
