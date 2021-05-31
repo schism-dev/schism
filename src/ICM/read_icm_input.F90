@@ -2080,7 +2080,7 @@ subroutine check_icm_param
     write(31,'(a10,i5)')'iAtm= ',iAtm
     write(31,'(a10,i5)')'iBen= ',iBen
     write(31,'(a10,i5)')'iSet= ',iSet
-    write(31,'(a10,i5)')'idry_icm= 'idry_icm
+    write(31,'(a10,i5)')'idry_icm= ',idry_icm
     !write(31,'(a10,i5)')'iReg_GP= ',iReg_GP
     !write(31,'(a10,i5)')'iPRR= ',iPRR
     !write(31,'(a10,i5)')'iReg_PR= ',iReg_PR
