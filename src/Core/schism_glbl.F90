@@ -389,7 +389,7 @@ module schism_glbl
 !  real(rkind),save,allocatable :: trel(:,:,:) !tracer concentration @ prism center; used as permanent storage
   !tracer concentration @ prism center; used as temp. storage. tr_el(ntracers,nvrt,nea2) but last index usually
   !is valid up to nea only except for TVD
-  real(rkind),save,allocatable :: tr_el(:,:,:) 
+  real(rkind),save,allocatable,target :: tr_el(:,:,:) 
   real(rkind),save,allocatable :: tr_nd(:,:,:) !tracer concentration @ node and whole levels
   real(rkind),save,allocatable :: bdy_frc(:,:,:) !body force at prism center Q_{i,k}
   real(rkind),save,allocatable :: flx_sf(:,:) !surface b.c. \kappa*dC/dz = flx_sf (at element center)
