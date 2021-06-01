@@ -19,7 +19,7 @@
 !       at a particular Z-level (use above surface/below bottom to get surface/bottom).
 !       Skip dry times for 3D variables.
 !       Works for mixed quad/tri on NODE based variables only.
-!       Input: schout*.nc (combined or uncombined); vgrid.in; screen
+!       Input: schout*.nc (combined or uncombined); local_to_global*; vgrid.in; screen
 !       Output: average.out (gredit for scalar or xmgr5 format for vector)
 !										
 !       ifort -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 compute_average3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
