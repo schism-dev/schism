@@ -451,7 +451,7 @@ subroutine fabm_schism_init_stage2
   ! fs%layer_height => schism_layer_height
 
   allocate(fs%layer_depth(nvrt,nea))
-  fs%layer_depth = -1.0_rk
+  fs%layer_depth = 1.0_rk
 
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
@@ -501,7 +501,7 @@ subroutine fabm_schism_init_stage2
   ! calculate initial layer heights
   !> @todo check fs%layer_height(1,:)
   fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
-  fs%layer_depth = ze
+  fs%layer_depth(2:nvrt,:) = -(ze(2:nvrt,:)+ze(1:nvrt-1,:))/2
 
   call fs%link_environmental_data()
   call driver%log_message('Linked environmental data')
@@ -774,7 +774,7 @@ subroutine fabm_schism_do()
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
-        fs%layer_depth(k,i) = (ze(k,i)+ze(k-1,i))/2.0 
+        fs%layer_depth(k,i) = -(ze(k,i)+ze(k-1,i))/2.0 
       end do
     end if
   end do
