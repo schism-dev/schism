@@ -347,17 +347,17 @@ subroutine cosine(it)
         endif
 
         !Z1
-        EXZ1=kex1*Z1(k) !excretion
+        EXZ1=OXR*kex1*Z1(k) !excretion
         MTZ1=gammaz*Z1(k)*Z1(k) !Mortality
-        qcos(6)=gamma1*GS1Z1-OXR*EXZ1-GZ1Z2-MTZ1
+        qcos(6)=gamma1*GS1Z1-EXZ1-GZ1Z2-MTZ1
 
         !Z2
-        EXZ2=kex2*Z2(k) !excretion
+        EXZ2=OXR*kex2*Z2(k) !excretion
         MTZ2=gammaz*Z2(k)*Z2(k) !Mortality
         if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
           MTZ2=bgraze(i)*gammaz*Z2(k)*Z2(k)
         endif
-        qcos(7)=gamma2*GTZ2-OXR*EXZ2-MTZ2 
+        qcos(7)=gamma2*GTZ2-EXZ2-MTZ2 
        
         !DN
         if(k>kbe(i)+1) then
@@ -365,10 +365,9 @@ subroutine cosine(it)
         else
           rat=kbmdn
         endif
-        MIDN=rat*DN(k) !remineralization, 1.5 to increase dissolution
-        qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2 &
-                &-GDNZ2+MTS1+MTS2+MTZ1+MTZ2 &
-                &-OXR*MIDN+SKDN/Tadjust
+        MIDN=rat*OXR*DN(k) !remineralization, 1.5 to increase dissolution
+        qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2-GDNZ2 &
+               & +MTS1+MTS2+MTZ1+MTZ2-MIDN+SKDN/Tadjust
 
         !DSi
         if(k>kbe(i)+1) then
@@ -380,12 +379,11 @@ subroutine cosine(it)
         qcos(9)=(GS2Z2+MTS2)*si2n-MIDSi+SKDSi/Tadjust
 
         !NO3
-        Nit=gamman*NH4(k) !Nitrification
-        qcos(1)=-NPS1-NPS2+OXR*Nit
+        Nit=gamman*OXR*NH4(k) !Nitrification
+        qcos(1)=-NPS1-NPS2+Nit
 
         !NH4
-        qcos(3)=-RPS1-RPS2+OXR*EXZ1+OXR*EXZ2 &
-               &-OXR*Nit+OXR*MIDN
+        qcos(3)=-RPS1-RPS2+EXZ1+EXZ2-Nit+MIDN
         if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
           qcos(3)=qcos(3)+CLREG
         endif
@@ -394,20 +392,17 @@ subroutine cosine(it)
         qcos(2)=-(NPS2+RPS2)*si2n+MIDSi
 
         !PO4
-        qcos(10)=-(NPS1+RPS1+NPS2+RPS2)*p2n &
-                 &+OXR*(EXZ1+EXZ2)*p2n+OXR*MIDN*p2n+MIDSi*p2n/si2n
+        qcos(10)=(EXZ1+EXZ2+MIDN+MIDSi/si2n-NPS1-RPS1-NPS2-RPS2)*p2n
         
         !DOX
         if(k>(kbe(i)+1)) then 
-          qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2)*o2nh &
-                   &-2.0*OXR*Nit-OXR*(EXZ1+EXZ2)*o2nh-OXR*MIDN*o2nh
+          qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2-EXZ1-EXZ2-MIDN)*o2nh-2.0*Nit
         else
           qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2)*o2nh 
         endif
 
         !CO2
-        qcos(12)=-(NPS1+RPS1+NPS2+RPS2)*c2n &
-                 &+OXR*(EXZ1+EXZ2)*c2n+OXR*MIDN*c2n 
+        qcos(12)=(EXZ1+EXZ2+MIDN-NPS1-RPS1-NPS2-RPS2)*c2n
         
         !ALK
         qcos(13)=-qcos(1)+qcos(3)
