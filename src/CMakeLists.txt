@@ -24,7 +24,9 @@ include(SCHISMTest)
 
 message(STATUS "\n################   Begin SCHISM Configuration   ################" )
 message(STATUS "In-source builds not allowed")
-project(SCHISM C CXX Fortran)
+
+set(comp_lang_list C Fortran)
+project(SCHISM LANGUAGES ${comp_lang_list})
 add_definitions("-DSCHISM")
 
 
@@ -129,7 +131,7 @@ if( NOT DEFINED NetCDF_FORTRAN_DIR AND ($ENV{NETCDF_FORTRAN_DIR} MATCHES ".+") )
   set(NetCDF_FORTRAN_DIR $ENV{NETCDF_FORTRAN_DIR})
 endif()
 
-find_package(NetCDF REQUIRED)
+find_package(NetCDF REQUIRED COMPONENTS ${comp_lang_list})
 if(NetCDF_NEEDS_HDF5)
   set( HDF5_USE_STATIC_LIBRARIES 1 )
   find_package(HDF5 COMPONENTS C REQUIRED)
