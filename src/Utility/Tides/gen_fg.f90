@@ -1,6 +1,6 @@
 !     Generate fg.bp for FES etc; works for mixed tri/quad
 !     Input: 
-!           hgrid.gr3 (for FES, use hgrid.ll with boundary info); 
+!           hgrid.gr3 (use hgrid.ll with boundary info); 
 !           gen_fg.in: 
 !                    1st line: nob - # of open boundary segments that need *3D.th;
 !                    2nd line: iob(1:nob) - list of segment IDs in hgrid.gr3
