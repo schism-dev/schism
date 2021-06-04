@@ -16,7 +16,8 @@ iflag=2;
 open_ll={'fg.bp.1','fg.bp.2','fg.bp.3'}; 
 
 %Output freq's must be first X of original freq's in nc
-const={'m2','s2','n2','k2','k1','o1','p1','q1'}; 
+%const={'m2','s2','n2','k2','k1','o1','p1','q1'}; 
+const={'m2','s2','n2','k2','k1','o1','p1','q1','mm','mf','m4','mn4','ms4'}; %'2n2','s1'
 nfr_out=length(const);
 
 for iseg=1:length(open_ll)
