@@ -152,7 +152,7 @@
   niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter
   !shapiro0: Shapiro filter strength, needed only if ishapiro=1 or 2 
   !If ishapiro=1, shapiro0 is the filter strength (max is 0.5).
-  !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest ~1.e3
+  !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest 20
   shapiro0 = 0.5 
 
 !-----------------------------------------------------------------------

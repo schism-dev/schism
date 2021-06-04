@@ -1383,7 +1383,7 @@ subroutine read_icm_param
   call get_param('icm.in','nspool_icm',1,nspool_icm,rtmp,stmp)
   !call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp) !read in ahead of allocations
   call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
-  call get_param('icm.in','idry_icm',1,idry_icm,rtmp,stmp)
+  call get_param('icm.in','idry_icm',1,iSet,rtmp,stmp)
 
   !check 
   if(jLight>2) call parallel_abort('read_icm: jLight>2')
@@ -2080,7 +2080,6 @@ subroutine check_icm_param
     write(31,'(a10,i5)')'iAtm= ',iAtm
     write(31,'(a10,i5)')'iBen= ',iBen
     write(31,'(a10,i5)')'iSet= ',iSet
-    write(31,'(a10,i5)')'idry_icm= ',idry_icm
     !write(31,'(a10,i5)')'iReg_GP= ',iReg_GP
     !write(31,'(a10,i5)')'iPRR= ',iPRR
     !write(31,'(a10,i5)')'iReg_PR= ',iReg_PR

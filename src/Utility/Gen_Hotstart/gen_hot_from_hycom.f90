@@ -40,11 +40,12 @@
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
 !                     3rd line: T,S values for pts outside background grid in nc
+!                     4th line: time step in .nc in sec
 !     (6) HYCOM files: [SSH,TS,UV]_[1,2,..nfiles].nc (beware scaling etc)
 !   Output: hotstart.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
 
-! ifort -O2 -mcmodel=medium -assume byterecl -CB -g -traceback -o gen_hot_from_hycom.exe ../UtilLib/schism_geometry.f90 \
+! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_hot_from_hycom.exe ../UtilLib/schism_geometry.f90 \
 ! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_from_hycom.f90 \
 !-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
@@ -738,11 +739,11 @@
               saltout(:,i)=sal_es
             endif
           endif !ixy(i,1)==0.or.
-        enddo !i=1,np
+        enddo !i
 
 !       hotstart.nc
         if(ifile==1.and.it2==ilo) then
-          write(20,*)'start outputting hot...'
+          write(20,*)'outputting hot...'
           call flush(20)
 
           do i=1,ns
@@ -761,9 +762,6 @@
 !           write(88,*)i,xcj(i),ycj(i),ssd(i,1),ssd(i,nvrt)
           enddo !i
 
-          write(20,*)'done vel i.c.'
-          call flush(20)
-
           do i=1,ne
             do k=2,nvrt
               tsel(1,k,i)=(sum(tempout(k,elnode(1:i34(i),i)))+sum(tempout(k-1,elnode(1:i34(i),i))))/2/i34(i) 
@@ -772,8 +770,6 @@
             tsel(1,1,i)=tsel(1,2,i) !mainly for hotstart format
             tsel(2,1,i)=tsel(2,2,i)
           enddo !i
-          write(20,*)'done TS i.c.'
-          call flush(20)
 
           if(iuv==0) then
             eout_tmp=0
