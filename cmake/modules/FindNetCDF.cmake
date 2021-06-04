@@ -1,7 +1,5 @@
-#
-# (C) Copyright 2011 ECMWF.
-# (C) Copyright 2020 NOAA
-# (C) Copyright 2021 Helmholtz-Zentrum Hereon
+# (C) Copyright 2011- ECMWF
+# (C) Copyright 2021- NOAA
 #
 # This software is licensed under the terms of the Apache Licence Version 2.0
 # which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
@@ -9,12 +7,23 @@
 # granted to it by virtue of its status as an intergovernmental organisation nor
 # does it submit to any jurisdiction.
 
-# Modifications: 
-# - Adapted to PAHM model by Panagiotis Velissariou, NOAA
-# - Adapted to SCHISM by Carsten Lemmen, hereon 
+# Modifications:
+# - Dec 12 2020 Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>, NOAA
+#     * Find NetCDF C/C++/Fortran libraries and include files in a basic
+#       Linux/GNU/gfortran system; by default the *.mod files are stored in the
+#       gfortran module directory (not the include directory); modified the search code
+#       (see function netcdf_config below) to consider all outputs from the nc/nf-config program
+#     * In some systems nf-config does not exist, so we make sure that nc-config
+#       is used instead
+#     * Minor modifications to remove duplicates from the resulting search lists
+#
+# - May 29 2021 Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>, NOAA
+#     * Improve the NetCDF find code in a Linux/GNU/gfortran system by passing
+#       both --includedir and --fflag to nf/nc-config program
+#
 
 # Try to find NetCDF includes and library.
-# Supports static and shared libaries and allows each component to be found in sepearte prefixes.
+# Supports static and shared libaries and allows each component to be found in seperate prefixes.
 #
 # This module defines
 #
@@ -88,7 +97,7 @@ foreach( _comp ${_possible_components} )
   set( _name_${_COMP} ${_comp} )
 endforeach()
 
-set( _search_components C Fortran )
+set( _search_components C)
 foreach( _comp ${${CMAKE_FIND_PACKAGE_NAME}_FIND_COMPONENTS} )
   string( TOUPPER "${_comp}" _COMP )
   set( _arg_${_COMP} ${_comp} )
@@ -154,20 +163,23 @@ foreach( _comp IN LISTS _search_components )
     set(_conf "cxx4")
   endif()
   find_program( NetCDF_${_comp}_CONFIG_EXECUTABLE
-      NAMES n${_conf}-config nc-config
+    # PV: include the nc-config in the list
+    NAMES n${_conf}-config nc-config
     HINTS ${NetCDF_INCLUDE_DIRS} ${_include_search_hints} ${_search_hints}
     PATH_SUFFIXES bin Bin ../bin ../../bin
-      DOC "NetCDF n${_conf}-config helper" )
-    message(DEBUG "NetCDF_${_comp}_CONFIG_EXECUTABLE: ${NetCDF_${_comp}_CONFIG_EXECUTABLE}")
+    DOC "NetCDF n${_conf}-config helper" )
+  message(DEBUG "NetCDF_${_comp}_CONFIG_EXECUTABLE: ${NetCDF_${_comp}_CONFIG_EXECUTABLE}")
 endforeach()
 
 set(_C_libs_flag --libs)
 set(_Fortran_libs_flag --flibs)
 set(_CXX_libs_flag --libs)
 set(_C_includes_flag --includedir)
+# PV: The following workaround is for a GNU/gfortran setup
 #set(_Fortran_includes_flag --includedir)
-set(_Fortran_includes_flag --fflags)
+set(_Fortran_includes_flag "--fflags")
 set(_CXX_includes_flag --includedir)
+# PV: modified to include in the list the CFLAG/FFLAG/LDFLAG defined directories
 function(netcdf_config exec flag output_var)
   set(${output_var} False PARENT_SCOPE)
   if( exec )
