@@ -16,6 +16,7 @@ if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
 	 add_compile_options(-fallow-argument-mismatch)
   endif()
+   add_compile_options(-ffree-line-length-none)
 endif()
 
 
