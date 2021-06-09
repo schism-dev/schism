@@ -193,12 +193,17 @@
 !new21
           if(xmin0<0) xmin0=xmin0+360
     
+!         Calculate locations of min/max @vertex (corner) and center.
+!         '0' denotes vertex location; xmin/xmax etc denote center
+!         location
           if(iadjust_corner/=0) then
             xmin = xmin0 + dx/2
             ymin = ymin0 + dy/2
           else
             xmin = xmin0 
             ymin = ymin0 
+            xmin0=xmin0-dx/2 !redefine corner
+            ymin0=ymin0-dy/2
           endif
 
           allocate(dp1(nx,ny),stat=istat)
@@ -209,8 +214,9 @@
     
 !         Coordinates for upper left corner (the starting point for *.asc)
           ymax=ymin+(ny-1)*dy
-!         xmax
           xmax=xmin+(nx-1)*dx
+          xmax0=xmax+dx/2 ! right edge of raster
+          ymax0=ymax+dy/2 ! top edge of raster
     
 !         .asc starts from upper left corner and goes along x
           do iy=1,ny
@@ -223,18 +229,22 @@
             x=x0(i); y=y0(i)
     
             !Interpolate
-            if(x.gt.xmax.or.x.lt.xmin0.or.y.gt.ymax.or.y.lt.ymin0) then
+            if(x.gt.xmax0.or.x.lt.xmin0.or.y.gt.ymax0.or.y.lt.ymin0) then
 !              write(13,101)j,x,y,dp
 !              dpout(i)=dp0(i)
             else !inside structured grid
-              !1/2 cell shift case: extrap to cover lower&left
-              if(iadjust_corner/=0) then
-                x=max(x,xmin)
-                y=max(y,ymin)
-              endif
+!              !1/2 cell shift case: extrap to cover lower&left
+!              if(iadjust_corner/=0) then
+!                x=max(x,xmin)
+!                y=max(y,ymin)
+!              endif
+!              x2=x 
+!              y2=y 
 
-              x2=x 
-              y2=y 
+              !Extrap min/max 1/2 cells
+              x2=min(xmax,max(x,xmin))
+              y2=min(ymax,max(y,ymin))
+
               ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
               iy=(y2-ymin)/dy+1
               if(ix.lt.1.or.ix.gt.nx.or.iy.lt.1.or.iy.gt.ny) then

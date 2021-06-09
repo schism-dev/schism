@@ -83,8 +83,8 @@
         write(fdb(lfdb-3:lfdb),'(i4.4)') idem
 
         open(62,file=trim(adjustl(fdb))//'.asc',status='old')
-        read(62,*) cha1,nx !# of nodes in x
-        read(62,*) cha1,ny !# of nodes in y
+        read(62,*) cha1,nx !# of pts in x
+        read(62,*) cha1,ny !# of pts in y
         close(62)
         dims(idem+1)=nx*ny
       enddo !idem
@@ -158,12 +158,11 @@
 
           open(62,file=trim(adjustl(fdb))//'.asc',status='old')
           open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank using DEM ID
-          read(62,*) cha1,nx !# of nodes in x
-          read(62,*) cha1,ny !# of nodes in y
+          read(62,*) cha1,nx !# of pts in x
+          read(62,*) cha1,ny !# of pts in y
           read(62,*) cha2,xmin0
           cha2=adjustl(cha2)
-          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is
-corner based
+          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
             iadjust_corner=1
           else !center based
             iadjust_corner=0
@@ -175,12 +174,17 @@ corner based
           dx=dxy
           dy=dxy
 
-          if(iadjust_corner/=0) then
+!         Calculate locations of min/max @vertex (corner) and center.
+!         '0' denotes vertex location; xmin/xmax etc denote center
+!         location
+          if(iadjust_corner/=0) then !vertex based
             xmin = xmin0 + dx/2
             ymin = ymin0 + dy/2
           else
             xmin = xmin0
             ymin = ymin0
+            xmin0=xmin0-dx/2 !redefine corner
+            ymin0=ymin0-dy/2
           endif
 
           allocate(dp1(nx,ny),stat=istat)
@@ -190,9 +194,10 @@ corner based
           endif
     
 !         Coordinates for upper left corner (the starting point for *.asc)
-          ymax=ymin+(ny-1)*dy
-!         xmax
+          ymax=ymin+(ny-1)*dy !center
           xmax=xmin+(nx-1)*dx
+          xmax0=xmax+dx/2 ! right edge of raster
+          ymax0=ymax+dy/2 ! top edge of raster
     
 !         .asc starts from upper left corner and goes along x
           do iy=1,ny
@@ -205,18 +210,22 @@ corner based
             x=x0(i); y=y0(i)
     
             !Interpolate
-            if(x.gt.xmax.or.x.lt.xmin0.or.y.gt.ymax.or.y.lt.ymin0) then
+            if(x.gt.xmax0.or.x.lt.xmin0.or.y.gt.ymax0.or.y.lt.ymin0) then
 !              write(13,101)j,x,y,dp
 !              dpout(i)=dp0(i)
             else !inside structured grid
-              !1/2 cell shift case: extrap to cover lower&left
-              if(iadjust_corner/=0) then
-                x=max(x,xmin)
-                y=max(y,ymin)
-              endif
+!              !1/2 cell shift case: extrap to cover lower&left
+!              if(iadjust_corner/=0) then
+!                x=max(x,xmin)
+!                y=max(y,ymin)
+!              endif
+!              x2=x 
+!              y2=y 
 
-              x2=x 
-              y2=y 
+              !Extrap min/max 1/2 cells
+              x2=min(xmax,max(x,xmin))
+              y2=min(ymax,max(y,ymin))
+
               ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
               iy=(y2-ymin)/dy+1
               if(ix.lt.1.or.ix.gt.nx.or.iy.lt.1.or.iy.gt.ny) then
