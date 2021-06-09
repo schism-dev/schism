@@ -485,6 +485,7 @@ git versions:
 (121) fb30239 (April 22, 2021): bug fix for ellipsoidal earth (tensor frames).
 (122) fb79cdc (May 26, 2021): in interpolate_depth_structured2*, added an option to shift 1/2 cell for ll corner
                               (c/o Charles Seaton);
+(123) 5e87c24 (June 9, 2021): more changes in interpolate_depth_structured2* to extrap also into right/upper sides.
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
