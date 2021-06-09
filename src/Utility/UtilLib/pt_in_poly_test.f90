@@ -2,7 +2,7 @@
 
 !  signa_[single,double]
 !  pt_in_poly_[single,double]: point-in-polygon (tri/quad) test
-!  pt_in_poly_ray_method_[single,double]: point-in-polygon test using ray tracing method (double prevision). 
+!  pt_in_poly_ray_method_[single,double]: point-in-polygon test using ray tracing method 
 !====================================================================
   module pt_in_poly_test
    implicit none
@@ -174,17 +174,17 @@
 !     Inputs:
 !            nvertices: # of polygonal vertices. 1st vertex of each sub-poly
 !            must be repeated.
-!            small1,ray_angle: tolerance and search angle (see below)
+!            small1,ray_angle: tolerance and search angle in degrees (see below)
 !            xpoly(nvertices),ypoly(nvertices): list of vertices
 !            xtest,ytest: test point
 !     Outputs:
 !            in_out: -1 if outside, 0 if on the polygon, 1 if inside
 !            inters: # of intersections (no accurate if in_out=0). If 
-!            outside bounding box of poly, inters=-1.
+!                    outside bounding box of poly, inters=-1.
 !            npoly: # of sub-poly's found
 !     Error: fort.11 (fatal)
 !     Method: ray tracing method by testing each side of polygons and a
-!     ray from the test point to infty along an angle. The point is
+!     ray from the test point to infty along an angle (ray_angle). The point is
 !     outside if the ray intersects polygonal sides even # of times,
 !     inside if odd # of times. Check separately if on the side based
 !     on a tolerance (small1).

@@ -11,6 +11,9 @@
 %ocean-land interface
 clear all; close all;
 
+%Isolate complex i (to avoid accidentally use it as integer e.g. in loop)
+img_i=complex(0,1);
+
 iflag=2;
 %List of open bnd seg's that contain lon/lat of open bnd nodes
 open_ll={'fg.bp.1','fg.bp.2','fg.bp.3'}; 
@@ -32,6 +35,11 @@ lon2(indx)=lon2(indx)+360;
 clear indx;
 
 %junk value in TPXO is 0
+%Init
+amp_out=zeros(npt,nfr_out,2*iflag-1);
+pha_out=zeros(npt,nfr_out,2*iflag-1);
+cmplx_out=amp_out+i*pha_out;
+
 for ifl=1:2*iflag-1 %loop over elev, u,v
   disp(['doing ifl=' num2str(ifl)]);
   if(ifl==1)
@@ -80,19 +88,27 @@ for ifl=1:2*iflag-1 %loop over elev, u,v
     vid=netcdf.inqVarID(ncid,'vp');
   end
   pha0=double(netcdf.getVar(ncid, vid)); %degr GMT
+  pha0=pha0/180*pi; %radian
   netcdf.close(ncid);
 
-  if(ifl==1) %init
-    amp_out=zeros(npt,nfr_out,2*iflag-1);
-    pha_out=zeros(npt,nfr_out,2*iflag-1);
-  end
 
   for jfr=1:nfr_out
-    amp_out(:,jfr,ifl)=griddata(reshape(lon,nx*ny,1),reshape(lat,nx*ny,1), ...
-      reshape(amp0(:,:,jfr),nx*ny,1),lon2,lat2);
-    pha_out(:,jfr,ifl)=griddata(reshape(lon,nx*ny,1),reshape(lat,nx*ny,1), ...
-      reshape(pha0(:,:,jfr),nx*ny,1),lon2,lat2); %,'nearest'); %avoid wrap around
+    cmplx_out(:,jfr,ifl)=griddata(reshape(lon,nx*ny,1),reshape(lat,nx*ny,1), ...
+      reshape(amp0(:,:,jfr).*exp(img_i*pha0(:,:,jfr)),nx*ny,1),lon2,lat2);
+    amp_out(:,jfr,ifl)=abs(cmplx_out(:,jfr,ifl));
+    pha_out(:,jfr,ifl)=angle(cmplx_out(:,jfr,ifl))/pi*180; %degr
+
+%    amp_out(:,jfr,ifl)=griddata(reshape(lon,nx*ny,1),reshape(lat,nx*ny,1), ...
+%      reshape(amp0(:,:,jfr),nx*ny,1),lon2,lat2);
+%    pha_out(:,jfr,ifl)=griddata(reshape(lon,nx*ny,1),reshape(lat,nx*ny,1), ...
+%      reshape(pha0(:,:,jfr),nx*ny,1),lon2,lat2); %,'nearest'); %avoid wrap around
   end %for jfr
+  
+  %Make phase in [-180,180]
+  indx=find(pha_out>180);
+  pha_out(indx)=pha_out(indx)-360;
+  clear indx;
+
 end %for ifl
 
 %Output
@@ -110,6 +126,6 @@ if(iflag==2)
 end
 fclose(fid);
 
-clear open lon* lat* amp* pha*;
+clear open lon* lat* amp* pha* cmplx_out;
 %------------------------------------------------------
 end %for iseg (open bnd segments
