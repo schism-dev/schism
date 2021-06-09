@@ -52,26 +52,31 @@
       read(62,*) cha3,fill_value
       dx=dxy
       dy=dxy
-
-      if(iadjust_corner/=0) then
-        xmin=xmin0+dx/2
-        ymin=ymin0+dy/2
+      
+      if(iadjust_corner/=0) then ! .ASC value is corner
+        xmin=xmin0+dx/2 ! define left-most center
+        ymin=ymin0+dy/2 ! define lower center
       else
-        xmin = xmin0
-        ymin = ymin0
+        xmin = xmin0  ! .ASC value is center
+        ymin = ymin0  ! 
+        xmin0 = xmin0-dx/2 ! define left edge
+        ymin0 = ymin0-dy/2 ! define lower edge
       endif
-
+      ! xmin,ymin is now center, xmin0,ymin0 is now corner
+      ! rest of code is not format-dependent
       allocate(dp1(nx,ny),stat=istat)
       if(istat/=0) stop 'Failed to allocate (1)'
 
 !     Max
-      ymax=ymin+(ny-1)*dy
-      xmax=xmin+(nx-1)*dx
+      ymax=ymin+(ny-1)*dy  ! center of upper cell
+      xmax=xmin+(nx-1)*dx  ! center of right-most cell
+      xmax0=xmax+dx/2 ! right edge of raster
+      ymax0=ymax+dy/2 ! top edge of raster
 
 !     Read starts from upper left corner and goes along x
       do iy=1,ny
         read(62,*)(dp1(ix,ny-iy+1),ix=1,nx)
-        write(99,*)'line read in:',iy+6
+!        write(99,*)'line read in:',iy+6
       enddo !iy
       close(62)
    
@@ -85,17 +90,16 @@
         read(14,*)j,x,y,dp
 
 !       Interpolate
-        if(x.gt.xmax.or.x.lt.xmin0.or.y.gt.ymax.or.y.lt.ymin0) then
-          write(13,101)j,x,y,dp
+        if(x.gt.xmax0.or.x.lt.xmin0.or.y.gt.ymax0.or.y.lt.ymin0) then
+          ! outside edges of raster
+          write(13,101)j,x,y,dp  
         else !inside structured grid
-          !1/2 cell shift case: extrap to cover lower&left
-          if(iadjust_corner/=0) then
-            x=max(x,xmin)
-            y=max(y,ymin)
-          endif
-
-          x2=x 
-          y2=y 
+          ! extrap lower and left
+          x2=max(x,xmin) 
+          y2=max(y,ymin)
+          ! extrap upper and right
+          x2=min(x2,xmax)
+          y2=min(y2,ymax)
           ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
           iy=(y2-ymin)/dy+1
           if(ix.lt.1.or.ix.gt.nx.or.iy.lt.1.or.iy.gt.ny) then
