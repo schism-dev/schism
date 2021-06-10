@@ -438,7 +438,7 @@
       nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=-1; nrampwind=1; 
-      drampwind=1; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -609,32 +609,7 @@
 !     vclose_surf_frac = 1.0.       
       if(myrank==0) write(16,*)'vclose_surf_frac is:',vclose_surf_frac 
 
-!...  Baroclinic flags
-!      call get_param('param.in','ibcc',1,ibc,tmp,stringvalue)
-!      call get_param('param.in','itransport',1,ibtp,tmp,stringvalue)
-!      if(ibc/=0.and.ibc/=1) call parallel_abort('Unknown ibcc')
-!      if(ibtp/=0.and.ibtp/=1) call parallel_abort('Unknown itransport')
-!
-!      if(ibc==0) then
-!        if(myrank==0) write(16,*)'You are using baroclinic model'
-!        call get_param('param.in','nrampbc',1,nrampbc,tmp,stringvalue)
-!        if(nrampbc/=0) call get_param('param.in','drampbc',2,itmp,drampbc,stringvalue)
-!      else !ibc=1
-!        if(ibtp==0) then
-!          if(myrank==0) write(16,*)'Barotropic model without ST calculation'
-!
-!        else !ibtp=1
-!          if(myrank==0) write(16,*)'Barotropic model with ST calculation'
-!
-!        endif
-!      endif
-
-!     Run time in days
-!      call get_param('param.in','rnday',2,itmp,rnday,stringvalue)
 !...  dramp not used if nramp=0
-!      call get_param('param.in','nramp',1,nramp,tmp,stringvalue)
-!      if(nramp/=0) call get_param('param.in','dramp',2,itmp,dramp,stringvalue)
-
       if(nramp/=0.and.nramp/=1) then
         write(errmsg,*)'Unknown nramp',nramp
         call parallel_abort(errmsg)
@@ -714,21 +689,13 @@
 
 !      iwind_form=0 !init.
       if(nws>0) then
-!        call get_param('param.in','iwind_form',1,iwind_form,tmp,stringvalue)
         if(iwind_form<-2.or.iwind_form>1) then
           write(errmsg,*)'Unknown iwind_form',iwind_form
           call parallel_abort(errmsg)
         endif
       endif !nws
 
-!      if(nws>0) then
-!        call get_param('param.in','nrampwind',1,nrampwind,tmp,stringvalue)
-!        call get_param('param.in','drampwind',2,itmp,drampwind,stringvalue)
-!      endif !nws
-
 !     Heat and salt conservation flags
-!      call get_param('param.in','ihconsv',1,ihconsv,tmp,stringvalue)
-!      call get_param('param.in','isconsv',1,isconsv,tmp,stringvalue)
       if(ihconsv<0.or.ihconsv>1.or.isconsv<0.or.isconsv>1) then
         write(errmsg,*)'Unknown ihconsv or isconsv',ihconsv,isconsv
         call parallel_abort(errmsg)
@@ -762,18 +729,8 @@
         call parallel_abort(errmsg)
       endif
       if(itur==0) then
-!        call get_param('param.in','dfv0',2,itmp,dfv0,stringvalue)
-!        call get_param('param.in','dfh0',2,itmp,dfh0,stringvalue)
 !!        dfv=dfv0; dfh=dfh0
       else if(itur==2) then !read in P&P coefficients
-!        call get_param('param.in','h1_pp',2,itmp,h1_pp,stringvalue)
-!        call get_param('param.in','h2_pp',2,itmp,h2_pp,stringvalue)
-!        call get_param('param.in','vdmax_pp1',2,itmp,vdmax_pp1,stringvalue)
-!        call get_param('param.in','vdmax_pp2',2,itmp,vdmax_pp2,stringvalue)
-!        call get_param('param.in','vdmin_pp1',2,itmp,vdmin_pp1,stringvalue)
-!        call get_param('param.in','vdmin_pp2',2,itmp,vdmin_pp2,stringvalue)
-!        call get_param('param.in','tdmin_pp1',2,itmp,tdmin_pp1,stringvalue)
-!        call get_param('param.in','tdmin_pp2',2,itmp,tdmin_pp2,stringvalue)
         if(h1_pp>=h2_pp) then
           write(errmsg,*)'h1_pp >= h2_pp in P&P'
           call parallel_abort(errmsg)
@@ -807,13 +764,6 @@
 !        endif
 !      enddo !i
       if(flag_ic(1)/=flag_ic(2)) call parallel_abort('INIT: T,S must have same i.c')
-
-!'    Start time
-!      call get_param('param.in','start_year',1,start_year,tmp,stringvalue)
-!      call get_param('param.in','start_month',1,start_month,tmp,stringvalue)
-!      call get_param('param.in','start_day',1,start_day,tmp,stringvalue)
-!      call get_param('param.in','start_hour',2,itmp,start_hour,stringvalue)
-!      call get_param('param.in','utc_start',2,itmp,utc_start,stringvalue)
 
 !     Pass time info to EcoSim and ICM
 #ifdef USE_ECO
@@ -921,281 +871,18 @@
       endif
 
       !Vertical relax
-!      call get_param('param.in','vnh1',2,itmp,vnh1,stringvalue)
-!      call get_param('param.in','vnh2',2,itmp,vnh2,stringvalue)
-!      call get_param('param.in','vnf1',2,itmp,vnf1,stringvalue)
-!      call get_param('param.in','vnf2',2,itmp,vnf2,stringvalue)
       if(vnh1>=vnh2.or.vnf1<0.or.vnf1>1.or.vnf2<0.or.vnf2>1) then
         write(errmsg,*)'INIT: check vertical nudging limits:',vnh1,vnf1,vnh2,vnf2
         call parallel_abort(errmsg)
       endif
 
 
-!      !Hydro first
-!      outfile(1)='elev'
-!      outfile(2)='pres'
-!      outfile(3)='airt'
-!      outfile(4)='shum'
-!      outfile(5)='srad'
-!      outfile(6)='flsu'
-!      outfile(7)='fllu'
-!      outfile(8)='radu'
-!      outfile(9)='radd'
-!      outfile(10)='flux'
-!      outfile(11)='evap'
-!      outfile(12)='prcp'
-!      outfile(13)='bdrc'
-!      outfile(14)='wind'
-!      outfile(15)='wist'
-!      outfile(16)='dahv'
-!      outfile(17)='vert'
-!      outfile(18)='temp'
-!      outfile(19)='salt'
-!      outfile(20)='conc'
-!      outfile(21)='tdff'
-!      outfile(22)='vdff'
-!      outfile(23)='kine'
-!      outfile(24)='mixl'
-!      outfile(25)='hvel'
-!
-!      outfile(26)='hvel_side' !must be consistent when calling the output routine later
-!      outfile(27)='vert_elem'
-!      outfile(28)='temp_elem'
-!      outfile(29)='salt_elem'
-!
-!      noutput=29 !so far
-!
-!#ifdef USE_GEN
-!      do i=1,ntrs(3)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='GEN_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(3)
-!#endif
-!
-!#ifdef USE_AGE
-!      do i=1,ntrs(4)/2
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='AGE_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(4)/2
-!#endif
-!
-!#ifdef USE_SED
-!      do i=1,ntrs(5)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        itmp=noutput+3*i-2 
-!        outfile(itmp)='SED_'//ifile_char(1:ifile_len) !//'.63'
-!        outfile(itmp+1)='SED_qbdl_'//ifile_char(1:ifile_len) !//'.62'
-!        outfile(itmp+2)='SED_bfrac_'//ifile_char(1:ifile_len) !//'.61'
-!      enddo !i
-!      noutput=noutput+3*ntrs(5)
-!
-!      outfile(noutput+1)='SED_depth'
-!      outfile(noutput+2)='SED_bedd50'
-!      outfile(noutput+3)='SED_bstress'
-!      outfile(noutput+4)='SED_brough'
-!
-!      outfile(noutput+5)='z0st_elem'
-!      outfile(noutput+6)='z0cr_elem'
-!      outfile(noutput+7)='z0sw_elem'
-!      outfile(noutput+8)='z0wr_elem'
-!      outfile(noutput+9)='bthk_elem'
-!      outfile(noutput+10)='bage_elem'
-!      outfile(noutput+11)='SED_TSC'
-!      noutput=noutput+11
-!#endif /*USE_SED*/
-!
-!#ifdef USE_ECO
-!      do i=1,ntrs(6)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='ECO_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(6)
-!#endif
-!
-!#ifdef USE_ICM
-!      do i=1,ntrs(7)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='ICM_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(7)
-!
-!      !pH model in ICM: make sure PH.63=0 in param.in if ICM_PH
-!      outfile(noutput+1)='ICM_Chl'
-!      outfile(noutput+2)='ICM_pH'
-!      outfile(noutput+3)='ICM_PrmPrdt'
-!      outfile(noutput+4)='ICM_DIN'
-!      outfile(noutput+5)='ICM_PON'
-!      noutput=noutput+5
-!
-!      outfile(noutput+1)='ICM_SED_BENDOC_elem'
-!      outfile(noutput+2)='ICM_SED_BENNH4_elem'
-!      outfile(noutput+3)='ICM_SED_BENNO3_elem'
-!      outfile(noutput+4)='ICM_SED_BENPO4_elem'
-!      outfile(noutput+5)='ICM_SED_BENCOD_elem'
-!      outfile(noutput+6)='ICM_SED_BENDO_elem'
-!      outfile(noutput+7)='ICM_SED_BENSA_elem'
-!      outfile(noutput+8)='ICM_lfsav'
-!      outfile(noutput+9)='ICM_stsav'
-!      outfile(noutput+10)='ICM_rtsav'
-!      outfile(noutput+11)='ICM_tlfsav'
-!      outfile(noutput+12)='ICM_tstsav'
-!      outfile(noutput+13)='ICM_trtsav'
-!      outfile(noutput+14)='ICM_hcansav'
-!      noutput=noutput+14
-!#endif
-!
-!#ifdef USE_COSINE
-!      do i=1,ntrs(8)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='COS_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(8)
-!#endif
-!
-!#ifdef USE_FIB
-!      do i=1,ntrs(9)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='FIB_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(9)
-!#endif
-!
-!#ifdef USE_TIMOR
-!#endif
-!
-!#ifdef USE_SED2D
-!      outfile(noutput+1)='SED2D_depth'
-!      outfile(noutput+2)='SED2D_cdsed'
-!      outfile(noutput+3)='SED2D_cflsed'
-!      outfile(noutput+4)='SED2D_d50'
-!      outfile(noutput+5)='SED2D_qtot'
-!      outfile(noutput+6)='SED2D_qsus'
-!      outfile(noutput+7)='SED2D_qbdl'
-!      outfile(noutput+8)='SED2D_dpdxy'
-!      outfile(noutput+9)='SED2D_qav'
-!      outfile(noutput+10)='SED2D_z0eq_elem'
-!      outfile(noutput+11)='SED2D_z0cr_elem'
-!      outfile(noutput+12)='SED2D_z0sw_elem'
-!      outfile(noutput+13)='SED2D_z0wr_elem'
-!      noutput=noutput+13
-!#endif
-!
-!#ifdef USE_WWM
-!      do i=1,28
-!        if(i==7.or.i==8) cycle !skip vectors first
-!        noutput=noutput+1
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  
-!        ifile_len=len_trim(ifile_char) 
-!        outfile(noutput)='WWM_'//ifile_char(1:ifile_len)
-!      enddo !i
-!      !Vectors
-!      outfile(noutput+1)='WWM_energy_dir'
-!      noutput=noutput+1
-!#endif
-!
-!      ! Barotropic gradient
-!      outfile(noutput+1)='bpgr_side'
-!      noutput=noutput+1
-!#ifdef USE_WWM
-!      outfile(noutput+1)='wave_force_side'
-!      noutput=noutput+1
-!#endif
-!
-!#ifdef USE_MARSH
-!      outfile(noutput+1)='mrsh_elem'
-!      noutput=noutput+1
-!#endif
-!
-!#ifdef USE_ICE
-!      do i=1,ntr_ice
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)
-!        ifile_len=len_trim(ifile_char)
-!        outfile(noutput+i)='ICE_tracer_'//ifile_char(1:ifile_len)
-!      enddo !i
-!      noutput=noutput+ntr_ice
-! 
-!      outfile(noutput+1)='ICE_velocity'
-!      outfile(noutput+2)='ICE_strain_rate'
-!      outfile(noutput+3)='ICE_net_heat_flux'
-!      outfile(noutput+4)='ICE_fresh_water'
-!      outfile(noutput+5)='ICE_top_T'
-!      noutput=noutput+5
-!#endif
-!
-!#ifdef USE_ANALYSIS
-!      outfile(noutput+1)='ANA_air_pres_grad_x'
-!      outfile(noutput+2)='ANA_air_pres_grad_y'
-!      outfile(noutput+3)='ANA_tide_pot_grad_x'
-!      outfile(noutput+4)='ANA_tide_pot_grad_y'
-!      outfile(noutput+5)='ANA_hor_viscosity_x'
-!      outfile(noutput+6)='ANA_hor_viscosity_y'
-!      outfile(noutput+7)='ANA_bclinic_force_x'
-!      outfile(noutput+8)='ANA_bclinic_force_y'
-!      outfile(noutput+9)='ANA_vert_viscosity_x'
-!      outfile(noutput+10)='ANA_vert_viscosity_y'
-!      outfile(noutput+11)='ANA_mom_advection_x'
-!      outfile(noutput+12)='ANA_mom_advection_y'
-!      outfile(noutput+13)='ANA_Richardson'
-!      outfile(noutput+14)='ANA_transport_min_dt_elem'
-!      noutput=noutput+14
-!#endif
-!
-!      if(myrank==0) write(16,*)'Total # of available global outputs=',noutput
-!      if(noutput>mnout) then
-!        write(errmsg,*)'Increase mnout in schism_glbl to',noutput
-!        call parallel_abort(errmsg)
-!      endif
-
-!     nspool,ihfskip: output and file spools
-!      call get_param('param.in','nspool',1,nspool,tmp,stringvalue)
-!      call get_param('param.in','ihfskip',1,ihfskip,tmp,stringvalue)
-!      if(nspool==0.or.ihfskip==0) call parallel_abort('Zero nspool')
-!      if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
-
-!      do i=1,noutput
-!        call get_param('param.in',trim(adjustl(outfile(i))),1,iof(i),tmp,stringvalue)
-!        if(iof(i)/=0.and.iof(i)/=1) then
-!          write(errmsg,*)'Unknown output option',i,iof(i),outfile(i)
-!          call parallel_abort(errmsg)
-!        endif
-!      enddo !i=1,noutput
-
 !...  input information about hot start output
-!...
-!      call get_param('param.in','hotout',1,nhot,tmp,stringvalue)
-!      call get_param('param.in','hotout_write',1,nhot_write,tmp,stringvalue)
       if(nhot/=0.and.nhot/=1.or.nhot*mod(nhot_write,ihfskip)/=0) then
         write(errmsg,*)'Unknown hotout or hotout_write not multiple of ihfskip',nhot,ihfskip
 !'
         call parallel_abort(errmsg)
       endif
-
-!...  JCG/PETSc solver parameters
-!     moitn0: output interval; mxitn0: max iterations; rtol0: relative tolerance
-!      call get_param('param.in','slvr_output_spool',1,moitn0,tmp,stringvalue)
-!      call get_param('param.in','mxitn',1,mxitn0,tmp,stringvalue)
-!      call get_param('param.in','tolerance',2,itmp,rtol0,stringvalue)
-
-!...  Compute flux flag
-!      call get_param('param.in','consv_check',1,iflux,tmp,stringvalue)
 
 !...  Interpolation flag vel. in ELM
 !     Kriging in vel: no bnd nodes/sides vel. use Kriging as the filter is not
@@ -1207,29 +894,14 @@
         call parallel_abort(errmsg)
       endif
 
-!...  Cut-off depth for option for hgrad_nodes() near bottom (like baroc. force)
-!      call get_param('param.in','depth_zsigma',2,itmp,h_bcc1,stringvalue)
-
-!!...  For under-resolution on b-clinic force (used only if ibcc=0)
-!      call get_param('param.in','hw_depth',2,itmp,hw_depth,stringvalue)
-!      call get_param('param.in','hw_ratio',2,itmp,hw_ratio,stringvalue)
-!      if(hw_depth<=0.or.hw_ratio<=0) then
-!        write(errmsg,*)'Check hw_ratio:',hw_depth,hw_ratio
-!        call parallel_abort(errmsg)
-!      endif
-
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv
 !     similar to T,S)
-!      call get_param('param.in','inu_elev',1,inu_elev,tmp,stringvalue)
-!      call get_param('param.in','inu_uv',1,inu_uv,tmp,stringvalue)
       if(inu_elev<0.or.inu_elev>1.or.inu_uv<0.or.inu_uv>1) then
         write(errmsg,*)'Check sponge inputs:',inu_elev,inu_uv
         call parallel_abort(errmsg)
       endif
 
-!...  Option to limit \hat{H} to enhance stability for large friction in shallow
-!area
-!      call get_param('param.in','ihhat',1,ihhat,tmp,stringvalue)
+!...  Option to limit \hat{H} to enhance stability for large friction in shallow area
       if(ihhat/=0.and.ihhat/=1) then
         write(errmsg,*)'Unknown ihhat:',ihhat
         call parallel_abort(errmsg)
@@ -1377,25 +1049,16 @@
       endif
 
 !...  ramp for the wave forces
-!      call get_param('param.in','nrampwafo',1,nrampwafo,tmp,stringvalue)
-!      if(nrampwafo/=0) call get_param('param.in','drampwafo',2,itmp,drampwafo,stringvalue)
       if(nrampwafo/=0.and.nrampwafo/=1) then
         write(errmsg,*)'Unknown nrampwafo',nrampwafo
         call parallel_abort(errmsg)
       endif
 
 !     Coupling interval (# of time steps)
-!      call get_param('param.in','nstep_wwm',1,nstep_wwm,tmp,stringvalue)
       if(nstep_wwm<1) then
         write(errmsg,*)'Wrong coupling interval:',nstep_wwm
         call parallel_abort(errmsg)
       endif
-
-!     Min (total) depth in radiation stress calculation
-!      call get_param('param.in','hmin_radstress',2,itmp,hmin_radstress,stringvalue)    
-
-!     % of energy dissipated by wave breaking processes injected to turbulence
-!      call get_param('param.in','turbinj',2,itmp,turbinj,stringvalue)      
 
 !     Wave boundary layer option
 !      call get_param('param.in','iwbl',1,iwbl,tmp,stringvalue)
@@ -1414,46 +1077,25 @@
         call parallel_abort(errmsg)
       endif
 
-
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
-      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
+!     Check all ramp periods
+      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')
 
-!'    Eq. of State type
-!     0: UNESCO 1980 (nonlinear); 1: linear function of T ONLY,
-!     i.e.\rho=eos_b+eos_a*T, where eos_a<=0 in kg/m^3/C
-!      call get_param('param.in','ieos_type',1,ieos_type,tmp,stringvalue)
-      !ieos_pres/=0: add pressure in EOS
-!      if(ieos_type==0) call get_param('param.in','ieos_pres',1,ieos_pres,tmp,stringvalue)
-
-!      if(ieos_type==1) then
-!        !Constants for linear EOS
-!        call get_param('param.in','eos_a',2,itmp,eos_a,stringvalue)
-!        call get_param('param.in','eos_b',2,itmp,eos_b,stringvalue)
-!      endif
+      if(min(dramp,drampbc,drampwind,drampwafo)<=0.d0) then
+        write(errmsg,*)'INIT: illegal ramp, ',dramp,drampbc,drampwind,drampwafo
+        call parallel_abort(errmsg)
+      endif
 
 #ifdef USE_MARSH
       !SLR rate in mm/year
-!      call get_param('param.in','slr_rate',2,itmp,slr_rate,stringvalue)
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
 #endif
 
-!      call get_param('param.in','rho0',2,itmp,rho0,stringvalue)
-!      call get_param('param.in','shw',2,itmp,shw,stringvalue)
-
 !     SAV
-!      call get_param('param.in','isav',1,isav,tmp,stringvalue)
-      !if(isav==1) then
-!        call get_param('param.in','sav_cd',2,itmp,sav_cd,stringvalue)
-        !if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
-      !else if(isav/=0) then
-        !write(errmsg,*)'INIT: illegal isav',isav
-        !call parallel_abort(errmsg)
-      !endif
-
       if(isav/=0.and.isav/=1) then !LLa
        write(errmsg,*)'INIT: illegal isav',isav
        call parallel_abort(errmsg)
@@ -1482,22 +1124,12 @@
         call parallel_abort(errmsg)
       endif
 
-!      if(Two_phase_mix==1) then !1120:close
-!#ifndef USE_SED
-!        call parallel_abort('Two_phase_mix needs USE_SED')
-!#endif
-!      endif
-
-!      if(Two_phase_mix==0.and.itur==5) then !Tsinghua group:0825 1018:close
-!        call parallel_abort('2_phase_mix Turb needs Two_phase_mix=1')
-!      endif
-
+!...  TWO-PHASE-MIXTURE TSINGHUA GROUP------------------
       if(itur==5) then !1018
 #ifndef USE_SED
         call parallel_abort('Two_phase_mix needs USE_SED')
 #endif
       endif      
-!...  TWO-PHASE-MIXTURE TSINGHUA GROUP------------------
 
       if(ielm_transport/=0) then
         if(max_subcyc<=0) call parallel_abort('INIT: max_subcyc<=0')
@@ -1508,7 +1140,7 @@
       if(myrank==0) write(16,*)'done reading param.nml'
 !'
 !-----------------------------------------------------------------
-!...  End reading param.nml
+!...  End reading & checking param.nml
 
 !...  Finish prep outputs to take care of hot start
       if(myrank==0) then
