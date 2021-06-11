@@ -90,7 +90,21 @@
       vdatum(23)=5.85*0.3048;!PrinceWilliamSound_83arc_mhhw_ll
       vdatum(24)=4.65*0.3048;!SEAlaska_83arc_mhhw_ll
       vdatum(26:175)=-2.51*0.3048;!SanF CoNED
-
+      vdatum(182)=-0.96;!sanfrancisco_dem_bay_delt_ll.asc
+      vdatum(183)=0.745;!eureka_13_mhw_2009
+      vdatum(184)=-1.014;!crescent_city_1-3_arc-second_navd_88
+      vdatum(185)=1.021;!port_orford_or
+      vdatum(186)=0.972;!central_or
+      vdatum(187)=0.946;!garibaldi_or
+      vdatum(188)=1.045;!astoria_or
+      vdatum(189)=1;!taholah_wa_1_3s
+      vdatum(190)=0.85;!sjdf6_ll
+      vdatum(191)=1.238;!puget_sound_13_mhw_2014
+      vdatum(192)=0.867;!port_townsend_13_mhw_2011
+      vdatum(193)=-1.124;!or_newport1_3navd
+      vdatum(194)=0.987;!la_push_wa
+      vdatum(195:196)=-1.439;!tilea_ospn_4m and tileb_ospn_4m
+      vdatum(197)=-0.765;!san_diego_13_navd88_2012
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
       do idem=0,ndems-1
