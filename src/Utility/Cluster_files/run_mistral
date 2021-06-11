@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=RUN33b
+#SBATCH --job-name=RUN10t
 #SBATCH --partition=compute2
-#SBATCH --nodes=30
+#SBATCH --nodes=80
 #SBATCH --ntasks-per-node=36
 ###Max 8 hrs
 #SBATCH --time=01:00:00
@@ -18,6 +18,7 @@ ulimit -s 132400
 # compiled with Intel MPI
 module rm intel intelmpi/2018.5.288
 module load intel/16.0 openmpi/1.10.2_mlx-intel16
+module load netcdf-c/4.7.4-intel-17.0.6 netcdf-fortran/4.5.3-intel-17.0.6
 module list
 
 export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
@@ -25,4 +26,4 @@ export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
 # Use srun (not mpirun or mpiexec) command to launch
 # programs compiled with any MPI library
 srun -l --propagate=STACK --cpu_bind=cores \
-  --distribution=block:cyclic ./pschism_MISTRAL_TVD-VL
+  --distribution=block:cyclic ./pschism_mistral_EVAP_VL_HA

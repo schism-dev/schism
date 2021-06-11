@@ -1,3 +1,5 @@
 Currently Loaded Modulefiles:
-  1) svn/1.8.13                   3) netcdf_c/4.3.2-gcc48         5) intel/16.0                   7) openmpi/1.10.2_mlx-intel16
-  2) cmake/3.13.3                 4) jdk/1.8.0_20                 6) mxm/3.3.3002
+  1) jdk/1.8.0_20                        4) openmpi/1.10.2_mlx-intel16          7) netcdf-c/4.7.4-intel-17.0.6
+  2) intel/16.0                          5) svn/1.8.13                          8) netcdf-fortran/4.5.3-intel-17.0.6
+  3) mxm/3.3.3002                        6) cmake/3.13.3
+
