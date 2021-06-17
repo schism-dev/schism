@@ -43,6 +43,8 @@ ENV = ubuntu.gnu.ompi
 # "sudo apt-get install gfortran gcc libnetcdf-dev libopenmpi-dev openmpi-bin, libcr-dev"
 #
 # Tests are passed on Ubuntu 12.04 64bit and Ubuntu 14.04 64bit
+# On Ubuntu 18.04 (after Netcdf version 4.2), an additional Netcdf Fortran library
+# "libnetcdff-dev" is needed
 #
 # Note: use /usr/bin/mpirun.openmpi to run compiled SCHISM executable
 ################################################################################
