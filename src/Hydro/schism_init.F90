@@ -2725,6 +2725,7 @@
         shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
         inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
         if(lexist) then
+          if(myrank==0) write(16,*)'Reading in shapiro_min.gr3'
           open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
           read(32,*)
           read(32,*) itmp1,itmp2
