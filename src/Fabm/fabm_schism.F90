@@ -372,7 +372,7 @@ subroutine fabm_schism_init_stage2
 !Error: remember to reset wsett=0 afterwards
     iwsett(istart+i-1)=-1
 #else
-    iwsett(istart+i-1)=0
+    iwsett(istart+i-1)=1
 #endif
   end do
 
