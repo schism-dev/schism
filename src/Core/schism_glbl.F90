@@ -435,6 +435,7 @@ module schism_glbl
   real(rkind),save,allocatable :: rho_mean(:,:)         ! mean density
   real(rkind),save,allocatable :: Cdp(:)         ! drag at node
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
+  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
                                   &windx1(:),windy1(:),windx2(:),windy2(:), &
@@ -451,7 +452,7 @@ module schism_glbl
                                   &tr_nudge(:,:),fun_lat(:,:), &
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
                                   &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
-                                  &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:) 
+                                  &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
 
   !(2,npa). ocean-ice stress (junk if no ice) [m^2/s/s]
   real(rkind),save,allocatable :: tau_oi(:,:)

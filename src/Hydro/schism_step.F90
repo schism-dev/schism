@@ -3421,7 +3421,7 @@
 !...  ishapiro=2: Smag-like filter
       if(ishapiro==2) then
 !$OMP   parallel default(shared) private(j,k,l,ie,i,jsj,swild,ibelow,swild10,ll, &
-!$OMP   in1,in2,in3,swild2,swild4,delta_wc,vmax,dudx,dudy,dvdx,dvdy)
+!$OMP   in1,in2,in3,swild2,swild4,delta_wc,vmax,vmin,dudx,dudy,dvdx,dvdy)
 
 !$OMP   workshare
         shapiro=0.d0
@@ -3502,7 +3502,9 @@
           enddo !k=kbs(j)+1,nvrt 
 
           shapiro(j)=0.5d0*tanh(dt*vmax*shapiro0)
-
+          !min value
+          vmin=0.5d0*(shapiro_min(isidenode(1,j))+shapiro_min(isidenode(2,j)))
+          shapiro(j)=max(shapiro(j),vmin)
         enddo !j=1,ns
 !$OMP   end do
 !$OMP   end parallel
@@ -3519,6 +3521,7 @@
             if(isdel(2,j)==0) then !isidenei2 not defined
               bcc(1,1,j)=shapiro(j)
             else
+              !Weighted average so positivity is guaranteed
               bcc(1,1,j)=shapiro(j)+0.5d0/4.d0*(sum(shapiro(isidenei2(1:4,j)))-4.d0*shapiro(j)) 
             endif
           enddo !j=1,ns

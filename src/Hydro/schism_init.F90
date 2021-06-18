@@ -1340,7 +1340,7 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),stat=istat)
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),shapiro_min(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -2721,6 +2721,22 @@
           if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
 !'
         enddo !i
+      else if(ishapiro==2) then !read in optional shapiro_min.gr3
+        shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
+        inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
+        if(lexist) then
+          open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
+     &call parallel_abort('Check shapiro_min.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
+            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !lexist
       endif !ishapiro==-1
 
 !...  Horizontal viscosity option
