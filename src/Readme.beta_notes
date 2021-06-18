@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+bfb4afc (18 June, 2021): added an optinal input 'shapiro_min.gr3' to be used with ishapiro=2;
 d07d75d (April 21, 2021): added T,S in rquired inputs for offline transport (to use hydro only results);
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
 b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
