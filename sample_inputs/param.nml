@@ -146,7 +146,9 @@
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
 ! if indvel=0. To transition between eddying/non-eddying regimes, use
-! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2 (Smagorinsky-like filter)
+! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2 (Smagorinsky-like filter).
+! If ishapiro=2 and shapiro_min.gr3 exists, the code will impose min filter strength 
+! based on 'depths' in this input. 
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
   niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter

@@ -1859,7 +1859,7 @@
 
         ae=abs(aa-ar(m))/ar(m)
         if(ae<=ae_min) then
-          ae=ae_min
+          ae_min=ae
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
           arco(1)=max(0.d0,min(1.d0,arco(1)))
