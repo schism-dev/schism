@@ -4375,6 +4375,7 @@
 #ifdef USE_FABM
       call fabm_schism_init_stage2()
       call fabm_schism_create_output_netcdf()
+      call fabm_schism_init_concentrations()
 #endif
 
 !#ifdef USE_NAPZD
@@ -4535,13 +4536,13 @@
 #ifdef USE_ECO
             if(mm==6) call bio_init !init. tr_nd
 #endif
-#ifdef USE_FABM
-            if(mm==11) call fabm_schism_init_concentrations()
+!#ifdef USE_FABM
+!            if(mm==11) call fabm_schism_init_concentrations()
 !#else
 !            write(errmsg,*)'INIT: type 0 i.c.:',mm
 !            call parallel_abort(errmsg)
 !#endif
-#endif
+!#endif
 
 #ifdef USE_DVD
             if(mm==12) then
