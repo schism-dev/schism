@@ -27,7 +27,7 @@
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl,  only: eta2, dpe,dp, pr2
+  use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
   use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
@@ -65,6 +65,7 @@ module fabm_schism
   public :: fabm_schism_do
   public :: fabm_schism_init_concentrations
   public :: fabm_schism_read_horizontal_state_from_netcdf
+  public :: fabm_schism_read_horizontal_state_from_hotstart
   public :: fabm_schism_create_output_netcdf
   public :: fabm_schism_write_output_netcdf
   public :: fabm_schism_close_output_netcdf
@@ -660,6 +661,7 @@ subroutine fabm_schism_init_concentrations()
   end do
 
   call fabm_schism_read_horizontal_state_from_netcdf('fabm_schism_init.nc',time=0.0_rk)
+  call fabm_schism_read_horizontal_state_from_hotstart('hotstart.nc')
 
 end subroutine fabm_schism_init_concentrations
 
@@ -1011,8 +1013,6 @@ subroutine integrate_vertical_movement(fs)
   end do
 end subroutine integrate_vertical_movement
 
-
-
 subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
 
   character(len=*), intent(in)    :: ncfilename
@@ -1102,6 +1102,57 @@ subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
   call nccheck( nf90_close(ncid) )
 
 end subroutine fabm_schism_read_horizontal_state_from_netcdf
+
+subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
+  use schism_msgp, only: parallel_abort
+  character(len=*),intent(in) :: ncfilename
+  
+  !local variables
+  integer :: iexist,varid,ncid,eid
+  integer :: i,n,itmp,istat
+  real(rk),allocatable :: swild(:)
+
+  !check whether file exist
+  iexist = nf90_open(in_dir(1:len_in_dir)//ncfilename, nf90_nowrite, ncid)
+  if (iexist /= nf90_noerr) then
+    call driver%log_message('Skipped reading horizontal state from non-existent file '//trim(ncfilename)
+    return
+  end if
+
+  !check dimension
+  call nccheck(nf90_inq_dimid(ncid,'elem',eid),'get elem dimension id' )
+  call nccheck(nf90_inquire_dimension(ncid,eid,len=itmp),'get elem dimension')
+  if(itmp/=ne_global) call parallel_abort('FABM/SCHISM: elem/=ne_global in '//ncfilename)
+
+  allocate(swild(ne_global),stat=istat)
+  if(istat/=0) call parallel_abort('FABM/SCHISM: failed in alloc. swild') 
+
+  !read surface and bottom horizontal state  
+  do n=1,fs%nvar_bot
+    iexist=nf90_inq_varid(ncid,trim(fs%model%bottom_state_variables(n)%name),varid)
+    if(iexist/=nf90_noerr) cycle
+
+    !read data
+    call nccheck(nf90_get_var(ncid,varid,swild))
+    do i=1,nea
+      fs%bottom_state(i,n)=swild(ielg(i))
+    enddo
+  enddo 
+
+  do n=1,fs%nvar_sf
+    iexist=nf90_inq_varid(ncid,trim(fs%model%surface_state_variables(n)%name),varid)
+    if(iexist/=nf90_noerr) cycle
+
+    !read data
+    call nccheck(nf90_get_var(ncid,varid,swild))
+    do i=1,nea
+      fs%surface_state(i,n)=swild(ielg(i))
+    enddo
+  enddo
+
+  call nccheck(nf90_close(ncid))
+    
+end subroutine fabm_schism_read_horizontal_hotstart_from_netcdf
 
 subroutine fabm_schism_create_output_netcdf()
 
