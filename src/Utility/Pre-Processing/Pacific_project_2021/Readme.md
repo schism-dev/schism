@@ -11,3 +11,4 @@ Some pre-proc and input files for the NOAA Pacific project
       new10: new7 with a few arcs near Jap Trench removed; Seto Inland Sea, Guam edited to better acommodate
              tide gauges.
       new11: based on new10 with stations along west coast with bad performance beding refined based on the results from r10k
+      new16: further edits due to change in vgrid. Near Apra habor, force transition into nearshore due to steep slope there.
