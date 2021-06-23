@@ -449,7 +449,7 @@
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
-      ihhat=1; kr_co=1; rmaxvel=10._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
+      ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
       ibtrack_test=0; irouse_test=0;  
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
