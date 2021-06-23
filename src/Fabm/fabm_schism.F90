@@ -1115,7 +1115,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
   !check whether file exist
   iexist = nf90_open(in_dir(1:len_in_dir)//ncfilename, nf90_nowrite, ncid)
   if (iexist /= nf90_noerr) then
-    call driver%log_message('Skipped reading horizontal state from non-existent file '//trim(ncfilename)
+    call driver%log_message('Skipped reading horizontal state from non-existent file '//trim(ncfilename))
     return
   end if
 
@@ -1152,7 +1152,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
 
   call nccheck(nf90_close(ncid))
     
-end subroutine fabm_schism_read_horizontal_hotstart_from_netcdf
+end subroutine fabm_schism_read_horizontal_state_from_hotstart
 
 subroutine fabm_schism_create_output_netcdf()
 
