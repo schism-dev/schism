@@ -134,6 +134,7 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: light_extinction => null()
     real(rk), dimension(:,:), pointer   :: layer_height => null()
     real(rk), dimension(:,:), pointer   :: layer_depth => null()
+    real(rk), dimension(:,:), pointer   :: spm => null()
     real(rk), dimension(:,:), pointer   :: eps => null()
     real(rk), dimension(:,:), pointer   :: num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
@@ -453,6 +454,9 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%layer_depth(nvrt,nea))
   fs%layer_depth = 1.0_rk
+
+  allocate(fs%spm(nvrt,nea))
+  fs%spm=10.0_rk
 
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
@@ -1427,6 +1431,7 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked interior standard variable "density"')
   call self%model%link_interior_data(fabm_standard_variables%cell_thickness,self%layer_height)
   call self%model%link_interior_data(fabm_standard_variables%depth,self%layer_depth)
+  call self%model%link_interior_data(fabm_standard_variables%mass_concentration_of_suspended_matter,self%spm)
   call driver%log_message('linked interior standard variable "cell_thickness"')
   !call self%model%link_interior_data( &
   !  type_interior_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
