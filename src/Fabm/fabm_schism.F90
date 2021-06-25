@@ -27,10 +27,10 @@
 module fabm_schism
 
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
-  use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global
+  use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global,np_global,iegl,ipgl
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
-  use schism_glbl,  only: lreadll,iwsett,irange_tr,epsf,dfv
+  use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
@@ -69,6 +69,9 @@ module fabm_schism
   public :: fabm_schism_create_output_netcdf
   public :: fabm_schism_write_output_netcdf
   public :: fabm_schism_close_output_netcdf
+  public :: fabm_schism_read_param_from_yaml 
+  public :: fabm_schism_read_param_2d
+  public :: fabm_schism_read_additional_forcing
   !public :: rk
   ! real kind imported from fabm
   integer, parameter, public :: fabm_schism_rk = selected_real_kind(13)
@@ -107,6 +110,10 @@ module fabm_schism
     logical                           :: output_averaged=.true.
   end type
 
+  type, public :: fabm_schism_parameter
+    integer  :: ispm  !spm option flag
+    real(rk) :: spm0  !constant spm conc. for ispm=0
+  end type
 
   type, public :: type_fabm_schism
 #if _FABM_API_VERSION_ > 0
@@ -154,9 +161,12 @@ module fabm_schism
 
     type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
     type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: horizontal_diagnostic_variables
+    type(fabm_schism_parameter)         :: params
     real(rk)                            :: tidx
     real(rk)                            :: time_since_last_output = 0.0_rk
     real(rk)                            :: time_since_last_hor_output = 0.0_rk
+    real(rk)                            :: time_fabm(1)=-999.0_rk  !time in forcing files
+
     contains
 #if _FABM_API_VERSION_ < 1
     procedure :: get_light
@@ -301,6 +311,20 @@ subroutine fabm_schism_init_model(ntracers)
   !> the (calendric) sflux?
 
   if (present(ntracers)) ntracers = fs%nvar
+
+  !read parameter from famb.yaml (can put these parameters in other input files, e.g. schism_fabm.in)
+  call fabm_schism_read_param_from_yaml('ispm',1,fs%params%ispm,tmp_real)
+  call fabm_schism_read_param_from_yaml('spm0',2,tmp_int,fs%params%spm0)
+  if(fs%params%ispm==2) then !spm from SED3D model
+#ifndef USE_SED
+    call parallel_abort('ispm=2,FABM-SCHSIM need to turn on SED3D module')
+#endif 
+  elseif(fs%params%ispm==3) then !spm from input: time varying
+    open(481,file=in_dir(1:len_in_dir)//'SPM.th',status='old') !todo: change to *.nc format
+  elseif(fs%params%ispm/=0 .and. fs%params%ispm/=1) then
+    call parallel_abort('FABM-SCHISM: unknown ispm')
+  endif
+
 end subroutine fabm_schism_init_model
 
 !> Initialize FABM internal fields
@@ -456,7 +480,20 @@ subroutine fabm_schism_init_stage2
   fs%layer_depth = 1.0_rk
 
   allocate(fs%spm(nvrt,nea))
-  fs%spm=10.0_rk
+  fs%spm=0.0_rk
+  if(fs%params%ispm==1) then 
+    call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
+    do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i); enddo
+  elseif(fs%params%ispm==2) then 
+    do n=1,ntrs(5)  
+      fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(1000.0*tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
+    enddo
+  elseif(fs%params%ispm==3) then 
+    call fabm_schism_read_additional_forcing(0.0_rkind)
+  else
+    fs%spm=fs%params%spm0
+  endif
+  fs%spm=fs%spm/1000.0_rk !convert mg/L to g/L
 
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
@@ -819,6 +856,16 @@ subroutine fabm_schism_do()
      fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
 
+  !update spm concentration
+  if(fs%params%ispm==2) then
+    do n=1,ntrs(5)
+      fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
+    enddo
+  elseif(fs%params%ispm==2) then
+    call fabm_schism_read_additional_forcing(dt*fs%tidx)
+    fs%spm=fs%spm/1000.0_rk
+  endif
+
 ! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
 ! todo if (allocated(fs%pres)) then
   do i=1,nea
@@ -970,7 +1017,6 @@ subroutine fabm_schism_do()
   call fs%integrate_diagnostics(timestep=dt)
 
 end subroutine fabm_schism_do
-
 
 subroutine integrate_vertical_movement(fs)
   ! integrate vertical movement with simple upwind method.
@@ -1155,6 +1201,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
   enddo
 
   call nccheck(nf90_close(ncid))
+  deallocate(swild)
     
 end subroutine fabm_schism_read_horizontal_state_from_hotstart
 
@@ -1496,5 +1543,139 @@ subroutine nccheck(status, optstr)
     endif
   endif
 end subroutine nccheck
+
+subroutine fabm_schism_read_param_from_yaml(varname,vartype,ivar,rvar)
+!--------------------------------------------------------------------
+!read parameter values from fabm.yaml
+!--------------------------------------------------------------------
+  implicit none
+
+  character(*),intent(in) :: varname
+  integer,intent(in)   :: vartype
+  integer,intent(inout)  :: ivar
+  real(rkind),intent(inout) :: rvar
+
+  !local variable
+  integer :: i,itmp,loc,ieof
+  real(rkind) :: rtmp 
+  character(len=300) :: lstr
+  logical :: lexist
+
+  itmp=-99999; rtmp=-99999.0 !default values
+
+  !check whether fabm.yaml exist
+  inquire(file=in_dir(1:len_in_dir)//'fabm.yaml',exist=lexist)
+  if(.not. lexist) return
+ 
+  !search 
+  open(31,file=in_dir(1:len_in_dir)//'fabm.yaml',status='old')
+  do 
+    read(31,'(a)',iostat=ieof) lstr
+    if(ieof<0) exit 
+   
+    !find location of ":" 
+    loc=index(lstr,':')
+    if(loc==0) cycle 
+  
+    !check parameter name
+    if(trim(adjustl(lstr(1:loc-1)))==varname) then
+      if(vartype==1) read(lstr(loc+1:len(lstr)),*) itmp
+      if(vartype==2) read(lstr(loc+1:len(lstr)),*) rtmp
+      exit
+    endif
+  enddo
+  close(31)
+
+  if(itmp/=-99999) ivar=itmp
+  if(rtmp/=-99999.0) rvar=rtmp
+  
+end subroutine fabm_schism_read_param_from_yaml
+
+subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
+!---------------------------------------------------------------------
+!funciton to automatically read spatially varying paramters (*.gr3 or
+!*.prop)
+!Input:
+!    varname: name of parameter
+!    pvar:    variable for the parameter (element based)
+!    pvalue:  parameter value
+!Output:
+!    1). pvalue=-999:  read values in "varname.gr3", and assign to pvar 
+!    2). pvalue=-9999: read values in "varname.prop", and assign to pvar 
+!    3). pvalue=other const: assign const value (pvalue) to pvar 
+!---------------------------------------------------------------------
+  implicit none
+  character(len=*),intent(in) :: varname
+  real(rkind),intent(in) :: pvalue
+  real(rkind),dimension(nea),intent(out) :: pvar
+
+  !local variables
+  integer :: i,j,k,negb,npgb,ip,ie,nd
+  real(rkind) :: xtmp,ytmp,rtmp
+  real(rkind),dimension(npa) :: tvar
+
+  !read spatailly varying parameter values
+  if(int(pvalue)==-999) then  !*.gr3
+    open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
+    do i=1,np_global
+      read(31,*)ip,xtmp,ytmp,rtmp
+      if(ipgl(ip)%rank==myrank) then
+        tvar(ipgl(ip)%id)=rtmp
+      endif
+    enddo
+    close(31)
+
+    !interp from node to element
+    pvar=0.0
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        pvar(i)=pvar(i)+tvar(nd)/i34(i)
+      enddo!j
+    enddo!i
+
+  else if(int(pvalue)==-9999) then !*.prop
+    open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
+    do i=1,ne_global
+      read(31,*)ie,rtmp
+      if(iegl(ie)%rank==myrank) then
+        pvar(iegl(ie)%id)=rtmp
+      endif
+    enddo
+
+  else !constant value 
+    do i=1,nea
+       pvar(i)=pvalue
+    enddo
+  endif!pvalue
+end subroutine fabm_schism_read_param_2d
+
+subroutine fabm_schism_read_additional_forcing(time)
+!---------------------------------------------
+!read time varying forcing 
+!---------------------------------------------
+  implicit none
+  real(rkind), intent(in) :: time
+  
+  !local variables
+  integer :: i,ie
+  real(rkind) :: rtmp,swild(ne_global)
+  
+  !read SPM input
+  if(fs%params%ispm==3 .and. fs%time_fabm(1)<time) then
+    do while(fs%time_fabm(1)<time)
+       read(481,*)rtmp,(swild(i),i=1,ne_global)       
+       if(rtmp>=time) then
+         do ie=1,ne_global
+           if(iegl(ie)%rank==myrank) fs%spm(:,iegl(ie)%id)=swild(ie)
+         enddo
+         exit
+       endif
+    enddo
+  endif
+
+end subroutine fabm_schism_read_additional_forcing
 
 end module fabm_schism
