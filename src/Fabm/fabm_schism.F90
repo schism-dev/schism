@@ -861,7 +861,7 @@ subroutine fabm_schism_do()
     do n=1,ntrs(5)
       fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
     enddo
-  elseif(fs%params%ispm==2) then
+  elseif(fs%params%ispm==3) then
     call fabm_schism_read_additional_forcing(dt*fs%tidx)
     fs%spm=fs%spm/1000.0_rk
   endif
