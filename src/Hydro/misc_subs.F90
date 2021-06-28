@@ -4041,9 +4041,16 @@
 !===============================================================================
 !     Compute area coordinates for a given pt w.r.t. to a triangular element
 !     If ifl=1, will fix 0 or negative area coord. (assuming it's not too negative)
-!     and in this case, the pt will be nudged into the element
+!     and in this case, the pt will be nudged into the element.
+!     Also for ics=2, the arco() may not be a reliable indicator on whether the
+!     pt
+!     is inside the elem when the pt is very far from the local elem frame. For
+!     this
+!     reason, we also output a flag (ioutside_box) that indicates if the pt is
+!     outside the
+!     (enlarged) bounding box of the elem.
 !===============================================================================
-      subroutine area_coord(ifl,nnel,gcor0,frame0,xt,yt,arco)
+      subroutine area_coord(ifl,nnel,gcor0,frame0,xt,yt,arco,ioutside_box)
       use schism_glbl
       use schism_msgp, only : parallel_abort
       implicit none
@@ -4053,12 +4060,13 @@
       real(rkind), intent(in) :: gcor0(3),frame0(3,3) !proj. info for ics=2
       real(rkind), intent(inout) :: xt,yt !coordinates (in the local frame0 if ics=2)
       real(rkind), intent(out) :: arco(3)
+      integer, intent(out) :: ioutside_box !1: outside bounding box
  
       !Function
       real(rkind) :: signa2
       !Local
       integer :: j,nd,indx
-      real(rkind) :: tmp,tmpmin,tmpmax,tmpsum
+      real(rkind) :: tmp,tmpmin,tmpmax,tmpsum,xmin,xmax,ymin,ymax,dx2,dy2,esp2
 
       real(rkind) :: wild(3,2)
 
@@ -4087,6 +4095,18 @@
 !          call project_pt('g2l',xnd(nd),ynd(nd),znd(nd),gcor0,frame0,wild(j,1),wild(j,2),tmp)
 !        endif !ics
 !      enddo !j
+
+!     Check against enlarged bounding box
+      xmin=minval(wild(1:3,1))
+      ymin=minval(wild(1:3,2))
+      xmax=maxval(wild(1:3,1))
+      ymax=maxval(wild(1:3,2))
+      dx2=xmax-xmin !>=0
+      dy2=ymax-ymin
+      esp2=0.1d0 !small number for expansion
+      ioutside_box=0 !init
+      if(xt<xmin-0.5d0*esp2*dx2.or.xt>xmax+0.5d0*esp2*dx2.or. &
+     &   yt<ymin-0.5d0*esp2*dy2.or.yt>ymax+0.5d0*esp2*dy2) ioutside_box=1
 
       arco(1)=signa2(xt,wild(2,1),wild(3,1),yt,wild(2,2),wild(3,2))/area(nnel)
       arco(2)=signa2(wild(1,1),xt,wild(3,1),wild(1,2),yt,wild(3,2))/area(nnel)
@@ -4284,9 +4304,12 @@
 !     functions (otherwise undefined).
 !     if ifl=1, assume the pt is reasonably inside quad, and compute
 !     shape functions and nudge the original pt into quad.
-!     If ics=2, (x,y) is assumed to be in elem. frame of ie.
+!     If ics=2, (x,y) is assumed to be in elem. frame of ie. 
+!     To avoid the case of ics=2 and pt is very far from the elem frame, output
+!     a flag (ioutside_box) that indicates if the pt is outside the
+!     (enlarged) bounding box of the elem.
 !===============================================================================
-      subroutine quad_shape(ifl,itag,ie,x,y,inside,shapef)
+      subroutine quad_shape(ifl,itag,ie,x,y,inside,shapef,ioutside_box)
       use schism_glbl, only : rkind,errmsg,ics,ielg,area,xel,yel,eframe,i34, &
      &elnode,xnd,ynd,znd,nxq,small2
       use schism_msgp, only : parallel_abort
@@ -4298,11 +4321,12 @@
       real(rkind), intent(inout) :: x,y !in eframe if ics=2
       integer, intent(out) :: inside !/=0: inside -matters only if ifl=0
       real(rkind), intent(out) :: shapef(4)
+      integer, intent(out) :: ioutside_box !1: outside bounding box
 
       real(rkind) :: signa2
 
       integer :: i,in1,in2,nd,icaseno
-      real(rkind) :: swild2(4),xi,eta,tmp
+      real(rkind) :: swild2(4),xi,eta,tmp,xmin,xmax,ymin,ymax,dx2,dy2,esp2
       
       if(i34(ie)/=4) call parallel_abort('quad_shape: not  quad')
       inside=0
@@ -4319,12 +4343,28 @@
 !      endif !ics
 
       if(ifl==0) then
+        xmin=huge(1.d0); ymin=xmin
+        xmax=-huge(1.d0); ymax=xmax
         do i=1,4
           in1=nxq(1,i,i34(ie))
           in2=nxq(2,i,i34(ie))
           swild2(i)=signa2(xel(in1,ie),xel(in2,ie),x,yel(in1,ie),yel(in2,ie),y)
+          xmin=min(xmin,xel(in1,ie),xel(in2,ie))
+          xmax=max(xmax,xel(in1,ie),xel(in2,ie))
+          ymin=min(ymin,yel(in1,ie),yel(in2,ie))
+          ymax=max(ymax,yel(in1,ie),yel(in2,ie))
         enddo !i
         tmp=minval(swild2(1:4))/area(ie)
+
+        !Bounding box
+        dx2=xmax-xmin !>=0
+        dy2=ymax-ymin
+        if(dx2<0.d0.or.dy2<0.d0) call parallel_abort('quad_shape: dx,y2<0')
+        esp2=0.1d0 !small number for expansion
+        ioutside_box=0 !init
+        if(x<xmin-0.5d0*esp2*dx2.or.x>xmax+0.5d0*esp2*dx2.or. &
+     &     y<ymin-0.5d0*esp2*dy2.or.y>ymax+0.5d0*esp2*dy2) ioutside_box=1
+
         if(tmp>-small2) then
           inside=1
           call ibilinear(itag,ie,area(ie),xel(1,ie),xel(2,ie),xel(3,ie),xel(4,ie), &

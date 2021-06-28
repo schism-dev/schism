@@ -3466,16 +3466,16 @@
             endif
 
             if(i34(i)==3) then
-              call area_coord(0,i,(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,arco_sta(l,1:3))
+              call area_coord(0,i,(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,arco_sta(l,1:3),itmp2)
               tmp=minval(arco_sta(l,1:3))
-              if(tmp>-small2) then
+              if(itmp2==0.and.tmp>-small2) then
                 iep_sta(l)=i
                 if(tmp<0) call area_coord(1,i,(/xctr(i),yctr(i),zctr(i)/), &
-     &eframe(:,:,i),xstal,ystal,arco_sta(l,1:3)) !fix A.C.
+     &eframe(:,:,i),xstal,ystal,arco_sta(l,1:3),itmp2) !fix A.C.
               endif
             else !quad
-              call quad_shape(0,0,i,xstal,ystal,itmp,arco_sta(l,1:4)) !arco_sta are 4 shape functions
-              if(itmp/=0) iep_sta(l)=i
+              call quad_shape(0,0,i,xstal,ystal,itmp,arco_sta(l,1:4),itmp2) !arco_sta are 4 shape functions
+              if(itmp/=0.and.itmp2==0) iep_sta(l)=i
             endif !i34
           enddo !l; build pts
 
