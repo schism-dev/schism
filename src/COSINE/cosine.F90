@@ -40,8 +40,8 @@ subroutine cosine(it)
   integer,intent(in) :: it
     
   !local variables
-  integer :: i,j,k,m,l,iter,id,itrc,iday,daynum
-  real(rkind) :: time,mtime,dtw,rat,rKe,rtmp,Uw
+  integer :: i,j,k,m,l,id,itrc,iday,daynum
+  real(rkind) :: time,mtime,dtw,rat,rKe,rtmp,Uw,mS2i,mZ1i,mDNi,mZ2i
   logical :: lopened
 
   !for precalculation
@@ -155,387 +155,318 @@ subroutine cosine(it)
       enddo !k
     endif!idelay
 
-    do iter=1,niter    
-      
-      !Light field
-      if(ispm==2) then !SPM from 3D sediment model, unit is Mg/L
-        do k=kbe(i)+1,nvrt
-          SPM(k,i)=0.0
-          do m=1,ntrs(5)
-            SPM(k,i)=SPM(k,i)+1.d3*max(tr_el(m-1+irange_tr(1,5),k,i),0.d0)
-          enddo
-        enddo
-      endif
-      sLight(nvrt+1)=max(0.46d0*srflx(i),0.d0)
-      do k=nvrt,kbe(i)+1,-1
-        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)
-        sLight(k)=sLight(k+1)*exp(-rKe)
-      enddo !k
-
-      !clam grazing
-      if(iclam/=0) then
-        CLREG=kcex*nclam(i)*Nperclam/deltaZ
-        grzc=1.d-3*Fclam*nclam(i)*Wclam/deltaZ
-      endif
-      
-
+    !Light field
+    if(ispm==2) then !SPM from 3D sediment model, unit is Mg/L
       do k=kbe(i)+1,nvrt
-        !-------------------------------------------------------------------     
-        !Precalculation
-        !-------------------------------------------------------------------
-        
-        !Tempreature Adjust
-        Tadjust=exp(0.069d0*(temp(k)-TR))
+        SPM(k,i)=0.0
+        do m=1,ntrs(5)
+          SPM(k,i)=SPM(k,i)+1.d3*max(tr_el(m-1+irange_tr(1,5),k,i),0.d0)
+        enddo
+      enddo
+    endif
+
+    !sLight(nvrt+1)=max(0.46d0*srflx(i),0.d0)
+    sLight(nvrt+1)=max(0.5d0*srflx(i),0.d0) !add par_fraction to paramter: todo
+    do k=nvrt,kbe(i)+1,-1
+      if(k==nvrt) then
+        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)/2.0
+      else
+        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*(dep(k)+dep(k+1))/2.0
+      endif
+      sLight(k)=sLight(k+1)*exp(-rKe)
+    enddo !k
+
+    !clam grazing
+    if(iclam/=0) then
+      CLREG=kcex*nclam(i)*Nperclam/deltaZ
+      grzc=1.d-3*Fclam*nclam(i)*Wclam/deltaZ
+    endif
+
+    do k=kbe(i)+1,nvrt
+      !-------------------------------------------------------------------     
+      !Precalculation
+      !-------------------------------------------------------------------
+      
+      !Tempreature Adjust
+      Tadjust=exp(0.069d0*(temp(k)-TR))
+     
+      !diatom sink velocity depending on NO3 concentration 
+      if(iws==1) then
+        if(NO3(k)>=NO3c) then
+          wss2=0.0
+        else
+          wss2=max(0.01,ws1*exp(-ws2*NO3(k)))
+        endif
+      endif 
+
+      !settling of particluate mattter: add to wsett: todo
+      if(k>kbe(i)+1 .and. k<nvrt) then
+        SKS2=wss2*(S2(k+1)-S2(k))/max(dep(k),1.d-1)
+        SKDN=wsdn*(DN(k+1)-DN(k))/max(dep(k),1.d-1)
+        SKDSi=wsdsi*(DSi(k+1)-DSi(k))/max(dep(k),1.d-1)
+      elseif(k==kbe(i)+1) then
+        SKS2=wss2*(S2(k+1)-S2(k))/max(dep(k),1.d-1)
+        SKDN=wsdn*(DN(k+1)-DN(k))/max(dep(k),1.d-1)
+        SKDSi=wsdsi*(DSi(k+1)-DSi(k))/max(dep(k),1.d-1)
+      elseif(k==nvrt) then
+        SKS2=-wss2*S2(k)/max(dep(k),1.d-1)
+        SKDN=-wsdn*DN(k)/max(dep(k),1.d-1)
+        SKDSi=-wsdsi*DSi(k)/max(dep(k),1.d-1)
+      endif
+      !if(S2(k)<=2.5d0) SKS2=0.0
+
+      !Light limitation factor including photo-inhibition and light adaptation
+      ADPT=1.0
+      if(idapt==1) ADPT=alpha_corr*(1.0-4.0*zr(k)/zeptic)
+      pih1=(1.0-exp(-sLight(k)*ADPT*alpha1/gmaxs1))*exp(-beta*sLight(k)/gmaxs1)
+      pih2=(1.0-exp(-sLight(k)*ADPT*alpha2/gmaxs2))*exp(-beta*sLight(k)/gmaxs2)
+
+      !NH4 inhibition for S1 and S2
+      !pnh4s1=min(1.0,exp(-pis1*NH4(k))+0.1)
+      !pnh4s2=min(1.0,exp(-pis2*NH4(k))+0.1)
+      pnh4s1=min(1.0,exp(-pis1*NH4(k)))
+      pnh4s2=min(1.0,exp(-pis2*NH4(k)))
+      
+      !PO4,CO2,and SiO4 limiation factors 
+      fPO4S1=PO4(k)/(kpo4s1+PO4(k))
+      fCO2S1=CO2(k)/(kco2s1+CO2(k))
+      fPO4S2=PO4(k)/(kpo4s2+PO4(k))
+      fCO2S2=CO2(k)/(kco2s2+CO2(k))
+      fSiO4S2=SiO4(k)/(ksio4s2+SiO4(k))
+
+      !Nitrogen limitation factors 
+      rtmp=1+NH4(k)/knh4s1+pnh4s1*NO3(k)/kno3s1
+      bfNO3S1=pnh4s1*NO3(k)/(kno3s1*rtmp)
+      bfNH4S1=NH4(k)/(knh4s1*rtmp)
+
+      rtmp=1+NH4(k)/knh4s2+pnh4s2*NO3(k)/kno3s2
+      bfNO3S2=pnh4s2*NO3(k)/(kno3s2*rtmp)
+      bfNH4S2=NH4(k)/(knh4s2*rtmp)
+
+      !final limitation
+      if(ico2s==0) then
+        fS1=min(bfNO3S1+bfNH4S1,fPO4S1)  !*pih1
+        fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2) !*pih2
+      else !with CO2 limitation
+        fS1=min(bfNO3S1+bfNH4S1,fPO4S1,fCO2S1)  !*pih1
+        fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2,fCO2S2) !*pih2
+      endif
+
+      !adjustment for nitrogen limitation factors
+      fNO3S1=fS1*bfNO3S1/(bfNO3S1+bfNH4S1+1.0e-6)
+      fNH4S1=fS1*bfNH4S1/(bfNO3S1+bfNH4S1+1.0e-6)
+
+      fNO3S2=fS2*bfNO3S2/(bfNO3S2+bfNH4S2+1.0E-6)
+      fNH4S2=fS2*bfNH4S2/(bfNO3S2+bfNH4S2+1.0E-6)
+
+      !Zooplankton grazing
+      GS1Z1=beta1*Z1(k)*S1(k)/(kgz1+S1(k))
+      if(S1(k)<=0.25d0) GS1Z1=0.0
+
+      if(idelay==1 .and. time>=(ndelay*86400.d0)) then
+        mtime=mod(time/86400.d0,dble(ndelay))
+        iday=floor(mtime)+1
+        mS2i=mS2(iday,k,i); mZ1i=mZ1(iday,k,i); mDNi=mDN(iday,k,i); mZ2i=mZ2(iday,k,i)
+      else
+        mS2i=S2(k); mZ1i=Z1(k); mDNi=DN(k); mZ2i=Z2(k)
+      endif
+      rhot=rho1*mS2i+rho2*mZ1i+rho3*mDNi
+      rhop=rho1*mS2i*mS2i+rho2*mZ1i*mZ1i+rho3*mDNi*mDNi
+
+      GS2Z2=beta2*rho1*mS2i*mS2i*mZ2i/(kgz2*rhot+rhop)
+      GZ1Z2=beta2*rho2*mZ1i*mZ1i*mZ2i/(kgz2*rhot+rhop)
+      GDNZ2=beta2*rho3*mDNi*mDNi*mZ2i/(kgz2*rhot+rhop)
+
+      !turn off mesozooplankton grazing at certain conditions
+      if((rhot<=0.d0 .and. rhop<=0.d0) .or. iz2graze==0) then
+        GS2Z2=0.0; GDNZ2=0.0; GZ1Z2=0.0
+      endif
+      if(mS2i<=0.5d0)   GS2Z2=0.0
+      if(mZ1i<=0.025d0) GZ1Z2=0.0
+
+      GTZ2=GDNZ2+GZ1Z2+GS2Z2
+
+      !oxidation rate of organic matter
+      OXR=DOX(k)/(kox+DOX(k))
+
+      !-------------------------------------------------------------------     
+      !CoSiNE model kinetics: computing the reaction rate
+      !-------------------------------------------------------------------
+
+      !S1
+      NPS1=gmaxs1*fNO3S1*pih1*S1(k) !Growth
+      RPS1=gmaxs1*max(kns1*nh4(k)/(knh4s1+nh4(k)),fNH4S1*pih1)*S1(k) !Growth, nighttime uptake
+      MTS1=gammas1*S1(k) !Mortality
+      qcos(4)=NPS1+RPS1-GS1Z1-MTS1
+      if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
+        qcos(4)=qcos(4)-grzc*S1(k)
+      endif
+
+      !S2 
+      NPS2=gmaxs2*fNO3S2*pih2*S2(k) !Growth
+      RPS2=gmaxs2*max(kns2*nh4(k)/(knh4s2+nh4(k)),fNH4S2*pih2)*S2(k) !Growth, nighttime uptake
+      MTS2=gammas2*S2(k) !Mortality
+      if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
+        MTS2=bgraze(i)*gammas2*s2(k)
+      endif
+      qcos(5)=NPS2+RPS2-GS2Z2-MTS2+SKS2/Tadjust
+      if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
+        qcos(5)=qcos(5)-grzc*S2(k)
+      endif
+
+      !Z1
+      EXZ1=OXR*kex1*Z1(k) !excretion
+      MTZ1=gammaz*Z1(k)*Z1(k) !Mortality
+      qcos(6)=gamma1*GS1Z1-EXZ1-GZ1Z2-MTZ1
+
+      !Z2
+      EXZ2=OXR*kex2*Z2(k) !excretion
+      MTZ2=gammaz*Z2(k)*Z2(k) !Mortality
+      if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
+        MTZ2=bgraze(i)*gammaz*Z2(k)*Z2(k)
+      endif
+      qcos(7)=gamma2*GTZ2-EXZ2-MTZ2 
+     
+      !DN
+      rat=max(kmdn1*temp(k)+kmdn2, 0.05) 
+      MIDN=rat*OXR*DN(k) !remineralization, 1.5 to increase dissolution
+      qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2-GDNZ2 &
+             & +MTS1+MTS2+MTZ1+MTZ2-MIDN+SKDN/Tadjust
+
+      !DSi
+      rat=max(kmdsi1*temp(k)+kmdsi2, 0.01) 
+      MIDSi=rat*DSi(k) !remineralization, 1.5 to increase dissolution
+      qcos(9)=(GS2Z2+MTS2)*si2n-MIDSi+SKDSi/Tadjust
+
+      !NO3
+      Nit=gamman*OXR*NH4(k) !Nitrification
+      qcos(1)=-NPS1-NPS2+Nit
+
+      !NH4
+      qcos(3)=-RPS1-RPS2+EXZ1+EXZ2-Nit+MIDN
+      if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
+        qcos(3)=qcos(3)+CLREG
+      endif
        
-        !diatom sink velocity depending on NO3 concentration 
-        if(iws==1) then
-          if(NO3(k)>=NO3c) then
-            wss2=0.0
-          else
-            wss2=max(0.01,ws1*exp(-ws2*NO3(k)))
-          endif
-        endif 
+      !SiO4 
+      qcos(2)=-(NPS2+RPS2)*si2n+MIDSi
 
-        !settling of particluate mattter
-        if(k>kbe(i)+1 .and. k<nvrt) then
-          SKS2=wss2*(S2(k+1)-S2(k))/max(dep(k),1.d-1)
-          SKDN=wsdn*(DN(k+1)-DN(k))/max(dep(k),1.d-1)
-          SKDSi=wsdsi*(DSi(k+1)-DSi(k))/max(dep(k),1.d-1)
-        elseif(k==kbe(i)+1) then
-          SKS2=wss2*(S2(k+1)-S2(k))/max(dep(k),1.d-1)
-          SKDN=wsdn*(DN(k+1)-DN(k))/max(dep(k),1.d-1)
-          SKDSi=wsdsi*(DSi(k+1)-DSi(k))/max(dep(k),1.d-1)
-        elseif(k==nvrt) then
-          SKS2=-wss2*S2(k)/max(dep(k),1.d-1)
-          SKDN=-wsdn*DN(k)/max(dep(k),1.d-1)
-          SKDSi=-wsdsi*DSi(k)/max(dep(k),1.d-1)
-        endif
-        if(S2(k)<=2.5d0) then
-          SKS2=0.0
-        endif
+      !PO4
+      qcos(10)=(EXZ1+EXZ2+MIDN-NPS1-RPS1-NPS2-RPS2)*p2n
+      !qcos(10)=qcos(10)+MIDSi*p2n/si2n
+      
+      !DOX
+      qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2-EXZ1-EXZ2-MIDN)*o2nh-2.0*Nit
 
-        !Light limitation factor including photo-inhibition and light adaptation
-        if(idapt==1) then
-           ADPT=alpha_corr*(1.0-4.0*zr(k)/zeptic)
-        else
-           ADPT=1.0
-        endif
-        pih1=(1.0-exp(-sLight(k)*ADPT*alpha1/gmaxs1))*exp(-beta*sLight(k)/gmaxs1)
-        pih2=(1.0-exp(-sLight(k)*ADPT*alpha2/gmaxs2))*exp(-beta*sLight(k)/gmaxs2)
+      !CO2
+      qcos(12)=(EXZ1+EXZ2+MIDN-NPS1-RPS1-NPS2-RPS2)*c2n
+      
+      !ALK
+      qcos(13)=-qcos(1)+qcos(3)
 
-        !NH4 inhibition for S1 and S2
-        !pnh4s1=min(1.0,exp(-pis1*NH4(k))+0.1)
-        !pnh4s2=min(1.0,exp(-pis2*NH4(k))+0.1)
-        pnh4s1=min(1.0,exp(-pis1*NH4(k)))
-        pnh4s2=min(1.0,exp(-pis2*NH4(k)))
-        
-        !PO4,CO2,and SiO4 limiation factors 
-        fPO4S1=PO4(k)/(kpo4s1+PO4(k))
-        fCO2S1=CO2(k)/(kco2s1+CO2(k))
-        fPO4S2=PO4(k)/(kpo4s2+PO4(k))
-        fCO2S2=CO2(k)/(kco2s2+CO2(k))
-        fSiO4S2=SiO4(k)/(ksio4s2+SiO4(k))
+      !--temperature adjust
+      qcos=Tadjust*qcos
 
-        !Nitrogen limitation factors 
-        rtmp=1+NH4(k)/knh4s1+pnh4s1*NO3(k)/kno3s1
-        bfNO3S1=pnh4s1*NO3(k)/(kno3s1*rtmp)
-        bfNH4S1=NH4(k)/(knh4s1*rtmp)
+      !surface fluxes 
+      if(k==nvrt) then
+        Uw=sqrt(uwind(i)*uwind(i)+vwind(i)*vwind(i)) 
+        rat=1.d-6
 
-        rtmp=1+NH4(k)/knh4s2+pnh4s2*NO3(k)/kno3s2
-        bfNO3S2=pnh4s2*NO3(k)/(kno3s2*rtmp)
-        bfNH4S2=NH4(k)/(knh4s2*rtmp)
+        call o2flux(o2flx,temp(k),salt(k),DOX(k),Uw)
+        call co2flux(2,ph,co2flx,temp(k),salt(k),CO2(k)*rat,SiO4(k)*rat,PO4(k)*rat, &
+                    & ALK(k)*rat,pco2a,Uw)
+      else 
+        o2flx=0.0
+        co2flx=0.0
+      endif
 
-        !final limitation
-        if(ico2s==0) then
-          fS1=min(bfNO3S1+bfNH4S1,fPO4S1)  !*pih1
-          fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2) !*pih2
-        else !with CO2 limitation
-          fS1=min(bfNO3S1+bfNH4S1,fPO4S1,fCO2S1)  !*pih1
-          fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2,fCO2S2) !*pih2
-        endif
+      !add air-sea exchange flux for O2 and CO2
+      qcos(11)=qcos(11)+o2flx/max(dep(k),1.d-1)
+      qcos(12)=qcos(12)+co2flx/max(dep(k),1.d-1)
 
-        !adjustment for nitrogen limitation factors
-        fNO3S1=fS1*bfNO3S1/(bfNO3S1+bfNH4S1+1.0e-6)
-        fNH4S1=fS1*bfNH4S1/(bfNO3S1+bfNH4S1+1.0e-6)
-
-        fNO3S2=fS2*bfNO3S2/(bfNO3S2+bfNH4S2+1.0E-6)
-        fNH4S2=fS2*bfNH4S2/(bfNO3S2+bfNH4S2+1.0E-6)
-
-        !Zooplankton grazing
-        GS1Z1=beta1*Z1(k)*S1(k)/(kgz1+S1(k))
-        if(S1(k)<=0.25d0) then
-          GS1Z1=0.0
-        endif
-
-        if(idelay==1 .and. time>=(ndelay*86400.d0)) then
-          mtime=mod(time/86400.d0,dble(ndelay))
-          iday=floor(mtime)+1
-
-          rhot=rho1*mS2(iday,k,i)+rho2*mZ1(iday,k,i)+rho3*mDN(iday,k,i)
-          rhop=rho1*mS2(iday,k,i)*mS2(iday,k,i)+rho2*mZ1(iday,k,i)*mZ1(iday,k,i)+rho3*mDN(iday,k,i)*mDN(iday,k,i)
-
-          if(rhot<=0.d0 .and. rhop<=0.d0) then
-            GS2Z2=0.0
-            GDNZ2=0.0
-            GZ1Z2=0.0
-          else
-            GS2Z2=beta2*rho1*mS2(iday,k,i)*mS2(iday,k,i)*mZ2(iday,k,i)/(kgz2*rhot+rhop)
-            GZ1Z2=beta2*rho2*mZ1(iday,k,i)*mZ1(iday,k,i)*mZ2(iday,k,i)/(kgz2*rhot+rhop)
-            GDNZ2=beta2*rho3*mDN(iday,k,i)*mDN(iday,k,i)*mZ2(iday,k,i)/(kgz2*rhot+rhop)
-          endif
-
-          if(mS2(iday,k,i)<=0.5d0)then
-            GS2Z2=0.0
-          endif
-
-          if(mZ1(iday,k,i)<=0.025d0)then
-            GZ1Z2=0.0
-          endif
-        else
-          rhot=rho1*S2(k)+rho2*Z1(k)+rho3*DN(k)
-          rhop=rho1*S2(k)*S2(k)+rho2*Z1(k)*Z1(k)+rho3*DN(k)*DN(k)
-
-          if(rhot<=0.d0 .and. rhop<=0.d0)then
-            GS2Z2=0.0
-            GDNZ2=0.0
-            GZ1Z2=0.0
-          else
-            GS2Z2=beta2*rho1*S2(k)*S2(k)*Z2(k)/(kgz2*rhot+rhop)
-            GZ1Z2=beta2*rho2*Z1(k)*Z1(k)*Z2(k)/(kgz2*rhot+rhop)
-            GDNZ2=beta2*rho3*DN(k)*DN(k)*Z2(k)/(kgz2*rhot+rhop)
-          endif
-        endif!idelay
-         
-        if(iz2graze==0) then !shut down Z2 grazing
-          GS2Z2=0.0
-          GDNZ2=0.0
-          GZ1Z2=0.0
-        endif
-
-        GTZ2=GDNZ2+GZ1Z2+GS2Z2
-
-        !oxidation rate of organic matter
-        if(k>kbe(i)) then
-          OXR=DOX(k)/(kox+DOX(k))
-        else
-          OXR=1.0
-        endif
-
-        !-------------------------------------------------------------------     
-        !Kinetics
-        !-------------------------------------------------------------------
-
-        !S1
-        NPS1=gmaxs1*fNO3S1*pih1*S1(k) !Growth
-        RPS1=gmaxs1*max(kns1*nh4(k)/(knh4s1+nh4(k)),fNH4S1*pih1)*S1(k) !Growth, nighttime uptake
-        MTS1=gammas1*S1(k) !Mortality
-        qcos(4)=NPS1+RPS1-GS1Z1-MTS1
-        if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
-          qcos(4)=qcos(4)-grzc*S1(k)
-        endif
-
-        !S2 
-        NPS2=gmaxs2*fNO3S2*pih2*S2(k) !Growth
-        RPS2=gmaxs2*max(kns2*nh4(k)/(knh4s2+nh4(k)),fNH4S2*pih2)*S2(k) !Growth, nighttime uptake
-        MTS2=gammas2*S2(k) !Mortality
-        if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
-          MTS2=bgraze(i)*gammas2*s2(k)
-        endif
-        qcos(5)=NPS2+RPS2-GS2Z2-MTS2+SKS2/Tadjust
-        if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
-          qcos(5)=qcos(5)-grzc*S2(k)
-        endif
-
-        !Z1
-        EXZ1=OXR*kex1*Z1(k) !excretion
-        MTZ1=gammaz*Z1(k)*Z1(k) !Mortality
-        qcos(6)=gamma1*GS1Z1-EXZ1-GZ1Z2-MTZ1
-
-        !Z2
-        EXZ2=OXR*kex2*Z2(k) !excretion
-        MTZ2=gammaz*Z2(k)*Z2(k) !Mortality
-        if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
-          MTZ2=bgraze(i)*gammaz*Z2(k)*Z2(k)
-        endif
-        qcos(7)=gamma2*GTZ2-EXZ2-MTZ2 
-       
-        !DN
-        if(k>kbe(i)+1) then
-          rat=max(kmdn1*temp(k)+kmdn2, 0.05) 
-        else
-          rat=kbmdn
-        endif
-        MIDN=rat*OXR*DN(k) !remineralization, 1.5 to increase dissolution
-        qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2-GDNZ2 &
-               & +MTS1+MTS2+MTZ1+MTZ2-MIDN+SKDN/Tadjust
-
-        !DSi
-        if(k>kbe(i)+1) then
-           rat=max(kmdsi1*temp(k)+kmdsi2, 0.01) 
-        else
-           rat=kbmdsi
-        endif
-        MIDSi=rat*DSi(k) !remineralization, 1.5 to increase dissolution
-        qcos(9)=(GS2Z2+MTS2)*si2n-MIDSi+SKDSi/Tadjust
-
-        !NO3
-        Nit=gamman*OXR*NH4(k) !Nitrification
-        qcos(1)=-NPS1-NPS2+Nit
-
-        !NH4
-        qcos(3)=-RPS1-RPS2+EXZ1+EXZ2-Nit+MIDN
-        if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
-          qcos(3)=qcos(3)+CLREG
-        endif
-         
-        !SiO4 
-        qcos(2)=-(NPS2+RPS2)*si2n+MIDSi
-
-        !PO4
-        qcos(10)=(EXZ1+EXZ2+MIDN+MIDSi/si2n-NPS1-RPS1-NPS2-RPS2)*p2n
-        
-        !DOX
-        if(k>(kbe(i)+1)) then 
-          qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2-EXZ1-EXZ2-MIDN)*o2nh-2.0*Nit
-        else
-          qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2)*o2nh 
-        endif
-
-        !CO2
-        qcos(12)=(EXZ1+EXZ2+MIDN-NPS1-RPS1-NPS2-RPS2)*c2n
-        
-        !ALK
-        qcos(13)=-qcos(1)+qcos(3)
-
-        !--temperature adjust
-        qcos=Tadjust*qcos
-
-        !surface fluxes 
-        if(k==nvrt) then
-          Uw=sqrt(uwind(i)*uwind(i)+vwind(i)*vwind(i)) 
-          rat=1.d-6
-
-          call o2flux(o2flx,temp(k),salt(k),DOX(k),Uw)
-          call co2flux(2,ph,co2flx,temp(k),salt(k),CO2(k)*rat,SiO4(k)*rat,PO4(k)*rat, &
-                      & ALK(k)*rat,pco2a,Uw)
-        else 
-          o2flx=0.0
-          co2flx=0.0
-        endif
-
-        !add air-sea exchange flux for O2 and CO2
-        qcos(11)=qcos(11)+o2flx/max(dep(k),1.d-1)
-        qcos(12)=qcos(12)+co2flx/max(dep(k),1.d-1)
-
-        !bottom fluxes
-        if(ised==1.and.k==kbe(i)+1) then
-          !partitioning sinking fluxes
-          m=0
-          do id=1,nsedS2
-            m=m+1
-            sedinflx(m)=wss2*S2(k)*psedS2(id)*dep(k)/max(dep(k),1.d-1)
-          enddo
-          do id=1,nsedDN
-            m=m+1
-            sedinflx(m)=wsdn*DN(k)*psedDN(id)*dep(k)/max(dep(k),1.d-1)
-          enddo
-          do id=1,nsedDSi
-            m=m+1
-            sedinflx(m)=wsdsi*DSi(k)*psedDSi(id)*dep(k)/max(dep(k),1.d-1)
-          enddo
-
-          !calculate sediment fluxes
-          call sedflux(nh4flx,sio4flx,po4flx,co2flxb,o2flxb,sedinflx,dtw,dep(k),i)
-          qcos(2)=qcos(2)+sio4flx/dep(k)
-          qcos(3)=qcos(3)+nh4flx/dep(k)
-          qcos(10)=qcos(10)+po4flx/dep(k)
-          qcos(11)=qcos(11)+o2flxb/dep(k)
-          qcos(12)=qcos(12)+co2flxb/dep(k)
-  
-          !if(i==15517) then 
-          !  write(*,*)'flx:',sedinflx
-          !  write(*,*)'con:',sedcon(:,i)/dtw
-          !  write(*,*)'rate:',sedrate(:,i)
-          !  write(*,*)'outflx:',nh4flx,sio4flx,po4flx,co2flxb,o2flxb
-          !  write(*,*)''
-          !endif
-        endif
- 
-        !source and sink 
-        do m=1,ntrc        
-          sqcos(k,m)=dtw*qcos(m)
+      !bottom fluxes
+      if(ised==1.and.k==kbe(i)+1) then
+        !partitioning sinking fluxes
+        m=0
+        do id=1,nsedS2
+          m=m+1
+          sedinflx(m)=wss2*S2(k)*psedS2(id)*dep(k)/max(dep(k),1.d-1)
+        enddo
+        do id=1,nsedDN
+          m=m+1
+          sedinflx(m)=wsdn*DN(k)*psedDN(id)*dep(k)/max(dep(k),1.d-1)
+        enddo
+        do id=1,nsedDSi
+          m=m+1
+          sedinflx(m)=wsdsi*DSi(k)*psedDSi(id)*dep(k)/max(dep(k),1.d-1)
         enddo
 
-        !output intermediate values for CoSiNE station
-        if(iter==1.and.i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
-          if(ista(i)/=0) then
-            id=ista(i)
-            do m=1,nsta(id)
-              rtmp=min(max(-depsta(m,id),ze(kbe(i)+1,i)),ze(nvrt,i))
-              if(rtmp>ze(k-1,i).and.rtmp<=ze(k,i)) then
-                !write(451)time,stanum(m,id),fS1,fS2,bfNO3S1,bfNH4S1,bfNH4S2,bfNO3S2, &
-                !  &fNO3S1,fNH4S1,fNH4S2,fNO3S2,fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2, &
-                !  &temp(k),salt(k),NO3(k),SiO4(k),NH4(k),S1(k),S2(k),Z1(k),Z2(k),   &
-                !  &DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k)
-                write(451)time,stanum(m,id),temp(k),salt(k),NO3(k),SiO4(k),NH4(k), &
-                  &S1(k),S2(k),Z1(k),Z2(k),DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k),&
-                  &NPS1,RPS1,NPS2,RPS2,MTS1,MTS2,MTZ1,MTZ2,EXZ1,EXZ2,GS1Z1,GS2Z2,GZ1Z2,&
-                  &GDNZ2,GTZ2,SKS2,SKDN,SKDSi,Nit,MIDN,MIDSi,pnh4s1,pnh4s2,pih1,pih2,&
-                  &fS1,fS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
-                  &fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2,o2flx,co2flx,OXR,ADPT,ph,dep(k),&
-                  &SPM(k,i),sLight(k),ak2*(S1(k)+S2(k)),ak3*SPM(k,i)*dep(k), &
-                  &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(sedcon(l,i),l=1,nsed),(sedrate(l,i),l=1,nsed)
-              endif
-            enddo !m
-          endif !ista(i)/=0 
-        endif !i<=ne
+        !calculate sediment fluxes
+        call sedflux(nh4flx,sio4flx,po4flx,co2flxb,o2flxb,sedinflx,dtw,dep(k),i)
+        qcos(2)=qcos(2)+sio4flx/dep(k)
+        qcos(3)=qcos(3)+nh4flx/dep(k)
+        qcos(10)=qcos(10)+po4flx/dep(k)
+        qcos(11)=qcos(11)+o2flxb/dep(k)
+        qcos(12)=qcos(12)+co2flxb/dep(k)
+  
+      endif
+ 
+      !source and sink 
+      do m=1,ntrc        
+        sqcos(k,m)=dtw*qcos(m)
+      enddo
 
-      enddo!k
+      !output intermediate values for CoSiNE station
+      if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
+        if(ista(i)/=0) then
+          id=ista(i)
+          do m=1,nsta(id)
+            rtmp=min(max(-depsta(m,id),ze(kbe(i)+1,i)),ze(nvrt,i))
+            if(rtmp>ze(k-1,i).and.rtmp<=ze(k,i)) then
+              !write(451)time,stanum(m,id),fS1,fS2,bfNO3S1,bfNH4S1,bfNH4S2,bfNO3S2, &
+              !  &fNO3S1,fNH4S1,fNH4S2,fNO3S2,fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2, &
+              !  &temp(k),salt(k),NO3(k),SiO4(k),NH4(k),S1(k),S2(k),Z1(k),Z2(k),   &
+              !  &DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k)
+              write(451)time,stanum(m,id),temp(k),salt(k),NO3(k),SiO4(k),NH4(k), &
+                &S1(k),S2(k),Z1(k),Z2(k),DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k),&
+                &NPS1,RPS1,NPS2,RPS2,MTS1,MTS2,MTZ1,MTZ2,EXZ1,EXZ2,GS1Z1,GS2Z2,GZ1Z2,&
+                &GDNZ2,GTZ2,SKS2,SKDN,SKDSi,Nit,MIDN,MIDSi,pnh4s1,pnh4s2,pih1,pih2,&
+                &fS1,fS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
+                &fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2,o2flx,co2flx,OXR,ADPT,ph,dep(k),&
+                &SPM(k,i),sLight(k),ak2*(S1(k)+S2(k)),ak3*SPM(k,i)*dep(k), &
+                &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(sedcon(l,i),l=1,nsed),(sedrate(l,i),l=1,nsed)
+            endif
+          enddo !m
+        endif !ista(i)/=0 
+      endif !i<=ne
 
-      !------------------------
-      ! Update Global tracer variables and find body force (source or sink)
-      !-----------------------
-      id=0
-      do itrc=irange_tr(1,8),irange_tr(2,8)
-        id=id+1
-        do k=kbe(i)+1,nvrt
-          bio(k,id)=bio0(k,id)+sqcos(k,id) 
-          bio(k,id)=max(bio(k,id),mval) 
+    enddo!k
 
-          !Make sure S1,S2,Z1 and Z2 are above the base minimum values
-          !if(id==4) then
-          !  bio(k,id)=max(bio(k,id),0.25d0)
-          !elseif(id==5) then
-          !  bio(k,id)=max(bio(k,id),0.5d0)
-          !elseif(id==6) then
-          !  bio(k,id)=max(bio(k,id),0.025d0) 
-          !elseif(id==7) then
-          !  bio(k,id)=max(bio(k,id),0.05d0)
-          !endif
-          
-          !sqcos is modified, so that sqcos+bio0 >=mval
-          sqcos(k,id)=bio(k,id)-bio0(k,id) 
+    !------------------------
+    ! Update Global tracer variables and find body force (source or sink)
+    !-----------------------
+    id=0
+    do itrc=irange_tr(1,8),irange_tr(2,8)
+      id=id+1
+      do k=kbe(i)+1,nvrt
+        bio(k,id)=bio0(k,id)+sqcos(k,id) 
+        bio(k,id)=max(bio(k,id),mval) 
 
-          if(bio(k,id)<=mval .or. bio(k,id)/=bio(k,id))  then
-             bdy_frc(itrc,k,i)=0.0 !bdy_frc = source/sink
-          else 
-             bdy_frc(itrc,k,i)=bdy_frc(itrc,k,i)+sqcos(k,id)/dt !change in mass per sec
-          endif
+        !sqcos is modified, so that sqcos+bio0 >=mval
+        sqcos(k,id)=bio(k,id)-bio0(k,id) 
 
-          if(bio(k,id)/=bio(k,id)) then
-            write(600,*) myrank,time,ielg(i),k,bio(k,id),itrc,id,dt,dtw
-          endif
+        if(bio(k,id)<=mval .or. bio(k,id)/=bio(k,id))  then
+           bdy_frc(itrc,k,i)=0.0 !bdy_frc = source/sink
+        else 
+           bdy_frc(itrc,k,i)=bdy_frc(itrc,k,i)+sqcos(k,id)/dt !change in mass per sec
+        endif
 
-          !do j=1,i34(i) !avoid error in the curvy river in domain
-          !   if(abs(su2(k,elside(j,i)))>1.7 .or. abs(sv2(k,elside(j,i)))>1.7 .or. abs(eta2(elnode(j,i)))>2.5) then
-          !      bdy_frc(itrc,k,i)=0.0
-          !   endif
-          !enddo !j
+        if(bio(k,id)/=bio(k,id)) then
+          write(600,*) myrank,time,ielg(i),k,bio(k,id),itrc,id,dt,dtw
+        endif
 
-        enddo!k 
-      enddo !itrc
-
-    enddo!niter
+      enddo!k 
+    enddo !itrc
   enddo!i=1,nea
 
   inquire(451,opened=lopened)
@@ -606,7 +537,7 @@ subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,sedinflx,dtw,dz,id)
   do i=1,nsedDSi
     m=m+1
     sio4flx=sio4flx+outflx(m)
-    po4flx=po4flx+outflx(m)*p2n/si2n
+    !po4flx=po4flx+outflx(m)*p2n/si2n
   enddo
   
   return
