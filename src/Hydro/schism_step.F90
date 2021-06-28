@@ -188,7 +188,7 @@
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
-                     &bigfa1,bigfa2,vnf,grav2
+                     &bigfa1,bigfa2,vnf,grav3
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -220,7 +220,7 @@
                      &bigu(2,nsa),ghat1(2,nea),etp(npa),h1d(0:nvrt),SS1d(0:nvrt), &
                      &NN1d(0:nvrt),q2tmp(nvrt),xltmp(nvrt),rzbt(nvrt),shearbt(2:nvrt),sav_prod(nvrt), &
                      &xlmax(nvrt),cpsi3(2:nvrt),cpsi2p(2:nvrt),q2ha(2:nvrt),xlha(2:nvrt), &
-                     &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa)
+                     &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa),grav2(npa)
       real(rkind) :: swild(max(100,nsa+nvrt+12+ntracers)),swild2(nvrt,12),swild10(max(4,nvrt),12), &
      &swild3(20+mntracers),swild4(2,4)
 !#ifdef USE_SED
@@ -285,9 +285,23 @@
 #endif
 
 !     SAL option: scale gravity
-      if(iloadtide==2) then
+      if(iloadtide==2) then !simple const
         grav2=grav*0.9d0
-      else
+      else if(iloadtide==3) then !Stepanov & Hughes (2004)
+        do i=1,npa
+          dp1=max(dp(i),0.d0)
+          tmp1=sqrt(dp1)
+          beta_bar=-9.8169d-3+1.8289d-3*tmp1+4.3787d-4*dp1-2.9042d-5*dp1*tmp1+ &
+     &6.6038d-7*dp1*dp1-4.7393d-9*dp1*dp1*tmp1-1.9354d-11*dp1*dp1*dp1+ &
+     &2.6969d-13*dp1*dp1*dp1*tmp1
+          beta_bar=max(0.d0,min(0.12d0,beta_bar))
+          
+          !Debug
+          !if(it==iths_main+1) write(12,*)'SAL beta=',i,dp(i),beta_bar
+
+          grav2(i)=grav*(1.d0-beta_bar) !0.9d0
+        enddo !i
+      else !iloadtide=0,1
         grav2=grav
       endif
 
@@ -1725,7 +1739,7 @@
           if(idry(i)==1) cycle
 !         Wet node
           htot=max(hmin_man,dp(i)+eta2(i)) !>0
-          Cdp(i)=grav*rmanning(i)*rmanning(i)/htot**0.333d0
+          Cdp(i)=grav2(i)*rmanning(i)*rmanning(i)/htot**0.333d0
 #ifdef USE_SED2D
           if(idrag_sed2d<-1) then
             Cdp(i)=Cdsed(i)
@@ -4647,7 +4661,7 @@
       if(ibc==0) then
 !$OMP parallel default(shared) private(i,swild,swild2,swild10,j,ie,eta_min,zmax,ibot_fl, &
 !$OMP tmp0,tmp1,k,n1,n2,xn1,xn2,yn1,yn2,tmp,alow,bdia,cupp,xctr2,yctr2,icount,x10,x20, &
-!$OMP y10,y20,rl10,rl20,bb1,bb2,delta,sintheta,gam,gam2,ibelow)
+!$OMP y10,y20,rl10,rl20,bb1,bb2,delta,sintheta,gam,gam2,ibelow,grav3)
 
 !       Prepare cubic spline (2nd derivative stored in hp_int temporarily)
 !$OMP   workshare
@@ -4851,8 +4865,9 @@
 !         ramp-up factor included
 !         In ll if ics=2 
           bcc(1:2,nvrt,i)=0.d0
+          grav3=(grav2(isidenode(1,i))+grav2(isidenode(2,i)))*0.5d0
           do k=nvrt-1,kbs(i),-1
-            bcc(1:2,k,i)=bcc(1:2,k+1,i)-rampbc*grav/rho0*(zs(k+1,i)-zs(k,i))*swild2(k+1,1:2)
+            bcc(1:2,k,i)=bcc(1:2,k+1,i)-rampbc*grav3/rho0*(zs(k+1,i)-zs(k,i))*swild2(k+1,1:2)
           enddo !k
         enddo !i=1,ns
 !$OMP   end do
@@ -4888,7 +4903,7 @@
 !$OMP detpdy,chigamma,ubstar,vbstar,h_bar,bigf1,bigf2,botf1,botf2,big_ubstar,big_vbstar, &
 !$OMP av_df,j,nd,isd,htot,cff1,cff2,tmp1,tmp2,k,rs1,rs2,swild10,horx,hory,swild2,swild, &
 !$OMP itmp1,tmpx1,tmpx2,tmpy1,tmpy2,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi,cff3, &
-!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2) 
+!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3) 
       do i=1,nea
         ghat1(1,i)=0.d0 !init
         ghat1(2,i)=0.d0
@@ -5077,10 +5092,9 @@
         ghat1(2,i)=ghat1(2,i)/real(i34(i),rkind)
       
         !Finish off terms in F, F^\alpha and f_b
-        botf1=grav2*detpdx-dprdx/rho0 !const in each elem
-        botf2=grav2*detpdy-dprdy/rho0
-        !botf1=0.69d0*grav2*detpdx-dprdx/rho0 !const in each elem
-        !botf2=0.69d0*grav2*detpdy-dprdy/rho0
+        grav3=sum(grav2(elnode(1:i34(i),i)))/dble(i34(i))
+        botf1=grav3*detpdx-dprdx/rho0 !const in each elem
+        botf2=grav3*detpdy-dprdy/rho0
         tmp1=0.d0; tmp2=0.d0 !elem average of all terms; into ghat1
         do j=1,i34(i) !side
           isd=elside(j,i)
@@ -5124,11 +5138,11 @@
 
           swild(1:2)=0.d0 !\in F [m^2/s/s]
           do k=kbe(i)+1,nvrt
-            swild(1:2)=swild(1:2)-grav/rho0*(ze(k,i)-ze(k-1,i))/2.d0* &
+            swild(1:2)=swild(1:2)-grav3/rho0*(ze(k,i)-ze(k-1,i))/2.d0* &
      &(2.d0*swild2(k,1:2)+dr_dxy(1:2,k,i)*(ze(k,i)-ze(k-1,i)))
           enddo !k
-          botf1=-grav/rho0*swild2(kbe(i)+1,1) ![m/s/s]; elem average
-          botf2=-grav/rho0*swild2(kbe(i)+1,2)
+          botf1=-grav3/rho0*swild2(kbe(i)+1,1) ![m/s/s]; elem average
+          botf2=-grav3/rho0*swild2(kbe(i)+1,2)
           bigfa1=av_df*swild(1) !approx
           bigfa2=av_df*swild(2)
           ghat1(1,i)=ghat1(1,i)+rampbc*dt*av_cff1*swild(1)-rampbc*dt*dt*av_cff2_chi*botf1-av_cff3*bigfa1
@@ -5158,7 +5172,7 @@
 !$OMP parallel default(shared) private(i,j,ie,id,hhatb,id2,id3,dot1,dot2,dot3, &
 !$OMP tmp0,swild,jj,nd,indx,m,l,swild10,isd,swild2,fac,dep,ubed,vbed,wbed,dpdx,dpdy, &
 !$OMP vnorm,detadx,detady,tmp,sum1,sum2,nj,ind,bigvn,k,vn1,vn2,ri3,con0,etam,tmp2, &
-!$OMP Unbar,lim,jblock,jface,ss,htot,beta_bar)
+!$OMP Unbar,lim,jblock,jface,ss,htot,beta_bar,grav3)
 
 !$OMP do 
       do i=1,np !resident only
@@ -5175,6 +5189,8 @@
           if(ihydraulics/=0.and.nhtblocks>0) then
             if(isblock_el(ie)>0) cycle !active block
           endif
+
+          grav3=sum(grav2(elnode(1:i34(ie),ie)))/dble(i34(ie))
 
 !	  I_1
           !\bar{\breve{H}} in notes
@@ -5198,9 +5214,9 @@
             dot2=(xel(id3,ie)-xel(id2,ie))*(xel(id,ie)-xel(id3,ie))+ &
      &           (yel(id3,ie)-yel(id2,ie))*(yel(id,ie)-yel(id3,ie))
             dot3=-dot1-dot2
-            tmp0=area(ie)/6.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot1
-            swild(1)=area(ie)/12.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot2 !for node (i,1)
-            swild(2)=area(ie)/12.d0+grav2*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot3 !for node (i,2)
+            tmp0=area(ie)/6.d0+grav3*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot1
+            swild(1)=area(ie)/12.d0+grav3*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot2 !for node (i,1)
+            swild(2)=area(ie)/12.d0+grav3*thetai*thetai*dt*dt/4.d0/area(ie)*hhatb*dot3 !for node (i,2)
             sparsem(0,i)=sparsem(0,i)+tmp0
 
             do jj=1,2 !other 2 nodes
@@ -5236,7 +5252,7 @@
               swild10(1,l)=quad_int(1,ie,id,l)
               swild10(2,l)=quad_int(2,ie,id,l)
 
-              sparsem(indx,i)=sparsem(indx,i)+swild10(1,l)+grav2*thetai*thetai*dt*dt* &
+              sparsem(indx,i)=sparsem(indx,i)+swild10(1,l)+grav3*thetai*thetai*dt*dt* &
      &hhatb*swild10(2,l)
 
               !Debug
@@ -5297,7 +5313,7 @@
               detadx=dot_product(eta2(elnode(1:3,ie)),dldxy(1:3,1,ie))
               detady=dot_product(eta2(elnode(1:3,ie)),dldxy(1:3,2,ie))
               tmp=dldxy(id,1,ie)*detadx+dldxy(id,2,ie)*detady
-              qel(i)=qel(i)-area(ie)*grav2*dt*dt*thetai*(1.d0-thetai)*hhatb*tmp
+              qel(i)=qel(i)-area(ie)*grav3*dt*dt*thetai*(1.d0-thetai)*hhatb*tmp
             endif !idry
 
           else !quad
@@ -5308,7 +5324,7 @@
               else
                 tmp2=bdef2(nd)-bdef1(nd)
               endif !imm 
-              qel(i)=qel(i)+(eta2(nd)+tmp2)*swild10(1,l)-eta2(nd)*grav2*thetai*(1.d0-thetai)*dt*dt*hhatb*swild10(2,l)
+              qel(i)=qel(i)+(eta2(nd)+tmp2)*swild10(1,l)-eta2(nd)*grav3*thetai*(1.d0-thetai)*dt*dt*hhatb*swild10(2,l)
             enddo !l
           endif !i34       
 
@@ -5785,8 +5801,9 @@
       swild98(1,:,:)=su2(:,:)
       swild98(2,:,:)=sv2(:,:)
       ! Storing the barotropic gradient for outputting purpose		  
-      bpgr(:,1) = -grav2*(1-thetai)*deta1_dx(:)-grav2*thetai*deta2_dx(:)
-      bpgr(:,2) = -grav2*(1-thetai)*deta1_dy(:)-grav2*thetai*deta2_dy(:)
+      !Error: grav
+      bpgr(:,1) = -grav*(1-thetai)*deta1_dx(:)-grav*thetai*deta2_dx(:)
+      bpgr(:,2) = -grav*(1-thetai)*deta1_dy(:)-grav*thetai*deta2_dy(:)
 !$OMP end workshare
 
 !...  Along each side
@@ -5809,6 +5826,8 @@
 !       ll frame at side
 !        swild10(1:3,1:3)=(pframe(:,:,node1)+pframe(:,:,node2))/2
 
+        grav3=(grav2(node1)+grav2(node2))*0.5d0
+
         if(nvrt==kbs(j)+1) then !2D
 !-------------------------------------------------------------------------------------
           !Warning: don't use eta2 which is updated
@@ -5822,11 +5841,11 @@
           tauy2=(tau(2,node1)+tau(2,node2))/2.d0
 
           !hat_gam_[xy] has a dimension of m/s
-          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav2*detp_dx(j)+ &
-          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav2*detp_dx(j)+ &
-     &bcc(1,kbs(j),j)+taux2/htot)-grav2*(1-thetai)*dt*deta1_dx(j)-grav2*thetai*dt*deta2_dx(j)
-          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav2*detp_dy(j)+ &
-     &bcc(2,kbs(j),j)+tauy2/htot)-grav2*(1-thetai)*dt*deta1_dy(j)-grav2*thetai*dt*deta2_dy(j)
+          !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav3*detp_dx(j)+ &
+          hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+grav3*detp_dx(j)+ &
+     &bcc(1,kbs(j),j)+taux2/htot)-grav3*(1-thetai)*dt*deta1_dx(j)-grav3*thetai*dt*deta2_dx(j)
+          hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav3*detp_dy(j)+ &
+     &bcc(2,kbs(j),j)+tauy2/htot)-grav3*(1-thetai)*dt*deta1_dy(j)-grav3*thetai*dt*deta2_dy(j)
 !         Radiation stress
 #ifdef USE_WWM
           !wwave_force in eframe
@@ -5912,16 +5931,16 @@
           rrhs(2,kin)=0.d0
 !	  Elevation gradient, atmo. pressure and tidal potential
           if(k<nvrt) then
-            rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav2*thetai*deta2_dx(j)+ &
-                       &grav2*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav2*detp_dx(j))
-            rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav2*thetai*deta2_dy(j)+ &
-                       &grav2*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav2*detp_dy(j))
+            rrhs(1,kin)=rrhs(1,kin)-dzz(k+1)/2.d0*dt*(grav3*thetai*deta2_dx(j)+ &
+                       &grav3*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav3*detp_dx(j))
+            rrhs(2,kin)=rrhs(2,kin)-dzz(k+1)/2.d0*dt*(grav3*thetai*deta2_dy(j)+ &
+                       &grav3*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav3*detp_dy(j))
           endif
           if(k>kbs(j)+1) then 
-            rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav2*thetai*deta2_dx(j)+ &
-                       &grav2*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav2*detp_dx(j))
-            rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav2*thetai*deta2_dy(j)+ &
-                       &grav2*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav2*detp_dy(j))
+            rrhs(1,kin)=rrhs(1,kin)-dzz(k)/2.d0*dt*(grav3*thetai*deta2_dx(j)+ &
+                       &grav3*(1.d0-thetai)*deta1_dx(j)+dpr_dx(j)/rho0-grav3*detp_dx(j))
+            rrhs(2,kin)=rrhs(2,kin)-dzz(k)/2.d0*dt*(grav3*thetai*deta2_dy(j)+ &
+                       &grav3*(1.d0-thetai)*deta1_dy(j)+dpr_dy(j)/rho0-grav3*detp_dy(j))
           endif
 
 !	  Coriolis, advection, wind stress, and horizontal viscosity
@@ -8764,9 +8783,10 @@
         if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
         if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ANA_tide_pot_grad_x',7,1,nsa,grav2*detp_dx)
+!Error: grav
+     &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
         if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ANA_tide_pot_grad_y',7,1,nsa,grav2*detp_dy)
+     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
         if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
         if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &

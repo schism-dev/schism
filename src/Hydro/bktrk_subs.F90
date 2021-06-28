@@ -1207,13 +1207,13 @@ end subroutine inter_btrack
 !     Check start and end pts
       qsearch_done=.false.
       if(i34(nel)==3) then 
-        call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco)
+        call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco,iflag)
         ar_min1=minval(arco(1:3)) !info for debug only
-        call area_coord(0,nel,gcor0,frame0,xt,yt,arco)
+        call area_coord(0,nel,gcor0,frame0,xt,yt,arco,iflag)
         ar_min2=minval(arco(1:3))
         if(ar_min2>-small1) then !found & finish
           !Fix A.C. for 0/negative
-          if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco)
+          if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco,iflag)
           nnel=nel
           trm=0._rkind
 !          go to 400
@@ -1230,9 +1230,9 @@ end subroutine inter_btrack
           call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
-        call quad_shape(0,1,nel,xn1,yn1,inside1,arco) !info only
+        call quad_shape(0,1,nel,xn1,yn1,inside1,arco,iflag) !info only
         ar_min1=minval(arco) !info for debug only
-        call quad_shape(0,2,nel,xn2,yn2,inside2,arco)
+        call quad_shape(0,2,nel,xn2,yn2,inside2,arco,iflag)
         ar_min2=minval(arco)
         if(inside2/=0) then !found & finish
           nnel=nel
@@ -1316,9 +1316,9 @@ end subroutine inter_btrack
             ycg=(1._rkind-eps)*ycg+eps*ytmp
 
             if(i34(nel)==3) then
-              call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco)
+              call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco,lit)
             else
-              if(ics==1) call quad_shape(0,3,nel,xcg,ycg,inside1,arco)
+              if(ics==1) call quad_shape(0,3,nel,xcg,ycg,inside1,arco,lit)
             endif !i34
             ar_min1=minval(arco(1:i34(nel))) !info for debug only (undefined if ics=2 and quads)
           else !i=2; out of luck
@@ -1379,7 +1379,7 @@ end subroutine inter_btrack
 !        call parallel_abort(errmsg)
 
         if(i34(nel)==3) then
-          call area_coord(1,nel,gcor0,frame0,xt,yt,arco) !'1' - fix A.C.
+          call area_coord(1,nel,gcor0,frame0,xt,yt,arco,lit) !'1' - fix A.C.
         else
           !Reproject pt in eframe of nel for ics=2
           if(ics==1) then
@@ -1389,8 +1389,7 @@ end subroutine inter_btrack
             call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
           endif !ics
 
-          !call quad_shape(1,4,nel,xt,yt,inside2,arco)
-          call quad_shape(1,4,nel,xn2,yn2,inside2,arco)
+          call quad_shape(1,4,nel,xn2,yn2,inside2,arco,lit)
         endif
         nnel=nel
         trm=0._rkind
@@ -1487,7 +1486,7 @@ end subroutine inter_btrack
 !      ar_min1=minval(wild(1:3,1))/area(nel)
 
       if(i34(nel)==3) then
-        call area_coord(0,nel,gcor0,frame0,xt,yt,arco)
+        call area_coord(0,nel,gcor0,frame0,xt,yt,arco,iflag)
         ar_min1=minval(arco(1:3))
 !        if(ar_min1==0) then
 !          write(errmsg,*)'QUICKSEARCH impossible(2):',idx,itr,l_ns,ipsgb, &
@@ -1497,7 +1496,7 @@ end subroutine inter_btrack
 
         if(ar_min1>-small1) then
           !arco will be fixed immediately outside loop4
-          !if(ar_min1<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco) !Fix
+          !if(ar_min1<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco,iflag) !Fix
           nnel=nel
           trm=0._rkind
           exit loop4
@@ -1511,12 +1510,11 @@ end subroutine inter_btrack
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
 
-        !call quad_shape(0,5,nel,xt,yt,inside2,arco)
-        call quad_shape(0,5,nel,xn2,yn2,inside2,arco)
+        call quad_shape(0,5,nel,xn2,yn2,inside2,arco,iflag)
         ar_min1=minval(arco(1:4))
         if(inside2/=0) then
           !arco will be fixed immediately outside loop4
-          !call quad_shape(1,?,nel,xt,yt,inside2,arco) !force the pt inside
+          !call quad_shape(1,?,nel,xt,yt,inside2,arco,iflag) !force the pt inside
           nnel=nel
           trm=0._rkind
           exit loop4
@@ -1589,7 +1587,7 @@ end subroutine inter_btrack
 
 !     Compute area & sigma coord.
       if(i34(nnel)==3) then
-        call area_coord(1,nnel,gcor0,frame0,xt,yt,arco)
+        call area_coord(1,nnel,gcor0,frame0,xt,yt,arco,iflag)
       else
         !Reproject pt in eframe of nel for ics=2
         if(ics==1) then
@@ -1599,8 +1597,7 @@ end subroutine inter_btrack
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nnel),yctr(nnel),zctr(nnel)/),eframe(:,:,nnel),xn2,yn2,zn2)
         endif !ics
 
-        !call quad_shape(1,6,nnel,xt,yt,inside2,arco)
-        call quad_shape(1,6,nnel,xn2,yn2,inside2,arco)
+        call quad_shape(1,6,nnel,xn2,yn2,inside2,arco,iflag)
       endif !i34
 
 !     Local z-coord.

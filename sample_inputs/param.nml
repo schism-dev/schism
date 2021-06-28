@@ -60,15 +60,18 @@
 
 !-----------------------------------------------------------------------
 ! Option to add self-attrection loading tide (SAL) into tidal potential 
-! (usually for large-scale model). 
+! (usually for basin-scale model). 
+! If iloadtide=0, no SAL.
 ! If iloadtide=1, needs inputs: loadtide_[FREQ].gr3, 
 ! where [FREQ] are freq names (shared with tidal potential, in upper cases) 
 ! and the _two_ 'depths' inside are amplitude (m) and phases (degrees behind GMT), 
 ! interpolated from global tide model (e.g. FES2014). In this option, SAL is 
 ! lumped into tidal potential so it shares some parameters with tidal potential 
 ! in bctides.in (cut-off depth, frequencies).
-! If iloadtide=2, use a simple scaling for gravity approach (in this option,
+! If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
 ! SAL is applied everywhere and does not share parameters with tidal potential).
+! For iloadtide=2, a const scaling (0.1) is used; for iloadtide=3, the scaling is 
+! dependent on depth (Stepanov & Hughes 2004).
 !-----------------------------------------------------------------------
   iloadtide = 0
 
