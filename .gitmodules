@@ -1,3 +1,0 @@
-[submodule "thirdparty/schism-esmf"]
-	path = thirdparty/schism-esmf
-	url = https://github.com/schism-dev/schism-esmf
