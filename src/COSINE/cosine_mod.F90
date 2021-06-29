@@ -48,7 +48,7 @@ module cosine_mod
   real(rkind),save,allocatable,dimension(:,:) :: SPM
   
   !link SCHISM to CoSiNE
-  real(rkind),save,allocatable :: bio(:,:),bio0(:,:),qcos(:),sqcos(:,:)
+  real(rkind),save,allocatable :: bcos(:,:) 
 
   !for daily mean of S2,Z1,DN,Z2
   integer,save,allocatable :: nstep(:,:)
@@ -84,7 +84,6 @@ module cosine_mod
   real(rkind),save,allocatable :: psedS2(:),rsedS2(:),rsedS2m(:)
   real(rkind),save,allocatable :: psedDN(:),rsedDN(:),rsedDNm(:)
   real(rkind),save,allocatable :: psedDSi(:),rsedDSi(:),rsedDSim(:)
-
 
 end module cosine_mod
 
