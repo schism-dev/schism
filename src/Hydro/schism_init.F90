@@ -3454,13 +3454,23 @@
 !       Find parent elements and initialize outputs
         iep_sta=0 !flag for no-parent
         do i=1,ne
+          !Max side length
+          edge_max=maxval(distj(elside(1:i34(i),i)))
           do l=1,nout_sta
             if(iep_sta(l)/=0) cycle
+
+            !Estimate if the pt is far away from the local frame (ics=2); init as false
+            ltmp=.false.
 
             if(ics==1) then
               xstal=xsta(l)
               ystal=ysta(l)
             else !to eframe
+              !Distance
+              tmp1=sqrt((xsta(l)-xctr(i))**2+(ysta(l)-yctr(i))**2+(zsta(l)-zctr(i))**2)
+              !Estimate if the pt is far away from the local frame
+              if(tmp1>10.d0*edge_max) ltmp=.true.  !far away
+
               call project_pt('g2l',xsta(l),ysta(l),zsta(l), &
      &(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,tmp)
             endif
@@ -3468,14 +3478,19 @@
             if(i34(i)==3) then
               call area_coord(0,i,(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,arco_sta(l,1:3))
               tmp=minval(arco_sta(l,1:3))
-              if(tmp>-small2) then
+              if(tmp>-small2.and..not.ltmp) then
                 iep_sta(l)=i
                 if(tmp<0) call area_coord(1,i,(/xctr(i),yctr(i),zctr(i)/), &
      &eframe(:,:,i),xstal,ystal,arco_sta(l,1:3)) !fix A.C.
+
+
+                !Debug
+                write(12,*)'Found station:',l,' in elem ',ielg(i),'; area coord=',arco_sta(l,1:3)
+
               endif
             else !quad
               call quad_shape(0,0,i,xstal,ystal,itmp,arco_sta(l,1:4)) !arco_sta are 4 shape functions
-              if(itmp/=0) iep_sta(l)=i
+              if(itmp/=0.and..not.ltmp) iep_sta(l)=i
             endif !i34
           enddo !l; build pts
 
