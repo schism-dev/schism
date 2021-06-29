@@ -1982,6 +1982,10 @@
       enddo !i
 #endif
 
+#if USE_COSINE
+      iwsett(irange_tr(1,8):irange_tr(2,8))=1
+#endif
+
 #ifdef USE_MARSH
 !...  Inputs for marsh migration model
       open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
