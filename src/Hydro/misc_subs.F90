@@ -4042,6 +4042,8 @@
 !     Compute area coordinates for a given pt w.r.t. to a triangular element
 !     If ifl=1, will fix 0 or negative area coord. (assuming it's not too negative)
 !     and in this case, the pt will be nudged into the element
+!     It's not reliable to use the area coord for ics=2 when the pt is far away
+!     from the local frame, so use additional check.
 !===============================================================================
       subroutine area_coord(ifl,nnel,gcor0,frame0,xt,yt,arco)
       use schism_glbl
@@ -4285,6 +4287,8 @@
 !     if ifl=1, assume the pt is reasonably inside quad, and compute
 !     shape functions and nudge the original pt into quad.
 !     If ics=2, (x,y) is assumed to be in elem. frame of ie.
+!     Note that 'inside' not reliable for ics=2 when the pt is far away
+!     from the local frame, so use additional check.
 !===============================================================================
       subroutine quad_shape(ifl,itag,ie,x,y,inside,shapef)
       use schism_glbl, only : rkind,errmsg,ics,ielg,area,xel,yel,eframe,i34, &

@@ -3459,7 +3459,8 @@
           do l=1,nout_sta
             if(iep_sta(l)/=0) cycle
 
-            !Estimate if the pt is far away from the local frame (ics=2); init as false
+            !Estimate if the pt is far away from the local frame (ics=2) b/c the area coord/local proj
+            ! below are not reliable in this case. Init as false
             ltmp=.false.
 
             if(ics==1) then
@@ -3483,9 +3484,8 @@
                 if(tmp<0) call area_coord(1,i,(/xctr(i),yctr(i),zctr(i)/), &
      &eframe(:,:,i),xstal,ystal,arco_sta(l,1:3)) !fix A.C.
 
-
                 !Debug
-                write(12,*)'Found station:',l,' in elem ',ielg(i),'; area coord=',arco_sta(l,1:3)
+                !write(12,*)'Found station:',l,' in elem ',ielg(i),'; area coord=',arco_sta(l,1:3)
 
               endif
             else !quad
