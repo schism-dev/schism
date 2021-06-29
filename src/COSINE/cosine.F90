@@ -57,7 +57,6 @@ subroutine cosine(it)
   !Arrays
   real(rkind) :: qcos(13),sLight(1:nvrt+1),sedinflx(nsed)
   real(rkind),dimension(nvrt) :: zr,dep
-  real(rkind),dimension(nea)  :: srflx,uwind,vwind
 
   !dtw is the time step used in COSINE model,unit in 1/day
   time=it*dt; daynum=int(d2s/dt); dtw=dt/d2s

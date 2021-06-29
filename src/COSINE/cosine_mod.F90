@@ -13,7 +13,7 @@ module cosine_mod
   !------------------------------------------------------------------
  
   !-------------switches and marco parameters------------------------------------
-  integer, save :: niter,nspool_cosine,ndelay
+  integer, save :: nspool_cosine,ndelay
   integer, save :: idelay,ibgraze,idapt,iz2graze,iout_cosine,ico2s,ispm,icheck
   integer, save :: ised,iws,iclam
 

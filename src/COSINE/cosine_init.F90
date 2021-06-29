@@ -46,7 +46,7 @@ subroutine read_cosine_param
  &in_dir,out_dir,len_in_dir,len_out_dir,ihot
   use schism_msgp, only : myrank,parallel_abort
   use misc_modules,only : get_param
-  use cosine_misc, only : get_param_1D
+  use cosine_misc, only : get_param_1D,read_gr3_prop
   use cosine_mod
   implicit none
 
@@ -55,9 +55,9 @@ subroutine read_cosine_param
   real(rkind) :: xtmp,ytmp,tSPM,tSPMs(npa),rtmp,rtmp1(1),rtmp2(1,1)
   integer :: tnclam,nclams(npa)
   character(len=2) :: stmp
+  character(len=100) :: snum 
 
   !read switches and macro parameters
-  call get_param('cosine.in','niter',1,niter,rtmp,stmp)
   call get_param('cosine.in','idelay',1,idelay,rtmp,stmp)
   if(idelay==1) call get_param('cosine.in','ndelay',1,ndelay,rtmp,stmp)
   call get_param('cosine.in','ibgraze',1,ibgraze,rtmp,stmp)
@@ -277,11 +277,16 @@ subroutine read_cosine_param
       rsedm(m)=rsedDSim(i)
     enddo
 
-    !initialize
-    !ZG, include sedcon, sedrate in hotstart.in
+    !initialize sediment variables
+    !todo, include sedcon, sedrate in hotstart.in; update to sediment flux model
     sedcon=0.d0; sedrate=0.d0
-    if(ihot==0) then
-      sedcon(1,:)=1; sedcon(2,:)=100; sedcon(3,:)=1; sedcon(4,:)=100; sedcon(5,:)=10
+    !sedcon(1,:)=1; sedcon(2,:)=100; sedcon(3,:)=1; sedcon(4,:)=100; sedcon(5,:)=10
+    if(ihot==0) then !temporary fix, need to update
+      do i=1,nsed
+        write(snum,*)i
+        call read_gr3_prop('sedcon_'//trim(adjustl(snum)),-999.d0,sedcon(i,:),nea)
+        call read_gr3_prop('sedrate_'//trim(adjustl(snum)),-999.d0,sedrate(i,:),nea)
+      enddo
     endif!
   endif !ised
  
@@ -392,7 +397,6 @@ subroutine check_cosine_param
 
     write(31,*)
     write(31,*)'!------switches and macro parameters-----'
-    write(31,'(a10,i5)')'niter = ',niter
     write(31,'(a10,i5)')'idelay = ',idelay
     write(31,'(a10,i5)')'ibgraze = ',ibgraze
     write(31,'(a10,i5)')'idapt = ',idapt

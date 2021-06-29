@@ -51,6 +51,89 @@ contains
    
      return
    end subroutine get_param_1D
+   
+   subroutine read_gr3_prop(varname,varin,varout,ndim)
+   !---------------------------------------------------------------------
+   !funciton to automatically read spatially varying values (*.gr3 or *.prop)
+   !Input:
+   !    varname: parameter name
+   !    varin:   parameter value
+   !    varout:  variable to store the parameter value (element or node based)
+   !    ndim:    dimension of varout (nea or npa)
+   !Output:
+   !    1). varin=-999:  read values in "varname.gr3", and assign to varout
+   !    2). varin=-9999: read values in "varname.prop", and assign to varout
+   !    3). varin=other const: assign const value (varin) to  varout
+   !---------------------------------------------------------------------
+     use schism_glbl,only : rkind,nea,npa,np_global,ne_global,in_dir,len_in_dir,&
+                          & i34,elnode,ipgl,iegl,nne
+     use schism_msgp, only : myrank,parallel_abort
+     implicit none
+     character(len=*),intent(in) :: varname
+     real(rkind),intent(in) :: varin 
+     integer, intent(in) :: ndim
+     real(rkind),dimension(ndim),intent(out) :: varout
+   
+     !local variables
+     integer :: i,j,k,negb,npgb,ip,ie,nd
+     real(rkind) :: xtmp,ytmp,rtmp
+     real(rkind),dimension(npa) :: pvar
+     real(rkind),dimension(nea) :: evar
+   
+     !read spatailly varying parameter values
+     pvar=0.0; evar=0.0
+     if(int(varin)==-999) then  !*.gr3
+       open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
+       read(31,*); read(31,*)negb,npgb
+       if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
+       do i=1,np_global
+         read(31,*)ip,xtmp,ytmp,rtmp
+         if(ipgl(ip)%rank==myrank) then
+           pvar(ipgl(ip)%id)=rtmp
+         endif
+       enddo
+       close(31)
+   
+       !interp from node to element
+       evar=0.0
+       do i=1,nea
+         do j=1,i34(i)
+           nd=elnode(j,i)
+           evar(i)=evar(i)+pvar(nd)/i34(i)
+         enddo!j
+       enddo!i
+   
+     else if(int(varin)==-9999) then !*.prop
+       open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
+       do i=1,ne_global
+         read(31,*)ie,rtmp
+         if(iegl(ie)%rank==myrank) then
+           evar(iegl(ie)%id)=rtmp
+         endif
+       enddo
+
+       !interp from element to node
+       do i=1,nea
+         do j=1,i34(i)
+           nd=elnode(j,i)
+           pvar(nd)=pvar(nd)+evar(i)/nne(nd)
+         enddo!j
+       enddo!i
+   
+     else !constant value 
+       pvar=varin; evar=varin
+     endif
+
+     !assign parameter values
+     if(ndim==nea) then
+       varout(1:nea)=evar(:)
+     elseif(ndim==npa) then
+       varout(1:npa)=pvar(:)
+     else
+       call parallel_abort('unknown dimenson of variable '//varname)
+     endif
+   
+   end subroutine read_gr3_prop
 
 #endif
 
