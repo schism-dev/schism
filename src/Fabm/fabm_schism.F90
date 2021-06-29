@@ -313,6 +313,7 @@ subroutine fabm_schism_init_model(ntracers)
   if (present(ntracers)) ntracers = fs%nvar
 
   !read parameter from famb.yaml (can put these parameters in other input files, e.g. schism_fabm.in)
+  call fabm_schism_read_param_from_yaml('fpar',2,tmp_int,fs%par_fraction)
   call fabm_schism_read_param_from_yaml('ispm',1,fs%params%ispm,tmp_real)
   call fabm_schism_read_param_from_yaml('spm0',2,tmp_int,fs%params%spm0)
   if(fs%params%ispm==2) then !spm from SED3D model
