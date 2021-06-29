@@ -489,6 +489,8 @@ git versions:
                               (c/o Charles Seaton);
 (123) 5e87c24 (June 9, 2021): more changes in interpolate_depth_structured2* to extrap also into right/upper sides.
 (124) 843c40f (19 June, 2021): fixed a bug in ptrack3 (pt_in_poly3; c/o Jilian Xiong) that affects quads;
+(124) b2cf92b (29 June, 2021): fixed a bug in station outputs in basin scale cases ics=2 (local proj is not accurate
+                               if the station is far away from the local frame);
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
