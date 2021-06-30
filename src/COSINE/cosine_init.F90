@@ -2,8 +2,6 @@
 !cosine_init: allocate and initilize variables
 !read_cosine_param: read cosine parameters
 !read_cosine_stainfo: read info. for station outputs
-!check_cosine_param: output cosine parameters for check
-!pt_in_poly: determine if point is in a polygon
 
 subroutine cosine_init
 !---------------------------------------------------------------------------
@@ -20,7 +18,7 @@ subroutine cosine_init
   !allocate 
   allocate( NO3(nvrt),NH4(nvrt),SiO4(nvrt),S1(nvrt),S2(nvrt),Z1(nvrt),Z2(nvrt),&
           & DN(nvrt),DSi(nvrt),PO4(nvrt),DOX(nvrt),CO2(nvrt),ALK(nvrt),temp(nvrt),&
-          & salt(nvrt),bgraze(nea),SPM(nvrt,nea),bcos(nvrt,ntrc),& !bio0(nvrt,ntrc),qcos(ntrc),sqcos(nvrt,ntrc),&
+          & salt(nvrt),bgraze(nea),SPM(nvrt,nea),bcos(nvrt,ntrc),& 
           & mS2(ndelay,nvrt,nea),mDN(ndelay,nvrt,nea),mZ1(ndelay,nvrt,nea),mZ2(ndelay,nvrt,nea),&
           & sS2(nvrt,nea),sDN(nvrt,nea),sZ1(nvrt,nea),sZ2(nvrt,nea),nstep(nvrt,nea), &
           & nclam(nea), stat=istat) 
@@ -33,6 +31,7 @@ subroutine cosine_init
   mS2=0.0;  mDN=0.0; mZ1=0.0;  mZ2=0.0; 
   sS2=0.0;  sDN=0.0; sZ1=0.0;  sZ2=0.0; nstep=0
   nclam=0;
+
   !read cosine parameters
   call read_cosine_param
    
@@ -45,116 +44,66 @@ subroutine read_cosine_param
   use schism_glbl, only : rkind,npa,nea,ne_global,np_global,ipgl,iegl,elnode,i34, &
  &in_dir,out_dir,len_in_dir,len_out_dir,ihot
   use schism_msgp, only : myrank,parallel_abort
-  use misc_modules,only : get_param
-  use cosine_misc, only : get_param_1D,read_gr3_prop
+  use cosine_misc, only : read_gr3_prop
   use cosine_mod
   implicit none
 
   !local variables
   integer :: i,j,k,m,negb,npgb,nd,itmp,itmp1(1),itmp2(1,1),istat
-  real(rkind) :: xtmp,ytmp,tSPM,tSPMs(npa),rtmp,rtmp1(1),rtmp2(1,1)
-  integer :: tnclam,nclams(npa)
+  real(rkind) :: xtmp,ytmp,tSPM,tSPMs(npa),rtmp,rtmp1(1),rtmp2(1,1) 
+  integer :: tnclam !,nclams(npa)
   character(len=2) :: stmp
   character(len=100) :: snum 
 
-  !read switches and macro parameters
-  call get_param('cosine.in','idelay',1,idelay,rtmp,stmp)
-  if(idelay==1) call get_param('cosine.in','ndelay',1,ndelay,rtmp,stmp)
-  call get_param('cosine.in','ibgraze',1,ibgraze,rtmp,stmp)
-  call get_param('cosine.in','idapt',1,idapt,rtmp,stmp)
-  call get_param('cosine.in','iz2graze',1,iz2graze,rtmp,stmp)
-  call get_param('cosine.in','iout_cosine',1,iout_cosine,rtmp,stmp)
-  call get_param('cosine.in','nspool_cosine',1,nspool_cosine,rtmp,stmp)
-  call get_param('cosine.in','ico2s',1,ico2s,rtmp,stmp)
-  call get_param('cosine.in','ispm',1,ispm,rtmp,stmp)
-  if(ispm==0) then
-    call get_param('cosine.in','spm0',2,itmp,spm0,stmp)
+  !define namelist
+  namelist /MARCO/ idelay,ndelay,ibgraze,idapt,alpha_corr,zeptic,iz2graze,&
+          & iout_cosine,nspool_cosine,ico2s,ispm,spm0,ised,nsedS2,nsedDN,nsedDSi
+  namelist /CORE/ gmaxs1,gmaxs2,pis1,pis2,kno3s1,knh4s1,kpo4s1,kco2s1,kno3s2,&
+          & knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1,alpha2,beta,ak1,ak2,&
+          & ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1,rho2,rho3,gamma1,&
+          & gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
+          & kox,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a
+  namelist /MISC/ iws,NO3c,ws1,ws2,iclam,deltaZ,kcex,Nperclam,Wclam,Fclam,&
+          & nclam0,nsedS2,psedS2,rsedS2,rsedS2m,nsedDN,psedDN,rsedDN,rsedDNm,&
+          & nsedDSi,psedDSi,rsedDSi,rsedDSim
+
+  !initialize parameter values
+  idelay=0; ndelay=7; ibgraze=0; idapt=0; alpha_corr=1.25; zeptic=10.0; iz2graze=1
+  iout_cosine=0; nspool_cosine=60; ico2s=0; ispm=0; spm0=20.0; ised=1; nsedS2=2; 
+  nsedDN=2; nsedDSi=1; gmaxs1=3.0; gmaxs2=2.5; pis1=1.5; pis2=1.5; kno3s1=1.0; 
+  knh4s1=0.15; kpo4s1=0.1; kco2s1=50.0; kno3s2=3.0; knh4s2=0.45; kpo4s2=0.1;
+  kco2s2=50.0; ksio4s2=4.5; kns1=0.0; kns2=0.0; alpha1=0.1; alpha2=0.1; beta=0.0; 
+  ak1=0.75; ak2=0.03; ak3=0.066; gammas1=0.5; gammas2=0.3; beta1=0.75; beta2=0.5; 
+  kgz1=0.5; kgz2=0.25; rho1=0.6; rho2=0.3; rho3=0.1; gamma1=0.75; gamma2=0.75; 
+  gammaz=0.05; kex1=0.2; kex2=0.3; wss2=0.25; wsdn=0.5; wsdsi=0.5; si2n=1.2; p2n=0.0625; 
+  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; kmdn1=0.009; kmdn2=0.075; kmdsi1=0.0114; 
+  kmdsi2=0.015; gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
+  iclam=0; deltaZ=1.0; kcex=0.002; Nperclam=0.39032; Wclam=5.45e-3; Fclam=40.0; 
+  nclam0=2000; psedS2=0.0; rsedS2=0.0; rsedS2m=0.1; psedDN=0.0; rsedDN=0.0; rsedDNm=0.1 
+  psedDSi=0.0; rsedDSi=4e-3; rsedDSim=0.1
+
+  !read parameter values
+  open(31,file=in_dir(1:len_in_dir)//'cosine.nml',delim='apostrophe',status='old')
+  read(31,nml=MARCO); read(31,nml=CORE)
+  
+  !allocate sediment variables
+  if(ised==1) then
+    nsed=nsedS2+nsedDN+nsedDSi
+    allocate(psedS2(nsedS2),rsedS2(nsedS2),rsedS2m(nsedS2),psedDN(nsedDN), &
+          & rsedDN(nsedDN),rsedDNm(nsedDN),psedDSi(nsedDSi),rsedDSi(nsedDSi), &
+          & rsedDSim(nsedDSi),rsed(nsed),rsedm(nsed),sedcon(nsed,nea),  &
+          & sedrate(nsed,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. psedDN')
   endif
-  call get_param('cosine.in','icheck',1,icheck,rtmp,stmp)
-  call get_param('cosine.in','ised',1,ised,rtmp,stmp)
-  call get_param('cosine.in','iws',1,iws,rtmp,stmp)
-  if(iws/=0) then
-    call get_param('cosine.in','NO3c',2,itmp,NO3c,stmp)
-    call get_param('cosine.in','ws1',2,itmp,ws1,stmp)
-    call get_param('cosine.in','ws2',2,itmp,ws2,stmp)
+
+  read(31,nml=MISC)
+  close(31)
+
+  if(myrank==0) then
+    open(31,file=out_dir(1:len_out_dir)//'cosine.out.nml',status='replace')
+    write(31,nml=MARCO); write(31,nml=CORE); write(31,nml=MISC)
+    close(31)
   endif
-  call get_param('cosine.in','iclam',1,iclam,rtmp,stmp)
-  if(iclam/=0) then
-    call get_param('cosine.in','deltaZ',2,itmp,deltaZ,stmp)
-    call get_param('cosine.in','kcex',2,itmp,kcex,stmp)
-    call get_param('cosine.in','Nperclam',2,itmp,Nperclam,stmp)
-    call get_param('cosine.in','Wclam',2,itmp,Wclam,stmp)
-    call get_param('cosine.in','Fclam',2,itmp,Fclam,stmp)
-    if(iclam==1) then
-      call get_param('cosine.in','nclam0',1,nclam0,rtmp,stmp)
-    endif
-  endif
-
-  !read cosine kinetics parameters
-  !phytoplankton
-  call get_param('cosine.in','gmaxs1',2,itmp,gmaxs1,stmp)
-  call get_param('cosine.in','alpha1',2,itmp,alpha1,stmp)
-  call get_param('cosine.in','pis1',2,itmp,pis1,stmp)
-  call get_param('cosine.in','kno3s1',2,itmp,kno3s1,stmp)
-  call get_param('cosine.in','knh4s1',2,itmp,knh4s1,stmp)
-  call get_param('cosine.in','kpo4s1',2,itmp,kpo4s1,stmp)
-  call get_param('cosine.in','kco2s1',2,itmp,kco2s1,stmp)
-  call get_param('cosine.in','kns1',2,itmp,kns1,stmp)
-  call get_param('cosine.in','gammas1',2,itmp,gammas1,stmp)
-
-  call get_param('cosine.in','gmaxs2',2,itmp,gmaxs2,stmp)
-  call get_param('cosine.in','alpha2',2,itmp,alpha2,stmp)
-  call get_param('cosine.in','pis2',2,itmp,pis2,stmp)
-  call get_param('cosine.in','kno3s2',2,itmp,kno3s2,stmp)
-  call get_param('cosine.in','knh4s2',2,itmp,knh4s2,stmp)
-  call get_param('cosine.in','kpo4s2',2,itmp,kpo4s2,stmp)
-  call get_param('cosine.in','kco2s2',2,itmp,kco2s2,stmp)
-  call get_param('cosine.in','kns2',2,itmp,kns2,stmp)
-  call get_param('cosine.in','gammas2',2,itmp,gammas2,stmp)
-  call get_param('cosine.in','ksio4s2',2,itmp,ksio4s2,stmp)
-
-  call get_param('cosine.in','ak1',2,itmp,ak1,stmp)
-  call get_param('cosine.in','ak2',2,itmp,ak2,stmp)
-  call get_param('cosine.in','ak3',2,itmp,ak3,stmp)
-  call get_param('cosine.in','alpha_corr',2,itmp,alpha_corr,stmp)
-  call get_param('cosine.in','zeptic',2,itmp,zeptic,stmp)
-  call get_param('cosine.in','beta',2,itmp,beta,stmp)
-
-  !zooplankton
-  call get_param('cosine.in','kex1',2,itmp,kex1,stmp)
-  call get_param('cosine.in','gamma1',2,itmp,gamma1,stmp)
-  call get_param('cosine.in','kex2',2,itmp,kex2,stmp)
-  call get_param('cosine.in','gamma2',2,itmp,gamma2,stmp)
-
-  call get_param('cosine.in','beta1',2,itmp,beta1,stmp)
-  call get_param('cosine.in','beta2',2,itmp,beta2,stmp)
-  call get_param('cosine.in','kgz1',2,itmp,kgz1,stmp)
-  call get_param('cosine.in','kgz2',2,itmp,kgz2,stmp)
-  call get_param('cosine.in','rho1',2,itmp,rho1,stmp)
-  call get_param('cosine.in','rho2',2,itmp,rho2,stmp)
-  call get_param('cosine.in','rho3',2,itmp,rho3,stmp)
-
-  call get_param('cosine.in','gammaz',2,itmp,gammaz,stmp)
-
-  !other
-  call get_param('cosine.in','kox',2,itmp,kox,stmp)
-  call get_param('cosine.in','kbmdn',2,itmp,kbmdn,stmp)
-  call get_param('cosine.in','kmdn1',2,itmp,kmdn1,stmp)
-  call get_param('cosine.in','kmdn2',2,itmp,kmdn2,stmp)
-  call get_param('cosine.in','kbmdsi',2,itmp,kbmdsi,stmp)
-  call get_param('cosine.in','kmdsi1',2,itmp,kmdsi1,stmp)
-  call get_param('cosine.in','kmdsi2',2,itmp,kmdsi2,stmp)
-  call get_param('cosine.in','TR',2,itmp,TR,stmp)
-  call get_param('cosine.in','gamman',2,itmp,gamman,stmp)
-  call get_param('cosine.in','pco2a',2,itmp,pco2a,stmp)
-  call get_param('cosine.in','wss2',2,itmp,wss2,stmp)
-  call get_param('cosine.in','wsdn',2,itmp,wsdn,stmp)
-  call get_param('cosine.in','wsdsi',2,itmp,wsdsi,stmp)
-  call get_param('cosine.in','si2n',2,itmp,si2n,stmp)
-  call get_param('cosine.in','p2n',2,itmp,p2n,stmp)
-  call get_param('cosine.in','o2no',2,itmp,o2no,stmp)
-  call get_param('cosine.in','o2nh',2,itmp,o2nh,stmp)
-  call get_param('cosine.in','c2n',2,itmp,c2n,stmp)
 
   !read in station info. 
   if(iout_cosine==1) call read_cosine_stainfo
@@ -162,14 +111,7 @@ subroutine read_cosine_param
   !read bottom grazing information
   if(ibgraze==1) then
     bgraze=0.0
-    open(454,file=in_dir(1:len_in_dir)//'bgraze.prop',status='old')
-    do i=1,ne_global
-      read(454,*)itmp,ytmp
-      if(iegl(itmp)%rank==myrank) then
-        bgraze(iegl(itmp)%id)=ytmp 
-      endif
-    enddo
-    close(454)
+    call read_gr3_prop('bgraze',-9999.d0,bgraze,nea)
   elseif(ibgraze==2) then !temporally and spatially varying inputs
     open(455,file=in_dir(1:len_in_dir)//'bgraze.th',status='old') 
     bgraze=0.0
@@ -183,24 +125,7 @@ subroutine read_cosine_param
   if(iclam==1) then
     nclam=nclam0  
   elseif (iclam==2) then
-    open(452,file=in_dir(1:len_in_dir)//'nclam.gr3',status='old')
-    read(452,*);read(452,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check nclam.gr3')
-    do i=1,np_global
-      read(452,*)itmp,xtmp,ytmp,tnclam
-      if(ipgl(itmp)%rank==myrank) then
-        nclams(ipgl(itmp)%id)=tnclam
-      endif
-    enddo
-    close(452)
-
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        nclam(i)=nclam(i)+nclams(nd)
-      enddo
-      nclam(i)=nclam(i)/i34(i)
-    enddo
+    call read_gr3_prop('nclam',-999.d0,nclam,nea)
   elseif (iclam==3) then
     open(456,file=in_dir(1:len_in_dir)//'nclam.th',status='old') 
     time_cosine(3)=-999.0
@@ -211,23 +136,8 @@ subroutine read_cosine_param
   if(ispm==0) then !constant
     SPM=spm0
   elseif(ispm==1) then !spatial varying
-    open(452,file=in_dir(1:len_in_dir)//'SPM.gr3',status='old')
-    read(452,*); read(452,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check SPM.gr3')
-    do i=1,np_global
-      read(452,*)itmp,xtmp,ytmp,tSPM
-      if(ipgl(itmp)%rank==myrank) then
-        tSPMs(ipgl(itmp)%id)=tSPM
-      endif
-    enddo !i
-    close(452)
-
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        SPM(:,i)=SPM(:,i)+tSPMs(nd)/i34(i)
-      enddo !j
-    enddo !i
+    call read_gr3_prop('SPM',-999.d0,SPM(1,:),nea)
+    do k=2,nvrt; SPM(k,:)=SPM(1,:); enddo
   elseif(ispm==2) then !call SED3D model
 #ifndef USE_SED
     call parallel_abort('ispm=2, need to turn on SED module')
@@ -241,25 +151,6 @@ subroutine read_cosine_param
 
   !read sediment flux model parameters
   if(ised==1) then
-    call get_param('cosine.in','nsedS2',1,nsedS2,rtmp,stmp)
-    call get_param('cosine.in','nsedDN',1,nsedDN,rtmp,stmp)
-    call get_param('cosine.in','nsedDSi',1,nsedDSi,rtmp,stmp)
-    nsed=nsedS2+nsedDN+nsedDSi
-    allocate(psedS2(nsedS2),rsedS2(nsedS2),rsedS2m(nsedS2),psedDN(nsedDN), &
-          & rsedDN(nsedDN),rsedDNm(nsedDN),psedDSi(nsedDSi),rsedDSi(nsedDSi), &
-          & rsedDSim(nsedDSi),rsed(nsed),rsedm(nsed),sedcon(nsed,nea),  &
-          & sedrate(nsed,nea),stat=istat)
-    if(istat/=0) call parallel_abort('Failed in alloc. psedDN')
-    call get_param_1D('cosine.in','psedS2',2,itmp1,psedS2,stmp,nsedS2)
-    call get_param_1D('cosine.in','rsedS2',2,itmp1,rsedS2,stmp,nsedS2)
-    call get_param_1D('cosine.in','rsedS2m',2,itmp1,rsedS2m,stmp,nsedS2)
-    call get_param_1D('cosine.in','psedDN',2,itmp1,psedDN,stmp,nsedDN)
-    call get_param_1D('cosine.in','rsedDN',2,itmp1,rsedDN,stmp,nsedDN)
-    call get_param_1D('cosine.in','rsedDNm',2,itmp1,rsedDNm,stmp,nsedDN)
-    call get_param_1D('cosine.in','psedDSi',2,itmp1,psedDSi,stmp,nsedDSi)
-    call get_param_1D('cosine.in','rsedDSi',2,itmp1,rsedDSi,stmp,nsedDSi)
-    call get_param_1D('cosine.in','rsedDSim',2,itmp1,rsedDSim,stmp,nsedDSi)
-
     m=0
     do i=1,nsedS2
       m=m+1 
@@ -290,9 +181,6 @@ subroutine read_cosine_param
     endif!
   endif !ised
  
-  !output cosine parameter 
-  if(icheck==1) call check_cosine_param
-
   return
 end subroutine read_cosine_param
 
@@ -379,133 +267,3 @@ subroutine read_cosine_stainfo
 
   return
 end subroutine read_cosine_stainfo
-
-subroutine check_cosine_param
-!---------------------------------------------------------------------------
-!output cosine parameters to check
-!---------------------------------------------------------------------------
-  use cosine_mod
-  use schism_msgp, only : myrank,parallel_abort
-  use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
-  implicit none
-
-  !local variables
-  integer :: i,j
-  if(myrank==0) then
-    open(31,file=out_dir(1:len_out_dir)//'cosine_param.out',status='replace')
-    write(31,*) 'Cosine Parameters used in the model'
-
-    write(31,*)
-    write(31,*)'!------switches and macro parameters-----'
-    write(31,'(a10,i5)')'idelay = ',idelay
-    write(31,'(a10,i5)')'ibgraze = ',ibgraze
-    write(31,'(a10,i5)')'idapt = ',idapt
-    write(31,'(a10,i5)')'iz2graze = ',iz2graze
-    write(31,'(a10,i5)')'iout_cosine = ',iout_cosine
-    write(31,'(a10,i5)')'nspool_cosine = ',nspool_cosine
-    write(31,'(a10,i5)')'ico2s = ',ico2s
-    write(31,'(a10,i5)')'ispm = ',ispm
-    if(ispm==0) then
-      write(31,'(a10,f12.3)')'spm0 = ',spm0
-    endif
-    write(31,'(a10,i5)')'icheck = ',icheck
-    write(31,'(a10,i5)')'ised = ',ised
-    write(31,'(a10,i5)')'iws = ',iws
-    if(iws/=0) then
-      write(31,'(a10,f12.3)')'NO3c = ',NO3c
-      write(31,'(a10,f12.3)')'ws1 = ',ws1
-      write(31,'(a10,f12.3)')'ws2 = ',ws2
-    endif
-    write(31,'(a10,i5)')'iclam = ',iclam
-    if(iclam/=0) then
-      write(31,'(a10,f12.3)')'deltaZ = ',deltaZ
-      write(31,'(a10,f12.3)')'kcex = ',kcex
-      write(31,'(a10,f12.3)')'Nperclam = ',Nperclam
-      write(31,'(a10,f12.3)')'Wclam = ',Wclam
-      write(31,'(a10,f12.3)')'Fclam = ',Fclam
-      if(iclam==1) then
-        write(31,'(a10,i5)')'nclam0 = ',nclam0
-      endif
-    endif
-
-    write(31,*)
-    write(31,*)'!--------cosine kinetics parameters------'
-    write(31,'(a10,i5)')'icheck = ',icheck
-    !write(31,'(a10,i5)')' =',
-
-    write(31,*)
-    write(31,*)'!--------cosine kinetics parameters------'
-    write(31,*)
-    write(31,*)'!phytoplankton'
-    write(31,'(a10,100(f8.5 x))')'gmaxs1 = ',gmaxs1
-    write(31,'(a10,100(f8.5 x))')'alpha1 = ',alpha1
-    write(31,'(a10,100(f8.5 x))')'pis1 = ',pis1
-    write(31,'(a10,100(f8.5 x))')'kno3s1 = ',kno3s1
-    write(31,'(a10,100(f8.5 x))')'knh4s1 = ',knh4s1
-    write(31,'(a10,100(f8.5 x))')'kpo4s1 = ',kpo4s1
-    write(31,'(a10,100(f18.9 x))')'kco2s1 = ',kco2s1
-    write(31,'(a10,100(f18.9 x))')'kns1 = ',kns1
-    write(31,'(a10,100(f8.5 x))')'gammas1 = ',gammas1
-
-    write(31,'(a10,100(f8.5 x))')'gmaxs2 = ',gmaxs2
-    write(31,'(a10,100(f8.5 x))')'alpha2 = ',alpha2
-    write(31,'(a10,100(f8.5 x))')'pis2 = ',pis2
-    write(31,'(a10,100(f8.5 x))')'kno3s2 = ',kno3s2
-    write(31,'(a10,100(f8.5 x))')'knh4s2 = ',knh4s2
-    write(31,'(a10,100(f8.5 x))')'kpo4s2 = ',kpo4s2
-    write(31,'(a10,100(f18.9 x))')'kco2s2 = ',kco2s2
-    write(31,'(a10,100(f18.9 x))')'kns2 = ',kns2
-    write(31,'(a10,100(f8.5 x))')'gammas2 = ',gammas2
-    write(31,'(a10,100(f8.5 x))')'ksio4s2 = ',ksio4s2
-
-    write(31,'(a10,100(f8.5 x))')'ak1 = ',ak1
-    write(31,'(a10,100(f8.5 x))')'ak2 = ',ak2
-    write(31,'(a10,100(f8.5 x))')'ak3 = ',ak3
-    write(31,'(a10,100(f8.5 x))')'alpha_corr = ',alpha_corr
-    write(31,'(a10,100(f8.5 x))')'zeptic = ', zeptic
-    write(31,'(a10,100(f8.5 x))')'beta = ',beta
-
-    write(31,*)
-    write(31,*)'!phytoplankton'
-    write(31,'(a10,100(f8.5 x))')'kex1 = ',kex1
-    write(31,'(a10,100(f8.5 x))')'gamma1 = ',gamma1
-    write(31,'(a10,100(f8.5 x))')'kex2 = ',kex2
-    write(31,'(a10,100(f8.5 x))')'gamma2 = ',gamma2
-
-    write(31,'(a10,100(f8.5 x))')'beta1 = ',beta1
-    write(31,'(a10,100(f8.5 x))')'beta2 = ',beta2
-    write(31,'(a10,100(f8.5 x))')'kgz1 = ',kgz1
-    write(31,'(a10,100(f8.5 x))')'kgz2 = ',kgz2
-    write(31,'(a10,100(f8.5 x))')'rho1 = ',rho1
-    write(31,'(a10,100(f8.5 x))')'rho2 = ',rho2
-    write(31,'(a10,100(f8.5 x))')'rho3 = ',rho3
-    write(31,'(a10,100(f8.5 x))')'gammaz = ',gammaz
-
-    write(31,*)
-    write(31,*)'!other'
-    write(31,'(a10,100(f8.5 x))')'kox = ',kox
-    write(31,'(a10,100(f8.5 x))')'kbmdn = ',kbmdn
-    write(31,'(a10,100(f8.5 x))')'kmdn1 = ',kmdn1
-    write(31,'(a10,100(f8.5 x))')'kmdn2 = ',kmdn2
-    write(31,'(a10,100(f8.5 x))')'kbmdsi = ',kbmdsi
-    write(31,'(a10,100(f8.5 x))')'kmdsi1 = ',kmdsi1
-    write(31,'(a10,100(f8.5 x))')'kmdsi2 = ',kmdsi2
-    write(31,'(a10,100(f8.5 x))')'TR = ',TR
-    write(31,'(a10,100(f8.5 x))')'gamman = ',gamman
-    write(31,'(a10,100(f18.9 x))')'pco2a = ',pco2a
-    write(31,'(a10,100(f8.5 x))')'wss2 = ',wss2
-    write(31,'(a10,100(f8.5 x))')'wsdn = ',wsdn
-    write(31,'(a10,100(f8.5 x))')'wsdsi = ',wsdsi
-    write(31,'(a10,100(f8.5 x))')'si2n = ',si2n
-    write(31,'(a10,100(f8.5 x))')'p2n = ',p2n
-    write(31,'(a10,100(f8.5 x))')'o2no = ',o2no
-    write(31,'(a10,100(f8.5 x))')'o2nh = ',o2nh
-    write(31,'(a10,100(f8.5 x))')'c2n = ',c2n
-
-    !write(31,'(a10,100(f8.5 x))')' = ',
-    close(31)
-  endif !myrank
-  
-  return
-end subroutine check_cosine_param
-

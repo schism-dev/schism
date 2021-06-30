@@ -1669,6 +1669,7 @@ subroutine fabm_schism_read_additional_forcing(time)
     do while(fs%time_fabm(1)<time)
        read(481,*)rtmp,(swild(i),i=1,ne_global)       
        if(rtmp>=time) then
+         fs%time_fabm(1)=rtmp
          do ie=1,ne_global
            if(iegl(ie)%rank==myrank) fs%spm(:,iegl(ie)%id)=swild(ie)
          enddo

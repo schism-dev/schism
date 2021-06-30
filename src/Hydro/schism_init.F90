@@ -1527,7 +1527,7 @@
 #endif 
 
 #ifdef USE_COSINE
-      call get_param('cosine.in','ndelay',1,ndelay,tmp,stringvalue)
+      call get_param('cosine.nml','ndelay',1,ndelay,tmp,stringvalue)
       call cosine_init
 #endif
 

@@ -71,7 +71,7 @@ module cosine_mod
   !------------------------------------------------------------------
   real(rkind),save :: deltaZ,kcex,Nperclam,Wclam,Fclam
   integer,save :: nclam0
-  integer,save,allocatable :: nclam(:)
+  real(rkind),save,allocatable :: nclam(:)
   
   !------------------------------------------------------------------
   !sediment flux model variables
