@@ -19,9 +19,8 @@
 !       flexible inputs to facilitate parallelization.
 !	Read (combined or uncombined) nc outputs for multiple files at all nodes 
 !       Works for mixed tri/quad outputs on NODE based vars.
-!       Inputs: screen; combined or uncombined nc file; filter_flag (for
-!       filtering outputs), output file name
-!       Outputs: time series (ascii); 
+!       Inputs: screen; combined or uncombined nc file
+!       Outputs: extract.out (time series (ascii)); 
 !       History: (1) added non-standard outputs (April 2012) - transparent to most scripts
 !               as format is same; (2) added ivcor=1 (Dec 2013); (3)
 !               added quads (Nov. 2014) (4) changed to nc outputs (Sept
@@ -97,13 +96,13 @@
       read(*,*) iday1,iday2
       print*, '<<<<<start and end stack #: ',iday1,iday2
 
-      print*, 'name for output time series:'
-      read(*,*) file63
-      print*, 'Output name is:',file63
+!      print*, 'name for output time series:'
+!      read(*,*) file63
+!      print*, 'Output name is:',file63
 
-      print*, 'File name for filter outputs:'
-      read(*,*) filter_flag
-      print*, 'Filter input is:',filter_flag
+!      print*, 'File name for filter outputs:'
+!      read(*,*) filter_flag
+!      print*, 'Filter input is:',filter_flag
 
 !      print*, 'Do you want to compute stats for 2D var? (0/1:min; 0/1:max; 0/1:time avg)'
 !!!'
@@ -133,7 +132,7 @@
 !        is_elev=0 
 !      endif
  
-      open(65,file=trim(adjustl(file63)),status='replace')
+      open(65,file='extract.out',status='replace')
       
 !...  Header
       !Returned vars: ne,np,ns,nrec,[x y dp](np),
@@ -170,11 +169,11 @@
       outvar=-huge(1.0) !test mem
 
 !     Read in filtering flags for output
-      open(60,file=trim(adjustl(filter_flag)),status='old')
-      do i=1,np
-        read(60,*)include2(i)
-      enddo !i
-      close(60)
+!      open(60,file=trim(adjustl(filter_flag)),status='old')
+!      do i=1,np
+!        read(60,*)include2(i)
+!      enddo !i
+!      close(60)
 
 !     Read vgrid.in
 !      call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
@@ -232,17 +231,18 @@
 
           if(mod(i23d-1,3)==0) then !2D
 !           Output: time, 2D variable at selected nodes
-            icount=0
-            do i=1,np
-              if(include2(i)/=0) then
-                icount=icount+1
-                outvar2(1:ivs,icount)=outvar(1:ivs,1,i,irec)
-              endif
-            enddo !i 
-            !write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
-            write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,outvar2(1:ivs,1:icount)
+!            icount=0
+!            do i=1,np
+!              if(include2(i)/=0) then
+!              icount=icount+1
+!              outvar2(1:ivs,icount)=outvar(1:ivs,1,i,irec)
+!              endif
+!            enddo !i 
+            write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
+!            write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,outvar2(1:ivs,1:icount)
 
           else !if(i23d==3) then !3D 
+            !Add your own output for 3D outvar()
             stop 'Cannot be 3D var'
           endif !i23d
         enddo !irec
