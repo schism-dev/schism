@@ -62,7 +62,7 @@ subroutine read_cosine_param
           & knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1,alpha2,beta,ak1,ak2,&
           & ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1,rho2,rho3,gamma1,&
           & gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
-          & kox,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a
+          & kox,kbmdn,kmdn1,kmdn2,kbmdsi,kmdsi1,kmdsi2,gamman,TR,pco2a
   namelist /MISC/ iws,NO3c,ws1,ws2,iclam,deltaZ,kcex,Nperclam,Wclam,Fclam,&
           & nclam0,nsedS2,psedS2,rsedS2,rsedS2m,nsedDN,psedDN,rsedDN,rsedDNm,&
           & nsedDSi,psedDSi,rsedDSi,rsedDSim
@@ -76,7 +76,7 @@ subroutine read_cosine_param
   ak1=0.75; ak2=0.03; ak3=0.066; gammas1=0.5; gammas2=0.3; beta1=0.75; beta2=0.5; 
   kgz1=0.5; kgz2=0.25; rho1=0.6; rho2=0.3; rho3=0.1; gamma1=0.75; gamma2=0.75; 
   gammaz=0.05; kex1=0.2; kex2=0.3; wss2=0.25; wsdn=0.5; wsdsi=0.5; si2n=1.2; p2n=0.0625; 
-  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; kmdn1=0.009; kmdn2=0.075; kmdsi1=0.0114; 
+  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; kbmdn=0.2; kmdn1=0.009; kmdn2=0.075; kbmdsi=0.2; kmdsi1=0.0114; 
   kmdsi2=0.015; gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
   iclam=0; deltaZ=1.0; kcex=0.002; Nperclam=0.39032; Wclam=5.45e-3; Fclam=40.0; 
   nclam0=2000; psedS2=0.0; rsedS2=0.0; rsedS2m=0.1; psedDN=0.0; rsedDN=0.0; rsedDNm=0.1 
