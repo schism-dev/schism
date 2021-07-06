@@ -1,10 +1,13 @@
-SCHISM
-Semi-implicit Cross-scale Hydroscience Integrated System Model
+# SCHISM
 
-Build instructions may be found on the SCHISM wiki at schism.wiki
+The **S**emi-implicit **C**ross-scale **H**ydroscience **I**ntegrated **S**ystem **M**odel (SCHISM) is an open-source community-supported modeling system based on unstructured grids and designed for the seamless simulation of 3D baroclinic circulation across creek-lake-river-estuary-shelf-ocean scales.
 
-When using the development version, note changes in flags and features described in
-Readme.beta_notes and examplified in param.nml, bctides.in, etc.
- 
+# Building and documentation
 
+Build instructions and the manual may be found on the SCHISM wiki at http://ccrm.vims.edu/schismweb/.
 
+# Developing and contributing
+
+When using the development version, note changes in flags and features described in ```sample_inputs/param.nml```, ```sample_inputs/bctides.in```, etc.
+
+Please refer to ```CONTRIBUTING.md``` for more information on contributing to SCHISM.
