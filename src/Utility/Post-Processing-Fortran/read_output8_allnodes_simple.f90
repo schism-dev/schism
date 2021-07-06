@@ -15,8 +15,7 @@
 !
 !****************************************************************************************
 
-!       Simplified read_output8_allnodes.f90 for 2D vars only, with
-!       flexible inputs to facilitate parallelization.
+!       Simplified read_output8_allnodes.f90 to show the output structure.
 !	Read (combined or uncombined) nc outputs for multiple files at all nodes 
 !       Works for mixed tri/quad outputs on NODE based vars.
 !       Inputs: screen; combined or uncombined nc file
@@ -74,12 +73,12 @@
         read(*,*)max_array_size
         print*, '<<<<<max_array_size read in=',max_array_size
       else
-        print*, 'Input # of records:'
+        print*, 'Input # of records for each read:'
         read(*,*)nrec3
-        print*, '<<<<<# of records=',nrec3
+        print*, '<<<<<# of records for each read=',nrec3
       endif
 
-      print*, 'Input NODE-based variable name to read from nc (e.g. elev):'
+      print*, 'Input NODE-based variable name to read from nc (e.g. elev, salt etc):'
       read(*,'(a30)')varname
 !!'
       print*, '<<<<<var name: ',varname
@@ -96,42 +95,6 @@
       read(*,*) iday1,iday2
       print*, '<<<<<start and end stack #: ',iday1,iday2
 
-!      print*, 'name for output time series:'
-!      read(*,*) file63
-!      print*, 'Output name is:',file63
-
-!      print*, 'File name for filter outputs:'
-!      read(*,*) filter_flag
-!      print*, 'Filter input is:',filter_flag
-
-!      print*, 'Do you want to compute stats for 2D var? (0/1:min; 0/1:max; 0/1:time avg)'
-!!!'
-!      read(*,*) icomp_stats(1),icomp_stats(2),icomp_stats(3)
-!      print*, '<<<<<icomp_stats: ',icomp_stats
-!      outname(1)='min';outname(2)='max';outname(3)='avg'
-!
-!      print*, 'Input a threshold: values below the threshold will be output as a bp file.'
-!!!'
-!      read(*,*) thres
-!      print*, '<<<<<threshold: ',thres
-!
-!      print*, 'How do you want to initialize the variable values for min/max?'
-!!!'
-!      print*, '0: do nothing;  1: intialized to -dp (useful for maxelev)'
-!!!'
-!      read(*,*) iinitial
-!!
-!      print*, '<<<<<initialization flag: ',iinitial
-!      if (iinitial.ne.0 .and. iinitial.ne.1) stop 'wrong initialization flag'
-
-!!'
-!      if(varname(1:len_var).eq.'elev' .and. iinitial==1) then
-!        is_elev=1 
-!        print*, '<<<<<special treatment will be implemented for elev'
-!      else
-!        is_elev=0 
-!      endif
- 
       open(65,file='extract.out',status='replace')
       
 !...  Header
@@ -230,20 +193,10 @@
           irec_real=irec1+irec-1 !actual record #
 
           if(mod(i23d-1,3)==0) then !2D
-!           Output: time, 2D variable at selected nodes
-!            icount=0
-!            do i=1,np
-!              if(include2(i)/=0) then
-!              icount=icount+1
-!              outvar2(1:ivs,icount)=outvar(1:ivs,1,i,irec)
-!              endif
-!            enddo !i 
             write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,((outvar(m,1,i,irec),m=1,ivs),i=1,np)
-!            write(65,'(e14.6,10000000(1x,e14.4))')timeout(irec_real)/86400,outvar2(1:ivs,1:icount)
-
           else !if(i23d==3) then !3D 
             !Add your own output for 3D outvar()
-            stop 'Cannot be 3D var'
+            stop 'Add your own 3D var output'
           endif !i23d
         enddo !irec
 
