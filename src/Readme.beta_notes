@@ -3,8 +3,8 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 Github versions:
 
 e281d94 (25, June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
-bfb4afc (18 June, 2021): added an optinal input 'shapiro_min.gr3' to be used with ishapiro=2;
-d07d75d (April 21, 2021): added T,S in rquired inputs for offline transport (to use hydro only results);
+bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
+d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
 b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
 9150d86 (Mar 31, 2021): added a new SAL option (iloadtide=2) using scaling;
@@ -474,7 +474,7 @@ git versions:
 (113) 7e9ff0a (Aug 20, 2020): Fei Y fixed a msource bug (init of msource at 0 at elem's not in source_sink.in
                               led to ice rain;
 (114) f311026 (Aug. 27, 2020): reverted init of msource to 0 for tracers other than T,S, 
-      c/o Nicole Cai. Using ambient values for other tracers can lead to artifitial and additional accumulation of nutrients e.g.
+      c/o Nicole Cai. Using ambient values for other tracers can lead to artificial and additional accumulation of nutrients e.g.
 
 (115) 00b6f16 (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for LSC2.
 (116) 8083cfa (Nov. 10, 2020): added option for transport solver only (itransport_only)
