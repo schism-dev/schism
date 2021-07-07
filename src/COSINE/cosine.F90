@@ -38,7 +38,7 @@ subroutine cosine(it)
     
   !local variables
   integer :: i,j,k,m,l,id,iday,daynum
-  real(rkind) :: time,mtime,dtw,rat,rKe,rtmp,Uw,mS2i,mZ1i,mDNi,mZ2i
+  real(rkind) :: time,mtime,dtw,rat,drat,rKe,rtmp,Uw,mS2i,mZ1i,mDNi,mZ2i
   real(rkind),parameter :: d2s=86400.0
   logical :: lopened
 
@@ -139,12 +139,11 @@ subroutine cosine(it)
     !Light field; add par_fraction to paramter: todo
     sLight(nvrt+1)=max(0.46d0*sum(srad(elnode(1:i34(i),i)))/i34(i),0.d0) 
     do k=nvrt,kbe(i)+1,-1
-      !if(k==nvrt) then
-      !  rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)/2.0
-      !else
-      !  rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*(dep(k)+dep(k+1))/2.0
-      !endif
-      rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)
+      if(k==nvrt) then
+        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)/2.0
+      else
+        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*(dep(k)+dep(k+1))/2.0
+      endif
       sLight(k)=sLight(k+1)*exp(-rKe)
     enddo !k
 
@@ -237,10 +236,8 @@ subroutine cosine(it)
       if((rhot<=0.d0 .and. rhop<=0.d0) .or. iz2graze==0) then
         GS2Z2=0.0; GDNZ2=0.0; GZ1Z2=0.0
       endif
-      !if(mS2i<=0.5d0)   GS2Z2=0.0
-      !if(mZ1i<=0.025d0) GZ1Z2=0.0
-      if(idelay==1 .and. time>=(ndelay*d2s) .and. mS2i<=0.5d0)   GS2Z2=0.0
-      if(idelay==1 .and. time>=(ndelay*d2s) .and. mZ1i<=0.025d0) GZ1Z2=0.0
+      if(mS2i<=0.5d0)   GS2Z2=0.0
+      if(mZ1i<=0.025d0) GZ1Z2=0.0
 
       GTZ2=GDNZ2+GZ1Z2+GS2Z2
 
@@ -287,13 +284,11 @@ subroutine cosine(it)
      
       !DN
       MIDN=max(kmdn1*temp(k)+kmdn2, 0.05)*OXR*DN(k) !remineralization, 1.5 to increase dissolution
-      if(k==kbe(i)+1) MIDN=kbmdn*OXR*DN(k)
       qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2-GDNZ2 &
              & +MTS1+MTS2+MTZ1+MTZ2-MIDN
 
       !DSi
       MIDSi=max(kmdsi1*temp(k)+kmdsi2, 0.01)*DSi(k) !remineralization, 1.5 to increase dissolution
-      if(k==kbe(i)+1) MIDSi=kbmdsi*OXR*DSi(k)
       qcos(9)=(GS2Z2+MTS2)*si2n-MIDSi
 
       !NO3
@@ -311,7 +306,7 @@ subroutine cosine(it)
 
       !PO4
       qcos(10)=(EXZ1+EXZ2+MIDN-NPS1-RPS1-NPS2-RPS2)*p2n
-      qcos(10)=qcos(10)+MIDSi*p2n/si2n
+      if(ipo4==1) qcos(10)=qcos(10)+MIDSi*p2n/si2n
       
       !DOX
       qcos(11)=(NPS1+NPS2)*o2no+(RPS1+RPS2-EXZ1-EXZ2-MIDN)*o2nh-2.0*Nit
@@ -327,15 +322,15 @@ subroutine cosine(it)
 
       !add sinking velocity for S2,DN,DSi 
       if(k<nvrt) then
-        rat=dep(k)/max(dep(k),1.d-1); rtmp=1.0
-        if(S2(k)<=2.5d0) rtmp=0.0
-        wsett(irange_tr(1,8)+4,k,i)=rtmp*rat*wss2/d2s
-        wsett(irange_tr(1,8)+7,k,i)=rat*wsdn/d2s
-        wsett(irange_tr(1,8)+8,k,i)=rat*wsdsi/d2s
+        drat=dep(k)/max(dep(k),1.d-1); rat=1.0
+        if(S2(k)<=2.5d0) rat=0.0
+        wsett(irange_tr(1,8)+4,k,i)=rat*drat*wss2/d2s
+        wsett(irange_tr(1,8)+7,k,i)=drat*wsdn/d2s
+        wsett(irange_tr(1,8)+8,k,i)=drat*wsdsi/d2s
         if(k==kbe(i)+1) then
-          wsett(irange_tr(1,8)+4,k-1,i)=rtmp*rat*wss2/d2s
-          wsett(irange_tr(1,8)+7,k-1,i)=rat*wsdn/d2s
-          wsett(irange_tr(1,8)+8,k-1,i)=rat*wsdsi/d2s
+          wsett(irange_tr(1,8)+4,k-1,i)=rat*drat*wss2/d2s
+          wsett(irange_tr(1,8)+7,k-1,i)=drat*wsdn/d2s
+          wsett(irange_tr(1,8)+8,k-1,i)=drat*wsdsi/d2s
         endif
       endif
 
@@ -348,26 +343,28 @@ subroutine cosine(it)
         call co2flux(2,ph,co2flx,temp(k),salt(k),CO2(k)*rat,SiO4(k)*rat,PO4(k)*rat,ALK(k)*rat,pco2a,Uw)
 
         !add air-sea exchange flux for O2 and CO2
-        rat=dep(k)/max(dep(k),1.d-1)
-        flx_sf(irange_tr(1,8)+10,i)=rat*o2flx/d2s
-        flx_sf(irange_tr(1,8)+11,i)=rat*co2flx/d2s
+        drat=dep(k)/max(dep(k),1.d-1)
+        flx_sf(irange_tr(1,8)+10,i)=drat*o2flx/d2s
+        flx_sf(irange_tr(1,8)+11,i)=drat*co2flx/d2s
       endif
 
       !bottom fluxes (todo: update sediment flux model)
       if(ised==1.and.k==kbe(i)+1) then
+        drat=dep(k)/max(dep(k),1.d-1); rat=1.0
+        if(S2(k)<=2.5d0) rat=0.0
         !partitioning sinking fluxes
         m=0
         do id=1,nsedS2
           m=m+1
-          sedinflx(m)=wss2*S2(k)*psedS2(id)*dep(k)/max(dep(k),1.d-1)
+          sedinflx(m)=rat*drat*wss2*S2(k)*psedS2(id)
         enddo
         do id=1,nsedDN
           m=m+1
-          sedinflx(m)=wsdn*DN(k)*psedDN(id)*dep(k)/max(dep(k),1.d-1)
+          sedinflx(m)=drat*wsdn*DN(k)*psedDN(id)
         enddo
         do id=1,nsedDSi
           m=m+1
-          sedinflx(m)=wsdsi*DSi(k)*psedDSi(id)*dep(k)/max(dep(k),1.d-1)
+          sedinflx(m)=drat*wsdsi*DSi(k)*psedDSi(id)
         enddo
 
         !calculate sediment fluxes
@@ -435,7 +432,7 @@ subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,sedinflx,dtw,dz,id)
 !-----------------------------------------------------------------
   use schism_msgp, only : parallel_abort
   use cosine_mod, only: nsed,sedcon,sedrate,rsed,rsedm,nsedS2,nsedDN, &
-      & nsedDSi,si2n,p2n,c2n,o2nh
+      & nsedDSi,si2n,p2n,c2n,o2nh,ipo4
   implicit none
   integer, parameter :: rkind=8
   integer,intent(in) :: id
@@ -480,7 +477,7 @@ subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,sedinflx,dtw,dz,id)
   do i=1,nsedDSi
     m=m+1
     sio4flx=sio4flx+outflx(m)
-    po4flx=po4flx+outflx(m)*p2n/si2n
+    if(ipo4==1) po4flx=po4flx+outflx(m)*p2n/si2n
   enddo
   
   return

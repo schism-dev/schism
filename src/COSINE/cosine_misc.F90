@@ -2,6 +2,7 @@
 !routines and functions for BGC models
 !--------------------------------------------------------------------
 !get_param_1D: read 1D parameter array
+!read_gr3_prop: read spatially varying values (*.gr3 or *.prop)
 !pt_in_poly:   check whether point-in-polygon (from Utility/UtilLib) 
 !o2flux:       compute air-sea o2 exchange
 !co2flux:      compute air-sea co2 exchange
