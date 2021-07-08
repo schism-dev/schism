@@ -904,9 +904,11 @@
 !              call parallel_abort(errmsg)
 !            endif
 
-            j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: tracer nudging(1)')
-
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: tracer nudging(1)')
+            endif
+ 
             do m=itmp1,itmp2
               swild9=-9999.
               if(myrank==0) then

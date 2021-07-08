@@ -127,7 +127,7 @@
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
       real(rkind), allocatable :: swild4(:,:) !double precision for hotstart.in (only)
       real(rkind), allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange etc (deallocate immediately afterwards)
-      real(rkind), allocatable :: buf3(:)
+      real(rkind), allocatable :: buf3(:),buf4(:)
 !      real(4), allocatable :: swild9(:,:) !used in tracer nudging
 
 
@@ -1272,7 +1272,7 @@
 
 !     Alloc arrays that are used only in this routine. Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
       allocate(nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &swild3(50+ntracers),swild4(ntracers,nvrt),stat=istat)
+         &swild3(50+ntracers),swild4(ntracers,nvrt),buf3(ns_global),buf4(ns_global),stat=istat)
       if(istat/=0) call parallel_abort('INIT: alloc wild')
 
       if(iorder==0) then
@@ -1573,26 +1573,27 @@
       if(iflux/=0) then
         if(iorder==0) then
           allocate(iflux_e(nea),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: iflux_e alloc')
+          if(istat/=0) call parallel_abort('INIT: iflux_e alloc')
         endif !iorder
 
-        open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
-        max_flreg=-1
-        do i=1,ne_global
-          read(32,*)j,tmp1
-          itmp=tmp1
-          if(itmp<-1) call parallel_abort('MAIN: fluxflag.prop has <-1')
-          if(iegl(i)%rank==myrank) iflux_e(iegl(i)%id)=itmp
-          if(itmp>max_flreg) max_flreg=itmp
-        enddo
-        close(32)
-!        do i=1,nea !must be aug.
-!          iflux_e(i)=maxval(nwild2(elnode(1:3,i)))
-!        enddo !i
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
+          max_flreg=-1
+          do i=1,ne_global
+            read(32,*)j,buf4(i) !tmp1
+            itmp=buf4(i) !tmp1
+            if(itmp<-1) call parallel_abort('INIT: fluxflag.prop has <-1')
+            if(itmp>max_flreg) max_flreg=itmp
+          enddo !i
+          close(32)
+          if(max_flreg<=0) call parallel_abort('INIT: fluxflag.prop flag wrong')
+        endif !myrank
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(max_flreg,1,itype,0,comm,istat)
 
-!        itmp1=maxval(iflux_e)
-!        call mpi_allreduce(itmp1,max_flreg,1,itype,MPI_MAX,comm,ierr)
-        if(max_flreg<=0) call parallel_abort('INIT: fluxflag.prop flag wrong')
+        do i=1,ne_global
+          if(iegl(i)%rank==myrank) iflux_e(iegl(i)%id)=buf4(i) !itmp
+        enddo !
       endif !iflux
 
 !'     Test message passing here
@@ -1962,17 +1963,24 @@
 
 !...  Compute lat/lon at element center for EcoSim 
 #if defined USE_ECO || defined USE_COSINE 
-      open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-      read(32,*)
-      read(32,*) !ne,np
+      if(myrank==0) then
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+        read(32,*)
+        read(32,*) !ne,np
+        do i=1,np_global
+          read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+        enddo !i
+        close(32)
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat) 
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat) 
+
       do i=1,np_global
-        read(32,*)j,xtmp,ytmp
         if(ipgl(i)%rank==myrank) then
-          xlon(ipgl(i)%id)=xtmp*pi/180.d0
-          ylat(ipgl(i)%id)=ytmp*pi/180.d0
+          xlon(ipgl(i)%id)=buf3(i)*pi/180.d0 !xtmp*pi/180.d0
+          ylat(ipgl(i)%id)=buf4(i)*pi/180.d0 !ytmp*pi/180.d0
         endif
       enddo !i
-      close(32)
       lreadll=.true.
 
       do i=1,nea
@@ -1988,44 +1996,62 @@
 
 #ifdef USE_MARSH
 !...  Inputs for marsh migration model
-      open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
+      if(myrank==0) then
+        open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
+        do i=1,ne_global
+          read(10,*)j,buf3(i) !tmp1
+          read(32,*)j,buf4(i) !tmp2
+          itmp1=nint(buf3(i))
+          itmp2=nint(buf4(i))
+          if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
+            write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
+            call parallel_abort(errmsg)
+          endif
+        enddo !i
+        close(10); close(32)
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
       do i=1,ne_global
-        read(10,*)j,tmp1
-        read(32,*)j,tmp2
-        itmp1=nint(tmp1)
-        itmp2=nint(tmp2)
-        if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
-          write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
         if(iegl(i)%rank==myrank) then
           ie=iegl(i)%id
-          imarsh(ie)=itmp1
-          ibarrier_m(ie)=itmp2
-          if(itmp2==1) imarsh(ie)=0
+          imarsh(ie)=nint(buf3(i)) !itmp1
+          ibarrier_m(ie)=nint(buf4(i)) !itmp2
+          if(ibarrier_m(ie)==1) imarsh(ie)=0
         endif
       enddo !i
-      close(10); close(32)
 #endif      
 
 !... Read lat/lon for spectral spatial interpolation  in WWM
 #ifdef USE_WWM
-      inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
+      if(myrank==0) then
+        inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
+        if(lexist) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+             read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+          enddo !i
+          close(32)
+          lreadll=.true. 
+        endif !lexist 
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
+      call mpi_bcast(lreadll,1,MPI_LOGICAL,0,comm,istat)
+
       if(lexist) then
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
-        do i=1,np_global
-           read(32,*)j,xtmp,ytmp
-           if(ipgl(i)%rank==myrank) then
-             xlon(ipgl(i)%id)=xtmp*pi/180.d0
-             ylat(ipgl(i)%id)=ytmp*pi/180.d0
-           endif
+       do i=1,np_global
+         if(ipgl(i)%rank==myrank) then
+           xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+           ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
+         endif
         enddo !i
-        close(32)
-        lreadll=.true. 
-      endif 
+      endif !lexist
 #endif
 
 #ifdef USE_SIMPLE_WIND
@@ -2054,6 +2080,7 @@
       endif       
 #endif
 
+!Error: large I/O
 !...  Classify interior/exterior bnd node and calculate edge angles (for WWM only)
 !...  WARNING: if WWM is used, the _land_ b.c. part of hgrid.gr3 must have flags for (exterior) land (0) and
 !...           island (1) bnds, and no open bnd is allowed on islands
@@ -2110,23 +2137,30 @@
           endif !iloadtide
         endif !iorder
 !'
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+          enddo !i
+          close(32)
+        endif !myrank
+        lreadll=.true.
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp
           if(ipgl(i)%rank==myrank) then
             ii=ipgl(i)%id
-            xlon(ii)=xtmp*pi/180.d0
-            ylat(ii)=ytmp*pi/180.d0
+            xlon(ii)=buf3(i)*pi/180.d0
+            ylat(ii)=buf4(i)*pi/180.d0
             !Pre-compute species function to save time
             fun_lat(0,ii)=3.d0*sin(ylat(ii))**2.d0-1.d0
             fun_lat(1,ii)=sin(2.d0*ylat(ii))
             fun_lat(2,ii)=cos(ylat(ii))**2.d0
           endif
         enddo !i
-        close(32)
-        lreadll=.true.
       
         do i=1,ntip
           read(31,'(a6)')tp_name(i) !tag
@@ -2146,17 +2180,24 @@
 !            write(12,*)'SAL grid name:',in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3'
  
             !.gr3 has both amp, phase
-            open(32,file=in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3',status='old')
-            read(32,*); read(32,*)
+            if(myrank==0) then
+              open(32,file=in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3',status='old')
+              read(32,*); read(32,*)
+              do j=1,np_global
+                read(32,*)k,xtmp,ytmp,buf3(j),buf4(j) !tmp1,tmp2
+              enddo !j
+              close(32)
+            endif !myrank
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+            call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
             do j=1,np_global
-              read(32,*)k,xtmp,ytmp,tmp1,tmp2
               if(ipgl(j)%rank==myrank) then
                 ii=ipgl(j)%id
-                rloadtide(1,i,ii)=tmp1 !amp [m]
-                rloadtide(2,i,ii)=tmp2*pi/180.d0 !phase [radian]
+                rloadtide(1,i,ii)=buf3(j) !tmp1 !amp [m]
+                rloadtide(2,i,ii)=buf4(j)*pi/180.d0 !tmp2*pi/180.d0 !phase [radian]
               endif
             enddo !j
-            close(32)
           enddo !i
         endif !iloadtide
       endif !ntip>0
@@ -2689,17 +2730,22 @@
 !     Initialize variables used in tsunami model (but bdef[1,2] and ibdef are available for all models)
       bdef=0.d0 !total deformation
       if(imm==1) then !read in deformation at all nodes
-        open(32,file=in_dir(1:len_in_dir)//'bdef.gr3',status='old') !connectivity part not used
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check bdef.gr3')
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'bdef.gr3',status='old') !connectivity part not used
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) call parallel_abort('Check bdef.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp !total deformation
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp !total deformation
-          if(ipgl(i)%rank==myrank) bdef(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) bdef(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !imm
 
 !...  Center of projection in degrees (used for beta-plane approx.)
       slam0=slam0*pi/180.d0
@@ -2709,16 +2755,23 @@
       if(ishapiro==1) then
         shapiro(:)=shapiro0
       else if(ishapiro==-1) then
-        open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check shapiro.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+ 
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+      
         do i=1,nsa
           shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
           !Check range
@@ -2727,116 +2780,138 @@
         enddo !i
       else if(ishapiro==2) then !read in optional shapiro_min.gr3
         shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
-        inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
-        if(lexist) then
-          if(myrank==0) write(16,*)'Reading in shapiro_min.gr3'
-          open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
-          read(32,*)
-          read(32,*) itmp1,itmp2
-          if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
+          if(lexist) then
+            write(16,*)'Reading in shapiro_min.gr3'
+            open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
+            read(32,*)
+            read(32,*) itmp1,itmp2
+            if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check shapiro_min.gr3')
+            do i=1,np_global
+              read(32,*)j,xtmp,ytmp,tmp
+              if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
+              buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
+            enddo !i
+            close(32)
+          endif !lexist
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
+
+        if(lexist) then
           do i=1,np_global
-            read(32,*)j,xtmp,ytmp,tmp
-            if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
-            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
+            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
           enddo !i
-          close(32)
         endif !lexist
       endif !ishapiro==-1
 
-!...  Horizontal viscosity option
-!     ihorcon =0 means horizontal viscosity term=0
-!      if(ihorcon==1) then
-!        open(32,file=in_dir(1:len_in_dir)//'hvis_coef.gr3',status='old')
-!        read(32,*)
-!        read(32,*) itmp1,itmp2
-!        if(itmp1/=ne_global.or.itmp2/=np_global) &
-!     &call parallel_abort('Check hvis_coef.gr3')
-!        do i=1,np_global
-!          read(32,*)j,xtmp,ytmp,tmp 
-!          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
-!        enddo !i
-!        close(32)
-!        do i=1,nsa
-!          hvis_coef(:,i)=sum(swild(isidenode(1:2,i)))/2
-!          !Check range
-!          if(hvis_coef(1,i)>0.125) call parallel_abort('INIT: hvis_coef>0.125')
-!        enddo !i
-!      else if(ihorcon==2) then
-!        hvis_coef=hvis_coef0
-!      endif !ihorcon
-      
 !...  Horizontal diffusivity option; only works for upwind/TVD
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
       if(ihdif==0) then
         hdif=0.d0
       else
-        open(32,file=in_dir(1:len_in_dir)//'hdif.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hdif.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check hdif.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp 
+            if(tmp<0.d0) then
+              write(errmsg,*)'hdif out of bound:',tmp,i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+         
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp 
-          if(tmp<0.d0) then
-            write(errmsg,*)'hdif out of bound:',tmp,i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
       endif !ihdif/=0
       
 !     Advection flags
       if(nadv==0) then
-        open(10,file=in_dir(1:len_in_dir)//'adv.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'adv.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check adv.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp
+            if(int(tmp)<0.or.int(tmp)>2) then
+              write(errmsg,*)'Unknown iadv',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp
-          if(int(tmp)<0.or.int(tmp)>2) then
-            write(errmsg,*)'Unknown iadv',i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) iadv(ipgl(i)%id)=int(tmp)
+          if(ipgl(i)%rank==myrank) iadv(ipgl(i)%id)=int(buf3(i))
         enddo
-        close(10)
       else !nadv/=0
         iadv=nadv
       endif
 
 !...  Bottom friction
       if(nchi==-1) then !read in Manning's n for 2D model
-        open(32,file=in_dir(1:len_in_dir)//'manning.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'manning.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check manning.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0) then
+              write(errmsg,*)'Negative Manning',tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=tmp
+          enddo
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0) then
-            write(errmsg,*)'Negative Manning',tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=buf3(i) !tmp
         enddo
-        close(32)
+ 
       else if(nchi==0) then !read in drag coefficients for 3D model
-        open(32,file=in_dir(1:len_in_dir)//'drag.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'drag.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check drag.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0) then
+              write(errmsg,*)'Negative bottom drag',tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=tmp
+          enddo
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0) then
-            write(errmsg,*)'Negative bottom drag',tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=buf3(i) !tmp
         enddo
+
         do i=1,nsa
           n1=isidenode(1,i)
           n2=isidenode(2,i)
@@ -2844,22 +2919,30 @@
 !         Debug
 !          if(myrank==0) write(99,*)i,iplg(n1),iplg(n2),Cd(i)
         enddo
-        close(32)
       else if(nchi==1) then !read in roughness in meters (3D)
-        open(32,file=in_dir(1:len_in_dir)//'rough.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'rough.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check rough.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0) then
+              write(errmsg,*)'INIT: negative rough at node ',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0) then
-            write(errmsg,*)'INIT: negative rough at node ',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+
       else
         write(errmsg,*)'Unknown bfric', nchi
         call parallel_abort(errmsg)
@@ -2873,18 +2956,29 @@
       else !ncor=1
         if(ics==1.and.myrank==0) write(16,*)'Check slam0 and sfea0 as variable Coriolis is used'
 !'
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+!            if(ipgl(i)%rank==myrank) then
+!              xlon(ipgl(i)%id)=xtmp*pi/180.d0
+!              ylat(ipgl(i)%id)=ytmp*pi/180.d0
+!            endif
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        lreadll=.true.
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp
           if(ipgl(i)%rank==myrank) then
-            xlon(ipgl(i)%id)=xtmp*pi/180.d0
-            ylat(ipgl(i)%id)=ytmp*pi/180.d0
+            xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+            ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
           endif
         enddo !i
-        close(32)
-        lreadll=.true.
 
         fc=2*omega_e*sin(sfea0)
         beta=2*omega_e*cos(sfea0)
@@ -2907,18 +3001,29 @@
 
 !     Wind 
       if(nws>=2.and.nws<=3) then !CORIE mode; read in hgrid.ll and open debug outputs
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,buf3(i),buf4(i) !tmp1,tmp2
+!            if(ipgl(i)%rank==myrank) then
+!              xlon(ipgl(i)%id)=tmp1*pi/180.d0
+!              ylat(ipgl(i)%id)=tmp2*pi/180.d0
+!            endif
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        lreadll=.true.
+ 
         do i=1,np_global
-          read(32,*)j,tmp1,tmp2
           if(ipgl(i)%rank==myrank) then
-            xlon(ipgl(i)%id)=tmp1*pi/180.d0
-            ylat(ipgl(i)%id)=tmp2*pi/180.d0
+            xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+            ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
           endif
         enddo !i
-        close(32)
-        lreadll=.true.
 
 #ifdef DEBUG
         fdb='sflux_0000'
@@ -2962,20 +3067,28 @@
         endif
 
 !       Read in albedo
-        open(32,file=in_dir(1:len_in_dir)//'albedo.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'albedo.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check albedo.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp>1.d0) then
+              write(errmsg,*)'Albedo out of bound:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0.or.tmp>1.d0) then
-            write(errmsg,*)'Albedo out of bound:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
 
 !       Read in water type; the values for R, d_1, d_2 are given below 
 !       solar flux= R*exp(z/d_1))+(1-R)*exp(z/d_2) (d_[1,2] are attentuation depths; smaller values for muddier water)
@@ -2986,21 +3099,29 @@
 !       5: 0.78 1.40 7.9 (Jerlov type III)
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
+        if(myrank==0) then
         open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check watertype.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(int(tmp)<1.or.int(tmp)>7) then
+              write(errmsg,*)'Unknown water type:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(int(tmp)<1.or.int(tmp)>7) then
-            write(errmsg,*)'Unknown water type:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !ihconsv/
    
 !...  Turbulence closure options
       if(itur==0) then
@@ -3037,30 +3158,43 @@
 !       Common variables for both models
         cmiu0=sqrt(0.3d0)
 !       read in mixing limits
-        open(31,file=in_dir(1:len_in_dir)//'diffmin.gr3',status='old')
-        open(32,file=in_dir(1:len_in_dir)//'diffmax.gr3',status='old')
-        read(31,*)
-        read(31,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) & 
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'diffmin.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'diffmax.gr3',status='old')
+          read(31,*)
+          read(31,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) & 
      &call parallel_abort('Check diffmin.gr3')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) & 
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) & 
      &call parallel_abort('Check diffmax.gr3')
+          do i=1,np_global
+            read(31,*)j,xtmp,ytmp,tmp1
+            read(32,*)j,xtmp,ytmp,tmp2
+            if(tmp2<tmp1) then
+              write(errmsg,*)'diffmin > diffmax:',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+            buf4(i)=tmp2
+!            if(ipgl(i)%rank==myrank) then
+!              diffmin(ipgl(i)%id)=tmp1
+!              diffmax(ipgl(i)%id)=tmp2
+!            endif
+          enddo !i
+          close(31)
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+   
         do i=1,np_global
-          read(31,*)j,xtmp,ytmp,tmp1
-          read(32,*)j,xtmp,ytmp,tmp2
-          if(tmp2<tmp1) then
-            write(errmsg,*)'diffmin > diffmax:',i
-            call parallel_abort(errmsg)
-          endif
           if(ipgl(i)%rank==myrank) then
-            diffmin(ipgl(i)%id)=tmp1
-            diffmax(ipgl(i)%id)=tmp2
+            diffmin(ipgl(i)%id)=buf3(i) !tmp1
+            diffmax(ipgl(i)%id)=buf4(i) !tmp2
           endif
         enddo !i
-        close(31)
-        close(32)
 
         if(itur==3.or.itur==5) then !Tsinghua group:0822+itur==5
 !	  Constants used in GLS; cpsi3 later
@@ -3211,20 +3345,29 @@
       if(inter_mom/=-1) then
         krvel=inter_mom
       else !-1
-        open(32,file=in_dir(1:len_in_dir)//'krvel.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'krvel.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check krvel.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp>1.d0) then
+              write(errmsg,*)'Unknown interpolation flag in krvel.gr3:',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0.or.tmp>1.d0) then
-            write(errmsg,*)'Unknown interpolation flag in krvel.gr3:',i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+
         do i=1,nea
           krvel(i)=minval(swild(elnode(1:i34(i),i)))
         enddo !i
@@ -3241,37 +3384,53 @@
 
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv -similar to T,S)
       if(inu_elev==1) then
-        open(10,file=in_dir(1:len_in_dir)//'elev_nudge.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'elev_nudge.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check elev_nudge.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1*dt>1.d0) then
+              write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+!            if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp1
-          if(tmp1<0.d0.or.tmp1*dt>1.d0) then
-            write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=buf3(i) !Dimension: sec^-1
         enddo !i
-        close(10)
       endif !inu_elev
 
       if(inu_uv==1) then
-        open(10,file=in_dir(1:len_in_dir)//'uv_nudge.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'uv_nudge.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check uv_nudge.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1*dt>1.d0) then
+              write(errmsg,*)'Wrong nudging factor at node (2):',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+!            if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp1
-          if(tmp1<0.d0.or.tmp1*dt>1.d0) then
-            write(errmsg,*)'Wrong nudging factor at node (2):',i,tmp1
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=buf3(i) !Dimension: sec^-1
         enddo !i
-        close(10)
       endif !inu_uv
 
 !...  Nudging for tracers
@@ -3280,30 +3439,42 @@
         if(ntrs(k)<=0) cycle
 
         if(inu_tr(k)/=0) then
-          open(10,file=in_dir(1:len_in_dir)//tr_mname(k)//'_nudge.gr3',status='old')
-          read(10,*)
-          read(10,*) itmp1,itmp2
-          if(itmp1/=ne_global.or.itmp2/=np_global) &
+          if(myrank==0) then
+            open(10,file=in_dir(1:len_in_dir)//tr_mname(k)//'_nudge.gr3',status='old')
+            read(10,*)
+            read(10,*) itmp1,itmp2
+            if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check tracer_nudge.gr3')
+            do i=1,np_global
+              read(10,*)j,xtmp,ytmp,tmp1
+              if(tmp1<0.d0.or.tmp1>1.d0) then
+                write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
+                call parallel_abort(errmsg)
+              endif
+              buf3(i)=tmp1
+!              if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=tmp1
+            enddo !i
+            close(10)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+ 
           do i=1,np_global
-            read(10,*)j,xtmp,ytmp,tmp1
-            if(tmp1<0.d0.or.tmp1>1.d0) then
-              write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
-              call parallel_abort(errmsg)
-            endif
-            if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=tmp1
+            if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=buf3(i) !tmp1
           enddo !i
-          close(10)
         endif !inu_tr(k)/=0
 
         if(inu_tr(k)==2) then
-          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
-          if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
-          !Static info
-          j=nf90_inq_dimid(ncid_nu(k),'node',mm)
-          j=nf90_inquire_dimension(ncid_nu(k),mm,len=nnu_pts(k))
-          if(j/=NF90_NOERR) call parallel_abort('INIT: nnu_pts')
-          if(nnu_pts(k)<=0) call parallel_abort('INIT: nnu_pts<=0')
+          if(myrank==0) then
+            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+            if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
+            !Static info
+            j=nf90_inq_dimid(ncid_nu(k),'node',mm)
+            j=nf90_inquire_dimension(ncid_nu(k),mm,len=nnu_pts(k))
+            if(j/=NF90_NOERR) call parallel_abort('INIT: nnu_pts')
+            if(nnu_pts(k)<=0) call parallel_abort('INIT: nnu_pts<=0')
+          endif !myrank
+          call mpi_bcast(ncid_nu(k),1,itype,0,comm,istat)
+          call mpi_bcast(nnu_pts(k),1,itype,0,comm,istat)
         endif
       enddo !k
 
@@ -3319,10 +3490,13 @@
         if(ntrs(k)<=0) cycle
 
         if(inu_tr(k)==2) then
-          j=nf90_inq_varid(ncid_nu(k), "map_to_global_node",mm)
-          if(j/=NF90_NOERR) call parallel_abort('INIT: map(0)')
-          j=nf90_get_var(ncid_nu(k),mm,inu_pts_gb(1:nnu_pts(k),k),(/1/),(/nnu_pts(k)/))
-          if(j/=NF90_NOERR) call parallel_abort('INIT: map')
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_nu(k), "map_to_global_node",mm)
+            if(j/=NF90_NOERR) call parallel_abort('INIT: map(0)')
+            j=nf90_get_var(ncid_nu(k),mm,inu_pts_gb(1:nnu_pts(k),k),(/1/),(/nnu_pts(k)/))
+            if(j/=NF90_NOERR) call parallel_abort('INIT: map')
+          endif !myrank
+          call mpi_bcast(inu_pts_gb,mnu_pts*natrm,itype,0,comm,istat)
         endif
       enddo !k
 
@@ -3334,47 +3508,90 @@
       sav_cd=0.d0 !Cdv : drag coefficient
       if(isav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
         !\lambda=D*Nv [1/m]
-        open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
-        open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
-        !SAV height [m]
-        open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
-        !Drag coefficient
-        open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        read(31,*); read(31,*)k,m
-        read(32,*); read(32,*)i,j
-        read(30,*); read(30,*)l,mm
-        if(itmp1/=ne_global.or.itmp2/=np_global.or.i/=ne_global.or.j/=np_global.or. &
-     &k/=ne_global.or.m/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
-!'
-        do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp
-          read(31,*)j,xtmp,ytmp,tmp1
-          read(32,*)j,xtmp,ytmp,tmp2
-          read(30,*)j,xtmp,ytmp,tmp3
-          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0.or.tmp3<0) then
-            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2,tmp3
-            call parallel_abort(errmsg)
-          endif
-          !Make D, Nv and h consistent at no SAV places
-          if(tmp*tmp1*tmp2*tmp3==0.d0) then
-            tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
-          endif
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          read(31,*); read(31,*)k,m
+          if(itmp1/=ne_global.or.itmp2/=np_global.or.k/=ne_global.or.m/=np_global) &
+     &call parallel_abort('INIT: Check sav_.gr3 (1)')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp
+            read(31,*)j,xtmp,ytmp,tmp1
+            if(tmp<0.d0.or.tmp1<0.d0) then
+              write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp; buf4(i)=tmp1
+            !Make D, Nv and h consistent at no SAV places
+!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
+!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
+!            endif
          
+!          if(ipgl(i)%rank==myrank) then
+!            nd=ipgl(i)%id
+!            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
+!            sav_nv(nd)=tmp1
+!            sav_h(nd)=tmp2
+!            sav_di(nd)=tmp
+!            sav_cd(nd)=tmp3
+!          endif
+          enddo !i
+          close(10)
+          close(31)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
-            sav_nv(nd)=tmp1
-            sav_h(nd)=tmp2
-            sav_di(nd)=tmp
-            sav_cd(nd)=tmp3
+            sav_nv(nd)=buf4(i) !tmp1
+            sav_di(nd)=buf3(i) !tmp
           endif
         enddo !i
-        close(10)
-        close(31)
-        close(32)
-        close(30)
+
+        if(myrank==0) then
+          !SAV height [m]
+          open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+          !Drag coefficient
+          open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
+          read(32,*); read(32,*)i,j
+          read(30,*); read(30,*)l,mm
+          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp2
+            read(30,*)j,xtmp,ytmp,tmp3
+            if(tmp2<0.d0.or.tmp3<0) then
+              write(errmsg,*)'INIT: illegal sav_:',i,tmp2,tmp3
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp2; buf4(i)=tmp3
+            !Make D, Nv and h consistent at no SAV places
+!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
+!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
+!            endif
+          enddo !i
+          close(32)
+          close(30)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            sav_alpha(nd)=sav_di(nd)*sav_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
+            sav_h(nd)=buf3(i) !tmp2
+            sav_cd(nd)=buf4(i) !tmp3
+
+            !Make D, Nv and h consistent at no SAV places
+            if(sav_di(nd)*sav_nv(nd)*sav_h(nd)*sav_cd(nd)==0.d0) then
+              sav_di(nd)=0.d0; sav_nv(nd)=0.d0; sav_h(nd)=0.d0; sav_cd(nd)=0.d0
+            endif
+          endif
+        enddo !i
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
@@ -3401,17 +3618,25 @@
 !     and some parts of the code are bypassed for efficiency
       itvd_e=0 !init. for upwind
       if(itr_met>=2.and.(ibc==0.or.ibtp==1)) then
-        open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
+          do i=1,ne_global
+            read(32,*)j,tmp
+            itmp=nint(tmp)
+            if(itmp/=0.and.itmp/=1) then
+              write(errmsg,*)'Unknown TVD flag:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf4(i)=tmp
+!            if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=itmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+ 
         do i=1,ne_global
-          read(32,*)j,tmp
-          itmp=nint(tmp)
-          if(itmp/=0.and.itmp/=1) then
-            write(errmsg,*)'Unknown TVD flag:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=itmp
+          if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=nint(buf4(i)) !itmp
         enddo !i
-        close(32)
       endif !itr_met
 
 !     Station output option (/=0: need station.in)
@@ -3870,15 +4095,22 @@
       if(ic_elev==0) then
         eta2=0.d0
       else    
-        open(32,file=in_dir(1:len_in_dir)//'elev.ic',status='old')
-        read(32,*)
-        read(32,*)
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'elev.ic',status='old')
+          read(32,*)
+          read(32,*)
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp
+!            if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+    
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !ic_elev
 
 !     For ics=1, (su2,sv2) are defined in the _global_ Cartesian frame
 !     For ics=2, they are defined in the ll frame
@@ -3912,28 +4144,38 @@
 !...  at nodes and elements as well (which will be over-written for other cases)
       if(ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2) then !T,S share same i.c. flag
 !       Read in intial mean S,T
-        open(32,file=in_dir(1:len_in_dir)//'ts.ic',status='old')
-        read(32,*)nz_r
-        if(nz_r<2) then
-          write(errmsg,*)'Change nz_r:',nz_r
-          call parallel_abort(errmsg)
-        endif
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'ts.ic',status='old')
+          read(32,*)nz_r
+          if(nz_r<2) then
+            write(errmsg,*)'Change nz_r:',nz_r
+            call parallel_abort(errmsg)
+          endif
+        endif !myrank
+        call mpi_bcast(nz_r,1,itype,0,comm,istat) 
+
         if(iorder==0) allocate(z_r(nz_r),tem1(nz_r),sal1(nz_r),cspline_ypp(nz_r,2),stat=istat)
         deallocate(swild,swild2,stat=istat)
         allocate(swild(max(nsa+nvrt+12+ntracers,nz_r)),swild2(max(nvrt,nz_r),12),stat=istat)
-        do k=1,nz_r
-          !z_r in local frame if ics=2
-          read(32,*)j,z_r(k),tem1(k),sal1(k)
-          if(tem1(k)<tempmin.or.tem1(k)>tempmax.or.sal1(k)<saltmin.or.sal1(k)>saltmax) then
-            write(errmsg,*)'Initial invalid S,T at',k,tem1(k),sal1(k)
-            call parallel_abort(errmsg)
-          endif
-          if(k>=2) then; if(z_r(k)<=z_r(k-1)) then
-            write(errmsg,*)'Inverted z-level (0):',k
-            call parallel_abort(errmsg)
-          endif; endif
-        enddo !k
-        close(32)
+
+        if(myrank==0) then
+          do k=1,nz_r
+            !z_r in local frame if ics=2
+            read(32,*)j,z_r(k),tem1(k),sal1(k)
+            if(tem1(k)<tempmin.or.tem1(k)>tempmax.or.sal1(k)<saltmin.or.sal1(k)>saltmax) then
+              write(errmsg,*)'Initial invalid S,T at',k,tem1(k),sal1(k)
+              call parallel_abort(errmsg)
+            endif
+            if(k>=2) then; if(z_r(k)<=z_r(k-1)) then
+              write(errmsg,*)'Inverted z-level (0):',k
+              call parallel_abort(errmsg)
+            endif; endif
+          enddo !k
+          close(32)
+        endif !myrank
+        call mpi_bcast(z_r,nz_r,rtype,0,comm,istat)
+        call mpi_bcast(tem1,nz_r,rtype,0,comm,istat)
+        call mpi_bcast(sal1,nz_r,rtype,0,comm,istat)
 
 !       Cubic spline coefficients (save for interpolation later)
         call cubic_spline(nz_r,z_r,tem1,0._rkind,0._rkind,swild,swild2(1:nz_r,1))
@@ -4044,33 +4286,45 @@
         tr_nd0(1,:,:)=10.d0; tr_nd0(2,:,:)=0.d0; tr_el(1,:,:)=10.d0; tr_el(2,:,:)=0.d0
       else !read in S,T
         if(flag_ic(1)==1) then !T,S share flag
-          open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
-          open(32,file=in_dir(1:len_in_dir)//'salt.ic',status='old')
-          read(31,*) 
-          read(31,*) !np
+          if(myrank==0) then
+            open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
+            open(32,file=in_dir(1:len_in_dir)//'salt.ic',status='old')
+            read(31,*) 
+            read(31,*) !np
+            do i=1,np_global
+              read(31,*) itmp,xtmp,ytmp,te
+              if(te<tempmin.or.te>tempmax) then
+                write(errmsg,*)'Initial invalid T at',i,te
+                call parallel_abort(errmsg)
+              endif
+!              if(ipgl(i)%rank==myrank) tr_nd0(1,:,ipgl(i)%id)=te
+              buf3(i)=te
+            enddo !i
+
+            read(32,*) 
+            read(32,*) !np
+            do i=1,np_global
+              read(32,*) itmp,xtmp,ytmp,sa
+              if(sa<saltmin.or.sa>saltmax) then
+                write(errmsg,*)'Initial invalid S at',i,sa
+                call parallel_abort(errmsg)
+              endif
+              buf4(i)=sa
+!              if(ipgl(i)%rank==myrank) tr_nd0(2,:,ipgl(i)%id)=sa
+            enddo
+            close(31)
+            close(32)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
           do i=1,np_global
-            read(31,*) itmp,xtmp,ytmp,te
-            if(te<tempmin.or.te>tempmax) then
-              write(errmsg,*)'Initial invalid T at',i,te
-              call parallel_abort(errmsg)
+            if(ipgl(i)%rank==myrank) then
+              tr_nd0(1,:,ipgl(i)%id)=buf3(i) !te
+              tr_nd0(2,:,ipgl(i)%id)=buf4(i) !sa
             endif
-            !if(ipgl(i)%rank==myrank) tem0(:,ipgl(i)%id)=te
-            if(ipgl(i)%rank==myrank) tr_nd0(1,:,ipgl(i)%id)=te
           enddo !i
 
-          read(32,*) 
-          read(32,*) !np
-          do i=1,np_global
-            read(32,*) itmp,xtmp,ytmp,sa
-            if(sa<saltmin.or.sa>saltmax) then
-              write(errmsg,*)'Initial invalid S at',i,sa
-              call parallel_abort(errmsg)
-            endif
-            !if(ipgl(i)%rank==myrank) sal0(:,ipgl(i)%id)=sa
-            if(ipgl(i)%rank==myrank) tr_nd0(2,:,ipgl(i)%id)=sa
-          enddo
-          close(31)
-          close(32)
 
 !         T,S @ elements
 !$OMP parallel do default(shared) private(i,k)
@@ -4478,53 +4732,70 @@
         select case(flag_ic(mm))
           case(1)                
 !	    Horizontally varying
-            do m=irange_tr(1,mm),irange_tr(2,mm) !1,ntracers
-              write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
-              ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
-              inputfile=tr_mname(mm)//'_hvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              read(10,*)
-              read(10,*) !np
+            do m=irange_tr(1,mm),irange_tr(2,mm) 
+              if(myrank==0) then
+                write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
+                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
+                inputfile=tr_mname(mm)//'_hvar_'//ifile_char(1:ifile_len)//'.ic'
+                open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
+                read(10,*)
+                read(10,*) !np
+                do j=1,np_global
+                  read(10,*) num,xtmp,ytmp,tr_tmp1
+                  if(tr_tmp1<0.d0) then
+                    write(errmsg,*)'INIT: Initial invalid tracer at:',j,tr_tmp1,inputfile
+                    call parallel_abort(errmsg)
+                  endif
+                  buf3(j)=tr_tmp1
+!                  if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=tr_tmp1
+                enddo !j
+                close(10)
+              endif !myrank
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
               do j=1,np_global
-                read(10,*) num,xtmp,ytmp,tr_tmp1
-                if(tr_tmp1<0.d0) then
-                  write(errmsg,*)'INIT: Initial invalid tracer at:',j,tr_tmp1,inputfile
-                  call parallel_abort(errmsg)
-                endif
-                if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=tr_tmp1
+                if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=buf3(j) !tr_tmp1
               enddo !j
-              close(10)
             enddo !m
           case(2)
 !	    Vertically varying
             allocate(swild99(nz_r2,1))
             do m=irange_tr(1,mm),irange_tr(2,mm) !1,ntracers
-              write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
-              ifile_char=adjustl(ifile_char) 
-              ifile_len=len_trim(ifile_char)
-              inputfile=tr_mname(mm)//'_vvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              read(10,*)nz_r2
-              if(nz_r2<2) then
-                write(errmsg,*)'Change nz_r2:',nz_r2
-                call parallel_abort(errmsg)
-              endif
+              if(myrank==0) then
+                write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
+                ifile_char=adjustl(ifile_char) 
+                ifile_len=len_trim(ifile_char)
+                inputfile=tr_mname(mm)//'_vvar_'//ifile_char(1:ifile_len)//'.ic'
+                open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
+                read(10,*)nz_r2
+                if(nz_r2<2) then
+                  write(errmsg,*)'Change nz_r2:',nz_r2
+                  call parallel_abort(errmsg)
+                endif
+              endif !myrank
+              call mpi_bcast(nz_r2,1,itype,0,comm,istat)
+
               deallocate(swild10,swild,swild2,stat=istat)
               allocate(z_r2(nz_r2),stat=istat)
               allocate(swild(max(nsa+nvrt+12+ntracers,nz_r2)),swild2(max(nvrt,nz_r2),12), &
      &swild10(max(3,nvrt,nz_r2),12),stat=istat)
-              do k=1,nz_r2
-                read(10,*)j,z_r2(k),swild10(k,1)
-                if(swild10(k,1)<0.d0) then
-                  write(errmsg,*)'Initial invalid Tr at',k,swild10(k,1)
-                  call parallel_abort(errmsg)
-                endif
-                if(k>=2) then; if(z_r2(k)<=z_r2(k-1)) then
-                  write(errmsg,*)'Inverted z-level (10):',k
-                  call parallel_abort(errmsg)
-                endif; endif
-              enddo !k
-              close(10)
+
+              if(myrank==0) then
+                do k=1,nz_r2
+                  read(10,*)j,z_r2(k),swild10(k,1)
+                  if(swild10(k,1)<0.d0) then
+                    write(errmsg,*)'Initial invalid Tr at',k,swild10(k,1)
+                    call parallel_abort(errmsg)
+                  endif
+                  if(k>=2) then; if(z_r2(k)<=z_r2(k-1)) then
+                    write(errmsg,*)'Inverted z-level (10):',k
+                    call parallel_abort(errmsg)
+                  endif; endif
+                enddo !k
+                close(10)
+              endif !myrank
+              call mpi_bcast(z_r2,nz_r2,rtype,0,comm,istat)
+              call mpi_bcast(swild10,max(3,nvrt,nz_r2)*12,rtype,0,comm,istat)
 
 !             Cubic spline coefficients
               call cubic_spline(nz_r2,z_r2,swild10(1:nz_r2,1),0._rkind,0._rkind,swild,swild99(:,1))
@@ -4789,7 +5060,6 @@
       time=0.d0
       iths=0
       if(ihot/=0) then
-        allocate(buf3(ns_global),stat=istat)
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
         !All ranks open .nc but rank 0 reads most of data 
@@ -5527,7 +5797,6 @@
         if(ihot==2) call parallel_abort('init: hot option for HA diabled')
 #endif /*USE_HA*/
 
-        deallocate(buf3)
         j=nf90_close(ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: nc close')
 
@@ -5657,9 +5926,7 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10)
-!      if(allocated(rwild)) deallocate(rwild)
-!      deallocate(swild9)
+      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4)
 
 #ifdef USE_FIB
        deallocate(sink0,fraction0,kk10,kk20)

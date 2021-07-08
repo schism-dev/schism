@@ -228,7 +228,7 @@ module schism_glbl
   real(rkind),save,allocatable :: radiel(:)       ! Element equivalent radii
   ! Cartesian coordinates of element centers; see comments for xnd
   real(rkind),save,allocatable :: xctr(:),yctr(:),zctr(:) 
-  real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in degrees
+  real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in _degrees_
   real(rkind),save,allocatable :: dpe(:)          ! Depth at element (min of all nodes)
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
   integer,save,allocatable :: idry_e(:)       ! wet/dry flag
@@ -277,7 +277,7 @@ module schism_glbl
   !for ics=2, the triplet are the coordinate in a global frame with origin at center of earth,
   !x-axis point to prime meridian, z-axis to the north pole
   real(rkind),save,allocatable :: xnd(:),ynd(:),znd(:)       ! Node cartesian coordinates
-  real(rkind),save,allocatable :: xlon(:),ylat(:) ! Node lat/lon coordinates in radians
+  real(rkind),save,allocatable :: xlon(:),ylat(:) ! Node lat/lon coordinates in _radians_
   real(rkind),save,allocatable :: dp(:),dp00(:)           ! Node depths
 !  integer,save,allocatable :: ibad(:)             ! Reliable bndry elevation flag
 !  integer,save,allocatable :: nnegb(:),inegb(:,:) ! Global node-element tables

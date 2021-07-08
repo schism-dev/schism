@@ -198,9 +198,13 @@ subroutine partition_hgrid
 !-------------------------------------------------------------------------------
 
   ! Open global grid file and read global grid size
-  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old')
-  read(14,*); read(14,*) ne_global,np_global
-  close(14)
+  if(myrank==0) then
+    open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old')
+    read(14,*); read(14,*) ne_global,np_global
+    close(14)
+  endif
+  call mpi_bcast(ne_global,1,itype,0,comm,i)
+  call mpi_bcast(np_global,1,itype,0,comm,i)
 
   ! Allocate global element to resident processor vector (in global module)
   if(allocated(iegrpv)) deallocate(iegrpv)
@@ -265,13 +269,21 @@ subroutine partition_hgrid
   !done
   if(ivcor==1) then
     allocate(kbp(npa))
-    open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-    read(19,*); read(19,*)nvrt
+    if(allocated(nlev)) deallocate(nlev); allocate(nlev(np_global),stat=stat) 
+    if(myrank==0) then
+      open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
+      read(19,*); read(19,*)nvrt !not needed
+      do i=1,np_global
+        read(19,*)j,nlev(i) !kbetmp
+      enddo !i
+      close(19)
+    endif !myrank
+    call mpi_bcast(nlev,np_global,itype,0,comm,stat)
+
     do i=1,np_global
-      read(19,*)j,kbetmp
-      if(ipgl(i)%rank==myrank) kbp(ipgl(i)%id)=kbetmp
+      if(ipgl(i)%rank==myrank) kbp(ipgl(i)%id)=nlev(i) !kbetmp
     enddo !i
-    close(19)
+    deallocate(nlev)
   endif !ivcor==1
 
   ! Count number of edges in dual graph
@@ -539,7 +551,7 @@ subroutine aquire_hgrid(full_aquire)
   logical,intent(in) :: full_aquire  ! Aquire and construct all tables
   integer :: i,j,k,l,ii,jj,irank,ip,jp,ie,je,ic,iegb,jegb,ngb1,ngb2,ipgb,isgb,icount,new,id,isd
   integer,allocatable :: ibuf(:),isbuf(:),irbuf(:)
-  real(rkind),allocatable :: dbuf1(:),dbuf2(:)
+  real(rkind),allocatable :: dbuf1(:,:)
   type(llist_type),pointer :: llp,node,nodep,side,sidep
   logical :: found,local1,local2,found1,found2
   real(rkind),parameter :: deg2rad=pi/180._rkind
@@ -587,31 +599,43 @@ subroutine aquire_hgrid(full_aquire)
   !-----------------------------------------------------------------------------
   ! Open global grid file
   !-----------------------------------------------------------------------------
-  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
-  if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
+  if(myrank==0) then
+    open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
+    if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
+  endif
 
   !-----------------------------------------------------------------------------
   ! Aquire and construct global data tables
   !-----------------------------------------------------------------------------
 
   ! Aquire global grid size
-  read(14,*); read(14,*) ne_global,np_global
+  if(myrank==0) then
+    read(14,*); read(14,*) ne_global,np_global
+  endif
+  call mpi_bcast(ne_global,1,itype,0,comm,stat)
+  call mpi_bcast(np_global,1,itype,0,comm,stat)
 
   ! Aquire global element-node tables from hgrid.gr3
   if(allocated(i34gb)) deallocate(i34gb); allocate(i34gb(ne_global),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: i34gb allocation failure')
   if(allocated(nmgb)) deallocate(nmgb); allocate(nmgb(4,ne_global),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: nmgb allocation failure')
-  do i=1,np_global; read(14,*); enddo;
-  do i=1,ne_global
-    read(14,*) iegb,i34gb(iegb),(nmgb(k,iegb),k=1,i34gb(iegb))
-    if(i34gb(iegb)/=3.and.i34gb(iegb)/=4) then
-      write(errmsg,*) 'AQUIRE_HGRID: Unknown type of element',iegb,i34gb(iegb)
-      call parallel_abort(errmsg)
-    endif
-    if(i34gb(iegb)==4) lhas_quad=.true.
-  enddo
-  if(myrank==0) write(16,*)'lhas_quad=',lhas_quad
+
+  if(myrank==0) then
+    do i=1,np_global; read(14,*); enddo;
+    do i=1,ne_global
+      read(14,*) iegb,i34gb(iegb),(nmgb(k,iegb),k=1,i34gb(iegb))
+      if(i34gb(iegb)/=3.and.i34gb(iegb)/=4) then
+        write(errmsg,*) 'AQUIRE_HGRID: Unknown type of element',iegb,i34gb(iegb)
+        call parallel_abort(errmsg)
+      endif
+      if(i34gb(iegb)==4) lhas_quad=.true.
+    enddo
+    write(16,*)'lhas_quad=',lhas_quad
+  endif !myrank
+  call mpi_bcast(i34gb,ne_global,itype,0,comm,stat)
+  call mpi_bcast(nmgb,ne_global*4,itype,0,comm,stat)
+  call mpi_bcast(lhas_quad,1,MPI_LOGICAL,0,comm,stat)
 
   ! Count number of elements connected to each node (global)
   if(allocated(nnegb)) deallocate(nnegb); allocate(nnegb(np_global),stat=stat);
@@ -747,25 +771,29 @@ subroutine aquire_hgrid(full_aquire)
   isbnd_global=0;
 
   ! Global number of open boundary segments and nodes
-  rewind(14); read(14,*); read(14,*);
-  do i=1,np_global; read(14,*); enddo;
-  do i=1,ne_global; read(14,*); enddo;
-  read(14,*) nope_global
-  read(14,*) neta_global
+  if(myrank==0) then
+    rewind(14); read(14,*); read(14,*);
+    do i=1,np_global; read(14,*); enddo;
+    do i=1,ne_global; read(14,*); enddo;
+    read(14,*) nope_global
+    read(14,*) neta_global
 
-  ! Scan segments to count number of open boundary segments and nodes
-  mnond_global=0 !global max number of nodes per segment
-  nt=0    !global total node count
-  do k=1,nope_global
-    read(14,*) nn
-    mnond_global=max(mnond_global,nn);
-    nt=nt+nn
-    do i=1,nn; read(14,*); enddo;
-  enddo !k
-  if(neta_global/=nt) then
-    write(errmsg,*) 'neta_global /= total # of open bnd nodes',neta_global,nt
-    call parallel_abort(errmsg)
-  endif
+    ! Scan segments to count number of open boundary segments and nodes
+    mnond_global=0 !global max number of nodes per segment
+    nt=0    !global total node count
+    do k=1,nope_global
+      read(14,*) nn
+      mnond_global=max(mnond_global,nn);
+      nt=nt+nn
+      do i=1,nn; read(14,*); enddo;
+    enddo !k
+    if(neta_global/=nt) then
+      write(errmsg,*) 'neta_global /= total # of open bnd nodes',neta_global,nt
+      call parallel_abort(errmsg)
+    endif
+  endif !myrank
+  call mpi_bcast(nope_global,1,itype,0,comm,stat)
+  call mpi_bcast(mnond_global,1,itype,0,comm,stat)
 
   ! Allocate arrays for global open boundary segments
   if(allocated(nond_global)) deallocate(nond_global);
@@ -776,52 +804,61 @@ subroutine aquire_hgrid(full_aquire)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: iond_global allocation failure')
 
   ! Aquire global open boundary segments and nodes
-  rewind(14); read(14,*); read(14,*);
-  do i=1,np_global; read(14,*); enddo;
-  do i=1,ne_global; read(14,*); enddo;
-  read(14,*); read(14,*);
-  nond_global=0; iond_global=0;
-  do k=1,nope_global
-    read(14,*) nn
-    do i=1,nn
-      read(14,*) ipgb
-      nond_global(k)=nond_global(k)+1
-      iond_global(k,nond_global(k))=ipgb
-      isbnd_global(ipgb)=k
-    enddo !i
-    if(iond_global(k,1)==iond_global(k,nond_global(k))) then
-      write(errmsg,*) 'Looped open bnd:',k
-      call parallel_abort(errmsg)
-    endif
-  enddo !k
+  if(myrank==0) then
+    rewind(14); read(14,*); read(14,*);
+    do i=1,np_global; read(14,*); enddo;
+    do i=1,ne_global; read(14,*); enddo;
+    read(14,*); read(14,*);
+    nond_global=0; iond_global=0;
+    do k=1,nope_global
+      read(14,*) nn
+      do i=1,nn
+        read(14,*) ipgb
+        nond_global(k)=nond_global(k)+1
+        iond_global(k,nond_global(k))=ipgb
+        isbnd_global(ipgb)=k
+      enddo !i
+      if(iond_global(k,1)==iond_global(k,nond_global(k))) then
+        write(errmsg,*) 'Looped open bnd:',k
+        call parallel_abort(errmsg)
+      endif
+    enddo !k
+  endif !myrank
+  call mpi_bcast(nond_global,nope_global,itype,0,comm,stat)
+  call mpi_bcast(iond_global,nope_global*mnond_global,itype,0,comm,stat)
+  call mpi_bcast(isbnd_global,np_global,itype,0,comm,stat)
 
   !-----------------------------------------------------------------------------
   ! Aquire global land boundary segments from hgrid.gr3
   !-----------------------------------------------------------------------------
 
   ! Global total number of land boundary segments and nodes
-  rewind(14); read(14,*); read(14,*);
-  do i=1,np_global; read(14,*); enddo;
-  do i=1,ne_global; read(14,*); enddo;
-  read(14,*); read(14,*);
-  do k=1,nope_global; read(14,*) nn; do i=1,nn; read(14,*); enddo; enddo;
-  read(14,*) nland_global
-  read(14,*) nvel_global
+  if(myrank==0) then
+    rewind(14); read(14,*); read(14,*);
+    do i=1,np_global; read(14,*); enddo;
+    do i=1,ne_global; read(14,*); enddo;
+    read(14,*); read(14,*);
+    do k=1,nope_global; read(14,*) nn; do i=1,nn; read(14,*); enddo; enddo;
+    read(14,*) nland_global
+    read(14,*) nvel_global
 
-  ! Scan segments to count number of land boundary segments and nodes
-  mnlnd_global=0 !global max number of nodes per segment
-  nt=0    !global total node count
-  do k=1,nland_global
-    read(14,*) nn
-    mnlnd_global=max(mnlnd_global,nn)
-    nt=nt+nn
-    do i=1,nn; read(14,*); enddo;
-  enddo !k
-  if(nvel_global/=nt) then
-    write(errmsg,*) 'AQUIRE_HGRID: nvel_global /= total # of land bnd nodes', &
+    ! Scan segments to count number of land boundary segments and nodes
+    mnlnd_global=0 !global max number of nodes per segment
+    nt=0    !global total node count
+    do k=1,nland_global
+      read(14,*) nn
+      mnlnd_global=max(mnlnd_global,nn)
+      nt=nt+nn
+      do i=1,nn; read(14,*); enddo;
+    enddo !k
+    if(nvel_global/=nt) then
+      write(errmsg,*) 'AQUIRE_HGRID: nvel_global /= total # of land bnd nodes', &
                     &nvel_global,nt
-    call parallel_abort(errmsg)
-  endif
+      call parallel_abort(errmsg)
+    endif
+  endif !myrank
+  call mpi_bcast(nland_global,1,itype,0,comm,stat)
+  call mpi_bcast(mnlnd_global,1,itype,0,comm,stat)
 
   ! Allocate arrays for global land boundary segments
   if(allocated(nlnd_global)) deallocate(nlnd_global);
@@ -832,22 +869,32 @@ subroutine aquire_hgrid(full_aquire)
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: ilnd_global allocation failure')
 
   ! Aquire global land boundary segments and nodes
-  rewind(14); read(14,*); read(14,*);
-  do i=1,np_global; read(14,*); enddo;
-  do i=1,ne_global; read(14,*); enddo;
-  read(14,*); read(14,*);
-  do k=1,nope_global; read(14,*) nn; do i=1,nn; read(14,*); enddo; enddo;
-  read(14,*); read(14,*);
-  nlnd_global=0; ilnd_global=0;
-  do k=1,nland_global
-    read(14,*) nn
-    do i=1,nn
-      read(14,*) ipgb
-      nlnd_global(k)=nlnd_global(k)+1
-      ilnd_global(k,nlnd_global(k))=ipgb
-      if(isbnd_global(ipgb)==0) isbnd_global(ipgb)=-1 !overlap of open bnd
-    enddo !i
-  enddo !k
+  if(myrank==0) then
+    rewind(14); read(14,*); read(14,*);
+    do i=1,np_global; read(14,*); enddo;
+    do i=1,ne_global; read(14,*); enddo;
+    read(14,*); read(14,*);
+    do k=1,nope_global; read(14,*) nn; do i=1,nn; read(14,*); enddo; enddo;
+    read(14,*); read(14,*);
+    nlnd_global=0; ilnd_global=0;
+    do k=1,nland_global
+      read(14,*) nn
+      do i=1,nn
+        read(14,*) ipgb
+        nlnd_global(k)=nlnd_global(k)+1
+        ilnd_global(k,nlnd_global(k))=ipgb
+        if(isbnd_global(ipgb)==0) isbnd_global(ipgb)=-1 !overlap of open bnd
+      enddo !i
+    enddo !k
+
+    !-----------------------------------------------------------------------------
+    ! Done with global grid -- close grid file
+    !-----------------------------------------------------------------------------
+    close(14)
+  endif !myrank
+  call mpi_bcast(nlnd_global,nland_global,itype,0,comm,stat)
+  call mpi_bcast(ilnd_global,nland_global*mnlnd_global,itype,0,comm,stat)
+  call mpi_bcast(isbnd_global,np_global,itype,0,comm,stat)
 
 ! Re-arrange in counter-clockwise fashion
 !  if(allocated(nnpgb)) deallocate(nnpgb);
@@ -930,10 +977,6 @@ subroutine aquire_hgrid(full_aquire)
 !      endif
     enddo !j=2,nnegb(i)
   enddo !i=1,np_global
-  !-----------------------------------------------------------------------------
-  ! Done with global grid -- close grid file
-  !-----------------------------------------------------------------------------
-  close(14)
 
   !-----------------------------------------------------------------------------
   ! Count number of resident elements, nodes and sides for each processor.
@@ -1621,32 +1664,40 @@ subroutine aquire_hgrid(full_aquire)
   if(allocated(ylat)) deallocate(ylat); allocate(ylat(npa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: ylat allocation failure')
 
-  open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
-  if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
-  read(14,*); read(14,*);
+  if(allocated(dbuf1)) deallocate(dbuf1); allocate(dbuf1(3,np_global),stat=stat);
+  if(stat/=0) call parallel_abort('AQUIRE_HGRID: dbuf1 allocation failure')
+  if(myrank==0) then
+    open(14,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old',iostat=stat)
+    if(stat/=0) call parallel_abort('AQUIRE_HGRID: open(14) failure')
+    read(14,*); read(14,*);
+    do i=1,np_global
+      read(14,*) ipgb,dbuf1(1:3,i) !xtmp,ytmp,dptmp
+    enddo !i
+    close(14)
+  endif !myrank
+  call mpi_bcast(dbuf1,3*np_global,rtype,0,comm,stat)
+
   do i=1,np_global
-    read(14,*) ipgb,xtmp,ytmp,dptmp
-    node=>ipgl(ipgb)
+    node=>ipgl(i)
     if(node%rank==myrank) then
       ii=node%id
       if(ics==1) then
-        xnd(ii)=xtmp
-        ynd(ii)=ytmp
-        dp(ii)=dptmp
+        xnd(ii)=dbuf1(1,i) !xtmp
+        ynd(ii)=dbuf1(2,i) !ytmp
+        dp(ii)=dbuf1(3,i) !dptmp
       else !lat/lon
-        xlon(ii)=xtmp*deg2rad
-        ylat(ii)=ytmp*deg2rad
-        dp(ii)=dptmp
+        xlon(ii)=dbuf1(1,i)*deg2rad !xtmp*deg2rad
+        ylat(ii)=dbuf1(2,i)*deg2rad !ytmp*deg2rad
+        dp(ii)=dbuf1(3,i) !dptmp
         lreadll=.true. !flag to indicate lat/lon already read in
         !global coordi.
         xnd(ii)=rearth_eq*cos(ylat(ii))*cos(xlon(ii))
         ynd(ii)=rearth_eq*cos(ylat(ii))*sin(xlon(ii))
         znd(ii)=rearth_pole*sin(ylat(ii))
       endif !ics
-!      if(dp(node%id).le.0) idrynode(node%id)=1
     endif !node%rank
   enddo !i
-  close(14)
+  deallocate(dbuf1)
 
   !-----------------------------------------------------------------------------
   ! Only do the rest if full_aquire

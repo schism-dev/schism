@@ -358,8 +358,10 @@
         if(inu_tr(k)==2) then
           itmp1=irange_tr(1,k) 
           itmp2=irange_tr(2,k) 
-          j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nudging(1)')
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nudging(1)')
+          endif 
 
           do m=itmp1,itmp2
             swild9=-9999.
