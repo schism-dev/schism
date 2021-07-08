@@ -99,10 +99,10 @@
       real(4), allocatable :: swild9(:,:) !used in tracer nudging
 
       allocate(swild9(nvrt,mnu_pts),swild(nsa+nvrt+12+ntracers),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: swild9')
+      if(istat/=0) call parallel_abort('MISC: swild9')
       if(nws==4) then
         allocate(rwild(np_global,3),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: failed to alloc. (71)')
+        if(istat/=0) call parallel_abort('MISC: failed to alloc. (71)')
       endif !nws=4
 
 !...  Finish init variables
@@ -360,7 +360,7 @@
           itmp2=irange_tr(2,k) 
           if(myrank==0) then
             j=nf90_inq_varid(ncid_nu(k), "tracer_concentration",mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nudging(1)')
+            if(j/=NF90_NOERR) call parallel_abort('MISC: nudging(1)')
           endif 
 
           do m=itmp1,itmp2
@@ -368,7 +368,7 @@
             if(myrank==0) then
               j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
      &(/m-itmp1+1,1,1,ntmp/),(/1,nvrt,nnu_pts(k),1/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nudging nc(2)')
+              if(j/=NF90_NOERR) call parallel_abort('MISC: nudging nc(2)')
             endif !myrank
             call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
             do i=1,nnu_pts(k)
@@ -387,7 +387,7 @@
             if(myrank==0) then
               j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
      &(/m-itmp1+1,1,1,ntmp+1/),(/1,nvrt,nnu_pts(k),1/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nudging nc(2.2)')
+              if(j/=NF90_NOERR) call parallel_abort('MISC: nudging nc(2.2)')
             endif !myrank
             call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
             do i=1,nnu_pts(k)
@@ -412,7 +412,7 @@
         !Get dt 1st
         read(50,*)tmp !,ath(1:nettype,1,1,1)
         read(50,*)th_dt(1,1) !,ath(1:nettype,1,2,1)
-        if(abs(tmp)>real(1.e-6,rkind).or.th_dt(1,1)<dt) call parallel_abort('INIT: check elev.th')
+        if(abs(tmp)>real(1.e-6,rkind).or.th_dt(1,1)<dt) call parallel_abort('MISC: check elev.th')
         rewind(50)
         ninv=time/th_dt(1,1)
         do it=0,ninv
@@ -428,7 +428,7 @@
         rewind(51)
         read(51,*) tmp !,ath(1:nfltype,1,1,2)
         read(51,*) th_dt(1,2) !
-        if(abs(tmp)>real(1.e-6,rkind).or.th_dt(1,2)<dt) call parallel_abort('INIT: check flux.th')
+        if(abs(tmp)>real(1.e-6,rkind).or.th_dt(1,2)<dt) call parallel_abort('MISC: check flux.th')
         rewind(51)
         ninv=time/th_dt(1,2)
         do it=0,ninv
@@ -445,7 +445,7 @@
             rewind(300+m)
             read(300+m,*)tmp !,ath(1:ntrtype1(i),m,1,5)
             read(300+m,*)th_dt(m,5) !
-            if(abs(tmp)>real(1.e-6,rkind).or.th_dt(m,5)<dt) call parallel_abort('INIT: check ASCII tracer .th')
+            if(abs(tmp)>real(1.e-6,rkind).or.th_dt(m,5)<dt) call parallel_abort('MISC: check ASCII tracer .th')
             rewind(300+m)
             ninv=time/th_dt(m,5)
             do it=0,ninv
@@ -460,7 +460,7 @@
 
 !     Check dimension of ath2
       if(max(nnode_et,nnode_fl,maxval(nnode_tr2))>neta_global) then
-        write(errmsg,*) 'INIT: Dimension overflow for ath2:',nnode_et,nnode_fl,nnode_tr2(:)
+        write(errmsg,*) 'MISC: Dimension overflow for ath2:',neta_global,nnode_et,nnode_fl,nnode_tr2(:)
         call parallel_abort(errmsg)
       endif
 !     Binary record length for *3D.th at each time step
@@ -472,54 +472,54 @@
 
       if(nettype2>0) then
         j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
-        if(j/=NF90_NOERR) call parallel_abort('init: elev2D.th.nc')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
-        if(itmp/=nnode_et) call parallel_abort('init: # of open nodes(1)')
+        if(itmp/=nnode_et) call parallel_abort('MISC: # of open nodes(1)')
         j=nf90_inq_varid(ncid_elev2D, "time_step",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc dt1')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt1')
         j=nf90_get_var(ncid_elev2D,mm,floatout)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc dt2')
-        if(floatout<dt) call parallel_abort('INIT: elev2D.th dt wrong')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt2')
+        if(floatout<dt) call parallel_abort('MISC: elev2D.th dt wrong')
         th_dt2(1)=floatout
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
 
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: elev time_series')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
     &(/1,1,1,ninv+1/),(/1,1,nnode_et,1/))
-        if(j/=NF90_NOERR) call parallel_abort('init: elev time_series1')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series1')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
     &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
-        if(j/=NF90_NOERR) call parallel_abort('init: elev time_series2')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series2')
       endif !nettype2
 
       if(nfltype2>0) then
         j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
-        if(j/=NF90_NOERR) call parallel_abort('init: uv3D.th.nc')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: uv3D.th.nc')
         j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
-        if(itmp/=nnode_fl) call parallel_abort('init: # of open nodes in uv3D.th.nc')
+        if(itmp/=nnode_fl) call parallel_abort('MISC: # of open nodes in uv3D.th.nc')
         j=nf90_inq_varid(ncid_uv3D, "time_step",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc dt in uv3D.th.nc')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in uv3D.th.nc')
         j=nf90_get_var(ncid_uv3D,mm,floatout);
-        if(j/=NF90_NOERR) call parallel_abort('init: nc dt in uv3D.th.nc(2)')
-        if(floatout<dt) call parallel_abort('INIT: uv3D.th dt wrong')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in uv3D.th.nc(2)')
+        if(floatout<dt) call parallel_abort('MISC: uv3D.th dt wrong')
         th_dt2(2)=floatout
         ninv=time/th_dt2(2)
         th_time2(1,2)=real(ninv,rkind)*th_dt2(2)
         th_time2(2,2)=th_time2(1,2)+th_dt2(2)
 
         j=nf90_inq_varid(ncid_uv3D, "time_series",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_series3')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: time_series3')
         j=nf90_get_var(ncid_uv3D,mm,ath2(1:2,1:nvrt,1:nnode_fl,1,2), &
      &(/1,1,1,ninv+1/),(/2,nvrt,nnode_fl,1/))
-        if(j/=NF90_NOERR) call parallel_abort('init: time_series in uv3D.th.nc')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in uv3D.th.nc')
         j=nf90_get_var(ncid_uv3D,mm,ath2(1:2,1:nvrt,1:nnode_fl,2,2), &
      &(/1,1,1,ninv+2/),(/2,nvrt,nnode_fl,1/))
-        if(j/=NF90_NOERR) call parallel_abort('init: time_series in uv3D.th.nc(2)')
+        if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in uv3D.th.nc(2)')
       endif !nfltype2
 
 !     All tracer models share time step etc
@@ -529,19 +529,19 @@
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
           j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
-          if(j/=NF90_NOERR) call parallel_abort('init: <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: <tr>_3D.th')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
-          if(itmp/=nnode_tr2(i)) call parallel_abort('init: # of open nodes in <tr>_3D.th')
+          if(itmp/=nnode_tr2(i)) call parallel_abort('MISC: # of open nodes in <tr>_3D.th')
           j=nf90_inq_varid(ncid_tr3D(i), "time_step",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc dt in <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in <tr>_3D.th')
           j=nf90_get_var(ncid_tr3D(i),mm,floatout);
-          if(j/=NF90_NOERR) call parallel_abort('init: nc dt in <tr>_3D.th (2)')
-          if(floatout<dt) call parallel_abort('INIT: tr3D.th dt wrong')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in <tr>_3D.th (2)')
+          if(floatout<dt) call parallel_abort('MISC: tr3D.th dt wrong')
           if(icount==1) then
             th_dt2(5)=floatout
           else if(abs(th_dt2(5)-real(floatout,rkind))>1.d-4) then
-            write(errmsg,*)'INIT: tracer models must share dt for tr3D.th:',i,th_dt2(5),floatout
+            write(errmsg,*)'MISC: tracer models must share dt for tr3D.th:',i,th_dt2(5),floatout
             call parallel_abort(errmsg)
           endif
 
@@ -550,16 +550,16 @@
           th_time2(2,5)=th_time2(1,5)+th_dt2(5)
 
           j=nf90_inq_varid(ncid_tr3D(i), "time_series",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: time_series in <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th')
           itmp=irange_tr(2,i)-irange_tr(1,i)+1
           j=nf90_get_var(ncid_tr3D(i),mm, &
      &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),1,5), &
      &(/1,1,1,ninv+1/),(/itmp,nvrt,nnode_tr2(i),1/))
-          if(j/=NF90_NOERR) call parallel_abort('init: time_series in <tr>_3D.th(1)')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th(1)')
           j=nf90_get_var(ncid_tr3D(i),mm, &
      &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5), &
      &(/1,1,1,ninv+2/),(/itmp,nvrt,nnode_tr2(i),1/))
-          if(j/=NF90_NOERR) call parallel_abort('init: time_series in <tr>_3D.th (2)')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th (2)')
         endif !ntrs
       enddo !i
 
@@ -569,7 +569,7 @@
           rewind(63)
           read(63,*)tmp,ath3(1:nsources,1,1,1)
           read(63,*)th_dt3(1),ath3(1:nsources,1,2,1)
-          if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(1)<dt) call parallel_abort('INIT: vsource.th start time wrong')
+          if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(1)<dt) call parallel_abort('MISC: vsource.th start time wrong')
           ninv=time/th_dt3(1)
           rewind(63)
           do it=0,ninv
@@ -585,7 +585,7 @@
           rewind(65)
           read(65,*)tmp,ath3(1:nsources,1:ntracers,1,3)
           read(65,*)th_dt3(3),ath3(1:nsources,1:ntracers,2,3)
-          if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(3)<dt) call parallel_abort('INIT: msource.th start time wrong')
+          if(abs(tmp)>real(1.d-6,rkind).or.th_dt3(3)<dt) call parallel_abort('MISC: msource.th start time wrong')
           ninv=time/th_dt3(3)
           rewind(65)
           do it=0,ninv
@@ -601,7 +601,7 @@
           rewind(64)
           read(64,*)tmp,ath3(1:nsinks,1,1,2)
           read(64,*)th_dt3(2),ath3(1:nsinks,1,2,2)
-          if(abs(tmp)>real(1.e-6,rkind).or.th_dt3(2)<dt) call parallel_abort('INIT: vsink.th start time wrong')
+          if(abs(tmp)>real(1.e-6,rkind).or.th_dt3(2)<dt) call parallel_abort('MISC: vsink.th start time wrong')
 !'
           ninv=time/th_dt3(2)
           rewind(64)

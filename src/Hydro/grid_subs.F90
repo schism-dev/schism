@@ -793,6 +793,7 @@ subroutine aquire_hgrid(full_aquire)
     endif
   endif !myrank
   call mpi_bcast(nope_global,1,itype,0,comm,stat)
+  call mpi_bcast(neta_global,1,itype,0,comm,stat)
   call mpi_bcast(mnond_global,1,itype,0,comm,stat)
 
   ! Allocate arrays for global open boundary segments
@@ -858,6 +859,7 @@ subroutine aquire_hgrid(full_aquire)
     endif
   endif !myrank
   call mpi_bcast(nland_global,1,itype,0,comm,stat)
+  call mpi_bcast(nvel_global,1,itype,0,comm,stat)
   call mpi_bcast(mnlnd_global,1,itype,0,comm,stat)
 
   ! Allocate arrays for global land boundary segments
