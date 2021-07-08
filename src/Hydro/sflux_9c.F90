@@ -1008,20 +1008,22 @@
 !-----------------------------------------------------------------------
       subroutine rotate_winds (u, v, num_nodes_out)
 
-        use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir
-        use schism_msgp, only : myrank
+        use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir,np_global
+        use schism_msgp, only : myrank,rtype,comm
         implicit none
+        include 'mpif.h'
 
 ! input/output variables
-        integer num_nodes_out
-        real(rkind) u(num_nodes_out), v(num_nodes_out)
+        integer :: num_nodes_out
+        real(rkind) :: u(num_nodes_out), v(num_nodes_out)
 
 ! local variables
-        integer i_node, i_node_tmp, alloc_stat,ne_global,np_global
-        real(rkind) x_tmp, y_tmp, speed, dir,tmp
-        real(rkind) pi, deg_to_rad
+        integer :: i_node, i_node_tmp, alloc_stat,ne_global !,np_global
+        real(rkind) :: x_tmp, y_tmp, speed, dir,tmp
+        real(rkind) :: pi, deg_to_rad
         real(rkind), save, allocatable, dimension(:) :: &
      &    rotate_angle
+        real(rkind), allocatable :: buf4(:)
         character, parameter :: rot_file*50 = 'windrot_geo2proj.gr3'
         logical, save :: first_call = .true.
 
@@ -1032,23 +1034,29 @@
 ! that the winds will need to be rotated by
 ! (convert degrees to radians)
         if (first_call) then
-
+          
 ! allocate array for needed size
-          allocate (rotate_angle(num_nodes_out), stat=alloc_stat)
+          allocate (rotate_angle(num_nodes_out),buf4(np_global),stat=alloc_stat)
           call check_allocation('rotate_angle', 'rotate_winds', &
      &                          alloc_stat)
 
-          open(10, file=in_dir(1:len_in_dir)//rot_file, status='old')
-          read(10,*) ! header
-          read(10,*)ne_global,np_global
+          if(myrank==0) then
+            open(10, file=in_dir(1:len_in_dir)//rot_file, status='old')
+            read(10,*) ! header
+            read(10,*) !ne_global,np_global
 
-          do i_node =1, np_global !num_nodes_out
-            read(10,*) i_node_tmp, x_tmp, y_tmp, tmp
-            if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=tmp*deg_to_rad
+            do i_node =1, np_global !num_nodes_out
+              read(10,*) i_node_tmp, x_tmp, y_tmp,buf4(i_node) !tmp
+!              if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=tmp*deg_to_rad
+            enddo
+            close(10)
+          endif !myrank
+          call mpi_bcast(buf4,np_global,rtype,0,comm,alloc_stat)
+ 
+          do i_node =1, np_global
+            if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=buf4(i_node)*deg_to_rad
           enddo
-
-          close(10)
-
+          deallocate(buf4)
         endif !first_call
 
 ! rotate winds
