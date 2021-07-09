@@ -460,6 +460,7 @@ module schism_glbl
   real(rkind),save,allocatable :: fresh_wa_flux(:)
   !(npa). net heat flux into the ocean surface [W/m/m]. >0: warm the ocean
   real(rkind),save,allocatable :: net_heat_flux(:)
+  real(rkind),save,allocatable :: wind_rotate_angle(:) !in radians
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
 

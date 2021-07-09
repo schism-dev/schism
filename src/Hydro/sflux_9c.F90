@@ -1008,8 +1008,8 @@
 !-----------------------------------------------------------------------
       subroutine rotate_winds (u, v, num_nodes_out)
 
-        use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir,np_global
-        use schism_msgp, only : myrank,rtype,comm
+        use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir,wind_rotate_angle
+        use schism_msgp, only : myrank
         implicit none
         include 'mpif.h'
 
@@ -1018,62 +1018,61 @@
         real(rkind) :: u(num_nodes_out), v(num_nodes_out)
 
 ! local variables
-        integer :: i_node, i_node_tmp, alloc_stat,ne_global !,np_global
+        integer :: i_node, i_node_tmp, alloc_stat !,ne_global,np_global
         real(rkind) :: x_tmp, y_tmp, speed, dir,tmp
         real(rkind) :: pi, deg_to_rad
-        real(rkind), save, allocatable, dimension(:) :: &
-     &    rotate_angle
-        real(rkind), allocatable :: buf4(:)
-        character, parameter :: rot_file*50 = 'windrot_geo2proj.gr3'
+!        real(rkind), save, allocatable, dimension(:) :: rotate_angle
+!        character, parameter :: rot_file*50 = 'windrot_geo2proj.gr3'
         logical, save :: first_call = .true.
 
-        pi = 4.0d0 * atan(1.0_rkind)
-        deg_to_rad = pi / 180.0_rkind
+!        pi = 4.0d0 * atan(1.0_rkind)
+!        deg_to_rad = pi / 180.0_rkind
 
 ! if this is the first call to this subroutine, then read in the angles
 ! that the winds will need to be rotated by
 ! (convert degrees to radians)
-        if (first_call) then
-          
-! allocate array for needed size
-          allocate (rotate_angle(num_nodes_out),buf4(np_global),stat=alloc_stat)
-          call check_allocation('rotate_angle', 'rotate_winds', &
-     &                          alloc_stat)
-
-          if(myrank==0) then
-            open(10, file=in_dir(1:len_in_dir)//rot_file, status='old')
-            read(10,*) ! header
-            read(10,*) !ne_global,np_global
-
-            do i_node =1, np_global !num_nodes_out
-              read(10,*) i_node_tmp, x_tmp, y_tmp,buf4(i_node) !tmp
-!              if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=tmp*deg_to_rad
-            enddo
-            close(10)
-          endif !myrank
-          call mpi_bcast(buf4,np_global,rtype,0,comm,alloc_stat)
- 
-          do i_node =1, np_global
-            if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=buf4(i_node)*deg_to_rad
-          enddo
-          deallocate(buf4)
-        endif !first_call
+!        if (first_call) then
+!          
+!! allocate array for needed size
+!          allocate (rotate_angle(num_nodes_out),buf4(np_global),stat=alloc_stat)
+!          call check_allocation('rotate_angle', 'rotate_winds', &
+!     &                          alloc_stat)
+!
+!          if(myrank==0) then
+!            open(10, file=in_dir(1:len_in_dir)//rot_file, status='old')
+!            read(10,*) ! header
+!            read(10,*) !ne_global,np_global
+!
+!            do i_node =1, np_global !num_nodes_out
+!              read(10,*) i_node_tmp, x_tmp, y_tmp,buf4(i_node) !tmp
+!!              if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=tmp*deg_to_rad
+!            enddo
+!            close(10)
+!          endif !myrank
+!          call mpi_bcast(buf4,np_global,rtype,0,comm,alloc_stat)
+! 
+!          do i_node =1, np_global
+!            if(ipgl(i_node)%rank==myrank) rotate_angle(ipgl(i_node)%id)=buf4(i_node)*deg_to_rad
+!          enddo
+!          deallocate(buf4)
+!        endif !first_call
 
 ! rotate winds
-        do i_node =1, num_nodes_out
+        do i_node =1, num_nodes_out !=npa
 
 ! calculate speed and direction (geographic)
           dir = atan2(-u(i_node),-v(i_node))
           speed = sqrt(u(i_node)*u(i_node) + v(i_node)*v(i_node))
 
 ! add rotation angle
-          dir = dir + rotate_angle(i_node)
+          !dir = dir + rotate_angle(i_node)
+          dir = dir + wind_rotate_angle(i_node)
 
 ! calculate new u and v components
           u(i_node) = -speed * sin(dir)
           v(i_node) = -speed * cos(dir)
 
-        enddo
+        enddo !i_node
 
 ! set first_call to false, so subsequent calls will know that they're
 ! not the first call

@@ -1298,7 +1298,6 @@
 !'
 
 !     Allocate the remaining arrays held in schism_glbl, except for Kriging related arrays 
-      !allocate(tem0(nvrt,npa),sal0(nvrt,npa),eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
       allocate(eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
           &we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa), & !ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
           &prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
@@ -1306,7 +1305,7 @@
           &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -3031,7 +3030,25 @@
         write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
         open(38,file=out_dir(1:len_out_dir)//fdb,status='replace')
 #endif
-      endif
+      endif !nws
+
+!...  Wind rotation angle input
+      if(nws==2) then
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'windrot_geo2proj.gr3',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !degr
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) wind_rotate_angle(ipgl(i)%id)=buf3(i)*pi/180.d0
+        enddo !i
+      endif !nws
 
 !      windfactor=1 !intialize for default
 !      if(nws>0) then
@@ -3063,7 +3080,7 @@
       if(ihconsv/=0) then
         if(myrank==0) then
           write(16,*)'Warning: you have chosen a heat conservation model'
-          write(16,*)'which assumes start time specified in sflux_inputs.txt!'
+          write(16,*)'which assumes start time specified in param.nml!'
         endif
 
 !       Read in albedo
