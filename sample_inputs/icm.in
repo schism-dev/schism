@@ -516,6 +516,8 @@ saltoptveg=  35     15     0
 tinunveg= 1      1      1
 
 !nitrogen parameters
+isfnveg= 1
+isrecnveg= 1
 ancveg=   0.09   0.09   0.09   !nitrogen to carbon ratio
 khnwveg=  0.01   0.01   0.01   !nitrogen half saturation in water column
 khnsveg=  0.1    0.1    0.1    !nitrogen half saturation in sediments
@@ -526,6 +528,8 @@ fnlpveg=  0.15   0.15   0.15
 fnrpveg=  0.05   0.05   0.05   
           
 !phosphorus parameters
+isfpveg=  1
+isrecpveg= 1
 apcveg=   0.01   0.01   0.01   !phosphorus to carbon ratio
 khpwveg=  0.001  0.001  0.001  !phosphorus half saturation in water column
 khpsveg=  0.01   0.01   0.01   !phosphorus half saturation in sediments

@@ -1906,8 +1906,11 @@ subroutine photosynthesis(id,hour,nv,it)
         !tmp0=max(1.e-2_iwp,xtveg0)
         !fnveg(id,j)=(CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))/ &
         !                &(khnsveg(j)+CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))
-        fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
-
+        if(isfnveg==1)then
+          fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
+        else
+          fnveg(id,j)=1
+        endif
         !!depth-averaged P
         !tmp=0.0
         !do k=1,nv
@@ -1918,8 +1921,11 @@ subroutine photosynthesis(id,hour,nv,it)
         !tmp=max(1.e-2_iwp,xtveg)
         !fpveg(id,j)=(CPIP(id)+tmp*khpsveg(j)/khpwveg(j))/ &
         !                &(khpsveg(j)+CPIP(id)+tmp*khpsveg(j)/khpwveg(j))
-        fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
-
+        if(isfpveg==1)then
+          fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
+        else
+          fpveg(id,j)=1
+        endif
 
         !--------------------
         !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients      
@@ -2816,7 +2822,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecnveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -2870,7 +2876,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecnveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -2920,7 +2926,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecnveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -3004,7 +3010,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecnveg==1) then
       !release from metabolism
       rtmp=0.0 !init
       do j=1,3
@@ -3132,7 +3138,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecpveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -3187,7 +3193,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecpveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -3238,7 +3244,7 @@ subroutine calkwq(id,nv,ure,it)
     endif !isav
 
     !ncai_veg
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecpveg==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
@@ -3305,7 +3311,7 @@ subroutine calkwq(id,nv,ure,it)
 
     !ncai_veg
     !release from metabolism
-    if(iveg_icm==1.and.patchveg(id)==1) then
+    if(iveg_icm==1.and.patchveg(id)==1.and.isrecpveg==1) then
       rtmp=0.0 !init
       do j=1,3
         if(idry_e(id)==1) then
@@ -3862,12 +3868,25 @@ subroutine calkwq(id,nv,ure,it)
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j) !sum(lfNH4veg(1:nv,j))
       tlfPO4veg(id,j)=apcveg(j)*plfveg(id,j)*tlfveg(id,j) !sum(lfPO4veg(1:nv,j))
+      if(isrecnveg==0)then !recycled nutrients go to sediment directly
+        tlfNH4veg(id,j)=tlfNH4veg(id,j)-ancveg(j)*fniveg(j)* &
+                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+        tlfPO4veg(id,j)=tlfPO4veg(id,j)-apcveg(j)*fpiveg(j)* &
+                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+      endif
 
       !produce of POM by rt metabolism rate for this dt, unit: g/m^2/day
       trtpocveg(id,j)=(1-fdoveg(j))*bmrtveg(j)*trtveg(id,j)
       trtponveg(id,j)=ancveg(j)*bmrtveg(j)*trtveg(id,j)
       trtpopveg(id,j)=apcveg(j)*bmrtveg(j)*trtveg(id,j)
       trtdoveg(id,j)=aocrveg(j)*fdoveg(j)*bmrtveg(j)*trtveg(id,j)
+
+      if(isrecnveg==0)then !recycled nutrients go to sediment directly
+        trtponveg(id,j)=trtponveg(id,j)+ancveg(j)*(1-fniveg(j))* &
+                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+        trtpopveg(id,j)=trtpopveg(id,j)+apcveg(j)*(1-fpiveg(j))* &
+                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+      endif
 
       !nan check
       if(.not.(tlfNH4veg(k,j)>0.or.tlfNH4veg(k,j)<=0))then

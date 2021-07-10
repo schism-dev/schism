@@ -42,6 +42,7 @@ module icm_mod
   integer,save :: iAtm,iCheck,iout_icm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
   integer,save :: isav_icm,iveg_icm !ncai_sav, ncai_veg 
+  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg !ncai_veg
   integer,save :: idry_icm
  
 !  !ICM region
