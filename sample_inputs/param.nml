@@ -137,9 +137,8 @@
 ! If indvel=1, no horizontal viscosity is needed. 
 ! (2) Shapiro filter (see below)
 !
-! For non-eddying regime applications (nearshore, estuary, river), two easiest options are: 
-! (1) indvel=1, ishapiro=ihorcon=0, and any choices of inter_mom; 
-! (2) indvel=0, ishapiro=1 (shapiro0=0.5), ihorcon=inter_mom=0.
+! For non-eddying regime applications (nearshore, estuary, river), an easiest option is: 
+!  indvel=0, ishapiro=1 (shapiro0=0.5), ihorcon=inter_mom=0.
 ! For applications that include eddying regime, refer to the manual.
 !-----------------------------------------------------------------------
   ihorcon = 0

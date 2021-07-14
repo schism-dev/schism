@@ -404,7 +404,7 @@
       REAL(8) TIMEBEG
       REAL(rkind) DT,FMV
 !      COMMON /MEANSQ/ TIMEBEG,DT,FMV,NTSTEPS,ITMV
-      CHARACTER*4 DIRNAME
+      CHARACTER*6 DIRNAME
 !
       convrd=180.d0/pi
 !
@@ -412,8 +412,8 @@
 !
 !**** Open velocity station harmonic output file and write header information
 !
-      write(DIRNAME(1:4),'(i4.4)') myrank
-      open(53,file=out_dir(1:len_out_dir)//'harme_'//DIRNAME(1:4))
+      write(DIRNAME(1:6),'(i6.6)') myrank
+      open(53,file=out_dir(1:len_out_dir)//'harme_'//DIRNAME(1:6))
       write(53,*) nfreq+nf
       do j=1,nfreq+nf
          write(53,3679) hafreq(j),HAFF(j),HAFACE(j),namefr(j)
@@ -574,7 +574,7 @@
       REAL(8) TIMEBEG
       REAL(rkind) DT,FMV
 !      COMMON /MEANSQ/ TIMEBEG,DT,FMV,NTSTEPS,ITMV
-      CHARACTER*4 DIRNAME
+      CHARACTER*6 DIRNAME
 !
       convrd=180.d0/pi
 !
@@ -584,8 +584,8 @@
 !
 !**** Open velocity station harmonic output file and write header information
 !
-      write(DIRNAME(1:4),'(i4.4)') myrank
-      open(54,file=out_dir(1:len_out_dir)//'harmv.54'//DIRNAME(1:4))
+      write(DIRNAME(1:6),'(i6.6)') myrank
+      open(54,file=out_dir(1:len_out_dir)//'harmv.54'//DIRNAME(1:6))
       write(54,*) nfreq+nf
       do j=1,nfreq+nf
          write(54,3679) hafreq(j),HAFF(j),HAFACE(j),namefr(j)

@@ -127,7 +127,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(icomb)) then !uncombined
-        file_char='schout_0000_'//stack_char(1:char_len)//'.nc'
+        file_char='schout_000000_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
@@ -300,8 +300,8 @@
       real*8 :: dble2
       real, allocatable :: ztot(:),sigma(:)
 
-      !Read local_to_global_0000 for global info
-      open(10,file='local_to_global_0000',status='old')
+      !Read local_to_global_000000 for global info
+      open(10,file='local_to_global_000000',status='old')
       read(10,*)ns,ne,np,nvrt,nproc
       close(10)
       if(allocated(x)) deallocate(x)
@@ -327,12 +327,12 @@
       ! Read rank-specific local_to_global*
       !-------------------------------------------------------------------------------
       ! Read in local-global mappings from all ranks
-      file_char='local_to_global_0000'
+      file_char='local_to_global_000000'
       char_len=len_trim(file_char)
     
       !Find max. for dimensioning
       do irank=0,nproc-1
-        write(file_char(char_len-3:char_len),'(i4.4)') irank
+        write(file_char(char_len-5:char_len),'(i6.6)') irank
         open(10,file=file_char,status='old')
         read(10,*) !global info
         read(10,*) !info
@@ -361,7 +361,7 @@
     
       !Re-read
       do irank=0,nproc-1
-        write(file_char(char_len-3:char_len),'(i4.4)') irank
+        write(file_char(char_len-5:char_len),'(i6.6)') irank
         open(10,file=file_char,status='old')
         read(10,*) !global info
         read(10,*) !info
@@ -436,7 +436,7 @@
       integer, optional, intent(in) :: irank
 
       integer :: iret,i,npes,len_var,ivarid1,ndims,dimids(100),idims(100),ncid2,ielev_id,nrec4
-      character(len=4) :: a_4
+      character(len=6) :: a_4
       real, allocatable :: worka(:,:,:,:),workb(:,:)
 
       if(allocated(worka)) deallocate(worka)
@@ -451,7 +451,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(irank)) then !uncombined
-        write(a_4,'(i4.4)') irank
+        write(a_4,'(i6.6)') irank
         file_char='schout_'//a_4//'_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'

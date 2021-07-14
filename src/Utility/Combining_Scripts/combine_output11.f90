@@ -52,7 +52,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   integer :: start_year,start_month,start_day
   real*8 :: start_hour,utc_start
   integer :: lfgb,lfdb       ! Length of processor specific global output file name
-  character(len=4) :: a_4
+  character(len=6) :: a_4
   integer,allocatable :: elnode(:,:)
   integer,allocatable :: elside(:,:)
   integer,allocatable :: isdel(:,:),vlen(:),ne(:),np(:),ns(:),ihot_len(:), &
@@ -106,8 +106,8 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 
   invalid_index = -99999
 
-! Read local_to_global_0000 for global info
-  open(10,file='local_to_global_0000',status='old')
+! Read local_to_global_000000 for global info
+  open(10,file='local_to_global_000000',status='old')
   read(10,*)ns_global,ne_global,np_global,nvrt,nproc !,ntracers
   close(10)
   allocate(x(np_global),y(np_global),dp(np_global),kbp00(np_global),kbe(ne_global),i34(ne_global), &
@@ -122,12 +122,12 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   ! Read rank-specific local_to_global*
   !-------------------------------------------------------------------------------
   ! Read in local-global mappings from all ranks
-  fdb='local_to_global_0000'
+  fdb='local_to_global_000000'
   lfdb=len_trim(fdb)
 
   !Find max. for dimensioning
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*) !global info
     read(10,*) !info
@@ -152,7 +152,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   !Re-read
   !ns_global=0
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*) !global info
     read(10,*) !info
@@ -505,7 +505,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 !          endif
 
     !Find and define variables
-    file63='schout_0000_'//it_char(1:it_len)//'.nc'
+    file63='schout_000000_'//it_char(1:it_len)//'.nc'
     file63=adjustl(file63)
     iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
     if(iret/=NF90_NOERR) stop 'Failed to open(1)'
@@ -733,7 +733,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
       !Gather all ranks
       do irank=0,nproc-1
         !Open input file
-        write(a_4,'(i4.4)') irank
+        write(a_4,'(i6.6)') irank
         file63='schout_'//a_4//'_'//it_char(1:it_len)//'.nc'
         file63=adjustl(file63)
         iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
@@ -989,7 +989,7 @@ cfile = ""
 !files=""
 
 cmd_name = "combine_output11"
-call cla_init(cmd_name,"Combine time blocked per-processor binary outputs (e.g. 'schout_0000_1.nc') into time blocked global outputs ('schout_1.nc')")
+call cla_init(cmd_name,"Combine time blocked per-processor binary outputs (e.g. 'schout_000000_1.nc') into time blocked global outputs ('schout_1.nc')")
 
 !call cla_register('-i','--in', 'input file (e.g. combine_input.in) containing options (overridden by command line specs)', cla_char,'')
 call cla_register('-b','--begin', 'start day', cla_int,'-1')

@@ -2464,9 +2464,9 @@ subroutine dump_hgrid
 
 #ifdef DEBUG
   ! Dump elements
-  fdb='helem_0000'
+  fdb='helem_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
   open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',nea,ne,neg
   do ie=1,nea
@@ -2524,9 +2524,9 @@ subroutine dump_hgrid
   close(10)
 
   ! Dump nodes
-  fdb='hnode_0000'
+  fdb='hnode_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
   open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',npa,np,npg
   do ip=1,npa
@@ -2599,9 +2599,9 @@ subroutine dump_hgrid
   close(10)
 
   ! Dump sides
-  fdb='hside_0000'
+  fdb='hside_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
   open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,4i10)') '#',nsa,ns,nsg
   do isd=1,nsa
@@ -2646,9 +2646,9 @@ subroutine dump_hgrid
   close(10)
 
   ! Dump local bnd info
-  fdb='bndinfo_0000'
+  fdb='bndinfo_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
   open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
   write(10,'(a,i10)') 'Open bnd:',nope
   do i=1,nope

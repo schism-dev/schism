@@ -1326,21 +1326,21 @@
 #else
 # ifdef SCHISM
          IF (WRITEDBGFLAG == 1) THEN
-           FDB  ='wwmdbg_0000'
+           FDB  ='wwmdbg_000000'
            LFDB =len_trim(FDB)
-           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           write(FDB(LFDB-5:LFDB),'(i6.6)') MYRANK
            open(DBG%FHNDL,file='outputs/'//fdb,status='replace')
          END IF
          IF (WRITESTATFLAG == 1) THEN
-           FDB  ='wwmstat_0000'
+           FDB  ='wwmstat_000000'
            LFDB =len_trim(FDB)
-           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           write(FDB(LFDB-5:LFDB),'(i6.6)') MYRANK
            open(STAT%FHNDL,file='outputs/'//fdb,status='replace') 
          END IF
          IF (WRITEWINDBGFLAG == 1) THEN
-           FDB  ='windbg_0000'
+           FDB  ='windbg_000000'
            LFDB =len_trim(FDB)
-           write(FDB(LFDB-3:LFDB),'(i4.4)') MYRANK
+           write(FDB(LFDB-5:LFDB),'(i6.6)') MYRANK
            open(WINDBG%FHNDL,file='outputs/'//fdb,status='replace') 
          END IF
 # else

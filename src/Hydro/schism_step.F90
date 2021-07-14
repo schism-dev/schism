@@ -196,6 +196,7 @@
 !     Output handles
       character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
+      character(len=6),save :: a_6
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout
       real(8) :: dbleout2(1)
@@ -2038,9 +2039,9 @@
 
 !     Dump Cdp for diagnostics
       if(ipre2/=0) then
-        fdb='Cdp_0000'
+        fdb='Cdp_000000'
         lfdb=len_trim(fdb)
-        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+        write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
         open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
         write(10,*)np,nproc
         do i=1,np
@@ -2074,20 +2075,6 @@
           Cd(i)=(Cdp(isidenode(1,i))+Cdp(isidenode(2,i)))/2.d0
         enddo !i
 !$OMP   end do
-
-!       Output Cd for first step
-!        if(it==iths_main+1) then
-!          fdb='Cd_0000'
-!          lfdb=len_trim(fdb)
-!          write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!          open(32,file=out_dir(1:len_out_dir)//trim(fdb),status='unknown')
-!          !write(32,*)'Drag coefficents for nchi=1 or -1'
-!          !write(32,*)nsa
-!          do i=1,nsa
-!            write(32,'(i6,2e14.6,1x,e11.3)')i,xcj(i),ycj(i),Cd(i)
-!          enddo !i=1,ns
-!          close(32)
-!        endif
       endif !nchi/=0
 
 !     Bottom stress in m^2/s/s
@@ -2337,9 +2324,9 @@
       if(itur==3) then
 !------------------------------------------------------------
 !     Debug
-!      fdb='MY_0000'
+!      fdb='MY_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 
 !$OMP do
       do j=1,npa
@@ -2680,9 +2667,9 @@
       if(itur==5) then
 !------------------------------------------------------------
 !     Debug
-!      fdb='MY_0000'
+!      fdb='MY_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 
 !!$OMP do
       kppian=0
@@ -3637,9 +3624,9 @@
         enddo !i
       endif !ibtrack_test
 
-!      fdb='btrack_0000'
+!      fdb='btrack_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 
 !     temp fix
 !      if(ics==2) call zonal_flow
@@ -9032,12 +9019,12 @@
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
       if(nhot==1.and.mod(it,nhot_write)==0) then
-        a_4='0000'
-        write(a_4,'(i4.4)') myrank
+        a_6='000000'
+        write(a_6,'(i6.6)') myrank
         write(it_char,'(i72)')it
         it_char=adjustl(it_char)
         lit=len_trim(it_char)
-        it_char=out_dir(1:len_out_dir)//'hotstart_'//a_4//'_'//it_char(1:lit)//'.nc'
+        it_char=out_dir(1:len_out_dir)//'hotstart_'//a_6//'_'//it_char(1:lit)//'.nc'
         j=nf90_create(trim(adjustl(it_char)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_hot)
         j=nf90_def_dim(ncid_hot,'nResident_node',np,node_dim)
         j=nf90_def_dim(ncid_hot,'nResident_elem',ne,elem_dim)

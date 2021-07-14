@@ -1229,11 +1229,6 @@
 
 ! for the first call only, initialize starting date, datasets, etc 
         if (first_call) then
-!          fdb='sflux2_0000'
-!          lfdb=len_trim(fdb)
-!          write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-!          open(39,file=out_dir(1:len_out_dir)//fdb,status='replace')
-        
           call get_sflux_inputs ()
           
 ! setup datasets

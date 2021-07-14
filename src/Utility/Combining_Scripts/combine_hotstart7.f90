@@ -80,18 +80,18 @@ subroutine combine_hotstart7(istep)
   print*, 'istep=',istep
 
 ! Read mapping info
-  open(10,file='local_to_global_0000',status='old')
+  open(10,file='local_to_global_000000',status='old')
   read(10,*)ns_global,ne_global,np_global,nvrt,nproc,ntracers
   close(10)
   !For dim purpose
   if(np_global>ns_global.or.ne_global>ns_global) stop 'ns_global not max'
   allocate(ner(0:nproc-1),npr(0:nproc-1),nsr(0:nproc-1))
 
-  fdb='local_to_global_0000'; fdb=adjustl(fdb)
+  fdb='local_to_global_000000'; fdb=adjustl(fdb)
   lfdb=len_trim(fdb)
   mxner=0; mxnpr=0; mxnsr=0
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*)!ns_global,ne_global,np_global,nvrt,nproc,ntracers
 
@@ -110,7 +110,7 @@ subroutine combine_hotstart7(istep)
   if(istat/=0) stop 'Allocation error (3)'
 
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*); read(10,*)
     read(10,*)ner(irank)
@@ -143,7 +143,7 @@ subroutine combine_hotstart7(istep)
   !print*, 'suffix is:',fgb(1:lfgb)
 
   !Query # of vars
-  iret=nf90_open('hotstart_0000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+  iret=nf90_open('hotstart_000000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
   iret=nf90_inquire(ncid2,nDimensions=ndimensions,nVariables=nvars)
   write(*,*)'nvars=',nvars,ndimensions
   allocate(idims(ndimensions),dim_name(ndimensions),dimids(ndimensions))
@@ -187,7 +187,7 @@ subroutine combine_hotstart7(istep)
     do irank=0,nproc-1
       fgb2=fgb
       fgb2=adjustl(fgb2)
-      write(fgb2(1:4),'(i4.4)') irank
+      write(fgb2(1:6),'(i6.6)') irank
       iret=nf90_open('hotstart_'//fgb2(1:lfgb)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
       if(iret.ne.NF90_NOERR) then
         print*, nf90_strerror(iret); stop

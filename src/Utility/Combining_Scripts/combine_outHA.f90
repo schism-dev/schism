@@ -61,7 +61,7 @@
    character*10   namefr(MXFREQ)
    character*28   file1
    character*20   file2
-   character*4   it_char
+   character*6   it_char
 !-----------------------------------------------------------------------
 ! Read hgrid
   open(14,file='hgrid.gr3',status='old')
@@ -77,15 +77,15 @@
   close(14)
 
 ! Determine number of processors
-   file1='outputs/local_to_global_0000'
+   file1='outputs/local_to_global_000000'
    open(10,file=file1,status='old')
    read(10,*)ns,ne_global,np_global,nvrt,nproc
    close (10)
 
 ! Read files and save in global arrays
    do i = 0, nproc-1
-       write(it_char(1:4),'(i4.4)') i
-       file1='outputs/local_to_global_'//it_char(1:4)
+       write(it_char(1:6),'(i6.6)') i
+       file1='outputs/local_to_global_'//it_char(1:6)
        open(10,file=file1,status='old')
        read(10,*) !ne_global,np_global,nvrt,nproc
        if (np_global .gt. MXNOD) then
@@ -97,7 +97,7 @@
        endif
        read(10,*)
 
-       file2='outputs/harme_'//it_char(1:4)
+       file2='outputs/harme_'//it_char(1:6)
        call r53(ampl,phal,freq,fft,facet,nfreq,np_local,file2,namefr)
 ! Skip element correspondences
 !       write(*,*)'Rank ',i

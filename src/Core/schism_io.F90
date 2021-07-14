@@ -370,15 +370,15 @@
 
       integer, intent(in) :: iopen
       character(len=140) :: fname
-      character(len=4) :: fgb
+      character(len=6) :: fgb
 
       integer :: iret
 
       write(ifile_char,'(i12)') ifile !convert ifile to a string
       ifile_char=adjustl(ifile_char)  !place blanks at end
       ifile_len=len_trim(ifile_char)  !length without trailing blanks
-      fgb='0000' 
-      write(fgb,'(i4.4)') myrank
+      fgb='000000' 
+      write(fgb,'(i6.6)') myrank
       fname=out_dir(1:len_out_dir)//('schout_'//fgb//'_'//ifile_char(1:ifile_len)//'.nc')
 !'
 

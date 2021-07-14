@@ -51,9 +51,9 @@
 #endif /*USE_WWM*/
 
 !...  Output max. elevations & dahv
-      fdb='maxelev_0000'
+      fdb='maxelev_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
@@ -61,9 +61,9 @@
       enddo !i
       close(10)
 
-      fdb='maxdahv_0000'
+      fdb='maxdahv_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
@@ -93,8 +93,8 @@
               YVELVA(I) = YVELVA(I)/NTSTEPS - YVELAV(I)*YVELAV(I)
             END DO
             TIMEBEG=ITMV*dt
-            write(it_char(1:4),'(i4.4)') myrank
-            open(55,file=out_dir(1:len_out_dir)//'harme.55'//it_char(1:4))
+            write(it_char(1:6),'(i6.6)') myrank
+            open(55,file=out_dir(1:len_out_dir)//'harme.55'//it_char(1:6))
             WRITE(55,*) np
           ENDIF
         endif

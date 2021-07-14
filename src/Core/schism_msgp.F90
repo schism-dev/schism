@@ -556,9 +556,9 @@ subroutine msgp_tables
   if(nproc==1) return
 
 #ifdef DEBUG
-  fdb='ctbl_0000'
+  fdb='ctbl_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
   open(10,file=out_dir(1:len_out_dir)//fdb,status='unknown')
 #endif
 

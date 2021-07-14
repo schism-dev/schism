@@ -222,16 +222,15 @@
       endif
       call parallel_rrsync(-1)
 
-      fdb='nonfatal_0000'
+      fdb='nonfatal_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      !open(12,file='outputs/'//fdb,status='replace') !non-fatal errors
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(12,file=out_dir(1:len_out_dir)//fdb,status='replace') !non-fatal errors
 
 !     Temp.
-!      fdb='shapiro_0000'
+!      fdb='shapiro_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 !      open(38,file='outputs/'//fdb,status='replace')
 
 !     Echo date and time
@@ -1238,9 +1237,9 @@
       endif !iorder=0
 
 !     Debug
-!      fdb='list_0000'
+!      fdb='list_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 !      open(32,file=trim(fdb),status='unknown') 
 !      do i=1,np_global
 !        if(.not.associated(ipgl(i)%next)) write(32,*)i 
@@ -3025,9 +3024,9 @@
         enddo !i
 
 #ifdef DEBUG
-        fdb='sflux_0000'
+        fdb='sflux_000000'
         lfdb=len_trim(fdb)
-        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+        write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
         open(38,file=out_dir(1:len_out_dir)//fdb,status='replace')
 #endif
       endif !nws
@@ -5013,9 +5012,9 @@
 #endif
 
 !     Write local to global mapping and header info for combining scripts
-      fdb='local_to_global_0000'
+      fdb='local_to_global_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
 
 !     header info 
