@@ -84,15 +84,13 @@ module schism_glbl
   integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
   !Parameters from param.nml
-  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux, &
+  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
                   &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
-                  &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
-                  &cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
-                  &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
-                  &itransport_only,meth_sink,iloadtide,nc_out
+                  &nstep_ice,niter_shap,iunder_deep,ibtrack_openbnd,flag_fib,ielm_transport,max_subcyc
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv
@@ -102,14 +100,13 @@ module schism_glbl
                       &vdmin_pp1,tdmin_pp1,vdmax_pp2,vdmin_pp2,tdmin_pp2, &
                       &h1_pp,h2_pp,dtb_min,dtb_max,thetai,theta2,rtol0, &
                       &vnh1,vnh2,vnf1,vnf2,rnday,btrack_nudge,hmin_man, &
-                      &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
+                      &prmsl_ref,hmin_radstress,dzb_decay,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
-                      &slr_rate,rho0,shw,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac, &
-                      &hmin_airsea_ex,shapiro0
+                      &slr_rate,rho0,shw,sav_cd,gen_wsett,turbinj,h1_bcc,h2_bcc,vclose_surf_frac
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
-                  &ihconsv,isconsv,i_hmin_airsea_ex,ihdif,ntracers, & 
+                  &ihconsv,isconsv,ihdif,ntracers, & 
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
@@ -153,8 +150,7 @@ module schism_glbl
   character(len=16),save :: a_16
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
-  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,ncid_schout, &
- &nstride_schout,nrec2_schout,istack0_schout,ncid_source
+  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -228,8 +224,8 @@ module schism_glbl
   real(rkind),save,allocatable :: radiel(:)       ! Element equivalent radii
   ! Cartesian coordinates of element centers; see comments for xnd
   real(rkind),save,allocatable :: xctr(:),yctr(:),zctr(:) 
-  real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in _degrees_
-  real(rkind),save,allocatable :: dpe(:)          ! Depth at element (min of all nodes)
+  real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in degrees
+  real(rkind),save,allocatable :: dpe(:)          ! Depth at element centers
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
   integer,save,allocatable :: idry_e(:)       ! wet/dry flag
   integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone
@@ -250,9 +246,9 @@ module schism_glbl
   !where j is the axis id, i is the component id, ie is the local element id (aug.)
   !Undefined for ics=1
   real(rkind),save,allocatable :: eframe(:,:,:)
-  !x,y coordinates of each element node/side in the _element_ frame
-  !xel(4,nea), xs_el(4,nea)
-  real(rkind),save,allocatable :: xel(:,:),yel(:,:),xs_el(:,:),ys_el(:,:)
+  !x,y coordinates of each element node in the _element_ frame
+  !xel(4,nea)
+  real(rkind),save,allocatable :: xel(:,:),yel(:,:)
   !shape_c2(4,2,nea)- for quads only. The shape function values for the mid-pts of 2 diagnonals inside
   ! the quad formed by 4 sidecenters
   real(rkind),save,allocatable :: shape_c2(:,:,:)
@@ -277,7 +273,7 @@ module schism_glbl
   !for ics=2, the triplet are the coordinate in a global frame with origin at center of earth,
   !x-axis point to prime meridian, z-axis to the north pole
   real(rkind),save,allocatable :: xnd(:),ynd(:),znd(:)       ! Node cartesian coordinates
-  real(rkind),save,allocatable :: xlon(:),ylat(:) ! Node lat/lon coordinates in _radians_
+  real(rkind),save,allocatable :: xlon(:),ylat(:),xlon_o(:),ylat_o(:) ! Node lat/lon coordinates in radians
   real(rkind),save,allocatable :: dp(:),dp00(:)           ! Node depths
 !  integer,save,allocatable :: ibad(:)             ! Reliable bndry elevation flag
 !  integer,save,allocatable :: nnegb(:),inegb(:,:) ! Global node-element tables
@@ -325,7 +321,8 @@ module schism_glbl
   real(rkind),save,allocatable :: zs(:,:)         ! z-coord. (local frame - vertical up)
   !Transformation tensor for side frame: sframe(i,j,isd)
   ! where j is the axis id, i is the component id, isd is the local side id (aug.)
-  ! For ics=1, only sframe(1:2,1:2,isd) are used. In all cases, x-axis is from adjacent elem 1 to 2.
+  ! For ics=1, only sframe(1:2,1:2,isd) are used
+  ! x-axis is from adjacent elem 1 to 2.
   real(rkind),save,allocatable :: sframe(:,:,:)
   !cos/sin of side normals. If ics=1, these are same as sframe(1:2,1,isd)
   !If ics=2, these are product of sframe(:,1,:) and local lat/lon frame
@@ -361,14 +358,13 @@ module schism_glbl
                              &jspc(:)          
   integer,save,allocatable :: isblock_nd(:,:),isblock_el(:),iq_block_lcl(:),iq_block(:)
   real(rkind),save,allocatable :: trobc(:,:),vobc1(:),vobc2(:),tamp(:), &
-                                  &tnf(:),tfreq(:),tear(:),amig(:),ff(:),face(:),rloadtide(:,:,:), &
+                                  &tnf(:),tfreq(:),tear(:),amig(:),ff(:),face(:), &
                                   &emo(:,:,:),efa(:,:,:),umo(:,:,:),ufa(:,:,:), &
                                   &vmo(:,:,:),vfa(:,:,:),eth(:,:), &
-                                  &qthcon(:),uthnd(:,:,:),vthnd(:,:,:), &
+                                  &qthcon(:),uth(:,:),vth(:,:),uthnd(:,:,:),vthnd(:,:,:), &
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
-                                  &dir_block(:,:),q_block_lcl(:)
+                                  &dir_block(:,:),q_block_lcl(:),ath3(:,:,:,:)
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
-  real(4),save,allocatable :: ath3(:,:,:,:) !used to read source/sink inputs
 
   ! Land boundary segment data
   integer,save :: nland_global                 ! Global number of land bndry segments
@@ -389,7 +385,7 @@ module schism_glbl
 !  real(rkind),save,allocatable :: trel(:,:,:) !tracer concentration @ prism center; used as permanent storage
   !tracer concentration @ prism center; used as temp. storage. tr_el(ntracers,nvrt,nea2) but last index usually
   !is valid up to nea only except for TVD
-  real(rkind),save,allocatable,target :: tr_el(:,:,:) 
+  real(rkind),save,allocatable :: tr_el(:,:,:) 
   real(rkind),save,allocatable :: tr_nd(:,:,:) !tracer concentration @ node and whole levels
   real(rkind),save,allocatable :: bdy_frc(:,:,:) !body force at prism center Q_{i,k}
   real(rkind),save,allocatable :: flx_sf(:,:) !surface b.c. \kappa*dC/dz = flx_sf (at element center)
@@ -408,12 +404,11 @@ module schism_glbl
   real(rkind),save,allocatable :: total_mass_error(:) !(ntracers) Total mass error after advection step for mass correction
   !x & y-component of velocity at side centers & whole levels
   !For ics=1, these are defined in the global frame
-  !For ics=2, these are defined in the ll frame (not local side frame). Note
-  !that these are not defined on sframe()
+  !For ics=2, these are defined in the ll frame
   real(rkind),save,allocatable :: su2(:,:),sv2(:,:) 
   !velocity at nodes in an element. In ll if ics=2
   !ufg(1:4,1:nvrt,1:nea)
-  !real(rkind),save,allocatable :: ufg(:,:,:),vfg(:,:,:)
+  real(rkind),save,allocatable :: ufg(:,:,:),vfg(:,:,:)
   real(rkind),save,allocatable :: prho(:,:) ! Density at whole levels and either nodes or elements
   real(rkind),save,allocatable :: q2(:,:)   ! Turbulent kinetic energy at sides & half levels
   real(rkind),save,allocatable :: xl(:,:)   ! Turbulent mixing length at sides & half levels
@@ -435,24 +430,24 @@ module schism_glbl
   real(rkind),save,allocatable :: rho_mean(:,:)         ! mean density
   real(rkind),save,allocatable :: Cdp(:)         ! drag at node
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
-  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
+  real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
                                   &windx1(:),windy1(:),windx2(:),windy2(:), &
                                   &surf_t1(:),surf_t2(:),surf_t(:), & !YC
                                   !WARNING: airt[12] are in C not K. The
                                   !original air T in sflux_air*.nc is in K but
                                   !get_wind() converts it to C
-                                  &tau(:,:),tau_bot_node(:,:),pr1(:),airt1(:), &
+                                  &tau(:,:),tau_bot_node(:,:),windfactor(:),pr1(:),airt1(:), &
                                   &shum1(:),pr2(:),airt2(:),shum2(:),pr(:), &
                                   &sflux(:),srad(:),tauxz(:),tauyz(:),fluxsu(:), &
                                   &fluxlu(:),hradu(:),hradd(:),cori(:), & !chi(:)
-                                  &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:), &
-                                  &sparsem(:,:), & 
-                                  &tr_nudge(:,:),fun_lat(:,:), &
+                                  &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:),d2uv(:,:,:), &
+                                  &sparsem(:,:),bcc(:,:,:), & !t_nudge(:),s_nudge(:), &
+                                  &tr_nudge(:,:),dr_dxy(:,:,:),fun_lat(:,:), &
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
                                   &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
-                                  &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
+                                  &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:) 
 
   !(2,npa). ocean-ice stress (junk if no ice) [m^2/s/s]
   real(rkind),save,allocatable :: tau_oi(:,:)
@@ -460,7 +455,8 @@ module schism_glbl
   real(rkind),save,allocatable :: fresh_wa_flux(:)
   !(npa). net heat flux into the ocean surface [W/m/m]. >0: warm the ocean
   real(rkind),save,allocatable :: net_heat_flux(:)
-  real(rkind),save,allocatable :: wind_rotate_angle(:) !in radians
+    !(npa). evap water flux in ice model [m water/sec]. 
+  real(rkind),save,allocatable :: ice_evap(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
 
@@ -520,7 +516,7 @@ module schism_glbl
   !<weno
 
   ! Non-hydrostatic arrays (not used)
-!  real(rkind),save,allocatable :: qnon(:,:)   
+  real(rkind),save,allocatable :: qnon(:,:)   
 !  integer,save,allocatable :: ihydro(:)
 
   ! Station and other output arrays
@@ -565,14 +561,9 @@ module schism_glbl
 ! WWM
 !#ifdef USE_WWM
   integer,save :: msc2,mdc2
-  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:)
-  real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
-  real(rkind),save,allocatable :: roller_stokes_hvel(:,:,:), roller_stokes_hvel_side(:,:,:)
-  !real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
-  real,save,allocatable :: out_wwm(:,:), out_wwm_rol(:,:), out_wwm_windpar(:,:)
-  real(rkind),save,allocatable :: tanbeta_x(:), tanbeta_y(:) ! MP from KM: bottom slope
-  real(rkind),save,allocatable :: curx_wwm(:),cury_wwm(:)  !BM: coupling current
-  real(rkind),save,allocatable :: wafo_opbnd_ramp(:) !BM: ramp on wave forces at open boundary
+  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:)
+  real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
+  real,save,allocatable :: out_wwm(:,:), out_wwm_windpar(:,:)
 !#endif
 
 ! TIMOR
@@ -624,7 +615,7 @@ module schism_glbl
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
 
 ! SAV
-  real(rkind),save,allocatable     :: sav_alpha(:),sav_h(:),sav_nv(:),sav_di(:),sav_cd(:)
+  real(rkind),save,allocatable     :: sav_alpha(:),sav_h(:),sav_nv(:),sav_di(:)
 
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
