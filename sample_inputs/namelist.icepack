@@ -1,0 +1,150 @@
+&env_nml                    ! In the original release these variables are defined in the icepack.settings
+    nicecat   = 5           ! number of ice thickness categories
+    nfsdcat   = 1           ! number of floe size categories
+    nicelyr   = 7           ! number of vertical layers in the ice
+    nsnwlyr   = 4           ! number of vertical layers in the snow
+    ntraero   = 0           ! number of aerosol tracers (up to max_aero in ice_domain_size.F90)
+    trzaero   = 0           ! number of z aerosol tracers (up to max_aero = 6)
+    tralg     = 0           ! number of algal tracers (up to max_algae = 3)
+    trdoc     = 0           ! number of dissolve organic carbon (up to max_doc = 3)
+    trdic     = 0           ! number of dissolve inorganic carbon (up to max_dic = 1)
+    trdon     = 0           ! number of dissolve organic nitrogen (up to max_don = 1)
+    trfed     = 0           ! number of dissolved iron tracers (up to max_fe  = 2)
+    trfep     = 0           ! number of particulate iron tracers (up to max_fe  = 2)
+    nbgclyr   = 0           ! number of zbgc layers
+    trbgcz    = 0           ! set to 1 for zbgc tracers (needs TRBGCS = 0 and TRBRI = 1)
+    trzs      = 0           ! set to 1 for zsalinity tracer (needs TRBRI = 1)
+    trbri     = 0           ! set to 1 for brine height tracer
+    trage     = 0           ! set to 1 for ice age tracer
+    trfy      = 0           ! set to 1 for first-year ice area tracer
+    trlvl     = 1           ! set to 1 for level and deformed ice tracers
+    trpnd     = 1           ! set to 1 for melt pond tracers
+    trbgcs    = 0           ! set to 1 for skeletal layer tracers (needs TRBGCZ = 0)
+    ndtd      = 1           ! dynamic time steps per thermodynamic time step
+/
+
+&grid_nml
+    kcatbound    = 1
+/
+
+&tracer_nml
+    tr_iage      = .false.
+    tr_FY        = .false.
+    tr_lvl       = .true.
+    tr_pond_cesm = .false.
+    tr_pond_topo = .false.
+    tr_pond_lvl  = .true.
+    tr_aero      = .false.
+    tr_fsd       = .true.
+/
+
+&thermo_nml
+    kitd              = 1
+    ktherm            = 2 
+    conduct           = 'bubbly'
+    a_rapid_mode      =  0.5e-3
+    Rac_rapid_mode    =    10.0
+    aspect_rapid_mode =     1.0
+    dSdt_slow_mode    = -1.5e-7
+    phi_c_slow_mode   =    0.05
+    phi_i_mushy       =    0.85
+    ksno              = 0.3
+/
+
+&shortwave_nml
+    shortwave       = 'ccsm3'
+    albedo_type     = 'ccsm3'
+    albicev         = 0.78
+    albicei         = 0.36
+    albsnowv        = 0.98
+    albsnowi        = 0.70
+    albocn          = 0.1
+    ahmax           = 0.3
+    R_ice           = 0.
+    R_pnd           = 0.
+    R_snw           = 1.5
+    dT_mlt          = 1.5
+    rsnw_mlt        = 1500.
+    kalg            = 0.6
+/
+
+&ponds_nml
+    hp1             = 0.01
+    hs0             = 0.
+    hs1             = 0.03
+    dpscale         = 1.e-3
+    frzpnd          = 'hlid'
+    rfracmin        = 0.15
+    rfracmax        = 1.
+    pndaspect       = 0.8
+/
+
+&forcing_nml
+    formdrag        = .false.
+    atmbndy         = 'default'
+    calc_strair     = .true.
+    calc_Tsfc       = .true.
+    highfreq        = .false.
+    natmiter        = 5
+    ustar_min       = 0.0005
+    emissivity      = 0.95
+    fbot_xfer_type  = 'constant'
+    update_ocn_f    = .false.
+    l_mpond_fresh   = .false.
+    tfrz_option     = 'mushy'
+    oceanmixed_ice  = .true.
+    wave_spec_type  = 'none'
+/
+
+&dynamics_nml
+    kstrength       = 1
+    krdg_partic     = 1
+    krdg_redist     = 1
+    mu_rdg          = 3
+    Cf              = 17.
+/
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!                Icepack output namelist                    !!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+&nml_listsize
+io_listsize=100 !number of streams to allocate. shallbe large or equal to the number of streams in &nml_list
+/
+
+&nml_list_icepack
+io_list_icepack =  !'aicen     ' ! Sea ice concentration
+                   !'vicen     ' ! Volume per unit area of ice
+                   !'vsnon     ' ! Volume per unit area of snow
+                    'Tsfcn     ' ! Sea ice surf. temperature
+                   !'iagen     ' ! Sea ice age
+                   !'FYn       ' ! First year ice
+                   !'lvln      ' ! Ridged sea ice area and volume
+                   !'pond_cesmn' ! Melt ponds area, volume and refrozen lid thickness
+                   !'pond_topon' ! Melt ponds area, volume and refrozen lid thickness
+                   !'pond_lvln ' ! Melt ponds area, volume and refrozen lid thickness
+                   !'brinen    ' ! Volume fraction of ice with dynamic salt
+                   !'qicen     ' ! Sea ice enthalpy
+                   !'sicen     ' ! Sea ice salinity
+                   !'qsnon     ' ! Snow enthalpy
+                   ! Average over thicknes classes
+                   'aice      ' ! Sea ice concentration
+                   'vice      ' ! Volume per unit area of ice
+                   'vsno      ' ! Volume per unit area of snow
+                   'Tsfc      ' ! Sea ice surf. temperature
+                   !'iage      ' ! Sea ice age
+                   !'FY        ' ! First year ice
+                   'lvl       ' ! Ridged sea ice area and volume
+                   !'pond_cesm ' ! Melt ponds area, volume and refrozen lid thickness
+                   !'pond_topo ' ! Melt ponds area, volume and refrozen lid thickness
+                   'pond_lvl  ' ! Melt ponds area, volume and refrozen lid thickness
+                   !'brine     ' ! Volume fraction of ice with dynamic salt
+                    'qice      ' ! Sea ice enthalpy
+                    'sice      ' ! Sea ice salinity
+                    'qsno      ' ! Snow enthalpy
+                   ! Other variables
+                   !'uvel      ' ! x-component of sea ice velocity
+                   !'vvel      ' ! y-component of sea ice velocity                   
+		   'rdg_conv  '
+		   'rdg_shear '
+/
