@@ -106,7 +106,7 @@ endif
 
 #Search path
 VPATH = Core/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
-        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Fabm/
+        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Multi_ice/ Fabm/
 
 ifdef FUJITSU
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DFUJITSU
@@ -115,7 +115,7 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o 
+OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -269,6 +269,20 @@ ifdef USE_ICE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_ICE
   OBJS := $(OBJS) ice_module.o ice_therm_mod.o ice_init.o ice_step.o ice_evp.o ice_mevp.o \
                   ice_fct.o ice_thermodynamics.o
+endif
+
+ifdef USE_MICE
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_MICE
+  OBJS := $(OBJS) icepack_kinds.o icepack_warnings.o icepack_parameters.o icepack_age.o icepack_tracers.o \
+                  icepack_mushy_physics.o icepack_orbital.o icepack_ocean.o icepack_firstyear.o \
+                  icepack_meltpond_cesm.o icepack_therm_shared.o icepack_therm_bl99.o icepack_meltpond_lvl.o \
+                  icepack_meltpond_topo.o icepack_zbgc_shared.o icepack_fsd.o icepack_atmo.o icepack_therm_mushy.o \
+                  icepack_isotope.o icepack_flux.o icepack_itd.o icepack_shortwave.o icepack_brine.o \
+                  icepack_aerosol.o icepack_therm_0layer.o icepack_zsalinity.o icepack_wavefracspec.o \
+                  icepack_mechred.o icepack_algae.o icepack_therm_vertical.o icepack_zbgc.o icepack_therm_itd.o \
+                  icepack_intfc.o icedrv_kinds.o icedrv_constants.o mice_module.o icedrv_system.o \
+                  icedrv_main.o icedrv_allocate.o icedrv_set.o mice_init.o mice_evp.o icedrv_init.o\
+                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o
 endif
 
 ifdef USE_MARSH

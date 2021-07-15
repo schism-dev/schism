@@ -89,6 +89,10 @@
 # USE_ICE = yes
 # EXEC := $(EXEC)_ICE
 
+# Multiclass Ice module
+# USE_MICE = yes
+# EXEC := $(EXEC)_MICE
+ 
 # Sediment model (2D)
 # USE_SED2D = yes
 # EXEC := $(EXEC)_SED2D
