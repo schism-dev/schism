@@ -114,7 +114,8 @@ module schism_glbl
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
                   &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
-                  &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm,max_iadjust_mass_consv
+                  &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
+                  &max_iadjust_mass_consv,nsteps_from_cold
 
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
@@ -399,6 +400,9 @@ module schism_glbl
   real(rkind),save,allocatable :: rkai_num(:,:,:) !DVD (numerical mixing) [C^2]/sec
   real(rkind),save,allocatable :: eta1(:)   ! Elevation at nodes at previous timestep
   real(rkind),save,allocatable :: eta2(:)   ! Elevation at nodes at current timestep
+  !cumsum of elev from 1st _cold_ start (regardles of ihot) until the cum time step (nsteps_from_cold)
+  !exceeds certain amount. This is used to compute anomaly
+  real(rkind),save,allocatable :: cumsum_eta(:) 
   !Vertical velocity at element centers & whole levels, along local vertical direction (element frame)
   real(rkind),save,allocatable :: we(:,:) 
   !Vertical velocity at element centers & whole levels, calculated using F.V.M. For hydrostatic 

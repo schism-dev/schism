@@ -30,7 +30,7 @@ $code="~yinglong/bin/combine_output11";
 
 for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
 {
-  while(!-e "outputs/schout_0000_$next_stack\.nc") {sleep 120;} #sleep 2 min.
+  while(!-e "outputs/schout_000000_$next_stack\.nc") {sleep 120;} #sleep 2 min.
 #  sleep 180; #wait a little longer to make sure outputs are written
   $current_stack=$next_stack-1;
   system "cd outputs; $code -b $current_stack -e $current_stack -w $iwetdry > combine.out";

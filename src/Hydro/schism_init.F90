@@ -93,9 +93,7 @@
 #endif
 
       implicit none
-!#ifndef USE_MPIMODULE
       include 'mpif.h'
-!#endif
  
       !iorder: 0: normal; 1: bypass alloc and domain decomp (in this case we
       !assume the domain decomp did not change)
@@ -1297,7 +1295,7 @@
 !'
 
 !     Allocate the remaining arrays held in schism_glbl, except for Kriging related arrays 
-      allocate(eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
+      allocate(eta1(npa),eta2(npa),cumsum_eta(npa), & !tsel(2,nvrt,nea)
           &we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa), & !ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
           &prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
           &uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
@@ -1613,6 +1611,8 @@
       ww2 = 0.0_rkind
       tr_nd0=0.d0
       istack0_schout=0
+      cumsum_eta=0.d0
+      nsteps_from_cold=0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -5113,10 +5113,15 @@
           if(j/=NF90_NOERR) call parallel_abort('init: nc ifile1')
           j=nf90_get_var(ncid2,mm,ifile);
           if(j/=NF90_NOERR) call parallel_abort('init: nc ifile2')
+          j=nf90_inq_varid(ncid2, "nsteps_from_cold",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc nsteps_from_cold')
+          j=nf90_get_var(ncid2,mm,nsteps_from_cold);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc nsteps_from_cold2')
         endif !myrank==0
         call mpi_bcast(time,1,rtype,0,comm,istat)
         call mpi_bcast(iths,1,itype,0,comm,istat)
         call mpi_bcast(ifile,1,itype,0,comm,istat)
+        call mpi_bcast(nsteps_from_cold,1,itype,0,comm,istat)
 
         ! Element data
         if(myrank==0) then
@@ -5284,14 +5289,20 @@
           if(j/=NF90_NOERR) call parallel_abort('init: nc eta2')
           j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
           if(j/=NF90_NOERR) call parallel_abort('init: nc eta2b')
+          j=nf90_inq_varid(ncid2, "cumsum_eta",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc cumsum_eta')
+          j=nf90_get_var(ncid2,mm,buf4(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc cumsum_eta2')
         endif !myrank
         call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
-        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)        
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             ip=ipgl(i)%id
             eta2(ip)=buf3(i)
+            cumsum_eta(ip)=buf4(i)
             idry(ip)=nwild2(i)
           endif
         enddo !i
@@ -5866,6 +5877,11 @@
 !...  init. eta1 (for some routines like WWM) and i.c. (for ramp function)
       eta1=eta2 
       etaic=eta2
+
+!...  Reset nsteps_from_cold and cumsum_eta to avoid the former being too large
+      if(nsteps_from_cold*dt/86400.d0>1.d0) then !use 1 yr
+        nsteps_from_cold=0; cumsum_eta=0.d0
+      endif
 
 !...  Assign variables in GOTM for cold starts
       if(itur==4.and.(ihot==0.or.ihot==1.and.nramp==1)) then

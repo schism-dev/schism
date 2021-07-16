@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+(16 July 2021): changed hotstart.nc: added nsteps_from_cold and cumsum_eta for DA;
 e281d94 (25, June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
 bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
 d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);

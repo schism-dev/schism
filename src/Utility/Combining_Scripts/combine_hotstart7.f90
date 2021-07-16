@@ -13,7 +13,7 @@
 !   limitations under the License.
 
 !===============================================================================
-! Read in rank-specific hotstart outputs and combine them into hotstart.in.
+! Read in rank-specific hotstart outputs and combine them into hotstart.nc.
 ! Gobal-local mappings are read in from separate files.
 
 ! Usage: ./combine_hotstart6 -h for help, inside outputs/
@@ -138,7 +138,7 @@ subroutine combine_hotstart7(istep)
   write(it_char,'(i12)') istep
   it_char=adjustl(it_char)  !place blanks at end
   it_len=len_trim(it_char)  !length without trailing blanks
-  fgb='0000_'//it_char(1:it_len); 
+  fgb='000000_'//it_char(1:it_len); 
   fgb=adjustl(fgb); lfgb=len_trim(fgb);
   !print*, 'suffix is:',fgb(1:lfgb)
 
@@ -158,6 +158,9 @@ subroutine combine_hotstart7(istep)
   iret=nf90_get_var(ncid2,i,iths);
   iret=nf90_inq_varid(ncid2, "ifile",i);
   iret=nf90_get_var(ncid2,i,ifile);
+  nsteps_from_cold=0 !init for older versions
+  iret=nf90_inq_varid(ncid2, "nsteps_from_cold",i);
+  iret=nf90_get_var(ncid2,i,nsteps_from_cold);
   !From modules
   ice_free_flag=-99 !flag
   iret=nf90_inq_varid(ncid2, "ice_free_flag",i);
@@ -166,7 +169,7 @@ subroutine combine_hotstart7(istep)
     if(iret/=NF90_NOERR) stop 'cannot get ice_free_flag'
     print*, 'Found ice_free_flag:',ice_free_flag
   endif
-  print*, 'static info:',time,iths,ifile
+  print*, 'static info:',time,iths,ifile,nsteps_from_cold
   iret=nf90_close(ncid2)
 
   !Open output file
@@ -190,7 +193,8 @@ subroutine combine_hotstart7(istep)
       write(fgb2(1:6),'(i6.6)') irank
       iret=nf90_open('hotstart_'//fgb2(1:lfgb)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
       if(iret.ne.NF90_NOERR) then
-        print*, nf90_strerror(iret); stop
+        print*, 'Input hot not there;', nf90_strerror(iret)
+        stop
       endif
 !      write(99,*)'file=',m,irank,'hotstart_'//fgb2(1:lfgb)//'.nc',ncid2
 
@@ -202,7 +206,7 @@ subroutine combine_hotstart7(istep)
       if(ndims>ndimensions) stop 'dim overflow'
       iret=nf90_inquire_variable(ncid2,m,dimids=dimids(1:ndims))
       if(iret.ne.NF90_NOERR) then
-        print*, nf90_strerror(iret); stop
+        print*, 'dimids error;',nf90_strerror(iret); stop
       endif
       !Re-read dims (rank specific)
       do i=1,ndimensions
@@ -370,17 +374,19 @@ subroutine combine_hotstart7(istep)
     deallocate(iwork2,work2)
   enddo loop1 !m: vars
 
-  !Append type II arrays
+  !Append type II static arrays
   iret=nf90_redef(ncid)
   var1d_dims(1)=one_dim
   iret=nf90_def_var(ncid,'time',NF90_DOUBLE,var1d_dims,i1)
   iret=nf90_def_var(ncid,'iths',NF90_INT,var1d_dims,i2)
   iret=nf90_def_var(ncid,'ifile',NF90_INT,var1d_dims,i3)
+  iret=nf90_def_var(ncid,'nsteps_from_cold',NF90_INT,var1d_dims,i5)
   if(ice_free_flag>=0) iret=nf90_def_var(ncid,'ice_free_flag',NF90_INT,var1d_dims,i4)
   iret=nf90_enddef(ncid)
   iret=nf90_put_var(ncid,i1,time)
   iret=nf90_put_var(ncid,i2,iths)
   iret=nf90_put_var(ncid,i3,ifile)
+  iret=nf90_put_var(ncid,i5,nsteps_from_cold)
   if(ice_free_flag>=0) iret=nf90_put_var(ncid,i4,ice_free_flag)
 
   iret=nf90_close(ncid)

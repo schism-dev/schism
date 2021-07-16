@@ -5616,15 +5616,14 @@
       wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
 #endif
 
-      !Debug
-      !if(it==int(rnday*86400.d0/dt+0.5)) then
-      !  do i=1,np
-      !    write(12,*)real(xnd(i)),real(ynd(i)),real(dav(1:2,i))
-      !  enddo !i
-      !endif
-
+!     Update cumsum
+      nsteps_from_cold=nsteps_from_cold+1
       etatotl=0.d0
 !$OMP parallel default(shared) private(i)
+!$OMP workshare
+      cumsum_eta=cumsum_eta+eta2
+!$OMP end workshare
+
 !$OMP do reduction(+: etatotl) 
       do i=1,np
         if(eta2(i)>elevmax(i)) elevmax(i)=eta2(i) !only for residents
@@ -9045,6 +9044,7 @@
         j=nf90_def_var(ncid_hot,'time',NF90_DOUBLE,var1d_dim,nwild(1))
         j=nf90_def_var(ncid_hot,'it',NF90_INT,var1d_dim,nwild(2))
         j=nf90_def_var(ncid_hot,'ifile',NF90_INT,var1d_dim,nwild(3))
+        j=nf90_def_var(ncid_hot,'nsteps_from_cold',NF90_INT,var1d_dim,nwild(20))
 
         var1d_dim(1)=elem_dim
         j=nf90_def_var(ncid_hot,'idry_e',NF90_INT,var1d_dim,nwild(4))
@@ -9053,6 +9053,7 @@
         var1d_dim(1)=node_dim
         j=nf90_def_var(ncid_hot,'idry',NF90_INT,var1d_dim,nwild(6))
         j=nf90_def_var(ncid_hot,'eta2',NF90_DOUBLE,var1d_dim,nwild(7))
+        j=nf90_def_var(ncid_hot,'cumsum_eta',NF90_DOUBLE,var1d_dim,nwild(21))
 
         !Note the order of multi-dim arrays not reversed here!
         !As long as the write is consistent with def it's fine 
@@ -9090,10 +9091,12 @@
         j=nf90_put_var(ncid_hot,nwild(1),time) 
         j=nf90_put_var(ncid_hot,nwild(2),it) 
         j=nf90_put_var(ncid_hot,nwild(3),ifile) 
+        j=nf90_put_var(ncid_hot,nwild(20),nsteps_from_cold) 
         j=nf90_put_var(ncid_hot,nwild(4),idry_e,(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(5),idry_s,(/1/),(/ns/))
         j=nf90_put_var(ncid_hot,nwild(6),idry,(/1/),(/np/))
         j=nf90_put_var(ncid_hot,nwild(7),eta2,(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(21),cumsum_eta,(/1/),(/np/))
         j=nf90_put_var(ncid_hot,nwild(8),we(:,1:ne),(/1,1/),(/nvrt,ne/))
         j=nf90_put_var(ncid_hot,nwild(9),tr_el(:,:,1:ne),(/1,1,1/),(/ntracers,nvrt,ne/))
         j=nf90_put_var(ncid_hot,nwild(10),su2(:,1:ns),(/1,1/),(/nvrt,ns/))
@@ -9114,7 +9117,7 @@
         !j=nf90_put_var(ncid_hot,nwild(24),uu2(:,1:np),(/1,1/),(/nvrt,np/))
         !j=nf90_put_var(ncid_hot,nwild(25),vv2(:,1:np),(/1,1/),(/nvrt,np/))
 
-        nvars_hot=19 !record # of vars in nwild so far
+        nvars_hot=21 !record # of vars in nwild so far
         !Debug
         !write(12,*)'hotout:',it,time
         !do i=1,np

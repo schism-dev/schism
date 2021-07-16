@@ -1196,6 +1196,8 @@
           iret=nf90_def_var(ncids(4),'time',NF90_DOUBLE,var1d_dims,ivarid(1))
           iret=nf90_def_var(ncids(4),'iths',NF90_INT,var1d_dims,ivarid(2))
           iret=nf90_def_var(ncids(4),'ifile',NF90_INT,var1d_dims,ivarid(3))
+          iret=nf90_def_var(ncids(4),'nsteps_from_cold',NF90_INT,var1d_dims,ivarid(20))
+
           var1d_dims(1)=nele_dim
           iret=nf90_def_var(ncids(4),'idry_e',NF90_INT,var1d_dims,ivarid(4))
           var1d_dims(1)=nedge_dim
@@ -1203,6 +1205,8 @@
           var1d_dims(1)=node_dim
           iret=nf90_def_var(ncids(4),'idry',NF90_INT,var1d_dims,ivarid(6))
           iret=nf90_def_var(ncids(4),'eta2',NF90_DOUBLE,var1d_dims,ivarid(7))
+          iret=nf90_def_var(ncids(4),'cumsum_eta',NF90_DOUBLE,var1d_dims,ivarid(21))
+
           var2d_dims(1)=nv_dim; var2d_dims(2)=nele_dim
           iret=nf90_def_var(ncids(4),'we',NF90_DOUBLE,var2d_dims,ivarid(8))
           var3d_dims(1)=ntr_dim; var3d_dims(2)=nv_dim; var3d_dims(3)=nele_dim
@@ -1226,10 +1230,14 @@
           iret=nf90_put_var(ncids(4),ivarid(1),dble(0.))
           iret=nf90_put_var(ncids(4),ivarid(2),0)
           iret=nf90_put_var(ncids(4),ivarid(3),1)
+          iret=nf90_put_var(ncids(4),ivarid(20),0)
+
           iret=nf90_put_var(ncids(4),ivarid(4),idry_s(1:ne),(/1/),(/ne/))
           iret=nf90_put_var(ncids(4),ivarid(5),idry_s(1:ns),(/1/),(/ns/))
           iret=nf90_put_var(ncids(4),ivarid(6),idry_s(1:np),(/1/),(/np/))
           iret=nf90_put_var(ncids(4),ivarid(7),dble(eout_tmp(1:np)),(/1/),(/np/))
+          iret=nf90_put_var(ncids(4),ivarid(21),dble(eout_tmp(1:np)),(/1/),(/np/)) !cumsum
+
           iret=nf90_put_var(ncids(4),ivarid(8),dble(zeros(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
           iret=nf90_put_var(ncids(4),ivarid(9),dble(tsel(1:2,1:nvrt,1:ne)))
           iret=nf90_put_var(ncids(4),ivarid(10),dble(tempout(1:nvrt,1:np)),(/1,1,1/),(/1,nvrt,np/))
