@@ -138,6 +138,11 @@
       integer :: nodel2(3)
       integer :: varid1,varid2,dimids(3),istat,nvtx,iret
 
+      print*, 'Do you output *.pth.more for more infor?'
+      read(*,*)ismore
+      if(ismore/=0.and.ismore/=1) stop 'Unknown ismore'
+
+
       !Random seed used only for oil spill model
       iseed=5
       !Ekman effects
@@ -641,7 +646,9 @@
       end do lp1 !i=1,nparticle
 
       open(95,file='particle.pth',status='replace')
-      open(97,file='particle.pth.more',status='replace')
+      if(ismore==1)then
+        open(97,file='particle.pth.more',status='replace')
+      endif
       write(95,*)'Drogues'
       if(ibf==1) then
         write(95,*) ntime-iths+1
