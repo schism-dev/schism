@@ -190,7 +190,7 @@ subroutine read_cosine_stainfo
 !---------------------------------------------------------------------------
   use cosine_mod, only : nsta,ista,depsta,stanum,nspool_cosine
   use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
-      & in_dir,out_dir,len_in_dir,len_out_dir
+      & in_dir,out_dir,len_in_dir,len_out_dir,ics,pi,rearth_eq
   use schism_msgp, only : myrank,nproc,parallel_abort
   use cosine_misc, only : pt_in_poly
   implicit none
@@ -199,6 +199,7 @@ subroutine read_cosine_stainfo
   integer,parameter :: maxsta=10000,maxl=100 !maximum station
   integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
   real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(3),y(3),arco(3),depstai(maxl,ne)
+  real(rkind) :: xtmp,ytmp
   character(len=4) :: fn
   logical :: lexist
 
@@ -208,6 +209,11 @@ subroutine read_cosine_stainfo
   read(450,*)nstation
   do i=1,nstation
     read(450,*)j,slx(i),sly(i),sdep(i) 
+    if(ics==2) then
+      xtmp=slx(i)*pi/180.0; ytmp=sly(i)*pi/180.0
+      slx(i)=rearth_eq*cos(ytmp)*cos(xtmp)
+      sly(i)=rearth_eq*cos(ytmp)*sin(xtmp)
+    endif
   enddo
   close(450)
 
