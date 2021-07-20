@@ -26,6 +26,7 @@ set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
 set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
 set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 set( USE_ICE OFF CACHE BOOLEAN "Use ICE module")
+set( USE_MICE ON CACHE BOOLEAN "Use multi-class ICE module")
 
 #Tracer models
 set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")
