@@ -40,7 +40,7 @@ submodule (icedrv_main) icedrv_advection
     subroutine tg_rhs_icepack(trc)
     
         !use mod_mesh
-        use ice_module
+        use mice_module
         !use g_parsup
         !use o_param
         !use g_config
@@ -109,7 +109,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_param
         !use o_mesh
         !use g_parsup
-         use ice_module
+         use mice_module
 
         implicit none
       
@@ -151,7 +151,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_mesh
         !use i_param
         !use g_parsup
-         use ice_module
+         use mice_module
 
         implicit none
       
@@ -228,7 +228,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_mesh
         !use i_param
         !use g_parsup
-         use ice_module
+         use mice_module
       
         implicit none
       
@@ -271,7 +271,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_mesh
         !use i_param
         !use g_parsup
-         use ice_module
+         use mice_module
     
         implicit none
       
@@ -337,7 +337,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_param
         !use i_param
         !use g_parsup
-        use ice_module
+        use mice_module
    
     
         integer(kind=int_kind)                            :: icoef(3,3), n, q, elem, elnodes(3), row
@@ -503,7 +503,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_param
         !use i_param
         !use g_parsup
-        use ice_module
+        use mice_module
     
         implicit none
     
@@ -579,7 +579,7 @@ submodule (icedrv_main) icedrv_advection
         !use o_param
         !use i_param
         !use g_parsup
-        use ice_module
+        use mice_module
     
     
         implicit none
@@ -666,7 +666,7 @@ submodule (icedrv_main) icedrv_advection
     module subroutine tracer_advection_icepack
 
         !use mod_mesh
-        use ice_module
+        use mice_module
         use icepack_intfc,        only: icepack_aggregate
         use icepack_itd,          only: cleanup_itd
         use schism_glbl,          only: dt,nstep_ice

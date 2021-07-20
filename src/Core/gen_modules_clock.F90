@@ -1,4 +1,4 @@
-module g_clock
+module gen_modules_clock
   !combining RT and Lars version
   !
   use schism_glbl
@@ -206,4 +206,4 @@ contains
   !
   !----------------------------------------------------------------------------
   !
-end module g_clock
+end module gen_modules_clock

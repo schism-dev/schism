@@ -7,7 +7,7 @@
 !  Ice velocity is defined at nodes
 !===========================================================================
 !
-MODULE ice_module
+MODULE mice_module
   !
   ! Ice specific parameters
   !
@@ -128,11 +128,11 @@ real(rkind)             :: scalevol=2.0e7
   namelist /nml_listsize      / io_listsize
   namelist /nml_list_icepack  / io_list_icepack
 
-  END MODULE ice_module
+  END MODULE mice_module
 !=====================================================================
 
 
-module ice_therm_mod
+module mice_therm_mod
 !USE o_PARAM
   use schism_glbl, only: rkind
   implicit none
@@ -182,7 +182,7 @@ REAL(rkind)    :: albw=    0.066    !         open water, LY2004
   NAMELIST /ice_therm/ Sice, h0, emiss_ice, &
   emiss_wat, albsn, albsnm, albi, albim, albw, consn
 
-end module ice_therm_mod
+end module mice_therm_mod
 
 
 !==============================================================================

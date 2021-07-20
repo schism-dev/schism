@@ -29,7 +29,7 @@
       use schism_io
       use netcdf
       use misc_modules
-      use g_clock
+      use gen_modules_clock
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -87,9 +87,9 @@
       USE hydraulic_structures
 
 #ifdef USE_MICE
-      use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
+      use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
-      use ice_therm_mod, only: t_oi
+      use mice_therm_mod, only: t_oi
       use icedrv_main, only:io_icepack,restart_icepack
       use icepack_intfc,    only: icepack_sea_freezing_temperature
 #endif

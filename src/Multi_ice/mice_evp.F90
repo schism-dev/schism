@@ -4,8 +4,8 @@ subroutine ice_evp
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
    &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
-    use ice_module
-    use ice_therm_mod
+    use mice_module
+    use mice_therm_mod
     use icedrv_main,   only: rdg_conv_elem, rdg_shear_elem,icepack_to_schism, &
     &dt_dyn
 

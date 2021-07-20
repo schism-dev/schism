@@ -4,8 +4,8 @@ subroutine ice_init
    &nstep_ice,fresh_wa_flux,net_heat_flux,xlon2,ylat2,rearth_eq,elnode,nnp,indnd,iplg,dt, &
    &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir,ice_evap,ielg
     use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
-    use ice_module
-    use ice_therm_mod
+    use mice_module
+    use mice_therm_mod
     use icedrv_main, only: set_icepack, init_icepack, alloc_icepack
     implicit none
     integer :: i,j,ie,istat,nd,nd2,m,mm,indx

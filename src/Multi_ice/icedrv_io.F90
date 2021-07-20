@@ -17,7 +17,7 @@
       use icedrv_system,    only: icedrv_system_abort
       use schism_glbl,      only: id_out_var,npa,nea,np
       use schism_io
-      use ice_module,       only: io_listsize,io_list_icepack
+      use mice_module,       only: io_listsize,io_list_icepack
       contains
 
       module subroutine io_icepack(noutput)

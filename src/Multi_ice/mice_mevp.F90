@@ -4,8 +4,8 @@ subroutine ice_mevp
    &grav,isbnd,nne,indel,area,iself,time_stamp,rnday,fdb,lfdb,xnd,ynd,iplg,ielg, &
    &elside,mnei,rho0,idry,errmsg
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
-    use ice_module
-    use ice_therm_mod
+    use mice_module
+    use mice_therm_mod
     use icedrv_main,   only: rdg_conv_elem, rdg_shear_elem,icepack_to_schism
 
     implicit none

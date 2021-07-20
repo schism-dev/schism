@@ -629,7 +629,7 @@ subroutine step_radiation (dt)
 
     ! column package includes
     use icepack_intfc, only: icepack_step_radiation
-    use ice_therm_mod, only:t_oi
+    use mice_therm_mod, only:t_oi
     implicit none
 
     real (kind=dbl_kind), intent(in) :: &
@@ -913,7 +913,7 @@ subroutine ocn_mixed_layer_icepack(                       &
                                    sss,       dt)
 
     !use i_therm_param,    only: emiss_wat
-    use  ice_therm_mod,   only: emiss_wat                                  
+    use  mice_therm_mod,   only: emiss_wat                                  
     !use g_forcing_param,  only: use_virt_salt
 
     implicit none
@@ -1146,8 +1146,8 @@ module subroutine step_icepack()
    &tau_oi,nws,ihconsv,isconsv,iplg,fresh_wa_flux,net_heat_flux,rho0,rnday,fdb,lfdb, &
    &lice_free_gb,lhas_ice,errmsg,ice_evap,isbnd,nnp,indnd,nstep_ice,it_main
     use schism_msgp, only : myrank,nproc,parallel_abort,comm,ierr,exchange_p2d
-    use ice_module
-    use ice_therm_mod  
+    use mice_module
+    use mice_therm_mod  
 
     implicit none
 

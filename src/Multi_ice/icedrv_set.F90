@@ -29,11 +29,11 @@
           !                               mpi_comm_fesom
           use schism_msgp, only : myrank
           !use i_param,             only: whichEVP
-          use ice_module,             only: ievp
+          use mice_module,             only: ievp
           !use i_param,             only: cd_oce_ice  
-          use ice_module,             only: cd_oce_ice   
+          use mice_module,             only: cd_oce_ice   
           !use i_therm_param,       only: albw
-          use ice_therm_mod,       only: albw
+          use mice_therm_mod,       only: albw
 
           implicit none
 

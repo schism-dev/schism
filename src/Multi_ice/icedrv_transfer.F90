@@ -16,8 +16,8 @@
           uu2,vv2,area,elnode,i34,dt,nstep_ice,prec_rain,prec_snow,it_main,lhas_ice,drampwind, &
           nws,nrampwind,idry,isbnd,dp
           use schism_msgp, only: myrank,nproc,parallel_abort,parallel_finalize,exchange_p2d
-          use ice_module
-          use ice_therm_mod
+          use mice_module
+          use mice_therm_mod
           
           !use g_forcing_arrays, only: Tair, shum, u_wind,   v_wind,       & ! Atmospheric forcing fields
           !                            shortwave,  longwave, prec_rain,    &
@@ -29,7 +29,7 @@
           !                            u_w,             v_w,               &
           !                            u_ice,           v_ice,             &
           !                            stress_atmice_x, stress_atmice_y
-          !use ice_module,          only: cd_oce_ice                            ! Sea ice parameters
+          !use mice_module,          only: cd_oce_ice                            ! Sea ice parameters
           use icepack_intfc,    only: icepack_warnings_flush, icepack_warnings_aborted
           use icepack_intfc,    only: icepack_query_parameters
           use icepack_intfc,    only: icepack_sea_freezing_temperature
@@ -40,7 +40,7 @@
           !use mod_mesh
           !use o_mesh
           !use g_parsup
-          use g_clock
+          use gen_modules_clock
  
           implicit none
 
