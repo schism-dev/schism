@@ -279,7 +279,9 @@ module schism_glbl
   !x-axis point to prime meridian, z-axis to the north pole
   real(rkind),save,allocatable :: xnd(:),ynd(:),znd(:)       ! Node cartesian coordinates
   real(rkind),save,allocatable :: xlon(:),ylat(:) ! Node lat/lon coordinates in _radians_
-  real(rkind),save,allocatable :: xlon2(:),ylat2(:) ! Modified node lat/lon coordinates in _radians_ for ice model (via FESOM2)
+  ! Modified node lat/lon coordinates in _radians_ for ice model (via FESOM2).
+  ! The nodes are at same physical location as (xlon, ylat)
+  real(rkind),save,allocatable :: xlon2(:),ylat2(:) 
   real(rkind),save,allocatable :: dp(:),dp00(:)           ! Node depths
 !  integer,save,allocatable :: ibad(:)             ! Reliable bndry elevation flag
 !  integer,save,allocatable :: nnegb(:),inegb(:,:) ! Global node-element tables

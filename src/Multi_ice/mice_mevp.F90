@@ -19,21 +19,21 @@ subroutine ice_mevp
     real(rkind) :: swild(2,3),deta(2,nea), &
    &swild2(nea),alow(4),bdia(4),rrhs(3,4),U_ice_0(npa),V_ice_0(npa)
 
-   rdg_conv_elem(:)  = 0.0
-   rdg_shear_elem(:) = 0.0
-   ice_tr0(:,:)=0.0
+    rdg_conv_elem(:)  = 0.0
+    rdg_shear_elem(:) = 0.0
+    ice_tr0(:,:)=0.0
     !Save u^n
     U_ice_0=U_ice; V_ice_0=V_ice
     do isub=1,mevp_rheol_steps !iterations
       !Update stress @ elem
-        call icepack_to_schism (nx_in=npa, &
-        aice_out=a_ice0,                 &
-        vice_out=m_ice0,                 &
-        vsno_out=m_snow0)
+      call icepack_to_schism (nx_in=npa, &
+      aice_out=a_ice0,                 &
+      vice_out=m_ice0,                 &
+      vsno_out=m_snow0)
           
-    ice_tr0(1,:)=m_ice0
-    ice_tr0(2,:)=a_ice0
-    ice_tr0(3,:)=m_snow0
+      ice_tr0(1,:)=m_ice0
+      ice_tr0(2,:)=a_ice0
+      ice_tr0(3,:)=m_snow0
       do i=1,nea
   !      if(h_ice(i)<=ice_cutoff.or.a_ice(i)<=ice_cutoff) then
   !        sigma11(i)=0; sigma12(i)=0; sigma22(i)=0; delta_ice(i)=0

@@ -109,7 +109,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 &nml_listsize
-io_listsize=100 !number of streams to allocate. shallbe large or equal to the number of streams in &nml_list
+io_listsize=100 !number of streams to allocate. shall be large or equal to the number of streams in &nml_list
 /
 
 &nml_list_icepack

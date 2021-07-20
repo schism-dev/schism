@@ -217,11 +217,13 @@ subroutine ice_init
   
   open( unit=nm_icepack_unit, file='namelist.icepack', form='formatted', access='sequential', status='old', iostat=iost )
   if (iost == 0) then
-  if (myrank==0) write(*,*) '     file   : ', 'namelist.icepack',' open ok' 
-     else
-  if (myrank==0) write(*,*) 'ERROR: --> bad opening file   : ','namelist.icepack',' ;    iostat=',iost
-     !call par_ex
-     stop
+    if (myrank==0) write(16,*) '     file   : ', 'namelist.icepack',' open ok' 
+  else
+    if (myrank==0) then
+      write(errmsg,*) 'ICE_INIT: --> bad opening file   : ','namelist.icepack',' ;    iostat=',iost
+      !call par_ex
+      call parallel_abort(errmsg)
+    endif 
   end if
   !read(nm_io_unit, nml=nml_listsize, iostat=iost )
   read(nm_icepack_unit, nml=nml_listsize, iostat=iost )
@@ -231,7 +233,7 @@ subroutine ice_init
 
   do i=1, io_listsize
      if (trim(io_list_icepack(i)%id)=='unknown   ') then
-        if (myrank==0) write(*,*) 'io_listsize will be changed from ', io_listsize, ' to ', i-1, '!'
+        if (myrank==0) write(16,*) 'io_listsize will be changed from ', io_listsize, ' to ', i-1, '!'
         io_listsize=i-1
         exit
      end if
