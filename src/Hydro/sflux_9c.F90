@@ -339,7 +339,7 @@
      &                   sen_flux, lat_flux, longwave_u, longwave_d, &
      &                   tau_xz, tau_yz, &
 #ifdef PREC_EVAP
-     &                   precip_flux, evap_flux, &
+     &                   precip_flux, evap_flux, prec_snow, &
 #endif
      &                   nws) !, fluxsu00, srad00)
 
@@ -358,7 +358,7 @@
         integer, intent(in) :: nws
 #ifdef PREC_EVAP
         real(rkind), dimension(npa), intent(out) :: &
-     &    precip_flux, evap_flux
+     &    precip_flux, evap_flux,prec_snow
 #endif
         
 ! local variables
@@ -387,6 +387,11 @@
 #ifdef PREC_EVAP
 ! retrieve the surface precipitation flux
         call get_precip_flux (time, precip_flux)
+#ifdef USE_MICE
+        call get_precsnow_flux (time, prec_snow)
+#else
+        prec_snow=0.d0 !not used
+#endif
 #endif
 
 ! output info to debug file
@@ -1182,6 +1187,7 @@
         character (len=50)  :: prc_1_file = 'sflux_prc_1'
         character (len=50)  :: prc_2_file = 'sflux_prc_2'
         character (len=50)  :: prate_name = 'prate'
+        character (len=50)  :: srate_name = 'srate'
 
         namelist /sflux_inputs/ &
 !     &    start_year, start_month, start_day, start_hour, utc_start, &
@@ -1199,7 +1205,7 @@
      &    prc_1_max_window_hours, prc_2_max_window_hours,            &
      &    prc_1_fail_if_missing, prc_2_fail_if_missing,              &
      &    prc_1_file, prc_2_file,                                    &
-     &    prate_name
+     &    prate_name,srate_name
 
       end module netcdf_io
 !-----------------------------------------------------------------------
@@ -1593,6 +1599,114 @@
 
       return !get_precip_flux
       end
+
+      !-----------------------------------------------------------------------
+      subroutine get_precsnow_flux (time, prec_snow)
+        use schism_glbl, only : rkind, npa,fdb,lfdb
+        use schism_msgp, only : myrank,parallel_abort
+        use netcdf_io
+        implicit none
+        
+        real(rkind), intent(in) :: time
+        real(rkind), dimension(npa), intent(out) :: prec_snow
+        
+! local variables
+        integer num_nodes_out, i_node
+        logical, save :: first_call = .true.
+        type(dataset_info), save :: dataset_1, dataset_2
+        real(rkind) time_now
+        real(rkind), parameter :: secs_per_day = 86400.0d0
+        character data_name*50
+
+! define the local variables num_nodes_out
+        num_nodes_out = npa
+
+!        fdb='sflux4_0000'
+!        lfdb=len_trim(fdb)
+!        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!        open(41,file=out_dir(1:len_out_dir)//fdb,status='unknown')
+!        rewind(41)
+
+! output info to debug file
+#ifdef DEBUG
+        write(38,*)
+        write(38,*) 'get_precsnow_flux:  time = ', time
+        write(38,*) 'first_call             = ', first_call
+        write(38,*) 'num_nodes_out          = ', num_nodes_out
+#endif
+
+! for the first call only, initialize starting date, datasets, etc 
+        if (first_call) then
+        
+          call get_sflux_inputs ()
+          
+! setup datasets
+          dataset_1%name             = prc_1_file
+          dataset_1%max_window_hours = prc_1_max_window_hours
+          dataset_1%fail_if_missing  = prc_1_fail_if_missing
+          dataset_1%relative_weight  = prc_1_relative_weight
+
+          dataset_2%name             = prc_2_file
+          dataset_2%max_window_hours = prc_2_max_window_hours
+          dataset_2%fail_if_missing  = prc_2_fail_if_missing
+          dataset_2%relative_weight  = prc_2_relative_weight
+
+! output some details
+          if(myrank==0) then
+            write(16,*)
+            write(16,*) 'get_precsnow_flux:  sflux_inputs'
+            write(16,*) '  start_year             = ', start_year
+            write(16,*) '  start_month            = ', start_month
+            write(16,*) '  start_day              = ', start_day
+            write(16,*) '  start_hour             = ', start_hour
+            write(16,*) '  utc_start              = ', utc_start
+            write(16,*) '  start_frac_jdate       = ', start_frac_jdate
+            write(16,*) '  prc_1_file             = ', &
+     &                   trim(prc_1_file)
+            write(16,*) '  prc_1_max_window_hours = ', &
+     &                   prc_1_max_window_hours
+            write(16,*) '  prc_1_fail_if_missing  = ', &
+     &                   prc_1_fail_if_missing
+            write(16,*) '  prc_1_relative_weight  = ', &
+     &                   prc_1_relative_weight
+            write(16,*) '  prc_2_file             = ', &
+     &                   trim(prc_2_file)
+            write(16,*) '  prc_2_max_window_hours = ', &
+     &                   prc_2_max_window_hours
+            write(16,*) '  prc_2_fail_if_missing  = ', &
+     &                   prc_2_fail_if_missing
+            write(16,*) '  prc_2_relative_weight  = ', &
+     &                   prc_2_relative_weight
+            write(16,*) '  srate_name             = ', &
+     &                   trim(srate_name)
+          endif
+
+! get basic info for dataset
+          call get_dataset_info (dataset_1)
+          call get_dataset_info (dataset_2)
+        endif
+
+! get the current time
+        time_now = start_frac_jdate + time/secs_per_day
+#ifdef DEBUG
+        write(38,*) 'current jdate        = ', time_now
+#endif
+
+! get the data at this time
+        data_name = trim(srate_name)
+        call combine_sflux_data &
+     &    (time_now, dataset_1, dataset_2, &
+     &     dataset_1%exist, dataset_2%exist, &
+     &     data_name, prec_snow, &
+     &     num_nodes_out)
+        
+! set first_call to false, so subsequent calls will know that they're
+! not the first call
+        first_call = .false.
+
+      return 
+      end !get_precsnow_flux
+      
 !-----------------------------------------------------------------------
       subroutine get_dataset_info (info)
 

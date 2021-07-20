@@ -778,7 +778,7 @@
         call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                   fluxprc,fluxevp, &
+     &                   fluxprc,fluxevp, prec_snow, &
 #endif
      &                   nws) 
 !       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)

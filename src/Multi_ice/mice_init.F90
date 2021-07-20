@@ -1,7 +1,7 @@
 ! Init ice vars
 subroutine ice_init
     use schism_glbl, only : rkind,pi,np,npa,ne,nea,mnei,mnei_p,nne,indel,xctr,yctr,area, &
-   &nstep_ice,fresh_wa_flux,net_heat_flux,xlon,ylat,rearth_eq,elnode,nnp,indnd,iplg,dt, &
+   &nstep_ice,fresh_wa_flux,net_heat_flux,xlon2,ylat2,rearth_eq,elnode,nnp,indnd,iplg,dt, &
    &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir,ice_evap,ielg
     use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
     use ice_module
@@ -122,12 +122,12 @@ subroutine ice_init
   bafuy=0.
   voltriangle=0.
   do i=1,nea
-    meancos=sum(cos(ylat(elnode(1:3,i))))/3.d0
+    meancos=sum(cos(ylat2(elnode(1:3,i))))/3.d0
 
     do j=1,3 !nodes
       nd=elnode(j,i)
-      local_cart(1,j)=xlon(nd) !radian
-      local_cart(2,j)=ylat(nd)*rearth_eq
+      local_cart(1,j)=xlon2(nd) !radian
+      local_cart(2,j)=ylat2(nd)*rearth_eq
     enddo !j
 
     !Jacobian of transform

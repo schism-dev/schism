@@ -866,7 +866,7 @@
 
       module subroutine set_grid_icepack
 
-         use schism_glbl, only :xlon_o,ylat_o,rearth_eq
+         use schism_glbl, only :xlon,ylat,rearth_eq
 
           implicit none
          
@@ -886,8 +886,8 @@
           if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
               file=__FILE__, line=__LINE__)
 
-          coord_nod2D(1,1:nx) = xlon_o(:) 
-          coord_nod2D(2,1:nx) = ylat_o(:) 
+          coord_nod2D(1,1:nx) = xlon(:) 
+          coord_nod2D(2,1:nx) = ylat(:) 
           !-----------------------------------------------------------------
           ! create hemisphereic masks
           !-----------------------------------------------------------------

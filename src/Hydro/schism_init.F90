@@ -29,6 +29,7 @@
       use schism_io
       use netcdf
       use misc_modules
+      use g_clock
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -84,6 +85,14 @@
 #endif
 
       USE hydraulic_structures
+
+#ifdef USE_MICE
+      use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
+   &sigma12,sigma22
+      use ice_therm_mod, only: t_oi
+      use icedrv_main, only:io_icepack,restart_icepack
+      use icepack_intfc,    only: icepack_sea_freezing_temperature
+#endif
 
 #ifdef USE_ICE
       use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
@@ -150,7 +159,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0
+                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0,tf
 
 
 #ifdef USE_FIB
@@ -1103,8 +1112,11 @@
 !      endif
 
 !     Ice
+#ifdef USE_MICE
+      if(nstep_ice<=0) call parallel_abort('INIT: nstep_ice<=0')
+#endif
+
 #ifdef USE_ICE
-!      call get_param('param.in','nstep_ice',1,nstep_ice,tmp,stringvalue)
       if(nstep_ice<=0) call parallel_abort('INIT: nstep_ice<=0')
 #endif
 
@@ -1329,7 +1341,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         &  hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa), & 
+         & hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -1552,6 +1564,12 @@
        allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
 
+#ifdef USE_MICE
+        allocate(xlon2(npa),ylat2(npa),tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
+     &ice_evap(npa),lhas_ice(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: ice allocation failure')
+#endif
+
 #ifdef USE_ICE
         allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa),lhas_ice(npa),stat=istat)
         if(istat/=0) call parallel_abort('INIT: ice allocation failure')
@@ -1597,7 +1615,7 @@
 !      stop
 
 !     Initialize some arrays and constants
-      tempmin=-5.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
+      tempmin=-2.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
       uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
       elevmax=-1.d34; dav_maxmag=-1.d0; dav_max=0.d0
@@ -1646,6 +1664,8 @@
       q2=0.d0; xl=0.d0 !for hotstart with itur/=3 only
       dfq1=0.d0; dfq2=0.d0 !for hotstart
       fluxevp=0.d0; fluxprc=0.d0
+      prec_rain=0.d0; prec_snow=0.d0
+
 !     Fort.12 flags
 !      ifort12=0
 
@@ -5004,6 +5024,34 @@
 #endif 
 #endif /*USE_SED2D*/
 
+#ifdef USE_MICE
+      if(lhas_quad) call parallel_abort('init: no quads for ice')
+      if(.not.lreadll) call parallel_abort('init: ice needs hgrid.ll')
+      !Read in modified lon/lat for ice model
+      if(myrank==0) then
+        open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
+        read(32,*)
+        read(32,*) !ne,np
+        do i=1,np_global
+          read(32,*)j,buf3(i),buf4(i) 
+        enddo !i
+        close(32)
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+      do i=1,np_global
+        if(ipgl(i)%rank==myrank) then
+          xlon2(ipgl(i)%id)=buf3(i)*pi/180.d0
+          ylat2(ipgl(i)%id)=buf4(i)*pi/180.d0 
+        endif
+      enddo !i
+
+      if(myrank==0) write(16,*)'start init multi ice...'
+      call ice_init
+      if(myrank==0) write(16,*)'done init multi ice...'
+#endif /*USE_MICE*/
+
 #ifdef USE_ICE
       if(lhas_quad) call parallel_abort('init: no quads for ice')
       if(.not.lreadll) call parallel_abort('init: ice needs hgrid.ll')
@@ -5067,6 +5115,11 @@
       
       if(myrank==0) write(16,*)'done initializing cold start'
       
+!Error: move to other_hot*?
+#ifdef USE_MICE
+      call clock_init !by wq
+      if(myrank==0) write(16,*) yearnew,month,day_in_month,timeold
+#endif
       
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -5715,6 +5768,138 @@
           endif
         enddo !i
 #endif /*USE_MARSH*/
+
+#ifdef USE_MICE
+        do i=1,nea
+          do k=1,nvrt
+            tf=icepack_sea_freezing_temperature(tr_el(2,k,i))
+            if(tr_el(1,k,i)<tf) tr_el(1,k,i)=tf         !reset temp. below freezing temp.  
+          enddo
+        enddo
+
+        do i=1,npa
+          do k=1,nvrt
+            tf=icepack_sea_freezing_temperature(tr_nd(2,k,i))
+            if(tr_nd(1,k,i)<tf) tr_nd(1,k,i)=tf         !reset temp. below freezing temp. 
+            tf=icepack_sea_freezing_temperature(tr_nd0(2,k,i))
+            if(tr_nd0(1,k,i)<tf) tr_nd0(1,k,i)=tf         !reset temp. below freezing temp.  
+          enddo
+        enddo
+
+        lice_free_gb=.false.
+        t_oi(:)=0
+        fresh_wa_flux(:)=0
+        net_heat_flux(:)=0
+        u_ice(:)=0
+        v_ice(:)=0
+        tau_oi(:,:)=0
+        ice_tr(:,:)=0
+        ice_evap(:)=0
+
+      if(lice_free_gb) then
+        j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
+        j=nf90_get_var(ncid2,mm,itmp)
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
+        if(itmp==0) then
+          lice_free_gb=.false.
+        else
+          lice_free_gb=.true.
+        endif
+        if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
+
+        !gfortran requires all chars have same length
+        ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
+        do k=1,5 !# of 1D node arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              if(k==1) then
+                t_oi(ip)=buf3(i)
+              else if(k==2) then
+                fresh_wa_flux(ip)=buf3(i)
+              else if(k==3) then
+                net_heat_flux(ip)=buf3(i)
+              else if(k==4) then
+                u_ice(ip)=buf3(i)
+              else if(k==5) then
+                v_ice(ip)=buf3(i)
+              endif
+            endif !ipgl
+          enddo !i
+        enddo !k
+
+        ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
+        do k=1,3 !# of 1D elem arrays
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ne_global
+            if(iegl(i)%rank==myrank) then
+              ie=iegl(i)%id
+              if(k==1) then
+                sigma11(ie)=buf3(i)
+              else if(k==2) then
+                sigma12(ie)=buf3(i)
+              else if(k==3) then
+                sigma22(ie)=buf3(i)
+              endif
+            endif !ipgl
+          enddo !i
+        enddo !k
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
+        endif
+        do m=1,2
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              tau_oi(m,ip)=buf3(i)
+            endif !iegl
+          enddo !i
+        enddo !m
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid2,"ice_tracers",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
+        endif
+        do m=1,ntr_ice
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
+          endif
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ice_tr(m,ip)=buf3(i)
+            endif !iegl
+          enddo !i
+        enddo !m
+      endif !lice_free_gb
+#endif /*USE_MICE*/
 
 #ifdef USE_ICE
         j=nf90_inq_varid(ncid2,"ice_free_flag",mm)

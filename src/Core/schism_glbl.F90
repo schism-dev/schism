@@ -279,6 +279,7 @@ module schism_glbl
   !x-axis point to prime meridian, z-axis to the north pole
   real(rkind),save,allocatable :: xnd(:),ynd(:),znd(:)       ! Node cartesian coordinates
   real(rkind),save,allocatable :: xlon(:),ylat(:) ! Node lat/lon coordinates in _radians_
+  real(rkind),save,allocatable :: xlon2(:),ylat2(:) ! Modified node lat/lon coordinates in _radians_ fro ice model
   real(rkind),save,allocatable :: dp(:),dp00(:)           ! Node depths
 !  integer,save,allocatable :: ibad(:)             ! Reliable bndry elevation flag
 !  integer,save,allocatable :: nnegb(:),inegb(:,:) ! Global node-element tables
@@ -441,6 +442,7 @@ module schism_glbl
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
   real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
+  real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
                                   &windx1(:),windy1(:),windx2(:),windy2(:), &
                                   &surf_t1(:),surf_t2(:),surf_t(:), & !YC
@@ -465,6 +467,8 @@ module schism_glbl
   !(npa). net heat flux into the ocean surface [W/m/m]. >0: warm the ocean
   real(rkind),save,allocatable :: net_heat_flux(:)
   real(rkind),save,allocatable :: wind_rotate_angle(:) !in radians
+  !(npa). evap water flux in ice model [m water/sec].
+  real(rkind),save,allocatable :: ice_evap(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
 

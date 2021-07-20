@@ -24,6 +24,7 @@
       use schism_io
       use netcdf
       use misc_modules
+      use g_clock
 
 #ifdef USE_GOTM
       use turbulence, only: do_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -109,6 +110,14 @@
       USE harm
 #endif
 
+#ifdef USE_MICE
+      use icedrv_main, only:io_icepack,restart_icepack,step_icepack
+      use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
+   &sigma12,sigma22
+      use ice_therm_mod, only: t_oi,rhoice,rhosno
+      use icepack_intfc,    only: icepack_sea_freezing_temperature
+#endif
+
 #ifdef USE_ICE
       use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
@@ -188,7 +197,7 @@
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
-                     &bigfa1,bigfa2,vnf,grav3
+                     &bigfa1,bigfa2,vnf,grav3,tf,maxpice
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -391,6 +400,12 @@
 !     Broadcast to global module
       time_stamp=time; it_main=it
 
+#ifdef USE_MICE
+      call clock_newyear                        ! check if it is a new year
+      call clock
+      if(myrank==0) write(16,*) yearold,month,day_in_month,timeold/3600
+#endif
+
 !...  define ramp function for boundary elevation forcing, wind and pressure
 !...  forcing and tidal potential forcing
 !...
@@ -562,13 +577,21 @@
             if(nws==2) call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                       fluxprc,fluxevp, &
+     &                       fluxprc,fluxevp,prec_snow, &
 #endif
-     &                       nws ) !,fluxsu00,srad00)
+     &                       nws ) 
 
 !$OMP parallel do default(shared) private(i)
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
+#ifdef USE_MICE
+              prec_rain(i)=fluxprc(i)-prec_snow(i)
+              if(prec_rain(i)<0.d0) then
+                prec_rain(i)=0.d0
+                prec_snow(i)=fluxprc(i)
+              endif
+#endif
+
               if(impose_net_flux/=0) then
                 sflux(i)=hradd(i) 
                 !fluxprc is net P-E 
@@ -831,6 +854,68 @@
       endif !icou_elfe_wwm
 #endif
 !$OMP end parallel
+
+#ifdef USE_MICE
+      !Exchange variables btw hydro and ice:
+      !From hydro to ice: uu2,vv2,wind[x,y],
+      !tr_nd(1:2,:,:),pr,fluxprc,srad,hradd,airt2,shum2
+      !From ice to hydro: tau_oi,fresh_wa_flux,net_heat_flux
+      !Beware hotstart implication
+
+      !if(mod(it-1,nstep_ice)==0) 
+      call step_icepack
+      !Overwrite ocean stress with ice (tau_oi)
+      tmp_max=0.d0 !init max stress
+      smax=0.d0 !init max abs previp rate
+      tmax=0.d0 !init max abs heat flux
+      do i=1,npa
+        if(lhas_ice(i)) then
+          tau(1,i)=((1-ice_tr(2,i))*tau(1,i)+tau_oi(1,i))*rampwind !m^2/s/s
+          tau(2,i)=((1-ice_tr(2,i))*tau(2,i)+tau_oi(2,i))*rampwind !m^2/s/s
+          !tau(1,i)=tau_oi(1,i)*rampwind !m^2/s/s
+          !tau(2,i)=tau_oi(2,i)*rampwind !m^2/s/s
+          maxpice=(rhoice*ice_tr(1,i)+ice_tr(3,i)*rhosno)*grav
+          maxpice=min(maxpice,5.d0*rho0*grav)
+          pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))+maxpice
+          !Update fluxes
+          if(impose_net_flux==0) then
+            fluxprc(i)=fresh_wa_flux(i)*rampwind !kg/s/m/m
+            sflux(i)=net_heat_flux(i)*rampwind !W/m/m
+            fluxevp(i)=0
+          endif   
+ 
+          tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
+          if(tmp>tmp_max) tmp_max=tmp
+          if(abs(fresh_wa_flux(i))>smax) smax=fresh_wa_flux(i)
+          if(abs(net_heat_flux(i))>tmax) tmax=net_heat_flux(i)
+        else !for output
+          tau_oi(:,i)=0.d0; fresh_wa_flux(i)=0.d0; net_heat_flux(i)=0.d0
+        endif
+        if(idry(i)==1) then
+          fluxprc(i)=0;sflux(i)=0;tau(1,i)=0;tau(2,i)=0
+        endif
+
+      enddo !i
+      
+      do i=1,nea
+        do k=1,nvrt
+          tf=icepack_sea_freezing_temperature(tr_el(2,k,i))
+          if(tr_el(1,k,i)<tf) tr_el(1,k,i)=tf         !reset temp. below freezing temp.  
+        enddo
+      enddo
+
+      do i=1,npa
+        do k=1,nvrt
+          tf=icepack_sea_freezing_temperature(tr_nd(2,k,i))
+          if(tr_nd(1,k,i)<tf) tr_nd(1,k,i)=tf         !reset temp. below freezing temp. 
+          tf=icepack_sea_freezing_temperature(tr_nd0(2,k,i))
+          if(tr_nd0(1,k,i)<tf) tr_nd0(1,k,i)=tf         !reset temp. below freezing temp.  
+        enddo
+      enddo
+!      write(12,*)'Max ice-ocean stress etc:',it,rampwind,tmp_max,smax,tmax
+
+      if(myrank==0) write(16,*) 'done multi ice...'
+#endif /*USE_MICE*/
 
 #ifdef USE_ICE
       !Exchange variables btw hydro and ice:
@@ -8742,6 +8827,30 @@
         noutput=noutput+1
 #endif
 
+#ifdef USE_MICE
+        if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
+     &'ICE_velocity',1,1,npa,u_ice,v_ice)
+        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+6), &
+     &'ICE_strain_rate',4,1,nea,delta_ice)
+        if(iof_ice(3)==1) call writeout_nc(id_out_var(noutput+7), &
+     &'ICE_net_heat_flux',1,1,npa,net_heat_flux)
+        if(iof_ice(4)==1) call writeout_nc(id_out_var(noutput+8), &
+     &'ICE_fresh_water_flux',1,1,npa,fresh_wa_flux)
+        if(iof_ice(5)==1) call writeout_nc(id_out_var(noutput+9), &
+     &'ICE_top_T',1,1,npa,t_oi)
+        noutput=noutput+5
+        icount=5 !offset
+
+        do i=1,ntr_ice
+          write(it_char,'(i72)')i
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          if(iof_ice(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
+     &'ICE_tracer_'//it_char(1:lit),1,1,npa,ice_tr(i,:))
+        enddo !i
+        noutput=noutput+ntr_ice
+        call io_icepack(noutput)
+#endif
+
 #ifdef USE_ICE
         if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
      &'ICE_velocity',1,1,npa,u_ice,v_ice)
@@ -9328,6 +9437,50 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),imarsh(1:ne),(/1/),(/ne/))
         nvars_hot=nvars_hot+1
 #endif /*USE_MARSH*/
+
+#ifdef USE_MICE
+        !Reenter def mode
+        j=nf90_redef(ncid_hot)
+        j=nf90_def_dim(ncid_hot,'ice_ntr',ntr_ice,ice_ntr_dim)
+
+        var1d_dim(1)=one_dim
+        j=nf90_def_var(ncid_hot,'ice_free_flag',NF90_INT,var1d_dim,nwild(nvars_hot+1))
+        var1d_dim(1)=node_dim
+        j=nf90_def_var(ncid_hot,'ice_surface_T',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2)) !t_oi
+        j=nf90_def_var(ncid_hot,'ice_water_flux',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
+        j=nf90_def_var(ncid_hot,'ice_heat_flux',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+4))
+        j=nf90_def_var(ncid_hot,'ice_velocity_x',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+5))
+        j=nf90_def_var(ncid_hot,'ice_velocity_y',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+6))
+        var1d_dim(1)=elem_dim
+        j=nf90_def_var(ncid_hot,'ice_sigma11',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+7))
+        j=nf90_def_var(ncid_hot,'ice_sigma12',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
+        j=nf90_def_var(ncid_hot,'ice_sigma22',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
+        var2d_dim(1)=two_dim; var2d_dim(2)=node_dim
+        j=nf90_def_var(ncid_hot,'ice_ocean_stress',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+10))
+        var2d_dim(1)=ice_ntr_dim; var2d_dim(2)=node_dim
+        j=nf90_def_var(ncid_hot,'ice_tracers',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+11))
+        j=nf90_enddef(ncid_hot)
+
+        !Convert to int
+        if(lice_free_gb) then
+          ifl=1
+        else
+          ifl=0
+        endif
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),ifl)
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),t_oi(1:np),(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),fresh_wa_flux(1:np),(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),net_heat_flux(1:np),(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),u_ice(1:np),(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),v_ice(1:np),(/1/),(/np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),sigma11(1:ne),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),sigma12(1:ne),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),sigma22(1:ne),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),tau_oi(1:2,1:np),(/1,1/),(/2,np/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),ice_tr(1:ntr_ice,1:np),(/1,1/),(/ntr_ice,np/))
+        nvars_hot=nvars_hot+11
+        call restart_icepack(ncid_hot,nvars_hot,node_dim)
+#endif /*USE_MICE*/
 
 #ifdef USE_ICE
         !Reenter def mode
