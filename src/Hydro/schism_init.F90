@@ -5025,9 +5025,9 @@
 #endif /*USE_SED2D*/
 
 #ifdef USE_MICE
-      if(lhas_quad) call parallel_abort('init: no quads for ice')
-      if(.not.lreadll) call parallel_abort('init: ice needs hgrid.ll')
-      !Read in modified lon/lat for ice model
+      if(lhas_quad) call parallel_abort('init: no quads for mice')
+      if(.not.lreadll) call parallel_abort('init: mice needs hgrid.ll')
+      !Read in modified (rotated north pole) lon/lat for ice model
       if(myrank==0) then
         open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
         read(32,*)
@@ -5796,109 +5796,109 @@
         ice_tr(:,:)=0
         ice_evap(:)=0
 
-      if(lice_free_gb) then
-        j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
-        j=nf90_get_var(ncid2,mm,itmp)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
-        if(itmp==0) then
-          lice_free_gb=.false.
-        else
-          lice_free_gb=.true.
-        endif
-        if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
-
-        !gfortran requires all chars have same length
-        ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
-        do k=1,5 !# of 1D node arrays
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
-            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+        if(lice_free_gb) then
+          j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
+          j=nf90_get_var(ncid2,mm,itmp)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
+          if(itmp==0) then
+            lice_free_gb=.false.
+          else
+            lice_free_gb=.true.
           endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
 
-          do i=1,np_global
-            if(ipgl(i)%rank==myrank) then
-              ip=ipgl(i)%id
-              if(k==1) then
-                t_oi(ip)=buf3(i)
-              else if(k==2) then
-                fresh_wa_flux(ip)=buf3(i)
-              else if(k==3) then
-                net_heat_flux(ip)=buf3(i)
-              else if(k==4) then
-                u_ice(ip)=buf3(i)
-              else if(k==5) then
-                v_ice(ip)=buf3(i)
-              endif
-            endif !ipgl
-          enddo !i
-        enddo !k
+          !gfortran requires all chars have same length
+          ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
+          do k=1,5 !# of 1D node arrays
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-        ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
-        do k=1,3 !# of 1D elem arrays
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                if(k==1) then
+                  t_oi(ip)=buf3(i)
+                else if(k==2) then
+                  fresh_wa_flux(ip)=buf3(i)
+                else if(k==3) then
+                  net_heat_flux(ip)=buf3(i)
+                else if(k==4) then
+                  u_ice(ip)=buf3(i)
+                else if(k==5) then
+                  v_ice(ip)=buf3(i)
+                endif
+              endif !ipgl
+            enddo !i
+          enddo !k
+
+          ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
+          do k=1,3 !# of 1D elem arrays
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                if(k==1) then
+                  sigma11(ie)=buf3(i)
+                else if(k==2) then
+                  sigma12(ie)=buf3(i)
+                else if(k==3) then
+                  sigma22(ie)=buf3(i)
+                endif
+              endif !ipgl
+            enddo !i
+          enddo !k
+
           if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
-            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+            j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
           endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          do m=1,2
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-          do i=1,ne_global
-            if(iegl(i)%rank==myrank) then
-              ie=iegl(i)%id
-              if(k==1) then
-                sigma11(ie)=buf3(i)
-              else if(k==2) then
-                sigma12(ie)=buf3(i)
-              else if(k==3) then
-                sigma22(ie)=buf3(i)
-              endif
-            endif !ipgl
-          enddo !i
-        enddo !k
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                tau_oi(m,ip)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
 
-        if(myrank==0) then
-          j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
-        endif
-        do m=1,2
           if(myrank==0) then
-            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+            j=nf90_inq_varid(ncid2,"ice_tracers",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
           endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          do m=1,ntr_ice
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-          do i=1,np_global
-            if(ipgl(i)%rank==myrank) then
-              ip=ipgl(i)%id
-              tau_oi(m,ip)=buf3(i)
-            endif !iegl
-          enddo !i
-        enddo !m
-
-        if(myrank==0) then
-          j=nf90_inq_varid(ncid2,"ice_tracers",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
-        endif
-        do m=1,ntr_ice
-          if(myrank==0) then
-            j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
-          endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-          do i=1,np_global
-            if(ipgl(i)%rank==myrank) then
-              ip=ipgl(i)%id
-              ice_tr(m,ip)=buf3(i)
-            endif !iegl
-          enddo !i
-        enddo !m
-      endif !lice_free_gb
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                ice_tr(m,ip)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
+        endif !lice_free_gb
 #endif /*USE_MICE*/
 
 #ifdef USE_ICE

@@ -1,7 +1,8 @@
 !=======================================================================
 !
 ! Module that contains the whole icepack implementation in fesom2
-!
+! (a list of available functions and routines; submodules in other files
+! then expand those).
 ! Author: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
 !  Modified by Qian Wang to apply to SCHISM
 !=======================================================================
