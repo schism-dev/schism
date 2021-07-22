@@ -5,6 +5,10 @@
 !
 ! Author: L. Zampieri ( lorenzo.zampieri@awi.de )
 !  Modified by Qian Wang to apply to SCHISM
+!
+! Main driver: tracer_advection_icepack, which 
+! calls fct_solve_icepack (sequence of lower- and higher-order FCT solver for
+! each tracer)
 !=======================================================================
 
 submodule (icedrv_main) icedrv_advection
@@ -50,7 +54,7 @@ submodule (icedrv_main) icedrv_advection
         ! Input - output
     
         !type(t_mesh),        target,        intent(in)     :: mesh
-        real(kind=dbl_kind), dimension(nx), intent(inout)  :: trc
+        real(kind=dbl_kind), dimension(nx), intent(inout)  :: trc  !nx=npa
     
         ! Local variables
     
@@ -64,13 +68,13 @@ submodule (icedrv_main) icedrv_advection
 
         ! Taylor-Galerkin (Lax-Wendroff) rhs
       
-        do row = 1, nx_nh
+        do row = 1, nx_nh !=np (no halo)
            rhs_tr(row)=c0
         enddo
     
         ! Velocities at nodes
     
-        do elem = 1, nx_elem_nh  !assembling rhs over elements
+        do elem = 1, nx_elem_nh  !assembling rhs over elements (no halo)
     
            elnodes = elnode(1:3,elem)
     
@@ -344,6 +348,7 @@ submodule (icedrv_main) icedrv_advection
         real   (kind=dbl_kind), allocatable, dimension(:) :: tmax, tmin
         real   (kind=dbl_kind)                            :: vol, flux, ae, gamma
         !type(t_mesh),        target,        intent(in)     :: mesh  
+        !nx=npa, nx_nh=np
         real(kind=dbl_kind), dimension(nx), intent(inout)  :: trc
     
 !#include "../associate_mesh.h"
@@ -520,7 +525,7 @@ submodule (icedrv_main) icedrv_advection
         ! In this version I tr to split divergent term off, 
         ! so that FCT works without it.
     
-        do row = 1, nx
+        do row = 1, nx !=npa
            ! row=myList_nod2D(m)
            rhs_tr(row)    = c0
            rhs_trdiv(row) = c0
@@ -736,7 +741,7 @@ submodule (icedrv_main) icedrv_advection
 
         if (allocated(works)) deallocate(works)
         if (allocated(works_old)) deallocate(works_old)
-        allocate ( works(nx,narr) )
+        allocate ( works(nx,narr) ) !(npa, max number of state variable arrays)
         allocate ( works_old(nx,narr) )
         allocate ( fiso_ocn(nx) )
         allocate ( swild(nx) )
