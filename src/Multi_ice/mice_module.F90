@@ -68,7 +68,7 @@ ice_gamma_fct, ice_diff, theta_io,ice_ave_steps, c_pressure
   !REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: eps11, eps12, eps22
   real(rkind),allocatable :: delta_ice(:) !(nea). Strain rate [1/sec]
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: fresh_wa_flux0,a_ice0,m_snow0,m_ice0
-  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: net_heat_flux0,evaporation
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: net_heat_flux0,evaporation,fsrad_ice_out0
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_x
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_y
   real(rkind),allocatable :: u_ocean(:),v_ocean(:) !ocean surface current@nodes
