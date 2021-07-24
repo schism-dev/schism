@@ -12,7 +12,7 @@
 
       module subroutine schism_to_icepack
           use schism_glbl,only: rkind,npa,tr_nd,iplg,pr,fluxprc,rho0,windx,windy, &
-          &nvrt,srad,albedo,hradd,airt1,shum1,errmsg,xlon2,ylat2,fresh_wa_flux,net_heat_flux, &
+          &nvrt,srad_o,albedo,hradd,airt1,shum1,errmsg,xlon2,ylat2,fresh_wa_flux,net_heat_flux, &
           uu2,vv2,area,elnode,i34,dt,nstep_ice,prec_rain,prec_snow,it_main,lhas_ice,drampwind, &
           nws,nrampwind,idry,isbnd,dp
           use schism_msgp, only: myrank,nproc,parallel_abort,parallel_finalize,exchange_p2d
@@ -95,7 +95,7 @@
                Qa(i)     = shum1(i)
                uatm(i)   = windx(i)
                vatm(i)   = windy(i)
-               fsw(i)    = srad(i)
+               fsw(i)    = srad_o(i)/(1-albedo(i))
                flw(i)    = hradd(i)
                
                  frain(i)  = prec_rain(i) !* 1000.0_dbl_kind
@@ -222,7 +222,8 @@
                                           fhocn_tot_out, fresh_tot_out,    &
                                           strocnxT_out,  strocnyT_out,     &
                                           dhs_dt_out,    dhi_dt_out,       &
-                                          fsalt_out,     evap_ocn_out      )
+                                          fsalt_out,     evap_ocn_out,     &
+                                          fsrad_ice_out                    )
 
           implicit none
 
@@ -240,7 +241,8 @@
              fsalt_out,     &
              dhs_dt_out,    &
              dhi_dt_out,    &
-             evap_ocn_out
+             evap_ocn_out,  &
+             fsrad_ice_out
 
           character(len=*),parameter :: subname='(icepack_to_schism)'   
 
@@ -256,6 +258,7 @@
           if (present(dhs_dt_out)            ) dhs_dt_out       = dhs_dt
           if (present(fsalt_out)             ) fsalt_out        = fsalt
           if (present(evap_ocn_out)          ) evap_ocn_out     = evap_ocn
+          if (present(fsrad_ice_out)         ) fsrad_ice_out    = fswthru
 
       end subroutine icepack_to_schism
 
