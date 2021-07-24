@@ -74,16 +74,18 @@ module cosine_mod
   real(rkind),save,allocatable :: nclam(:)
   
   !------------------------------------------------------------------
-  !sediment flux model variables
+  !sediment flux model variables: 3 G classes 
   !------------------------------------------------------------------
-  !nsed: number of total types of POM
-  !sedcon: sediment POM concentration 
-  !sedrate: total remineralization rate
-  integer,save :: nsed,nsedS2,nsedDN,nsedDSi  
-  real(rkind),save,allocatable :: sedcon(:,:),sedrate(:,:),rsed(:),rsedm(:)
-  real(rkind),save,allocatable :: psedS2(:),rsedS2(:),rsedS2m(:)
-  real(rkind),save,allocatable :: psedDN(:),rsedDN(:),rsedDNm(:)
-  real(rkind),save,allocatable :: psedDSi(:),rsedDSi(:),rsedDSim(:)
+  !fS2, fDN, fDSi:   partitioning coefficient of G. classes 
+  !rkS2,rkDN,rkDSi:  changing rate of remineralization rate 
+  !mkS2,mkDN,mkDSi:  maximum remineralization rate 
+  !PS2, PDN, PDSi:   sediment POM concentration 
+  !RS2, RDN, RDSi:   sediment POM decay rate
+  real(rkind),save,allocatable :: fS2(:),   fDN(:),   fDSi(:)
+  real(rkind),save,allocatable :: rkS2(:),  rkDN(:),  rkDSi(:)
+  real(rkind),save,allocatable :: mkS2(:),  mkDN(:),  mkDSi(:)
+  real(rkind),save,allocatable :: PS2(:,:), PDN(:,:), PDSi(:,:)
+  real(rkind),save,allocatable :: RS2(:,:), RDN(:,:), RDSi(:,:)
 
 end module cosine_mod
 

@@ -43,7 +43,7 @@ subroutine cosine(it)
   logical :: lopened
 
   !for precalculation
-  real(rkind) :: fS1,fS2,bfNO3S1,bfNH4S1,bfNH4S2,bfNO3S2
+  real(rkind) :: bfS1,bfS2,bfNO3S1,bfNH4S1,bfNH4S2,bfNO3S2
   real(rkind) :: fNO3S1,fNH4S1,fNH4S2,fNO3S2,fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2
   real(rkind) :: pnh4s1,pnh4s2,pih1,pih2,rhot,rhop,ADPT,OXR,Tadjust
   real(rkind) :: ph,o2flx,co2flx,nh4flx,sio4flx,po4flx,co2flxb,o2flxb
@@ -55,7 +55,7 @@ subroutine cosine(it)
   real(rkind) :: Nit,MIDN,MIDSi,CLREG,grzc
 
   !Arrays
-  real(rkind) :: qcos(13),sLight(1:nvrt+1),sedinflx(nsed)
+  real(rkind) :: qcos(13),sLight(1:nvrt+1),flxS2,flxDN,flxDSi
   real(rkind),dimension(nvrt) :: zr,dep
 
   !dtw is the time step used in COSINE model,unit in 1/day
@@ -200,19 +200,19 @@ subroutine cosine(it)
 
       !final limitation
       if(ico2s==0) then
-        fS1=min(bfNO3S1+bfNH4S1,fPO4S1)  !*pih1
-        fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2) !*pih2
+        bfS1=min(bfNO3S1+bfNH4S1,fPO4S1)  !*pih1
+        bfS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2) !*pih2
       else !with CO2 limitation
-        fS1=min(bfNO3S1+bfNH4S1,fPO4S1,fCO2S1)  !*pih1
-        fS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2,fCO2S2) !*pih2
+        bfS1=min(bfNO3S1+bfNH4S1,fPO4S1,fCO2S1)  !*pih1
+        bfS2=min(bfNO3S2+bfNH4S2,fSiO4S2,fPO4S2,fCO2S2) !*pih2
       endif
 
       !adjustment for nitrogen limitation factors
-      fNO3S1=fS1*bfNO3S1/(bfNO3S1+bfNH4S1+1.0e-6)
-      fNH4S1=fS1*bfNH4S1/(bfNO3S1+bfNH4S1+1.0e-6)
+      fNO3S1=bfS1*bfNO3S1/(bfNO3S1+bfNH4S1+1.0e-6)
+      fNH4S1=bfS1*bfNH4S1/(bfNO3S1+bfNH4S1+1.0e-6)
 
-      fNO3S2=fS2*bfNO3S2/(bfNO3S2+bfNH4S2+1.0E-6)
-      fNH4S2=fS2*bfNH4S2/(bfNO3S2+bfNH4S2+1.0E-6)
+      fNO3S2=bfS2*bfNO3S2/(bfNO3S2+bfNH4S2+1.0E-6)
+      fNH4S2=bfS2*bfNH4S2/(bfNO3S2+bfNH4S2+1.0E-6)
 
       !Zooplankton grazing
       GS1Z1=beta1*Z1(k)*S1(k)/(kgz1+S1(k))
@@ -352,23 +352,14 @@ subroutine cosine(it)
       if(ised==1.and.k==kbe(i)+1) then
         drat=dep(k)/max(dep(k),1.d-1); rat=1.0
         if(S2(k)<=2.5d0) rat=0.0
-        !partitioning sinking fluxes
-        m=0
-        do id=1,nsedS2
-          m=m+1
-          sedinflx(m)=rat*drat*wss2*S2(k)*psedS2(id)
-        enddo
-        do id=1,nsedDN
-          m=m+1
-          sedinflx(m)=drat*wsdn*DN(k)*psedDN(id)
-        enddo
-        do id=1,nsedDSi
-          m=m+1
-          sedinflx(m)=drat*wsdsi*DSi(k)*psedDSi(id)
-        enddo
+
+        !computing sinking fluxes
+        flxS2=rat*drat*wss2*S2(k)
+        flxDN=drat*wsdn*DN(k)
+        flxDSi=drat*wsdsi*DSi(k)
 
         !calculate sediment fluxes
-        call sedflux(nh4flx,sio4flx,po4flx,co2flxb,o2flxb,sedinflx,dtw,dep(k),i)
+        call sedflux(nh4flx,sio4flx,po4flx,co2flxb,o2flxb,flxS2,flxDN,flxDSi,dtw,dep(k),i)
 
         flx_bt(irange_tr(1,8)+1,i) =-sio4flx/d2s
         flx_bt(irange_tr(1,8)+2,i) =-nh4flx/d2s
@@ -397,10 +388,11 @@ subroutine cosine(it)
                 &S1(k),S2(k),Z1(k),Z2(k),DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k),&
                 &NPS1,RPS1,NPS2,RPS2,MTS1,MTS2,MTZ1,MTZ2,EXZ1,EXZ2,GS1Z1,GS2Z2,GZ1Z2,&
                 &GDNZ2,GTZ2,SKS2,SKDN,SKDSi,Nit,MIDN,MIDSi,pnh4s1,pnh4s2,pih1,pih2,&
-                &fS1,fS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
+                &bfS1,bfS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
                 &fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2,o2flx,co2flx,OXR,ADPT,ph,dep(k),&
                 &SPM(k,i),sLight(k),ak2*(S1(k)+S2(k)),ak3*SPM(k,i)*dep(k), &
-                &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(sedcon(l,i),l=1,nsed),(sedrate(l,i),l=1,nsed)
+                &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(PS2(l,i),l=1,3),(PDN(l,i),l=1,3), &
+                &(PDSi(l,i),l=1,3),(RS2(l,i),l=1,3),(RDN(l,i),l=1,3),(RDSi(l,i),l=1,3)
             endif
           enddo !m
         endif !ista(i)/=0 
@@ -415,14 +407,14 @@ subroutine cosine(it)
   return
 end subroutine cosine
 
-subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,sedinflx,dtw,dz,id)
+subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,flxS2,flxDN,flxDSi,dtw,dep,id)
 !-----------------------------------------------------------------
 !calculate sediment flux from sediment diagenesis 
 !Input: 
-!     1)sedinflx: settling flux for each type of POM (mmol/m2/day)
+!     1)flxS2,flxDn,flxDSi: settling flux for S2,DN,and DSi (mmol/m2/day)
 !     2)dtw: time step (day)
 !     3)id: element number
-!     4)dz: thickness of the bottom layer (m)
+!     4)dep: thickness of the bottom layer (m)
 !Output:
 !     1)nh4flx: outflux of NH4 (mmol/m2/day) 
 !     2)sio4flx: outflux of SiO4 (mmol/m2/day) 
@@ -431,56 +423,50 @@ subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,sedinflx,dtw,dz,id)
 !     5)o2flx: outflux of O2 (mmol/m2/day) 
 !-----------------------------------------------------------------
   use schism_msgp, only : parallel_abort
-  use cosine_mod, only: nsed,sedcon,sedrate,rsed,rsedm,nsedS2,nsedDN, &
-      & nsedDSi,si2n,p2n,c2n,o2nh,ipo4
+  use cosine_mod, only: fS2,fDN,fDSi,rkS2,rkDN,rkDSi,mkS2,&
+      & mkDN,mkDSi,PS2,PDN,PDSi,RS2,RDN,RDSi,si2n,p2n,c2n,o2nh,ipo4
   implicit none
   integer, parameter :: rkind=8
+  real(rkind), parameter :: mval=1.d-10
   integer,intent(in) :: id
-  real(rkind),intent(in) :: sedinflx(nsed),dtw,dz
+  real(rkind),intent(in) :: flxS2,flxDN,flxDSi,dtw,dep
   real(rkind),intent(out) :: nh4flx,sio4flx,po4flx,co2flx,o2flx
 
   !local variables
   integer :: i,j,k,m
-  real(rkind) :: outflx(nsed)
+  real(rkind) :: JS2(3),JDN(3),JDSi(3),drat
 
-  !sediment modeling
-  do m=1,nsed
-    outflx(m)=sedrate(m,id)*sedcon(m,id)*dz/max(dz,1.d-1)
-    sedcon(m,id)=sedcon(m,id)+dtw*sedinflx(m)-dtw*outflx(m)
-    sedrate(m,id)=sedrate(m,id)+dtw*rsed(m)-dtw*sedrate(m,id)*sedinflx(m)/sedcon(m,id)
-    sedrate(m,id)=max(min(sedrate(m,id),rsedm(m)),0.d0) 
+  drat=dep/max(dep,0.1d0)
+
+  !for each G class
+  do m=1,3
+     !diagensis flux
+     JS2(m) =RS2(m,id) *PS2(m,id) !*drat
+     JDN(m) =RDN(m,id) *PDN(m,id) !*drat
+     JDSi(m)=RDSi(m,id)*PDSi(m,id) !*drat
+
+     !sediment POM conc.
+     PS2(m,id) =PS2(m,id) +dtw*(fS2(m)*flxS2-JS2(m))
+     PDN(m,id) =PDN(m,id) +dtw*(fDN(m)*flxDN-JDN(m))
+     PDSi(m,id)=PDSi(m,id)+dtw*(fDSi(m)*flxDSi-JDSi(m))
+
+     !sediment POM decay rate
+     RS2(m,id) =RS2(m,id) +dtw*(rkS2(m) -RS2(m,id)*fS2(m)*flxS2/max(mval,PS2(m,id)))
+     RDN(m,id) =RDN(m,id) +dtw*(rkDN(m) -RDN(m,id)*fDN(m)*flxDN/max(mval,PDN(m,id)))
+     RDSi(m,id)=RDSi(m,id)+dtw*(rkDSi(m)-RDSi(m,id)*fDSi(m)*flxDSi/max(mval,PDSi(m,id)))
+
+     !check 
+     RS2(m,id)=max(min(RS2(m,id),mkS2(m)),0.0_rkind)
+     RDN(m,id)=max(min(RDN(m,id),mkDN(m)),0.0_rkind)
+     RDSi(m,id)=max(min(RDSi(m,id),mkDSi(m)),0.0_rkind)
   enddo
 
-  !sum up the fluxes
-  nh4flx=0.d0
-  sio4flx=0.d0
-  po4flx=0.d0
-  co2flx=0.d0
-  o2flx=0.d0
+  !sediment flux
+  nh4flx=sum(JS2)+sum(JDN)
+  sio4flx=si2n*sum(JS2)+sum(JDSi)
+  po4flx=p2n*nh4flx; co2flx=c2n*nh4flx; o2flx=-o2nh*nh4flx
+  if(ipo4==1) po4flx=po4flx+p2n*sum(JDSi)/si2n
 
-  m=0
-  do i=1,nsedS2
-    m=m+1
-    nh4flx=nh4flx+outflx(m)
-    sio4flx=sio4flx+outflx(m)*si2n
-    po4flx=po4flx+outflx(m)*p2n
-    co2flx=co2flx+outflx(m)*c2n
-    o2flx=o2flx-outflx(m)*o2nh
-  enddo
-  do i=1,nsedDN
-    m=m+1
-    nh4flx=nh4flx+outflx(m)
-    po4flx=po4flx+outflx(m)*p2n
-    co2flx=co2flx+outflx(m)*c2n
-    o2flx=o2flx-outflx(m)*o2nh
-  enddo
-  do i=1,nsedDSi
-    m=m+1
-    sio4flx=sio4flx+outflx(m)
-    if(ipo4==1) po4flx=po4flx+outflx(m)*p2n/si2n
-  enddo
-  
-  return
 end
 
 subroutine WQinput(time)

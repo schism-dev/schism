@@ -1,32 +1,20 @@
-!-----------------------------------------------------------------------
-! COSINE model parameter inputs.
-! Format rules
-! (1) Lines beginning with "!" are comments; blank lines are ignored;
-! (2) one line for each parameter in the format: keywords= (value1,value2,...);
-!     keywords are case sensitive; spaces allowed between keywords and "=" and value;
-!     comments starting with "!"  allowed after value;
-! (3) value is an integer, double, or string (no single quote needed); for double, any of the format is acceptable:
-!     40 40. 4.e1
-!     Use of decimal point in integers is OK but discouraged.
-!-----------------------------------------------------------------------
+!parameter inputs via namelist convention.
+!(1) Use ' ' (single quotes) for chars;
+!(2) integer values are fine for real vars/arrays;
+!(3) if multiple entries for a parameter are found, the last one wins - please avoid this
+!(4) array inputs follow column major (like FORTRAN) and can spill to multiple lines
+!(5) space allowed before/after '='
 
-
+&MARCO
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !switches and marco parameters
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !-----------------------------------------------------------------------
-!niter: number of subcycles for COSINE kinetic processes
+!idelay: a 7-day delay for zooplankton predation 
 !-----------------------------------------------------------------------
-niter = 1
-
-!-----------------------------------------------------------------------
-!idelay: a time delay for zooplankton predation 
-!ndelay: number of days for the delay
-!-----------------------------------------------------------------------
-idelay = 0 
-
-ndelay=7
+idelay = 0
+ndelay = 7
 
 !-----------------------------------------------------------------------
 !ibgraze: bottom grazing function 
@@ -51,7 +39,7 @@ iz2graze = 1
 !has a similar format of station.bp is needed. nspool_cosine is the 
 !interval (time step) for the output 
 !-----------------------------------------------------------------------
-iout_cosine=0 
+iout_cosine=0
 nspool_cosine=60
 
 !-----------------------------------------------------------------------
@@ -68,16 +56,12 @@ ispm = 0
 spm0 = 20.0
 
 !-----------------------------------------------------------------------
-!icheck: output cosine parameter for check
+!ised=1 : sediment flux model
 !-----------------------------------------------------------------------
-icheck = 1
+ised = 1
+/
 
-!-----------------------------------------------------------------------
-!ised=1 : sediment flux model 
-!-----------------------------------------------------------------------
-ised = 0
-
-
+&CORE
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !phytoplankton
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -98,21 +82,21 @@ pis2=  1.5
 !nutrient half saturation
 !-----------------------------------------------------------------------
 kno3s1= 1.0
-knh4s1= 0.1
+knh4s1= 0.15
 kpo4s1= 0.1
-kco2s1= 500
+kco2s1= 50
 
 kno3s2= 3.0
-knh4s2= 0.3
+knh4s2= 0.45
 kpo4s2= 0.1
-kco2s2= 500
+kco2s2= 50
 ksio4s2= 4.5
 
 !-----------------------------------------------------------------------
 !nighttime uptake rate of NH4
 !-----------------------------------------------------------------------
-kns1=0.0305
-kns2=0.0305
+kns1=0.0
+kns2=0.0
 
 !-----------------------------------------------------------------------
 !light coefficient
@@ -131,7 +115,7 @@ ak3= 0.066
 !mortality rate
 !-----------------------------------------------------------------------
 gammas1= 0.2
-gammas2= 0.1
+gammas2= 0.075
 
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -141,8 +125,8 @@ gammas2= 0.1
 !-----------------------------------------------------------------------
 !maximum grzaing rate
 !-----------------------------------------------------------------------
-beta1= 1.6
-beta2= 0.65
+beta1= 1.35
+beta2= 0.4
 
 !-----------------------------------------------------------------------
 !reference prey concentration for grzaing
@@ -166,7 +150,7 @@ gamma2= 0.75
 !-----------------------------------------------------------------------
 !mortality rate
 !-----------------------------------------------------------------------
-gammaz= 0.15
+gammaz= 0.2
 
 !-----------------------------------------------------------------------
 !excretion rate
@@ -182,14 +166,10 @@ kex2= 0.2
 !-----------------------------------------------------------------------
 !settling velocity
 !-----------------------------------------------------------------------
-wss2= 5.0
-wsdn= 15.0
-wsdsi= 25.0
+wss2=  0.2
+wsdn=  1.0
+wsdsi= 1.0
 
-iws=0
-NO3c=2.0 !mmol/m3
-ws1=2.5
-ws2=2.0
 !-----------------------------------------------------------------------
 !conversion coefficens
 !-----------------------------------------------------------------------
@@ -205,11 +185,15 @@ c2n= 7.3
 kox= 30.0
 
 !-----------------------------------------------------------------------
+!add additional PO4 from biogenic silica dissolution
+!-----------------------------------------------------------------------
+ipo4=1
+
+!-----------------------------------------------------------------------
 !remineralization coefficients for DN
 !kdmdn is bottom remineralization coefficient, while water column 
 !coefficient=kmdn1*T+kmdn2, where T is temperature
 !-----------------------------------------------------------------------
-kbmdn=7.5
 kmdn1=0.009
 kmdn2=0.075
 
@@ -218,24 +202,33 @@ kmdn2=0.075
 !kdmdsi is bottom remineralization coefficient, while water column 
 !coefficient=kmdsi1*T+kmdsi2, where T is temperature
 !-----------------------------------------------------------------------
-kbmdsi=7.5
 kmdsi1=0.0114
 kmdsi2=0.015
 
 !-----------------------------------------------------------------------
 !nitrification coefficent
 !-----------------------------------------------------------------------
-gamman= 0.25
+gamman= 0.07
 
 !-----------------------------------------------------------------------
 !Reference temperature for temperature adjust for CoSiNE sink and source
 !-----------------------------------------------------------------------
-TR= 20
+TR= 20 
 
 !-----------------------------------------------------------------------
 !atmospheric CO2 concentration
 !-----------------------------------------------------------------------
 pco2a= 391.63
+/
+
+&MISC
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!diatom sinking velocity depends on NO3
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+iws=0
+NO3c=2.0 !mmol/m3
+ws1=2.5
+ws2=2.0
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !clam grazing model
@@ -244,8 +237,8 @@ iclam=0
 deltaZ= 1 !meter
 kcex=0.002  !day-1
 Nperclam=0.39032 !mmol[N]
-Wcalm=5.45e-3  !clam weigh (g)
-Fcalm=40  !L.g[AFDW]-1.day-1, filtration rate 
+Wclam=5.45e-3  !clam weigh (g)
+Fclam=40  !L.g[AFDW]-1.day-1, filtration rate
 nclam0=2000
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -254,36 +247,31 @@ nclam0=2000
 
 !-----------------------------------------------------------------------
 !parameters related to S2 in sediment
-!nsedS2: number of forms of sediment S2
-!psedS2: partitioning coefficient from S2 in water column into sediment S2
-!rsedS2: changing rate of remineralization rate for sediment S2
-!rsedS2m: maximum remineralization rate for sediment S2
+!fS2:  partitioning coefficient from S2 in water column into sediment S2
+!rkS2: changing rate of remineralization rate for sediment S2
+!mkS2: maximum remineralization rate for sediment S2
 !-----------------------------------------------------------------------
-nsedS2= 1  
-psedS2= 1.0 
-rsedS2= 0.00444 !time delay of 15 days 
-rsedS2m= 0.2
+fS2=  0.1    0.1     0.8
+rkS2= 4e-3   1.0e-4  0.0   !time delay of 63 day
+mkS2= 0.1    0.01    0.0 
 
 !-----------------------------------------------------------------------
 !parameters related to DN in sediment
-!nsedDN: number of forms of sediment DN
-!psedDN: partitioning coefficient from DN in water column into sediment DN
-!rsedDN: changing rate of remineralization rate for sediment DN
-!rsedDNm: maximum remineralization rate for sediment DN
+!fdDN: partitioning coefficient from DN in water column into sediment DN
+!rkDN: changing rate of remineralization rate for sediment DN
+!mkDN: maximum remineralization rate for sediment DN
 !-----------------------------------------------------------------------
-nsedDN= 1  
-psedDN= 1.0 
-rsedDN= 0.00444 !time delay of 15 days 
-rsedDNm= 0.2
+fDN=  0.15   0.10    0.75
+rkDN= 4e-3   1.0e-4  0.0 !time delay of 63 day
+mkDN= 0.1    0.01    0.0
 
 !-----------------------------------------------------------------------
 !parameters related to DSi in sediment
-!nsedDSi: number of forms of sediment DSi
-!psedDSi: partitioning coefficient from DSi in water column into sediment DSi
-!rsedDSi: changing rate of remineralization rate for sediment DSi
-!rsedDSim: maximum remineralization rate for sediment DSi
+!fDSi:  partitioning coefficient from DSi in water column into sediment DSi
+!rkDSi: changing rate of remineralization rate for sediment DSi
+!mkDSi: maximum remineralization rate for sediment DSi
 !-----------------------------------------------------------------------
-nsedDSi= 1  
-psedDSi= 1.0 
-rsedDSi= 0.00444 !time delay of 15 days 
-rsedDSim= 0.2
+fDSi=  0.3   0.3   0.4
+rkDSi= 0.004 1e-4  0.0 !time delay of about half a month
+mkDSi= 0.1   0.01  0.0
+/

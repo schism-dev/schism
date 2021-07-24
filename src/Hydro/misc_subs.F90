@@ -234,6 +234,11 @@
       call WQinput(time)
 #endif /*USE_ICM*/
 
+#ifdef USE_MICE
+      call clock_init !by wq
+      if(myrank==0) write(16,*) yearnew,month,day_in_month,timeold
+#endif
+
 !...  Find position in the wind input file for nws=1,2, and read in wind[x,y][1,2]
 !...  Wind vector always in lat/lon frame
       if(nws==0) then

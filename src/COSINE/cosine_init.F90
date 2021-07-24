@@ -57,20 +57,19 @@ subroutine read_cosine_param
 
   !define namelist
   namelist /MARCO/ idelay,ndelay,ibgraze,idapt,alpha_corr,zeptic,iz2graze,&
-          & iout_cosine,nspool_cosine,ico2s,ispm,spm0,ised,nsedS2,nsedDN,nsedDSi
+          & iout_cosine,nspool_cosine,ico2s,ispm,spm0,ised 
   namelist /CORE/ gmaxs1,gmaxs2,pis1,pis2,kno3s1,knh4s1,kpo4s1,kco2s1,kno3s2,&
           & knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1,alpha2,beta,ak1,ak2,&
           & ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1,rho2,rho3,gamma1,&
           & gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
           & kox,ipo4,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a
   namelist /MISC/ iws,NO3c,ws1,ws2,iclam,deltaZ,kcex,Nperclam,Wclam,Fclam,&
-          & nclam0,nsedS2,psedS2,rsedS2,rsedS2m,nsedDN,psedDN,rsedDN,rsedDNm,&
-          & nsedDSi,psedDSi,rsedDSi,rsedDSim
+          & nclam0,fS2,fDN,fDSi,rkS2,rkDN,rkDSi,mkS2,mkDN,mkDSi
 
   !initialize parameter values
   idelay=0; ndelay=7; ibgraze=0; idapt=0; alpha_corr=1.25; zeptic=10.0; iz2graze=1
-  iout_cosine=0; nspool_cosine=60; ico2s=0; ispm=0; spm0=20.0; ised=1; nsedS2=2; 
-  nsedDN=2; nsedDSi=1; gmaxs1=3.0; gmaxs2=2.5; pis1=1.5; pis2=1.5; kno3s1=1.0; 
+  iout_cosine=0; nspool_cosine=60; ico2s=0; ispm=0; spm0=20.0; ised=1; 
+  gmaxs1=3.0; gmaxs2=2.5; pis1=1.5; pis2=1.5; kno3s1=1.0; 
   knh4s1=0.15; kpo4s1=0.1; kco2s1=50.0; kno3s2=3.0; knh4s2=0.45; kpo4s2=0.1;
   kco2s2=50.0; ksio4s2=4.5; kns1=0.0; kns2=0.0; alpha1=0.1; alpha2=0.1; beta=0.0; 
   ak1=0.75; ak2=0.03; ak3=0.066; gammas1=0.5; gammas2=0.3; beta1=0.75; beta2=0.5; 
@@ -79,8 +78,8 @@ subroutine read_cosine_param
   o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; ipo4=0; kmdn1=0.009; kmdn2=0.075; kmdsi1=0.0114; 
   kmdsi2=0.015; gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
   iclam=0; deltaZ=1.0; kcex=0.002; Nperclam=0.39032; Wclam=5.45e-3; Fclam=40.0; 
-  nclam0=2000; psedS2=0.0; rsedS2=0.0; rsedS2m=0.1; psedDN=0.0; rsedDN=0.0; rsedDNm=0.1 
-  psedDSi=0.0; rsedDSi=4e-3; rsedDSim=0.1
+  nclam0=2000; fS2=0.0; fDN=0.0; fDSi=0.0; rkS2=4e-3; rkDN=4e-3; rkDSi=4e-3;
+  mkS2=0.1; mkDN=0.1; mkDSi=0.1
 
   !read parameter values
   open(31,file=in_dir(1:len_in_dir)//'cosine.nml',delim='apostrophe',status='old')
@@ -88,12 +87,10 @@ subroutine read_cosine_param
   
   !allocate sediment variables
   if(ised==1) then
-    nsed=nsedS2+nsedDN+nsedDSi
-    allocate(psedS2(nsedS2),rsedS2(nsedS2),rsedS2m(nsedS2),psedDN(nsedDN), &
-          & rsedDN(nsedDN),rsedDNm(nsedDN),psedDSi(nsedDSi),rsedDSi(nsedDSi), &
-          & rsedDSim(nsedDSi),rsed(nsed),rsedm(nsed),sedcon(nsed,nea),  &
-          & sedrate(nsed,nea),stat=istat)
-    if(istat/=0) call parallel_abort('Failed in alloc. psedDN')
+    allocate(fS2(3),fDN(3),fDSi(3),rkS2(3),rkDN(3),rkDSi(3), &
+             mkS2(3),mkDN(3),mkDSi(3),PS2(3,nea),PDN(3,nea), &
+             PDSi(3,nea),RS2(3,nea),RDN(3,nea),RDSi(3,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. fS2')
   endif
 
   read(31,nml=MISC)
@@ -151,34 +148,28 @@ subroutine read_cosine_param
 
   !read sediment flux model parameters
   if(ised==1) then
-    m=0
-    do i=1,nsedS2
-      m=m+1 
-      rsed(m)=rsedS2(i)
-      rsedm(m)=rsedS2m(i)
-    enddo
-    do i=1,nsedDN
-      m=m+1 
-      rsed(m)=rsedDN(i)
-      rsedm(m)=rsedDNm(i)
-    enddo
-    do i=1,nsedDSi
-      m=m+1 
-      rsed(m)=rsedDSi(i)
-      rsedm(m)=rsedDSim(i)
-    enddo
-
     !initialize sediment variables
-    !todo, include sedcon, sedrate in hotstart.in; update to sediment flux model
-    sedcon=0.d0; sedrate=0.d0
-    !sedcon(1,:)=1; sedcon(2,:)=100; sedcon(3,:)=1; sedcon(4,:)=100; sedcon(5,:)=10
+    !todo, include these variables in hotstart.nc; update to sediment flux model
+    PS2=0.0; PDN=0.0; PDSi=0.0; RS2=0.0; RDN=0.0; RDSi=0.0
     if(ihot==0) then !temporary fix, need to update
-      do i=1,nsed
+      do i=1,3
         write(snum,*)i
-        call read_gr3_prop('sedcon_'//trim(adjustl(snum)),-999.d0,sedcon(i,:),nea)
-        call read_gr3_prop('sedrate_'//trim(adjustl(snum)),-999.d0,sedrate(i,:),nea)
+        call read_gr3_prop('PS2_'//trim(adjustl(snum)),-999.d0,PS2(i,:),nea)
+        call read_gr3_prop('RS2_'//trim(adjustl(snum)),-999.d0,RS2(i,:),nea)
       enddo
-    endif!
+
+      do i=1,3
+        write(snum,*)i
+        call read_gr3_prop('PDN_'//trim(adjustl(snum)),-999.d0,PDN(i,:),nea)
+        call read_gr3_prop('RDN_'//trim(adjustl(snum)),-999.d0,RDN(i,:),nea)
+      enddo
+
+      do i=1,3
+        write(snum,*)i
+        call read_gr3_prop('PDSi_'//trim(adjustl(snum)),-999.d0,PDSi(i,:),nea)
+        call read_gr3_prop('RDSi_'//trim(adjustl(snum)),-999.d0,RDSi(i,:),nea)
+      enddo
+    endif! ihot=0
   endif !ised
  
   return

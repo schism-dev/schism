@@ -484,17 +484,16 @@ subroutine fabm_schism_init_stage2
   fs%spm=0.0_rk
   if(fs%params%ispm==1) then 
     call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
-    do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i); enddo
+    do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
   elseif(fs%params%ispm==2) then 
     do n=1,ntrs(5)  
-      fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(1000.0*tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
+      fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
     enddo
   elseif(fs%params%ispm==3) then 
     call fabm_schism_read_additional_forcing(0.0_rkind)
   else
-    fs%spm=fs%params%spm0
+    fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
   endif
-  fs%spm=fs%spm/1000.0_rk !convert mg/L to g/L
 
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
@@ -864,7 +863,6 @@ subroutine fabm_schism_do()
     enddo
   elseif(fs%params%ispm==3) then
     call fabm_schism_read_additional_forcing(dt*fs%tidx)
-    fs%spm=fs%spm/1000.0_rk
   endif
 
 ! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
@@ -1671,7 +1669,7 @@ subroutine fabm_schism_read_additional_forcing(time)
        if(rtmp>=time) then
          fs%time_fabm(1)=rtmp
          do ie=1,ne_global
-           if(iegl(ie)%rank==myrank) fs%spm(:,iegl(ie)%id)=swild(ie)
+           if(iegl(ie)%rank==myrank) fs%spm(:,iegl(ie)%id)=swild(ie)/1000.0_rkind !convert mg/L to g/L
          enddo
          exit
        endif

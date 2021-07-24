@@ -5115,12 +5115,6 @@
       
       if(myrank==0) write(16,*)'done initializing cold start'
       
-!Error: move to other_hot*?
-#ifdef USE_MICE
-      call clock_init !by wq
-      if(myrank==0) write(16,*) yearnew,month,day_in_month,timeold
-#endif
-      
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 ! Hot start section

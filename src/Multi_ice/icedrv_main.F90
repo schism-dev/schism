@@ -44,7 +44,7 @@
           ! 1. Setting variables used by the model
           !=======================================================================
 
-          integer (kind=int_kind), save  :: nx                   ! number of nodes and gost nodes for each mesh partition
+          integer (kind=int_kind), save  :: nx                   ! number of nodes and gost nodes for each mesh partition (npa)
           integer (kind=int_kind), save  :: nx_elem              ! number of elements and gost elements for each mesh partition
           integer (kind=int_kind), save  :: nx_nh                ! number of nodes for each mesh partition (NO GOST CELLS)
           integer (kind=int_kind), save  :: nx_elem_nh           ! number of elements for each mesh partition (NO GOST CELLS)

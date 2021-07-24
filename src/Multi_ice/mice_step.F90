@@ -1180,7 +1180,7 @@ module subroutine step_icepack()
 
     character(len=*), parameter :: subname='(ice_step)'
 
-    dt=ice_dt
+    dt=ice_dt !=dt*nstep_ice
 
     !t1 = c0
     !t2 = c0
@@ -1258,7 +1258,7 @@ module subroutine step_icepack()
     ! note this is called outside of the dynamics subcycling loop
     if (tr_fsd .and. wave_spec) call step_dyn_wave(dt)
 
-    do k = 1, ndtd
+    do k = 1, ndtd !split in time; =1 in icedrv_set.F90
 
        !-----------------------------------------------------------------
        ! EVP 
