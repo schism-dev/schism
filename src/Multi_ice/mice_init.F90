@@ -134,7 +134,7 @@ subroutine ice_init
     do j=1,2 !nodes 2&3
       jacobian2D(:,j)=local_cart(:,j+1)-local_cart(:,1)
       !make sure \in [-pi,pi]
-      !Error: distance not rite across dateline
+      !Fix distance across lon jump
       if(jacobian2D(1,j)>pi) jacobian2D(1,j)=jacobian2D(1,j)-2*pi
       if(jacobian2D(1,j)<-pi) jacobian2D(1,j)=jacobian2D(1,j)+2*pi
     enddo !j

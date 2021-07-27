@@ -14,6 +14,8 @@
 
 !  Adapted from FESOM's ice module. Special thanks to Dr. Sergey Danilov's group
 !  for their generous help.
+!Error: FESOM ice works in a rotated lon/lat frame with North Pole in Greenland. So
+!  beware the link to SCHISM especially vectors.
 !====================================================================
 ! Init ice vars
 subroutine ice_init
