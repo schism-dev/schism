@@ -20,7 +20,7 @@ print("\n");
 
 #dirs
 $script_dir="../Grid_manipulation/";
-$hycom_dir="../HYCOM_KATRINA_PERIOD/";
+$hycom_dir="../HYCOM_2015/";
 
 $thisdir=cwd();
 chdir("..");
@@ -42,11 +42,14 @@ unlink("$rundir/TEM_nudge.gr3");
 copy("nudge.gr3","$rundir/TEM_nudge.gr3");
 
 
+
 chdir($thisdir);
+copy("./Nudge_gr3/nudge.gr3","TEM_nudge.gr3");
 
 #set include zone, which is a bit larger than the actual nudging zone
-system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
-move("out.gr3","include.gr3");
+#no longer needed after the update on gen_nudge_from_hycom, which directly reads TEM_nudge.gr3 and expand the region based on neighboring nodes within an element
+#system("$script_dir/auto_edit_region 0 include.reg hgrid.gr3 1 0");
+#move("out.gr3","include.gr3");
 
 #generate nudging files
 system("./gen_nudge_from_hycom.exe");
