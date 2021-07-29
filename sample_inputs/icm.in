@@ -498,6 +498,18 @@ trrtveg=  20     20     20
           
 !mortality parameters
 iMortveg= 0 !1: ture on die-off term for veg !error, to add
+adlfveg=  15 	15 	15
+bdlfveg=  -4	-4	-4
+cdlfveg=  17	17	17
+ddlfveg=  12.8	12.8	12.8
+adstveg=  15    15      15
+bdstveg=  -4    -4      -4
+cdstveg=  17    17      17
+ddstveg=  12.8  12.8    12.8
+adrtveg=  15    15      15
+bdrtveg=  -4    -4      -4
+cdrtveg=  17    17      17
+ddrtveg=  12.8  12.8    12.8
 
 !light & height parameters
 alphaveg= 0.006  0.006  0.006    

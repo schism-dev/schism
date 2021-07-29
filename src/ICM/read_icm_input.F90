@@ -145,6 +145,14 @@ subroutine WQinput(time)
     call parallel_abort(errmsg)
   endif!time_icm
 
+  !ncai_veg
+  !time_icm(4) for veg module
+  if(iveg_icm==1.and.time_icm(4)<time) then !manually input
+    do while(time_icm(4)<time)
+      read(404,*)rtmp,mtemp
+      time_icm(4)=rtmp
+    enddo !while
+  endif!time_icm
 
 !  !more work to do, put code in schism_step here, ZG
 !  !read non-point source
@@ -1427,6 +1435,9 @@ subroutine read_icm_param
   elseif(iRad/=1.and.iRad/=2) then
     call parallel_abort('error: iRad')
   endif
+  if(iveg_icm==1) then
+    open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
+  endif
   time_icm=-999.0  !initializing time stamp
  
   if(iTBen/=0)then
@@ -1666,6 +1677,19 @@ subroutine read_icm_param
   call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
   call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
   call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
+  call get_param_1D('icm.in','adlfveg',2,itmp1,adlfveg,stmp,3)
+  call get_param_1D('icm.in','bdlfveg',2,itmp1,bdlfveg,stmp,3)
+  call get_param_1D('icm.in','cdlfveg',2,itmp1,cdlfveg,stmp,3)
+  call get_param_1D('icm.in','ddlfveg',2,itmp1,ddlfveg,stmp,3)
+  call get_param_1D('icm.in','adstveg',2,itmp1,adstveg,stmp,3)
+  call get_param_1D('icm.in','bdstveg',2,itmp1,bdstveg,stmp,3)
+  call get_param_1D('icm.in','cdstveg',2,itmp1,cdstveg,stmp,3)
+  call get_param_1D('icm.in','ddstveg',2,itmp1,ddstveg,stmp,3)
+  call get_param_1D('icm.in','adrtveg',2,itmp1,adrtveg,stmp,3)
+  call get_param_1D('icm.in','bdrtveg',2,itmp1,bdrtveg,stmp,3)
+  call get_param_1D('icm.in','cdrtveg',2,itmp1,cdrtveg,stmp,3)
+  call get_param_1D('icm.in','ddrtveg',2,itmp1,ddrtveg,stmp,3)
+
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)

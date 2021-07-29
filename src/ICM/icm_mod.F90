@@ -162,13 +162,16 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
+  real(kind=iwp),save,dimension(3) :: adlfveg,bdlfveg,cdlfveg,ddlfveg
+  real(kind=iwp),save,dimension(3) :: adstveg,bdstveg,cdstveg,ddstveg
+  real(kind=iwp),save,dimension(3) :: adrtveg,bdrtveg,cdrtveg,ddrtveg
   !intermediate variables
   integer,save :: knveg(3) !index of top layer with canopy occupied, knveg=0 for emergency
   real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
-  real(kind=iwp),save :: airtveg
+  real(kind=iwp),save :: airtveg,mtemp
   real(kind=iwp),save,dimension(3) :: rdensveg
 
 

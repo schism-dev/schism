@@ -1975,7 +1975,7 @@ subroutine calkwq(id,nv,ure,it)
   real(kind=iwp) :: nprsav,fnsedsav,fpsedsav,denssav
   !ncai_veg
   !real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3)
-  real(kind=iwp) :: tmp,mtemp,densveg(3)
+  real(kind=iwp) :: tmp,densveg(3)
 
 
   !--------------------------------------------------------------------------------------
@@ -2195,21 +2195,26 @@ subroutine calkwq(id,nv,ure,it)
   !ncai_veg mass
   if(iveg_icm==1.and.patchveg(id)==1) then
 
-    !depth-averaged temp
-    tmp=0.0
-    do k=1,nv
-      tmp=tmp+Temp(k)*dep(k)
-    enddo !k::nv
-    mtemp=tmp/max(tdep,1.e-2_iwp)!tdep checked at init
+    !!depth-averaged temp
+    !tmp=0.0
+    !do k=1,nv
+    !  tmp=tmp+Temp(k)*dep(k)
+    !enddo !k::nv
+    !mtemp=tmp/max(tdep,1.e-2_iwp)!tdep checked at init
+  
+    !read in inputs of mtemp for wetlands
+
 
     do j=1,3
 
-      !----------mortality rate----------
-      mtlfveg=0.0; mtstveg=0.0; mtrtveg=0.0 !init
+      !----------seasonal mortality coefficient----------
+      mtlfveg=1.0; mtstveg=1.0; mtrtveg=1.0 !init
       if(iMortveg==1) then
-
+        rtmp=-bdlfveg(j)*(mtemp-cdlfveg(j))-ddlfveg(j);
+        mtlfveg(j)=1+adlfveg(j)/(1+exp(rtmp));
+        rtmp=-bdstveg(j)*(mtemp-cdstveg(j))-ddstveg(j);
+        mtstveg(j)=1+adstveg(j)/(1+exp(rtmp));
       endif !iMortvey
-
 
       !----------metabolism rate----------
       rtmp=ktblfveg(j)*(mtemp-trlfveg(j))
@@ -2217,25 +2222,25 @@ subroutine calkwq(id,nv,ure,it)
         write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
-      bmlfveg(j)=bmlfrveg(j)*exp(rtmp)
+      bmlfveg(j)=mtlfveg(j)*bmlfrveg(j)*exp(rtmp)
 
       rtmp=ktbstveg(j)*(mtemp-trstveg(j)) 
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg st metabolism:',mtemp,trstveg(j),ktbstveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
-      bmstveg(j)=bmstrveg(j)*exp(rtmp)
+      bmstveg(j)=mtstveg(j)*bmstrveg(j)*exp(rtmp)
 
       rtmp=ktbrtveg(j)*(mtemp-trrtveg(j))
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg rt metabolism:',mtemp,trrtveg(j),ktbrtveg(j),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
-      bmrtveg(j)=bmrtrveg(j)*exp(rtmp)
+      bmrtveg(j)=mtrtveg(j)*bmrtrveg(j)*exp(rtmp)
 
       !calculation of biomass
       !lfveg(j)
-      a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j)-mtlfveg(j) !1/day
+      a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j) !1/day
       rtmp=a*dtw
       if(rtmp>50.0.or.rtmp<-50.0) then
         write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j,ielg(id)
@@ -2249,7 +2254,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       !stveg
-      a=bmstveg(j)+mtstveg(j)
+      a=bmstveg(j)
       b=plfveg(id,j)*(1.-famveg(j))*fpstveg(j)*tlfveg(id,j)
       tstveg(id,j)=(b*dtw+tstveg(id,j))/(1.0+a*dtw)
       !nan check
@@ -2259,7 +2264,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       !rtveg
-      a=bmrtveg(j)+mtrtveg(j)
+      a=bmrtveg(j)
       b=plfveg(id,j)*(1.-famveg(j))*fprtveg(j)*tlfveg(id,j)
       trtveg(id,j)=(b*dtw+trtveg(id,j))/(1.0+a*dtw)
       !nan check
