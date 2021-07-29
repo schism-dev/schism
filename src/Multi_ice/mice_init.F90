@@ -55,7 +55,7 @@ subroutine ice_init
      &v_ocean(npa),area_median(np),voltriangle(nea),bafux(3,nea),bafuy(3,nea), &
      &ice_matrix(0:mnei_p,np),lump_ice_matrix(npa),delta_ice(nea),t_oi(npa),fresh_wa_flux0(npa), &
      &net_heat_flux0(npa),m_snow0(npa),a_ice0(npa),m_ice0(npa),evaporation(npa),stress_atmice_x(npa),&
-     &stress_atmice_y(npa),stat=istat)
+     &stress_atmice_y(npa),fsrad_ice_out0(npa),stat=istat)
      if(istat/=0) call parallel_abort('ice_init: alloc (1)')
      !  if(ice_therm_on==1) then
      !    allocate(t_oi(npa),stat=istat)
@@ -65,7 +65,7 @@ subroutine ice_init
        t_oi=0 !init T @snow/ice surface in C
        u_ice=0; v_ice=0; sigma11=0; sigma12=0; sigma22=0
        fresh_wa_flux0=0; net_heat_flux0=0;m_ice0=0;m_snow0=0;a_ice0=0
-       evaporation=0
+       evaporation=0; fsrad_ice_out0=0
        !Box test
        if(ice_tests==0) then !normal
          ice_tr=0

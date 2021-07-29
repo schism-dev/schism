@@ -1566,7 +1566,7 @@
 
 #ifdef USE_MICE
         allocate(xlon2(npa),ylat2(npa),tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
-     &ice_evap(npa),lhas_ice(npa),stat=istat)
+     &ice_evap(npa),srad_o(npa),srad_th_ice(npa),lhas_ice(npa),stat=istat)
         if(istat/=0) call parallel_abort('INIT: ice allocation failure')
 #endif
 
@@ -5789,7 +5789,8 @@
         tau_oi(:,:)=0
         ice_tr(:,:)=0
         ice_evap(:)=0
-
+        srad_th_ice(:)=0
+        srad_o(:) = 0
         if(lice_free_gb) then
           j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
           if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')

@@ -464,13 +464,16 @@ module schism_glbl
 
   !(2,npa). ocean-ice stress (junk if no ice) [m^2/s/s]
   real(rkind),save,allocatable :: tau_oi(:,:)
-  !(npa). freshwater flux due to ice melting [m water/sec]. >0: precip; <0: evap
+  !(npa). freshwater flux due to ice melting [kg/s/m/m]. >0: precip; <0: evap
   real(rkind),save,allocatable :: fresh_wa_flux(:)
   !(npa). net heat flux into the ocean surface [W/m/m]. >0: warm the ocean
   real(rkind),save,allocatable :: net_heat_flux(:)
   real(rkind),save,allocatable :: wind_rotate_angle(:) !in radians
-  !(npa). evap water flux in ice model [m water/sec].
+  !(npa). shortwave radiation through ice in ice model [W/m/m].
+  real(rkind),save,allocatable :: srad_th_ice(:)
+  !(npa). evap water flux in ice model [kg/s/m/m]. 
   real(rkind),save,allocatable :: ice_evap(:)
+  real(rkind),save,allocatable :: srad_o(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
 

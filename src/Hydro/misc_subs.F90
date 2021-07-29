@@ -82,6 +82,7 @@
       use schism_msgp
       use netcdf
       use hydraulic_structures
+      use gen_modules_clock
 #ifdef USE_SED
        USE sed_mod, only : Srho,Nbed,MBEDP,bed,bed_frac,Wsed,Sd50
 #endif

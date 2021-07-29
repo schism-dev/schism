@@ -585,6 +585,7 @@
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
+              srad_o(i) = srad(i)
               prec_rain(i)=fluxprc(i)-prec_snow(i)
               if(prec_rain(i)<0.d0) then
                 prec_rain(i)=0.d0
@@ -877,6 +878,7 @@
           maxpice=(rhoice*ice_tr(1,i)+ice_tr(3,i)*rhosno)*grav
           maxpice=min(maxpice,5.d0*rho0*grav)
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))+maxpice
+          srad(i)=srad_o(i)*(1-ice_tr(2,i))+srad_th_ice(i)
           !Update fluxes
           if(impose_net_flux==0) then
             fluxprc(i)=fresh_wa_flux(i)*rampwind !kg/s/m/m

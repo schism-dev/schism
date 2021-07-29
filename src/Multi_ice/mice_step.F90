@@ -997,9 +997,12 @@ subroutine ocn_mixed_layer_icepack(                       &
 
     ! Compute heat change due to exchange between ocean and atmosphere
 
-    fhocn_tot = fhocn + fswthru                                  &  ! these are *aice already
-              + (fsens_ocn + flat_ocn + flwout_ocn + flw + swabs &
-              + Lfresh*fsnow) * (c1-aice) + max(c0,frzmlt)*aice   
+    fhocn_tot = fhocn                                        &  ! these are *aice already
+              + (fsens_ocn + flat_ocn + flwout_ocn + flw     &
+              ) * (c1-aice)
+              !+ swabs &
+              !+ Lfresh*fsnow) * (c1-aice) 
+              !+ max(c0,frzmlt)*aice   
               !+ min(max(-frzmlt_max,frzmlt),frzmlt_max)*aice!
     !fhocn_tot =  fhocn + fswthru                                  &  ! these are *aice already
     !           + (fsens_ocn + flat_ocn + flwout_ocn + flw + swabs &
@@ -1143,7 +1146,7 @@ end subroutine coupling_prep
 module subroutine step_icepack()
 
    use schism_glbl, only: rkind,pi,np,npa,nvrt,uu2,vv2,time_stamp,windx,windy,xnd,ynd, &
-   &tau_oi,nws,ihconsv,isconsv,iplg,fresh_wa_flux,net_heat_flux,rho0,rnday,fdb,lfdb, &
+   &tau_oi,nws,ihconsv,isconsv,iplg,fresh_wa_flux,net_heat_flux,srad_th_ice,rho0,rnday,fdb,lfdb, &
    &lice_free_gb,lhas_ice,errmsg,ice_evap,isbnd,nnp,indnd,nstep_ice,it_main
     use schism_msgp, only : myrank,nproc,parallel_abort,comm,ierr,exchange_p2d
     use mice_module
@@ -1379,8 +1382,9 @@ module subroutine step_icepack()
     !fsalt_out=real_salt_flux,       &
     !dhi_dt_out=thdgrsn,             &
     !dhs_dt_out=thdgr,               &
-    evap_ocn_out=evaporation        )
-    
+    evap_ocn_out=evaporation,        &
+    fsrad_ice_out=fsrad_ice_out0        )
+
     !Mark ice/no ice
 lice_free=.true. !over all aug domain
 do i=1,npa
@@ -1402,6 +1406,7 @@ net_heat_flux(:)=0
 tau_oi=0 !init as junk
 ice_tr(:,:)=0
 ice_evap(:)=0
+srad_th_ice(:)=0
 
  do i=1,npa
    if(lhas_ice(i)) then
@@ -1413,6 +1418,7 @@ ice_evap(:)=0
      net_heat_flux(i)   =  net_heat_flux0(i)
      fresh_wa_flux(i)   =  fresh_wa_flux0(i) !- runoff(:)
      ice_evap(i)=evaporation(i)*(1-a_ice0(i))
+     srad_th_ice(i)     =  fsrad_ice_out0(i)
    endif
 
  !Check outputs
