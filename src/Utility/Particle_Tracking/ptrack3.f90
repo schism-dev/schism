@@ -834,7 +834,9 @@
 
 !...  Particle tracking
       write(95,*) time,nparticle
-      write(97,*) time,nparticle
+      if(ismore==1)then
+        write(97,*) time,nparticle
+      endif
       do i=1,nparticle
         eta_p=0; dp_p=0 !for output before moving
         if((ibf==1.and.time<=st_p(i)).or.(ibf==-1.and.time>st_p(i)-dt)) go to 449 !output directly
@@ -1100,14 +1102,15 @@
         !drogue format for xmvis6s; no extra lines after this
         write(95,'(i12,2(1x,e22.14),1x,f12.3)')i,xout,yout,zpar(i)-eta_p
 !       write(95,*) i,ist(i),amas(i),xout,yout,real(zpar(i)-eta_p)
-        write(97,*)i,real(xout),real(yout),real(zpar(i)),ielpar(i),levpar(i), &
-     &real(eta_p),real(dp_p),iabnorm(i),real(upar(i)),real(vpar(i)),real(wpar(i))
-        if(levpar(i)>0) then
-          ie4=ielpar(i)
-          write(97,*)'wet:',i34(ie4),real(arco(1:3)),real(uu2(elnode(1:i34(ie4),ie4),levpar(i))), &
-     &real(vv2(elnode(1:i34(ie4),ie4),levpar(i))),real(eta3(elnode(1:i34(ie4),ie4)))
-        endif !levpar
-
+        if(ismore==1)then
+          write(97,*)i,real(xout),real(yout),real(zpar(i)),ielpar(i),levpar(i), &
+       &real(eta_p),real(dp_p),iabnorm(i),real(upar(i)),real(vpar(i)),real(wpar(i))
+          if(levpar(i)>0) then
+            ie4=ielpar(i)
+            write(97,*)'wet:',i34(ie4),real(arco(1:3)),real(uu2(elnode(1:i34(ie4),ie4),levpar(i))), &
+       &real(vv2(elnode(1:i34(ie4),ie4),levpar(i))),real(eta3(elnode(1:i34(ie4),ie4)))
+          endif !levpar
+        endif
 !!        write(95,'(2e14.4)')time,ztmp2(nvrt)
 !!        write(*,'(2e14.4)')time,zpar(i)-eta3(ielpar(i))
       enddo !i=1,nparticle
