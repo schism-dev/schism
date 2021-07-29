@@ -5028,24 +5028,30 @@
       if(lhas_quad) call parallel_abort('init: no quads for mice')
       if(.not.lreadll) call parallel_abort('init: mice needs hgrid.ll')
       !Read in modified (rotated north pole) lon/lat for ice model
-      if(myrank==0) then
-        open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
-        do i=1,np_global
-          read(32,*)j,buf3(i),buf4(i) 
-        enddo !i
-        close(32)
-      endif !myrank
-      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+!      if(myrank==0) then
+!        open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
+!        read(32,*)
+!        read(32,*) !ne,np
+!        do i=1,np_global
+!          read(32,*)j,buf3(i),buf4(i) 
+!        enddo !i
+!        close(32)
+!      endif !myrank
+!      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+!
+!      do i=1,np_global
+!        if(ipgl(i)%rank==myrank) then
+!          xlon2(ipgl(i)%id)=buf3(i)*pi/180.d0
+!          ylat2(ipgl(i)%id)=buf4(i)*pi/180.d0 
+!        endif
+!      enddo !i
+      xlon2=xlon
+      ylat2=ylat
 
-      do i=1,np_global
-        if(ipgl(i)%rank==myrank) then
-          xlon2(ipgl(i)%id)=buf3(i)*pi/180.d0
-          ylat2(ipgl(i)%id)=buf4(i)*pi/180.d0 
-        endif
-      enddo !i
+!     Make sure no nodes are too close to North Pole to avoid forcing
+!     singularity there (wind)
+      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
 
       if(myrank==0) write(16,*)'start init multi ice...'
       call ice_init
