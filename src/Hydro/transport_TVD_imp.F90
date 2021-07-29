@@ -1438,7 +1438,6 @@
 !-------------------------------------------------------------------------------------
       endif !itr_met=3,4
       
-!new28
 !      write(12,*)'done 1st transport step...'
 
 !'    Save the final array from horizontal part as trel_tmp
@@ -1683,7 +1682,7 @@
                 psi1(:)=0.d0 !reset for conservation check
               endif
 
-              !DEBUG; new23
+              !DEBUG 
               !denom=1.d0
 
               bdia(kin)=bdia(kin)+denom
@@ -1817,7 +1816,6 @@
       endif
 !$OMP end master
 
-!new28
 !      write(12,*)'done 2nd transport step...'
 
 !     3rd step: non-advection terms 

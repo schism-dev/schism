@@ -1638,7 +1638,6 @@
 
               if(isd0==0.or.isd0>ns) cycle !skip ghost to avoid duplication
 
-!new25
               htot=dps(isd0)+(eta2(n1)+eta2(n2))/2.d0
 !              if(htot<=h0) then
 !                write(errmsg,*)'Dry bnd side: h_tot',htot, &
@@ -1687,7 +1686,6 @@
         ibnd=isbs(i) !global bnd #
         if(ibnd<=0) cycle
 
-!new25
         if(idry_s(i)==1) then
           uth(:,i)=0.d0; vth(:,i)=0.d0
           cycle
@@ -1842,7 +1840,7 @@
 
 !$OMP end parallel
 
-!new28: bypass solver for transport only option
+!     Bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
       !Read in schout (saved hydro outputs), and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
@@ -5458,7 +5456,6 @@
 !                call parallel_abort(errmsg)
 !              endif
 
-!new25 
               if(idry_s(isd)==1) then
                 ri3=0.d0
               else
@@ -6378,7 +6375,7 @@
 
 
 !=================================================================================
-!new28: end of bypassing solver for transport only option
+!     End of bypassing solver for transport only option
       endif !itransport_only
 
 !...  solve for vertical velocities using F.V.
@@ -7326,10 +7323,6 @@
 #ifdef INCLUDE_TIMING
           wtimer(9,2)=wtimer(9,2)+mpi_wtime()-cwtmp
 #endif
-
-!new27: temporary 
-!      tnd=tr_nd(1,:,:)
-!      snd=tr_nd(2,:,:)
 
 !...  End of tracer transport
 !----------------------------------------------------------------------
