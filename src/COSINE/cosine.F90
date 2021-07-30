@@ -30,7 +30,7 @@ subroutine cosine(it)
   use schism_glbl, only : rkind,dt,ne,nea,npa,nvrt,bdy_frc,idry_e,kbe,ze,&
       & tr_el,xlon_el,ylat_el,xlon,ylat,irange_tr,ntrs,ielg,iplg,elnode,srad,& 
       & su2,sv2,elside,iegl,eta2,i34,windx,windy,wsett,flx_sf,flx_bt
-  use schism_msgp, only : myrank,parallel_abort
+  use schism_msgp, only : myrank,parallel_abort,parallel_barrier
   use cosine_misc
   use cosine_mod
   implicit none
@@ -46,7 +46,7 @@ subroutine cosine(it)
   real(rkind) :: bfS1,bfS2,bfNO3S1,bfNH4S1,bfNH4S2,bfNO3S2
   real(rkind) :: fNO3S1,fNH4S1,fNH4S2,fNO3S2,fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2
   real(rkind) :: pnh4s1,pnh4s2,pih1,pih2,rhot,rhop,ADPT,OXR,Tadjust
-  real(rkind) :: ph,o2flx,co2flx,nh4flx,sio4flx,po4flx,co2flxb,o2flxb
+  real(rkind) :: ph,o2flxs,co2flxs,nh4flx,sio4flx,po4flx,co2flx,o2flx
 
   !for kinetics
   real(rkind) :: NPS1,NPS2,RPS1,RPS2,SKS2,SKDN,SKDSi
@@ -62,7 +62,7 @@ subroutine cosine(it)
   time=it*dt; daynum=int(d2s/dt); dtw=dt/d2s
 
   !update SPM or bgraze or nclam
-  if(ispm>=2.or.ibgraze==2.or.iclam==3) call WQinput(time)
+  if(ispm>=2.or.ibgraze==2.or.iclam==3) call read_cosine_input(time)
 
   do i=1,nea
     if(idry_e(i)==1) cycle  !element becomes dry
@@ -339,13 +339,13 @@ subroutine cosine(it)
         rat=1.d-6
         Uw=sqrt((sum(windx(elnode(1:i34(i),i)))/i34(i))**2.0+(sum(windy(elnode(1:i34(i),i)))/i34(i))**2.0)
 
-        call o2flux(o2flx,temp(k),salt(k),DOX(k),Uw)
-        call co2flux(2,ph,co2flx,temp(k),salt(k),CO2(k)*rat,SiO4(k)*rat,PO4(k)*rat,ALK(k)*rat,pco2a,Uw)
+        call o2flux(o2flxs,temp(k),salt(k),DOX(k),Uw)
+        call co2flux(2,ph,co2flxs,temp(k),salt(k),CO2(k)*rat,SiO4(k)*rat,PO4(k)*rat,ALK(k)*rat,pco2a,Uw)
 
         !add air-sea exchange flux for O2 and CO2
         drat=dep(k)/max(dep(k),1.d-1)
-        flx_sf(irange_tr(1,8)+10,i)=drat*o2flx/d2s
-        flx_sf(irange_tr(1,8)+11,i)=drat*co2flx/d2s
+        flx_sf(irange_tr(1,8)+10,i)=drat*o2flxs/d2s
+        flx_sf(irange_tr(1,8)+11,i)=drat*co2flxs/d2s
       endif
 
       !bottom fluxes (todo: update sediment flux model)
@@ -359,13 +359,13 @@ subroutine cosine(it)
         flxDSi=drat*wsdsi*DSi(k)
 
         !calculate sediment fluxes
-        call sedflux(nh4flx,sio4flx,po4flx,co2flxb,o2flxb,flxS2,flxDN,flxDSi,dtw,dep(k),i)
+        call sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,flxS2,flxDN,flxDSi,dtw,dep(k),i)
 
         flx_bt(irange_tr(1,8)+1,i) =-sio4flx/d2s
         flx_bt(irange_tr(1,8)+2,i) =-nh4flx/d2s
         flx_bt(irange_tr(1,8)+9,i) =-po4flx/d2s
-        flx_bt(irange_tr(1,8)+10,i)=-o2flxb/d2s
-        flx_bt(irange_tr(1,8)+11,i)=-co2flxb/d2s
+        flx_bt(irange_tr(1,8)+10,i)=-o2flx/d2s
+        flx_bt(irange_tr(1,8)+11,i)=-co2flx/d2s
       endif
     
       !update body force (source or sink) 
@@ -377,32 +377,136 @@ subroutine cosine(it)
         endif
       enddo !m
 
+      !-------------------------------------------------------------
       !output intermediate values for CoSiNE station
+      !to add new variables: 
+      !   1)add cosine_output(...);  2)change nvar in cosine_mod 
+      !-------------------------------------------------------------
       if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
-        if(ista(i)/=0) then
-          id=ista(i)
-          do m=1,nsta(id)
-            rtmp=min(max(-depsta(m,id),ze(kbe(i)+1,i)),ze(nvrt,i))
-            if(rtmp>ze(k-1,i).and.rtmp<=ze(k,i)) then
-              write(451)time,stanum(m,id),temp(k),salt(k),NO3(k),SiO4(k),NH4(k), &
-                &S1(k),S2(k),Z1(k),Z2(k),DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k),&
-                &NPS1,RPS1,NPS2,RPS2,MTS1,MTS2,MTZ1,MTZ2,EXZ1,EXZ2,GS1Z1,GS2Z2,GZ1Z2,&
-                &GDNZ2,GTZ2,SKS2,SKDN,SKDSi,Nit,MIDN,MIDSi,pnh4s1,pnh4s2,pih1,pih2,&
-                &bfS1,bfS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
-                &fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2,o2flx,co2flx,OXR,ADPT,ph,dep(k),&
-                &SPM(k,i),sLight(k),ak2*(S1(k)+S2(k)),ak3*SPM(k,i)*dep(k), &
-                &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(PS2(l,i),l=1,3),(PDN(l,i),l=1,3), &
-                &(PDSi(l,i),l=1,3),(RS2(l,i),l=1,3),(RDN(l,i),l=1,3),(RDSi(l,i),l=1,3)
-            endif
-          enddo !m
-        endif !ista(i)/=0 
+        do j=1,nsta_lc
+          !skip if not inside the prism
+          if(sie(j)/=i) cycle
+
+          !check depth
+          rtmp=min(max(-sdep(j),ze(kbe(i)+1,i)),ze(nvrt,i))
+          if(rtmp<=ze(k-1,i).or.rtmp>ze(k,i)) cycle
+
+          !output CoSiNE variables
+          id=sid(j)
+          call cosine_output(1, id,'temp', 1, temp(k), 0)
+          call cosine_output(2, id,'salt', 1, salt(k), 0)
+          call cosine_output(3, id,'NO3',  1, NO3(k),  0)
+          call cosine_output(4, id,'SiO4', 1, SiO4(k), 0)
+          call cosine_output(5, id,'NH4',  1, NH4(k),  0)
+          call cosine_output(6, id,'S1',   1, S1(k),   0)
+          call cosine_output(7, id,'S2',   1, S2(k),   0)
+          call cosine_output(8, id,'Z1',   1, Z1(k),   0)
+          call cosine_output(9, id,'Z2',   1, Z2(k),   0)
+          call cosine_output(10,id,'DN',   1, DN(k),   0)
+          call cosine_output(11,id,'DSi',  1, DSi(k),  0)
+          call cosine_output(12,id,'PO4',  1, PO4(k),  0)
+          call cosine_output(13,id,'DOX',  1, DOX(k),  0)
+          call cosine_output(14,id,'CO2',  1, CO2(k),  0)
+          call cosine_output(15,id,'ALK',  1, ALK(k),  0)
+
+          call cosine_output(16,id,'NPS1', 1, NPS1,    0)
+          call cosine_output(17,id,'RPS1', 1, RPS1,    0)
+          call cosine_output(18,id,'MTS1', 1, MTS1,    0)
+          call cosine_output(19,id,'NPS2', 1, NPS2,    0)
+          call cosine_output(20,id,'RPS2', 1, RPS2,    0)
+          call cosine_output(21,id,'MTS2', 1, MTS2,    0)
+          call cosine_output(22,id,'EXZ1', 1, EXZ1,    0)
+          call cosine_output(23,id,'MTZ1', 1, MTZ1,    0)
+          call cosine_output(24,id,'EXZ2', 1, EXZ2,    0)
+          call cosine_output(25,id,'MTZ2', 1, MTZ2,    0)
+          call cosine_output(26,id,'GS1Z1',1, GS1Z1,   0)
+          call cosine_output(27,id,'GS2Z2',1, GS2Z2,   0)
+          call cosine_output(28,id,'GZ1Z2',1, GZ1Z2,   0)
+          call cosine_output(29,id,'GDNZ2',1, GDNZ2,   0)
+          call cosine_output(30,id,'GTZ2', 1, GTZ2,    0)
+          call cosine_output(31,id,'MIDN', 1, MIDN,    0)
+          call cosine_output(32,id,'MIDSi',1, MIDSi,   0)
+          call cosine_output(33,id,'Nit',  1, Nit,     0)
+
+          call cosine_output(34,id,'sLight', 1, sLight(k),         0)
+          call cosine_output(35,id,'SPM',    1, SPM(k,i),          0)
+          call cosine_output(36,id,'ak2',    1, ak2*(S1(k)+S2(k)), 0)
+          call cosine_output(37,id,'ak3',    1, ak3*SPM(k,i),      0)
+          call cosine_output(38,id,'ADPT',   1, ADPT,    0)
+          call cosine_output(39,id,'dep',    1, dep(k),  0)
+          call cosine_output(40,id,'OXR',    1, OXR,     0)
+          call cosine_output(41,id,'pih1',   1, pih1,    0)
+          call cosine_output(42,id,'pih2',   1, pih2,    0)
+          call cosine_output(43,id,'pnh4s1', 1, pnh4s1,  0)
+          call cosine_output(44,id,'pnh4s2', 1, pnh4s2,  0)
+          call cosine_output(45,id,'bfNO3S1',1, bfNO3S1, 0)
+          call cosine_output(46,id,'bfNH4S1',1, bfNH4S1, 0)
+          call cosine_output(47,id,'fNO3S1', 1, fNO3S1,  0)
+          call cosine_output(48,id,'fNH4S1', 1, fNH4S1,  0)
+          call cosine_output(49,id,'fPO4S1', 1, fPO4S1,  0)
+          call cosine_output(50,id,'fCO2S1', 1, fCO2S1,  0)
+          call cosine_output(51,id,'bfS1',   1, bfS1,    0)
+          call cosine_output(52,id,'bfNO3S2',1, bfNO3S2, 0)
+          call cosine_output(53,id,'bfNH4S2',1, bfNH4S2, 0)
+          call cosine_output(54,id,'fNO3S2', 1, fNO3S2,  0)
+          call cosine_output(55,id,'fNH4S2', 1, fNH4S2,  0)
+          call cosine_output(56,id,'fPO4S2', 1, fPO4S2,  0)
+          call cosine_output(57,id,'fCO2S2', 1, fCO2S2,  0)
+          call cosine_output(58,id,'fSiO4S2',1, fSiO4S2, 0)
+          call cosine_output(59,id,'bfS2',   1, bfS2,    0)
+
+          call cosine_output(60,id,'ph',     1, ph,       0)
+          call cosine_output(61,id,'o2flxs', 1, o2flxs,   0)
+          call cosine_output(62,id,'co2flxs',1, co2flxs,  0)
+          call cosine_output(63,id,'o2flx',  1, o2flx,    0)
+          call cosine_output(64,id,'co2flx', 1, co2flx,   0)
+          call cosine_output(65,id,'nh4flx', 1, nh4flx,   0)
+          call cosine_output(66,id,'sio4flx',1, sio4flx,  0)
+          call cosine_output(67,id,'po4flx', 1, po4flx,   0)
+          call cosine_output(68,id,'PS2',    3, PS2(:,i), 0)
+          call cosine_output(69,id,'PDN',    3, PDN(:,i), 0)
+          call cosine_output(70,id,'PDSi',   3, PDSi(:,i),0)
+          call cosine_output(71,id,'RS2',    3, RS2(:,i), 0)
+          call cosine_output(72,id,'RDN',    3, RDN(:,i), 0)
+          call cosine_output(73,id,'RDSi',   3, RDSi(:,i),0)
+
+        enddo !m
       endif !i<=ne
+
+      !output intermediate values for CoSiNE station
+      !if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
+      !  if(ista(i)/=0) then
+      !    id=ista(i)
+      !    do m=1,nsta(id)
+      !      rtmp=min(max(-depsta(m,id),ze(kbe(i)+1,i)),ze(nvrt,i))
+      !      if(rtmp>ze(k-1,i).and.rtmp<=ze(k,i)) then
+      !        write(451)time,stanum(m,id),temp(k),salt(k),NO3(k),SiO4(k),NH4(k), &
+      !          &S1(k),S2(k),Z1(k),Z2(k),DN(k),DSi(k),PO4(k),DOX(k),CO2(k),ALK(k),&
+      !          &NPS1,RPS1,NPS2,RPS2,MTS1,MTS2,MTZ1,MTZ2,EXZ1,EXZ2,GS1Z1,GS2Z2,GZ1Z2,&
+      !          &GDNZ2,GTZ2,SKS2,SKDN,SKDSi,Nit,MIDN,MIDSi,pnh4s1,pnh4s2,pih1,pih2,&
+      !          &bfS1,bfS2,bfNO3S1,bfNH4S1,bfNO3S2,bfNH4S2,fNO3S1,fNH4S1,fNO3S2,fNH4S2,& 
+      !          &fPO4S1,fPO4S2,fCO2S1,fCO2S2,fSiO4S2,o2flx,co2flx,OXR,ADPT,ph,dep(k),&
+      !          &SPM(k,i),sLight(k),ak2*(S1(k)+S2(k)),ak3*SPM(k,i)*dep(k), &
+      !          &nh4flx,sio4flx,po4flx,o2flxb,co2flxb,(PS2(l,i),l=1,3),(PDN(l,i),l=1,3), &
+      !          &(PDSi(l,i),l=1,3),(RS2(l,i),l=1,3),(RDN(l,i),l=1,3),(RDSi(l,i),l=1,3)
+      !      endif
+      !    enddo !m
+      !  endif !ista(i)/=0 
+      !endif !i<=ne
 
     enddo!k
   enddo!i=1,nea
 
-  inquire(451,opened=lopened)
-  if(lopened.and.mod(it,nspool_cosine)==0) flush(451)
+
+  !collect cosine diagostic variables
+  if(iout_cosine/=0.and.mod(it,nspool_cosine)==0) then 
+    dcosine%it=int(it/nspool_cosine);   
+    dcosine%time=it*dtw
+    call cosine_output(0,0,'',0,0.d0, 1)
+  endif
+
+  !inquire(451,opened=lopened)
+  !if(lopened.and.mod(it,nspool_cosine)==0) flush(451)
 
   return
 end subroutine cosine
@@ -469,7 +573,7 @@ subroutine sedflux(nh4flx,sio4flx,po4flx,co2flx,o2flx,flxS2,flxDN,flxDSi,dtw,dep
 
 end
 
-subroutine WQinput(time)
+subroutine read_cosine_input(time)
 !-------------------------------------------------------------------------------
 !read time varying input
 !-------------------------------------------------------------------------------
@@ -542,5 +646,5 @@ subroutine WQinput(time)
     enddo !while
   endif
 
-end subroutine WQinput
+end subroutine read_cosine_input
 

@@ -55,16 +55,41 @@ module cosine_mod
   real(rkind),save,allocatable :: mS2(:,:,:),mDN(:,:,:),mZ1(:,:,:),mZ2(:,:,:)
   real(rkind),save,allocatable :: sS2(:,:),sDN(:,:),sZ1(:,:),sZ2(:,:)
 
-  !for station output for intermediate parameters and CoSiNE variables
+  !time varying input
+  real(rkind),save :: time_cosine(3)
+
+  !------------------------------------------------------------------
+  !station output for intermediate parameters and CoSiNE variables
+  !------------------------------------------------------------------
   !ista(ie) refers to local station index (lsi)
   !nsta(lsi) refers to number of depth
   !depsta(k,lsi) is depth,where k is depth index
   !stanum is the station index from cstation.in
-  integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
-  real(rkind),save,allocatable :: depsta(:,:) 
+  !integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
+  !real(rkind),save,allocatable :: depsta(:,:) 
 
-  !time varying input
-  real(rkind),save :: time_cosine(3)
+  integer,save :: nsta_lc,nsta,ndata_gb,nvar=73
+  integer,save,allocatable :: sie(:),sid(:),nstas(:),displ(:),sids(:)
+  real(rkind),save,allocatable :: sdep(:)
+  integer,save :: istat_cosine=0
+ 
+  type, public :: cosine_diagnostic_variable  
+    integer :: istat=0
+    integer :: ndata=0
+    integer :: varid
+    character(len=30) :: varname=''
+    real(rkind), dimension(:,:),pointer :: data=> null()
+  end type
+
+  type, public :: cosine_diagnostic_header
+    integer :: it=0
+    integer :: ncid
+    integer :: varid 
+    real(rkind) :: time=0.0
+  end type
+
+  type(cosine_diagnostic_header),save :: dcosine
+  type(cosine_diagnostic_variable),allocatable,save :: dvar(:),dvars(:)
 
   !------------------------------------------------------------------
   !clam grazing model
@@ -81,9 +106,9 @@ module cosine_mod
   !mkS2,mkDN,mkDSi:  maximum remineralization rate 
   !PS2, PDN, PDSi:   sediment POM concentration 
   !RS2, RDN, RDSi:   sediment POM decay rate
-  real(rkind),save,allocatable :: fS2(:),   fDN(:),   fDSi(:)
-  real(rkind),save,allocatable :: rkS2(:),  rkDN(:),  rkDSi(:)
-  real(rkind),save,allocatable :: mkS2(:),  mkDN(:),  mkDSi(:)
+  real(rkind),save :: fS2(3),  fDN(3),  fDSi(3)
+  real(rkind),save :: rkS2(3), rkDN(3), rkDSi(3)
+  real(rkind),save :: mkS2(3), mkDN(3), mkDSi(3)
   real(rkind),save,allocatable :: PS2(:,:), PDN(:,:), PDSi(:,:)
   real(rkind),save,allocatable :: RS2(:,:), RDN(:,:), RDSi(:,:)
 
