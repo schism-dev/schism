@@ -211,7 +211,7 @@ endif
 
 ifdef USE_COSINE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_COSINE
-  OBJS := $(OBJS) cosine_mod.o cosine_init.o cosine.o 
+  OBJS := $(OBJS) cosine_misc.o cosine_mod.o cosine_init.o cosine.o 
 endif
 
 ifdef USE_FIB
