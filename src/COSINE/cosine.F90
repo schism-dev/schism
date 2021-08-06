@@ -29,15 +29,16 @@ subroutine cosine(it)
 
   use schism_glbl, only : rkind,dt,ne,nea,npa,nvrt,bdy_frc,idry_e,kbe,ze,&
       & tr_el,xlon_el,ylat_el,xlon,ylat,irange_tr,ntrs,ielg,iplg,elnode,srad,& 
-      & su2,sv2,elside,iegl,eta2,i34,windx,windy,wsett,flx_sf,flx_bt
+      & su2,sv2,elside,iegl,eta2,i34,windx,windy,wsett,flx_sf,flx_bt,rnday
   use schism_msgp, only : myrank,parallel_abort,parallel_barrier
   use cosine_misc
   use cosine_mod
+  use netcdf
   implicit none
   integer,intent(in) :: it
     
   !local variables
-  integer :: i,j,k,m,l,id,iday,daynum
+  integer :: i,j,k,m,l,id,iret,iday,daynum
   real(rkind) :: time,mtime,dtw,rat,drat,rKe,rtmp,Uw,mS2i,mZ1i,mDNi,mZ2i
   real(rkind),parameter :: d2s=86400.0
   logical :: lopened
@@ -348,7 +349,7 @@ subroutine cosine(it)
         flx_sf(irange_tr(1,8)+11,i)=drat*co2flxs/d2s
 
         !station output
-        if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
+        if(i<=ne.and.(iout_cosine==1.or.iout_cosine==5).and.mod(it,nspool_cosine)==0) then
           do j=1,dl%nsta
             if(ielg(i)==dl%iep(j)) then
               call cosine_output(0,j,'drats',  1, drat)
@@ -381,7 +382,7 @@ subroutine cosine(it)
         flx_bt(irange_tr(1,8)+11,i)=-co2flx/d2s
 
         !station output
-        if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
+        if(i<=ne.and.(iout_cosine==1.or.iout_cosine==5).and.mod(it,nspool_cosine)==0) then
           do j=1,dl%nsta
             if(ielg(i)==dl%iep(j)) then
               call cosine_output(0,j,'dratb',  1, drat)
@@ -417,7 +418,7 @@ subroutine cosine(it)
       !-------------------------------------------------------------
       !CoSiNE station outputs
       !-------------------------------------------------------------
-      if(i<=ne.and.iout_cosine==1.and.mod(it,nspool_cosine)==0) then
+      if(i<=ne.and.iout_cosine/=0.and.mod(it,nspool_cosine)==0) then
         do j=1,dl%nsta
           rtmp=min(max(-dl%z(j),ze(kbe(i),i)+1.d-10),ze(nvrt,i))
           if(ielg(i)==dl%iep(j) .and. rtmp>ze(k-1,i) .and. rtmp<=ze(k,i)) then 
@@ -436,52 +437,56 @@ subroutine cosine(it)
             call cosine_output(0,j,'DOX',  1, DOX(k))
             call cosine_output(0,j,'CO2',  1, CO2(k))
             call cosine_output(0,j,'ALK',  1, ALK(k))
+            
+            if(iout_cosine==1 .or. iout_cosine==3) then
+              call cosine_output(0,j,'NPS1', 1, NPS1)
+              call cosine_output(0,j,'RPS1', 1, RPS1)
+              call cosine_output(0,j,'MTS1', 1, MTS1)
+              call cosine_output(0,j,'NPS2', 1, NPS2)
+              call cosine_output(0,j,'RPS2', 1, RPS2)
+              call cosine_output(0,j,'MTS2', 1, MTS2)
+              call cosine_output(0,j,'EXZ1', 1, EXZ1)
+              call cosine_output(0,j,'MTZ1', 1, MTZ1)
+              call cosine_output(0,j,'EXZ2', 1, EXZ2)
+              call cosine_output(0,j,'MTZ2', 1, MTZ2)
+              call cosine_output(0,j,'GS1Z1',1, GS1Z1)
+              call cosine_output(0,j,'GS2Z2',1, GS2Z2)
+              call cosine_output(0,j,'GZ1Z2',1, GZ1Z2)
+              call cosine_output(0,j,'GDNZ2',1, GDNZ2)
+              call cosine_output(0,j,'GTZ2', 1, GTZ2)
+              call cosine_output(0,j,'MIDN', 1, MIDN)
+              call cosine_output(0,j,'MIDSi',1, MIDSi)
+              call cosine_output(0,j,'Nit',  1, Nit)
+            endif
 
-            call cosine_output(0,j,'NPS1', 1, NPS1)
-            call cosine_output(0,j,'RPS1', 1, RPS1)
-            call cosine_output(0,j,'MTS1', 1, MTS1)
-            call cosine_output(0,j,'NPS2', 1, NPS2)
-            call cosine_output(0,j,'RPS2', 1, RPS2)
-            call cosine_output(0,j,'MTS2', 1, MTS2)
-            call cosine_output(0,j,'EXZ1', 1, EXZ1)
-            call cosine_output(0,j,'MTZ1', 1, MTZ1)
-            call cosine_output(0,j,'EXZ2', 1, EXZ2)
-            call cosine_output(0,j,'MTZ2', 1, MTZ2)
-            call cosine_output(0,j,'GS1Z1',1, GS1Z1)
-            call cosine_output(0,j,'GS2Z2',1, GS2Z2)
-            call cosine_output(0,j,'GZ1Z2',1, GZ1Z2)
-            call cosine_output(0,j,'GDNZ2',1, GDNZ2)
-            call cosine_output(0,j,'GTZ2', 1, GTZ2)
-            call cosine_output(0,j,'MIDN', 1, MIDN)
-            call cosine_output(0,j,'MIDSi',1, MIDSi)
-            call cosine_output(0,j,'Nit',  1, Nit)
-
-            call cosine_output(0,j,'sLight', 1, sLight(k))
-            call cosine_output(0,j,'SPM',    1, SPM(k,i))
-            call cosine_output(0,j,'ak2',    1, ak2*(S1(k)+S2(k)))
-            call cosine_output(0,j,'ak3',    1, ak3*SPM(k,i))
-            call cosine_output(0,j,'ADPT',   1, ADPT)
-            call cosine_output(0,j,'dep',    1, dep(k))
-            call cosine_output(0,j,'OXR',    1, OXR)
-            call cosine_output(0,j,'pih1',   1, pih1)
-            call cosine_output(0,j,'pih2',   1, pih2)
-            call cosine_output(0,j,'pnh4s1', 1, pnh4s1)
-            call cosine_output(0,j,'pnh4s2', 1, pnh4s2)
-            call cosine_output(0,j,'bfNO3S1',1, bfNO3S1)
-            call cosine_output(0,j,'bfNH4S1',1, bfNH4S1)
-            call cosine_output(0,j,'fNO3S1', 1, fNO3S1)
-            call cosine_output(0,j,'fNH4S1', 1, fNH4S1)
-            call cosine_output(0,j,'fPO4S1', 1, fPO4S1)
-            call cosine_output(0,j,'fCO2S1', 1, fCO2S1)
-            call cosine_output(0,j,'bfS1',   1, bfS1)
-            call cosine_output(0,j,'bfNO3S2',1, bfNO3S2)
-            call cosine_output(0,j,'bfNH4S2',1, bfNH4S2)
-            call cosine_output(0,j,'fNO3S2', 1, fNO3S2)
-            call cosine_output(0,j,'fNH4S2', 1, fNH4S2)
-            call cosine_output(0,j,'fPO4S2', 1, fPO4S2)
-            call cosine_output(0,j,'fCO2S2', 1, fCO2S2)
-            call cosine_output(0,j,'fSiO4S2',1, fSiO4S2)
-            call cosine_output(0,j,'bfS2',   1, bfS2)
+            if(iout_cosine==1 .or. iout_cosine==4) then
+              call cosine_output(0,j,'sLight', 1, sLight(k))
+              call cosine_output(0,j,'SPM',    1, SPM(k,i))
+              call cosine_output(0,j,'ak2',    1, ak2*(S1(k)+S2(k)))
+              call cosine_output(0,j,'ak3',    1, ak3*SPM(k,i))
+              call cosine_output(0,j,'ADPT',   1, ADPT)
+              call cosine_output(0,j,'dep',    1, dep(k))
+              call cosine_output(0,j,'OXR',    1, OXR)
+              call cosine_output(0,j,'pih1',   1, pih1)
+              call cosine_output(0,j,'pih2',   1, pih2)
+              call cosine_output(0,j,'pnh4s1', 1, pnh4s1)
+              call cosine_output(0,j,'pnh4s2', 1, pnh4s2)
+              call cosine_output(0,j,'bfNO3S1',1, bfNO3S1)
+              call cosine_output(0,j,'bfNH4S1',1, bfNH4S1)
+              call cosine_output(0,j,'fNO3S1', 1, fNO3S1)
+              call cosine_output(0,j,'fNH4S1', 1, fNH4S1)
+              call cosine_output(0,j,'fPO4S1', 1, fPO4S1)
+              call cosine_output(0,j,'fCO2S1', 1, fCO2S1)
+              call cosine_output(0,j,'bfS1',   1, bfS1)
+              call cosine_output(0,j,'bfNO3S2',1, bfNO3S2)
+              call cosine_output(0,j,'bfNH4S2',1, bfNH4S2)
+              call cosine_output(0,j,'fNO3S2', 1, fNO3S2)
+              call cosine_output(0,j,'fNH4S2', 1, fNH4S2)
+              call cosine_output(0,j,'fPO4S2', 1, fPO4S2)
+              call cosine_output(0,j,'fCO2S2', 1, fCO2S2)
+              call cosine_output(0,j,'fSiO4S2',1, fSiO4S2)
+              call cosine_output(0,j,'bfS2',   1, bfS2)
+            endif
           endif !if(ielg(i)==dl%iep(j)
         enddo !j
       endif !i<=ne
@@ -491,9 +496,10 @@ subroutine cosine(it)
 
   !collect cosine diagostic variables
   if(iout_cosine/=0.and.mod(it,nspool_cosine)==0) then 
-    dg%it=int(it/nspool_cosine)
+    dg%it=dg%it+1 !int(it/nspool_cosine)
     dg%time=it*dtw
     call cosine_output(1,0,'',0,0.d0)
+    if(it==int(rnday*86400.d0/dt+0.5d0)) iret=nf90_close(dg%ncid)
   endif
 
   return

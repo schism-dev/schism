@@ -61,17 +61,10 @@ module cosine_mod
   !------------------------------------------------------------------
   !station output for intermediate parameters and CoSiNE variables
   !------------------------------------------------------------------
-  !ista(ie) refers to local station index (lsi)
-  !nsta(lsi) refers to number of depth
-  !depsta(k,lsi) is depth,where k is depth index
-  !stanum is the station index from cstation.in
-  !integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
-  !real(rkind),save,allocatable :: depsta(:,:) 
-  
   !for storing diagnostic variables
   type, public :: cosine_diagnostic_variable  
-    integer :: ndim=0
-    integer :: varid
+    integer :: ndim=0                 !variable dimenesion
+    integer :: varid                  !nc file id
     character(len=30) :: varname=''
     real(rkind), dimension(:,:),pointer :: data=> null()
     type(cosine_diagnostic_variable),pointer :: next=>null()
@@ -80,23 +73,24 @@ module cosine_mod
 
   !store local information about station output
   type, public :: cosine_diagnostic_header_local
-    integer :: nvar=0,ndim=0, nsta=-1
-    integer,allocatable :: iep(:)
-    real(rkind),allocatable :: z(:)
+    integer :: nvar=0,ndim=0, nsta=-1 !# of variables, sum of all variable dimesnsions, # of stations
+    integer,allocatable :: iep(:)     !global parent elements for each station
+    real(rkind),allocatable :: z(:)   !depth
   end type
   type(cosine_diagnostic_header_local),save :: dl
 
   !!store global information about station output
   type, public :: cosine_diagnostic_header
-    integer :: istat=0
-    integer :: it=0
-    real(rkind) :: time=0.0
+    integer :: istat=0                !istat=0: initilize dg's variables 
+    integer :: it=0                   !time step of cosine_station_outputs
+    real(rkind) :: time=0.0           !model time
 
-    integer :: ncid,id_time
-    integer :: nvar=0, ndim=0
+    integer :: ncid,id_time           !(only for myrank=0) id_time: nc id of time
+    integer :: nvar=0, ndim=0         !# of variables, sum of all variable dimesnsions
 
-    integer :: nsta=-1
-    integer,allocatable :: nstas(:),iep(:),sids(:),displ(:)
+    integer :: nsta=-1                !# of stations
+    !nstas store all dg%nsta and displ are the displacements for MP, sids store station indices after MP
+    integer,allocatable :: nstas(:),iep(:),sids(:),displ(:) 
     real(rkind),allocatable :: x(:),y(:),z(:) 
   end type
   type(cosine_diagnostic_header),save :: dg

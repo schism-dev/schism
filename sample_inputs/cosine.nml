@@ -34,13 +34,17 @@ zeptic= 10.0
 iz2graze = 1
 
 !-----------------------------------------------------------------------
-!iout_cosine=1 : output time series for intermediate variables and
-!CoSiNE variables at specific loations. A input file cstation.bp that  
-!has a similar format of station.bp is needed. nspool_cosine is the 
-!interval (time step) for the output 
+!CoSiNE model station output option (need cstation.in with *.bp format)
+! iout_cosine=0: turn off this option
+! iout_cosine=1: all available diagnostic variables
+! iout_cosine=2: state variables
+! iout_cosine=3: state variables + source/sink terms
+! iout_cosine=4: state variables + misc diagnostics
+! iout_cosine=5: state variables + surface/bottom fluxes
+! nspool_cosine: output interval (number of time step)
 !-----------------------------------------------------------------------
 iout_cosine=0
-nspool_cosine=60
+nspool_cosine=30
 
 !-----------------------------------------------------------------------
 !ico2s=0: no CO2 limitation on phytoplankton growth

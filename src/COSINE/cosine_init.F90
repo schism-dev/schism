@@ -100,7 +100,7 @@ subroutine read_cosine_param
   endif
 
   !read in station info. 
-  if(iout_cosine==1) call read_cosine_stainfo
+  if(iout_cosine/=0) call read_cosine_stainfo
 
   !read bottom grazing information
   if(ibgraze==1) then
@@ -183,7 +183,7 @@ end subroutine read_cosine_param
 
 subroutine read_cosine_stainfo
 !---------------------------------------------------------------------------
-!CoSiNE outputs
+!read CoSiNE station 
 !---------------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode,ielg, &
       & in_dir,out_dir,len_in_dir,len_out_dir,ne_global,np_global
@@ -303,7 +303,16 @@ subroutine read_cosine_stainfo
 end subroutine read_cosine_stainfo
 
 subroutine cosine_output(imode,id,varname,ndim,rarray)
-  use schism_glbl, only : rkind,errmsg,out_dir,len_out_dir
+!---------------------------------------------------------------------------
+!CoSiNE station outputs
+!imode=0: for local rank to initialize and store local diagnostic variables
+!         id: the station index 
+!         varname: variable name
+!         ndim: number of variable dimensions
+!         rarray: variable values
+!imode=1: for myrank=0 to initialize and store all diagnostic variables
+!---------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg,out_dir,len_out_dir,ihot
   use schism_msgp, only : myrank,nproc,comm,parallel_abort,parallel_barrier, &
       & itype,rtype
   use cosine_mod, only: dl,dg,dlv,dgv,cosine_diagnostic_variable
@@ -318,13 +327,14 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
   real(rkind),dimension(*),intent(in) :: rarray
  
   !local variables 
-  integer :: i,j,m,n,istat,iflag,ierr
+  integer :: i,j,m,n,istat,iflag,ierr,id_x,id_y,id_z,id_iep
   integer :: ndim_lc,ndim_nc,time_dim,nsta_dim,ncid,iret
   integer,allocatable :: ndim_gb(:),dims_nc(:),var_dims_nc(:)
   character(len=30) :: varname_lc
   character(len=30), allocatable :: varname_gb(:)
   real(rkind),allocatable :: swild_lc(:),swild_gb(:) 
   type(cosine_diagnostic_variable), pointer :: dtv,drv
+  logical :: lexist
 
   !1). initilize local diagnotic variable; 2) save variable values
   if(imode==0) then
@@ -430,34 +440,61 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
 
       !initialize station output file
       if(myrank==0) then
-        iret=nf90_create(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
-        dg%ncid=ncid
+        inquire(file=trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),exist=lexist)
+        if(ihot==2 .and. lexist) then
+          iret=nf90_open(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),NF90_WRITE,ncid)
+          dg%ncid=ncid
 
-        !define dimension
-        iret=nf90_def_dim(ncid,'time',NF90_UNLIMITED,time_dim)
-        iret=nf90_def_dim(ncid,'nstation',dg%nsta,nsta_dim)
-        do i=1,ndim_nc
-          write(varname_lc,*)dims_nc(i)
-          iret=nf90_def_dim(ncid,trim(adjustl(varname_lc)),dims_nc(i),var_dims_nc(i))
-        enddo
+          !get varid 
+          iret=nf90_inq_varid(ncid,'time',dg%id_time)
+          iret=nf90_inquire_dimension(ncid,dg%id_time,len=dg%it); dg%it=dg%it+1
 
-        !define variables
-        iret=nf90_def_var(ncid,'time',nf90_double,(/time_dim/),dg%id_time)
-        dtv=>dgv
-        do i=1,dg%nvar
-          if(dtv%ndim==1) then
-            iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,nsta_dim/),dtv%varid)
-          elseif(dtv%ndim>1) then
-            do j=1,ndim_nc; if(dims_nc(j)==dtv%ndim) exit; enddo
-            iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,var_dims_nc(j),nsta_dim/),dtv%varid)
-          endif
-          dtv=>dtv%next
-        enddo
+          dtv=>dgv
+          do i=1,dg%nvar
+            iret=nf90_inq_varid(ncid,trim(adjustl(dtv%varname)),dtv%varid)
+            dtv=>dtv%next
+          enddo
+        else
+          iret=nf90_create(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
+          dg%ncid=ncid
 
-        iret=nf90_enddef(ncid)
+          !define dimension
+          iret=nf90_def_dim(ncid,'time',NF90_UNLIMITED,time_dim)
+          iret=nf90_def_dim(ncid,'nstation',dg%nsta,nsta_dim)
+          do i=1,ndim_nc
+            write(varname_lc,*)dims_nc(i)
+            iret=nf90_def_dim(ncid,trim(adjustl(varname_lc)),dims_nc(i),var_dims_nc(i))
+          enddo
+
+          !define variables
+          iret=nf90_def_var(ncid,'time',nf90_double,(/time_dim/),dg%id_time)
+          iret=nf90_def_var(ncid,'x',nf90_double,(/nsta_dim/),id_x)
+          iret=nf90_def_var(ncid,'y',nf90_double,(/nsta_dim/),id_y)
+          iret=nf90_def_var(ncid,'z',nf90_double,(/nsta_dim/),id_z)
+          iret=nf90_def_var(ncid,'ie',nf90_int,(/nsta_dim/),id_iep)
+
+          dtv=>dgv
+          do i=1,dg%nvar
+            if(dtv%ndim==1) then
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,nsta_dim/),dtv%varid)
+            elseif(dtv%ndim>1) then
+              do j=1,ndim_nc; if(dims_nc(j)==dtv%ndim) exit; enddo
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,var_dims_nc(j),nsta_dim/),dtv%varid)
+            endif
+            dtv=>dtv%next
+          enddo
+          iret=nf90_enddef(ncid)
+
+          !put x,y,z and iep
+          iret=nf90_put_var(dg%ncid,id_iep,dg%iep,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_x,dg%x,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_y,dg%y,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_z,dg%z,start=(/1/),count=(/dg%nsta/))
+        endif!ihot
+
         deallocate(varname_gb,ndim_gb,dims_nc,var_dims_nc) 
       endif !myrank
-    endif !istat
+    endif !dg%istat==0
 
     !------------------------------------------------------------------------------ 
     !allocate data for storing all diagnostic values 
