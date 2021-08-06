@@ -54,6 +54,7 @@ subroutine read_cosine_param
   integer :: tnclam !,nclams(npa)
   character(len=2) :: stmp
   character(len=100) :: snum 
+  logical :: lexist
 
   !define namelist
   namelist /MARCO/ idelay,ndelay,ibgraze,idapt,alpha_corr,zeptic,iz2graze,&
@@ -150,20 +151,29 @@ subroutine read_cosine_param
     if(ihot==0) then !temporary fix, need to update
       do i=1,3
         write(snum,*)i
-        call read_gr3_prop('PS2_'//trim(adjustl(snum)),-999.d0,PS2(i,:),nea)
-        call read_gr3_prop('RS2_'//trim(adjustl(snum)),-999.d0,RS2(i,:),nea)
+        inquire(file=in_dir(1:len_in_dir)//'PS2_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PS2_'//trim(adjustl(snum)),-999.d0,PS2(i,:),nea)
+
+        inquire(file=in_dir(1:len_in_dir)//'RS2_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RS2_'//trim(adjustl(snum)),-999.d0,RS2(i,:),nea)
       enddo
 
       do i=1,3
         write(snum,*)i
-        call read_gr3_prop('PDN_'//trim(adjustl(snum)),-999.d0,PDN(i,:),nea)
-        call read_gr3_prop('RDN_'//trim(adjustl(snum)),-999.d0,RDN(i,:),nea)
+        inquire(file=in_dir(1:len_in_dir)//'PDN_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PDN_'//trim(adjustl(snum)),-999.d0,PDN(i,:),nea)
+
+        inquire(file=in_dir(1:len_in_dir)//'RDN_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RDN_'//trim(adjustl(snum)),-999.d0,RDN(i,:),nea)
       enddo
 
       do i=1,3
         write(snum,*)i
-        call read_gr3_prop('PDSi_'//trim(adjustl(snum)),-999.d0,PDSi(i,:),nea)
-        call read_gr3_prop('RDSi_'//trim(adjustl(snum)),-999.d0,RDSi(i,:),nea)
+        inquire(file=in_dir(1:len_in_dir)//'PDSi_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PDSi_'//trim(adjustl(snum)),-999.d0,PDSi(i,:),nea)
+
+        inquire(file=in_dir(1:len_in_dir)//'RDSi_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RDSi_'//trim(adjustl(snum)),-999.d0,RDSi(i,:),nea)
       enddo
     endif! ihot=0
   endif !ised

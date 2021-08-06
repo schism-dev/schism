@@ -492,7 +492,7 @@ git versions:
 (124) 843c40f (19 June, 2021): fixed a bug in ptrack3 (pt_in_poly3; c/o Jilian Xiong) that affects quads;
 (124) b2cf92b (29 June, 2021): fixed a bug in station outputs in basin scale cases ics=2 (local proj is not accurate
                                if the station is far away from the local frame);
-(125) a9f8f6c (8 July, 2021): fixed a bug in iloadtide=2 (index error). Also revamped reading of input files
+(125) a9f8f6c (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
                               fro large core counts.
 (126) ab46def (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
 ---------------------------------------------------------------

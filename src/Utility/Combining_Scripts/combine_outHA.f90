@@ -59,8 +59,8 @@
    integer      i,j,k,nvrt,nproc,np,np_local, &
      &         nfreq,nodel,nodeg,ne,ns
    character*10   namefr(MXFREQ)
-   character*28   file1
-   character*20   file2
+   character*30   file1
+   character*22   file2
    character*6   it_char
 !-----------------------------------------------------------------------
 ! Read hgrid

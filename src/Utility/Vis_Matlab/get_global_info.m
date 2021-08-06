@@ -1,11 +1,11 @@
 function [ne,np,nvrt,nm,xy00,i23d,ivs,vzcor,vid5,vdry_e,h0,dp,kbp00,vid_eta,nproc,np_lcl,ne_lcl,ns_lcl,iplg,ielg,iegl_rank]=get_global_info(icomb,base,varname,stacks)
 %Get basic info before reading (combined or uncombined) nc outputs 
-%Outputs starting from npoc are only defined if icomb=0 (uncombined)
+%Outputs starting from npoc are only defined if icomb=0 (uncombined).
 %vzcor,vis5,vdry_e: IDs for zcor and varname, and wetdry_elem
 %xy00(np,2); nm(4,ne)
 
 if(icomb==0)
-  fid=fopen([base '/outputs/local_to_global_0000'],'r');
+  fid=fopen([base '/outputs/local_to_global_000000'],'r');
   first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',18);
   %disp(first);
   fclose(fid);
@@ -14,7 +14,7 @@ if(icomb==0)
   nm=NaN(4,ne); i34=zeros(ne,1); xy00=zeros(np,2); iegl_rank=NaN(ne,1);
 
   for irank=0:nproc-1
-    fid=fopen([base '/outputs/local_to_global_' num2str(irank,'%04.f')],'r');
+    fid=fopen([base '/outputs/local_to_global_' num2str(irank,'%06.f')],'r');
     first=fscanf(fid,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n',18);
     %char=fscanf(fid,'%s\n')
     ne_lcl(irank+1)=fscanf(fid,'local to global mapping: %d\n',1);
@@ -71,7 +71,7 @@ if(icomb==0)
   end
 
   %Read header of nc
-  fname=[base,'/outputs/' 'schout_0000_' num2str(stacks(1)) '.nc'];
+  fname=[base,'/outputs/' 'schout_000000_' num2str(stacks(1)) '.nc'];
   ncid0 = netcdf.open(fname,'NC_NOWRITE');
   vid5=netcdf.inqVarID(ncid0,varname);
   i23d=netcdf.getAtt(ncid0,vid5,'i23d'); %1: 2D; 2: 3D (whole level)
