@@ -6065,7 +6065,7 @@
       etaic=eta2
 
 !...  Reset nsteps_from_cold and cumsum_eta to avoid the former being too large
-      if(nsteps_from_cold*dt/86400.d0>1.d0) then !use 1 yr
+      if(nsteps_from_cold*dt/86400.d0>365.d0) then !use 1 yr
         nsteps_from_cold=0; cumsum_eta=0.d0
       endif
 
