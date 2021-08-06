@@ -67,29 +67,39 @@ module cosine_mod
   !stanum is the station index from cstation.in
   !integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
   !real(rkind),save,allocatable :: depsta(:,:) 
-
-  integer,save :: nsta_lc,nsta,ndata_gb,nvar=73
-  integer,save,allocatable :: sie(:),sid(:),nstas(:),displ(:),sids(:)
-  real(rkind),save,allocatable :: sdep(:)
-  integer,save :: istat_cosine=0
- 
+  
+  !for storing diagnostic variables
   type, public :: cosine_diagnostic_variable  
-    integer :: istat=0
-    integer :: ndata=0
+    integer :: ndim=0
     integer :: varid
     character(len=30) :: varname=''
     real(rkind), dimension(:,:),pointer :: data=> null()
+    type(cosine_diagnostic_variable),pointer :: next=>null()
   end type
+  type(cosine_diagnostic_variable),pointer,save :: dlv,dgv
 
+  !store local information about station output
+  type, public :: cosine_diagnostic_header_local
+    integer :: nvar=0,ndim=0, nsta=-1
+    integer,allocatable :: iep(:)
+    real(rkind),allocatable :: z(:)
+  end type
+  type(cosine_diagnostic_header_local),save :: dl
+
+  !!store global information about station output
   type, public :: cosine_diagnostic_header
+    integer :: istat=0
     integer :: it=0
-    integer :: ncid
-    integer :: varid 
     real(rkind) :: time=0.0
-  end type
 
-  type(cosine_diagnostic_header),save :: dcosine
-  type(cosine_diagnostic_variable),allocatable,save :: dvar(:),dvars(:)
+    integer :: ncid,id_time
+    integer :: nvar=0, ndim=0
+
+    integer :: nsta=-1
+    integer,allocatable :: nstas(:),iep(:),sids(:),displ(:)
+    real(rkind),allocatable :: x(:),y(:),z(:) 
+  end type
+  type(cosine_diagnostic_header),save :: dg
 
   !------------------------------------------------------------------
   !clam grazing model
