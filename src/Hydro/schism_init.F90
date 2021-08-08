@@ -5053,9 +5053,6 @@
 !     singularity there (wind)
       if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
 
-      if(myrank==0) write(16,*)'start init multi ice...'
-      call ice_init
-      if(myrank==0) write(16,*)'done init multi ice...'
 #endif /*USE_MICE*/
 
 #ifdef USE_ICE
@@ -5785,6 +5782,10 @@
             if(tr_nd0(1,k,i)<tf) tr_nd0(1,k,i)=tf         !reset temp. below freezing temp.  
           enddo
         enddo
+        
+        if(myrank==0) write(16,*)'start init multi ice...'
+        call ice_init
+        if(myrank==0) write(16,*)'done init multi ice...'
 
         lice_free_gb=.false.
         t_oi(:)=0
