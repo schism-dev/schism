@@ -5783,10 +5783,6 @@
           enddo
         enddo
         
-        if(myrank==0) write(16,*)'start init multi ice...'
-        call ice_init
-        if(myrank==0) write(16,*)'done init multi ice...'
-
         lice_free_gb=.false.
         t_oi(:)=0
         fresh_wa_flux(:)=0
@@ -6116,6 +6112,12 @@
 #ifdef USE_PETSC
       call init_petsc
 #endif 
+
+#ifdef USE_MICE
+      if(myrank==0) write(16,*)'start init multi ice...'
+      call ice_init
+      if(myrank==0) write(16,*)'done init multi ice...'
+#endif
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 
