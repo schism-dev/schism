@@ -1012,7 +1012,7 @@
     
           real (kind=dbl_kind) :: &
              Tsfc, sum, hbar, &
-             rhos, Lfresh, puny
+             rhos, Lfresh, puny, pi
     
           real (kind=dbl_kind), dimension(ncat) :: &
              ainit, hinit    ! initial area, thickness
@@ -1043,7 +1043,7 @@
           call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc, nt_qice_out=nt_qice, &
                nt_qsno_out=nt_qsno, nt_sice_out=nt_sice, nt_fsd_out=nt_fsd,            &
                nt_fbri_out=nt_fbri, nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl)
-          call icepack_query_parameters(rhos_out=rhos, Lfresh_out=Lfresh, puny_out=puny)
+          call icepack_query_parameters(rhos_out=rhos, Lfresh_out=Lfresh, puny_out=puny, pi_out=pi)
           call icepack_warnings_flush(ice_stderr)
           if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname,     &
              file=__FILE__,line= __LINE__)
@@ -1078,6 +1078,49 @@
              hinit(n) = c0
           enddo
 
+          if (3 <= ncat) then
+            n = 3
+            ainit(n) = c1  ! assumes we are using the default ITD boundaries
+            hinit(n) = c2
+          else
+            ainit(ncat) = c1
+            hinit(ncat) = c2
+          endif
+          do i = 1, nx
+            do n = 1, ncat
+               if((lat_val(i)*180/pi)>88) then
+                  write(*,*) i,lat_val(i)*180/pi,lat_val(i)
+                    aicen(i,n) = ainit(n)
+                    vicen(i,n) = hinit(n) * ainit(n) ! m
+                    vsnon(i,n) = c0
+                                    call icepack_init_trcr(Tair     = T_air(i),    &
+                                             Tf       = Tf(i),       &
+                                             Sprofile = salinz(i,:), &
+                                             Tprofile = Tmltz(i,:),  &
+                                             Tsfc     = Tsfc,        &
+                                             nilyr=nilyr, nslyr=nslyr, &
+                                             qin=qin(:), qsn=qsn(:))
+                                             ! surface temperature
+                     trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
+                     ! ice enthalpy, salinity
+                     do k = 1, nilyr
+                        trcrn(i,nt_qice+k-1,n) = qin(k)
+                        trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+                     enddo
+                     ! snow enthalpy
+                     do k = 1, nslyr
+                        trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+                     enddo               ! nslyr
+                     ! brine fraction
+                     if (tr_brine) trcrn(i,nt_fbri,n) = c1
+               endif
+            enddo                  ! ncat
+                call icepack_warnings_flush(ice_stderr)
+                if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+                    file=__FILE__, line=__LINE__)
+
+            
+         enddo
           ! For the moment we start we no sea ice
 
 !          if (3 <= ncat) then
