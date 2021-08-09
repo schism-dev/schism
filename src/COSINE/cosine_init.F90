@@ -367,6 +367,7 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
       dtv%data(:,id)=rarray(1:ndim)
 
       dl%nvar=dl%nvar+1; dl%ndim=dl%ndim+ndim
+      if(trim(adjustl(varname)).eq.'temp') dl%istat=1
     endif
   
   elseif(imode==1) then
@@ -396,7 +397,7 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
         else
           ndim_lc=0; varname_lc=''
         endif
-      
+
         !initialize dgv
         call mpi_gather(ndim_lc,1,itype,ndim_gb,1,itype,0,comm,ierr)
         call mpi_gather(varname_lc,30,stype,varname_gb,30,stype,0,comm,ierr)
@@ -416,7 +417,7 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
           do j=1,nproc
             if((varname_lc.eq.'').and.(varname_gb(j).ne.'')) varname_lc=varname_gb(j) 
             if(ndim_lc==0 .and. ndim_gb(j)/=0) ndim_lc=ndim_gb(j) 
-        
+
             if((varname_lc.ne.'').and.(varname_gb(j).ne.'').and.(varname_lc.ne.varname_gb(j))) call parallel_abort('varname_lc: cosine') 
             if(ndim_lc/=0 .and. ndim_gb(j)/=0 .and. ndim_lc/=ndim_gb(j)) call parallel_abort('ndim_lc: cosine') 
           enddo

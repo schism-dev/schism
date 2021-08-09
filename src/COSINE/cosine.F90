@@ -421,7 +421,8 @@ subroutine cosine(it)
       if(i<=ne.and.iout_cosine/=0.and.mod(it,nspool_cosine)==0) then
         do j=1,dl%nsta
           rtmp=min(max(-dl%z(j),ze(kbe(i),i)+1.d-10),ze(nvrt,i))
-          if(ielg(i)==dl%iep(j) .and. rtmp>ze(k-1,i) .and. rtmp<=ze(k,i)) then 
+          if(ielg(i)==dl%iep(j).and.((rtmp>ze(k-1,i).and.rtmp<=ze(k,i)).or.dl%istat==0)) then 
+            !call cosine_output(0,j,'temp', 1, (/temp(k)/))
             call cosine_output(0,j,'temp', 1, temp(k))
             call cosine_output(0,j,'salt', 1, salt(k))
             call cosine_output(0,j,'NO3',  1, NO3(k))

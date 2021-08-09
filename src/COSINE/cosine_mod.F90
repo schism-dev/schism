@@ -73,7 +73,7 @@ module cosine_mod
 
   !store local information about station output
   type, public :: cosine_diagnostic_header_local
-    integer :: nvar=0,ndim=0, nsta=-1 !# of variables, sum of all variable dimesnsions, # of stations
+    integer :: istat=0,nvar=0,ndim=0, nsta=-1 !# of variables, sum of all variable dimesnsions, # of stations
     integer,allocatable :: iep(:)     !global parent elements for each station
     real(rkind),allocatable :: z(:)   !depth
   end type
