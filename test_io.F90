@@ -12,8 +12,7 @@
   integer :: ierr,comm_schism,comm2,comm,nproc_schism,myrank_schism,task_id,i,j,k,m,it 
   integer :: comm_scribe,nscribes,nproc_compute,nproc,myrank,np_gb
   integer :: nsteps,nspool,irank,noutvars,itag
-  integer,allocatable :: srqst(:),sstat(:,:)
-  integer,allocatable :: rrqst(:),rstat(:,:)
+  integer,allocatable :: srqst(:),rrqst(:)
 
   real*8 :: dt,tmp,tmp_gb,tmp1
   real*8 :: work(1000), ar1(nvrt,np),ar2(nvrt,np),ar3(nvrt,np)
@@ -60,7 +59,7 @@
     if(noutvars>nscribes) call mpi_abort(comm_schism,'>nscribes',ierr)
 
     !allocate(srqst(nscribes),sstat(MPI_STATUS_SIZE,nscribes),stat=i)
-    allocate(srqst(noutvars),sstat(MPI_STATUS_SIZE,noutvars),stat=i)
+    allocate(srqst(noutvars),stat=i)
     if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
     !Init
     srqst(:)=MPI_REQUEST_NULL
@@ -128,7 +127,7 @@
     comm_scribe=comm2
     
     allocate(ar1_gb(nvrt,np,nproc_compute),ar2_gb(nvrt,np,nproc_compute))
-    allocate(rrqst(nproc_compute),rstat(MPI_STATUS_SIZE,nproc_compute),stat=i)
+    allocate(rrqst(nproc_compute),stat=i)
     if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
 
     !Get basic info
@@ -151,7 +150,6 @@
       if(myrank_schism==nproc_schism-j) then
         do i=1,nproc_compute
           call mpi_irecv(ar1_gb(:,:,i),np*nvrt,MPI_REAL8,i-1,100+j,comm_schism,rrqst(i),ierr)
-          !call mpi_recv(ar1_gb(:,:,i),np*nvrt,MPI_REAL8,i-1,100+j,comm_schism,rrqst(i),ierr)
 !        write(errchar,'(i10)')i
 !        if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,errchar,ierr)
         enddo !i
@@ -159,7 +157,7 @@
         rrqst(:)=MPI_REQUEST_NULL
       endif
 
-      call mpi_waitall(nproc_compute,rrqst,rstat,ierr)
+      call mpi_waitall(nproc_compute,rrqst,MPI_STATUSES_IGNORE,ierr)
       if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'receive error',ierr)
 
       print*, 'Scribe recv var:',it,j,myrank
@@ -187,27 +185,6 @@
     endif !myrank_schism
 
     print*, 'Scribe done writing ',it,myrank
-
-!    do i=1,nproc_compute
-!      call mpi_irecv(ar2_gb(:,:,i),np*nvrt,MPI_REAL8,i-1,14,comm_schism,rrqst(i),ierr)
-!      write(errchar,'(i10)')i
-!      if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,errchar,ierr)
-!    enddo !i
-!    call mpi_waitall(nproc_compute,rrqst,rstat,ierr)
-!    if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'receive error2',ierr)
-
-!    do i=1,nproc_compute
-      !Combine
-!      do j=1,np
-!        np_gb=j+(nproc_compute-1)*np !global node #
-!        if(np_gb>mnp) call mpi_abort(comm_schism,'>mnp',ierr)
-!        (:,np_gb)=ar1(:,j)
-
-        !Debug
-!        write(98,*)'Time=',it*dt,'Compute rank ',i-1,ar1_gb(:,:,i)
-!        write(99,*)'Time=',it*dt,'Compute rank ',i-1,ar2_gb(:,:,i)
-!      enddo !j
-!    enddo !i
 
     call mpi_barrier(comm_scribe,ierr)
 !--------------------------------------------------------------------------
