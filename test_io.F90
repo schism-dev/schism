@@ -80,10 +80,12 @@
 
       ar3=0.d0
 !WARNING: cannot compute arrays while the send is still on-going
-      do j=1,noutvars
-        !Make sure the previous send is finished
-        call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
-      enddo !j
+!      do j=1,noutvars
+!        !Make sure the previous send is finished
+!        call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+!      enddo !j
+
+      call mpi_waitall(noutvars,srqst,MPI_STATUSES_IGNORE,ierr)
       !In btw output steps, srqst is NULL, but reset just in case
       srqst=MPI_REQUEST_NULL
 
@@ -223,7 +225,5 @@
   call mpi_finalize(ierr)
   if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'failed to finalize',ierr)
   stop
-
-  print*, 'why am I here?'
  
   end program 
