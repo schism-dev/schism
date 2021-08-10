@@ -1,3 +1,4 @@
+!lessons: (1) do NOT change the vars being sednt/recv while send/recv is on-going to avoid mem corruption.
 ! mpif90 -cpp -O2 -mcmodel=medium -assume byterecl -g -traceback -o test_io test_io.F90
   program test_io
   implicit none
@@ -15,7 +16,7 @@
   integer,allocatable :: rrqst(:),rstat(:,:)
 
   real*8 :: dt,tmp,tmp_gb,tmp1
-  real*8 :: work(1000), ar1(nvrt,np),ar2(nvrt,np)
+  real*8 :: work(1000), ar1(nvrt,np),ar2(nvrt,np),ar3(nvrt,np)
   real*8, allocatable :: ar1_gb(:,:,:),ar2_gb(:,:,:)
 
   CALL MPI_Init(ierr)
@@ -26,7 +27,7 @@
 
 !  print*, 'hello from rank ',myrank_world,nproc_world
 
-  nscribes=3
+  nscribes=4
   nproc_compute=nproc_schism-nscribes
   if(myrank_schism<nproc_schism-nscribes) then !compute ranks
     task_id=1
@@ -51,17 +52,20 @@
     if(nproc_compute/=nproc) call mpi_abort(comm_schism,'nproc mismatch',ierr)
     if(myrank+1>nproc_compute) call mpi_abort(comm_schism,'>nproc_compute',ierr)
 
-    allocate(srqst(nscribes),sstat(MPI_STATUS_SIZE,nscribes),stat=i)
-    if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
-
     !Time step info
     dt=100.
-    nsteps=4
-    nspool=2
+    nsteps=21
+    nspool=5
     noutvars=2
     if(noutvars>nscribes) call mpi_abort(comm_schism,'>nscribes',ierr)
 
-    !Send to IO scribes
+    !allocate(srqst(nscribes),sstat(MPI_STATUS_SIZE,nscribes),stat=i)
+    allocate(srqst(noutvars),sstat(MPI_STATUS_SIZE,noutvars),stat=i)
+    if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
+    !Init
+    srqst(:)=MPI_REQUEST_NULL
+
+    !Send basic info to IO scribes
     if(myrank_schism==nproc_schism-nscribes-1) then
       do i=1,nscribes
         call mpi_send(dt,1,MPI_REAL8,nproc_schism-i,10,comm_schism,ierr)
@@ -70,40 +74,51 @@
         call mpi_send(noutvars,1,MPI_INTEGER,nproc_schism-i,15,comm_schism,ierr)
       enddo !i
     endif
-   
+
     do it=1,nsteps
       print*, 'Doing step ',it,myrank,comm,myrank_schism,nproc
+
+      ar3=0.d0
+!WARNING: cannot compute arrays while the send is still on-going
+      do j=1,noutvars
+        !Make sure the previous send is finished
+        call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+      enddo !j
+      !In btw output steps, srqst is NULL, but reset just in case
+      srqst=MPI_REQUEST_NULL
+
       do i=1,np
         do k=1,nvrt
           ar1(k,i)=k+i+myrank+it
-          ar2(k,i)=ar1(k,i)*0.5d0
         enddo !k
       enddo !i
+      ar2=ar1*0.5d0
 
-      call mpi_barrier(comm,ierr)
+!      call mpi_barrier(comm,ierr)
       
-!      tmp1=0.d0
-!      do i=0,nproc-1
-!        tmp1=tmp1+i**0.5d0
-!      enddo !i
-!      tmp=myrank**0.5d0
-
       if(mod(it,nspool)==0) then
+
         do j=1,noutvars
           print*, 'Sending to rank',nproc_schism-j,' from rank:',myrank_schism,it
+
           if(j==1) then
-            !call mpi_send(ar1,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,ierr)
             call mpi_isend(ar1,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
           else
-            !call mpi_send(ar2,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,ierr)
             call mpi_isend(ar2,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
           endif
-          call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+!          call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
           !print*, 'Sent to rank',nproc_schism-j,' from rank:',myrank_schism,it
         enddo !j
-        !call mpi_waitall(srqst(1:noutvars),sstat(:,1:noutvars),ierr)
-        if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'send error',ierr)
+
+        !can do compute here as long as the send arrays are not altered
+!        do j=1,noutvars
+!          call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+!        enddo !j
+
+!        if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'send error',ierr)
       endif !mod()
+
+      call mpi_barrier(comm,ierr)
     enddo !it
     print*, 'Done computing...',myrank
   
@@ -120,7 +135,7 @@
     call mpi_recv(nspool,1,MPI_INTEGER,nproc_schism-nscribes-1,13,comm_schism,rrqst(1),ierr)
     call mpi_recv(noutvars,1,MPI_INTEGER,nproc_schism-nscribes-1,15,comm_schism,rrqst(1),ierr)
 
-    call mpi_barrier(comm_scribe,ierr)
+!    call mpi_barrier(comm_scribe,ierr)
     print*, 'Scribe ',myrank,comm_scribe,myrank_schism
     print*, 'Scribe, basic info:',dt,nsteps,nspool,noutvars,nproc_compute
 
@@ -145,7 +160,7 @@
       call mpi_waitall(nproc_compute,rrqst,rstat,ierr)
       if(ierr/=MPI_SUCCESS) call mpi_abort(comm_schism,'receive error',ierr)
 
-      print*, 'Scribe recv var:',it,myrank
+      print*, 'Scribe recv var:',it,j,myrank
     enddo !j
     print*, 'Scribe done recv var:',it,myrank
 
@@ -191,10 +206,11 @@
 !        write(99,*)'Time=',it*dt,'Compute rank ',i-1,ar2_gb(:,:,i)
 !      enddo !j
 !    enddo !i
+
+    call mpi_barrier(comm_scribe,ierr)
 !--------------------------------------------------------------------------
     enddo !it
-  endif
-
+  endif !task_id
 
 
 !  call MPI_Comm_free(comm_schism,ierr)
