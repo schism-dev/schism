@@ -21,12 +21,13 @@
 subroutine ice_init
   use schism_glbl, only : rkind,pi,np,npa,ne,nea,mnei,mnei_p,nne,indel,xctr,yctr,area, &
  &nstep_ice,fresh_wa_flux,net_heat_flux,xlon,ylat,rearth_eq,elnode,nnp,indnd,iplg,dt, &
- &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir
+ &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir,ielg,i34,iself, &
+ &nxq
   use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
   use ice_module
   use ice_therm_mod
   implicit none
-  integer :: i,j,ie,istat,nd,nd2,m,mm,indx
+  integer :: i,j,ie,istat,nd,nd2,m,mm,indx,jj,id
   real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
  &det,der_transp(3,2),derivative_stdbf(2,3) 
   namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
@@ -180,26 +181,48 @@ subroutine ice_init
 
   !Mass matrix: ice_matrix(0:mnei_p,np)
   ice_matrix=0.0
-  do i=1,ne
-    do j=1,3
-      nd=elnode(j,i)
-      do m=1,3
-        nd2=elnode(m,i)
-        if(j==m) then !diagonal
-          ice_matrix(0,nd)=ice_matrix(0,nd)+voltriangle(i)/6.0
-        else
-          indx=0
-          do mm=1,nnp(nd)
-            if(indnd(mm,nd)==nd2) then
-              indx=mm; exit
-            endif
-          enddo !mm
-          if(indx==0) call parallel_abort('ice_init: failed (9.1)')
-          ice_matrix(indx,nd)=ice_matrix(indx,nd)+voltriangle(i)/12.0
+  !do i=1,ne
+  !  do j=1,3
+  !    nd=elnode(j,i)
+  !    do m=1,3
+  !      nd2=elnode(m,i)
+  !      if(j==m) then !diagonal
+  !        ice_matrix(0,nd)=ice_matrix(0,nd)+voltriangle(i)/6.0
+  !      else
+  !        indx=0
+  !        do mm=1,nnp(nd)
+  !          if(indnd(mm,nd)==nd2) then
+  !            indx=mm; exit
+  !          endif
+  !        enddo !mm
+  !        if(indx==0) call parallel_abort('ice_init: failed (9.1)')
+  !        ice_matrix(indx,nd)=ice_matrix(indx,nd)+voltriangle(i)/12.0
+  !      endif
+  !    enddo !m
+  !  enddo !j
+  !enddo !i=1,ne
+
+  do i=1,np !resident only
+    do j=0,nnp(i)
+      ice_matrix(j,i)=0.d0
+    enddo !j
+    do j=1,nne(i)
+      ie=indel(j,i)
+      id=iself(j,i)
+      ice_matrix(0,i) = ice_matrix(0,i) + voltriangle(ie)/6.0
+    do jj=1,2 !other 2 nodes
+      nd=elnode(nxq(jj,id,i34(ie)),ie)
+      indx=0
+      do m=1,nnp(i)
+        if(indnd(m,i)==nd) then
+          indx=m; exit
         endif
       enddo !m
-    enddo !j
-  enddo !i=1,ne
+      if(indx==0) call parallel_abort('STEP: failed to find (9.1)')
+      ice_matrix(indx,i)=ice_matrix(indx,i)+voltriangle(ie)/12.0
+    enddo !jj
+    enddo
+  enddo
 
   do i=1,np
     lump_ice_matrix(i)=sum(ice_matrix(0:nnp(i),i))
