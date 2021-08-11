@@ -2,6 +2,7 @@ message(STATUS "In Utility/Grid_Scripts")
 
 add_executable( cpp_bp cpp_bp.f90)
 add_executable( cpp cpp.f90)
+add_executable( arctic_stereo arctic_stereo.f90)
 add_executable( grid_spring grid_spring.f90)
 add_executable( grid_subsampler grid_subsampler.f)
 add_executable( interpolate_depth_structured2 interpolate_depth_structured2.f90)

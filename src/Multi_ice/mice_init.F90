@@ -206,7 +206,7 @@ subroutine ice_init
           indx=m; exit
         endif
       enddo !m
-      if(indx==0) call parallel_abort('STEP: failed to find (9.1)')
+      if(indx==0) call parallel_abort('MICE_INIT: failed to find (9.1)')
       ice_matrix(indx,i)=ice_matrix(indx,i)+voltriangle(ie)/12.0
     enddo !jj
     enddo
