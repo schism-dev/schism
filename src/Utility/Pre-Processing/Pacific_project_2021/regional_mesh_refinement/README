@@ -1,0 +1,1 @@
+This folder contains regional mesh refinements for specific priority islands and locations within the Pacific Basin. Basin scale meshes are named in reference to the basin scale mesh to which regional refinements were added (e.g. new16_TLFiji.map adds Timor Leste and Fiji to the new16.map in the main Pacific_project_2021 folder)
