@@ -428,10 +428,8 @@
          temp(i)=-9999
       enddo
       open(15,file='msource.th')
-      do i=1,ntime
-      write(15,'(50000F15.3)')tstep(i),(temp(k),k=1,nso),(salt(k),k=1,nso)
-     
-      enddo
+      write(15,'(50000F15.3)')tstep(1),(temp(k),k=1,nso),(salt(k),k=1,nso)
+      write(15,'(50000F15.3)')tstep(ntime),(temp(k),k=1,nso),(salt(k),k=1,nso)
 
 
 
