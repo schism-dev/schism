@@ -1,4 +1,5 @@
-!lessons: (1) do NOT change the vars being sednt/recv while send/recv is on-going to avoid mem corruption.
+!lessons: (1) do NOT change the vars being sednt/recv while send/recv is on-going to avoid mem corruption. Try copying 
+!             to another var.
 ! mpif90 -cpp -O2 -mcmodel=medium -assume byterecl -g -traceback -o test_io test_io.F90
   program test_io
   implicit none
@@ -15,8 +16,8 @@
   integer,allocatable :: srqst(:),rrqst(:)
 
   real*8 :: dt,tmp,tmp_gb,tmp1
-  real*8 :: work(1000), ar1(nvrt,np),ar2(nvrt,np),ar3(nvrt,np)
-  real*8, allocatable :: ar1_gb(:,:,:),ar2_gb(:,:,:)
+  real*8 :: work(1000), ar1(nvrt,np),ar2(nvrt,np)
+  real*8, allocatable :: ar1_gb(:,:,:),ar2_gb(:,:,:),ar3(:,:,:)
 
   CALL MPI_Init(ierr)
 
@@ -59,7 +60,7 @@
     if(noutvars>nscribes) call mpi_abort(comm_schism,'>nscribes',ierr)
 
     !allocate(srqst(nscribes),sstat(MPI_STATUS_SIZE,nscribes),stat=i)
-    allocate(srqst(noutvars),stat=i)
+    allocate(srqst(noutvars),ar3(nvrt,np,noutvars),stat=i)
     if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
     !Init
     srqst(:)=MPI_REQUEST_NULL
@@ -77,16 +78,15 @@
     do it=1,nsteps
       print*, 'Doing step ',it,myrank,comm,myrank_schism,nproc
 
-      ar3=0.d0
 !WARNING: cannot compute arrays while the send is still on-going
 !      do j=1,noutvars
 !        !Make sure the previous send is finished
 !        call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
 !      enddo !j
 
-      call mpi_waitall(noutvars,srqst,MPI_STATUSES_IGNORE,ierr)
+!      call mpi_waitall(noutvars,srqst,MPI_STATUSES_IGNORE,ierr)
       !In btw output steps, srqst is NULL, but reset just in case
-      srqst=MPI_REQUEST_NULL
+!      srqst=MPI_REQUEST_NULL
 
       do i=1,np
         do k=1,nvrt
@@ -98,14 +98,20 @@
 !      call mpi_barrier(comm,ierr)
       
       if(mod(it,nspool)==0) then
-
         do j=1,noutvars
+
           print*, 'Sending to rank',nproc_schism-j,' from rank:',myrank_schism,it
 
           if(j==1) then
-            call mpi_isend(ar1,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
+            !Make sure the previous send is finished
+            call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+            !Copy send array to allow continuation of computation next step
+            ar3(:,:,j)=ar1
+            call mpi_isend(ar3(:,:,j),np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
           else
-            call mpi_isend(ar2,np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
+            call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
+            ar3(:,:,j)=ar2
+            call mpi_isend(ar3(:,:,j),np*nvrt,MPI_REAL8,nproc_schism-j,100+j,comm_schism,srqst(j),ierr)
           endif
 !          call mpi_wait(srqst(j),MPI_STATUS_IGNORE,ierr)
           !print*, 'Sent to rank',nproc_schism-j,' from rank:',myrank_schism,it
