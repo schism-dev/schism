@@ -100,7 +100,7 @@ subroutine read_cosine_param
   endif
 
   !read in station info. 
-  if(iout_cosine==1) call read_cosine_stainfo
+  if(iout_cosine/=0) call read_cosine_stainfo
 
   !read bottom grazing information
   if(ibgraze==1) then
@@ -183,22 +183,22 @@ end subroutine read_cosine_param
 
 subroutine read_cosine_stainfo
 !---------------------------------------------------------------------------
-!CoSiNE outputs
+!read CoSiNE station 
 !---------------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode,ielg, &
-      & in_dir,out_dir,len_in_dir,len_out_dir,ics,pi,rearth_eq,ne_global,np_global
+      & in_dir,out_dir,len_in_dir,len_out_dir,ne_global,np_global
   use schism_msgp, only : myrank,nproc,comm,parallel_abort,parallel_barrier, &
       & itype,rtype
   use cosine_misc, only : pt_in_poly
-  use cosine_mod, only : nvar,dvar,nsta_lc,nsta,sie,sid,sdep,nstas,displ,sids,dvars
+  use cosine_mod, only : dg,dl,mval
   implicit none
   include 'mpif.h'
 
   !local variables
-  integer :: i,j,m,id,irank,istat,inside,nodel(3),ierr,negb,npgb
+  integer :: i,j,m,id,irank,istat,inside,nodel(3),ierr,negb,npgb,nsta
   real(rkind) :: rtmp,xtmp,ytmp,x(4),y(4),arco(3)
-  integer,allocatable :: ista(:),iep(:),i34gb(:),elnodegb(:,:),sid_gb(:)
-  real(rkind), allocatable :: sx(:),sy(:),sz(:),xgb(:),ygb(:)
+  integer,allocatable :: i34gb(:),elnodegb(:,:),ista(:),iep(:)
+  real(rkind), allocatable :: xgb(:),ygb(:),z(:)
 
   !read grid and station information on myrank=0
   if(myrank==0) then
@@ -215,347 +215,348 @@ subroutine read_cosine_stainfo
     !read station info. 
     open(31,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
     read(31,*); read(31,*)nsta
-    allocate(sx(nsta),sy(nsta),sz(nsta),ista(nsta),iep(nsta),sids(nsta), &
-           & nstas(nproc),displ(nproc),dvars(nvar),stat=istat)
-    if(istat/=0) call parallel_abort('failed to alloc. sx')
-    do i=1,nsta; read(31,*)j,sx(i),sy(i),sz(i); enddo
+    allocate(dg%x(nsta),dg%y(nsta),dg%z(nsta),dg%nstas(nproc),dg%sids(nsta), &
+           & dg%displ(nproc),dg%iep(nsta),ista(nsta),iep(nsta),z(nsta),stat=istat)
+    if(istat/=0) call parallel_abort('failed to alloc. dcosine%x')
+    do i=1,nsta; read(31,*)j,dg%x(i),dg%y(i),dg%z(i); enddo
     close(31)
   
     !find parent element
-    ista=0; iep=-1
+    ista=0; dg%iep=-1
     do m=1,nsta
       do i=1,ne_global
         x(1:i34gb(i))=xgb(elnodegb(1:i34gb(i),i))
         y(1:i34gb(i))=ygb(elnodegb(1:i34gb(i),i))
-        call pt_in_poly(i34gb(i),x(1:i34gb(i)),y(1:i34gb(i)),sx(m),sy(m),inside,arco,nodel)
+        call pt_in_poly(i34gb(i),x(1:i34gb(i)),y(1:i34gb(i)),dg%x(m),dg%y(m),inside,arco,nodel)
         if(inside==1) then
           ista(m)=1 
-          iep(m)=i
+          dg%iep(m)=i
         endif !if
         if(ista(m)==1) exit
       enddo !i
     enddo !m
 
-    deallocate(ista,i34gb,elnodegb,xgb,ygb,sx,sy)
+    deallocate(i34gb,elnodegb,xgb,ygb)
   endif !if(myrank==0)
 
-  !boradcast station information
+  !boradcast global station information
   call mpi_bcast(nsta,1,itype,0,comm,ierr) 
-  if(.not.allocated(iep)) then
-     allocate(iep(nsta),sz(nsta),stat=istat)
+  if(.not.allocated(dg%iep)) then
+     allocate(dg%iep(nsta),dg%z(nsta),stat=istat)
      if(istat/=0) call parallel_abort('failed to alloc. iep')
   endif  
-  call mpi_bcast(iep,nsta,itype,0,comm,ierr) 
-  call mpi_bcast(sz,nsta,rtype,0,comm,ierr) 
+  call mpi_bcast(dg%iep,nsta,itype,0,comm,ierr) 
+  call mpi_bcast(dg%z,nsta,rtype,0,comm,ierr) 
+  dg%nsta=nsta
+  call parallel_barrier 
 
-  !compute local nsta,sid,sie
+  !compute local nsta,sid,iep
   do m=1,2
     !initilize
     if(m==2) then
-      allocate(sdep(nsta_lc),sie(nsta_lc),sid(nsta_lc),sid_gb(nsta_lc),dvar(nvar),stat=istat) 
+      allocate(dl%z(nsta),dl%iep(nsta),stat=istat) 
       if(istat/=0) call parallel_abort('failed to alloc. sdep')
     endif
 
     !check each station pt in local domain
-    nsta_lc=0
-    do j=1,nsta
+    nsta=0
+    do j=1,dg%nsta
       do i=1,ne
-        if(ielg(i)==iep(j)) then
-          nsta_lc=nsta_lc+1
+        if(ielg(i)==dg%iep(j)) then
+          nsta=nsta+1
           if(m==1) exit
-          sdep(nsta_lc)=sz(j)
-          sie(nsta_lc)=i
-          sid_gb(nsta_lc)=j
+          dl%z(nsta)=dg%z(j)
+          dl%iep(nsta)=dg%iep(j)
         endif 
       enddo !i
     enddo !j
-
-    !find the local index for each station in local domain
-    if(m==2) then
-      sid=0; id=0
-      do j=1,ne
-        do i=1,nsta_lc
-          if(sie(i)==j) then
-            id=id+1
-            sid(id)=i
-          endif
-        enddo
-      enddo
-    endif !if
   enddo!m
+  dl%nsta=nsta
 
-  !write(361+myrank,*) sie
-  !call parallel_barrier
-  !stop
-
-  !collect nsta_lc
-  call mpi_gather(nsta_lc,1,itype,nstas,1,itype,0,comm,ierr)
-  if(ierr/=MPI_SUCCESS) call parallel_abort('failed in gather nsta_lc')
+  !collect local nsta and iep,z
+  call mpi_gather(dl%nsta,1,itype,dg%nstas,1,itype,0,comm,ierr)
+  if(ierr/=MPI_SUCCESS) call parallel_abort('failed in gather local nsta')
   if(myrank==0) then
-    displ=0
+    dg%displ=0
     do i=2,nproc
-      displ(i)=displ(i-1)+nstas(i-1)
+      dg%displ(i)=dg%displ(i-1)+dg%nstas(i-1)
     enddo
   endif
-  call mpi_gatherv(sid_gb,nsta_lc,itype,sids,nstas,displ,itype,0,comm,ierr)
+  call mpi_gatherv(dl%iep,dl%nsta,itype,iep,dg%nstas,dg%displ,itype,0,comm,ierr)
+  call mpi_gatherv(dl%z,dl%nsta,rtype,z,dg%nstas,dg%displ,rtype,0,comm,ierr)
 
-  deallocate(iep,sid_gb,sz)
+  !compute the indices of local iep
+  if(myrank==0) then
+    ista=0
+    do i=1,dg%nsta
+      do j=1,dg%nsta
+        if(ista(j)==1) cycle 
+        if(iep(i)==dg%iep(j) .and. abs(z(i)-dg%z(j))<mval) then
+          dg%sids(i)=j; ista(j)=1; exit
+        endif
+      enddo
+    enddo
+
+    deallocate(ista,z,iep)
+  endif
+
 end subroutine read_cosine_stainfo
 
-subroutine cosine_output(vid,id,varname,ndata_lc,rarray,imode)
-  use schism_glbl, only : rkind,errmsg,out_dir,len_out_dir
+subroutine cosine_output(imode,id,varname,ndim,rarray)
+!---------------------------------------------------------------------------
+!CoSiNE station outputs
+!imode=0: for local rank to initialize and store local diagnostic variables
+!         id: the station index 
+!         varname: variable name
+!         ndim: number of variable dimensions
+!         rarray: variable values
+!imode=1: for myrank=0 to initialize and store all diagnostic variables
+!---------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg,out_dir,len_out_dir,ihot
   use schism_msgp, only : myrank,nproc,comm,parallel_abort,parallel_barrier, &
       & itype,rtype
-  use cosine_mod, only: nvar,dcosine,dvar,dvars,nsta_lc,nsta,nstas,ndata_gb,istat_cosine,& 
-      & sids,displ
+  use cosine_mod, only: dl,dg,dlv,dgv,cosine_diagnostic_variable
   use netcdf
   implicit none
   include 'mpif.h'
   
   integer :: stype=MPI_CHARACTER
-  integer,intent(in) :: imode,vid,id
+  integer,intent(in) :: imode,id
   character(*),intent(in) :: varname
-  integer,intent(in) :: ndata_lc
+  integer,intent(in) :: ndim
   real(rkind),dimension(*),intent(in) :: rarray
  
   !local variables 
-  integer :: i,j,m,n,istat,ierr
-  integer :: iret,ncid,ndim,time_dim,nsta_dim
-  integer,allocatable :: ndata(:),ndatas(:),dims(:),var_dims(:)
-  real(rkind),allocatable :: swild(:),swild_gb(:) 
-  character(len=30) :: stmp
+  integer :: i,j,m,n,istat,iflag,ierr,id_x,id_y,id_z,id_iep
+  integer :: ndim_lc,ndim_nc,time_dim,nsta_dim,ncid,iret
+  integer,allocatable :: ndim_gb(:),dims_nc(:),var_dims_nc(:)
+  character(len=30) :: varname_lc
   character(len=30), allocatable :: varname_gb(:)
+  real(rkind),allocatable :: swild_lc(:),swild_gb(:) 
+  type(cosine_diagnostic_variable), pointer :: dtv,drv
+  logical :: lexist
 
+  !1). initilize local diagnotic variable; 2) save variable values
   if(imode==0) then
-    !allocate variables 
-    if(dvar(vid)%istat==0) then
-       dvar(vid)%istat=1
-
-       dvar(vid)%ndata=ndata_lc
-       dvar(vid)%varname=varname 
-       allocate(dvar(vid)%data(ndata_lc,nsta_lc),stat=istat)
-       if(istat/=0) call parallel_abort('failed in alloc. dvar(vid)%data')
+    iflag=0
+    if(associated(dlv)) then
+      !dlv exists; search dlv for the variable
+      dtv=>dlv
+      do while(.True.)
+        if(.not. associated(dtv)) exit
+        if(trim(adjustl(dtv%varname)) .eq. trim(adjustl(varname))) then
+          dtv%data(:,id)=rarray(1:ndim) !if variable found
+          iflag=1; exit
+        endif
+        drv=>dtv; dtv=>dtv%next
+      enddo
     endif
 
-    !save variable values 
-    dvar(vid)%data(:,id)=rarray(1:ndata_lc)
+    !varable not found 
+    if(iflag==0) then
+      !initialize new variable
+      allocate(dtv,stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. dtv')
+      if(associated(dlv)) drv%next=>dtv
+      if(.not. associated(dlv)) dlv=>dtv
+      
+      dtv%ndim=ndim
+      dtv%varname=varname
+      allocate(dtv%data(ndim,dl%nsta),stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. dtv%data')
+      dtv%data(:,id)=rarray(1:ndim)
+
+      dl%nvar=dl%nvar+1; dl%ndim=dl%ndim+ndim
+      if(trim(adjustl(varname)).eq.'temp') dl%istat=1
+    endif
+  
   elseif(imode==1) then
     !------------------------------------------------------------------------------ 
     !compute total datasize for each station, and initilize dvars
     !------------------------------------------------------------------------------ 
-    if(istat_cosine==0) then
-      istat_cosine=1
+    if(dg%istat==0) then
+      dg%istat=1
 
-      !compute dimensions
-      allocate(ndata(nvar),ndatas(nvar),varname_gb(nproc),dims(nvar),var_dims(nvar), stat=istat)
-      if(istat/=0) call parallel_abort('failed in alloc. ndata')
-      ndata=0; do i=1,nvar; ndata(i)=dvar(i)%ndata; enddo
-      call mpi_allreduce(ndata,ndatas,nvar,itype,MPI_MAX,comm,ierr)
-      ndata_gb=sum(ndatas)
+      !sync total nvar and ndim
+      call mpi_allreduce(dl%nvar,dg%nvar,1,itype,MPI_MAX,comm,ierr)
+      call mpi_allreduce(dl%ndim,dg%ndim,1,itype,MPI_MAX,comm,ierr)
 
-      !initialize dvars
-      ndim=0; dims=0
-      do i=1,nvar
-        call mpi_gather(dvar(i)%varname,30,stype,varname_gb,30,stype,0,comm,ierr)
-
-        if(myrank==0) then
-          !determine varname
-          do j=1,nproc
-            stmp=varname_gb(j)
-            if(len(trim(adjustl(stmp)))/=0) exit 
-          enddo 
-
-          !initilize dvars variables
-          if(ndatas(i)>0) then
-            dvars(i)%istat=1; dvars(i)%ndata=ndatas(i)
-            dvars(i)%varname=stmp
-            allocate(dvars(i)%data(ndatas(i),nsta),stat=istat)
-            if(istat/=0) call parallel_abort('failed in alloc. dvars')
-          endif
-
-          !find variables with ndata>1
-          if(ndatas(i)>1) then
-            istat=0
-            do j=1,ndim
-              if(dims(j)==ndatas(i)) istat=1
-            enddo
-            
-            !new dimension found
-            if(istat==0) ndim=ndim+1; dims(ndim)=ndatas(i)
-          endif
-        endif !myrank
-      enddo 
-
-      !create station output
       if(myrank==0) then
-        iret=nf90_create(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
-        dcosine%ncid=ncid
+        allocate(varname_gb(nproc),ndim_gb(nproc),dims_nc(dg%nvar),var_dims_nc(dg%nvar),stat=istat)
+        if(istat/=0) call parallel_abort('failed in alloc. varname_gb')
+        ndim_nc=0; dims_nc=0
+      endif
 
-        !define dimension
-        iret=nf90_def_dim(ncid,'time',NF90_UNLIMITED,time_dim)
-        iret=nf90_def_dim(ncid,'nstation',nsta,nsta_dim)
-        do i=1,ndim
-          write(stmp,*)dims(i)
-          iret=nf90_def_dim(ncid,trim(adjustl(stmp)),dims(i),var_dims(i))
-        enddo
+      !initialize dgv
+      if(associated(dlv)) dtv=>dlv
+      do i=1,dg%nvar
+        !get local ndim and varname
+        if(associated(dtv)) then
+          ndim_lc=dtv%ndim; varname_lc=dtv%varname
+          dtv=>dtv%next
+        else
+          ndim_lc=0; varname_lc=''
+        endif
 
-        !define variables
-        iret=nf90_def_var(ncid,'time',nf90_double,(/time_dim/),dcosine%varid)
-        do i=1,nvar
-          if(dvars(i)%ndata==1) then
-            iret=nf90_def_var(ncid,trim(adjustl(dvars(i)%varname)),nf90_FLOAT,(/time_dim,nsta_dim/),dvars(i)%varid)
-          elseif(dvars(i)%ndata>1) then
-            do j=1,ndim; if(dims(j)==dvars(i)%ndata) exit; enddo
-            iret=nf90_def_var(ncid,trim(adjustl(dvars(i)%varname)),nf90_FLOAT,(/time_dim,var_dims(j),nsta_dim/),dvars(i)%varid)
-          elseif(dvars(i)%ndata/=0) then
-            call parallel_abort('error in def cosine diagnostic variables')
+        !initialize dgv
+        call mpi_gather(ndim_lc,1,itype,ndim_gb,1,itype,0,comm,ierr)
+        call mpi_gather(varname_lc,30,stype,varname_gb,30,stype,0,comm,ierr)
+        if(myrank==0) then
+          if(i==1) then
+            allocate(drv,stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. drv')
+            dgv=>drv
+          else
+            allocate(drv%next,stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. drv%next')
+            drv=>drv%next
           endif
-        enddo
 
-        iret=nf90_enddef(ncid)
+          !determine/check global ndim and varname
+          ndim_lc=0; varname_lc=''
+          do j=1,nproc
+            if((varname_lc.eq.'').and.(varname_gb(j).ne.'')) varname_lc=varname_gb(j) 
+            if(ndim_lc==0 .and. ndim_gb(j)/=0) ndim_lc=ndim_gb(j) 
+
+            if((varname_lc.ne.'').and.(varname_gb(j).ne.'').and.(varname_lc.ne.varname_gb(j))) call parallel_abort('varname_lc: cosine') 
+            if(ndim_lc/=0 .and. ndim_gb(j)/=0 .and. ndim_lc/=ndim_gb(j)) call parallel_abort('ndim_lc: cosine') 
+          enddo
+          drv%ndim=ndim_lc; drv%varname=varname_lc
+          allocate(drv%data(ndim_lc,dg%nsta),stat=istat)
+          if(istat/=0) call parallel_abort('failed in alloc. drv%data')
+
+          !find variable with ndim>1
+          if(ndim_lc>1) then
+            istat=0
+            do j=1,ndim_nc
+              if(ndim_lc==dims_nc(j)) istat=1
+            enddo
+           
+            !new dimension found
+            if(istat==0) ndim_nc=ndim_nc+1; dims_nc(ndim_nc)=ndim_lc
+          endif
+        endif !if(myrank==0)
+
+      enddo !i=1,dg%nvar
+
+      !initialize station output file
+      if(myrank==0) then
+        inquire(file=trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),exist=lexist)
+        if(ihot==2 .and. lexist) then
+          iret=nf90_open(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),NF90_WRITE,ncid)
+          dg%ncid=ncid
+
+          !get varid 
+          iret=nf90_inq_varid(ncid,'time',dg%id_time)
+          iret=nf90_inquire_dimension(ncid,dg%id_time,len=dg%it); dg%it=dg%it+1
+
+          dtv=>dgv
+          do i=1,dg%nvar
+            iret=nf90_inq_varid(ncid,trim(adjustl(dtv%varname)),dtv%varid)
+            dtv=>dtv%next
+          enddo
+        else
+          iret=nf90_create(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
+          dg%ncid=ncid
+
+          !define dimension
+          iret=nf90_def_dim(ncid,'time',NF90_UNLIMITED,time_dim)
+          iret=nf90_def_dim(ncid,'nstation',dg%nsta,nsta_dim)
+          do i=1,ndim_nc
+            write(varname_lc,*)dims_nc(i)
+            iret=nf90_def_dim(ncid,trim(adjustl(varname_lc)),dims_nc(i),var_dims_nc(i))
+          enddo
+
+          !define variables
+          iret=nf90_def_var(ncid,'time',nf90_double,(/time_dim/),dg%id_time)
+          iret=nf90_def_var(ncid,'x',nf90_double,(/nsta_dim/),id_x)
+          iret=nf90_def_var(ncid,'y',nf90_double,(/nsta_dim/),id_y)
+          iret=nf90_def_var(ncid,'z',nf90_double,(/nsta_dim/),id_z)
+          iret=nf90_def_var(ncid,'ie',nf90_int,(/nsta_dim/),id_iep)
+
+          dtv=>dgv
+          do i=1,dg%nvar
+            if(dtv%ndim==1) then
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,nsta_dim/),dtv%varid)
+            elseif(dtv%ndim>1) then
+              do j=1,ndim_nc; if(dims_nc(j)==dtv%ndim) exit; enddo
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,var_dims_nc(j),nsta_dim/),dtv%varid)
+            endif
+            dtv=>dtv%next
+          enddo
+          iret=nf90_enddef(ncid)
+
+          !put x,y,z and iep
+          iret=nf90_put_var(dg%ncid,id_iep,dg%iep,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_x,dg%x,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_y,dg%y,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_z,dg%z,start=(/1/),count=(/dg%nsta/))
+        endif!ihot
+
+        deallocate(varname_gb,ndim_gb,dims_nc,var_dims_nc) 
       endif !myrank
-
-      deallocate(ndata,ndatas,varname_gb) 
-    endif !istat_cosine
+    endif !dg%istat==0
 
     !------------------------------------------------------------------------------ 
     !allocate data for storing all diagnostic values 
     !------------------------------------------------------------------------------ 
-    allocate(swild(ndata_gb*nsta_lc),stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. swild')
+    !check nvar and ndim
+    if(dl%nsta/=0) then
+      if(dl%nvar/=dg%nvar) call parallel_abort('dl%nvar/=dg%nvar')
+      if(dl%ndim/=dg%ndim) call parallel_abort('dl%ndim/=dg%ndim')
+    endif
+  
+    allocate(swild_lc(dl%ndim*dl%nsta),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. swild_lc')
     if(myrank==0) then
-      allocate(swild_gb(ndata_gb*nsta),stat=istat)
+      allocate(swild_gb(dg%ndim*dg%nsta),stat=istat)
       if(istat/=0) call parallel_abort('failed in alloc. swild_gb')
     endif
 
-    !assemble data 
-    swild=0.0; m=0 
-    do i=1,nsta_lc
-      do j=1,nvar
-        do n=1,dvar(j)%ndata
+    !assemble data on each rank 
+    swild_lc=0.0; m=0 
+    do i=1,dl%nsta
+
+      dtv=>dlv
+      do j=1,dl%nvar
+        do n=1,dtv%ndim
           m=m+1
-          swild(m)=dvar(j)%data(n,i)
+          swild_lc(m)=dtv%data(n,i)
         enddo !n
-      enddo !j=1,nvar
-    enddo !i=1,nsta_lc
+        dtv=>dtv%next
+      enddo !j=1,dl%nvar
+    enddo !i=1,dl%nsta
 
     !pass all data to myrank=0
-    call mpi_gatherv(swild,nsta_lc*ndata_gb,rtype, swild_gb, nstas*ndata_gb,displ*ndata_gb,rtype,0,comm,ierr)
+    call mpi_gatherv(swild_lc,dl%nsta*dl%ndim,rtype,swild_gb,dg%nstas*dg%ndim,dg%displ*dg%ndim,rtype,0,comm,ierr)
     if(myrank==0) then
       m=0
-      do i=1,nsta
-        do j=1,nvar
-          do n=1,dvars(j)%ndata
-            m=m+1; dvars(j)%data(n,sids(i))=swild_gb(m) 
+      do i=1,dg%nsta
+        dtv=>dgv
+        do j=1,dg%nvar
+          do n=1,dtv%ndim
+            m=m+1; dtv%data(n,dg%sids(i))=swild_gb(m) 
           enddo
-        enddo
-      enddo
+          dtv=>dtv%next
+        enddo !j1,dg%nvar
+      enddo !i=1,dg%nsta
 
       !write station output
-      iret=nf90_put_var(dcosine%ncid,dcosine%varid,(/dcosine%time/),start=(/dcosine%it/),count=(/1/))
-      do i=1,nvar
-        if(dvars(i)%ndata==1) then
-          iret=nf90_put_var(dcosine%ncid,dvars(i)%varid,dvars(i)%data(:,1),start=(/dcosine%it,1/),count=(/1,nsta/))
-        elseif(dvars(i)%ndata>1) then
-          iret=nf90_put_var(dcosine%ncid,dvars(i)%varid,dvars(i)%data(:,:),start=(/dcosine%it,1,1/),count=(/1,dvars(i)%ndata,nsta/))
+      iret=nf90_put_var(dg%ncid,dg%id_time,(/dg%time/),start=(/dg%it/),count=(/1/))
+      dtv=>dgv
+      do i=1,dg%nvar
+        if(dtv%ndim==1) then
+          iret=nf90_put_var(dg%ncid,dtv%varid,dtv%data(:,1),start=(/dg%it,1/),count=(/1,dg%nsta/))
+        elseif(dtv%ndim>1) then
+          iret=nf90_put_var(dg%ncid,dtv%varid,dtv%data(:,:),start=(/dg%it,1,1/),count=(/1,dtv%ndim,dg%nsta/))
         endif
+        dtv=>dtv%next
       enddo
-      iret=nf90_sync(dcosine%ncid) 
+      iret=nf90_sync(dg%ncid) 
+    endif !myrank
 
-    endif
-
-    deallocate(swild)
+    deallocate(swild_lc)
     if(myrank==0) deallocate(swild_gb)
   endif !imode
     
 end subroutine cosine_output
-
-!subroutine read_cosine_stainfo
-!!---------------------------------------------------------------------------
-!!output cosine parameters to check
-!!---------------------------------------------------------------------------
-!  use cosine_mod, only : nsta,ista,depsta,stanum,nspool_cosine
-!  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
-!      & in_dir,out_dir,len_in_dir,len_out_dir,ics,pi,rearth_eq
-!  use schism_msgp, only : myrank,nproc,parallel_abort
-!  use cosine_misc, only : pt_in_poly
-!  implicit none
-!
-!  !local variables
-!  integer,parameter :: maxsta=10000,maxl=100 !maximum station
-!  integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
-!  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(3),y(3),arco(3),depstai(maxl,ne)
-!  real(rkind) :: xtmp,ytmp
-!  character(len=4) :: fn
-!  logical :: lexist
-!
-!  !read station info.
-!  open(450,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
-!  read(450,*)
-!  read(450,*)nstation
-!  do i=1,nstation
-!    read(450,*)j,slx(i),sly(i),sdep(i) 
-!    if(ics==2) then
-!      xtmp=slx(i)*pi/180.0; ytmp=sly(i)*pi/180.0
-!      slx(i)=rearth_eq*cos(ytmp)*cos(xtmp)
-!      sly(i)=rearth_eq*cos(ytmp)*sin(xtmp)
-!    endif
-!  enddo
-!  close(450)
-!
-!  !alloc.
-!  allocate(ista(ne),stat=istat) 
-!  if(istat/=0) call parallel_abort('failure in alloc. ista')
-!
-!  !determine the elements with values to be checked
-!  id=0; ista=0; nstai=0;
-!  msta=-100; depstai=-9999
-!  do i=1,ne
-!    iflag=0
-!    do j=1,nstation
-!      x=xnd(elnode(1:i34(i),i))
-!      y=ynd(elnode(1:i34(i),i))
-!      call pt_in_poly(i34(i),x,y,slx(j),sly(j),inside,arco,nodel)
-!      if(inside==1) then
-!        if(ista(i)==0) then
-!          id=id+1
-!          ista(i)=id
-!        endif
-!        nstai(id)=nstai(id)+1
-!        depstai(nstai(id),id)=sdep(j)
-!        stanumi(nstai(id),id)=j
-!        msta=max(msta,nstai(id))
-!      endif 
-!    enddo !j
-!  enddo !i
-!  mid=id !number of elements
-!
-!  if(mid==0) return 
-!
-!  !alloc.
-!  allocate(nsta(mid),depsta(msta,mid),stanum(msta,mid),stat=istat) 
-!  if(istat/=0) call parallel_abort('failure in alloc. nsta')
-!
-!  nsta=0; depsta=-9999
-!  do i=1,mid
-!    nsta(i)=nstai(i)
-!    do j=1,nsta(i)
-!      depsta(j,i)=depstai(j,i)
-!      stanum(j,i)=stanumi(j,i)
-!    enddo
-!  enddo
-!
-!  !open a station output file
-!  write(fn,'(i4.4)')myrank
-!  inquire(file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',exist=lexist)
-!  if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
-!    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',status='replace')
-!    write(451)sum(nsta),dt*nspool_cosine
-!  elseif(ihot==2.and.lexist) then
-!    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',access='append',status='old')
-!  else
-!    call parallel_abort('unknown ihot, CoSiNE')
-!  endif
-!
-!  return
-!end subroutine read_cosine_stainfo

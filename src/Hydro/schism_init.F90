@@ -5053,9 +5053,6 @@
 !     singularity there (wind)
       if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
 
-      if(myrank==0) write(16,*)'start init multi ice...'
-      call ice_init
-      if(myrank==0) write(16,*)'done init multi ice...'
 #endif /*USE_MICE*/
 
 #ifdef USE_ICE
@@ -5785,7 +5782,7 @@
             if(tr_nd0(1,k,i)<tf) tr_nd0(1,k,i)=tf         !reset temp. below freezing temp.  
           enddo
         enddo
-
+        
         lice_free_gb=.false.
         t_oi(:)=0
         fresh_wa_flux(:)=0
@@ -6065,7 +6062,7 @@
       etaic=eta2
 
 !...  Reset nsteps_from_cold and cumsum_eta to avoid the former being too large
-      if(nsteps_from_cold*dt/86400.d0>1.d0) then !use 1 yr
+      if(nsteps_from_cold*dt/86400.d0>365.d0) then !use 1 yr
         nsteps_from_cold=0; cumsum_eta=0.d0
       endif
 
@@ -6115,6 +6112,12 @@
 #ifdef USE_PETSC
       call init_petsc
 #endif 
+
+#ifdef USE_MICE
+      if(myrank==0) write(16,*)'start init multi ice...'
+      call ice_init
+      if(myrank==0) write(16,*)'done init multi ice...'
+#endif
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 
