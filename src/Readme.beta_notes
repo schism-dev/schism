@@ -495,6 +495,7 @@ git versions:
 (125) a9f8f6c (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
                               fro large core counts.
 (126) ab46def (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
+(127) 70db927 (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);

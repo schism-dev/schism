@@ -1929,7 +1929,7 @@ subroutine aquire_hgrid(full_aquire)
       sframe(1,2,j)=-sframe(2,1,j)
       sframe(2,2,j)=sframe(1,1,j)
     else !lat/lon
-      !zs axis with help from local ll frame
+      !First compute zs axis with help from local ll frame
       call compute_ll(xcj(j),ycj(j),zcj(j),ar1,ar2)
       !1: zonal axis; 2: meridional axis; 3: outward of ellipsoid
       swild(1,1)=-sin(ar1)
@@ -1947,7 +1947,7 @@ subroutine aquire_hgrid(full_aquire)
      &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j))
 
 
-      !ys axis
+      !ys axis: local tangential dir
       ar1=xnd(n2)-xnd(n1)
       ar2=ynd(n2)-ynd(n1)
       ar3=znd(n2)-znd(n1)
