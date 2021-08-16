@@ -329,7 +329,7 @@ module schism_glbl
   real(rkind),save,allocatable :: zs(:,:)         ! z-coord. (local frame - vertical up)
   !Transformation tensor for side frame: sframe(i,j,isd)
   ! where j is the axis id, i is the component id, isd is the local side id (aug.)
-  ! For ics=1, only sframe(1:2,1:2,isd) are used. In all cases, x-axis is from adjacent elem 1 to 2.
+  ! For ics=1, only sframe(1:2,1:2,isd) are used. In all cases, x-axis is from adjacent elem 1 to 2 (i.e. local normal dir).
   real(rkind),save,allocatable :: sframe(:,:,:)
   !cos/sin of side normals. If ics=1, these are same as sframe(1:2,1,isd)
   !If ics=2, these are product of sframe(:,1,:) and local lat/lon frame
