@@ -375,6 +375,12 @@
             unisi_nwm(nsi)=sink_seg(i) !NWM feature ID
           endif
         enddo
+        if(sink_bnd(n_sink-1).ne.sink_bnd(n_sink)) then !check the last sink elem
+           nsi=nsi+1
+           unisi_ele(nsi)=sink_bnd(n_sink)
+           unisi_nwm(nsi)=sink_seg(n_sink)
+        endif
+
         allocate(elesi_uni(nsi),nwmsi_uni(nsi))
         do i=1,nsi
           elesi_uni(i)=unisi_ele(i) !element id is unique now
@@ -400,6 +406,12 @@
             uniso_nwm(nso)=source_seg(i)
           endif
         enddo
+        if(source_bnd(n_source-1).ne.source_bnd(n_source)) then !check the last bnd element
+           nso=nso+1
+           uniso_ele(nso)=source_bnd(n_source)
+           uniso_nwm(nso)=source_seg(n_source)
+        endif
+
         allocate(eleso_uni(nso),nwmso_uni(nso))
         do i=1,nso
           eleso_uni(i)=uniso_ele(i) !element id is unique now
@@ -557,6 +569,12 @@
              dup=0
            endif
          enddo !j
+         if(source_bnd(n_source-1).ne.source_bnd(n_source)) then
+           nso=nso+1
+           SF_so(i,nso)=dup+sflow(source_seg(n_source))
+           dup=0
+         endif
+
        else
          SF_so(1,1)=0
        endif
@@ -577,6 +595,11 @@
              dup=0
            endif
          enddo !j
+         if(sink_bnd(n_sink-1).ne.sink_bnd(n_sink)) then
+           nsi=nsi+1
+           SF_si(i,nso)=dup+sflow(sink_seg(n_sink))
+           dup=0
+         endif
        else
          SF_si(1,1)=0
        endif
