@@ -59,7 +59,6 @@
     noutvars=2
     if(noutvars>nscribes) call mpi_abort(comm_schism,'>nscribes',ierr)
 
-    !allocate(srqst(nscribes),sstat(MPI_STATUS_SIZE,nscribes),stat=i)
     allocate(srqst(noutvars),ar3(nvrt,np,noutvars),stat=i)
     if(i/=0) call mpi_abort(comm_schism,'alloc(1)',ierr)
     !Init

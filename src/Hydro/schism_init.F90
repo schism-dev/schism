@@ -6051,9 +6051,9 @@
       if(ihot<=1) ifile=1 !reset output file #
       if(nc_out>0) call fill_nc_header(0)
 
-#ifdef SINGLE_NETCDF_OUTPUT
-      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
-#endif
+!#ifdef SINGLE_NETCDF_OUTPUT
+!      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
+!#endif
 
       if(myrank==0) write(16,'(a)')'Done initializing outputs'
       
@@ -6133,6 +6133,20 @@
      
       !Set global time stamp
       time_stamp=iths_main*dt
+
+!...  Send basic time info to scribes
+!new35: add hot and other outputs
+      noutvars=sum(iof_hydro) 
+      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(myrank==0) then 
+        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
+        do i=1,nscribes
+          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
+          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
+          call mpi_send(noutvars,1,itype,nproc_schism-i,102,comm_schism,ierr)
+        enddo !i
+      endif !myrank_schism
+
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------

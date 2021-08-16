@@ -304,7 +304,7 @@ endif
 OBJS := $(OBJS) grid_subs.o hydraulic_structures.o schism_init.o \
         schism_step.o schism_finalize.o bktrk_subs.o solver_subs.o \
         misc_subs.o transport_TVD.o transport_TVD_imp.o \
-        sflux_9c.o lap.o single_netcdf.o
+        sflux_9c.o lap.o
 
 ifdef USE_SIMPLE_WIND
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_SIMPLE_WIND

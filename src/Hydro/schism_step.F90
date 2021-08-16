@@ -8909,7 +8909,7 @@
       endif !mod(it,nspool)==0 && nc_out>0
 #else /*SINGLE_NETCDF_OUTPUT*/
       IF (mod(it,nspool)==0) THEN
-        CALL NETCDF_SINGLE_OUTPUT(it)
+!        CALL NETCDF_SINGLE_OUTPUT(it)
       END IF
 #endif /*SINGLE_NETCDF_OUTPUT*/
 
