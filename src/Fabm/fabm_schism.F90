@@ -6,10 +6,11 @@
 ! core.
 !
 !> @author Richard Hofmeister
-!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Deborah Benkort <deborah.benkort@hzg.de>
-!> @author Jan Kossack <jan.kossack@hzg.de>
-!
+!> @author Carsten Lemmen <carsten.lemmen@hereon.de>
+!> @author Deborah Benkort <deborah.benkort@hereon.de>
+!> @author Jan Kossack <jan.kossack@hereon.de>
+!> @author Wang Zhenggui
+
 !> @copyright Copyright 2021 Helmholtz-Zentrum Hereon
 !> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
 !
@@ -69,7 +70,7 @@ module fabm_schism
   public :: fabm_schism_create_output_netcdf
   public :: fabm_schism_write_output_netcdf
   public :: fabm_schism_close_output_netcdf
-  public :: fabm_schism_read_param_from_yaml 
+  public :: fabm_schism_read_param_from_yaml
   public :: fabm_schism_read_param_2d
   public :: fabm_schism_read_additional_forcing
   !public :: rk
@@ -318,10 +319,10 @@ subroutine fabm_schism_init_model(ntracers)
   call fabm_schism_read_param_from_yaml('spm0',2,tmp_int,fs%params%spm0)
   if(fs%params%ispm==2) then !spm from SED3D model
 #ifndef USE_SED
-    call parallel_abort('ispm=2,FABM-SCHSIM need to turn on SED3D module')
-#endif 
+    call parallel_abort('ispm=2, FABM-SCHISM needs to turn on SED3D module')
+#endif
   elseif(fs%params%ispm==3) then !spm from input: time varying
-    open(481,file=in_dir(1:len_in_dir)//'SPM.th',status='old') !todo: change to *.nc format
+    open(481,file=in_dir(1:len_in_dir)//'SPM.th', status='old') !todo: change to *.nc format
   elseif(fs%params%ispm/=0 .and. fs%params%ispm/=1) then
     call parallel_abort('FABM-SCHISM: unknown ispm')
   endif
@@ -482,14 +483,14 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%spm(nvrt,nea))
   fs%spm=0.0_rk
-  if(fs%params%ispm==1) then 
+  if(fs%params%ispm==1) then
     call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
     do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
-  elseif(fs%params%ispm==2) then 
-    do n=1,ntrs(5)  
+  elseif(fs%params%ispm==2) then
+    do n=1,ntrs(5)
       fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
     enddo
-  elseif(fs%params%ispm==3) then 
+  elseif(fs%params%ispm==3) then
     call fabm_schism_read_additional_forcing(0.0_rkind)
   else
     fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
@@ -565,7 +566,7 @@ end subroutine fabm_schism_init_stage2
 
 !> Integrate the diagnostics
 !> Diagnostics that have the property output averaged need to be summed over the
-!> output timestep.  Since FABM version one, also automatic diagnostics, i.e. 
+!> output timestep.  Since FABM version one, also automatic diagnostics, i.e.
 !> sms and w of each state variable, and totals available.  We need to exclude
 !> them here, as those that do not have the %save  property don't have the get()
 !> function.  Optionally, we can configure FABM to output also those diagnostics
@@ -599,11 +600,11 @@ subroutine integrate_diagnostics(fs, timestep)
       !write(message,'(A,X,I2,X,A)') 'Integrating averaged interior diagnostic ', n,  &
       !  trim(fs%interior_diagnostic_variables(n)%short_name)
       !call driver%log_message(message)
-      
+
       fs%interior_diagnostic_variables(n)%data = fs%interior_diagnostic_variables(n)%data  &
         + (eff_timestep * fs%model%get_interior_diagnostic_data(n))
 #endif
-    endif    
+    endif
   end do
 
   do n=1,size(fs%horizontal_diagnostic_variables)
@@ -620,11 +621,11 @@ subroutine integrate_diagnostics(fs, timestep)
       !write(message,'(A,X,I2,X,A)') 'Integrating averaged horizontal diagnostic ', n,  &
       !  trim(fs%horizontal_diagnostic_variables(n)%short_name)
       !call driver%log_message(message)
-      
+
       fs%horizontal_diagnostic_variables(n)%data = fs%horizontal_diagnostic_variables(n)%data  &
         + (eff_timestep * fs%model%get_horizontal_diagnostic_data(n))
 #endif
-    endif    
+    endif
   end do
 
   fs%time_since_last_output = fs%time_since_last_output + eff_timestep
@@ -817,7 +818,7 @@ subroutine fabm_schism_do()
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
-        fs%layer_depth(k,i) = -(ze(k,i)+ze(k-1,i))/2.0 
+        fs%layer_depth(k,i) = -(ze(k,i)+ze(k-1,i))/2.0
       end do
     end if
   end do
@@ -1155,7 +1156,7 @@ end subroutine fabm_schism_read_horizontal_state_from_netcdf
 subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
   use schism_msgp, only: parallel_abort
   character(len=*),intent(in) :: ncfilename
-  
+
   !local variables
   integer :: iexist,varid,ncid,eid
   integer :: i,n,itmp,istat
@@ -1174,9 +1175,9 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
   if(itmp/=ne_global) call parallel_abort('FABM/SCHISM: elem/=ne_global in '//ncfilename)
 
   allocate(swild(ne_global),stat=istat)
-  if(istat/=0) call parallel_abort('FABM/SCHISM: failed in alloc. swild') 
+  if(istat/=0) call parallel_abort('FABM/SCHISM: failed in alloc. swild')
 
-  !read surface and bottom horizontal state  
+  !read surface and bottom horizontal state
   do n=1,fs%nvar_bot
     iexist=nf90_inq_varid(ncid,trim(fs%model%bottom_state_variables(n)%name),varid)
     if(iexist/=nf90_noerr) cycle
@@ -1186,7 +1187,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
     do i=1,nea
       fs%bottom_state(i,n)=swild(ielg(i))
     enddo
-  enddo 
+  enddo
 
   do n=1,fs%nvar_sf
     iexist=nf90_inq_varid(ncid,trim(fs%model%surface_state_variables(n)%name),varid)
@@ -1201,7 +1202,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
 
   call nccheck(nf90_close(ncid))
   deallocate(swild)
-    
+
 end subroutine fabm_schism_read_horizontal_state_from_hotstart
 
 subroutine fabm_schism_create_output_netcdf()
@@ -1462,6 +1463,7 @@ subroutine link_environmental_data(self, rc)
   !call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
   call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
 #ifdef USE_ICEBGC
   call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
@@ -1556,7 +1558,7 @@ subroutine fabm_schism_read_param_from_yaml(varname,vartype,ivar,rvar)
 
   !local variable
   integer :: i,itmp,loc,ieof
-  real(rkind) :: rtmp 
+  real(rkind) :: rtmp
   character(len=300) :: lstr
   logical :: lexist
 
@@ -1565,17 +1567,17 @@ subroutine fabm_schism_read_param_from_yaml(varname,vartype,ivar,rvar)
   !check whether fabm.yaml exist
   inquire(file=in_dir(1:len_in_dir)//'fabm.yaml',exist=lexist)
   if(.not. lexist) return
- 
-  !search 
+
+  !search
   open(31,file=in_dir(1:len_in_dir)//'fabm.yaml',status='old')
-  do 
+  do
     read(31,'(a)',iostat=ieof) lstr
-    if(ieof<0) exit 
-   
-    !find location of ":" 
+    if(ieof<0) exit
+
+    !find location of ":"
     loc=index(lstr,':')
-    if(loc==0) cycle 
-  
+    if(loc==0) cycle
+
     !check parameter name
     if(trim(adjustl(lstr(1:loc-1)))==varname) then
       if(vartype==1) read(lstr(loc+1:len(lstr)),*) itmp
@@ -1587,7 +1589,7 @@ subroutine fabm_schism_read_param_from_yaml(varname,vartype,ivar,rvar)
 
   if(itmp/=-99999) ivar=itmp
   if(rtmp/=-99999.0) rvar=rtmp
-  
+
 end subroutine fabm_schism_read_param_from_yaml
 
 subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
@@ -1599,9 +1601,9 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
 !    pvar:    variable for the parameter (element based)
 !    pvalue:  parameter value
 !Output:
-!    1). pvalue=-999:  read values in "varname.gr3", and assign to pvar 
-!    2). pvalue=-9999: read values in "varname.prop", and assign to pvar 
-!    3). pvalue=other const: assign const value (pvalue) to pvar 
+!    1). pvalue=-999:  read values in "varname.gr3", and assign to pvar
+!    2). pvalue=-9999: read values in "varname.prop", and assign to pvar
+!    3). pvalue=other const: assign const value (pvalue) to pvar
 !---------------------------------------------------------------------
   implicit none
   character(len=*),intent(in) :: varname
@@ -1644,7 +1646,7 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
       endif
     enddo
 
-  else !constant value 
+  else !constant value
     do i=1,nea
        pvar(i)=pvalue
     enddo
@@ -1653,19 +1655,19 @@ end subroutine fabm_schism_read_param_2d
 
 subroutine fabm_schism_read_additional_forcing(time)
 !---------------------------------------------
-!read time varying forcing 
+!read time varying forcing
 !---------------------------------------------
   implicit none
   real(rkind), intent(in) :: time
-  
+
   !local variables
   integer :: i,ie
   real(rkind) :: rtmp,swild(ne_global)
-  
+
   !read SPM input
   if(fs%params%ispm==3 .and. fs%time_fabm(1)<time) then
     do while(fs%time_fabm(1)<time)
-       read(481,*)rtmp,(swild(i),i=1,ne_global)       
+       read(481,*)rtmp,(swild(i),i=1,ne_global)
        if(rtmp>=time) then
          fs%time_fabm(1)=rtmp
          do ie=1,ne_global
