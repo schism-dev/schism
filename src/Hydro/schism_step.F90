@@ -8129,7 +8129,7 @@
 !        endif
 !      enddo !i
 
-#ifndef SINGLE_NETCDF_OUTPUT
+!#ifndef SINGLE_NETCDF_OUTPUT
       if(nc_out>0.and.mod(it,nspool)==0) then
         call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
@@ -8907,11 +8907,11 @@
 
         !write(12,*)'id_out_var=',it,id_out_var(1:noutput)
       endif !mod(it,nspool)==0 && nc_out>0
-#else /*SINGLE_NETCDF_OUTPUT*/
-      IF (mod(it,nspool)==0) THEN
+!#else /*SINGLE_NETCDF_OUTPUT*/
+!      IF (mod(it,nspool)==0) THEN
 !        CALL NETCDF_SINGLE_OUTPUT(it)
-      END IF
-#endif /*SINGLE_NETCDF_OUTPUT*/
+!      END IF
+!#endif /*SINGLE_NETCDF_OUTPUT*/
 
 #ifdef USE_FABM
       if(mod(it,nspool)==0) then

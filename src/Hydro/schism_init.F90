@@ -150,7 +150,8 @@
                 &jblock,jface,isd,n1,n2,n3,ndgb,ndgb1,ndgb2,irank, &
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
-                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now,iadjust_mass_consv0(natrm)
+                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
+                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50)
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -4301,6 +4302,47 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
+!...  Send basic time info to scribes
+!new35: add hot and other outputs
+      noutvars=sum(iof_hydro) 
+      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(myrank==0) then 
+        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
+        do i=1,nscribes
+          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
+          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
+          call mpi_send(noutvars,1,itype,nproc_schism-i,102,comm_schism,ierr)
+          call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
+          call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
+          call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
+          call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
+          call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
+        enddo !i
+      endif !myrank=0
+
+!     Send subdomain info to last scribe (all compute ranks participate)
+      srqst3(:)=MPI_REQUEST_NULL !init
+      call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
+      call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
+      call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
+      call mpi_isend(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,srqst3(3),ierr) 
+
+      !Make sure index arrays are completely sent as others depend on them
+      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
+      srqst3(:)=MPI_REQUEST_NULL !init
+
+!!new35: xnd
+!      call mpi_send(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
+      call mpi_isend(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,srqst3(3),ierr) 
+!      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
+
+      !Check send status later to hide latency
+      nnonblock=3
+!      call mpi_waitall(50,srqst3(50),MPI_STATUS_IGNORE,ierr)
 
 !								   
 !*******************************************************************
@@ -6134,19 +6176,8 @@
       !Set global time stamp
       time_stamp=iths_main*dt
 
-!...  Send basic time info to scribes
-!new35: add hot and other outputs
-      noutvars=sum(iof_hydro) 
-      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
-      if(myrank==0) then 
-        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
-        do i=1,nscribes
-          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
-          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
-          call mpi_send(noutvars,1,itype,nproc_schism-i,102,comm_schism,ierr)
-        enddo !i
-      endif !myrank_schism
-
+!...  Catch up with non-block comm
+      call mpi_waitall(nnonblock,srqst3(nnonblock),MPI_STATUS_IGNORE,ierr)
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
