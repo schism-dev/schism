@@ -134,13 +134,13 @@
           ynd(iplg(1:np(i+1),i+1))=work(1:np(i+1))
           call mpi_recv(work,np(i+1),rtype,i,191,comm_schism,rrqst,ierr)
           dp(iplg(1:np(i+1),i+1))=work(1:np(i+1))
-!          call mpi_recv(iwork,np(i+1),itype,i,190,comm_schism,rrqst,ierr)
-!          kbp00(iplg(1:np(i+1),i+1))=iwork(1:np(i+1))
+          call mpi_recv(iwork,np(i+1),itype,i,190,comm_schism,rrqst,ierr)
+          kbp00(iplg(1:np(i+1),i+1))=iwork(1:np(i+1))
         enddo !i
 
         write(99,*)'x:',xnd
         write(99,*)'y:',ynd
-!        write(99,*)'kbp:',kbp00
+        write(99,*)'kbp:',kbp00
       endif !myrank_schism
    
       call mpi_bcast(iplg,np_max*nproc_schism,itype,nscribes-1,comm_scribe,ierr)

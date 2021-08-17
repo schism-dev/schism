@@ -4302,7 +4302,8 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
-!...  Send basic time info to scribes
+!...  Send basic time info to scribes. Make sure the send vars are not altered
+!     during non-block sends/recv
 !new35: add hot and other outputs
       noutvars=sum(iof_hydro) 
       if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
@@ -4334,15 +4335,15 @@
       srqst3(:)=MPI_REQUEST_NULL !init
 
 !!new35: xnd
-!      call mpi_send(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
       call mpi_isend(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,srqst3(1),ierr) 
       call mpi_isend(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,srqst3(2),ierr) 
       call mpi_isend(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,srqst3(3),ierr) 
-!      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
+      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
 
       !Check send status later to hide latency
-      nnonblock=3
-!      call mpi_waitall(50,srqst3(50),MPI_STATUS_IGNORE,ierr)
+      nnonblock=4
+      call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
+      print*, 'After send...',myrank,myrank_schism
 
 !								   
 !*******************************************************************
@@ -6177,7 +6178,7 @@
       time_stamp=iths_main*dt
 
 !...  Catch up with non-block comm
-      call mpi_waitall(nnonblock,srqst3(nnonblock),MPI_STATUS_IGNORE,ierr)
+!      call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
