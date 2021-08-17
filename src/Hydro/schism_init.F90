@@ -4326,6 +4326,7 @@
       call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
       call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
       call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
+
       call mpi_isend(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,srqst3(1),ierr) 
       call mpi_isend(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,srqst3(2),ierr) 
       call mpi_isend(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,srqst3(3),ierr) 
@@ -4343,7 +4344,7 @@
       !Check send status later to hide latency
       nnonblock=4
       call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
-      print*, 'After send...',myrank,myrank_schism
+!      print*, 'After send...',myrank,myrank_schism
 
 !								   
 !*******************************************************************

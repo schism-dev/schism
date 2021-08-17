@@ -27,7 +27,7 @@
     !Limit global vars to those essentials for communication, as scribe ranks do
     !not have access to other vars read in from .nml etc
     use schism_glbl, only : rkind,errmsg
-    use schism_msgp, only : comm_schism,comm_scribe,nproc_schism,nscribes, &
+    use schism_msgp, only : comm_schism,comm_scribe,nproc_schism,nproc_scribe,nscribes, &
   &myrank_scribe,myrank_schism,rtype,itype,parallel_abort
     use netcdf
     implicit none
@@ -65,12 +65,12 @@
 !      integer,intent(inout) :: varid
  
       character(len=1000) :: var_nm2
-      integer :: i,rrqst,ierr
-      integer,allocatable :: iwork(:)
+      integer :: i,rrqst,ierr,itmp
+      integer,allocatable :: iwork(:),rrqst2(:)
       real(rkind),allocatable :: work(:)
       
       nproc_compute=nproc_schism-nscribes
-      allocate(np(nproc_compute),ne(nproc_compute),ns(nproc_compute))
+      allocate(np(nproc_compute),ne(nproc_compute),ns(nproc_compute),rrqst2(nproc_compute))
 
       !Get basic info
       call mpi_recv(dt,1,rtype,0,100,comm_schism,rrqst,ierr)
@@ -83,17 +83,31 @@
       call mpi_recv(ne_global,1,itype,0,106,comm_schism,rrqst,ierr)
       call mpi_recv(ns_global,1,itype,0,107,comm_schism,rrqst,ierr)
 
-!      print*, 'Scribe ',myrank_scribe,myrank_schism,nproc_scribe
-!      print*, 'Scribe, basic info:',dt,nspool,noutvars,nvrt,np_global
+      print*, 'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
+      print*, 'Scribe, basic info:',dt,nspool,noutvars,nvrt,np_global
 
       !Last scribe receives subdomain info and then bcast
       if(myrank_schism==nproc_schism-1) then
-        !First 3 dimensions
-        do i=0,nproc_compute-1
-          call mpi_recv(np(i+1),1,itype,i,199,comm_schism,rrqst,ierr)
-          call mpi_recv(ne(i+1),1,itype,i,198,comm_schism,rrqst,ierr)
-          call mpi_recv(ns(i+1),1,itype,i,197,comm_schism,rrqst,ierr)
+        !First 3 dimensions. I don't understand why I had to use irecv on some
+        !systems
+        do i=1,nproc_compute
+          call mpi_irecv(itmp,1,itype,i-1,199,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          np(i)=itmp
         enddo !i
+
+        do i=1,nproc_compute
+          call mpi_irecv(itmp,1,itype,i-1,198,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          ne(i)=itmp
+        enddo !i
+
+        do i=1,nproc_compute
+          call mpi_irecv(itmp,1,itype,i-1,197,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          ns(i)=itmp
+        enddo !i
+
 !        write(99,*)'np:',np
 !        write(99,*)'ne:',ne
 !        write(99,*)'ns:',ns
@@ -114,28 +128,55 @@
       allocate(iplg(np_max,nproc_schism),ielg(ne_max,nproc_schism),islg(ns_max,nproc_schism))
       allocate(iwork(np_max),work(np_max),xnd(np_global),ynd(np_global),dp(np_global),kbp00(np_global))
       if(myrank_schism==nproc_schism-1) then
-        !Mapping index arrays first
-        do i=0,nproc_compute-1
-          call mpi_recv(iplg(1,i+1),np(i+1),itype,i,196,comm_schism,rrqst,ierr)
-          call mpi_recv(ielg(1,i+1),ne(i+1),itype,i,195,comm_schism,rrqst,ierr)
-          call mpi_recv(islg(1,i+1),ns(i+1),itype,i,194,comm_schism,rrqst,ierr)
- 
-          write(99,*)'iplg:',i,np(i+1),iplg(1:np(i+1),i+1)
-          write(99,*)'islg:',i,ns(i+1),islg(1:ns(i+1),i+1)
+        !Mapping index arrays first. Do not combine multiple into same loop
+        do i=1,nproc_compute
+          call mpi_irecv(iplg(1,i),np(i),itype,i-1,196,comm_schism,rrqst2(i),ierr)
+        enddo !i
+        call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)   
+
+        do i=1,nproc_compute
+          call mpi_irecv(ielg(1,i),ne(i),itype,i-1,195,comm_schism,rrqst2(i),ierr)
+        enddo !i
+        call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+      
+        do i=1,nproc_compute
+          call mpi_irecv(islg(1,i),ns(i),itype,i-1,194,comm_schism,rrqst2(i),ierr)
+        enddo !i
+        call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+      
+        write(99,*)'islg:',islg(1:ns(1),1)
+        write(99,*)'islg:',islg(1:ns(2),2)
+
+        !check local and global dims
+        do i=1,nproc_compute
+          if(maxval(iplg(1:np(i),i))>np_global.or.minval(iplg(1:np(i),i))<1) &
+     &call parallel_abort('scribe_init: overflow(1)')
+          if(maxval(ielg(1:ne(i),i))>ne_global.or.minval(ielg(1:ne(i),i))<1) &
+     &call parallel_abort('scribe_init: overflow(2)')
+          if(maxval(islg(1:ns(i),i))>ns_global.or.minval(islg(1:ns(i),i))<1) &
+     &call parallel_abort('scribe_init: overflow(3)')
         enddo !i
 
         !Other using index arrays
-        do i=0,nproc_compute-1
-          call mpi_recv(work,np(i+1),rtype,i,193,comm_schism,rrqst,ierr)
-          if(maxval(iplg(1:np(i+1),i+1))>np_global.or.minval(iplg(1:np(i+1),i+1))<1) &
-     &call parallel_abort('scribe_init: overflow(1)')
-          xnd(iplg(1:np(i+1),i+1))=work(1:np(i+1))
-          call mpi_recv(work,np(i+1),rtype,i,192,comm_schism,rrqst,ierr)
-          ynd(iplg(1:np(i+1),i+1))=work(1:np(i+1))
-          call mpi_recv(work,np(i+1),rtype,i,191,comm_schism,rrqst,ierr)
-          dp(iplg(1:np(i+1),i+1))=work(1:np(i+1))
-          call mpi_recv(iwork,np(i+1),itype,i,190,comm_schism,rrqst,ierr)
-          kbp00(iplg(1:np(i+1),i+1))=iwork(1:np(i+1))
+        do i=1,nproc_compute
+          call mpi_irecv(work,np(i),rtype,i-1,193,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          xnd(iplg(1:np(i),i))=work(1:np(i))
+        enddo !i
+        do i=1,nproc_compute
+          call mpi_irecv(work,np(i),rtype,i-1,192,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          ynd(iplg(1:np(i),i))=work(1:np(i))
+        enddo !i
+        do i=1,nproc_compute
+          call mpi_irecv(work,np(i),rtype,i-1,191,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          dp(iplg(1:np(i),i))=work(1:np(i))
+        enddo !i
+        do i=1,nproc_compute
+          call mpi_irecv(iwork,np(i),itype,i-1,190,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          kbp00(iplg(1:np(i),i))=iwork(1:np(i))
         enddo !i
 
         write(99,*)'x:',xnd
@@ -152,7 +193,7 @@
       call mpi_bcast(dp,np_global,rtype,nscribes-1,comm_scribe,ierr)
       call mpi_bcast(kbp00,np_global,itype,nscribes-1,comm_scribe,ierr)
  
-      deallocate(work,iwork)
+      deallocate(work,iwork,rrqst2)
     
       end subroutine scribe_init
 

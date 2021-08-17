@@ -1,6 +1,7 @@
 !lessons: (1) do NOT change the vars being sednt/recv while send/recv is on-going to avoid mem corruption. Try copying 
 !             to another var.
 ! mpif90 -cpp -O2 -mcmodel=medium -assume byterecl -g -traceback -o test_io test_io.F90
+! mpif90 -O3 -xSKYLAKE-AVX512 -mtune=skylake -fma -init=zero -align array64byte -finline-functions -o test_io test_io.F90
   program test_io
   implicit none
   include 'mpif.h'
