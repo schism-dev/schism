@@ -115,7 +115,7 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
