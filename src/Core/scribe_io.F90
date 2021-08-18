@@ -41,11 +41,13 @@
     &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4)
 
     integer,save :: nspool,noutvars,nc_out,nvrt,nproc_compute,np_global,ne_global,ns_global, &
-  &np_max,ne_max,ns_max,ncid_schism_io
+  &np_max,ne_max,ns_max,ncount_2dnode,ncount_3dnode,     ncid_schism_io
     real(rkind), save :: dt
 
-    integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:)
+    integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
+  &scribe_cat(:),itag_out(:),rrqst2(:)
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:)
+    real(rkind),save,allocatable :: var2dnode(:,:),var3dnode(:,:),var3dnode_gb(:,:)
     
     public :: scribe_init
     public :: scribe_step
@@ -54,10 +56,11 @@
     contains
 
 !===============================================================================
-      subroutine scribe_init
+      subroutine scribe_init(iths,ntime)
 !     Get basic info from compute ranks
       implicit none
    
+      integer, intent(out) :: iths,ntime
 !      character(len=*),intent(in) :: var_nm
 !      integer,intent(in) :: i23d,idim1,idim2
 !      real(rkind),intent(in) :: outvar1(idim1,idim2)
@@ -66,11 +69,12 @@
  
       character(len=1000) :: var_nm2
       integer :: i,rrqst,ierr,itmp
-      integer,allocatable :: iwork(:),rrqst2(:)
+      integer,allocatable :: iwork(:)
       real(rkind),allocatable :: work(:)
       
       nproc_compute=nproc_schism-nscribes
-      allocate(np(nproc_compute),ne(nproc_compute),ns(nproc_compute),rrqst2(nproc_compute))
+      allocate(np(nproc_compute),ne(nproc_compute),ns(nproc_compute),rrqst2(nproc_compute), &
+     &scribe_cat(nscribes),itag_out(nscribes))
 
       !Get basic info
       call mpi_recv(dt,1,rtype,0,100,comm_schism,rrqst,ierr)
@@ -82,9 +86,16 @@
       call mpi_recv(np_global,1,itype,0,105,comm_schism,rrqst,ierr)
       call mpi_recv(ne_global,1,itype,0,106,comm_schism,rrqst,ierr)
       call mpi_recv(ns_global,1,itype,0,107,comm_schism,rrqst,ierr)
+      call mpi_recv(ncount_2dnode,1,itype,0,108,comm_schism,rrqst,ierr)
+      call mpi_recv(ncount_3dnode,1,itype,0,109,comm_schism,rrqst,ierr)
+      call mpi_recv(scribe_cat,nscribes,itype,0,110,comm_schism,rrqst,ierr)
+      call mpi_recv(itag_out,nscribes,itype,0,111,comm_schism,rrqst,ierr)
+      call mpi_recv(iths,1,itype,0,112,comm_schism,rrqst,ierr)
+      call mpi_recv(ntime,1,itype,0,113,comm_schism,rrqst,ierr)
 
       print*, 'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
-      print*, 'Scribe, basic info:',dt,nspool,noutvars,nvrt,np_global
+      print*, 'Scribe, basic info:',dt,nspool,noutvars,nvrt,np_global,ncount_2dnode, &
+    &ncount_3dnode,itag_out,iths,ntime
 
       !Last scribe receives subdomain info and then bcast
       if(myrank_schism==nproc_schism-1) then
@@ -144,8 +155,8 @@
         enddo !i
         call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
       
-        write(99,*)'islg:',islg(1:ns(1),1)
-        write(99,*)'islg:',islg(1:ns(2),2)
+!        write(99,*)'islg:',islg(1:ns(1),1)
+!        write(99,*)'islg:',islg(1:ns(2),2)
 
         !check local and global dims
         do i=1,nproc_compute
@@ -179,9 +190,9 @@
           kbp00(iplg(1:np(i),i))=iwork(1:np(i))
         enddo !i
 
-        write(99,*)'x:',xnd
-        write(99,*)'y:',ynd
-        write(99,*)'kbp:',kbp00
+!        write(99,*)'x:',xnd
+!        write(99,*)'y:',ynd
+!        write(99,*)'kbp:',kbp00
       endif !myrank_schism
    
       call mpi_bcast(iplg,np_max*nproc_schism,itype,nscribes-1,comm_scribe,ierr)
@@ -193,19 +204,89 @@
       call mpi_bcast(dp,np_global,rtype,nscribes-1,comm_scribe,ierr)
       call mpi_bcast(kbp00,np_global,itype,nscribes-1,comm_scribe,ierr)
  
-      deallocate(work,iwork,rrqst2)
-    
+      deallocate(work,iwork)
+  
+!      if(myrank_schism==nproc_schism-2) write(98,*)'x:',xnd
+
+      !Alloc global output arrays for step    
+      if(ncount_2dnode>0) then
+        allocate(var2dnode(ncount_2dnode,np_max))
+        var2dnode(ncount_2dnode,np_max)=0.d0 !touch mem
+      endif 
+
+!      if(ncount_3dnode>0) then
+        allocate(var3dnode(nvrt,np_max),var3dnode_gb(nvrt,np_global))
+        var3dnode_gb(nvrt,np_global)=0.d0 !touch mem
+!      endif 
+
+!      call mpi_barrier(comm_scribe,ierr)
+      print*, 'finished scribe_init:',myrank_schism
+
       end subroutine scribe_init
 
+!===============================================================================
       subroutine scribe_step(it)
       implicit none
       integer,intent(in) :: it
 
+      integer :: i,j,k,m,rrqst,ierr
+
 !     Return if not output step
-      if(mod(it,nspool)/=0) return
+      if(nc_out==0.or.mod(it,nspool)/=0) return
+
+!      write(*,*)'Ready for I/O...',myrank_schism,it
+      if(myrank_schism==nproc_schism-1) then
+        do i=1,nproc_compute
+          !OK to fill partial arrays as long as respect column major
+          call mpi_irecv(var3dnode,np(i)*nvrt,rtype,i-1,200,comm_schism,rrqst,ierr)
+          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i))
+        enddo !i
+
+        write(97,*)'SSS:',it*dt
+        do i=1,np_global
+          write(97,*)i,real(xnd(i)),real(ynd(i)),real(var3dnode_gb(nvrt,i))
+        enddo !i
+      endif
+
+
+      if(0) then
+      do i=1,nproc_compute
+        select case(scribe_cat(myrank_scribe+1))
+          case(1)
+!            if(ncount_2dnode>0) then
+!              !Align column first; last dim may not fill
+!              call mpi_irecv(var2dnode,np(i)*ncount_2dnode,rtype,i-1,itag_out(myrank_scribe+1),comm_schism,rrqst,ierr)
+!              call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+!              do m=1,ncount_2dnode
+!                do j=1,np(i)
+!                  var2dnode_gb(iplg(1:np(j),i),m)=var2dnode(m,1:np(j))
+!                enddo !j
+!              enddo !m
+!            endif
+          case(2) !2D elem
+          case(3) !2D side
+          case(4) !3D node
+            if(ncount_3dnode>0) then
+              !Align column first; last dim may not fill
+!              call mpi_irecv(var3dnode,nvrt*np(i)*ncount_3dnode,rtype,i-1,itag_out(myrank_scribe+1),comm_schism,rrqst,ierr)
+!              call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+              do m=1,ncount_3dnode
+                do j=1,np(i)
+!                 var3dnode_gb(1:nvrt,iplg(1:np(j),i),m)=var3dnode(:,m,1:np(j))
+                enddo !j
+              enddo !m
+            endif
+
+          case(5) !3D elem
+          case(6) !3D side
+        end select
+      enddo !i=1,nproc_compute
+      endif !0
 
       end subroutine scribe_step
 
+!===============================================================================
       subroutine scribe_finalize
       implicit none
 

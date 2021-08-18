@@ -427,8 +427,10 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(210),iof_cos(20),iof_fib(5), &
-     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),stat=istat)
+     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),itag_out(nscribes), &
+     &scribe_cat(nscribes),srqst7(nscribes),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
+        srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
         !Array to index into global output file # for modules (only used by
         !single_netcdf.F90 and out of date)
@@ -4302,50 +4304,6 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
-!...  Send basic time info to scribes. Make sure the send vars are not altered
-!     during non-block sends/recv
-!new35: add hot and other outputs
-      noutvars=sum(iof_hydro) 
-      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
-      if(myrank==0) then 
-        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
-        do i=1,nscribes
-          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
-          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
-          call mpi_send(noutvars,1,itype,nproc_schism-i,102,comm_schism,ierr)
-          call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
-          call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
-          call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
-          call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
-          call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
-        enddo !i
-      endif !myrank=0
-
-!     Send subdomain info to last scribe (all compute ranks participate)
-      srqst3(:)=MPI_REQUEST_NULL !init
-      call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
-      call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
-      call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
-
-      call mpi_isend(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,srqst3(1),ierr) 
-      call mpi_isend(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,srqst3(2),ierr) 
-      call mpi_isend(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,srqst3(3),ierr) 
-
-      !Make sure index arrays are completely sent as others depend on them
-      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
-      srqst3(:)=MPI_REQUEST_NULL !init
-
-!!new35: xnd
-      call mpi_isend(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,srqst3(1),ierr) 
-      call mpi_isend(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,srqst3(2),ierr) 
-      call mpi_isend(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,srqst3(3),ierr) 
-      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
-
-      !Check send status later to hide latency
-      nnonblock=4
-      call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
-!      print*, 'After send...',myrank,myrank_schism
-
 !								   
 !*******************************************************************
 !								   
@@ -6088,6 +6046,91 @@
       enddo
 #endif
 
+!...  Prep info for I/O scribes: # of output vars and attributes etc
+      !Count 2Dnode outputs; vectors count as 2
+      ncount_2dnode=0
+      !scribe output var type: 1: 2D node; 2: 2D elem; 3: 2D side; 4: 3D node;
+      !5: 3D elem; 6: 3D side
+      scribe_cat(1)=1 !1st scribe does 2D node outputs 
+      itag_out(1)=200 !send/recv tag
+      do i=1,16 
+        if(iof_hydro(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+        endif
+      enddo !i
+      !Add idry
+      ncount_2dnode=ncount_2dnode+1
+
+      ncount_3dnode=0
+      scribe_cat(2)=4 !2nd scribe does 3D node
+      itag_out(2)=201 !send/recv tag
+      do i=17,25 
+        if(iof_hydro(i)/=0) then
+          ncount_3dnode=ncount_3dnode+1
+        endif
+      enddo !i
+      !add zcor
+      ncount_3dnode=ncount_3dnode+1
+
+      !All 2D vars share a scribe
+      noutvars=ncount_3dnode+1 
+
+!new35: modules
+
+!...  Send basic time info to scribes. Make sure the send vars are not altered
+!     during non-block sends/recv
+      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(myrank==0) then 
+        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
+        do i=1,nscribes
+          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
+          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
+          call mpi_send(noutvars,1,itype,nproc_schism-i,102,comm_schism,ierr)
+          call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
+          call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
+          call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
+          call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
+          call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
+          call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,108,comm_schism,ierr)
+          call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,109,comm_schism,ierr)
+          call mpi_send(scribe_cat,nscribes,itype,nproc_schism-i,110,comm_schism,ierr)
+          call mpi_send(itag_out,nscribes,itype,nproc_schism-i,111,comm_schism,ierr)
+          call mpi_send(iths,1,itype,nproc_schism-i,112,comm_schism,ierr)
+          call mpi_send(ntime,1,itype,nproc_schism-i,113,comm_schism,ierr)
+        enddo !i
+      endif !myrank=0
+
+!     Send subdomain info to last scribe (all compute ranks participate)
+      srqst3(:)=MPI_REQUEST_NULL !init
+      call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
+      call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
+      call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
+
+      call mpi_isend(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,srqst3(3),ierr) 
+
+      !Make sure index arrays are completely sent as others depend on them
+      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
+      srqst3(:)=MPI_REQUEST_NULL !init
+
+!!new35: xnd
+      call mpi_isend(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,srqst3(3),ierr) 
+      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
+
+      !Check send status later to hide latency
+      nnonblock=4
+      !More vars to be sent after hotstart
+
+!...  Finish sending info to sccribes
+!      if(myrank==0) then
+!        call mpi_isend(iths,1,itype,nproc_schism-1,189,comm_schism,srqst3(nnonblock+1),ierr)
+!        call mpi_isend(ntime,1,itype,nproc_schism-1,188,comm_schism,srqst3(nnonblock+2),ierr)
+!        nnonblock=nnonblock+2
+!      endif !myrank
+
 !     Broadcast to global module
       iths_main=iths
  
@@ -6179,7 +6222,7 @@
       time_stamp=iths_main*dt
 
 !...  Catch up with non-block comm
-!      call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
+      call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------

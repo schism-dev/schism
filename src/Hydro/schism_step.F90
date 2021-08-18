@@ -8129,8 +8129,22 @@
 !        endif
 !      enddo !i
 
-!#ifndef SINGLE_NETCDF_OUTPUT
+!...  Send outputs to scribes
+!     Beware multi-dim arrays: send/recv sections of first X dims is fine
+!     (column major)
+      allocate(swild97(nvrt,np,3))
       if(nc_out>0.and.mod(it,nspool)==0) then
+!        if(iof_hydro(19)==1) then
+          swild97(:,:,2)=tr_nd(2,:,1:np)
+          !call mpi_isend(swild99,np*nvrt,rtype,nproc_schism-1,200,comm_schism,srqst7(1),ierr)
+          call mpi_isend(swild97(:,1:np,2),np*nvrt,rtype,nproc_schism-1,200,comm_schism,srqst7(1),ierr)
+          call mpi_wait(srqst7(1),MPI_STATUSES_IGNORE,ierr)
+!        endif
+      endif !nc_out
+      deallocate(swild97)
+
+!#ifndef SINGLE_NETCDF_OUTPUT
+      if(0.and.nc_out>0.and.mod(it,nspool)==0) then
         call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))

@@ -127,7 +127,7 @@ subroutine schism_init0(iths,ntime)
   if(task_id==1) then !compute
     call schism_init(0,'./',iths,ntime)
   else !I/O scribes
-    call scribe_init
+    call scribe_init(iths,ntime)
   endif !task_id
 
 end subroutine schism_init0
