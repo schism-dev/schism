@@ -5071,18 +5071,18 @@
 !   quality check for stencils (2nd order polynomials)
 !   For each element side ("jsj"), make sure at least 1 stencil does not straddle "jsj";
 !   otherwise, over/under-shoots may occur from the reconstruction at this side
-!   This needs to be done under the local frame, otherwise problems may occur (e.g., when
-!   crossing the equator)
+!   For ics==2, this needs to be done under the local frame,
+!   otherwise problems may occur (e.g., when crossing the equator)
 !========================================================================================
       subroutine CheckSten2
       use schism_glbl,only: rkind,xctr,yctr,zctr,xnd,ynd,znd,ne,isten_qual2,isten2 &
-      &,nweno2,isidenode,elside,i34,eframe
+      &,nweno2,isidenode,elside,i34,eframe,ics
       use schism_msgp
       implicit none
 
       integer :: iqual(4),ielqual,jsj,ie,i,j,k,n1,n2,je
       real(rkind) :: tmp1,tmp2
-      real(rkind) :: xn1,yn1,xn2,yn2 
+      real(rkind) :: xn1,yn1,xn2,yn2,xn1_xn2
       real(rkind) :: xci,yci,xcj,ycj
       
       do ie=1,ne
@@ -5091,36 +5091,52 @@
           jsj=elside(j,ie)
           n1=isidenode(1,jsj); n2=isidenode(2,jsj)
 
-          !convert to local frame
-          xn1=xnd(n1)*eframe(1,1,ie)+ynd(n1)*eframe(2,1,ie)+znd(n1)*eframe(3,1,ie)
-          yn1=xnd(n1)*eframe(1,2,ie)+ynd(n1)*eframe(2,2,ie)+znd(n1)*eframe(3,2,ie)
-          xn2=xnd(n2)*eframe(1,1,ie)+ynd(n2)*eframe(2,1,ie)+znd(n2)*eframe(3,1,ie)
-          yn2=xnd(n2)*eframe(1,2,ie)+ynd(n2)*eframe(2,2,ie)+znd(n2)*eframe(3,2,ie)
-
-          xci=xctr(ie)*eframe(1,1,ie)+yctr(ie)*eframe(2,1,ie)+zctr(ie)*eframe(3,1,ie)
-          yci=xctr(ie)*eframe(1,2,ie)+yctr(ie)*eframe(2,2,ie)+zctr(ie)*eframe(3,2,ie)
-
           !On which side of jsj does the center element (ie) lie?
-          !tmp1 = yctr(ie) -( (ynd(n1)-ynd(n2))/(xnd(n1)-xnd(n2))*(xctr(ie)-xnd(n2))+ynd(n2) )
-          tmp1 = yci - ( (yn1-yn2)/(xn1-xn2)*(xci-xn2)+yn2 )
+          if (ics==1) then
+            xn1=xnd(n1)
+            yn1=ynd(n1)
+            xn2=xnd(n2)
+            yn2=ynd(n2)
+            xci = xctr(ie)
+            yci = yctr(ie)
+            ! tmp1 = yctr(ie) -( (ynd(n1)-ynd(n2))/(xnd(n1)-xnd(n2))*(xctr(ie)-xnd(n2))+ynd(n2) )
+          else
+            !convert to local frame
+            xn1=xnd(n1)*eframe(1,1,ie)+ynd(n1)*eframe(2,1,ie)+znd(n1)*eframe(3,1,ie)
+            yn1=xnd(n1)*eframe(1,2,ie)+ynd(n1)*eframe(2,2,ie)+znd(n1)*eframe(3,2,ie)
+            xn2=xnd(n2)*eframe(1,1,ie)+ynd(n2)*eframe(2,1,ie)+znd(n2)*eframe(3,1,ie)
+            yn2=xnd(n2)*eframe(1,2,ie)+ynd(n2)*eframe(2,2,ie)+znd(n2)*eframe(3,2,ie)
+            xci=xctr(ie)*eframe(1,1,ie)+yctr(ie)*eframe(2,1,ie)+zctr(ie)*eframe(3,1,ie)
+            yci=xctr(ie)*eframe(1,2,ie)+yctr(ie)*eframe(2,2,ie)+zctr(ie)*eframe(3,2,ie)
+          endif
+          if (abs(xn1-xn2)<1e-8) then !avoid division by 0
+            xn1_xn2=sign(1e-8, xn1-xn2)
+          endif
+          tmp1 = yci - ( (yn1-yn2)/(xn1_xn2)*(xci-xn2)+yn2 )
 
           do i=1,nweno2(ie)
             !Initially, assuming all 6 elements in the ith stencil lie on the same side
             ielqual=0; 
+
             if (ie.ne.isten2(1,i,ie)) then
               call parallel_abort('center element of a stencil is not self')
+!'
             endif
 
             !Are the other 5 elements on the same side as ie?
             do k=2,6
               je=isten2(k,i,ie)
 
-              !local frame
-              xcj=xctr(je)*eframe(1,1,ie)+yctr(je)*eframe(2,1,ie)+zctr(je)*eframe(3,1,ie)
-              ycj=xctr(je)*eframe(1,2,ie)+yctr(je)*eframe(2,2,ie)+zctr(je)*eframe(3,2,ie)
-
+              if (ics==1) then
+                xcj=xctr(je)
+                ycj=yctr(je)
+              else
+                !local frame
+                xcj=xctr(je)*eframe(1,1,ie)+yctr(je)*eframe(2,1,ie)+zctr(je)*eframe(3,1,ie)
+                ycj=xctr(je)*eframe(1,2,ie)+yctr(je)*eframe(2,2,ie)+zctr(je)*eframe(3,2,ie)
+              endif
               !tmp2=yctr(je) -( (ynd(n1)-ynd(n2))/(xnd(n1)-xnd(n2))*(xctr(je)-xnd(n2))+ynd(n2) )
-              tmp2 = ycj - ( (yn1-yn2)/(xn1-xn2)*(xcj-xn2)+yn2 )
+              tmp2 = ycj - ( (yn1-yn2)/(xn1_xn2)*(xcj-xn2)+yn2 )
 
               if ((tmp1*tmp2)<0) then  
                 ielqual=1 !the current element is on the other side
