@@ -30,7 +30,6 @@ add_library(core ${local_extra_code}
                  schism_msgp.F90
                  schism_assert.F90
                  schism_io.F90
-                 scribe_io.F90
 		 misc_modules.F90
                  hydraulic_structures.F90
                  gen_modules_clock.F90

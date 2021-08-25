@@ -49,20 +49,12 @@ module schism_msgp
   ! Public data
   !-----------------------------------------------------------------------------
 
-  integer,public,save :: nscribes                  ! # of I/O scribes (>=0)
-  integer,public,save :: task_id                   ! 1: compute; 2: I/O
-  integer,public,save :: myrank                    ! Rank of MPI compute task (0 base)
-  integer,public,save :: nproc                     ! Number of MPI compute tasks
-  integer,public,save :: myrank_schism             ! Rank of MPI task from union world
-  integer,public,save :: nproc_schism              ! Number of MPI tasks in union world
-  integer,public,save :: myrank_scribe             ! Rank of MPI task from scribe world
-  integer,public,save :: nproc_scribe              ! Number of MPI tasks from scribe world
+  integer,public,save :: myrank                    ! Rank of MPI task (0 base)
+  integer,public,save :: nproc                     ! Number of MPI tasks
   integer,public,save :: ierr                      ! Return flag for MPI calls
   integer,public,save :: istatus(MPI_STATUS_SIZE)  ! Return status for MPI calls
 
-  integer,public,save :: comm                    ! MPI Communicator for compute only
-  integer,public,save :: comm_scribe             ! MPI Communicator for scribes only
-  integer,public,save :: comm_schism             ! Union Communicator for compute & scribes
+  integer,public,save :: comm                    ! MPI Communicator for ELCIRC
   integer,public,save :: itype = MPI_INTEGER     ! MPI Integer Type
 !#ifdef USE_SINGLE
 !  integer,public,save :: rtype = MPI_REAL4       ! MPI Real Type -- to match rkind
@@ -376,53 +368,27 @@ subroutine parallel_init(communicator)
   implicit none
   integer, optional :: communicator
 
-  integer :: comm2,nproc3,myrank3,nproc_compute
-
 
   if (present(communicator)) then
     ! Expect external call to mpi_init,
     ! use communicator as provided by the interface
-    call mpi_comm_dup(communicator,comm_schism,ierr)
+    call mpi_comm_dup(communicator,comm,ierr)
   else
     ! Initialize MPI
     call mpi_init(ierr)
     if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
     ! Duplicate communication space to isolate ELCIRC communication
-    call mpi_comm_dup(MPI_COMM_WORLD,comm_schism,ierr)
+    call mpi_comm_dup(MPI_COMM_WORLD,comm,ierr)
   endif
   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
 
   ! Get number of processors
-  call mpi_comm_size(comm_schism,nproc_schism,ierr)
+  call mpi_comm_size(comm,nproc,ierr)
   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
 
   ! Get rank
-  call mpi_comm_rank(comm_schism,myrank_schism,ierr)
+  call mpi_comm_rank(comm,myrank,ierr)
   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
-
-  nproc_compute=nproc_schism-nscribes
-  if(myrank_schism<nproc_schism-nscribes) then !compute ranks
-    task_id=1
-  else !IO ranks
-    task_id=2
-  endif
-
-  !Use original rank as key to order the new ranks
-  CALL MPI_Comm_split(comm_schism,task_id,myrank_schism,comm2,ierr)
-  CALL MPI_Comm_size(comm2, nproc3, ierr)
-  CALL MPI_Comm_rank(comm2, myrank3,ierr)
-
-  if(task_id==1) then !compute
-    comm=comm2
-    nproc=nproc3
-    myrank=myrank3
-!    print*, 'Compute:',myrank_schism,nproc_schism,myrank,nproc,nproc_compute,nscribes,task_id
-  else !I/O scribes
-    comm_scribe=comm2
-    nproc_scribe=nproc3
-    myrank_scribe=myrank3
-!    print*, 'Scribes:',myrank_schism,nproc_schism,myrank3,nproc3,nproc_compute,nscribes,task_id
-  endif
 
 end subroutine parallel_init
 
@@ -458,10 +424,10 @@ subroutine parallel_abort(string,error)
       if(lopen) write(11,'(i4,2a)') myrank,': MPI ERROR: ',s
     endif
     do i=1,500; inquire(i,opened=lopen); if(lopen) close(i); enddo;
-    call mpi_abort(comm_schism,error,ierror)
+    call mpi_abort(comm,error,ierror)
   else
     do i=1,500; inquire(i,opened=lopen); if(lopen) close(i); enddo;
-    call mpi_abort(comm_schism,0,ierror)
+    call mpi_abort(comm,0,ierror)
   endif
 
 end subroutine parallel_abort
