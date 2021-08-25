@@ -8129,8 +8129,52 @@
 !        endif
 !      enddo !i
 
-#ifndef SINGLE_NETCDF_OUTPUT
+!...  Send outputs to scribes
       if(nc_out>0.and.mod(it,nspool)==0) then
+!-------------------------------------------------------------------------------
+        !Catch up with previous sends and free buffers
+        call mpi_waitall(nsend_varout,srqst7(1:nsend_varout),MPI_STATUSES_IGNORE,ierr)
+
+!       Beware multi-dim arrays: send/recv sections of first X dims is fine
+!       (column major)
+        nsend_varout=0 !total # of sends in this step
+        icount=0 !# of output index into varout_3dnode etc  
+        do i=17,25 !3D nodes
+          if(iof_hydro(i)/=0) then
+            icount=icount+1
+            if(icount>nscribes) call parallel_abort('STEP: icount>nscribes(1)')
+            nsend_varout=nsend_varout+1 
+            select case(i)
+              case(17)
+                varout_3dnode(:,:,icount)=ww2(:,1:np)
+              case(18)
+                varout_3dnode(:,:,icount)=tr_nd(1,:,1:np)
+              case(19)
+                varout_3dnode(:,:,icount)=tr_nd(2,:,1:np)
+              case(20)
+                varout_3dnode(:,:,icount)=prho(:,1:np)
+              case(21)
+                varout_3dnode(:,:,icount)=dfh(:,1:np)
+              case(22)
+                varout_3dnode(:,:,icount)=dfv(:,1:np)
+              case(23)
+                varout_3dnode(:,:,icount)=q2(:,1:np)
+              case(24)
+                varout_3dnode(:,:,icount)=xl(:,1:np)
+              case(25)
+                varout_3dnode(:,:,icount)=uu2(:,1:np)
+!Error: vv2
+            end select
+
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,rtype,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_hydro
+        enddo !i
+!-------------------------------------------------------------------------------
+      endif !nc_out>0.and.mod(it,nspool)==0
+
+!#ifndef SINGLE_NETCDF_OUTPUT
+      if(0.and.nc_out>0.and.mod(it,nspool)==0) then
         call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
@@ -8907,11 +8951,11 @@
 
         !write(12,*)'id_out_var=',it,id_out_var(1:noutput)
       endif !mod(it,nspool)==0 && nc_out>0
-#else /*SINGLE_NETCDF_OUTPUT*/
-      IF (mod(it,nspool)==0) THEN
-        CALL NETCDF_SINGLE_OUTPUT(it)
-      END IF
-#endif /*SINGLE_NETCDF_OUTPUT*/
+!#else /*SINGLE_NETCDF_OUTPUT*/
+!      IF (mod(it,nspool)==0) THEN
+!        CALL NETCDF_SINGLE_OUTPUT(it)
+!      END IF
+!#endif /*SINGLE_NETCDF_OUTPUT*/
 
 #ifdef USE_FABM
       if(mod(it,nspool)==0) then
@@ -8923,8 +8967,7 @@
 !     Open new global output files and write header data
       if(nc_out>0.and.mod(it,ihfskip)==0) then
         ifile=ifile+1  !output file #
-        !ifile=it/ihfskip+1
-        call fill_nc_header(1)
+!        call fill_nc_header(1)
       endif !it==ifile*ihfskip
 
 !...  Station outputs

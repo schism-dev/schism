@@ -1,4 +1,5 @@
-###W&M Vortex cluster
+###W&M vortex cluster
+
 #  Set the base name of the executable.
 #  The main reason for this is to include something like a cluster/architecture name.
 #  Do not add the file extension (none for linux, .exe for Windows etc)

@@ -150,7 +150,8 @@
                 &jblock,jface,isd,n1,n2,n3,ndgb,ndgb1,ndgb2,irank, &
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
-                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now,iadjust_mass_consv0(natrm)
+                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
+                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50)
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -426,8 +427,10 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(210),iof_cos(20),iof_fib(5), &
-     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),stat=istat)
+     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &srqst7(nscribes),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
+        srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
         !Array to index into global output file # for modules (only used by
         !single_netcdf.F90 and out of date)
@@ -4301,7 +4304,6 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
-
 !								   
 !*******************************************************************
 !								   
@@ -6049,11 +6051,94 @@
  
 !     Open global output files and write header data
       if(ihot<=1) ifile=1 !reset output file #
-      if(nc_out>0) call fill_nc_header(0)
+!      if(nc_out>0) call fill_nc_header(0)
 
-#ifdef SINGLE_NETCDF_OUTPUT
-      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
-#endif
+!...  Prep info for I/O scribes: # of output vars and attributes etc
+      if(nc_out>0) then
+!-------------------------------------------------------------------
+      !Count 2D&3D outputs; vectors count as 2
+      !Thsi section must be consistent with scribe_io
+      nsend_varout=0 !init
+!      ncount_2dnode=0
+!      do i=1,16 
+!        if(iof_hydro(i)/=0) then
+!          ncount_2dnode=ncount_2dnode+1
+!        endif
+!      enddo !i
+!      !Add idry
+!      ncount_2dnode=ncount_2dnode+1
+!
+      ncount_3dnode=0
+      do i=17,25 
+        if(iof_hydro(i)/=0) then
+          ncount_3dnode=ncount_3dnode+1
+        endif
+      enddo !i
+!      !All 2D vars share a scribe
+      noutvars=ncount_3dnode+1 
+
+!new35: modules
+
+      !Allocate send varout buffers
+      if(iorder==0) then
+        if(ncount_3dnode>0) then
+          allocate(varout_3dnode(nvrt,np,ncount_3dnode),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ')
+        endif
+      endif !iorder
+
+!...  Send basic time info to scribes. Make sure the send vars are not altered
+!     during non-block sends/recv
+      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(myrank==0) then 
+        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
+        do i=1,nscribes
+          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
+          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
+!          call mpi_send(ifile,1,itype,nproc_schism-i,102,comm_schism,ierr)
+          call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
+          call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
+          call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
+          call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
+          call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
+          call mpi_send(ihfskip,1,itype,nproc_schism-i,108,comm_schism,ierr)
+!          call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,109,comm_schism,ierr)
+          call mpi_send(iths,1,itype,nproc_schism-i,110,comm_schism,ierr)
+          call mpi_send(ntime,1,itype,nproc_schism-i,111,comm_schism,ierr)
+          call mpi_send(iof_hydro,40,itype,nproc_schism-i,112,comm_schism,ierr)
+          call mpi_send(iof_wwm,30,itype,nproc_schism-i,113,comm_schism,ierr)
+        enddo !i
+      endif !myrank=0
+
+!     Send subdomain info to last scribe (all compute ranks participate)
+      srqst3(:)=MPI_REQUEST_NULL !init
+      call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
+      call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
+      call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
+
+      call mpi_isend(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,srqst3(3),ierr) 
+
+      !Make sure index arrays are completely sent as others depend on them
+      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
+      srqst3(:)=MPI_REQUEST_NULL !init
+
+!!new35: xnd
+      call mpi_isend(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,srqst3(1),ierr) 
+      call mpi_isend(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,srqst3(2),ierr) 
+      call mpi_isend(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,srqst3(3),ierr) 
+      call mpi_isend(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,srqst3(4),ierr) 
+      call mpi_isend(i34(1:ne),ne,itype,nproc_schism-1,189,comm_schism,srqst3(5),ierr) 
+      call mpi_isend(elnode(1:4,1:ne),4*ne,itype,nproc_schism-1,188,comm_schism,srqst3(6),ierr) 
+      !Check send status later to hide latency
+      nnonblock=6
+!-------------------------------------------------------------------
+      endif !nc_out>0
+
+!#ifdef SINGLE_NETCDF_OUTPUT
+!      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
+!#endif
 
       if(myrank==0) write(16,'(a)')'Done initializing outputs'
       
@@ -6133,6 +6218,9 @@
      
       !Set global time stamp
       time_stamp=iths_main*dt
+
+!...  Catch up with non-block comm
+      if(nc_out>0) call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
