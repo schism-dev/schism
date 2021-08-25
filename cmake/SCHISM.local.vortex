@@ -24,7 +24,7 @@ set (SCHISM_EXE_BASENAME pschism_VORT CACHE STRING "Base name (modules and file 
 ###Relative paths won't work
 set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
 set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN}" CACHE PATH "Path to NetCDF Fortran library")
-set(NetCDF_C_DIR  "/usr/local/seoul/linux-centos7-piledriver/intel-18.0.5/netcdf-c-4.7.4-o2hl/"  CACHE PATH "Path to NetCDF C library")
+set(NetCDF_C_DIR  "$ENV{NETCDF_C}"  CACHE PATH "Path to NetCDF C library")
 ###MPI_ROOT is only needed when cmake is having trouble finding write MPI wrapper
 #set(MPI_ROOT /opt/mvapich2/2.3-intel CACHE PATH "Root dir of MPI implementation")
 

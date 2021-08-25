@@ -22,7 +22,9 @@ netcdf.close(ncid0);
 %varout(1:nvars)=var(1:end);
 
 %Output
-ncid2 = netcdf.create('hotstart.nc','CLOBBER');
+cmode = netcdf.getConstant('NETCDF4');
+cmode = bitor(cmode,netcdf.getConstant('CLASSIC_MODEL'));
+ncid2 = netcdf.create('hotstart.nc',cmode);
 %Def 
 for i=1:ndims
   id2=netcdf.defDim(ncid2,dimname{i},dimlen(i)); %dimids are 0-based
