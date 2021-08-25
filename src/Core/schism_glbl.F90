@@ -148,7 +148,7 @@ module schism_glbl
                   &noutput,it_main,iths_main,id_out_var(2000)
 !  integer,save,dimension(mnout) :: iof 
 !  integer,save,allocatable :: ichan_ns(:),iof_ns(:)
-  real(rkind) :: time_stamp !simulation time in sec
+  real(rkind),save :: time_stamp !simulation time in sec
   character(len=48),save,allocatable :: outfile_ns(:) !,varnm_ns(:)
   character(len=48),save :: a_48
   character(len=16),save :: a_16
