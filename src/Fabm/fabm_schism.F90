@@ -73,7 +73,7 @@ module fabm_schism
   public :: fabm_schism_read_param_from_yaml
   public :: fabm_schism_read_param_2d
   public :: fabm_schism_read_additional_forcing
-  !public :: rk
+
   ! real kind imported from fabm
   integer, parameter, public :: fabm_schism_rk = selected_real_kind(13)
   integer, parameter, dimension(12) :: month_offsets = &
@@ -82,10 +82,10 @@ module fabm_schism
   integer :: i
   integer :: namlst_unit=53
 
-  !> @todo this assumes that FABM is the first BGC model to be loaded, just
-  !> after temperature and salinity.
-  !> Let's replace this by sum(ntrs(1:10))+1 !
-  integer, public :: istart=3
+  !> FABM is module 11 in the schism-internal counting of subsidiary models.
+  !> Therefore the start index for fabm tracers is the sum of all tracers from models
+  !> 1 to 10.  Without any other models, it should be 3 after temperature and salinity.
+  integer, public :: istart=3 ! sum(ntrs(1:10))+1
 
   type, extends(type_base_driver) :: type_schism_driver
     contains
@@ -448,7 +448,7 @@ subroutine fabm_schism_init_stage2
       fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
 #endif
     end if
-    fs%interior_diagnostic_variables(n)%data = 0.0_rk
+    fs%interior_diagnostic_variables(n)%data = -1.0e30_rk
     fs%time_since_last_output = 0.0_rk
   end do
 
@@ -472,10 +472,10 @@ subroutine fabm_schism_init_stage2
 
   ! link environment
   allocate(fs%light_extinction(nvrt,nea))
-  fs%light_extinction = 0.0_rk
+  fs%light_extinction = -1.0e30_rk
 
   allocate(fs%layer_height(nvrt,nea))
-  fs%layer_height = 0.5_rk
+  fs%layer_height = -1.0e30_rk
   ! fs%layer_height => schism_layer_height
 
   allocate(fs%layer_depth(nvrt,nea))
@@ -483,6 +483,7 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%spm(nvrt,nea))
   fs%spm=0.0_rk
+
   if(fs%params%ispm==1) then
     call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
     do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
@@ -499,46 +500,46 @@ subroutine fabm_schism_init_stage2
   !> allocate surface short-wave radidation
   !!@todo link surface radiation to schism field
   allocate(fs%windvel(nea))
-  fs%windvel = 0.0_rk
+  fs%windvel = -1.0e30_rk
 
   allocate(fs%tau_bottom(nea))
-  fs%tau_bottom = 0.0_rk
+  fs%tau_bottom = -1.0e30_rk
 
   allocate(fs%I_0(nea))
-  fs%I_0 = 0.0_rk
+  fs%I_0 = -1.0e30_rk
 
   allocate(fs%par0(nea))
-  fs%par0 = 0.0_rk
+  fs%par0 = -1.0e30_rk
 
   allocate(fs%bottom_depth(nea))
-  fs%bottom_depth = 0.0_rk
+  fs%bottom_depth = -1.0e30_rk
 
   allocate(fs%par(nvrt,nea))
-  fs%par = 0.0_rk
+  fs%par = -1.0e30_rk
 
   allocate(fs%eps(nvrt,nea))
-  fs%eps = 0.0_rk
+  fs%eps = -1.0e30_rk
 
   allocate(fs%num(nvrt,nea))
-  fs%num = 0.0_rk
+  fs%num = -1.0e30_rk
 
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
   allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
-  fs%pres = 0.0_rk
+  fs%pres = -1.0e30_rk
 
   ! Link ice environment
 #ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
-  fs%dh_growth = 0.0_rk
+  fs%dh_growth = -1.0e30_rk
 
   allocate(fs%ice_thick(nea))
-  fs%ice_thick = 0.0_rk
+  fs%ice_thick = -1.0e30_rk
 
   allocate(fs%ice_cover(nea))
-  fs%ice_cover = 0.0_rk
+  fs%ice_cover = -1.0e30_rk
 
   allocate(fs%snow_thick(nea))
-  fs%snow_thick = 0.0_rk
+  fs%snow_thick = -1.0e30_rk
 #endif
 
   ! calculate initial layer heights
