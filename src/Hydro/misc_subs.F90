@@ -5109,8 +5109,8 @@
             xci=xctr(ie)*eframe(1,1,ie)+yctr(ie)*eframe(2,1,ie)+zctr(ie)*eframe(3,1,ie)
             yci=xctr(ie)*eframe(1,2,ie)+yctr(ie)*eframe(2,2,ie)+zctr(ie)*eframe(3,2,ie)
           endif
-          if (abs(xn1-xn2)<1e-8) then !avoid division by 0
-            xn1_xn2=sign(1e-8, xn1-xn2)
+          if (abs(xn1-xn2)<1e-8_rkind) then !avoid division by 0
+            xn1_xn2=sign(1e-8_rkind, xn1-xn2)
           endif
           tmp1 = yci - ( (yn1-yn2)/(xn1_xn2)*(xci-xn2)+yn2 )
 
