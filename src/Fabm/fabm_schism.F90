@@ -35,6 +35,7 @@ module fabm_schism
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
+  use schism_glbl,  only: nws, ihconsv ! for checking that light is available
   use schism_msgp,  only: myrank, parallel_abort
 
 #ifdef USE_ICEBGC
@@ -497,25 +498,34 @@ subroutine fabm_schism_init_stage2
     fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
   endif
 
-  !> allocate surface short-wave radidation
-  !!@todo link surface radiation to schism field
+  !> Set wind to -1E30 if atmospheric forcing is provided by setting nws>0 in
+  !> param.nml, otherwise assume quiet conditions.
   allocate(fs%windvel(nea))
-  fs%windvel = -1.0e30_rk
+  if (nws > 0) then
+    fs%windvel = -1.0e30_rk
+  else
+    fs%windvel = 0.0_rk
+    call driver%log_message('Warning: without atmospheric forcing, wind is zero')
+  endif
 
   allocate(fs%tau_bottom(nea))
   fs%tau_bottom = -1.0e30_rk
 
-  allocate(fs%I_0(nea))
-  fs%I_0 = -1.0e30_rk
+  !> We can only use light if this is provided by the atmosphere, here by
+  !> setting nws = 2, ihconsv = 1 and using files from sflux/ directory
+  if (nws == 2 .and. ihconsv == 1) then
+    allocate(fs%I_0(nea))
+    fs%I_0 = -1.0e30_rk
 
-  allocate(fs%par0(nea))
-  fs%par0 = -1.0e30_rk
+    allocate(fs%par0(nea))
+    fs%par0 = -1.0e30_rk
+
+    allocate(fs%par(nvrt,nea))
+    fs%par = -1.0e30_rk
+  endif
 
   allocate(fs%bottom_depth(nea))
   fs%bottom_depth = -1.0e30_rk
-
-  allocate(fs%par(nvrt,nea))
-  fs%par = -1.0e30_rk
 
   allocate(fs%eps(nvrt,nea))
   fs%eps = -1.0e30_rk
@@ -717,20 +727,23 @@ subroutine get_light(fs)
   real(rk) :: intext
   real(rk), dimension(1:nvrt) :: localext
 
-  ! get light extinction and calculate par
-  fs%light_extinction = 0.0_rk
-  do nel=1,nea
-    call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
-    do k=nvrt,kbe(nel)+1,-1
-      intext = (localext(k)+fs%background_extinction)*0.5_rk*fs%layer_height(k,nel)
+  if (nws == 2 and ihconsv == 1) then
+
+    ! get light extinction and calculate par
+    fs%light_extinction = 0.0_rk
+    do nel=1,nea
+      call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
+      do k=nvrt,kbe(nel)+1,-1
+        intext = (localext(k)+fs%background_extinction)*0.5_rk*fs%layer_height(k,nel)
 #ifdef USE_SED
-      intext = intext + 1000.0_rk * sum(tr_el(irange_tr(1,5):irange_tr(2,5),k,nel))*fs%external_spm_extinction*0.5_rk*fs%layer_height(k,nel)
+        intext = intext + 1000.0_rk * sum(tr_el(irange_tr(1,5):irange_tr(2,5),k,nel))*fs%external_spm_extinction*0.5_rk*fs%layer_height(k,nel)
 #endif
-      fs%light_extinction(k,nel) = fs%light_extinction(k,nel) + intext
-      fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
-      if (k>kbe(nel)+1) fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+        fs%light_extinction(k,nel) = fs%light_extinction(k,nel) + intext
+        fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
+        if (k>kbe(nel)+1) fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+      end do
     end do
-  end do
+  endif
 
   ! call fabm-internal light models (if any),
   ! this includes also updating expressions of vertical integrals
@@ -840,23 +853,35 @@ subroutine fabm_schism_do()
   call fabm_update_time(fs%model, fs%tidx)
 #endif
 
-  ! get light, wind speed and depth on elements, update ice vars
+  ! Get ice variables and depth on elements
   do i=1,nea
-     fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
-       sum(windy(elnode(1:i34(i),i))/i34(i))**2)
-     fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
-     fs%par0(i) = fs%I_0(i) * fs%par_fraction
-
 #ifdef USE_ICEBGC
      fs%ice_thick(i) = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
      fs%ice_cover(i) = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
      fs%snow_thick(i) = sum(ice_tr(3,elnode(1:i34(i),i)))/i34(i)
      fs%dh_growth(i) = sum(dh_growth(elnode(1:i34(i),i)))/i34(i)
 #endif
-
      ! Total water depth
      fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
+
+  ! Update wind only when atmospheric forcing is provided (nws>0)
+  if (nws > 0) then
+    do i=1,nea
+      fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
+        sum(windy(elnode(1:i34(i),i))/i34(i))**2)
+      end do
+  endif
+
+  ! Update light at surface only when atmospheric forcing is provided
+  ! nws == 2 and ihconsv == 1
+  ! @todo consider who is responsible for setting par_fraction (host?)
+  if (nws == 2 .and. ihconsv == 1) then
+    do i=1,nea
+      fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
+      fs%par0(i) = fs%I_0(i) * fs%par_fraction
+    end do
+  endif
 
   !update spm concentration
   if(fs%params%ispm==2) then
@@ -1419,7 +1444,13 @@ subroutine link_environmental_data(self, rc)
 
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
-  call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+
+  if (nws == 2 .and. ihconsv == 1) then
+    call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+    call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_shortwave_flux,self%I_0)
+    call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
+    call driver%log_message('linked surface shortwave radiation and PAR, bulk PAR')
+  endif
   call fabm_link_bulk_data(self%model,standard_variables%density,erho)
   call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
   !call fabm_link_bulk_data(self%model,standard_variables%turbulence_dissipation,self%eps)
@@ -1435,9 +1466,6 @@ subroutine link_environmental_data(self, rc)
      type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
      cf_names='ocean_vertical_momentum_diffusivity'),self%num)
   call driver%log_message('linked bulk variable "momentum diffusivity"')
-  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_shortwave_flux,self%I_0)
-  call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
-  call driver%log_message('linked horizontal standard variable "surface downwelling photosynthetic radiative flux"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
 #ifdef USE_ICEBGC
@@ -1460,10 +1488,12 @@ subroutine link_environmental_data(self, rc)
   call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
   call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
 
-  call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-  !call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_radiative_flux,self%I_0)
-  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
-  call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
+  if (nws == 2 .and. ihconsv == 1) then
+    call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
+    call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
+    call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
+    call driver%log_message('linked surface shortwave radiation and PAR, bulk PAR')
+  endif
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
 #ifdef USE_ICEBGC
