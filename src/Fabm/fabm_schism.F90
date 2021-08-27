@@ -727,7 +727,7 @@ subroutine get_light(fs)
   real(rk) :: intext
   real(rk), dimension(1:nvrt) :: localext
 
-  if (nws == 2 and ihconsv == 1) then
+  if (nws == 2 .and. ihconsv == 1) then
 
     ! get light extinction and calculate par
     fs%light_extinction = 0.0_rk
