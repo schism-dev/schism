@@ -52,7 +52,7 @@
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:)
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:)
-    real(4),save,allocatable :: var2dnode(:,:),var3dnode(:,:),var3dnode_gb(:,:)
+    real(4),save,allocatable :: var2dnode(:,:,:),var3dnode(:,:,:),var3dnode_gb(:,:)
     
     public :: scribe_init
     public :: scribe_step
@@ -244,12 +244,14 @@
 
       !Alloc global output arrays for step    
 !      if(ncount_2dnode>0) then
-!        allocate(var2dnode(ncount_2dnode,np_max))
-!        var2dnode(ncount_2dnode,np_max)=0. !touch mem
+!        allocate(var2dnode(ncount_2dnode,np_max,nproc_compute))
+!        var2dnode(ncount_2dnode,np_max,nproc_compute)=0. !touch mem
 !      endif 
 
 !      if(ncount_3dnode>0) then
-      allocate(var3dnode(nvrt,np_max),var3dnode_gb(nvrt,np_global))
+!      allocate(var3dnode(nvrt,np_max),var3dnode_gb(nvrt,np_global))
+      allocate(var3dnode(nvrt,np_max,nproc_compute),var3dnode_gb(nvrt,np_global))
+      var3dnode(nvrt,np_max,nproc_compute)=0.
       var3dnode_gb(nvrt,np_global)=0. !touch mem
 !      endif 
 
@@ -280,19 +282,22 @@
           if(myrank_schism==irank) then
             !OK to fill partial arrays as long as respect column major
             do i=1,nproc_compute
-              call mpi_irecv(var3dnode,np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst,ierr)
-              call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i))
+              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
             enddo !i
+            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+       
+            do i=1,nproc_compute
+              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+            enddo !i
+
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode,np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst,ierr)
+!              call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i))
+!            enddo !i
 
             call nc_writeout3D(it,nvrt,np_global,var3dnode_gb,varname(j))
 
-!            if(j==) then
-!              write(96,*)'SSC:',it*dt
-!              do i=1,np_global
-!                write(96,*)real(xnd(i)),real(ynd(i)),real(var3dnode_gb(nvrt,i))
-!              enddo !i
-!            endif 
 !            if(j==19) then
 !              write(97,*)'SSS:',it*dt
 !              do i=1,np_global
