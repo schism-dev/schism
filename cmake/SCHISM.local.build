@@ -16,6 +16,9 @@
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
+#Turn OLDIO off to use the new scribe based I/O
+set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
+
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 ##Older versions of GOTM (3.*) have issues with netcdf v4, so are not maintained
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")

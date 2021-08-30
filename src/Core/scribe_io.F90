@@ -52,7 +52,7 @@
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:)
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:)
-    real(rkind),save,allocatable :: var2dnode(:,:),var3dnode(:,:),var3dnode_gb(:,:)
+    real(4),save,allocatable :: var2dnode(:,:),var3dnode(:,:),var3dnode_gb(:,:)
     
     public :: scribe_init
     public :: scribe_step
@@ -245,12 +245,12 @@
       !Alloc global output arrays for step    
 !      if(ncount_2dnode>0) then
 !        allocate(var2dnode(ncount_2dnode,np_max))
-!        var2dnode(ncount_2dnode,np_max)=0.d0 !touch mem
+!        var2dnode(ncount_2dnode,np_max)=0. !touch mem
 !      endif 
 
 !      if(ncount_3dnode>0) then
       allocate(var3dnode(nvrt,np_max),var3dnode_gb(nvrt,np_global))
-      var3dnode_gb(nvrt,np_global)=0.d0 !touch mem
+      var3dnode_gb(nvrt,np_global)=0. !touch mem
 !      endif 
 
 !     Define output var/file names (gfort requires equal length in assignment) 
@@ -280,7 +280,7 @@
           if(myrank_schism==irank) then
             !OK to fill partial arrays as long as respect column major
             do i=1,nproc_compute
-              call mpi_irecv(var3dnode,np(i)*nvrt,rtype,i-1,200+itotal,comm_schism,rrqst,ierr)
+              call mpi_irecv(var3dnode,np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst,ierr)
               call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
               var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i))
             enddo !i
@@ -310,7 +310,7 @@
       implicit none
  
       integer, intent(in) :: it,idim1,idim2
-      real(rkind), intent(in) :: var3dnode_gb(idim1,idim2)
+      real(4), intent(in) :: var3dnode_gb(idim1,idim2)
       character(len=*), intent(in) :: vname
 
       integer :: irec,iret
@@ -339,9 +339,9 @@
         iret=nf90_put_att(ncid_schism_io,itime_id,'i23d',0) !set i23d flag
 
         time_dims(1)=node_dim
-        iret=nf90_def_var(ncid_schism_io,'SCHISM_hgrid_node_x',NF90_FLOAT,time_dims,ix_id)
+        iret=nf90_def_var(ncid_schism_io,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: xnd')
-        iret=nf90_def_var(ncid_schism_io,'SCHISM_hgrid_node_y',NF90_FLOAT,time_dims,iy_id)
+        iret=nf90_def_var(ncid_schism_io,'SCHISM_hgrid_node_y',NF90_DOUBLE,time_dims,iy_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: ynd')
         iret=nf90_def_var(ncid_schism_io,'depth',NF90_FLOAT,time_dims,ih_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: dp')
@@ -359,8 +359,8 @@
         iret=nf90_enddef(ncid_schism_io)
 
         !Write static info (x,y...)
-        iret=nf90_put_var(ncid_schism_io,ix_id,real(xnd),(/1/),(/np_global/)) 
-        iret=nf90_put_var(ncid_schism_io,iy_id,real(ynd),(/1/),(/np_global/)) 
+        iret=nf90_put_var(ncid_schism_io,ix_id,xnd,(/1/),(/np_global/)) 
+        iret=nf90_put_var(ncid_schism_io,iy_id,ynd,(/1/),(/np_global/)) 
         iret=nf90_put_var(ncid_schism_io,ih_id,real(dp),(/1/),(/np_global/)) 
 !        iret=nf90_put_var(ncid_schism_io,i34_id,i34,(/1/),(/ne_global/)) 
         iret=nf90_put_var(ncid_schism_io,elnode_id,elnode,(/1,1/),(/4,ne_global/)) 
