@@ -8916,7 +8916,7 @@
         call fill_nc_header(1)
       endif !it==ifile*ihfskip
 !=============================================================================
-#else 
+#else  /*OLDIO*/
 !     Scribe I/O
 !...  Send outputs to scribes
       if(nc_out>0.and.mod(it,nspool)==0) then
@@ -8925,13 +8925,14 @@
 
 !       Beware multi-dim arrays: send/recv sections of first X dims is fine
 !       (column major)
-        nsend_varout=0 !total # of sends in this step
+        nsend_varout=0 !total # of sends in this step (including all 2/3D outputs)
         icount=0 !# of output index into varout_3dnode etc  
-        do i=17,25 !3D nodes
+        !Scalar
+        do i=17,24 !3D nodes
           if(iof_hydro(i)/=0) then
             icount=icount+1
-            if(icount>nscribes) call parallel_abort('STEP: icount>nscribes(1)')
             nsend_varout=nsend_varout+1 
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1)')
             select case(i)
               case(17)
                 varout_3dnode(:,:,icount)=ww2(:,1:np)
@@ -8949,15 +8950,33 @@
                 varout_3dnode(:,:,icount)=q2(:,1:np)
               case(24)
                 varout_3dnode(:,:,icount)=xl(:,1:np)
-              case(25)
-                varout_3dnode(:,:,icount)=uu2(:,1:np)
-!Error: vv2
+!              case(25)
+!                varout_3dnode(:,:,icount)=uu2(:,1:np)
             end select
 
             call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
      &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_hydro
         enddo !i
+
+        !Vectors
+        do i=25,25 
+          if(iof_hydro(i)/=0) then
+            do j=1,2 !components
+              icount=icount+1
+              nsend_varout=nsend_varout+1
+              if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2)')
+              if(j==1) then
+                varout_3dnode(:,:,icount)=uu2(:,1:np)
+              else
+                varout_3dnode(:,:,icount)=vv2(:,1:np)
+              endif !j
+              call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+            enddo !j
+          endif !iof_hydro
+        enddo !i
+        
       endif !nc_out>0.and.mod(it,nspool)==0
 !=============================================================================
 #endif /*OLDIO*/

@@ -147,8 +147,7 @@ module schism_glbl
   integer,save :: ihfskip,nrec,nspool,ifile,ifile_len, &
      &noutput,noutvars,it_main,iths_main,id_out_var(2000),ncount_2dnode, &
      &ncount_3dnode,nsend_varout
-!  integer,save,dimension(mnout) :: iof
-  integer,save,allocatable :: scribe_cat(:),srqst7(:)
+  integer,save,allocatable :: srqst7(:)
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)

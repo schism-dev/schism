@@ -65,12 +65,9 @@
 !                                                                                       
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! OMP: search for 'new21' for TODO
-!'new35' for scribe I/O todo
-! List of changed files from official repo: 
-!  Driver/schism_driver.F90
-!  Corie: schism_[glbl,msgp], scribe_io
-!  Hydro: schism_[init,step]; renamed single_netcdf
-!  src/Makefile
+!'OLDIO' for scribe I/O 
+! To add new outputs: work in schism_init, schism_step and scribe_io; make sure
+! the order is consistent among these.
 !===============================================================================
 !===============================================================================
 ! SCHISM main driver 
@@ -121,18 +118,18 @@ subroutine schism_main
   implicit none
   integer :: it,iths,ntime
 
-#ifndef OLDIO
-  call schism_init0(iths,ntime)
-  do it=iths+1,ntime
-    call schism_step0(it)
-  enddo !it
-  call schism_finalize0
-#else
+#ifdef OLDIO
   call schism_init(0,'./',iths,ntime)
   do it=iths+1,ntime
     call schism_step(it)
   enddo !it
   call schism_finalize
+#else
+  call schism_init0(iths,ntime)
+  do it=iths+1,ntime
+    call schism_step0(it)
+  enddo !it
+  call schism_finalize0
 #endif
 
 end subroutine schism_main

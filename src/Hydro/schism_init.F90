@@ -6057,8 +6057,8 @@
 #else
 !...  Prep info for I/O scribes: # of output vars and attributes etc
       !Count 2D&3D outputs; vectors count as 2
-      !This section must be consistent with scribe_io
-      nsend_varout=0 !init
+      !This section must be consistent with schism_step and scribe_io
+      nsend_varout=0 !init for first waitall in _step
 !      ncount_2dnode=0
 !      do i=1,16 
 !        if(iof_hydro(i)/=0) then
@@ -6069,17 +6069,21 @@
 !      ncount_2dnode=ncount_2dnode+1
 !
       ncount_3dnode=0
-      do i=17,25 
+      !Scalar
+      do i=17,24 
         if(iof_hydro(i)/=0) then
           ncount_3dnode=ncount_3dnode+1
         endif
       enddo !i
-!      !All 2D vars share a scribe
+      !Vectors count as 2
+      if(iof_hydro(25)/=0) ncount_3dnode=ncount_3dnode+2    
+
+!     Min # of scribes required: all 2D vars share a scribe 
       noutvars=ncount_3dnode+1 
 
 !new35: modules
 
-      !Allocate send varout buffers
+      !Allocate send varout buffers for _step
       if(iorder==0) then
         if(ncount_3dnode>0) then
           allocate(varout_3dnode(nvrt,np,ncount_3dnode),stat=istat)

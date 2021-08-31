@@ -19,6 +19,7 @@
 ! subroutine scribe_init
 ! subroutine scribe_step
 ! subroutine scribe_finalize
+! subroutine nc_writeout3D
 
 !===============================================================================
 !===============================================================================
@@ -46,7 +47,7 @@
     !Output flag dim must be same as schism_init!
     integer,save :: iof_hydro(40),iof_wwm(30)
     real(rkind), save :: dt
-    character(len=20), save :: varname(200)
+    character(len=20), save :: varname(2,400),varname3
     character(len=1000),save :: out_dir
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
@@ -236,11 +237,14 @@
 !     Calculate # of actual outputs; indices must be consistent with the send
 !     part of schism_step
       ncount_3dnode=0
-      do i=17,25
+      !Scalar
+      do i=17,24
         if(iof_hydro(i)/=0) then
           ncount_3dnode=ncount_3dnode+1
         endif
       enddo !i
+      !Vectors
+      if(iof_hydro(25)/=0) ncount_3dnode=ncount_3dnode+2
 
       !Alloc global output arrays for step    
 !      if(ncount_2dnode>0) then
@@ -255,8 +259,10 @@
       var3dnode_gb(nvrt,np_global)=0. !touch mem
 !      endif 
 
-!     Define output var/file names (gfort requires equal length in assignment) 
-      varname(17:25)=(/'wvel','temp','salt','dens','vdfs','visc','tke ','mixl','uvel'/)
+!     Define output var/file names dictionary (gfort requires equal length in assignment) 
+!     Vectors: list out component names in 2nd dim
+      varname(1,17:24)=(/'wvel','temp','salt','dens','vdfs','visc','tke ','mixl'/)
+      varname(1:2,25)=(/'uvel','vvel'/)
 
 !      call mpi_barrier(comm_scribe,ierr)
       print*, 'finished scribe_init:',myrank_schism
@@ -275,7 +281,8 @@
 
 !      write(*,*)'Ready for I/O...',myrank_schism,it
       itotal=0 !# of output/sends so far
-      do j=17,25 
+      !Scalar
+      do j=17,24 
         if(iof_hydro(j)/=0) then
           itotal=itotal+1
           irank=nproc_schism-itotal
@@ -296,7 +303,8 @@
 !              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i))
 !            enddo !i
 
-            call nc_writeout3D(it,nvrt,np_global,var3dnode_gb,varname(j))
+            varname3=varname(1,j)
+            call nc_writeout3D(it,nvrt,np_global,var3dnode_gb,varname3)
 
 !            if(j==19) then
 !              write(97,*)'SSS:',it*dt
@@ -308,6 +316,28 @@
         endif !iof_hydro
       enddo !j
 
+      !Vectors
+      do j=25,25 
+        if(iof_hydro(j)/=0) then
+          do m=1,2 !components
+            itotal=itotal+1
+            irank=nproc_schism-itotal
+            if(myrank_schism==irank) then
+              do i=1,nproc_compute
+                call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+              enddo !i
+              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+       
+              do i=1,nproc_compute
+                var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+              enddo !i
+
+              varname3=varname(m,j)
+              call nc_writeout3D(it,nvrt,np_global,var3dnode_gb,varname3)
+            endif !myrank_schism
+          enddo !m
+        endif !iof_hydro
+      enddo !j
       end subroutine scribe_step
 
 !===============================================================================
@@ -382,6 +412,7 @@
 
       data_start_3d=(/1,1,irec/)
       data_count_3d=(/nvrt,np_global,1/)
+!Error: use idim[12]
       iret=nf90_put_var(ncid_schism_io,ivar_id,real(var3dnode_gb),data_start_3d,data_count_3d)
       if(iret/=NF90_NOERR) call parallel_abort('nc_writeout3D: put 3D var')
      
