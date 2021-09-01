@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+(1 Sept 2021): add zcor output flag as iof_hydro(25); rest of hydro output shifted by 1;
 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option);
 1902c1e (16 July 2021): changed hotstart.nc: added nsteps_from_cold and cumsum_eta for DA;
 e281d94 (25, June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
