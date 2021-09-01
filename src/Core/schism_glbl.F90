@@ -151,7 +151,7 @@ module schism_glbl
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)
-  real(4),save,allocatable :: varout_2dnode(:,:,:),varout_2delem(:,:,:),varout_2dside(:,:,:)
+  real(4),save,allocatable :: varout_2dnode(:,:),varout_2delem(:,:),varout_2dside(:,:)
   character(len=48),save,allocatable :: outfile_ns(:) !,varnm_ns(:)
   character(len=48),save :: a_48
   character(len=16),save :: a_16

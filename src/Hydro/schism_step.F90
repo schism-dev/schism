@@ -154,7 +154,7 @@
                  &side_dim,nvrt_dim,ntracers_dim,three_dim,two_dim,one_dim, &
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
-                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3)
+                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -8926,9 +8926,100 @@
 !       Beware multi-dim arrays: send/recv sections of first X dims is fine
 !       (column major)
         nsend_varout=0 !total # of sends in this step (including all 2/3D outputs)
-        icount=0 !# of output index into varout_3dnode etc  
+
+        !2D: share a scribe
+        icount=0 !# of output index into varout_2dnode etc  
         !Scalar
-        do i=17,24 !3D nodes
+        !Outputs not controlled by flags first
+        do i=1,1
+          icount=icount+1
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(1.4)')
+          varout_2dnode(icount,:)=idry(1:np)
+        enddo !i
+
+        do i=1,12 
+          if(iof_hydro(i)/=0) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2)')
+            select case(i)
+              case(1)
+                varout_2dnode(icount,:)=eta2(1:np)
+              case(2)
+                varout_2dnode(icount,:)=pr(1:np)
+              case(3)
+                varout_2dnode(icount,:)=airt1(1:np)
+              case(4)
+                varout_2dnode(icount,:)=shum1(1:np)
+              case(5)
+                varout_2dnode(icount,:)=srad(1:np)
+              case(6)
+                varout_2dnode(icount,:)=fluxsu(1:np)
+              case(7)
+                varout_2dnode(icount,:)=fluxlu(1:np)
+              case(8)
+                varout_2dnode(icount,:)=hradu(1:np)
+              case(9)
+                varout_2dnode(icount,:)=hradd(1:np)
+              case(10)
+                varout_2dnode(icount,:)=sflux(1:np)
+              case(11)
+                varout_2dnode(icount,:)=fluxevp(1:np)
+              case(12)
+                varout_2dnode(icount,:)=fluxprc(1:np)
+            end select
+          endif !iof_hydro
+        enddo !i=1,12
+
+        !2D vectors
+        do i=13,16
+          if(iof_hydro(i)/=0) then
+            do j=1,2 !components
+              icount=icount+1
+              if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(3)')
+              if(i==13) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=tau_bot_node(1,1:np)
+                else
+                  varout_2dnode(icount,:)=tau_bot_node(2,1:np)
+                endif !j
+              else if(i==14) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=windx(1:np)
+                else
+                  varout_2dnode(icount,:)=windy(1:np)
+                endif !j
+              else if(i==15) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=tau(1,1:np)
+                else
+                  varout_2dnode(icount,:)=tau(2,1:np)
+                endif !j
+              else  !16
+                if(j==1) then
+                  varout_2dnode(icount,:)=dav(1,1:np)
+                else
+                  varout_2dnode(icount,:)=dav(2,1:np)
+                endif !j
+              endif !i
+            enddo !j
+          endif !iof_hydro
+        enddo !i=13,16
+
+        !Send all 2D outputs (always has at least one var)
+        if(icount/=ncount_2dnode) then
+          write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
+          call parallel_abort(errmsg)
+        endif
+        nsend_varout=1
+        iscribe_2d=nproc_schism-nsend_varout !dest rank (scribe)
+        if(nsend_varout>nscribes) call parallel_abort('STEP: icount>nscribes(3.2)')
+        !Column major to deal with variable last dim
+        call mpi_isend(varout_2dnode(1:icount,1:np),np*icount,MPI_REAL4,iscribe_2d, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+
+        !3D node scalar: each output has its own scribe
+        icount=0 !# of output index into varout_3dnode etc  
+        do i=17,24 
           if(iof_hydro(i)/=0) then
             icount=icount+1
             nsend_varout=nsend_varout+1 
@@ -8950,16 +9041,14 @@
                 varout_3dnode(:,:,icount)=q2(:,1:np)
               case(24)
                 varout_3dnode(:,:,icount)=xl(:,1:np)
-!              case(25)
-!                varout_3dnode(:,:,icount)=uu2(:,1:np)
             end select
 
             call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
      &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_hydro
-        enddo !i
+        enddo !i=17,24
 
-        !Vectors
+        !3D node vectors
         do i=25,25 
           if(iof_hydro(i)/=0) then
             do j=1,2 !components
@@ -8977,6 +9066,7 @@
           endif !iof_hydro
         enddo !i
         
+
       endif !nc_out>0.and.mod(it,nspool)==0
 !=============================================================================
 #endif /*OLDIO*/

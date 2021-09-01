@@ -142,6 +142,7 @@
       type(llist_type),pointer :: llp
       logical :: ltmp,ltmp1,ltmp2,lexist
       character(len=48) :: inputfile,ar_name(100)
+      character(len=20) :: out_name(500)
 
       integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
@@ -151,7 +152,7 @@
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
                 &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
-                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50)
+                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50),counter_out_name
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -6059,58 +6060,143 @@
       !Count 2D&3D outputs; vectors count as 2
       !This section must be consistent with schism_step and scribe_io
       nsend_varout=0 !init for first waitall in _step
-!      ncount_2dnode=0
-!      do i=1,16 
-!        if(iof_hydro(i)/=0) then
-!          ncount_2dnode=ncount_2dnode+1
-!        endif
-!      enddo !i
-!      !Add idry
-!      ncount_2dnode=ncount_2dnode+1
-!
+      out_name='' !init
+
+!     2D node
+      !Total # of 2D dynamic outputs, including those not controlled by flags:
+      !idry
+      ncount_2dnode=1 !idry
+      out_name(1)='dry_flag_node'
+      !Scalar
+      do i=1,12
+        if(iof_hydro(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          select case(i)
+            case(1)
+              out_name(ncount_2dnode)='elev'
+            case(2)
+              out_name(ncount_2dnode)='airp'
+            case(3)
+              out_name(ncount_2dnode)='airt'
+            case(4)
+              out_name(ncount_2dnode)='shum'
+            case(5)
+              out_name(ncount_2dnode)='srad'
+            case(6)
+              out_name(ncount_2dnode)='senh'
+            case(7)
+              out_name(ncount_2dnode)='lath'
+            case(8)
+              out_name(ncount_2dnode)='uplong'
+            case(9)
+              out_name(ncount_2dnode)='downlong'
+            case(10)
+              out_name(ncount_2dnode)='totalh'
+            case(11)
+              out_name(ncount_2dnode)='evap'
+            case(12)
+              out_name(ncount_2dnode)='prcp'
+          end select
+        endif
+      enddo !i
+      !Vectors count as 2
+      do i=13,16
+        if(iof_hydro(i)/=0) then
+          ncount_2dnode=ncount_2dnode+2
+          select case(i)
+            case(13)
+              out_name(ncount_2dnode-1)='botstressx'
+              out_name(ncount_2dnode)='botstressy'
+            case(14)
+              out_name(ncount_2dnode-1)='uwind'
+              out_name(ncount_2dnode)='vwind'
+            case(15)
+              out_name(ncount_2dnode-1)='wstressx'
+              out_name(ncount_2dnode)='wstressy'
+            case(16)
+              out_name(ncount_2dnode-1)='udahv'
+              out_name(ncount_2dnode)='vdahv'
+          end select
+        endif
+      enddo !i
+      counter_out_name=ncount_2dnode
+
+!     3D nodes 
       ncount_3dnode=0
       !Scalar
       do i=17,24 
         if(iof_hydro(i)/=0) then
           ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+
+          select case(i)
+            case(17)
+              out_name(counter_out_name)='wvel'
+            case(18)
+              out_name(counter_out_name)='temp'
+            case(19)
+              out_name(counter_out_name)='salt'
+            case(20)
+              out_name(counter_out_name)='dens'
+            case(21)
+              out_name(counter_out_name)='diffusivity'
+            case(22)
+              out_name(counter_out_name)='viscosity'
+            case(23)
+              out_name(counter_out_name)='tke'
+            case(24)
+              out_name(counter_out_name)='mixl'
+          end select
         endif
       enddo !i
       !Vectors count as 2
-      if(iof_hydro(25)/=0) ncount_3dnode=ncount_3dnode+2    
-
-!     Min # of scribes required: all 2D vars share a scribe 
-      noutvars=ncount_3dnode+1 
+      if(iof_hydro(25)/=0) then
+        ncount_3dnode=ncount_3dnode+2    
+        counter_out_name=counter_out_name+2
+        out_name(counter_out_name-1)='uvel'
+        out_name(counter_out_name)='vvel'
+      endif
 
 !new35: modules
 
+
       !Allocate send varout buffers for _step
       if(iorder==0) then
+        allocate(varout_2dnode(ncount_2dnode,np),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: 2dnode')
+
         if(ncount_3dnode>0) then
           allocate(varout_3dnode(nvrt,np,ncount_3dnode),stat=istat)
-          if(istat/=0) call parallel_abort('INIT: ')
+          if(istat/=0) call parallel_abort('INIT: 3dnode')
         endif
       endif !iorder
 
 !...  Send basic time info to scribes. Make sure the send vars are not altered
 !     during non-block sends/recv
+!     Min # of scribes required: all 2D vars share a scribe 
+      noutvars=ncount_3dnode+1 
       if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(counter_out_name>500) call parallel_abort('INIT: increase out_name dim')
       if(myrank==0) then 
         write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
         do i=1,nscribes
           call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
           call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
-!          call mpi_send(ifile,1,itype,nproc_schism-i,102,comm_schism,ierr)
+          call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,102,comm_schism,ierr)
           call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
           call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
           call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
           call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
           call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
           call mpi_send(ihfskip,1,itype,nproc_schism-i,108,comm_schism,ierr)
-!          call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,109,comm_schism,ierr)
+          call mpi_send(counter_out_name,1,itype,nproc_schism-i,109,comm_schism,ierr)
           call mpi_send(iths,1,itype,nproc_schism-i,110,comm_schism,ierr)
           call mpi_send(ntime,1,itype,nproc_schism-i,111,comm_schism,ierr)
           call mpi_send(iof_hydro,40,itype,nproc_schism-i,112,comm_schism,ierr)
           call mpi_send(iof_wwm,30,itype,nproc_schism-i,113,comm_schism,ierr)
+          !Make sure char len is 20 in scribe_io also!
+          call mpi_send(out_name,counter_out_name*20,MPI_CHAR,nproc_schism-i,114,comm_schism,ierr)
+          call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,115,comm_schism,ierr)
         enddo !i
       endif !myrank=0
 
