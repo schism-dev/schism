@@ -127,7 +127,7 @@
       real(rkind) :: double1 !for hotstart.in
 
 !     Misc. arrays
-      integer, allocatable :: ipiv(:) !,iwild(:)
+      integer, allocatable :: ipiv(:)
       integer, allocatable :: nwild(:),nwild2(:),ibuf1(:,:),ibuf2(:,:)
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
@@ -142,7 +142,9 @@
       type(llist_type),pointer :: llp
       logical :: ltmp,ltmp1,ltmp2,lexist
       character(len=48) :: inputfile,ar_name(100)
+      !Dimensions of out_name,iout_23d should be same as in scribe_io
       character(len=20) :: out_name(500)
+      integer :: iout_23d(500)
 
       integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
@@ -152,7 +154,8 @@
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
                 &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
-                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50),counter_out_name
+                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50),counter_out_name, &
+                &noutvars
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -6064,15 +6067,21 @@
       !This section must be consistent with schism_step and scribe_io
       nsend_varout=0 !init for first waitall in _step
       out_name='' !init
+      !iout_23d: ndicates location where outputs are defined. 1:3 - node 2D/3D
+      !whole/3D half level; 4:6 - elem 2D/3D whole/3D half levels; 7:9 - side 2D/3D
+      !whole/3D half levels; 0: no vertical info (e.g. time)
+      iout_23d=0 
 
 !     2D node
       !Total # of 2D dynamic outputs, including those not controlled by flags: idry
       ncount_2dnode=1 !idry
       out_name(1)='dry_flag_node'
+      iout_23d(ncount_2dnode)=1
       !Scalar
       do i=1,12
         if(iof_hydro(i)/=0) then
           ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
           select case(i)
             case(1)
               out_name(ncount_2dnode)='elev'
@@ -6105,6 +6114,7 @@
       do i=13,16
         if(iof_hydro(i)/=0) then
           ncount_2dnode=ncount_2dnode+2
+          iout_23d(ncount_2dnode-1:ncount_2dnode)=1
           select case(i)
             case(13)
               out_name(ncount_2dnode-1)='botstressx'
@@ -6127,11 +6137,13 @@
       ncount_2delem=1 !idry
       counter_out_name=counter_out_name+1
       out_name(counter_out_name)='dry_flag_elem'
+      iout_23d(counter_out_name)=4
 
 !     2D side
       ncount_2dside=1 !idry
       counter_out_name=counter_out_name+1
       out_name(counter_out_name)='dry_flag_side'
+      iout_23d(counter_out_name)=7
 
 !     3D nodes 
       ncount_3dnode=0
@@ -6140,6 +6152,7 @@
         if(iof_hydro(i)/=0) then
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
 
           select case(i)
             case(17)
@@ -6167,6 +6180,7 @@
       if(iof_hydro(26)/=0) then
         ncount_3dnode=ncount_3dnode+2    
         counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=2
         out_name(counter_out_name-1)='uvel'
         out_name(counter_out_name)='vvel'
       endif
@@ -6177,6 +6191,7 @@
         if(iof_hydro(i)/=0) then
           ncount_3dside=ncount_3dside+2
           counter_out_name=counter_out_name+2
+          iout_23d(counter_out_name-1:counter_out_name)=8
           out_name(counter_out_name-1)='uvelside'
           out_name(counter_out_name)='vvelside'
         endif
@@ -6190,10 +6205,13 @@
           counter_out_name=counter_out_name+1
           if(i==28) then
             out_name(counter_out_name)='wvelelem'
+            iout_23d(counter_out_name)=5
           else if(i==29) then
             out_name(counter_out_name)='tempelem'
+            iout_23d(counter_out_name)=6
           else
             out_name(counter_out_name)='saltelem'
+            iout_23d(counter_out_name)=6
           endif
         endif
       enddo !i
@@ -6226,7 +6244,7 @@
 !...  Send basic time info to scribes. Make sure the send vars are not altered
 !     during non-block sends/recv
 !     Min # of scribes required: all 2D (nodes/elem/side) vars share 1 scribe 
-      noutvars=ncount_3dnode+1 
+      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
       if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
       if(counter_out_name>500) call parallel_abort('INIT: increase out_name dim')
       if(myrank==0) then 
@@ -6253,6 +6271,8 @@
           call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,117,comm_schism,ierr)
           call mpi_send(ncount_3dside,1,itype,nproc_schism-i,118,comm_schism,ierr)
           call mpi_send(ncount_3delem,1,itype,nproc_schism-i,119,comm_schism,ierr)
+          call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
+          call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
         enddo !i
       endif !myrank=0
 
@@ -6270,10 +6290,15 @@
       !Make sure index arrays are completely sent as others depend on them
 !      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
 !      srqst3(:)=MPI_REQUEST_NULL !init
-
-!!new35: xnd
-      call mpi_send(xnd(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
-      call mpi_send(ynd(1:np),np,rtype,nproc_schism-1,192,comm_schism,ierr) 
+      if(ics==1) then
+        buf3(1:np)=xnd(1:np)
+        buf4(1:np)=ynd(1:np)
+      else
+        buf3(1:np)=xnd(1:np)/pi*180.d0
+        buf4(1:np)=ynd(1:np)/pi*180.d0
+      endif
+      call mpi_send(buf3(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
+      call mpi_send(buf4(1:np),np,rtype,nproc_schism-1,192,comm_schism,ierr) 
       call mpi_send(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,ierr) 
       call mpi_send(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,ierr) 
       call mpi_send(i34(1:ne),ne,itype,nproc_schism-1,189,comm_schism,ierr) 

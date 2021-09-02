@@ -48,8 +48,9 @@
   &iths0,ncid_schism_2d,ncid_schism_3d
     !Output flag dim must be same as schism_init!
     integer,save :: iof_hydro(40),iof_wwm(30),counter_out_name
-    real(rkind), save :: dt
+    real(rkind), save :: dt,h0
     character(len=20), save :: varname3,out_name(500)
+    integer :: iout_23d(500)
     character(len=1000),save :: out_dir
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
@@ -107,15 +108,17 @@
       call mpi_recv(ncount_3dnode,1,itype,0,117,comm_schism,rrqst,ierr)
       call mpi_recv(ncount_3dside,1,itype,0,118,comm_schism,rrqst,ierr)
       call mpi_recv(ncount_3delem,1,itype,0,119,comm_schism,rrqst,ierr)
+      call mpi_recv(iout_23d,counter_out_name,itype,0,120,comm_schism,rrqst,ierr)
+      call mpi_recv(h0,1,rtype,0,121,comm_schism,rrqst,ierr)
 
       print*, 'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
       print*, 'Scribe, basic info:',dt,nspool,nvrt,np_global,ihfskip, &
     &iths,ntime,iof_hydro,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode, &
     &ncount_3dside,ncount_3delem
 
-      print*, 'out_name:'
+      print*, 'out_name and i23d:'
       do i=1,counter_out_name
-        print*, i,trim(adjustl(out_name(i)))
+        print*, i,trim(adjustl(out_name(i))),iout_23d(i)
       enddo !i
 
       iths0=iths !save to global var
@@ -347,7 +350,8 @@
         enddo !i
 
         call nc_writeout2D(it,np_global,ne_global,ns_global,ncount_2dnode,ncount_2delem,ncount_2dside, &
-     &var2dnode_gb,var2delem_gb,var2dside_gb,out_name(1:ncount_2dnode+ncount_2delem+ncount_2dside))
+     &var2dnode_gb,var2delem_gb,var2dside_gb,out_name(1:ncount_2dnode+ncount_2delem+ncount_2dside), &
+     &iout_23d(1:ncount_2dnode+ncount_2delem+ncount_2dside))
       endif !myrank_schism: 2D
       icount_out_name=ncount_2dnode+ncount_2delem+ncount_2dside
 
@@ -375,7 +379,7 @@
 !            enddo !i
 
             varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3)
+            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
 
 !            if(j==19) then
 !              write(97,*)'SSS:',it*dt
@@ -405,7 +409,7 @@
               enddo !i
 
               varname3=out_name(icount_out_name)
-              call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3)
+              call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
             endif !myrank_schism
           enddo !m
         endif !iof_hydro
@@ -429,7 +433,7 @@
               enddo !i
 
               varname3=out_name(icount_out_name)
-              call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3)
+              call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
             endif !myrank_schism
           enddo !m
         endif !iof_hydro
@@ -452,7 +456,7 @@
             enddo !i
 
             varname3=out_name(icount_out_name)
-            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3)
+            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
 
           endif !myrank_schism
         endif !iof_hydro
@@ -462,14 +466,14 @@
 
 !===============================================================================
       subroutine nc_writeout2D(it,np_gb,ne_gb,ns_gb,ncount_p,ncount_e,ncount_s, &
-     &var2dnode_gb2,var2delem_gb2,var2dside_gb2,vname) 
+     &var2dnode_gb2,var2delem_gb2,var2dside_gb2,vname,i23da)
       implicit none
  
-      integer, intent(in) :: it,np_gb,ne_gb,ns_gb,ncount_p,ncount_e,ncount_s
+      integer, intent(in) :: it,np_gb,ne_gb,ns_gb,ncount_p,ncount_e,ncount_s,i23da(ncount_p+ncount_e+ncount_s)
       real(4), intent(in) :: var2dnode_gb2(np_gb,ncount_p),var2delem_gb2(ne_gb,ncount_e),var2dside_gb2(ns_gb,ncount_s)
       character(len=20), intent(in) :: vname(ncount_p+ncount_e+ncount_s)
 
-      integer :: irec,iret,i,j,k
+      integer :: irec,iret,i,j,k,ih0_id2,ikbp_id2
       character(len=140) :: fname
       character(len=12) :: ifile_char
       real(rkind) :: a1d(1)
@@ -494,6 +498,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: time dim')
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'i23d',0) !set i23d flag
 
+        time_dims(1)=one_dim2
+        iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
         time_dims(1)=node_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xnd')
@@ -501,6 +508,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ynd')
         iret=nf90_def_var(ncid_schism_2d,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
+        time_dims(1)=node_dim2
+        iret=nf90_def_var(ncid_schism_2d,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: kbp')
 !        time_dims(1)=nele_dim2
 !        iret=nf90_def_var(ncid_schism_2d,'element_vertices',NF90_INT,time_dims,i34_id2)
 !        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: i34')
@@ -512,6 +522,7 @@
           var2d_dims(1)=node_dim2; var2d_dims(2)=time_dim2
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i))),NF90_FLOAT,var2d_dims,ivar_id2(i))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
+          iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
         enddo !i
 
@@ -519,6 +530,7 @@
           var2d_dims(1)=nele_dim2; var2d_dims(2)=time_dim2
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i+ncount_p))),NF90_FLOAT,var2d_dims,ivar_id2(i+ncount_p))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
+          iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
         enddo !i
 
@@ -527,15 +539,19 @@
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i+ncount_p+ncount_e))),NF90_FLOAT, &
      &var2d_dims,ivar_id2(i+ncount_p+ncount_e))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(3)')
+          iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
+     &i23da(i+ncount_p+ncount_e)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
         enddo !i
 
         iret=nf90_enddef(ncid_schism_2d)
 
         !Write static info (x,y...)
+        iret=nf90_put_var(ncid_schism_2d,ih0_id2,h0)
         iret=nf90_put_var(ncid_schism_2d,ix_id2,xnd,(/1/),(/np_global/)) 
         iret=nf90_put_var(ncid_schism_2d,iy_id2,ynd,(/1/),(/np_global/)) 
         iret=nf90_put_var(ncid_schism_2d,ih_id2,real(dp),(/1/),(/np_global/)) 
+        iret=nf90_put_var(ncid_schism_2d,ikbp_id2,kbp00,(/1/),(/np_global/)) 
 !        iret=nf90_put_var(ncid_schism_2d,i34_id2,i34,(/1/),(/ne_global/)) 
         iret=nf90_put_var(ncid_schism_2d,elnode_id2,elnode,(/1,1/),(/4,ne_global/)) 
       endif !mod(it-
@@ -572,13 +588,13 @@
       end subroutine nc_writeout2D
 
 !===============================================================================
-      subroutine nc_writeout3D(imode,it,idim1,idim2,var3d_gb2,vname) 
+      subroutine nc_writeout3D(imode,it,idim1,idim2,var3d_gb2,vname,i23d)
       implicit none
  
       !imode: 1-node; 2-elem; 3-side
       !Since many IDs in this routines are shared across outputs, all 3D outputs
       !must follow same order
-      integer, intent(in) :: imode,it,idim1,idim2 !idim1=nvrt; idim2=n[p,e,s]_global
+      integer, intent(in) :: imode,it,idim1,idim2,i23d !idim1=nvrt; idim2=n[p,e,s]_global
       real(4), intent(in) :: var3d_gb2(idim1,idim2)
       character(len=*), intent(in) :: vname
 
@@ -643,6 +659,7 @@
         endif
         iret=nf90_def_var(ncid_schism_3d,trim(adjustl(vname)),NF90_FLOAT,var3d_dims,ivar_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: var_dims')
+        iret=nf90_put_att(ncid_schism_3d,ivar_id,'i23d',i23d) !set i23d flag
         !iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         iret=nf90_enddef(ncid_schism_3d)
 
