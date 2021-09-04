@@ -35,28 +35,29 @@
 !       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
-!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out
       use netcdf
-!      use extract_mod
+      use extract_mod2
       use compute_zcor
       use pt_in_poly_test
 
-      character(len=30) :: file63,varname
+      character(len=30) :: file63,file62,varname
       character(len=12) :: it_char
 !      character(len=48) :: version,variable_nm,variable_dim
       logical :: lexist
       dimension swild(3)
       integer, allocatable :: i34(:),elnode(:,:),node3(:,:),kbp(:),iep(:),irank_read(:),kbp00(:)
-      real*8,allocatable :: timeout(:),x(:),y(:)
+      real*8,allocatable :: timeout(:),xnd(:),ynd(:)
       real,allocatable :: dp(:),ztot(:),sigma(:),sigma_lcl(:,:),outvar(:,:), &
-     &out(:,:,:,:),out2(:,:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
-     &out3(:,:),z00(:),rl2min(:),dep(:),ztmp2(:,:)
+     &out(:,:,:,:),out2(:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
+     &out3(:),z00(:),rl2min(:),dep(:),ztmp2(:,:)
       integer :: nodel(3),dimids(100),idims(100)
       integer :: char_len,start_2d(2),start_3d(3),start_4d(4), &
      &count_2d(2),count_3d(3),count_4d(4)
+!      real*8 :: h0
       
 !      print*, 'Do you work on uncombined (0) or combined (1) nc?'
 !      read(*,*)icomb
@@ -126,27 +127,15 @@
       close(10)
 
 !...  Header
-      h0=0.01
-      nrec=96
-      nvrt=54
-      ivs=1
-      !Returned vars: ne,np,ns,nrec,[x y dp](np),
-      !elnode,i34,nvrt,h0,dtout
-      !If icomb=0, additonal vars: nproc,iegl_rank,iplg,ielg,islg,np_lcl(:),ne_lcl(:),ns_lcl(:)
-!      call readheader(iday1)
+      !Returned vars: ne,np,ns,nrec,[xnd ynd dp](np),
+      !elnode,i34,nvrt,h0,dtout,kbp
+      call get_dims(iday1,np,ne,ns,nvrt,h0)
+      allocate(xnd(np),ynd(np),dp(np),kbp(np),i34(ne),elnode(4,ne),stat=istat)
+      if(istat/=0) stop 'alloc (1)'
+      call readheader(iday1,np,ne,ns,kbp,i34,elnode,nrec,xnd,ynd,dp,dtout)
 
-!      print*, 'After header:',ne,np,ns,nrec,i34(ne), &
-!     &elnode(1:i34(ne),ne),nvrt,h0,x(np),y(np),dp(np) !,start_time
-      open(14,file='hgrid.gr3',status='old')
-      read(14,*); read(14,*)ne,np
-      allocate(x(np),y(np),dp(np),i34(ne),elnode(4,ne))
-      do i=1,np
-        read(14,*)j,x(i),y(i),dp(i)
-      enddo !i
-      do i=1,ne
-        read(14,*)j,i34(i),elnode(1:i34(i),i)
-      enddo !i
-      close(14)
+      print*, 'After header:',ne,np,ns,nvrt,nrec,i34(ne), &
+     &elnode(1:i34(ne),ne),h0,xnd(np),ynd(np),dp(np),dtout !,start_time
 
 !...  Read in time records in segments for mem
       if(inode_elem==1) then !node based
@@ -155,20 +144,14 @@
         last_dim=ne
       endif
 
-      !nrec specified if ispec_max=2
-!      if(ispec_max==1) nrec3=max_array_size/(2*nvrt*last_dim)-1
-!      nrec3=min(nrec,max(nrec3,1))
-
-!      print*, '# of records in each stack is: ',nrec, &
-!     &'; actual # of records that can be read in each time is:',nrec3
- 
       allocate(timeout(nrec),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp00(np), &
-     &kbp(np),outvar(nvrt,last_dim),eta2(np),out2(nxy,nvrt,2),out3(nxy,2), &
-     &out(nxy,3,nvrt,2),node3(nxy,3),arco(nxy,3),iep(nxy))
+     &outvar(nvrt,last_dim),eta2(np),out2(nxy,nvrt),out3(nxy), &
+     &out(nxy,3,nvrt,2),node3(nxy,3),arco(nxy,3),iep(nxy),ztmp(nvrt),ztmp2(nvrt,3))
+      outvar=-huge(1.0) !test mem
+
+!     Read in vgrid
       call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b, &
      &theta_f,ztot,sigma,sigma_lcl,kbp)
-      allocate(ztmp(nvrt),ztmp2(nvrt,3),stat=istat)
-      outvar=-huge(1.0) !test mem
 
 !     Read in vgrid.in 
 !     Calculate kbp00 
@@ -188,8 +171,8 @@
         do i=1,ne
           do l=1,nxy
             if(iep(l)/=0) cycle
-            call pt_in_poly_single(i34(i),real(x(elnode(1:i34(i),i))), &
-     &real(y(elnode(1:i34(i),i))),x00(l),y00(l),inside,arco(l,1:3),nodel)
+            call pt_in_poly_single(i34(i),real(xnd(elnode(1:i34(i),i))), &
+     &real(ynd(elnode(1:i34(i),i))),x00(l),y00(l),inside,arco(l,1:3),nodel)
             if(inside==1) then
               iep(l)=i
               !print*, 'Found:',l,arco(l,1:3),nodel
@@ -212,7 +195,7 @@
           do j=1,i34(ie)
             i=elnode(j,ie)
             do l=1,nxy
-              rl2=(x(i)-x00(l))**2+(y(i)-y00(l))**2
+              rl2=(xnd(i)-x00(l))**2+(ynd(i)-y00(l))**2
               if(rl2<rl2min(l)) then
                 rl2min(l)=rl2
                 iep(l)=ie
@@ -231,17 +214,6 @@
         endif
       enddo !j
 
-      !Mark ranks that need to be read in
-!      if(icomb==0) then
-!        allocate(irank_read(0:nproc-1))
-!        irank_read=0
-!        do j=1,nxy
-!          irank_read(iegl_rank(iep(j)))=1 
-!          write(99,*)'reading from rank #:',iegl_rank(iep(j))
-!        enddo
-!         write(99,*)'Need to read from ',sum(irank_read),' ranks'
-!      endif !icomb
-
 !...  Time iteration
 !...
       do iday=iday1,iday2
@@ -249,12 +221,18 @@
       write(it_char,'(i12)')iday
       it_char=adjustl(it_char)
       leng=len_trim(it_char)
-      file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      file62='out2d_'//it_char(1:leng)//'.nc'
+      iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+
+      if(i23d==1) then !2D var
+        file63=file62
+      else !3D var
+        file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      endif !i23d
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
       !time is double
-      iret=nf90_inq_varid(ncid,'time',itime_id)
-      iret=nf90_get_var(ncid,itime_id,timeout,(/1/),(/nrec/))
-!        call get_timeout(iday,nrec,timeout)
+      iret=nf90_inq_varid(ncid4,'time',itime_id)
+      iret=nf90_get_var(ncid4,itime_id,timeout,(/1/),(/nrec/))
       print*, 'time=',timeout !,trim(adjustl(file63))
 
       iret=nf90_inq_varid(ncid,varname(1:len_var),ivarid1)
@@ -275,17 +253,23 @@
 !        iret=nf90_get_att(ncid,ivarid1,'ivs',ivs)
 !        !print*, 'i23d:',i23d,ivs,idims(1:ndims)
 !
-      do irec=1,nrec !irec2-irec1+1 !offeset record #
+      do irec=1,nrec
+        !Get elev
+        iret=nf90_inq_varid(ncid4,'elev',itmp)
+        start_2d(1)=1; start_2d(2)=irec
+        count_2d(1)=np; count_2d(2)=1
+        iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)
+
 !        if(ivs==1) then !scalar
-          if(i23d==1) then !2D
-            start_2d(1)=1; start_2d(2)=irec
-            count_2d(1)=npes; count_2d(2)=1
-            iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
-          else !3D
-            start_3d(1:2)=1; start_3d(3)=irec
-            count_3d(2)=npes; count_3d(1)=nvrt; count_3d(3)=1
-            iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
-          endif 
+        if(i23d==1) then !2D
+          start_2d(1)=1; start_2d(2)=irec
+          count_2d(1)=npes; count_2d(2)=1
+          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+        else !3D
+          start_3d(1:2)=1; start_3d(3)=irec
+          count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
+          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+        endif 
 !        else !vector
 !          if(mod(i23d-1,3)==0) then !2D
 !            start_3d(1:2)=1; start_3d(3)=irec
@@ -321,9 +305,7 @@
 !          if(i23d<=3) stop 'U said it is elem based'
 !        endif
 
-        eta2=0. !temp
-        !Available now: outvar(nvrt,np|ne),i23d,ivs,eta2(np)
-!        irec_real=irec1+irec-1 !actual record #
+        !Available now: outvar(nvrt,np|ne)
         out2=0
         out3=0
         if(i23d==1) then !2D
@@ -333,18 +315,15 @@
               nd=node3(i,j)
               !Compute local depth
               dep(i)=dep(i)+arco(i,j)*dp(nd)
-              do m=1,ivs
-                if(inode_elem==1) then !node
-                  out2(i,1,m)=out2(i,1,m)+arco(i,j)*outvar(1,nd)
-                else if (inode_elem==2) then !elem
-                  if(iep(i)<=0) stop 'iep(i)<=0'
-                  out2(i,1,m)=outvar(1,iep(i))
-                endif
-              enddo !m
+              if(inode_elem==1) then !node
+                out2(i,1)=out2(i,1)+arco(i,j)*outvar(1,nd)
+              else if (inode_elem==2) then !elem
+                if(iep(i)<=0) stop 'iep(i)<=0'
+                out2(i,1)=outvar(1,iep(i))
+              endif
             enddo !j
           enddo !i
-          write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,1),i=1,nxy)
-!          if(ivs==2) write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
+          write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1),i=1,nxy)
         else !3D
 !          if(i23d<=3) then !node
 !            do i=1,nxy
@@ -367,17 +346,15 @@
               if(eta2(nd)+dp(nd)<h0) idry=1
               etal=etal+arco(i,j)*eta2(nd)
               dep(i)=dep(i)+arco(i,j)*dp(nd)
-      
 !             Debug
 !              write(11,*)i,j,nd,dp(nd),arco(i,j)
-
             enddo !j
             if(idry==1) then
-              if(ivs==2) then
-                out3(i,1:2)=0
-              else
-                out3(i,1:2)=-99
-              endif
+!              if(ivs==2) then
+!                out3(i)=0
+!              else
+              out3(i)=-99
+!              endif
 !              write(65,*)'Dry'
             else !element wet
               !Compute z-coordinates
@@ -409,14 +386,11 @@
 !             Horizontal interpolation
               if(inode_elem==1) then !node based
                 do k=kbpl,nvrt
-                  do m=1,ivs
-                    do j=1,3
-                      nd=node3(i,j)
-                      kin=max(k,kbp00(nd))
-                      out2(i,k,m)=out2(i,k,m)+arco(i,j)*outvar(kin,nd) !out(i,j,kin,m)
-                    enddo !j
-                  enddo !m
-!                  write(65,*)i,k,ztmp(k),(out2(i,k,m),m=1,ivs)     
+                  do j=1,3
+                    nd=node3(i,j)
+                    kin=max(k,kbp00(nd))
+                    out2(i,k)=out2(i,k)+arco(i,j)*outvar(kin,nd) !out(i,j,kin,m)
+                  enddo !j
                 enddo !k
               endif !inode_elem
 
@@ -426,17 +400,15 @@
                   write(*,*)'depth<=0:',total_dp,i
                   stop
                 endif
-                do m=1,ivs
-                  sum1=0
-                  do k=kbpl,nvrt-1
-                    if(inode_elem==1) then !node
-                      sum1=sum1+(ztmp(k+1)-ztmp(k))*(out2(i,k,m)+out2(i,k+1,m))/2
-                    else if(inode_elem==2) then !elem
-                      sum1=sum1+(ztmp(k+1)-ztmp(k))*outvar(k+1,iep(i))
-                    endif    
-                  enddo !k
-                  out3(i,m)=sum1/total_dp
-                enddo !m
+                sum1=0
+                do k=kbpl,nvrt-1
+                  if(inode_elem==1) then !node
+                    sum1=sum1+(ztmp(k+1)-ztmp(k))*(out2(i,k)+out2(i,k+1))/2
+                  else if(inode_elem==2) then !elem
+                    sum1=sum1+(ztmp(k+1)-ztmp(k))*outvar(k+1,iep(i))
+                  endif    
+                enddo !k
+                out3(i)=sum1/total_dp
               else !Interplate in vertical
                 if(ifs==0) then !relative to MSL
                   z2=z00(i)
@@ -463,25 +435,22 @@
 !'
                   stop
                 else
-                  do m=1,ivs
                     if(inode_elem==1) then !node
-                      out3(i,m)=out2(i,k0,m)*(1-rat)+out2(i,k0+1,m)*rat
+                      out3(i)=out2(i,k0)*(1-rat)+out2(i,k0+1)*rat
                     else if(inode_elem==2) then !elem
                       if(iep(i)<=0) stop 'iep(i)<=0(2)'
-                      out3(i,m)=outvar(k0+1,iep(i)) !FV
+                      out3(i)=outvar(k0+1,iep(i)) !FV
                     endif
-                  enddo !m
                 endif
               endif !depth average or not
             endif !dry/wet
           enddo !i=1,nxy
-          write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,1),i=1,nxy)
-!          if(ivs==2) write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
+          write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i),i=1,nxy)
          
         endif !i23d
-!----------------------------------------------------------------------------
       enddo !irec
       iret=nf90_close(ncid)
+      iret=nf90_close(ncid4)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday
