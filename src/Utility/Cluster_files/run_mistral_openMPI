@@ -1,0 +1,42 @@
+#!/bin/bash
+#SBATCH --job-name=R10t
+#SBATCH --partition=compute2
+#SBATCH --nodes=80
+#SBATCH --ntasks-per-node=36
+###Max 8 hrs
+#SBATCH --time=01:00:00
+#SBATCH --mail-type=NONE
+#SBATCH --account=gg0028
+#SBATCH --output=my_job.o%j
+#SBATCH --error=my_job.e%j
+
+# limit stacksize ... adjust to your programs need. Mistral does not suggest unlimited
+#ulimit -s 102400
+ulimit -s 132400
+ulimit -c 0
+
+#Compiled with openMPI (2.0.0 or newer)
+module load intel/18.0.4
+module load openmpi/2.0.2p2_hpcx-intel14
+# Settings for OpenMPI and MXM (MellanoX Messaging)
+# library
+export OMPI_MCA_pml=cm
+export OMPI_MCA_mtl=mxm
+export OMPI_MCA_mtl_mxm_np=0
+export MXM_RDMA_PORTS=mlx5_0:1
+export MXM_LOG_LEVEL=ERROR
+# Disable GHC algorithm for collective communication
+export OMPI_MCA_coll=^ghc
+
+# Use srun (not mpirun or mpiexec) command to launch
+# programs compiled with any MPI library
+srun -l --propagate=STACK,CORE --cpu_bind=cores \
+  --distribution=block:cyclic ./pschism_mistral_VL
+
+#module rm intel intelmpi/2018.5.288
+#module load intel/16.0 openmpi/1.10.2_mlx-intel16
+#module load netcdf-c/4.7.4-intel-17.0.6 netcdf-fortran/4.5.3-intel-17.0.6
+#module list
+
+#export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+
