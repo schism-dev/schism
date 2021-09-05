@@ -31,6 +31,7 @@
     contains
 
 !================================================================
+!     Get dimensions from out2d_*.nc
       subroutine get_dims(istack,np,ne,ns,nvrt,h0)
       integer, intent(in) :: istack
       integer, intent(out) :: np,ne,ns,nvrt

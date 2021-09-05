@@ -6294,8 +6294,8 @@
         buf3(1:np)=xnd(1:np)
         buf4(1:np)=ynd(1:np)
       else
-        buf3(1:np)=xnd(1:np)/pi*180.d0
-        buf4(1:np)=ynd(1:np)/pi*180.d0
+        buf3(1:np)=xlon(1:np)/pi*180.d0
+        buf4(1:np)=ylat(1:np)/pi*180.d0
       endif
       call mpi_send(buf3(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
       call mpi_send(buf4(1:np),np,rtype,nproc_schism-1,192,comm_schism,ierr) 

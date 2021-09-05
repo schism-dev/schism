@@ -21,18 +21,15 @@
 !       depth averaged value will be calculated (for 3D vars).
 !       Output time series for 3D variables (surface values for 2D variables), DEFINED AT NODES OR
 !       ELEMENTS.
-!       Works with combined or uncombined nc outputs.
 
 !       Inputs: 
 !              (1) screen; 
 !              (2) station.bp or station.sta
 !              (3) vgrid.in: in this dir or ../
-!              (4) combined or uncombined nc outputs (schout*.nc; tri-quad)
+!              (4) out2d*.nc
+!              (4) nc outputs for that variable(tri-quad)
 
-!              max_array_size - this constant sets max
-!              array size and may need to be adjusted depending on your
-!              systems memory.
-!       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
+!       Outputs: fort.18; ; fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
 !   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -126,7 +123,7 @@
       enddo !i
       close(10)
 
-!...  Header
+!...  Get basic info from out2d*.nc
       !Returned vars: ne,np,ns,nrec,[xnd ynd dp](np),
       !elnode,i34,nvrt,h0,dtout,kbp
       call get_dims(iday1,np,ne,ns,nvrt,h0)
