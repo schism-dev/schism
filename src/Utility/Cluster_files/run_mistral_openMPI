@@ -33,10 +33,3 @@ export OMPI_MCA_coll=^ghc
 srun -l --propagate=STACK,CORE --cpu_bind=cores \
   --distribution=block:cyclic ./pschism_mistral_VL
 
-#module rm intel intelmpi/2018.5.288
-#module load intel/16.0 openmpi/1.10.2_mlx-intel16
-#module load netcdf-c/4.7.4-intel-17.0.6 netcdf-fortran/4.5.3-intel-17.0.6
-#module list
-
-#export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
-

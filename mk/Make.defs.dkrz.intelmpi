@@ -41,7 +41,8 @@ ENV = mistral
 # Environment 
 ################################################################################
 
-FCP = mpif90
+#OpenMPI uses mpif90; IntelMPI uses mpiifort
+FCP = mpiifort
 FLD = $(FCP)
 FCS = $(FCP)
 PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 
