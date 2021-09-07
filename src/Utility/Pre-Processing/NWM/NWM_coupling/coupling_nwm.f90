@@ -598,6 +598,7 @@
          if(sink_bnd(n_sink-1).ne.sink_bnd(n_sink)) then
            nsi=nsi+1
            SF_si(i,nsi)=dup+sflow(sink_seg(n_sink))
+           SF_si(i,nsi)=-SF_si(i,nsi)
            dup=0
          endif
        else
