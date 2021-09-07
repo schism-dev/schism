@@ -30,7 +30,7 @@ module fabm_schism
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
   use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global,np_global,iegl,ipgl
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
-  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
+  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat,kbp
   use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,epsf,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
@@ -145,8 +145,8 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: layer_height => null()
     real(rk), dimension(:,:), pointer   :: layer_depth => null()
     real(rk), dimension(:,:), pointer   :: spm => null()
-    real(rk), dimension(:,:), pointer   :: eps => null()
-    real(rk), dimension(:,:), pointer   :: num => null()
+    real(rk), dimension(:), pointer     :: bottom_eps => null()
+    !real(rk), dimension(:), pointer     :: bottom_num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
     real(rk), dimension(:), pointer     :: I_0 => null()
@@ -624,21 +624,25 @@ subroutine fabm_schism_init_stage2
   endif
 #endif
 
-  allocate(fs%tau_bottom(nea))
-  fs%tau_bottom = -9999.0_rk
-
   allocate(fs%bottom_depth(nea))
-  fs%bottom_depth = -9999.0_rk
+  fs%bottom_depth = -1E30_rk
 
-  allocate(fs%eps(nvrt,nea))
-  fs%eps = -9999.0_rk
+  allocate(fs%tau_bottom(nea))
+  fs%tau_bottom = -1E30_rk ! will be initialized from schism_step
 
-  allocate(fs%num(nvrt,nea))
-  fs%num = -9999.0_rk
+  !> @todo epsf is only calculated with USE_SED=ON, so what do we do for
+  !> maecs which needs this in maecs/fwfzmethod=4
+  if (allocated(epsf)) then
+    allocate(fs%bottom_eps(nea))
+    fs%bottom_eps = -1E30_rk
+  endif
+
+  !allocate(fs%bottom_num(nea))
+  !fs%bottom_num = -1E30.0_rk
 
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
   allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
-  fs%pres = -9999.0_rk
+  fs%pres = -1E30_rk
 
   ! Link ice environment
 #ifdef USE_ICEBGC
@@ -836,7 +840,7 @@ subroutine get_light(fs)
     do nel=1,nea
       call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
 
-      write(0,*) nea,nel,nvrt,localext(kbe(nel)+1:nvrt)
+      !write(0,*) nea,nel,nvrt,localext(kbe(nel)+1:nvrt)
       do k=nvrt,kbe(nel)+1,-1
         intext = (localext(k)+fs%background_extinction)*0.5_rk*fs%layer_height(k,nel)
 #ifdef USE_SED
@@ -1025,19 +1029,30 @@ subroutine fabm_schism_do()
 
   ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
-  if (allocated(epsf)) then
+  if (associated(fs%bottom_eps)) then
+    fs%bottom_eps=0.0_rk
     do i=1,nea
-        fs%eps(1:nvrt,i) = sum(epsf(1:nvrt,elnode(1:i34(i),i)),dim=2)/i34(i)
+      do k=1,i34(i)
+        fs%bottom_eps(i) = fs%bottom_eps(i) + epsf(kbp(elnode(k,i)),elnode(k,i))/i34(i)
+        !write(0,*), i,k,fs%bottom_eps(i), kbp(elnode(k,i)), epsf(kbp(elnode(k,i)),elnode(k,i))/i34(i)
+      enddo
     enddo
+    if (any(fs%bottom_eps < 0.0_rk)) then
+      call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom TKE')
+    endif
   endif
 
-  if (allocated(dfv)) then
-  do i=1,nea
-    do k=1,nvrt
-      fs%num(k,i) = sum(dfv(k,elnode(1:i34(i),i)))/i34(i)
-    enddo
-  enddo
-  endif
+  !if (allocated(dfv) .and. associated(fs%bottom_num)) then
+  !  fs%bottom_num=0.0_rk
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      fs%bottom_num(i) = fs%bottom_num(i) + dfv(kbp(elnode(j,i)),elnode(j,i))/i34(i)
+  !    enddo
+  !  enddo
+  !  if (any(bottom_num < 0.0_rk)) then
+  !    call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom NUM')
+  !  endif
+  !endif
 
   ! get rhs and put tendencies into schism-array
   do i=1,nea
@@ -1564,28 +1579,28 @@ subroutine link_environmental_data(self, rc)
   call fabm_link_bulk_data(self%model,standard_variables%density,erho)
   call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
   !call fabm_link_bulk_data(self%model,standard_variables%turbulence_dissipation,self%eps)
-  call fabm_link_bulk_data(self%model, &
-    type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-    units='W kg-1', &
-    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+!  call fabm_link_bulk_data(self%model, &
+!    type_bulk_standard_variable(name='bottom_turbulent_kinetic_energy_dissipation', &
+!    units='W kg-1', &
+!    cf_names='specific_turbulent_kinetic_energy_dissipation_at_soil_surface'), self%bottom_eps)
   !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-      units='m3'), self%eps(1,:))
-  call fabm_link_bulk_data(self%model, &
-     type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
-     cf_names='ocean_vertical_momentum_diffusivity'),self%num)
-  call driver%log_message('linked bulk variable "momentum diffusivity"')
+      units='m3'), self%bottom_eps)
+  !call fabm_link_bulk_data(self%model, &
+  !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+  !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  !call driver%log_message('linked bulk variable "momentum diffusivity"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+  call driver%log_message('linked horizontal standard variable "bottom_stress"')
 #ifdef USE_ICEBGC
   call fabm_link_horizontal_data(self%model,standard_variables%ice_thickness,self%ice_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%ice_conc,self%ice_cover)
   call fabm_link_horizontal_data(self%model,standard_variables%snow_thickness,self%snow_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%dh_growth,self%dh_growth)
 #endif
-  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
-  call driver%log_message('linked horizontal standard variable "bottom_stress"')
   call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
   call driver%log_message('linked horizontal standard variable "longitude"')
   call fabm_link_horizontal_data(self%model,standard_variables%latitude,ylat_el)
@@ -1596,9 +1611,8 @@ subroutine link_environmental_data(self, rc)
 #else
 !_FABM_API_VERSION_>=1
   call self%model%link_interior_data(fabm_standard_variables%pressure,self%pres) !ADDED
-
-  call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
 #ifdef USE_ICEBGC
   call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
   call self%model%link_horizontal_data(fabm_standard_variables%ice_conc,self%ice_cover)
@@ -1623,7 +1637,8 @@ subroutine link_environmental_data(self, rc)
   !    units='W kg-1', &
   !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
   call self%model%link_horizontal_data(type_bottom_standard_variable( &
-    name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%eps(1,:))
+  !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_eps(:))
+  name='turbulent_kinetic_energy_at_soil_surface',units='m3'),self%bottom_eps(:))
 
   !call self%model%link_horizontal_data( &
   !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
