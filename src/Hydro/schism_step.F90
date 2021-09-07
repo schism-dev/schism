@@ -154,7 +154,7 @@
                  &side_dim,nvrt_dim,ntracers_dim,three_dim,two_dim,one_dim, &
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
-                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3)
+                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -8137,8 +8137,7 @@
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
         !zcor MUST be 1st 3D var output for combine scripts to work!
-        call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
-        !call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,bcc(1,1:nvrt,1:npa)) !znl(:,:))
+        if(iof_hydro(25)==1) call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
         if(iof_hydro(1)==1) call writeout_nc(id_out_var(5),'elev',1,1,npa,eta2)
         if(iof_hydro(2)==1) call writeout_nc(id_out_var(6),'air_pressure',1,1,npa,pr)
         if(iof_hydro(3)==1) call writeout_nc(id_out_var(7),'air_temperature',1,1,npa,airt1)
@@ -8163,12 +8162,12 @@
         if(iof_hydro(22)==1) call writeout_nc(id_out_var(26),'viscosity',2,nvrt,npa,dfv)
         if(iof_hydro(23)==1) call writeout_nc(id_out_var(27),'TKE',2,nvrt,npa,q2)
         if(iof_hydro(24)==1) call writeout_nc(id_out_var(28),'mixing_length',2,nvrt,npa,xl)
-        if(iof_hydro(25)==1) call writeout_nc(id_out_var(29),'hvel',2,nvrt,npa,uu2,vv2)
-        if(iof_hydro(26)==1) call writeout_nc(id_out_var(30),'hvel_side',8,nvrt,nsa,su2,sv2)
-        if(iof_hydro(27)==1) call writeout_nc(id_out_var(31),'wvel_elem',5,nvrt,nea,we)
-        if(iof_hydro(28)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
-        if(iof_hydro(29)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
-        if(iof_hydro(30)==1) call writeout_nc(id_out_var(34), &
+        if(iof_hydro(26)==1) call writeout_nc(id_out_var(29),'hvel',2,nvrt,npa,uu2,vv2)
+        if(iof_hydro(27)==1) call writeout_nc(id_out_var(30),'hvel_side',8,nvrt,nsa,su2,sv2)
+        if(iof_hydro(28)==1) call writeout_nc(id_out_var(31),'wvel_elem',5,nvrt,nea,we)
+        if(iof_hydro(29)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
+        if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
+        if(iof_hydro(31)==1) call writeout_nc(id_out_var(34), &
      &'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
         noutput=30 !total # of outputs so far (for dim of id_out_var)
 
@@ -8926,9 +8925,127 @@
 !       Beware multi-dim arrays: send/recv sections of first X dims is fine
 !       (column major)
         nsend_varout=0 !total # of sends in this step (including all 2/3D outputs)
+
+        !2D: all (node/side/elem) share 1 scribe
+        icount=0 !# of output index into varout_2dnode etc  
+        !2D scalar
+        !Outputs not controlled by flags first
+        do i=1,1
+          icount=icount+1
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(1.4)')
+          varout_2dnode(icount,:)=idry(1:np)
+        enddo !i
+
+        do i=1,12 
+          if(iof_hydro(i)/=0) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2)')
+            select case(i)
+              case(1)
+                varout_2dnode(icount,:)=eta2(1:np)
+              case(2)
+                varout_2dnode(icount,:)=pr(1:np)
+              case(3)
+                varout_2dnode(icount,:)=airt1(1:np)
+              case(4)
+                varout_2dnode(icount,:)=shum1(1:np)
+              case(5)
+                varout_2dnode(icount,:)=srad(1:np)
+              case(6)
+                varout_2dnode(icount,:)=fluxsu(1:np)
+              case(7)
+                varout_2dnode(icount,:)=fluxlu(1:np)
+              case(8)
+                varout_2dnode(icount,:)=hradu(1:np)
+              case(9)
+                varout_2dnode(icount,:)=hradd(1:np)
+              case(10)
+                varout_2dnode(icount,:)=sflux(1:np)
+              case(11)
+                varout_2dnode(icount,:)=fluxevp(1:np)
+              case(12)
+                varout_2dnode(icount,:)=fluxprc(1:np)
+            end select
+          endif !iof_hydro
+        enddo !i=1,12
+
+        !2D node vectors
+        do i=13,16
+          if(iof_hydro(i)/=0) then
+            do j=1,2 !components
+              icount=icount+1
+              if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(3)')
+              if(i==13) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=tau_bot_node(1,1:np)
+                else
+                  varout_2dnode(icount,:)=tau_bot_node(2,1:np)
+                endif !j
+              else if(i==14) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=windx(1:np)
+                else
+                  varout_2dnode(icount,:)=windy(1:np)
+                endif !j
+              else if(i==15) then
+                if(j==1) then
+                  varout_2dnode(icount,:)=tau(1,1:np)
+                else
+                  varout_2dnode(icount,:)=tau(2,1:np)
+                endif !j
+              else  !16
+                if(j==1) then
+                  varout_2dnode(icount,:)=dav(1,1:np)
+                else
+                  varout_2dnode(icount,:)=dav(2,1:np)
+                endif !j
+              endif !i
+            enddo !j
+          endif !iof_hydro
+        enddo !i=13,16
+
+        if(icount/=ncount_2dnode) then
+          write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
+          call parallel_abort(errmsg)
+        endif
+!end of 2D node
+
+        !2D elem scalars
+        icount=1
+        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
+        varout_2delem(icount,:)=idry_e(1:ne)
+        if(icount/=ncount_2delem) then
+          write(errmsg,*)'STEP: 2D count wrong(2):',icount,ncount_2delem
+          call parallel_abort(errmsg)
+        endif
+
+        !2D side scalars
+        icount=1
+        if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.2)')
+        varout_2dside(icount,:)=idry_s(1:ns)
+        if(icount/=ncount_2dside) then
+          write(errmsg,*)'STEP: 2D count wrong(3):',icount,ncount_2dside
+          call parallel_abort(errmsg)
+        endif
+
+!        do i=1,ne
+!          if(ielg(i)<=4) write(99,*)'elem dry flag:',it,idry_e(i)
+!        enddo !i
+!        do i=1,ns
+!          if(islg(i)<=4) write(99,*)'side dry flag:',it,idry_s(i)
+!        enddo !i
+
+        !Send 2D node first (elem/side last as nsend_varout is shared)
+        nsend_varout=1
+        iscribe_2d=nproc_schism-nsend_varout !dest rank (scribe)
+        if(nsend_varout>nscribes) call parallel_abort('STEP: nsend_varout>nscribes(3.2)')
+        !Column major to deal with variable last dim
+        call mpi_isend(varout_2dnode(1:ncount_2dnode,1:np),np*ncount_2dnode,MPI_REAL4,iscribe_2d, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+
+        !3D node scalar: each output has its own scribe
         icount=0 !# of output index into varout_3dnode etc  
-        !Scalar
-        do i=17,24 !3D nodes
+        do i=17,25
           if(iof_hydro(i)/=0) then
             icount=icount+1
             nsend_varout=nsend_varout+1 
@@ -8950,17 +9067,17 @@
                 varout_3dnode(:,:,icount)=q2(:,1:np)
               case(24)
                 varout_3dnode(:,:,icount)=xl(:,1:np)
-!              case(25)
-!                varout_3dnode(:,:,icount)=uu2(:,1:np)
+              case(25)
+                varout_3dnode(:,:,icount)=znl(:,1:np)
             end select
 
             call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
      &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_hydro
-        enddo !i
+        enddo !i=17,24
 
-        !Vectors
-        do i=25,25 
+        !3D node vectors
+        do i=26,26
           if(iof_hydro(i)/=0) then
             do j=1,2 !components
               icount=icount+1
@@ -8976,7 +9093,55 @@
             enddo !j
           endif !iof_hydro
         enddo !i
+
+        !3D side vector
+        icount=0
+        do i=27,27
+          if(iof_hydro(i)/=0) then
+            do j=1,2 !components
+              icount=icount+1
+              nsend_varout=nsend_varout+1
+              if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2)')
+              if(j==1) then
+                varout_3dside(:,:,icount)=su2(:,1:ns)
+              else
+                varout_3dside(:,:,icount)=sv2(:,1:ns)
+              endif !j
+              call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+            enddo !j
+          endif !iof_hydro
+        enddo !i
+
+        !3D elem scalar
+        icount=0
+        do i=28,30
+          if(iof_hydro(i)/=0) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.2)')
+            if(i==28) then
+              varout_3delem(:,:,icount)=we(:,1:ne)
+            else if(i==29) then
+              varout_3delem(:,:,icount)=tr_el(1,:,1:ne)
+            else
+              varout_3delem(:,:,icount)=tr_el(2,:,1:ne)
+            endif
+
+            call mpi_isend(varout_3delem(:,1:ne,icount),ne*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_hydro
+        enddo !i
+
         
+!...    Lastly, send 2D elem/side outputs as nsend_varout is used by 3D outputs above
+        nsend_varout=nsend_varout+1
+        call mpi_isend(varout_2delem(1:ncount_2delem,1:ne),ne*ncount_2delem,MPI_REAL4,iscribe_2d, &
+     &701,comm_schism,srqst7(nsend_varout),ierr)
+        nsend_varout=nsend_varout+1
+        call mpi_isend(varout_2dside(1:ncount_2dside,1:ns),ns*ncount_2dside,MPI_REAL4,iscribe_2d, &
+     &702,comm_schism,srqst7(nsend_varout),ierr)
+
       endif !nc_out>0.and.mod(it,nspool)==0
 !=============================================================================
 #endif /*OLDIO*/
