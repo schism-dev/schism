@@ -1,3 +1,7 @@
+# Old nc output option (each rank dumps its own data)
+# USE_OLDIO = yes
+# EXEC := $(EXEC)_OLDIO
+
 # Use PetSc as solver for FE eq
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
 # PETSC_VERSION = v2

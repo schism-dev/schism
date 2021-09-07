@@ -2,6 +2,7 @@ Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
+8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option);
 1902c1e (16 July 2021): changed hotstart.nc: added nsteps_from_cold and cumsum_eta for DA;
 e281d94 (25, June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
 bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
@@ -496,6 +497,7 @@ git versions:
                               fro large core counts.
 (126) ab46def (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
 (127) 70db927 (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
+(128) 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option)
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);

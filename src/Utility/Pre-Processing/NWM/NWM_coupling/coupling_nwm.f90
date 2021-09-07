@@ -33,7 +33,7 @@
 !
 ! 
 !
-!ifort -O2 -CB -traceback -o coupling_nwm ../../../UtilLib/julian_date.f90 ../../../UtilLib/schism_geometry.f90 ../../../UtilLib/pt_in_poly_test.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!ifort -O2 -CB -traceback -o coupling_nwm ../../../UtilLib/julian_date.f90 ../../../UtilLib/schism_geometry.f90 ../../../UtilLib/pt_in_poly_ll.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
        program coupling_nwm
        use netcdf
@@ -597,7 +597,7 @@
          enddo !j
          if(sink_bnd(n_sink-1).ne.sink_bnd(n_sink)) then
            nsi=nsi+1
-           SF_si(i,nso)=dup+sflow(sink_seg(n_sink))
+           SF_si(i,nsi)=dup+sflow(sink_seg(n_sink))
            dup=0
          endif
        else

@@ -115,7 +115,7 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -126,6 +126,10 @@ ifdef USE_PETSC
 else
   PETSCLIBS =
   PETSCMOD =
+endif
+
+ifdef USE_OLDIO
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DOLDIO
 endif
 
 ifdef USE_PREC_EVAP
@@ -304,7 +308,7 @@ endif
 OBJS := $(OBJS) grid_subs.o hydraulic_structures.o schism_init.o \
         schism_step.o schism_finalize.o bktrk_subs.o solver_subs.o \
         misc_subs.o transport_TVD.o transport_TVD_imp.o \
-        sflux_9c.o lap.o single_netcdf.o
+        sflux_9c.o lap.o
 
 ifdef USE_SIMPLE_WIND
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_SIMPLE_WIND
