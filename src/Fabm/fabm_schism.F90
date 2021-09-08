@@ -1033,7 +1033,8 @@ subroutine fabm_schism_do()
     do i=1,nea
       fs%bottom_tke(i) = 0.0_rk
       do k=1,i34(i)
-        fs%bottom_tke(i) = fs%bottom_tke(i) + q2(kbp(k)+1,elnode(k,i))/i34(i)
+        !> @todo Find out why we have kbp+1 here
+        fs%bottom_tke(i) = fs%bottom_tke(i) + q2(kbp(elnode(k,i))+1,elnode(k,i))/i34(i)
       enddo
     enddo
     if (any(fs%bottom_tke < 0.0_rk)) then
