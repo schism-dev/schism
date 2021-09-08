@@ -31,7 +31,7 @@ module fabm_schism
   use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global,np_global,iegl,ipgl
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat,kbp
-  use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,epsf,dfv
+  use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,q2,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
@@ -145,7 +145,7 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: layer_height => null()
     real(rk), dimension(:,:), pointer   :: layer_depth => null()
     real(rk), dimension(:,:), pointer   :: spm => null()
-    real(rk), dimension(:), pointer     :: bottom_eps => null()
+    real(rk), dimension(:), pointer     :: bottom_tke => null()
     !real(rk), dimension(:), pointer     :: bottom_num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
@@ -632,10 +632,10 @@ subroutine fabm_schism_init_stage2
 
   !> @todo epsf is only calculated with USE_SED=ON, so what do we do for
   !> maecs which needs this in maecs/fwfzmethod=4
-  if (allocated(epsf)) then
-    allocate(fs%bottom_eps(nea))
-    fs%bottom_eps = -1E30_rk
-  endif
+  !if (allocated(epsf)) then ! changed to q2
+
+  allocate(fs%bottom_tke(nea))
+  fs%bottom_tke = -1E30_rk
 
   !allocate(fs%bottom_num(nea))
   !fs%bottom_num = -1E30.0_rk
@@ -1029,15 +1029,14 @@ subroutine fabm_schism_do()
 
   ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
-  if (associated(fs%bottom_eps)) then
-    fs%bottom_eps=0.0_rk
+  if (associated(fs%bottom_tke)) then
     do i=1,nea
+      fs%bottom_tke(i) = 0.0_rk
       do k=1,i34(i)
-        fs%bottom_eps(i) = fs%bottom_eps(i) + epsf(kbp(elnode(k,i)),elnode(k,i))/i34(i)
-        !write(0,*), i,k,fs%bottom_eps(i), kbp(elnode(k,i)), epsf(kbp(elnode(k,i)),elnode(k,i))/i34(i)
+        fs%bottom_tke(i) = fs%bottom_tke(i) + q2(kbp(k)+1,elnode(k,i))/i34(i)
       enddo
     enddo
-    if (any(fs%bottom_eps < 0.0_rk)) then
+    if (any(fs%bottom_tke < 0.0_rk)) then
       call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom TKE')
     endif
   endif
@@ -1560,7 +1559,7 @@ subroutine link_environmental_data(self, rc)
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
   ! represented in the dfv(1:nvrt,1:npa) variable.
   ! @todo what is the exact representation of this quantity in SCHISM? We assume
-  ! `epsf` here for now.
+  ! q2bot for now
   ! @todo make this call to $\nu_m$ and $\epsilon$ to standard variables, i.e.
   ! expand the controlled vocabulary if they do not exist.
 
@@ -1582,11 +1581,11 @@ subroutine link_environmental_data(self, rc)
 !  call fabm_link_bulk_data(self%model, &
 !    type_bulk_standard_variable(name='bottom_turbulent_kinetic_energy_dissipation', &
 !    units='W kg-1', &
-!    cf_names='specific_turbulent_kinetic_energy_dissipation_at_soil_surface'), self%bottom_eps)
+!    cf_names='specific_turbulent_kinetic_energy_dissipation_at_soil_surface'), self%bottom_tke)
   !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-      units='m3'), self%bottom_eps)
+      units='m3'), self%bottom_tke)
   !call fabm_link_bulk_data(self%model, &
   !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
   !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
@@ -1637,8 +1636,8 @@ subroutine link_environmental_data(self, rc)
   !    units='W kg-1', &
   !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
   call self%model%link_horizontal_data(type_bottom_standard_variable( &
-  !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_eps(:))
-  name='turbulent_kinetic_energy_at_soil_surface',units='m3'),self%bottom_eps(:))
+  !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_tke(:))
+  name='turbulent_kinetic_energy_at_soil_surface',units='m3'),self%bottom_tke(:))
 
   !call self%model%link_horizontal_data( &
   !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
