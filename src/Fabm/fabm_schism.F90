@@ -55,7 +55,7 @@ module fabm_schism
 #else
   !> @todo remove this compatibility in the long-term, it takes care of the
   !> renaming from FABM v0.9 to v1.0
-  use fabm_types, only: rk, output_none
+  use fabm_types, only: rk, output_none, type_bottom_standard_variable
   use fabm_v0_compatibility
 #endif
 
@@ -620,7 +620,7 @@ subroutine fabm_schism_init_stage2
 
   !> For now, only FABM0 light calculation is done here.
   if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
-    call driver%fatal('fabm_init', 'Not implemented: requested downwelling PAR flux')
+    call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
   endif
 #endif
 
