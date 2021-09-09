@@ -1359,6 +1359,9 @@ end subroutine fabm_schism_read_horizontal_state_from_hotstart
 
 subroutine fabm_schism_create_output_netcdf()
 
+  use schism_glbl, only: start_day, start_year, start_month
+  use schism_glbl, only: start_hour, utc_start
+
   character(len=*),parameter  :: filename='fabm_state'
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
@@ -1371,7 +1374,6 @@ subroutine fabm_schism_create_output_netcdf()
   character(len=*),parameter     :: nvrt_name = 'nvrt'
   character(len=*),parameter     :: x_name = 'node_x'
   character(len=*),parameter     :: y_name = 'node_y'
-  character(len=*),parameter     :: time_units = 'seconds since start of simulation'
 
   integer              :: status
   integer              :: elements_dim_id,nodes_dim_id,surrnodes_dim_id,time_dim_id,nvrt_dim_id
@@ -1380,6 +1382,12 @@ subroutine fabm_schism_create_output_netcdf()
   integer              :: start(1),count(1)
   integer(8)           :: tmp(1,1)
   integer(8)           :: tmp2(4,1)
+  character(len=64)    :: time_units
+
+  !> @todo the real parts of start_hour and utc_start are not handled yet
+  write(time_units,'(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,SP,I5.4)') 'seconds since ', &
+    start_year, '-', start_month,'-', start_day,'T', &
+    int(start_hour),':00:00',int(utc_start)
 
   write(rankstr,fmt='(I0.6)') myrank
   ncfile = trim(out_dir)//trim(filename)//'_'//rankstr//'.nc'
@@ -1395,7 +1403,7 @@ subroutine fabm_schism_create_output_netcdf()
 
   ! create variables
   call nccheck( nf90_def_var(ncid, 'time', nf90_double, (/ time_dim_id /), time_id) )
-  call nccheck( nf90_put_att(ncid, time_id, 'units', time_units) )
+  call nccheck( nf90_put_att(ncid, time_id, 'units', trim(time_units)) )
 
   call nccheck( nf90_def_var(ncid, element_id_name, nf90_int64, (/ elements_dim_id /), element_id_id) )
   call nccheck( nf90_put_att(ncid, element_id_id, 'long_name', 'global element id, like in the hgrid.gr3') )
