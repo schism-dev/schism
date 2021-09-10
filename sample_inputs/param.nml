@@ -497,7 +497,7 @@
   nrampwind = 1 !ramp-up option for atmos. forcing
   drampwind = 1. !needed if nrampwind/=0; ramp-up period in days
 !  iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
-  iwind_form = -1 !needed if nws/=0
+  iwind_form = 1 !needed if nws/=0
   !If impose_net_flux/=0 and nws=2, read in net _surface_ heat flux as var 'dlwrf' 
   !(Downward Long Wave) in sflux_rad (solar radiation is still used separately),
   !and if PREC_EVAP is on, also read in net P-E as 'prate' (Surface Precipitation Rate) in sflux_prc.
