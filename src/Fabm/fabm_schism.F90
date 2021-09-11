@@ -188,7 +188,7 @@ module fabm_schism
 
   type(type_fabm_schism), public :: fs ! the main module object
   integer  :: ncid=-1 ! ncid of hotstart variables
-  real     :: missing_value=-9999. ! missing_value for netcdf variables
+  real     :: missing_value=-2E20_rk ! missing_value for netcdf variables
 
 contains
 
@@ -448,7 +448,7 @@ subroutine fabm_schism_init_stage2
       fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
 #endif
     end if
-    fs%interior_diagnostic_variables(n)%data = -1.0e30_rk
+    fs%interior_diagnostic_variables(n)%data = missing_value
     fs%time_since_last_output = 0.0_rk
 
     write(message,'(A)') 'Linked interior diagnostic '// &
@@ -502,19 +502,19 @@ subroutine fabm_schism_init_stage2
 
   ! link environment
   allocate(fs%light_extinction(nvrt,nea))
-  fs%light_extinction = -1.0e30_rk
+  fs%light_extinction = missing_value
 
   allocate(fs%layer_height(nvrt,nea))
-  fs%layer_height = -1.0e30_rk
+  fs%layer_height = missing_value
 
   allocate(fs%layer_depth(nvrt,nea))
-  fs%layer_depth = -1.0e30_rk
+  fs%layer_depth = missing_value
 
   allocate(fs%spm(nvrt,nea))
-  fs%spm=0.0_rk
+  fs%spm=missing_value
 
   if(fs%params%ispm==1) then
-    call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
+    call fabm_schism_read_param_2d('SPM',fs%spm(1,:),real(missing_value,kind=rk))
     do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
   elseif(fs%params%ispm==2) then
     do n=1,ntrs(5)
@@ -526,14 +526,14 @@ subroutine fabm_schism_init_stage2
     fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
   endif
 
-  !> Set wind to the netcdf missing value -9999.f if atmospheric forcing is
+  !> Set wind to the netcdf missing value  if atmospheric forcing is
   !> no provided by setting nws>0 in param.nml
   !> @todo check units, needs m s-1
 #if _FABM_API_VERSION_ < 1
   if (fs%model%variable_needs_values(standard_variables%wind_speed)) then
     if (nws > 0) then
       allocate(fs%windvel(nea))
-      fs%windvel = -9999.0_rk
+      fs%windvel = missing_value
       call fabm_link_horizontal_data(fs%model,standard_variables%wind_speed,fs%windvel)
       call driver%log_message('Linked requested wind speed')
     else
@@ -545,7 +545,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(fabm_standard_variables%wind_speed)) then
     if (nws > 0) then
       allocate(fs%windvel(nea))
-      fs%windvel = -9999.0_rk
+      fs%windvel = missing_value
 
       call fs%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel)
       call driver%log_message('Linked requested wind speed')
@@ -556,7 +556,7 @@ subroutine fabm_schism_init_stage2
   endif
 #endif
 
-  !> Set I_0 to -1E30 if atmospheric forcing is provided by setting nws = 2 and
+  !> Set I_0 to missing_value if atmospheric forcing is provided by setting nws = 2 and
   !> ihconsv = 1 in param.nml
   !> @todo check models using muE as unit
 #if _FABM_API_VERSION_ < 1
@@ -570,7 +570,7 @@ subroutine fabm_schism_init_stage2
     endif
 
     allocate(fs%I_0(nea))
-    fs%I_0 = -9999.0_rk
+    fs%I_0 = missing_value
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
   endif
@@ -579,7 +579,7 @@ subroutine fabm_schism_init_stage2
    .or. fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par0(nea))
-    fs%par0 = -9999.0_rk
+    fs%par0 = missing_value
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
   endif
@@ -587,7 +587,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par(nvrt, nea))
-    fs%par = -9999.0_rk
+    fs%par = missing_value
     call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
     call driver%log_message('Linked requested downwelling PAR flux')
   endif
@@ -604,7 +604,7 @@ subroutine fabm_schism_init_stage2
     endif
 
     allocate(fs%I_0(nea))
-    fs%I_0 = -9999.0_rk
+    fs%I_0 = missing_value
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
   endif
@@ -613,7 +613,7 @@ subroutine fabm_schism_init_stage2
    .or. fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par0(nea))
-    fs%par0 = -9999.0_rk
+    fs%par0 = missing_value
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
   endif
@@ -625,37 +625,37 @@ subroutine fabm_schism_init_stage2
 #endif
 
   allocate(fs%bottom_depth(nea))
-  fs%bottom_depth = -1E30_rk
+  fs%bottom_depth = missing_value
 
   allocate(fs%tau_bottom(nea))
-  fs%tau_bottom = -1E30_rk ! will be initialized from schism_step
+  fs%tau_bottom = missing_value ! will be initialized from schism_step
 
   !> @todo epsf is only calculated with USE_SED=ON, so what do we do for
   !> maecs which needs this in maecs/fwfzmethod=4
   !if (allocated(epsf)) then ! changed to q2
 
   allocate(fs%bottom_tke(nea))
-  fs%bottom_tke = -1E30_rk
+  fs%bottom_tke = missing_value
 
   !allocate(fs%bottom_num(nea))
-  !fs%bottom_num = -1E30.0_rk
+  !fs%bottom_num = missing_value.0_rk
 
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
   allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
-  fs%pres = -1E30_rk
+  fs%pres = missing_value
 
   ! Link ice environment
 #ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
-  fs%dh_growth = -9999.0_rk
+  fs%dh_growth = missing_value
 
   allocate(fs%ice_thick(nea))
-  fs%ice_thick = -9999.0_rk
+  fs%ice_thick = missing_value
 
   allocate(fs%ice_cover(nea))
-  fs%ice_cover = -9999.0_rk
+  fs%ice_cover = missing_value
   allocate(fs%snow_thick(nea))
-  fs%snow_thick = -9999.0_rk
+  fs%snow_thick = missing_value
 #endif
 
   ! calculate initial layer heights
@@ -1437,6 +1437,16 @@ subroutine fabm_schism_create_output_netcdf()
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%bottom_state_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%bottom_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
+
+    if (fs%model%bottom_state_variables(n)%minimum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%bottom_state_variables(n)%minimum),'set min value' )
+    endif
+    if (fs%model%bottom_state_variables(n)%maximum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%bottom_state_variables(n)%maximum),'set max value' )
+    endif
+    if (fs%model%bottom_state_variables(n)%initial_value /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%bottom_state_variables(n)%initial_value),'set initial value' )
+    endif
   end do
 
   do n=1,fs%nvar_sf
@@ -1444,6 +1454,17 @@ subroutine fabm_schism_create_output_netcdf()
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%surface_state_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%surface_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
+
+    if (fs%model%surface_state_variables(n)%minimum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%surface_state_variables(n)%minimum),'set min value' )
+    endif
+    if (fs%model%surface_state_variables(n)%maximum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%surface_state_variables(n)%maximum),'set max value' )
+    endif
+    if (fs%model%surface_state_variables(n)%initial_value /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%surface_state_variables(n)%initial_value),'set initial value' )
+    endif
+
   end do
 
   do n=1,fs%ndiag_hor
