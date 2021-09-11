@@ -79,6 +79,15 @@ program schism_driver
   implicit none
   character(len=20) :: cli
 
+#ifdef OLDIO
+  nscribes=0
+  call get_command_argument(1,cli)
+  if (cli(1:2) == "-v")then
+     print*, ""
+     call print_version
+     stop
+  endif
+#else
   if(COMMAND_ARGUMENT_COUNT()<1) then
     print*, 'Must have at least 1 cmd argument (# of scribes)'
     stop
@@ -90,12 +99,6 @@ program schism_driver
     print*, 'nscribes<0:',nscribes
     stop 
   endif
-#ifdef OLDIO
-  if(nscribes/=0) then
-    print*, 'nscribes must be 0 in this option:',nscribes
-    stop
-  endif
-#endif
 
   if(COMMAND_ARGUMENT_COUNT()>1) then
     call get_command_argument(1,cli)
@@ -105,6 +108,7 @@ program schism_driver
        stop
     endif
   endif
+#endif
 
   call parallel_init
 
