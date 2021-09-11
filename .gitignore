@@ -27,3 +27,4 @@ o/
 *.tar
 *.zip
 
+src/Core/_version

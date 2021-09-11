@@ -840,16 +840,29 @@ subroutine get_light(fs)
     do nel=1,nea
       call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
 
-      !write(0,*) nea,nel,nvrt,localext(kbe(nel)+1:nvrt)
       do k=nvrt,kbe(nel)+1,-1
+        ! Intext it the extinction by half a layer
         intext = (localext(k)+fs%background_extinction)*0.5_rk*fs%layer_height(k,nel)
 #ifdef USE_SED
         intext = intext + 1000.0_rk * sum(tr_el(irange_tr(1,5):irange_tr(2,5),k,nel))*fs%external_spm_extinction*0.5_rk*fs%layer_height(k,nel)
 #endif
         fs%light_extinction(k,nel) = fs%light_extinction(k,nel) + intext
-        fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
-        if (k>kbe(nel)+1) fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+        !fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
+
+        ! Add this layer's extinction + half layer to advance to level below, otherwise
+        ! make it dark below the bottom
+        !> @todo add here calculation for par_bottom_flux before making it too dark
+        if (k>kbe(nel)+1) then
+          fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+        else
+          fs%light_extinction(1:k-1,nel) = 1000.0
+        endif
+
       end do
+      fs%par(:,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(:,nel))
+
+      !write(0,'(A,6F9.3)') 'P0=',fs%I_0(nel) * fs%par_fraction, &
+      !  fs%par(1:nvrt,nel)
     end do
   endif
 
@@ -995,7 +1008,6 @@ subroutine fabm_schism_do()
     do i=1,nea
       fs%par0(i) = fs%I_0(i) * fs%par_fraction
     end do
-    !write(0,*) sum(fs%I_0), sum(fs%par0)
   endif
 
   !update spm concentration
@@ -1019,13 +1031,6 @@ subroutine fabm_schism_do()
     ! add atmospheric pressure
     fs%pres(:,i) = fs%pres(:,i)+sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
   end do
-
-
-#if _FABM_API_VERSION_ < 1
-  call fs%get_light()
-#else
-  call fs%model%prepare_inputs(fs%tidx)
-#endif
 
   ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
@@ -1053,6 +1058,12 @@ subroutine fabm_schism_do()
   !    call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom NUM')
   !  endif
   !endif
+
+#if _FABM_API_VERSION_ < 1
+  call fs%get_light()
+#else
+  call fs%model%prepare_inputs(fs%tidx)
+#endif
 
   ! get rhs and put tendencies into schism-array
   do i=1,nea
