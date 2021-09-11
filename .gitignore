@@ -28,3 +28,4 @@ o/
 *.zip
 
 src/Core/_version
+.DS_Store
