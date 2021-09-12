@@ -30,8 +30,8 @@ module fabm_schism
   use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
   use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global,np_global,iegl,ipgl
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
-  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat
-  use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,epsf,dfv
+  use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat,kbp
+  use schism_glbl,  only: lreadll,iwsett,ntrs,irange_tr,q2,dfv
   use schism_glbl,  only: in_dir,out_dir, len_in_dir,len_out_dir
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
@@ -49,12 +49,13 @@ module fabm_schism
   use fabm_types
   use fabm_config
   use fabm_expressions
-  use fabm_standard_variables, only: standard_variables, type_bulk_standard_variable
+  use fabm_standard_variables, only: standard_variables
+  use fabm_standard_variables, only: type_bulk_standard_variable
   use fabm_standard_variables, only: type_horizontal_standard_variable
 #else
   !> @todo remove this compatibility in the long-term, it takes care of the
   !> renaming from FABM v0.9 to v1.0
-  use fabm_types, only: rk, output_none
+  use fabm_types, only: rk, output_none, type_bottom_standard_variable
   use fabm_v0_compatibility
 #endif
 
@@ -144,8 +145,8 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: layer_height => null()
     real(rk), dimension(:,:), pointer   :: layer_depth => null()
     real(rk), dimension(:,:), pointer   :: spm => null()
-    real(rk), dimension(:,:), pointer   :: eps => null()
-    real(rk), dimension(:,:), pointer   :: num => null()
+    real(rk), dimension(:), pointer     :: bottom_tke => null()
+    !real(rk), dimension(:), pointer     :: bottom_num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
     real(rk), dimension(:), pointer     :: I_0 => null()
@@ -187,7 +188,7 @@ module fabm_schism
 
   type(type_fabm_schism), public :: fs ! the main module object
   integer  :: ncid=-1 ! ncid of hotstart variables
-  real     :: missing_value=-9999. ! missing_value for netcdf variables
+  real     :: missing_value=-2E20_rk ! missing_value for netcdf variables
 
 contains
 
@@ -314,7 +315,7 @@ subroutine fabm_schism_init_model(ntracers)
 
   if (present(ntracers)) ntracers = fs%nvar
 
-  !read parameter from famb.yaml (can put these parameters in other input files, e.g. schism_fabm.in)
+  !read parameter from fabm.yaml (can put these parameters in other input files, e.g. schism_fabm.in)
   call fabm_schism_read_param_from_yaml('fpar',2,tmp_int,fs%par_fraction)
   call fabm_schism_read_param_from_yaml('ispm',1,fs%params%ispm,tmp_real)
   call fabm_schism_read_param_from_yaml('spm0',2,tmp_int,fs%params%spm0)
@@ -394,7 +395,6 @@ subroutine fabm_schism_init_stage2
     !> to the variables in tr_el(), i.e. interior state variables. Also check
     !> necessity of dedicated fabm_init subroutine below.
 
-
     ! set settling velocity method
 #define BDY_FRC_SINKING 0
 #if BDY_FRC_SINKING
@@ -413,7 +413,6 @@ subroutine fabm_schism_init_stage2
 #endif
     call driver%log_message(message)
   enddo
-
 
   allocate(fs%bottom_state(nea,fs%nvar_bot))
   do i=1,fs%nvar_bot
@@ -449,11 +448,26 @@ subroutine fabm_schism_init_stage2
       fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
 #endif
     end if
-    fs%interior_diagnostic_variables(n)%data = -1.0e30_rk
+    fs%interior_diagnostic_variables(n)%data = missing_value
     fs%time_since_last_output = 0.0_rk
-  end do
 
-  call driver%log_message('Linked interior diagnostics')
+    write(message,'(A)') 'Linked interior diagnostic '// &
+      trim(fs%interior_diagnostic_variables(n)%short_name)// '(' // &
+      trim(fs%interior_diagnostic_variables(n)%long_name)// ') unit ' // &
+      trim(fs%interior_diagnostic_variables(n)%units)
+
+    if (fs%interior_diagnostic_variables(n)%do_output) then
+      if (fs%interior_diagnostic_variables(n)%output_averaged) then
+        write(message,'(A,A)') trim(message),', averaged output'
+      else
+        write(message,'(A,A)') trim(message),', instantaneous output'
+      endif
+    else
+      write(message,'(A,A)') trim(message),', no output'
+    endif
+    call driver%log_message(trim(message))
+
+  end do
 
   do n=1,fs%ndiag_hor
     if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
@@ -467,26 +481,40 @@ subroutine fabm_schism_init_stage2
     end if
     fs%horizontal_diagnostic_variables(n)%data = 0.0_rk
     fs%time_since_last_hor_output = 0.0_rk
-  end do
 
-  call driver%log_message('Linked horizontal diagnostics')
+    write(message,'(A)') 'Linked horizontal diagnostic '// &
+      trim(fs%horizontal_diagnostic_variables(n)%short_name)// '(' // &
+      trim(fs%horizontal_diagnostic_variables(n)%long_name)// ') unit ' // &
+      trim(fs%horizontal_diagnostic_variables(n)%units)
+
+    if (fs%horizontal_diagnostic_variables(n)%do_output) then
+      if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
+        write(message,'(A,A)') trim(message),', averaged output'
+      else
+        write(message,'(A,X,A)') trim(message),', instantaneous output'
+      endif
+    else
+      write(message,'(A,X,A)') trim(message),', no output'
+    endif
+    call driver%log_message(trim(message))
+
+  end do
 
   ! link environment
   allocate(fs%light_extinction(nvrt,nea))
-  fs%light_extinction = -1.0e30_rk
+  fs%light_extinction = missing_value
 
   allocate(fs%layer_height(nvrt,nea))
-  fs%layer_height = -1.0e30_rk
-  ! fs%layer_height => schism_layer_height
+  fs%layer_height = missing_value
 
   allocate(fs%layer_depth(nvrt,nea))
-  fs%layer_depth = 1.0_rk
+  fs%layer_depth = missing_value
 
   allocate(fs%spm(nvrt,nea))
-  fs%spm=0.0_rk
+  fs%spm=missing_value
 
   if(fs%params%ispm==1) then
-    call fabm_schism_read_param_2d('SPM',fs%spm(1,:),-999.0_rkind)
+    call fabm_schism_read_param_2d('SPM',fs%spm(1,:),real(missing_value,kind=rk))
     do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
   elseif(fs%params%ispm==2) then
     do n=1,ntrs(5)
@@ -498,58 +526,136 @@ subroutine fabm_schism_init_stage2
     fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
   endif
 
-  !> Set wind to -1E30 if atmospheric forcing is provided by setting nws>0 in
-  !> param.nml, otherwise assume quiet conditions.
-  allocate(fs%windvel(nea))
-  if (nws > 0) then
-    fs%windvel = -1.0e30_rk
-  else
-    fs%windvel = 0.0_rk
-    call driver%log_message('Warning: without atmospheric forcing, wind is zero')
+  !> Set wind to the netcdf missing value  if atmospheric forcing is
+  !> no provided by setting nws>0 in param.nml
+  !> @todo check units, needs m s-1
+#if _FABM_API_VERSION_ < 1
+  if (fs%model%variable_needs_values(standard_variables%wind_speed)) then
+    if (nws > 0) then
+      allocate(fs%windvel(nea))
+      fs%windvel = missing_value
+      call fabm_link_horizontal_data(fs%model,standard_variables%wind_speed,fs%windvel)
+      call driver%log_message('Linked requested wind speed')
+    else
+      call driver%fatal_error('fabm_schism_init_stage2', &
+        'Wind speed requested.  Please provide atmospheric forcing (nws > 0)')
+    endif
+  endif
+#else
+  if (fs%model%variable_needs_values(fabm_standard_variables%wind_speed)) then
+    if (nws > 0) then
+      allocate(fs%windvel(nea))
+      fs%windvel = missing_value
+
+      call fs%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel)
+      call driver%log_message('Linked requested wind speed')
+    else
+      call driver%fatal_error('fabm_schism_init_stage2', &
+        'Wind speed requested.  Please provide atmospheric forcing (nws > 0)')
+    endif
+  endif
+#endif
+
+  !> Set I_0 to missing_value if atmospheric forcing is provided by setting nws = 2 and
+  !> ihconsv = 1 in param.nml
+  !> @todo check models using muE as unit
+#if _FABM_API_VERSION_ < 1
+  if (fs%model%variable_needs_values(standard_variables%surface_downwelling_shortwave_flux) &
+   .or. fs%model%variable_needs_values(standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
+   .or. fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
+    if (nws /= 2 .or. ihconsv < 1) then
+      call driver%fatal_error('fabm_schism_init_stage2', &
+        'Downwelling short wave radiation requested.  Please provide ' // &
+        'atmospheric forcing (nws = 2) and heat model (ihconsv = 1)')
+    endif
+
+    allocate(fs%I_0(nea))
+    fs%I_0 = missing_value
+    call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
+    call driver%log_message('Linked requested surface downwelling short wave flux')
   endif
 
-  allocate(fs%tau_bottom(nea))
-  fs%tau_bottom = -1.0e30_rk
-
-  !> We can only use light if this is provided by the atmosphere, here by
-  !> setting nws = 2, ihconsv = 1 and using files from sflux/ directory
-  if (nws == 2 .and. ihconsv == 1) then
-    allocate(fs%I_0(nea))
-    fs%I_0 = -1.0e30_rk
+  if (fs%model%variable_needs_values(standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
+   .or. fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par0(nea))
-    fs%par0 = -1.0e30_rk
-
-    allocate(fs%par(nvrt,nea))
-    fs%par = -1.0e30_rk
+    fs%par0 = missing_value
+    call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
+    call driver%log_message('Linked requested surface downwelling PAR flux')
   endif
 
+  if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
+
+    allocate(fs%par(nvrt, nea))
+    fs%par = missing_value
+    call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
+    call driver%log_message('Linked requested downwelling PAR flux')
+  endif
+
+#else
+
+  if (fs%model%variable_needs_values(fabm_standard_variables%surface_downwelling_shortwave_flux) &
+   .or. fs%model%variable_needs_values(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
+   .or. fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
+    if (nws /= 2 .or. ihconsv < 1) then
+      call driver%fatal_error('fabm_schism_init_stage2', &
+        'Downwelling short wave radiation requested.  Please provide ' // &
+        'atmospheric forcing (nws = 2) and heat model (ihconsv = 1)')
+    endif
+
+    allocate(fs%I_0(nea))
+    fs%I_0 = missing_value
+    call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
+    call driver%log_message('Linked requested surface downwelling short wave flux')
+  endif
+
+  if (fs%model%variable_needs_values(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
+   .or. fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
+
+    allocate(fs%par0(nea))
+    fs%par0 = missing_value
+    call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
+    call driver%log_message('Linked requested surface downwelling PAR flux')
+  endif
+
+  !> For now, only FABM0 light calculation is done here.
+  if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
+    call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
+  endif
+#endif
+
   allocate(fs%bottom_depth(nea))
-  fs%bottom_depth = -1.0e30_rk
+  fs%bottom_depth = missing_value
 
-  allocate(fs%eps(nvrt,nea))
-  fs%eps = -1.0e30_rk
+  allocate(fs%tau_bottom(nea))
+  fs%tau_bottom = missing_value ! will be initialized from schism_step
 
-  allocate(fs%num(nvrt,nea))
-  fs%num = -1.0e30_rk
+  !> @todo epsf is only calculated with USE_SED=ON, so what do we do for
+  !> maecs which needs this in maecs/fwfzmethod=4
+  !if (allocated(epsf)) then ! changed to q2
+
+  allocate(fs%bottom_tke(nea))
+  fs%bottom_tke = missing_value
+
+  !allocate(fs%bottom_num(nea))
+  !fs%bottom_num = missing_value.0_rk
 
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
   allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
-  fs%pres = -1.0e30_rk
+  fs%pres = missing_value
 
   ! Link ice environment
 #ifdef USE_ICEBGC
   allocate(fs%dh_growth(nea))
-  fs%dh_growth = -1.0e30_rk
+  fs%dh_growth = missing_value
 
   allocate(fs%ice_thick(nea))
-  fs%ice_thick = -1.0e30_rk
+  fs%ice_thick = missing_value
 
   allocate(fs%ice_cover(nea))
-  fs%ice_cover = -1.0e30_rk
-
+  fs%ice_cover = missing_value
   allocate(fs%snow_thick(nea))
-  fs%snow_thick = -1.0e30_rk
+  fs%snow_thick = missing_value
 #endif
 
   ! calculate initial layer heights
@@ -733,15 +839,30 @@ subroutine get_light(fs)
     fs%light_extinction = 0.0_rk
     do nel=1,nea
       call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
+
       do k=nvrt,kbe(nel)+1,-1
+        ! Intext it the extinction by half a layer
         intext = (localext(k)+fs%background_extinction)*0.5_rk*fs%layer_height(k,nel)
 #ifdef USE_SED
         intext = intext + 1000.0_rk * sum(tr_el(irange_tr(1,5):irange_tr(2,5),k,nel))*fs%external_spm_extinction*0.5_rk*fs%layer_height(k,nel)
 #endif
         fs%light_extinction(k,nel) = fs%light_extinction(k,nel) + intext
-        fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
-        if (k>kbe(nel)+1) fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+        !fs%par(k,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(k,nel))
+
+        ! Add this layer's extinction + half layer to advance to level below, otherwise
+        ! make it dark below the bottom
+        !> @todo add here calculation for par_bottom_flux before making it too dark
+        if (k>kbe(nel)+1) then
+          fs%light_extinction(k-1,nel) = fs%light_extinction(k,nel) + intext
+        else
+          fs%light_extinction(1:k-1,nel) = 1000.0
+        endif
+
       end do
+      fs%par(:,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(:,nel))
+
+      !write(0,'(A,6F9.3)') 'P0=',fs%I_0(nel) * fs%par_fraction, &
+      !  fs%par(1:nvrt,nel)
     end do
   endif
 
@@ -750,6 +871,9 @@ subroutine get_light(fs)
   do nel=1,nea
     call fabm_get_light(fs%model,1,nvrt,nel)
   end do
+
+  !write(0,*)  'I0 = ',sum(fs%I_0), sum(fs%layer_height(1,:)), &
+  !  sum(fs%light_extinction(1,:)), sum(fs%par(1,:))
 
 end subroutine get_light
 #endif
@@ -865,20 +989,23 @@ subroutine fabm_schism_do()
      fs%bottom_depth(i)=max(0.0_rk,sum(dp(elnode(1:i34(i),i))+eta2(elnode(1:i34(i),i)))/i34(i))
   end do
 
-  ! Update wind only when atmospheric forcing is provided (nws>0)
-  if (nws > 0) then
+  if (associated(fs%windvel)) then
     do i=1,nea
       fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
         sum(windy(elnode(1:i34(i),i))/i34(i))**2)
       end do
   endif
 
-  ! Update light at surface only when atmospheric forcing is provided
-  ! nws == 2 and ihconsv == 1
-  ! @todo consider who is responsible for setting par_fraction (host?)
-  if (nws == 2 .and. ihconsv == 1) then
+  !> Update light at surface only when atmospheric forcing is provided
+  !> @todo consider who is responsible for setting par_fraction (host?)
+  if (associated(fs%I_0)) then
     do i=1,nea
       fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
+    end do
+  endif
+
+  if (associated(fs%par0) .and. associated(fs%I_0)) then
+    do i=1,nea
       fs%par0(i) = fs%I_0(i) * fs%par_fraction
     end do
   endif
@@ -905,28 +1032,38 @@ subroutine fabm_schism_do()
     fs%pres(:,i) = fs%pres(:,i)+sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
   end do
 
+  ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
+  ! from nodes to elements
+  if (associated(fs%bottom_tke)) then
+    do i=1,nea
+      fs%bottom_tke(i) = 0.0_rk
+      do k=1,i34(i)
+        !> @todo Find out why we have kbp+1 here
+        fs%bottom_tke(i) = fs%bottom_tke(i) + q2(kbp(elnode(k,i))+1,elnode(k,i))/i34(i)
+      enddo
+    enddo
+    if (any(fs%bottom_tke < 0.0_rk)) then
+      call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom TKE')
+    endif
+  endif
+
+  !if (allocated(dfv) .and. associated(fs%bottom_num)) then
+  !  fs%bottom_num=0.0_rk
+  !  do i=1,nea
+  !    do j=1,i34(i)
+  !      fs%bottom_num(i) = fs%bottom_num(i) + dfv(kbp(elnode(j,i)),elnode(j,i))/i34(i)
+  !    enddo
+  !  enddo
+  !  if (any(bottom_num < 0.0_rk)) then
+  !    call driver%fatal_error('fabm_schism_do','Erroneous calculation of bottom NUM')
+  !  endif
+  !endif
 
 #if _FABM_API_VERSION_ < 1
   call fs%get_light()
 #else
-  call fs%model%prepare_inputs()
+  call fs%model%prepare_inputs(fs%tidx)
 #endif
-
-  ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
-  ! from nodes to elements
-  if (allocated(epsf)) then
-    do i=1,nea
-        fs%eps(1:nvrt,i) = sum(epsf(1:nvrt,elnode(1:i34(i),i)),dim=2)/i34(i)
-    enddo
-  endif
-
-  if (allocated(dfv)) then
-  do i=1,nea
-    do k=1,nvrt
-      fs%num(k,i) = sum(dfv(k,elnode(1:i34(i),i)))/i34(i)
-    enddo
-  enddo
-  endif
 
   ! get rhs and put tendencies into schism-array
   do i=1,nea
@@ -1233,6 +1370,9 @@ end subroutine fabm_schism_read_horizontal_state_from_hotstart
 
 subroutine fabm_schism_create_output_netcdf()
 
+  use schism_glbl, only: start_day, start_year, start_month
+  use schism_glbl, only: start_hour, utc_start
+
   character(len=*),parameter  :: filename='fabm_state'
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
@@ -1245,7 +1385,6 @@ subroutine fabm_schism_create_output_netcdf()
   character(len=*),parameter     :: nvrt_name = 'nvrt'
   character(len=*),parameter     :: x_name = 'node_x'
   character(len=*),parameter     :: y_name = 'node_y'
-  character(len=*),parameter     :: time_units = 'seconds since start of simulation'
 
   integer              :: status
   integer              :: elements_dim_id,nodes_dim_id,surrnodes_dim_id,time_dim_id,nvrt_dim_id
@@ -1254,6 +1393,12 @@ subroutine fabm_schism_create_output_netcdf()
   integer              :: start(1),count(1)
   integer(8)           :: tmp(1,1)
   integer(8)           :: tmp2(4,1)
+  character(len=64)    :: time_units
+
+  !> @todo the real parts of start_hour and utc_start are not handled yet
+  write(time_units,'(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,SP,I5.4)') 'seconds since ', &
+    start_year, '-', start_month,'-', start_day,'T', &
+    int(start_hour),':00:00',int(utc_start)
 
   write(rankstr,fmt='(I0.6)') myrank
   ncfile = trim(out_dir)//trim(filename)//'_'//rankstr//'.nc'
@@ -1269,7 +1414,7 @@ subroutine fabm_schism_create_output_netcdf()
 
   ! create variables
   call nccheck( nf90_def_var(ncid, 'time', nf90_double, (/ time_dim_id /), time_id) )
-  call nccheck( nf90_put_att(ncid, time_id, 'units', time_units) )
+  call nccheck( nf90_put_att(ncid, time_id, 'units', trim(time_units)) )
 
   call nccheck( nf90_def_var(ncid, element_id_name, nf90_int64, (/ elements_dim_id /), element_id_id) )
   call nccheck( nf90_put_att(ncid, element_id_id, 'long_name', 'global element id, like in the hgrid.gr3') )
@@ -1292,6 +1437,16 @@ subroutine fabm_schism_create_output_netcdf()
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%bottom_state_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%bottom_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
+
+    if (fs%model%bottom_state_variables(n)%minimum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%bottom_state_variables(n)%minimum),'set min value' )
+    endif
+    if (fs%model%bottom_state_variables(n)%maximum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%bottom_state_variables(n)%maximum),'set max value' )
+    endif
+    if (fs%model%bottom_state_variables(n)%initial_value /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%bottom_state_variables(n)%initial_value),'set initial value' )
+    endif
   end do
 
   do n=1,fs%nvar_sf
@@ -1299,6 +1454,17 @@ subroutine fabm_schism_create_output_netcdf()
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%surface_state_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%surface_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
+
+    if (fs%model%surface_state_variables(n)%minimum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%surface_state_variables(n)%minimum),'set min value' )
+    endif
+    if (fs%model%surface_state_variables(n)%maximum /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%surface_state_variables(n)%maximum),'set max value' )
+    endif
+    if (fs%model%surface_state_variables(n)%initial_value /= missing_value) then
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%surface_state_variables(n)%initial_value),'set initial value' )
+    endif
+
   end do
 
   do n=1,fs%ndiag_hor
@@ -1434,48 +1600,47 @@ subroutine link_environmental_data(self, rc)
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
   ! represented in the dfv(1:nvrt,1:npa) variable.
   ! @todo what is the exact representation of this quantity in SCHISM? We assume
-  ! `epsf` here for now.
+  ! q2bot for now
   ! @todo make this call to $\nu_m$ and $\epsilon$ to standard variables, i.e.
   ! expand the controlled vocabulary if they do not exist.
 
 #if _FABM_API_VERSION_ < 1
-  call fabm_link_bulk_data(self%model,standard_variables%pressure,fs%pres) !ADDED
-  call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
+  call fabm_link_bulk_data(self%model,standard_variables%pressure,self%pres) !ADDED
+  !call fabm_link_horizontal_data(self%model,standard_variables%wind_speed,self%windvel) ! ADDED !todo check units, needs m s-1
 
   call fabm_link_bulk_data(self%model,standard_variables%temperature,tr_el(1,:,:))
   call fabm_link_bulk_data(self%model,standard_variables%practical_salinity,tr_el(2,:,:))
 
   if (nws == 2 .and. ihconsv == 1) then
     call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-    call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_shortwave_flux,self%I_0)
     call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
     call driver%log_message('linked surface shortwave radiation and PAR, bulk PAR')
   endif
   call fabm_link_bulk_data(self%model,standard_variables%density,erho)
   call fabm_link_bulk_data(self%model,standard_variables%cell_thickness,self%layer_height)
   !call fabm_link_bulk_data(self%model,standard_variables%turbulence_dissipation,self%eps)
-  call fabm_link_bulk_data(self%model, &
-    type_bulk_standard_variable(name='turbulent_kinetic_energy_dissipation', &
-    units='W kg-1', &
-    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+!  call fabm_link_bulk_data(self%model, &
+!    type_bulk_standard_variable(name='bottom_turbulent_kinetic_energy_dissipation', &
+!    units='W kg-1', &
+!    cf_names='specific_turbulent_kinetic_energy_dissipation_at_soil_surface'), self%bottom_tke)
   !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-      units='m3'), self%eps(1,:))
-  call fabm_link_bulk_data(self%model, &
-     type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
-     cf_names='ocean_vertical_momentum_diffusivity'),self%num)
-  call driver%log_message('linked bulk variable "momentum diffusivity"')
+      units='m3'), self%bottom_tke)
+  !call fabm_link_bulk_data(self%model, &
+  !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
+  !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
+  !call driver%log_message('linked bulk variable "momentum diffusivity"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
+  call driver%log_message('linked horizontal standard variable "bottom_stress"')
 #ifdef USE_ICEBGC
   call fabm_link_horizontal_data(self%model,standard_variables%ice_thickness,self%ice_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%ice_conc,self%ice_cover)
   call fabm_link_horizontal_data(self%model,standard_variables%snow_thickness,self%snow_thick)
   call fabm_link_horizontal_data(self%model,standard_variables%dh_growth,self%dh_growth)
 #endif
-  call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
-  call driver%log_message('linked horizontal standard variable "bottom_stress"')
   call fabm_link_horizontal_data(self%model,standard_variables%longitude,xlon_el)
   call driver%log_message('linked horizontal standard variable "longitude"')
   call fabm_link_horizontal_data(self%model,standard_variables%latitude,ylat_el)
@@ -1485,17 +1650,9 @@ subroutine link_environmental_data(self, rc)
 
 #else
 !_FABM_API_VERSION_>=1
-  call self%model%link_interior_data(fabm_standard_variables%pressure,fs%pres) !ADDED
-  call self%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel) ! ADDED !todo check units, needs m s-1
-
-  if (nws == 2 .and. ihconsv == 1) then
-    call self%model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-    call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,self%I_0)
-    call self%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
-    call driver%log_message('linked surface shortwave radiation and PAR, bulk PAR')
-  endif
-  call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
+  call self%model%link_interior_data(fabm_standard_variables%pressure,self%pres) !ADDED
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
 #ifdef USE_ICEBGC
   call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
   call self%model%link_horizontal_data(fabm_standard_variables%ice_conc,self%ice_cover)
@@ -1519,9 +1676,14 @@ subroutine link_environmental_data(self, rc)
   !  type_interior_standard_variable(name='turbulent_kinetic_energy_dissipation', &
   !    units='W kg-1', &
   !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
+  call self%model%link_horizontal_data(type_bottom_standard_variable( &
+  !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_tke(:))
+  name='turbulent_kinetic_energy_at_soil_surface',units='m3'),self%bottom_tke(:))
+
   !call self%model%link_horizontal_data( &
-  !    type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+  !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
   !        units='Wm kg-1'), self%eps(1,:))
+  !call self%model%link_horizontal_data(fabm_standard_variables%bottom_turbulent_kinetic_energy, self%eps(1,:))
   call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
   call driver%log_message('linked scalar standard variable "number_of_days_since_start_of_the_year"')
 #endif
