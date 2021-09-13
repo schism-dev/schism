@@ -379,7 +379,7 @@ WSSED= 1.00
 
 !-----------------------------------------------------------------------
 !settling velocity into sediment: 2D variables 
-!iSet=0: same as water column settling velocity  
+!iSet=0: same as water column settling velocity; no re-suspension 
 !iSet=1: spatial constant net settling velocity 
 !-----------------------------------------------------------------------
 iSet= 1 
