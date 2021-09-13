@@ -869,7 +869,8 @@
 ! 70:90--N group parameters; 
 ! 91:107--P group parameters;
 ! 108:116--Oxygen parameters;
-! 117:141--water column foundamental tracers @nodes
+! 117:184--sav/veg/rad parameters;
+! 185:209--water column foundamental tracers @nodes
 !-----------------------------------------------------------------------
   iof_icm(1) = 0 !Chlorophyll {ICM_Chl}
   iof_icm(2) = 0 !PH values (ICM_PH on) {ICM_pH}
