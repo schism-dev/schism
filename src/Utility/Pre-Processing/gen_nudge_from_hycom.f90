@@ -63,9 +63,10 @@
       integer :: evid ! SSH variable IDs
       integer :: var1d_dims(1),var4d_dims(4)
       integer, dimension(nf90_max_var_dims) :: dids
+      integer :: lldim ! check lat/lon dimension
              
 !     Local variables for data
-      real (kind = 4), allocatable :: xind(:), yind(:), lind(:) 
+      real (kind = 4), allocatable :: xind(:), yind(:), lind(:), xind2(:,:), yind2(:,:) 
 !     Lat, lon, bathymetry
       real (kind = 4), allocatable :: lat(:,:), lon(:,:), hnc(:)
 !     Vertical postion, salinity, and temperature
@@ -238,9 +239,26 @@
         status = nf90_Inquire_Dimension(sid, dids(4), len = ntime)
         print*, 'ixlen,iylen,ilen,ntime= ',ixlen,iylen,ilen,ntime
 
+!       Check static info (lat/lon) dimension & allocate
+        status = nf90_inq_varid(sid, "xlon", xvid)
+        status = nf90_Inquire_Variable(sid, xvid,ndims = lldim)
+        print*, 'xlon, ylat is ', lldim ,' dimension.'
+        if (lldim.eq.1) then
+           allocate(xind(ixlen),stat=ier)
+           allocate(yind(iylen),stat=ier)
+        else if (lldim.eq.2) then
+           allocate(xind2(ixlen,iylen),stat=ier)
+           allocate(yind2(ixlen,iylen),stat=ier)
+           interp_mode=1
+        else
+           print*, 'Error dimension in xlon,ylat!'
+           stop
+        end if
+
+
 !       allocate arrays
-        allocate(xind(ixlen),stat=ier)
-        allocate(yind(iylen),stat=ier)
+!       allocate(xind(ixlen),stat=ier)
+!       allocate(yind(iylen),stat=ier)
         allocate(lind(ilen),stat=ier)
         allocate(lat(ixlen,iylen))
         allocate(lon(ixlen,iylen))
@@ -253,31 +271,61 @@
 !        allocate(salt0(ixlen,iylen,ilen),stat=ier)
 !        allocate(temp0(ixlen,iylen,ilen),stat=ier)
   
-!       get static info (lat/lon grids etc) 
+!       get static info (lat/lon grids etc)
+        if (lldim.eq.1) then
+           status = nf90_inq_varid(sid, "xlon", xvid)
+           status = nf90_get_var(sid, xvid, xind)
+           status = nf90_inq_varid(sid, "ylat", yvid)
+           status = nf90_get_var(sid, yvid, yind)
+        elseif (lldim.eq.2) then
+           status = nf90_inq_varid(sid, "xlon", xvid)
+           status = nf90_get_var(sid, xvid, xind2)
+           status = nf90_inq_varid(sid, "ylat", yvid)
+           status = nf90_get_var(sid, yvid, yind2)
+        end if
+
         status = nf90_inq_varid(sid, "depth", hvid)
         status = nf90_get_var(sid, hvid, hnc)
-        status = nf90_inq_varid(sid, "xlon", xvid)
-        status = nf90_get_var(sid, xvid, xind)
-        status = nf90_inq_varid(sid, "ylat", yvid)
-        status = nf90_get_var(sid, yvid, yind)
 
 !       processing static info
 !       lon/lat as 2D arrays mostly for potential extension to
 !       non-rectangular grids
-        do i=1,ixlen
-          lon(i,:)=xind(i)
-          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
-            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
-            stop 
-          endif; endif;
-        enddo !i
-        do j=1,iylen
-          lat(:,j)=yind(j)
-          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
-            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
-            stop 
-          endif; endif;
-        enddo !j
+        if (lldim.eq.1) then
+           do i=1,ixlen
+             lon(i,:)=xind(i)
+             if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+               write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+               stop
+             endif; endif;
+           enddo !i
+           do j=1,iylen
+             lat(:,j)=yind(j)
+             if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+               write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+               stop
+             endif; endif;
+           enddo !j
+        elseif (lldim.eq.2) then
+           lon=xind2
+           lat=yind2
+           do j=1,iylen
+            do i=1,ixlen
+             if(i<ixlen) then; if(lon(i,j)>=lon(i+1,j)) then
+               write(11,*)'Lon must be increasing:',i,lon(i,j),lon(i+1,j)
+               stop
+             endif; endif;
+            enddo !i
+           enddo !j
+           do i=1,ixlen
+            do j=1,iylen
+             if(j<iylen) then; if(lat(i,j)>=lat(i,j+1)) then
+               write(11,*)'Lat must be increasing:',i,lat(i,j),lat(i,j+1)
+               stop
+             endif; endif;
+            enddo !j
+           enddo !i
+        end if
+
 !        lon=lon-360 !convert to our long.
 
 !       Grid bounds for searching for parents  later
