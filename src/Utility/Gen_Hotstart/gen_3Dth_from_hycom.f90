@@ -854,8 +854,7 @@
               endif !kbp
             enddo !j
           enddo !i
-!Error
-          if(icount/=ndrypt) stop 'mismatch(8)'
+!          if(icount/=ndrypt) stop 'mismatch(8)'
 
           !Save for abnormal cases later
 !          salt0=salt

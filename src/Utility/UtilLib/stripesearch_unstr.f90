@@ -1,16 +1,17 @@
-!     Sort each unstru. grid element into strips along x or y to speed up interpolation later
+!     Sort each unstru. grid element into stripes along x or y to speed up interpolation later
 !     In:
 !            is_xy - 1: search along x; 2: along y
 !            nbin - # of bins along x/y
 !            mne_bin - max. # of elem. per bin
 !            nebg,npbg - # of elem. and nodes for the unstr. grid (background grid)
-!            xbg,ybg,i34,nmbg - x,y, and connectivity table for unstr. grid 
+!            xbg,ybg,i34,nmbg - x,y, and connectivity table for unstr. grid  (tri-quad or actually any polygon)
 !     Out:
 !            ne_bin(1:nbin) - # of elem. for each bin
 !            ie_bin(1:nbin,1:ne_bin) - list of elem. for each bin
 !            xybin(1:nbin+1) - x or y coord. of each bin line
+!            binwid: bin width
 
-      subroutine stripsearch_unstr(is_xy,nbin,mne_bin,nebg,npbg,xbg,ybg,i34,nmbg, &
+      subroutine stripesearch_unstr(is_xy,nbin,mne_bin,nebg,npbg,xbg,ybg,i34,nmbg, &
      &ne_bin,ie_bin,xybin,binwid)
       implicit real(8)(a-h,o-z)
 
@@ -27,7 +28,7 @@
       ymin_bg=minval(ybg)-1.e-2
       ymax_bg=maxval(ybg)+1.e-2
 
-!     Bucket strip sorting
+!     Bucket stripe sorting
 !     If an element i is in ie_bin(l,:), it's 'physically' in it (i.e. at least one internal point
 !     is inside the bin l; 1<=l<=nbin).
 !     If a given pt is inside bin l, search ie_bin(l,:); in addition, also search neighboring 
@@ -105,5 +106,5 @@
         stop
       endif
 
-      end subroutine stripsearch_unstr
+      end subroutine stripesearch_unstr
 
