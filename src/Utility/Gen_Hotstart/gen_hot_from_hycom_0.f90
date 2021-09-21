@@ -12,7 +12,10 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file).
+! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file); works for global grid.
+! Changed algorithm from gen_hot_3Dth_from_hycom: no longer do
+! horizontal extension but simply fill invalid pts with T,S values from a valid
+! location (0 for SSH, U,V).
 
 ! The section on nc read needs to be modified as appropriate- search for
 ! 'start11' and 'end11'
@@ -41,8 +44,8 @@
 !   Output: hotstart.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
 
-! ifort -O2 -mcmodel=medium -assume byterecl -CB -g -traceback -o gen_hot_from_hycom.exe ../UtilLib/schism_geometry.f90 \
-! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_from_hycom.f90 \
+! ifort -O2 -mcmodel=medium -assume byterecl -CB -g -traceback -o gen_hot_from_hycom_0.exe ../UtilLib/schism_geometry.f90 \
+! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_from_hycom_0.f90 \
 !-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
@@ -98,7 +101,7 @@
      &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:)
       real, allocatable :: xl(:),yl(:),dp(:),ztot(:),sigma(:),arco(:,:), &
      &tempout(:,:),saltout(:,:),uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:), &
-     &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:)
+     &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:),ts_lat(:,:,:)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
       real*8 :: aa1(1)
 
@@ -243,6 +246,7 @@
         allocate(uvel(ixlen,iylen,ilen),stat=ier)
         allocate(vvel(ixlen,iylen,ilen),stat=ier)
         allocate(salt(ixlen,iylen,ilen),stat=ier)
+        allocate(ts_lat(iylen,ilen,2),stat=ier)
         allocate(temp(ixlen,iylen,ilen),stat=ier)
         allocate(ssh(ixlen,iylen),stat=ier)
         uvel=0; vvel=0; ssh=0
@@ -419,6 +423,38 @@
         enddo !i  
 !       print*, 'ndrypt=',ndrypt
 
+!       Find a valid T,S at each lat point for extrapolation later
+        ts_lat=-9999 !flag
+        do j=1,iylen
+          ifl=0 !flag
+          do i=1,ixlen
+            if(salt(i,j,ilen)>rjunk) then
+              ifl=1
+              ts_lat(j,:,1)=temp(i,j,:)
+              ts_lat(j,:,2)=salt(i,j,:)
+              exit
+            endif
+          enddo !i
+          if(ifl==0) write(20,*)'Did not find a valid T,S at lat pt:',j,lat(1,j) !,salt(:,j,ilen)
+        enddo !j
+
+!       Further extend to fill rest of lat pts
+        do j=1,iylen
+          if(ts_lat(j,1,1)<rjunk+0.1) then
+            ifl=0
+            do jj=j+1,iylen
+              if(ts_lat(jj,1,1)>rjunk) then
+                ts_lat(j,:,1:2)=ts_lat(jj,:,1:2) 
+                ifl=1; exit 
+              endif   
+            enddo !jj
+            if(ifl==0) then
+              write(11,*)'Failed to find a valid T,S at lat pt:',j,lat(1,j)
+              stop
+            endif
+          endif !ts_lat
+        enddo !j
+
 !       Compute S,T etc@ invalid pts based on nearest neighbor
 !       Search around neighborhood of a pt
         allocate(iparen_of_dry(2,max(1,ndrypt)))
@@ -428,46 +464,53 @@
         do i=1,ixlen
           do j=1,iylen
             if(kbp(i,j)==-1) then !invalid pts  
-              icount=icount+1
-              if(icount>ndrypt) stop 'overflow'
-              !Compute max possible tier # for neighborhood
-              mmax=max(i-1,ixlen-i,j-1,iylen-j)
+              salt(i,j,1:ilen)=ts_lat(j,:,2)
+              temp(i,j,1:ilen)=ts_lat(j,:,1)
+              uvel(i,j,1:ilen)=0.
+              vvel(i,j,1:ilen)=0.
+              ssh(i,j)=0.
 
-              m=0 !tier #
-              loop6: do
-                m=m+1
-                do ii=max(-m,1-i),min(m,ixlen-i)
-                  i3=max(1,min(ixlen,i+ii))
-                  do jj=max(-m,1-j),min(m,iylen-j)
-                    j3=max(1,min(iylen,j+jj))
-                    if(kbp(i3,j3)>0) then !found
-                      i1=i3; j1=j3
-                      exit loop6   
-                    endif
-                  enddo !jj
-                enddo !ii
 
-                if(m==mmax) then
-                  write(11,*)'Max. exhausted:',i,j,mmax
-                  write(11,*)'kbp'
-                  do ii=1,ixlen
-                    do jj=1,iylen
-                      write(11,*)ii,jj,kbp(ii,jj)
-                    enddo !jj
-                  enddo !ii
-                  stop
-                endif
-              end do loop6
-
-              salt(i,j,1:ilen)=salt(i1,j1,1:ilen)
-              temp(i,j,1:ilen)=temp(i1,j1,1:ilen)
-              uvel(i,j,1:ilen)=uvel(i1,j1,1:ilen)
-              vvel(i,j,1:ilen)=vvel(i1,j1,1:ilen)
-              ssh(i,j)=ssh(i1,j1)
-
-              !Save for other steps
-              iparen_of_dry(1,icount)=i1
-              iparen_of_dry(2,icount)=j1
+!                icount=icount+1
+!                if(icount>ndrypt) stop 'overflow'
+!                !Compute max possible tier # for neighborhood
+!                mmax=max(i-1,ixlen-i,j-1,iylen-j)
+!
+!                m=0 !tier #
+!                loop6: do
+!                  m=m+1
+!                  do ii=max(-m,1-i),min(m,ixlen-i)
+!                    i3=max(1,min(ixlen,i+ii))
+!                    do jj=max(-m,1-j),min(m,iylen-j)
+!                      j3=max(1,min(iylen,j+jj))
+!                      if(kbp(i3,j3)>0) then !found
+!                        i1=i3; j1=j3
+!                        exit loop6   
+!                      endif
+!                    enddo !jj
+!                  enddo !ii
+!
+!                  if(m==mmax) then
+!                    write(11,*)'Max. exhausted:',i,j,mmax
+!                    write(11,*)'kbp'
+!                    do ii=1,ixlen
+!                      do jj=1,iylen
+!                        write(11,*)ii,jj,kbp(ii,jj)
+!                      enddo !jj
+!                    enddo !ii
+!                    stop
+!                  endif
+!                end do loop6
+!
+!                salt(i,j,1:ilen)=salt(i1,j1,1:ilen)
+!                temp(i,j,1:ilen)=temp(i1,j1,1:ilen)
+!                uvel(i,j,1:ilen)=uvel(i1,j1,1:ilen)
+!                vvel(i,j,1:ilen)=vvel(i1,j1,1:ilen)
+!                ssh(i,j)=ssh(i1,j1)
+!
+!                !Save for other steps
+!                iparen_of_dry(1,icount)=i1
+!                iparen_of_dry(2,icount)=j1
 
               !Check 
               do k=1,ilen
@@ -486,9 +529,9 @@
           enddo !j=iylen1,iylen2
         enddo !i=ixlen1,ixlen2
         call cpu_time(tt1)
-        if(icount/=ndrypt) stop 'mismatch(7)'
-        write(20,*)'extending took (sec):',tt1-tt0,ndrypt
-        call flush(20)
+!          if(icount/=ndrypt) stop 'mismatch(7)'
+!          write(20,*)'extending took (sec):',tt1-tt0,ndrypt
+!          call flush(20)
 
 !       Test outputs
         icount=0
