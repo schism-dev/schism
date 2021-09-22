@@ -1126,12 +1126,13 @@ subroutine fabm_schism_do()
       call fs%model%get_vertical_movement(1, nvrt, i, w)
 #endif
 
-      wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
+!       ! @todo we lose mass here, if coupled, this can go to the sediment
+!       wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
       do k=kbe(i)+1,nvrt-1
         wsett(istart:istart+fs%nvar-1,k,i) = -0.5d0*(w(k,1:fs%nvar)+w(k+1,1:fs%nvar))
       end do
-      ! boundary condition (excl. sedimentation/erosion), not necessary because
-      ! wsett=0.0 already for k<kbe(i+1) and k==nvrt:
+      !boundary condition (excl. sedimentation/erosion), not necessary because
+      !wsett=0.0 already for k<kbe(i+1) and k==nvrt:
       !wsett(istart:istart+fs%nvar-1,k,i) = 0.0d0
       !wsett(istart:istart+fs%nvar-1,ikbe(i),i) = 0.0d0
     end if
