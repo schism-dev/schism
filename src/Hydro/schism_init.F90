@@ -4910,28 +4910,28 @@
           enddo !i=1,nea
 
 #ifdef USE_AGE
-          !AGE: deal with first half of tracers only (2nd half=0). Mark non-0
-          !elem
+          !AGE: deal with first half of tracers only (2nd half=0). Mark non-0 elem
           indx2=m-irange_tr(1,mm)+1 !local tracer index
-          !If level_age=-999, the init above is good (1 for all levels)
-          if(mm==4.and.indx2<=ntrs(4)/2.and.level_age(indx2)/=-999) then
+          !If level_age=-999, the init from .ic is good (1 for all levels)
+          if(mm==4.and.indx2<=ntrs(4)/2) then !.and.level_age(indx2)/=-999) then
             do i=1,nea
               if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then
                 nelem_age(indx2)=nelem_age(indx2)+1
                 if(nelem_age(indx2)>nea) call parallel_abort('INIT: increase dim of ielem_age')
                 ielem_age(nelem_age(indx2),indx2)=i
 
-                if(idry_e(i)==1) then
-                  kl=nvrt !arbitrary
-                else
-                  kl=max(kbe(i)+1,min(nvrt,level_age(indx2)))
-                endif
-                tr_el(m,:,i)=0.d0 !reset 
-                tr_el(m,kl,i)=1.d0
-                !tr_nd i.c. is not correct but this will be corrected during
-                !time loop
-                !tr_nd(m,1:kl-1,elnode(1:i34(i),i))=0
-                !tr_nd(m,kl+1:nvrt,elnode(1:i34(i),i))=0
+                if(level_age(indx2)/=-999) then
+                  if(idry_e(i)==1) then
+                    kl=nvrt !arbitrary
+                  else
+                    kl=max(kbe(i)+1,min(nvrt,level_age(indx2)))
+                  endif
+                  tr_el(m,:,i)=0.d0 !reset 
+                  tr_el(m,kl,i)=1.d0
+                  !tr_nd i.c. is not correct but this will be corrected during time loop
+                  !tr_nd(m,1:kl-1,elnode(1:i34(i),i))=0
+                  !tr_nd(m,kl+1:nvrt,elnode(1:i34(i),i))=0
+                endif !level_age
               endif !abs()
             enddo !i=1,nea
 
