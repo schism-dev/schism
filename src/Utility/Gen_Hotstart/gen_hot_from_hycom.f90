@@ -37,19 +37,19 @@
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
 !                     3rd line: T,S values for pts outside background grid in nc
-!     (6) HYCOM files: [SSH,TS,UV]_[1,2,..nfiles].nc (beware scaling etc)
+!     (6) HYCOM files: [SSH,TS,UV]_1.nc (beware scaling etc)
 !   Output: hotstart.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
 
 ! ifort -O2 -mcmodel=medium -assume byterecl -CB -g -traceback -o gen_hot_from_hycom.exe ../UtilLib/schism_geometry.f90 \
-! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_hot_from_hycom.f90 \
+! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 ../UtilLib/stripesearch_unstr.f90 gen_hot_from_hycom.f90 \
 !-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
       program gen_hot
       use netcdf
       use schism_geometry_mod
       use compute_zcor
-      use pt_in_poly_test, only: signa_single
+      use pt_in_poly_test, only: signa_single,pt_in_poly_double
 
 !      implicit none
 
@@ -91,30 +91,28 @@
       integer :: ier ! allocate error return.
       integer :: ixlen, iylen, ilen ! sampled lengths in each coordinate direction
       integer :: ixlen1, iylen1,ixlen2, iylen2 !reduced indices for CORIE grid to speed up interpolation
-      integer :: klev(4)
+      integer :: klev(4),nodel(3)
       real :: wild(100),wild2(100,2)
 
       integer, allocatable :: elnode(:,:),elside(:,:),isdel(:,:),idry_s(:),i34(:),iest(:), &
-     &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:)
+     &ixy(:,:),ic3(:,:),isidenode(:,:),nond(:),iond(:,:),iob(:),iond2(:),i34bg(:),nmbg(:,:), &
+     &ne_bin(:),ie_bin(:,:),lowerleft(:,:)
       real, allocatable :: xl(:),yl(:),dp(:),ztot(:),sigma(:),arco(:,:), &
      &tempout(:,:),saltout(:,:),uout(:,:),vout(:,:),eout(:),su2(:,:),sv2(:,:), &
      &eout_tmp(:),tsel(:,:,:),zeros(:,:),xcj(:),ycj(:)
+      real*8, allocatable :: xbg(:),ybg(:),xybin(:)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
-      real*8 :: aa1(1)
+      real*8 :: aa1(1),binwid,arco3(3)
 
 !     First statement
-!     Currently we assume rectangular grid in HYCOM
-!     (interp_mode=0). interp_mode=1 uses generic UG search (splitting
-!     quads) and is kept for more generic cases
-      interp_mode=0
-
       open(10,file='gen_hot_from_nc.in',status='old')
       read(10,*) iuv !1: include vel and elev. in hotstart.in; 0: only T,S
       read(10,*) tem_es,sal_es !T,S values for estuary points defined in estuary.gr3
       read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc
-!      read(10,*) dtout !time step in .nc [sec]
-!      read(10,*) nndays !# of days needed in output
-!      read(10,*) nfiles !# of stacks of HYCOM files
+      !Inputs for stripe sort
+      read(10,*) is_xy !search direction for background grid (1: along x)
+      read(10,*) nbin !# of bins
+      read(10,*) mne_bin !max # of elem in each bin
       close(10)
       if(tem_es<-6.or.sal_es<0.or.tem_outside<-6.or.sal_outside<0) &
      &stop 'Invalid T,S constants'
@@ -127,7 +125,8 @@
       open(11,file='fort.11',status='replace')
       read(14,*)
       read(14,*)ne,np
-      allocate(xl(np),yl(np),dp(np),i34(ne),elnode(4,ne),iest(np),ixy(np,3),stat=istat)
+      allocate(xl(np),yl(np),dp(np),i34(ne),elnode(4,ne),iest(np),ixy(np,3),ne_bin(nbin), &
+     &ie_bin(mne_bin,nbin),xybin(nbin+1),stat=istat)
       if(istat/=0) stop 'Failed to alloc. (0)'
       read(16,*)
       read(16,*)
@@ -202,7 +201,8 @@
 
 !     Assuming elev, u,v, S,T have same dimensions (and time step) and grids do not change over time
 !      timeout=0
-      do ifile=1,1 !nfiles
+!      do ifile=1,1 
+      ifile=1
 !--------------------------------------------------------------------
       write(char3,'(i20)')ifile
       char3=adjustl(char3); len_char3=len_trim(char3)
@@ -212,88 +212,128 @@
       status = nf90_open('SSH_'//char3(1:len_char3)//'.nc', nf90_nowrite, ncids(1))
       status = nf90_open('UV_'//char3(1:len_char3)//'.nc', nf90_nowrite, ncids(2))
 
-      if(ifile==1) then
-!       Get dimnesions from S
-        status = nf90_inq_varid(sid, "salinity", svid)
-        print*, 'Done reading variable ID'
-        print*, sid,svid,ncids(1:2),'TS_'//char3(1:len_char3)//'.nc'
+!     Get dimnesions from S
+      status = nf90_inq_varid(sid, "salinity", svid)
+      print*, 'Done reading variable ID'
+      print*, sid,svid,ncids(1:2),'TS_'//char3(1:len_char3)//'.nc'
 
-!       Get dimensions from the 1st file
-!       Assumed same as for all variables
-!       WARNING: indices reversed from ncdump!
-        status = nf90_Inquire_Variable(sid, svid, dimids = dids)
-        status = nf90_Inquire_Dimension(sid, dids(1), len = ixlen)
-        status = nf90_Inquire_Dimension(sid, dids(2), len = iylen)
-        status = nf90_Inquire_Dimension(sid, dids(3), len = ilen)
-        status = nf90_Inquire_Dimension(sid, dids(4), len = ntime)
-        print*, dids(1),dids(2),dids(3),dids(4)
-        print*, 'ixlen,iylen,ilen,ntime= ',ixlen,iylen,ilen,ntime
+!     Get dimensions from the 1st file
+!     Assumed same as for all variables
+!     WARNING: indices reversed from ncdump!
+      status = nf90_Inquire_Variable(sid, svid, dimids = dids)
+      status = nf90_Inquire_Dimension(sid, dids(1), len = ixlen)
+      status = nf90_Inquire_Dimension(sid, dids(2), len = iylen)
+      status = nf90_Inquire_Dimension(sid, dids(3), len = ilen)
+      status = nf90_Inquire_Dimension(sid, dids(4), len = ntime)
+      print*, dids(1),dids(2),dids(3),dids(4)
+      print*, 'ixlen,iylen,ilen,ntime= ',ixlen,iylen,ilen,ntime
 
-!       allocate arrays
-        allocate(xind(ixlen),stat=ier)
-        allocate(yind(iylen),stat=ier)
-        allocate(lind(ilen),stat=ier)
-        allocate(lat(ixlen,iylen))
-        allocate(lon(ixlen,iylen))
-        allocate(zm(ixlen, iylen, ilen))
-!        allocate(hnc(ixlen,iylen))
-        allocate(hnc(ilen))
-        allocate(kbp(ixlen,iylen))
-        allocate(ihope(ixlen,iylen))
-        allocate(uvel(ixlen,iylen,ilen),stat=ier)
-        allocate(vvel(ixlen,iylen,ilen),stat=ier)
-        allocate(salt(ixlen,iylen,ilen),stat=ier)
-        allocate(temp(ixlen,iylen,ilen),stat=ier)
-        allocate(ssh(ixlen,iylen),stat=ier)
-        uvel=0; vvel=0; ssh=0
-  
-!       get static info (lat/lon grids etc) 
-        status = nf90_inq_varid(ncids(1), "xlon", xvid)
-        status = nf90_get_var(ncids(1), xvid, xind)
-        status = nf90_inq_varid(ncids(1), "ylat", yvid)
-        status = nf90_get_var(ncids(1), yvid, yind)
-        !lind may be sigma coord.
-!        status = nf90_inq_varid(sid, "sigma", lvid)
-!        status = nf90_get_var(sid, lvid, lind)
-        status = nf90_inq_varid(sid, "depth", hvid)
-        status = nf90_get_var(sid, hvid, hnc)
+!     allocate arrays
+      allocate(xind(ixlen),stat=ier)
+      allocate(yind(iylen),stat=ier)
+      allocate(lind(ilen),stat=ier)
+      allocate(lat(ixlen,iylen))
+      allocate(lon(ixlen,iylen))
+      allocate(zm(ixlen, iylen, ilen))
+!     allocate(hnc(ixlen,iylen))
+      allocate(hnc(ilen))
+      allocate(kbp(ixlen,iylen))
+      allocate(ihope(ixlen,iylen))
+      allocate(uvel(ixlen,iylen,ilen),stat=ier)
+      allocate(vvel(ixlen,iylen,ilen),stat=ier)
+      allocate(salt(ixlen,iylen,ilen),stat=ier)
+      allocate(temp(ixlen,iylen,ilen),stat=ier)
+      allocate(ssh(ixlen,iylen),stat=ier)
+      npbg=ixlen*iylen; nebg=(ixlen-1)*(iylen-1)
+      allocate(xbg(npbg),ybg(npbg),i34bg(nebg),nmbg(4,nebg),lowerleft(2,nebg),stat=ier)
+      uvel=0; vvel=0; ssh=0
 
-!       processing static info
-        do i=1,ixlen
-          lon(i,:)=xind(i)
-          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
-            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
-            stop
-          endif; endif;
-        enddo !i
+!     get static info (lat/lon grids etc) 
+      status = nf90_inq_varid(ncids(1), "xlon", xvid)
+      status = nf90_get_var(ncids(1), xvid, xind)
+      status = nf90_inq_varid(ncids(1), "ylat", yvid)
+      status = nf90_get_var(ncids(1), yvid, yind)
+      !lind may be sigma coord.
+!     status = nf90_inq_varid(sid, "sigma", lvid)
+!     status = nf90_get_var(sid, lvid, lind)
+      status = nf90_inq_varid(sid, "depth", hvid)
+      status = nf90_get_var(sid, hvid, hnc)
+
+!     processing static info
+      do i=1,ixlen
+        lon(i,:)=xind(i)
+        if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+          write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+          stop
+        endif; endif;
+      enddo !i
+      do j=1,iylen
+        lat(:,j)=yind(j)
+        if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+          write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+          stop
+        endif; endif;
+      enddo !j
+!     lon=lon-360 !convert to our long.
+
+!     Add background grid as an UG
+      icount=0
+      do ix=1,ixlen
+        do iy=1,iylen
+          icount=icount+1
+          xbg(icount)=lon(ix,iy)
+          ybg(icount)=lat(ix,iy)
+        enddo !iy
+      enddo !ix
+      if(icount/=npbg) stop 'icount/=npbg'
+      icount=0
+      do ix=1,ixlen-1
+        do iy=1,iylen-1
+          icount=icount+1
+          i34bg(icount)=4
+          nd1=(ix-1)*iylen+iy
+          nd2=ix*iylen+iy
+          nmbg(1,icount)=nd1 
+          nmbg(4,icount)=nd1+1 
+          nmbg(2,icount)=nd2
+          nmbg(3,icount)=nd2+1
+          !Save indices for lower left corner
+          lowerleft(1,icount)=ix
+          lowerleft(2,icount)=iy
+        enddo !iy
+      enddo !ix
+      if(icount/=nebg) stop 'icount/=nebg'
+
+!     Stripe sort bg grid
+      call stripesearch_unstr(is_xy,nbin,mne_bin,nebg,npbg,xbg,ybg,i34bg,nmbg,ne_bin,ie_bin,xybin,binwid)
+
+      !Debug
+!      print*, 'out of stripesearch_unstr:',ne_bin(5)
+!      write(90,*)'Bin bounds=',xybin(5:6)
+!      do m=1,ne_bin(5)
+!        ie=ie_bin(m,5)
+!        write(90,*)lowerleft(:,ie),real(xbg(nmbg(:,ie))),real(ybg(nmbg(:,ie)))
+!      enddo !m
+!      stop
+
+!     Compute z-coord. (assuming eta=0)
+!     WARNING: In zm(), 1 is bottom; ilen is surface (SCHISM convention)
+      do i=1,ixlen
         do j=1,iylen
-          lat(:,j)=yind(j)
-          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
-            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
-            stop
-          endif; endif;
+          do k=1,ilen
+            zm(i,j,k)=-hnc(1+ilen-k) !lind(k)*hnc(i,j)
+          enddo !k
         enddo !j
-!        lon=lon-360 !convert to our long.
+      enddo !i
 
-!       Compute z-coord. (assuming eta=0)
-!       WARNING: In zm(), 1 is bottom; ilen is surface (SCHISM convention)
-        do i=1,ixlen
-          do j=1,iylen
-            do k=1,ilen
-              zm(i,j,k)=-hnc(1+ilen-k) !lind(k)*hnc(i,j)
-            enddo !k
-          enddo !j
-        enddo !i
+!     Get rest of varid's
+      status = nf90_inq_varid(sid, "temperature", tvid)
+      status = nf90_inq_varid(ncids(1), "surf_el", evid)
+      status = nf90_inq_varid(ncids(2), "water_u", uvid)
+      status = nf90_inq_varid(ncids(2), "water_v", vvid)
 
-!       Get rest of varid's
-        status = nf90_inq_varid(sid, "temperature", tvid)
-        status = nf90_inq_varid(ncids(1), "surf_el", evid)
-        status = nf90_inq_varid(ncids(2), "water_u", uvid)
-        status = nf90_inq_varid(ncids(2), "water_v", vvid)
-
-!       Arrays no longer used after this: hnc,lind
-        deallocate(hnc,lind)
-      endif !ifile==1
+!     Arrays no longer used after this: hnc,lind
+      deallocate(hnc,lind)
 
 !     Vertical convention follows SCHISM from now on; i.e., 1 is at bottom
 !     Compute bottom indices
@@ -507,94 +547,133 @@
    
 !       Find parent elements for hgrid.ll
         call cpu_time(tt0)
+
         loop4: do i=1,np
           ixy(i,1:2)=0
+          arco(:,i)=0
 
-          if(interp_mode==0) then !SG search
-            do ix=1,ixlen-1
-              if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
-                !Lower left corner index
-                ixy(i,1)=ix
-                xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
-                exit
+          !Find a bin
+          if(is_xy==1) then !stripes along x
+            xy3=xl(i)
+          else !stripes along y
+            xy3=yl(i)
+          endif !is_xy
+          l0=min(nbin,int((xy3-xybin(1))/binwid+1)) !>=1
+          !Deal with border cases
+          if(xy3==xybin(l0)) then
+            ibin1=max(l-1,1); ibin2=l
+          else if(xy3==xybin(l0+1)) then
+            ibin1=l0; ibin2=min(l0+1,nbin)
+          else if(xy3>xybin(l0).and.xy3<xybin(l0+1)) then
+            ibin1=l0; ibin2=l0
+          else
+            write(11,*)'Cannot find a bin (2):',i,xl(i),yl(i),xybin(l0),xybin(l0+1),binwid,l0
+            write(11,*)xybin(:)
+            stop
+          endif
+  
+          loop5: do ibin=ibin1,ibin2
+            do m=1,ne_bin(ibin)
+              iebg=ie_bin(m,ibin)
+              call pt_in_poly_double(4,xbg(nmbg(:,iebg)),ybg(nmbg(:,iebg)),dble(xl(i)), &
+     &dble(yl(i)),inside,arco3(:),nodel)
+              if(inside>0) then
+                ixy(i,1:2)=lowerleft(1:2,iebg)
+                arco(nodel(1:3),i)=arco3(1:3)
+                cycle loop4
               endif
-            enddo !ix
-            do iy=1,iylen-1
-              if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
-                !Lower left corner index
-                ixy(i,2)=iy
-                yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
-                exit
-              endif
-            enddo !ix
+            enddo !m
+          end do loop5 !ibin
+        end do loop4 !i
 
-            if(ixy(i,1)==0.or.ixy(i,2)==0) then
-              write(20,*)'Did not find parent; will use outside T,S:',i,ixy(i,1:2),xl(i),yl(i)
-            else
-              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
-                write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
-                stop
-              endif
-
-              !Bilinear shape function
-              arco(1,i)=(1-xrat)*(1-yrat)
-              arco(2,i)=xrat*(1-yrat)
-              arco(4,i)=(1-xrat)*yrat
-              arco(3,i)=xrat*yrat
-            endif
-          else !interp_mode=1; generic search with UG
-            do ix=1,ixlen-1 
-              do iy=1,iylen-1 
-                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
-                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
-                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
-                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
-                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
-                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
-                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
-                if(rat<small1) then
-                  ixy(i,1)=ix; ixy(i,2)=iy
-!                 Find a triangle
-                  in=0 !flag
-                  do l=1,2
-                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
-                    if(l==1) then !nodes 1,2,3
-                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
-                      wild(l)=abs(a1+a2+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=1
-                        arco(1,i)=max(0.,min(1.,a2/bb))
-                        arco(2,i)=max(0.,min(1.,ap/bb))
-                        arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
-                        arco(4,i)=0.
-                        exit
-                      endif
-                    else !nodes 1,3,4
-                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
-                      wild(l)=abs(a3+a4+ap-bb)/bb
-                      if(wild(l)<small1*5) then
-                        in=2
-                        arco(1,i)=max(0.,min(1.,a3/bb))
-                        arco(3,i)=max(0.,min(1.,a4/bb))
-                        arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
-                        arco(2,i)=0.
-                        exit
-                      endif
-                    endif
-                  enddo !l=1,2
-                  if(in==0) then
-                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
-                    stop
-                  endif
-                  !ixy(i,3)=in
-                  cycle loop4
-                endif !rat<small1
-              enddo !iy=iylen1,iylen2-1
-            enddo !ix=ixlen1,ixlen2-1
-          endif !interp_mode
-        end do loop4 !i=1,np
+!        loop4: do i=1,np
+!          ixy(i,1:2)=0
+!
+!          if(interp_mode==0) then !SG search
+!            do ix=1,ixlen-1
+!              if(xl(i)>=xind(ix).and.xl(i)<=xind(ix+1)) then
+!                !Lower left corner index
+!                ixy(i,1)=ix
+!                xrat=(xl(i)-xind(ix))/(xind(ix+1)-xind(ix))
+!                exit
+!              endif
+!            enddo !ix
+!            do iy=1,iylen-1
+!              if(yl(i)>=yind(iy).and.yl(i)<=yind(iy+1)) then
+!                !Lower left corner index
+!                ixy(i,2)=iy
+!                yrat=(yl(i)-yind(iy))/(yind(iy+1)-yind(iy))
+!                exit
+!              endif
+!            enddo !ix
+!
+!            if(ixy(i,1)==0.or.ixy(i,2)==0) then
+!              write(20,*)'Did not find parent; will use outside T,S:',i,ixy(i,1:2),xl(i),yl(i)
+!            else
+!              if(xrat<0.or.xrat>1.or.yrat<0.or.yrat>1) then
+!                write(11,*)'Ratio out of bound:',i,xl(i),yl(i),xrat,yrat
+!                stop
+!              endif
+!
+!              !Bilinear shape function
+!              arco(1,i)=(1-xrat)*(1-yrat)
+!              arco(2,i)=xrat*(1-yrat)
+!              arco(4,i)=(1-xrat)*yrat
+!              arco(3,i)=xrat*yrat
+!            endif
+!          else !interp_mode=1; generic search with UG
+!            do ix=1,ixlen-1 
+!              do iy=1,iylen-1 
+!                x1=lon(ix,iy); x2=lon(ix+1,iy); x3=lon(ix+1,iy+1); x4=lon(ix,iy+1)
+!                y1=lat(ix,iy); y2=lat(ix+1,iy); y3=lat(ix+1,iy+1); y4=lat(ix,iy+1)
+!                a1=abs(signa_single(xl(i),x1,x2,yl(i),y1,y2))
+!                a2=abs(signa_single(xl(i),x2,x3,yl(i),y2,y3))
+!                a3=abs(signa_single(xl(i),x3,x4,yl(i),y3,y4))
+!                a4=abs(signa_single(xl(i),x4,x1,yl(i),y4,y1))
+!                b1=abs(signa_single(x1,x2,x3,y1,y2,y3))
+!                b2=abs(signa_single(x1,x3,x4,y1,y3,y4))
+!                rat=abs(a1+a2+a3+a4-b1-b2)/(b1+b2)
+!                if(rat<small1) then
+!                  ixy(i,1)=ix; ixy(i,2)=iy
+!!                 Find a triangle
+!                  in=0 !flag
+!                  do l=1,2
+!                    ap=abs(signa_single(xl(i),x1,x3,yl(i),y1,y3))
+!                    if(l==1) then !nodes 1,2,3
+!                      bb=abs(signa_single(x1,x2,x3,y1,y2,y3))
+!                      wild(l)=abs(a1+a2+ap-bb)/bb
+!                      if(wild(l)<small1*5) then
+!                        in=1
+!                        arco(1,i)=max(0.,min(1.,a2/bb))
+!                        arco(2,i)=max(0.,min(1.,ap/bb))
+!                        arco(3,i)=max(0.,min(1.,1-arco(1,i)-arco(2,i)))
+!                        arco(4,i)=0.
+!                        exit
+!                      endif
+!                    else !nodes 1,3,4
+!                      bb=abs(signa_single(x1,x3,x4,y1,y3,y4))
+!                      wild(l)=abs(a3+a4+ap-bb)/bb
+!                      if(wild(l)<small1*5) then
+!                        in=2
+!                        arco(1,i)=max(0.,min(1.,a3/bb))
+!                        arco(3,i)=max(0.,min(1.,a4/bb))
+!                        arco(4,i)=max(0.,min(1.,1-arco(1,i)-arco(3,i)))
+!                        arco(2,i)=0.
+!                        exit
+!                      endif
+!                    endif
+!                  enddo !l=1,2
+!                  if(in==0) then
+!                    write(11,*)'Cannot find a triangle:',(wild(l),l=1,2)
+!                    stop
+!                  endif
+!                  !ixy(i,3)=in
+!                  cycle loop4
+!                endif !rat<small1
+!              enddo !iy=iylen1,iylen2-1
+!            enddo !ix=ixlen1,ixlen2-1
+!          endif !interp_mode
+!        end do loop4 !i=1,np
 
         call cpu_time(tt1)
         write(20,*)'weights took (sec):',tt1-tt0
@@ -844,7 +923,7 @@
       print*, 'Finished!'
       stop
 !--------------------------------------------------------------------
-      enddo !ifile=1,
+!      enddo !ifile=1,
 
 !      deallocate(lat,lon,zm,h,kbp,ihope,xind,yind,lind,salt,temp)
 

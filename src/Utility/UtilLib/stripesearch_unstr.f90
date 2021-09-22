@@ -7,7 +7,7 @@
 !            xbg,ybg,i34,nmbg - x,y, and connectivity table for unstr. grid  (tri-quad or actually any polygon)
 !     Out:
 !            ne_bin(1:nbin) - # of elem. for each bin
-!            ie_bin(1:nbin,1:ne_bin) - list of elem. for each bin
+!            ie_bin(1:mne_bin,1:nbin) - list of elem. for each bin
 !            xybin(1:nbin+1) - x or y coord. of each bin line
 !            binwid: bin width
 
@@ -15,26 +15,28 @@
      &ne_bin,ie_bin,xybin,binwid)
       implicit real(8)(a-h,o-z)
 
-      integer, intent(in) :: is_xy,nbin,mne_bin,nebg,npbg,i34(nebg),nmbg(nebg,4)
+      integer, intent(in) :: is_xy,nbin,mne_bin,nebg,npbg,i34(nebg),nmbg(4,nebg)
       real(8), intent(in) :: xbg(npbg),ybg(npbg)
-      integer, intent(out) :: ne_bin(nbin),ie_bin(nbin,mne_bin)
+      integer, intent(out) :: ne_bin(nbin),ie_bin(mne_bin,nbin)
       real(8), intent(out) :: xybin(nbin+1),binwid
       
       if(is_xy/=1.and.is_xy/=2.or.mne_bin<=0.or.nbin<=0) stop 'STRIPSEARCH: Check is_xy etc'
 !'
-      ie_bin(nbin,mne_bin)=0 !test memory leak
+      ie_bin(mne_bin,nbin)=0 !test memory leak
       xmin_bg=minval(xbg)-1.e-2
       xmax_bg=maxval(xbg)+1.e-2
       ymin_bg=minval(ybg)-1.e-2
       ymax_bg=maxval(ybg)+1.e-2
 
 !     Bucket stripe sorting
-!     If an element i is in ie_bin(l,:), it's 'physically' in it (i.e. at least one internal point
+!     If an element i is in ie_bin(:,l), it's 'physically' in it (i.e. at least one internal point
 !     is inside the bin l; 1<=l<=nbin).
-!     If a given pt is inside bin l, search ie_bin(l,:); in addition, also search neighboring 
-!     (if any) bins if it's right on the border
+!     If a given pt is inside bin l, search ie_bin(:,l); in addition, also search neighboring 
+!     (if any) bins if it's right on the border (e.g., if it's on the
+!     left border, search also bin to the left)
       ne_bin=0
-      write(95,*)'Max/min:',xmin_bg,xmax_bg,ymin_bg,ymax_bg,'; coord. of bin lines'
+      write(*,*)'Max/min from STRIPSEARCH:',xmin_bg,xmax_bg,ymin_bg,ymax_bg,'; coord. of bin lines'
+!'
       do i=1,nbin+1
         xbin=xmin_bg+(xmax_bg-xmin_bg)/nbin*(i-1)
         ybin=ymin_bg+(ymax_bg-ymin_bg)/nbin*(i-1)
@@ -43,7 +45,7 @@
         else
           xybin(i)=ybin
         endif
-        write(95,*)i,xybin(i)
+!        write(*,*)i,xybin(i)
       enddo !i
       binwid=(xybin(nbin+1)-xybin(1))/nbin !bin width
       if(binwid<=0) stop 'STRIPSEARCH: negative bin width'
@@ -60,9 +62,9 @@
       iabort=0 !flag for success in binning elements
       do i=1,nebg
         if(is_xy==1) then
-          bmin=minval(xbg(nmbg(i,:))); bmax=maxval(xbg(nmbg(i,1:i34(i))))
+          bmin=minval(xbg(nmbg(1:i34(i),i))); bmax=maxval(xbg(nmbg(1:i34(i),i)))
         else
-          bmin=minval(ybg(nmbg(i,:))); bmax=maxval(ybg(nmbg(i,1:i34(i))))
+          bmin=minval(ybg(nmbg(1:i34(i),i))); bmax=maxval(ybg(nmbg(1:i34(i),i)))
         endif
         ibin_min=(bmin-xybin(1))/binwid+1 !estimate
         ibin_min=min(nbin,max(1,ibin_min))
@@ -93,7 +95,7 @@
             if(iabort==0) print*, 'Aborting...'
             iabort=1
           endif
-          if(iabort==0) ie_bin(l,ne_bin(l))=i
+          if(iabort==0) ie_bin(ne_bin(l),l)=i
         enddo !l
       enddo !i=1,nebg
 
