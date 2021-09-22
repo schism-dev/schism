@@ -37,6 +37,10 @@
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
 !                     3rd line: T,S values for pts outside background grid in nc
+!                     4th line: search direction for background grid (1: along x; 
+!                               2: along y) used in stripe sort;
+!                     5th line: # of bins in search
+!                     6th line: max # of elements allowed in each bin
 !     (6) HYCOM files: [SSH,TS,UV]_1.nc (beware scaling etc)
 !   Output: hotstart.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
@@ -572,7 +576,7 @@
             stop
           endif
   
-          loop5: do ibin=ibin1,ibin2
+          do ibin=ibin1,ibin2
             do m=1,ne_bin(ibin)
               iebg=ie_bin(m,ibin)
               call pt_in_poly_double(4,xbg(nmbg(:,iebg)),ybg(nmbg(:,iebg)),dble(xl(i)), &
@@ -583,7 +587,7 @@
                 cycle loop4
               endif
             enddo !m
-          end do loop5 !ibin
+          enddo !ibin
         end do loop4 !i
 
 !        loop4: do i=1,np
