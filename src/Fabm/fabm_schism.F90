@@ -1122,12 +1122,13 @@ subroutine fabm_schism_do()
     if (idry_e(i)==0) then
 #if _FABM_API_VERSION_ < 1
       call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
+      !@>todo we lose mass here, if we include the FABM 1 calculation below.
+      !> This needs to be thoroughly assessed
 #else
       call fs%model%get_vertical_movement(1, nvrt, i, w)
+      wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
 #endif
 
-!       ! @todo we lose mass here, if coupled, this can go to the sediment
-!       wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
       do k=kbe(i)+1,nvrt-1
         wsett(istart:istart+fs%nvar-1,k,i) = -0.5d0*(w(k,1:fs%nvar)+w(k+1,1:fs%nvar))
       end do
