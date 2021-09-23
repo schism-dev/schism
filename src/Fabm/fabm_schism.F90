@@ -1126,6 +1126,7 @@ subroutine fabm_schism_do()
       !> This needs to be thoroughly assessed
 #else
       call fs%model%get_vertical_movement(1, nvrt, i, w)
+      !todo: declear a standard variable to store bottom velocity
       wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
 #endif
 
