@@ -77,9 +77,10 @@
       integer :: one_dim,ivarid(100),var1d_dims(1),var2d_dims(2),var3d_dims(3), &
      &var4d_dims(4),itime_id(4)
       integer, dimension(nf90_max_var_dims) :: dids
+      integer :: lldim ! check lat/lon dimension
              
 !     Local variables for data
-      real (kind = 4), allocatable :: xind(:), yind(:), lind(:) 
+      real (kind = 4), allocatable :: xind(:), yind(:), lind(:), xind2(:,:), yind2(:,:)
 !     Lat, lon, bathymetry
       real (kind = 4), allocatable :: lat(:,:), lon(:,:), hnc(:)
 !     Vertical postion, salinity, and temperature
@@ -128,7 +129,7 @@
 
       allocate(iob(nob))
       rewind(10)
-      do i=1,4; read(10,*); enddo
+      do i=1,2; read(10,*); enddo
       read(10,*) nob,iob(1:nob)
       close(10)
       if(tem_outside<0.or.sal_outside<0) &
@@ -335,9 +336,25 @@
         print*, dids(1),dids(2),dids(3),dids(4)
         print*, 'ixlen,iylen,ilen,ntime= ',ixlen,iylen,ilen,ntime
 
+!       Check static info (lat/lon) dimension & allocate
+        status = nf90_inq_varid(ncids(1), "xlon", xvid)
+        status = nf90_Inquire_Variable(ncids(1), xvid,ndims = lldim)
+        print*, 'xlon, ylat is ', lldim ,' dimension.'
+        if (lldim.eq.1) then
+           allocate(xind(ixlen),stat=ier)
+           allocate(yind(iylen),stat=ier)
+        else if (lldim.eq.2) then
+           allocate(xind2(ixlen,iylen),stat=ier)
+           allocate(yind2(ixlen,iylen),stat=ier)
+           interp_mode=1
+        else
+           print*, 'Error dimension in xlon,ylat!'
+           stop
+        end if
+
 !       allocate arrays
-        allocate(xind(ixlen),stat=ier)
-        allocate(yind(iylen),stat=ier)
+!       allocate(xind(ixlen),stat=ier)
+!       allocate(yind(iylen),stat=ier)
         allocate(lind(ilen),stat=ier)
         allocate(lat(ixlen,iylen))
         allocate(lon(ixlen,iylen))
@@ -354,10 +371,18 @@
         uvel=0; vvel=0; ssh=0
   
 !       get static info (lat/lon grids etc) 
-        status = nf90_inq_varid(ncids(1), "xlon", xvid)
-        status = nf90_get_var(ncids(1), xvid, xind)
-        status = nf90_inq_varid(ncids(1), "ylat", yvid)
-        status = nf90_get_var(ncids(1), yvid, yind)
+        if (lldim.eq.1) then
+           status = nf90_inq_varid(ncids(1), "xlon", xvid)
+           status = nf90_get_var(ncids(1), xvid, xind)
+           status = nf90_inq_varid(ncids(1), "ylat", yvid)
+           status = nf90_get_var(ncids(1), yvid, yind)
+        elseif (lldim.eq.2) then
+           status = nf90_inq_varid(ncids(1), "xlon", xvid)
+           status = nf90_get_var(ncids(1), xvid, xind2)
+           status = nf90_inq_varid(ncids(1), "ylat", yvid)
+           status = nf90_get_var(ncids(1), yvid, yind2)
+        end if
+
         !lind may be sigma coord.
 !        status = nf90_inq_varid(sid, "sigma", lvid)
 !        status = nf90_get_var(sid, lvid, lind)
@@ -365,21 +390,43 @@
         status = nf90_get_var(sid, hvid, hnc)
 
 !       processing static info
-        do i=1,ixlen
-          lon(i,:)=xind(i)
-          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
-            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
-            stop
-          endif; endif;
-        enddo !i
-        do j=1,iylen
-          lat(:,j)=yind(j)
-          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
-            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
-            stop
-          endif; endif;
-        enddo !j
-!        lon=lon-360 !convert to our long.
+        if (lldim.eq.1) then
+           do i=1,ixlen
+             lon(i,:)=xind(i)
+             if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+               write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+               stop
+             endif; endif;
+           enddo !i
+           do j=1,iylen
+             lat(:,j)=yind(j)
+             if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+               write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+               stop
+             endif; endif;
+           enddo !j
+        elseif (lldim.eq.2) then
+           lon=xind2
+           lat=yind2
+           do j=1,iylen
+            do i=1,ixlen
+             if(i<ixlen) then; if(lon(i,j)>=lon(i+1,j)) then
+               write(11,*)'Lon must be increasing:',i,lon(i,j),lon(i+1,j)
+               stop
+             endif; endif;
+            enddo !i
+           enddo !j
+           do i=1,ixlen
+            do j=1,iylen
+             if(j<iylen) then; if(lat(i,j)>=lat(i,j+1)) then
+               write(11,*)'Lat must be increasing:',i,lat(i,j),lat(i,j+1)
+               stop
+             endif; endif;
+            enddo !j
+           enddo !i
+        end if !lldim
+
+!       lon=lon-360 !convert to our long.
 
 !       Compute z-coord. (assuming eta=0)
 !       WARNING: In zm(), 1 is bottom; ilen is surface (SCHISM convention)
