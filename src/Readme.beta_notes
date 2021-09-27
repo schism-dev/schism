@@ -503,6 +503,7 @@ git versions:
 (127) 70db927 (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
 (128) 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option)
 (129) 53689f4 (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
+(130) c7dd516 (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
 ---------------------------------------------------------------
 Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
