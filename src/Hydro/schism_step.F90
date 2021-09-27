@@ -7158,7 +7158,7 @@
 !       Deal with AGE: clamp source elem @ i.c.
 #ifdef USE_AGE
 !$OMP single
-        do m=1,ntrs(4)/2 !first half only
+        do m=1,ntrs(4)/2 !first half
           indx=irange_tr(1,4)+m-1 !into global tracer array
           do i=1,nelem_age(m)
             ie=ielem_age(i,m) 
@@ -7170,8 +7170,10 @@
                 klev=max(kbe(ie)+1,min(nvrt,level_age(m)))
               endif
               tr_el(indx,klev,ie)=1.d0
+              tr_el(indx+ntrs(4)/2,klev,ie)=0.d0
             else !whole column
               tr_el(indx,:,ie)=1.d0
+              tr_el(indx+ntrs(4)/2,:,ie)=0.d0
             endif !level_age(m)
           enddo !i
         enddo !m
