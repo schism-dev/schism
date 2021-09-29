@@ -2,7 +2,7 @@
 %Inputs: out2d*.nc and the corresponding nc output for the var
 clear all; close all;
 start_stack=10; end_stack=10;
-varname='temp';
+varname='temperature';
 levelout=33; %use 1 for 2D var
 ispher_nowrap=0; %1: remove wrap around elem on the globe (jump can be any lon)
 %xyz=load('hgrid.xyz'); %xyz part of .gr3
@@ -73,7 +73,7 @@ for istack=start_stack:end_stack
     end %for i
   end %ispher_nowrap==1
 %----------------------------------------------------
-  end %if
+  end %if 1st stack
 
   ncid4 = netcdf.open(['outputs/' varname '_' num2str(istack) '.nc'],'NC_NOWRITE');
   vid=netcdf.inqVarID(ncid4,varname); %(nvrt,np,ntime)

@@ -256,19 +256,6 @@
   
 !      if(myrank_schism==nproc_schism-2) write(98,*)'x:',xnd
 
-!     Calculate # of actual outputs; indices must be consistent with the send
-!     part of schism_step. These numbers are only used for conditional alloc of
-!     arrays
-!      ncount_3dnode=0
-!      !Scalar
-!      do i=17,24
-!        if(iof_hydro(i)/=0) then
-!          ncount_3dnode=ncount_3dnode+1
-!        endif
-!      enddo !i
-!      !Vectors
-!      if(iof_hydro(25)/=0) ncount_3dnode=ncount_3dnode+2
-
       !Alloc global output arrays for step; note the indices are reversed btw
       !var2dnode and _gb etc
       allocate(var2dnode(ncount_2dnode,np_max,nproc_compute),var2dnode_gb(np_global,ncount_2dnode), &
@@ -312,11 +299,12 @@
 !      write(*,*)'Ready for I/O...',myrank_schism,it
       itotal=0 !# of output/sends so far
 
-      !2D node scalar&vector: all 2D outputs share same scribe
-      !Outputs not controlled by flags first
-      itotal=itotal+1
+      !2D: all 2D outputs share same scribe
+      itotal=itotal+1 !used in tags and rank #
       irank=nproc_schism-itotal !last scribe
       if(myrank_schism==irank) then
+!------------------
+        !2D node (modules already included inside)
         do i=1,nproc_compute
           call mpi_irecv(var2dnode(:,:,i),np(i)*ncount_2dnode,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
         enddo !i
@@ -328,8 +316,8 @@
 !          write(98,*)'elev:',myrank_schism,it,i,var2dnode(2,1:np(i),i)
 !          write(97,*)'wind:',myrank_schism,it,i,var2dnode(3:4,1:np(i),i)
         enddo !i
-
-        !2D elem
+!------------------
+        !2D elem (modules already included inside)
         do i=1,nproc_compute
           call mpi_irecv(var2delem(:,:,i),ne(i)*ncount_2delem,MPI_REAL4,i-1,701,comm_schism,rrqst2(i),ierr)
         enddo !i
@@ -339,7 +327,8 @@
 !          write(99,*)'elem dry:',myrank_schism,it,i,var2delem(:,1:ne(i),i)
         enddo !i
 
-        !2D side
+!------------------
+        !2D side (modules already included inside)
         do i=1,nproc_compute
           call mpi_irecv(var2dside(:,:,i),ns(i)*ncount_2dside,MPI_REAL4,i-1,702,comm_schism,rrqst2(i),ierr)
         enddo !i
@@ -349,13 +338,16 @@
 !          write(98,*)'side dry:',myrank_schism,it,i,var2dside(:,1:ns(i),i)
         enddo !i
 
+!------------------
+        !Output all 2D vars (modules included inside)
         call nc_writeout2D(it,np_global,ne_global,ns_global,ncount_2dnode,ncount_2delem,ncount_2dside, &
      &var2dnode_gb,var2delem_gb,var2dside_gb,out_name(1:ncount_2dnode+ncount_2delem+ncount_2dside), &
      &iout_23d(1:ncount_2dnode+ncount_2delem+ncount_2dside))
       endif !myrank_schism: 2D
       icount_out_name=ncount_2dnode+ncount_2delem+ncount_2dside
 
-      !3D node scalar
+!------------------
+      !3D node: hydro
       do j=17,25
         if(iof_hydro(j)/=0) then
           itotal=itotal+1
@@ -415,7 +407,9 @@
         endif !iof_hydro
       enddo !j
 
-      !3D side vector
+      !Add modules
+!------------------
+      !3D side: hydro
       do j=27,27
         if(iof_hydro(j)/=0) then
           do m=1,2 !components
@@ -439,7 +433,32 @@
         endif !iof_hydro
       enddo !j
 
-      !3D elem scalar
+      !Add modules
+#ifdef USE_WWM
+      if(iof_wwm(28)/=0) then
+        do m=1,2 !vector components
+          itotal=itotal+1
+          icount_out_name=icount_out_name+1 !index into out_name
+          irank=nproc_schism-itotal
+          if(myrank_schism==irank) then
+            do i=1,nproc_compute
+              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+            enddo !i
+            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+
+            do i=1,nproc_compute
+              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+            enddo !i
+
+            varname3=out_name(icount_out_name)
+            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+          endif !myrank_schism
+        enddo !m
+      endif !iof_wwm
+#endif /*USE_WWM*/
+
+!------------------
+      !3D elem: hydro
       do j=28,30
         if(iof_hydro(j)/=0) then
           itotal=itotal+1
@@ -461,6 +480,11 @@
           endif !myrank_schism
         endif !iof_hydro
       enddo !j
+
+      !Add modules
+  
+      !End of 3D elem
+!------------------
 
       end subroutine scribe_step
 

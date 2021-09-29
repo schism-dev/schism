@@ -6072,10 +6072,11 @@
       !whole/3D half levels; 0: no vertical info (e.g. time)
       iout_23d=0 
 
-!     2D node
+!------------------
+!---  2D node
       !Total # of 2D dynamic outputs, including those not controlled by flags: idry
       ncount_2dnode=1 !idry
-      out_name(1)='dry_flag_node'
+      out_name(1)='dryFlagNode'
       iout_23d(ncount_2dnode)=1
       !Scalar
       do i=1,12
@@ -6084,29 +6085,29 @@
           iout_23d(ncount_2dnode)=1
           select case(i)
             case(1)
-              out_name(ncount_2dnode)='elev'
+              out_name(ncount_2dnode)='elevation'
             case(2)
-              out_name(ncount_2dnode)='airpres'
+              out_name(ncount_2dnode)='airPressure'
             case(3)
-              out_name(ncount_2dnode)='airT'
+              out_name(ncount_2dnode)='airTemperature'
             case(4)
-              out_name(ncount_2dnode)='spchum'
+              out_name(ncount_2dnode)='specificHumidity'
             case(5)
-              out_name(ncount_2dnode)='solarrad'
+              out_name(ncount_2dnode)='solarRadiation'
             case(6)
-              out_name(ncount_2dnode)='senheat'
+              out_name(ncount_2dnode)='sensibleHeat'
             case(7)
-              out_name(ncount_2dnode)='latheat'
+              out_name(ncount_2dnode)='latentHeat'
             case(8)
-              out_name(ncount_2dnode)='uplong'
+              out_name(ncount_2dnode)='upwardLongwave'
             case(9)
-              out_name(ncount_2dnode)='downlong'
+              out_name(ncount_2dnode)='downwardLongwave'
             case(10)
-              out_name(ncount_2dnode)='totalheat'
+              out_name(ncount_2dnode)='totalHeat'
             case(11)
-              out_name(ncount_2dnode)='evap'
+              out_name(ncount_2dnode)='evaporationRate'
             case(12)
-              out_name(ncount_2dnode)='prcp'
+              out_name(ncount_2dnode)='precipitationRate'
           end select
         endif
       enddo !i
@@ -6117,35 +6118,120 @@
           iout_23d(ncount_2dnode-1:ncount_2dnode)=1
           select case(i)
             case(13)
-              out_name(ncount_2dnode-1)='botstressx'
-              out_name(ncount_2dnode)='botstressy'
+              out_name(ncount_2dnode-1)='bottomStressX'
+              out_name(ncount_2dnode)='bottomStressY'
             case(14)
-              out_name(ncount_2dnode-1)='uwind'
-              out_name(ncount_2dnode)='vwind'
+              out_name(ncount_2dnode-1)='windSpeedX'
+              out_name(ncount_2dnode)='windSpeedY'
             case(15)
-              out_name(ncount_2dnode-1)='wstressx'
-              out_name(ncount_2dnode)='wstressy'
+              out_name(ncount_2dnode-1)='windStressX'
+              out_name(ncount_2dnode)='windStressY'
             case(16)
-              out_name(ncount_2dnode-1)='dahvx'
-              out_name(ncount_2dnode)='dahvy'
+              out_name(ncount_2dnode-1)='depthAverageVelX'
+              out_name(ncount_2dnode)='depthAverageVelY'
           end select
         endif
       enddo !i
+
+!     Add module outputs of 2D node below (scalars&vectors)
+#ifdef USE_WWM
+      !2D node scalar
+      itmp=0 !counter
+      do i=1,28
+        if(i==7.or.i==8) cycle !skip vectors first
+
+        itmp=itmp+1
+        if(iof_wwm(itmp)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(1)
+              out_name(ncount_2dnode)='sigWaveHeight'
+            case(2)
+              out_name(ncount_2dnode)='meanWavePeriod'
+            case(3)
+              out_name(ncount_2dnode)='zeroDowncrossPeriod'
+            case(4)
+              out_name(ncount_2dnode)='TM10'
+            case(5)
+              out_name(ncount_2dnode)='meanWaveNumber'
+            case(6)
+              out_name(ncount_2dnode)='meanWaveLength'
+            case(9)
+              out_name(ncount_2dnode)='meanWaveDirection'
+            case(10)
+              out_name(ncount_2dnode)='meanDirSpreading'
+            case(11)
+              out_name(ncount_2dnode)='peakPeriod'
+            case(12)
+              out_name(ncount_2dnode)='continuousPeakPeriod'
+            case(13)
+              out_name(ncount_2dnode)='peakPhaseVel'
+            case(14)
+              out_name(ncount_2dnode)='peakNFactor'
+            case(15)
+              out_name(ncount_2dnode)='peakGroupVel'
+            case(16)
+              out_name(ncount_2dnode)='peakWaveNumber'
+            case(17)
+              out_name(ncount_2dnode)='peakWaveLength'
+            case(18)
+              out_name(ncount_2dnode)='discretePeakDirectio'
+            case(19)
+              out_name(ncount_2dnode)='peakSpreading'
+            case(20)
+              out_name(ncount_2dnode)='orbitalVelocity'
+            case(21)
+              out_name(ncount_2dnode)='rmsOrbitalVelocity'
+            case(22)
+              out_name(ncount_2dnode)='bottomExcursionPerio'
+            case(23)
+              out_name(ncount_2dnode)='bottomWavePeriod'
+            case(24)
+              out_name(ncount_2dnode)='UresellNumber'
+            case(25)
+              out_name(ncount_2dnode)='frictionalVelocity'
+            case(26)
+              out_name(ncount_2dnode)='CharnockCoeff'
+            case(27)
+              out_name(ncount_2dnode)='rougnessLength'
+          end select
+        endif !iof_wwm
+      enddo !i
+
+      !Vectors count as 2
+      if(iof_wwm(27)/=0) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='waveEnergyDirX'
+        out_name(ncount_2dnode)='waveEnergyDirY'
+      endif
+#endif /*USE_WWM*/
+
+!     Done with 2D node outputs; init counter_out_name to be used for other
+!     outputs
       counter_out_name=ncount_2dnode !index of out_name
 
-!     2D elem
+!------------------
+!---  2D elem
       ncount_2delem=1 !idry
       counter_out_name=counter_out_name+1
-      out_name(counter_out_name)='dry_flag_elem'
+      out_name(counter_out_name)='dryFlagElement'
       iout_23d(counter_out_name)=4
 
-!     2D side
+!     Add module outputs of 2D elem below (scalars&vectors)
+
+!------------------
+!---  2D side
       ncount_2dside=1 !idry
       counter_out_name=counter_out_name+1
-      out_name(counter_out_name)='dry_flag_side'
+      out_name(counter_out_name)='dryFlagSide'
       iout_23d(counter_out_name)=7
 
-!     3D nodes 
+!     Add module outputs of 2D side below (scalars&vectors)
+
+!------------------
+!---  3D nodes 
       ncount_3dnode=0
       !Scalar
       do i=17,25 
@@ -6156,23 +6242,23 @@
 
           select case(i)
             case(17)
-              out_name(counter_out_name)='wvel'
+              out_name(counter_out_name)='verticalVelocity'
             case(18)
-              out_name(counter_out_name)='temp'
+              out_name(counter_out_name)='temperature'
             case(19)
-              out_name(counter_out_name)='salt'
+              out_name(counter_out_name)='salinity'
             case(20)
-              out_name(counter_out_name)='dens'
+              out_name(counter_out_name)='waterDensity'
             case(21)
               out_name(counter_out_name)='diffusivity'
             case(22)
               out_name(counter_out_name)='viscosity'
             case(23)
-              out_name(counter_out_name)='tke'
+              out_name(counter_out_name)='turbulentKineticEner'
             case(24)
-              out_name(counter_out_name)='mixl'
+              out_name(counter_out_name)='mixingLength'
             case(25)
-              out_name(counter_out_name)='zcor'
+              out_name(counter_out_name)='zCordinates'
           end select
         endif
       enddo !i
@@ -6181,43 +6267,55 @@
         ncount_3dnode=ncount_3dnode+2    
         counter_out_name=counter_out_name+2
         iout_23d(counter_out_name-1:counter_out_name)=2
-        out_name(counter_out_name-1)='uvel'
-        out_name(counter_out_name)='vvel'
+        out_name(counter_out_name-1)='horizontalVelX'
+        out_name(counter_out_name)='horizontalVelY'
       endif
 
-!     3D side vector
+#ifdef USE_SED
+#endif /*USE_SED*/
+
+!------------------
+!---  3D side vector
       ncount_3dside=0
       do i=27,27
         if(iof_hydro(i)/=0) then
           ncount_3dside=ncount_3dside+2
           counter_out_name=counter_out_name+2
           iout_23d(counter_out_name-1:counter_out_name)=8
-          out_name(counter_out_name-1)='uvelside'
-          out_name(counter_out_name)='vvelside'
+          out_name(counter_out_name-1)='horizontalSideVelX'
+          out_name(counter_out_name)='horizontalSideVelY'
         endif
       enddo !i
 
-!     3D elem scalar
+#ifdef USE_WWM
+      if(iof_wwm(28)/=0) then
+        ncount_3dside=ncount_3dside+2
+        counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=8
+        out_name(counter_out_name-1)='waveForceX'
+        out_name(counter_out_name)='waveForceY'
+      endif
+#endif /*USE_WWM*/
+
+!------------------
+!---  3D elem scalar
       ncount_3delem=0
       do i=28,30
         if(iof_hydro(i)/=0) then
           ncount_3delem=ncount_3delem+1
           counter_out_name=counter_out_name+1
           if(i==28) then
-            out_name(counter_out_name)='wvelelem'
+            out_name(counter_out_name)='verticalVelAtElement'
             iout_23d(counter_out_name)=5
           else if(i==29) then
-            out_name(counter_out_name)='tempelem'
+            out_name(counter_out_name)='temperatureAtElement'
             iout_23d(counter_out_name)=6
           else
-            out_name(counter_out_name)='saltelem'
+            out_name(counter_out_name)='salinityAtElement'
             iout_23d(counter_out_name)=6
           endif
         endif
       enddo !i
-
-!new35: modules
-
 
       !Allocate send varout buffers for _step
       if(iorder==0) then
@@ -6243,7 +6341,7 @@
 
 !...  Send basic time info to scribes. Make sure the send vars are not altered
 !     during non-block sends/recv
-!     Min # of scribes required: all 2D (nodes/elem/side) vars share 1 scribe 
+!     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
       noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
       if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
       if(counter_out_name>500) call parallel_abort('INIT: increase out_name dim')

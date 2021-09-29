@@ -8934,8 +8934,9 @@
         nsend_varout=0 !total # of sends in this step (including all 2/3D outputs)
 
         !2D: all (node/side/elem) share 1 scribe
-        icount=0 !# of output index into varout_2dnode etc  
-        !2D scalar
+!------------------
+!       2D node scalar
+        icount=0 !index into varout_2dnode 
         !Outputs not controlled by flags first
         do i=1,1
           icount=icount+1
@@ -9011,14 +9012,37 @@
           endif !iof_hydro
         enddo !i=13,16
 
+!       Add module outputs of 2D node below (scalars&vectors)
+#ifdef USE_WWM
+        !scalar
+        itmp=0 !counter
+        do i=1,28
+          if(i==7.or.i==8) cycle !skip vectors first
+          itmp=itmp+1
+          if(iof_wwm(itmp)/=0) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.1)')
+            varout_2dnode(icount,:)=out_wwm(1:np,i)
+          endif !iof_wwm
+        enddo !i
+        !vectors
+        if(iof_wwm(27)/=0) then
+          icount=icount+2
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.2)')
+          varout_2dnode(icount-1,:)=out_wwm(1:np,8)
+          varout_2dnode(icount,:)=out_wwm(1:np,7)
+        endif !iof_wwm
+#endif /*USE_WWM*/
+
         if(icount/=ncount_2dnode) then
           write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
           call parallel_abort(errmsg)
         endif
 !end of 2D node
 
-        !2D elem scalars
-        icount=1
+!------------------
+!---    2D elem 
+        icount=1 !reset index into varout_2delem
         if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
         varout_2delem(icount,:)=idry_e(1:ne)
         if(icount/=ncount_2delem) then
@@ -9026,14 +9050,18 @@
           call parallel_abort(errmsg)
         endif
 
-        !2D side scalars
-        icount=1
+        !Modules output
+!------------------
+!---    2D side scalars
+        icount=1 !index into varout_2dside
         if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.2)')
         varout_2dside(icount,:)=idry_s(1:ns)
         if(icount/=ncount_2dside) then
           write(errmsg,*)'STEP: 2D count wrong(3):',icount,ncount_2dside
           call parallel_abort(errmsg)
         endif
+
+        !Modules output
 
 !        do i=1,ne
 !          if(ielg(i)<=4) write(99,*)'elem dry flag:',it,idry_e(i)
@@ -9042,6 +9070,7 @@
 !          if(islg(i)<=4) write(99,*)'side dry flag:',it,idry_s(i)
 !        enddo !i
 
+!------------------
         !Send 2D node first (elem/side last as nsend_varout is shared)
         nsend_varout=1
         iscribe_2d=nproc_schism-nsend_varout !dest rank (scribe)
@@ -9050,13 +9079,14 @@
         call mpi_isend(varout_2dnode(1:ncount_2dnode,1:np),np*ncount_2dnode,MPI_REAL4,iscribe_2d, &
      &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
 
-        !3D node scalar: each output has its own scribe
-        icount=0 !# of output index into varout_3dnode etc  
+!------------------
+!---    3D node scalar &vector: each output has its own scribe
+        icount=0 !index into varout_3dnode 
         do i=17,25
           if(iof_hydro(i)/=0) then
             icount=icount+1
             nsend_varout=nsend_varout+1 
-            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1)')
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.5)')
             select case(i)
               case(17)
                 varout_3dnode(:,:,icount)=ww2(:,1:np)
@@ -9089,7 +9119,7 @@
             do j=1,2 !components
               icount=icount+1
               nsend_varout=nsend_varout+1
-              if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2)')
+              if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.6)')
               if(j==1) then
                 varout_3dnode(:,:,icount)=uu2(:,1:np)
               else
@@ -9101,14 +9131,16 @@
           endif !iof_hydro
         enddo !i
 
-        !3D side vector
-        icount=0
+        !Modules
+!------------------
+!---    3D side 
+        icount=0 !index into varout_3dside
         do i=27,27
           if(iof_hydro(i)/=0) then
             do j=1,2 !components
               icount=icount+1
               nsend_varout=nsend_varout+1
-              if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2)')
+              if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.7)')
               if(j==1) then
                 varout_3dside(:,:,icount)=su2(:,1:ns)
               else
@@ -9119,14 +9151,34 @@
             enddo !j
           endif !iof_hydro
         enddo !i
-
-        !3D elem scalar
-        icount=0
+     
+        !Modules
+#ifdef USE_WWM
+        if(iof_wwm(28)/=0) then
+          !Vector
+          do j=1,2 !components
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.8)')
+            if(j==1) then
+              varout_3dside(:,:,icount)=wwave_force(1,:,1:ns)
+            else
+              varout_3dside(:,:,icount)=wwave_force(2,:,1:ns)
+            endif !j
+            call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+            enddo !j
+        endif !iof_wwm
+#endif /*USE_WWM*/
+        
+!------------------
+!---    3D elem 
+        icount=0 !index into varout_3delem
         do i=28,30
           if(iof_hydro(i)/=0) then
             icount=icount+1
             nsend_varout=nsend_varout+1
-            if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.2)')
+            if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.9)')
             if(i==28) then
               varout_3delem(:,:,icount)=we(:,1:ne)
             else if(i==29) then
@@ -9140,6 +9192,8 @@
           endif !iof_hydro
         enddo !i
 
+        !Modules
+!------------------
         
 !...    Lastly, send 2D elem/side outputs as nsend_varout is used by 3D outputs above
         nsend_varout=nsend_varout+1
