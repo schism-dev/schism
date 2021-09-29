@@ -89,8 +89,8 @@
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
       
-      print*, 'Is the var 2D (1) or 3D (2)?'
-      read(*,*) i23d
+!      print*, 'Is the var 2D (1) or 3D (2)?'
+!      read(*,*) i23d
 
       print*, 'Is the var node (1) or elem (2) based?'
       read(*,*) inode_elem
@@ -150,7 +150,6 @@
       call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b, &
      &theta_f,ztot,sigma,sigma_lcl,kbp)
 
-!     Read in vgrid.in 
 !     Calculate kbp00 
       if(ivcor==1) then
         kbp00=kbp
@@ -220,18 +219,22 @@
       leng=len_trim(it_char)
       file62='out2d_'//it_char(1:leng)//'.nc'
       iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
-
-      if(i23d==1) then !2D var
-        file63=file62
-      else !3D var
-        file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
-      endif !i23d
-      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
       !time is double
       iret=nf90_inq_varid(ncid4,'time',itime_id)
       iret=nf90_get_var(ncid4,itime_id,timeout,(/1/),(/nrec/))
       print*, 'time=',timeout !,trim(adjustl(file63))
+ 
+      !Find nc file
+      file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      inquire(file=file63,exist=lexist)
+      if(lexist) then
+        i23d=2 !3D var
+      else
+        i23d=1 !2D
+        file63=file62
+      endif
 
+      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
       iret=nf90_inq_varid(ncid,varname(1:len_var),ivarid1)
       if(iret/=nf90_NoErr) stop 'Var not found'
       iret=nf90_Inquire_Variable(ncid,ivarid1,ndims=ndims,dimids=dimids)
@@ -267,42 +270,8 @@
           count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
           iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
         endif 
-!        else !vector
-!          if(mod(i23d-1,3)==0) then !2D
-!            start_3d(1:2)=1; start_3d(3)=irec
-!            count_3d(2)=npes; count_3d(1)=2; count_3d(3)=1
-!            iret=nf90_get_var(ncid,ivarid1,outvar(1:2,1,1:npes),start_3d,count_3d)
-!          else if(ndims-1==3) then !3D vector
-!            start_4d(1:3)=1; start_4d(4)=irec
-!            count_4d(3)=npes; count_4d(2)=nvrt; count_4d(1)=2; count_4d(4)=1
-!            iret=nf90_get_var(ncid,ivarid1,outvar(:,:,1:npes),start_4d,count_4d)
-!          else
-!            stop 'Unknown type(2)'
-!          endif
-!        endif !ivs
 
-!      irec1=1 !start record
-!      loop1: do
-!        irec2=min(nrec,irec1+nrec3-1)
-!
-!        if(icomb==0) then !uncombined
-!          do irank=0,nproc-1
-!            if(irank_read(irank)>0) then
-!              call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
-!            endif
-!          enddo !irank
-!        else
-!          call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
-!        endif
-!
-!        if(i23d>3.and.ics==2) stop 'ics=2 with non node-based var'
-!        if(inode_elem==1) then !node based
-!          if(i23d>3) stop 'U said it is node based'
-!        else !elem
-!          if(i23d<=3) stop 'U said it is elem based'
-!        endif
-
-        !Available now: outvar(nvrt,np|ne)
+        !Available now: outvar(nvrt,np|ne), eta2(np)
         out2=0
         out3=0
         if(i23d==1) then !2D
@@ -322,19 +291,6 @@
           enddo !i
           write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1),i=1,nxy)
         else !3D
-!          if(i23d<=3) then !node
-!            do i=1,nxy
-!              do j=1,3 !nodes
-!                nd=node3(i,j)
-!                do k=max0(1,kbp00(nd)),nvrt
-!                  do m=1,ivs
-!                    out(i,j,k,m)=outvar(m,k,nd,irec)
-!                  enddo !m
-!                enddo !k
-!              enddo !j
-!            enddo !i
-!          endif !node
-
 !         Do interpolation
           do i=1,nxy
             etal=0; dep(i)=0; idry=0
@@ -347,17 +303,12 @@
 !              write(11,*)i,j,nd,dp(nd),arco(i,j)
             enddo !j
             if(idry==1) then
-!              if(ivs==2) then
-!                out3(i)=0
-!              else
               out3(i)=-99
-!              endif
 !              write(65,*)'Dry'
             else !element wet
               !Compute z-coordinates
               if(ivcor==1) then !localized
-                !Strictly speaking for elem-based vars, we need to use
-                !i34 nodes
+                !Strictly speaking for elem-based vars, we need to use i34 nodes
                 do j=1,3
                   nd=node3(i,j)
                   do k=kbp(nd)+1,nvrt-1
