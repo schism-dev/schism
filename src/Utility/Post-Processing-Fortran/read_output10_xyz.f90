@@ -85,7 +85,7 @@
       print*, 'Input ics (1-linear interp; 2-nearest neighbor interp. 2 for node-based variables only! 2 is suggested for sub-meter resolution!):'
       read(*,*)ics
 
-      print*, 'Input variable name to read from nc (e.g. elev):'
+      print*, 'Input variable name to read from nc (e.g. elevation):'
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
       
@@ -255,7 +255,7 @@
 !
       do irec=1,nrec
         !Get elev
-        iret=nf90_inq_varid(ncid4,'elev',itmp)
+        iret=nf90_inq_varid(ncid4,'elevation',itmp)
         start_2d(1)=1; start_2d(2)=irec
         count_2d(1)=np; count_2d(2)=1
         iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)

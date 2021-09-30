@@ -6144,7 +6144,7 @@
         if(iof_wwm(itmp)/=0) then
           ncount_2dnode=ncount_2dnode+1
           iout_23d(ncount_2dnode)=1
-          select case(i)
+          select case(itmp)
             case(1)
               out_name(ncount_2dnode)='sigWaveHeight'
             case(2)
@@ -6157,43 +6157,45 @@
               out_name(ncount_2dnode)='meanWaveNumber'
             case(6)
               out_name(ncount_2dnode)='meanWaveLength'
-            case(9)
+            case(7)
               out_name(ncount_2dnode)='meanWaveDirection'
-            case(10)
+            case(8)
               out_name(ncount_2dnode)='meanDirSpreading'
-            case(11)
+            case(9)
               out_name(ncount_2dnode)='peakPeriod'
-            case(12)
+            case(10)
               out_name(ncount_2dnode)='continuousPeakPeriod'
-            case(13)
+            case(11)
               out_name(ncount_2dnode)='peakPhaseVel'
-            case(14)
+            case(12)
               out_name(ncount_2dnode)='peakNFactor'
-            case(15)
+            case(13)
               out_name(ncount_2dnode)='peakGroupVel'
-            case(16)
+            case(14)
               out_name(ncount_2dnode)='peakWaveNumber'
-            case(17)
+            case(15)
               out_name(ncount_2dnode)='peakWaveLength'
+            case(16)
+              out_name(ncount_2dnode)='dominantDirection'
+            case(17)
+              out_name(ncount_2dnode)='peakSpreading'
             case(18)
               out_name(ncount_2dnode)='discretePeakDirectio'
             case(19)
-              out_name(ncount_2dnode)='peakSpreading'
-            case(20)
               out_name(ncount_2dnode)='orbitalVelocity'
+            case(20)
+              out_name(ncount_2dnode)='rmsOrbitalVelocity' 
             case(21)
-              out_name(ncount_2dnode)='rmsOrbitalVelocity'
-            case(22)
               out_name(ncount_2dnode)='bottomExcursionPerio'
-            case(23)
+            case(22)
               out_name(ncount_2dnode)='bottomWavePeriod'
+            case(23)
+              out_name(ncount_2dnode)='UresellNumber' 
             case(24)
-              out_name(ncount_2dnode)='UresellNumber'
-            case(25)
               out_name(ncount_2dnode)='frictionalVelocity'
-            case(26)
+            case(25)
               out_name(ncount_2dnode)='CharnockCoeff'
-            case(27)
+            case(26)
               out_name(ncount_2dnode)='rougnessLength'
           end select
         endif !iof_wwm

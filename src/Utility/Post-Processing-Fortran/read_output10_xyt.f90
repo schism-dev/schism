@@ -248,7 +248,7 @@
 
           irec=irecord(l,i)
           !Get elev
-          iret=nf90_inq_varid(ncid4,'elev',itmp)
+          iret=nf90_inq_varid(ncid4,'elevation',itmp)
           start_2d(1)=1; start_2d(2)=irec
           count_2d(1)=np; count_2d(2)=1
           iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)
