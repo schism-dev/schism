@@ -1,10 +1,17 @@
 %Read SCHISM node-based outputs from scribe I/O versions and display
 %Inputs: out2d*.nc and the corresponding nc output for the var
 clear all; close all;
-start_stack=10; end_stack=10;
-varname='temperature';
-levelout=33; %use 1 for 2D var
+start_stack=6; end_stack=6;
+filename='out2d'; %nc file name
+varname='sigWaveHeight'; %var name
+levelout=1; %use 1 for 2D var
 ispher_nowrap=0; %1: remove wrap around elem on the globe (jump can be any lon)
+ivs=1; %1: scalar; 2: vector
+if(ivs==2) 
+  filename2='';
+  varname2='';
+end
+
 %xyz=load('hgrid.xyz'); %xyz part of .gr3
 %ax=[2.e5  4.e5 1.e5 4.e5]; %axis appearance
 %xcenter=(ax(1)+ax(2))/2;
@@ -71,32 +78,49 @@ for istack=start_stack:end_stack
         icolor_nd(nm(1:i34(i),i))=1;
       end
     end %for i
+    uv=nan(np,2);
   end %ispher_nowrap==1
 %----------------------------------------------------
   end %if 1st stack
 
-  ncid4 = netcdf.open(['outputs/' varname '_' num2str(istack) '.nc'],'NC_NOWRITE');
-  vid=netcdf.inqVarID(ncid4,varname); %(nvrt,np,ntime)
-  for it=1:1 %ntime
-    v3d=double(netcdf.getVar(ncid4, vid,[levelout-1 0 it-1],[1 np 1]));
+  ncid4 = netcdf.open(['outputs/' filename '_' num2str(istack) '.nc'],'NC_NOWRITE');
+  vid=netcdf.inqVarID(ncid4,varname); %(*,np,ntime)
+  i23d= netcdf.getAtt(ncid4,vid,'i23d');
+  if(ivs==2)
+    ncid5 = netcdf.open(['outputs/' filename2 '_' num2str(istack) '.nc'],'NC_NOWRITE');
+    vid5=netcdf.inqVarID(ncid5,varname2); %(*,np,ntime)
+  end
+
+  for it=1 %ntime
+    if(i23d==1) %2D
+      uv(:,1)=double(netcdf.getVar(ncid4, vid,[0 it-1],[np 1]));
+      if(ivs==2)
+        uv(:,2)=double(netcdf.getVar(ncid5, vid5,[0 it-1],[np 1]));
+      end
+    else %3D
+      uv(:,1)=double(netcdf.getVar(ncid4, vid,[levelout-1 0 it-1],[1 np 1]));
+      if(ivs==2)
+        uv(:,1)=double(netcdf.getVar(ncid5, vid5,[levelout-1 0 it-1],[1 np 1]));
+      end
+    end
 
     %Deal with junks
-    v3d(find(abs(v3d)>1.e10))=nan;
+    uv(find(abs(uv)>1.e10))=nan;
 
-%      scale=2e3; %scale to fit
-%      quiver(x,y,squeeze(uv(1,1,:))*scale,squeeze(uv(2,1,:))*scale,0,'b');
+    if(ivs==2) %vector
+      scale=2e2; %scale to fit
+      quiver(x,y,squeeze(uv(:,1))*scale,squeeze(uv(:,2))*scale,0,'b');
 %      text(3.5e5,4.e5,'1 m/s');
-%      axis(ax);
-%      title(['suv; Time=' num2str(time(end))]);
+    else %scalar
+      surf=squeeze(uv(:,1)); 
+      surf(find(icolor_nd==1))=nan;
 
-    surf=squeeze(v3d); 
-    surf(find(icolor_nd==1))=nan;
-
-    h1=patch('Faces',nm(:,:)','Vertices',[x y],'FaceVertexCData',surf','FaceColor','interp','EdgeColor','none');
-    caxis([10 30]);
-%    axis(ax);
-    colormap(jet(40));
-    colorbar;
+      h1=patch('Faces',nm(:,:)','Vertices',[x y],'FaceVertexCData',surf,'FaceColor','interp','EdgeColor','none');
+      caxis([0 10]);
+      colormap(jet(40));
+      colorbar;
+    end %%scalar|vetor
+%   axis(ax);
     title([varname '; Time=' num2str(time(it))]);
 
     % Add image to avi file
