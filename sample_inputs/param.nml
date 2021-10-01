@@ -829,29 +829,32 @@
 ! Specific outputs in SED3D (USE_SED must be on in Makefile;
 ! otherwise these are not needed)
 !-----------------------------------------------------------------------
-!  iof_sed(1) = 0 !bottom depth _change_ from init. condition (m) {SED_depth_change}
-!  iof_sed(2) = 0 ! Bed median grain size in the active layer (mm) {SED_D50}
-!  iof_sed(3) = 0 ! Bottom shear stress (Pa) {SED_bed_stress}
-!  iof_sed(4) = 0 ! Bottom roughness lenghth (mm) {SED_bed_roughness}
-!  iof_sed(5) = 0 !total suspended concentration (g/L) {SED_TSC}
-!  iof_sed(6) = 0 ! total bed thickness @elem (m) {bed_thickness}
-!  iof_sed(7) = 0 ! total bed age over all layers @elem (sec) {bed_age}
-!  iof_sed(8) = 0 ! Sediment transport roughness length @elem (m) (z0st_elem) {z0st}
-!  iof_sed(9) = 0 !current-ripples roughness length @elem (m) (z0cr_elem) {z0cr}
-!  iof_sed(10) = 0 !sand-waves roughness length (m) @elem (z0sw_elem) {z0sw}
-!  iof_sed(11) = 0 !wave-ripples roughness length @elem (m) (z0wr_elem) {z0wr}
-!  iof_sed(12) = 0 ! sediment porosity in the top layer (-) {SED_poro}
-!  iof_sed(13) = 0 ! erosion flux for suspended transport (kg/m/m/s) {SED_eroflx}
-!  iof_sed(14) = 0 ! deposition flux for suspended transport (kg/m/m/s) {SED_depflx}
-!  iof_sed(15) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {SED_qbdl_acc}
+!  iof_sed(1) = 0 ! total bed thickness @elem (m) {bed_thickness}
+!  iof_sed(2) = 0 ! total bed age over all layers @elem (sec) {bed_age}
+!  iof_sed(3) = 0 ! Sediment transport roughness length @elem (m) (z0st_elem) {z0st}
+!  iof_sed(4) = 0 !current-ripples roughness length @elem (m) (z0cr_elem) {z0cr}
+!  iof_sed(5) = 0 !sand-waves roughness length (m) @elem (z0sw_elem) {z0sw}
+!  iof_sed(6) = 0 !wave-ripples roughness length @elem (m) (z0wr_elem) {z0wr}
+
+!  iof_sed(7) = 0 !bottom depth _change_ from init. condition (m) {SED_depth_change}
+!  iof_sed(8) = 0 ! Bed median grain size in the active layer (mm) {SED_D50}
+!  iof_sed(9) = 0 ! Bottom shear stress (Pa) {SED_bed_stress}
+!  iof_sed(10) = 0 ! Bottom roughness lenghth (mm) {SED_bed_roughness}
+!  iof_sed(11) = 0 ! sediment porosity in the top layer (-) {SED_poro}
+!  iof_sed(12) = 0 ! erosion flux for suspended transport (kg/m/m/s) {SED_eroflx}
+!  iof_sed(13) = 0 ! deposition flux for suspended transport (kg/m/m/s) {SED_depflx}
+!  iof_sed(14) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {SED_qbdl_acc}
 
 !  Example of using 2 classes
-!  iof_sed(16) = 0 !conc. of 1st class (one output need by each class) [g/L] {SED3D_1}
-!  iof_sed(17) = 0 !Bedload transport rate vector (kg.m-1.s-1) for 1st tracer (one output need by tracer) {SED_bdld_1}
-!  iof_sed(18) = 0 !Bed fraction 1st tracer (one output need by each class) [-] {SED_bedfrac_1}
-!  iof_sed(19) = 0 !conc. of 2nd class {SED3D_2}
-!  iof_sed(20) = 0 !Bedload transport of 2nd class {SED_bdld_2}
-!  iof_sed(21) = 0 !Bed fraction of 2nd class {SED_bedfrac_3}
+!  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st tracer (one output per class) {SED_bdld_1}
+!  iof_sed(16) = 0 !Bedload transport of 2nd class {SED_bdld_2}
+!  iof_sed(17) = 0 !Bed fraction 1st tracer (one output per class) [-] {SED_bedfrac_1}
+!  iof_sed(18) = 0 !Bed fraction of 2nd class {SED_bedfrac_3}
+
+!  iof_sed(19) = 0 !conc. of 1st class (one output need by each class) [g/L] {SED3D_1}
+!  iof_sed(20) = 0 !conc. of 2nd class {SED3D_2}
+
+!  iof_sed(21) = 0 !total suspended concentration (g/L) {SED_TSC}
 
 !-----------------------------------------------------------------------
 ! EcoSim outputs 
@@ -1137,8 +1140,8 @@
 !-----------------------------------------------------------------------
 ! Ice module outputs (if USE_ICE is on)
 !-----------------------------------------------------------------------
-!  iof_ice(1)= 0 !ice advective velcoity vector [m/s] {ICE_velocity}
-!  iof_ice(2)= 0 !strain rate @ elem [1/sec] {ICE_strain_rate}
+!  iof_ice(1)= 0 !strain rate @ elem [1/sec] {ICE_strain_rate}
+!  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {ICE_velocity}
 !  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {ICE_net_heat_flux}
 !  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {ICE_fresh_water_flux}
 !  iof_ice(5)= 0 !ice temperature [C] at air-ice interface {ICE_top_T}
@@ -1150,18 +1153,18 @@
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)
 !-----------------------------------------------------------------------
-!  iof_ana(1) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {ANA_air_pres_grad_x}
-!  iof_ana(2) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {ANA_air_pres_grad_y}
-!  iof_ana(3) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {ANA_tide_pot_grad_x}
-!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] {ANA_tide_pot_grad_y}
-!  iof_ana(5) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {ANA_hor_viscosity_x}
-!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {ANA_hor_viscosity_y}
-!  iof_ana(7) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {ANA_bclinic_force_x}
-!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {ANA_bclinic_force_y}
-!  iof_ana(9) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {ANA_vert_viscosity_x}
-!  iof_ana(10) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {ANA_vert_viscosity_y}
-!  iof_ana(11) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {ANA_mom_advection_x}
-!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] {ANA_mom_advection_y}
-!  iof_ana(13) = 0 !gradient Richardson number [-] {ANA_Richardson}
-!  iof_ana(14) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {ANA_transport_min_dt_elem}
+!  iof_ana(1) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {ANA_transport_min_dt_elem}
+!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {ANA_air_pres_grad_x}
+!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {ANA_air_pres_grad_y}
+!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {ANA_tide_pot_grad_x}
+!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {ANA_tide_pot_grad_y}
+!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {ANA_hor_viscosity_x}
+!  iof_ana(7) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {ANA_hor_viscosity_y}
+!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {ANA_bclinic_force_x}
+!  iof_ana(9) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {ANA_bclinic_force_y}
+!  iof_ana(10) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {ANA_vert_viscosity_x}
+!  iof_ana(11) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {ANA_vert_viscosity_y}
+!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {ANA_mom_advection_x}
+!  iof_ana(13) = 0 !(u \cdot \nabla) u [m/s/s] {ANA_mom_advection_y}
+!  iof_ana(14) = 0 !gradient Richardson number [-] {ANA_Richardson}
 /

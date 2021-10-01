@@ -154,7 +154,8 @@
                  &side_dim,nvrt_dim,ntracers_dim,three_dim,two_dim,one_dim, &
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
-                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d
+                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
+                 &ised_out_sofar
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -8207,54 +8208,72 @@
 
 #ifdef USE_SED
         if(iof_sed(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'SED_depth_change',1,1,npa,dp-dp00)
-        if(iof_sed(2)==1) call writeout_nc(id_out_var(noutput+6), &
-     &'SED_D50',1,1,npa,bed_d50n*1.d3) !in mm
-        if(iof_sed(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'SED_bed_stress',1,1,npa,bed_taun*rho0) ![Pa]
-        if(iof_sed(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'SED_bed_roughness',1,1,npa,bed_rough*1.d3) !mm
-        if(iof_sed(5)==1) call writeout_nc(id_out_var(noutput+9), &
-     &'SED_TSC',2,nvrt,npa,total_sus_conc)
-
-        if(iof_sed(6)==1) call writeout_nc(id_out_var(noutput+10), &
      &'bed_thickness',4,1,nea,sum(bed(:,:,ithck),1))
-        if(iof_sed(7)==1) call writeout_nc(id_out_var(noutput+11), &
+        if(iof_sed(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'bed_age',4,1,nea,sum(bed(:,:,iaged),1))
-        if(iof_sed(8)==1) call writeout_nc(id_out_var(noutput+12), &
+        if(iof_sed(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'z0st',4,1,nea,bottom(:,izbld))
-        if(iof_sed(9)==1) call writeout_nc(id_out_var(noutput+13), &
+        if(iof_sed(4)==1) call writeout_nc(id_out_var(noutput+8), &
      &'z0cr',4,1,nea,bottom(:,izcr))
-        if(iof_sed(10)==1) call writeout_nc(id_out_var(noutput+14), &
+        if(iof_sed(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'z0sw',4,1,nea,bottom(:,izsw))
-        if(iof_sed(11)==1) call writeout_nc(id_out_var(noutput+15), &
+        if(iof_sed(6)==1) call writeout_nc(id_out_var(noutput+10), &
      &'z0wr',4,1,nea,bottom(:,izwr))
 
-        if(iof_sed(12)==1) call writeout_nc(id_out_var(noutput+16), &
+        if(iof_sed(7)==1) call writeout_nc(id_out_var(noutput+11), &
+     &'SED_depth_change',1,1,npa,dp-dp00)
+        if(iof_sed(8)==1) call writeout_nc(id_out_var(noutput+12), &
+     &'SED_D50',1,1,npa,bed_d50n*1.d3) !in mm
+        if(iof_sed(9)==1) call writeout_nc(id_out_var(noutput+13), &
+     &'SED_bed_stress',1,1,npa,bed_taun*rho0) ![Pa]
+        if(iof_sed(10)==1) call writeout_nc(id_out_var(noutput+14), &
+     &'SED_bed_roughness',1,1,npa,bed_rough*1.d3) !mm
+        if(iof_sed(11)==1) call writeout_nc(id_out_var(noutput+15), &
      &'SED_poro',1,1,npa,poron) ![-]
-        if(iof_sed(13)==1) call writeout_nc(id_out_var(noutput+17), &
+        if(iof_sed(12)==1) call writeout_nc(id_out_var(noutput+16), &
      &'SED_eroflx',1,1,npa,eroflxn) ![kg/m/m/s]
-        if(iof_sed(14)==1) call writeout_nc(id_out_var(noutput+18), &
+        if(iof_sed(13)==1) call writeout_nc(id_out_var(noutput+17), &
      &'SED_depflx',1,1,npa,depflxn) ![kg/m/m/s]
-        if(iof_sed(15)==1) call writeout_nc(id_out_var(noutput+19), &
+        if(iof_sed(14)==1) call writeout_nc(id_out_var(noutput+18), &
      &'SED_qbdl_acc',1,1,npa,Qaccun,Qaccvn) ![[kg/m/s]]
 
-        noutput=noutput+15
-        icount=15 !offset
+        noutput=noutput+14
+        icount=14 !offset
 
         do i=1,ntrs(5)
           write(it_char,'(i72)')i
           it_char=adjustl(it_char); lit=len_trim(it_char)
           itmp=irange_tr(1,5)+i-1 !global tracer #
-          if(iof_sed(icount+3*i-2)==1) call writeout_nc(id_out_var(noutput+3*i+2), &
-     &'SED3D_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
-          if(iof_sed(icount+3*i-1)==1) call writeout_nc(id_out_var(noutput+3*i+3), &
+          if(iof_sed(icount+i)==1) call writeout_nc(id_out_var(noutput+icount+i+4), &
      &'SED_bdld_'//it_char(1:lit),1,1,npa,bedldu(:,i),bedldv(:,i))
-          if(iof_sed(icount+3*i)==1) call writeout_nc(id_out_var(noutput+3*i+4), &
+        enddo !i
+        noutput=noutput+ntrs(5)
+        icount=icount+ntrs(5)
+
+       do i=1,ntrs(5)
+          write(it_char,'(i72)')i
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          itmp=irange_tr(1,5)+i-1 !global tracer #
+          if(iof_sed(icount+i)==1) call writeout_nc(id_out_var(noutput+icount+i+4), &
      &'SED_bedfrac_'//it_char(1:lit),1,1,npa,bed_fracn(:,i))
         enddo !i
-        noutput=noutput+ntrs(5)*3
+        noutput=noutput+ntrs(5)
+        icount=icount+ntrs(5)
 
+        do i=1,ntrs(5)
+          write(it_char,'(i72)')i
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          itmp=irange_tr(1,5)+i-1 !global tracer #
+          if(iof_sed(icount+i)==1) call writeout_nc(id_out_var(noutput+icount+i+4), &
+     &'SED3D_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
+        enddo !i
+        noutput=noutput+ntrs(5)
+        icount=icount+ntrs(5)
+
+        if(iof_sed(icount+1)==1) call writeout_nc(id_out_var(noutput+icount+5), &
+     &'SED_TSC',2,nvrt,npa,total_sus_conc)
+
+        noutput=noutput+1
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
@@ -8856,9 +8875,9 @@
 
 #ifdef USE_ICE
         if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ICE_velocity',1,1,npa,u_ice,v_ice)
-        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ICE_strain_rate',4,1,nea,delta_ice)
+        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+6), &
+     &'ICE_velocity',1,1,npa,u_ice,v_ice)
         if(iof_ice(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ICE_net_heat_flux',1,1,npa,net_heat_flux)
         if(iof_ice(4)==1) call writeout_nc(id_out_var(noutput+8), &
@@ -8879,34 +8898,34 @@
 
 #ifdef USE_ANALYSIS
         if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ANA_air_pres_grad_x',7,1,nsa,dpr_dx/rho0)
+     &'ANA_transport_min_dt_elem',4,1,ne,dtbe)
         if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
-     &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
+     &'ANA_air_pres_grad_x',7,1,nsa,dpr_dx/rho0)
         if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
+     &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
+        if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
 !Error: grav
      &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
-        if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
         if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
-     &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
+     &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
         if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &
-     &'ANA_hor_viscosity_y',8,nvrt,nsa,d2uv(2,:,:))
+     &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
         if(iof_ana(7)==1) call writeout_nc(id_out_var(noutput+11), &
-     &'ANA_bclinic_force_x',8,nvrt,nsa,swild95(:,:,1))
+     &'ANA_hor_viscosity_y',8,nvrt,nsa,d2uv(2,:,:))
         if(iof_ana(8)==1) call writeout_nc(id_out_var(noutput+12), &
-     &'ANA_bclinic_force_y',8,nvrt,nsa,swild95(:,:,2))
+     &'ANA_bclinic_force_x',8,nvrt,nsa,swild95(:,:,1))
         if(iof_ana(9)==1) call writeout_nc(id_out_var(noutput+13), &
-     &'ANA_vert_viscosity_x',8,nvrt,nsa,swild95(:,:,3))
+     &'ANA_bclinic_force_y',8,nvrt,nsa,swild95(:,:,2))
         if(iof_ana(10)==1) call writeout_nc(id_out_var(noutput+14), &
-     &'ANA_vert_viscosity_y',8,nvrt,nsa,swild95(:,:,4))
+     &'ANA_vert_viscosity_x',8,nvrt,nsa,swild95(:,:,3))
         if(iof_ana(11)==1) call writeout_nc(id_out_var(noutput+15), &
-     &'ANA_mom_advection_x',8,nvrt,nsa,swild95(:,:,5))
+     &'ANA_vert_viscosity_y',8,nvrt,nsa,swild95(:,:,4))
         if(iof_ana(12)==1) call writeout_nc(id_out_var(noutput+16), &
-     &'ANA_mom_advection_y',8,nvrt,nsa,swild95(:,:,6))
+     &'ANA_mom_advection_x',8,nvrt,nsa,swild95(:,:,5))
         if(iof_ana(13)==1) call writeout_nc(id_out_var(noutput+17), &
-     &'ANA_Richardson',2,nvrt,npa,swild95(:,1:npa,7))
+     &'ANA_mom_advection_y',8,nvrt,nsa,swild95(:,:,6))
         if(iof_ana(14)==1) call writeout_nc(id_out_var(noutput+18), &
-     &'ANA_transport_min_dt_elem',4,1,ne,dtbe)
+     &'ANA_Richardson',2,nvrt,npa,swild95(:,1:npa,7))
         noutput=14
 #endif /*USE_ANALYSIS*/
 
@@ -8935,7 +8954,7 @@
 
         !2D: all (node/side/elem) share 1 scribe
 !------------------
-!       2D node scalar
+!       2D node 
         icount=0 !index into varout_2dnode 
         !Outputs not controlled by flags first
         do i=1,1
@@ -9034,6 +9053,84 @@
         endif !iof_wwm
 #endif /*USE_WWM*/
 
+#ifdef USE_SED
+      do i=7,13
+        if(iof_sed(i)/=0) then
+          icount=icount+1
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.0)')
+          select case(i)
+            case(7)
+              varout_2dnode(icount,:)=dp(1:np)-dp00(:np)
+            case(8)
+              varout_2dnode(icount,:)=bed_d50n(1:np)*1.d3
+            case(9)
+              varout_2dnode(icount,:)=bed_taun(1:np)*rho0
+            case(10)
+              varout_2dnode(icount,:)=bed_rough(1:np)*1.d3
+            case(11)
+              varout_2dnode(icount,:)=poron(1:np)
+            case(12)
+              varout_2dnode(icount,:)=eroflxn(1:np)
+            case(13)
+              varout_2dnode(icount,:)=depflxn(1:np)
+          end select
+        endif
+      enddo !i
+
+      if(iof_sed(14)/=0) then
+        icount=icount+2
+        if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.11)')
+        varout_2dnode(icount-1,:)=Qaccun(1:np)
+        varout_2dnode(icount,:)=Qaccvn(1:np)
+      endif
+
+      ised_out_sofar=14 !set output flag index so far
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then !vectors
+          icount=icount+2
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.12)')
+          varout_2dnode(icount-1,:)=bedldu(1:np,i)
+          varout_2dnode(icount,:)=bedldv(1:np,i)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then !scalar
+          icount=icount+1
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.13)')
+          varout_2dnode(icount,:)=bed_fracn(1:np,i)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+#endif /*USE_SED*/
+
+#ifdef USE_ICE
+        if(iof_ice(2)==1) then
+          icount=icount+2
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.3)')
+          varout_2dnode(icount-1,:)=u_ice(1:np)
+          varout_2dnode(icount,:)=v_ice(1:np)
+        endif
+
+        do i=3,5+ntr_ice
+          if(iof_ice(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.4)')
+            if(i==3) then
+              varout_2dnode(icount,:)=net_heat_flux(1:np)
+            else if(i==4) then
+              varout_2dnode(icount,:)=fresh_wa_flux(1:np)
+            else if(i==5) then
+              varout_2dnode(icount,:)=t_oi(1:np)
+            else
+              varout_2dnode(icount,:)=ice_tr(i-5,1:np)
+            endif
+          endif !iof
+        enddo !i
+#endif /*USE_ICE*/
+
+        !Check total # of vars
         if(icount/=ncount_2dnode) then
           write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
           call parallel_abort(errmsg)
@@ -9045,31 +9142,101 @@
         icount=1 !reset index into varout_2delem
         if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
         varout_2delem(icount,:)=idry_e(1:ne)
+
+        !Modules output
+#ifdef USE_SED
+      do i=1,6
+        if(iof_sed(i)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.13)')
+          select case(i)
+            case(1)
+              varout_2delem(icount,:)=sum(bed(:,1:ne,ithck),1)
+            case(2)
+              varout_2delem(icount,:)=sum(bed(:,1:ne,iaged),1)
+            case(3)
+              varout_2delem(icount,:)=bottom(1:ne,izbld)
+            case(4)
+              varout_2delem(icount,:)=bottom(1:ne,izcr)
+            case(5)
+              varout_2delem(icount,:)=bottom(1:ne,izsw)
+            case(6)
+              varout_2delem(icount,:)=bottom(1:ne,izwr)
+          end select
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_MARSH
+        if(iof_marsh(1)==1)
+          icount=icount+1 
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14)')
+          varout_2delem(icount,:)=imarsh(1:ne)
+        endif
+#endif
+
+#ifdef USE_FABM
+        do i=1,ubound(fs%bottom_state,2)
+           icount=icount+1
+           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.2)')
+           varout_2delem(icount,:)=fs%bottom_state(1:ne,i)
+        enddo !i
+#endif
+
+#ifdef USE_ICE
+        if(iof_ice(1)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.3)')
+          varout_2delem(icount,:)=delta_ice(1:ne)
+        endif
+#endif
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(1)==1) then
+        icount=icount+1
+        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.4)')
+        varout_2delem(icount,:)=dtbe(1:ne)
+      endif
+#endif
+
+        !Check total # of vars
         if(icount/=ncount_2delem) then
           write(errmsg,*)'STEP: 2D count wrong(2):',icount,ncount_2delem
           call parallel_abort(errmsg)
         endif
-
-        !Modules output
+!end of 2D elem
 !------------------
-!---    2D side scalars
+!---    2D side 
         icount=1 !index into varout_2dside
         if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.2)')
         varout_2dside(icount,:)=idry_s(1:ns)
+
+        !Modules output
+#ifdef USE_ANALYSIS
+      do i=2,5
+        if(iof_ana(i)==1) then
+          icount=icount+1
+          if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.4)')
+          select case(i)
+            case(2)
+              varout_2dside(icount,:)=dpr_dx(1:ns)/rho0
+            case(3)
+              varout_2dside(icount,:)=dpr_dy(1:ns)/rho0
+            case(4)
+              varout_2dside(icount,:)=grav*detp_dx(1:ns)
+            case(5)
+              varout_2dside(icount,:)=grav*detp_dy(1:ns)
+          end select
+        endif      
+      enddo !i
+#endif
+
+        !Check total # of vars
         if(icount/=ncount_2dside) then
           write(errmsg,*)'STEP: 2D count wrong(3):',icount,ncount_2dside
           call parallel_abort(errmsg)
         endif
-
-        !Modules output
-
-!        do i=1,ne
-!          if(ielg(i)<=4) write(99,*)'elem dry flag:',it,idry_e(i)
-!        enddo !i
-!        do i=1,ns
-!          if(islg(i)<=4) write(99,*)'side dry flag:',it,idry_s(i)
-!        enddo !i
-
+!end of 2D side
 !------------------
         !Send 2D node first (elem/side last as nsend_varout is shared)
         nsend_varout=1
@@ -9132,6 +9299,129 @@
         enddo !i
 
         !Modules
+#ifdef USE_GEN
+        do i=1,ntrs(3)
+          if(iof_gen(i)==1) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.7)')
+            itmp=irange_tr(1,3)+i-1 !tracer #
+            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_gen
+        enddo !i
+#endif /*USE_GEN*/
+
+#ifdef USE_AGE
+        do i=1,ntrs(4)/2
+          if(iof_age(i)==1) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.8)')
+            itmp=irange_tr(1,4)+i-1 !tracer #
+            bcc(1,1:nvrt,1:npa)=max(1.d-5,tr_nd(itmp,:,:))
+            varout_3dnode(:,:,icount)=tr_nd(itmp+ntrs(4)/2,:,1:np)/bcc(1,1:nvrt,1:np)/86400.d0
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_age
+        enddo !i
+#endif /*USE_AGE*/
+
+#ifdef USE_SED
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          icount=icount+1
+          nsend_varout=nsend_varout+1
+          if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.81)')
+          itmp=irange_tr(1,5)+i-1 !tracer #
+          varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
+          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
+
+      if(iof_sed(ised_out_sofar+1)==1) then
+        icount=icount+1
+        nsend_varout=nsend_varout+1
+        if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.82)')
+        varout_3dnode(:,:,icount)=total_sus_conc(:,1:np)
+        call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+      endif
+#endif /*USE_SED*/
+
+#ifdef USE_ECO
+        do i=1,ntrs(6)
+          if(iof_eco(i)==1) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.9)')
+            itmp=irange_tr(1,6)+i-1 !tracer #
+            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_eco
+        enddo !i
+#endif /*USE_ECO*/
+
+#ifdef USE_COSINE
+        do i=1,ntrs(8)
+          if(iof_cos(i)==1) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.9)')
+            itmp=irange_tr(1,8)+i-1 !tracer #
+            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_cos
+        enddo !i
+#endif /*USE_COSINE*/
+
+#ifdef USE_FIB
+        do i=1,ntrs(9)
+          if(iof_fib(i)==1) then
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.8)')
+            itmp=irange_tr(1,9)+i-1 !tracer #
+            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          endif !iof_fib
+        enddo !i
+#endif/*USE_FIB*/
+
+#ifdef USE_FABM
+        do i=1,ntrs(11)
+          icount=icount+1
+          nsend_varout=nsend_varout+1
+          if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.2)')
+          varout_3dnode(:,:,icount)=tr_nd(i+fabm_istart-1,:,1:np)
+          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        enddo !i
+#endif
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(14)==1) then
+        icount=icount+1
+        nsend_varout=nsend_varout+1
+        if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.3)')
+        varout_3dnode(:,:,icount)=swild95(:,1:np,7)
+        call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+      endif
+#endif
+
+      !Check total # of vars
+      if(icount/=ncount_3dnode) then
+        write(errmsg,*)'STEP: 3D count wrong(1):',icount,ncount_3dnode
+        call parallel_abort(errmsg)
+      endif
+!end of 3D node
 !------------------
 !---    3D side 
         icount=0 !index into varout_3dside
@@ -9159,7 +9449,7 @@
           do j=1,2 !components
             icount=icount+1
             nsend_varout=nsend_varout+1
-            if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.8)')
+            if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.6)')
             if(j==1) then
               varout_3dside(:,:,icount)=wwave_force(1,:,1:ns)
             else
@@ -9170,7 +9460,45 @@
             enddo !j
         endif !iof_wwm
 #endif /*USE_WWM*/
+
+#ifdef USE_ANALYSIS
+      do i=6,13
+        if(iof_ana(i)/=0) then
+          icount=icount+1
+          nsend_varout=nsend_varout+1
+          if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.7)')
+          select case(i)
+            case(6)
+              varout_3dside(:,:,icount)=d2uv(1,:,1:ns)
+            case(7)
+              varout_3dside(:,:,icount)=d2uv(2,:,1:ns)
+            case(8)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,1)
+            case(9)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,2)
+            case(10)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,3)
+            case(11)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,4)
+            case(12)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,5)
+            case(13)
+              varout_3dside(:,:,icount)=swild95(:,1:ns,6)
+          end select
+
+          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        endif
+      enddo !i
+#endif /*USE_ANALYSIS*/
+
         
+      !Check total # of vars
+      if(icount/=ncount_3dside) then
+        write(errmsg,*)'STEP: 3D count wrong(2):',icount,ncount_3dside
+        call parallel_abort(errmsg)
+      endif
+!end 3D side
 !------------------
 !---    3D elem 
         icount=0 !index into varout_3delem
@@ -9193,6 +9521,23 @@
         enddo !i
 
         !Modules
+#ifdef USE_DVD
+        if(iof_dvd(1)==1) then
+          icount=icount+1
+          nsend_varout=nsend_varout+1
+          if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.5)')
+          varout_3delem(:,:,icount)=rkai_num(1,:,1:ne)
+          call mpi_isend(varout_3delem(:,1:ne,icount),ne*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        endif !iof_dvd
+#endif /*USE_DVD*/
+
+      !Check total # of vars
+      if(icount/=ncount_3delem) then
+        write(errmsg,*)'STEP: 3D count wrong(3):',icount,ncount_3delem
+        call parallel_abort(errmsg)
+      endif
+!end 3D elem
 !------------------
         
 !...    Lastly, send 2D elem/side outputs as nsend_varout is used by 3D outputs above

@@ -2,11 +2,11 @@
 %Inputs: out2d*.nc and the corresponding nc output for the var
 clear all; close all;
 start_stack=6; end_stack=6;
+ivs=1; %1: scalar; 2: vector
 filename='out2d'; %nc file name
 varname='sigWaveHeight'; %var name
 levelout=1; %use 1 for 2D var
 ispher_nowrap=0; %1: remove wrap around elem on the globe (jump can be any lon)
-ivs=1; %1: scalar; 2: vector
 if(ivs==2) 
   filename2='';
   varname2='';
@@ -100,7 +100,7 @@ for istack=start_stack:end_stack
     else %3D
       uv(:,1)=double(netcdf.getVar(ncid4, vid,[levelout-1 0 it-1],[1 np 1]));
       if(ivs==2)
-        uv(:,1)=double(netcdf.getVar(ncid5, vid5,[levelout-1 0 it-1],[1 np 1]));
+        uv(:,2)=double(netcdf.getVar(ncid5, vid5,[levelout-1 0 it-1],[1 np 1]));
       end
     end
 

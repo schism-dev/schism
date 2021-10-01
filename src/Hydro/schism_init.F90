@@ -155,7 +155,7 @@
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
                 &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
                 &iadjust_mass_consv0(natrm),nnonblock,srqst3(50),counter_out_name, &
-                &noutvars
+                &noutvars,ised_out_sofar,istart_sed_3dnode
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -6210,6 +6210,89 @@
       endif
 #endif /*USE_WWM*/
 
+#ifdef USE_SED
+      do i=7,13
+        if(iof_sed(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(7)
+              out_name(ncount_2dnode)='sedDepthChange'
+            case(8)
+              out_name(ncount_2dnode)='sedD50'
+            case(9)
+              out_name(ncount_2dnode)='sedBedStress'
+            case(10)
+              out_name(ncount_2dnode)='sedBedRoughness'
+            case(11)
+              out_name(ncount_2dnode)='sedPorocity'
+            case(12)
+              out_name(ncount_2dnode)='sedErosionalFlux'
+            case(13)
+              out_name(ncount_2dnode)='sedDepositionalFlux'
+          end select
+        endif
+      enddo !i
+
+      if(iof_sed(14)/=0) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='sedBedloadTransportX'
+        out_name(ncount_2dnode)='sedBedloadTransportY'
+      endif !iof
+
+      ised_out_sofar=14 !set output flag index so far
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then !vectors
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_2dnode=ncount_2dnode+2
+          iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+          out_name(ncount_2dnode-1)='sedBedloadX_'//ifile_char(1:itmp2)
+          out_name(ncount_2dnode)='sedBedloadY_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          out_name(ncount_2dnode)='sedBedFraction_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+#endif /*USE_SED*/
+
+#ifdef USE_ICE
+      if(iof_ice(2)==1) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='iceVelocityX'
+        out_name(ncount_2dnode)='iceVelocityY'
+      endif
+
+      do i=3,5+ntr_ice
+        if(iof_ice(i)==1) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          if(i==3) then
+            out_name(ncount_2dnode)='iceNetHeatFlux'
+          else if(i==4) then
+            out_name(ncount_2dnode)='iceFreshwaterFlux'
+          else if(i==5) then
+            out_name(ncount_2dnode)='iceTopTemperature'
+          else 
+            write(ifile_char,'(i12)')i-5
+            ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)             
+            out_name(ncount_2dnode)='iceTracer_'//ifile_char(1:itmp2)
+          endif !i
+        endif !iof
+      enddo !i
+#endif /*USE_ICE*/
+
 !     Done with 2D node outputs; init counter_out_name to be used for other
 !     outputs
       counter_out_name=ncount_2dnode !index of out_name
@@ -6222,7 +6305,67 @@
       iout_23d(counter_out_name)=4
 
 !     Add module outputs of 2D elem below (scalars&vectors)
+#ifdef USE_SED
+      do i=1,6
+        if(iof_sed(i)==1) then
+          ncount_2delem=ncount_2delem+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=4
+          select case(i)
+            case(1)
+              out_name(counter_out_name)='sedBedThickness'
+            case(2)
+              out_name(counter_out_name)='sedBedAge'
+            case(3)
+              out_name(counter_out_name)='sedTransportRough'
+            case(4)
+              out_name(counter_out_name)='sedRoughCurrentRippl'
+            case(5)
+              out_name(counter_out_name)='sedRoughSandWave'
+            case(6)
+              out_name(counter_out_name)='sedRoughWaveRipple'
+          end select
+        endif !iof
+      enddo !i
+#endif
 
+#ifdef USE_MARSH
+      if(iof_marsh(1)==1) 
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='marshFlag'
+        iout_23d(counter_out_name)=4
+      endif !iof_marsh 
+#endif
+
+#ifdef USE_FABM
+      do i=1,ubound(fs%bottom_state,2)
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)=trim(fs%model%bottom_state_variables(i)%name)
+        iout_23d(counter_out_name)=4
+      enddo !i
+#endif
+
+#ifdef USE_ICE
+      if(iof_ice(1)==1) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='iceStrainRate'
+        iout_23d(counter_out_name)=4
+      endif
+#endif
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(1)==1) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='minTransportTimeStep'
+        iout_23d(counter_out_name)=4
+      endif
+#endif
+
+!end of 2D elem
 !------------------
 !---  2D side
       ncount_2dside=1 !idry
@@ -6231,7 +6374,27 @@
       iout_23d(counter_out_name)=7
 
 !     Add module outputs of 2D side below (scalars&vectors)
+#ifdef USE_ANALYSIS
+      do i=2,5
+        if(iof_ana(i)==1) then
+          ncount_2dside=ncount_2dside+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=7
+          select case(i)
+            case(2)
+              out_name(counter_out_name)='airPressureGradientX'
+            case(3)
+              out_name(counter_out_name)='airPressureGradientY'
+            case(4)
+              out_name(counter_out_name)='tidePotentialGradX'
+            case(5)
+              out_name(counter_out_name)='tidePotentialGradY'
+          end select
+        endif
+      enddo !i
+#endif
 
+!end of 2D side
 !------------------
 !---  3D nodes 
       ncount_3dnode=0
@@ -6273,11 +6436,121 @@
         out_name(counter_out_name)='horizontalVelY'
       endif
 
+#ifdef USE_GEN
+      do i=1,ntrs(3)
+        if(iof_gen(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='GEN_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif /*USE_GEN*/
+
+#ifdef USE_AGE
+      do i=1,ntrs(4)/2
+        if(iof_age(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='AGE_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif /*USE_AGE*/
+
 #ifdef USE_SED
+      istart_sed_3dnode=ised_out_sofar
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='sedConcentration_'//ifile_char(1:itmp2)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
+      
+      if(iof_sed(ised_out_sofar+1)==1) then
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+        out_name(counter_out_name)='totalSuspendedLoad'
+      endif
+      ised_out_sofar=ised_out_sofar+1
 #endif /*USE_SED*/
 
+#ifdef USE_ECO
+      do i=1,ntrs(6)
+        if(iof_eco(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='ECO_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_COSINE
+      do i=1,ntrs(6)
+        if(iof_cos(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='COS_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_FIB
+      do i=1,ntrs(9)
+        if(iof_fib(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='FIB_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_FABM
+      do i=1,ntrs(11)
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+#if _FABM_API_VERSION_ < 1
+        out_name(counter_out_name)=trim(fs%model%state_variables(i)%name)
+#else
+        out_name(counter_out_name)=trim(fs%model%interior_state_variables(i)%name)
+#endif
+      enddo !i
+#endif/*USE_FABM*/
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(14)==1) then
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+        out_name(counter_out_name)='gradientRichardson'        
+      endif
+#endif
+
+!end of 3D node
 !------------------
-!---  3D side vector
+!---  3D side 
       ncount_3dside=0
       do i=27,27
         if(iof_hydro(i)/=0) then
@@ -6299,6 +6572,34 @@
       endif
 #endif /*USE_WWM*/
 
+#ifdef USE_ANALYSIS
+      do i=6,13
+        if(iof_ana(i)/=0) then
+          ncount_3dside=ncount_3dside+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=8
+          select case(i)
+            case(6)
+              out_name(counter_out_name)='horzontalViscosityX'
+            case(7)
+              out_name(counter_out_name)='horzontalViscosityY'
+            case(8)
+              out_name(counter_out_name)='baroclinicForceX'
+            case(9)
+              out_name(counter_out_name)='baroclinicForceY'
+            case(10)
+              out_name(counter_out_name)='verticalViscosityX'
+            case(11)
+              out_name(counter_out_name)='verticalViscosityY'
+            case(12)
+              out_name(counter_out_name)='mommentumAdvectionX'
+            case(13)
+              out_name(counter_out_name)='mommentumAdvectionY'
+          end select 
+        endif
+      enddo !i
+#endif
+!end of 3D side
 !------------------
 !---  3D elem scalar
       ncount_3delem=0
@@ -6318,6 +6619,18 @@
           endif
         endif
       enddo !i
+
+      !Modules
+#ifdef USE_DVD
+      if(iof_dvd(1)==1) then
+        ncount_3delem=ncount_3delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='DVD_1'
+        iout_23d(counter_out_name)=6
+      endif
+#endif /*USE_DVD*/
+!end of 3D elem
+!------------------
 
       !Allocate send varout buffers for _step
       if(iorder==0) then
@@ -6373,6 +6686,21 @@
           call mpi_send(ncount_3delem,1,itype,nproc_schism-i,119,comm_schism,ierr)
           call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
           call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
+          call mpi_send(ntrs,natrm,itype,nproc_schism-i,122,comm_schism,ierr)
+          call mpi_send(iof_icm,210,itype,nproc_schism-i,123,comm_schism,ierr)
+          call mpi_send(iof_cos,20,itype,nproc_schism-i,124,comm_schism,ierr)
+          call mpi_send(iof_fib,5,itype,nproc_schism-i,125,comm_schism,ierr)
+          call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
+          call mpi_send(iof_ice,10,itype,nproc_schism-i,127,comm_schism,ierr)
+          call mpi_send(iof_ana,20,itype,nproc_schism-i,128,comm_schism,ierr)
+          call mpi_send(iof_marsh,2,itype,nproc_schism-i,129,comm_schism,ierr)
+
+          call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
+          call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)
+          call mpi_send(iof_sed,3*ntrs(5)+20,itype,nproc_schism-i,132,comm_schism,ierr)
+          call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
+          call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
+          call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)
         enddo !i
       endif !myrank=0
 
@@ -6403,6 +6731,7 @@
       call mpi_send(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,ierr) 
       call mpi_send(i34(1:ne),ne,itype,nproc_schism-1,189,comm_schism,ierr) 
       call mpi_send(elnode(1:4,1:ne),4*ne,itype,nproc_schism-1,188,comm_schism,ierr) 
+      call mpi_send(isidenode(:,1:ns),2*ns,itype,nproc_schism-1,187,comm_schism,ierr) 
       !Check send status later to hide latency
 !      nnonblock=6
 #endif /*OLDIO*/
