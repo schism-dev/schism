@@ -2299,7 +2299,6 @@ subroutine aquire_hgrid(full_aquire)
   if(.not.allocated(kbp)) allocate(kbp(npa))
   if(.not.allocated(sigma_lcl)) allocate(sigma_lcl(nvrt,npa))
   if(ivcor==1) then
-    write(12,*)'im here:',nvrt,np_global
     allocate(buf6(nvrt,np_global),ibuf6(np_global),stat=stat)
     if(stat/=0) call parallel_abort('AQUIRE_HGRID: allocation failure(5.1)')
     if(myrank==0) then
@@ -2315,7 +2314,6 @@ subroutine aquire_hgrid(full_aquire)
     if(ierr/=MPI_SUCCESS) call parallel_abort('AQUIRE_HGRID: mpi_bcast')
     call mpi_bcast(ibuf6,np_global,itype,0,comm,stat)
     if(ierr/=MPI_SUCCESS) call parallel_abort('AQUIRE_HGRID: mpi_bcast2')
-    write(12,*)'im here2:',buf6(ibuf6(np_global):nvrt,np_global)
 
     do i=1,np_global
       if(ipgl(i)%rank==myrank) then
@@ -2325,7 +2323,6 @@ subroutine aquire_hgrid(full_aquire)
       endif
     enddo !i
     deallocate(buf6,ibuf6)
-    write(12,*)'im here3:',kbp(np)
   endif !ivcor==1
 
   !-----------------------------------------------------------------------------

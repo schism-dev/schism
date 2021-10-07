@@ -3696,8 +3696,13 @@
         endif
         open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
 !       Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
-        read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
-        read(32,*)nout_sta
+        if(myrank==0) then
+          read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
+          read(32,*)nout_sta
+        endif !myrank
+        call mpi_bcast(iof_sta,nvar_sta,itype,0,comm,istat)
+        call mpi_bcast(nout_sta,1,itype,0,comm,istat)
+
 !       Following is needed for dimension of nwild2
         if(nout_sta>ne_global) call parallel_abort('MAIN: too many stations')
 !'
@@ -3715,8 +3720,16 @@
           zta_out3d=0.0_rkind
         endif
 
+        if(myrank==0) then
+          do i=1,nout_sta
+            read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
+          enddo !i
+        endif !myrank
+        call mpi_bcast(xsta,nout_sta,rtype,0,comm,istat)
+        call mpi_bcast(ysta,nout_sta,rtype,0,comm,istat)
+        call mpi_bcast(zstal,nout_sta,rtype,0,comm,istat)
+
         do i=1,nout_sta
-          read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
           if(ics==2) then
             xtmp=xsta(i)/180.d0*pi
             ytmp=ysta(i)/180.d0*pi
@@ -3812,11 +3825,13 @@
 !...
 !...  READ AND CHECK INFORMATION ABOUT HARMONIC ANALYSIS OF MODEL RESULTS
 !...  
-        READ(31,*) NFREQ 
-        if (myrank==0) then
+        if(myrank==0) then
+          READ(31,*) NFREQ 
           WRITE(16,99392) NFREQ  
 99392     FORMAT(////,1X,'HARMONIC ANALYSIS INFORMATION OUTPUT : ',//,5X,'HARMONIC ANALYSIS PERFORMED FOR ',I4,' CONSTITUENTS',/)
-        endif
+        endif !myrank
+        call mpi_bcast(NFREQ,1,itype,0,comm,istat)
+
         MNHARF = NFREQ
         IF (NFREQ.EQ.0) MNHARF = 1
 
@@ -3836,16 +3851,27 @@
         IF(NFREQ.GT.0 .AND. myrank.EQ. 0) WRITE(16,2330)
  2330   FORMAT(/,7X,'FREQUENCY',4X,'NODAL FACTOR',6X,'EQU.ARG(DEG)',1X,'CONSTITUENT',/)
 !'
-        DO I=1,NFREQ  
-           READ(31,'(A10)') NAMEFR(I)
-           READ(31,*) HAFREQ(I),HAFF(I),HAFACE(I)
-           if (myrank==0) WRITE(16,2331) HAFREQ(I),HAFF(I),HAFACE(I),NAMEFR(I)
- 2331      FORMAT(4X,F15.12,2X,F10.7,5X,F10.3,7X,A10)
-        enddo
+        if(myrank==0) then
+          DO I=1,NFREQ  
+            READ(31,'(A10)') NAMEFR(I)
+            READ(31,*) HAFREQ(I),HAFF(I),HAFACE(I)
+            if (myrank==0) WRITE(16,2331) HAFREQ(I),HAFF(I),HAFACE(I),NAMEFR(I)
+ 2331       FORMAT(4X,F15.12,2X,F10.7,5X,F10.3,7X,A10)
+          enddo !i
+        endif !myrank
+        call mpi_bcast(NAMEFR,10*MNHARF,MPI_CHAR,0,comm,istat)
+        call mpi_bcast(HAFREQ,MNHARF,rtype,0,comm,istat)
+        call mpi_bcast(HAFF,MNHARF,rtype,0,comm,istat)
+        call mpi_bcast(HAFACE,MNHARF,rtype,0,comm,istat)
 
 !...  read in interval information for harmonic analysis
 !...  compute thas and thaf in terms of the number of time steps
-        READ(31,*) THAS,THAF,NHAINC,FMV
+        if(myrank==0) READ(31,*) THAS,THAF,NHAINC,FMV
+        call mpi_bcast(THAS,1,rtype,0,comm,istat)
+        call mpi_bcast(THAF,1,rtype,0,comm,istat)
+        call mpi_bcast(NHAINC,1,itype,0,comm,istat)
+        call mpi_bcast(FMV,1,rtype,0,comm,istat)
+
         ITHAS=INT(THAS*(86400.D0/dt) + 0.5d0)
         THAS=ITHAS*dt/86400.D0
         ITHAF=INT(THAF*(86400.D0/dt) + 0.5d0)
@@ -3876,7 +3902,10 @@
 !...  read in and write out information on where harmonic analysis will
 !...  be done
 
-        READ(31,*) NHAGE,NHAGV
+        if(myrank==0) READ(31,*) NHAGE,NHAGV
+        call mpi_bcast(NHAGE,1,itype,0,comm,istat) 
+        call mpi_bcast(NHAGV,1,itype,0,comm,istat) 
+
         IF((NHAGE.LT.0).OR.(NHAGE.GT.1)) THEN
            WRITE(errmsg,99663)
 99663      FORMAT(////,1X,'!!!!!!!!!!  WARNING - INPUT ERROR  !!!!!!!!!',//,1X,'YOUR SELECTION OF NHAGE (A harm.in INPUT PARAMETER) IS NOT AN ALLOWABLE VALUE',/,1X,'PLEASE CHECK YOUR INPUT')
