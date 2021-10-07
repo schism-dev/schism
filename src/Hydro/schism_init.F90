@@ -1306,12 +1306,13 @@
       allocate(sstat(MPI_STATUS_SIZE,0:nproc-1),stat=istat)
       if(istat/=0) call parallel_abort('main: sstat allocation failure')
 
-!     Allocate the remaining grid geometry arrays held in schism_glbl
+!     Allocate the remaining grid geometry arrays held in schism_glbl: kbp and
+!     sigma_lcl in grid_subs.F90
       allocate(kbe(nea),idry_e(nea),idry_e_2t(nea2),ie_kr(nea), &
-     &krvel(nea),itvd_e(nea),ze(nvrt,nea),dldxy(4,2,nea),dp00(npa),kbp(npa), &
+     &krvel(nea),itvd_e(nea),ze(nvrt,nea),dldxy(4,2,nea),dp00(npa), &
      &kbp00(npa),kbp_e(np),idry(npa),hmod(npa),znl(nvrt,npa), &
      &kbs(nsa),idry_s(nsa),isidenei2(4,ns),zs(nvrt,nsa), &
-     &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
+     &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),shape_c2(4,2,nea), &
      &snx(nsa),sny(nsa),xs_el(4,nea),ys_el(4,nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: grid geometry arrays allocation failure')
 !'
@@ -1770,19 +1771,19 @@
       endif; endif
 
 !...  Read in sigma coord. and kbp from vgrid.in if ivcor=1
-      if(ivcor==1) then
-        open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-        read(19,*); read(19,*) nvrt
-        do i=1,np_global
-          read(19,*)j,itmp,swild(itmp:nvrt)
-          if(ipgl(i)%rank==myrank) then
-            id1=ipgl(i)%id
-            kbp(id1)=itmp
-            sigma_lcl(itmp:nvrt,id1)=swild(itmp:nvrt)
-          endif
-        enddo !i
-        close(19)
-      endif !ivcor==1
+!      if(ivcor==1) then
+!        open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
+!        read(19,*); read(19,*) nvrt
+!        do i=1,np_global
+!          read(19,*)j,itmp,swild(itmp:nvrt)
+!          if(ipgl(i)%rank==myrank) then
+!            id1=ipgl(i)%id
+!            kbp(id1)=itmp
+!            sigma_lcl(itmp:nvrt,id1)=swild(itmp:nvrt)
+!          endif
+!        enddo !i
+!        close(19)
+!      endif !ivcor==1
 
 !...  Init some vars b4 OMP
       zdev_max=-1 !max. deviation of zp-axis and radial direction
