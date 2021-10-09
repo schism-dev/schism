@@ -587,8 +587,6 @@ subroutine aquire_hgrid(full_aquire)
   integer :: intvalue
   real(rkind) :: realvalue
   character(len=2) :: stringvalue
-  real(4), allocatable :: buf6(:,:)
-  integer,allocatable :: ibuf6(:)
 !-------------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
@@ -2294,36 +2292,6 @@ subroutine aquire_hgrid(full_aquire)
 
   ! Output centers.bp and sidecenters.bp if ipre/=0 and nproc==1
   if(nproc==1.and.ipre/=0) call write_obe
-
-  ! Finish reading of vgrid.in for ivcor=1
-  if(.not.allocated(kbp)) allocate(kbp(npa))
-  if(.not.allocated(sigma_lcl)) allocate(sigma_lcl(nvrt,npa))
-  if(ivcor==1) then
-    allocate(buf6(nvrt,np_global),ibuf6(np_global),stat=stat)
-    if(stat/=0) call parallel_abort('AQUIRE_HGRID: allocation failure(5.1)')
-    if(myrank==0) then
-      open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-      read(19,*); read(19,*) nvrt
-      do i=1,np_global
-        read(19,*)j,k,buf6(k:nvrt,i) !swild(itmp:nvrt)
-        ibuf6(i)=k
-      enddo !i
-      close(19)
-    endif !myrank
-    call mpi_bcast(buf6,nvrt*np_global,MPI_REAL4,0,comm,ierr)
-    if(ierr/=MPI_SUCCESS) call parallel_abort('AQUIRE_HGRID: mpi_bcast')
-    call mpi_bcast(ibuf6,np_global,itype,0,comm,stat)
-    if(ierr/=MPI_SUCCESS) call parallel_abort('AQUIRE_HGRID: mpi_bcast2')
-
-    do i=1,np_global
-      if(ipgl(i)%rank==myrank) then
-        id=ipgl(i)%id
-        kbp(id)=ibuf6(i)
-        sigma_lcl(kbp(id):nvrt,id)=buf6(ibuf6(i):nvrt,i)
-      endif
-    enddo !i
-    deallocate(buf6,ibuf6)
-  endif !ivcor==1
 
   !-----------------------------------------------------------------------------
   ! End of full_aquire if block
