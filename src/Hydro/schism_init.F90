@@ -1200,6 +1200,10 @@
       if(iorder==0) then
 !       Aquire vertical grid
         call aquire_vgrid
+        if(myrank==0) then
+          write(16,*)'done reading vgrid...'        
+          call flush(16)
+        endif
 
 !       Partition horizontal grid into subdomains
         call partition_hgrid
@@ -1209,6 +1213,12 @@
 
 !       Dump horizontal grid
         call dump_hgrid
+
+        if(myrank==0) then
+          write(16,*)'done domain decomp...'
+          call flush(16)
+        endif
+
 
 #ifdef DEBUG
 !     Test if ipgl and isgl are in ascending rank order for _residents_;
@@ -1251,6 +1261,12 @@
 
 !       Initialize parallel message-passing datatypes
         call msgp_init
+
+        if(myrank==0) then
+          write(16,*)'done msg passing table...'
+          call flush(16)
+        endif
+
 
 !       Synchronize
         call parallel_barrier
@@ -1783,6 +1799,11 @@
         enddo !i
         close(19)
       endif !ivcor==1
+      if(myrank==0) then
+        write(16,*)'done reading vgrid ivcor=1...'
+        call flush(16)
+      endif
+
 
 !...  Init some vars b4 OMP
       zdev_max=-1 !max. deviation of zp-axis and radial direction
@@ -6740,7 +6761,10 @@
 !      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
 !#endif
 
-      if(myrank==0) write(16,'(a)')'Done initializing outputs'
+      if(myrank==0) then
+        write(16,'(a)')'Done initializing outputs'
+        call flush(16)
+      endif
       
 !...  init. eta1 (for some routines like WWM) and i.c. (for ramp function)
       eta1=eta2 
