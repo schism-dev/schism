@@ -2021,6 +2021,7 @@
      &                           num_file_times)
 
         use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
+        use schism_msgp, only : myrank,itype,rtype,comm
         implicit none
         include 'netcdf.inc'
 
@@ -2033,70 +2034,74 @@
 ! file_times_tmp must be default real (netcdf)
         real, dimension(max_file_times) :: file_times_tmp
         
-        integer ncid, iret, time_dim, time_id, i_time
+        integer ncid, iret, time_dim, time_id, i_time, istat
         character data_name*50, attr_name*50
         integer, allocatable, dimension(:) :: base_date
         integer day, month, year, jd, n_base_date, allocate_stat
 
-! open file_name and enter read-only mode
-        iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-        call check_err(iret)
+        if(myrank==0) then
+!   open file_name and enter read-only mode
+          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
+          call check_err(iret)
 
-! get the variable id for the time variable
-        data_name = 'time'
-        iret = nf_inq_varid(ncid, data_name, time_id)
-        call check_err(iret)
+!   get the variable id for the time variable
+          data_name = 'time'
+          iret = nf_inq_varid(ncid, data_name, time_id)
+          call check_err(iret)
 
-! get the time dimension id
-        iret = nf_inq_vardimid (ncid, time_id, time_dim)
-        call check_err(iret)
-        
-! determine number of times stored in the time dimension
-        iret = nf_inq_dimlen(ncid, time_dim, num_file_times)
-        if (num_file_times .gt. max_file_times) then
-          call halt_error ('sflux:num_file_times .gt. max_file_times!')
-        endif
-        call check_err(iret)
+!   get the time dimension id
+          iret = nf_inq_vardimid (ncid, time_id, time_dim)
+          call check_err(iret)
+          
+!   determine number of times stored in the time dimension
+          iret = nf_inq_dimlen(ncid, time_dim, num_file_times)
+          if (num_file_times .gt. max_file_times) then
+            call halt_error ('sflux:num_file_times .gt. max_file_times!')
+          endif
+          call check_err(iret)
 
-! read the time vector for this file
-        iret = nf_get_var_real(ncid, time_id, file_times_tmp)
-        call check_err(iret)
+!   read the time vector for this file
+          iret = nf_get_var_real(ncid, time_id, file_times_tmp)
+          call check_err(iret)
 
-! convert from file real type to data real type
-        do i_time = 1, num_file_times
-          file_times(i_time) = real(file_times_tmp(i_time),rkind)
-        enddo
+!   convert from file real type to data real type
+          do i_time = 1, num_file_times
+            file_times(i_time) = real(file_times_tmp(i_time),rkind)
+          enddo
 
-! get the base_date - the time and date which corresponds with time zero
-!                     Note that only year,month,day of base_date are used (not 'hour').
-        attr_name = 'base_date'
+!   get the base_date - the time and date which corresponds with time zero
+!                       Note that only year,month,day of base_date are used (not 'hour').
+          attr_name = 'base_date'
 
-! get size of base_date (make sure it is at least 3)
-        iret = nf_inq_attlen (ncid, time_id, attr_name, n_base_date)
-        if (n_base_date .lt. 3) then
-          call halt_error ('insufficient fields in base_date!')
-        endif
+!   get size of base_date (make sure it is at least 3)
+          iret = nf_inq_attlen (ncid, time_id, attr_name, n_base_date)
+          if (n_base_date .lt. 3) then
+            call halt_error ('insufficient fields in base_date!')
+          endif
 
-! allocate space for base_date
-        allocate(base_date(n_base_date), stat=allocate_stat)
-        call check_allocation('base_date', 'get_file_times', &
-     &                        allocate_stat)
+!   allocate space for base_date
+          allocate(base_date(n_base_date), stat=allocate_stat)
+          call check_allocation('base_date', 'get_file_times', &
+       &                        allocate_stat)
 
-! read base_date
-        iret = nf_get_att_int(ncid, time_id, attr_name, base_date)
+!   read base_date
+          iret = nf_get_att_int(ncid, time_id, attr_name, base_date)
 
-! convert base_date to integer Julian date
-        year = base_date(1)
-        month = base_date(2)
-        day = base_date(3)
-        file_julian_date = jd(year,month,day)
+!   convert base_date to integer Julian date
+          year = base_date(1)
+          month = base_date(2)
+          day = base_date(3)
+          file_julian_date = jd(year,month,day)
 
-! deallocate base_date
-        deallocate(base_date)
-
-! close the netCDF file
-        iret = nf_close(ncid)
-        call check_err(iret)
+!   deallocate base_date
+          deallocate(base_date)
+!   close the netCDF file
+          iret = nf_close(ncid)
+          call check_err(iret)
+        endif !myrank
+        call mpi_bcast(num_file_times,1,itype,0,comm,istat)
+        call mpi_bcast(file_times,max_file_times,rtype,0,comm,istat)
+        call mpi_bcast(file_julian_date,1,itype,0,comm,istat)
 
       return
       end !get_file_times
@@ -2131,38 +2136,43 @@
 !-----------------------------------------------------------------------
       subroutine get_dims (file_name, nx, ny)
         use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
+        use schism_msgp, only : myrank,itype,rtype,comm
         implicit none
         include 'netcdf.inc'
         character, intent(in) ::  file_name*50
         integer, intent(out) :: nx, ny
         
-        integer ncid, iret, nx_dim, ny_dim, dim_ids(3), test_var_id
+        integer ncid, iret, nx_dim, ny_dim, dim_ids(3),test_var_id,istat
         character, parameter :: test_variable*50 = 'lat'
 
-! open file_name and enter read-only mode
-        iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-        call check_err(iret)
+        if(myrank==0) then
+!   open file_name and enter read-only mode
+          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
+          call check_err(iret)
 
-! get the variable ID for the test variable
-        iret = nf_inq_varid(ncid, test_variable, test_var_id)
-        call check_err(iret)
+!   get the variable ID for the test variable
+          iret = nf_inq_varid(ncid, test_variable, test_var_id)
+          call check_err(iret)
 
-! get the dimension IDs for the test variable
-        iret = nf_inq_vardimid (ncid, test_var_id, dim_ids)
-        call check_err(iret)
-        
-! determine number of points in the nx and ny dimensions
-        nx_dim = dim_ids(1)
-        iret = nf_inq_dimlen(ncid, nx_dim, nx)
-        call check_err(iret)
+!   get the dimension IDs for the test variable
+          iret = nf_inq_vardimid (ncid, test_var_id, dim_ids)
+          call check_err(iret)
+          
+!   determine number of points in the nx and ny dimensions
+          nx_dim = dim_ids(1)
+          iret = nf_inq_dimlen(ncid, nx_dim, nx)
+          call check_err(iret)
 
-        ny_dim = dim_ids(2)
-        iret = nf_inq_dimlen(ncid, ny_dim, ny)
-        call check_err(iret)
+          ny_dim = dim_ids(2)
+          iret = nf_inq_dimlen(ncid, ny_dim, ny)
+          call check_err(iret)
 
-! close the netCDF file
-        iret = nf_close(ncid)
-        call check_err(iret)
+!   close the netCDF file
+          iret = nf_close(ncid)
+          call check_err(iret)
+        endif !myrank
+        call mpi_bcast(nx,1,itype,0,comm,istat)
+        call mpi_bcast(ny,1,itype,0,comm,istat)
         
       return
       end !get_dims
