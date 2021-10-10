@@ -5201,7 +5201,10 @@
 
       close(10)
       
-      if(myrank==0) write(16,*)'done initializing cold start'
+      if(myrank==0) then
+        write(16,*)'done initializing cold start'
+        call flush(16)
+      endif
       
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -6109,7 +6112,10 @@
           iths=0
         endif
 
-        if(myrank==0) write(16,*)'hot start at time=',time,iths,' ; stack #=',ifile
+        if(myrank==0) then
+          write(16,*)'hot start at time=',time,iths,' ; stack #=',ifile
+          call flush(16)
+        endif
 
 !     end hot start section
       endif !ihot/=0
