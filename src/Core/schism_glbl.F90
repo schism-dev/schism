@@ -342,8 +342,8 @@ module schism_glbl
   integer,save,allocatable :: isgl2(:,:)      ! Global-to-local side index table (2-tier augmented)
 
   ! Open boundary segment data
-  integer,save :: nope_global                  ! Global number of local open bndry segments
-  integer,save :: neta_global                  ! Global number of local open bndry nodes
+  integer,save :: nope_global                  ! Global number of open bndry segments
+  integer,save :: neta_global                  ! Global number of open bndry nodes
   integer,save :: nope                         ! Local number of local open bndry segments
   integer,save :: neta                         ! Local number of local open bndry nodes
   integer,save :: mnond                        ! Max # nodes per open bndry segment

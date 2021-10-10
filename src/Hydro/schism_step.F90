@@ -489,8 +489,11 @@
 !$OMP     single
           wtime1=wtime2
           wtime2=wtime2+wtiminc
-          read(22,*)tmp,wx2,wy2
+          if(myrank==0) read(22,*)tmp,wx2,wy2
 !$OMP     end single
+          call mpi_bcast(wx2,1,rtype,0,comm,istat)
+          call mpi_bcast(wy2,1,rtype,0,comm,istat)
+
 !$OMP     workshare
           windx1=windx2
           windy1=windy2
@@ -522,7 +525,9 @@
           pr1=pr2
 !          The large array for nws=4 option (may consider changing to
 !          unformatted binary read)
-          read(22,*)tmp,rwild(:,:) 
+          if(myrank==0) read(22,*)tmp,rwild(:,:) 
+          call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
               nd=ipgl(i)%id
@@ -1235,8 +1240,11 @@
         deallocate(buf1,buf2)
       endif !ihydraulics/=0 and nhtblocks>0
 
-!...  Get new time series values from *.th
-!...
+!     Continue reading time series inputs from misc_subs, only by rank 0 and
+!     then bcast the final products of eth etc.
+      if(myrank==0) then
+!--------------------------------------------------------------------------
+!     Get new time series values from *.th
       if(nettype>0) then
         if(time>th_time(1,2,1)) then !not '>=' to avoid last step
           ath(:,1,1,1)=ath(:,1,2,1)
@@ -1368,21 +1376,23 @@
       if(nfltype2>0) then
         if(time>th_time2(2,2)) then
           ath2(:,:,:,1,2)=ath2(:,:,:,2,2)
-          allocate(buffer(2,nvrt,nnode_fl),stat=istat)
-          if(istat/=0) call parallel_abort('step: buffer')
+!          allocate(buffer(2,nvrt,nnode_fl),stat=istat)
+!          if(istat/=0) call parallel_abort('step: buffer')
 
-          if(myrank==0) then
-            icount3=time/th_dt2(2)+2
-            j=nf90_inq_varid(ncid_uv3D, "time_series",mm)
-            if(j/=NF90_NOERR) call parallel_abort('step: time_series in uv3D.th.nc')
-            j=nf90_get_var(ncid_uv3D,mm,buffer(1:2,1:nvrt,1:nnode_fl), &
+!          if(myrank==0) then
+          icount3=time/th_dt2(2)+2
+          j=nf90_inq_varid(ncid_uv3D, "time_series",mm)
+          if(j/=NF90_NOERR) call parallel_abort('step: time_series in uv3D.th.nc')
+          j=nf90_get_var(ncid_uv3D,mm,ath2(1:2,1:nvrt,1:nnode_fl,2,2), &
     &(/1,1,1,icount3/),(/2,nvrt,nnode_fl,1/))
-            if(j/=NF90_NOERR) call parallel_abort('step: time_series in uv3D.th.nc')
-          endif !myrank
+!          j=nf90_get_var(ncid_uv3D,mm,buffer(1:2,1:nvrt,1:nnode_fl), &
+!    &(/1,1,1,icount3/),(/2,nvrt,nnode_fl,1/))
+          if(j/=NF90_NOERR) call parallel_abort('step: time_series in uv3D.th.nc')
+!          endif !myrank
 
-          call mpi_bcast(buffer,2*nvrt*nnode_fl,mpi_real,0,comm,istat)
-          ath2(1:2,1:nvrt,1:nnode_fl,2,2)=buffer(1:2,1:nvrt,1:nnode_fl)
-          deallocate(buffer)
+!          call mpi_bcast(buffer,2*nvrt*nnode_fl,mpi_real,0,comm,istat)
+!          ath2(1:2,1:nvrt,1:nnode_fl,2,2)=buffer(1:2,1:nvrt,1:nnode_fl)
+!          deallocate(buffer)
 
           th_time2(1,2)=th_time2(2,2)
           th_time2(2,2)=th_time2(2,2)+th_dt2(2)
@@ -1421,20 +1431,22 @@
             ath2(irange_tr(1,i):irange_tr(2,i),:,:,1,5)=ath2(irange_tr(1,i):irange_tr(2,i),:,:,2,5)
 
             n=irange_tr(2,i)-irange_tr(1,i)+1
-            allocate(buffer(n,nvrt,nnode_tr2(i)),stat=istat)
-            if(istat/= 0) call parallel_abort('STEP: buffer(1)')
-            if(myrank==0) then
-              icount3=time/th_dt2(5)+2
-              j=nf90_inq_varid(ncid_tr3D(i), "time_series",mm)
-              if(j/=NF90_NOERR) call parallel_abort('step: time_series5')
-              j=nf90_get_var(ncid_tr3D(i),mm,buffer(1:n,1:nvrt,1:nnode_tr2(i)), &
+!            allocate(buffer(n,nvrt,nnode_tr2(i)),stat=istat)
+!            if(istat/= 0) call parallel_abort('STEP: buffer(1)')
+!            if(myrank==0) then
+            icount3=time/th_dt2(5)+2
+            j=nf90_inq_varid(ncid_tr3D(i), "time_series",mm)
+            if(j/=NF90_NOERR) call parallel_abort('step: time_series5')
+            j=nf90_get_var(ncid_tr3D(i),mm,ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5), &
     &(/1,1,1,icount3/),(/n,nvrt,nnode_tr2(i),1/))
-              if(j/=NF90_NOERR) call parallel_abort('step: time_series in TR_.th.nc')
-            endif !myrank
+!            j=nf90_get_var(ncid_tr3D(i),mm,buffer(1:n,1:nvrt,1:nnode_tr2(i)), &
+!    &(/1,1,1,icount3/),(/n,nvrt,nnode_tr2(i),1/))
+            if(j/=NF90_NOERR) call parallel_abort('step: time_series in TR_.th.nc')
+!            endif !myrank
 
-            call mpi_bcast(buffer,n*nvrt*nnode_tr2(i),mpi_real,0,comm,istat)
-            ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5)=buffer(1:n,1:nvrt,1:nnode_tr2(i))
-            deallocate(buffer)
+!            call mpi_bcast(buffer,n*nvrt*nnode_tr2(i),mpi_real,0,comm,istat)
+!            ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5)=buffer(1:n,1:nvrt,1:nnode_tr2(i))
+!            deallocate(buffer)
           endif !ntrs
         enddo !i
 
@@ -1469,6 +1481,16 @@
           enddo !k
         endif !ntrs
       enddo !i
+!--------------------------------------------------------------------------
+      endif !myrank==0
+!     Bcast final products
+      if(nope_global>0.and.mnond_global>0) then
+        call mpi_bcast(eth,mnond_global*nope_global,rtype,0,comm,istat)
+        call mpi_bcast(qthcon,nope_global,rtype,0,comm,istat)
+        call mpi_bcast(trth,ntracers*nvrt*mnond_global*max(1,nope_global),rtype,0,comm,istat)
+        call mpi_bcast(uthnd,nvrt*mnond_global*nope_global,rtype,0,comm,istat)
+        call mpi_bcast(vthnd,nvrt*mnond_global*nope_global,rtype,0,comm,istat)
+      endif
 
 !     Read in volume/mass sources/sinks
 !     Notes on msource: while vsource may be updated after this loop (e.g. precip), msource 
@@ -1486,7 +1508,9 @@
         msource=0.d0 
         !Exceptions
         msource(1:2,:)=-9999.d0 !junk so ambient values will be used
-        if(nsources>0) then
+
+        !Reading by rank 0
+        if(nsources>0.and.myrank==0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
             th_time3(1,1)=th_time3(2,1)
@@ -1517,7 +1541,29 @@
               if(j/=NF90_NOERR) call parallel_abort('STEP: msource')
             endif !if_source
           endif !time
+        endif !nsources>0.and.myrank==0
  
+        if(nsinks>0.and.myrank==0) then
+          if(time>th_time3(2,2)) then !not '>=' to avoid last step
+            ath3(:,1,1,2)=ath3(:,1,2,2)
+            th_time3(1,2)=th_time3(2,2)
+            th_time3(2,2)=th_time3(2,2)+th_dt3(2)
+ 
+            if(if_source==1) then
+              read(64,*)tmp,ath3(1:nsinks,1,2,2)
+            else !nc
+              itmp2=time/th_dt3(2)+2
+              j=nf90_inq_varid(ncid_source, "vsink",mm)
+              j=nf90_get_var(ncid_source,mm,ath3(1:nsinks,1,2,2),(/1,itmp2/),(/nsinks,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: vsink')
+            endif !if_source
+          endif !time
+        endif !nsinks
+!       Finished reading; bcast
+        call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+        call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+
+        if(nsources>0) then
           rat=(time-th_time3(1,1))/th_dt3(1)
           if(rat<-small1.or.rat>1.d0+small1) then
             write(errmsg,*) 'STEP: rat out in vsource.th:',rat,time,th_time3(1:2,1)
@@ -1554,21 +1600,6 @@
         endif !nsources>0
 
         if(nsinks>0) then
-          if(time>th_time3(2,2)) then !not '>=' to avoid last step
-            ath3(:,1,1,2)=ath3(:,1,2,2)
-            th_time3(1,2)=th_time3(2,2)
-            th_time3(2,2)=th_time3(2,2)+th_dt3(2)
- 
-            if(if_source==1) then
-              read(64,*)tmp,ath3(1:nsinks,1,2,2)
-            else !nc
-              itmp2=time/th_dt3(2)+2
-              j=nf90_inq_varid(ncid_source, "vsink",mm)
-              j=nf90_get_var(ncid_source,mm,ath3(1:nsinks,1,2,2),(/1,itmp2/),(/nsinks,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: vsink')
-            endif !if_source
-          endif !time
-
           rat=(time-th_time3(1,2))/th_dt3(2)
           if(rat<-small1.or.rat>1.d0+small1) then
             write(errmsg,*) 'STEP: rat out in vsink.th:',rat,time,th_time3(1:2,2)
@@ -1671,7 +1702,7 @@
              call parallel_abort(errmsg)
             endif
           endif
-        enddo
+        enddo !k
         deallocate(buf1,buf2)
       endif !lflbc
 

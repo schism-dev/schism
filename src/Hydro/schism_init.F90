@@ -432,7 +432,8 @@
         allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(210),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
-     &srqst7(nscribes),stat=istat)
+      !dim of srqst7 increased to account for 2D elem/side etc
+     &srqst7(nscribes+10),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -2286,11 +2287,12 @@
       nettype=0 !total # of type I bnds; global variable
       nfltype=0
       ntrtype1(:)=0 !total # of type I bnds
-      nettype2=0 !total # of type IV bnds (3D input)
+
+      nettype2=0 !total # of type IV bnds (netcdf input)
       nfltype2=0 
-      nnode_et=0 !total # of open bnd nodes that require elev2D.th
-      nnode_fl=0 !total # of open bnd nodes that require uv3D.th
-      nnode_tr2(:)=0 !total # of open bnd nodes that require tr3D.th
+      nnode_et=0 !total # of open bnd nodes that require elev2D.th.nc
+      nnode_fl=0 !total # of open bnd nodes that require uv3D.th.nc
+      nnode_tr2(:)=0 !total # of open bnd nodes that require <tr>_3D.th.nc
       itrtype(:,:)=-99 !init
       lflbc=.false. !flag to indicate existence of ifltype/=0
       do k=1,nope_global
@@ -2414,13 +2416,13 @@
             else if(itrtype(i,k)==1) then
               read(31,*) trobc(i,k) !nudging factor
               ntrtype1(i)=ntrtype1(i)+1
-              do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
-                write(ifile_char,'(i03)')m-irange_tr(1,i)+1
-                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
-                inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
-!'
-                open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              enddo !m
+!              do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
+!                write(ifile_char,'(i03)')m-irange_tr(1,i)+1
+!                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
+!                inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
+!!'
+!                open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
+!              enddo !m
             else if(itrtype(i,k)==3) then !nudge to i.c.
               read(31,*) trobc(i,k) !nudging factor
             else if(itrtype(i,k)==4) then
@@ -2657,61 +2659,79 @@
 
 !     Read in source/sink info 
       if(if_source==1) then !ASCII
-        open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
-        read(31,*)nsources
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
+          read(31,*)nsources
+        endif !myrank
+        call mpi_bcast(nsources,1,itype,0,comm,istat)
+
         if(iorder==0) then
           allocate(ieg_source(max(1,nsources)),stat=istat)
           if(istat/=0) call parallel_abort('INIT: ieg_source failure')
         endif
-        do i=1,nsources
-          read(31,*)ieg_source(i) !global elem. #
-        enddo !i
 
-        read(31,*) !blank line
-        read(31,*)nsinks
+        if(myrank==0) then
+          do i=1,nsources
+            read(31,*)ieg_source(i) !global elem. #
+          enddo !i
+          read(31,*) !blank line
+          read(31,*)nsinks
+        endif !myrank
+        call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(nsinks,1,itype,0,comm,istat)
+
         if(iorder==0) then
           allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
           if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
         endif
-        do i=1,nsinks
-          read(31,*)ieg_sink(i)
-        enddo !i
-        close(31)
+
+        if(myrank==0) then
+          do i=1,nsinks
+            read(31,*)ieg_sink(i)
+          enddo !i
+          close(31)
+        endif !myrank
+        call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
 
       if(if_source==-1) then !nc
-        j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
-        if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
-        j=nf90_inq_dimid(ncid_source,'nsources',mm)
-        j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
-        if(j/=NF90_NOERR) call parallel_abort('init: nsources')
-        j=nf90_inq_dimid(ncid_source,'nsinks',mm)
-        j=nf90_inquire_dimension(ncid_source,mm,len=nsinks)
-        if(j/=NF90_NOERR) call parallel_abort('init: nsinks')
-        j=nf90_inq_dimid(ncid_source,'ntracers',mm)
-        j=nf90_inquire_dimension(ncid_source,mm,len=itmp)
-        if(itmp/=ntracers) call parallel_abort('init: wrong ntracers in source.nc')
+        if(myrank==0) then
+          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+          if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
+          j=nf90_inq_dimid(ncid_source,'nsources',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
+          if(j/=NF90_NOERR) call parallel_abort('init: nsources')
+          j=nf90_inq_dimid(ncid_source,'nsinks',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=nsinks)
+          if(j/=NF90_NOERR) call parallel_abort('init: nsinks')
+          j=nf90_inq_dimid(ncid_source,'ntracers',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=itmp)
+          if(itmp/=ntracers) call parallel_abort('init: wrong ntracers in source.nc')
 
-        j=nf90_inq_varid(ncid_source, "time_step_vsource",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource')
-        j=nf90_get_var(ncid_source,mm,floatout)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource(2)')
-        if(floatout<dt) call parallel_abort('INIT: dt_vsource wrong')
-        th_dt3(1)=dble(floatout)
+          j=nf90_inq_varid(ncid_source, "time_step_vsource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_vsource wrong')
+          th_dt3(1)=dble(floatout)
 
-        j=nf90_inq_varid(ncid_source, "time_step_msource",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource')
-        j=nf90_get_var(ncid_source,mm,floatout)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource(2)')
-        if(floatout<dt) call parallel_abort('INIT: dt_msource wrong')
-        th_dt3(3)=dble(floatout)
+          j=nf90_inq_varid(ncid_source, "time_step_msource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_msource wrong')
+          th_dt3(3)=dble(floatout)
 
-        j=nf90_inq_varid(ncid_source, "time_step_vsink",mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink')
-        j=nf90_get_var(ncid_source,mm,floatout)
-        if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
-        if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
-        th_dt3(2)=dble(floatout)
+          j=nf90_inq_varid(ncid_source, "time_step_vsink",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
+          th_dt3(2)=dble(floatout)
+        endif !myrank=0
+        call mpi_bcast(nsources,1,itype,0,comm,istat)
+        call mpi_bcast(nsinks,1,itype,0,comm,istat)
+        call mpi_bcast(th_dt3,nthfiles2,rtype,0,comm,istat)
 
         if(iorder==0) then
           allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
@@ -2719,19 +2739,23 @@
           if(istat/=0) call parallel_abort('INIT: ieg_source failure(3)')
         endif
 
-        if(nsources>0) then
-          j=nf90_inq_varid(ncid_source, "source_elem",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
-          j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
-          if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
-        endif !nsources
+        if(myrank==0) then
+          if(nsources>0) then
+            j=nf90_inq_varid(ncid_source, "source_elem",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
+            j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
+            if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
+          endif !nsources
 
-        if(nsinks>0) then
-          j=nf90_inq_varid(ncid_source, "sink_elem",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
-          j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
-          if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
-        endif !nsinks
+          if(nsinks>0) then
+            j=nf90_inq_varid(ncid_source, "sink_elem",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
+            j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
+            if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
+          endif !nsinks
+        endif !myrank=0
+        call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source=-1
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -3167,7 +3191,7 @@
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
         if(myrank==0) then
-        open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
           read(32,*)
           read(32,*) itmp1,itmp2
           if(itmp1/=ne_global.or.itmp2/=np_global) &

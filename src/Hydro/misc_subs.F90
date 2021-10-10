@@ -96,6 +96,7 @@
       integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp,istat,ip,icount,n1,n2,kl
       real :: floatout 
       real(rkind) :: tmp,wx1,wx2,wy1,wy2,wtratio,ttt,dep,eqstate
+      character(len=48) :: inputfile
       real(rkind), allocatable :: swild(:),rwild(:,:)
       real(4), allocatable :: swild9(:,:) !used in tracer nudging
 
@@ -199,9 +200,7 @@
 #endif /*USE_SED*/
 ! 0917 tsinghua group------------
 
-!----------------------------------------------------------------------
 !     Init time history in/outputs
-!----------------------------------------------------------------------
 !     Station output
       if(iout_sta/=0.and.myrank==0) then
         do i=1,nvar_sta
@@ -252,19 +251,26 @@
       endif
 
       if(nws==1) then
-        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-        rewind(22)
         ninv=time/wtiminc
         wtime1=real(ninv,rkind)*wtiminc 
         wtime2=real(ninv+1,rkind)*wtiminc 
-        do it=0,ninv
-          read(22,*)tmp,wx1,wy1
-          if(it==0.and.abs(tmp)>real(1.e-4,rkind)) &
+        if(myrank==0) then
+          open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
+          rewind(22)
+          do it=0,ninv
+            read(22,*)tmp,wx1,wy1
+            if(it==0.and.abs(tmp)>real(1.e-4,rkind)) &
      &call parallel_abort('check time stamp in wind.th')
-          if(it==1.and.abs(tmp-wtiminc)>real(1.e-4,rkind)) &
+            if(it==1.and.abs(tmp-wtiminc)>real(1.e-4,rkind)) &
      &call parallel_abort('check time stamp in wind.th(2)')
-        enddo !it
-        read(22,*)tmp,wx2,wy2
+          enddo !it
+          read(22,*)tmp,wx2,wy2
+        endif !myrank=0
+        call mpi_bcast(wx1,1,rtype,0,comm,istat)
+        call mpi_bcast(wy1,1,rtype,0,comm,istat)
+        call mpi_bcast(wx2,1,rtype,0,comm,istat)
+        call mpi_bcast(wy2,1,rtype,0,comm,istat)
+
         windx1=wx1
         windy1=wy1
         windx2=wx2
@@ -272,18 +278,23 @@
       endif
 
       if(nws==4) then
-        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-        rewind(22)
         ninv=time/wtiminc
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
-        do it=0,ninv
-          read(22,*)tmp,rwild(:,:)
-          if(it==0.and.abs(tmp)>real(1.e-4,rkind)) &
+
+        if(myrank==0) then
+          open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
+          rewind(22)
+          do it=0,ninv
+            read(22,*)tmp,rwild(:,:)
+            if(it==0.and.abs(tmp)>real(1.e-4,rkind)) &
      &call parallel_abort('check time stamp in wind.th(4.1)')
-          if(it==1.and.abs(tmp-wtiminc)>real(1.e-4,rkind)) &
+            if(it==1.and.abs(tmp-wtiminc)>real(1.e-4,rkind)) &
      &call parallel_abort('check time stamp in wind.th(4.2)')
-        enddo !it
+          enddo !it
+        endif !myrank=0
+        call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
@@ -293,7 +304,9 @@
           endif
         enddo !i
 
-        read(22,*)tmp,rwild(:,:)
+        if(myrank==0) read(22,*)tmp,rwild(:,:)
+        call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
@@ -337,9 +350,7 @@
       endif !5|6
 #endif
 
-!-------------------------------------------------------------------------------
 !   Initialize wind wave model (WWM)
-!-------------------------------------------------------------------------------
 #ifdef USE_WWM
       !Init. windx,y for WWM 
       if(nws==0) then
@@ -375,6 +386,7 @@
               j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
      &(/m-itmp1+1,1,1,ntmp/),(/1,nvrt,nnu_pts(k),1/))
               if(j/=NF90_NOERR) call parallel_abort('MISC: nudging nc(2)')
+!'
             endif !myrank
             call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
             do i=1,nnu_pts(k)
@@ -394,6 +406,7 @@
               j=nf90_get_var(ncid_nu(k),mm,swild9(1:nvrt,1:nnu_pts(k)), &
      &(/m-itmp1+1,1,1,ntmp+1/),(/1,nvrt,nnu_pts(k),1/))
               if(j/=NF90_NOERR) call parallel_abort('MISC: nudging nc(2.2)')
+!'
             endif !myrank
             call mpi_bcast(swild9,nvrt*mnu_pts,mpi_real,0,comm,istat)
             do i=1,nnu_pts(k)
@@ -411,6 +424,13 @@
         endif !inu_tr(k)
       enddo !k
 
+!     The following to init th_dt*, th_time* and ath* is only done by
+!     rank 0 and but bcast'ed, b/c in _step we'll continue the reading
+!     by rank0 and only bcast the final
+!     products of eth, trth (since they use global indices) etc, 
+!     and the th_dt[12], th_time[12] and ath[12] are not used further 
+      if(myrank==0) then
+!-----------------------------------------------------------------------------
 !...  Init reading t.h. files 
       if(nettype>0) then
         open(50,file=in_dir(1:len_in_dir)//'elev.th',status='old')
@@ -448,6 +468,10 @@
       do i=1,natrm
         if(ntrs(i)>0.and.ntrtype1(i)>0) then !type I
           do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
+            write(ifile_char,'(i03)')m-irange_tr(1,i)+1
+            ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
+            inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
+            open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
             rewind(300+m)
             read(300+m,*)tmp !,ath(1:ntrtype1(i),m,1,5)
             read(300+m,*)th_dt(m,5) !
@@ -460,11 +484,11 @@
             th_time(m,1,5)=ttt
             read(300+m,*) ttt,ath(1:ntrtype1(i),m,2,5)
             th_time(m,2,5)=ttt
-          enddo
+          enddo !m
         endif 
       enddo !i
 
-!     Check dimension of ath2
+!     Check dimension of ath2 (netcdf)
       if(max(nnode_et,nnode_fl,maxval(nnode_tr2))>neta_global) then
         write(errmsg,*) 'MISC: Dimension overflow for ath2:',neta_global,nnode_et,nnode_fl,nnode_tr2(:)
         call parallel_abort(errmsg)
@@ -566,10 +590,14 @@
      &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5), &
      &(/1,1,1,ninv+2/),(/itmp,nvrt,nnode_tr2(i),1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th (2)')
+!'
         endif !ntrs
-      enddo !i
+      enddo !i=1,natrm
+!-----------------------------------------------------------------------------
+      endif !myrank==0
 
-      if(if_source==1) then !ASCII
+!...  Source/sinks: read by rank 0 first
+      if(if_source==1.and.myrank==0) then !ASCII
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
           rewind(63)
@@ -620,14 +648,13 @@
         endif !nsinks
       endif !if_source
 
-      if(if_source==-1) then !nc
+      if(if_source==-1.and.myrank==0) then !nc
         if(nsources>0) then
           ninv=time/th_dt3(1)
           th_time3(1,1)=dble(ninv)*th_dt3(1)
           th_time3(2,1)=th_time3(1,1)+th_dt3(1)
           j=nf90_inq_varid(ncid_source, "vsource",mm)
           if(j/=NF90_NOERR) call parallel_abort('MISC: vsource')
-!Error: consider bcast
           j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1,1,1),(/1,ninv+1/),(/nsources,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: vsource(2)')
           j=nf90_get_var(ncid_source,mm,ath3(1:nsources,1,2,1),(/1,ninv+2/),(/nsources,1/))
@@ -657,6 +684,13 @@
           if(j/=NF90_NOERR) call parallel_abort('MISC: vsink(3)')
         endif !nsinks>0
       endif !if_source=-1
+
+!     Bcast
+      if(if_source/=0) then
+        call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
+        call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+        call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+      endif 
 
 #ifdef USE_SED
 !...  Sediment model initialization
