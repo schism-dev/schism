@@ -85,6 +85,9 @@
       allocate(np(nproc_compute),ne(nproc_compute),ns(nproc_compute),rrqst2(nproc_compute))
 
       out_dir=trim(adjustl(indir))//'/outputs/'
+      if(myrank_scribe==0) then
+        open(16,file=trim(adjustl(out_dir))//'mirror.out.scribe',status='replace')
+      endif !myrank_scribe
 
       !Get basic info
       call mpi_recv(dt,1,rtype,0,100,comm_schism,rrqst,ierr)
@@ -121,15 +124,16 @@
       call mpi_recv(iof_ana,20,itype,0,128,comm_schism,rrqst,ierr)
       call mpi_recv(iof_marsh,2,itype,0,129,comm_schism,rrqst,ierr)
 
-      print*, 'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
-      print*, 'Scribe, basic info:',dt,nspool,nvrt,np_global,ihfskip, &
-    &iths,ntime,iof_hydro,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode, &
-    &ncount_3dside,ncount_3delem,ntrs
-
-      print*, 'out_name and i23d:'
-      do i=1,counter_out_name
-        print*, i,trim(adjustl(out_name(i))),iout_23d(i)
-      enddo !i
+      if(myrank_scribe==0) then
+        write(16,*)'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
+        write(16,*)'Scribe, basic info:',dt,nspool,nvrt,np_global,ihfskip, &
+     &iths,ntime,iof_hydro,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode, &
+     &ncount_3dside,ncount_3delem,ntrs
+        write(16,*)'out_name and i23d:'
+        do i=1,counter_out_name
+          write(16,*)i,trim(adjustl(out_name(i))),iout_23d(i)
+        enddo !i
+      endif !myrank_scribe
 
       !Finish rest of recv for modules
       allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+20), &
@@ -179,7 +183,7 @@
       ne_max=maxval(ne)
       ns_max=maxval(ns)
       if(min(np_max,ne_max,ns_max)<1) call parallel_abort('scribe_init: dim<1')
-      print*, 'max dim:',np_max,ne_max,ns_max,myrank_schism 
+      if(myrank_scribe==0) write(16,*)'max dim:',np_max,ne_max,ns_max,myrank_schism 
       
       !Alloc
       allocate(iplg(np_max,nproc_schism),ielg(ne_max,nproc_schism),islg(ns_max,nproc_schism))
@@ -313,7 +317,7 @@
       endif
        
 !      call mpi_barrier(comm_scribe,ierr)
-      print*, 'finished scribe_init:',myrank_schism
+      if(myrank_scribe==0) write(16,*)'finished scribe_init:',myrank_schism
 
       end subroutine scribe_init
 

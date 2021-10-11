@@ -6518,7 +6518,7 @@
             case(24)
               out_name(counter_out_name)='mixingLength'
             case(25)
-              out_name(counter_out_name)='zCordinates'
+              out_name(counter_out_name)='zCoordinates'
           end select
         endif
       enddo !i
