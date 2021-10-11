@@ -86,6 +86,7 @@
       allocate(xnd(np),ynd(np),dp(np),i34(ne),elnode(4,ne),kbp0(np),kbp(np),eta2(np), &
      &sigma_vqs(nvrt,np),znd(nvrt,np),m0(np),z1tmp(nvrt),z2tmp(nvrt))
       eta2=etal
+      sigma_vqs=-9. !init
       do i=1,np
         read(14,*)j,xnd(i),ynd(i),dp(i)
       enddo !i
@@ -272,6 +273,9 @@
       open(19,file='vgrid.in',status='replace')
       write(19,*)1 !ivcor
       write(19,*)nvrt
+      if(np>10000000) stop 'Please increase write length'
+      write(19,'(10000000(1x,i10))')nvrt+1-kbp(:)
+
       do i=1,np
         if(dp(i)<=hsm(1)) then
           !sigma_vqs already assigned
@@ -291,8 +295,12 @@
           endif
         enddo !k
 
-        write(19,'(2(1x,i10),10000(1x,f14.6))')i,nvrt+1-kbp(i),sigma_vqs(kbp(i):1:-1,i)
+!        write(19,'(2(1x,i10),10000(1x,f14.6))')i,nvrt+1-kbp(i),sigma_vqs(kbp(i):1:-1,i)
       enddo !i
+
+      do k=1,nvrt
+        write(19,'(i10,10000000(1x,f14.6))')k,(sigma_vqs(nvrt+1-k,i),i=1,np)
+      enddo !k
       close(19)
 
 !     Output horizontal map of # of levels for more adjustment
