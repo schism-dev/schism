@@ -1790,7 +1790,7 @@
       if(ivcor==1) then
         if(myrank==0) then
           open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-          read(19,*); read(19,*) nvrt
+          read(19,*); read(19,*) !nvrt
           read(19,*)nwild2(1:np_global)
         endif !myrank
         call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
