@@ -1788,23 +1788,36 @@
 
 !...  Read in sigma coord. and kbp from vgrid.in if ivcor=1
       if(ivcor==1) then
-        open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-        read(19,*); read(19,*) nvrt
+        if(myrank==0) then
+          open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
+          read(19,*); read(19,*) nvrt
+          read(19,*)nwild2(1:np_global)
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
         do i=1,np_global
-          read(19,*)j,itmp,swild(itmp:nvrt)
           if(ipgl(i)%rank==myrank) then
             id1=ipgl(i)%id
-            kbp(id1)=itmp
-            sigma_lcl(itmp:nvrt,id1)=swild(itmp:nvrt)
+            kbp(id1)=nwild2(i)
           endif
         enddo !i
-        close(19)
+
+        do k=1,nvrt !np_global
+          if(myrank==0) read(19,*)j,buf3(1:np_global) !j,itmp,swild(itmp:nvrt)
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)    
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              id1=ipgl(i)%id
+              sigma_lcl(k,id1)=buf3(i)
+            endif
+          enddo !i
+        enddo !k
+        if(myrank==0) close(19)
       endif !ivcor==1
       if(myrank==0) then
         write(16,*)'done reading vgrid ivcor=1...'
         call flush(16)
       endif
-
 
 !...  Init some vars b4 OMP
       zdev_max=-1 !max. deviation of zp-axis and radial direction

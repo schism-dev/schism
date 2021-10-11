@@ -37,18 +37,6 @@ subroutine aquire_vgrid
   real(rkind) :: buf1(100),hmod2,zz
 
   !ivcor: types of vertical coord.; surface must all be nvrt (for sflux routines)
-  !ivcor=2 !SZ coordinates
-
-!  if(lm2d) then
-!    !2D
-!    ivcor=2; nvrt=2; kz=1; nsig=2; h_s=1.e6; h_c=h_s !5
-!    theta_b=0; theta_f=1.e-4; s_con1=sinh(theta_f)
-!    allocate(ztot(nvrt),sigma(nvrt),cs(nvrt),dcs(nvrt),stat=stat) !for outputs only
-!    if(stat/=0) call parallel_abort('VGRID: ztot allocation failure')
-!    ztot(kz)=-h_s
-!    sigma(1)=-1 !bottom
-!    sigma(nsig)=0 !surface
-!  else !3D
   open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old',iostat=stat)
   if(stat/=0) call parallel_abort('AQUIRE_VGIRD: open(19) failure')
   read(19,*)ivcor
@@ -125,7 +113,7 @@ subroutine aquire_vgrid
     ztot=0._rkind; sigma=0._rkind 
     kz=1; h_s=0._rkind; h_c=0._rkind; theta_b=0._rkind; theta_f=0._rkind
   else
-    call parallel_abort('VGRID: Unknown ivcor')
+    call parallel_abort('GRID_SUBS: Unknown ivcor')
   endif !ivcor
 !  endif !lm2d
 
@@ -273,9 +261,9 @@ subroutine partition_hgrid
     if(myrank==0) then
       open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
       read(19,*); read(19,*)nvrt !not needed
-      do i=1,np_global
-        read(19,*)j,nlev(i) !kbetmp
-      enddo !i
+!      do i=1,np_global
+      read(19,*)nlev(1:np_global) !kbetmp
+!      enddo !i
       close(19)
     endif !myrank
     call mpi_bcast(nlev,np_global,itype,0,comm,stat)
