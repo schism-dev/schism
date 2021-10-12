@@ -738,38 +738,38 @@
 ! Global output options
 ! The variable names that appear in nc output are shown in {}
 !-----------------------------------------------------------------------
-  iof_hydro(1) = 1 !0: off; 1: on - elev. [m]  {elevation}
-  iof_hydro(2) = 0 !air pressure [Pa]  {airPressure}
-  iof_hydro(3) = 0 !air temperature [C] {airTemperature}
-  iof_hydro(4) = 0 !Specific humidity [-] {specificHumidity}
-  iof_hydro(5) = 0 !Net downward solar (shortwave) radiation after albedo [W/m/m] {solarRadiation}
-  iof_hydro(6) = 0 !sensible flux (positive upward) [W/m/m]  {sensibleHeat}
-  iof_hydro(7) = 0 !latent heat flux (positive upward) [W/m/m] {latentHeat}
-  iof_hydro(8) = 0 !upward longwave radiation (positive upward) [W/m/m] {upwardLongwave}
-  iof_hydro(9) = 0 !downward longwave radiation (positive downward) [W/m/m] {downwardLongwave}
-  iof_hydro(10) = 0 !total flux=-flsu-fllu-(radu-radd) [W/m/m] {totalHeat}
-  iof_hydro(11) = 0 !evaporation rate [kg/m/m/s] {evaporationRate}
-  iof_hydro(12) = 0 !precipitation rate [kg/m/m/s] {precipitationRate}
-  iof_hydro(13) = 0 !Bottom stress vector [kg/m/s^2(Pa)] {bottomStressX,Y}
-  iof_hydro(14) = 0 !wind velocity vector [m/s] {windSpeedX,Y}
-  iof_hydro(15) = 0 !wind stress vector [m^2/s/s] {windStressX,Y}
-  iof_hydro(16) = 0 !depth-averaged vel vector [m/s] {depthAverageVelX,Y}
-  iof_hydro(17) = 0 !vertical velocity [m/s] {verticalVelocity}
-  iof_hydro(18) = 0 !water temperature [C] {temperature}
-  iof_hydro(19) = 0 !water salinity [PSU] {salinity}
-  iof_hydro(20) = 0 !water density [kg/m^3] {waterDensity}
-  iof_hydro(21) = 0 !eddy diffusivity [m^2/s] {diffusivity}
-  iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}
-  iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}
-  iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}
-  iof_hydro(25) = 1 !z-coord {zCoordinates}
-  iof_hydro(26) = 1 !horizontal vel vector [m/s] {horizontalVelX,Y}
+  iof_hydro(1) = 1 !0: off; 1: on - elev. [m]  {elevation}  2D
+  iof_hydro(2) = 0 !air pressure [Pa]  {airPressure}  2D
+  iof_hydro(3) = 0 !air temperature [C] {airTemperature}  2D
+  iof_hydro(4) = 0 !Specific humidity [-] {specificHumidity}  2D
+  iof_hydro(5) = 0 !Net downward solar (shortwave) radiation after albedo [W/m/m] {solarRadiation}  2D
+  iof_hydro(6) = 0 !sensible flux (positive upward) [W/m/m]  {sensibleHeat}  2D
+  iof_hydro(7) = 0 !latent heat flux (positive upward) [W/m/m] {latentHeat}  2D
+  iof_hydro(8) = 0 !upward longwave radiation (positive upward) [W/m/m] {upwardLongwave}  2D
+  iof_hydro(9) = 0 !downward longwave radiation (positive downward) [W/m/m] {downwardLongwave}  2D
+  iof_hydro(10) = 0 !total flux=-flsu-fllu-(radu-radd) [W/m/m] {totalHeat}  2D
+  iof_hydro(11) = 0 !evaporation rate [kg/m/m/s] {evaporationRate}  2D
+  iof_hydro(12) = 0 !precipitation rate [kg/m/m/s] {precipitationRate}  2D
+  iof_hydro(13) = 0 !Bottom stress vector [kg/m/s^2(Pa)] {bottomStressX,Y}  2D vector
+  iof_hydro(14) = 0 !wind velocity vector [m/s] {windSpeedX,Y}  2D vector
+  iof_hydro(15) = 0 !wind stress vector [m^2/s/s] {windStressX,Y}  2D vector
+  iof_hydro(16) = 0 !depth-averaged vel vector [m/s] {depthAverageVelX,Y}  2D vector
+  iof_hydro(17) = 0 !vertical velocity [m/s] {verticalVelocity}  3D
+  iof_hydro(18) = 0 !water temperature [C] {temperature}  3D
+  iof_hydro(19) = 0 !water salinity [PSU] {salinity}  3D
+  iof_hydro(20) = 0 !water density [kg/m^3] {waterDensity}  3D
+  iof_hydro(21) = 0 !eddy diffusivity [m^2/s] {diffusivity}  3D
+  iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}  3D
+  iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
+  iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
+!  iof_hydro(25) = 1 !z-coord {zCoordinates}  3D - this flag will be reset by code to be always on
+  iof_hydro(26) = 1 !horizontal velocity vector [m/s] {horizontalVelX,Y}  3D vector
 
-  iof_hydro(27) = 0 !horizontal vel vector defined @side [m/s] {horizontalSideVelX,Y}
-  iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement}
-  iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement}
-  iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement}
-  iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient}
+  iof_hydro(27) = 0 !horizontal velocity vector defined @side [m/s] {horizontalSideVelX,Y}  3D vector
+  iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement}   3D
+  iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement}  3D
+  iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement}  3D
+  iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient}  -not implemented yet
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on
@@ -777,89 +777,89 @@
 !-----------------------------------------------------------------------
 ! Outputs from DVD (USE_DVD must be on in Makefile)
 !-----------------------------------------------------------------------
-!  iof_dvd(1) = 1 !num mixing for S (PSU^2/s) {DVD_1}
+!  iof_dvd(1) = 1 !num mixing for S (PSU^2/s) {DVD_1}   3D elem
 
 !-----------------------------------------------------------------------
 ! Outputs from WWM (USE_WWM must be on in Makefile)
 !-----------------------------------------------------------------------
-!  iof_wwm(1)  = 0 !sig. height (m) {sigWaveHeight}
-!  iof_wwm(2)  = 0 !Mean average period (sec) - TM01 {meanWavePeriod}
-!  iof_wwm(3)  = 0 !Zero down crossing period for comparison with buoy (s) - TM02 {zeroDowncrossPeriod}
-!  iof_wwm(4)  = 0 !Average period of wave runup/overtopping - TM10 {TM10}
-!  iof_wwm(5)  = 0 !Mean wave number (1/m) {meanWaveNumber}
-!  iof_wwm(6)  = 0 !Mean wave length (m) {meanWaveLength}
-!  iof_wwm(7)  = 0 !Mean average energy transport direction (degr) - MWD in NDBC? {meanWaveDirection}
-!  iof_wwm(8) = 0 !Mean directional spreading (degr) {meanDirSpreading}
-!  iof_wwm(9) = 0 !Discrete peak period (sec) - Tp {peakPeriod}
-!  iof_wwm(10) = 0 !Continuous peak period based on higher order moments (sec) {continuousPeakPeriod}
-!  iof_wwm(11) = 0 !Peak phase vel. (m/s) {peakPhaseVel}
-!  iof_wwm(12) = 0 !Peak n-factor {peakNFactor}
-!  iof_wwm(13) = 0 !Peak group vel. (m/s) {peakGroupVel}
-!  iof_wwm(14) = 0 !Peak wave number {peakWaveNumber}
-!  iof_wwm(15) = 0 !Peak wave length {peakWaveLength}
-!  iof_wwm(16) = 0 !Peak (dominant) direction (degr) {dominantDirection}
-!  iof_wwm(17) = 0 !Peak directional spreading {peakSpreading}
-!  iof_wwm(18) = 0 !Discrete peak direction (radian?) {discretePeakDirectio}
-!  iof_wwm(19) = 0 !Orbital vel. (m/s) {orbitalVelocity}
-!  iof_wwm(20) = 0 !RMS Orbital vel. (m/s) {rmsOrbitalVelocity}
-!  iof_wwm(21) = 0 !Bottom excursion period (sec?) {bottomExcursionPerio}
-!  iof_wwm(22) = 0 !Bottom wave period (sec) {bottomWavePeriod}
-!  iof_wwm(23) = 0 !Uresell number based on peak period {UresellNumber}
-!  iof_wwm(24) = 0 !Friction velocity (m/s?) {frictionalVelocity}
-!  iof_wwm(25) = 0 !Charnock coefficient {CharnockCoeff}
-!  iof_wwm(26) = 0 !Rougness length {rougnessLength}
-!  iof_wwm(27) = 0 !WWM_energy vector {waveEnergyDirX,Y}
-!  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y} 
+!  iof_wwm(1)  = 0 !sig. height (m) {sigWaveHeight}   2D
+!  iof_wwm(2)  = 0 !Mean average period (sec) - TM01 {meanWavePeriod}  2D
+!  iof_wwm(3)  = 0 !Zero down crossing period for comparison with buoy (s) - TM02 {zeroDowncrossPeriod}  2D
+!  iof_wwm(4)  = 0 !Average period of wave runup/overtopping - TM10 {TM10}  2D
+!  iof_wwm(5)  = 0 !Mean wave number (1/m) {meanWaveNumber}  2D
+!  iof_wwm(6)  = 0 !Mean wave length (m) {meanWaveLength}  2D
+!  iof_wwm(7)  = 0 !Mean average energy transport direction (degr) - MWD in NDBC? {meanWaveDirection}  2D
+!  iof_wwm(8) = 0 !Mean directional spreading (degr) {meanDirSpreading}  2D
+!  iof_wwm(9) = 0 !Discrete peak period (sec) - Tp {peakPeriod}  2D
+!  iof_wwm(10) = 0 !Continuous peak period based on higher order moments (sec) {continuousPeakPeriod}  2D
+!  iof_wwm(11) = 0 !Peak phase vel. (m/s) {peakPhaseVel}  2D
+!  iof_wwm(12) = 0 !Peak n-factor {peakNFactor}   2D
+!  iof_wwm(13) = 0 !Peak group vel. (m/s) {peakGroupVel}   2D
+!  iof_wwm(14) = 0 !Peak wave number {peakWaveNumber}  2D
+!  iof_wwm(15) = 0 !Peak wave length {peakWaveLength}  2D
+!  iof_wwm(16) = 0 !Peak (dominant) direction (degr) {dominantDirection}  2D
+!  iof_wwm(17) = 0 !Peak directional spreading {peakSpreading}  2D
+!  iof_wwm(18) = 0 !Discrete peak direction (radian?) {discretePeakDirectio}  2D
+!  iof_wwm(19) = 0 !Orbital vel. (m/s) {orbitalVelocity}  2D
+!  iof_wwm(20) = 0 !RMS Orbital vel. (m/s) {rmsOrbitalVelocity}  2D
+!  iof_wwm(21) = 0 !Bottom excursion period (sec?) {bottomExcursionPerio}  2D
+!  iof_wwm(22) = 0 !Bottom wave period (sec) {bottomWavePeriod}  2D
+!  iof_wwm(23) = 0 !Uresell number based on peak period {UresellNumber}  2D
+!  iof_wwm(24) = 0 !Friction velocity (m/s?) {frictionalVelocity}  2D
+!  iof_wwm(25) = 0 !Charnock coefficient {CharnockCoeff}  2D
+!  iof_wwm(26) = 0 !Rougness length {rougnessLength}  2D
+!  iof_wwm(27) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
+!  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   2D vector
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used
 !-----------------------------------------------------------------------
 ! Outputs for user-defined tracer module (USE_GEN)
 !-----------------------------------------------------------------------
-!  iof_gen(1) = 0 !1st tracer {GEN_1}
-!  iof_gen(2) = 0 !2nd tracer {GEN_2}
+!  iof_gen(1) = 0 !1st tracer {GEN_1}  3D
+!  iof_gen(2) = 0 !2nd tracer {GEN_2}  3D
 
 !-----------------------------------------------------------------------
 ! Outputs for (age). Indices from "1" to "ntracer_age/2"; [days]
 !-----------------------------------------------------------------------
-!  iof_age(1) = 0 !{AGE_1}
-!  iof_age(2) = 0 !{AGE_2}
+!  iof_age(1) = 0 !{AGE_1}  3D
+!  iof_age(2) = 0 !{AGE_2}  3D
 
 !-----------------------------------------------------------------------
 ! Specific outputs in SED3D (USE_SED must be on in Makefile;
 ! otherwise these are not needed)
 !-----------------------------------------------------------------------
-!  iof_sed(1) = 0 ! total bed thickness @elem (m) {bed_thickness}
-!  iof_sed(2) = 0 ! total bed age over all layers @elem (sec) {bed_age}
-!  iof_sed(3) = 0 ! Sediment transport roughness length @elem (m) (z0st_elem) {z0st}
-!  iof_sed(4) = 0 !current-ripples roughness length @elem (m) (z0cr_elem) {z0cr}
-!  iof_sed(5) = 0 !sand-waves roughness length (m) @elem (z0sw_elem) {z0sw}
-!  iof_sed(6) = 0 !wave-ripples roughness length @elem (m) (z0wr_elem) {z0wr}
+!  iof_sed(1) = 0 ! total bed thickness @elem (m) {sedBedThickness}  2D
+!  iof_sed(2) = 0 ! total bed age over all layers @elem (sec) {sedBedAge}  2D
+!  iof_sed(3) = 0 ! Sediment transport roughness length @elem (m) (sedTransportRough) {z0st}  2D
+!  iof_sed(4) = 0 !current-ripples roughness length @elem (m) (sedRoughCurrentRippl) {z0cr}  2D
+!  iof_sed(5) = 0 !sand-waves roughness length (m) @elem (z0sw_elem) {sedRoughSandWave}  2D
+!  iof_sed(6) = 0 !wave-ripples roughness length @elem (m) (z0wr_elem) {sedRoughWaveRipple}  2D
 
-!  iof_sed(7) = 0 !bottom depth _change_ from init. condition (m) {SED_depth_change}
-!  iof_sed(8) = 0 ! Bed median grain size in the active layer (mm) {SED_D50}
-!  iof_sed(9) = 0 ! Bottom shear stress (Pa) {SED_bed_stress}
-!  iof_sed(10) = 0 ! Bottom roughness lenghth (mm) {SED_bed_roughness}
-!  iof_sed(11) = 0 ! sediment porosity in the top layer (-) {SED_poro}
-!  iof_sed(12) = 0 ! erosion flux for suspended transport (kg/m/m/s) {SED_eroflx}
-!  iof_sed(13) = 0 ! deposition flux for suspended transport (kg/m/m/s) {SED_depflx}
-!  iof_sed(14) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {SED_qbdl_acc}
+!  iof_sed(7) = 0 !bottom depth _change_ from init. condition (m) {sedDepthChange}  2D
+!  iof_sed(8) = 0 ! Bed median grain size in the active layer (mm) {sedD50}  2D
+!  iof_sed(9) = 0 ! Bottom shear stress (Pa) {sedBedStress}  2D
+!  iof_sed(10) = 0 ! Bottom roughness lenghth (mm) {sedBedRoughness}  2D
+!  iof_sed(11) = 0 ! sediment porosity in the top layer (-) {sedPorocity}  2D
+!  iof_sed(12) = 0 ! erosion flux for suspended transport (kg/m/m/s) {sedErosionalFlux}  2D
+!  iof_sed(13) = 0 ! deposition flux for suspended transport (kg/m/m/s) {sedDepositionalFlux}  2D
+!  iof_sed(14) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {sedBedloadTransportX,Y}  2D vector
 
 !  Example of using 2 classes
-!  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st tracer (one output per class) {SED_bdld_1}
-!  iof_sed(16) = 0 !Bedload transport of 2nd class {SED_bdld_2}
-!  iof_sed(17) = 0 !Bed fraction 1st tracer (one output per class) [-] {SED_bedfrac_1}
-!  iof_sed(18) = 0 !Bed fraction of 2nd class {SED_bedfrac_3}
+!  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st tracer (one output per class) {sedBedload[X,Y]_1}  2D vector
+!  iof_sed(16) = 0 !Bedload transport of 2nd class {sedBedFraction_[X,Y]_2}  2D vector
+!  iof_sed(17) = 0 !Bed fraction 1st tracer (one output per class) [-] {sedBedFraction_1}   2D
+!  iof_sed(18) = 0 !Bed fraction of 2nd class {sedBedFraction_2}   2D
 
-!  iof_sed(19) = 0 !conc. of 1st class (one output need by each class) [g/L] {SED3D_1}
-!  iof_sed(20) = 0 !conc. of 2nd class {SED3D_2}
+!  iof_sed(19) = 0 !conc. of 1st class (one output need by each class) [g/L] {sedConcentration_1}   3D
+!  iof_sed(20) = 0 !conc. of 2nd class {sedConcentration_2}   3D
 
-!  iof_sed(21) = 0 !total suspended concentration (g/L) {SED_TSC}
+!  iof_sed(21) = 0 !total suspended concentration (g/L) {totalSuspendedLoad}  3D
 
 !-----------------------------------------------------------------------
 ! EcoSim outputs 
 !-----------------------------------------------------------------------
-!  iof_eco(1) = 0 {ECO_1}
+!  iof_eco(1) = 0 {ECO_1}  3D
 
 !-----------------------------------------------------------------------
 ! ICM outputs 
@@ -1093,7 +1093,7 @@
   iof_icm(209) = 0 !CACO3 {ICM_25}
            
 !-----------------------------------------------------------------------
-! CoSINE outputs
+! CoSINE outputs: all 3D
 !-----------------------------------------------------------------------
 !  iof_cos(1) = 0 ! {COS_1}
 !  iof_cos(2) = 0 ! {COS_2}
@@ -1112,11 +1112,11 @@
 !-----------------------------------------------------------------------
 ! Fecal indicating bacteria module
 !-----------------------------------------------------------------------
-!  iof_fib(1) = 0 ! {FIB_1}
+!  iof_fib(1) = 0 ! {FIB_1}  3D
 
 !-----------------------------------------------------------------------
 ! Specific outputs in SED2D (USE_SED2D must be on in Makefile;
-! otherwise these are not needed)
+! otherwise these are not needed) - not implemented yet
 !-----------------------------------------------------------------------
 !  iof_sed2d(1)  = 0 !bottom depth _change_ from init. condition (m) {SED2D_depth_change}
 !  iof_sed2d(2)  = 0 !drag coefficient used in transport formulae SED2D_Cd{}
@@ -1135,36 +1135,36 @@
 !-----------------------------------------------------------------------
 !  marsh flags (USE_MARSH on)
 !-----------------------------------------------------------------------
-!  iof_marsh(1) = 0 ! {marshFlag}
+!  iof_marsh(1) = 0 ! {marshFlag}  2D elem
 
 !-----------------------------------------------------------------------
 ! Ice module outputs (if USE_ICE is on)
 !-----------------------------------------------------------------------
-!  iof_ice(1)= 0 !strain rate @ elem [1/sec] {iceStrainRate}
-!  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}
-!  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}
-!  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}
-!  iof_ice(5)= 0 !ice temperature [C] at air-ice interface {iceTopTemperature}
+!  iof_ice(1)= 0 !strain rate @ elem [1/sec] {iceStrainRate}  2D
+!  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
+!  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
+!  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D
+!  iof_ice(5)= 0 !ice temperature [C] at air-ice interface {iceTopTemperature}  2D
 
-!  iof_ice(6)= 0 !ice volume [m] {iceTracer_1}
-!  iof_ice(7)= 0 !ice concentration [-] {iceTracer_2}
-!  iof_ice(8)= 0 !snow volume [m] {iceTracer_3}
+!  iof_ice(6)= 0 !ice volume [m] {iceTracer_1}   2D
+!  iof_ice(7)= 0 !ice concentration [-] {iceTracer_2}  2D
+!  iof_ice(8)= 0 !snow volume [m] {iceTracer_3}  2D
 
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)
 !-----------------------------------------------------------------------
-!  iof_ana(1) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {minTransportTimeStep}
-!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}
-!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}
-!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}
-!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}
-!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {horzontalViscosityX}
-!  iof_ana(7) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {horzontalViscosityY}
-!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {baroclinicForceX}
-!  iof_ana(9) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {baroclinicForceY}
-!  iof_ana(10) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {verticalViscosityX}
-!  iof_ana(11) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {verticalViscosityY}
-!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {mommentumAdvectionX}
-!  iof_ana(13) = 0 !(u \cdot \nabla) u [m/s/s] {mommentumAdvectionY}
-!  iof_ana(14) = 0 !gradient Richardson number [-] {gradientRichardson}
+!  iof_ana(1) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {minTransportTimeStep}  2D
+!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}  2D
+!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}  2D
+!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}  2D
+!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}  2D
+!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {horzontalViscosityX}  3D side
+!  iof_ana(7) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {horzontalViscosityY}   3D side
+!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {baroclinicForceX}  3D side
+!  iof_ana(9) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {baroclinicForceY}  3D side
+!  iof_ana(10) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {verticalViscosityX}  3D side
+!  iof_ana(11) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {verticalViscosityY}  3D side
+!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {mommentumAdvectionX}  3D side
+!  iof_ana(13) = 0 !(u \cdot \nabla) u [m/s/s] {mommentumAdvectionY}  3D side
+!  iof_ana(14) = 0 !gradient Richardson number [-] {gradientRichardson}   3D
 /

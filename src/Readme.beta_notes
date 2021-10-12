@@ -1,4 +1,11 @@
-Changes in param.[in,nml] and main parameter inputs for other modules:
+This beta notes are divided into 5 part:
+(A) changes made in param.nml and other major inputs (as these are most affected when we hop versions)
+(B) changes in outputs
+(C) algorithmic changes and bug fixes
+(D) Auto test history
+(E) history for very old versions pre-svn
+================================================================================================
+(A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
 
@@ -299,8 +306,8 @@ Changes in other inputs:
 (2) R86: tvd.gr3 is needed if iupwind_t=2;
 (1) R??: if ihydraulics/=0, need hydraulics.in 
 
----------------------------------------------------------------
-Changes in outputs:
+================================================================================================
+(B) Changes in outputs:
 (1) R??: 3D profiles for station outputs;
 (2) R147: commented out (1);
 (3) R304: added non-standard outputs (*.67 etc) that users can also use.
@@ -315,8 +322,8 @@ Changes in outputs:
 GIT versions:
 (1) e227f8579 (Dec 2020): added wet/dry flags @nodes/sides in nc outputs;
 
----------------------------------------------------------------
-Algorithmic changes & bug fixes:
+================================================================================================
+(C) Algorithmic changes & bug fixes:
 (1) R97: found a bug in evaluate_cubic_spline
 (2) R212: changes in btrack routines to enhance robustness
 (3) R395: broke main routine into _init, _step, and _finalize
@@ -507,8 +514,8 @@ git versions:
 (128) 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option)
 (129) 53689f4 (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
 (130) c7dd516 (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
----------------------------------------------------------------
-Auto-test history:
+================================================================================================
+(D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
 (SCHISM) R2521: all modules tested;
 R2737: all modules except SED3D tested;
@@ -554,8 +561,8 @@ Write your own env into mk/Make.defs.<your env name> (see mk/Make.defs.* from ot
 In addition, python is also needed.
 
 To add a new CPP or module, need to update all 3 files (in the order shown above).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Pre-svn versions:
+================================================================================================
+(E) Pre-svn versions:
 v3.0b:
 
 v3.0c:
