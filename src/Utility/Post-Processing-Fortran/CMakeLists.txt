@@ -8,8 +8,12 @@ add_executable( read_output8_allnodes read_output8_allnodes.f90)
 add_executable( read_output9_transect read_output9_transect.f90) 
 add_executable( read_output9_xyt read_output9_xyt.f90) 
 add_executable( read_output9_xyz read_output9_xyz.f90) 
-add_executable( read_output10_xyz read_output10_xyz.f90) 
 add_executable( read_output9_xyzt read_output9_xyzt.f90) 
+add_executable( read_output10_allnodes read_output10_allnodes.f90) 
+add_executable( read_output10_xyz read_output10_xyz.f90) 
+add_executable( read_output10_transect read_output10_transect.f90)
+add_executable( read_output10_xyt read_output10_xyt.f90)
+add_executable( read_output10_xyzt read_output10_xyzt.f90)
 
 
 target_link_libraries (compute_alongchannel_vel utillib ${NetCDFLIBS} ${HDF5_LIBRARIES} )
@@ -20,8 +24,12 @@ target_link_libraries (read_output8_allnodes utillib ${NetCDFLIBS} ${HDF5_LIBRAR
 target_link_libraries (read_output9_transect utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
 target_link_libraries (read_output9_xyt utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
 target_link_libraries (read_output9_xyz utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
-target_link_libraries (read_output10_xyz utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
 target_link_libraries (read_output9_xyzt utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+target_link_libraries (read_output10_allnodes utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+target_link_libraries (read_output10_xyz utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+target_link_libraries (read_output10_xyt utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+target_link_libraries (read_output10_xyzt utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+target_link_libraries (read_output10_transect utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
 
 add_dependencies(utility compute_alongchannel_vel compute_average3 compute_fluxes_ns extract_subregion2 read_output8_allnodes read_output9_transect read_output9_xyt read_output9_xyz read_output9_xyzt read_output10_xyz)
 
