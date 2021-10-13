@@ -1,0 +1,6 @@
+# what follows is a simple configuration that was observed to work on Ubuntu 20.04 on  2021-10-13
+
+set(CMAKE_Fortran_COMPILER gfortran CACHE PATH "Path to serial Fortran compiler")
+set(CMAKE_C_COMPILER gcc CACHE PATH "Path to serial C compiler")
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran flags" FORCE)
+
