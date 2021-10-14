@@ -1,6 +1,8 @@
 {% set name = "schism" %}
-{% set version = "5.8.0" %}
+{% set version = "5.9.0" %}
+{% set build = 0 %}
 
+# Based on https://github.com/conda-forge/netcdf-fortran-feedstock/blob/master/recipe/meta.yaml
 #{% set data = load_setup_py_data() %}
 
 package:
@@ -9,37 +11,40 @@ package:
 
 source:
 # path: ..
-  url: https://github.com/schism-dev/schism/archive/v5.8.0.tar.gz
-  sha256: 8644b82083525a26834d073ab515eb32e3e7680feb1a18110d14f8752c160a23
+  url: https://github.com/schism-dev/schism/archive/refs/tags/v5.9.0.tar.gz
+  sha256: 3f990b8f005079a07a62f08f491ba2818000fb2905772ce50e2253a1334d8420
 
 build:
-  number: 0
+  number: {{ build }}
   skip: true #[win]
-  script_env:
+  merge_build_host: true
 
 outputs:
   - name: pschism
-    script: build_mk.sh
-#   files:
-#     - {{ environ.get('SRC_DIR') }}/README
+    script: build.sh
+    {% set mpi_prefix = "mpi_" + mpi %}
+    string: {{ mpi_prefix }}_h{{ PKG_HASH }}_{{ build }}
+    {% set build_pin = mpi_prefix + '_*' %}
 
     requirements:
       build:
+      host:
+        - {{ compiler('cxx') }}
         - {{ compiler('c') }}
         - {{ compiler('fortran') }}
-      host:
         - cmake  ##>=3.17
         - sed
-        - python=3
-        - mpich
-        - mpich-mpifort
-        - mpich-mpicc
-        - netcdf-fortran=4.5.3=mpi_mpich_*
+        - python #=3.8
+        - {{ mpi }}
+        - {{ mpi }}-mpifort
+        - {{ mpi }}-mpicc
+        - {{ mpi }}-mpicxx
+        - netcdf-fortran * {{ mpi_prefix }}_*
       run:
-        - mpich
+        - {{ mpi }}
         - parmetis
         - metis
-        - netcdf-fortran=4.5.3=mpi_mpich_*
+        - netcdf-fortran * {{ mpi_prefix }}_*
 #   test:
 #     commands:
 #      - echo $BUILD_PREFIX
@@ -56,4 +61,4 @@ about:
 
 extra:
   recipe-maintainers:
-#   -     
+#   - brey

@@ -2,20 +2,19 @@
 
 set -xeuo pipefail
 
-#export mpi=mpich
 export CC=mpicc
+export CXX=mpicxx
 export FC=mpif90
 export F77=mpif77
 export F90=mpif90
-
-#Fix an error?
-sed -i -e "s|\!bflux0,|bflux0,|g" src/Hydro/schism_step.F90
 
 # build and install schism
 mkdir build
 cd build
 
-CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/cross-linux.cmake")
+# check if needed on Linux
+#CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/cross-linux.cmake")
+#   ${CMAKE_PLATFORM_FLAGS[@]} \
 
 cmake -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE="Release" \
     -DCMAKE_Fortran_FLAGS_RELEASE_INIT="-O2 -ffree-line-length-none" \
@@ -24,16 +23,20 @@ cmake -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE="Release" \
     -DC_PREPROCESS_FLAG="-cpp" \
     -DNetCDF_FORTRAN_DIR="$PREFIX/lib" \
     -DNetCDF_C_DIR="$PREFIX/lib" \
+    -DNetCDF_LIBRARIES="$PREFIX/lib/libnetcdff.dylib;$PREFIX/lib/libnetcdf.dylib" \
     -DNetCDF_INCLUDE_DIR="$PREFIX/include" \
-    -DNetCDF_LIBRARIES="$PREFIX/lib/libnetcdff.so;$PREFIX/lib/libnetcdf.so" \
-    ${CMAKE_PLATFORM_FLAGS[@]} \
     -DTVD_LIM="VL" \
     ../src
-#make -j${CPU_COUNT:-1}
-#   -DNetCDF_LIBRARIES="$PREFIX/lib/libnetcdff.dylib;$PREFIX/lib/libnetcdf.dylib" \
+#make -j${CPU_COUNT:-1} # It doesn't seem to work because of the build of parmetis
 make
+
+#make install
 cp -r bin/* $PREFIX/bin/
-cp -r include/* $PREFIX/include/
-cp -r lib/* $PREFIX/lib/
-ln -s $PREFIX/bin/pschism_TVD-VL $PREFIX/bin/schism
-#cd $BUILD_PREFIX
+#ln -s $PREFIX/bin/pschism_TVD-VL $PREFIX/bin/schism # optional to be discussed
+
+#clean up
+cd ..
+rm -r build
+
+cd $BUILD_PREFIX
+
