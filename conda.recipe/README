@@ -1,24 +1,17 @@
 # This are the recipe files for conda.
 
-There are 2 ways to compile: 
-
-1. Based on a Makefile. The build_mk.sh script creates the Makefile and compiles it. This is the approached used currently.
-
-2. Based on CMake. It compiles better that the Makefile but for some reason I couldn't get it to work within conda. It should be checked again. The build_vl.sh script is used for this and it should be replaced in the meta.yaml file. 
 
 ## Files:
 
 meta.yaml : conda config
 
-build_mk.sh : Bash script for compiling based on Makefile.
+build.sh : Bash script for compiling based on CMake.
 
-build_vl.sh : Bash script for compiling based on CMake.
+conda_build_config.yaml: Used for defining various variants. Currently mpich options.
 
-conda_build_config.yaml_: Used for testing. Probably not needed.
-
-cross-linux.cmake : used in build_vl.sh.
+cross-linux.cmake : left there for testing. Probably not needed.
 
 
 ## Procedure:
 
-`conda build conda.recipe` 
+`conda build conda.recipe`
