@@ -643,12 +643,12 @@
       endif !nws>=2
 
 !...  Re-scale wind
-!      if(nws>0) then; if(iwindoff/=0) then
-!        do i=1,npa
-!          windx(i)=windx(i)*windfactor(i)
-!          windy(i)=windy(i)*windfactor(i)
-!        enddo !i
-!      endif; endif
+      if(nws>0) then; if(iwindoff/=0) then
+        do i=1,npa
+          windx(i)=windx(i)*windfactor(i)
+          windy(i)=windy(i)*windfactor(i)
+        enddo !i
+      endif; endif
 
 #ifdef USE_ICM
 ! calculating WMS used for reareation,added by wangzg
@@ -658,7 +658,7 @@
           if(idry_e(i)==1) cycle
           wmag_e=sum(sqrt(windx(elnode(1:i34(i),i))**2.d0+windy(elnode(1:i34(i),i))**2.d0))/real(i34(i),rkind)
 !          wmag_factor=sum(windfactor(elnode(1:i34(i),i)))/real(i34(i),rkind)
-          WMS(i)=wmag_e !*wmag_factor !no windfactor for DO reareation
+          WMS(i)=wmag_e  !*wmag_factor !no windfactor for DO reareation
         enddo !i
 !$OMP end parallel do
       endif !irea=1
@@ -817,8 +817,8 @@
             tau(1,i)=0.d0
             tau(2,i)=0.d0
           else !rescale as well
-            tau(1,i)=-tauxz(i)/rho0*rampwind !*windfactor(i)**2.d0 !sign and scale difference between stresses tauxz and tau
-            tau(2,i)=-tauyz(i)/rho0*rampwind !*windfactor(i)**2.d0
+            tau(1,i)=-tauxz(i)/rho0*rampwind*windfactor(i)**2.d0 !sign and scale difference between stresses tauxz and tau
+            tau(2,i)=-tauyz(i)/rho0*rampwind*windfactor(i)**2.d0
           endif
         else !if(nws==1.or.nws>=4.or.nws>=2.and.ihconsv==0.or.iwind_form==-1) then
           wmag=sqrt(windx(i)**2.d0+windy(i)**2.d0)

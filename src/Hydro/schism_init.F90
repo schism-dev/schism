@@ -184,7 +184,7 @@
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,nrampbc,drampbc, &
      &nramp,dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form,nrampwind, &
-     &drampwind,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
+     &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
@@ -451,7 +451,7 @@
       ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
       nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
-      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; nrampwind=1; 
+      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; nrampwind=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
@@ -1364,7 +1364,7 @@
 !     All other arrays
 !      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
        allocate(windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
-         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),pr1(npa),airt1(npa),shum1(npa), &
+         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),pr1(npa),airt1(npa),shum1(npa),windfactor(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
@@ -3137,25 +3137,30 @@
         enddo !i
       endif !nws
 
-!      windfactor=1 !intialize for default
-!      if(nws>0) then
-!        if(iwindoff/=0) then
-!          open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
-!          read(32,*)
-!          read(32,*) itmp1,itmp2
-!          if(itmp1/=ne_global.or.itmp2/=np_global) &
-!     &call parallel_abort('Check windfactor.gr3')
-!          do i=1,np_global
-!            read(32,*)j,xtmp,ytmp,tmp
-!            if(tmp<0.d0) then
-!              write(errmsg,*)'Wind scaling factor must be positive:',i,tmp
-!              call parallel_abort(errmsg)
-!            endif
-!            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=tmp
-!          enddo !i
-!          close(32)
-!        endif
-!      endif !nws>0
+      windfactor=1 !intialize for default
+      if(nws>0) then
+        if(iwindoff/=0) then
+          if(myrank==0) then
+            open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
+            read(32,*)
+            read(32,*) itmp1,itmp2
+            if(itmp1/=ne_global.or.itmp2/=np_global) call parallel_abort('Check windfactor.gr3')
+            do i=1,np_global
+              read(32,*)j,xtmp,ytmp,buf3(i)
+              if(buf3(i)<0.d0) then
+                write(errmsg,*)'Wind scaling factor must be positive:',i,buf3(i)
+                call parallel_abort(errmsg)
+              endif
+            enddo !i
+            close(32)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=buf3(i)
+          enddo !i
+        endif
+      endif !nws>0
 
 !     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
 !      if(nws==4) then
