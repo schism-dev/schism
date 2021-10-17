@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-(17 Oct 2021): restored iwindoff
+a7a0b2b (17 Oct 2021): restored iwindoff;
 afc7b1a (11 Oct 2021): changed vgrid.in format for ivcor=1 to facilitate parallel read (use
                        change_vgrid.f90 to convert) 
 e9aec89 (1 Oct 2021): added most module outputs; order of flags changed in: ICE, ANALYSIS, SED;
