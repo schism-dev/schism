@@ -8248,7 +8248,19 @@
 !        endif
 !      enddo !i
 
-!     Filter elev outputs (especially for inunfl=0)
+!     Filter elev outputs (especially for inunfl=0) for isolated wet
+      swild(1:npa)=eta2
+      do i=1,np !ghost not needed for outputs
+        ifl=0
+        do j=1,nne(i)
+          if(idry_e(indel(j,i))==0) then
+            ifl=1; exit
+          endif
+        enddo !j
+        if(ifl==0) then !all dry; enforce limit
+          swild(i)=min(swild(i),-dp(i)-1.d-3)
+        endif !ifl
+      enddo !i
 
 #ifdef OLDIO
 !=============================================================================
@@ -8259,7 +8271,8 @@
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
         !zcor MUST be 1st 3D var output for combine scripts to work!
         if(iof_hydro(25)==1) call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
-        if(iof_hydro(1)==1) call writeout_nc(id_out_var(5),'elev',1,1,npa,eta2)
+        !if(iof_hydro(1)==1) call writeout_nc(id_out_var(5),'elev',1,1,npa,eta2)
+        if(iof_hydro(1)==1) call writeout_nc(id_out_var(5),'elev',1,1,np,swild(1:np))
         if(iof_hydro(2)==1) call writeout_nc(id_out_var(6),'air_pressure',1,1,npa,pr)
         if(iof_hydro(3)==1) call writeout_nc(id_out_var(7),'air_temperature',1,1,npa,airt1)
         if(iof_hydro(4)==1) call writeout_nc(id_out_var(8),'specific_humidity',1,1,npa,shum1)
@@ -9082,7 +9095,7 @@
             if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2)')
             select case(i)
               case(1)
-                varout_2dnode(icount,:)=eta2(1:np)
+                varout_2dnode(icount,:)=swild(1:np) !eta2(1:np)
               case(2)
                 varout_2dnode(icount,:)=pr(1:np)
               case(3)

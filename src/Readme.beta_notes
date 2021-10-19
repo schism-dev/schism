@@ -1,9 +1,9 @@
 This beta notes are divided into 5 part:
-(A) changes made in param.nml and other major inputs (as these are most affected when we hop versions)
-(B) changes in outputs
-(C) algorithmic changes and bug fixes
+(A) Changes made in param.nml and other major inputs (as these are most affected when we hop versions)
+(B) Changes in outputs
+(C) Algorithmic changes and bug fixes
 (D) Auto test history
-(E) history for very old versions pre-svn
+(E) History for Pre-svn versions
 ================================================================================================
 (A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
@@ -515,6 +515,7 @@ git versions:
 (128) 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option)
 (129) 53689f4 (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
 (130) c7dd516 (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
+(131) (19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
