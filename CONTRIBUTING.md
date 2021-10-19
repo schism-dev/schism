@@ -3,11 +3,11 @@
 ## License and copyright
 
 According to section 5 of SCHISM's Apache License, your contribution is accepted
-under the terms of the Apache 2.0 License, unless agreed otherwise. With your
-contribution, you confirm that you have the legal right to contribute your work
-to SCHISM.  You may choose to retain or to transfer the copyright.  If you retain
-the copyright, you irrevocably grant the SCHISM community the right to re-license
-your work under any open source license endorsed by the Open Software Initiative.  
+under the terms of the Apache 2.0 License, unless agreed otherwise.  By submitting your
+contribution, you acknowledge that you have the legal right to contribute your work
+to SCHISM, and you hereby irrevocably grant to SCHISM a perpetual license to use, redistribute, and re-license
+your contribution under any open source license endorsed by the Open Software Initiative. 
+
 
 ## SCHISM github Workflow (Trunk Based Development)
 
