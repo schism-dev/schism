@@ -6473,6 +6473,15 @@
 !     End of bypassing solver for transport only option
       endif !itransport_only
 
+!     Add Stokes drift to horizontal vel for wvel and transport; will restore
+!     after transport
+#ifdef USE_WWM
+      if(RADFLAG.eq.'VOR') then
+        su2=su2+stokes_hvel_side(1,:,:)
+        sv2=sv2+stokes_hvel_side(2,:,:)
+      endif
+#endif
+
 !...  solve for vertical velocities using F.V.
 !...  For hydrostatic model, this is the vertical vel; for non-hydrostatic
 !...  model, this is only used in transport
@@ -7432,6 +7441,14 @@
 
       if(myrank==0) write(16,*)'done solving transport equation'
 
+!     Restore Eulerian vel
+#ifdef USE_WWM
+      if(RADFLAG.eq.'VOR') then
+        su2=su2-stokes_hvel_side(1,:,:)
+        sv2=sv2-stokes_hvel_side(2,:,:)
+      endif
+#endif
+
 #ifdef TIMER2
       tmp=mpi_wtime()
       write(12,*)'Time taken for transport=',tmp-cwtmp3,it
@@ -8230,6 +8247,8 @@
 !          bcc(1,kbp(i):nvrt,i)=znl(kbp(i):nvrt,i)
 !        endif
 !      enddo !i
+
+!     Filter elev outputs (especially for inunfl=0)
 
 #ifdef OLDIO
 !=============================================================================
