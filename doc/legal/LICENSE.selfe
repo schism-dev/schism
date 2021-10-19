@@ -1,12 +1,3 @@
-SCHISM: Semi-implicit Cross-scale Hydroscience Integrated System Model
-Copyright 2014 College of William and Mary
-
-For further information contact Y. Joseph Zhang [yjzhang@vims.edu]
-
-
-
-Original copy of SELFE END USER LICENSE AGREEMENT 
- 
 License approved by OHSU's Technology & Research Collaborations office on September 4, 2003. Questions regarding this license agreement should be directed to:
  
 Technology and Research Collaborations
@@ -45,16 +36,3 @@ OHSU does not directly or indirectly endorse any product or service provided, or
 12. Disputes: You and OHSU agree to attempt to settle amicably any controversy or claim arising under this Agreement or a breach of this Agreement. Thereafter, you or OHSU may exercise any administrative or judicial remedies that may be available. The construction, validity, performance, and effect of this Agreement shall be governed by the laws of the State of Oregon.
  
 13. Entire Agreement: This Agreement contains the entire agreement between the parties with respect to the subject matter hereof, and it shall not be modified or amended except by an instrument in writing signed by both parties hereto.
-
-
-ROMS license for EcoSim
-Copyright © 2002-2014 The ROMS/TOMS Group
-This Software is open-source and licensed under the following conditions as stated by MIT/X License: 
-
-(See http://www.opensource.org/licenses/mit-license.php ). 
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this Software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: 
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. 
-The Software is provided as is, without warranty of any kind, expressed or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claims, damages or other liabilities, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the Software or the use or other dealings in the Software 
-
