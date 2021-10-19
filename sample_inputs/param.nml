@@ -50,7 +50,8 @@
 ! Usage: turn the flag on ('1') and turn on your tracer modules and make sure 
 ! (1) your inputs are consistent with the original hydro-only run (with additional tracers
 ! of course); (2) hydro-only run results are in hydro_out/schout*.nc, which must
-! have 'hvel_side' (not normal hvel), 'elev', 'diffusivity', 'temp_elem', 'salt_elem'; (3) dt above is 
+! have 'hvel_side' (not normal hvel), 'elev', 'diffusivity', 'temp_elem', 'salt_elem' (for
+! new scribe outputs, use corresponding files/var names); (3) dt above is 
 ! multiple of _output_ step used in the original hydro-only run 
 ! (as found in in hydro_out/schout*.nc); e.g. dt = 1 hour. 
 ! Hotstart should work also, but you'd probably not use an aggressively large dt especially
