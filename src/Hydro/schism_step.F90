@@ -155,7 +155,8 @@
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
                  &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
-                 &ised_out_sofar
+                 &ised_out_sofar,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
+                 &ncid_schout6
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -1875,13 +1876,19 @@
 !     Bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
-      !Read in schout (saved hydro outputs), and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
+      !Read in saved hydro outputs, and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
       !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
       !transport solver; similarly for tr_nd*
 
       !Read time from 1st stack and check dt==multiple of dtout
-      if(it==iths_main+1) then
+      if(it==iths_main+1.and.myrank==0) then
+        !Outputs (nstride_schout,nrec2_schout) are only used by rank 0
+#ifdef OLDIO
         j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout)
+#else 
+!       Scribe I/O
+        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout)
+#endif /*OLDIO*/
         if(j/=NF90_NOERR) call parallel_abort('STEP: schout_1.nc not found')
         j= nf90_inquire(ncid_schout, unlimitedDimId=mm)
         j= nf90_inquire_dimension(ncid_schout,mm,len=nrec2_schout)
@@ -1914,16 +1921,40 @@
         endif
 
         if(istack/=istack0_schout) then
+          istack0_schout=istack
           j=nf90_close(ncid_schout)
           write(it_char,'(i72)')istack
           it_char=adjustl(it_char); lit=len_trim(it_char)
+#ifdef OLDIO
           j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout)
           if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found')
-          istack0_schout=istack
+#else
+          j=nf90_close(ncid_schout2)
+          j=nf90_close(ncid_schout3)
+          j=nf90_close(ncid_schout4)
+          j=nf90_close(ncid_schout5)
+          j=nf90_close(ncid_schout6)
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found')
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout2)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found')
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout3)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found')
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout4)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found')
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout5)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found')
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout6)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found')
+#endif
           if(myrank==0) write(16,*)'reading from schout stack #:',istack,irec2,time/3600
         endif !istack
 
+#ifdef OLDIO
         j=nf90_inq_varid(ncid_schout, "elev",mm)
+#else
+        j=nf90_inq_varid(ncid_schout, "elevation",mm)
+#endif
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc elev')
         j=nf90_get_var(ncid_schout,mm,swild11(1:np_global),(/1,irec2/),(/np_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get eta2')
@@ -1943,11 +1974,18 @@
 
       if(myrank==0) then
         !write(16,*)'done reading elev...'
+#ifdef OLDIO
         j=nf90_inq_varid(ncid_schout, "diffusivity",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
         !j=nf90_get_var(ncid_schout,mm,swild11(1:np_global),(/k,1,irec2/),(/1,np_global,1/))
         j=nf90_get_var(ncid_schout,mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
+#else
+        j=nf90_inq_varid(ncid_schout2,"diffusivity",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
+        j=nf90_get_var(ncid_schout2,mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
+#endif
       endif !myrank=0
       call mpi_bcast(swild12,ns_global*nvrt,mpi_real,0,comm,istat)
       do i=1,np_global
@@ -1959,10 +1997,17 @@
 
       if(myrank==0) then
         !write(16,*)'done reading dfh...'
+#ifdef OLDIO
         j=nf90_inq_varid(ncid_schout, "hvel_side",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvel')
         j=nf90_get_var(ncid_schout,mm,swild12,(/1,1,1,irec2/),(/1,nvrt,ns_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel')
+#else
+        j=nf90_inq_varid(ncid_schout3, "horizontalSideVelX",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvelside')
+        j=nf90_get_var(ncid_schout3,mm,swild12,(/1,1,irec2/),(/nvrt,ns_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel')
+#endif
           !write(16,*)'done reading su2'
       endif !myrank=0
       call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
@@ -1974,8 +2019,15 @@
       enddo !i
 
       if(myrank==0) then
+#ifdef OLDIO
         j=nf90_get_var(ncid_schout,mm,swild12,(/2,1,1,irec2/),(/1,nvrt,ns_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel2')
+#else
+        j=nf90_inq_varid(ncid_schout4, "horizontalSideVelY",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvelsideY')
+        j=nf90_get_var(ncid_schout4,mm,swild12,(/1,1,irec2/),(/nvrt,ns_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel2')
+#endif
 !        write(16,*)'finished reading sv2...'
       endif !myrank=0
       call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
@@ -1993,6 +2045,7 @@
       swild14(nvrt,ne_global,2)=0 !test mem
 
       if(myrank==0) then
+#ifdef OLDIO
         j=nf90_inq_varid(ncid_schout, "temp_elem",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem')
         j=nf90_inq_varid(ncid_schout, "salt_elem",jj)
@@ -2001,7 +2054,17 @@
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem')
         j=nf90_get_var(ncid_schout,jj,swild14(:,:,2),(/1,1,irec2/),(/nvrt,ne_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem')
-        write(16,*)'done reading T,S and schout_'
+#else
+        j=nf90_inq_varid(ncid_schout5, "temperatureAtElement",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem')
+        j=nf90_inq_varid(ncid_schout6, "salinityAtElement",jj)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem')
+        j=nf90_get_var(ncid_schout5,mm,swild14(:,:,1),(/1,1,irec2/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem')
+        j=nf90_get_var(ncid_schout6,jj,swild14(:,:,2),(/1,1,irec2/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem')
+#endif
+        write(16,*)'done reading T,S...'
       endif !myrank=0
       call mpi_bcast(swild14,2*nvrt*ne_global,mpi_real,0,comm,istat)
       if(istat/=MPI_SUCCESS) call parallel_abort('STEP: mpi_bcast in reading T,S')
