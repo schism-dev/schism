@@ -1,5 +1,14 @@
 # Contributing developers: please read
 
+## License and copyright
+
+According to section 5 of SCHISM's Apache License, your contribution is accepted
+under the terms of the Apache 2.0 License, unless agreed otherwise. With your
+contribution, you confirm that you have the legal right to contribute your work
+to SCHISM.  You may choose to retain or to transfer the copyright.  If you retain
+the copyright, you irrevocably grant the SCHISM community the right to re-license
+your work under any open source license endorsed by the Open Software Initiative.  
+
 ## SCHISM github Workflow (Trunk Based Development)
 
 The following is tested on linux git. Should work same on other platforms.
