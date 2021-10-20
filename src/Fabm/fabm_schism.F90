@@ -619,9 +619,9 @@ subroutine fabm_schism_init_stage2
   endif
 
   !> For now, only FABM0 light calculation is done here.
-  if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
-    call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
-  endif
+  !if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
+  !  call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
+  !!endif
 #endif
 
   allocate(fs%bottom_depth(nea))
