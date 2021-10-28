@@ -4,29 +4,31 @@ function []=sflux2source(varargin)
 %   sflux2source.prop
 %     (use xmgredit to make an ele-based prop file for elements (prop value=1) that need sources from sflux,
 %     if you don't have xmgredit, use the alternative method shown in /Sflux2Source/Sample_Prop/)
-%   sflux/ 
-%   hgrid.ll (for interpolation) 
+%   sflux/
+%   hgrid.ll (for interpolation)
 %   hgrid.utm.26918 (for converting precip. to flux);
 %
-% Important! To speed up the interpolation, "i_lonlat_const=true" assumes 
-%   the lon/lat does not change among sflux*prc*.nc.
-%   Slight differences in vsource.th.2 exist between
-%   i_lonlat_const=true and i_lonlat_const=false
+% Important! To speed up the interpolation, the script assumes
+%   the lon/lat does not change among "sflux_fliles".
+%   Different interpolation method will return slightly different vsources.
+%   e.g., the inverse distance weighted method generally produces worse patterns than linear interp
 
 if nargin==0
     %Sample inputs. You can change the variables here if you want to run this script directly.
     %1) it is recommended to copy (cp -rL) the entire script folder (Sflux2Source) into your run dir to keep a record of the scripts used
-    wdir='./'; 
+    wdir='./';
     %2) look for sflux files using the 'dir' function. Depending on your needs,
     %   you may change the path, e.g., sflux_files=dir('../sflux/sflux*prc_1*.nc'),
-    %   or set the sflux dataset number, e.g., sflux_files = dir([some_dir sflux/sflux*prc_2*.nc']); 
-    sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']); 
+    %   or set the sflux dataset number, e.g., sflux_files = dir([some_dir sflux/sflux*prc_2*.nc']);
+    sflux_files = dir([wdir '/sflux/sflux*prc_1*.nc']);
     %3) start time of the SCHISM run
-    start_time_run=datenum('2018-9-14 12:00:00');
+    start_time_run=datenum('2018-6-17 00:00:00');
     %4) values outside this range will be warned
     min_val=-0.001; max_val=100;  
-    %5) true: assuming lon/lat does not change in sflux files (faster); false: otherwise (slower)
-    i_lonlat_const=true;
+    %5) interp method: 
+    i_interp=1;  % 0: fastest, 8-point inverse distance weighted, assuming lon/lat does not change in sflux files
+                 % 1 (default): linear interp with scatteredInterpolant, assuming lon/lat does not change in sflux files, 4 times slower than 0
+                 % 2: linear interp with shape functions, assuming lon/lat does not change in sflux files, x times slower than 0; needs more test
 elseif nargin==6
     %Run the script like a function
     wdir=varargin{1,1};
@@ -34,15 +36,15 @@ elseif nargin==6
     start_time_run=varargin{1,3};
     min_val=varargin{1,4};
     max_val=varargin{1,5};
-    i_lonlat_const=varargin{1,6};
+    i_interp=varargin{1,6};
 else
     disp('wrong number of input arguments');
 end
 %----------------end user inputs------------------
 
 %---------------outputs--------------
-% Please check the figure generated along with the output files 
-% and see if anything is obviously wrong 
+% Please check the figure generated along with the output files
+% and see if anything is obviously wrong
 %
 % Output files:
 %  source_sink.in.2
@@ -59,7 +61,7 @@ hgrid_name=('hgrid.utm.26918');
 display(['reading ' hgrid_name]);
 [ne,np,node,ele,i34,bndnode,open_bnds,land_bnds,ilb_island]=load_hgrid(wdir,hgrid_name,hgrid_name,0);
 display(['done reading ' hgrid_name]);
-    
+   
 display(['calculating element area based on ' hgrid_name]);
 area_e=nan(ne,1); precip2flux=area_e;
 for k=3:4
@@ -104,7 +106,46 @@ lat = ncread([wdir '/sflux/' fname],'lat');
 prate = ncread([wdir '/sflux/' fname],'prate'); %kg/m^2/s
 time = ncread([wdir '/sflux/' fname],'time');
 dt=time(2)-time(1); nt=length(time);
-dt=dt*86400; %convert to sec
+dt=round(dt*86400); %convert to sec
+
+%calculate weights for interpolation
+if i_interp==0 % assuming lon/lat of sflux*.nc does not change
+    disp('calculating weights for spatial interpolation')
+    n_inv_points = 4
+    X = [double(lat(:)),double(lon(:))];
+    Mdl = createns(X,'Distance','euclidean');
+    Q = [lat_e(iSS),lon_e(iSS)];
+    IdxNN = knnsearch(Mdl,Q,'K',n_inv_points);
+    dist = nan*IdxNN;
+    for k=1:n_inv_points
+        dist(:,k)=( (Q(:,1)-X(IdxNN(:,k),1)).^2 + (Q(:,2)-X(IdxNN(:,k),2)).^2 ).^0.5;
+    end
+    inv_weight = 1./dist ./ sum(1./dist, 2);
+elseif i_interp==1
+    this_prate=prate(:,:,1);
+    F_interp=[]; seq3=[1 2 3 1 2];
+    F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));                
+elseif i_interp==2
+    disp('calculating weights for linear interpolation')
+    this_prate=prate(:,:,1);
+    t=delaunayn([double(lat(:)),double(lon(:))]);
+    f=double(this_prate(:));
+    i_ele = tsearchn([double(lat(:)),double(lon(:))],t,[lat_e(iSS),lon_e(iSS)]);
+    i_area_cor=-ones(length(i_ele),3);
+
+    for k=1:3
+        area_lat0 = [lat_e(iSS) lat(t(i_ele,seq3(k+1:k+2)))]';
+        area_lon0 = [lon_e(iSS) lon(t(i_ele,seq3(k+1:k+2)))]';
+        area_lat = lat(t(i_ele,:))'; area_lon = lon(t(i_ele,:))';
+        i_area_cor(:,k) = abs(polyarea(area_lat0,area_lon0)./polyarea(area_lat,area_lon));
+    end
+
+    II=find(i_area_cor<0 | i_area_cor>1);
+    if ~isempty(II)
+        disp('error in area coordinates')
+    end
+    disp('done calculating weights for linear interpolation')
+end
 
 
 fname_out=([wdir 'vsource.th.2']);
@@ -114,7 +155,6 @@ end
 
 time_stamp=0;
 this_sflux_time=sflux_base_time;
-F_interp=[]; seq3=[1 2 3 1 2];
 for i=1:nf
     fname = sflux_files(i).name
     prate = ncread([wdir '/sflux/' fname],'prate'); %kg/m^2/s
@@ -122,70 +162,64 @@ for i=1:nf
         disp('Negative Precip');
     end
     for j=1:nt
-        this_sflux_time=this_sflux_time+dt/86400;
+        this_sflux_time=this_sflux_time+double(dt/86400);
         if (this_sflux_time >= start_time_run)
-            
+           
             this_prate=prate(:,:,j);
-            if isempty(F_interp)
-                F_interp = scatteredInterpolant(double(lat(:)),double(lon(:)),double(this_prate(:)));                
-                
-                if i_lonlat_const % assuming lon/lat of sflux*.nc does not change
-                    disp('calculating weights for spatial interpolation')
-                    t=delaunayn([double(lat(:)),double(lon(:))]);
-                    f=double(this_prate(:));
-                    i_ele = tsearchn([double(lat(:)),double(lon(:))],t,[lat_e(iSS),lon_e(iSS)]);
-                    i_area_cor=-ones(length(i_ele),3);
-
-                    for k=1:3
-                        area_lat0 = [lat_e(iSS) lat(t(i_ele,seq3(k+1:k+2)))]';
-                        area_lon0 = [lon_e(iSS) lon(t(i_ele,seq3(k+1:k+2)))]';
-                        area_lat = lat(t(i_ele,:))'; area_lon = lon(t(i_ele,:))';
-                        i_area_cor(:,k) = abs(polyarea(area_lat0,area_lon0)./polyarea(area_lat,area_lon));
-                    end
-
-                    II=find(i_area_cor<0 | i_area_cor>1);
-                    if ~isempty(II)
-                        disp('error in area coordinates')
-                    end
-                    disp('done calculating weights for spatial interpolation')
-                end
-            else
-                if ~i_lonlat_const
-                    F_interp.Values=double(this_prate(:));
-                end
-            end
-            if ~i_lonlat_const
+            if i_interp==0
+                prate_1d = this_prate(:);
+                prate_interp = sum(prate_1d(IdxNN) .* inv_weight, 2);
+            elseif i_interp==1
+                F_interp.Values=double(this_prate(:));
                 prate_interp = F_interp(lat_e(iSS),lon_e(iSS));
-            else
+            elseif i_interp==2
                 tmp=this_prate(:);
                 this_prate_inele = tmp(t(i_ele,:));
                 prate_interp = sum(this_prate_inele .* i_area_cor, 2);
             end
-            
-            if ~(max(prate_interp(:)) < max_val && min(prate_interp(:)) > min_val) 
+           
+            if ~(max(prate_interp(:)) < max_val && min(prate_interp(:)) > min_val)
               disp(['warning: value out of range']);
-              max(prate_interp(:)) 
-              min(prate_interp(:)) 
+              max(prate_interp(:))
+              min(prate_interp(:))
             end
             dlmwrite(fname_out,[time_stamp;max(0,prate_interp).*precip2flux(iSS)]','precision',10,'delimiter',' ','-append');
             time_stamp=time_stamp+dt;
-            
+                        
             if this_sflux_time==start_time_run %diagnostic plot
                 figure;
                 subplot(1,3,3); 
                 scatter(lon_e(iSS),lat_e(iSS),5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource, selected region');
                 
                 subplot(1,3,1); 
-                this_prate=prate(:,:,j);
-                F_interp.Values = double(this_prate(:));
-                prate_interp = F_interp(double(lat_e),double(lon_e));
-                contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux');  
+                contour(lon,lat,prate(:,:,j)); hold on; colormap jet; colorbar; title('sflux'); 
                 
                 subplot(1,3,2); 
-                [prate_sorted,II]=sort(prate_interp.*precip2flux,'descend');
-                scatter(lon_e(II),lat_e(II),5,max(0,prate_interp(II)),'filled'); hold on; colormap jet;colorbar;title('vsource, whole domain');
+                if i_interp==0
+                    Q0 = [lat_e,lon_e];
+                    IdxNN0 = knnsearch(Mdl,Q0,'K',n_inv_points);
+                    dist0 = nan*IdxNN0;
+                    for k=1:n_inv_points
+                        dist0(:,k)=( (Q0(:,1)-X(IdxNN0(:,k),1)).^2 + (Q0(:,2)-X(IdxNN0(:,k),2)).^2 ).^0.5;
+                    end
+                    inv_weight0 = 1./dist0 ./ sum(1./dist0, 2);
+                    this_prate0=prate(:,:,j);
+                    prate_1d0 = this_prate0(:);
+                    prate_interp = sum(prate_1d0(IdxNN0) .* inv_weight0, 2);                 
+                    scatter(lon_e,lat_e,5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource, whole domain');
+                elseif i_interp==1
+                    this_prate=prate(:,:,j);
+                    F_interp.Values = double(this_prate(:));
+                    prate_interp = F_interp(double(lat_e),double(lon_e));
+                    scatter(lon_e,lat_e,5,max(0,prate_interp),'filled'); hold on; colormap jet;colorbar;title('vsource, whole domain');
+                elseif i_interp==2
+                    % do nothing, skip subplot 2
+                end
+
+                % [prate_sorted,II]=sort(prate_interp0.*precip2flux,'descend');
                 clearvars prate_interp;
             end
+            
         end
     end
 end
@@ -203,5 +237,3 @@ msource=zeros(2,length(iSS)*2+1);
 msource(:,1)=[0 time_stamp*1.1];
 msource(:,2:length(iSS)+1)=-9999;
 dlmwrite([wdir 'msource.th.2'],msource,'precision',15,'delimiter',' ');
-            
-    

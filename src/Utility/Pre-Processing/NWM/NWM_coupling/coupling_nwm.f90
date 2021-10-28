@@ -33,7 +33,7 @@
 !
 ! 
 !
-!ifort -O2 -CB -traceback -o coupling_nwm ../../../UtilLib/julian_date.f90 ../../../UtilLib/schism_geometry.f90 ../../../UtilLib/pt_in_poly_ll.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!ifort -O2 -CB -traceback -o coupling_nwm julian_date.f90 schism_geometry.f90 pt_in_poly_ll.f90 coupling_nwm.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
        program coupling_nwm
        use netcdf
