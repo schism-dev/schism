@@ -28,6 +28,9 @@
       print*, 'Input ref and min slope:'
       read*, threshold_slope,slope_min
 
+      print*, 'Input a cut-off depth (below which the filter is off):'
+      read*, shallow_depth
+
       open(14,file='hgrid.gr3',status='old')
       open(13,file='slope_filter.gr3',status='replace')
       read(14,*)
@@ -54,7 +57,7 @@
         read(14,*) j,i34(i),elnode(1:i34(i),i)
         !skip shallow elem
         hmax=maxval(dp(elnode(1:i34(i),i)))
-        if(hmax<=100) cycle
+        if(hmax<=shallow_depth) cycle
 
         do m=1,i34(i)-2 !split into tri
           if(m==1) then
@@ -161,7 +164,7 @@
         if(hdif(i)<=1.e-2) hdif(i)=0
       enddo !i
 
-      write(13,*)'threshold_slope=',real(threshold_slope),real(slope_min)
+      write(13,*)'threshold_slope=',real(threshold_slope),real(slope_min),real(shallow_depth)
       write(13,*)ne,np
       do i=1,np
         write(13,*)i,real(x(i)),real(y(i)),real(hdif(i))
