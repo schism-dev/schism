@@ -12,8 +12,11 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file).
+! WARNING! This script uses the stripe search and treats HYCOM grid as UG. It uses
+! some large arrays so memory consumption may be too large for large
+! meshes. Use gen_hot_from_hycom_0.f90 if this happens.
 
+! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file).
 ! The section on nc read needs to be modified as appropriate- search for
 ! 'start11' and 'end11'
 ! Beware the order of vertical levels in the nc file!!!
@@ -271,15 +274,15 @@
 
 !     get static info (lat/lon grids etc) 
       if (lldim.eq.1) then
-         status = nf90_inq_varid(ncids(1), "xlon", xvid)
-         status = nf90_get_var(ncids(1), xvid, xind)
-         status = nf90_inq_varid(ncids(1), "ylat", yvid)
-         status = nf90_get_var(ncids(1), yvid, yind)
+        status = nf90_inq_varid(ncids(1), "xlon", xvid)
+        status = nf90_get_var(ncids(1), xvid, xind)
+        status = nf90_inq_varid(ncids(1), "ylat", yvid)
+        status = nf90_get_var(ncids(1), yvid, yind)
       elseif (lldim.eq.2) then
-         status = nf90_inq_varid(ncids(1), "xlon", xvid)
-         status = nf90_get_var(ncids(1), xvid, xind2)
-         status = nf90_inq_varid(ncids(1), "ylat", yvid)
-         status = nf90_get_var(ncids(1), yvid, yind2)
+        status = nf90_inq_varid(ncids(1), "xlon", xvid)
+        status = nf90_get_var(ncids(1), xvid, xind2)
+        status = nf90_inq_varid(ncids(1), "ylat", yvid)
+        status = nf90_get_var(ncids(1), yvid, yind2)
       end if
 
 !     status = nf90_inq_varid(ncids(1), "xlon", xvid)
