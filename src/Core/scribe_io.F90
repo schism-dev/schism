@@ -19,6 +19,7 @@
 ! subroutine scribe_init
 ! subroutine scribe_step
 ! subroutine scribe_finalize
+! subroutine nc_writeout2D
 ! subroutine nc_writeout3D
 
 !===============================================================================
@@ -915,19 +916,19 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: time dim')
         iret=nf90_put_att(ncid_schism_3d,itime_id,'i23d',0) !set i23d flag
 
-        time_dims(1)=node_dim
-        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: xnd')
-        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_y',NF90_DOUBLE,time_dims,iy_id)
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: ynd')
-        iret=nf90_def_var(ncid_schism_3d,'depth',NF90_FLOAT,time_dims,ih_id)
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: dp')
-!        time_dims(1)=nele_dim
-!        iret=nf90_def_var(ncid_schism_3d,'element_vertices',NF90_INT,time_dims,i34_id)
-!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: i34')
-        var2d_dims(1)=four_dim; var2d_dims(2)=nele_dim
-        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_face_nodes',NF90_INT,var2d_dims,elnode_id)
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: elnode')
+!        time_dims(1)=node_dim
+!        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
+!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: xnd')
+!        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_y',NF90_DOUBLE,time_dims,iy_id)
+!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: ynd')
+!        iret=nf90_def_var(ncid_schism_3d,'depth',NF90_FLOAT,time_dims,ih_id)
+!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: dp')
+!!        time_dims(1)=nele_dim
+!!        iret=nf90_def_var(ncid_schism_3d,'element_vertices',NF90_INT,time_dims,i34_id)
+!!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: i34')
+!        var2d_dims(1)=four_dim; var2d_dims(2)=nele_dim
+!        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_face_nodes',NF90_INT,var2d_dims,elnode_id)
+!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: elnode')
 
         var3d_dims(1)=nv_dim; var3d_dims(3)=time_dim
         if(imode==1) then
@@ -943,12 +944,12 @@
         !iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         iret=nf90_enddef(ncid_schism_3d)
 
-        !Write static info (x,y...)
-        iret=nf90_put_var(ncid_schism_3d,ix_id,xnd,(/1/),(/np_global/)) 
-        iret=nf90_put_var(ncid_schism_3d,iy_id,ynd,(/1/),(/np_global/)) 
-        iret=nf90_put_var(ncid_schism_3d,ih_id,real(dp),(/1/),(/np_global/)) 
-!        iret=nf90_put_var(ncid_schism_3d,i34_id,i34,(/1/),(/ne_global/)) 
-        iret=nf90_put_var(ncid_schism_3d,elnode_id,elnode,(/1,1/),(/4,ne_global/)) 
+!        !Write static info (x,y...)
+!        iret=nf90_put_var(ncid_schism_3d,ix_id,xnd,(/1/),(/np_global/)) 
+!        iret=nf90_put_var(ncid_schism_3d,iy_id,ynd,(/1/),(/np_global/)) 
+!        iret=nf90_put_var(ncid_schism_3d,ih_id,real(dp),(/1/),(/np_global/)) 
+!!        iret=nf90_put_var(ncid_schism_3d,i34_id,i34,(/1/),(/ne_global/)) 
+!        iret=nf90_put_var(ncid_schism_3d,elnode_id,elnode,(/1,1/),(/4,ne_global/)) 
       endif !mod(it-
 
       !Output
