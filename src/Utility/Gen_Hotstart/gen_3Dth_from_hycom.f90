@@ -304,7 +304,7 @@
       saltmin=0
       saltmax=45
       vmag_max=10 !max. |u| or |v|
-      ssh_max=5 !max. of |SSH|
+      ssh_max=6 !max. of |SSH|
 
 !     Assuming elev, u,v, S,T have same dimensions (and time step) and grids do not change over time
       timeout=0

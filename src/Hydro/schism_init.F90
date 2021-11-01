@@ -2191,8 +2191,12 @@
 !...  Earth tidal potential
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
       if(ntip>0) then
+        !Seperate allocation to avoid crash under ESMF-PDAF flexible mode ensemble
+        allocate(tp_name(ntip),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: allocation failure for tp_name')
         if(iorder==0) then
-          allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+!         allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+          allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
           if(istat/=0) call parallel_abort('INIT: allocation failure for tamp etc')
           if(iloadtide==1) then !loading tide (SAL) interpolated from another model
             allocate(rloadtide(2,ntip,npa),stat=istat)
