@@ -86,6 +86,9 @@ for istack=start_stack:end_stack
   ncid4 = netcdf.open(['outputs/' filename '_' num2str(istack) '.nc'],'NC_NOWRITE');
   vid=netcdf.inqVarID(ncid4,varname); %(*,np,ntime)
   i23d= netcdf.getAtt(ncid4,vid,'i23d');
+  vid=netcdf.inqVarID(ncid4,'time');
+  time=double(netcdf.getVar(ncid0, vid));
+
   if(ivs==2)
     ncid5 = netcdf.open(['outputs/' filename2 '_' num2str(istack) '.nc'],'NC_NOWRITE');
     vid5=netcdf.inqVarID(ncid5,varname2); %(*,np,ntime)
@@ -121,7 +124,7 @@ for istack=start_stack:end_stack
       colorbar;
     end %%scalar|vetor
 %   axis(ax);
-    title([varname '; Time=' num2str(time(it))]);
+    title([varname '; Time(days)=' num2str(time(it)/86400)]);
 
     % Add image to avi file
     set(gcf,'Color',[1 1 1]);

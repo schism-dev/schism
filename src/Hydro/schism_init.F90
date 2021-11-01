@@ -2191,7 +2191,7 @@
 !...  Earth tidal potential
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
       if(ntip>0) then
-        !Seperate allocation to avoid crash under ESMF-PDAF flexible mode ensemble
+        !Alloc local arrays separately to avoid crash under ESMF-PDAF flexible mode ensemble
         if(.not.allocated(tp_name)) allocate(tp_name(ntip),stat=istat)
         if(istat/=0) call parallel_abort('INIT: allocation failure for tp_name')
         if(iorder==0) then
@@ -6942,7 +6942,8 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4,tp_name)
+      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4)
+      if(allocated(tp_name)) deallocate(tp_name)
 
 #ifdef USE_FIB
        deallocate(sink0,fraction0,kk10,kk20)
