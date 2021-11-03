@@ -699,7 +699,9 @@
 
       if(nws==3) then
 #ifndef USE_ESMF
-        call parallel_abort('nws=3 requires coupler')
+        !> @todo the USE_ESMF macro is not yet implemented in CMake, thus the 
+        !> following check is disabled
+        !call parallel_abort('nws=3 requires coupler')
 #endif        
         !Error:overwrite wtiminc by coupling step
       endif !nws==3
