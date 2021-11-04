@@ -87,7 +87,7 @@ for istack=start_stack:end_stack
   vid=netcdf.inqVarID(ncid4,varname); %(*,np,ntime)
   i23d= netcdf.getAtt(ncid4,vid,'i23d');
   vid_t=netcdf.inqVarID(ncid4,'time');
-  time=double(netcdf.getVar(ncid0, vid_t));
+  time=double(netcdf.getVar(ncid4, vid_t));
 
   if(ivs==2)
     ncid5 = netcdf.open(['outputs/' filename2 '_' num2str(istack) '.nc'],'NC_NOWRITE');
