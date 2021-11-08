@@ -638,9 +638,6 @@
 !        windx2=wx2; windy2=wy2
 !        windx=wx2; windy=wy2
 !       End
-
-!       Read in new flux values for next step
-!        if(nws==3) read(23,*) tmp,fluxsu00,srad00
       endif !nws>=2
 
 !...  Re-scale wind
@@ -1622,6 +1619,7 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
+!...  For nws=3, needs evap for atmos model 
       if(isconsv/=0) then
         if(impose_net_flux/=0) then !impose net precip (nws=2)
           do i=1,nea

@@ -698,11 +698,11 @@
       endif
 
       if(nws==3) then
-#ifndef USE_ESMF
+!#ifndef USE_ESMF
         !> @todo the USE_ESMF macro is not yet implemented in CMake, thus the 
         !> following check is disabled
         !call parallel_abort('nws=3 requires coupler')
-#endif        
+!#endif        
         !Error:overwrite wtiminc by coupling step
       endif !nws==3
 
@@ -739,7 +739,7 @@
 #endif
       endif
 
-      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
+!      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -1660,6 +1660,7 @@
       istack0_schout=0
       cumsum_eta=0.d0
       nsteps_from_cold=0
+      wind_rotate_angle=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 

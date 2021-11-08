@@ -324,7 +324,7 @@
         if(nws==2) then
           call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-        else
+        else !=3; init
           windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
           pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
           airt1=20._rkind; airt2=20._rkind
@@ -814,6 +814,7 @@
 
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
+!     For nws=3, sflux etc are init'ed as 0 in _init
       if(ihconsv/=0.and.nws==2) then
         call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
@@ -828,7 +829,6 @@
 !       srad: solar radiation (W/m^2)
 !       tauxz,tauyz: wind stress (in true E-N direction if ics=2)
 !$OMP parallel do default(shared) private(i)
-        !If nws=3, sflux is init'ed as 0
         do i=1,npa
           sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
           !fluxprc is net flux P-E if impose_net_flux/=0
