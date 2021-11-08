@@ -5205,7 +5205,7 @@
 #endif /*USE_SED*/
 
 !         Radiation stress
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           !No quads
 !          rs1=0
 !          rs2=0
@@ -6012,7 +6012,7 @@
           hat_gam_y=sdbt(2,nvrt,j)+dt*(-cori(j)*su2(nvrt,j)-dpr_dy(j)/rho0+grav3*detp_dy(j)+ &
      &bcc(2,kbs(j),j)+tauy2/htot)-grav3*(1-thetai)*dt*deta1_dy(j)-grav3*thetai*dt*deta2_dy(j)
 !         Radiation stress
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           !wwave_force in eframe
           hat_gam_x=hat_gam_x+dt*wwave_force(1,1,j) 
           hat_gam_y=hat_gam_y+dt*wwave_force(2,1,j)
@@ -6153,7 +6153,7 @@
           endif !ibc==0
 
 !         Radiation stress
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           if(k<nvrt) rrhs(1:2,kin)=rrhs(1:2,kin)+dzz(k+1)/6.d0*dt* &
      &(2.d0*wwave_force(1:2,k,j)+wwave_force(1:2,k+1,j))
           if(k>kbs(j)+1) rrhs(1:2,kin)=rrhs(1:2,kin)+dzz(k)/6.d0*dt* &

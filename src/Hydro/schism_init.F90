@@ -1377,7 +1377,8 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),shapiro_min(npa),stat=istat)
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),shapiro_min(npa), &
+         & wwave_force(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1445,7 +1446,7 @@
 !     Wave model arrays
 #ifdef  USE_WWM
       if(iorder==0) then
-        allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10),   &
+        allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
                & out_wwm_rol(npa,35), &
                & stokes_hvel(2,nvrt,npa), stokes_wvel(nvrt,npa),stokes_hvel_side(2,nvrt,nsa), stokes_wvel_side(nvrt,nsa), &
                & roller_stokes_hvel(2,nvrt,npa), roller_stokes_hvel_side(2,nvrt,nsa), &
@@ -1453,7 +1454,7 @@
                & nne_wwm(np), stat=istat)
         if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
       endif !iorder
-      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0
+      out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0
       jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0
       stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
       roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0
@@ -1661,6 +1662,7 @@
       cumsum_eta=0.d0
       nsteps_from_cold=0
       wind_rotate_angle=0.d0
+      wwave_force=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 

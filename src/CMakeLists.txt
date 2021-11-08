@@ -207,6 +207,7 @@ endmacro(add_module)
 
 # Create list of modules
 add_module(WWMIII    USE_WWM   OFF)
+add_module(WW3    USE_WW3   OFF)
 add_module(COSINE USE_COSINE OFF)
 add_module(ICM      USE_ICM OFF)
 add_module(FIB      USE_FIB OFF)
