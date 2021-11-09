@@ -3,6 +3,8 @@
       module compute_wave_force
       implicit none
 
+      public compute_wave_force_lon
+
       contains
 
       subroutine compute_wave_force_lon(RSXX,RSXY,RSYY)
