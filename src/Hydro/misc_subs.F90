@@ -48,6 +48,7 @@
 ! function quad_int
 ! subroutine compute_bed_slope
 ! subroutine smooth_2dvar
+! subroutine compute_wave_force_lon
 
 !weno>
 ! subroutine weno1_coef 
@@ -6012,99 +6013,155 @@
 !===============================================================================
 !<weno
 
-subroutine compute_bed_slope
-!-------------------------------------------------------------------------------
-! MP from KM
-! Compute the bed slope for use in the wave model
-!-------------------------------------------------------------------------------
-  use schism_glbl
-  use schism_msgp
-  implicit none
-  integer     :: icount, inne, ip, ie
-  real(rkind) :: depel_x, depel_y, tmp_x, tmp_y
-  real(rkind) :: dp_tmp(npa) !tanbeta_x_tmp(npa), tanbeta_y_tmp(npa), dp_tmp(npa)
-  
-  ! Initialization
-  tanbeta_x = 0; tanbeta_y = 0 
-  
-  ! Smoothing water depth
-  dp_tmp = dp
-  call smooth_2dvar(dp_tmp,npa)
-  
-  ! Estimation of the bed slopes at nodes by averaging the value found at the surrounding element centers
-  do ip = 1, np
-    depel_x = 0.d0; depel_y = 0.d0 ! Spatial derivative of the bed elevation at element centers
-    tmp_x = 0.d0;   tmp_y = 0.d0   ! Local sum of spatial derivatives of the bed elevation 
-    icount = 0
-    do inne = 1, nne(ip)
-      ie = indel(inne,ip)
-      if (ie>0) then
-        icount = icount + 1
-        depel_x = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,1,ie))
-        depel_y = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,2,ie))
-        tmp_x = tmp_x + depel_x
-        tmp_y = tmp_y + depel_y
-      endif
-    enddo !inne
-    if (icount>0) then
-      tanbeta_x(ip) = -tmp_x/icount !global array, minus sign because dp = -dz
-      tanbeta_y(ip) = -tmp_y/icount
-    endif
-  enddo !ip
- 
-! Exchanges between ghost zones and smoothing
-  call exchange_p2d(tanbeta_x)
-  call exchange_p2d(tanbeta_y)
-  
-end subroutine compute_bed_slope
+      subroutine compute_bed_slope
+      !-------------------------------------------------------------------------------
+      ! MP from KM
+      ! Compute the bed slope for use in the wave model
+      !-------------------------------------------------------------------------------
+      use schism_glbl
+      use schism_msgp
+      implicit none
+      integer     :: icount, inne, ip, ie
+      real(rkind) :: depel_x, depel_y, tmp_x, tmp_y
+      real(rkind) :: dp_tmp(npa) !tanbeta_x_tmp(npa), tanbeta_y_tmp(npa), dp_tmp(npa)
+        
+      !Initialization
+      tanbeta_x = 0; tanbeta_y = 0 
+        
+      !Smoothing water depth
+      dp_tmp = dp
+      call smooth_2dvar(dp_tmp,npa)
+        
+      !Estimation of the bed slopes at nodes by averaging the value 
+      !found at the surrounding element centers
+      do ip = 1, np
+        depel_x = 0.d0; depel_y = 0.d0 ! Spatial derivative of the bed elevation at element centers
+        tmp_x = 0.d0;   tmp_y = 0.d0   ! Local sum of spatial derivatives of the bed elevation 
+        icount = 0
+        do inne = 1, nne(ip)
+          ie = indel(inne,ip)
+          if (ie>0) then
+            icount = icount + 1
+            depel_x = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,1,ie))
+            depel_y = dot_product(dp_tmp(elnode(1:3,ie)), dldxy(1:3,2,ie))
+            tmp_x = tmp_x + depel_x
+            tmp_y = tmp_y + depel_y
+          endif
+        enddo !inne
+        if (icount>0) then
+          tanbeta_x(ip) = -tmp_x/icount !global array, minus sign because dp = -dz
+          tanbeta_y(ip) = -tmp_y/icount
+        endif
+      enddo !ip
+       
+      ! Exchanges between ghost zones and smoothing
+      call exchange_p2d(tanbeta_x)
+      call exchange_p2d(tanbeta_y)
+        
+      end subroutine compute_bed_slope
+      
+      subroutine smooth_2dvar(glbvar,array_size)
+      !-------------------------------------------------------------------------------
+      ! MP from KM
+      ! Routine to smooth a 2d variable at nodes
+      !-------------------------------------------------------------------------------
+      use schism_glbl, only: np,npa,nnp, indnd, rkind
+      use schism_msgp
+      implicit none
+      integer, intent(in) :: array_size
+      real(rkind), intent(inout) :: glbvar(array_size)
+      integer     :: icount, inne, ip, ip2
+      real(rkind) :: locvar(array_size)
+      
+      if(array_size/=npa) call parallel_abort('smooth_2dvar: wrong array size')
+      
+      !'We re-pass everywhere to smooth out the bed slope (avoid spurious 
+      !effects in the wave breaking thresholds)
+      locvar = glbvar; icount = 0
+      glbvar = 0.D0
+      do ip = 1,np !array_size
+        icount = 0
+        do inne = 1, nnp(ip)
+          ip2 = indnd(inne,ip)
+          if (ip2>0) then
+            icount = icount + 1
+            glbvar(ip) = glbvar(ip) + locvar(ip2)
+          endif
+        enddo
+        if (icount>0) then
+          glbvar(ip) = glbvar(ip)/icount
+        endif
+      enddo !ip 
+      
+      call exchange_p2d(glbvar)
+      
+      end subroutine smooth_2dvar
 
-subroutine smooth_2dvar(glbvar,array_size)
-!-------------------------------------------------------------------------------
-! MP from KM
-! Routine to smooth a 2d variable at nodes
-!-------------------------------------------------------------------------------
-  use schism_glbl, only: np,npa,nnp, indnd, rkind
-  use schism_msgp
-  implicit none
-  integer, intent(in) :: array_size
-  real(rkind), intent(inout) :: glbvar(array_size)
-  integer     :: icount, inne, ip, ip2
-  real(rkind) :: locvar(array_size)
 
-  if(array_size/=npa) call parallel_abort('smooth_2dvar: wrong array size')
+!     This routine is called from ESMF directly to be used for USE_WW3
+!     Compute wave force using Longuet-Higgins Stewart formulation
+      subroutine compute_wave_force_lon(RSXX,RSXY,RSYY)
+      use schism_glbl, only : rkind,nsa,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
+     &WWAVE_FORCE
+      use schism_msgp
+      implicit none
+      REAL(rkind), intent(inout) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
+     
+      REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
+      integer :: IS,i
+      REAL(rkind) :: HTOT
+    
+      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa))
 
-  ! We re-pass everywhere to smooth out the bed slope (avoid spurious effects in the wave breaking thresholds)
-  locvar = glbvar; icount = 0
-  glbvar = 0.D0
-  do ip = 1,np !array_size
-    icount = 0
-    do inne = 1, nnp(ip)
-      ip2 = indnd(inne,ip)
-      if (ip2>0) then
-         icount = icount + 1
-         glbvar(ip) = glbvar(ip) + locvar(ip2)
-      endif
-    enddo
-    if (icount>0) then
-      glbvar(ip) = glbvar(ip)/icount
-    endif
-  enddo !ip 
+      !Convert unit so that [RSXX]=m^3/s/s
+      do i=1,npa
+        if(idry(i)==1) then
+          RSXX(i)=0.d0
+          RSXY(i)=0.d0
+          RSYY(i)=0.d0
+        else !wet
+          RSXX(i)=RSXX(i)/rho0
+          RSXY(i)=RSXY(i)/rho0
+          RSYY(i)=RSYY(i)/rho0
+        endif !idry
+      enddo !i
 
-  call exchange_p2d(glbvar)
+      ! Computing gradients of the depth-averaged radiation stress
+      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSXX,DSXX3D)   !C(dSxx/dx , dSxx/dy )
+      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSYY,DSYY3D)   !C(dSyy/dx , dSyy/dy )
+      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSXY,DSXY3D)   !C(dSxy/dx , dSxy/dy )
+      CALL exchange_s3d_2(DSXX3D)
+      CALL exchange_s3d_2(DSYY3D)
+      CALL exchange_s3d_2(DSXY3D)
 
-end subroutine smooth_2dvar
+      ! Computing the wave forces
+      ! These are stored in wwave_force(:,1:nsa,1:2) (unit: m/s/s)
+      WWAVE_FORCE=0.d0 !m/s/s
+      DO IS=1,nsa
+        IF(idry_s(IS)==1) CYCLE
 
-!dir$ attributes forceinline :: signa2
-function signa2(x1,x2,x3,y1,y2,y3)
+        ! Total water depth at sides
+        HTOT=MAX(dps(IS),hmin_radstress)
+
+        ! Wave forces
+        WWAVE_FORCE(1,:,IS)=WWAVE_FORCE(1,:,IS)-(DSXX3D(1,:,IS)+DSXY3D(2,:,IS))/HTOT
+        WWAVE_FORCE(2,:,IS)=WWAVE_FORCE(2,:,IS)-(DSXY3D(1,:,IS)+DSYY3D(2,:,IS))/HTOT
+      ENDDO !IS
+
+      deallocate(DSXX3D,DSYY3D,DSXY3D)
+      end subroutine compute_wave_force_lon
+
+      !dir$ attributes forceinline :: signa2
+      function signa2(x1,x2,x3,y1,y2,y3)
 !-------------------------------------------------------------------------------
 ! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
 !-------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
-  implicit none
-  real(rkind) :: signa2
-  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+      use schism_glbl, only : rkind,errmsg
+      implicit none
+      real(rkind) :: signa2
+      real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
 
-  signa2=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
+      signa2=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
   
-end function signa2
+      end function signa2
 

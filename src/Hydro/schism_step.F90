@@ -10347,21 +10347,3 @@
 #endif
 
       end subroutine schism_step
-
-
-  subroutine compute_waveforce_from_stress(rsxx, rsxy, rsyy)
-
-    use schism_glbl, only: npa, rkind
-#if defined(USE_WW3)
-    use compute_wave_force, only : compute_wave_force_lon
-#endif
-
-    implicit none
-    REAL(rkind), intent(inout) :: RSXX(npa),RSXY(npa),RSYY(npa) !dimension: m*m/s/s
-
-#if defined(USE_WW3)
-    call compute_wave_force_lon(rsxx, rsxy, rsyy)
-#endif
-
-  end subroutine compute_waveforce_from_stress
-
