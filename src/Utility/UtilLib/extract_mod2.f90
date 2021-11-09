@@ -3,6 +3,7 @@
 !  Date: Sept 2017
 
 !  Routines in this module, for scribe I/O
+!  subroutine get_dims
 !  subroutine readheader 
 
     module extract_mod2
