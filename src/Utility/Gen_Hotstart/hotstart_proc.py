@@ -82,7 +82,7 @@ class Hotstart():
 
 def gather_grid_info(grid_in, eta, dir):
     grid_in.compute_ctr()
-    grid_in.isidenode = grid_in.compute_side(fmt=2)
+    grid_in.compute_side(fmt=1)
     grid_in.side_x = (grid_in.x[grid_in.isidenode[:, 0]] + grid_in.x[grid_in.isidenode[:, 1]]) / 2.0
     grid_in.side_y = (grid_in.y[grid_in.isidenode[:, 0]] + grid_in.y[grid_in.isidenode[:, 1]]) / 2.0
 
@@ -181,12 +181,12 @@ def interp_hot(in_dir, out_dir, iplot=False, i_vert_interp=True):
     eta2_in = np.array(hot_in.eta2)
 
     # ----------------------- read hgrids and vgrids ----------------------------
-    grid_in = schism_grid(f'{in_dir}/hgrid.pkl')
+    grid_in = schism_grid(f'{in_dir}/hgrid.gr3')
     if not hasattr(grid_in, 'vgrid'):
         grid_in = gather_grid_info(grid_in, eta=eta2_in, dir=in_dir)
         grid_in.save(f'{in_dir}/hgrid.pkl')
 
-    grid_out = schism_grid(f'{out_dir}/hgrid.pkl')
+    grid_out = schism_grid(f'{out_dir}/hgrid.gr3')
     eta2 = griddata(np.c_[grid_in.x, grid_in.y], hot_in.eta2, (grid_out.x, grid_out.y), method='linear')
     eta2_tmp = griddata(np.c_[grid_in.x, grid_in.y], hot_in.eta2, (grid_out.x, grid_out.y), method='nearest')
     eta2[np.isnan(eta2)] = eta2_tmp[np.isnan(eta2)]
@@ -243,7 +243,7 @@ def interp_hot(in_dir, out_dir, iplot=False, i_vert_interp=True):
     # slightly different from SCHISM:
     # SCHISM: A node is wet if and only if at least one surrounding element is wet. This script: skipped
     # SCHISM: A side is wet if and only if at least one surrounding element is wet. This script: changed to both nodes are wet
-    grid_out.isidenode = grid_out.compute_side(fmt=2)
+    grid_out.compute_side(fmt=1)
     idry_s = np.amax(idry[grid_out.isidenode], axis=1).astype(int)
 
     print(f'Setting dry indicators took {time()-t} seconds', flush=True)
@@ -439,17 +439,17 @@ def replace_hot_vars(infile, outfile, grid, vars_list=[], shapefile_name=None, n
 
 if __name__ == "__main__":
     # Sample usage
-    replace_hot_vars(
-        infile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart_it=31104.nc',
-        outfile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart.nc.0',
-        grid=schism_grid('/sciclone/schism10/feiye/From_Nabi/RUN02/hgrid.ll'),
-        vars_list=['tr_nd', 'tr_nd0', 'tr_el'],
-        shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp'
-    )
+    # replace_hot_vars(
+    #     infile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart_it=31104.nc',
+    #     outfile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart.nc.0',
+    #     grid=schism_grid('/sciclone/schism10/feiye/From_Nabi/RUN02/hgrid.ll'),
+    #     vars_list=['tr_nd', 'tr_nd0', 'tr_el'],
+    #     shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp'
+    # )
 
     interp_hot(
-        in_dir='/sciclone/schism10/feiye/ICOGS/Ida01/',
-        out_dir='/sciclone/schism10/feiye/ICOGS/RUN20f/',
-        iplot=False,
+        in_dir='/sciclone/schism10/feiye/From_Nabi/RUN02/',
+        out_dir='/sciclone/schism10/feiye/From_Nabi/RUN01/',
+        iplot=True,
         i_vert_interp=False
     )
