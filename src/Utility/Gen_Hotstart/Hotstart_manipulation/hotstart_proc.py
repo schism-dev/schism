@@ -1,4 +1,4 @@
-from pylib import schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: git@github.com:wzhengui/pylibs.git
+from pylib import schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: git@github.com:wzhengui/pylibs.git or https://github.com/wzhengui/pylibs
 from scipy import spatial
 from scipy.interpolate import griddata
 from scipy.sparse import csc_matrix
@@ -6,9 +6,8 @@ import numpy as np
 from time import time
 import os
 import xarray as xr
-# import pymp  # pip install pymp-pypi; setenv OMP_PROC_BIND true; srun --cpus-per-task=20 --time=01:00:00 python ./interp_hotstart4.py
+# import pymp  # (The speed gain is probably not worth the trouble) pip install pymp-pypi; setenv OMP_PROC_BIND true; srun --cpus-per-task=20 --time=01:00:00 python ./interp_hotstart4.py
 import matplotlib.pyplot as plt
-import gc
 import shapefile
 
 
@@ -19,7 +18,7 @@ def nearest_neighbour(points_a, points_b):
 
 class zdata():
     def __init__(self):
-        pass  # dummy class to adhere to the style in pylib
+        pass  # dummy class to adhere to pylib's style
 
 
 class Hotstart():
@@ -30,10 +29,17 @@ class Hotstart():
                  'grid', 'source_dir', 'var_dict')
 
     def __init__(self, grid_info, ntracers=2, hot_file=None):
+        '''
+        Different ways to instantiate:
+            (1) Hotstart(grid_info=some_dir), where some_dir contains hgrid.gr3 and vgrid.in; the values of the hotstart variables are initialized to 0 mostly.
+            (2) Hotstart(grid_info=some_dir, hot_file=some_file), same as (1), but with the hotstart variable values from some_file.
+            (3) Hotstart(grid_info={'ne': 2, 'np': 4, 'ns': 5, 'nvrt': 4}); the values of the hotstart variables are initialized to 0 mostly.
+        '''
+
         self.file_format = 'NETCDF4'
         self.dimname = ['node', 'elem', 'side', 'nVert', 'ntracers', 'one']
         if isinstance(grid_info, dict):
-            self.dims = [grid_info.np, grid_info.ne, grid_info.ns, grid_info.nvrt, ntracers, 1]
+            self.dims = [grid_info['np'], grid_info['ne'], grid_info['ns'], grid_info['nvrt'], ntracers, 1]
         elif isinstance(grid_info, str):
             self.source_dir = grid_info
             self.grid = zdata()
@@ -46,6 +52,9 @@ class Hotstart():
                 my_hot = xr.open_dataset(hot_file)
                 if my_hot.dims['elem'] != self.dims[1]:
                     raise Exception(f'Inconsistent geometry: {self.source_dir}')
+                if ntracers != my_hot.dims['ntracers']:
+                    ntracers = my_hot.dims['ntracers']
+                    print(f'Warning: inconsistent ntracers, setting ntracers={ntracers} based on the value in the hotstart file')
 
         self.vars = ['time', 'iths', 'ifile', 'idry_e', 'idry_s', 'idry', 'eta2', 'we', 'tr_el',
                      'tr_nd', 'tr_nd0', 'su2', 'sv2', 'q2', 'xl', 'dfv', 'dfh', 'dfq1', 'dfq2',
@@ -83,7 +92,7 @@ class Hotstart():
 
             self.set_var('nsteps_from_cold', 0)
             self.set_var('cumsum_eta', np.zeros(self.dims[0]))
-        else:
+        else:  # read from existing hotstart.nc
             for var_str in self.vars:
                 self.set_var(var_str, my_hot[var_str].data)
 
@@ -127,13 +136,16 @@ class Hotstart():
 
     def interp_from_existing_hotstart(self, hot_in, iplot=False, i_vert_interp=True):
         '''
+        The interpolation method in this routine sacrifices some accuracy for efficiency,
+        by using the nearest neighbor method in the horizontal dimension.
         hot_in:
-            Background hotstart.nc as a Hostart instance
+            Background hotstart.nc as an instance of the <Hostart> class
         i_plot:
-            True: save diagnostic plots of the interplated hotstart.nc
+            True: save diagnostic plots of the interplated hotstart.nc; can take a few minutes for larger grid
+            False (default): don't plot
         i_vert_interp:
             True: linear interpolation in the vertical dimension
-            False: assuming the vertical discretization is unchanged
+            False: assuming the vertical discretization is unchanged (faster)
         '''
 
         print('Using %d processors' % int(os.getenv('SLURM_CPUS_PER_TASK', 1)), flush=True)
@@ -141,7 +153,7 @@ class Hotstart():
         print('Using %d tasks' % int(os.getenv('SLURM_NTASKS', 1)), flush=True)
 
         h0 = 1e-5  # minimum water depth
-        plot_layer = 40
+        plot_layer = -1  # surface
         t = time()
         t0 = t
 
@@ -255,7 +267,7 @@ class Hotstart():
             for k in range(self.dims[3]):
                 col = np.r_[grid_out.vgrid.ze_idx_lower[:, k], grid_out.vgrid.ze_idx_upper[:, k]]
                 data = np.r_[grid_out.vgrid.ze_weight_lower[:, k], 1.0 - grid_out.vgrid.ze_weight_lower[:, k]]
-                weights = csc_matrix((data, (row, col)), shape=(self.dims[1], self.dims[3])).toarray()
+                weights = csc_matrix((data, (row, col)), shape=(self.dims[1], hot_in.dims[3])).toarray()
                 self.we.val[:, k] = np.sum(we_tmp * weights, axis=1)
                 for j in range(self.dims[4]):
                     self.tr_el.val[:, k, j] = np.sum(trel_tmp[:, :, j] * weights, axis=1)
@@ -272,7 +284,7 @@ class Hotstart():
             for k in range(self.dims[3]):
                 col = np.r_[grid_out.vgrid.zs_idx_lower[:, k], grid_out.vgrid.zs_idx_upper[:, k]]
                 data = np.r_[grid_out.vgrid.zs_weight_lower[:, k], 1.0 - grid_out.vgrid.zs_weight_lower[:, k]]
-                weights = csc_matrix((data, (row, col)), shape=(self.dims[2], self.dims[3])).toarray()
+                weights = csc_matrix((data, (row, col)), shape=(self.dims[2], hot_in.dims[3])).toarray()
                 self.su2.val[:, k] = np.sum(hot_in.var_dict['su2'].val[neighbor_s] * weights, axis=1)
                 self.sv2.val[:, k] = np.sum(hot_in.var_dict['sv2'].val[neighbor_s] * weights, axis=1)
                 print(f'Processing Layer {k+1} of {self.dims[3]} for su2 and sv2 took {time()-t} seconds', flush=True)
@@ -289,7 +301,7 @@ class Hotstart():
             for k in range(self.dims[3]):
                 col = np.r_[grid_out.vgrid.z_idx_lower[:, k], grid_out.vgrid.z_idx_upper[:, k]]
                 data = np.r_[grid_out.vgrid.z_weight_lower[:, k], 1.0 - grid_out.vgrid.z_weight_lower[:, k]]
-                weights = csc_matrix((data, (row, col)), shape=(self.dims[0], self.dims[3])).toarray()
+                weights = csc_matrix((data, (row, col)), shape=(self.dims[0], hot_in.dims[3])).toarray()
                 for var_str in self.vars_2d_node_based:
                     self.var_dict[var_str].val[:, k] = np.sum(hot_in.var_dict[var_str].val[neighbor] * weights, axis=1)
 
@@ -312,6 +324,13 @@ class Hotstart():
         WriteNC(fname, self)
 
     def replace_vars(self, var_dict=[], shapefile_name=None):
+        '''
+        var_dict:
+                keys: variable names whose values are to be replaced;
+                values: replacement values 
+        shapefile_name:
+                contains one or more polygons inside which the value replacement will occur
+        '''
         if not hasattr(self.grid, 'hgrid'):
             raise Exception('missing hgrid, initialize Hotstart instance with hgrid and try again.')
         if shapefile_name is not None:
@@ -370,7 +389,7 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
     zcor_tmp = zcor_in[neighbors]
 
     n_points = zcor_out.shape[0]
-    nvrt = zcor_out.shape[1]
+    nvrt_in = zcor_in.shape[1]
     dz = zcor_tmp[:, 1:] - zcor_tmp[:, :-1]
 
     # openmp-like parallelism, which can save some time
@@ -383,8 +402,8 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
     for i in range(n_points):
             l_idx = np.searchsorted(zcor_tmp[i], zcor_out[i]) - 1
             below = l_idx == -1
-            interior = (l_idx >= 0) & (l_idx < nvrt-1)
-            above = (l_idx == (nvrt-1))
+            interior = (l_idx >= 0) & (l_idx < nvrt_in-1)
+            above = (l_idx == (nvrt_in-1))
 
             z_weight_lower[i, interior] = (zcor_tmp[i, l_idx[interior]+1]-zcor_out[i, interior]) / dz[i, l_idx[interior]]
             z_idx_lower[i, interior] = l_idx[interior]
@@ -403,7 +422,9 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
 
 def find_ele_node_in_shpfile(shapefile_name, grid):
     '''
-    Find element/node index within polygons of a list of shapefiles
+    Find element/node index within one or more polygons defined in a shapefile
+        shapefile_name: file contains polygon(s)
+        grid: schism_grid instance
     '''
     grid.compute_ctr()
 
@@ -481,14 +502,17 @@ if __name__ == "__main__":
     fg_hot.replace_vars(
         var_dict={'tr_nd': bg_hot.tr_nd.val, 'tr_nd0': bg_hot.tr_nd0.val, 'tr_el': bg_hot.tr_el.val},
         shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp',
-    )
+    )  # sample *.shp is provided under the same folder as this script in SCHISM GIT
     fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc.0.new2')
 
     # Sample 3: interpolating one hotstart.nc to another
     hot_background = Hotstart(
-        grid_info='/sciclone/schism10/feiye/From_Nabi/RUN02/',
+        grid_info='/sciclone/schism10/feiye/From_Nabi/RUN02/',  # contains hgrid.gr3 and vgrid.ll
         hot_file='/sciclone/schism10/feiye/From_Nabi/RUN02/hotstart.nc'
-    )
-    my_hot = Hotstart(grid_info='/sciclone/schism10/feiye/From_Nabi/RUN01/')
+    )  # create a Hotstart instance with existing values
+    my_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/From_Nabi/RUN01b/',
+        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    )  # create a Hotstart instance with empty values
     my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=True, i_vert_interp=True)
     my_hot.writer(f'{my_hot.source_dir}/new_hotstart.nc')
