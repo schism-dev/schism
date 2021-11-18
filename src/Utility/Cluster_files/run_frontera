@@ -50,7 +50,7 @@ date
 ##./pre_proc.pl
 
 # Launch MPI code... 
-ibrun ./pschism_FRONTERA_TVD-VL
+ibrun ./pschism_FRONTERA_TVD-VL  5
 ##Can launch >1 MPI jobs one after another
 ##ibrun ./
 
