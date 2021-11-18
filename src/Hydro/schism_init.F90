@@ -479,7 +479,7 @@
       ipre2=0
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind
-      itransport_only=0; meth_sink=0
+      itransport_only=0; meth_sink=1
       iloadtide=0; 
 
       !Output elev, hvel by detault
