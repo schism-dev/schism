@@ -938,8 +938,9 @@
             if(iwind==0) then
               cur_x=0; cur_y=0
             else
-              cur_x = speed*sin(dir)*drag_c !approx surface current
-              cur_y = speed*cos(dir)*drag_c
+!Error: original code used wrong sin/cos
+              cur_x = speed*cos(dir)*drag_c !approx surface current
+              cur_y = speed*sin(dir)*drag_c
             endif  
             if(z0<-0.1) then  ! sub_surface particles are not influenced by wind
               cur_x=0; cur_y=0

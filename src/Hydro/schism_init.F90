@@ -30,6 +30,7 @@
       use netcdf
       use misc_modules
       use gen_modules_clock
+      USE ParWind, ONLY : ReadCsvBestTrackFile
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -680,11 +681,7 @@
       endif
 
 !     Wind (nws=3: for coupling directly to atmos model; otherwise same as nws=2)
-!      call get_param('param.in','nws',1,nws,tmp,stringvalue)
-      !impose_net_flux/=0 works under nws=2
-!      call get_param('param.in','impose_net_flux',1,impose_net_flux,tmp,stringvalue)
-!      call get_param('param.in','wtiminc',2,itmp,wtiminc,stringvalue)
-      if(nws<0.or.nws>6) then
+      if(nws<-1.or.nws>6) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
       endif
@@ -707,7 +704,7 @@
       endif !nws==3
 
 !      iwind_form=0 !init.
-      if(nws>0) then
+      if(nws/=0) then
         if(iwind_form<-2.or.iwind_form>1) then
           write(errmsg,*)'Unknown iwind_form',iwind_form
           call parallel_abort(errmsg)
@@ -3095,7 +3092,7 @@
       endif !ncor
 
 !     Wind 
-      if(nws>=2.and.nws<=3) then !CORIE mode; read in hgrid.ll and open debug outputs
+      if(nws<0.or.(nws>=2.and.nws<=3)) then !CORIE mode; read in hgrid.ll and open debug outputs
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
           read(32,*)
@@ -3147,7 +3144,7 @@
       endif !nws
 
       windfactor=1 !intialize for default
-      if(nws>0) then
+      if(nws/=0) then
         if(iwindoff/=0) then
           if(myrank==0) then
             open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
@@ -3169,7 +3166,7 @@
             if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=buf3(i)
           enddo !i
         endif
-      endif !nws>0
+      endif !nws/=0
 
 !     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
 !      if(nws==4) then
@@ -6915,6 +6912,12 @@
       call ice_init
       if(myrank==0) write(16,*)'done init multi ice...'
 #endif
+
+
+!...  Init PaHM
+      if(nws<0) then
+        call ReadCsvBestTrackFile()
+      endif !nws<0
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 
