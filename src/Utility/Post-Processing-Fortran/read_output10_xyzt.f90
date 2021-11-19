@@ -38,6 +38,7 @@
 
       character(len=30) :: file63,varname,file62
       character(len=12) :: it_char
+      logical :: lexist
       integer,allocatable :: kbp(:),kbp00(:),iday(:,:),irecord(:,:),node3(:,:),iep(:),irank_read(:), &
      &i34(:),elnode(:,:)
       real,allocatable ::  sigma(:),cs(:),ztot(:),times(:,:),out(:,:,:),out2(:,:), &
