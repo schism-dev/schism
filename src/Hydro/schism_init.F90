@@ -1327,7 +1327,8 @@
      &krvel(nea),itvd_e(nea),ze(nvrt,nea),dldxy(4,2,nea),dp00(npa),kbp(npa), &
      &kbp00(npa),kbp_e(np),idry(npa),hmod(npa),znl(nvrt,npa), &
      &kbs(nsa),idry_s(nsa),isidenei2(4,ns),zs(nvrt,nsa), &
-     &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
+!new37
+     &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sframe2(3,3,nsa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
      &snx(nsa),sny(nsa),xs_el(4,nea),ys_el(4,nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: grid geometry arrays allocation failure')
 !'
@@ -1851,9 +1852,11 @@
 !...  pframe is along local ll direction: 2nd index indicates zonal or meridional or outward radial
 !...  directions. Note that the vectors are strictly undefined at 2 poles, but can be calculated 
 !...  as all we need is just a frame there.
-!...  For ics=1 pframe is not needed
+!...  Also sframe2: local lon/lat frame at a side
+!...  For ics=1 pframe/sframe2 are not needed
 !$OMP workshare
       pframe=0 !for ics=1
+      sframe2=0 !for ics=1; new37
 !$OMP end workshare
 
       if(ics==2) then
@@ -1872,6 +1875,25 @@
                             &pframe(1,2,i),pframe(2,2,i),pframe(3,2,i), &
                             &pframe(1,3,i),pframe(2,3,i),pframe(3,3,i))
         enddo !i=1,npa
+!$OMP   end do
+
+        !sframe2: Qian's method C (new37)
+!$OMP   do
+        do i=1,nsa
+          call compute_ll(xcj(i),ycj(i),zcj(i),ar1,ar2)
+          sframe2(1,1,i)=-sin(ar1) !zonal dir.
+          sframe2(2,1,i)=cos(ar1)
+          sframe2(3,1,i)=0.d0
+          sframe2(1,2,i)=-cos(ar1)*sin(ar2) !meri. dir.
+          sframe2(2,2,i)=-sin(ar1)*sin(ar2)
+          sframe2(3,2,i)=rearth_pole/rearth_eq*cos(ar2)
+          tmp=sqrt(sframe2(1,2,i)**2.d0+sframe2(2,2,i)**2.d0+sframe2(3,2,i)**2.d0)
+          if(tmp==0.d0) call parallel_abort('INIT: 0 y-axis')
+          sframe2(1:3,2,i)=sframe2(1:3,2,i)/tmp
+          call cross_product(sframe2(1,1,i),sframe2(2,1,i),sframe2(3,1,i), &
+                            &sframe2(1,2,i),sframe2(2,2,i),sframe2(3,2,i), &
+                            &sframe2(1,3,i),sframe2(2,3,i),sframe2(3,3,i))
+        enddo
 !$OMP   end do
 
         !Check dot products
@@ -1907,9 +1929,12 @@
       else !lat/lon; use 1st node's ll frame
 !$OMP   do
         do i=1,nsa
-          n1=isidenode(1,i)
-          snx(i)=dot_product(sframe(1:3,1,i),pframe(1:3,1,n1))
-          sny(i)=dot_product(sframe(1:3,1,i),pframe(1:3,2,n1))
+!          n1=isidenode(1,i)
+!          snx(i)=dot_product(sframe(1:3,1,i),pframe(1:3,1,n1))
+!          sny(i)=dot_product(sframe(1:3,1,i),pframe(1:3,2,n1))
+!new37: use sframe2
+          snx(i)=dot_product(sframe(1:3,1,i),sframe2(1:3,1,i))
+          sny(i)=dot_product(sframe(1:3,1,i),sframe2(1:3,2,i))
         enddo !i
 !$OMP   end do
       endif !ics
