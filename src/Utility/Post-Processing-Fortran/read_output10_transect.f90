@@ -40,6 +40,7 @@
 !      parameter(nbyte=4)
       character(len=30) :: file63,varname,file62
       character(len=12) :: it_char
+      logical::lexist
       allocatable :: sigma(:),cs(:),ztot(:)
       allocatable:: outvar(:,:),out(:,:,:),out2(:,:),eta2(:),node3(:,:),arco(:,:)
       allocatable :: ztmp(:),x00(:),y00(:),iep(:),out3(:,:),out4(:),av_out3(:,:)
