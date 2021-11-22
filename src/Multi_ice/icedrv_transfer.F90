@@ -14,7 +14,7 @@
           use schism_glbl,only: rkind,npa,tr_nd,iplg,pr,fluxprc,rho0,windx,windy, &
           &nvrt,srad_o,albedo,hradd,airt1,shum1,errmsg,xlon2,ylat2,fresh_wa_flux,net_heat_flux, &
           uu2,vv2,area,elnode,i34,dt,nstep_ice,prec_rain,prec_snow,it_main,lhas_ice,drampwind, &
-          nws,nrampwind,idry,isbnd,dp
+          nws,nrampwind,idry,isbnd,dp,nnp
           use schism_msgp, only: myrank,nproc,parallel_abort,parallel_finalize,exchange_p2d
           use mice_module
           use mice_therm_mod
@@ -31,7 +31,8 @@
           !                            stress_atmice_x, stress_atmice_y
           !use mice_module,          only: cd_oce_ice                            ! Sea ice parameters
           use icepack_intfc,    only: icepack_warnings_flush, icepack_warnings_aborted
-          use icepack_intfc,    only: icepack_query_parameters
+          use icepack_intfc,    only: icepack_query_parameters, &
+                                      icepack_query_tracer_indices
           use icepack_intfc,    only: icepack_sea_freezing_temperature
           !use g_comm_auto,      only: exchange_nod
           use icedrv_system,    only: icedrv_system_abort
@@ -62,14 +63,16 @@
              ex     = 0.286_dbl_kind
 
           integer(kind=dbl_kind)   :: i, n,  k,  elem
+          integer (kind=int_kind)  :: nt_Tsfc
           real   (kind=int_kind)   :: tx, ty, tvol
 
           real (kind=dbl_kind) :: &
              aux,                 &
-             cprho
+             cprho,maxu,maxv,tmp1,tmp2,tmpsum,maxuwind,maxvwind,tmpw1,tmpw2,tmpwsum
           real(rkind) :: ug,ustar,T_oc,S_oc,fw,ehf,srad2,dux,dvy,rampwind
           !type(t_mesh), target, intent(in) :: mesh
 
+            call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc)
           ! Ice 
           do i=1,npa
            
@@ -79,13 +82,15 @@
                ! Ocean 
                !T_oc(:)=tr_nd(1,nvrt,:) !T@ mixed layer - may want to average top layers??
                !S_oc(:)=tr_nd(2,nvrt,:) !S
-     
-               sss(i)    = tr_nd(2,nvrt,i)
                uocn(i)   = uu2(nvrt,i)
                vocn(i)   = vv2(nvrt,i)
                u_ocean(i)= uu2(nvrt,i)
                v_ocean(i)= vv2(nvrt,i)
-     
+               uatm(i)   = windx(i)
+               vatm(i)   = windy(i)
+               
+               sss(i)    = tr_nd(2,nvrt,i)
+
                Tf(i)   = icepack_sea_freezing_temperature(sss(i))
 
                sst(i)    = tr_nd(1,nvrt,i)
@@ -93,8 +98,7 @@
      
                T_air(i)  = airt1(i) + 273.15_dbl_kind
                Qa(i)     = shum1(i)
-               uatm(i)   = windx(i)
-               vatm(i)   = windy(i)
+
                fsw(i)    = srad_o(i)/(1-albedo(i))
                flw(i)    = hradd(i)
                
@@ -102,7 +106,8 @@
                  fsnow(i)  = prec_snow(i) !* 1000.0_dbl_kind
 
      
-               wind(i)   = sqrt(windx(i)**2 + windy(i)**2)
+               !wind(i)   = sqrt(windx(i)**2 + windy(i)**2)
+                wind(i)   = sqrt(uatm(i)**2 + vatm(i)**2)
      
                !if ( l_mslp ) then
                !   potT(:) = T_air(:)*(press_air(:)/100000.0_dbl_kind)**ex             
@@ -117,7 +122,6 @@
                swvdf(i) = fsw(i)*frcvdf        ! visible diffuse
                swidr(i) = fsw(i)*frcidr        ! near IR direct
                swidf(i) = fsw(i)*frcidf        ! near IR diffuse
-     
              
             !endif
             call icepack_query_parameters(calc_strair_out=calc_strair, cprho_out=cprho)
@@ -132,8 +136,11 @@
                     dux=uatm(i)-uvel(i) 
                     dvy=vatm(i)-vvel(i)
                     aux=sqrt(dux**2+dvy**2)*rhoair
-                    stress_atmice_x(i) = cdwin*aux*dux
-                    stress_atmice_y(i) = cdwin*aux*dvy
+                    !stress_atmice_x(i) = cdwin*aux*dux
+                    !stress_atmice_y(i) = cdwin*aux*dvy
+                    stress_atmice_x(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dux
+                    stress_atmice_y(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dvy
+                    
                  endif
      
                if (.not. calc_strair) then
@@ -145,7 +152,7 @@
          
          zlvl_t    = 2 !ncar_bulk_z_tair
          zlvl_q    = 2 !ncar_bulk_z_shum
-         zlvl_v    = 2 !ncar_bulk_z_wind
+         zlvl_v    = 10 !ncar_bulk_z_wind
          
          strocnxT(:)=0
          strocnyT(:)=0
@@ -219,6 +226,7 @@
 
       module subroutine icepack_to_schism( nx_in,                           &
                                           aice_out,  vice_out,  vsno_out,  &
+                                          aice0_out,  aicen_out,  vicen_out,  &
                                           fhocn_tot_out, fresh_tot_out,    &
                                           strocnxT_out,  strocnyT_out,     &
                                           dhs_dt_out,    dhi_dt_out,       &
@@ -234,6 +242,7 @@
              aice_out, &  
              vice_out, &
              vsno_out, &
+             aice0_out, &
              fhocn_tot_out, &
              fresh_tot_out, &
              strocnxT_out,  &
@@ -243,6 +252,10 @@
              dhi_dt_out,    &
              evap_ocn_out,  &
              fsrad_ice_out
+            
+            real (kind=dbl_kind), dimension(nx_in,ncat), intent(out), optional :: &
+               aicen_out, &
+               vicen_out             
 
           character(len=*),parameter :: subname='(icepack_to_schism)'   
 
@@ -250,6 +263,9 @@
           if (present(aice_out)              ) aice_out         = aice
           if (present(vice_out)              ) vice_out         = vice
           if (present(vsno_out)              ) vsno_out         = vsno
+          if (present(aice0_out)             ) aice0_out        = aice0
+          if (present(aicen_out)             ) aicen_out        = aicen
+          if (present(vicen_out)             ) vicen_out        = vicen
           if (present(fresh_tot_out)         ) fresh_tot_out    = fresh_tot
           if (present(fhocn_tot_out)         ) fhocn_tot_out    = fhocn_tot
           if (present(strocnxT_out)          ) strocnxT_out     = strocnxT

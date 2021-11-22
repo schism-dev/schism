@@ -2,12 +2,14 @@
 subroutine ice_evp
     use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
-   &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa
+   &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa,xctr,yctr,zctr,pi,&
+   &pframe,eframe,indnd,nnp
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
     use mice_module
     use mice_therm_mod
+    use icepack_intfc, only: icepack_ice_strength
     use icedrv_main,   only: rdg_conv_elem, rdg_shear_elem,icepack_to_schism, &
-    &dt_dyn
+    &dt_dyn,Cdn_ocn,ncat
 
     implicit none
     integer :: isub,i,j,ie,n1,n2,icount,m,id
@@ -15,10 +17,11 @@ subroutine ice_evp
    &pp0,delta,delta_inv,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
    &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
    &cori_nd,umod,gam1,rx,ry,rxp,ryp,eps11,eps12,eps22, &
-   &zeta,delta_nd
+   &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength
   
     integer :: iball(mnei),n
-    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),p_ice(3)
+    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3),strength(nea), &
+    &a_ice0_0(npa),a_icen0(npa,ncat),v_icen0(npa,ncat),a_icen_elem(ncat),v_icen_elem(ncat),swild1(3)
   
     dtevp=dt_dyn/evp_rheol_steps
     t_evp_inv=3/dt_dyn !inverse of T
@@ -27,23 +30,73 @@ subroutine ice_evp
 
     rdg_conv_elem(:)  = 0.0
     rdg_shear_elem(:) = 0.0
+    sigma11(:) = 0
+    sigma12(:) = 0
+    sigma22(:) = 0
+    strength(:) = 0
+    a_ice0_0(:) = 0
+    a_icen0(:,:) = 0
+    v_icen0(:,:) = 0
 
-    do isub=1,evp_rheol_steps
+
+    
       !Update stress @ elem
       call icepack_to_schism (nx_in=npa, &
                   aice_out=a_ice0,                 &
                   vice_out=m_ice0,                 &
-                  vsno_out=m_snow0)
+                  vsno_out=m_snow0,                &
+                  aice0_out=a_ice0_0,               &
+                  aicen_out=a_icen0,                &
+                  vicen_out=v_icen0                 )
+      do i = 1,nea
+        swild1(1) = sum(a_ice0(elnode(1:i34(i),i)))/i34(i)
+        swild1(2) = sum(m_ice0(elnode(1:i34(i),i)))/i34(i)
+        swild1(3) = sum(a_ice0_0(elnode(1:i34(i),i)))/i34(i)
+
+        do j = 1,ncat
+          a_icen_elem(j) = sum(a_icen0(elnode(1:i34(i),i),j))/i34(i)
+          v_icen_elem(j) = sum(v_icen0(elnode(1:i34(i),i),j))/i34(i)
+        enddo
+        call icepack_ice_strength(ncat     = ncat,            &
+                                  aice     = swild1(1),       & 
+                                  vice     = swild1(2),       & 
+                                  aice0    = swild1(3),       & 
+                                  aicen    = a_icen_elem (:), &  
+                                  vicen    = v_icen_elem (:), & 
+                                  strength = strength(i)      )
+        !write(12,*) i ,swild1(1),swild1(2), strength(i)
+      enddo
+      do isub=1,evp_rheol_steps
       do i=1,nea
   !      if(h_ice(i)<=ice_cutoff.or.a_ice(i)<=ice_cutoff) then
   !        sigma11(i)=0; sigma12(i)=0; sigma22(i)=0; delta_ice(i)=0
   !        cycle
   !      endif
-  
-        eps11=dot_product(U_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !epsilon11=du_dx
-        eps22=dot_product(V_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i)) !epsilon22=dv_dy
-        tmp1=dot_product(U_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i)) !du_dy
-        tmp2=dot_product(V_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !dv_dx
+
+        !eps11=dot_product(U_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !epsilon11=du_dx
+        !eps22=dot_product(V_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i)) !epsilon22=dv_dy
+        !tmp1=dot_product(U_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i)) !du_dy
+        !tmp2=dot_product(V_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !dv_dx
+        utmp = U_ice(elnode(1:i34(i),i))
+        vtmp = V_ice(elnode(1:i34(i),i))
+        ave_strength = 0
+        do j=1,i34(i)
+
+          tmp3 = U_ice(elnode(j,i))
+          tmp4 = V_ice(elnode(j,i))
+          !utmp(j) = tmp3*tmp1+tmp2*tmp4
+          !vtmp(j) = tmp1*tmp4+tmp3*tmp2
+          !utmp(j) = tmp3*dot_product(pframe(1:3,1,elnode(j,i)),eframe(1:3,1,i))+tmp4*dot_product(pframe(1:3,2,elnode(j,i)),eframe(1:3,1,i))
+          !vtmp(j) = tmp3*dot_product(pframe(1:3,1,elnode(j,i)),eframe(1:3,2,i))+tmp4*dot_product(pframe(1:3,2,elnode(j,i)),eframe(1:3,2,i))
+          utmp(j) = tmp3*dot_product(pframe(1:3,1,elnode(j,i)),eframe(1:3,1,i))+tmp4*dot_product(pframe(1:3,2,elnode(j,i)),eframe(1:3,1,i))
+          vtmp(j) = tmp3*dot_product(pframe(1:3,1,elnode(j,i)),eframe(1:3,2,i))+tmp4*dot_product(pframe(1:3,2,elnode(j,i)),eframe(1:3,2,i))
+        enddo
+        
+        eps11=dot_product(utmp,dldxy(1:i34(i),1,i)) !epsilon11=du_dx
+        eps22=dot_product(vtmp,dldxy(1:i34(i),2,i)) !epsilon22=dv_dy
+        tmp1=dot_product(utmp,dldxy(1:i34(i),2,i)) !du_dy
+        tmp2=dot_product(vtmp,dldxy(1:i34(i),1,i)) !dv_dx
+
         eps12=0.5*(tmp1+tmp2) !epsilon12
         !Deformation rate
         tmp1=eps11+eps22 !divergence
@@ -56,6 +109,7 @@ subroutine ice_evp
         h_ice_el=sum(m_ice0(elnode(1:3,i)))/3.0
         a_ice_el=sum(a_ice0(elnode(1:3,i)))/3.0
         pp0=h_ice_el*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
+        !pp0 = strength(i)
         zeta=pp0*0.5/max(delta_ice(i),delta_min)
   
         rr1=zeta*t_evp_inv*(eps11+eps22-delta_ice(i)) !RHS for 1st eq
@@ -110,12 +164,20 @@ subroutine ice_evp
           if(maxval(idry(elnode(1:i34(i),i)))/=0) then !dry
             deta(1:2,i)=0
           else !wet
+            p_ice = 0
+            !do n=1,3
+            !  if(any(isbnd(1,elnode(1:i34(i),i))/=0))  p_ice(n)=(rhoice*m_ice0(elnode(n,i))+rhosno*m_snow0(elnode(n,i)))/rho0
+            !enddo
             p_ice=(rhoice*m_ice0(elnode(1:i34(i),i))+rhosno*m_snow0(elnode(1:i34(i),i)))/rho0
-            do n=1,3
-              p_ice(n)=min(p_ice(n),5.0)
-            end do
-            deta(1,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),1,i))
-            deta(2,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),2,i))
+            !do n=1,3
+            !  p_ice(n)=min(p_ice(n),5.0)
+            !end do
+            !deta(1,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),1,i))
+            !deta(2,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),2,i))
+            deta_pice(1,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),1,i))
+            deta_pice(2,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),2,i))
+            deta(1,i)=dot_product((eta2(elnode(1:i34(i),i))),dldxy(1:i34(i),1,i))
+            deta(2,i)=dot_product((eta2(elnode(1:i34(i),i))),dldxy(1:i34(i),2,i))
           endif !dry
         endif !
       enddo !i
@@ -132,6 +194,10 @@ subroutine ice_evp
           U_ice(i)=0; V_ice(i)=0
           cycle 
         endif
+        !if(a_ice0(i)<=0.01) then !no ice
+        !  U_ice(i)=0; V_ice(i)=0
+        !  cycle 
+        !endif
      
         !Not bnd node; has ice
         mass=(rhoice*m_ice0(i)+rhosno*m_snow0(i)) !>0
@@ -147,7 +213,7 @@ subroutine ice_evp
         !RHS
   !Error: tri only
         umod=sqrt((U_ice(i)-u_ocean(i))**2+(V_ice(i)-v_ocean(i))**2)
-        gam1=a_ice0(i)/mass*cdwat*rho0*umod
+        gam1=a_ice0(i)/mass*Cdn_ocn(i)*rho0*umod
         rxp=a_ice0(i)*stress_atmice_x(i)/mass
         ryp=a_ice0(i)*stress_atmice_y(i)/mass
         !Pressure gradient
@@ -157,8 +223,19 @@ subroutine ice_evp
           h_ice_el=sum(m_ice0(elnode(1:3,ie)))/3.0
           h_snow_el=sum(m_snow0(elnode(1:3,ie)))/3.0
           tmp1=rhoice*h_ice_el+rhosno*h_snow_el !mass @elem
-          sum1=sum1+tmp1*deta(1,ie)*area(ie)/3
-          sum2=sum2+tmp1*deta(2,ie)*area(ie)/3
+          !sum1=sum1+tmp1*deta(1,ie)*area(ie)/3
+          !sum2=sum2+tmp1*deta(2,ie)*area(ie)/3
+
+          !if(any(isbnd(1,indnd(1:nnp(i),i))/=0)) then
+            sum1=sum1+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+            sum2=sum2+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
+          !else
+          !  sum1=sum1+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+          !  sum2=sum2+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
+          !endif
+
+          !sum1=sum1+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+          !sum2=sum2+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
         enddo !j
         rxp=rxp-grav*sum1/mass/area_median(i)
         ryp=ryp-grav*sum2/mass/area_median(i)
@@ -167,8 +244,12 @@ subroutine ice_evp
         do j=1,nne(i)
           ie=indel(j,i)
           id=iself(j,i)
-          sum1=sum1+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))
-          sum2=sum2+area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))
+          !sum1=sum1+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))
+          !sum2=sum2+area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))
+          sum1=sum1+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+&
+          &area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+          sum2=sum2+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+&
+          &area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
         enddo !j
         rxp=rxp-sum1/mass/area_median(i)
         ryp=ryp-sum2/mass/area_median(i)
@@ -182,11 +263,15 @@ subroutine ice_evp
         if(delta<=0) call parallel_abort('ice_evp: delta<=0')
         U_ice(i)=(rx*tmp1+ry*tmp2)/delta
         V_ice(i)=(-rx*tmp2+ry*tmp1)/delta
-        if(abs(U_ice(i))>0.5) then
-          U_ice(i)=0.5*U_ice(i)/abs(U_ice(i))
-        endif
-        if(abs(V_ice(i))>0.5) then
-          V_ice(i)=0.5*V_ice(i)/abs(V_ice(i))
+        !if(abs(U_ice(i))>0.1) then
+        !  U_ice(i)=0.1*U_ice(i)/abs(U_ice(i))
+        !endif
+        !if(abs(V_ice(i))>0.1) then
+        !  V_ice(i)=0.1*V_ice(i)/abs(V_ice(i))
+        !endif
+        if(sqrt(U_ice(i)**2+v_ice(i)**2)>1.5) then
+            U_ice(i)=1.5*U_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
+            V_ice(i)=1.5*V_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
         endif
         !Debug
         !if(isub==evp_rheol_steps.and.it_main==1) then

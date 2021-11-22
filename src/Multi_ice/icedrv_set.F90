@@ -417,7 +417,8 @@
           if (myrank == 0) write(*,*) '       icepack.diagnostics'
 
           diag_filename = 'icepack.errors'
-          open (ice_stderr, file=diag_filename, status='unknown', iostat=diag_error)
+         !open (ice_stderr, file=diag_filename, status='unknown', iostat=diag_error)
+         open (87, file=diag_filename, status='unknown', iostat=diag_error)
           if (diag_error /= 0) then
              if (myrank == 0) write(*,*) 'Error while opening error file'
              if (myrank == 0) call icedrv_system_abort(file=__FILE__,line=__LINE__)

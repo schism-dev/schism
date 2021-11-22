@@ -3,7 +3,7 @@ subroutine ice_init
     use schism_glbl, only : rkind,pi,np,npa,ne,nea,mnei,mnei_p,nne,indel,xctr,yctr,area, &
    &nstep_ice,fresh_wa_flux,net_heat_flux,xlon2,ylat2,rearth_eq,elnode,nnp,indnd,iplg,dt, &
    &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir,ice_evap,ielg,i34, &
-   &iself,nxq
+   &iself,nxq,zctr,dldxy
     use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
     use mice_module
     use mice_therm_mod
@@ -11,7 +11,7 @@ subroutine ice_init
     implicit none
     integer :: i,j,ie,istat,nd,nd2,m,mm,indx,jj,id
     real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
-   &det,der_transp(3,2),derivative_stdbf(2,3) 
+   &det,der_transp(3,2),derivative_stdbf(2,3),ar1,ar2
 
     namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
    &delta_min,theta_io,mevp_alpha1,mevp_alpha2,pstar,ellipse,c_pressure,niter_fct, &
@@ -32,7 +32,7 @@ subroutine ice_init
     close(10)
   !Check
     if(ice_tests/=0.and.ice_tests/=1) call parallel_abort('ice_init: ice_tests')
-    if(ice_advection/=0.and.ice_advection/=1) call parallel_abort('ice_init: ice_advection')
+    if(ice_advection/=0.and.ice_advection/=1.and.ice_advection/=2.and.ice_advection/=3) call parallel_abort('ice_init: ice_advection')
     if(ice_therm_on/=0.and.ice_therm_on/=1) call parallel_abort('ice_init: ice_therm_on')
     if(ievp/=0.and.ievp/=1.and.ievp/=2) call parallel_abort('ice_init: ievp')
     if(ice_cutoff<=0) call parallel_abort('ice_init: ice_cutoff')
@@ -123,12 +123,16 @@ subroutine ice_init
   bafuy=0.
   voltriangle=0.
   do i=1,nea
+    call compute_ll(xctr(i),yctr(i),zctr(i),ar1,ar2)
     meancos=sum(cos(ylat2(elnode(1:3,i))))/3.d0
-
+    meancos=cos(ar2)
     do j=1,3 !nodes
       nd=elnode(j,i)
       local_cart(1,j)=xlon2(nd) !radian
       local_cart(2,j)=ylat2(nd)*rearth_eq
+      !local_cart(1,j)=rearth_eq*cos(ylat2(nd))*cos(xlon2(nd))
+      !local_cart(2,j)=rearth_eq*cos(ylat2(nd))*sin(xlon2(nd))
+      !write(12,*) xlon2(nd)/pi*180,ylat2(nd)/pi*180
     enddo !j
 
     !Jacobian of transform
@@ -159,7 +163,11 @@ subroutine ice_init
       bafuy(j,i)=der_transp(j,2)
     enddo
     voltriangle(i)=abs(det)*0.5d0
-
+    do j=1,3
+      bafux(j,i) = dldxy(j,1,i)
+      bafuy(j,i) = dldxy(j,2,i)
+    enddo
+    voltriangle(i) = area(i)
     !Debug
     !write(12,*)'voltriangle:',i,ielg(i),voltriangle(i)
     !write(12,*)'bafux:',i,ielg(i),bafux(:,i)

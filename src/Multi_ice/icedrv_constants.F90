@@ -18,7 +18,7 @@
       integer (kind=int_kind), parameter, public :: &
          ice_stdin  =  5,   & ! reserved unit for standard input
          ice_stdout =  88,   & ! reserved unit for standard output
-         ice_stderr =  87,   & ! reserved unit for standard error
+         ice_stderr =  12,   & ! reserved unit for standard error
          nu_nml     = 10,   &  ! unit for namelist
          nu_restart = 12,   &  ! unit for restart file
          nu_dump    = 13,   &  ! unit for dump file

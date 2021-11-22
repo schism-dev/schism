@@ -82,6 +82,7 @@ subroutine step_therm1 (dt)
     ! column packge includes
     use icepack_intfc, only: icepack_step_therm1
     use schism_glbl, only : idry
+    use mice_module, only : stress_atmice_x,stress_atmice_y
     implicit none
 
     logical (kind=log_kind) :: & 
@@ -103,7 +104,7 @@ subroutine step_therm1 (dt)
 
     logical (kind=log_kind) :: &
        tr_iage, tr_FY, tr_aero, tr_pond, tr_pond_cesm, &
-       tr_pond_lvl, tr_pond_topo, calc_Tsfc
+       tr_pond_lvl, tr_pond_topo, calc_Tsfc, calc_strair
 
     real (kind=dbl_kind), dimension(n_aero,2,ncat) :: &
        aerosno,  aeroice    ! kg/m^2
@@ -118,7 +119,7 @@ subroutine step_therm1 (dt)
     !-----------------------------------------------------------------
 
     call icepack_query_parameters(puny_out=puny)
-    call icepack_query_parameters(calc_Tsfc_out=calc_Tsfc)
+    call icepack_query_parameters(calc_strair_out=calc_strair,calc_Tsfc_out=calc_Tsfc)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -268,6 +269,11 @@ subroutine step_therm1 (dt)
           mlt_onset=mlt_onset(i),   frz_onset = frz_onset(i),   &
           yday = yday,  prescribed_ice = prescribed_ice)
 
+          if (calc_strair) then
+            stress_atmice_x(i) = strairxT(i)
+            stress_atmice_y(i) = strairyT(i)
+         endif
+         
       if (tr_aero) then
         do n = 1, ncat
           if (vicen(i,n) > puny) &
@@ -396,7 +402,7 @@ subroutine update_state (dt, daidt, dvidt, dagedt, offset)
 
     ! column package includes
     use icepack_intfc, only: icepack_aggregate
-
+    use icepack_intfc,    only: icepack_init_trcr
     implicit none
 
     real (kind=dbl_kind), intent(in) :: &
@@ -409,9 +415,29 @@ subroutine update_state (dt, daidt, dvidt, dagedt, offset)
        dagedt   ! change in ice age per time step
 
     integer (kind=int_kind) :: & 
-       i,     & ! horizontal indices
+       i, n, k,     & ! horizontal indices
        ntrcr, & !
        nt_iage  !
+       
+    real (kind=dbl_kind) :: & 
+       temp,     & 
+       tempsum, & !
+       tempv, temps, tempa, pi, &
+       Tsfc, sum, hbar, &
+       rhos, Lfresh, puny   !
+
+    logical (kind=log_kind) :: tr_brine, tr_lvl, tr_fsd
+    integer (kind=int_kind) :: nt_Tsfc, nt_qice, nt_qsno, nt_sice, nt_fsd
+    integer (kind=int_kind) :: nt_fbri, nt_alvl, nt_vlvl
+
+    real (kind=dbl_kind), dimension(ncat) :: &
+       ainit, hinit    ! initial area, thickness
+
+    real (kind=dbl_kind), dimension(nilyr) :: &
+       qin             ! ice enthalpy (J/m3)
+
+    real (kind=dbl_kind), dimension(nslyr) :: &
+       qsn             ! snow enthalpy (J/m3)
 
     logical (kind=log_kind) :: &
        tr_iage  ! ice age tracer
@@ -421,8 +447,14 @@ subroutine update_state (dt, daidt, dvidt, dagedt, offset)
     !-----------------------------------------------------------------
     ! query icepack values
     !-----------------------------------------------------------------
-
+    call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_lvl_out=tr_lvl,    &
+    tr_fsd_out=tr_fsd)
     call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
+    call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc, nt_qice_out=nt_qice, &
+       nt_qsno_out=nt_qsno, nt_sice_out=nt_sice, nt_fsd_out=nt_fsd,            &
+       nt_fbri_out=nt_fbri, nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl)
+    call icepack_query_parameters(rhos_out=rhos, Lfresh_out=Lfresh, puny_out=puny, pi_out=pi)
+
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -437,6 +469,57 @@ subroutine update_state (dt, daidt, dvidt, dagedt, offset)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
 
+   ! set permanent ice cap at the north pole
+        ainit(:) = c0
+        hinit(:) = c0
+    if (3 <= ncat) then
+      n = 3
+      ainit(n) = c1  ! assumes we are using the default ITD boundaries
+      hinit(n) = c2
+    else
+      ainit(ncat) = c1
+      hinit(ncat) = c2
+    endif
+
+
+    do i = 1, nx
+      do n = 1, ncat
+         if((lat_val(i)*180/pi)>91) then
+            !write(*,*) i,lat_val(i)*180/pi,lat_val(i)
+              aicen(i,n) = ainit(n)
+              vicen(i,n) = hinit(n) * ainit(n) ! m
+              vsnon(i,n) = c0
+                              call icepack_init_trcr(Tair     = T_air(i),    &
+                                       Tf       = Tf(i),       &
+                                       Sprofile = salinz(i,:), &
+                                       Tprofile = Tmltz(i,:),  &
+                                       Tsfc     = Tsfc,        &
+                                       nilyr=nilyr, nslyr=nslyr, &
+                                       qin=qin(:), qsn=qsn(:))
+                                       ! surface temperature
+               !trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
+               ! ice enthalpy, salinity
+               !do k = 1, nilyr
+               !   trcrn(i,nt_qice+k-1,n) = qin(k)
+               !   trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+               !enddo
+               ! snow enthalpy
+               !do k = 1, nslyr
+               !   trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+               !enddo               ! nslyr
+               ! brine fraction
+               !if (tr_brine) trcrn(i,nt_fbri,n) = c1
+         endif
+      enddo                  ! ncat
+
+
+          call icepack_warnings_flush(ice_stderr)
+          if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+              file=__FILE__, line=__LINE__)
+
+      
+   enddo
+    !-----------------------------------------------------------------
     do i = 1, nx
 
     !-----------------------------------------------------------------
@@ -612,7 +695,7 @@ subroutine step_dyn_ridge (dt, ndtd)
 
     enddo 
 
-    !call cut_off_icepack
+    call cut_off_icepack
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__, line=__LINE__)
@@ -999,7 +1082,7 @@ subroutine ocn_mixed_layer_icepack(                       &
 
     fhocn_tot = fhocn                                        &  ! these are *aice already
               + (fsens_ocn + flat_ocn + flwout_ocn + flw     &
-              ) * (c1-aice)
+              - Lfresh*fsnow) * (c1-aice)+ max(c0,frzmlt)*aice
               !+ swabs &
               !+ Lfresh*fsnow) * (c1-aice) 
               !+ max(c0,frzmlt)*aice   
@@ -1156,7 +1239,7 @@ module subroutine step_icepack()
 
 
     integer (kind=int_kind) :: &
-       i,k,jj,njj,kk               ! dynamics supercycling index
+       i,k,jj,njj,kk, nt_Tsfc,nt_sice               ! dynamics supercycling index
 
     logical (kind=log_kind) :: &
        calc_Tsfc, skl_bgc, solve_zsal, z_tracers, tr_brine, &  ! from icepack
@@ -1165,7 +1248,7 @@ module subroutine step_icepack()
     real (kind=dbl_kind) :: &
        offset,              &   ! d(age)/dt time offset
        t1, t2, t3, t4,dt,umod,tmp1,&
-       dux,dvy,aux
+       dux,dvy,aux,puny
 
     real(kind=dbl_kind) :: &
        swild(npa)
@@ -1195,7 +1278,9 @@ module subroutine step_icepack()
 
     call icepack_query_parameters(skl_bgc_out=skl_bgc, z_tracers_out=z_tracers)
     call icepack_query_parameters(solve_zsal_out=solve_zsal, calc_Tsfc_out=calc_Tsfc, &
-                                  wave_spec_out=wave_spec)
+                                  wave_spec_out=wave_spec,puny_out=puny)
+    call icepack_query_tracer_indices( &
+         nt_Tsfc_out=nt_Tsfc,nt_sice_out=nt_sice)
     call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_fsd_out=tr_fsd)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
@@ -1323,9 +1408,17 @@ module subroutine step_icepack()
 
        !t2 = MPI_Wtime()
 
-       if(ice_advection/=0) then
+       if(ice_advection==1) then
          call tracer_advection_icepack
          if(myrank==0) write(16,*)'done ice FCT advection'
+       else if (ice_advection==2) then
+         call tracer_advection_icepack2
+         if(myrank==0) write(16,*)'done ice advection in Taylor-Galerkin way'
+       else if (ice_advection==3) then
+         call tracer_advection_icepack3
+         if(myrank==0) write(16,*)'done ice upwind advection'
+       else
+         if(myrank==0) write(16,*)'no ice dynamics'
        endif
        
        !t3 = MPI_Wtime()
@@ -1409,7 +1502,7 @@ ice_evap(:)=0
 srad_th_ice(:)=0
 
  do i=1,npa
-   if(lhas_ice(i)) then
+   !if(lhas_ice(i)) then
      !tau_oi(1,i)=tau_oi_x1(i) !m^2/s/s
      !tau_oi(2,i)=tau_oi_y1(i)
       ice_tr(1,i)=m_ice0(i)
@@ -1419,8 +1512,7 @@ srad_th_ice(:)=0
      fresh_wa_flux(i)   =  fresh_wa_flux0(i) !- runoff(:)
      ice_evap(i)=evaporation(i)*(1-a_ice0(i))
      srad_th_ice(i)     =  fsrad_ice_out0(i)
-   endif
-
+   !endif
  !Check outputs
  !if(t_oi(i)/=t_oi(i).or.fresh_wa_flux(i)/=fresh_wa_flux(i).or. &
  !&net_heat_flux(i)/=net_heat_flux(i).or.ice_tr(1,i)/=ice_tr(1,i).or. &
@@ -1434,14 +1526,14 @@ srad_th_ice(:)=0
  do i=1,np
    if(lhas_ice(i)) then
       umod=sqrt((U_ice(i)-u_ocean(i))**2+(V_ice(i)-v_ocean(i))**2)
-     tmp1=ice_tr(2,i)*cdwat*umod
+     tmp1=ice_tr(2,i)*Cdn_ocn(i)*umod
      if(isbnd(1,i)<0) then !b.c. (including open)
       njj=0
       do kk=1,nnp(i)
          jj=indnd(kk,i)
          if((isbnd(1,jj)==0).and.(lhas_ice(jj))) then
             umod=sqrt((U_ice(jj)-u_ocean(jj))**2+(V_ice(jj)-v_ocean(jj))**2)
-            tmp1=a_ice0(jj)*cdwat*umod
+            tmp1=a_ice0(jj)*Cdn_ocn(i)*umod
             tau_oi(1,i)=tau_oi(1,i)+tmp1*((U_ice(jj)-u_ocean(jj))*cos_io-(V_ice(jj)-v_ocean(jj))*sin_io) !m^2/s/s
             tau_oi(2,i)=tau_oi(2,i)+tmp1*((U_ice(jj)-u_ocean(jj))*sin_io+(V_ice(jj)-v_ocean(jj))*cos_io)  
             njj=njj+1  

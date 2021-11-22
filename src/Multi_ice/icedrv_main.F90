@@ -24,7 +24,7 @@
 
           public ::                                                         &
                     ! Variables
-                    ncat, rdg_conv_elem, rdg_shear_elem,dt_dyn,              & 
+                    ncat, rdg_conv_elem, rdg_shear_elem,Cdn_ocn,dt_dyn,    & 
                     ! Subroutines
                     set_icepack, alloc_icepack, init_icepack, step_icepack, &
                     icepack_to_schism,                                       &
@@ -808,22 +808,25 @@
 
               ! Copy variables to schism from icepack
               module subroutine icepack_to_schism(                          &
-                                          nx_in,                           &
-                                          aice_out,  vice_out,  vsno_out,  &
-                                          fhocn_tot_out, fresh_tot_out,    &
-                                          strocnxT_out,  strocnyT_out,     &
-                                          dhs_dt_out,    dhi_dt_out,       &
-                                          fsalt_out,     evap_ocn_out,     &
-                                          fsrad_ice_out                    )
+                                          nx_in,                            &
+                                          aice_out,  vice_out,  vsno_out,   &
+                                          aice0_out,  aicen_out,  vicen_out,&
+                                          fhocn_tot_out, fresh_tot_out,     &
+                                          strocnxT_out,  strocnyT_out,      &
+                                          dhs_dt_out,    dhi_dt_out,        &
+                                          fsalt_out,     evap_ocn_out,      &
+                                          fsrad_ice_out                     )
+
 
                   !use mod_mesh
                   implicit none        
                   integer (kind=int_kind), intent(in) :: &
                      nx_in      ! block dimensions        
                   real (kind=dbl_kind), dimension(nx_in), intent(out), optional :: &
-                     aice_out, &
+                     aice_out, &  
                      vice_out, &
                      vsno_out, &
+                     aice0_out, &
                      fhocn_tot_out, &
                      fresh_tot_out, &
                      strocnxT_out,  &
@@ -833,6 +836,10 @@
                      dhi_dt_out,    &
                      evap_ocn_out,  &
                      fsrad_ice_out
+
+                  real (kind=dbl_kind), dimension(nx_in,ncat), intent(out), optional :: &
+                     aicen_out, &
+                     vicen_out
                      
               end subroutine icepack_to_schism
 
@@ -842,6 +849,16 @@
                   implicit none
                   !type(t_mesh), intent(in), target :: mesh
               end subroutine tracer_advection_icepack
+              module subroutine tracer_advection_icepack2()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack2
+              module subroutine tracer_advection_icepack3()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack3
 
               ! Advection initialization
               module subroutine init_advection_icepack()
