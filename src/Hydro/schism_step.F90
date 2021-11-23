@@ -5124,7 +5124,7 @@
 !$OMP detpdy,chigamma,ubstar,vbstar,h_bar,bigf1,bigf2,botf1,botf2,big_ubstar,big_vbstar, &
 !$OMP av_df,j,nd,isd,htot,cff1,cff2,tmp1,tmp2,k,rs1,rs2,swild10,horx,hory,swild2,swild, &
 !$OMP itmp1,tmpx1,tmpx2,tmpy1,tmpy2,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi,cff3, &
-!$OMP !sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
+!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
       do i=1,nea
         ghat1(1,i)=0.d0 !init
         ghat1(2,i)=0.d0
