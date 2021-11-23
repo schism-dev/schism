@@ -234,7 +234,7 @@
                      &xlmax(nvrt),cpsi3(2:nvrt),cpsi2p(2:nvrt),q2ha(2:nvrt),xlha(2:nvrt), &
                      &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa),grav2(npa)
       real(rkind) :: swild(max(100,nsa+nvrt+12+ntracers)),swild2(nvrt,12),swild10(max(4,nvrt),12), &
-     &swild3(20+mntracers),swild4(2,4)
+     &swild3(20+mntracers),swild4(2,4),utmp0(4),vtmp0(4)
 !#ifdef USE_SED
       real(rkind) :: swild_m(6,ntracers),swild_w(3),q2fha(2:nvrt),q2fpha(2:nvrt),epsftmp(nvrt), &
                      &Tpzzntr(nvrt),Dpzzntr(nvrt)  
@@ -867,8 +867,7 @@
       !From ice to hydro: tau_oi,fresh_wa_flux,net_heat_flux
       !Beware hotstart implication
 
-      !if(mod(it-1,nstep_ice)==0) 
-      call step_icepack
+      if(mod(it-1,nstep_ice)==0) call step_icepack
       !Overwrite ocean stress with ice (tau_oi)
       tmp_max=0.d0 !init max stress
       smax=0.d0 !init max abs previp rate
@@ -3465,7 +3464,14 @@
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),su2(:,jsj),swild(1),ibelow)
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
                 endif !isd/=i
-                swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+
+!new37
+                if(ics==1) then
+                  swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+                else
+                  call project_hvec(swild(1),swild(2),sframe2(:,:,jsj),sframe2(:,:,j),swild10(i,1),swild10(i,2))
+                endif
+ 
               enddo !i=1,i34(ie)
 
               !do i=1,2 !i34(ie) !2 sides per elem.
@@ -3555,7 +3561,13 @@
                     call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),gam2,swild(2),ibelow)
                     !call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),swild98(2,:,jsj),swild(2),ibelow)
                   endif !isd/=i
-                  swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+
+!new37
+                  if(ics==1) then
+                    swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+                  else
+                    call project_hvec(swild(1),swild(2),sframe2(:,:,jsj),sframe2(:,:,j),swild10(i,1),swild10(i,2))
+                  endif
  
 !                  !Project to side frame for ics=2
 !                  if(ics==1) then
@@ -3635,8 +3647,13 @@
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),su2(:,jsj),swild(1),ibelow)
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
                 endif !isd/=i
-                !in ll frame if ics=2
-                swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+                !in ll frame if ics=2; new37
+                if(ics==1) then
+                  swild10(i,1)=swild(1); swild10(i,2)=swild(2)
+                else
+                  call project_hvec(swild(1),swild(2),sframe2(:,:,jsj),sframe2(:,:,j),swild10(i,1),swild10(i,2))
+                endif
+
               enddo !i=1,i34(ie)
 
               !Reconstruct local gradient
@@ -3844,7 +3861,7 @@
 !$OMP parallel default(private) shared(ns,sdbt,su2,sv2,uu2,vv2,ww2,idry_s,kbs,isdel, &
 !$OMP idry_e,iplg,isidenode,xcj,ycj,zcj,pframe,nvrt,islg,iadv,ics,xctr,yctr,zctr,zs,isbs,velmin_btrack, &
 !$OMP swild98,ibtrack_test,tsd,dt,dtb_min,dtb_max,ndelt_min,ndelt_max,elnode,i34,dldxy,btrack_nudge, &
-!$OMP xnd,ynd,l,nbtrk,mxnbt,btlist,myrank,ielg &
+!$OMP xnd,ynd,l,nbtrk,mxnbt,btlist,myrank,ielg,sframe2,eframe &
 !$OMP ) 
 
 !$OMP workshare
@@ -3889,8 +3906,8 @@
         !swild_tmp to store global coord. of the starting side
         swild_tmp(1)=xcj(isd0); swild_tmp(2)=ycj(isd0); swild_tmp(3)=zcj(isd0)
         !swild10_tmp to store frame at starting pt for ics=2 (not used for ics=1)
-        !Use pframe at 1st node as approx.
-        swild10_tmp(1:3,1:3)=pframe(:,:,isidenode(1,isd0)) !sframe(:,:,isd0)
+        !Use sframe2; new37
+        swild10_tmp(1:3,1:3)=sframe2(:,:,i) !pframe(:,:,isidenode(1,isd0)) !sframe(:,:,isd0)
 
         do j=jmin,nvrt 
 !         Initialize (xt,yt,zt),nnel and vel.
@@ -3947,10 +3964,24 @@
               icount=icount+1
 
               !not strictly along z; in ll frame for ics=2
-              dudx=dot_product(uu2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),1,ie))
-              dudy=dot_product(uu2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
-              dvdx=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),1,ie))
-              dvdy=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
+!              dudx=dot_product(uu2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),1,ie))
+!              dudy=dot_product(uu2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
+!              dvdx=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),1,ie))
+!              dvdy=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
+!new37
+              do jj=1,i34(ie)
+                nd0=elnode(jj,ie)
+                if(ics==1) then
+                  utmp0(jj)=uu2(j,nd0); vtmp0(jj)=vv2(j,nd0)
+                else
+                  call project_hvec(uu2(j,nd0),vv2(j,nd0),pframe(:,:,nd0),eframe(:,:,ie),utmp0(jj),vtmp0(jj))
+                endif !ics
+              enddo !jj
+              dudx=dot_product(utmp0(1:i34(ie)),dldxy(1:i34(ie),1,ie))
+              dudy=dot_product(utmp0(1:i34(ie)),dldxy(1:i34(ie),2,ie))
+              dvdx=dot_product(vtmp0(1:i34(ie)),dldxy(1:i34(ie),1,ie))
+              dvdy=dot_product(vtmp0(1:i34(ie)),dldxy(1:i34(ie),2,ie))
+
               suma=suma+dt*sqrt(dudx**2.d0+dudy**2.d0+dvdx**2.d0+dvdy**2.d0)
             enddo !ii=1,2
             if(icount==0) then
@@ -4226,7 +4257,7 @@
         allocate(swild96(2,nvrt,nsa),swild97(2,nvrt,nsa),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (2.2)')
 
-!$OMP parallel default(shared) private(iter,i,ie,k,suru,surv,ll,j,id,kin)
+!$OMP parallel default(shared) private(iter,i,ie,k,suru,surv,ll,j,id,kin,tt1,ss1)
         do iter=1,15 !100
           !Calc epsilon
 !$OMP     workshare
@@ -4274,8 +4305,16 @@
                     id=elside(nxq(i34(ie)-1,ll,i34(ie)),ie)
                   endif
                   kin=max(k,kbs(id))
-                  suru=suru+swild96(1,kin,id)
-                  surv=surv+swild96(2,kin,id)
+!new37
+                  if(ics==1) then
+                    suru=suru+swild96(1,kin,id)
+                    surv=surv+swild96(2,kin,id)
+                  else
+                    call project_hvec(swild96(1,kin,id),swild96(2,kin,id),sframe2(:,:,id),sframe2(:,:,i),tt1,ss1)
+                    suru=suru+tt1
+                    surv=surv+ss1
+                  endif !ics
+
                 enddo !j
                 !swild97(1,k,i)=tsd(k,i)+0.125*(suru-2*swild96(1,k,i))
                 swild97(1,k,i)=sdbt(1,k,i)+0.125d0*(suru-2.d0*swild96(1,k,i))
@@ -4502,8 +4541,13 @@
               call vinter(1,nvrt,1,znl(k,i),kbs(isd),nvrt,k,zs(:,isd),gam,swild(1),ibelow)
               gam(:)=sv2(:,isd)
               call vinter(1,nvrt,1,znl(k,i),kbs(isd),nvrt,k,zs(:,isd),gam,swild(2),ibelow)
-              swild10(m,1)=swild(1) !u@side @nodal level
-              swild10(m,2)=swild(2) !v
+!new37
+              if(ics==1) then
+                swild10(m,1)=swild(1) !u@side @nodal level
+                swild10(m,2)=swild(2) !v
+              else
+                call project_hvec(swild(1),swild(2),sframe2(:,:,isd),pframe(:,:,i),swild10(m,1),swild10(m,2))
+              endif !ics
             enddo !m
             utmp=sum(swild10(1:i34(ie),1))/real(i34(ie),rkind) !vel @ centroid
             vtmp=sum(swild10(1:i34(ie),2))/real(i34(ie),rkind) !vel @ centroid
@@ -4579,7 +4623,7 @@
 #endif
 
       !Vertical advection part
-!$OMP parallel default(shared) private(i,alow,icount,j,ie,tmp1,tmp2,swild,swild2,n1,n2,k)
+!$OMP parallel default(shared) private(i,alow,icount,j,ie,tmp1,tmp2,swild,swild2,n1,n2,k,vn1,vn2,tt1,ss1)
 
 !$OMP workshare
       sdbt(1:2,:,:)=0.d0
@@ -4617,8 +4661,17 @@
         n1=isidenode(1,i); n2=isidenode(2,i)
         do k=kbs(i),nvrt
 !          if(isbs(i)==0) then !internal
-          sdbt(1,k,i)=su2(k,i)-dt*(bcc(1,k,n1)+bcc(1,k,n2))/2.d0-dt*swild2(k,1)
-          sdbt(2,k,i)=sv2(k,i)-dt*(bcc(2,k,n1)+bcc(2,k,n2))/2.d0-dt*swild2(k,2)
+!new37
+          if(ics==1) then
+            sdbt(1,k,i)=su2(k,i)-dt*(bcc(1,k,n1)+bcc(1,k,n2))/2.d0-dt*swild2(k,1)
+            sdbt(2,k,i)=sv2(k,i)-dt*(bcc(2,k,n1)+bcc(2,k,n2))/2.d0-dt*swild2(k,2)
+          else
+            call project_hvec(bcc(1,k,n1),bcc(2,k,n1),pframe(:,:,n1),sframe2(:,:,i),vn1,vn2)
+            call project_hvec(bcc(1,k,n2),bcc(2,k,n2),pframe(:,:,n2),sframe2(:,:,i),tt1,ss1)
+            sdbt(1,k,i)=su2(k,i)-dt*(vn1+tt1)/2.d0-dt*swild2(k,1)
+            sdbt(2,k,i)=sv2(k,i)-dt*(vn2+ss1)/2.d0-dt*swild2(k,2)
+          endif !ics
+
 !          else !bnd side; use ELM
             !Use elem average b/cos there is no viscosity
 !            ie=isdel(1,i)
@@ -4828,7 +4881,7 @@
       if(ibc==0) then
 !$OMP parallel default(shared) private(i,swild,swild2,swild10,j,ie,eta_min,zmax,ibot_fl, &
 !$OMP tmp0,tmp1,k,n1,n2,xn1,xn2,yn1,yn2,tmp,alow,bdia,cupp,xctr2,yctr2,icount,x10,x20, &
-!$OMP y10,y20,rl10,rl20,bb1,bb2,delta,sintheta,gam,gam2,ibelow,grav3)
+!$OMP y10,y20,rl10,rl20,bb1,bb2,delta,sintheta,gam,gam2,ibelow,grav3,tmp2)
 
 !       Prepare cubic spline (2nd derivative stored in hp_int temporarily)
 !$OMP   workshare
@@ -5017,11 +5070,12 @@
               call vinter(1,nvrt,1,(zs(k,i)+zs(k-1,i))/2.d0,kbe(ie)+1,nvrt,k,gam,gam2,swild(1),ibelow)
               gam2(kbe(ie)+1:nvrt)=dr_dxy(2,kbe(ie)+1:nvrt,ie)
               call vinter(1,nvrt,1,(zs(k,i)+zs(k-1,i))/2.d0,kbe(ie)+1,nvrt,k,gam,gam2,swild(2),ibelow)
-!              if(ics==2) then !to sframe
-!                call project_hvec(swild(1),swild(2),eframe(:,:,ie),sframe(:,:,i),tmp1,tmp2)
-!                swild(1)=tmp1
-!                swild(2)=tmp2
-!              endif !ics
+!new37
+              if(ics==2) then !to sframe
+                call project_hvec(swild(1),swild(2),eframe(:,:,ie),sframe2(:,:,i),tmp1,tmp2)
+                swild(1)=tmp1
+                swild(2)=tmp2
+              endif !ics
               swild2(k,1:2)=swild2(k,1:2)+swild(1:2)
             enddo !j
             if(icount==0) call parallel_abort('MAIN: impossible 101')
@@ -5070,7 +5124,7 @@
 !$OMP detpdy,chigamma,ubstar,vbstar,h_bar,bigf1,bigf2,botf1,botf2,big_ubstar,big_vbstar, &
 !$OMP av_df,j,nd,isd,htot,cff1,cff2,tmp1,tmp2,k,rs1,rs2,swild10,horx,hory,swild2,swild, &
 !$OMP itmp1,tmpx1,tmpx2,tmpy1,tmpy2,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi,cff3, &
-!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3) 
+!$OMP !sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
       do i=1,nea
         ghat1(1,i)=0.d0 !init
         ghat1(2,i)=0.d0
@@ -5165,14 +5219,32 @@
               endif
             endif !2/3D
           enddo !k
-          ghat1(1,i)=ghat1(1,i)+cff1*tmp1-cff3*xtmp
-          ghat1(2,i)=ghat1(2,i)+cff1*tmp2-cff3*ytmp
 
-          !For tau, pframe and eframe are approx. the same
-          tau_x=sum(tau(1,isidenode(1:2,isd)))/2.d0
-          tau_y=sum(tau(2,isidenode(1:2,isd)))/2.d0
-          ubstar=sdbt(1,kbs(isd)+1,isd)
-          vbstar=sdbt(2,kbs(isd)+1,isd)
+!new37
+          if(ics==1) then
+            ghat1(1,i)=ghat1(1,i)+cff1*tmp1-cff3*xtmp
+            ghat1(2,i)=ghat1(2,i)+cff1*tmp2-cff3*ytmp
+          else
+            call project_hvec(tmp1,tmp2,sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            call project_hvec(xtmp,ytmp,sframe2(:,:,isd),eframe(:,:,i),tt1,ss1)
+            ghat1(1,i)=ghat1(1,i)+cff1*vn1-cff3*tt1
+            ghat1(2,i)=ghat1(2,i)+cff1*vn2-cff3*ss1
+          endif !ics
+
+          if(ics==1) then
+            tau_x=sum(tau(1,isidenode(1:2,isd)))/2.d0
+            tau_y=sum(tau(2,isidenode(1:2,isd)))/2.d0
+            ubstar=sdbt(1,kbs(isd)+1,isd)
+            vbstar=sdbt(2,kbs(isd)+1,isd)
+          else
+            n1=isidenode(1,isd); n2=isidenode(2,isd)
+            call project_hvec(tau(1,n1),tau(2,n1),pframe(:,:,n1),eframe(:,:,i),vn1,vn2)
+            call project_hvec(tau(1,n2),tau(2,n2),pframe(:,:,n2),eframe(:,:,i),tt1,ss1)
+            tau_x=(vn1+tt1)/2.d0
+            tau_y=(vn2+ss1)/2.d0
+            call project_hvec(sdbt(1,kbs(isd)+1,isd),sdbt(2,kbs(isd)+1,isd),sframe2(:,:,isd),eframe(:,:,i),ubstar,vbstar)
+          endif !ics
+
           ghat1(1,i)=ghat1(1,i)-chi(isd)*dt*cff2*ubstar+dt*cff1*tau_x
           ghat1(2,i)=ghat1(2,i)-chi(isd)*dt*cff2*vbstar+dt*cff1*tau_y
 
@@ -5252,6 +5324,16 @@
           botf1=botf1+swild10(kbs(isd)+1,1)
           botf2=botf2+swild10(kbs(isd)+1,2)
 
+!new37
+          if(ics==2) then
+            call project_hvec(bigf1,bigf2,sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            bigf1=vn1; bigf2=vn2
+            call project_hvec(botf1,botf2,sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            botf1=vn1; botf2=vn2
+            call project_hvec(bigfa1,bigfa2,sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            bigfa1=vn1; bigfa2=vn2
+          endif !ics
+
           ghat1(1,i)=ghat1(1,i)+cff1*dt*bigf1-cff2*chi(isd)*dt*dt*botf1-cff3*dt*bigfa1
           ghat1(2,i)=ghat1(2,i)+cff1*dt*bigf2-cff2*chi(isd)*dt*dt*botf2-cff3*dt*bigfa2
         enddo !j: nodes and sides
@@ -5274,6 +5356,7 @@
           tmp1=tmp1+av_cff1*dt*bigf1-av_cff2*chi(isd)*dt*dt*botf1-av_cff3*dt*bigfa1
           tmp2=tmp2+av_cff1*dt*bigf2-av_cff2*chi(isd)*dt*dt*botf2-av_cff3*dt*bigfa2
         enddo !j
+        !botf1 etc are already in elem frame
         ghat1(1,i)=ghat1(1,i)+tmp1/real(i34(i),rkind)
         ghat1(2,i)=ghat1(2,i)+tmp2/real(i34(i),rkind)
 
@@ -5433,7 +5516,12 @@
 !	  I_4
           do m=1,i34(ie)
             isd=elside(m,ie)
-            swild2(1:2,m)=bigu(1:2,isd)   
+!new37
+            if(ics==1) then
+              swild2(1:2,m)=bigu(1:2,isd)   
+            else
+              call project_hvec(bigu(1,isd),bigu(2,isd),sframe2(:,:,isd),eframe(:,:,ie),swild2(1,m),swild2(2,m))
+            endif
           enddo !m
           dot1=dldxy(id,1,ie)*sum(swild2(1,1:i34(ie)))/real(i34(ie),rkind)+ &
      &dldxy(id,2,ie)*sum(swild2(2,1:i34(ie)))/real(i34(ie),rkind)
@@ -5851,7 +5939,7 @@
       if(istat/=0) call parallel_abort('MAIN: fail to allocate swild99')
 !'
 !$OMP parallel default(shared) private(j,icount1,icount2,icount3,l,ie,itmp,m,nd, &
-!$OMP tmpx,tmpx1,tmpx2,tmpx3,tmpy,tmpy1,tmpy2,tmpy3,itmp1,i,k,icount)
+!$OMP tmpx,tmpx1,tmpx2,tmpx3,tmpy,tmpy1,tmpy2,tmpy3,itmp1,i,k,icount,vn1,vn2)
 !     Initialize for dry sides and exchange
 
 !$OMP workshare
@@ -5879,6 +5967,12 @@
               do m=1,i34(ie)
                 tmpx=eta2(elnode(m,ie))*dldxy(m,1,ie) !eframe if ics=2
                 tmpy=eta2(elnode(m,ie))*dldxy(m,2,ie)
+!new37
+                if(ics==2) then
+                  call project_hvec(tmpx,tmpy,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
+                  tmpx=vn1; tmpy=vn2
+                endif
+
                 deta2_dx(j)=deta2_dx(j)+tmpx !ll if ics=2
                 deta2_dy(j)=deta2_dy(j)+tmpy
               enddo !m
@@ -5895,6 +5989,16 @@
                 tmpx3=etp(nd)*dldxy(m,1,ie)
                 tmpy3=etp(nd)*dldxy(m,2,ie)
             
+!new37
+                if(ics==2) then
+                  call project_hvec(tmpx1,tmpy1,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
+                  tmpx1=vn1; tmpy1=vn2
+                  call project_hvec(tmpx2,tmpy2,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
+                  tmpx2=vn1; tmpy2=vn2
+                  call project_hvec(tmpx3,tmpy3,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
+                  tmpx3=vn1; tmpy3=vn2
+                endif
+
                 deta1_dx(j)=deta1_dx(j)+tmpx1 
                 deta1_dy(j)=deta1_dy(j)+tmpy1
                 dpr_dx(j)=dpr_dx(j)+tmpx2
@@ -5960,7 +6064,7 @@
 !$OMP parallel default(shared) private(j,k,node1,node2,htot,taux2,tauy2,hat_gam_x, &
 !$OMP hat_gam_y,tmp1,tmp2,dzz,dfz,ndim,kin,alow,bdia,cupp,tmp,rrhs,soln,gam,dep, &
 !$OMP swild,uths,vths,vnorm,etam,vtan,jblock,jface,dot1,ss,sav_h_sd,sav_alpha_sd, &
-!$OMP zctr2,cff1,zz1,zrat,ub2,vb2,vmag1,vmag2)
+!$OMP zctr2,cff1,zz1,zrat,ub2,vb2,vmag1,vmag2,vn1,vn2,tt1,ss1)
 
 !$OMP workshare
       swild98(1,:,:)=su2(:,:)
@@ -6002,8 +6106,16 @@
             call parallel_abort(errmsg)
           endif
 !          del=hhat(j)*hhat(j)+(theta2*cori(j)*dt*htot)**2 !delta > 0
-          taux2=(tau(1,node1)+tau(1,node2))/2.d0
-          tauy2=(tau(2,node1)+tau(2,node2))/2.d0
+          !new37
+          if(ics==1) then
+            taux2=(tau(1,node1)+tau(1,node2))/2.d0
+            tauy2=(tau(2,node1)+tau(2,node2))/2.d0
+          else
+            call project_hvec(tau(1,node1),tau(2,node1),pframe(:,:,node1),sframe2(:,:,j),vn1,vn2)
+            call project_hvec(tau(1,node2),tau(2,node2),pframe(:,:,node2),sframe2(:,:,j),tt1,ss1)
+            taux2=(vn1+tt1)*0.5d0
+            tauy2=(vn2+ss1)*0.5d0
+          endif !ics
 
           !hat_gam_[xy] has a dimension of m/s
           !hat_gam_x=sdbt(1,nvrt,j)+dt*(cori(j)*sv2(nvrt,j)-dpr_dx(j)/rho0+0.69d0*grav3*detp_dx(j)+ &
@@ -6121,8 +6233,17 @@
             endif
 !-----------------------------
           else !k=nvrt
-            taux2=(tau(1,node1)+tau(1,node2))/2.d0
-            tauy2=(tau(2,node1)+tau(2,node2))/2.d0
+!new37
+            if(ics==1) then            
+              taux2=(tau(1,node1)+tau(1,node2))/2.d0
+              tauy2=(tau(2,node1)+tau(2,node2))/2.d0
+            else
+              call project_hvec(tau(1,node1),tau(2,node1),pframe(:,:,node1),sframe2(:,:,j),vn1,vn2)
+              call project_hvec(tau(1,node2),tau(2,node2),pframe(:,:,node2),sframe2(:,:,j),tt1,ss1)
+              taux2=(vn1+tt1)*0.5d0
+              tauy2=(vn2+ss1)*0.5d0
+            endif !ics
+
             rrhs(1,kin)=rrhs(1,kin)+dt*taux2
             rrhs(2,kin)=rrhs(2,kin)+dt*tauy2
           endif !k
@@ -6334,11 +6455,19 @@
                 else
                   kin=max(k,kbs(id)+1)
                 endif
-                suru=suru+su2(kin,id) !utmp
-                surv=surv+sv2(kin,id) !vtmp
+
+!new37
+                if(ics==1) then
+                  suru=suru+su2(kin,id) !utmp
+                  surv=surv+sv2(kin,id) !vtmp
+                else
+                  call project_hvec(su2(kin,id),sv2(kin,id),sframe2(:,:,id),sframe2(:,:,i),vn1,vn2)
+                  suru=suru+vn1
+                  surv=surv+vn2
+                endif
               enddo !j
 
-              bcc(1,k,i)=su2(k,i)+shapiro(i)/4.d0*(suru-4.d0*su2(k,i)) !sframe if ics=2
+              bcc(1,k,i)=su2(k,i)+shapiro(i)/4.d0*(suru-4.d0*su2(k,i)) !sframe2 if ics=2
               bcc(2,k,i)=sv2(k,i)+shapiro(i)/4.d0*(surv-4.d0*sv2(k,i))
 
             enddo !k
@@ -6487,7 +6616,7 @@
 !$OMP parallel default(shared) private(i,i34inv,n1,n2,n3,n4,av_bdef1,av_bdef2,l, &
 !$OMP xcon,ycon,zcon,area_e,sne,ubar,vbar,m,isd,dhdx,dhdy,dep,swild,ubed,vbed,wbed, &
 !$OMP !bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux,surface_flux_ratio, &
-!$OMP wflux_correct)
+!$OMP wflux_correct,vn1,vn2,tt1,ss1)
 
 !$OMP workshare
       we=0.d0 !for dry and below bottom levels; in eframe if ics=2
@@ -6546,8 +6675,16 @@
         ubar=0.d0; vbar=0.d0 !average bottom hvel
         do m=1,i34(i) !side
           isd=elside(m,i)
-          ubar=ubar+su2(kbs(isd),isd)*i34inv !swild98(1,m,kbs(isd))/i34(i)
-          vbar=vbar+sv2(kbs(isd),isd)*i34inv !swild98(2,m,kbs(isd))/i34(i)
+!new37
+          if(ics==1) then
+            ubar=ubar+su2(kbs(isd),isd)*i34inv 
+            vbar=vbar+sv2(kbs(isd),isd)*i34inv
+          else
+            call project_hvec(su2(kbs(isd),isd),sv2(kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            ubar=ubar+vn1*i34inv
+            vbar=vbar+vn2*i34inv
+          endif !ics
+
         enddo !m
 
 !       Bottom b.c.
@@ -6575,11 +6712,20 @@
             vnor2=su2(l+1,jsj)*snx(jsj)+sv2(l+1,jsj)*sny(jsj)
             sum1=sum1+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
 
-            !In eframe
-            ubar=ubar+su2(l,jsj)*i34inv !swild98(1,j,l)/i34(i) !su2(l,jsj)/3    
-            ubar1=ubar1+su2(l+1,jsj)*i34inv !swild98(1,j,l+1)/i34(i) !su2(l+1,jsj)/3    
-            vbar=vbar+sv2(l,jsj)*i34inv !swild98(2,j,l)/i34(i) !sv2(l,jsj)/3    
-            vbar1=vbar1+sv2(l+1,jsj)*i34inv !swild98(2,j,l+1)/i34(i) !sv2(l+1,jsj)/3    
+            !In eframe; new37
+            if(ics==1) then
+              ubar=ubar+su2(l,jsj)*i34inv 
+              ubar1=ubar1+su2(l+1,jsj)*i34inv 
+              vbar=vbar+sv2(l,jsj)*i34inv 
+              vbar1=vbar1+sv2(l+1,jsj)*i34inv 
+            else
+              call project_hvec(su2(l,jsj),sv2(l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
+              call project_hvec(su2(l+1,jsj),sv2(l+1,jsj),sframe2(:,:,jsj),eframe(:,:,i),tt1,ss1)
+              ubar=ubar+vn1*i34inv
+              vbar=vbar+vn2*i34inv
+              ubar1=ubar1+tt1*i34inv
+              vbar1=vbar1+ss1*i34inv
+            endif !ics
           enddo !j
 
 !         Impose bottom no-flux b.c.
@@ -6631,8 +6777,16 @@
           vbar=0.d0
           do j=1,i34(i)
             jsj=elside(j,i)
-            ubar=ubar+su2(l,jsj)*i34inv 
-            vbar=vbar+sv2(l,jsj)*i34inv  
+!new37
+            if(ics==1) then
+              ubar=ubar+su2(l,jsj)*i34inv 
+              vbar=vbar+sv2(l,jsj)*i34inv  
+            else
+              call project_hvec(su2(l,jsj),sv2(l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
+              ubar=ubar+vn1*i34inv
+              vbar=vbar+vn2*i34inv
+            endif !ics
+
           enddo !j
           wflux_correct=(ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l))*surface_flux_ratio*area_e(l) !fraction of surface flux
 
