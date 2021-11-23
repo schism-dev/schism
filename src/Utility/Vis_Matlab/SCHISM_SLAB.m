@@ -90,7 +90,7 @@ for day=stacks2
   istep=istep+1;
 
   if(icomb==0) 
-    fname=[base,'/outputs/' 'schout_0000_' num2str(day) '.nc'];
+    fname=[base,'/outputs/' 'schout_000000_' num2str(day) '.nc'];
   else
     fname=[base,'/outputs/' 'schout_' num2str(day) '.nc'];
   end
@@ -117,7 +117,7 @@ for day=stacks2
     %out5(ivs,np) if 2D or 'S'; otherwise out5(ivs,nvrt,np)
     if(icomb==0) 
       for irank=0:nproc-1
-        fname3=[base '/outputs/schout_' num2str(irank,'%04.f') '_' num2str(day) '.nc'];
+        fname3=[base '/outputs/schout_' num2str(irank,'%06.f') '_' num2str(day) '.nc'];
         ncid3 = netcdf.open(fname3,'NC_NOWRITE');
         
         clear tmp tmp2 tmp3;
@@ -229,7 +229,7 @@ for day=stacks2
       h1=patch('Faces',nm','Vertices',xy00,'FaceVertexCData',uout_p','FaceColor','interp','EdgeColor','none');
       colormap(jet(40));
       % Set colormap range
-      caxis([-0.5 0.5]); colorbar;
+      caxis([0 30]); colorbar;
     else %vector
       loc_scale_x=v2(2)*0.3+v2(1)*0.7;
       loc_scale_y=-v2(4)*0.02+v2(3)*1.02;

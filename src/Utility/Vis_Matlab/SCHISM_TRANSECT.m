@@ -144,7 +144,7 @@ for day=stacks2
   istep=istep+1;
 
   if(icomb==0)
-    fname=[base,'/outputs/' 'schout_0000_' num2str(day) '.nc'];
+    fname=[base,'/outputs/' 'schout_000000_' num2str(day) '.nc'];
   else
     fname=[base,'/outputs/' 'schout_' num2str(day) '.nc'];
   end
@@ -179,7 +179,7 @@ for day=stacks2
       for irank=0:nproc-1
         if(rank_read(irank+1)==0); continue; end;
         
-        fname3=[base '/outputs/schout_' num2str(irank,'%04.f') '_' num2str(day) '.nc'];
+        fname3=[base '/outputs/schout_' num2str(irank,'%06.f') '_' num2str(day) '.nc'];
         ncid3 = netcdf.open(fname3,'NC_NOWRITE');
         clear tmp tmp2 tmp3;
         if(ivs==1)
