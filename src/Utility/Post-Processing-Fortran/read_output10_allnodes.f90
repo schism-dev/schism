@@ -33,7 +33,7 @@
       character(len=30) :: file63,varname,outname(3),file62
       character(len=12) :: it_char
 !      character*48 data_format
-  
+      logical::lexist
       integer :: nx(4,4,3),dimids(100),idims(100)
       allocatable :: sigma(:),cs(:),ztot(:)
       allocatable :: outvar(:,:),out(:,:,:),icum(:,:,:),eta2(:),ztmp(:,:)
