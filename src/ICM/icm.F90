@@ -3876,6 +3876,8 @@ subroutine calkwq(id,nv,ure,it)
       if(isrecnveg==0)then !recycled nutrients go to sediment directly
         tlfNH4veg(id,j)=tlfNH4veg(id,j)-ancveg(j)*fniveg(j)* &
                                        &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+      endif
+      if(isrecpveg==0)then
         tlfPO4veg(id,j)=tlfPO4veg(id,j)-apcveg(j)*fpiveg(j)* &
                                        &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
       endif
@@ -3889,6 +3891,8 @@ subroutine calkwq(id,nv,ure,it)
       if(isrecnveg==0)then !recycled nutrients go to sediment directly
         trtponveg(id,j)=trtponveg(id,j)+ancveg(j)*(1-fniveg(j))* &
                                        &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
+      endif
+      if(isrecpveg==0)then
         trtpopveg(id,j)=trtpopveg(id,j)+apcveg(j)*(1-fpiveg(j))* &
                                        &((bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j))
       endif
