@@ -105,7 +105,7 @@ endif
 # rules to build objects for executable programs and libraries
 
 #Search path
-VPATH = Core/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
+VPATH = Core/ Core/PaHM/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
         WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Multi_ice/ Fabm/
 
 ifdef FUJITSU
@@ -115,7 +115,10 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
+        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
+        csv_utilities.o  parwind.o 
+OBJS :=  $(OBJS) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
