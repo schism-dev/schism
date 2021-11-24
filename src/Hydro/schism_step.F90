@@ -1750,8 +1750,8 @@
           endif
           vnth0=qthcon(ibnd)*ramp/carea(ibnd)
 !          if(inflow_mth == 0) then !uniform
-          uth(:,i)=vnth0*snx(i) !sframe(1,1,i)
-          vth(:,i)=vnth0*sny(i) !sframe(2,1,i)
+          uth(:,i)=vnth0*snx(i)
+          vth(:,i)=vnth0*sny(i)
         else if(ifltype(ibnd)==-1) then !Flather 1
 !         uthnd is the normal vel.; no ramp up
           do k=1,nvrt
@@ -1760,8 +1760,8 @@
               call parallel_abort(errmsg)
             endif
             tmp=(uthnd(k,nwild(1),ibnd)+uthnd(k,nwild(2),ibnd))/2.d0
-            uth(k,i)=tmp*snx(i) !sframe(1,1,i)
-            vth(k,i)=tmp*sny(i) !sframe(2,1,i) 
+            uth(k,i)=tmp*snx(i) 
+            vth(k,i)=tmp*sny(i) 
           enddo !k
 
         else if(ifltype(ibnd)==3) then
@@ -1771,8 +1771,8 @@
 !            arg=amig(jfr)*time-ncyc*2*pi+face(jfr)-vfa(ibnd,1,jfr)
 !            vnth0=vnth0+ramp*ff(jfr)*vmo(ibnd,1,jfr)*cos(arg)
 !          enddo !jfr=1,nbfr
-!          uth(:,i)=vnth0*snx(i) !sframe(1,1,i)
-!          vth(:,i)=vnth0*sny(i) !sframe(2,1,i)
+!          uth(:,i)=vnth0*snx(i) 
+!          vth(:,i)=vnth0*sny(i)
 
           ubar1=0.d0
           vbar1=0.d0
@@ -3907,7 +3907,7 @@
         swild_tmp(1)=xcj(isd0); swild_tmp(2)=ycj(isd0); swild_tmp(3)=zcj(isd0)
         !swild10_tmp to store frame at starting pt for ics=2 (not used for ics=1)
         !Use sframe2; new37
-        swild10_tmp(1:3,1:3)=sframe2(:,:,i) !pframe(:,:,isidenode(1,isd0)) !sframe(:,:,isd0)
+        swild10_tmp(1:3,1:3)=sframe2(:,:,i) !pframe(:,:,isidenode(1,isd0)) 
 
         do j=jmin,nvrt 
 !         Initialize (xt,yt,zt),nnel and vel.
@@ -5071,7 +5071,7 @@
               gam2(kbe(ie)+1:nvrt)=dr_dxy(2,kbe(ie)+1:nvrt,ie)
               call vinter(1,nvrt,1,(zs(k,i)+zs(k-1,i))/2.d0,kbe(ie)+1,nvrt,k,gam,gam2,swild(2),ibelow)
 !new37
-              if(ics==2) then !to sframe
+              if(ics==2) then !to sframe2
                 call project_hvec(swild(1),swild(2),eframe(:,:,ie),sframe2(:,:,i),tmp1,tmp2)
                 swild(1)=tmp1
                 swild(2)=tmp2
@@ -6340,8 +6340,8 @@
 
               vnorm=sqrt(grav/dps(j))*(eta2(node1)+eta2(node2)-eta_mean(node1)-eta_mean(node2))/2.d0
               vnorm=vnorm+uth(k,j)*snx(j)+vth(k,j)*sny(j)
-              su2(k,j)=vnorm*snx(j) !sframe(1,1,j)
-              sv2(k,j)=vnorm*sny(j) !sframe(2,1,j)
+              su2(k,j)=vnorm*snx(j)
+              sv2(k,j)=vnorm*sny(j)
             else if(ifltype(isbs(j))==-2) then !discharge
               etam=(eta1(node1)+eta1(node2))/2.d0
               !tmp2=(-0.0011*etam+0.0907)/clen(isbs(j)) !\bar{f}>=0
@@ -6355,8 +6355,8 @@
               endif
               vnorm=tmp2*tmp1/htot
 !              if(ics==1) then
-              su2(k,j)=vnorm*snx(j) !sframe(1,1,j)
-              sv2(k,j)=vnorm*sny(j) !sframe(2,1,j)
+              su2(k,j)=vnorm*snx(j)
+              sv2(k,j)=vnorm*sny(j)
 
             else if(ifltype(isbs(j))==-4.or.ifltype(isbs(j))==-5) then !3D radiation
               vnorm=su2(k,j)*snx(j)+sv2(k,j)*sny(j)
@@ -6423,7 +6423,7 @@
       deallocate(swild98)
 
 !...  Shapiro filter (normally used if indvel<=0)
-!     use bcc as temporary variable (sframe)
+!     use bcc as temporary variable (sframe2)
       if(ishapiro/=0) then
         allocate(swild98(2,nvrt,nsa),stat=istat)
         if(istat/=0) call parallel_abort('STEP: fail to allocate swild98')

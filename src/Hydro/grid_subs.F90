@@ -1917,14 +1917,20 @@ subroutine aquire_hgrid(full_aquire)
   enddo !ie
 
   ! Allocate and compute side frame tensor for ics=1 or 2
-  ! sframe(i,j,isd): where j is the axis id, i is the component id, isd is the local side id
-  ! For ics=1, only sframe(1:2,1:2,isd) are used
-  if(allocated(sframe)) deallocate(sframe); allocate(sframe(3,3,nsa),stat=stat);
+  ! sframe(i,j,isd): local normal/tangential frame (where j=1 is the axis id, 
+  ! i is the component id, isd is the local side id). We only need j=1.
+  ! sframe2(i,j,isd): side-based lon/lat frame (not used if ics=1; j=1:3)
+  ! sn[x,y]: cos/sin of side normal dir
+  if(allocated(sframe)) deallocate(sframe); allocate(sframe(3,1,nsa),stat=stat);
+  if(allocated(sframe2)) deallocate(sframe2); allocate(sframe2(3,3,nsa),stat=stat);
+  if(allocated(snx)) deallocate(snx); allocate(snx(nsa),stat=stat);
+  if(allocated(sny)) deallocate(sny); allocate(sny(nsa),stat=stat);
   if(stat/=0) call parallel_abort('AQUIRE_HGRID: sframe allocation failure')
 
   thetan=-1.d10 !max. deviation between ze and zs axes
   realvalue=-1.d10 !max. dot product of zs and ys axes
   sframe=0._rkind !for ics=1
+  sframe2=0._rkind !for ics=1
   do j=1,nsa
     n1=isidenode(1,j)
     n2=isidenode(2,j)
@@ -1932,25 +1938,31 @@ subroutine aquire_hgrid(full_aquire)
       thetan=atan2(xnd(n1)-xnd(n2),ynd(n2)-ynd(n1))
       sframe(1,1,j)=cos(thetan) 
       sframe(2,1,j)=sin(thetan)
-      sframe(1,2,j)=-sframe(2,1,j)
-      sframe(2,2,j)=sframe(1,1,j)
+      snx(j)=sframe(1,1,j)
+      sny(j)=sframe(2,1,j)
+!      sframe(1,2,j)=-sframe(2,1,j)
+!      sframe(2,2,j)=sframe(1,1,j)
     else !lat/lon
       !First compute zs axis with help from local ll frame
       call compute_ll(xcj(j),ycj(j),zcj(j),ar1,ar2)
       !1: zonal axis; 2: meridional axis; 3: outward of ellipsoid
-      swild(1,1)=-sin(ar1)
-      swild(2,1)=cos(ar1)
-      swild(3,1)=0._rkind
-      swild(1,2)=-cos(ar1)*sin(ar2)
-      swild(2,2)=-sin(ar1)*sin(ar2)
-      swild(3,2)=rearth_pole/rearth_eq*cos(ar2)
-      ar4=sqrt(swild(1,2)**2.d0+swild(2,2)**2+swild(3,2)**2)
+      sframe2(1,1,j)=-sin(ar1) !zonal
+      sframe2(2,1,j)=cos(ar1)
+      sframe2(3,1,j)=0._rkind
+      sframe2(1,2,j)=-cos(ar1)*sin(ar2) !meridional
+      sframe2(2,2,j)=-sin(ar1)*sin(ar2)
+      sframe2(3,2,j)=rearth_pole/rearth_eq*cos(ar2)
+      ar4=sqrt(sframe2(1,2,j)**2.d0+sframe2(2,2,j)**2.d0+sframe2(3,2,j)**2.d0) 
       if(ar4==0.d0) call parallel_abort('GRID: ar4=0')
-      swild(1:3,2)=swild(1:3,2)/ar4
+      sframe2(1:3,2,j)=sframe2(1:3,2,j)/ar4
 
-      call cross_product(swild(1,1),swild(2,1),swild(3,1), &
-     &                   swild(1,2),swild(2,2),swild(3,2), &
-     &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j))
+      call cross_product(sframe2(1,1,j),sframe2(2,1,j),sframe2(3,1,j), &
+                        &sframe2(1,2,j),sframe2(2,2,j),sframe2(3,2,j), &
+                        &sframe2(1,3,j),sframe2(2,3,j),sframe2(3,3,j))
+
+!      call cross_product(swild(1,1),swild(2,1),swild(3,1), &
+!     &                   swild(1,2),swild(2,2),swild(3,2), &
+!     &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j))
 
 
       !ys axis: local tangential dir
@@ -1962,27 +1974,17 @@ subroutine aquire_hgrid(full_aquire)
         write(errmsg,*)'AQUIRE_HGRID: 0 ys-vector',iplg(isidenode(1:2,j))
         call parallel_abort(errmsg)
       endif
-      sframe(1,2,j)=ar1/ar4
-      sframe(2,2,j)=ar2/ar4
-      sframe(3,2,j)=ar3/ar4
-
-!      !zs axis
-!      ar4=sqrt(xcj(j)**2+ycj(j)**2+zcj(j)**2)
-!      if(ar4==0._rkind) then
-!        write(errmsg,*)'AQUIRE_HGRID: 0 zs-vector',iplg(isidenode(1:2,j))
-!        call parallel_abort(errmsg)
-!      endif
-!      sframe(1,3,j)=xcj(j)/ar4
-!      sframe(2,3,j)=ycj(j)/ar4
-!      sframe(3,3,j)=zcj(j)/ar4
+      swild(1,2)=ar1/ar4
+      swild(2,2)=ar2/ar4
+      swild(3,2)=ar3/ar4
 
       !Orthogonality between zs and ys
-      egb1=abs(dot_product(sframe(1:3,2,j),sframe(1:3,3,j)))
+      egb1=abs(dot_product(swild(1:3,2),sframe2(1:3,3,j)))
       if(egb1>realvalue) realvalue=egb1
 
-      !xs axis
-      call cross_product(sframe(1,2,j),sframe(2,2,j),sframe(3,2,j), &
-     &                   sframe(1,3,j),sframe(2,3,j),sframe(3,3,j),ar1,ar2,ar3)
+      !xs axis (normal dir)
+      call cross_product(swild(1,2),swild(2,2),swild(3,2), &
+     &                   sframe2(1,3,j),sframe2(2,3,j),sframe2(3,3,j),ar1,ar2,ar3)
       ar4=sqrt(ar1*ar1+ar2*ar2+ar3*ar3)
       if(ar4==0._rkind) then
         write(errmsg,*)'AQUIRE_HGRID: 0 xs-vector',iplg(isidenode(1:2,j))
@@ -1992,10 +1994,13 @@ subroutine aquire_hgrid(full_aquire)
       sframe(2,1,j)=ar2/ar4
       sframe(3,1,j)=ar3/ar4
 
+      snx(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,1,j))
+      sny(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,2,j))
+
       !Check zs and ze axes (from isdel(1,j))
       if(j<=ns) then !resident
         ie=isdel(1,j)
-        egb1=dot_product(sframe(1:3,3,j),eframe(1:3,3,ie))-1
+        egb1=dot_product(sframe2(1:3,3,j),eframe(1:3,3,ie))-1
         if(abs(egb1)>thetan) thetan=abs(egb1)
       endif !j<=ns
 

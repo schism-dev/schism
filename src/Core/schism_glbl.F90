@@ -330,16 +330,17 @@ module schism_glbl
   integer,save,allocatable :: idry_s(:)        ! wet/dry flag
   integer,save,allocatable :: isidenei2(:,:)        !side neighborhood 
   real(rkind),save,allocatable :: zs(:,:)         ! z-coord. (local frame - vertical up)
-  !Transformation tensor for side frame: sframe(i,j,isd)
-  ! where j is the axis id, i is the component id, isd is the local side id (aug.)
-  ! For ics=1, only sframe(1:2,1:2,isd) are used. In all cases, x-axis is from adjacent elem 1 to 2 (i.e. local normal dir).
+  !Transformation tensor for side frame: sframe(i,j=1,isd)
+  ! where j=1 is the axis id, i is the component id, isd is the local side id (aug.)
+  ! In all cases, x-axis is from adjacent elem 1 to 2 (i.e. local normal dir).
+  ! We only need j=1
   real(rkind),save,allocatable :: sframe(:,:,:)
 !new37: sframe2
   !2nd version of side frame, aligning with local lon/lat frame. Only defined if ics=2
   real(rkind),save,allocatable :: sframe2(:,:,:)
 
   !cos/sin of side normals. If ics=1, these are same as sframe(1:2,1,isd)
-  !If ics=2, these are product of sframe(:,1,:) and local lat/lon frame
+  !If ics=2, these are product of sframe(:,1,:) and local lat/lon frame sframe2
   real(rkind),save,allocatable :: snx(:),sny(:)
   real(rkind),save,allocatable :: isblock_sd(:,:)
   integer,save,allocatable :: islg2(:)      ! Local-to-global side index table (2-tier augmented)
@@ -422,8 +423,8 @@ module schism_glbl
   real(rkind),save,allocatable :: total_mass_error(:) !(ntracers) Total mass error after advection step for mass correction
   !x & y-component of velocity at side centers & whole levels
   !For ics=1, these are defined in the global frame
-  !For ics=2, these are defined in the ll frame (not local side frame). Note
-  !that these are not defined on sframe() but on sframe2()
+  !For ics=2, these are defined in the ll frame (not local side frame sframe but
+  !sframe2)
   real(rkind),save,allocatable :: su2(:,:),sv2(:,:) 
   !velocity at nodes in an element. In ll if ics=2
   !ufg(1:4,1:nvrt,1:nea)

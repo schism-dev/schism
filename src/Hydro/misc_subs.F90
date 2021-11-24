@@ -3758,10 +3758,10 @@
 !        uzonal=u_compactzonal(ytmp,u00_zonal)
 
         vmer=-u00_zonal*sin(xtmp)*sin(alpha_zonal) !meridional vel.
-        swild10(1:3,1:3)=(pframe(:,:,n1)+pframe(:,:,n2))/2._rkind
-        call project_hvec(uzonal,vmer,swild10(1:3,1:3),sframe(:,:,i),utmp,vtmp)
-        su2(:,i)=utmp 
-        sv2(:,i)=vtmp 
+!        swild10(1:3,1:3)=(pframe(:,:,n1)+pframe(:,:,n2))/2._rkind
+!        call project_hvec(uzonal,vmer,swild10(1:3,1:3),sframe(:,:,i),utmp,vtmp)
+        su2(:,i)=uzonal !utmp 
+        sv2(:,i)=vmer !vtmp 
       enddo !i
 
 !      eta2=0 
