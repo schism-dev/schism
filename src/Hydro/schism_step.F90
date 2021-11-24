@@ -298,7 +298,7 @@
 
 !     SAL option: scale gravity
       if(iloadtide==2) then !simple const
-        grav2=grav*0.9d0
+        grav2=grav*(1.d0-loadtide_coef) !0.9d0
       else if(iloadtide==3) then !Stepanov & Hughes (2004)
         do i=1,npa
           dp1=max(dp(i),0.d0)
