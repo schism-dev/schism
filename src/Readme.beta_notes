@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+2a7647d (24 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2;
 a7a0b2b (17 Oct 2021): restored iwindoff;
 afc7b1a (11 Oct 2021): changed vgrid.in format for ivcor=1 to facilitate parallel read (use
                        change_vgrid.f90 to convert) 
