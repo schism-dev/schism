@@ -1917,29 +1917,27 @@ subroutine aquire_hgrid(full_aquire)
   enddo !ie
 
   ! Allocate and compute side frame tensor for ics=1 or 2
-  ! sframe(i,j,isd): local normal/tangential frame (where j=1 is the axis id, 
-  ! i is the component id, isd is the local side id). We only need j=1.
   ! sframe2(i,j,isd): side-based lon/lat frame (not used if ics=1; j=1:3)
-  ! sn[x,y]: cos/sin of side normal dir
-  if(allocated(sframe)) deallocate(sframe); allocate(sframe(3,1,nsa),stat=stat);
+  ! sn[x,y]: cos/sin of side normal dir (in local lon/lat frame if ics=2)
+!  if(allocated(sframe)) deallocate(sframe); allocate(sframe(3,1,nsa),stat=stat);
   if(allocated(sframe2)) deallocate(sframe2); allocate(sframe2(3,3,nsa),stat=stat);
   if(allocated(snx)) deallocate(snx); allocate(snx(nsa),stat=stat);
   if(allocated(sny)) deallocate(sny); allocate(sny(nsa),stat=stat);
-  if(stat/=0) call parallel_abort('AQUIRE_HGRID: sframe allocation failure')
+  if(stat/=0) call parallel_abort('AQUIRE_HGRID: sframe2 allocation failure')
 
   thetan=-1.d10 !max. deviation between ze and zs axes
   realvalue=-1.d10 !max. dot product of zs and ys axes
-  sframe=0._rkind !for ics=1
+!  sframe=0._rkind !for ics=1
   sframe2=0._rkind !for ics=1
   do j=1,nsa
     n1=isidenode(1,j)
     n2=isidenode(2,j)
     if(ics==1) then
       thetan=atan2(xnd(n1)-xnd(n2),ynd(n2)-ynd(n1))
-      sframe(1,1,j)=cos(thetan) 
-      sframe(2,1,j)=sin(thetan)
-      snx(j)=sframe(1,1,j)
-      sny(j)=sframe(2,1,j)
+!      sframe(1,1,j)=cos(thetan) 
+!      sframe(2,1,j)=sin(thetan)
+      snx(j)=cos(thetan) !sframe(1,1,j)
+      sny(j)=sin(thetan) !sframe(2,1,j)
 !      sframe(1,2,j)=-sframe(2,1,j)
 !      sframe(2,2,j)=sframe(1,1,j)
     else !lat/lon
@@ -1990,12 +1988,16 @@ subroutine aquire_hgrid(full_aquire)
         write(errmsg,*)'AQUIRE_HGRID: 0 xs-vector',iplg(isidenode(1:2,j))
         call parallel_abort(errmsg)
       endif
-      sframe(1,1,j)=ar1/ar4
-      sframe(2,1,j)=ar2/ar4
-      sframe(3,1,j)=ar3/ar4
-
-      snx(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,1,j))
-      sny(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,2,j))
+      swild(1,1)=ar1/ar4
+      swild(2,1)=ar2/ar4
+      swild(3,1)=ar3/ar4
+      snx(j)=dot_product(swild(1:3,1),sframe2(1:3,1,j))
+      sny(j)=dot_product(swild(1:3,1),sframe2(1:3,2,j))
+!      sframe(1,1,j)=ar1/ar4
+!      sframe(2,1,j)=ar2/ar4
+!      sframe(3,1,j)=ar3/ar4
+!      snx(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,1,j))
+!      sny(j)=dot_product(sframe(1:3,1,j),sframe2(1:3,2,j))
 
       !Check zs and ze axes (from isdel(1,j))
       if(j<=ns) then !resident
@@ -2008,7 +2010,7 @@ subroutine aquire_hgrid(full_aquire)
       !if(islg(j)==1.or.islg(j)==ns_global.or.islg(j)==1000) then
       !  xtmp=(xlon(n1)+xlon(n2))/2/pi*180
       !  ytmp=(ylat(n1)+ylat(n2))/2/pi*180
-      !  write(12,*)'sample sframe:',iplg(n1),iplg(n2),xtmp,ytmp,sframe(:,:,j)
+      !  write(12,*)'sample sframe:',iplg(n1),iplg(n2),xtmp,ytmp,snx(j),sny(j)
       !endif
     endif !ics
   enddo !j=1,nsa
@@ -2638,10 +2640,10 @@ subroutine dump_hgrid
     enddo
     if(isd<=ns) then
       write(10,'(a,6i8,7e14.6,i4)') 'Side ',isd,isdgb,ngb1,ngb2,iegb1,iegb2, &
-      &xcj(isd),ycj(isd),zcj(isd),dps(isd),distj(isd),sframe(1,1,isd),sframe(2,1,isd),isbs(isd)
+      &xcj(isd),ycj(isd),zcj(isd),dps(isd),distj(isd),snx(isd),sny(isd),isbs(isd)
     else
       write(10,'(a,6i8,7e14.6,i4)') '# Side', isd,isdgb,ngb1,ngb2,iegb1,iegb2, &
-      &xcj(isd),ycj(isd),zcj(isd),dps(isd),distj(isd),sframe(1,1,isd),sframe(2,1,isd),isbs(isd)
+      &xcj(isd),ycj(isd),zcj(isd),dps(isd),distj(isd),snx(isd),sny(isd),isbs(isd)
     endif
     write(10,'(a,1000i8)') '####PList:',(ibuf1(k),ibuf2(k),k=1,j)
   enddo !isd

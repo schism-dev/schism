@@ -2498,7 +2498,7 @@
         if(nhtblocks>0) then
           if(iorder==0) then
             allocate(isblock_nd(2,npa), &
-                  &dir_block(3,nhtblocks), &
+                  &dir_block(2,nhtblocks), &
                   &isblock_sd(2,nsa), &
                   &isblock_el(nea),q_block(nhtblocks),vnth_block(2,nhtblocks), &
                   &q_block_lcl(nhtblocks),iq_block_lcl(nhtblocks), &
@@ -2530,7 +2530,7 @@
 
           !Compute block elements and (mean) face directions for each block (assumed
           !to be outer normal of face "2" from the block element
-          allocate(swild99(3,nhtblocks),ibuf1(nhtblocks,1),ibuf2(nhtblocks,1),stat=istat)
+          allocate(swild99(2,nhtblocks),ibuf1(nhtblocks,1),ibuf2(nhtblocks,1),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: failed to alloc. (15)')
           swild99=0.d0 !local copy of dir
           ibuf1=0 !local counter
@@ -2546,7 +2546,8 @@
                   call parallel_abort(errmsg)
                 endif
                 if(isblock_nd(2,n1)==2.and.isblock_nd(2,n2)==2) then
-                  swild99(1:3,jblock)=swild99(1:3,jblock)+sframe(1:3,1,isd)*ssign(j,i)
+                  swild99(1,jblock)=swild99(1,jblock)+snx(isd)*ssign(j,i) !sframe(1:3,1,isd)*ssign(j,i)
+                  swild99(2,jblock)=swild99(2,jblock)+sny(isd)*ssign(j,i) 
                   ibuf1(jblock,1)=ibuf1(jblock,1)+1
                 endif
               enddo !j
@@ -2556,7 +2557,7 @@
 #ifdef INCLUDE_TIMING
           wtmp1=mpi_wtime()
 #endif
-          call mpi_allreduce(swild99,dir_block,3*nhtblocks,rtype,MPI_SUM,comm,ierr)
+          call mpi_allreduce(swild99,dir_block,2*nhtblocks,rtype,MPI_SUM,comm,ierr)
           call mpi_allreduce(ibuf1,ibuf2,nhtblocks,itype,MPI_SUM,comm,ierr)
 #ifdef INCLUDE_TIMING
           wtimer(3,2)=wtimer(3,2)+mpi_wtime()-wtmp1
@@ -2567,14 +2568,14 @@
               write(errmsg,*) 'MAIN: orphaned block face:',i
               call parallel_abort(errmsg)
             else
-              dir_block(1:3,i)=dir_block(1:3,i)/real(ibuf2(i,1),rkind)
+              dir_block(1:2,i)=dir_block(1:2,i)/real(ibuf2(i,1),rkind)
               !Re-normalize dir. vector
-              rmag=sqrt(dir_block(1,i)**2.d0+dir_block(2,i)**2.d0+dir_block(3,i)**2.d0)
+              rmag=sqrt(dir_block(1,i)**2.d0+dir_block(2,i)**2.d0) !+dir_block(3,i)**2.d0)
               if(rmag==0.d0) call parallel_abort('MAIN: 0 dir vector')
-              dir_block(1:3,i)=dir_block(1:3,i)/rmag
+              dir_block(1:2,i)=dir_block(1:2,i)/rmag
 
               !Check
-              !write(12,*)'Block face dir:',i,ibuf2(i,1),dir_block(1:3,i)
+              !write(12,*)'Block face dir:',i,ibuf2(i,1),dir_block(1:2,i)
             endif
           enddo !i
           deallocate(swild99,ibuf1,ibuf2)

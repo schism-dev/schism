@@ -5730,7 +5730,8 @@
                 jblock=isblock_sd(1,isd)
                 jface=isblock_sd(2,isd)
                 !Compute if the local side normal is in/against block dir
-                dot1=dot_product(dir_block(1:3,jblock),sframe(1:3,1,isd))
+                !dot1=dot_product(dir_block(1:3,jblock),sframe(1:3,1,isd))
+                dot1=dir_block(1,jblock)*snx(isd)+dir_block(2,jblock)*sny(isd)
                 ss=sign(1.d0,dot1)
                 if(jface==1) then
                   !Out-normal for I_3,5 is along block dir
@@ -6400,7 +6401,8 @@
             if(isblock_sd(2,j)>0) then !face
               jface=isblock_sd(2,j)
               !Compute normal vel. in local sframe
-              dot1=dot_product(dir_block(1:3,jblock),sframe(1:3,1,j))
+              !dot1=dot_product(dir_block(1:3,jblock),sframe(1:3,1,j))
+              dot1=dir_block(1,jblock)*snx(j)+dir_block(2,jblock)*sny(j)
               ss=sign(1.d0,dot1)
               vnorm=vnth_block(jface,jblock)*ss
               su2(k,j)=block_nudge*vnorm*snx(j)+(1-block_nudge)*swild98(1,k,j) !su2(k,j)

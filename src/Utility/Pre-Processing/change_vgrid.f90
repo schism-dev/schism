@@ -1,4 +1,4 @@
-! Change ivcor=1 format of vgrid.in for newer versions
+! Change ivcor=1 format of vgrid.in for newer versions from 11 Oct 2021
 ! Inputs: hgrid.gr3, vgrid.in.old
 ! Outputs: vgrid.in.new
 ! ifort -O2 -mcmodel=medium -CB -Bstatic -o change_vgrid change_vgrid.f90 
