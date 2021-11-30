@@ -72,10 +72,10 @@
 ! If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
 ! SAL is applied everywhere and does not share parameters with tidal potential).
 ! For iloadtide=2, a const scaling (1-loadtide_coef) is used; for iloadtide=3, the scaling is 
-! dependent on depth (Stepanov & Hughes 2004).
+! dependent on depth (Stepanov & Hughes 2004) with max of loadtide_coef.
 !-----------------------------------------------------------------------
   iloadtide = 0
-  loadtide_coef = 0.1 !only used if iloadtide=2
+  loadtide_coef = 0.1 !only used if iloadtide=2,3
 
 ! Starting time
   start_year = 2000 !int

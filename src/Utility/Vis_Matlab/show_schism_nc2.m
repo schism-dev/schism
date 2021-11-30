@@ -114,6 +114,14 @@ for istack=start_stack:end_stack
       scale=2e2; %scale to fit
       quiver(x,y,squeeze(uv(:,1))*scale,squeeze(uv(:,2))*scale,0,'b');
 %      text(3.5e5,4.e5,'1 m/s');
+
+      %Alternatively, plot vector magnitude
+%      surf=squeeze(sqrt(uv(:,1).^2+uv(:,2).^2));
+%      surf(find(icolor_nd==1))=nan;
+%      h1=patch('Faces',nm','Vertices',[x y],'FaceVertexCData',surf,'FaceColor','interp','EdgeColor','none');
+%      colormap(jet(40));
+%      caxis([0 1]); colorbar;
+
     else %scalar
       surf=squeeze(uv(:,1)); 
       surf(find(icolor_nd==1))=nan;

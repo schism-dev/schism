@@ -306,7 +306,8 @@
           beta_bar=-9.8169d-3+1.8289d-3*tmp1+4.3787d-4*dp1-2.9042d-5*dp1*tmp1+ &
      &6.6038d-7*dp1*dp1-4.7393d-9*dp1*dp1*tmp1-1.9354d-11*dp1*dp1*dp1+ &
      &2.6969d-13*dp1*dp1*dp1*tmp1
-          beta_bar=max(0.d0,min(0.12d0,beta_bar))
+          !beta_bar=max(0.d0,min(0.12d0,beta_bar))
+          beta_bar=max(0.d0,min(loadtide_coef,beta_bar))
           
           !Debug
           !if(it==iths_main+1) write(12,*)'SAL beta=',i,dp(i),beta_bar
