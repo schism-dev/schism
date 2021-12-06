@@ -619,9 +619,9 @@ subroutine fabm_schism_init_stage2
   endif
 
   !> For now, only FABM0 light calculation is done here.
-  if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
-    call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
-  endif
+  !if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
+  !  call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
+  !!endif
 #endif
 
   allocate(fs%bottom_depth(nea))
@@ -1122,16 +1122,19 @@ subroutine fabm_schism_do()
     if (idry_e(i)==0) then
 #if _FABM_API_VERSION_ < 1
       call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
+      !@>todo we lose mass here, if we include the FABM 1 calculation below.
+      !> This needs to be thoroughly assessed
 #else
       call fs%model%get_vertical_movement(1, nvrt, i, w)
+      !todo: declear a standard variable to store bottom velocity
+      wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
 #endif
 
-      wsett(istart:istart+fs%nvar-1,kbe(i),i) = -w(kbe(i)+1,1:fs%nvar)
       do k=kbe(i)+1,nvrt-1
         wsett(istart:istart+fs%nvar-1,k,i) = -0.5d0*(w(k,1:fs%nvar)+w(k+1,1:fs%nvar))
       end do
-      ! boundary condition (excl. sedimentation/erosion), not necessary because
-      ! wsett=0.0 already for k<kbe(i+1) and k==nvrt:
+      !boundary condition (excl. sedimentation/erosion), not necessary because
+      !wsett=0.0 already for k<kbe(i+1) and k==nvrt:
       !wsett(istart:istart+fs%nvar-1,k,i) = 0.0d0
       !wsett(istart:istart+fs%nvar-1,ikbe(i),i) = 0.0d0
     end if
