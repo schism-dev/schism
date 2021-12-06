@@ -1876,7 +1876,7 @@
 !=================================================================================
       !Read in saved hydro outputs, and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
       !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
-      !transport solver; similarly for tr_nd*
+      !transport solver; similarly for tr_nd* and [uu,vv,ww]2 (for btrack)
 
       !Read time from 1st stack and check dt==multiple of dtout
       if(it==iths_main+1.and.myrank==0) then
@@ -3752,12 +3752,14 @@
       cwtmp3=tmp !reset
 #endif
 
+!=================================================================================
+      endif !itransport_only
+
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 !   Backtracking/upwind for momentum
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
-
       if(iupwind_mom==0) then !ELM
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !     Temp. array swild9[6-8] for ELAD
@@ -4709,6 +4711,9 @@
       write(12,*)'Time taken for mom advection=',tmp-cwtmp3,it
       cwtmp3=tmp !reset
 #endif
+
+      if(itransport_only==0) then
+!=================================================================================
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -6601,7 +6606,7 @@
 
 !=================================================================================
 !     End of bypassing solver for transport only option
-      endif !itransport_only
+      endif !itransport_only==0
 
 !     Add Stokes drift to horizontal vel for wvel and transport; will restore
 !     after transport
