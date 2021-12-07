@@ -190,6 +190,7 @@ for day=stacks2
       uout(:,:,i)=nan;
       zout(:,i)=nan;
       if(idry_e(ie)~=0)
+        kbp_e(i)=0;
         continue; 
       end
      
