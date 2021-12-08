@@ -34,7 +34,7 @@
       character*9 cha2
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
-      integer, allocatable :: indx_sorted(:),imap(:),ndems_on_rank(:)
+      integer, allocatable :: indx_sorted(:),imap(:),ndems_on_rank(:),iout_dem(:)
       real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:), &
 !new21
      &h_min(:),vdatum(:)
@@ -64,7 +64,7 @@
       read(14,*)
       read(14,*)ne,np
       allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems),h_min(ndems), &
-     &vdatum(ndems),ndems_on_rank(0:nproc-1))
+     &vdatum(ndems),ndems_on_rank(0:nproc-1),iout_dem(np))
       do i=1,np
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
@@ -295,7 +295,7 @@
 
                 !Write temp output (in 'valid' region only)
 !new21
-                write(19,*)i,max(h-vdatum(idem+1),h_min(idem+1))
+                write(19,*)i,max(h-vdatum(idem+1),h_min(idem+1)),iout_dem0
               endif !junk
     
             endif
@@ -321,7 +321,7 @@
           open(19,file=trim(adjustl(fdb))//'.out',status='old')
           lines=0
           do
-            read(19,*,end=100,err=100)i,dp0(i)
+            read(19,*,end=100,err=100)i,dp0(i),iout_dem(i)
             lines=lines+1
           enddo
 
@@ -333,7 +333,7 @@
         write(13,*)'Bathymetry loaded grid'
         write(13,*)ne,np
         do i=1,np
-          write(13,101)i,x0(i),y0(i),dp0(i)
+          write(13,101)i,x0(i),y0(i),dp0(i),iout_dem(i)
         enddo !i
         do i=1,ne
           read(14,*)j,k,(nm(l),l=1,k)
@@ -341,7 +341,7 @@
         enddo !i
         close(13)
       endif !myrank=0
-101   format(i9,2(1x,e24.16),1x,f13.6)
+101   format(i9,2(1x,e24.16),1x,f13.6,1x,i6)
       close(14)
 
       call MPI_FINALIZE(errcode)
