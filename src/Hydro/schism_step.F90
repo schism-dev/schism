@@ -1961,7 +1961,9 @@
       do i=1,np_global
         if(ipgl(i)%rank==myrank) then
           ip=ipgl(i)%id
-          eta2(ip)=swild11(i)
+          !Save new elev as eta1 first for btrack; will update to eta2 b4
+          !transport
+          eta1(ip)=swild11(i)
         endif
       enddo !i
       deallocate(swild11)
@@ -6604,8 +6606,13 @@
 #endif /*USE_ANALYSIS*/
 
 
-!=================================================================================
 !     End of bypassing solver for transport only option
+!=================================================================================
+      else !restore some vars
+!$OMP parallel workshare default(shared)
+        eta2=eta1
+!$OMP end parallel workshare
+!=================================================================================
       endif !itransport_only==0
 
 !     Add Stokes drift to horizontal vel for wvel and transport; will restore

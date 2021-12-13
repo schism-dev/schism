@@ -340,7 +340,7 @@ MODULE ParWind
           !----------
 
         END IF
-      END DO
+      END DO !iCnt
 
       bestTrackData(iFile)%thisStorm = ''
       bestTrackData(iFile)%loaded    = .TRUE.
