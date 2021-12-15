@@ -11,7 +11,7 @@ subroutine ice_evp
  &pp0,delta,delta_inv,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
  &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
  &cori_nd,umod,gam1,rx,ry,rxp,ryp,eps11,eps12,eps22, &
- &zeta,delta_nd
+ &zeta,delta_nd,zeta_over_T
 
   integer :: iball(mnei)
   real(rkind) :: swild(2,3),swild2(nea),deta(2,nea)
@@ -41,11 +41,18 @@ subroutine ice_evp
       h_ice_el=sum(ice_tr(1,elnode(1:3,i)))/3.0
       a_ice_el=sum(ice_tr(2,elnode(1:3,i)))/3.0
       pp0=h_ice_el*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
-      zeta=pp0*0.5/max(delta_ice(i),delta_min)
+      zeta=pp0*0.5/max(delta_ice(i),delta_min) !viscosity/moduli
 
-      rr1=zeta*t_evp_inv*(eps11+eps22-delta_ice(i)) !RHS for 1st eq
-      rr2=zeta*t_evp_inv*(eps11-eps22)
-      rr3=zeta*t_evp_inv*eps12
+!      !Hunke limiter
+      zeta_over_T=zeta*t_evp_inv
+!      if(evp_limiter>0.d0) then
+!        sum1=evp_limiter*area(i)/dtevp/dtevp
+!        zeta_over_T=min(zeta_over_T,sum1)
+!      endif
+
+      rr1=zeta_over_T*(eps11+eps22-delta_ice(i)) !RHS for 1st eq
+      rr2=zeta_over_T*(eps11-eps22)
+      rr3=zeta_over_T*eps12
       sig1=sigma11(i)+sigma22(i) !from previous step
       sig2=sigma11(i)-sigma22(i)
 
