@@ -15,7 +15,7 @@
 !  Adapted from FESOM's ice module. Special thanks to Dr. Sergey Danilov's group
 !  for their generous help.
 !Error: FESOM ice works in a rotated lon/lat frame with North Pole in Greenland. So
-!  beware the link to SCHISM especially vectors.
+!  beware the link to SCHISM especially for vectors.
 !====================================================================
 ! Init ice vars
 subroutine ice_init
@@ -36,13 +36,13 @@ subroutine ice_init
   
   !Init parameters
   !integers
-  ice_tests=-1e6; ice_advection=-1e6; ice_therm_on=-1e6; ievp=-1e6; evp_rheol_steps=-1e6;
-  mevp_rheol_steps=-1e6; niter_fct=-1e6; 
+  ice_tests=0; ice_advection=1; ice_therm_on=1; ievp=2; evp_rheol_steps=200;
+  mevp_rheol_steps=200; niter_fct=3 
   !Doubles
-  ice_cutoff=-huge(1.d0); delta_min=-huge(1.d0); theta_io=-huge(1.d0);
-  mevp_alpha1=-huge(1.d0); mevp_alpha2=-huge(1.d0); pstar=-huge(1.d0);
-  ellipse=-huge(1.d0); c_pressure=-huge(1.d0); ice_gamma_fct=-huge(1.d0);
-  h_ml0=-huge(1.d0); salt_ice=-huge(1.d0); salt_water=-huge(1.d0)
+  ice_cutoff=1.d-3; delta_min=2.0d-9; theta_io=0.d0
+  mevp_alpha1=200; mevp_alpha2=mevp_alpha1; pstar=15000.d0
+  ellipse=2.d0; c_pressure=2.d1; ice_gamma_fct=0.25d0
+  h_ml0=1.d-1; salt_ice=5.d0; salt_water=34.d0
 
   open(10,file=in_dir(1:len_in_dir)//'ice.nml',status='old')
   read(10,nml=ice_in)
