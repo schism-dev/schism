@@ -276,6 +276,7 @@
 !   get_wind
 !   get_rad
 !   get_precip_flux
+!   get_precsnow_flux
 !   get_dataset_info
 !   char_num (function): convert number to char
 !   get_file_name (fucntion):
@@ -300,7 +301,7 @@
 !   combine_sflux_data: combine from 2 sources;
 
 !Joseph Z.'s notes:
-!   (0) Of all attributes in nc file, only 'base_date' is required;
+!   (0) Of all attributes in nc file, only 'base_date' is required ('hour' is not read in);
 !   (1) air, rad and prc each can have up to 2 sources;
 !   (2) grids for air, rad and prc can be different (but must be the same within
 !       each type and each source). Additional requirements for the structured grid in .nc:
@@ -315,8 +316,10 @@
 !       will be done on grid "1" only (see combine_sflux_data, in particular, bad_node_2
 !       based on area coordinates outside [0,1]). Both grids must start from stack
 !       1 and may have different # of stacks for each variable (and starting times of 
-!       '1' and '2' may be different). However, within each nc file #
-!       of time steps can vary;
+!       '1' and '2' may be different). Also, within each nc file #
+!       of time steps can vary. The cumulative time window of '2' does
+!       not need to cover the entire simulation (code will use values
+!       from '1' only if '2' time is missing), but window of '1' must;
 !   (5) air_1_max_window_hours (etc) are set in netcdf_io to define the max. time stamp
 !       (offset from start time in each) within each nc file (the actual offset should 
 !        not equal air_1_max_window_hours); these constants can be
