@@ -6,10 +6,11 @@ module ice_module
 
   !Parameters
   integer,parameter :: ntr_ice=3 !# of ice tracers (in order: 1: ice mass; 2: ice conc; 3: snow mass)
-  integer :: ice_tests,ice_advection,ice_therm_on,ievp,evp_rheol_steps,mevp_rheol_steps,niter_fct
+  integer :: ice_tests,ice_advection,ice_therm_on,ievp,evp_rheol_steps,mevp_rheol_steps,niter_fct, &
+ &mevp_coef
   real(rkind) :: xmin_ice,ymin_ice,xmax_ice,ymax_ice,rlx_ice,rly_ice !use in box test only
   real(rkind) :: ice_cutoff,theta_io,cos_io,sin_io,mevp_alpha1,mevp_alpha2, &
-  &h_ml0,salt_ice,salt_water
+  &h_ml0,salt_ice,salt_water,mevp_alpha3,mevp_alpha4
 
   real(rkind) :: dt_ice !time step for ice
 

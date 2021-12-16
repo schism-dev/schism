@@ -31,16 +31,17 @@ subroutine ice_init
   real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
  &det,der_transp(3,2),derivative_stdbf(2,3) 
   namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
- &delta_min,theta_io,mevp_alpha1,mevp_alpha2,pstar,ellipse,c_pressure,niter_fct, &
- &ice_gamma_fct,h_ml0,salt_ice,salt_water
+ &delta_min,theta_io,mevp_alpha1,mevp_alpha2,mevp_alpha3,mevp_alpha4,pstar,ellipse,c_pressure,niter_fct, &
+ &ice_gamma_fct,h_ml0,salt_ice,salt_water,mevp_coef
   
   !Init parameters
   !integers
   ice_tests=0; ice_advection=1; ice_therm_on=1; ievp=2; evp_rheol_steps=200;
-  mevp_rheol_steps=200; niter_fct=3 
+  mevp_rheol_steps=200; niter_fct=3; mevp_coef=0
   !Doubles
   ice_cutoff=1.d-3; delta_min=2.0d-9; theta_io=0.d0
-  mevp_alpha1=200; mevp_alpha2=mevp_alpha1; pstar=15000.d0
+  mevp_alpha1=2.d2; mevp_alpha2=mevp_alpha1; pstar=15000.d0
+  mevp_alpha3=2.d2; mevp_alpha4=2.d-2 
   ellipse=2.d0; c_pressure=2.d1; ice_gamma_fct=0.25d0
   h_ml0=1.d-1; salt_ice=5.d0; salt_water=34.d0
 
@@ -58,12 +59,14 @@ subroutine ice_init
   if(delta_min<=0) call parallel_abort('ice_init: delta_min')
   if(abs(theta_io)>360) call parallel_abort('ice_init: theta_io')
   if(mevp_alpha1<=0.or.mevp_alpha2<=0) call parallel_abort('ice_init: mevp_alpha1')
+  if(mevp_alpha3<=0.or.mevp_alpha4<=0) call parallel_abort('ice_init: mevp_alpha3')
   if(pstar<=0) call parallel_abort('ice_init: pstar')
   if(ellipse<=0.or.c_pressure<=0) call parallel_abort('ice_init: ellipse')
   if(niter_fct<=0) call parallel_abort('ice_init: niter_fct')
   if(ice_gamma_fct<0) call parallel_abort('ice_init: ice_gamma_fct')
   if(h_ml0<=0) call parallel_abort('ice_init: h_ml0')
   if(salt_ice<0.or.salt_water<0) call parallel_abort('ice_init: salt_water')
+  if(mevp_coef/=0.and.mevp_coef/=1) call parallel_abort('ice_init: mevp_coef')
   
   dt_ice=dt*nstep_ice
   cos_io=cos(theta_io/180*pi)

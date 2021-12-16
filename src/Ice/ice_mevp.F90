@@ -10,14 +10,22 @@ subroutine ice_mevp
   real(rkind) :: tmp1,tmp2,pp0,delta,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
  &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
  &cori_nd,umod,gam1,rx,ry,rxp,ryp,eps11,eps12,eps22, &
- &zeta,delta_nd,sum1,sum2,dt_by_mass
+ &zeta,delta_nd,sum1,sum2,dt_by_mass,beta0
 
   integer :: iball(mnei)
-  real(rkind) :: swild(2,3),deta(2,nea), &
- &swild2(nea),alow(4),bdia(4),rrhs(3,4),u_ice_0(npa),v_ice_0(npa)
+  real(rkind) :: swild(2,3),deta(2,nea),swild2(nea),alow(4),bdia(4),rrhs(3,4), &
+ &u_ice_0(npa),v_ice_0(npa),al_beta(nea)
 
   !Save u^n
   u_ice_0=u_ice; v_ice_0=v_ice
+
+  !Pre-compute some arrays
+  if(mevp_coef/=0) then
+    do i=1,nea
+      al_beta(i)=mevp_alpha3/tanh(mevp_alpha4*area(i)/dt_ice)      
+    enddo !i=1,nea
+  endif !mevp_coef/
+
   do isub=1,mevp_rheol_steps !iterations
     !Update stress @ elem
     do i=1,nea
@@ -46,10 +54,15 @@ subroutine ice_mevp
       sig1=sigma11(i)+sigma22(i) !from previous iteration
       sig2=sigma11(i)-sigma22(i)
 
-      sig1=sig1+(rr1-sig1)/mevp_alpha1
-      sig2=sig2+(rr2-sig2)/mevp_alpha1
+      if(mevp_coef==0) then
+        sum1=mevp_alpha1
+      else
+        sum1=al_beta(i)
+      endif
+      sig1=sig1+(rr1-sig1)/sum1 !mevp_alpha1
+      sig2=sig2+(rr2-sig2)/sum1 !mevp_alpha1
 
-      sigma12(i)=sigma12(i)+(rr3-sigma12(i))/mevp_alpha1
+      sigma12(i)=sigma12(i)+(rr3-sigma12(i))/sum1 !mevp_alpha1
       sigma11(i)=0.5*(sig1+sig2)
       sigma22(i)=0.5*(sig1-sig2)
     enddo !i=1,nea
@@ -87,13 +100,22 @@ subroutine ice_mevp
         cycle
       endif
 
-      iball(1:nne(i))=indel(1:nne(i),i)
       if(ice_tr(1,i)<=ice_cutoff.or.ice_tr(2,i)<=ice_cutoff) then !no ice
         u_ice(i)=0; v_ice(i)=0
         cycle 
       endif
    
       !Not bnd node; has ice
+      iball(1:nne(i))=indel(1:nne(i),i)
+
+      !Relax const
+      if(mevp_coef==0) then
+        beta0=mevp_alpha2
+      else
+        beta0=dot_product(weit_elem2node(1:nne(i),i),al_beta(iball(1:nne(i))))
+        !beta0=maxval(al_beta(iball(1:nne(i))))
+      endif !mevp_coef
+
       mass=rhoice*ice_tr(1,i)+rhosnow*ice_tr(3,i) !>0
       !mass=max(mass,9.d0*ice_tr(2,i)) !limit m/a>=9
       !Coriolis @ node
@@ -108,9 +130,9 @@ subroutine ice_mevp
       umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
       dt_by_mass=dt_ice/mass
       gam1=ice_tr(2,i)*dt_by_mass*cdwat*rho0*umod
-      rx=mevp_alpha2*u_ice(i)+u_ice_0(i)+gam1*(u_ocean(i)*cos_io-v_ocean(i)*sin_io)+ &
+      rx=beta0*u_ice(i)+u_ice_0(i)+gam1*(u_ocean(i)*cos_io-v_ocean(i)*sin_io)+ &
     &dt_by_mass*ice_tr(2,i)*stress_atm_ice(1,i)
-      ry=mevp_alpha2*v_ice(i)+v_ice_0(i)+gam1*(u_ocean(i)*sin_io+v_ocean(i)*cos_io)+ &
+      ry=beta0*v_ice(i)+v_ice_0(i)+gam1*(u_ocean(i)*sin_io+v_ocean(i)*cos_io)+ &
     &dt_by_mass*ice_tr(2,i)*stress_atm_ice(2,i)
 
       !Pressure gradient
@@ -137,7 +159,7 @@ subroutine ice_mevp
       rx=rx-dt_by_mass/area_median(i)*sum1
       ry=ry-dt_by_mass/area_median(i)*sum2
      
-      tmp1=1+mevp_alpha2+gam1*cos_io
+      tmp1=1+beta0+gam1*cos_io
       tmp2=dt_ice*cori_nd+gam1*sin_io
       delta=tmp1*tmp1+tmp2*tmp2
       if(delta<=0) call parallel_abort('ice_mevp: delta<=0')
