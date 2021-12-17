@@ -17,10 +17,10 @@
 ! This file collect subroutines implementing FE-FCT
 ! advection scheme by Loehner et al.
 ! There is a tunable paremeter gamma in ts_solve_low_order and fem_fct.
-! Increasing it leads to positivity preserving solution.
+! Increasing it toward 1 leads to positivity preserving solution.
 
 ! Driving routine is fct_ice_solve. It calles other routines
-! that do low-order and figh order solutions and then combine them in a flux
+! that do low-order (which is a damped high-order soln) and high-order solutions and then combine them in a flux
 ! corrected way. Taylor-Galerkin type of advection is used.
 !===============================================================================
 !===============================================================================
@@ -28,13 +28,13 @@
 
   subroutine ice_fct
   use schism_glbl, only: rkind,nea,np,npa,elnode,nnp,indnd,time_stamp,rnday, &
- &fdb,lfdb,xnd,ynd,iplg
+ &fdb,lfdb,xnd,ynd,iplg,errmsg
   use schism_msgp, only: nproc,myrank,parallel_abort,exchange_p2d
   use ice_module
 
   implicit none
  
-  integer :: i,j,m,n,nd,nd2,icoef(3,3)
+  integer :: i,j,m,n,nd,nd2,icoef(3,3),icyc
   real(rkind) :: um,vm,diff,sum1,flux,ae
   real(rkind) :: dx(3),dy(3),entries(3),icefluxes(3,nea),tmax(np),tmin(np), &
  &icepplus(npa),icepminus(npa),swild(npa) !,swild2(nea)
@@ -43,6 +43,8 @@
   allocate(fct_rhs(ntr_ice,npa),ice_tr_lo(ntr_ice,npa),d_ice_tr(ntr_ice,npa),stat=i)
   if(i/=0) call parallel_abort('ice_fct: alloc(1)')
 
+  do icyc=1,ncyc_fct
+!^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ! RHS of Taylor Galerkin
   ! Computes the rhs in a Taylor-Galerkin way (with upwind type of
   ! correction for the advection operator)
@@ -60,8 +62,8 @@
       do m=1,3
         nd2=elnode(m,i)
         ![entries]=m^2
-        entries(m)=voltriangle(i)*dt_ice*((dx(j)*(um+u_ice(nd2))+dy(j)*(vm+v_ice(nd2)))/12.0- &
-  &0.5*dt_ice*(um*dx(j)+vm*dy(j))*(um*dx(m)+vm*dy(m))/9.0)
+        entries(m)=voltriangle(i)*dt_ice/ncyc_fct*((dx(j)*(um+u_ice(nd2))+dy(j)*(vm+v_ice(nd2)))/12.0- &
+  &0.5*dt_ice/ncyc_fct*(um*dx(j)+vm*dy(j))*(um*dx(m)+vm*dy(m))/9.0)
   !&diff*(dx(j)*dx(m)+dy(j)*dy(m))-0.5*dt_ice*(um*dx(j)+vm*dy(j))*(um*dx(m)+vm*dy(m))/9.0)
       enddo !m
 
@@ -124,7 +126,7 @@
  ! One adds diffusive contribution to the rhs. It is realized as
  ! difference between the  consistent and lumped mass matrices
  ! acting on the field from the previous time step. The mass matrix on the
- ! lhs is replaced with lumped one.
+ ! lhs is replaced with lumped one (high-order uses consistent mass matrix).
   do i=1,np
     do m=1,ntr_ice
       sum1=ice_matrix(0,i)*ice_tr(m,i)
@@ -132,7 +134,15 @@
         nd=indnd(j,i)
         sum1=sum1+ice_matrix(j,i)*ice_tr(m,nd)
       enddo !j
-      ice_tr_lo(m,i)=(fct_rhs(m,i)+ice_gamma_fct*sum1)/lump_ice_matrix(i)+(1-ice_gamma_fct)*ice_tr(m,i)
+
+      !Use max blending in non-FCT area
+      if(ice_fct_flag(i)==0) then
+        ae=1.d0
+      else
+        ae=ice_gamma_fct
+      endif
+      !ice_tr_lo(m,i)=(fct_rhs(m,i)+ice_gamma_fct*sum1)/lump_ice_matrix(i)+(1-ice_gamma_fct)*ice_tr(m,i)
+      ice_tr_lo(m,i)=(fct_rhs(m,i)+ae*sum1)/lump_ice_matrix(i)+(1-ae)*ice_tr(m,i)
     enddo !m
   enddo !i=1,np
 
@@ -269,6 +279,11 @@
       enddo !j
     enddo !i  
 
+    !Restore low-order soln in non-FCT zone
+    do i=1,np
+      if(ice_fct_flag(i)==0) ice_tr(m,i)=ice_tr_lo(m,i)
+    enddo !i
+
     swild=ice_tr(m,:)
     call exchange_p2d(swild)
     ice_tr(m,:)=swild
@@ -286,7 +301,16 @@
     ice_tr(2,i)=min(ice_tr(2,i),1.d0)
     if(ice_tr(2,i)<1.d-9) ice_tr(2,i)=0
     if(ice_tr(1,i)<1.d-9) ice_tr(1,i)=0
+
+    !Check
+    if(ice_tr(1,i)>1.d3.or.ice_tr(3,i)>1.d3) then
+      write(errmsg,*)'ice_fct: ice too thick,',iplg(i),ice_tr(1:3,i),u_ice(i),v_ice(i)
+      call parallel_abort(errmsg)
+    endif
   enddo !i
+
+!^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  enddo !icyc
 
 !Debug
 !  if(abs(time_stamp-rnday*86400)<0.1) then
@@ -303,9 +327,6 @@
 
 ! Deallocate
   deallocate(fct_rhs,ice_tr_lo,d_ice_tr)
-
-!  call parallel_finalize
-!  stop
 
   end subroutine ice_fct
 

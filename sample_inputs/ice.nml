@@ -33,8 +33,11 @@
   c_pressure=20.0  !C [-]
 
   !FCT
+  ncyc_fct=1 !# of subcycling in transport
   niter_fct=3 !# of iterartions in higher-order solve
-  ice_gamma_fct=0.25 ! smoothing parameter
+  ice_gamma_fct=0.25 ! smoothing parameter; 1 for max positivity preserving
+  !non-FCT zone is delineated by h<=depth_ice_fct OR depth=0 in ice_fct.gr3
+  depth_ice_fct=5. !cut off depth (m) for non-FCT
 
   !Thermodynamics
   h_ml0=0.1 !ocean mixed layer depth [m]

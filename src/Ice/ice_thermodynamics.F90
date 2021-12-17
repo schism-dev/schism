@@ -104,6 +104,12 @@ subroutine ice_thermodynamics
   &fresh_wa_flux(i),net_heat_flux(i),ice_tr(:,i)
       call parallel_abort(errmsg)
     endif
+
+    if(abs(ice_tr(1,i))>1.e3.or.abs(ice_tr(3,i))>1.d3) then
+      write(errmsg,*)'ice_thermodynamics: overflow, ',iplg(i),ice_tr(1:3,i), &
+     &t_oi(i),fresh_wa_flux(i),net_heat_flux(i)
+      call parallel_abort(errmsg)
+    endif
   enddo !i=1,npa
 
 !  write(99,*)'done'

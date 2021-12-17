@@ -7,10 +7,10 @@ module ice_module
   !Parameters
   integer,parameter :: ntr_ice=3 !# of ice tracers (in order: 1: ice mass; 2: ice conc; 3: snow mass)
   integer :: ice_tests,ice_advection,ice_therm_on,ievp,evp_rheol_steps,mevp_rheol_steps,niter_fct, &
- &mevp_coef
+ &mevp_coef,ncyc_fct
   real(rkind) :: xmin_ice,ymin_ice,xmax_ice,ymax_ice,rlx_ice,rly_ice !use in box test only
   real(rkind) :: ice_cutoff,theta_io,cos_io,sin_io,mevp_alpha1,mevp_alpha2, &
-  &h_ml0,salt_ice,salt_water,mevp_alpha3,mevp_alpha4
+  &h_ml0,salt_ice,salt_water,mevp_alpha3,mevp_alpha4,depth_ice_fct
 
   real(rkind) :: dt_ice !time step for ice
 
@@ -31,6 +31,7 @@ module ice_module
   real(rkind),parameter :: rhosnow=290.   ! Snow density
 
   !Arrays
+  integer, allocatable :: ice_fct_flag(:) !(npa); switch on/off FCT
   real(rkind),allocatable :: u_ice(:),v_ice(:) !ice vel @ nodes (1:npa)
 !  real(rkind),allocatable :: h_ice(:),a_ice(:),h_snow(:) !ice tracers @ nodes
   real(rkind),allocatable :: ice_tr(:,:) !(ntr_ice,npa); ice tracers @ nodes (1: h_ice; 2: conc a_ice; 3: h_snow)

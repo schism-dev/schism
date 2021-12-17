@@ -65,6 +65,15 @@ subroutine ice_mevp
       sigma12(i)=sigma12(i)+(rr3-sigma12(i))/sum1 !mevp_alpha1
       sigma11(i)=0.5*(sig1+sig2)
       sigma22(i)=0.5*(sig1-sig2)
+
+      !Check
+      if(sigma11(i)/=sigma11(i).or.sigma12(i)/=sigma12(i).or.sigma22(i)/=sigma22(i)) then
+!        write(12,*)'u_ice:',u_ice,v_ice
+        write(errmsg,*)'NaN in ice_mevp (1):',ielg(i),sigma11(i),sigma12(i),sigma22(i), &
+     &sum1,rr1,rr2,rr3,pp0,h_ice_el,a_ice_el,zeta,eps11,eps22,eps12
+        call parallel_abort(errmsg)
+      endif
+
     enddo !i=1,nea
 
 !    if(isub==evp_rheol_steps.and.it_main==1) then
@@ -76,7 +85,7 @@ subroutine ice_mevp
 !      close(94); close(95); close(96);
 !    endif
 
-    !Coriolis @ elem
+    !Coriolis and pressure gradient @ elem
     do i=1,nea
       swild2(i)=sum(cori(elside(1:i34(i),i)))/i34(i)
       !Pressure gradient 
@@ -166,6 +175,17 @@ subroutine ice_mevp
       u_ice(i)=(rx*tmp1+ry*tmp2)/delta
       v_ice(i)=(-rx*tmp2+ry*tmp1)/delta
 
+      !Limit vel
+!      u_ice(i)=max(-2.d0,min(2.d0,u_ice(i)))
+!      v_ice(i)=max(-2.d0,min(2.d0,v_ice(i)))
+
+      !Check
+      if(u_ice(i)/=u_ice(i).or.v_ice(i)/=v_ice(i)) then
+        write(errmsg,*)'NaN in ice_mevp (2):',iplg(i),u_ice(i),v_ice(i),delta, &
+     &beta0,gam1,rx,ry,dt_by_mass,area_median(i),tmp1,tmp2
+        call parallel_abort(errmsg)
+      endif
+
       !Debug
       !if(isub==evp_rheol_steps.and.it_main==1) then
       !  write(92,*)real(xnd(i)),real(ynd(i)),real(u_ice(i)),real(v_ice(i))
@@ -176,19 +196,19 @@ subroutine ice_mevp
   enddo !isub: iteration
 
   !Check NaN
-  do i=1,nea
-    if(sigma11(i)/=sigma11(i).or.sigma12(i)/=sigma12(i).or.sigma22(i)/=sigma22(i)) then
-      write(12,*)'u_ice:',u_ice,v_ice
-      write(errmsg,*)'NaN in ice_mevp (1):',ielg(i),sigma11(i),sigma12(i),sigma22(i)
-      call parallel_abort(errmsg)
-    endif
-  enddo !i
-  do i=1,npa
-    if(u_ice(i)/=u_ice(i).or.v_ice(i)/=v_ice(i)) then
-      write(errmsg,*)'NaN in ice_mevp (2):',iplg(i),u_ice(i),v_ice(i)
-      call parallel_abort(errmsg)
-    endif
-  enddo !i
+!  do i=1,nea
+!    if(sigma11(i)/=sigma11(i).or.sigma12(i)/=sigma12(i).or.sigma22(i)/=sigma22(i)) then
+!      write(12,*)'u_ice:',u_ice,v_ice
+!      write(errmsg,*)'NaN in ice_mevp (1):',ielg(i),sigma11(i),sigma12(i),sigma22(i)
+!      call parallel_abort(errmsg)
+!    endif
+!  enddo !i
+!  do i=1,npa
+!    if(u_ice(i)/=u_ice(i).or.v_ice(i)/=v_ice(i)) then
+!      write(errmsg,*)'NaN in ice_mevp (2):',iplg(i),u_ice(i),v_ice(i)
+!      call parallel_abort(errmsg)
+!    endif
+!  enddo !i
 
   !Debug
 !  if(abs(time_stamp-rnday*86400)<0.1) then
