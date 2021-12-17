@@ -21,7 +21,7 @@
 
   !Options for specifying 2 relax coefficients in mEVP only (mevp_coef)
   !0: constant (mevp_alpha[12] below); 1: both coefficients equal to: mevp_alpha3/tanh(mevp_alpha4*area/dt_ice) 
-  !In this case, mevp_alpha3 is the max, and at the finer end of mesh, the coeff's are approximately ~mevp_alpha4^-1
+  !In this case, mevp_alpha3 is the min, and at the finer end of mesh, the coeff's are approximately ~mevp_alpha4^-1
   mevp_coef=0
   mevp_alpha1=200. !const used in mEVP (constitutive eq), if mevp_coef=0
   mevp_alpha2=200. !const used in mEVP for momentum eq, if mevp_coef=0
