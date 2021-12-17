@@ -22,7 +22,8 @@ subroutine ice_mevp
   !Pre-compute some arrays
   if(mevp_coef/=0) then
     do i=1,nea
-      al_beta(i)=mevp_alpha3/tanh(mevp_alpha4*area(i)/dt_ice)      
+      !al_beta(i)=mevp_alpha3/tanh(mevp_alpha4*area(i)/dt_ice)      
+      al_beta(i)=mevp_cmin+(mevp_cmax-mevp_cmin)*tanh(mevp_slope*dt_ice/area(i))      
     enddo !i=1,nea
   endif !mevp_coef/
 

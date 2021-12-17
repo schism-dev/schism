@@ -9,6 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+(16 Dec 2021): added a new parameter in ice.nml 'mevp_coef' and 3 related ones: mevp_cmax,
+               mevp_cmin, mevp_slope. All parameters in ice.nml now have defaults;
 2a7647d (24&29 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2,3;
 a7a0b2b (17 Oct 2021): restored iwindoff;
 afc7b1a (11 Oct 2021): changed vgrid.in format for ivcor=1 to facilitate parallel read (use
