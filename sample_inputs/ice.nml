@@ -20,14 +20,13 @@
   theta_io=0.       ! ice/ocean rotation angle. [degr]
 
   !Options for specifying 2 relax coefficients in mEVP only (mevp_coef)
-  !0: constant (mevp_alpha[12] below); 1: both coefficients equal to: mevp_cmin+(mevp_cmax-mevp_cmin)*tanh(mevp_slope*dt_ice/area(i))
-  !In this case, mevp_cmax/cmin are the max/min and mevp_slope is the slope (for small arguments)
+  !0: constant (mevp_alpha[12] below); 1: both coefficients equal to: mevp_alpha3/tanh(mevp_alpha4*area/dt_ice) 
+  !In this case, mevp_alpha3 is the max, and at the finer end of mesh, the coeff's are approximately ~mevp_alpha4^-1
   mevp_coef=0
   mevp_alpha1=200. !const used in mEVP (constitutive eq), if mevp_coef=0
   mevp_alpha2=200. !const used in mEVP for momentum eq, if mevp_coef=0
-  mevp_cmin=2.e2 !if mevp_coef=1
-  mevp_cmax=2.e3 !if mevp_coef=1
-  mevp_slope=2.e1 !if mevp_coef=1
+  mevp_alpha3=200. !if mevp_coef=1
+  mevp_alpha4=2.e-2 !if mevp_coef=1
 
   pstar=15000. ![N/m^2]
   ellipse=2.  !ellipticity
