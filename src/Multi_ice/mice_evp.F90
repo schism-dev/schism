@@ -4,7 +4,7 @@ subroutine ice_evp
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
    &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa,xctr,yctr,zctr,pi,&
    &pframe,eframe,indnd,nnp
-    use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
+    use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,rtype,comm
     use mice_module
     use mice_therm_mod
     use icepack_intfc, only: icepack_ice_strength
@@ -12,15 +12,16 @@ subroutine ice_evp
     &dt_dyn,Cdn_ocn,ncat
 
     implicit none
-    integer :: isub,i,j,ie,n1,n2,icount,m,id
+    include 'mpif.h'
+    integer :: isub,i,j,ie,n1,n2,icount,m,id,ierr
     real(rkind) :: dtevp,t_evp_inv,det1,det2,tmp1,tmp2,sum1,sum2, &
    &pp0,delta,delta_inv,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
    &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
    &cori_nd,umod,gam1,rx,ry,rxp,ryp,eps11,eps12,eps22, &
-   &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength
+   &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength,tmp0,tmpsum,maxdeta,maxstr,maxstress,str_ocn_u,str_ocn_v
   
     integer :: iball(mnei),n
-    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3),strength(nea), &
+    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3),strength(npa), &
     &a_ice0_0(npa),a_icen0(npa,ncat),v_icen0(npa,ncat),a_icen_elem(ncat),v_icen_elem(ncat),swild1(3)
   
     dtevp=dt_dyn/evp_rheol_steps
@@ -30,13 +31,15 @@ subroutine ice_evp
 
     rdg_conv_elem(:)  = 0.0
     rdg_shear_elem(:) = 0.0
-    sigma11(:) = 0
-    sigma12(:) = 0
-    sigma22(:) = 0
+    !sigma11(:) = 0
+    !sigma12(:) = 0
+    !sigma22(:) = 0
     strength(:) = 0
     a_ice0_0(:) = 0
     a_icen0(:,:) = 0
     v_icen0(:,:) = 0
+    maxdeta = 0
+    maxstr = 0
 
 
     
@@ -48,21 +51,32 @@ subroutine ice_evp
                   aice0_out=a_ice0_0,               &
                   aicen_out=a_icen0,                &
                   vicen_out=v_icen0                 )
-      do i = 1,nea
-        swild1(1) = sum(a_ice0(elnode(1:i34(i),i)))/i34(i)
-        swild1(2) = sum(m_ice0(elnode(1:i34(i),i)))/i34(i)
-        swild1(3) = sum(a_ice0_0(elnode(1:i34(i),i)))/i34(i)
 
-        do j = 1,ncat
-          a_icen_elem(j) = sum(a_icen0(elnode(1:i34(i),i),j))/i34(i)
-          v_icen_elem(j) = sum(v_icen0(elnode(1:i34(i),i),j))/i34(i)
-        enddo
+     !do i = 1,nea
+     !   swild1(1) = sum(a_ice0(elnode(1:i34(i),i)))/i34(i)
+     !   swild1(2) = sum(m_ice0(elnode(1:i34(i),i)))/i34(i)
+     !   swild1(3) = sum(a_ice0_0(elnode(1:i34(i),i)))/i34(i)
+
+     !   do j = 1,ncat
+     !     a_icen_elem(j) = sum(a_icen0(elnode(1:i34(i),i),j))/i34(i)
+     !     v_icen_elem(j) = sum(v_icen0(elnode(1:i34(i),i),j))/i34(i)
+     !   enddo
+     !   call icepack_ice_strength(ncat     = ncat,            &
+     !                             aice     = swild1(1),       & 
+     !                             vice     = swild1(2),       & 
+     !                             aice0    = swild1(3),       & 
+     !                             aicen    = a_icen_elem (:), &  
+     !                             vicen    = v_icen_elem (:), & 
+     !                             strength = strength(i)      )
+     !   !write(12,*) i ,swild1(1),swild1(2), strength(i)
+     ! enddo
+      do i = 1,npa
         call icepack_ice_strength(ncat     = ncat,            &
-                                  aice     = swild1(1),       & 
-                                  vice     = swild1(2),       & 
-                                  aice0    = swild1(3),       & 
-                                  aicen    = a_icen_elem (:), &  
-                                  vicen    = v_icen_elem (:), & 
+                                  aice     = a_ice0(i),       & 
+                                  vice     = m_ice0(i),       & 
+                                  aice0    = a_ice0_0(i),       & 
+                                  aicen    = a_icen0 (i,:), &  
+                                  vicen    = v_icen0 (i,:), & 
                                   strength = strength(i)      )
         !write(12,*) i ,swild1(1),swild1(2), strength(i)
       enddo
@@ -110,17 +124,20 @@ subroutine ice_evp
         a_ice_el=sum(a_ice0(elnode(1:3,i)))/3.0
         pp0=h_ice_el*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
         !pp0 = strength(i)
+        !pp0 = sum(strength(elnode(1:3,i)))/3.0
+        pp0 = sum(strength(elnode(1:3,i)))/3.0
+        !if(any(a_ice0(elnode(1:3,i))<=0).or.any(m_ice0(elnode(1:3,i))<=0)) pp0 = 0
         zeta=pp0*0.5/max(delta_ice(i),delta_min)
-  
+    
         rr1=zeta*t_evp_inv*(eps11+eps22-delta_ice(i)) !RHS for 1st eq
         rr2=zeta*t_evp_inv*(eps11-eps22)
         rr3=zeta*t_evp_inv*eps12
         sig1=sigma11(i)+sigma22(i) !from previous step
         sig2=sigma11(i)-sigma22(i)
-  
+    
         sig1=det1*(sig1+rr1*dtevp)
         sig2=det2*(sig2+rr2*dtevp)
-  
+    
         sigma12(i)=det2*(sigma12(i)+rr3*dtevp)
         sigma11(i)=0.5*(sig1+sig2)
         sigma22(i)=0.5*(sig1-sig2)
@@ -188,7 +205,7 @@ subroutine ice_evp
           U_ice(i)=0; V_ice(i)=0
           cycle
         endif
-  
+   
         iball(1:nne(i))=indel(1:nne(i),i)
         if(a_ice0(i)<=ice_cutoff.or.m_ice0(i)<=ice_cutoff) then !no ice
           U_ice(i)=0; V_ice(i)=0
@@ -202,6 +219,7 @@ subroutine ice_evp
         !Not bnd node; has ice
         mass=(rhoice*m_ice0(i)+rhosno*m_snow0(i)) !>0
         !mass=max(mass,9*a_ice0(i))
+        !mass=min(mass,rhoice*10)
         !Error: limit mass>9?
         !Coriolis @ node
         cori_nd=dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
@@ -216,6 +234,7 @@ subroutine ice_evp
         gam1=a_ice0(i)/mass*Cdn_ocn(i)*rho0*umod
         rxp=a_ice0(i)*stress_atmice_x(i)/mass
         ryp=a_ice0(i)*stress_atmice_y(i)/mass
+        maxstr = max(maxstr,sqrt(rxp*rxp+ryp*ryp))
         !Pressure gradient
         sum1=0; sum2=0
         do j=1,nne(i)
@@ -223,22 +242,27 @@ subroutine ice_evp
           h_ice_el=sum(m_ice0(elnode(1:3,ie)))/3.0
           h_snow_el=sum(m_snow0(elnode(1:3,ie)))/3.0
           tmp1=rhoice*h_ice_el+rhosno*h_snow_el !mass @elem
+          tmp1 = mass
           !sum1=sum1+tmp1*deta(1,ie)*area(ie)/3
           !sum2=sum2+tmp1*deta(2,ie)*area(ie)/3
 
           !if(any(isbnd(1,indnd(1:nnp(i),i))/=0)) then
-            sum1=sum1+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
-            sum2=sum2+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
+          !  sum1=sum1+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+          !  sum2=sum2+tmp1*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
           !else
-          !  sum1=sum1+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
-          !  sum2=sum2+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
+            sum1=sum1+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+            sum2=sum2+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
           !endif
 
           !sum1=sum1+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
           !sum2=sum2+tmp1*deta(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp1*deta(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
         enddo !j
-        rxp=rxp-grav*sum1/mass/area_median(i)
-        ryp=ryp-grav*sum2/mass/area_median(i)
+        tmp3 = grav*sum1/mass/area_median(i)
+        rxp=rxp-tmp3
+        tmp4 = grav*sum2/mass/area_median(i)
+        ryp=ryp-tmp4
+        maxdeta = max(maxdeta,sqrt(tmp3*tmp3+tmp4*tmp4))
+        
         !Stress
         sum1=0; sum2=0
         do j=1,nne(i)
@@ -246,13 +270,16 @@ subroutine ice_evp
           id=iself(j,i)
           !sum1=sum1+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))
           !sum2=sum2+area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))
-          sum1=sum1+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+&
-          &area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
-          sum2=sum2+area(ie)*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+&
-          &area(ie)*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
+          sum1=sum1+area(ie)/3*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+&
+          &area(ie)/3*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
+          sum2=sum2+area(ie)/3*(dldxy(id,1,ie)*sigma11(ie)+dldxy(id,2,ie)*sigma12(ie))*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+&
+          &area(ie)/3*(dldxy(id,1,ie)*sigma12(ie)+dldxy(id,2,ie)*sigma22(ie))*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
         enddo !j
-        rxp=rxp-sum1/mass/area_median(i)
-        ryp=ryp-sum2/mass/area_median(i)
+        rxp = rxp-sum1/mass/area_median(i)
+        tmp3 = sum1/mass/area_median(i)
+        ryp = ryp-sum2/mass/area_median(i)
+        tmp4 = sum2/mass/area_median(i)
+        maxstress = max(maxstress,sqrt(tmp3*tmp3+tmp4*tmp4))
   
         rx=U_ice(i)+rxp*dtevp+gam1*dtevp*(u_ocean(i)*cos_io-v_ocean(i)*sin_io)
         ry=V_ice(i)+ryp*dtevp+gam1*dtevp*(u_ocean(i)*sin_io+v_ocean(i)*cos_io)
@@ -269,10 +296,6 @@ subroutine ice_evp
         !if(abs(V_ice(i))>0.1) then
         !  V_ice(i)=0.1*V_ice(i)/abs(V_ice(i))
         !endif
-        if(sqrt(U_ice(i)**2+v_ice(i)**2)>1.5) then
-            U_ice(i)=1.5*U_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
-            V_ice(i)=1.5*V_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
-        endif
         !Debug
         !if(isub==evp_rheol_steps.and.it_main==1) then
         !  write(92,*)real(xnd(i)),real(ynd(i)),real(U_ice(i)),real(V_ice(i))
@@ -287,20 +310,35 @@ subroutine ice_evp
       call exchange_p2d(U_ice)
       call exchange_p2d(V_ice)
     enddo !isub: sub-cycling
-  
-    !Check NaN
-  !  do i=1,nea
-  !    if(sigma11(i)/=sigma11(i).or.sigma12(i)/=sigma12(i).or.sigma22(i)/=sigma22(i)) then
-  !      write(errmsg,*)'NaN in ice_evp (1):',ielg(i),sigma11(i),sigma12(i),sigma22(i)
-  !      call parallel_abort(errmsg)
-  !    endif
-  !  enddo !i
-  !  do i=1,npa
-  !    if(U_ice(i)/=U_ice(i).or.V_ice(i)/=V_ice(i)) then
-  !      write(errmsg,*)'NaN in ice_evp (2):',iplg(i),U_ice(i),V_ice(i)
-  !      call parallel_abort(errmsg)
-  !    endif
-  !  enddo !i
+
+    do i = 1,np
+      if(sqrt(U_ice(i)**2+v_ice(i)**2)>2) then
+        U_ice(i)=2*U_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
+        V_ice(i)=2*V_ice(i)/sqrt(U_ice(i)**2+v_ice(i)**2)
+      endif
+    enddo
+
+      call exchange_p2d(U_ice)
+      call exchange_p2d(V_ice)
+        !Check NaN
+!  do i=1,nea
+!    if(sigma11(i)/=sigma11(i).or.sigma12(i)/=sigma12(i).or.sigma22(i)/=sigma22(i)) then
+!      write(errmsg,*)'NaN in mice_evp (1):',ielg(i),sigma11(i),sigma12(i),sigma22(i)
+!      call parallel_abort(errmsg)
+!    endif
+!  enddo !i
+!  do i=1,npa
+!    if(u_ice(i)/=u_ice(i).or.v_ice(i)/=v_ice(i)) then
+!      write(errmsg,*)'NaN in mice_evp (2):',iplg(i),u_ice(i),v_ice(i)
+!      call parallel_abort(errmsg)
+!    endif
+!  enddo !i
+    call mpi_allreduce(maxdeta,tmpsum,1,rtype,MPI_MAX,comm,ierr)
+    if(myrank==0) write(16,*) 'In EVP maxdeta',tmpsum
+    call mpi_allreduce(maxstr,tmpsum,1,rtype,MPI_MAX,comm,ierr)
+    if(myrank==0) write(16,*) 'In EVP maxairstr',tmpsum
+    call mpi_allreduce(maxstress,tmpsum,1,rtype,MPI_MAX,comm,ierr)
+    if(myrank==0) write(16,*) 'In EVP maxstress',tmpsum
   
     !Debug
   !  if(abs(time_stamp-rnday*86400)<0.1) then
