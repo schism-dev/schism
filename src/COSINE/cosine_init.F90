@@ -375,11 +375,11 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
     !compute total datasize for each station, and initilize dvars
     !------------------------------------------------------------------------------ 
     if(dg%istat==0) then
-      dg%istat=1
-
       !sync total nvar and ndim
       call mpi_allreduce(dl%nvar,dg%nvar,1,itype,MPI_MAX,comm,ierr)
       call mpi_allreduce(dl%ndim,dg%ndim,1,itype,MPI_MAX,comm,ierr)
+      if(dg%nvar>0) dg%istat=1
+      if(dg%istat==0) return
 
       if(myrank==0) then
         allocate(varname_gb(nproc),ndim_gb(nproc),dims_nc(dg%nvar),var_dims_nc(dg%nvar),stat=istat)
@@ -501,12 +501,12 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
     !allocate data for storing all diagnostic values 
     !------------------------------------------------------------------------------ 
     !check nvar and ndim
-    if(dl%nsta/=0) then
-      if(dl%nvar/=dg%nvar) call parallel_abort('dl%nvar/=dg%nvar')
-      if(dl%ndim/=dg%ndim) call parallel_abort('dl%ndim/=dg%ndim')
-    endif
+    !if(dl%nsta/=0) then !this can happen if dry_ie(i)==1
+    !  if(dl%nvar/=dg%nvar) call parallel_abort('dl%nvar/=dg%nvar')
+    !  if(dl%ndim/=dg%ndim) call parallel_abort('dl%ndim/=dg%ndim')
+    !endif
   
-    allocate(swild_lc(dl%ndim*dl%nsta),stat=istat)
+    allocate(swild_lc(dg%ndim*dl%nsta),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. swild_lc')
     if(myrank==0) then
       allocate(swild_gb(dg%ndim*dg%nsta),stat=istat)
@@ -514,9 +514,9 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
     endif
 
     !assemble data on each rank 
-    swild_lc=0.0; m=0 
+    swild_lc=-9999; m=0 
     do i=1,dl%nsta
-
+      if(.not. associated(dlv)) cycle
       dtv=>dlv
       do j=1,dl%nvar
         do n=1,dtv%ndim
@@ -528,7 +528,7 @@ subroutine cosine_output(imode,id,varname,ndim,rarray)
     enddo !i=1,dl%nsta
 
     !pass all data to myrank=0
-    call mpi_gatherv(swild_lc,dl%nsta*dl%ndim,rtype,swild_gb,dg%nstas*dg%ndim,dg%displ*dg%ndim,rtype,0,comm,ierr)
+    call mpi_gatherv(swild_lc,dl%nsta*dg%ndim,rtype,swild_gb,dg%nstas*dg%ndim,dg%displ*dg%ndim,rtype,0,comm,ierr)
     if(myrank==0) then
       m=0
       do i=1,dg%nsta
