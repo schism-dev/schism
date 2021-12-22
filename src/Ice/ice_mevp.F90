@@ -176,8 +176,8 @@ subroutine ice_mevp
       v_ice(i)=(-rx*tmp2+ry*tmp1)/delta
 
       !Limit vel
-!      u_ice(i)=max(-2.d0,min(2.d0,u_ice(i)))
-!      v_ice(i)=max(-2.d0,min(2.d0,v_ice(i)))
+      u_ice(i)=max(-5.d0,min(5.d0,u_ice(i)))
+      v_ice(i)=max(-5.d0,min(5.d0,v_ice(i)))
 
       !Check
       if(u_ice(i)/=u_ice(i).or.v_ice(i)/=v_ice(i)) then

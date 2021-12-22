@@ -28,7 +28,7 @@
 
   subroutine ice_fct
   use schism_glbl, only: rkind,nea,np,npa,elnode,nnp,indnd,time_stamp,rnday, &
- &fdb,lfdb,xnd,ynd,iplg,errmsg
+ &fdb,lfdb,xnd,ynd,iplg,errmsg,idry_e,idry,dp,eta2
   use schism_msgp, only: nproc,myrank,parallel_abort,exchange_p2d
   use ice_module
 
@@ -51,6 +51,8 @@
   fct_rhs=0 !-A_{jk}*a_k^n in notes; [m^2]
   !fct_rhs invalid at ghost nodes!!!
   do i=1,nea !assembling rhs over elements 
+    if(idry_e(i)==1) cycle
+
     !derivatives of shape functions
     dx=bafux(:,i)
     dy=bafuy(:,i)
@@ -271,7 +273,7 @@
     !==========================
     ! Update the solution 
     !==========================
-    ice_tr=ice_tr_lo
+    ice_tr(m,:)=ice_tr_lo(m,:)
     do i=1,nea !ice_tr invalid @ ghost nodes
       do j=1,3
         nd=elnode(j,i)
@@ -279,17 +281,28 @@
       enddo !j
     enddo !i  
 
-    !Restore low-order soln in non-FCT zone
-    do i=1,np
-      if(ice_fct_flag(i)==0) ice_tr(m,i)=ice_tr_lo(m,i)
-    enddo !i
-
     swild=ice_tr(m,:)
     call exchange_p2d(swild)
     ice_tr(m,:)=swild
 
-    !Check NaN
+    !Restore low-order soln in non-FCT zone; deal with dry
     do i=1,npa
+      if(idry(i)==1) then
+        ice_tr(m,i)=0.d0
+      else !wet
+        if(ice_fct_flag(i)==0) ice_tr(m,i)=ice_tr_lo(m,i)
+        !Limit to depth
+        if(m==1.or.m==3) then
+          !ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,eta2(i)+dp(i)))
+          ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,dp(i)))
+          if(ice_tr(m,i)>1.d3) then
+             write(errmsg,*)'ice_fct(0): ice too thick,',m,iplg(i),idry(i), &
+    &ice_tr(m,i),u_ice(i),v_ice(i),dp(i),eta2(i)
+             call parallel_abort(errmsg)
+          endif 
+        endif !m
+      endif !idry
+
       if(ice_tr(m,i)/=ice_tr(m,i)) call parallel_abort('ice_fct: NaN')
     enddo !i
 !+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -301,10 +314,19 @@
     ice_tr(2,i)=min(ice_tr(2,i),1.d0)
     if(ice_tr(2,i)<1.d-9) ice_tr(2,i)=0
     if(ice_tr(1,i)<1.d-9) ice_tr(1,i)=0
+    if(ice_tr(3,i)<1.d-9) ice_tr(3,i)=0
+  enddo !i
 
-    !Check
+  !Check
+  do i=1,np
     if(ice_tr(1,i)>1.d3.or.ice_tr(3,i)>1.d3) then
-      write(errmsg,*)'ice_fct: ice too thick,',iplg(i),ice_tr(1:3,i),u_ice(i),v_ice(i)
+      do j=1,nnp(i)
+        nd=indnd(j,i)
+        write(12,*)'ice_fct:',iplg(i),iplg(nd),idry(nd),dp(nd),eta2(nd),u_ice(nd),v_ice(nd), &
+     &ice_tr(1:3,nd)
+      enddo !j
+      write(errmsg,*)'ice_fct: ice too thick,',iplg(i),idry(i),ice_tr(1:3,i),u_ice(i),v_ice(i), &
+    &dp(i),eta2(i)
       call parallel_abort(errmsg)
     endif
   enddo !i

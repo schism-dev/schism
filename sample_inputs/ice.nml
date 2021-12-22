@@ -17,7 +17,7 @@
   delta_min=2.0e-9     ! (1/s) Limit for minimum divergence (Hibler, Hunke
                        ! normally use 2.0e-9, which does much stronger
                        ! limiting; valid for both VP and EVP
-  theta_io=0.       ! ice/ocean rotation angle. [degr]
+  theta_io=0.       ! ice/ocean rotation angle. [degr]. Usually 0 unless vgrid is too coarse
 
   !Options for specifying 2 relax coefficients in mEVP only (mevp_coef)
   !0: constant (mevp_alpha[12] below); 1: both coefficients equal to: mevp_alpha3/tanh(mevp_alpha4*area/dt_ice) 
