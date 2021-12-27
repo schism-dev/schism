@@ -13,6 +13,45 @@
 !> @note Adopted from the ADCIRC source code.
 !----------------------------------------------------------------
 
+!Routines & functions
+! CalcIntensityChange
+! UVTrans
+! UVTransPoint
+! NewVortex
+! NewVortexFull
+! SetVortex
+! SetRMaxes
+! GetRMaxes
+! CalcRMaxes
+! CalcRMaxesFull
+! FitRMaxes
+! FitRMaxes4
+! SetVMaxesBL
+! GetVMaxesBL
+! SetUseVMaxesBL
+! SetShapeParameter
+! GetShapeParameter (fun)
+! GetShapeParameters (fun)
+! GetPhiFactors (fun)
+! SetIsotachRadii
+! SetIsotachWindSpeeds
+! SetUsequadrantVR
+! GetUsequadrantVR (fun)
+! SpInterp (fun)
+! InterpR (fun)
+! Rmw (fun)
+! UVP
+! UVPR
+! FAng (fun)
+! Rotate
+! GetLatestRMax (fun)
+! GetLatestAngle (fun)
+! VhWithCoriFull (fun)
+! VhWithCori (fun)
+! VhNoCori (fun)
+! FindRoot (fun)
+
+
 MODULE PaHM_Vortex
 
   USE PaHM_Sizes

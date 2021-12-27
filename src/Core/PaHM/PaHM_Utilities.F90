@@ -1810,6 +1810,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: x
     REAL(SZ), INTENT(OUT) :: y
 
+!YJZ error: lat0 in degrees
     x = DEG2RAD * REARTH * (lon - lon0) * COS(lat0)
     y = DEG2RAD * REARTH * lat
 

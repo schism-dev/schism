@@ -30,7 +30,8 @@
       use netcdf
       use misc_modules
       use gen_modules_clock
-      USE ParWind, ONLY : ReadCsvBestTrackFile
+      use ParWind, only : ReadCsvBestTrackFile
+      use PaHM_Utilities, only : ReadControlFile
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -6939,7 +6940,20 @@
 
 !...  Init PaHM
       if(nws<0) then
+        if(myrank==0) then
+          write(16,*)'reading PaHM inputs...'
+          call flush(16)
+        endif
+        call parallel_barrier
+
+        call ReadControlFile('pahm_control.in') !TRIM(controlFileName))
         call ReadCsvBestTrackFile()
+
+        if(myrank==0) then
+          write(16,*)'done pre-proc PaHM...'
+          call flush(16)
+        endif
+        call parallel_barrier
       endif !nws<0
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)

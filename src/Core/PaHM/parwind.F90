@@ -13,10 +13,23 @@
 !> @author Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>
 !----------------------------------------------------------------
 
+!Search for 'YJZ' for notes
+!Routines & functions
+! ReadCsvBestTrackFile
+! ProcessHollandData (called by GetHollandFields)
+! GetHollandFields
+! WriteBestTrackData
+! AllocBTrStruct
+! DeAllocBTrStruct 
+! AllocHollStruct
+! DeAllocHollStruct 
+
 MODULE ParWind
 
   USE PaHM_Sizes
   USE PaHM_Messages
+  use schism_glbl, only : rkind,it_main,time_stamp,xlon,ylat,npa,pi,windx,windy,pr
+  use schism_msgp, only: parallel_barrier
 
   ! switch to turn on or off geostrophic balance in GAHM
   ! on (default): Coriolis term included, phiFactors will be calculated before being used 
@@ -682,22 +695,22 @@ MODULE ParWind
   !>   timeIDX   The time location to generate the fields for
   !>
   !----------------------------------------------------------------
-  SUBROUTINE GetHollandFields(timeIDX)
+  SUBROUTINE GetHollandFields()
 
 !    USE PaHM_Mesh, ONLY : slam, sfea, xcSlam, ycSfea, np, isMeshOK
     USE PaHM_Global, ONLY : gravity, rhoWater, rhoAir,                     &
                        backgroundAtmPress, blAdjustFac, ONE2TEN,      &
                        DEG2RAD, RAD2DEG, BASEE, OMEGA, MB2PA, MB2KPA, &
                        nBTrFiles, bestTrackFileName,                  &
-                       nOutDT, mdBegSimTime, mdEndSimTime, mdOutDT,   &
-                       wVelX, wVelY, wPress, Times
+                       nOutDT, mdBegSimTime, mdEndSimTime, mdOutDT   !,   &
+!                       wVelX, wVelY, wPress, Times
     USE PaHM_Utilities, ONLY : SphericalDistance, SphericalFracPoint, GetLocAndRatio
     USE TimeDateUtils, ONLY : JulDayToGreg, GregToJulDay
     !USE PaHM_NetCDFIO
 
     IMPLICIT NONE
 
-    INTEGER, INTENT(IN)                  :: timeIDX
+!    INTEGER, INTENT(IN)                  :: timeIDX
 
     TYPE(HollandData_T), ALLOCATABLE     :: holStru(:)          ! array of Holland data structures
     INTEGER                              :: stormNumber         ! storm identification number
@@ -710,6 +723,8 @@ MODULE ParWind
     REAL(SZ)                             :: trVX, trVY, trSPD   ! storm translation velocities (m/s)
     REAL(SZ)                             :: trSpdX, trSpdY      ! adjusted translation velocities (m/s)
     REAL(SZ)                             :: lon, lat            ! current eye location
+
+    real(rkind) :: slam(npa),sfea(npa)     !lon,lat in degrees
 
     REAL(SZ), ALLOCATABLE                :: rad(:)              ! distance of nodal points from the eye location
     INTEGER, ALLOCATABLE                 :: radIDX(:)           ! indices of nodal points duch that rad <= rrp
@@ -731,73 +746,87 @@ MODULE ParWind
 
     LOGICAL, SAVE                        :: firstCall = .TRUE.
 
-    CALL SetMessageSource("GetHollandFields")
+!   Debug
+    write(12,*)'Check reading of Holland...',it_main,time_stamp/86400,nOutDT,npa
 
-#ifdef JUNK
-    ! Check if timeIDX is within bounds (1 <= timeIDX <= nOutDT). If it is not then exit the program.
-    IF ((timeIDX < 1) .OR. (timeIDX > nOutDT)) THEN
-        WRITE(tmpStr1, '(a, i0)') 'timeIDX = ', timeIDX
-        WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
-        WRITE(scratchMessage, '(a)') 'timeIDX should be: 1 <= timeIDX <= nOutDT :' // &
-                                     TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
-        CALL AllMessage(ERROR, scratchMessage)
-
-        CALL UnsetMessageSource()
-
-        CALL Terminate()
-    END IF
-
-    ! This part of the code should only be executed just once
-    IF (firstCall) THEN
-      firstCall = .FALSE.
-       
-      ! Check if the mash variables are set and that nOutDT is greater than zero.
-      IF (.NOT. isMeshOK) THEN
-        WRITE(scratchMessage, '(a)') 'The mesh variables are not established properly. ' // &
-                                     'Call subroutine ReadMesh to read/create the mesh topology first.'
-        CALL AllMessage(ERROR, scratchMessage)
-
-        CALL UnsetMessageSource()
-
-        CALL Terminate()
-      ELSE
-        IF ((np <= 0) .OR. (nOutDT <= 0)) THEN
-          WRITE(tmpStr1, '(a, i0)') 'np = ', np
-          WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
-          WRITE(scratchMessage, '(a)') 'Variables "np" or "nOutDT" are not defined properly: ' // &
-                                       TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
-          CALL AllMessage(ERROR, scratchMessage)
-
-          CALL UnsetMessageSource()
-
-          CALL Terminate()
-        END IF
-      END IF
-
-      ! Allocate storage for the Times array that contains the output times.
-      ALLOCATE(Times(nOutDT))
-      DO iCnt = 1, nOutDT
-        Times(iCnt) = mdBegSimTime + (iCnt - 1) * mdOutDT
-      END DO
-    END IF
-
+!   Calc lon/lat in degrees (lon \in (-180,180))
+!    if(.not.allocated(slam)) allocate(slam(npa))
+!    if(.not.allocated(sfea)) allocate(sfea(npa))
+    slam=xlon/pi*180.d0
+    sfea=ylat/pi*180.d0
 
     !------------------------------
     ! Allocate storage for required arrays.
-    IF (.NOT. ALLOCATED(wVelX))  ALLOCATE(wVelX(np))
-    IF (.NOT. ALLOCATED(wVelY))  ALLOCATE(wVelY(np))
-    IF (.NOT. ALLOCATED(wPress)) ALLOCATE(wPress(np))
-
-    ! Initialize the arrays. Here we are resetting the fields to their defaults.
-    ! This subroutine is called repeatdly and its time the following fields
-    ! are recalculated.
-    wVelX  = 0.0_SZ
-    wVelY  = wVelX
-    wPress = backgroundAtmPress * MB2PA
+!    IF (.NOT. ALLOCATED(wVelX))  ALLOCATE(wVelX(npa))
+!    IF (.NOT. ALLOCATED(wVelY))  ALLOCATE(wVelY(npa))
+!    IF (.NOT. ALLOCATED(wPress)) ALLOCATE(wPress(npa))
+!
+!    ! Initialize the arrays. Here we are resetting the fields to their defaults.
+!    ! This subroutine is called repeatdly and its time the following fields
+!    ! are recalculated.
+!    wVelX  = 0.0_SZ
+!    wVelY  = wVelX
+!    wPress = backgroundAtmPress * MB2PA
     !------------------------------
 
+!    CALL SetMessageSource("GetHollandFields")
+
+    ! Check if timeIDX is within bounds (1 <= timeIDX <= nOutDT). If it is not then exit the program.
+    !IF ((timeIDX < 1) .OR. (timeIDX > nOutDT)) THEN
+    if(time_stamp<mdBegSimTime.or.time_stamp>mdEndSimTime) then
+!        WRITE(tmpStr1, '(a, f14.4)') 'time_stamp= ',time_stamp 
+!        WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
+!        WRITE(scratchMessage, '(a)') 'Outside time :' // &
+!                                     TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
+        write(12,*)'GetHollandFields: outside time window:',time_stamp,mdBegSimTime,mdEndSimTime
+        return
+!        CALL AllMessage(ERROR, scratchMessage)
+
+!        CALL UnsetMessageSource()
+
+!        CALL Terminate()
+    END IF
+
+!YJZ, debug
+!    return
+
+    ! This part of the code should only be executed just once
+!    IF (firstCall) THEN
+!      firstCall = .FALSE.
+!       
+!      ! Check if the mash variables are set and that nOutDT is greater than zero.
+!      IF (.NOT. isMeshOK) THEN
+!        WRITE(scratchMessage, '(a)') 'The mesh variables are not established properly. ' // &
+!                                     'Call subroutine ReadMesh to read/create the mesh topology first.'
+!        CALL AllMessage(ERROR, scratchMessage)
+!
+!        CALL UnsetMessageSource()
+!
+!        CALL Terminate()
+!      ELSE
+!        IF ((np <= 0) .OR. (nOutDT <= 0)) THEN
+!          WRITE(tmpStr1, '(a, i0)') 'np = ', np
+!          WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
+!          WRITE(scratchMessage, '(a)') 'Variables "np" or "nOutDT" are not defined properly: ' // &
+!                                       TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
+!          CALL AllMessage(ERROR, scratchMessage)
+!
+!          CALL UnsetMessageSource()
+!
+!          CALL Terminate()
+!        END IF
+!      END IF
+!
+!      ! Allocate storage for the Times array that contains the output times.
+!      ALLOCATE(Times(nOutDT))
+!      DO iCnt = 1, nOutDT
+!        Times(iCnt) = mdBegSimTime + (iCnt - 1) * mdOutDT
+!      END DO
+!    END IF !firstCall
+
+
     !------------------------------
-!YJZ: this block should be in _init, not in _run
+!YJZ: this block should be in _init, not in _run?
     ! ALLOCATE THE HOLLAND DATA STRUCTURES AND STORE THE HOLLAND
     ! DATA INTO THE DATA STRUCTURE ARRAY FOR SUBSEQUENT USE
     !------------------------------
@@ -837,7 +866,7 @@ MODULE ParWind
 
         CALL Terminate()
       ELSE
-        WRITE(scratchMessage, '(a)') 'Processing the Holland data structure for the best track file: ' // &
+        WRITE(12,'(a)') 'Processing the Holland data structure for the best track file: ' // &
                                      TRIM(ADJUSTL(bestTrackFileName(stCnt)))
         CALL LogMessage(INFO, scratchMessage)
       END IF
@@ -850,26 +879,31 @@ MODULE ParWind
 !    WRITE(scratchMessage, '(a)') 'Start of the main time loop'
 !    CALL AllMessage(INFO, scratchMessage)
 !    DO iCnt = 1, nOutDT
-        iCnt = timeIDX
-        WRITE(tmpStr1, '(i5)') iCnt
-        WRITE(tmpStr2, '(i5)') nOutDT
-      tmpStr1 = '(' // TRIM(tmpStr1) // '/' // TRIM(ADJUSTL(tmpStr2)) // ')'
-        WRITE(tmpTimeStr, '(f20.3)') Times(iCnt)
-      WRITE(scratchMessage, '(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpStr1)) // " " // TRIM(ADJUSTL(tmpTimeStr))
-      CALL AllMessage(scratchMessage)
+!YJZ
+!     iCnt = timeIDX
+!     WRITE(tmpStr1, '(i5)') iCnt
+!     WRITE(tmpStr2, '(i5)') nOutDT
+!     tmpStr1 = '(' // TRIM(tmpStr1) // '/' // TRIM(ADJUSTL(tmpStr2)) // ')'
+     WRITE(tmpTimeStr, '(f20.3)') time_stamp !Times(iCnt) (time from ref in sec; make sure origin=ref time)
+     WRITE(12,'(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpTimeStr))
+!      CALL AllMessage(scratchMessage)
 
       DO stCnt = 1, nBTrFiles
+       
+        write(12,*)'Check holStru...',stCnt,time_stamp,real(holStru(stCnt)%castTime)
+
         ! Get the bin interval where Times(iCnt) is bounded and the corresponding ratio
         ! factor for the subsequent linear interpolation in time. In order for this to
         ! work, the array holStru%castTime should be ordered in ascending order.
-        CALL GetLocAndRatio(Times(iCnt), holStru(stCnt)%castTime, jl1, jl2, wtRatio)
+        !CALL GetLocAndRatio(Times(iCnt), holStru(stCnt)%castTime, jl1, jl2, wtRatio)
+        CALL GetLocAndRatio(time_stamp, holStru(stCnt)%castTime, jl1, jl2, wtRatio)
 
         ! Skip the subsequent calculations if Times(iCnt) is outside the castTime range
         ! by exiting this loop
         IF ((jl1 <= 0) .OR. (jl2 <= 0)) THEN
-          WRITE(scratchMessage, '(a)') 'Requested output time: ' // TRIM(ADJUSTL(tmpTimeStr)) // &
+          WRITE(12, '(a)') 'Requested output time: ' // TRIM(ADJUSTL(tmpTimeStr)) // &
                                        ', skipping generating data for this time'
-          CALL LogMessage(INFO, scratchMessage)
+!          CALL LogMessage(INFO, scratchMessage)
 
           EXIT
         END IF
@@ -896,17 +930,17 @@ MODULE ParWind
         ! Get all the distances of the mesh nodes from (lat, lon)
         rad    = SphericalDistance(sfea, slam, lat, lon)
         ! ... and the indices of the nodal points where rad <= rrp
-        radIDX = PACK([(i, i = 1, np)], rad <= rrp)
+        radIDX = PACK([(i, i = 1, npa)], rad <= rrp) !leave dim of radIDX undefined to receive values from pack()
         maxRadIDX = SIZE(radIDX)
 
         ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
         IF (maxRadIDX == 0) THEN
           WRITE(tmpStr1, '(f20.3)') rrp
-            tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
-          WRITE(scratchMessage, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
+          tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
+          WRITE(12, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
                                        TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
                                        TRIM(ADJUSTL(holStru(stCnt)%thisStorm))
-          CALL LogMessage(INFO, scratchMessage)
+!          CALL LogMessage(INFO, scratchMessage)
 
           EXIT
         END IF
@@ -925,12 +959,13 @@ MODULE ParWind
         ! If this is a "CALM" period, set winds to zero velocity and pressure equal to the
         ! background pressure and return. PV: check if this is actually needed
         IF (cPress < 0.0_SZ) THEN
-          wVelX  = 0.0_SZ
-          wVelY  = wVelX
-          wPress = backgroundAtmPress * MB2PA
+!YJZ error: this is in a loop of nfiles
+          windx= 0.0_SZ
+          windy= 0.d0 !wVelX
+          pr= backgroundAtmPress * MB2PA
 
-          WRITE(scratchMessage, '(a)') 'Calm period found, generating zero atmospheric fields for this time'
-          CALL LogMessage(INFO, scratchMessage)
+          WRITE(12, '(a)') 'Calm period found, generating zero atmospheric fields for this time'
+!          CALL LogMessage(INFO, scratchMessage)
 
           EXIT
         END IF
@@ -960,7 +995,7 @@ MODULE ParWind
         windMultiplier = 1.0_SZ
         IF (stormNumber == 2) windMultiplier = 1.2_SZ
 
-        DO npCnt = 1, maxRadIDX
+        DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
           i = radIDX(npCnt)
 
           dx    = SphericalDistance(lat, lon, lat, slam(i))
@@ -1008,9 +1043,9 @@ MODULE ParWind
           !print *, sfVelX, sfVelY, wVelX(i), wVelY(i)
           !PV Need to interpolate between storms if this nodal point
           !   is affected by more than on storm
-          wPress(i) = sfPress
-          wVelX(i)  = sfVelX
-          wVelY(i)  = sfVelY
+          pr(i) = sfPress
+          windx(i)  = sfVelX
+          windy(i)  = sfVelY
 
           !print *, sfVelX, sfVelY, wVelX(i), wVelY(i)
           !print *, '--------------------------------------'
@@ -1030,8 +1065,12 @@ MODULE ParWind
     DEALLOCATE(holStru)
     !----------
 
-#endif /*JUNK*/
-    CALL UnsetMessageSource()
+!    CALL UnsetMessageSource()
+
+    !Debug
+    write(12,*)'wPress from GetHollandFields:',time_stamp/86400,pr
+    write(12,*)'wVelX from GetHollandFields:',time_stamp/86400,windx
+    write(12,*)'wVelY from GetHollandFields:',time_stamp/86400,windy
 
   END SUBROUTINE GetHollandFields
 

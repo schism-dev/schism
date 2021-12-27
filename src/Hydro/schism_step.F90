@@ -25,6 +25,7 @@
       use netcdf
       use misc_modules
       use gen_modules_clock
+      use ParWind, only: GetHollandFields
 
 #ifdef USE_GOTM
       use turbulence, only: do_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -484,6 +485,12 @@
         windx  = 0.d0
         windy  = 0.d0
 !$OMP   end workshare
+      endif
+
+      if(nws<0) then !PaHM
+        if(myrank==0) write(16,*)'b4 GetHollandFields'
+        call GetHollandFields()
+        if(myrank==0) write(16,*)'after GetHollandFields'
       endif
 
       if(nws==1) then
