@@ -13,10 +13,15 @@
 !> @author Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>
 !----------------------------------------------------------------
 
+!Relevant routines
+! ReadControlFile
+
 MODULE PaHM_Utilities
 
   USE PaHM_Sizes
   USE PaHM_Messages
+  use schism_glbl, only: errmsg
+  use schism_msgp, only: parallel_abort
 
   IMPLICIT NONE
 
@@ -2002,7 +2007,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(IN) :: lat2    ! latitude of point 2 on the sphere (degrees north)
     REAL(SZ), INTENT(IN) :: lon2    ! longitude of point 2 on the sphere (degrees east)
 
-    REAL(SZ)             :: phi1, phi2, lamda1, lamda2, dphi, dlamda, dsigma
+    REAL(SZ)             :: phi1, phi2, lamda1, lamda2, dphi, dlamda, dsigma,tmp4
 
     phi1   = DEG2RAD * lat1
     phi2   = DEG2RAD * lat2
@@ -2014,8 +2019,14 @@ MODULE PaHM_Utilities
 
     ! Vincenty formula to calculate a distance along a sphere
     dsigma = ATAN(SQRT((COS(phi2) * SIN(dlamda))**2 + &
-                       (COS(phi1) * SIN(phi2) - SIN(phi1) * COS(phi2) * COS(dlamda))**2))
-    dsigma = dsigma / (SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda))
+                       (COS(phi1) * SIN(phi2) - SIN(phi1) * COS(phi2) * COS(dlamda))**2)) !>=0
+    tmp4=SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda) !can be <0?
+    if(tmp4==0.d0) then
+      write(errmsg,*)'SphericalDistance_Scalar, div by 0:',tmp4
+      call parallel_abort(errmsg)
+    endif
+    
+    dsigma = dsigma /tmp4 !(SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda))
 
     ! This is the great-circle distance; REARTH in meters
     myValOut = REARTH * dsigma
@@ -2074,12 +2085,12 @@ MODULE PaHM_Utilities
     REAL(SZ), DIMENSION(:), ALLOCATABLE :: myValOut
 
     ! Local variables
-    REAL(SZ), DIMENSION(:), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma,tmp5
     REAL(SZ)                            :: phi0, lamda0
     INTEGER                             :: status, n1
 
 
-    CALL SetMessageSource("SphericalDistance_1D")
+!    CALL SetMessageSource("SphericalDistance_1D")
 
     IF (SIZE(lats) /= SIZE(lons)) THEN
       WRITE(scratchMessage, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
@@ -2090,7 +2101,7 @@ MODULE PaHM_Utilities
 
     n1 = SIZE(lats, 1)
     ALLOCATE(myValOut(n1), STAT = status)
-    ALLOCATE(phis(n1), lamdas(n1), dphi(n1), dlamda(n1), dsigma(n1), STAT = status)
+    ALLOCATE(phis(n1), lamdas(n1), dphi(n1), dlamda(n1), dsigma(n1), tmp5(n1),STAT = status)
 
     IF (status /= 0) THEN
       WRITE(scratchMessage, '(a)') 'Could no allocate memory for the internal arrays.'
@@ -2110,14 +2121,19 @@ MODULE PaHM_Utilities
     ! Vincenty formula to calculate a distance along a sphere
     dsigma = ATAN(SQRT((COS(phi0) * SIN(dlamda))**2 + &
                        (COS(phis) * SIN(phi0) - SIN(phis) * COS(phi0) * COS(dlamda))**2))
-    dsigma = dsigma / (SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda))
+    tmp5=SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda)
+    if(any(tmp5==0.d0)) then
+      write(errmsg,*)'SphericalDistance_1D, div by 0:',tmp5
+      call parallel_abort(errmsg)
+    endif
+    dsigma = dsigma /tmp5 !(SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda))
 
     ! This is the great-circle distance; REARTH in meters
     myValOut = REARTH * dsigma
 
     DEALLOCATE(phis, lamdas, dphi, dlamda, dsigma)
 
-    CALL UnsetMessageSource()
+!    CALL UnsetMessageSource()
    
     RETURN
 

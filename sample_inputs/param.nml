@@ -485,6 +485,8 @@
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
 ! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
+! If nws=-1, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+!  In this case, the Holland model is called every step so wtiminc is not used.
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange

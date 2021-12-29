@@ -28,8 +28,8 @@ MODULE ParWind
 
   USE PaHM_Sizes
   USE PaHM_Messages
-  use schism_glbl, only : rkind,it_main,time_stamp,xlon,ylat,npa,pi,windx,windy,pr
-  use schism_msgp, only: parallel_barrier
+  use schism_glbl, only : rkind,it_main,time_stamp,xlon_gb,ylat_gb,pi,errmsg
+  use schism_msgp, only: parallel_barrier,parallel_abort
 
   ! switch to turn on or off geostrophic balance in GAHM
   ! on (default): Coriolis term included, phiFactors will be calculated before being used 
@@ -695,7 +695,7 @@ MODULE ParWind
   !>   timeIDX   The time location to generate the fields for
   !>
   !----------------------------------------------------------------
-  SUBROUTINE GetHollandFields()
+  SUBROUTINE GetHollandFields(np_gb,atmos_1)
 
 !    USE PaHM_Mesh, ONLY : slam, sfea, xcSlam, ycSfea, np, isMeshOK
     USE PaHM_Global, ONLY : gravity, rhoWater, rhoAir,                     &
@@ -711,6 +711,8 @@ MODULE ParWind
     IMPLICIT NONE
 
 !    INTEGER, INTENT(IN)                  :: timeIDX
+    INTEGER, INTENT(IN)                  :: np_gb
+    real(rkind), intent(inout)           :: atmos_1(np_gb,3) !1:2 wind; 3: pressure
 
     TYPE(HollandData_T), ALLOCATABLE     :: holStru(:)          ! array of Holland data structures
     INTEGER                              :: stormNumber         ! storm identification number
@@ -724,7 +726,6 @@ MODULE ParWind
     REAL(SZ)                             :: trSpdX, trSpdY      ! adjusted translation velocities (m/s)
     REAL(SZ)                             :: lon, lat            ! current eye location
 
-    real(rkind) :: slam(npa),sfea(npa)     !lon,lat in degrees
 
     REAL(SZ), ALLOCATABLE                :: rad(:)              ! distance of nodal points from the eye location
     INTEGER, ALLOCATABLE                 :: radIDX(:)           ! indices of nodal points duch that rad <= rrp
@@ -746,14 +747,25 @@ MODULE ParWind
 
     LOGICAL, SAVE                        :: firstCall = .TRUE.
 
-!   Debug
-    write(12,*)'Check reading of Holland...',it_main,time_stamp/86400,nOutDT,npa
+!    real(rkind) :: slam(npa),sfea(npa)     !lon,lat in degrees
+    real(rkind) :: tmp2,tmp3,tmp4
+    real(rkind) :: atmos_0(np_gb,3)
+    logical :: lrevert
 
+!   Debug
+    write(12,*)'start Holland at step: ',it_main,time_stamp,nOutDT
+
+    !Save previous outputs (error: not init'ed)
+    atmos_0=atmos_1
+    lrevert=.false. !init
+ 
 !   Calc lon/lat in degrees (lon \in (-180,180))
-!    if(.not.allocated(slam)) allocate(slam(npa))
-!    if(.not.allocated(sfea)) allocate(sfea(npa))
-    slam=xlon/pi*180.d0
-    sfea=ylat/pi*180.d0
+!    slam=xlon/pi*180.d0
+!    sfea=ylat/pi*180.d0
+
+!   Init wind etc
+    atmos_1(:,1:2)=0.d0
+    atmos_1(:,3)=backgroundAtmPress*MB2PA
 
     !------------------------------
     ! Allocate storage for required arrays.
@@ -778,7 +790,7 @@ MODULE ParWind
 !        WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
 !        WRITE(scratchMessage, '(a)') 'Outside time :' // &
 !                                     TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
-        write(12,*)'GetHollandFields: outside time window:',time_stamp,mdBegSimTime,mdEndSimTime
+!        write(12,*)'GetHollandFields: outside time window:',time_stamp,mdBegSimTime,mdEndSimTime
         return
 !        CALL AllMessage(ERROR, scratchMessage)
 
@@ -884,13 +896,13 @@ MODULE ParWind
 !     WRITE(tmpStr1, '(i5)') iCnt
 !     WRITE(tmpStr2, '(i5)') nOutDT
 !     tmpStr1 = '(' // TRIM(tmpStr1) // '/' // TRIM(ADJUSTL(tmpStr2)) // ')'
-     WRITE(tmpTimeStr, '(f20.3)') time_stamp !Times(iCnt) (time from ref in sec; make sure origin=ref time)
-     WRITE(12,'(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpTimeStr))
+    WRITE(tmpTimeStr, '(f20.3)') time_stamp !Times(iCnt) (time from ref in sec; make sure origin=ref time)
+    WRITE(12,'(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpTimeStr))
 !      CALL AllMessage(scratchMessage)
 
       DO stCnt = 1, nBTrFiles
        
-        write(12,*)'Check holStru...',stCnt,time_stamp,real(holStru(stCnt)%castTime)
+!        write(12,*)'Check holStru...',stCnt,time_stamp,real(holStru(stCnt)%castTime)
 
         ! Get the bin interval where Times(iCnt) is bounded and the corresponding ratio
         ! factor for the subsequent linear interpolation in time. In order for this to
@@ -910,10 +922,19 @@ MODULE ParWind
 
         ! Perform linear interpolation in time
         stormNumber = holStru(stCnt)%stormNumber(jl1)
-
+        !lon,lat is current eye location
         CALL SphericalFracPoint(holStru(stCnt)%lat(jl1), holStru(stCnt)%lon(jl1), &
                                 holStru(stCnt)%lat(jl2), holStru(stCnt)%lon(jl2), &
                                 wtRatio, lat, lon)
+
+        !Check NaN
+        if(wtRatio/=wtRatio.or.lat/=lat.or.lon/=lon) then
+          write(12,*)'GetHollandFields, error in lonlat:',wtRatio,lat,lon,jl1,jl2,holStru(stCnt)%lat,holStru(stCnt)%lon
+!          write(errmsg,*)'GetHollandFields- nan(1):',wtRatio,lat,lon,jl1,jl2
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
+
         !lat    = holStru(stCnt)%lat(jl1) + &
         !         wtRatio * (holStru(stCnt)%lat(jl2) - holStru(stCnt)%lat(jl1))
         !lon    = holStru(stCnt)%lon(jl1) + &
@@ -922,18 +943,33 @@ MODULE ParWind
         ! Radius of the last closed isobar
         rrp = holStru(stCnt)%rrp(jl1) + &
                 wtRatio * (holStru(stCnt)%rrp(jl2) - holStru(stCnt)%rrp(jl1))
-
         ! Radius of maximum winds
         rmw = holStru(stCnt)%rmw(jl1) + &
                 wtRatio * (holStru(stCnt)%rmw(jl2) - holStru(stCnt)%rmw(jl1))
+        !Limit
+        rrp=max(rrp,0.d0)
+        rmw=max(rmw,0.d0)
+
+        !Check
+        write(12,*)'rrp,rmw=',rrp,rmw,time_stamp,stormNumber,lon,lat
+        if(rrp/=rrp.or.rmw/=rmw) then
+          write(12,*)'GetHollandFields- nan(2):',rrp,rmw
+!          write(errmsg,*)'GetHollandFields- nan(2):',rrp,rmw
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
 
         ! Get all the distances of the mesh nodes from (lat, lon)
-        rad    = SphericalDistance(sfea, slam, lat, lon)
+        !rad() is allocated inside the routine
+        rad    = SphericalDistance(ylat_gb, xlon_gb, lat, lon)
+        write(12,*)'min &max rad=',minval(rad),maxval(rad)
+        !YJZ: limit rad;  I don't understand why distance can be <0
+        where(rad<1.d-1) rad=1.d-1
         ! ... and the indices of the nodal points where rad <= rrp
-        radIDX = PACK([(i, i = 1, npa)], rad <= rrp) !leave dim of radIDX undefined to receive values from pack()
+        radIDX = PACK([(i, i = 1, np_gb)], rad <= rrp) !leave dim of radIDX undefined to receive values from pack()
         maxRadIDX = SIZE(radIDX)
 
-        ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
+        ! Exit this loop if no nodes are inside last closed isobar
         IF (maxRadIDX == 0) THEN
           WRITE(tmpStr1, '(f20.3)') rrp
           tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
@@ -945,24 +981,51 @@ MODULE ParWind
           EXIT
         END IF
 
+        !From now on, rrp>=0.1
+        !Check
+        write(12,*)'rad:',size(rad),rrp,rmw,maxRadIDX !,radIDX
+        tmp2=sum(rad)/np_gb
+        if(maxRadIDX/=maxRadIDX.or.tmp2/=tmp2) then
+          write(12,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
+!          write(errmsg,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
+        if(maxRadIDX>0) then
+          tmp2=sum(radIDX)/np_gb
+          if(tmp2/=tmp2) then
+            write(12,*)'GetHollandFields- nan(4):',tmp2
+!            write(errmsg,*)'GetHollandFields- nan(4):',tmp2
+!            call parallel_abort(errmsg)
+            lrevert=.true.
+          endif 
+        endif
+
+        !Max wind speed
         speed  = holStru(stCnt)%speed(jl1) + &
                  wtRatio * (holStru(stCnt)%speed(jl2) - holStru(stCnt)%speed(jl1))
-
         cPress = holStru(stCnt)%cPress(jl1) + &
                  wtRatio * (holStru(stCnt)%cPress(jl2) - holStru(stCnt)%cPress(jl1))
-
         trVX   = holStru(stCnt)%trVx(jl1) + &
                 wtRatio * (holStru(stCnt)%trVx(jl2) - holStru(stCnt)%trVx(jl1))
         trVY   = holStru(stCnt)%trVy(jl1) + &
                 wtRatio * (holStru(stCnt)%trVy(jl2) - holStru(stCnt)%trVy(jl1))
 
+        !Check
+        write(12,*)'speed etc=',time_stamp,speed,cPress,trVX,trVY
+        if(speed/=speed.or.cPress/=cPress.or.trVX/=trVX.or.trVY/=trVY) then
+          write(12,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
+!          write(errmsg,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
+
         ! If this is a "CALM" period, set winds to zero velocity and pressure equal to the
         ! background pressure and return. PV: check if this is actually needed
-        IF (cPress < 0.0_SZ) THEN
+        IF (cPress < 0.0_SZ) THEN 
 !YJZ error: this is in a loop of nfiles
-          windx= 0.0_SZ
-          windy= 0.d0 !wVelX
-          pr= backgroundAtmPress * MB2PA
+          atmos_1(:,1:2)= 0.0_SZ
+          atmos_1(:,3)= backgroundAtmPress * MB2PA
 
           WRITE(12, '(a)') 'Calm period found, generating zero atmospheric fields for this time'
 !          CALL LogMessage(INFO, scratchMessage)
@@ -970,9 +1033,15 @@ MODULE ParWind
           EXIT
         END IF
 
+        !Revert if junks are found and exit
+        if(lrevert) then
+          atmos_1=atmos_0
+          exit
+        endif !lrevert
+       
         ! Calculate and limit central pressure deficit; some track files (e.g., Charley 2004)
         ! may have a central pressure greater than the ambient pressure that this subroutine assumes
-        cPressDef = backgroundAtmPress * MB2PA - cPress
+        cPressDef = backgroundAtmPress * MB2PA - cPress !Pa
         IF (cPressDef < 100.0_SZ) cPressDef = 100.0_SZ
 
         ! Subtract the translational speed of the storm from the observed max wind speed to avoid
@@ -998,27 +1067,42 @@ MODULE ParWind
         DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
           i = radIDX(npCnt)
 
-          dx    = SphericalDistance(lat, lon, lat, slam(i))
-          dy    = SphericalDistance(lat, lon, sfea(i), lon)
+          !dx,dy can be <0?
+          dx    = SphericalDistance(lat, lon, lat, xlon_gb(i))
+          dy    = SphericalDistance(lat, lon, ylat_gb(i), lon)
           theta = ATAN2(dy, dx)
 
           ! Compute coriolis
-          coriolis = 2.0_SZ * OMEGA * SIN(sfea(i) * DEG2RAD)
+          !coriolis = 2.0_SZ * OMEGA * SIN(sfea(i) * DEG2RAD)
+          coriolis = 2.0_SZ * OMEGA * SIN(ylat_gb(i) * DEG2RAD)
 
           ! Compute the pressure (Pa) at a distance rad(i); all distances are in meters
-          sfPress = cPress + cPressDef * EXP(-(rmw / rad(i))**hlB)
+          !Check
+          tmp2=rmw/rad(i) !rad already limited
+          if(tmp2/=tmp2.or.tmp2<0.d0.or.rad(i)<0.d0) then
+            write(errmsg,*)'GetHollandFields- nan(6):',tmp2,rmw,rad(i)
+            call parallel_abort(errmsg)
+          endif
+          tmp3=min(tmp2**hlB,500.d0) !limit; tmp3>=0
+
+          !sfPress = cPress + cPressDef * EXP(-(rmw / rad(i))**hlB)
+          sfPress = cPress + cPressDef * EXP(-tmp3)
 
           ! Compute wind speed (speed - trSPD) at gradient level (m/s) and at a distance rad(i);
           ! all distances are in meters. Using absolute value for coriolis for Southern Hempisphere
-          grVel = SQRT(speed**2 * (rmw / rad(i))**hlB * EXP(1.0_SZ - (rmw / rad(i))**hlB) +   &
-                       (rad(i) * ABS(coriolis) / 2.0_SZ)**2) -                                &
-                  rad(i) * ABS(coriolis) / 2.0_SZ
+!          grVel = SQRT(speed**2 * (rmw / rad(i))**hlB * EXP(1.0_SZ - (rmw / rad(i))**hlB) +   &
+!                       (rad(i) * ABS(coriolis) / 2.0_SZ)**2) -                                &
+!                  rad(i) * ABS(coriolis) / 2.0_SZ
+          grVel = SQRT(speed**2*tmp3*EXP(1.0_SZ-tmp3)+(rad(i)*ABS(coriolis)/2.0_SZ)**2)- &
+     &rad(i)*ABS(coriolis)/2.0_SZ
 
           ! Determine translation speed that should be added to final !PV CHECK ON THIS
           ! storm wind speed. This is tapered to zero as the storm wind tapers
           ! to zero toward the eye of the storm and at long distances from the storm.
-          trSpdX = (ABS(grVel) / speed ) * trVX
-          trSpdY = (ABS(grVel) / speed ) * trVY
+          tmp2=sign(1.d0,speed)*max(1.d0,abs(speed)) !limit
+          !trSpdX = ABS(grVel) / speed * trVX  
+          trSpdX = ABS(grVel)/tmp2*trVX  
+          trSpdY = ABS(grVel)/tmp2*trVY
 
           ! Apply mutliplier for Storm #2 in LPFS ensemble.
           grVel = grVel * windMultiplier
@@ -1041,11 +1125,12 @@ MODULE ParWind
           sfVelY = sfVelY + trSpdY
 
           !print *, sfVelX, sfVelY, wVelX(i), wVelY(i)
-          !PV Need to interpolate between storms if this nodal point
+          !YJZ, PV: Need to interpolate between storms if this nodal point
           !   is affected by more than on storm
-          pr(i) = sfPress
-          windx(i)  = sfVelX
-          windy(i)  = sfVelY
+          !Impose reasonable bounds
+          atmos_1(i,3) = max(0.9d5,min(1.1e5,sfPress))
+          atmos_1(i,1)  = max(-200.d0,min(200.d0,sfVelX))
+          atmos_1(i,2)  = max(-200.d0,min(200.d0,sfVelY))
 
           !print *, sfVelX, sfVelY, wVelX(i), wVelY(i)
           !print *, '--------------------------------------'
@@ -1067,10 +1152,12 @@ MODULE ParWind
 
 !    CALL UnsetMessageSource()
 
-    !Debug
-    write(12,*)'wPress from GetHollandFields:',time_stamp/86400,pr
-    write(12,*)'wVelX from GetHollandFields:',time_stamp/86400,windx
-    write(12,*)'wVelY from GetHollandFields:',time_stamp/86400,windy
+  !Check outputs
+  tmp2=sum(atmos_1(:,3))/np_gb; tmp3=sum(atmos_1(:,1))/np_gb; tmp4=sum(atmos_1(:,2))/np_gb
+  if(tmp2/=tmp2.or.tmp3/=tmp3.or.tmp4/=tmp4) then
+    write(errmsg,*)'GetHollandFields- nan(7):',tmp2,tmp3,tmp4
+    call parallel_abort(errmsg)
+  endif
 
   END SUBROUTINE GetHollandFields
 

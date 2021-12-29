@@ -1392,6 +1392,11 @@
         allocate(sdbt(2+ntracers,nvrt,nsa),stat=istat)
       endif
       if(istat/=0) call parallel_abort('INIT: alloc sdbt failure')
+   
+      if(nws<0) then
+        allocate(xlon_gb(np_global),ylat_gb(np_global),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: alloc xlon_gb failure')
+      endif !nws
 
 #ifdef USE_DVD
      allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
@@ -3123,10 +3128,10 @@
           read(32,*) !ne,np
           do i=1,np_global
             read(32,*)j,buf3(i),buf4(i) !tmp1,tmp2
-!            if(ipgl(i)%rank==myrank) then
-!              xlon(ipgl(i)%id)=tmp1*pi/180.d0
-!              ylat(ipgl(i)%id)=tmp2*pi/180.d0
-!            endif
+            if(nws<0) then !save only on rank 0
+              xlon_gb(i)=buf3(i) !degr
+              ylat_gb(i)=buf4(i)
+            endif
           enddo !i
           close(32)
         endif !myrank
@@ -6938,22 +6943,14 @@
 #endif
 
 
-!...  Init PaHM
+!...  Init PaHM on rank 0 only
       if(nws<0) then
         if(myrank==0) then
           write(16,*)'reading PaHM inputs...'
-          call flush(16)
-        endif
-        call parallel_barrier
-
-        call ReadControlFile('pahm_control.in') !TRIM(controlFileName))
-        call ReadCsvBestTrackFile()
-
-        if(myrank==0) then
+          call ReadControlFile('pahm_control.in') !TRIM(controlFileName))
+          call ReadCsvBestTrackFile()
           write(16,*)'done pre-proc PaHM...'
-          call flush(16)
         endif
-        call parallel_barrier
       endif !nws<0
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)

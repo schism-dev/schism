@@ -364,9 +364,9 @@
       if(istat/=0) call parallel_abort('STEP: analysis allocation error')
 #endif
 
-!'    Alloc. the large array for nws=4-6 option (may consider changing
+!'    Alloc. the large array for nws=4,-1 option (may consider changing
 !     to unformatted binary read)
-      if(nws==4) then
+      if(nws==4.or.nws<0) then
         allocate(rwild(np_global,3),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
@@ -487,11 +487,24 @@
 !$OMP   end workshare
       endif
 
-      if(nws<0) then !PaHM
-        if(myrank==0) write(16,*)'b4 GetHollandFields'
-        call GetHollandFields()
-        if(myrank==0) write(16,*)'after GetHollandFields'
-      endif
+      if(nws<0) then 
+        !PaHM: rank 0 returns wind and air pressure only for global nodes
+        if(myrank==0) then
+          write(16,*)'before GetHollandFields'
+          call GetHollandFields(np_global,rwild)
+          if(myrank==0) write(16,*)'after GetHollandFields'
+        endif !myrank
+
+        call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            windx(nd)=rwild(i,1)
+            windy(nd)=rwild(i,2)
+            pr(nd)=rwild(i,3)
+          endif
+        enddo !i
+      endif !nws<0
 
       if(nws==1) then
         if(time>=wtime2) then
