@@ -121,7 +121,6 @@ subroutine WQinput(time)
     enddo !while
   endif !iBen>0
 
-
   !read solar radiation (unit: ly/day)
   if(iRad==2.and.time_icm(3)<time) then!manually input
     do while(time_icm(3)<time)

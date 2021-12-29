@@ -54,8 +54,6 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: dep,Sal,Temp,TSED 
   real(kind=iwp),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(kind=iwp),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
-  !(nvrt,nea)>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,rad_el
 
   !ncai_sav + ncai_veg :: uniformed vegetation height, density
   real(kind=iwp),save,allocatable,dimension(:) :: tthcan,ttdens !(nea) 
@@ -63,7 +61,6 @@ module icm_mod
   !ncai_sav
   !(nvrt,nea)>> bottom to surface
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
-  real(kind=iwp),save,allocatable,dimension(:,:) :: PrmPrdtsav !(nvrt,nea), unit: gC/m^2/day
   !(nvrt)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
   real(kind=iwp),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
@@ -79,7 +76,6 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
-  real(kind=iwp),save,allocatable,dimension(:)   :: PrmPrdtveg !(nea)
 
   !PH model
   integer, save :: inu_ph,irec_ph
@@ -93,8 +89,7 @@ module icm_mod
   real(kind=iwp),save :: TU,TD,rIa,rIavg,Daylen
   real(kind=iwp),save,allocatable,dimension(:,:) :: PrefN
   !(nvrt,nea),>>> 1 to nvrt: bottom to surface
-  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP,GPT,netGP
-  real(kind=iwp),save,allocatable,dimension(:,:) :: rFI1,rFN1,rFP1,rFI2,rFN2,rFP2,rFI3,rFN3,rFP3,rFS,rFSal
+  real(kind=iwp),save,allocatable,dimension(:,:,:) :: GP
   real(kind=iwp),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: irSi, iLimit
   
@@ -184,23 +179,12 @@ module icm_mod
   real(kind=iwp),save :: rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
   real(kind=iwp),save,dimension(3) :: FCD,FCRP,FCLP,FCDP
   real(kind=iwp),save,dimension(2) :: FCDZ,rKHRZ
-  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOC,disoLPOC,HRDOC,DenitDOC !base on DOC budget
-  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOC,predLPOC,predDOC,basalDOC !based on PB 
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtRPOC,savmtLPOC,savmtDOC !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtRPOC,vegmtLPOC,vegmtDOC !ncai_veg
 
   !nitrogen parameters 
   real(kind=iwp),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
   real(kind=iwp),save :: rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg,rNitM,TNit,rKNit1,rKNit2,rKhNitDO,rKhNitN
   real(kind=iwp),save,dimension(3) :: FNR,FNL,FND,FNI,ANC
   real(kind=iwp),save,dimension(2) :: FNRZ,FNLZ,FNDZ,FNIZ,ANCZ
-  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPON,disoLPON,HRDON
-  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPON,predLPON,predDON,predNH4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPON,basalLPON,basalDON,basalNH4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: NitNH4,absNH4,absNO3,DenitNO3 
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON !ncai_veg
-
 
   !phosphorus parameters 
   real(kind=iwp),save :: FPRPZ,FPLPZ,FPDPZ,FPIPZ,FPRP,FPLP,FPDP,FPIP
@@ -210,12 +194,6 @@ module icm_mod
   real(kind=iwp),save,allocatable,dimension(:) :: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
   real(kind=iwp),save,dimension(3) :: FPR,FPL,FPD,FPI,APC
   real(kind=iwp),save,dimension(2) :: FPRZ,FPLZ,FPDZ,FPIZ,APCZ
-  real(kind=iwp),save,allocatable,dimension(:,:) :: disoRPOP,disoLPOP,HRDOP
-  real(kind=iwp),save,allocatable,dimension(:,:) :: predRPOP,predLPOP,predDOP,predPO4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: basalRPOP,basalLPOP,basalDOP,basalPO4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: absPO4
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP !ncai_veg
 
   !silica parameters 
   real(kind=iwp),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
@@ -225,10 +203,6 @@ module icm_mod
   !COD&DO parameters 
   real(kind=iwp),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
   real(kind=iwp),save :: AOC,AON,AONO,rKro,rKTr         
-  real(kind=iwp),save,allocatable,dimension(:,:) :: basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO
-  real(kind=iwp),save,allocatable,dimension(:,:) :: savmtDOO,savgrDOO !ncai_sav
-  real(kind=iwp),save,allocatable,dimension(:,:) :: vegmtDOO,veggrDOO !ncai_veg
-
 
   !--------------------------------------------------------------------------------------
   !erosion
@@ -254,12 +228,6 @@ module icm_mod
 
   !surface flux : atmospheric loading
   real(kind=iwp),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO
-
-  !loading
-  real(kind=iwp),save,allocatable,dimension(:) :: WWPRPOC,WWPLPOC,WWPDOC,WWPRPON,WWPLPON,WWPDON,WWPNH4,WWPNO3,&
-                                                 & WWPRPOP,WWPLPOP,WWPDOP,WWPPO4t,WWPSU,WWPSAt,WWPCOD,WWPDO,WWPSalt 
-  real(kind=iwp),save :: WPRPOC,WPLPOC,WPDOC,WPRPON,WPLPON,WPDON,WPNH4,WPNO3,WPRPOP,WPLPOP,WPDOP,WPPO4t,WPSU,WPSAt,WPCOD,WPDO 
-  real(kind=iwp),save :: WZB1,WZB2,WPB1,WPB2,WPB3,WRPOC,WLPOC,WDOC,WRPON,WLPON,WDON,WNH4,WNO3,WRPOP,WLPOP,WDOP,WPO4t,WSU,WSAt,WCOD,WDO      
 
   !for station output for intermediate parameters and ICM variables
   !ista(ie) refers to local station index (lsi)

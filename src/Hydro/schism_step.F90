@@ -45,36 +45,10 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,Chl_el,PrmPrdt,DIN_el,PON_el, &
-                         &tthcan,ttdens, & !ncai_sav + ncai_veg
-                         &tlfsav,tstsav,trtsav,hcansav,lfsav,stsav,rtsav,isav_icm, & !ncai_sav
-                         &tlfveg,tstveg,trtveg,hcanveg,iveg_icm, & !ncai_veg
-                         &EROH2S,EROLPOC,ERORPOC, & !ncai_erosion
-                         &GP,GPT,netGP, &
-                         &rFI1,rFN1,rFP1,rFI2,rFN2,rFP2,rFI3,rFN3,rFP3,rFS,rFSal, &
-                         &disoRPOC,disoLPOC,HRDOC,DenitDOC, &
-                         &predRPOC,predLPOC,predDOC,basalDOC, &
-                         &savmtRPOC,savmtLPOC,savmtDOC, &
-                         &disoRPON,disoLPON,HRDON, &
-                         &predRPON,predLPON,predDON,predNH4, &
-                         &basalRPON,basalLPON,basalDON,basalNH4, &
-                         &NitNH4,absNH4,absNO3,DenitNO3, &
-                         &savmtNH4,savgrNH4,savgrNO3,savmtRPON,savmtLPON,savmtDON, &
-                         &disoRPOP,disoLPOP,HRDOP, &
-                         &predRPOP,predLPOP,predDOP,predPO4, &
-                         &basalRPOP,basalLPOP,basalDOP,basalPO4,absPO4, &
-                         &savmtPO4,savgrPO4,savmtRPOP,savmtLPOP,savmtDOP, &
-                         &basalDOO,predDOO,NitDOO,HRDOO,chemDOO,phoDOO,reaDOO, &
-                         &savmtDOO,savgrDOO,&
-                         &vegmtRPOC,vegmtLPOC,vegmtDOC, &
-                         &vegmtNH4,veggrNH4,veggrNO3,vegmtRPON,vegmtLPON,vegmtDON, &
-                         &vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP, & 
-                         &vegmtDOO,veggrDOO,&
-                         &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
-                         &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg, &
-                         &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg, &
-                         &plfsav,pmaxsav,fisav,fnsav,fpsav, &
-                         &PrmPrdtveg,PrmPrdtsav,rad_el
+      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
+                        & lfsav,stsav,rtsav,tlfsav,tstsav,trtsav,hcansav, &
+                        & tlfveg,tstveg,trtveg,hcanveg
+                      
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
@@ -7581,13 +7555,6 @@
         if(myrank==0) write(16,*)'calculating ICM kinetic source/sink'
         call ecosystem(it)
 
-
-        !ncai_sav, ncai_veg
-        !hcan_uni for a cell
-
-
-
-
         !feedback from ICM to Hydro 
         if(isav==1.and.isav_icm==1)then
           !Convert hcansav to nodes
@@ -7603,12 +7570,6 @@
             endif
           enddo !i
 
-!          do i=1,np_global
-!            nd=ipgl(i)%id
-!            if(sav_h(nd)*sav_nv(nd)*sav_alpha(nd)/=0) then
-!              sav_h(nd)=sum(hcansav(indel(1:nne(nd),nd)))/nne(nd)
-!            endif !zero out
-!          enddo !i=np_global
         endif!isav&&isav_icm
 
 #endif /*USE_ICM*/
@@ -8601,455 +8562,48 @@
 #endif 
 
 #ifdef USE_ICM
-        if(iof_icm(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ICM_Chl',5,nvrt,nea,dble(Chl_el))
-        if(iof_icm(2)==1.and.iPh/=0) call writeout_nc(id_out_var(noutput+6), &
-     &'ICM_pH',2,nvrt,npa,dble(PH_nd))
-        if(iof_icm(3)==1) call writeout_nc(id_out_var(noutput+7), &
-     &'ICM_PrmPrdt',5,nvrt,nea,dble(PrmPrdt))
-        if(iof_icm(4)==1) call writeout_nc(id_out_var(noutput+8), &
-     &'ICM_DIN',5,nvrt,nea,dble(DIN_el))
-        if(iof_icm(5)==1) call writeout_nc(id_out_var(noutput+9), &
-     &'ICM_PON',5,nvrt,nea,dble(PON_el))
-
-        if(iof_icm(6)==1) call writeout_nc(id_out_var(noutput+10), &
-     &'ICM_SED_BENDOC',4,1,nea,dble(SED_BENDOC))
-        if(iof_icm(7)==1) call writeout_nc(id_out_var(noutput+11), &
-     &'ICM_SED_BENNH4',4,1,nea,dble(SED_BENNH4))
-        if(iof_icm(8)==1) call writeout_nc(id_out_var(noutput+12), &
-     &'ICM_SED_BENNO3',4,1,nea,dble(SED_BENNO3))
-        if(iof_icm(9)==1) call writeout_nc(id_out_var(noutput+13), &
-     &'ICM_SED_BENPO4',4,1,nea,dble(SED_BENPO4))
-        if(iof_icm(10)==1) call writeout_nc(id_out_var(noutput+14), &
-     &'ICM_SED_BENCOD',4,1,nea,dble(SED_BENCOD))
-        if(iof_icm(11)==1) call writeout_nc(id_out_var(noutput+15), &
-     &'ICM_SED_BENDO',4,1,nea,dble(SED_BENDO))
-        if(iof_icm(12)==1) call writeout_nc(id_out_var(noutput+16), &
-     &'ICM_SED_BENSA',4,1,nea,dble(SED_BENSA))
-
-        if(iof_icm(13)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+17), &
-     &'ICM_lfsav',6,nvrt,nea,dble(lfsav))
-        if(iof_icm(14)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+18), &
-     &'ICM_stsav',6,nvrt,nea,dble(stsav))
-        if(iof_icm(15)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+19), &
-     &'ICM_rtsav',6,nvrt,nea,dble(rtsav))
-        if(iof_icm(16)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+20), &
-     &'ICM_tlfsav',4,1,nea,dble(tlfsav))
-        if(iof_icm(17)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+21), &
-     &'ICM_tstsav',4,1,nea,dble(tstsav))
-        if(iof_icm(18)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+22), &
-     &'ICM_trtsav',4,1,nea,dble(trtsav))
-        if(iof_icm(19)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+23), &
-     &'ICM_hcansav',4,1,nea,dble(hcansav))
-
-        if(iof_icm(20)==1) call writeout_nc(id_out_var(noutput+24), &
-     &'ICM_CNH4',4,1,nea,dble(CNH4))
-        if(iof_icm(21)==1) call writeout_nc(id_out_var(noutput+25), &
-     &'ICM_CNO3',4,1,nea,dble(CNO3))
-        if(iof_icm(22)==1) call writeout_nc(id_out_var(noutput+26), &
-     &'ICM_CPIP',4,1,nea,dble(CPIP))
-        if(iof_icm(23)==1) call writeout_nc(id_out_var(noutput+27), &
-     &'ICM_CPOS',4,1,nea,dble(CPOS))
-        if(iof_icm(24)==1) call writeout_nc(id_out_var(noutput+28), &
-     &'ICM_CCH4',4,1,nea,dble(CCH4))
-        if(iof_icm(25)==1) call writeout_nc(id_out_var(noutput+29), &
-     &'ICM_CSO4',4,1,nea,dble(CSO4))
-        if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+30), &
-     &'ICM_CH2S',4,1,nea,dble(CH2S))
-        if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+31), &
-     &'ICM_SEDPON1',4,1,nea,dble(CPON(:,1)))
-        if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+32), &
-     &'ICM_SEDPON2',4,1,nea,dble(CPON(:,2)))
-        if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+33), &
-     &'ICM_SEDPON3',4,1,nea,dble(CPON(:,3)))
-        if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+34), &
-     &'ICM_SEDPOP1',4,1,nea,dble(CPOP(:,1)))
-        if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+35), &
-     &'ICM_SEDPOP2',4,1,nea,dble(CPOP(:,2)))
-        if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+36), &
-     &'ICM_SEDPOP3',4,1,nea,dble(CPOP(:,3)))
-        if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+37), &
-     &'ICM_SEDPOC1',4,1,nea,dble(CPOC(:,1)))
-        if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+38), &
-     &'ICM_SEDPOC2',4,1,nea,dble(CPOC(:,2)))
-        if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+39), &
-     &'ICM_SEDPOC3',4,1,nea,dble(CPOC(:,3)))
-        if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+40), &
-     &'ICM_EROH2S',4,1,nea,dble(EROH2S))
-        if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+41), &
-     &'ICM_EROLPOC',4,1,nea,dble(EROLPOC))
-        if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+42), &
-     &'ICM_ERORPOC',4,1,nea,dble(ERORPOC))
-        if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+43), &
-     &'ICM_GP1',5,nvrt,nea,dble(GP(:,:,1)))
-        if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+44), &
-     &'ICM_GP2',5,nvrt,nea,dble(GP(:,:,2)))
-        if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+45), &
-     &'ICM_GP3',5,nvrt,nea,dble(GP(:,:,3)))
-        if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+46), &
-     &'ICM_GPT1',5,nvrt,nea,dble(GPT(:,:,1)))
-        if(iof_icm(43)==1) call writeout_nc(id_out_var(noutput+47), &
-     &'ICM_GPT2',5,nvrt,nea,dble(GPT(:,:,2)))
-        if(iof_icm(44)==1) call writeout_nc(id_out_var(noutput+48), &
-     &'ICM_GPT3',5,nvrt,nea,dble(GPT(:,:,3)))
-        if(iof_icm(45)==1) call writeout_nc(id_out_var(noutput+49), &
-     &'ICM_netGP1',5,nvrt,nea,dble(netGP(:,:,1)))
-        if(iof_icm(46)==1) call writeout_nc(id_out_var(noutput+50), &
-     &'ICM_netGP2',5,nvrt,nea,dble(netGP(:,:,2)))
-        if(iof_icm(47)==1) call writeout_nc(id_out_var(noutput+51), &
-     &'ICM_netGP3',5,nvrt,nea,dble(netGP(:,:,3)))
-        if(iof_icm(48)==1) call writeout_nc(id_out_var(noutput+52), &
-     &'ICM_rFI1',5,nvrt,nea,dble(rFI1))
-        if(iof_icm(49)==1) call writeout_nc(id_out_var(noutput+53), &
-     &'ICM_rFI2',5,nvrt,nea,dble(rFI2))
-        if(iof_icm(50)==1) call writeout_nc(id_out_var(noutput+54), &
-     &'ICM_rFI3',5,nvrt,nea,dble(rFI3))
-        if(iof_icm(51)==1) call writeout_nc(id_out_var(noutput+55), &
-     &'ICM_rFN1',5,nvrt,nea,dble(rFN1))
-        if(iof_icm(52)==1) call writeout_nc(id_out_var(noutput+56), &
-     &'ICM_rFN2',5,nvrt,nea,dble(rFN2))
-        if(iof_icm(53)==1) call writeout_nc(id_out_var(noutput+57), &
-     &'ICM_rFN3',5,nvrt,nea,dble(rFN3))
-        if(iof_icm(54)==1) call writeout_nc(id_out_var(noutput+58), &
-     &'ICM_rFP1',5,nvrt,nea,dble(rFP1))
-        if(iof_icm(55)==1) call writeout_nc(id_out_var(noutput+59), &
-     &'ICM_rFP2',5,nvrt,nea,dble(rFP2))
-        if(iof_icm(56)==1) call writeout_nc(id_out_var(noutput+60), &
-     &'ICM_rFP3',5,nvrt,nea,dble(rFP3))
-        if(iof_icm(57)==1) call writeout_nc(id_out_var(noutput+61), &
-     &'ICM_rFS',5,nvrt,nea,dble(rFS))
-        if(iof_icm(58)==1) call writeout_nc(id_out_var(noutput+62), &
-     &'ICM_rFSal',5,nvrt,nea,dble(rFSal))
-        if(iof_icm(59)==1) call writeout_nc(id_out_var(noutput+63), &
-     &'ICM_disoRPOC',5,nvrt,nea,dble(disoRPOC))
-        if(iof_icm(60)==1) call writeout_nc(id_out_var(noutput+64), &
-     &'ICM_disoLPOC',5,nvrt,nea,dble(disoLPOC))
-        if(iof_icm(61)==1) call writeout_nc(id_out_var(noutput+65), &
-     &'ICM_HRDOC',5,nvrt,nea,dble(HRDOC))
-        if(iof_icm(62)==1) call writeout_nc(id_out_var(noutput+66), &
-     &'ICM_DenitDOC',5,nvrt,nea,dble(DenitDOC))
-        if(iof_icm(63)==1) call writeout_nc(id_out_var(noutput+67), &
-     &'ICM_predRPOC',5,nvrt,nea,dble(predRPOC))
-        if(iof_icm(64)==1) call writeout_nc(id_out_var(noutput+68), &
-     &'ICM_predLPOC',5,nvrt,nea,dble(predLPOC))
-        if(iof_icm(65)==1) call writeout_nc(id_out_var(noutput+69), &
-     &'ICM_predDOC',5,nvrt,nea,dble(predDOC))
-        if(iof_icm(66)==1) call writeout_nc(id_out_var(noutput+70), &
-     &'ICM_basalDOC',5,nvrt,nea,dble(basalDOC))
-        if(iof_icm(67)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+71), &
-     &'ICM_savmtRPOC',5,nvrt,nea,dble(savmtRPOC))
-        if(iof_icm(68)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+72), &
-     &'ICM_savmtLPOC',5,nvrt,nea,dble(savmtLPOC))
-        if(iof_icm(69)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+73), &
-     &'ICM_savmtDOC',5,nvrt,nea,dble(savmtDOC))
-        if(iof_icm(70)==1) call writeout_nc(id_out_var(noutput+74), &
-     &'ICM_disoRPON',5,nvrt,nea,dble(disoRPON))
-        if(iof_icm(71)==1) call writeout_nc(id_out_var(noutput+75), &
-     &'ICM_disoLPON',5,nvrt,nea,dble(disoLPON))
-        if(iof_icm(72)==1) call writeout_nc(id_out_var(noutput+76), &
-     &'ICM_HRDON',5,nvrt,nea,dble(HRDON))
-        if(iof_icm(73)==1) call writeout_nc(id_out_var(noutput+77), &
-     &'ICM_predRPON',5,nvrt,nea,dble(predRPON))
-        if(iof_icm(74)==1) call writeout_nc(id_out_var(noutput+78), &
-     &'ICM_predLPON',5,nvrt,nea,dble(predLPON))
-        if(iof_icm(75)==1) call writeout_nc(id_out_var(noutput+79), &
-     &'ICM_predDON',5,nvrt,nea,dble(predDON))
-        if(iof_icm(76)==1) call writeout_nc(id_out_var(noutput+80), &
-     &'ICM_predNH4',5,nvrt,nea,dble(predNH4))
-        if(iof_icm(77)==1) call writeout_nc(id_out_var(noutput+81), &
-     &'ICM_basalRPON',5,nvrt,nea,dble(basalRPON))
-        if(iof_icm(78)==1) call writeout_nc(id_out_var(noutput+82), &
-     &'ICM_basalLPON',5,nvrt,nea,dble(basalLPON))
-        if(iof_icm(79)==1) call writeout_nc(id_out_var(noutput+83), &
-     &'ICM_basalDON',5,nvrt,nea,dble(basalDON))
-        if(iof_icm(80)==1) call writeout_nc(id_out_var(noutput+84), &
-     &'ICM_basalNH4',5,nvrt,nea,dble(basalNH4))
-        if(iof_icm(81)==1) call writeout_nc(id_out_var(noutput+85), &
-     &'ICM_NitNH4',5,nvrt,nea,dble(NitNH4))
-        if(iof_icm(82)==1) call writeout_nc(id_out_var(noutput+86), &
-     &'ICM_absNH4',5,nvrt,nea,dble(absNH4))
-        if(iof_icm(83)==1) call writeout_nc(id_out_var(noutput+87), &
-     &'ICM_DenitNO3',5,nvrt,nea,dble(DenitNO3))
-        if(iof_icm(84)==1) call writeout_nc(id_out_var(noutput+88), &
-     &'ICM_absNO3',5,nvrt,nea,dble(absNO3))
-        if(iof_icm(85)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+89), &
-     &'ICM_savmtRPON',5,nvrt,nea,dble(savmtRPON))
-        if(iof_icm(86)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+90), &
-     &'ICM_savmtLPON',5,nvrt,nea,dble(savmtLPON))
-        if(iof_icm(87)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+91), &
-     &'ICM_savmtDON',5,nvrt,nea,dble(savmtDON))
-        if(iof_icm(88)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+92), &
-     &'ICM_savmtNH4',5,nvrt,nea,dble(savmtNH4))
-        if(iof_icm(89)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+93), &
-     &'ICM_savgrNH4',5,nvrt,nea,dble(savgrNH4))
-        if(iof_icm(90)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+94), &
-     &'ICM_savgrNO3',5,nvrt,nea,dble(savgrNO3))
-        if(iof_icm(91)==1) call writeout_nc(id_out_var(noutput+95), &
-     &'ICM_disoRPOP',5,nvrt,nea,dble(disoRPOP))
-        if(iof_icm(92)==1) call writeout_nc(id_out_var(noutput+96), &
-     &'ICM_disoLPOP',5,nvrt,nea,dble(disoLPOP))
-        if(iof_icm(93)==1) call writeout_nc(id_out_var(noutput+97), &
-     &'ICM_HRDOP',5,nvrt,nea,dble(HRDOP))
-        if(iof_icm(94)==1) call writeout_nc(id_out_var(noutput+98), &
-     &'ICM_absPO4',5,nvrt,nea,dble(absPO4))
-        if(iof_icm(95)==1) call writeout_nc(id_out_var(noutput+99), &
-     &'ICM_predRPOP',5,nvrt,nea,dble(predRPOP))
-        if(iof_icm(96)==1) call writeout_nc(id_out_var(noutput+100), &
-     &'ICM_predLPOP',5,nvrt,nea,dble(predLPOP))
-        if(iof_icm(97)==1) call writeout_nc(id_out_var(noutput+101), &
-     &'ICM_predDOP',5,nvrt,nea,dble(predDOP))
-        if(iof_icm(98)==1) call writeout_nc(id_out_var(noutput+102), &
-     &'ICM_predPO4',5,nvrt,nea,dble(predPO4))
-        if(iof_icm(99)==1) call writeout_nc(id_out_var(noutput+103), &
-     &'ICM_basalRPOP',5,nvrt,nea,dble(basalRPOP))
-        if(iof_icm(100)==1) call writeout_nc(id_out_var(noutput+104), &
-     &'ICM_basalLPOP',5,nvrt,nea,dble(basalLPOP))
-        if(iof_icm(101)==1) call writeout_nc(id_out_var(noutput+105), &
-     &'ICM_basalDOP',5,nvrt,nea,dble(basalDOP))
-        if(iof_icm(102)==1) call writeout_nc(id_out_var(noutput+106), &
-     &'ICM_basalPO4',5,nvrt,nea,dble(basalPO4))
-        if(iof_icm(103)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+107), &
-     &'ICM_savmtRPOP',5,nvrt,nea,dble(savmtRPOP))
-        if(iof_icm(104)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+108), &
-     &'ICM_savmtLPOP',5,nvrt,nea,dble(savmtLPOP))
-        if(iof_icm(105)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+109), &
-     &'ICM_savmtDOP',5,nvrt,nea,dble(savmtDOP))
-        if(iof_icm(106)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+110), &
-     &'ICM_savmtPO4',5,nvrt,nea,dble(savmtPO4))
-        if(iof_icm(107)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+111), &
-     &'ICM_savgrPO4',5,nvrt,nea,dble(savgrPO4))
-        if(iof_icm(108)==1) call writeout_nc(id_out_var(noutput+112), &
-     &'ICM_basalDOO',5,nvrt,nea,dble(basalDOO))
-        if(iof_icm(109)==1) call writeout_nc(id_out_var(noutput+113), &
-     &'ICM_predDOO',5,nvrt,nea,dble(predDOO))
-        if(iof_icm(110)==1) call writeout_nc(id_out_var(noutput+114), &
-     &'ICM_NitDOO',5,nvrt,nea,dble(NitDOO))
-        if(iof_icm(111)==1) call writeout_nc(id_out_var(noutput+115), &
-     &'ICM_HRDOO',5,nvrt,nea,dble(HRDOO))
-        if(iof_icm(112)==1) call writeout_nc(id_out_var(noutput+116), &
-     &'ICM_chemDOO',5,nvrt,nea,dble(chemDOO))
-        if(iof_icm(113)==1) call writeout_nc(id_out_var(noutput+117), &
-     &'ICM_phoDOO',5,nvrt,nea,dble(phoDOO))
-        if(iof_icm(114)==1) call writeout_nc(id_out_var(noutput+118), &
-     &'ICM_reaDOO',5,nvrt,nea,dble(reaDOO))
-        if(iof_icm(115)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+119), &
-     &'ICM_savmtDOO',5,nvrt,nea,dble(savmtDOO))
-        if(iof_icm(116)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+120), &
-     &'ICM_savgrDOO',5,nvrt,nea,dble(savgrDOO))
-
-        !ncai_veg
-        if(iof_icm(117)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+121), &
-     &'ICM_tlfveg1',4,1,nea,dble(tlfveg(:,1)))
-        if(iof_icm(118)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+122), &
-     &'ICM_tlfveg2',4,1,nea,dble(tlfveg(:,2)))
-        if(iof_icm(119)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+123), &
-     &'ICM_tlfveg3',4,1,nea,dble(tlfveg(:,3)))
-        if(iof_icm(120)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+124), &
-     &'ICM_tstveg1',4,1,nea,dble(tstveg(:,1)))
-        if(iof_icm(121)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+125), &
-     &'ICM_tstveg2',4,1,nea,dble(tstveg(:,2)))
-        if(iof_icm(122)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+126), &
-     &'ICM_tstveg3',4,1,nea,dble(tstveg(:,3)))
-        if(iof_icm(123)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+127), &
-     &'ICM_trtveg1',4,1,nea,dble(trtveg(:,1)))
-        if(iof_icm(124)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+128), &
-     &'ICM_trtveg2',4,1,nea,dble(trtveg(:,2)))
-        if(iof_icm(125)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+129), &
-     &'ICM_trtveg3',4,1,nea,dble(trtveg(:,3)))
-        if(iof_icm(126)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+130), &
-     &'ICM_hcanveg1',4,1,nea,dble(hcanveg(:,1)))
-        if(iof_icm(127)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+131), &
-     &'ICM_hcanveg2',4,1,nea,dble(hcanveg(:,2)))
-        if(iof_icm(128)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+132), &
-     &'ICM_hcanveg3',4,1,nea,dble(hcanveg(:,3)))
-
-        !veg-related process to nutrient dynamics in water column
-        if(iof_icm(129)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+133), &
-     &'ICM_vegmtRPOC',5,nvrt,nea,dble(vegmtRPOC))
-        if(iof_icm(130)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+134), &
-     &'ICM_vegmtLPOC',5,nvrt,nea,dble(vegmtLPOC))
-        if(iof_icm(131)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+135), &
-     &'ICM_vegmtDOC',5,nvrt,nea,dble(vegmtDOC))
-        if(iof_icm(132)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+136), &
-     &'ICM_vegmtRPON',5,nvrt,nea,dble(vegmtRPON))
-        if(iof_icm(133)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+137), &
-     &'ICM_vegmtLPON',5,nvrt,nea,dble(vegmtLPON))
-        if(iof_icm(134)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+138), &
-     &'ICM_vegmtDON',5,nvrt,nea,dble(vegmtDON))
-        if(iof_icm(135)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+139), &
-     &'ICM_vegmtNH4',5,nvrt,nea,dble(vegmtNH4))
-        if(iof_icm(136)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+140), &
-     &'ICM_veggrNH4',5,nvrt,nea,dble(veggrNH4))
-        if(iof_icm(137)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+141), &
-     &'ICM_veggrNO3',5,nvrt,nea,dble(veggrNO3))
-        if(iof_icm(138)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+142), &
-     &'ICM_vegmtRPOP',5,nvrt,nea,dble(vegmtRPOP))
-        if(iof_icm(139)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+143), &
-     &'ICM_vegmtLPOP',5,nvrt,nea,dble(vegmtLPOP))
-        if(iof_icm(140)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+144), &
-     &'ICM_vegmtDOP',5,nvrt,nea,dble(vegmtDOP))
-        if(iof_icm(141)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+145), &
-     &'ICM_vegmtPO4',5,nvrt,nea,dble(vegmtPO4))
-        if(iof_icm(142)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+146), &
-     &'ICM_veggrPO4',5,nvrt,nea,dble(veggrPO4))
-        if(iof_icm(143)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+147), &
-     &'ICM_vegmtDOO',5,nvrt,nea,dble(vegmtDOO))
-        if(iof_icm(144)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+148), &
-     &'ICM_veggrDOO',5,nvrt,nea,dble(veggrDOO))
-
-        !savand veg -induced nutrient fluxes to sediment
-        if(iof_icm(145)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+149), &
-     &'ICM_tlfNH4sav',4,1,nea,dble(tlfNH4sav))
-        if(iof_icm(146)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+150), &
-     &'ICM_tlfPO4sav',4,1,nea,dble(tlfPO4sav))
-        if(iof_icm(147)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+151), &
-     &'ICM_trtpocsav',4,1,nea,dble(trtpocsav))
-        if(iof_icm(148)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+152), &
-     &'ICM_trtponsav',4,1,nea,dble(trtponsav))
-        if(iof_icm(149)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+153), &
-     &'ICM_trtpopsav',4,1,nea,dble(trtpopsav))
-        if(iof_icm(150)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+154), &
-     &'ICM_trtdosav',4,1,nea,dble(trtdosav))
-        if(iof_icm(151)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+155), &
-     &'ICM_tlfNH4veg1',4,1,nea,dble(tlfNH4veg(:,1)))
-        if(iof_icm(152)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+156), &
-     &'ICM_tlfNH4veg2',4,1,nea,dble(tlfNH4veg(:,2)))
-        if(iof_icm(153)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+157), &
-     &'ICM_tlfNH4veg3',4,1,nea,dble(tlfNH4veg(:,3)))
-        if(iof_icm(154)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+158), &
-     &'ICM_tlfPO4veg1',4,1,nea,dble(tlfPO4veg(:,1)))
-        if(iof_icm(155)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+159), &
-     &'ICM_tlfPO4veg2',4,1,nea,dble(tlfPO4veg(:,2)))
-        if(iof_icm(156)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+160), &
-     &'ICM_tlfPO4veg3',4,1,nea,dble(tlfPO4veg(:,3)))
-        if(iof_icm(157)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+161), &
-     &'ICM_trtpocveg1',4,1,nea,dble(trtpocveg(:,1)))
-        if(iof_icm(158)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+162), &
-     &'ICM_trtpocveg2',4,1,nea,dble(trtpocveg(:,2)))
-        if(iof_icm(159)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+163), &
-     &'ICM_trtpocveg3',4,1,nea,dble(trtpocveg(:,3)))
-        if(iof_icm(160)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+164), &
-     &'ICM_trtponveg1',4,1,nea,dble(trtponveg(:,1)))
-        if(iof_icm(161)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+165), &
-     &'ICM_trtponveg2',4,1,nea,dble(trtponveg(:,2)))
-        if(iof_icm(162)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+166), &
-     &'ICM_trtponveg3',4,1,nea,dble(trtponveg(:,3)))
-        if(iof_icm(163)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+167), &
-     &'ICM_trtpopveg1',4,1,nea,dble(trtpopveg(:,1)))
-        if(iof_icm(164)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+168), &
-     &'ICM_trtpopveg2',4,1,nea,dble(trtpopveg(:,2)))
-        if(iof_icm(165)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+169), &
-     &'ICM_trtpopveg3',4,1,nea,dble(trtpopveg(:,3)))
-        if(iof_icm(166)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+170), &
-     &'ICM_trtdoveg1',4,1,nea,dble(trtdoveg(:,1)))
-        if(iof_icm(167)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+171), &
-     &'ICM_trtdoveg2',4,1,nea,dble(trtdoveg(:,2)))
-        if(iof_icm(168)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+172), &
-     &'ICM_trtdoveg3',4,1,nea,dble(trtdoveg(:,3)))
-
-        if(iveg_icm/=0) then
-          if(iof_icm(169)==1) call writeout_nc(id_out_var(noutput+173), &
-       &'ICM_plfveg',4,1,nea,dble(plfveg(:,1)))
-          if(iof_icm(169)==2) call writeout_nc(id_out_var(noutput+173), &
-       &'ICM_plfveg',4,1,nea,dble(plfveg(:,2)))
-          if(iof_icm(169)==3) call writeout_nc(id_out_var(noutput+173), &
-       &'ICM_plfveg',4,1,nea,dble(plfveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(170)==1) call writeout_nc(id_out_var(noutput+174), &
-       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,1)))
-          if(iof_icm(170)==2) call writeout_nc(id_out_var(noutput+174), &
-       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,2)))
-          if(iof_icm(170)==3) call writeout_nc(id_out_var(noutput+174), &
-       &'ICM_pmaxveg',4,1,nea,dble(pmaxveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(171)==1) call writeout_nc(id_out_var(noutput+175), &
-       &'ICM_fiveg',4,1,nea,dble(fiveg(:,1)))
-          if(iof_icm(171)==2) call writeout_nc(id_out_var(noutput+175), &
-       &'ICM_fiveg',4,1,nea,dble(fiveg(:,2)))
-          if(iof_icm(171)==3) call writeout_nc(id_out_var(noutput+175), &
-       &'ICM_fiveg',4,1,nea,dble(fiveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(172)==1) call writeout_nc(id_out_var(noutput+176), &
-       &'ICM_fnveg',4,1,nea,dble(fnveg(:,1)))
-          if(iof_icm(172)==2) call writeout_nc(id_out_var(noutput+176), &
-       &'ICM_fnveg',4,1,nea,dble(fnveg(:,2)))
-          if(iof_icm(172)==3) call writeout_nc(id_out_var(noutput+176), &
-       &'ICM_fnveg',4,1,nea,dble(fnveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(173)==1) call writeout_nc(id_out_var(noutput+177), &
-       &'ICM_fpveg',4,1,nea,dble(fpveg(:,1)))
-          if(iof_icm(173)==2) call writeout_nc(id_out_var(noutput+177), &
-       &'ICM_fpveg',4,1,nea,dble(fpveg(:,2)))
-          if(iof_icm(173)==3) call writeout_nc(id_out_var(noutput+177), &
-       &'ICM_fpveg',4,1,nea,dble(fpveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(174)==1) call writeout_nc(id_out_var(noutput+178), &
-       &'ICM_fsveg',4,1,nea,dble(fsveg(:,1)))
-          if(iof_icm(174)==2) call writeout_nc(id_out_var(noutput+178), &
-       &'ICM_fsveg',4,1,nea,dble(fsveg(:,2)))
-          if(iof_icm(174)==3) call writeout_nc(id_out_var(noutput+178), &
-       &'ICM_fsveg',4,1,nea,dble(fsveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(175)==1) call writeout_nc(id_out_var(noutput+179), &
-       &'ICM_ffveg',4,1,nea,dble(ffveg(:,1)))
-          if(iof_icm(175)==2) call writeout_nc(id_out_var(noutput+179), &
-       &'ICM_ffveg',4,1,nea,dble(ffveg(:,2)))
-          if(iof_icm(175)==3) call writeout_nc(id_out_var(noutput+179), &
-       &'ICM_ffveg',4,1,nea,dble(ffveg(:,3)))
-        endif
-
-        if(iveg_icm/=0) then
-          if(iof_icm(176)==1) call writeout_nc(id_out_var(noutput+180), &
-       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,1)))
-          if(iof_icm(176)==2) call writeout_nc(id_out_var(noutput+180), &
-       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,2)))
-          if(iof_icm(176)==3) call writeout_nc(id_out_var(noutput+180), &
-       &'ICM_rdephcanveg',4,1,nea,dble(rdephcanveg(:,3)))
-        endif
-
-        if(iof_icm(177)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+181), &
-     &'ICM_PrmPrdtveg',4,1,nea,dble(PrmPrdtveg))
-        if(iof_icm(178)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+182), &
-     &'ICM_PrmPrdtsav',5,nvrt,nea,dble(PrmPrdtsav))
-
-        if(iof_icm(179)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+183), &
-     &'ICM_plfsav',5,nvrt,nea,dble(plfsav))
-        if(iof_icm(180)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+184), &
-     &'ICM_pmaxsav',5,nvrt,nea,dble(pmaxsav))
-        if(iof_icm(181)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+185), &
-     &'ICM_fisav',5,nvrt,nea,dble(fisav))
-        if(iof_icm(182)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+186), &
-     &'ICM_fnsav',5,nvrt,nea,dble(fnsav))
-        if(iof_icm(183)==1.and.isav_icm/=0) call writeout_nc(id_out_var(noutput+187), &
-     &'ICM_fpsav',5,nvrt,nea,dble(fpsav))
-
-
-        if(iof_icm(184)==1) call writeout_nc(id_out_var(noutput+188), &
-     &'ICM_rad',5,nvrt,nea,dble(rad_el))
-
-        noutput=noutput+184
-        icount=184 !offset
-
+        !default ICM variables and pH model variables
         do i=1,ntrs(7)
           write(it_char,'(i72)')i
           it_char=adjustl(it_char); lit=len_trim(it_char)
           itmp=irange_tr(1,7)+i-1 !global tracer #
-          if(iof_icm(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
+          if(iof_icm(i)==1) call writeout_nc(id_out_var(noutput+i+4), &
      &'ICM_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
         enddo !i
         noutput=noutput+ntrs(7)
+
+#ifndef ICM_PH 
+        noutput=noutput+4
+#endif
+         
+        !SAV model
+        if(isav_icm/=0) then
+          if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_lfsav',6,nvrt,nea,dble(lfsav))
+          if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_stsav',6,nvrt,nea,dble(stsav))
+          if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_rtsav',6,nvrt,nea,dble(rtsav))
+          if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_tlfsav',4,1,nea,dble(tlfsav))
+          if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_tstsav',4,1,nea,dble(tstsav))
+          if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_trtsav',4,1,nea,dble(trtsav))
+          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_hcansav',4,1,nea,dble(hcansav))
+        endif
+        noutput=noutput+7
+
+        !VEG model
+        if(iveg_icm/=0) then
+          if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_tlfveg1',4,1,nea,dble(tlfveg(:,1)))
+          if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_tlfveg2',4,1,nea,dble(tlfveg(:,2)))
+          if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_tlfveg3',4,1,nea,dble(tlfveg(:,3)))
+          if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_tstveg1',4,1,nea,dble(tstveg(:,1)))
+          if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_tstveg2',4,1,nea,dble(tstveg(:,2)))
+          if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_tstveg3',4,1,nea,dble(tstveg(:,3)))
+          if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_trtveg1',4,1,nea,dble(trtveg(:,1)))
+          if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+4+8),'ICM_trtveg2',4,1,nea,dble(trtveg(:,2)))
+          if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+4+9),'ICM_trtveg3',4,1,nea,dble(trtveg(:,3)))
+          if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_hcanveg1',4,1,nea,dble(hcanveg(:,1)))
+          if(iof_icm(43)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_hcanveg2',4,1,nea,dble(hcanveg(:,2)))
+          if(iof_icm(44)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_hcanveg3',4,1,nea,dble(hcanveg(:,3)))
+        endif
+        noutput=noutput+12
 
 #endif /*USE_ICM*/
 

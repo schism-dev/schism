@@ -432,7 +432,7 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(210),iof_cos(20),iof_fib(5), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(44),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
@@ -6822,7 +6822,7 @@
           call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
           call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
           call mpi_send(ntrs,natrm,itype,nproc_schism-i,122,comm_schism,ierr)
-          call mpi_send(iof_icm,210,itype,nproc_schism-i,123,comm_schism,ierr)
+          call mpi_send(iof_icm,44,itype,nproc_schism-i,123,comm_schism,ierr)
           call mpi_send(iof_cos,20,itype,nproc_schism-i,124,comm_schism,ierr)
           call mpi_send(iof_fib,5,itype,nproc_schism-i,125,comm_schism,ierr)
           call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
