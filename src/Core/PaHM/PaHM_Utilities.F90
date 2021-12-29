@@ -210,7 +210,7 @@ MODULE PaHM_Utilities
     !----------
 
 
-    CALL SetMessageSource("ReadControlFile")
+!    CALL SetMessageSource("ReadControlFile")
 
     !---------- Establish the format variables
     cntlFmtStr = ' "in control file ' // "<" // TRIM(ADJUSTL(inpFile)) // ">" // '"'
@@ -629,7 +629,7 @@ MODULE PaHM_Utilities
 
     CALL PrintModelParams()
 
-    CALL UnsetMessageSource()
+!    CALL UnsetMessageSource()
 
   END SUBROUTINE ReadControlFile
 
