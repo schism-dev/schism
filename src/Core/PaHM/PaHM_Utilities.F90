@@ -2141,10 +2141,10 @@ MODULE PaHM_Utilities
 !    CALL SetMessageSource("SphericalDistance_1D")
 
     IF (SIZE(lats) /= SIZE(lons)) THEN
-      WRITE(scratchMessage, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
-      CALL AllMessage(ERROR, scratchMessage)    
-
-      CALL Terminate()
+      WRITE(errmsg, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
+!      CALL AllMessage(ERROR, scratchMessage)    
+      call parallel_abort(errmsg)
+!      CALL Terminate()
     END IF
 
     n1 = SIZE(lats, 1)
@@ -2152,10 +2152,10 @@ MODULE PaHM_Utilities
     ALLOCATE(phis(n1), lamdas(n1), dphi(n1), dlamda(n1), dsigma(n1), tmp5(n1),STAT = status)
 
     IF (status /= 0) THEN
-      WRITE(scratchMessage, '(a)') 'Could no allocate memory for the internal arrays.'
-      CALL AllMessage(ERROR, scratchMessage)    
-
-      CALL Terminate()
+      WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
+      call parallel_abort(errmsg)
+!      CALL AllMessage(ERROR, scratchMessage)    
+!      CALL Terminate()
     END IF
 
     phis   = DEG2RAD * lats
@@ -2245,12 +2245,11 @@ MODULE PaHM_Utilities
     CALL SetMessageSource("SphericalDistance_2D")
 
     IF (SIZE(lats) /= SIZE(lons)) THEN
-      WRITE(scratchMessage, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
-      CALL AllMessage(ERROR, scratchMessage)    
-
-      CALL UnsetMessageSource()
-
-      CALL Terminate()
+      WRITE(errmsg, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
+!      CALL AllMessage(ERROR, scratchMessage)    
+!      CALL UnsetMessageSource()
+      call parallel_abort(errmsg)
+!      CALL Terminate()
     END IF
 
     n1 = SIZE(lats, 1)
@@ -2259,12 +2258,11 @@ MODULE PaHM_Utilities
     ALLOCATE(phis(n1, n2), lamdas(n1, n2), dphi(n1, n2), dlamda(n1, n2), dsigma(n1, n2), STAT = status)
 
     IF (status /= 0) THEN
-      WRITE(scratchMessage, '(a)') 'Could no allocate memory for the internal arrays.'
-      CALL AllMessage(ERROR, scratchMessage)    
-
-      CALL UnsetMessageSource()
-
-      CALL Terminate()
+      WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
+      call parallel_abort(errmsg)
+!      CALL AllMessage(ERROR, scratchMessage)    
+!      CALL UnsetMessageSource()
+!      CALL Terminate()
     END IF
 
     phis   = DEG2RAD * lats

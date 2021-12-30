@@ -14,7 +14,7 @@
 !----------------------------------------------------------------
 
 !Search for 'YJZ' for notes
-!All routines are executed by rank 0 only
+!All routines are executed by rank 0 only on global nodes
 !Routines & functions
 ! ReadCsvBestTrackFile
 ! ProcessHollandData: process track data into struc for time steps
@@ -390,8 +390,8 @@ MODULE ParWind
 
       IF (status /= 0) THEN
         CALL UnsetMessageSource()
-    
-        CALL Terminate()
+        call parallel_abort('ReadCsvBestTrackFile: indx error')
+!        CALL Terminate()
       END IF
 
       ! Create the index array to be used in the comparison below
@@ -615,10 +615,13 @@ MODULE ParWind
           END IF
 
           IF ((strOut%iCPress(iCnt) == 0) .OR. (strOut%iRmw(iCnt) == 0)) THEN
-            CALL AllMessage(ERROR,                                                                 &
-                            'The storm hindcast/forecast input file ' // TRIM(strOut%fileName) //  &
-                            ' contains invalid data for central pressure or rMax.')
-            CALL Terminate()
+!            CALL AllMessage(ERROR,                                                                 &
+!                            'The storm hindcast/forecast input file ' // TRIM(strOut%fileName) //  &
+!                            ' contains invalid data for central pressure or rMax.')
+!            CALL Terminate()
+            write(errmsg,*)'The storm hindcast/forecast input file '//TRIM(strOut%fileName) // &
+     &' contains invalid data for central pressure or rMax.'
+            call parallel_abort(errmsg)
           END IF
 
         ! Adding a new type to allow the analyst to add lines
@@ -642,11 +645,11 @@ MODULE ParWind
           END IF
 
         CASE DEFAULT        ! unrecognized
-          WRITE(scratchMessage, '(a)') 'Only "BEST", "OFCL", or "CALM" are allowed in the 5th column of ' // &
+          WRITE(errmsg, '(a)') 'Only "BEST", "OFCL", or "CALM" are allowed in the 5th column of ' // &
                                        TRIM(ADJUSTL(strOut%fileName))
-          CALL AllMessage(ERROR, scratchMessage)
-
-          CALL Terminate()
+          call parallel_abort(errmsg)
+!          CALL AllMessage(ERROR, scratchMessage)
+!          CALL Terminate()
       END SELECT
 
       strOut%castTime(iCnt) = castTime(iCnt)
@@ -754,7 +757,7 @@ MODULE ParWind
     logical :: lrevert
 
 !   Debug
-    write(12,*)'start Holland at step: ',it_main,time_stamp,nOutDT
+!    write(16,*)'start Holland at step: ',it_main,time_stamp,nOutDT
 
     !Save previous outputs (error: not init'ed)
     atmos_0=atmos_1
@@ -857,29 +860,28 @@ MODULE ParWind
       CALL ProcessHollandData(stCnt, holStru(stCnt), status)
 
       IF (.NOT. holStru(stCnt)%loaded) THEN
-        WRITE(scratchMessage, '(a)') 'There was an error loading the Holland data structure for the best track file: ' // &
+        WRITE(errmsg, '(a)') 'There was an error loading the Holland data structure for the best track file: ' // &
                                      TRIM(ADJUSTL(bestTrackFileName(stCnt)))
-        CALL AllMessage(ERROR, scratchMessage)
+!        CALL AllMessage(ERROR, scratchMessage)
 
         CALL DeAllocHollStruct(holStru(stCnt))
         DEALLOCATE(holStru)
 
         CALL UnsetMessageSource()
-
-        CALL Terminate()
+        call parallel_abort(errmsg)
+!        CALL Terminate()
       ELSE IF (status /= 0) THEN
-        WRITE(scratchMessage, '(a)') 'There was an error processing the Holland data structure for the best track file: ' // &
+        WRITE(errmsg,'(a)') 'There was an error processing the Holland data structure for the best track file: ' // &
                                      TRIM(ADJUSTL(bestTrackFileName(stCnt)))
-        CALL AllMessage(ERROR, scratchMessage)
+!        CALL AllMessage(ERROR, scratchMessage)
 
         CALL DeAllocHollStruct(holStru(stCnt))
         DEALLOCATE(holStru)
-
-        CALL UnsetMessageSource()
-
-        CALL Terminate()
+        call parallel_abort(errmsg)
+!        CALL UnsetMessageSource()
+!        CALL Terminate()
       ELSE
-        WRITE(12,'(a)') 'Processing the Holland data structure for the best track file: ' // &
+        WRITE(16,'(a)') 'Processing the Holland data structure for the best track file: ' // &
                                      TRIM(ADJUSTL(bestTrackFileName(stCnt)))
         CALL LogMessage(INFO, scratchMessage)
       END IF
@@ -898,7 +900,7 @@ MODULE ParWind
 !     WRITE(tmpStr2, '(i5)') nOutDT
 !     tmpStr1 = '(' // TRIM(tmpStr1) // '/' // TRIM(ADJUSTL(tmpStr2)) // ')'
     WRITE(tmpTimeStr, '(f20.3)') time_stamp !Times(iCnt) (time from ref in sec; make sure origin=ref time)
-    WRITE(12,'(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpTimeStr))
+    WRITE(16,*)'Working on time frame: ',time_stamp !// TRIM(ADJUSTL(tmpTimeStr))
 !      CALL AllMessage(scratchMessage)
 
       DO stCnt = 1, nBTrFiles
@@ -914,7 +916,7 @@ MODULE ParWind
         ! Skip the subsequent calculations if Times(iCnt) is outside the castTime range
         ! by exiting this loop
         IF ((jl1 <= 0) .OR. (jl2 <= 0)) THEN
-          WRITE(12, '(a)') 'Requested output time: ' // TRIM(ADJUSTL(tmpTimeStr)) // &
+          WRITE(16, '(a)') 'Requested output time: ' // TRIM(ADJUSTL(tmpTimeStr)) // &
                                        ', skipping generating data for this time'
 !          CALL LogMessage(INFO, scratchMessage)
 
@@ -930,7 +932,7 @@ MODULE ParWind
 
         !Check NaN
         if(wtRatio/=wtRatio.or.lat/=lat.or.lon/=lon) then
-          write(12,*)'GetHollandFields, error in lonlat:',wtRatio,lat,lon,jl1,jl2,holStru(stCnt)%lat,holStru(stCnt)%lon
+          write(16,*)'GetHollandFields, error in lonlat:',wtRatio,lat,lon,jl1,jl2,holStru(stCnt)%lat,holStru(stCnt)%lon
 !          write(errmsg,*)'GetHollandFields- nan(1):',wtRatio,lat,lon,jl1,jl2
 !          call parallel_abort(errmsg)
           lrevert=.true.
@@ -952,9 +954,9 @@ MODULE ParWind
         rmw=max(rmw,0.d0)
 
         !Check
-        write(12,*)'rrp,rmw=',rrp,rmw,time_stamp,stormNumber,lon,lat
+        write(16,*)'rrp,rmw=',rrp,rmw,time_stamp,stormNumber,lon,lat
         if(rrp/=rrp.or.rmw/=rmw) then
-          write(12,*)'GetHollandFields- nan(2):',rrp,rmw
+          write(16,*)'GetHollandFields- nan(2):',rrp,rmw
 !          write(errmsg,*)'GetHollandFields- nan(2):',rrp,rmw
 !          call parallel_abort(errmsg)
           lrevert=.true.
@@ -963,7 +965,7 @@ MODULE ParWind
         ! Get all the distances of the mesh nodes from (lat, lon)
         !rad() is allocated inside the routine
         rad    = SphericalDistance(ylat_gb, xlon_gb, lat, lon)
-        write(12,*)'min &max rad=',minval(rad),maxval(rad)
+        write(16,*)'min &max rad=',minval(rad),maxval(rad)
         !YJZ: limit rad;  I don't understand why distance can be <0
         where(rad<1.d-1) rad=1.d-1
         ! ... and the indices of the nodal points where rad <= rrp
@@ -974,20 +976,19 @@ MODULE ParWind
         IF (maxRadIDX == 0) THEN
           WRITE(tmpStr1, '(f20.3)') rrp
           tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
-          WRITE(12, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
+          WRITE(16, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
                                        TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
                                        TRIM(ADJUSTL(holStru(stCnt)%thisStorm))
 !          CALL LogMessage(INFO, scratchMessage)
-
           EXIT
         END IF
 
         !From now on, rrp>=0.1
         !Check
-        write(12,*)'rad:',size(rad),rrp,rmw,maxRadIDX !,radIDX
+        write(16,*)'rad:',size(rad),rrp,rmw,maxRadIDX !,radIDX
         tmp2=sum(rad)/np_gb
         if(maxRadIDX/=maxRadIDX.or.tmp2/=tmp2) then
-          write(12,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
+          write(16,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
 !          write(errmsg,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
 !          call parallel_abort(errmsg)
           lrevert=.true.
@@ -995,7 +996,7 @@ MODULE ParWind
         if(maxRadIDX>0) then
           tmp2=sum(radIDX)/np_gb
           if(tmp2/=tmp2) then
-            write(12,*)'GetHollandFields- nan(4):',tmp2
+            write(16,*)'GetHollandFields- nan(4):',tmp2
 !            write(errmsg,*)'GetHollandFields- nan(4):',tmp2
 !            call parallel_abort(errmsg)
             lrevert=.true.
@@ -1013,9 +1014,9 @@ MODULE ParWind
                 wtRatio * (holStru(stCnt)%trVy(jl2) - holStru(stCnt)%trVy(jl1))
 
         !Check
-        write(12,*)'speed etc=',time_stamp,speed,cPress,trVX,trVY
+        write(16,*)'speed etc=',time_stamp,speed,cPress,trVX,trVY
         if(speed/=speed.or.cPress/=cPress.or.trVX/=trVX.or.trVY/=trVY) then
-          write(12,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
+          write(16,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
 !          write(errmsg,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
 !          call parallel_abort(errmsg)
           lrevert=.true.
@@ -1028,7 +1029,7 @@ MODULE ParWind
           atmos_1(:,1:2)= 0.0_SZ
           atmos_1(:,3)= backgroundAtmPress * MB2PA
 
-          WRITE(12, '(a)') 'Calm period found, generating zero atmospheric fields for this time'
+          WRITE(16, '(a)') 'Calm period found, generating zero atmospheric fields for this time'
 !          CALL LogMessage(INFO, scratchMessage)
 
           EXIT
