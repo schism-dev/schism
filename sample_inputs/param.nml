@@ -509,7 +509,8 @@
   impose_net_flux = 0
 
 !-----------------------------------------------------------------------
-! Heat and salt exchange. isconsv=1 needs ihconsv=1; ihconsv=1 needs nws=2.
+! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.
+! isconsv=1 needs ihconsv=1; ihconsv=1 needs nws=2.
 ! If isconsv=1, need to compile with precip/evap module turned on.
 ! If at least one of ihconsv and isconsv is set to 1,
 ! locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.

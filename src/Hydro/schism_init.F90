@@ -721,6 +721,12 @@
 !'
       if(ihconsv/=0.and.(nws<2.or.nws>3)) call parallel_abort('Heat budge model must have nws>=2')
 
+#ifdef USE_BULK_FAIRALL
+      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
+#else
+      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
+#endif
+
       if(isconsv/=0.or.ihconsv/=0) then
         if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
           write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
