@@ -155,21 +155,23 @@ MODULE PaHM_Utilities
   !>   inpFile   The full pathname of the input file
   !>
   !----------------------------------------------------------------
-  SUBROUTINE ReadControlFile(inpFile)
+  SUBROUTINE ReadControlFile !(inpFile)
 
     USE PaHM_Global
     USE PaHM_Messages
     USE TimeDateUtils, ONLY : TimeConv, SplitDateTimeString, JoinDate,  GregToJulDay, JulDayToGreg, &
                               GetTimeConvSec, DateTime2String
+    use schism_glbl, only : start_year,start_month,start_day,start_hour,utc_start,grav, &
+     &rho0
     
     IMPLICIT NONE
 
     ! Global variables
-    CHARACTER(LEN=*), INTENT(IN)        :: inpFile
+!    CHARACTER(LEN=*), INTENT(IN)        :: inpFile
 
     ! Local variables
     LOGICAL                             :: fileFound   ! .TRUE. if the file is present
-    CHARACTER(LEN=LEN(inpFile))         :: tmpFileName
+!    CHARACTER(LEN=LEN(inpFile))         :: tmpFileName
     CHARACTER(LEN=512)                  :: inpLine, outLine
     CHARACTER(LEN=40)                   :: keyWord
 
@@ -193,7 +195,7 @@ MODULE PaHM_Utilities
 
     !---------- Initialize variables
     ! Global variables
-    numBTFiles                 = 0
+!    numBTFiles                 = 0
 
     ! Local variables
     inpLine                    = BLANK
@@ -209,423 +211,469 @@ MODULE PaHM_Utilities
     errIO = 0
     !----------
 
+    nBTrFiles=1 !#of track files 
+    numBTFiles =1
+    ALLOCATE(bestTrackFileName(nBTrFiles))
+    bestTrackFileName(1)='hurricane-track.dat'
+    gravity=grav
+    rhoWater=rho0
+    rhoAir=1.1478d0 
+    backgroundAtmPress=1013.25d0
+    blAdjustFac=0.9d0
+!    refDateTime=
+    refYear=start_year
+    refMonth=start_month
+    refDay=start_day
+    refHour=start_hour+utc_start   !UTC
+    refMin=0
+    refSec=0
+    refDate = JoinDate(refYear, refMonth, refDay)
+    refTime = JoinDate(refHour, refMin, refSec)
+    refDateSpecified = .TRUE.
+    unitTime='S'
+
+!    begDateTime=
+    begYear=start_year
+    begMonth=start_month
+    begDay=start_day
+    begHour=start_hour+utc_start   !UTC
+    begMin=0; begSec=0
+    begDate = JoinDate(begYear, begMonth, begDay)
+    begTime = JoinDate(begHour, begMin, begSec)
+    CALL TimeConv(begYear, begMonth, begDay, begHour, begMin, begSec, mdBegSimTime)
+    begSimTime = mdBegSimTime * GetTimeConvSec(unitTime, 1)
+    begDateSpecified = .TRUE.
+    begSimSpecified  = .TRUE.
+
+!    endDateTime=
+    endYear=5000 !not really used
+    endMonth=1
+    endDay=1
+    endHour=0; endMin=0; endSec=0
+    endDate = JoinDate(endYear, endMonth, endDay)
+    endTime = JoinDate(endHour, endMin, endSec)
+    CALL TimeConv(endYear, endMonth, endDay, endHour, endMin, endSec, mdEndSimTime)
+    endSimTime = mdEndSimTime * GetTimeConvSec(unitTime, 1)
+    endDateTime = DateTime2String(endYear, endMonth, endDay, endHour, endMin, endSec)
+    endDateSpecified = .TRUE.
+    endSimSpecified  = .TRUE.
+
+    modelType=1   
+    writeParams = .TRUE.
 
     CALL SetMessageSource("ReadControlFile")
 
     !---------- Establish the format variables
-    cntlFmtStr = ' "in control file ' // "<" // TRIM(ADJUSTL(inpFile)) // ">" // '"'
+!    cntlFmtStr = ' "in control file ' // "<" // TRIM(ADJUSTL(inpFile)) // ">" // '"'
 
-    fmtDimParInvalid  = '(" Invalid dimension parameter: ", a, 1x, i0, 2x, '
-      fmtDimParInvalid  = TRIM(fmtDimParInvalid) // TRIM(cntlFmtStr) // ', 1x, a)'
+!    fmtDimParInvalid  = '(" Invalid dimension parameter: ", a, 1x, i0, 2x, '
+!      fmtDimParInvalid  = TRIM(fmtDimParInvalid) // TRIM(cntlFmtStr) // ', 1x, a)'
 
-    fmtParNotFound = '(" Could not find input parameter: ", a, 1x, '
-      fmtParNotFound = TRIM(fmtParNotFound) // TRIM(cntlFmtStr) // ', 1x, a)'
+!    fmtParNotFound = '(" Could not find input parameter: ", a, 1x, '
+!      fmtParNotFound = TRIM(fmtParNotFound) // TRIM(cntlFmtStr) // ', 1x, a)'
     !----------
     
-    tmpFileName = ADJUSTL(inpFile)
+!    tmpFileName = ADJUSTL(inpFile)
 
-    INQUIRE(FILE=TRIM(tmpFileName), EXIST=fileFound)
-    IF (.NOT. fileFound) THEN
-      WRITE(LUN_SCREEN, '("The control file : ", a, " was not found, cannot continue.")') TRIM(tmpFileName)
+!    INQUIRE(FILE=TRIM(tmpFileName), EXIST=fileFound)
+!    IF (.NOT. fileFound) THEN
+!      WRITE(LUN_SCREEN, '("The control file : ", a, " was not found, cannot continue.")') TRIM(tmpFileName)
+!
+!      STOP  ! file not found
+!    ELSE
+!      WRITE(LUN_SCREEN, '("The contol file : ", a, " was found and will be opened for reading.")') TRIM(tmpFileName)
+!    END IF
+!    
+!    ! Open existing file
+!    OPEN(UNIT=iUnit, FILE=TRIM(tmpFileName), STATUS='OLD', ACTION='READ', IOSTAT=errIO)
+!    IF (errIO /= 0) THEN
+!      WRITE(LUN_SCREEN, '("Could not open the contol file: ", a, ".")') TRIM(tmpFileName)
+!
+!      STOP  ! file found but could not be opened
+!    END IF
 
-      STOP  ! file not found
-    ELSE
-      WRITE(LUN_SCREEN, '("The contol file : ", a, " was found and will be opened for reading.")') TRIM(tmpFileName)
-    END IF
-    
-    ! Open existing file
-    OPEN(UNIT=iUnit, FILE=TRIM(tmpFileName), STATUS='OLD', ACTION='READ', IOSTAT=errIO)
-    IF (errIO /= 0) THEN
-      WRITE(LUN_SCREEN, '("Could not open the contol file: ", a, ".")') TRIM(tmpFileName)
+!   DO WHILE (.TRUE.)
+!     READ(UNIT=iUnit, FMT='(a)', ERR=10, END=20) inpLine
+!     status = ParseLine(inpLine, outLine, keyWord, nVal, charVal, realVal)
 
-      STOP  ! file found but could not be opened
-    END IF
+!     IF (status > 0) THEN
+!       SELECT CASE (ToUpperCase(TRIM(KeyWord)))
+!         !----- CASE
+!         CASE ('TITLE')
+!           IF (nVal == 1) THEN
+!             title = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             WRITE(title, '(a, 1x, a)') TRIM(ADJUSTL(title)), TRIM(ADJUSTL(charVal(nVal)))
+!           END IF
 
-    DO WHILE (.TRUE.)
-      READ(UNIT=iUnit, FMT='(a)', ERR=10, END=20) inpLine
-      status = ParseLine(inpLine, outLine, keyWord, nVal, charVal, realVal)
+!         !----- CASE
+!         CASE ('LOGFILENAME')
+!           IF (nVal == 1) THEN
+!             logFileName = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(logFileName)) == '') THEN
+!               logFileName = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-      IF (status > 0) THEN
-        SELECT CASE (ToUpperCase(TRIM(KeyWord)))
-          !----- CASE
-          CASE ('TITLE')
-            IF (nVal == 1) THEN
-              title = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              WRITE(title, '(a, 1x, a)') TRIM(ADJUSTL(title)), TRIM(ADJUSTL(charVal(nVal)))
-            END IF
+!         !----- CASE
+!         CASE ('WRITEPARAMS')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           IF (iValOut(1) > 0) THEN
+!             writeParams = .TRUE.
+!           ELSE
+!             writeParams = .FALSE.
+!           END IF
 
-          !----- CASE
-          CASE ('LOGFILENAME')
-            IF (nVal == 1) THEN
-              logFileName = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(logFileName)) == '') THEN
-                logFileName = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('NBTRFILES')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           nBTrFiles = iValOut(1)
+!           IF (nBTrFiles > 0) THEN
+!             ALLOCATE(bestTrackFileName(nBTrFiles))
+!             bestTrackFileName = BLANK
+!           END IF
+!           gotNBTRFILES = .TRUE.
 
-          !----- CASE
-          CASE ('WRITEPARAMS')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            IF (iValOut(1) > 0) THEN
-              writeParams = .TRUE.
-            ELSE
-              writeParams = .FALSE.
-            END IF
+!         !----- CASE
+!         CASE ('BESTTRACKFILENAME')
+!           IF (.NOT. gotNBTRFILES) THEN
+!             WRITE(scratchMessage, fmtParNotFound) 'nBTrFiles', '(add the "nBTrFiles" keyword before "bestTrackFileName").'
+!             CALL AllMessage(ERROR, scratchMessage)
+!           ELSE
+!             IF (ALLOCATED(bestTrackFileName)) THEN
+!               tmpStr = ADJUSTL(charVal(nVal))
+!               IF (TRIM(tmpStr) == '') THEN
+!                 nVal = nVal - 1
+!               ELSE
+!                 IF (nVal <= nBTrFiles) THEN ! because bestTrackFileName has been allocated this way above
+!                   numBTFiles = numBTFiles + 1
+!                   bestTrackFileName(numBTFiles) = TRIM(tmpStr)
+!                   bestTrackFileNameSpecified = .TRUE.
+!                 END IF
+!               END IF
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('NBTRFILES')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            nBTrFiles = iValOut(1)
-            IF (nBTrFiles > 0) THEN
-              ALLOCATE(bestTrackFileName(nBTrFiles))
-              bestTrackFileName = BLANK
-            END IF
-            gotNBTRFILES = .TRUE.
+!         !----- CASE
+!         CASE ('MESHFILETYPE')
+!           IF (nVal == 1) THEN
+!             meshFileType = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(meshFileType)) == '') THEN
+!               meshFileType = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('BESTTRACKFILENAME')
-            IF (.NOT. gotNBTRFILES) THEN
-              WRITE(scratchMessage, fmtParNotFound) 'nBTrFiles', '(add the "nBTrFiles" keyword before "bestTrackFileName").'
-              CALL AllMessage(ERROR, scratchMessage)
-            ELSE
-              IF (ALLOCATED(bestTrackFileName)) THEN
-                tmpStr = ADJUSTL(charVal(nVal))
-                IF (TRIM(tmpStr) == '') THEN
-                  nVal = nVal - 1
-                ELSE
-                  IF (nVal <= nBTrFiles) THEN ! because bestTrackFileName has been allocated this way above
-                    numBTFiles = numBTFiles + 1
-                    bestTrackFileName(numBTFiles) = TRIM(tmpStr)
-                    bestTrackFileNameSpecified = .TRUE.
-                  END IF
-                END IF
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('MESHFILENAME')
+!           IF (nVal == 1) THEN
+!             meshFileName = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(meshFileName)) == '') THEN
+!               meshFileName = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
+!           IF (TRIM(ADJUSTL(meshFileName)) /= '') meshFileNameSpecified = .TRUE.
 
-          !----- CASE
-          CASE ('MESHFILETYPE')
-            IF (nVal == 1) THEN
-              meshFileType = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(meshFileType)) == '') THEN
-                meshFileType = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('MESHFILEFORM')
+!           IF (nVal == 1) THEN
+!             meshFileForm = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(meshFileForm)) == '') THEN
+!               meshFileForm = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('MESHFILENAME')
-            IF (nVal == 1) THEN
-              meshFileName = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(meshFileName)) == '') THEN
-                meshFileName = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
-            IF (TRIM(ADJUSTL(meshFileName)) /= '') meshFileNameSpecified = .TRUE.
+!         !----- CASE
+!         CASE ('GRAVITY')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           gravity = rValOut(1)
 
-          !----- CASE
-          CASE ('MESHFILEFORM')
-            IF (nVal == 1) THEN
-              meshFileForm = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(meshFileForm)) == '') THEN
-                meshFileForm = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('RHOWATER')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           rhoWater = rValOut(1)
 
-          !----- CASE
-          CASE ('GRAVITY')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            gravity = rValOut(1)
+!         !----- CASE
+!         CASE ('RHOAIR')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           rhoAir = rValOut(1)
 
-          !----- CASE
-          CASE ('RHOWATER')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            rhoWater = rValOut(1)
+!         !----- CASE
+!         CASE ('BACKGROUNDATMPRESS')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           backgroundAtmPress = rValOut(1)
 
-          !----- CASE
-          CASE ('RHOAIR')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            rhoAir = rValOut(1)
+!         !----- CASE
+!         CASE ('BLADJUSTFAC')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           blAdjustFac = rValOut(1)
 
-          !----- CASE
-          CASE ('BACKGROUNDATMPRESS')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            backgroundAtmPress = rValOut(1)
+!         !----- CASE
+!         CASE ('REFDATETIME')
+!           IF (nVal == 1) THEN
+!             refDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(refDateTime)) == '') THEN
+!               refDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('BLADJUSTFAC')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            blAdjustFac = rValOut(1)
+!           CALL SplitDateTimeString(refDateTime, refYear, refMonth, refDay, refHour, refMin, refSec)
 
-          !----- CASE
-          CASE ('REFDATETIME')
-            IF (nVal == 1) THEN
-              refDateTime = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(refDateTime)) == '') THEN
-                refDateTime = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!           IF ((refYear == IMISSV) .OR. (refMonth <= 0) .OR. (refDay <= 0)) THEN
+!             refDate = IMISSV
+!           ELSE
+!             refDate = JoinDate(refYear, refMonth, refDay)
+!           END IF
+!           refTime = JoinDate(refHour, refMin, refSec)
+!           refDateSpecified = .TRUE.
 
-            CALL SplitDateTimeString(refDateTime, refYear, refMonth, refDay, refHour, refMin, refSec)
+!         !----- CASE
+!         CASE ('UNITTIME')
+!           IF (begDateSpecified .OR. begSimSpecified .OR. &
+!               endDateSpecified .OR. endSimSpecified) THEN
+!             scratchMessage = 'add the "unitTime" keyword before the ' // &
+!                              '"begDateTime"/"begTime" and "endDateTime"/"endTime" keywords'
+!             CALL AllMessage(ERROR, scratchMessage)
+!             CALL Terminate()
+!           ELSE
+!             IF (nVal == 1) THEN
+!               tmpCharVal = ToUpperCase(ADJUSTL(charVal(nVal)))
+!               unitTime = tmpCharVal(1:1)
+!             ELSE
+!               IF (TRIM(ADJUSTL(unitTime)) == '') THEN
+!                 tmpCharVal = ToUpperCase(ADJUSTL(charVal(nVal)))
+!                 unitTime = tmpCharVal(1:1)
+!               END IF
+!             END IF
+!           END IF
 
-            IF ((refYear == IMISSV) .OR. (refMonth <= 0) .OR. (refDay <= 0)) THEN
-              refDate = IMISSV
-            ELSE
-              refDate = JoinDate(refYear, refMonth, refDay)
-            END IF
-            refTime = JoinDate(refHour, refMin, refSec)
-            refDateSpecified = .TRUE.
+!         !----- CASE
+!         CASE ('BEGDATETIME')
+!           IF (begDateSpecified .OR. begSimSpecified) THEN
+!             scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
+!             CALL AllMessage(ERROR, scratchMessage)
 
-          !----- CASE
-          CASE ('UNITTIME')
-            IF (begDateSpecified .OR. begSimSpecified .OR. &
-                endDateSpecified .OR. endSimSpecified) THEN
-              scratchMessage = 'add the "unitTime" keyword before the ' // &
-                               '"begDateTime"/"begTime" and "endDateTime"/"endTime" keywords'
-              CALL AllMessage(ERROR, scratchMessage)
-              CALL Terminate()
-            ELSE
-              IF (nVal == 1) THEN
-                tmpCharVal = ToUpperCase(ADJUSTL(charVal(nVal)))
-                unitTime = tmpCharVal(1:1)
-              ELSE
-                IF (TRIM(ADJUSTL(unitTime)) == '') THEN
-                  tmpCharVal = ToUpperCase(ADJUSTL(charVal(nVal)))
-                  unitTime = tmpCharVal(1:1)
-                END IF
-              END IF
-            END IF
+!             begDateSpecified = .FALSE.
+!           ELSE
+!             IF (.NOT. refDateSpecified) THEN
+!               scratchMessage = 'Add the "refDateTime" keyword before "begDateTime").'
+!               CALL AllMessage(ERROR, scratchMessage)
+!             ELSE
+!               IF (nVal == 1) THEN
+!                 begDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!               ELSE
+!                 IF (TRIM(ADJUSTL(begDateTime)) == '') THEN
+!                   begDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!                 END IF
+!               END IF
 
-          !----- CASE
-          CASE ('BEGDATETIME')
-            IF (begDateSpecified .OR. begSimSpecified) THEN
-              scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
-              CALL AllMessage(ERROR, scratchMessage)
+!               CALL SplitDateTimeString(begDateTime, begYear, begMonth, begDay, begHour, begMin, begSec)
 
-              begDateSpecified = .FALSE.
-            ELSE
-              IF (.NOT. refDateSpecified) THEN
-                scratchMessage = 'Add the "refDateTime" keyword before "begDateTime").'
-                CALL AllMessage(ERROR, scratchMessage)
-              ELSE
-                IF (nVal == 1) THEN
-                  begDateTime = TRIM(ADJUSTL(charVal(nVal)))
-                ELSE
-                  IF (TRIM(ADJUSTL(begDateTime)) == '') THEN
-                    begDateTime = TRIM(ADJUSTL(charVal(nVal)))
-                  END IF
-                END IF
+!               IF ((begYear == IMISSV) .OR. (begMonth <= 0) .OR. (begDay <= 0)) THEN
+!                 begDate = IMISSV
+!               ELSE
+!                 begDate = JoinDate(begYear, begMonth, begDay)
+!               END IF
+!               begTime = JoinDate(begHour, begMin, begSec)
 
-                CALL SplitDateTimeString(begDateTime, begYear, begMonth, begDay, begHour, begMin, begSec)
+!               CALL TimeConv(begYear, begMonth, begDay, begHour, begMin, begSec, mdBegSimTime)
+!               begSimTime = mdBegSimTime * GetTimeConvSec(unitTime, 1)
 
-                IF ((begYear == IMISSV) .OR. (begMonth <= 0) .OR. (begDay <= 0)) THEN
-                  begDate = IMISSV
-                ELSE
-                  begDate = JoinDate(begYear, begMonth, begDay)
-                END IF
-                begTime = JoinDate(begHour, begMin, begSec)
+!               begDateTime = DateTime2String(begYear, begMonth, begDay, begHour, begMin, begSec)
 
-                CALL TimeConv(begYear, begMonth, begDay, begHour, begMin, begSec, mdBegSimTime)
-                begSimTime = mdBegSimTime * GetTimeConvSec(unitTime, 1)
+!               begDateSpecified = .TRUE.
+!               begSimSpecified  = .TRUE.
+!             END IF
+!           END IF
 
-                begDateTime = DateTime2String(begYear, begMonth, begDay, begHour, begMin, begSec)
+!         !----- CASE
+!         CASE ('ENDDATETIME')
+!           IF (endDateSpecified .OR. endSimSpecified) THEN
+!             scratchMessage = 'Only one of "endDateTime" or "endSimTime" can be specified'
+!             CALL AllMessage(ERROR, scratchMessage)
 
-                begDateSpecified = .TRUE.
-                begSimSpecified  = .TRUE.
-              END IF
-            END IF
+!             endDateSpecified = .FALSE.
+!           ELSE
+!             IF (.NOT. refDateSpecified) THEN
+!               scratchMessage = 'Add the "refDateTime" keyword before "endDateTime").'
+!               CALL AllMessage(ERROR, scratchMessage)
+!             ELSE
+!               IF (nVal == 1) THEN
+!                 endDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!               ELSE
+!                 IF (TRIM(ADJUSTL(endDateTime)) == '') THEN
+!                   endDateTime = TRIM(ADJUSTL(charVal(nVal)))
+!                 END IF
+!               END IF
 
-          !----- CASE
-          CASE ('ENDDATETIME')
-            IF (endDateSpecified .OR. endSimSpecified) THEN
-              scratchMessage = 'Only one of "endDateTime" or "endSimTime" can be specified'
-              CALL AllMessage(ERROR, scratchMessage)
+!               CALL SplitDateTimeString(endDateTime, endYear, endMonth, endDay, endHour, endMin, endSec)
 
-              endDateSpecified = .FALSE.
-            ELSE
-              IF (.NOT. refDateSpecified) THEN
-                scratchMessage = 'Add the "refDateTime" keyword before "endDateTime").'
-                CALL AllMessage(ERROR, scratchMessage)
-              ELSE
-                IF (nVal == 1) THEN
-                  endDateTime = TRIM(ADJUSTL(charVal(nVal)))
-                ELSE
-                  IF (TRIM(ADJUSTL(endDateTime)) == '') THEN
-                    endDateTime = TRIM(ADJUSTL(charVal(nVal)))
-                  END IF
-                END IF
+!               IF ((endYear == IMISSV) .OR. (endMonth <= 0) .OR. (endDay <= 0)) THEN
+!                 endDate = IMISSV
+!               ELSE
+!                 endDate = JoinDate(endYear, endMonth, endDay)
+!               END IF
+!               endTime = JoinDate(endHour, endMin, endSec)
 
-                CALL SplitDateTimeString(endDateTime, endYear, endMonth, endDay, endHour, endMin, endSec)
+!               CALL TimeConv(endYear, endMonth, endDay, endHour, endMin, endSec, mdEndSimTime)
+!               endSimTime = mdEndSimTime * GetTimeConvSec(unitTime, 1)
 
-                IF ((endYear == IMISSV) .OR. (endMonth <= 0) .OR. (endDay <= 0)) THEN
-                  endDate = IMISSV
-                ELSE
-                  endDate = JoinDate(endYear, endMonth, endDay)
-                END IF
-                endTime = JoinDate(endHour, endMin, endSec)
+!               endDateTime = DateTime2String(endYear, endMonth, endDay, endHour, endMin, endSec)
 
-                CALL TimeConv(endYear, endMonth, endDay, endHour, endMin, endSec, mdEndSimTime)
-                endSimTime = mdEndSimTime * GetTimeConvSec(unitTime, 1)
+!               endDateSpecified = .TRUE.
+!               endSimSpecified  = .TRUE.
+!             END IF
+!           END IF
 
-                endDateTime = DateTime2String(endYear, endMonth, endDay, endHour, endMin, endSec)
+!         !----- CASE
+!         CASE ('OUTDT')
+!           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!           outDT = rValOut(1)
+!           mdOutDT = FixNearWholeReal(outDT * GetTimeConvSec(unitTime), closeTOL)
 
-                endDateSpecified = .TRUE.
-                endSimSpecified  = .TRUE.
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('BEGSIMTIME')
+!           IF (begDateSpecified .OR. begSimSpecified) THEN
+!             scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
+!             CALL AllMessage(ERROR, scratchMessage)
 
-          !----- CASE
-          CASE ('OUTDT')
-            nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-            outDT = rValOut(1)
-            mdOutDT = FixNearWholeReal(outDT * GetTimeConvSec(unitTime), closeTOL)
+!             begSimSpecified = .FALSE.
+!           ELSE
+!             IF (.NOT. refDateSpecified) THEN
+!               scratchMessage = 'Add the "refDateTime" keyword before "begSimTime").'
+!               CALL AllMessage(ERROR, scratchMessage)
+!             ELSE
+!               nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!               begSimTime = rValOut(1)
 
-          !----- CASE
-          CASE ('BEGSIMTIME')
-            IF (begDateSpecified .OR. begSimSpecified) THEN
-              scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
-              CALL AllMessage(ERROR, scratchMessage)
+!               mdBegSimTime = begSimTime * GetTimeConvSec(unitTime)
 
-              begSimSpecified = .FALSE.
-            ELSE
-              IF (.NOT. refDateSpecified) THEN
-                scratchMessage = 'Add the "refDateTime" keyword before "begSimTime").'
-                CALL AllMessage(ERROR, scratchMessage)
-              ELSE
-                nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-                begSimTime = rValOut(1)
+!               jday = (mdbegSimTime *  GetTimeConvSec('D', 1)) + GregToJulDay(refYear, refMonth, refDay, refHour, refMin, refSec)
+!               CALL JulDayToGreg(jday, begYear, begMonth, begDay, begHour, begMin, begSec)
+!               begDateTime = DateTime2String(begYear, begMonth, begDay, begHour, begMin, begSec)
 
-                mdBegSimTime = begSimTime * GetTimeConvSec(unitTime)
+!               begDateSpecified = .TRUE.
+!               begSimSpecified  = .TRUE.
+!             END IF
+!           END IF
 
-                jday = (mdbegSimTime *  GetTimeConvSec('D', 1)) + GregToJulDay(refYear, refMonth, refDay, refHour, refMin, refSec)
-                CALL JulDayToGreg(jday, begYear, begMonth, begDay, begHour, begMin, begSec)
-                begDateTime = DateTime2String(begYear, begMonth, begDay, begHour, begMin, begSec)
+!         !----- CASE
+!         CASE ('ENDSIMTIME')
+!           IF (endDateSpecified .OR. endSimSpecified) THEN
+!             scratchMessage = 'Only one of "endDateTime" and "endSimTime" can be specified'
+!             CALL AllMessage(ERROR, scratchMessage)
 
-                begDateSpecified = .TRUE.
-                begSimSpecified  = .TRUE.
-              END IF
-            END IF
+!             endSimSpecified = .FALSE.
+!           ELSE
+!              IF (.NOT. refDateSpecified) THEN
+!               scratchMessage = 'Add the "refDateTime" keyword before "endSimTime").'
+!               CALL AllMessage(ERROR, scratchMessage)
+!             ELSE
+!               nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
+!               endSimTime = rValOut(1)
 
-          !----- CASE
-          CASE ('ENDSIMTIME')
-            IF (endDateSpecified .OR. endSimSpecified) THEN
-              scratchMessage = 'Only one of "endDateTime" and "endSimTime" can be specified'
-              CALL AllMessage(ERROR, scratchMessage)
+!               mdEndSimTime = endSimTime * GetTimeConvSec(unitTime)
 
-              endSimSpecified = .FALSE.
-            ELSE
-               IF (.NOT. refDateSpecified) THEN
-                scratchMessage = 'Add the "refDateTime" keyword before "endSimTime").'
-                CALL AllMessage(ERROR, scratchMessage)
-              ELSE
-                nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-                endSimTime = rValOut(1)
+!               jday = (mdEndSimTime * GetTimeConvSec('D', 1)) + GregToJulDay(refYear, refMonth, refDay, refHour, refMin, refSec)
+!               CALL JulDayToGreg(jday, endYear, endMonth, endDay, endHour, endMin, endSec)
+!               begDateTime = DateTime2String(endYear, endMonth, endDay, endHour, endMin, endSec)
 
-                mdEndSimTime = endSimTime * GetTimeConvSec(unitTime)
+!               endDateSpecified = .TRUE.
+!               endSimSpecified  = .TRUE.
+!             END IF
+!           END IF
 
-                jday = (mdEndSimTime * GetTimeConvSec('D', 1)) + GregToJulDay(refYear, refMonth, refDay, refHour, refMin, refSec)
-                CALL JulDayToGreg(jday, endYear, endMonth, endDay, endHour, endMin, endSec)
-                begDateTime = DateTime2String(endYear, endMonth, endDay, endHour, endMin, endSec)
+!         !----- CASE
+!         CASE ('OUTFILENAME')
+!           IF (nVal == 1) THEN
+!             outFileName = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(outFileName)) == '') THEN
+!               outFileName = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
+!           IF (TRIM(ADJUSTL(outFileName)) /= '') outFileNameSpecified = .TRUE.
 
-                endDateSpecified = .TRUE.
-                endSimSpecified  = .TRUE.
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('NCVARNAM_PRES')
+!           IF (nVal == 1) THEN
+!             ncVarNam_Pres = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(ncVarNam_Pres)) == '') THEN
+!               ncVarNam_Pres = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('OUTFILENAME')
-            IF (nVal == 1) THEN
-              outFileName = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(outFileName)) == '') THEN
-                outFileName = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
-            IF (TRIM(ADJUSTL(outFileName)) /= '') outFileNameSpecified = .TRUE.
+!         !----- CASE
+!         CASE ('NCVARNAM_WNDX')
+!           IF (nVal == 1) THEN
+!             ncVarNam_WndX = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(ncVarNam_WndX)) == '') THEN
+!               ncVarNam_WndX = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('NCVARNAM_PRES')
-            IF (nVal == 1) THEN
-              ncVarNam_Pres = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(ncVarNam_Pres)) == '') THEN
-                ncVarNam_Pres = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('NCVARNAM_WNDY')
+!           IF (nVal == 1) THEN
+!             ncVarNam_WndY = TRIM(ADJUSTL(charVal(nVal)))
+!           ELSE
+!             IF (TRIM(ADJUSTL(ncVarNam_WndY)) == '') THEN
+!               ncVarNam_WndY = TRIM(ADJUSTL(charVal(nVal)))
+!             END IF
+!           END IF
 
-          !----- CASE
-          CASE ('NCVARNAM_WNDX')
-            IF (nVal == 1) THEN
-              ncVarNam_WndX = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(ncVarNam_WndX)) == '') THEN
-                ncVarNam_WndX = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('NCSHUFFLE')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           ncShuffle = iValOut(1)
 
-          !----- CASE
-          CASE ('NCVARNAM_WNDY')
-            IF (nVal == 1) THEN
-              ncVarNam_WndY = TRIM(ADJUSTL(charVal(nVal)))
-            ELSE
-              IF (TRIM(ADJUSTL(ncVarNam_WndY)) == '') THEN
-                ncVarNam_WndY = TRIM(ADJUSTL(charVal(nVal)))
-              END IF
-            END IF
+!         !----- CASE
+!         CASE ('NCDEFLATE')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           ncDeflate = iValOut(1)
 
-          !----- CASE
-          CASE ('NCSHUFFLE')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            ncShuffle = iValOut(1)
+!         !----- CASE
+!         CASE ('NCDLEVEL')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           ncDLevel = iValOut(1)
 
-          !----- CASE
-          CASE ('NCDEFLATE')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            ncDeflate = iValOut(1)
+!         !----- CASE
+!         CASE ('MODELTYPE')
+!           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
+!           modelType = iValOut(1)
 
-          !----- CASE
-          CASE ('NCDLEVEL')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            ncDLevel = iValOut(1)
+!         !----- CASE
+!         CASE DEFAULT
+!           ! Do nothing
+!       END SELECT
+!     END IF
+!   END DO
+!    10 WRITE(LUN_SCREEN, '("Error while processing line: ", a, " in file: ", a)') &
+!          TRIM(ADJUSTL(inpLine)), TRIM(tmpFileName)
+!    CLOSE(iUnit)
+!    STOP
+!    20 CLOSE(iUnit)
 
-          !----- CASE
-          CASE ('MODELTYPE')
-            nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
-            modelType = iValOut(1)
-
-          !----- CASE
-          CASE DEFAULT
-            ! Do nothing
-        END SELECT
-      END IF
-    END DO
-
-    10 WRITE(LUN_SCREEN, '("Error while processing line: ", a, " in file: ", a)') &
-          TRIM(ADJUSTL(inpLine)), TRIM(tmpFileName)
-
-    CLOSE(iUnit)
-    STOP
-
-    20 CLOSE(iUnit)
-
-    WRITE(LUN_SCREEN, '(a)') 'Finished processing the input fields from the control file ...'
+!    WRITE(LUN_SCREEN, '(a)') 'Finished processing the input fields from the control file ...'
 
     !--------------------
     !--- CHECK INPUT VARIABLES AND SET DEFAULTS
     !--------------------
-    CALL InitLogging()
+!    CALL InitLogging()
 
-    IF (CheckControlFileInputs() /= 0) THEN
-      WRITE(scratchMessage, '(a)') &
-              'Errors found while processing the input variables. Check the log file for details.'
-      CALL ScreenMessage(ERROR, scratchMessage)
-      CALL UnsetMessageSource()
-      CALL Terminate()
-    END IF
+!    IF (CheckControlFileInputs() /= 0) THEN
+!      WRITE(scratchMessage, '(a)') &
+!              'Errors found while processing the input variables. Check the log file for details.'
+!      CALL ScreenMessage(ERROR, scratchMessage)
+!      CALL UnsetMessageSource()
+!      CALL Terminate()
+!    END IF
 
     CALL PrintModelParams()
 

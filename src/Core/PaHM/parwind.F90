@@ -14,10 +14,11 @@
 !----------------------------------------------------------------
 
 !Search for 'YJZ' for notes
+!All routines are executed by rank 0 only
 !Routines & functions
 ! ReadCsvBestTrackFile
-! ProcessHollandData (called by GetHollandFields)
-! GetHollandFields
+! ProcessHollandData: process track data into struc for time steps
+! GetHollandFields: interpolate onto UG mesh wind and pressure
 ! WriteBestTrackData
 ! AllocBTrStruct
 ! DeAllocBTrStruct 

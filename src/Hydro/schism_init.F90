@@ -6947,7 +6947,7 @@
       if(nws<0) then
         if(myrank==0) then
           write(16,*)'reading PaHM inputs...'
-          call ReadControlFile('pahm_control.in') !TRIM(controlFileName))
+          call ReadControlFile !('pahm_control.in') !TRIM(controlFileName))
           call ReadCsvBestTrackFile()
           write(16,*)'done pre-proc PaHM...'
         endif
