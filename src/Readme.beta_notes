@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
 91c91a7 (17 Dec 2021): ICE module, added new parameters: ncyc_fct, depth_ice_fct. Also requires ice_fct.gr3 now;
 0e2f90e (17 Dec 2021): added a new parameter in ice.nml 'mevp_coef' and 2 related ones: mevp_alpha[34]
 2a7647d (24&29 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2,3;
@@ -519,6 +520,8 @@ git versions:
 (129) 53689f4 (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
 (130) c7dd516 (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
 (131) (19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);
+(132) 7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
+(133) 7455d5d (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
