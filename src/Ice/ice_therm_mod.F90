@@ -14,9 +14,13 @@ module ice_therm_mod
 
   real(rkind),parameter :: sice = 5.0      ! Ice salinity 3.2--5.0 ppt.
 
-integer, parameter :: iclasses=7     ! Number of ice thickness gradations for ice growth calcs.
-  real(rkind),parameter :: h0=1.0 ! Lead, closing parameter 0.5 [m] standard
-  real(rkind),parameter :: Saterm=0.5      ! Sa - term parameter 0.5 [m] standard
+  integer, parameter :: iclasses=7     ! Number of ice thickness gradations for ice growth calcs.
+!  real(rkind),parameter :: h0=1.0 ! Lead, closing parameter 0.5 [m] standard
+!  Lead closing parameter, usualy 0.5-1 [m] - larger values slow down freezing-up but
+!  increase sea ice thickness
+  real(rkind) :: lead_closing
+! Semter parameter - smaller value could slow down melting
+  real(rkind) :: Saterm   !=0.5
   real(rkind),parameter :: hmin= 0.05      ! Cut-off ice thickness [m]
   real(rkind),parameter :: Armin=0.15      ! Minimum ice concentration
 

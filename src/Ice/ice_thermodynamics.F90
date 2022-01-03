@@ -423,7 +423,8 @@ subroutine therm_ice(h,hsn,A,toi,fsh,flo,tair,qa,preslev,precrate, &
   rh=-min(h,-rh)   ! Make sure we do not try to melt more ice than is available
   rA= rhow -(T_oc-TFrez(S_oc))*h_ml*cc/cl !m
   
-  A=A+Saterm*min(rh,0.d0)*A/max(h,hmin)+max(rA,0.d0)*(1.-A)/h0   ! Total change. [-]
+  !A=A+Saterm*min(rh,0.d0)*A/max(h,hmin)+max(rA,0.d0)*(1.-A)/h0   ! Total change. [-]
+  A=A+Saterm*min(rh,0.d0)*A/max(h,hmin)+max(rA,0.d0)*(1.-A)/lead_closing   ! Total change. [-]
   
   A=min(A,h*1.e6)     ! A -> 0 for h -> 0; impose h>=1.e-6m
   A=min(max(A,0.d0),1.d0) ! A >= 0, A <= 1

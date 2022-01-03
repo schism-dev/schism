@@ -43,4 +43,6 @@
   h_ml0=0.1 !ocean mixed layer depth [m]
   salt_ice=5. !salinity for ice [PSU] (>=0)
   salt_water=34. !salinity for water [PSU] (>=0)
+  lead_closing=0.5 !lead closing parameter [m] - larger values slow down freezing-up but increase sea ice thickness
+  Saterm=0.5 !Semter const -smaller value could slow down melting
 /
