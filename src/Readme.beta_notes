@@ -9,8 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
 f9f0844 (3 Jan 2022): ICE module, added 2 new parameters: lead_closing, Saterm. Also changed ice-wind stress formula;
+7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
 91c91a7 (17 Dec 2021): ICE module, added new parameters: ncyc_fct, depth_ice_fct. Also requires ice_fct.gr3 now;
 0e2f90e (17 Dec 2021): added a new parameter in ice.nml 'mevp_coef' and 2 related ones: mevp_alpha[34]
 2a7647d (24&29 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2,3;

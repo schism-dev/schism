@@ -23,7 +23,7 @@ module ice_module
 !  REAL(rkind) :: zeta_min=4.0e+8  ! kg/s
 
   !Physical const
-  real(rkind),parameter :: cdwin=2.25e-3 ! drag coeff. atmosphere - ice
+!  real(rkind),parameter :: cdwin=2.25e-3 ! drag coeff. atmosphere - ice
   real(rkind),parameter :: cdwat=5.00e-3 ! drag coeff. ocean - ice
   real(rkind),parameter :: cdao=1.20e-3 ! drag coeff. atmosphere - ocean
   real(rkind),parameter :: rhoair=1.3    ! Air density [kg/m^3]
