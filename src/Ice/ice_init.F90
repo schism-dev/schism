@@ -40,9 +40,9 @@ subroutine ice_init
   mevp_rheol_steps=200; niter_fct=3; mevp_coef=0; ncyc_fct=1
   !Doubles
   ice_cutoff=1.d-3; delta_min=2.0d-9; theta_io=0.d0
-  mevp_alpha1=2.d2; mevp_alpha2=mevp_alpha1; pstar=15000.d0
+  mevp_alpha1=2.d2; mevp_alpha2=mevp_alpha1; pstar=27500.d0
   mevp_alpha3=2.d2; mevp_alpha4=2.d-2 
-  ellipse=2.d0; c_pressure=2.d1; ice_gamma_fct=0.25d0
+  ellipse=2.d0; c_pressure=15.d0; ice_gamma_fct=0.25d0
   h_ml0=1.d-1; salt_ice=5.d0; salt_water=34.d0
   depth_ice_fct=5.d0
   lead_closing=0.5; Saterm=0.5
