@@ -7366,7 +7366,7 @@
 !$OMP     end do
         endif !if_source
 
-!       Nudging: sum of horizontal & vertical relaxations 
+!       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 
         do i=1,nea
           if(idry_e(i)==1) cycle
@@ -7385,8 +7385,11 @@
                   vnf=vnf2
                 endif
 
-                !trnu=sum(tr_nudge(jj,elnode(1:i34(i),i)))/i34(i)*dt
-                trnu=(tmp0+vnf)*dt
+                if(nu_sum_mult==1) then !sum
+                  trnu=(tmp0+vnf)*dt
+                else !multiple
+                  trnu=tmp0*vnf*dt
+                endif
                 if(trnu<0.d0.or.trnu>1.d0) then
                   write(errmsg,*)'Nudging factor out of bound (2):',trnu
                   call parallel_abort(errmsg)

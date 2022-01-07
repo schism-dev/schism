@@ -201,7 +201,7 @@
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
-     &iloadtide,loadtide_coef
+     &iloadtide,loadtide_coef,nu_sum_mult
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -482,6 +482,7 @@
       hmin_airsea_ex=0.2_rkind
       itransport_only=0; meth_sink=1
       iloadtide=0; loadtide_coef=0.1d0
+      nu_sum_mult=1
 
       !Output elev, hvel by detault
       nc_out=1
@@ -886,8 +887,9 @@
       if(inu_tr(12)/=0) call parallel_abort('INIT: nudging for DVD/=0')
 #endif
 
+      !1: final relax is sum of horizontal & vertical relax's; 2: product
+      if(nu_sum_mult/=1.and.nu_sum_mult/=2) call parallel_abort('INIT: check nu_sum_mult')
       !All tracers share time steps etc.
-!      call get_param('param.in','step_nu_tr',2,itmp,step_nu_tr,stringvalue)
       if(step_nu_tr<dt) then
         write(errmsg,*)'Wrong step_nu_tr:',step_nu_tr
         call parallel_abort(errmsg)

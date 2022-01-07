@@ -12,7 +12,7 @@ module ice_therm_mod
 !  real(rkind),parameter :: rhoice=  910.   ! Ice density
 !  real(rkind),parameter :: rhosno=  290.   ! Snow density
 
-  real(rkind),parameter :: sice = 5.0      ! Ice salinity 3.2--5.0 ppt.
+!  real(rkind),parameter :: sice = 5.0      ! Ice salinity 3.2--5.0 ppt; not used
 
   integer, parameter :: iclasses=7     ! Number of ice thickness gradations for ice growth calcs.
 !  real(rkind),parameter :: h0=1.0 ! Lead, closing parameter 0.5 [m] standard

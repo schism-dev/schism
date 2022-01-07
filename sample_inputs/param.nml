@@ -553,9 +553,10 @@
 ! Nudging options for tracers. If inu_[MOD]=0, no nudging is used. If inu_tr=1,
 ! nudge to initial condition according to relaxation constants specified.
 ! If inu_tr=2, nudge to values in [MOD]_nu.nc (with step 'step_nu_tr').
-! The relaxation constants = [horizontal relax (specified in [MOD]_nudge.gr3) +
+! The relaxation constants = [horizontal relax (specified in [MOD]_nudge.gr3) + or x
 ! vertical relax] times dt, where vertical relax is a linear function of 
-! vnh[1,2] and vnf[1,2], and [MOD] are tracer model names.
+! vnh[1,2] and vnf[1,2], and [MOD] are tracer model names. 'nu_sum_mult' decides
+! '+' or 'x' in the calculation of final relax.
 ! Code will ignore junk values (<=-99) inside [MOD]_nu.nc, so 1 way to avoid 
 ! nudging for a tracer is to set its nudged values to -9999
 !-----------------------------------------------------------------------
@@ -572,6 +573,7 @@
   inu_tr(11) = 0 !FABM 
   inu_tr(12) = 0 !DVD (must=0)
 
+  nu_sum_mult=1 !1: final relax is sum of horizontal&vertical; 2: product
   vnh1 = 400 !vertical nudging depth 1
   vnf1 = 0. !vertical relax \in [0,1]
   vnh2 = 500 !vertical nudging depth 2 (must >vnh1)
