@@ -28,9 +28,9 @@
   mevp_alpha3=200. !if mevp_coef=1
   mevp_alpha4=2.e-2 !if mevp_coef=1
 
-  pstar=27500. ![N/m^2]
+  pstar=15000. ![N/m^2]
   ellipse=2.  !ellipticity
-  c_pressure=15.0  !C [-]
+  c_pressure=20.0  !C [-]
 
   !FCT
   ncyc_fct=1 !# of subcycling in transport
