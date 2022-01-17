@@ -916,8 +916,8 @@ MODULE ParWind
         ! Skip the subsequent calculations if Times(iCnt) is outside the castTime range
         ! by exiting this loop
         IF ((jl1 <= 0) .OR. (jl2 <= 0)) THEN
-          WRITE(16, '(a)') 'Requested output time: ' // TRIM(ADJUSTL(tmpTimeStr)) // &
-                                       ', skipping generating data for this time'
+          WRITE(16,*) 'Requested output time: ',time_stamp,', skipping generating data for this time;', &
+     &holStru(stCnt)%castTime
 !          CALL LogMessage(INFO, scratchMessage)
 
           EXIT

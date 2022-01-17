@@ -19,7 +19,7 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O
 set (OLDIO ON CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
-set (PREC_EVAP ON CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ##Older versions of GOTM (3.*) have issues with netcdf v4, so are not maintained
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
@@ -31,7 +31,7 @@ set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
 set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 ##Coupling to WW3, either via ESMF or hard coupling (in dev)
 set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
-set( USE_ICE ON CACHE BOOLEAN "Use 1-class ICE module")
+set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
 set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
 
 #Tracer models
