@@ -32,12 +32,14 @@ subroutine ice_init
  &det,der_transp(3,2),derivative_stdbf(2,3),tmp
   namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
  &delta_min,theta_io,mevp_alpha1,mevp_alpha2,mevp_alpha3,mevp_alpha4,pstar,ellipse,c_pressure,niter_fct, &
- &ice_gamma_fct,h_ml0,salt_ice,salt_water,mevp_coef,depth_ice_fct,ncyc_fct,lead_closing,Saterm
+ &ice_gamma_fct,h_ml0,salt_ice,salt_water,mevp_coef,depth_ice_fct,ncyc_fct,lead_closing,Saterm, &
+ &ice_atmos_stress_form,cdwin0
   
   !Init parameters
   !integers
   ice_tests=0; ice_advection=1; ice_therm_on=1; ievp=2; evp_rheol_steps=200;
   mevp_rheol_steps=200; niter_fct=3; mevp_coef=0; ncyc_fct=1
+  ice_atmos_stress_form=1
   !Doubles
   ice_cutoff=1.d-3; delta_min=2.0d-9; theta_io=0.d0
   mevp_alpha1=2.d2; mevp_alpha2=mevp_alpha1; pstar=15000.d0
@@ -46,6 +48,7 @@ subroutine ice_init
   h_ml0=1.d-1; salt_ice=5.d0; salt_water=34.d0
   depth_ice_fct=5.d0
   lead_closing=0.5; Saterm=0.5
+  cdwin0=2.d-3
 
   open(10,file=in_dir(1:len_in_dir)//'ice.nml',status='old')
   read(10,nml=ice_in)
@@ -72,6 +75,9 @@ subroutine ice_init
   if(ncyc_fct<1) call parallel_abort('ice_init: ncyc_fct')
   if(lead_closing<=0.d0) call parallel_abort('ice_init: lead_closing')
   if(Saterm<=0.d0) call parallel_abort('ice_init: Saterm')
+  if(cdwin0<0.d0) call parallel_abort('ice_init: cdwin0')
+  !0: const Cdw; 1: FESOM
+  if(ice_atmos_stress_form/=0.and.ice_atmos_stress_form/=1) call parallel_abort('ice_init: ice_atmos_stress_form')
   
   dt_ice=dt*nstep_ice
   cos_io=cos(theta_io/180*pi)

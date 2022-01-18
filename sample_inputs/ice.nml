@@ -14,6 +14,10 @@
   ice_cutoff=1.e-3 !cut-off thickness [m] or fraction for ice. No ice velocity if *<=ice_cuttoff
   evp_rheol_steps=200  ! the number of sybcycling steps in EVP
   mevp_rheol_steps=200  ! the number of iterations in mEVP
+  !ice_atmos_stress_form: 0-const Cd; 1: FESOM formulation
+  ice_atmos_stress_form=1
+  cdwin0=2.e-3 !needed if ice_atmos_stress_form=0 (const Cdw)
+
   delta_min=2.0e-9     ! (1/s) Limit for minimum divergence (Hibler, Hunke
                        ! normally use 2.0e-9, which does much stronger
                        ! limiting; valid for both VP and EVP
