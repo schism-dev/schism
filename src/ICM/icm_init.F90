@@ -16,7 +16,7 @@ subroutine icm_init
   !--------------------------------------------------------------------------------
   !allocate ICM arrays and initialize
   !--------------------------------------------------------------------------------
-  use schism_glbl, only : iwp,nea,npa,nvrt,ntrs,ne_global
+  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs,ne_global
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
   use icm_sed_mod
@@ -25,7 +25,7 @@ subroutine icm_init
   
   !local variables
   integer :: istat
-  real(8) :: rtmp
+  real(rkind) :: rtmp
   character(len=2) :: stmp
 
   !icm_mod

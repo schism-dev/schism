@@ -60,7 +60,7 @@ subroutine ecosystem(it)
 !---------------------------------------------------------------------------------
 !calculate kinetic source/sink 
 !---------------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg,NDTWQ,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
+  use schism_glbl, only : rkind,errmsg,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
                         & isdel,kbs,zs,su2,sv2,npa,nne,elnode,srad,i34,np
   use schism_msgp, only : myrank,parallel_abort,exchange_p3dw
   use icm_mod, only : iSed,iRea,iPh,PH_el,PH_nd,nspool_icm,rIa,rIavg,iRad,rIavg_save, &
@@ -70,110 +70,96 @@ subroutine ecosystem(it)
 
   !local variables
   integer :: i,j,k,nv,icount,jsj,nd
-  real(iwp) :: time,day,hour,dz,h,u,v,ure
-  real(8),allocatable :: swild(:,:) !for exchange only
+  real(rkind) :: time,day,hour,dz,h,u,v,usf
+  real(rkind),allocatable :: swild(:,:) !for exchange only
   logical :: lopened
 
-  if(mod(it,NDTWQ)==0) then
-    time=it*dt
-    day=time/86400.0
-    !Asssuming the time zone is local
-    if(iRad==2) then
-      hour=(day-int(day))*24.0
-    else
-      hour=0
-    endif !iRad
+  time=it*dt; day=time/86400.0
 
-    do i=1,nea
-      if(idry_icm==0.and.idry_e(i)==1.and.(iveg_icm==0.or.patchveg(i)==0)) cycle
+  !Asssuming the time zone is local
+  if(iRad==2) then
+    hour=(day-int(day))*24.0
+  else
+    hour=0
+  endif !iRad
 
-      !apply radiation in case of from sflux
-      if(iRad==1)then !rIa in unit of W/m^2
-        rIa=sum(srad(elnode(1:i34(i),i)))/i34(i)
-        rIa=max(0.47d0*rIa,0.d0) !ecological absorption
-      endif!iRad
+  do i=1,nea
+    if(idry_icm==0.and.idry_e(i)==1.and.(iveg_icm==0.or.patchveg(i)==0)) cycle
 
-      if(idry_e(i)==1) then !assign non-SAV condiction for dry elem
-        !no sav presense for intertidal zone >> once dry, no sav any longer
-        if(isav_icm==1.and.patchsav(i)==1)then 
-          patchsav(i)=-1
-          do k=1,nvrt !clean all layers
-            lfsav(k,i)=1.e-5
-            stsav(k,i)=1.e-5
-            rtsav(k,i)=1.e-5
-          enddo !k 
-        endif !isav_icm
-      endif !dry elem exclusion
-     
-      !bypass with local processes no matter if the elem is dry or wet 
-      call link_icm(1,i,nv) 
-      call photosynthesis(i,hour,nv,it) !calculation on growth rate of PB e.g.
+    !apply radiation in case of from sflux: rIa in unit of W/m^2
+    if(iRad==1) rIa=max(0.47d0*sum(srad(elnode(1:i34(i),i)))/i34(i),0.d0)
+
+    !assign non-SAV condiction for dry elem
+    !no sav presense for intertidal zone >> once dry, no sav any longer
+    if(idry_e(i)==1) then 
+      if(isav_icm==1.and.patchsav(i)==1)then 
+        patchsav(i)=-1
+        do k=1,nvrt !clean all layers
+          lfsav(k,i)=1.e-5
+          stsav(k,i)=1.e-5
+          rtsav(k,i)=1.e-5
+        enddo !k 
+      endif !isav_icm
+    endif !dry elem exclusion
+   
+    !reverse the direction of vertical layers
+    call link_icm(1,i,nv) 
+
+    !calculation on growth rate of phytoplankton
+    call photosynthesis(i,hour,nv,it) 
       
 #ifdef ICM_PH
-        call ph_calc(i,nv)
+    call ph_calc(i,nv)
 #endif
-      
-      !kinetic sed_flux module 
-      if(iSed==1) then
-        call link_sed_input(i,nv)
-        call sed_calc(i)
-        call link_sed_output(i)
-      endif
-      
-      !surface renewal rate for DO reareation: prep
-      if(iRea==0) then
-        ure=0.0; icount=0
-        do j=1,i34(i)
-          jsj=elside(j,i)
-          !All sides wet
-          if(isdel(2,jsj)==0) cycle
-          icount=icount+1
-      
-          u=0.0; v=0.0
-          do k=kbs(i)+1,nvrt
-            dz=zs(k,jsj)-zs(k-1,jsj)
-            u=u+su2(k,jsj)*dz
-            v=v+sv2(k,jsj)*dz
-          enddo !k
-          h=zs(nvrt,jsj)-zs(kbs(i),jsj)
-          ure=ure+sqrt(max(u*u+v*v,1.e-20_iwp))/(h*h)
-        enddo !j
-        if(icount/=0) ure=ure/icount
-      endif !iRea
-      
-      !kinetic eq 
-      call calkwq(i,nv,ure,it)  
-      call link_icm(2,i,nv)
+    
+    !sediment flux module 
+    if(iSed==1) then
+      call link_sed_input(i,nv)
+      call sed_calc(i)
+      call link_sed_output(i)
+    endif
+    
+    !surface renewal rate for DO reareation: change to surface velocity 
+    usf=0.0; icount=0
+    do j=1,i34(i)
+      jsj=elside(j,i)
+      if(isdel(2,jsj)==0) cycle
+      icount=icount+1
 
-    enddo !i=1,nea
+      u=su2(nvrt,jsj); v=sv2(nvrt,jsj)
+      usf=usf+sqrt(max(u*u+v*v,1.d-20))
+    enddo !j
+    if(icount/=0) usf=usf/icount
 
-    !interpolation for pH
+    !compute ICM kinetic terms
+    call calkwq(i,nv,usf,it)  
+    call link_icm(2,i,nv)
+
+  enddo !i=1,nea
+
 #ifdef ICM_PH
-      PH_nd=0.0
-      do i=1,nea
-        do j=1,i34(i)
-          nd=elnode(j,i)
-          do k=1,nvrt
-            PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,i)
-          enddo !k
-        enddo !j
-      enddo !i
+  !interpolation for pH
+  PH_nd=0.0
+  do i=1,nea
+    do j=1,i34(i)
+      nd=elnode(j,i)
+      do k=1,nvrt
+        PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,i)
+      enddo !k
+    enddo !j
+  enddo !i
 
-      do i=1,np
-        PH_nd(:,i)=PH_nd(:,i)/real(nne(i),iwp)
-      enddo
+  do i=1,np
+    PH_nd(:,i)=PH_nd(:,i)/dble(nne(i))
+  enddo
 
-      !call exchange_p3dw(PH_nd)
-      allocate(swild(nvrt,npa))
-      swild(:,1:npa)=PH_nd
-      call exchange_p3dw(swild)
-      PH_nd=swild(:,1:npa)
-      deallocate(swild)
+  !call exchange_p3dw(PH_nd)
+  allocate(swild(nvrt,npa))
+  swild(:,1:npa)=PH_nd
+  call exchange_p3dw(swild)
+  PH_nd=swild(:,1:npa)
+  deallocate(swild)
 #endif
-  endif !mod(it,NDTWQ)==0
-
-  !inquire(410,opened=lopened)
-  !if(lopened.and.mod(it,nspool_icm)==0) flush(410)
 
 end subroutine ecosystem
 
@@ -181,7 +167,7 @@ subroutine link_icm(imode,id,nv)
 !--------------------------------------------------------------------------------
 !initialized water quality variables
 !--------------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg,tr_el,nvrt,irange_tr,ntrs,ze,kbe,ielg,idry_e,airt1,elnode,i34
+  use schism_glbl, only : rkind,errmsg,tr_el,nvrt,irange_tr,ntrs,ze,kbe,ielg,idry_e,airt1,elnode,i34
   use schism_msgp, only : parallel_abort
   use icm_mod, only : wqc,dep,Temp,Sal,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
                     & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO,iLight,PC2TSS,&
@@ -192,16 +178,32 @@ subroutine link_icm(imode,id,nv)
 
   !local variables
   integer :: i,k,m
-  real(8),parameter :: mval=3.d-2
+  real(rkind),parameter :: mval=3.d-2
 
-  if(idry_e(id)==1)then !dry elem 
-    if(imode==1) then
-      nv=1 !one layer of water with depth of 0.1 m
-      m=1;k=nvrt
+  if(imode==1) then
+    nv=nvrt-kbe(id) !total # of _layers_ (levels=nv+1)
+    if(idry_e(id)==1) nv=1
 
-      dep(m)=0.1
-      Temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
-      Sal(m)=tr_el(2,k,id) !salt use last wet value
+    !check
+    if(nv<1) call parallel_abort('illegal nv')
+    if(kbe(id)<1)then
+      write(errmsg,*)'illegal kbe(id): ',kbe(id),nv,nvrt,ielg(id)
+      call parallel_abort(errmsg)
+    endif
+ 
+    do k=min(kbe(id)+1,nvrt-nv+1),nvrt
+      m=nvrt-k+1 !vertical layer reverse in icm
+      if(idry_e(id)==1 .and. k/=nvrt) cycle
+
+      if(idry_e(id)==1) then 
+        dep(m)=0.1
+        Temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
+      else
+        dep(m)=max(ze(k,id)-ze(k-1,id),0.1) !k>2; set minimum depth for wet elem
+        Temp(m)=tr_el(1,k,id)
+      endif
+      Sal(m)=tr_el(2,k,id)    
+ 
       !check
       if(Temp(m)<-20.or.Temp(m)>50) then
         write(errmsg,*)'temp in ICM: ',Temp(m),m,ielg(id)
@@ -211,17 +213,17 @@ subroutine link_icm(imode,id,nv)
         write(errmsg,*)'salt in ICM: ',Sal(m),m,ielg(id)
           call parallel_abort(errmsg)
       endif
-
-      ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id),0.d0)
-      ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id),0.d0)
-      PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id),mval)
-      PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id),mval)
-      PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id),mval)
-      RPOC(m,1)=max(tr_el(5+irange_tr(1,7),k,id),0.d0)
-      LPOC(m,1)=max(tr_el(6+irange_tr(1,7),k,id),0.d0)
-      DOC(m,1) =max(tr_el(7+irange_tr(1,7),k,id),0.d0)
-      RPON(m,1)=max(tr_el(8+irange_tr(1,7),k,id),0.d0)
-      LPON(m,1)=max(tr_el(9+irange_tr(1,7),k,id),0.d0)
+ 
+      ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
+      ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
+      PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id), mval)
+      PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id), mval)
+      PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id), mval)
+      RPOC(m,1)=max(tr_el(5+irange_tr(1,7),k,id), 0.d0)
+      LPOC(m,1)=max(tr_el(6+irange_tr(1,7),k,id), 0.d0)
+      DOC(m,1) =max(tr_el(7+irange_tr(1,7),k,id), 0.d0)
+      RPON(m,1)=max(tr_el(8+irange_tr(1,7),k,id), 0.d0)
+      LPON(m,1)=max(tr_el(9+irange_tr(1,7),k,id), 0.d0)
       DON(m,1) =max(tr_el(10+irange_tr(1,7),k,id),0.d0)
       NH4(m,1) =max(tr_el(11+irange_tr(1,7),k,id),0.d0)
       NO3(m,1) =max(tr_el(12+irange_tr(1,7),k,id),0.d0)
@@ -233,288 +235,129 @@ subroutine link_icm(imode,id,nv)
       SAt(m,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
       COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
       DOO(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
-
+ 
 #ifdef ICM_PH
-!!     if(iPh==1) then
-        TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
-        ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
-        CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id),0.d0)
-        CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
-!!     endif
+      TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
+      ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
+      CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id), 0.d0)
+      CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
 #endif
-
+      
       !nan check 
       do i=1,(21+4*iPh)
         if(.not.(tr_el(i-1+irange_tr(1,7),k,id)>0.d0.or.tr_el(i-1+irange_tr(1,7),k,id)<=0.d0)) then
-          write(errmsg,*)'nan found in ICM:',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
+          write(errmsg,*)'nan found in ICM: ',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
           call parallel_abort(errmsg)
         endif
       enddo
 
-    elseif(imode==2) then
-      m=1
-      do k=1,nvrt !extend to the whole array
-        tr_el(0+irange_tr(1,7),k,id)=max(ZB1(m,1),0._iwp)
-        tr_el(1+irange_tr(1,7),k,id)=max(ZB2(m,1),0._iwp)
-        tr_el(2+irange_tr(1,7),k,id)=max(PB1(m,1),0._iwp)
-        tr_el(3+irange_tr(1,7),k,id)=max(PB2(m,1),0._iwp)
-        tr_el(4+irange_tr(1,7),k,id)=max(PB3(m,1),0._iwp)
-        tr_el(5+irange_tr(1,7),k,id)=max(RPOC(m,1),0._iwp)
-        tr_el(6+irange_tr(1,7),k,id)=max(LPOC(m,1),0._iwp)
-        tr_el(7+irange_tr(1,7),k,id)=max(DOC(m,1),0._iwp)
-        tr_el(8+irange_tr(1,7),k,id)=max(RPON(m,1),0._iwp)
-        tr_el(9+irange_tr(1,7),k,id)=max(LPON(m,1),0._iwp)
-        tr_el(10+irange_tr(1,7),k,id)=max(DON(m,1),0._iwp)
-        tr_el(11+irange_tr(1,7),k,id)=max(NH4(m,1),0._iwp)
-        tr_el(12+irange_tr(1,7),k,id)=max(NO3(m,1),0._iwp)
-        tr_el(13+irange_tr(1,7),k,id)=max(RPOP(m,1),0._iwp)
-        tr_el(14+irange_tr(1,7),k,id)=max(LPOP(m,1),0._iwp)
-        tr_el(15+irange_tr(1,7),k,id)=max(DOP(m,1),0._iwp)
-        tr_el(16+irange_tr(1,7),k,id)=max(PO4t(m,1),0._iwp)
-        tr_el(17+irange_tr(1,7),k,id)=max(SU(m,1),0._iwp)
-        tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1),0._iwp)
-        tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1),0._iwp)
-        tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1),0._iwp)
+      if(idry_e(id)==1) exit
+      
+      if(iLight==2) then !TSS from 3D sediment model
+        TSED(m)=0.0
+        do i=1,ntrs(5)
+          TSED(m)=TSED(m)+1.0d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0)
+        enddo !
+      elseif(iLight==3) then !TSS from POC
+        TSED(m)=(RPOC(m,1)+LPOC(m,1))*PC2TSS(id)
+      else
+        TSED(m)=(RPOC(m,1)+LPOC(m,1))*6.0
+      endif!iLight
 
-#ifdef ICM_PH
-!!       if(iPh==1) then
-          tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),0._iwp)
-          tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),0._iwp)
-          tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),0._iwp)
-          tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0._iwp)
-          PH_el(k,id)=PH(m)
-!!       endif
-#endif
-
-        wqc(1,k,id) =max(ZB1(m,2),0._iwp)
-        wqc(2,k,id) =max(ZB2(m,2),0._iwp)
-        wqc(3,k,id) =max(PB1(m,2),0._iwp)
-        wqc(4,k,id) =max(PB2(m,2),0._iwp)
-        wqc(5,k,id) =max(PB3(m,2),0._iwp)
-        wqc(6,k,id) =max(RPOC(m,2),0._iwp)
-        wqc(7,k,id) =max(LPOC(m,2),0._iwp)
-        wqc(8,k,id) =max(DOC(m,2),0._iwp)
-        wqc(9,k,id) =max(RPON(m,2),0._iwp)
-        wqc(10,k,id)=max(LPON(m,2),0._iwp)
-        wqc(11,k,id)=max(DON(m,2),0._iwp)
-        wqc(12,k,id)=max(NH4(m,2),0._iwp)
-        wqc(13,k,id)=max(NO3(m,2),0._iwp)
-        wqc(14,k,id)=max(RPOP(m,2),0._iwp)
-        wqc(15,k,id)=max(LPOP(m,2),0._iwp)
-        wqc(16,k,id)=max(DOP(m,2),0._iwp)
-        wqc(17,k,id)=max(PO4t(m,2),0._iwp)
-        wqc(18,k,id)=max(SU(m,2),0._iwp)
-        wqc(19,k,id)=max(SAt(m,2),0._iwp)
-        wqc(20,k,id)=max(COD(m,2),0._iwp)
-        wqc(21,k,id)=max(DOO(m,2),0._iwp)
-
-#ifdef ICM_PH
-!!       if(iPh==1) then
-          wqc(22,k,id)=max(TIC(m,2),0._iwp)
-          wqc(23,k,id)=max(ALK(m,2),0._iwp)
-          wqc(24,k,id)=max(CA(m,2),0._iwp)
-          wqc(25,k,id)=max(CACO3(m,2),0._iwp)
-!!       endif
-#endif
-        !nan check
-        do i=1,(21+4*iPh)
-          if(tr_el(i-1+irange_tr(1,7),k,id)/=tr_el(i-1+irange_tr(1,7),k,id)) then
-            write(errmsg,*)'nan found in ICM(2) : ',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
-            call parallel_abort(errmsg)
-          endif
-        enddo!i
-      enddo!k::1,nvrt
-
-      !pH
-#ifdef ICM_PH
-        do k=1,nvrt-1
-          PH_el(k,id)=PH_el(nvrt,id)
-          !nan check
-          if(PH_el(k,id)/=PH_el(k,id))then
-            write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
-            call parallel_abort(errmsg)
-          endif
-        enddo !k
-#endif
-    endif !imode
-
-  else !wet elem
-    if(imode==1) then
-      nv=nvrt-kbe(id) !total # of _layers_ (levels=nv+1)
-      !check
-      if(nv<1) call parallel_abort('illegal nv')
-      if(kbe(id)<1)then
-        write(errmsg,*)'illegal kbe(id): ',kbe(id),nv,nvrt,ielg(id)
+      !nan check
+      if(.not.(TSED(m)>0.or.TSED(m)<=0))then
+        write(errmsg,*)'nan found in TSED:',TSED(m),ielg(id),i,k
         call parallel_abort(errmsg)
       endif
+    enddo!k::kbe(id)+1,nvrt
  
-      do k=kbe(id)+1,nvrt
-        m=nvrt-k+1 !vertical layer reverse in icm
-        
-        dep(m)=max(ze(k,id)-ze(k-1,id),0.1) !k>2; set minimum depth for wet elem
-        Temp(m)=tr_el(1,k,id)
-        Sal(m)=tr_el(2,k,id)    
+  elseif(imode==2) then
  
-        !check
-        if(Temp(m)<-20.or.Temp(m)>50) then
-          write(errmsg,*)'temp in ICM: ',Temp(m),m,ielg(id)
-            call parallel_abort(errmsg)
-        endif
-        if(Sal(m)<0.or.Sal(m)>45) then
-          write(errmsg,*)'salt in ICM: ',Sal(m),m,ielg(id)
-            call parallel_abort(errmsg)
-        endif
- 
-        ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id),0.d0)
-        ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id),0.d0)
-        PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id),mval)
-        PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id),mval)
-        PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id),mval)
-        RPOC(m,1)=max(tr_el(5+irange_tr(1,7),k,id),0.d0)
-        LPOC(m,1)=max(tr_el(6+irange_tr(1,7),k,id),0.d0)
-        DOC(m,1) =max(tr_el(7+irange_tr(1,7),k,id),0.d0)
-        RPON(m,1)=max(tr_el(8+irange_tr(1,7),k,id),0.d0)
-        LPON(m,1)=max(tr_el(9+irange_tr(1,7),k,id),0.d0)
-        DON(m,1) =max(tr_el(10+irange_tr(1,7),k,id),0.d0)
-        NH4(m,1) =max(tr_el(11+irange_tr(1,7),k,id),0.d0)
-        NO3(m,1) =max(tr_el(12+irange_tr(1,7),k,id),0.d0)
-        RPOP(m,1)=max(tr_el(13+irange_tr(1,7),k,id),0.d0)
-        LPOP(m,1)=max(tr_el(14+irange_tr(1,7),k,id),0.d0)
-        DOP(m,1) =max(tr_el(15+irange_tr(1,7),k,id),0.d0)
-        PO4t(m,1)=max(tr_el(16+irange_tr(1,7),k,id),0.d0)
-        SU(m,1)  =max(tr_el(17+irange_tr(1,7),k,id),0.d0)
-        SAt(m,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
-        COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
-        DOO(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
+    do k=kbe(id)+1,nvrt
+      m=nvrt-k+1
+      if(idry_e(id)==1) m=1
+      
+      tr_el(0+irange_tr(1,7),k,id) =max(ZB1(m,1), 0.d0)
+      tr_el(1+irange_tr(1,7),k,id) =max(ZB2(m,1), 0.d0)
+      tr_el(2+irange_tr(1,7),k,id) =max(PB1(m,1), 0.d0)
+      tr_el(3+irange_tr(1,7),k,id) =max(PB2(m,1), 0.d0)
+      tr_el(4+irange_tr(1,7),k,id) =max(PB3(m,1), 0.d0)
+      tr_el(5+irange_tr(1,7),k,id) =max(RPOC(m,1),0.d0)
+      tr_el(6+irange_tr(1,7),k,id) =max(LPOC(m,1),0.d0)
+      tr_el(7+irange_tr(1,7),k,id) =max(DOC(m,1), 0.d0)
+      tr_el(8+irange_tr(1,7),k,id) =max(RPON(m,1),0.d0)
+      tr_el(9+irange_tr(1,7),k,id) =max(LPON(m,1),0.d0)
+      tr_el(10+irange_tr(1,7),k,id)=max(DON(m,1), 0.d0)
+      tr_el(11+irange_tr(1,7),k,id)=max(NH4(m,1), 0.d0)
+      tr_el(12+irange_tr(1,7),k,id)=max(NO3(m,1), 0.d0)
+      tr_el(13+irange_tr(1,7),k,id)=max(RPOP(m,1),0.d0)
+      tr_el(14+irange_tr(1,7),k,id)=max(LPOP(m,1),0.d0)
+      tr_el(15+irange_tr(1,7),k,id)=max(DOP(m,1), 0.d0)
+      tr_el(16+irange_tr(1,7),k,id)=max(PO4t(m,1),0.d0)
+      tr_el(17+irange_tr(1,7),k,id)=max(SU(m,1),  0.d0)
+      tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1), 0.d0)
+      tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1), 0.d0)
+      tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1), 0.d0)
  
 #ifdef ICM_PH
-!!       if(iPh==1) then
-          TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
-          ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
-          CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id),0.d0)
-          CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
-!!       endif
+      tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
+      tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),  0.d0)
+      tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),   0.d0)
+      tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0.d0)
+      PH_el(k,id)=PH(m)
 #endif
-       
-        !nan check 
-        do i=1,(21+4*iPh)
-          if(.not.(tr_el(i-1+irange_tr(1,7),k,id)>0.d0.or.tr_el(i-1+irange_tr(1,7),k,id)<=0.d0)) then
-            write(errmsg,*)'nan found in ICM: ',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
-            call parallel_abort(errmsg)
-          endif
-        enddo
-        
-        if(iLight==2) then !TSS from 3D sediment model
-          TSED(m)=0.0
-          do i=1,ntrs(5)
-            TSED(m)=TSED(m)+1.0d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0)
-          enddo !
-        elseif(iLight==3) then !TSS from POC
-          TSED(m)=(RPOC(m,1)+LPOC(m,1))*PC2TSS(id)
-        else
-          TSED(m)=(RPOC(m,1)+LPOC(m,1))*6.0
-        endif!iLight
-        !nan check
-        if(.not.(TSED(m)>0.or.TSED(m)<=0))then
-          write(errmsg,*)'nan found in TSED:',TSED(m),ielg(id),i,k
+ 
+      wqc(1,k,id) =max(ZB1(m,2),  0.d0)
+      wqc(2,k,id) =max(ZB2(m,2),  0.d0)
+      wqc(3,k,id) =max(PB1(m,2),  0.d0)
+      wqc(4,k,id) =max(PB2(m,2),  0.d0)
+      wqc(5,k,id) =max(PB3(m,2),  0.d0)
+      wqc(6,k,id) =max(RPOC(m,2), 0.d0)
+      wqc(7,k,id) =max(LPOC(m,2), 0.d0)
+      wqc(8,k,id) =max(DOC(m,2),  0.d0)
+      wqc(9,k,id) =max(RPON(m,2), 0.d0)
+      wqc(10,k,id)=max(LPON(m,2), 0.d0)
+      wqc(11,k,id)=max(DON(m,2),  0.d0)
+      wqc(12,k,id)=max(NH4(m,2),  0.d0)
+      wqc(13,k,id)=max(NO3(m,2),  0.d0)
+      wqc(14,k,id)=max(RPOP(m,2), 0.d0)
+      wqc(15,k,id)=max(LPOP(m,2), 0.d0)
+      wqc(16,k,id)=max(DOP(m,2),  0.d0)
+      wqc(17,k,id)=max(PO4t(m,2), 0.d0)
+      wqc(18,k,id)=max(SU(m,2),   0.d0)
+      wqc(19,k,id)=max(SAt(m,2),  0.d0)
+      wqc(20,k,id)=max(COD(m,2),  0.d0)
+      wqc(21,k,id)=max(DOO(m,2),  0.d0)
+ 
+#ifdef ICM_PH
+      wqc(22,k,id)=max(TIC(m,2),  0.d0)
+      wqc(23,k,id)=max(ALK(m,2),  0.d0)
+      wqc(24,k,id)=max(CA(m,2),   0.d0)
+      wqc(25,k,id)=max(CACO3(m,2),0.d0)
+#endif
+ 
+      !nan check
+      do i=1,(21+4*iPh)
+        if(tr_el(i-1+irange_tr(1,7),k,id)/=tr_el(i-1+irange_tr(1,7),k,id)) then
+          write(errmsg,*)'nan found in ICM(2) : ',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
           call parallel_abort(errmsg)
         endif
-      enddo!k::kbe(id)+1,nvrt
- 
- 
-    elseif(imode==2) then
- 
-      do k=kbe(id)+1,nvrt
-        m=nvrt-k+1
-        
-        tr_el(0+irange_tr(1,7),k,id)=max(ZB1(m,1),0._iwp)
-        tr_el(1+irange_tr(1,7),k,id)=max(ZB2(m,1),0._iwp)
-        tr_el(2+irange_tr(1,7),k,id)=max(PB1(m,1),0._iwp)
-        tr_el(3+irange_tr(1,7),k,id)=max(PB2(m,1),0._iwp)
-        tr_el(4+irange_tr(1,7),k,id)=max(PB3(m,1),0._iwp)
-        tr_el(5+irange_tr(1,7),k,id)=max(RPOC(m,1),0._iwp)
-        tr_el(6+irange_tr(1,7),k,id)=max(LPOC(m,1),0._iwp)
-        tr_el(7+irange_tr(1,7),k,id)=max(DOC(m,1),0._iwp)
-        tr_el(8+irange_tr(1,7),k,id)=max(RPON(m,1),0._iwp)
-        tr_el(9+irange_tr(1,7),k,id)=max(LPON(m,1),0._iwp)
-        tr_el(10+irange_tr(1,7),k,id)=max(DON(m,1),0._iwp)
-        tr_el(11+irange_tr(1,7),k,id)=max(NH4(m,1),0._iwp)
-        tr_el(12+irange_tr(1,7),k,id)=max(NO3(m,1),0._iwp)
-        tr_el(13+irange_tr(1,7),k,id)=max(RPOP(m,1),0._iwp)
-        tr_el(14+irange_tr(1,7),k,id)=max(LPOP(m,1),0._iwp)
-        tr_el(15+irange_tr(1,7),k,id)=max(DOP(m,1),0._iwp)
-        tr_el(16+irange_tr(1,7),k,id)=max(PO4t(m,1),0._iwp)
-        tr_el(17+irange_tr(1,7),k,id)=max(SU(m,1),0._iwp)
-        tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1),0._iwp)
-        tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1),0._iwp)
-        tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1),0._iwp)
+      enddo!i
+    enddo!k::kbe(id)+1,nvrt
  
 #ifdef ICM_PH
-!!       if(iPh==1) then
-          tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),0._iwp)
-          tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),0._iwp)
-          tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),0._iwp)
-          tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0._iwp)
-          PH_el(k,id)=PH(m)
-!!       endif
-#endif
- 
-        wqc(1,k,id) =max(ZB1(m,2),0._iwp)
-        wqc(2,k,id) =max(ZB2(m,2),0._iwp)
-        wqc(3,k,id) =max(PB1(m,2),0._iwp)
-        wqc(4,k,id) =max(PB2(m,2),0._iwp)
-        wqc(5,k,id) =max(PB3(m,2),0._iwp)
-        wqc(6,k,id) =max(RPOC(m,2),0._iwp)
-        wqc(7,k,id) =max(LPOC(m,2),0._iwp)
-        wqc(8,k,id) =max(DOC(m,2),0._iwp)
-        wqc(9,k,id) =max(RPON(m,2),0._iwp)
-        wqc(10,k,id)=max(LPON(m,2),0._iwp)
-        wqc(11,k,id)=max(DON(m,2),0._iwp)
-        wqc(12,k,id)=max(NH4(m,2),0._iwp)
-        wqc(13,k,id)=max(NO3(m,2),0._iwp)
-        wqc(14,k,id)=max(RPOP(m,2),0._iwp)
-        wqc(15,k,id)=max(LPOP(m,2),0._iwp)
-        wqc(16,k,id)=max(DOP(m,2),0._iwp)
-        wqc(17,k,id)=max(PO4t(m,2),0._iwp)
-        wqc(18,k,id)=max(SU(m,2),0._iwp)
-        wqc(19,k,id)=max(SAt(m,2),0._iwp)
-        wqc(20,k,id)=max(COD(m,2),0._iwp)
-        wqc(21,k,id)=max(DOO(m,2),0._iwp)
- 
-#ifdef ICM_PH
-!!       if(iPh==1) then
-          wqc(22,k,id)=max(TIC(m,2),0._iwp)
-          wqc(23,k,id)=max(ALK(m,2),0._iwp)
-          wqc(24,k,id)=max(CA(m,2),0._iwp)
-          wqc(25,k,id)=max(CACO3(m,2),0._iwp)
-!!       endif
-#endif
- 
-        !nan check
-        do i=1,(21+4*iPh)
-          if(tr_el(i-1+irange_tr(1,7),k,id)/=tr_el(i-1+irange_tr(1,7),k,id)) then
-            write(errmsg,*)'nan found in ICM(2) : ',tr_el(i-1+irange_tr(1,7),k,id),ielg(id),i,k
-            call parallel_abort(errmsg)
-          endif
-        enddo!i
- 
-      enddo!k::kbe(id)+1,nvrt
- 
-      !pH
-#ifdef ICM_PH
-        if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
-        do k=1,kbe(id)
-          PH_el(k,id)=PH_el(kbe(id)+1,id)
-          !nan check
-          if(PH_el(k,id)/=PH_el(k,id))then
-            write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
-            call parallel_abort(errmsg)
-          endif
-        enddo !k
+    if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
+    do k=1,kbe(id)
+      PH_el(k,id)=PH_el(kbe(id)+1,id)
+      !nan check
+      if(PH_el(k,id)/=PH_el(k,id))then
+        write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
+        call parallel_abort(errmsg)
+      endif
+    enddo !k
 #endif      
-    endif !imode
 
-  endif !idry_e
+  endif !imode
 
 end subroutine link_icm
 
@@ -522,7 +365,7 @@ subroutine ph_calc(id,nv)
 !----------------------------------------------------------------------------
 !calculate pH
 !----------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : parallel_abort
   use icm_mod, only : TIC,ALK,CA,CACO3,PH,Temp,Sal,CO2,CAsat,mCACO3,mC
   implicit none
@@ -530,17 +373,17 @@ subroutine ph_calc(id,nv)
   
   !local variables
   integer :: i,j,k,ierr,imed
-  real(iwp) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc 
-  real(iwp) :: sth,sth2,r1,r2,r3,T,S,S2,rH2CO3,rHCO3,rCO3,rOH,rH,Kw,K1,K2,Kb
-  real(iwp) :: phi,h,a,f0,f1,f2,pKsp,Ksp
-  real(iwp) :: rval
+  real(rkind) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc 
+  real(rkind) :: sth,sth2,r1,r2,r3,T,S,S2,rH2CO3,rHCO3,rCO3,rOH,rH,Kw,K1,K2,Kb
+  real(rkind) :: phi,h,a,f0,f1,f2,pKsp,Ksp
+  real(rkind) :: rval
 
   mmCACO3=1.d3*mCACO3; mmC=1.d3*mC
   do k=1,nv
     !change mg/l to mol/l
     sTIC=TIC(k,1)/mmC !total carbon
-    sALK=ALK(k,1)*2.0_iwp/mmCACO3 !alkalinity
-    sB=4.16e-4_iwp*Sal(k)/35_iwp !boron concentration
+    sALK=ALK(k,1)*2.0/mmCACO3 !alkalinity
+    sB=4.16e-4*Sal(k)/35.d0 !boron concentration
 
     !sCA=CA(k,1)/mmCACO3 !Ca++
     !sCACO3=CACO3(k,1)/mmCACO3
@@ -549,28 +392,28 @@ subroutine ph_calc(id,nv)
     !Ct=sTIC-sCACO3 !total carbon (exclude CaCO3s)
     !Ca=sALK-sCACO3 !alkalintiy (exclude CaCO3s)
 
-    T=Temp(k)+273.15_iwp
+    T=Temp(k)+273.15
     S=Sal(k)
     S2=sqrt(S)
 
-    if(T<250._iwp.or.T>325._iwp.or.S>50._iwp.or.S<0._iwp) then
+    if(T<250.d0.or.T>325.d0.or.S>50.d0.or.S<0.d0) then
       write(errmsg,*)'check salinity and temperature values: ',T,S
       call parallel_abort(errmsg)
     endif
     !ionic strength
-    sth=1.47e-3_iwp+1.9885e-2_iwp*Sal(k)+3.8e-5_iwp*Sal(k)*Sal(k)
-    if(sth<0._iwp) then
+    sth=1.47e-3+1.9885e-2*Sal(k)+3.8e-5*Sal(k)*Sal(k)
+    if(sth<0.d0) then
       write(errmsg,*)'check ICM ionic stength: ',Sal(k),sth
       call parallel_abort(errmsg)
     endif
     sth2=sqrt(sth)
 
-    r3=-0.5085_iwp*sth2/(1._iwp+2.9529_iwp*sth2) !for H+
-    rH=10._iwp**r3    
+    r3=-0.5085*sth2/(1.d0+2.9529*sth2) !for H+
+    rH=10.d0**r3    
 
-    if(S<1._iwp) then   
+    if(S<1.d0) then   
       !Debye-Huckel terms and activity coefficients
-      r1=-0.5085_iwp*sth2/(1._iwp+1.3124_iwp*sth2)+4.745694e-03_iwp+4.160762e-02_iwp*sth-9.284843e-03_iwp*sth*sth
+      r1=-0.5085*sth2/(1.d0+1.3124*sth2)+4.745694e-03+4.160762e-02*sth-9.284843e-03*sth*sth
       r2=-2.0340*sth2/(1.0+1.4765*sth2)+1.205665e-02+9.715745e-02*sth-2.067746e-02*sth*sth
       rH2CO3=10.0**(-0.0755*sth)
       rHCO3=10.0**r1
@@ -583,15 +426,15 @@ subroutine ph_calc(id,nv)
       K2=10.0**(-2902.39/T+6.4980-0.023790*T)*rHCO3/rCO3
     else !S>=1
       rval=148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S; !DOE
-      if(abs(rval)>50._iwp) call parallel_abort('value in ICM ph too large: Kw')
+      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kw')
       Kw=exp(rval)
 
       rval=2.83655-2307.1266/T-1.5529413*log(T)-(0.207608410+4.0484/T)*S2+0.0846834*S-0.00654208*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50._iwp) call parallel_abort('value in ICM ph too large: K1')
+      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K1')
       K1=exp(rval)
 
       rval=-9.226508-3351.6106/T-0.2005743*log(T)-(0.106901773+23.9722/T)*S2+0.1130822*S-0.00846934*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50._iwp) call parallel_abort('value in ICM ph too large: K2')
+      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K2')
       K2=exp(rval)
 
       !Kw=exp(148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S); !DOE
@@ -601,7 +444,7 @@ subroutine ph_calc(id,nv)
 
     rval=(-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
        &  +1.62142*S-(24.4344+25.085*S2+0.2474*S)*log(T)+0.053105*S2*T  !*rBOH3/rBOH4
-    if(abs(rval)>50._iwp) call parallel_abort('value in ICM ph too large: Kb')
+    if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kb')
     Kb=exp(rval)
 
     !Kb=exp((-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
@@ -628,7 +471,7 @@ subroutine ph_calc(id,nv)
     !Aragonite solubility (Zeebe,2001)
     pKsp=-171.945-0.077993*T+2903.293/T+71.595*log10(T)+(-0.068393+0.0017276*T+ &    
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
-    Ksp=10._iwp**(pKsp)
+    Ksp=10.d0**(pKsp)
 
     PH(k)=phi
     CO2(k)=f0*sTIC*mmC
@@ -642,22 +485,22 @@ subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
 !Brent's method to find ph value
 !numerical recipes from William H. Press, 1992
 !---------------------------------------------------------------------
-  use schism_glbl, only : iwp
+  use schism_glbl, only : rkind 
   
   implicit none
   !integer, parameter :: rkind=8,nloop=100
   integer, parameter :: nloop=100
 !Error: tweak single
-  real(kind=iwp), parameter :: eps=3.0e-8_iwp, tol=1.e-6_iwp,phmin=3.0_iwp,phmax=13.0_iwp
+  real(rkind), parameter :: eps=3.0e-8, tol=1.e-6,phmin=3.0,phmax=13.0
   integer, intent(in) :: imed
   integer, intent(out) :: ierr
-  real(kind=iwp),intent(in) :: K1,K2,Kw,Kb,Ct,Ca,Bt,rH
-  real(kind=iwp),intent(out) :: ph
+  real(rkind),intent(in) :: K1,K2,Kw,Kb,Ct,Ca,Bt,rH
+  real(rkind),intent(out) :: ph
 
   !local variables
   integer :: i
-  real(kind=iwp) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,s,tol1,xm
-  real(kind=iwp) :: rtmp,h
+  real(rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,s,tol1,xm
+  real(rkind) :: rtmp,h
 
   !initilize upper and lower limits
   ierr=0
@@ -668,14 +511,14 @@ subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
   h=10.0**(-b); call ph_f(fb,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
 
   !root must be bracketed in brent
-  if(fa*fb>0._iwp) then
+  if(fa*fb>0.d0) then
     ierr=5
     return
   endif
 
   fc=fb
   do i=1,nloop
-    if(fb*fc>0._iwp) then
+    if(fb*fc>0.d0) then
       c=a
       fc=fa
       d=b-a
@@ -691,7 +534,7 @@ subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
     endif !abs(fc)
     tol1=2.d0*eps*abs(b)+0.5d0*tol !convergence check
     xm=0.5d0*(c-b)
-    if(abs(xm)<=tol1.or.fb==0._iwp) then
+    if(abs(xm)<=tol1.or.fb==0.d0) then
     !if(abs(xm)<=tol1.or.abs(fb)<=1.d-8) then
       ph=b
       return
@@ -699,19 +542,19 @@ subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
     if(abs(e)>=tol1.and.abs(fa)>abs(fb)) then
       s=fb/fa
       if(a==c) then
-        p=2._iwp*xm*s
-        q=1._iwp-s
+        p=2.d0*xm*s
+        q=1.d0-s
       else
         q=fa/fc
         r=fb/fc
-        p=s*(2._iwp*xm*q*(q-r)-(b-a)*(r-1._iwp))
-        q=(q-1._iwp)*(r-1._iwp)*(s-1._iwp)
+        p=s*(2.d0*xm*q*(q-r)-(b-a)*(r-1.d0))
+        q=(q-1.d0)*(r-1.d0)*(s-1.d0)
       endif !a==c
       if(p>0.d0) q=-q
       p=abs(p)
-      m1=3._iwp*xm*q-abs(tol1*q)
+      m1=3.d0*xm*q-abs(tol1*q)
       m2=abs(e*q)
-      if(2._iwp*p<min(m1,m2)) then
+      if(2.d0*p<min(m1,m2)) then
         e=d
         d=p/q
       else
@@ -742,14 +585,14 @@ subroutine ph_f(f,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
 !--------------------------------------------------------------------
 !calculate the nonlinear equation value of PH
 !--------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 !Error: tweak single
 !  integer, parameter :: rkind=8
   integer, intent(in) :: imed
-  real(kind=iwp), intent(in) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
-  real(kind=iwp), intent(out):: f
+  real(rkind), intent(in) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
+  real(rkind), intent(out):: f
 
   if(imed==1) then !no boric
     f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h/rH
@@ -772,28 +615,28 @@ subroutine photosynthesis(id,hour,nv,it)
 !----------------------------------------------------------------------------
   use icm_mod
   use icm_sed_mod, only : sbLight,CPIP,CNH4,NH4T2I,PO4T2I
-  use schism_glbl, only : iwp,errmsg,pi,ielg,iths_main,kbe,nvrt,ze,idry_e
+  use schism_glbl, only : rkind,errmsg,pi,ielg,iths_main,kbe,nvrt,ze,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
   !id: (wet) elem index
   integer, intent(in) :: id,nv,it
-  real(kind=iwp), intent(in) :: hour
+  real(rkind), intent(in) :: hour
  
   !local variables
   integer :: i,j,k
-  real(kind=iwp) :: sLight,sLight0,bLight,mLight,rKe,Chl,rKeh,xT,rIK,rIs(3),rat
-  real(kind=iwp) :: PO4td,SAtd,rtmp,rval,rval2
-  real(kind=iwp) :: GPT0(3),rlFI,rlFN,rlFP,rlFS,rlFSal
-  real(kind=iwp) :: tdep
+  real(rkind) :: sLight,sLight0,bLight,mLight,rKe,Chl,rKeh,xT,rIK,rIs(3),rat
+  real(rkind) :: PO4td,SAtd,rtmp,rval,rval2
+  real(rkind) :: GPT0(3),rlFI,rlFN,rlFP,rlFS,rlFSal
+  real(rkind) :: tdep
   !ncai_sav
-  real(kind=iwp) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeh0,rKeh1,rKeh2 !light
-  real(kind=iwp) :: ztcsav,zlfsav(nv+1),zstsav(nv+1) 
-  real(kind=iwp) :: tmp0,tmp,xtsav,zt0,dzt,hdep
+  real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeh0,rKeh1,rKeh2 !light
+  real(rkind) :: ztcsav,zlfsav(nv+1),zstsav(nv+1) 
+  real(rkind) :: tmp0,tmp,xtsav,zt0,dzt,hdep
   integer :: klev,kcnpy
   !ncai_veg
-  real(kind=iwp) :: xtveg,xtveg0
-  real(kind=iwp) :: iabvcnpyveg,iatcnpyveg,ikveg,iwcveg
-  real(kind=iwp) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
+  real(rkind) :: xtveg,xtveg0
+  real(rkind) :: iabvcnpyveg,iatcnpyveg,ikveg,iwcveg
+  real(rkind) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
 
 
   !--------------------------------------------------------------------------------
@@ -823,7 +666,7 @@ subroutine photosynthesis(id,hour,nv,it)
     !Init for every layer and timestep at current elem 
     plfsav(:,id)=0.0
     hdep=0.0
-    ztcsav=max(tdep-hcansav(id),0._iwp) !submergence
+    ztcsav=max(tdep-hcansav(id),0.d0) !submergence
 
     !canopy (hcansav) is always at or below surface and so kcnpy would stay at 1 or more
     kcnpy=1
@@ -903,7 +746,7 @@ subroutine photosynthesis(id,hour,nv,it)
     if(iRad==1)then
       sLight0=rIa !unit: W/m^2
     elseif(iRad==2) then
-      sLight0=max(real(rIa*sin(pi*(hour-TU)/Daylen),iwp),0._iwp) !unit: ly/day
+      sLight0=max(dble(rIa*sin(pi*(hour-TU)/Daylen)),0.d0) !unit: ly/day
     else
       call parallel_abort('unknown iRad in icm.F90')
     endif!iRad
@@ -1062,7 +905,7 @@ subroutine photosynthesis(id,hour,nv,it)
       endif !isav
 
       !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh 
-      rKeh=min(rKe*dep(k),20._iwp)
+      rKeh=min(rKe*dep(k),20.d0)
       if(rKeh<0) then
         write(errmsg,*)'check ICM iLight rKeh:',rKe,dep(k),rKeh,rKeChl,Chl,rKeTSS,TSED(k),iLight,ielg(id),k
         call parallel_abort(errmsg)
@@ -1396,7 +1239,7 @@ subroutine photosynthesis(id,hour,nv,it)
         do k=1,nv
           tmp=tmp+Temp(k)*dep(k)
         enddo !k::nv
-        xtveg=tmp/max(tdep,1.e-2_iwp)-toptveg(j) !tdep checked at init
+        xtveg=tmp/max(tdep,1.d-2)-toptveg(j) !tdep checked at init
         if(xtveg<=0.0)then
           rtmp=ktg1veg(j)*xtveg*xtveg
           if(rtmp>50.0.or.rtmp<0.)then
@@ -1420,14 +1263,14 @@ subroutine photosynthesis(id,hour,nv,it)
         do k=1,nv
           tmp=tmp+Sal(k)*dep(k)
         enddo !k::nv
-        xtveg=tmp/max(tdep,1.e-2_iwp)-saltoptveg(j)
-        fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.e-2_iwp))
+        xtveg=tmp/max(tdep,1.d-2)-saltoptveg(j)
+        fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.d-2))
 
 
         !----------inundation stress in wet elem----------
         !ratio of tdep versus hcanveg, tdep>0 checked 
         rdephcanveg(id,j)=hcanveg(id,j)/tdep
-        ffveg(id,j)=rdephcanveg(id,j)/(max((tinunveg(j)+rdephcanveg(id,j)),1.e-2_iwp))
+        ffveg(id,j)=rdephcanveg(id,j)/(max((tinunveg(j)+rdephcanveg(id,j)),1.d-2))
 
 
         !----------light supply----------
@@ -1464,36 +1307,12 @@ subroutine photosynthesis(id,hour,nv,it)
           call parallel_abort(errmsg)
         endif
 
-
-        !----------nutrient supplies----------
-        !!depth-averaged N
-        !tmp=0.0
-        !tmp0=0.0
-        !do k=1,nv
-        !  tmp=tmp+NH4(k,1)*dep(k)
-        !  tmp0=tmp0+NO3(k,1)*dep(k)
-        !enddo !k::nv
-        !xtveg=tmp/max(tdep,1.e-2_iwp)
-        !xtveg0=tmp0/max(tdep,1.e-2_iwp)
-        !tmp=max(1.e-2_iwp,xtveg) !re-use
-        !tmp0=max(1.e-2_iwp,xtveg0)
-        !fnveg(id,j)=(CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))/ &
-        !                &(khnsveg(j)+CNH4(id)+(tmp+tmp0)*khnsveg(j)/khnwveg(j))
         if(isfnveg==1)then
           fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
         else
           fnveg(id,j)=1
         endif
-        !!depth-averaged P
-        !tmp=0.0
-        !do k=1,nv
-        !  PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-        !  tmp=tmp+PO4td*dep(k)
-        !enddo !k::nv
-        !xtveg=tmp/max(tdep,1.e-2_iwp)
-        !tmp=max(1.e-2_iwp,xtveg)
-        !fpveg(id,j)=(CPIP(id)+tmp*khpsveg(j)/khpwveg(j))/ &
-        !                &(khpsveg(j)+CPIP(id)+tmp*khpsveg(j)/khpwveg(j))
+
         if(isfpveg==1)then
           fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
         else
@@ -1515,40 +1334,40 @@ subroutine photosynthesis(id,hour,nv,it)
 end subroutine photosynthesis
 
 
-subroutine calkwq(id,nv,ure,it)
+subroutine calkwq(id,nv,usf,it)
 !----------------------------------------------------------------------------
 !calculate the mass balance equation in water column
 !----------------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : iwp,NDTWQ,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,idry_e
+  use schism_glbl, only : rkind,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,idry_e
   use schism_msgp, only : myrank, parallel_abort
   use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav,frnveg,frpveg
   implicit none
   !id is (wet) elem index
   integer, intent(in) :: id,nv,it
-  real(kind=iwp), intent(in) :: ure
+  real(rkind), intent(in) :: usf
 
   !local variables
   integer :: i,j,k,m,iid
   integer :: klev
-  real(kind=iwp) :: time,rtmp,T,xT,sum1,k1,k2,a,b,fp,x,rat,s,rval,rval2
-  real(kind=iwp) :: zdep(nv),tdep,rdep,DOsat,urea,rKr,AZB1,AZB2,sumAPB,VSED
-  real(kind=iwp) :: rKTPOM,rKTDOM,rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
-  real(kind=iwp) :: xKHR,xDenit,xNit,rKSUA,rKCOD
-  real(kind=iwp) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,BMZ(2),Fish,BMP(3),BPR(3)
-  real(kind=iwp) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
+  real(rkind) :: time,rtmp,T,xT,sum1,k1,k2,a,b,fp,x,rat,s,rval,rval2
+  real(rkind) :: zdep(nv),tdep,rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB,VSED
+  real(rkind) :: rKTPOM,rKTDOM,rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
+  real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
+  real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,BMZ(2),Fish,BMP(3),BPR(3)
+  real(rkind) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
                     & PZB_ZB,PFh_ZB,PZB_PB,PFh_PB,SZB_ZB,SFh_ZB,SZB_PB,SFh_PB
-  real(kind=iwp) :: PB10,PB20,PB30,RPOC0,LPOC0,RPON0,LPON0,RPOP0,LPOP0,PO4t0,PO4td,SU0,SAt0,CACO30 
-  real(kind=iwp) :: nRPOC,nLPOC,nDOC,nRPON,nLPON,nDON,nNH4,nNO3,nRPOP,nLPOP,nDOP,nPO4t,nSU,nSAt,nCOD,nDO 
-  real(kind=iwp),dimension(nvrt) :: znRPOC,znLPOC,znDOC,znRPON,znLPON,znDON,znNH4,znNO3, &
+  real(rkind) :: PB10,PB20,PB30,RPOC0,LPOC0,RPON0,LPON0,RPOP0,LPOP0,PO4t0,PO4td,SU0,SAt0,CACO30 
+  real(rkind) :: nRPOC,nLPOC,nDOC,nRPON,nLPON,nDON,nNH4,nNO3,nRPOP,nLPOP,nDOP,nPO4t,nSU,nSAt,nCOD,nDO 
+  real(rkind),dimension(nvrt) :: znRPOC,znLPOC,znDOC,znRPON,znLPON,znDON,znNH4,znNO3, &
                                     & znRPOP,znLPOP,znDOP,znPO4t,znSU,znSAt,znCOD,znDO
-  real(kind=iwp) :: pK0,CO2sat,xKCA,xKCACO3
+  real(rkind) :: pK0,CO2sat,xKCA,xKCACO3
 
   !ncai_sav 
-  real(kind=iwp) :: nprsav,fnsedsav,fpsedsav,denssav
+  real(rkind) :: nprsav,fnsedsav,fpsedsav,denssav
   !ncai_veg
-  !real(kind=iwp) :: nprveg(3),fnsedveg(3),fpsedveg(3)
-  real(kind=iwp) :: tmp,densveg(3)
+  !real(rkind) :: nprveg(3),fnsedveg(3),fpsedveg(3)
+  real(rkind) :: tmp,densveg(3)
 
   !--------------------------------------------------------------------------------------
   time=it*dt
@@ -1570,7 +1389,7 @@ subroutine calkwq(id,nv,ure,it)
   !redistribute surface or bottom fluxes in case the surface or bottom layer is too thin.
   tdep=sum(dep(1:nv))
   if(tdep<1.e-5) call parallel_abort('illegal tdep(2)')
-  rdep=min(tdep,1._iwp)
+  rdep=min(tdep,1.d0)
 
   znRPOC=0.0;  nRPOC=0.0
   znLPOC=0.0;  nLPOC=0.0
@@ -1621,7 +1440,7 @@ subroutine calkwq(id,nv,ure,it)
           write(errmsg,*)'Unknown ICM ph model:', PH(nv),rval
           call parallel_abort(errmsg)
         endif
-        BnPO4t=max(BnPO4t*exp(rval),0.02_iwp)
+        BnPO4t=max(BnPO4t*exp(rval),0.02)
         !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
         !nPO4t=max(2.5d-3*(Temp(nv)-0.0)/35.d0,0.d0);
       endif
@@ -1675,8 +1494,8 @@ subroutine calkwq(id,nv,ure,it)
     x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
     do k=nv,1,-1
       x=x+dep(k)
-      rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1._iwp)
-      if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1._iwp)
+      rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1.d0)
+      if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1.d0)
 
       znRPOC(k) = znRPOC(k)+rat*nRPOC
       znLPOC(k) = znLPOC(k)+rat*nLPOC
@@ -1722,8 +1541,8 @@ subroutine calkwq(id,nv,ure,it)
     x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
     do k=1,nv
       x=x+dep(k)
-      rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1._iwp)
-      if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1._iwp)
+      rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1.d0)
+      if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1.d0)
 
       znRPOC(k) = znRPOC(k)+rat*nRPOC
       znLPOC(k) = znLPOC(k)+rat*nLPOC
@@ -2843,10 +2662,10 @@ subroutine calkwq(id,nv,ure,it)
 
       if(iRea==0) then !(Park,1995)
 !Error: 1.e-20
-        urea=0.728*sqrt(max(WMS(id),1.e-20_iwp))-0.317*WMS(id)+0.0372*WMS(id)*WMS(id) !*2
-        rKr=(rKro*ure+urea)*rKTr**(Temp(k)-20.0)/max(dep(k),5.e-2_iwp)
+        usfa=0.728*sqrt(max(WMS(id),1.d-20))-0.317*WMS(id)+0.0372*WMS(id)*WMS(id) !*2
+        rKr=(rKro*usf+usfa)*rKTr**(Temp(k)-20.0)/max(dep(k),5.d-2)
       elseif(iRea==1) then ! (Cerco, 2002)
-        rKr=0.157*(0.54+0.0233*Temp(k)-0.002*Sal(k))*WMS(id)**1.5/max(dep(k),5.e-2_iwp)
+        rKr=0.157*(0.54+0.0233*Temp(k)-0.002*Sal(k))*WMS(id)**1.5/max(dep(k),5.d-2)
       else
         call parallel_abort('Uknown iRea in ICM')
       endif
@@ -2941,7 +2760,7 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       if(k==nv.and.CA(k,1)<CAsat(k)) then
-        xKCA=rKCA*(CAsat(k)-CA(k,1))/max(dep(k),5.e-2_iwp) !dissolution from sediment
+        xKCA=rKCA*(CAsat(k)-CA(k,1))/max(dep(k),5.d-2) !dissolution from sediment
       endif
       xKCA=0.0 !ZG, no dissolution from sediment
 
@@ -2974,7 +2793,7 @@ subroutine calkwq(id,nv,ure,it)
 
         !(borges,2004)
 !Error: 1.e-20
-        rKa=0.24*(1.0+1.719*sqrt(max(ure,1.e-20_iwp))/sqrt(2.0)+2.58*WMS(id))/max(dep(k),5.e-2_iwp)
+        rKa=0.24*(1.0+1.719*sqrt(max(usf,1.d-20))/sqrt(2.0)+2.58*WMS(id))/max(dep(k),5.d-2)
 
         T=Temp(k)+273.15 
         if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
@@ -3079,7 +2898,7 @@ subroutine calkwq(id,nv,ure,it)
       if(ista(id)/=0) then
         iid=ista(id)
         do m=1,nsta(iid)
-          rtmp=max(min(depsta(m,iid),zdep(nv)),0._iwp)
+          rtmp=max(min(depsta(m,iid),zdep(nv)),0.d0)
           if((k==1.and.rtmp<=zdep(k).and.rtmp>=0.0).or.(k>1.and.rtmp>zdep(max(1,(k-1))).and.rtmp<=zdep(k))) then
             write(410)time,stanum(m,iid),Sal(k),Temp(k),&
      & PB1(k,1),GP(klev,id,1),BMP(1),WSPB1(id),PB10,&
@@ -3128,9 +2947,9 @@ subroutine calkwq(id,nv,ure,it)
       if(ze(k-1,id)<hcansav(id)+ze(kbe(id),id)) then
         !add seeds
         !i=nvrt-k+1 !ICM convention
-        lfsav(k,id)=max(lfsav(k,id),1.e-5_iwp)
-        stsav(k,id)=max(stsav(k,id),1.e-5_iwp)
-        rtsav(k,id)=max(rtsav(k,id),1.e-5_iwp)
+        lfsav(k,id)=max(lfsav(k,id),1.d-5)
+        stsav(k,id)=max(stsav(k,id),1.d-5)
+        rtsav(k,id)=max(rtsav(k,id),1.d-5)
       endif !ze
     enddo !k
 
@@ -3167,9 +2986,9 @@ subroutine calkwq(id,nv,ure,it)
       endif
 
       !seeds
-      tlfveg(id,j)=max(tlfveg(id,j),1.e-5_iwp)
-      tstveg(id,j)=max(tstveg(id,j),1.e-5_iwp)
-      trtveg(id,j)=max(trtveg(id,j),1.e-5_iwp)   
+      tlfveg(id,j)=max(tlfveg(id,j),1.d-5)
+      tstveg(id,j)=max(tstveg(id,j),1.d-5)
+      trtveg(id,j)=max(trtveg(id,j),1.d-5)   
      
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=ancveg(j)*plfveg(id,j)*tlfveg(id,j) !sum(lfNH4veg(1:nv,j))

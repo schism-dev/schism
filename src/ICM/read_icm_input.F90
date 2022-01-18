@@ -31,7 +31,7 @@ subroutine WQinput(time)
 !4) non-point source load, 5) point source load
 !---------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : errmsg,iwp,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
+  use schism_glbl, only : errmsg,rkind,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 
@@ -40,9 +40,9 @@ subroutine WQinput(time)
   
   !local variable
   integer :: i,j,k,ie,iegb,neben
-  real(kind=iwp) :: rtmp
-  real(kind=iwp) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
-  real(kind=iwp) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+  real(rkind) :: rtmp
+  real(rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
+  real(rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
                    &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO 
 
   !read atmospheric loading (unit: g/m2/day)
@@ -183,7 +183,7 @@ subroutine read_icm_param2
 !---------------------------------------------------------------------
 !read spatially varying paramters 
 !---------------------------------------------------------------------
-  use schism_glbl, only : iwp,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
+  use schism_glbl, only : rkind,npa,ne_global,np_global,nea,i34,elnode,ipgl, &
                    & iegl,errmsg,nvrt,kbe,ze,ihot,idry_e,in_dir,out_dir, &
                    &len_in_dir,len_out_dir,dpe,ielg
   use schism_msgp, only : myrank, parallel_abort
@@ -194,16 +194,16 @@ subroutine read_icm_param2
   !local variables
   integer :: i,j,ie,ip,npgb,negb,nd,ne,itmp,itmp1(1),itmp2(1,1),k,k2,m,n,q
   real(8) :: rtmp
-  real(kind=iwp) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
+  real(rkind) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp
-  real(kind=iwp) :: tGPM1,tGPM2,tGPM3,tTGP1,tTGP2,tTGP3,trKTGP11,trKTGP12,trKTGP13, &
+  real(rkind) :: tGPM1,tGPM2,tGPM3,tTGP1,tTGP2,tTGP3,trKTGP11,trKTGP12,trKTGP13, &
                   & trKTGP21,trKTGP22,trKTGP23,tCChl1,tCChl2,tCChl3,tPRR1,tPRR2,tPRR3
-  real(kind=iwp) :: tWSSED,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
-  real(kind=iwp) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
-  real(kind=iwp) :: trKRC,trKLC,trKDC, trKRP,trKLP,trKDP,trKRPalg,trKLPalg,trKDPalg
-  !real(kind=iwp),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
-  !real(kind=iwp),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
-  real(kind=iwp),allocatable :: swild2(:,:) !,ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
+  real(rkind) :: tWSSED,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
+  real(rkind) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
+  real(rkind) :: trKRC,trKLC,trKDC, trKRP,trKLP,trKDP,trKRPalg,trKLPalg,trKDPalg
+  !real(rkind),dimension(npa) :: tWSRPs,tWSLPs,tWSPB1s,tWSPB2s,tWSPB3s,tTurbs,tWReas,tPC2TSSs,tPRR
+  !real(rkind),dimension(npa) :: tWSSBNETs,tWSLBNETs,tWSRBNETs,tWS1BNETs,tWS2BNETs,tWS3BNETs
+  real(rkind),allocatable :: swild2(:,:) !,ptmp1(:),ptmp2(:),ptmp3(:),ptmp4(:),ptmp5(:),ptmp6(:),ptmp7(:),ptmp8(:),ptmp9(:),ptmp10(:),ptmp11(:),ptmp12(:),ptmp13(:),ptmp14(:),ptmp15(:)
 
   !read phytoplankton parameters
   call get_param_1D('icm.in','GPM1',2,itmp,tGPM1,stmp,1)
@@ -1050,7 +1050,7 @@ subroutine read_icm_param2
         patchsav(i)=-1 !non-sav habitat
       else !wet elem
         hcansavori(i)=rlf*tlfsav(i)+rst*tstsav(i)+rrt*trtsav(i)+hcansav0
-        hcansav(i)=min(hcansavori(i),real(ze(nvrt,i)-ze(kbe(i),i),iwp),hcansav_limit)
+        hcansav(i)=min(hcansavori(i),dble(ze(nvrt,i)-ze(kbe(i),i)),hcansav_limit)
         !Biomass at each layer (0 if above canopy)
         do k=kbe(i)+1,nvrt
           if(kbe(i)<1) then
@@ -1299,18 +1299,18 @@ subroutine read_icm_param_2d(varname,pvar,pvalue)
 !    2). pvalue=-9999: read values in "varname.prop", and assign to pvar 
 !    3). pvalue=other const: assign const value (pvalue) to pvar 
 !---------------------------------------------------------------------
-  use schism_glbl,only : iwp,nea,npa,np_global,ne_global,in_dir,len_in_dir,&
+  use schism_glbl,only : rkind,nea,npa,np_global,ne_global,in_dir,len_in_dir,&
                        & i34,elnode,ipgl,iegl
   use schism_msgp, only : myrank,parallel_abort
   implicit none
   character(len=*),intent(in) :: varname
-  real(kind=iwp),intent(in) :: pvalue
-  real(kind=iwp),dimension(nea),intent(out) :: pvar
+  real(rkind),intent(in) :: pvalue
+  real(rkind),dimension(nea),intent(out) :: pvar
 
   !local variables
   integer :: i,j,k,negb,npgb,ip,ie,nd
-  real(kind=iwp) :: xtmp,ytmp,rtmp
-  real(kind=iwp),dimension(npa) :: tvar
+  real(rkind) :: xtmp,ytmp,rtmp
+  real(rkind),dimension(npa) :: tvar
   
   !read spatailly varying parameter values
   if(int(pvalue)==-999) then  !*.gr3
@@ -1355,7 +1355,7 @@ subroutine read_icm_param
 !---------------------------------------------------------------------
 !read paramters in icm.in
 !---------------------------------------------------------------------
-  use schism_glbl, only : iwp,dt,NDTWQ,nvrt,ne_global,ihconsv,nws, &
+  use schism_glbl, only : rkind,dt,nvrt,ne_global,ihconsv,nws, &
                         & in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : parallel_abort
   use icm_mod
@@ -1367,7 +1367,7 @@ subroutine read_icm_param
   !local variables
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
   real(8) :: rtmp
-  real(kind=iwp) :: rtmp1(1),rtmp2(1,1),tmp
+  real(rkind) :: rtmp1(1),rtmp2(1,1),tmp
   character(len=2) :: stmp
   
   !read glocal swtiches  
@@ -1921,7 +1921,7 @@ subroutine read_icm_param
   endif
 
   !---------------preprocess parameters----------------------------
-  dtw=NDTWQ*dt/86400.0 !days
+  dtw=dt/86400.0 !days
   dtw2=dtw/2.0
 
   !zooplankton
@@ -2006,7 +2006,7 @@ subroutine read_icm_stainfo
 !read in ICM station output information
 !-----------------------------------------------------------------------
   use icm_mod, only : nsta,ista,depsta,stanum,nspool_icm
-  use schism_glbl, only : iwp,dt,ihot,ne,i34,xnd,ynd,elnode, &
+  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,nproc,parallel_abort
   implicit none
@@ -2014,7 +2014,7 @@ subroutine read_icm_stainfo
   !local variables
   integer,parameter :: maxsta=10000,maxl=100 !maximum station
   integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
-  real(iwp) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
+  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
   character(len=4) :: fn
   logical :: lexist
 
@@ -2089,7 +2089,7 @@ subroutine check_icm_param
 ! Outputs water quality parameter to check
 !-----------------------------------------------------------------------
   use icm_mod
-  use schism_glbl, only : NDTWQ,in_dir,out_dir,len_in_dir,len_out_dir
+  use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank,parallel_abort
   implicit none
 
@@ -2232,7 +2232,7 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
 !--------------------------------------------------------------------
 !Read a one-Dimensional ICM parameter
 !--------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : parallel_abort,myrank
   use misc_modules
   implicit none
@@ -2242,7 +2242,7 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
   integer,intent(in) :: vartype
   integer,intent(in) :: idim1
   integer,intent(out) :: ivar(idim1)
-  real(iwp),intent(out) :: rvar(idim1)
+  real(rkind),intent(out) :: rvar(idim1)
   character(len=2),intent(out) :: svar
   
   !local variables
@@ -2268,7 +2268,7 @@ subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
 !--------------------------------------------------------------------
 !Read a 2-Dimensional ICM parameter
 !--------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : parallel_abort,myrank
   use misc_modules
   implicit none
@@ -2278,7 +2278,7 @@ subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
   integer,intent(in) :: vartype
   integer,intent(in) :: idim1,idim2
   integer,intent(out) :: ivar(idim1,idim2)
-  real(iwp),intent(out) :: rvar(idim1,idim2)
+  real(rkind),intent(out) :: rvar(idim1,idim2)
   character(len=2),intent(out) :: svar
   
   !local variables
@@ -2318,19 +2318,19 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
 !            inside: 0, outside; 1, inside
 !            arco(3), nodel(3) : area coord. and 3 local node indices (valid
 !            only if inside)
-      use schism_glbl, only : iwp,errmsg
+      use schism_glbl, only : rkind,errmsg
       use schism_msgp, only : myrank,parallel_abort
 
       implicit none 
       integer, intent(in) :: i34
-      real(iwp), intent(in) :: x(i34),y(i34),xp,yp
+      real(rkind), intent(in) :: x(i34),y(i34),xp,yp
       integer, intent(out) :: inside,nodel(3)
-      real(iwp), intent(out) :: arco(3)
+      real(rkind), intent(out) :: arco(3)
 
       !Local
-      real(iwp) :: signa_icm
+      real(rkind) :: signa_icm
       integer :: m,j,j1,j2,list(3)
-      real(iwp) :: aa,ae,ar(2),swild(2,3)
+      real(rkind) :: aa,ae,ar(2),swild(2,3)
 
       !Areas
       ar(1)=signa_icm(x(1),x(2),x(3),y(1),y(2),y(3))
@@ -2364,8 +2364,8 @@ subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
           inside=1
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
-          arco(1)=max(0._iwp,min(1._iwp,arco(1)))
-          arco(2)=max(0._iwp,min(1._iwp,arco(2)))
+          arco(1)=max(0.d0,min(1.d0,arco(1)))
+          arco(2)=max(0.d0,min(1.d0,arco(2)))
           if(arco(1)+arco(2)>1.) then
             arco(3)=0
             arco(2)=1-arco(1)
@@ -2383,11 +2383,11 @@ function signa_icm(x1,x2,x3,y1,y2,y3)
 !-------------------------------------------------------------------------------
 ! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
 !-------------------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   implicit none
-  real(iwp) :: signa_icm
-  real(iwp),intent(in) :: x1,x2,x3,y1,y2,y3
+  real(rkind) :: signa_icm
+  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
 
-  signa_icm=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._iwp
+  signa_icm=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2.d0
 
 end function signa_icm

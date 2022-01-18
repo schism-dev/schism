@@ -33,17 +33,17 @@ subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0
 ! b1=j1+s*fd0*C0
 ! b2=j2+H2*C2/dt
 !-----------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank, parallel_abort
   implicit none
   
   integer, intent(in) :: itag !debug info only
-  real(kind=iwp),intent(in) :: C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt 
-  real(kind=iwp),intent(out) :: C1td,C2td,C1t,C2t
+  real(rkind),intent(in) :: C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt 
+  real(rkind),intent(out) :: C1td,C2td,C1t,C2t
   
   !local variables
-  real(kind=iwp) :: a11,a12,a21,a22,b1,b2,fd1,fd2,fp1,fp2 
-  real(kind=iwp) :: a1,a2,delta 
+  real(rkind) :: a11,a12,a21,a22,b1,b2,fd1,fd2,fp1,fp2 
+  real(rkind) :: a1,a2,delta 
 
   !calculate partition coefficents 
   fd1=1.0/(1.0+m1*pie1) 
@@ -87,7 +87,7 @@ function sed_zbrent(id,ierr)
 !Brent's method to find SOD value
 !numerical recipes from William H. Press, 1992
 !---------------------------------------------------------------------
-  use schism_glbl, only : iwp,errmsg
+  use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
   use icm_sed_mod, only : O20,SOD,stc
   implicit none
@@ -95,15 +95,15 @@ function sed_zbrent(id,ierr)
   integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
 !Error: tweak single
-  real(kind=iwp), parameter :: eps=3.0e-8_iwp, tol=1.e-5_iwp,sodmin=1.e-8_iwp,sodmax=100._iwp
-  !real(kind=iwp),intent(out) :: fout
-!  real(kind=iwp), external :: sedf
-  real(kind=iwp) :: sed_zbrent
+  real(rkind), parameter :: eps=3.0e-8, tol=1.e-5,sodmin=1.e-8,sodmax=100.d0
+  !real(rkind),intent(out) :: fout
+!  real(rkind), external :: sedf
+  real(rkind) :: sed_zbrent
   
   !local variables
   integer :: i
-  real(kind=iwp) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,rs,tol1,xm 
-  real(kind=iwp) :: rtmp
+  real(rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,rs,tol1,xm 
+  real(rkind) :: rtmp
 
   !initilize upper and lower limits
   ierr=0
@@ -222,7 +222,7 @@ subroutine read_icm_sed_param
 !read sediment flux model parameters
 !---------------------------------------------------------------------C
   use icm_sed_mod
-  use schism_glbl, only : iwp,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
+  use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod, only : iCheck,isav_icm,iTBen,iveg_icm
@@ -234,9 +234,9 @@ subroutine read_icm_sed_param
   integer :: npgb,negb,ip,nd,ne
   integer :: i,j,itmp,itmp1(1),itmp2(1,1)
   real(8) :: rtmp
-  real(kind=iwp) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp
-  real(kind=iwp) :: ttau_c_elem
-  real(kind=iwp),dimension(npa) :: ttau_c_elems
+  real(rkind) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp
+  real(rkind) :: ttau_c_elem
+  real(rkind),dimension(npa) :: ttau_c_elems
   character(len=10) :: stmp
    
   !General parameters 
@@ -878,7 +878,7 @@ subroutine sed_calc(id)
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
 !-----------------------------------------------------------------------
-  use schism_glbl, only : dt,iwp,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
+  use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC, &
                       &isav_icm,patchsav, & !ncai_sav
@@ -890,14 +890,14 @@ subroutine sed_calc(id)
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
-  real(kind=iwp),external :: sed_zbrent
+  real(rkind),external :: sed_zbrent
 
   !local variables
   integer :: i,j,k,itmp,ind,ierr
-  real(kind=iwp) :: pie1,pie2,j1,j2,fd2,rval
-  real(kind=iwp) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2 
-  real(kind=iwp) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
-  real(kind=iwp) :: tau_bot_elem,ero_elem
+  real(rkind) :: pie1,pie2,j1,j2,fd2,rval
+  real(rkind) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2 
+  real(rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
+  real(rkind) :: tau_bot_elem,ero_elem
 
   !if(iSteady==1) tintim=tintim+dtw
 
@@ -978,15 +978,15 @@ subroutine sed_calc(id)
 
   !ncai_sav !unit: g/m^3
   if(isav_icm==1.and.patchsav(id)==1)then
-    NH4T2TM1=max(1.0e-10_iwp,NH4T2TM1-tlfNH4sav(id)*dtw/HSED(id))
-    PO4T2TM1=max(1.0e-10_iwp,PO4T2TM1-tlfPO4sav(id)*dtw/HSED(id))
+    NH4T2TM1=max(1.0d-10,NH4T2TM1-tlfNH4sav(id)*dtw/HSED(id))
+    PO4T2TM1=max(1.0d-10,PO4T2TM1-tlfPO4sav(id)*dtw/HSED(id))
     ROOTDO=ROOTDO+trtdosav(id) !unit: g/m^2 day
   endif !isav_icm
 
   !ncai_veg
   if(iveg_icm==1.and.patchveg(id)==1)then
-    NH4T2TM1=max(1.0e-10_iwp,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
-    PO4T2TM1=max(1.0e-10_iwp,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
+    NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
+    PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
     ROOTDO=ROOTDO+sum(trtdoveg(id,1:3)) !unit: g/m^2 day
   endif !iveg_icm
 
@@ -1483,8 +1483,8 @@ subroutine sed_calc(id)
     if(iDEPO==2)then
 !Error: check exponent magnitude
       rtmp=exp(rKTHDR*(SED_T(id)-TRHDR))
-      depofracL=ero_elem/(WSLP(id)*depoWSL/max(1.e-7_iwp,SED_BL(id))+rKLP(id)*rtmp)
-      depofracR=ero_elem/(WSRP(id)*depoWSL/max(1.e-7_iwp,SED_BL(id))+rKRP(id)*rtmp)
+      depofracL=ero_elem/(WSLP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKLP(id)*rtmp)
+      depofracR=ero_elem/(WSRP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKRP(id)*rtmp)
     endif !iDEPO
 
     !sediemnt erosion >> nutrient erosion flux
@@ -1504,9 +1504,9 @@ subroutine sed_calc(id)
     endif !iERO
 
     !minus erosion in sediment for mass balance
-    HST2TM1S(id)=max(1.0e-10_iwp,HST2TM1S(id)-SED_EROH2S(id)*dtw/HSED(id))
-    POC1TM1S(id)=max(1.0e-10_iwp,POC1TM1S(id)-SED_EROLPOC(id)*dtw/HSED(id))
-    POC2TM1S(id)=max(1.0e-10_iwp,POC2TM1S(id)-SED_ERORPOC(id)*dtw/HSED(id))
+    HST2TM1S(id)=max(1.d-10,HST2TM1S(id)-SED_EROH2S(id)*dtw/HSED(id))
+    POC1TM1S(id)=max(1.d-10,POC1TM1S(id)-SED_EROLPOC(id)*dtw/HSED(id))
+    POC2TM1S(id)=max(1.d-10,POC2TM1S(id)-SED_ERORPOC(id)*dtw/HSED(id))
   endif !iERO
   !************************************************************************
 
@@ -1578,16 +1578,16 @@ end subroutine sed_calc
 subroutine sedsod(id)
   use icm_sed_mod
   use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm,iveg_icm
-  use schism_glbl, only : errmsg,iwp,idry_e
+  use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
   integer,intent(in) :: id !elem #
   !local variables
-  real(kind=iwp) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
-  real(kind=iwp) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
-  real(kind=iwp) :: XJC1,SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
-  real(kind=iwp) :: HS2AV,SO42AV,XJ2,XJ2CH4,CSODHS,CH42AV,CH4T2AV,CH40
-  real(kind=iwp) :: X1J2,DCH4T2,DHST2,CSODCH4,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
+  real(rkind) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
+  real(rkind) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
+  real(rkind) :: XJC1,SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
+  real(rkind) :: HS2AV,SO42AV,XJ2,XJ2CH4,CSODHS,CH42AV,CH4T2AV,CH40
+  real(rkind) :: X1J2,DCH4T2,DHST2,CSODCH4,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
   integer :: ind
 
 !  ind=10.0*max(0.d0,TEMPD)+1
@@ -1728,7 +1728,7 @@ subroutine sedsod(id)
 
     C0d=HS0 !unit: g/m^3
     j1=0.0
-    j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+    j2=max(AOC*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
     k2=0.0
     call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
@@ -1750,7 +1750,7 @@ subroutine sedsod(id)
     C0d=CH40
     j1=0.0
     !j2=XJ2 !need future work
-    j2=max(AOC*XJC-AONO*JN2GAS,1.e-10_iwp) !unit: g/m^2/day
+    j2=max(AOC*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     !Error: different from manual
     k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
     k2=0.0
@@ -1819,7 +1819,7 @@ subroutine link_sed_input(id,nv)
 !---------------------------------------------------------------------------------------
 !initializ sediment 
 !---------------------------------------------------------------------------------------
-  use schism_glbl, only: iwp,errmsg,dpe,eta2,elnode,i34,area,ielg
+  use schism_glbl, only: rkind,errmsg,dpe,eta2,elnode,i34,area,ielg
   use icm_mod, only : dep,Temp,Sal,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
                     & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
   use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &

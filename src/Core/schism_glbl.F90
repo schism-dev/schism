@@ -47,8 +47,6 @@ module schism_glbl
   real(rkind),parameter :: pi=3.141592653589793_rkind
   real(rkind),parameter :: grav=9.81_rkind
   real(rkind),parameter :: omega_e=real(7.292d-5,rkind) !angular freq. of earth rotation
-  !For water quality model
-  integer,parameter :: NDTWQ=1   !add by YC
 
   !# of threads in openMP. Note that this is the # at the start of run (thus the 'default'), but
   !you can change # of threads in some loops (after that, it should revert to default)
