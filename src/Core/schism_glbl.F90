@@ -283,7 +283,7 @@ module schism_glbl
   real(rkind),save,allocatable :: xlon_gb(:),ylat_gb(:) ! global lat/lon coordinates in _degrees_ (for some options)
   ! Modified node lat/lon coordinates in _radians_ for ice model (via FESOM2).
   ! The nodes are at same physical location as (xlon, ylat)
-  real(rkind),save,allocatable :: xlon2(:),ylat2(:) 
+!  real(rkind),save,allocatable :: xlon2(:),ylat2(:) 
   real(rkind),save,allocatable :: dp(:),dp00(:)           ! Node depths
 !  integer,save,allocatable :: ibad(:)             ! Reliable bndry elevation flag
 !  integer,save,allocatable :: nnegb(:),inegb(:,:) ! Global node-element tables
