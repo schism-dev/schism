@@ -212,7 +212,7 @@ subroutine step_therm1 (dt)
           uatm = uatm(i), vatm = vatm(i),  &
           wind = wind(i),                  &
           zlvl = zlvl_v,                 &
-          !zlvl_q = zlvl_q,                 &
+          zlvs = zlvs,                   &
           !zlvl_t = zlvl_t,                 &
           Qa   = Qa(i),   rhoa = rhoa(i),  &
           Tair = T_air(i), Tref = Tref(i), &
@@ -638,7 +638,7 @@ subroutine step_dyn_ridge (dt, ndtd)
        i,            & ! horizontal indices
        ntrcr,        & !
        nbtrcr,       & !
-       narr
+       narr,n
 
     character(len=*), parameter :: subname='(step_dyn_ridge)'
 
@@ -1078,7 +1078,8 @@ subroutine ocn_mixed_layer_icepack(                       &
 
     fhocn_tot = fhocn                                        &  ! these are *aice already
               + (fsens_ocn + flat_ocn + flwout_ocn + flw     &
-              - Lfresh*fsnow) * (c1-aice)+ max(c0,frzmlt)*aice
+              - Lfresh*fsnow) * (c1-aice)+ max(c0,frzmlt)!*aice
+              !- Lfresh*fsnow) * (c1-aice)+ max(c0,frzmlt)!*aice
               !+ swabs &
               !+ Lfresh*fsnow) * (c1-aice) 
               !+ max(c0,frzmlt)*aice   
@@ -1091,7 +1092,7 @@ subroutine ocn_mixed_layer_icepack(                       &
        lfs_corr = fsalt/ice_ref_salinity/p001
        fresh = fresh - lfs_corr * ice_ref_salinity / sss
     endif
-
+    fresh = fresh - max(fsalt,0.d0) /p001 / sss
     fresh_tot = fresh + (-evap_ocn + frain + fsnow)*(c1-aice)
 
 end subroutine ocn_mixed_layer_icepack

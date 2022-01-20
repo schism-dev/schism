@@ -62,7 +62,7 @@
                                       Qa_iso,   Qref_iso, &
                                       iso_flag,           &
                                       uvel,     vvel,     &
-                                      Uref                )     
+                                      Uref,     zlvs      )     
 
       use icepack_parameters, only: highfreq, natmiter, atmiter_conv
 
@@ -118,6 +118,9 @@
       real (kind=dbl_kind), intent(out) :: &
          Uref         ! reference height wind speed (m/s)
 
+      real (kind=dbl_kind), intent(in), optional :: &
+         zlvs        ! atm level height (scalar quantities) (m)
+
       ! local variables
 
       integer (kind=int_kind) :: &
@@ -125,7 +128,6 @@
 
       real (kind=dbl_kind) :: &
          TsfK  , & ! surface temperature in Kelvin (K)
-         xqq   , & ! temporary variable
          psimh , & ! stability function at zlvl   (momentum)
          tau   , & ! stress at zlvl
          fac   , & ! interpolation factor
@@ -153,13 +155,15 @@
          re    , & ! sqrt of exchange coefficient (water)
          rh    , & ! sqrt of exchange coefficient (heat)
          vmag  , & ! surface wind magnitude   (m/s)
-         alz   , & ! ln(zlvl  /z10)
+         alzm  , & ! ln(zlvl  /z10)
+         alzs  , & ! ln(zlvs  /z10) (if zlvs present)
          thva  , & ! virtual temperature      (K)
          cp    , & ! specific heat of moist air
-         hol   , & ! H (at zlvl  ) over L
+         holm  , & ! H (at zlvl  ) over L
+         hols  , & ! H (at zlvs  ) over L (if zlvs present)
          stable, & ! stability factor
          cpvir , & ! defined as cp_wv/cp_air - 1.
-         psixh     ! stability function at zlvl   (heat and water)
+         psixh     ! stability function at zlvl (at zlvs if present) (heat and water)
 
       real (kind=dbl_kind), parameter :: &
          zTrf  = c2     ! reference height for air temp (m)
@@ -247,7 +251,12 @@
       
       thva = potT * (c1 + zvir * Qa) ! virtual pot temp (K)
       delq = Qa - ssq          ! spec hum dif (kg/kg)
-      alz  = log(zlvl/zref)
+      alzm = log(zlvl/zref)
+      if (present(zlvs)) then
+         alzs = log(zlvs/zref)
+      else
+         alzs = alzm
+      endif
       cp   = cp_air*(c1 + cpvir*ssq)
       
       !------------------------------------------------------------
@@ -275,28 +284,24 @@
          ustar_prev = ustar
 
          ! compute stability & evaluate all stability functions
-         hol = vonkar * gravit * zlvl &
-                 * (tstar/thva &
-                 + qstar/(c1/zvir+Qa)) &
-                 / ustar**2
-         hol    = sign( min(abs(hol),c10), hol )
-         stable = p5 + sign(p5 , hol)
-         xqq    = max(sqrt(abs(c1 - c16*hol)) , c1)
-         xqq    = sqrt(xqq)
+         holm = compute_stability_parameter(zlvl , thva , &
+                                           ustar, tstar, &
+                                           qstar, Qa)
+         if (present(zlvs)) then
+            hols = compute_stability_parameter(zlvs , thva , &
+                                               ustar, tstar, &
+                                               qstar, Qa)
+         else
+            hols = holm
+         endif
 
-         ! Jordan et al 1999
-         psimhs = -(0.7_dbl_kind*hol &
-                + 0.75_dbl_kind*(hol-14.3_dbl_kind) &
-                * exp(-0.35_dbl_kind*hol) + 10.7_dbl_kind)
-         psimh  = psimhs*stable &
-                + (c1 - stable)*psimhu(xqq)
-         psixh  = psimhs*stable &
-                + (c1 - stable)*psixhu(xqq)
+         call compute_stability_function('momentum', holm, stable, psimh)
+         call compute_stability_function('scalar'  , hols, stable, psixh)
 
          ! shift all coeffs to measurement height and stability
-         rd = rdn / (c1+rdn/vonkar*(alz-psimh))
-         rh = rhn / (c1+rhn/vonkar*(alz-psixh))
-         re = ren / (c1+ren/vonkar*(alz-psixh))
+         rd = rdn / (c1+rdn/vonkar*(alzm-psimh))
+         rh = rhn / (c1+rhn/vonkar*(alzs-psixh))
+         re = ren / (c1+ren/vonkar*(alzs-psixh))
       
          ! update ustar, tstar, qstar using updated, shifted coeffs
          ustar = rd * vmag
@@ -361,16 +366,14 @@
       ! Compute diagnostics: 2m ref T, Q, U
       !------------------------------------------------------------
 
-      hol   = hol*zTrf/zlvl
-      xqq   = max( c1, sqrt(abs(c1-c16*hol)) )
-      xqq   = sqrt(xqq)
-      psix2 = -c5*hol*stable + (c1-stable)*psixhu(xqq)
+      hols  = hols*zTrf/zlvl
+      psix2 = -c5*hols*stable + (c1-stable)*psi_scalar_unstable(hols)
       fac   = (rh/vonkar) &
-            * (alz + al2 - psixh + psix2)
+            * (alzs + al2 - psixh + psix2)
       Tref  = potT - delt*fac
       Tref  = Tref - p01*zTrf ! pot temp to temp correction
       fac   = (re/vonkar) &
-            * (alz + al2 - psixh + psix2)
+            * (alzs + al2 - psixh + psix2)
       Qref  = Qa - delq*fac
 
       if (highfreq .and. sfctype(1:3)=='ice') then
@@ -853,7 +856,7 @@
                                      Cdn_atm_ratio_n,            &
                                      Qa_iso,      Qref_iso,      &
                                      uvel,        vvel,          &
-                                     Uref)
+                                     Uref,        zlvs)
 
       character (len=3), intent(in) :: &
          sfctype      ! ice or ocean
@@ -864,7 +867,7 @@
          uatm     , & ! x-direction wind speed (m/s)
          vatm     , & ! y-direction wind speed (m/s)
          wind     , & ! wind speed (m/s)
-         zlvl     , & ! atm level height (m)
+         zlvl     , & ! atm level height for momentum (and scalars if zlvs is not present) (m)
          Qa       , & ! specific humidity (kg/kg)
          rhoa         ! air density (kg/m^3)
 
@@ -893,7 +896,8 @@
 
       real (kind=dbl_kind), optional, intent(in) :: &
          uvel     , & ! x-direction ice speed (m/s)
-         vvel         ! y-direction ice speed (m/s)
+         vvel     , & ! y-direction ice speed (m/s)
+         zlvs         ! atm level height for scalars (if different than zlvl) (m)
 
       real (kind=dbl_kind), optional, intent(out) :: &
          Uref         ! reference height wind speed (m/s)
@@ -965,7 +969,7 @@
                                    Qa_iso=l_Qa_iso,         &
                                    Qref_iso=l_Qref_iso,     &
                                    uvel=l_uvel, vvel=l_vvel,  &
-                                   Uref=l_Uref)
+                                   Uref=l_Uref, zlvs=zlvs)
          if (icepack_warnings_aborted(subname)) return
       endif ! atmbndy
 
@@ -981,31 +985,117 @@
 
       end subroutine icepack_atm_boundary
 
+!=======================================================================
+
+      function compute_stability_parameter(zlvl , thva , &
+                                           ustar, tstar, &
+                                           qstar, Qa)    &
+                                           result(hol)
+
+      real (kind=dbl_kind), intent(in) :: &
+         zlvl     , & ! atm level height (m)
+         thva     , & ! virtual temperature      (K)
+         ustar    , & ! turbulent scale for momentum
+         tstar    , & ! turbulent scale for temperature
+         qstar    , & ! turbulent scale for humidity
+         Qa           ! specific humidity (kg/kg)
+
+      real (kind=dbl_kind) :: &
+         hol          ! H (at zlvl) over L
+
+      character(len=*),parameter :: subname='(compute_stability_parameter)'
+
+      hol = vonkar * gravit * zlvl &
+               * (tstar/thva &
+               + qstar/(c1/zvir+Qa)) &
+               / ustar**2
+      hol    = sign( min(abs(hol),c10), hol)
+
+      end function compute_stability_parameter
+
+!=======================================================================
+
+      subroutine compute_stability_function(qty, hol, stable, psi)
+
+      character (len=*), intent(in) :: &
+         qty          ! 'momentum' or 'scalar'
+
+      real (kind=dbl_kind), intent(in) :: &
+         hol          ! H over L
+
+      real (kind=dbl_kind), intent(out) :: &
+         psi          , & ! stability function at hol
+         stable           ! unit step function at hol
+
+      ! local variables
+
+      real (kind=dbl_kind) :: &
+         psi_stable   , & ! stable stability funcion at hol
+         psi_unstable     ! unstable stability funcion at hol
+
+      character(len=*),parameter :: subname='(compute_stability_function)'
+
+      stable = p5 + sign(p5 , hol)
+
+      psi_stable = -(0.7_dbl_kind*hol &
+                 + 0.75_dbl_kind*(hol-14.3_dbl_kind) &
+                 * exp(-0.35_dbl_kind*hol) + 10.7_dbl_kind)
+
+      if(trim(qty) == 'momentum') then
+         psi_unstable = psi_momentum_unstable(hol)
+      elseif(trim(qty) == 'scalar') then
+         psi_unstable = psi_scalar_unstable(hol)
+      else
+         call icepack_warnings_add(subname//' incorrect qty: ' // qty)
+         call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
+      endif
+
+      psi = psi_stable*stable + (c1 - stable)*psi_unstable
+
+   end subroutine compute_stability_function
+
 !------------------------------------------------------------
 ! Define functions
 !------------------------------------------------------------
 
 !=======================================================================
 
-      real(kind=dbl_kind) function psimhu(xd)
+      real(kind=dbl_kind) function psi_momentum_unstable(hol)
 
-      real(kind=dbl_kind), intent(in) :: xd
+      real(kind=dbl_kind), intent(in) :: hol
 
-      psimhu = log((c1+xd*(c2+xd))*(c1+xd*xd)/c8) &
-             - c2*atan(xd) + pih
-!ech         - c2*atan(xd) + 1.571_dbl_kind
+      real(kind=dbl_kind) :: xd
 
-      end function psimhu
+      xd = capital_X(hol)
+
+      psi_momentum_unstable = log((c1+xd*(c2+xd))*(c1+xd*xd)/c8) &
+                              - c2*atan(xd) + pih
+
+      end function psi_momentum_unstable
 
 !=======================================================================
 
-      real(kind=dbl_kind) function psixhu(xd)
+      real(kind=dbl_kind) function psi_scalar_unstable(hol)
 
-      real(kind=dbl_kind), intent(in) :: xd
+      real(kind=dbl_kind), intent(in) :: hol
 
-      psixhu =  c2 * log((c1 + xd*xd)/c2)
+      real(kind=dbl_kind) :: xd
 
-      end function psixhu
+      xd = capital_X(hol)
+
+      psi_scalar_unstable =  c2 * log((c1 + xd*xd)/c2)
+
+      end function psi_scalar_unstable
+
+!=======================================================================
+
+      real(kind=dbl_kind) function capital_X(hol)
+
+      real(kind=dbl_kind), intent(in) :: hol
+
+      capital_X =  sqrt(max(sqrt(abs(c1 - c16*hol)) , c1))
+
+      end function capital_X
 
 !=======================================================================
 

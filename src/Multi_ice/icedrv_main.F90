@@ -174,7 +174,8 @@
           real (kind=dbl_kind), save :: & 
              zlvl_t     , &  ! atm level height for temperature (m)
              zlvl_q     , &  ! atm level height for humidity    (m)
-             zlvl_v          ! atm level height for wind        (m)
+             zlvl_v     , &  ! atm level height for wind        (m)
+             zlvs            ! atm level height for scalars (if different than zlvl) (m)
 
           real (kind=dbl_kind), allocatable, save :: & ! DIM nx
              uatm(:)    , &  ! wind velocity components (m/s)
