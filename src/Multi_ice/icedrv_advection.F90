@@ -24,7 +24,7 @@ submodule (icedrv_main) icedrv_advection
                                   icepack_query_parameters,       &
                                   icepack_query_tracer_sizes
     use schism_glbl, only: rkind,nea,np,npa,elnode,nnp,indnd,time_stamp,rnday, &
-   &fdb,lfdb,xnd,ynd,iplg,idry,i34,isbnd,xlon2,ylat2,pframe,eframe,area,idry_e,nxq, &
+   &fdb,lfdb,xnd,ynd,iplg,idry,i34,isbnd,pframe,eframe,area,idry_e,nxq, &
    &elside,iself,indel,nne,distj,snx,sny,isbs,xel,yel,xctr,yctr,xcj,ycj,ics,isidenode, &
    &sframe2,mnei_p
 

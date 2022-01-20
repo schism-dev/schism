@@ -1,7 +1,7 @@
 ! Init ice vars
 subroutine ice_init
     use schism_glbl, only : rkind,pi,np,npa,ne,nea,mnei,mnei_p,nne,indel,xctr,yctr,area, &
-   &nstep_ice,fresh_wa_flux,net_heat_flux,xlon2,ylat2,rearth_eq,elnode,nnp,indnd,iplg,dt, &
+   &nstep_ice,fresh_wa_flux,net_heat_flux,xlon,ylat,rearth_eq,elnode,nnp,indnd,iplg,dt, &
    &xnd,ynd,errmsg,lice_free_gb,in_dir,out_dir,len_in_dir,len_out_dir,ice_evap,ielg,i34, &
    &iself,nxq,zctr,dldxy
     use schism_msgp, only : myrank,parallel_abort,parallel_finalize,exchange_p2d
@@ -124,15 +124,15 @@ subroutine ice_init
   voltriangle=0.
   do i=1,nea
     call compute_ll(xctr(i),yctr(i),zctr(i),ar1,ar2)
-    meancos=sum(cos(ylat2(elnode(1:3,i))))/3.d0
+    meancos=sum(cos(ylat(elnode(1:3,i))))/3.d0
     meancos=cos(ar2)
     do j=1,3 !nodes
       nd=elnode(j,i)
-      local_cart(1,j)=xlon2(nd) !radian
-      local_cart(2,j)=ylat2(nd)*rearth_eq
-      !local_cart(1,j)=rearth_eq*cos(ylat2(nd))*cos(xlon2(nd))
-      !local_cart(2,j)=rearth_eq*cos(ylat2(nd))*sin(xlon2(nd))
-      !write(12,*) xlon2(nd)/pi*180,ylat2(nd)/pi*180
+      local_cart(1,j)=xlon(nd) !radian
+      local_cart(2,j)=ylat(nd)*rearth_eq
+      !local_cart(1,j)=rearth_eq*cos(ylat(nd))*cos(xlon(nd))
+      !local_cart(2,j)=rearth_eq*cos(ylat(nd))*sin(xlon(nd))
+      !write(12,*) xlon(nd)/pi*180,ylat(nd)/pi*180
     enddo !j
 
     !Jacobian of transform

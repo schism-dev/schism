@@ -2,7 +2,7 @@
 subroutine ice_mevp
     use schism_glbl,only: rkind,time_stamp,eta2,np,npa,ne,nea,dldxy,elnode,i34,cori, &
    &grav,isbnd,nne,indel,area,iself,time_stamp,rnday,fdb,lfdb,xnd,ynd,iplg,ielg, &
-   &elside,mnei,rho0,idry,errmsg,pframe,eframe,indnd,nnp,omega_e,xlon2,ylat2
+   &elside,mnei,rho0,idry,errmsg,pframe,eframe,indnd,nnp,omega_e,xlon,ylat
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
     use mice_module
     use mice_therm_mod
@@ -165,7 +165,7 @@ subroutine ice_mevp
         !mass=max(mass,9.d0*ice_tr(2,i)) !limit m/a>=9
         !Coriolis @ node
         !cori_nd=dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
-        cori_nd = 2.d0*omega_e*sin(ylat2(i))
+        cori_nd = 2.d0*omega_e*sin(ylat(i))
         !Debug
         !if(isub==1.and.it_main==1) then
         !  write(93,*)i,real(xnd(i)),real(ynd(i)),real(),real(cori_nd) !,real(h_ice_nd),real(mass)

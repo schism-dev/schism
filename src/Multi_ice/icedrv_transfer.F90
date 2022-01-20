@@ -12,7 +12,7 @@
 
       module subroutine schism_to_icepack
           use schism_glbl,only: rkind,npa,tr_nd,iplg,pr,fluxprc,rho0,windx,windy, &
-          &nvrt,srad_o,albedo,hradd,airt1,shum1,errmsg,xlon2,ylat2,fresh_wa_flux,net_heat_flux, &
+          &nvrt,srad_o,albedo,hradd,airt1,shum1,errmsg,fresh_wa_flux,net_heat_flux, &
           uu2,vv2,area,elnode,i34,dt,nstep_ice,prec_rain,prec_snow,it_main,lhas_ice,drampwind, &
           nws,nrampwind,idry,isbnd,dp,nnp,znl,eta2,kbp,prho
           use schism_msgp, only: myrank,nproc,parallel_abort,parallel_finalize,exchange_p2d

@@ -3,7 +3,7 @@ subroutine ice_evp
     use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
    &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa,xctr,yctr,zctr,pi,&
-   &pframe,eframe,indnd,nnp,omega_e,xlon2,ylat2,dp
+   &pframe,eframe,indnd,nnp,omega_e,dp,xlon,ylat
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,rtype,comm
     use mice_module
     use mice_therm_mod
@@ -241,7 +241,7 @@ subroutine ice_evp
         !Error: limit mass>9?
         !Coriolis @ node
         !cori_nd = dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
-        cori_nd = 2.d0*omega_e*sin(ylat2(i))
+        cori_nd = 2.d0*omega_e*sin(ylat(i))
         !tmp3 = dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
         !if(abs(tmp3-cori_nd)>1.d-8) write(12,*) i,tmp3,cori_nd
         !Debug
