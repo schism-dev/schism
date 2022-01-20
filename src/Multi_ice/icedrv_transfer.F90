@@ -14,7 +14,7 @@
           use schism_glbl,only: rkind,npa,tr_nd,iplg,pr,fluxprc,rho0,windx,windy, &
           &nvrt,srad_o,albedo,hradd,airt1,shum1,errmsg,xlon2,ylat2,fresh_wa_flux,net_heat_flux, &
           uu2,vv2,area,elnode,i34,dt,nstep_ice,prec_rain,prec_snow,it_main,lhas_ice,drampwind, &
-          nws,nrampwind,idry,isbnd,dp,nnp
+          nws,nrampwind,idry,isbnd,dp,nnp,znl,eta2,kbp,prho
           use schism_msgp, only: myrank,nproc,parallel_abort,parallel_finalize,exchange_p2d
           use mice_module
           use mice_therm_mod
@@ -62,23 +62,28 @@
              ! Volumetr. heat cap. of water [J/m**3/K](cc = rhowat*cp_water)
              ex     = 0.286_dbl_kind
 
-          integer(kind=dbl_kind)   :: i, n,  k,  elem
+          integer(kind=dbl_kind)   :: i, n,  k,  elem, j, kbp1, indx
           integer (kind=int_kind)  :: nt_Tsfc
-          real   (kind=int_kind)   :: tx, ty, tvol
+          real   (kind=int_kind)   :: tx, ty, tmp3, tmp4, tvol,utmp(3),vtmp(3),&
+          &eps11,eps12,eps22,delta_ice0
 
           real (kind=dbl_kind) :: &
              aux,                 &
              cprho,maxu,maxv,tmp1,tmp2,tmpsum,maxuwind,maxvwind,tmpw1,tmpw2,tmpwsum
-          real(rkind) :: ug,ustar,T_oc,S_oc,fw,ehf,srad2,dux,dvy,rampwind
+          real(rkind) :: ug,ustar,T_oc,S_oc,fw,ehf,srad2,dux,dvy,rampwind,dptot,hmixt
           !type(t_mesh), target, intent(in) :: mesh
+         real(rkind), allocatable :: depth0(:)
 
+         allocate(depth0(nvrt))
             call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc)
           ! Ice 
           do i=1,npa
            
                uvel(i)  = u_ice(i)
                vvel(i)  = v_ice(i)
-               hmix(i)=min(hmix(i),dp(i))
+               dptot = max(0.d0,dp(i)+eta2(i))
+               depth0 = abs(znl(:,i))
+               !hmix(i)=min(dptot)
                ! Ocean 
                !T_oc(:)=tr_nd(1,nvrt,:) !T@ mixed layer - may want to average top layers??
                !S_oc(:)=tr_nd(2,nvrt,:) !S
@@ -88,14 +93,15 @@
                v_ocean(i)= vv2(nvrt,i)
                uatm(i)   = windx(i)
                vatm(i)   = windy(i)
-               
+     
                sss(i)    = tr_nd(2,nvrt,i)
 
                Tf(i)   = icepack_sea_freezing_temperature(sss(i))
+               
+               hmix(i) = abs(depth0(nvrt)-depth0(nvrt - 1))
+               hmix(i) = min(dptot , hmix(i))
+               !if(idry(i)==1) hmix(i) = 0
 
-               sst(i)    = tr_nd(1,nvrt,i)
-               sstdat(i) = tr_nd(1,nvrt,i)
-     
                T_air(i)  = airt1(i) + 273.15_dbl_kind
                Qa(i)     = shum1(i)
 
@@ -110,12 +116,12 @@
                 wind(i)   = sqrt(uatm(i)**2 + vatm(i)**2)
      
                !if ( l_mslp ) then
-               !   potT(:) = T_air(:)*(press_air(:)/100000.0_dbl_kind)**ex             
-               !   rhoa(:) = press_air(:) / (R_dry * T_air(:) * (c1 + ((R_vap/R_dry) * Qa) ))
+                  !potT(:) = T_air(:)*(press_air(:)/100000.0_dbl_kind)**ex             
+                  rhoa(:) = pr(:) / (R_dry * T_air(:) * (c1 + ((R_vap/R_dry) * Qa) ))
                !else 
                   ! The option below is used in FESOM2
-                  potT(i) = T_air(i)
-                  rhoa(i) = 1.3_dbl_kind
+                  potT(i) = T_air(i) !+ 0.0098d0*2
+                  !rhoa(i) = 1.3_dbl_kind
                !endif
                ! divide shortwave into spectral bands
                swvdr(i) = fsw(i)*frcvdr        ! visible direct
@@ -153,6 +159,7 @@
          zlvl_t    = 2 !ncar_bulk_z_tair
          zlvl_q    = 2 !ncar_bulk_z_shum
          zlvl_v    = 10 !ncar_bulk_z_wind
+         zlvs      = 2
          
          strocnxT(:)=0
          strocnyT(:)=0
@@ -160,15 +167,15 @@
 
           do i = 1 , npa
             ! ocean - ice stress
-            if(lhas_ice(i)) then
+            !if(lhas_ice(i)) then
               aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*cd_oce_ice
               strocnxT(i) = aux*(uvel(i) - uocn(i))
               strocnyT(i) = aux*(vvel(i) - vocn(i))
-            endif
+            !endif
               ! freezing - melting potential
               Tf(i)   = icepack_sea_freezing_temperature(sss(i))
-              frzmlt(i) = min(max((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt,-1000.0_dbl_kind), 1000.0_dbl_kind)
-              !frzmlt(i) = min((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt, 1000.0_dbl_kind)
+              !frzmlt(i) = min(max((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt,-1000.0_dbl_kind), 1000.0_dbl_kind)
+              frzmlt(i) = min((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt, 1000.0_dbl_kind)
             
          enddo
 
@@ -218,7 +225,8 @@
           secday        = real(sec, kind=dbl_kind)
           calendar_type = 'Gregorian'
           dt_dyn        = ice_dt/real(ndtd,kind=dbl_kind) ! dynamics et al timestep
-
+          
+          deallocate(depth0)
       end subroutine schism_to_icepack
 
 !=======================================================================
