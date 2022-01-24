@@ -11,8 +11,9 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021 Helmholtz-Zentrum Hereon
-!> @copyright Copyright 2017--2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
+!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
+!> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht
 !
 ! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
 ! Public License Version 3.0
@@ -120,9 +121,9 @@ module fabm_schism
 
   type, public :: type_fabm_schism
 #if _FABM_API_VERSION_ > 0
-  type(type_fabm_model), pointer     :: model => null()
+    type(type_fabm_model), pointer :: model => null()
 #else
-  type(type_model), pointer     :: model => null()
+    type(type_model), pointer      :: model => null()
 #endif
 
     character(len=1024)           :: version = 'unknown'
@@ -1597,7 +1598,7 @@ subroutine link_environmental_data(self, rc)
   if (present(rc)) rc = 0
 
   !> The dissipation of the turbulent kinetic energy is usually abbreviated as
-  ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, or,
+  ! eps with greek symbol notation $\epsilon$. Its unit is W kg-1, J (kg s)-1, or,
   ! equivalently m2 s-3.
   ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
@@ -1629,7 +1630,7 @@ subroutine link_environmental_data(self, rc)
   !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
-      units='m3'), self%bottom_tke)
+      units='m2 s-2'), self%bottom_tke)
   !call fabm_link_bulk_data(self%model, &
   !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
   !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
