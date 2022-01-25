@@ -2,7 +2,7 @@
 subroutine ice_mevp
     use schism_glbl,only: rkind,time_stamp,eta2,np,npa,ne,nea,dldxy,elnode,i34,cori, &
    &grav,isbnd,nne,indel,area,iself,time_stamp,rnday,fdb,lfdb,xnd,ynd,iplg,ielg, &
-   &elside,mnei,rho0,idry,errmsg,pframe,eframe,indnd,nnp,omega_e,xlon,ylat
+   &elside,mnei,rho0,idry,errmsg,pframe,eframe,indnd,nnp,omega_e,xlon,ylat,idry_e
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d
     use mice_module
     use mice_therm_mod
@@ -116,6 +116,21 @@ subroutine ice_mevp
         sigma12(i)=sigma12(i)+(rr3-sigma12(i))/mevp_alpha1
         sigma11(i)=0.5*(sig1+sig2)
         sigma22(i)=0.5*(sig1-sig2)
+
+        do j=1,i34(i)
+          if(a_ice0(elnode(j,i))<=ice_cutoff.or.m_ice0(elnode(j,i))<=ice_cutoff) then
+            sigma12(i) = 0
+            sigma11(i) = 0
+            sigma22(i) = 0
+            rdg_conv_elem(i) = 0
+            rdg_shear_elem(i) = 0
+          endif
+        enddo
+        if(idry_e(i) == 1) then
+            rdg_conv_elem(i) = 0
+            rdg_shear_elem(i) = 0
+        endif
+        
       enddo !i=1,nea
   
   !    if(isub==evp_rheol_steps.and.it_main==1) then
@@ -137,6 +152,7 @@ subroutine ice_mevp
         else
           if(maxval(idry(elnode(1:i34(i),i)))/=0) then !dry
             deta(1:2,i)=0
+            deta_pice(1:2,i) = 0
           else !wet
             p_ice=(rhoice*m_ice0(elnode(1:i34(i),i))+rhosno*m_snow0(elnode(1:i34(i),i)))/rho0
             deta_pice(1,i)=dot_product((eta2(elnode(1:i34(i),i))+p_ice(1:3)),dldxy(1:i34(i),1,i))
@@ -159,7 +175,11 @@ subroutine ice_mevp
             U_ice(i)=0; V_ice(i)=0
           cycle 
         endif
-     
+             
+        if(idry(i)/=0) then !dry
+          U_ice(i)=0; V_ice(i)=0
+          cycle 
+        endif
         !Not bnd node; has ice
         mass=(rhoice*ice_tr0(1,i)+rhosno*ice_tr0(3,i))  !>0
         !mass=max(mass,9.d0*ice_tr(2,i)) !limit m/a>=9

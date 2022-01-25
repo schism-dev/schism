@@ -3,7 +3,7 @@ subroutine ice_evp
     use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
    &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa,xctr,yctr,zctr,pi,&
-   &pframe,eframe,indnd,nnp,omega_e,dp,xlon,ylat
+   &pframe,eframe,indnd,nnp,omega_e,xlon,ylat,dp,idry_e
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,rtype,comm
     use mice_module
     use mice_therm_mod
@@ -156,6 +156,10 @@ subroutine ice_evp
             rdg_shear_elem(i) = 0
           endif
         enddo
+        if(idry_e(i) == 1) then
+            rdg_conv_elem(i) = 0
+            rdg_shear_elem(i) = 0
+        endif
         
       enddo !i=1,nea
   
@@ -196,6 +200,7 @@ subroutine ice_evp
         else
           if(maxval(idry(elnode(1:i34(i),i)))/=0) then !dry
             deta(1:2,i)=0
+            deta_pice(1:2,i) = 0
           else !wet
             p_ice = 0
             !do n=1,3
@@ -228,7 +233,7 @@ subroutine ice_evp
           cycle 
         endif
         
-        if(eta2(i)+dp(i)<0.01) then
+        if(idry(i)/=0) then !dry
           U_ice(i)=0; V_ice(i)=0
           cycle 
         endif
@@ -331,12 +336,12 @@ subroutine ice_evp
         !  write(92,*)real(xnd(i)),real(ynd(i)),real(U_ice(i)),real(V_ice(i))
         !endif
       enddo !i=1,np
-      do i=1,nea
-        if(maxval(idry(elnode(1:i34(i),i)))/=0) then
-          U_ice(elnode(1:i34(i),i))=0
-          V_ice(elnode(1:i34(i),i))=0
-        endif
-      enddo
+      !do i=1,nea
+      !  if(maxval(idry(elnode(1:i34(i),i)))/=0) then
+      !    U_ice(elnode(1:i34(i),i))=0
+      !    V_ice(elnode(1:i34(i),i))=0
+      !  endif
+      !enddo
       call exchange_p2d(U_ice)
       call exchange_p2d(V_ice)
     enddo !isub: sub-cycling
