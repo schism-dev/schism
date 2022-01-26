@@ -49,4 +49,8 @@
   salt_water=34. !salinity for water [PSU] (>=0)
   lead_closing=0.5 !lead closing parameter [m] - larger values slow down freezing-up but increase sea ice thickness
   Saterm=0.5 !Semter const -smaller value could slow down melting
+  albsn=0.85 !Albedo: frozen snow
+  albsnm=0.75  !melting snow (<=albsn)
+  albi=0.75  !frozen ice (<=albsn)
+  albm=0.66  !melting ice (<=albi)
 /

@@ -33,7 +33,7 @@ subroutine ice_init
   namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
  &delta_min,theta_io,mevp_alpha1,mevp_alpha2,mevp_alpha3,mevp_alpha4,pstar,ellipse,c_pressure,niter_fct, &
  &ice_gamma_fct,h_ml0,salt_ice,salt_water,mevp_coef,depth_ice_fct,ncyc_fct,lead_closing,Saterm, &
- &ice_atmos_stress_form,cdwin0
+ &ice_atmos_stress_form,cdwin0,albsn,albsnm,albi,albm
   
   !Init parameters
   !integers
@@ -49,6 +49,7 @@ subroutine ice_init
   depth_ice_fct=5.d0
   lead_closing=0.5; Saterm=0.5
   cdwin0=2.d-3
+  albsn=0.85; albsnm=0.75; albi=0.75; albm=0.66
 
   open(10,file=in_dir(1:len_in_dir)//'ice.nml',status='old')
   read(10,nml=ice_in)
@@ -78,6 +79,10 @@ subroutine ice_init
   if(cdwin0<0.d0) call parallel_abort('ice_init: cdwin0')
   !0: const Cdw; 1: FESOM
   if(ice_atmos_stress_form/=0.and.ice_atmos_stress_form/=1) call parallel_abort('ice_init: ice_atmos_stress_form')
+  if(albsn<0.d0.or.albsn>1.d0) call parallel_abort('ice_init: albsn')
+  if(albsnm<0.d0.or.albsnm>1.d0) call parallel_abort('ice_init: albsnm')
+  if(albi<0.d0.or.albi>1.d0) call parallel_abort('ice_init: albi')
+  if(albm<0.d0.or.albm>1.d0) call parallel_abort('ice_init: albm')
   
   dt_ice=dt*nstep_ice
   cos_io=cos(theta_io/180*pi)

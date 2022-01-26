@@ -52,11 +52,12 @@ module ice_therm_mod
   real(rkind),parameter :: d3=boltzmann*emiss  ! SIOM standard (MH)
   real(rkind),parameter :: con   = 2.1656 ! Thermal conductivities: ice [W/m/K]
   real(rkind),parameter :: consn = 0.31   ! snow
-  real(rkind),parameter :: albsn=0.85     ! Albedo: frozen snow
-  real(rkind),parameter :: albsnm=0.75    !         melting snow
-  real(rkind),parameter :: albi=0.75      !         frozen ice
-  real(rkind),parameter :: albm=0.66      !         melting ice
+!  real(rkind),parameter :: albsn=0.85     ! Albedo: frozen snow
+!  real(rkind),parameter :: albsnm=0.75    !         melting snow
+!  real(rkind),parameter :: albi=0.75      !         frozen ice
+!  real(rkind),parameter :: albm=0.66      !         melting ice
   real(rkind),parameter :: albw=0.10      !         open water
+  real(rkind) :: albsn,albsnm,albi,albm
 
   !Variables
   !(npa). T@ top of ice/snow surface (T_sfc in Parkinson &Washington) [C]. NOT
