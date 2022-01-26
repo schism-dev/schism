@@ -46,6 +46,8 @@ SMS maps and other info for lake projects.
 Steps for loading bathymetry
 1. loading bathymetry for Superior_Wei_v8.ll
 	1) Load ascii file from dir below: (script: /sciclone/home20/whuang07/schism10/GreatLakes/Grid/v9/load_asc.pl)
+        (fortran script used in the load_asc.pl is an older version of fortran script:
+        schism/src/Utility/Grid_Scripts/interpolate_depth_structured2.f90)
 	/sciclone/home20/whuang07/schism10/GreatLakes/DEM/ascii/
 	superior_lld.asc
 	dem_3m_above0m_ldw_ll.asc
@@ -69,6 +71,8 @@ Steps for loading bathymetry
 2. loading bathymetry for FiveLakes_Wei_v2.map
 	1) Load ascii file from dir below: (script: /sciclone/home20/whuang07/schism10/GreatLakes/Grid/v10/load_asc.pl)
 	/sciclone/home20/whuang07/schism10/GreatLakes/DEM/ascii/
+        (fortran script used in the load_asc.pl is an older version of fortran script:
+        schism/src/Utility/Grid_Scripts/interpolate_depth_structured2.f90)
 	2) Load bathy from separate mesh using gred:
 	/sciclone/home20/whuang07/schism10/GreatLakes/Grid/v10/Depth_regions_from_NVChart.ll
 	3) Load depth from another separate mesh using gred:
