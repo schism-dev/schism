@@ -183,7 +183,7 @@
       integer, optional, intent(in) :: irank
 
       integer :: iret,i,npes,len_var,ivarid1,ndims,dimids(100),idims(100),ncid2,ielev_id
-      character(len=4) :: a_4
+      character(len=6) :: a_4
       real, allocatable :: worka(:,:,:),workb(:)
 
       if(allocated(worka)) deallocate(worka) 
