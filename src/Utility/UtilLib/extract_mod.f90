@@ -195,7 +195,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(irank)) then !uncombined
-        write(a_4,'(i4.4)') irank
+        write(a_4,'(i6.6)') irank
         file_char='schout_'//a_4//'_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'

@@ -11,7 +11,7 @@ Github versions:
 
 80f1caa (26 Jan 2022): added 4 parameters in ice.nml: albsn,albsnm, albi,albm
 d792ed0 (18 Jan 2022): added 2 new ice parameters: 'ice_atmos_stress_form' and 'cdwin0';
-b4d2214 (7 Jan 2022): added a new parameter 'nu_sum_mult' to allow sum/product of final relax constants;
+b4d2214 (7 Jan 2022): added a new parameter 'nu_sum_mult' to allow sum/product of final relax constants for tracer nudging;
 f9f0844 (3 Jan 2022): ICE module, added 2 new parameters: lead_closing, Saterm. Also changed ice-wind stress formula;
 7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
 91c91a7 (17 Dec 2021): ICE module, added new parameters: ncyc_fct, depth_ice_fct. Also requires ice_fct.gr3 now;
