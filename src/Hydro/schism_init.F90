@@ -1383,7 +1383,7 @@
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa),shapiro_min(npa), &
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
          & wwave_force(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
@@ -2907,34 +2907,34 @@
           if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
 !'
         enddo !i
-      else if(ishapiro==2) then !read in optional shapiro_min.gr3
-        shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
-        if(myrank==0) then
-          inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
-          if(lexist) then
-            write(16,*)'Reading in shapiro_min.gr3'
-            open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
-            read(32,*)
-            read(32,*) itmp1,itmp2
-            if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check shapiro_min.gr3')
-            do i=1,np_global
-              read(32,*)j,xtmp,ytmp,tmp
-              if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
-              buf3(i)=tmp
-!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
-            enddo !i
-            close(32)
-          endif !lexist
-        endif !myrank
-        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-        call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
-
-        if(lexist) then
-          do i=1,np_global
-            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
-          enddo !i
-        endif !lexist
+!      else if(ishapiro==2) then 
+!        shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
+!        if(myrank==0) then
+!          inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
+!          if(lexist) then
+!            write(16,*)'Reading in shapiro_min.gr3'
+!            open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
+!            read(32,*)
+!            read(32,*) itmp1,itmp2
+!            if(itmp1/=ne_global.or.itmp2/=np_global) &
+!     &call parallel_abort('Check shapiro_min.gr3')
+!            do i=1,np_global
+!              read(32,*)j,xtmp,ytmp,tmp
+!              if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
+!              buf3(i)=tmp
+!!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
+!            enddo !i
+!            close(32)
+!          endif !lexist
+!        endif !myrank
+!        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!        call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
+!
+!        if(lexist) then
+!          do i=1,np_global
+!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
+!          enddo !i
+!        endif !lexist
       endif !ishapiro==-1
 
 !...  Horizontal diffusivity option; only works for upwind/TVD

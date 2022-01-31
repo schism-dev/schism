@@ -447,7 +447,7 @@ module schism_glbl
   real(rkind),save,allocatable :: rho_mean(:,:)         ! mean density
   real(rkind),save,allocatable :: Cdp(:)         ! drag at node
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
-  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
+!  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
