@@ -388,20 +388,23 @@
 !...  forcing and tidal potential forcing
 !...
       if(ibc==0) then
-        if(nrampbc/=0) then
+!        if(nrampbc/=0) then
+        if(drampbc>0.d0) then
           rampbc=tanh(2.d0*time/86400.d0/drampbc)
         else
           rampbc=1.d0
         endif
       endif
 
-      if(nws>0.and.nrampwind/=0) then
+!      if(nws>0.and.nrampwind/=0) then
+      if(nws>0.and.drampwind>0.d0) then
         rampwind=tanh(2.d0*time/86400.d0/drampwind)
       else
         rampwind=1.d0
       endif
 
-      if(nrampwafo/=0) then
+!      if(nrampwafo/=0) then
+      if(drampwafo>0.d0) then
         rampwafo=tanh(2.d0*time/86400.d0/drampwafo)
       else
         rampwafo=1.d0
@@ -409,14 +412,16 @@
 
       !For source/sinks
       if(if_source/=0) then
-        if(nramp_ss==1) then
+        !if(nramp_ss==1) then
+        if(dramp_ss>0.d0) then
           ramp_ss=tanh(2.d0*time/86400.d0/dramp_ss)
         else
           ramp_ss=1.d0
         endif
       endif
 
-      if(nramp==1) then
+      !if(nramp==1) then
+      if(dramp>0.d0) then
         ramp=tanh(2.d0*time/86400.d0/dramp)
       else
         ramp=1.d0

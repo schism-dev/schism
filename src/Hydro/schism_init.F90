@@ -183,9 +183,9 @@
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
-     &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,nrampbc,drampbc, &
-     &nramp,dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
-     &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form,nrampwind, &
+     &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
+     &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
+     &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form, &
      &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
@@ -195,9 +195,9 @@
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
-     &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
+     &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
-     &iwbl,cur_wwm,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
+     &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
@@ -450,10 +450,10 @@
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
       gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
-      ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
-      nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
+      ihdif=0; thetai=0.6_rkind; drampbc=0.d0
+      dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
-      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; nrampwind=1; iwindoff=0;
+      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
@@ -469,9 +469,9 @@
       ibtrack_test=0; irouse_test=0;  
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
-      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
+      iharind=0; icou_elfe_wwm=0; drampwafo=0.d0; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
-      iwbl=0; cur_wwm=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
+      iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
@@ -629,11 +629,10 @@
 !     vclose_surf_frac = 1.0.       
       if(myrank==0) write(16,*)'vclose_surf_frac is:',vclose_surf_frac 
 
-!...  dramp not used if nramp=0
-      if(nramp/=0.and.nramp/=1) then
-        write(errmsg,*)'Unknown nramp',nramp
-        call parallel_abort(errmsg)
-      endif
+!      if(nramp/=0.and.nramp/=1) then
+!        write(errmsg,*)'Unknown nramp',nramp
+!        call parallel_abort(errmsg)
+!      endif
 
 !     Time step in seconds
 !      call get_param('param.in','dt',2,itmp,dt,stringvalue)
@@ -1019,7 +1018,6 @@
 
 !     Elev. b.c. ramp option (=0: ramp up from eta=0; =1: from eta2 before
 !     the time loop, after the hotstart loop)
-!      call get_param('param.in','nramp_elev',1,nramp_elev,tmp,stringvalue)
       if(nramp_elev/=0.and.nramp_elev/=1) then
         write(errmsg,*)'Illegal nramp_elev:',nramp_elev
         call parallel_abort(errmsg)
@@ -1074,10 +1072,10 @@
       endif
 
 !...  ramp for the wave forces
-      if(nrampwafo/=0.and.nrampwafo/=1) then
-        write(errmsg,*)'Unknown nrampwafo',nrampwafo
-        call parallel_abort(errmsg)
-      endif
+!      if(nrampwafo/=0.and.nrampwafo/=1) then
+!        write(errmsg,*)'Unknown nrampwafo',nrampwafo
+!        call parallel_abort(errmsg)
+!      endif
 
 !     Coupling interval (# of time steps)
       if(nstep_wwm<1) then
@@ -1106,12 +1104,11 @@
       if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
 !     Check all ramp periods
-      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')
-
-      if(min(dramp,drampbc,drampwind,drampwafo)<=0.d0) then
-        write(errmsg,*)'INIT: illegal ramp, ',dramp,drampbc,drampwind,drampwafo
-        call parallel_abort(errmsg)
-      endif
+!      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')
+!      if(min(dramp,drampbc,drampwind,drampwafo)<=0.d0) then
+!        write(errmsg,*)'INIT: illegal ramp, ',dramp,drampbc,drampwind,drampwafo
+!        call parallel_abort(errmsg)
+!      endif
 
 #ifdef USE_MARSH
       !SLR rate in mm/year
@@ -6898,7 +6895,7 @@
       endif
 
 !...  Assign variables in GOTM for cold starts
-      if(itur==4.and.(ihot==0.or.ihot==1.and.nramp==1)) then
+      if(itur==4.and.(ihot==0.or.ihot==1.and.dramp>0.d0)) then
 #ifdef USE_GOTM
 !          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
 !          call init_tridiagonal(nvrt-1)

@@ -111,11 +111,11 @@
 !-----------------------------------------------------------------------
 ! Main ramp option
 !-----------------------------------------------------------------------
-  nramp = 1 !ramp-up option (1: on; 0: off)
-  dramp = 1. !needed if nramp=1; ramp-up period in days
+!  nramp = 1 !ramp-up option (1: on; 0: off)
+  dramp = 1. !ramp-up period in days for b.c. etc (no ramp-up if <=0)
 
-  nrampbc = 0 !ramp-up flag for baroclinic force
-  drampbc = 1. !not used if nrampbc=0
+!  nrampbc = 0 !ramp-up flag for baroclinic force
+  drampbc = 0. !ramp-up period in days for baroclinic force
 
 !-----------------------------------------------------------------------
 ! Method for momentum advection. 0: ELM; 1: upwind (not quite working yet)
@@ -187,8 +187,8 @@
            !icou_elfe_wwm/=0 and nchi=1. If icou_elfe_wwm=0, set iwbl=0): 
            !1-modified Grant-Madsen formulation; 2-Soulsby (1997)
   hmin_radstress = 1. !min. total water depth used only in radiation stress calculation [m]
-  nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
-  drampwafo = 1.      !needed if nrampwafo=1; ramp-up period in days
+!  nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
+  drampwafo = 0.      !ramp-up period in days for the wave forces (no ramp-up if <=0)
   turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence (default: 0.15 (15%), as proposed by Feddersen, 2012)
                          ! Vortex Force terms (off/on:0/1)
   fwvor_advxy_stokes = 1 !  --> Stokes drift advection (xy), Coriolis
@@ -268,8 +268,8 @@
 ! zero out sink if the elem is dry if meth_sink=1
 !-----------------------------------------------------------------------
   if_source = 0
-  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
-  dramp_ss = 2 !needed if if_source=1; ramp-up period in days
+!  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
+  dramp_ss = 2 !needed if if_source=1; ramp-up period in days for source/sinks (no ramp-up if <=0)
   meth_sink = 1 !options to treat sinks @ dry elem
 
 !-----------------------------------------------------------------------
@@ -313,7 +313,7 @@
 ! Elevation boundary condition ramp-up flag. =0: ramp up from 0; =1: ramp up from
 ! elev. values read in from elev.ic or hotstart.nc - if neither is present, from 0.
 ! This flag is mainly used to start the simulation from non-zero elev.
-! The ramp-up period is same as 'dramp' below.
+! The ramp-up period is 'dramp'.
 !-----------------------------------------------------------------------
   nramp_elev = 0
 
@@ -499,8 +499,8 @@
 !-----------------------------------------------------------------------
   nws = 0 
   wtiminc = 150. !time step for atmos. forcing. Default: same as dt
-  nrampwind = 1 !ramp-up option for atmos. forcing
-  drampwind = 1. !needed if nrampwind/=0; ramp-up period in days
+!  nrampwind = 1 !ramp-up option for atmos. forcing
+  drampwind = 1. !ramp-up period in days for wind (no ramp-up if <=0)
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
   !If impose_net_flux/=0 and nws=2, read in net _surface_ heat flux as var 'dlwrf' 

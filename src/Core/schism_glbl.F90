@@ -83,7 +83,7 @@ module schism_glbl
 
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
-                  &ibc,nrampbc,nrampwind,nrampwafo,nramp,nramp_ss,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
+                  &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
