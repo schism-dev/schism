@@ -308,9 +308,9 @@
 !   (1) air, rad and prc each can have up to 2 sources;
 !   (2) grids for air, rad and prc can be different (but must be the same within
 !       each type and each source). Additional requirements for the structured grid in .nc:
-!       [lon,lat](nx,ny) give x,y coord., nx is # of pts in x. Suppose a node in the grid is
-!       given by (i,j) (1<=i<=nx), then the quad (i,j), (i+1,j), (i+1,j+1,i,j+1) must be along
-!       counter-clockwise direction;
+!       [lon,lat](nx,ny) give x,y coord; 
+!       orientation of the structured grids can be either clock or counter-clockwise 
+!       (but must be self consistent within each set); 
 !   (3) search for "relative_weight" (inside netcdf_io) to 
 !       change relative weights of the 2 sources for air, rad and prc if needed. All weights must > 0!
 !   (4) in case of 2 sources/grids for a variable, use "1" as larger grid (i.e. encompassing hgrid.ll)

@@ -526,6 +526,7 @@ git versions:
 (131) (19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);
 (132) 7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
 (133) 7455d5d (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;
+(134) (31 Jan 2022): removed the restriction of counter-clockwise orientation in sflux grid;
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
