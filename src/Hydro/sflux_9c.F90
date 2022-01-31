@@ -2386,18 +2386,19 @@
         integer, intent(out), dimension(num_nodes_out) :: &
      &    in_elem_for_out_node
 
-        real(rkind) area_in(num_elems)
-        integer i_elem, i_node
-        integer i1, j1, i2, j2, i3, j3
-        integer last_elem, top, floor
-        real(rkind) x1, y1, x2, y2, x3, y3, x4, y4
-        real(rkind) a1, a2, a3, aa, ae
-        real(rkind) ae_min
+        real(rkind) :: area_in(num_elems)
+        integer :: i_elem, i_node
+        integer :: i1, j1, i2, j2, i3, j3,isign_area
+        integer :: last_elem, top, floor
+        real(rkind) :: x1, y1, x2, y2, x3, y3, x4, y4
+        real(rkind) :: a1, a2, a3, aa, ae
+        real(rkind) :: ae_min
         real(rkind), parameter :: epsilon = 1.0d-10
         real(rkind), parameter :: bad_point_flag = -9.9d20
-        logical zero_ae, completed_check
+        logical :: zero_ae, completed_check
 
 ! calculate and store the areas of the input grid elements
+        isign_area=1 !init as counter-clockwise
         do i_elem = 1, num_elems !sflux grid; already split into pair of triangles like .gr3 format
           i1 = node_i(elem_nodes(i_elem,1))
           j1 = node_j(elem_nodes(i_elem,1))
@@ -2414,6 +2415,17 @@
           x3 = x_in(i3,j3)
           y3 = y_in(i3,j3)
           area_in(i_elem)=0.5d0*((x1-x3)*(y2-y3)+(x3-x2)*(y1-y3)) !tri
+          if(area_in(i_elem)==0.d0) then
+            write(errmsg,*) 'get_weight, 0 area:',area_in(i_elem),i_elem
+            call parallel_abort(errmsg)
+          endif
+ 
+          !Make sure all orintations are consistent (clockwise or counter-clockwise)
+          if(i_elem==1.and.area_in(i_elem)<0.d0) isign_area=-1 !clockwise
+          if(isign_area*area_in(i_elem)<0.d0) then
+            write(errmsg,*) 'get_weight, orientation not consistent:',isign_area,area_in(i_elem),i_elem
+            call parallel_abort(errmsg)
+          endif
         enddo
 
 ! now loop over the nodes of the output grid, searching for the
@@ -2506,12 +2518,11 @@
             a2 = (x4-x1)*(y3-y1) - (y4-y1)*(x3-x1)
             a3 = (y4-y1)*(x2-x1) - (x4-x1)*(y2-y1)
             aa = abs(a1) + abs(a2) + abs(a3)
-            if (area_in(i_elem) .gt. 0.0d0) then
-              ae = abs(aa - 2.0d0*area_in(i_elem)) &
-     &           / (2.0d0*area_in(i_elem))
-            else
-              ae = 1.0d25
-            endif
+!            if (area_in(i_elem) .gt. 0.0d0) then
+            ae=abs(aa-2.0d0*abs(area_in(i_elem)))/abs(2.0d0*area_in(i_elem))
+!            else
+!              ae = 1.0d25
+!            endif
 
 ! if ae equals zero (within epsilon) then we've found correct element
             zero_ae = (ae .lt. epsilon)
@@ -2532,7 +2543,7 @@
 ! loop again if need to
 !          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
             if(completed_check.or.zero_ae) exit
-          enddo
+          enddo !infinite do
 
 ! if we didnt find a good ae_min, then there are problems
 ! Currently, use nearest elem for interpolation even if no parent is found, b/cos
@@ -2550,7 +2561,7 @@
 ! (but make sure that there are no bad points from get_xy)
 
 ! get the locations of the nodes for this element on the input grid
-          i_elem = in_elem_for_out_node(i_node)
+          i_elem = in_elem_for_out_node(i_node) !may be nearest elem (not parent)
           i1 = node_i(elem_nodes(i_elem,1))
           j1 = node_j(elem_nodes(i_elem,1))
           x1 = x_in(i1,j1)
@@ -2582,12 +2593,13 @@
           x4 = x_out(i_node)
           y4 = y_out(i_node)
 
-! now calculate the weighting functions, which may be <0!
-          weight(i_node,1) = ( (x4-x3)*(y2-y3) + (x2-x3)*(y3-y4) ) &
+! now calculate the weighting functions, which may be outside [0,1]
+! Signs are consistent btw area_in and each signed area
+          weight(i_node,1) = ((x4-x3)*(y2-y3) + (x2-x3)*(y3-y4)) &
      &                     / ( 2.0d0*area_in(i_elem) )
-          weight(i_node,2) = ( (x4-x1)*(y3-y1) - (y4-y1)*(x3-x1) ) &
+          weight(i_node,2) = ((x4-x1)*(y3-y1) - (y4-y1)*(x3-x1)) &
      &                     / ( 2.0d0*area_in(i_elem) )
-          weight(i_node,3) = ( -(x4-x1)*(y2-y1) + (y4-y1)*(x2-x1) ) &
+          weight(i_node,3) = (-(x4-x1)*(y2-y1) + (y4-y1)*(x2-x1)) &
      &                     / ( 2.0d0*area_in(i_elem) )
 
 ! this node is done, reset top and floor so next iteration is informed
