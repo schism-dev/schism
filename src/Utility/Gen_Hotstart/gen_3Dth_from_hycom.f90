@@ -42,14 +42,8 @@
 !                     4th line: # of days needed
 !                     5th line: # of HYCOM file stacks
 !     (5) HYCOM files: [SSH,TS,UV]_[1,2,..nfiles].nc (beware scaling etc)
-!   Output: hotstart.nc; *[23D].th.nc
+!   Output: *[23D].th.nc
 !   Debug outputs: fort.11 (fatal errors); fort.20 (warning); fort.2[1-9], fort.9[5-9], fort.100; backup.out
-!   Use note: if the domain is large and you wish to download HYCOM
-!   fast, you may want to run this script twice: first to generate
-!   hotstart only (so you need only to download a few HYCOM files); the
-!   .th.nc are junk in this step.
-!   Second, download HYCOM to only cover the open boundary segments to
-!   generate .th.nc (hotstart would be junk).
 
 ! ifort -O2 -mcmodel=medium -assume byterecl -CB -o gen_3Dth_from_hycom.exe ../UtilLib/schism_geometry.f90 \
 ! ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 gen_3Dth_from_hycom.f90 \

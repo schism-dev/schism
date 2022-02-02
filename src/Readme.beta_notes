@@ -9,7 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-dcd5356 (31 Jan 2022): removed most ramp flags (use dramp<=0 to turn off ramp): nramp, nrampbc, nrampwind, nrampwafo,nramp_ss;
+dcd5356 (31 Jan 2022): removed ramp flags except for nramp_elev (use dramp*<=0 to turn off ramp): 
+      nramp, nrampbc, nrampwind, nrampwafo,nramp_ss; removed the optional input 'shapiro_min.gr3';
 80f1caa (26 Jan 2022): added 4 parameters in ice.nml: albsn,albsnm, albi,albm
 d792ed0 (18 Jan 2022): added 2 new ice parameters: 'ice_atmos_stress_form' and 'cdwin0';
 b4d2214 (7 Jan 2022): added a new parameter 'nu_sum_mult' to allow sum/product of final relax constants for tracer nudging;
