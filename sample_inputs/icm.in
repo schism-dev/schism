@@ -59,20 +59,6 @@ iLight = 3
 !-----------------------------------------------------------------------
 jLight = 2 
 
-!!-----------------------------------------------------------------------
-!!Temperature specifiation: use specified temperature for whole domain
-!! when iSun=2
-!!-----------------------------------------------------------------------
-!iSun = 0
-
-!!-----------------------------------------------------------------------
-!!VIMS' old way of adding load
-!!Right now, iNPS and iWQPS are not used in the code. To add load, one has
-!! to use if_source function of SCHISM
-!!-----------------------------------------------------------------------
-!iNPS = 0
-!iPS = 0
-
 !-----------------------------------------------------------------------
 !wind induced DO reareation. iRea=1: Use air reareation
 !-----------------------------------------------------------------------
@@ -186,28 +172,18 @@ Pf=     0.0
 !Phytoplankton parameters
 !CChl: carbon to Chl ratio g[C]/mg[Chl]
 !alpha_PB: initial slope between photosynthetic rate and irradiance g[C]*m2/g[Chl]/E
-!2D variables: GPM?,TGP?,rKTGP??,CChl?,PRR?
+!2D variables: GPM,TGP,rKTGP??,CChl,PRR
 !-----------------------------------------------------------------------
-GPM1=   3.0 
-GPM2=   3.0
-GPM3=   2.5   
-TGP1=   15.0  
-TGP2=   22.0  
-TGP3=   27.0  
+GPM=   3.0    3.0    2.5   
+TGP=   15.0   22.0   27.0  
+PRR=   0.215  0.215  0.01
+chl2c=   0.059    0.059    0.059   
 rKTGP11= 0.004 
 rKTGP12= 0.008   
 rKTGP13= 0.005 
 rKTGP21= 0.006   
 rKTGP22= 0.010   
 rKTGP23= 0.004 
-
-CChl1=   0.059    
-CChl2=   0.059    
-CChl3=   0.059   
-
-PRR1=   0.215   
-PRR2=   0.215
-PRR3=   0.01
 
 !--------------
 BMPR=   0.01   0.01   0.04

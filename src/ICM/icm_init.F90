@@ -30,10 +30,10 @@ subroutine icm_init
 
   !icm_mod
   !(nvrt)<< surface to bottom
-  allocate(dep(nvrt),Sal(nvrt),Temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
+  allocate(dep(nvrt),salt(nvrt),temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
-    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOO(nvrt,2),PrefN(nvrt,3),PC2TSS(nea),WSSED(nea), &
+    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOX(nvrt,2),PrefN(nvrt,3),PC2TSS(nea),WSSED(nea), &
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
     & wqc(ntrs(7),nvrt,nea),GP(nvrt,nea,3),&
     & rKRC(nea),rKLC(nea),rKDC(nea),&
@@ -41,9 +41,7 @@ subroutine icm_init
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
-    & PRR1(nea),PRR2(nea),PRR3(nea),& !grazing
-    & GPM1(nea),GPM2(nea),GPM3(nea),& !maximun growth rate
-    & TGP1(nea),TGP2(nea),TGP3(nea),CChl1(nea),CChl2(nea),CChl3(nea), & 
+    & PRR(nea,3),GPM(nea,3),TGP(nea,3),chl2c(nea,3), & 
     & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
     & rIavg_save(nea), &!ncai_rad
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
@@ -141,19 +139,17 @@ subroutine icm_init
   !array init
   !----------------------------------------------------------------
   wqc=0.0;
-  dep=0.0;     Sal=0.0;     Temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
+  dep=0.0;     salt=0.0;    temp=0.0;    TSED=0.0;    ZB1=0.0;    ZB2=0.0;    PB1=0.0
   PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;    RPON=0.0;   LPON=0.0
   DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;   DOP=0.0;    PO4t=0.0
-  SU=0.0;      SAt=0.0;     COD=0.0;     DOO=0.0;     PrefN=0.0;  PC2TSS=0.0; WSSED=0.0
+  SU=0.0;      SAt=0.0;     COD=0.0;     DOX=0.0;     PrefN=0.0;  PC2TSS=0.0; WSSED=0.0
   GP=0.0;      
   rKRC=0.0;    rKLC=0.0;    rKDC=0.0
   rKRP=0.0;    rKLP=0.0;    rKDP=0.0;    rKRPalg=0.0; rKLPalg=0.0;rKDPalg=0.0
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
   BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;    BSAt=0.0;   BCOD=0.0;   BDO=0.0
-  PRR1=0.0;    PRR2=0.0;    PRR3=0.0
-  GPM1=0.0;    GPM2=0.0;    GPM3=0.0
-  TGP1=0.0;    TGP2=0.0;    TGP3=0.0;    CChl1=0.0;   CChl2=0.0;  CChl3=0.0
+  PRR=0.0;     GPM=0.0;     TGP=0.0;     chl2c=0.0;  
   rKTGP11=0.0; rKTGP12=0.0; rKTGP13=0.0; rKTGP21=0.0; rKTGP22=0.0;rKTGP23=0.0
   !default regiong id
   reg_PO4=1;   reg_GP=1;     reg_WS=1;   reg_PR=1;      reg_KC=1;

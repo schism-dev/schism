@@ -1820,8 +1820,8 @@ subroutine link_sed_input(id,nv)
 !initializ sediment 
 !---------------------------------------------------------------------------------------
   use schism_glbl, only: rkind,errmsg,dpe,eta2,elnode,i34,area,ielg
-  use icm_mod, only : dep,Temp,Sal,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
-                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
+  use icm_mod, only : dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
+                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX
   use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &
                     & SED_LPOP,SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD, &
                     & SED_TSS,SED_SALT,SED_T,SFA,ZD
@@ -1836,8 +1836,8 @@ subroutine link_sed_input(id,nv)
   ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0) 
 
   SED_BL=dep(nv) 
-  SED_T(id)   =Temp(nv) 
-  SED_SALT(id)=Sal(nv)
+  SED_T(id)   =temp(nv) 
+  SED_SALT(id)=salt(nv)
   SED_B(id,1) =PB1(nv,1)
   SED_B(id,2) =PB2(nv,1)
   SED_B(id,3) =PB3(nv,1)
@@ -1852,7 +1852,7 @@ subroutine link_sed_input(id,nv)
   SED_NH4(id) =NH4(nv,1) 
   SED_NO3(id) =NO3(nv,1) 
   SED_SA(id)  =SAt(nv,1) 
-  SED_DO(id)  =DOO(nv,1)
+  SED_DO(id)  =DOX(nv,1)
   SED_COD(id) =COD(nv,1)
 
   SED_TSS(id) =TSED(nv)

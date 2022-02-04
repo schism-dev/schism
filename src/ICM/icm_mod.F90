@@ -20,13 +20,9 @@ module icm_mod
   use schism_glbl,only: rkind,nvrt,nea
   implicit none
 
-  !integer, parameter ::iT=2
-  !real(rkind), parameter :: CV1=1.0E8
-  !real(rkind), parameter :: CV2=1.0E8
   real(rkind), parameter :: COV=1.0d-10
   !molar weight for C,Ca,CaCo3,N
   real(rkind), parameter :: mC=12.011,mCACO3=100.086,mN=14.007
-
 
   !time step in ICM [days]
   real(rkind), save :: dtw,dtw2 !dtw2=dtw/2
@@ -35,30 +31,26 @@ module icm_mod
   real(rkind),save:: time_icm(5),time_ph
   
   !global switch 
-  integer,save :: iSun,iNPS,iPS
   integer,save :: iLight,jLight,iRad
   integer,save :: iSed,iRea,iBen,iTBen
   integer,save :: iZoo,iPh
   integer,save :: iAtm,iCheck,iout_icm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
-  integer,save :: isav_icm,iveg_icm !ncai_sav, ncai_veg 
-  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg !ncai_veg
+  integer,save :: isav_icm,iveg_icm !sav, veg 
+  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg !veg
   integer,save :: idry_icm
  
-!  !ICM region
-!  integer,save,allocatable :: reg_icm(:) !nea
-
   !water quality state variables
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
   !dep(1:nv=nvrt-kbe) (1- surface). dep(k) is Layer thickness btw level nvrt-k and nvrt-k+1
-  real(rkind),save,allocatable,dimension(:) :: dep,Sal,Temp,TSED 
+  real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED 
   real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
-  real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
+  real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX
 
-  !ncai_sav + ncai_veg :: uniformed vegetation height, density
+  !sav + veg :: uniformed vegetation height, density
   real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea) 
 
-  !ncai_sav
+  !sav
   !(nvrt,nea)>> bottom to surface
   real(rkind),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
   !(nvrt)<< surface to bottom
@@ -70,7 +62,7 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
 
-  !ncai_veg
+  !veg
   real(rkind),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: hcanveg !,ztcveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
@@ -110,10 +102,11 @@ module icm_mod
   integer,save,allocatable :: reg_GP(:),reg_PR(:) !nea
   real(rkind),save :: rKhS,ST,rKeC1,rKeC2,rKeChl,rKeTSS,rKeSal,mKhN,mKhP,Dopt 
   real(rkind),save,dimension(3) :: BMPR,TBP,rKTBP,rKhN,rKhP,rIm,alpha_PB
-  real(rkind),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,GPM1,GPM2,GPM3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
+  !real(rkind),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
   real(rkind),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
+  real(rkind),save,allocatable,dimension(:,:) :: GPM,PRR,TGP,chl2c
 
-  !ncai_sav readin parameters 
+  !sav readin parameters 
   integer,save,allocatable :: patchsav(:) !(nea)
   integer,save :: initsav
   real(rkind),save :: famsav,fplfsav,fpstsav,fprtsav
@@ -137,7 +130,7 @@ module icm_mod
   real(rkind),save :: rdenssav !density
 
 
-  !ncai_veg readin parameters
+  !veg readin parameters
   integer,save,allocatable :: patchveg(:) !nea
   integer,save :: initveg !decide init mapping format
   integer,save :: iMortveg !flag of vegetation mortality

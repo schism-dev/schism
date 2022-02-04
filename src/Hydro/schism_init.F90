@@ -45,8 +45,8 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav, & !ncai_sav
-                          & tlfveg,tstveg,trtveg,hcanveg !ncai_veg 
+      use icm_mod, only : wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav, & !sav
+                          & tlfveg,tstveg,trtveg,hcanveg !veg 
       use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                            & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                            & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&

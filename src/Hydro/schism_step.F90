@@ -45,7 +45,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,iRea,WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
+      use icm_mod, only : iRea,WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
                         & lfsav,stsav,rtsav,tlfsav,tstsav,trtsav,hcansav, &
                         & tlfveg,tstveg,trtveg,hcanveg
                       
@@ -7250,21 +7250,6 @@
         flx_bt(itmp1:itmp2,:)=0.d0
         flx_sf(itmp1:itmp2,:)=0.d0
 !$OMP   end workshare
-
-!        !VIMS surface temperature; added by YC
-!        if(iSun==2) then
-!!$OMP     do
-!          do i=1,nea
-!            if(idry_e(i)==1) cycle
-!            sflux_e=sum(surf_t(elnode(1:i34(i),i)))/i34(i)
-!            tr_el(1,nvrt,i)=sflux_e
-!          enddo !i
-!!$OMP     end do
-
-!!$OMP     master
-!          if(myrank==0) write(16,*)'end ICM adjust. surface T..'
-!!$OMP     end master
-!        endif !iSun=2
 
 !$OMP end parallel
 

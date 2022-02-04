@@ -49,7 +49,7 @@
 ! 18 SU    :  Particulate Biogenic Silica                g/m^3
 ! 19 SAt   :  Available Silica                           g/m^3
 ! 20 COD   :  Chemical Oxygen Demand                     g/m^3
-! 21 DOO   :  Dissolved Oxygen                           g/m^3
+! 21 DOX   :  Dissolved Oxygen                           g/m^3
 ! 22 TIC   :  Total Inorganic Carbon                     g/m^3
 ! 23 ALK   :  Alkalinity                                 g[CaCO3]/m^3
 ! 24 CA    :  Dissolved Calcium                          g[CaCO3]/m^3
@@ -167,9 +167,9 @@ subroutine link_icm(imode,id,nv)
 !--------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,tr_el,nvrt,irange_tr,ntrs,ze,kbe,ielg,idry_e,airt1,elnode,i34
   use schism_msgp, only : parallel_abort
-  use icm_mod, only : wqc,dep,Temp,Sal,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
-                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO,iLight,PC2TSS,&
-                    & iPh,TIC,ALK,CA,CACO3,PH,PH_el,CChl1,CChl2,CChl3,GP
+  use icm_mod, only : wqc,dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
+                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,iLight,PC2TSS,&
+                    & iPh,TIC,ALK,CA,CACO3,PH,PH_el,chl2c,GP
   implicit none 
   integer, intent(in) :: imode,id !id is (wet) elem index
   integer, intent(out) :: nv !# of layers from surface to bottom
@@ -195,12 +195,12 @@ subroutine link_icm(imode,id,nv)
 
       if(idry_e(id)==1) then 
         dep(m)=0.1
-        Temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
+        temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
       else
         dep(m)=max(ze(k,id)-ze(k-1,id),0.1) !k>2; set minimum depth for wet elem
-        Temp(m)=tr_el(1,k,id)
+        temp(m)=tr_el(1,k,id)
       endif
-      Sal(m)=tr_el(2,k,id)    
+      salt(m)=tr_el(2,k,id)    
  
       ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
       ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
@@ -222,7 +222,7 @@ subroutine link_icm(imode,id,nv)
       SU(m,1)  =max(tr_el(17+irange_tr(1,7),k,id),0.d0)
       SAt(m,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
       COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
-      DOO(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
+      DOX(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
  
 #ifdef ICM_PH
       TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
@@ -244,8 +244,8 @@ subroutine link_icm(imode,id,nv)
       endif!iLight
 
       !check
-      if(frange(Temp(m),-30.d0,50.d0).or.frange(Sal(m),0.d0,50.d0)) then
-        write(errmsg,*)'ST out of range:',Temp(m), Sal(m),ielg(id),m,k
+      if(frange(temp(m),-30.d0,50.d0).or.frange(salt(m),0.d0,50.d0)) then
+        write(errmsg,*)'ST out of range:',temp(m),salt(m),ielg(id),m,k
         call parallel_abort(errmsg)
       endif
 
@@ -287,7 +287,7 @@ subroutine link_icm(imode,id,nv)
       tr_el(17+irange_tr(1,7),k,id)=max(SU(m,1),  0.d0)
       tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1), 0.d0)
       tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1), 0.d0)
-      tr_el(20+irange_tr(1,7),k,id)=max(DOO(m,1), 0.d0)
+      tr_el(20+irange_tr(1,7),k,id)=max(DOX(m,1), 0.d0)
  
 #ifdef ICM_PH
       tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
@@ -317,7 +317,7 @@ subroutine link_icm(imode,id,nv)
       wqc(18,k,id)=max(SU(m,2),   0.d0)
       wqc(19,k,id)=max(SAt(m,2),  0.d0)
       wqc(20,k,id)=max(COD(m,2),  0.d0)
-      wqc(21,k,id)=max(DOO(m,2),  0.d0)
+      wqc(21,k,id)=max(DOX(m,2),  0.d0)
  
 #ifdef ICM_PH
       wqc(22,k,id)=max(TIC(m,2),  0.d0)
@@ -440,8 +440,8 @@ subroutine photosynthesis(id,hour,nv,it)
   !--------------------------------------------------------------------------------
   !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
   if(iTBen/=0) then !simplified sediment fluxes
-    CNH4 = NH4T2I*thata_tben**(Temp(nv)-20.d0)
-    CPIP = PO4T2I*thata_tben**(Temp(nv)-20.d0)
+    CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
+    CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
   endif !iTBen
 
   !PB::init
@@ -474,45 +474,45 @@ subroutine photosynthesis(id,hour,nv,it)
 
     do k=1,nv
       !PB1: diatom; adjust growth rate by temperature
-      xT=Temp(k)-TGP1(id)
+      xT=temp(k)-TGP(id,i)
       if(xT>0.0) then
-        GPT0(1)=GPM1(id)*exp(-rKTGP11(id)*xT*xT); tmp1=rKTGP11(id)*xT*xT
+        GPT0(1)=GPM(id,1)*exp(-rKTGP11(id)*xT*xT); tmp1=rKTGP11(id)*xT*xT
       else
-        GPT0(1)=GPM1(id)*exp(-rKTGP21(id)*xT*xT); tmp1=rKTGP21(id)*xT*xT
+        GPT0(1)=GPM(id,1)*exp(-rKTGP21(id)*xT*xT); tmp1=rKTGP21(id)*xT*xT
       endif !xT
 
       !PB2:green algae
-      xT=Temp(k)-TGP2(id)
+      xT=temp(k)-TGP(id,2)
       if(xT>0.0) then
-        GPT0(2)=GPM2(id)*exp(-rKTGP12(id)*xT*xT); tmp2=rKTGP12(id)*xT*xT
+        GPT0(2)=GPM(id,2)*exp(-rKTGP12(id)*xT*xT); tmp2=rKTGP12(id)*xT*xT
       else
-        GPT0(2)=GPM2(id)*exp(-rKTGP22(id)*xT*xT); tmp2=rKTGP22(id)*xT*xT
+        GPT0(2)=GPM(id,2)*exp(-rKTGP22(id)*xT*xT); tmp2=rKTGP22(id)*xT*xT
       endif !xT
 
       !PB3:cyanobacteria
-      xT=Temp(k)-TGP3(id)
+      xT=temp(k)-TGP(id,2)
       if(xT>0.0) then
-        GPT0(3)=GPM3(id)*exp(-rKTGP13(id)*xT*xT); tmp3=rKTGP13(id)*xT*xT
+        GPT0(3)=GPM(id,3)*exp(-rKTGP13(id)*xT*xT); tmp3=rKTGP13(id)*xT*xT
       else
-        GPT0(3)=GPM3(id)*exp(-rKTGP23(id)*xT*xT); tmp3=rKTGP23(id)*xT*xT
+        GPT0(3)=GPM(id,3)*exp(-rKTGP23(id)*xT*xT); tmp3=rKTGP23(id)*xT*xT
       endif !xT
 
       !check
       if(tmp1>50.d0.or.rKTGP11(id)<0.d0.or.rKTGP21(id)<0.d0) then
-        write(errmsg,*)'check PB1 growth:',xT,rKTGP11(id),rKTGP21(id),tmp1,TGP1(id),Temp(k),ielg(id)
+        write(errmsg,*)'check PB1 growth:',xT,rKTGP11(id),rKTGP21(id),tmp1,TGP(id,1),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
       if(tmp2>50.d0.or.rKTGP12(id)<0.d0.or.rKTGP22(id)<0.d0) then
-        write(errmsg,*)'check PB2 growth:',xT,rKTGP12(id),rKTGP22(id),tmp2,TGP2(id),Temp(k),ielg(id)
+        write(errmsg,*)'check PB2 growth:',xT,rKTGP12(id),rKTGP22(id),tmp2,TGP(id,2),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
       if(tmp3>50.d0.or.rKTGP13(id)<0.d0.or.rKTGP23(id)<0.d0) then
-        write(errmsg,*)'check PB3 growth:',xT,rKTGP13(id),rKTGP23(id),tmp3,TGP3(id),Temp(k),ielg(id)
+        write(errmsg,*)'check PB3 growth:',xT,rKTGP13(id),rKTGP23(id),tmp3,TGP(id,3),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
 
       !calculate CHLA
-      Chl=PB1(k,1)/CChl1(id)+PB2(k,1)/CChl2(id)+PB3(k,1)/CChl3(id)
+      Chl=PB1(k,1)/chl2c(id,1)+PB2(k,1)/chl2c(id,2)+PB3(k,1)/chl2c(id,3)
 
       if(Chl<0.0) then
         if(abs(Chl)>1.e-12) then
@@ -526,16 +526,16 @@ subroutine photosynthesis(id,hour,nv,it)
       !calculate light attenuation coefficient rKe for PB
       !if isav_icm or iveg_icm is turned on,the impact of sav on light limitation to chla is automatally imbeded
       if(iLight==1) then
-        rval=rKeC2*Sal(k)
+        rval=rKeC2*salt(k)
         rKe0=rKeC1*exp(-rval)
       elseif(iLight==2.or.iLight==3) then 
         rKe0=Turb(id)+rKeChl*Chl+rKeTSS*TSED(k)
       elseif(iLight==4) then
-        rKe0=Turb(id)+rKeChl*Chl+rKeSal*Sal(k)
+        rKe0=Turb(id)+rKeChl*Chl+rKeSal*salt(k)
       endif !iLight
 
       if(rval>50.0.or.rKeC2<0.) then
-        write(errmsg,*)'check ICM iLight rKeC2*Sal:',rKeC2,Sal(k),rval,ielg(id)
+        write(errmsg,*)'check ICM iLight rKeC2*Sal:',rKeC2,salt(k),rval,ielg(id)
         call parallel_abort(errmsg)
       endif
 
@@ -665,11 +665,11 @@ subroutine photosynthesis(id,hour,nv,it)
           endif !
           mLight=0.5*(sLight+bLight)*rat !from W/m2 to E/m2/day
           if (i==1) then
-            rIK=(1.d3*CChl1(id))*GPT0(i)/alpha_PB(i) 
+            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i) 
           elseif (i==2) then
-            rIK=(1.d3*CChl2(id))*GPT0(i)/alpha_PB(i)
+            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i)
           else
-            rIK=(1.d3*CChl3(id))*GPT0(i)/alpha_PB(i)
+            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i)
           endif !i
           rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
@@ -714,7 +714,7 @@ subroutine photosynthesis(id,hour,nv,it)
 
         !cyanobacteria
         if(i==3) then 
-          rlFSal=ST/(ST+Sal(k)*Sal(k))
+          rlFSal=ST/(ST+salt(k)*salt(k))
           if(iLimit==1) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)*rlFSal 
           if(iLimit==2) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)*rlFSal 
         endif 
@@ -735,7 +735,7 @@ subroutine photosynthesis(id,hour,nv,it)
       !--------------------------------------------------------------------------------
       if(isav_icm==1.and.patchsav(id)==1) then
         if(ze(klev-1,id)<hcansav(id)+ze(kbe(id),id)) then
-          xT=Temp(k)-toptsav !adjust sav  maximum growth rate by temperature
+          xT=temp(k)-toptsav !adjust sav  maximum growth rate by temperature
           if(xtsav<=0.0) then
             rtmp=ktg1sav*xT*xT
           else
@@ -845,7 +845,7 @@ subroutine photosynthesis(id,hour,nv,it)
         !tempreture effect
         tmp=0.0
         do k=1,nv
-          tmp=tmp+Temp(k)*dep(k)
+          tmp=tmp+temp(k)*dep(k)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.d-2)-toptveg(j) !tdep checked at init
         if(xtveg<=0.0)then
@@ -864,7 +864,7 @@ subroutine photosynthesis(id,hour,nv,it)
         !salinty stress
         tmp=0.0
         do k=1,nv
-          tmp=tmp+Sal(k)*dep(k)
+          tmp=tmp+salt(k)*dep(k)
         enddo !k::nv
         xtveg=tmp/max(tdep,1.d-2)-saltoptveg(j)
         fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.d-2))
@@ -995,7 +995,7 @@ subroutine calkwq(id,nv,usf,it)
   !if(iBen/=0.or.iSed==1) then
   if(iBen/=0.or.iSed==1.or.iTBen/=0) then
     if(iBen/=0) then !sediment fluxes from ICM_ben.th
-      xT=Temp(nv)-20.
+      xT=temp(nv)-20.
       nRPOC = BRPOC(id)*TBRPOC**xT
       nLPOC = BLPOC(id)*TBLPOC**xT
       nDOC =  BDOC(id)*TBDOC**xT
@@ -1020,7 +1020,7 @@ subroutine calkwq(id,nv,usf,it)
         rval=1.3*(PH(nv)-8.5)
         BnPO4t=max(BnPO4t*exp(rval),0.02)
         !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
-        !nPO4t=max(2.5d-3*(Temp(nv)-0.0)/35.d0,0.d0);
+        !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
 
         if(abs(rval)>10.) then
           write(errmsg,*)'Unknown ICM ph model:', PH(nv),rval
@@ -1045,7 +1045,7 @@ subroutine calkwq(id,nv,usf,it)
     endif !iSed
 
     if(iTBen==1)then!simplified sediment fluxes
-      xT=Temp(nv)-20.
+      xT=temp(nv)-20.
       nDO = -SOD_tben*thata_tben**xT  !no combination with iBen/=0.or.iSed=1
       nNH4 = NH4_tben*thata_tben**xT
       nNO3 = NO3_tben*thata_tben**xT
@@ -1259,30 +1259,30 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(isav_icm==1.and.patchsav(id)==1) then
       !pre-calculation for metabolism rate;  no relation with light, alweys respire
-      rtmp=ktblfsav*(Temp(k)-trlfsav)
+      rtmp=ktblfsav*(temp(k)-trlfsav)
       bmlfsav(k)=bmlfrsav*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav lf metabolism:',Temp(k),trlfsav,ktblfsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav lf metabolism:',temp(k),trlfsav,ktblfsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbstsav*(Temp(k)-trstsav)
+      rtmp=ktbstsav*(temp(k)-trstsav)
       bmstsav(k)=bmstrsav*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav st metabolism:',Temp(k),trstsav,ktbstsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav st metabolism:',temp(k),trstsav,ktbstsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbrtsav*(Temp(k)-trrtsav)
+      rtmp=ktbrtsav*(temp(k)-trrtsav)
       bmrtsav(k)=bmrtrsav*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav rt metabolism:',Temp(k),trrtsav,ktbrtsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav rt metabolism:',temp(k),trrtsav,ktbrtsav,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
@@ -1352,14 +1352,14 @@ subroutine calkwq(id,nv,usf,it)
           sum1=sum1+PPC(j,i)*nz(j)
         enddo
 
-        xT=Temp(k)-TGZ(i)
+        xT=temp(k)-TGZ(i)
         if(xT>0.0) then
           ZBG(:,i)=ZBG(:,i)*exp(-rKTGZ1(i)*xT*xT)/sum1; tmp1=rKTGZ1(i)*xT*xT
         else
           ZBG(:,i)=ZBG(:,i)*exp(-rKTGZ2(i)*xT*xT)/sum1; tmp1=rKTGZ2(i)*xT*xT
         endif !rtmp
         ZBG0(:,i)=ZBG(:,i)
-        BMZ(i)=BMZR(i)*exp(rKTBZ(i)*(Temp(k)-TBZ(i))); tmp2=rKTBZ(i)*(Temp(k)-TBZ(i)) !metabolism
+        BMZ(i)=BMZR(i)*exp(rKTBZ(i)*(temp(k)-TBZ(i))); tmp2=rKTBZ(i)*(temp(k)-TBZ(i)) !metabolism
 
         !check
         if(abs(tmp1)>50.0) then
@@ -1367,7 +1367,7 @@ subroutine calkwq(id,nv,usf,it)
           call parallel_abort(errmsg)
         endif
         if(abs(tmp2)>50.0) then
-          write(errmsg,*)'check ICM ZB rKTBZ: ',rKTBZ(i),Temp(k),TBZ(i),tmp2,ielg(id),k
+          write(errmsg,*)'check ICM ZB rKTBZ: ',rKTBZ(i),temp(k),TBZ(i),tmp2,ielg(id),k
           call parallel_abort(errmsg)
         endif
       enddo !i
@@ -1396,24 +1396,24 @@ subroutine calkwq(id,nv,usf,it)
     !---------------------------------------------
     !pre-calculation for PB1, PB2, and PB3
     do i=1,3
-      rval=rKTBP(i)*(Temp(k)-TBP(i))
+      rval=rKTBP(i)*(temp(k)-TBP(i))
       BMP(i)=BMPR(i)*exp(rval)
-      !BMP(i)=BMPR(i)*exp(rKTBP(i)*(Temp(k)-TBP(i)))
+      !BMP(i)=BMPR(i)*exp(rKTBP(i)*(temp(k)-TBP(i)))
 
       if(i==1)then
-        BPR(i)=PRR1(id)*exp(rval)
+        BPR(i)=PRR(id,1)*exp(rval)
       elseif(i==2)then
-        BPR(i)=PRR2(id)*exp(rval)
+        BPR(i)=PRR(id,2)*exp(rval)
       elseif(i==3)then
-        BPR(i)=PRR3(id)*exp(rval)
+        BPR(i)=PRR(id,3)*exp(rval)
       endif !i
       !BPR(i)=PRR(i)*exp(rval)
-      !BPR(i)=PRR(i)*exp(rKTBP(i)*(Temp(k)-TBP(i)))
+      !BPR(i)=PRR(i)*exp(rKTBP(i)*(temp(k)-TBP(i)))
     enddo
 
     !check
     if(abs(rval)>50.0.or.rKTBP(i)<-50.0) then
-      write(errmsg,*)'check ICM PB rKTBP: ',rKTBP(i),Temp(k),TBP(i),rval,ielg(id),k
+      write(errmsg,*)'check ICM PB rKTBP: ',rKTBP(i),temp(k),TBP(i),rval,ielg(id),k
       call parallel_abort(errmsg)
     endif
 
@@ -1462,11 +1462,11 @@ subroutine calkwq(id,nv,usf,it)
         ZBG(i,2)=ZBG(i,2)*ZB2(k,1)
       enddo
     endif
-    rKTPOM=exp(rKTHDR*(Temp(k)-TRHDR)); tmp1=rKTHDR*(Temp(k)-TRHDR)
-    rKTDOM=exp(rKTMNL*(Temp(k)-TRMNL)); tmp2=rKTMNL*(Temp(k)-TRMNL)
+    rKTPOM=exp(rKTHDR*(temp(k)-TRHDR)); tmp1=rKTHDR*(temp(k)-TRHDR)
+    rKTDOM=exp(rKTMNL*(temp(k)-TRMNL)); tmp2=rKTMNL*(temp(k)-TRMNL)
 
     if(abs(tmp1)>50.0.or.abs(tmp2)>50.0) then
-      write(errmsg,*)'check ICM rKTHDR rKTMNL:',rKTHDR,rKTMNL,Temp(k),TRHDR,TRMNL,tmp1,tmp2,ielg(id),k
+      write(errmsg,*)'check ICM rKTHDR rKTMNL:',rKTHDR,rKTMNL,temp(k),TRHDR,TRMNL,tmp1,tmp2,ielg(id),k
       call parallel_abort(errmsg)
     endif
 
@@ -1573,21 +1573,21 @@ subroutine calkwq(id,nv,usf,it)
 
     !DOC 
     rKDOC=(rKDC(id)+rKDCalg*sumAPB)*rKTDOM
-    xKHR=rKDOC*DOO(k,1)/(rKHORDO+DOO(k,1))
-    xDenit=AANOX*rKDOC*rKHORDO*NO3(k,1)/(rKHORDO+DOO(k,1))/(rKHDNn+NO3(k,1))
+    xKHR=rKDOC*DOX(k,1)/(rKHORDO+DOX(k,1))
+    xDenit=AANOX*rKDOC*rKHORDO*NO3(k,1)/(rKHORDO+DOX(k,1))/(rKHDNn+NO3(k,1))
 
     a=-xKHR-xDenit
 
     b=FCDP(1)*BPR(1)*PB1(k,1)+FCDP(2)*BPR(2)*PB2(k,1)+FCDP(3)*BPR(3)*PB3(k,1)
     if(iZoo==1) then
-      b=(FCDZ(1)+(1.0-FCDZ(1))*rKHRZ(1)/(DOO(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
-       &(FCDZ(2)+(1.0-FCDZ(2))*rKHRZ(2)/(DOO(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1) & !ZB2 metabolism
+      b=(FCDZ(1)+(1.0-FCDZ(1))*rKHRZ(1)/(DOX(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
+       &(FCDZ(2)+(1.0-FCDZ(2))*rKHRZ(2)/(DOX(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1) & !ZB2 metabolism
        & -(RF+Eff*(1.0-RF))*(ZBG(8,1)+ZBG(8,2))+ & !ZB eats DOC
        & FCDPZ*(CZB_ZB+CFh_ZB)+FCDP(1)*(CZB_PB+CFh_PB)                !ZB eats ZB 
     endif
-    b=b+(FCD(1)+(1.0-FCD(1))*rKHR1/(DOO(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ &         !PB1 metabolism
-      & (FCD(2)+(1.0-FCD(2))*rKHR2/(DOO(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ &         !PB2 metabolism
-      & (FCD(3)+(1.0-FCD(3))*rKHR3/(DOO(k,1)+rKHR3))*BMP(3)*PB3(k,1)+ &         !PB3 metabolism
+    b=b+(FCD(1)+(1.0-FCD(1))*rKHR1/(DOX(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ &         !PB1 metabolism
+      & (FCD(2)+(1.0-FCD(2))*rKHR2/(DOX(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ &         !PB2 metabolism
+      & (FCD(3)+(1.0-FCD(3))*rKHR3/(DOX(k,1)+rKHR3))*BMP(3)*PB3(k,1)+ &         !PB3 metabolism
       & rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+znDOC(k)/dep(k) !dissolution, surface or benthic flux
 
     !sav
@@ -1764,16 +1764,16 @@ subroutine calkwq(id,nv,usf,it)
     DON(k,1)=0.5*(DON(k,1)+DON(k,2))
 
     !NH4
-    xT=Temp(k)-TNit
+    xT=temp(k)-TNit
     if(xT>0.0) then
-      xNit=(DOO(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rKNit1*xT*xT); tmp=rKNit1*xT*xT
+      xNit=(DOX(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOX(k,1))))*exp(-rKNit1*xT*xT); tmp=rKNit1*xT*xT
     else
-      xNit=(DOO(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOO(k,1))))*exp(-rKNit2*xT*xT); tmp=rKNit2*xT*xT
+      xNit=(DOX(k,1)*rNitM*rKhNitN/((rKhNitN+NH4(k,1))*(rKhNitDO+DOX(k,1))))*exp(-rKNit2*xT*xT); tmp=rKNit2*xT*xT
     endif
     a=-xNit
 
     if(frange(tmp,0.d0,50.d0)) then
-      write(errmsg,*)'check ICM rKNit: ',rKNit1,rKNit2,xT,Temp(k),TNit,tmp,ielg(id),k
+      write(errmsg,*)'check ICM rKNit: ',rKNit1,rKNit2,xT,temp(k),TNit,tmp,ielg(id),k
       call parallel_abort(errmsg)
     endif
     
@@ -2060,9 +2060,9 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     !SU
-    rKSUA=rKSU*exp(rKTSUA*(Temp(k)-TRSUA)); tmp=rKTSUA*(Temp(k)-TRSUA)
+    rKSUA=rKSU*exp(rKTSUA*(temp(k)-TRSUA)); tmp=rKTSUA*(temp(k)-TRSUA)
     if(abs(tmp)>50.0) then
-      write(errmsg,*)'check ICM rKTSUA:',rKTSUA,Temp(k),TRSUA,tmp,ielg(id),k
+      write(errmsg,*)'check ICM rKTSUA:',rKTSUA,temp(k),TRSUA,tmp,ielg(id),k
       call parallel_abort(errmsg)
     endif
 
@@ -2104,9 +2104,9 @@ subroutine calkwq(id,nv,usf,it)
 
     !---------------------------------------------
     !COD
-    rKCOD=(DOO(k,1)/(rKHCOD+DOO(k,1)))*rKCD*exp(rKTCOD*(Temp(k)-TRCOD)); tmp=rKTCOD*(Temp(k)-TRCOD)
+    rKCOD=(DOX(k,1)/(rKHCOD+DOX(k,1)))*rKCD*exp(rKTCOD*(temp(k)-TRCOD)); tmp=rKTCOD*(temp(k)-TRCOD)
     if(abs(tmp)>50.0) then
-      write(errmsg,*)'check ICM rKTCOD:',rKTCOD,Temp(k),TRCOD,tmp,ielg(id),k
+      write(errmsg,*)'check ICM rKTCOD:',rKTCOD,temp(k),TRCOD,tmp,ielg(id),k
       call parallel_abort(errmsg)
     endif
 
@@ -2122,18 +2122,18 @@ subroutine calkwq(id,nv,usf,it)
     rKr=0.0
     if(k==1) then
       !surface DO reaeration;  saturated DO,(Chi-Fang Wang, 2009)
-      !DOsat=14.6244-0.367134*Temp(k)+4.497d-3*Temp(k)*Temp(k)- &
-      !     & (0.0966-2.05d-3*Temp(k)-2.739d-4*Sal(k))*Sal(k)
+      !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)- &
+      !     & (0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k)
 
       !saturated DO,(Genet et al. 1974; Carl Cerco)
-      DOsat=14.5532-0.38217*Temp(k)+5.4258e-3*Temp(k)*Temp(k)- &
-           & Sal(k)*(1.665e-4-5.866e-6*Temp(k)+9.796e-8*Temp(k)*Temp(k))/1.80655
+      DOsat=14.5532-0.38217*temp(k)+5.4258e-3*temp(k)*temp(k)- &
+           & salt(k)*(1.665e-4-5.866e-6*temp(k)+9.796e-8*temp(k)*temp(k))/1.80655
 
       if(iRea==0) then !(Park,1995)
         usfa=0.728*sqrt(max(WMS(id),1.d-20))-0.317*WMS(id)+0.0372*WMS(id)*WMS(id) !*2
-        rKr=(rKro*usf+usfa)*rKTr**(Temp(k)-20.0)/max(dep(k),5.d-2)
+        rKr=(rKro*usf+usfa)*rKTr**(temp(k)-20.0)/max(dep(k),5.d-2)
       elseif(iRea==1) then ! (Cerco, 2002)
-        rKr=0.157*(0.54+0.0233*Temp(k)-0.002*Sal(k))*WMS(id)**1.5/max(dep(k),5.d-2)
+        rKr=0.157*(0.54+0.0233*temp(k)-0.002*salt(k))*WMS(id)**1.5/max(dep(k),5.d-2)
       else
         call parallel_abort('Uknown iRea in ICM')
       endif
@@ -2142,13 +2142,13 @@ subroutine calkwq(id,nv,usf,it)
 
     a=-rKr;  b=0.0
     if(iZoo==1) then
-      b=-((1.0-FCDZ(1))*DOO(k,1)/(DOO(k,1)+rKHRZ(1)))*AOC*BMZ(1)*ZB1(k,1) & !ZB1 metabolism
-       &-((1.0-FCDZ(2))*DOO(k,1)/(DOO(k,1)+rKHRZ(2)))*AOC*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
+      b=-((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*AOC*BMZ(1)*ZB1(k,1) & !ZB1 metabolism
+       &-((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*AOC*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
     endif
 
-    b=b-((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
-     & -((1.0-FCD(2))*DOO(k,1)/(DOO(k,1)+rKHR2))*AOC*BMP(2)*PB2(k,1) & !PB2 metabolism
-     & -((1.0-FCD(3))*DOO(k,1)/(DOO(k,1)+rKHR3))*AOC*BMP(3)*PB3(k,1) &  !PB3 metabolism
+    b=b-((1.0-FCD(1))*DOX(k,1)/(DOX(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
+     & -((1.0-FCD(2))*DOX(k,1)/(DOX(k,1)+rKHR2))*AOC*BMP(2)*PB2(k,1) & !PB2 metabolism
+     & -((1.0-FCD(3))*DOX(k,1)/(DOX(k,1)+rKHR3))*AOC*BMP(3)*PB3(k,1) &  !PB3 metabolism
      & +(1.3-0.3*PrefN(k,1))*AOC*GP(k,id,1)*PB1(k,1) & !PB1 photosynthesis
      & +(1.3-0.3*PrefN(k,2))*AOC*GP(k,id,2)*PB2(k,1) & !PB2 photosynthesis
      & +(1.3-0.3*PrefN(k,3))*AOC*GP(k,id,3)*PB3(k,1) & !PB3 photosynthesis
@@ -2200,8 +2200,8 @@ subroutine calkwq(id,nv,usf,it)
       b=b+rtmp
     endif
 
-    DOO(k,2)=((1.0+a*dtw2)*DOO(k,1)+b*dtw)/(1.0-a*dtw2)
-    DOO(k,1)=0.5*(DOO(k,1)+DOO(k,2))
+    DOX(k,2)=((1.0+a*dtw2)*DOX(k,1)+b*dtw)/(1.0-a*dtw2)
+    DOX(k,1)=0.5*(DOX(k,1)+DOX(k,2))
 
     !---------------------------------------------------------------------------------
     !PH model; concentration unit is mg/l
@@ -2252,11 +2252,11 @@ subroutine calkwq(id,nv,usf,it)
         !(borges,2004) !Error: 1.e-20
         rKa=0.24*(1.0+1.719*sqrt(max(usf,1.d-20))/sqrt(2.0)+2.58*WMS(id))/max(dep(k),5.d-2)
 
-        T=Temp(k)+273.15 
+        T=temp(k)+273.15 
         if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
-        pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+Sal(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
+        pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+salt(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
         if(abs(pK0)>50.0) then
-          write(errmsg,*)'check ICM pH model pK0:',pK0,T,Sal(k),ielg(id),k
+          write(errmsg,*)'check ICM pH model pK0:',pK0,T,salt(k),ielg(id),k
           call parallel_abort(errmsg)
         endif
         CO2sat=exp(pK0)*4.8 !Henry's law, assuming CO2atm=400 ppm , 400d-6*12.011d3=4.8 
@@ -2264,14 +2264,14 @@ subroutine calkwq(id,nv,usf,it)
 
       a=0.0
       if(iZoo==1) then
-        b=((1.0-FCDZ(1))*DOO(k,1)/(DOO(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
-         & ((1.0-FCDZ(2))*DOO(k,1)/(DOO(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
+        b=((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
+         & ((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
       else
         b=0.0
       endif
-      b=b+((1.0-FCD(1))*DOO(k,1)/(DOO(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ & !PB1 metabolism
-        & ((1.0-FCD(2))*DOO(k,1)/(DOO(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ & !PB2 metabolism
-        & ((1.0-FCD(3))*DOO(k,1)/(DOO(k,1)+rKHR3))*BMP(3)*PB3(k,1)  & !PB3 metabolism
+      b=b+((1.0-FCD(1))*DOX(k,1)/(DOX(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ & !PB1 metabolism
+        & ((1.0-FCD(2))*DOX(k,1)/(DOX(k,1)+rKHR2))*BMP(2)*PB2(k,1)+ & !PB2 metabolism
+        & ((1.0-FCD(3))*DOX(k,1)/(DOX(k,1)+rKHR3))*BMP(3)*PB3(k,1)  & !PB3 metabolism
         &-GP(k,id,1)*PB1(k,1)-GP(k,id,2)*PB2(k,1)-GP(k,id,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
         & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(AOC*dep(k))
 
@@ -2357,7 +2357,7 @@ subroutine calkwq(id,nv,usf,it)
         do m=1,nsta(iid)
           rtmp=max(min(depsta(m,iid),zdep(nv)),0.d0)
           if((k==1.and.rtmp<=zdep(k).and.rtmp>=0.0).or.(k>1.and.rtmp>zdep(max(1,(k-1))).and.rtmp<=zdep(k))) then
-            write(410)time,stanum(m,iid),Sal(k),Temp(k),&
+            write(410)time,stanum(m,iid),salt(k),temp(k),&
      & PB1(k,1),GP(k,id,1),BMP(1),WSPB1(id),PB10,&
      & PB2(k,1),GP(k,id,2),BMP(2),WSPB2(id),PB20,&
      & PB3(k,1),GP(k,id,3),BMP(3),WSPB3(id),PB30,&
@@ -2376,7 +2376,7 @@ subroutine calkwq(id,nv,usf,it)
      & SU(k,1),rKSUA,rKSU,rKTSUA,WSPB1(id),FSPP,ASCd,FSPd,SU0,nSU,&
      & SAt(k,1),rKSAp,FSIP,FSId,SAt0,nSAt,&
      & COD(k,1),rKCOD,rKHCOD,rKCD,rKTCOD,nCOD,&
-     & DOO(k,1),DOsat,rKr,AOC,AON,nDO
+     & DOX(k,1),DOsat,rKr,AOC,AON,nDO
           endif !rtmp
         enddo !m
       endif !ista(i)/=0
@@ -2540,7 +2540,7 @@ subroutine ph_calc(id,nv)
 !----------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : parallel_abort
-  use icm_mod, only : TIC,ALK,CA,CACO3,PH,Temp,Sal,CO2,CAsat,mCACO3,mC
+  use icm_mod, only : TIC,ALK,CA,CACO3,PH,temp,salt,CO2,CAsat,mCACO3,mC
   implicit none
   integer,intent(in) :: id,nv
   
@@ -2556,7 +2556,7 @@ subroutine ph_calc(id,nv)
     !change mg/l to mol/l
     sTIC=TIC(k,1)/mmC !total carbon
     sALK=ALK(k,1)*2.0/mmCACO3 !alkalinity
-    sB=4.16e-4*Sal(k)/35.d0 !boron concentration
+    sB=4.16e-4*salt(k)/35.d0 !boron concentration
 
     !sCA=CA(k,1)/mmCACO3 !Ca++
     !sCACO3=CACO3(k,1)/mmCACO3
@@ -2565,8 +2565,8 @@ subroutine ph_calc(id,nv)
     !Ct=sTIC-sCACO3 !total carbon (exclude CaCO3s)
     !Ca=sALK-sCACO3 !alkalintiy (exclude CaCO3s)
 
-    T=Temp(k)+273.15
-    S=Sal(k)
+    T=temp(k)+273.15
+    S=salt(k)
     S2=sqrt(S)
 
     if(T<250.d0.or.T>325.d0.or.S>50.d0.or.S<0.d0) then
@@ -2574,9 +2574,9 @@ subroutine ph_calc(id,nv)
       call parallel_abort(errmsg)
     endif
     !ionic strength
-    sth=1.47e-3+1.9885e-2*Sal(k)+3.8e-5*Sal(k)*Sal(k)
+    sth=1.47e-3+1.9885e-2*salt(k)+3.8e-5*salt(k)*salt(k)
     if(sth<0.d0) then
-      write(errmsg,*)'check ICM ionic stength: ',Sal(k),sth
+      write(errmsg,*)'check ICM ionic stength: ',salt(k),sth
       call parallel_abort(errmsg)
     endif
     sth2=sqrt(sth)
@@ -2640,7 +2640,7 @@ subroutine ph_calc(id,nv)
     
     !Calcite solubility (Zeebe,2001)
     !pKsp=-171.9065-0.077993*T+2839.319/T+71.595*log10(T)+(-0.77712+0.0028426*T+ &
-    !    & 178.34/T)*sqrt(Sal(k))-0.07711*Sal(k)+0.0041249*Sal(k)**1.5 
+    !    & 178.34/T)*sqrt(salt(k))-0.07711*salt(k)+0.0041249*salt(k)**1.5 
     !Aragonite solubility (Zeebe,2001)
     pKsp=-171.945-0.077993*T+2903.293/T+71.595*log10(T)+(-0.068393+0.0017276*T+ &    
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
