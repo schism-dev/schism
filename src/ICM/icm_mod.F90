@@ -102,9 +102,8 @@ module icm_mod
   integer,save,allocatable :: reg_GP(:),reg_PR(:) !nea
   real(rkind),save :: rKhS,ST,rKeC1,rKeC2,rKeChl,rKeTSS,rKeSal,mKhN,mKhP,Dopt 
   real(rkind),save,dimension(3) :: BMPR,TBP,rKTBP,rKhN,rKhP,rIm,alpha_PB
-  !real(rkind),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
-  real(rkind),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
   real(rkind),save,allocatable,dimension(:,:) :: GPM,PRR,TGP,chl2c
+  real(rkind),save,allocatable,dimension(:,:,:) :: rKTGP
 
   !sav readin parameters 
   integer,save,allocatable :: patchsav(:) !(nea)

@@ -474,45 +474,45 @@ subroutine photosynthesis(id,hour,nv,it)
 
     do k=1,nv
       !PB1: diatom; adjust growth rate by temperature
-      xT=temp(k)-TGP(id,i)
+      xT=temp(k)-TGP(1,id)
       if(xT>0.0) then
-        GPT0(1)=GPM(id,1)*exp(-rKTGP11(id)*xT*xT); tmp1=rKTGP11(id)*xT*xT
+        GPT0(1)=GPM(1,id)*exp(-rKTGP(1,1,id)*xT*xT); tmp1=rKTGP(1,1,id)*xT*xT
       else
-        GPT0(1)=GPM(id,1)*exp(-rKTGP21(id)*xT*xT); tmp1=rKTGP21(id)*xT*xT
+        GPT0(1)=GPM(1,id)*exp(-rKTGP(1,2,id)*xT*xT); tmp1=rKTGP(1,2,id)*xT*xT
       endif !xT
 
       !PB2:green algae
-      xT=temp(k)-TGP(id,2)
+      xT=temp(k)-TGP(2,id)
       if(xT>0.0) then
-        GPT0(2)=GPM(id,2)*exp(-rKTGP12(id)*xT*xT); tmp2=rKTGP12(id)*xT*xT
+        GPT0(2)=GPM(2,id)*exp(-rKTGP(2,1,id)*xT*xT); tmp2=rKTGP(2,1,id)*xT*xT
       else
-        GPT0(2)=GPM(id,2)*exp(-rKTGP22(id)*xT*xT); tmp2=rKTGP22(id)*xT*xT
+        GPT0(2)=GPM(2,id)*exp(-rKTGP(2,2,id)*xT*xT); tmp2=rKTGP(2,2,id)*xT*xT
       endif !xT
 
       !PB3:cyanobacteria
-      xT=temp(k)-TGP(id,2)
+      xT=temp(k)-TGP(3,id)
       if(xT>0.0) then
-        GPT0(3)=GPM(id,3)*exp(-rKTGP13(id)*xT*xT); tmp3=rKTGP13(id)*xT*xT
+        GPT0(3)=GPM(3,id)*exp(-rKTGP(3,1,id)*xT*xT); tmp3=rKTGP(3,1,id)*xT*xT
       else
-        GPT0(3)=GPM(id,3)*exp(-rKTGP23(id)*xT*xT); tmp3=rKTGP23(id)*xT*xT
+        GPT0(3)=GPM(3,id)*exp(-rKTGP(3,2,id)*xT*xT); tmp3=rKTGP(3,2,id)*xT*xT
       endif !xT
 
       !check
-      if(tmp1>50.d0.or.rKTGP11(id)<0.d0.or.rKTGP21(id)<0.d0) then
-        write(errmsg,*)'check PB1 growth:',xT,rKTGP11(id),rKTGP21(id),tmp1,TGP(id,1),temp(k),ielg(id)
+      if(tmp1>50.d0.or.rKTGP(1,1,id)<0.d0.or.rKTGP(1,2,id)<0.d0) then
+        write(errmsg,*)'check PB1 growth:',xT,rKTGP(1,1:2,id),tmp1,TGP(1,id),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
-      if(tmp2>50.d0.or.rKTGP12(id)<0.d0.or.rKTGP22(id)<0.d0) then
-        write(errmsg,*)'check PB2 growth:',xT,rKTGP12(id),rKTGP22(id),tmp2,TGP(id,2),temp(k),ielg(id)
+      if(tmp2>50.d0.or.rKTGP(2,1,id)<0.d0.or.rKTGP(2,2,id)<0.d0) then
+        write(errmsg,*)'check PB2 growth:',xT,rKTGP(2,1:2,id),tmp2,TGP(2,id),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
-      if(tmp3>50.d0.or.rKTGP13(id)<0.d0.or.rKTGP23(id)<0.d0) then
-        write(errmsg,*)'check PB3 growth:',xT,rKTGP13(id),rKTGP23(id),tmp3,TGP(id,3),temp(k),ielg(id)
+      if(tmp3>50.d0.or.rKTGP(3,1,id)<0.d0.or.rKTGP(3,2,id)<0.d0) then
+        write(errmsg,*)'check PB3 growth:',xT,rKTGP(3,1:2,id),tmp3,TGP(3,id),temp(k),ielg(id)
         call parallel_abort(errmsg)
       endif
 
       !calculate CHLA
-      Chl=PB1(k,1)/chl2c(id,1)+PB2(k,1)/chl2c(id,2)+PB3(k,1)/chl2c(id,3)
+      Chl=PB1(k,1)/chl2c(1,id)+PB2(k,1)/chl2c(2,id)+PB3(k,1)/chl2c(3,id)
 
       if(Chl<0.0) then
         if(abs(Chl)>1.e-12) then
@@ -665,11 +665,11 @@ subroutine photosynthesis(id,hour,nv,it)
           endif !
           mLight=0.5*(sLight+bLight)*rat !from W/m2 to E/m2/day
           if (i==1) then
-            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i) 
+            rIK=(1.d3*chl2c(1,id))*GPT0(i)/alpha_PB(i) 
           elseif (i==2) then
-            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i)
+            rIK=(1.d3*chl2c(2,id))*GPT0(i)/alpha_PB(i)
           else
-            rIK=(1.d3*chl2c(id,1))*GPT0(i)/alpha_PB(i)
+            rIK=(1.d3*chl2c(3,id))*GPT0(i)/alpha_PB(i)
           endif !i
           rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
@@ -1401,11 +1401,11 @@ subroutine calkwq(id,nv,usf,it)
       !BMP(i)=BMPR(i)*exp(rKTBP(i)*(temp(k)-TBP(i)))
 
       if(i==1)then
-        BPR(i)=PRR(id,1)*exp(rval)
+        BPR(i)=PRR(1,id)*exp(rval)
       elseif(i==2)then
-        BPR(i)=PRR(id,2)*exp(rval)
+        BPR(i)=PRR(2,id)*exp(rval)
       elseif(i==3)then
-        BPR(i)=PRR(id,3)*exp(rval)
+        BPR(i)=PRR(3,id)*exp(rval)
       endif !i
       !BPR(i)=PRR(i)*exp(rval)
       !BPR(i)=PRR(i)*exp(rKTBP(i)*(temp(k)-TBP(i)))

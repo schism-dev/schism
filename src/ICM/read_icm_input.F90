@@ -188,39 +188,29 @@ subroutine read_icm_param2
   real(8) :: rtmp
   real(rkind) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp,pid
-  real(rkind) :: trKTGP11,trKTGP12,trKTGP13,trKTGP21,trKTGP22,trKTGP23
   real(rkind) :: tWSSED,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
   real(rkind) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
   real(rkind) :: trKRC,trKLC,trKDC, trKRP,trKLP,trKDP,trKRPalg,trKLPalg,trKDPalg
   real(rkind),allocatable :: swild2(:,:)
 
   !read phytoplankton parameters
-  call get_param_1D('icm.in','GPM',2,itmp,GPM(1,1:3),stmp,3)
-  call get_param_1D('icm.in','PRR',2,itmp,PRR(1,1:3),stmp,3)
-  call get_param_1D('icm.in','TGP',2,itmp,TGP(1,1:3),stmp,3)
-  call get_param_1D('icm.in','chl2c',2,itmp,chl2c(1,1:3),stmp,3)
-
-  call get_param_1D('icm.in','rKTGP11',2,itmp1,trKTGP11,stmp,1)
-  call get_param_1D('icm.in','rKTGP12',2,itmp1,trKTGP12,stmp,1)
-  call get_param_1D('icm.in','rKTGP13',2,itmp1,trKTGP13,stmp,1)
-  call get_param_1D('icm.in','rKTGP21',2,itmp1,trKTGP21,stmp,1)
-  call get_param_1D('icm.in','rKTGP22',2,itmp1,trKTGP22,stmp,1)
-  call get_param_1D('icm.in','rKTGP23',2,itmp1,trKTGP23,stmp,1)
+  call get_param_1D('icm.in','GPM',2,itmp,GPM(1:3,1),stmp,3)
+  call get_param_1D('icm.in','PRR',2,itmp,PRR(1:3,1),stmp,3)
+  call get_param_1D('icm.in','TGP',2,itmp,TGP(1:3,1),stmp,3)
+  call get_param_1D('icm.in','chl2c',2,itmp,chl2c(1:3,1),stmp,3)
+  call get_param_1D('icm.in','rKTGP',2,itmp1,rKTGP(1:3,1:2,1),stmp,6)
 
   do i=1,3
-    write(pid,'(a2)') i
-    call read_icm_param_2d('GPM_'//trim(adjustl(pid)),GPM(:,i),GPM(1,i))
-    call read_icm_param_2d('PRR_'//trim(adjustl(pid)),PRR(:,i),PRR(1,i))
-    call read_icm_param_2d('TGP_'//trim(adjustl(pid)),TGP(:,i),TGP(1,i))
-    call read_icm_param_2d('chl2c_'//trim(adjustl(pid)),chl2c(:,i),chl2c(1,i))
+    write(pid,'(a1)') i
+    call read_icm_param_2d('GPM_'//trim(adjustl(pid)),GPM(i,:),GPM(i,1))
+    call read_icm_param_2d('PRR_'//trim(adjustl(pid)),PRR(i,:),PRR(i,1))
+    call read_icm_param_2d('TGP_'//trim(adjustl(pid)),TGP(i,:),TGP(i,1))
+    call read_icm_param_2d('chl2c_'//trim(adjustl(pid)),chl2c(i,:),chl2c(i,1))
+    do j=1,2
+      write(pid,'(a1,a1)') i,j
+      call read_icm_param_2d('rKTGP_'//trim(adjustl(pid)),rKTGP(i,j,:),rKTGP(i,j,1))
+    enddo
   enddo
-
-  call read_icm_param_2d('rKTGP11',rKTGP11,trKTGP11)
-  call read_icm_param_2d('rKTGP12',rKTGP12,trKTGP12)
-  call read_icm_param_2d('rKTGP13',rKTGP13,trKTGP13)
-  call read_icm_param_2d('rKTGP21',rKTGP21,trKTGP21)
-  call read_icm_param_2d('rKTGP22',rKTGP22,trKTGP22)
-  call read_icm_param_2d('rKTGP23',rKTGP23,trKTGP23)
 
   !read carbon parameters
   call get_param_1D('icm.in','rKRC',2,itmp,trKRC,stmp,1)
@@ -1475,8 +1465,6 @@ subroutine check_icm_param
     do i=1,3
       write(31,808)BMPR(i),TBP(i),rKTBP(i),rKhN(i),rKhP(i),rIm(i)
     enddo
-    write(31,807)'rKTGP11','rKTGP12','rKTGP13','rKTGP21','rKTGP22','rKTGP23'
-    write(31,808)rKTGP11(1),rKTGP12(1),rKTGP13(1),rKTGP21(1),rKTGP22(1),rKTGP23(1)
     write(31,807)'rKhS','ST','rKeC1','rKeC2'
     write(31,808)rKhS,ST,rKeC1,rKeC2
 

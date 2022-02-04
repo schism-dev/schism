@@ -41,8 +41,7 @@ subroutine icm_init
     & WMS(nea),WSRP(nea),WSLP(nea),WSPB1(nea),WSPB2(nea),WSPB3(nea),Turb(nea),WRea(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
-    & PRR(nea,3),GPM(nea,3),TGP(nea,3),chl2c(nea,3), & 
-    & rKTGP11(nea),rKTGP12(nea),rKTGP13(nea),rKTGP21(nea),rKTGP22(nea),rKTGP23(nea), &
+    & PRR(3,nea),GPM(3,nea),TGP(3,nea),chl2c(3,nea),rKTGP(3,2,nea),& 
     & rIavg_save(nea), &!ncai_rad
     & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
     & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!ncai_veg
@@ -149,8 +148,7 @@ subroutine icm_init
   WMS=0.0;     WSRP=0.0;    WSLP=0.0;    WSPB1=0.0;   WSPB2=0.0;  WSPB3=0.0;  Turb=0.0;   WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
   BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;    BSAt=0.0;   BCOD=0.0;   BDO=0.0
-  PRR=0.0;     GPM=0.0;     TGP=0.0;     chl2c=0.0;  
-  rKTGP11=0.0; rKTGP12=0.0; rKTGP13=0.0; rKTGP21=0.0; rKTGP22=0.0;rKTGP23=0.0
+  PRR=0.0;     GPM=0.0;     TGP=0.0;     chl2c=0.0;   rKTGP=0.0
   !default regiong id
   reg_PO4=1;   reg_GP=1;     reg_WS=1;   reg_PR=1;      reg_KC=1;
 
