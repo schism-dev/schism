@@ -16,7 +16,7 @@
 ! Read in rank-specific hotstart outputs and combine them into hotstart.nc.
 ! Gobal-local mappings are read in from separate files.
 
-! Usage: ./combine_hotstart6 -h for help, inside outputs/
+! Usage: ./combine_hotstart7 -h for help, inside outputs/
 ! Inputs:
 !        rank-specific hotstart files; 
 !        local_to_global_*; 
@@ -25,7 +25,7 @@
 !
 !  ifort -O2 -cpp -CB -mcmodel=medium -assume byterecl -g -traceback -o combine_hotstart7.exe ../UtilLib/argparse.f90 combine_hotstart7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
-! Revisions: v6 with nc
+! Revisions: v7 with nc
 !================================================================================
 program combine_hotstart
 integer :: istep
