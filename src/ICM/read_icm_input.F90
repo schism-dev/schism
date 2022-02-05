@@ -15,10 +15,9 @@
 !Routines & functions:
 !WQinput: read time varying input 
 !read_icm_param2: read spatially varying parameter 
-!read_icm_param_2d: function to read spatially varying parameter 
+!read_param_2d: function to read spatially varying parameter 
 !read_icm_param: read parameter in icm.in
 !get_param_1D: read 1D array parameters
-!get_param_2D: read 2D array parameters
 !pt_in_poly
 !Function signa_icm
 
@@ -133,18 +132,13 @@ subroutine WQinput(time)
     enddo !while 
     Daylen=(TD-TU)
 
-    !PTT=pi/(TD-TU)
-    !do i=1,3
-    !  rIn(i)=12.d0*PTT*rIa
-    !enddo
   elseif(iRad/=1.and.iRad/=2)then
     write(errmsg,*)'Unknown ICM iRad value: ', iRad
     call parallel_abort(errmsg)
   endif!time_icm
 
-  !veg
-  !time_icm(4) for veg module
-  if(iveg_icm==1.and.time_icm(4)<time) then !manually input
+  !veg !time_icm(4) for veg module !manually input
+  if(iveg_icm==1.and.time_icm(4)<time) then 
     do while(time_icm(4)<time)
       read(404,*)rtmp,mtemp
       time_icm(4)=rtmp
@@ -186,9 +180,6 @@ subroutine read_icm_param2
   real(8) :: rtmp
   real(rkind) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp,pid
-  real(rkind) :: tWSSED,tWSRP,tWSLP,tWSPB1,tWSPB2,tWSPB3,tTurb,tWRea,tPC2TSS
-  real(rkind) :: tWSSBNET,tWSLBNET,tWSRBNET,tWS1BNET,tWS2BNET,tWS3BNET 
-  real(rkind) :: trKRC,trKLC,trKDC, trKRP,trKLP,trKDP,trKRPalg,trKLPalg,trKDPalg
   real(rkind),allocatable :: swild2(:,:)
 
   !read phytoplankton parameters
@@ -200,93 +191,93 @@ subroutine read_icm_param2
 
   do i=1,3
     write(pid,'(a1)') i
-    call read_icm_param_2d('GPM_'//trim(adjustl(pid)),GPM(i,:),GPM(i,1))
-    call read_icm_param_2d('PRR_'//trim(adjustl(pid)),PRR(i,:),PRR(i,1))
-    call read_icm_param_2d('TGP_'//trim(adjustl(pid)),TGP(i,:),TGP(i,1))
-    call read_icm_param_2d('chl2c_'//trim(adjustl(pid)),chl2c(i,:),chl2c(i,1))
+    call read_param_2d('GPM_'//trim(adjustl(pid)),GPM(i,:),GPM(i,1))
+    call read_param_2d('PRR_'//trim(adjustl(pid)),PRR(i,:),PRR(i,1))
+    call read_param_2d('TGP_'//trim(adjustl(pid)),TGP(i,:),TGP(i,1))
+    call read_param_2d('chl2c_'//trim(adjustl(pid)),chl2c(i,:),chl2c(i,1))
     do j=1,2
       write(pid,'(a1,a1)') i,j
-      call read_icm_param_2d('rKTGP_'//trim(adjustl(pid)),rKTGP(i,j,:),rKTGP(i,j,1))
+      call read_param_2d('rKTGP_'//trim(adjustl(pid)),rKTGP(i,j,:),rKTGP(i,j,1))
     enddo
   enddo
 
   !read carbon parameters
-  call get_param_1D('icm.in','rKRC',2,itmp,trKRC,stmp,1)
-  call get_param_1D('icm.in','rKLC',2,itmp,trKLC,stmp,1)
-  call get_param_1D('icm.in','rKDC',2,itmp,trKDC,stmp,1)
+  call get_param_1D('icm.in','rKRC',2,itmp,rKRC(1),stmp,1)
+  call get_param_1D('icm.in','rKLC',2,itmp,rKLC(1),stmp,1)
+  call get_param_1D('icm.in','rKDC',2,itmp,rKDC(1),stmp,1)
 
-  call read_icm_param_2d('rKRC',rKRC,trKRC)
-  call read_icm_param_2d('rKLC',rKLC,trKLC)
-  call read_icm_param_2d('rKDC',rKDC,trKDC)
+  call read_param_2d('rKRC',rKRC,rKRC(1))
+  call read_param_2d('rKLC',rKLC,rKLC(1))
+  call read_param_2d('rKDC',rKDC,rKDC(1))
 
   !read Phosphorus parameters
-  call get_param_1D('icm.in','rKRP',2,itmp,trKRP,stmp,1)
-  call get_param_1D('icm.in','rKLP',2,itmp,trKLP,stmp,1)
-  call get_param_1D('icm.in','rKDP',2,itmp,trKDP,stmp,1)
-  call get_param_1D('icm.in','rKRPalg',2,itmp,trKRPalg,stmp,1)
-  call get_param_1D('icm.in','rKLPalg',2,itmp,trKLPalg,stmp,1)
-  call get_param_1D('icm.in','rKDPalg',2,itmp,trKDPalg,stmp,1)
-  call read_icm_param_2d('rKRP',rKRP,trKRP)
-  call read_icm_param_2d('rKLP',rKLP,trKLP)
-  call read_icm_param_2d('rKDP',rKDP,trKDP)
-  call read_icm_param_2d('rKRPalg',rKRPalg,trKRPalg)
-  call read_icm_param_2d('rKLPalg',rKLPalg,trKLPalg)
-  call read_icm_param_2d('rKDPalg',rKDPalg,trKDPalg)
+  call get_param_1D('icm.in','rKRP',2,itmp,rKRP(1),stmp,1)
+  call get_param_1D('icm.in','rKLP',2,itmp,rKLP(1),stmp,1)
+  call get_param_1D('icm.in','rKDP',2,itmp,rKDP(1),stmp,1)
+  call get_param_1D('icm.in','rKRPalg',2,itmp,rKRPalg(1),stmp,1)
+  call get_param_1D('icm.in','rKLPalg',2,itmp,rKLPalg(1),stmp,1)
+  call get_param_1D('icm.in','rKDPalg',2,itmp,rKDPalg(1),stmp,1)
+  call read_param_2d('rKRP',rKRP,rKRP(1))
+  call read_param_2d('rKLP',rKLP,rKLP(1))
+  call read_param_2d('rKDP',rKDP,rKDP(1))
+  call read_param_2d('rKRPalg',rKRPalg,rKRPalg(1))
+  call read_param_2d('rKLPalg',rKLPalg,rKLPalg(1))
+  call read_param_2d('rKDPalg',rKDPalg,rKDPalg(1))
 
   !read settling velocity
-  call get_param_1D('icm.in','WSSED',2,itmp,tWSSED,stmp,1)
-  call get_param_1D('icm.in','WSRP',2,itmp,tWSRP,stmp,1)
-  call get_param_1D('icm.in','WSLP',2,itmp,tWSLP,stmp,1)
-  call get_param_1D('icm.in','WSPB1',2,itmp,tWSPB1,stmp,1)
-  call get_param_1D('icm.in','WSPB2',2,itmp,tWSPB2,stmp,1)
-  call get_param_1D('icm.in','WSPB3',2,itmp,tWSPB3,stmp,1)
+  call get_param_1D('icm.in','WSSED',2,itmp,WSSED(1),stmp,1)
+  call get_param_1D('icm.in','WSRP', 2,itmp, WSRP(1),stmp,1)
+  call get_param_1D('icm.in','WSLP', 2,itmp, WSLP(1),stmp,1)
+  call get_param_1D('icm.in','WSPB1',2,itmp,WSPB1(1),stmp,1)
+  call get_param_1D('icm.in','WSPB2',2,itmp,WSPB2(1),stmp,1)
+  call get_param_1D('icm.in','WSPB3',2,itmp,WSPB3(1),stmp,1)
   
-  call read_icm_param_2d('WSRP',WSRP,tWSRP)
-  call read_icm_param_2d('WSLP',WSLP,tWSLP)
-  call read_icm_param_2d('WSPB1',WSPB1,tWSPB1)
-  call read_icm_param_2d('WSPB2',WSPB2,tWSPB2)
-  call read_icm_param_2d('WSPB3',WSPB3,tWSPB3)
-  call read_icm_param_2d('WSSED',WSSED,tWSSED)
+  call read_param_2d('WSRP', WSRP,  WSRP(1))
+  call read_param_2d('WSLP', WSLP,  WSLP(1))
+  call read_param_2d('WSPB1',WSPB1,WSPB1(1))
+  call read_param_2d('WSPB2',WSPB2,WSPB2(1))
+  call read_param_2d('WSPB3',WSPB3,WSPB3(1))
+  call read_param_2d('WSSED',WSSED,WSSED(1))
 
   !read net settling velocity (POM into the sediment)
-  call get_param('icm.in','WSSBNET',2,itmp,tWSSBNET,stmp)
-  call get_param('icm.in','WSLBNET',2,itmp,tWSLBNET,stmp)
-  call get_param('icm.in','WSRBNET',2,itmp,tWSRBNET,stmp)
-  call get_param('icm.in','WS1BNET',2,itmp,tWS1BNET,stmp)
-  call get_param('icm.in','WS2BNET',2,itmp,tWS2BNET,stmp)
-  call get_param('icm.in','WS3BNET',2,itmp,tWS3BNET,stmp)
+  call get_param('icm.in','WSSBNET',2,itmp,WSSBNET(1),stmp)
+  call get_param('icm.in','WSLBNET',2,itmp,WSLBNET(1),stmp)
+  call get_param('icm.in','WSRBNET',2,itmp,WSRBNET(1),stmp)
+  call get_param('icm.in','WS1BNET',2,itmp,WS1BNET(1),stmp)
+  call get_param('icm.in','WS2BNET',2,itmp,WS2BNET(1),stmp)
+  call get_param('icm.in','WS3BNET',2,itmp,WS3BNET(1),stmp)
 
-  call read_icm_param_2d('WSSBNET',WSSBNET,tWSSBNET)
-  call read_icm_param_2d('WSLBNET',WSLBNET,tWSLBNET)
-  call read_icm_param_2d('WSRBNET',WSRBNET,tWSRBNET)
-  call read_icm_param_2d('WS1BNET',WS1BNET,tWS1BNET)
-  call read_icm_param_2d('WS2BNET',WS2BNET,tWS2BNET)
-  call read_icm_param_2d('WS3BNET',WS3BNET,tWS3BNET)
+  call read_param_2d('WSSBNET',WSSBNET,WSSBNET(1))
+  call read_param_2d('WSLBNET',WSLBNET,WSLBNET(1))
+  call read_param_2d('WSRBNET',WSRBNET,WSRBNET(1))
+  call read_param_2d('WS1BNET',WS1BNET,WS1BNET(1))
+  call read_param_2d('WS2BNET',WS2BNET,WS2BNET(1))
+  call read_param_2d('WS3BNET',WS3BNET,WS3BNET(1))
 
   !read turbidity
-  call get_param('icm.in','Turb',2,itmp,tTurb,stmp)
-  call read_icm_param_2d('Turb',Turb,tTurb)
+  call get_param('icm.in','Turb',2,itmp,Turb(1),stmp)
+  call read_param_2d('Turb',Turb,Turb(1))
 
   !read reareation 
-  call get_param('icm.in','WRea',2,itmp,tWRea,stmp)
-  call read_icm_param_2d('WRea',WRea,tWRea)
+  call get_param('icm.in','WRea',2,itmp,WRea(1),stmp)
+  call read_param_2d('WRea',WRea,WRea(1))
 
   !read PC to TSS
   if(iLight==3) then
-    call get_param('icm.in','PC2TSS',2,itmp,tPC2TSS,stmp)
-    call read_icm_param_2d('PC2TSS',PC2TSS,tPC2TSS)
+    call get_param('icm.in','PC2TSS',2,itmp,PC2TSS(1),stmp)
+    call read_param_2d('PC2TSS',PC2TSS,PC2TSS(1))
   endif
 
   !for pH module
 #ifdef ICM_PH
   !pH flag
   iphgb=0
-  call read_icm_param_2d('ph',iphgb,-9999)
+  call read_param_2d('ph',iphgb,-9999)
 
   !pH nudge flag
   if(inu_ph==1) then
     ph_nudge=0.0
-    call read_icm_param_2d('ph_nudge',ph_nudge,-999)
+    call read_param_2d('ph_nudge',ph_nudge,-999)
   endif
 #endif ICM_PH
 
@@ -422,29 +413,6 @@ subroutine read_icm_param2
     enddo !i=1,nea
   endif !ihot&isav_icm
 
-!    do i=1,nea
-!      !Biomass at each layer (0 if above canopy)
-!!      if(patchsav(i)==1) then
-!        do k=kbe(i)+1,nvrt
-!          if(ze(k-1,i)<hcansav(i)+ze(kbe(i),i)) then
-!            tmp=min(ze(k,i),hcansav(i)+ze(kbe(i),i))-ze(k-1,i) !>0
-!            if(hcansav(i)<=0.or.tmp<=0) call parallel_abort('read_icm: hcansav<=0')
-!            !k2=nvrt-k+1 !ICM convention
-!            lfsav(k,i)=tlfsav(i)*tmp/hcansav(i)
-!            stsav(k,i)=tstsav(i)*tmp/hcansav(i)
-!            rtsav(k,i)=trtsav(i)*tmp/hcansav(i)
-!          endif !ze
-!
-!          !write(12,*)'init sav leaf biomass for id and it on
-!          !layer:',id,ielg(i),it,i,lfsav(i,i)
-!          !write(12,*)'with hcansav is: ; zdep is',hcansav(i)
-!        enddo !k
-!!      endif !patchsav
-!    enddo !i
-!  endif !ihot&isav_icm
-
-
-  !veg
   !-----------------read in veg patch flag-----------------
   if(iveg_icm==1) then
     open(31,file=in_dir(1:len_in_dir)//'patchveg.prop',status='old')
@@ -460,57 +428,6 @@ subroutine read_icm_param2
     close(31)
   endif !iveg_icm
  
- 
- ! !-----------------read in mean high water level for each elem-----------------
- ! if(iveg_icm==1) then
- !   if(initveg==1)then
- !     open(31,file=in_dir(1:len_in_dir)//'mhtveg.prop',status='old')
- !     do i=1,ne_global
- !       read(31,*)j,tmp
- !       if(tmp<0.or.tmp>=0) then
- !         write(errmsg,*)'ICM_init: illegal mhtveg.prop:',i,tmp
- !         call parallel_abort(errmsg)
- !       endif
- !       if(iegl(i)%rank==myrank) then
- !          ne=iegl(i)%id
- !          mhtveg(ne)=tmp
- !       endif
- !     enddo !i=ne_global
- !     close(31)
- !   elseif(initveg==2) then
- !     allocate(ptmp1(npa),stat=i)
- !     if(i/=0) call parallel_abort('read_icm_input: alloc(0)')
- !     open(10,file=in_dir(1:len_in_dir)//'mhtveg.gr3',status='old')
- !     read(10,*); read(10,*) n,q
- !     if(n/=ne_global.or.q/=np_global) then
- !       call parallel_abort('ICM_init: Check mhtveg.gr3')
- !     endif
- !
- !     do i=1,np_global
- !       read(10,*)j,xtmp,ytmp,tmp
- !       if(.not.(tmp<0.or.tmp>=0)) then
- !         write(errmsg,*)'ICM_init: illegal mhtveg.gr3:',i,tmp
- !         call parallel_abort(errmsg)
- !       endif
- !       if(ipgl(i)%rank==myrank) then
- !         nd=ipgl(i)%id
- !         ptmp1(nd)=tmp
- !       endif
- !     enddo!i=np_global
- !     close(10)
- !
- !     do i=1,nea
- !       mhtveg(i)=sum(ptmp1(elnode(1:i34(i),i)))/i34(i)
- !     enddo !i
- !     deallocate(ptmp1)
- !
- !   else
- !     write(errmsg,*)'ICM_init: illegal initveg:',initveg
- !     call parallel_abort(errmsg)
- !   endif !initveg
- ! endif !iveg_icm
-
-
   !-----------------read in veg initial biomass for cold start-----------------
   if(iveg_icm==1.and.ihot==0) then
     if(initveg==1)then
@@ -585,26 +502,6 @@ subroutine read_icm_param2
       write(errmsg,*)'ICM_init: illegal initveg:',initveg
       call parallel_abort(errmsg)
     endif !initveg
-
- !   !remove init biomass in deep zone (deep: mht+dp>hcan+1.2, 1.2 comes from Morris, 2013)
- !   do j=1,3
- !     do i=1,nea
- !       rtmp=mhtveg(i)+dpe(i)
- !       if(rtmp<0.) then
- !         tlfveg(i,j)=0.0
- !         tstveg(i,j)=0.0
- !         trtveg(i,j)=0.0
- !         patchveg(i)=-1
- !       endif !total dry land
- !       rtmp=mhtveg(i)+dpe(i)-10
- !       if(rtmp>0.) then
- !         tlfveg(i,j)=0.0
- !         tstveg(i,j)=0.0
- !         trtveg(i,j)=0.0
- !         patchveg(i)=-1
- !       endif !open water with no survival potential 
- !     enddo !i::nea
- !   enddo !j::veg species
  
     !calc canopy height 
     do j=1,3
@@ -627,7 +524,7 @@ subroutine read_icm_param2
 
 end subroutine read_icm_param2
 
-subroutine read_icm_param_2d(varname,pvar,pvalue)
+subroutine read_param_2d(varname,pvar,pvalue)
 !---------------------------------------------------------------------
 !funciton to automatically read spatially varying ICM paramters (*.gr3 or *.prop)
 !Input:
@@ -689,7 +586,7 @@ subroutine read_icm_param_2d(varname,pvar,pvalue)
     enddo
   endif!pvalue
   
-end subroutine read_icm_param_2d
+end subroutine read_param_2d
 
 subroutine read_icm_param
 !---------------------------------------------------------------------
@@ -784,9 +681,9 @@ subroutine read_icm_param
 
  
   !read Zooplanktion parameters
-  call get_param_2D('icm.in','GZM',2,itmp2,GZM,stmp,8,2)
-  call get_param_2D('icm.in','rKhGE',2,itmp2,rKhGE,stmp,8,2)
-  call get_param_2D('icm.in','PPC',2,itmp2,PPC,stmp,8,2)
+  call get_param_1D('icm.in','GZM',2,itmp2,GZM(1:8,1:2),stmp,16)
+  call get_param_1D('icm.in','rKhGE',2,itmp2,rKhGE(1:8,1:2),stmp,16)
+  call get_param_1D('icm.in','PPC',2,itmp2,PPC(1:8,1:2),stmp,16)
 
   call get_param_1D('icm.in','BMZR',2,itmp1,BMZR,stmp,2)
   call get_param_1D('icm.in','DRZ',2,itmp1,DRZ,stmp,2)
@@ -832,8 +729,6 @@ subroutine read_icm_param
   rKeSal=rtmp
   call get_param('icm.in','Dopt',2,itmp,rtmp,stmp)
   Dopt=rtmp
-
-  !call get_param('icm.in','STB',2,itmp,STB,stmp)
 
   !sav parameters
   call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
@@ -960,8 +855,6 @@ subroutine read_icm_param
   call get_param_1D('icm.in','saltoptveg',2,itmp1,saltoptveg,stmp,3)
   call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
   call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
-  !call get_param_1D('icm.in','bveg',2,itmp1,bveg,stmp,3)
-  !call get_param_1D('icm.in','cveg',2,itmp1,cveg,stmp,3)
   call get_param_1D('icm.in','dveg',2,itmp1,dveg,stmp,3)
   call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)
   call get_param_1D('icm.in','critveg',2,itmp1,critveg,stmp,3)
@@ -1004,7 +897,6 @@ subroutine read_icm_param
   call get_param_1D('icm.in','bdrtveg',2,itmp1,bdrtveg,stmp,3)
   call get_param_1D('icm.in','cdrtveg',2,itmp1,cdrtveg,stmp,3)
   call get_param_1D('icm.in','ddrtveg',2,itmp1,ddrtveg,stmp,3)
-
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
@@ -1201,8 +1093,7 @@ subroutine read_icm_param
   rKa=rtmp
   call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
 
-!error, to add
-  !sav :: check
+  !sav :: check !error, to add
   if(isav_icm==1) then
     if(alphasav<=0) call parallel_abort('read_icm_input: alphasav')
     if(pmbssav<=0) call parallel_abort('read_icm_input: pmbssav')
@@ -1228,7 +1119,6 @@ subroutine read_icm_param
     enddo !j::veg species
   endif !iveg_icm
 
-
   !PH nudge for TIC and ALK
   if(iPh==1.and.inu_ph==1) then
     open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
@@ -1241,10 +1131,6 @@ subroutine read_icm_param
   dtw2=dtw/2.0
 
   !zooplankton
-!  Ef1=Eff*(1-RF)
-!  Ef2=(1-Eff)*(1-RF)
-!  Ef3=1-Ef1
-!  Ef4=RF+Ef1
   do i=1,2
     do j=1,8
       PPC(j,i)=PPC(j,i)/rKhGE(j,i)
@@ -1297,44 +1183,6 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
   endif
 
 end subroutine get_param_1D
-
-subroutine get_param_2D(fname,varname,vartype,ivar,rvar,svar,idim1,idim2)
-!--------------------------------------------------------------------
-!Read a 2-Dimensional ICM parameter
-!--------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
-  use schism_msgp, only : parallel_abort,myrank
-  use misc_modules
-  implicit none
-
-  character(*),intent(in) :: fname
-  character(*),intent(in) :: varname
-  integer,intent(in) :: vartype
-  integer,intent(in) :: idim1,idim2
-  integer,intent(out) :: ivar(idim1,idim2)
-  real(rkind),intent(out) :: rvar(idim1,idim2)
-  character(len=2),intent(out) :: svar
-  
-  !local variables
-  integer :: itmp,iarray(10000),i,j,irec
-  real(8) :: rtmp,rarray(10000) !main code in double
-  character(len=2) :: stmp
-
-  svar='  '
-  irec=idim1*idim2
-
-  if(vartype==1) then  !read 2D integer array
-    call get_param(fname,varname,3,itmp,rtmp,stmp,ndim1=irec,iarr1=iarray)
-    ivar=transpose(reshape(iarray(1:irec),(/idim2,idim1/)))
-  elseif(vartype==2) then !read 2D float array
-    call get_param(fname,varname,4,itmp,rtmp,stmp,ndim1=irec,arr1=rarray)
-    rvar=transpose(reshape(rarray(1:irec),(/idim2,idim1/)))
-  else
-    write(errmsg,*)'unknown vartype :',varname
-    call parallel_abort(errmsg)
-  endif
-
-end subroutine get_param_2D
 
 subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
 !---------------------------------------------------------------------------

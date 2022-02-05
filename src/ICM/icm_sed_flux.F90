@@ -251,9 +251,9 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','SALTND',2,itmp,rtmp,stmp)
   SALTND=rtmp
   
-  call get_param_2D('icm_sed.in','FRPPH',2,itmp2,FRPPH,stmp,3,3)
-  call get_param_2D('icm_sed.in','FRNPH',2,itmp2,FRNPH,stmp,3,3)
-  call get_param_2D('icm_sed.in','FRCPH',2,itmp2,FRCPH,stmp,3,3)
+  call get_param_1D('icm_sed.in','FRPPH',2,itmp2,FRPPH(1:3,1:3),stmp,9)
+  call get_param_1D('icm_sed.in','FRNPH',2,itmp2,FRNPH(1:3,1:3),stmp,9)
+  call get_param_1D('icm_sed.in','FRCPH',2,itmp2,FRCPH(1:3,1:3),stmp,9)
   call get_param_1D('icm_sed.in','FRPPHB',2,itmp1,FRPPHB,stmp,3)
   call get_param_1D('icm_sed.in','FRNPHB',2,itmp1,FRNPHB,stmp,3)
   call get_param_1D('icm_sed.in','FRCPHB',2,itmp1,FRCPHB,stmp,3)
@@ -360,9 +360,9 @@ subroutine read_icm_sed_param
 
   !veg
   if(iveg_icm==1) then
-    call get_param_2D('icm_sed.in','frnveg',2,itmp2,frnveg,stmp,3,3)
-    call get_param_2D('icm_sed.in','frpveg',2,itmp2,frpveg,stmp,3,3)
-    call get_param_2D('icm_sed.in','frcveg',2,itmp2,frpveg,stmp,3,3)
+    call get_param_1D('icm_sed.in','frnveg',2,itmp2,frnveg(1:3,1:3),stmp,9)
+    call get_param_1D('icm_sed.in','frpveg',2,itmp2,frpveg(1:3,1:3),stmp,9)
+    call get_param_1D('icm_sed.in','frcveg',2,itmp2,frpveg(1:3,1:3),stmp,9)
   endif
 
   !benthic stress

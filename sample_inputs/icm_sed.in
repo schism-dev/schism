@@ -21,22 +21,12 @@ iSteady = 1
 DIFFT = 0.0018
 SALTSW= 1.0
 SALTND= 1.0
-FRPPH=  0.65  0.65  0.65 0.255  0.255  0.255 0.095  0.095  0.095  ! 3 phyto. into 3G POP classes,(3G,3PB) 
-FRNPH=  0.65  0.65  0.65 0.300  0.300  0.300 0.050  0.050  0.050  ! 3 phyto. into 3G PON classes 
-FRCPH=  0.65  0.65  0.65 0.255  0.255  0.255 0.095  0.095  0.095  ! 3 phyto. into 3G POC classes 
+FRPPH=  0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095  ! 3 phyto. into 3G POP classes,(3G,3PB) 
+FRNPH=  0.65 0.300 0.050   0.65 0.300 0.050   0.65 0.300 0.050  ! 3 phyto. into 3G PON classes 
+FRCPH=  0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095  ! 3 phyto. into 3G POC classes 
 FRPPHB= 0.65    0.255    0.095    !new
 FRNPHB= 0.65    0.300    0.050    !new
 FRCPHB= 0.65    0.255    0.095    !new
-
-!FRPPH1= 0.65    0.255    0.095    !POP of diatom into 3G class
-!FRPPH2= 0.65    0.255    0.095    !POP of green alage into 3G class
-!FRPPH3= 0.65    0.255    0.095    !POP of cyanobacteria into 3G class
-!FRNPH1= 0.65    0.300    0.050    !PON of diatom into 3G class
-!FRNPH2= 0.65    0.300    0.050    !PON of green alage into 3G class
-!FRNPH3= 0.65    0.300    0.050    !PON of cyanobacteria into 3G class
-!FRCPH1= 0.65    0.255    0.095    !POC of diatom into 3G class
-!FRCPH2= 0.65    0.255    0.095    !POC of green alage into 3G class
-!FRCPH3= 0.65    0.255    0.095    !POC of cyanobacteria into 3G class
 
 !unit: /day
 KPDIAG= 0.035   0.0018   0.00     !reaction rates of 3G class POP decay at 20C
@@ -199,9 +189,9 @@ frcsav=   0.65    0.255    0.095    !fraction of POC produced by rt metabolism g
 !Marsh
 !-----------------------------------------------------------------------
 !raction of POM produced by rt metabolism goes to G1, G2, G3, (3G,3veg)
-frnveg= 0.65  0.65  0.65  0.300   0.300   0.300  0.050   0.050   0.050  
-frpveg= 0.65  0.65  0.65  0.255   0.255   0.255  0.095   0.095   0.095  
-frcveg= 0.65  0.65  0.65  0.255   0.255   0.255  0.095   0.095   0.095  
+frnveg= 0.65 0.300 0.050   0.65 0.300 0.050   0.65 0.300 0.050  
+frpveg= 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095   
+frcveg= 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095 
 
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
