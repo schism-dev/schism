@@ -63,7 +63,7 @@ subroutine ecosystem(it)
   use schism_glbl, only : rkind,errmsg,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
                         & isdel,kbs,zs,su2,sv2,npa,nne,elnode,srad,i34,np
   use schism_msgp, only : myrank,parallel_abort,exchange_p3dw
-  use icm_mod, only : iSed,iRea,iPh,PH_el,PH_nd,nspool_icm,rIa,rIavg,iRad,rIavg_save, &
+  use icm_mod, only : iSed,iRea,iPh,PH_el,PH_nd,rIa,rIavg,iRad,rIavg_save, &
                     & isav_icm,patchsav,lfsav,stsav,rtsav,iveg_icm,patchveg,idry_icm 
   implicit none
   integer, intent(in) :: it
@@ -2346,43 +2346,9 @@ subroutine calkwq(id,nv,usf,it)
         write(errmsg,*)'nan found in rtdosav:',rtdosav(k),ielg(id),k,it
         call parallel_abort(errmsg)
       endif
-
     endif !isav_icm
 
-    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !station output for ICM
-    if(id<=ne.and.iout_icm==1.and.mod(it,nspool_icm)==0) then
-      if(ista(id)/=0) then
-        iid=ista(id)
-        do m=1,nsta(iid)
-          rtmp=max(min(depsta(m,iid),zdep(nv)),0.d0)
-          if((k==1.and.rtmp<=zdep(k).and.rtmp>=0.0).or.(k>1.and.rtmp>zdep(max(1,(k-1))).and.rtmp<=zdep(k))) then
-            write(410)time,stanum(m,iid),salt(k),temp(k),&
-     & PB1(k,1),GP(k,id,1),BMP(1),WSPB1(id),PB10,&
-     & PB2(k,1),GP(k,id,2),BMP(2),WSPB2(id),PB20,&
-     & PB3(k,1),GP(k,id,3),BMP(3),WSPB3(id),PB30,&
-     & RPOC(k,1),rKRPOC,WSRP(id),FCRP(1),FCRP(2),FCRP(3),RPOC0,nRPOC,&
-     & LPOC(k,1),rKLPOC,WSLP(id),FCLP(1),FCLP(2),FCLP(3),RPOC0,nLPOC,&
-     & DOC(k,1),xKHR,xDenit,rKDOC,rKHORDO,rKDC(id),rKTDOM,FCDP(1),FCDP(2),FCDP(3),rKHR1,rKHR2,rKHR3,nDOC,&
-     & RPON(k,1),rKRPON,FNRP,FNR(1),ANC(1),FNR(2),ANC(2),FNR(3),ANC(3),RPON0,nRPON,&
-     & LPON(k,1),rKLPON,FNLP,FNL(1),FNL(2),FNL(3),LPON0,nLPON,&
-     & DON(k,1),rKDON,FNDP,FND(1),FND(2),FND(3),nDON,&
-     & NH4(k,1),xNit,rNitM,rKhNitN,rKhNitDO,FNIP,FNI(1),FNI(2),FNI(3),PrefN(k,1),PrefN(k,2),PrefN(k,3),nNH4,&
-     & NO3(k,1),ANDC,xDenit,nNO3,&
-     & RPOP(k,1),rKRPOP,FPRP,FPR(1),APC(1),FPR(2),APC(2),FPR(3),APC(3),RPOP0,nRPOP,&
-     & LPOP(k,1),rKLPOP,FNLP,FPL(1),FPL(2),FPL(3),LPOP0,nLPOP,&
-     & DOP(k,1),rKDOP,FPDP,FPD(1),FPD(2),FPD(3),nDOP,&
-     & PO4t(k,1),rKPO4p,TSED(k),WSSED(id),FPIP,FPI(1),FPI(2),FPI(3),nPO4t,&
-     & SU(k,1),rKSUA,rKSU,rKTSUA,WSPB1(id),FSPP,ASCd,FSPd,SU0,nSU,&
-     & SAt(k,1),rKSAp,FSIP,FSId,SAt0,nSAt,&
-     & COD(k,1),rKCOD,rKHCOD,rKCD,rKTCOD,nCOD,&
-     & DOX(k,1),DOsat,rKr,AOC,AON,nDO
-          endif !rtmp
-        enddo !m
-      endif !ista(i)/=0
-    endif !i<=ne
   enddo !k=1,nv
-
 
   !--------------------------------------------------------------------------------------
   !sav::calculate SAV height + intergrated nutrient fluxes

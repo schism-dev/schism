@@ -42,12 +42,12 @@ subroutine icm_init
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
     & PRR(3,nea),GPM(3,nea),TGP(3,nea),chl2c(3,nea),rKTGP(3,2,nea),& 
-    & rIavg_save(nea), &!ncai_rad
-    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !ncai_sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
-    & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!ncai_veg
-    & tthcan(nea),ttdens(nea), &!ncai_sav + ncai_veg
+    & rIavg_save(nea), &!rad
+    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
+    & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!veg
+    & tthcan(nea),ttdens(nea), &!sav + veg
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
-    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !ncai_region
+    & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region
   if(istat/=0) call parallel_abort('Failed in alloc. icm_mod variables')
 
   !----------------------------------------------------------------
@@ -65,7 +65,7 @@ subroutine icm_init
 #endif
 
   !----------------------------------------------------------------
-  !ncai_sav:: parameters + outputs
+  !sav:: parameters + outputs
   !----------------------------------------------------------------
   call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
   if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
@@ -91,7 +91,7 @@ subroutine icm_init
   endif !isav_icm
 
   !----------------------------------------------------------------
-  !ncai_veg:: parameters + outputs
+  !veg:: parameters + outputs
   !----------------------------------------------------------------
   call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
   if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
@@ -116,7 +116,7 @@ subroutine icm_init
   !icm_sed_mod
   !----------------------------------------------------------------
   allocate(SFA(nea),SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
-      & tau_c_elem(nea), &!ncai_erosion
+      & tau_c_elem(nea), &!erosion
       & SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), & 
       & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
       & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea), &
@@ -152,19 +152,19 @@ subroutine icm_init
   !default regiong id
   reg_PO4=1;   reg_GP=1;     reg_WS=1;   reg_PR=1;      reg_KC=1;
 
-  !ncai_rad
+  !rad
   rIavg_save=0.0
 
-  !ncai_sav
+  !sav
   lfsav=0.0;    stsav=0.0;      rtsav=0.0;      hcansav=0.0 !init for each layer whole domain 
 
-  !ncai_veg
+  !veg
   tlfveg=0.0;   tstveg=0.0;     trtveg=0.0;     hcanveg=0.0
 
-  !ncai_sav + ncai_veg
+  !sav + veg
   tthcan=0.0;   ttdens=0.0;
 
-  !ncai_erosion
+  !erosion
   tau_c_elem=0.0
   EROH2S=0.0; EROLPOC=0.0; ERORPOC=0.0
   SED_EROH2S=0.0; SED_EROLPOC=0.0; SED_ERORPOC=0.0

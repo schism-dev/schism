@@ -17,8 +17,6 @@
 !read_icm_param2: read spatially varying parameter 
 !read_icm_param_2d: function to read spatially varying parameter 
 !read_icm_param: read parameter in icm.in
-!read_icm_stainfo: read in icm station output information
-!check_icm_param: Output ICM parameters to check
 !get_param_1D: read 1D array parameters
 !get_param_2D: read 2D array parameters
 !pt_in_poly
@@ -627,9 +625,6 @@ subroutine read_icm_param2
 
   endif !ihot&iveg_icm
 
-
-  if(iCheck==1) call check_icm_param
-
 end subroutine read_icm_param2
 
 subroutine read_icm_param_2d(varname,pvar,pvalue)
@@ -720,17 +715,11 @@ subroutine read_icm_param
   call get_param('icm.in','jLight',1,jLight,rtmp,stmp)
   call get_param('icm.in','iRea',1,iRea,rtmp,stmp)
   call get_param('icm.in','iZoo',1,iZoo,rtmp,stmp)
-!  call get_param('icm.in','iPh',1,iPh,rtmp,stmp)
   call get_param('icm.in','iAtm',1,iAtm,rtmp,stmp)
   call get_param('icm.in','iSed',1,iSed,rtmp,stmp)
   call get_param('icm.in','iBen',1,iBen,rtmp,stmp)
   call get_param('icm.in','iTBen',1,iTBen,rtmp,stmp)
   call get_param('icm.in','iRad',1,iRad,rtmp,stmp)
-!  call get_param('icm.in','iReg',1,iReg,rtmp,stmp)
-  call get_param('icm.in','iCheck',1,iCheck,rtmp,stmp)
-  call get_param('icm.in','iout_icm',1,iout_icm,rtmp,stmp)
-  call get_param('icm.in','nspool_icm',1,nspool_icm,rtmp,stmp)
-  !call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp) !read in ahead of allocations
   call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
   call get_param('icm.in','idry_icm',1,idry_icm,rtmp,stmp)
 
@@ -740,23 +729,14 @@ subroutine read_icm_param
   if(max(iAtm,iSed,iBen,iRad)>2) call parallel_abort('read_icm: iAtm,iSed,iBen,iRad')
   if(iSet/=0.and.iSet/=1) call parallel_abort('read_icm: invalid iSet')
   if(idry_icm/=0.and.idry_icm/=1) call parallel_abort('read_icm: invalid idry_icm')
-  !if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
   if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('read_icm: iRad=1 needs heat exchange')
   if(jLight==1.and.(iRad/=2)) call parallel_abort('read_icm: iRad=2 is required for jLight=1')
-!  if(iReg/=0.and.iReg/=1) call parallel_abort('read_icm: invalid iReg')
 
 #ifdef ICM_PH
   iPh=1
 #else
   iPh=0
 #endif
-
-!Error: need more check on the flags
-
-  
-
-  !read in icm station information
-  if(iout_icm==1) call read_icm_stainfo
 
 #ifndef USE_SED 
   if(iLight==2) then
@@ -1280,276 +1260,7 @@ subroutine read_icm_param
   enddo
   ST=ST*ST
 
-!  do i=1,2
-!    CCZR2(i)=FCRPZ*RZ(i)
-!    CCZL2(i)=FCLPZ*RZ(i)
-!    CCZD2(i)=FCDPZ*RZ(i)
-!
-!    CNZR2(i)=FNRPZ*RZ(i)*ANCZ(i)
-!    CNZL2(i)=FNLPZ*RZ(i)*ANCZ(i)
-!    CNZD2(i)=FNDPZ*RZ(i)*ANCZ(i)
-!    CNZI2(i)=FNIPZ*RZ(j)*ANCZ(i)
-!
-!    CPZR2(i)=FPRPZ*RZ(i)*APCZ(i)
-!    CPZL2(i)=FPLPZ*RZ(i)*APCZ(i)
-!    CPZD2(i)=FPDPZ*RZ(i)*APCZ(i)
-!    CPZI2(i)=FPIPZ*RZ(i)*APCZ(i)
-!
-!    CSZP2(i)=FSPPZ*RZ(i)*ASCZ(i)
-!    CSZI2(i)=FSIPZ*RZ(i)*ASCZ(i)
-!
-!    CCZR3(i)=FCRPZ*DRZ(i)
-!    CCZL3(i)=FCLPZ*DRZ(i)
-!    CCZD3(i)=FCDPZ*DRZ(i)
-!
-!    CNZR3(i)=FNRPZ*DRZ(i)*ANCZ(i)
-!    CNZL3(i)=FNLPZ*DRZ(i)*ANCZ(i)
-!    CNZD3(i)=FNDPZ*DRZ(i)*ANCZ(i)
-!    CNZI3(i)=FNIPZ*DRZ(i)*ANCZ(i)
-!
-!    CPZR3(i)=FPRPZ*DRZ(i)*APCZ(i)
-!    CPZL3(i)=FPLPZ*DRZ(i)*APCZ(i)
-!    CPZD3(i)=FPDPZ*DRZ(i)*APCZ(i)
-!    CPZI3(i)=FPIPZ*DRZ(i)*APCZ(i)
-!
-!    CSZP3(i)=FSPPZ*DRZ(i)*ASCZ(i)
-!    CSZI3(i)=FSIPZ*DRZ(i)*ASCZ(i)
-!  enddo
-!
-!  CCPR=FCRP*Pf
-!  CCPL=FCLP*Pf
-!  CCPD=FCDP*Pf
-!
-!  do i=1,3
-!    CNPR2(i)=FNRP*Pf*ANC(i)
-!    CNPL2(i)=FNLP*Pf*ANC(i)
-!    CNPD2(i)=FNDP*Pf*ANC(i)
-!    CNPI2(i)=FNIP*Pf*ANC(i)
-!
-!    CPPR2(i)=FPRP*Pf*APC(i)
-!    CPPL2(i)=FPLP*Pf*APC(i)
-!    CPPD2(i)=FPDP*Pf*APC(i)
-!    CPPI2(i)=FPIP*Pf*APC(i)
-!  enddo
-!  CSPP2 = FSPP*Pf*ASCd
-!  CSPI2 = FSIP*Pf*ASCd
-
-  
 end subroutine read_icm_param
-
-subroutine read_icm_stainfo
-!-----------------------------------------------------------------------
-!read in ICM station output information
-!-----------------------------------------------------------------------
-  use icm_mod, only : nsta,ista,depsta,stanum,nspool_icm
-  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
- &in_dir,out_dir,len_in_dir,len_out_dir
-  use schism_msgp, only : myrank,nproc,parallel_abort
-  implicit none
-
-  !local variables
-  integer,parameter :: maxsta=10000,maxl=100 !maximum station
-  integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
-  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(4),y(4),arco(3),depstai(maxl,ne)
-  character(len=4) :: fn
-  logical :: lexist
-
-  !read station info.
-  open(31,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
-  read(31,*)
-  read(31,*)nstation
-  do i=1,nstation
-    read(31,*)j,slx(i),sly(i),sdep(i)
-  enddo
-  close(31)
-
-  !alloc.
-  allocate(ista(ne),stat=istat)
-  if(istat/=0) call parallel_abort('failure in alloc. ista')
-
-  !determine the elements with values to be checked
-  id=0; ista=0; nstai=0;
-  msta=-100; depstai=-9999
-  do i=1,ne
-    iflag=0
-    do j=1,nstation
-      x(1:i34(i))=xnd(elnode(1:i34(i),i))
-      y(1:i34(i))=ynd(elnode(1:i34(i),i))
-      call pt_in_poly(i34(i),x(1:i34(i)),y(1:i34(i)),slx(j),sly(j),inside,arco,nodel)
-      if(inside==1) then
-        if(ista(i)==0) then
-          id=id+1
-          ista(i)=id
-        endif
-        nstai(id)=nstai(id)+1
-        depstai(nstai(id),id)=sdep(j)
-        stanumi(nstai(id),id)=j
-        msta=max(msta,nstai(id))
-      endif
-    enddo !j
-  enddo !i
-  mid=id !number of elements
-
-  if(mid==0) return
-
-  !alloc.
-  allocate(nsta(mid),depsta(msta,mid),stanum(msta,mid),stat=istat)
-  if(istat/=0) call parallel_abort('failure in alloc. nsta')
-
-  nsta=0; depsta=-9999
-  do i=1,mid
-    nsta(i)=nstai(i)
-    do j=1,nsta(i)
-      depsta(j,i)=depstai(j,i)
-      stanum(j,i)=stanumi(j,i)
-    enddo
-  enddo
-
-  !open a station output file
-  write(fn,'(i4.4)')myrank
-  inquire(file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',exist=lexist)
-  if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
-    open(410,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',status='replace')
-    write(410)sum(nsta),dt*nspool_icm
-  elseif(ihot==2..and.lexist) then
-    open(410,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',access='append',status='old')
-  else
-    call parallel_abort('unknown ihot, ICM')
-  endif
-
-end subroutine read_icm_stainfo
-
-
-subroutine check_icm_param 
-!-----------------------------------------------------------------------
-! Outputs water quality parameter to check
-!-----------------------------------------------------------------------
-  use icm_mod
-  use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
-  use schism_msgp, only : myrank,parallel_abort
-  implicit none
-
-  integer :: i,j 
-      
-  if(myrank==0) then
-    open(31, file=out_dir(1:len_out_dir)//'ecosim_1.out', status='replace')
-    write(31,*) 'Water Quality Model Parameter output2'
-
-    write(31,*)
-    write(31,*)'!-------Global Switch---------------------------------'
-    write(31,'(a10,i5)')'iLight= ',iLight
-    write(31,'(a10,i5)')'iSed= ', iSed 
-    write(31,'(a10,i5)')'iRea= ', iRea
-    write(31,'(a10,i5)')'iZoo= ',iZoo
-    write(31,'(a10,i5)')'iAtm= ',iAtm
-    write(31,'(a10,i5)')'iBen= ',iBen
-    write(31,'(a10,i5)')'iSet= ',iSet
-    write(31,'(a10,i5)')'idry_icm= ',idry_icm
-
-    write(31,*)
-    write(31,*)'!-------Zooplankton parameter--------------------------'
-    write(31,'(a10,100(f8.5 x))')'GZM= ',GZM
-    write(31,'(a10,100(f8.5 x))')'rKhGE= ',rKhGE
-    write(31,'(a10,100(f8.5 x))')'PPC= ',PPC
-    write(*,*)
-    write(31,807)'BMZR','DRZ','TGZ','rKTGZ1','rKTGZ2','TBZ','rKTBZ','RZ'
-    do i=1,2
-      write(31,808) BMZR(i),DRZ(i),TGZ(i),rKTGZ1(i),rKTGZ2(i),TBZ(i),rKTBZ(i),RZ(i)
-    enddo
-    write(31,807)'Eff','RF','Pf'
-    write(31,808)Eff,RF,Pf
-
-    write(31,*)
-    write(31,*)'!------Phytoplankton Parameters------------------------'
-    write(31,807)'BMPR','TBP','rKTBP','rKhN','rKhP','rIm'
-    do i=1,3
-      write(31,808)BMPR(i),TBP(i),rKTBP(i),rKhN(i),rKhP(i),rIm(i)
-    enddo
-    write(31,807)'rKhS','ST','rKeC1','rKeC2'
-    write(31,808)rKhS,ST,rKeC1,rKeC2
-
-    write(31,*)
-    write(31,*)'!-----Carbon Parameters-------------------------------' 
-    write(31,807)'FCRPZ','FCLPZ','FCDPZ','FCDZ(1:2)','rKHRZ(1:2)'
-    write(31,808)FCRPZ,FCLPZ,FCDPZ,FCDZ,rKHRZ
-
-    write(31,807)'FCRP(1:3)','FCLP(1:3)','FCDP(1:3)','FCD(1:3)'
-    write(31,808)FCRP,FCLP,FCDP,FCD
-
-    !write(31,807)'rKRC','rKLC','rKDC','rKRCalg','rKLCalg','rKDCalg'
-    !write(31,808)rKRC,rKLC,rKDC,rKRCalg,rKLCalg,rKDCalg
-    write(31,807)'TRHDR','TRMNL','rKTHDR','rKTMNL'
-    write(31,808)TRHDR,TRMNL,rKTHDR,rKTMNL
-    write(31,807)'rKHR1','rKHR2','rKHR3','rKHORDO','rKHDNn','AANOX'
-    write(31,808)rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
-
-    write(31,*)
-    write(31,*)'!---Nitrogen Parameters-------------------------------'
-    write(31,807) 'FNRPZ','FNLPZ','FNDPZ','FNIPZ'
-    write(31,808)FNRPZ,FNLPZ,FNDPZ,FNIPZ
-    write(31,807)'FNRZ','FNLZ','FNDZ','FNIZ','ANCZ'
-    do j= 1,2
-      write(31,808)FNRZ(j),FNLZ(j),FNDZ(j),FNIZ(j),ANCZ(j)
-    enddo
-    write(31,807)'FNRP','FNLP','FNDP','FNIP','ANDC'
-    write(31,808)FNRP,FNLP,FNDP,FNIP,ANDC
-    write(31,807)'FNR','FNL','FND','FNI','ANC'
-    do j= 1,3
-      write(31,808)FNR(j),FNL(j),FND(j),FNI(j),ANC(j)
-    enddo
-    write(31,807)'rKRN','rKLN','rKDN','rKRNalg','rKLNalg','rKDNalg'
-    write(31,808)rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg
-    write(31,807)'rNitM','rKhNitDO','rKhNitN','TNit','rKNit1','rKNit2'
-    write(31,808)rNitM,rKhNitDO,rKhNitN,TNit,rKNit1,rKNit2
-
-    write(31,*)
-    write(31,*)'!---Phosphorus Parameters----------------------------'
-    write(31,807)'FPRPZ','FPLPZ','FPDPZ','FPIPZ'
-    write(31,808)FPRPZ,FPLPZ,FPDPZ,FPIPZ
-    write(31,807)'FPRZ','FPLZ','FPDZ','FPIZ','APCZ'
-    do j = 1,2
-      write(31,808)FPRZ(j),FPLZ(j),FPDZ(j),FPIZ(j),APCZ(j)
-    enddo
-    write(31,807)'FPRP','FPLP','FPDP','FPIP'
-    write(31,808)FPRP,FPLP,FPDP,FPIP
-    write(31,807)'FPR','FPL','FPD','FPI','APC'
-    do j = 1,3
-      write(31,808)FPR(j),FPL(j),FPD(j),FPI(j),APC(j)
-    enddo
-    !write(31,807)'rKPO4p','rKRP','rKLP','rKDP','rKRPalg','rKLPalg','rKDPalg'
-    !write(31,808)rKPO4p,rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg
-
-    write(31,*)
-    write(31,*)'!----Silica Parameters-------------------------------'
-    write(31,807)'FSPPZ','FSIPZ'
-    write(31,808)FSPPZ,FSIPZ
-    write(31,807)'FSPZ','FSIZ','ASCZ'
-    do j = 1,2
-      write(31,808)FSPZ(j),FSIZ(j),ASCZ(j)
-    enddo
-    write(31,807)'FSPP','FSIP','FSPd','FSId'
-    write(31,808)FSPP,FSIP,FSPd,FSId
-    write(31,807)'ASCd','rKSAp','rKSU','TRSUA','rKTSUA'
-    write(31,808)ASCd,rKSAp,rKSU,TRSUA,rKTSUA
-   
-    write(31,*)
-    write(31,*)'!----COD and DO Parameters---------------------------'
-    write(31,807)'rKHCOD','rKCD','TRCOD','rKTCOD','ACO','AON','rKro','rKTr'
-    write(31,808) rKHCOD,rKCD,TRCOD,rKTCOD,AOC,AON,rKro,rKTr
-
-    write(31,*)
-    write(31,*)'!----Settling Velocities---------------------------'
-    write(31,807)'WSRP','WSLP','WSPB1','WSPB2','WSPB3'
-    write(31,808) WSRP(1),WSLP(1),WSPB1(1),WSPB2(1),WSPB3(1)
-    close(31)
-
-  endif
-
-  return
-
-807 format(100(a10,x))
-808 format(100(f10.5,x))
-end subroutine check_icm_param
 
 subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
 !--------------------------------------------------------------------

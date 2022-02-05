@@ -41,9 +41,9 @@ module icm_sed_mod
   real(rkind),save,dimension(3) :: FRPPHB,FRNPHB,FRCPHB
   real(rkind),save,dimension(3) :: KPDIAG,KNDIAG,KCDIAG,DPTHTA,DNTHTA,DCTHTA
   real(rkind),save :: W2,H2,m1,m2,KSI,THTASI,THTADP,THTADD
-  !ncai_sav 
+  !sav 
   real(rkind),save,dimension(3) :: frnsav,frpsav,frcsav
-  !ncai_veg
+  !veg
   real(rkind),save,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
 
   !nutrients, parameters
@@ -81,7 +81,7 @@ module icm_sed_mod
   real(rkind),save :: TEMPD,PON1,PON2,PON3,POC2,POC3,POP1,POP2,POP3,PSI
   real(rkind),save :: NH41TM1,NO31TM1,HS1TM1,SI1TM1,PO41TM1,NH4T2TM1,NO3T2TM1,HST2TM1,SIT2TM1,PO4T2TM1,CH4T2TM1,CH41TM1,SO4T2TM1
   real(rkind),save :: PON1TM1,PON2TM1,PON3TM1,POC1TM1,POC1,POC2TM1,POC3TM1,POP1TM1,POP2TM1,POP3TM1,PSITM1
-  real(rkind),save :: ROOTDO !ncai_sav
+  real(rkind),save :: ROOTDO !sav
   real(rkind),save :: DFEED,DFEEDM1 !deposit feeder 
   real(rkind),save :: BENSTR1 !benthic stress
 

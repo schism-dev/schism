@@ -34,7 +34,7 @@ module icm_mod
   integer,save :: iLight,jLight,iRad
   integer,save :: iSed,iRea,iBen,iTBen
   integer,save :: iZoo,iPh
-  integer,save :: iAtm,iCheck,iout_icm
+  integer,save :: iAtm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
   integer,save :: isav_icm,iveg_icm !sav, veg 
   integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg !veg
@@ -220,14 +220,5 @@ module icm_mod
 
   !surface flux : atmospheric loading
   real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO
-
-  !for station output for intermediate parameters and ICM variables
-  !ista(ie) refers to local station index (lsi)
-  !nsta(lsi) refers to number of depth
-  !depsta(k,lsi) is depth,where k is depth index
-  !stanum is the station index from cstation.in
-  integer, save :: nspool_icm
-  integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
-  real(rkind),save,allocatable :: depsta(:,:)
 
 end module icm_mod

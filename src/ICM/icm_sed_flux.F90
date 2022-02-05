@@ -16,7 +16,6 @@
 !sed_eq: solve mass-balance equations of 2 layers in sediment
 !function sed_zbrent: Brent's method to find SOD value
 !read_icm_sed_param: read sediment flux model parameters
-!check_icm_sed_param: output sediment parameters to check
 !sed_calc: sediment flux; sub-models 
 !sedsod: calculate SOD
 !link_sed_input: initialize sediment
@@ -225,7 +224,7 @@ subroutine read_icm_sed_param
   use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
-  use icm_mod, only : iCheck,isav_icm,iTBen,iveg_icm
+  use icm_mod, only : isav_icm,iTBen,iveg_icm
   use misc_modules
   implicit none
   
@@ -352,14 +351,14 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','O2CRIT',2,itmp,rtmp,stmp)
   O2CRIT=rtmp
 
-  !ncai_sav 
+  !sav 
   if(isav_icm==1) then
     call get_param_1D('icm_sed.in','frnsav',2,itmp1,frnsav,stmp,3)
     call get_param_1D('icm_sed.in','frpsav',2,itmp1,frpsav,stmp,3)
     call get_param_1D('icm_sed.in','frcsav',2,itmp1,frcsav,stmp,3)
   endif
 
-  !ncai_veg
+  !veg
   if(iveg_icm==1) then
     call get_param_2D('icm_sed.in','frnveg',2,itmp2,frnveg,stmp,3,3)
     call get_param_2D('icm_sed.in','frpveg',2,itmp2,frpveg,stmp,3,3)
@@ -683,8 +682,6 @@ subroutine read_icm_sed_param
     enddo
   endif !ihot
 
-  if(iCheck==1) call check_icm_sed_param
-
   !---------------initialization of sediment flux model----------------
   !TSS calculation
   do i=1,nea
@@ -772,107 +769,6 @@ subroutine read_icm_sed_param
 
 end subroutine read_icm_sed_param
 
-subroutine check_icm_sed_param
-!-----------------------------------------------------------------------
-! Outputs sediment parameter to check
-!-----------------------------------------------------------------------
-  use icm_sed_mod
-  use schism_msgp, only : myrank,parallel_abort
-  use schism_glbl, only: in_dir,out_dir,len_in_dir,len_out_dir
-  use icm_mod, only : isav_icm,iveg_icm
-
-  implicit none
-
- 
-  !local variables
-  integer :: i, j
-  
-  if(myrank==0) then
-    open(31,file=out_dir(1:len_out_dir)//'ecosim_2.out',status='replace')
-    write(31,*) 'Sediment flux model parameters:'
-
-    write(31,*)
-    write(31,*)'!----General parameters----------------------------------'
-    write(31,809)'HSEDALL','iSteady','DIFFT','SALTSW','SALTND' 
-    write(31,'(f10.5,x,(I10,x),5(f10.5,x))')HSEDALL,iSteady,DIFFT,SALTSW,SALTND 
-    !write(31,809)'HSEDALL','INTSEDC','iSteady','DIFFT','SALTSW','SALTND' 
-    !write(31,'(f10.5,x,2(I10,x),5(f10.5,x))')HSEDALL,INTSEDC,iSteady,DIFFT,SALTSW,SALTND 
-    !write(31,809)'FRPPH1','FRPPH2','FRPPH3','FRPPHB','FRNPH1','FRNPH2','FRNPH3','FRNPHB','FRCPH1','FRCPH2','FRCPH3','FRCPHB'
-    write(31,809)'FRPPH(:,1)','FRPPH(:,2)','FRPPH(:,3)','FRPPHB','FRNPH(:,1)','FRNPH(:,2)','FRNPH(:,3)','FRNPHB','FRCPH(:,1)','FRCPH(:,2)','FRCPH(:,3)','FRCPHB'
-    do i=1,3
-      !write(31,810)FRPPH1(i),FRPPH2(i),FRPPH3(i),FRPPHB(i),FRNPH1(i),FRNPH2(i),FRNPH3(i),FRNPHB(i),FRCPH1(i),FRCPH2(i),FRCPH3(i),FRCPHB(i)
-      write(31,810)FRPPH(i,1),FRPPH(i,2),FRPPH(i,3),FRPPHB(i),FRNPH(i,1),FRNPH(i,2),FRNPH(i,3),FRNPHB(i),FRCPH(i,1),FRCPH(i,2),FRCPH(i,3),FRCPHB(i)
-    enddo
-    write(31,809)'KPDIAG','KNDIAG','KCDIAG','DPTHTA','DNTHTA','DCTHTA'
-    do i=1,3
-      write(31,810)KPDIAG(i),KNDIAG(i),KCDIAG(i),DPTHTA(i),DNTHTA(i),DCTHTA(i)
-    enddo
-    write(31,809)'KSI','THTASI','m1','m2','THTADP','THTADD'
-    write(31,810)KSI,THTASI,m1,m2,THTADP,THTADD
-
-    write(31,*)
-    write(31,*)'-----------------------------------------------------------------'
-    write(31,*)'!nitrification, denitrification, H2S, Silica, PO4, benthic stress'
-    write(31,*)'-----------------------------------------------------------------'
-    write(31,809)'KAPPNH4F','KAPPNH4S','PIENH4','THTANH4','KMNH4','KMNH4O2'
-    write(31,810)KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2
-    write(31,809)'KAPPNO3F','KAPPNO3S','K2NO3','THTANO3'
-    write(31,810)KAPPNO3F,KAPPNO3S,K2NO3,THTANO3
-    write(31,809)'KAPPD1','KAPPP1','PIE1S','PIE2S','THTAPD1','KMHSO2'
-    write(31,810)KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2
-    write(31,809)'CSISAT','DPIE1SI','PIE2SI','O2CRITSI','JSIDETR'
-    write(31,810)CSISAT,DPIE1SI,PIE2SI,O2CRITSI,JSIDETR
-    write(31,809)'DPIE1PO4F','DPIE1PO4S','O2CRIT','KMO2DP'
-    write(31,810)DPIE1PO4F,DPIE1PO4S,O2CRIT,KMO2DP
-    write(31,809)'isav_icm','iveg_icm'
-    write(31,'(I10)')isav_icm,iveg_icm
-    write(31,809)'TEMPBEN','KBENSTR','KLBNTH','DPMIN'
-    write(31,810)TEMPBEN,KBENSTR,KLBNTH,DPMIN
-    write(31,809)'KAPPCH4','THTACH4','KMCH4O2','KMSO4'
-    write(31,810)KAPPCH4,THTACH4,KMCH4O2,KMSO4
-   
-    write(31,*)
-    write(31,*)'----Initial concentration----------------------------------'
-    write(31,809)'CTEMPI','CPOPI(1)','CPOPI(2)','CPOPI(3)','CPONI(1)','CPONI(2)','CPONI(3)','CPOCI(1)','CPOCI(2)','CPOCI(3)'
-    write(31,'(100(f10.2,x))')CTEMPI,CPOPI,CPONI,CPOCI
-    write(31,809)'PO4T2I','NH4T2I','HST2I','CH4T2I','CH41TI','SO4T2I','SIT2I','BENSTI','BBMI'
-    write(31,810)PO4T2I,NH4T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI,BBMI
-   
-    write(31,*)
-    write(31,*)'----benthic algae-----------------------------------------'
-    !write(31,809)'BALC'
-    !write(31,809)BALC
-    write(31,809)'iBalg'
-    write(31,'(I10)')iBalg
-    write(31,809)'PMB','ANCB','APCB','KTGB1','KTGB2','TMB','ALPHB','CCHLB','KESED','KEBALG','KHNB','KHPB','KHRB'
-    write(31,810)PMB,ANCB,APCB,KTGB1,KTGB2,TMB,ALPHB,CCHLB,KESED,KEBALG,KHNB,KHPB,KHRB
-    write(31,809)'BMRB','BPRB','KTBB','TRB','BALGMIN','FNIB','FPIB'
-    write(31,810)BMRB,BPRB,KTBB,TRB,BALGMIN,FNIB,FPIB
-
-    write(31,*)
-    write(31,*)'----deposit feeders----------------------------------------'
-    write(31,809)'idf','ihypox','XKMI0','ING0','THTAI0','R','THTAR','BETA','THBETA'
-    write(31,'(2(I10,x),100(f10.5,x))')idf,ihypox,XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA
-    write(31,809)'AMCN','AMCP','AA1','AA2','XKMG1','XKMG2'
-    write(31,'(4(f10.5,x),2(f10.2,x))')AMCN,AMCP,AA1,AA2,XKMG1,XKMG2
-    write(31,809)'XKBO2','TDD','DOLOW','DFDOH','DFDOQ'
-    write(31,810)XKBO2,TDD,DOLOW,DFDOH,DFDOQ
-
-    write(31,*)
-    write(31,*)'----spatially varying variables----------------------------'
-    write(31,809)'VSED(1)','VPMIX(1)','VDMIX(1)'
-    write(31,810)VSED(1),VPMIX(1),VDMIX(1)
-    write(31,809)'FRPOP(1,2)','FRPOP(1,3)','FRPON(1,2)','FRPON(1,3)','FRPOC(1,2)','FRPOC(1,3)'
-    write(31,810)FRPOP(1,2:3),FRPON(1,2:3),FRPOC(1,2:3)
-    close(31) 
-  endif !myrank==0
-  return
-
-809 format(100(a10,x))
-810 format(100(f10.5,x))
-
-end subroutine check_icm_sed_param
-
 subroutine sed_calc(id)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
@@ -881,11 +777,11 @@ subroutine sed_calc(id)
   use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC, &
-                      &isav_icm,patchsav, & !ncai_sav
+                      &isav_icm,patchsav, & !sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
-                      &iveg_icm,patchveg, & !ncai_veg
+                      &iveg_icm,patchveg, & !veg
                       &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET, & !ncai_erosion
+                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET, & !erosion
                       &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
   use icm_sed_mod
   implicit none
@@ -976,14 +872,14 @@ subroutine sed_calc(id)
   !put vegetation effect dirctly ahead after assign previous dt, before start going to
   !RHS of mass balance of layer 2 in sedimentation flux 
 
-  !ncai_sav !unit: g/m^3
+  !sav !unit: g/m^3
   if(isav_icm==1.and.patchsav(id)==1)then
     NH4T2TM1=max(1.0d-10,NH4T2TM1-tlfNH4sav(id)*dtw/HSED(id))
     PO4T2TM1=max(1.0d-10,PO4T2TM1-tlfPO4sav(id)*dtw/HSED(id))
     ROOTDO=ROOTDO+trtdosav(id) !unit: g/m^2 day
   endif !isav_icm
 
-  !ncai_veg
+  !veg
   if(iveg_icm==1.and.patchveg(id)==1)then
     NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
     PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
@@ -1039,7 +935,7 @@ subroutine sed_calc(id)
  
   !rt metaolism adding the RHS of mass balance of POM on layer 2
   !trtpo?sav in unit of g/m^2 day
-  !ncai_sav
+  !sav
   if(isav_icm==1.and.patchsav(id)==1) then
     do i=1,3
       flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
@@ -1048,7 +944,7 @@ subroutine sed_calc(id)
     enddo
   endif
 
-  !ncai_veg
+  !veg
   if(iveg_icm==1.and.patchveg(id)==1) then
     do i=1,3
       do j=1,3
@@ -1273,7 +1169,7 @@ subroutine sed_calc(id)
 
   !Methane saturation
   !CH4SAT=0.099*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0)
-  !ncai_CSOD
+  !CSOD
   CH4SAT=100*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0) !in unit of g/m^3
 
 
@@ -1806,7 +1702,7 @@ subroutine sedsod(id)
 !    SOD=SOD+XKR*DFEEDM1*2.667E-3
 !  endif
 
-  !ncai_sav, ncai_veg
+  !sav, veg
   if(isav_icm==1.or.iveg_icm==1) then
     SOD=SOD+ROOTDO !consume DO by root metabolism
   endif
