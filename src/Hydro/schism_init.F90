@@ -30,8 +30,11 @@
       use netcdf
       use misc_modules
       use gen_modules_clock
+
+#ifdef USE_PAHM
       use ParWind, only : ReadCsvBestTrackFile
       use PaHM_Utilities, only : ReadControlFile
+#endif
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -693,6 +696,12 @@
       if(impose_net_flux/=0.and.nws/=2) then
         write(errmsg,*)'impose_net_flux/=0 requires nws=2'
         call parallel_abort(errmsg)
+      endif
+
+      if(nws<0) then
+#ifndef USE_PAHM 
+        call parallel_abort('INIT: nws<0 requires USE_PAHM')
+#endif
       endif
 
       if(nws==3) then
@@ -6949,6 +6958,7 @@
 
 
 !...  Init PaHM on rank 0 only
+#ifdef USE_PAHM
       if(nws<0) then
         if(myrank==0) then
           write(16,*)'reading PaHM inputs...'
@@ -6957,6 +6967,7 @@
           write(16,*)'done pre-proc PaHM...'
         endif
       endif !nws<0
+#endif /*USE_PAHM*/
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 

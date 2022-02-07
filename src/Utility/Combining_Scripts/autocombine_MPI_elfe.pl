@@ -37,4 +37,4 @@ for($next_stack=$start_stack+1; $next_stack<=$end_stack+1; $next_stack++)
   print "done combining stack $current_stack...\n";
 } #for
 
-#if(-e "outputs/$end_stack\_hvel.64") {system "cd outputs/; echo schout_[0-9]???_*.nc | xargs rm -f";}
+#if(-e "outputs/$end_stack\_hvel.64") {system "cd outputs/; echo schout_[0-9]?????_*.nc | xargs rm -f";}

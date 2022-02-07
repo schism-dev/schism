@@ -115,10 +115,10 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
-        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
-        csv_utilities.o  parwind.o 
-OBJS :=  $(OBJS) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+#OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
+#        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
+#        csv_utilities.o  parwind.o 
+OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -200,6 +200,13 @@ endif
 ifdef USE_HA
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_HA
   OBJS := $(OBJS) harm.o
+endif
+
+ifdef USE_PAHM
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PAHM
+  OBJS := $(OBJS) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
+        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
+        csv_utilities.o  parwind.o
 endif
 
 ifdef USE_GEN

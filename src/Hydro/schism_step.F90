@@ -25,7 +25,10 @@
       use netcdf
       use misc_modules
       use gen_modules_clock
+
+#ifdef USE_PAHM
       use ParWind, only: GetHollandFields
+#endif
 
 #ifdef USE_GOTM
       use turbulence, only: do_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -397,7 +400,7 @@
       endif
 
 !      if(nws>0.and.nrampwind/=0) then
-      if(nws>0.and.drampwind>0.d0) then
+      if(nws/=0.and.drampwind>0.d0) then
         rampwind=tanh(2.d0*time/86400.d0/drampwind)
       else
         rampwind=1.d0
@@ -466,6 +469,7 @@
 !$OMP   end workshare
       endif
 
+#ifdef USE_PAHM
       if(nws<0) then 
         !PaHM: rank 0 returns wind and air pressure only for global nodes
         if(myrank==0) then
@@ -484,6 +488,7 @@
           endif
         enddo !i
       endif !nws<0
+#endif /*USE_PAHM*/
 
       if(nws==1) then
         if(time>=wtime2) then
@@ -641,7 +646,7 @@
       endif !nws>=2
 
 !...  Re-scale wind
-      if(nws>0) then; if(iwindoff/=0) then
+      if(nws/=0) then; if(iwindoff/=0) then
         do i=1,npa
           windx(i)=windx(i)*windfactor(i)
           windy(i)=windy(i)*windfactor(i)

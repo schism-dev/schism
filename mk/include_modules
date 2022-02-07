@@ -34,6 +34,10 @@
 # USE_WWM = yes
 # EXEC := $(EXEC)_WWM
 
+#aParametric wind module
+# USE_PAHM = yes
+# EXEC := $(EXEC)_PAHM
+
 # Harmonic analysis tool
 # USE_HA = yes
 # EXEC := $(EXEC)_HA

@@ -61,6 +61,7 @@ define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF
 define_opt(OLDIO "Old nc output option" OFF)
 define_opt(PREC_EVAP "Use  precipitation/evaporation option" OFF)
 define_opt(USE_BULK_FAIRALL "Enable Fairall scheme" OFF)
+define_opt(USE_PAHM "Enable USE_PAHM scheme" OFF)
 define_opt(USE_HA "Enable Harmonic Analysis output" OFF)
 define_opt(USE_SIMPLE_WIND "Simplified wind data interface" OFF)
 define_opt(USE_GOTM  "Enable compiling with GOTM turbulence closure" OFF)
