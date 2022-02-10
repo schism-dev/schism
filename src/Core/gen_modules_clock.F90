@@ -1,6 +1,6 @@
 module gen_modules_clock
   !combining RT and Lars version
-  !
+  !Used in USE_MICE
   use schism_glbl
   use schism_msgp, only : myrank
   implicit none
