@@ -18,7 +18,7 @@ plugins:
       cover_logo: assets/logo.png
       output_path: pdf/schism-manual.pdf
       render_js: true
-      headless_chrome_path: chromium-browser
+      headless_chrome_path: chrome
       exclude_pages:
         - 'publications'
 
