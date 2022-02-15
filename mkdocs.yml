@@ -17,6 +17,7 @@ plugins:
       cover_subtitle: v5.9.0
       cover_logo: assets/logo.png
       output_path: pdf/schism-manual.pdf
+      enabled_if_env: ENABLE_PDF_EXPORT
       render_js: true
       headless_chrome_path: chrome
       exclude_pages:
