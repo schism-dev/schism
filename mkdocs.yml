@@ -6,6 +6,7 @@ theme:
     - toc.follow
   icon:
     repo: fontawesome/brands/git-alt
+  logo: assets/logo.png
 
 plugins:
   - search
@@ -15,17 +16,18 @@ repo_url: https://github.com/schism-dev/schism
 # Page tree
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
-  - SCHISM:
-    - Overview: schism/overview.md
-    - Physical Formulation: schism/physical-formulation.md
-    - Numerical Formulation: schism/numerical-formulation.md
-    - Input/Output: schism/input-output.md
-  - How to use:
+  - Getting started:
+    - How to get started: getting-started.md
+    - Compile: howto/compilation.md
     - Grid generation: howto/grid-generation.md
     - Preprocessing: howto/pre-processing.md
     - Visualization: howto/visualization.md
     - Postprocessing: howto/post-processing.md
+  - Core SCHISM Model:
+    - Overview: schism/overview.md
+    - Physical Formulation: schism/physical-formulation.md
+    - Numerical Formulation: schism/numerical-formulation.md
+    - Input/Output: schism/input-output.md
   - Modules:
     - Generic tracer module: modules/generic-tracer.md
     - AGE: modules/age.md
@@ -39,6 +41,7 @@ nav:
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
+  - Changelog: changelog.md
   - Code and Contribution: code-contribution.md
-  - Case study: case-study.md
+  - Case studies: case-study.md
   - Publications: publications.md
