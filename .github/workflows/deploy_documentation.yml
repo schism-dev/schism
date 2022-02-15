@@ -11,7 +11,5 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.x
-      - run: sudo add-apt-repository -y ppa:xtradeb/apps && sudo apt-get update && sudo apt-get install -y weasyprint chromium
-      - run: alias chromium-browser=chromium
-      - run: pip install mkdocs-material mkdocs-with-pdf weasyprint
+      - run: pip install mkdocs-material mkdocs-with-pdf
       - run: mkdocs gh-deploy --force
