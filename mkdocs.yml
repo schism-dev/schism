@@ -10,12 +10,38 @@ theme:
 
 plugins:
   - search
+  - with-pdf:
+      author: SCHISM Development Team
+      copyright: Ⓒschism-dev
+      cover_title: Manual
+      cover_subtitle: v5.9.0
+      cover_logo: assets/logo.png
+      output_path: pdf/schism-manual.pdf
+      render_js: true
+      headless_chrome_path: chromium-browser
+      exclude_pages:
+        - 'publications'
+
+markdown_extensions:
+  - attr_list
+  - md_in_html 
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 repo_url: https://github.com/schism-dev/schism
 
 # Page tree
 nav:
   - Home: index.md
+  - Changelog: changelog.md
   - Getting started:
     - How to get started: getting-started.md
     - Compile: howto/compilation.md
@@ -41,7 +67,6 @@ nav:
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
-  - Changelog: changelog.md
   - Code and Contribution: code-contribution.md
   - Case studies: case-study.md
   - Publications: publications.md

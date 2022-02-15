@@ -1,3 +1,4 @@
-# Bug fixes and major algorithmic changes
+# Changelog
+## Bug fixes and major algorithmic changes
 
-# Changes in input and output format
+## Changes in input and output format

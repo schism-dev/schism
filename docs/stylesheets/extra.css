@@ -1,0 +1,11 @@
+.article {
+	counter-reset: figures;
+}
+
+.figure {
+	counter-increment: figures;
+}
+
+.figure figcaption:before {
+	content: 'Fig. ' counter(figures) ' - ';
+}
