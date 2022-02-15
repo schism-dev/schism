@@ -3,6 +3,11 @@ SCHISM modeling system is a derivative work from the original SELFE model (v3.1d
 
 SCHISM (Semi-implicit Cross-scale Hydroscience Integrated System Model) is an open-source community-supported modeling system based on unstructured grids, designed for seamless simulation of 3D baroclinic circulation across creek-lake-river-estuary-shelf-ocean scales. It uses a highly efficient and accurate semi-implicit finite-element/finite-volume method with Eulerian-Lagrangian algorithm to solve the Navier-Stokes equations (in hydrostatic form), in order to addresses a wide range of physical and biological processes. The numerical algorithm judiciously mixes higher-order with lower-order methods, to obtain stable and accurate results in an efficient way. Mass conservation is enforced with the finite-volume transport algorithm. It also naturally incorporates wetting and drying of tidal flats.
 
+<figure>
+<img alt="SCHISM modelling framework" src="assets/schism_flow_diagram.jpg" title="SCHISM modelling framework." />
+<figcaption>SCHISM modelling framework.</figcaption>
+</figure>
+
 The SCHISM system has been extensively tested against standard ocean/coastal benchmarks and applied to a number of regional seas/bays/estuaries around the world (see 'Case study') in the context of general circulation, tsunami and storm-surge inundation, water quality, oil spill, sediment transport, coastal ecology, and wave-current interaction. SCHISM now includes many upgrades of the original SELFE code (v3.1dc); the major differences are summarized in Zhang et al. (Seamless cross-scale modeling with SCHISM, Ocean Modelling, 2016; see Publications).
 
 The source code and user manual can be downloaded from this web site. The plot to the right shows a snapshot of various modules inside SCHISM.
