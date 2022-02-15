@@ -11,6 +11,6 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.x
-      - run: apt-get update; apt-get install -y chromium-browser
+      - run: sudo apt-get update && sudo apt-get install -y chromium-browser
       - run: pip install mkdocs-material mkdocs-with-pdf
       - run: mkdocs gh-deploy --force
