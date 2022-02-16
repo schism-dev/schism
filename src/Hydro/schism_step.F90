@@ -626,6 +626,13 @@
           enddo
 !$OMP end parallel do
           if(nws==2) call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
+
+          if(nws==3) then !via ESMF
+            !ESMF may not extend to ghosts
+            call exchange_p2d(windx2)
+            call exchange_p2d(windy2)
+            call exchange_p2d(pr2)
+          endif !nws==3
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
