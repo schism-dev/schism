@@ -1,0 +1,14 @@
+Modules for Levante:
+
+
+#Intel MPI
+#module load intel-oneapi-compilers intel-oneapi-mpi
+
+#OMPI
+module load intel-oneapi-compilers openmpi
+
+#Manually load python after cmake
+##module load python3/2022.01
+module load netcdf-c netcdf-fortran
+module load git
+
