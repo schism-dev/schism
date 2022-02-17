@@ -28,7 +28,7 @@
 
 module fabm_schism
 
-  use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,nea,npa,ne,np
+  use schism_glbl,  only: ntracers,nvrt,tr_el,tr_nd,erho,idry_e,ne,np
   use schism_glbl,  only: eta2, dpe,dp, pr2,ne_global,np_global,iegl,ipgl
   use schism_glbl,  only: bdy_frc,flx_sf,flx_bt,dt,elnode,i34,srad,windx,windy
   use schism_glbl,  only: ze,kbe,wsett,ielg,iplg, xnd,ynd,rkind,xlon,ylat,kbp
@@ -354,15 +354,15 @@ subroutine fabm_schism_init_stage2
   fs%tidx = 0
 
 #if _FABM_API_VERSION_ < 1
-  call fabm_set_domain(fs%model, nvrt, nea, dt)
+  call fabm_set_domain(fs%model, nvrt, ne, dt)
 #else
-  call fs%model%set_domain(nvrt, nea, dt)
+  call fs%model%set_domain(nvrt, ne, dt)
   ! SCHISM has no mask, so we do not need to set one.
   ! call fs%model%set_mask(mask)
 #endif
 
-  allocate(bottom_idx(1:nea))
-  allocate(surface_idx(1:nea))
+  allocate(bottom_idx(1:ne))
+  allocate(surface_idx(1:ne))
   bottom_idx(:) = kbe(:)+1
   surface_idx(:) = nvrt
 
@@ -373,7 +373,7 @@ subroutine fabm_schism_init_stage2
 
   !> Allocate and initialize state variables.  All state variables have default
   !> initial values defined at registration.  These can be changed in fabm.yaml
-  allocate(fs%interior_initial_concentration(ntracers, nvrt, nea))
+  allocate(fs%interior_initial_concentration(ntracers, nvrt, ne))
 
   do i=1, fs%nvar
     !> link state data
@@ -415,7 +415,7 @@ subroutine fabm_schism_init_stage2
     call driver%log_message(message)
   enddo
 
-  allocate(fs%bottom_state(nea,fs%nvar_bot))
+  allocate(fs%bottom_state(ne,fs%nvar_bot))
   do i=1,fs%nvar_bot
     fs%bottom_state(:,i) = fs%model%bottom_state_variables(i)%initial_value
 #if _FABM_API_VERSION_ < 1
@@ -427,7 +427,7 @@ subroutine fabm_schism_init_stage2
 
   call driver%log_message('Linked bottom state data')
 
-  allocate(fs%surface_state(nea,fs%nvar_sf))
+  allocate(fs%surface_state(ne,fs%nvar_sf))
   do i=1,fs%nvar_sf
     fs%surface_state(:,i) = fs%model%surface_state_variables(i)%initial_value
 #if _FABM_API_VERSION_ < 1
@@ -441,7 +441,7 @@ subroutine fabm_schism_init_stage2
 
   do n=1,fs%ndiag
     if (fs%interior_diagnostic_variables(n)%output_averaged) then
-      allocate(fs%interior_diagnostic_variables(n)%data(nvrt,nea))
+      allocate(fs%interior_diagnostic_variables(n)%data(nvrt,ne))
     else
 #if _FABM_API_VERSION_ < 1
       fs%interior_diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
@@ -472,7 +472,7 @@ subroutine fabm_schism_init_stage2
 
   do n=1,fs%ndiag_hor
     if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
-      allocate(fs%horizontal_diagnostic_variables(n)%data(nea))
+      allocate(fs%horizontal_diagnostic_variables(n)%data(ne))
     else
 #if _FABM_API_VERSION_ < 1
       fs%horizontal_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
@@ -502,21 +502,21 @@ subroutine fabm_schism_init_stage2
   end do
 
   ! link environment
-  allocate(fs%light_extinction(nvrt,nea))
+  allocate(fs%light_extinction(nvrt,ne))
   fs%light_extinction = missing_value
 
-  allocate(fs%layer_height(nvrt,nea))
+  allocate(fs%layer_height(nvrt,ne))
   fs%layer_height = missing_value
 
-  allocate(fs%layer_depth(nvrt,nea))
+  allocate(fs%layer_depth(nvrt,ne))
   fs%layer_depth = missing_value
 
-  allocate(fs%spm(nvrt,nea))
+  allocate(fs%spm(nvrt,ne))
   fs%spm=missing_value
 
   if(fs%params%ispm==1) then
     call fabm_schism_read_param_2d('SPM',fs%spm(1,:),real(missing_value,kind=rk))
-    do i=1,nea; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
+    do i=1,ne; fs%spm(2:nvrt,i)=fs%spm(1,i)/1000.0; enddo
   elseif(fs%params%ispm==2) then
     do n=1,ntrs(5)
       fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
@@ -533,7 +533,7 @@ subroutine fabm_schism_init_stage2
 #if _FABM_API_VERSION_ < 1
   if (fs%model%variable_needs_values(standard_variables%wind_speed)) then
     if (nws > 0) then
-      allocate(fs%windvel(nea))
+      allocate(fs%windvel(ne))
       fs%windvel = missing_value
       call fabm_link_horizontal_data(fs%model,standard_variables%wind_speed,fs%windvel)
       call driver%log_message('Linked requested wind speed')
@@ -545,7 +545,7 @@ subroutine fabm_schism_init_stage2
 #else
   if (fs%model%variable_needs_values(fabm_standard_variables%wind_speed)) then
     if (nws > 0) then
-      allocate(fs%windvel(nea))
+      allocate(fs%windvel(ne))
       fs%windvel = missing_value
 
       call fs%model%link_horizontal_data(fabm_standard_variables%wind_speed,fs%windvel)
@@ -570,7 +570,7 @@ subroutine fabm_schism_init_stage2
         'atmospheric forcing (nws = 2) and heat model (ihconsv = 1)')
     endif
 
-    allocate(fs%I_0(nea))
+    allocate(fs%I_0(ne))
     fs%I_0 = missing_value
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
@@ -579,7 +579,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
    .or. fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
-    allocate(fs%par0(nea))
+    allocate(fs%par0(ne))
     fs%par0 = missing_value
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
@@ -587,7 +587,7 @@ subroutine fabm_schism_init_stage2
 
   if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
-    allocate(fs%par(nvrt, nea))
+    allocate(fs%par(nvrt, ne))
     fs%par = missing_value
     call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
     call driver%log_message('Linked requested downwelling PAR flux')
@@ -604,7 +604,7 @@ subroutine fabm_schism_init_stage2
         'atmospheric forcing (nws = 2) and heat model (ihconsv = 1)')
     endif
 
-    allocate(fs%I_0(nea))
+    allocate(fs%I_0(ne))
     fs%I_0 = missing_value
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
@@ -613,7 +613,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux) &
    .or. fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
-    allocate(fs%par0(nea))
+    allocate(fs%par0(ne))
     fs%par0 = missing_value
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
@@ -625,37 +625,37 @@ subroutine fabm_schism_init_stage2
   !!endif
 #endif
 
-  allocate(fs%bottom_depth(nea))
+  allocate(fs%bottom_depth(ne))
   fs%bottom_depth = missing_value
 
-  allocate(fs%tau_bottom(nea))
+  allocate(fs%tau_bottom(ne))
   fs%tau_bottom = missing_value ! will be initialized from schism_step
 
   !> @todo epsf is only calculated with USE_SED=ON, so what do we do for
   !> maecs which needs this in maecs/fwfzmethod=4
   !if (allocated(epsf)) then ! changed to q2
 
-  allocate(fs%bottom_tke(nea))
+  allocate(fs%bottom_tke(ne))
   fs%bottom_tke = missing_value
 
-  !allocate(fs%bottom_num(nea))
+  !allocate(fs%bottom_num(ne))
   !fs%bottom_num = missing_value.0_rk
 
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
-  allocate(fs%pres(nvrt,nea)) !ADDED !todo add to declaration
+  allocate(fs%pres(nvrt,ne)) !ADDED !todo add to declaration
   fs%pres = missing_value
 
   ! Link ice environment
 #ifdef USE_ICEBGC
-  allocate(fs%dh_growth(nea))
+  allocate(fs%dh_growth(ne))
   fs%dh_growth = missing_value
 
-  allocate(fs%ice_thick(nea))
+  allocate(fs%ice_thick(ne))
   fs%ice_thick = missing_value
 
-  allocate(fs%ice_cover(nea))
+  allocate(fs%ice_cover(ne))
   fs%ice_cover = missing_value
-  allocate(fs%snow_thick(nea))
+  allocate(fs%snow_thick(ne))
   fs%snow_thick = missing_value
 #endif
 
@@ -838,7 +838,7 @@ subroutine get_light(fs)
 
     ! get light extinction and calculate par
     fs%light_extinction = 0.0_rk
-    do nel=1,nea
+    do nel=1,ne
       call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
 
       do k=nvrt,kbe(nel)+1,-1
@@ -860,16 +860,20 @@ subroutine get_light(fs)
         endif
 
       end do
-      fs%par(:,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(:,nel))
-
-      !write(0,'(A,6F9.3)') 'P0=',fs%I_0(nel) * fs%par_fraction, &
-      !  fs%par(1:nvrt,nel)
     end do
+    if (associated(fs%par)) then
+      do nel=1,ne
+        fs%par(:,nel) = fs%I_0(nel) * fs%par_fraction * exp(-fs%light_extinction(:,nel))
+      end do
+    endif
   endif
+
+  !write(0,'(A,6F9.3)') 'P0=',fs%I_0(nel) * fs%par_fraction, &
+  !  fs%par(1:nvrt,nel)
 
   ! call fabm-internal light models (if any),
   ! this includes also updating expressions of vertical integrals
-  do nel=1,nea
+  do nel=1,ne
     call fabm_get_light(fs%model,1,nvrt,nel)
   end do
 
@@ -896,14 +900,14 @@ end function state_variable_name_by_idx
 !> repair state
 subroutine repair_state(fs)
 
-  use schism_glbl, only: nea, nvrt
+  use schism_glbl, only: ne, nvrt
   implicit none
 
   class(type_fabm_schism) :: fs
   integer                 :: k, nel
   logical                 :: had_valid_state=.true.
 
-  do nel=1, nea
+  do nel=1, ne
 #if _FABM_API_VERSION_ < 1
     call fabm_check_state(fs%model, 1, nvrt, nel, fs%repair_allowed, had_valid_state)
 #else
@@ -912,7 +916,7 @@ subroutine repair_state(fs)
     !evtl. clip values below zero
   end do
 
-  do nel=1, nea
+  do nel=1, ne
 #if _FABM_API_VERSION_ < 1
     call fabm_check_surface_state(fs%model, nel, fs%repair_allowed, had_valid_state)
     call fabm_check_bottom_state(fs%model, nel, fs%repair_allowed, had_valid_state)
@@ -953,7 +957,7 @@ subroutine fabm_schism_do()
   call fs%repair_state()
 
   ! calculate layer height, and depth
-  do i=1, nea
+  do i=1, ne
     if (idry_e(i)==0) then
       do k=kbe(i)+1,nvrt
         fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
@@ -979,7 +983,7 @@ subroutine fabm_schism_do()
 #endif
 
   ! Get ice variables and depth on elements
-  do i=1,nea
+  do i=1,ne
 #ifdef USE_ICEBGC
      fs%ice_thick(i) = sum(ice_tr(1,elnode(1:i34(i),i)))/i34(i)
      fs%ice_cover(i) = sum(ice_tr(2,elnode(1:i34(i),i)))/i34(i)
@@ -991,7 +995,7 @@ subroutine fabm_schism_do()
   end do
 
   if (associated(fs%windvel)) then
-    do i=1,nea
+    do i=1,ne
       fs%windvel(i) = sqrt(sum(windx(elnode(1:i34(i),i))/i34(i))**2 + &
         sum(windy(elnode(1:i34(i),i))/i34(i))**2)
       end do
@@ -1000,13 +1004,13 @@ subroutine fabm_schism_do()
   !> Update light at surface only when atmospheric forcing is provided
   !> @todo consider who is responsible for setting par_fraction (host?)
   if (associated(fs%I_0)) then
-    do i=1,nea
+    do i=1,ne
       fs%I_0(i) = sum(srad(elnode(1:i34(i),i)))/i34(i)
     end do
   endif
 
   if (associated(fs%par0) .and. associated(fs%I_0)) then
-    do i=1,nea
+    do i=1,ne
       fs%par0(i) = fs%I_0(i) * fs%par_fraction
     end do
   endif
@@ -1022,7 +1026,7 @@ subroutine fabm_schism_do()
 
 ! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
 ! todo if (allocated(fs%pres)) then
-  do i=1,nea
+  do i=1,ne
     if (idry_e(i)==1) cycle
     do k=1,nvrt
       n = max(k,kbe(i))
@@ -1036,7 +1040,7 @@ subroutine fabm_schism_do()
   ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
   if (associated(fs%bottom_tke)) then
-    do i=1,nea
+    do i=1,ne
       fs%bottom_tke(i) = 0.0_rk
       do k=1,i34(i)
         !> @todo Find out why we have kbp+1 here
@@ -1050,7 +1054,7 @@ subroutine fabm_schism_do()
 
   !if (allocated(dfv) .and. associated(fs%bottom_num)) then
   !  fs%bottom_num=0.0_rk
-  !  do i=1,nea
+  !  do i=1,ne
   !    do j=1,i34(i)
   !      fs%bottom_num(i) = fs%bottom_num(i) + dfv(kbp(elnode(j,i)),elnode(j,i))/i34(i)
   !    enddo
@@ -1067,7 +1071,7 @@ subroutine fabm_schism_do()
 #endif
 
   ! get rhs and put tendencies into schism-array
-  do i=1,nea
+  do i=1,ne
 !write(0,*) 'fabm: get rhs'
     rhs = 0.0_rk
 #if _FABM_API_VERSION_ < 1
@@ -1177,7 +1181,7 @@ subroutine fabm_schism_do()
     flx_sf(istart:istart+fs%nvar-1,i) = rhs2d ! positive into water column
 #endif
 
-  end do !nea
+  end do !ne
 !write(0,*) 'fabm: done'
 
   ! integrate time-averaged diagnostic data arrays
@@ -1195,7 +1199,7 @@ subroutine integrate_vertical_movement(fs)
   real(rk) :: h_inv(nvrt)
   real(rk) :: w(nvrt,fs%nvar)
 
-  do i=1,nea
+  do i=1,ne
     if (idry_e(i) == 0) then
 #if _FABM_API_VERSION_ < 1
       call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
@@ -1294,7 +1298,7 @@ subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
       cycle
     end if
     call nccheck( nf90_get_var(ncid,varid,var_data,start=(/1,time_index/),count=(/nelements,1/)) )
-    do i=1,nea
+    do i=1,ne
       fs%bottom_state(i,n) = var_data(el_dict(ielg(i)))
     end do
   end do
@@ -1307,7 +1311,7 @@ subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
       cycle
     end if
     call nccheck( nf90_get_var(ncid,varid,var_data,start=(/1,time_index/),count=(/nelements,1/)) )
-    do i=1,nea
+    do i=1,ne
       fs%surface_state(i,n) = var_data(el_dict(ielg(i)))
     end do
   end do
@@ -1351,7 +1355,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
 
     !read data
     call nccheck(nf90_get_var(ncid,varid,swild))
-    do i=1,nea
+    do i=1,ne
       fs%bottom_state(i,n)=swild(ielg(i))
     enddo
   enddo
@@ -1362,7 +1366,7 @@ subroutine fabm_schism_read_horizontal_state_from_hotstart(ncfilename)
 
     !read data
     call nccheck(nf90_get_var(ncid,varid,swild))
-    do i=1,nea
+    do i=1,ne
       fs%surface_state(i,n)=swild(ielg(i))
     enddo
   enddo
@@ -1602,7 +1606,7 @@ subroutine link_environmental_data(self, rc)
   ! equivalently m2 s-3.
   ! The vertical eddy viscosity or momentum diffusivity is usually abbreviated
   ! as num with greek symbol $\nu_m$.  Its unit is m2 s-1. In SCHISM, it is
-  ! represented in the dfv(1:nvrt,1:npa) variable.
+  ! represented in the dfv(1:nvrt,1:np) variable.
   ! @todo what is the exact representation of this quantity in SCHISM? We assume
   ! q2bot for now
   ! @todo make this call to $\nu_m$ and $\epsilon$ to standard variables, i.e.
@@ -1682,7 +1686,7 @@ subroutine link_environmental_data(self, rc)
   !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
   call self%model%link_horizontal_data(type_bottom_standard_variable( &
   !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_tke(:))
-  name='turbulent_kinetic_energy_at_soil_surface',units='m3'),self%bottom_tke(:))
+  name='turbulent_kinetic_energy_at_soil_surface',units='m2 s-2'),self%bottom_tke(:))
 
   !call self%model%link_horizontal_data( &
   !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
@@ -1693,7 +1697,6 @@ subroutine link_environmental_data(self, rc)
 #endif
 
 end subroutine link_environmental_data
-
 
 !> Custom routines for log and error handling, see
 !> https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling
@@ -1805,12 +1808,12 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
   implicit none
   character(len=*),intent(in) :: varname
   real(rkind),intent(in) :: pvalue
-  real(rkind),dimension(nea),intent(out) :: pvar
+  real(rkind),dimension(ne),intent(out) :: pvar
 
   !local variables
   integer :: i,j,k,negb,npgb,ip,ie,nd
   real(rkind) :: xtmp,ytmp,rtmp
-  real(rkind),dimension(npa) :: tvar
+  real(rkind),dimension(np) :: tvar
 
   !read spatailly varying parameter values
   if(int(pvalue)==-999) then  !*.gr3
@@ -1827,7 +1830,7 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
 
     !interp from node to element
     pvar=0.0
-    do i=1,nea
+    do i=1,ne
       do j=1,i34(i)
         nd=elnode(j,i)
         pvar(i)=pvar(i)+tvar(nd)/i34(i)
@@ -1844,7 +1847,7 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
     enddo
 
   else !constant value
-    do i=1,nea
+    do i=1,ne
        pvar(i)=pvalue
     enddo
   endif!pvalue
