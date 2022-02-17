@@ -48,7 +48,7 @@
 ! function quad_int
 ! subroutine compute_bed_slope
 ! subroutine smooth_2dvar
-! subroutine compute_wave_force_lon
+! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
 
 !weno>
 ! subroutine weno1_coef 
@@ -6103,22 +6103,45 @@
 
 !     This routine is called from ESMF directly to be used for USE_WW3
 !     Compute wave force using Longuet-Higgins Stewart formulation
-      subroutine compute_wave_force_lon(RSXX,RSXY,RSYY)
-      use schism_glbl, only : rkind,nsa,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
-     &WWAVE_FORCE
+      subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
+      use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
+     &WWAVE_FORCE,errmsg,it_main
       use schism_msgp
       implicit none
-      REAL(rkind), intent(inout) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
-     
-      REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
+      REAL(rkind), intent(inout) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
+
+      REAL(rkind) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
+      !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
+      REAL(rkind) :: DSXX3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),DSYY3D(2,NVRT,nsa)
       integer :: IS,i
-      REAL(rkind) :: HTOT
+      REAL(rkind) :: HTOT,sum1,sum2,sum3,tmp
     
-      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa))
+!      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),stat=i)
+!      if(i/=0) call parallel_abort('compute_wave_force_lon, alloc')
+
+      !Check
+      sum1=sum(RSXX0)
+      sum2=sum(RSXY0)
+      sum3=sum(RSYY0)
+      tmp=sum1+sum2+sum3
+      if(tmp/=tmp) then
+        write(errmsg,*)'compute_wave_force_lon: NaN ',sum1,sum2,sum3,RSXX0
+        call parallel_abort(errmsg)
+      endif
+!new39
+      write(12,*)'Inside compute_wave_force_lon:',it_main,sum1,sum2,sum3
+
+      !Exchange
+      RSXX(1:np)=RSXX0
+      RSXY(1:np)=RSXY0
+      RSYY(1:np)=RSYY0
+      call exchange_p2d(RSXX)
+      call exchange_p2d(RSXY)
+      call exchange_p2d(RSYY)
 
       !Convert unit so that [RSXX]=m^3/s/s
       do i=1,npa
-        if(idry(i)==1) then
+        if(idry(i)==1.or.max(abs(RSXX(i)),abs(RSXY(i)),abs(RSYY(i)))>1.e10) then
           RSXX(i)=0.d0
           RSXY(i)=0.d0
           RSYY(i)=0.d0
@@ -6129,14 +6152,23 @@
         endif !idry
       enddo !i
 
-      ! Computing gradients of the depth-averaged radiation stress
-      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSXX,DSXX3D)   !C(dSxx/dx , dSxx/dy )
-      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSYY,DSYY3D)   !C(dSyy/dx , dSyy/dy )
-      CALL hgrad_nodes(2,0,NVRT,npa,nsa,RSXY,DSXY3D)   !C(dSxy/dx , dSxy/dy )
+!new39
+      sum1=sum(RSXX+RSXY+RSYY)/3.d0/npa
+      write(12,*)'Inside compute_wave_force_lon(2):',it_main,sum1
+      
+
+      ! Computing gradients of the depth-averaged radiation stress (m^2/s/s)
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXX,DSXX3D)   !(dSxx/dx , dSxx/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSYY,DSYY3D)   !(dSyy/dx , dSyy/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXY,DSXY3D)   !(dSxy/dx , dSxy/dy )
       CALL exchange_s3d_2(DSXX3D)
       CALL exchange_s3d_2(DSYY3D)
       CALL exchange_s3d_2(DSXY3D)
 
+!new39
+      sum1=sum(DSXX3D+DSYY3D+DSXY3D)/2.d0/nsa/nvrt
+      write(12,*)'Inside compute_wave_force_lon(3):',it_main,sum1
+      
       ! Computing the wave forces
       ! These are stored in wwave_force(:,1:nsa,1:2) (unit: m/s/s)
       WWAVE_FORCE=0.d0 !m/s/s
@@ -6151,7 +6183,11 @@
         WWAVE_FORCE(2,:,IS)=WWAVE_FORCE(2,:,IS)-(DSXY3D(1,:,IS)+DSYY3D(2,:,IS))/HTOT
       ENDDO !IS
 
-      deallocate(DSXX3D,DSYY3D,DSXY3D)
+      sum1=sum(WWAVE_FORCE)/2.d0/nvrt/nsa
+!new39
+      write(12,*)'done compute_wave_force_lon:',sum1,it_main
+
+!      deallocate(DSXX3D,DSYY3D,DSXY3D)
       end subroutine compute_wave_force_lon
 
       !dir$ attributes forceinline :: signa2

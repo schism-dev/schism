@@ -679,7 +679,6 @@
 !   Wind wave model (WWM)
 !-------------------------------------------------------------------------------
 #ifdef USE_WWM
-
       !BM: coupling current for WWM
       if (cur_wwm==0) then ! surface currents
         curx_wwm(:)=uu2(nvrt,:)
@@ -8689,7 +8688,7 @@
         noutput=noutput+13
 #endif
 
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
         icount=0
         do i=1,28
           if(i==7.or.i==8) cycle !skip vectors first  
