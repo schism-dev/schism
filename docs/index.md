@@ -15,7 +15,7 @@ The source code and user manual can be downloaded from this web site. The plot t
 ## Major Characteristics of SCHISM
 - Finite element/volume formulation
 - Unstructured mixed triangular/quadrangular grid in the horizontal dimension
-- Hybrid SZ coordinates or new LSC2 in the vertical dimension
+- Hybrid SZ coordinates or new $LSC^2$ in the vertical dimension
 - Polymorphism: a single grid can mimic 1D/2DV/2DH/3D configurations
 - Semi-implicit time stepping (no mode splitting): no CFL stability constraints → numerical efficiency
 - Robust matrix solver
