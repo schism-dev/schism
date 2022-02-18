@@ -47,14 +47,25 @@ We will use bold characters to denote vectors and matrices, and unbold character
 Below are some notations used in this manual:
 
 $N_p$: # (number) of nodes
+
 $N_s$: # $ of sides
+
 $N_e$: # of elements
+
 $N_z$: maximum # of vertical levels
+
 $i34(j)$: type of an element j (3: triangle; 4: quad)
+
 $Nb(i)$: # of surrounding elements of a node i;
+
 $kbp(i)$: bottom index as seen by a node i
+
 $kbs(i)$: bottom index as seen by a side i
+
 $kbe(i)$: bottom index as seen by an element i
+
 $A$: area of an element
+
 $\Delta z$: layer thickness (at a node, side or elem.)
+
 $\delta_{ij}$: Dirac’s Delta function (=1 when i=j; 0 otherwise)
