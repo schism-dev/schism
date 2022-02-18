@@ -6105,7 +6105,7 @@
 !     Compute wave force using Longuet-Higgins Stewart formulation
       subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
       use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
-     &WWAVE_FORCE,errmsg,it_main
+     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl
       use schism_msgp
       implicit none
       REAL(rkind), intent(inout) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
@@ -6130,6 +6130,10 @@
       endif
 !new39
       write(12,*)'Inside compute_wave_force_lon:',it_main,sum1,sum2,sum3
+!      if(ipgl(101)%rank==myrank) then
+!        i=ipgl(101)%id
+!        if(i<=np) write(99,*)real(time_stamp/86400.d0),real(RSXX0(i)),real(RSYY0(i)),real(RSXY0(i))
+!      endif
 
       !Exchange
       RSXX(1:np)=RSXX0
