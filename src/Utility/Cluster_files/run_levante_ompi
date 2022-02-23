@@ -42,4 +42,4 @@ export UCX_HANDLE_ERRORS=bt
 # Use srun (not mpirun or mpiexec) command to launch
 # programs compiled with any MPI library
 srun -l --cpu_bind=verbose --hint=nomultithread \
-  --distribution=block:cyclic ./pschism_levante_VL 8
+  --distribution=block:cyclic ./pschism_LEVANTE_TVD-VL  8
