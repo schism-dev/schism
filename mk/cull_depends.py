@@ -2,7 +2,6 @@
 import string
 import os.path as pth
 
-
 def cull_depends(infile,outfile, targets):
     inp = open(infile,'r')
     inlines = inp.readlines()
@@ -18,7 +17,7 @@ def cull_depends(infile,outfile, targets):
         #print "target: %s" % target
 	#print moddeps
         if len(moddeps) > 0:
-            out.write("%s: %s\n" % (target,string.join(moddeps," ")))
+            out.write("%s: %s\n" % (target," ".join(moddeps)))
         
 if __name__ == "__main__":
     import sys
