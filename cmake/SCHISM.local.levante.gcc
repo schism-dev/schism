@@ -9,7 +9,7 @@ set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN}"  CACHE PATH "Path to NetCDF Fortra
 set(NetCDF_C_DIR "$ENV{NETCDF}" CACHE PATH "Path to NetCDF C library")
 
 #Compiler flags for openmpi/gcc
-set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -fallow-argument-mismatch" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -fallow-argument-mismatch -ffree-line-length-none" CACHE STRING "Fortran flags" FORCE)
 
 
 
