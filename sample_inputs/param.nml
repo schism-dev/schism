@@ -150,15 +150,14 @@
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
 ! if indvel=0. To transition between eddying/non-eddying regimes, use
-! indvel=0, ihorcon/=0, and ishapiro=-1 (shapiro.gr3) or 2 (Smagorinsky-like filter).
-! If ishapiro=2 and shapiro_min.gr3 exists, the code will impose min filter strength 
-! based on 'depths' in this input. 
+! indvel=0, ihorcon/=0, and ishapiro=-1 (requiring shapiro.gr3) or 2 (Smagorinsky-like filter).
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
   niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter
   !shapiro0: Shapiro filter strength, needed only if ishapiro=1 or 2 
   !If ishapiro=1, shapiro0 is the filter strength (max is 0.5).
   !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest ~1.e3
+  !If ishapiro=-1, this is not used as the filter strength is read in from shapiro.gr3
   shapiro0 = 0.5 
 
 !-----------------------------------------------------------------------
@@ -313,7 +312,7 @@
 ! Elevation boundary condition ramp-up flag. =0: ramp up from 0; =1: ramp up from
 ! elev. values read in from elev.ic or hotstart.nc - if neither is present, from 0.
 ! This flag is mainly used to start the simulation from non-zero elev.
-! The ramp-up period is 'dramp'.
+! The ramp-up period is 'dramp' (so if dramp=0, full strength is applied).
 !-----------------------------------------------------------------------
   nramp_elev = 0
 
