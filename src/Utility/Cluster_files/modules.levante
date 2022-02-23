@@ -1,14 +1,22 @@
-Modules for Levante:
+NETCDF_Fortran_MODULE=netcdf-fortran/4.5.3-openmpi-4.1.2-gcc-11.2.0
+NETCDF_C_MODULE=netcdf-c/4.8.1-gcc-11.2.0
 
-
-#Intel MPI
-#module load intel-oneapi-compilers intel-oneapi-mpi
-
-#OMPI
-module load intel-oneapi-compilers openmpi
-
-#Manually load python after cmake
-##module load python3/2022.01
-module load netcdf-c netcdf-fortran
+module purge
+module load python3
 module load git
+module load gcc
+module load openmpi/4.1.2-gcc-11.2.0
+module load ${NETCDF_C_MODULE}
+module load ${NETCDF_Fortran_MODULE}
+
+echo MPIF90=${MPIF90}
+echo MPICC=${MPICC}
+
+P=$(module show  ${NETCDF_C_MODULE}|awk  '/bin/{print $3}')
+export NetCDF_C_DIR=${P%%/bin}
+echo NetCDF_C_DIR=${NetCDF_C_DIR}
+
+P=$(module show ${NETCDF_Fortran_MODULE}|awk  '/bin/{print $3}')
+export NetCDF_FORTRAN_DIR=${P%%/bin}
+echo NetCDF_FORTRAN_DIR=${NetCDF_FORTRAN_DIR}
 
