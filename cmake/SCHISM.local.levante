@@ -1,4 +1,5 @@
 ###DKRZ Levante
+##Intel compilers (not working)
 
 set (SCHISM_EXE_BASENAME pschism_LEVANTE CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
