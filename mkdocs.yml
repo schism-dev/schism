@@ -46,16 +46,17 @@ nav:
   - Getting started:
     - Getting the sourcecode: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
+    - Typical workflow: getting-started/typical-workflow.md
     - Grid generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
     - Running the model: getting-started/running-model.md
     - Visualization: getting-started/visualization.md
     - Postprocessing: getting-started/post-processing.md
-  - Core SCHISM Model:
+  - Model formulation:
     - Overview: schism/overview.md
-    - Physical Formulation: schism/physical-formulation.md
-    - Numerical Formulation: schism/numerical-formulation.md
-    - Input/Output: schism/input-output.md
+    - Physical formulation: schism/physical-formulation.md
+    - Numerical formulation: schism/numerical-formulation.md
+  - Input/Output: input-output.md
   - Modules:
     - Generic tracer module: modules/generic-tracer.md
     - AGE: modules/age.md
@@ -69,6 +70,6 @@ nav:
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
-  - Code and Contribution: code-contribution.md
+  - How to contribute: code-contribution.md
   - Case studies: case-study.md
   - Publications: publications.md
