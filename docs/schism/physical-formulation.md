@@ -8,6 +8,7 @@ Momentum equation:
 \end{equation}
 
 where, 
+
 \begin{equation}
 f = f(v, -u) - \frac{g}{\rho_0} \int_z^{\eta} \nabla \rho d\zeta - \frac{\nabla p_A}{\rho_0} + \alpha a \nabla \psi + F_m + other
 \end{equation}
