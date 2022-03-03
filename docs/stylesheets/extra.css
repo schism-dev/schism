@@ -1,11 +1,15 @@
-.article {
+article {
 	counter-reset: figures;
 }
 
-.figure {
+figure {
 	counter-increment: figures;
 }
 
-.figure figcaption:before {
-	content: 'Fig. ' counter(figures) ' - ';
+figure figcaption:before {
+	content: 'Figure ' counter(figures) '. ';
+}
+
+figcaption {
+	font-weight: bold;
 }
