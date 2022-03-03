@@ -44,10 +44,11 @@ nav:
   - Home: index.md
   - Changelog: changelog.md
   - Getting started:
-    - How to get started: getting-started.md
+    - Getting the sourcecode: howto/getting-sourcecode.md
     - Compile: howto/compilation.md
     - Grid generation: howto/grid-generation.md
     - Preprocessing: howto/pre-processing.md
+    - Running the model: howto/running-model.md
     - Visualization: howto/visualization.md
     - Postprocessing: howto/post-processing.md
   - Core SCHISM Model:
