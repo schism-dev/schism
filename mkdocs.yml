@@ -58,13 +58,12 @@ nav:
     - Numerical formulation: schism/numerical-formulation.md
   - Input/Output: 
     - Overview: input-output/overview.md
-    - Mandatory inputs:
-      - Horizontal grid (hgrid.gr3): input-output/hgrid.md
-      - Vertical grid (vgrid.in): input-output/vgrid.md
-      - Model parameters (param.nml): input-output/param.md
-      - Boundary conditions (bctides.in): input-output/bctides.md
-      - Bottom friction: input-output/friction.md
-    - Atmospheric flux (sflux): input-output/sflux.md
+    - Horizontal grid (hgrid.gr3): input-output/hgrid.md
+    - Vertical grid (vgrid.in): input-output/vgrid.md
+    - Model parameters (param.nml): input-output/param.md
+    - Boundary conditions (bctides.in): input-output/bctides.md
+    - Bottom friction: input-output/friction.md
+    - Atmospheric flux (/sflux): input-output/sflux.md
     - Optional inputs: input-output/optional-inputs.md
     - Outputs: input-output/outputs.md
   - Modules:
