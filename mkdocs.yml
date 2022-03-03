@@ -44,13 +44,13 @@ nav:
   - Home: index.md
   - Changelog: changelog.md
   - Getting started:
-    - Getting the sourcecode: howto/getting-sourcecode.md
-    - Compile: howto/compilation.md
-    - Grid generation: howto/grid-generation.md
-    - Preprocessing: howto/pre-processing.md
-    - Running the model: howto/running-model.md
-    - Visualization: howto/visualization.md
-    - Postprocessing: howto/post-processing.md
+    - Getting the sourcecode: getting-started/getting-sourcecode.md
+    - Compilation: getting-started/compilation.md
+    - Grid generation: getting-started/grid-generation.md
+    - Preprocessing: getting-started/pre-processing.md
+    - Running the model: getting-started/running-model.md
+    - Visualization: getting-started/visualization.md
+    - Postprocessing: getting-started/post-processing.md
   - Core SCHISM Model:
     - Overview: schism/overview.md
     - Physical Formulation: schism/physical-formulation.md
