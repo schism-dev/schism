@@ -80,5 +80,6 @@ nav:
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
   - How to contribute: code-contribution.md
+  - Verification tests: verification-tests.md
   - Case studies: case-study.md
   - Publications: publications.md
