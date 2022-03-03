@@ -1,5 +1,4 @@
-<figure>
-<img alt="Typical workflow with SCHISM modeling" src="/assets/typical-workflow.png" title="Typical workflow with SCHISM modeling." />
+<figure markdown>
+![Typical workflow with SCHISM modeling](/assets/typical-workflow.png)
 <figcaption>Typical workflow with SCHISM modeling.</figcaption>
 </figure>
-
