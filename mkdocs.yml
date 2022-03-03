@@ -1,5 +1,5 @@
 site_name: Semi-implicit Cross-scale Hydroscience Integrated System Model (SCHISM)
-site_url: https://jamalkhan.me/schism
+use_directory_urls: false
 theme:
   name: material
   features:
