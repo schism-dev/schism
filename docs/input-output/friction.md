@@ -1,0 +1,1 @@
+Bottom friction can be provided in three types of file - `drag.gr3`, or `rough.gr3` or `manning.gr3`.

@@ -41,5 +41,3 @@ SCHISM (Semi-implicit Cross-scale Hydroscience Integrated System Model) is a der
 
 - Zhang, Y. and Baptista, A.M. (2008) SELFE: A semi-implicit Eulerian-Lagrangian finite-element model for cross-scale ocean circulation", Ocean Modelling, 21(3-4), 71-96.
 - Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81.
-
-Download this documentation as pdf [here](pdf/schism-manual.pdf)
