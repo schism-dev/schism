@@ -1,0 +1,7 @@
+Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the [Optional inputs](/input-output/optional-inputs.md) section.
+
+| Variable | Type 1 (`*.th`) | Type 2 | Type 3 | Type 4 (`*[23]D.th`) | Type 5 | Type -1 | Type -4, -5 (`uv3D.th`); Nudging | Nudging/Sponge layer near bnd |
+|----------|---------------|--------|--------|--------------------|--------|---------|--------------------------------|-------------------------------|
+| $\eta$ | `elev.th`; Time history; uniform along bnd | constant | Tidal amp/phases | `elev2D.th.nc`: time- and space- varying along bnd | `elev2D.th.nc`: combination of 3 and 4 | Must = 0 | N\/A | `inu_elev=1`|
+| S&T, Tracers | `[MOD]_[ID].th`: relax to time history (uniform along bnd for inflow) | Relax to constant for inflow | Relax to i.c. for inflow | `[MOD]_3D.th.nc`: relax to time- and space- varying values along bnd during inflow | N/A | N/A | N/A | `inu_[MOD]=1 or 2`|
+| u,v | `flux.th`: via discharge ( <0 for inflow!) | Via dischage (<0 for inflow) | Tidal amp/phases for u and v components | `uv3D.th.nc`: time- and space- varying along bnd (in lon/lat for `ics=2`) | `uv3D.th.nc`: combination of 3 and 4 (but tidal amp/phases vary along bnd) | Flather (0 for $\eta$) | Relax to `uv3D.th.nc` (2 separate relaxations for in and outflow) | `inu_uv=1` |
