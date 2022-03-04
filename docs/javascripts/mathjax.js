@@ -3,7 +3,11 @@ window.MathJax = {
       inlineMath: [["\\(", "\\)"]],
       displayMath: [["\\[", "\\]"]],
       processEscapes: true,
-      processEnvironments: true
+      processEnvironments: true,
+      tags: 'ams',
+      equationNumbers: {
+        autoNumber: "AMS",
+      }
     },
     options: {
       ignoreHtmlClass: ".*|",
@@ -14,4 +18,3 @@ window.MathJax = {
   document$.subscribe(() => { 
     MathJax.typesetPromise()
   })
-  
