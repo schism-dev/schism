@@ -84,6 +84,55 @@ where, $\nu$ is the eddy viscosity, $\mathbf{\tau}_w$ is the surface wind stress
 Note that $\mathbf{u}$ denotes the depth-averaged velocity in a 2D region.
 
 ## Boundary conditions (B.C.)
+The differential equations above need initial condition (I.C.) and B.C. In general, all state variables ($\eta$, $\mathbf{u}$, $C$) are specified at $t=0$ as I.C. and these are also specified at all open _lateral_ boundary segments (open ocean, rivers etc). However, not all variables need to be specified at all boundary segments and we’ll revisit this in the input-output section, i.e., [bctides](../input-output/bctides.md).
+
+The vertical B.C. for (Eq 1-4) are described in detail below as these impact the numerical scheme. Note that these only apply to 3D cells; for 2D cells, Eq. 1a has taken into account the B.C.
+
+At the sea surface, SCHISM enforces the balance between the internal Reynolds stress and the applied shear stress.
+
+\begin{equation}
+\nu \frac{\partial \mathbf{u}}{\partial z} = \mathbf{\tau}_w, \text{ at } z = \eta
+\end{equation}
+
+where the stress $\mathbf{\tau}_z$ can be parameterized using the approach of Zeng et al. (1998) or the simpler approach of Pond and Pickard (1998). If the Wind Wave Model is invoked, it can also be calculated from the wave model.
+
+Because the bottom boundary layer is usually not well resolved in ocean models, the no-slip condition at the sea or river bottom ($\mathbf{u} = w = 0$) is replaced by a balance between the internal Reynolds stress and the bottom frictional stress. 
+
+\begin{equation}
+\nu \frac{\partial \mathbf{u}}{\partial z} = \mathbf{\tau}_b, \text{ at } z=-h
+\end{equation}
+
+The specific form of the bottom stress $\mathbf{\tau}_b$ depends on the type of boundary layer used and here we will only discuss the turbulent boundary layer below (Blumberg and Mellor 1987), given its prevalent usage in ocean modeling. The bottom stress is then - 
+
+\begin{equation}
+\mathbf{\tau}_b = C_D \left| \mathbf{u}_b \right| \mathbf{u}_b \equiv \chi \mathbf{u}_b
+\end{equation}
+
+The velocity profile in the interior of the bottom boundary layer obeys the logarithmic law, which is smoothly matched to the exterior flow at the top of the boundary layer.
+
+\begin{equation}
+\mathbf{u} = \frac{ln[(z+h)/z_0]}{ln(\delta_b/z_0)}\mathbf{u}_b, z_0-h \leq z \leq \delta_b -h
+\end{equation}
+
+Here, $\delta_b$ is the thickness of the bottom computational cell (assuming that the bottom is sufficiently resolved in SCHISM that the bottom cell is inside the boundary layer), $z_0$ is the bottom roughness, and $\mathbf{u}_b$ is the velocity measured at the top of the bottom computational cell. Therefore the Reynolds stress inside the boundary layer is derived as - 
+
+\begin{equation}
+\nu \frac{\partial \mathbf{u}}{\partial z} = \frac{\nu}{(z+h)ln(\delta_b/z_0)}  \mathbf{u}_b
+\end{equation}
+
+Utilizing the turbulence closure theory discussed below, we can show that the Reynolds stress is constant inside the boundary layer - 
+
+\begin{equation}
+\nu \frac{\partial \mathbf{u}}{\partial z} = \frac{\kappa_0}{ln(\delta_b/z_0)} C_D^{1/2} \left| \mathbf{u}_b \right| \mathbf{u}_b, z_0-h \leq z \leq \delta_b -h
+\end{equation}
+
+and the drag coefficient is calculated from Eq. 7, 8, and 11 as - 
+
+\begin{equation}
+C_D = \left( \frac{1}{\kappa_0} ln(\delta_b/z_0) \right) ^{-2}
+\end{equation}
+
+which is the drag formula as discussed in Blumberg and Mellor (1987). Eq. 11 also shows that the vertical viscosity term in the momentum equation vanishes inside the boundary layer. This fact will be utilized in the numerical formulation.
 
 ## Turbulence closure
 
