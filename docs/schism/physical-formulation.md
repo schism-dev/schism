@@ -177,4 +177,4 @@ K = \frac{1}{2} B_1^{2/3} \left| \mathbf{\tau_b} \right|, \text{ or } \frac{1}{2
 where $\mathbf{\tau_b}$ is a bottom frictional stress, $\kappa_0 = 0.4$ is the von Karman’s constant, $B_1$ is a constant, and $d_b$ and $d_s$ are the distances to the bottom and the free surface, respectively.
 
 ## Air-sea exchange
-
+We use the bulk aerodynamic module of Zeng et al. (1998), which can be viewed [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Zeng_etal_JClimate_1998-BulkAerodynamic-Model.pdf).
