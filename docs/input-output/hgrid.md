@@ -60,6 +60,11 @@ for other .gr3 files.
 29449 !last node on this island (note this is different from the first node ‘29448’ above)
 ```
 
+<figure markdown>
+![Horizontal grid and boundary segments.](../assets/hgrid-bnd.png){width=400}
+<figcaption>Horizontal grid and boundary segments..</figcaption>
+</figure>
+
 Note:
 
 1. Land and Ocean boundary sagment can be generated with xmgredit5 $\rightarrow$ GridDEM $\rightarrow$ Create open/land boundaries; it can also be generated with SMS;
