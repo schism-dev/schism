@@ -135,6 +135,46 @@ C_D = \left( \frac{1}{\kappa_0} ln(\delta_b/z_0) \right) ^{-2}
 which is the drag formula as discussed in Blumberg and Mellor (1987). Eq. 11 also shows that the vertical viscosity term in the momentum equation vanishes inside the boundary layer. This fact will be utilized in the numerical formulation.
 
 ## Turbulence closure
+Eq 1-4 are not closed and must be supplemented by turbulence closure equations for the viscosity/diffusivity. We use the Generic Length-scale (GLS) model of Umlauf and Burchard (2003), which has the advantage of encompassing most of the Eq 6 closure models $k-\varepsilon$ (Rodi 1984); $k-\omega$ (Wilcox 1998; Mellor and Yamada, 1982). In this framework, the transport, production, and dissipation of the turbulent kinetic energy ($K$) and of a generic length-scale variable ($\psi$) are governed by - 
+
+\begin{equation}
+\frac{Dk}{Dt} = \frac{\partial}{\partial z} \left( \nu_k^{\psi} \frac{\partial k}{\partial z} \right) + \nu M^2 + \kappa N^2 - \varepsilon + c_{fk} \alpha \left| \mathbf{u} \right|^3 \mathcal{H} (z_v - z)
+\end{equation}
+
+\begin{equation}
+\frac{D \psi}{Dt} = \frac{\partial}{\partial z} \left( \nu_{\psi} \frac{\partial \psi}{\partial z} \right) + \frac{\psi}{k}\left[ c_{\psi 1} \nu M^2 + c_{\psi 3} \kappa N^2 - c_{\psi 2}\varepsilon F_{wall} + c_{f\psi} \alpha \left| \mathbf{u} \right|^3 \mathcal{H}(z_v-z) \right]
+\end{equation}
+
+where $\nu_k^{\psi}$ and $\nu_{\psi}$ are vertical turbulent diffusivities, $c_{\psi 1}$, $c_{\psi 2}$, and $c_{\psi 3}$ are model-specific constants (Umlauf and Burchard 2003), $F_{wall}$ is a wall proximity function, $M$ and $N$ are shear and buoyancy frequencies, and $\varepsilon$ is a dissipation rate. The generic length-scale is defined as - 
+
+\begin{equation}
+\psi = (c_{\mu}^0)^p K^m \ell^n
+\end{equation}
+
+where $c_{\mu}^0 = 0.3^{1/2}$ and $\ell$ is the turbulence mixing length. The specific choices of the constants $p$, $m$, and $n$ lead to the different closure models mentioned above. Finally, vertical viscosities and diffusivities as appeared in Eq 1-4 are related to $K$, $ell$, and stability functions - 
+
+\begin{equation}
+\begin{aligned}
+\nu = \sqrt{2} s_m K^{1/2} \ell \\
+\kappa = \sqrt{2} s_h K^{1/2} \ell \\
+\nu_k^{\psi} = \frac{\nu}{\sigma_k^{\psi}} \\
+\nu_{\psi} = \frac{\nu}{\sigma_{\psi}}
+\end{aligned}
+\end{equation}
+
+where the Schmidt numbers $\sigma_k^{\psi}$ and $\sigma_{\psi}$ are model-specific constants. The stability functions ($s_m$ and $s_h$) are given by an Algebraic Stress Model (e.g.: Kantha and Clayson 1994, Canuto et al. 2001, or Galperin et al. 1988). Following Shimizu and Tsujimoto (1994; ST94 hereafter), we set $c_{fk} = 0.07$ and $c_{f\psi} = 0.16$.
+
+At the free surface and at the bottom of rivers and oceans, the turbulent kinetic energy and the mixing length are specified as Direchlet boundary conditions - 
+
+\begin{equation}
+K = \frac{1}{2} B_1^{2/3} \left| \mathbf{\tau_b} \right|, \text{ or } \frac{1}{2} B_1^{2/3} \left| \mathbf{\tau_w} \right| 
+\end{equation}
+
+\begin{equation}
+\ell = \kappa_o d_b \text{ or } \kappa_0 d_s
+\end{equation}
+
+where $\mathbf{\tau_b}$ is a bottom frictional stress, $\kappa_0 = 0.4$ is the von Karman’s constant, $B_1$ is a constant, and $d_b$ and $d_s$ are the distances to the bottom and the free surface, respectively.
 
 ## Air-sea exchange
 
