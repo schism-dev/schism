@@ -75,6 +75,7 @@ nav:
     - Optional inputs: input-output/optional-inputs.md
     - Outputs: input-output/outputs.md
   - Modules:
+    - Overview: modules/overview.md
     - Generic tracer module: modules/generic-tracer.md
     - AGE: modules/age.md
     - 2D Sediment model: modules/sed2d.md
