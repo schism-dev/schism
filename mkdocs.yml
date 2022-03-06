@@ -5,6 +5,7 @@ theme:
   features:
     - toc.integrate
     - toc.follow
+    - content.code.annotate
   icon:
     repo: fontawesome/brands/git-alt
   logo: assets/logo.png
@@ -25,10 +26,16 @@ plugins:
         - 'publications'
 
 markdown_extensions:
+  - admonition
   - attr_list
-  - md_in_html 
+  - md_in_html
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 
 extra_css:
   - stylesheets/extra.css
