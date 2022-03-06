@@ -1,7 +1,7 @@
 The information presented in this chapter is mostly intended for developers or anyone who wishes to work on the code. To know more about how to contribute your code see [CONTRIBUTING.md](https://github.com/schism-dev/schism/blob/master/CONTRIBUTING.md) on SCHISM github repo. 
 
 ## General info
-SCHISM was written in MPI FORTRAN 90. After svn revision 5225, we have migrated to github: https://github.com/schism-dev. Figure 1 shows the directory structure of the SCHISM github repository schism. General public have access to all branches.
+SCHISM was written in MPI FORTRAN 90. After svn revision 5225, we have migrated to [github](https://github.com/schism-dev). Figure 1 shows the directory structure of the SCHISM github repository schism. General public have access to all branches.
 
 <figure markdown>
 ![SCHISM github repository](assets/github-fs.png)
