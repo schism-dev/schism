@@ -434,7 +434,10 @@ If you are working on the code you may be confused about the exchanges inside SC
 
 The first thing you need to remember when writing MPI code with domain decomposition is that a rank (or MPI 'process') only has info in its 'augmented' (=resident + ghost) domain, and knows absolutely nothing outside this region.
 
-<!-- Figure 4 goes here -->
+<figure markdown>
+![Domain decomposition for code example](assets/domain-decomposition-example.png){width=500px}
+<figcaption> Domain decomposition for code example.</figcaption>
+</figure>
 
 Consider Figure 4. For example, you want to do averaging at each node of the sub-domain around its ball of elements.
 
