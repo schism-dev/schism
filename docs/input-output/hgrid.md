@@ -65,10 +65,9 @@ for other .gr3 files.
 <figcaption>Horizontal grid and boundary segments..</figcaption>
 </figure>
 
-Note:
-
-1. Land and Ocean boundary sagment can be generated with xmgredit5 $\rightarrow$ GridDEM $\rightarrow$ Create open/land boundaries; it can also be generated with SMS;
-2. If you have no open boundary, you can create two land boundary segments that are linked to each other. Likewise, if you have no land boundary, you should create two open boundary segments that are connected to each other;
-3. Although not required, we recommend you follow the following convention when generating the boundary segments. For the exterior boundary (open+land), go in counter-clockwise direction. With xmgredit5, the island boundaries are automatically created once you have finished designating all open and land segments on the exterior boundary.
-4. Note that this format is the same as fort.14 of ADCIRC; Keep an eye on the Land boundary sagment, where instead of `741 0` in the above example SMS will produce `741 10`. 
-5. If WWM is used, the land boundary flags (cf. red texts above) are required, and also there must not be any open boundary segments on any island. Since WWM can only handle triangles, the mixed grid needs to be converted to a pure triangular grid for WWM using a pre-processing script.
+!!! note
+    1. Land and Ocean boundary sagment can be generated with xmgredit5 $\rightarrow$ GridDEM $\rightarrow$ Create open/land boundaries; it can also be generated with SMS;
+    2. If you have no open boundary, you can create two land boundary segments that are linked to each other. Likewise, if you have no land boundary, you should create two open boundary segments that are connected to each other;
+    3. Although not required, we recommend you follow the following convention when generating the boundary segments. For the exterior boundary (open+land), go in counter-clockwise direction. With xmgredit5, the island boundaries are automatically created once you have finished designating all open and land segments on the exterior boundary.
+    4. Note that this format is the same as fort.14 of ADCIRC; Keep an eye on the Land boundary sagment, where instead of `741 0` in the above example SMS will produce `741 10`. 
+    5. If WWM is used, the land boundary flags (cf. red texts above) are required, and also there must not be any open boundary segments on any island. Since WWM can only handle triangles, the mixed grid needs to be converted to a pure triangular grid for WWM using a pre-processing script.
