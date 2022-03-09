@@ -63,7 +63,16 @@ nav:
   - Model formulation:
     - Overview: schism/overview.md
     - Physical formulation: schism/physical-formulation.md
-    - Numerical formulation: schism/numerical-formulation.md
+    - Numerical formulation:
+      - Geometry and discretization: schism/geometry-discretization.md
+      - Barotropic solver: schism/barotropic-solver.md
+      - Eulerian-Lagrangian Method: schism/eulerian-lagrangian-method.md
+      - Momentum equation: schism/momentum-equation.md
+      - Vertical velocity: schism/vertical-velocity.md
+      - Turbulence closure: schism/turbulence-closure.md
+      - Transport equation: schism/transport-equation.md
+      - Updating the levels/Inundation: schism/updating-levels.md
+      - Spherical coordinates: schism/spherical-coordinates.md
   - Input/Output: 
     - Overview: input-output/overview.md
     - Horizontal grid (hgrid.gr3): input-output/hgrid.md
