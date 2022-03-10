@@ -17,9 +17,9 @@
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O
-set (OLDIO ON CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
+set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
-set (PREC_EVAP ON CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ##Older versions of GOTM (3.*) have issues with netcdf v4, so are not maintained
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
@@ -39,7 +39,7 @@ set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
 set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")
 set( USE_AGE OFF CACHE BOOLEAN "Use age module")
 set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
-set( USE_ICM ON  CACHE BOOLEAN "Use ICM module")
+set( USE_ICM OFF  CACHE BOOLEAN "Use ICM module")
 ##pH model is active only if ICM is on
 set( ICM_PH OFF   CACHE BOOLEAN "Use pH module inside ICM")
 set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
@@ -47,11 +47,12 @@ set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
 set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
 
 set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
+#If FABM is on, need to set FABM_BASE (after cloning from Joseph's fork: https://github.com/josephzhang8/fabm.git).
 #Use master branch of the fork
+set( FABM_BASE /sciclone/home10/wangzg/fabm CACHE STRING "Path to FABM base")
 
 set( USE_DVD OFF CACHE BOOLEAN "DVD module interface")
 
 set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
 set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
  
-set( FABM_BASE /sciclone/home10/wangzg/fabm CACHE STRING "Path to FABM base")
