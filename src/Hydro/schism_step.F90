@@ -8586,7 +8586,7 @@
           if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_stleaf',4,1,nea,dble(stleaf))
           if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_ststem',4,1,nea,dble(ststem))
           if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_stroot',4,1,nea,dble(stroot))
-          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_sht   ',4,1,nea,dble(sht))
+          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_sht',4,1,nea,dble(sht))
         endif
         noutput=noutput+7
 
