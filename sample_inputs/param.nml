@@ -1059,33 +1059,41 @@
   iof_icm(182) = 0 !sav N limitation [-] {ICM_fnsav}
   iof_icm(183) = 0 !sav P limitation [-] {ICM_fpsav}
 
-  iof_icm(184) = 0 !light radiation at bottom of each layer [W/m/m] {ICM_rad}
+  iof_icm(184) = 1 !light radiation at bottom of each layer [W/m/m] {ICM_rad}
+  iof_icm(185) = 1 !benthic algae biomass {ICM_BBM}
+  iof_icm(186) = 1 !benthic algae net productivity {ICM_PrmPrdtBalg}
+  iof_icm(187) = 0 !benthic algae growth rate {ICM_GPBalg}
+  iof_icm(188) = 0 !benthic algae respiration rate {ICM_BMBalg}
+  iof_icm(189) = 0 !benthic algae predation rate {ICM_PRBalg}
+  iof_icm(190) = 1 !benthic algae light limiation function {ICM_FIBalg}
+  iof_icm(191) = 1 !benthic algae nitrogen limiation function {ICM_FNBalg}
+  iof_icm(192) = 1 !benthic algae phosphorus limiation function {ICM_FPBalg}
 
-  iof_icm(185) = 0 !Zoo. #1 {ICM_1}
-  iof_icm(186) = 0 !Zoo. #2 {ICM_2}
-  iof_icm(187) = 0 !phyto #1 {ICM_3}
-  iof_icm(188) = 0 !phyto #2 {ICM_4}
-  iof_icm(189) = 0 !phyto #3 {ICM_5}
-  iof_icm(190) = 0 !RPOC {ICM_6}
-  iof_icm(191) = 0 !LPOC {ICM_7}
-  iof_icm(192) = 0 !DOC {ICM_8}
-  iof_icm(193) = 0 !RPON {ICM_9}
-  iof_icm(194) = 0 !LPON {ICM_10}
-  iof_icm(195) = 0 !DON {ICM_11}
-  iof_icm(196) = 0 !NH4 {ICM_12}
-  iof_icm(197) = 0 !NO3 {ICM_13}
-  iof_icm(198) = 0 !RPOP {ICM_14}
-  iof_icm(199) = 0 !LPOP {ICM_15}
-  iof_icm(200) = 0 !DOP {ICM_16}
-  iof_icm(201) = 0 !PO4t {ICM_17}
-  iof_icm(202) = 0 !Si- biogenic {ICM_18}
-  iof_icm(203) = 0 !available Si {ICM_19}
-  iof_icm(204) = 0 !COD: Chemical oxygen demand {ICM_20}
-  iof_icm(205) = 0 !DO {ICM_21}
-  iof_icm(206) = 0 !TIC {ICM_22} !following requires ICM_PH on
-  iof_icm(207) = 0 !ALK {ICM_23}
-  iof_icm(208) = 0 !CA {ICM_24}
-  iof_icm(209) = 0 !CACO3 {ICM_25}
+  iof_icm(193) = 0 !Zoo. #1 {ICM_1}
+  iof_icm(194) = 0 !Zoo. #2 {ICM_2}
+  iof_icm(195) = 0 !phyto #1 {ICM_3}
+  iof_icm(196) = 0 !phyto #2 {ICM_4}
+  iof_icm(197) = 0 !phyto #3 {ICM_5}
+  iof_icm(198) = 0 !RPOC {ICM_6}
+  iof_icm(199) = 0 !LPOC {ICM_7}
+  iof_icm(200) = 0 !DOC {ICM_8}
+  iof_icm(201) = 0 !RPON {ICM_9}
+  iof_icm(202) = 0 !LPON {ICM_10}
+  iof_icm(203) = 0 !DON {ICM_11}
+  iof_icm(204) = 0 !NH4 {ICM_12}
+  iof_icm(205) = 0 !NO3 {ICM_13}
+  iof_icm(206) = 0 !RPOP {ICM_14}
+  iof_icm(207) = 0 !LPOP {ICM_15}
+  iof_icm(208) = 0 !DOP {ICM_16}
+  iof_icm(209) = 0 !PO4t {ICM_17}
+  iof_icm(210) = 0 !Si- biogenic {ICM_18}
+  iof_icm(211) = 0 !available Si {ICM_19}
+  iof_icm(212) = 0 !COD: Chemical oxygen demand {ICM_20}
+  iof_icm(213) = 0 !DO {ICM_21}
+  iof_icm(214) = 0 !TIC {ICM_22} !following requires ICM_PH on
+  iof_icm(215) = 0 !ALK {ICM_23}
+  iof_icm(216) = 0 !CA {ICM_24}
+  iof_icm(217) = 0 !CACO3 {ICM_25}
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs

@@ -18,7 +18,7 @@ program combine_icm_output
   character(len=12),allocatable :: trname(:)
  
   !read number for rank 
-  open(10,file='./outputs/local_to_global_0000',status='old');
+  open(10,file='./outputs/local_to_global_000000',status='old');
   read(10,*)nsgb,ne,np,nvrt,nproc
   close(10)
   

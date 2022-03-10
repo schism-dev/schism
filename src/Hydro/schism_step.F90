@@ -69,16 +69,17 @@
                          &vegmtPO4,veggrPO4,vegmtRPOP,vegmtLPOP,vegmtDOP, & 
                          &vegmtDOO,veggrDOO,&
                          &tlfNH4sav,tlfPO4sav,trtpocsav,trtponsav,trtpopsav,trtdosav, &
-                         &tlfNH4veg,tlfPO4veg,trtpocveg,trtponveg,trtpopveg,trtdoveg, &
+                         &tlfNH4veg,tlfPO4veg,tpocveg,tponveg,tpopveg,trtdoveg, &
                          &plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg,rdephcanveg, &
                          &plfsav,pmaxsav,fisav,fnsav,fpsav, &
                          &PrmPrdtveg,PrmPrdtsav,rad_el
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
-                         &CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                         &CTEMP,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                          &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
                          &NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
                          &POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
-                         &SED_BENDO,SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
+                         &SED_BENDO,SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA, &
+                         &iBalg,BBM,PrmPrdtBalg,GPBalg,BMBalg,PRBalg,FIBalg,FNBalg,FPBalg
 #endif
 
 #ifdef USE_COSINE
@@ -8504,23 +8505,23 @@
         if(iof_icm(156)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+160), &
      &'ICM_tlfPO4veg3',4,1,nea,dble(tlfPO4veg(:,3)))
         if(iof_icm(157)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+161), &
-     &'ICM_trtpocveg1',4,1,nea,dble(trtpocveg(:,1)))
+     &'ICM_tpocveg1',4,1,nea,dble(tpocveg(:,1)))
         if(iof_icm(158)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+162), &
-     &'ICM_trtpocveg2',4,1,nea,dble(trtpocveg(:,2)))
+     &'ICM_tpocveg2',4,1,nea,dble(tpocveg(:,2)))
         if(iof_icm(159)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+163), &
-     &'ICM_trtpocveg3',4,1,nea,dble(trtpocveg(:,3)))
+     &'ICM_tpocveg3',4,1,nea,dble(tpocveg(:,3)))
         if(iof_icm(160)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+164), &
-     &'ICM_trtponveg1',4,1,nea,dble(trtponveg(:,1)))
+     &'ICM_tponveg1',4,1,nea,dble(tponveg(:,1)))
         if(iof_icm(161)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+165), &
-     &'ICM_trtponveg2',4,1,nea,dble(trtponveg(:,2)))
+     &'ICM_tponveg2',4,1,nea,dble(tponveg(:,2)))
         if(iof_icm(162)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+166), &
-     &'ICM_trtponveg3',4,1,nea,dble(trtponveg(:,3)))
+     &'ICM_tponveg3',4,1,nea,dble(tponveg(:,3)))
         if(iof_icm(163)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+167), &
-     &'ICM_trtpopveg1',4,1,nea,dble(trtpopveg(:,1)))
+     &'ICM_tpopveg1',4,1,nea,dble(tpopveg(:,1)))
         if(iof_icm(164)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+168), &
-     &'ICM_trtpopveg2',4,1,nea,dble(trtpopveg(:,2)))
+     &'ICM_tpopveg2',4,1,nea,dble(tpopveg(:,2)))
         if(iof_icm(165)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+169), &
-     &'ICM_trtpopveg3',4,1,nea,dble(trtpopveg(:,3)))
+     &'ICM_tpopveg3',4,1,nea,dble(tpopveg(:,3)))
         if(iof_icm(166)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+170), &
      &'ICM_trtdoveg1',4,1,nea,dble(trtdoveg(:,1)))
         if(iof_icm(167)==1.and.iveg_icm/=0) call writeout_nc(id_out_var(noutput+171), &
@@ -8619,9 +8620,25 @@
 
         if(iof_icm(184)==1) call writeout_nc(id_out_var(noutput+188), &
      &'ICM_rad',5,nvrt,nea,dble(rad_el))
+        if(iof_icm(185)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+189), &
+     &'ICM_BBM',4,1,nea,dble(BBM))
+        if(iof_icm(186)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+190), &
+     &'ICM_PrmPrdtBalg',4,1,nea,dble(PrmPrdtBalg))
+        if(iof_icm(187)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+191), &
+     &'ICM_GPBalg',4,1,nea,dble(GPBalg))
+        if(iof_icm(188)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+192), &
+     &'ICM_BMBalg',4,1,nea,dble(BMBalg))
+        if(iof_icm(189)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+193), &
+     &'ICM_PRBalg',4,1,nea,dble(PRBalg))
+        if(iof_icm(190)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+194), &
+     &'ICM_FIBalg',4,1,nea,dble(FIBalg))
+        if(iof_icm(191)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+195), &
+     &'ICM_FNBalg',4,1,nea,dble(FNBalg))
+        if(iof_icm(192)==1.and.iBalg==1) call writeout_nc(id_out_var(noutput+196), &
+     &'ICM_FPBalg',4,1,nea,dble(FPBalg))
 
-        noutput=noutput+184
-        icount=184 !offset
+        noutput=noutput+192
+        icount=192 !offset
 
         do i=1,ntrs(7)
           write(it_char,'(i72)')i

@@ -192,19 +192,19 @@ subroutine icm_init
   call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
   if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
   if(iveg_icm==1) then
-    !allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
-    allocate(trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
+    allocate(tpocveg(nea,3),tponveg(nea,3),tpopveg(nea,3),trtdoveg(nea,3), &
     & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
+    & tNH4veg(nea,3),tPO4veg(nea,3),tDOveg(nea,3),tDOCveg(nea,3), &
     & patchveg(nea),rdephcanveg(nea,3), & !mhtveg(nea), &
     & plfveg(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3),fpveg(nea,3),fsveg(nea,3),ffveg(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. icm_veg variables')
 
     !init
-    !ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
-    trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
-    lfNH4veg=0.0;       lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0
-    patchveg=0; rdephcanveg=0.0;        !mhtveg=0.0;     
-    plfveg=0.0; pmaxveg=0.0; fiveg=1.0; fnveg=1.0;      fpveg=1.0
+    tpocveg=0.0;    tponveg=0.0;    tpopveg=0.0;  trtdoveg=0.0
+    lfNH4veg=0.0;   lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0;
+    tNH4veg=0.0;    tPO4veg=0.0;    tDOveg=0.0;     tDOCveg=0.0;  
+    patchveg=0;     rdephcanveg=0.0;!mhtveg=0.0;     
+    plfveg=0.0;     pmaxveg=0.0;    fiveg=1.0;      fnveg=1.0;      fpveg=1.0
     fsveg=1.0;      ffveg=1.0
 
     !options to output veg-related terms
@@ -638,7 +638,9 @@ subroutine icm_init
       & NH4T2TM1S(nea),NO3T2TM1S(nea),HST2TM1S(nea),SIT2TM1S(nea),PO4T2TM1S(nea),DFEEDM1S(nea), &
       & SED_BENDO(nea),SED_BENCOD(nea),SED_BENNH4(nea),SED_BENNO3(nea),SED_BENPO4(nea),SED_BENDOC(nea),SED_BENSA(nea), &
       & sbLight(nea),&
-      & SFLUXP(nea),SF_RPOP(nea),SFLUXN(nea),SF_RPON(nea),SFLUXC(nea),SF_RPOC(nea),JSUSF(nea),SF_SU(nea),BBM(nea),stat=istat)
+      & SFLUXP(nea),SF_RPOP(nea),SFLUXN(nea),SF_RPON(nea),SFLUXC(nea),SF_RPOC(nea),JSUSF(nea),SF_SU(nea), &
+      & BBM(nea),patchBalg(nea),FIBalg(nea),FTBalg(nea),FNBalg(nea),FPBalg(nea), &
+      & PrmPrdtBalg(nea),GPBalg(nea),BMBalg(nea),PRBalg(nea),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. icm_sed_mod variables')
 
 !$OMP parallel workshare default(shared)
@@ -697,7 +699,9 @@ subroutine icm_init
   NH4T2TM1S=0.0; NO3T2TM1S=0.0;  HST2TM1S=0.0;   SIT2TM1S=0.0;   PO4T2TM1S=0.0;  DFEEDM1S=0.0;
   SED_BENDO=0.0; SED_BENCOD=0.0; SED_BENNH4=0.0; SED_BENNO3=0.0; SED_BENPO4=0.0; SED_BENDOC=0.0; SED_BENSA=0.0; 
   sbLight=0.0;  
-  SFLUXP=0.0;    SF_RPOP=0.0;    SFLUXN=0.0;     SF_RPON=0.0;    SFLUXC=0.0;     SF_RPOC=0.0;    JSUSF=0.0;     SF_SU=0.0;     BBM=0.0; 
+  SFLUXP=0.0;    SF_RPOP=0.0;    SFLUXN=0.0;     SF_RPON=0.0;    SFLUXC=0.0;     SF_RPOC=0.0;    JSUSF=0.0;     SF_SU=0.0;     
+  BBM=0.0;       patchBalg=0;    FIBalg=0.0;     FTBalg=0.0;     FNBalg=0.0;     FPBalg=0.0;
+  PrmPrdtBalg=0.0;               GPBalg=0.0;     BMBalg=0.0;     PRBalg=0.0;
 !$OMP end parallel workshare
 
  !read parameter and initialzies variables

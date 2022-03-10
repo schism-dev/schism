@@ -39,6 +39,7 @@
 !-----------------------------------------------------------------------
 
 
+
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !global switches
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -46,9 +47,9 @@
 !-----------------------------------------------------------------------
 !light attenuation formuation for rKe
 !iLight=1: rKe=rKeC1*exp(-rKeC2*Sal(k)) 
-!iLight=2: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is from sediment model 
-!iLight=3: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is related to PC,PC2TSS is needed in this case
-!iLight=4: Ke=rke0+rKeChl*Chl+rKeSal*Sal(k); Here TSS is related to Sal
+!iLight=2: rKe=rke0+rKeC2*Chl+rKeC3*TSS; Here TSS is from sediment model 
+!iLight=3: rKe=rke0+rKeC2*Chl+rKeC3*TSS; Here TSS is related to PC, 
+!PC2TSS is needed in this case
 !-----------------------------------------------------------------------
 iLight = 3
 
@@ -84,9 +85,9 @@ iRea = 1
 iZoo = 0
 
 !-----------------------------------------------------------------------
-!PH model switch (plz use ICM_PH)
+!PH model switch
 !-----------------------------------------------------------------------
-!iPh = 0 
+iPh = 0 
 
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation switch
@@ -96,12 +97,12 @@ isav_icm = 0
 !-----------------------------------------------------------------------
 !Intertidal vegetation switch
 !-----------------------------------------------------------------------
-iveg_icm = 0
+iveg_icm = 1
 
 !-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
 !-----------------------------------------------------------------------
-iAtm = 0 
+iAtm = 1 
 
 !-----------------------------------------------------------------------
 !Sediment module switch. iSed=1: Use sediment flux model
@@ -142,7 +143,7 @@ iRad = 1
 !idry_icm=1: turn on shallow kinetic biochemical process
 !idry_icm=0: jump dry elems, keep last wet value; jump won't happen if iveg_icm is turn on and this elem is veg
 !-----------------------------------------------------------------------
-idry_icm = 0
+idry_icm = 1
 
 !-----------------------------------------------------------------------
 !Check parameter(iCheck=1: output all parameter for check)
@@ -153,11 +154,11 @@ iCheck = 1
 !iout_icm (iout_icm=1: ICM station output)
 !nspool_icm: output ICM variables every nspool_icm steps
 !-----------------------------------------------------------------------
-iout_icm=0
-nspool_icm=30
+iout_icm=1
+nspool_icm=12
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!ICM parameters for water column 
+!wqparam1.in
 !Note for 2D element based parameters  
 !   value=-999:  value read from *.gr3 file   (e.g. need GPM1.gr3 if GPM1=-999) 
 !   value=-9999: value read from *.prop file  (e.g. need GPM1.prop if GPM1=-9999) 
@@ -188,37 +189,39 @@ Pf=     0.0
 !alpha_PB: initial slope between photosynthetic rate and irradiance g[C]*m2/g[Chl]/E
 !2D variables: GPM?,TGP?,rKTGP??,CChl?,PRR?
 !-----------------------------------------------------------------------
-GPM1=   3.0 
-GPM2=   3.0
-GPM3=   2.5   
-TGP1=   15.0  
-TGP2=   22.0  
-TGP3=   27.0  
-rKTGP11= 0.004 
-rKTGP12= 0.008   
-rKTGP13= 0.005 
-rKTGP21= 0.006   
-rKTGP22= 0.010   
-rKTGP23= 0.004 
+!-growth curve-------------
+GPM1=  -999 3.5   0.0   3.0   3.0   3.0   3.0   3.0
+GPM2=  -999 2.4   0.0   3.0   3.0   3.0   3.0   3.0 
+GPM3=  -999 1.5   0.0   2.5   2.5   2.5   2.5   2.5
+TGP1=  -999 10.0   15.0   15.0   15.0   15.0   15.0   15.0
+TGP2=  -999 20.0   22.0   22.0   22.0   22.0   22.0   22.0
+TGP3=  27.0   27.0   27.0   27.0   27.0   27.0   27.0
+rKTGP11= 0.005 0.004 0.004 0.004 0.004 0.004 0.004
+rKTGP12= 0.006 0.008 0.008 0.008 0.008 0.008 0.008  
+rKTGP13= 0.001 0.005 0.005 0.005 0.005 0.005 0.005
+rKTGP21= 0.001 0.006 0.006 0.006 0.006 0.006 0.006  
+rKTGP22= 0.01 0.010 0.010 0.010 0.010 0.010 0.010  
+rKTGP23= 0.01 0.004 0.004 0.004 0.004 0.004 0.004
 
-CChl1=   0.059    
-CChl2=   0.059    
-CChl3=   0.059   
+CChl1=   0.05   0.059   0.059   0.059   0.059   0.059   0.059  
+CChl2=   0.06   0.059   0.059   0.059   0.059   0.059   0.059  
+CChl3=   0.06   0.059   0.059   0.059   0.059   0.059   0.059
 
-PRR1=   0.215   
-PRR2=   0.215
-PRR3=   0.01
+!-grazing rate--------------------
+PRR1=   0.3   0.215   0.215   0.215   0.215   0.215   0.215
+PRR2=   0.2   0.215   0.215   0.215   0.215   0.215   0.215
+PRR3=   0.1    0.01    0.01    0.01    0.01    0.01    0.01
 
 !--------------
-BMPR=   0.01   0.01   0.04
+BMPR=   0.02   0.02   0.04
 TBP=    20.0   20.0   20.0 
 rKTBP=  0.0322 0.0322 0.0322
 rKhN=   0.01   0.01   0.01
 rKhP=   0.001  0.001  0.001
 rIm=    40.0   40.0   40.0
-alpha_PB= 8.0  10.0   3.15 
-iLimit= 1                !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
-irSi= 0                  !irSi=0: no Si limitation; irSi=1: Si limitation 
+alpha_PB= 10.0  10.0   3.15
+iLimit= 1 !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
+irSi= 0 !irSi=0: no Si limitation; irSi=1: Si limitation 
 rKhS=   0.05
 ST=     0.1
 rKeC1=  5.82
@@ -239,14 +242,14 @@ FCDPZ=  0.1
 FCDZ=   0.0  0.0
 rKHRZ=  0.5  0.5
 
-FCRP=   0.35 0.35 0.35
-FCLP=   0.55 0.55 0.55
-FCDP=   0.1 0.1 0.1
+FCRP=   0.1 0.1 0.15
+FCLP=   0.15 0.3 0.6
+FCDP=   0.75 0.6 0.25
 FCD=    0.0  0.0  0.0 
 
-rKRC=   0.005 
-rKLC=   0.075 
-rKDC=   0.2 
+rKRC=   0.01
+rKLC=   0.045
+rKDC=   0.04
 rKRCalg= 0.0
 rKLCalg= 0.0
 rKDCalg= 0.0
@@ -266,38 +269,38 @@ AANOX=   0.5
 !-----------------------------------------------------------------------
 !Nitrogen parameters
 !-----------------------------------------------------------------------
-FNRPZ=  0.35
-FNLPZ=  0.5
+FNRPZ=  0.0
+FNLPZ=  0.4
 FNDPZ=  0.1
-FNIPZ=  0.05
+FNIPZ=  0.5
 FNRZ=   0.35   0.35
 FNLZ=   0.5    0.5
 FNDZ=   0.1    0.1
 FNIZ=   0.05   0.05
 ANCZ=   0.2    0.2
 
-FNRP=   0.35
-FNLP=   0.5
-FNDP=   0.1
-FNIP=   0.05
+FNRP=   0.1
+FNLP=   0.4
+FNDP=   0.3
+FNIP=   0.2
 ANDC=   0.933
-FNR=    0.0    0.0    0.0
-FNL=    0.0    0.0    0.0
-FND=    1.0    1.0    1.0 
-FNI=    0.0    0.0    0.0
+FNR=    0.1    0.0   0.0
+FNL=    0.4    0.4   0.4
+FND=    0.3    0.3   0.3
+FNI=    0.2    0.3   0.3
 ANC=    0.167  0.167  0.167
 
 rKRN=   0.005
 rKLN=   0.075
-rKDN=   0.015
+rKDN=   0.11
 rKRNalg= 0.0
 rKLNalg= 0.0
 rKDNalg= 0.0
 
-rNitM=  0.07   !maximum nitrification rate (1/day)
-rKhNitDO= 1.0  !half DO conc. for nitrif.
-rKhNitN=  1.0  !half NH4 conc. for nitrif. adjust based on your case (larger value: larger of nitrif. upper limit)
-TNit=     27.0
+rNitM=  0.1
+rKhNitDO= 1.0
+rKhNitN=  1.0
+TNit=     24.0
 rKNit1=  0.0045
 rKNit2=  0.0045
 
@@ -315,24 +318,24 @@ FPDZ=   0.1    0.1
 FPIZ=   0.05   0.05
 APCZ=   0.02   0.02
 
-FPRP=   0.10
-FPLP=   0.20
-FPDP=   0.50
-FPIP=   0.20
-FPR=    0.0    0.0   0.0
-FPL=    0.0    0.0   0.0
-FPD=    1.0    1.0   1.0 
-FPI=    0.0    0.0   0.0 
+FPRP=   0.2
+FPLP=   0.4
+FPDP=   0.3
+FPIP=   0.1
+FPR=    0.2    0.0   0.0
+FPL=    0.4    0.4   0.4
+FPD=    0.3    0.3   0.3 
+FPI=    0.1    0.3   0.3 
 APC=    0.02   0.02  0.02
 
-rKPO4p=  0.0 !PO4p partition coefficient
+rKPO4p=  0.02 !PO4p partition coefficient
 
-rKRP=   0.005 
-rKLP=   0.075 
-rKDP=   0.10
-rKRPalg= 0.0 
-rKLPalg= 0.0 
-rKDPalg= 0.2 
+rKRP=   0.01 0.005 0.005 0.005 0.005 0.005 0.005
+rKLP=   0.05 0.075 0.075 0.075 0.075 0.075 0.075
+rKDP=   0.05 0.10 0.10 0.10 0.10 0.10 0.10
+rKRPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+rKLPalg= 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+rKDPalg= 0.2 0.2 0.2 0.2 0.2 0.2 0.2
 
 !-----------------------------------------------------------------------
 !Silica parameters
@@ -343,10 +346,10 @@ FSPZ=  0.45   0.45
 FSIZ=  0.55   0.55
 ASCZ=  0.5    0.5
 
-FSPP=  1.00
-FSIP=  0.00
-FSPd=  1.00 
-FSId=  0.00
+FSPP=  0.50
+FSIP=  0.50
+FSPd=  0.75
+FSId=  0.25
 
 ASCd=  0.5
 rKSAp= 0.0 
@@ -368,36 +371,38 @@ rKro=    3.933
 rKTr=    1.024
 
 !-----------------------------------------------------------------------
-!water column settling velocity (m/day):  2D variables
+!water column settling velocity (m/day), 2D
 !-----------------------------------------------------------------------
-WSRP=  1.0  
-WSLP=  1.0  
-WSPB1= 0.35 
-WSPB2= 0.1
-WSPB3= 0.00
-WSSED= 1.00
+WSRP=  0.4  1.0  1.0  1.0  1.0  1.0  1.0
+WSLP=  0.4  1.0  1.0  1.0  1.0  1.0  1.0
+WSPB1= 0.6 0.35 0.35 0.35 0.35 0.35 0.35
+WSPB2= 0.4 0.10 0.10 0.10 0.10 0.10 0.10
+WSPB3= 0.075 0.00 0.00 0.00 0.00 0.00 0.00
+WSSED= 0.4
 
 !-----------------------------------------------------------------------
-!settling velocity into sediment: 2D variables 
-!iSet=0: same as water column settling velocity  
-!iSet=1: spatial constant net settling velocity 
+!Net settling velocity to sediment
+!iSet=0: no re-suspension; 
+!iSet=1: spatial constant net settling velocity; 
+!iSet=2: spatial varying, requires netsettling.gr3, in order as follwing
 !-----------------------------------------------------------------------
-iSet= 1 
-WSLBNET=  1.0
-WSRBNET=  1.0
-WS1BNET=  0.35
-WS2BNET=  0.1
-WS3BNET=  0.00
-WSSBNET=  0.2
+iSet=    1 
+WSSBNET=  -9999 0.02 
+WSLBNET=  -9999 0.02
+WSRBNET=  -9999 0.02
+WS1BNET=  -9999 0.035
+WS2BNET=  -9999 0.025
+WS3BNET=  -9999 0.005
 
 !-----------------------------------------------------------------------
-!Turb:   base coefficient for Light extinction coefficient(1/m), (2D variable)
-!WRea:   coefficients for Wind-induced reaeration of DO, (2D variable)
-!PC2TSS: coefficient of converting PC to TSS, (2D variable)
+!coefficients for Light extinction coefficient(1/m)
+!coefficients for Wind-induced reaeration of DO
+!coefficients for the relation between TSS and PC 
 !-----------------------------------------------------------------------
-Turb=0.26  
+Turb=  0.26 
 WRea= 0.0
-PC2TSS= 3.0
+PC2TSS= -999 6.0
+
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !PH model parameter
@@ -474,76 +479,76 @@ rdenssav= 10
 !-----------------------------------------------------------------------
 !veg parameters
 !-----------------------------------------------------------------------
-initveg=  2                    !initveg=1:prop; initveg=2:gr3
+initveg=  1                    !initveg=1:prop; initveg=2:gr3
 famveg=   0.2    0.2    0.2    !fraction for active metabolism
 fplfveg=  0.6    0.6    0.6    !fraction for leaf biomass
 fpstveg=  0.3    0.3    0.3    !fraction for stem biomass
 fprtveg=  0.1    0.1    0.1    !fraction for root biomass
 acdwveg=  0.38   0.38   0.38   !carbon to dry weight ratio
-pmbsveg=  0.1    0.1    0.1    !coefficient for maximum growth rate function
-toptveg=  32     32     32     !optimal temperature
+pmbsveg=  0.4    0.4    0.4     !coefficient for maximum growth rate function
+toptveg=  27     27     27     !optimal temperature
 ktg1veg=  0.003  0.003  0.003  !shape function of temperature adjustment
 ktg2veg=  0.005  0.005  0.005  !shape function of temperature adjustment
 
 !metabolism parameters
-bmlfrveg= 0.02   0.02   0.02   !reference metabolism rate of lf
-bmstrveg= 0.02   0.02   0.02
-bmrtrveg= 0.02   0.02   0.02
-ktblfveg= 0.069  0.069  0.069  !shape coefficient for temp impact
-ktbstveg= 0.069  0.069  0.069
-ktbrtveg= 0.069  0.069  0.069
+bmlfrveg= 0.01   0.01   0.01   !reference metabolism rate of lf
+bmstrveg= 0.01   0.01   0.01
+bmrtrveg= 0.01   0.01   0.01
+ktblfveg= 0.08   0.08   0.08   !shape coefficient for temp impact
+ktbstveg= 0.08   0.08   0.08 
+ktbrtveg= 0.08   0.08   0.08 
 trlfveg=  20     20     20     !reference temperature for metabolism
 trstveg=  20     20     20
 trrtveg=  20     20     20
-          
-!mortality parameters
-iMortveg= 0 !1: ture on die-off term for veg !error, to add
 
-!light & height parameters
-alphaveg= 0.006  0.006  0.006    
+!mortality parameters
+iMortveg= 1 !1: ture on die-off term for veg !error, to add
+adlfveg=  4     4       4 
+bdlfveg=  -4    -4      -4
+cdlfveg=  17    17      17
+ddlfveg=  12.8  12.8    12.8
+adstveg=  4     4       4 
+bdstveg=  -4    -4      -4
+cdstveg=  17    17      17
+ddstveg=  12.8  12.8    12.8
+adrtveg=  15    15      15
+bdrtveg=  -4    -4      -4
+cdrtveg=  17    17      17 
+ddrtveg=  12.8  12.8    12.8
+
+!light parameters
+alphaveg= 0.005  0.005  0.005
 rkshveg=  0.045  0.045  0.045  !light attenuation from veg absorption
-aveg=     -0.001 -0.001 -0.001 
+aveg=     -0.0002 -0.0002 -0.0002 
 bveg=     1.0    1.0    1.0  
-dveg=     0.0036 0.0036 0.0036     
+dveg=     0.0036 0.0036 0.0036    
 eveg=     0.054  0.054  0.054
-critveg=  250    250    250
+critveg=  300    300    300
 
 !salt parameter
-saltveg=  35	 35	35
-saltoptveg=  35     15     0
+saltveg=  35     35     35
+saltoptveg=  20     12     0
 
 !inundation parameter
-tinunveg= 1      1      1
+tinunveg= 0.2    0.2    0.2
 
 !nitrogen parameters
-isfnveg= 1
-isrecnveg= 1
-ancveg=   0.09   0.09   0.09   !nitrogen to carbon ratio
-khnwveg=  0.01   0.01   0.01   !nitrogen half saturation in water column
+isfnveg= 0
+ancveg=   0.01   0.01   0.01   !nitrogen to carbon ratio
 khnsveg=  0.1    0.1    0.1    !nitrogen half saturation in sediments
-khnprveg= 0.1    0.1    0.1    !?? !half NH4 concentration
-fniveg=   0.5    0.5    0.5    !fraction of N to 4 groups in metabolism
-fndveg=   0.3    0.3    0.3    
-fnlpveg=  0.15   0.15   0.15   
-fnrpveg=  0.05   0.05   0.05   
-          
+fniveg=   0.0    0.0    0.0    !fraction of N to be directly recycled before settling down 
+
 !phosphorus parameters
-isfpveg=  1
-isrecpveg= 1
-apcveg=   0.01   0.01   0.01   !phosphorus to carbon ratio
-khpwveg=  0.001  0.001  0.001  !phosphorus half saturation in water column
+isfpveg=  0
+apcveg=   0.003  0.003  0.003  !phosphorus to carbon ratio
 khpsveg=  0.01   0.01   0.01   !phosphorus half saturation in sediments
-fpiveg=   0.5    0.5    0.5    !fraction of P to 4 groups in metabolism
-fpdveg=   0.35   0.35   0.35
-fplpveg=  0.1    0.1    0.1
-fprpveg=  0.05   0.05   0.05
-          
+fpiveg=   0.0    0.0    0.0    !fraction of P to be directly recycled before settling down
+
 !oxygen parameters
 aocrveg=  2.67   2.67   2.67   !oxygen to carbon ratio
-fdoveg=   0.5    0.5    0.5    !fraction of to DO, in metabolism
-fcdveg=   0.3    0.3    0.3    
-fclpveg=  0.15   0.15   0.15   
-fcrpveg=  0.05   0.05   0.05   
+fdoveg=   0.30   0.30   0.30   !fraction of immediate recycling before settling down 
+khrveg=   1.00   1.00   1.00   !coefficient of DOC recycling
+frtdoveg= 0.80   0.80   0.80   !fraction of DO consumption of the root in the sediment
 
 !density parameters
-rdensveg= 10	 10	10     !density coefficient                         
+rdensveg= 10     10     10     !density coefficient

@@ -135,15 +135,18 @@ module icm_sed_mod
   real(kind=iwp),save,allocatable,dimension(:) :: SFLUXP,SF_RPOP,SFLUXN,SF_RPON,SFLUXC,SF_RPOC,JSUSF,SF_SU
   
   !benthic algae
-  integer, save :: iBalg
-  real(kind=iwp),save :: PO4AVL, NH4AVL, NO3AVL
-  real(kind=iwp),save :: PMB,ANCB,APCB,KTGB1,KTGB2,TMB
-  real(kind=iwp),save :: ALPHB,CCHLB,KESED,KEBALG,KHNB,KHPB,KHRB
-  real(kind=iwp),save :: BMRB,BPRB,KTBB,TRB,BALGMIN
-  real(kind=iwp),save :: FNIB,FPIB
-  real(kind=iwp),save :: FTB,PRNB
-  real(kind=iwp),save,allocatable,dimension(:) :: BBM
-  real(kind=iwp),save :: FIB,BLITE,NLB,PLB,BMB,PB,NPPB,PRB
+  integer,save :: iBalg,iNPBalg
+  integer,save,allocatable,dimension(:) :: patchBalg
+  real(kind=iwp),save,allocatable,dimension(:) :: BBM !nea
+  real(kind=iwp),save,allocatable,dimension(:) :: PrmPrdtBalg 
+  real(kind=iwp),save,allocatable,dimension(:) :: GPBalg,BMBalg,PRBalg
+  real(kind=iwp),save,allocatable,dimension(:) :: FIBalg, FTBalg, FNBalg, FPBalg 
+  real(kind=iwp),save :: GPMB,TGPB,KTGB1,KTGB2
+  real(kind=iwp),save :: isedBalg,ALPHB,keSedB,keBalg
+  real(kind=iwp),save :: PO4AVL,NH4AVL,NO3AVL,KHNB,KHPB
+  real(kind=iwp),save :: BMRB,PRRB,KTBB,TRB,BALGMIN
+  real(kind=iwp),save :: FNIB,FPIB,ANCB,APCB
+  real(kind=iwp),save :: PRNitB,KHRB
   real(kind=iwp),save :: BAPOC,BAPON,BAPOP
 
 end module icm_sed_mod

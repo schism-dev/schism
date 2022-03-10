@@ -121,7 +121,6 @@ subroutine WQinput(time)
     enddo !while
   endif !iBen>0
 
-
   !read solar radiation (unit: ly/day)
   if(iRad==2.and.time_icm(3)<time) then!manually input
     do while(time_icm(3)<time)
@@ -145,6 +144,14 @@ subroutine WQinput(time)
     call parallel_abort(errmsg)
   endif!time_icm
 
+  !ncai_veg
+  !time_icm(4) for veg module
+  if(iveg_icm==1.and.time_icm(4)<time) then !manually input
+    do while(time_icm(4)<time)
+      read(404,*)rtmp,mtemp
+      time_icm(4)=rtmp
+    enddo !while
+  endif!time_icm
 
 !  !more work to do, put code in schism_step here, ZG
 !  !read non-point source
@@ -182,6 +189,7 @@ subroutine read_icm_param2
   use schism_msgp, only : myrank, parallel_abort
   use icm_mod
   use misc_modules
+  use icm_sed_mod, only : iBalg,patchBalg
   implicit none
  
   !local variables
@@ -1427,6 +1435,9 @@ subroutine read_icm_param
   elseif(iRad/=1.and.iRad/=2) then
     call parallel_abort('error: iRad')
   endif
+  if(iveg_icm==1) then
+    open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
+  endif
   time_icm=-999.0  !initializing time stamp
  
   if(iTBen/=0)then
@@ -1610,12 +1621,12 @@ subroutine read_icm_param
   call get_param('icm.in','iMortveg',1,iMortveg,rtmp,stmp)
   call get_param('icm.in','isfnveg',1,isfnveg,rtmp,stmp)
   if(isfnveg/=0.and.isfnveg/=1) call parallel_abort('read_icm: illegal isfnveg')
-  call get_param('icm.in','isrecnveg',1,isrecnveg,rtmp,stmp)
-  if(isrecnveg/=0.and.isrecnveg/=1) call parallel_abort('read_icm: illegal isrecnveg')
+!  call get_param('icm.in','isrecnveg',1,isrecnveg,rtmp,stmp)
+!  if(isrecnveg/=0.and.isrecnveg/=1) call parallel_abort('read_icm: illegal isrecnveg')
   call get_param('icm.in','isfpveg',1,isfpveg,rtmp,stmp)
   if(isfpveg/=0.and.isfpveg/=1) call parallel_abort('read_icm: illegal isfpveg')
-  call get_param('icm.in','isrecpveg',1,isrecpveg,rtmp,stmp)
-  if(isrecpveg/=0.and.isrecpveg/=1) call parallel_abort('read_icm: illegal isrecpveg')
+!  call get_param('icm.in','isrecpveg',1,isrecpveg,rtmp,stmp)
+!  if(isrecpveg/=0.and.isrecpveg/=1) call parallel_abort('read_icm: illegal isrecpveg')
   call get_param_1D('icm.in','famveg',2,itmp1,famveg,stmp,3)
   call get_param_1D('icm.in','fplfveg',2,itmp1,fplfveg,stmp,3)
   call get_param_1D('icm.in','fpstveg',2,itmp1,fpstveg,stmp,3)
@@ -1640,22 +1651,24 @@ subroutine read_icm_param
   call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)
   call get_param_1D('icm.in','critveg',2,itmp1,critveg,stmp,3)
   call get_param_1D('icm.in','fdoveg',2,itmp1,fdoveg,stmp,3)
-  call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
-  call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)
-  call get_param_1D('icm.in','fcrpveg',2,itmp1,fcrpveg,stmp,3)
-  call get_param_1D('icm.in','khnwveg',2,itmp1,khnwveg,stmp,3)
+  call get_param_1D('icm.in','khrveg',2,itmp1,khrveg,stmp,3)
+  call get_param_1D('icm.in','frtdoveg',2,itmp1,frtdoveg,stmp,3)
+!  call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
+!  call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)
+!  call get_param_1D('icm.in','fcrpveg',2,itmp1,fcrpveg,stmp,3)
+!  call get_param_1D('icm.in','khnwveg',2,itmp1,khnwveg,stmp,3)
   call get_param_1D('icm.in','khnsveg',2,itmp1,khnsveg,stmp,3)
-  call get_param_1D('icm.in','khnprveg',2,itmp1,khnprveg,stmp,3)
+!  call get_param_1D('icm.in','khnprveg',2,itmp1,khnprveg,stmp,3)
   call get_param_1D('icm.in','fniveg',2,itmp1,fniveg,stmp,3)
-  call get_param_1D('icm.in','fndveg',2,itmp1,fndveg,stmp,3)
-  call get_param_1D('icm.in','fnlpveg',2,itmp1,fnlpveg,stmp,3)
-  call get_param_1D('icm.in','fnrpveg',2,itmp1,fnrpveg,stmp,3)
-  call get_param_1D('icm.in','khpwveg',2,itmp1,khpwveg,stmp,3)
+!  call get_param_1D('icm.in','fndveg',2,itmp1,fndveg,stmp,3)
+!  call get_param_1D('icm.in','fnlpveg',2,itmp1,fnlpveg,stmp,3)
+!  call get_param_1D('icm.in','fnrpveg',2,itmp1,fnrpveg,stmp,3)
+!  call get_param_1D('icm.in','khpwveg',2,itmp1,khpwveg,stmp,3)
   call get_param_1D('icm.in','khpsveg',2,itmp1,khpsveg,stmp,3)
   call get_param_1D('icm.in','fpiveg',2,itmp1,fpiveg,stmp,3)
-  call get_param_1D('icm.in','fpdveg',2,itmp1,fpdveg,stmp,3)
-  call get_param_1D('icm.in','fplpveg',2,itmp1,fplpveg,stmp,3)
-  call get_param_1D('icm.in','fprpveg',2,itmp1,fprpveg,stmp,3)
+!  call get_param_1D('icm.in','fpdveg',2,itmp1,fpdveg,stmp,3)
+!  call get_param_1D('icm.in','fplpveg',2,itmp1,fplpveg,stmp,3)
+!  call get_param_1D('icm.in','fprpveg',2,itmp1,fprpveg,stmp,3)
   call get_param_1D('icm.in','bmlfrveg',2,itmp1,bmlfrveg,stmp,3)
   call get_param_1D('icm.in','bmstrveg',2,itmp1,bmstrveg,stmp,3)
   call get_param_1D('icm.in','bmrtrveg',2,itmp1,bmrtrveg,stmp,3)
@@ -1666,6 +1679,19 @@ subroutine read_icm_param
   call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
   call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
   call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
+  call get_param_1D('icm.in','adlfveg',2,itmp1,adlfveg,stmp,3)
+  call get_param_1D('icm.in','bdlfveg',2,itmp1,bdlfveg,stmp,3)
+  call get_param_1D('icm.in','cdlfveg',2,itmp1,cdlfveg,stmp,3)
+  call get_param_1D('icm.in','ddlfveg',2,itmp1,ddlfveg,stmp,3)
+  call get_param_1D('icm.in','adstveg',2,itmp1,adstveg,stmp,3)
+  call get_param_1D('icm.in','bdstveg',2,itmp1,bdstveg,stmp,3)
+  call get_param_1D('icm.in','cdstveg',2,itmp1,cdstveg,stmp,3)
+  call get_param_1D('icm.in','ddstveg',2,itmp1,ddstveg,stmp,3)
+  call get_param_1D('icm.in','adrtveg',2,itmp1,adrtveg,stmp,3)
+  call get_param_1D('icm.in','bdrtveg',2,itmp1,bdrtveg,stmp,3)
+  call get_param_1D('icm.in','cdrtveg',2,itmp1,cdrtveg,stmp,3)
+  call get_param_1D('icm.in','ddrtveg',2,itmp1,ddrtveg,stmp,3)
+
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
@@ -1881,9 +1907,9 @@ subroutine read_icm_param
       if(alphaveg(j)<=0) call parallel_abort('read_icm_input: alphaveg')
       if(pmbsveg(j)<=0) call parallel_abort('read_icm_input: pmbsveg')
       if(khnsveg(j)<=0) call parallel_abort('read_icm_input: khnsveg')
-      if(khnwveg(j)<=0) call parallel_abort('read_icm_input: khnwveg')
+!      if(khnwveg(j)<=0) call parallel_abort('read_icm_input: khnwveg')
       if(khpsveg(j)<=0) call parallel_abort('read_icm_input: khpsveg')
-      if(khpwveg(j)<=0) call parallel_abort('read_icm_input: khpwveg')
+!      if(khpwveg(j)<=0) call parallel_abort('read_icm_input: khpwveg')
       if(acdwveg(j)<=0) call parallel_abort('read_icm_input: acdwveg')
       if(bmlfrveg(j)<=0.or.bmstrveg(j)<=0.or.bmrtrveg(j)<=0) call parallel_abort('read_icm_input: bmlfrveg')
     enddo !j::veg species

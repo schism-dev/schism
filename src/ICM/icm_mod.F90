@@ -76,9 +76,10 @@ module icm_mod
   !ncai_veg
   real(kind=iwp),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: hcanveg !,ztcveg !(nea,3)
-  real(kind=iwp),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: tpocveg,tponveg,tpopveg,trtdoveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
-  real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg,tNH4veg,tPO4veg !(nea,3)
+  real(kind=iwp),save,allocatable,dimension(:,:) :: tDOveg,tDOCveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:)   :: PrmPrdtveg !(nea)
 
   !PH model
@@ -154,21 +155,24 @@ module icm_mod
   real(kind=iwp),save,dimension(3) :: tinunveg !inundation
   real(kind=iwp),save,dimension(3) :: aveg,critveg,dveg,eveg !height
   !real(kind=iwp),save,allocatable,dimension(:) :: mhtveg !(nea),water level
-  real(kind=iwp),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
+  real(kind=iwp),save,dimension(3) :: fdoveg,khrveg,frtdoveg ! fcdveg, fclpveg, fcrpveg !carbon
   real(kind=iwp),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
-  real(kind=iwp),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
+  real(kind=iwp),save,dimension(3) :: fniveg !, fndveg, fnlpveg, fnrpveg
   real(kind=iwp),save,dimension(3) :: khpwveg,khpsveg !phosphorus
-  real(kind=iwp),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
+  real(kind=iwp),save,dimension(3) :: fpiveg !, fpdveg, fplpveg, fprpveg
   real(kind=iwp),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
   real(kind=iwp),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
   real(kind=iwp),save,dimension(3) :: trlfveg,trstveg,trrtveg
+  real(kind=iwp),save,dimension(3) :: adlfveg,bdlfveg,cdlfveg,ddlfveg
+  real(kind=iwp),save,dimension(3) :: adstveg,bdstveg,cdstveg,ddstveg
+  real(kind=iwp),save,dimension(3) :: adrtveg,bdrtveg,cdrtveg,ddrtveg
   !intermediate variables
   integer,save :: knveg(3) !index of top layer with canopy occupied, knveg=0 for emergency
   real(kind=iwp),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
   real(kind=iwp),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
   real(kind=iwp),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(kind=iwp),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
-  real(kind=iwp),save :: airtveg
+  real(kind=iwp),save :: airtveg,mtemp
   real(kind=iwp),save,dimension(3) :: rdensveg
 
 
