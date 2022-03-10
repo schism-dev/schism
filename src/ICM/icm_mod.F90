@@ -36,9 +36,10 @@ module icm_mod
   integer,save :: iZoo,iPh
   integer,save :: iAtm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
-  integer,save :: isav_icm,iveg_icm !sav, veg 
-  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg !veg
-  integer,save :: idry_icm
+  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg 
+  integer,target,save :: idry_icm
+  integer,target,save :: isav_icm,iveg_icm 
+  integer,pointer :: jdry,jsav,jveg
  
   !water quality state variables
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
@@ -52,19 +53,19 @@ module icm_mod
 
   !sav
   !(nvrt,nea)>> bottom to surface
-  real(rkind),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav !(nvrt,nea), unit: g/m^2 
+  real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2 
   !(nvrt)<< surface to bottom
   real(rkind),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
   !(nea)<<depth integrated, true outputs
-  real(rkind),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav !(nea), unit: g/m^2 
-  real(rkind),save,allocatable,dimension(:) :: hcansav,hcansavori!(nea)
+  real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot !(nea), unit: g/m^2 
+  real(rkind),save,allocatable,dimension(:) :: sht
   real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
 
   !veg
-  real(rkind),save,allocatable,dimension(:,:) :: tlfveg,tstveg,trtveg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: hcanveg !,ztcveg !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(rkind),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
@@ -106,13 +107,13 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:,:) :: rKTGP
 
   !sav readin parameters 
-  integer,save,allocatable :: patchsav(:) !(nea)
+  integer,save,allocatable :: spatch(:) !(nea)
   integer,save :: initsav
   real(rkind),save :: famsav,fplfsav,fpstsav,fprtsav
   real(rkind),save :: acdwsav,ancsav,apcsav,aocrsav !ratios
   real(rkind),save :: pmbssav,toptsav,ktg1sav,ktg2sav !temp 
   real(rkind),save :: alphasav,rkshsav !light
-  real(rkind),save :: rlf,rst,rrt,hcansav0,hcansav_limit !height
+  real(rkind),save :: s2ht(3),shtm(2) !height
   real(rkind),save :: fdosav, fcdsav, fclpsav, fcrpsav !carbon
   real(rkind),save :: khnwsav,khnssav,khnprsav !nitrogen
   real(rkind),save :: fnisav, fndsav, fnlpsav, fnrpsav
@@ -130,7 +131,7 @@ module icm_mod
 
 
   !veg readin parameters
-  integer,save,allocatable :: patchveg(:) !nea
+  integer,save,allocatable :: vpatch(:) !nea
   integer,save :: initveg !decide init mapping format
   integer,save :: iMortveg !flag of vegetation mortality
   real(rkind),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg

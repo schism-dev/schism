@@ -49,8 +49,7 @@
 
 #ifdef USE_ICM
       use icm_mod, only : iRea,WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
-                        & lfsav,stsav,rtsav,tlfsav,tstsav,trtsav,hcansav, &
-                        & tlfveg,tstveg,trtveg,hcanveg
+                        & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot !sav & veg
                       
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                          &CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
@@ -7562,7 +7561,7 @@
         if(isav==1.and.isav_icm==1)then
           !Convert hcansav to nodes
           do i=1,np
-            sav_h(i)=sum(hcansav(indel(1:nne(i),i)))/real(nne(i),rkind)
+            sav_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
           call exchange_p2d(sav_h)
 
@@ -8581,30 +8580,30 @@
          
         !SAV model
         if(isav_icm/=0) then
-          if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_lfsav',6,nvrt,nea,dble(lfsav))
-          if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_stsav',6,nvrt,nea,dble(stsav))
-          if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_rtsav',6,nvrt,nea,dble(rtsav))
-          if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_tlfsav',4,1,nea,dble(tlfsav))
-          if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_tstsav',4,1,nea,dble(tstsav))
-          if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_trtsav',4,1,nea,dble(trtsav))
-          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_hcansav',4,1,nea,dble(hcansav))
+          if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_sleaf', 6,nvrt,nea,dble(sleaf))
+          if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_sstem', 6,nvrt,nea,dble(sstem))
+          if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_sroot', 6,nvrt,nea,dble(sroot))
+          if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_stleaf',4,1,nea,dble(stleaf))
+          if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_ststem',4,1,nea,dble(ststem))
+          if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_stroot',4,1,nea,dble(stroot))
+          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_sht   ',4,1,nea,dble(sht))
         endif
         noutput=noutput+7
 
         !VEG model
         if(iveg_icm/=0) then
-          if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_tlfveg1',4,1,nea,dble(tlfveg(:,1)))
-          if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_tlfveg2',4,1,nea,dble(tlfveg(:,2)))
-          if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_tlfveg3',4,1,nea,dble(tlfveg(:,3)))
-          if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_tstveg1',4,1,nea,dble(tstveg(:,1)))
-          if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_tstveg2',4,1,nea,dble(tstveg(:,2)))
-          if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_tstveg3',4,1,nea,dble(tstveg(:,3)))
-          if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_trtveg1',4,1,nea,dble(trtveg(:,1)))
-          if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+4+8),'ICM_trtveg2',4,1,nea,dble(trtveg(:,2)))
-          if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+4+9),'ICM_trtveg3',4,1,nea,dble(trtveg(:,3)))
-          if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_hcanveg1',4,1,nea,dble(hcanveg(:,1)))
-          if(iof_icm(43)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_hcanveg2',4,1,nea,dble(hcanveg(:,2)))
-          if(iof_icm(44)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_hcanveg3',4,1,nea,dble(hcanveg(:,3)))
+          if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+4+1), 'ICM_vtleaf1',4,1,nea,dble(vtleaf(:,1)))
+          if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+4+2), 'ICM_vtleaf2',4,1,nea,dble(vtleaf(:,2)))
+          if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+4+3), 'ICM_vtleaf3',4,1,nea,dble(vtleaf(:,3)))
+          if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+4+4), 'ICM_vtstem1',4,1,nea,dble(vtstem(:,1)))
+          if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+4+5), 'ICM_vtstem2',4,1,nea,dble(vtstem(:,2)))
+          if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+4+6), 'ICM_vtstem3',4,1,nea,dble(vtstem(:,3)))
+          if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+4+7), 'ICM_vtroot1',4,1,nea,dble(vtroot(:,1)))
+          if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+4+8), 'ICM_vtroot2',4,1,nea,dble(vtroot(:,2)))
+          if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+4+9), 'ICM_vtroot3',4,1,nea,dble(vtroot(:,3)))
+          if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_vht1',   4,1,nea,dble(vht(:,1)))
+          if(iof_icm(43)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_vht2',   4,1,nea,dble(vht(:,2)))
+          if(iof_icm(44)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_vht3',   4,1,nea,dble(vht(:,3)))
         endif
         noutput=noutput+12
 
@@ -9778,21 +9777,21 @@
         j=nf90_def_var(ncid_hot,'BFORMAXS',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+29))
         j=nf90_def_var(ncid_hot,'ISWBENS',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+30))
         j=nf90_def_var(ncid_hot,'DFEEDM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+31))
-        j=nf90_def_var(ncid_hot,'hcansav',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+32))
+        j=nf90_def_var(ncid_hot,'sht',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+32))
         !last dim must be node/elem/side- I suggest we swap indices for
         !these 2D arrays
         var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim
         j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
         j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+34))
         j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+35))
-        j=nf90_def_var(ncid_hot,'tlfveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+36))
-        j=nf90_def_var(ncid_hot,'tstveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+37))
-        j=nf90_def_var(ncid_hot,'trtveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+38))
-        j=nf90_def_var(ncid_hot,'hcanveg',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+39))
+        j=nf90_def_var(ncid_hot,'vtleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+36))
+        j=nf90_def_var(ncid_hot,'vtstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+37))
+        j=nf90_def_var(ncid_hot,'vtroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+38))
+        j=nf90_def_var(ncid_hot,'vht',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+39))
         var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'lfsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+40))
-        j=nf90_def_var(ncid_hot,'stsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+41))
-        j=nf90_def_var(ncid_hot,'rtsav',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+42))
+        j=nf90_def_var(ncid_hot,'sleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+40))
+        j=nf90_def_var(ncid_hot,'sstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+41))
+        j=nf90_def_var(ncid_hot,'stoot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+42))
         !3D arrays
         var3d_dim(1)=ICM_ntr_dim; var3d_dim(2)=nvrt_dim; var3d_dim(3)=elem_dim
         j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+43))
@@ -9829,17 +9828,17 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+29),dble(BFORMAXS),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+30),dble(ISWBENS),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),dble(DFEEDM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(hcansav),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(sht),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(transpose(tlfveg(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(transpose(tstveg(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(transpose(trtveg(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(transpose(hcanveg(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+40),dble(lfsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+41),dble(stsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+42),dble(rtsav(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(transpose(vtleaf(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(transpose(vtstem(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(transpose(vtroot(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(transpose(vht(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+40),dble(sleaf(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+41),dble(sstem(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+42),dble(sroot(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+43),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
         
         nvars_hot=nvars_hot+43 !update

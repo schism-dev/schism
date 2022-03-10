@@ -43,8 +43,8 @@ subroutine icm_init
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
     & PRR(3,nea),GPM(3,nea),TGP(3,nea),chl2c(3,nea),rKTGP(3,2,nea),& 
     & rIavg_save(nea), &!rad
-    & lfsav(nvrt,nea),stsav(nvrt,nea),rtsav(nvrt,nea),hcansav(nea), & !sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
-    & tlfveg(nea,3),tstveg(nea,3),trtveg(nea,3),hcanveg(nea,3), &!veg
+    & sleaf(nvrt,nea),sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), & !sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
+    & vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3),vht(nea,3), &!veg
     & tthcan(nea),ttdens(nea), &!sav + veg
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &!erosion
     & reg_PO4(nea),reg_GP(nea),reg_WS(nea),reg_PR(nea),reg_KC(nea),stat=istat)  !region
@@ -67,39 +67,39 @@ subroutine icm_init
   !----------------------------------------------------------------
   !sav:: parameters + outputs
   !----------------------------------------------------------------
-  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp)
-  if(isav_icm/=0.and.isav_icm/=1) call parallel_abort('read_icm: illegal isav_icm')
-  if(isav_icm==1) then
+  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp); jsav=>isav_icm
+  if(jsav/=0.and.jsav/=1) call parallel_abort('read_icm: illegal isav_icm')
+  if(jsav==1) then
     !base case
     !(nvrt,nea)>> 1 to nvrt: bottom to surface
     allocate(plfsav(nvrt,nea),pmaxsav(nvrt,nea),fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea), &
     !(nvrt)<< surface to bottom
     & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), &
     & rtpocsav(nvrt),rtponsav(nvrt),rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt), &
-    & patchsav(nea),tlfsav(nea),tstsav(nea),trtsav(nea),hcansavori(nea), &
+    & spatch(nea),stleaf(nea),ststem(nea),stroot(nea), &
     & tlfNH4sav(nea),tlfPO4sav(nea),trtpocsav(nea),trtponsav(nea),trtpopsav(nea),trtdosav(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. icm_sav variables')
 
     !init
-    tlfsav=0.0;   tstsav=0.0;     trtsav=0.0;       hcansavori=0.0;   
+    stleaf=0.0;   ststem=0.0;     stroot=0.0;          
     plfsav=0.0;   pmaxsav=0.0;    fisav=1.0;        fnsav=1.0;      fpsav=1.0;
     rtpocsav=0.0; rtponsav=0.0;   rtpopsav=0.0;     rtdosav=0.0
     trtpocsav=0.0;trtponsav=0.0;  trtpopsav=0.0;    trtdosav=0.0
     lfNH4sav=0.0; lfPO4sav=0.0
     tlfNH4sav=0.0;tlfPO4sav=0.0
 
-  endif !isav_icm
+  endif !jsav
 
   !----------------------------------------------------------------
   !veg:: parameters + outputs
   !----------------------------------------------------------------
-  call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp)
-  if(iveg_icm/=0.and.iveg_icm/=1) call parallel_abort('read_icm: illegal iveg_icm')
-  if(iveg_icm==1) then
+  call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp); jveg=>iveg_icm
+  if(jveg/=0.and.jveg/=1) call parallel_abort('read_icm: illegal iveg_icm')
+  if(jveg==1) then
     !allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
     allocate(trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
     & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
-    & patchveg(nea),rdephcanveg(nea,3), & !mhtveg(nea), &
+    & vpatch(nea),rdephcanveg(nea,3), & !mhtveg(nea), &
     & plfveg(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3),fpveg(nea,3),fsveg(nea,3),ffveg(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. icm_veg variables')
 
@@ -107,10 +107,10 @@ subroutine icm_init
     !ztcveg=0.0; trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
     trtpocveg=0.0;  trtponveg=0.0;  trtpopveg=0.0;  trtdoveg=0.0
     lfNH4veg=0.0;       lfPO4veg=0.0;   tlfNH4veg=0.0;  tlfPO4veg=0.0
-    patchveg=0; rdephcanveg=0.0;        !mhtveg=0.0;     
+    vpatch=0; rdephcanveg=0.0;        !mhtveg=0.0;     
     plfveg=0.0; pmaxveg=0.0; fiveg=1.0; fnveg=1.0;      fpveg=1.0
     fsveg=1.0;      ffveg=1.0
-  endif !iveg_icm
+  endif !jveg
 
   !----------------------------------------------------------------
   !icm_sed_mod
@@ -156,10 +156,10 @@ subroutine icm_init
   rIavg_save=0.0
 
   !sav
-  lfsav=0.0;    stsav=0.0;      rtsav=0.0;      hcansav=0.0 !init for each layer whole domain 
+  sleaf=0.0;    sstem=0.0;      sroot=0.0;      sht=0.0 !init for each layer whole domain 
 
   !veg
-  tlfveg=0.0;   tstveg=0.0;     trtveg=0.0;     hcanveg=0.0
+  vtleaf=0.0;   vtstem=0.0;     vtroot=0.0;     vht=0.0
 
   !sav + veg
   tthcan=0.0;   ttdens=0.0;

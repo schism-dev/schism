@@ -395,11 +395,8 @@ trrtsav= 20
 !light parameters
 alphasav=0.006
 rkshsav= 0.045 !light attenuation from sav absorption
-rlf=     0.0036!??
-rst=     0.0036!??
-rrt=     0!0.1!??
-hcansav0=0.054!1!??
-hcansav_limit=2.0!maximium canopy height
+s2ht= 0.0036 0.0036  0.0  !coefficients converting (leaf,stem,root) to canopy height
+shtm= 0.054  2.0   !minimum (base) and  maximium canopy height
 
 !nitrogen parameters
 ancsav=  0.09 !nitrogen to carbon ratio

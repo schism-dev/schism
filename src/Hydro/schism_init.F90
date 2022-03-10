@@ -48,8 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav, & !sav
-                          & tlfveg,tstveg,trtveg,hcanveg !veg 
+      use icm_mod, only : wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot !sav & veg
       use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                            & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                            & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -5580,7 +5579,7 @@
      &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
      &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
      &'POC3TM1S ','POP1TM1S ','POP2TM1S ','POP3TM1S ','PSITM1S  ','BFORMAXS ', &
-     &'ISWBENS  ','DFEEDM1S ','hcansav  '/)
+     &'ISWBENS  ','DFEEDM1S ','sht      '/)
 !'
         do k=1,32 !# of 1D arrays
           if(myrank==0) then
@@ -5657,14 +5656,14 @@
               else if(k==31) then
                 DFEEDM1S(ie)=buf3(i)
               else if(k==32) then
-                hcansav(ie)=buf3(i)
+                sht(ie)=buf3(i)
               endif
             endif !iegl
           enddo !i
         enddo !k=1,31
 
         !gfortran requires all chars have same length
-        ar_name(1:10)=(/'CPOP ','CPON ','CPOC ','tlfveg','tstveg','trtveg','hcanveg','lfsav','stsav','rtsav'/)
+        ar_name(1:10)=(/'CPOP ','CPON ','CPOC ','vtleaf','vtstem','vtroot','vht','sleaf','sstem','sroot'/)
         do k=1,7 !# of 2D arrays
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
@@ -5688,13 +5687,13 @@
                 else if(k==3) then
                   CPOC(ie,m)=buf3(i)
                 else if(k==4) then
-                  tlfveg(ie,m)=buf3(i)
+                  vtleaf(ie,m)=buf3(i)
                 else if(k==5) then
-                  tstveg(ie,m)=buf3(i)
+                  vtstem(ie,m)=buf3(i)
                 else if(k==6) then
-                  trtveg(ie,m)=buf3(i)
+                  vtroot(ie,m)=buf3(i)
                 else if(k==7) then
-                  hcanveg(ie,m)=buf3(i)
+                  vht(ie,m)=buf3(i)
                 endif
               endif !iegl
             enddo !i
@@ -5717,11 +5716,11 @@
               if(iegl(i)%rank==myrank) then
                 ie=iegl(i)%id
                 if(k==8) then
-                  lfsav(m,ie)=buf3(i)
+                  sleaf(m,ie)=buf3(i)
                 else if(k==9) then
-                  stsav(m,ie)=buf3(i)
+                  sstem(m,ie)=buf3(i)
                 else if(k==10) then
-                  rtsav(m,ie)=buf3(i)
+                  sroot(m,ie)=buf3(i)
                 endif
               endif !iegl
             enddo !i

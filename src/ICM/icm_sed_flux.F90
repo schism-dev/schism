@@ -224,7 +224,7 @@ subroutine read_icm_sed_param
   use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
-  use icm_mod, only : isav_icm,iTBen,iveg_icm
+  use icm_mod, only : jsav,iTBen,jveg
   use misc_modules
   implicit none
   
@@ -352,14 +352,14 @@ subroutine read_icm_sed_param
   O2CRIT=rtmp
 
   !sav 
-  if(isav_icm==1) then
+  if(jsav==1) then
     call get_param_1D('icm_sed.in','frnsav',2,itmp1,frnsav,stmp,3)
     call get_param_1D('icm_sed.in','frpsav',2,itmp1,frpsav,stmp,3)
     call get_param_1D('icm_sed.in','frcsav',2,itmp1,frcsav,stmp,3)
   endif
 
   !veg
-  if(iveg_icm==1) then
+  if(jveg==1) then
     call get_param_1D('icm_sed.in','frnveg',2,itmp2,frnveg(1:3,1:3),stmp,9)
     call get_param_1D('icm_sed.in','frpveg',2,itmp2,frpveg(1:3,1:3),stmp,9)
     call get_param_1D('icm_sed.in','frcveg',2,itmp2,frpveg(1:3,1:3),stmp,9)
@@ -777,9 +777,9 @@ subroutine sed_calc(id)
   use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC, &
-                      &isav_icm,patchsav, & !sav
+                      &jsav,spatch, & !sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
-                      &iveg_icm,patchveg, & !veg
+                      &jveg,vpatch, & !veg
                       &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
                       &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET, & !erosion
                       &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
@@ -873,18 +873,18 @@ subroutine sed_calc(id)
   !RHS of mass balance of layer 2 in sedimentation flux 
 
   !sav !unit: g/m^3
-  if(isav_icm==1.and.patchsav(id)==1)then
+  if(jsav==1.and.spatch(id)==1)then
     NH4T2TM1=max(1.0d-10,NH4T2TM1-tlfNH4sav(id)*dtw/HSED(id))
     PO4T2TM1=max(1.0d-10,PO4T2TM1-tlfPO4sav(id)*dtw/HSED(id))
     ROOTDO=ROOTDO+trtdosav(id) !unit: g/m^2 day
-  endif !isav_icm
+  endif !jsav
 
   !veg
-  if(iveg_icm==1.and.patchveg(id)==1)then
+  if(jveg==1.and.vpatch(id)==1)then
     NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED(id))
     PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED(id))
     ROOTDO=ROOTDO+sum(trtdoveg(id,1:3)) !unit: g/m^2 day
-  endif !iveg_icm
+  endif !jveg
 
 
 
@@ -936,7 +936,7 @@ subroutine sed_calc(id)
   !rt metaolism adding the RHS of mass balance of POM on layer 2
   !trtpo?sav in unit of g/m^2 day
   !sav
-  if(isav_icm==1.and.patchsav(id)==1) then
+  if(jsav==1.and.spatch(id)==1) then
     do i=1,3
       flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
       flxpon(id,i)=flxpon(id,i)+trtponsav(id)*frnsav(i)
@@ -945,7 +945,7 @@ subroutine sed_calc(id)
   endif
 
   !veg
-  if(iveg_icm==1.and.patchveg(id)==1) then
+  if(jveg==1.and.vpatch(id)==1) then
     do i=1,3
       do j=1,3
         flxpoc(id,i)=flxpoc(id,i)+trtpocveg(id,j)*frcveg(i,j)
@@ -1473,7 +1473,7 @@ end subroutine sed_calc
 
 subroutine sedsod(id)
   use icm_sed_mod
-  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,isav_icm,iveg_icm
+  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,jsav,jveg
   use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -1703,7 +1703,7 @@ subroutine sedsod(id)
 !  endif
 
   !sav, veg
-  if(isav_icm==1.or.iveg_icm==1) then
+  if(jsav==1.or.jveg==1) then
     SOD=SOD+ROOTDO !consume DO by root metabolism
   endif
 
