@@ -108,7 +108,7 @@ module icm_mod
 
   !sav readin parameters 
   integer,save,allocatable :: spatch(:) !(nea)
-  integer,save :: initsav
+  real(rkind),save :: stleaf0,ststem0,stroot0
   real(rkind),save :: famsav,fplfsav,fpstsav,fprtsav
   real(rkind),save :: acdwsav,ancsav,apcsav,aocrsav !ratios
   real(rkind),save :: pmbssav,toptsav,ktg1sav,ktg2sav !temp 
@@ -132,15 +132,18 @@ module icm_mod
 
   !veg readin parameters
   integer,save,allocatable :: vpatch(:) !nea
-  integer,save :: initveg !decide init mapping format
   integer,save :: iMortveg !flag of vegetation mortality
+  real(rkind),save,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
   real(rkind),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
   real(rkind),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
   real(rkind),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
   real(rkind),save,dimension(3) :: alphaveg,rkshveg !light
   real(rkind),save,dimension(3) :: saltveg,saltoptveg !salt
   real(rkind),save,dimension(3) :: tinunveg !inundation
-  real(rkind),save,dimension(3) :: aveg,critveg,dveg,eveg !height
+  
+  real(rkind),save,dimension(3) :: vcrit,vht0 !height
+  real(rkind),save,dimension(3,2) :: v2ht     !coef. mass to height
+
   !real(rkind),save,allocatable,dimension(:) :: mhtveg !(nea),water level
   real(rkind),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
   real(rkind),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen

@@ -177,7 +177,7 @@ subroutine read_icm_param2
  
   !local variables
   integer :: i,j,ie,ip,npgb,negb,nd,ne,itmp,itmp1(1),itmp2(1,1),k,k2,m,n,q
-  real(8) :: rtmp
+  real(rkind) :: rtmp,rat,swild(nea)
   real(rkind) :: rtmp1(1),rtmp2(1,1),xtmp,ytmp,ztmp,tmp,tmp1,tmp2
   character(len=2) :: stmp,pid
   real(rkind),allocatable :: swild2(:,:)
@@ -272,255 +272,70 @@ subroutine read_icm_param2
 #ifdef ICM_PH
   !pH flag
   iphgb=0
-  call read_param_2d('ph',iphgb,-9999)
+  call read_param_2d('ph',iphgb,-9999.d0)
 
   !pH nudge flag
   if(inu_ph==1) then
     ph_nudge=0.0
-    call read_param_2d('ph_nudge',ph_nudge,-999)
+    call read_param_2d('ph_nudge',ph_nudge,-999.d0)
   endif
 #endif ICM_PH
 
   !sav
   !-----------------read in sav patch flag-----------------
   if(jsav==1) then
-    open(31,file=in_dir(1:len_in_dir)//'spatch.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp/=0.and.itmp/=1) then
-        write(errmsg,*)'Unknown spatch flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) spatch(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-  endif !jsav
+    call read_param_2d('spatch',swild,-9999.d0); spatch(:)=swild(:)
+    if(ihot==0) then
+      !init sav mass for tleaf,tstem and troot
+      call read_param_2d('stleaf',stleaf,stleaf0)
+      call read_param_2d('ststem',ststem,ststem0)
+      call read_param_2d('stroot',stroot,stroot0)
 
-
-  !-----------------read in sav initial biomass for cold start-----------------
-  if(jsav==1.and.ihot==0) then
-    if(initsav==1)then
-      open(10,file=in_dir(1:len_in_dir)//'stleaf.prop',status='old')
-      open(31,file=in_dir(1:len_in_dir)//'ststem.prop',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'stroot.prop',status='old')
-
-      do i=1,ne_global
-        read(10,*)j,tmp
-        read(31,*)j,tmp1
-        read(32,*)j,tmp2
-        if(tmp<0.or.tmp1<0.or.tmp2<0) then
-          write(errmsg,*)'ICM_init: illegal sav_*:',i,tmp,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
-
-        if(iegl(i)%rank==myrank) then
-           ne=iegl(i)%id
-           stleaf(ne)=tmp
-           ststem(ne)=tmp1
-           stroot(ne)=tmp2
-        endif 
-      enddo !i=ne_global
-      close(10)
-      close(31)
-      close(32)
-
-    elseif(initsav==2) then
-      allocate(swild2(3,npa),stat=i)
-      if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
-      open(10,file=in_dir(1:len_in_dir)//'stleaf.gr3',status='old')
-      open(31,file=in_dir(1:len_in_dir)//'ststem.gr3',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'stroot.gr3',status='old')
-      read(10,*); read(10,*) n,q
-      read(31,*); read(31,*)k,m
-      read(32,*); read(32,*)i,j
-      if(n/=ne_global.or.q/=np_global.or.i/=ne_global.or.j/=np_global.or.k/=ne_global.or.m/=np_global) then
-        call parallel_abort('ICM_init: Check sav_*.gr3') 
-      endif
-
-      do i=1,np_global
-        read(10,*)j,xtmp,ytmp,tmp
-        read(31,*)j,xtmp,ytmp,tmp1
-        read(32,*)j,xtmp,ytmp,tmp2
-        if(tmp<0.or.tmp1<0.or.tmp2<0) then
-          write(errmsg,*)'ICM_init: illegal sav_*:',i,tmp,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
-
-        if(ipgl(i)%rank==myrank) then
-          nd=ipgl(i)%id
-          swild2(1,nd)=tmp
-          swild2(2,nd)=tmp1
-          swild2(3,nd)=tmp2
-        endif
-      enddo!i=np_global
-      close(10)
-      close(31)
-      close(32)
-
+      !distribute init mass into different layes
       do i=1,nea
-        stleaf(i)=sum(swild2(1,elnode(1:i34(i),i)))/i34(i)
-        ststem(i)=sum(swild2(2,elnode(1:i34(i),i)))/i34(i)
-        stroot(i)=sum(swild2(3,elnode(1:i34(i),i)))/i34(i)
-      enddo !i
-      deallocate(swild2)
-    else
-      write(errmsg,*)'ICM_init: illegal initsav:',initsav
-      call parallel_abort(errmsg)
-    endif !initsav
+        sleaf(:,i)=1.d-5; sstem(:,i)=1.d-5; sroot(:,i)=1.d-5
+        if(idry_e(i)/=1)then !wet elem
+          sht(i)=min(s2ht(1)*stleaf(i)+s2ht(2)*ststem(i)+s2ht(3)*stroot(i)+shtm(1),ze(nvrt,i)-ze(kbe(i),i),shtm(2))
+          do k=kbe(i)+1,nvrt
+            if((ze(k-1,i)-ze(kbe(i),i))<sht(i)) then
+              rat=min(ze(k,i)-ze(k-1,i),sht(i)-(ze(k-1,i)-ze(kbe(i),i)))/sht(i)
+              sleaf(k,i)=stleaf(i)*rat !unit: g/m2
+              sstem(k,i)=ststem(i)*rat
+              sroot(k,i)=stroot(i)*rat
+            endif !ze
+          enddo !k=kbe(i)+1,nvrt
+        else !dry elem
+          spatch(i)=-1
+        endif !wet elem
+      enddo !i=1,nea
 
-    !distribute init stleaf e.g. into different layes
-    do i=1,nea
-      if(idry_e(i)==1)then !dry elem
-        if(nvrt<=0) then
-          write(errmsg,*)'read_icm: illegal nvrt',nvrt
-          call parallel_abort(errmsg)
-        endif
-        do k=1,nvrt
-          sleaf(k,i)=1.e-5
-          sstem(k,i)=1.e-5
-          sroot(k,i)=1.e-5
-        enddo !k
-        spatch(i)=-1 !non-sav habitat
-      else !wet elem
-        tmp=s2ht(1)*stleaf(i)+s2ht(2)*ststem(i)+s2ht(3)*stroot(i)+shtm(1)
-        sht(i)=min(tmp,dble(ze(nvrt,i)-ze(kbe(i),i)),shtm(2))
-        !Biomass at each layer (0 if above canopy)
-        do k=kbe(i)+1,nvrt
-          if(kbe(i)<1) then
-            write(errmsg,*)'read_icm: illegal kbe',i,k,kbe(i)
-            call parallel_abort(errmsg)
-          endif
-          if(ze(k-1,i)<sht(i)+ze(kbe(i),i)) then
-            tmp=min(ze(k,i),sht(i)+ze(kbe(i),i))-ze(k-1,i) !>0
-            if(sht(i)<=0.or.tmp<=0) then
-              write(errmsg,*)'read_icm: sht<=0',i,k,tmp,sht(i),ze(k,i),ze(k-1,i),ze(kbe(i),i)
-              call parallel_abort(errmsg)
-            endif
+    endif!ihot
+  endif!jsav
 
-            !unit of sleaf etc: g/m^2
-            sleaf(k,i)=stleaf(i)*tmp/sht(i)
-            sstem(k,i)=ststem(i)*tmp/sht(i)
-            sroot(k,i)=stroot(i)*tmp/sht(i)
-
-          else
-            sleaf(k,i)=1.e-5
-            sstem(k,i)=1.e-5
-            sroot(k,i)=1.e-5
-          endif !ze
-        enddo !k=kbe(i)+1,nvrt
-      endif !wet elem
-    enddo !i=1,nea
-  endif !ihot&jsav
-
-  !-----------------read in veg patch flag-----------------
+  !veg init
   if(jveg==1) then
-    open(31,file=in_dir(1:len_in_dir)//'vpatch.prop',status='old')
-    do i=1,ne_global
-      read(31,*)j,tmp
-      itmp=nint(tmp)
-      if(itmp/=0.and.itmp/=1) then
-        write(errmsg,*)'Unknown vpatch flag at elem:',i,tmp
-        call parallel_abort(errmsg)
-      endif
-      if(iegl(i)%rank==myrank) vpatch(iegl(i)%id)=itmp
-      enddo !i
-    close(31)
-  endif !jveg
- 
-  !-----------------read in veg initial biomass for cold start-----------------
-  if(jveg==1.and.ihot==0) then
-    if(initveg==1)then
-      open(10,file=in_dir(1:len_in_dir)//'veg_icm_lf.prop',status='old')
-      open(31,file=in_dir(1:len_in_dir)//'veg_icm_st.prop',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'veg_icm_rt.prop',status='old')
+    call read_param_2d('vpatch',swild,-9999.d0); vpatch(:)=swild(:)
+    if(ihot==0) then
+      do i=1,3
+        !init veg mass for tleaf,tstem and troot
+        write(pid,'(a1)') i
+        call read_param_2d('vtleaf_'//trim(adjustl(pid)),vtleaf(:,i),vtleaf0(i))
+        call read_param_2d('vtstem_'//trim(adjustl(pid)),vtstem(:,i),vtstem0(i))
+        call read_param_2d('vtroot_'//trim(adjustl(pid)),vtroot(:,i),vtroot0(i))
 
-      do i=1,ne_global
-        read(10,*)j,tmp
-        read(31,*)j,tmp1
-        read(32,*)j,tmp2
-        if(tmp<0.or.tmp1<0.or.tmp2<0) then
-          write(errmsg,*)'ICM_init: illegal veg_*:',i,tmp,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
-
-        if(iegl(i)%rank==myrank) then
-          ne=iegl(i)%id
-          do j=1,3
-            vtleaf(ne,j)=tmp
-            vtstem(ne,j)=tmp1
-            vtroot(ne,j)=tmp2
-          enddo !j::veg species
-        endif
-      enddo !i=ne_global
-      close(10)
-      close(31)
-      close(32)
-
-    elseif(initveg==2) then
-      allocate(swild2(3,npa),stat=i)
-      if(i/=0) call parallel_abort('read_icm_input: alloc(1)')
-      open(10,file=in_dir(1:len_in_dir)//'veg_icm_lf.gr3',status='old')
-      open(31,file=in_dir(1:len_in_dir)//'veg_icm_st.gr3',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'veg_icm_rt.gr3',status='old')
-      read(10,*); read(10,*) n,q
-      read(31,*); read(31,*)k,m
-      read(32,*); read(32,*)i,j
-      if(n/=ne_global.or.q/=np_global.or.i/=ne_global.or.j/=np_global.or.k/=ne_global.or.m/=np_global) then
-        call parallel_abort('ICM_init: Check veg_*.gr3')
-      endif
-
-      do i=1,np_global
-        read(10,*)j,xtmp,ytmp,tmp
-        read(31,*)j,xtmp,ytmp,tmp1
-        read(32,*)j,xtmp,ytmp,tmp2
-        if(tmp<0.or.tmp1<0.or.tmp2<0) then
-          write(errmsg,*)'ICM_init: illegal veg_*:',i,tmp,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
-
-        if(ipgl(i)%rank==myrank) then
-          nd=ipgl(i)%id
-          swild2(1,nd)=tmp
-          swild2(2,nd)=tmp1
-          swild2(3,nd)=tmp2
-        endif
-      enddo!i=np_global
-      close(10)
-      close(31)
-      close(32)
-
-      do j=1,3
-        do i=1,nea
-          vtleaf(i,j)=sum(swild2(1,elnode(1:i34(i),i)))/i34(i)
-          vtstem(i,j)=sum(swild2(2,elnode(1:i34(i),i)))/i34(i)
-          vtroot(i,j)=sum(swild2(3,elnode(1:i34(i),i)))/i34(i)
+        !compute veg canopy height
+        do j=1,nea
+          if(vtleaf(j,i)+vtstem(j,i)<vcrit(i)) then
+            vht(j,i)=vht0(i)+v2ht(i,1)*(vtleaf(j,i)+vtstem(j,i))
+          else
+            vht(j,i)=max(vht0(i)+v2ht(i,1)*vcrit(i)+v2ht(i,2)*(vtleaf(j,i)+vtstem(j,i)-vcrit(i)),1.d-2)
+          endif
+          if(vht(i,j)<0.0) call parallel_abort('check vht initlization')
         enddo !i::nea
-      enddo !j::veg species
-      deallocate(swild2)
-    else
-      write(errmsg,*)'ICM_init: illegal initveg:',initveg
-      call parallel_abort(errmsg)
-    endif !initveg
- 
-    !calc canopy height 
-    do j=1,3
-      do i=1,nea
-        !calc canopy height
-        if(vtleaf(i,j)+vtstem(i,j)-critveg(j)<0) then
-          vht(i,j)=dveg(j)*(vtleaf(i,j)+vtstem(i,j))+eveg(j)
-        else
-          rtmp=dveg(j)*critveg(j)+eveg(j)
-          vht(i,j)=max(1.e-2,rtmp+aveg(j)*(vtleaf(i,j)+vtstem(i,j)-critveg(j)))
-        endif 
-        if(vht(i,j)<0.) then
-          write(errmsg,*)'illegal veg height:',vht(i,j),ielg(i),j
-          call parallel_abort(errmsg)
-        endif
-      enddo !i::nea
-    enddo !j::veg species
 
-  endif !ihot&jveg
+      enddo!i=1,3  
+    endif!ihot=0
+  endif !jveg
 
 end subroutine read_icm_param2
 
@@ -550,7 +365,7 @@ subroutine read_param_2d(varname,pvar,pvalue)
   real(rkind),dimension(npa) :: tvar
   
   !read spatailly varying parameter values
-  if(int(pvalue)==-999) then  !*.gr3
+  if(abs(pvalue+999)<1.d-5) then  !*.gr3
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
     read(31,*); read(31,*)negb,npgb
     if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
@@ -571,7 +386,7 @@ subroutine read_param_2d(varname,pvar,pvalue)
       enddo!j
     enddo!i
 
-  else if(int(pvalue)==-9999) then !*.prop
+  else if(abs(pvalue+9999)<1.d-5) then !*.prop
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
     do i=1,ne_global
       read(31,*)ie,rtmp 
@@ -731,7 +546,11 @@ subroutine read_icm_param
   Dopt=rtmp
 
   !sav parameters
-  call get_param('icm.in','initsav',1,initsav,rtmp,stmp)
+  call get_param('icm.in','stleaf0',2,itmp,stleaf0,stmp)
+  call get_param('icm.in','ststem0',2,itmp,ststem0,stmp)
+  call get_param('icm.in','stroot0',2,itmp,stroot0,stmp)
+
+
   call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
   famsav=rtmp
   call get_param('icm.in','fplfsav',2,itmp,rtmp,stmp)
@@ -819,9 +638,11 @@ subroutine read_icm_param
   call get_param('icm.in','rdenssav',2,itmp,rtmp,stmp)
   rdenssav=rtmp
 
-
   !veg parameters
-  call get_param('icm.in','initveg',1,initveg,rtmp,stmp)
+  call get_param_1D('icm.in','vtleaf0',2,itmp1,vtleaf0,stmp,3)
+  call get_param_1D('icm.in','vtstem0',2,itmp1,vtstem0,stmp,3)
+  call get_param_1D('icm.in','vtroot0',2,itmp1,vtroot0,stmp,3)
+
   call get_param('icm.in','iMortveg',1,iMortveg,rtmp,stmp)
   call get_param('icm.in','isfnveg',1,isfnveg,rtmp,stmp)
   if(isfnveg/=0.and.isfnveg/=1) call parallel_abort('read_icm: illegal isfnveg')
@@ -848,10 +669,11 @@ subroutine read_icm_param
   call get_param_1D('icm.in','saltveg',2,itmp1,saltveg,stmp,3)
   call get_param_1D('icm.in','saltoptveg',2,itmp1,saltoptveg,stmp,3)
   call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
-  call get_param_1D('icm.in','aveg',2,itmp1,aveg,stmp,3)
-  call get_param_1D('icm.in','dveg',2,itmp1,dveg,stmp,3)
-  call get_param_1D('icm.in','eveg',2,itmp1,eveg,stmp,3)
-  call get_param_1D('icm.in','critveg',2,itmp1,critveg,stmp,3)
+
+  call get_param_1D('icm.in','vht0',2,itmp1,vht0,stmp,3)
+  call get_param_1D('icm.in','vcrit',2,itmp1,vcrit,stmp,3)
+  call get_param_1D('icm.in','v2ht',2,itmp1,v2ht(1:3,1:2),stmp,6)
+
   call get_param_1D('icm.in','fdoveg',2,itmp1,fdoveg,stmp,3)
   call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
   call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)

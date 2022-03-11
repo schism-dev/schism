@@ -2395,17 +2395,13 @@ subroutine calkwq(id,nv,usf,it)
   !veg::height+density + nutrient fluxes
   if (jveg==1.and.vpatch(id)==1) then
     do j=1,3
-      !calc canopy height
-      if(vtleaf(id,j)+vtstem(id,j)-critveg(j)<0) then
-        vht(id,j)=dveg(j)*(vtleaf(id,j)+vtstem(id,j))+eveg(j)
+      !compute veg canopy height
+      if(vtleaf(id,j)+vtstem(id,j)<vcrit(j)) then
+        vht(id,j)=vht0(j)+v2ht(j,1)*(vtleaf(id,j)+vtstem(id,j))
       else
-        rtmp=dveg(j)*critveg(j)+eveg(j)
-        vht(id,j)=max(1.e-2,rtmp+aveg(j)*(vtleaf(id,j)+vtstem(id,j)-critveg(j)))
+        vht(id,j)=max(vht0(j)+v2ht(j,1)*vcrit(j)+v2ht(j,2)*(vtleaf(id,j)+vtstem(id,j)-vcrit(j)),1.d-2)
       endif !
-      if(vht(id,j)<1.e-8)then
-        write(errmsg,*)'illegal veg height:',vht(id,j),vtleaf(id,j),vtstem(id,j),j,ielg(id)
-        call parallel_abort(errmsg)
-      endif
+      if(vht(id,j)<1.d-8) call parallel_abort('check vht computation')
 
       !seeds
       vtleaf(id,j)=max(vtleaf(id,j),1.d-5)
