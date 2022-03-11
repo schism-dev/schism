@@ -8,9 +8,9 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran
 set(NetCDF_FORTRAN_DIR /opt/local  CACHE PATH "Path to NetCDF Fortran library")
 set(NetCDF_C_DIR /opt/local CACHE PATH "Path to NetCDF C library")
 set(CMAKE_C_PREPROCESS_FLAG "-cpp" CACHE PATH "Preprocess flag")
-set(CMAKE_Fortran_PREPROCESS_FLAG "-" CACHE PATH "Preprocess flag")
+set(CMAKE_Fortran_PREPROCESS_FLAG "-cpp" CACHE PATH "Preprocess flag")
 
 set_source_files_properties(
-  *.F90 *.fpp
+  *.F90 *.fpp *.ftn
   PROPERTIES Fortran_PREPROCESS ON
 )
