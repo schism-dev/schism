@@ -76,6 +76,7 @@ module icm_sed_mod
   real(kind=iwp), save,allocatable,dimension(:) :: CH4T2TM1S,CH41TM1S,SO4T2TM1S,BENSTR1S,BFORMAXS,ISWBENS
   real(kind=iwp), save,allocatable,dimension(:) :: POP1TM1S,POP2TM1S,POP3TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,POC3TM1S,PSITM1S
   real(kind=iwp), save,allocatable,dimension(:) :: NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,NH4T2TM1S,NO3T2TM1S,HST2TM1S,SIT2TM1S,PO4T2TM1S
+  real(kind=iwp), save,allocatable,dimension(:) :: NH42TM1S,NO32TM1S,HS2TM1S,SI2TM1S,PO42TM1S
   real(kind=iwp), save,allocatable,dimension(:) :: DFEEDM1S !deposit feeder
 
   real(kind=iwp),save :: TEMPD,PON1,PON2,PON3,POC2,POC3,POP1,POP2,POP3,PSI

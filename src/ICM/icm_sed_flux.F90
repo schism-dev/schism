@@ -1440,28 +1440,35 @@ subroutine sed_calc(id)
 
     !nutrient limiations
     if(iNPBalg==1)then !limitations from both bottom water layer and benthic fluxes
-      !N limitation
       NH4AVL=max(SED_BENNH4(id)*dtw+SED_NH4(id)*SED_BL(id),0.d0)
       NO3AVL=max(SED_BENNO3(id)*dtw+SED_NO3(id)*SED_BL(id),0.d0)
-      FNBalg(id)=(NH4AVL+NO3AVL)/(KHNB+NH4AVL+NO3AVL+1.0d-20)
+      PO4AVL=max(SED_BENPO4(id)*dtw+SED_PO4(id)*SED_BL(id)/(1.0+rKPO4p*SSI(id)),0.d0)
+    elseif(iNPBalg==2)then !only consider bottom water layer conc
+      NH4AVL=SED_NH4(id)
+      NO3AVL=SED_NO3(id)
+      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))
+    elseif(iNPBalg==3)then !consider bottom water layer conc + first layer sediment
+      NH4AVL=SED_NH4(id)+NH41TM1S(id)
+      NO3AVL=SED_NO3(id)+NO31TM1S(id)
+      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41TM1S(id)
+    elseif(iNPBalg==4)then !consider bottom water layer conc + both layerssediemnt
+      NH4AVL=SED_NH4(id)+NH41TM1S(id)+NH42TM1S(id)
+      NO3AVL=SED_NO3(id)+NO31TM1S(id)+NO32TM1S(id)
+      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41TM1S(id)+PO42TM1S(id)
+    endif
 
+    !limiting factors
+    if(iNPBalg==0)then !don't consider nutrient limitations
+      FNBalg(id)=1
+      FPBalg(id)=1
+    else
+      FNBalg(id)=(NH4AVL+NO3AVL)/(KHNB+NH4AVL+NO3AVL+1.0d-20)
+      FPBalg(id)=PO4AVL/(KHPB+PO4AVL+1.0d-20)
       !nitrogen preference
       PRNitB=NH4AVL*NO3AVL/((KHNB+NH4AVL)*(KHNB+NO3AVL)) &
            & +NH4AVL*KHNB/((1.d-20+NH4AVL+NO3AVL)*(KHNB+NO3AVL))
+    endif 
 
-      !P limitation
-      PO4AVL=max(SED_BENPO4(id)*dtw+SED_PO4(id)*SED_BL(id)/(1.0+rKPO4p*SSI(id)),0.d0)
-      FPBalg(id)=PO4AVL/(KHPB+PO4AVL)
-
-    elseif(iNPBalg==2)then !only consider bottom water layer conc
-      !N limitation
-      FNBalg(id)=(SED_NH4(id)+SED_NO3(id))/(KHNB+SED_NH4(id)+SED_NO3(id)+1.0d-20)
-      !P limitation
-      FPBalg(id)=SED_PO4(id)/(KHPB+SED_PO4(id)+1.0d-20)
-    else
-      FNBalg(id)=1
-      FPBalg(id)=1
-    endif
 
     !production rate
     GPBalg(id)=GPMB*FTBalg(id)*FIBalg(id)*min(FNBalg(id),FPBalg(id))
@@ -1486,18 +1493,18 @@ subroutine sed_calc(id)
     endif
    
     !modify benthic fluxes
-    if(iNPBalg==1)then !limitations from N/P, uptake N/P 
+    if(iNPBalg==0)then !no nutrient limitations, pure source 
+      SED_BENNH4(id)=SED_BENNH4(id)+ANCB*FNIB*BMBalg(id)*BBM(id)
+      !SED_BENNO3(id)=SED_BENNO3(id)
+      SED_BENPO4(id)=SED_BENPO4(id)+APCB*FPIB*BMBalg(id)*BBM(id)
+      SED_BENDO(id)=SED_BENDO(id)+AOC*(GPBalg(id)-BMBalg(id)*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
+      SED_BENDOC(id)=SED_BENDOC(id)+BMBalg(id)*BBM(id)*KHRB/(SED_DO(id)+KHRB) 
+    else
       SED_BENNH4(id)=SED_BENNH4(id)+ANCB*(FNIB*BMBalg(id)-PRNitB*GPBalg(id))*BBM(id)
       SED_BENNO3(id)=SED_BENNO3(id)-(1.0-PRNitB)*GPBalg(id)*ANCB*BBM(id)
       SED_BENPO4(id)=SED_BENPO4(id)+APCB*(FPIB*BMBalg(id)-GPBalg(id))*BBM(id)
       SED_BENDO(id)=SED_BENDO(id)+AOC*((1.3-0.3*PRNitB)*GPBalg(id)-BMBalg(id)*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
       SED_BENDOC(id)=SED_BENDOC(id)+BMBalg(id)*BBM(id)*KHRB/(SED_DO(id)+KHRB)
-    else
-      SED_BENNH4(id)=SED_BENNH4(id)+ANCB*FNIB*BMBalg(id)*BBM(id)
-      !SED_BENNO3(id)=SED_BENNO3(id)
-      SED_BENPO4(id)=SED_BENPO4(id)+APCB*FPIB*BMBalg(id)*BBM(id)
-      SED_BENDO(id)=SED_BENDO(id)+AOC*(GPBalg(id)-BMBalg(id)*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
-      SED_BENDOC(id)=SED_BENDOC(id)+BMBalg(id)*BBM(id)*KHRB/(SED_DO(id)+KHRB)  
     endif
   
     !modify sediment POM (g/m3)
@@ -1573,6 +1580,12 @@ subroutine sed_calc(id)
   HS1TM1S(id)   = HS1         !dissolved H2S in 1st layer
   SI1TM1S(id)   = SI1         !dissolved SAt in 1st lyaer
   PO41TM1S(id)  = PO41        !dissolved PO4 in 1st layer
+
+  NH42TM1S(id)  = NH42        !dissolved NH4 in 1st layer
+  NO32TM1S(id)  = NO32        !dissolved NO3 in 1st layer
+  HS2TM1S(id)   = HS2         !dissolved H2S in 1st layer
+  SI2TM1S(id)   = SI2         !dissolved SAt in 1st lyaer
+  PO42TM1S(id)  = PO42        !dissolved PO4 in 1st layer
 
   NH4T2TM1S(id) = NH4T2       !total NH4 in 2nd layer
   NO3T2TM1S(id) = NO3T2       !total NO3 in 2nd layer
