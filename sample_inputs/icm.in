@@ -477,8 +477,7 @@ ddrtveg=  12.8  12.8    12.8
 alphaveg= 0.006  0.006  0.006    
 rkshveg=  0.045  0.045  0.045  !light attenuation from veg absorption
 
-v2ht=  1 2 3    4 5 6
-!v2ht= 0.0036 0.0036 0.0036  -0.001 -0.001 -0.001  !coef. convert veg mass to canopy height
+v2ht= 0.0036 0.0036 0.0036  -0.001 -0.001 -0.001  !coef. convert veg mass to canopy height
 vht0 = 0.054  0.054  0.054 !base veg canopy hgt (vht)
 vcrit= 250.0  250.0  250.0 !critical mass for computing vht
 
