@@ -549,72 +549,33 @@ subroutine read_icm_param
   call get_param('icm.in','stleaf0',2,itmp,stleaf0,stmp)
   call get_param('icm.in','ststem0',2,itmp,ststem0,stmp)
   call get_param('icm.in','stroot0',2,itmp,stroot0,stmp)
+  call get_param('icm.in','sFAM',2,itmp,sFAM,stmp)
+  call get_param('icm.in','sGPM',2,itmp,sGPM,stmp)
+  call get_param('icm.in','sTGP',2,itmp,sTGP,stmp)
+  call get_param_1D('icm.in','sKTGP',2,itmp1,sKTGP,stmp,2)
+  call get_param('icm.in','sc2dw',2,itmp,sc2dw,stmp)
+  call get_param_1D('icm.in','sFCP',2,itmp1,sFCP,stmp,3)
+  call get_param_1D('icm.in','sBMP',2,itmp1,sBMP,stmp,3)
+  call get_param_1D('icm.in','sTBP',2,itmp1,sTBP,stmp,3)
+  call get_param_1D('icm.in','sKTBP',2,itmp1,sKTBP,stmp,3)
+  call get_param('icm.in','sn2c',2,itmp,sn2c,stmp)
 
-
-  call get_param('icm.in','famsav',2,itmp,rtmp,stmp)
-  famsav=rtmp
-  call get_param('icm.in','fplfsav',2,itmp,rtmp,stmp)
-  fplfsav=rtmp
-  call get_param('icm.in','fpstsav',2,itmp,rtmp,stmp)
-  fpstsav=rtmp
-  call get_param('icm.in','fprtsav',2,itmp,rtmp,stmp)
-  fprtsav=rtmp
-  call get_param('icm.in','acdwsav',2,itmp,rtmp,stmp)
-  acdwsav=rtmp
-  call get_param('icm.in','ancsav',2,itmp,rtmp,stmp)
-  ancsav=rtmp
   call get_param('icm.in','apcsav',2,itmp,rtmp,stmp)
   apcsav=rtmp
   call get_param('icm.in','aocrsav',2,itmp,rtmp,stmp)
   aocrsav=rtmp
-  call get_param('icm.in','pmbssav',2,itmp,rtmp,stmp)
-  pmbssav=rtmp
-  call get_param('icm.in','toptsav',2,itmp,rtmp,stmp)
-  toptsav=rtmp
-  call get_param('icm.in','ktg1sav',2,itmp,rtmp,stmp)
-  ktg1sav=rtmp
-  call get_param('icm.in','ktg2sav',2,itmp,rtmp,stmp)
-  ktg2sav=rtmp
-  call get_param('icm.in','bmlfrsav',2,itmp,rtmp,stmp)
-  bmlfrsav=rtmp
-  call get_param('icm.in','bmstrsav',2,itmp,rtmp,stmp)
-  bmstrsav=rtmp
-  call get_param('icm.in','bmrtrsav',2,itmp,rtmp,stmp)
-  bmrtrsav=rtmp
-  call get_param('icm.in','ktblfsav',2,itmp,rtmp,stmp)
-  ktblfsav=rtmp
-  call get_param('icm.in','ktbstsav',2,itmp,rtmp,stmp)
-  ktbstsav=rtmp
-  call get_param('icm.in','ktbrtsav',2,itmp,rtmp,stmp)
-  ktbrtsav=rtmp
-  call get_param('icm.in','trlfsav',2,itmp,rtmp,stmp)
-  trlfsav=rtmp
-  call get_param('icm.in','trstsav',2,itmp,rtmp,stmp)
-  trstsav=rtmp
-  call get_param('icm.in','trrtsav',2,itmp,rtmp,stmp)
-  trrtsav=rtmp
-  call get_param('icm.in','alphasav',2,itmp,rtmp,stmp)
-  alphasav=rtmp
-  call get_param('icm.in','rkshsav',2,itmp,rtmp,stmp)
-  rkshsav=rtmp
+
+  call get_param('icm.in','salpha',2,itmp,salpha,stmp)
+  call get_param('icm.in','sKe',2,itmp,sKe,stmp)
 
   call get_param_1D('icm.in','s2ht',2,itmp1,s2ht,stmp,3)
   call get_param_1D('icm.in','shtm',2,itmp1,shtm,stmp,2)
 
-  call get_param('icm.in','khnwsav',2,itmp,rtmp,stmp)
-  khnwsav=rtmp
-  call get_param('icm.in','khnssav',2,itmp,rtmp,stmp)
-  khnssav=rtmp
-  call get_param('icm.in','khnprsav',2,itmp,rtmp,stmp)
-  khnprsav=rtmp
-  call get_param('icm.in','fnisav',2,itmp,rtmp,stmp)
-  fnisav=rtmp
-  call get_param('icm.in','fndsav',2,itmp,rtmp,stmp)
-  fndsav=rtmp
-  call get_param('icm.in','fnlpsav',2,itmp,rtmp,stmp)
-  fnlpsav=rtmp
-  call get_param('icm.in','fnrpsav',2,itmp,rtmp,stmp)
-  fnrpsav=rtmp
+  call get_param('icm.in','sKhNw',2,itmp,sKhNw,stmp)
+  call get_param('icm.in','sKhNs',2,itmp,sKhNs,stmp)
+  call get_param('icm.in','sKhNH4',2,itmp,sKhNH4,stmp)
+  call get_param_1D('icm.in','sFNP',2,itmp1,sFNP,stmp,4)
+
   call get_param('icm.in','khpwsav',2,itmp,rtmp,stmp)
   khpwsav=rtmp
   call get_param('icm.in','khpssav',2,itmp,rtmp,stmp)
@@ -911,14 +872,14 @@ subroutine read_icm_param
 
   !sav :: check !error, to add
   if(jsav==1) then
-    if(alphasav<=0) call parallel_abort('read_icm_input: alphasav')
-    if(pmbssav<=0) call parallel_abort('read_icm_input: pmbssav')
-    if(khnssav<=0) call parallel_abort('read_icm_input: khnssav')
-    if(khnwsav<=0) call parallel_abort('read_icm_input: khnwsav')
+    if(salpha<=0) call parallel_abort('read_icm_input: salpha')
+    if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
+    if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
+    if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
     if(khpssav<=0) call parallel_abort('read_icm_input: khpssav')
     if(khpwsav<=0) call parallel_abort('read_icm_input: khpwsav')
-    if(acdwsav<=0) call parallel_abort('read_icm_input: acdwsav')
-    if(bmlfrsav<=0.or.bmstrsav<=0.or.bmrtrsav<=0) call parallel_abort('read_icm_input: bmlfrsav')
+    if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
+    if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
   endif !jsav
 
   !_veg :: check

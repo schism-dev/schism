@@ -552,7 +552,7 @@ subroutine photosynthesis(id,hour,nv,it)
       rKeveg=rKe0
       if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
         if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-          rKeveg=rKe0+rkshsav*(sleaf(klev,id)+sstem(klev,id))
+          rKeveg=rKe0+sKe*(sleaf(klev,id)+sstem(klev,id))
         endif !ze
       endif !isav
 
@@ -573,7 +573,7 @@ subroutine photosynthesis(id,hour,nv,it)
       rKe=rKe0
       if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
         if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-          rKe=rKe0+rkshsav*(sleaf(klev,id)+sstem(klev,id))
+          rKe=rKe0+sKe*(sleaf(klev,id)+sstem(klev,id))
         endif !ze
       endif !isav
 
@@ -735,16 +735,16 @@ subroutine photosynthesis(id,hour,nv,it)
       !--------------------------------------------------------------------------------
       if(jsav==1.and.spatch(id)==1) then
         if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-          xT=temp(k)-toptsav !adjust sav  maximum growth rate by temperature
+          xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
           if(xtsav<=0.0) then
-            rtmp=ktg1sav*xT*xT
+            rtmp=sKTGP(1)*xT*xT
           else
-            rtmp=ktg2sav*xT*xT
+            rtmp=sKTGP(2)*xT*xT
           endif
-          pmaxsav(klev,id)=pmbssav*exp(-rtmp)
+          pmaxsav(klev,id)=sGPM*exp(-rtmp)
 
           if(frange(rtmp,0.d0,50.d0)) then
-            write(errmsg,*)'photosynthesis: check max growth rate:',ktg1sav,ktg2sav,xT,rtmp,ielg(id),k
+            write(errmsg,*)'photosynthesis: check max growth rate:',sKTGP,xT,rtmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
          
@@ -775,19 +775,19 @@ subroutine photosynthesis(id,hour,nv,it)
               zt0=(sht(id)+ze(kbe(id),id)+ze(klev-1,id))/2. !z-cor @half level
               dzt=sht(id)+ze(kbe(id),id)-zt0 !half of thickness in ze(klev,id) for attenuation
               rKeh1=rKe0*dzt!accumulation for layer k, half
-              tmp=rKeh1+rkshsav*(zlfsav(k+1)+zstsav(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+              tmp=rKeh1+sKe*(zlfsav(k+1)+zstsav(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
               rKeh2=rKeh2+2.*rKeh1!accumulation from canopy downwards
             else
               zt0=(ze(klev,id)+ze(klev-1,id))/2. !z-cor @half level
               dzt=ze(klev,id)-zt0 !ze(klev,id)
               rKeh1=rKe0*dzt
 
-              tmp=rKeh2+rKeh1+rkshsav*(zlfsav(k+1)+zstsav(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+              tmp=rKeh2+rKeh1+sKe*(zlfsav(k+1)+zstsav(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
               rKeh2=rKeh2+2.*rKeh1!accumulation from canopy downwards
             endif !kcnpy
          
             if(tmp<=0.d0) then
-              write(errmsg,*)'photosynthesis: check light attenuation on leaf:',k,rKeh1,rKeh2,rkshsav,zlfsav(k+1),zstsav(k+1),sleaf(klev,id),sstem(klev,id),tmp,ielg(id),k
+              write(errmsg,*)'photosynthesis: check light attenuation on leaf:',k,rKeh1,rKeh2,sKe,zlfsav(k+1),zstsav(k+1),sleaf(klev,id),sstem(klev,id),tmp,ielg(id),k
               call parallel_abort(errmsg)
             endif
          
@@ -801,7 +801,7 @@ subroutine photosynthesis(id,hour,nv,it)
          
             iwcsav=iatcnpysav*rat*(1-exp(-tmp))/tmp
             if(tmp>50) iwcsav=1.e-5
-            iksav=pmaxsav(klev,id)/alphasav !>0 (alphasav checked)
+            iksav=pmaxsav(klev,id)/salpha !>0 (salpha checked)
          
             !light limitation function for sav
             fisav(klev,id)=iwcsav/sqrt(iwcsav*iwcsav+iksav*iksav) !>0
@@ -816,12 +816,12 @@ subroutine photosynthesis(id,hour,nv,it)
           endif !zlfsav(k+1)>0.and.zstsav(k+1)>0
          
           !N/P limitation function fnsav(klev,id) (denom checked)
-          fnsav(klev,id)=(NH4(k,1)+NO3(k,1)+CNH4(id)*khnwsav/khnssav)/(khnwsav+NH4(k,1)+NO3(k,1)+CNH4(id)*khnwsav/khnssav)
+          fnsav(klev,id)=(NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)
           PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
           fpsav(klev,id)=(PO4td+CPIP(id)*khpwsav/khpssav)/(khpwsav+PO4td+CPIP(id)*khpwsav/khpssav)
          
           !calculation of lf growth rate [1/day] as function of temp, light, N/P
-          plfsav(klev,id)=pmaxsav(klev,id)*min(fisav(klev,id),fnsav(klev,id),fpsav(klev,id))/acdwsav !acdwsav checked !>=0 with seeds, =0 for no seeds
+          plfsav(klev,id)=pmaxsav(klev,id)*min(fisav(klev,id),fnsav(klev,id),fpsav(klev,id))/sc2dw !sc2dw checked !>=0 with seeds, =0 for no seeds
         endif !ze
       endif !jsav
     enddo !k=1,nv
@@ -1259,41 +1259,41 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then
       !pre-calculation for metabolism rate;  no relation with light, alweys respire
-      rtmp=ktblfsav*(temp(k)-trlfsav)
-      bmlfsav(k)=bmlfrsav*exp(rtmp) !1/day
+      rtmp=sKTBP(1)*(temp(k)-sTBP(1))
+      bmlfsav(k)=sBMP(1)*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav lf metabolism:',temp(k),trlfsav,ktblfsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav lf metabolism:',temp(k),sTBP,sKTBP,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbstsav*(temp(k)-trstsav)
-      bmstsav(k)=bmstrsav*exp(rtmp) !1/day
+      rtmp=sKTBP(2)*(temp(k)-sTBP(2))
+      bmstsav(k)=sBMP(2)*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav st metabolism:',temp(k),trstsav,ktbstsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav st metabolism:',temp(k),sTBP,sKTBP,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbrtsav*(temp(k)-trrtsav)
-      bmrtsav(k)=bmrtrsav*exp(rtmp) !1/day
+      rtmp=sKTBP(3)*(temp(k)-sTBP(3))
+      bmrtsav(k)=sBMP(3)*exp(rtmp) !1/day
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav rt metabolism:',temp(k),trrtsav,ktbrtsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav rt metabolism:',temp(k),sTBP,rKTBP,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
 
       !calculation of biomass !sleaf
-      a=plfsav(klev,id)*(1-famsav)*fplfsav-bmlfsav(k) !1/day
+      a=plfsav(klev,id)*(1-sFAM)*sFCP(1)-bmlfsav(k) !1/day
       rtmp=a*dtw
       sleaf(klev,id)=sleaf(klev,id)*exp(rtmp) !sleaf>0 with seeds, =0 for no seeds with rtmp/=0
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check sav lf growth:',a,plfsav(klev,id),bmlfsav(k),famsav,fplfsav,rtmp,ielg(id),k
+        write(errmsg,*)'calkwq: check sav lf growth:',a,plfsav(klev,id),bmlfsav(k),sFAM,sFCP,rtmp,ielg(id),k
         call parallel_abort(errmsg)
       endif
       if(fnan(sleaf(klev,id)))then
@@ -1303,7 +1303,7 @@ subroutine calkwq(id,nv,usf,it)
 
       !sstem
       a=bmstsav(k) !>0
-      b=plfsav(klev,id)*(1.-famsav)*fpstsav*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+      b=plfsav(klev,id)*(1.-sFAM)*sFCP(2)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
       sstem(klev,id)=(b*dtw+sstem(klev,id))/(1.0+a*dtw) !>0 with seeds 
 
       !nan check
@@ -1314,7 +1314,7 @@ subroutine calkwq(id,nv,usf,it)
 
       !sroot
       a=bmrtsav(k) !>0
-      b=plfsav(klev,id)*(1.-famsav)*fprtsav*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+      b=plfsav(klev,id)*(1.-sFAM)*sFCP(3)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
       sroot(klev,id)=(b*dtw+sroot(klev,id))/(1.0+a*dtw) !>0 with seeds 
 
       !nan check
@@ -1495,7 +1495,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fcrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=fcrpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1541,7 +1541,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fclpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=fclpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1593,7 +1593,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fcdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=fcdsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1648,7 +1648,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= ancsav*fnrpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp= sn2c*sFNP(1)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -1694,7 +1694,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= ancsav*fnlpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp= sn2c*sFNP(2)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -1737,7 +1737,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=ancsav*fndsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp=sn2c*sFNP(3)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -1791,23 +1791,23 @@ subroutine calkwq(id,nv,usf,it)
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
         !pre-calculation for NH4, and for NO3
-        nprsav=(NH4(k,1)/(khnprsav+NO3(k,1)))*(NO3(k,1)/(khnprsav+NH4(k,1))+khnprsav/(NH4(k,1)+NO3(k,1)+1.e-6))
-        fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*khnssav/khnwsav+1.e-8)
+        nprsav=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
+        fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*sKhNs/sKhNw+1.e-8)
        
         if(nprsav<0) then
-          write(errmsg,*)'npr<0.0 :',id,NH4(k,1),khnprsav,NO3(k,1),ielg(id),k
+          write(errmsg,*)'npr<0.0 :',id,NH4(k,1),sKhNH4,NO3(k,1),ielg(id),k
           call parallel_abort(errmsg)
         endif !nprsav
        
         if(fnsedsav<=0) then
-          write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),khnssav,khnwsav,ielg(id),k
+          write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),sKhNs,sKhNw,ielg(id),k
           call parallel_abort(errmsg)
         endif !fnsedsav
        
-        rtmp=ancsav*fnisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp=sn2c*sFNP(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
-        rtmp=-ancsav*(1-fnsedsav)*nprsav*plfsav(klev,id)*sleaf(klev,id)
+        rtmp=-sn2c*(1-fnsedsav)*nprsav*plfsav(klev,id)*sleaf(klev,id)
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1841,7 +1841,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=-ancsav*(1-fnsedsav)*(1-nprsav)*plfsav(klev,id)*sleaf(klev,id) !uptake for growth
+        rtmp=-sn2c*(1-fnsedsav)*(1-nprsav)*plfsav(klev,id)*sleaf(klev,id) !uptake for growth
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1879,7 +1879,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fprpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp= apcsav*fprpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -1924,7 +1924,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fplpsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp= apcsav*fplpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -1967,7 +1967,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fpdsav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp= apcsav*fpdsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
@@ -2021,7 +2021,7 @@ subroutine calkwq(id,nv,usf,it)
           call parallel_abort(errmsg)
         endif !fpsedsav
  
-        rtmp=apcsav*fpisav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp=apcsav*fpisav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id)) !basal metabolism
         b=b+rtmp/max(1.e-5,dep(k))
         rtmp=-apcsav*(1-fpsedsav)*plfsav(klev,id)*sleaf(klev,id) !uptake for growth
@@ -2157,7 +2157,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=-aocrsav*fdosav*((bmlfsav(k)+plfsav(klev,id)*famsav)*sleaf(klev,id)+ &
+        rtmp=-aocrsav*fdosav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id)) !metabolism
         b=b+rtmp/max(1.e-5,dep(k))
         rtmp=aocrsav*plfsav(klev,id)*sleaf(klev,id) !photosynthesis
@@ -2306,7 +2306,7 @@ subroutine calkwq(id,nv,usf,it)
     if(jsav==1.and.spatch(id)==1) then
 
       !sediment flux/uptake from this layer
-      lfNH4sav(k)=ancsav*fnsedsav*plfsav(klev,id)*sleaf(klev,id)!unit:g/m^2 day
+      lfNH4sav(k)=sn2c*fnsedsav*plfsav(klev,id)*sleaf(klev,id)!unit:g/m^2 day
       !nan check
       if(.not.(lfNH4sav(k)>0.or.lfNH4sav(k)<=0))then
         write(errmsg,*)'nan found in lfNH4sav:',lfNH4sav(k),ielg(id),k,it
@@ -2326,7 +2326,7 @@ subroutine calkwq(id,nv,usf,it)
         write(errmsg,*)'nan found in rtpocsav:',rtpocsav(k),ielg(id),k,it
         call parallel_abort(errmsg)
       endif
-      rtponsav(k)=ancsav*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
+      rtponsav(k)=sn2c*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
       !nan check
       if(.not.(rtponsav(k)>0.or.rtponsav(k)<=0))then
         write(errmsg,*)'nan found in rtponsav:',rtponsav(k),ielg(id),k,it

@@ -109,19 +109,18 @@ module icm_mod
   !sav readin parameters 
   integer,save,allocatable :: spatch(:) !(nea)
   real(rkind),save :: stleaf0,ststem0,stroot0
-  real(rkind),save :: famsav,fplfsav,fpstsav,fprtsav
-  real(rkind),save :: acdwsav,ancsav,apcsav,aocrsav !ratios
-  real(rkind),save :: pmbssav,toptsav,ktg1sav,ktg2sav !temp 
-  real(rkind),save :: alphasav,rkshsav !light
+  real(rkind),save :: sFAM,sGPM,sTGP,sKTGP(2),sc2dw,sFCP(3)
+  real(rkind),save :: sBMP(3),sTBP(3),sKTBP(3)
+
+  real(rkind),save :: sn2c,apcsav,aocrsav !ratios
+  real(rkind),save :: salpha,sKe !light
   real(rkind),save :: s2ht(3),shtm(2) !height
   real(rkind),save :: fdosav, fcdsav, fclpsav, fcrpsav !carbon
-  real(rkind),save :: khnwsav,khnssav,khnprsav !nitrogen
-  real(rkind),save :: fnisav, fndsav, fnlpsav, fnrpsav
+  real(rkind),save :: sKhNw,sKhNs,sKhNH4 !nitrogen
+  real(rkind),save :: sFNP(4)
   real(rkind),save :: khpwsav,khpssav !phosphorus
   real(rkind),save :: fpisav, fpdsav, fplpsav, fprpsav
-  real(rkind),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
-  real(rkind),save :: ktblfsav,ktbstsav,ktbrtsav
-  real(rkind),save :: trlfsav,trstsav,trrtsav
+
   !intermediate variables
   !sav growth rate and metabolism rate
   !(nvrt,nea)>> bottom to surface
