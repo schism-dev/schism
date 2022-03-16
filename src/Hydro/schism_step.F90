@@ -6948,10 +6948,10 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_airsea_ex==1) then
-              if(dpe(i)<hmin_airsea_ex) cycle
-            elseif(i_hmin_airsea_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+            if(i_hmin_salt_ex==1) then
+              if(dpe(i)<hmin_salt_ex) cycle
+            elseif(i_hmin_salt_ex==2) then
+              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
             endif
 
             if(impose_net_flux/=0) then !imposed net 

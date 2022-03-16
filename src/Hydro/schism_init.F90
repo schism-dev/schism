@@ -203,7 +203,7 @@
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
-     &iloadtide,loadtide_coef,nu_sum_mult
+     &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -456,7 +456,7 @@
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; iwindoff=0;
-      drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -481,7 +481,7 @@
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
       ielm_transport=0; max_subcyc=10
-      hmin_airsea_ex=0.2_rkind
+      hmin_airsea_ex=0.2_rkind; hmin_salt_ex=0.2_rkind
       itransport_only=0; meth_sink=1
       iloadtide=0; loadtide_coef=0.1d0
       nu_sum_mult=1
@@ -735,13 +735,20 @@
       if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
-      if(isconsv/=0.or.ihconsv/=0) then
+      if(ihconsv/=0) then
         if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
           write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
           call parallel_abort(errmsg)
         endif 
       endif
-!'
+
+      if(isconsv/=0) then
+        if(i_hmin_salt_ex<0.or.i_hmin_salt_ex>2) then
+          write(errmsg,*)'INIT: illegal i_hmin_salt_ex',i_hmin_salt_ex
+          call parallel_abort(errmsg)
+        endif 
+      endif
+
       if(isconsv/=0) then
 #ifndef PREC_EVAP
         write(errmsg,*)'Pls enable PREC_EVAP:',isconsv

@@ -514,19 +514,21 @@
 ! If at least one of ihconsv and isconsv is set to 1,
 ! locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
 ! Options for locally turning off heat/salt exchange are specified by
-! i_hmin_airsea_ex:
+! i_hmin_airsea_ex, i_hmin_salt_ex respectively:
 !   0: not turned off locally;
 !   1: locally turned off, based on grid depth, i.e.,
-!      off when the local grid depth (z in hgrid) < hmin_airsea_ex;
+!      off when the local grid depth (z in hgrid) < hmin_airsea_ex or hmin_salt_ex;
 !   2 (recommended): locally turned off, based on local total water depth, i.e.,
-!      off when the local total water depth < hmin_airsea_ex,
-! hmin_airsea_ex:
-!   0.2 m is recommended for both i_hmin_airsea_ex=1 and i_hmin_airsea_ex=2
+!      off when the local total water depth < hmin_airsea_ex or hmin_salt_ex,
+! hmin_airsea_ex, hmin_salt_ex:
+!   0.2 m is recommended for both "1" and "2"
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
   isconsv = 0 !evaporation/precipitation model
-  i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 and isconsv=0
-  hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 and isconsv=0
+  i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 
+  hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
+  i_hmin_salt_ex = 2 ! no effect if isconsv=0 
+  hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
