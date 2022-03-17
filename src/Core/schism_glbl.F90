@@ -408,7 +408,7 @@ module schism_glbl
   real(rkind),save,allocatable :: tr_nd0(:,:,:) ! Initial tracer conc. at nodes
   real(rkind),save,allocatable :: rkai_num(:,:,:) !DVD (numerical mixing) [C^2]/sec
   real(rkind),save,allocatable :: eta1(:)   ! Elevation at nodes at previous timestep
-  real(rkind),save,allocatable :: eta2(:)   ! Elevation at nodes at current timestep
+  real(rkind),save,allocatable,target :: eta2(:)   ! Elevation at nodes at current timestep
   !cumsum of elev from 1st _cold_ start (regardles of ihot) until the cum time step (nsteps_from_cold)
   !exceeds certain amount. This is used to compute anomaly
   real(rkind),save,allocatable :: cumsum_eta(:) 
