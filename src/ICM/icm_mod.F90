@@ -33,7 +33,7 @@ module icm_mod
   !global switch 
   integer,save :: iLight,jLight,iRad
   integer,save :: iSed,iRea,iBen,iTBen
-  integer,save :: iZoo,iPh
+  integer,save :: iPh
   integer,save :: iAtm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
   integer,target,save :: idry_icm
@@ -93,9 +93,9 @@ module icm_mod
 
   !---------general parameters from icm.in--------------------------------
   !zooplankton paramters
-  real(rkind),save :: Eff,RF,Pf
-  real(rkind),save,dimension(8,2) :: GZM,rKhGE,PPC
-  real(rkind),save,dimension(2) :: BMZR,DRZ,TGZ,rKTGZ1,rKTGZ2,TBZ,rKTBZ,RZ
+  integer,save :: iZB
+  real(rkind),save :: AGZ,RGZ,p2pr,GZM(8,2),KhGZ(8,2),TGZ(2),KTGZ(2,2)
+  real(rkind),save,dimension(2) :: BMZ,MTZ,TBZ,KTBZ,z2pr
 
   !phytoplankton parameters 
   integer,save :: iReg_PR,iReg_GP,iPRR

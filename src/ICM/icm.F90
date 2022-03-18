@@ -945,7 +945,7 @@ subroutine calkwq(id,nv,usf,it)
   real(rkind) :: zdep(nv),tdep,rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB,VSED
   real(rkind) :: rKTPOM,rKTDOM,rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
-  real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,BMZ(2),Fish,BMP(3),BPR(3)
+  real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,ZBM(2),Fish,BMP(3),BPR(3)
   real(rkind) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
                     & PZB_ZB,PFh_ZB,PZB_PB,PFh_PB,SZB_ZB,SFh_ZB,SZB_PB,SFh_PB
   real(rkind) :: PB10,PB20,PB30,RPOC0,LPOC0,RPON0,LPON0,RPOP0,LPOP0,PO4t0,PO4td,SU0,SAt0,CACO30 
@@ -1339,7 +1339,7 @@ subroutine calkwq(id,nv,usf,it)
     !---------------------------------------------
     !note: fish can eat zooplanktons and phytoplanktons, while zooplankton can eat
     !other zooplanktons, all phytoplankton and carbon species
-    if(iZoo==1) then
+    if(iZB==1) then
       !pre-calculation for ZB1 & ZB2
       nz(1)=ZB1(k,1); nz(2)=ZB2(k,1);  nz(3)=PB1(k,1);  nz(4)=PB2(k,1);
       nz(5)=PB3(k,1); nz(6)=RPOC(k,1); nz(7)=LPOC(k,1); nz(8)=DOC(k,1);
@@ -1348,26 +1348,26 @@ subroutine calkwq(id,nv,usf,it)
       do i=1,2 !ZB1,ZB2
         sum1=1.0 
         do j=1,8 !prey
-          ZBG(j,i)=GZM(j,i)*PPC(j,i)*nz(j)
-          sum1=sum1+PPC(j,i)*nz(j)
+          ZBG(j,i)=GZM(j,i)*nz(j)/KhGZ(j,i)
+          sum1=sum1+nz(j)/KhGZ(j,i)
         enddo
 
         xT=temp(k)-TGZ(i)
         if(xT>0.0) then
-          ZBG(:,i)=ZBG(:,i)*exp(-rKTGZ1(i)*xT*xT)/sum1; tmp1=rKTGZ1(i)*xT*xT
+          ZBG(:,i)=ZBG(:,i)*exp(-KTGZ(i,1)*xT*xT)/sum1; tmp1=KTGZ(i,1)*xT*xT
         else
-          ZBG(:,i)=ZBG(:,i)*exp(-rKTGZ2(i)*xT*xT)/sum1; tmp1=rKTGZ2(i)*xT*xT
+          ZBG(:,i)=ZBG(:,i)*exp(-KTGZ(i,1)*xT*xT)/sum1; tmp1=KTGZ(i,1)*xT*xT
         endif !rtmp
         ZBG0(:,i)=ZBG(:,i)
-        BMZ(i)=BMZR(i)*exp(rKTBZ(i)*(temp(k)-TBZ(i))); tmp2=rKTBZ(i)*(temp(k)-TBZ(i)) !metabolism
+        ZBM(i)=BMZ(i)*exp(KTBZ(i)*(temp(k)-TBZ(i))); tmp2=KTBZ(i)*(temp(k)-TBZ(i)) !metabolism
 
         !check
         if(abs(tmp1)>50.0) then
-          write(errmsg,*)'check ICM ZB growth rKTGZ, xT: ',xT,rKTGZ1,rKTGZ2,tmp1,ielg(id),k
+          write(errmsg,*)'check ICM ZB growth KTGZ, xT: ',xT,KTGZ,tmp1,ielg(id),k
           call parallel_abort(errmsg)
         endif
         if(abs(tmp2)>50.0) then
-          write(errmsg,*)'check ICM ZB rKTBZ: ',rKTBZ(i),temp(k),TBZ(i),tmp2,ielg(id),k
+          write(errmsg,*)'check ICM ZB KTBZ: ',KTBZ(i),temp(k),TBZ(i),tmp2,ielg(id),k
           call parallel_abort(errmsg)
         endif
       enddo !i
@@ -1381,17 +1381,17 @@ subroutine calkwq(id,nv,usf,it)
 
       AZB1=ZB1(k,1); AZB2=ZB2(k,1)
       !ZB1
-      a=ZB1G*Eff*(1-RF)-BMZ(1)-RZ(1)*Fish-DRZ(1)
+      a=ZB1G*AGZ*(1-RGZ)-ZBM(1)-z2pr(1)*Fish-MTZ(1)
       b=-ZBG(1,2)*AZB2
       ZB1(k,2)=((1.0+a*dtw2)*ZB1(k,1)+b*dtw)/(1.0-a*dtw2)
       ZB1(k,1)=0.5*(ZB1(k,1)+ZB1(k,2))
    
       !ZB2
-      a=ZB2G*Eff*(1-RF)-BMZ(2)-RZ(2)*Fish-DRZ(2)
+      a=ZB2G*AGZ*(1-RGZ)-ZBM(2)-z2pr(2)*Fish-MTZ(2)
       b=-ZBG(2,1)*AZB1
       ZB2(k,2)=((1.0+a*dtw2)*ZB2(k,1)+b*dtw)/(1.0-a*dtw2)
       ZB2(k,1)=0.5*(ZB2(k,1)+ZB2(k,2))
-    endif !iZoo==1
+    endif !iZB==1
 
     !---------------------------------------------
     !pre-calculation for PB1, PB2, and PB3
@@ -1423,7 +1423,7 @@ subroutine calkwq(id,nv,usf,it)
     b=WSPB1(id)*PB10/dep(k)
 
     a=a-BPR(1)
-    if(iZoo==1) a=a-Pf*Fish;  b=b-ZBG(3,1)*ZB1(k,1)-ZBG(3,2)*ZB2(k,1)
+    if(iZB==1) a=a-p2pr*Fish;  b=b-ZBG(3,1)*ZB1(k,1)-ZBG(3,2)*ZB2(k,1)
 
     PB1(k,2)=((1.0+a*dtw2)*PB1(k,1)+b*dtw)/(1.0-a*dtw2)
     PB1(k,1)=0.5*(PB1(k,1)+PB1(k,2))
@@ -1435,7 +1435,7 @@ subroutine calkwq(id,nv,usf,it)
     b=WSPB2(id)*PB20/dep(k)
 
     a=a-BPR(2)
-    if(iZoo==1) a=a-Pf*Fish; b=b-ZBG(4,1)*ZB1(k,1)-ZBG(4,2)*ZB2(k,1)
+    if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(4,1)*ZB1(k,1)-ZBG(4,2)*ZB2(k,1)
 
     PB2(k,2)=((1.0+a*dtw2)*PB2(k,1)+b*dtw)/(1.0-a*dtw2)
     PB2(k,1)=0.5*(PB2(k,1)+PB2(k,2))
@@ -1447,7 +1447,7 @@ subroutine calkwq(id,nv,usf,it)
     b=WSPB3(id)*PB30/dep(k)
 
     a=a-BPR(3)
-    if(iZoo==1) a=a-Pf*Fish; b=b-ZBG(5,1)*ZB1(k,1)-ZBG(5,2)*ZB2(k,1)
+    if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(5,1)*ZB1(k,1)-ZBG(5,2)*ZB2(k,1)
 
     PB3(k,2)=((1.0+a*dtw2)*PB3(k,1)+b*dtw)/(1.0-a*dtw2)
     PB3(k,1)=0.5*(PB3(k,1)+PB3(k,2))
@@ -1456,7 +1456,7 @@ subroutine calkwq(id,nv,usf,it)
     !---------------------------------------------
     !pre-calculation for nutrients
     sumAPB=PB1(k,1)+PB2(k,1)+PB3(k,1)
-    if(iZoo==1) then
+    if(iZB==1) then
       do i=1,8
         ZBG(i,1)=ZBG(i,1)*ZB1(k,1)
         ZBG(i,2)=ZBG(i,2)*ZB2(k,1)
@@ -1472,11 +1472,11 @@ subroutine calkwq(id,nv,usf,it)
 
     !---------------------------------------------
     !pre-calculation for Carbon
-    if(iZoo==1) then
-      CZB_ZB=(1.0-Eff)*(1.0-RF)*(ZBG0(2,1)*AZB1+ZBG0(1,2)*AZB2)  !ZB eats ZB
-      CFh_ZB=(RZ(1)*Fish+DRZ(1))*ZB1(k,1)+(RZ(2)*Fish+DRZ(2))*ZB2(k,1) !1) Fish eats ZB, 2) ZB dies
-      CZB_PB=(1.0-Eff)*(1.0-RF)*(ZBG(3,1)+ZBG(4,1)+ZBG(5,1)+ZBG(3,2)+ZBG(4,2)+ZBG(5,2)) !ZB eats PB
-      CFh_PB=Pf*Fish*sumAPB !Fish eats PB
+    if(iZB==1) then
+      CZB_ZB=(1.0-AGZ)*(1.0-RGZ)*(ZBG0(2,1)*AZB1+ZBG0(1,2)*AZB2)  !ZB eats ZB
+      CFh_ZB=(z2pr(1)*Fish+MTZ(1))*ZB1(k,1)+(z2pr(2)*Fish+MTZ(2))*ZB2(k,1) !1) Fish eats ZB, 2) ZB dies
+      CZB_PB=(1.0-AGZ)*(1.0-RGZ)*(ZBG(3,1)+ZBG(4,1)+ZBG(5,1)+ZBG(3,2)+ZBG(4,2)+ZBG(5,2)) !ZB eats PB
+      CFh_PB=p2pr*Fish*sumAPB !Fish eats PB
     endif
 
     !RPOC
@@ -1486,8 +1486,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKRPOC-WSRBNET(id)/dep(k)
 
     b= FCRP(1)*BPR(1)*PB1(k,1)+FCRP(2)*BPR(2)*PB2(k,1)+FCRP(3)*BPR(3)*PB3(k,1) !predation
-    if(iZoo==1) then
-      b= -(RF+Eff*(1.0-RF))*(ZBG(6,1)+ZBG(6,2))+ &  !ZB eats RPOC
+    if(iZB==1) then
+      b= -(RGZ+AGZ*(1.0-RGZ))*(ZBG(6,1)+ZBG(6,2))+ &  !ZB eats RPOC
        & FCRPZ*(CZB_ZB+CFh_ZB)+FCRP(1)*(CZB_PB+CFh_PB)  !
     endif
     b=b+WSRP(id)*RPOC0/dep(k)+znRPOC(k)/dep(k)
@@ -1532,8 +1532,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKLPOC-WSLBNET(id)/dep(k)
 
     b= FCLP(1)*BPR(1)*PB1(k,1)+FCLP(2)*BPR(2)*PB2(k,1)+FCLP(3)*BPR(3)*PB3(k,1)
-    if(iZoo==1) then
-      b= -(RF+Eff*(1-RF))*(ZBG(7,1)+ZBG(7,2))+ & !ZB eats LPOC
+    if(iZB==1) then
+      b= -(RGZ+AGZ*(1-RGZ))*(ZBG(7,1)+ZBG(7,2))+ & !ZB eats LPOC
        & FCLPZ*(CZB_ZB+CFh_ZB)+FCLPZ*(CZB_PB+CFh_PB)   !ZB eats ZB 
     endif
     b=b+WSLP(id)*LPOC0/dep(k)+znLPOC(k)/dep(k)  !settling, surface or benthic flux
@@ -1579,10 +1579,10 @@ subroutine calkwq(id,nv,usf,it)
     a=-xKHR-xDenit
 
     b=FCDP(1)*BPR(1)*PB1(k,1)+FCDP(2)*BPR(2)*PB2(k,1)+FCDP(3)*BPR(3)*PB3(k,1)
-    if(iZoo==1) then
-      b=(FCDZ(1)+(1.0-FCDZ(1))*rKHRZ(1)/(DOX(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
-       &(FCDZ(2)+(1.0-FCDZ(2))*rKHRZ(2)/(DOX(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1) & !ZB2 metabolism
-       & -(RF+Eff*(1.0-RF))*(ZBG(8,1)+ZBG(8,2))+ & !ZB eats DOC
+    if(iZB==1) then
+      b=(FCDZ(1)+(1.0-FCDZ(1))*rKHRZ(1)/(DOX(k,1)+rKHRZ(1)))*ZBM(1)*ZB1(k,1)+ & !ZB1 metabolism
+       &(FCDZ(2)+(1.0-FCDZ(2))*rKHRZ(2)/(DOX(k,1)+rKHRZ(2)))*ZBM(2)*ZB2(k,1) & !ZB2 metabolism
+       & -(RGZ+AGZ*(1.0-RGZ))*(ZBG(8,1)+ZBG(8,2))+ & !ZB eats DOC
        & FCDPZ*(CZB_ZB+CFh_ZB)+FCDP(1)*(CZB_PB+CFh_PB)                !ZB eats ZB 
     endif
     b=b+(FCD(1)+(1.0-FCD(1))*rKHR1/(DOX(k,1)+rKHR1))*BMP(1)*PB1(k,1)+ &         !PB1 metabolism
@@ -1620,13 +1620,13 @@ subroutine calkwq(id,nv,usf,it)
     
     !---------------------------------------------
     !pre-calculation for nitrogen
-    if(iZoo==1) then
-      NZB_ZB=(1.0-Eff*(1.0-RF))*(ZBG0(2,1)*AZB1*ANCZ(1)+ZBG0(1,2)*AZB2*ANCZ(2))  !ZB eats ZB
-      NFh_ZB=(RZ(1)*Fish+DRZ(1))*ZB1(k,1)*ANCZ(1)+(RZ(2)*Fish+DRZ(2))*ZB2(k,1)*ANCZ(2) !1) Fish eats ZB, 2) ZB dies
+    if(iZB==1) then
+      NZB_ZB=(1.0-AGZ*(1.0-RGZ))*(ZBG0(2,1)*AZB1*ANCZ(1)+ZBG0(1,2)*AZB2*ANCZ(2))  !ZB eats ZB
+      NFh_ZB=(z2pr(1)*Fish+MTZ(1))*ZB1(k,1)*ANCZ(1)+(z2pr(2)*Fish+MTZ(2))*ZB2(k,1)*ANCZ(2) !1) Fish eats ZB, 2) ZB dies
       k1=ZBG(3,1)*ANC(1)+ZBG(4,1)*ANC(2)+ZBG(5,1)*ANC(3)
       k2=ZBG(3,2)*ANC(1)+ZBG(4,2)*ANC(2)+ZBG(5,2)*ANC(3)
-      NZB_PB=(1.0-Eff*(1.0-RF))*(k1+k2) !ZB eats PB
-      NFh_PB=Pf*Fish*(PB1(k,1)*ANC(1)+PB2(k,1)*ANC(2)+PB3(k,1)*ANC(3)) !Fish eats PB
+      NZB_PB=(1.0-AGZ*(1.0-RGZ))*(k1+k2) !ZB eats PB
+      NFh_PB=p2pr*Fish*(PB1(k,1)*ANC(1)+PB2(k,1)*ANC(2)+PB3(k,1)*ANC(3)) !Fish eats PB
     endif
 
 
@@ -1637,8 +1637,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKRPON-WSRBNET(id)/dep(k)
 
     b=FNRP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FNRZ(1)*ANCZ(1)*BMZ(1)*ZB1(k,1)+FNRZ(2)*ANCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FNRZ(1)*ANCZ(1)*ZBM(1)*ZB1(k,1)+FNRZ(2)*ANCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FNRPZ*(NZB_ZB+NFh_ZB)+FNRP*(NZB_PB+NFh_PB) 
     endif
 
@@ -1683,8 +1683,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKLPON-WSLBNET(id)/dep(k)
 
     b= FNLP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FNLZ(1)*ANCZ(1)*BMZ(1)*ZB1(k,1)+FNLZ(2)*ANCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FNLZ(1)*ANCZ(1)*ZBM(1)*ZB1(k,1)+FNLZ(2)*ANCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FNLPZ*(NZB_ZB+NFh_ZB)+FNLP*(NZB_PB+NFh_PB)   !
     endif
 
@@ -1726,8 +1726,8 @@ subroutine calkwq(id,nv,usf,it)
 
     a=-rKDON
     b= FNDP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FNDZ(1)*ANCZ(1)*BMZ(1)*ZB1(k,1)+FNDZ(2)*ANCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FNDZ(1)*ANCZ(1)*ZBM(1)*ZB1(k,1)+FNDZ(2)*ANCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FNDPZ*(NZB_ZB+NFh_ZB)+FNDP*(NZB_PB+NFh_PB)  !
     endif
 
@@ -1778,8 +1778,8 @@ subroutine calkwq(id,nv,usf,it)
     endif
     
     b= FNIP*(ANC(1)*BPR(1)*PB1(k,1)+ANC(2)*BPR(2)*PB2(k,1)+ANC(3)*BPR(3)*PB3(k,1))  !predation
-    if(iZoo==1) then
-      b= FNIZ(1)*ANCZ(1)*BMZ(1)*ZB1(k,1)+FNIZ(2)*ANCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FNIZ(1)*ANCZ(1)*ZBM(1)*ZB1(k,1)+FNIZ(2)*ANCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FNIPZ*(NZB_ZB+NFh_ZB)+FNIP*(NZB_PB+NFh_PB) 
     endif
 
@@ -1851,13 +1851,13 @@ subroutine calkwq(id,nv,usf,it)
 
     !---------------------------------------------
     !pre-calculation for phosphorus
-    if(iZoo==1) then
-      PZB_ZB=(1.0-Eff*(1.0-RF))*(ZBG0(2,1)*AZB1*APCZ(1)+ZBG0(1,2)*AZB2*APCZ(2))  !ZB eats ZB
-      PFh_ZB=(RZ(1)*Fish+DRZ(1))*ZB1(k,1)*APCZ(1)+(RZ(2)*Fish+DRZ(2))*ZB2(k,1)*APCZ(2) !1) Fish eats ZB, 2) ZB dies
+    if(iZB==1) then
+      PZB_ZB=(1.0-AGZ*(1.0-RGZ))*(ZBG0(2,1)*AZB1*APCZ(1)+ZBG0(1,2)*AZB2*APCZ(2))  !ZB eats ZB
+      PFh_ZB=(z2pr(1)*Fish+MTZ(1))*ZB1(k,1)*APCZ(1)+(z2pr(2)*Fish+MTZ(2))*ZB2(k,1)*APCZ(2) !1) Fish eats ZB, 2) ZB dies
       k1=ZBG(3,1)*APC(1)+ZBG(4,1)*APC(2)+ZBG(5,1)*APC(3)
       k2=ZBG(3,2)*APC(1)+ZBG(4,2)*APC(2)+ZBG(5,2)*APC(3)
-      PZB_PB=(1.0-Eff*(1.0-RF))*(k1+k2) !ZB eats PB
-      PFh_PB=Pf*Fish*(PB1(k,1)*APC(1)+PB2(k,1)*APC(2)+PB3(k,1)*APC(3)) !Fish eats PB
+      PZB_PB=(1.0-AGZ*(1.0-RGZ))*(k1+k2) !ZB eats PB
+      PFh_PB=p2pr*Fish*(PB1(k,1)*APC(1)+PB2(k,1)*APC(2)+PB3(k,1)*APC(3)) !Fish eats PB
     endif
     
     !RPOP
@@ -1868,8 +1868,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKRPOP-WSRBNET(id)/dep(k)
 
     b= FPRP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FPRZ(1)*APCZ(1)*BMZ(1)*ZB1(k,1)+FPRZ(2)*APCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FPRZ(1)*APCZ(1)*ZBM(1)*ZB1(k,1)+FPRZ(2)*APCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FPRPZ*(PZB_ZB+PFh_ZB)+FPRP*(PZB_PB+PFh_PB) !
     endif
 
@@ -1914,8 +1914,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKLPOP-WSLBNET(id)/dep(k)
 
     b= FPLP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FPLZ(1)*APCZ(1)*BMZ(1)*ZB1(k,1)+FPLZ(2)*APCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FPLZ(1)*APCZ(1)*ZBM(1)*ZB1(k,1)+FPLZ(2)*APCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FPLPZ*(PZB_ZB+PFh_ZB)+FPLP*(PZB_PB+PFh_PB)
     endif
     b=b+FPL(1)*APC(1)*BMP(1)*PB1(k,1)+FPL(2)*APC(2)*BMP(2)*PB2(k,1)+FPL(3)*APC(3)*BMP(3)*PB3(k,1) &
@@ -1957,8 +1957,8 @@ subroutine calkwq(id,nv,usf,it)
 
     a=-rKDOP
     b= FPDP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1)) !predation
-    if(iZoo==1) then
-      b= FPDZ(1)*APCZ(1)*BMZ(1)*ZB1(k,1)+FPDZ(2)*APCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FPDZ(1)*APCZ(1)*ZBM(1)*ZB1(k,1)+FPDZ(2)*APCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FPDPZ*(PZB_ZB+PFh_ZB)+FPDP*(PZB_PB+PFh_PB)
     endif
     b=b+FPD(1)*APC(1)*BMP(1)*PB1(k,1)+FPD(2)*APC(2)*BMP(2)*PB2(k,1)+FPD(3)*APC(3)*BMP(3)*PB3(k,1) &
@@ -2001,8 +2001,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-fp*WSSBNET(id)/dep(k)
 
     b= FPIP*(APC(1)*BPR(1)*PB1(k,1)+APC(2)*BPR(2)*PB2(k,1)+APC(3)*BPR(3)*PB3(k,1))  !predation
-    if(iZoo==1) then
-      b= FPIZ(1)*APCZ(1)*BMZ(1)*ZB1(k,1)+FPIZ(2)*APCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FPIZ(1)*APCZ(1)*ZBM(1)*ZB1(k,1)+FPIZ(2)*APCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FPIPZ*(PZB_ZB+PFh_ZB)+FPIP*(PZB_PB+PFh_PB) 
     endif
 
@@ -2052,11 +2052,11 @@ subroutine calkwq(id,nv,usf,it)
 
     !---------------------------------------------
     !pre-calculation for silica 
-    if(iZoo==1) then
-      SZB_ZB=(1.0-Eff*(1.0-RF))*(ZBG0(2,1)*AZB1*ASCZ(1)+ZBG0(1,2)*AZB2*ASCZ(2))  !ZB eats ZB
-      SFh_ZB=(RZ(1)*Fish+DRZ(1))*ZB1(k,1)*ASCZ(1)+(RZ(2)*Fish+DRZ(2))*ZB2(k,1)*ASCZ(2) !1) Fish eats ZB, 2) ZB dies
-      PZB_PB=(1.0-Eff*(1.0-RF))*ASCd*(ZBG(3,1)+ZBG(3,2)) !ZB eats PB1
-      PFh_PB=Pf*Fish*ASCd*PB1(k,1) !Fish eats PB
+    if(iZB==1) then
+      SZB_ZB=(1.0-AGZ*(1.0-RGZ))*(ZBG0(2,1)*AZB1*ASCZ(1)+ZBG0(1,2)*AZB2*ASCZ(2))  !ZB eats ZB
+      SFh_ZB=(z2pr(1)*Fish+MTZ(1))*ZB1(k,1)*ASCZ(1)+(z2pr(2)*Fish+MTZ(2))*ZB2(k,1)*ASCZ(2) !1) Fish eats ZB, 2) ZB dies
+      PZB_PB=(1.0-AGZ*(1.0-RGZ))*ASCd*(ZBG(3,1)+ZBG(3,2)) !ZB eats PB1
+      PFh_PB=p2pr*Fish*ASCd*PB1(k,1) !Fish eats PB
     endif
 
     !SU
@@ -2070,8 +2070,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-rKSUA-WS1BNET(id)/dep(k)
 
     b= FSPP*ASCd*BPR(1)*PB1(k,1) !predation
-    if(iZoo==1) then
-      b= FSPZ(1)*ASCZ(1)*BMZ(1)*ZB1(k,1)+FSPZ(2)*ASCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FSPZ(1)*ASCZ(1)*ZBM(1)*ZB1(k,1)+FSPZ(2)*ASCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FSPPZ*(SZB_ZB+SFh_ZB)+FSPP*(SZB_PB+SFh_PB)
     endif
 
@@ -2089,8 +2089,8 @@ subroutine calkwq(id,nv,usf,it)
     if(k==nv.and.iSet/=0) a=-fp*WSSBNET(id)/dep(k)
 
     b= FSIP*ASCd*BPR(1)*PB1(k,1) !predation
-    if(iZoo==1) then
-      b= FSIZ(1)*ASCZ(1)*BMZ(1)*ZB1(k,1)+FSIZ(2)*ASCZ(2)*BMZ(2)*ZB2(k,1)+ &  !ZB metabolism
+    if(iZB==1) then
+      b= FSIZ(1)*ASCZ(1)*ZBM(1)*ZB1(k,1)+FSIZ(2)*ASCZ(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
        & FSIPZ*(SZB_ZB+SFh_ZB)+FSIP*(SZB_PB+SFh_PB)
     endif
 
@@ -2141,9 +2141,9 @@ subroutine calkwq(id,nv,usf,it)
     endif !k==1
 
     a=-rKr;  b=0.0
-    if(iZoo==1) then
-      b=-((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*AOC*BMZ(1)*ZB1(k,1) & !ZB1 metabolism
-       &-((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*AOC*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
+    if(iZB==1) then
+      b=-((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*AOC*ZBM(1)*ZB1(k,1) & !ZB1 metabolism
+       &-((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*AOC*ZBM(2)*ZB2(k,1)  !ZB2 metabolism
     endif
 
     b=b-((1.0-FCD(1))*DOX(k,1)/(DOX(k,1)+rKHR1))*AOC*BMP(1)*PB1(k,1) & !PB1 metabolism
@@ -2263,9 +2263,9 @@ subroutine calkwq(id,nv,usf,it)
       endif
 
       a=0.0
-      if(iZoo==1) then
-        b=((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*BMZ(1)*ZB1(k,1)+ & !ZB1 metabolism
-         & ((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*BMZ(2)*ZB2(k,1)  !ZB2 metabolism
+      if(iZB==1) then
+        b=((1.0-FCDZ(1))*DOX(k,1)/(DOX(k,1)+rKHRZ(1)))*ZBM(1)*ZB1(k,1)+ & !ZB1 metabolism
+         & ((1.0-FCDZ(2))*DOX(k,1)/(DOX(k,1)+rKHRZ(2)))*ZBM(2)*ZB2(k,1)  !ZB2 metabolism
       else
         b=0.0
       endif

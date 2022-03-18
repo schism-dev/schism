@@ -65,15 +65,14 @@ jLight = 2
 iRea = 1
 
 !-----------------------------------------------------------------------
-!Zooplankton(iZoo=1: use zooplankton dynamics; iZoo=0: don't use)
+!Zooplankton(iZB=1: use zooplankton dynamics; iZB=0: don't use)
 !-----------------------------------------------------------------------
-iZoo = 0
+iZB = 0
 
 !-----------------------------------------------------------------------
 !PH model switch (plz use ICM_PH)
 !-----------------------------------------------------------------------
 !iPh = 0 
-
 
 !-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
@@ -130,22 +129,24 @@ idry_icm = 0
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !-----------------------------------------------------------------------
-!Zooplankton parameters
+!Zooplankton (ZB) parameters
+!  GZM:  ZB predation rate(day-1);   dim(prey=1:8, ZB=1:2)
+!  KhZG: reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
 !-----------------------------------------------------------------------
-GZM =   1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  1.75  !dim(8,2) 
-rKhGE=  0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 !dim(8,2)
-PPC=    0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   !dim(8,2)
-BMZR=   0.254    0.186
-DRZ=    0.02     0.02
-TGZ=    25.0     25.0 
-rKTGZ1= 0.0035   0.008
-rKTGZ2= 0.025    0.030
-TBZ=    20.0     20.0 
-rKTBZ=  0.0693   0.0693
-RZ=     2.0      2.0
-Eff=    0.0
-RF=     0.0
-Pf=     0.0
+GZM  =  0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
+KhGZ =  0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
+TGZ  =  25.0   25.0               !optimal temp. for ZB growth (oC)
+KTGZ =  0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth; dim(ZB=1:2,1:2) (oC-2)
+AGZ  =  0.75                      !ZB assimilation efficiency ratio (0-1)
+RGZ  =  0.1                       !ZB respiration ratio when it grazes (0-1)
+
+BMZ  =  0.254  0.186              !ZB metabolism rates (day-1)
+TBZ  =  20.0   20.0               !reference temp. for ZB metabolism (oC)
+KTBZ =  0.0693 0.0693             !temp. dependence for ZB metabolism (oC-1)
+
+MTZ  =  0.02   0.02               !ZB mortality rates (day-1)
+z2pr =  0.5    0.5                !ratio converting ZB+PB biomass to predation rates on ZB (L.mg-1.day-1)
+p2pr =  0.25                      !ratio converting ZB+PB biomass to predation rates on PB (L.mg-1.day-1)
 
 !-----------------------------------------------------------------------
 !Phytoplankton parameters

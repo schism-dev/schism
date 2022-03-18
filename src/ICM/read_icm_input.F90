@@ -426,7 +426,6 @@ subroutine read_icm_param
   call get_param('icm.in','iLight',1,iLight,rtmp,stmp)
   call get_param('icm.in','jLight',1,jLight,rtmp,stmp)
   call get_param('icm.in','iRea',1,iRea,rtmp,stmp)
-  call get_param('icm.in','iZoo',1,iZoo,rtmp,stmp)
   call get_param('icm.in','iAtm',1,iAtm,rtmp,stmp)
   call get_param('icm.in','iSed',1,iSed,rtmp,stmp)
   call get_param('icm.in','iBen',1,iBen,rtmp,stmp)
@@ -496,25 +495,22 @@ subroutine read_icm_param
 
  
   !read Zooplanktion parameters
+  call get_param('icm.in','iZB',1,iZB,rtmp,stmp)
+
   call get_param_1D('icm.in','GZM',2,itmp2,GZM(1:8,1:2),stmp,16)
-  call get_param_1D('icm.in','rKhGE',2,itmp2,rKhGE(1:8,1:2),stmp,16)
-  call get_param_1D('icm.in','PPC',2,itmp2,PPC(1:8,1:2),stmp,16)
-
-  call get_param_1D('icm.in','BMZR',2,itmp1,BMZR,stmp,2)
-  call get_param_1D('icm.in','DRZ',2,itmp1,DRZ,stmp,2)
+  call get_param_1D('icm.in','KhGZ',2,itmp2,KhGZ(1:8,1:2),stmp,16)
   call get_param_1D('icm.in','TGZ',2,itmp1,TGZ,stmp,2)     
-  call get_param_1D('icm.in','rKTGZ1',2,itmp1,rKTGZ1,stmp,2) 
-  call get_param_1D('icm.in','rKTGZ2',2,itmp1,rKTGZ2,stmp,2)
-  call get_param_1D('icm.in','TBZ',2,itmp1,TBZ,stmp,2);  
-  call get_param_1D('icm.in','rKTBZ',2,itmp1,rKTBZ,stmp,2)
-  call get_param_1D('icm.in','RZ',2,itmp1,RZ,stmp,2)
+  call get_param_1D('icm.in','KTGZ',2,itmp1,KTGZ(1:2,1:2),stmp,4) 
 
-  call get_param('icm.in','Eff',2,itmp,rtmp,stmp)
-  Eff=rtmp
-  call get_param('icm.in','RF',2,itmp,rtmp,stmp)
-  RF=rtmp
-  call get_param('icm.in','Pf',2,itmp,rtmp,stmp)
-  Pf=rtmp
+  call get_param_1D('icm.in','BMZ',2,itmp1,BMZ,stmp,2)
+  call get_param_1D('icm.in','TBZ',2,itmp1,TBZ,stmp,2);  
+  call get_param_1D('icm.in','KTBZ',2,itmp1,KTBZ,stmp,2)
+  call get_param_1D('icm.in','MTZ',2,itmp1,MTZ,stmp,2)
+  call get_param_1D('icm.in','z2pr',2,itmp1,z2pr,stmp,2)
+
+  call get_param('icm.in','AGZ',2,itmp,AGZ,stmp)
+  call get_param('icm.in','RGZ',2,itmp,RGZ,stmp)
+  call get_param('icm.in','p2pr',2,itmp,p2pr,stmp)
 
   !read phytoplankton parameters
   call get_param_1D('icm.in','BMPR',2,itmp1,BMPR,stmp,3)
@@ -862,13 +858,6 @@ subroutine read_icm_param
   !---------------preprocess parameters----------------------------
   dtw=dt/86400.0 !days
   dtw2=dtw/2.0
-
-  !zooplankton
-  do i=1,2
-    do j=1,8
-      PPC(j,i)=PPC(j,i)/rKhGE(j,i)
-    enddo !j
-  enddo! 
 
   !phytoplankton
   mKhN=0.0
