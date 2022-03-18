@@ -36,7 +36,6 @@ module icm_mod
   integer,save :: iZoo,iPh
   integer,save :: iAtm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
-  integer,save :: isfnveg,isrecnveg,isfpveg,isrecpveg 
   integer,target,save :: idry_icm
   integer,target,save :: isav_icm,iveg_icm 
   integer,pointer :: jdry,jsav,jveg
@@ -106,55 +105,40 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:) :: GPM,PRR,TGP,chl2c
   real(rkind),save,allocatable,dimension(:,:,:) :: rKTGP
 
-  !sav readin parameters 
-  integer,save,allocatable :: spatch(:) !(nea)
-  real(rkind),save :: stleaf0,ststem0,stroot0
-  real(rkind),save :: sFAM,sGPM,sTGP,sKTGP(2),sc2dw,sFCP(3)
-  real(rkind),save :: sBMP(3),sTBP(3),sKTBP(3)
-
-  real(rkind),save :: sn2c,apcsav,aocrsav !ratios
-  real(rkind),save :: salpha,sKe !light
-  real(rkind),save :: s2ht(3),shtm(2) !height
-  real(rkind),save :: fdosav, fcdsav, fclpsav, fcrpsav !carbon
-  real(rkind),save :: sKhNw,sKhNs,sKhNH4 !nitrogen
-  real(rkind),save :: sFNP(4)
-  real(rkind),save :: khpwsav,khpssav !phosphorus
-  real(rkind),save :: fpisav, fpdsav, fplpsav, fprpsav
+  !------------------------------------------------------------------------------------
+  !SAV module 
+  !------------------------------------------------------------------------------------
+  !parameters
+  integer,save,allocatable :: spatch(:)               !sav region
+  real(rkind),save :: stleaf0,ststem0,stroot0         !init. conc
+  real(rkind),save :: sFAM,sGPM,sTGP,sKTGP(2),sFCP(3) !growth related coefficients
+  real(rkind),save :: sBMP(3),sTBP(3),sKTBP(3)        !meta. coefficients (rate, temp, temp dependence)
+  real(rkind),save :: sFCM(4),sFNM(4),sFPM(4)         !metabolism to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save :: sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs  !half-saturation conc. of N&P
+  real(rkind),save :: salpha,sKe,shtm(2)              !(P-I curve, light attenu., canopy height)
+  real(rkind),save :: sn2c,sp2c,so2c,sc2dw,s2ht(3),s2den !convert ratios
 
   !intermediate variables
   !sav growth rate and metabolism rate
   !(nvrt,nea)>> bottom to surface
   real(rkind),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(rkind),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
-  real(rkind),save :: rdenssav !density
 
+  !------------------------------------------------------------------------------------
+  !VEG module
+  !------------------------------------------------------------------------------------
+  integer,save,allocatable :: vpatch(:)                 !reg region
+  real(rkind),save :: vtleaf0(3),vtstem0(3),vtroot0(3)  !init conc.
+  real(rkind),save :: vFAM(3),vGPM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
+  real(rkind),save :: vBMP(3,3),vTBP(3,3),vKTBP(3,3)    !meta. coefficients (rate,temp,temp dependence)
+  real(rkind),save :: vFNM(3,4),vFPM(3,4),vFCM(3,4)     !metabolism to (RPOM,RLOM,DOM,DIM)
 
-  !veg readin parameters
-  integer,save,allocatable :: vpatch(:) !nea
-  integer,save :: iMortveg !flag of vegetation mortality
-  real(rkind),save,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
-  real(rkind),save,dimension(3) :: famveg,fplfveg,fpstveg,fprtveg
-  real(rkind),save,dimension(3) :: acdwveg,ancveg,apcveg,aocrveg !ratios
-  real(rkind),save,dimension(3) :: pmbsveg,toptveg,ktg1veg,ktg2veg !temp
-  real(rkind),save,dimension(3) :: alphaveg,rkshveg !light
-  real(rkind),save,dimension(3) :: saltveg,saltoptveg !salt
-  real(rkind),save,dimension(3) :: tinunveg !inundation
-  
-  real(rkind),save,dimension(3) :: vcrit,vht0 !height
-  real(rkind),save,dimension(3,2) :: v2ht     !coef. mass to height
+  integer,save :: ivNs,ivPs,ivNc,ivPc,ivMT   !flags for (N,P) limit, recycled (N,P) dest., mortality
+  real(rkind),save,dimension(3) :: vKhNs,vKhPs,valpha,vKe,vScr,vSopt,vInun !growth limit(nutrent,light,salinity,inundation)
+  real(rkind),save,dimension(3) :: vn2c,vp2c,vo2c,vc2dw,v2den !convert ratios
+  real(rkind),save :: vcrit(3),vht0(3),v2ht(3,2)              !veg height
+  real(rkind),save,dimension(3,2) :: vTMT,vKTMT,vMT0,vMTcr    !mortality coeffs
 
-  !real(rkind),save,allocatable,dimension(:) :: mhtveg !(nea),water level
-  real(rkind),save,dimension(3) :: fdoveg, fcdveg, fclpveg, fcrpveg !carbon
-  real(rkind),save,dimension(3) :: khnwveg,khnsveg,khnprveg !nitrogen
-  real(rkind),save,dimension(3) :: fniveg, fndveg, fnlpveg, fnrpveg
-  real(rkind),save,dimension(3) :: khpwveg,khpsveg !phosphorus
-  real(rkind),save,dimension(3) :: fpiveg, fpdveg, fplpveg, fprpveg
-  real(rkind),save,dimension(3) :: bmlfrveg,bmstrveg,bmrtrveg !reference metabolism 
-  real(rkind),save,dimension(3) :: ktblfveg,ktbstveg,ktbrtveg
-  real(rkind),save,dimension(3) :: trlfveg,trstveg,trrtveg
-  real(rkind),save,dimension(3) :: adlfveg,bdlfveg,cdlfveg,ddlfveg
-  real(rkind),save,dimension(3) :: adstveg,bdstveg,cdstveg,ddstveg
-  real(rkind),save,dimension(3) :: adrtveg,bdrtveg,cdrtveg,ddrtveg
   !intermediate variables
   integer,save :: knveg(3) !index of top layer with canopy occupied, knveg=0 for emergency
   real(rkind),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
@@ -162,7 +146,6 @@ module icm_mod
   real(rkind),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
   real(rkind),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(rkind),save :: airtveg,mtemp
-  real(rkind),save,dimension(3) :: rdensveg
 
 
   !carbon parameters 

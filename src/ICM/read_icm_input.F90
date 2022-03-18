@@ -559,11 +559,8 @@ subroutine read_icm_param
   call get_param_1D('icm.in','sTBP',2,itmp1,sTBP,stmp,3)
   call get_param_1D('icm.in','sKTBP',2,itmp1,sKTBP,stmp,3)
   call get_param('icm.in','sn2c',2,itmp,sn2c,stmp)
-
-  call get_param('icm.in','apcsav',2,itmp,rtmp,stmp)
-  apcsav=rtmp
-  call get_param('icm.in','aocrsav',2,itmp,rtmp,stmp)
-  aocrsav=rtmp
+  call get_param('icm.in','sp2c',2,itmp,sp2c,stmp)
+  call get_param('icm.in','so2c',2,itmp,so2c,stmp)
 
   call get_param('icm.in','salpha',2,itmp,salpha,stmp)
   call get_param('icm.in','sKe',2,itmp,sKe,stmp)
@@ -574,106 +571,67 @@ subroutine read_icm_param
   call get_param('icm.in','sKhNw',2,itmp,sKhNw,stmp)
   call get_param('icm.in','sKhNs',2,itmp,sKhNs,stmp)
   call get_param('icm.in','sKhNH4',2,itmp,sKhNH4,stmp)
-  call get_param_1D('icm.in','sFNP',2,itmp1,sFNP,stmp,4)
+  call get_param_1D('icm.in','sFNM',2,itmp1,sFNM,stmp,4)
 
-  call get_param('icm.in','khpwsav',2,itmp,rtmp,stmp)
-  khpwsav=rtmp
-  call get_param('icm.in','khpssav',2,itmp,rtmp,stmp)
-  khpssav=rtmp
-  call get_param('icm.in','fpisav',2,itmp,rtmp,stmp)
-  fpisav=rtmp
-  call get_param('icm.in','fpdsav',2,itmp,rtmp,stmp)
-  fpdsav=rtmp
-  call get_param('icm.in','fplpsav',2,itmp,rtmp,stmp)
-  fplpsav=rtmp
-  call get_param('icm.in','fprpsav',2,itmp,rtmp,stmp)
-  fprpsav=rtmp
-  call get_param('icm.in','fdosav',2,itmp,rtmp,stmp)
-  fdosav=rtmp
-  call get_param('icm.in','fcdsav',2,itmp,rtmp,stmp)
-  fcdsav=rtmp
-  call get_param('icm.in','fclpsav',2,itmp,rtmp,stmp)
-  fclpsav=rtmp
-  call get_param('icm.in','fcrpsav',2,itmp,rtmp,stmp)
-  fcrpsav=rtmp
-  call get_param('icm.in','rdenssav',2,itmp,rtmp,stmp)
-  rdenssav=rtmp
+  call get_param('icm.in','sKhPw',2,itmp,sKhPw,stmp)
+  call get_param('icm.in','sKhPs',2,itmp,sKhPs,stmp)
+  call get_param_1D('icm.in','sFPM',2,itmp1,sFPM,stmp,4)
+  call get_param_1D('icm.in','sFCM',2,itmp1,sFCM,stmp,4)
+  call get_param('icm.in','s2den',2,itmp,s2den,stmp)
 
   !veg parameters
   call get_param_1D('icm.in','vtleaf0',2,itmp1,vtleaf0,stmp,3)
   call get_param_1D('icm.in','vtstem0',2,itmp1,vtstem0,stmp,3)
   call get_param_1D('icm.in','vtroot0',2,itmp1,vtroot0,stmp,3)
 
-  call get_param('icm.in','iMortveg',1,iMortveg,rtmp,stmp)
-  call get_param('icm.in','isfnveg',1,isfnveg,rtmp,stmp)
-  if(isfnveg/=0.and.isfnveg/=1) call parallel_abort('read_icm: illegal isfnveg')
-  call get_param('icm.in','isrecnveg',1,isrecnveg,rtmp,stmp)
-  if(isrecnveg/=0.and.isrecnveg/=1) call parallel_abort('read_icm: illegal isrecnveg')
-  call get_param('icm.in','isfpveg',1,isfpveg,rtmp,stmp)
-  if(isfpveg/=0.and.isfpveg/=1) call parallel_abort('read_icm: illegal isfpveg')
-  call get_param('icm.in','isrecpveg',1,isrecpveg,rtmp,stmp)
-  if(isrecpveg/=0.and.isrecpveg/=1) call parallel_abort('read_icm: illegal isrecpveg')
-  call get_param_1D('icm.in','famveg',2,itmp1,famveg,stmp,3)
-  call get_param_1D('icm.in','fplfveg',2,itmp1,fplfveg,stmp,3)
-  call get_param_1D('icm.in','fpstveg',2,itmp1,fpstveg,stmp,3)
-  call get_param_1D('icm.in','fprtveg',2,itmp1,fprtveg,stmp,3)
-  call get_param_1D('icm.in','acdwveg',2,itmp1,acdwveg,stmp,3)
-  call get_param_1D('icm.in','ancveg',2,itmp1,ancveg,stmp,3)
-  call get_param_1D('icm.in','apcveg',2,itmp1,apcveg,stmp,3)
-  call get_param_1D('icm.in','aocrveg',2,itmp1,aocrveg,stmp,3)
-  call get_param_1D('icm.in','pmbsveg',2,itmp1,pmbsveg,stmp,3)
-  call get_param_1D('icm.in','toptveg',2,itmp1,toptveg,stmp,3)
-  call get_param_1D('icm.in','ktg1veg',2,itmp1,ktg1veg,stmp,3)
-  call get_param_1D('icm.in','ktg2veg',2,itmp1,ktg2veg,stmp,3)
-  call get_param_1D('icm.in','alphaveg',2,itmp1,alphaveg,stmp,3)
-  call get_param_1D('icm.in','rkshveg',2,itmp1,rkshveg,stmp,3)
-  call get_param_1D('icm.in','saltveg',2,itmp1,saltveg,stmp,3)
-  call get_param_1D('icm.in','saltoptveg',2,itmp1,saltoptveg,stmp,3)
-  call get_param_1D('icm.in','tinunveg',2,itmp1,tinunveg,stmp,3)
+  call get_param('icm.in','ivMT',1,ivMT,rtmp,stmp)
+  call get_param('icm.in','ivNs',1,ivNs,rtmp,stmp)
+  if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
+  call get_param('icm.in','ivNc',1,ivNc,rtmp,stmp)
+  if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
+  call get_param('icm.in','ivPs',1,ivPs,rtmp,stmp)
+  if(ivPs/=0.and.ivPs/=1) call parallel_abort('read_icm: illegal ivPs')
+  call get_param('icm.in','ivPc',1,ivPc,rtmp,stmp)
+  if(ivPc/=0.and.ivPc/=1) call parallel_abort('read_icm: illegal ivPc')
+
+  call get_param_1D('icm.in','vFAM',2,itmp1,vFAM,stmp,3)
+  call get_param_1D('icm.in','vc2dw',2,itmp1,vc2dw,stmp,3)
+  call get_param_1D('icm.in','vGPM',2,itmp1,vGPM,stmp,3)
+  call get_param_1D('icm.in','vTGP',2,itmp1,vTGP,stmp,3)
+  call get_param_1D('icm.in','vKTGP',2,itmp1,vKTGP(1:3,1:2),stmp,6)
+  call get_param_1D('icm.in','vFCP',2,itmp1,vFCP(1:3,1:3),stmp,9)
+
+  call get_param_1D('icm.in','vBMP',2,itmp1,vBMP(1:3,1:3),stmp,9)
+  call get_param_1D('icm.in','vTBP',2,itmp1,vTBP(1:3,1:3),stmp,9)
+  call get_param_1D('icm.in','vKTBP',2,itmp1,vKTBP(1:3,1:3),stmp,9)
+
+  call get_param_1D('icm.in','vFNM',2,itmp1,vFNM(1:3,1:4),stmp,12)
+  call get_param_1D('icm.in','vFPM',2,itmp1,vFPM(1:3,1:4),stmp,12)
+  call get_param_1D('icm.in','vFCM',2,itmp1,vFCM(1:3,1:4),stmp,12)
+
+  call get_param_1D('icm.in','valpha',2,itmp1,valpha,stmp,3)
+  call get_param_1D('icm.in','vKe',2,itmp1,vKe,stmp,3)
+
+  call get_param_1D('icm.in','vp2c',2,itmp1,vp2c,stmp,3)
+  call get_param_1D('icm.in','vn2c',2,itmp1,vn2c,stmp,3)
+  call get_param_1D('icm.in','vo2c',2,itmp1,vo2c,stmp,3)
+
+  call get_param_1D('icm.in','vScr',2,itmp1,vScr,stmp,3)
+  call get_param_1D('icm.in','vSopt',2,itmp1,vSopt,stmp,3)
+  call get_param_1D('icm.in','vInun',2,itmp1,vInun,stmp,3)
 
   call get_param_1D('icm.in','vht0',2,itmp1,vht0,stmp,3)
   call get_param_1D('icm.in','vcrit',2,itmp1,vcrit,stmp,3)
   call get_param_1D('icm.in','v2ht',2,itmp1,v2ht(1:3,1:2),stmp,6)
 
-  call get_param_1D('icm.in','fdoveg',2,itmp1,fdoveg,stmp,3)
-  call get_param_1D('icm.in','fcdveg',2,itmp1,fcdveg,stmp,3)
-  call get_param_1D('icm.in','fclpveg',2,itmp1,fclpveg,stmp,3)
-  call get_param_1D('icm.in','fcrpveg',2,itmp1,fcrpveg,stmp,3)
-  call get_param_1D('icm.in','khnwveg',2,itmp1,khnwveg,stmp,3)
-  call get_param_1D('icm.in','khnsveg',2,itmp1,khnsveg,stmp,3)
-  call get_param_1D('icm.in','khnprveg',2,itmp1,khnprveg,stmp,3)
-  call get_param_1D('icm.in','fniveg',2,itmp1,fniveg,stmp,3)
-  call get_param_1D('icm.in','fndveg',2,itmp1,fndveg,stmp,3)
-  call get_param_1D('icm.in','fnlpveg',2,itmp1,fnlpveg,stmp,3)
-  call get_param_1D('icm.in','fnrpveg',2,itmp1,fnrpveg,stmp,3)
-  call get_param_1D('icm.in','khpwveg',2,itmp1,khpwveg,stmp,3)
-  call get_param_1D('icm.in','khpsveg',2,itmp1,khpsveg,stmp,3)
-  call get_param_1D('icm.in','fpiveg',2,itmp1,fpiveg,stmp,3)
-  call get_param_1D('icm.in','fpdveg',2,itmp1,fpdveg,stmp,3)
-  call get_param_1D('icm.in','fplpveg',2,itmp1,fplpveg,stmp,3)
-  call get_param_1D('icm.in','fprpveg',2,itmp1,fprpveg,stmp,3)
-  call get_param_1D('icm.in','bmlfrveg',2,itmp1,bmlfrveg,stmp,3)
-  call get_param_1D('icm.in','bmstrveg',2,itmp1,bmstrveg,stmp,3)
-  call get_param_1D('icm.in','bmrtrveg',2,itmp1,bmrtrveg,stmp,3)
-  call get_param_1D('icm.in','ktblfveg',2,itmp1,ktblfveg,stmp,3)
-  call get_param_1D('icm.in','ktbstveg',2,itmp1,ktbstveg,stmp,3)
-  call get_param_1D('icm.in','ktbrtveg',2,itmp1,ktbrtveg,stmp,3)
-  call get_param_1D('icm.in','trlfveg',2,itmp1,trlfveg,stmp,3)
-  call get_param_1D('icm.in','trstveg',2,itmp1,trstveg,stmp,3)
-  call get_param_1D('icm.in','trrtveg',2,itmp1,trrtveg,stmp,3)
-  call get_param_1D('icm.in','rdensveg',2,itmp1,rdensveg,stmp,3)
-  call get_param_1D('icm.in','adlfveg',2,itmp1,adlfveg,stmp,3)
-  call get_param_1D('icm.in','bdlfveg',2,itmp1,bdlfveg,stmp,3)
-  call get_param_1D('icm.in','cdlfveg',2,itmp1,cdlfveg,stmp,3)
-  call get_param_1D('icm.in','ddlfveg',2,itmp1,ddlfveg,stmp,3)
-  call get_param_1D('icm.in','adstveg',2,itmp1,adstveg,stmp,3)
-  call get_param_1D('icm.in','bdstveg',2,itmp1,bdstveg,stmp,3)
-  call get_param_1D('icm.in','cdstveg',2,itmp1,cdstveg,stmp,3)
-  call get_param_1D('icm.in','ddstveg',2,itmp1,ddstveg,stmp,3)
-  call get_param_1D('icm.in','adrtveg',2,itmp1,adrtveg,stmp,3)
-  call get_param_1D('icm.in','bdrtveg',2,itmp1,bdrtveg,stmp,3)
-  call get_param_1D('icm.in','cdrtveg',2,itmp1,cdrtveg,stmp,3)
-  call get_param_1D('icm.in','ddrtveg',2,itmp1,ddrtveg,stmp,3)
+  call get_param_1D('icm.in','vKhNs',2,itmp1,vKhNs,stmp,3)
+  call get_param_1D('icm.in','vKhPs',2,itmp1,vKhPs,stmp,3)
+  call get_param_1D('icm.in','v2den',2,itmp1,v2den,stmp,3)
+
+  call get_param_1D('icm.in','vTMT',2,itmp1,vTMT(1:3,1:2),stmp,6)
+  call get_param_1D('icm.in','vKTMT',2,itmp1,vKTMT(1:3,1:2),stmp,6)
+  call get_param_1D('icm.in','vMT0',2,itmp1,vMT0(1:3,1:2),stmp,6)
+  call get_param_1D('icm.in','vMTcr',2,itmp1,vMTcr(1:3,1:2),stmp,6)
 
   !read Carbon parameters
   call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
@@ -876,8 +834,8 @@ subroutine read_icm_param
     if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
     if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
     if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
-    if(khpssav<=0) call parallel_abort('read_icm_input: khpssav')
-    if(khpwsav<=0) call parallel_abort('read_icm_input: khpwsav')
+    if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
+    if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
     if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
     if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
   endif !jsav
@@ -885,14 +843,12 @@ subroutine read_icm_param
   !_veg :: check
   if(jveg==1) then
     do j=1,3
-      if(alphaveg(j)<=0) call parallel_abort('read_icm_input: alphaveg')
-      if(pmbsveg(j)<=0) call parallel_abort('read_icm_input: pmbsveg')
-      if(khnsveg(j)<=0) call parallel_abort('read_icm_input: khnsveg')
-      if(khnwveg(j)<=0) call parallel_abort('read_icm_input: khnwveg')
-      if(khpsveg(j)<=0) call parallel_abort('read_icm_input: khpsveg')
-      if(khpwveg(j)<=0) call parallel_abort('read_icm_input: khpwveg')
-      if(acdwveg(j)<=0) call parallel_abort('read_icm_input: acdwveg')
-      if(bmlfrveg(j)<=0.or.bmstrveg(j)<=0.or.bmrtrveg(j)<=0) call parallel_abort('read_icm_input: bmlfrveg')
+      if(valpha(j)<=0) call parallel_abort('read_icm_input: valpha')
+      if(vGPM(j)<=0) call parallel_abort('read_icm_input: vGPM')
+      if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
+      if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
+      if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
+      if(vBMP(j,1)<=0.or.vBMP(j,2)<=0.or.vBMP(j,3)<=0) call parallel_abort('read_icm_input: vBMP')
     enddo !j::veg species
   endif !jveg
 

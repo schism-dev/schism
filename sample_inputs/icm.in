@@ -74,15 +74,6 @@ iZoo = 0
 !-----------------------------------------------------------------------
 !iPh = 0 
 
-!-----------------------------------------------------------------------
-!Submerged Aquatic Vegetation switch
-!-----------------------------------------------------------------------
-isav_icm = 0 
-
-!-----------------------------------------------------------------------
-!Intertidal vegetation switch
-!-----------------------------------------------------------------------
-iveg_icm = 0
 
 !-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
@@ -368,143 +359,103 @@ rKCA = 60.0 !sediment surface transfer coefficient from CaCO3 to Ca++
 rKa = 1.0  !reaeration rate
 
 !-----------------------------------------------------------------------
-!SAV parameters
+!Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
-stleaf0 = -9999 !init conc to total sav leaf
-ststem0 = -9999 !init conc to total sav stem
-stroot0 = -9999 !init conc to total sav root
+isav_icm = 0                !0: SAV off;  1: SAV on
+stleaf0 = -9999             !init conc of total sav leaf
+ststem0 = -9999             !init conc of total sav stem
+stroot0 = -9999             !init conc of total sav root
 
-sFAM = 0.2    !fraction of leaf production to active metabolism
-sc2dw= 0.38   !carbon to dry weight ratio of SAV
-sGPM = 0.1    !maximum growth rate (day-1)
-sTGP = 32     !optimal growth temperature
-sKTGP= 0.003  0.005        !temp. dependence for sav growth (<sTGP, or >sTGP)
-sFCP = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
+!growth coefficients
+sGPM  = 0.1                 !maximum growth rate (day-1)
+sTGP  = 32                  !optimal growth temperature (oC)
+sKTGP = 0.003  0.005        !temp. dependence for growth (<sTGP, or >sTGP)
+sFAM  = 0.2                 !fraction of leaf production to active metabolism
+sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
 
-sBMP = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
-sTBP = 20     20     20    !reference temp. for leaf/stem/root metabolism
-sKTBP= 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
+!metabolism coefficients
+sBMP  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
+sTBP  = 20     20     20    !reference temp. for leaf/stem/root metabolism
+sKTBP = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
+sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism N into (RPON,LPON,DON,NH4)
+sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism P into (RPOP,LPOP,DOP,PO4)
+sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism C into (RPOC,LPOC,DOC,CO2)
 
-s2ht   = 0.0036 0.0036  0.0  !coefficients converting (leaf,stem,root) to canopy height
-shtm   = 0.054  2.0   !minimum (base) and  maximium canopy height
+!nutrient limitation
+sKhNw  = 0.01               !nitrogen half saturation in water column
+sKhNs  = 0.1                !nitrogen half saturation in sediments
+sKhNH4 = 0.1                !ammonium half saturation
+sKhPw  = 0.001              !phosphorus half saturation in water column
+sKhPs  = 0.01               !phosphorus half saturation in sediments
 
-!light parameters
-salpha = 0.006  !init. slope of P-I curve
-sKe    = 0.045  !light attenuation due to sav absorption
-
-!nitrogen parameters
-sn2c   = 0.09   !nitrogen to carbon ratio of sav
-sKhNw  = 0.01   !nitrogen half saturation in water column
-sKhNs  = 0.1    !nitrogen half saturation in sediments
-sKhNH4 = 0.1    !half NH4 concentration
-sFNP   = 0.05  0.15  0.3  0.5  !fractions of sav N into (RPON,LPON,DON,NH4)
-
-!phosphorus parameters
-apcsav=  0.01 !phosphorus to carbon ratio
-khpwsav= 0.001 !phosphorus half saturation in water column
-khpssav= 0.01 !phosphorus half saturation in sediments
-fpisav=  0.5 !fraction of P to 4 groups in metabolism
-fpdsav=  0.35
-fplpsav= 0.1
-fprpsav= 0.05
-
-!oxygen parameters
-aocrsav= 2.67 !oxygen to carbon ratio
-fdosav=  0.5 !fraction of to DO, in metabolism
-fcdsav=  0.3
-fclpsav= 0.15
-fcrpsav= 0.05
-
-!density parameters
-rdenssav= 10
+!misc. coefficients
+salpha = 0.006              !init. slope of P-I curve
+sKe    = 0.045              !light attenuation due to sav absorption
+shtm   = 0.054  2.0         !minimum (base) and  maximium canopy height
+s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy height
+sc2dw  = 0.38               !carbon to dry weight ratio of SAV
+s2den  = 10                 !coeff. computing SAV density from leaf&stem
+sn2c   = 0.09               !nitrogen to carbon ratio of sav
+sp2c   = 0.01               !phosphorus to carbon ratio
+so2c   = 2.67               !oxygen to carbon ratio
 
 !-----------------------------------------------------------------------
-!veg parameters
+!Intertidal Vegetation (VEG), paramters
+!  vKTGP : temp. dependence(3,2) for growth (<vTGP, or >vTGP)
+!  vFCP  : fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
+!  vBMP  : metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
+!  vTBP  : reference temp. for leaf/stem/root metabolism
+!  vKTBP : temp. depdenpence for leaf/stem/root metabolism
+!  vFNM  : fractions(3,4) of metabolism N into (RPON,LPON,DON,NH4)
+!  vFPM  : fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
+!  vFCM  : fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
 !-----------------------------------------------------------------------
-vtleaf0= 100.0  100.0  100.0  !init conc to total veg leaf 
-vtstem0= 100.0  100.0  100.0  !init conc to total veg stem
-vtroot0= 30.0   30.0   30.0   !init conc to total veg root
+iveg_icm = 0                   !0: VEG off;  1: VEG on
+vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
+vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
+vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
 
-famveg=   0.2    0.2    0.2    !fraction for active metabolism
-fplfveg=  0.6    0.6    0.6    !fraction for leaf biomass
-fpstveg=  0.3    0.3    0.3    !fraction for stem biomass
-fprtveg=  0.1    0.1    0.1    !fraction for root biomass
-acdwveg=  0.38   0.38   0.38   !carbon to dry weight ratio
-pmbsveg=  0.1    0.1    0.1    !coefficient for maximum growth rate function
-toptveg=  32     32     32     !optimal temperature
-ktg1veg=  0.003  0.003  0.003  !shape function of temperature adjustment
-ktg2veg=  0.005  0.005  0.005  !shape function of temperature adjustment
+!growth coefficients: see description of variable meanings above
+vGPM  = 0.1    0.1    0.1      !maximum growth rate (day-1)
+vFAM  = 0.2    0.2    0.2      !fractions of leaf production to active metabolism
+vTGP  = 32.0   32.0   32.0     !optimal growth temperature (oC)
+vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence(3,2)
+vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1
 
-!metabolism parameters
-bmlfrveg= 0.02   0.02   0.02   !reference metabolism rate of lf
-bmstrveg= 0.02   0.02   0.02
-bmrtrveg= 0.02   0.02   0.02
-ktblfveg= 0.069  0.069  0.069  !shape coefficient for temp impact
-ktbstveg= 0.069  0.069  0.069
-ktbrtveg= 0.069  0.069  0.069
-trlfveg=  20     20     20     !reference temperature for metabolism
-trstveg=  20     20     20
-trrtveg=  20     20     20
-          
-!mortality parameters
-iMortveg= 0 !1: ture on die-off term for veg !error, to add
-adlfveg=  15 	15 	15
-bdlfveg=  -4	-4	-4
-cdlfveg=  17	17	17
-ddlfveg=  12.8	12.8	12.8
-adstveg=  15    15      15
-bdstveg=  -4    -4      -4
-cdstveg=  17    17      17
-ddstveg=  12.8  12.8    12.8
-adrtveg=  15    15      15
-bdrtveg=  -4    -4      -4
-cdrtveg=  17    17      17
-ddrtveg=  12.8  12.8    12.8
+!metabolism coefficients: see description of variable meanings above
+vBMP  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01
+vTBP  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0
+vKTBP = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069
+vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
+vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5
+vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
+ivNc  = 1                   !recycled veg N goes to (0: sediment; 1: water)
+ivPc  = 1                   !recycled veg P goes to (0: sediment; 1: water)
 
-!light & height parameters
-alphaveg= 0.006  0.006  0.006    
-rkshveg=  0.045  0.045  0.045  !light attenuation from veg absorption
+!nutrient limitation & salinity/inundation stress
+vKhNs = 0.1   0.1   0.1     !nitrogen half saturation in sediments
+vKhPs = 0.01  0.01  0.01    !phosphorus half saturation in sediments
+vScr  = 35.0  35.0  35.0    !reference sality for computing veg growth
+vSopt = 35.0  15.0  0.0     !optimal salinity for veg growth
+vInun = 1.0   1.0   1.0     !reference value for inundation stress (nondimensional)
+ivNs  = 1                   !N limitation on veg growth(0: OFF; 1: ON)
+ivPs  = 1                   !P limitation on veg growth(0: OFF; 1: ON)
 
-v2ht= 0.0036 0.0036 0.0036  -0.001 -0.001 -0.001  !coef. convert veg mass to canopy height
-vht0 = 0.054  0.054  0.054 !base veg canopy hgt (vht)
-vcrit= 250.0  250.0  250.0 !critical mass for computing vht
+!mortality (seasonal?)
+ivMT  = 0                    !veg mortality term (0: OFF;  1: ON)
+vTMT  = 17.0   17.0  17.0    17.0  17.0  17.0  !reference temp(3,2) for leaf/stem mortality
+vKTMT = 4.0    4.0   4.0     4.0   4.0   4.0   !temp dependence(3,2) for leaf/stem mortality
+vMT0  = 12.8   12.8  12.8    12.8  12.8  12.8  !base value(3,2) of temp effect on mortality (unit: None)
+vMTcr = 15.0   15.0  15.0    15.0  15.0  15.0  !reference value(3,2) for computing mortality (unit: None)
 
-!salt parameter
-saltveg=  35	 35	35
-saltoptveg=  35     15     0
-
-!inundation parameter
-tinunveg= 1      1      1
-
-!nitrogen parameters
-isfnveg= 1   !flag of nutrient limitation for veg growth
-isrecnveg= 1 !flag of direct nutrient recycle in water column
-ancveg=   0.09   0.09   0.09   !nitrogen to carbon ratio
-khnwveg=  0.01   0.01   0.01   !nitrogen half saturation in water column
-khnsveg=  0.1    0.1    0.1    !nitrogen half saturation in sediments
-khnprveg= 0.1    0.1    0.1    !?? !half NH4 concentration
-fniveg=   0.5    0.5    0.5    !fraction of N to 4 groups in metabolism
-fndveg=   0.3    0.3    0.3    
-fnlpveg=  0.15   0.15   0.15   
-fnrpveg=  0.05   0.05   0.05   
-          
-!phosphorus parameters
-isfpveg=  1   !flag of nutrient limitation for veg growth
-isrecpveg= 1  !flag of direct nutrient recycle in water column
-apcveg=   0.01   0.01   0.01   !phosphorus to carbon ratio
-khpwveg=  0.001  0.001  0.001  !phosphorus half saturation in water column
-khpsveg=  0.01   0.01   0.01   !phosphorus half saturation in sediments
-fpiveg=   0.5    0.5    0.5    !fraction of P to 4 groups in metabolism
-fpdveg=   0.35   0.35   0.35
-fplpveg=  0.1    0.1    0.1
-fprpveg=  0.05   0.05   0.05
-          
-!oxygen parameters
-aocrveg=  2.67   2.67   2.67   !oxygen to carbon ratio
-fdoveg=   0.5    0.5    0.5    !fraction of to DO, in metabolism
-fcdveg=   0.3    0.3    0.3    
-fclpveg=  0.15   0.15   0.15   
-fcrpveg=  0.05   0.05   0.05   
-
-!density parameters
-rdensveg= 10	 10	10     !density coefficient                         
+!misc. coefficients
+valpha = 0.006  0.006  0.006  !init. slope of P-I curve
+vKe    = 0.045  0.045  0.045  !light attenuation from veg absorption
+vht0   = 0.054  0.054  0.054  !base veg canopy hgt (vht)
+vcrit  = 250.0  250.0  250.0  !critical mass for computing vht
+v2ht   = 0.0036 0.0036 0.0036 0.001 0.001 0.001   !coefs. convert mass(3,2) to canopy height
+vc2dw  = 0.38   0.38   0.38   !carbon to dry weight ratio of VEG
+v2den  = 10     10     10     !coeff. computing veg density
+vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
+vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
+vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio

@@ -430,7 +430,7 @@ subroutine photosynthesis(id,hour,nv,it)
     plfveg(id,:)=0.0 !growth rate(near,1:3), for each time step at current elem
     sdveg=0.0  !pre-calc total shading effects
     do j=1,3 !veg species 
-      sdveg=sdveg+rkshveg(j)*(vtleaf(id,j)+vtstem(id,j))/2
+      sdveg=sdveg+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/2
     enddo !j
   endif !jveg
 
@@ -462,7 +462,7 @@ subroutine photosynthesis(id,hour,nv,it)
       rtmp=0
       do j=1,3
         if(vht(id,j)-tdep>1.e-5) then
-          rtmp=rtmp+rkshveg(j)*(vtleaf(id,j)+vtstem(id,j))*(vht(id,j)-tdep)/max(1.e-5,vht(id,j))
+          rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*(vht(id,j)-tdep)/max(1.e-5,vht(id,j))
         endif !non-submerged
       enddo !
 
@@ -560,10 +560,10 @@ subroutine photosynthesis(id,hour,nv,it)
       if(jveg==1.and.vpatch(id)==1) then
         do j=1,3
           if(idry_e(id)==1) then !dry elem, no sav
-            rKe0=rKe0+rkshveg(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
+            rKe0=rKe0+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
           else !wet elem
             if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-              rKe0=rKe0+rkshveg(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
+              rKe0=rKe0+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
             endif !ze 
           endif !idry_e
         enddo !j::veg species
@@ -818,7 +818,7 @@ subroutine photosynthesis(id,hour,nv,it)
           !N/P limitation function fnsav(klev,id) (denom checked)
           fnsav(klev,id)=(NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)
           PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-          fpsav(klev,id)=(PO4td+CPIP(id)*khpwsav/khpssav)/(khpwsav+PO4td+CPIP(id)*khpwsav/khpssav)
+          fpsav(klev,id)=(PO4td+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4td+CPIP(id)*sKhPw/sKhPs)
          
           !calculation of lf growth rate [1/day] as function of temp, light, N/P
           plfsav(klev,id)=pmaxsav(klev,id)*min(fisav(klev,id),fnsav(klev,id),fpsav(klev,id))/sc2dw !sc2dw checked !>=0 with seeds, =0 for no seeds
@@ -847,17 +847,17 @@ subroutine photosynthesis(id,hour,nv,it)
         do k=1,nv
           tmp=tmp+temp(k)*dep(k)
         enddo !k::nv
-        xtveg=tmp/max(tdep,1.d-2)-toptveg(j) !tdep checked at init
+        xtveg=tmp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
         if(xtveg<=0.0)then
-          rtmp=ktg1veg(j)*xtveg*xtveg
+          rtmp=vKTGP(j,1)*xtveg*xtveg
         else
-          rtmp=ktg2veg(j)*xtveg*xtveg
+          rtmp=vKTGP(j,2)*xtveg*xtveg
         endif 
-        pmaxveg(id,j)=pmbsveg(j)*exp(-rtmp)
+        pmaxveg(id,j)=vGPM(j)*exp(-rtmp)
 
         !check
         if(frange(rtmp,0.d0,50.d0))then
-          write(errmsg,*)'photosynthesis: check veg max growth rate :',ktg1veg(j),ktg2veg(j),xtveg,rtmp,j,ielg(id)
+          write(errmsg,*)'photosynthesis: check veg max growth rate :',vKTGP,xtveg,rtmp,j,ielg(id)
           call parallel_abort(errmsg)
         endif
 
@@ -866,13 +866,13 @@ subroutine photosynthesis(id,hour,nv,it)
         do k=1,nv
           tmp=tmp+salt(k)*dep(k)
         enddo !k::nv
-        xtveg=tmp/max(tdep,1.d-2)-saltoptveg(j)
-        fsveg(id,j)=saltveg(j)/(max(saltveg(j)+xtveg*xtveg,1.d-2))
+        xtveg=tmp/max(tdep,1.d-2)-vSopt(j)
+        fsveg(id,j)=vScr(j)/(max(vScr(j)+xtveg*xtveg,1.d-2))
 
         !inundation stress in wet elem
         !ratio of tdep versus vht, tdep>0 checked 
         rdephcanveg(id,j)=vht(id,j)/tdep
-        ffveg(id,j)=rdephcanveg(id,j)/(max((tinunveg(j)+rdephcanveg(id,j)),1.d-2))
+        ffveg(id,j)=rdephcanveg(id,j)/(max((vInun(j)+rdephcanveg(id,j)),1.d-2))
 
         !light supply
         if(iRad==2) then
@@ -898,7 +898,7 @@ subroutine photosynthesis(id,hour,nv,it)
         else
           iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
         endif
-        ikveg=pmaxveg(id,j)/alphaveg(j) !check alphaveg >0
+        ikveg=pmaxveg(id,j)/valpha(j) !check valpha >0
 
         fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
 
@@ -908,13 +908,13 @@ subroutine photosynthesis(id,hour,nv,it)
           call parallel_abort(errmsg)
         endif
 
-        fnveg(id,j)=CNH4(id)/(khnsveg(j)+CNH4(id))
-        fpveg(id,j)=CPIP(id)/(khpsveg(j)+CPIP(id))
-        if(isfnveg==0) fnveg(id,j)=1
-        if(isfpveg==0) fpveg(id,j)=1
+        fnveg(id,j)=CNH4(id)/(vKhNs(j)+CNH4(id))
+        fpveg(id,j)=CPIP(id)/(vKhPs(j)+CPIP(id))
+        if(ivNs==0) fnveg(id,j)=1
+        if(ivPs==0) fpveg(id,j)=1
 
         !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients      
-        plfveg(id,j)=pmaxveg(id,j)*fsveg(id,j)*ffveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/acdwveg(j)
+        plfveg(id,j)=pmaxveg(id,j)*fsveg(id,j)*ffveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/vc2dw(j)
       enddo !j::veg species
     endif !veg
     !--------------------------------------------------------------------------------
@@ -1154,45 +1154,45 @@ subroutine calkwq(id,nv,usf,it)
     !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
     do j=1,3
       mtlfveg=1.0; mtstveg=1.0; mtrtveg=1.0 !init
-      if(iMortveg==1) then
-        rtmp=-bdlfveg(j)*(mtemp-cdlfveg(j))-ddlfveg(j)
-        mtlfveg(j)=1+adlfveg(j)/(1+exp(rtmp))
-        rtmp=-bdstveg(j)*(mtemp-cdstveg(j))-ddstveg(j)
-        mtstveg(j)=1+adstveg(j)/(1+exp(rtmp))
+      if(ivMT==1) then
+        rtmp=vKTMT(j,1)*(mtemp-vTMT(j,1))-vMT0(j,1)
+        mtlfveg(j)=1+vMTcr(j,1)/(1+exp(rtmp))
+        rtmp=vKTMT(j,2)*(mtemp-vTMT(j,2))-vMT0(j,2)
+        mtstveg(j)=1+vMTcr(j,2)/(1+exp(rtmp))
       endif !iMortvey
 
       !----------metabolism rate----------
-      rtmp=ktblfveg(j)*(mtemp-trlfveg(j))
-      bmlfveg(j)=mtlfveg(j)*bmlfrveg(j)*exp(rtmp)
+      rtmp=vKTBP(j,1)*(mtemp-vTBP(j,1))
+      bmlfveg(j)=mtlfveg(j)*vBMP(j,1)*exp(rtmp)
 
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,trlfveg(j),ktblfveg(j),rtmp,j,ielg(id)
+        write(errmsg,*)'calkwq: check veg lf metabolism:',mtemp,vTBP(j,1),vKTBP(j,1),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbstveg(j)*(mtemp-trstveg(j)) 
-      bmstveg(j)=mtstveg(j)*bmstrveg(j)*exp(rtmp)
+      rtmp=vKTBP(j,2)*(mtemp-vTBP(j,2))
+      bmstveg(j)=mtstveg(j)*vBMP(j,2)*exp(rtmp)
 
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check veg st metabolism:',mtemp,trstveg(j),ktbstveg(j),rtmp,j,ielg(id)
+        write(errmsg,*)'calkwq: check veg st metabolism:',mtemp,vTBP(j,2),vKTBP(j,2),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
 
-      rtmp=ktbrtveg(j)*(mtemp-trrtveg(j))
-      bmrtveg(j)=mtrtveg(j)*bmrtrveg(j)*exp(rtmp)
+      rtmp=vKTBP(j,3)*(mtemp-vTBP(j,3))
+      bmrtveg(j)=mtrtveg(j)*vBMP(j,3)*exp(rtmp)
 
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check veg rt metabolism:',mtemp,trrtveg(j),ktbrtveg(j),rtmp,j,ielg(id)
+        write(errmsg,*)'calkwq: check veg rt metabolism:',mtemp,vTBP(j,3),vKTBP(j,3),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
 
       !calculation of biomass, lfveg(j)
-      a=plfveg(id,j)*(1-famveg(j))*fplfveg(j)-bmlfveg(j) !1/day
+      a=plfveg(id,j)*(1-vFAM(j))*vFCP(j,1)-bmlfveg(j) !1/day
       vtleaf(id,j)=vtleaf(id,j)*exp(a*dtw); tmp=a*dtw
 
       !check
       if(abs(rtmp)>50.0) then
-        write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),famveg(j),fplfveg(j),rtmp,j,ielg(id)
+        write(errmsg,*)'calkwq: check veg lf growth:',a,plfveg(id,j),bmlfveg(j),vFAM(j),vFCP(j,1),rtmp,j,ielg(id)
         call parallel_abort(errmsg)
       endif
       if(.not.(vtleaf(id,j)>0.or.vtleaf(id,j)<=0))then
@@ -1202,7 +1202,7 @@ subroutine calkwq(id,nv,usf,it)
 
       !stveg
       a=bmstveg(j)
-      b=plfveg(id,j)*(1.-famveg(j))*fpstveg(j)*vtleaf(id,j)
+      b=plfveg(id,j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(id,j)
       vtstem(id,j)=(b*dtw+vtstem(id,j))/(1.0+a*dtw)
 
       !nan check
@@ -1213,7 +1213,7 @@ subroutine calkwq(id,nv,usf,it)
 
       !rtveg
       a=bmrtveg(j)
-      b=plfveg(id,j)*(1.-famveg(j))*fprtveg(j)*vtleaf(id,j)
+      b=plfveg(id,j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(id,j)
       vtroot(id,j)=(b*dtw+vtroot(id,j))/(1.0+a*dtw)
       !nan check
       if(.not.(vtroot(id,j)>0.or.vtroot(id,j)<=0))then
@@ -1495,7 +1495,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fcrpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=sFCM(1)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1505,11 +1505,11 @@ subroutine calkwq(id,nv,usf,it)
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then 
-          rtmp=rtmp+fcrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ & 
+          rtmp=rtmp+vFCM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
              & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+fcrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vFCM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1541,7 +1541,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fclpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=sFCM(2)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1551,11 +1551,11 @@ subroutine calkwq(id,nv,usf,it)
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp=rtmp+fclpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp=rtmp+vFCM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
              & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+fclpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vFCM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1593,7 +1593,7 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=fcdsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
+        rtmp=sFCM(3)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -1603,11 +1603,11 @@ subroutine calkwq(id,nv,usf,it)
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp=rtmp+fcdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp=rtmp+vFCM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
              & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+fcdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vFCM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1648,22 +1648,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= sn2c*sFNP(1)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp= sn2c*sFNM(1)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecnveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+ancveg(j)*fnrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vn2c(j)*vFNM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp= rtmp+ancveg(j)*fnrpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp= rtmp+vn2c(j)*vFNM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1694,22 +1694,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= sn2c*sFNP(2)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp= sn2c*sFNM(2)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecnveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp=rtmp+ancveg(j)*fnlpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp=rtmp+vn2c(j)*vFNM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+ancveg(j)*fnlpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vn2c(j)*vFNM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1737,22 +1737,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=sn2c*sFNP(3)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp=sn2c*sFNM(3)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecnveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp=rtmp+ancveg(j)*fndveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp=rtmp+vn2c(j)*vFNM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                                           &bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+ancveg(j)*fndveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vn2c(j)*vFNM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                                             &bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1804,7 +1804,7 @@ subroutine calkwq(id,nv,usf,it)
           call parallel_abort(errmsg)
         endif !fnsedsav
        
-        rtmp=sn2c*sFNP(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp=sn2c*sFNM(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
         rtmp=-sn2c*(1-fnsedsav)*nprsav*plfsav(klev,id)*sleaf(klev,id)
@@ -1813,16 +1813,16 @@ subroutine calkwq(id,nv,usf,it)
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecnveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
       !release from metabolism
       rtmp=0.0 !init
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+ancveg(j)*fniveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vn2c(j)*vFNM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp= rtmp+ancveg(j)*fniveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp= rtmp+vn2c(j)*vFNM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1879,22 +1879,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fprpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp= sp2c*sFPM(1)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecpveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+apcveg(j)*fprpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vp2c(j)*vFPM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+apcveg(j)*fprpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vp2c(j)*vFPM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1924,22 +1924,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fplpsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp= sp2c*sFPM(2)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecpveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+apcveg(j)*fplpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vp2c(j)*vFPM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp= rtmp+apcveg(j)*fplpveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp= rtmp+vp2c(j)*vFPM(j,2)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -1967,22 +1967,22 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp= apcsav*fpdsav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp= sp2c*sFPM(3)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg
-    if(jveg==1.and.vpatch(id)==1.and.isrecpveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
       rtmp=0.0
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+apcveg(j)*fpdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vp2c(j)*vFPM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp= rtmp+apcveg(j)*fpdveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp= rtmp+vp2c(j)*vFPM(j,3)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -2014,31 +2014,31 @@ subroutine calkwq(id,nv,usf,it)
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
         !pre-calculation for P
-        fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*khpssav/khpwsav+1.e-8)
+        fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*sKhPs/sKhPw+1.e-8)
  
         if(fpsedsav<=0.) then
-          write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),khpssav,khpwsav,ielg(id),k
+          write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),sKhPs,sKhPw,ielg(id),k
           call parallel_abort(errmsg)
         endif !fpsedsav
  
-        rtmp=apcsav*fpisav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp=sp2c*sFPM(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id)) !basal metabolism
         b=b+rtmp/max(1.e-5,dep(k))
-        rtmp=-apcsav*(1-fpsedsav)*plfsav(klev,id)*sleaf(klev,id) !uptake for growth
+        rtmp=-sp2c*(1-fpsedsav)*plfsav(klev,id)*sleaf(klev,id) !uptake for growth
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
 
     !veg !release from metabolism
-    if(jveg==1.and.vpatch(id)==1.and.isrecpveg==1) then
+    if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
       rtmp=0.0 !init
       do j=1,3
         if(idry_e(id)==1) then
-          rtmp= rtmp+apcveg(j)*fpiveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+          rtmp= rtmp+vp2c(j)*vFPM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
               & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
           if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-            rtmp=rtmp+apcveg(j)*fpiveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
+            rtmp=rtmp+vp2c(j)*vFPM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
           endif !ze
         endif !idry_e
@@ -2157,10 +2157,10 @@ subroutine calkwq(id,nv,usf,it)
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-        rtmp=-aocrsav*fdosav*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
+        rtmp=-so2c*sFCM(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
             & bmstsav(k)*sstem(klev,id)) !metabolism
         b=b+rtmp/max(1.e-5,dep(k))
-        rtmp=aocrsav*plfsav(klev,id)*sleaf(klev,id) !photosynthesis
+        rtmp=so2c*plfsav(klev,id)*sleaf(klev,id) !photosynthesis
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
@@ -2172,11 +2172,11 @@ subroutine calkwq(id,nv,usf,it)
       do j=1,3
         if(tdep-vht(id,j)>1.e-5) then
           if(idry_e(id)==1) then
-            rtmp= rtmp-aocrveg(j)*fdoveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,vht(id,j))+ &
+            rtmp= rtmp-vo2c(j)*vFCM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,vht(id,j))+ &
                 & bmstveg(j)*vtstem(id,j)/max(1.e-5,vht(id,j)))
           else
             if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-              rtmp= rtmp-aocrveg(j)*fdoveg(j)*((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)/max(1.e-5,vht(id,j))+ &
+              rtmp= rtmp-vo2c(j)*vFCM(j,4)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,vht(id,j))+ &
                   & bmstveg(j)*vtstem(id,j)/max(1.e-5,vht(id,j)))
             endif !ze
           endif !idry_e
@@ -2189,10 +2189,10 @@ subroutine calkwq(id,nv,usf,it)
       do j=1,3
         if(tdep-vht(id,j)>1.e-5) then
           if(idry_e(id)==1) then
-            rtmp=rtmp+aocrveg(j)*plfveg(id,j)*vtleaf(id,j)/max(1.e-5,vht(id,j))
+            rtmp=rtmp+vo2c(j)*plfveg(id,j)*vtleaf(id,j)/max(1.e-5,vht(id,j))
           else
             if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-              rtmp=rtmp+aocrveg(j)*plfveg(id,j)*vtleaf(id,j)/max(1.e-5,vht(id,j))
+              rtmp=rtmp+vo2c(j)*plfveg(id,j)*vtleaf(id,j)/max(1.e-5,vht(id,j))
             endif !ze
           endif !idry_e
         endif !submerged
@@ -2312,7 +2312,7 @@ subroutine calkwq(id,nv,usf,it)
         write(errmsg,*)'nan found in lfNH4sav:',lfNH4sav(k),ielg(id),k,it
         call parallel_abort(errmsg)
       endif
-      lfPO4sav(k)=apcsav*fpsedsav*plfsav(klev,id)*sleaf(klev,id)!unit:g/m^2 day
+      lfPO4sav(k)=sp2c*fpsedsav*plfsav(klev,id)*sleaf(klev,id)!unit:g/m^2 day
       !nan check
       if(.not.(lfPO4sav(k)>0.or.lfPO4sav(k)<=0))then
         write(errmsg,*)'nan found in lfPO4sav:',lfPO4sav(k),ielg(id),k,it
@@ -2320,7 +2320,7 @@ subroutine calkwq(id,nv,usf,it)
       endif
 
       !produce of POM by rt metabolism rate for this dt for each layer
-      rtpocsav(k)=(1-fdosav)*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
+      rtpocsav(k)=(1-sFCM(4))*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
       !nan check
       if(.not.(rtpocsav(k)>0.or.rtpocsav(k)<=0))then
         write(errmsg,*)'nan found in rtpocsav:',rtpocsav(k),ielg(id),k,it
@@ -2332,7 +2332,7 @@ subroutine calkwq(id,nv,usf,it)
         write(errmsg,*)'nan found in rtponsav:',rtponsav(k),ielg(id),k,it
         call parallel_abort(errmsg)
       endif
-      rtpopsav(k)=apcsav*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
+      rtpopsav(k)=sp2c*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
       !nan check
       if(.not.(rtpopsav(k)>0.or.rtpopsav(k)<=0))then
         write(errmsg,*)'nan found in rtpopsav:',rtpopsav(k),ielg(id),k,it
@@ -2340,7 +2340,7 @@ subroutine calkwq(id,nv,usf,it)
       endif
 
       !comsumption of DO by rt rate for this dt for each layer
-      rtdosav(k)=aocrsav*fdosav*bmrtsav(k)*sroot(klev,id)!positive comsumption!unit:g/m^2 day
+      rtdosav(k)=so2c*sFCM(4)*bmrtsav(k)*sroot(klev,id)!positive comsumption!unit:g/m^2 day
       !nan check
       if(.not.(rtdosav(k)>0.or.rtdosav(k)<=0))then
         write(errmsg,*)'nan found in rtdosav:',rtdosav(k),ielg(id),k,it
@@ -2399,7 +2399,7 @@ subroutine calkwq(id,nv,usf,it)
       if(vtleaf(id,j)+vtstem(id,j)<vcrit(j)) then
         vht(id,j)=vht0(j)+v2ht(j,1)*(vtleaf(id,j)+vtstem(id,j))
       else
-        vht(id,j)=max(vht0(j)+v2ht(j,1)*vcrit(j)+v2ht(j,2)*(vtleaf(id,j)+vtstem(id,j)-vcrit(j)),1.d-2)
+        vht(id,j)=max(vht0(j)+v2ht(j,1)*vcrit(j)-v2ht(j,2)*(vtleaf(id,j)+vtstem(id,j)-vcrit(j)),1.d-2)
       endif !
       if(vht(id,j)<1.d-8) call parallel_abort('check vht computation')
 
@@ -2409,30 +2409,30 @@ subroutine calkwq(id,nv,usf,it)
       vtroot(id,j)=max(vtroot(id,j),1.d-5)   
      
       !nutrient fluxes, sum of (g/m^2/day)
-      tlfNH4veg(id,j)=ancveg(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfNH4veg(1:nv,j))
-      tlfPO4veg(id,j)=apcveg(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfPO4veg(1:nv,j))
-      if(isrecnveg==0)then !recycled nutrients go to sediment directly
-        tlfNH4veg(id,j)=tlfNH4veg(id,j)-ancveg(j)*fniveg(j)* &
-                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
+      tlfNH4veg(id,j)=vn2c(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfNH4veg(1:nv,j))
+      tlfPO4veg(id,j)=vp2c(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfPO4veg(1:nv,j))
+      if(ivNc==0)then !recycled nutrients go to sediment directly
+        tlfNH4veg(id,j)=tlfNH4veg(id,j)-vn2c(j)*vFNM(j,4)* &
+                                       &((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
       endif
-      if(isrecpveg==0)then
-        tlfPO4veg(id,j)=tlfPO4veg(id,j)-apcveg(j)*fpiveg(j)* &
-                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
+      if(ivPc==0)then
+        tlfPO4veg(id,j)=tlfPO4veg(id,j)-vp2c(j)*vFPM(j,4)* &
+                                       &((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
       endif
 
       !produce of POM by rt metabolism rate for this dt, unit: g/m^2/day
-      trtpocveg(id,j)=(1-fdoveg(j))*bmrtveg(j)*vtroot(id,j)
-      trtponveg(id,j)=ancveg(j)*bmrtveg(j)*vtroot(id,j)
-      trtpopveg(id,j)=apcveg(j)*bmrtveg(j)*vtroot(id,j)
-      trtdoveg(id,j)=aocrveg(j)*fdoveg(j)*bmrtveg(j)*vtroot(id,j)
+      trtpocveg(id,j)=(1-vFCM(j,4))*bmrtveg(j)*vtroot(id,j)
+      trtponveg(id,j)=vn2c(j)*bmrtveg(j)*vtroot(id,j)
+      trtpopveg(id,j)=vp2c(j)*bmrtveg(j)*vtroot(id,j)
+      trtdoveg(id,j)=vo2c(j)*vFCM(j,4)*bmrtveg(j)*vtroot(id,j)
 
-      if(isrecnveg==0)then !recycled nutrients go to sediment directly
-        trtponveg(id,j)=trtponveg(id,j)+ancveg(j)*(1-fniveg(j))* &
-                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
+      if(ivNc==0)then !recycled nutrients go to sediment directly
+        trtponveg(id,j)=trtponveg(id,j)+vn2c(j)*(1-vFNM(j,4))* &
+                                       &((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
       endif
-      if(isrecpveg==0)then
-        trtpopveg(id,j)=trtpopveg(id,j)+apcveg(j)*(1-fpiveg(j))* &
-                                       &((bmlfveg(j)+plfveg(id,j)*famveg(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
+      if(ivPc==0)then
+        trtpopveg(id,j)=trtpopveg(id,j)+vp2c(j)*(1-vFPM(j,4))* &
+                                       &((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
       endif
 
       !nan check
@@ -2473,12 +2473,12 @@ subroutine calkwq(id,nv,usf,it)
   denssav=0.0
   densveg(:)=0.0
   if(jsav==1.and.spatch(i)==1)then
-    denssav=(stleaf(id)+ststem(id))/(rdenssav*max(sht(id),1.e-4))
+    denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
   endif !jsav
 
   if(jveg==1.and.vpatch(id)==1) then
     do j=1,3
-      densveg(j)=(vtleaf(id,j)+vtstem(id,j))/(rdensveg(j)*max(vht(id,j),1.e-4))  
+      densveg(j)=(vtleaf(id,j)+vtstem(id,j))/(v2den(j)*max(vht(id,j),1.e-4))
     enddo !j::veg species
   endif !jveg
 
