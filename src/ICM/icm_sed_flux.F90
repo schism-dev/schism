@@ -1522,14 +1522,14 @@ subroutine sed_calc(id)
     !modify sediment conc (g/m^3)
     if(iNPBalg==3.or.iNPBalg==4.or.iNPBalg==5)then !debug iNPBalg==3
       rtmp=ANCB*(1-ratNH4B)*PRNitB*GPBalg(id)*BBM(id)*dtw/H2
-      NH42=NH42-rtmp
-      NH4T2=NH4T2-rtmp
+      NH42=max(1.0e-10_iwp,NH42-rtmp)
+      NH4T2=max(1.0e-10_iwp,NH4T2-rtmp)
       rtmp=ANCB*(1-ratNO3B)*(1.0-PRNitB)*GPBalg(id)*BBM(id)*dtw/H2
-      NO32=NO32-rtmp
-      NO3T2=NO3T2-rtmp
+      NO32=max(1.0e-10_iwp,NO32-rtmp)
+      NO3T2=max(1.0e-10_iwp,NO3T2-rtmp)
       rtmp=APCB*(1-ratPO4B)*GPBalg(id)*BBM(id)*dtw/H2
-      PO42=PO42-rtmp
-      PO4T2=PO4T2-rtmp
+      PO42=max(1.0e-10_iwp,PO42-rtmp)
+      PO4T2=max(1.0e-10_iwp,PO4T2-rtmp)
     endif !iNPBalg
  
     !modify sediment POM (g/m3)
