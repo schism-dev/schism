@@ -145,6 +145,7 @@ module icm_sed_mod
   real(kind=iwp),save :: GPMB,TGPB,KTGB1,KTGB2
   real(kind=iwp),save :: isedBalg,ALPHB,keSedB,keBalg
   real(kind=iwp),save :: PO4AVL,NH4AVL,NO3AVL,KHNB,KHPB
+  real(kind=iwp),save :: ratNH4B,ratNO3B,ratPO4B
   real(kind=iwp),save :: BMRB,PRRB,KTBB,TRB,BALGMIN
   real(kind=iwp),save :: FNIB,FPIB,ANCB,APCB
   real(kind=iwp),save :: PRNitB,KHRB

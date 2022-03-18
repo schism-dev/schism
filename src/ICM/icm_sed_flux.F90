@@ -1439,6 +1439,7 @@ subroutine sed_calc(id)
     FIBalg(id)=isedBalg/sqrt(rtmp*rtmp+isedBalg*isedBalg+1.0d-20)
 
     !nutrient limiations
+    ratNH4B=1;ratNO3B=1;ratPO4B=1
     if(iNPBalg==1)then !limitations from both bottom water layer and benthic fluxes
       NH4AVL=max(SED_BENNH4(id)*dtw+SED_NH4(id)*SED_BL(id),0.d0)
       NO3AVL=max(SED_BENNO3(id)*dtw+SED_NO3(id)*SED_BL(id),0.d0)
@@ -1448,13 +1449,24 @@ subroutine sed_calc(id)
       NO3AVL=SED_NO3(id)
       PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))
     elseif(iNPBalg==3)then !consider bottom water layer conc + first layer sediment
-      NH4AVL=SED_NH4(id)+NH41TM1S(id)
-      NO3AVL=SED_NO3(id)+NO31TM1S(id)
-      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41TM1S(id)
-    elseif(iNPBalg==4)then !consider bottom water layer conc + both layerssediemnt
-      NH4AVL=SED_NH4(id)+NH41TM1S(id)+NH42TM1S(id)
-      NO3AVL=SED_NO3(id)+NO31TM1S(id)+NO32TM1S(id)
-      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41TM1S(id)+PO42TM1S(id)
+      NH4AVL=SED_NH4(id)+NH41 !NH41TM1S(id)
+      NO3AVL=SED_NO3(id)+NO31 !NO31TM1S(id)
+      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41 !PO41TM1S(id)
+      ratNH4B=SED_NH4(id)/max(1.0d-2,NH4AVL)
+      ratNO3B=SED_NO3(id)/max(1.0d-2,NH4AVL)
+      ratPO4B=SED_PO4(id)/(max(1.0d-2,PO4AVL)*(1.0+rKPO4p*SSI(id)))
+    elseif(iNPBalg==4)then !consider bottom water layer conc + both layers sediemnt
+      NH4AVL=SED_NH4(id)+NH41+NH42 !NH41TM1S(id)+NH42TM1S(id)
+      NO3AVL=SED_NO3(id)+NO31+NO32 !NO31TM1S(id)+NO32TM1S(id)
+      PO4AVL=SED_PO4(id)/(1.0+rKPO4p*SSI(id))+PO41+PO42 !PO41TM1S(id)+PO42TM1S(id)
+      ratNH4B=SED_NH4(id)/max(1.0d-2,NH4AVL)
+      ratNO3B=SED_NO3(id)/max(1.0d-2,NH4AVL)
+      ratPO4B=SED_PO4(id)/(max(1.0d-2,PO4AVL)*(1.0+rKPO4p*SSI(id)))
+    elseif(iNPBalg==5)then !consider both layers sediemnt
+      NH4AVL=NH41+NH42 !NH41TM1S(id)+NH42TM1S(id)
+      NO3AVL=NO31+NO32 !NO31TM1S(id)+NO32TM1S(id)
+      PO4AVL=PO41+PO42 !PO41TM1S(id)+PO42TM1S(id)
+      ratNH4B=0;ratNO3B=0;ratPO4B=0
     endif
 
     !limiting factors
@@ -1500,13 +1512,26 @@ subroutine sed_calc(id)
       SED_BENDO(id)=SED_BENDO(id)+AOC*(GPBalg(id)-BMBalg(id)*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
       SED_BENDOC(id)=SED_BENDOC(id)+BMBalg(id)*BBM(id)*KHRB/(SED_DO(id)+KHRB) 
     else
-      SED_BENNH4(id)=SED_BENNH4(id)+ANCB*(FNIB*BMBalg(id)-PRNitB*GPBalg(id))*BBM(id)
-      SED_BENNO3(id)=SED_BENNO3(id)-(1.0-PRNitB)*GPBalg(id)*ANCB*BBM(id)
-      SED_BENPO4(id)=SED_BENPO4(id)+APCB*(FPIB*BMBalg(id)-GPBalg(id))*BBM(id)
+      SED_BENNH4(id)=SED_BENNH4(id)+ANCB*(BMBalg(id)-ratNH4B*PRNitB*GPBalg(id))*BBM(id)
+      SED_BENNO3(id)=SED_BENNO3(id)-ratNO3B*(1.0-PRNitB)*GPBalg(id)*ANCB*BBM(id)
+      SED_BENPO4(id)=SED_BENPO4(id)+APCB*(BMBalg(id)-ratPO4B*GPBalg(id))*BBM(id)
       SED_BENDO(id)=SED_BENDO(id)+AOC*((1.3-0.3*PRNitB)*GPBalg(id)-BMBalg(id)*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
       SED_BENDOC(id)=SED_BENDOC(id)+BMBalg(id)*BBM(id)*KHRB/(SED_DO(id)+KHRB)
     endif
-  
+ 
+    !modify sediment conc (g/m^3)
+    if(iNPBalg==3.or.iNPBalg==4.or.iNPBalg==5)then !debug iNPBalg==3
+      rtmp=ANCB*(1-ratNH4B)*PRNitB*GPBalg(id)*BBM(id)*dtw/H2
+      NH42=NH42-rtmp
+      NH4T2=NH4T2-rtmp
+      rtmp=ANCB*(1-ratNO3B)*(1.0-PRNitB)*GPBalg(id)*BBM(id)*dtw/H2
+      NO32=NO32-rtmp
+      NO3T2=NO3T2-rtmp
+      rtmp=APCB*(1-ratPO4B)*GPBalg(id)*BBM(id)*dtw/H2
+      PO42=PO42-rtmp
+      PO4T2=PO4T2-rtmp
+    endif !iNPBalg
+ 
     !modify sediment POM (g/m3)
     BAPOC=PRBalg(id)*BBM(id)
     BAPON=ANCB*PRBalg(id)*BBM(id)
