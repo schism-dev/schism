@@ -183,21 +183,22 @@ subroutine read_icm_param2
   real(rkind),allocatable :: swild2(:,:)
 
   !read phytoplankton parameters
-  call get_param_1D('icm.in','GPM',2,itmp,GPM(1:3,1),stmp,3)
-  call get_param_1D('icm.in','PRR',2,itmp,PRR(1:3,1),stmp,3)
-  call get_param_1D('icm.in','TGP',2,itmp,TGP(1:3,1),stmp,3)
-  call get_param_1D('icm.in','chl2c',2,itmp,chl2c(1:3,1),stmp,3)
-  call get_param_1D('icm.in','rKTGP',2,itmp1,rKTGP(1:3,1:2,1),stmp,6)
+  call get_param_1D('icm.in','GPM',2,itmp,GPM,stmp,3)
+  call get_param_1D('icm.in','TGP',2,itmp,TGP,stmp,3)
+  call get_param_1D('icm.in','KTGP',2,itmp1,KTGP(1:3,1:2),stmp,6)
+
+  call get_param_1D('icm.in','PRP',2,itmp,PRP,stmp,3)
+  call get_param_1D('icm.in','c2chl',2,itmp,c2chl,stmp,3)
 
   do i=1,3
-    write(pid,'(a1)') i
-    call read_param_2d('GPM_'//trim(adjustl(pid)),GPM(i,:),GPM(i,1))
-    call read_param_2d('PRR_'//trim(adjustl(pid)),PRR(i,:),PRR(i,1))
-    call read_param_2d('TGP_'//trim(adjustl(pid)),TGP(i,:),TGP(i,1))
-    call read_param_2d('chl2c_'//trim(adjustl(pid)),chl2c(i,:),chl2c(i,1))
+    write(pid,'(i1)') i
+    call read_param_2d('GPM_'//trim(adjustl(pid)),sp%GPM(:,i),GPM(i))
+    call read_param_2d('TGP_'//trim(adjustl(pid)),sp%TGP(:,i),TGP(i))
+    call read_param_2d('PRP_'//trim(adjustl(pid)),sp%PRP(:,i),PRP(i))
+    call read_param_2d('c2chl_'//trim(adjustl(pid)),sp%c2chl(:,i),c2chl(i))
     do j=1,2
-      write(pid,'(a1,a1)') i,j
-      call read_param_2d('rKTGP_'//trim(adjustl(pid)),rKTGP(i,j,:),rKTGP(i,j,1))
+      write(pid,'(i1,i1)') i,j
+      call read_param_2d('KTGP_'//trim(adjustl(pid)),sp%KTGP(:,i,j),KTGP(i,j))
     enddo
   enddo
 
@@ -513,9 +514,10 @@ subroutine read_icm_param
   call get_param('icm.in','p2pr',2,itmp,p2pr,stmp)
 
   !read phytoplankton parameters
-  call get_param_1D('icm.in','BMPR',2,itmp1,BMPR,stmp,3)
+  call get_param_1D('icm.in','BMP',2,itmp1,BMP,stmp,3)
   call get_param_1D('icm.in','TBP',2,itmp1,TBP,stmp,3)
-  call get_param_1D('icm.in','rKTBP',2,itmp1,rKTBP,stmp,3)
+  call get_param_1D('icm.in','KTBP',2,itmp1,KTBP,stmp,3)
+
   call get_param_1D('icm.in','rKhN',2,itmp1,rKhN,stmp,3)
   call get_param_1D('icm.in','rKhP',2,itmp1,rKhP,stmp,3)
   call get_param_1D('icm.in','rIm',2,itmp1,rIm,stmp,3)

@@ -34,6 +34,7 @@ module icm_mod
   integer,save :: iLight,jLight,iRad
   integer,save :: iSed,iRea,iBen,iTBen
   integer,save :: iPh
+  integer,save :: iZB
   integer,save :: iAtm
   integer,save :: iSet !,iTurb,iWRea,iTSS 
   integer,target,save :: idry_icm
@@ -93,17 +94,14 @@ module icm_mod
 
   !---------general parameters from icm.in--------------------------------
   !zooplankton paramters
-  integer,save :: iZB
   real(rkind),save :: AGZ,RGZ,p2pr,GZM(8,2),KhGZ(8,2),TGZ(2),KTGZ(2,2)
   real(rkind),save,dimension(2) :: BMZ,MTZ,TBZ,KTBZ,z2pr
 
   !phytoplankton parameters 
-  integer,save :: iReg_PR,iReg_GP,iPRR
-  integer,save,allocatable :: reg_GP(:),reg_PR(:) !nea
   real(rkind),save :: rKhS,ST,rKeC1,rKeC2,rKeChl,rKeTSS,rKeSal,mKhN,mKhP,Dopt 
-  real(rkind),save,dimension(3) :: BMPR,TBP,rKTBP,rKhN,rKhP,rIm,alpha_PB
-  real(rkind),save,allocatable,dimension(:,:) :: GPM,PRR,TGP,chl2c
-  real(rkind),save,allocatable,dimension(:,:,:) :: rKTGP
+  real(rkind),save,dimension(3) :: BMP,TBP,KTBP,rKhN,rKhP,rIm,alpha_PB
+  real(rkind),save,dimension(:),pointer :: GPM,TGP,PRP,c2chl
+  real(rkind),save,dimension(:,:),pointer :: KTGP
 
   !------------------------------------------------------------------------------------
   !SAV module 
@@ -127,11 +125,11 @@ module icm_mod
   !------------------------------------------------------------------------------------
   !VEG module
   !------------------------------------------------------------------------------------
-  integer,save,allocatable :: vpatch(:)                 !reg region
-  real(rkind),save :: vtleaf0(3),vtstem0(3),vtroot0(3)  !init conc.
+  integer,save,allocatable :: vpatch(:)                     !reg region
+  real(rkind),save,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
   real(rkind),save :: vFAM(3),vGPM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
-  real(rkind),save :: vBMP(3,3),vTBP(3,3),vKTBP(3,3)    !meta. coefficients (rate,temp,temp dependence)
-  real(rkind),save :: vFNM(3,4),vFPM(3,4),vFCM(3,4)     !metabolism to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save,dimension(3,3) :: vBMP,vTBP,vKTBP    !meta. coefficients (rate,temp,temp dependence)
+  real(rkind),save,dimension(3,4) :: vFNM,vFPM,vFCM     !metabolism to (RPOM,RLOM,DOM,DIM)
 
   integer,save :: ivNs,ivPs,ivNc,ivPc,ivMT   !flags for (N,P) limit, recycled (N,P) dest., mortality
   real(rkind),save,dimension(3) :: vKhNs,vKhPs,valpha,vKe,vScr,vSopt,vInun !growth limit(nutrent,light,salinity,inundation)
@@ -206,5 +204,14 @@ module icm_mod
 
   !surface flux : atmospheric loading
   real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO
+
+  !---------------------------------------------------------------------------
+  !spatially varying parameter
+  !---------------------------------------------------------------------------
+  type,public :: icm_spatial_param
+    real(rkind),dimension(:,:),pointer :: GPM,TGP,PRP,c2chl
+    real(rkind),dimension(:,:,:),pointer :: KTGP 
+  end type
+  type(icm_spatial_param) :: sp
 
 end module icm_mod
