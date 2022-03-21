@@ -291,7 +291,7 @@ It’s important to notice that the friction-modified depth is different between
 In the model, the decision on 2D/3D emergent/3D submerged scenarios is made at each side (where the velocity is defined) based on the total depths from the previous time step and the transition of regimes is handled in the model.
 
 ### Integral $I_3$
-This is a boundary integral that only need to be evaluated when the node $i$ is located on an open boundary segment where Neuman-type B.C. is prescribed. Since the unknowns vary linearly along any side, we have (cf. Figure 1) -
+This is a boundary integral that only need to be evaluated when the node $i$ is located on an open boundary segment where Neuman-type B.C. is prescribed. Since the unknowns vary linearly along any side, we have (cf. Figure [1](#figure01)) -
 
 \begin{equation}
 \label{eq39}
@@ -300,7 +300,7 @@ I_3 = \sum_j \frac{L_{ij}}{2} \sum_{k=kbs}^{N_z-1} \Delta z_{j,k+1} \frac{\hat{u
 
 where the outer sum is carried out along the 2 adjacent open side $j$, $L_{ij}$ is the side length, $\Delta z_{j,k+1}$ is the layer thickness along side $j$, and $kbs$ is the local bottom index.
 
-<figure markdown>
+<figure markdown id="figure01">
 ![Boundary node](../assets/bnd-elem.png)
 <figcaption>Boundary node i with adjacent sides.</figcaption>
 </figure>
@@ -330,7 +330,7 @@ I_5 = \sum_j \frac{L_{ij}}{2} \sum_{k=kbs}^{N_z-1} \Delta z_{j, k+1} \frac{u_{j,
 \end{equation}
 
 ### Integral $I_1$
-This is the only implicit term. Referring to Figure 2, we have - 
+This is the only implicit term. Referring to Figure [2](#figure02), we have - 
 
 \begin{equation}
 \label{eq43}
@@ -339,7 +339,7 @@ I_1 = \sum_{j=1}^{Nb(i)} \sum_{l=1}^{i34(j)} \eta_{j,l}^{n+1} \int_{A_j} \hat{\p
 
 Where $j$ is a neighbouring element of $i$, $i'$ is the local index of node $i$ inside element $j$, overbar in $\overline{\check{H}}$ denotes element averating, and $\hat{\phi}$ is the local linear shape function. We discuss the case of a triangle and quad element.
 
-<figure markdown>
+<figure markdown id="figure02">
 ![Node ball I1](../assets/i1-node-ball.png){width=500px}
 <figcaption>Node ball used in calculating integral I 1.</figcaption>
 </figure>
@@ -374,7 +374,7 @@ We can analytically evaluate integral Eq. $\ref{eq44}$ as -
 \int_{A_j} \hat{\phi_{i'}}\hat{\phi_l}dA_j = \frac{A_j}{16}\left(1+\frac{1}{3}\xi_{i'}\xi_l\right)\left(1+\frac{1}{3}\varsigma_{i'}\varsigma_l\right) + \frac{B_1}{96}\left(1+\frac{1}{3}\varsigma_{i'}\varsigma_l\right)\left(\xi_{i'}+\xi_l\right) + \frac{B_2}{96}\left(1+\frac{1}{3}\xi_{i'}\xi_l\right)\left(\varsigma_{i'}+\varsigma_l\right)
 \end{equation}
 
-Where $(\xi, \varsigma)$ are local coordinates, and $B_1$ and $B_2$ are 2 geometric constants (Figure 3) - 
+Where $(\xi, \varsigma)$ are local coordinates, and $B_1$ and $B_2$ are 2 geometric constants (Figure [3](#figure03)) - 
 
 \begin{equation}
 \label{eq47}
@@ -384,7 +384,7 @@ B_2 = \left(\vec{23}\times\vec{14}\right)_k
 \end{aligned}
 \end{equation}
 
-<figure markdown>
+<figure markdown id="figure03">
 ![Quad element](../assets/quad-element.png)
 <figcaption>Quad element and local transformation.</figcaption>
 </figure>
@@ -395,7 +395,7 @@ The other integral Eq. $\ref{eq45}$ cannot be evaluated analytically and so we u
 This integral contains most of the explicit terms. Most terms are straightforward to evaluate, e.g., using element averaging or analytical integration (in the case of volume sources/sinks); the integrals involving the shape function or its derivative can be calculated using the similar method as in $I_1$. Therefore we will only discuss the a few terms below given their importance in SCHISM.
 
 #### Baroclinicity
-Since a FVM is used to solve the tracers (including T,S) at the prism center, we evaluate the density gradient at prism center via a reconstruction method. Referring to Figure 4, given a prism center '0', we first project the gradient onto vectors connecting adjacent prism centers - 
+Since a FVM is used to solve the tracers (including T,S) at the prism center, we evaluate the density gradient at prism center via a reconstruction method. Referring to Figure [4](#figure04), given a prism center '0', we first project the gradient onto vectors connecting adjacent prism centers - 
 
 \begin{equation}
 \label{eq48}
@@ -414,7 +414,7 @@ Since a FVM is used to solve the tracers (including T,S) at the prism center, we
 
 after a cubic spline interpolation has been performed to calculate the density at prism '1' at the same vertical location as ‘0’ (i.e. ($i$,$k$)). Note that if the element $i$ is a quad, we will have 4 equations. We then solve pairs of equations to find for $\nabla\rho$, i.e., Eq. $\ref{eq48}$ with Eq. $\ref{eq49}$, Eq. $\ref{eq49}$ with Eq. $\ref{eq50}$, and Eq. $\ref{eq50}$ with Eq. $\ref{eq48}$. If the 3 centers happen to be co-linear, the equations have no solution and are discarded; however, at least 1 pair has a valid solution. 
 
-<figure markdown>
+<figure markdown id="figure04">
 ![Reconstruction method](../assets/reconstruction-method.png)
 <figcaption>Reconstruction method. i is the element index and k is the vertical index.</figcaption>
 </figure>
@@ -429,7 +429,7 @@ If a neighbor does not exist (boundary) or is dry, we replace the corresponding 
 After the density gradients are found at prism centers, a simple linear interpolation in the vertical is used to calculate the gradients at side centers (and half levels). Then the trapezoidal rule is used to compute the baroclinic term: $-\frac{g}{\rho_0}\int_z^\eta\nabla\rho dz$. This will also be utilized in the solution of the momentum equation.
 
 #### Horizontal viscosity
-Momentum stabilization is an important consideration in designing advection and viscosity schemes. Zhang et al. (2016) demonstrated that the standard Laplacian viscosity is equivalent to the 5-point Shapiro filter (see below) on uniform grids; however, on non-uniform grids, it may behave like an ‘amplifier’ and therefore the filter form should be used instead (Figure 5a,b) - 
+Momentum stabilization is an important consideration in designing advection and viscosity schemes. Zhang et al. (2016) demonstrated that the standard Laplacian viscosity is equivalent to the 5-point Shapiro filter (see below) on uniform grids; however, on non-uniform grids, it may behave like an ‘amplifier’ and therefore the filter form should be used instead (Figure [5a,b](#figure05)) - 
 
 \begin{equation}
 \label{eq52}
@@ -438,12 +438,12 @@ Momentum stabilization is an important consideration in designing advection and 
 
 where all velocities have been interpolated onto a horizontal plane using linear interpolation in the vertical. 
 
-<figure markdown>
+<figure markdown id='figure05'>
 ![Viscosity stencil](../assets/viscosity-stencil.png)
 <figcaption>Shapiro filters and viscosity stencil for (a) triangular and (b) quadrangular elements. 'I' and 'II' are 2 adjacent elements of side of interest ('0'). The extended stencil used in constructing bi-harmonic viscosity is shown in (c). The special case of a boundary side is shown in (d).</figcaption>
 </figure>
 
-The bi-harmonic viscosity is often superior to the Laplacian viscosity as it is more discriminating in removing sub-grid instabilities without adversely affecting the resolved scales of flow (Griffies and Hallberg 2000). The bi-harmonic viscosity can be implemented by applying the Laplacian operator twice. Referring to Figure 5c, we have - 
+The bi-harmonic viscosity is often superior to the Laplacian viscosity as it is more discriminating in removing sub-grid instabilities without adversely affecting the resolved scales of flow (Griffies and Hallberg 2000). The bi-harmonic viscosity can be implemented by applying the Laplacian operator twice. Referring to Figure [5c](#figure05), we have - 
 
 \begin{equation}
 \label{eq53}
