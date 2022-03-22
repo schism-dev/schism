@@ -44,20 +44,37 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !-----------------------------------------------------------------------
-!light attenuation formuation for rKe
-!iLight=1: rKe=rKeC1*exp(-rKeC2*Sal(k)) 
-!iLight=2: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is from sediment model 
-!iLight=3: rKe=rke0+rKeChl*Chl+rKeTSS*TSS; Here TSS is related to PC,PC2TSS is needed in this case
-!iLight=4: Ke=rke0+rKeChl*Chl+rKeSal*Sal(k); Here TSS is related to Sal
+!options of formulations for computing light attenuation coefficients
+!  iKe=0: Ke=Ke0+KeC*Chl+KeS*(tss2c*POC);  TSS=tss2c*POC
+!  iKe=1: Ke=Ke0+KeC*Chl+KeS*TSS;        TSS from sediment model (SED3D)
+!  iKe=2: Ke=Ke0+KeC*Chl+KeSalt*Salt;    CDOM effect related to Salinity
 !-----------------------------------------------------------------------
-iLight = 3
+iKe = 0
+
+Ke0    = 0.26            !backgroud light extinction coefficient (1/m)
+KeC    = 0.017           !Light attenu. due to chlorophyll
+KeS    = 0.07            !Light attenu. due to TSS
+KeSalt = -0.02           !Light attenu. due to CDOM (related to salinity)
+tss2c  = 6.0             !TSS to carbon ratio
 
 !-----------------------------------------------------------------------
-!method to caluclate FI
-!jLight=1: (Chapra S.C., Page 611), PAR is needed in ICM_rad.th, unit: ly/day, iRad=2 
-!jLight=2: (Carl Cerco), unit: E/m^2
+!options of computing light limitation factor
+!  iLight=0: (Carl Cerco), unit: E/m^2
+!  iLight=1: (Chapra S.C., Page 611), PAR is needed in ICM_rad.th, unit: ly/day, iRad=2
 !-----------------------------------------------------------------------
-jLight = 2 
+iLight = 0
+
+alpha  = 8.0   10.0  3.15  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0)
+Iopt   = 40.0  40.0  40.0  !optimal irradiance for PB growth (iLight=1)
+Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
+
+!-----------------------------------------------------------------------
+!options of nutrient limitation on phytoplankton growth
+!  iLimit=0: f=min[f(N),f(P)]*f(I);  iLimit=1: f=min[f(N),f(P),f(I)]
+!  iLimitSi: silica limitation on diatom growth (0: OFF;  1: ON)
+!-----------------------------------------------------------------------
+iLimit   = 0
+iLimitSi = 1
 
 !-----------------------------------------------------------------------
 !wind induced DO reareation. iRea=1: Use air reareation
@@ -134,69 +151,83 @@ idry_icm = 0
 !  KhZG: reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
 !  prey(1:8)=(ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC)
 !-----------------------------------------------------------------------
-GZM  =  0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
-KhGZ =  0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
-TGZ  =  25.0   25.0               !optimal temp. for ZB growth (oC)
-KTGZ =  0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth; dim(ZB=1:2,1:2) (oC-2)
-AGZ  =  0.75                      !ZB assimilation efficiency ratio (0-1)
-RGZ  =  0.1                       !ZB respiration ratio when it grazes (0-1)
+!zooplankton growth
+GZM  = 0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
+KhGZ = 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
+TGZ  = 25.0   25.0               !optimal temp. for ZB growth (oC)
+KTGZ = 0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth; dim(ZB=1:2,1:2) (oC-2)
+AGZ  = 0.75                      !ZB assimilation efficiency ratio (0-1)
+RGZ  = 0.1                       !ZB respiration ratio when it grazes (0-1)
 
-BMZ  =  0.254  0.186              !ZB metabolism rates (day-1)
-TBZ  =  20.0   20.0               !reference temp. for ZB metabolism (oC)
-KTBZ =  0.0693 0.0693             !temp. dependence for ZB metabolism (oC-1)
+!zooplankton mortality & metabolism
+MTZ  = 0.02   0.02               !ZB mortality rates (day-1)
+BMZ  = 0.254  0.186              !ZB metabolism rates (day-1)
+TBZ  = 20.0   20.0               !reference temp. for ZB metabolism (oC)
+KTBZ = 0.0693 0.0693             !temp. dependence for ZB metabolism (oC-1)
 
-MTZ  =  0.02   0.02               !ZB mortality rates (day-1)
-z2pr =  0.5    0.5                !ratio converting ZB+PB biomass to predation rates on ZB (L.mg-1.day-1)
-p2pr =  0.25                      !ratio converting ZB+PB biomass to predation rates on PB (L.mg-1.day-1)
+!partition of zooplankton biomass 
+FCPZ = 0.35   0.55   0.10        !fractions of ZB carbon into (RPOC,LPOC,DOC)
+FNPZ = 0.35   0.50   0.10  0.05  !fractions of ZB nitrogen into (RPON,LPON,DON,NH4)
+FPPZ = 0.10   0.20   0.50  0.20  !fractions of ZB Phosphorus into (RPOP,LPOP,DOP,PO4)
+FSPZ = 0.70   0.25               !fractions of ZB silica into (SU,SA)
+
+!partition of metabolized zooplankton biomass 
+FCMZ = 0.10   0.0                !fractions of ZB metabolism carbon into DOC; dim(ZB=1:2)
+FNMZ = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism N. into (RPON,LPON,DON,NH4); dim(ZB=1:2,4)
+FPMZ = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(ZB=1:2,4)
+FSMZ = 0.50 0.40   0.50 0.60     !fractions of ZB metabolism Si into (SU,SA); dim(ZB=1:2,2)
+
+!misc
+zKhDO= 0.5   0.5                  !half saturation of DO for zooplankton excretion of DOC (mg/L) 
+zn2c = 0.20  0.20                 !nitrogen to carbon ratio for zooplankton
+zp2c = 0.02  0.02                 !phosphorus to carbon ratio for zooplankton
+zs2c = 0.50  0.50                 !silica to carbon ratio for zooplankton
+z2pr = 0.5   0.5                  !ratio converting ZB+PB biomass to predation rates on ZB (L.mg-1.day-1)
+p2pr = 0.25                       !ratio converting ZB+PB biomass to predation rates on PB (L.mg-1.day-1)
 
 !-----------------------------------------------------------------------
 !Phytoplankton(PB) parameters
-!  alpha_PB: initial slope between photosynthetic rate and irradiance g[C]*m2/g[Chl]/E
-!  2D variables: GPM,TGP,rKTGP??,CChl,PRR
 !-----------------------------------------------------------------------
+!phytoplankton growth
 GPM  = 3.0    3.0    2.5          !PB growth rates (day-1)
 TGP  = 15.0   22.0   27.0         !optimal temp. for PB growth (oC)
 KTGP = 0.004  0.008  0.005    0.006  0.010  0.004  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
+!phytoplankton predation & metabolism
+PRP  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
 BMP  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
 TBP  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
 KTBP = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
 
-PRP  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
+!partition of phytoplankton biomass
+FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30 !fractions of PB carbon into (RPOC,LPOC,DOC); dim(PB=1:3,3)
+FNP  = 0.35  0.50  0.10  0.05     !fractions of PB nitrogen into (RPON,LPON,DON,NH4) 
+FPP  = 0.10  0.20  0.50  0.20     !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4)
+FSP  = 0.90 0.10                  !fractions of diatom silica into (SU,SA)
 
-c2chl= 0.059  0.059  0.059        !carbon to Chl ratio g[C]/mg[Chl]
+!partition of metabolized phytoplankton biomass
+FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
+FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
+FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
 
-!--------------
-rKhN=   0.01   0.01   0.01
-rKhP=   0.001  0.001  0.001
-rIm=    40.0   40.0   40.0
-alpha_PB= 8.0  10.0   3.15 
-iLimit= 1                !iLimit=1: min(N,P)*I; iLimit=2: min(N,P,I)
-irSi= 0                  !irSi=0: no Si limitation; irSi=1: Si limitation 
-rKhS=   0.05
-ST=     0.1
-rKeC1=  5.82
-rKeC2=  0.017
-rKeChl=  0.017
-rKeTSS=  0.07
-rKeSal=  -0.02
-Dopt= 1.0
-!STB=    0.05
+FSM  = 0.50   0.50                !fractions of diatom metabolism Si into (SU,SA)
+
+!nutrient limitation & salinity stress
+KhN  = 0.01   0.01   0.01         !nitrogen half saturation (mg/L)
+KhP  = 0.001  0.001  0.001        !phosphorus half saturation (mg/L)
+KhSi = 0.05                       !silica half saturation on diatom (mg/L)
+KhS  = 0.1                        !salinity when PB3 growth is halved (PSU)
+
+!misc
+c2chl= 0.059 0.059 0.059          !carbon to Chl ratio (g[C]/mg[Chl])
+n2c  = 0.167 0.167 0.167          !nitrogen to carbon ratio for phytoplankton
+p2c  = 0.02  0.02  0.02           !phosphorus to carbon ratio for phytoplankton
+s2c  = 0.50                       !silica to carbon ratio for phytolankton
 
 !-----------------------------------------------------------------------
 !Carbon parameters
 !2D variables: rKRC,rKLC,rKDC 
 !-----------------------------------------------------------------------
-FCRPZ=  0.35
-FCLPZ=  0.55
-FCDPZ=  0.1
-FCDZ=   0.0  0.0
-rKHRZ=  0.5  0.5
-
-FCRP=   0.35 0.35 0.35
-FCLP=   0.55 0.55 0.55
-FCDP=   0.1 0.1 0.1
-FCD=    0.0  0.0  0.0 
 
 rKRC=   0.005 
 rKLC=   0.075 
@@ -220,26 +251,8 @@ AANOX=   0.5
 !-----------------------------------------------------------------------
 !Nitrogen parameters
 !-----------------------------------------------------------------------
-FNRPZ=  0.35
-FNLPZ=  0.5
-FNDPZ=  0.1
-FNIPZ=  0.05
-FNRZ=   0.35   0.35
-FNLZ=   0.5    0.5
-FNDZ=   0.1    0.1
-FNIZ=   0.05   0.05
-ANCZ=   0.2    0.2
 
-FNRP=   0.35
-FNLP=   0.5
-FNDP=   0.1
-FNIP=   0.05
 ANDC=   0.933
-FNR=    0.0    0.0    0.0
-FNL=    0.0    0.0    0.0
-FND=    1.0    1.0    1.0 
-FNI=    0.0    0.0    0.0
-ANC=    0.167  0.167  0.167
 
 rKRN=   0.005
 rKLN=   0.075
@@ -259,25 +272,6 @@ rKNit2=  0.0045
 !Phosphorus parameters
 !2D variables: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
 !-----------------------------------------------------------------------
-FPRPZ=  0.1
-FPLPZ=  0.2
-FPDPZ=  0.5
-FPIPZ=  0.2
-FPRZ=   0.35   0.35
-FPLZ=   0.5    0.5
-FPDZ=   0.1    0.1  
-FPIZ=   0.05   0.05
-APCZ=   0.02   0.02
-
-FPRP=   0.10
-FPLP=   0.20
-FPDP=   0.50
-FPIP=   0.20
-FPR=    0.0    0.0   0.0
-FPL=    0.0    0.0   0.0
-FPD=    1.0    1.0   1.0 
-FPI=    0.0    0.0   0.0 
-APC=    0.02   0.02  0.02
 
 rKPO4p=  0.0 !PO4p partition coefficient
 
@@ -291,18 +285,7 @@ rKDPalg= 0.2
 !-----------------------------------------------------------------------
 !Silica parameters
 !-----------------------------------------------------------------------
-FSPPZ= 0.75
-FSIPZ= 0.25
-FSPZ=  0.45   0.45
-FSIZ=  0.55   0.55
-ASCZ=  0.5    0.5
 
-FSPP=  1.00
-FSIP=  0.00
-FSPd=  1.00 
-FSId=  0.00
-
-ASCd=  0.5
 rKSAp= 0.0 
 rKSU=  0.03
 TRSUA= 20.0
@@ -349,9 +332,7 @@ WSSBNET=  0.2
 !WRea:   coefficients for Wind-induced reaeration of DO, (2D variable)
 !PC2TSS: coefficient of converting PC to TSS, (2D variable)
 !-----------------------------------------------------------------------
-Turb=0.26  
 WRea= 0.0
-PC2TSS= 3.0
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !PH model parameter
@@ -393,7 +374,7 @@ sKhPw  = 0.001              !phosphorus half saturation in water column
 sKhPs  = 0.01               !phosphorus half saturation in sediments
 
 !misc. coefficients
-salpha = 0.006              !init. slope of P-I curve
+salpha = 0.006              !init. slope of P-I curve (g[C]*m2/g[Chl]/E)
 sKe    = 0.045              !light attenuation due to sav absorption
 shtm   = 0.054  2.0         !minimum (base) and  maximium canopy height
 s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy height

@@ -776,7 +776,7 @@ subroutine sed_calc(id)
 !-----------------------------------------------------------------------
   use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : dtw,iLight,APC,ANC,ASCd,rKPO4p,rKSAp,AOC, &
+  use icm_mod, only : dtw,iKe,sp,p2c,n2c,s2c,rKPO4p,rKSAp,AOC, &
                       &jsav,spatch, & !sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
                       &jveg,vpatch, & !veg
@@ -802,8 +802,8 @@ subroutine sed_calc(id)
 
 
   !calculate bottom layer TSS. Need more work, ZG
-  if(iLight==0) then
-    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*6.
+  if(iKe==0) then
+    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*sp%tss2c(id)
   else 
     SSI(id)=SED_TSS(id)
   endif
@@ -909,14 +909,14 @@ subroutine sed_calc(id)
 
   do i=1,3 !for 3 classes of POM
     do j=1,3 !for 3 phytoplankton species
-      flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*APC(j)*SED_B(id,j)
-      flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*ANC(j)*SED_B(id,j)
+      flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*p2c(j)*SED_B(id,j)
+      flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*n2c(j)*SED_B(id,j)
       flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
     enddo !j
   enddo !i
   !combination of PB1 and two groups of Si, need future work for SAt
-  !flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxu*SED_SU(id)
-  flxpos(id)=flxp(1)*ASCd*SED_B(id,1)+flxp(1)*SED_SU(id)
+  !flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxu*SED_SU(id)
+  flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxp(1)*SED_SU(id)
  
   !split settling POM from water column
   !SED_???? in unit of g/m^3, flx? in unit of m/day, flxpo? in unit of g/m^2 day

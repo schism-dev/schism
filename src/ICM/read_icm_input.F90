@@ -256,17 +256,17 @@ subroutine read_icm_param2
   call read_param_2d('WS3BNET',WS3BNET,WS3BNET(1))
 
   !read turbidity
-  call get_param('icm.in','Turb',2,itmp,Turb(1),stmp)
-  call read_param_2d('Turb',Turb,Turb(1))
+  call get_param('icm.in','Ke0',2,itmp,Ke0,stmp)
+  call read_param_2d('Ke0',sp%Ke0,Ke0)
 
   !read reareation 
   call get_param('icm.in','WRea',2,itmp,WRea(1),stmp)
   call read_param_2d('WRea',WRea,WRea(1))
 
   !read PC to TSS
-  if(iLight==3) then
-    call get_param('icm.in','PC2TSS',2,itmp,PC2TSS(1),stmp)
-    call read_param_2d('PC2TSS',PC2TSS,PC2TSS(1))
+  if(iKe==0) then
+    call get_param('icm.in','tss2c',2,itmp,tss2c,stmp)
+    call read_param_2d('tss2c',sp%tss2c,tss2c)
   endif
 
   !for pH module
@@ -424,8 +424,8 @@ subroutine read_icm_param
   character(len=2) :: stmp
   
   !read glocal swtiches  
+  call get_param('icm.in','iKe',1,iKe,rtmp,stmp)
   call get_param('icm.in','iLight',1,iLight,rtmp,stmp)
-  call get_param('icm.in','jLight',1,jLight,rtmp,stmp)
   call get_param('icm.in','iRea',1,iRea,rtmp,stmp)
   call get_param('icm.in','iAtm',1,iAtm,rtmp,stmp)
   call get_param('icm.in','iSed',1,iSed,rtmp,stmp)
@@ -436,13 +436,13 @@ subroutine read_icm_param
   call get_param('icm.in','idry_icm',1,idry_icm,rtmp,stmp); jdry=>idry_icm
 
   !check 
-  if(jLight>2) call parallel_abort('read_icm: jLight>2')
+  if(iLight>1) call parallel_abort('read_icm: iLight>1')
   if(iRea>1) call parallel_abort('read_icm: iRea>1')
   if(max(iAtm,iSed,iBen,iRad)>2) call parallel_abort('read_icm: iAtm,iSed,iBen,iRad')
   if(iSet/=0.and.iSet/=1) call parallel_abort('read_icm: invalid iSet')
   if(jdry/=0.and.jdry/=1) call parallel_abort('read_icm: invalid idry_icm')
   if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('read_icm: iRad=1 needs heat exchange')
-  if(jLight==1.and.(iRad/=2)) call parallel_abort('read_icm: iRad=2 is required for jLight=1')
+  if(iLight==1.and.(iRad/=2)) call parallel_abort('read_icm: iRad=2 is required for iLight=1')
 
 #ifdef ICM_PH
   iPh=1
@@ -451,8 +451,8 @@ subroutine read_icm_param
 #endif
 
 #ifndef USE_SED 
-  if(iLight==2) then
-    call parallel_abort('iLight=2,need to turn on SED')
+  if(iKe==1) then
+    call parallel_abort('iKe=1,need to turn on SED3D module')
   endif
 #endif
 
@@ -518,30 +518,24 @@ subroutine read_icm_param
   call get_param_1D('icm.in','TBP',2,itmp1,TBP,stmp,3)
   call get_param_1D('icm.in','KTBP',2,itmp1,KTBP,stmp,3)
 
-  call get_param_1D('icm.in','rKhN',2,itmp1,rKhN,stmp,3)
-  call get_param_1D('icm.in','rKhP',2,itmp1,rKhP,stmp,3)
-  call get_param_1D('icm.in','rIm',2,itmp1,rIm,stmp,3)
-  call get_param_1D('icm.in','alpha_PB',2,itmp1,alpha_PB,stmp,3)
+  call get_param_1D('icm.in','KhN',2,itmp1,KhN,stmp,3)
+  call get_param_1D('icm.in','KhP',2,itmp1,KhP,stmp,3)
+  call get_param('icm.in','KhSi',2,itmp,KhSi,stmp)
+  call get_param('icm.in','KhS',2,itmp,KhS,stmp)
 
-  call get_param('icm.in','irSi',1,irSi,rtmp,stmp)
+  call get_param_1D('icm.in','Iopt',2,itmp1,Iopt,stmp,3)
+  call get_param_1D('icm.in','Hopt',2,itmp1,Hopt,stmp,3)
+
+  call get_param_1D('icm.in','alpha',2,itmp1,alpha,stmp,3)
+
   call get_param('icm.in','iLimit',1,iLimit,rtmp,stmp)
-  if(iLimit>2) call parallel_abort('read_icm: iLimit>2')
-  call get_param('icm.in','rKhS',2,itmp,rtmp,stmp)
-  rKhS=rtmp
-  call get_param('icm.in','ST',2,itmp,rtmp,stmp)
-  ST=rtmp
-  call get_param('icm.in','rKeC1',2,itmp,rtmp,stmp)
-  rKeC1=rtmp
-  call get_param('icm.in','rKeC2',2,itmp,rtmp,stmp)
-  rKeC2=rtmp
-  call get_param('icm.in','rKeChl',2,itmp,rtmp,stmp)
-  rKeChl=rtmp
-  call get_param('icm.in','rKeTSS',2,itmp,rtmp,stmp)
-  rKeTSS=rtmp
-  call get_param('icm.in','rKeSal',2,itmp,rtmp,stmp)
-  rKeSal=rtmp
-  call get_param('icm.in','Dopt',2,itmp,rtmp,stmp)
-  Dopt=rtmp
+  call get_param('icm.in','iLimitSi',1,iLimitSi,rtmp,stmp)
+
+  call get_param('icm.in','KeC',2,itmp,KeC,stmp)
+  call get_param('icm.in','KeS',2,itmp,KeS,stmp)
+  call get_param('icm.in','KeSalt',2,itmp,KeSalt,stmp)
+
+  if(iLimit>1) call parallel_abort('read_icm: iLimit>1')
 
   !sav parameters
   call get_param('icm.in','stleaf0',2,itmp,stleaf0,stmp)
@@ -632,19 +626,13 @@ subroutine read_icm_param
   call get_param_1D('icm.in','vMTcr',2,itmp1,vMTcr(1:3,1:2),stmp,6)
 
   !read Carbon parameters
-  call get_param('icm.in','FCRPZ',2,itmp,rtmp,stmp)
-  FCRPZ=rtmp
-  call get_param('icm.in','FCLPZ',2,itmp,rtmp,stmp)
-  FCLPZ=rtmp
-  call get_param('icm.in','FCDPZ',2,itmp,rtmp,stmp)
-  FCDPZ=rtmp
+  call get_param_1D('icm.in','FCPZ',2,itmp1,FCPZ,stmp,3)
+  call get_param_1D('icm.in','FCMZ',2,itmp1,FCMZ,stmp,2)
 
-  call get_param_1D('icm.in','FCDZ',2,itmp1,FCDZ,stmp,2)
-  call get_param_1D('icm.in','rKHRZ',2,itmp1,rKHRZ,stmp,2)
-  call get_param_1D('icm.in','FCRP',2,itmp,FCRP,stmp,2)
-  call get_param_1D('icm.in','FCLP',2,itmp,FCLP,stmp,2)
-  call get_param_1D('icm.in','FCDP',2,itmp,FCDP,stmp,2)
-  call get_param_1D('icm.in','FCD',2,itmp1,FCD,stmp,2)
+  call get_param_1D('icm.in','FCP',2,itmp1,FCP(1:3,1:3),stmp,9)
+  call get_param_1D('icm.in','FCM',2,itmp1,FCM,stmp,3)
+
+  call get_param_1D('icm.in','zKhDO',2,itmp1,zKhDO,stmp,2)
 
   call get_param('icm.in','rKRCalg',2,itmp,rtmp,stmp)
   rKRCalg=rtmp
@@ -675,37 +663,18 @@ subroutine read_icm_param
   AANOX=rtmp
 
   !read Nitrogen parameters
-  call get_param('icm.in','FNRPZ',2,itmp,rtmp,stmp)
-  FNRPZ=rtmp
-  call get_param('icm.in','FNLPZ',2,itmp,rtmp,stmp)
-  FNLPZ=rtmp
-  call get_param('icm.in','FNDPZ',2,itmp,rtmp,stmp)
-  FNDPZ=rtmp
-  call get_param('icm.in','FNIPZ',2,itmp,rtmp,stmp)
-  FNIPZ=rtmp
+  call get_param_1D('icm.in','FNPZ',2,itmp1,FNPZ,stmp,4)
+  call get_param_1D('icm.in','FNMZ',2,itmp1,FNMZ(1:2,1:4),stmp,8)
 
-  call get_param_1D('icm.in','FNRZ',2,itmp1,FNRZ,stmp,2)
-  call get_param_1D('icm.in','FNLZ',2,itmp1,FNLZ,stmp,2)
-  call get_param_1D('icm.in','FNDZ',2,itmp1,FNDZ,stmp,2)
-  call get_param_1D('icm.in','FNIZ',2,itmp1,FNIZ,stmp,2)
-  call get_param_1D('icm.in','ANCZ',2,itmp1,ANCZ,stmp,2)
+  call get_param_1D('icm.in','FNP',2,itmp1,FNP,stmp,4)
+  call get_param_1D('icm.in','FNM',2,itmp1,FNM(1:3,1:4),stmp,12)
+
+  call get_param_1D('icm.in','zn2c',2,itmp1,zn2c,stmp,2)
   
-  call get_param('icm.in','FNRP',2,itmp,rtmp,stmp)
-  FNRP=rtmp
-  call get_param('icm.in','FNLP',2,itmp,rtmp,stmp)
-  FNLP=rtmp
-  call get_param('icm.in','FNDP',2,itmp,rtmp,stmp)
-  FNDP=rtmp
-  call get_param('icm.in','FNIP',2,itmp,rtmp,stmp)
-  FNIP=rtmp
   call get_param('icm.in','ANDC',2,itmp,rtmp,stmp)
   ANDC=rtmp
 
-  call get_param_1D('icm.in','FNR',2,itmp1,FNR,stmp,3)
-  call get_param_1D('icm.in','FNL',2,itmp1,FNL,stmp,3)
-  call get_param_1D('icm.in','FND',2,itmp1,FND,stmp,3)
-  call get_param_1D('icm.in','FNI',2,itmp1,FNI,stmp,3)
-  call get_param_1D('icm.in','ANC',2,itmp1,ANC,stmp,3)
+  call get_param_1D('icm.in','n2c',2,itmp1,n2c,stmp,3)
 
   call get_param('icm.in','rKRN',2,itmp,rtmp,stmp)
   rKRN=rtmp
@@ -733,59 +702,29 @@ subroutine read_icm_param
   rKNit2=rtmp
  
   !read Phosphorus parameters
-  call get_param('icm.in','FPRPZ',2,itmp,rtmp,stmp)
-  FPRPZ=rtmp
-  call get_param('icm.in','FPLPZ',2,itmp,rtmp,stmp)
-  FPLPZ=rtmp
-  call get_param('icm.in','FPDPZ',2,itmp,rtmp,stmp)
-  FPDPZ=rtmp
-  call get_param('icm.in','FPIPZ',2,itmp,rtmp,stmp)
-  FPIPZ=rtmp
+  call get_param_1D('icm.in','FPPZ',2,itmp1,FPPZ,stmp,4)
+  call get_param_1D('icm.in','FPMZ',2,itmp1,FPMZ(1:2,1:4),stmp,8)
 
-  call get_param_1D('icm.in','FPRZ',2,itmp1,FPRZ,stmp,2)
-  call get_param_1D('icm.in','FPLZ',2,itmp1,FPLZ,stmp,2)
-  call get_param_1D('icm.in','FPDZ',2,itmp1,FPDZ,stmp,2)
-  call get_param_1D('icm.in','FPIZ',2,itmp1,FPIZ,stmp,2)
-  call get_param_1D('icm.in','APCZ',2,itmp1,APCZ,stmp,2)
+  call get_param_1D('icm.in','FPP',2,itmp1,FPP,stmp,4)
+  call get_param_1D('icm.in','FPM',2,itmp1,FPM(1:3,1:4),stmp,12)
 
-  call get_param('icm.in','FPRP',2,itmp,rtmp,stmp)
-  FPRP=rtmp
-  call get_param('icm.in','FPLP',2,itmp,rtmp,stmp)
-  FPLP=rtmp
-  call get_param('icm.in','FPDP',2,itmp,rtmp,stmp)
-  FPDP=rtmp
-  call get_param('icm.in','FPIP',2,itmp,rtmp,stmp)
-  FPIP=rtmp
-
-  call get_param_1D('icm.in','FPR',2,itmp1,FPR,stmp,3)
-  call get_param_1D('icm.in','FPL',2,itmp1,FPL,stmp,3)
-  call get_param_1D('icm.in','FPD',2,itmp1,FPD,stmp,3)
-  call get_param_1D('icm.in','FPI',2,itmp1,FPI,stmp,3)
-  call get_param_1D('icm.in','APC',2,itmp1,APC,stmp,3)
+  call get_param_1D('icm.in','zp2c',2,itmp1,zp2c,stmp,2)
+  call get_param_1D('icm.in','p2c',2,itmp1,p2c,stmp,3)
 
   call get_param('icm.in','rKPO4p',2,itmp,rtmp,stmp)
   rKPO4p=rtmp
 
   !read Silica parameters
-  call get_param('icm.in','FSPPZ',2,itmp,rtmp,stmp)
-  FSPPZ=rtmp
-  call get_param('icm.in','FSIPZ',2,itmp,rtmp,stmp)
-  FSIPZ=rtmp
-
   call get_param_1D('icm.in','FSPZ',2,itmp1,FSPZ,stmp,2)
-  call get_param_1D('icm.in','FSIZ',2,itmp1,FSIZ,stmp,2)
-  call get_param_1D('icm.in','ASCZ',2,itmp1,ASCZ,stmp,2)
+  call get_param_1D('icm.in','FSMZ',2,itmp1,FSMZ(1:2,1:2),stmp,4)
 
-  call get_param('icm.in','FSPP',2,itmp,rtmp,stmp)
-  FSPP=rtmp
-  call get_param('icm.in','FSIP',2,itmp,rtmp,stmp)
-  FSIP=rtmp
-  call get_param('icm.in','FSPd',2,itmp,rtmp,stmp)
-  FSPd=rtmp
-  call get_param('icm.in','FSId',2,itmp,rtmp,stmp)
-  FSId=rtmp
-  call get_param('icm.in','ASCd',2,itmp,rtmp,stmp)
-  ASCd=rtmp
+  call get_param_1D('icm.in','zs2c',2,itmp1,zs2c,stmp,2)
+  call get_param('icm.in','s2c',2,itmp,s2c,stmp)
+
+  call get_param_1D('icm.in','FSP',2,itmp1,FSP,stmp,2)
+  call get_param_1D('icm.in','FSM',2,itmp1,FSM,stmp,2)
+
+
   call get_param('icm.in','rKSAp',2,itmp,rtmp,stmp)
   rKSAp=rtmp
   call get_param('icm.in','rKSU',2,itmp,rtmp,stmp)
@@ -865,10 +804,9 @@ subroutine read_icm_param
   mKhN=0.0
   mKhP=0.0
   do i=1,3
-    mKhN=mKhN+rKhN(i)/3.0
-    mKhP=mKhP+rKhP(i)/3.0
+    mKhN=mKhN+KhN(i)/3.0
+    mKhP=mKhP+KhP(i)/3.0
   enddo
-  ST=ST*ST
 
 end subroutine read_icm_param
 
