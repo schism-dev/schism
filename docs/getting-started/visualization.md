@@ -1,4 +1,6 @@
 ## Visualization with VisIT
+The easiest way to visualize SCHISM nc4 outputs is via VisIT.
+
 Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'. At runtime, the user needs to specify number of scribe cores (equal to # of 3D outputs variables (vectors counted as 2) plus 2), and the code, compiled without `USE_OLDIO`, will output combined netcdf outputs for each 3D variable and also all 2D variables in `out2d*.nc`. Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`.
 
 You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by following these steps:
@@ -20,4 +22,4 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 Newer versions can be found at the master branch of [github](https://github.com/schism-dev/schism_visit_plugin).
 
 !!!note
-    Note that the plugins also work with the old I/O (combined `schout*.nc`).
+    Note that the new plugins also work with the old I/O (combined `schout*.nc`).
