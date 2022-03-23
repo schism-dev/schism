@@ -29,6 +29,7 @@ markdown_extensions:
   - admonition
   - attr_list
   - md_in_html
+  - footnotes
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.highlight:
