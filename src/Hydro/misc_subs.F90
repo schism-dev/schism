@@ -6130,10 +6130,10 @@
       endif
 !new39
       write(12,*)'Inside compute_wave_force_lon:',it_main,sum1,sum2,sum3
-!      if(ipgl(101)%rank==myrank) then
-!        i=ipgl(101)%id
-!        if(i<=np) write(99,*)real(time_stamp/86400.d0),real(RSXX0(i)),real(RSYY0(i)),real(RSXY0(i))
-!      endif
+      if(ipgl(101)%rank==myrank) then
+        i=ipgl(101)%id
+        if(i<=np) write(99,*)real(time_stamp/86400.d0),real(RSXX0(i)),real(RSYY0(i)),real(RSXY0(i))
+      endif
 
       !Exchange
       RSXX(1:np)=RSXX0
