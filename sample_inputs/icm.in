@@ -178,7 +178,7 @@ FPMZ = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism
 FSMZ = 0.50 0.40   0.50 0.60     !fractions of ZB metabolism Si into (SU,SA); dim(ZB=1:2,2)
 
 !misc
-zKhDO= 0.5   0.5                  !half saturation of DO for zooplankton excretion of DOC (mg/L) 
+zKhDO= 0.5   0.5                  !DO half saturation for ZB's DOC excretion (mg/L)
 zn2c = 0.20  0.20                 !nitrogen to carbon ratio for zooplankton
 zp2c = 0.02  0.02                 !phosphorus to carbon ratio for zooplankton
 zs2c = 0.50  0.50                 !silica to carbon ratio for zooplankton
@@ -209,7 +209,6 @@ FSP  = 0.90 0.10                  !fractions of diatom silica into (SU,SA)
 FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
 FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
 FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
-
 FSM  = 0.50   0.50                !fractions of diatom metabolism Si into (SU,SA)
 
 !nutrient limitation & salinity stress
@@ -228,21 +227,12 @@ s2c  = 0.50                       !silica to carbon ratio for phytolankton
 !Carbon parameters
 !2D variables: rKRC,rKLC,rKDC 
 !-----------------------------------------------------------------------
+KC0   = 0.005  0.075  0.20        !minimum decay rate of RPOC,LPOC and DOC (day-1)
+KCalg = 0.0    0.0    0.0         !algae effect on carbon decay  (day-1.m3.g[C]-1)
+KhDO  = 0.5    0.5    0.5         !DO half saturation for PB's DOC excretion (mg/L)
 
-rKRC=   0.005 
-rKLC=   0.075 
-rKDC=   0.2 
-rKRCalg= 0.0
-rKLCalg= 0.0
-rKDCalg= 0.0
-TRHDR=  20.0
-TRMNL=  20.0 
-rKTHDR= 0.069
-rKTMNL= 0.069
-
-rKHR1= 0.5
-rKHR2= 0.5
-rKHR3= 0.5
+TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
+KTRM  = 0.069  0.069  0.069       !temp. dependence of (RPOM,LPOM,DOM) decay (oC-1)
 
 rKHORDO= 0.5
 rKHDNn=  0.1
@@ -251,15 +241,10 @@ AANOX=   0.5
 !-----------------------------------------------------------------------
 !Nitrogen parameters
 !-----------------------------------------------------------------------
+KN0   = 0.005  0.075  0.015       !minimum decay rate of RPON,LPON and DON (day-1)
+KNalg = 0.0    0.0    0.0         !algae effect on nitrogen decay  (day-1.m3.g[C]-1)
 
 ANDC=   0.933
-
-rKRN=   0.005
-rKLN=   0.075
-rKDN=   0.015
-rKRNalg= 0.0
-rKLNalg= 0.0
-rKDNalg= 0.0
 
 rNitM=  0.07   !maximum nitrification rate (1/day)
 rKhNitDO= 1.0  !half DO conc. for nitrif.
@@ -272,20 +257,14 @@ rKNit2=  0.0045
 !Phosphorus parameters
 !2D variables: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
 !-----------------------------------------------------------------------
+KP0   = 0.005  0.075  0.010       !minimum decay rate of RPOP,LPOP and DOP (day-1)
+KPalg = 0.0    0.0    0.0         !algae effect on nitrogen decay  (day-1.m3.g[C]-1)
 
 rKPO4p=  0.0 !PO4p partition coefficient
-
-rKRP=   0.005 
-rKLP=   0.075 
-rKDP=   0.10
-rKRPalg= 0.0 
-rKLPalg= 0.0 
-rKDPalg= 0.2 
 
 !-----------------------------------------------------------------------
 !Silica parameters
 !-----------------------------------------------------------------------
-
 rKSAp= 0.0 
 rKSU=  0.03
 TRSUA= 20.0
@@ -307,12 +286,9 @@ rKTr=    1.024
 !-----------------------------------------------------------------------
 !water column settling velocity (m/day):  2D variables
 !-----------------------------------------------------------------------
-WSRP=  1.0  
-WSLP=  1.0  
-WSPB1= 0.35 
-WSPB2= 0.1
-WSPB3= 0.00
-WSSED= 1.00
+WSSED  = 1.00              !settling velocity of TSS (m.day-1)
+WSPOM  = 1.00  1.00        !settling velocity of RPOM and LPOM (m.day-1)
+WSPBS  = 0.35  0.10  0.00  !settling velocity of (PB1,PB2,PB3) (m.day-1)
 
 !-----------------------------------------------------------------------
 !settling velocity into sediment: 2D variables 
@@ -320,17 +296,12 @@ WSSED= 1.00
 !iSet=1: spatial constant net settling velocity 
 !-----------------------------------------------------------------------
 iSet= 1 
-WSLBNET=  1.0
-WSRBNET=  1.0
-WS1BNET=  0.35
-WS2BNET=  0.1
-WS3BNET=  0.00
-WSSBNET=  0.2
+WSSEDn = 0.20              !net settling velocity of TSS (m.day-1)
+WSPOMn = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
+WSPBSn = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
 
 !-----------------------------------------------------------------------
-!Turb:   base coefficient for Light extinction coefficient(1/m), (2D variable)
 !WRea:   coefficients for Wind-induced reaeration of DO, (2D variable)
-!PC2TSS: coefficient of converting PC to TSS, (2D variable)
 !-----------------------------------------------------------------------
 WRea= 0.0
 

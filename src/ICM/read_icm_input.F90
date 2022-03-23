@@ -202,58 +202,44 @@ subroutine read_icm_param2
     enddo
   enddo
 
-  !read carbon parameters
-  call get_param_1D('icm.in','rKRC',2,itmp,rKRC(1),stmp,1)
-  call get_param_1D('icm.in','rKLC',2,itmp,rKLC(1),stmp,1)
-  call get_param_1D('icm.in','rKDC',2,itmp,rKDC(1),stmp,1)
+  !read carbon and phosphorus parameters
+  call get_param_1D('icm.in','KC0',2,itmp,KC0,stmp,3)
+  call get_param_1D('icm.in','KCalg',2,itmp,KCalg,stmp,3)
 
-  call read_param_2d('rKRC',rKRC,rKRC(1))
-  call read_param_2d('rKLC',rKLC,rKLC(1))
-  call read_param_2d('rKDC',rKDC,rKDC(1))
+  call get_param_1D('icm.in','TRM',2,itmp,TRM,stmp,3)
+  call get_param_1D('icm.in','KTRM',2,itmp,KTRM,stmp,3)
+  call get_param_1D('icm.in','KhDO',2,itmp,KhDO,stmp,3)
 
-  !read Phosphorus parameters
-  call get_param_1D('icm.in','rKRP',2,itmp,rKRP(1),stmp,1)
-  call get_param_1D('icm.in','rKLP',2,itmp,rKLP(1),stmp,1)
-  call get_param_1D('icm.in','rKDP',2,itmp,rKDP(1),stmp,1)
-  call get_param_1D('icm.in','rKRPalg',2,itmp,rKRPalg(1),stmp,1)
-  call get_param_1D('icm.in','rKLPalg',2,itmp,rKLPalg(1),stmp,1)
-  call get_param_1D('icm.in','rKDPalg',2,itmp,rKDPalg(1),stmp,1)
-  call read_param_2d('rKRP',rKRP,rKRP(1))
-  call read_param_2d('rKLP',rKLP,rKLP(1))
-  call read_param_2d('rKDP',rKDP,rKDP(1))
-  call read_param_2d('rKRPalg',rKRPalg,rKRPalg(1))
-  call read_param_2d('rKLPalg',rKLPalg,rKLPalg(1))
-  call read_param_2d('rKDPalg',rKDPalg,rKDPalg(1))
+  call get_param_1D('icm.in','KP0',2,itmp,KP0,stmp,3)
+  call get_param_1D('icm.in','KPalg',2,itmp,KPalg,stmp,3)
+  do i=1,3
+    write(pid,'(i1)') i
+    call read_param_2d('KC0_'//trim(adjustl(pid)),sp%KC0(:,i),KC0(i))
+    call read_param_2d('KP0_'//trim(adjustl(pid)),sp%KP0(:,i),KP0(i))
+    call read_param_2d('KPalg_'//trim(adjustl(pid)),sp%KPalg(:,i),KPalg(i))
+  enddo
 
   !read settling velocity
-  call get_param_1D('icm.in','WSSED',2,itmp,WSSED(1),stmp,1)
-  call get_param_1D('icm.in','WSRP', 2,itmp, WSRP(1),stmp,1)
-  call get_param_1D('icm.in','WSLP', 2,itmp, WSLP(1),stmp,1)
-  call get_param_1D('icm.in','WSPB1',2,itmp,WSPB1(1),stmp,1)
-  call get_param_1D('icm.in','WSPB2',2,itmp,WSPB2(1),stmp,1)
-  call get_param_1D('icm.in','WSPB3',2,itmp,WSPB3(1),stmp,1)
-  
-  call read_param_2d('WSRP', WSRP,  WSRP(1))
-  call read_param_2d('WSLP', WSLP,  WSLP(1))
-  call read_param_2d('WSPB1',WSPB1,WSPB1(1))
-  call read_param_2d('WSPB2',WSPB2,WSPB2(1))
-  call read_param_2d('WSPB3',WSPB3,WSPB3(1))
-  call read_param_2d('WSSED',WSSED,WSSED(1))
+  call get_param('icm.in','WSSED',2,itmp,WSSED,stmp)
+  call get_param_1D('icm.in','WSPOM', 2,itmp, WSPOM,stmp,2)
+  call get_param_1D('icm.in','WSPBS', 2,itmp, WSPBS,stmp,3)
 
-  !read net settling velocity (POM into the sediment)
-  call get_param('icm.in','WSSBNET',2,itmp,WSSBNET(1),stmp)
-  call get_param('icm.in','WSLBNET',2,itmp,WSLBNET(1),stmp)
-  call get_param('icm.in','WSRBNET',2,itmp,WSRBNET(1),stmp)
-  call get_param('icm.in','WS1BNET',2,itmp,WS1BNET(1),stmp)
-  call get_param('icm.in','WS2BNET',2,itmp,WS2BNET(1),stmp)
-  call get_param('icm.in','WS3BNET',2,itmp,WS3BNET(1),stmp)
+  call get_param('icm.in','WSSEDn',2,itmp,WSSEDn,stmp)
+  call get_param_1D('icm.in','WSPOMn', 2,itmp, WSPOMn,stmp,2)
+  call get_param_1D('icm.in','WSPBSn', 2,itmp, WSPBSn,stmp,3)
 
-  call read_param_2d('WSSBNET',WSSBNET,WSSBNET(1))
-  call read_param_2d('WSLBNET',WSLBNET,WSLBNET(1))
-  call read_param_2d('WSRBNET',WSRBNET,WSRBNET(1))
-  call read_param_2d('WS1BNET',WS1BNET,WS1BNET(1))
-  call read_param_2d('WS2BNET',WS2BNET,WS2BNET(1))
-  call read_param_2d('WS3BNET',WS3BNET,WS3BNET(1))
+  call read_param_2d('WSSED',sp%WSSED,WSSED)
+  call read_param_2d('WSSEDn',sp%WSSEDn,WSSEDn)
+  do i=1,2
+      write(pid,'(i1)') i
+      call read_param_2d('WSPOM_'//trim(adjustl(pid)),sp%WSPOM(:,i),WSPOM(i))
+      call read_param_2d('WSPOMn_'//trim(adjustl(pid)),sp%WSPOMn(:,i),WSPOMn(i))
+  enddo
+  do i=1,3
+      write(pid,'(i1)') i
+      call read_param_2d('WSPBS_'//trim(adjustl(pid)),sp%WSPBS(:,i),WSPBS(i))
+      call read_param_2d('WSPBSn_'//trim(adjustl(pid)),sp%WSPBSn(:,i),WSPBSn(i))
+  enddo
 
   !read turbidity
   call get_param('icm.in','Ke0',2,itmp,Ke0,stmp)
@@ -634,27 +620,6 @@ subroutine read_icm_param
 
   call get_param_1D('icm.in','zKhDO',2,itmp1,zKhDO,stmp,2)
 
-  call get_param('icm.in','rKRCalg',2,itmp,rtmp,stmp)
-  rKRCalg=rtmp
-  call get_param('icm.in','rKLCalg',2,itmp,rtmp,stmp)
-  rKLCalg=rtmp
-  call get_param('icm.in','rKDCalg',2,itmp,rtmp,stmp)
-  rKDCalg=rtmp
-  call get_param('icm.in','TRHDR',2,itmp,rtmp,stmp)
-  TRHDR=rtmp
-  call get_param('icm.in','TRMNL',2,itmp,rtmp,stmp)
-  TRMNL=rtmp
-  call get_param('icm.in','rKTHDR',2,itmp,rtmp,stmp)
-  rKTHDR=rtmp
-  call get_param('icm.in','rKTMNL',2,itmp,rtmp,stmp)
-  rKTMNL=rtmp
-
-  call get_param('icm.in','rKHR1',2,itmp,rtmp,stmp)
-  rKHR1=rtmp
-  call get_param('icm.in','rKHR2',2,itmp,rtmp,stmp)
-  rKHR2=rtmp
-  call get_param('icm.in','rKHR3',2,itmp,rtmp,stmp)
-  rKHR3=rtmp
   call get_param('icm.in','rKHORDO',2,itmp,rtmp,stmp)
   rKHORDO=rtmp
   call get_param('icm.in','rKHDNn',2,itmp,rtmp,stmp)
@@ -676,18 +641,9 @@ subroutine read_icm_param
 
   call get_param_1D('icm.in','n2c',2,itmp1,n2c,stmp,3)
 
-  call get_param('icm.in','rKRN',2,itmp,rtmp,stmp)
-  rKRN=rtmp
-  call get_param('icm.in','rKLN',2,itmp,rtmp,stmp)
-  rKLN=rtmp
-  call get_param('icm.in','rKDN',2,itmp,rtmp,stmp)
-  rKDN=rtmp
-  call get_param('icm.in','rKRNalg',2,itmp,rtmp,stmp)
-  rKRNalg=rtmp
-  call get_param('icm.in','rKLNalg',2,itmp,rtmp,stmp)
-  rKLNalg=rtmp
-  call get_param('icm.in','rKDNalg',2,itmp,rtmp,stmp)
-  rKDNalg=rtmp
+  call get_param_1D('icm.in','KN0',2,itmp1,KN0,stmp,3)
+  call get_param_1D('icm.in','KNalg',2,itmp1,KNalg,stmp,3)
+
   call get_param('icm.in','rNitM',2,itmp,rtmp,stmp)
   rNitM=rtmp
   call get_param('icm.in','rKhNitDO',2,itmp,rtmp,stmp)

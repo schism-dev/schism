@@ -86,9 +86,6 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: rIavg_save !(nea)
   integer,save :: iLimit,iLimitSi
   
-  !TSED
-  real(rkind),save,allocatable,dimension(:) :: WSSED
-  
   !DO
   real(rkind),save,allocatable,dimension(:) :: WMS 
 
@@ -149,16 +146,17 @@ module icm_mod
 
   !carbon parameters 
   real(rkind),save :: FCPZ(3),FCMZ(2), FCP(3,3),FCM(3)
-  real(rkind),save :: rKRCalg,rKLCalg,rKDCalg,TRHDR,TRMNL,rKTHDR,rKTMNL
+  real(rkind),save :: KCalg(3),TRM(3),KTRM(3),KhDO(3)
+  real(rkind),save,dimension(:),pointer :: KC0
+ 
   integer,save :: iReg_KC
   integer,save,allocatable :: reg_KC(:) !nea
-  real(rkind),save,allocatable,dimension(:) :: rKRC,rKLC,rKDC
-  real(rkind),save :: rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
+  real(rkind),save :: rKHORDO,rKHDNn,AANOX
   real(rkind),save,dimension(2) :: zKhDO
 
   !nitrogen parameters 
   real(rkind),save :: FNPZ(4),FNMZ(2,4),FNP(4),FNM(3,4),ANDC
-  real(rkind),save :: rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg,rNitM,TNit,rKNit1,rKNit2,rKhNitDO,rKhNitN
+  real(rkind),save :: KN0(3),KNalg(3),rNitM,TNit,rKNit1,rKNit2,rKhNitDO,rKhNitN
   real(rkind),save,dimension(3) :: n2c
   real(rkind),save,dimension(2) :: zn2c
 
@@ -167,9 +165,9 @@ module icm_mod
   real(rkind),save :: rKPO4p
   integer,save :: iReg_PO4
   integer,save,allocatable :: reg_PO4(:) !nea
-  real(rkind),save,allocatable,dimension(:) :: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
   real(rkind),save,dimension(3) :: p2c
   real(rkind),save,dimension(2) :: zp2c
+  real(rkind),save,dimension(:),pointer :: KP0,KPalg
 
   !silica parameters 
   real(rkind),save :: FSPZ(2),FSMZ(2,2),FSP(2),FSM(2),rKSAp,rKSU,TRSUA,rKTSUA
@@ -187,10 +185,9 @@ module icm_mod
   !settling
   !integer,save :: iReg_WS,iWS
   integer,save,allocatable :: reg_WS(:) !nea
-  real(rkind),save,allocatable,dimension(:) :: WSRP,WSLP,WSPB1,WSPB2,WSPB3,WRea
-
-  !net settling velocity !unit:m/day
-  real(rkind),save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
+  real(rkind),save,pointer :: WSSED,WSSEDn
+  real(rkind),save,dimension(:),pointer :: WSPOM,WSPBS,WSPOMn,WSPBSn
+  real(rkind),save,allocatable,dimension(:) :: WRea
 
   !benthic flux from sediment flux model, positive refer to from sediment to water column
   real(rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO
@@ -209,8 +206,8 @@ module icm_mod
   !spatially varying parameter
   !---------------------------------------------------------------------------
   type,public :: icm_spatial_param
-    real(rkind),dimension(:),pointer :: Ke0,tss2c
-    real(rkind),dimension(:,:),pointer :: GPM,TGP,PRP,c2chl
+    real(rkind),dimension(:),pointer :: Ke0,tss2c,WSSED,WSSEDn
+    real(rkind),dimension(:,:),pointer :: GPM,TGP,PRP,c2chl,WSPOM,WSPBS,WSPOMn,WSPBSn,KC0,KP0,KPalg
     real(rkind),dimension(:,:,:),pointer :: KTGP 
   end type
   type(icm_spatial_param) :: sp

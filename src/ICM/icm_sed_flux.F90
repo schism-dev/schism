@@ -781,8 +781,7 @@ subroutine sed_calc(id)
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
                       &jveg,vpatch, & !veg
                       &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
-                      &WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET, & !erosion
-                      &WSRP,WSLP,rKRP,rKLP,rKTHDR,TRHDR
+                      &TRM,KTRM
   use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
@@ -894,12 +893,12 @@ subroutine sed_calc(id)
 
   !flux rate, in unit of m/day
   !in order of inert, refractory, labile, PB(1:3), Si
-  flxs=WSSBNET(id)
-  flxr=WSRBNET(id)
-  flxl=WSLBNET(id)
-  flxp(1)=WS1BNET(id)
-  flxp(2)=WS2BNET(id)
-  flxp(3)=WS3BNET(id)
+  flxs=sp%WSSEDn(id)
+  flxr=sp%WSPOMn(id,1)
+  flxl=sp%WSPOMn(id,2)
+  flxp(1)=sp%WSPBSn(id,1)
+  flxp(2)=sp%WSPBSn(id,2)
+  flxp(3)=sp%WSPBSn(id,3)
 
   !error
   !net settling velocity is going to be transfered from advanced hydrodynamics model, more work later on
@@ -1378,9 +1377,8 @@ subroutine sed_calc(id)
     !calculate depostion fraction for elem #id :: E/(k+W) 
     if(iDEPO==2)then
 !Error: check exponent magnitude
-      rtmp=exp(rKTHDR*(SED_T(id)-TRHDR))
-      depofracL=ero_elem/(WSLP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKLP(id)*rtmp)
-      depofracR=ero_elem/(WSRP(id)*depoWSL/max(1.d-7,SED_BL(id))+rKRP(id)*rtmp)
+      depofracR=ero_elem/(sp%WSPOM(id,1)*depoWSL/max(1.d-7,SED_BL(id))+sp%KP0(id,1)*exp(KTRM(1)*(SED_T(id)-TRM(1))))
+      depofracL=ero_elem/(sp%WSPOM(id,2)*depoWSL/max(1.d-7,SED_BL(id))+sp%KP0(id,2)*exp(KTRM(2)*(SED_T(id)-TRM(2))))
     endif !iDEPO
 
     !sediemnt erosion >> nutrient erosion flux

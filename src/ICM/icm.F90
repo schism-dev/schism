@@ -937,7 +937,7 @@ subroutine calkwq(id,nv,usf,it)
   integer :: klev
   real(rkind) :: time,rtmp,T,xT,sum1,k1,k2,a,b,fp,x,rat,s,rval,rval2
   real(rkind) :: zdep(nv),tdep,rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB,VSED
-  real(rkind) :: rKTPOM,rKTDOM,rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
+  real(rkind) :: rKTM(3),rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
   real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,ZBM(2),Fish,PBM(3),BPR(3)
   real(rkind) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
@@ -954,7 +954,11 @@ subroutine calkwq(id,nv,usf,it)
   real(rkind) :: tmp,densveg(3),tmp1,tmp2,tmp3
 
   !pointers
-  GPM=>sp%GPM(id,:); TGP=>sp%TGP(id,:); PRP=>sp%PRP(id,:); c2chl=sp%c2chl(id,:); KTGP=>sp%KTGP(id,:,:)
+  GPM=>sp%GPM(id,:); TGP=>sp%TGP(id,:); KTGP=>sp%KTGP(id,:,:); PRP=>sp%PRP(id,:); 
+  WSSED=>sp%WSSED(id); WSPOM=>sp%WSPOM(id,:); WSPBS=>sp%WSPBS(id,:)
+  WSSEDn=>sp%WSSEDn(id); WSPOMn=>sp%WSPOMn(id,:); WSPBSn=>sp%WSPBSn(id,:)
+  KC0=>sp%KC0(id,:); KP0=>sp%KP0(id,:); KPalg=>sp%KPalg(id,:)
+  c2chl=sp%c2chl(id,:)
 
   !--------------------------------------------------------------------------------------
   time=it*dt
@@ -1415,9 +1419,9 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     !PB1
-    a=GP(k,id,1)-PBM(1)-WSPB1(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=GP(k,id,1)-PBM(1)-WS1BNET(id)/dep(k)
-    b=WSPB1(id)*PB10/dep(k)
+    a=GP(k,id,1)-PBM(1)-WSPBS(1)/dep(k)
+    if(k==nv.and.iSet/=0) a=GP(k,id,1)-PBM(1)-WSPBSn(1)/dep(k)
+    b=WSPBS(1)*PB10/dep(k)
 
     a=a-BPR(1)
     if(iZB==1) a=a-p2pr*Fish;  b=b-ZBG(3,1)*ZB1(k,1)-ZBG(3,2)*ZB2(k,1)
@@ -1427,9 +1431,9 @@ subroutine calkwq(id,nv,usf,it)
     PB10=PB1(k,1)
 
     !PB2
-    a=GP(k,id,2)-PBM(2)-WSPB2(id)/dep(k) !todo use pre-compute
-    if(k==nv.and.iSet/=0) a=GP(k,id,2)-PBM(2)-WS2BNET(id)/dep(k)
-    b=WSPB2(id)*PB20/dep(k)
+    a=GP(k,id,2)-PBM(2)-WSPBS(2)/dep(k) !todo use pre-compute
+    if(k==nv.and.iSet/=0) a=GP(k,id,2)-PBM(2)-WSPBSn(2)/dep(k)
+    b=WSPBS(2)*PB20/dep(k)
 
     a=a-BPR(2)
     if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(4,1)*ZB1(k,1)-ZBG(4,2)*ZB2(k,1)
@@ -1439,9 +1443,9 @@ subroutine calkwq(id,nv,usf,it)
     PB20=PB2(k,1)
 
     !PB3
-    a=GP(k,id,3)-PBM(3)-WSPB3(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=GP(k,id,3)-PBM(3)-WS3BNET(id)/dep(k)
-    b=WSPB3(id)*PB30/dep(k)
+    a=GP(k,id,3)-PBM(3)-WSPBS(3)/dep(k)
+    if(k==nv.and.iSet/=0) a=GP(k,id,3)-PBM(3)-WSPBSn(3)/dep(k)
+    b=WSPBS(3)*PB30/dep(k)
 
     a=a-BPR(3)
     if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(5,1)*ZB1(k,1)-ZBG(5,2)*ZB2(k,1)
@@ -1459,13 +1463,8 @@ subroutine calkwq(id,nv,usf,it)
         ZBG(i,2)=ZBG(i,2)*ZB2(k,1)
       enddo
     endif
-    rKTPOM=exp(rKTHDR*(temp(k)-TRHDR)); tmp1=rKTHDR*(temp(k)-TRHDR)
-    rKTDOM=exp(rKTMNL*(temp(k)-TRMNL)); tmp2=rKTMNL*(temp(k)-TRMNL)
 
-    if(abs(tmp1)>50.0.or.abs(tmp2)>50.0) then
-      write(errmsg,*)'check ICM rKTHDR rKTMNL:',rKTHDR,rKTMNL,temp(k),TRHDR,TRMNL,tmp1,tmp2,ielg(id),k
-      call parallel_abort(errmsg)
-    endif
+    do i=1,3; rKTM(i)=exp(KTRM(i)*(temp(k)-TRM(i))); enddo
 
     !---------------------------------------------
     !pre-calculation for Carbon
@@ -1477,17 +1476,17 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     !RPOC
-    rKRPOC=(rKRC(id)+rKRCalg*sumAPB)*rKTPOM
+    rKRPOC=(KC0(1)+KCalg(1)*sumAPB)*rKTM(1)
 
-    a=-rKRPOC-WSRP(id)/dep(k) 
-    if(k==nv.and.iSet/=0) a=-rKRPOC-WSRBNET(id)/dep(k)
+    a=-rKRPOC-WSPOM(1)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKRPOC-WSPOMn(1)/dep(k)
 
     b= FCP(1,1)*BPR(1)*PB1(k,1)+FCP(2,1)*BPR(2)*PB2(k,1)+FCP(3,1)*BPR(3)*PB3(k,1) !predation
     if(iZB==1) then
       b= -(RGZ+AGZ*(1.0-RGZ))*(ZBG(6,1)+ZBG(6,2))+ &  !ZB eats RPOC
        & FCPZ(1)*(CZB_ZB+CFh_ZB)+FCP(1,1)*(CZB_PB+CFh_PB)  !check FCP, ZG
     endif
-    b=b+WSRP(id)*RPOC0/dep(k)+znRPOC(k)/dep(k)
+    b=b+WSPOM(1)*RPOC0/dep(k)+znRPOC(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1523,17 +1522,17 @@ subroutine calkwq(id,nv,usf,it)
     
  
     !LPOC 
-    rKLPOC=(rKLC(id)+rKLCalg*sumAPB)*rKTPOM
+    rKLPOC=(KC0(2)+KCalg(2)*sumAPB)*rKTM(2)
 
-    a=-rKLPOC-WSLP(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKLPOC-WSLBNET(id)/dep(k)
+    a=-rKLPOC-WSPOM(2)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKLPOC-WSPOMn(2)/dep(k)
 
     b= FCP(1,2)*BPR(1)*PB1(k,1)+FCP(2,2)*BPR(2)*PB2(k,1)+FCP(3,2)*BPR(3)*PB3(k,1)
     if(iZB==1) then
       b= -(RGZ+AGZ*(1-RGZ))*(ZBG(7,1)+ZBG(7,2))+ & !ZB eats LPOC
        & FCPZ(2)*(CZB_ZB+CFh_ZB)+FCPZ(2)*(CZB_PB+CFh_PB)   !ZB eats ZB 
     endif
-    b=b+WSLP(id)*LPOC0/dep(k)+znLPOC(k)/dep(k)  !settling, surface or benthic flux
+    b=b+WSPOM(2)*LPOC0/dep(k)+znLPOC(k)/dep(k)  !settling, surface or benthic flux
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1569,7 +1568,7 @@ subroutine calkwq(id,nv,usf,it)
     
 
     !DOC 
-    rKDOC=(rKDC(id)+rKDCalg*sumAPB)*rKTDOM
+    rKDOC=(KC0(3)+KCalg(3)*sumAPB)*rKTM(3)
     xKHR=rKDOC*DOX(k,1)/(rKHORDO+DOX(k,1))
     xDenit=AANOX*rKDOC*rKHORDO*NO3(k,1)/(rKHORDO+DOX(k,1))/(rKHDNn+NO3(k,1))
 
@@ -1582,9 +1581,9 @@ subroutine calkwq(id,nv,usf,it)
        & -(RGZ+AGZ*(1.0-RGZ))*(ZBG(8,1)+ZBG(8,2))+ & !ZB eats DOC
        & FCPZ(3)*(CZB_ZB+CFh_ZB)+FCP(1,3)*(CZB_PB+CFh_PB)            !ZB eats ZB, check FCP, ZG
     endif
-    b=b+(FCM(1)+(1.0-FCM(1))*rKHR1/(DOX(k,1)+rKHR1))*PBM(1)*PB1(k,1)+ &         !PB1 metabolism
-      & (FCM(2)+(1.0-FCM(2))*rKHR2/(DOX(k,1)+rKHR2))*PBM(2)*PB2(k,1)+ &         !PB2 metabolism
-      & (FCM(3)+(1.0-FCM(3))*rKHR3/(DOX(k,1)+rKHR3))*PBM(3)*PB3(k,1)+ &         !PB3 metabolism
+    b=b+(FCM(1)+(1.0-FCM(1))*KhDO(1)/(DOX(k,1)+KhDO(1)))*PBM(1)*PB1(k,1)+ &         !PB1 metabolism
+      & (FCM(2)+(1.0-FCM(2))*KhDO(2)/(DOX(k,1)+KhDO(2)))*PBM(2)*PB2(k,1)+ &         !PB2 metabolism
+      & (FCM(3)+(1.0-FCM(3))*KhDO(3)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)+ &         !PB3 metabolism
       & rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+znDOC(k)/dep(k) !dissolution, surface or benthic flux
 
     !sav
@@ -1628,10 +1627,10 @@ subroutine calkwq(id,nv,usf,it)
 
 
     !RPON
-    rKRPON=(rKRN+rKRNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
+    rKRPON=(KN0(1)+KNalg(1)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(1)
 
-    a=-rKRPON-WSRP(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKRPON-WSRBNET(id)/dep(k)
+    a=-rKRPON-WSPOM(1)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKRPON-WSPOMn(1)/dep(k)
 
     b=FNP(1)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1)) !predation
     if(iZB==1) then
@@ -1640,7 +1639,7 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     b=b+FNM(1,1)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,1)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,1)*n2c(3)*PBM(3)*PB3(k,1) & !PB metabolism
-     & +WSRP(id)*RPON0/dep(k)+znRPON(k)/dep(k)
+     & +WSPOM(1)*RPON0/dep(k)+znRPON(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1674,10 +1673,10 @@ subroutine calkwq(id,nv,usf,it)
 
 
     !LPON
-    rKLPON=(rKLN+rKLNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTPOM
+    rKLPON=(KN0(2)+KNalg(2)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(2)
 
-    a=-rKLPON-WSLP(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKLPON-WSLBNET(id)/dep(k)
+    a=-rKLPON-WSPOM(2)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKLPON-WSPOMn(2)/dep(k)
 
     b= FNP(2)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1)) !predation
     if(iZB==1) then
@@ -1686,7 +1685,7 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     b=b+FNM(1,2)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,2)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,2)*n2c(3)*PBM(3)*PB3(k,1)+ & !PB metabolism
-     &  WSLP(id)*LPON0/dep(k)+znLPON(k)/dep(k)
+     &  WSPOM(2)*LPON0/dep(k)+znLPON(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1719,7 +1718,7 @@ subroutine calkwq(id,nv,usf,it)
     LPON0=LPON(k,1)
 
     !DON
-    rKDON=(rKDN+rKDNalg*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTDOM
+    rKDON=(KN0(3)+KNalg(3)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(3)
 
     a=-rKDON
     b= FNP(3)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1)) !predation
@@ -1859,10 +1858,10 @@ subroutine calkwq(id,nv,usf,it)
     
     !RPOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-    rKRPOP=(rKRP(id)+rKRPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
+    rKRPOP=(KP0(1)+KPalg(1)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(1)
 
-    a=-rKRPOP-WSRP(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKRPOP-WSRBNET(id)/dep(k)
+    a=-rKRPOP-WSPOM(1)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKRPOP-WSPOMn(1)/dep(k)
 
     b= FPP(1)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1)) !predation
     if(iZB==1) then
@@ -1871,7 +1870,7 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     b=b+FPM(1,1)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,1)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,1)*p2c(3)*PBM(3)*PB3(k,1) &
-     & +WSRP(id)*RPOP0/dep(k)+znRPOP(k)/dep(k)
+     & +WSPOM(1)*RPOP0/dep(k)+znRPOP(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1905,10 +1904,10 @@ subroutine calkwq(id,nv,usf,it)
 
     !LPOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-    rKLPOP=(rKLP(id)+rKLPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTPOM
+    rKLPOP=(KP0(2)+KPalg(2)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(2)
 
-    a=-rKLPOP-WSLP(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKLPOP-WSLBNET(id)/dep(k)
+    a=-rKLPOP-WSPOM(2)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKLPOP-WSPOMn(2)/dep(k)
 
     b= FPP(2)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1)) !predation
     if(iZB==1) then
@@ -1916,7 +1915,7 @@ subroutine calkwq(id,nv,usf,it)
        & FPPZ(2)*(PZB_ZB+PFh_ZB)+FPP(2)*(PZB_PB+PFh_PB)
     endif
     b=b+FPM(1,2)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,2)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,2)*p2c(3)*PBM(3)*PB3(k,1) &
-     & +WSLP(id)*LPOP0/dep(k)+znLPOP(k)/dep(k)
+     & +WSPOM(2)*LPOP0/dep(k)+znLPOP(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -1950,7 +1949,7 @@ subroutine calkwq(id,nv,usf,it)
 
     !DOP
     PO4td=PO4t(k,1)/(1.0+rKPO4p*TSED(k))
-    rKDOP=(rKDP(id)+rKDPalg(k)*sumAPB*mKhP/(mKhP+PO4td))*rKTDOM
+    rKDOP=(KP0(3)+KPalg(3)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(3)
 
     a=-rKDOP
     b= FPP(3)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1)) !predation
@@ -1994,8 +1993,8 @@ subroutine calkwq(id,nv,usf,it)
     !PO4t
     fp=rKPO4p*TSED(k)/(1.0+rKPO4p*TSED(k))
 
-    a=-fp*WSSED(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-fp*WSSBNET(id)/dep(k)
+    a=-fp*WSSED/dep(k)
+    if(k==nv.and.iSet/=0) a=-fp*WSSEDn/dep(k)
 
     b= FPP(4)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1))  !predation
     if(iZB==1) then
@@ -2005,7 +2004,7 @@ subroutine calkwq(id,nv,usf,it)
 
     b=b+FPM(1,4)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,4)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,4)*p2c(3)*PBM(3)*PB3(k,1) &
      & -p2c(1)*GP(k,id,1)*PB1(k,1)-p2c(2)*GP(k,id,2)*PB2(k,1)-p2c(3)*GP(k,id,3)*PB3(k,1) &
-     & +rKDOP*DOP(k,1)+fp*WSSED(id)*PO4t0/dep(k)+znPO4t(k)/dep(k)
+     & +rKDOP*DOP(k,1)+fp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)
 
     !sav
     if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
@@ -2063,8 +2062,8 @@ subroutine calkwq(id,nv,usf,it)
       call parallel_abort(errmsg)
     endif
 
-    a=-rKSUA-WSPB1(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-rKSUA-WS1BNET(id)/dep(k)
+    a=-rKSUA-WSPBS(1)/dep(k)
+    if(k==nv.and.iSet/=0) a=-rKSUA-WSPBSn(1)/dep(k)
 
     b= FSP(1)*s2c*BPR(1)*PB1(k,1) !predation
     if(iZB==1) then
@@ -2073,7 +2072,7 @@ subroutine calkwq(id,nv,usf,it)
     endif
 
     b=b+FSM(1)*s2c*PBM(1)*PB1(k,1)+ & !PB metabolism
-      & WSPB1(id)*SU0/dep(k)+znSU(k)/dep(k)
+      & WSPBS(1)*SU0/dep(k)+znSU(k)/dep(k)
 
     SU(k,2)=((1.0+a*dtw2)*SU(k,1)+b*dtw)/(1.0-a*dtw2)
     SU(k,1)=0.5*(SU(k,1)+SU(k,2))
@@ -2082,8 +2081,8 @@ subroutine calkwq(id,nv,usf,it)
     !SAt
     fp=rKSAp*TSED(k)/(1.0+rKSAp*TSED(k))
 
-    a=-fp*WSSED(id)/dep(k)
-    if(k==nv.and.iSet/=0) a=-fp*WSSBNET(id)/dep(k)
+    a=-fp*WSSED/dep(k)
+    if(k==nv.and.iSet/=0) a=-fp*WSSEDn/dep(k)
 
     b= FSP(2)*s2c*BPR(1)*PB1(k,1) !predation
     if(iZB==1) then
@@ -2093,7 +2092,7 @@ subroutine calkwq(id,nv,usf,it)
 
     b=b+FSM(2)*s2c*PBM(1)*PB1(k,1) & !PB metabolism
       & -s2c*GP(k,id,1)*PB1(k,1)+ &  !PB1 uptake
-      & rKSUA*SU(k,1)+WSSED(id)*SAt0/dep(k)+znSAt(k)/dep(k)
+      & rKSUA*SU(k,1)+WSSED*SAt0/dep(k)+znSAt(k)/dep(k)
 
     SAt(k,2)=((1.0+a*dtw2)*SAt(k,1)+b*dtw)/(1.0-a*dtw2)
     SAt(k,1)=0.5*(SAt(k,1)+SAt(k,2))
@@ -2143,9 +2142,9 @@ subroutine calkwq(id,nv,usf,it)
        &-((1.0-FCMZ(2))*DOX(k,1)/(DOX(k,1)+zKhDO(2)))*AOC*ZBM(2)*ZB2(k,1)  !ZB2 metabolism
     endif
 
-    b=b-((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+rKHR1))*AOC*PBM(1)*PB1(k,1) & !PB1 metabolism
-     & -((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+rKHR2))*AOC*PBM(2)*PB2(k,1) & !PB2 metabolism
-     & -((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+rKHR3))*AOC*PBM(3)*PB3(k,1) &  !PB3 metabolism
+    b=b-((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+KhDO(1)))*AOC*PBM(1)*PB1(k,1) & !PB1 metabolism
+     & -((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+KhDO(2)))*AOC*PBM(2)*PB2(k,1) & !PB2 metabolism
+     & -((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+KhDO(3)))*AOC*PBM(3)*PB3(k,1) &  !PB3 metabolism
      & +(1.3-0.3*PrefN(k,1))*AOC*GP(k,id,1)*PB1(k,1) & !PB1 photosynthesis
      & +(1.3-0.3*PrefN(k,2))*AOC*GP(k,id,2)*PB2(k,1) & !PB2 photosynthesis
      & +(1.3-0.3*PrefN(k,3))*AOC*GP(k,id,3)*PB3(k,1) & !PB3 photosynthesis
@@ -2266,9 +2265,9 @@ subroutine calkwq(id,nv,usf,it)
       else
         b=0.0
       endif
-      b=b+((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+rKHR1))*PBM(1)*PB1(k,1)+ & !PB1 metabolism
-        & ((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+rKHR2))*PBM(2)*PB2(k,1)+ & !PB2 metabolism
-        & ((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+rKHR3))*PBM(3)*PB3(k,1)  & !PB3 metabolism
+      b=b+((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+KhDO(1)))*PBM(1)*PB1(k,1)+ & !PB1 metabolism
+        & ((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+KhDO(2)))*PBM(2)*PB2(k,1)+ & !PB2 metabolism
+        & ((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)  & !PB3 metabolism
         &-GP(k,id,1)*PB1(k,1)-GP(k,id,2)*PB2(k,1)-GP(k,id,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
         & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(AOC*dep(k))
 
