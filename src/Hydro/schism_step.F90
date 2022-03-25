@@ -7347,8 +7347,6 @@
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle); imposed at bottom layer.
 !       Do nothing for net sinks
-!Error: need to reconcile with ICM
-
         if(if_source/=0) then
 !$OMP     do
           do i=1,nea
@@ -7454,6 +7452,32 @@
 !$OMP     end workshare
         endif !itransport_only/
 
+#ifdef USE_ICM
+        !update ICM time varying input 
+        call WQinput(time)
+
+        if(myrank==0) write(16,*)'calculating ICM kinetic source/sink'
+        call ecosystem(it)
+
+        !feedback from ICM to Hydro 
+        if(isav==1.and.isav_icm==1)then
+          !Convert hcansav to nodes
+          do i=1,np
+            sav_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
+          enddo !i
+          call exchange_p2d(sav_h)
+
+          do i=1,npa
+            !Do not allow SAV to grow out of init patch for the time being
+            if(sav_nv(i)==0.d0.or.sav_alpha(i)==0.d0) then
+              sav_nv(i)=0.d0; sav_alpha(i)=0.d0; sav_h(i)=0.d0
+            endif
+          enddo !i
+
+        endif!isav&&isav_icm
+
+#endif /*USE_ICM*/
+
 !       Convert to nodes and whole levels
 !$OMP   do 
         do i=1,nea
@@ -7549,32 +7573,6 @@
         deallocate(swild98)
 !Debug
 !        write(12,*)'stage 2'
-
-#ifdef USE_ICM
-        !update ICM time varying input 
-        call WQinput(time)
-
-        if(myrank==0) write(16,*)'calculating ICM kinetic source/sink'
-        call ecosystem(it)
-
-        !feedback from ICM to Hydro 
-        if(isav==1.and.isav_icm==1)then
-          !Convert hcansav to nodes
-          do i=1,np
-            sav_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
-          enddo !i
-          call exchange_p2d(sav_h)
-
-          do i=1,npa
-            !Do not allow SAV to grow out of init patch for the time being
-            if(sav_nv(i)==0.d0.or.sav_alpha(i)==0.d0) then
-              sav_nv(i)=0.d0; sav_alpha(i)=0.d0; sav_h(i)=0.d0
-            endif
-          enddo !i
-
-        endif!isav&&isav_icm
-
-#endif /*USE_ICM*/
 
 #ifdef INCLUDE_TIMING
           cwtmp=mpi_wtime()
