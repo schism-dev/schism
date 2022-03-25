@@ -88,7 +88,7 @@ module fabm_schism
   !> FABM is module 11 in the schism-internal counting of subsidiary models.
   !> Therefore the start index for fabm tracers is the sum of all tracers from models
   !> 1 to 10.  Without any other models, it should be 3 after temperature and salinity.
-  integer, public :: istart=3 ! sum(ntrs(1:10))+1
+  integer, public :: istart=3 ! set later: sum(ntrs(1:10))+1
 
   type, extends(type_base_driver) :: type_schism_driver
     contains
@@ -222,7 +222,6 @@ subroutine fabm_schism_init_model(ntracers)
 #endif
   call driver%log_message('version '//trim(fs%version))
 
-
   !> @todo get the define macro into a string
   !call driver%log_message('using API version '//_FABM_API_VERSION_)
 
@@ -253,7 +252,7 @@ subroutine fabm_schism_init_model(ntracers)
     case (0)
       ! From namelists in fabm.nml
       fs%model => fabm_create_model_from_file(namlst_unit)
-  case (1)
+    case (1)
       ! From YAML file fabm.yaml
       allocate(fs%model)
       call fabm_create_model_from_yaml_file(fs%model)
@@ -264,24 +263,25 @@ subroutine fabm_schism_init_model(ntracers)
 #endif
 
 #if _FABM_API_VERSION_ < 1
-  fs%nvar = size(fs%model%state_variables)
+  fs%nvar  = size(fs%model%state_variables)
   fs%ndiag = size(fs%model%diagnostic_variables)
 #else
-  fs%nvar = size(fs%model%interior_state_variables)
+  fs%nvar  = size(fs%model%interior_state_variables)
   fs%ndiag = size(fs%model%interior_diagnostic_variables)
 #endif
 
-  fs%nvar_bot = size(fs%model%bottom_state_variables)
-  fs%nvar_sf = size(fs%model%surface_state_variables)
+  fs%nvar_bot  = size(fs%model%bottom_state_variables)
+  fs%nvar_sf   = size(fs%model%surface_state_variables)
   fs%ndiag_hor = size(fs%model%horizontal_diagnostic_variables)
 
   !> @todo check real kind
   !write(0,*) 'fabm realkind=',rk,', schism realkind=',rkind
 
   !> The diagnostic variables are allocated here in the host, whereas the
-  !> state variables are allocated by schism itself
+  !> interior state variables are allocated by schism itself
   allocate(fs%interior_diagnostic_variables(1:fs%ndiag))
   do i=1,fs%ndiag
+
 #if _FABM_API_VERSION_ < 1
     fs%interior_diagnostic_variables(i)%short_name = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
     fs%interior_diagnostic_variables(i)%long_name = fs%model%diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%long_name)))
@@ -297,7 +297,8 @@ subroutine fabm_schism_init_model(ntracers)
 
   end do
 
-  allocate(fs%horizontal_diagnostic_variables(1:fs%ndiag_hor))
+  if (fs%ndiag_hor > 0) allocate(fs%horizontal_diagnostic_variables(1:fs%ndiag_hor))
+  
   do i=1,fs%ndiag_hor
     fs%horizontal_diagnostic_variables(i)%short_name = fs%model%horizontal_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%name)))
     fs%horizontal_diagnostic_variables(i)%long_name = fs%model%horizontal_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%long_name)))
@@ -325,6 +326,7 @@ subroutine fabm_schism_init_model(ntracers)
     call parallel_abort('ispm=2, FABM-SCHISM needs to turn on SED3D module')
 #endif
   elseif(fs%params%ispm==3) then !spm from input: time varying
+    !> @todo check for free_lun
     open(481,file=in_dir(1:len_in_dir)//'SPM.th', status='old') !todo: change to *.nc format
   elseif(fs%params%ispm/=0 .and. fs%params%ispm/=1) then
     call parallel_abort('FABM-SCHISM: unknown ispm')
@@ -335,17 +337,17 @@ end subroutine fabm_schism_init_model
 !> Initialize FABM internal fields
 subroutine fabm_schism_init_stage2
 
-  integer :: ntracer, n, i
+  integer :: n, i
   integer, save, allocatable, target :: bottom_idx(:)
   integer, save, allocatable, target :: surface_idx(:)
   character(len=256)                 :: message
 
-  ! check size of tracer field
-  !> @todo this assumes that only FABM BGC is run and not another model
-  !> Should be replaced by checking ntrs(11) and then getting rid of this.
-  ntracer = ubound(tr_el, 1)
-  if (ntracer-istart+1 < fs%nvar) then
-    write(message,*) 'incorrect number of tracers:', ntracer, &
+  ! FABM is the model number 11, its number of tracers are in ntrs(11)
+  istart = irange_tr(1,11)
+
+  if (irange_tr(2,11) - irange_tr(1,11) + 1 /= fs%nvar) then
+    write(message,*) 'incorrect number of tracers:', &
+      irange_tr(2,11) - irange_tr(1,11) + 1, &
       ', number required by fabm_schism:',fs%nvar
     call driver%fatal_error('fabm_schism_init_stage2',message)
   end if
@@ -505,6 +507,7 @@ subroutine fabm_schism_init_stage2
   allocate(fs%light_extinction(nvrt,ne))
   fs%light_extinction = missing_value
 
+  !> @todo what is a sensible value for layers below kbe?
   allocate(fs%layer_height(nvrt,ne))
   fs%layer_height = missing_value
 
@@ -527,8 +530,8 @@ subroutine fabm_schism_init_stage2
     fs%spm=fs%params%spm0/1000.0 !convert mg/L to g/L
   endif
 
-  !> Set wind to the netcdf missing value  if atmospheric forcing is
-  !> no provided by setting nws>0 in param.nml
+  !> Set wind to the netcdf missing value if atmospheric forcing is
+  !> not provided by setting nws>0 in param.nml
   !> @todo check units, needs m s-1
 #if _FABM_API_VERSION_ < 1
   if (fs%model%variable_needs_values(standard_variables%wind_speed)) then
@@ -660,9 +663,10 @@ subroutine fabm_schism_init_stage2
 #endif
 
   ! calculate initial layer heights
-  !> @todo check fs%layer_height(1,:)
-  fs%layer_height(2:nvrt,:) = ze(2:nvrt,:)-ze(1:nvrt-1,:)
-  fs%layer_depth(2:nvrt,:) = -(ze(2:nvrt,:)+ze(1:nvrt-1,:))/2
+  do i=1,i
+    fs%layer_height(kbe(i)+1:nvrt,i) =   ze(kbe(i)+1:nvrt,i)-ze(kbe(i):nvrt-1,i)
+    fs%layer_depth (kbe(i)+1:nvrt,i) = -(ze(kbe(i)+1:nvrt,i)+ze(kbe(i):nvrt-1,i))/2
+  enddo
 
   call fs%link_environmental_data()
   call driver%log_message('Linked environmental data')
@@ -957,14 +961,11 @@ subroutine fabm_schism_do()
   call fs%repair_state()
 
   ! calculate layer height, and depth
-  do i=1, ne
-    if (idry_e(i)==0) then
-      do k=kbe(i)+1,nvrt
-        fs%layer_height(k,i) = ze(k,i)-ze(k-1,i)
-        fs%layer_depth(k,i) = -(ze(k,i)+ze(k-1,i))/2.0
-      end do
-    end if
-  end do
+  do i=1,ne
+    if (idry_e(i) /= 0) cycle
+    fs%layer_height(kbe(i)+1:nvrt,i) =   ze(kbe(i)+1:nvrt,i)-ze(kbe(i):nvrt-1,i)
+    fs%layer_depth (kbe(i)+1:nvrt,i) = -(ze(kbe(i)+1:nvrt,i)+ze(kbe(i):nvrt-1,i))/2
+  enddo
 
   ! update time stepping information
   fs%tidx = fs%tidx+1
@@ -1016,6 +1017,7 @@ subroutine fabm_schism_do()
   endif
 
   !update spm concentration
+  !> @todo consider kbe
   if(fs%params%ispm==2) then
     do n=1,ntrs(5)
       fs%spm(1:nvrt,:)=fs%spm(1:nvrt,:)+max(tr_el(n-1+irange_tr(1,5),1:nvrt,:),0.0_rkind)
@@ -1024,18 +1026,20 @@ subroutine fabm_schism_do()
     call fabm_schism_read_additional_forcing(dt*fs%tidx)
   endif
 
-! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
-! todo if (allocated(fs%pres)) then
-  do i=1,ne
-    if (idry_e(i)==1) cycle
-    do k=1,nvrt
-      n = max(k,kbe(i))
-      !fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
-      fs%pres(k,i) = rho0*grav*abs(ze(nvrt,i)-ze(n,i))*1.e-4_rk
+  ! get hydrostatic pressure in decibars=1.e4 Pa for pml/carbonate module
+  ! Set the pressure in soil layers < kbe to the lowest level pressure
+  !if (allocated(fs%pres)) then
+    do i=1,ne
+      if (idry_e(i) /= 0) cycle
+      do k=1,nvrt
+        n = max(k,kbe(i))
+        !fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
+        fs%pres(k,i) = rho0*grav*abs(ze(nvrt,i)-ze(n,i))*1.e-4_rk
+      end do
+      ! add atmospheric pressure
+      fs%pres(:,i) = fs%pres(:,i)+sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
     end do
-    ! add atmospheric pressure
-    fs%pres(:,i) = fs%pres(:,i)+sum(pr2(elnode(1:i34(i),i)))/i34(i)*1.e-4_rk
-  end do
+  !endif
 
   ! Interpolate momentum diffusivity (num) and tke dissipation (eps)
   ! from nodes to elements
@@ -1385,14 +1389,14 @@ subroutine fabm_schism_create_output_netcdf()
   character(len=1024)         :: ncfile
   character(len=6)            :: rankstr
   character(len=*),parameter  :: elements_dim_name = 'ielement'
-  character(len=*),parameter     :: nodes_dim_name = 'inode'
-  character(len=*),parameter     :: surr_nodes_name = 'surr_node'
-  character(len=*),parameter     :: node_id_name = 'nodeid'
-  character(len=*),parameter     :: element_id_name = 'elementid'
-  character(len=*),parameter     :: nv_name = 'nv'
-  character(len=*),parameter     :: nvrt_name = 'nvrt'
-  character(len=*),parameter     :: x_name = 'node_x'
-  character(len=*),parameter     :: y_name = 'node_y'
+  character(len=*),parameter  :: nodes_dim_name = 'inode'
+  character(len=*),parameter  :: surr_nodes_name = 'surr_node'
+  character(len=*),parameter  :: node_id_name = 'nodeid'
+  character(len=*),parameter  :: element_id_name = 'elementid'
+  character(len=*),parameter  :: nv_name = 'nv'
+  character(len=*),parameter  :: nvrt_name = 'nvrt'
+  character(len=*),parameter  :: x_name = 'node_x'
+  character(len=*),parameter  :: y_name = 'node_y'
 
   integer              :: status
   integer              :: elements_dim_id,nodes_dim_id,surrnodes_dim_id,time_dim_id,nvrt_dim_id
