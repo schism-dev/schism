@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot !sav & veg
+      use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot !sav & veg
       use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                            & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                            & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -365,11 +365,8 @@
 #endif
 
 #ifdef USE_ICM
-!      call get_param('icm.in','iPh',1,iPh,tmp,stringvalue)
-      ntrs(7)=21
-#ifdef ICM_PH
-      ntrs(7)=25
-#endif
+      call read_icm_param_tmp(0)
+      ntrs(7)=ntrs_icm
       tr_mname(7)='ICM'
 #endif
 
@@ -5670,7 +5667,7 @@
         enddo !k=1,31
 
         !gfortran requires all chars have same length
-        ar_name(1:10)=(/'CPOP ','CPON ','CPOC ','vtleaf','vtstem','vtroot','vht','sleaf','sstem','sroot'/)
+        ar_name(1:10)=(/'CPOP  ','CPON  ','CPOC  ','vtleaf','vtstem','vtroot','vht   ','sleaf ','sstem ','sroot '/)
         do k=1,7 !# of 2D arrays
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)

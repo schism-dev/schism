@@ -73,6 +73,8 @@ KAPPNO3S= 0.125 !unit: m/day
 K2NO3=    0.25 !unit: m/day
 THTANO3=  1.08
 
+AONO=    2.86  !from icm.in, moved by ZG (oxygen to carbon ratio?)
+
 !-----------------------------------------------------------------------
 !H2S (particulate and dissolve) oxidation
 !-----------------------------------------------------------------------

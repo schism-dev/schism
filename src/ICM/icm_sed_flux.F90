@@ -289,6 +289,8 @@ subroutine read_icm_sed_param
   call get_param('icm_sed.in','alphaTdif',2,itmp,rtmp,stmp)
   alphaTdif=rtmp
 
+  call get_param('icm_sed.in','AONO',2,itmp,AONO,stmp)
+
   !nitrification
   call get_param('icm_sed.in','KAPPNH4F',2,itmp,rtmp,stmp)
   KAPPNH4F=rtmp
@@ -776,7 +778,7 @@ subroutine sed_calc(id)
 !-----------------------------------------------------------------------
   use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : dtw,iKe,sp,p2c,n2c,s2c,rKPO4p,rKSAp,AOC, &
+  use icm_mod, only : dtw,iKe,sp,p2c,n2c,s2c,KPO4p,KSAp,o2c, &
                       &jsav,spatch, & !sav
                       &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
                       &jveg,vpatch, & !veg
@@ -809,10 +811,10 @@ subroutine sed_calc(id)
 
   !water column concentrations 
   !in unit of g/m^3
-  PO40=SED_PO4(id)/(1.0+rKPO4p*SSI(id))
+  PO40=SED_PO4(id)/(1.0+KPO4p*SSI(id))
   NH40=SED_NH4(id)
   NO30=SED_NO3(id)
-  SI0=SED_SA(id)/(1.0+rKSAp*SSI(id))
+  SI0=SED_SA(id)/(1.0+KSAp*SSI(id))
   O20=max(SED_DO(id),1.e-2)
   HS0=SED_COD(id)
   SAL0=SED_SALT(id)
@@ -1216,9 +1218,9 @@ subroutine sed_calc(id)
 
   C0d=SI0
   j1=0.0
-  !j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*rKSAp*SSI(id)/(1.0+rKSAp*SSI(id))
-  !from init transfer: SI0=SED_SA(id)/(1.0+rKSAp*SSI(id)
-  j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*rKSAp*SSI(id) !rKSAp ==0,future app with TSS
+  !j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*KSAp*SSI(id)/(1.0+KSAp*SSI(id))
+  !from init transfer: SI0=SED_SA(id)/(1.0+KSAp*SSI(id)
+  j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*KSAp*SSI(id) !KSAp ==0,future app with TSS
  
   k12=0.0
   k2=ZHTASI*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
@@ -1242,14 +1244,13 @@ subroutine sed_calc(id)
 
   C0d=PO40
   j1=0.0
-  j2=XJP+flxs*SED_PO4(id)*rKPO4p*SSI(id)/(1.0+rKPO4p*SSI(id))
+  j2=XJP+flxs*SED_PO4(id)*KPO4p*SSI(id)/(1.0+KPO4p*SSI(id))
   k12=0.0
   k2=0.0
   call sed_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
   JPO4=stc*(PO41-PO40)
 
-  !assign flux arrays, in unit of g/m^2 day
-  !with all state variables in unit of g/*, no need to transfer
+  !assign flux arrays, in unit of g/m^2 day; with all state variables in unit of g/ , no need to convert
   SED_BENDO(id)=-SOD !negatvie
   SED_BENNH4(id)=JNH4
   SED_BENNO3(id)=JNO3
@@ -1305,7 +1306,7 @@ subroutine sed_calc(id)
 !         & +NH4AVL*KHNB/((1.d-20+NH4AVL+NO3AVL)*(KHNB+NO3AVL))
 !
 !    !P limitation
-!    PO4AVL=max(SED_BENPO4(id)*dtw+SED_PO4(id)*SED_BL(id)/(1.0+rKPO4p*SSI(id)),0.d0)
+!    PO4AVL=max(SED_BENPO4(id)*dtw+SED_PO4(id)*SED_BL(id)/(1.0+KPO4p*SSI(id)),0.d0)
 !    PLB=PO4AVL/(KHPB+PO4AVL)
 !
 !    !base metabolism
@@ -1337,7 +1338,7 @@ subroutine sed_calc(id)
 !    SED_BENNH4(id)=SED_BENNH4(id)+ANCB*(FNIB*(BMB+PRB)-PRNB*PB)*BBM(id)
 !    SED_BENNO3(id)=SED_BENNO3(id)-(1.0-PRNB)*PB*ANCB*BBM(id)
 !    SED_BENPO4(id)=SED_BENPO4(id)+APCB*(FPIB*(BMB+PRB)-PB)*BBM(id)
-!    SED_BENDO(id)=SED_BENDO(id)+AOC*((1.3-0.3*PRNB)*PB-BMB*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
+!    SED_BENDO(id)=SED_BENDO(id)+o2c*((1.3-0.3*PRNB)*PB-BMB*(1.0-KHRB/(SED_DO(id)+KHRB)))*BBM(id)
 !    SED_BENDOC(id)=SED_BENDOC(id)+BMB*BBM(id)*KHRB/(SED_DO(id)+KHRB)
 !    
 !    !modify sediment POM (mg/m3)
@@ -1471,7 +1472,7 @@ end subroutine sed_calc
 
 subroutine sedsod(id)
   use icm_sed_mod
-  use icm_mod, only : dtw,AON,AOC,AONO,ANDC,jsav,jveg
+  use icm_mod, only : dtw,o2n,o2c,dn2c,jsav,jveg
   use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -1515,7 +1516,7 @@ subroutine sedsod(id)
   JNH4=stc*(NH41-NH40)
 
   !oxygen consumed by nitrification
-  JO2NH4=AON*k12*NH41/stc !unit: g/m^2/day
+  JO2NH4=o2n*k12*NH41/stc !unit: g/m^2/day
 
   !NO3 flux
   pie1=0.0; pie2=0.0 !W12=0 for no particle exits, no need to switch W12 because fp1=fp2=0
@@ -1534,8 +1535,8 @@ subroutine sedsod(id)
   JN2GAS=k12*NO31/stc+k2*NO32
 
 !  !convert carbon diagensis flux to O2 unit
-!  rtmp=(k12*NO31/s+k2*NO32)/ANDC
-!  XJC1=max(AOC*(XJC-rtmp)/rat,1.d-10)
+!  rtmp=(k12*NO31/s+k2*NO32)/dn2c
+!  XJC1=max(o2c*(XJC-rtmp)/rat,1.d-10)
 !
 !  !-------------------------------------------------------------------
 !  !code for methane and sulfide, CH4 starts when SO4 is used up 
@@ -1622,7 +1623,7 @@ subroutine sedsod(id)
 
     C0d=HS0 !unit: g/m^3
     j1=0.0
-    j2=max(AOC*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
+    j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
     k2=0.0
     call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
@@ -1644,7 +1645,7 @@ subroutine sedsod(id)
     C0d=CH40
     j1=0.0
     !j2=XJ2 !need future work
-    j2=max(AOC*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
+    j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     !Error: different from manual
     k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
     k2=0.0

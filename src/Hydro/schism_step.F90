@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iRea,WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
+      use icm_mod, only : WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot !sav & veg
                       
       USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
@@ -172,7 +172,6 @@
                      &tot_salt_gb,dav_mag,tvol,tmass,tpe,tkne,enerf,ener_ob, &
                      &av_dep,vel_m1,vel_m2,xtmp,ytmp,ftmp,tvol12,fluxbnd, &
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,ramp_ss,Cdmax, &
-                     &wmag_e, & !wmag_e and wmag_facotr addedy by wangzg
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
@@ -660,17 +659,13 @@
       endif; endif
 
 #ifdef USE_ICM
-! calculating WMS used for reareation,added by wangzg
-      if(irea==1) then
-!$OMP parallel do default(shared) private(i,wmag_e)
+!$OMP parallel do default(shared) private(i)
+        !computing WMS used for DO reareation
         do i=1,nea
           if(idry_e(i)==1) cycle
-          wmag_e=sum(sqrt(windx(elnode(1:i34(i),i))**2.d0+windy(elnode(1:i34(i),i))**2.d0))/real(i34(i),rkind)
-!          wmag_factor=sum(windfactor(elnode(1:i34(i),i)))/real(i34(i),rkind)
-          WMS(i)=wmag_e  !*wmag_factor !no windfactor for DO reareation
-        enddo !i
+          WMS(i)=sum(sqrt(windx(elnode(1:i34(i),i))**2.d0+windy(elnode(1:i34(i),i))**2.d0))/real(i34(i),rkind)
+        enddo 
 !$OMP end parallel do
-      endif !irea=1
 #endif
 
 

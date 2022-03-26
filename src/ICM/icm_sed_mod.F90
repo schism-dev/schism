@@ -54,6 +54,7 @@ module icm_sed_mod
   real(rkind),save :: DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT,KMO2DP  !PO4
   real(rkind),save :: TEMPBEN,KBENSTR,KLBNTH,DPMIN  !benthic stress
   real(rkind),save :: KAPPCH4,THTACH4,KMCH4O2,KMSO4 !CH4 reaction
+  real(rkind),save :: AONO
 
   !initial concentration 
   real(rkind),save :: CTEMPI,BBMI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI

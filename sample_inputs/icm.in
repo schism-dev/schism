@@ -5,9 +5,13 @@
 ! (2) one line for each parameter in the format: keywords= (value1,value2,...);
 !     keywords are case sensitive; spaces allowed between keywords and "=" and value;
 !     comments starting with "!"  allowed after value;
-! (3) value is an integer, double, or string (no single quote needed); for double, any of the format is acceptable:
-!     40 40. 4.e1
-!     Use of decimal point in integers is OK but discouraged.
+! (3) value is an integer, double, or string (no single quote needed); for double,
+!     any of the format is acceptable: 40 40. 4.e1; ! Use of decimal point in integers
+!     is OK but discouraged.
+! (4) spatially varying values (2D) are available for some parameters
+!        value=-999:  value read from *.gr3 file   (e.g. GPM(1)=-999 => GPM_1.gr3; Ke0=-999 => Ke0.gr3)
+!        value=-9999: value read from *.prop file  (e.g. GPM(1)=-9999 => GPM_1.prop; Ke0=-999 => Ke0.prop)
+!        value=const: const value is applied in 2D space
 !-----------------------------------------------------------------------
 !---------------------------state variables in ICM----------------------
 !-----------------------------------------------------------------------
@@ -38,10 +42,13 @@
 ! 25 CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
 !-----------------------------------------------------------------------
 
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!global switches
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+&MARCO
+!-----------------------------------------------------------------------
+!solar radiation
+!  iRad=1: short wave radiation from sflux; require ihconsv =1, nws=2
+!  iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day
+!-----------------------------------------------------------------------
+iRad = 1
 
 !-----------------------------------------------------------------------
 !options of formulations for computing light attenuation coefficients
@@ -77,9 +84,14 @@ iLimit   = 0
 iLimitSi = 1
 
 !-----------------------------------------------------------------------
-!wind induced DO reareation. iRea=1: Use air reareation
+!net settling velocity (WS) into sediment
+!  iSettle=0: bottom-layer WS same as water column WS
+!  iSettle=1: assign bottom-layer WS from WSSEDn, WSPOMn,WSPBSn
 !-----------------------------------------------------------------------
-iRea = 1
+iSettle = 1
+WSSEDn  = 0.20              !net settling velocity of TSS (m.day-1)
+WSPOMn  = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
+WSPBSn  = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
 
 !-----------------------------------------------------------------------
 !Zooplankton(iZB=1: use zooplankton dynamics; iZB=0: don't use)
@@ -87,9 +99,14 @@ iRea = 1
 iZB = 0
 
 !-----------------------------------------------------------------------
-!PH model switch (plz use ICM_PH)
+!Submerged Aquatic Vegetation switch
 !-----------------------------------------------------------------------
-!iPh = 0 
+isav_icm = 0
+
+!-----------------------------------------------------------------------
+!Intertidal vegetation switch
+!-----------------------------------------------------------------------
+iveg_icm = 0                   !0: VEG off;  1: VEG on
 
 !-----------------------------------------------------------------------
 !Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
@@ -125,68 +142,15 @@ PO4t_tben = 0.01
 SAt_tben = 0.0
 
 !-----------------------------------------------------------------------
-!solar radiation
-!iRad=1: short wave from sflux; require ihconsv =1, nws=2
-!iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day
-!-----------------------------------------------------------------------
-iRad = 1
-
-!-----------------------------------------------------------------------
 !idry_icm=1: turn on shallow kinetic biochemical process
 !idry_icm=0: jump dry elems, keep last wet value; jump won't happen if iveg_icm is turn on and this elem is veg
 !-----------------------------------------------------------------------
 idry_icm = 0
+/
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!ICM parameters for water column 
-!Note for 2D element based parameters  
-!   value=-999:  value read from *.gr3 file   (e.g. need GPM1.gr3 if GPM1=-999) 
-!   value=-9999: value read from *.prop file  (e.g. need GPM1.prop if GPM1=-9999) 
-!   value=other const: const value is applied 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+&CORE
 !-----------------------------------------------------------------------
-!Zooplankton (ZB) parameters
-!  GZM:  ZB predation rate(day-1);   dim(prey=1:8, ZB=1:2)
-!  KhZG: reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
-!  prey(1:8)=(ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC)
-!-----------------------------------------------------------------------
-!zooplankton growth
-GZM  = 0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
-KhGZ = 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
-TGZ  = 25.0   25.0               !optimal temp. for ZB growth (oC)
-KTGZ = 0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth; dim(ZB=1:2,1:2) (oC-2)
-AGZ  = 0.75                      !ZB assimilation efficiency ratio (0-1)
-RGZ  = 0.1                       !ZB respiration ratio when it grazes (0-1)
-
-!zooplankton mortality & metabolism
-MTZ  = 0.02   0.02               !ZB mortality rates (day-1)
-BMZ  = 0.254  0.186              !ZB metabolism rates (day-1)
-TBZ  = 20.0   20.0               !reference temp. for ZB metabolism (oC)
-KTBZ = 0.0693 0.0693             !temp. dependence for ZB metabolism (oC-1)
-
-!partition of zooplankton biomass 
-FCPZ = 0.35   0.55   0.10        !fractions of ZB carbon into (RPOC,LPOC,DOC)
-FNPZ = 0.35   0.50   0.10  0.05  !fractions of ZB nitrogen into (RPON,LPON,DON,NH4)
-FPPZ = 0.10   0.20   0.50  0.20  !fractions of ZB Phosphorus into (RPOP,LPOP,DOP,PO4)
-FSPZ = 0.70   0.25               !fractions of ZB silica into (SU,SA)
-
-!partition of metabolized zooplankton biomass 
-FCMZ = 0.10   0.0                !fractions of ZB metabolism carbon into DOC; dim(ZB=1:2)
-FNMZ = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism N. into (RPON,LPON,DON,NH4); dim(ZB=1:2,4)
-FPMZ = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(ZB=1:2,4)
-FSMZ = 0.50 0.40   0.50 0.60     !fractions of ZB metabolism Si into (SU,SA); dim(ZB=1:2,2)
-
-!misc
-zKhDO= 0.5   0.5                  !DO half saturation for ZB's DOC excretion (mg/L)
-zn2c = 0.20  0.20                 !nitrogen to carbon ratio for zooplankton
-zp2c = 0.02  0.02                 !phosphorus to carbon ratio for zooplankton
-zs2c = 0.50  0.50                 !silica to carbon ratio for zooplankton
-z2pr = 0.5   0.5                  !ratio converting ZB+PB biomass to predation rates on ZB (L.mg-1.day-1)
-p2pr = 0.25                       !ratio converting ZB+PB biomass to predation rates on PB (L.mg-1.day-1)
-
-!-----------------------------------------------------------------------
-!Phytoplankton(PB) parameters
+!ICM parameters for water column; PB: phytoplankton
 !-----------------------------------------------------------------------
 !phytoplankton growth
 GPM  = 3.0    3.0    2.5          !PB growth rates (day-1)
@@ -199,125 +163,140 @@ BMP  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
 TBP  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
 KTBP = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
 
-!partition of phytoplankton biomass
-FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30 !fractions of PB carbon into (RPOC,LPOC,DOC); dim(PB=1:3,3)
+!water column settling velocity and net settling velocity
+WSPBS  = 0.35  0.10  0.00         !settling velocity of (PB1,PB2,PB3) (m.day-1)
+WSPOM  = 1.00  1.00               !settling velocity of RPOM and LPOM (m.day-1)
+WSSED  = 1.00                     !settling velocity of TSS (m.day-1)
+
+!partition of phytoplankton biomass (predation)
+!  FCP: fractions of PB carbon into (RPOC,LPOC,DOC); dim(PB=1:3,3)
+FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30
 FNP  = 0.35  0.50  0.10  0.05     !fractions of PB nitrogen into (RPON,LPON,DON,NH4) 
 FPP  = 0.10  0.20  0.50  0.20     !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4)
 FSP  = 0.90 0.10                  !fractions of diatom silica into (SU,SA)
 
 !partition of metabolized phytoplankton biomass
+!  FNM: fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
+!  FPM: fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
 FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
-FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
-FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
+FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
+FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
 FSM  = 0.50   0.50                !fractions of diatom metabolism Si into (SU,SA)
+
+!nitrification
+Nit      = 0.07                   !maximum nitrification rate (day-1)
+TNit     = 27.0                   !optimal temp. for nitrification (oC)
+KTNit    = 0.0045  0.0045         !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
+KhDOnit  = 1.0                    !DO half saturation for nitrification (mg/L)
+KhNH4nit = 1.0                    !NH4 half saturation for nitrification (mg/L)
+
+!denitrifcation
+KhDOox     = 0.5                  !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
+KhNO3denit = 0.1                  !NO3 half saturation for denitrification (mg/L)
+
+!decay coefficients for organic matters (C,N,P)
+KC0   = 0.005  0.075  0.20        !minimum decay rate of RPOC,LPOC,DOC (day-1)
+KN0   = 0.005  0.075  0.015       !minimum decay rate of RPON,LPON,DON (day-1)
+KP0   = 0.005  0.075  0.010       !minimum decay rate of RPOP,LPOP,DOP (day-1)
+KCalg = 0.0    0.0    0.0         !algae effect on RPOC,LPOC,DOC decay (day-1.m3.g[C]-1)
+KNalg = 0.0    0.0    0.0         !algae effect on RPON,LPON,DON decay (day-1.m3.g[C]-1)
+KPalg = 0.0    0.0    0.0         !algae effect on RPOP,LPOP,DOP decay (day-1.m3.g[C]-1)
+TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
+KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
+
+!decay coefficient for biogenic silica (SU)
+KS    = 0.03                      !dissolution rate of SU at TRS (day-1)
+TRS   = 20.0                      !reference temp. for SU dissolution (oC)
+KTRS  = 0.092                     !temp. dependence for SU dissolution (oC-1)
+
+!decay coefficient for chemical oxygen demand (COD)
+KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
+TRCOD = 20.0                      !reference temp. for COD oxidation (oC)
+KTRCOD= 0.041                     !temp. dependence for COD oxidation (oC-1)
+KhCOD=  1.5                       !COD half saturation for COD oxidation (mg[O2]/L)
 
 !nutrient limitation & salinity stress
 KhN  = 0.01   0.01   0.01         !nitrogen half saturation (mg/L)
 KhP  = 0.001  0.001  0.001        !phosphorus half saturation (mg/L)
-KhSi = 0.05                       !silica half saturation on diatom (mg/L)
-KhS  = 0.1                        !salinity when PB3 growth is halved (PSU)
+KhS  = 0.05                       !silica half saturation on diatom (mg/L)
+KhSal= 0.1                        !salinity when PB3 growth is halved (PSU)
 
-!misc
-c2chl= 0.059 0.059 0.059          !carbon to Chl ratio (g[C]/mg[Chl])
+!conversion coeffiecients
+c2chl= 0.059 0.059 0.059          !carbon to chlorophyll ratio (g[C]/mg[Chl])
 n2c  = 0.167 0.167 0.167          !nitrogen to carbon ratio for phytoplankton
 p2c  = 0.02  0.02  0.02           !phosphorus to carbon ratio for phytoplankton
 s2c  = 0.50                       !silica to carbon ratio for phytolankton
+o2c  = 2.67                       !oxygen to carbon ratio in respiration
+o2n  = 4.33                       !oxygen to ammonium ratio (g[O2]/g[NH4])
+dn2c = 0.933                      !mass of NO3 consumed per mass of DOC oxidized in denit. (g[N]/g[C])
+an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration rate
 
-!-----------------------------------------------------------------------
-!Carbon parameters
-!2D variables: rKRC,rKLC,rKDC 
-!-----------------------------------------------------------------------
-KC0   = 0.005  0.075  0.20        !minimum decay rate of RPOC,LPOC and DOC (day-1)
-KCalg = 0.0    0.0    0.0         !algae effect on carbon decay  (day-1.m3.g[C]-1)
-KhDO  = 0.5    0.5    0.5         !DO half saturation for PB's DOC excretion (mg/L)
+!misc
+KhDO = 0.5   0.5   0.5            !DO half saturation for PB's DOC excretion (mg/L)
+KPO4p= 0.0                        !coefficient relating PO4 sorption to TSS
+KSAp = 0.0                        !coefficient relating Silicate(SA) sorption to TSS
+WRea = 0.0                        !baseline wind-induced reaeration coefficient for DO (day-1)
+/
 
-TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
-KTRM  = 0.069  0.069  0.069       !temp. dependence of (RPOM,LPOM,DOM) decay (oC-1)
+&ZB
+!-----------------------------------------------------------------------
+!Zooplankton (ZB) parameters
+!-----------------------------------------------------------------------
+!zooplankton growth
+!  zGPM: ZB predation rate(day-1);   dim(prey=1:8, ZB=1:2)
+!  zKhG: reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
+!  prey(1:8)=(ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC)
+zGPM = 0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
+zKhG = 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
+zTGP = 25.0   25.0               !optimal temp. for ZB growth (oC)
+zKTGP= 0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth (T<=zTGP & T>zTGP); dim(ZB=1:2,1:2) (oC-2)
+zAG  = 0.75                      !ZB assimilation efficiency ratio (0-1)
+zRG  = 0.1                       !ZB respiration ratio when it grazes (0-1)
 
-rKHORDO= 0.5
-rKHDNn=  0.1
-AANOX=   0.5
+!zooplankton mortality & metabolism
+zMT   = 0.02   0.02              !ZB mortality rates (day-1)
+zBMP  = 0.254  0.186             !ZB metabolism rates (day-1)
+zTBP  = 20.0   20.0              !reference temp. for ZB metabolism (oC)
+zKTBP = 0.0693 0.0693            !temp. dependence for ZB metabolism (oC-1)
 
-!-----------------------------------------------------------------------
-!Nitrogen parameters
-!-----------------------------------------------------------------------
-KN0   = 0.005  0.075  0.015       !minimum decay rate of RPON,LPON and DON (day-1)
-KNalg = 0.0    0.0    0.0         !algae effect on nitrogen decay  (day-1.m3.g[C]-1)
+!partition of zooplankton biomass
+zFCP = 0.35   0.55   0.10        !fractions of ZB carbon into (RPOC,LPOC,DOC)
+zFNP = 0.35   0.50   0.10  0.05  !fractions of ZB nitrogen into (RPON,LPON,DON,NH4)
+zFPP = 0.10   0.20   0.50  0.20  !fractions of ZB Phosphorus into (RPOP,LPOP,DOP,PO4)
+zFSP = 0.70   0.25               !fractions of ZB silica into (SU,SA)
 
-ANDC=   0.933
+!partition of metabolized zooplankton biomass
+!  zFNM: fractions of ZB metabolism N. into (RPON,LPON,DON,NH4); dim(ZB=1:2,4)
+!  zFPM: fractions of ZB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(ZB=1:2,4)
+zFCM = 0.10   0.0                !fractions of ZB metabolism carbon into DOC; dim(ZB=1:2)
+zFNM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10
+zFPM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10
+zFSM = 0.50 0.40   0.50 0.60     !fractions of ZB metabolism Si into (SU,SA); dim(ZB=1:2,2)
 
-rNitM=  0.07   !maximum nitrification rate (1/day)
-rKhNitDO= 1.0  !half DO conc. for nitrif.
-rKhNitN=  1.0  !half NH4 conc. for nitrif. adjust based on your case (larger value: larger of nitrif. upper limit)
-TNit=     27.0
-rKNit1=  0.0045
-rKNit2=  0.0045
+!misc
+zKhDO= 0.5   0.5                  !DO half saturation for ZB's DOC excretion (mg/L)
+zn2c = 0.20  0.20                 !nitrogen to carbon ratio for zooplankton
+zp2c = 0.02  0.02                 !phosphorus to carbon ratio for zooplankton
+zs2c = 0.50  0.50                 !silica to carbon ratio for zooplankton
+z2pr = 0.5   0.5                  !ratio converting ZB+PB biomass to predation rates on ZB (L.mg-1.day-1)
+p2pr = 0.25                       !ratio converting ZB+PB biomass to predation rates on PB (L.mg-1.day-1)
+/
 
+&PH_ICM
 !-----------------------------------------------------------------------
-!Phosphorus parameters
-!2D variables: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
-!-----------------------------------------------------------------------
-KP0   = 0.005  0.075  0.010       !minimum decay rate of RPOP,LPOP and DOP (day-1)
-KPalg = 0.0    0.0    0.0         !algae effect on nitrogen decay  (day-1.m3.g[C]-1)
-
-rKPO4p=  0.0 !PO4p partition coefficient
-
-!-----------------------------------------------------------------------
-!Silica parameters
-!-----------------------------------------------------------------------
-rKSAp= 0.0 
-rKSU=  0.03
-TRSUA= 20.0
-rKTSUA= 0.092
-
-!-----------------------------------------------------------------------
-!COD and DO parameters
-!-----------------------------------------------------------------------
-rKHCOD=  1.5
-rKCD=    1.0
-TRCOD=   20.0
-rKTCOD=  0.041
-AOC=     2.67
-AON=     4.33
-AONO=    2.86
-rKro=    3.933
-rKTr=    1.024
-
-!-----------------------------------------------------------------------
-!water column settling velocity (m/day):  2D variables
-!-----------------------------------------------------------------------
-WSSED  = 1.00              !settling velocity of TSS (m.day-1)
-WSPOM  = 1.00  1.00        !settling velocity of RPOM and LPOM (m.day-1)
-WSPBS  = 0.35  0.10  0.00  !settling velocity of (PB1,PB2,PB3) (m.day-1)
-
-!-----------------------------------------------------------------------
-!settling velocity into sediment: 2D variables 
-!iSet=0: same as water column settling velocity; no re-suspension 
-!iSet=1: spatial constant net settling velocity 
-!-----------------------------------------------------------------------
-iSet= 1 
-WSSEDn = 0.20              !net settling velocity of TSS (m.day-1)
-WSPOMn = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
-WSPBSn = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
-
-!-----------------------------------------------------------------------
-!WRea:   coefficients for Wind-induced reaeration of DO, (2D variable)
-!-----------------------------------------------------------------------
-WRea= 0.0
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !PH model parameter
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-inu_ph= 0 
-WSCACO3 = 0.1
-rKCACO3 = 60.0 !dissulution bewteen CaCO3 and Ca++
-rKCA = 60.0 !sediment surface transfer coefficient from CaCO3 to Ca++
-rKa = 1.0  !reaeration rate
+!-----------------------------------------------------------------------
+inu_ph= 0                     !nudge option for pH model
+pWSCACO3 = 0.1                !settling velocity of pWSCACO3
+pKCACO3  = 60.0               !dissulution bewteen CaCO3 and Ca++
+pKCA     = 60.0               !sediment surface transfer coefficient from CaCO3 to Ca++
+pRea     = 1.0                !reaeration rate for CO2
+/
 
+&SAV
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
-isav_icm = 0                !0: SAV off;  1: SAV on
 stleaf0 = -9999             !init conc of total sav leaf
 ststem0 = -9999             !init conc of total sav stem
 stroot0 = -9999             !init conc of total sav root
@@ -325,7 +304,7 @@ stroot0 = -9999             !init conc of total sav root
 !growth coefficients
 sGPM  = 0.1                 !maximum growth rate (day-1)
 sTGP  = 32                  !optimal growth temperature (oC)
-sKTGP = 0.003  0.005        !temp. dependence for growth (<sTGP, or >sTGP)
+sKTGP = 0.003  0.005        !temp. dependence for growth (T<=sTGP & T>sTGP)
 sFAM  = 0.2                 !fraction of leaf production to active metabolism
 sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
 
@@ -354,10 +333,12 @@ s2den  = 10                 !coeff. computing SAV density from leaf&stem
 sn2c   = 0.09               !nitrogen to carbon ratio of sav
 sp2c   = 0.01               !phosphorus to carbon ratio
 so2c   = 2.67               !oxygen to carbon ratio
+/
 
+&VEG
 !-----------------------------------------------------------------------
 !Intertidal Vegetation (VEG), paramters
-!  vKTGP : temp. dependence(3,2) for growth (<vTGP, or >vTGP)
+!  vKTGP : temp. dependence(3,2) for growth (T<=vTGP & T>vTGP)
 !  vFCP  : fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
 !  vBMP  : metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
 !  vTBP  : reference temp. for leaf/stem/root metabolism
@@ -366,7 +347,6 @@ so2c   = 2.67               !oxygen to carbon ratio
 !  vFPM  : fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
 !  vFCM  : fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
 !-----------------------------------------------------------------------
-iveg_icm = 0                   !0: VEG off;  1: VEG on
 vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
 vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
 vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
@@ -415,3 +395,4 @@ v2den  = 10     10     10     !coeff. computing veg density
 vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
 vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
 vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
+/

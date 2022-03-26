@@ -183,13 +183,6 @@ subroutine read_icm_param2
   real(rkind),allocatable :: swild2(:,:)
 
   !read phytoplankton parameters
-  call get_param_1D('icm.in','GPM',2,itmp,GPM,stmp,3)
-  call get_param_1D('icm.in','TGP',2,itmp,TGP,stmp,3)
-  call get_param_1D('icm.in','KTGP',2,itmp1,KTGP(1:3,1:2),stmp,6)
-
-  call get_param_1D('icm.in','PRP',2,itmp,PRP,stmp,3)
-  call get_param_1D('icm.in','c2chl',2,itmp,c2chl,stmp,3)
-
   do i=1,3
     write(pid,'(i1)') i
     call read_param_2d('GPM_'//trim(adjustl(pid)),sp%GPM(:,i),GPM(i))
@@ -203,15 +196,6 @@ subroutine read_icm_param2
   enddo
 
   !read carbon and phosphorus parameters
-  call get_param_1D('icm.in','KC0',2,itmp,KC0,stmp,3)
-  call get_param_1D('icm.in','KCalg',2,itmp,KCalg,stmp,3)
-
-  call get_param_1D('icm.in','TRM',2,itmp,TRM,stmp,3)
-  call get_param_1D('icm.in','KTRM',2,itmp,KTRM,stmp,3)
-  call get_param_1D('icm.in','KhDO',2,itmp,KhDO,stmp,3)
-
-  call get_param_1D('icm.in','KP0',2,itmp,KP0,stmp,3)
-  call get_param_1D('icm.in','KPalg',2,itmp,KPalg,stmp,3)
   do i=1,3
     write(pid,'(i1)') i
     call read_param_2d('KC0_'//trim(adjustl(pid)),sp%KC0(:,i),KC0(i))
@@ -220,14 +204,6 @@ subroutine read_icm_param2
   enddo
 
   !read settling velocity
-  call get_param('icm.in','WSSED',2,itmp,WSSED,stmp)
-  call get_param_1D('icm.in','WSPOM', 2,itmp, WSPOM,stmp,2)
-  call get_param_1D('icm.in','WSPBS', 2,itmp, WSPBS,stmp,3)
-
-  call get_param('icm.in','WSSEDn',2,itmp,WSSEDn,stmp)
-  call get_param_1D('icm.in','WSPOMn', 2,itmp, WSPOMn,stmp,2)
-  call get_param_1D('icm.in','WSPBSn', 2,itmp, WSPBSn,stmp,3)
-
   call read_param_2d('WSSED',sp%WSSED,WSSED)
   call read_param_2d('WSSEDn',sp%WSSEDn,WSSEDn)
   do i=1,2
@@ -241,17 +217,9 @@ subroutine read_icm_param2
       call read_param_2d('WSPBSn_'//trim(adjustl(pid)),sp%WSPBSn(:,i),WSPBSn(i))
   enddo
 
-  !read turbidity
-  call get_param('icm.in','Ke0',2,itmp,Ke0,stmp)
   call read_param_2d('Ke0',sp%Ke0,Ke0)
-
-  !read reareation 
-  call get_param('icm.in','WRea',2,itmp,WRea(1),stmp)
-  call read_param_2d('WRea',WRea,WRea(1))
-
-  !read PC to TSS
+  call read_param_2d('WRea',sp%WRea,WRea)
   if(iKe==0) then
-    call get_param('icm.in','tss2c',2,itmp,tss2c,stmp)
     call read_param_2d('tss2c',sp%tss2c,tss2c)
   endif
 
@@ -268,7 +236,6 @@ subroutine read_icm_param2
   endif
 #endif ICM_PH
 
-  !sav
   !-----------------read in sav patch flag-----------------
   if(jsav==1) then
     call read_param_2d('spatch',swild,-9999.d0); spatch(:)=swild(:)
@@ -325,6 +292,209 @@ subroutine read_icm_param2
   endif !jveg
 
 end subroutine read_icm_param2
+
+subroutine read_icm_param_tmp(imode)
+!---------------------------------------------------------------------
+!read paramters in icm.in
+!---------------------------------------------------------------------
+  use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir, &
+                        & len_in_dir,len_out_dir,ihconsv,nws
+  use schism_msgp, only : parallel_abort
+  use misc_modules
+  use icm_mod
+  implicit none
+  integer,intent(in) :: imode
+
+  !local variables
+  integer :: istat
+  !integer :: istat,i,j,itmp,itmp1(1),itmp2(1,1)
+  !real(rkind) :: rtmp
+  !real(rkind) :: rtmp1(1),rtmp2(1,1),tmp
+  !character(len=2) :: stmp
+
+  !define namelists
+  namelist /MARCO/ iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen,&
+           & iZB,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
+           & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben, &
+           & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
+  namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,FSP,&
+           & FCM,FNM,FPM,FSM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
+           & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KS,TRS,KTRS,KCD,TRCOD,KTRCOD, &
+           & KhCOD,KhN,KhP,KhS,KhSal,c2chl,n2c,p2c,s2c,o2c,o2n,dn2c,an2c,KhDO, &
+           & KPO4p,KSAp,WRea
+  namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMT,zBMP,zTBP,zKTBP,zFCP,zFNP,zFPP, &
+           & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
+  namelist /PH_ICM/ inu_ph,pWSCACO3,pKCACO3,pKCA,pRea
+  namelist /SAV/ stleaf0,ststem0,stroot0,sGPM,sTGP,sKTGP,sFAM,sFCP,sBMP,sTBP,sKTBP,&
+           & sFNM,sFPM,sFCM,sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs,salpha,sKe,shtm,s2ht, &
+           & sc2dw,s2den,sn2c,sp2c,so2c
+  namelist /VEG/ vtleaf0,vtstem0,vtroot0,vGPM,vFAM,vTGP,vKTGP,vFCP,vBMP,vTBP,vKTBP,&
+           & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMT, &
+           & vTMT,vKTMT,vMT0,vMTcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
+           & vo2c 
+
+  if(imode==0) then
+    !initilize global switches
+    iRad=1; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
+    iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
+    Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
+    thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4t_tben=0; SAt_tben=0
+    jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm
+
+    !read global switches
+    open(31,file=in_dir(1:len_in_dir)//'icm.in',delim='apostrophe',status='old')
+    read(31,nml=MARCO)
+    close(31)
+#ifdef ICM_PH
+    iPh=1  !better to put this in icm.in
+#endif
+
+    !compute total number of ICM 3D state variables
+    ntrs_icm=21
+    if(iPh==1) ntrs_icm=ntrs_icm+4
+
+  elseif(imode==1) then !read module variables
+    !init. CORE modules
+    GPM=0; TGP=0; KTGP=0; PRP=0; BMP=0; TBP=0; KTBP=0; WSPBS=0; WSPOM=0; WSSED=0;
+    FCP=0; FNP=0; FPP=0; FSP=0; FCM=0; FNM=0; FPM=0; FSM=0; Nit=0; TNit=0; KTNit=0;
+    KhDOnit=0; KhNH4nit=0; KhDOox=0; KhNO3denit=0; KC0=0; KN0=0; KP0=0; KCalg=0;
+    KNalg=0; KPalg=0; TRM=0; KTRM=0; KS=0; TRS=0; KTRS=0; KCD=0; TRCOD=0; KTRCOD=0;
+    KhCOD=0; KhN=0; KhP=0; KhS=0; KhSal=0; c2chl=0; n2c=0; p2c=0; s2c=0; o2c=0;
+    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0; KSAp=0; WRea=0
+
+    !init. ZB modules
+    zGPM=0; zKhG=0; zTGP=0; zKTGP=0; zAG=0; zRG=0; zMT=0; zBMP=0; zTBP=0; zKTBP=0;
+    zFCP=0; zFNP=0; zFPP=0; zFSP=0; zFCM=0; zFNM=0; zFPM=0; zFSM=0; zKhDO=0; zn2c=0;
+    zp2c=0; zs2c=0; z2pr=0; p2pr=0
+
+    !init. PH modules
+    inu_ph=0; pWSCACO3=0; pKCACO3=0; pKCA=0; pRea=0
+
+    !init. SAV module
+    stleaf0=0; ststem0=0; stroot0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sBMP=0;
+    sTBP=0; sKTBP=0; sFNM=0; sFPM=0; sFCM=0; sKhNw=0; sKhNs=0; sKhNH4=0; sKhPw=0;
+    sKhPs=0; salpha=0; sKe=0; shtm=0; s2ht=0; sc2dw=0; s2den=0; sn2c=0; sp2c=0; so2c=0
+    
+    !init. VEG module
+    vtleaf0=0; vtstem0=0; vtroot0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vBMP=0;
+    vTBP=0; vKTBP=0; vFNM=0; vFPM=0; vFCM=0; ivNc=0; ivPc=0; vKhNs=0; vKhPs=0; vScr=0;
+    vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMT=0; vTMT=0; vKTMT=0; vMT0=0; vMTcr=0; valpha=0;
+    vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
+
+    open(31,file=in_dir(1:len_in_dir)//'icm.in',delim='apostrophe',status='old')
+    read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
+    read(31,nml=SAV);  read(31,nml=VEG); 
+    close(31)
+
+  endif
+
+end subroutine read_icm_param_tmp
+
+    !check values
+    !if(iRad>2)     call parallel_abort('check parameter: iRad>1')
+    !if(iKe>2)      call parallel_abort('check parameter: iKe>1')
+    !if(iLight>1)   call parallel_abort('check parameter: iLight>1')
+    !if(iLimit>1)   call parallel_abort('check parameter: iLimit>1')
+    !if(iLimitSi>1) call parallel_abort('check parameter: iLimitSi>1')
+    !if(iSettle>1)  call parallel_abort('check parameter: iSettle>1')
+    !if(iZB>1)      call parallel_abort('check parameter: iZB>1')
+    !if(jsav>1)     call parallel_abort('check parameter: isav_icm>1')
+    !if(jveg>1)     call parallel_abort('check parameter: iveg_icm>1')
+    !if(jdry>1)     call parallel_abort('check parameter: idry_icm>1')
+    !if(iAtm>1)     call parallel_abort('check parameter: iAtm>1')
+    !if(iSed>1)     call parallel_abort('check parameter: iSed>1')
+    !if(iBen>1)     call parallel_abort('check parameter: iBen>1')
+    !if(iTBen>1)    call parallel_abort('check parameter: iTBen>1')
+
+    !put these check later as SCHISM hasn't been initilized
+    !if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=1 needs heat exchange')
+    !if(iLight==1.and.(iRad/=2)) call parallel_abort('check parameter: iRad=2 is required for iLight=1')
+
+    !if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
+    !if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
+    !if(ivPs/=0.and.ivPs/=1) call parallel_abort('read_icm: illegal ivPs')
+    !if(ivPc/=0.and.ivPc/=1) call parallel_abort('read_icm: illegal ivPc')
+
+    !if(jsav==1) then
+    !  if(salpha<=0) call parallel_abort('read_icm_input: salpha')
+    !  if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
+    !  if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
+    !  if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
+    !  if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
+    !  if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
+    !  if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
+    !  if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
+    !endif !jsav
+
+    !if(jveg==1) then
+    !  do j=1,3
+    !    if(valpha(j)<=0) call parallel_abort('read_icm_input: valpha')
+    !    if(vGPM(j)<=0) call parallel_abort('read_icm_input: vGPM')
+    !    if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
+    !    if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
+    !    if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
+    !    if(vBMP(j,1)<=0.or.vBMP(j,2)<=0.or.vBMP(j,3)<=0) call parallel_abort('read_icm_input: vBMP')
+    !  enddo !j::veg species
+    !endif !jveg
+
+subroutine read_icm_param
+!---------------------------------------------------------------------
+!read paramters in icm.in
+!---------------------------------------------------------------------
+  use schism_glbl, only : rkind,dt,nvrt,ne_global,ihconsv,nws, &
+                        & in_dir,out_dir,len_in_dir,len_out_dir
+  use schism_msgp, only : parallel_abort
+  use icm_mod
+  use misc_modules
+  use icm_sed_mod, only : NH4T2I,PO4T2I
+
+  implicit none
+
+  !local variables
+  integer :: istat,i,j,itmp,itmp1(1),itmp2(1,1)
+  real(8) :: rtmp
+  real(rkind) :: rtmp1(1),rtmp2(1,1),tmp
+  character(len=2) :: stmp
+
+#ifndef USE_SED 
+  if(iKe==1) then
+    call parallel_abort('iKe=1,need to turn on SED3D module')
+  endif
+#endif
+
+  !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
+  if(iAtm==1) then
+    open(401,file=in_dir(1:len_in_dir)//'ICM_atm.th',status='old')
+  endif 
+  if(iBen/=0) then
+    open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
+  endif 
+  if(iRad==2) then
+    open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
+  elseif(iRad/=1.and.iRad/=2) then
+    call parallel_abort('error: iRad')
+  endif
+  if(jveg==1) then
+    open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
+  endif
+  time_icm=-999.0  !initializing time stamp
+ 
+  if(iTBen/=0)then
+    call get_param('icm_sed.in','NH4T2I',2,itmp,NH4T2I,stmp)
+    call get_param('icm_sed.in','PO4T2I',2,itmp,PO4T2I,stmp)
+  endif!iTBen=1
+
+  !PH nudge for TIC and ALK
+  if(iPh==1.and.inu_ph==1) then
+    open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
+    time_ph=-999.0
+    irec_ph=1
+  endif
+
+  dtw=dt/86400.0;  dtw2=dtw/2.0 !days
+  mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
+
+end subroutine read_icm_param
 
 subroutine read_param_2d(varname,pvar,pvalue)
 !---------------------------------------------------------------------
@@ -390,382 +560,6 @@ subroutine read_param_2d(varname,pvar,pvalue)
   
 end subroutine read_param_2d
 
-subroutine read_icm_param
-!---------------------------------------------------------------------
-!read paramters in icm.in
-!---------------------------------------------------------------------
-  use schism_glbl, only : rkind,dt,nvrt,ne_global,ihconsv,nws, &
-                        & in_dir,out_dir,len_in_dir,len_out_dir
-  use schism_msgp, only : parallel_abort
-  use icm_mod
-  use misc_modules
-  use icm_sed_mod, only : NH4T2I,PO4T2I
-
-  implicit none
-
-  !local variables
-  integer :: i,j,itmp,itmp1(1),itmp2(1,1)
-  real(8) :: rtmp
-  real(rkind) :: rtmp1(1),rtmp2(1,1),tmp
-  character(len=2) :: stmp
-  
-  !read glocal swtiches  
-  call get_param('icm.in','iKe',1,iKe,rtmp,stmp)
-  call get_param('icm.in','iLight',1,iLight,rtmp,stmp)
-  call get_param('icm.in','iRea',1,iRea,rtmp,stmp)
-  call get_param('icm.in','iAtm',1,iAtm,rtmp,stmp)
-  call get_param('icm.in','iSed',1,iSed,rtmp,stmp)
-  call get_param('icm.in','iBen',1,iBen,rtmp,stmp)
-  call get_param('icm.in','iTBen',1,iTBen,rtmp,stmp)
-  call get_param('icm.in','iRad',1,iRad,rtmp,stmp)
-  call get_param('icm.in','iSet',1,iSet,rtmp,stmp)
-  call get_param('icm.in','idry_icm',1,idry_icm,rtmp,stmp); jdry=>idry_icm
-
-  !check 
-  if(iLight>1) call parallel_abort('read_icm: iLight>1')
-  if(iRea>1) call parallel_abort('read_icm: iRea>1')
-  if(max(iAtm,iSed,iBen,iRad)>2) call parallel_abort('read_icm: iAtm,iSed,iBen,iRad')
-  if(iSet/=0.and.iSet/=1) call parallel_abort('read_icm: invalid iSet')
-  if(jdry/=0.and.jdry/=1) call parallel_abort('read_icm: invalid idry_icm')
-  if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('read_icm: iRad=1 needs heat exchange')
-  if(iLight==1.and.(iRad/=2)) call parallel_abort('read_icm: iRad=2 is required for iLight=1')
-
-#ifdef ICM_PH
-  iPh=1
-#else
-  iPh=0
-#endif
-
-#ifndef USE_SED 
-  if(iKe==1) then
-    call parallel_abort('iKe=1,need to turn on SED3D module')
-  endif
-#endif
-
-  !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
-  if(iAtm==1) then
-    open(401,file=in_dir(1:len_in_dir)//'ICM_atm.th',status='old')
-  endif 
-  if(iBen/=0) then
-    open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
-  endif 
-  if(iRad==2) then
-    open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
-  elseif(iRad/=1.and.iRad/=2) then
-    call parallel_abort('error: iRad')
-  endif
-  if(jveg==1) then
-    open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
-  endif
-  time_icm=-999.0  !initializing time stamp
- 
-  if(iTBen/=0)then
-    call get_param('icm.in','thata_tben',2,itmp,rtmp,stmp)
-    thata_tben=rtmp
-    call get_param('icm.in','SOD_tben',2,itmp,rtmp,stmp)
-    SOD_tben=rtmp
-    call get_param('icm.in','DOC_tben',2,itmp,rtmp,stmp)
-    DOC_tben=rtmp
-    call get_param('icm.in','NH4_tben',2,itmp,rtmp,stmp)
-    NH4_tben=rtmp
-    call get_param('icm.in','NO3_tben',2,itmp,rtmp,stmp)
-    NO3_tben=rtmp
-    call get_param('icm.in','PO4t_tben',2,itmp,rtmp,stmp)
-    PO4t_tben=rtmp
-    call get_param('icm.in','SAt_tben',2,itmp,rtmp,stmp)
-    SAt_tben=rtmp
-    call get_param('icm_sed.in','NH4T2I',2,itmp,rtmp,stmp)
-    NH4T2I=rtmp
-    call get_param('icm_sed.in','PO4T2I',2,itmp,rtmp,stmp)
-    PO4T2I=rtmp
-  endif!iTBen=1
-
- 
-  !read Zooplanktion parameters
-  call get_param('icm.in','iZB',1,iZB,rtmp,stmp)
-
-  call get_param_1D('icm.in','GZM',2,itmp2,GZM(1:8,1:2),stmp,16)
-  call get_param_1D('icm.in','KhGZ',2,itmp2,KhGZ(1:8,1:2),stmp,16)
-  call get_param_1D('icm.in','TGZ',2,itmp1,TGZ,stmp,2)     
-  call get_param_1D('icm.in','KTGZ',2,itmp1,KTGZ(1:2,1:2),stmp,4) 
-
-  call get_param_1D('icm.in','BMZ',2,itmp1,BMZ,stmp,2)
-  call get_param_1D('icm.in','TBZ',2,itmp1,TBZ,stmp,2);  
-  call get_param_1D('icm.in','KTBZ',2,itmp1,KTBZ,stmp,2)
-  call get_param_1D('icm.in','MTZ',2,itmp1,MTZ,stmp,2)
-  call get_param_1D('icm.in','z2pr',2,itmp1,z2pr,stmp,2)
-
-  call get_param('icm.in','AGZ',2,itmp,AGZ,stmp)
-  call get_param('icm.in','RGZ',2,itmp,RGZ,stmp)
-  call get_param('icm.in','p2pr',2,itmp,p2pr,stmp)
-
-  !read phytoplankton parameters
-  call get_param_1D('icm.in','BMP',2,itmp1,BMP,stmp,3)
-  call get_param_1D('icm.in','TBP',2,itmp1,TBP,stmp,3)
-  call get_param_1D('icm.in','KTBP',2,itmp1,KTBP,stmp,3)
-
-  call get_param_1D('icm.in','KhN',2,itmp1,KhN,stmp,3)
-  call get_param_1D('icm.in','KhP',2,itmp1,KhP,stmp,3)
-  call get_param('icm.in','KhSi',2,itmp,KhSi,stmp)
-  call get_param('icm.in','KhS',2,itmp,KhS,stmp)
-
-  call get_param_1D('icm.in','Iopt',2,itmp1,Iopt,stmp,3)
-  call get_param_1D('icm.in','Hopt',2,itmp1,Hopt,stmp,3)
-
-  call get_param_1D('icm.in','alpha',2,itmp1,alpha,stmp,3)
-
-  call get_param('icm.in','iLimit',1,iLimit,rtmp,stmp)
-  call get_param('icm.in','iLimitSi',1,iLimitSi,rtmp,stmp)
-
-  call get_param('icm.in','KeC',2,itmp,KeC,stmp)
-  call get_param('icm.in','KeS',2,itmp,KeS,stmp)
-  call get_param('icm.in','KeSalt',2,itmp,KeSalt,stmp)
-
-  if(iLimit>1) call parallel_abort('read_icm: iLimit>1')
-
-  !sav parameters
-  call get_param('icm.in','stleaf0',2,itmp,stleaf0,stmp)
-  call get_param('icm.in','ststem0',2,itmp,ststem0,stmp)
-  call get_param('icm.in','stroot0',2,itmp,stroot0,stmp)
-  call get_param('icm.in','sFAM',2,itmp,sFAM,stmp)
-  call get_param('icm.in','sGPM',2,itmp,sGPM,stmp)
-  call get_param('icm.in','sTGP',2,itmp,sTGP,stmp)
-  call get_param_1D('icm.in','sKTGP',2,itmp1,sKTGP,stmp,2)
-  call get_param('icm.in','sc2dw',2,itmp,sc2dw,stmp)
-  call get_param_1D('icm.in','sFCP',2,itmp1,sFCP,stmp,3)
-  call get_param_1D('icm.in','sBMP',2,itmp1,sBMP,stmp,3)
-  call get_param_1D('icm.in','sTBP',2,itmp1,sTBP,stmp,3)
-  call get_param_1D('icm.in','sKTBP',2,itmp1,sKTBP,stmp,3)
-  call get_param('icm.in','sn2c',2,itmp,sn2c,stmp)
-  call get_param('icm.in','sp2c',2,itmp,sp2c,stmp)
-  call get_param('icm.in','so2c',2,itmp,so2c,stmp)
-
-  call get_param('icm.in','salpha',2,itmp,salpha,stmp)
-  call get_param('icm.in','sKe',2,itmp,sKe,stmp)
-
-  call get_param_1D('icm.in','s2ht',2,itmp1,s2ht,stmp,3)
-  call get_param_1D('icm.in','shtm',2,itmp1,shtm,stmp,2)
-
-  call get_param('icm.in','sKhNw',2,itmp,sKhNw,stmp)
-  call get_param('icm.in','sKhNs',2,itmp,sKhNs,stmp)
-  call get_param('icm.in','sKhNH4',2,itmp,sKhNH4,stmp)
-  call get_param_1D('icm.in','sFNM',2,itmp1,sFNM,stmp,4)
-
-  call get_param('icm.in','sKhPw',2,itmp,sKhPw,stmp)
-  call get_param('icm.in','sKhPs',2,itmp,sKhPs,stmp)
-  call get_param_1D('icm.in','sFPM',2,itmp1,sFPM,stmp,4)
-  call get_param_1D('icm.in','sFCM',2,itmp1,sFCM,stmp,4)
-  call get_param('icm.in','s2den',2,itmp,s2den,stmp)
-
-  !veg parameters
-  call get_param_1D('icm.in','vtleaf0',2,itmp1,vtleaf0,stmp,3)
-  call get_param_1D('icm.in','vtstem0',2,itmp1,vtstem0,stmp,3)
-  call get_param_1D('icm.in','vtroot0',2,itmp1,vtroot0,stmp,3)
-
-  call get_param('icm.in','ivMT',1,ivMT,rtmp,stmp)
-  call get_param('icm.in','ivNs',1,ivNs,rtmp,stmp)
-  if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
-  call get_param('icm.in','ivNc',1,ivNc,rtmp,stmp)
-  if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
-  call get_param('icm.in','ivPs',1,ivPs,rtmp,stmp)
-  if(ivPs/=0.and.ivPs/=1) call parallel_abort('read_icm: illegal ivPs')
-  call get_param('icm.in','ivPc',1,ivPc,rtmp,stmp)
-  if(ivPc/=0.and.ivPc/=1) call parallel_abort('read_icm: illegal ivPc')
-
-  call get_param_1D('icm.in','vFAM',2,itmp1,vFAM,stmp,3)
-  call get_param_1D('icm.in','vc2dw',2,itmp1,vc2dw,stmp,3)
-  call get_param_1D('icm.in','vGPM',2,itmp1,vGPM,stmp,3)
-  call get_param_1D('icm.in','vTGP',2,itmp1,vTGP,stmp,3)
-  call get_param_1D('icm.in','vKTGP',2,itmp1,vKTGP(1:3,1:2),stmp,6)
-  call get_param_1D('icm.in','vFCP',2,itmp1,vFCP(1:3,1:3),stmp,9)
-
-  call get_param_1D('icm.in','vBMP',2,itmp1,vBMP(1:3,1:3),stmp,9)
-  call get_param_1D('icm.in','vTBP',2,itmp1,vTBP(1:3,1:3),stmp,9)
-  call get_param_1D('icm.in','vKTBP',2,itmp1,vKTBP(1:3,1:3),stmp,9)
-
-  call get_param_1D('icm.in','vFNM',2,itmp1,vFNM(1:3,1:4),stmp,12)
-  call get_param_1D('icm.in','vFPM',2,itmp1,vFPM(1:3,1:4),stmp,12)
-  call get_param_1D('icm.in','vFCM',2,itmp1,vFCM(1:3,1:4),stmp,12)
-
-  call get_param_1D('icm.in','valpha',2,itmp1,valpha,stmp,3)
-  call get_param_1D('icm.in','vKe',2,itmp1,vKe,stmp,3)
-
-  call get_param_1D('icm.in','vp2c',2,itmp1,vp2c,stmp,3)
-  call get_param_1D('icm.in','vn2c',2,itmp1,vn2c,stmp,3)
-  call get_param_1D('icm.in','vo2c',2,itmp1,vo2c,stmp,3)
-
-  call get_param_1D('icm.in','vScr',2,itmp1,vScr,stmp,3)
-  call get_param_1D('icm.in','vSopt',2,itmp1,vSopt,stmp,3)
-  call get_param_1D('icm.in','vInun',2,itmp1,vInun,stmp,3)
-
-  call get_param_1D('icm.in','vht0',2,itmp1,vht0,stmp,3)
-  call get_param_1D('icm.in','vcrit',2,itmp1,vcrit,stmp,3)
-  call get_param_1D('icm.in','v2ht',2,itmp1,v2ht(1:3,1:2),stmp,6)
-
-  call get_param_1D('icm.in','vKhNs',2,itmp1,vKhNs,stmp,3)
-  call get_param_1D('icm.in','vKhPs',2,itmp1,vKhPs,stmp,3)
-  call get_param_1D('icm.in','v2den',2,itmp1,v2den,stmp,3)
-
-  call get_param_1D('icm.in','vTMT',2,itmp1,vTMT(1:3,1:2),stmp,6)
-  call get_param_1D('icm.in','vKTMT',2,itmp1,vKTMT(1:3,1:2),stmp,6)
-  call get_param_1D('icm.in','vMT0',2,itmp1,vMT0(1:3,1:2),stmp,6)
-  call get_param_1D('icm.in','vMTcr',2,itmp1,vMTcr(1:3,1:2),stmp,6)
-
-  !read Carbon parameters
-  call get_param_1D('icm.in','FCPZ',2,itmp1,FCPZ,stmp,3)
-  call get_param_1D('icm.in','FCMZ',2,itmp1,FCMZ,stmp,2)
-
-  call get_param_1D('icm.in','FCP',2,itmp1,FCP(1:3,1:3),stmp,9)
-  call get_param_1D('icm.in','FCM',2,itmp1,FCM,stmp,3)
-
-  call get_param_1D('icm.in','zKhDO',2,itmp1,zKhDO,stmp,2)
-
-  call get_param('icm.in','rKHORDO',2,itmp,rtmp,stmp)
-  rKHORDO=rtmp
-  call get_param('icm.in','rKHDNn',2,itmp,rtmp,stmp)
-  rKHDNn=rtmp
-  call get_param('icm.in','AANOX',2,itmp,rtmp,stmp)
-  AANOX=rtmp
-
-  !read Nitrogen parameters
-  call get_param_1D('icm.in','FNPZ',2,itmp1,FNPZ,stmp,4)
-  call get_param_1D('icm.in','FNMZ',2,itmp1,FNMZ(1:2,1:4),stmp,8)
-
-  call get_param_1D('icm.in','FNP',2,itmp1,FNP,stmp,4)
-  call get_param_1D('icm.in','FNM',2,itmp1,FNM(1:3,1:4),stmp,12)
-
-  call get_param_1D('icm.in','zn2c',2,itmp1,zn2c,stmp,2)
-  
-  call get_param('icm.in','ANDC',2,itmp,rtmp,stmp)
-  ANDC=rtmp
-
-  call get_param_1D('icm.in','n2c',2,itmp1,n2c,stmp,3)
-
-  call get_param_1D('icm.in','KN0',2,itmp1,KN0,stmp,3)
-  call get_param_1D('icm.in','KNalg',2,itmp1,KNalg,stmp,3)
-
-  call get_param('icm.in','rNitM',2,itmp,rtmp,stmp)
-  rNitM=rtmp
-  call get_param('icm.in','rKhNitDO',2,itmp,rtmp,stmp)
-  rKhNitDO=rtmp
-  call get_param('icm.in','rKhNitN',2,itmp,rtmp,stmp)
-  rKhNitN=rtmp
-  call get_param('icm.in','TNit',2,itmp,rtmp,stmp)
-  TNit=rtmp
-  call get_param('icm.in','rKNit1',2,itmp,rtmp,stmp)
-  rKNit1=rtmp
-  call get_param('icm.in','rKNit2',2,itmp,rtmp,stmp)
-  rKNit2=rtmp
- 
-  !read Phosphorus parameters
-  call get_param_1D('icm.in','FPPZ',2,itmp1,FPPZ,stmp,4)
-  call get_param_1D('icm.in','FPMZ',2,itmp1,FPMZ(1:2,1:4),stmp,8)
-
-  call get_param_1D('icm.in','FPP',2,itmp1,FPP,stmp,4)
-  call get_param_1D('icm.in','FPM',2,itmp1,FPM(1:3,1:4),stmp,12)
-
-  call get_param_1D('icm.in','zp2c',2,itmp1,zp2c,stmp,2)
-  call get_param_1D('icm.in','p2c',2,itmp1,p2c,stmp,3)
-
-  call get_param('icm.in','rKPO4p',2,itmp,rtmp,stmp)
-  rKPO4p=rtmp
-
-  !read Silica parameters
-  call get_param_1D('icm.in','FSPZ',2,itmp1,FSPZ,stmp,2)
-  call get_param_1D('icm.in','FSMZ',2,itmp1,FSMZ(1:2,1:2),stmp,4)
-
-  call get_param_1D('icm.in','zs2c',2,itmp1,zs2c,stmp,2)
-  call get_param('icm.in','s2c',2,itmp,s2c,stmp)
-
-  call get_param_1D('icm.in','FSP',2,itmp1,FSP,stmp,2)
-  call get_param_1D('icm.in','FSM',2,itmp1,FSM,stmp,2)
-
-
-  call get_param('icm.in','rKSAp',2,itmp,rtmp,stmp)
-  rKSAp=rtmp
-  call get_param('icm.in','rKSU',2,itmp,rtmp,stmp)
-  rKSU=rtmp
-  call get_param('icm.in','TRSUA',2,itmp,rtmp,stmp)
-  TRSUA=rtmp
-  call get_param('icm.in','rKTSUA',2,itmp,rtmp,stmp)
-  rKTSUA=rtmp
-  
-  !read COD and DO parameters
-  call get_param('icm.in','rKHCOD',2,itmp,rtmp,stmp)
-  rKHCOD=rtmp
-  call get_param('icm.in','rKCD',2,itmp,rtmp,stmp)
-  rKCD=rtmp
-  call get_param('icm.in','TRCOD',2,itmp,rtmp,stmp)
-  TRCOD=rtmp
-  call get_param('icm.in','rKTCOD',2,itmp,rtmp,stmp)
-  rKTCOD=rtmp
-  call get_param('icm.in','AOC',2,itmp,rtmp,stmp)
-  AOC=rtmp
-  call get_param('icm.in','AONO',2,itmp,rtmp,stmp)
-  AONO=rtmp
-  call get_param('icm.in','AON',2,itmp,rtmp,stmp)
-  AON=rtmp
-  call get_param('icm.in','rKro',2,itmp,rtmp,stmp)
-  rKro=rtmp
-  call get_param('icm.in','rKTr',2,itmp,rtmp,stmp)
-  rKTr=rtmp
-
-  !for CACO3 settling
-  call get_param('icm.in','WSCACO3',2,itmp,rtmp,stmp)
-  WSCACO3=rtmp
-  call get_param('icm.in','rKCACO3',2,itmp,rtmp,stmp)
-  rKCACO3=rtmp
-  call get_param('icm.in','rKCA',2,itmp,rtmp,stmp)
-  rKCA=rtmp
-  call get_param('icm.in','rKa',2,itmp,rtmp,stmp)
-  rKa=rtmp
-  call get_param('icm.in','inu_ph',1,inu_ph,rtmp,stmp)
-
-  !sav :: check !error, to add
-  if(jsav==1) then
-    if(salpha<=0) call parallel_abort('read_icm_input: salpha')
-    if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
-    if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
-    if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
-    if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
-    if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
-    if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
-    if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
-  endif !jsav
-
-  !_veg :: check
-  if(jveg==1) then
-    do j=1,3
-      if(valpha(j)<=0) call parallel_abort('read_icm_input: valpha')
-      if(vGPM(j)<=0) call parallel_abort('read_icm_input: vGPM')
-      if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
-      if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
-      if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
-      if(vBMP(j,1)<=0.or.vBMP(j,2)<=0.or.vBMP(j,3)<=0) call parallel_abort('read_icm_input: vBMP')
-    enddo !j::veg species
-  endif !jveg
-
-  !PH nudge for TIC and ALK
-  if(iPh==1.and.inu_ph==1) then
-    open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
-    time_ph=-999.0
-    irec_ph=1
-  endif
-
-  !---------------preprocess parameters----------------------------
-  dtw=dt/86400.0 !days
-  dtw2=dtw/2.0
-
-  !phytoplankton
-  mKhN=0.0
-  mKhP=0.0
-  do i=1,3
-    mKhN=mKhN+KhN(i)/3.0
-    mKhP=mKhP+KhP(i)/3.0
-  enddo
-
-end subroutine read_icm_param
-
 subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
 !--------------------------------------------------------------------
 !Read a one-Dimensional ICM parameter
@@ -802,92 +596,110 @@ subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
 
 end subroutine get_param_1D
 
-subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
-!---------------------------------------------------------------------------
-!subroutine from Utility/UtilLib
-!---------------------------------------------------------------------------
-!     Routine to perform point-in-polygon
-!     (triangle/quads) test and if it's inside, calculate the area coord.
-!     (for quad, split it into 2 triangles and return the 3 nodes and
-!     area coord.)
-!     Inputs:
-!            i34: 3 or 4 (type of elem)
-!            x(i34),y(i34): coord. of polygon/elem. (counter-clockwise)
-!            xp,yp: point to be tested
-!     Outputs:
-!            inside: 0, outside; 1, inside
-!            arco(3), nodel(3) : area coord. and 3 local node indices (valid
-!            only if inside)
-      use schism_glbl, only : rkind,errmsg
-      use schism_msgp, only : myrank,parallel_abort
+subroutine icm_finalize()
+!--------------------------------------------------------------------
+!free memory assocated with pointers, to aviod memory leak
+!--------------------------------------------------------------------
+  use icm_mod
+  deallocate(sp%Ke0);  deallocate(sp%tss2c);deallocate(sp%WSSED);deallocate(sp%WSSEDn);
+  deallocate(sp%WRea); deallocate(sp%GPM);  deallocate(sp%TGP);  deallocate(sp%PRP)
+  deallocate(sp%c2chl);deallocate(sp%WSPOM);deallocate(sp%WSPBS);deallocate(sp%WSPOMn)
+  deallocate(sp%WSPBSn);deallocate(sp%KC0); deallocate(sp%KP0);  deallocate(sp%KPalg);
+  deallocate(sp%KTGP)
+  nullify(sp%Ke0);     nullify(sp%tss2c);   nullify(sp%WSSED);   nullify(sp%WSSEDn);
+  nullify(sp%WRea);    nullify(sp%GPM);     nullify(sp%TGP);     nullify(sp%PRP);
+  nullify(sp%c2chl);   nullify(sp%WSPOM);   nullify(sp%WSPBS);   nullify(sp%WSPOMn);
+  nullify(sp%WSPBSn);  nullify(sp%KC0);     nullify(sp%KP0);     nullify(sp%KPalg);
+  nullify(sp%KTGP);
 
-      implicit none 
-      integer, intent(in) :: i34
-      real(rkind), intent(in) :: x(i34),y(i34),xp,yp
-      integer, intent(out) :: inside,nodel(3)
-      real(rkind), intent(out) :: arco(3)
+end subroutine icm_finalize
 
-      !Local
-      real(rkind) :: signa_icm
-      integer :: m,j,j1,j2,list(3)
-      real(rkind) :: aa,ae,ar(2),swild(2,3)
+!subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
+!!---------------------------------------------------------------------------
+!!subroutine from Utility/UtilLib
+!!---------------------------------------------------------------------------
+!!     Routine to perform point-in-polygon
+!!     (triangle/quads) test and if it's inside, calculate the area coord.
+!!     (for quad, split it into 2 triangles and return the 3 nodes and
+!!     area coord.)
+!!     Inputs:
+!!            i34: 3 or 4 (type of elem)
+!!            x(i34),y(i34): coord. of polygon/elem. (counter-clockwise)
+!!            xp,yp: point to be tested
+!!     Outputs:
+!!            inside: 0, outside; 1, inside
+!!            arco(3), nodel(3) : area coord. and 3 local node indices (valid
+!!            only if inside)
+!      use schism_glbl, only : rkind,errmsg
+!      use schism_msgp, only : myrank,parallel_abort
+!
+!      implicit none
+!      integer, intent(in) :: i34
+!      real(rkind), intent(in) :: x(i34),y(i34),xp,yp
+!      integer, intent(out) :: inside,nodel(3)
+!      real(rkind), intent(out) :: arco(3)
+!
+!      !Local
+!      real(rkind) :: signa_icm
+!      integer :: m,j,j1,j2,list(3)
+!      real(rkind) :: aa,ae,ar(2),swild(2,3)
+!
+!      !Areas
+!      ar(1)=signa_icm(x(1),x(2),x(3),y(1),y(2),y(3))
+!      ar(2)=0 !init
+!      if(i34==4) ar(2)=signa_icm(x(1),x(3),x(4),y(1),y(3),y(4))
+!      if(ar(1)<=0.or.i34==4.and.ar(2)<=0) then
+!        write(errmsg,*)'Negative area:',i34,ar,x,y
+!        call parallel_abort(errmsg)
+!      endif
+!
+!      inside=0
+!      do m=1,i34-2 !# of triangles
+!        if(m==1) then
+!          list(1:3)=(/1,2,3/) !local indices
+!        else !quads
+!          list(1:3)=(/1,3,4/)
+!        endif !m
+!        aa=0
+!        do j=1,3
+!          j1=j+1
+!          j2=j+2
+!          if(j1>3) j1=j1-3
+!          if(j2>3) j2=j2-3
+!          swild(m,j)=signa_icm(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp)
+!          !temporary storage
+!          aa=aa+abs(swild(m,j))
+!        enddo !j=1,3
+!
+!        ae=abs(aa-ar(m))/ar(m)
+!        if(ae<=1.e-5) then
+!          inside=1
+!          nodel(1:3)=list(1:3)
+!          arco(1:3)=swild(m,1:3)/ar(m)
+!          arco(1)=max(0.d0,min(1.d0,arco(1)))
+!          arco(2)=max(0.d0,min(1.d0,arco(2)))
+!          if(arco(1)+arco(2)>1.) then
+!            arco(3)=0
+!            arco(2)=1-arco(1)
+!          else
+!            arco(3)=1-arco(1)-arco(2)
+!          endif
+!          exit
+!        endif
+!      enddo !m
+!
+!end subroutine pt_in_poly
 
-      !Areas
-      ar(1)=signa_icm(x(1),x(2),x(3),y(1),y(2),y(3))
-      ar(2)=0 !init
-      if(i34==4) ar(2)=signa_icm(x(1),x(3),x(4),y(1),y(3),y(4))
-      if(ar(1)<=0.or.i34==4.and.ar(2)<=0) then
-        write(errmsg,*)'Negative area:',i34,ar,x,y
-        call parallel_abort(errmsg)
-      endif
-
-      inside=0
-      do m=1,i34-2 !# of triangles
-        if(m==1) then
-          list(1:3)=(/1,2,3/) !local indices
-        else !quads
-          list(1:3)=(/1,3,4/)
-        endif !m
-        aa=0
-        do j=1,3
-          j1=j+1
-          j2=j+2
-          if(j1>3) j1=j1-3
-          if(j2>3) j2=j2-3
-          swild(m,j)=signa_icm(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp)
-          !temporary storage
-          aa=aa+abs(swild(m,j))
-        enddo !j=1,3
-
-        ae=abs(aa-ar(m))/ar(m)
-        if(ae<=1.e-5) then
-          inside=1
-          nodel(1:3)=list(1:3)
-          arco(1:3)=swild(m,1:3)/ar(m)
-          arco(1)=max(0.d0,min(1.d0,arco(1)))
-          arco(2)=max(0.d0,min(1.d0,arco(2)))
-          if(arco(1)+arco(2)>1.) then
-            arco(3)=0
-            arco(2)=1-arco(1)
-          else
-            arco(3)=1-arco(1)-arco(2)
-          endif
-          exit
-        endif
-      enddo !m
-
-end subroutine pt_in_poly
-
-!dir$ attributes forceinline :: signa_icm
-function signa_icm(x1,x2,x3,y1,y2,y3)
-!-------------------------------------------------------------------------------
-! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
-!-------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
-  implicit none
-  real(rkind) :: signa_icm
-  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
-
-  signa_icm=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2.d0
-
-end function signa_icm
+!dir attributes forceinline :: signa_icm
+!function signa_icm(x1,x2,x3,y1,y2,y3)
+!!-------------------------------------------------------------------------------
+!! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
+!!-------------------------------------------------------------------------------
+!  use schism_glbl, only : rkind,errmsg
+!  implicit none
+!  real(rkind) :: signa_icm
+!  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
+!
+!  signa_icm=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2.d0
+!
+!end function signa_icm

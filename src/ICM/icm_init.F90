@@ -33,15 +33,14 @@ subroutine icm_init
   allocate(dep(nvrt),salt(nvrt),temp(nvrt),TSED(nvrt),ZB1(nvrt,2),ZB2(nvrt,2),PB1(nvrt,2), &
     & PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2),RPON(nvrt,2),LPON(nvrt,2), &
     & DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2),DOP(nvrt,2),PO4t(nvrt,2), &
-    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOX(nvrt,2),PrefN(nvrt,3),sp%tss2c(nea),tss2c,sp%WSSED(nea),WSSED, &
+    & SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOX(nvrt,2),PrefN(nvrt,3),sp%tss2c(nea),sp%WSSED(nea), &
     !3D parameters, (nvrt,nea)>> 1 to nvrt: bottom to surface
     & wqc(ntrs(7),nvrt,nea),GP(nvrt,nea,3),&
-    & KC0(3),sp%KC0(nea,3),&
-    & KP0(3),sp%KP0(nea,3),KPalg(3),sp%KPalg(nea,3),&
-    & WMS(nea),WSPOM(2),sp%WSPOM(nea,2),WSPBS(3),sp%WSPBS(nea,3),sp%Ke0(nea),Ke0,WRea(nea), &
+    & sp%KC0(nea,3),&
+    & sp%KP0(nea,3),sp%KPalg(nea,3),&
+    & WMS(nea),sp%WSPOM(nea,2),sp%WSPBS(nea,3),sp%Ke0(nea),sp%WRea(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
-    & GPM(3),TGP(3),PRP(3),c2chl(3),KTGP(3,2),&
     & sp%GPM(nea,3),sp%TGP(nea,3),sp%PRP(nea,3),sp%c2chl(nea,3),sp%KTGP(nea,3,2),&
     & rIavg_save(nea), &!rad
     & sleaf(nvrt,nea),sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), & !sav; (nvrt,nea)>> 1 to nvrt: bottom to surface
@@ -68,8 +67,6 @@ subroutine icm_init
   !----------------------------------------------------------------
   !sav:: parameters + outputs
   !----------------------------------------------------------------
-  call get_param('icm.in','isav_icm',1,isav_icm,rtmp,stmp); jsav=>isav_icm
-  if(jsav/=0.and.jsav/=1) call parallel_abort('read_icm: illegal isav_icm')
   if(jsav==1) then
     !base case
     !(nvrt,nea)>> 1 to nvrt: bottom to surface
@@ -94,8 +91,6 @@ subroutine icm_init
   !----------------------------------------------------------------
   !veg:: parameters + outputs
   !----------------------------------------------------------------
-  call get_param('icm.in','iveg_icm',1,iveg_icm,rtmp,stmp); jveg=>iveg_icm
-  if(jveg/=0.and.jveg/=1) call parallel_abort('read_icm: illegal iveg_icm')
   if(jveg==1) then
     !allocate(ztcveg(nea,3),trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
     allocate(trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
@@ -121,8 +116,8 @@ subroutine icm_init
       & SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), & 
       & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
       & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea), &
-      & SSI(nea), AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),WSSEDn,sp%WSSEDn(nea),WSPOMn(2),sp%WSPOMn(nea,2), &
-      & WSPBSn(3),sp%WSPBSn(nea,3),HSED(nea),VSED(nea),VPMIX(nea),VDMIX(nea), &
+      & SSI(nea), AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),sp%WSSEDn(nea),sp%WSPOMn(nea,2), &
+      & sp%WSPBSn(nea,3),HSED(nea),VSED(nea),VPMIX(nea),VDMIX(nea), &
       & FRPOP(nea,3),FRPON(nea,3),FRPOC(nea,3), flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
       & CTEMP(nea),CPIP(nea),CNO3(nea),CNH4(nea),CCH4(nea),CSO4(nea),CPOS(nea),CH2S(nea),CPOP(nea,3),CPON(nea,3),CPOC(nea,3), &
       & CH4T2TM1S(nea),CH41TM1S(nea),SO4T2TM1S(nea),BENSTR1S(nea),BFORMAXS(nea),ISWBENS(nea),POP1TM1S(nea), &
@@ -146,7 +141,7 @@ subroutine icm_init
   GP=0.0;      
   sp%KC0=0.0
   sp%KP0=0.0;  sp%KPalg=0.0
-  WMS=0.0;     sp%WSPOM=0.0;    sp%WSPBS=0.0;  sp%Ke0=0.0; WRea=0.0
+  WMS=0.0;     sp%WSPOM=0.0;    sp%WSPBS=0.0;  sp%Ke0=0.0; sp%WRea=0.0
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
   BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;    BSAt=0.0;   BCOD=0.0;   BDO=0.0
   sp%PRP=0.0;  sp%GPM=0.0;  sp%TGP=0.0;  sp%c2chl=0.0;  sp%KTGP=0.0
@@ -188,6 +183,7 @@ subroutine icm_init
 !$OMP end parallel workshare
 
  !read parameter and initialzies variables
+ call read_icm_param_tmp(1)
  call read_icm_param !ICM parameters 
  call read_icm_param2 !ICM spatially varying parameters 
  if(iSed==1) call read_icm_sed_param !sediment flux model parameters
