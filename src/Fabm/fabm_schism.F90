@@ -20,6 +20,10 @@
 !
 #include "fabm_version.h"
 
+#ifndef _FABM_API_VERSION_
+#define _FABM_API_VERSION_ 0
+#endif
+
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
 #error You need to enable the ice module with -DUSE_ICE as well.
@@ -156,6 +160,9 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
 
+    integer, dimension(:,:), pointer   :: mask => null()
+    integer, dimension(:), pointer     :: mask_hz => null()
+    
 #ifdef USE_ICEBGC
     real(rk), dimension(:), pointer     :: ice_thick => null()
     real(rk), dimension(:), pointer     :: ice_cover => null()
@@ -359,9 +366,27 @@ subroutine fabm_schism_init_stage2
   call fabm_set_domain(fs%model, nvrt, ne, dt)
 #else
   call fs%model%set_domain(nvrt, ne, dt)
-  ! SCHISM has no mask, so we do not need to set one.
-  ! call fs%model%set_mask(mask)
 #endif
+
+  if (any(kbe > 1)) then 
+    allocate(fs%mask(nvrt,ne), fs%mask_hz(ne))
+    fs%mask(:,:) = 0
+    fs%mask_hz(:) = 0
+    where(kbe == nvrt) 
+      fs%mask_hz = 1
+    endwhere 
+    !> @how do we deal with items that are between levels and 
+    !> have a physical vertical range 2:nvrt
+    do i=1,ne 
+      if (kbe(i) > 1) fs%mask(1:kbe(i),i) = 1
+    enddo
+  
+#if _FABM_API_VERSION_ < 1
+    call fabm_set_mask(fs%model, fs%mask, fs%mask_hz)
+#else
+    call fs%model%set_mask(fs%mask, fs%mask_hz)
+#endif
+  endif 
 
   allocate(bottom_idx(1:ne))
   allocate(surface_idx(1:ne))
@@ -662,8 +687,9 @@ subroutine fabm_schism_init_stage2
   fs%snow_thick = missing_value
 #endif
 
-  ! calculate initial layer heights
-  do i=1,i
+  ! calculate initial layer heights, note that the at nlevel=1, this variable 
+  ! is not defined 
+  do i=1,ne
     fs%layer_height(kbe(i)+1:nvrt,i) =   ze(kbe(i)+1:nvrt,i)-ze(kbe(i):nvrt-1,i)
     fs%layer_depth (kbe(i)+1:nvrt,i) = -(ze(kbe(i)+1:nvrt,i)+ze(kbe(i):nvrt-1,i))/2
   enddo
