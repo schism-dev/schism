@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#SBATCH -J R19fw   # Job name
+#SBATCH -A oce140024  # Allocation name
+##standard: 16 nodesx96hrs; wide: 56 nodesx12hr
+#SBATCH -p wide  # Queue (partition) name
+#SBATCH --nodes=30       # Total # of nodes, up to 128 cores/node
+#SBATCH --ntasks-per-node=30  #MPI tasks per node
+#SBATCH --cpus-per-task=4   #OMP threads per MPI task
+
+#SBATCH --time=3:00:00  # Total run time limit (hh:mm:ss)
+#SBATCH -o myjob.o%j    # Name of stdout output file
+#SBATCH -e myjob.e%j    # Name of stderr error file
+#SBATCH --mail-user=yjzhang@vims.edu
+#SBATCH--mail-type=all # Send email to above address at begin and end of job
+
+# Manage processing environment, load compilers and applications.
+#source ~/modules_ompi
+module list
+
+# Set thread count (default value is 1).
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+# Launch MPI code
+mpirun ./pschism_ANVIL_INTEL_OMP_PREC_EVAP_TVD-VL  7

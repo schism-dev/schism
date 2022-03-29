@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#SBATCH -J R19fw-TMP   # Job name
+#SBATCH -A oce140024  # Allocation name
+##standard: 16 nodesx96hrs; wide: 56 nodesx12hr
+#SBATCH -p wide  # Queue (partition) name
+#SBATCH --nodes=18       # Total # of nodes, up to 128 cores/node
+#SBATCH --ntasks-per-node=120
+#SBATCH --time=3:00:00  # Total run time limit (hh:mm:ss)
+#SBATCH -o myjob.o%j    # Name of stdout output file
+#SBATCH -e myjob.e%j    # Name of stderr error file
+#SBATCH --mail-user=yjzhang@vims.edu
+#SBATCH--mail-type=all # Send email to above address at begin and end of job
+
+# Manage processing environment, load compilers and applications.
+#module purge
+#module load intel
+#module load mvapich2
+#module load netcdf-c
+#module load netcdf-fortran
+
+module list
+
+# Launch MPI code
+mpirun ./pschism_ANVIL_INTEL_PREC_EVAP_TVD-VL  7
