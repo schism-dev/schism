@@ -49,7 +49,7 @@ pwd
 date
 
 # Set thread count (normally, (MPI proc)x Threads/(# of nodes)=56. No hyperthreading
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=14
 
 # Launch MPI code... 
 ibrun ./pschism_FRONTERA_OMP_TVD-VL     # Use ibrun instead of mpirun or mpiexec
