@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+(30 Mar 2022): added an optional depth for mass conversation for ICM: 'h_massconsv'
 1788867 (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): i_hmin_salt_ex,hmin_salt_ex;
 dcd5356 (31 Jan 2022): removed ramp flags except for nramp_elev (use dramp*<=0 to turn off ramp): 
       nramp, nrampbc, nrampwind, nrampwafo,nramp_ss; removed the optional input 'shapiro_min.gr3';

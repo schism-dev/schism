@@ -7112,10 +7112,7 @@
 #ifdef USE_SED
         if(myrank==0) write(16,*) 'Entering sediment model...'
 
-!----------------------------------------------------------------------
-! Compute element depth averaged hvel for VRIJN bedload
-!----------------------------------------------------------------------
-
+!       Compute element depth averaged hvel for VRIJN bedload (before level changes)
         itmp1=irange_tr(1,5)
         itmp2=irange_tr(2,5)
 !$OMP parallel default(shared) private(i,k,htot,cff1,cff2)
@@ -7246,8 +7243,8 @@
 #ifdef USE_ICM
         itmp1=irange_tr(1,7)
         itmp2=irange_tr(2,7)
-!        if(myrank==0) write(16,*)'start ICM adjust. surface T..'
 
+!       Kinetics (reaction terms) are treated in ICM routine after transport solver
 !$OMP parallel default(shared) private(i,sflux_e)
 
 !$OMP   workshare
@@ -7337,7 +7334,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle); imposed at bottom layer.
@@ -7448,6 +7445,31 @@
         endif !itransport_only/
 
 #ifdef USE_ICM
+        !Enforce mass conservation at deep depths: V^(n+1)*C^**=V^n*C^* (where
+        !C^* is output from transport solver). The change in prism height is
+        !estimated as dz=(1+sigma)*(eta2-eta1)
+        itmp1=irange_tr(1,7)
+        itmp2=irange_tr(2,7)
+!$OMP   do
+        do i=1,nea
+          htot=ze(nvrt,i)-ze(kbe(i),i) !@ step n
+          if(idry_e(i)==1.or.htot<=h0.or.dpe(i)<h_massconsv) cycle 
+
+          !Estimate sigma
+          top=sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))-ze(nvrt,i) !eta2-eta1
+          swild(kbe(i))=-1.d0; swild(nvrt)=0.d0
+          do k=kbe(i)+1,nvrt-1
+            swild(k)=(ze(k,i)-ze(nvrt,i))/htot
+          enddo !k
+
+          do k=kbe(i)+1,nvrt
+            zrat=(ze(k+1,i)-ze(k,i)) !@ step n
+            dzz1=zrat+(1.d0+0.5d0*(swild(k-1)+swild(k)))*top !@step n+1
+            tr_el(itmp1:itmp2,k,i)=tr_el(itmp1:itmp2,k,i)*dzz1/zrat
+          enddo !k
+        enddo !i
+!$OMP   enddo
+
         !update ICM time varying input 
         call WQinput(time)
 

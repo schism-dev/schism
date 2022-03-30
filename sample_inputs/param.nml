@@ -715,6 +715,11 @@
   iadjust_mass_consv0(10)=0 !TIMOR
   iadjust_mass_consv0(11)=0 !FABM
   iadjust_mass_consv0(12)=0 !DVD (must=0)
+
+! For ICM, impose mass conservation for depths larger than a threshold by considering prism 
+! volume change from step n to n+1
+  h_massconsv = 2. ![m]
+
 /
 
 &SCHOUT
