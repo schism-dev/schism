@@ -22,7 +22,7 @@ subroutine icm_init
   use icm_sed_mod
   use misc_modules
   implicit none
-  
+
   !local variables
   integer :: istat
 
@@ -32,9 +32,9 @@ subroutine icm_init
   allocate(sp%tss2c(nea),sp%WSSED(nea),sp%KC0(nea,3),sp%KP0(nea,3),sp%KPalg(nea,3),&
     & sp%WSPOM(nea,2),sp%WSPBS(nea,3),sp%Ke0(nea),sp%WRea(nea),sp%GPM(nea,3), &
     & sp%TGP(nea,3),sp%PRP(nea,3),sp%c2chl(nea,3),sp%KTGP(nea,3,2),sp%WSSEDn(nea), &
-    & sp%WSPOMn(nea,2),sp%WSPBSn(nea,3),stat=istat) 
+    & sp%WSPOMn(nea,2),sp%WSPBSn(nea,3),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. spatially varying parameter')
-  
+
   sp%tss2c=0.0;  sp%WSSED=0.0; sp%KC0=0.0;    sp%KP0=0.0;    sp%KPalg=0.0; sp%WSPOM=0.0
   sp%WSPBS=0.0;  sp%Ke0=0.0;   sp%WRea=0.0;   sp%PRP=0.0;    sp%GPM=0.0;   sp%TGP=0.0
   sp%c2chl=0.0;  sp%KTGP=0.0;  sp%WSSEDn=0.0; sp%WSPOMn=0.0; sp%WSPBSn=0.0
@@ -148,15 +148,7 @@ subroutine icm_init
   NH4T2TM1S=0.0;  NO3T2TM1S=0.0;   HST2TM1S=0.0;    SIT2TM1S=0.0;    PO4T2TM1S=0.0;  DFEEDM1S=0.0;
   SED_BENDO=0.0;  SED_BENCOD=0.0;  SED_BENNH4=0.0;  SED_BENNO3=0.0;  SED_BENPO4=0.0; SED_BENDOC=0.0; SED_BENSA=0.0;
   SFLUXP=0.0;     SF_RPOP=0.0;     SFLUXN=0.0;      SF_RPON=0.0;     SFLUXC=0.0;     SF_RPOC=0.0;    JSUSF=0.0;     SF_SU=0.0;     BBM=0.0;
-  sbLight=0.0;  
+  sbLight=0.0;
 !$OMP end parallel workshare
 
- !read parameter and initialzies variables
- call read_icm_param_tmp(1)
- call read_icm_param !ICM parameters 
- call read_icm_param2 !ICM spatially varying parameters 
- if(iSed==1) call read_icm_sed_param !sediment flux model parameters
- if(myrank==0) write(16,*) 'done read ICM parameters'
- call WQinput(0.d0) !init time varying input
- if(myrank==0) write(16,*) 'done read ICM_init'
 end subroutine icm_init

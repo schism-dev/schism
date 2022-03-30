@@ -30,7 +30,7 @@
 !---------------------------state variables in ICM--------------------------------
 !---------------------------------------------------------------------------------
 ! 1  ZB1   :  1st zooplankton                            g/m^3
-! 2  ZB2   :  2nd zooplankton                            g/m^3 
+! 2  ZB2   :  2nd zooplankton                            g/m^3
 ! 3  PB1   :  Diatom                                     g/m^3
 ! 4  PB2   :  Green Algae                                g/m^3
 ! 5  PB3   :  Cyanobacteria                              g/m^3
@@ -58,7 +58,7 @@
 
 subroutine ecosystem(it)
 !---------------------------------------------------------------------------------
-!calculate kinetic source/sink 
+!calculate kinetic source/sink
 !---------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
                         & isdel,kbs,zs,su2,sv2,npa,nne,elnode,srad,i34,np
@@ -92,32 +92,32 @@ subroutine ecosystem(it)
     !assign non-SAV condiction for dry elem
     !no sav presense for intertidal zone >> once dry, no sav any longer
     if(idry_e(i)==1) then
-      if(jsav==1.and.spatch(i)==1)then 
+      if(jsav==1.and.spatch(i)==1)then
         spatch(i)=-1
         do k=1,nvrt !clean all layers
           sleaf(k,i)=1.d-5; sstem(k,i)=1.d-5; sroot(k,i)=1.d-5
-        enddo !k 
+        enddo !k
       endif !jsav
     endif !dry elem exclusion
-   
+
     !reverse the direction of vertical layers
-    call link_icm(1,i,nv) 
+    call link_icm(1,i,nv)
 
     !calculation on growth rate of phytoplankton
-    call photosynthesis(i,hour,nv,it) 
-      
+    call photosynthesis(i,hour,nv,it)
+
     if(iPh==1) then
       call ph_calc(i,nv)
     endif
-    
-    !sediment flux module 
+
+    !sediment flux module
     if(iSed==1) then
       call link_sed_input(i,nv)
       call sed_calc(i)
       call link_sed_output(i)
     endif
-    
-    !surface renewal rate for DO reareation: change to surface velocity 
+
+    !surface renewal rate for DO reareation: change to surface velocity
     usf=0.0; icount=0
     do j=1,i34(i)
       jsj=elside(j,i)
@@ -130,7 +130,7 @@ subroutine ecosystem(it)
     if(icount/=0) usf=usf/icount
 
     !compute ICM kinetic terms
-    call calkwq(i,nv,usf,it)  
+    call calkwq(i,nv,usf,it)
     call link_icm(2,i,nv)
 
   enddo !i=1,nea
@@ -170,7 +170,7 @@ subroutine link_icm(imode,id,nv)
   use icm_mod, only : wqc,dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
                     & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,iKe,&
                     & iPh,TIC,ALK,CA,CACO3,PH,PH_el,GP,sp
-  implicit none 
+  implicit none
   integer, intent(in) :: imode,id !id is (wet) elem index
   integer, intent(out) :: nv !# of layers from surface to bottom
 
@@ -188,20 +188,20 @@ subroutine link_icm(imode,id,nv)
       write(errmsg,*)'illegal kbe or nv: ',kbe(id),nv,nvrt,ielg(id)
       call parallel_abort(errmsg)
     endif
- 
+
     do k=min(kbe(id)+1,nvrt-nv+1),nvrt
       m=nvrt-k+1 !vertical layer reverse in icm
       if(idry_e(id)==1 .and. k/=nvrt) cycle
 
-      if(idry_e(id)==1) then 
+      if(idry_e(id)==1) then
         dep(m)=0.1
         temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
       else
         dep(m)=max(ze(k,id)-ze(k-1,id),0.1) !k>2; set minimum depth for wet elem
         temp(m)=tr_el(1,k,id)
       endif
-      salt(m)=tr_el(2,k,id)    
- 
+      salt(m)=tr_el(2,k,id)
+
       ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
       ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
       PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id), mval)
@@ -223,7 +223,7 @@ subroutine link_icm(imode,id,nv)
       SAt(m,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
       COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
       DOX(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
- 
+
       if(iPh==1) then
         TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
         ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
@@ -232,7 +232,7 @@ subroutine link_icm(imode,id,nv)
       endif
 
       if(idry_e(id)==1) exit
-      
+
       if(iKe==0) then !TSS from POC
         TSED(m)=(RPOC(m,1)+LPOC(m,1))*sp%tss2c(id)
       elseif(iKe==1) then !TSS from 3D sediment model
@@ -253,19 +253,19 @@ subroutine link_icm(imode,id,nv)
           write(errmsg,*)'NaN found in tr_el (1):',ielg(id),i,k; call parallel_abort(errmsg)
         endif
       enddo
- 
+
       if(fnan(TSED(m))) then
         write(errmsg,*)'NaN found in TSED:',ielg(id),k,(tr_el(i-1+irange_tr(1,5),k,id), i=1,ntrs(5))
         call parallel_abort(errmsg)
       endif
     enddo!k::kbe(id)+1,nvrt
- 
+
   elseif(imode==2) then
- 
+
     do k=kbe(id)+1,nvrt
       m=nvrt-k+1
       if(idry_e(id)==1) m=1
-      
+
       tr_el(0+irange_tr(1,7),k,id) =max(ZB1(m,1), 0.d0)
       tr_el(1+irange_tr(1,7),k,id) =max(ZB2(m,1), 0.d0)
       tr_el(2+irange_tr(1,7),k,id) =max(PB1(m,1), 0.d0)
@@ -287,7 +287,7 @@ subroutine link_icm(imode,id,nv)
       tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1), 0.d0)
       tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1), 0.d0)
       tr_el(20+irange_tr(1,7),k,id)=max(DOX(m,1), 0.d0)
- 
+
       if(iPh==1) then
         tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
         tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),  0.d0)
@@ -295,7 +295,7 @@ subroutine link_icm(imode,id,nv)
         tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0.d0)
         PH_el(k,id)=PH(m)
       endif
- 
+
       wqc(1,k,id) =max(ZB1(m,2),  0.d0)
       wqc(2,k,id) =max(ZB2(m,2),  0.d0)
       wqc(3,k,id) =max(PB1(m,2),  0.d0)
@@ -317,14 +317,14 @@ subroutine link_icm(imode,id,nv)
       wqc(19,k,id)=max(SAt(m,2),  0.d0)
       wqc(20,k,id)=max(COD(m,2),  0.d0)
       wqc(21,k,id)=max(DOX(m,2),  0.d0)
- 
+
       if(iPh==1) then
         wqc(22,k,id)=max(TIC(m,2),  0.d0)
         wqc(23,k,id)=max(ALK(m,2),  0.d0)
         wqc(24,k,id)=max(CA(m,2),   0.d0)
         wqc(25,k,id)=max(CACO3(m,2),0.d0)
       endif
- 
+
       !nan check
       do i=1,(21+4*iPh)
         if(tr_el(i-1+irange_tr(1,7),k,id)/=tr_el(i-1+irange_tr(1,7),k,id)) then
@@ -333,7 +333,7 @@ subroutine link_icm(imode,id,nv)
         endif
       enddo!i
     enddo!k::kbe(id)+1,nvrt
- 
+
     if(iPh==1) then
       if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
       do k=1,kbe(id)
@@ -364,7 +364,7 @@ subroutine photosynthesis(id,hour,nv,it)
   integer, intent(in) :: id,nv,it
   real(rkind), intent(in) :: hour
   logical :: fnan, frange
- 
+
   !local variables
   integer :: i,j,k,m,klev,kcnpy
   real(rkind) :: tmp,tmp0,tmp1,tmp2,tmp3
@@ -374,7 +374,7 @@ subroutine photosynthesis(id,hour,nv,it)
   real(rkind) :: tdep
   !sav
   real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeh0,rKeh1,rKeh2 !light
-  real(rkind) :: ztcsav,zlfsav(nv+1),zstsav(nv+1) 
+  real(rkind) :: ztcsav,zlfsav(nv+1),zstsav(nv+1)
   real(rkind) :: xtsav,zt0,dzt,hdep
   !veg
   real(rkind) :: xtveg,xtveg0
@@ -407,7 +407,7 @@ subroutine photosynthesis(id,hour,nv,it)
       endif !ze
     enddo !k
 
-    !Init for every layer and timestep at current elem 
+    !Init for every layer and timestep at current elem
     plfsav(:,id)=0.0;  hdep=0.0
     ztcsav=max(tdep-sht(id),0.d0) !submergence
 
@@ -417,22 +417,22 @@ subroutine photosynthesis(id,hour,nv,it)
       rtmp=sht(id)+ze(kbe(id),id); m=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
       if(ze(m-1,id)<rtmp.and.ze(m,id)>=rtmp) then
         kcnpy=k
-        exit 
+        exit
       endif !kcnpy
     enddo !k
   endif !jsav
 
   !init for sav light attenuation
   !above canopy; new half layer under canopy;  accumulated above current layer under canopy
-  rKeh0=0.0; rKeh1=0.0; rKeh2=0.0 
+  rKeh0=0.0; rKeh1=0.0; rKeh2=0.0
 
   !--------------------------------------------------------------------------------
-  !veg init 
+  !veg init
   !--------------------------------------------------------------------------------
   if(jveg==1.and.vpatch(id)==1) then
     plfveg(id,:)=0.0 !growth rate(near,1:3), for each time step at current elem
     sdveg=0.0  !pre-calc total shading effects
-    do j=1,3 !veg species 
+    do j=1,3 !veg species
       sdveg=sdveg+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/2
     enddo !j
   endif !jveg
@@ -559,7 +559,7 @@ subroutine photosynthesis(id,hour,nv,it)
           else !wet elem
             if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
               rKe0=rKe0+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
-            endif !ze 
+            endif !ze
           endif !idry_e
         enddo !j::veg species
       endif !wet elem + veg
@@ -572,7 +572,7 @@ subroutine photosynthesis(id,hour,nv,it)
         endif !ze
       endif !isav
 
-      !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh 
+      !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh
       !uptil now, rKe and rKeh (for PB) for current layer calculated
       rKeh=min(rKe*dep(k),20.d0)
       bLight=sLight*exp(-rKeh)
@@ -603,23 +603,23 @@ subroutine photosynthesis(id,hour,nv,it)
               rKehabveg(j)=rKehabveg(j)+rKeveg*(dep(k)-cndep)
               rKehblveg(j)=rKehblveg(j)+rKeveg*cndep
             else
-              !if this layer is under canopy 
+              !if this layer is under canopy
               rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k)
             endif !tdep
           enddo !j::veg species
         else !wet elem
           do j=1,3
             if(ze(klev-1,id)>=vht(id,j)+ze(kbe(id),id)) then
-              !if there are layers above canopy 
+              !if there are layers above canopy
               rKehabveg(j)=rKehabveg(j)+rKeveg*dep(k)
-            elseif(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id).and.ze(klev,id)>=vht(id,j)+ze(kbe(id),id)) then 
+            elseif(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id).and.ze(klev,id)>=vht(id,j)+ze(kbe(id),id)) then
               !if canopy is in this layer
               cndep=vht(id,j)+ze(kbe(id),id)-ze(klev-1,id)
               rKehabveg(j)=rKehabveg(j)+rKeveg*(dep(k)-cndep)
               rKehblveg(j)=rKehblveg(j)+rKeveg*cndep
-            else 
-              !if this layer is under canopy 
-              rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k) 
+            else
+              !if this layer is under canopy
+              rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k)
             endif !ze
           enddo !j::veg species
         endif !idry_e
@@ -629,7 +629,7 @@ subroutine photosynthesis(id,hour,nv,it)
       if(iLight==1.and.k==1) then
         do i=1,3
           rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i)); tmp=rKe*Hopt(i)
-           
+
           !check
           if(tmp>50.or.rKe<0) then
             write(errmsg,*)'check ICM iKe rKe*Hopt:',rKe,Hopt,tmp,ielg(id),k
@@ -651,7 +651,7 @@ subroutine photosynthesis(id,hour,nv,it)
           endif
         elseif(iLight==0) then !Cerco, convert rIa to E/m^2/day
           !rat=2.42 !ly/day to uE/m2/s
-          if(iRad==2) then 
+          if(iRad==2) then
             rat=0.21 !ly/day to E/m2/day
           elseif(iRad==1) then !iRad check in read_icm
             rat=0.397d0 !W/m2 to E/m2/day
@@ -674,7 +674,7 @@ subroutine photosynthesis(id,hour,nv,it)
         if(rlFI-1>1.e-12.or.rlFI<0.or.rlFI/=rlFI) then
           write(errmsg,*)'FI>1.or.FI<0: ',rlFI,bLight,sLight,rKeh,rKe,ielg(id),k
           call parallel_abort(errmsg)
-        endif 
+        endif
 
         !Nitrogen Limitation function for PB
         if((NH4(k,1)+NO3(k,1))==0.0) then
@@ -687,9 +687,9 @@ subroutine photosynthesis(id,hour,nv,it)
         !P Limit limitation function for PB
         PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k))
         rlFP=PO4td/(PO4td+KhP(i))
- 
+
         !diatom, with Si limitation
-        if(i==1) then 
+        if(i==1) then
           SAtd=SAt(k,1)/(1.0+KSAp*TSED(k))
           rlFS=SAtd/(SAtd+KhS)
           if(iLimitSi==1) then
@@ -698,22 +698,22 @@ subroutine photosynthesis(id,hour,nv,it)
           else
             if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)
             if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
-          endif 
-        endif 
+          endif
+        endif
 
         !green alage
-        if(i==2) then 
+        if(i==2) then
           if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)
           if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
-        endif 
+        endif
 
         !cyanobacteria
-        if(i==3) then 
+        if(i==3) then
           rlFSal=KhSal*KhSal/(KhSal*KhSal+salt(k)*salt(k))
           if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)*rlFSal
           if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)*rlFSal
-        endif 
-  
+        endif
+
         !TIC limitation
         if(iPh==1) then
           if(iphgb(id)/=0) then
@@ -742,16 +742,16 @@ subroutine photosynthesis(id,hour,nv,it)
             write(errmsg,*)'photosynthesis: check max growth rate:',sKTGP,xT,rtmp,ielg(id),k
             call parallel_abort(errmsg)
           endif
-         
+
           !light on the bottom level of the layer above canopy (iabvcnpysav)
           if(rKeh0<0.) then
             write(errmsg,*)'photosynthesis: check light attenuation:',rKeh0,ielg(id),k
             call parallel_abort(errmsg)
           endif
 
-          iabvcnpysav=sLight0*exp(-rKeh0) !account from light at water surface 
+          iabvcnpysav=sLight0*exp(-rKeh0) !account from light at water surface
           if(rKeh0>20) iabvcnpysav=0
-         
+
           !light at canopy height
           if (k==kcnpy) then!k from surface downwards, kcnpy is the first, so no need to over init
             rtmp=rKe0*(ztcsav-hdep)
@@ -763,7 +763,7 @@ subroutine photosynthesis(id,hour,nv,it)
               call parallel_abort(errmsg)
             endif
           endif !k==kcnpy
-         
+
           !light on leave
           if(zlfsav(k+1)>=0.0.and.zstsav(k+1)>=0.0) then !below canopy
             if (k==kcnpy) then
@@ -780,12 +780,12 @@ subroutine photosynthesis(id,hour,nv,it)
               tmp=rKeh2+rKeh1+sKe*(zlfsav(k+1)+zstsav(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
               rKeh2=rKeh2+2.*rKeh1!accumulation from canopy downwards
             endif !kcnpy
-         
+
             if(tmp<=0.d0) then
               write(errmsg,*)'photosynthesis: check light attenuation on leaf:',k,rKeh1,rKeh2,sKe,zlfsav(k+1),zstsav(k+1),sleaf(klev,id),sstem(klev,id),tmp,ielg(id),k
               call parallel_abort(errmsg)
             endif
-         
+
             if(iRad==2) then
               rat=0.21 !ly/day to E/m2/day
             elseif(iRad==1) then !iRad check in read_icm
@@ -793,14 +793,14 @@ subroutine photosynthesis(id,hour,nv,it)
             else
               call parallel_abort('unknown iRad in icm.F90')
             endif !
-         
+
             iwcsav=iatcnpysav*rat*(1-exp(-tmp))/tmp
             if(tmp>50) iwcsav=1.e-5
             iksav=pmaxsav(klev,id)/salpha !>0 (salpha checked)
-         
+
             !light limitation function for sav
             fisav(klev,id)=iwcsav/sqrt(iwcsav*iwcsav+iksav*iksav) !>0
-         
+
             if(fisav(klev,id)>1.or.fisav(klev,id)<0.or.fisav(klev,id)/=fisav(klev,id)) then
               write(errmsg,*)'photosynthesis: fisav(klev,id)>1.or.fisav(klev,id)<0:',fisav(klev,id),rKe0,rKe,iksav,iwcsav, &
                    & iatcnpysav,ztcsav,tdep,sht(id),ielg(id),k
@@ -809,12 +809,12 @@ subroutine photosynthesis(id,hour,nv,it)
           else
             fisav(klev,id)=1
           endif !zlfsav(k+1)>0.and.zstsav(k+1)>0
-         
+
           !N/P limitation function fnsav(klev,id) (denom checked)
           fnsav(klev,id)=(NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k,1)+NO3(k,1)+CNH4(id)*sKhNw/sKhNs)
           PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k))
           fpsav(klev,id)=(PO4td+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4td+CPIP(id)*sKhPw/sKhPs)
-         
+
           !calculation of lf growth rate [1/day] as function of temp, light, N/P
           plfsav(klev,id)=pmaxsav(klev,id)*min(fisav(klev,id),fnsav(klev,id),fpsav(klev,id))/sc2dw !sc2dw checked !>=0 with seeds, =0 for no seeds
         endif !ze
@@ -832,11 +832,11 @@ subroutine photosynthesis(id,hour,nv,it)
     endif !kcnpy
 
     !--------------------------------------------------------------------------------
-    !for Veg 
+    !for Veg
     !--------------------------------------------------------------------------------
     if(jveg==1.and.vpatch(id)==1)then
       do j=1,3
-        
+
         !tempreture effect
         tmp=0.0
         do k=1,nv
@@ -847,7 +847,7 @@ subroutine photosynthesis(id,hour,nv,it)
           rtmp=vKTGP(j,1)*xtveg*xtveg
         else
           rtmp=vKTGP(j,2)*xtveg*xtveg
-        endif 
+        endif
         pmaxveg(id,j)=vGPM(j)*exp(-rtmp)
 
         !check
@@ -865,7 +865,7 @@ subroutine photosynthesis(id,hour,nv,it)
         fsveg(id,j)=vScr(j)/(max(vScr(j)+xtveg*xtveg,1.d-2))
 
         !inundation stress in wet elem
-        !ratio of tdep versus vht, tdep>0 checked 
+        !ratio of tdep versus vht, tdep>0 checked
         rdephcanveg(id,j)=vht(id,j)/tdep
         ffveg(id,j)=rdephcanveg(id,j)/(max((vInun(j)+rdephcanveg(id,j)),1.d-2))
 
@@ -876,7 +876,7 @@ subroutine photosynthesis(id,hour,nv,it)
           rat=0.397 !W/m2 to E/m2/day
         else
           call parallel_abort('unknown iRad in icm.F90')
-        endif ! 
+        endif !
 
         iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
 
@@ -908,15 +908,15 @@ subroutine photosynthesis(id,hour,nv,it)
         if(ivNs==0) fnveg(id,j)=1
         if(ivPs==0) fpveg(id,j)=1
 
-        !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients      
+        !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients
         plfveg(id,j)=pmaxveg(id,j)*fsveg(id,j)*ffveg(id,j)*fiveg(id,j)*min(fnveg(id,j),fpveg(id,j))/vc2dw(j)
       enddo !j::veg species
     endif !veg
     !--------------------------------------------------------------------------------
 
-    !renew light supply to sediment (for benthic algae) 
+    !renew light supply to sediment (for benthic algae)
     sbLight(id)=bLight
-  endif !rIa>30 
+  endif !rIa>30
 
 end subroutine photosynthesis
 
@@ -943,8 +943,8 @@ subroutine calkwq(id,nv,usf,it)
   real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,ZBM(2),Fish,PBM(3),BPR(3)
   real(rkind) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
                     & PZB_ZB,PFh_ZB,PZB_PB,PFh_PB,SZB_ZB,SFh_ZB,SZB_PB,SFh_PB
-  real(rkind) :: PB10,PB20,PB30,RPOC0,LPOC0,RPON0,LPON0,RPOP0,LPOP0,PO4t0,PO4td,SU0,SAt0,CACO30 
-  real(rkind) :: nRPOC,nLPOC,nDOC,nRPON,nLPON,nDON,nNH4,nNO3,nRPOP,nLPOP,nDOP,nPO4t,nSU,nSAt,nCOD,nDO 
+  real(rkind) :: PB10,PB20,PB30,RPOC0,LPOC0,RPON0,LPON0,RPOP0,LPOP0,PO4t0,PO4td,SU0,SAt0,CACO30
+  real(rkind) :: nRPOC,nLPOC,nDOC,nRPON,nLPON,nDON,nNH4,nNO3,nRPOP,nLPOP,nDOP,nPO4t,nSU,nSAt,nCOD,nDO
   real(rkind),dimension(nvrt) :: znRPOC,znLPOC,znDOC,znRPON,znLPON,znDON,znNH4,znNO3, &
                                     & znRPOP,znLPOP,znDOP,znPO4t,znSU,znSAt,znCOD,znDO
   real(rkind) :: rKa,pK0,CO2sat,xKCA,xKCACO3
@@ -971,7 +971,7 @@ subroutine calkwq(id,nv,usf,it)
 
   !calculate depth at the bottom of each layer (from surface)
   zdep(1)=dep(1);  do i=2,nv;  zdep(i)=zdep(i-1)+dep(i); enddo
- 
+
   !redistribute surface or bottom fluxes in case the surface or bottom layer is too thin.
   tdep=sum(dep(1:nv));  rdep=min(tdep,1.d0)
   if(tdep<1.d-5) call parallel_abort('illegal tdep(2)')
@@ -993,7 +993,7 @@ subroutine calkwq(id,nv,usf,it)
   znCOD =0.0;  nCOD =0.0
   znDO  =0.0;  nDO  =0.0
 
-  !sediment fluxes 
+  !sediment fluxes
   !if(iBen/=0.or.iSed==1) then
   if(iBen/=0.or.iSed==1.or.iTBen/=0) then
     if(iBen/=0) then !sediment fluxes from ICM_ben.th
@@ -1040,7 +1040,7 @@ subroutine calkwq(id,nv,usf,it)
       nDO  =nDO  +BnDO
 
       !check
-      if(fnan(BnDOC).or.fnan(BnNH4).or.fnan(BnNO3).or.fnan(BnPO4t).or.fnan(BnSAt).or.fnan(BnCOD).or.fnan(BnDO)) then 
+      if(fnan(BnDOC).or.fnan(BnNH4).or.fnan(BnNO3).or.fnan(BnPO4t).or.fnan(BnSAt).or.fnan(BnCOD).or.fnan(BnDO)) then
         write(errmsg,*)'ICM sed_flux: nan found :',ielg(id),BnDOC,BnNH4,BnNO3,BnPO4t,BnCOD,BnDO,BnSAt
         call parallel_abort(errmsg)
       endif
@@ -1070,7 +1070,7 @@ subroutine calkwq(id,nv,usf,it)
 
     endif!iTBen
 
-    !linear distribution y=1-0.5*x, (0<x<1) 
+    !linear distribution y=1-0.5*x, (0<x<1)
     x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
     do k=nv,1,-1
       x=x+dep(k)
@@ -1117,7 +1117,7 @@ subroutine calkwq(id,nv,usf,it)
     nCOD  = SCOD
     nDO   = SDO
 
-    !linear distribution y=1-0.5*x, (0<x<1) 
+    !linear distribution y=1-0.5*x, (0<x<1)
     x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
     do k=1,nv
       x=x+dep(k)
@@ -1229,12 +1229,12 @@ subroutine calkwq(id,nv,usf,it)
   !state variables at each layer
   do k=1,nv
     klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-    
+
     !check
     if((jsav==1.and.spatch(id)==1 .or. jveg==1.and.vpatch(id)==1) .and. (kbe(id)<1.or.klev<=1)) then
       write(errmsg,*)'illegal kbe(id) and klev: ',kbe(id),nv,nvrt,ielg(id),klev
       call parallel_abort(errmsg)
-    endif  
+    endif
 
     if(k==1) then
       !for settling from surface;  init of settling conc
@@ -1306,7 +1306,7 @@ subroutine calkwq(id,nv,usf,it)
       !sstem
       a=bmstsav(k) !>0
       b=plfsav(klev,id)*(1.-sFAM)*sFCP(2)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-      sstem(klev,id)=(b*dtw+sstem(klev,id))/(1.0+a*dtw) !>0 with seeds 
+      sstem(klev,id)=(b*dtw+sstem(klev,id))/(1.0+a*dtw) !>0 with seeds
 
       !nan check
       if(fnan(sstem(klev,id)))then
@@ -1317,7 +1317,7 @@ subroutine calkwq(id,nv,usf,it)
       !sroot
       a=bmrtsav(k) !>0
       b=plfsav(klev,id)*(1.-sFAM)*sFCP(3)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-      sroot(klev,id)=(b*dtw+sroot(klev,id))/(1.0+a*dtw) !>0 with seeds 
+      sroot(klev,id)=(b*dtw+sroot(klev,id))/(1.0+a*dtw) !>0 with seeds
 
       !nan check
       if(fnan(sroot(klev,id)))then
@@ -1345,10 +1345,10 @@ subroutine calkwq(id,nv,usf,it)
       !pre-calculation for ZB1 & ZB2
       nz(1)=ZB1(k,1); nz(2)=ZB2(k,1);  nz(3)=PB1(k,1);  nz(4)=PB2(k,1);
       nz(5)=PB3(k,1); nz(6)=RPOC(k,1); nz(7)=LPOC(k,1); nz(8)=DOC(k,1);
-      
-      !ZBG(j,i): specific predation rate on prey j by predator i 
+
+      !ZBG(j,i): specific predation rate on prey j by predator i
       do i=1,2 !ZB1,ZB2
-        sum1=1.0 
+        sum1=1.0
         do j=1,8 !prey
           ZBG(j,i)=zGPM(j,i)*nz(j)/zKhG(j,i)
           sum1=sum1+nz(j)/zKhG(j,i)
@@ -1375,7 +1375,7 @@ subroutine calkwq(id,nv,usf,it)
       enddo !i
       Fish=nz(1)+nz(2)+nz(3)+nz(4)+nz(5) !predation by higher trophic levels
 
-      ZB1G=0.0; ZB2G=0.0  
+      ZB1G=0.0; ZB2G=0.0
       do j=1,8
         if(j/=1) ZB1G=ZB1G+ZBG(j,1)
         if(j/=2) ZB2G=ZB2G+ZBG(j,2)
@@ -1387,7 +1387,7 @@ subroutine calkwq(id,nv,usf,it)
       b=-ZBG(1,2)*AZB2
       ZB1(k,2)=((1.0+a*dtw2)*ZB1(k,1)+b*dtw)/(1.0-a*dtw2)
       ZB1(k,1)=0.5*(ZB1(k,1)+ZB1(k,2))
-   
+
       !ZB2
       a=ZB2G*zAG*(1-zRG)-ZBM(2)-z2pr(2)*Fish-zMT(2)
       b=-ZBG(2,1)*AZB1
@@ -1496,12 +1496,12 @@ subroutine calkwq(id,nv,usf,it)
         b=b+rtmp/max(1.e-5,dep(k))
       endif !ze
     endif !isav
-    
+
     !veg
     if(jveg==1.and.vpatch(id)==1) then
       rtmp=0.0
       do j=1,3
-        if(idry_e(id)==1) then 
+        if(idry_e(id)==1) then
           rtmp=rtmp+vFCM(j,1)*((bmlfveg(j)+plfveg(id,j)*vFAM(j))*vtleaf(id,j)/max(1.e-5,min(tdep,vht(id,j)))+ &
              & bmstveg(j)*vtstem(id,j)/max(1.e-5,min(tdep,vht(id,j))))
         else
@@ -1520,9 +1520,9 @@ subroutine calkwq(id,nv,usf,it)
     RPOC(k,2)=((1.0+a*dtw2)*RPOC(k,1)+b*dtw)/(1.0-a*dtw2)
     RPOC(k,1)=0.5*(RPOC(k,1)+RPOC(k,2))
     RPOC0=RPOC(k,1)
-    
- 
-    !LPOC 
+
+
+    !LPOC
     rKLPOC=(KC0(2)+KCalg(2)*sumAPB)*rKTM(2)
 
     a=-rKLPOC-WSPOM(2)/dep(k)
@@ -1566,9 +1566,9 @@ subroutine calkwq(id,nv,usf,it)
     LPOC(k,2)=((1.0+a*dtw2)*LPOC(k,1)+b*dtw)/(1.0-a*dtw2)
     LPOC(k,1)=0.5*(LPOC(k,1)+LPOC(k,2))
     LPOC0=LPOC(k,1)
-    
 
-    !DOC 
+
+    !DOC
     rKDOC=(KC0(3)+KCalg(3)*sumAPB)*rKTM(3)
     xKHR=rKDOC*DOX(k,1)/(KhDOox+DOX(k,1))
     xDenit=an2c*rKDOC*KhDOox*NO3(k,1)/(KhDOox+DOX(k,1))/(KhNO3denit+NO3(k,1))
@@ -1614,7 +1614,7 @@ subroutine calkwq(id,nv,usf,it)
 
     DOC(k,2)=((1.0+a*dtw2)*DOC(k,1)+b*dtw)/(1.0-a*dtw2)
     DOC(k,1)=0.5*(DOC(k,1)+DOC(k,2))
-    
+
     !---------------------------------------------
     !pre-calculation for nitrogen
     if(iZB==1) then
@@ -1773,7 +1773,7 @@ subroutine calkwq(id,nv,usf,it)
       write(errmsg,*)'check ICM KTNit: ',KTNit,xT,temp(k),TNit,tmp,ielg(id),k
       call parallel_abort(errmsg)
     endif
-    
+
     b= FNP(4)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1))  !predation
     if(iZB==1) then
       b= zFNM(1,4)*zn2c(1)*ZBM(1)*ZB1(k,1)+zFNM(2,4)*zn2c(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
@@ -1790,17 +1790,17 @@ subroutine calkwq(id,nv,usf,it)
         !pre-calculation for NH4, and for NO3
         nprsav=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
         fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*sKhNs/sKhNw+1.e-8)
-       
+
         if(nprsav<0) then
           write(errmsg,*)'npr<0.0 :',id,NH4(k,1),sKhNH4,NO3(k,1),ielg(id),k
           call parallel_abort(errmsg)
         endif !nprsav
-       
+
         if(fnsedsav<=0) then
           write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),sKhNs,sKhNw,ielg(id),k
           call parallel_abort(errmsg)
         endif !fnsedsav
-       
+
         rtmp=sn2c*sFNM(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id))
         b=b+rtmp/max(1.e-5,dep(k))
@@ -1829,7 +1829,7 @@ subroutine calkwq(id,nv,usf,it)
 
     NH4(k,2)=((1.0+a*dtw2)*NH4(k,1)+b*dtw)/(1.0-a*dtw2)
     NH4(k,1)=0.5*(NH4(k,1)+NH4(k,2))
-   
+
     !NO3
     a=0.0
     b=-n2c(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)-n2c(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)-n2c(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1) &
@@ -1856,7 +1856,7 @@ subroutine calkwq(id,nv,usf,it)
       PZB_PB=(1.0-zAG*(1.0-zRG))*(k1+k2) !ZB eats PB
       PFh_PB=p2pr*Fish*(PB1(k,1)*p2c(1)+PB2(k,1)*p2c(2)+PB3(k,1)*p2c(3)) !Fish eats PB
     endif
-    
+
     !RPOP
     PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k))
     rKRPOP=(KP0(1)+KPalg(1)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(1)
@@ -1942,7 +1942,7 @@ subroutine calkwq(id,nv,usf,it)
         endif !idry_e
       enddo !j::veg species
       b=b+rtmp
-    endif 
+    endif
 
     LPOP(k,2)=((1.0+a*dtw2)*LPOP(k,1)+b*dtw)/(1.0-a*dtw2)
     LPOP(k,1)=0.5*(LPOP(k,1)+LPOP(k,2))
@@ -2012,12 +2012,12 @@ subroutine calkwq(id,nv,usf,it)
       if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
         !pre-calculation for P
         fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*sKhPs/sKhPw+1.e-8)
- 
+
         if(fpsedsav<=0.) then
           write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),sKhPs,sKhPw,ielg(id),k
           call parallel_abort(errmsg)
         endif !fpsedsav
- 
+
         rtmp=sp2c*sFPM(4)*((bmlfsav(k)+plfsav(klev,id)*sFAM)*sleaf(klev,id)+ &
                                   &bmstsav(k)*sstem(klev,id)) !basal metabolism
         b=b+rtmp/max(1.e-5,dep(k))
@@ -2048,7 +2048,7 @@ subroutine calkwq(id,nv,usf,it)
     PO4t0=PO4t(k,1)
 
     !---------------------------------------------
-    !pre-calculation for silica 
+    !pre-calculation for silica
     if(iZB==1) then
       SZB_ZB=(1.0-zAG*(1.0-zRG))*(ZBG0(2,1)*AZB1*zs2c(1)+ZBG0(1,2)*AZB2*zs2c(2))  !ZB eats ZB
       SFh_ZB=(z2pr(1)*Fish+zMT(1))*ZB1(k,1)*zs2c(1)+(z2pr(2)*Fish+zMT(2))*ZB2(k,1)*zs2c(2) !1) Fish eats ZB, 2) ZB dies
@@ -2114,7 +2114,7 @@ subroutine calkwq(id,nv,usf,it)
 
     COD(k,2)=((1.0+a*dtw2)*COD(k,1)+b*dtw)/(1.0-a*dtw2)
     COD(k,1)=0.5*(COD(k,1)+COD(k,2))
-  
+
     !DO
     rKr=0.0
     if(k==1) then
@@ -2173,7 +2173,7 @@ subroutine calkwq(id,nv,usf,it)
         endif !submerged
       enddo !j::veg species
       b=b+rtmp
- 
+
       !release from photosynthesis
       rtmp=0.0
       do j=1,3
@@ -2366,15 +2366,15 @@ subroutine calkwq(id,nv,usf,it)
 
     !total N/P uptake rate from sediemnt by lf photosynthesis
     tlfNH4sav(id)=sum(lfNH4sav(1:nv)) !unit:g/m^2 day
-    tlfPO4sav(id)=sum(lfPO4sav(1:nv)) 
+    tlfPO4sav(id)=sum(lfPO4sav(1:nv))
 
     !total POM adding rate to sediment from rt metabolism
     trtpocsav(id)=sum(rtpocsav(1:nv))
-    trtponsav(id)=sum(rtponsav(1:nv)) 
-    trtpopsav(id)=sum(rtpopsav(1:nv)) 
+    trtponsav(id)=sum(rtponsav(1:nv))
+    trtpopsav(id)=sum(rtpopsav(1:nv))
 
     !total DO comsumption rate from sediemtn by rt metabolism
-    trtdosav(id)=sum(rtdosav(1:nv))!>0 
+    trtdosav(id)=sum(rtdosav(1:nv))!>0
 
   endif !jsav
   !--------------------------------------------------------------------------------------
@@ -2395,8 +2395,8 @@ subroutine calkwq(id,nv,usf,it)
       !seeds
       vtleaf(id,j)=max(vtleaf(id,j),1.d-5)
       vtstem(id,j)=max(vtstem(id,j),1.d-5)
-      vtroot(id,j)=max(vtroot(id,j),1.d-5)   
-     
+      vtroot(id,j)=max(vtroot(id,j),1.d-5)
+
       !nutrient fluxes, sum of (g/m^2/day)
       tlfNH4veg(id,j)=vn2c(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfNH4veg(1:nv,j))
       tlfPO4veg(id,j)=vp2c(j)*plfveg(id,j)*vtleaf(id,j) !sum(lfPO4veg(1:nv,j))
@@ -2491,10 +2491,10 @@ subroutine ph_calc(id,nv)
   use icm_mod, only : TIC,ALK,CA,CACO3,PH,temp,salt,CO2,CAsat,mCACO3,mC
   implicit none
   integer,intent(in) :: id,nv
-  
+
   !local variables
   integer :: i,j,k,ierr,imed
-  real(rkind) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc 
+  real(rkind) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc
   real(rkind) :: sth,sth2,r1,r2,r3,T,S,S2,rH2CO3,rHCO3,rCO3,rOH,rH,Kw,K1,K2,Kb
   real(rkind) :: phi,h,a,f0,f1,f2,pKsp,Ksp
   real(rkind) :: rval
@@ -2530,9 +2530,9 @@ subroutine ph_calc(id,nv)
     sth2=sqrt(sth)
 
     r3=-0.5085*sth2/(1.d0+2.9529*sth2) !for H+
-    rH=10.d0**r3    
+    rH=10.d0**r3
 
-    if(S<1.d0) then   
+    if(S<1.d0) then
       !Debye-Huckel terms and activity coefficients
       r1=-0.5085*sth2/(1.d0+1.3124*sth2)+4.745694e-03+4.160762e-02*sth-9.284843e-03*sth*sth
       r2=-2.0340*sth2/(1.0+1.4765*sth2)+1.205665e-02+9.715745e-02*sth-2.067746e-02*sth*sth
@@ -2541,7 +2541,7 @@ subroutine ph_calc(id,nv)
       rCO3=10.0**r2
       rOH=rHCO3
 
-      !Temperature adjustment 
+      !Temperature adjustment
       Kw=10.0**(-283.971-0.05069842*T+13323.0/T+102.24447*log10(T)-1119669.0/(T*T))/rOH
       K1=10.0**(-3404.71/T+14.8435-0.032786*T)*rH2CO3/rHCO3
       K2=10.0**(-2902.39/T+6.4980-0.023790*T)*rHCO3/rCO3
@@ -2585,12 +2585,12 @@ subroutine ph_calc(id,nv)
     h=10.0**(-phi)
     a=h*h+K1*h+K1*K2;
     f0=h*h/a; f2=K1*K2/a;
-    
+
     !Calcite solubility (Zeebe,2001)
     !pKsp=-171.9065-0.077993*T+2839.319/T+71.595*log10(T)+(-0.77712+0.0028426*T+ &
-    !    & 178.34/T)*sqrt(salt(k))-0.07711*salt(k)+0.0041249*salt(k)**1.5 
+    !    & 178.34/T)*sqrt(salt(k))-0.07711*salt(k)+0.0041249*salt(k)**1.5
     !Aragonite solubility (Zeebe,2001)
-    pKsp=-171.945-0.077993*T+2903.293/T+71.595*log10(T)+(-0.068393+0.0017276*T+ &    
+    pKsp=-171.945-0.077993*T+2903.293/T+71.595*log10(T)+(-0.068393+0.0017276*T+ &
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
     Ksp=10.d0**(pKsp)
 
@@ -2598,7 +2598,7 @@ subroutine ph_calc(id,nv)
     CO2(k)=f0*sTIC*mmC
     CAsat(k)=Ksp*mmCACO3/(f2*sTIC)
   enddo !k
-  
+
 end subroutine ph_calc
 
 subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
@@ -2606,8 +2606,8 @@ subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
 !Brent's method to find ph value
 !numerical recipes from William H. Press, 1992
 !---------------------------------------------------------------------
-  use schism_glbl, only : rkind 
-  
+  use schism_glbl, only : rkind
+
   implicit none
   !integer, parameter :: rkind=8,nloop=100
   integer, parameter :: nloop=100
@@ -2724,7 +2724,7 @@ subroutine ph_f(f,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
   else
     !stop 'unknown imed in PH calculation'
     write(errmsg,*)'unknown imed in PH calculation'
-    call parallel_abort(errmsg) 
+    call parallel_abort(errmsg)
   endif
 
 end subroutine ph_f

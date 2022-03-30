@@ -14,7 +14,7 @@
 
 module icm_sed_mod
 !-------------------------------------------------------------------------------
-!parameter definition for sediment flux model 
+!parameter definition for sediment flux model
 !-------------------------------------------------------------------------------
   use schism_glbl,only: rkind,nea
   implicit none
@@ -29,7 +29,7 @@ module icm_sed_mod
   real(rkind), save,allocatable,dimension(:,:) :: SED_B !3 phyto. species
   real(rkind), save,allocatable,dimension(:) :: SED_LPOP,SED_RPOP,SED_LPON,SED_RPON,SED_LPOC,SED_RPOC,SED_TSS
   real(rkind), save,allocatable,dimension(:) :: SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD,SED_SALT,SED_T,SSI
-  
+
   !steady state
   integer, save :: iSteady
   real(rkind), save :: TINTIM
@@ -37,11 +37,11 @@ module icm_sed_mod
 
   !General Parameters
   real(rkind),save :: HSEDALL,DIFFT,SALTSW,SALTND
-  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH 
+  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH
   real(rkind),save,dimension(3) :: FRPPHB,FRNPHB,FRCPHB
   real(rkind),save,dimension(3) :: KPDIAG,KNDIAG,KCDIAG,DPTHTA,DNTHTA,DCTHTA
   real(rkind),save :: W2,H2,m1,m2,KSI,THTASI,THTADP,THTADD
-  !sav 
+  !sav
   real(rkind),save,dimension(3) :: frnsav,frpsav,frcsav
   !veg
   real(rkind),save,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
@@ -56,7 +56,7 @@ module icm_sed_mod
   real(rkind),save :: KAPPCH4,THTACH4,KMCH4O2,KMSO4 !CH4 reaction
   real(rkind),save :: AONO
 
-  !initial concentration 
+  !initial concentration
   real(rkind),save :: CTEMPI,BBMI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI
   real(rkind),save,dimension(3) :: CPOPI,CPONI,CPOCI
 
@@ -66,7 +66,7 @@ module icm_sed_mod
 
   !splits of refractory POM from Water Column into G2,G3 class POM in sediment
   real(rkind), save,allocatable,dimension(:,:) :: FRPOP,FRPON,FRPOC !(1:nea,3), leave option for mapping
-  
+
   !POM fluxes !unit:mg/m^2
   real(rkind), save,allocatable,dimension(:,:) :: flxpop,flxpon,flxpoc
   real(rkind), save,allocatable,dimension(:) :: flxpos
@@ -83,7 +83,7 @@ module icm_sed_mod
   real(rkind),save :: NH41TM1,NO31TM1,HS1TM1,SI1TM1,PO41TM1,NH4T2TM1,NO3T2TM1,HST2TM1,SIT2TM1,PO4T2TM1,CH4T2TM1,CH41TM1,SO4T2TM1
   real(rkind),save :: PON1TM1,PON2TM1,PON3TM1,POC1TM1,POC1,POC2TM1,POC3TM1,POP1TM1,POP2TM1,POP3TM1,PSITM1
   real(rkind),save :: ROOTDO !sav
-  real(rkind),save :: DFEED,DFEEDM1 !deposit feeder 
+  real(rkind),save :: DFEED,DFEEDM1 !deposit feeder
   real(rkind),save :: BENSTR1 !benthic stress
 
   real(rkind),save :: SI1,SI2,SIT1,SIT2,PO41,PO42,PO4T1,PO4T2,NH41,NH42,NH4T1,NH4T2
@@ -91,7 +91,7 @@ module icm_sed_mod
 
   !diagenesis fluxes
   real(rkind),save :: XJN,XJC,XJP
-  
+
   !sediment fluxes
   real(rkind),save :: JSI,JPO4,JNH4,JNO3,JHS,JCH4,JCH4AQ,JCH4G,JN2GAS,JGAS
 
@@ -126,7 +126,7 @@ module icm_sed_mod
 
   !bottom Light (nea)
   real(rkind),save,allocatable,dimension(:) :: sbLight
-  
+
   !deposit feeder
   integer,save :: idf,ihypox
   real(rkind),save :: XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA
@@ -134,7 +134,7 @@ module icm_sed_mod
   real(rkind),save :: XKBO2,TDD,DOLOW,DFDOH,DFDOQ,RDD,RMORT
   real(rkind),save :: XKI0,XKR,XKBETA
   real(rkind),save,allocatable,dimension(:) :: SFLUXP,SF_RPOP,SFLUXN,SF_RPON,SFLUXC,SF_RPOC,JSUSF,SF_SU
-  
+
   !benthic algae
   integer, save :: iBalg
   real(rkind),save :: PO4AVL, NH4AVL, NO3AVL

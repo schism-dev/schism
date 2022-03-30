@@ -365,7 +365,7 @@
 #endif
 
 #ifdef USE_ICM
-      call read_icm_param_tmp(0)
+      call read_icm_param(0)
       ntrs(7)=ntrs_icm
       tr_mname(7)='ICM'
 #endif
@@ -5097,7 +5097,7 @@
 
 #ifdef USE_ICM
       !read ICM parameter and initial ICM variables
-      call icm_init
+      call read_icm_param(1)
 
       !initial ICM variable wqc
 !$OMP parallel do default(shared) private(i,k,j)

@@ -49,14 +49,14 @@ module icm_mod
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: TU,TD,rIa,rIavg,Daylen
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
-  real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED 
+  real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED
   real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,PrefN
   real(rkind),save,allocatable,dimension(:,:,:) :: GP
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   real(rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO !benthic flux from sediment flux model, positive refer to from sediment to water column
-  !additional time series of benthic flux 
+  !additional time series of benthic flux
   real(rkind),save:: TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
   real(rkind),save,allocatable,dimension(:) :: BRPOC,BLPOC,BDOC,BRPON,BLPON,BDON,BNH4,BNO3,BRPOP,BLPOP,BDOP,BPO4t,BSU,BSAt,BCOD,BDO
   real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO !surface flux : atmospheric loading
@@ -79,8 +79,8 @@ module icm_mod
 
   integer, save :: irec_ph
   integer,save,allocatable :: iphgb(:)
-  real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:) 
-  real(rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3,PH_el,PH_nd,TIC_el,ALK_el                         
+  real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:)
+  real(rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3,PH_el,PH_nd,TIC_el,ALK_el
   real(rkind),save,allocatable,dimension(:) :: PH,CAsat,CO2
 
   !-------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ module icm_mod
 
   integer,save,allocatable :: spatch(:)               !sav region
   real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
-  real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2 
+  real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
   real(rkind),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
   real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
@@ -113,7 +113,7 @@ module icm_mod
   real(rkind),save,dimension(3,4) :: vFNM,vFPM,vFCM     !metabolism to (RPOM,RLOM,DOM,DIM)
   real(rkind),save,dimension(3) :: vKhNs,vKhPs,vScr,vSopt,vInun,valpha,vKe !growth limit(nutrent,light,salinity,inundation)
   real(rkind),save,dimension(3,2) :: vTMT,vKTMT,vMT0,vMTcr    !mortality coeffs
-  real(rkind),save :: v2ht(3,2),vht0(3),vcrit(3)    !computing canopy height               
+  real(rkind),save :: v2ht(3,2),vht0(3),vcrit(3)    !computing canopy height
   real(rkind),save,dimension(3) :: vc2dw,v2den,vn2c,vp2c,vo2c!convert ratios
   integer,save :: ivNc,ivPc,ivNs,ivPs,ivMT              !flags for (N,P) limit, recycled (N,P) dest., mortality
 
@@ -135,7 +135,7 @@ module icm_mod
   type,public :: icm_spatial_param
     real(rkind),dimension(:),pointer :: Ke0,tss2c,WSSED,WSSEDn,WRea
     real(rkind),dimension(:,:),pointer :: GPM,TGP,PRP,c2chl,WSPOM,WSPBS,WSPOMn,WSPBSn,KC0,KP0,KPalg
-    real(rkind),dimension(:,:,:),pointer :: KTGP 
+    real(rkind),dimension(:,:,:),pointer :: KTGP
   end type
   type(icm_spatial_param) :: sp
 

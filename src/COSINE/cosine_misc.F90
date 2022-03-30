@@ -14,7 +14,7 @@ include 'misc_module.txt'
 
 contains
 
-#ifdef USE_COSINE
+#if defined USE_COSINE || defined USE_ICM
 
    subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
    !--------------------------------------------------------------------
@@ -50,7 +50,6 @@ contains
        call parallel_abort(errmsg)
      endif
    
-     return
    end subroutine get_param_1D
    
    subroutine read_gr3_prop(varname,varin,varout,ndim)
