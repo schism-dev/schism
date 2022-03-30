@@ -8567,9 +8567,7 @@
         enddo !i
         noutput=noutput+ntrs(7)
 
-#ifndef ICM_PH 
-        noutput=noutput+4
-#endif
+        if(iPh==1) noutput=noutput+4
          
         !SAV model
         if(isav_icm/=0) then

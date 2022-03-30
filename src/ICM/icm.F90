@@ -63,7 +63,7 @@ subroutine ecosystem(it)
   use schism_glbl, only : rkind,errmsg,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
                         & isdel,kbs,zs,su2,sv2,npa,nne,elnode,srad,i34,np
   use schism_msgp, only : myrank,parallel_abort,exchange_p3dw
-  use icm_mod, only : iSed,iPh,PH_el,PH_nd,rIa,rIavg,iRad,rIavg_save, &
+  use icm_mod, only : iSed,iPh,PH_el,PH_nd,rIa,rIavg,iRad, &
                     & jsav,spatch,sleaf,sstem,sroot,jveg,vpatch,jdry
   implicit none
   integer, intent(in) :: it
@@ -106,9 +106,9 @@ subroutine ecosystem(it)
     !calculation on growth rate of phytoplankton
     call photosynthesis(i,hour,nv,it) 
       
-#ifdef ICM_PH
-    call ph_calc(i,nv)
-#endif
+    if(iPh==1) then
+      call ph_calc(i,nv)
+    endif
     
     !sediment flux module 
     if(iSed==1) then
@@ -135,29 +135,29 @@ subroutine ecosystem(it)
 
   enddo !i=1,nea
 
-#ifdef ICM_PH
-  !interpolation for pH
-  PH_nd=0.0
-  do i=1,nea
-    do j=1,i34(i)
-      nd=elnode(j,i)
-      do k=1,nvrt
-        PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,i)
-      enddo !k
-    enddo !j
-  enddo !i
+  if(iPh==1) then
+    !interpolation for pH
+    PH_nd=0.0
+    do i=1,nea
+      do j=1,i34(i)
+        nd=elnode(j,i)
+        do k=1,nvrt
+          PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,i)
+        enddo !k
+      enddo !j
+    enddo !i
 
-  do i=1,np
-    PH_nd(:,i)=PH_nd(:,i)/dble(nne(i))
-  enddo
+    do i=1,np
+      PH_nd(:,i)=PH_nd(:,i)/dble(nne(i))
+    enddo
 
-  !call exchange_p3dw(PH_nd)
-  allocate(swild(nvrt,npa))
-  swild(:,1:npa)=PH_nd
-  call exchange_p3dw(swild)
-  PH_nd=swild(:,1:npa)
-  deallocate(swild)
-#endif
+    !call exchange_p3dw(PH_nd)
+    allocate(swild(nvrt,npa))
+    swild(:,1:npa)=PH_nd
+    call exchange_p3dw(swild)
+    PH_nd=swild(:,1:npa)
+    deallocate(swild)
+  endif
 
 end subroutine ecosystem
 
@@ -224,12 +224,13 @@ subroutine link_icm(imode,id,nv)
       COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
       DOX(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
  
-#ifdef ICM_PH
-      TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
-      ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
-      CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id), 0.d0)
-      CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
-#endif
+      if(iPh==1) then
+        TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
+        ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
+        CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id), 0.d0)
+        CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
+      endif
+
       if(idry_e(id)==1) exit
       
       if(iKe==0) then !TSS from POC
@@ -287,13 +288,13 @@ subroutine link_icm(imode,id,nv)
       tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1), 0.d0)
       tr_el(20+irange_tr(1,7),k,id)=max(DOX(m,1), 0.d0)
  
-#ifdef ICM_PH
-      tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
-      tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),  0.d0)
-      tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),   0.d0)
-      tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0.d0)
-      PH_el(k,id)=PH(m)
-#endif
+      if(iPh==1) then
+        tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
+        tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),  0.d0)
+        tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),   0.d0)
+        tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0.d0)
+        PH_el(k,id)=PH(m)
+      endif
  
       wqc(1,k,id) =max(ZB1(m,2),  0.d0)
       wqc(2,k,id) =max(ZB2(m,2),  0.d0)
@@ -317,12 +318,12 @@ subroutine link_icm(imode,id,nv)
       wqc(20,k,id)=max(COD(m,2),  0.d0)
       wqc(21,k,id)=max(DOX(m,2),  0.d0)
  
-#ifdef ICM_PH
-      wqc(22,k,id)=max(TIC(m,2),  0.d0)
-      wqc(23,k,id)=max(ALK(m,2),  0.d0)
-      wqc(24,k,id)=max(CA(m,2),   0.d0)
-      wqc(25,k,id)=max(CACO3(m,2),0.d0)
-#endif
+      if(iPh==1) then
+        wqc(22,k,id)=max(TIC(m,2),  0.d0)
+        wqc(23,k,id)=max(ALK(m,2),  0.d0)
+        wqc(24,k,id)=max(CA(m,2),   0.d0)
+        wqc(25,k,id)=max(CACO3(m,2),0.d0)
+      endif
  
       !nan check
       do i=1,(21+4*iPh)
@@ -333,17 +334,17 @@ subroutine link_icm(imode,id,nv)
       enddo!i
     enddo!k::kbe(id)+1,nvrt
  
-#ifdef ICM_PH
-    if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
-    do k=1,kbe(id)
-      PH_el(k,id)=PH_el(kbe(id)+1,id)
-      !nan check
-      if(PH_el(k,id)/=PH_el(k,id))then
-        write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
-        call parallel_abort(errmsg)
-      endif
-    enddo !k
-#endif      
+    if(iPh==1) then
+      if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
+      do k=1,kbe(id)
+        PH_el(k,id)=PH_el(kbe(id)+1,id)
+        !nan check
+        if(PH_el(k,id)/=PH_el(k,id))then
+          write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
+          call parallel_abort(errmsg)
+        endif
+      enddo !k
+    endif
 
   endif !imode
 
@@ -714,12 +715,12 @@ subroutine photosynthesis(id,hour,nv,it)
         endif 
   
         !TIC limitation
-#ifdef ICM_PH
-        if(iphgb(id)/=0) then
-          rtmp=TIC(k,1)*TIC(k,1) !*2.d0
-          GP(k,id,i)=GP(k,id,i)*rtmp/(rtmp+25.0)
+        if(iPh==1) then
+          if(iphgb(id)/=0) then
+            rtmp=TIC(k,1)*TIC(k,1) !*2.d0
+            GP(k,id,i)=GP(k,id,i)*rtmp/(rtmp+25.0)
+          endif
         endif
-#endif
 
       enddo !i::PB1,PB2,PB3
       sLight=bLight
@@ -946,7 +947,7 @@ subroutine calkwq(id,nv,usf,it)
   real(rkind) :: nRPOC,nLPOC,nDOC,nRPON,nLPON,nDON,nNH4,nNO3,nRPOP,nLPOP,nDOP,nPO4t,nSU,nSAt,nCOD,nDO 
   real(rkind),dimension(nvrt) :: znRPOC,znLPOC,znDOC,znRPON,znLPON,znDON,znNH4,znNO3, &
                                     & znRPOP,znLPOP,znDOP,znPO4t,znSU,znSAt,znCOD,znDO
-  real(rkind) :: pK0,CO2sat,xKCA,xKCACO3
+  real(rkind) :: rKa,pK0,CO2sat,xKCA,xKCACO3
   logical :: fnan, frange
 
   !sav and veg
@@ -1016,19 +1017,19 @@ subroutine calkwq(id,nv,usf,it)
     endif !k==nv.and.iBen/=0
 
     if(iSed==1) then !sediment fluxes
-#ifdef ICM_PH
-      if(iphgb(id)/=0) then
-        rval=1.3*(PH(nv)-8.5)
-        BnPO4t=max(BnPO4t*exp(rval),0.02)
-        !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
-        !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
+      if(iPh==1) then
+        if(iphgb(id)/=0) then
+          rval=1.3*(PH(nv)-8.5)
+          BnPO4t=max(BnPO4t*exp(rval),0.02)
+          !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
+          !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
 
-        if(abs(rval)>10.) then
-          write(errmsg,*)'Unknown ICM ph model:', PH(nv),rval
-          call parallel_abort(errmsg)
+          if(abs(rval)>10.) then
+            write(errmsg,*)'Unknown ICM ph model:', PH(nv),rval
+            call parallel_abort(errmsg)
+          endif
         endif
       endif
-#endif
 
       nDOC =nDOC +BnDOC
       nNH4 =nNH4 +BnNH4
@@ -2197,98 +2198,97 @@ subroutine calkwq(id,nv,usf,it)
     !mole weight: CACO3=100.086; CA=40.078; C=12.011; O=15.999
     !assuming (CA,CACO3,TAK) have the same mole weight (100.086) to simiplify
     !---------------------------------------------------------------------------------
-#ifdef ICM_PH
-    if(iphgb(id)/=0) then
-      !if(k==1) write(1001,*)ielg(id),iphgb(id)
-      !pre-compute the dissolution terms
-      xKCA=0.0; xKCACO3=0.0
-      if(.not.(CA(k,1)<CAsat(k).and.CACO3(k,1)==0.0)) then
-        xKCACO3=min(pKCACO3*(CAsat(k)-CA(k,1)),CACO3(k,1)/dtw) !CaCo3 <-> Ca++
-      endif
-
-      if(k==nv.and.CA(k,1)<CAsat(k)) then
-        xKCA=rKCA*(CAsat(k)-CA(k,1))/max(dep(k),5.d-2) !dissolution from sediment
-      endif
-      xKCA=0.0 !ZG, no dissolution from sediment
-
-      !CA
-      a=0.0
-      b=xKCACO3+xKCA
-
-      CA(k,2)=((1.0+a*dtw2)*CA(k,1)+b*dtw)/(1.0-a*dtw2)
-      CA(k,1)=0.5*(CA(k,1)+CA(k,2))
-
-      !CACO3
-      a=-pWSCACO3/dep(k)
-      b=-xKCACO3+pWSCACO3*CACO30/dep(k)
-
-      CACO3(k,2)=((1.0+a*dtw2)*CACO3(k,1)+b*dtw)/(1.0-a*dtw2)
-
-      if(CACO3(k,2)<0) then
-        CACO3(k,2)=0.0
-        CACO3(k,1)=0.0
-      else
-        CACO3(k,1)=0.5*(CACO3(k,1)+CACO3(k,2))
-      endif
-      CACO30=CACO3(k,1)
-
-      !TIC
-      rKa=0.0
-      if(k==1) then 
-        !atm. exchange CO2 (richard Zeebe, 2001)
-        !rKa=rKr
-
-        !(borges,2004) !Error: 1.e-20
-        rKa=0.24*(1.0+1.719*sqrt(max(usf,1.d-20))/sqrt(2.0)+2.58*WMS(id))/max(dep(k),5.d-2)
-
-        T=temp(k)+273.15 
-        if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
-        pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+salt(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
-        if(abs(pK0)>50.0) then
-          write(errmsg,*)'check ICM pH model pK0:',pK0,T,salt(k),ielg(id),k
-          call parallel_abort(errmsg)
+    if(iPh==1) then
+      if(iphgb(id)/=0) then
+        !if(k==1) write(1001,*)ielg(id),iphgb(id)
+        !pre-compute the dissolution terms
+        xKCA=0.0; xKCACO3=0.0
+        if(.not.(CA(k,1)<CAsat(k).and.CACO3(k,1)==0.0)) then
+          xKCACO3=min(pKCACO3*(CAsat(k)-CA(k,1)),CACO3(k,1)/dtw) !CaCo3 <-> Ca++
         endif
-        CO2sat=exp(pK0)*4.8 !Henry's law, assuming CO2atm=400 ppm , 400d-6*12.011d3=4.8 
-      endif
 
-      a=0.0
-      if(iZB==1) then
-        b=((1.0-zFCM(1))*DOX(k,1)/(DOX(k,1)+zKhDO(1)))*ZBM(1)*ZB1(k,1)+ & !ZB1 metabolism
-         & ((1.0-zFCM(2))*DOX(k,1)/(DOX(k,1)+zKhDO(2)))*ZBM(2)*ZB2(k,1)  !ZB2 metabolism
-      else
-        b=0.0
-      endif
-      b=b+((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+KhDO(1)))*PBM(1)*PB1(k,1)+ & !PB1 metabolism
-        & ((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+KhDO(2)))*PBM(2)*PB2(k,1)+ & !PB2 metabolism
-        & ((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)  & !PB3 metabolism
-        &-GP(k,id,1)*PB1(k,1)-GP(k,id,2)*PB2(k,1)-GP(k,id,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
-        & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(o2c*dep(k))
+        if(k==nv.and.CA(k,1)<CAsat(k)) then
+          xKCA=pKCA*(CAsat(k)-CA(k,1))/max(dep(k),5.d-2) !dissolution from sediment
+        endif
+        xKCA=0.0 !ZG, no dissolution from sediment
 
-      TIC(k,2)=((1.0+a*dtw2)*TIC(k,1)+b*dtw)/(1.0-a*dtw2)
-      TIC(k,1)=0.5*(TIC(k,1)+TIC(k,2))
+        !CA
+        a=0.0
+        b=xKCACO3+xKCA
 
-      !ALK unit in Mg[CaCO3]/L
-      a=0.0
-      b=(0.5*mCACO3/mN)*((15.0/14.0)*(-n2c(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1))+ & !PB uptake NH4
-       & (17.0/16.0)*(n2c(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)+n2c(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)+n2c(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1)) & !PB uptake NO3
-       &-2.0*xNit*NH4(k,1))+xKCACO3+xKCA
+        CA(k,2)=((1.0+a*dtw2)*CA(k,1)+b*dtw)/(1.0-a*dtw2)
+        CA(k,1)=0.5*(CA(k,1)+CA(k,2))
 
-      ALK(k,2)=((1.0+a*dtw2)*ALK(k,1)+b*dtw)/(1.0-a*dtw2)
-      ALK(k,1)=0.5*(ALK(k,1)+ALK(k,2))
-    else !doesn't invoke PH calculation
-      TIC(k,2)=TIC(k,1) 
-      ALK(k,2)=ALK(k,1) 
-      CACO3(k,2)=CACO3(k,1)
-      CA(k,2)=CA(k,1)
-       
-      !apply nudge option for TIC and ALK
-      if(inu_ph==1) then
-        TIC(k,2)=TIC(k,2)*(1.0-ph_nudge(id))+TIC_el(k,id)*ph_nudge(id)
-        ALK(k,2)=ALK(k,2)*(1.0-ph_nudge(id))+ALK_el(k,id)*ph_nudge(id)
-      endif
-    endif !iphgb(id)/=0
-#endif/*ICM_PH*/
+        !CACO3
+        a=-pWSCACO3/dep(k)
+        b=-xKCACO3+pWSCACO3*CACO30/dep(k)
 
+        CACO3(k,2)=((1.0+a*dtw2)*CACO3(k,1)+b*dtw)/(1.0-a*dtw2)
+
+        if(CACO3(k,2)<0) then
+          CACO3(k,2)=0.0
+          CACO3(k,1)=0.0
+        else
+          CACO3(k,1)=0.5*(CACO3(k,1)+CACO3(k,2))
+        endif
+        CACO30=CACO3(k,1)
+
+        !TIC
+        rKa=0.0
+        if(k==1) then
+          !atm. exchange CO2 (richard Zeebe, 2001)
+          !rKa=rKr
+
+          !(borges,2004) !Error: 1.e-20
+          rKa=0.24*(1.0+1.719*sqrt(max(usf,1.d-20))/sqrt(2.0)+2.58*WMS(id))/max(dep(k),5.d-2)
+
+          T=temp(k)+273.15
+          if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
+          pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+salt(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
+          if(abs(pK0)>50.0) then
+            write(errmsg,*)'check ICM pH model pK0:',pK0,T,salt(k),ielg(id),k
+            call parallel_abort(errmsg)
+          endif
+          CO2sat=exp(pK0)*4.8 !Henry's law, assuming CO2atm=400 ppm , 400d-6*12.011d3=4.8
+        endif
+
+        a=0.0
+        if(iZB==1) then
+          b=((1.0-zFCM(1))*DOX(k,1)/(DOX(k,1)+zKhDO(1)))*ZBM(1)*ZB1(k,1)+ & !ZB1 metabolism
+           & ((1.0-zFCM(2))*DOX(k,1)/(DOX(k,1)+zKhDO(2)))*ZBM(2)*ZB2(k,1)  !ZB2 metabolism
+        else
+          b=0.0
+        endif
+        b=b+((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+KhDO(1)))*PBM(1)*PB1(k,1)+ & !PB1 metabolism
+          & ((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+KhDO(2)))*PBM(2)*PB2(k,1)+ & !PB2 metabolism
+          & ((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)  & !PB3 metabolism
+          &-GP(k,id,1)*PB1(k,1)-GP(k,id,2)*PB2(k,1)-GP(k,id,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
+          & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(o2c*dep(k))
+
+        TIC(k,2)=((1.0+a*dtw2)*TIC(k,1)+b*dtw)/(1.0-a*dtw2)
+        TIC(k,1)=0.5*(TIC(k,1)+TIC(k,2))
+
+        !ALK unit in Mg[CaCO3]/L
+        a=0.0
+        b=(0.5*mCACO3/mN)*((15.0/14.0)*(-n2c(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1))+ & !PB uptake NH4
+         & (17.0/16.0)*(n2c(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)+n2c(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)+n2c(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1)) & !PB uptake NO3
+         &-2.0*xNit*NH4(k,1))+xKCACO3+xKCA
+
+        ALK(k,2)=((1.0+a*dtw2)*ALK(k,1)+b*dtw)/(1.0-a*dtw2)
+        ALK(k,1)=0.5*(ALK(k,1)+ALK(k,2))
+      else !doesn't invoke PH calculation
+        TIC(k,2)=TIC(k,1)
+        ALK(k,2)=ALK(k,1)
+        CACO3(k,2)=CACO3(k,1)
+        CA(k,2)=CA(k,1)
+
+        !apply nudge option for TIC and ALK
+        if(inu_ph==1) then
+          TIC(k,2)=TIC(k,2)*(1.0-ph_nudge(id))+TIC_el(k,id)*ph_nudge(id)
+          ALK(k,2)=ALK(k,2)*(1.0-ph_nudge(id))+ALK_el(k,id)*ph_nudge(id)
+        endif
+      endif !iphgb(id)/=0
+    endif !iPh
 
     !--------------------------------------------------------------------------------------
     !sav::nutrient flux to sed
@@ -2459,26 +2459,24 @@ subroutine calkwq(id,nv,usf,it)
   !calculate uniformed canopy height and density feedback to flow field
   !--------------------------------------------------------------------------------------
   !init
-  denssav=0.0
-  densveg(:)=0.0
+  denssav=0.0;  densveg(:)=0.0; ttdens(id)=0.0
   if(jsav==1.and.spatch(i)==1)then
     denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
+    ttdens(id)=ttdens(id)+denssav
   endif !jsav
-
   if(jveg==1.and.vpatch(id)==1) then
     do j=1,3
       densveg(j)=(vtleaf(id,j)+vtstem(id,j))/(v2den(j)*max(vht(id,j),1.e-4))
     enddo !j::veg species
+    ttdens(id)=ttdens(id)+sum(densveg(1:3))
   endif !jveg
-
-  ttdens(id)=denssav+sum(densveg(1:3))
 
   if(ttdens(id)>1.e-8) then
     rtmp=sht(id)*denssav
     do j=1,3
       rtmp=rtmp+vht(id,j)*densveg(j)
     enddo !j::veg species
-    tthcan=rtmp/ttdens(id)
+    tthcan(id)=rtmp/ttdens(id)
   endif !vegetation
   !--------------------------------------------------------------------------------------
 

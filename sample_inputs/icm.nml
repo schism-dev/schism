@@ -99,6 +99,11 @@ WSPBSn  = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
 iZB = 0
 
 !-----------------------------------------------------------------------
+!PH model (0: OFF;  1: ON)
+!-----------------------------------------------------------------------
+iPh = 0
+
+!-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation switch
 !-----------------------------------------------------------------------
 isav_icm = 0
@@ -312,9 +317,9 @@ sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
 sBMP  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
 sTBP  = 20     20     20    !reference temp. for leaf/stem/root metabolism
 sKTBP = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
+sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism C into (RPOC,LPOC,DOC,CO2)
 sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism N into (RPON,LPON,DON,NH4)
 sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism P into (RPOP,LPOP,DOP,PO4)
-sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism C into (RPOC,LPOC,DOC,CO2)
 
 !nutrient limitation
 sKhNw  = 0.01               !nitrogen half saturation in water column

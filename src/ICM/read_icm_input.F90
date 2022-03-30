@@ -16,7 +16,7 @@
 !WQinput: read time varying input 
 !read_icm_param2: read spatially varying parameter 
 !read_param_2d: function to read spatially varying parameter 
-!read_icm_param: read parameter in icm.in
+!read_icm_param: read parameter in icm.nml
 !get_param_1D: read 1D array parameters
 !pt_in_poly
 !Function signa_icm
@@ -223,18 +223,14 @@ subroutine read_icm_param2
     call read_param_2d('tss2c',sp%tss2c,tss2c)
   endif
 
-  !for pH module
-#ifdef ICM_PH
-  !pH flag
-  iphgb=0
-  call read_param_2d('ph',iphgb,-9999.d0)
-
-  !pH nudge flag
-  if(inu_ph==1) then
-    ph_nudge=0.0
-    call read_param_2d('ph_nudge',ph_nudge,-999.d0)
+  if(iPh==1) then
+    iphgb=0 !pH flag
+    call read_param_2d('ph',iphgb,-9999.d0)
+    if(inu_ph==1) then
+      ph_nudge=0.0 !pH nudge flag
+      call read_param_2d('ph_nudge',ph_nudge,-999.d0)
+    endif
   endif
-#endif ICM_PH
 
   !-----------------read in sav patch flag-----------------
   if(jsav==1) then
@@ -295,7 +291,7 @@ end subroutine read_icm_param2
 
 subroutine read_icm_param_tmp(imode)
 !---------------------------------------------------------------------
-!read paramters in icm.in
+!read paramters in icm.nml
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir, &
                         & len_in_dir,len_out_dir,ihconsv,nws
@@ -314,7 +310,7 @@ subroutine read_icm_param_tmp(imode)
 
   !define namelists
   namelist /MARCO/ iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen,&
-           & iZB,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
+           & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
            & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben, &
            & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
   namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,FSP,&
@@ -342,12 +338,9 @@ subroutine read_icm_param_tmp(imode)
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm
 
     !read global switches
-    open(31,file=in_dir(1:len_in_dir)//'icm.in',delim='apostrophe',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=MARCO)
     close(31)
-#ifdef ICM_PH
-    iPh=1  !better to put this in icm.in
-#endif
 
     !compute total number of ICM 3D state variables
     ntrs_icm=21
@@ -381,7 +374,7 @@ subroutine read_icm_param_tmp(imode)
     vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMT=0; vTMT=0; vKTMT=0; vMT0=0; vMTcr=0; valpha=0;
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
-    open(31,file=in_dir(1:len_in_dir)//'icm.in',delim='apostrophe',status='old')
+    open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
     read(31,nml=SAV);  read(31,nml=VEG); 
     close(31)
@@ -439,7 +432,7 @@ end subroutine read_icm_param_tmp
 
 subroutine read_icm_param
 !---------------------------------------------------------------------
-!read paramters in icm.in
+!read paramters in icm.nml
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,nvrt,ne_global,ihconsv,nws, &
                         & in_dir,out_dir,len_in_dir,len_out_dir
