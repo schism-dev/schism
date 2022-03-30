@@ -15,7 +15,6 @@
 !General Paramters
 !-----------------------------------------------------------------------
 HSEDALL = 10.0 !unit: cm 
-INTSEDC = 0 
 iSteady = 1
 
 DIFFT = 0.0018

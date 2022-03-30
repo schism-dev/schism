@@ -48,8 +48,8 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot !sav & veg
-      use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+      use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
+                           & SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                            & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                            & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
                            & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 

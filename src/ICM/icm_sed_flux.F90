@@ -88,7 +88,7 @@ function sed_zbrent(id,ierr)
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
-  use icm_sed_mod, only : O20,SOD,stc
+  use icm_mod, only : O20,SOD,stc
   implicit none
   integer,intent(in) :: id !elem #
   integer, intent(out) :: ierr !0: normal; /=0: error
@@ -220,11 +220,12 @@ subroutine read_icm_sed_param
 !---------------------------------------------------------------------C
 !read sediment flux model parameters
 !---------------------------------------------------------------------C
-  use icm_sed_mod
   use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
  &in_dir,out_dir,len_in_dir,len_out_dir
   use schism_msgp, only : myrank, parallel_abort
-  use icm_mod, only : jsav,iTBen,jveg
+  !use icm_mod, only : jsav,iTBen,jveg
+  !use icm_sed_mod
+  use icm_mod
   use misc_modules
   use icm_misc, only : get_param_1D 
   implicit none
@@ -240,9 +241,7 @@ subroutine read_icm_sed_param
   character(len=10) :: stmp
 
   !General parameters
-  call get_param('icm_sed.in','HSEDALL',2,itmp,rtmp,stmp)
-  HSEDALL=rtmp
-  !call get_param('icm_sed.in','INTSEDC',1,INTSEDC,rtmp,stmp)
+  call get_param('icm_sed.in','HSEDALL',2,itmp,HSEDALL,stmp)
   call get_param('icm_sed.in','iSteady',1,iSteady,rtmp,stmp)
 
   call get_param('icm_sed.in','DIFFT',2,itmp,rtmp,stmp)
@@ -779,13 +778,14 @@ subroutine sed_calc(id)
 !-----------------------------------------------------------------------
   use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode,idry_e
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : dtw,iKe,sp,p2c,n2c,s2c,KPO4p,KSAp,o2c, &
-                      &jsav,spatch, & !sav
-                      &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
-                      &jveg,vpatch, & !veg
-                      &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
-                      &TRM,KTRM
-  use icm_sed_mod
+  use icm_mod
+  !use icm_mod, only : dtw,iKe,sp,p2c,n2c,s2c,KPO4p,KSAp,o2c, &
+  !                    &jsav,spatch, & !sav
+  !                    &trtpocsav,trtponsav,trtpopsav,tlfNH4sav,tlfPO4sav,trtdosav, &
+  !                    &jveg,vpatch, & !veg
+  !                    &trtpocveg,trtponveg,trtpopveg,tlfNH4veg,tlfPO4veg,trtdoveg, &
+  !                    &TRM,KTRM
+  !use icm_sed_mod
   implicit none
   integer,intent(in) :: id !elem #
   real(rkind),external :: sed_zbrent
@@ -1472,8 +1472,9 @@ end subroutine sed_calc
 
 
 subroutine sedsod(id)
-  use icm_sed_mod
-  use icm_mod, only : dtw,o2n,o2c,dn2c,jsav,jveg
+  !use icm_sed_mod
+  !use icm_mod, only : dtw,o2n,o2c,dn2c,jsav,jveg
+  use icm_mod
   use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -1709,18 +1710,17 @@ subroutine sedsod(id)
 
 end subroutine sedsod
 
-
-
 subroutine link_sed_input(id,nv)
 !---------------------------------------------------------------------------------------
 !initializ sediment
 !---------------------------------------------------------------------------------------
   use schism_glbl, only: rkind,errmsg,dpe,eta2,elnode,i34,area,ielg
-  use icm_mod, only : dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
-                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX
-  use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &
-                    & SED_LPOP,SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD, &
-                    & SED_TSS,SED_SALT,SED_T,SFA,ZD
+  use icm_mod
+  !use icm_mod, only : dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
+  !                  & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX
+  !use icm_sed_mod, only : SED_BL,SED_B,SED_RPOC,SED_LPOC,SED_RPON,SED_LPON,SED_RPOP, &
+  !                  & SED_LPOP,SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD, &
+  !                  & SED_TSS,SED_SALT,SED_T,SFA,ZD
   implicit none
   integer, intent(in) :: id,nv
 
@@ -1763,8 +1763,9 @@ subroutine link_sed_output(id)
 !sediment flux
 !---------------------------------------------------------------------------------------
   use schism_glbl, only : idry_e
-  use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD,EROH2S,EROLPOC,ERORPOC
-  use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC,PIE1S,m1
+  use icm_mod
+  !use icm_mod, only : BnDOC,BnNH4,BnNO3,BnPO4t,BnDO,BnSAt,BnCOD,EROH2S,EROLPOC,ERORPOC
+  !use icm_sed_mod, only : SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENDO,SED_BENSA,iERO,SED_EROH2S,SED_EROLPOC,SED_ERORPOC,PIE1S,m1
   implicit none
   integer, intent(in) :: id
 

@@ -12,14 +12,450 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-subroutine icm_init
+!Routines & functions:
+!WQinput: read time varying input 
+!read_gr3_prop: function to read spatially varying parameter 
+!read_icm_param: read parameter in icm.nml
+
+
+subroutine read_icm_param(imode)
+!---------------------------------------------------------------------
+!read paramters in icm.nml
+!---------------------------------------------------------------------
+  use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir, &
+                   & len_in_dir,len_out_dir,ihconsv,nws,nea,npa,ihot, &
+                   & idry_e,ze,kbe
+  use schism_msgp, only : myrank,parallel_abort
+  use icm_misc, only : read_gr3_prop
+  !use misc_modules
+  use icm_mod
+  implicit none
+  integer,intent(in) :: imode
+
+  !local variables
+  integer :: istat,i,j,k
+  real(rkind) :: rat,swild(nea)
+  character(len=2) :: pid
+
+  !define namelists
+  namelist /MARCO/ iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen,&
+           & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
+           & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben, &
+           & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
+  namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,FSP,&
+           & FCM,FNM,FPM,FSM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
+           & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KS,TRS,KTRS,KCD,TRCOD,KTRCOD, &
+           & KhCOD,KhN,KhP,KhS,KhSal,c2chl,n2c,p2c,s2c,o2c,o2n,dn2c,an2c,KhDO, &
+           & KPO4p,KSAp,WRea
+  namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMT,zBMP,zTBP,zKTBP,zFCP,zFNP,zFPP, &
+           & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
+  namelist /PH_ICM/ inu_ph,pWSCACO3,pKCACO3,pKCA,pRea
+  namelist /SAV/ stleaf0,ststem0,stroot0,sGPM,sTGP,sKTGP,sFAM,sFCP,sBMP,sTBP,sKTBP,&
+           & sFNM,sFPM,sFCM,sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs,salpha,sKe,shtm,s2ht, &
+           & sc2dw,s2den,sn2c,sp2c,so2c
+  namelist /VEG/ vtleaf0,vtstem0,vtroot0,vGPM,vFAM,vTGP,vKTGP,vFCP,vBMP,vTBP,vKTBP,&
+           & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMT, &
+           & vTMT,vKTMT,vMT0,vMTcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
+           & vo2c 
+
+  if(imode==0) then
+    !------------------------------------------------------------------------------------
+    !read ICM; compute total # of state variables 
+    !------------------------------------------------------------------------------------
+    !initilize global switches
+    iRad=1; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
+    iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
+    Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
+    thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4t_tben=0; SAt_tben=0
+    jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm
+
+    !read global switches
+    open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
+    read(31,nml=MARCO)
+    close(31)
+
+    !compute total number of ICM 3D state variables
+    ntrs_icm=21
+    if(iPh==1) ntrs_icm=ntrs_icm+4
+
+  elseif(imode==1) then
+    !------------------------------------------------------------------------------------
+    !read module variables
+    !------------------------------------------------------------------------------------
+    !init. CORE modules
+    GPM=0; TGP=0; KTGP=0; PRP=0; BMP=0; TBP=0; KTBP=0; WSPBS=0; WSPOM=0; WSSED=0;
+    FCP=0; FNP=0; FPP=0; FSP=0; FCM=0; FNM=0; FPM=0; FSM=0; Nit=0; TNit=0; KTNit=0;
+    KhDOnit=0; KhNH4nit=0; KhDOox=0; KhNO3denit=0; KC0=0; KN0=0; KP0=0; KCalg=0;
+    KNalg=0; KPalg=0; TRM=0; KTRM=0; KS=0; TRS=0; KTRS=0; KCD=0; TRCOD=0; KTRCOD=0;
+    KhCOD=0; KhN=0; KhP=0; KhS=0; KhSal=0; c2chl=0; n2c=0; p2c=0; s2c=0; o2c=0;
+    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0; KSAp=0; WRea=0
+
+    !init. ZB modules
+    zGPM=0; zKhG=0; zTGP=0; zKTGP=0; zAG=0; zRG=0; zMT=0; zBMP=0; zTBP=0; zKTBP=0;
+    zFCP=0; zFNP=0; zFPP=0; zFSP=0; zFCM=0; zFNM=0; zFPM=0; zFSM=0; zKhDO=0; zn2c=0;
+    zp2c=0; zs2c=0; z2pr=0; p2pr=0
+
+    !init. PH modules
+    inu_ph=0; pWSCACO3=0; pKCACO3=0; pKCA=0; pRea=0
+
+    !init. SAV module
+    stleaf0=0; ststem0=0; stroot0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sBMP=0;
+    sTBP=0; sKTBP=0; sFNM=0; sFPM=0; sFCM=0; sKhNw=0; sKhNs=0; sKhNH4=0; sKhPw=0;
+    sKhPs=0; salpha=0; sKe=0; shtm=0; s2ht=0; sc2dw=0; s2den=0; sn2c=0; sp2c=0; so2c=0
+    
+    !init. VEG module
+    vtleaf0=0; vtstem0=0; vtroot0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vBMP=0;
+    vTBP=0; vKTBP=0; vFNM=0; vFPM=0; vFCM=0; ivNc=0; ivPc=0; vKhNs=0; vKhPs=0; vScr=0;
+    vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMT=0; vTMT=0; vKTMT=0; vMT0=0; vMTcr=0; valpha=0;
+    vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
+
+    open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
+    read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
+    read(31,nml=SAV);  read(31,nml=VEG); 
+    close(31)
+    if(myrank==0) write(16,*) 'done read ICM parameters'
+
+    !------------------------------------------------------------------------------------
+    !pre-processing
+    !------------------------------------------------------------------------------------
+#ifndef USE_SED 
+    if(iKe==1) then
+      call parallel_abort('iKe=1,need to turn on SED3D module')
+    endif
+#endif
+
+    dtw=dt/86400.0;  dtw2=dtw/2.0 !days
+    mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
+
+    !------------------------------------------------------------------------------------
+    !1) allocate ICM variables; 2) read spatially varying parameters; 3) read SFM parameter
+    !------------------------------------------------------------------------------------
+    call icm_vars_init
+
+    if(iKe==0) call read_gr3_prop('tss2c',tss2c,sp%tss2c,nea)
+    call read_gr3_prop('WSSED', WSSED,  sp%WSSED,  nea)
+    call read_gr3_prop('WSSEDn',WSSEDn, sp%WSSEDn, nea)
+    call read_gr3_prop('Ke0',   Ke0,    sp%Ke0,    nea)
+    call read_gr3_prop('WRea',  WRea,   sp%WRea,   nea)
+    do i=1,2
+        write(pid,'(i1)') i
+        call read_gr3_prop('WSPOM_'//trim(adjustl(pid)), WSPOM(i), sp%WSPOM(:,i), nea)
+        call read_gr3_prop('WSPOMn_'//trim(adjustl(pid)),WSPOMn(i),sp%WSPOMn(:,i),nea)
+    enddo
+    do i=1,3
+      write(pid,'(i1)') i
+      call read_gr3_prop('GPM_'//trim(adjustl(pid)),   GPM(i),   sp%GPM(:,i),   nea)
+      call read_gr3_prop('TGP_'//trim(adjustl(pid)),   TGP(i),   sp%TGP(:,i),   nea)
+      call read_gr3_prop('PRP_'//trim(adjustl(pid)),   PRP(i),   sp%PRP(:,i),   nea)
+      call read_gr3_prop('c2chl_'//trim(adjustl(pid)), c2chl(i), sp%c2chl(:,i), nea)
+      call read_gr3_prop('KC0_'//trim(adjustl(pid)),   KC0(i),   sp%KC0(:,i),   nea)
+      call read_gr3_prop('KP0_'//trim(adjustl(pid)),   KP0(i),   sp%KP0(:,i),   nea)
+      call read_gr3_prop('KPalg_'//trim(adjustl(pid)), KPalg(i), sp%KPalg(:,i), nea)
+      call read_gr3_prop('WSPBS_'//trim(adjustl(pid)), WSPBS(i), sp%WSPBS(:,i), nea)
+      call read_gr3_prop('WSPBSn_'//trim(adjustl(pid)),WSPBSn(i),sp%WSPBSn(:,i),nea)
+      do j=1,2
+        write(pid,'(i1,i1)') i,j
+        call read_gr3_prop('KTGP_'//trim(adjustl(pid)),KTGP(i,j),sp%KTGP(:,i,j),nea)
+      enddo
+    enddo
+
+    if(iPh==1) then
+      iphgb=0 !pH flag
+      call read_gr3_prop('ph',-9999.d0,swild,nea); iphgb(:)=swild(:)
+      if(inu_ph==1) then
+        ph_nudge=0.0 !pH nudge flag
+        call read_gr3_prop('ph_nudge',-999.d0,ph_nudge,npa)
+      endif
+    endif
+
+    !-----------------read in sav patch flag-----------------
+    if(jsav==1) then
+      call read_gr3_prop('spatch',-9999.d0,swild,nea); spatch(:)=swild(:)
+      if(ihot==0) then
+        !init sav mass for tleaf,tstem and troot
+        call read_gr3_prop('stleaf',stleaf0,stleaf,nea)
+        call read_gr3_prop('ststem',ststem0,ststem,nea)
+        call read_gr3_prop('stroot',stroot0,stroot,nea)
+
+        !distribute init mass into different layes
+        do i=1,nea
+          sleaf(:,i)=1.d-5; sstem(:,i)=1.d-5; sroot(:,i)=1.d-5
+          if(idry_e(i)/=1)then !wet elem
+            sht(i)=min(s2ht(1)*stleaf(i)+s2ht(2)*ststem(i)+s2ht(3)*stroot(i)+shtm(1),ze(nvrt,i)-ze(kbe(i),i),shtm(2))
+            do k=kbe(i)+1,nvrt
+              if((ze(k-1,i)-ze(kbe(i),i))<sht(i)) then
+                rat=min(ze(k,i)-ze(k-1,i),sht(i)-(ze(k-1,i)-ze(kbe(i),i)))/sht(i)
+                sleaf(k,i)=stleaf(i)*rat !unit: g/m2
+                sstem(k,i)=ststem(i)*rat
+                sroot(k,i)=stroot(i)*rat
+              endif !ze
+            enddo !k=kbe(i)+1,nvrt
+          else !dry elem
+            spatch(i)=-1
+          endif !wet elem
+        enddo !i=1,nea
+
+      endif!ihot
+    endif!jsav
+
+    !veg init
+    if(jveg==1) then
+      call read_gr3_prop('vpatch',-9999.d0,swild,nea); vpatch(:)=swild(:)
+      if(ihot==0) then
+        do i=1,3
+          !init veg mass for tleaf,tstem and troot
+          write(pid,'(a1)') i
+          call read_gr3_prop('vtleaf_'//trim(adjustl(pid)),vtleaf0(i),vtleaf(:,i),nea)
+          call read_gr3_prop('vtstem_'//trim(adjustl(pid)),vtstem0(i),vtstem(:,i),nea)
+          call read_gr3_prop('vtroot_'//trim(adjustl(pid)),vtroot0(i),vtroot(:,i),nea)
+
+          !compute veg canopy height
+          do j=1,nea
+            if(vtleaf(j,i)+vtstem(j,i)<vcrit(i)) then
+              vht(j,i)=vht0(i)+v2ht(i,1)*(vtleaf(j,i)+vtstem(j,i))
+            else
+              vht(j,i)=max(vht0(i)+v2ht(i,1)*vcrit(i)+v2ht(i,2)*(vtleaf(j,i)+vtstem(j,i)-vcrit(i)),1.d-2)
+            endif
+            if(vht(i,j)<0.0) call parallel_abort('check vht initlization')
+          enddo !i::nea
+
+        enddo!i=1,3  
+      endif!ihot=0
+    endif !jveg
+
+    if(iSed==1) call read_icm_sed_param !sediment flux model parameters
+
+    !------------------------------------------------------------------------------------
+    !time varying input of ICM model
+    !------------------------------------------------------------------------------------
+    !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
+    if(iAtm==1) then
+      open(401,file=in_dir(1:len_in_dir)//'ICM_atm.th',status='old')
+    endif 
+    if(iBen/=0) then
+      open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
+    endif 
+    if(iRad==2) then
+      open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
+    elseif(iRad/=1.and.iRad/=2) then
+      call parallel_abort('error: iRad')
+    endif
+    if(jveg==1) then
+      open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
+    endif
+    time_icm=-999.0  !initializing time stamp
+ 
+    !PH nudge for TIC and ALK
+    if(iPh==1.and.inu_ph==1) then
+      open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
+      time_ph=-999.0
+      irec_ph=1
+    endif
+
+    call WQinput(0.d0)
+
+    if(myrank==0) write(16,*) 'done ICM initialization'
+  endif
+
+end subroutine read_icm_param
+
+    !check values
+    !if(iRad>2)     call parallel_abort('check parameter: iRad>1')
+    !if(iKe>2)      call parallel_abort('check parameter: iKe>1')
+    !if(iLight>1)   call parallel_abort('check parameter: iLight>1')
+    !if(iLimit>1)   call parallel_abort('check parameter: iLimit>1')
+    !if(iLimitSi>1) call parallel_abort('check parameter: iLimitSi>1')
+    !if(iSettle>1)  call parallel_abort('check parameter: iSettle>1')
+    !if(iZB>1)      call parallel_abort('check parameter: iZB>1')
+    !if(jsav>1)     call parallel_abort('check parameter: isav_icm>1')
+    !if(jveg>1)     call parallel_abort('check parameter: iveg_icm>1')
+    !if(jdry>1)     call parallel_abort('check parameter: idry_icm>1')
+    !if(iAtm>1)     call parallel_abort('check parameter: iAtm>1')
+    !if(iSed>1)     call parallel_abort('check parameter: iSed>1')
+    !if(iBen>1)     call parallel_abort('check parameter: iBen>1')
+    !if(iTBen>1)    call parallel_abort('check parameter: iTBen>1')
+
+    !put these check later as SCHISM hasn't been initilized
+    !if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=1 needs heat exchange')
+    !if(iLight==1.and.(iRad/=2)) call parallel_abort('check parameter: iRad=2 is required for iLight=1')
+
+    !if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
+    !if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
+    !if(ivPs/=0.and.ivPs/=1) call parallel_abort('read_icm: illegal ivPs')
+    !if(ivPc/=0.and.ivPc/=1) call parallel_abort('read_icm: illegal ivPc')
+
+    !if(jsav==1) then
+    !  if(salpha<=0) call parallel_abort('read_icm_input: salpha')
+    !  if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
+    !  if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
+    !  if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
+    !  if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
+    !  if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
+    !  if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
+    !  if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
+    !endif !jsav
+
+    !if(jveg==1) then
+    !  do j=1,3
+    !    if(valpha(j)<=0) call parallel_abort('read_icm_input: valpha')
+    !    if(vGPM(j)<=0) call parallel_abort('read_icm_input: vGPM')
+    !    if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
+    !    if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
+    !    if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
+    !    if(vBMP(j,1)<=0.or.vBMP(j,2)<=0.or.vBMP(j,3)<=0) call parallel_abort('read_icm_input: vBMP')
+    !  enddo !j::veg species
+    !endif !jveg
+
+subroutine WQinput(time)
+!---------------------------------------------------------------------
+!read time varying input:
+!1) benthic flux, 2) atmoshperic loading, 3)solor radition 
+!4) non-point source load, 5) point source load
+!---------------------------------------------------------------------
+  use icm_mod
+  use schism_glbl, only : errmsg,rkind,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
+  use schism_msgp, only : myrank,parallel_abort
+  implicit none
+
+  real(8),intent(in) :: time !double
+  
+  
+  !local variable
+  integer :: i,j,k,ie,iegb,neben
+  real(rkind) :: rtmp
+  real(rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
+  real(rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                   &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO 
+
+  !read atmospheric loading (unit: g/m2/day)
+  if(iAtm==1.and.time_icm(1)<time) then
+    do while(time_icm(1)<time)
+      read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
+                & SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO 
+      time_icm(1)=rtmp
+    enddo
+  endif !iAtm
+ 
+  !read benthic flux (unit: g/m2/day; positive value means from sediment to water column)
+  if(iBen/=0.and.time_icm(2)<time) then
+    do while(time_icm(2)<time)
+      if(iBen==1) then !uniform Benthic flux
+        read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+        if(rtmp<time) then
+          read(402,*)
+          cycle
+        endif
+        BRPOC=tRPOC
+        BLPOC=tLPOC
+        BDOC =tDOC
+        BRPON=tRPON
+        BLPON=tLPON
+        BDON =tDON
+        BNH4 =tNH4
+        BNO3 =tNO3
+        BRPOP=tRPOP
+        BLPOP=tLPOP
+        BDOP =tDOP
+        BPO4t=tPO4t
+        BSU  =tSU
+        BSAt =tSAt
+        BCOD =tCOD
+        BDO  =tDO
+        time_icm(2)=rtmp
+        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+      elseif(iBen==2) then !spatially varying benthic flux 
+        read(402,*)rtmp,neben
+        if(rtmp<time) then
+          do i=1,neben+1; read(402,*); enddo
+          cycle
+        endif
+        do ie=1,neben
+          read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+          if(iegl(iegb)%rank==myrank) then
+            BRPOC(iegl(iegb)%id) = tRPOC
+            BLPOC(iegl(iegb)%id) = tLPOC
+            BDOC(iegl(iegb)%id)  = tDOC
+            BRPON(iegl(iegb)%id) = tRPON
+            BLPON(iegl(iegb)%id) = tLPON
+            BDON(iegl(iegb)%id)  = tDON
+            BNH4(iegl(iegb)%id)  = tNH4
+            BNO3(iegl(iegb)%id)  = tNO3
+            BRPOP(iegl(iegb)%id) = tRPOP
+            BLPOP(iegl(iegb)%id) = tLPOP
+            BDOP(iegl(iegb)%id)  = tDOP
+            BPO4t(iegl(iegb)%id) = tPO4t
+            BSU(iegl(iegb)%id)   = tSU
+            BSAt(iegl(iegb)%id)  = tSAt
+            BCOD(iegl(iegb)%id)  = tCOD
+            BDO(iegl(iegb)%id)   = tDO
+          endif
+        enddo
+        time_icm(2)=rtmp
+        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+      else
+        write(errmsg,*)'Unknown ICM value: ', iBen
+        call parallel_abort(errmsg)
+      endif !iBen=1 or iBen=2
+    enddo !while
+  endif !iBen>0
+
+  !read solar radiation (unit: ly/day)
+  if(iRad==2.and.time_icm(3)<time) then!manually input
+    do while(time_icm(3)<time)
+      if(iRad==2) then !uniform solar radiation
+        read(403,*)rtmp,rIa,TU,TD !time, radiation, time of sunrise and sunset, rIa in unit of ly/day
+        time_icm(3)=rtmp
+        if(time==0.0) rIavg=rIa
+        rIavg=0.7*rIa+0.3*rIavg
+      elseif(iRad==3) then !spatially varying solar radiation
+        ! need more work if necessary 
+      endif !iRad
+    enddo !while 
+    Daylen=(TD-TU)
+
+  elseif(iRad/=1.and.iRad/=2)then
+    write(errmsg,*)'Unknown ICM iRad value: ', iRad
+    call parallel_abort(errmsg)
+  endif!time_icm
+
+  !veg !time_icm(4) for veg module !manually input
+  if(jveg==1.and.time_icm(4)<time) then
+    do while(time_icm(4)<time)
+      read(404,*)rtmp,mtemp
+      time_icm(4)=rtmp
+    enddo !while
+  endif!time_icm
+
+  !read PH nudge file
+  if(iPh==1.and.inu_ph==1.and.time_ph<time) then
+    do while(time_ph<time) 
+      read(406,rec=irec_ph)time_ph,TIC_t(1:nvrt,1:ne_global),ALK_t(1:nvrt,1:ne_global)
+      do i=1,ne_global
+         if(iegl(i)%rank==myrank) then
+           do k=1,nvrt
+             TIC_el(k,iegl(i)%id)=TIC_t(nvrt-k+1,i)
+             ALK_el(k:nvrt,iegl(i)%id)=ALK_t(nvrt-k+1,i)
+           enddo !k
+         endif !if(iegl(i)
+      enddo !i
+      irec_ph=irec_ph+1
+    enddo !while
+  endif !iPh
+  
+end subroutine WQinput
+
+subroutine icm_vars_init
   !--------------------------------------------------------------------------------
   !allocate ICM arrays and initialize
   !--------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nea,npa,nvrt,ntrs
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
-  use icm_sed_mod
+  !use icm_sed_mod
   use misc_modules
   implicit none
 
@@ -151,4 +587,23 @@ subroutine icm_init
   sbLight=0.0;
 !$OMP end parallel workshare
 
-end subroutine icm_init
+end subroutine icm_vars_init
+
+subroutine icm_finalize()
+!--------------------------------------------------------------------
+!free memory assocated with pointers, to aviod memory leak
+!--------------------------------------------------------------------
+  use icm_mod
+  deallocate(sp%Ke0);  deallocate(sp%tss2c);deallocate(sp%WSSED);deallocate(sp%WSSEDn);
+  deallocate(sp%WRea); deallocate(sp%GPM);  deallocate(sp%TGP);  deallocate(sp%PRP)
+  deallocate(sp%c2chl);deallocate(sp%WSPOM);deallocate(sp%WSPBS);deallocate(sp%WSPOMn)
+  deallocate(sp%WSPBSn);deallocate(sp%KC0); deallocate(sp%KP0);  deallocate(sp%KPalg);
+  deallocate(sp%KTGP)
+  nullify(sp%Ke0);     nullify(sp%tss2c);   nullify(sp%WSSED);   nullify(sp%WSSEDn);
+  nullify(sp%WRea);    nullify(sp%GPM);     nullify(sp%TGP);     nullify(sp%PRP);
+  nullify(sp%c2chl);   nullify(sp%WSPOM);   nullify(sp%WSPBS);   nullify(sp%WSPOMn);
+  nullify(sp%WSPBSn);  nullify(sp%KC0);     nullify(sp%KP0);     nullify(sp%KPalg);
+  nullify(sp%KTGP);
+
+end subroutine icm_finalize
+

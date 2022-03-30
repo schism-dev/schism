@@ -49,14 +49,13 @@
 
 #ifdef USE_ICM
       use icm_mod, only : WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
-                        & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot !sav & veg
-                      
-      USE icm_sed_mod, only: CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
-                         &CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
-                         &HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
-                         &NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
-                         &POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
-                         &SED_BENDO,SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
+                        & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
+                        & CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
+                        & CTEMP,BBM,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                        & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
+                        & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
+                        & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
+                        & SED_BENDO,SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
 #endif
 
 #ifdef USE_COSINE

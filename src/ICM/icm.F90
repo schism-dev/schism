@@ -356,7 +356,7 @@ subroutine photosynthesis(id,hour,nv,it)
 !inputs: TSED and tracers from link mode 1, checked; rIa from sflux, checked here
 !----------------------------------------------------------------------------
   use icm_mod
-  use icm_sed_mod, only : sbLight,CPIP,CNH4,NH4T2I,PO4T2I
+  !use icm_sed_mod, only : sbLight,CPIP,CNH4,NH4T2I,PO4T2I
   use schism_glbl, only : rkind,errmsg,pi,ielg,iths_main,kbe,nvrt,ze,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
@@ -927,7 +927,7 @@ subroutine calkwq(id,nv,usf,it)
   use icm_mod
   use schism_glbl, only : rkind,nvrt,ielg,dt,ne,nvrt,ze,kbe,errmsg,idry_e
   use schism_msgp, only : myrank, parallel_abort
-  use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav,frnveg,frpveg
+  !use icm_sed_mod, only : CPIP,CNH4,frnsav,frpsav,frnveg,frpveg
   implicit none
   !id is (wet) elem index
   integer, intent(in) :: id,nv,it
@@ -937,7 +937,7 @@ subroutine calkwq(id,nv,usf,it)
   integer :: i,j,k,m,iid
   integer :: klev
   real(rkind) :: time,rtmp,T,xT,sum1,k1,k2,a,b,fp,x,rat,s,rval,rval2
-  real(rkind) :: zdep(nv),tdep,rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB,VSED
+  real(rkind) :: zdep(nv),tdep,rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB
   real(rkind) :: rKTM(3),rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
   real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,ZBM(2),Fish,PBM(3),BPR(3)
