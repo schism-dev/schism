@@ -7336,20 +7336,23 @@
 !$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
-!       principle); imposed at bottom layer.
-!       Do nothing for net sinks
+!       principle). Do nothing for net sinks
         if(if_source/=0) then
 !$OMP     do
           do i=1,nea
             if(idry_e(i)==1.or.vsource(i)<=0.d0) cycle
 
             !Positive source only
-            bigv=area(i)*(ze(kbe(i)+1,i)-ze(kbe(i),i))
-            if(bigv<=0.d0) call parallel_abort('STEP: bigv==0 (3)')
-            rat=vsource(i)*dt/bigv !ratio of volumes (>0)
             do j=1,ntracers
-              if(msource(j,i)>-99.d0) tr_el(j,kbe(i)+1,i)=(tr_el(j,kbe(i)+1,i)+rat*msource(j,i))/(1.d0+rat)
+              kin=max(kbe(i)+1,min(nvrt,lev_tr_source2(j)))
+              !bigv=area(i)*(ze(kbe(i)+1,i)-ze(kbe(i),i))
+              bigv=area(i)*(ze(kin,i)-ze(kin-1,i))
+              if(bigv<=0.d0) call parallel_abort('STEP: bigv==0 (3)')
+              rat=vsource(i)*dt/bigv !ratio of volumes (>0)
+              !if(msource(j,i)>-99.d0) tr_el(j,kbe(i)+1,i)=(tr_el(j,kbe(i)+1,i)+rat*msource(j,i))/(1.d0+rat)
+              if(msource(j,i)>-99.d0) tr_el(j,kin,i)=(tr_el(j,kin,i)+rat*msource(j,i))/(1.d0+rat)
             enddo !j
+
           enddo !i
 !$OMP     end do
         endif !if_source

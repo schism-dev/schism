@@ -203,7 +203,7 @@
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
-     &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv
+     &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
@@ -483,6 +483,7 @@
       iloadtide=0; loadtide_coef=0.1d0
       nu_sum_mult=1
       h_massconsv=2.d0
+      lev_tr_source=-9 !bottom
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1359,7 +1360,7 @@
           &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -1449,6 +1450,13 @@
 #endif
 !===========================================================================
       endif !iorder=0
+
+!     Assign source level
+      do i=1,natrm
+        if(ntrs(i)>0) then
+           lev_tr_source2(irange_tr(1,i):irange_tr(2,i))=lev_tr_source(i)
+        endif !ntrs
+      enddo !i
 
 !     Adjust mass for conservation flags
       iadjust_mass_consv=0
