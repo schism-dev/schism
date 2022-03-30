@@ -21,7 +21,6 @@
 !link_sed_input: initialize sediment
 !link_sed_output: sediment fluxes to ICM
 
-
 subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0d,j1,j2,k12,k2)
 !-----------------------------------------------------------------------
 !solve mass-balance equations for two layers,written by ZG
