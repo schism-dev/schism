@@ -7448,26 +7448,32 @@
 
 #ifdef USE_ICM
         !Enforce mass conservation at deep depths: V^(n+1)*C^**=V^n*C^* (where
-        !C^* is output from transport solver). The change in prism height is
-        !estimated as dz=(1+sigma)*(eta2-eta1)
+        !C^* is output from transport solver) 
         itmp1=irange_tr(1,7)
         itmp2=irange_tr(2,7)
 !$OMP   do
         do i=1,nea
-          htot=ze(nvrt,i)-ze(kbe(i),i) !@ step n
-          if(idry_e(i)==1.or.htot<=h0.or.dpe(i)<h_massconsv) cycle 
+          if(idry_e(i)==1.or.dpe(i)<h_massconsv) cycle 
 
           !Estimate sigma
-          top=sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))-ze(nvrt,i) !eta2-eta1
-          swild(kbe(i))=-1.d0; swild(nvrt)=0.d0
-          do k=kbe(i)+1,nvrt-1
-            swild(k)=(ze(k,i)-ze(nvrt,i))/htot
-          enddo !k
+!          top=sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))-ze(nvrt,i) !eta2-eta1
+!          swild(kbe(i))=-1.d0; swild(nvrt)=0.d0
+!          do k=kbe(i)+1,nvrt-1
+!            swild(k)=(ze(k,i)-ze(nvrt,i))/htot
+!          enddo !k
+
+          htot=ze(nvrt,i)-ze(kbe(i),i) !@ step n
+          dzz1=sum(eta2(elnode(1:i34(i),i)))/dble(i34(i))-ze(kbe(i),i) !@ step n+1
+          if(htot<=h0.or.dzz1<=0.d0) cycle
+
+          !Inflation coef (ratio of volumes)
+          zrat=htot/dzz1
+          if(zrat<0.9d0.or.zrat>1.1d0) cycle
 
           do k=kbe(i)+1,nvrt
-            zrat=(ze(k+1,i)-ze(k,i)) !@ step n
-            dzz1=zrat+(1.d0+0.5d0*(swild(k-1)+swild(k)))*top !@step n+1
-            tr_el(itmp1:itmp2,k,i)=tr_el(itmp1:itmp2,k,i)*dzz1/zrat
+!            zrat=ze(k+1,i)-ze(k,i) !@ step n
+!            dzz1=zrat+(1.d0+0.5d0*(swild(k-1)+swild(k)))*top !@step n+1
+            tr_el(itmp1:itmp2,k,i)=tr_el(itmp1:itmp2,k,i)*zrat
           enddo !k
         enddo !i
 !$OMP   enddo
