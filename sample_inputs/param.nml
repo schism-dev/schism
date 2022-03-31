@@ -273,18 +273,18 @@
 
 ! Specify vertical level to inject source concentration for each tracer _module_.
 ! Code will extrapolate below bottom/above surface.
-  lev_tr_source(1) = -9. !T
-  lev_tr_source(2) = -9. !S
-  lev_tr_source(3) = -9. !GEN
-  lev_tr_source(4) = -9. !AGE
-  lev_tr_source(5) = -9. !SED3D
-  lev_tr_source(6) = -9. !EcoSim
-  lev_tr_source(7) = -9. !ICM
-  lev_tr_source(8) = -9. !CoSINE
-  lev_tr_source(9) = -9. !Feco
-  lev_tr_source(10) = -9. !TIMOR
-  lev_tr_source(11) = -9. !FABM
-  lev_tr_source(12) = -9. !DVD
+  lev_tr_source(1) = -9 !T
+  lev_tr_source(2) = -9 !S
+  lev_tr_source(3) = -9 !GEN
+  lev_tr_source(4) = -9 !AGE
+  lev_tr_source(5) = -9 !SED3D
+  lev_tr_source(6) = -9 !EcoSim
+  lev_tr_source(7) = -9 !ICM
+  lev_tr_source(8) = -9 !CoSINE
+  lev_tr_source(9) = -9 !Feco
+  lev_tr_source(10) = -9 !TIMOR
+  lev_tr_source(11) = -9 !FABM
+  lev_tr_source(12) = -9 !DVD
 
 !-----------------------------------------------------------------------
 ! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
