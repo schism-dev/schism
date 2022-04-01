@@ -132,11 +132,17 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
-  !Hydro
-  integer, save :: SED_IWC        !SED_IWC=id
-  real(rkind), save,allocatable,dimension(:) :: SFA
-  real(rkind), save,allocatable,dimension(:) :: SED_BL
-  real(rkind), save,allocatable,dimension(:) :: ZD
+  real(rkind),save :: HSED,VSED,DIFFT,SALTSW,SALTND
+  real(rkind),save :: m1,m2,THTADP,THTADD
+  real(rkind),save,dimension(3) :: KCDIAG,KNDIAG,KPDIAG,DCTHTA,DNTHTA,DPTHTA
+  real(rkind),save :: KSI,THTASI
+  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH
+  
+
+
+  !variables
+  real(rkind),save,allocatable,dimension(:) :: SED_BL,ZD
+  real(rkind),save :: W2,H2
 
   !bottom layer concentration from water column
   real(rkind), save,allocatable,dimension(:,:) :: SED_B !3 phyto. species
@@ -144,16 +150,10 @@ module icm_mod
   real(rkind), save,allocatable,dimension(:) :: SED_SU,SED_PO4,SED_NH4,SED_NO3,SED_SA,SED_DO,SED_COD,SED_SALT,SED_T,SSI
 
   !steady state
-  integer, save :: iSteady
   real(rkind), save :: TINTIM
   real(rkind), save,allocatable,dimension(:) :: AG3CFL,AG3NFL,AG3PFL,ASDTMP
 
   !General Parameters
-  real(rkind),save :: HSEDALL,DIFFT,SALTSW,SALTND
-  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH
-  real(rkind),save,dimension(3) :: FRPPHB,FRNPHB,FRCPHB
-  real(rkind),save,dimension(3) :: KPDIAG,KNDIAG,KCDIAG,DPTHTA,DNTHTA,DCTHTA
-  real(rkind),save :: W2,H2,m1,m2,KSI,THTASI,THTADP,THTADD
   !sav
   real(rkind),save,dimension(3) :: frnsav,frpsav,frcsav
   !veg
@@ -174,7 +174,7 @@ module icm_mod
   real(rkind),save,dimension(3) :: CPOPI,CPONI,CPOCI
 
   !Sediment thickness, burial and mixing rates
-  real(rkind),save,allocatable,dimension(:) :: HSED,VSED,VPMIX,VDMIX
+  real(rkind),save,allocatable,dimension(:) :: VPMIX,VDMIX
   real(rkind),save :: W12,W12MIN,KL12
 
   !splits of refractory POM from Water Column into G2,G3 class POM in sediment
@@ -263,35 +263,19 @@ module icm_mod
   !---------------------------------------------------------------------------
   !spatially varying parameter
   !---------------------------------------------------------------------------
+  !parameter in water column
   type,public :: icm_spatial_param
     real(rkind),dimension(:),pointer :: Ke0,tss2c,WSSED,WSSEDn,WRea
     real(rkind),dimension(:,:),pointer :: GPM,TGP,PRP,c2chl,WSPOM,WSPBS,WSPOMn,WSPBSn,KC0,KP0,KPalg
     real(rkind),dimension(:,:,:),pointer :: KTGP
   end type
-  type(icm_spatial_param) :: sp
+  type(icm_spatial_param) :: wp 
+
+  !parameter in sediment flux model
+  type,public :: icm_sed_spatial_param
+    real(rkind),dimension(:),pointer :: HSED,VSED
+  end type
+  type(icm_sed_spatial_param) :: sp
 
 end module icm_mod
 
-!   Copyright 2014 College of William and Mary
-!
-!   Licensed under the Apache License, Version 2.0 (the "License");
-!   you may not use this file except in compliance with the License.
-!   You may obtain a copy of the License at
-!
-!     http://www.apache.org/licenses/LICENSE-2.0
-!
-!   Unless required by applicable law or agreed to in writing, software
-!   distributed under the License is distributed on an "AS IS" BASIS,
-!   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-!   See the License for the specific language governing permissions and
-!   limitations under the License.
-
-!module icm_sed_mod
-!!-------------------------------------------------------------------------------
-!!parameter definition for sediment flux model
-!!-------------------------------------------------------------------------------
-!  use schism_glbl,only: rkind,nea
-!  implicit none
-!
-!
-!end module icm_sed_mod

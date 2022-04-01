@@ -49,10 +49,10 @@
 
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
-                           & SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
-                           & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
-                           & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
-                           & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 
+                    & isav_icm,iveg_icm,SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                    & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
+                    & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
+                    & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 
 #endif
 
 #ifdef USE_COSINE
@@ -5602,6 +5602,7 @@
      &'ISWBENS  ','DFEEDM1S ','sht      '/)
 !'
         do k=1,32 !# of 1D arrays
+          if(isav_icm==0.and.k==32) cycle
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
@@ -5683,79 +5684,78 @@
         enddo !k=1,31
 
         !gfortran requires all chars have same length
-        ar_name(1:10)=(/'CPOP  ','CPON  ','CPOC  ','vtleaf','vtstem','vtroot','vht   ','sleaf ','sstem ','sroot '/)
-        do k=1,7 !# of 2D arrays
+        ar_name(1:10)=(/'CPOP  ','CPON  ','CPOC  ','sleaf ','sstem ','sroot ','vht   ','vtleaf','vtstem','vtroot'/)
+        do k=1,10 !# of 2D arrays
+          if(isav_icm==0.and.k>=4.and.k<=6) cycle
+          if(iveg_icm==0.and.k>=7.and.k<=10) cycle
+
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
           endif
 
-          do m=1,3
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          if((k>=1.and.k<=3).or.(k>=7.and.k<=10)) then
+            do m=1,3
+              if(myrank==0) then
+                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
+              endif
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                ie=iegl(i)%id
-                if(k==1) then
-                  CPOP(ie,m)=buf3(i)
-                else if(k==2) then
-                  CPON(ie,m)=buf3(i)
-                else if(k==3) then
-                  CPOC(ie,m)=buf3(i)
-                else if(k==4) then
-                  vtleaf(ie,m)=buf3(i)
-                else if(k==5) then
-                  vtstem(ie,m)=buf3(i)
-                else if(k==6) then
-                  vtroot(ie,m)=buf3(i)
-                else if(k==7) then
-                  vht(ie,m)=buf3(i)
-                endif
-              endif !iegl
-            enddo !i
-          enddo !m
-        enddo !k
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  ie=iegl(i)%id
+                  if(k==1) then
+                    CPOP(ie,m)=buf3(i)
+                  else if(k==2) then
+                    CPON(ie,m)=buf3(i)
+                  else if(k==3) then
+                    CPOC(ie,m)=buf3(i)
+                  else if(k==7) then
+                    vht(ie,m)=buf3(i)
+                  else if(k==8) then
+                    vtleaf(ie,m)=buf3(i)
+                  else if(k==9) then
+                    vtstem(ie,m)=buf3(i)
+                  else if(k==10) then
+                    vtroot(ie,m)=buf3(i)
+                  endif
+                endif !iegl
+              enddo !i
+            enddo !m
+          elseif(k>=4.and.k<=6) then
+            do m=1,nvrt
+              if(myrank==0) then
+                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
+              endif
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-        do k=8,10 !# of 2D arrays
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
-          endif
-          do m=1,nvrt
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM6')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                ie=iegl(i)%id
-                if(k==8) then
-                  sleaf(m,ie)=buf3(i)
-                else if(k==9) then
-                  sstem(m,ie)=buf3(i)
-                else if(k==10) then
-                  sroot(m,ie)=buf3(i)
-                endif
-              endif !iegl
-            enddo !i
-          enddo !m
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  ie=iegl(i)%id
+                  if(k==4) then
+                    sleaf(m,ie)=buf3(i)
+                  else if(k==5) then
+                    sstem(m,ie)=buf3(i)
+                  else if(k==6) then
+                    sroot(m,ie)=buf3(i)
+                  endif
+                endif !iegl
+              enddo !i
+            enddo !m
+          endif!if((k>=1.and.k<=3
         enddo !k
 
         j=nf90_inq_varid(ncid2,'wqc',mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ICM7')
+        if(j/=NF90_NOERR) call parallel_abort('init: nc ICM6')
         do i=1,ne_global
           if(iegl(i)%rank==myrank) then
             ie=iegl(i)%id
             !j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
             j=nf90_get_var(ncid2,mm,swild4(1:ntrs(7),:),(/1,1,i/),(/ntrs(7),nvrt,1/))
             wqc(:,:,ie)=swild4(1:ntrs(7),:)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM8')
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM7')
           endif!iegl
         enddo !i
 

@@ -132,30 +132,30 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     call icm_vars_init
 
-    if(iKe==0) call read_gr3_prop('tss2c',tss2c,sp%tss2c,nea)
-    call read_gr3_prop('WSSED', WSSED,  sp%WSSED,  nea)
-    call read_gr3_prop('WSSEDn',WSSEDn, sp%WSSEDn, nea)
-    call read_gr3_prop('Ke0',   Ke0,    sp%Ke0,    nea)
-    call read_gr3_prop('WRea',  WRea,   sp%WRea,   nea)
+    if(iKe==0) call read_gr3_prop('tss2c',tss2c,wp%tss2c,nea)
+    call read_gr3_prop('WSSED', WSSED,  wp%WSSED,  nea)
+    call read_gr3_prop('WSSEDn',WSSEDn, wp%WSSEDn, nea)
+    call read_gr3_prop('Ke0',   Ke0,    wp%Ke0,    nea)
+    call read_gr3_prop('WRea',  WRea,   wp%WRea,   nea)
     do i=1,2
         write(pid,'(i1)') i
-        call read_gr3_prop('WSPOM_'//trim(adjustl(pid)), WSPOM(i), sp%WSPOM(:,i), nea)
-        call read_gr3_prop('WSPOMn_'//trim(adjustl(pid)),WSPOMn(i),sp%WSPOMn(:,i),nea)
+        call read_gr3_prop('WSPOM_'//trim(adjustl(pid)), WSPOM(i), wp%WSPOM(:,i), nea)
+        call read_gr3_prop('WSPOMn_'//trim(adjustl(pid)),WSPOMn(i),wp%WSPOMn(:,i),nea)
     enddo
     do i=1,3
       write(pid,'(i1)') i
-      call read_gr3_prop('GPM_'//trim(adjustl(pid)),   GPM(i),   sp%GPM(:,i),   nea)
-      call read_gr3_prop('TGP_'//trim(adjustl(pid)),   TGP(i),   sp%TGP(:,i),   nea)
-      call read_gr3_prop('PRP_'//trim(adjustl(pid)),   PRP(i),   sp%PRP(:,i),   nea)
-      call read_gr3_prop('c2chl_'//trim(adjustl(pid)), c2chl(i), sp%c2chl(:,i), nea)
-      call read_gr3_prop('KC0_'//trim(adjustl(pid)),   KC0(i),   sp%KC0(:,i),   nea)
-      call read_gr3_prop('KP0_'//trim(adjustl(pid)),   KP0(i),   sp%KP0(:,i),   nea)
-      call read_gr3_prop('KPalg_'//trim(adjustl(pid)), KPalg(i), sp%KPalg(:,i), nea)
-      call read_gr3_prop('WSPBS_'//trim(adjustl(pid)), WSPBS(i), sp%WSPBS(:,i), nea)
-      call read_gr3_prop('WSPBSn_'//trim(adjustl(pid)),WSPBSn(i),sp%WSPBSn(:,i),nea)
+      call read_gr3_prop('GPM_'//trim(adjustl(pid)),   GPM(i),   wp%GPM(:,i),   nea)
+      call read_gr3_prop('TGP_'//trim(adjustl(pid)),   TGP(i),   wp%TGP(:,i),   nea)
+      call read_gr3_prop('PRP_'//trim(adjustl(pid)),   PRP(i),   wp%PRP(:,i),   nea)
+      call read_gr3_prop('c2chl_'//trim(adjustl(pid)), c2chl(i), wp%c2chl(:,i), nea)
+      call read_gr3_prop('KC0_'//trim(adjustl(pid)),   KC0(i),   wp%KC0(:,i),   nea)
+      call read_gr3_prop('KP0_'//trim(adjustl(pid)),   KP0(i),   wp%KP0(:,i),   nea)
+      call read_gr3_prop('KPalg_'//trim(adjustl(pid)), KPalg(i), wp%KPalg(:,i), nea)
+      call read_gr3_prop('WSPBS_'//trim(adjustl(pid)), WSPBS(i), wp%WSPBS(:,i), nea)
+      call read_gr3_prop('WSPBSn_'//trim(adjustl(pid)),WSPBSn(i),wp%WSPBSn(:,i),nea)
       do j=1,2
         write(pid,'(i1,i1)') i,j
-        call read_gr3_prop('KTGP_'//trim(adjustl(pid)),KTGP(i,j),sp%KTGP(:,i,j),nea)
+        call read_gr3_prop('KTGP_'//trim(adjustl(pid)),KTGP(i,j),wp%KTGP(:,i,j),nea)
       enddo
     enddo
 
@@ -465,15 +465,15 @@ subroutine icm_vars_init
   !---------------------------------------------------------------------------
   !spatially varying parameter
   !---------------------------------------------------------------------------
-  allocate(sp%tss2c(nea),sp%WSSED(nea),sp%KC0(nea,3),sp%KP0(nea,3),sp%KPalg(nea,3),&
-    & sp%WSPOM(nea,2),sp%WSPBS(nea,3),sp%Ke0(nea),sp%WRea(nea),sp%GPM(nea,3), &
-    & sp%TGP(nea,3),sp%PRP(nea,3),sp%c2chl(nea,3),sp%KTGP(nea,3,2),sp%WSSEDn(nea), &
-    & sp%WSPOMn(nea,2),sp%WSPBSn(nea,3),stat=istat)
+  allocate(wp%tss2c(nea),wp%WSSED(nea),wp%KC0(nea,3),wp%KP0(nea,3),wp%KPalg(nea,3),&
+    & wp%WSPOM(nea,2),wp%WSPBS(nea,3),wp%Ke0(nea),wp%WRea(nea),wp%GPM(nea,3), &
+    & wp%TGP(nea,3),wp%PRP(nea,3),wp%c2chl(nea,3),wp%KTGP(nea,3,2),wp%WSSEDn(nea), &
+    & wp%WSPOMn(nea,2),wp%WSPBSn(nea,3),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. spatially varying parameter')
 
-  sp%tss2c=0.0;  sp%WSSED=0.0; sp%KC0=0.0;    sp%KP0=0.0;    sp%KPalg=0.0; sp%WSPOM=0.0
-  sp%WSPBS=0.0;  sp%Ke0=0.0;   sp%WRea=0.0;   sp%PRP=0.0;    sp%GPM=0.0;   sp%TGP=0.0
-  sp%c2chl=0.0;  sp%KTGP=0.0;  sp%WSSEDn=0.0; sp%WSPOMn=0.0; sp%WSPBSn=0.0
+  wp%tss2c=0.0;  wp%WSSED=0.0; wp%KC0=0.0;    wp%KP0=0.0;    wp%KPalg=0.0; wp%WSPOM=0.0
+  wp%WSPBS=0.0;  wp%Ke0=0.0;   wp%WRea=0.0;   wp%PRP=0.0;    wp%GPM=0.0;   wp%TGP=0.0
+  wp%c2chl=0.0;  wp%KTGP=0.0;  wp%WSSEDn=0.0; wp%WSPOMn=0.0; wp%WSPBSn=0.0
 
   !-------------------------------------------------------------------------------
   !ICM variables
@@ -554,11 +554,11 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(tau_c_elem(nea),SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea),SFA(nea), &
+  allocate(tau_c_elem(nea),SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), &
     & SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
     & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
     & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea),SSI(nea), &
-    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),HSED(nea),VSED(nea),VPMIX(nea),VDMIX(nea), &
+    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),sp%HSED(nea),sp%VSED(nea),VPMIX(nea),VDMIX(nea), &
     & FRPOP(nea,3),FRPON(nea,3),FRPOC(nea,3), flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
     & CTEMP(nea),CPIP(nea),CNO3(nea),CNH4(nea),CCH4(nea),CSO4(nea),CPOS(nea),CH2S(nea),CPOP(nea,3),CPON(nea,3),CPOC(nea,3), &
     & CH4T2TM1S(nea),CH41TM1S(nea),SO4T2TM1S(nea),BENSTR1S(nea),BFORMAXS(nea),ISWBENS(nea),POP1TM1S(nea), &
@@ -571,11 +571,11 @@ subroutine icm_vars_init
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  tau_c_elem=0.0; SED_EROH2S=0.0;  SED_EROLPOC=0.0; SED_ERORPOC=0.0; SFA=0.0;
+  tau_c_elem=0.0; SED_EROH2S=0.0;  SED_EROLPOC=0.0; SED_ERORPOC=0.0; 
   SED_BL=0.0;     ZD=0.0;          SED_B=0.0;       SED_LPOP=0.0;    SED_RPOP=0.0;   SED_LPON=0.0;   SED_RPON=0.0;
   SED_LPOC=0.0;   SED_RPOC=0.0;    SED_TSS=0.0;     SED_SU=0.0;      SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;
   SED_SA=0.0;     SED_DO=0.0;      SED_COD=0.0;     SED_SALT=0.0;    SED_T=0.0;      SSI=0.0;
-  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      HSED=0.0;       VSED=0.0;       VPMIX=0.0;     VDMIX=0.0;
+  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      sp%HSED=0.0;    sp%VSED=0.0;       VPMIX=0.0;     VDMIX=0.0;
   FRPOP=0.0;      FRPON=0.0;       FRPOC=0.0;       flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
   CTEMP=0.0;      CPIP=0.0;        CNO3=0.0;        CH2S=0.0;        CNH4=0.0;       CCH4=0.0;       CSO4=0.0;       CPOS=0.0;      CPOP=0.0;      CPON=0.0; CPOC=0.0;
   CH4T2TM1S=0.0;  CH41TM1S=0.0;    SO4T2TM1S=0.0;   BENSTR1S=0.0;    BFORMAXS=0.0;   ISWBENS=0.0;    POP1TM1S=0.0;
@@ -594,16 +594,19 @@ subroutine icm_finalize()
 !free memory assocated with pointers, to aviod memory leak
 !--------------------------------------------------------------------
   use icm_mod
-  deallocate(sp%Ke0);  deallocate(sp%tss2c);deallocate(sp%WSSED);deallocate(sp%WSSEDn);
-  deallocate(sp%WRea); deallocate(sp%GPM);  deallocate(sp%TGP);  deallocate(sp%PRP)
-  deallocate(sp%c2chl);deallocate(sp%WSPOM);deallocate(sp%WSPBS);deallocate(sp%WSPOMn)
-  deallocate(sp%WSPBSn);deallocate(sp%KC0); deallocate(sp%KP0);  deallocate(sp%KPalg);
-  deallocate(sp%KTGP)
-  nullify(sp%Ke0);     nullify(sp%tss2c);   nullify(sp%WSSED);   nullify(sp%WSSEDn);
-  nullify(sp%WRea);    nullify(sp%GPM);     nullify(sp%TGP);     nullify(sp%PRP);
-  nullify(sp%c2chl);   nullify(sp%WSPOM);   nullify(sp%WSPBS);   nullify(sp%WSPOMn);
-  nullify(sp%WSPBSn);  nullify(sp%KC0);     nullify(sp%KP0);     nullify(sp%KPalg);
-  nullify(sp%KTGP);
+  deallocate(wp%Ke0);  deallocate(wp%tss2c);deallocate(wp%WSSED);deallocate(wp%WSSEDn);
+  deallocate(wp%WRea); deallocate(wp%GPM);  deallocate(wp%TGP);  deallocate(wp%PRP)
+  deallocate(wp%c2chl);deallocate(wp%WSPOM);deallocate(wp%WSPBS);deallocate(wp%WSPOMn)
+  deallocate(wp%WSPBSn);deallocate(wp%KC0); deallocate(wp%KP0);  deallocate(wp%KPalg);
+  deallocate(wp%KTGP)
+  nullify(wp%Ke0);     nullify(wp%tss2c);   nullify(wp%WSSED);   nullify(wp%WSSEDn);
+  nullify(wp%WRea);    nullify(wp%GPM);     nullify(wp%TGP);     nullify(wp%PRP);
+  nullify(wp%c2chl);   nullify(wp%WSPOM);   nullify(wp%WSPBS);   nullify(wp%WSPOMn);
+  nullify(wp%WSPBSn);  nullify(wp%KC0);     nullify(wp%KP0);     nullify(wp%KPalg);
+  nullify(wp%KTGP);
+
+  deallocate(sp%HSED); deallocate(sp%VSED);
+  nullify(sp%HSED); nullify(sp%VSED)
 
 end subroutine icm_finalize
 

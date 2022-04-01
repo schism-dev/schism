@@ -169,7 +169,7 @@ subroutine link_icm(imode,id,nv)
   use schism_msgp, only : parallel_abort
   use icm_mod, only : wqc,dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
                     & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,iKe,&
-                    & iPh,TIC,ALK,CA,CACO3,PH,PH_el,GP,sp
+                    & iPh,TIC,ALK,CA,CACO3,PH,PH_el,GP,wp
   implicit none
   integer, intent(in) :: imode,id !id is (wet) elem index
   integer, intent(out) :: nv !# of layers from surface to bottom
@@ -234,7 +234,7 @@ subroutine link_icm(imode,id,nv)
       if(idry_e(id)==1) exit
 
       if(iKe==0) then !TSS from POC
-        TSED(m)=(RPOC(m,1)+LPOC(m,1))*sp%tss2c(id)
+        TSED(m)=(RPOC(m,1)+LPOC(m,1))*wp%tss2c(id)
       elseif(iKe==1) then !TSS from 3D sediment model
         TSED(m)=0.0
         do i=1,ntrs(5)
@@ -382,8 +382,8 @@ subroutine photosynthesis(id,hour,nv,it)
   real(rkind) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
 
   !for spatially varying parameters
-  GPM=sp%GPM(id,:); TGP=sp%TGP(id,:); PRP=sp%PRP(id,:); c2chl=sp%c2chl(id,:)
-  KTGP=sp%KTGP(id,:,:); Ke0=sp%Ke0(id)
+  GPM=wp%GPM(id,:); TGP=wp%TGP(id,:); PRP=wp%PRP(id,:); c2chl=wp%c2chl(id,:)
+  KTGP=wp%KTGP(id,:,:); Ke0=wp%Ke0(id)
 
   !general init
   tdep=sum(dep(1:nv)) !ze(nvrt,id)-ze(kbe(id),id) !dep,nv assigned from link_icm(1...)
@@ -955,11 +955,11 @@ subroutine calkwq(id,nv,usf,it)
   real(rkind) :: tmp,densveg(3),tmp1,tmp2,tmp3
 
   !for spatially varying parameters
-  GPM=sp%GPM(id,:);     TGP=sp%TGP(id,:);       KTGP=sp%KTGP(id,:,:); PRP=sp%PRP(id,:);
-  WSSED=sp%WSSED(id);   WSPOM=sp%WSPOM(id,:);   WSPBS=sp%WSPBS(id,:)
-  WSSEDn=sp%WSSEDn(id); WSPOMn=sp%WSPOMn(id,:); WSPBSn=sp%WSPBSn(id,:)
-  KC0=sp%KC0(id,:);     KP0=sp%KP0(id,:);       KPalg=sp%KPalg(id,:)
-  c2chl=sp%c2chl(id,:); WRea=sp%WRea(id)
+  GPM=wp%GPM(id,:);     TGP=wp%TGP(id,:);       KTGP=wp%KTGP(id,:,:); PRP=wp%PRP(id,:);
+  WSSED=wp%WSSED(id);   WSPOM=wp%WSPOM(id,:);   WSPBS=wp%WSPBS(id,:)
+  WSSEDn=wp%WSSEDn(id); WSPOMn=wp%WSPOMn(id,:); WSPBSn=wp%WSPBSn(id,:)
+  KC0=wp%KC0(id,:);     KP0=wp%KP0(id,:);       KPalg=wp%KPalg(id,:)
+  c2chl=wp%c2chl(id,:); WRea=wp%WRea(id)
 
   !--------------------------------------------------------------------------------------
   time=it*dt
