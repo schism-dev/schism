@@ -118,7 +118,7 @@ module schism_glbl
 
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
-                      &difnum_max_l2,wtime1,wtime2,fluxsu00,srad00,cmiu0, &
+                      &difnum_max_l2,wtime1,wtime2,cmiu0, &
                       &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0, &
                       &dtb_min_transport
 
@@ -156,8 +156,8 @@ module schism_glbl
   character(len=16),save :: a_16
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
-  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,ncid_schout, &
- &nstride_schout,nrec2_schout,istack0_schout,ncid_source
+  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D, &
+ &istack0_schout,ncid_source
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -396,12 +396,13 @@ module schism_glbl
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
-!  real(rkind),save,allocatable :: tsel(:,:,:) ! S,T at elements and half levels for upwind & TVD scheme
-!  real(rkind),save,allocatable :: trel(:,:,:) !tracer concentration @ prism center; used as permanent storage
   !tracer concentration @ prism center; used as temp. storage. tr_el(ntracers,nvrt,nea2) but last index usually
   !is valid up to nea only except for TVD
   real(rkind),save,allocatable,target :: tr_el(:,:,:) 
   real(rkind),save,allocatable,target :: tr_nd(:,:,:) !tracer concentration @ node and whole levels
+  !Store T,S offline mode ts_offline(4,nvrt,nea), where [1 3] are for T, [2 4]
+  !for S
+  real(rkind),save,allocatable :: ts_offline(:,:,:)
   real(rkind),save,allocatable :: bdy_frc(:,:,:) !body force at prism center Q_{i,k}
   real(rkind),save,allocatable :: flx_sf(:,:) !surface b.c. \kappa*dC/dz = flx_sf (at element center)
   real(rkind),save,allocatable :: flx_bt(:,:) !bottom b.c.
@@ -459,7 +460,7 @@ module schism_glbl
                                   !get_wind() converts it to C
                                   &tau(:,:),tau_bot_node(:,:),windfactor(:),pr1(:),airt1(:), &
                                   &shum1(:),pr2(:),airt2(:),shum2(:),pr(:), &
-                                  &sflux(:),srad(:),tauxz(:),tauyz(:),fluxsu(:), &
+                                  &sflux(:),srad(:),srad00(:),tauxz(:),tauyz(:),fluxsu(:), &
                                   &fluxlu(:),hradu(:),hradd(:),cori(:), & !chi(:)
                                   &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:), &
                                   &sparsem(:,:), & 

@@ -131,8 +131,9 @@
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
                  &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
-                 &ised_out_sofar,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
-                 &ncid_schout6
+                 &ised_out_sofar,ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
+                 &ncid_schout6,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
+                 &&ncid_schout6_2,nstride_schout,nrec2_schout,irec4,istack4
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -232,7 +233,7 @@
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
       real(rkind),allocatable :: swild95(:,:,:) !for analysis module
       real(rkind),allocatable :: swild13(:) 
-      real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:),ts_offline(:,:,:) !reading schout*
+      real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:) !reading schout*
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
       logical :: ltmp,ltmp1(1),ltmp2(1)
@@ -352,10 +353,10 @@
 !     End alloc.
 
 !     Offline transport
-      if(itransport_only/=0) then
-        allocate(ts_offline(2,nvrt,nea),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (73)')
-      endif
+!      if(itransport_only/=0) then
+!        allocate(ts_offline(2,nvrt,nea),stat=istat)
+!        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (73)')
+!      endif
 
 !      do it=iths+1,ntime
 
@@ -583,6 +584,7 @@
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
+            srad00=srad !save
             if(nws==2) call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
@@ -1913,15 +1915,21 @@
       allocate(swild11(np_global),stat=istat)
       if(istat/=0) call parallel_abort('STEP: alloc swild11')
       if(myrank==0) then
-        !Calculate stack and record # to read from 
+        !Calculate stack and record # to read from for step n and n+1
         istack=(it*nstride_schout-1)/nrec2_schout+1
-        irec2=it*nstride_schout-(istack-1)*nrec2_schout
+        irec2=it*nstride_schout-(istack-1)*nrec2_schout !->time step n (start)
         if(istack<=0.or.irec2<=0.or.irec2>nrec2_schout) then
           write(errmsg,*)'STEP: wrong record or stack #, ',istack,irec2
           call parallel_abort(errmsg)
         endif
+        istack4=((it+1)*nstride_schout-1)/nrec2_schout+1 !may exceed max stack #
+        irec4=(it+1)*nstride_schout-(istack4-1)*nrec2_schout !->time step n+1 (new)
+        if(istack4<=0.or.irec4<=0.or.irec4>nrec2_schout) then
+          write(errmsg,*)'STEP: wrong new record or stack #, ',istack4,irec4
+          call parallel_abort(errmsg)
+        endif
 
-        if(istack/=istack0_schout) then
+        if(istack/=istack0_schout) then !open stack for reading step n
           istack0_schout=istack
           j=nf90_close(ncid_schout)
           write(it_char,'(i72)')istack
@@ -1950,6 +1958,53 @@
 #endif
           if(myrank==0) write(16,*)'reading from schout stack #:',istack,irec2,time/3600
         endif !istack
+
+        if(istack4==istack) then !existing stack for reading step n+1
+          ncid_schout_2=ncid_schout
+          ncid_schout2_2=ncid_schout2
+          ncid_schout3_2=ncid_schout3
+          ncid_schout4_2=ncid_schout4
+          ncid_schout5_2=ncid_schout5
+          ncid_schout6_2=ncid_schout6
+        else !open new stack
+          write(it_char,'(i72)')istack4
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          !This stack might not exisit (last record)
+#ifdef OLDIO
+          inquire(file=in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',exist=ltmp)
+#else
+          inquire(file=in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',exist=ltmp)
+#endif
+          if(.not.ltmp) then !not exist; use same stack and reset record #
+            istack4=istack; irec4=irec2
+            ncid_schout_2=ncid_schout
+            ncid_schout2_2=ncid_schout2
+            ncid_schout3_2=ncid_schout3
+            ncid_schout4_2=ncid_schout4
+            ncid_schout5_2=ncid_schout5
+            ncid_schout6_2=ncid_schout6
+          else !stack exists
+
+#ifdef OLDIO
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found(2)')
+#else
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found(2)')
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout2_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found(2)')
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout3_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found(2)')
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout4_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found(2)')
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout5_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found(2)')
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout6_2)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found(2)')
+#endif
+          endif !.not.ltmp
+          if(myrank==0) write(16,*)'reading from schout stack #:',istack4,irec4,time/3600
+        endif !istack4
 
 #ifdef OLDIO
         j=nf90_inq_varid(ncid_schout, "elev",mm)
@@ -2076,6 +2131,39 @@
           ie=iegl(i)%id !up to nea
           ts_offline(1,:,ie)=swild14(:,i,1)
           ts_offline(2,:,ie)=swild14(:,i,2)
+        endif
+      enddo !i
+
+      !Read step n+1
+      if(myrank==0) then
+#ifdef OLDIO
+        j=nf90_inq_varid(ncid_schout_2, "temp_elem",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem(2)')
+        j=nf90_inq_varid(ncid_schout_2, "salt_elem",jj)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem(2)')
+        j=nf90_get_var(ncid_schout_2,mm,swild14(:,:,1),(/1,1,irec4/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem(2)')
+        j=nf90_get_var(ncid_schout_2,jj,swild14(:,:,2),(/1,1,irec4/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem(2)')
+#else
+        j=nf90_inq_varid(ncid_schout5_2, "temperatureAtElement",mm)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem(2)')
+        j=nf90_inq_varid(ncid_schout6_2, "salinityAtElement",jj)
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem(2)')
+        j=nf90_get_var(ncid_schout5_2,mm,swild14(:,:,1),(/1,1,irec4/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem(2)')
+        j=nf90_get_var(ncid_schout6_2,jj,swild14(:,:,2),(/1,1,irec4/),(/nvrt,ne_global,1/))
+        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem(2)')
+#endif
+        write(16,*)'done reading T,S @n+1'
+      endif !myrank=0
+      call mpi_bcast(swild14,2*nvrt*ne_global,mpi_real,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('STEP: mpi_bcast in reading T,S(2)')
+      do i=1,ne_global
+        if(iegl(i)%rank==myrank) then
+          ie=iegl(i)%id !up to nea
+          ts_offline(3,:,ie)=swild14(:,i,1)
+          ts_offline(4,:,ie)=swild14(:,i,2)
         endif
       enddo !i
 
