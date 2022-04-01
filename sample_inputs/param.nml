@@ -732,8 +732,9 @@
   iadjust_mass_consv0(12)=0 !DVD (must=0)
 
 ! For ICM, impose mass conservation for depths larger than a threshold by considering prism 
-! volume change from step n to n+1
+! volume change from step n to n+1. rinflation_icm is the max ratio btw H^{n+1} and H^n allowed.
   h_massconsv = 2. ![m]
+  rinflation_icm = 1.e-3
 
 /
 

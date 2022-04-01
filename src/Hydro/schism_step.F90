@@ -7468,7 +7468,7 @@
 
           !Inflation coef (ratio of volumes)
           zrat=htot/dzz1
-          if(zrat<0.9d0.or.zrat>1.1d0) cycle
+          if(abs(zrat-1)>rinflation_icm) cycle
 
           do k=kbe(i)+1,nvrt
 !            zrat=ze(k+1,i)-ze(k,i) !@ step n
