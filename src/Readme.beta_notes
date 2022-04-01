@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-(1 April, 2022):  added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'
+d44dbdf (1 April, 2022):  added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'
 6f367d0 (30 Mar 2022): added optional vertical levels to inject source tracer conventration: 'lev_tr_source'; 
 7cc7f27 (30 Mar 2022): added an optional threshold depth for mass conversation for ICM: 'h_massconsv';
 1788867 (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): i_hmin_salt_ex,hmin_salt_ex;
