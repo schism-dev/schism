@@ -133,7 +133,7 @@
                  &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
                  &ised_out_sofar,ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
                  &ncid_schout6,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
-                 &&ncid_schout6_2,nstride_schout,nrec2_schout,irec4,istack4
+                 &&ncid_schout6_2,nstride_schout,nrec2_schout,irec4,istack4,nvars_hot_icm
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -9853,7 +9853,7 @@
         j=nf90_redef(ncid_hot)
         j=nf90_def_dim(ncid_hot,'ICM_ntr',ntrs(7),ICM_ntr_dim)
 
-        var1d_dim(1)=elem_dim
+        var1d_dim(1)=elem_dim; 
         j=nf90_def_var(ncid_hot,'SED_BENDO',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
         j=nf90_def_var(ncid_hot,'CTEMP',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2))
         j=nf90_def_var(ncid_hot,'BBM',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
@@ -9885,24 +9885,35 @@
         j=nf90_def_var(ncid_hot,'BFORMAXS',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+29))
         j=nf90_def_var(ncid_hot,'ISWBENS',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+30))
         j=nf90_def_var(ncid_hot,'DFEEDM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+31))
-        j=nf90_def_var(ncid_hot,'sht',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+32))
-        !last dim must be node/elem/side- I suggest we swap indices for
-        !these 2D arrays
+        !last dim must be node/elem/side- I suggest we swap indices for these
+        !2D arrays
         var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
-        j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+34))
-        j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+35))
-        j=nf90_def_var(ncid_hot,'vtleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+36))
-        j=nf90_def_var(ncid_hot,'vtstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+37))
-        j=nf90_def_var(ncid_hot,'vtroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+38))
-        j=nf90_def_var(ncid_hot,'vht',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+39))
-        var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'sleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+40))
-        j=nf90_def_var(ncid_hot,'sstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+41))
-        j=nf90_def_var(ncid_hot,'stoot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+42))
+        j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+32))
+        j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
+        j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+34))
         !3D arrays
         var3d_dim(1)=ICM_ntr_dim; var3d_dim(2)=nvrt_dim; var3d_dim(3)=elem_dim
-        j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+43))
+        j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+35))
+        nvars_hot_icm=nvars_hot+35
+
+        if(isav_icm==1) then
+          var1d_dim(1)=elem_dim;  !1D array
+          j=nf90_def_var(ncid_hot,'sht',NF90_DOUBLE,var1d_dim,nwild(nvars_hot_icm+1))
+          var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim !2D array
+          j=nf90_def_var(ncid_hot,'sleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+2))
+          j=nf90_def_var(ncid_hot,'sstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+3))
+          j=nf90_def_var(ncid_hot,'stoot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
+          nvars_hot_icm=nvars_hot_icm+4
+        endif
+        
+        if(iveg_icm==1) then
+          var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim !2D array
+          j=nf90_def_var(ncid_hot,'vht',   NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+1))
+          j=nf90_def_var(ncid_hot,'vtleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+2))
+          j=nf90_def_var(ncid_hot,'vtstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+3))
+          j=nf90_def_var(ncid_hot,'vtroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
+          nvars_hot_icm=nvars_hot_icm+4
+        endif
         j=nf90_enddef(ncid_hot)
 
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(SED_BENDO),(/1/),(/ne/))
@@ -9936,20 +9947,29 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+29),dble(BFORMAXS),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+30),dble(ISWBENS),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),dble(DFEEDM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(sht),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+36),dble(transpose(vtleaf(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+37),dble(transpose(vtstem(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+38),dble(transpose(vtroot(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+39),dble(transpose(vht(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+40),dble(sleaf(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+41),dble(sstem(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+42),dble(sroot(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+43),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+35),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
+        nvars_hot_icm=nvars_hot+35
+
+        if(isav_icm==1) then
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+2),dble(sleaf(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+3),dble(sstem(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+4),dble(sroot(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
+          nvars_hot_icm=nvars_hot_icm+4
+        endif
+
+        if(iveg_icm==1) then
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(transpose(vht(1:ne,1:3))),(/1,1/),(/3,ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+2),dble(transpose(vtleaf(1:ne,1:3))),(/1,1/),(/3,ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+3),dble(transpose(vtstem(1:ne,1:3))),(/1,1/),(/3,ne/))
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+4),dble(transpose(vtroot(1:ne,1:3))),(/1,1/),(/3,ne/))
+          nvars_hot_icm=nvars_hot_icm+4
+        endif
         
-        nvars_hot=nvars_hot+43 !update
+        nvars_hot=nvars_hot_icm !update
 #endif /*USE_ICM*/
 
         !write(12,*)'After hot trcr:',it,real(trel),real(tr_nd0)
