@@ -1386,7 +1386,7 @@
        allocate(windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
          &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),pr1(npa),airt1(npa),shum1(npa),windfactor(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
-         &  srad00(npa),fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
+         &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
          & hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
@@ -1727,7 +1727,7 @@
 #endif /*Tsinghua group*/
 
 !     for output
-      airt1=0.d0; shum1=0.d0;  airt2=0.d0; shum2=0.d0; srad=0.d0; srad00=0.d0; fluxsu=0.d0; fluxlu=0.d0
+      airt1=0.d0; shum1=0.d0;  airt2=0.d0; shum2=0.d0; srad=0.d0; fluxsu=0.d0; fluxlu=0.d0
       hradu=0.d0; hradd=0.d0; sflux=0.d0; windx=0.d0; windy=0.d0
       q2=0.d0; xl=0.d0 !for hotstart with itur/=3 only
       dfq1=0.d0; dfq2=0.d0 !for hotstart

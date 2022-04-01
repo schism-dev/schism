@@ -584,7 +584,6 @@
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-            srad00=srad !save
             if(nws==2) call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP

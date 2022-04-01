@@ -460,7 +460,7 @@ module schism_glbl
                                   !get_wind() converts it to C
                                   &tau(:,:),tau_bot_node(:,:),windfactor(:),pr1(:),airt1(:), &
                                   &shum1(:),pr2(:),airt2(:),shum2(:),pr(:), &
-                                  &sflux(:),srad(:),srad00(:),tauxz(:),tauyz(:),fluxsu(:), &
+                                  &sflux(:),srad(:),tauxz(:),tauyz(:),fluxsu(:), &
                                   &fluxlu(:),hradu(:),hradd(:),cori(:), & !chi(:)
                                   &Cd(:),rough_p(:),erho(:,:),hvis_coef(:,:), &
                                   &sparsem(:,:), & 
