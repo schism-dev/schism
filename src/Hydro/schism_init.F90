@@ -49,7 +49,7 @@
 
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
-                    & isav_icm,iveg_icm,SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                    & isav_icm,iveg_icm,SED_BENDO,CTEMP,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                     & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                     & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
                     & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 
@@ -5594,15 +5594,15 @@
 
 #ifdef USE_ICM
         !gfortran requires all chars have same length
-        ar_name(1:32)=(/'SED_BENDO','CTEMP    ','BBM      ','CPOS     ','PO4T2TM1S', &
+        ar_name(1:31)=(/'SED_BENDO','CTEMP    ','CPOS     ','PO4T2TM1S', &
      &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
      &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
      &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
      &'POC3TM1S ','POP1TM1S ','POP2TM1S ','POP3TM1S ','PSITM1S  ','BFORMAXS ', &
      &'ISWBENS  ','DFEEDM1S ','sht      '/)
 !'
-        do k=1,32 !# of 1D arrays
-          if(isav_icm==0.and.k==32) cycle
+        do k=1,31 !# of 1D arrays
+          if(isav_icm==0.and.k==31) cycle
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
@@ -5619,64 +5619,62 @@
               else if(k==2) then
                 CTEMP(ie)=buf3(i)
               else if(k==3) then
-                BBM(ie)=buf3(i)
-              else if(k==4) then
                 CPOS(ie)=buf3(i)
-              else if(k==5) then
+              else if(k==4) then
                 PO4T2TM1S(ie)=buf3(i)
-              else if(k==6) then
+              else if(k==5) then
                 NH4T2TM1S(ie)=buf3(i)
-              else if(k==7) then
+              else if(k==6) then
                 NO3T2TM1S(ie)=buf3(i)
-              else if(k==8) then
+              else if(k==7) then
                 HST2TM1S(ie)=buf3(i)
-              else if(k==9) then
+              else if(k==8) then
                 CH4T2TM1S(ie)=buf3(i)
-              else if(k==10) then
+              else if(k==9) then
                 CH41TM1S(ie)=buf3(i)
-              else if(k==11) then
+              else if(k==10) then
                 SO4T2TM1S(ie)=buf3(i)
-              else if(k==12) then
+              else if(k==11) then
                 SIT2TM1S(ie)=buf3(i)
-              else if(k==13) then
+              else if(k==12) then
                 BENSTR1S(ie)=buf3(i)
-              else if(k==14) then
+              else if(k==13) then
                 NH41TM1S(ie)=buf3(i)
-              else if(k==15) then
+              else if(k==14) then
                 NO31TM1S(ie)=buf3(i)
-              else if(k==16) then
+              else if(k==15) then
                 HS1TM1S(ie)=buf3(i)
-              else if(k==17) then
+              else if(k==16) then
                 SI1TM1S(ie)=buf3(i)
-              else if(k==18) then
+              else if(k==17) then
                 PO41TM1S(ie)=buf3(i)
-              else if(k==19) then
+              else if(k==18) then
                 PON1TM1S(ie)=buf3(i)
-              else if(k==20) then
+              else if(k==19) then
                 PON2TM1S(ie)=buf3(i)
-              else if(k==21) then
+              else if(k==20) then
                 PON3TM1S(ie)=buf3(i)
-              else if(k==22) then
+              else if(k==21) then
                 POC1TM1S(ie)=buf3(i)
-              else if(k==23) then
+              else if(k==22) then
                 POC2TM1S(ie)=buf3(i)
-              else if(k==24) then
+              else if(k==23) then
                 POC3TM1S(ie)=buf3(i)
-              else if(k==25) then
+              else if(k==24) then
                 POP1TM1S(ie)=buf3(i)
-              else if(k==26) then
+              else if(k==25) then
                 POP2TM1S(ie)=buf3(i)
-              else if(k==27) then
+              else if(k==26) then
                 POP3TM1S(ie)=buf3(i)
-              else if(k==28) then
+              else if(k==27) then
                 PSITM1S(ie)=buf3(i)
-              else if(k==29) then
+              else if(k==28) then
                 BFORMAXS(ie)=buf3(i)
-              else if(k==30) then
+              else if(k==29) then
                 ISWBENS(ie)=buf3(i)
-              else if(k==31) then
+              else if(k==30) then
                 DFEEDM1S(ie)=buf3(i)
-              else if(k==32) then
+              else if(k==31) then
                 sht(ie)=buf3(i)
               endif
             endif !iegl

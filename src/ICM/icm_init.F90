@@ -57,6 +57,16 @@ subroutine read_icm_param(imode)
            & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMT, &
            & vTMT,vKTMT,vMT0,vMTcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
            & vo2c 
+  namelist /SFM/ HSED,VSED,DIFFT,SALTSW,SALTND,m1,m2,THTADP,THTADD,VPMIX,VDMIX,CTEMPI,&
+           & CPOPI,CPONI,CPOCI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,&
+           & SIT2I,BENSTI,KCDIAG,KNDIAG,KPDIAG,DCTHTA,DNTHTA,DPTHTA,KSI,THTASI,FRPPH,&
+           & FRNPH,FRCPH,frnveg,frpveg,frcveg,frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC,&
+           & dO2c,dstc,dtheta,KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2,KAPPNO3F,&
+           & KAPPNO3S,K2NO3,THTANO3,KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2,CSISAT, &
+           & DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR,DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT, &
+           & TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP,KAPPCH4,THTACH4,KMCH4O2,KMSO4,AONO, &
+           & ierosion,idepo,etau,eroporo,erorate,erofrac,erodiso,depofracR,depofracL, &
+           & depoWSR,depoWSL
 
   if(imode==0) then
     !------------------------------------------------------------------------------------
@@ -109,9 +119,25 @@ subroutine read_icm_param(imode)
     vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMT=0; vTMT=0; vKTMT=0; vMT0=0; vMTcr=0; valpha=0;
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
+    !init. SFM module
+    HSED=0;  VSED=0;  DIFFT=0;  SALTSW=0;  SALTND=0;  m1=0;  m2=0;  THTADP=0;  THTADD=0;
+    VPMIX=0;  VDMIX=0;  CTEMPI=0;  CPOPI=0;  CPONI=0;  CPOCI=0;  CPOSI=0;  PO4T2I=0;  
+    NH4T2I=0;  NO3T2I=0;  HST2I=0;  CH4T2I=0;  CH41TI=0;  SO4T2I=0;  SIT2I=0;  BENSTI=0; 
+    KCDIAG=0;  KNDIAG=0;  KPDIAG=0;  DCTHTA=0;  DNTHTA=0;  DPTHTA=0;  KSI=0;  THTASI=0; 
+    FRPPH=0;  FRNPH=0;  FRCPH=0;  frnveg=0;  frpveg=0;  frcveg=0;  frnsav=0;  frpsav=0;
+    frcsav=0;  FRPOP=0;  FRPON=0;  FRPOC=0;  dO2c=0;  dstc=0;  dtheta=0;  KAPPNH4F=0;
+    KAPPNH4S=0;  PIENH4=0;  THTANH4=0;  KMNH4=0;  KMNH4O2=0;  KAPPNO3F=0;  KAPPNO3S=0;  
+    K2NO3=0;  THTANO3=0;  KAPPD1=0;  KAPPP1=0;  PIE1S=0;  PIE2S=0;  THTAPD1=0;  KMHSO2=0; 
+    CSISAT=0;  DPIE1SI=0;  PIE2SI=0;  KMPSI=0;  O2CRITSI=0;  JSIDETR=0;  DPIE1PO4F=0;  
+    DPIE1PO4S=0;  PIE2PO4=0;  O2CRIT=0;  TEMPBEN=0;  KBENSTR=0;  KLBNTH=0;  DPMIN=0; 
+    KMO2DP=0;  KAPPCH4=0;  THTACH4=0;  KMCH4O2=0;  KMSO4=0;  AONO=0;  ierosion=0; 
+    idepo=0;  etau=0;  eroporo=0;  erorate=0;  erofrac=0;  erodiso=0;  depofracR=0; 
+    depofracL=0;  depoWSR=0;  depoWSL=0
+
+
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
-    read(31,nml=SAV);  read(31,nml=VEG); 
+    read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM)
     close(31)
     if(myrank==0) write(16,*) 'done read ICM parameters'
 
@@ -123,15 +149,21 @@ subroutine read_icm_param(imode)
       call parallel_abort('iKe=1,need to turn on SED3D module')
     endif
 #endif
-
+    !Water
     dtw=dt/86400.0;  dtw2=dtw/2.0 !days
     mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
+    
+    !SFM
+    HSED=1.d-2*HSED !unit: m
+    VSED=2.73791e-5*VSED !unit: m/day 
+    DIFFT=1.0e-4*DIFFT !m2/s
 
     !------------------------------------------------------------------------------------
-    !1) allocate ICM variables; 2) read spatially varying parameters; 3) read SFM parameter
+    !1) allocate ICM variables; 2) read spatially varying parameters
     !------------------------------------------------------------------------------------
     call icm_vars_init
 
+    !ICM variables init
     if(iKe==0) call read_gr3_prop('tss2c',tss2c,wp%tss2c,nea)
     call read_gr3_prop('WSSED', WSSED,  wp%WSSED,  nea)
     call read_gr3_prop('WSSEDn',WSSEDn, wp%WSSEDn, nea)
@@ -159,6 +191,7 @@ subroutine read_icm_param(imode)
       enddo
     enddo
 
+    !pH init
     if(iPh==1) then
       iphgb=0 !pH flag
       call read_gr3_prop('ph',-9999.d0,swild,nea); iphgb(:)=swild(:)
@@ -168,7 +201,7 @@ subroutine read_icm_param(imode)
       endif
     endif
 
-    !-----------------read in sav patch flag-----------------
+    !sav init
     if(jsav==1) then
       call read_gr3_prop('spatch',-9999.d0,swild,nea); spatch(:)=swild(:)
       if(ihot==0) then
@@ -223,7 +256,21 @@ subroutine read_icm_param(imode)
       endif!ihot=0
     endif !jveg
 
-    if(iSed==1) call read_icm_sed_param !sediment flux model parameters
+    !veg init
+    if(iSed==1) then 
+      call read_gr3_prop('HSED', HSED,  sp%HSED,  nea)
+      call read_gr3_prop('VSED', VSED,  sp%VSED,  nea)
+      call read_gr3_prop('VPMIX',VPMIX, sp%VPMIX, nea)
+      call read_gr3_prop('VDMIX',VDMIX, sp%VDMIX, nea)
+      if(ierosion==1) call read_gr3_prop('etau', etau,  sp%etau,  nea)
+      do i=1,3
+        write(pid,'(i1)') i
+        call read_gr3_prop('FRPOP_'//trim(adjustl(pid)), FRPOP(i), sp%FRPOP(:,i), nea)
+        call read_gr3_prop('FRPON_'//trim(adjustl(pid)), FRPON(i), sp%FRPON(:,i), nea) 
+        call read_gr3_prop('FRPOC_'//trim(adjustl(pid)), FRPOC(i), sp%FRPOC(:,i), nea)
+      enddo
+      call icm_sfm_init
+    endif
 
     !------------------------------------------------------------------------------------
     !time varying input of ICM model
@@ -316,9 +363,7 @@ subroutine WQinput(time)
   use schism_glbl, only : errmsg,rkind,nvrt,ne_global,nea,ipgl,iegl,ihot,pi
   use schism_msgp, only : myrank,parallel_abort
   implicit none
-
   real(8),intent(in) :: time !double
-  
   
   !local variable
   integer :: i,j,k,ie,iegb,neben
@@ -554,36 +599,34 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(tau_c_elem(nea),SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), &
+  allocate(sp%etau(nea),SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), &
     & SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
     & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
     & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea),SSI(nea), &
-    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),sp%HSED(nea),sp%VSED(nea),VPMIX(nea),VDMIX(nea), &
-    & FRPOP(nea,3),FRPON(nea,3),FRPOC(nea,3), flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
+    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),sp%HSED(nea),sp%VSED(nea),sp%VPMIX(nea),sp%VDMIX(nea), &
+    & sp%FRPOP(nea,3),sp%FRPON(nea,3),sp%FRPOC(nea,3), flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
     & CTEMP(nea),CPIP(nea),CNO3(nea),CNH4(nea),CCH4(nea),CSO4(nea),CPOS(nea),CH2S(nea),CPOP(nea,3),CPON(nea,3),CPOC(nea,3), &
     & CH4T2TM1S(nea),CH41TM1S(nea),SO4T2TM1S(nea),BENSTR1S(nea),BFORMAXS(nea),ISWBENS(nea),POP1TM1S(nea), &
     & POP2TM1S(nea),POP3TM1S(nea),PON1TM1S(nea),PON2TM1S(nea),PON3TM1S(nea),POC1TM1S(nea),POC2TM1S(nea), &
     & POC3TM1S(nea),PSITM1S(nea), NH41TM1S(nea),NO31TM1S(nea),HS1TM1S(nea),SI1TM1S(nea),PO41TM1S(nea), &
     & NH4T2TM1S(nea),NO3T2TM1S(nea),HST2TM1S(nea),SIT2TM1S(nea),PO4T2TM1S(nea),DFEEDM1S(nea), &
     & SED_BENDO(nea),SED_BENCOD(nea),SED_BENNH4(nea),SED_BENNO3(nea),SED_BENPO4(nea),SED_BENDOC(nea),SED_BENSA(nea), &
-    & SFLUXP(nea),SF_RPOP(nea),SFLUXN(nea),SF_RPON(nea),SFLUXC(nea),SF_RPOC(nea),JSUSF(nea),SF_SU(nea),BBM(nea), &
     & sbLight(nea), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  tau_c_elem=0.0; SED_EROH2S=0.0;  SED_EROLPOC=0.0; SED_ERORPOC=0.0; 
+  sp%etau=0.0; SED_EROH2S=0.0;  SED_EROLPOC=0.0; SED_ERORPOC=0.0; 
   SED_BL=0.0;     ZD=0.0;          SED_B=0.0;       SED_LPOP=0.0;    SED_RPOP=0.0;   SED_LPON=0.0;   SED_RPON=0.0;
   SED_LPOC=0.0;   SED_RPOC=0.0;    SED_TSS=0.0;     SED_SU=0.0;      SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;
   SED_SA=0.0;     SED_DO=0.0;      SED_COD=0.0;     SED_SALT=0.0;    SED_T=0.0;      SSI=0.0;
-  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      sp%HSED=0.0;    sp%VSED=0.0;       VPMIX=0.0;     VDMIX=0.0;
-  FRPOP=0.0;      FRPON=0.0;       FRPOC=0.0;       flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
+  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      sp%HSED=0.0;    sp%VSED=0.0;    sp%VPMIX=0.0;   sp%VDMIX=0.0;
+  sp%FRPOP=0.0;  sp%FRPON=0.0;     sp%FRPOC=0.0;    flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
   CTEMP=0.0;      CPIP=0.0;        CNO3=0.0;        CH2S=0.0;        CNH4=0.0;       CCH4=0.0;       CSO4=0.0;       CPOS=0.0;      CPOP=0.0;      CPON=0.0; CPOC=0.0;
   CH4T2TM1S=0.0;  CH41TM1S=0.0;    SO4T2TM1S=0.0;   BENSTR1S=0.0;    BFORMAXS=0.0;   ISWBENS=0.0;    POP1TM1S=0.0;
   POP2TM1S=0.0;   POP3TM1S=0.0;    PON1TM1S=0.0;    PON2TM1S=0.0;    PON3TM1S=0.0;   POC1TM1S=0.0;   POC2TM1S=0.0;
   POC3TM1S=0.0;   PSITM1S=0.0;     NH41TM1S=0.0;    NO31TM1S=0.0;    HS1TM1S=0.0;    SI1TM1S=0.0;    PO41TM1S=0.0;
   NH4T2TM1S=0.0;  NO3T2TM1S=0.0;   HST2TM1S=0.0;    SIT2TM1S=0.0;    PO4T2TM1S=0.0;  DFEEDM1S=0.0;
   SED_BENDO=0.0;  SED_BENCOD=0.0;  SED_BENNH4=0.0;  SED_BENNO3=0.0;  SED_BENPO4=0.0; SED_BENDOC=0.0; SED_BENSA=0.0;
-  SFLUXP=0.0;     SF_RPOP=0.0;     SFLUXN=0.0;      SF_RPON=0.0;     SFLUXC=0.0;     SF_RPOC=0.0;    JSUSF=0.0;     SF_SU=0.0;     BBM=0.0;
   sbLight=0.0;
 !$OMP end parallel workshare
 

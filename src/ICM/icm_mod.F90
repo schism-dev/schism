@@ -133,14 +133,28 @@ module icm_mod
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save :: HSED,VSED,DIFFT,SALTSW,SALTND
-  real(rkind),save :: m1,m2,THTADP,THTADD
+  real(rkind),save :: m1,m2,THTADP,THTADD,VPMIX,VDMIX
+  real(rkind),save :: CTEMPI,CPOPI(3),CPONI(3),CPOCI(3),CPOSI,PO4T2I,NH4T2I,NO3T2I !init conc.
+  real(rkind),save :: HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI   !init conc.
   real(rkind),save,dimension(3) :: KCDIAG,KNDIAG,KPDIAG,DCTHTA,DNTHTA,DPTHTA
   real(rkind),save :: KSI,THTASI
-  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH
-  
+  real(rkind),save,dimension(3,3) :: FRPPH,FRNPH,FRCPH, frnveg,frpveg,frcveg !(G1:G3,veg/PB)
+  real(rkind),save,dimension(3) :: frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC !(G1:G3)
+  real(rkind),save :: dO2c,dstc,dtheta !diffusion under hypoxia
+  real(rkind),save :: KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2 !!nitrification
+  real(rkind),save :: KAPPNO3F,KAPPNO3S,K2NO3,THTANO3 !denitrification
+  real(rkind),save :: KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2 !H2S oxidation
+  real(rkind),save :: CSISAT,DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR  !Silica dissolution
+  real(rkind),save :: DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT  !PO4
+  real(rkind),save :: TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP !benthic stress
+  real(rkind),save :: KAPPCH4,THTACH4,KMCH4O2,KMSO4,AONO !CH4 reaction
+  integer, save :: ierosion,idepo                     !erosion
+  real(rkind),save :: etau,eroporo,erorate,erofrac,erodiso !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand
+  real(rkind),save :: depofracR,depofracL,depoWSR,depoWSL
 
-
+  !---------------------------------
   !variables
+  !---------------------------------
   real(rkind),save,allocatable,dimension(:) :: SED_BL,ZD
   real(rkind),save :: W2,H2
 
@@ -153,32 +167,8 @@ module icm_mod
   real(rkind), save :: TINTIM
   real(rkind), save,allocatable,dimension(:) :: AG3CFL,AG3NFL,AG3PFL,ASDTMP
 
-  !General Parameters
-  !sav
-  real(rkind),save,dimension(3) :: frnsav,frpsav,frcsav
-  !veg
-  real(rkind),save,dimension(3,3) :: frnveg,frpveg,frcveg !(3G,3veg)
-
-  !nutrients, parameters
-  real(rkind),save :: KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2 !!nitrification
-  real(rkind),save :: KAPPNO3F,KAPPNO3S,K2NO3,THTANO3 !denitrification
-  real(rkind),save :: KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2 !H2S
-  real(rkind),save :: CSISAT,DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR  !Si
-  real(rkind),save :: DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT,KMO2DP  !PO4
-  real(rkind),save :: TEMPBEN,KBENSTR,KLBNTH,DPMIN  !benthic stress
-  real(rkind),save :: KAPPCH4,THTACH4,KMCH4O2,KMSO4 !CH4 reaction
-  real(rkind),save :: AONO
-
-  !initial concentration
-  real(rkind),save :: CTEMPI,BBMI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,SIT2I,BENSTI
-  real(rkind),save,dimension(3) :: CPOPI,CPONI,CPOCI
-
   !Sediment thickness, burial and mixing rates
-  real(rkind),save,allocatable,dimension(:) :: VPMIX,VDMIX
   real(rkind),save :: W12,W12MIN,KL12
-
-  !splits of refractory POM from Water Column into G2,G3 class POM in sediment
-  real(rkind), save,allocatable,dimension(:,:) :: FRPOP,FRPON,FRPOC !(1:nea,3), leave option for mapping
 
   !POM fluxes !unit:mg/m^2
   real(rkind), save,allocatable,dimension(:,:) :: flxpop,flxpon,flxpoc
@@ -223,42 +213,14 @@ module icm_mod
   !SOD calculation
   real(rkind),save :: SOD,stc
 
-  !diffusion under hypoxia
-  real(rkind),save :: O2CRITdif,stc0
-  real(rkind),save :: thtaTdif,alphaTdif
-
   !sediment fluxes
   real(rkind),save,allocatable,dimension(:) :: SED_BENDO,SED_BENCOD,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENDOC,SED_BENSA
 
   !erosion fluxes
   real(rkind),save,allocatable,dimension(:) :: SED_EROH2S,SED_EROLPOC,SED_ERORPOC !nea
-  real(rkind),save,allocatable,dimension(:) :: tau_c_elem !nea
-  real(rkind),save :: eroporo,erorate,erofrac,erodiso !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand
-  real(rkind),save :: depofracR,depofracL,depoWSR,depoWSL
-  integer, save :: iERO,iDEPO
 
   !bottom Light (nea)
   real(rkind),save,allocatable,dimension(:) :: sbLight
-
-  !deposit feeder
-  integer,save :: idf,ihypox
-  real(rkind),save :: XKMI0,ING0,THTAI0,R,THTAR,BETA,THBETA
-  real(rkind),save :: AMCN,AMCP,AA1,AA2,XKMG1,XKMG2
-  real(rkind),save :: XKBO2,TDD,DOLOW,DFDOH,DFDOQ,RDD,RMORT
-  real(rkind),save :: XKI0,XKR,XKBETA
-  real(rkind),save,allocatable,dimension(:) :: SFLUXP,SF_RPOP,SFLUXN,SF_RPON,SFLUXC,SF_RPOC,JSUSF,SF_SU
-
-  !benthic algae
-  integer, save :: iBalg
-  real(rkind),save :: PO4AVL, NH4AVL, NO3AVL
-  real(rkind),save :: PMB,ANCB,APCB,KTGB1,KTGB2,TMB
-  real(rkind),save :: ALPHB,CCHLB,KESED,KEBALG,KHNB,KHPB,KHRB
-  real(rkind),save :: BMRB,BPRB,KTBB,TRB,BALGMIN
-  real(rkind),save :: FNIB,FPIB
-  real(rkind),save :: FTB,PRNB
-  real(rkind),save,allocatable,dimension(:) :: BBM
-  real(rkind),save :: FIB,BLITE,NLB,PLB,BMB,PB,NPPB,PRB
-  real(rkind),save :: BAPOC,BAPON,BAPOP
 
   !---------------------------------------------------------------------------
   !spatially varying parameter
@@ -273,7 +235,8 @@ module icm_mod
 
   !parameter in sediment flux model
   type,public :: icm_sed_spatial_param
-    real(rkind),dimension(:),pointer :: HSED,VSED
+    real(rkind),dimension(:),pointer :: HSED,VSED,VPMIX,VDMIX,etau
+    real(rkind),dimension(:,:),pointer :: FRPOP,FRPON,FRPOC 
   end type
   type(icm_sed_spatial_param) :: sp
 
