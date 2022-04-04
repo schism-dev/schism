@@ -168,6 +168,7 @@ subroutine link_icm(imode,id,nv)
   real(rkind),parameter :: mval=3.d-2
   logical :: fnan, frange
 
+
   if(imode==1) then
     nv=nvrt-kbe(id) !total # of _layers_ (levels=nv+1)
     if(idry_e(id)==1) nv=1
