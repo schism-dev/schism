@@ -97,7 +97,7 @@ module icm_mod
   integer,save,allocatable :: spatch(:)               !sav region
   real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
   real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,allocatable,dimension(:,:) :: plfsav,pmaxsav,fisav,fnsav,fpsav !(nvrt,nea)
+  real(rkind),save,allocatable,dimension(:,:) :: spleaf,spmax,fisav,fnsav,fpsav !(nvrt,nea)
   real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
   real(rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
@@ -127,7 +127,7 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(rkind),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: plfveg,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vpleaf,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
