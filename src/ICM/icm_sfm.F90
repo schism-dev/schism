@@ -755,66 +755,6 @@ subroutine sedsod(id)
 
 end subroutine sedsod
 
-!subroutine link_sed_input(id,nv)
-!!---------------------------------------------------------------------------------------
-!!initializ sediment
-!!---------------------------------------------------------------------------------------
-!  use schism_glbl, only: rkind,errmsg,dpe,eta2,elnode,i34,area,ielg
-!  use icm_mod
-!  implicit none
-!  integer, intent(in) :: id,nv
-!
-!  !total depth
-!  ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
-!
-!  SED_BL=dep(nv)
-!  SED_T(id)   =temp(nv)
-!  SED_SALT(id)=salt(nv)
-!  SED_B(id,1) =PB1(nv,1)
-!  SED_B(id,2) =PB2(nv,1)
-!  SED_B(id,3) =PB3(nv,1)
-!  SED_RPOC(id)=RPOC(nv,1)
-!  SED_LPOC(id)=LPOC(nv,1)
-!  SED_RPON(id)=RPON(nv,1)
-!  SED_LPON(id)=LPON(nv,1)
-!  SED_RPOP(id)=RPOP(nv,1)
-!  SED_LPOP(id)=LPOP(nv,1)
-!  SED_SU(id)  =SU(nv,1)
-!  SED_PO4(id) =PO4t(nv,1)
-!  SED_NH4(id) =NH4(nv,1)
-!  SED_NO3(id) =NO3(nv,1)
-!  SED_SA(id)  =SAt(nv,1)
-!  SED_DO(id)  =DOX(nv,1)
-!  SED_COD(id) =COD(nv,1)
-!  SED_TSS(id) =TSED(nv)
-!
-!end subroutine link_sed_input
-
-!subroutine link_sed_output(id)
-!!---------------------------------------------------------------------------------------
-!!sediment flux
-!!---------------------------------------------------------------------------------------
-!  use schism_glbl, only : idry_e
-!  use icm_mod
-!  implicit none
-!  integer, intent(in) :: id
-!
-!  BnDOC  = SED_BENDOC(id)
-!  BnNH4  = SED_BENNH4(id)
-!  BnNO3  = SED_BENNO3(id)
-!  BnPO4t = SED_BENPO4(id)
-!  BnCOD  = SED_BENCOD(id)
-!  BnDO   = SED_BENDO(id)
-!  BnSAt  = SED_BENSA(id)
-!
-!  !erosion flux, H2S>S
-!  if(ierosion>0.and.idry_e(id)/=1)then
-!    EROH2S(id)=SED_EROH2S(id)/2 !S to 0.5*O2
-!    EROLPOC(id)=SED_EROLPOC(id)
-!    ERORPOC(id)=SED_ERORPOC(id)
-!  endif !ierosion
-!
-!end subroutine link_sed_output
 
 subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0d,j1,j2,k12,k2)
 !-----------------------------------------------------------------------
