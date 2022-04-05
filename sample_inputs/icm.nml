@@ -46,7 +46,7 @@
 !-----------------------------------------------------------------------
 !solar radiation
 !  iRad=1: short wave radiation from sflux; require ihconsv =1, nws=2
-!  iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day
+!  iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day; todo: change to W/m2 
 !-----------------------------------------------------------------------
 iRad = 1
 

@@ -60,116 +60,41 @@ subroutine ecosystem(it)
 !---------------------------------------------------------------------------------
 !calculate kinetic source/sink
 !---------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg,dt,tr_el,i34,elside,nea,nvrt,irange_tr,ntrs,idry_e, &
-                        & isdel,kbs,zs,su2,sv2,npa,nne,elnode,srad,i34,np
+  use schism_glbl, only : rkind,errmsg,dt,nea,npa,np,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
+                        & ielg,kbe,kbs,ze,zs,su2,sv2,nne,elnode,elside,isdel,srad,airt1
   use schism_msgp, only : myrank,parallel_abort,exchange_p3dw
-  use icm_mod, only : iSed,iPh,PH_el,PH_nd,rIa,rIavg,iRad, &
-                    & jsav,spatch,sleaf,sstem,sroot,jveg,vpatch,jdry
+  use icm_mod
+  !use icm_mod, only : iSed,iPh,PH_el,PH_nd,rIa,rIavg,iRad, &
+  !                  & jsav,spatch,sleaf,sstem,sroot,jveg,vpatch,jdry
+
   implicit none
   integer, intent(in) :: it
 
   !local variables
-  integer :: i,j,k,nv,icount,jsj,nd
+  integer :: i,ie,ip,id,j,k,m,nv,icount,jsj,nd
   real(rkind) :: time,day,hour,dz,h,u,v,usf
   real(rkind),allocatable :: swild(:,:) !for exchange only
-  logical :: lopened
+  logical :: fnan, frange
 
-  do i=1,nea
-    if(jdry==0.and.idry_e(i)==1.and.(jveg==0.or.vpatch(i)==0)) cycle
+  do id=1,nea
+    if(jdry==0.and.idry_e(id)==1.and.(jveg==0.or.vpatch(id)==0)) cycle
 
     !compute local time
     time=it*dt; day=time/86400.0; hour=(day-int(day))*24.0
     if(iRad/=2) hour=0.0
 
     !rIa from sflux (unit: W/m2)
-    if(iRad==1) rIa=max(0.47d0*sum(srad(elnode(1:i34(i),i)))/i34(i),0.d0)
+    if(iRad==1) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
 
     !no SAV for dry elem (intertial zone); once it becomes dry, no SAV any !longer
-    if(idry_e(i)==1.and.jsav==1.and.spatch(i)==1)then
-      spatch(i)=-1; sleaf(:,i)=1.d-5; sstem(:,i)=1.d-5; sroot(:,i)=1.d-5
+    if(idry_e(id)==1.and.jsav==1.and.spatch(id)==1)then
+      spatch(id)=-1; sleaf(:,id)=1.d-5; sstem(:,id)=1.d-5; sroot(:,id)=1.d-5
     endif 
 
-    !reverse the direction of vertical layers
-    call link_icm(1,i,nv)
-
-    !calculation on growth rate of phytoplankton
-    call photosynthesis(i,hour,nv,it)
-
-    if(iPh==1) then
-      call ph_calc(i,nv)
-    endif
-
-    !sediment flux module
-    if(iSed==1) then
-      call link_sed_input(i,nv)
-      call sed_calc(i)
-      call link_sed_output(i)
-    endif
-
-    !surface renewal rate for DO reareation: change to surface velocity
-    usf=0.0; icount=0
-    do j=1,i34(i)
-      jsj=elside(j,i)
-      if(isdel(2,jsj)==0) cycle
-      icount=icount+1
-
-      u=su2(nvrt,jsj); v=sv2(nvrt,jsj)
-      usf=usf+sqrt(max(u*u+v*v,1.d-20))
-    enddo !j
-    if(icount/=0) usf=usf/icount
-
-    !compute ICM kinetic terms
-    call calkwq(i,nv,usf,it)
-    call link_icm(2,i,nv)
-
-  enddo !i=1,nea
-
-  if(iPh==1) then
-    !interpolation for pH
-    PH_nd=0.0
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        do k=1,nvrt
-          PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,i)
-        enddo !k
-      enddo !j
-    enddo !i
-
-    do i=1,np
-      PH_nd(:,i)=PH_nd(:,i)/dble(nne(i))
-    enddo
-
-    !call exchange_p3dw(PH_nd)
-    allocate(swild(nvrt,npa))
-    swild(:,1:npa)=PH_nd
-    call exchange_p3dw(swild)
-    PH_nd=swild(:,1:npa)
-    deallocate(swild)
-  endif
-
-end subroutine ecosystem
-
-subroutine link_icm(imode,id,nv)
-!--------------------------------------------------------------------------------
-!initialized water quality variables
-!--------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg,tr_el,nvrt,irange_tr,ntrs,ze,kbe,ielg,idry_e,airt1,elnode,i34
-  use schism_msgp, only : parallel_abort
-  use icm_mod, only : wqc,dep,temp,salt,TSED,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON, &
-                    & DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,iKe,&
-                    & iPh,TIC,ALK,CA,CACO3,PH,PH_el,GP,wp
-  implicit none
-  integer, intent(in) :: imode,id !id is (wet) elem index
-  integer, intent(out) :: nv !# of layers from surface to bottom
-
-  !local variables
-  integer :: i,k,m
-  real(rkind),parameter :: mval=3.d-2
-  logical :: fnan, frange
-
-
-  if(imode==1) then
+    !**********************************************************************************
+    !reverse the direction of vertical layers; link icm variables
+    !call link_icm(1,id,nv)
+    !**********************************************************************************
     nv=nvrt-kbe(id) !total # of _layers_ (levels=nv+1)
     if(idry_e(id)==1) nv=1
 
@@ -181,16 +106,16 @@ subroutine link_icm(imode,id,nv)
         dep(m)=0.1
         temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
       else
-        dep(m)=max(ze(k,id)-ze(k-1,id),0.1) !k>2; set minimum depth for wet elem
+        dep(m)=max(ze(k,id)-ze(k-1,id),1.d-1) !k>2; set minimum depth for wet elem
         temp(m)=tr_el(1,k,id)
       endif
       salt(m)=tr_el(2,k,id)
 
       ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
       ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
-      PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id), mval)
-      PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id), mval)
-      PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id), mval)
+      PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id), 3.d-2)
+      PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id), 3.d-2)
+      PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id), 3.d-2)
       RPOC(m,1)=max(tr_el(5+irange_tr(1,7),k,id), 0.d0)
       LPOC(m,1)=max(tr_el(6+irange_tr(1,7),k,id), 0.d0)
       DOC(m,1) =max(tr_el(7+irange_tr(1,7),k,id), 0.d0)
@@ -243,9 +168,42 @@ subroutine link_icm(imode,id,nv)
         call parallel_abort(errmsg)
       endif
     enddo!k::kbe(id)+1,nvrt
+    !**********************************************************************************
+    !link_icm
+    !**********************************************************************************
 
-  elseif(imode==2) then
+    !**********************************************************************************
+    !calculation on growth rate of phytoplankton
+    call photosynthesis(id,hour,nv,it)
+    !**********************************************************************************
 
+    if(iPh==1) call ph_calc(id,nv)
+
+    !sediment flux module
+    if(iSed==1) then
+      !call link_sed_input(id,nv)
+      call sed_calc(id,nv)
+      !call link_sed_output(id)
+    endif
+
+    !surface renewal rate for DO reareation: change to surface velocity
+    usf=0.0; icount=0
+    do j=1,i34(id)
+      jsj=elside(j,id)
+      if(isdel(2,jsj)==0) cycle
+      icount=icount+1
+
+      u=su2(nvrt,jsj); v=sv2(nvrt,jsj)
+      usf=usf+sqrt(max(u*u+v*v,1.d-20))
+    enddo !j
+    if(icount/=0) usf=usf/icount
+
+    !compute ICM kinetic terms
+    call calkwq(id,nv,usf,it)
+
+    !**********************************************************************************
+    !call link_icm(2,id,nv)
+    !**********************************************************************************
     do k=kbe(id)+1,nvrt
       m=nvrt-k+1
       if(idry_e(id)==1) m=1
@@ -329,10 +287,34 @@ subroutine link_icm(imode,id,nv)
         endif
       enddo !k
     endif
+    !**********************************************************************************
 
-  endif !imode
+  enddo !id=1,nea
 
-end subroutine link_icm
+  if(iPh==1) then
+    !interpolation for pH
+    PH_nd=0.0
+    do ie=1,nea
+      do j=1,i34(ie)
+        nd=elnode(j,ie)
+        do k=1,nvrt
+          PH_nd(k,nd)=PH_nd(k,nd)+PH_el(k,ie)
+        enddo !k
+      enddo !j
+    enddo !ie
+
+    do ip=1,np
+      PH_nd(:,ip)=PH_nd(:,ip)/dble(nne(ip))
+    enddo
+
+    allocate(swild(nvrt,npa))
+    swild(:,1:npa)=PH_nd
+    call exchange_p3dw(swild)
+    PH_nd=swild(:,1:npa)
+    deallocate(swild)
+  endif
+
+end subroutine ecosystem
 
 subroutine photosynthesis(id,hour,nv,it)
 !----------------------------------------------------------------------------
@@ -352,16 +334,16 @@ subroutine photosynthesis(id,hour,nv,it)
   !local variables
   integer :: i,j,k,m,klev,kcnpy
   real(rkind) :: tmp,tmp0,tmp1,tmp2,tmp3
-  real(rkind) :: sLight,sLight0,bLight,mLight,rKe,chl,rKeh,xT,rIK,rIs(3),rat
+  real(rkind) :: sLight,sLight0,bLight,mLight,rKe,chl,rKeh,xT,xS,rIK,rIs(3),rat
   real(rkind) :: PO4td,SAtd,rtmp,rval,rval2
   real(rkind) :: GPT0(3),rlFI,rlFN,rlFP,rlFS,rlFSal
   real(rkind) :: tdep
   !sav
   real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeh0,rKeh1,rKeh2 !light
   real(rkind) :: sdep,szleaf(nv+1),szstem(nv+1)
-  real(rkind) :: xtsav,zt0,dzt,hdep
+  real(rkind) :: xtsav,dzt,hdep
   !veg
-  real(rkind) :: xtveg,xtveg0
+  real(rkind) :: atemp,asalt
   real(rkind) :: iabvcnpyveg,iatcnpyveg,ikveg,iwcveg
   real(rkind) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
 
@@ -510,11 +492,6 @@ subroutine photosynthesis(id,hour,nv,it)
       rKeh=min(rKe*dep(k),20.d0)
       bLight=sLight*exp(-rKeh)
 
-      if(rKeh<0) then
-        write(errmsg,*)'check ICM iKe rKeh:',rKe,dep(k),rKeh,KeC,chl,KeS,TSED(k),iKe,ielg(id),k
-        call parallel_abort(errmsg)
-      endif
-
       !---------------------
       !hdep and rKeh0 (for sav) calculated with the if statement from surface to layer above canopy
       !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
@@ -561,13 +538,7 @@ subroutine photosynthesis(id,hour,nv,it)
       !calculate optimal light intensity for PB
       if(iLight==1.and.k==1) then
         do i=1,3
-          rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i)); tmp=rKe*Hopt(i)
-
-          !check
-          if(tmp>50.or.rKe<0) then
-            write(errmsg,*)'check ICM iKe rKe*Hopt:',rKe,Hopt,tmp,ielg(id),k
-            call parallel_abort(errmsg)
-          endif
+          rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i))
         enddo
       endif
 
@@ -592,21 +563,10 @@ subroutine photosynthesis(id,hour,nv,it)
             call parallel_abort('unknown iRad in icm.F90')
           endif !
           mLight=0.5*(sLight+bLight)*rat !from W/m2 to E/m2/day
-          if (i==1) then
-            rIK=(1.d3*c2chl(1))*GPT0(i)/alpha(i)
-          elseif (i==2) then
-            rIK=(1.d3*c2chl(2))*GPT0(i)/alpha(i)
-          else
-            rIK=(1.d3*c2chl(3))*GPT0(i)/alpha(i)
-          endif !i
+          rIK=(1.d3*c2chl(i))*GPT0(i)/alpha(i)
           rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         else
           call parallel_abort('unknown iLight in icm.F90')
-        endif
-
-        if(rlFI-1>1.e-12.or.rlFI<0.or.rlFI/=rlFI) then
-          write(errmsg,*)'FI>1.or.FI<0: ',rlFI,bLight,sLight,rKeh,rKe,ielg(id),k
-          call parallel_abort(errmsg)
         endif
 
         !Nitrogen Limitation function for PB
@@ -618,34 +578,18 @@ subroutine photosynthesis(id,hour,nv,it)
         rlFN=(NH4(k,1)+NO3(k,1))/(NH4(k,1)+NO3(k,1)+KhN(i))
 
         !P Limit limitation function for PB
-        PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k))
-        rlFP=PO4td/(PO4td+KhP(i))
+        PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k));  rlFP=PO4td/(PO4td+KhP(i))
 
-        !diatom, with Si limitation
-        if(i==1) then
-          SAtd=SAt(k,1)/(1.0+KSAp*TSED(k))
-          rlFS=SAtd/(SAtd+KhS)
-          if(iLimitSi==1) then
-            if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP,rlFS)
-            if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP,rlFS)
-          else
-            if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)
-            if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
-          endif
-        endif
+        !Silica Limitation 
+        SAtd=SAt(k,1)/(1.0+KSAp*TSED(k));  rlFS=SAtd/(SAtd+KhS)
+        if(iLimitSi==0.or.i/=1) rlFS=1.0 
 
-        !green alage
-        if(i==2) then
-          if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)
-          if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)
-        endif
+        !Salinity Limitation 
+        rlFSal=KhSal*KhSal/(KhSal*KhSal+salt(k)*salt(k))
+        if(i/=3) rlFSal=1.0
 
-        !cyanobacteria
-        if(i==3) then
-          rlFSal=KhSal*KhSal/(KhSal*KhSal+salt(k)*salt(k))
-          if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP)*rlFSal
-          if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP)*rlFSal
-        endif
+        if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP,rlFS)*rlFSal
+        if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP,rlFS)*rlFSal
 
         !TIC limitation
         if(iPh==1) then
@@ -665,67 +609,43 @@ subroutine photosynthesis(id,hour,nv,it)
         if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
           xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
           if(xtsav<=0.0) then
-            rtmp=sKTGP(1)*xT*xT
+            spmax(klev,id)=sGPM*exp(-sKTGP(1)*xT*xT)
           else
-            rtmp=sKTGP(2)*xT*xT
-          endif
-          spmax(klev,id)=sGPM*exp(-rtmp)
-
-          if(frange(rtmp,0.d0,50.d0)) then
-            write(errmsg,*)'photosynthesis: check max growth rate:',sKTGP,xT,rtmp,ielg(id),k
-            call parallel_abort(errmsg)
+            spmax(klev,id)=sGPM*exp(-sKTGP(2)*xT*xT)
           endif
 
-          !light on the bottom level of the layer above canopy (iabvcnpysav)
-          if(rKeh0<0.) then
-            write(errmsg,*)'photosynthesis: check light attenuation:',rKeh0,ielg(id),k
-            call parallel_abort(errmsg)
-          endif
-
-          iabvcnpysav=sLight0*exp(-rKeh0) !account from light at water surface
-          if(rKeh0>20) iabvcnpysav=0
+          iabvcnpysav=max(sLight0*exp(-rKeh0),0.d0) !account from light at water surface
+          !if(rKeh0>20) iabvcnpysav=0
 
           !light at canopy height
           if (k==kcnpy) then!k from surface downwards, kcnpy is the first, so no need to over init
-            rtmp=rKe0*(sdep-hdep)
-            iatcnpysav=iabvcnpysav*exp(-rtmp)
-            if(rtmp>20) iatcnpysav=iabvcnpysav*1.e-5
-
+            !rtmp=rKe0*(sdep-hdep)
+            iatcnpysav=iabvcnpysav*max(exp(-rKe0*(sdep-hdep)),1.d-5)
+            !if(rtmp>20) iatcnpysav=iabvcnpysav*1.e-5
           endif !k==kcnpy
 
           !light on leave
           if(szleaf(k+1)>=0.0.and.szstem(k+1)>=0.0) then !below canopy
             if (k==kcnpy) then
-              zt0=(sht(id)+ze(kbe(id),id)+ze(klev-1,id))/2. !z-cor @half level
-              dzt=sht(id)+ze(kbe(id),id)-zt0 !half of thickness in ze(klev,id) for attenuation
+              !half of thickness in ze(klev,id) for attenuation
+              !zt0=(sht(id)+ze(kbe(id),id)+ze(klev-1,id))/2. !z-cor @half level
+              dzt=sht(id)+ze(kbe(id),id)-(sht(id)+ze(kbe(id),id)+ze(klev-1,id))/2.0
               rKeh1=rKe0*dzt!accumulation for layer k, half
               tmp=rKeh1+sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
               rKeh2=rKeh2+2.*rKeh1!accumulation from canopy downwards
             else
-              zt0=(ze(klev,id)+ze(klev-1,id))/2. !z-cor @half level
-              dzt=ze(klev,id)-zt0 !ze(klev,id)
+              !zt0=(ze(klev,id)+ze(klev-1,id))/2. !z-cor @half level
+              dzt=ze(klev,id)-(ze(klev,id)+ze(klev-1,id))/2.0 !ze(klev,id)
               rKeh1=rKe0*dzt
 
               tmp=rKeh2+rKeh1+sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
               rKeh2=rKeh2+2.*rKeh1!accumulation from canopy downwards
             endif !kcnpy
 
-            if(tmp<=0.d0) then
-              write(errmsg,*)'photosynthesis: check light attenuation on leaf:', k,rKeh1,rKeh2, &
-               & sKe,szleaf(k+1),szstem(k+1),sleaf(klev,id),sstem(klev,id),tmp,ielg(id),k
-              call parallel_abort(errmsg)
-            endif
+            rat=0.397 !W/m2 to E/m2/day
 
-            if(iRad==2) then
-              rat=0.21 !ly/day to E/m2/day
-            elseif(iRad==1) then !iRad check in read_icm
-              rat=0.397 !W/m2 to E/m2/day
-            else
-              call parallel_abort('unknown iRad in icm.F90')
-            endif !
-
-            iwcsav=iatcnpysav*rat*(1-exp(-tmp))/tmp
-            if(tmp>50) iwcsav=1.e-5
+            iwcsav=max(iatcnpysav*rat*(1-exp(-tmp))/tmp,1.d-5)
+            !if(tmp>50) iwcsav=1.e-5
             iksav=spmax(klev,id)/salpha !>0 (salpha checked)
 
             !light limitation function for sav
@@ -764,34 +684,20 @@ subroutine photosynthesis(id,hour,nv,it)
       do j=1,3
 
         !tempreture effect
-        tmp=0.0
-        do k=1,nv
-          tmp=tmp+temp(k)*dep(k)
-        enddo !k::nv
-        xtveg=tmp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
-        if(xtveg<=0.0)then
-          rtmp=vKTGP(j,1)*xtveg*xtveg
+        atemp=0.0; do k=1,nv; atemp=atemp+temp(k)*dep(k); enddo
+        xT=atemp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
+        if(xT<=0.0)then
+          pmaxveg(id,j)=vGPM(j)*exp(-vKTGP(j,1)*xT*xT)
         else
-          rtmp=vKTGP(j,2)*xtveg*xtveg
-        endif
-        pmaxveg(id,j)=vGPM(j)*exp(-rtmp)
-
-        !check
-        if(frange(rtmp,0.d0,50.d0))then
-          write(errmsg,*)'photosynthesis: check veg max growth rate :',vKTGP,xtveg,rtmp,j,ielg(id)
-          call parallel_abort(errmsg)
+          pmaxveg(id,j)=vGPM(j)*exp(-vKTGP(j,2)*xT*xT)
         endif
 
         !salinty stress
-        tmp=0.0
-        do k=1,nv
-          tmp=tmp+salt(k)*dep(k)
-        enddo !k::nv
-        xtveg=tmp/max(tdep,1.d-2)-vSopt(j)
-        fsveg(id,j)=vScr(j)/(max(vScr(j)+xtveg*xtveg,1.d-2))
+        asalt=0.0; do k=1,nv; asalt=asalt+salt(k)*dep(k); enddo 
+        xS=asalt/max(tdep,1.d-2)-vSopt(j)
+        fsveg(id,j)=vScr(j)/(max(vScr(j)+xS*xS,1.d-2))
 
-        !inundation stress in wet elem
-        !ratio of tdep versus vht, tdep>0 checked
+        !inundation stress in wet elem !ratio of tdep versus vht, tdep>0 checked
         rdephcanveg(id,j)=vht(id,j)/tdep
         ffveg(id,j)=rdephcanveg(id,j)/(max((vInun(j)+rdephcanveg(id,j)),1.d-2))
 
@@ -805,12 +711,7 @@ subroutine photosynthesis(id,hour,nv,it)
         endif !
 
         iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
-
         tmp=sdveg+rKehblveg(j)
-        if(tmp<0) then
-          write(errmsg,*)'photo-veg: check light attenuation on leaf:',rKehblveg(j),j,tmp,vtleaf(id,j),vtstem(id,j),ielg(id)
-          call parallel_abort(errmsg)
-        endif
 
         if(tmp>20) then
           iwcveg=iatcnpyveg*rat/tmp
@@ -820,14 +721,7 @@ subroutine photosynthesis(id,hour,nv,it)
           iwcveg=iatcnpyveg*rat*(1-exp(-tmp))/tmp
         endif
         ikveg=pmaxveg(id,j)/valpha(j) !check valpha >0
-
         fiveg(id,j)=iwcveg/sqrt(iwcveg*iwcveg+ikveg*ikveg) !>0
-
-        if(fiveg(id,j)>1.or.fiveg(id,j)<0.or.fiveg(id,j)/=fiveg(id,j)) then
-          write(errmsg,*)'photo_veg: fiveg(id,j)>1.or.fiveg(id,j)<0:',fiveg(id,j),ikveg,iwcveg, &
-        &iatcnpyveg,tdep,vht(id,j),ielg(id),j,rat,tmp,sLight0,rKehabveg(j),sdveg,idry_e(id),rIa
-          call parallel_abort(errmsg)
-        endif
 
         fnveg(id,j)=CNH4(id)/(vKhNs(j)+CNH4(id))
         fpveg(id,j)=CPIP(id)/(vKhPs(j)+CPIP(id))
