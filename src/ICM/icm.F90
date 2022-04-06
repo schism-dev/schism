@@ -69,7 +69,7 @@ subroutine ecosystem(it)
 
   !local variables
   integer :: i,ie,ip,id,j,k,m,nv,icount,jsj,nd
-  real(rkind) :: time,day,hour,dz,h,u,v,usf
+  real(rkind) :: time,day,dz,h,usf
   real(rkind),allocatable :: swild(:,:) !for exchange only
   logical :: fnan, frange
 
@@ -119,19 +119,17 @@ subroutine ecosystem(it)
     c2chl=wp%c2chl(id,:); WRea=wp%WRea(id);       Ke0=wp%Ke0(id)
 
     !compute local time
-    time=it*dt; day=time/86400.0; hour=(day-int(day))*24.0
-    if(iRad/=2) hour=0.0
+    time=it*dt; day=time/86400.0
 
     !rIa from sflux (unit: W/m2)
-    if(iRad==1) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
+    if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
 
     !surface renewal rate for DO reareation: change to surface velocity
     usf=0.0; icount=0
     do j=1,i34(id)
       jsj=elside(j,id)
       if(isdel(2,jsj)==0) cycle
-      u=su2(nvrt,jsj); v=sv2(nvrt,jsj);  icount=icount+1
-      usf=usf+sqrt(max(u*u+v*v,1.d-20))
+      usf=usf+sqrt(max(su2(nvrt,jsj)**2+sv2(nvrt,jsj)**2,1.d-6));  icount=icount+1
     enddo !j
     if(icount/=0) usf=usf/icount
 
@@ -241,17 +239,6 @@ subroutine ecosystem(it)
     !above canopy; new half layer under canopy;  accumulated above current layer under canopy
     rKeh0=0.0;  rKeh2=0.0
 
-    !--------------------------------------------------------------------------------
-    !veg init
-    !--------------------------------------------------------------------------------
-    if(jveg==1.and.vpatch(id)==1) then
-      vpleaf(id,:)=0.0 !growth rate(near,1:3), for each time step at current elem
-      sdveg=0.0  !pre-calc total shading effects
-      do j=1,3 !veg species
-        sdveg=sdveg+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/2
-      enddo !j
-    endif !jveg
-
     !light attenuation for veg growth
     rKehabveg(:)=0.0;  rKehblveg(:)=0.0
 
@@ -266,17 +253,12 @@ subroutine ecosystem(it)
     !PB::init
     GP(:,id,:)=0.0;  sbLight(id)=0.0
 
-    if(rIa>30.or.(hour>TU.and.hour<TD)) then !photosynthesis critia, in unit of W/m^2, for case iRad=1
+    if(rIa>30) then !photosynthesis critia, in unit of W/m^2, for case iRad=0
       !sLight0 saves the surface light intensity, and sLight is in-situ value at certain layer
-      if(iRad==1)then
-        sLight0=rIa !unit: W/m^2
-      elseif(iRad==2) then
-        sLight0=max(dble(rIa*sin(pi*(hour-TU)/Daylen)),0.d0) !unit: ly/day
-      else
-        call parallel_abort('unknown iRad in icm.F90')
-      endif!iRad
+      sLight0=rIa !unit: W/m^2
 
       !light attenuation caused by the veg above water
+      sLight=sLight0
       if(jveg==1.and.vpatch(id)==1) then
         rtmp=0
         do j=1,3
@@ -284,22 +266,10 @@ subroutine ecosystem(it)
             rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*(vht(id,j)-tdep)/max(1.e-5,vht(id,j))
           endif !non-submerged
         enddo !
-
         sLight=max(sLight0*exp(-rtmp),1.d-8)
-      else
-        sLight=sLight0
       endif !jveg
 
       do k=1,nv
-        !growth rate adjusted by temperature
-        do i=1,3
-          xT=temp(k)-TGP(i)
-          if(xT>0.0) then
-            GPT0(i)=GPM(i)*exp(-KTGP(i,1)*xT*xT)
-          else
-            GPT0(i)=GPM(i)*exp(-KTGP(i,2)*xT*xT)
-          endif
-        enddo
 
         !calculate CHLA
         chl=max(PB1(k,1)/c2chl(1)+PB2(k,1)/c2chl(2)+PB3(k,1)/c2chl(3),0.d0)
@@ -391,28 +361,25 @@ subroutine ecosystem(it)
           endif !idry_e
         endif !jveg
 
-        !calculate optimal light intensity for PB
-        if(iLight==1.and.k==1) then
-          do i=1,3
-            rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i))
-          enddo
-        endif
-
-        !light limitation function for PB
         do i=1,3
+          !growth rate adjusted by temperature
+          xT=temp(k)-TGP(i)
+          if(xT>0.0) then
+            GPT0(i)=GPM(i)*exp(-KTGP(i,1)*xT*xT)
+          else
+            GPT0(i)=GPM(i)*exp(-KTGP(i,2)*xT*xT)
+          endif
+
+          !light limitation function for PB
           if(iLight==0) then !Cerco, convert rIa to E/m^2/day
-            if(iRad==2) then
-              !rat=2.42 !ly/day to uE/m2/s
-              rat=0.21 !ly/day to E/m2/day
-            elseif(iRad==1) then !iRad check in read_icm
-              rat=0.397d0 !W/m2 to E/m2/day
-            else
-              call parallel_abort('unknown iRad in icm.F90')
-            endif !
+            rat=0.397d0 !W/m2 to E/m2/day
+
             mLight=0.5*(sLight+bLight)*rat !from W/m2 to E/m2/day
             rIK=(1.d3*c2chl(i))*GPT0(i)/alpha(i)
             rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
-          elseif(iLight==1) then !Chapra S.C., where iRad=2, rIa in unit of ly/day
+          elseif(iLight==1) then !Chapra S.C.
+            !calculate optimal light intensity for PB
+            if(k==1) rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i))
             rlFI=2.718*(exp(-bLight/rIs(i))-exp(-sLight/rIs(i)))/rKeh
           else
             call parallel_abort('unknown iLight in icm.F90')
@@ -520,6 +487,9 @@ subroutine ecosystem(it)
       !for Veg
       !--------------------------------------------------------------------------------
       if(jveg==1.and.vpatch(id)==1)then
+        vpleaf(id,:)=0.0 !growth rate(near,1:3), for each time step at current elem
+        sdveg=dot_product(vKe(1:3),vtleaf(id,1:3)+vtstem(id,1:3)/2) !shading effect
+
         do j=1,3
 
           !tempreture effect
@@ -541,13 +511,7 @@ subroutine ecosystem(it)
           ffveg(id,j)=rdephcanveg(id,j)/(max((vInun(j)+rdephcanveg(id,j)),1.d-2))
 
           !light supply
-          if(iRad==2) then
-            rat=0.21 !ly/day to E/m2/day
-          elseif(iRad==1) then !iRad check in read_icm
-            rat=0.397 !W/m2 to E/m2/day
-          else
-            call parallel_abort('unknown iRad in icm.F90')
-          endif !
+           rat=0.397 !W/m2 to E/m2/day
 
           iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
           tmp=sdveg+rKehblveg(j)

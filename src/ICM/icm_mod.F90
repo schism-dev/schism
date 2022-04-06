@@ -47,7 +47,7 @@ module icm_mod
   real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)
   real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
-  real(rkind),save :: TU,TD,rIa,rIavg,Daylen
+  real(rkind),save :: rIa,rIavg
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
   real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED
   real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3

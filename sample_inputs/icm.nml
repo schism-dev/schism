@@ -45,10 +45,11 @@
 &MARCO
 !-----------------------------------------------------------------------
 !solar radiation
-!  iRad=1: short wave radiation from sflux; require ihconsv =1, nws=2
-!  iRad=2: mannually PAR apply from observation, needs ICM_rad.th, in unit ly/day; todo: change to W/m2 
+!  iRad=0: short wave from sflux; require ihconsv =1, nws=2
+!  iRad=1: read PAR(time) from ICM_rad.th; (unit: W/m2)
+!  iRad=2: read PAR(time,location) from ICM_rad.th; (unit: W/m2)
 !-----------------------------------------------------------------------
-iRad = 1
+iRad = 0
 
 !-----------------------------------------------------------------------
 !options of formulations for computing light attenuation coefficients

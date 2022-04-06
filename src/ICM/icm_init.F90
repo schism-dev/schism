@@ -73,7 +73,7 @@ subroutine read_icm_param(imode)
     !read ICM; compute total # of state variables 
     !------------------------------------------------------------------------------------
     !initilize global switches
-    iRad=1; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
+    iRad=0; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
     iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
     Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
     thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4t_tben=0; SAt_tben=0
@@ -282,10 +282,8 @@ subroutine read_icm_param(imode)
     if(iBen/=0) then
       open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
     endif 
-    if(iRad==2) then
+    if(iRad==1.or.iRad==2) then
       open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
-    elseif(iRad/=1.and.iRad/=2) then
-      call parallel_abort('error: iRad')
     endif
     if(jveg==1) then
       open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
@@ -307,7 +305,7 @@ subroutine read_icm_param(imode)
 end subroutine read_icm_param
 
     !check values
-    !if(iRad>2)     call parallel_abort('check parameter: iRad>1')
+    !if(iRad>2)     call parallel_abort('check parameter: iRad>2')
     !if(iKe>2)      call parallel_abort('check parameter: iKe>1')
     !if(iLight>1)   call parallel_abort('check parameter: iLight>1')
     !if(iLimit>1)   call parallel_abort('check parameter: iLimit>1')
@@ -323,8 +321,8 @@ end subroutine read_icm_param
     !if(iTBen>1)    call parallel_abort('check parameter: iTBen>1')
 
     !put these check later as SCHISM hasn't been initilized
-    !if(iRad==1.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=1 needs heat exchange')
-    !if(iLight==1.and.(iRad/=2)) call parallel_abort('check parameter: iRad=2 is required for iLight=1')
+    !if(iRad==0.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=0 needs heat exchange')
+    !if(iLight==1.and.(iRad/=1).and.(iRad/=2)) call parallel_abort('check parameter: iRad=1/2 is required for iLight=1')
 
     !if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
     !if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
@@ -449,22 +447,17 @@ subroutine WQinput(time)
   endif !iBen>0
 
   !read solar radiation (unit: ly/day)
-  if(iRad==2.and.time_icm(3)<time) then!manually input
+  if((iRad==1.or.iRad==2).and.time_icm(3)<time) then!manually input
     do while(time_icm(3)<time)
-      if(iRad==2) then !uniform solar radiation
-        read(403,*)rtmp,rIa,TU,TD !time, radiation, time of sunrise and sunset, rIa in unit of ly/day
+      if(iRad==1) then !uniform solar radiation
+        read(403,*)rtmp,rIa !time, PAR; unit W/m2
         time_icm(3)=rtmp
         if(time==0.0) rIavg=rIa
         rIavg=0.7*rIa+0.3*rIavg
-      elseif(iRad==3) then !spatially varying solar radiation
+      elseif(iRad==2) then !spatially varying solar radiation
         ! need more work if necessary 
-      endif !iRad
+      endif 
     enddo !while 
-    Daylen=(TD-TU)
-
-  elseif(iRad/=1.and.iRad/=2)then
-    write(errmsg,*)'Unknown ICM iRad value: ', iRad
-    call parallel_abort(errmsg)
   endif!time_icm
 
   !veg !time_icm(4) for veg module !manually input
