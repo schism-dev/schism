@@ -460,6 +460,9 @@ where $\lambda$  is a hyper viscosity in $m^4/s$, $\gamma_3 = \frac{1}{\sqrt{3}A
 **References**
 
 <span id="casulli1994">Casulli, V. and E. Cattani (1994) Stability, accuracy and efficiency of a semi-implicit method for 3D shallow water flow. Computers & Mathematics with Applications, 27, pp. 99-112.</span>
+
 <span id="flather1987">Flather, R.A. (1987) A tidal model of Northeast Pacific. Atmosphere-Ocean, 25, pp. 22-45.</span>
+
 <span id="zhang-baptista2008">Zhang, Y. and Baptista, A.M. (2008) "SELFE: A semi-implicit Eulerian-Lagrangian finite-element model for cross-scale ocean circulation", Ocean Modelling, 21(3-4), 71-96</span>
+
 <span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span>

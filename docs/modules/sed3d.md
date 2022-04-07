@@ -14,4 +14,5 @@ A common crash occurs when the active morphology is on. At a river inflow bounda
 **References**
 
 <span id="pinto2012">Pinto, L., Fortunato, A.B., Zhang, Y., Oliveira, A. and Sancho, F.E.P. (2012) Development and validation of a three-dimensional morphodynamic modelling system, Ocean Mod., 57-58, 1-14.</span>
+
 <span id="warner2008">Warner, J.C., Sherwood, C.R., Signell, R.P., Harris, C.K., Arango, H.G. 2008. Development of a three-dimensional, regional, coupled wave, current, and sediment-transport model. Comput. Geosci. 34 (10), 1284–1306. doi: 10.1016/j.cageo.2008.02.012</span>

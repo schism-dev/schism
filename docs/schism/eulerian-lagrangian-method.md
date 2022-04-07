@@ -122,10 +122,17 @@ The various schemes presented above can be freely combined, resulting in schemes
 **References**
 
 <span id="danilov2013">Danilov, D. (2013) Ocean modeling on unstructured meshes, Ocean Mod., 69, 195-210.</span>
+
 <span id="gravel1994">Gravel, S. and A. Staniforth (1994), A mass-conserving semi-Lagrangian scheme for the shallow-water equations, Mon. Wea. Rev., 122, 243-248.</span>
+
 <span id="ham2006">Ham, D.A., Pietrzak, J., and G.S. Stelling (2006), A streamline tracking algorithm for semi-Lagrangian advection schemes based on the analytic integration of the velocity field, Journal of Computational and Applied Mathematics 192, 168–174.</span>
+
 <span id="leroux1997">Le Roux, D.Y., Lin, C.A., Staniforth, A. (1997), An accurate interpolating scheme for semi-Lagrangian advection on an unstructured mesh for ocean modelling, Tellus, 49A, 119–138.</span>
+
 <span id="leroux2005">Le Roux, D.Y., Sène, A., Rostand, V., and E. Hanert (2005), On some spurious mode issues in shallow-water models using a linear algebra approach. Ocean Modelling 10, 83–94.</span>
+
 <span id="shapiro1970">Shapiro, R. (1970), Smoothing, filtering and boundary effects, Rev. Geophys. Space Phys. 8 (2), 359–387.</span>
+
 <span id="shchepetkin1998">Shchepetkin, A.F. and J.C. Mcwilliams (1998), Quasi-Monotone Advection Schemes Based on Explicit Locally Adaptive Dissipation , Monthly Weather Review, 126, 1541-80.</span>
+
 <span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span>

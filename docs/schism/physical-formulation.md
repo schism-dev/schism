@@ -183,13 +183,23 @@ We use the bulk aerodynamic module of [Zeng et al. (1998)](#zeng1998), which can
 **References**
 
 <span id="blumberg1987">Blumberg, A.F. and G.L. Mellor (1987) A description of a three-dimensional coastal ocean circulation model. In: Three-Dimensional Coastal Ocean Models, vol. 4, Coastal and Estuarine Studies, N. Heaps, editor, Washington, D.C.: AGU, pp. 1-16.</span>
+
 <span id="canuto2001">Canuto, V.M., A. Howard, Y. Cheng and M.S. Dubovikov (2001) Ocean turbulence I: one-point closure model. Momentum and heat vertical diffusivities. J. Phys. Oceano., 31, pp. 1413-1426.</span>
+
 <span id="galperin1988">Galperin, B., L. H. Kantha, S. Hassid and A. Rosati (1988) A quasi-equilibrium turbulent energy model for geophysical flows. J. Atmos. Sci., 45, pp. 55-62.</span>
+
 <span id="kantha1994">Kantha, L.H. and C.A. Clayson (1994) An improved mixed layer model for geophysical applications. J. Geophy. Res, 99(25), pp. 235-266.</span>
+
 <span id="mellor1982">Mellor, G.L. and T. Yamada (1982) Development of a turbulence closure model for geophysical fluid problems. Rev. Geophys., 20, pp. 851-875.</span>
+
 <span id="pond1998">Pond, S. and G.L. Pickard (1998) Introductory Dynamical Oceanography, Butterworth-Heinmann.</span>
+
 <span id="rodi1984">Rodi, W. (1984) Turbulence models and their applications in hydraulics: a state of the art review. Delft, The Netherlands, International Association for Hydraulics Research.</span>
+
 <span id="umlauf2003">Umlauf, L. and H. Burchard (2003) A generic length-scale equation for geophysical turbulence models. J. Mar. Res., 6, pp. 235-265.</span>
+
 <span id="wilcox1998">Wilcox, D.C. (1998) Reassessment of scale determining equation for advance turbulence models. AIAA J., 26, pp. 1299-1310.</span>
+
 <span id="zeng1998">Zeng, X., M. Zhao and R.E. Dickinson (1998) Intercomparison of bulk aerodynamic algorithms for the computation of sea surface fluxes using TOGA COARE and TAO data. J. Clim., 11, pp. 2628-2644.</span>
+
 <span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span>
