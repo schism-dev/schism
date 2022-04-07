@@ -1,0 +1,106 @@
+site_name: Semi-implicit Cross-scale Hydroscience Integrated System Model (SCHISM)
+use_directory_urls: false
+theme:
+  name: material
+  features:
+    - toc.integrate
+    - toc.follow
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/git-alt
+  logo: assets/logo.png
+
+plugins:
+  - search
+  - with-pdf:
+      author: SCHISM Development Team
+      copyright: Ⓒschism-dev
+      cover_title: Manual
+      cover_subtitle: v5.9.0
+      cover_logo: assets/logo.png
+      output_path: pdf/schism-manual.pdf
+      enabled_if_env: ENABLE_PDF_EXPORT
+      render_js: true
+      headless_chrome_path: chrome
+      exclude_pages:
+        - 'publications'
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+repo_url: https://github.com/schism-dev/schism
+
+# Page tree
+nav:
+  - Home: index.md
+  - Changelog: changelog.md
+  - Getting started:
+    - Getting the sourcecode: getting-started/getting-sourcecode.md
+    - Compilation: getting-started/compilation.md
+    - Typical workflow: getting-started/typical-workflow.md
+    - Grid generation: getting-started/grid-generation.md
+    - Preprocessing: getting-started/pre-processing.md
+    - Running the model: getting-started/running-model.md
+    - Visualization: getting-started/visualization.md
+    - Postprocessing: getting-started/post-processing.md
+  - Model formulation:
+    - Overview: schism/overview.md
+    - Physical formulation: schism/physical-formulation.md
+    - Numerical formulation:
+      - Geometry and discretization: schism/geometry-discretization.md
+      - Barotropic solver: schism/barotropic-solver.md
+      - Eulerian-Lagrangian Method: schism/eulerian-lagrangian-method.md
+      - Momentum equation: schism/momentum-equation.md
+      - Vertical velocity: schism/vertical-velocity.md
+      - Turbulence closure: schism/turbulence-closure.md
+      - Transport equation: schism/transport-equation.md
+      - Updating the levels/Inundation: schism/updating-levels.md
+      - Spherical coordinates: schism/spherical-coordinates.md
+  - Input/Output: 
+    - Overview: input-output/overview.md
+    - Horizontal grid (hgrid.gr3): input-output/hgrid.md
+    - Vertical grid (vgrid.in): input-output/vgrid.md
+    - Model parameters (param.nml): input-output/param.md
+    - Boundary conditions (bctides.in): input-output/bctides.md
+    - Bottom friction: input-output/friction.md
+    - Atmospheric flux (/sflux): input-output/sflux.md
+    - Optional inputs: input-output/optional-inputs.md
+    - Outputs: input-output/outputs.md
+  - Modules:
+    - Overview: modules/overview.md
+    - Generic tracer module: modules/generic-tracer.md
+    - AGE: modules/age.md
+    - 2D Sediment model: modules/sed2d.md
+    - 3D Sediment model: modules/sed3d.md
+    - ICM: modules/icm.md
+    - CoSiNe: modules/cosine.md
+    - DVD: modules/dvd.md
+    - Marsh migration: modules/marsh-migration.md
+    - Analysis mode: modules/analysis-mode.md
+    - Hydraulics: modules/hydraulics.md
+    - Particle tracking: modules/particle-tracking.md
+    - WWM: modules/wwm.md
+  - How to contribute: code-contribution.md
+  - Verification tests: verification-tests.md
+  - Case studies: case-study.md
+  - Publications: publications.md
+  - Frequently Asked Questions: faq.md

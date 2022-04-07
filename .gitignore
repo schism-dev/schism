@@ -1,6 +1,7 @@
 # Don't track content of these folders
 build*/
 o/
+site/
 
 # Compiled source #
 ###################
