@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=R01a
 #SBATCH --partition=compute
-#SBATCH --nodes=1
+#SBATCH --nodes=30
 ##128cores/node but leave a few idle
-#SBATCH --ntasks-per-node=124
+#SBATCH --ntasks-per-node=120
 #SBATCH --exclusive
 ##Compute partitin up to 8 hrs
-#SBATCH --time=00:40:00
+#SBATCH --time=08:00:00
 #SBATCH --mail-type=NONE
 #SBATCH --account=gg0028
 #SBATCH --output=my_job.%j.out
@@ -41,4 +41,4 @@ export UCX_HANDLE_ERRORS=bt
 # Use srun (not mpirun or mpiexec) command to launch
 # programs compiled with any MPI library
 srun -l --cpu_bind=verbose --hint=nomultithread \
-  --distribution=block:cyclic ./pschism_LEVANTE_TVD-VL  8
+  --distribution=block:cyclic ./pschism_LEVANTE_GCC_PREC_EVAP_TVD-VL  8
