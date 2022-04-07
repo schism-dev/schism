@@ -1,4 +1,4 @@
-Umlauf and Burchard’s Generic Length Scale (GLS) model is 
+[Umlauf and Burchard](#umlauf2003)’s Generic Length Scale (GLS) model is 
 
 \begin{equation}
 \label{eq01}
@@ -71,3 +71,7 @@ In the code, the natural B.C. is applied first (see the FEM formulation below), 
 \end{equation}
 
 where $\begin{Bmatrix}\end{Bmatrix}$ indicates the alternative explicit/implicit schemes mentioned above, and $\mathcal{H}$ is a step function. We have applied the natural B.C. (Eqs. $\ref{eq02}$) in these equations, and after $K$ and $\psi$ are solved, the essential B.C. (Eqs $\ref{eq03}$) is then used to overwrite the boundary values.
+
+**References**
+
+<span id="umlauf2003">Umlauf, L. and H. Burchard (2003) A generic length-scale equation for geophysical turbulence models. J. Mar. Res., 6, pp. 235-265.</span>

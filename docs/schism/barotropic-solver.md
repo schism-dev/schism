@@ -79,7 +79,7 @@ where we have performed linearization of the vegetation term -
 
 and $H^\alpha = z_v +h$ is the height of vegetation. Note that similar procedures have been used for other nonlinear terms (e.g. the quadratic bottom drag).
 
-To eliminate $\pmb{u}_b^{n+1}$ in Eq $\ref{eq08}$, we invoke the discretized momentum equation at the bottom cell and utilize the fact that the Reynolds stress is constant within the boundary layer, as shown in Zhang and Baptista (2008) - 
+To eliminate $\pmb{u}_b^{n+1}$ in Eq $\ref{eq08}$, we invoke the discretized momentum equation at the bottom cell and utilize the fact that the Reynolds stress is constant within the boundary layer, as shown in [Zhang and Baptista (2008)](#zhang-baptista2008) - 
 
 \begin{equation}
 \label{eq11}
@@ -93,7 +93,7 @@ from which $\pmb{u}_b^{n+1}$ can be formally solved as -
 \pmb{u}_b^{n+1} = \frac{1}{1+\alpha\left|\pmb{u}_b\right|\Delta t} \left[\pmb{u}_b^* +\pmb{f}_b\Delta t - g(1-\theta)\Delta t \nabla \eta^n \right] - \frac{g\theta\Delta t}{1+\alpha\left|\pmb{u}_b\right|\Delta t}\nabla\eta^{n+1}
 \end{equation}
 
-The subscript $b$ denotes the top of the bottom cell. Note that the main difference from the original formulation of Zhang and Baptista (2008) is the appearance of the vegetation term.
+The subscript $b$ denotes the top of the bottom cell. Note that the main difference from the original formulation of [Zhang and Baptista (2008)](#zhang-baptista2008) is the appearance of the vegetation term.
 
 The remaining task is to find $\pmb{U}^\alpha$. We’ll discuss two scenarios of submerged and emergent vegetation.
 
@@ -124,10 +124,10 @@ and $\hat{H}$ is a friction modified depth -
 \hat{H} = H - \tilde{\chi}\Delta t
 \end{equation}
 
-Compared to the original formulation in Zhang and Baptista (2008), the only change in this depth is the vegetation term in $\tilde{\chi}$.
+Compared to the original formulation in [Zhang and Baptista (2008)](#zhang-baptista2008), the only change in this depth is the vegetation term in $\tilde{\chi}$.
 
 ### Submerged vegetation
-When the vegetation is submerged, i.e., $H^\alpha < H$, strong shear and turbulence develop between the vegetation and the overlying flow above it (ST94). Nepf and Vivoni (2000) demonstrated that there are two zones for submerged aquatic vegetation (SAV). In the upper canopy (called the ‘vertical exchange zone’), mean shear at the top of the canopy produces vertical turbulent exchange with the overlying water, which plays a significant role in the momentum balance. The lower canopy (‘longitudinal change zone’ as in Nepf and Vivoni, 2000) communicates with surrounding water predominantly through longitudinal advection. The extent of the vertical exchange of momentum between the vegetation zone and overlying water is dependent on the submergence.
+When the vegetation is submerged, i.e., $H^\alpha < H$, strong shear and turbulence develop between the vegetation and the overlying flow above it ([ST94](#)). [Nepf and Vivoni (2000)](#) demonstrated that there are two zones for submerged aquatic vegetation (SAV). In the upper canopy (called the ‘vertical exchange zone’), mean shear at the top of the canopy produces vertical turbulent exchange with the overlying water, which plays a significant role in the momentum balance. The lower canopy (‘longitudinal change zone’ as in [Nepf and Vivoni, 2000](#)) communicates with surrounding water predominantly through longitudinal advection. The extent of the vertical exchange of momentum between the vegetation zone and overlying water is dependent on the submergence.
 
 We first integrate the momentum equation (Eq. $\ref{eq02}$) from the bottom to the top of canopy - 
 
@@ -284,9 +284,9 @@ I_6 = \int_{\overline{\Gamma}_\nu} \phi_i U_n^{n+1} d\overline{\Gamma}_\nu
 
 Following standard finite-element procedures, and using appropriate essential and natural boundary conditions, SCHISM solves Eq. $\ref{eq33}$ to determine the elevations at all nodes. Note that the RHS terms $I_{3-6}$ are known; in the case of $I_6$, the integrals on $\overline{\Gamma}_\nu$ need not be evaluated since the essential boundary conditions are imposed by eliminating corresponding rows and columns of the matrix.
 
-The matrix resulting from Eq. $\ref{eq33}$ is sparse and symmetric. It is also positive-definite as long as the depth $\breve{H}$ is non-negative (`ihhat=1`); numerical experiments indicated that even this restriction can be relaxed for many practical applications that include shallow areas. We show that the addition of vegetation does not introduce additional stability constraint. The effects of the vegetation on $\breve{H}$ are generally similar to the bottom friction. For the 2D case, $\breve{H}$ is always positive. For the 3D emergent case, the vegetation term in the denominator is positive and so does not change the sign. For the 3D submerged case, as $\alpha \rightarrow 0$, previous results of Zhang and Baptista (2008) are recovered. As $\alpha \rightarrow \infty$ (i.e., very dense vegetation), the friction term (the second term in Eq. $\ref{eq27}$) dwarfs in comparison with the vegetation term (the third term in Eq. $\ref{eq27}$), and therefore the friction is negligible under dense vegetation. Since $c \rightarrow 1$ as $\alpha \rightarrow \infty$, $\breve{H}$ approaches the submergence $H-H^\alpha$, which is positive. When the submergence is very small (i.e. almost emergent vegetation), $\breve{H} \rightarrow 0$ and the conditioning of the matrix would somewhat deteriorate but the model remains stable. Physically, this means that very strong shear will develop near the canopy.
+The matrix resulting from Eq. $\ref{eq33}$ is sparse and symmetric. It is also positive-definite as long as the depth $\breve{H}$ is non-negative (`ihhat=1`); numerical experiments indicated that even this restriction can be relaxed for many practical applications that include shallow areas. We show that the addition of vegetation does not introduce additional stability constraint. The effects of the vegetation on $\breve{H}$ are generally similar to the bottom friction. For the 2D case, $\breve{H}$ is always positive. For the 3D emergent case, the vegetation term in the denominator is positive and so does not change the sign. For the 3D submerged case, as $\alpha \rightarrow 0$, previous results of [Zhang and Baptista (2008)](#zhang-baptista2008) are recovered. As $\alpha \rightarrow \infty$ (i.e., very dense vegetation), the friction term (the second term in Eq. $\ref{eq27}$) dwarfs in comparison with the vegetation term (the third term in Eq. $\ref{eq27}$), and therefore the friction is negligible under dense vegetation. Since $c \rightarrow 1$ as $\alpha \rightarrow \infty$, $\breve{H}$ approaches the submergence $H-H^\alpha$, which is positive. When the submergence is very small (i.e. almost emergent vegetation), $\breve{H} \rightarrow 0$ and the conditioning of the matrix would somewhat deteriorate but the model remains stable. Physically, this means that very strong shear will develop near the canopy.
 
-It’s important to notice that the friction-modified depth is different between 2D and 3D cases, which has implications in shallow depths. We show more details of the evaluation of the integrals $I_i$ below. The corresponding constant for 2D prisms is always positive (see below) and therefore the 2D mode is inherently more stable than 3D mode; consequently, judiciously leveraging SCHISM’s polyphorphism enhances stability near the wetting and drying interface. The matrix can be efficiently solved using a pre-conditioned Conjugate Gradient method (Casulli and Cattani 1994). This simple matrix solver is implemented in SCHISM; alternatively, the efficient parallel matrix solver PETSc can be used for large matrices.
+It’s important to notice that the friction-modified depth is different between 2D and 3D cases, which has implications in shallow depths. We show more details of the evaluation of the integrals $I_i$ below. The corresponding constant for 2D prisms is always positive (see below) and therefore the 2D mode is inherently more stable than 3D mode; consequently, judiciously leveraging SCHISM’s polyphorphism enhances stability near the wetting and drying interface. The matrix can be efficiently solved using a pre-conditioned Conjugate Gradient method ([Casulli and Cattani 1994](#casulli1994)). This simple matrix solver is implemented in SCHISM; alternatively, the efficient parallel matrix solver PETSc can be used for large matrices.
 
 In the model, the decision on 2D/3D emergent/3D submerged scenarios is made at each side (where the velocity is defined) based on the total depths from the previous time step and the transition of regimes is handled in the model.
 
@@ -305,7 +305,7 @@ where the outer sum is carried out along the 2 adjacent open side $j$, $L_{ij}$ 
 <figcaption>Boundary node i with adjacent sides.</figcaption>
 </figure>
 
-If a Flather-type radiation condition (Flather 1987) needs to be applied, it can be done in the following fashion - 
+If a Flather-type radiation condition ([Flather 1987](#flather1987)) needs to be applied, it can be done in the following fashion - 
 
 \begin{equation}
 \label{eq40}
@@ -429,7 +429,7 @@ If a neighbor does not exist (boundary) or is dry, we replace the corresponding 
 After the density gradients are found at prism centers, a simple linear interpolation in the vertical is used to calculate the gradients at side centers (and half levels). Then the trapezoidal rule is used to compute the baroclinic term: $-\frac{g}{\rho_0}\int_z^\eta\nabla\rho dz$. This will also be utilized in the solution of the momentum equation.
 
 #### Horizontal viscosity
-Momentum stabilization is an important consideration in designing advection and viscosity schemes. Zhang et al. (2016) demonstrated that the standard Laplacian viscosity is equivalent to the 5-point Shapiro filter (see below) on uniform grids; however, on non-uniform grids, it may behave like an ‘amplifier’ and therefore the filter form should be used instead (Figure [5a,b](#figure05)) - 
+Momentum stabilization is an important consideration in designing advection and viscosity schemes. [Zhang et al. (2016)](#zhang2016) demonstrated that the standard Laplacian viscosity is equivalent to the 5-point Shapiro filter (see below) on uniform grids; however, on non-uniform grids, it may behave like an ‘amplifier’ and therefore the filter form should be used instead (Figure [5a,b](#figure05)) - 
 
 \begin{equation}
 \label{eq52}
@@ -455,3 +455,11 @@ The bi-harmonic viscosity is often superior to the Laplacian viscosity as it is 
 \end{equation}
 
 where $\lambda$  is a hyper viscosity in $m^4/s$, $\gamma_3 = \frac{1}{\sqrt{3}A_I}$ and $\gamma_2 = \lambda\gamma_3^2\Delta t$ is a diffusion-number-like dimensionless constant. We found that in practice $\gamma_2 \leq 0.025$  is sufficient to suppress inertial spurious modes.
+
+
+**References**
+
+<span id="casulli1994">Casulli, V. and E. Cattani (1994) Stability, accuracy and efficiency of a semi-implicit method for 3D shallow water flow. Computers & Mathematics with Applications, 27, pp. 99-112.</span>
+<span id="flather1987">Flather, R.A. (1987) A tidal model of Northeast Pacific. Atmosphere-Ocean, 25, pp. 22-45.</span>
+<span id="zhang-baptista2008">Zhang, Y. and Baptista, A.M. (2008) "SELFE: A semi-implicit Eulerian-Lagrangian finite-element model for cross-scale ocean circulation", Ocean Modelling, 21(3-4), 71-96</span>
+<span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span>

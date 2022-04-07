@@ -1,4 +1,4 @@
-We used the approach of Comblen et al. (2009) and transform the coordinates instead of the equations. Since the unstructured grids work naturally on a sphere, the polar singularity is avoided. Most of the work is done inside local frames. There are 2 frames used (Figure [1](#figure01)); note that all frames rotate with the earth.
+We used the approach of [Comblen et al. (2009)](#comblen2009) and transform the coordinates instead of the equations. Since the unstructured grids work naturally on a sphere, the polar singularity is avoided. Most of the work is done inside local frames. There are 2 frames used (Figure [1](#figure01)); note that all frames rotate with the earth.
 
 <figure markdown id='figure01'>
 ![alt-text](../assets/spherical-coordinates.png){width=400}
@@ -39,3 +39,7 @@ Below are some important info about arrays used in the code that are affected by
 - `(xnd,ynd,znd)`, `(xcj,ycj,zcj)`, `(xctr,yctr,zctr)` are global coordinates of node, side center and element centroid for `ics=1` or `2`. If `ics=1` (Cartesian), `znd=zcj=zctr= 0`;
 - `(znl, zs, ze)` are local z-coordinates measured vertically upward from the undisturbed surface (i.e. local frame when `ics=2`), at node, side, and element;
 - `eframe(1:3,1:3,1:nea)` is the tensor for the element frame (w.r.t. global frame). The 2nd index indicates axid id `(1=x; 2=y; 3=z)` and the 1st index indicates tensor components. `sframe` and `pframe` are similar.
+
+**References**
+
+<span id="comblen2009">Comblen, R., Legrand, S., Deleersnijder, E., and Legat, V. (2009) A finite element method for solving the shallow water equations on the sphere. Ocean Mod., 28, 12-23.</span>

@@ -116,7 +116,7 @@ In Eqs. $\ref{eq09}$ and $\ref{eq10}$, the faces $S$, $S^+$, and $S^-$ need to e
 Since TVD is a nonlinear method, we cannot treat the vertical fluxes implicitly, and so all fluxes have to be treated explicitly. TVD method is therefore more expensive than upwind. A hybrid upwind/TVD, with TVD being used in the deeper depths and upwind in the shallow depths, has been implemented in SCHISM to improve efficiency. The user can also manually specify upwind/TVD zones in the domain via `tvd.prop`. You are encouraged to use [$TVD^2$](#tvd2) as much as possible for efficiency/accuracy.
 
 ## $TVD^2$
-The TVD scheme shown above is explicit in 3D space and thus subject to the Courant condition, which comprises of horizontal and vertical fluxes across each of the prism faces (Casulli and Zanolli 2005). The restriction related to the vertical fluxes is especially severe due to smaller grid size used in the vertical dimension, and therefore a large number of sub-cycles within each time step are usually required. To partially mitigate the issue, a hybrid upwind-TVD approach can be used in which the more efficient upwind scheme, with an implicit treatment of the vertical fluxes, is used when the flow depth falls below a given threshold (with the assumption that stratification is usually much smaller in the shallows). However, this approach does not work in deeper depths of eddying regime, as large vertical velocities are not uncommon along steep bathymetric slopes. Together with the fact that a large number of vertical levels are usually required in the eddying regime, the explicit scheme leads to subpar computational performance and usually takes over 90% of the total CPU time.
+The TVD scheme shown above is explicit in 3D space and thus subject to the Courant condition, which comprises of horizontal and vertical fluxes across each of the prism faces ([Casulli and Zanolli 2005](#casulli2005)). The restriction related to the vertical fluxes is especially severe due to smaller grid size used in the vertical dimension, and therefore a large number of sub-cycles within each time step are usually required. To partially mitigate the issue, a hybrid upwind-TVD approach can be used in which the more efficient upwind scheme, with an implicit treatment of the vertical fluxes, is used when the flow depth falls below a given threshold (with the assumption that stratification is usually much smaller in the shallows). However, this approach does not work in deeper depths of eddying regime, as large vertical velocities are not uncommon along steep bathymetric slopes. Together with the fact that a large number of vertical levels are usually required in the eddying regime, the explicit scheme leads to subpar computational performance and usually takes over 90% of the total CPU time.
 
 We therefore develop an implicit TVD scheme in the vertical dimension in SCHISM. We start from the FVM formulation of the 3D transport equation at a prism $i$:
 
@@ -153,7 +153,7 @@ C_i^{n+1} = \widetilde C_i + \frac{A_i \Delta t}{V_i} \left[ \left( \kappa \frac
 
 The 1st step solves the horizontal advection part (for all 3D prisms $i$), the 2nd step deals with the vertical advection part (where $k_b$ is the bottom level index and $N_z$ is the surface level index), and the last step tackles the remaining terms. We could have combined the 1st and 3rd steps into a single step at the expense of efficiency, because sub-cycling is used in the 1st step. In Eq. $\ref{eq15}$, sub-cylcing in $M$ sub-steps is required because of the horizontal Courant number condition, $\Delta t_m$ is the sub-time step used, and $\hat\psi_j^m$ is a standard TVD limiter function. Eq. $\ref{eq15}$ is then solved with a standard TVD method. The last step (Eq. $\ref{eq17}$) requires the solution of a simple tri-diagonal matrix. So we will only focus on the 2nd step.
 
-Following Duraisamy and Baeder (2007, hereafter DB07), we use two limiter functions in Eq. $\ref{eq16}$: $\Phi_j$ is the space limiter and $\Psi_j$ is the time limiter - thus the name $TVD^2$. The origin of these two limiters is the approximation Eq. $\ref{eq14}$ via a Taylor expansion in both space and time (DB07):
+Following [Duraisamy and Baeder (2007, hereafter DB07)](#duraisamy2007), we use two limiter functions in Eq. $\ref{eq16}$: $\Phi_j$ is the space limiter and $\Psi_j$ is the time limiter - thus the name $TVD^2$. The origin of these two limiters is the approximation Eq. $\ref{eq14}$ via a Taylor expansion in both space and time ([DB07](#duraisamy2007)):
 
 \begin{equation}
 \label{eq18}
@@ -199,7 +199,7 @@ s_q &= \frac{(\widetilde C_i - C_i^{M+1}) \sum_{p\in S_V^+} \left| Q_p \right|}{
 \end{aligned}
 \end{equation}
 
-DB07 showed that a sufficient TVD condition for Eq. $\ref{eq21}$ is that the coefficient of the 2nd LHS term be non-negative, i.e.:
+[DB07](#duraisamy2007) showed that a sufficient TVD condition for Eq. $\ref{eq21}$ is that the coefficient of the 2nd LHS term be non-negative, i.e.:
 
 \begin{equation}
 \label{eq23}
@@ -247,3 +247,8 @@ where $w_s$ is the settling velocity (__positive downward__). This term is treat
 
 ## Horizontal B.C. for transport
 In either upwind or TVD schemes, the concentration at the neighboring prism $T_j$ at the open boundary is known. For outflow, $T_j=T_i$ and the signal is advected out of the domain without hindrance. For incoming flow, $T_j$ is specified by the B.C. (either in `bctides.in` or `*.th`), and SCHISM nudges to this value with a relaxation constant (specified in `bctides.in`), in order to prevent sharp gradient there. For a complete list of horizontal B.C. supported by SCHISM, see [bctides.in](../input-output/bctides.md).
+
+**References**
+
+<span id="casulli2005">Casulli, V. and P. Zanolli (2005) High resolution methods for multidimensional advection–diffusion problems in free-surface hydrodynamics. Ocean Modelling, 10, pp.137-151.</span>
+<span id="duraisamy2007">Duraisamy, K. and J.D. Baeder (2007), Implicit Scheme For Hyperbolic Conservation Laws Using Nonoscillatory Reconstruction In Space And Time, Siam J. Sci. Comput. 29(6), 2607–2620.</span>

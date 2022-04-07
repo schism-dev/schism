@@ -52,9 +52,9 @@ Where,
 - $\pmb{F}_m$: horizontal viscosity [$m^2/s$]
 - $F_h$: horizontal diffusion and mass sources/sinks [$m^2/s$]
 
-Vegetation effects have been accounted for in Eq. 1. The main vegetation parameter is $\alpha(x, y) = D_v N_v C_{Dv}/2$ is a vegetation related density variable in [$m^{-1}]$, where $D_v$ is the stem diameter, $N_v$ is the vegetation density (number of stems per $m^2$), and $C_{Dv}$ is the bulk form drag coefficient. Selection of $C_{Dv}$ is the topic of other studies with values between 0 and 3 (Nepf and Vivoni 2000; Tanino and Nepf 2008), and is validated against reported lab study values. The underlying assumption used here is to treat the vegetation as arrays of solid cylinders, which is only a first-order approximation of the problem. Flexibility of the vegetation, sheltering effects within a cluster of vegetation can lead to one to two orders of reduction in the drag forces, and Gaylord et al. (2008) showed that the drag formulation is also species dependent. These additional complexities are outside the scope of the current study. In this paper, we assume $C_{Dv}$ is a constant, but a vertically varying $C_{Dv}$ (as suggested by Nepf and Vivoni 2000 and others) can be easily added as well; the latter can be used to approximate flexible stems (Nepf and Vivoni 2000; Luhar and Nepf 2011).
+Vegetation effects have been accounted for in Eq. 1. The main vegetation parameter is $\alpha(x, y) = D_v N_v C_{Dv}/2$ is a vegetation related density variable in [$m^{-1}]$, where $D_v$ is the stem diameter, $N_v$ is the vegetation density (number of stems per $m^2$), and $C_{Dv}$ is the bulk form drag coefficient. Selection of $C_{Dv}$ is the topic of other studies with values between 0 and 3 ([Nepf and Vivoni 2000](#); [Tanino and Nepf 2008](#)), and is validated against reported lab study values. The underlying assumption used here is to treat the vegetation as arrays of solid cylinders, which is only a first-order approximation of the problem. Flexibility of the vegetation, sheltering effects within a cluster of vegetation can lead to one to two orders of reduction in the drag forces, and [Gaylord et al. (2008)](#) showed that the drag formulation is also species dependent. These additional complexities are outside the scope of the current study. In this paper, we assume $C_{Dv}$ is a constant, but a vertically varying $C_{Dv}$ (as suggested by [Nepf and Vivoni 2000](#) and others) can be easily added as well; the latter can be used to approximate flexible stems ([Nepf and Vivoni 2000](#); Luhar and Nepf 2011).
 
-Since SCHISM allows ‘polymorphism’ with mixed 2D and 3D cells in a single grid (Zhang et al. 2016), we have different forms for the vertical eddy viscosity term $\pmb{m}_z$ and vegetation term $L(x, y, z)$. 
+Since SCHISM allows ‘polymorphism’ with mixed 2D and 3D cells in a single grid ([Zhang et al. 2016](#zhang2016)), we have different forms for the vertical eddy viscosity term $\pmb{m}_z$ and vegetation term $L(x, y, z)$. 
 
 \begin{equation}
 \begin{aligned}
@@ -94,7 +94,7 @@ At the sea surface, SCHISM enforces the balance between the internal Reynolds st
 \nu \frac{\partial \pmb{u}}{\partial z} = \pmb{\tau}_w, \text{ at } z = \eta
 \end{equation}
 
-where the stress $\pmb{\tau}_z$ can be parameterized using the approach of Zeng et al. (1998) or the simpler approach of Pond and Pickard (1998). If the Wind Wave Model is invoked, it can also be calculated from the wave model.
+where the stress $\pmb{\tau}_z$ can be parameterized using the approach of [Zeng et al. (1998)](#zeng1998) or the simpler approach of [Pond and Pickard (1998)](#pond1998). If the Wind Wave Model is invoked, it can also be calculated from the wave model.
 
 Because the bottom boundary layer is usually not well resolved in ocean models, the no-slip condition at the sea or river bottom ($\pmb{u} = w = 0$) is replaced by a balance between the internal Reynolds stress and the bottom frictional stress. 
 
@@ -132,10 +132,10 @@ and the drag coefficient is calculated from Eq. 7, 8, and 11 as -
 C_D = \left( \frac{1}{\kappa_0} ln(\delta_b/z_0) \right) ^{-2}
 \end{equation}
 
-which is the drag formula as discussed in Blumberg and Mellor (1987). Eq. 11 also shows that the vertical viscosity term in the momentum equation vanishes inside the boundary layer. This fact will be utilized in the numerical formulation.
+which is the drag formula as discussed in [Blumberg and Mellor (1987)](#blumberg1987). Eq. 11 also shows that the vertical viscosity term in the momentum equation vanishes inside the boundary layer. This fact will be utilized in the numerical formulation.
 
 ## Turbulence closure
-Eq 1-4 are not closed and must be supplemented by turbulence closure equations for the viscosity/diffusivity. We use the Generic Length-scale (GLS) model of Umlauf and Burchard (2003), which has the advantage of encompassing most of the Eq 6 closure models $k-\varepsilon$ (Rodi 1984); $k-\omega$ (Wilcox 1998; Mellor and Yamada, 1982). In this framework, the transport, production, and dissipation of the turbulent kinetic energy ($K$) and of a generic length-scale variable ($\psi$) are governed by - 
+Eq 1-4 are not closed and must be supplemented by turbulence closure equations for the viscosity/diffusivity. We use the Generic Length-scale (GLS) model of [Umlauf and Burchard (2003)](#umlauf2003), which has the advantage of encompassing most of the Eq 6 closure models $k-\varepsilon$ ([Rodi 1984](#rodi1984)); $k-\omega$ ([Wilcox 1998](#wilcox1998); [Mellor and Yamada, 1982](#mellor1982)). In this framework, the transport, production, and dissipation of the turbulent kinetic energy ($K$) and of a generic length-scale variable ($\psi$) are governed by - 
 
 \begin{equation}
 \frac{Dk}{Dt} = \frac{\partial}{\partial z} \left( \nu_k^{\psi} \frac{\partial k}{\partial z} \right) + \nu M^2 + \kappa N^2 - \varepsilon + c_{fk} \alpha \left| \pmb{u} \right|^3 \mathcal{H} (z_v - z)
@@ -145,7 +145,7 @@ Eq 1-4 are not closed and must be supplemented by turbulence closure equations f
 \frac{D \psi}{Dt} = \frac{\partial}{\partial z} \left( \nu_{\psi} \frac{\partial \psi}{\partial z} \right) + \frac{\psi}{k}\left[ c_{\psi 1} \nu M^2 + c_{\psi 3} \kappa N^2 - c_{\psi 2}\varepsilon F_{wall} + c_{f\psi} \alpha \left| \pmb{u} \right|^3 \mathcal{H}(z_v-z) \right]
 \end{equation}
 
-where $\nu_k^{\psi}$ and $\nu_{\psi}$ are vertical turbulent diffusivities, $c_{\psi 1}$, $c_{\psi 2}$, and $c_{\psi 3}$ are model-specific constants (Umlauf and Burchard 2003), $F_{wall}$ is a wall proximity function, $M$ and $N$ are shear and buoyancy frequencies, and $\varepsilon$ is a dissipation rate. The generic length-scale is defined as - 
+where $\nu_k^{\psi}$ and $\nu_{\psi}$ are vertical turbulent diffusivities, $c_{\psi 1}$, $c_{\psi 2}$, and $c_{\psi 3}$ are model-specific constants ([Umlauf and Burchard 2003](#umlauf2003)), $F_{wall}$ is a wall proximity function, $M$ and $N$ are shear and buoyancy frequencies, and $\varepsilon$ is a dissipation rate. The generic length-scale is defined as - 
 
 \begin{equation}
 \psi = (c_{\mu}^0)^p K^m \ell^n
@@ -162,7 +162,7 @@ where $c_{\mu}^0 = 0.3^{1/2}$ and $\ell$ is the turbulence mixing length. The sp
 \end{aligned}
 \end{equation}
 
-where the Schmidt numbers $\sigma_k^{\psi}$ and $\sigma_{\psi}$ are model-specific constants. The stability functions ($s_m$ and $s_h$) are given by an Algebraic Stress Model (e.g.: Kantha and Clayson 1994, Canuto et al. 2001, or Galperin et al. 1988). Following Shimizu and Tsujimoto (1994; ST94 hereafter), we set $c_{fk} = 0.07$ and $c_{f\psi} = 0.16$.
+where the Schmidt numbers $\sigma_k^{\psi}$ and $\sigma_{\psi}$ are model-specific constants. The stability functions ($s_m$ and $s_h$) are given by an Algebraic Stress Model (e.g.: [Kantha and Clayson 1994](#kantha1994), [Canuto et al. 2001](#canuto2001), or [Galperin et al. 1988](#galperin1988)). Following [Shimizu and Tsujimoto (1994; ST94 hereafter)](#), we set $c_{fk} = 0.07$ and $c_{f\psi} = 0.16$.
 
 At the free surface and at the bottom of rivers and oceans, the turbulent kinetic energy and the mixing length are specified as Direchlet boundary conditions - 
 
@@ -177,4 +177,19 @@ K = \frac{1}{2} B_1^{2/3} \left| \pmb{\tau_b} \right|, \text{ or } \frac{1}{2} B
 where $\pmb{\tau_b}$ is a bottom frictional stress, $\kappa_0 = 0.4$ is the von Karman’s constant, $B_1$ is a constant, and $d_b$ and $d_s$ are the distances to the bottom and the free surface, respectively.
 
 ## Air-sea exchange
-We use the bulk aerodynamic module of Zeng et al. (1998), which can be viewed [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Zeng_etal_JClimate_1998-BulkAerodynamic-Model.pdf).
+We use the bulk aerodynamic module of [Zeng et al. (1998)](#zeng1998), which can be viewed [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Zeng_etal_JClimate_1998-BulkAerodynamic-Model.pdf).
+
+
+**References**
+
+<span id="blumberg1987">Blumberg, A.F. and G.L. Mellor (1987) A description of a three-dimensional coastal ocean circulation model. In: Three-Dimensional Coastal Ocean Models, vol. 4, Coastal and Estuarine Studies, N. Heaps, editor, Washington, D.C.: AGU, pp. 1-16.</span>
+<span id="canuto2001">Canuto, V.M., A. Howard, Y. Cheng and M.S. Dubovikov (2001) Ocean turbulence I: one-point closure model. Momentum and heat vertical diffusivities. J. Phys. Oceano., 31, pp. 1413-1426.</span>
+<span id="galperin1988">Galperin, B., L. H. Kantha, S. Hassid and A. Rosati (1988) A quasi-equilibrium turbulent energy model for geophysical flows. J. Atmos. Sci., 45, pp. 55-62.</span>
+<span id="kantha1994">Kantha, L.H. and C.A. Clayson (1994) An improved mixed layer model for geophysical applications. J. Geophy. Res, 99(25), pp. 235-266.</span>
+<span id="mellor1982">Mellor, G.L. and T. Yamada (1982) Development of a turbulence closure model for geophysical fluid problems. Rev. Geophys., 20, pp. 851-875.</span>
+<span id="pond1998">Pond, S. and G.L. Pickard (1998) Introductory Dynamical Oceanography, Butterworth-Heinmann.</span>
+<span id="rodi1984">Rodi, W. (1984) Turbulence models and their applications in hydraulics: a state of the art review. Delft, The Netherlands, International Association for Hydraulics Research.</span>
+<span id="umlauf2003">Umlauf, L. and H. Burchard (2003) A generic length-scale equation for geophysical turbulence models. J. Mar. Res., 6, pp. 235-265.</span>
+<span id="wilcox1998">Wilcox, D.C. (1998) Reassessment of scale determining equation for advance turbulence models. AIAA J., 26, pp. 1299-1310.</span>
+<span id="zeng1998">Zeng, X., M. Zhao and R.E. Dickinson (1998) Intercomparison of bulk aerodynamic algorithms for the computation of sea surface fluxes using TOGA COARE and TAO data. J. Clim., 11, pp. 2628-2644.</span>
+<span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span>
