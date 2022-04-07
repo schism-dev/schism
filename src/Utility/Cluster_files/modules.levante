@@ -9,8 +9,10 @@ module load openmpi/4.1.2-gcc-11.2.0
 module load ${NETCDF_C_MODULE}
 module load ${NETCDF_Fortran_MODULE}
 
-echo MPIF90=${MPIF90}
+##echo MPIF90=${MPIF90}
 echo MPICC=${MPICC}
+
+export MPIF90=mpifort
 
 P=$(module show  ${NETCDF_C_MODULE}|awk  '/bin/{print $3}')
 export NetCDF_C_DIR=${P%%/bin}
