@@ -1726,9 +1726,9 @@
 !0821
 #endif /*Tsinghua group*/
 
-!     for output
+!     for output and init for abnormal cases
       airt1=0.d0; shum1=0.d0;  airt2=0.d0; shum2=0.d0; srad=0.d0; fluxsu=0.d0; fluxlu=0.d0
-      hradu=0.d0; hradd=0.d0; sflux=0.d0; windx=0.d0; windy=0.d0
+      hradu=0.d0; hradd=0.d0; sflux=0.d0; windx=0.d0; windy=0.d0; tauxz=0.d0; tauyz=0.d0
       q2=0.d0; xl=0.d0 !for hotstart with itur/=3 only
       dfq1=0.d0; dfq2=0.d0 !for hotstart
       fluxevp=0.d0; fluxprc=0.d0

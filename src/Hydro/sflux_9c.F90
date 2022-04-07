@@ -620,6 +620,10 @@
 ! precalculate constants
         one_third = 1.0d0 / 3.0d0
 
+! Init tau_xz for dry
+!        tau_xz=0.d0
+!        tau_yz=0.d0
+
 ! now loop over all points
 !$OMP parallel do default(shared) private(i_node,dry,sfc_lev,e_sfc,q_sfc,mix_ratio, &
 !$OMP theta_air,theta_v_air,delta_theta,delta_q,delta_theta_v,t_v,rho_air,speed_air, &
@@ -911,7 +915,7 @@
 !     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 )
 !#endif /* SCHISM */
 
-          if (speed_res .gt. 0.0d0) then
+          if(speed_res>0.0d0.and.speed>0.1d0) then
             tau = rho_air * u_star * u_star * speed_res / speed
             tau_xz(i_node) =-tau*(u_air(i_node)-uu2(sfc_lev,i_node))/speed_res
 !#ifndef SCHISM
@@ -946,7 +950,7 @@
 
 !=================================================================
 ! end of loop over points
-        enddo !i_node
+        enddo !i_node= 1, num_nodes !=npa
 !$OMP end parallel do 
 
 #ifdef DEBUG
