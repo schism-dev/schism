@@ -43,4 +43,4 @@
 7. See [Case studies](../case-study.md) commonly encountered issues in 3D setup.
 
 !!!note A Beginners guide
-    A good resource for beginners is a mini live [manual](https://www.overleaf.com/project/6122fe048b59c97d57109608) written on Overleaf by Ms. Christelle Auguste (U. of Tasmania).
+    Another good resource for beginners is a mini live [manual](https://www.overleaf.com/project/6122fe048b59c97d57109608) written on Overleaf by Ms. Christelle Auguste (U. of Tasmania).
