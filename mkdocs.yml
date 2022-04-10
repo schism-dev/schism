@@ -101,6 +101,7 @@ nav:
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
+    - FABM: modules/fabm.md
   - Code contribution: code-contribution.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
