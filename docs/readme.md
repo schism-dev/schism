@@ -4,7 +4,7 @@
 The basic install only requires `mkdocs` and `mkdocs_materials` to be installed. This can be done system-wide using the system python installation (and associated `pip` command). 
 
 ```bash
-pip install mkdocs mkdocs_materials
+pip install mkdocs mkdocs_material mkdocs-with-pdf
 ```
 
 To check where `pip` is located, use `which pip` in linux/unix system.

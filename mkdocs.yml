@@ -38,6 +38,8 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.superfences
   - pymdownx.details
+  - toc:
+      permalink: true
 
 extra_css:
   - stylesheets/extra.css
@@ -99,8 +101,9 @@ nav:
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
-  - How to contribute: code-contribution.md
+  - Code contribution: code-contribution.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
   - Publications: publications.md
   - Frequently Asked Questions: faq.md
+  - Contribute to this online manual: contribute-to-this-online-manual.md
