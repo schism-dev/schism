@@ -69,26 +69,26 @@ subroutine ecosystem(it)
 
   !local variables
   integer :: i,ie,ip,id,j,k,m,nv,icount,jsj,nd
-  real(rkind) :: time,day,dz,h,usf
+  real(rkind) :: time,dz,h,usf
   real(rkind),allocatable :: swild(:,:) !for exchange only
   logical :: fnan, frange
 
   !local variables
   integer :: klev,kcnpy,istat
   real(rkind) :: tmp,tmp1,tmp2
-  real(rkind) :: sLight,sLight0,bLight,mLight,rKe,chl,rKeh,xT,xS,rIK,rIs(3),rat
+  real(rkind) :: sLight,bLight,mLight,rKe,chl,rKeh,xT,xS,rIK,rIs(3),rat
   real(rkind) :: SAtd,rtmp,rval,rval2
   real(rkind) :: GPT0(3),rlFI,rlFN,rlFP,rlFS,rlFSal
   real(rkind) :: tdep
   !sav
-  real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeh0,rKeh2 !light
+  real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeS,rKeV,rKeh0,rKeh2 !light
   real(rkind) :: sdep
   real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1)
   real(rkind) :: xtsav,dzt,hdep
   !veg
   real(rkind) :: atemp,asalt
   real(rkind) :: iabvcnpyveg,iatcnpyveg,ikveg,iwcveg
-  real(rkind) :: rKehabveg(3),rKehblveg(3),rKeveg,sdveg,cndep
+  real(rkind) :: rKehV(3,2),sdveg
 
   !local variables
   real(rkind) :: sum1,k1,k2,a,b,fp,x,s,T
@@ -108,6 +108,7 @@ subroutine ecosystem(it)
   real(rkind) :: nprsav,fnsedsav,fpsedsav,denssav
   real(rkind) :: densveg(3)
 
+  time=it*dt
   do id=1,nea
     if(jdry==0.and.idry_e(id)==1.and.(jveg==0.or.vpatch(id)==0)) cycle
 
@@ -117,12 +118,6 @@ subroutine ecosystem(it)
     WSSEDn=wp%WSSEDn(id); WSPOMn=wp%WSPOMn(id,:); WSPBSn=wp%WSPBSn(id,:)
     KC0=wp%KC0(id,:);     KP0=wp%KP0(id,:);       KPalg=wp%KPalg(id,:)
     c2chl=wp%c2chl(id,:); WRea=wp%WRea(id);       Ke0=wp%Ke0(id)
-
-    !compute local time
-    time=it*dt; day=time/86400.0
-
-    !rIa from sflux (unit: W/m2)
-    if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
 
     !surface renewal rate for DO reareation: change to surface velocity
     usf=0.0; icount=0
@@ -192,18 +187,18 @@ subroutine ecosystem(it)
           TSED(m)=TSED(m)+1.0d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0)
         enddo !
       endif!iKe
-
     enddo!k::kbe(id)+1,nvrt
+
+    !compute total water depth
+    tdep=sum(dep(1:nv))
+    if(tdep<1.e-5) call parallel_abort('illegal tdep')
+
     !**********************************************************************************
 
     !**********************************************************************************
     !calculation on growth rate of phytoplankton
     !call photosynthesis(id,hour,nv,it)
     !**********************************************************************************
-    !compute total water depth
-    tdep=sum(dep(1:nv))
-    if(tdep<1.e-5) call parallel_abort('illegal tdep')
-
     if(jsav==1.and.spatch(id)==1) then
       if(idry_e(id)==1) then
          !no SAV for dry elem (intertial zone); once it becomes dry, no SAV any longer
@@ -235,13 +230,6 @@ subroutine ecosystem(it)
       endif!idry_e
     endif!jsav
 
-    !init for sav light attenuation
-    !above canopy; new half layer under canopy;  accumulated above current layer under canopy
-    rKeh0=0.0;  rKeh2=0.0
-
-    !light attenuation for veg growth
-    rKehabveg(:)=0.0;  rKehblveg(:)=0.0
-
     !--------------------------------------------------------------------------------
     !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
     !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
@@ -250,117 +238,93 @@ subroutine ecosystem(it)
     !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
     !endif !iTBen
 
+    !above canopy; new half layer under canopy;  accumulated above current layer under canopy
+    rKeh0=0.0;  rKeh2=0.0
+
+    !light attenuation for veg growth
+    rKehV=0.0
+
     !PB::init
     GP(:,id,:)=0.0;  sbLight(id)=0.0
 
-    if(rIa>30) then !photosynthesis critia, in unit of W/m^2, for case iRad=0
-      !sLight0 saves the surface light intensity, and sLight is in-situ value at certain layer
-      sLight0=rIa !unit: W/m^2
+    !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
+    if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
 
-      !light attenuation caused by the veg above water
-      sLight=sLight0
-      if(jveg==1.and.vpatch(id)==1) then
-        rtmp=0
-        do j=1,3
-          if(vht(id,j)-tdep>1.e-5) then
-            rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*(vht(id,j)-tdep)/max(1.e-5,vht(id,j))
-          endif !non-submerged
-        enddo !
-        sLight=max(sLight0*exp(-rtmp),1.d-8)
-      endif !jveg
+    if(rIa>30) then !photosynthesis critia, in unit of W/m^2, for case iRad=0
+      sLight=rIa
 
       do k=1,nv
+        klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
 
-        !calculate CHLA
+        !light attenuation due to (water,chlorophyll,TSS)
         chl=max(PB1(k,1)/c2chl(1)+PB2(k,1)/c2chl(2)+PB3(k,1)/c2chl(3),0.d0)
-
-        !light attenuation coefficient rKe for PB; SAV/VEG impact on Ke is automatically included 
         if(iKe==0.or.iKe==1) then
           rKe0=Ke0+KeC*chl+KeS*TSED(k)
         elseif(iKe==2) then
           rKe0=Ke0+KeC*chl+KeSalt*salt(k)
         endif !iKe
 
-        !light attenuation due to SAV/VEG
-        klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-
-        !rKeveg (for marsh) based on rKe (for PB)
-        rKeveg=rKe0
+        !light attenuation due to SAV 
+        rKeS=0.d0
         if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
           if((ze(klev-1,id)-ze(kbe(id),id))<sht(id)) then
-            rKeveg=rKe0+sKe*(sleaf(klev,id)+sstem(klev,id))
+            rKeS=sKe*(sleaf(klev,id)+sstem(klev,id))
           endif !ze
         endif !isav
 
-        !renew rKe0 (for sav; future for PB)
+        !light attenuation due to VEG
+        rKeV=0.d0
         if(jveg==1.and.vpatch(id)==1) then
+          rtmp=0
           do j=1,3
-            if(idry_e(id)==1) then !dry elem, no sav
-              rKe0=rKe0+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
-            else !wet elem
-              if(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id)) then
-                rKe0=rKe0+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
-              endif !ze
-            endif !idry_e
-          enddo !j::veg species
-        endif !wet elem + veg
+            if(idry_e(id)==1 .or. (idry_e(id)==0.and.ze(klev-1,id)<(vht(id,j)+ze(kbe(id),id)))) then 
+              rKeV=rKeV+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
+            endif 
+            !light attenuation due to VEG above water
+            if(k==1) rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*max(vht(id,j)-tdep,1.d-5)/max(1.e-5,vht(id,j))
+          enddo 
+          if(k==1) sLight=max(rIa*exp(-rtmp),1.d-8)
 
-        !rKe0 and rKeh0 is only for SAV, where rKe0 contains attenuation from PB+marsh
-        rKe=rKe0
-        if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-          if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
-            rKe=rKe0+sKe*(sleaf(klev,id)+sstem(klev,id))
-          endif !ze
-        endif !isav
-
-        !rKeh (for PB) accumulate the light attenuation for layer k, include shading from sav+marsh
-        !uptil now, rKe and rKeh (for PB) for current layer calculated
-        rKeh=min(rKe*dep(k),20.d0)
-        bLight=sLight*exp(-rKeh)
-
-        !---------------------
-        !hdep and rKeh0 (for sav) calculated with the if statement from surface to layer above canopy
-        !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
-        !hdep: total distance from surface to the bottom level of the layer above sav canopy
-        if(jsav==1.and.spatch(id)==1) then
-          if(ze(klev-1,id)>=sht(id)+ze(kbe(id),id))then
-            rKeh0=rKeh0+rKe0*dep(k)
-            hdep=hdep+dep(k)
-          endif !ze
-        endif !isav
-
-        !---------------------
-        if(jveg==1.and.vpatch(id)==1) then
+          !pre-compute light for VEG
           if(idry_e(id)==1) then !dry elem
             do j=1,3
               if(tdep-vht(id,j)>1.e-5) then
-                !if canopy is in this layer
-                cndep=vht(id,j)
-                rKehabveg(j)=rKehabveg(j)+rKeveg*(dep(k)-cndep)
-                rKehblveg(j)=rKehblveg(j)+rKeveg*cndep
+                !if canopy is in this layer !potentail bug, dep-> tdep
+                rKehV(j,1)=rKehV(j,1)+(rKe0+rKeS)*(dep(k)-vht(id,j))
+                rKehV(j,2)=rKehV(j,2)+(rKe0+rKeS)*vht(id,j)
               else
                 !if this layer is under canopy
-                rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k)
+                rKehV(j,2)=rKehV(j,2)+(rKe0+rKeS)*dep(k)
               endif !tdep
             enddo !j::veg species
           else !wet elem
             do j=1,3
               if(ze(klev-1,id)>=vht(id,j)+ze(kbe(id),id)) then
                 !if there are layers above canopy
-                rKehabveg(j)=rKehabveg(j)+rKeveg*dep(k)
+                rKehV(j,1)=rKehV(j,1)+(rKe0+rKeS)*dep(k)
               elseif(ze(klev-1,id)<vht(id,j)+ze(kbe(id),id).and.ze(klev,id)>=vht(id,j)+ze(kbe(id),id)) then
                 !if canopy is in this layer
-                cndep=vht(id,j)+ze(kbe(id),id)-ze(klev-1,id)
-                rKehabveg(j)=rKehabveg(j)+rKeveg*(dep(k)-cndep)
-                rKehblveg(j)=rKehblveg(j)+rKeveg*cndep
+                rKehV(j,1)=rKehV(j,1)+(rKe0+rKeS)*(dep(k)-(vht(id,j)+ze(kbe(id),id)-ze(klev-1,id)))
+                rKehV(j,2)=rKehV(j,2)+(rKe0+rKeS)*(vht(id,j)+ze(kbe(id),id)-ze(klev-1,id))
               else
                 !if this layer is under canopy
-                rKehblveg(j)=rKehblveg(j)+rKeveg*dep(k)
+                rKehV(j,2)=rKehV(j,2)+(rKe0+rKeS)*dep(k)
               endif !ze
             enddo !j::veg species
           endif !idry_e
         endif !jveg
 
+        !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
+        !hdep: total distance from surface to the bottom level of the layer above sav canopy
+        if(jsav==1.and.spatch(id)==1.and. (ze(klev-1,id)-ze(kbe(id),id))<sht(id)) then 
+            rKeh0=rKeh0+(rKe0+rKeV)*dep(k);  hdep=hdep+dep(k)
+        endif !isav
+
+        !total light attenuation
+        rKe=rKe0+rKeS+rKeV;  rKeh=min(rKe*dep(k),20.d0)
+        bLight=sLight*exp(-rKeh)
+
+        !---------------------
         do i=1,3
           !growth rate adjusted by temperature
           xT=temp(k)-TGP(i)
@@ -430,11 +394,11 @@ subroutine ecosystem(it)
               spmax(klev,id)=sGPM*exp(-sKTGP(2)*xT*xT)
             endif
 
-            iabvcnpysav=max(sLight0*exp(-rKeh0),0.d0) !account from light at water surface
+            iabvcnpysav=max(rIa*exp(-rKeh0),0.d0) !account from light at water surface
 
             !light at canopy height
             if (k==kcnpy) then!k from surface downwards, kcnpy is the first, so no need to over init
-              iatcnpysav=iabvcnpysav*max(exp(-rKe0*(sdep-hdep)),1.d-5)
+              iatcnpysav=iabvcnpysav*max(exp(-(rKe0+rKeV)*(sdep-hdep)),1.d-5)
             endif !k==kcnpy
 
             !light on leave
@@ -442,12 +406,12 @@ subroutine ecosystem(it)
               if (k==kcnpy) then
                 !half of thickness in ze(klev,id) for attenuation
                 dzt=sht(id)+ze(kbe(id),id)-(sht(id)+ze(kbe(id),id)+ze(klev-1,id))/2.0
-                tmp=rKe0*dzt+sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
-                rKeh2=rKeh2+2.*rKe0*dzt  !accumulation from canopy downwards
+                tmp=(rKe0+rKeV)*dzt+sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+                rKeh2=rKeh2+2.*(rKe0+rKeV)*dzt  !accumulation from canopy downwards
               else
                 dzt=ze(klev,id)-(ze(klev,id)+ze(klev-1,id))/2.0 !ze(klev,id)
-                tmp=rKeh2+ rKe0*dzt +sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
-                rKeh2=rKeh2+2.*rKe0*dzt !accumulation from canopy downwards
+                tmp=rKeh2+ (rKe0+rKeV)*dzt +sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+                rKeh2=rKeh2+2.*(rKe0+rKeV)*dzt !accumulation from canopy downwards
               endif !kcnpy
 
               rat=0.397 !W/m2 to E/m2/day
@@ -513,8 +477,8 @@ subroutine ecosystem(it)
           !light supply
            rat=0.397 !W/m2 to E/m2/day
 
-          iatcnpyveg=sLight0*exp(-rKehabveg(j)) !accumulated attenuation from PB, sav and other marsh species
-          tmp=sdveg+rKehblveg(j)
+          iatcnpyveg=rIa*exp(-rKehV(j,1)) !accumulated attenuation from PB, sav and other marsh species
+          tmp=sdveg+rKehV(j,2)
 
           if(tmp>20) then
             iwcveg=iatcnpyveg*rat/tmp
