@@ -75,10 +75,9 @@ subroutine ecosystem(it)
 
   !local variables
   integer :: klev,kcnpy,istat
-  real(rkind) :: tmp,tmp1,tmp2
-  real(rkind) :: sLight,bLight,mLight,rKe,chl,rKeh,xT,xS,rIK,rIs(3),rat
-  real(rkind) :: SAtd,rtmp,rval,rval2
-  real(rkind) :: GPT0(3),rlFI,rlFN,rlFP,rlFS,rlFSal
+  real(rkind) :: tmp,tmp1,tmp2,fT,fST,fR,fN,fP,fS,fC
+  real(rkind) :: wLight(nvrt),mLight,rKe,chl,rKeh,xT,xS,rIK,rIs(3),rat
+  real(rkind) :: SAtd,rtmp,rval
   real(rkind) :: tdep
   !sav
   real(rkind) :: iwcsav,iabvcnpysav,iatcnpysav,iksav,rKe0,rKeS,rKeV,rKeh0,rKeh2 !light
@@ -91,7 +90,7 @@ subroutine ecosystem(it)
   real(rkind) :: rKehV(3,2),sdveg
 
   !local variables
-  real(rkind) :: sum1,k1,k2,a,b,fp,x,s,T
+  real(rkind) :: sum1,k1,k2,a,b,rfp,x,s,T
   real(rkind) :: zdep(nvrt+1),rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB
   real(rkind) :: rKTM(3),rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
@@ -245,13 +244,13 @@ subroutine ecosystem(it)
     rKehV=0.0
 
     !PB::init
-    GP(:,id,:)=0.0;  sbLight(id)=0.0
+    GP(:,id,:)=0.0;  sbLight(id)=0.0; wLight=0.0
 
     !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
     if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
 
     if(rIa>30) then !photosynthesis critia, in unit of W/m^2, for case iRad=0
-      sLight=rIa
+      wLight(1)=rIa
 
       do k=1,nv
         klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
@@ -283,7 +282,7 @@ subroutine ecosystem(it)
             !light attenuation due to VEG above water
             if(k==1) rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*max(vht(id,j)-tdep,1.d-5)/max(1.e-5,vht(id,j))
           enddo 
-          if(k==1) sLight=max(rIa*exp(-rtmp),1.d-8)
+          if(k==1) wLight(1)=max(rIa*exp(-rtmp),1.d-8)
 
           !pre-compute light for VEG
           if(idry_e(id)==1) then !dry elem
@@ -322,65 +321,62 @@ subroutine ecosystem(it)
 
         !total light attenuation
         rKe=rKe0+rKeS+rKeV;  rKeh=min(rKe*dep(k),20.d0)
-        bLight=sLight*exp(-rKeh)
+        wLight(k+1)=wLight(k)*exp(-rKeh)
 
         !---------------------
         do i=1,3
-          !growth rate adjusted by temperature
+          fST=1.0; fC=1.0; fPN(k,i)=1.0
+          
+          !temperature factor
           xT=temp(k)-TGP(i)
           if(xT>0.0) then
-            GPT0(i)=GPM(i)*exp(-KTGP(i,1)*xT*xT)
+            fT=exp(-KTGP(i,1)*xT*xT)
           else
-            GPT0(i)=GPM(i)*exp(-KTGP(i,2)*xT*xT)
+            fT=exp(-KTGP(i,2)*xT*xT)
           endif
 
-          !light limitation function for PB
+          !light factor
           if(iLight==0) then !Cerco, convert rIa to E/m^2/day
             rat=0.397d0 !W/m2 to E/m2/day
-
-            mLight=0.5*(sLight+bLight)*rat !from W/m2 to E/m2/day
-            rIK=(1.d3*c2chl(i))*GPT0(i)/alpha(i)
-            rlFI=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
+            mLight=0.5*(wLight(k)+wLight(k+1))*rat !from W/m2 to E/m2/day
+            rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
+            fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
           elseif(iLight==1) then !Chapra S.C.
             !calculate optimal light intensity for PB
             if(k==1) rIs(i)=max(rIavg*exp(-rKe*Hopt(i)),Iopt(i))
-            rlFI=2.718*(exp(-bLight/rIs(i))-exp(-sLight/rIs(i)))/rKeh
+            fR=2.718*(exp(-wLight(k+1)/rIs(i))-exp(-wLight(k)/rIs(i)))/rKeh
           else
             call parallel_abort('unknown iLight in icm.F90')
           endif
 
-          !Nitrogen Limitation function for PB
-          if((NH4(k,1)+NO3(k,1))==0.0) then
-            PrefN(k,i)=1.0
+          !nitrogen limitation
+          if(NH4(k,1)+NO3(k,1)>0.d0) then 
+            fPN(k,i)=(NH4(k,1)/(KhN(i)+NO3(k,1)))*(NO3(k,1)/(KhN(i)+NH4(k,1))+KhN(i)/(NH4(k,1)+NO3(k,1)+1.e-6))
+          endif
+          fN=(NH4(k,1)+NO3(k,1))/(NH4(k,1)+NO3(k,1)+KhN(i))
+
+          !phosphorus limitation
+          PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k));  fP=PO4td/(PO4td+KhP(i))
+
+          !silica limitation 
+          SAtd=SAt(k,1)/(1.0+KSAp*TSED(k)); fS=SAtd/(SAtd+KhS)
+          if(iLimitSi==0.or.i/=1) fS=1.0
+
+          !CO2 limitation
+          if(iPh==1.and.iphgb(id)/=0) fC=TIC(k,1)**2.d0/(TIC(k,1)**2.d0+25.0)
+
+          !salinity limitation 
+          if(i==3) fST=KhSal*KhSal/(KhSal*KhSal+salt(k)*salt(k))
+
+          !total limitation
+          if(iLimit==0) then 
+            GP(k,id,i)=GPM(i)*fT*fST*fR*min(fN,fP,fS)*fC
+          elseif(iLimit==1) then 
+            GP(k,id,i)=GPM(i)*fT*fST*min(fR,fN,fP,fS)*fC
           else
-            PrefN(k,i)=(NH4(k,1)/(KhN(i)+NO3(k,1)))*(NO3(k,1)/(KhN(i)+NH4(k,1))+KhN(i)/(NH4(k,1)+NO3(k,1)+1.e-6))
+            call parallel_abort('unknown iLimit in icm.F90')
           endif
-          rlFN=(NH4(k,1)+NO3(k,1))/(NH4(k,1)+NO3(k,1)+KhN(i))
-
-          !P Limit limitation function for PB
-          PO4td=PO4t(k,1)/(1.0+KPO4p*TSED(k));  rlFP=PO4td/(PO4td+KhP(i))
-
-          !Silica Limitation 
-          SAtd=SAt(k,1)/(1.0+KSAp*TSED(k));  rlFS=SAtd/(SAtd+KhS)
-          if(iLimitSi==0.or.i/=1) rlFS=1.0 
-
-          !Salinity Limitation 
-          rlFSal=KhSal*KhSal/(KhSal*KhSal+salt(k)*salt(k))
-          if(i/=3) rlFSal=1.0
-
-          if(iLimit==0) GP(k,id,i)=GPT0(i)*rlFI*min(rlFN,rlFP,rlFS)*rlFSal
-          if(iLimit==1) GP(k,id,i)=GPT0(i)*min(rlFI,rlFN,rlFP,rlFS)*rlFSal
-
-          !TIC limitation
-          if(iPh==1) then
-            if(iphgb(id)/=0) then
-              rtmp=TIC(k,1)*TIC(k,1) !*2.d0
-              GP(k,id,i)=GP(k,id,i)*rtmp/(rtmp+25.0)
-            endif
-          endif
-
-        enddo !i::PB1,PB2,PB3
-        sLight=bLight
+        enddo 
 
         !--------------------------------------------------------------------------------
         !for SAV
@@ -502,7 +498,7 @@ subroutine ecosystem(it)
       !--------------------------------------------------------------------------------
 
       !renew light supply to sediment (for benthic algae)
-      sbLight(id)=bLight
+      sbLight(id)=wLight(nv+1)
     endif !rIa>30
 
     !**********************************************************************************
@@ -570,18 +566,10 @@ subroutine ecosystem(it)
       endif !k==nv.and.iBen/=0
 
       if(iSed==1) then !sediment fluxes
-        if(iPh==1) then
-          if(iphgb(id)/=0) then
-            rval=1.3*(PH(nv)-8.5)
-            BnPO4t=max(BnPO4t*exp(rval),0.02)
-            !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
-            !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
-
-            if(abs(rval)>10.) then
-              write(errmsg,*)'Unknown ICM ph model:', PH(nv),rval
-              call parallel_abort(errmsg)
-            endif
-          endif
+        if(iPh==1 .and.  iphgb(id)/=0) then
+          BnPO4t=max(BnPO4t*exp(1.3*(PH(nv)-8.5)),0.02)
+          !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
+          !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
         endif
 
         nDOC =nDOC +BnDOC
@@ -591,12 +579,6 @@ subroutine ecosystem(it)
         nSAt =nSAt +BnSAt
         nCOD =nCOD +BnCOD
         nDO  =nDO  +BnDO
-
-        !check
-        if(fnan(BnDOC).or.fnan(BnNH4).or.fnan(BnNO3).or.fnan(BnPO4t).or.fnan(BnSAt).or.fnan(BnCOD).or.fnan(BnDO)) then
-          write(errmsg,*)'ICM sed_flux: nan found :',ielg(id),BnDOC,BnNH4,BnNO3,BnPO4t,BnCOD,BnDO,BnSAt
-          call parallel_abort(errmsg)
-        endif
       endif !iSed
 
       if(iTBen==1)then!simplified sediment fluxes
@@ -729,33 +711,16 @@ subroutine ecosystem(it)
         b=vpleaf(id,j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(id,j)
         vtstem(id,j)=(b*dtw+vtstem(id,j))/(1.0+a*dtw)
 
-        !nan check
-        if(.not.(vtstem(id,j)>0.or.vtstem(id,j)<=0))then
-          write(errmsg,*)'nan found in stveg:',vtstem(id,j),ielg(id),j,it,ielg(id)
-          call parallel_abort(errmsg)
-        endif
-
         !rtveg
         a=bmrtveg(j)
         b=vpleaf(id,j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(id,j)
         vtroot(id,j)=(b*dtw+vtroot(id,j))/(1.0+a*dtw)
-        !nan check
-        if(.not.(vtroot(id,j)>0.or.vtroot(id,j)<=0))then
-          write(errmsg,*)'nan found in rtveg:',vtroot(id,j),ielg(id),j,it,ielg(id)
-          call parallel_abort(errmsg)
-        endif
       enddo !j::veg species
     endif !jveg
 
     !state variables at each layer
     do k=1,nv
       klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-
-      !check
-      if((jsav==1.and.spatch(id)==1 .or. jveg==1.and.vpatch(id)==1) .and. (kbe(id)<1.or.klev<=1)) then
-        write(errmsg,*)'illegal kbe(id) and klev: ',kbe(id),nv,nvrt,ielg(id),klev
-        call parallel_abort(errmsg)
-      endif
 
       if(k==1) then
         !for settling from surface;  init of settling conc
@@ -785,67 +750,26 @@ subroutine ecosystem(it)
         rtmp=sKTBP(1)*(temp(k)-sTBP(1))
         bmlfsav(k)=sBMP(1)*exp(rtmp) !1/day
 
-        !check
-        if(abs(rtmp)>50.0) then
-          write(errmsg,*)'calkwq: check sav lf metabolism:',temp(k),sTBP,sKTBP,rtmp,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-
         rtmp=sKTBP(2)*(temp(k)-sTBP(2))
         bmstsav(k)=sBMP(2)*exp(rtmp) !1/day
 
-        !check
-        if(abs(rtmp)>50.0) then
-          write(errmsg,*)'calkwq: check sav st metabolism:',temp(k),sTBP,sKTBP,rtmp,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-
         rtmp=sKTBP(3)*(temp(k)-sTBP(3))
         bmrtsav(k)=sBMP(3)*exp(rtmp) !1/day
-
-        !check
-        if(abs(rtmp)>50.0) then
-          write(errmsg,*)'calkwq: check sav rt metabolism:',temp(k),sTBP,KTBP,rtmp,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
 
         !calculation of biomass !sleaf
         a=spleaf(klev,id)*(1-sFAM)*sFCP(1)-bmlfsav(k) !1/day
         rtmp=a*dtw
         sleaf(klev,id)=sleaf(klev,id)*exp(rtmp) !sleaf>0 with seeds, =0 for no seeds with rtmp/=0
 
-        !check
-        if(abs(rtmp)>50.0) then
-          write(errmsg,*)'calkwq: check sav lf growth:',a,spleaf(klev,id),bmlfsav(k),sFAM,sFCP,rtmp,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-        if(fnan(sleaf(klev,id)))then
-          write(errmsg,*)'nan found in sleaf:',sleaf(klev,id),ielg(id),k,it,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-
         !sstem
         a=bmstsav(k) !>0
         b=spleaf(klev,id)*(1.-sFAM)*sFCP(2)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
         sstem(klev,id)=(b*dtw+sstem(klev,id))/(1.0+a*dtw) !>0 with seeds
 
-        !nan check
-        if(fnan(sstem(klev,id)))then
-          write(errmsg,*)'nan found in sstem:',sstem(klev,id),ielg(id),k,it,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-
         !sroot
         a=bmrtsav(k) !>0
         b=spleaf(klev,id)*(1.-sFAM)*sFCP(3)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
         sroot(klev,id)=(b*dtw+sroot(klev,id))/(1.0+a*dtw) !>0 with seeds
-
-        !nan check
-        if(fnan(sroot(klev,id)))then
-          write(errmsg,*)'nan found in sroot:',sroot(klev,id),ielg(id),k,it,ielg(id),k
-          call parallel_abort(errmsg)
-        endif
-
       endif !jsav
       !--------------------------------------------------------------------------------------
 
@@ -883,16 +807,6 @@ subroutine ecosystem(it)
           endif !rtmp
           ZBG0(:,i)=ZBG(:,i)
           ZBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i))); tmp2=zKTBP(i)*(temp(k)-zTBP(i)) !metabolism
-
-          !check
-          if(abs(tmp1)>50.0) then
-            write(errmsg,*)'check ICM ZB growth zKTGP, xT: ',xT,zKTGP,tmp1,ielg(id),k
-            call parallel_abort(errmsg)
-          endif
-          if(abs(tmp2)>50.0) then
-            write(errmsg,*)'check ICM ZB zKTBP: ',zKTBP(i),temp(k),zTBP(i),tmp2,ielg(id),k
-            call parallel_abort(errmsg)
-          endif
         enddo !i
         Fish=nz(1)+nz(2)+nz(3)+nz(4)+nz(5) !predation by higher trophic levels
 
@@ -933,12 +847,6 @@ subroutine ecosystem(it)
         !BPR(i)=PRP(i)*exp(rval)
         !BPR(i)=PRP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))
       enddo
-
-      !check
-      if(abs(rval)>50.0.or.KTBP(i)<-50.0) then
-        write(errmsg,*)'check ICM PB KTBP: ',KTBP(i),temp(k),TBP(i),rval,ielg(id),k
-        call parallel_abort(errmsg)
-      endif
 
       !PB1
       a=GP(k,id,1)-PBM(1)-WSPBS(1)/dep(k)
@@ -1290,11 +1198,6 @@ subroutine ecosystem(it)
       endif
       a=-xNit
 
-      if(frange(tmp,0.d0,50.d0)) then
-        write(errmsg,*)'check ICM KTNit: ',KTNit,xT,temp(k),TNit,tmp,ielg(id),k
-        call parallel_abort(errmsg)
-      endif
-
       b= FNP(4)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1))  !predation
       if(iZB==1) then
         b= zFNM(1,4)*zn2c(1)*ZBM(1)*ZB1(k,1)+zFNM(2,4)*zn2c(2)*ZBM(2)*ZB2(k,1)+ &  !ZB metabolism
@@ -1302,7 +1205,7 @@ subroutine ecosystem(it)
       endif
 
       b=b+FNM(1,4)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,4)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,4)*n2c(3)*PBM(3)*PB3(k,1) &
-       & -n2c(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1) &
+       & -n2c(1)*fPN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*fPN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*fPN(k,3)*GP(k,id,3)*PB3(k,1) &
        & +rKDON*DON(k,1)+znNH4(k)/dep(k)
 
       !sav
@@ -1311,16 +1214,6 @@ subroutine ecosystem(it)
           !pre-calculation for NH4, and for NO3
           nprsav=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
           fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*sKhNs/sKhNw+1.e-8)
-
-          if(nprsav<0) then
-            write(errmsg,*)'npr<0.0 :',id,NH4(k,1),sKhNH4,NO3(k,1),ielg(id),k
-            call parallel_abort(errmsg)
-          endif !nprsav
-
-          if(fnsedsav<=0) then
-            write(errmsg,*)'fnsedsav<0.0:',id,NH4(k,1),NO3(k,1),CNH4(id),sKhNs,sKhNw,ielg(id),k
-            call parallel_abort(errmsg)
-          endif !fnsedsav
 
           rtmp=sn2c*sFNM(4)*((bmlfsav(k)+spleaf(klev,id)*sFAM)*sleaf(klev,id)+ &
                                     &bmstsav(k)*sstem(klev,id))
@@ -1353,7 +1246,7 @@ subroutine ecosystem(it)
 
       !NO3
       a=0.0
-      b=-n2c(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)-n2c(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)-n2c(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1) &
+      b=-n2c(1)*(1.0-fPN(k,1))*GP(k,id,1)*PB1(k,1)-n2c(2)*(1.0-fPN(k,2))*GP(k,id,2)*PB2(k,1)-n2c(3)*(1.0-fPN(k,3))*GP(k,id,3)*PB3(k,1) &
        &-dn2c*xDenit*DOC(k,1)+xNit*NH4(k,1)+znNO3(k)/dep(k)
 
       !sav
@@ -1513,10 +1406,10 @@ subroutine ecosystem(it)
 
 
       !PO4t
-      fp=KPO4p*TSED(k)/(1.0+KPO4p*TSED(k))
+      rfp=KPO4p*TSED(k)/(1.0+KPO4p*TSED(k))
 
-      a=-fp*WSSED/dep(k)
-      if(k==nv.and.iSettle/=0) a=-fp*WSSEDn/dep(k)
+      a=-rfp*WSSED/dep(k)
+      if(k==nv.and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
 
       b= FPP(4)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1))  !predation
       if(iZB==1) then
@@ -1526,18 +1419,13 @@ subroutine ecosystem(it)
 
       b=b+FPM(1,4)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,4)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,4)*p2c(3)*PBM(3)*PB3(k,1) &
        & -p2c(1)*GP(k,id,1)*PB1(k,1)-p2c(2)*GP(k,id,2)*PB2(k,1)-p2c(3)*GP(k,id,3)*PB3(k,1) &
-       & +rKDOP*DOP(k,1)+fp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)
+       & +rKDOP*DOP(k,1)+rfp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)
 
       !sav
       if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
         if(ze(klev-1,id)<sht(id)+ze(kbe(id),id)) then
           !pre-calculation for P
           fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*sKhPs/sKhPw+1.e-8)
-
-          if(fpsedsav<=0.) then
-            write(errmsg,*)'fpsedsav<0.0:',id,PO4t(k,1),CPIP(id),sKhPs,sKhPw,ielg(id),k
-            call parallel_abort(errmsg)
-          endif !fpsedsav
 
           rtmp=sp2c*sFPM(4)*((bmlfsav(k)+spleaf(klev,id)*sFAM)*sleaf(klev,id)+ &
                                     &bmstsav(k)*sstem(klev,id)) !basal metabolism
@@ -1579,10 +1467,6 @@ subroutine ecosystem(it)
 
       !SU
       rKSUA=KS*exp(KTRS*(temp(k)-TRS)); tmp=KTRS*(temp(k)-TRS)
-      if(abs(tmp)>50.0) then
-        write(errmsg,*)'check ICM KTRS:',KTRS,temp(k),TRS,tmp,ielg(id),k
-        call parallel_abort(errmsg)
-      endif
 
       a=-rKSUA-WSPBS(1)/dep(k)
       if(k==nv.and.iSettle/=0) a=-rKSUA-WSPBSn(1)/dep(k)
@@ -1601,10 +1485,10 @@ subroutine ecosystem(it)
       SU0=SU(k,1)
 
       !SAt
-      fp=KSAp*TSED(k)/(1.0+KSAp*TSED(k))
+      rfp=KSAp*TSED(k)/(1.0+KSAp*TSED(k))
 
-      a=-fp*WSSED/dep(k)
-      if(k==nv.and.iSettle/=0) a=-fp*WSSEDn/dep(k)
+      a=-rfp*WSSED/dep(k)
+      if(k==nv.and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
 
       b= FSP(2)*s2c*BPR(1)*PB1(k,1) !predation
       if(iZB==1) then
@@ -1618,15 +1502,11 @@ subroutine ecosystem(it)
 
       SAt(k,2)=((1.0+a*dtw2)*SAt(k,1)+b*dtw)/(1.0-a*dtw2)
       SAt(k,1)=0.5*(SAt(k,1)+SAt(k,2))
-      SAt0=fp*SAt(k,1)
+      SAt0=rfp*SAt(k,1)
 
       !---------------------------------------------
       !COD
       rKCOD=(DOX(k,1)/(KhCOD+DOX(k,1)))*KCD*exp(KTRCOD*(temp(k)-TRCOD)); tmp=KTRCOD*(temp(k)-TRCOD)
-      if(abs(tmp)>50.0) then
-        write(errmsg,*)'check ICM KTRCOD:',KTRCOD,temp(k),TRCOD,tmp,ielg(id),k
-        call parallel_abort(errmsg)
-      endif
 
       a=-rKCOD
       b=znCOD(k)/dep(k)
@@ -1660,9 +1540,9 @@ subroutine ecosystem(it)
       b=b-((1.0-FCM(1))*DOX(k,1)/(DOX(k,1)+KhDO(1)))*o2c*PBM(1)*PB1(k,1) & !PB1 metabolism
        & -((1.0-FCM(2))*DOX(k,1)/(DOX(k,1)+KhDO(2)))*o2c*PBM(2)*PB2(k,1) & !PB2 metabolism
        & -((1.0-FCM(3))*DOX(k,1)/(DOX(k,1)+KhDO(3)))*o2c*PBM(3)*PB3(k,1) &  !PB3 metabolism
-       & +(1.3-0.3*PrefN(k,1))*o2c*GP(k,id,1)*PB1(k,1) & !PB1 photosynthesis
-       & +(1.3-0.3*PrefN(k,2))*o2c*GP(k,id,2)*PB2(k,1) & !PB2 photosynthesis
-       & +(1.3-0.3*PrefN(k,3))*o2c*GP(k,id,3)*PB3(k,1) & !PB3 photosynthesis
+       & +(1.3-0.3*fPN(k,1))*o2c*GP(k,id,1)*PB1(k,1) & !PB1 photosynthesis
+       & +(1.3-0.3*fPN(k,2))*o2c*GP(k,id,2)*PB2(k,1) & !PB2 photosynthesis
+       & +(1.3-0.3*fPN(k,3))*o2c*GP(k,id,3)*PB3(k,1) & !PB3 photosynthesis
        & -o2n*xNit*NH4(k,1)-o2c*xKHR*DOC(k,1)-rKCOD*COD(k,1)+rKr*DOsat+znDO(k)/dep(k)
 
       !sav
@@ -1766,10 +1646,6 @@ subroutine ecosystem(it)
             T=temp(k)+273.15
             if(T<=200.) call parallel_abort('ICM Temperature two low, TIC')
             pK0=9345.17/T-60.2409+23.3585*log(0.01*T)+salt(k)*(0.023517-2.3656e-4*T+4.7036d-7*T*T)
-            if(abs(pK0)>50.0) then
-              write(errmsg,*)'check ICM pH model pK0:',pK0,T,salt(k),ielg(id),k
-              call parallel_abort(errmsg)
-            endif
             CO2sat=exp(pK0)*4.8 !Henry's law, assuming CO2atm=400 ppm , 400d-6*12.011d3=4.8
           endif
 
@@ -1791,8 +1667,8 @@ subroutine ecosystem(it)
 
           !ALK unit in Mg[CaCO3]/L
           a=0.0
-          b=(0.5*mCACO3/mN)*((15.0/14.0)*(-n2c(1)*PrefN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*PrefN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*PrefN(k,3)*GP(k,id,3)*PB3(k,1))+ & !PB uptake NH4
-           & (17.0/16.0)*(n2c(1)*(1.0-PrefN(k,1))*GP(k,id,1)*PB1(k,1)+n2c(2)*(1.0-PrefN(k,2))*GP(k,id,2)*PB2(k,1)+n2c(3)*(1.0-PrefN(k,3))*GP(k,id,3)*PB3(k,1)) & !PB uptake NO3
+          b=(0.5*mCACO3/mN)*((15.0/14.0)*(-n2c(1)*fPN(k,1)*GP(k,id,1)*PB1(k,1)-n2c(2)*fPN(k,2)*GP(k,id,2)*PB2(k,1)-n2c(3)*fPN(k,3)*GP(k,id,3)*PB3(k,1))+ & !PB uptake NH4
+           & (17.0/16.0)*(n2c(1)*(1.0-fPN(k,1))*GP(k,id,1)*PB1(k,1)+n2c(2)*(1.0-fPN(k,2))*GP(k,id,2)*PB2(k,1)+n2c(3)*(1.0-fPN(k,3))*GP(k,id,3)*PB3(k,1)) & !PB uptake NO3
            &-2.0*xNit*NH4(k,1))+xKCACO3+xKCA
 
           ALK(k,2)=((1.0+a*dtw2)*ALK(k,1)+b*dtw)/(1.0-a*dtw2)
@@ -1817,47 +1693,16 @@ subroutine ecosystem(it)
 
         !sediment flux/uptake from this layer
         lfNH4sav(k)=sn2c*fnsedsav*spleaf(klev,id)*sleaf(klev,id)!unit:g/m^2 day
-        !nan check
-        if(.not.(lfNH4sav(k)>0.or.lfNH4sav(k)<=0))then
-          write(errmsg,*)'nan found in lfNH4sav:',lfNH4sav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
         lfPO4sav(k)=sp2c*fpsedsav*spleaf(klev,id)*sleaf(klev,id)!unit:g/m^2 day
-        !nan check
-        if(.not.(lfPO4sav(k)>0.or.lfPO4sav(k)<=0))then
-          write(errmsg,*)'nan found in lfPO4sav:',lfPO4sav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
 
         !produce of POM by rt metabolism rate for this dt for each layer
         rtpocsav(k)=(1-sFCM(4))*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
-        !nan check
-        if(.not.(rtpocsav(k)>0.or.rtpocsav(k)<=0))then
-          write(errmsg,*)'nan found in rtpocsav:',rtpocsav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
         rtponsav(k)=sn2c*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
-        !nan check
-        if(.not.(rtponsav(k)>0.or.rtponsav(k)<=0))then
-          write(errmsg,*)'nan found in rtponsav:',rtponsav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
         rtpopsav(k)=sp2c*bmrtsav(k)*sroot(klev,id)!unit:g/m^2 day
-        !nan check
-        if(.not.(rtpopsav(k)>0.or.rtpopsav(k)<=0))then
-          write(errmsg,*)'nan found in rtpopsav:',rtpopsav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
 
         !comsumption of DO by rt rate for this dt for each layer
         rtdosav(k)=so2c*sFCM(4)*bmrtsav(k)*sroot(klev,id)!positive comsumption!unit:g/m^2 day
-        !nan check
-        if(.not.(rtdosav(k)>0.or.rtdosav(k)<=0))then
-          write(errmsg,*)'nan found in rtdosav:',rtdosav(k),ielg(id),k,it
-          call parallel_abort(errmsg)
-        endif
       endif !jsav
-
     enddo !k=1,nv
 
     !--------------------------------------------------------------------------------------
@@ -1872,10 +1717,6 @@ subroutine ecosystem(it)
       sht(id)=min(s2ht(1)*stleaf(id)+s2ht(2)*ststem(id)+s2ht(3)*stroot(id)+shtm(1),tdep,shtm(2))
 
       do k=kbe(id)+1,nvrt
-        if(kbe(id)<1.or.klev<=1)then
-          write(errmsg,*)'illegal kbe(id)9: ',kbe(id),nv,nvrt,ielg(id),klev
-          call parallel_abort(errmsg)
-        endif
         if(ze(k-1,id)<sht(id)+ze(kbe(id),id)) then
           !add seeds
           !i=nvrt-k+1 !ICM convention
@@ -1943,32 +1784,6 @@ subroutine ecosystem(it)
         if(ivPc==0)then
           trtpopveg(id,j)=trtpopveg(id,j)+vp2c(j)*(1-vFPM(j,4))* &
                                          &((bmlfveg(j)+vpleaf(id,j)*vFAM(j))*vtleaf(id,j)+bmstveg(j)*vtstem(id,j))
-        endif
-
-        !nan check
-        if(.not.(tlfNH4veg(k,j)>0.or.tlfNH4veg(k,j)<=0))then
-          write(errmsg,*)'nan found in tlfNH4veg:',tlfNH4veg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(tlfPO4veg(k,j)>0.or.tlfPO4veg(k,j)<=0))then
-          write(errmsg,*)'nan found in tlfPO4veg:',tlfPO4veg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(trtpocveg(id,j)>0.or.trtpocveg(id,j)<=0))then
-          write(errmsg,*)'nan found in trtpocveg:',trtpocveg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(trtponveg(id,j)>0.or.trtponveg(id,j)<=0))then
-          write(errmsg,*)'nan found in trtponveg:',trtponveg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(trtpopveg(id,j)>0.or.trtpopveg(id,j)<=0))then
-          write(errmsg,*)'nan found in trtpopveg:',trtpopveg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
-        endif
-        if(.not.(trtdoveg(id,j)>0.or.trtdoveg(id,j)<=0))then
-          write(errmsg,*)'nan found in trtdoveg:',trtdoveg(id,j),ielg(id),it,j
-          call parallel_abort(errmsg)
         endif
 
       enddo !j::veg species
@@ -2081,11 +1896,6 @@ subroutine ecosystem(it)
       if(kbe(id)<1) call parallel_abort('illegal kbe(id)')
       do k=1,kbe(id)
         PH_el(k,id)=PH_el(kbe(id)+1,id)
-        !nan check
-        if(PH_el(k,id)/=PH_el(k,id))then
-          write(errmsg,*)'nan found in ICM(2)_ph :',PH_el(k,id),ielg(id),i,k
-          call parallel_abort(errmsg)
-        endif
       enddo !k
     endif
     !**********************************************************************************

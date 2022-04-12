@@ -51,7 +51,7 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
   real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED
   real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
-  real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,PrefN
+  real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,fPN
   real(rkind),save,allocatable,dimension(:,:,:) :: GP
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
