@@ -52,7 +52,6 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED
   real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
   real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,fPN
-  real(rkind),save,allocatable,dimension(:,:,:) :: GP
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   real(rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO !benthic flux from sediment flux model, positive refer to from sediment to water column
@@ -97,9 +96,7 @@ module icm_mod
   integer,save,allocatable :: spatch(:)               !sav region
   real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
   real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,allocatable,dimension(:,:) :: spleaf,spmax,fisav,fnsav,fpsav !(nvrt,nea)
   real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
-  real(rkind),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day; (nvrt)<< surface to bottom
   real(rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
   real(rkind),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
@@ -117,8 +114,6 @@ module icm_mod
   real(rkind),save,dimension(3) :: vc2dw,v2den,vn2c,vp2c,vo2c!convert ratios
   integer,save :: ivNc,ivPc,ivNs,ivPs,ivMT              !flags for (N,P) limit, recycled (N,P) dest., mortality
 
-  real(rkind),save,dimension(3) :: bmlfveg,bmstveg,bmrtveg !1/day
-  real(rkind),save,dimension(3) :: mtlfveg,mtstveg,mtrtveg !1/day
   real(rkind),save :: airtveg,mtemp
   integer,save,allocatable :: vpatch(:)                     !reg region
   real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
@@ -126,8 +121,7 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(rkind),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: rdephcanveg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: vpleaf,pmaxveg,fiveg,fnveg,fpveg,fsveg,ffveg !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vpleaf !(nea,3)
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables

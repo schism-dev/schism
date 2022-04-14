@@ -520,7 +520,7 @@ subroutine icm_vars_init
     & ZB2(nvrt,2),PB1(nvrt,2),PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2), &
     & RPON(nvrt,2),LPON(nvrt,2), DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2), &
     & DOP(nvrt,2),PO4t(nvrt,2),SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOX(nvrt,2),fPN(nvrt,3), &
-    & GP(nvrt,nea,3), WMS(nea), &
+    & WMS(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
@@ -530,7 +530,7 @@ subroutine icm_vars_init
   ZB2=0.0;     PB1=0.0;     PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;
   RPON=0.0;    LPON=0.0;    DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;
   DOP=0.0;     PO4t=0.0;    SU=0.0;      SAt=0.0;     COD=0.0;     DOX=0.0;     fPN=0.0;
-  GP=0.0;      WMS=0.0;
+  WMS=0.0;
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;   BDON=0.0;    BNH4=0.0;   BNO3=0.0
   BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;     BSAt=0.0;    BCOD=0.0;   BDO=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
@@ -554,19 +554,19 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   if(jsav==1) then
     allocate(spatch(nea),stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
-      & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea),spleaf(nvrt,nea),spmax(nvrt,nea), &
-      & fisav(nvrt,nea),fnsav(nvrt,nea),fpsav(nvrt,nea),trtpocsav(nea),trtponsav(nea), &
+      & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), &
+      & trtpocsav(nea),trtponsav(nea), &
       & trtpopsav(nea),trtdosav(nea),tlfNH4sav(nea),tlfPO4sav(nea), &
-      & bmlfsav(nvrt),bmstsav(nvrt),bmrtsav(nvrt), rtpocsav(nvrt),rtponsav(nvrt), &
+      & rtpocsav(nvrt),rtponsav(nvrt), &
       & rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
 
     !init
     spatch=0;     stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
-    sstem=0.0;    sroot=0.0;    sht=0.0;        spleaf=0.0;    spmax=0.0;
-    fisav=1.0;    fnsav=1.0;    fpsav=1.0;      trtpocsav=0.0; trtponsav=0.0;
+    sstem=0.0;    sroot=0.0;    sht=0.0;        
+    trtpocsav=0.0; trtponsav=0.0;
     trtpopsav=0.0;trtdosav=0.0; tlfNH4sav=0.0;  tlfPO4sav=0.0;
-    bmlfsav=0.0;  bmstsav=0.0;  bmrtsav=0.0;    rtpocsav=0.0;  rtponsav=0.0;
+    rtpocsav=0.0;  rtponsav=0.0;
     rtpopsav=0.0; rtdosav=0.0;  lfNH4sav=0.0;   lfPO4sav=0.0;
   endif
 
@@ -577,16 +577,14 @@ subroutine icm_vars_init
     allocate(vpatch(nea),vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
       & trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
       & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
-      & rdephcanveg(nea,3),vpleaf(nea,3),pmaxveg(nea,3),fiveg(nea,3),fnveg(nea,3), &
-      & fpveg(nea,3),fsveg(nea,3),ffveg(nea,3), stat=istat)
+      & vpleaf(nea,3),  stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. VEG variables')
 
     !init
     vpatch=0;      vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
     trtpocveg=0.0; trtponveg=0.0; trtpopveg=0.0;  trtdoveg=0.0;
     lfNH4veg=0.0;  lfPO4veg=0.0;  tlfNH4veg=0.0;  tlfPO4veg=0.0
-    rdephcanveg=0.0;vpleaf=0.0;   pmaxveg=0.0;    fiveg=1.0;      fnveg=1.0;
-    fpveg=1.0;     fsveg=1.0;     ffveg=1.0;
+    vpleaf=0.0;   
   endif
 
   !-------------------------------------------------------------------------------
