@@ -90,7 +90,7 @@ subroutine ecosystem(it)
   real(rkind) :: shtz,vhtz(3),zid(nvrt),vGP(3),sGP(nvrt)
   real(rkind) :: sdep
   real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1)
-  real(rkind) :: dzt,hdep,sfT,sfR,sfN,sfP,sPBM(nvrt,3)
+  real(rkind) :: dzt,hdep,sfT,sfR,sfN,sfP,sPBM(nvrt,3),sBM,sGM,sdNH4,sdNO3,sdPO4
   !veg
   real(rkind) :: atemp,asalt,vrat,vfI,vfST,vfR,vfN,vfP,vfMT(3,3)
   real(rkind) :: vLight,vPBM(3,3)
@@ -110,7 +110,7 @@ subroutine ecosystem(it)
   real(rkind) :: rKa,pK0,CO2sat,xKCA,xKCACO3
 
   !sav and veg
-  real(rkind) :: nprsav,fnsedsav,fpsedsav,denssav
+  real(rkind) :: sfPN,sfNs,sfPs,denssav
   real(rkind) :: densveg(3)
 
   time=it*dt
@@ -914,6 +914,26 @@ subroutine ecosystem(it)
         CFh_PB=p2pr*Fish*sumAPB !Fish eats PB
       endif
 
+      !----------------------------------------------------------------------------
+      !Pre-compute SAV terms
+      !----------------------------------------------------------------------------
+      !sav,RPOC
+      sBM=0.0; sdNH4=0; sdNO3=0; sdPO4=0
+      if(jsav==1.and.spatch(id)==1.and.zid(klev-1)<shtz) then
+        sBM=((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+sPBM(k,2)*sstem(klev,id))/max(1.e-5,dep(k))
+        sGM=sGP(klev)*sleaf(klev,id)/max(1.e-5,dep(k))  
+
+        !pre-calculation for NH4, and for NO3
+        sfPN=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
+        sfNs=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*sKhNs/sKhNw+1.e-8)
+        sfPs=CPIP(id)/(CPIP(id)+PO4t(k,1)*sKhPs/sKhPw+1.e-8)
+      
+        sdNH4=sn2c*(sFNM(4)*sBM-(1-sfNs)*sfPN*sGM)
+        sdNO3=-sn2c*(1-sfNs)*(1-sfPN)*sGM
+        sdPO4=sp2c*(sFPM(4)*sBM-(1-sfPs)*sGM)
+      endif !isav
+      !----------------------------------------------------------------------------
+
       !RPOC
       rKRPOC=(KC0(1)+KCalg(1)*sumAPB)*rKTM(1)
 
@@ -925,15 +945,8 @@ subroutine ecosystem(it)
         b= -(zRG+zAG*(1.0-zRG))*(ZBG(6,1)+ZBG(6,2))+ &  !ZB eats RPOC
          & zFCP(1)*(CZB_ZB+CFh_ZB)+FCP(1,1)*(CZB_PB+CFh_PB)  !check FCP, ZG
       endif
-      b=b+WSPOM(1)*RPOC0/dep(k)+znRPOC(k)/dep(k)
+      b=b+WSPOM(1)*RPOC0/dep(k)+znRPOC(k)/dep(k)+sFCM(1)*sBM
 
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp=sFCM(1)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
 
       !veg
       if(jveg==1.and.vpatch(id)==1) then
@@ -971,15 +984,8 @@ subroutine ecosystem(it)
         b= -(zRG+zAG*(1-zRG))*(ZBG(7,1)+ZBG(7,2))+ & !ZB eats LPOC
          & zFCP(2)*(CZB_ZB+CFh_ZB)+zFCP(2)*(CZB_PB+CFh_PB)   !ZB eats ZB
       endif
-      b=b+WSPOM(2)*LPOC0/dep(k)+znLPOC(k)/dep(k)  !settling, surface or benthic flux
+      b=b+WSPOM(2)*LPOC0/dep(k)+znLPOC(k)/dep(k)+sFCM(2)*sBM  !settling, surface or benthic flux
 
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp=sFCM(2)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
 
       !veg
       if(jveg==1.and.vpatch(id)==1) then
@@ -1023,15 +1029,8 @@ subroutine ecosystem(it)
       b=b+(FCM(1)+(1.0-FCM(1))*KhDO(1)/(DOX(k,1)+KhDO(1)))*PBM(1)*PB1(k,1)+ &         !PB1 metabolism
         & (FCM(2)+(1.0-FCM(2))*KhDO(2)/(DOX(k,1)+KhDO(2)))*PBM(2)*PB2(k,1)+ &         !PB2 metabolism
         & (FCM(3)+(1.0-FCM(3))*KhDO(3)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)+ &         !PB3 metabolism
-        & rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+znDOC(k)/dep(k) !dissolution, surface or benthic flux
+        & rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+znDOC(k)/dep(k)+sFCM(3)*sBM !dissolution, surface or benthic flux
 
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp=sFCM(3)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
 
       !veg
       if(jveg==1.and.vpatch(id)==1) then
@@ -1064,7 +1063,6 @@ subroutine ecosystem(it)
         NFh_PB=p2pr*Fish*(PB1(k,1)*n2c(1)+PB2(k,1)*n2c(2)+PB3(k,1)*n2c(3)) !Fish eats PB
       endif
 
-
       !RPON
       rKRPON=(KN0(1)+KNalg(1)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(1)
 
@@ -1078,16 +1076,7 @@ subroutine ecosystem(it)
       endif
 
       b=b+FNM(1,1)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,1)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,1)*n2c(3)*PBM(3)*PB3(k,1) & !PB metabolism
-       & +WSPOM(1)*RPON0/dep(k)+znRPON(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp= sn2c*sFNM(1)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-              & sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
+       & +WSPOM(1)*RPON0/dep(k)+znRPON(k)/dep(k)+sn2c*sFNM(1)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
@@ -1124,16 +1113,7 @@ subroutine ecosystem(it)
       endif
 
       b=b+FNM(1,2)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,2)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,2)*n2c(3)*PBM(3)*PB3(k,1)+ & !PB metabolism
-       &  WSPOM(2)*LPON0/dep(k)+znLPON(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp= sn2c*sFNM(2)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-              & sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
+       &  WSPOM(2)*LPON0/dep(k)+znLPON(k)/dep(k)+sn2c*sFNM(2)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
@@ -1167,16 +1147,7 @@ subroutine ecosystem(it)
       endif
 
       b=b+FNM(1,3)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,3)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,3)*n2c(3)*PBM(3)*PB3(k,1)+ & !PB metabolism
-       &  rKRPON*RPON(k,1)+rKLPON*LPON(k,1)+znDON(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp=sn2c*sFNM(3)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-                                    &sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif 
-      endif !isav
+       &  rKRPON*RPON(k,1)+rKLPON*LPON(k,1)+znDON(k)/dep(k)+sn2c*sFNM(3)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
@@ -1215,22 +1186,7 @@ subroutine ecosystem(it)
 
       b=b+FNM(1,4)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,4)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,4)*n2c(3)*PBM(3)*PB3(k,1) &
        & -n2c(1)*fPN(k,1)*GP(k,1)*PB1(k,1)-n2c(2)*fPN(k,2)*GP(k,2)*PB2(k,1)-n2c(3)*fPN(k,3)*GP(k,3)*PB3(k,1) &
-       & +rKDON*DON(k,1)+znNH4(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          !pre-calculation for NH4, and for NO3
-          nprsav=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
-          fnsedsav=CNH4(id)/(CNH4(id)+(NH4(k,1)+NO3(k,1))*sKhNs/sKhNw+1.e-8)
-
-          rtmp=sn2c*sFNM(4)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-                                    &sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-          rtmp=-sn2c*(1-fnsedsav)*nprsav*sGP(klev)*sleaf(klev,id)
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       & +rKDON*DON(k,1)+znNH4(k)/dep(k) +sdNH4
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivNc==1) then
@@ -1256,15 +1212,7 @@ subroutine ecosystem(it)
       !NO3
       a=0.0
       b=-n2c(1)*(1.0-fPN(k,1))*GP(k,1)*PB1(k,1)-n2c(2)*(1.0-fPN(k,2))*GP(k,2)*PB2(k,1)-n2c(3)*(1.0-fPN(k,3))*GP(k,3)*PB3(k,1) &
-       &-dn2c*xDenit*DOC(k,1)+xNit*NH4(k,1)+znNO3(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp=-sn2c*(1-fnsedsav)*(1-nprsav)*sGP(klev)*sleaf(klev,id) !uptake for growth
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       &-dn2c*xDenit*DOC(k,1)+xNit*NH4(k,1)+znNO3(k)/dep(k)+sdNO3
 
       NO3(k,2)=NO3(k,1)+b*dtw
       NO3(k,1)=0.5*(NO3(k,1)+NO3(k,2))
@@ -1294,16 +1242,7 @@ subroutine ecosystem(it)
       endif
 
       b=b+FPM(1,1)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,1)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,1)*p2c(3)*PBM(3)*PB3(k,1) &
-       & +WSPOM(1)*RPOP0/dep(k)+znRPOP(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp= sp2c*sFPM(1)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-              & sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       & +WSPOM(1)*RPOP0/dep(k)+znRPOP(k)/dep(k)+sp2c*sFPM(1)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
@@ -1339,16 +1278,7 @@ subroutine ecosystem(it)
          & zFPP(2)*(PZB_ZB+PFh_ZB)+FPP(2)*(PZB_PB+PFh_PB)
       endif
       b=b+FPM(1,2)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,2)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,2)*p2c(3)*PBM(3)*PB3(k,1) &
-       & +WSPOM(2)*LPOP0/dep(k)+znLPOP(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp= sp2c*sFPM(2)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-              & sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       & +WSPOM(2)*LPOP0/dep(k)+znLPOP(k)/dep(k)+sp2c*sFPM(2)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
@@ -1382,16 +1312,7 @@ subroutine ecosystem(it)
          & zFPP(3)*(PZB_ZB+PFh_ZB)+FPP(3)*(PZB_PB+PFh_PB)
       endif
       b=b+FPM(1,3)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,3)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,3)*p2c(3)*PBM(3)*PB3(k,1) &
-       & +rKRPOP*RPOP(k,1)+rKLPOP*LPOP(k,1)+znDOP(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rtmp= sp2c*sFPM(3)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-              & sPBM(k,2)*sstem(klev,id))
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       & +rKRPOP*RPOP(k,1)+rKLPOP*LPOP(k,1)+znDOP(k)/dep(k)+sp2c*sFPM(3)*sBM
 
       !veg
       if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
@@ -1428,21 +1349,7 @@ subroutine ecosystem(it)
 
       b=b+FPM(1,4)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,4)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,4)*p2c(3)*PBM(3)*PB3(k,1) &
        & -p2c(1)*GP(k,1)*PB1(k,1)-p2c(2)*GP(k,2)*PB2(k,1)-p2c(3)*GP(k,3)*PB3(k,1) &
-       & +rKDOP*DOP(k,1)+rfp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)
-
-      !sav
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          !pre-calculation for P
-          fpsedsav=CPIP(id)/(CPIP(id)+PO4t(k,1)*sKhPs/sKhPw+1.e-8)
-
-          rtmp=sp2c*sFPM(4)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
-                                    &sPBM(k,2)*sstem(klev,id)) !basal metabolism
-          b=b+rtmp/max(1.e-5,dep(k))
-          rtmp=-sp2c*(1-fpsedsav)*sGP(klev)*sleaf(klev,id) !uptake for growth
-          b=b+rtmp/max(1.e-5,dep(k))
-        endif
-      endif !isav
+       & +rKDOP*DOP(k,1)+rfp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)+sdPO4
 
       !veg !release from metabolism
       if(jveg==1.and.vpatch(id)==1.and.ivPc==1) then
@@ -1554,7 +1461,7 @@ subroutine ecosystem(it)
        & +(1.3-0.3*fPN(k,3))*o2c*GP(k,3)*PB3(k,1) & !PB3 photosynthesis
        & -o2n*xNit*NH4(k,1)-o2c*xKHR*DOC(k,1)-rKCOD*COD(k,1)+rKr*DOsat+znDO(k)/dep(k)
 
-      !sav
+      !sav,DO
       if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
         if(zid(klev-1)<shtz) then
           rtmp=-so2c*sFCM(4)*((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+ &
@@ -1701,8 +1608,8 @@ subroutine ecosystem(it)
       if(jsav==1.and.spatch(id)==1) then
 
         !sediment flux/uptake from this layer
-        lfNH4sav(k)=sn2c*fnsedsav*sGP(klev)*sleaf(klev,id)!unit:g/m^2 day
-        lfPO4sav(k)=sp2c*fpsedsav*sGP(klev)*sleaf(klev,id)!unit:g/m^2 day
+        lfNH4sav(k)=sn2c*sfNs*sGP(klev)*sleaf(klev,id)!unit:g/m^2 day
+        lfPO4sav(k)=sp2c*sfPs*sGP(klev)*sleaf(klev,id)!unit:g/m^2 day
 
         !produce of POM by rt metabolism rate for this dt for each layer
         rtpocsav(k)=(1-sFCM(4))*sPBM(k,3)*sroot(klev,id)!unit:g/m^2 day
