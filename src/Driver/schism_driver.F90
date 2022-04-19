@@ -89,24 +89,22 @@ program schism_driver
   endif
 #else
   if(COMMAND_ARGUMENT_COUNT()<1) then
-    print*, 'Must have at least 1 cmd argument (# of scribes)'
+    print*, 'Must have at least 1 cmd argument: # of scribes to run, or -v for version.'
     stop
   endif
 
   call get_command_argument(1,cli)
-  read(cli,*)nscribes
+  if (cli(1:2) == "-v")then
+    print*, ""
+    call print_version
+    stop
+  else
+    read(cli,*)nscribes
+  endif
+
   if(nscribes<0) then
     print*, 'nscribes<0:',nscribes
     stop 
-  endif
-
-  if(COMMAND_ARGUMENT_COUNT()>1) then
-    call get_command_argument(1,cli)
-    if (cli(1:2) == "-v")then
-       print*, ""
-       call print_version
-       stop
-    endif
   endif
 #endif
 
