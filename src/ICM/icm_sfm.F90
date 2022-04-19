@@ -221,16 +221,16 @@ subroutine sed_calc(id,nv)
 
   !sav !unit: g/m^3
   if(jsav==1.and.spatch(id)==1)then
-    NH4T2TM1=max(1.0d-10,NH4T2TM1-tlfNH4sav(id)*dtw/HSED)
-    PO4T2TM1=max(1.0d-10,PO4T2TM1-tlfPO4sav(id)*dtw/HSED)
-    ROOTDO=ROOTDO+trtdosav(id) !unit: g/m^2 day
+    NH4T2TM1=max(1.0d-10,NH4T2TM1-sleaf_NH4(id)*dtw/HSED)
+    PO4T2TM1=max(1.0d-10,PO4T2TM1-sleaf_PO4(id)*dtw/HSED)
+    ROOTDO=ROOTDO+sroot_DOX(id) !unit: g/m^2 day
   endif !jsav
 
   !veg
   if(jveg==1.and.vpatch(id)==1)then
-    NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(tlfNH4veg(id,1:3))*dtw/HSED)
-    PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(tlfPO4veg(id,1:3))*dtw/HSED)
-    ROOTDO=ROOTDO+sum(trtdoveg(id,1:3)) !unit: g/m^2 day
+    NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(vleaf_NH4(id,1:3))*dtw/HSED)
+    PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(vleaf_PO4(id,1:3))*dtw/HSED)
+    ROOTDO=ROOTDO+sum(vroot_DOX(id,1:3)) !unit: g/m^2 day
   endif !jveg
 
   !------------------------------------------------------------------------
@@ -283,9 +283,9 @@ subroutine sed_calc(id,nv)
   !sav
   if(jsav==1.and.spatch(id)==1) then
     do i=1,3
-      flxpoc(id,i)=flxpoc(id,i)+trtpocsav(id)*frcsav(i)
-      flxpon(id,i)=flxpon(id,i)+trtponsav(id)*frnsav(i)
-      flxpop(id,i)=flxpop(id,i)+trtpopsav(id)*frpsav(i)
+      flxpoc(id,i)=flxpoc(id,i)+sroot_POC(id)*frcsav(i)
+      flxpon(id,i)=flxpon(id,i)+sroot_PON(id)*frnsav(i)
+      flxpop(id,i)=flxpop(id,i)+sroot_POP(id)*frpsav(i)
     enddo
   endif
 
@@ -293,9 +293,9 @@ subroutine sed_calc(id,nv)
   if(jveg==1.and.vpatch(id)==1) then
     do i=1,3
       do j=1,3
-        flxpoc(id,i)=flxpoc(id,i)+trtpocveg(id,j)*frcveg(i,j)
-        flxpon(id,i)=flxpon(id,i)+trtponveg(id,j)*frnveg(i,j)
-        flxpop(id,i)=flxpop(id,i)+trtpopveg(id,j)*frpveg(i,j)
+        flxpoc(id,i)=flxpoc(id,i)+vroot_POC(id,j)*frcveg(i,j)
+        flxpon(id,i)=flxpon(id,i)+vroot_PON(id,j)*frnveg(i,j)
+        flxpop(id,i)=flxpop(id,i)+vroot_POP(id,j)*frpveg(i,j)
       enddo !j::veg species
     enddo !i::POM group
   endif

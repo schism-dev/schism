@@ -96,10 +96,8 @@ module icm_mod
   integer,save,allocatable :: spatch(:)               !sav region
   real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
   real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav !(nea), unit: g/m^2/day
-  real(rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav  !(nea), unit: g/m^2/day
-  real(rkind),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav !(nvrt), unit: g/m^2/day
-  real(rkind),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav,rtdosav !(nvrt), unit: g/m^2/day
+  real(rkind),save,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
+  real(rkind),save,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
 
   !-------------------------------------------------------------------------------
   !VEG parameters and variables
@@ -118,10 +116,9 @@ module icm_mod
   integer,save,allocatable :: vpatch(:)                     !reg region
   real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: trtpocveg,trtponveg,trtpopveg,trtdoveg !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
-  real(rkind),save,allocatable,dimension(:,:) :: tlfNH4veg,tlfPO4veg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: vpleaf !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables

@@ -555,19 +555,15 @@ subroutine icm_vars_init
   if(jsav==1) then
     allocate(spatch(nea),stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
       & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), &
-      & trtpocsav(nea),trtponsav(nea), &
-      & trtpopsav(nea),trtdosav(nea),tlfNH4sav(nea),tlfPO4sav(nea), &
-      & rtpocsav(nvrt),rtponsav(nvrt), &
-      & rtpopsav(nvrt),rtdosav(nvrt),lfNH4sav(nvrt),lfPO4sav(nvrt),stat=istat)
+      & sroot_POC(nea),sroot_PON(nea), &
+      & sroot_POP(nea),sroot_DOX(nea),sleaf_NH4(nea),sleaf_PO4(nea), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
 
     !init
     spatch=0;     stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
     sstem=0.0;    sroot=0.0;    sht=0.0;        
-    trtpocsav=0.0; trtponsav=0.0;
-    trtpopsav=0.0;trtdosav=0.0; tlfNH4sav=0.0;  tlfPO4sav=0.0;
-    rtpocsav=0.0;  rtponsav=0.0;
-    rtpopsav=0.0; rtdosav=0.0;  lfNH4sav=0.0;   lfPO4sav=0.0;
+    sroot_POC=0.0; sroot_PON=0.0;
+    sroot_POP=0.0; sroot_DOX=0.0; sleaf_NH4=0.0;  sleaf_PO4=0.0;
   endif
 
   !-------------------------------------------------------------------------------
@@ -575,16 +571,14 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   if(jveg==1) then
     allocate(vpatch(nea),vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
-      & trtpocveg(nea,3),trtponveg(nea,3),trtpopveg(nea,3),trtdoveg(nea,3), &
-      & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),tlfNH4veg(nea,3),tlfPO4veg(nea,3), &
-      & vpleaf(nea,3),  stat=istat)
+      & vroot_POC(nea,3),vroot_PON(nea,3),vroot_POP(nea,3),vroot_DOX(nea,3), &
+      & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),vleaf_NH4(nea,3),vleaf_PO4(nea,3), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. VEG variables')
 
     !init
     vpatch=0;      vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
-    trtpocveg=0.0; trtponveg=0.0; trtpopveg=0.0;  trtdoveg=0.0;
-    lfNH4veg=0.0;  lfPO4veg=0.0;  tlfNH4veg=0.0;  tlfPO4veg=0.0
-    vpleaf=0.0;   
+    vroot_POC=0.0; vroot_PON=0.0; vroot_POP=0.0;  vroot_DOX=0.0;
+    lfNH4veg=0.0;  lfPO4veg=0.0;  vleaf_NH4=0.0;  vleaf_PO4=0.0
   endif
 
   !-------------------------------------------------------------------------------
