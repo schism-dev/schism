@@ -100,11 +100,10 @@ program schism_driver
     stop
   else
     read(cli,*)nscribes
-  endif
-
-  if(nscribes<0) then
-    print*, 'nscribes<0:',nscribes
-    stop 
+    if(nscribes<0) then
+      print*, 'nscribes<0:',nscribes
+      stop 
+    endif
   endif
 #endif
 
