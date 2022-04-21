@@ -50,7 +50,7 @@
 ! Thomas Huxhorn (BGS IT&E, Darmstadt, Germany),
 ! Ivica Janekovic, (UWA, Perth, Australia) 
 ! Kai Li (XXXX, PR China), 
-! Kevin Maarten (UNR, La Rochele, France), 
+! Kevin Martins (University of Bordeaux, France), 
 ! Peter Janssen (ECWMF, Reading, U.K.) 
 ! Stefan Zieger (XXXX, Australia) 
 !
@@ -306,14 +306,9 @@
 
          DO IP = 1, MNP
            ACLOC = AC2(:,:,IP)
-           IF (IROLLER == 1) RACLOC = RAC2(:,:,IP)
            IF (DEP(IP) .GT. DMIN) THEN
              CALL INTPAR(IP, MSC, ACLOC, OUTPAR)
              OUTT_INTPAR(IP,:) = OUTPAR
-             IF(IROLLER == 1) THEN
-               CALL INTPAR(IP, MSC, RACLOC, OUTPAR)
-               OUTT_INTPARROL(IP,:) = OUTPAR
-             ENDIF
              CALL WINDPAR(IP,OUTWINDPAR)
              WIND_INTPAR(IP,:) = OUTWINDPAR
              IF (LMONO_OUT) THEN
@@ -351,9 +346,8 @@
            IF (RADFLAG == 'VOR') THEN                  ! Vortex force formalism as described in Bennis (2011)
              CALL STOKES_STRESS_INTEGRAL_SCHISM        ! Compute Stokes drift velocities and pressure terms 
              CALL COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM ! Conservative terms (relative to Stokes drift advection, Coriolis and pressure head: Eq. 17, 19 and 20 from Bennis 2011)
-             IF (fwvor_breaking == 1) THEN ! BM
-               CALL COMPUTE_BREAKING_VF_TERMS_SCHISM     ! Sink of momentum due to wave breaking and update wwave_force
-             END IF
+             IF (fwvor_breaking == 1) CALL COMPUTE_BREAKING_VF_TERMS_SCHISM     ! Sink of momentum due to wave breaking and update wwave_force
+             IF (fwvor_streaming == 1) CALL COMPUTE_STREAMING_VF_TERMS_SCHISM ! Sink of momentum due to bottom streaming and update wwave_force
            ELSE ! Radiation stress formalism (Longuet-Higgins and Stewart, 1962 and 1964) as described in Battjes (1974)
              CALL RADIATION_STRESS_SCHISM
            ENDIF
@@ -505,7 +499,6 @@
 !      CALL Print_SumAC2("Before the advection")
       IF (ICOMP .EQ. 0) THEN
         CALL COMPUTE_SIMPLE_EXPLICIT
-        IF (IROLLER == 1) CALL COMPUTE_ROLLER_EXPLICIT
       ELSE IF (ICOMP .EQ. 1) THEN 
         CALL COMPUTE_SEMI_IMPLICIT
       ELSE IF (ICOMP .EQ. 2) THEN 
@@ -513,6 +506,7 @@
       ELSE IF (ICOMP .EQ. 3) THEN 
         CALL COMPUTE_IMPLICIT
       END IF
+      IF (IROLLER == 1) CALL COMPUTE_ROLLER
 !      CALL Print_SumAC2("After the advection")
 
 #ifdef TIMINGS

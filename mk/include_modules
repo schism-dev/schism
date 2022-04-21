@@ -1,6 +1,6 @@
 # Old nc output option (each rank dumps its own data)
-# USE_OLDIO = yes
-# EXEC := $(EXEC)_OLDIO
+ USE_OLDIO = yes
+ EXEC := $(EXEC)_OLDIO
 
 # Use PetSc as solver for FE eq
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
@@ -27,12 +27,12 @@
  EXEC := $(EXEC)_$(TVD_LIM)
 
 # GOTM turbulence closure model
-# USE_GOTM = yes
-# EXEC := $(EXEC)_GOTM
+ USE_GOTM = yes
+ EXEC := $(EXEC)_GOTM
 
 # Wind wave model WWM
-# USE_WWM = yes
-# EXEC := $(EXEC)_WWM
+ USE_WWM = yes
+ EXEC := $(EXEC)_WWM
 
 #aParametric wind module
 # USE_PAHM = yes

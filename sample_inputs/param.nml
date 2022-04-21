@@ -188,12 +188,18 @@
   hmin_radstress = 1. !min. total water depth used only in radiation stress calculation [m]
 !  nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
   drampwafo = 0.      !ramp-up period in days for the wave forces (no ramp-up if <=0)
-  turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence (default: 0.15 (15%), as proposed by Feddersen, 2012)
+  turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence 
+                      !(default: 0.15 (15%), as proposed by Feddersen, 2012)
+  turbinjds = 1.0     !% of wave energy dissipated through whitecapping injected in turbulence 
+                      !(default: 1 (100%), as proposed by Paskyabi et al. 2012)
+  alphaw = 0.5        !for itur=4 : scaling parameter for the surface roughness z0s = alphaw*Hm0. 
+                      !If negative z0s = abs(alphaw) e.g. z0s=0.2 m (Feddersen and Trowbridge, 2005)
                          ! Vortex Force terms (off/on:0/1)
   fwvor_advxy_stokes = 1 !  --> Stokes drift advection (xy), Coriolis
   fwvor_advz_stokes = 1  !  --> Stokes drift advection (z) , Coriolis
   fwvor_gradpress = 1    !  --> Pressure term
   fwvor_breaking = 1     !  --> Wave breaking
+  fwvor_streaming = 1     !  --> Wave streaming
   cur_wwm = 0            ! Coupling current in WWM
                          ! 0: surface layer current
                          ! 1: depth-averaged current
@@ -792,14 +798,12 @@
   iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
-!  iof_hydro(25) = 1 !z-coord {zCoordinates}  3D - this flag will be reset by code to be always on
-  iof_hydro(26) = 1 !horizontal velocity vector [m/s] {horizontalVelX,Y}  3D vector
-
-  iof_hydro(27) = 0 !horizontal velocity vector defined @side [m/s] {horizontalSideVelX,Y}  3D vector
-  iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement}   3D
-  iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement}  3D
-  iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement}  3D
-  iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient}  -not implemented yet
+  iof_hydro(25) = 0 !horizontal vel vector [m/s] {hvel}
+  iof_hydro(26) = 0 !horizontal vel vector defined @side [m/s] {hvel_side}
+  iof_hydro(27) = 0 !vertical vel. @elem [m/s] {wvel_elem}
+  iof_hydro(28) = 0 !T @prism centers [C] {temp_elem}
+  iof_hydro(29) = 0 !S @prism centers [PSU] {salt_elem}
+  iof_hydro(30) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient}
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on
@@ -840,6 +844,15 @@
 !  iof_wwm(26) = 0 !Rougness length {rougnessLength}  2D
 !  iof_wwm(27) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
 !  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   2D vector
+  ! Only available when using OLDIO
+!  iof_wwm(29) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 
+!  iof_wwm(30) = 0 !Vertical Stokes velocity (m.s-1) @nodes and whole levels {stokes_wvel} 
+!  iof_wwm(31) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel}  
+!  iof_wwm(32) = 0 !Roller energy dissipation rate (W/m²) @nodes {Drol}
+!  iof_wwm(33) = 0 !Total wave energy dissipation rate by depth-induced breaking (W/m²) @nodes {wave_sbrtot}
+!  iof_wwm(34) = 0 !Total wave energy dissipation rate by bottom friction (W/m²) @nodes {wave_sbftot}
+!  iof_wwm(35) = 0 !Total wave energy dissipation rate by whitecapping (W/m²) @nodes {wave_sdstot}
+!  iof_wwm(36) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot}
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used

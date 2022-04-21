@@ -9,6 +9,8 @@
       ! - Correction in Madsen formulation
       ! - Add SHOWEX formulation following WW3 approach
       ! - Comments
+      ! March 2022 MP update:
+      ! - Non uniform D50 for SHOWEX formulation
       !******************************************************************
       USE DATAPOOL
       USE schism_glbl
@@ -50,12 +52,6 @@
       PBOTF(4)   = -0.08    ! Constant in fw function for Madsen et al. (1989): this value follows Jonsson & Carlsen (1976) consistent with SWAN
       PBOTF(5)   =  0.001   ! Default physical bottom roughness for Madsen et al. (1989)
 
-      IF (ABS(FRICC) .GT. THR) THEN
-        PBOTF(3) = FRICC  ! User defined friction coeff for JONSWAP formulation
-        PBOTF(5) = FRICC  ! User defined constant physical bottom roughness for Madsen et al. (1989)
-        PBOTF(1) = FRICC  ! User defined constant D50 for SHOWEX formulation
-      END IF
-
 #ifdef SCHISM
       SBF(:,IP) = ZERO
 #endif
@@ -67,14 +63,14 @@
       CALL WAVE_CURRENT_PARAMETER(IP,ACLOC,UBOT,ORBITAL,BOTEXPER,TMBOT,'FRICTION')
  
       IF (MESBF .EQ. 1) THEN ! JONSWAP formulation (Hasselman et al., 1973)
+        IF (ABS(FRICC) .GT. THR) PBOTF(3) = FRICC
         CFBOT = PBOTF(3) / G9**2
         
       ELSE IF (MESBF .EQ. 2) THEN ! Madsen formulation (Madsen et al., 1989), this follows SWAN approach
-        IF (nchi == 1) THEN ! Variable physical roughness for Madsen formulation
-		  IF (rough_p(IP) > 0) THEN ! Manage the case of Cd given in rough.gr3 instead of z0
-            PBOTF(5) = rough_p(IP)
-		  END IF
-		END IF
+		IF (ABS(FRICC) .GT. THR) PBOTF(5) = FRICC
+		! Variable physical roughness for Madsen formulation
+		! Manage the case of Cd given in rough.gr3 instead of z0
+        IF (rough_p(IP) > 0) PBOTF(5) = rough_p(IP)
         AKN = 30*PBOTF(5) !Equivalent roughness
         IF ( ( BOTEXPER / AKN ) .GT. 1.57 ) THEN
           XDUM = PBOTF(4) + LOG10 ( BOTEXPER / AKN )
@@ -106,8 +102,9 @@
         END IF
         ! 1.1  Min / Max settings for grain size D50
         ! TO DO : Extract D50 at each node from a D50.gr3 file
-        DD50=MAX(PBOTF(1),1E-5)
-        DD50=MIN(DD50,1.)
+        PBOTF(1) = D50_SHOWEX(IP)
+        DD50 = MAX(PBOTF(1),1E-5)
+        DD50 = MIN(DD50,1.)
 		! 1.2 Critical Shields number based on Soulsby (1997) analytical fit
         DSTAR = DD50*(G9*(SED_SG-1.)/(NU_WATER**2))**(ONETHIRD)
         PSIC = 0.3/(1.+1.2*DSTAR)+0.055*(1.-EXP(-0.02*DSTAR))

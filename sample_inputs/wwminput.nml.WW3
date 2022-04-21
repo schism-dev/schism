@@ -117,7 +117,7 @@
                       !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
  IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=5); only used if cycle 3 is switched on
  MESBF          = 1                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
- FRICC          = 0.067             ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50
+ FRICC          = 0.067              ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50 (if negative read from SHOWEX_D50.gr3) 
  MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
  IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978)
                                      !                            2 - Thornton and Guza (1983) - Constant weighting function
@@ -206,8 +206,6 @@
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
                                      ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS)
-
- ROLMETHOD      = 2                  ! Roller source term integration (1 or 2)
 
  DMETHOD        = 2
                                      ! This switch controls the numerical method in directional space.

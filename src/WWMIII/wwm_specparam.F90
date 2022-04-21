@@ -2032,3 +2032,84 @@
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
+!**********************************************************************
+!*  Subroutine computing mean wave parameters, optimised for breaking
+!**********************************************************************
+      SUBROUTINE MEAN_WAVE_PARAMETER_SWB(IP,ACLOC,HS,ETOT,SME01,SMECP,KMWAM)
+
+         USE DATAPOOL
+         IMPLICIT NONE
+
+         INTEGER, INTENT(IN) :: IP
+
+         REAL(rkind), INTENT(IN)    :: ACLOC(MSC,MDC)
+         REAL(rkind), INTENT(OUT)   :: SME01, SMECP, KMWAM, HS
+
+         INTEGER     :: ID, IS
+         REAL(rkind) :: ETOT, ETOT_SPSIG, ETOT_WK, ETOT_ISQ_WK, ETOT_INVSPSIG2
+         REAL(rkind) :: Y1(MSC), Y2(MSC), Y3(MSC), TMP1(MSC), TMP2(MSC), TMP3(MSC)
+
+!---     Computing total wave energy
+         ETOT = ZERO
+         DO ID = 1, MDC
+           TMP1(:) = ACLOC(:,ID)*SPSIG 
+           ETOT = ETOT + ONEHALF*TMP1(1)*DS_INCR(1)*DDIR
+           DO IS = 2, MSC
+             ETOT = ETOT + ONEHALF*(TMP1(IS)+TMP1(IS-1))*DS_BAND(IS)*DDIR
+           END DO
+           ETOT = ETOT + ONEHALF*TMP1(MSC)*DS_INCR(MSC)*DDIR
+         END DO
+
+!---     Computing other bulk parameters (skipping if ETOT is too small)
+         IF (ETOT .GT. THR) then
+           ! Initialisation
+           ETOT_SPSIG = ZERO
+           ETOT_WK = ZERO
+           ETOT_ISQ_WK = ZERO 
+           ETOT_INVSPSIG2 = ZERO 
+           Y1 = SIGPOW(:,1)
+           Y2 = ONE/SQRT(WK(:,IP))
+           Y3 = ONE/SPSIG
+
+           ! All in two loops
+           DO ID = 1, MDC
+             ! Corresponding temporary arrays
+             TMP1(:) = ACLOC(:,ID)*SPSIG*Y1
+             TMP2(:) = ACLOC(:,ID)*SPSIG*Y2
+             TMP3(:) = ACLOC(:,ID)*Y3
+
+             ! First frequency
+             ETOT_SPSIG = ETOT_SPSIG + ONEHALF*TMP1(1)*DS_INCR(1)*DDIR
+             ETOT_ISQ_WK = ETOT_ISQ_WK + ONEHALF*TMP2(1)*DS_INCR(1)*DDIR
+             ETOT_INVSPSIG2 = ETOT_INVSPSIG2 + ONEHALF*TMP3(1)*DS_INCR(1)*DDIR
+
+             ! Middle frequencies
+             DO IS = 2, MSC
+               ETOT_SPSIG = ETOT_SPSIG + ONEHALF*(TMP1(IS)+TMP1(IS-1))*DS_BAND(IS)*DDIR
+               ETOT_ISQ_WK = ETOT_ISQ_WK + ONEHALF*(TMP2(IS)+TMP2(IS-1))*DS_BAND(IS)*DDIR
+               ETOT_INVSPSIG2 = ETOT_INVSPSIG2 + ONEHALF*(TMP3(is)+TMP3(is-1))*DS_BAND(is)*DDIR
+             END DO
+
+             ! Last frequencies
+             ETOT_SPSIG = ETOT_SPSIG + ONEHALF*TMP1(MSC)*DS_INCR(MSC)*DDIR
+             ETOT_ISQ_WK = ETOT_ISQ_WK + ONEHALF*TMP2(MSC)*DS_INCR(MSC)*DDIR
+             ETOT_INVSPSIG2 = ETOT_INVSPSIG2 + ONEHALF*TMP3(msc)*DS_INCR(msc)*DDIR
+           END DO
+
+           ! Final computations
+           HS    = MAX(ZERO,4.*SQRT(ETOT))
+           SME01 = ETOT_SPSIG/ETOT
+           SMECP = ETOT**2/(ETOT_INVSPSIG2*ETOT_SPSIG)
+           KMWAM = (ETOT/ETOT_ISQ_WK)**2
+
+         ELSE
+           ETOT        = ZERO
+           HS          = ZERO 
+           SME01       = ZERO
+           SMECP       = ZERO
+           KMWAM       = 10.0_rkind
+         END IF
+      END SUBROUTINE 
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************

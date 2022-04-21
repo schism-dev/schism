@@ -68,11 +68,16 @@
      &                         MDC_SCHISM => MDC2,           & !mdc2 from SCHISM ...
      &                         WWAVE_FORCE=>wwave_force,     & !wave-induced force
      &                         OUTT_INTPAR=>out_wwm,         & !outputs from WWM
+     &                         WAVE_SBRTOT => wave_sbrtot,   & ! Total wave energy dissipation rate by depth-induced breaking [W/m²]
+     &                         WAVE_SBFTOT => wave_sbftot,   & ! Total wave energy dissipation rate by bottom friction [W/m²]
+     &                         WAVE_SINTOT => wave_sintot,   & ! Total wave energy input rate from atmospheric forcing [W/m²]
+     &                         WAVE_SDSTOT => wave_sdstot,   & ! Total wave energy dissipation rate by whitecapping [W/m²]
      &                         OUTT_INTPARROL=>out_wwm_rol,  & !outputs from WWM
      &                         WIND_INTPAR=>out_wwm_windpar, & ! boundary layer stuff from wwm ...
      &                         ISBND,                        & !bnd flags
      &                         RKIND,                        &
-     &                         JPRESS,SBR,SBF,SROL, & !for vortex formulation
+     &                         JPRESS,SBR,SBF,SROL,SDS, & !for vortex formulation
+     &                         EPS_W, EPS_R, EPS_BR,         & ! energy dissipation of wave and roller, and total forcing
      &                         STOKES_HVEL, STOKES_HVEL_SIDE, & !horizontal Stokes drift velocities (u,v)
      &                         STOKES_WVEL, STOKES_WVEL_SIDE, & !vertical Stokes drift velocities
      &                         ROLLER_STOKES_HVEL,ROLLER_STOKES_HVEL_SIDE, & ! horizontal Stokes drift velocities (u,v)for the surface rollers
@@ -82,6 +87,7 @@
      &                         fwvor_advz_stokes,             & ! terms involved in the vortex force formalism (RADFLAG='VOR')
      &                         fwvor_gradpress,               &
      &                         fwvor_breaking,                &
+     &                         fwvor_streaming,               &
      &                         wafo_obcramp                   ! BM: flag (0/1:off/on) to apply a ramp on wave forces at open boundary
 !     &                         wafo_opbnd_ramp                  ! The corresponding ramp value defined at sides
 
@@ -705,10 +711,16 @@
          REAL(rkind), ALLOCATABLE        :: AC1(:,:,:)
          REAL(rkind), ALLOCATABLE        :: AC2(:,:,:)
 !
-! ... wave roller action arrays
+! ... surface roller arrays
 !
-         REAL(rkind), ALLOCATABLE        :: RAC1(:,:,:)  ! Roller
-         REAL(rkind), ALLOCATABLE        :: RAC2(:,:,:)  ! Roller
+         REAL(rkind), ALLOCATABLE        :: EROL1(:), EROL2(:) ! Bulk energy of surface rollers [m^3/s^2]
+         REAL(rkind), ALLOCATABLE        :: SINBETAROL(:)      ! Surface roller slope [-]
+         REAL(rkind), ALLOCATABLE        :: KROLP(:)           ! Peak wave number [m^-1], mainly for forcing terms in VOR formalism
+         REAL(rkind), ALLOCATABLE        :: SIGROLP(:)         ! Peak wave frequency [s^-1], mainly for forcing terms in VOR formalism
+         REAL(rkind), ALLOCATABLE        :: DROLP(:)           ! Mean wave direction [rad]: surface roller direction of propagation
+         REAL(rkind), ALLOCATABLE        :: CROLP(:)           ! Peak wave phase [m/s]: surface roller propagation speed, used for computing dissipation
+         REAL(rkind), ALLOCATABLE        :: CROL(:,:)          ! Peak wave phase components [m/s]: used for comuting advection
+         REAL(rkind), ALLOCATABLE        :: AROL(:)            ! Alpha constant in roller source term [-]; array mostly used to cancel roller near shoreline
 !
 ! ... implicit splitting
 !
@@ -947,6 +959,8 @@
           
 
          REAL(rkind)             :: FRICC = -0.067
+         ! MP D50 for SHOWEX friction source term
+         REAL(rkind), ALLOCATABLE :: D50_SHOWEX(:)
          REAL(rkind)             :: TRICO = 0.05
          REAL(rkind)             :: TRIRA = 2.5
          REAL(rkind)             :: TRIURS = 0.1
@@ -978,10 +992,11 @@
          REAL(rkind), ALLOCATABLE      :: DISSIPATION(:)
          REAL(rkind), ALLOCATABLE      :: AIRMOMENTUM(:)
 
-!
-! ... Wave breaking-induced source term summed over sub-cycles (needed for computing SBR and for the roller source term when used)
-!
-         REAL(rkind), ALLOCATABLE :: SSBR_TOTAL(:,:,:)
+! MP : not needed...
+!!
+!! ... Wave breaking-induced source term summed over sub-cycles (needed for computing SBR and for the roller source term when used)
+!!
+!!         REAL(rkind), ALLOCATABLE :: SSBR_TOTAL(:,:,:)
 
 
          INTEGER                :: MELIM   = 1
@@ -1064,6 +1079,9 @@
          LOGICAL                :: LOUTS   = .FALSE.
          INTEGER                :: IOUTS
 
+         LOGICAL                :: LFRCOUT = .FALSE.
+         REAL(rkind)            :: FRCOUT = 0.4
+
          LOGICAL                :: LWW3GLOBALOUT = .FALSE.
          REAL(rkind), ALLOCATABLE      :: WW3GLOBAL(:,:)
 
@@ -1143,13 +1161,12 @@
 
          REAL(rkind), ALLOCATABLE ::   RSXX(:), RSXY(:), RSYY(:), FORCEXY(:,:)
          REAL(rkind), ALLOCATABLE ::   SXX3D(:,:), SXY3D(:,:), SYY3D(:,:)
-         REAL(rkind), ALLOCATABLE ::   BETAROLLER(:)
+
 !
 ! switch for the numerics ... wwmDnumsw.mod
 !
          INTEGER                :: AMETHOD = 1
          INTEGER                :: SMETHOD = 1
-         INTEGER                :: ROLMETHOD = 2
          INTEGER                :: DMETHOD = 2
          INTEGER                :: FMETHOD = 1
          INTEGER                :: IVECTOR = 2

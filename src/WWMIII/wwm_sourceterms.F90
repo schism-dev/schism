@@ -5,7 +5,7 @@
 !2do add mean quantities for 
       SUBROUTINE SOURCETERMS (IP, ACLOC, IMATRA, IMATDA, LRECALC, ISELECT, CALLFROM)
       
-      USE DATAPOOL, ONLY : MSC, MDC, MNP, WK, LINID, THR, UFRIC
+      USE DATAPOOL, ONLY : MSC, MDC, MNP, WK, LINID, THR, UFRIC, RADFLAG
       USE DATAPOOL, ONLY : CD, TAUTOT, TAUWX, TAUWY, DEP, AC1, AC2
       USE DATAPOOL, ONLY : PI2, CG, G9, ZERO, ALPHA_CH, QBLOCAL
       USE DATAPOOL, ONLY : USTDIR, Z0, SMALL, VERYSMALL, MSC_HF
@@ -15,7 +15,10 @@
       USE DATAPOOL, ONLY : TAUW, FR, MESNL, MESIN, MESDS, MESBF, MESBR, IBREAK
       USE DATAPOOL, ONLY : MESTR, ISHALLOW, DS_INCR, IOBP, IOBPD, MEVEG
       USE DATAPOOL, ONLY : LNANINFCHK, DBG, WRITEDBGFLAG, IFRIC, RTIME, DISSIPATION
-      USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP
+      USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP, IROLLER
+      USE DATAPOOL, ONLY : WAVE_SBRTOT, WAVE_SBFTOT, WAVE_SINTOT, WAVE_SDSTOT
+      USE DATAPOOL, ONLY : EPS_W, EPS_BR
+      USE DATAPOOL, ONLY : RHOW
 #ifdef WWM_MPI
       USE DATAPOOL, ONLY : myrank
 #endif
@@ -58,6 +61,7 @@
          REAL(rkind)    :: SSVEG(MSC,MDC),DSSVEG(MSC,MDC), DSSBF(MSC,MDC)
          REAL(rkind)    :: SSBF(MSC,MDC), SSBR(MSC,MDC), SSINE(MSC,MDC), DSSNL3(MSC,MDC), DSSBR(MSC,MDC)
          REAL(rkind)    :: TMP_IN(MSC), TMP_DS(MSC), WN2(MSC*MDC),SPRDD(MDC),AK2VGM1,AKM1
+         REAL(rkind)    :: SINTOT,SDSTOT,SBRTOT,SBFTOT
 
          REAL(rkind)    :: EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, AS
          REAL(rkind)    :: FMEANWS, TAUWAX, TAUWAY, XJ, FLLOWEST, GADIAG
@@ -105,6 +109,8 @@
          DSSNL4      = zero
          SSBR        = zero
          SSBF        = zero
+         SSDS        = zero
+         DSSBF       = zero
          SSVEG       = zero
          DSSVEG      = zero
          IMATRA_WAM  = zero
@@ -300,7 +306,7 @@
          call WAV_MY_WTIME(TIME4)
 #endif 
          IF ((ISELECT.EQ.3 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.20) .AND. .NOT. LRECALC) THEN
-
+           
            IMATRAT = IMATRA
 
            IF (IOBP(IP) .EQ. 0 .OR. IOBP(IP) .EQ. 4) THEN
@@ -315,9 +321,15 @@
                CALL ONED2TWOD(IMATDA1D,IMATDAWW3)
                DO ID = 1, MDC
                  SSDS(:,ID)   = IMATRAWW3(:,ID) / CG(:,IP)
-                 IMATRA(:,ID) = IMATRA(:,ID)+IMATRAWW3(:,ID) / CG(:,IP)
-                 !IMATDA(:,ID) = IMATDA(:,ID)+IMATDAWW3(:,ID) !/ CG(:,IP)
+                 IF (ISELECT.EQ.3 .OR. ISELECT.EQ.20) THEN
+                   IMATRA(:,ID) = IMATRA(:,ID)+IMATRAWW3(:,ID) / CG(:,IP)
+                   !IMATDA(:,ID) = IMATDA(:,ID) + IMATDAWW3(:,ID) !/ CG(:,IP)
+                 ELSE IF (ISELECT.EQ.10) THEN
+                   IMATDA(:,ID) = IMATDA(:,ID) - IMATDAWW3(:,ID)
+                 END IF
                END DO
+               CALL COMPUTE_WAVE_SDSTOT(SSDS,SDSTOT)
+               WAVE_SDSTOT(IP) = SDSTOT
              ELSE IF (MESDS == 2) THEN
                CALL WWM_ABORT('PLEASE USE LSOURCEWAM FOR ECWAM SOURCE TERM FORMULATION')
              ELSE IF (MESDS == 3) THEN
@@ -344,6 +356,9 @@
 !              CALL SSWELL(IP,ETOT,ACLOC,IMATRA,IMATDA,URMSTOP,CG0)
              ELSE IF (MESDS == 5) THEN
                CALL SDS_CYCLE3 ( IP, KMWAM, SME10, ETOT, ACLOC, IMATRA, IMATDA, SSDS ) 
+             END IF
+             IF ( MESDS/=0 .AND. RADFLAG .EQ. 'VOR' ) THEN
+                 CALL COMPUTE_SDS(IP,SSDS)
              END IF
            END IF
 #ifdef VDISLIN
@@ -394,11 +409,22 @@
          IF (MESBR .EQ. 1) THEN
            IF (((ISELECT.EQ.5 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.30) .AND. ISHALLOW(IP) .EQ. 1) .AND. .NOT. LRECALC) THEN
              IF (IOBP(IP) == 0 .OR. IOBP(IP) == 4 .OR. IOBP(IP) == 3) THEN
+               ! Compute source term
                IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
-                 CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                 CALL SDS_SWB(IP,SME01,KMWAM,ETOT,HS,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
                ELSE
-                 CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
+                 CALL SDS_SWB(IP,SMECP,KMWAM,ETOT,HS,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
                ENDIF
+               ! In case of VOR + implicit mode, we deal with the SBR term here
+               ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
+               ! In exlicit, we should use SMETHOD = 6, and SBR is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+               IF ( ISELECT.EQ.10 ) THEN 
+                 CALL COMPUTE_WAVE_SBRTOT(-(DSSBR*ACLOC-SSBR),SBRTOT)
+                 WAVE_SBRTOT(IP) = SBRTOT
+                 EPS_W(IP) = - WAVE_SBRTOT(IP)/RHOW
+                 IF (IROLLER == 0) EPS_BR(IP) = EPS_W(IP)
+               ENDIF
+               IF ( ISELECT.EQ.10 .AND. RADFLAG .EQ. 'VOR' ) CALL COMPUTE_SBR(IP, -(DSSBR*ACLOC-SSBR))
              END IF
            ENDIF
          END IF
@@ -414,6 +440,17 @@
            IF (((ISELECT.EQ.6 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.30) .AND. ISHALLOW(IP) .EQ. 1) .AND. .NOT. LRECALC) THEN
              IF (IOBP(IP) == 0 .OR. IOBP(IP) == 4 .OR. IOBP(IP) == 3) THEN
               CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+              ! In case of VOR + implicit mode, we deal with the SBF term here
+              ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
+              ! In exlicit, we should use SMETHOD = 6, and SBF is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+              ! In contrast to the breaking source term, the friction source term is not linearized (hence SSBF) 
+              IF ( ISELECT.EQ.10 ) THEN 
+                CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+                WAVE_SBFTOT(IP) = SBFTOT
+              ENDIF
+              IF ( ISELECT.EQ.10 .AND. RADFLAG .EQ. 'VOR' ) THEN
+                 CALL COMPUTE_SBF(IP,SSBF)
+              END IF
              END IF
            END IF
          ENDIF
@@ -507,4 +544,117 @@
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSBF(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SBFTOT
+
+      ! Initialization
+      SBFTOT = ZERO
+       
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SBFTOT = SBFTOT + SPSIG(IS)*SSBF(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SBRTOT(SSBR, SBRTOT)
+      !This serves mostly for implicit solvers. For the explicit
+      !solver, a more accurate computation is performed during 
+      !the call to routine INT_SHALLOW_SOURCETERMS.
+      !As the source term is linearized with implicit solver,
+      !take as input : DSSBR*ACLOC - SSBR
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSBR(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SBRTOT
+	  
+      ! Initialization
+      SBRTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SBRTOT = SBRTOT + SPSIG(IS)*SSBR(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SINTOT(SSIN,SINTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSIN(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SINTOT
+	  
+      ! Initialization
+      SINTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SINTOT = SINTOT + SPSIG(IS)*SSIN(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SDSTOT(SSDS,SDSTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                 :: IS, ID
+      REAL(rkind), INTENT(IN) :: SSDS(MSC,MDC)
+      REAL(rkind), INTENT(OUT):: SDSTOT
+	  
+      ! Initialization
+      SDSTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SDSTOT = SDSTOT + SPSIG(IS)*SSDS(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_SDS(IP,SSDS)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                 :: IS, ID
+      INTEGER, INTENT(IN)     :: IP
+      REAL(rkind), INTENT(IN) :: SSDS(MSC,MDC)
+
+      ! Initialization
+      SDS(:,IP) = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SDS(1,IP) = SDS(1,IP) + G9*COSTH(ID)*WK(IS,IP)*SSDS(IS,ID)*DS_INCR(IS)*DDIR
+          SDS(2,IP) = SDS(2,IP) + G9*SINTH(ID)*WK(IS,IP)*SSDS(IS,ID)*DS_INCR(IS)*DDIR
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
 

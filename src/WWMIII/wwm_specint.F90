@@ -265,6 +265,7 @@
          REAL(rkind)  :: SSNL3(MSC,MDC),DSSNL3(MSC,MDC), DSSVEG(MSC,MDC)
          REAL(rkind)  :: SSBR(MSC,MDC),DSSBR(MSC,MDC), SSVEG(MSC,MDC)
          REAL(rkind)  :: SSBF(MSC,MDC),DSSBF(MSC,MDC), SSINL(MSC,MDC)
+         REAL(rkind)  :: SBRTOT, SBFTOT
          REAL(rkind)  :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS,WIND10
          REAL(rkind)  :: ETAIL,EFTAIL,EMAX,LIMAC,NEWDAC,FPM,WINDTH,TEMP,GTEMP1
          REAL(rkind)  :: RATIO,LIMFAC,LIMDAC,GTEMP2,FLHAB,DELFL,USFM, NEWDACDT
@@ -396,17 +397,39 @@
                    END DO
                  END DO
                ENDIF ! MESTR
+               
+               ! Depth-induced wave breaking
                IF (MESBR .GT. 0) THEN
                  IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
                    CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
                  ELSE
                    CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
                  ENDIF
+                 CALL COMPUTE_WAVE_SBRTOT(-(DSSBR*ACLOC-SSBR),SBRTOT)
+                 WAVE_SBRTOT(IP) = SBRTOT
+                 EPS_W(IP) = - WAVE_SBRTOT(IP)/RHOW
+                 IF (IROLLER == 0) EPS_BR(IP) = EPS_W(IP)
+                 ! In case of VOR + implicit mode, we deal with the SBR term here
+                 IF (RADFLAG .EQ. 'VOR') CALL COMPUTE_SBR(IP, -(DSSBR*ACLOC-SSBR))
                ENDIF
-               IF (MESBF .GT. 0) CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+
+               ! Bottom friction
+               IF (MESBF .GT. 0) THEN 
+                 CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+                 CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+                 WAVE_SBFTOT(IP) = SBFTOT
+                 ! In case of VOR + implicit mode, we deal with the SBF term here
+                 IF (RADFLAG .EQ. 'VOR') THEN
+                   CALL COMPUTE_SBF(IP,SSBF)
+                 END IF
+               END IF
+
+               ! Interaction with vegetation
                IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
-               IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG 
-               IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG 
+
+               ! Updating matrices with these source terms
+               IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG
+               IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG  
              ENDIF ! ISHALLOW(IP) .EQ. 1
            ELSE ! IOBP(IP) .NE. 0
              IF (LSOUBOUND) THEN ! Source terms on boundary ...
@@ -470,15 +493,36 @@
                        END DO
                      END DO
                    ENDIF ! MESTR
+                   ! Depth-induced wave breaking
                    IF (MESBR .GT. 0) THEN
                      IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
                        CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
                      ELSE
                        CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
                      ENDIF
+                     CALL COMPUTE_WAVE_SBRTOT(-(DSSBR*ACLOC-SSBR),SBRTOT)
+                     WAVE_SBRTOT(IP) = SBRTOT
+                     EPS_W(IP) = - WAVE_SBRTOT(IP)/RHOW
+                     IF (IROLLER == 0) EPS_BR(IP) = EPS_W(IP)
+                     ! In case of VOR + implicit mode, we deal with the SBR term here
+                     IF (RADFLAG .EQ. 'VOR') CALL COMPUTE_SBR(IP, -(DSSBR*ACLOC-SSBR))
                    ENDIF
-                   IF (MESBF .GT. 0) CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+
+                   ! Bottom friction
+                   IF (MESBF .GT. 0) THEN 
+                     CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+                     CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+                     WAVE_SBFTOT(IP) = SBFTOT
+                     ! In case of VOR + implicit mode, we deal with the SBF term here
+                     IF (RADFLAG .EQ. 'VOR') THEN
+                       CALL COMPUTE_SBF(IP,SSBF)
+                     END IF
+                   END IF
+
+                   ! Interaction with vegetation
                    IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+
+                   ! Updating matrices with these source terms
                    IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG
                    IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG
                  ENDIF ! ISHALLOW(IP) .EQ. 1
@@ -630,105 +674,79 @@
          REAL(rkind) :: HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2, SUMACLOC
          REAL(rkind) :: CFL_LOC, DT_LOC, NEWDAC
          REAL(rkind) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
-         REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC)
-         REAL(rkind) :: SSBF(MSC,MDC), DSSBF(MSC,MDC)
-         REAL(rkind) :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)	
+         REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC), SURFA0_CUM, SSBR_TOTAL(MSC,MDC)
+         REAL(rkind) :: SSBF(MSC,MDC), DSSBF(MSC,MDC), SBFTOT, SBFTOT_CUM, SSBF_TOTAL(MSC,MDC)
+         REAL(rkind) :: DSSVEG(MSC,MDC), SSVEG(MSC,MDC)
+         REAL(rkind) :: SSNL3(MSC,MDC), DSSNL3(MSC,MDC)
 
          ! Depth-induced breaking
          IF (MESBR .EQ. 1) THEN
            ! Initializing the time-averaged wave breaking-induced source term for the roller
-           SSBR_TOTAL(:,:,IP) = 0
+           SURFA0_CUM = 0.
 
            ! Computing the source term
            IMATRA = ZERO; IMATDA = ZERO
-           CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+           CALL MEAN_WAVE_PARAMETER_SWB(IP,ACLOC,HS,ETOT,SME01,SMECP,KMWAM)
            IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
              CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
            ELSE
              CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
-           ENDIF
+           END IF
+              
            ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
-           CFL_LOC = 0.9D0 ! ref 0.9D0
-           DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           CFL_LOC = 0.8D0; DT_LOC = CFL_LOC/MAX(ABS(DSSBR(1,1)),1.D-12) ! DSSBR is constant !
            IF (DT_LOC > DT) THEN
              NB_SUBITE = 1                  ! we keep the time step in use
-             DT_LOC    = DT     
+             DT_LOC    = DT
            ELSE
              NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
-             DT_LOC    = DT/NB_SUBITE
+             DT_LOC    = DT/DFLOAT(NB_SUBITE)
            END IF
 
            ! Integration with sub-cycles
            DO TI = 1, NB_SUBITE
-             IMATRA = ZERO; IMATDA = ZERO
+             ! Cumulating SURFA0 terms for computing eps_w (eps_w ~ dFw/dx, for turbulence injection and roller)
+             ! NB: DSSBR is constant and equals SURFA0; ETOT varies with each iteration, so needed here too !
+             SURFA0_CUM = SURFA0_CUM + DT_LOC*DSSBR(1,1)*ETOT
 
-             ! Computing source term
-             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+             ! Time-integration
+             DO ID = 1, MDC
+               DO IS = 1, MSC
+                 NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                 ! Updating the wave action spectrum
+                 ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+               END DO
+             END DO
+
+             ! Updating source term
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL MEAN_WAVE_PARAMETER_SWB(IP,ACLOC,HS,ETOT,SME01,SMECP,KMWAM)
              IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
                CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
              ELSE
                CALL SDS_SWB(IP, SMECP, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR)
-             ENDIF
-
-             ! Time-integration
-             DO IS = 1, MSC
-                DO ID = 1, MDC
-                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
-                  ! Updating the wave action spectrum
-                  ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
-                END DO
-             END DO
+             END IF
            END DO
+
+           ! Computing spatial gradient of energy flux (eps_w)
+           EPS_W(IP) = -SURFA0_CUM*G9/DT
+           IF (IROLLER == 0) EPS_BR(IP) = EPS_W(IP)
+           
+           ! Compute the total wave energy dissipation rate by depth-induced breaking
+           WAVE_SBRTOT(IP) =  SURFA0_CUM/DT*G9*RHOW
                
-           ! Storing the wave breaking-induced source term for the roller
+           ! Storing the wave breaking-induced source term for the wave force
            ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSBR
-           SSBR_TOTAL(:,:,IP) = (AC2(:,:,IP) - ACLOC)/DT
+           SSBR_TOTAL = (AC2(:,:,IP) - ACLOC)/DT
 
            ! Compute SBR for SCHISM
            ! NB: SBR needs to enter with its real sign, which is '-', see wwm_breaking.F90 to check that out
-           IF (IROLLER == 1) THEN
-             CALL COMPUTE_SBR(IP, -(1.D0-ALPROL)*SSBR_TOTAL(:,:,IP))
-           ELSE
-             CALL COMPUTE_SBR(IP, -SSBR_TOTAL(:,:,IP))
-           END IF
-
+           IF (RADFLAG .EQ. 'VOR') CALL COMPUTE_SBR(IP, -SSBR_TOTAL)
          END IF
 
-         ! Bottom friction
-         IF (MESBF .GE. 1) THEN
-           ! Initialization
-           IMATRA = ZERO; IMATDA = ZERO
-           CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
-         
-           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
-           CFL_LOC = 0.9D0; DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
-           IF (DT_LOC > DT) THEN
-             NB_SUBITE = 1                  ! we keep the time step in use
-             DT_LOC    = DT     
-           ELSE
-             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
-             DT_LOC    = DT/NB_SUBITE
-           END IF
-
-           ! Integration with sub-cycles
-           DO TI = 1, NB_SUBITE
-             IMATRA = ZERO; IMATDA = ZERO
-             CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
-           
-             DO IS = 1, MSC
-                DO ID = 1, MDC
-                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
-                  ! Updating the wave action spectrum
-                  ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
-                END DO
-             END DO
-           END DO
-
-           ! Compute SBF for SCHISM
-           CALL COMPUTE_SBF(IP,SSBF)
-         END IF
-
-         ! Dissipation by vegetation !LLa
+         ! Dissipation by vegetation
+         ! Re-init AC2
+         AC2(:,:,IP) = ACLOC
          IF (MEVEG .GE. 1) THEN
            ! Initialization
            IMATRA = ZERO; IMATDA = ZERO
@@ -736,7 +754,7 @@
            CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
 
            ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
-           CFL_LOC = 0.9D0; DT_LOC = CFL_LOC/MAX(ABS(MAXVAL(IMATDA)),1.D-6)
+           CFL_LOC = 0.5D0; DT_LOC = CFL_LOC/MAX(MAXVAL(ABS(IMATDA)),1.D-6)
            IF (DT_LOC > DT) THEN
              NB_SUBITE = 1                  ! we keep the time step in use
              DT_LOC    = DT     
@@ -747,17 +765,66 @@
 
            ! Integration with sub-cycles
            DO TI = 1, NB_SUBITE
-             IMATRA = ZERO; IMATDA = ZERO
-             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
-             CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
-             DO IS = 1, MSC
-               DO ID = 1, MDC
+             DO ID = 1, MDC
+               DO IS = 1, MSC
                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
                  ! Updating the wave action spectrum
                  ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
                END DO
              END DO
+
+             ! Updating source term
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
+             CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
            END DO
+         END IF
+
+         ! Bottom friction
+         ! Re-init AC2
+         AC2(:,:,IP) = ACLOC
+         IF (MESBF .GE. 1) THEN
+           ! Initialization
+           IMATRA = ZERO; IMATDA = ZERO; SBFTOT_CUM = ZERO
+           CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
+         
+           ! We follow the recommendations of Hargreaves and Annan (2001) for the number of sub-cycles
+           CFL_LOC = 0.8D0; DT_LOC = CFL_LOC/MAX(MAXVAL(ABS(IMATDA)),1.D-6)
+           IF (DT_LOC > DT) THEN
+             NB_SUBITE = 1                  ! we keep the time step in use
+             DT_LOC    = DT     
+           ELSE
+             NB_SUBITE = CEILING(DT/DT_LOC) ! ceiling instead of nint to be conservative here
+             DT_LOC    = DT/NB_SUBITE
+           END IF
+
+           ! Integration with sub-cycles
+           DO TI = 1, NB_SUBITE
+             ! wave energy dissipation rate at sub timestep
+             CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+             SBFTOT_CUM = SBFTOT_CUM + SBFTOT*DT_LOC
+             DO ID = 1, MDC
+               DO IS = 1, MSC
+                 NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
+                 ! Updating the wave action spectrum
+                 ACLOC(IS,ID) = MAX( ZERO , ACLOC(IS,ID) + MIN(ZERO,NEWDAC))
+               END DO
+             END DO
+
+             ! Updating source term
+             IMATRA = ZERO; IMATDA = ZERO
+             CALL SDS_BOTF(IP, ACLOC, IMATRA, IMATDA, SSBF, DSSBF)
+           END DO
+           
+           ! Compute the total wave energy dissipation rate by bottom friction
+           WAVE_SBFTOT(IP) =  SBFTOT_CUM/DT
+           
+           ! Storing the wave breaking-induced source term for the wave force
+           ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSBR
+           SSBF_TOTAL = (AC2(:,:,IP) - ACLOC)/DT
+           
+           ! Compute SBF for SCHISM
+           IF (RADFLAG .EQ. 'VOR') CALL COMPUTE_SBF(IP, -SSBF_TOTAL)
          END IF
 
       END SUBROUTINE

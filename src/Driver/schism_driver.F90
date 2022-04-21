@@ -136,6 +136,7 @@ subroutine schism_main
 
 end subroutine schism_main
 
+#ifndef OLDIO
 subroutine schism_init0(iths,ntime)
   use schism_msgp, only: task_id
   use scribe_io
@@ -178,3 +179,4 @@ subroutine schism_finalize0
   call mpi_barrier(comm_schism,ierr)
 
 end subroutine schism_finalize0
+#endif
