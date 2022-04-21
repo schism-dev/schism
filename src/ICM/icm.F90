@@ -68,38 +68,44 @@ subroutine ecosystem(it)
   integer, intent(in) :: it
 
   !local variables
-  integer :: i,ie,ip,id,j,k,m,nv,icount,jsj,nd
+  integer :: i,ie,ip,id,j,k,m,icount,jsj,nd
   real(rkind) :: time,dz,h,usf
   real(rkind),allocatable :: swild(:,:) !for exchange only
   real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   logical :: fnan, frange
 
   !local variables
-  integer :: klev,knp,istat
+  integer :: kb,knp,istat
   real(rkind) :: tmp,tmp1,tmp2,fT,fST,fR,fN,fP,fS,fC
   real(rkind) :: mLight,chl,xT,xS,rIK,rIs(3),rat
   real(rkind) :: SAtd,rtmp,rval
   real(rkind) :: tdep,GP(nvrt,3)
+  real(rkind),dimension(nvrt) :: dep,salt,temp,TSED
+  real(rkind),dimension(nvrt,2) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3,RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX
 
   !light
-  !real(rkind) :: wLight(nvrt),rKe,rKeh,rKe0,rKeS,rKeV,rKeh0,rKeh2,rKehV(3,2),sdveg
   real(rkind) :: wLight(nvrt),rKe(nvrt),rKeh(nvrt),rKe0(nvrt),rKeS(nvrt),rKeV(nvrt),rKeh0,rKeh2,rKehV(3,2),sdveg
   real(rkind) :: sLight0,sLight !light
+
+  !pH
+  real(rkind),dimension(nvrt) :: pH,CAsat,CO2
+  real(rkind),dimension(nvrt,2) :: TIC,ALK,CA,CACO3
   
-  !sav
+  !SAV
   real(rkind) :: shtz,vhtz(3),zid(nvrt),vGP(3),sGP(nvrt)
   real(rkind) :: sdep
   real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1)
   real(rkind) :: sdz,dzt,hdep,sfT,sfR,sfN,sfP,sPBM(nvrt,3),sBM,sGM,sRM,sdDOX
   real(rkind) :: sdC(3),sdN(5),sdP(4)
-  !veg
+
+  !VEG
   real(rkind) :: atemp,asalt,vrat,vfT,vfI,vfST,vfR,vfN,vfP,vfMT(3,3)
   real(rkind) :: vLight,vPBM(3,3)
   real(rkind) :: vdz,vdzm,vBM(3),vGM(3),vdC(3),vdN(4),vdP(4),vdDOX
 
   !local variables
   real(rkind) :: sum1,k1,k2,a,b,rfp,x,s,T
-  real(rkind) :: zdep(nvrt+1),rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB
+  real(rkind) :: rdep,DOsat,usfa,rKr,AZB1,AZB2,sumAPB
   real(rkind) :: rKTM(3),rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
   real(rkind) :: nz(8),ZBG0(8,2),ZBG(8,2),ZB1G,ZB2G,ZBM(2),Fish,PBM(3),BPR(3)
@@ -142,60 +148,58 @@ subroutine ecosystem(it)
     !reverse the direction of vertical layers; link icm variables
     !call link_icm(1,id,nv)
     !**********************************************************************************
-    do k=1,nvrt; zid(k)=ze(max(k,kbe(id)),id); enddo
-    nv=nvrt-kbe(id) !total # of _layers_ (levels=nv+1)
-    if(idry_e(id)==1) nv=1
+    kb=min(kbe(id),nvrt-1)
+    do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo
+    !nv=nvrt-kbe(id) !layers; levels=nv+1
+    !if(idry_e(id)==1) nv=1
 
-    do k=min(kbe(id)+1,nvrt),nvrt
-      m=nvrt-k+1 !vertical layer reverse in icm
+    do k=kb+1,nvrt
+      !m=nvrt-k+1 !vertical layer reverse in icm
       if(idry_e(id)==1 .and. k/=nvrt) cycle
 
       if(idry_e(id)==1) then
-        dep(m)=0.1
-        temp(m)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !air temp for curent elem at this step
+        dep(k)=0.1; temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
       else
-        dep(m)=max(zid(k)-zid(k-1),1.d-1) !k>2; set minimum depth for wet elem
-        temp(m)=tr_el(1,k,id)
+        dep(k)=max(zid(k)-zid(k-1),1.d-1); temp(k)=tr_el(1,k,id) !minimum depth
       endif
-      salt(m)=tr_el(2,k,id)
+      salt(k)=tr_el(2,k,id)
 
-      ZB1(m,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
-      ZB2(m,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
-      PB1(m,1) =max(tr_el(2+irange_tr(1,7),k,id), 3.d-2)
-      PB2(m,1) =max(tr_el(3+irange_tr(1,7),k,id), 3.d-2)
-      PB3(m,1) =max(tr_el(4+irange_tr(1,7),k,id), 3.d-2)
-      RPOC(m,1)=max(tr_el(5+irange_tr(1,7),k,id), 0.d0)
-      LPOC(m,1)=max(tr_el(6+irange_tr(1,7),k,id), 0.d0)
-      DOC(m,1) =max(tr_el(7+irange_tr(1,7),k,id), 0.d0)
-      RPON(m,1)=max(tr_el(8+irange_tr(1,7),k,id), 0.d0)
-      LPON(m,1)=max(tr_el(9+irange_tr(1,7),k,id), 0.d0)
-      DON(m,1) =max(tr_el(10+irange_tr(1,7),k,id),0.d0)
-      NH4(m,1) =max(tr_el(11+irange_tr(1,7),k,id),0.d0)
-      NO3(m,1) =max(tr_el(12+irange_tr(1,7),k,id),0.d0)
-      RPOP(m,1)=max(tr_el(13+irange_tr(1,7),k,id),0.d0)
-      LPOP(m,1)=max(tr_el(14+irange_tr(1,7),k,id),0.d0)
-      DOP(m,1) =max(tr_el(15+irange_tr(1,7),k,id),0.d0)
-      PO4t(m,1)=max(tr_el(16+irange_tr(1,7),k,id),0.d0)
-      SU(m,1)  =max(tr_el(17+irange_tr(1,7),k,id),0.d0)
-      SAt(m,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
-      COD(m,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
-      DOX(m,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
+      ZB1(k,1) =max(tr_el(0+irange_tr(1,7),k,id), 0.d0)
+      ZB2(k,1) =max(tr_el(1+irange_tr(1,7),k,id), 0.d0)
+      PB1(k,1) =max(tr_el(2+irange_tr(1,7),k,id), 3.d-2)
+      PB2(k,1) =max(tr_el(3+irange_tr(1,7),k,id), 3.d-2)
+      PB3(k,1) =max(tr_el(4+irange_tr(1,7),k,id), 3.d-2)
+      RPOC(k,1)=max(tr_el(5+irange_tr(1,7),k,id), 0.d0)
+      LPOC(k,1)=max(tr_el(6+irange_tr(1,7),k,id), 0.d0)
+      DOC(k,1) =max(tr_el(7+irange_tr(1,7),k,id), 0.d0)
+      RPON(k,1)=max(tr_el(8+irange_tr(1,7),k,id), 0.d0)
+      LPON(k,1)=max(tr_el(9+irange_tr(1,7),k,id), 0.d0)
+      DON(k,1) =max(tr_el(10+irange_tr(1,7),k,id),0.d0)
+      NH4(k,1) =max(tr_el(11+irange_tr(1,7),k,id),0.d0)
+      NO3(k,1) =max(tr_el(12+irange_tr(1,7),k,id),0.d0)
+      RPOP(k,1)=max(tr_el(13+irange_tr(1,7),k,id),0.d0)
+      LPOP(k,1)=max(tr_el(14+irange_tr(1,7),k,id),0.d0)
+      DOP(k,1) =max(tr_el(15+irange_tr(1,7),k,id),0.d0)
+      PO4t(k,1)=max(tr_el(16+irange_tr(1,7),k,id),0.d0)
+      SU(k,1)  =max(tr_el(17+irange_tr(1,7),k,id),0.d0)
+      SAt(k,1) =max(tr_el(18+irange_tr(1,7),k,id),0.d0)
+      COD(k,1) =max(tr_el(19+irange_tr(1,7),k,id),0.d0)
+      DOX(k,1) =max(tr_el(20+irange_tr(1,7),k,id),0.d0)
 
       if(iPh==1) then
-        TIC(m,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
-        ALK(m,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
-        CA(m,1)   =max(tr_el(23+irange_tr(1,7),k,id), 0.d0)
-        CACO3(m,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
+        TIC(k,1)   =max(tr_el(21+irange_tr(1,7),k,id),0.d0)
+        ALK(k,1)   =max(tr_el(22+irange_tr(1,7),k,id),0.d0)
+        CA(k,1)    =max(tr_el(23+irange_tr(1,7),k,id),0.d0)
+        CACO3(k,1) =max(tr_el(24+irange_tr(1,7),k,id),0.d0)
       endif
-
       if(idry_e(id)==1) exit
 
       if(iKe==0) then !TSS from POC
-        TSED(m)=(RPOC(m,1)+LPOC(m,1))*wp%tss2c(id)
+        TSED(k)=(RPOC(k,1)+LPOC(k,1))*wp%tss2c(id)
       elseif(iKe==1) then !TSS from 3D sediment model
-        TSED(m)=0.0
+        TSED(k)=0.0
         do i=1,ntrs(5)
-          TSED(m)=TSED(m)+1.0d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0)
+          TSED(k)=TSED(k)+1.0d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0)
         enddo !
       endif!iKe
     enddo!k::kbe(id)+1,nvrt
@@ -205,8 +209,7 @@ subroutine ecosystem(it)
     if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(1)  
 
     !compute total water depth
-    tdep=sum(dep(1:nv))
-    if(tdep<1.e-5) call parallel_abort('illegal tdep')
+    tdep=sum(dep((kb+1):nvrt))
 
     !----------------------------------------------------------------------------------
     !Light Attenuation
@@ -216,12 +219,10 @@ subroutine ecosystem(it)
 
     !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
     if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
-    wLight(1)=rIa
+    wLight(nvrt)=rIa
 
     !compute light attenuation
-    do k=1,nv
-      klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-
+    do k=nvrt,kb+1,-1
       !light attenuation due to (water,chlorophyll,TSS)
       chl=max(PB1(k,1)/c2chl(1)+PB2(k,1)/c2chl(2)+PB3(k,1)/c2chl(3),0.d0)
       if(iKe==0.or.iKe==1) then
@@ -232,25 +233,25 @@ subroutine ecosystem(it)
 
       !light attenuation due to SAV 
       if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(klev-1)<shtz) then
-          rKeS(k)=sKe*(sleaf(klev,id)+sstem(klev,id))
+        if(zid(k-1)<shtz) then
+          rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
         endif 
       endif !isav
 
       !light attenuation due to VEG
       if(jveg==1.and.vpatch(id)==1) then
         !light attenuation due to VEG above water
-        if(k==1) then
+        if(k==nvrt) then
           rtmp=0
           do j=1,3
             rtmp=rtmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*max(vht(id,j)-tdep,1.d-5)/max(1.e-5,vht(id,j))
           enddo
-          wLight(1)=max(rIa*exp(-rtmp),1.d-8)
+          wLight(nvrt)=max(rIa*exp(-rtmp),1.d-8)
         endif
 
         !light attenuation due to VEG at each layer
         do j=1,3
-          if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(klev-1)<vhtz(j))) then 
+          if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then 
             rKeV(k)=rKeV(k)+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
           endif 
         enddo 
@@ -258,15 +259,15 @@ subroutine ecosystem(it)
 
       !total light attenuation
       rKe(k)=rKe0(k)+rKeS(k)+rKeV(k);  rKeh(k)=min(rKe(k)*dep(k),20.d0)
-      wLight(k+1)=wLight(k)*exp(-rKeh(k))
+      wLight(k-1)=wLight(k)*exp(-rKeh(k))
     enddo !k
-    sbLight(id)=wLight(nv+1) !light @sediment (e.g. benthic algae)
+    sbLight(id)=wLight(kb) !light @sediment (e.g. benthic algae)
 
     !----------------------------------------------------------------------------------
     !compute phytoplankton growth rate
     !----------------------------------------------------------------------------------
     GP=0.0
-    do k=1,nv
+    do k=nvrt,kb+1,-1
       if(rIa<=30) cycle
       do i=1,3
         fST=1.0; fC=1.0; fPN(k,i)=1.0
@@ -281,13 +282,13 @@ subroutine ecosystem(it)
 
         !light factor
         if(iLight==0) then !Cerco
-          mLight=rrat*(wLight(k)+wLight(k+1))/2.0 !(W.m-2=> E.m-2.day-1) 
+          mLight=rrat*(wLight(k-1)+wLight(k))/2.0 !(W.m-2=> E.m-2.day-1) 
           rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
           fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
         elseif(iLight==1) then !Chapra S.C.
           !calculate optimal light intensity for PB
-          if(k==1) rIs(i)=max(rIavg*exp(-rKe(k)*Hopt(i)),Iopt(i))
-          fR=2.718*(exp(-wLight(k+1)/rIs(i))-exp(-wLight(k)/rIs(i)))/rKeh(k)
+          if(k==nvrt) rIs(i)=max(rIavg*exp(-rKe(k)*Hopt(i)),Iopt(i))
+          fR=2.718*(exp(-wLight(k-1)/rIs(i))-exp(-wLight(k)/rIs(i)))/rKeh(k)
         else
           call parallel_abort('unknown iLight in icm.F90')
         endif
@@ -320,7 +321,7 @@ subroutine ecosystem(it)
           call parallel_abort('unknown iLimit in icm.F90')
         endif
       enddo !i
-    enddo !nv
+    enddo
 
     !----------------------------------------------------------------------------------
     !compute SAV growth rate
@@ -328,11 +329,10 @@ subroutine ecosystem(it)
     if(jsav==1.and.spatch(id)==1.and.idry_e(id)/=1) then
       !compute total leaf and stem biomass down to each layer; for wet elem. only
       szleaf=-99; szstem=-99
-      do k=1,nv
-        m=nvrt-k+1
-        if(zid(m-1)<shtz) then
-          szleaf(k+1)=sum(sleaf(m:nvrt,id))
-          szstem(k+1)=sum(sstem(m:nvrt,id))
+      do k=kb+1,nvrt
+        if(zid(k-1)<shtz) then
+          szleaf(k-1)=sum(sleaf(k:nvrt,id))
+          szstem(k-1)=sum(sstem(k:nvrt,id))
         endif 
       enddo 
 
@@ -341,10 +341,9 @@ subroutine ecosystem(it)
       sdep=max(tdep-sht(id),0.d0) !submergence
 
       !canopy (sht) is always at or below surface and so knp would stay at 1 or more
-      knp=1
-      do k=1,nv
-        m=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-        if(zid(m-1)<shtz.and.zid(m)>=shtz) then
+      knp=nvrt
+      do k=kb+1,nvrt
+        if(zid(k-1)<shtz.and.zid(k)>=shtz) then
           knp=k
           exit
         endif !knp
@@ -355,17 +354,15 @@ subroutine ecosystem(it)
       !above canopy; new half layer under canopy;  accumulated above current layer under canopy
       rKeh0=0.0;  rKeh2=0.0
     
-      do k=1,nv
-
-        klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
+      do k=nvrt,kb+1,-1
         !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
         !hdep: total distance from surface to the bottom level of the layer above sav canopy
-        if(jsav==1.and.spatch(id)==1.and.zid(klev-1)>=shtz) then 
+        if(jsav==1.and.spatch(id)==1.and.zid(k-1)>=shtz) then 
             rKeh0=rKeh0+(rKe0(k)+rKeV(k))*dep(k);  hdep=hdep+dep(k)
         endif !isav
 
         if(jsav==1.and.spatch(id)==1) then
-          if(zid(klev-1)<shtz) then
+          if(zid(k-1)<shtz) then
             xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
             if(xT<=0.0) then
               sfT=exp(-sKTGP(1)*xT*xT)
@@ -380,15 +377,15 @@ subroutine ecosystem(it)
             endif !k==knp
 
             !light on leave
-            if(szleaf(k+1)>=0.0.and.szstem(k+1)>=0.0) then !below canopy
+            if(szleaf(k-1)>=0.0.and.szstem(k-1)>=0.0) then !below canopy
               if (k==knp) then
                 !half of thickness for light attenuation
-                dzt=(shtz-zid(klev-1))/2.0
-                tmp=(rKe0(k)+rKeV(k))*dzt+sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+                dzt=(shtz-zid(k-1))/2.0
+                tmp=(rKe0(k)+rKeV(k))*dzt+sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
                 rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt  !accumulation from canopy downwards
               else
-                dzt=(zid(klev)-zid(klev-1))/2.0 
-                tmp=rKeh2+ (rKe0(k)+rKeV(k))*dzt +sKe*(szleaf(k+1)+szstem(k+1)-(sleaf(klev,id)+sstem(klev,id))/2.)
+                dzt=(zid(k)-zid(k-1))/2.0 
+                tmp=rKeh2+ (rKe0(k)+rKeV(k))*dzt +sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
                 rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
               endif !knp
 
@@ -409,39 +406,38 @@ subroutine ecosystem(it)
 
             !calculation of lf growth rate [1/day] as function of temp, light, N/P
             !sc2dw checked !>=0 with seeds, =0 for no seeds
-            sGP(klev)=sGPM*sfT*min(sfR,sfN,sfP)/sc2dw 
+            sGP(k)=sGPM*sfT*min(sfR,sfN,sfP)/sc2dw 
           endif 
         endif !jsav
-      enddo !k=1,nv
+      enddo !k
 
       !extend sav growth rate upward
-      if(jsav==1.and.spatch(id)==1.and.knp>=2)then
-        do k=1,knp-1
-          klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
-          if(sleaf(klev,id)>1.e-3)then
-            sGP(klev)=sGP(nvrt-knp+2)
+      if(jsav==1.and.spatch(id)==1.and.knp<nvrt)then
+        do k=knp+1,nvrt
+          if(sleaf(k,id)>1.e-3)then
+            sGP(k)=sGP(knp)
           endif !sleaf>0
         enddo !k
       endif !knp
     endif !rIa>30
 
-      !--------------------------------------------------------------------------------
-      !for Veg
-      !--------------------------------------------------------------------------------
-      !--------------------------------------------------------------------------------
-      !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
-      !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
-      !if(iTBen/=0) then !simplified sediment fluxes
-      !  CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
-      !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
-      !endif !iTBen
+    !--------------------------------------------------------------------------------
+    !for Veg
+    !--------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
+    !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
+    !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
+    !if(iTBen/=0) then !simplified sediment fluxes
+    !  CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
+    !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
+    !endif !iTBen
 
     !light attenuation for veg growth
     rKehV=0.0
     if(rIa>30) then
       if(jveg==1.and.vpatch(id)==1) then
         !pre-compute light for VEG
-        do k=1,nv
+        do k=nvrt,kb+1,-1
           if(idry_e(id)==1) then !dry elem
             do j=1,3
               if(tdep-vht(id,j)>1.e-5) then
@@ -455,13 +451,13 @@ subroutine ecosystem(it)
             enddo !j::veg species
           else !wet elem
             do j=1,3
-              if(zid(klev-1)>=vhtz(j)) then
+              if(zid(k-1)>=vhtz(j)) then
                 !if there are layers above canopy
                 rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*dep(k)
-              elseif(zid(klev-1)<vhtz(j).and.zid(klev)>=vhtz(j)) then
+              elseif(zid(k-1)<vhtz(j).and.zid(k)>=vhtz(j)) then
                 !if canopy is in this layer
-                rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dep(k)-(vhtz(j)-zid(klev-1)))
-                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*(vhtz(j)-zid(klev-1))
+                rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dep(k)-(vhtz(j)-zid(k-1)))
+                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*(vhtz(j)-zid(k-1))
               else
                 !if this layer is under canopy
                 rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dep(k)
@@ -474,7 +470,7 @@ subroutine ecosystem(it)
         sdveg=dot_product(vKe(1:3),vtleaf(id,1:3)+vtstem(id,1:3)/2) !shading effect
         do j=1,3
           !tempreture effect
-          atemp=0.0; do k=1,nv; atemp=atemp+temp(k)*dep(k); enddo
+          atemp=0.0; do k=kb+1,nvrt; atemp=atemp+temp(k)*dep(k); enddo
           xT=atemp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
           if(xT<=0.0)then
             vfT=exp(-vKTGP(j,1)*xT*xT)
@@ -483,7 +479,7 @@ subroutine ecosystem(it)
           endif
 
           !salinty stress
-          asalt=0.0; do k=1,nv; asalt=asalt+salt(k)*dep(k); enddo 
+          asalt=0.0; do k=kb+1,nvrt; asalt=asalt+salt(k)*dep(k); enddo 
           xS=asalt/max(tdep,1.d-2)-vSopt(j)
           vfST=vScr(j)/(max(vScr(j)+xS*xS,1.d-2))
 
@@ -517,24 +513,27 @@ subroutine ecosystem(it)
     endif !rIa>30
 
     !pH model
-    if(iPh==1) call ph_calc(id,nv)
+    if(iPh==1) then
+      do k=nvrt,kb+1,-1
+        call ph_calc(temp(k),salt(k),TIC(k,1),ALK(k,1),pH(k),CO2(k),CAsat(k))
+      enddo
+    endif
 
     !sediment flux module
-    if(iSed==1) call sed_calc(id,nv)
+    if(iSed==1) then 
+      k=kb+1
+      call sed_calc(id,dep(k),temp(k),salt(k),PB1(k,1),PB2(k,1),PB3(k,1), &
+                  & RPOC(k,1),LPOC(k,1),RPON(k,1),LPON(k,1),RPOP(k,1),LPOP(k,1), &
+                  & SU(k,1),PO4t(k,1),NH4(k,1),NO3(k,1),SAt(k,1),DOX(k,1), &
+                  & COD(k,1),TSED(k))
+    endif
 
     !**********************************************************************************
     !compute ICM kinetic terms
     !call calkwq(id,nv,usf,it)
     !**********************************************************************************
-    !init of sav inducing flux
-    !refresh each time step, tlf*sav to save for id=1:nea
-    lfNH4veg=0; lfPO4veg=0
-
-    !calculate depth at the bottom of each layer (from surface)
-    zdep(1)=dep(1);  do i=2,nv;  zdep(i)=zdep(i-1)+dep(i); enddo
-
     !redistribute surface or bottom fluxes in case the surface or bottom layer is too thin.
-    tdep=sum(dep(1:nv));  rdep=min(tdep,1.d0)
+    tdep=sum(dep((kb+1):nvrt));  rdep=min(tdep,1.d0)
     if(tdep<1.d-5) call parallel_abort('illegal tdep(2)')
 
     znRPOC=0.0;  nRPOC=0.0
@@ -558,7 +557,7 @@ subroutine ecosystem(it)
     !if(iBen/=0.or.iSed==1) then
     if(iBen/=0.or.iSed==1.or.iTBen/=0) then
       if(iBen/=0) then !sediment fluxes from ICM_ben.th
-        xT=temp(nv)-20.
+        xT=temp(kb+1)-20.
         nRPOC = BRPOC(id)*TBRPOC**xT
         nLPOC = BLPOC(id)*TBLPOC**xT
         nDOC =  BDOC(id)*TBDOC**xT
@@ -575,13 +574,13 @@ subroutine ecosystem(it)
         nSAt  = BSAt(id)*TBSAt**xT
         nCOD  = BCOD(id)*TBCOD**xT
         nDO   = BDO(id)*TBDO**xT
-      endif !k==nv.and.iBen/=0
+      endif !k
 
       if(iSed==1) then !sediment fluxes
         if(iPh==1 .and.  iphgb(id)/=0) then
-          BnPO4t=max(BnPO4t*exp(1.3*(PH(nv)-8.5)),0.02)
-          !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(nv)-8.5)),0.02d0)
-          !nPO4t=max(2.5d-3*(temp(nv)-0.0)/35.d0,0.d0);
+          BnPO4t=max(BnPO4t*exp(1.3*(PH(kb+1)-8.5)),0.02)
+          !BnPO4t=max(BnPO4t*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
+          !nPO4t=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
         endif
 
         nDOC =nDOC +BnDOC
@@ -594,7 +593,7 @@ subroutine ecosystem(it)
       endif !iSed
 
       if(iTBen==1)then!simplified sediment fluxes
-        xT=temp(nv)-20.
+        xT=temp(kb+1)-20.
         nDO = -SOD_tben*thata_tben**xT  !no combination with iBen/=0.or.iSed=1
         nNH4 = NH4_tben*thata_tben**xT
         nNO3 = NO3_tben*thata_tben**xT
@@ -619,7 +618,7 @@ subroutine ecosystem(it)
 
       !linear distribution y=1-0.5*x, (0<x<1)
       x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
-      do k=nv,1,-1
+      do k=kb+1,nvrt
         x=x+dep(k)
         rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1.d0)
         if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1.d0)
@@ -666,7 +665,7 @@ subroutine ecosystem(it)
 
       !linear distribution y=1-0.5*x, (0<x<1)
       x=0.0; s=(1.0-0.25*rdep)*rdep !total weight
-      do k=1,nv
+      do k=nvrt,kb+1,-1
         x=x+dep(k)
         rat=min(dep(k)*(1.0-0.5*x+0.25*dep(k))/s,1.d0)
         if(x>rdep) rat=min((dep(k)+rdep-x)*(1.0-0.25*x+0.25*dep(k)-0.25*rdep)/s,1.d0)
@@ -694,10 +693,9 @@ subroutine ecosystem(it)
 
 
     !state variables at each layer
-    do k=1,nv
-      klev=nvrt-k+1 !SCHISM convention \in [kbe+1,nvrt] (upper level)
+    do k=nvrt,kb+1,-1
 
-      if(k==1) then
+      if(k==nvrt) then
         !for settling from surface;  init of settling conc
         PB10  = 0.0
         PB20  = 0.0
@@ -712,7 +710,7 @@ subroutine ecosystem(it)
         SU0   = 0.0
         SAt0  = 0.0
         CACO30= 0.0
-      endif! k==1
+      endif
 
       !--------------------------------------------------------------------------------------
       !SAV
@@ -726,29 +724,29 @@ subroutine ecosystem(it)
         do m=1,3; sPBM(k,m)=sBMP(m)*exp(sKTBP(m)*(temp(k)-sTBP(m))); enddo
 
         !calculation of biomass !sleaf
-        a=sGP(klev)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
+        a=sGP(k)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
         rtmp=a*dtw
-        sleaf(klev,id)=sleaf(klev,id)*exp(rtmp) !sleaf>0 with seeds, =0 for no seeds with rtmp/=0
+        sleaf(k,id)=sleaf(k,id)*exp(rtmp) !sleaf>0 with seeds, =0 for no seeds with rtmp/=0
 
         !sstem
         a=sPBM(k,2) !>0
-        b=sGP(klev)*(1.-sFAM)*sFCP(2)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sstem(klev,id)=(b*dtw+sstem(klev,id))/(1.0+a*dtw) !>0 with seeds
+        b=sGP(k)*(1.-sFAM)*sFCP(2)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+        sstem(k,id)=(b*dtw+sstem(k,id))/(1.0+a*dtw) !>0 with seeds
 
         !sroot
         a=sPBM(k,3) !>0
-        b=sGP(klev)*(1.-sFAM)*sFCP(3)*sleaf(klev,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sroot(klev,id)=(b*dtw+sroot(klev,id))/(1.0+a*dtw) !>0 with seeds
+        b=sGP(k)*(1.-sFAM)*sFCP(3)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+        sroot(k,id)=(b*dtw+sroot(k,id))/(1.0+a*dtw) !>0 with seeds
 
         !Pre-compute SAV terms
-        if(k==1) then
+        if(k==nvrt) then
           sleaf_NH4(id)=0; sleaf_PO4(id)=0; sroot_POC(id)=0 
           sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0
         endif
-        if (zid(klev-1)<shtz) then
-          sBM=((sPBM(k,1)+sGP(klev)*sFAM)*sleaf(klev,id)+sPBM(k,2)*sstem(klev,id))/sdz
-          sGM=sGP(klev)*sleaf(klev,id)/sdz
-          sRM=sPBM(k,3)*sroot(klev,id)
+        if (zid(k-1)<shtz) then
+          sBM=((sPBM(k,1)+sGP(k)*sFAM)*sleaf(k,id)+sPBM(k,2)*sstem(k,id))/sdz
+          sGM=sGP(k)*sleaf(k,id)/sdz
+          sRM=sPBM(k,3)*sroot(k,id)
 
           !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
           sfPN=(NH4(k,1)/(sKhNH4+NO3(k,1)))*(NO3(k,1)/(sKhNH4+NH4(k,1))+sKhNH4/(NH4(k,1)+NO3(k,1)+1.e-6))
@@ -782,7 +780,7 @@ subroutine ecosystem(it)
       !--------------------------------------------------------------------------------------
       vdC=0; vdN=0; vdP=0; vdDOX=0
       if(jveg==1.and.vpatch(id)==1) then
-        if(k==1) then
+        if(k==nvrt) then
           !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
           vfMT=1.0
           do j=1,3
@@ -846,14 +844,14 @@ subroutine ecosystem(it)
         vdzm=max(1.e-5,min(tdep,vht(id,j))); vdz=max(1.e-5,vht(id,j))
         do m=1,4
           do j=1,3
-            if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(klev-1)<vhtz(j))) then
+            if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then
               if(m<=3) vdC(m)=vdC(m)+vFCM(j,m)*vBM(j)/vdzm
               if(m==4) vdDOX =vdDOX-vo2c(j)*vFCM(j,m)*vBM(j)/vdzm
               if(ivNc==1) vdN(m)=vdN(m)+vn2c(j)*vFNM(j,m)*vBM(j)/vdzm 
               if(ivPc==1) vdP(m)=vdP(m)+vp2c(j)*vFPM(j,m)*vBM(j)/vdzm
             endif
 
-            if(tdep-vht(id,j)>1.e-5.or.(tdep-vht(id,j)<=1.e-5.and.zid(klev-1)<vhtz(j))) then
+            if(tdep-vht(id,j)>1.e-5.or.(tdep-vht(id,j)<=1.e-5.and.zid(k-1)<vhtz(j))) then
               if(m==4) vdDOX=vdDOX+vo2c(j)*vGM(j)/vdz
             endif
           enddo !j
@@ -888,12 +886,12 @@ subroutine ecosystem(it)
 
           xT=temp(k)-zTGP(i)
           if(xT>0.0) then
-            ZBG(:,i)=ZBG(:,i)*exp(-zKTGP(i,1)*xT*xT)/sum1; tmp1=zKTGP(i,1)*xT*xT
+            ZBG(:,i)=ZBG(:,i)*exp(-zKTGP(i,1)*xT*xT)/sum1
           else
-            ZBG(:,i)=ZBG(:,i)*exp(-zKTGP(i,1)*xT*xT)/sum1; tmp1=zKTGP(i,1)*xT*xT
+            ZBG(:,i)=ZBG(:,i)*exp(-zKTGP(i,1)*xT*xT)/sum1
           endif !rtmp
           ZBG0(:,i)=ZBG(:,i)
-          ZBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i))); tmp2=zKTBP(i)*(temp(k)-zTBP(i)) !metabolism
+          ZBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i)))
         enddo !i
         Fish=nz(1)+nz(2)+nz(3)+nz(4)+nz(5) !predation by higher trophic levels
 
@@ -926,7 +924,7 @@ subroutine ecosystem(it)
 
       !PB1
       a=GP(k,1)-PBM(1)-WSPBS(1)/dep(k)
-      if(k==nv.and.iSettle/=0) a=GP(k,1)-PBM(1)-WSPBSn(1)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=GP(k,1)-PBM(1)-WSPBSn(1)/dep(k)
       b=WSPBS(1)*PB10/dep(k)
 
       a=a-BPR(1)
@@ -938,7 +936,7 @@ subroutine ecosystem(it)
 
       !PB2
       a=GP(k,2)-PBM(2)-WSPBS(2)/dep(k) !todo use pre-compute
-      if(k==nv.and.iSettle/=0) a=GP(k,2)-PBM(2)-WSPBSn(2)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=GP(k,2)-PBM(2)-WSPBSn(2)/dep(k)
       b=WSPBS(2)*PB20/dep(k)
 
       a=a-BPR(2)
@@ -950,7 +948,7 @@ subroutine ecosystem(it)
 
       !PB3
       a=GP(k,3)-PBM(3)-WSPBS(3)/dep(k)
-      if(k==nv.and.iSettle/=0) a=GP(k,3)-PBM(3)-WSPBSn(3)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=GP(k,3)-PBM(3)-WSPBSn(3)/dep(k)
       b=WSPBS(3)*PB30/dep(k)
 
       a=a-BPR(3)
@@ -981,12 +979,11 @@ subroutine ecosystem(it)
         CFh_PB=p2pr*Fish*sumAPB !Fish eats PB
       endif
 
-
       !RPOC
       rKRPOC=(KC0(1)+KCalg(1)*sumAPB)*rKTM(1)
 
       a=-rKRPOC-WSPOM(1)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKRPOC-WSPOMn(1)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKRPOC-WSPOMn(1)/dep(k)
 
       b= FCP(1,1)*BPR(1)*PB1(k,1)+FCP(2,1)*BPR(2)*PB2(k,1)+FCP(3,1)*BPR(3)*PB3(k,1) !predation
       if(iZB==1) then
@@ -996,7 +993,7 @@ subroutine ecosystem(it)
       b=b+WSPOM(1)*RPOC0/dep(k)+znRPOC(k)/dep(k)+sdC(1)+vdC(1)
 
       !erosion
-      if(k==nv) b=b+ERORPOC(id)/dep(k)
+      if(k==(kb+1)) b=b+ERORPOC(id)/dep(k)
 
       RPOC(k,2)=((1.0+a*dtw2)*RPOC(k,1)+b*dtw)/(1.0-a*dtw2)
       RPOC(k,1)=0.5*(RPOC(k,1)+RPOC(k,2))
@@ -1007,7 +1004,7 @@ subroutine ecosystem(it)
       rKLPOC=(KC0(2)+KCalg(2)*sumAPB)*rKTM(2)
 
       a=-rKLPOC-WSPOM(2)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKLPOC-WSPOMn(2)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKLPOC-WSPOMn(2)/dep(k)
 
       b= FCP(1,2)*BPR(1)*PB1(k,1)+FCP(2,2)*BPR(2)*PB2(k,1)+FCP(3,2)*BPR(3)*PB3(k,1)
       if(iZB==1) then
@@ -1017,7 +1014,7 @@ subroutine ecosystem(it)
       b=b+WSPOM(2)*LPOC0/dep(k)+znLPOC(k)/dep(k)+sdC(2)+vdC(2)  !settling, surface or benthic flux
 
       !erosion
-      if(k==nv) b=b+EROLPOC(id)/dep(k)
+      if(k==(kb+1)) b=b+EROLPOC(id)/dep(k)
 
       LPOC(k,2)=((1.0+a*dtw2)*LPOC(k,1)+b*dtw)/(1.0-a*dtw2)
       LPOC(k,1)=0.5*(LPOC(k,1)+LPOC(k,2))
@@ -1061,7 +1058,7 @@ subroutine ecosystem(it)
       rKRPON=(KN0(1)+KNalg(1)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(1)
 
       a=-rKRPON-WSPOM(1)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKRPON-WSPOMn(1)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKRPON-WSPOMn(1)/dep(k)
 
       b=FNP(1)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1)) !predation
       if(iZB==1) then
@@ -1080,7 +1077,7 @@ subroutine ecosystem(it)
       rKLPON=(KN0(2)+KNalg(2)*sumAPB*mKhN/(mKhN+NH4(k,1)+NO3(k,1)))*rKTM(2)
 
       a=-rKLPON-WSPOM(2)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKLPON-WSPOMn(2)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKLPON-WSPOMn(2)/dep(k)
 
       b= FNP(2)*(n2c(1)*BPR(1)*PB1(k,1)+n2c(2)*BPR(2)*PB2(k,1)+n2c(3)*BPR(3)*PB3(k,1)) !predation
       if(iZB==1) then
@@ -1157,7 +1154,7 @@ subroutine ecosystem(it)
       rKRPOP=(KP0(1)+KPalg(1)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(1)
 
       a=-rKRPOP-WSPOM(1)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKRPOP-WSPOMn(1)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKRPOP-WSPOMn(1)/dep(k)
 
       b= FPP(1)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1)) !predation
       if(iZB==1) then
@@ -1177,7 +1174,7 @@ subroutine ecosystem(it)
       rKLPOP=(KP0(2)+KPalg(2)*sumAPB*mKhP/(mKhP+PO4td))*rKTM(2)
 
       a=-rKLPOP-WSPOM(2)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKLPOP-WSPOMn(2)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKLPOP-WSPOMn(2)/dep(k)
 
       b= FPP(2)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1)) !predation
       if(iZB==1) then
@@ -1211,7 +1208,7 @@ subroutine ecosystem(it)
       rfp=KPO4p*TSED(k)/(1.0+KPO4p*TSED(k))
 
       a=-rfp*WSSED/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
 
       b= FPP(4)*(p2c(1)*BPR(1)*PB1(k,1)+p2c(2)*BPR(2)*PB2(k,1)+p2c(3)*BPR(3)*PB3(k,1))  !predation
       if(iZB==1) then
@@ -1240,7 +1237,7 @@ subroutine ecosystem(it)
       rKSUA=KS*exp(KTRS*(temp(k)-TRS)); tmp=KTRS*(temp(k)-TRS)
 
       a=-rKSUA-WSPBS(1)/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rKSUA-WSPBSn(1)/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rKSUA-WSPBSn(1)/dep(k)
 
       b= FSP(1)*s2c*BPR(1)*PB1(k,1) !predation
       if(iZB==1) then
@@ -1259,7 +1256,7 @@ subroutine ecosystem(it)
       rfp=KSAp*TSED(k)/(1.0+KSAp*TSED(k))
 
       a=-rfp*WSSED/dep(k)
-      if(k==nv.and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
+      if(k==(kb+1).and.iSettle/=0) a=-rfp*WSSEDn/dep(k)
 
       b= FSP(2)*s2c*BPR(1)*PB1(k,1) !predation
       if(iZB==1) then
@@ -1282,14 +1279,14 @@ subroutine ecosystem(it)
       a=-rKCOD
       b=znCOD(k)/dep(k)
 
-      if(k==nv) b=b+EROH2S(id)/dep(k) !erosion flux
+      if(k==(kb+1)) b=b+EROH2S(id)/dep(k) !erosion flux
 
       COD(k,2)=((1.0+a*dtw2)*COD(k,1)+b*dtw)/(1.0-a*dtw2)
       COD(k,1)=0.5*(COD(k,1)+COD(k,2))
 
       !DO
       rKr=0.0
-      if(k==1) then
+      if(k==nvrt) then
         !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
         DOsat=14.5532-0.38217*temp(k)+5.4258e-3*temp(k)*temp(k)- &
              & salt(k)*(1.665e-4-5.866e-6*temp(k)+9.796e-8*temp(k)*temp(k))/1.80655
@@ -1333,7 +1330,7 @@ subroutine ecosystem(it)
             xKCACO3=min(pKCACO3*(CAsat(k)-CA(k,1)),CACO3(k,1)/dtw) !CaCo3 <-> Ca++
           endif
 
-          if(k==nv.and.CA(k,1)<CAsat(k)) then
+          if(k==(kb+1).and.CA(k,1)<CAsat(k)) then
             xKCA=pKCA*(CAsat(k)-CA(k,1))/max(dep(k),5.d-2) !dissolution from sediment
           endif
           xKCA=0.0 !ZG, no dissolution from sediment
@@ -1361,7 +1358,7 @@ subroutine ecosystem(it)
 
           !TIC
           rKa=0.0
-          if(k==1) then
+          if(k==nvrt) then
             !atm. exchange CO2 (richard Zeebe, 2001)
             !rKa=rKr
 
@@ -1419,25 +1416,19 @@ subroutine ecosystem(it)
 
       !These arrays won't be used until 1 step later
       !total sav biomass and canopy height
-      stleaf(id)=sum(sleaf((kbe(id)+1):nvrt,id))
-      ststem(id)=sum(sstem((kbe(id)+1):nvrt,id))
-      stroot(id)=sum(sroot((kbe(id)+1):nvrt,id))
+      stleaf(id)=sum(sleaf((kb+1):nvrt,id))
+      ststem(id)=sum(sstem((kb+1):nvrt,id))
+      stroot(id)=sum(sroot((kb+1):nvrt,id))
       sht(id)=min(s2ht(1)*stleaf(id)+s2ht(2)*ststem(id)+s2ht(3)*stroot(id)+shtm(1),tdep,shtm(2))
 
-      do k=kbe(id)+1,nvrt
+      do k=kb,nvrt
         if(zid(k-1)<shtz) then
-          !add seeds
-          !i=nvrt-k+1 !ICM convention
-          sleaf(k,id)=max(sleaf(k,id),1.d-5)
+          sleaf(k,id)=max(sleaf(k,id),1.d-5) !add seeds
           sstem(k,id)=max(sstem(k,id),1.d-5)
           sroot(k,id)=max(sroot(k,id),1.d-5)
         endif
       enddo !k
-
     endif !jsav
-    !--------------------------------------------------------------------------------------
-
-    !--------------------------------------------------------------------------------------
     !--------------------------------------------------------------------------------------
 
     !--------------------------------------------------------------------------------------
@@ -1470,67 +1461,67 @@ subroutine ecosystem(it)
     !**********************************************************************************
     !call link_icm(2,id,nv)
     !**********************************************************************************
-    do k=kbe(id)+1,nvrt
-      m=nvrt-k+1
-      if(idry_e(id)==1) m=1
+    do k=kb,nvrt
+      !m=nvrt-k+1
+      !if(idry_e(id)==1) m=1
 
-      tr_el(0+irange_tr(1,7),k,id) =max(ZB1(m,1), 0.d0)
-      tr_el(1+irange_tr(1,7),k,id) =max(ZB2(m,1), 0.d0)
-      tr_el(2+irange_tr(1,7),k,id) =max(PB1(m,1), 0.d0)
-      tr_el(3+irange_tr(1,7),k,id) =max(PB2(m,1), 0.d0)
-      tr_el(4+irange_tr(1,7),k,id) =max(PB3(m,1), 0.d0)
-      tr_el(5+irange_tr(1,7),k,id) =max(RPOC(m,1),0.d0)
-      tr_el(6+irange_tr(1,7),k,id) =max(LPOC(m,1),0.d0)
-      tr_el(7+irange_tr(1,7),k,id) =max(DOC(m,1), 0.d0)
-      tr_el(8+irange_tr(1,7),k,id) =max(RPON(m,1),0.d0)
-      tr_el(9+irange_tr(1,7),k,id) =max(LPON(m,1),0.d0)
-      tr_el(10+irange_tr(1,7),k,id)=max(DON(m,1), 0.d0)
-      tr_el(11+irange_tr(1,7),k,id)=max(NH4(m,1), 0.d0)
-      tr_el(12+irange_tr(1,7),k,id)=max(NO3(m,1), 0.d0)
-      tr_el(13+irange_tr(1,7),k,id)=max(RPOP(m,1),0.d0)
-      tr_el(14+irange_tr(1,7),k,id)=max(LPOP(m,1),0.d0)
-      tr_el(15+irange_tr(1,7),k,id)=max(DOP(m,1), 0.d0)
-      tr_el(16+irange_tr(1,7),k,id)=max(PO4t(m,1),0.d0)
-      tr_el(17+irange_tr(1,7),k,id)=max(SU(m,1),  0.d0)
-      tr_el(18+irange_tr(1,7),k,id)=max(SAt(m,1), 0.d0)
-      tr_el(19+irange_tr(1,7),k,id)=max(COD(m,1), 0.d0)
-      tr_el(20+irange_tr(1,7),k,id)=max(DOX(m,1), 0.d0)
+      tr_el(0+irange_tr(1,7),k,id) =max(ZB1(k,1), 0.d0)
+      tr_el(1+irange_tr(1,7),k,id) =max(ZB2(k,1), 0.d0)
+      tr_el(2+irange_tr(1,7),k,id) =max(PB1(k,1), 0.d0)
+      tr_el(3+irange_tr(1,7),k,id) =max(PB2(k,1), 0.d0)
+      tr_el(4+irange_tr(1,7),k,id) =max(PB3(k,1), 0.d0)
+      tr_el(5+irange_tr(1,7),k,id) =max(RPOC(k,1),0.d0)
+      tr_el(6+irange_tr(1,7),k,id) =max(LPOC(k,1),0.d0)
+      tr_el(7+irange_tr(1,7),k,id) =max(DOC(k,1), 0.d0)
+      tr_el(8+irange_tr(1,7),k,id) =max(RPON(k,1),0.d0)
+      tr_el(9+irange_tr(1,7),k,id) =max(LPON(k,1),0.d0)
+      tr_el(10+irange_tr(1,7),k,id)=max(DON(k,1), 0.d0)
+      tr_el(11+irange_tr(1,7),k,id)=max(NH4(k,1), 0.d0)
+      tr_el(12+irange_tr(1,7),k,id)=max(NO3(k,1), 0.d0)
+      tr_el(13+irange_tr(1,7),k,id)=max(RPOP(k,1),0.d0)
+      tr_el(14+irange_tr(1,7),k,id)=max(LPOP(k,1),0.d0)
+      tr_el(15+irange_tr(1,7),k,id)=max(DOP(k,1), 0.d0)
+      tr_el(16+irange_tr(1,7),k,id)=max(PO4t(k,1),0.d0)
+      tr_el(17+irange_tr(1,7),k,id)=max(SU(k,1),  0.d0)
+      tr_el(18+irange_tr(1,7),k,id)=max(SAt(k,1), 0.d0)
+      tr_el(19+irange_tr(1,7),k,id)=max(COD(k,1), 0.d0)
+      tr_el(20+irange_tr(1,7),k,id)=max(DOX(k,1), 0.d0)
 
       if(iPh==1) then
-        tr_el(21+irange_tr(1,7),k,id)=max(TIC(m,1),  0.d0)
-        tr_el(22+irange_tr(1,7),k,id)=max(ALK(m,1),  0.d0)
-        tr_el(23+irange_tr(1,7),k,id)=max(CA(m,1),   0.d0)
-        tr_el(24+irange_tr(1,7),k,id)=max(CACO3(m,1),0.d0)
-        PH_el(k,id)=PH(m)
+        tr_el(21+irange_tr(1,7),k,id)=max(TIC(k,1),  0.d0)
+        tr_el(22+irange_tr(1,7),k,id)=max(ALK(k,1),  0.d0)
+        tr_el(23+irange_tr(1,7),k,id)=max(CA(k,1),   0.d0)
+        tr_el(24+irange_tr(1,7),k,id)=max(CACO3(k,1),0.d0)
+        PH_el(k,id)=PH(k)
       endif
 
-      wqc(1,k,id) =max(ZB1(m,2),  0.d0)
-      wqc(2,k,id) =max(ZB2(m,2),  0.d0)
-      wqc(3,k,id) =max(PB1(m,2),  0.d0)
-      wqc(4,k,id) =max(PB2(m,2),  0.d0)
-      wqc(5,k,id) =max(PB3(m,2),  0.d0)
-      wqc(6,k,id) =max(RPOC(m,2), 0.d0)
-      wqc(7,k,id) =max(LPOC(m,2), 0.d0)
-      wqc(8,k,id) =max(DOC(m,2),  0.d0)
-      wqc(9,k,id) =max(RPON(m,2), 0.d0)
-      wqc(10,k,id)=max(LPON(m,2), 0.d0)
-      wqc(11,k,id)=max(DON(m,2),  0.d0)
-      wqc(12,k,id)=max(NH4(m,2),  0.d0)
-      wqc(13,k,id)=max(NO3(m,2),  0.d0)
-      wqc(14,k,id)=max(RPOP(m,2), 0.d0)
-      wqc(15,k,id)=max(LPOP(m,2), 0.d0)
-      wqc(16,k,id)=max(DOP(m,2),  0.d0)
-      wqc(17,k,id)=max(PO4t(m,2), 0.d0)
-      wqc(18,k,id)=max(SU(m,2),   0.d0)
-      wqc(19,k,id)=max(SAt(m,2),  0.d0)
-      wqc(20,k,id)=max(COD(m,2),  0.d0)
-      wqc(21,k,id)=max(DOX(m,2),  0.d0)
+      wqc(1,k,id) =max(ZB1(k,2),  0.d0)
+      wqc(2,k,id) =max(ZB2(k,2),  0.d0)
+      wqc(3,k,id) =max(PB1(k,2),  0.d0)
+      wqc(4,k,id) =max(PB2(k,2),  0.d0)
+      wqc(5,k,id) =max(PB3(k,2),  0.d0)
+      wqc(6,k,id) =max(RPOC(k,2), 0.d0)
+      wqc(7,k,id) =max(LPOC(k,2), 0.d0)
+      wqc(8,k,id) =max(DOC(k,2),  0.d0)
+      wqc(9,k,id) =max(RPON(k,2), 0.d0)
+      wqc(10,k,id)=max(LPON(k,2), 0.d0)
+      wqc(11,k,id)=max(DON(k,2),  0.d0)
+      wqc(12,k,id)=max(NH4(k,2),  0.d0)
+      wqc(13,k,id)=max(NO3(k,2),  0.d0)
+      wqc(14,k,id)=max(RPOP(k,2), 0.d0)
+      wqc(15,k,id)=max(LPOP(k,2), 0.d0)
+      wqc(16,k,id)=max(DOP(k,2),  0.d0)
+      wqc(17,k,id)=max(PO4t(k,2), 0.d0)
+      wqc(18,k,id)=max(SU(k,2),   0.d0)
+      wqc(19,k,id)=max(SAt(k,2),  0.d0)
+      wqc(20,k,id)=max(COD(k,2),  0.d0)
+      wqc(21,k,id)=max(DOX(k,2),  0.d0)
 
       if(iPh==1) then
-        wqc(22,k,id)=max(TIC(m,2),  0.d0)
-        wqc(23,k,id)=max(ALK(m,2),  0.d0)
-        wqc(24,k,id)=max(CA(m,2),   0.d0)
-        wqc(25,k,id)=max(CACO3(m,2),0.d0)
+        wqc(22,k,id)=max(TIC(k,2),  0.d0)
+        wqc(23,k,id)=max(ALK(k,2),  0.d0)
+        wqc(24,k,id)=max(CA(k,2),   0.d0)
+        wqc(25,k,id)=max(CACO3(k,2),0.d0)
       endif
 
       !nan check
@@ -1577,16 +1568,18 @@ subroutine ecosystem(it)
 
 end subroutine ecosystem
 
-
-subroutine ph_calc(id,nv)
+subroutine ph_calc(temp,salt,TIC,ALK,pH,CO2,CAsat)
 !----------------------------------------------------------------------------
 !calculate pH
 !----------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
+  use schism_glbl, only : rkind,errmsg,nvrt
   use schism_msgp, only : parallel_abort
-  use icm_mod, only : TIC,ALK,CA,CACO3,PH,temp,salt,CO2,CAsat,mCACO3,mC
+  !use icm_mod, only : TIC,ALK,CA,CACO3,pH,CO2,CAsat,mCACO3,mC
+  use icm_mod, only : mCACO3,mC
   implicit none
-  integer,intent(in) :: id,nv
+  !integer,intent(in) :: id,nv
+  real(rkind),intent(in) :: temp,salt,TIC,ALK
+  real(rkind),intent(out) :: pH,CO2,CAsat 
 
   !local variables
   integer :: i,j,k,ierr,imed
@@ -1596,11 +1589,11 @@ subroutine ph_calc(id,nv)
   real(rkind) :: rval
 
   mmCACO3=1.d3*mCACO3; mmC=1.d3*mC
-  do k=1,nv
+  !do k=1,nv
     !change mg/l to mol/l
-    sTIC=TIC(k,1)/mmC !total carbon
-    sALK=ALK(k,1)*2.0/mmCACO3 !alkalinity
-    sB=4.16e-4*salt(k)/35.d0 !boron concentration
+    sTIC=TIC/mmC !total carbon
+    sALK=ALK*2.0/mmCACO3 !alkalinity
+    sB=4.16e-4*salt/35.d0 !boron concentration
 
     !sCA=CA(k,1)/mmCACO3 !Ca++
     !sCACO3=CACO3(k,1)/mmCACO3
@@ -1609,8 +1602,8 @@ subroutine ph_calc(id,nv)
     !Ct=sTIC-sCACO3 !total carbon (exclude CaCO3s)
     !Ca=sALK-sCACO3 !alkalintiy (exclude CaCO3s)
 
-    T=temp(k)+273.15
-    S=salt(k)
+    T=temp+273.15
+    S=salt
     S2=sqrt(S)
 
     if(T<250.d0.or.T>325.d0.or.S>50.d0.or.S<0.d0) then
@@ -1618,9 +1611,9 @@ subroutine ph_calc(id,nv)
       call parallel_abort(errmsg)
     endif
     !ionic strength
-    sth=1.47e-3+1.9885e-2*salt(k)+3.8e-5*salt(k)*salt(k)
+    sth=1.47e-3+1.9885e-2*salt+3.8e-5*salt*salt
     if(sth<0.d0) then
-      write(errmsg,*)'check ICM ionic stength: ',salt(k),sth
+      write(errmsg,*)'check ICM ionic stength: ',salt,sth
       call parallel_abort(errmsg)
     endif
     sth2=sqrt(sth)
@@ -1673,7 +1666,7 @@ subroutine ph_calc(id,nv)
     call ph_zbrent(ierr,imed,phi,K1,K2,Kw,Kb,sTIC,sALK,sB,rH)
 
     if(ierr/=0) then
-      write(errmsg,*)'PH calculation failure, ierr=',ierr
+      write(errmsg,*)'pH calculation failure, ierr=',ierr
       call parallel_abort(errmsg)
     endif
 
@@ -1690,10 +1683,10 @@ subroutine ph_calc(id,nv)
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
     Ksp=10.d0**(pKsp)
 
-    PH(k)=phi
-    CO2(k)=f0*sTIC*mmC
-    CAsat(k)=Ksp*mmCACO3/(f2*sTIC)
-  enddo !k
+    pH=phi
+    CO2=f0*sTIC*mmC
+    CAsat=Ksp*mmCACO3/(f2*sTIC)
+  !enddo !k
 
 end subroutine ph_calc
 

@@ -17,7 +17,6 @@
 !read_gr3_prop: function to read spatially varying parameter 
 !read_icm_param: read parameter in icm.nml
 
-
 subroutine read_icm_param(imode)
 !---------------------------------------------------------------------
 !read paramters in icm.nml
@@ -516,21 +515,13 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(wqc(ntrs(7),nvrt,nea),dep(nvrt),salt(nvrt),temp(nvrt),TSED(nvrt),ZB1(nvrt,2), &
-    & ZB2(nvrt,2),PB1(nvrt,2),PB2(nvrt,2),PB3(nvrt,2),RPOC(nvrt,2),LPOC(nvrt,2),DOC(nvrt,2), &
-    & RPON(nvrt,2),LPON(nvrt,2), DON(nvrt,2),NH4(nvrt,2),NO3(nvrt,2),RPOP(nvrt,2),LPOP(nvrt,2), &
-    & DOP(nvrt,2),PO4t(nvrt,2),SU(nvrt,2),SAt(nvrt,2),COD(nvrt,2),DOX(nvrt,2),fPN(nvrt,3), &
-    & WMS(nea), &
+  allocate(wqc(ntrs(7),nvrt,nea), fPN(nvrt,3), WMS(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
     & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  wqc=0.0;     dep=0.0;     salt=0.0;    temp=0.0;    TSED=0.0;    ZB1=0.0;
-  ZB2=0.0;     PB1=0.0;     PB2=0.0;     PB3=0.0;     RPOC=0.0;    LPOC=0.0;    DOC=0.0;
-  RPON=0.0;    LPON=0.0;    DON=0.0;     NH4=0.0;     NO3=0.0;     RPOP=0.0;    LPOP=0.0;
-  DOP=0.0;     PO4t=0.0;    SU=0.0;      SAt=0.0;     COD=0.0;     DOX=0.0;     fPN=0.0;
-  WMS=0.0;
+  wqc=0.0;     fPN=0.0;     WMS=0.0;
   BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;   BDON=0.0;    BNH4=0.0;   BNO3=0.0
   BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;     BSAt=0.0;    BCOD=0.0;   BDO=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
@@ -539,13 +530,13 @@ subroutine icm_vars_init
   !pH variables
   !-------------------------------------------------------------------------------
   if(iPh==1) then
-    allocate(TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), CAsat(nvrt), &
-      & CO2(nvrt),PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
+    allocate( PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
+      ! TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), CAsat(nvrt),CO2(nvrt),
       & TIC_el(nvrt,nea),ALK_el(nvrt,nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. pH variables')
 
-    TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0;  CAsat=0.0;
-    CO2=0.0;     PH_el=0.0;   PH_nd=0.0;   iphgb=0.0;  ph_nudge=0.0; ph_nudge_nd=0.0;
+    !TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0;  CAsat=0.0;  CO2=0.0;     
+    PH_el=0.0;   PH_nd=0.0;   iphgb=0.0;  ph_nudge=0.0; ph_nudge_nd=0.0;
     TIC_el=0.0;  ALK_el=0.0;
   endif
 
@@ -572,13 +563,13 @@ subroutine icm_vars_init
   if(jveg==1) then
     allocate(vpatch(nea),vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
       & vroot_POC(nea,3),vroot_PON(nea,3),vroot_POP(nea,3),vroot_DOX(nea,3), &
-      & lfNH4veg(nvrt,3),lfPO4veg(nvrt,3),vleaf_NH4(nea,3),vleaf_PO4(nea,3), stat=istat)
+      & vleaf_NH4(nea,3),vleaf_PO4(nea,3), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. VEG variables')
 
     !init
     vpatch=0;      vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
     vroot_POC=0.0; vroot_PON=0.0; vroot_POP=0.0;  vroot_DOX=0.0;
-    lfNH4veg=0.0;  lfPO4veg=0.0;  vleaf_NH4=0.0;  vleaf_PO4=0.0
+    vleaf_NH4=0.0;  vleaf_PO4=0.0
   endif
 
   !-------------------------------------------------------------------------------

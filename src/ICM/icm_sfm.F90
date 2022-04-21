@@ -100,7 +100,8 @@ subroutine icm_sfm_init
 
 end subroutine icm_sfm_init
 
-subroutine sed_calc(id,nv)
+subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
+                  & RPOP,LPOP,SU,PO4t,NH4,NO3,SAt,DOX,COD,TSED)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
@@ -110,7 +111,9 @@ subroutine sed_calc(id,nv)
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
-  integer,intent(in) :: id,nv !elem #
+  integer,intent(in) :: id
+  real(rkind),intent(in) :: dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
+                          & RPOP,LPOP,SU,PO4t,NH4,NO3,SAt,DOX,COD,TSED
   real(rkind),external :: sed_zbrent
 
   !local variables
@@ -126,27 +129,27 @@ subroutine sed_calc(id,nv)
   etau=sp%etau(id)
 
   !total depth and other variables from water column
-  SED_BL=dep(nv)
+  SED_BL=dep
   ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
-  SED_T(id)   =temp(nv)
-  SED_SALT(id)=salt(nv)
-  SED_B(id,1) =PB1(nv,1)
-  SED_B(id,2) =PB2(nv,1)
-  SED_B(id,3) =PB3(nv,1)
-  SED_RPOC(id)=RPOC(nv,1)
-  SED_LPOC(id)=LPOC(nv,1)
-  SED_RPON(id)=RPON(nv,1)
-  SED_LPON(id)=LPON(nv,1)
-  SED_RPOP(id)=RPOP(nv,1)
-  SED_LPOP(id)=LPOP(nv,1)
-  SED_SU(id)  =SU(nv,1)
-  SED_PO4(id) =PO4t(nv,1)
-  SED_NH4(id) =NH4(nv,1)
-  SED_NO3(id) =NO3(nv,1)
-  SED_SA(id)  =SAt(nv,1)
-  SED_DO(id)  =DOX(nv,1)
-  SED_COD(id) =COD(nv,1)
-  SED_TSS(id) =TSED(nv)
+  SED_T(id)   =temp
+  SED_SALT(id)=salt
+  SED_B(id,1) =PB1 
+  SED_B(id,2) =PB2 
+  SED_B(id,3) =PB3 
+  SED_RPOC(id)=RPOC
+  SED_LPOC(id)=LPOC
+  SED_RPON(id)=RPON
+  SED_LPON(id)=LPON
+  SED_RPOP(id)=RPOP
+  SED_LPOP(id)=LPOP
+  SED_SU(id)  =SU  
+  SED_PO4(id) =PO4t
+  SED_NH4(id) =NH4 
+  SED_NO3(id) =NO3 
+  SED_SA(id)  =SAt 
+  SED_DO(id)  =DOX 
+  SED_COD(id) =COD 
+  SED_TSS(id) =TSED
 
   !calculate bottom layer TSS. Need more work, ZG
   if(iKe==0) then

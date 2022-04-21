@@ -49,9 +49,7 @@ module icm_mod
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
   real(rkind),save,allocatable,dimension(:,:,:) :: wqc
-  real(rkind),save,allocatable,dimension(:) :: dep,salt,temp,TSED
-  real(rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
-  real(rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOX,fPN
+  real(rkind),save,allocatable,dimension(:,:) :: fPN
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   real(rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO !benthic flux from sediment flux model, positive refer to from sediment to water column
@@ -79,8 +77,9 @@ module icm_mod
   integer, save :: irec_ph
   integer,save,allocatable :: iphgb(:)
   real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:)
-  real(rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3,PH_el,PH_nd,TIC_el,ALK_el
-  real(rkind),save,allocatable,dimension(:) :: PH,CAsat,CO2
+  real(rkind),save,allocatable,dimension(:,:) :: PH_el,PH_nd,TIC_el,ALK_el
+  !real(rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3
+  !real(rkind),save,allocatable,dimension(:) :: PH,CAsat,CO2
 
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
@@ -117,7 +116,6 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: lfNH4veg,lfPO4veg !(nvrt,3)<< surface to bottom
   real(rkind),save,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
 
   !-------------------------------------------------------------------------------
