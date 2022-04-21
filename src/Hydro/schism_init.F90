@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,wqc,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
+      use icm_mod, only : ntrs_icm,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
                     & isav_icm,iveg_icm,SED_BENDO,CTEMP,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                     & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                     & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -5114,17 +5114,6 @@
 #ifdef USE_ICM
       !read ICM parameter and initial ICM variables
       call read_icm_param(1)
-
-      !initial ICM variable wqc
-!$OMP parallel do default(shared) private(i,k,j)
-      do i=1,nea
-        do k=1,nvrt
-          do j=1,ntrs(7)
-            wqc(j,k,i)=tr_el(j-1+irange_tr(1,7),k,i)
-          enddo !j
-        enddo !k
-      enddo !i
-!$OMP end parallel do
 #endif
 
 !     Store i.c. 
@@ -5744,18 +5733,6 @@
             enddo !m
           endif!if((k>=1.and.k<=3
         enddo !k
-
-        j=nf90_inq_varid(ncid2,'wqc',mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ICM6')
-        do i=1,ne_global
-          if(iegl(i)%rank==myrank) then
-            ie=iegl(i)%id
-            !j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
-            j=nf90_get_var(ncid2,mm,swild4(1:ntrs(7),:),(/1,1,i/),(/ntrs(7),nvrt,1/))
-            wqc(:,:,ie)=swild4(1:ntrs(7),:)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM7')
-          endif!iegl
-        enddo !i
 
 #endif /*USE_ICM*/
 

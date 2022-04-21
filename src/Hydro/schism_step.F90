@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : WMS,wqc,iPh,PH_nd,isav_icm,iveg_icm, &
+      use icm_mod, only : WMS,iPh,PH_nd,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                         & CTEMP,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
@@ -962,20 +962,6 @@
 #endif /*USE_ICE*/
 
       if(myrank==0) write(16,*)'done adjusting wind stress ...'
-
-!    VIMS mode added by YC
-#ifdef USE_ICM 
-      !pass C(n+1,-P) for tranport, see (Park,1995)
-!$OMP parallel do default(shared) private(i,k,j)
-      do i=1,nea
-        do k=1,nvrt
-          do j=1,ntrs(7)
-            tr_el(j-1+irange_tr(1,7),k,i)=wqc(j,k,i)
-          enddo !j
-        enddo !k
-      enddo !i
-!$OMP end parallel do
-#endif /*USE_ICM*/
 
 !...  Read in tracer nudging
       if(time>time_nu_tr) then
@@ -9890,10 +9876,7 @@
         j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+31))
         j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+32))
         j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
-        !3D arrays
-        var3d_dim(1)=ICM_ntr_dim; var3d_dim(2)=nvrt_dim; var3d_dim(3)=elem_dim
-        j=nf90_def_var(ncid_hot,'wqc',NF90_DOUBLE,var3d_dim,nwild(nvars_hot+34))
-        nvars_hot_icm=nvars_hot+34
+        nvars_hot_icm=nvars_hot+33
 
         if(isav_icm==1) then
           var1d_dim(1)=elem_dim;  !1D array
@@ -9948,8 +9931,7 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+34),dble(wqc(1:ntrs(7),1:nvrt,1:ne)),(/1,1,1/),(/ntrs(7),nvrt,ne/))
-        nvars_hot_icm=nvars_hot+34
+        nvars_hot_icm=nvars_hot+33
 
         if(isav_icm==1) then
           j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))

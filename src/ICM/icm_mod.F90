@@ -48,7 +48,6 @@ module icm_mod
   real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
-  real(rkind),save,allocatable,dimension(:,:,:) :: wqc
   real(rkind),save,allocatable,dimension(:,:) :: fPN
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion

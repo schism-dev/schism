@@ -725,18 +725,17 @@ subroutine ecosystem(it)
 
         !calculation of biomass !sleaf
         a=sGP(k)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
-        rtmp=a*dtw
-        sleaf(k,id)=sleaf(k,id)*exp(rtmp) !sleaf>0 with seeds, =0 for no seeds with rtmp/=0
+        sleaf(k,id)=(1+dtw*a)*sleaf(k,id)
 
         !sstem
-        a=sPBM(k,2) !>0
+        a=-sPBM(k,2) !>0
         b=sGP(k)*(1.-sFAM)*sFCP(2)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sstem(k,id)=(b*dtw+sstem(k,id))/(1.0+a*dtw) !>0 with seeds
+        sstem(k,id)=(1+dtw*a)*sstem(k,id)+dtw*b
 
         !sroot
-        a=sPBM(k,3) !>0
+        a=-sPBM(k,3) !>0
         b=sGP(k)*(1.-sFAM)*sFCP(3)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sroot(k,id)=(b*dtw+sroot(k,id))/(1.0+a*dtw) !>0 with seeds
+        sroot(k,id)=(1+dtw*a)*sroot(k,id)+dtw*b
 
         !Pre-compute SAV terms
         if(k==nvrt) then
@@ -797,17 +796,17 @@ subroutine ecosystem(it)
 
             !calculation of biomass, lfveg(j)
             a=vGP(j)*(1-vFAM(j))*vFCP(j,1)-vPBM(j,1) !1/day
-            vtleaf(id,j)=vtleaf(id,j)*exp(a*dtw); tmp=a*dtw
+            vtleaf(id,j)=(1+dtw*a)*vtleaf(id,j)
 
             !stveg
-            a=vPBM(j,2)
+            a=-vPBM(j,2)
             b=vGP(j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(id,j)
-            vtstem(id,j)=(b*dtw+vtstem(id,j))/(1.0+a*dtw)
+            vtstem(id,j)=(1+dtw*a)*vtstem(id,j)+dtw*b
 
             !rtveg
-            a=vPBM(j,3)
+            a=-vPBM(j,3)
             b=vGP(j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(id,j)
-            vtroot(id,j)=(b*dtw+vtroot(id,j))/(1.0+a*dtw)
+            vtroot(id,j)=(1+dtw*a)*vtroot(id,j)+dtw*b
 
             !compute veg canopy height
             if(vtleaf(id,j)+vtstem(id,j)<vcrit(j)) then
@@ -905,14 +904,12 @@ subroutine ecosystem(it)
         !ZB1
         a=ZB1G*zAG*(1-zRG)-ZBM(1)-z2pr(1)*Fish-zMT(1)
         b=-ZBG(1,2)*AZB2
-        ZB1(k,2)=((1.0+a*dtw2)*ZB1(k,1)+b*dtw)/(1.0-a*dtw2)
-        ZB1(k,1)=0.5*(ZB1(k,1)+ZB1(k,2))
+        ZB1(k,2)=(1+dtw*a)*ZB1(k,1)+dtw*b
 
         !ZB2
         a=ZB2G*zAG*(1-zRG)-ZBM(2)-z2pr(2)*Fish-zMT(2)
         b=-ZBG(2,1)*AZB1
-        ZB2(k,2)=((1.0+a*dtw2)*ZB2(k,1)+b*dtw)/(1.0-a*dtw2)
-        ZB2(k,1)=0.5*(ZB2(k,1)+ZB2(k,2))
+        ZB2(k,2)=(1+dtw*a)*ZB2(k,1)+dtw*b
       endif !iZB==1
 
       !---------------------------------------------
@@ -930,8 +927,7 @@ subroutine ecosystem(it)
       a=a-BPR(1)
       if(iZB==1) a=a-p2pr*Fish;  b=b-ZBG(3,1)*ZB1(k,1)-ZBG(3,2)*ZB2(k,1)
 
-      PB1(k,2)=((1.0+a*dtw2)*PB1(k,1)+b*dtw)/(1.0-a*dtw2)
-      PB1(k,1)=0.5*(PB1(k,1)+PB1(k,2))
+      PB1(k,2)=(1+dtw*a)*PB1(k,1)+dtw*b
       PB10=PB1(k,1)
 
       !PB2
@@ -942,8 +938,7 @@ subroutine ecosystem(it)
       a=a-BPR(2)
       if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(4,1)*ZB1(k,1)-ZBG(4,2)*ZB2(k,1)
 
-      PB2(k,2)=((1.0+a*dtw2)*PB2(k,1)+b*dtw)/(1.0-a*dtw2)
-      PB2(k,1)=0.5*(PB2(k,1)+PB2(k,2))
+      PB2(k,2)=(1+dtw*a)*PB2(k,1)+dtw*b
       PB20=PB2(k,1)
 
       !PB3
@@ -954,8 +949,7 @@ subroutine ecosystem(it)
       a=a-BPR(3)
       if(iZB==1) a=a-p2pr*Fish; b=b-ZBG(5,1)*ZB1(k,1)-ZBG(5,2)*ZB2(k,1)
 
-      PB3(k,2)=((1.0+a*dtw2)*PB3(k,1)+b*dtw)/(1.0-a*dtw2)
-      PB3(k,1)=0.5*(PB3(k,1)+PB3(k,2))
+      PB3(k,2)=(1+dtw*a)*PB3(k,1)+dtw*b
       PB30=PB3(k,1)
 
       !---------------------------------------------
@@ -995,10 +989,8 @@ subroutine ecosystem(it)
       !erosion
       if(k==(kb+1)) b=b+ERORPOC(id)/dep(k)
 
-      RPOC(k,2)=((1.0+a*dtw2)*RPOC(k,1)+b*dtw)/(1.0-a*dtw2)
-      RPOC(k,1)=0.5*(RPOC(k,1)+RPOC(k,2))
+      RPOC(k,2)=(1+dtw*a)*RPOC(k,1)+dtw*b
       RPOC0=RPOC(k,1)
-
 
       !LPOC
       rKLPOC=(KC0(2)+KCalg(2)*sumAPB)*rKTM(2)
@@ -1016,10 +1008,8 @@ subroutine ecosystem(it)
       !erosion
       if(k==(kb+1)) b=b+EROLPOC(id)/dep(k)
 
-      LPOC(k,2)=((1.0+a*dtw2)*LPOC(k,1)+b*dtw)/(1.0-a*dtw2)
-      LPOC(k,1)=0.5*(LPOC(k,1)+LPOC(k,2))
+      LPOC(k,2)=(1+dtw*a)*LPOC(k,1)+dtw*b
       LPOC0=LPOC(k,1)
-
 
       !DOC
       rKDOC=(KC0(3)+KCalg(3)*sumAPB)*rKTM(3)
@@ -1040,8 +1030,7 @@ subroutine ecosystem(it)
         & (FCM(3)+(1.0-FCM(3))*KhDO(3)/(DOX(k,1)+KhDO(3)))*PBM(3)*PB3(k,1)+ &         !PB3 metabolism
         & rKRPOC*RPOC(k,1)+rKLPOC*LPOC(k,1)+znDOC(k)/dep(k)+sdC(3)+vdC(3) !dissolution, surface or benthic flux
 
-      DOC(k,2)=((1.0+a*dtw2)*DOC(k,1)+b*dtw)/(1.0-a*dtw2)
-      DOC(k,1)=0.5*(DOC(k,1)+DOC(k,2))
+      DOC(k,2)=(1+dtw*a)*DOC(k,1)+dtw*b
 
       !---------------------------------------------
       !pre-calculation for nitrogen
@@ -1069,8 +1058,7 @@ subroutine ecosystem(it)
       b=b+FNM(1,1)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,1)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,1)*n2c(3)*PBM(3)*PB3(k,1) & !PB metabolism
        & +WSPOM(1)*RPON0/dep(k)+znRPON(k)/dep(k)+sdN(1)+vdN(1)
 
-      RPON(k,2)=((1.0+a*dtw2)*RPON(k,1)+b*dtw)/(1.0-a*dtw2)
-      RPON(k,1)=0.5*(RPON(k,1)+RPON(k,2))
+      RPON(k,2)=(1+dtw*a)*RPON(k,1)+dtw*b
       RPON0=RPON(k,1)
 
       !LPON
@@ -1088,8 +1076,7 @@ subroutine ecosystem(it)
       b=b+FNM(1,2)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,2)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,2)*n2c(3)*PBM(3)*PB3(k,1)+ & !PB metabolism
        &  WSPOM(2)*LPON0/dep(k)+znLPON(k)/dep(k)+sdN(2)+vdN(2)
 
-      LPON(k,2)=((1.0+a*dtw2)*LPON(k,1)+b*dtw)/(1.0-a*dtw2)
-      LPON(k,1)=0.5*(LPON(k,1)+LPON(k,2))
+      LPON(k,2)=(1+dtw*a)*LPON(k,1)+dtw*b
       LPON0=LPON(k,1)
 
       !DON
@@ -1105,8 +1092,7 @@ subroutine ecosystem(it)
       b=b+FNM(1,3)*n2c(1)*PBM(1)*PB1(k,1)+FNM(2,3)*n2c(2)*PBM(2)*PB2(k,1)+FNM(3,3)*n2c(3)*PBM(3)*PB3(k,1)+ & !PB metabolism
        & rKRPON*RPON(k,1)+rKLPON*LPON(k,1)+znDON(k)/dep(k)+sdN(3)+vdN(3)
 
-      DON(k,2)=((1.0+a*dtw2)*DON(k,1)+b*dtw)/(1.0-a*dtw2)
-      DON(k,1)=0.5*(DON(k,1)+DON(k,2))
+      DON(k,2)=(1+dtw*a)*DON(k,1)+dtw*b
 
       !NH4
       xT=temp(k)-TNit
@@ -1127,16 +1113,14 @@ subroutine ecosystem(it)
        & -n2c(1)*fPN(k,1)*GP(k,1)*PB1(k,1)-n2c(2)*fPN(k,2)*GP(k,2)*PB2(k,1)-n2c(3)*fPN(k,3)*GP(k,3)*PB3(k,1) &
        & +rKDON*DON(k,1)+znNH4(k)/dep(k) + sdN(4)+vdN(4)
 
-      NH4(k,2)=((1.0+a*dtw2)*NH4(k,1)+b*dtw)/(1.0-a*dtw2)
-      NH4(k,1)=0.5*(NH4(k,1)+NH4(k,2))
+      NH4(k,2)=(1+dtw*a)*NH4(k,1)+dtw*b
 
       !NO3
       a=0.0
       b=-n2c(1)*(1.0-fPN(k,1))*GP(k,1)*PB1(k,1)-n2c(2)*(1.0-fPN(k,2))*GP(k,2)*PB2(k,1)-n2c(3)*(1.0-fPN(k,3))*GP(k,3)*PB3(k,1) &
        &-dn2c*xDenit*DOC(k,1)+xNit*NH4(k,1)+znNO3(k)/dep(k)+sdN(5)
 
-      NO3(k,2)=NO3(k,1)+b*dtw
-      NO3(k,1)=0.5*(NO3(k,1)+NO3(k,2))
+      NO3(k,2)=(1+dtw*a)*NO3(k,1)+dtw*b
 
       !---------------------------------------------
       !pre-calculation for phosphorus
@@ -1165,8 +1149,7 @@ subroutine ecosystem(it)
       b=b+FPM(1,1)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,1)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,1)*p2c(3)*PBM(3)*PB3(k,1) &
        & +WSPOM(1)*RPOP0/dep(k)+znRPOP(k)/dep(k)+sdP(1)+vdP(1)
 
-      RPOP(k,2)=((1.0+a*dtw2)*RPOP(k,1)+b*dtw)/(1.0-a*dtw2)
-      RPOP(k,1)=0.5*(RPOP(k,1)+RPOP(k,2))
+      RPOP(k,2)=(1+dtw*a)*RPOP(k,1)+dtw*b
       RPOP0=RPOP(k,1)
 
       !LPOP
@@ -1184,8 +1167,7 @@ subroutine ecosystem(it)
       b=b+FPM(1,2)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,2)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,2)*p2c(3)*PBM(3)*PB3(k,1) &
        & +WSPOM(2)*LPOP0/dep(k)+znLPOP(k)/dep(k)+sdP(2)+vdP(2)
 
-      LPOP(k,2)=((1.0+a*dtw2)*LPOP(k,1)+b*dtw)/(1.0-a*dtw2)
-      LPOP(k,1)=0.5*(LPOP(k,1)+LPOP(k,2))
+      LPOP(k,2)=(1+dtw*a)*LPOP(k,1)+dtw*b
       LPOP0=LPOP(k,1)
 
       !DOP
@@ -1201,8 +1183,7 @@ subroutine ecosystem(it)
       b=b+FPM(1,3)*p2c(1)*PBM(1)*PB1(k,1)+FPM(2,3)*p2c(2)*PBM(2)*PB2(k,1)+FPM(3,3)*p2c(3)*PBM(3)*PB3(k,1) &
        & +rKRPOP*RPOP(k,1)+rKLPOP*LPOP(k,1)+znDOP(k)/dep(k)+sdP(3)+vdP(3)
 
-      DOP(k,2)=((1.0+a*dtw2)*DOP(k,1)+b*dtw)/(1.0-a*dtw2)
-      DOP(k,1)=0.5*(DOP(k,1)+DOP(k,2))
+      DOP(k,2)=(1+dtw*a)*DOP(k,1)+dtw*b
 
       !PO4t
       rfp=KPO4p*TSED(k)/(1.0+KPO4p*TSED(k))
@@ -1220,8 +1201,7 @@ subroutine ecosystem(it)
        & -p2c(1)*GP(k,1)*PB1(k,1)-p2c(2)*GP(k,2)*PB2(k,1)-p2c(3)*GP(k,3)*PB3(k,1) &
        & +rKDOP*DOP(k,1)+rfp*WSSED*PO4t0/dep(k)+znPO4t(k)/dep(k)+sdP(4)+vdP(4)
 
-      PO4t(k,2)=((1.0+a*dtw2)*PO4t(k,1)+b*dtw)/(1.0-a*dtw2)
-      PO4t(k,1)=0.5*(PO4t(k,1)+PO4t(k,2))
+      PO4t(k,2)=(1+dtw*a)*PO4t(k,1)+dtw*b
       PO4t0=PO4t(k,1)
 
       !---------------------------------------------
@@ -1248,8 +1228,7 @@ subroutine ecosystem(it)
       b=b+FSM(1)*s2c*PBM(1)*PB1(k,1)+ & !PB metabolism
         & WSPBS(1)*SU0/dep(k)+znSU(k)/dep(k)
 
-      SU(k,2)=((1.0+a*dtw2)*SU(k,1)+b*dtw)/(1.0-a*dtw2)
-      SU(k,1)=0.5*(SU(k,1)+SU(k,2))
+      SU(k,2)=(1+dtw*a)*SU(k,1)+dtw*b
       SU0=SU(k,1)
 
       !SAt
@@ -1268,8 +1247,7 @@ subroutine ecosystem(it)
         & -s2c*GP(k,1)*PB1(k,1)+ &  !PB1 uptake
         & rKSUA*SU(k,1)+WSSED*SAt0/dep(k)+znSAt(k)/dep(k)
 
-      SAt(k,2)=((1.0+a*dtw2)*SAt(k,1)+b*dtw)/(1.0-a*dtw2)
-      SAt(k,1)=0.5*(SAt(k,1)+SAt(k,2))
+      SAt(k,2)=(1+dtw*a)*SAt(k,1)+dtw*b
       SAt0=rfp*SAt(k,1)
 
       !---------------------------------------------
@@ -1281,8 +1259,7 @@ subroutine ecosystem(it)
 
       if(k==(kb+1)) b=b+EROH2S(id)/dep(k) !erosion flux
 
-      COD(k,2)=((1.0+a*dtw2)*COD(k,1)+b*dtw)/(1.0-a*dtw2)
-      COD(k,1)=0.5*(COD(k,1)+COD(k,2))
+      COD(k,2)=(1+dtw*a)*COD(k,1)+dtw*b
 
       !DO
       rKr=0.0
@@ -1313,8 +1290,7 @@ subroutine ecosystem(it)
        & +(1.3-0.3*fPN(k,3))*o2c*GP(k,3)*PB3(k,1) & !PB3 photosynthesis
        & -o2n*xNit*NH4(k,1)-o2c*xKHR*DOC(k,1)-rKCOD*COD(k,1)+rKr*DOsat+znDO(k)/dep(k)+sdDOX+vdDOX
 
-      DOX(k,2)=((1.0+a*dtw2)*DOX(k,1)+b*dtw)/(1.0-a*dtw2)
-      DOX(k,1)=0.5*(DOX(k,1)+DOX(k,2))
+      DOX(k,2)=(1+dtw*a)*DOX(k,1)+dtw*b
 
       !---------------------------------------------------------------------------------
       !PH model; concentration unit is mg/l
@@ -1339,14 +1315,13 @@ subroutine ecosystem(it)
           a=0.0
           b=xKCACO3+xKCA
 
-          CA(k,2)=((1.0+a*dtw2)*CA(k,1)+b*dtw)/(1.0-a*dtw2)
-          CA(k,1)=0.5*(CA(k,1)+CA(k,2))
+          CA(k,2)=(1+dtw*a)*CA(k,1)+dtw*b
 
           !CACO3
           a=-pWSCACO3/dep(k)
           b=-xKCACO3+pWSCACO3*CACO30/dep(k)
 
-          CACO3(k,2)=((1.0+a*dtw2)*CACO3(k,1)+b*dtw)/(1.0-a*dtw2)
+          CACO3(k,2)=(1+dtw*a)*CACO3(k,1)+dtw*b
 
           if(CACO3(k,2)<0) then
             CACO3(k,2)=0.0
@@ -1384,8 +1359,7 @@ subroutine ecosystem(it)
             &-GP(k,1)*PB1(k,1)-GP(k,2)*PB2(k,1)-GP(k,3)*PB3(k,1)+ & !PB1,BP2,and PB3 photosynthesis
             & rKa*(CO2sat-CO2(k))+xKHR*DOC(k,1)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(o2c*dep(k))
 
-          TIC(k,2)=((1.0+a*dtw2)*TIC(k,1)+b*dtw)/(1.0-a*dtw2)
-          TIC(k,1)=0.5*(TIC(k,1)+TIC(k,2))
+          TIC(k,2)=(1+dtw*a)*TIC(k,1)+dtw*b
 
           !ALK unit in Mg[CaCO3]/L
           a=0.0
@@ -1393,8 +1367,7 @@ subroutine ecosystem(it)
            & (17.0/16.0)*(n2c(1)*(1.0-fPN(k,1))*GP(k,1)*PB1(k,1)+n2c(2)*(1.0-fPN(k,2))*GP(k,2)*PB2(k,1)+n2c(3)*(1.0-fPN(k,3))*GP(k,3)*PB3(k,1)) & !PB uptake NO3
            &-2.0*xNit*NH4(k,1))+xKCACO3+xKCA
 
-          ALK(k,2)=((1.0+a*dtw2)*ALK(k,1)+b*dtw)/(1.0-a*dtw2)
-          ALK(k,1)=0.5*(ALK(k,1)+ALK(k,2))
+          ALK(k,2)=(1+dtw*a)*ALK(k,1)+dtw*b
         else !doesn't invoke PH calculation
           TIC(k,2)=TIC(k,1)
           ALK(k,2)=ALK(k,1)
@@ -1465,63 +1438,34 @@ subroutine ecosystem(it)
       !m=nvrt-k+1
       !if(idry_e(id)==1) m=1
 
-      tr_el(0+irange_tr(1,7),k,id) =max(ZB1(k,1), 0.d0)
-      tr_el(1+irange_tr(1,7),k,id) =max(ZB2(k,1), 0.d0)
-      tr_el(2+irange_tr(1,7),k,id) =max(PB1(k,1), 0.d0)
-      tr_el(3+irange_tr(1,7),k,id) =max(PB2(k,1), 0.d0)
-      tr_el(4+irange_tr(1,7),k,id) =max(PB3(k,1), 0.d0)
-      tr_el(5+irange_tr(1,7),k,id) =max(RPOC(k,1),0.d0)
-      tr_el(6+irange_tr(1,7),k,id) =max(LPOC(k,1),0.d0)
-      tr_el(7+irange_tr(1,7),k,id) =max(DOC(k,1), 0.d0)
-      tr_el(8+irange_tr(1,7),k,id) =max(RPON(k,1),0.d0)
-      tr_el(9+irange_tr(1,7),k,id) =max(LPON(k,1),0.d0)
-      tr_el(10+irange_tr(1,7),k,id)=max(DON(k,1), 0.d0)
-      tr_el(11+irange_tr(1,7),k,id)=max(NH4(k,1), 0.d0)
-      tr_el(12+irange_tr(1,7),k,id)=max(NO3(k,1), 0.d0)
-      tr_el(13+irange_tr(1,7),k,id)=max(RPOP(k,1),0.d0)
-      tr_el(14+irange_tr(1,7),k,id)=max(LPOP(k,1),0.d0)
-      tr_el(15+irange_tr(1,7),k,id)=max(DOP(k,1), 0.d0)
-      tr_el(16+irange_tr(1,7),k,id)=max(PO4t(k,1),0.d0)
-      tr_el(17+irange_tr(1,7),k,id)=max(SU(k,1),  0.d0)
-      tr_el(18+irange_tr(1,7),k,id)=max(SAt(k,1), 0.d0)
-      tr_el(19+irange_tr(1,7),k,id)=max(COD(k,1), 0.d0)
-      tr_el(20+irange_tr(1,7),k,id)=max(DOX(k,1), 0.d0)
+      tr_el(0+irange_tr(1,7),k,id) =max( ZB1(k,2), 0.d0)
+      tr_el(1+irange_tr(1,7),k,id) =max( ZB2(k,2), 0.d0)
+      tr_el(2+irange_tr(1,7),k,id) =max( PB1(k,2), 0.d0)
+      tr_el(3+irange_tr(1,7),k,id) =max( PB2(k,2), 0.d0)
+      tr_el(4+irange_tr(1,7),k,id) =max( PB3(k,2), 0.d0)
+      tr_el(5+irange_tr(1,7),k,id) =max(RPOC(k,2),0.d0)
+      tr_el(6+irange_tr(1,7),k,id) =max(LPOC(k,2),0.d0)
+      tr_el(7+irange_tr(1,7),k,id) =max( DOC(k,2), 0.d0)
+      tr_el(8+irange_tr(1,7),k,id) =max(RPON(k,2),0.d0)
+      tr_el(9+irange_tr(1,7),k,id) =max(LPON(k,2),0.d0)
+      tr_el(10+irange_tr(1,7),k,id)=max( DON(k,2), 0.d0)
+      tr_el(11+irange_tr(1,7),k,id)=max( NH4(k,2), 0.d0)
+      tr_el(12+irange_tr(1,7),k,id)=max( NO3(k,2), 0.d0)
+      tr_el(13+irange_tr(1,7),k,id)=max(RPOP(k,2),0.d0)
+      tr_el(14+irange_tr(1,7),k,id)=max(LPOP(k,2),0.d0)
+      tr_el(15+irange_tr(1,7),k,id)=max( DOP(k,2), 0.d0)
+      tr_el(16+irange_tr(1,7),k,id)=max(PO4t(k,2),0.d0)
+      tr_el(17+irange_tr(1,7),k,id)=max(  SU(k,2),  0.d0)
+      tr_el(18+irange_tr(1,7),k,id)=max( SAt(k,2), 0.d0)
+      tr_el(19+irange_tr(1,7),k,id)=max( COD(k,2), 0.d0)
+      tr_el(20+irange_tr(1,7),k,id)=max( DOX(k,2), 0.d0)
 
       if(iPh==1) then
-        tr_el(21+irange_tr(1,7),k,id)=max(TIC(k,1),  0.d0)
-        tr_el(22+irange_tr(1,7),k,id)=max(ALK(k,1),  0.d0)
-        tr_el(23+irange_tr(1,7),k,id)=max(CA(k,1),   0.d0)
-        tr_el(24+irange_tr(1,7),k,id)=max(CACO3(k,1),0.d0)
+        tr_el(21+irange_tr(1,7),k,id)=max(TIC(k,2),  0.d0)
+        tr_el(22+irange_tr(1,7),k,id)=max(ALK(k,2),  0.d0)
+        tr_el(23+irange_tr(1,7),k,id)=max(CA(k,2),   0.d0)
+        tr_el(24+irange_tr(1,7),k,id)=max(CACO3(k,2),0.d0)
         PH_el(k,id)=PH(k)
-      endif
-
-      wqc(1,k,id) =max(ZB1(k,2),  0.d0)
-      wqc(2,k,id) =max(ZB2(k,2),  0.d0)
-      wqc(3,k,id) =max(PB1(k,2),  0.d0)
-      wqc(4,k,id) =max(PB2(k,2),  0.d0)
-      wqc(5,k,id) =max(PB3(k,2),  0.d0)
-      wqc(6,k,id) =max(RPOC(k,2), 0.d0)
-      wqc(7,k,id) =max(LPOC(k,2), 0.d0)
-      wqc(8,k,id) =max(DOC(k,2),  0.d0)
-      wqc(9,k,id) =max(RPON(k,2), 0.d0)
-      wqc(10,k,id)=max(LPON(k,2), 0.d0)
-      wqc(11,k,id)=max(DON(k,2),  0.d0)
-      wqc(12,k,id)=max(NH4(k,2),  0.d0)
-      wqc(13,k,id)=max(NO3(k,2),  0.d0)
-      wqc(14,k,id)=max(RPOP(k,2), 0.d0)
-      wqc(15,k,id)=max(LPOP(k,2), 0.d0)
-      wqc(16,k,id)=max(DOP(k,2),  0.d0)
-      wqc(17,k,id)=max(PO4t(k,2), 0.d0)
-      wqc(18,k,id)=max(SU(k,2),   0.d0)
-      wqc(19,k,id)=max(SAt(k,2),  0.d0)
-      wqc(20,k,id)=max(COD(k,2),  0.d0)
-      wqc(21,k,id)=max(DOX(k,2),  0.d0)
-
-      if(iPh==1) then
-        wqc(22,k,id)=max(TIC(k,2),  0.d0)
-        wqc(23,k,id)=max(ALK(k,2),  0.d0)
-        wqc(24,k,id)=max(CA(k,2),   0.d0)
-        wqc(25,k,id)=max(CACO3(k,2),0.d0)
       endif
 
       !nan check
