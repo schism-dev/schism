@@ -105,6 +105,11 @@ nav:
   - Code contribution: code-contribution.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
+  - SCHISM external coupling:
+    - Earth System Modeling Framework: coupling/esmf.md
+    - National Unified Operational Prediction Capability: coupling/nuopc.md
+    - NOAA's CoastalApp: coupling/coastalapp.md
+    - Modular System for Shelves and Coasts: coupling/mossco.md
   - Publications: publications.md
   - Frequently Asked Questions: faq.md
   - Contribute to this online manual: contribute-to-this-online-manual.md
