@@ -839,7 +839,7 @@
 !  iof_wwm(25) = 0 !Charnock coefficient {CharnockCoeff}  2D
 !  iof_wwm(26) = 0 !Rougness length {rougnessLength}  2D
 !  iof_wwm(27) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
-!  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   2D vector
+!  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used
