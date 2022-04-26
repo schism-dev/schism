@@ -39,7 +39,7 @@ subroutine read_icm_param(imode)
   !define namelists
   namelist /MARCO/ iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen,&
            & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
-           & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben, &
+           & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben, &
            & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
   namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,FSP,&
            & FCM,FNM,FPM,FSM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
@@ -75,7 +75,7 @@ subroutine read_icm_param(imode)
     iRad=0; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
     iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
     Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
-    thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4t_tben=0; SAt_tben=0
+    thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4_tben=0; SA_tben=0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm
 
     !read global switches
@@ -84,8 +84,13 @@ subroutine read_icm_param(imode)
     close(31)
 
     !compute total number of ICM 3D state variables
-    ntrs_icm=21
-    if(iPh==1) ntrs_icm=ntrs_icm+4
+    itrs(1,1)=1; itrs(2,1)=21; ntrs_icm=21
+    iZB1=1;  iZB2=2;  iPB1=3;  iPB2=4;  iPB3=5;  iRPOC=6;  iLPOC=7;  iDOC=8;  iRPON=9;  iLPON=10
+    iDON=11; iNH4=12; iNO3=13; iRPOP=14;iLPOP=15;iDOP=16;  iPO4=17;  iSU=18;  iSA=19;   iCOD=20;  iDOX=21
+    if(iPh==1) then
+      itrs(1,2)=ntrs_icm+1; itrs(2,2)=ntrs_icm+4; ntrs_icm=ntrs_icm+4; 
+      iTIC=itrs(1,2); iALK=itrs(1,2)+1; iCA=itrs(1,2)+2; iCACO3=itrs(1,2)+3
+    endif
 
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
@@ -157,6 +162,10 @@ subroutine read_icm_param(imode)
     VSED=2.73791e-5*VSED !unit: m/day 
     DIFFT=1.0e-4*DIFFT !m2/s
 
+    !net settling velocity
+    if(iSettle==0) then
+      WSPBSn=WSPBS; WSPOMn=WSPOM; WSSEDn=WSSED
+    endif
     !------------------------------------------------------------------------------------
     !1) allocate ICM variables; 2) read spatially varying parameters
     !------------------------------------------------------------------------------------
@@ -367,13 +376,13 @@ subroutine WQinput(time)
   real(rkind) :: rtmp
   real(rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
   real(rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                   &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO 
+                   &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO 
 
   !read atmospheric loading (unit: g/m2/day)
   if(iAtm==1.and.time_icm(1)<time) then
     do while(time_icm(1)<time)
       read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
-                & SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO 
+                & SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO 
       time_icm(1)=rtmp
     enddo
   endif !iAtm
@@ -383,7 +392,7 @@ subroutine WQinput(time)
     do while(time_icm(2)<time)
       if(iBen==1) then !uniform Benthic flux
         read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+                  &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
         if(rtmp<time) then
           read(402,*)
           cycle
@@ -399,14 +408,14 @@ subroutine WQinput(time)
         BRPOP=tRPOP
         BLPOP=tLPOP
         BDOP =tDOP
-        BPO4t=tPO4t
+        BPO4 =tPO4
         BSU  =tSU
-        BSAt =tSAt
+        BSA  =tSA
         BCOD =tCOD
         BDO  =tDO
         time_icm(2)=rtmp
         read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
       elseif(iBen==2) then !spatially varying benthic flux 
         read(402,*)rtmp,neben
         if(rtmp<time) then
@@ -415,7 +424,7 @@ subroutine WQinput(time)
         endif
         do ie=1,neben
           read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                  &  tRPOP,tLPOP,tDOP,tPO4t,tSU,tSAt,tCOD,tDO
+                  &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
           if(iegl(iegb)%rank==myrank) then
             BRPOC(iegl(iegb)%id) = tRPOC
             BLPOC(iegl(iegb)%id) = tLPOC
@@ -428,16 +437,16 @@ subroutine WQinput(time)
             BRPOP(iegl(iegb)%id) = tRPOP
             BLPOP(iegl(iegb)%id) = tLPOP
             BDOP(iegl(iegb)%id)  = tDOP
-            BPO4t(iegl(iegb)%id) = tPO4t
+            BPO4(iegl(iegb)%id)  = tPO4
             BSU(iegl(iegb)%id)   = tSU
-            BSAt(iegl(iegb)%id)  = tSAt
+            BSA(iegl(iegb)%id)   = tSA
             BCOD(iegl(iegb)%id)  = tCOD
             BDO(iegl(iegb)%id)   = tDO
           endif
         enddo
         time_icm(2)=rtmp
         read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-                  &  TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
+                  &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
       else
         write(errmsg,*)'Unknown ICM value: ', iBen
         call parallel_abort(errmsg)
@@ -517,13 +526,13 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   allocate(fPN(nvrt,3), WMS(nea), &
     & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
-    & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4t(nea),BSU(nea),BSAt(nea),BCOD(nea),BDO(nea), &
+    & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4(nea),BSU(nea),BSA(nea),BCOD(nea),BDO(nea), &
     & EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
   fPN=0.0;     WMS=0.0;
-  BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;   BDON=0.0;    BNH4=0.0;   BNO3=0.0
-  BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4t=0.0;   BSU=0.0;     BSAt=0.0;    BCOD=0.0;   BDO=0.0
+  BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
+  BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4=0.0;   BSU=0.0;     BSA=0.0;    BCOD=0.0;   BDO=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
 
   !-------------------------------------------------------------------------------
@@ -586,8 +595,8 @@ subroutine icm_vars_init
     & POP2TM1S(nea),POP3TM1S(nea),PON1TM1S(nea),PON2TM1S(nea),PON3TM1S(nea),POC1TM1S(nea),POC2TM1S(nea), &
     & POC3TM1S(nea),PSITM1S(nea), NH41TM1S(nea),NO31TM1S(nea),HS1TM1S(nea),SI1TM1S(nea),PO41TM1S(nea), &
     & NH4T2TM1S(nea),NO3T2TM1S(nea),HST2TM1S(nea),SIT2TM1S(nea),PO4T2TM1S(nea),DFEEDM1S(nea), &
-    & SED_BENDO(nea),SED_BENCOD(nea),SED_BENNH4(nea),SED_BENNO3(nea),SED_BENPO4(nea),SED_BENDOC(nea),SED_BENSA(nea), &
-    & sbLight(nea), stat=istat)
+    & sedDOX(nea),sedCOD(nea),sedNH4(nea),sedNO3(nea),sedPO4(nea),sedDOC(nea),sedSA(nea), &
+    & bLight(nea), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
@@ -602,11 +611,27 @@ subroutine icm_vars_init
   POP2TM1S=0.0;   POP3TM1S=0.0;    PON1TM1S=0.0;    PON2TM1S=0.0;    PON3TM1S=0.0;   POC1TM1S=0.0;   POC2TM1S=0.0;
   POC3TM1S=0.0;   PSITM1S=0.0;     NH41TM1S=0.0;    NO31TM1S=0.0;    HS1TM1S=0.0;    SI1TM1S=0.0;    PO41TM1S=0.0;
   NH4T2TM1S=0.0;  NO3T2TM1S=0.0;   HST2TM1S=0.0;    SIT2TM1S=0.0;    PO4T2TM1S=0.0;  DFEEDM1S=0.0;
-  SED_BENDO=0.0;  SED_BENCOD=0.0;  SED_BENNH4=0.0;  SED_BENNO3=0.0;  SED_BENPO4=0.0; SED_BENDOC=0.0; SED_BENSA=0.0;
-  sbLight=0.0;
+  sedDOX=0.0;  sedCOD=0.0;  sedNH4=0.0;  sedNO3=0.0;  sedPO4=0.0; sedDOC=0.0; sedSA=0.0;
+  bLight=0.0;
 !$OMP end parallel workshare
 
 end subroutine icm_vars_init
+
+subroutine update_param(id)
+!--------------------------------------------------------------------
+!get 2D parameter value of element
+!--------------------------------------------------------------------
+  use icm_mod
+  implicit none
+  integer, intent(in) :: id
+
+  GPM=wp%GPM(id,:);     TGP=wp%TGP(id,:);       KTGP=wp%KTGP(id,:,:); PRP=wp%PRP(id,:)
+  WSSED=wp%WSSED(id);   WSPOM=wp%WSPOM(id,:);   WSPBS=wp%WSPBS(id,:);
+  WSSEDn=wp%WSSEDn(id); WSPOMn=wp%WSPOMn(id,:); WSPBSn=wp%WSPBSn(id,:)
+  KC0=wp%KC0(id,:);     KP0=wp%KP0(id,:);       KPalg=wp%KPalg(id,:)
+  c2chl=wp%c2chl(id,:); WRea=wp%WRea(id);       Ke0=wp%Ke0(id);   tss2c=wp%tss2c(id)
+
+end subroutine update_param
 
 subroutine icm_finalize()
 !--------------------------------------------------------------------

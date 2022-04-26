@@ -55,7 +55,7 @@
                         & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
                         & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
                         & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
-                        & SED_BENDO,SED_BENDOC,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENCOD,SED_BENSA
+                        & sedDOX,sedDOX,sedNH4,sedNO3,sedPO4,sedCOD,sedSA
 #endif
 
 #ifdef USE_COSINE
@@ -9840,7 +9840,7 @@
         j=nf90_def_dim(ncid_hot,'ICM_ntr',ntrs(7),ICM_ntr_dim)
 
         var1d_dim(1)=elem_dim; 
-        j=nf90_def_var(ncid_hot,'SED_BENDO',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
+        j=nf90_def_var(ncid_hot,'sedDOX',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
         j=nf90_def_var(ncid_hot,'CTEMP',    NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2))
         j=nf90_def_var(ncid_hot,'CPOS',     NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
         j=nf90_def_var(ncid_hot,'PO4T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+4))
@@ -9898,7 +9898,7 @@
         endif
         j=nf90_enddef(ncid_hot)
 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(SED_BENDO),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(sedDOX),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),dble(CTEMP),(/1/),(/ne/))  
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),dble(CPOS),(/1/),(/ne/))        
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),dble(PO4T2TM1S),(/1/),(/ne/))

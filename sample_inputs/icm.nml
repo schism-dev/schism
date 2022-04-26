@@ -31,9 +31,9 @@
 ! 14 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
 ! 15 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
 ! 16 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
-! 17 PO4t  :  Total Phosphate                            g/m^3
+! 17 PO4   :  Total Phosphate                            g/m^3
 ! 18 SU    :  Particulate Biogenic Silica                g/m^3
-! 19 SAt   :  Available Silica                           g/m^3
+! 19 SA    :  Available Silica                           g/m^3
 ! 20 COD   :  Chemical Oxygen Demand                     g/m^3
 ! 21 DOO   :  Dissolved Oxygen                           g/m^3
 ! 22 TIC   :  Total Inorganic Carbon                     g/m^3
@@ -144,8 +144,8 @@ SOD_tben = 2.0
 DOC_tben = 0.0
 NH4_tben = 0.1
 NO3_tben = 0.1
-PO4t_tben = 0.01
-SAt_tben = 0.0
+PO4_tben = 0.01
+SA_tben  = 0.0
 
 !-----------------------------------------------------------------------
 !idry_icm=1: turn on shallow kinetic biochemical process

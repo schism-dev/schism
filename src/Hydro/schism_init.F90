@@ -49,7 +49,7 @@
 
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
-                    & isav_icm,iveg_icm,SED_BENDO,CTEMP,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
+                    & isav_icm,iveg_icm,sedDOX,CTEMP,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                     & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                     & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
                     & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 
@@ -5583,7 +5583,7 @@
 
 #ifdef USE_ICM
         !gfortran requires all chars have same length
-        ar_name(1:31)=(/'SED_BENDO','CTEMP    ','CPOS     ','PO4T2TM1S', &
+        ar_name(1:31)=(/'sedDOX   ','CTEMP    ','CPOS     ','PO4T2TM1S', &
      &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
      &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
      &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
@@ -5604,7 +5604,7 @@
             if(iegl(i)%rank==myrank) then
               ie=iegl(i)%id
               if(k==1) then
-                SED_BENDO(ie)=buf3(i)
+                sedDOX(ie)=buf3(i)
               else if(k==2) then
                 CTEMP(ie)=buf3(i)
               else if(k==3) then

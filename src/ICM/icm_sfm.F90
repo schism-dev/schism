@@ -101,7 +101,7 @@ subroutine icm_sfm_init
 end subroutine icm_sfm_init
 
 subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
-                  & RPOP,LPOP,SU,PO4t,NH4,NO3,SAt,DOX,COD,TSED)
+                  & RPOP,LPOP,SU,PO4,NH4,NO3,SA,DOX,COD,TSED)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
@@ -113,7 +113,7 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   implicit none
   integer,intent(in) :: id
   real(rkind),intent(in) :: dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
-                          & RPOP,LPOP,SU,PO4t,NH4,NO3,SAt,DOX,COD,TSED
+                          & RPOP,LPOP,SU,PO4,NH4,NO3,SA,DOX,COD,TSED
   real(rkind),external :: sed_zbrent
 
   !local variables
@@ -122,6 +122,7 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   real(rkind) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2
   real(rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
   real(rkind) :: tau_bot_elem,ero_elem
+  real(rkind) :: PO40
 
   !spatailly varying parameter
   HSED=sp%HSED(id); VSED=sp%VSED(id); VPMIX=sp%VPMIX(id); VDMIX=sp%VDMIX(id) 
@@ -143,10 +144,10 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   SED_RPOP(id)=RPOP
   SED_LPOP(id)=LPOP
   SED_SU(id)  =SU  
-  SED_PO4(id) =PO4t
+  SED_PO4(id) =PO4
   SED_NH4(id) =NH4 
   SED_NO3(id) =NO3 
-  SED_SA(id)  =SAt 
+  SED_SA(id)  =SA 
   SED_DO(id)  =DOX 
   SED_COD(id) =COD 
   SED_TSS(id) =TSED
@@ -262,7 +263,7 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
       flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
     enddo !j
   enddo !i
-  !combination of PB1 and two groups of Si, need future work for SAt
+  !combination of PB1 and two groups of Si, need future work for SA
   !flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxu*SED_SU(id)
   flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxp(1)*SED_SU(id)
 
@@ -473,14 +474,14 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   JPO4=stc*(PO41-PO40)
 
   !assign flux arrays, in unit of g/m^2 day; with all state variables in unit of g/ , no need to convert
-  SED_BENDO(id)=-SOD !negatvie
-  SED_BENNH4(id)=JNH4
-  SED_BENNO3(id)=JNO3
-  SED_BENPO4(id)=JPO4
+  sedDOX(id)=-SOD !negatvie
+  sedNH4(id)=JNH4
+  sedNO3(id)=JNO3
+  sedPO4(id)=JPO4
 !Error: DOC
-  SED_BENDOC(id)=0.0
-  SED_BENCOD(id)=JHS !+JCH4AQ
-  SED_BENSA(id)=JSI
+  sedDOC(id)=0.0
+  sedCOD(id)=JHS !+JCH4AQ
+  sedSA(id)=JSI
 
   !************************************************************************
   !erosion flux
@@ -530,13 +531,13 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   NH41TM1S(id)  = NH41        !dissolved NH4 in 1st layer
   NO31TM1S(id)  = NO31        !dissolved NO3 in 1st layer
   HS1TM1S(id)   = HS1         !dissolved H2S in 1st layer
-  SI1TM1S(id)   = SI1         !dissolved SAt in 1st lyaer
+  SI1TM1S(id)   = SI1         !dissolved SA in 1st lyaer
   PO41TM1S(id)  = PO41        !dissolved PO4 in 1st layer
 
   NH4T2TM1S(id) = NH4T2       !total NH4 in 2nd layer
   NO3T2TM1S(id) = NO3T2       !total NO3 in 2nd layer
   HST2TM1S(id)  = HST2        !total H2S in 2nd layer
-  SIT2TM1S(id)  = SIT2        !total SAt in 2nd layer
+  SIT2TM1S(id)  = SIT2        !total SA in 2nd layer
   PO4T2TM1S(id) = PO4T2       !total PO4 in 2nd layer
 
   PON1TM1S(id)  = PON1        !1st class PON
@@ -586,15 +587,6 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
 
   !update sediment temperature
   CTEMP(id)=CTEMP(id)+dt*DIFFT*(SED_T(id)-CTEMP(id))/H2/H2
-
-  !link sediment fluxes to water column
-  BnDOC  = SED_BENDOC(id)
-  BnNH4  = SED_BENNH4(id)
-  BnNO3  = SED_BENNO3(id)
-  BnPO4t = SED_BENPO4(id)
-  BnCOD  = SED_BENCOD(id)
-  BnDO   = SED_BENDO(id)
-  BnSAt  = SED_BENSA(id)
 
   !erosion flux, H2S>S
   if(ierosion>0.and.idry_e(id)/=1)then

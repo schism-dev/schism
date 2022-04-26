@@ -28,9 +28,13 @@ module icm_mod
   integer,save,target :: iZB,iPh,isav_icm,iveg_icm,idry_icm
   real(rkind),save :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
   real(rkind),save,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
-  real(rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben !todo, ZG
+  real(rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben !todo, ZG
   integer,pointer :: jdry,jsav,jveg
 
+  integer :: ntrs_icm, itrs(2,2)
+  integer :: iZB1,iZB2,iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
+           & iLPOP,iDOP,iPO4,iSU,iSA,iCOD,iDOX,iTIC,iALK,iCA,iCACO3
+ 
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
   !-------------------------------------------------------------------------------
@@ -43,7 +47,6 @@ module icm_mod
   real(rkind),save,dimension(3) :: KhN,KhP,c2chl,n2c,p2c,KhDO
   real(rkind),save :: KhS,KhSal,s2c,o2c,o2n,dn2c,an2c,KPO4p,KSAp,WRea
 
-  integer :: ntrs_icm
   real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)
   real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
@@ -51,11 +54,10 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:,:) :: fPN
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
-  real(rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO !benthic flux from sediment flux model, positive refer to from sediment to water column
   !additional time series of benthic flux
-  real(rkind),save:: TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
-  real(rkind),save,allocatable,dimension(:) :: BRPOC,BLPOC,BDOC,BRPON,BLPON,BDON,BNH4,BNO3,BRPOP,BLPOP,BDOP,BPO4t,BSU,BSAt,BCOD,BDO
-  real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO !surface flux : atmospheric loading
+  real(rkind),save:: TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
+  real(rkind),save,allocatable,dimension(:) :: BRPOC,BLPOC,BDOC,BRPON,BLPON,BDON,BNH4,BNO3,BRPOP,BLPOP,BDOP,BPO4,BSU,BSA,BCOD,BDO
+  real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO !surface flux : atmospheric loading
   real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea)
 
   !-------------------------------------------------------------------------------
@@ -187,7 +189,7 @@ module icm_mod
   real(rkind),save :: JSI,JPO4,JNH4,JNO3,JHS,JCH4,JCH4AQ,JCH4G,JN2GAS,JGAS
 
   !nutrient concentration in water column
-  real(rkind),save :: PO40,NH40,NO30,SI0,O20,HS0,SAL0,SO40MG
+  real(rkind),save :: NH40,NO30,SI0,O20,HS0,SAL0,SO40MG
   real(rkind),save :: CH4SAT
 
   !reaction rate (temp vars)
@@ -202,13 +204,13 @@ module icm_mod
   real(rkind),save :: SOD,stc
 
   !sediment fluxes
-  real(rkind),save,allocatable,dimension(:) :: SED_BENDO,SED_BENCOD,SED_BENNH4,SED_BENNO3,SED_BENPO4,SED_BENDOC,SED_BENSA
+  real(rkind),save,allocatable,dimension(:) :: sedDOX,sedCOD,sedNH4,sedNO3,sedPO4,sedDOC,sedSA
 
   !erosion fluxes
   real(rkind),save,allocatable,dimension(:) :: SED_EROH2S,SED_EROLPOC,SED_ERORPOC !nea
 
   !bottom Light (nea)
-  real(rkind),save,allocatable,dimension(:) :: sbLight
+  real(rkind),save,allocatable,dimension(:) :: bLight
 
   !---------------------------------------------------------------------------
   !spatially varying parameter
