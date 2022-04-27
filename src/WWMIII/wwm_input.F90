@@ -714,7 +714,7 @@
      &      ZPROF_BREAK, BC_BREAK, IROLLER, ALPROL,                     &
      &      LMAXETOT, MESDS, MESTR, TRICO, TRIRA, TRIURS
 
-         NAMELIST /NUMS/ ICOMP, AMETHOD, SMETHOD, ROLMETHOD, DMETHOD,   &
+         NAMELIST /NUMS/ ICOMP, AMETHOD, SMETHOD, DMETHOD,              &
      &      LITERSPLIT, LFILTERTH, MAXCFLTH, LTHBOUND, FMETHOD,         &
      &      LFILTERCXY, MAXCFLCXY, LFILTERSIG, MAXCFLSIG, LSIGBOUND,    &
      &      LLIMT, LIMFAK, MELIM, LDIFR, IDIFFR, LADVTEST, LSOUBOUND,   &
@@ -1260,8 +1260,14 @@
              CALL WWM_ABORT('LCPL=T if running with SCHISM')
            ENDIF
 #endif
-           IF (MESBF .GT. 0 .AND. FRICC .LT. 0.) THEN
+           IF (MESBF .eq. 1 .AND. FRICC .LT. 0.) THEN
              call wwm_abort('CHECK NUMS - FRICTION COEFFICIENT HAS WRONG SIGN')
+           END IF
+           IF (MESBF .eq. 2 .AND. FRICC .LT. 0.) THEN
+             call wwm_abort('CHECK NUMS - FRICTION COEFFICIENT HAS WRONG SIGN')
+           END IF
+           IF (MESBF .eq. 3) THEN
+             call ALLOCATE_D50
            END IF
 
 #ifndef PETSC
@@ -1680,5 +1686,28 @@
 #else
         CALL WWM_ABORT('Need to compile with netcdf for IWATLVFORMAT = 2')
 #endif
+      END IF
+      END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+      SUBROUTINE ALLOCATE_D50
+      ! MP
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER :: I
+      REAL(rkind) :: TMP1,TMP2,TMP3,TMP4
+      IF (FRICC .LT. 0) THEN
+        OPEN(32, FILE='D50_SHOWEX.gr3', STATUS='OLD')
+        READ(32,*)
+        DO I = 1, NP_GLOBAL
+          READ(32,*)TMP1,TMP2,TMP3,TMP4
+          IF(ipgl(I)%rank==myrank) D50_SHOWEX(ipgl(I)%id)=TMP4
+        END DO
+        CLOSE(32)
+      ELSE
+        DO I = 1, NP_GLOBAL
+          IF(ipgl(I)%rank==myrank) D50_SHOWEX(ipgl(I)%id)=FRICC
+        END DO
       END IF
       END SUBROUTINE

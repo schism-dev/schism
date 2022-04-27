@@ -47,31 +47,33 @@
        ALLOCATE(MSC_HF(MNP), stat=istat)
        IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 5')
        MSC_HF = MSC
+       
 !
-! action densities and source terms - shared
+! wave and surface roller action densities - shared
 !
-       ALLOCATE (AC2(MSC,MDC,MNP), stat=istat)
-       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 8')
-       AC2 = zero
-
-       ALLOCATE (AC1(MSC,MDC,MNP), stat=istat)
-       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9')
+       ALLOCATE(AC1(MSC,MDC,MNP), stat=istat)
+       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 6')
        AC1 = zero
 
-       ALLOCATE(SSBR_TOTAL(MSC,MDC,MNP), stat=istat)
-       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.1')
-       SSBR_TOTAL = zero
+       ALLOCATE(AC2(MSC,MDC,MNP), stat=istat)
+       IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 7')
+       AC2 = zero
 
        IF (IROLLER == 1) THEN
-         ALLOCATE(RAC1(MSC,MDC,MNP), stat=istat)
-         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.2')
-         RAC1 = zero
+         ALLOCATE(EROL1(MNP), EROL2(MNP), stat=istat)
+         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 8.2')
+         EROL1 = zero; EROL2 = zero; 
 
-         ALLOCATE(RAC2(MSC,MDC,MNP), stat=istat)
-         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 9.3')
-         RAC2 = zero
+         ALLOCATE(KROLP(MNP), SINBETAROL(MNP), SIGROLP(MNP), DROLP(MNP), & 
+           &      CROLP(MNP), CROL(2,MNP), AROL(MNP), stat=istat)
+         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 8.0')
+         KROLP = zero; SINBETAROL = zero; SIGROLP = zero; DROLP = zero; 
+         CROLP = zero; CROL = zero; AROL = zero
        END IF
 
+!
+! Adaptive breaking coeff
+!
        ALLOCATE( A_BR_COEF(MNP), BRCRIT(MNP), stat=istat)
        IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 25b')
        A_BR_COEF = zero
@@ -180,6 +182,14 @@
          DIFRM = zero
          DIFRX = zero
          DIFRY = zero
+       END IF
+!
+! friction source term
+!
+       IF (MESBF .EQ. 3) THEN
+         ALLOCATE(D50_SHOWEX(MNP), stat=istat)
+         IF (istat/=0) CALL WWM_ABORT('wwm_initio, allocate error 18b')
+         D50_SHOWEX = zero
        END IF
 !
 ! water level, currents and depths ...
@@ -389,7 +399,7 @@
         DEALLOCATE (U_JACOBI)
       END IF
       DEALLOCATE (AC2, AC1)
-      IF (IROLLER == 1) DEALLOCATE (RAC2, RAC1)
+      IF (IROLLER == 1) DEALLOCATE (EROL1, EROL2, CROLP, CROL, DROLP, KROLP, SIGROLP)
       IF (ICOMP .GE. 2) THEN
         DEALLOCATE (IMATRAA, IMATDAA)
       END IF
@@ -840,7 +850,7 @@
 #endif
       IF (WRITESTATFLAG == 1) FLUSH(STAT%FHNDL)
       AC1 = AC2
-      IF (IROLLER == 1) RAC1 = RAC2
+      IF (IROLLER == 1) EROL1 = EROL2
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *

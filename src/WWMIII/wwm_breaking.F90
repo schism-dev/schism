@@ -25,7 +25,7 @@
       REAL(rkind) :: BIPH,Ur,S0
       REAL(rkind) :: SBRD, WS, SURFA0, SURFA1
       REAL(rkind) :: ERF_BETA
-      REAL(rkind) :: WAVEDIR, DPDW
+      REAL(rkind) :: WAVEDIR, DEG, TANBETA
       
       INTEGER :: ie,inne,icount
       INTEGER :: IS, ID
@@ -71,9 +71,10 @@
          ! (e.g. Sallenger and Holman, 1985)
          ! lower and upper limit values prescribed in wwminput.nml
          CALL PEAK_PARAMETER(IP,ACLOC,MSC,FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD)
-         WAVEDIR = PEAKDM * PI / 180.d0 + PI / 2.d0 !conversion naut. to math. and in rad.
-         DPDW = tanbeta_x(IP)*COS(WAVEDIR) + tanbeta_y(IP)*SIN(WAVEDIR)
-         BRCRIT(IP) = a_BRCR*dpdw + b_BRCR
+         CALL DEG2NAUT(PEAKDM,DEG,LNAUTOUT) !conversion naut. to math.
+         WAVEDIR = DEG * PI / 180.d0        !in rad
+         TANBETA = tanbeta_x(IP)*COS(WAVEDIR) + tanbeta_y(IP)*SIN(WAVEDIR)
+         BRCRIT(IP) = a_BRCR*TANBETA + b_BRCR
          IF (BRCRIT(IP) < min_BRCR) BRCRIT(IP) = min_BRCR
          IF (BRCRIT(IP) > max_BRCR) BRCRIT(IP) = max_BRCR
          
@@ -118,7 +119,7 @@
            BR_COEF = B_ALP**3D0
         END SELECT
       ELSE IF (BR_COEF_METHOD == 2) THEN
-        ! Adaptive with bottom slope (Pezerat et al., 2020 - under review)
+        ! Adaptive with bottom slope (Pezerat et al., 2021 - OM)
         BR_COEF = A_BR_COEF(IP)
       ELSE
         CALL WWM_ABORT('BR_COEF_METHOD HAS A WRONG VALUE')
@@ -270,9 +271,21 @@
            BETA = ZERO
          END IF
          ! Implicit solver
-         ! TO DO
+         ! Source terms are linearized using a Newton-Raphson approach
          IF (ICOMP .GE. 2) THEN
-           CALL WWM_ABORT('IBREAK=4 not yet implemented in implicit')
+           IF ( BRCRIT(IP) .GT. 0D0 ) THEN 
+             IF ( BRCRIT(IP) .LT. 1D0 ) THEN
+               WS   = 0.75D0 * BR_COEF * SME / SQRTPI * BRCRIT(IP)**2.5 * BETA
+             ELSE
+               WS   = 0.75D0 * BR_COEF * SME / SQRTPI * BETA
+             END IF
+             SbrD = 7.D0*WS/2.
+             SURFA0 = SbrD
+             SURFA1 = WS + SbrD
+           ELSE
+             SURFA0 = 0D0
+             SURFA1 = 0D0
+           END IF
          ! Explicit Solver
          ELSE
            IF ( BRCRIT(IP) .GT. 0D0 ) THEN

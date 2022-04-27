@@ -26,7 +26,7 @@ CONTAINS
     real(rkind)             , INTENT(INOUT) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
     real(rkind)             , INTENT(OUT) ::  Kds(:)     ! Kds(f)=Sds(f)/E(f)
 
-    real(rkind)             ::  Sds(nfreq)     ! Sds(f), the source term
+    real(rkind)             ::  Sds_loc(nfreq)     ! Sds(f), the source term
     real(rkind)             ::  ndedens(nfreq) ! NDEDENS(f)=DEDENS(f)/EDENST(f)
     real(rkind)             ::  dedens(nfreq)  ! DEDENS(f)=EDENS(f)-EDENST(f)
     real(rkind)             ::  edenst(nfreq)  ! EDENST(f)=(2*g.^2)*((2*pi).^-4)*(f.^-5).*(A.^-1)*Bnt
@@ -146,7 +146,7 @@ CONTAINS
 ! 3/9/2009 Since we have already non-dimensionalized by using NDEDENS instead of DEDENS, we do it backwards: Sds=Kds*Edens
 
     do is=1,nfreq
-       Sds(is)=Kds(is)*Edens(is) ! note that in most cases, the calling routine will not use Sds
+       Sds_loc(is)=Kds(is)*Edens(is) ! note that in most cases, the calling routine will not use Sds
        ST1(is)=T1(is)*Edens(is)
        ST2(is)=T2(is)*Edens(is)
     end do
@@ -165,7 +165,7 @@ CONTAINS
 
     CALL integrate(ST1_INT,f,ST1,nfreq)
     CALL integrate(ST2_INT,f,ST2,nfreq)
-    CALL integrate(Sds_int,f,Sds,nfreq)
+    CALL integrate(Sds_int,f,Sds_loc,nfreq)
 
 ! (point output write location 3)
     if(.false. .AND. WRITEDBGFLAG == 1)then
