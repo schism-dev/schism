@@ -564,7 +564,7 @@
 !-----------------------------------------------------------------------
 ! Sponge layer for elevation and vel.
 ! If inu_elev=0, no relaxation is applied to elev.
-! If inu_elev=1, relax. constants are specified in elev_nudge.gr3
+! If inu_elev=1, relax. constants (in 1/sec, i.e. relax*dt<=1) are specified in elev_nudge.gr3
 ! and applied to eta=0 (thus a depth=0 means no relaxation).
 ! Similarly for inu_uv (with input uv_nudge.gr3)
 !-----------------------------------------------------------------------

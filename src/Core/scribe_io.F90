@@ -48,7 +48,7 @@
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode
     !Output flag dim must be same as schism_init!
-    integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(30),iof_icm(210),iof_cos(20),iof_fib(5), &
+    integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm(210),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name
     real(rkind), save :: dt,h0
     character(len=20), save :: varname3,out_name(500)
@@ -106,7 +106,7 @@
       call mpi_recv(iths,1,itype,0,110,comm_schism,rrqst,ierr)
       call mpi_recv(ntime,1,itype,0,111,comm_schism,rrqst,ierr)
       call mpi_recv(iof_hydro,40,itype,0,112,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_wwm,30,itype,0,113,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_wwm,40,itype,0,113,comm_schism,rrqst,ierr)
       !Make sure char len is 20 in schism_init and nc_writeout2D()!
       call mpi_recv(out_name,counter_out_name*20,MPI_CHAR,0,114,comm_schism,rrqst,ierr)
       call mpi_recv(ncount_2delem,1,itype,0,115,comm_schism,rrqst,ierr)
