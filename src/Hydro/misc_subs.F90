@@ -3864,7 +3864,7 @@
       !integer MadsenFlag  !0 - Madsen2004, 1 - Madsen79
       !Local
       real(rkind) :: rkappa,rkn,taub,phi_c,phi_cw,rmu,rmu2,c_mu,tmp,tau_wm, &
-                     &cm_ubm,aa
+                     &cm_ubm,aa,wdir_math
 
 !     sanity check
       if(z0<0._rkind.or.ubm<0._rkind.or.wfr<0._rkind) then
@@ -3888,7 +3888,14 @@
 !      Ubm = Wheight*wr/Sinh(Wnum*Depth) !orbital vel.
       taub=sqrt(taubx*taubx+tauby*tauby)
       phi_c=atan2(tauby,taubx) !current dir
-      phi_cw=phi_c+wdir/180._rkind*pi+pi/2._rkind !convert to math convention
+      !convert to math convention
+      wdir_math = 180._rkind + 90._rkind - wdir
+      if (wdir_math .GE. 360.0_rkind) then
+        wdir_math = MOD (wdir_math, 360.0_rkind)
+      else if (wdir_math .LT. 0.) then
+        wdir_math = MOD (wdir_math, 360.0_rkind) + 360.0_rkind
+      endif
+      phi_cw=phi_c+wdir_math/180._rkind*pi
 
       rmu=0._rkind !init. guess
       c_mu=1._rkind
@@ -3951,8 +3958,9 @@
 !     Compute the bottom shear stress due to both wave and current following 
 !     Soulsby (Ch5, Dynamics of Marine Sand, 1997)
 !     Authors: Kévin Martins, Xavier Bertin, Joseph Zhang
+!     March 2022, LRU team : correction of a mistake in tau_bot formula
 !===============================================================================
-      subroutine wbl_Soulsby97(Uc_x,Uc_y,z0,sigma,uorb,bthick,Cdp)
+      subroutine wbl_Soulsby97(Uc_x,Uc_y,z0,sigma,uorb,bthick,Cdp,tau_bot)
 !     Inputs:
 !             (Uc_x,Uc_y) - components of the current velocity at the top of the bottom cell;
 !             z0 - bottom roughness (no waves; m);
@@ -3969,10 +3977,10 @@
       use schism_msgp, only : parallel_abort
       implicit none
       real(rkind), intent(in) :: Uc_x, Uc_y, z0, sigma, uorb, bthick
-      real(rkind), intent(inout) :: Cdp
+      real(rkind), intent(inout) :: Cdp,tau_bot
 
       ! Local
-      real(rkind) :: epsi, Uc, tau_c, tau_w, fw, tau_bot
+      real(rkind) :: epsi, Uc, tau_c, tau_w, fw
 
       ! Some constant
       epsi = 0.000001_rkind
@@ -3991,11 +3999,11 @@
       tau_c = Cdp*Uc*Uc                  ! Norm of the the current-induced shear stress (skin friction) [m^2/s/s]
 
       ! Compute wave-induced bottom stress
-      fw    = 1.39_rkind*(sigma*z0/uorb)**0.52_rkind ! Friction factor
+      fw    = min(0.3_rkind,1.39_rkind*(sigma*z0/uorb)**0.52) ! Friction factor
       tau_w = 0.5_rkind*fw*uorb*uorb             ! Norm of the the wave-induced shear stress 
       
       ! Compute the combination of both
-      tau_bot = tau_c*(1._rkind+1.2_rkind*(tau_w/max(epsi,tau_w+tau_c)))
+      tau_bot = tau_c*(1._rkind+1.2_rkind*(tau_w/max(epsi,tau_w+tau_c))**3.2)
       
       if(Uc==0._rkind) then
         !keep original

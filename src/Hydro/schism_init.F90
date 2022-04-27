@@ -197,8 +197,8 @@
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
-     &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
-     &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,wafo_obcramp, &
+     &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj,turbinjds,alphaw, &
+     &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,fwvor_streaming,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
@@ -431,7 +431,7 @@
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
-        allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
+        allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(44),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
@@ -470,6 +470,8 @@
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
       iharind=0; icou_elfe_wwm=0; drampwafo=0.d0; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
+      alphaw=1.0_rkind; fwvor_advxy_stokes=1; fwvor_advz_stokes=1;
+      fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; wafo_obcramp=0;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
@@ -1483,17 +1485,19 @@
 #ifdef  USE_WWM
       if(iorder==0) then
         allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
-               & out_wwm_rol(npa,35), &
+               & out_wwm_rol(npa,35),taub_wc(npa), &
                & stokes_hvel(2,nvrt,npa), stokes_wvel(nvrt,npa),stokes_hvel_side(2,nvrt,nsa), stokes_wvel_side(nvrt,nsa), &
                & roller_stokes_hvel(2,nvrt,npa), roller_stokes_hvel_side(2,nvrt,nsa), &
-               & jpress(npa), sbr(2,npa), sbf(2,npa), srol(2,npa),                    &
-               & nne_wwm(np), stat=istat)
+               & jpress(npa), sbr(2,npa), sbf(2,npa), srol(2,npa), sds(2,npa), &
+               & nne_wwm(np), eps_w(npa), eps_r(npa), eps_br(npa), delta_wbl(npa), &
+               & wave_sbrtot(npa),wave_sbftot(npa),wave_sdstot(npa),wave_sintot(npa), stat=istat)
         if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
       endif !iorder
-      out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0
-      jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0
+      out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0; eps_w=0.d0; eps_r=0.d0; eps_br=0.d0
+      jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0; sds=0.d0; taub_wc=0.d0
       stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
-      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=0.D0
+      wave_sbrtot=0.0D0; wave_sbftot=0.0D0; wave_sintot=0.0D0; wave_sdstot=0.0D0
       !BM: coupling current for WWM
       allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
       if(istat/=0) call parallel_abort('MAIN: (2) WWM alloc failure')
@@ -5167,7 +5171,7 @@
 !...  otherwise they will be assigned values below.
       if(itur==4) then
 #ifdef USE_GOTM
-          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
+          call init_turbulence(8,'gotmturb.nml',nvrt-1) !GOTM starts from level 0
           call init_tridiagonal(nvrt-1)
 #endif
       endif
@@ -6819,7 +6823,7 @@
           call mpi_send(iths,1,itype,nproc_schism-i,110,comm_schism,ierr)
           call mpi_send(ntime,1,itype,nproc_schism-i,111,comm_schism,ierr)
           call mpi_send(iof_hydro,40,itype,nproc_schism-i,112,comm_schism,ierr)
-          call mpi_send(iof_wwm,30,itype,nproc_schism-i,113,comm_schism,ierr)
+          call mpi_send(iof_wwm,40,itype,nproc_schism-i,113,comm_schism,ierr)
           !Make sure char len is 20 in scribe_io also!
           call mpi_send(out_name,counter_out_name*20,MPI_CHAR,nproc_schism-i,114,comm_schism,ierr)
           call mpi_send(ncount_2delem,1,itype,nproc_schism-i,115,comm_schism,ierr)
