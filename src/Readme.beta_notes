@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-(28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
+567b612 (28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
 6524e19 (27 April 2022): a few more WWM related parameters under VOR (turbinjds,alpha,wfwvor_streaming) 
                          and new WWM outputs, after merging with lrdev_updates;
 d44dbdf (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'

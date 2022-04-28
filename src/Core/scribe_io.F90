@@ -1018,6 +1018,7 @@
 
       end subroutine nc_writeout3D
 
+      !Recv and write out _3D_ variables
       subroutine scribe_recv_write(it,imode,ivs,itotal,icount_out_name)
       implicit none
       !imode: 1/2/3 for node/elem/side; ivs: 1 (scalar) or 2 (vector)
