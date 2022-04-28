@@ -8832,36 +8832,6 @@
      &'WWM_'//it_char(1:lit),1,1,npa,dble(out_wwm(:,i)))
         enddo !i
 
-        !Deal with vectors
-        noutput=noutput+1
-        icount=icount+1
-        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'WWM_energy_dir',1,1,npa,dble(out_wwm(:,8)),dble(out_wwm(:,7)))
-
-        !Wave forces
-        noutput=noutput+1
-        icount=icount+1
-        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'wave_force',8,nvrt,nsa,wwave_force(1,:,:),wwave_force(2,:,:))
-
-        ! Horizontal Stokes velocity at nodes
-        noutput=noutput+1
-        icount=icount+1
-        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'stokes_hvel',2,nvrt,npa,stokes_hvel(1,:,:),stokes_hvel(2,:,:))
-
-        ! Vertical Stokes velocity at sides
-        noutput=noutput+1
-        icount=icount+1
-        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'stokes_wvel',8,nvrt,nsa,dble(stokes_wvel_side(:,:)))
-
-        ! Horizontal Stokes velocity at nodes for the surface roller
-        noutput=noutput+1
-        icount=icount+1
-        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'roller_stokes_hvel',2,nvrt,npa,roller_stokes_hvel(1,:,:),roller_stokes_hvel(2,:,:))
-
         ! Roller energy dissipation rate (Drol = rho * eps_r, unit [W/m²])
         noutput=noutput+1
         icount=icount+1
@@ -8891,6 +8861,37 @@
         icount=icount+1
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'wave_sintot',1,1,npa,dble(wave_sintot(:)))
+
+        !2D vectors
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'WWM_energy_dir',1,1,npa,dble(out_wwm(:,8)),dble(out_wwm(:,7)))
+
+        !3D
+        ! Vertical Stokes velocity at sides
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'stokes_wvel',8,nvrt,nsa,dble(stokes_wvel_side(:,:)))
+
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'wave_force',8,nvrt,nsa,wwave_force(1,:,:),wwave_force(2,:,:))
+
+        ! Horizontal Stokes velocity at nodes
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'stokes_hvel',2,nvrt,npa,stokes_hvel(1,:,:),stokes_hvel(2,:,:))
+
+        ! Horizontal Stokes velocity at nodes for the surface roller
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'roller_stokes_hvel',2,nvrt,npa,roller_stokes_hvel(1,:,:),roller_stokes_hvel(2,:,:))
+
 #endif
 
 #ifdef USE_MARSH
@@ -9094,8 +9095,27 @@
             varout_2dnode(icount,:)=out_wwm(1:np,i)
           endif !iof_wwm
         enddo !i
+
+        do i=27,31
+          if(iof_wwm(i)/=0) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.11)')
+            if(i==27) then
+              varout_2dnode(icount,:)=rho0*eps_r(1:np)
+            else if(i==28) then
+              varout_2dnode(icount,:)=wave_sbrtot(1:np)
+            else if(i==29) then
+              varout_2dnode(icount,:)=wave_sbftot(1:np)
+            else if(i==30) then
+              varout_2dnode(icount,:)=wave_sdstot(1:np)
+            else
+              varout_2dnode(icount,:)=wave_sintot(1:np)
+            endif !i
+          endif !iof_wwm
+        enddo !i
+
         !vectors
-        if(iof_wwm(27)/=0) then
+        if(iof_wwm(32)/=0) then
           icount=icount+2
           if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.2)')
           varout_2dnode(icount-1,:)=out_wwm(1:np,8)
@@ -9349,6 +9369,35 @@
         enddo !i
 
         !Modules
+#ifdef USE_WWM
+      !Vectors
+      do i=35,36
+        if(iof_wwm(i)/=0) then
+          do j=1,2 !components
+            icount=icount+1
+            nsend_varout=nsend_varout+1
+            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.63)')
+            if(i==35) then
+              if(j==1) then
+                varout_3dnode(:,:,icount)=stokes_hvel(1,:,1:np)
+              else
+                varout_3dnode(:,:,icount)=stokes_hvel(2,:,1:np)
+              endif !j
+            else
+              if(j==1) then
+                varout_3dnode(:,:,icount)=roller_stokes_hvel(1,:,1:np)
+              else
+                varout_3dnode(:,:,icount)=roller_stokes_hvel(2,:,1:np)
+              endif !j
+            endif !i
+
+            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+          enddo !j
+        endif !iof_wwm
+      enddo !i
+#endif /*USE_WWM*/
+
 #ifdef USE_GEN
         do i=1,ntrs(3)
           if(iof_gen(i)==1) then
@@ -9494,8 +9543,17 @@
      
         !Modules
 #ifdef USE_WWM
-        if(iof_wwm(28)/=0) then
-          !Vector
+        if(iof_wwm(33)/=0) then
+          icount=icount+1
+          nsend_varout=nsend_varout+1
+          if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.62)')
+          varout_3dside(:,:,icount)=stokes_wvel_side(:,1:ns)
+          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        endif !iof_wwm
+
+        !Vector
+        if(iof_wwm(34)/=0) then
           do j=1,2 !components
             icount=icount+1
             nsend_varout=nsend_varout+1
@@ -9507,7 +9565,7 @@
             endif !j
             call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
      &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-            enddo !j
+          enddo !j
         endif !iof_wwm
 #endif /*USE_WWM*/
 

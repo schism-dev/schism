@@ -798,8 +798,8 @@
   iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
-  ! iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag will be reset by code to be always on
-  iof_hydro(26) = 0 !horizontal vel vector [m/s] {horizontalVelX,Y} 3D vector
+  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
+  iof_hydro(26) = 1 !horizontal vel vector [m/s] {horizontalVelX,Y} 3D vector
   iof_hydro(27) = 0 !horizontal vel vector defined @side [m/s] {horizontalSideVelX,Y} 3D vector
   iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement} 3D
   iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement} 3D
@@ -843,17 +843,19 @@
 !  iof_wwm(24) = 0 !Friction velocity (m/s?) {frictionalVelocity}  2D
 !  iof_wwm(25) = 0 !Charnock coefficient {CharnockCoeff}  2D
 !  iof_wwm(26) = 0 !Rougness length {rougnessLength}  2D
-!  iof_wwm(27) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
-!  iof_wwm(28) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   2D vector
 
-!  iof_wwm(29) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 
-!  iof_wwm(30) = 0 !Vertical Stokes velocity (m.s-1) @nodes and whole levels {stokes_wvel} 
-!  iof_wwm(31) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel}  
-!  iof_wwm(32) = 0 !Roller energy dissipation rate (W/m²) @nodes {Drol}
-!  iof_wwm(33) = 0 !Total wave energy dissipation rate by depth-induced breaking (W/m²) @nodes {wave_sbrtot}
-!  iof_wwm(34) = 0 !Total wave energy dissipation rate by bottom friction (W/m²) @nodes {wave_sbftot}
-!  iof_wwm(35) = 0 !Total wave energy dissipation rate by whitecapping (W/m²) @nodes {wave_sdstot}
-!  iof_wwm(36) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot}
+!  iof_wwm(27) = 0 !Roller energy dissipation rate (W/m²) @nodes {Drol} 2D
+!  iof_wwm(28) = 0 !Total wave energy dissipation rate by depth-induced breaking (W/m²) @nodes {wave_sbrtot}  2D
+!  iof_wwm(29) = 0 !Total wave energy dissipation rate by bottom friction (W/m²) @nodes {wave_sbftot} 2D
+!  iof_wwm(30) = 0 !Total wave energy dissipation rate by whitecapping (W/m²) @nodes {wave_sdstot} 2D
+!  iof_wwm(31) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot} 2D
+!  iof_wwm(32) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
+
+!  iof_wwm(33) = 0 !Vertical Stokes velocity (m.s-1) @sides and whole levels {stokes_wvel}  3D
+!  iof_wwm(34) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
+
+!  iof_wwm(35) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 3D vector
+!  iof_wwm(36) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel} 3D vector 
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used

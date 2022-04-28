@@ -51,7 +51,7 @@
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm(210),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name
     real(rkind), save :: dt,h0
-    character(len=20), save :: varname3,out_name(500)
+    character(len=20), save :: out_name(500)
     integer, save :: iout_23d(500)
     character(len=1000),save :: out_dir
 
@@ -328,6 +328,7 @@
       integer,intent(in) :: it
 
       integer :: i,j,k,m,rrqst,ierr,irank,itotal,icount_out_name,itmp5
+      character(len=20) :: varname3
 
 !     Return if not output step
       if(nc_out==0.or.mod(it,nspool)/=0) return
@@ -385,29 +386,56 @@
 !------------------
       !3D node: hydro
       do j=17,25
-        if(iof_hydro(j)/=0) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            !OK to fill partial arrays as long as respect column major
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-       
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_hydro
+        if(iof_hydro(j)/=0) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            !OK to fill partial arrays as long as respect column major
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!       
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_hydro
       enddo !j
 
       !3D node vectors
       do j=26,26
-        if(iof_hydro(j)/=0) then
+        if(iof_hydro(j)/=0) call scribe_recv_write(it,1,2,itotal,icount_out_name)
+!          do m=1,2 !components
+!            itotal=itotal+1
+!            icount_out_name=icount_out_name+1
+!            irank=nproc_schism-itotal
+!            if(myrank_schism==irank) then
+!              do i=1,nproc_compute
+!                call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!              enddo !i
+!              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!       
+!              do i=1,nproc_compute
+!                var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!              enddo !i
+!
+!              varname3=out_name(icount_out_name)
+!              call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!            endif !myrank_schism
+!          enddo !m
+!        endif !iof_hydro
+      enddo !j
+
+      !Add modules
+#ifdef USE_WWM
+      !Vectors
+      do j=35,36
+        if(iof_wwm(j)/=0) then
           do m=1,2 !components
             itotal=itotal+1
             icount_out_name=icount_out_name+1
@@ -417,7 +445,7 @@
                 call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
               enddo !i
               call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-       
+
               do i=1,nproc_compute
                 var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
               enddo !i
@@ -426,10 +454,10 @@
               call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
             endif !myrank_schism
           enddo !m
-        endif !iof_hydro
+        endif !iof_wwm
       enddo !j
+#endif /*USE_WWM*/
 
-      !Add modules
 #ifdef USE_GEN
       do j=1,ntrs(3)
         if(iof_gen(j)==1) then
@@ -648,7 +676,26 @@
 
       !Add modules
 #ifdef USE_WWM
-      if(iof_wwm(28)/=0) then
+      if(iof_wwm(33)/=0) then
+        itotal=itotal+1
+        icount_out_name=icount_out_name+1
+        irank=nproc_schism-itotal
+        if(myrank_schism==irank) then
+          do i=1,nproc_compute
+            call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+          enddo !i
+          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+          do i=1,nproc_compute
+            var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+          enddo !i
+
+          varname3=out_name(icount_out_name)
+          call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+        endif !myrank_schism
+      endif !iof_wwm
+
+      !Vector
+      if(iof_wwm(34)/=0) then
         do m=1,2 !vector components
           itotal=itotal+1
           icount_out_name=icount_out_name+1 !index into out_name
@@ -970,6 +1017,59 @@
       if(mod(it,ihfskip)==0) iret=nf90_close(ncid_schism_3d)
 
       end subroutine nc_writeout3D
+
+      subroutine scribe_recv_write(it,imode,ivs,itotal,icount_out_name)
+      implicit none
+      !imode: 1/2/3 for node/elem/side; ivs: 1 (scalar) or 2 (vector)
+      integer, intent(in) :: it,imode,ivs
+      integer, intent(inout) :: itotal,icount_out_name !global counters
+
+      character(len=20) :: varname3
+      integer :: i,j,m,irank,ierr
+
+      if(imode<1.or.imode>3) call parallel_abort('scribe_recv_write: imode')
+      if(ivs/=1.and.ivs/=2) call parallel_abort('scribe_recv_write: ivs')
+
+      do m=1,ivs !components
+        itotal=itotal+1
+        icount_out_name=icount_out_name+1
+        irank=nproc_schism-itotal
+        if(myrank_schism==irank) then
+          !OK to fill partial arrays as long as respect column major
+          do i=1,nproc_compute
+            if(imode==1) then !node
+              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+            else if(imode==2) then !elem
+              call mpi_irecv(var3delem(:,:,i),ne(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+            else !side
+              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+            endif !imode
+          enddo !i
+          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+
+          !Combine in memory
+          do i=1,nproc_compute
+            if(imode==1) then !node
+              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+            else if(imode==2) then !elem
+              var3delem_gb(1:nvrt,ielg(1:ne(i),i))=var3delem(1:nvrt,1:ne(i),i)
+            else !side
+              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+            endif !imode
+          enddo !i
+
+          varname3=out_name(icount_out_name)
+          if(imode==1) then !node
+            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+          else if(imode==2) then !elem
+            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
+          else !side
+            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+          endif !imode
+        endif !myrank_schism
+      enddo !m
+
+      end subroutine scribe_recv_write
 
 !===============================================================================
       subroutine scribe_finalize

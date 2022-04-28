@@ -499,8 +499,8 @@
       read(15,nml=SCHOUT)
       close(15)
 
-      !zcor should always be there
-      iof_hydro(25)=1
+      !zcor should be on usually
+!      iof_hydro(25)=1
 
 !...  Dump param.nml for checking
       if(myrank==0) then
@@ -6348,8 +6348,27 @@
         endif !iof_wwm
       enddo !i
 
+      do i=27,31
+        if(iof_wwm(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(27)
+              out_name(ncount_2dnode)='rollerDissRate'
+            case(28)
+              out_name(ncount_2dnode)='dissRateDepBreaking'
+            case(29)
+              out_name(ncount_2dnode)='dissRateBottFriction'
+            case(30)
+              out_name(ncount_2dnode)='dissRateWhiteCapping'
+            case(31)
+              out_name(ncount_2dnode)='energyInputAtmos'
+          end select 
+        endif !iof_wwm
+      enddo !i
+
       !Vectors count as 2
-      if(iof_wwm(27)/=0) then
+      if(iof_wwm(32)/=0) then
         ncount_2dnode=ncount_2dnode+2
         iout_23d(ncount_2dnode-1:ncount_2dnode)=1
         out_name(ncount_2dnode-1)='waveEnergyDirX'
@@ -6583,6 +6602,23 @@
         out_name(counter_out_name)='horizontalVelY'
       endif
 
+#ifdef USE_WWM
+      do i=35,36
+        if(iof_wwm(i)/=0) then
+          ncount_3dnode=ncount_3dnode+2
+          counter_out_name=counter_out_name+2
+          iout_23d(counter_out_name-1:counter_out_name)=2
+          if(i==35) then
+            out_name(counter_out_name-1)='stokesDriftVelX'
+            out_name(counter_out_name)='stokesDriftVelY'
+          else
+            out_name(counter_out_name-1)='rollStokesDriftVelX'
+            out_name(counter_out_name)='rollStokesDriftVelY'
+          endif
+        endif !iof_wwm
+      enddo !i
+#endif /*USE_WWM*/
+
 #ifdef USE_GEN
       do i=1,ntrs(3)
         if(iof_gen(i)==1) then
@@ -6710,7 +6746,15 @@
       enddo !i
 
 #ifdef USE_WWM
-      if(iof_wwm(28)/=0) then
+      if(iof_wwm(33)/=0) then
+        ncount_3dside=ncount_3dside+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=8
+        out_name(counter_out_name)='verticalStokesVel'
+      endif
+
+      !Vector
+      if(iof_wwm(34)/=0) then
         ncount_3dside=ncount_3dside+2
         counter_out_name=counter_out_name+2
         iout_23d(counter_out_name-1:counter_out_name)=8
