@@ -9237,6 +9237,62 @@
       enddo !i
 #endif
 
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=29,32
+          if(iof_icm(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.131)')
+            select case(i)
+              case(29)
+                varout_2delem(icount,:)=stleaf(1:ne)
+              case(30)
+                varout_2delem(icount,:)=ststem(1:ne)
+              case(31)
+                varout_2delem(icount,:)=stroot(1:ne)
+              case(32)
+                varout_2delem(icount,:)=sht(1:ne)
+            end select
+          endif !iof_icm
+        enddo !i
+      endif !isav_icm/
+
+      if(iveg_icm/=0) then
+        do i=33,44
+          if(iof_icm(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.132)')
+            select case(i)
+              case(33)
+                varout_2delem(icount,:)=vtleaf(1:ne,1)
+              case(34)
+                varout_2delem(icount,:)=vtleaf(1:ne,2)
+              case(35)
+                varout_2delem(icount,:)=vtleaf(1:ne,3)
+              case(36)
+                varout_2delem(icount,:)=vtstem(1:ne,1)
+              case(37)
+                varout_2delem(icount,:)=vtstem(1:ne,2)
+              case(38)
+                varout_2delem(icount,:)=vtstem(1:ne,3)
+              case(39)
+                varout_2delem(icount,:)=vtroot(1:ne,1)
+              case(40)
+                varout_2delem(icount,:)=vtroot(1:ne,2)
+              case(41)
+                varout_2delem(icount,:)=vtroot(1:ne,3)
+              case(42)
+                varout_2delem(icount,:)=vht(1:ne,1)
+              case(43)
+                varout_2delem(icount,:)=vht(1:ne,2)
+              case(44)
+                varout_2delem(icount,:)=vht(1:ne,3)
+            end select     
+          endif !iof_icm
+        enddo !i
+      endif !iveg_icm/
+#endif
+
 #ifdef USE_MARSH
         if(iof_marsh(1)==1)
           icount=icount+1 
@@ -9485,6 +9541,15 @@
         enddo !i
 #endif /*USE_ECO*/
 
+#ifdef USE_ICM
+        do i=1,ntrs(7)
+          if(iof_icm(i)==1) then
+            itmp=irange_tr(1,7)+i-1 !tracer #
+            call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
+          endif
+        enddo !i
+#endif/*USE_ICM*/
+
 #ifdef USE_COSINE
         do i=1,ntrs(8)
           if(iof_cos(i)==1) then
@@ -9661,6 +9726,22 @@
         enddo !i
 
         !Modules
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=26,28
+          if(iof_icm(i)==1) then
+            if(i==26) then
+              call savensend3D_scribe(icount,2,1,nvrt,ne,sleaf(:,1:ne))
+            else if(i==27) then
+              call savensend3D_scribe(icount,2,1,nvrt,ne,sstem(:,1:ne))
+            else
+              call savensend3D_scribe(icount,2,1,nvrt,ne,sroot(:,1:ne))
+            endif
+          endif !iof_icm
+        enddo !i
+      endif !isav_icm/
+#endif
+
 #ifdef USE_DVD
         if(iof_dvd(1)==1) call savensend3D_scribe(icount,2,1,nvrt,ne,rkai_num(1,:,1:ne))
 !          icount=icount+1

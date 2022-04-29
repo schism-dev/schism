@@ -6495,6 +6495,64 @@
       enddo !i
 #endif
 
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=29,32
+          if(iof_icm(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            select case(i)
+              case(29)
+                out_name(counter_out_name)='ICM_stleaf'
+              case(30)
+                out_name(counter_out_name)='ICM_ststem'
+              case(31)
+                out_name(counter_out_name)='ICM_stroot'
+              case(32)
+                out_name(counter_out_name)='ICM_sht'
+            end select
+          endif !iof
+        enddo !i
+      endif !isav_icm/
+
+      if(iveg_icm/=0) then
+        do i=33,44
+          if(iof_icm(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            select case(i)
+              case(33)
+                out_name(counter_out_name)='ICM_vtleaf1'
+              case(34)
+                out_name(counter_out_name)='ICM_vtleaf2'
+              case(35)
+                out_name(counter_out_name)='ICM_vtleaf3'
+              case(36)
+                out_name(counter_out_name)='ICM_vtstem1'
+              case(37)
+                out_name(counter_out_name)='ICM_vtstem2'
+              case(38)
+                out_name(counter_out_name)='ICM_vtstem3'
+              case(39)
+                out_name(counter_out_name)='ICM_vtroot1'
+              case(40)
+                out_name(counter_out_name)='ICM_vtroot2'
+              case(41)
+                out_name(counter_out_name)='ICM_vtroot3'
+              case(42)
+                out_name(counter_out_name)='ICM_vht1'
+              case(43)
+                out_name(counter_out_name)='ICM_vht2'
+              case(44)
+                out_name(counter_out_name)='ICM_vht3'
+            end select
+          endif !iof
+        enddo !i
+      endif !iveg_icm/
+#endif
+
 #ifdef USE_MARSH
       if(iof_marsh(1)==1) 
         ncount_2delem=ncount_2delem+1
@@ -6683,6 +6741,19 @@
       enddo !i
 #endif
 
+#ifdef USE_ICM
+      do i=1,ntrs(7)
+        if(iof_icm(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='ICM_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif/*USE_ICM*/
+
 #ifdef USE_COSINE
       do i=1,ntrs(6)
         if(iof_cos(i)==1) then
@@ -6812,6 +6883,25 @@
       enddo !i
 
       !Modules
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=26,28
+          if(iof_icm(i)==1) then
+            ncount_3delem=ncount_3delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=6
+            if(i==26) then
+              out_name(counter_out_name)='ICM_sleaf'
+            else if(i==27) then
+              out_name(counter_out_name)='ICM_sstem'
+            else
+              out_name(counter_out_name)='ICM_sroot'
+            endif
+          endif
+        enddo !i
+      endif !isav_icm/
+#endif
+
 #ifdef USE_DVD
       if(iof_dvd(1)==1) then
         ncount_3delem=ncount_3delem+1
@@ -6892,6 +6982,9 @@
           call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
           call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
           call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)
+#ifdef USE_ICM
+          call mpi_send(isav_icm,1,itype,nproc_schism-i,136,comm_schism,ierr)
+#endif
         enddo !i
       endif !myrank=0
 

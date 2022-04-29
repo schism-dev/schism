@@ -50,7 +50,7 @@
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode
     !Output flag dim must be same as schism_init!
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm(210),iof_cos(20),iof_fib(5), &
-  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name
+  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,isav_icm
     real(rkind), save :: dt,h0
     character(len=20), save :: out_name(max_ncoutvar)
     integer, save :: iout_23d(max_ncoutvar)
@@ -146,6 +146,9 @@
       call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,rrqst,ierr)
       call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,rrqst,ierr)
       call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,rrqst,ierr)
+#ifdef USE_ICM
+      call mpi_recv(isav_icm,1,itype,0,136,comm_schism,rrqst,ierr)
+#endif
 
       iths0=iths !save to global var
    
@@ -565,6 +568,12 @@
       enddo !j
 #endif /*USE_ECO*/
 
+#ifdef USE_ICM
+      do j=1,ntrs(7)
+        if(iof_icm(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+      enddo !j
+#endif
+
 #ifdef USE_COSINE
       do j=1,ntrs(8)
         if(iof_cos(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
@@ -766,6 +775,14 @@
       enddo !j
 
       !Add modules
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do j=26,28
+          if(iof_hydro(j)/=0) call scribe_recv_write(it,2,1,itotal,icount_out_name)
+        enddo !j
+      endif !isav_icm/
+#endif
+
 #ifdef USE_DVD
       if(iof_dvd(1)==1) call scribe_recv_write(it,2,1,itotal,icount_out_name)
 !          itotal=itotal+1
