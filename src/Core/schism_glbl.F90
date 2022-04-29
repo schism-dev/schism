@@ -434,7 +434,7 @@ module schism_glbl
   real(rkind),save,allocatable :: xl(:,:)   ! Turbulent mixing length at sides & half levels
   real(rkind),save,allocatable :: xlmin2(:) ! min. turbulent mixing length fro non-surface layers
   !Velocity at nodes & whole levels at current timestep. If ics=2, it's in ll frame
-  real(rkind),save,allocatable :: uu2(:,:),vv2(:,:),ww2(:,:)
+  real(rkind),save,allocatable, target :: uu2(:,:),vv2(:,:),ww2(:,:)
   real(rkind),save,allocatable :: bdef(:)   !bottom deformation
   real(rkind),save,allocatable :: bdef1(:)   !bottom deformation
   real(rkind),save,allocatable :: bdef2(:)   !bottom deformation
