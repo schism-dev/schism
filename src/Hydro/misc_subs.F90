@@ -6214,7 +6214,7 @@
       include 'mpif.h'
 
       !imode: 1(node), 2(elem), 3(side)
-      !npes: reside only
+      !npes: resident only
       integer, intent(in) :: imode,ivs,nvrt0,npes
       !icount: global counter
       integer, intent(inout) :: icount

@@ -224,7 +224,7 @@ subroutine partition_hgrid
     return
   endif
 
-  ! Setup initial partition
+  ! Setup initial naive partition
   ! Equal # of elements in each processor (except for the last one).
   allocate(neproc(0:nproc-1),stat=stat)
   if(stat/=0) call parallel_abort('partition: neproc allocation failure')
@@ -247,7 +247,7 @@ subroutine partition_hgrid
 
   !The following needs info 
   !from aquire_hgrid: i34, ielg; elnode; ic3; nne; indel; ne; nea; npa; xnd, ynd, znd, dp
-  !from aquire_vgrid: nvrt; ztot; kz; h_s.
+  !from aquire_vgrid: nvrt; ztot; kz; h_s
   !from schism_init: ics
 
   !Do map projection for lat/lon
@@ -292,6 +292,23 @@ subroutine partition_hgrid
     deallocate(nlev)
   endif !ivcor==1
 
+  if(ioffline_partition/=0) then
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !Offline paritition by reading from input similar to global_to_local.prop
+    if(myrank==0) then
+      open(10,file='global_to_local.in',status='old')
+      do i=1,ne_global 
+        read(10,*)j,iegrpv(i)
+      enddo
+      read(10,*); read(10,*)k
+      close(10)
+
+      if(k/=nproc) call parallel_abort('offline partition: different nproc')
+    endif !myrank
+    call mpi_bcast(iegrpv,ne_global,itype,0,comm,stat)
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  else !ioffline_partition; use ParMETIS
+  
   ! Count number of edges in dual graph
   allocate(adjncy(1000),stat=stat) !for single element
   if(stat/=0) call parallel_abort('partition: adjncy(1000) allocation failure')
@@ -521,15 +538,20 @@ subroutine partition_hgrid
   call mpi_allgatherv(part,ne,itype,iegrpv,neproc,neprocsum,itype,comm,ierr)
   if(ierr/=MPI_SUCCESS) call parallel_abort('partition: mpi_allgatherv',ierr)
 
-  ! Deallocate neproc arrays
-  deallocate(neproc,neprocsum)
-
   ! Deallocate ParMeTiS arrays
   deallocate(vtxdist,xadj,adjncy,part)
-  deallocate(xyz,nlev,tpwgts,ubvec,xproj,yproj)
+  deallocate(xyz,tpwgts,ubvec)
   if(wgtflag==2.or.wgtflag==3) deallocate(vwgt)
   if(wgtflag==1.or.wgtflag==3) deallocate(adjwgt)
-  if(ivcor==1) deallocate(kbp)
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  endif !ioffline_partition/
+
+  ! Deallocate arrays
+  deallocate(neproc,neprocsum)
+!  if(ivcor==1) deallocate(kbp)
+  if(allocated(nlev)) deallocate(nlev)
+  if(allocated(kbp)) deallocate(kbp)
+  deallocate(xproj,yproj)
 
 end subroutine partition_hgrid
 
@@ -2679,6 +2701,9 @@ subroutine dump_hgrid
   if(myrank==0) then
     open(32,file=out_dir(1:len_out_dir)//'global_to_local.prop',status='unknown')
     write(32,'(i8,1x,i4)')(ie,iegrpv(ie),ie=1,ne_global)
+    !Add more info
+    write(32,*)
+    write(32,*)nproc
     close(32)
   endif
 

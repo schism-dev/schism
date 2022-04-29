@@ -40,6 +40,12 @@
 ! Optional parameters. The values shown below are default unless otherwise noted
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !-----------------------------------------------------------------------
+! Optional offline partitioning. If on, need global_to_local.in (like global_to_local.prop).
+! The default (0) is off i.e. use ParMETIS
+!-----------------------------------------------------------------------
+  ioffline_partition = 0
+
+!-----------------------------------------------------------------------
 ! 2nd pre-proc flag. If ipre2/=0, code will output some diagnotic outputs and stop.
 ! These outputs are: drag coefficients (Cdp)
 !-----------------------------------------------------------------------
