@@ -42,6 +42,7 @@ module schism_glbl
   integer,parameter :: nthfiles=5 !# of type I (ASCII) .th files (for dimensioning)
   integer,parameter :: nthfiles2=5 !# of *3D.th files (for dimensioning)
   integer,parameter :: nthfiles3=3 !# of source/sink .th (for dimensioning)
+  integer,parameter :: max_ncoutvar=500 !max # of vars in global nc outputs
   real(rkind),parameter :: small1=real(1.d-6,rkind) !small non-negative number
   real(rkind),parameter :: small2=small1*100._rkind !slightly larger number
   real(rkind),parameter :: pi=3.141592653589793_rkind

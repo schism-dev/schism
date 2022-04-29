@@ -21,6 +21,7 @@
 ! subroutine scribe_finalize
 ! subroutine nc_writeout2D
 ! subroutine nc_writeout3D
+! subroutine scribe_recv_write
 
 !===============================================================================
 !===============================================================================
@@ -28,7 +29,7 @@
     module scribe_io
     !Limit global vars to those essentials for communication, as scribe ranks do
     !not have access to other vars read in from .nml etc
-    use schism_glbl, only : rkind,errmsg,natrm
+    use schism_glbl, only : rkind,errmsg,natrm,max_ncoutvar
     use schism_msgp, only : comm_schism,comm_scribe,nproc_schism,nproc_scribe,nscribes, &
   &myrank_scribe,myrank_schism,rtype,itype,parallel_abort
     use netcdf
@@ -51,8 +52,8 @@
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm(210),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name
     real(rkind), save :: dt,h0
-    character(len=20), save :: out_name(500)
-    integer, save :: iout_23d(500)
+    character(len=20), save :: out_name(max_ncoutvar)
+    integer, save :: iout_23d(max_ncoutvar)
     character(len=1000),save :: out_dir
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
@@ -102,7 +103,7 @@
       call mpi_recv(ns_global,1,itype,0,107,comm_schism,rrqst,ierr)
       call mpi_recv(ihfskip,1,itype,0,108,comm_schism,rrqst,ierr)
       call mpi_recv(counter_out_name,1,itype,0,109,comm_schism,rrqst,ierr)
-      if(counter_out_name>500) call parallel_abort('scribe_init: increase out_name dim')
+      if(counter_out_name>max_ncoutvar) call parallel_abort('scribe_init: increase out_name dim')
       call mpi_recv(iths,1,itype,0,110,comm_schism,rrqst,ierr)
       call mpi_recv(ntime,1,itype,0,111,comm_schism,rrqst,ierr)
       call mpi_recv(iof_hydro,40,itype,0,112,comm_schism,rrqst,ierr)
@@ -435,352 +436,353 @@
 #ifdef USE_WWM
       !Vectors
       do j=35,36
-        if(iof_wwm(j)/=0) then
-          do m=1,2 !components
-            itotal=itotal+1
-            icount_out_name=icount_out_name+1
-            irank=nproc_schism-itotal
-            if(myrank_schism==irank) then
-              do i=1,nproc_compute
-                call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-              enddo !i
-              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-              do i=1,nproc_compute
-                var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-              enddo !i
-
-              varname3=out_name(icount_out_name)
-              call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-            endif !myrank_schism
-          enddo !m
-        endif !iof_wwm
+        if(iof_wwm(j)/=0) call scribe_recv_write(it,1,2,itotal,icount_out_name)
+!          do m=1,2 !components
+!            itotal=itotal+1
+!            icount_out_name=icount_out_name+1
+!            irank=nproc_schism-itotal
+!            if(myrank_schism==irank) then
+!              do i=1,nproc_compute
+!                call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!              enddo !i
+!              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!              do i=1,nproc_compute
+!                var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!              enddo !i
+!
+!              varname3=out_name(icount_out_name)
+!              call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!            endif !myrank_schism
+!          enddo !m
+!        endif !iof_wwm
       enddo !j
 #endif /*USE_WWM*/
 
 #ifdef USE_GEN
       do j=1,ntrs(3)
-        if(iof_gen(j)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_gen
+        if(iof_gen(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_gen
       enddo !j
 #endif /*USE_GEN*/
 
 #ifdef USE_AGE
       do j=1,ntrs(4)/2
-        if(iof_age(j)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_gen
+        if(iof_age(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_gen
       enddo !j
 #endif /*USE_AGE*/
 
 #ifdef USE_SED
       do j=1,ntrs(5)
-        if(iof_sed(j+istart_sed_3dnode)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_
+        if(iof_sed(j+istart_sed_3dnode)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_
       enddo !j
 
       itmp5=istart_sed_3dnode+ntrs(5) !index of iof_sed so far
-      if(iof_sed(itmp5+1)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-      endif !iof_
+      if(iof_sed(itmp5+1)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!      endif !iof_
       itmp5=itmp5+1
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
       do j=1,ntrs(6)
-        if(iof_eco(j)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_
+        if(iof_eco(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_
       enddo !j
 #endif /*USE_ECO*/
 
 #ifdef USE_COSINE
       do j=1,ntrs(8)
-        if(iof_cos(j)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_cos
+        if(iof_cos(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_cos
       enddo !j
 #endif /*USE_COSINE*/
 
 #ifdef USE_FIB
       do j=1,ntrs(9)
-        if(iof_fib(j)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_fib
+        if(iof_fib(j)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_fib
       enddo !j
 #endif/*USE_FIB*/
 
 #ifdef USE_FABM
       do j=1,ntrs(11)
-        itotal=itotal+1
-        icount_out_name=icount_out_name+1 !index into out_name
-        irank=nproc_schism-itotal
-        if(myrank_schism==irank) then
-          do i=1,nproc_compute
-            call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-          enddo !i
-          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-          do i=1,nproc_compute
-            var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-          enddo !i
-          varname3=out_name(icount_out_name)
-          call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-        endif !myrank_schism
+        call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!        itotal=itotal+1
+!        icount_out_name=icount_out_name+1 !index into out_name
+!        irank=nproc_schism-itotal
+!        if(myrank_schism==irank) then
+!          do i=1,nproc_compute
+!            call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!          enddo !i
+!          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!          do i=1,nproc_compute
+!            var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!          enddo !i
+!          varname3=out_name(icount_out_name)
+!          call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!        endif !myrank_schism
       enddo !j
 #endif/*USE_FABM*/
 
 #ifdef USE_ANALYSIS
-      if(iof_ana(14)==1) then
-        itotal=itotal+1
-        icount_out_name=icount_out_name+1 !index into out_name
-        irank=nproc_schism-itotal
-        if(myrank_schism==irank) then
-          do i=1,nproc_compute
-            call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-          enddo !i
-          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-          do i=1,nproc_compute
-            var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
-          enddo !i
-          varname3=out_name(icount_out_name)
-          call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
-        endif
-      endif
+      if(iof_ana(14)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+!        itotal=itotal+1
+!        icount_out_name=icount_out_name+1 !index into out_name
+!        irank=nproc_schism-itotal
+!        if(myrank_schism==irank) then
+!          do i=1,nproc_compute
+!            call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!          enddo !i
+!          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!          do i=1,nproc_compute
+!            var3dnode_gb(1:nvrt,iplg(1:np(i),i))=var3dnode(1:nvrt,1:np(i),i)
+!          enddo !i
+!          varname3=out_name(icount_out_name)
+!          call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+!        endif
+!      endif
 #endif
 
 !end of 3D node
 !------------------
       !3D side: hydro
       do j=27,27
-        if(iof_hydro(j)/=0) then
-          do m=1,2 !components
-            itotal=itotal+1
-            icount_out_name=icount_out_name+1
-            irank=nproc_schism-itotal
-            if(myrank_schism==irank) then
-              do i=1,nproc_compute
-                call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-              enddo !i
-              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-              do i=1,nproc_compute
-                var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
-              enddo !i
-
-              varname3=out_name(icount_out_name)
-              call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
-            endif !myrank_schism
-          enddo !m
-        endif !iof_hydro
+        if(iof_hydro(j)/=0) call scribe_recv_write(it,3,2,itotal,icount_out_name)
+!          do m=1,2 !components
+!            itotal=itotal+1
+!            icount_out_name=icount_out_name+1
+!            irank=nproc_schism-itotal
+!            if(myrank_schism==irank) then
+!              do i=1,nproc_compute
+!                call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!              enddo !i
+!              call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!              do i=1,nproc_compute
+!                var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+!              enddo !i
+!
+!              varname3=out_name(icount_out_name)
+!              call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+!            endif !myrank_schism
+!          enddo !m
+!        endif !iof_hydro
       enddo !j
 
       !Add modules
 #ifdef USE_WWM
-      if(iof_wwm(33)/=0) then
-        itotal=itotal+1
-        icount_out_name=icount_out_name+1
-        irank=nproc_schism-itotal
-        if(myrank_schism==irank) then
-          do i=1,nproc_compute
-            call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-          enddo !i
-          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-          do i=1,nproc_compute
-            var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
-          enddo !i
-
-          varname3=out_name(icount_out_name)
-          call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
-        endif !myrank_schism
-      endif !iof_wwm
+      if(iof_wwm(33)/=0) call scribe_recv_write(it,3,1,itotal,icount_out_name)
+!        itotal=itotal+1
+!        icount_out_name=icount_out_name+1
+!        irank=nproc_schism-itotal
+!        if(myrank_schism==irank) then
+!          do i=1,nproc_compute
+!            call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!          enddo !i
+!          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!          do i=1,nproc_compute
+!            var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+!          enddo !i
+!
+!          varname3=out_name(icount_out_name)
+!          call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+!        endif !myrank_schism
+!      endif !iof_wwm
 
       !Vector
-      if(iof_wwm(34)/=0) then
-        do m=1,2 !vector components
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
-            enddo !i
-
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        enddo !m
-      endif !iof_wwm
+      if(iof_wwm(34)/=0) call scribe_recv_write(it,3,2,itotal,icount_out_name)
+!        do m=1,2 !vector components
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+!            enddo !i
+!
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        enddo !m
+!      endif !iof_wwm
 #endif /*USE_WWM*/
 
 #ifdef USE_ANALYSIS
       do j=6,13
-        if(iof_ana(j)/=0) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-            do i=1,nproc_compute
-              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
-            enddo !i
-
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-        endif !iof_ana
+        if(iof_ana(j)/=0) call scribe_recv_write(it,3,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!            do i=1,nproc_compute
+!              var3dside_gb(1:nvrt,islg(1:ns(i),i))=var3dside(1:nvrt,1:ns(i),i)
+!            enddo !i
+!
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!        endif !iof_ana
       enddo !j
 #endif
 !end of 3D side
 !------------------
       !3D elem: hydro
       do j=28,30
-        if(iof_hydro(j)/=0) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3delem(:,:,i),ne(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-
-            do i=1,nproc_compute
-              var3delem_gb(1:nvrt,ielg(1:ne(i),i))=var3delem(1:nvrt,1:ne(i),i)
-            enddo !i
-
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
-
-          endif !myrank_schism
-        endif !iof_hydro
+        if(iof_hydro(j)/=0) call scribe_recv_write(it,2,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3delem(:,:,i),ne(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!
+!            do i=1,nproc_compute
+!              var3delem_gb(1:nvrt,ielg(1:ne(i),i))=var3delem(1:nvrt,1:ne(i),i)
+!            enddo !i
+!
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
+!
+!          endif !myrank_schism
+!        endif !iof_hydro
       enddo !j
 
       !Add modules
 #ifdef USE_DVD
-      if(iof_dvd(1)==1) then
-          itotal=itotal+1
-          icount_out_name=icount_out_name+1 !index into out_name
-          irank=nproc_schism-itotal
-          if(myrank_schism==irank) then
-            do i=1,nproc_compute
-              call mpi_irecv(var3delem(:,:,i),ne(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
-            enddo !i
-            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
-            do i=1,nproc_compute
-              var3delem_gb(1:nvrt,ielg(1:ne(i),i))=var3delem(1:nvrt,1:ne(i),i)
-            enddo !i
-            varname3=out_name(icount_out_name)
-            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
-          endif !myrank_schism
-      endif !iof_dvd
+      if(iof_dvd(1)==1) call scribe_recv_write(it,2,1,itotal,icount_out_name)
+!          itotal=itotal+1
+!          icount_out_name=icount_out_name+1 !index into out_name
+!          irank=nproc_schism-itotal
+!          if(myrank_schism==irank) then
+!            do i=1,nproc_compute
+!              call mpi_irecv(var3delem(:,:,i),ne(i)*nvrt,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+!            enddo !i
+!            call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+!            do i=1,nproc_compute
+!              var3delem_gb(1:nvrt,ielg(1:ne(i),i))=var3delem(1:nvrt,1:ne(i),i)
+!            enddo !i
+!            varname3=out_name(icount_out_name)
+!            call nc_writeout3D(2,it,nvrt,ne_global,var3delem_gb,varname3,iout_23d(icount_out_name))
+!          endif !myrank_schism
+!      endif !iof_dvd
 #endif /*USE_DVD*/
   
       !End of 3D elem
@@ -1018,6 +1020,7 @@
 
       end subroutine nc_writeout3D
 
+!===============================================================================
       !Recv and write out _3D_ variables
       subroutine scribe_recv_write(it,imode,ivs,itotal,icount_out_name)
       implicit none

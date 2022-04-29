@@ -147,8 +147,8 @@
       logical :: ltmp,ltmp1,ltmp2,lexist
       character(len=48) :: inputfile,ar_name(100)
       !Dimensions of out_name,iout_23d should be same as in scribe_io
-      character(len=20) :: out_name(500)
-      integer :: iout_23d(500)
+      character(len=20) :: out_name(max_ncoutvar)
+      integer :: iout_23d(max_ncoutvar)
 
       integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
@@ -6850,7 +6850,7 @@
 !     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
       noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
       if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
-      if(counter_out_name>500) call parallel_abort('INIT: increase out_name dim')
+      if(counter_out_name>max_ncoutvar) call parallel_abort('INIT: increase out_name dim')
       if(myrank==0) then 
         write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
         do i=1,nscribes
