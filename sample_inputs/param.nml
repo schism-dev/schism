@@ -810,7 +810,7 @@
   iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement} 3D
   iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement} 3D
   iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement} 3D
-  iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient} - not implemented yet
+  iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient} 2D vector
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on

@@ -6598,6 +6598,14 @@
       out_name(counter_out_name)='dryFlagSide'
       iout_23d(counter_out_name)=7
 
+      if(iof_hydro(31)==1) then
+        ncount_2dside=ncount_2dside+2
+        counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=7
+        out_name(counter_out_name-1)='barotropicPresGradX'
+        out_name(counter_out_name)='barotropicPresGradY'
+      endif !iof_hydro
+
 !     Add module outputs of 2D side below (scalars&vectors)
 #ifdef USE_ANALYSIS
       do i=2,5

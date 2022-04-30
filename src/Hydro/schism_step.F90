@@ -8585,8 +8585,7 @@
         if(iof_hydro(28)==1) call writeout_nc(id_out_var(31),'wvel_elem',5,nvrt,nea,we)
         if(iof_hydro(29)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
-        if(iof_hydro(31)==1) call writeout_nc(id_out_var(34), &
-     &'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
+        if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
         noutput=31 !total # of outputs so far (for dim of id_out_var)
 
         !'Modules
@@ -9336,6 +9335,13 @@
         icount=1 !index into varout_2dside
         if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.2)')
         varout_2dside(icount,:)=idry_s(1:ns)
+
+        if(iof_hydro(31)==1) then
+          icount=icount+2
+          if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.41)')
+          varout_2dside(icount-1,:)=bpgr(1:ns,1)
+          varout_2dside(icount,:)=bpgr(1:ns,2)
+        endif !iof_hydro
 
         !Modules output
 #ifdef USE_ANALYSIS
