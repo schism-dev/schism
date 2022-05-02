@@ -6179,7 +6179,7 @@
         endif
 
         if(myrank==0) then
-          write(16,*)'hot start at time=',time,iths,' ; stack #=',ifile
+          write(16,*)'hot start at time=',time,iths !,' ; stack #=',ifile
           call flush(16)
         endif
 
@@ -6991,8 +6991,13 @@
           call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
           call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
           call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)
+          call mpi_send(start_year,1,itype,nproc_schism-i,136,comm_schism,ierr)
+          call mpi_send(start_month,1,itype,nproc_schism-i,137,comm_schism,ierr)
+          call mpi_send(start_day,1,itype,nproc_schism-i,138,comm_schism,ierr)
+          call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
+          call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
 #ifdef USE_ICM
-          call mpi_send(isav_icm,1,itype,nproc_schism-i,136,comm_schism,ierr)
+          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
 #endif
         enddo !i
       endif !myrank=0

@@ -47,14 +47,15 @@
 
     integer,save :: ifile,ihfskip,nspool,nc_out,nvrt,nproc_compute,np_global,ne_global,ns_global, &
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
-  &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode
+  &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day
     !Output flag dim must be same as schism_init!
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm(210),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,isav_icm
-    real(rkind), save :: dt,h0
+    real(rkind), save :: dt,h0,start_hour,utc_start
     character(len=20), save :: out_name(max_ncoutvar)
     integer, save :: iout_23d(max_ncoutvar)
     character(len=1000),save :: out_dir
+    character(len=48),save :: start_time
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:),ivar_id2(:),iof_gen(:),iof_age(:),iof_sed(:),iof_eco(:), &
@@ -146,9 +147,17 @@
       call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,rrqst,ierr)
       call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,rrqst,ierr)
       call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,rrqst,ierr)
+      call mpi_recv(start_year,1,itype,0,136,comm_schism,rrqst,ierr)
+      call mpi_recv(start_month,1,itype,0,137,comm_schism,rrqst,ierr)
+      call mpi_recv(start_day,1,itype,0,138,comm_schism,rrqst,ierr)
+      call mpi_recv(start_hour,1,rtype,0,139,comm_schism,rrqst,ierr)
+      call mpi_recv(utc_start,1,rtype,0,140,comm_schism,rrqst,ierr)
 #ifdef USE_ICM
-      call mpi_recv(isav_icm,1,itype,0,136,comm_schism,rrqst,ierr)
+      call mpi_recv(isav_icm,1,itype,0,141,comm_schism,rrqst,ierr)
 #endif
+
+      !Write start time into a string for later write      
+      write(start_time,'(i5,2(1x,i2),2(1x,f10.2))')start_year,start_month,start_day,start_hour,utc_start
 
       iths0=iths !save to global var
    
@@ -840,6 +849,7 @@
         iret=nf90_def_var(ncid_schism_2d,'time',NF90_DOUBLE,time_dims,itime_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: time dim')
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'i23d',0) !set i23d flag
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'base_date',start_time) 
 
         time_dims(1)=one_dim2
         iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
@@ -981,6 +991,7 @@
         iret=nf90_def_var(ncid_schism_3d,'time',NF90_DOUBLE,time_dims,itime_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: time dim')
         iret=nf90_put_att(ncid_schism_3d,itime_id,'i23d',0) !set i23d flag
+        iret=nf90_put_att(ncid_schism_3d,itime_id,'base_date',start_time) 
 
 !        time_dims(1)=node_dim
 !        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
@@ -1007,6 +1018,7 @@
         iret=nf90_def_var(ncid_schism_3d,trim(adjustl(vname)),NF90_FLOAT,var3d_dims,ivar_id)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: var_dims')
         iret=nf90_put_att(ncid_schism_3d,ivar_id,'i23d',i23d) !set i23d flag
+        iret=nf90_put_att(ncid_schism_3d,ivar_id,'missing_value',NF90_FILL_FLOAT) 
         !iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         iret=nf90_enddef(ncid_schism_3d)
 
@@ -1079,6 +1091,13 @@
             endif !imode
           enddo !i
 
+          !Fill in below-bottom values (for nodes only at the moment)
+          if(imode==1) then
+            do i=1,np_global 
+              var3dnode_gb(1:kbp00(i)-1,i)=NF90_FILL_FLOAT
+            enddo !i
+          endif !imode
+
           varname3=out_name(icount_out_name)
           if(imode==1) then !node
             call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
@@ -1088,7 +1107,7 @@
             call nc_writeout3D(3,it,nvrt,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
           endif !imode
         endif !myrank_schism
-      enddo !m
+      enddo !m=1,ivs
 
       end subroutine scribe_recv_write
 
