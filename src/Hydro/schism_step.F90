@@ -7419,12 +7419,12 @@
 !        bdy_frc=0
 !#endif /*USE_TIMOR*/
 
-        ltvd=itr_met>=2
-        if(itr_met<=2) then !upwind or explicit TVD
-          call do_transport_tvd(it,ltvd,ntracers,difnum_max_l) !,nvrt,npa,dfh)
-        else if(itr_met==3.or.itr_met==4) then !vertically implicit TVD
-          call do_transport_tvd_imp(it,ltvd,ntracers,difnum_max_l) !,nvrt,npa,dfh)
-        endif !itr_met
+!        ltvd=itr_met>=2
+!        if(itr_met<=2) then !upwind or explicit TVD
+!          call do_transport_tvd(it,ltvd,ntracers,difnum_max_l) !,nvrt,npa,dfh)
+!        else if(itr_met==3.or.itr_met==4) then !vertically implicit TVD
+        call do_transport_tvd_imp(it,ntracers,difnum_max_l) !,nvrt,npa,dfh)
+!        endif !itr_met
         if(myrank==0) write(16,*)'done tracer transport...'
 
 !        if(irouse_test==1) then

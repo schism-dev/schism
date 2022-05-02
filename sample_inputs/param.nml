@@ -465,26 +465,22 @@
   kr_co = 1 !not used if inter_mom=0
 
 !-----------------------------------------------------------------------
-! Tracer transport method. 
-! IMPORTANT: itr_met=1,2 (explicit TVD) options are kept mainly for comparison and should NOT 
-! be used normally (use '3' or '4' instead); also it does NOT support any other tracer modules like GEN etc.
-!
-! If itr_met=1, explicit upwind method is used. If itr_met>=2, TVD or WENO method is used
-! on an element/prism if the total depth (at all nodes of the elem.)>=h_tvd and the flag in
-! tvd.prop = 1 for the elem (tvd.prop is required in this case); otherwise upwind is used for efficiency. 
+! Tracer transport method. TVD or WENO method requires tvd.prop.
+! TVD or WENO method is used on an element/prism if the total depth (at all nodes of the elem.)>=h_tvd and the flag in
+! tvd.prop = 1 for the elem; otherwise upwind is used for efficiency. 
 ! itr_met=3 (horizontal TVD) or 4 (horizontal WENO): implicit TVD in the vertical dimension. 
 ! Also if itr_met==3 and h_tvd>=1.e5, some parts of the code are bypassed for efficiency.
 ! Controls for WENO are not yet in place.
 !-----------------------------------------------------------------------
   itr_met = 3 
-  h_tvd = 5. !used only if itr_met>=2; cut-off depth (m) 
+  h_tvd = 5. !cut-off depth (m) 
   !If itr_met=3 or 4, need the following 2 tolerances of convergence. The convergence
   !is achieved when sqrt[\sum_i(T_i^s+1-T_i^s)^2]<=eps1_tvd_imp*sqrt[\sum_i(T_i^s)^2]+eps2_tvd_imp
   eps1_tvd_imp = 1.e-4 !suggested value is 1.e-4, but for large suspended load, need to use a smaller value (e.g. 1.e-9)
   eps2_tvd_imp = 1.e-14  
 
   !Optional hybridized ELM transport for efficiency
-  ielm_transport = 0 !1: turn on. Used only with itr_met>=3
+  ielm_transport = 0 !1: turn on 
   max_subcyc = 10 !used only if ielm_transport/=0. Max # of subcycling per time step in transport allowed
 
   !if itr_met = 4, the following parameters are needed

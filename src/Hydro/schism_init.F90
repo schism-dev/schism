@@ -818,7 +818,7 @@
      
 !...  Transport method for all tracers including T,S
 !     1: upwind; 2: TVD (explicit); 3: TVD (implicit vertical); 4: WENO (implicit vertical)
-      if(itr_met<1.or.itr_met>4) then
+      if(itr_met<3.or.itr_met>4) then
         write(errmsg,*)'Unknown tracer method',itr_met
         call parallel_abort(errmsg)
       endif
@@ -885,9 +885,9 @@
       !<weno
 
 !...  Explicit transport solver cannot handle settling vel. yet
-#if defined USE_SED || defined USE_TIMOR
-      if(itr_met<=2) call parallel_abort('Some transport solver cannot handle settling vel.')
-#endif
+!#if defined USE_SED || defined USE_TIMOR
+!      if(itr_met<=2) call parallel_abort('Some transport solver cannot handle settling vel.')
+!#endif
 
 !'..  Nudging for each tracer model
       do i=1,natrm
@@ -3799,7 +3799,7 @@
 !     between T,S and all tracers. Also if h_tvd>=1.e5 and itr_met>=3, then upwind is used for all tracers 
 !     and some parts of the code are bypassed for efficiency
       itvd_e=0 !init. for upwind
-      if(itr_met>=2.and.(ibc==0.or.ibtp==1)) then
+      if(itr_met>=3.and.(ibc==0.or.ibtp==1)) then
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
           do i=1,ne_global

@@ -26,7 +26,7 @@
 !
 
 !     Do upwind and TVD transport
-      subroutine do_transport_tvd_imp(it,ltvd,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
+      subroutine do_transport_tvd_imp(it,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
 
 !#ifdef USE_MPIMODULE
 !      use mpi
@@ -44,7 +44,7 @@
 !#endif
 
       integer, intent(in) :: it !time stepping #; info only
-      logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine
+!      logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine
 !      character(len=2), intent(in) :: flimiter
       integer, intent(in) :: ntr !# of tracers (=ntracers)
 !      integer, intent(in) :: nvrt1 !,npa1 !for dimensioning
