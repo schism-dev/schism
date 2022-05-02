@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+da90a33 (2 May 2022): removed itr_met=1,2;
 2165224 (29 April 2022): added optional offline partitioning 'ioffline_partition' to bypass ParMETIS; 
                          if on, needs global_to_local.in;
 567b612 (28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
