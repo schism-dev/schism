@@ -29,11 +29,21 @@ module icm_mod
   real(rkind),save :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
   real(rkind),save,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
   real(rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben !todo, ZG
-  integer,pointer :: jdry,jsav,jveg
+  integer,save,pointer :: jdry,jsav,jveg
 
-  integer :: ntrs_icm, itrs(2,2)
-  integer :: iZB1,iZB2,iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
-           & iLPOP,iDOP,iPO4,iSU,iSA,iCOD,iDOX,iTIC,iALK,iCA,iCACO3
+  integer,save :: ntrs_icm, itrs(2,2)
+  integer,save :: iZB1,iZB2,iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
+                & iLPOP,iDOP,iPO4,iSU,iSA,iCOD,iDOX,iTIC,iALK,iCA,iCACO3
+  !declear temporary variables to increase code readability (can be put in main loop)
+  real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
+  real(rkind),save,pointer,dimension(:) :: salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
+                                         & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
+  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:),sdwqc(:),vdwqc(:) 
+  real(rkind),save,pointer,dimension(:) :: dZBS,dPBS, sdC,sdN,sdP, vdC,vdN,vdP, zdPBS,zdC,zdN,zdP,zdS
+  real(rkind),save,pointer :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
+                            & dNO3,dRPOP,dLPOP,dDOP,dPO4,dSU,dSA,dCOD,dDOX,dTIC,dALK,dCA,dCACO3
+  real(rkind),save,pointer :: sdDOX,vdDOX,zdDOX
+  
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -55,9 +65,6 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   !additional time series of benthic flux
-  real(rkind),save:: TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
-  real(rkind),save,allocatable,dimension(:) :: BRPOC,BLPOC,BDOC,BRPON,BLPON,BDON,BNH4,BNO3,BRPOP,BLPOP,BDOP,BPO4,BSU,BSA,BCOD,BDO
-  real(rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO !surface flux : atmospheric loading
   real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea)
 
   !-------------------------------------------------------------------------------

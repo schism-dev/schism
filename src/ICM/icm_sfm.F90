@@ -100,8 +100,8 @@ subroutine icm_sfm_init
 
 end subroutine icm_sfm_init
 
-subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
-                  & RPOP,LPOP,SU,PO4,NH4,NO3,SA,DOX,COD,TSED)
+subroutine sed_calc(id,dep,btemp,bsalt,bPB1,bPB2,bPB3,bRPOC,bLPOC,bRPON,bLPON,&
+                  & bRPOP,bLPOP,bSU,bPO4,bNH4,bNO3,bSA,bDOX,bCOD,TSED)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
@@ -112,8 +112,8 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   use icm_mod
   implicit none
   integer,intent(in) :: id
-  real(rkind),intent(in) :: dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
-                          & RPOP,LPOP,SU,PO4,NH4,NO3,SA,DOX,COD,TSED
+  real(rkind),intent(in) :: dep,btemp,bsalt,bPB1,bPB2,bPB3,bRPOC,bLPOC,bRPON,bLPON,&
+                          & bRPOP,bLPOP,bSU,bPO4,bNH4,bNO3,bSA,bDOX,bCOD,TSED
   real(rkind),external :: sed_zbrent
 
   !local variables
@@ -132,24 +132,24 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   !total depth and other variables from water column
   SED_BL=dep
   ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
-  SED_T(id)   =temp
-  SED_SALT(id)=salt
-  SED_B(id,1) =PB1 
-  SED_B(id,2) =PB2 
-  SED_B(id,3) =PB3 
-  SED_RPOC(id)=RPOC
-  SED_LPOC(id)=LPOC
-  SED_RPON(id)=RPON
-  SED_LPON(id)=LPON
-  SED_RPOP(id)=RPOP
-  SED_LPOP(id)=LPOP
-  SED_SU(id)  =SU  
-  SED_PO4(id) =PO4
-  SED_NH4(id) =NH4 
-  SED_NO3(id) =NO3 
-  SED_SA(id)  =SA 
-  SED_DO(id)  =DOX 
-  SED_COD(id) =COD 
+  SED_T(id)   =btemp
+  SED_SALT(id)=bsalt
+  SED_B(id,1) =bPB1 
+  SED_B(id,2) =bPB2 
+  SED_B(id,3) =bPB3 
+  SED_RPOC(id)=bRPOC
+  SED_LPOC(id)=bLPOC
+  SED_RPON(id)=bRPON
+  SED_LPON(id)=bLPON
+  SED_RPOP(id)=bRPOP
+  SED_LPOP(id)=bLPOP
+  SED_SU(id)  =bSU  
+  SED_PO4(id) =bPO4
+  SED_NH4(id) =bNH4 
+  SED_NO3(id) =bNO3 
+  SED_SA(id)  =bSA 
+  SED_DO(id)  =bDOX 
+  SED_COD(id) =bCOD 
   SED_TSS(id) =TSED
 
   !calculate bottom layer TSS. Need more work, ZG
@@ -345,10 +345,15 @@ subroutine sed_calc(id,dep,temp,salt,PB1,PB2,PB3,RPOC,LPOC,RPON,LPON, &
   POP2=(flxpop(id,2)*dtw/H2+POP2TM1)/(1.0+dtw*(W2/H2+ZHTAPOP2))
   POP3=(flxpop(id,3)*dtw/H2+POP3TM1)/(1.0+dtw*(W2/H2+ZHTAPOP3))
 
-  rtmp=ZHTASI*(CSISAT-SIT2TM1/(1.0+m2*PIE2SI))/(PSITM1+KMPSI)
-  tmp1=1.0+dtw*(W2/H2+rtmp)
-  PSI=((flxpos(id)+JSIDETR)*dtw/H2+PSITM1)/tmp1
-  if(tmp1<=0) call parallel_abort('icm_sed_flux: tmp1<=0')
+  !rtmp=ZHTASI*(CSISAT-SIT2TM1/(1.0+m2*PIE2SI))/(PSITM1+KMPSI)
+  !tmp1=1.0+dtw*(W2/H2+rtmp)
+  !PSI=((flxpos(id)+JSIDETR)*dtw/H2+PSITM1)/tmp1
+  !if(tmp1<=0) call parallel_abort('icm_sed_flux: tmp1<=0')
+
+  rtmp=ZHTASI*max((CSISAT-SIT2TM1/(1.0+m2*PIE2SI)),0.d0)/(PSITM1+KMPSI)
+  PSI=PSITM1+dtw*((flxpos(id)+JSIDETR)/H2-(rtmp+W2/H2)*PSITM1)
+  !if(tmp1<=0) call parallel_abort('icm_sed_flux: tmp1<=0')
+  if(PSI<=0) call parallel_abort('icm_sed_flux: PSI<=0')
 
   !assign diagenesis fluxes, no flux from inert group 3
   XJP=(ZHTAPOP1*POP1+ZHTAPOP2*POP2+ZHTAPOP3*POP3)*H2

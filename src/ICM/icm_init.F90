@@ -92,6 +92,26 @@ subroutine read_icm_param(imode)
       iTIC=itrs(1,2); iALK=itrs(1,2)+1; iCA=itrs(1,2)+2; iCACO3=itrs(1,2)+3
     endif
 
+    !assign pointers
+    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm),sdwqc(ntrs_icm),vdwqc(ntrs_icm),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
+
+    !concentration changes
+    dZB1=>dwqc(1);   dZB2=>dwqc(2);   dZBS=>dwqc(1:2)
+    dPB1=>dwqc(3);   dPB2=>dwqc(4);   dPB3=>dwqc(5);   dPBS=>dwqc(3:5)
+    dRPOC=>dwqc(6);  dLPOC=>dwqc(7);  dDOC=>dwqc(8)
+    dRPON=>dwqc(9);  dLPON=>dwqc(10); dDON=>dwqc(11);  dNH4=>dwqc(12); dNO3=>dwqc(13)
+    dRPOP=>dwqc(14); dLPOP=>dwqc(15); dDOP=>dwqc(16);  dPO4=>dwqc(17)
+    dSU=>dwqc(18);   dSA=>dwqc(19)
+    dCOD=>dwqc(20);  dDOX=>dwqc(21)
+    if(iPh==1) then
+      dTIC=>dwqc(22); dALK=>dwqc(23); dCA=>dwqc(24); dCACO3=>dwqc(25)
+    endif
+
+    zdPBS=>zdwqc(3:5); zdC=>zdwqc(6:8); zdN=>zdwqc(9:13); zdP=>zdwqc(14:17); zdS=>zdwqc(18:19); zdDOX=>zdwqc(21)
+    sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
+    vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
+
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
     !read module variables
@@ -166,6 +186,9 @@ subroutine read_icm_param(imode)
     if(iSettle==0) then
       WSPBSn=WSPBS; WSPOMn=WSPOM; WSSEDn=WSSED
     endif
+
+    !Zooplankton not graze on themselves
+    zGPM(1,1)=0.0; zGPM(2,2)=0.0 
     !------------------------------------------------------------------------------------
     !1) allocate ICM variables; 2) read spatially varying parameters
     !------------------------------------------------------------------------------------
@@ -375,84 +398,82 @@ subroutine WQinput(time)
   integer :: i,j,k,ie,iegb,neben
   real(rkind) :: rtmp
   real(rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
-  real(rkind) :: tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                   &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO 
 
-  !read atmospheric loading (unit: g/m2/day)
-  if(iAtm==1.and.time_icm(1)<time) then
-    do while(time_icm(1)<time)
-      read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
-                & SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO 
-      time_icm(1)=rtmp
-    enddo
-  endif !iAtm
+  !!read atmospheric loading (unit: g/m2/day)
+  !if(iAtm==1.and.time_icm(1)<time) then
+  !  do while(time_icm(1)<time)
+  !    read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
+  !              & SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO 
+  !    time_icm(1)=rtmp
+  !  enddo
+  !endif !iAtm
  
-  !read benthic flux (unit: g/m2/day; positive value means from sediment to water column)
-  if(iBen/=0.and.time_icm(2)<time) then
-    do while(time_icm(2)<time)
-      if(iBen==1) then !uniform Benthic flux
-        read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                  &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
-        if(rtmp<time) then
-          read(402,*)
-          cycle
-        endif
-        BRPOC=tRPOC
-        BLPOC=tLPOC
-        BDOC =tDOC
-        BRPON=tRPON
-        BLPON=tLPON
-        BDON =tDON
-        BNH4 =tNH4
-        BNO3 =tNO3
-        BRPOP=tRPOP
-        BLPOP=tLPOP
-        BDOP =tDOP
-        BPO4 =tPO4
-        BSU  =tSU
-        BSA  =tSA
-        BCOD =tCOD
-        BDO  =tDO
-        time_icm(2)=rtmp
-        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-                  &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
-      elseif(iBen==2) then !spatially varying benthic flux 
-        read(402,*)rtmp,neben
-        if(rtmp<time) then
-          do i=1,neben+1; read(402,*); enddo
-          cycle
-        endif
-        do ie=1,neben
-          read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-                  &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
-          if(iegl(iegb)%rank==myrank) then
-            BRPOC(iegl(iegb)%id) = tRPOC
-            BLPOC(iegl(iegb)%id) = tLPOC
-            BDOC(iegl(iegb)%id)  = tDOC
-            BRPON(iegl(iegb)%id) = tRPON
-            BLPON(iegl(iegb)%id) = tLPON
-            BDON(iegl(iegb)%id)  = tDON
-            BNH4(iegl(iegb)%id)  = tNH4
-            BNO3(iegl(iegb)%id)  = tNO3
-            BRPOP(iegl(iegb)%id) = tRPOP
-            BLPOP(iegl(iegb)%id) = tLPOP
-            BDOP(iegl(iegb)%id)  = tDOP
-            BPO4(iegl(iegb)%id)  = tPO4
-            BSU(iegl(iegb)%id)   = tSU
-            BSA(iegl(iegb)%id)   = tSA
-            BCOD(iegl(iegb)%id)  = tCOD
-            BDO(iegl(iegb)%id)   = tDO
-          endif
-        enddo
-        time_icm(2)=rtmp
-        read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-                  &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
-      else
-        write(errmsg,*)'Unknown ICM value: ', iBen
-        call parallel_abort(errmsg)
-      endif !iBen=1 or iBen=2
-    enddo !while
-  endif !iBen>0
+  !!read benthic flux (unit: g/m2/day; positive value means from sediment to water column)
+  !if(iBen/=0.and.time_icm(2)<time) then
+  !  do while(time_icm(2)<time)
+  !    if(iBen==1) then !uniform Benthic flux
+  !      read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+  !                &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
+  !      if(rtmp<time) then
+  !        read(402,*)
+  !        cycle
+  !      endif
+  !      BRPOC=tRPOC
+  !      BLPOC=tLPOC
+  !      BDOC =tDOC
+  !      BRPON=tRPON
+  !      BLPON=tLPON
+  !      BDON =tDON
+  !      BNH4 =tNH4
+  !      BNO3 =tNO3
+  !      BRPOP=tRPOP
+  !      BLPOP=tLPOP
+  !      BDOP =tDOP
+  !      BPO4 =tPO4
+  !      BSU  =tSU
+  !      BSA  =tSA
+  !      BCOD =tCOD
+  !      BDO  =tDO
+  !      time_icm(2)=rtmp
+  !      read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+  !                &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
+  !    elseif(iBen==2) then !spatially varying benthic flux 
+  !      read(402,*)rtmp,neben
+  !      if(rtmp<time) then
+  !        do i=1,neben+1; read(402,*); enddo
+  !        cycle
+  !      endif
+  !      do ie=1,neben
+  !        read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
+  !                &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
+  !        if(iegl(iegb)%rank==myrank) then
+  !          BRPOC(iegl(iegb)%id) = tRPOC
+  !          BLPOC(iegl(iegb)%id) = tLPOC
+  !          BDOC(iegl(iegb)%id)  = tDOC
+  !          BRPON(iegl(iegb)%id) = tRPON
+  !          BLPON(iegl(iegb)%id) = tLPON
+  !          BDON(iegl(iegb)%id)  = tDON
+  !          BNH4(iegl(iegb)%id)  = tNH4
+  !          BNO3(iegl(iegb)%id)  = tNO3
+  !          BRPOP(iegl(iegb)%id) = tRPOP
+  !          BLPOP(iegl(iegb)%id) = tLPOP
+  !          BDOP(iegl(iegb)%id)  = tDOP
+  !          BPO4(iegl(iegb)%id)  = tPO4
+  !          BSU(iegl(iegb)%id)   = tSU
+  !          BSA(iegl(iegb)%id)   = tSA
+  !          BCOD(iegl(iegb)%id)  = tCOD
+  !          BDO(iegl(iegb)%id)   = tDO
+  !        endif
+  !      enddo
+  !      time_icm(2)=rtmp
+  !      read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
+  !                &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
+  !    else
+  !      write(errmsg,*)'Unknown ICM value: ', iBen
+  !      call parallel_abort(errmsg)
+  !    endif !iBen=1 or iBen=2
+  !  enddo !while
+  !endif !iBen>0
 
   !read solar radiation (unit: ly/day)
   if((iRad==1.or.iRad==2).and.time_icm(3)<time) then!manually input
@@ -524,15 +545,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(fPN(nvrt,3), WMS(nea), &
-    & BRPOC(nea),BLPOC(nea),BDOC(nea),BRPON(nea),BLPON(nea),BDON(nea),BNH4(nea),BNO3(nea), &
-    & BRPOP(nea),BLPOP(nea),BDOP(nea),BPO4(nea),BSU(nea),BSA(nea),BCOD(nea),BDO(nea), &
-    & EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
+  allocate(fPN(nvrt,3), WMS(nea),EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
   fPN=0.0;     WMS=0.0;
-  BRPOC=0.0;   BLPOC=0.0;   BDOC=0.0;    BRPON=0.0;   BLPON=0.0;  BDON=0.0;   BNH4=0.0;   BNO3=0.0
-  BRPOP=0.0;   BLPOP=0.0;   BDOP=0.0;    BPO4=0.0;   BSU=0.0;     BSA=0.0;    BCOD=0.0;   BDO=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
 
   !-------------------------------------------------------------------------------
@@ -617,13 +633,31 @@ subroutine icm_vars_init
 
 end subroutine icm_vars_init
 
-subroutine update_param(id)
+subroutine update_vars(id)
 !--------------------------------------------------------------------
 !get 2D parameter value of element
 !--------------------------------------------------------------------
+  use schism_glbl, only : irange_tr,tr_el,nvrt
   use icm_mod
   implicit none
   integer, intent(in) :: id
+
+  !local variable
+  integer :: j
+
+  j=irange_tr(1,7);    wqc=>tr_el(j:(j+ntrs_icm-1),1:nvrt,id)
+  !temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
+  salt=>tr_el(2,:,id)
+  ZB1=>wqc(1,:);   ZB2=>wqc(2,:);   ZBS=>wqc(1:2,:)
+  PB1=>wqc(3,:);   PB2=>wqc(4,:);   PB3=>wqc(5,:);   PBS=>wqc(3:5,:)
+  RPOC=>wqc(6,:);  LPOC=>wqc(7,:);  DOC=>wqc(8,:)
+  RPON=>wqc(9,:);  LPON=>wqc(10,:); DON=>wqc(11,:);  NH4=>wqc(12,:); NO3=>wqc(13,:)
+  RPOP=>wqc(14,:); LPOP=>wqc(15,:); DOP=>wqc(16,:);  PO4=>wqc(17,:)
+  SU=>wqc(18,:);   SA=>wqc(19,:)
+  COD=>wqc(20,:);  DOX=>wqc(21,:)
+  if(iPh==1) then
+    TIC=>wqc(22,:);  ALK=>wqc(23,:);  CA=>wqc(24,:); CACO3=>wqc(25,:)
+  endif
 
   GPM=wp%GPM(id,:);     TGP=wp%TGP(id,:);       KTGP=wp%KTGP(id,:,:); PRP=wp%PRP(id,:)
   WSSED=wp%WSSED(id);   WSPOM=wp%WSPOM(id,:);   WSPBS=wp%WSPBS(id,:);
@@ -631,7 +665,7 @@ subroutine update_param(id)
   KC0=wp%KC0(id,:);     KP0=wp%KP0(id,:);       KPalg=wp%KPalg(id,:)
   c2chl=wp%c2chl(id,:); WRea=wp%WRea(id);       Ke0=wp%Ke0(id);   tss2c=wp%tss2c(id)
 
-end subroutine update_param
+end subroutine update_vars
 
 subroutine icm_finalize()
 !--------------------------------------------------------------------
