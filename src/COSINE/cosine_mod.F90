@@ -116,5 +116,19 @@ module cosine_mod
   real(rkind),save,allocatable :: PS2(:,:), PDN(:,:), PDSi(:,:)
   real(rkind),save,allocatable :: RS2(:,:), RDN(:,:), RDSi(:,:)
 
+  !---------------------------------------------------------------------------
+  !spatially varying parameter
+  !---------------------------------------------------------------------------
+  !parameter in water column
+  type,public :: cos_spatial_param
+    real(rkind),dimension(:),pointer :: gmaxs1,gmaxs2,pis1,pis2,kno3s1,knh4s1, &
+        & kpo4s1,kco2s1,kno3s2,knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1, &
+        & alpha2,beta,ak1,ak2,ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1, &
+        & rho2,rho3,gamma1,gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n, &
+        & o2no,o2nh,c2n,kox,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a 
+  end type
+  type(cos_spatial_param) :: wp
+
+
 end module cosine_mod
 

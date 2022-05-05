@@ -67,6 +67,7 @@ subroutine cosine(it)
 
   do i=1,nea
     if(idry_e(i)==1) cycle  !element becomes dry
+    call update_vars(i)
 
     !assign SCHISM tracer values to local variables
     do m=1,ntrs(8)

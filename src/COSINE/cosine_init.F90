@@ -32,6 +32,30 @@ subroutine cosine_init
   sS2=0.0;  sDN=0.0; sZ1=0.0;  sZ2=0.0; nstep=0
   nclam=0;
 
+  !---------------------------------------------------------------------------
+  !spatially varying parameter
+  !---------------------------------------------------------------------------
+  allocate(wp%gmaxs1(nea),wp%gmaxs2(nea),wp%pis1(nea),wp%pis2(nea),wp%kno3s1(nea), &
+         & wp%knh4s1(nea),wp%kpo4s1(nea),wp%kco2s1(nea),wp%kno3s2(nea),wp%knh4s2(nea), &
+         & wp%kpo4s2(nea),wp%kco2s2(nea),wp%ksio4s2(nea),wp%kns1(nea),wp%kns2(nea), &
+         & wp%alpha1(nea),wp%alpha2(nea),wp%beta(nea),wp%ak1(nea),wp%ak2(nea),wp%ak3(nea), &
+         & wp%gammas1(nea),wp%gammas2(nea),wp%beta1(nea),wp%beta2(nea),wp%kgz1(nea), &
+         & wp%kgz2(nea),wp%rho1(nea),wp%rho2(nea),wp%rho3(nea),wp%gamma1(nea),wp%gamma2(nea), &
+         & wp%gammaz(nea),wp%kex1(nea),wp%kex2(nea),wp%wss2(nea),wp%wsdn(nea),wp%wsdsi(nea), &
+         & wp%si2n(nea),wp%p2n(nea),wp%o2no(nea),wp%o2nh(nea),wp%c2n(nea),wp%kox(nea), &
+         & wp%kmdn1(nea),wp%kmdn2(nea),wp%kmdsi1(nea),wp%kmdsi2(nea),wp%gamman(nea), &
+         & wp%TR(nea),wp%pco2a(nea),stat=istat) 
+  if(istat/=0) call parallel_abort('failure in alloc. gmaxs1')
+
+  wp%gmaxs1=0; wp%gmaxs2=0; wp%pis1=0; wp%pis2=0; wp%kno3s1=0; wp%knh4s1=0; wp%kpo4s1=0;
+  wp%kco2s1=0; wp%kno3s2=0; wp%knh4s2=0; wp%kpo4s2=0; wp%kco2s2=0; wp%ksio4s2=0; 
+  wp%kns1=0; wp%kns2=0; wp%alpha1=0; wp%alpha2=0; wp%beta=0; wp%ak1=0; wp%ak2=0; 
+  wp%ak3=0; wp%gammas1=0; wp%gammas2=0; wp%beta1=0; wp%beta2=0; wp%kgz1=0; wp%kgz2=0; 
+  wp%rho1=0; wp%rho2=0; wp%rho3=0; wp%gamma1=0; wp%gamma2=0; wp%gammaz=0; wp%kex1=0; 
+  wp%kex2=0; wp%wss2=0; wp%wsdn=0; wp%wsdsi=0; wp%si2n=0; wp%p2n=0; wp%o2no=0; wp%o2nh=0;
+  wp%c2n=0; wp%kox=0; wp%kmdn1=0; wp%kmdn2=0; wp%kmdsi1=0; wp%kmdsi2=0; wp%gamman=0; 
+  wp%TR=0; wp%pco2a=0
+
   !read cosine parameters
   call read_cosine_param
    
@@ -98,6 +122,61 @@ subroutine read_cosine_param
     write(31,nml=MARCO); write(31,nml=CORE); write(31,nml=MISC)
     close(31)
   endif
+
+  !------------------------------------------------------------------------------------
+  !read spatially varying parameters
+  !------------------------------------------------------------------------------------
+  call read_gr3_prop('gmaxs1' ,gmaxs1 ,wp%gmaxs1 ,nea)
+  call read_gr3_prop('gmaxs2' ,gmaxs2 ,wp%gmaxs2 ,nea)
+  call read_gr3_prop('pis1'   ,pis1   ,wp%pis1   ,nea)
+  call read_gr3_prop('pis2'   ,pis2   ,wp%pis2   ,nea)
+  call read_gr3_prop('kno3s1' ,kno3s1 ,wp%kno3s1 ,nea)
+  call read_gr3_prop('knh4s1' ,knh4s1 ,wp%knh4s1 ,nea)
+  call read_gr3_prop('kpo4s1' ,kpo4s1 ,wp%kpo4s1 ,nea)
+  call read_gr3_prop('kco2s1' ,kco2s1 ,wp%kco2s1 ,nea)
+  call read_gr3_prop('kno3s2' ,kno3s2 ,wp%kno3s2 ,nea)
+  call read_gr3_prop('knh4s2' ,knh4s2 ,wp%knh4s2 ,nea)
+  call read_gr3_prop('kpo4s2' ,kpo4s2 ,wp%kpo4s2 ,nea)
+  call read_gr3_prop('kco2s2' ,kco2s2 ,wp%kco2s2 ,nea)
+  call read_gr3_prop('ksio4s2',ksio4s2,wp%ksio4s2,nea)
+  call read_gr3_prop('kns1'   ,kns1   ,wp%kns1   ,nea)
+  call read_gr3_prop('kns2'   ,kns2   ,wp%kns2   ,nea)
+  call read_gr3_prop('alpha1' ,alpha1 ,wp%alpha1 ,nea)
+  call read_gr3_prop('alpha2' ,alpha2 ,wp%alpha2 ,nea)
+  call read_gr3_prop('beta'   ,beta   ,wp%beta   ,nea)
+  call read_gr3_prop('ak1'    ,ak1    ,wp%ak1    ,nea)
+  call read_gr3_prop('ak2'    ,ak2    ,wp%ak2    ,nea)
+  call read_gr3_prop('ak3'    ,ak3    ,wp%ak3    ,nea)
+  call read_gr3_prop('gammas1',gammas1,wp%gammas1,nea)
+  call read_gr3_prop('gammas2',gammas2,wp%gammas2,nea)
+  call read_gr3_prop('beta1'  ,beta1  ,wp%beta1  ,nea)
+  call read_gr3_prop('beta2'  ,beta2  ,wp%beta2  ,nea)
+  call read_gr3_prop('kgz1'   ,kgz1   ,wp%kgz1   ,nea)
+  call read_gr3_prop('kgz2'   ,kgz2   ,wp%kgz2   ,nea)
+  call read_gr3_prop('rho1'   ,rho1   ,wp%rho1   ,nea)
+  call read_gr3_prop('rho2'   ,rho2   ,wp%rho2   ,nea)
+  call read_gr3_prop('rho3'   ,rho3   ,wp%rho3   ,nea)
+  call read_gr3_prop('gamma1' ,gamma1 ,wp%gamma1 ,nea)
+  call read_gr3_prop('gamma2' ,gamma2 ,wp%gamma2 ,nea)
+  call read_gr3_prop('gammaz' ,gammaz ,wp%gammaz ,nea)
+  call read_gr3_prop('kex1'   ,kex1   ,wp%kex1   ,nea)
+  call read_gr3_prop('kex2'   ,kex2   ,wp%kex2   ,nea)
+  call read_gr3_prop('wss2'   ,wss2   ,wp%wss2   ,nea)
+  call read_gr3_prop('wsdn'   ,wsdn   ,wp%wsdn   ,nea)
+  call read_gr3_prop('wsdsi'  ,wsdsi  ,wp%wsdsi  ,nea)
+  call read_gr3_prop('si2n'   ,si2n   ,wp%si2n   ,nea)
+  call read_gr3_prop('p2n'    ,p2n    ,wp%p2n    ,nea)
+  call read_gr3_prop('o2no'   ,o2no   ,wp%o2no   ,nea)
+  call read_gr3_prop('o2nh'   ,o2nh   ,wp%o2nh   ,nea)
+  call read_gr3_prop('c2n'    ,c2n    ,wp%c2n    ,nea)
+  call read_gr3_prop('kox'    ,kox    ,wp%kox    ,nea)
+  call read_gr3_prop('kmdn1'  ,kmdn1  ,wp%kmdn1  ,nea)
+  call read_gr3_prop('kmdn2'  ,kmdn2  ,wp%kmdn2  ,nea)
+  call read_gr3_prop('kmdsi1' ,kmdsi1 ,wp%kmdsi1 ,nea)
+  call read_gr3_prop('kmdsi2' ,kmdsi2 ,wp%kmdsi2 ,nea)
+  call read_gr3_prop('gamman' ,gamman ,wp%gamman ,nea)
+  call read_gr3_prop('TR'     ,TR     ,wp%TR     ,nea)
+  call read_gr3_prop('pco2a'  ,pco2a  ,wp%pco2a  ,nea)
 
   !read in station info. 
   if(iout_cosine/=0) call read_cosine_stainfo
@@ -180,6 +259,30 @@ subroutine read_cosine_param
  
   return
 end subroutine read_cosine_param
+
+subroutine update_vars(id)
+!--------------------------------------------------------------------
+!get 2D parameter value of element
+!--------------------------------------------------------------------
+  use cosine_mod
+  implicit none
+  integer, intent(in) :: id
+
+  gmaxs1=wp%gmaxs1(id); gmaxs2=wp%gmaxs2(id); pis1=wp%pis1(id); pis2=wp%pis2(id); 
+  kno3s1=wp%kno3s1(id); knh4s1=wp%knh4s1(id); kpo4s1=wp%kpo4s1(id); kco2s1=wp%kco2s1(id); 
+  kno3s2=wp%kno3s2(id); knh4s2=wp%knh4s2(id); kpo4s2=wp%kpo4s2(id); kco2s2=wp%kco2s2(id); 
+  ksio4s2=wp%ksio4s2(id); kns1=wp%kns1(id); kns2=wp%kns2(id); alpha1=wp%alpha1(id); 
+  alpha2=wp%alpha2(id); beta=wp%beta(id); ak1=wp%ak1(id); ak2=wp%ak2(id); ak3=wp%ak3(id); 
+  gammas1=wp%gammas1(id); gammas2=wp%gammas2(id); beta1=wp%beta1(id); beta2=wp%beta2(id); 
+  kgz1=wp%kgz1(id); kgz2=wp%kgz2(id); rho1=wp%rho1(id); rho2=wp%rho2(id); rho3=wp%rho3(id); 
+  gamma1=wp%gamma1(id); gamma2=wp%gamma2(id); gammaz=wp%gammaz(id); kex1=wp%kex1(id); 
+  kex2=wp%kex2(id); wss2=wp%wss2(id); wsdn=wp%wsdn(id); wsdsi=wp%wsdsi(id); si2n=wp%si2n(id); 
+  p2n=wp%p2n(id); o2no=wp%o2no(id); o2nh=wp%o2nh(id); c2n=wp%c2n(id); kox=wp%kox(id); 
+  kmdn1=wp%kmdn1(id); kmdn2=wp%kmdn2(id); kmdsi1=wp%kmdsi1(id); kmdsi2=wp%kmdsi2(id); 
+  gamman=wp%gamman(id); TR=wp%TR(id); pco2a=wp%pco2a(id);
+
+end subroutine update_vars
+
 
 subroutine read_cosine_stainfo
 !---------------------------------------------------------------------------
