@@ -1,0 +1,15 @@
+article {
+	counter-reset: figures;
+}
+
+figure {
+	counter-increment: figures;
+}
+
+figure figcaption:before {
+	content: 'Figure ' counter(figures) '. ';
+}
+
+figcaption {
+	font-weight: bold;
+}
