@@ -6764,7 +6764,7 @@
 #endif/*USE_ICM*/
 
 #ifdef USE_COSINE
-      do i=1,ntrs(6)
+      do i=1,ntrs(8)
         if(iof_cos(i)==1) then
           write(ifile_char,'(i12)')i
           ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
