@@ -24,5 +24,7 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::v5.9
       - name: Deploy with mike
-        run: mike deploy --push --update-aliases ${{ steps.get_version.outputs.VERSION }} latest 
+        run: |
+          mike deploy --push --update-aliases ${{ steps.get_version.outputs.VERSION }} latest
+          mike set-default --push latest
 
