@@ -1,0 +1,29 @@
+name: release documentation 
+on:
+  push:
+    branches:
+      - 'v*.*'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Install python packages
+        run: pip install mkdocs-material mike
+      - name: Configure git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      - name: Get tag of the version
+        uses: olegtarasov/get-tag@v2.1
+        id: tag_name
+      - name: Deploy with mike
+        run: mike deploy --force --push $GIT_TAG_NAME
+
