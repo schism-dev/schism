@@ -8,12 +8,21 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup python
+        uses: actions/setup-python@v2
         with:
           python-version: 3.x
-      - run: pip install mkdocs-material mkdocs-with-pdf mike
-      - run: |
+      - name: Install python packages
+        run: pip install mkdocs-material mkdocs-with-pdf mike
+      - name: Configure git user
+        run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-      - run: mike deploy --push --update-aliases v5.9 latest
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Deploy with mike
+        run: mike deploy --push --update-aliases ${{ steps.get_version.outputs.VERSION }} latest 
+
