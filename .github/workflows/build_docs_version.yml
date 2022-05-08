@@ -1,4 +1,4 @@
-name: latest documentation 
+name: release documentation 
 on:
   push:
     branches:
