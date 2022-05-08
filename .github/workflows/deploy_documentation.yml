@@ -28,5 +28,6 @@ jobs:
       - name: Deploy with mike
         run: |
           mike deploy --force --push --update-aliases ${{ steps.get_version.outputs.VERSION }} latest
+          mike retitle latest latest
           mike set-default --push latest
 
