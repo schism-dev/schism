@@ -22,7 +22,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        run: echo ::set-output name=VERSION::v5.9
       - name: Deploy with mike
         run: mike deploy --push --update-aliases ${{ steps.get_version.outputs.VERSION }} latest 
 
