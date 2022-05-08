@@ -1,9 +1,8 @@
-name: documentation 
+name: latest documentation 
 on:
   push:
     branches:
-      - master
-      - docs
+      - 'v*.*'
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,12 +21,9 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::v5.9
+      - name: Get tag of the version
+        uses: olegtarasov/get-tag@v2.1
+        id: tag_name
       - name: Deploy with mike
-        run: |
-          mike deploy --force --update-aliases ${{ steps.get_version.outputs.VERSION }} latest
-          mike retitle latest latest
-          mike set-default --push latest
+        run: mike deploy --force --push $GIT_TAG_NAME
 
