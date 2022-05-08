@@ -1,0 +1,1487 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
+    
+    
+      
+        <title>Grid generation - SCHISM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.3de6f41f.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
+        
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#beware-of-cfl-number" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="SCHISM" class="md-header__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCHISM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Grid generation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="SCHISM" class="md-nav__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    SCHISM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog.html" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-sourcecode.html" class="md-nav__link">
+        Getting the sourcecode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="compilation.html" class="md-nav__link">
+        Compilation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="typical-workflow.html" class="md-nav__link">
+        Typical workflow
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Grid generation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="grid-generation.html" class="md-nav__link md-nav__link--active">
+        Grid generation
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#beware-of-cfl-number" class="md-nav__link">
+    Beware of CFL number
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grid-quality" class="md-nav__link">
+    Grid quality
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    Channels
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grid-near-wetting-and-drying" class="md-nav__link">
+    Grid near wetting and drying
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#periodic-boundary-condition" class="md-nav__link">
+    Periodic boundary condition
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing.html" class="md-nav__link">
+        Preprocessing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="running-model.html" class="md-nav__link">
+        Running the model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="visualization.html" class="md-nav__link">
+        Visualization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="post-processing.html" class="md-nav__link">
+        Postprocessing
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Model formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Model formulation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Model formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/physical-formulation.html" class="md-nav__link">
+        Physical formulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_3" type="checkbox" id="__nav_4_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_3">
+          Numerical formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_3">
+          <span class="md-nav__icon md-icon"></span>
+          Numerical formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/geometry-discretization.html" class="md-nav__link">
+        Geometry and discretization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/barotropic-solver.html" class="md-nav__link">
+        Barotropic solver
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/eulerian-lagrangian-method.html" class="md-nav__link">
+        Eulerian-Lagrangian Method
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/momentum-equation.html" class="md-nav__link">
+        Momentum equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/vertical-velocity.html" class="md-nav__link">
+        Vertical velocity
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/turbulence-closure.html" class="md-nav__link">
+        Turbulence closure
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/transport-equation.html" class="md-nav__link">
+        Transport equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/updating-levels.html" class="md-nav__link">
+        Updating the levels/Inundation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/spherical-coordinates.html" class="md-nav__link">
+        Spherical coordinates
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Input/Output
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Input/Output" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Input/Output
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/hgrid.html" class="md-nav__link">
+        Horizontal grid (hgrid.gr3)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/vgrid.html" class="md-nav__link">
+        Vertical grid (vgrid.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/param.html" class="md-nav__link">
+        Model parameters (param.nml)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/bctides.html" class="md-nav__link">
+        Boundary conditions (bctides.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/friction.html" class="md-nav__link">
+        Bottom friction
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/sflux.html" class="md-nav__link">
+        Atmospheric flux (/sflux)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/optional-inputs.html" class="md-nav__link">
+        Optional inputs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/outputs.html" class="md-nav__link">
+        Outputs
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Modules
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Modules" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Modules
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/generic-tracer.html" class="md-nav__link">
+        Generic tracer module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/age.html" class="md-nav__link">
+        AGE
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed2d.html" class="md-nav__link">
+        2D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed3d.html" class="md-nav__link">
+        3D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/icm.html" class="md-nav__link">
+        ICM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/cosine.html" class="md-nav__link">
+        CoSiNe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/dvd.html" class="md-nav__link">
+        DVD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/marsh-migration.html" class="md-nav__link">
+        Marsh migration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/analysis-mode.html" class="md-nav__link">
+        Analysis mode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/hydraulics.html" class="md-nav__link">
+        Hydraulics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/particle-tracking.html" class="md-nav__link">
+        Particle tracking
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/wwm.html" class="md-nav__link">
+        WWM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/fabm.html" class="md-nav__link">
+        FABM
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-contribution.html" class="md-nav__link">
+        Code contribution
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verification-tests.html" class="md-nav__link">
+        Verification tests
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../case-study.html" class="md-nav__link">
+        Case studies
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          SCHISM external coupling
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SCHISM external coupling" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          SCHISM external coupling
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/esmf.html" class="md-nav__link">
+        Earth System Modeling Framework
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/nuopc.html" class="md-nav__link">
+        National Unified Operational Prediction Capability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/coastalapp.html" class="md-nav__link">
+        NOAA's CoastalApp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/mossco.html" class="md-nav__link">
+        Modular System for Shelves and Coasts
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publications.html" class="md-nav__link">
+        Publications
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq.html" class="md-nav__link">
+        Frequently Asked Questions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-to-this-online-manual.html" class="md-nav__link">
+        Contribute to this online manual
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/getting-started/grid-generation.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Grid generation</h1>
+
+<p>UG modelling starts with grid generation, and the latter is often an <strong>iterative</strong> process. Here lies the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We will only cover SCHISM specific aspects of gridgen using SMS <a href="https://aquaveo.com">aquaveo.com</a> in this chapter; you are referred to schism.wiki for other info related to DEM preparation etc. Please also refer to <a href="http://ccrm.vims.edu/yinglong/wiki_files/Wood_MScThesis_2012-SMS-WMS-Chesapeake&amp;DelawareBays-Grid.pdf">Dr. Wood’s thesis</a> for some insight info on using SMS.</p>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>One important point to remember is that grid generation for SCHISM always starts from raw high-resolution DEMs; do NOT use computational grids from another model as DEM.</p>
+</div>
+<p>With some practice and care, you can generate great-looking UG like Figure <a href="#figure01">1</a>.</p>
+<figure id="figure01">
+<p><img alt="Bay-Delta SCHISM grid" src="../assets/bay-delta-schism-grid.png" width="1000" /></p>
+<figcaption>San Francisco Bay &amp; Delta grid (c/o CAL-Department of Water Resource (DWR)).</figcaption>
+</figure>
+<h2 id="beware-of-cfl-number">Beware of CFL number<a class="headerlink" href="#beware-of-cfl-number" title="Permanent link">&para;</a></h2>
+<p>You may be familiar with the CFL restriction associated with explicit (mode-splitting) models <span class="arithmatex">\(\text{CFL} \lt 1\)</span>, where the CFL number is defined as -</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq01}
+\text{CFL} = \frac{\left( \left| \pmb{u} \right| + \sqrt{gh} \right) \Delta t}{\Delta x}
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(h\)</span> is the local water depth, and <span class="arithmatex">\(\pmb{u}\)</span> is the flow velocity. Note that the surface wave celerity term is undefined when <span class="arithmatex">\(h \lt 0\)</span>, and in the shallow area it’s best to drop this term and assume <span class="arithmatex">\(\left| \pmb{u} \right| \sim 1\)</span>, and therefore <span class="arithmatex">\(\text{CFL} \approx \frac{\Delta t}{\Delta x}\)</span> when <span class="arithmatex">\(h \lt 0.1\)</span>m.</p>
+<p>Being an implicit model using ELM, SCHISM has a somewhat opposite requirement:</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq02}
+\text{CFL} \gt 0.4
+\end{equation}\]</div>
+<p>You may be able to get away with <span class="arithmatex">\(\text{CFL}\gt 0.2\)</span> in some applications like tsunami. Therefore care must be taken in the grid generation process; otherwise numerical diffusion in ELM would ruin your results, which may manifest itself in the form of either noise or dissipation. For a given grid, the errors changes with <span class="arithmatex">\(\Delta t\)</span> in a nonlinear manner, as shown in Figure <a href="#figure02">2</a>.</p>
+<figure id="figure02">
+<p><img alt="Operating timestep" src="../assets/timestep-range.png" width="800" /></p>
+<figcaption>Operational range for time step for a given grid size.</figcaption>
+</figure>
+<p>The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for baroclinic applications. Eqn. <span class="arithmatex">\(\ref{eq02}\)</span> is then used to calculate the coarsest grid size at each depth (in anticipation of the smallest possible <span class="arithmatex">\(\Delta t = 100s\)</span>). Table <a href="#table01">1</a> shows some examples. You can see that the inverse CFL restriction is not restrictive.</p>
+<div id='table01'></div>
+<p><strong>Table 1. Coarsest grid resolution at sample depths, assuming a ‘worse case’ scenario of <span class="arithmatex">\(\Delta t=100s\)</span>.</strong></p>
+<table>
+<thead>
+<tr>
+<th>h(m)</th>
+<th><span class="arithmatex">\(\Delta x_{max}\)</span> (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>790</td>
+</tr>
+<tr>
+<td>10</td>
+<td>2500</td>
+</tr>
+<tr>
+<td>50</td>
+<td>5.5e3</td>
+</tr>
+<tr>
+<td>100</td>
+<td>7.9e3</td>
+</tr>
+<tr>
+<td>500</td>
+<td>1.7e4</td>
+</tr>
+<tr>
+<td>1000</td>
+<td>2.5e4</td>
+</tr>
+<tr>
+<td>4000</td>
+<td>5e4</td>
+</tr>
+</tbody>
+</table>
+<p>Three immediate consequences of Eqs. <span class="arithmatex">\(\ref{eq02}\)</span> are that - </p>
+<ol>
+<li>you do not need to reduce <span class="arithmatex">\(\Delta t\)</span> if you refine grid (yey!)</li>
+<li>if you have to coarsen grid, you will have to recheck Eq. <span class="arithmatex">\(\ref{eq02}\)</span></li>
+<li>if you have to reduce the time step for some reason, you may have to refine grid</li>
+</ol>
+<p>The first consequence embodies the greatest strength (efficiency) of SCHISM as an implicit model. If you are doing a convergence study, you need to keep the <span class="arithmatex">\(\text{CFL}\)</span> number fixed while reducing the time step (which means you have to reduce the grid spacing), as is done with explicit models. Therefore both explicit and implicit models converge (and are consistent) as <span class="arithmatex">\(\Delta x, \Delta t \rightarrow 0\)</span> and <span class="arithmatex">\(\frac{\Delta x}{\Delta t} = \text{constant}\)</span>.</p>
+<div class="admonition notes">
+<p class="admonition-title">Check CFL number in xmgredit5</p>
+<p>With xmgredit5, you can very easily visualize CFL for the entire grid.</p>
+<ul>
+<li><code>xmgredit5 -belel -1.e-10 hgrid.gr3</code>. <code>-belel -1.e-10</code> is used mainly to increase precision for lat/lon grid. <strong>if your hgrid.gr3 is in lat/lon, you need to first project it, as the grid size dx in lat/lon is not in meters)</strong></li>
+<li>Since the CFL inside ACE is calculated without <span class="arithmatex">\(\pmb{u}\)</span>, and a different form is used for CFL in the shallow <span class="arithmatex">\(h \lt 0.1m\)</span>, we should impose a min depth of 0.1m, where <span class="arithmatex">\(\sqrt{gh} = 1m/s\)</span>. You can do this by - </li>
+<li>Edit <span class="arithmatex">\(\rightarrow\)</span> Edit over grid/regions <span class="arithmatex">\(\rightarrow\)</span> Evaluate.</li>
+<li>In the dialogue box, type <code>depth=max(depth,0.1)</code></li>
+<li>The Evaluate function is also very useful for generation of other .gr3 files needed by SCHISM</li>
+<li>Special <span class="arithmatex">\(\rightarrow\)</span> Dimensionless numbers.</li>
+<li>In the right half of the dialogue box, type in 100s (<span class="arithmatex">\(\Delta t\)</span>), Warning value (say 0.8), Unacceptable value (say 0.4), press Display filled.</li>
+<li>The color will appear in the main window, with red indicating good CFL, and green for bad CFL, and orange somewhere in between. You may also 'Display Courant number' but this may take a while to refresh, and so you may want to zoom into a small region first.</li>
+<li>Small patches of ‘green’ are OK with SCHISM, especially if they are in shallow area. However, avoid large patches of green in deeper area.</li>
+<li>Revise your grid accordingly if necessary.</li>
+</ul>
+</div>
+<div class="admonition notes">
+<p class="admonition-title">Tsunami simulations</p>
+<p>In tsunami simulations, <span class="arithmatex">\(\Delta t\)</span> has to be small (~1s) due to small wavelength, and you can bypass the CFL condition by turning off advection in deeper depths as the advection is negligible there. You also need to make sure that each wavelength is resolved by at least 20 grid points.</p>
+</div>
+<h2 id="grid-quality">Grid quality<a class="headerlink" href="#grid-quality" title="Permanent link">&para;</a></h2>
+<p>SCHISM’s superior stability means the model is very forgiving in grid quality; skewness of triangles (defined as the ratio between the max. side and the equivalent radius) &gt;15 can be used without problem (the skewness can be easily checked with xmgredit5: Evaluate <span class="arithmatex">\(\rightarrow\)</span> Acceptable skewness). However, for baroclinic applications, mesh quality may be important especially in critical regions. Also note that quality quads are required; split quads otherwise. You can check quad quality in xmgredit5 <span class="arithmatex">\(\rightarrow\)</span> Edit <span class="arithmatex">\(\rightarrow\)</span> Edit over region <span class="arithmatex">\(\rightarrow\)</span> Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted.</p>
+<p>Unlike explicit models, you’ll find gridgen for SCHISM is more ‘intuitive’ and ‘freer’. Implicit model allows you to focus on physics instead of numerics. You are freer to resolve important features (e.g. jetties) without worrying about cost/instability. SCHISM is not picky about grid quality (except for quads). While the physics generally suggests that coarser resolution be used in deeper depths, this is not always the best practice. E.g., you may want to resolve the channel to more accurately represent the salt intrusion process.</p>
+<div class="admonition note">
+<p class="admonition-title">Barotropic simulation</p>
+<p>Grid quality requirement is relatively lax for barotropic simulations. Besides the considerations above, you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution in deeper depths and finer resolution for shallow depths). Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Baroclinic simulation</p>
+<p>The transport process is influenced by your choice of grid, and so the gridgen for baroclinic simulations needs some attention. The grid quality may need to be better in some critical areas (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, not for stability but to avoid distortion of eddies (Zhang et al. 2016). Or gradual transition in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution in high-flow area would speed up the transport TVD solver. Grid generation process for baroclinic applications requires more effort and is often an iterative process, and so it’s important to establish a good work flow from the start. </p>
+</div>
+<div class="admonition notes">
+<p class="admonition-title">Conceptual maps in SMS</p>
+<p>While there are many methods for creating conceptual maps in SMS, we typically create representative isobaths (e.g., isobath at the highest gradient that represents slope) first and specify resolution along each arc based on Table <a href="#table01">1</a>. An exmample map is given below.</p>
+<p><figure markdown id='figure03'>
+<img alt="SMS Map" src="../assets/sms-map.png" width="800" />
+<figcaption>SMS map in a stretch of San Francisco Bay.</figcaption>
+</figure></p>
+</div>
+<h2 id="channels">Channels<a class="headerlink" href="#channels" title="Permanent link">&para;</a></h2>
+<p>Channels serves as the main conduit for fresh and ocean water flow, and thus are important features for gravitational circulation. When gridding channels, try to use ‘patch’ method to generate quads as much as possible for better efficiency but do not round corners (Figure <a href="#figure03">3</a>). Use arcs to follow the thalweg and the steep slopes (highest gradient zone for isobaths). Avoid artificial blocking of channels (Figure <a href="#figure04">4</a>), which may lead to noisy flow field, but try to represent the channel cross section as faithfully as possible. With <span class="arithmatex">\(LSC^2\)</span>, there is no need for bathymetry smoothing or other manipulation (and implicitness allows high resolution on steep slope and skew elements).</p>
+<figure id="figure04">
+<p><img alt="Channel representation in the grid" src="../assets/channel-representation.png" width="800" /></p>
+<figcaption>Side view of channel representation. Remember SCHISM does not allow partial wet/dry.</figcaption>
+</figure>
+<h2 id="grid-near-wetting-and-drying">Grid near wetting and drying<a class="headerlink" href="#grid-near-wetting-and-drying" title="Permanent link">&para;</a></h2>
+<p>You may want to have an arc follow the initial shoreline. Reasonable grid transition should be done from shoreline to dryland. Use comparable or finer grid resolution in the dryland that is expected to be wetted, and then transition to coarser resolution beyond (to account for rare inundation).</p>
+<p>Simulating wetting and drying well with SCHISM requires some effort. A critical parameter in shallow area is the bottom friction. Note that the bottom friction parameterizations are very different between 2D and 3D prisms.</p>
+<p>From a physical point of view, the 2D and 3D models behave very differently. Consider a straight channel with variable depths, with flow coming from deeper part and going into shallower part. Figure <a href="#figure05">5</a> shows the side views of 2D and 3D velocities.</p>
+<figure id="figure05">
+<p><img alt="Channel flow" src="../assets/channel-flow.png" width="600" /></p>
+<figcaption>Side view of channel flow for (a) 2D and (b) 3D cases. Volume conservation dictates larger velocities in shallow areas. Note that strong shear is possible in 3D model.</figcaption>
+</figure>
+<p>In 2D model, the velocity is depth-averaged and vertical shear is not represented. Strong friction merely translates into reduced velocity. In 3D model however, a large friction will lead to strong shear, although the depth integrated velocity value matches that from the 2D model. This problem is exacerbated by the exaggeration of <span class="arithmatex">\(C_d\)</span> in the shallow if the roughness formula is used (since the bottom cell thickness is very small). A classical pathological velocity field obtained with SCHISM is seen in Figure <a href="#figure06">6</a>.</p>
+<figure id="figure06">
+<p><img alt="Channel noisy velogity" src="../assets/channel-noisy-velocity.png" width="800" /></p>
+<figcaption>Noisy velocity field in shallow areas in SCHISM 3D.</figcaption>
+</figure>
+<p>There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, try to use 2D prisms in shallows. Lastly, using a larger <code>thetai</code> would also stabilize the wetting and drying fronts.</p>
+<div class="admonition important">
+<p class="admonition-title">Dredging open boundary</p>
+<p>A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an entire open boundary segment to become dry at ANY time (while drying at individual nodes is fine). Therefore you need to make sure the depths there are deep enough compared to expected tidal range. An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.</p>
+<p>Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if any of its surrounding elements becomes dry. As a result, you need to impose a minimum depth a couple of rows of elements into the domain, not just at open boundary nodes. This ensures that water can come into the domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries.</p>
+<p>If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (<code>imm=1</code>): start with a dredged boundary, and then gradually move the bed back to its original location. Another robust option is to use point sources (<code>if_source=1</code>): in this case no open boundary is required there so wet/dry can happen without crashing the code.</p>
+</div>
+<h2 id="periodic-boundary-condition">Periodic boundary condition<a class="headerlink" href="#periodic-boundary-condition" title="Permanent link">&para;</a></h2>
+<p>Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in <code>Utility/Pre-Processing/periodic_grid.f90</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">DWR tools</p>
+<p>In the git directory of BayDeltaSCHISM you will find a number of useful python tools for DEM preparation and for aiding the gridgen.</p>
+</div>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="typical-workflow.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Typical workflow" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Typical workflow
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="pre-processing.html" class="md-footer__link md-footer__link--next" aria-label="Next: Preprocessing" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Preprocessing
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c2e1ee47.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
