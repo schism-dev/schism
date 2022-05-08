@@ -12,7 +12,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.x
-      - uses: browser-actions/setup-chrome@latest
-      - run: chrome --version
-      - run: pip install mkdocs-material mkdocs-with-pdf
-      - run: mkdocs gh-deploy --force
+      - run: pip install mkdocs-material mkdocs-with-pdf mike
+      - run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      - run: mike deploy --push --update-aliases v5.9 latest

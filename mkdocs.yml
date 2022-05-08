@@ -1,4 +1,4 @@
-site_name: Semi-implicit Cross-scale Hydroscience Integrated System Model (SCHISM)
+site_name: SCHISM
 use_directory_urls: false
 theme:
   name: material
@@ -12,18 +12,8 @@ theme:
 
 plugins:
   - search
-  - with-pdf:
-      author: SCHISM Development Team
-      copyright: Ⓒschism-dev
-      cover_title: Manual
-      cover_subtitle: v5.9.0
-      cover_logo: assets/logo.png
-      output_path: pdf/schism-manual.pdf
-      enabled_if_env: ENABLE_PDF_EXPORT
-      render_js: true
-      headless_chrome_path: chrome
-      exclude_pages:
-        - 'publications'
+  - mike:
+      version_selector: true
 
 markdown_extensions:
   - admonition
@@ -40,6 +30,11 @@ markdown_extensions:
   - pymdownx.details
   - toc:
       permalink: true
+
+extra:
+  version:
+    provider: mike
+    default: latest
 
 extra_css:
   - stylesheets/extra.css
