@@ -27,9 +27,7 @@ jobs:
         id: tag_name
       - name: Deploy with mike
         run: |
-          mike delete v5.9
-          mike deploy --force v5.9
-          mike deploy --force --update-aliases master latest
-          mike retitle master latest
-          mike set-default --push latest
+          mike deploy --force --update-aliases master dev
+          mike retitle master dev
+          mike set-default --push dev
 
