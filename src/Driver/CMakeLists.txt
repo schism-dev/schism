@@ -2,7 +2,11 @@
 
 #####  Dependencies
 list(APPEND schism_libs ${NetCDFLIBS})
-list(APPEND schism_libs parmetis)
+
+if(NOT NO_PARMETIS)
+  list(APPEND schism_libs parmetis)
+  message(STATUS "Building SCHISM without ParMETIS lib")
+endif()
 
 if (USE_GOTM)
   list(APPEND schism_libs ${GOTMLIBS})

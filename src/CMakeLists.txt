@@ -55,6 +55,7 @@ add_compile_options(${C_PREPROCESS_FLAG})
 
 message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
 
+define_opt(NO_PARMETIS "Diable ParMETIS" OFF)
 define_opt(DEBUG "Enable diagnostics (slow and not suitable for production simulations" OFF)
 define_opt(USE_ANALYSIS "Triggers detailed calculations and output options" OFF)
 define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
@@ -222,9 +223,11 @@ add_module(Sed2d    USE_SED2D OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 
+if(NOT NO_PARMETIS)
 set(PARMETIS_VER ParMetis-4.0.3 CACHE STRING "Version and relative path to Parmetis library inside /src.")
 set(PARMETIS_DIR "${CMAKE_SOURCE_DIR}/${PARMETIS_VER}/" CACHE PATH "Path to ParMetis which defaults to /src/PARMETIS_VER in the schism source directory. Support for other locations not tested." FORCE)
 add_subdirectory( ${PARMETIS_VER} )
+endif()
 
 # Now recurse them and process the contents. 
 # In the process, we accumulate a (global) list of compile options and libraries

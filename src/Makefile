@@ -131,6 +131,10 @@ else
   PETSCMOD =
 endif
 
+ifdef NO_PARMETIS
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DNO_PARMETIS
+endif
+
 ifdef USE_OLDIO
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DOLDIO
 endif
@@ -359,7 +363,12 @@ endif
 ################################################################################
 # Library list
 ################################################################################
-MTSLIBS= -L$(PARMETISDIR) -lparmetis -lmetis
+ifdef NO_PARMETIS
+#Use offline partitioning and disable ParMETIS
+  MTSLIBS= 
+else
+  MTSLIBS= -L$(PARMETISDIR) -lparmetis -lmetis
+endif
 LIBS = $(MTSLIBS) $(FABMLIBS) $(CDFLIBS) $(GTMLIBS) $(PETSCLIBS)
 
 ################################################################################
@@ -394,6 +403,11 @@ all: pschism utility
 
 
 # This is the main executable target
+ifdef NO_PARMETIS
+$(EXEC): $(CONFIG_OBJS) 
+	$(FLD) $(FLDFLAGS) $(CONFIG_OBJS) $(LIBS) ${MODULEOUTDIR}. -I. -o $@
+	ar -ru libschism.a $(CONFIG_OBJS)
+else
 $(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a 
 	$(FLD) $(FLDFLAGS) $(CONFIG_OBJS) $(LIBS) ${MODULEOUTDIR}. -I. -o $@
 	ar -ru libschism.a $(CONFIG_OBJS)
@@ -403,6 +417,7 @@ $(PARMETISDIR)/parmetis.a:
 ##	+$(MAKE) distclean --directory=$(PARMETISDIR)
 	+$(MAKE) config --directory=$(PARMETISDIR)
 	+$(MAKE) --directory=$(PARMETISDIR)
+endif
 
 #.PHONY: parmetis
 #parmetis:

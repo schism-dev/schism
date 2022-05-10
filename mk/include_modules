@@ -1,3 +1,7 @@
+# ParMETIS enabled/off
+# NO_PARMETIS = yes
+# EXEC := $(EXEC)_NOPM
+
 # Old nc output option (each rank dumps its own data)
 # USE_OLDIO = yes
 # EXEC := $(EXEC)_OLDIO

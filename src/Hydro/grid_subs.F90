@@ -292,8 +292,8 @@ subroutine partition_hgrid
     deallocate(nlev)
   endif !ivcor==1
 
-  if(ioffline_partition/=0) then
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  if(ioffline_partition/=0) then
+#ifdef NO_PARMETIS
     !Offline paritition by reading from input similar to global_to_local.prop
     if(myrank==0) then
       open(10,file=in_dir(1:len_in_dir)//'global_to_local.in',status='old')
@@ -306,10 +306,11 @@ subroutine partition_hgrid
       if(k/=nproc) call parallel_abort('offline partition: different nproc')
     endif !myrank
     call mpi_bcast(iegrpv,ne_global,itype,0,comm,stat)
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  else !ioffline_partition; use ParMETIS
+
+#else
+!Use ParMETIS
   
-  ! Count number of edges in dual graph
+  ! Count number of edges in dual graph (element as 'vertex')
   allocate(adjncy(1000),stat=stat) !for single element
   if(stat/=0) call parallel_abort('partition: adjncy(1000) allocation failure')
   ntedge=0 !total # of edges in the grid
@@ -344,7 +345,7 @@ subroutine partition_hgrid
   enddo !ie
   deallocate(adjncy)
 
-  ! Use vertex and/or edge weights
+  ! Use vertex (elem) and/or edge weights
   wgtflag = 3   ! 0: none; 1: edges; 2: vertices; 3: vertices & edges
 
   ! Number of weights associated with each vertex, used to optimize the
@@ -543,8 +544,7 @@ subroutine partition_hgrid
   deallocate(xyz,tpwgts,ubvec)
   if(wgtflag==2.or.wgtflag==3) deallocate(vwgt)
   if(wgtflag==1.or.wgtflag==3) deallocate(adjwgt)
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  endif !ioffline_partition/
+#endif /*NO_PARMETIS*/
 
   ! Deallocate arrays
   deallocate(neproc,neprocsum)

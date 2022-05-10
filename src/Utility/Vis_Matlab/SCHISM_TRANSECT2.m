@@ -13,7 +13,7 @@ function []=SCHISM_TRANSECT2(base,ivs,transect_bp,varname,stacks,nspool,test)
 % Requires get_global_info2.m (in this dir), out2d*nc, and zCoordinates*.nc
 % SCHISM_TRANSECT(base,ivs,transect_bp,varname,stacks,nspool,test)
 % Inputs: 
-%         base: base directory (schout*.nc are in base/outputs/ and transect_bp is in base/)
+%         base: base directory (*.nc are in base/outputs/ and transect_bp is in base/)
 %         ivs: 1 for scalar; 2 for vector
 %         transect_bp: build point file name defining the transect (same projection as hgrid.gr3; depths not used)
 %         varname: 'salinity' etc (node based only)
