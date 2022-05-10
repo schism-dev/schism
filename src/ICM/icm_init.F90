@@ -92,25 +92,6 @@ subroutine read_icm_param(imode)
       iTIC=itrs(1,2); iALK=itrs(1,2)+1; iCA=itrs(1,2)+2; iCACO3=itrs(1,2)+3
     endif
 
-    !assign pointers
-    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm),sdwqc(ntrs_icm),vdwqc(ntrs_icm),stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
-
-    !concentration changes
-    dZB1=>dwqc(1);   dZB2=>dwqc(2);   dZBS=>dwqc(1:2)
-    dPB1=>dwqc(3);   dPB2=>dwqc(4);   dPB3=>dwqc(5);   dPBS=>dwqc(3:5)
-    dRPOC=>dwqc(6);  dLPOC=>dwqc(7);  dDOC=>dwqc(8)
-    dRPON=>dwqc(9);  dLPON=>dwqc(10); dDON=>dwqc(11);  dNH4=>dwqc(12); dNO3=>dwqc(13)
-    dRPOP=>dwqc(14); dLPOP=>dwqc(15); dDOP=>dwqc(16);  dPO4=>dwqc(17)
-    dSU=>dwqc(18);   dSA=>dwqc(19)
-    dCOD=>dwqc(20);  dDOX=>dwqc(21)
-    if(iPh==1) then
-      dTIC=>dwqc(22); dALK=>dwqc(23); dCA=>dwqc(24); dCACO3=>dwqc(25)
-    endif
-
-    zdPBS=>zdwqc(3:5); zdC=>zdwqc(6:8); zdN=>zdwqc(9:13); zdP=>zdwqc(14:17); zdS=>zdwqc(18:19); zdDOX=>zdwqc(21)
-    sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
-    vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
 
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
@@ -168,6 +149,26 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
+    !assign pointers
+    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
+
+    !concentration changes
+    dZB1=>dwqc(1);   dZB2=>dwqc(2);   dZBS=>dwqc(1:2)
+    dPB1=>dwqc(3);   dPB2=>dwqc(4);   dPB3=>dwqc(5);   dPBS=>dwqc(3:5)
+    dRPOC=>dwqc(6);  dLPOC=>dwqc(7);  dDOC=>dwqc(8)
+    dRPON=>dwqc(9);  dLPON=>dwqc(10); dDON=>dwqc(11);  dNH4=>dwqc(12); dNO3=>dwqc(13)
+    dRPOP=>dwqc(14); dLPOP=>dwqc(15); dDOP=>dwqc(16);  dPO4=>dwqc(17)
+    dSU=>dwqc(18);   dSA=>dwqc(19)
+    dCOD=>dwqc(20);  dDOX=>dwqc(21)
+    if(iPh==1) then
+      dTIC=>dwqc(22); dALK=>dwqc(23); dCA=>dwqc(24); dCACO3=>dwqc(25)
+    endif
+
+    zdPBS=>zdwqc(3:5); zdC=>zdwqc(6:8); zdN=>zdwqc(9:13); zdP=>zdwqc(14:17); zdS=>zdwqc(18:19); zdDOX=>zdwqc(21)
+    !sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
+    !vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
+
 #ifndef USE_SED 
     if(iKe==1) then
       call parallel_abort('iKe=1,need to turn on SED3D module')
@@ -545,10 +546,11 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(fPN(nvrt,3), WMS(nea),EROH2S(nea),EROLPOC(nea),ERORPOC(nea),tthcan(nea),ttdens(nea),stat=istat) !erosion
+  allocate(fPN(nvrt,3),temp(nvrt),WMS(nea),EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &
+         & tthcan(nea),ttdens(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  fPN=0.0;     WMS=0.0;
+  fPN=0.0;     WMS=0.0;     temp=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
 
   !-------------------------------------------------------------------------------
@@ -646,8 +648,7 @@ subroutine update_vars(id)
   integer :: j
 
   j=irange_tr(1,7);    wqc=>tr_el(j:(j+ntrs_icm-1),1:nvrt,id)
-  !temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
-  salt=>tr_el(2,:,id)
+  temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
   ZB1=>wqc(1,:);   ZB2=>wqc(2,:);   ZBS=>wqc(1:2,:)
   PB1=>wqc(3,:);   PB2=>wqc(4,:);   PB3=>wqc(5,:);   PBS=>wqc(3:5,:)
   RPOC=>wqc(6,:);  LPOC=>wqc(7,:);  DOC=>wqc(8,:)

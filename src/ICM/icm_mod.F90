@@ -36,9 +36,9 @@ module icm_mod
                 & iLPOP,iDOP,iPO4,iSU,iSA,iCOD,iDOX,iTIC,iALK,iCA,iCACO3
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
-  real(rkind),save,pointer,dimension(:) :: salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
+  real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                                          & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
-  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:),sdwqc(:),vdwqc(:) 
+  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:),sdwqc(:,:),vdwqc(:,:) 
   real(rkind),save,pointer,dimension(:) :: dZBS,dPBS, sdC,sdN,sdP, vdC,vdN,vdP, zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
                             & dNO3,dRPOP,dLPOP,dDOP,dPO4,dSU,dSA,dCOD,dDOX,dTIC,dALK,dCA,dCACO3

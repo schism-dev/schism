@@ -807,7 +807,7 @@ subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0
   C1t=(a22*b1-a12*b2)/delta
   C2t=(a11*b2-a21*b1)/delta
   if(C1t<0.0.or.C2t<0.0) then
-    write(errmsg,*)'icm_sed_flux: conc<0,',C1t,C2t,C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
+    write(errmsg,*)'icm_sed_flux: conc<0,',C1t,C2t,a11,a22,a12,a21,a1,a2,b1,b2,'variable=',C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
     call parallel_abort(errmsg)
   endif
   C1td=C1t*fd1

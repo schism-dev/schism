@@ -72,37 +72,25 @@ subroutine ecosystem(it)
   real(rkind) :: time,h,usf
   real(rkind),allocatable :: swild(:,:) !for exchange only
   real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
-  logical :: fnan, frange
 
   !local variables
-  integer :: kb,knp,istat
-  real(rkind) :: tmp,tmp1,tmp2,fT,fST,fR,fN,fP,fS,fC
+  integer :: kb,istat
+  real(rkind) :: tmp,fT,fST,fR,fN,fP,fS,fC
   real(rkind) :: mLight,chl,xT,xS,rIK,rIs(3),rat
   real(rkind) :: rtmp,rval,z1,z2
   real(rkind) :: tdep,GP(nvrt,3)
-  real(rkind),dimension(nvrt) :: dz,temp,TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a
+  real(rkind),dimension(nvrt) :: dz,TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a
   real(rkind),target,dimension(ntrs_icm) :: WS0,WS,sink,sflux,bflux
-  !real(rkind),pointer,dimension(:,:) :: wqc,ZBS,PBS
-  !real(rkind),pointer,dimension(:) :: salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
-  !                                  & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
 
   !light
-  real(rkind) :: Light(nvrt),rKe(nvrt),rKeh(nvrt),rKe0(nvrt),rKeS(nvrt),rKeV(nvrt),rKeh0,rKeh2,rKehV(3,2),sdveg
+  real(rkind) :: Light(nvrt),rKe(nvrt),rKeh(nvrt),rKe0(nvrt),rKeS(nvrt),rKeV(nvrt)
   real(rkind) :: sLight0,sLight !light
 
   !pH
   real(rkind),dimension(nvrt) :: pH,CAsat,CO2
   
-  !SAV
-  real(rkind) :: shtz,vhtz(3),zid(nvrt),vGP(3),sGP(nvrt)
-  real(rkind) :: sdep
-  real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1)
-  real(rkind) :: sdz,dzt,hdep,sfT,sfR,sfN,sfP,sPBM(nvrt,3),sBM,sGM,sRM
-
   !VEG
-  real(rkind) :: atemp,asalt,vrat,vfT,vfI,vfST,vfR,vfN,vfP,vfMT(3,3)
-  real(rkind) :: vLight,vPBM(3,3)
-  real(rkind) :: vdz,vdzm,vBM(3),vGM(3)
+  real(rkind) :: shtz,vhtz(3),zid(nvrt)
 
   !local variables
   real(rkind) :: k1,k2,a,b,x,s,T
@@ -110,14 +98,10 @@ subroutine ecosystem(it)
   real(rkind) :: rKTM(3),rKRPOC,rKLPOC,rKDOC,rKRPON,rKLPON,rKDON,rKRPOP,rKLPOP,rKDOP
   real(rkind) :: xKHR,xDenit,xNit,rKSUA,rKCOD
   real(rkind) :: prey(8),nprey(8,2),zBG(8,2),zBM(2),zMTB(2),fishZ(2),fishP(3),PBM(3),BPR(3),BM(3),PR(3),GR(3)
-  !real(rkind) :: CZB_ZB,CFh_ZB,CZB_PB,CFh_PB,NZB_ZB,NFh_ZB,NZB_PB,NFh_PB, &
-  !                  & PZB_ZB,PFh_ZB,PZB_PB,PFh_PB,SZB_ZB,SFh_ZB,SZB_PB,SFh_PB
-  !real(rkind) :: CZB_ZB,CFh_ZB, NZB_ZB,NFh_ZB, PZB_ZB,PFh_ZB, SZB_ZB,SFh_ZB
   real(rkind) :: rKa,pK0,CO2sat,xKCA,xKCACO3
 
   !sav and veg
-  real(rkind) :: sfPN,sfNs,sfPs,denssav
-  real(rkind) :: densveg(3)
+  real(rkind) :: denssav, densveg(3)
 
   time=it*dt
   do id=1,nea
@@ -146,20 +130,6 @@ subroutine ecosystem(it)
     tdep=sum(dz((kb+1):nvrt))                             !tdep: total water depth
     if(jsav==1) shtz=sht(id)+zid(kb)                      !shtz: zcoor of SAV canopy 
     if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)             !vhtz: zcoor of VEG canopy 
-
-    !j=irange_tr(1,7);    wqc=>tr_el(j:(j+ntrs_icm-1),1:nvrt,id)
-    temp=tr_el(1,:,id)
-    !temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
-    !ZB1=>wqc(1,:);   ZB2=>wqc(2,:);   ZBS=>wqc(1:2,:)     
-    !PB1=>wqc(3,:);   PB2=>wqc(4,:);   PB3=>wqc(5,:);   PBS=>wqc(3:5,:)
-    !RPOC=>wqc(6,:);  LPOC=>wqc(7,:);  DOC=>wqc(8,:)
-    !RPON=>wqc(9,:);  LPON=>wqc(10,:); DON=>wqc(11,:);  NH4=>wqc(12,:);  NO3=>wqc(13,:)
-    !RPOP=>wqc(14,:); LPOP=>wqc(15,:); DOP=>wqc(16,:);  PO4=>wqc(17,:)
-    !SU=>wqc(18,:);   SA=>wqc(19,:)
-    !COD=>wqc(20,:);  DOX=>wqc(21,:)
-    !if(iPh==1) then
-    !  TIC=>wqc(22,:);  ALK=>wqc(23,:);  CA=>wqc(24,:); CACO3=>wqc(25,:)
-    !endif
 
     s=min(tdep,1.d0); srat=0; brat=0
     do k=kb+1,nvrt
@@ -299,193 +269,21 @@ subroutine ecosystem(it)
       enddo !i
     enddo
 
-    !----------------------------------------------------------------------------------
-    !compute SAV growth rate
-    !----------------------------------------------------------------------------------
-    if(jsav==1.and.spatch(id)==1.and.idry_e(id)/=1) then
-      !compute total leaf and stem biomass down to each layer; for wet elem. only
-      szleaf=-99; szstem=-99
-      do k=kb+1,nvrt
-        if(zid(k-1)<shtz) then
-          szleaf(k-1)=sum(sleaf(k:nvrt,id))
-          szstem(k-1)=sum(sstem(k:nvrt,id))
-        endif 
-      enddo 
+    !SAV
+    sdwqc=0
+    sleaf_NH4(id)=0; sleaf_PO4(id)=0; sroot_POC(id)=0
+    sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0
+    if(jsav==1.and.spatch(id)==1) then 
+      call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
+    endif
 
-      !Init for every layer and timestep at current elem
-      sGP=0.0;  hdep=0.0
-      sdep=max(tdep-sht(id),0.d0) !submergence
-
-      !canopy (sht) is always at or below surface and so knp would stay at 1 or more
-      knp=nvrt
-      do k=kb+1,nvrt
-        if(zid(k-1)<shtz.and.zid(k)>=shtz) then
-          knp=k
-          exit
-        endif !knp
-      enddo !k
-    endif!jsav
-
-    if(rIa>30) then
-      !above canopy; new half layer under canopy;  accumulated above current layer under canopy
-      rKeh0=0.0;  rKeh2=0.0
-    
-      do k=nvrt,kb+1,-1
-        !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
-        !hdep: total distance from surface to the bottom level of the layer above sav canopy
-        if(jsav==1.and.spatch(id)==1.and.zid(k-1)>=shtz) then 
-            rKeh0=rKeh0+(rKe0(k)+rKeV(k))*dz(k);  hdep=hdep+dz(k)
-        endif !isav
-
-        if(jsav==1.and.spatch(id)==1) then
-          if(zid(k-1)<shtz) then
-            xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
-            if(xT<=0.0) then
-              sfT=exp(-sKTGP(1)*xT*xT)
-            else
-              sfT=exp(-sKTGP(2)*xT*xT)
-            endif
-
-            sLight0=max(rIa*exp(-rKeh0),0.d0) !account from light at water surface
-            !light at canopy height
-            if (k==knp) then!k from surface downwards, knp is the first, so no need to over init
-              sLight=sLight0*max(exp(-(rKe0(k)+rKeV(k))*(sdep-hdep)),1.d-5)
-            endif !k==knp
-
-            !light on leave
-            if(szleaf(k-1)>=0.0.and.szstem(k-1)>=0.0) then !below canopy
-              if (k==knp) then
-                !half of thickness for light attenuation
-                dzt=(shtz-zid(k-1))/2.0
-                tmp=(rKe0(k)+rKeV(k))*dzt+sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
-                rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt  !accumulation from canopy downwards
-              else
-                dzt=(zid(k)-zid(k-1))/2.0 
-                tmp=rKeh2+ (rKe0(k)+rKeV(k))*dzt +sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
-                rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
-              endif !knp
-
-              mLight=max(sLight*rrat*(1-exp(-tmp))/tmp,1.d-5)
-              rIK=sGPM*sfT/salpha
-
-              !light limitation function for sav
-              sfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
-
-            else
-              sfR=1
-            endif !szleaf(k+1)>0.and.szstem(k+1)>0
-
-            !N/P limitation function
-            sfN=(NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)
-            sfP=(PO4d(k)+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+CPIP(id)*sKhPw/sKhPs)
-
-            !calculation of lf growth rate [1/day] as function of temp, light, N/P
-            !sc2dw checked !>=0 with seeds, =0 for no seeds
-            sGP(k)=sGPM*sfT*min(sfR,sfN,sfP)/sc2dw 
-          endif 
-        endif !jsav
-      enddo !k
-
-      !extend sav growth rate upward
-      if(jsav==1.and.spatch(id)==1.and.knp<nvrt)then
-        do k=knp+1,nvrt
-          if(sleaf(k,id)>1.e-3)then
-            sGP(k)=sGP(knp)
-          endif !sleaf>0
-        enddo !k
-      endif !knp
-    endif !rIa>30
-
-    !--------------------------------------------------------------------------------
-    !for Veg
-    !--------------------------------------------------------------------------------
-    !--------------------------------------------------------------------------------
-    !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
-    !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
-    !if(iTBen/=0) then !simplified sediment fluxes
-    !  CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
-    !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
-    !endif !iTBen
-
-    !light attenuation for veg growth
-    rKehV=0.0
-    if(rIa>30) then
-      if(jveg==1.and.vpatch(id)==1) then
-        !pre-compute light for VEG
-        do k=nvrt,kb+1,-1
-          if(idry_e(id)==1) then !dry elem
-            do j=1,3
-              if(tdep-vht(id,j)>1.e-5) then
-                !if canopy is in this layer !potentail bug, dep-> tdep
-                rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-vht(id,j))
-                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*vht(id,j)
-              else
-                !if this layer is under canopy
-                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
-              endif !tdep
-            enddo !j::veg species
-          else !wet elem
-            do j=1,3
-              if(zid(k-1)>=vhtz(j)) then
-                !if there are layers above canopy
-                rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*dz(k)
-              elseif(zid(k-1)<vhtz(j).and.zid(k)>=vhtz(j)) then
-                !if canopy is in this layer
-                rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-(vhtz(j)-zid(k-1)))
-                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*(vhtz(j)-zid(k-1))
-              else
-                !if this layer is under canopy
-                rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
-              endif !zid
-            enddo !j::veg species
-          endif !idry_e
-        enddo !k
-
-        vGP=0 !growth rate
-        sdveg=dot_product(vKe(1:3),vtleaf(id,1:3)+vtstem(id,1:3)/2) !shading effect
-        do j=1,3
-          !tempreture effect
-          atemp=0.0; do k=kb+1,nvrt; atemp=atemp+temp(k)*dz(k); enddo
-          xT=atemp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
-          if(xT<=0.0)then
-            vfT=exp(-vKTGP(j,1)*xT*xT)
-          else
-            vfT=exp(-vKTGP(j,2)*xT*xT)
-          endif
-
-          !salinty stress
-          asalt=0.0; do k=kb+1,nvrt; asalt=asalt+salt(k)*dz(k); enddo 
-          xS=asalt/max(tdep,1.d-2)-vSopt(j)
-          vfST=vScr(j)/(max(vScr(j)+xS*xS,1.d-2))
-
-          !inundation stress in wet elem !ratio of tdep versus vht, tdep>0 checked
-          vrat=vht(id,j)/tdep
-          vfI=vrat/max(vInun(j)+vrat,1.d-2)
-
-          !light supply
-          vLight=rIa*exp(-rKehV(j,1)) !accumulated attenuation from PB, sav and other marsh species
-          tmp=sdveg+rKehV(j,2)
-
-          if(tmp>20) then
-            mLight=vLight*rrat/tmp
-          elseif(tmp<0.02)then
-            mLight=vLight*rrat
-          else
-            mLight=vLight*rrat*(1-exp(-tmp))/tmp
-          endif
-          rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
-          vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
-
-          vfN=CNH4(id)/(vKhNs(j)+CNH4(id))
-          vfP=CPIP(id)/(vKhPs(j)+CPIP(id))
-          if(ivNs==0) vfN=1
-          if(ivPs==0) vfP=1
-
-          !lf growth rate as function of temp, salinty stress, inundation stress, light and nutrients
-          vGP(j)=vGPM(j)*vfT*vfST*vfI*vfR*min(vfN,vfP)/vc2dw(j)
-        enddo !j::veg species
-      endif !veg
-    endif !rIa>30
+    !VEG
+    vdwqc=0
+    vleaf_NH4(id,:)=0; vleaf_PO4(id,:)=0; vroot_POC(id,:)=0; 
+    vroot_PON(id,:)=0; vroot_POP(id,:)=0; vroot_DOX(id,:)=0; 
+    if(jveg==1.and.vpatch(id)==1) then 
+      call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
+    endif
 
     !pH model
     if(iPh==1) then
@@ -583,149 +381,6 @@ subroutine ecosystem(it)
         endif
       enddo
 
-      !--------------------------------------------------------------------------------------
-      !SAV
-      ! Finite difference for equation: dC/dt=a*C+b for SAV and VEG
-      ! lf: dC/dt=a*C ==> C1=C0*exp(a*dt), init>=0, checked
-      ! st or rt: dC/dt=-a*C+b, a>0, b>0 =implicit=> C1=(b*dt+C0)/(1.0+a*dt), init>=0, checked
-      !--------------------------------------------------------------------------------------
-      sBM=0; sdwqc=0; sdz=max(1.e-5,dz(k))
-      if(jsav==1.and.spatch(id)==1) then
-        !pre-calculation for metabolism rate;  no relation with light, alweys respire
-        do m=1,3; sPBM(k,m)=sBMP(m)*exp(sKTBP(m)*(temp(k)-sTBP(m))); enddo
-
-        !calculation of biomass !sleaf
-        a=sGP(k)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
-        sleaf(k,id)=(1+dtw*a)*sleaf(k,id)
-
-        !sstem
-        a=-sPBM(k,2) !>0
-        b=sGP(k)*(1.-sFAM)*sFCP(2)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sstem(k,id)=(1+dtw*a)*sstem(k,id)+dtw*b
-
-        !sroot
-        a=-sPBM(k,3) !>0
-        b=sGP(k)*(1.-sFAM)*sFCP(3)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
-        sroot(k,id)=(1+dtw*a)*sroot(k,id)+dtw*b
-
-        !Pre-compute SAV terms
-        !if(k==nvrt) then
-        if(k==(kb+1)) then
-          sleaf_NH4(id)=0; sleaf_PO4(id)=0; sroot_POC(id)=0 
-          sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0
-        endif
-        if (zid(k-1)<shtz) then
-          sBM=((sPBM(k,1)+sGP(k)*sFAM)*sleaf(k,id)+sPBM(k,2)*sstem(k,id))/sdz
-          sGM=sGP(k)*sleaf(k,id)/sdz
-          sRM=sPBM(k,3)*sroot(k,id)
-
-          !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
-          sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(NH4(k)+NO3(k)+1.e-6))
-          sfNs=CNH4(id)/(CNH4(id)+(NH4(k)+NO3(k))*sKhNs/sKhNw+1.e-8)
-          sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
-     
-          sdC(1:3)= sFCM(1:3)*sBM                        !RPOC,LPOC,DOC
-          sdN(1:3)= sn2c*sFNM(1:3)*sBM                   !RPON,LPON,DON
-          sdN(4)  = sn2c*(sFNM(4)*sBM-(1-sfNs)*sfPN*sGM) !NH4
-          sdN(5)  =-sn2c*(1-sfNs)*(1-sfPN)*sGM           !NO3
-          sdP(1:3)= sp2c*sFPM(1:3)*sBM                   !RPOP,LPOP,DOP
-          sdP(4)  = sp2c*(sFPM(4)*sBM-(1-sfPs)*sGM)      !PO4
-          sdDOX   = so2c*(-sFCM(4)*sBM+sGM)              !DOX
-
-          !N/P uptake from sediemnt; and root metabolism into sediment 
-          sleaf_NH4(id)=sleaf_NH4(id)+sn2c*sfNs*sGM*sdz
-          sleaf_PO4(id)=sleaf_PO4(id)+sp2c*sfPs*sGM*sdz
-          sroot_POC(id)=sroot_POC(id)+(1-sFCM(4))*sRM
-          sroot_PON(id)=sroot_PON(id)+sn2c*sRM
-          sroot_POP(id)=sroot_POP(id)+sp2c*sRM
-          sroot_DOX(id)=sroot_DOX(id)+so2c*sFCM(4)*sRM
-        endif
-      endif !jsav
-
-      !--------------------------------------------------------------------------------------
-      !VEG
-      !--------------------------------------------------------------------------------------
-      vdwqc=0
-      if(jveg==1.and.vpatch(id)==1) then
-        !if(k==nvrt) then
-        if(k==(kb+1)) then
-          !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
-          vfMT=1.0
-          do j=1,3
-            if(ivMT==1) then
-              rtmp=vKTMT(j,1)*(mtemp-vTMT(j,1))-vMT0(j,1)
-              vfMT(j,1)=1+vMTcr(j,1)/(1+exp(rtmp))
-
-              rtmp=vKTMT(j,2)*(mtemp-vTMT(j,2))-vMT0(j,2)
-              vfMT(j,2)=1+vMTcr(j,2)/(1+exp(rtmp))
-            endif !iMortvey
-
-            !----------metabolism rate----------
-            do m=1,3; vPBM(j,m)=vfMT(j,m)*vBMP(j,m)*exp(vKTBP(j,m)*(mtemp-vTBP(j,m))); enddo
-
-            !calculation of biomass, lfveg(j)
-            a=vGP(j)*(1-vFAM(j))*vFCP(j,1)-vPBM(j,1) !1/day
-            vtleaf(id,j)=(1+dtw*a)*vtleaf(id,j)
-
-            !stveg
-            a=-vPBM(j,2)
-            b=vGP(j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(id,j)
-            vtstem(id,j)=(1+dtw*a)*vtstem(id,j)+dtw*b
-
-            !rtveg
-            a=-vPBM(j,3)
-            b=vGP(j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(id,j)
-            vtroot(id,j)=(1+dtw*a)*vtroot(id,j)+dtw*b
-
-            !compute veg canopy height
-            if(vtleaf(id,j)+vtstem(id,j)<vcrit(j)) then
-              vht(id,j)=vht0(j)+v2ht(j,1)*(vtleaf(id,j)+vtstem(id,j))
-            else
-              vht(id,j)=max(vht0(j)+v2ht(j,1)*vcrit(j)-v2ht(j,2)*(vtleaf(id,j)+vtstem(id,j)-vcrit(j)),1.d-2)
-            endif !
-            if(vht(id,j)<1.d-8) call parallel_abort('check vht computation')
-
-            !seeds
-            vtleaf(id,j)=max(vtleaf(id,j),1.d-5)
-            vtstem(id,j)=max(vtstem(id,j),1.d-5)
-            vtroot(id,j)=max(vtroot(id,j),1.d-5)
-
-            !nutrient fluxes, sum of (g/m^2/day)
-            vBM(j)=(vPBM(j,1)+vGP(j)*vFAM(j))*vtleaf(id,j)+vPBM(j,2)*vtstem(id,j)
-            vGM(j)=vGP(j)*vtleaf(id,j)
-
-            !nutrient fluxes into sediment ( g/m^2/day)
-            vleaf_NH4(id,j)=vn2c(j)*vGM(j)
-            vleaf_PO4(id,j)=vp2c(j)*vGM(j)
-            vroot_POC(id,j)=(1-vFCM(j,4))*vPBM(j,3)*vtroot(id,j)
-            vroot_PON(id,j)=vn2c(j)*vPBM(j,3)*vtroot(id,j)
-            vroot_POP(id,j)=vp2c(j)*vPBM(j,3)*vtroot(id,j)
-            vroot_DOX(id,j)=vo2c(j)*vFCM(j,4)*vPBM(j,3)*vtroot(id,j)
-            if(ivNc==0) vleaf_NH4(id,j)=vleaf_NH4(id,j)-vn2c(j)*vFNM(j,4)*vBM(j)
-            if(ivPc==0) vleaf_PO4(id,j)=vleaf_PO4(id,j)-vp2c(j)*vFPM(j,4)*vBM(j)
-            if(ivNc==0) vroot_PON(id,j)=vroot_PON(id,j)+vn2c(j)*(1-vFNM(j,4))*vBM(j)
-            if(ivPc==0) vroot_POP(id,j)=vroot_POP(id,j)+vp2c(j)*(1-vFPM(j,4))*vBM(j)
-          enddo !
-        endif !k==1
-
-        !compute VEG metabolism into C/N/P/DO
-        vdzm=max(1.e-5,min(tdep,vht(id,j))); vdz=max(1.e-5,vht(id,j))
-        do m=1,4
-          do j=1,3
-            if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then
-              if(m<=3) vdC(m)=vdC(m)+vFCM(j,m)*vBM(j)/vdzm
-              if(m==4) vdDOX =vdDOX-vo2c(j)*vFCM(j,m)*vBM(j)/vdzm
-              if(ivNc==1) vdN(m)=vdN(m)+vn2c(j)*vFNM(j,m)*vBM(j)/vdzm 
-              if(ivPc==1) vdP(m)=vdP(m)+vp2c(j)*vFPM(j,m)*vBM(j)/vdzm
-            endif
-
-            if(tdep-vht(id,j)>1.e-5.or.(tdep-vht(id,j)<=1.e-5.and.zid(k-1)<vhtz(j))) then
-              if(m==4) vdDOX=vdDOX+vo2c(j)*vGM(j)/vdz
-            endif
-          enddo !j
-        enddo !m
-      endif !jveg
-
       !pre-compute: PBS
       APB=sum(PBS(1:3,k))
       do m=1,3
@@ -734,78 +389,13 @@ subroutine ecosystem(it)
         GR(m)=GP(k,m)*PBS(m,k); BM(m)=PBM(m)*PBS(m,k); PR(m)=BPR(m)*PBS(m,k)
       enddo
 
-      !--------------------------------------------------------------------------------------
       !Zooplankton
-      !note: fish can eat zooplanktons and phytoplanktons, while zooplankton can eat
-      !other zooplanktons, all phytoplankton and carbon species
-      !--------------------------------------------------------------------------------------
       zdwqc=0
-      if(iZB==1) then
-        !prey and normalized prey of zooplankton
-        prey=(/ZBS(1:2,k),PBS(1:3,k),RPOC(k),LPOC(k),DOC(k)/)
-        do i=1,2; do j=1,8; nprey(j,i)=prey(j)/zKhG(j,i); enddo; enddo
-
-        !zooplankton predation rate: zBG(prey=1:8,ZB=1:2)
-        do i=1,2 
-          !temp. effect
-          xT=temp(k)-zTGP(i)
-          if(xT<0.0) then
-            fT=exp(-zKTGP(i,1)*xT*xT)
-          else
-            fT=exp(-zKTGP(i,2)*xT*xT)
-          endif 
-
-          !growth rate (predation rate)
-          do j=1,8 
-            zBG(j,i)=zGPM(j,i)*ZBS(i,k)*fT*nprey(j,i)/(1.0+sum(nprey(1:8,i)))
-          enddo
-
-          !metabolism, mortality and predation
-          zBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i)))*ZBS(i,k)
-          zMTB(i)=zMT(i)*ZBS(i,k)
-          fishZ(i)=z2pr(i)*sum(prey(1:5))*ZBS(i,k) 
-        enddo !i
-      
-        !ZB1, ZB2
-        dZB1=sum(zBG(1:8,1))*zAG*(1-zRG)-zBM(1)-zMTB(1)-fishZ(1)-zBG(1,2)
-        dZB2=sum(zBG(1:8,2))*zAG*(1-zRG)-zBM(2)-zMTB(2)-fishZ(2)-zBG(2,1)
-
-        !Fish/ZB predation on PB
-        do m=1,3 !PB
-          !modified PB predation . The actual predation on PB is: fishP(m)+sum(zBG(m+2,1:2)) 
-          fishP(m)=p2pr*sum(prey(1:5))*PBS(m,k) !Fish=>PB
-          PR(m)=fishP(m)+(1.0-zAG*(1.0-zRG))*sum(zBG(m+2,1:2))  !Fish=>PB, ZB=>PB (partial)
-          zdPBS(m)=-zAG*(1.0-zRG)*sum(zBG(m+2,1:2))  !ZB=>PB (partial)
-        enddo
-
-        !compute additional C/N/P/S terms
-        do m=1,4 !nutrient species
-          if(m<=3) zdC(m)=zdC(m)-(zRG+zAG*(1.0-zRG))*sum(zBG(m+5,1:2)) !ZB=>C
-
-          !respiration cost 
-          do j=1,3 !PB
-            if(m<=3) zdC(m)=zdC(m)-FCP(j,m)*zRG*sum(zBG(j+2,1:2)) !ZB=>PB (respiration cost)
-          enddo
-
-          !ZB/Fish predation on ZB, and ZB mortality, ZB metabolism
-          do j=1,2 !ZB
-            if(m<=3) zdC(m)=zdC(m)+zFCP(m)*((1.0-zAG)*(1.0-zRG)*sum(zBG(1:2,j))+fishZ(j)+zMTB(j)) !ZB=>ZB, Fish=>ZB, ZB mortality
-            if(m==3) zdC(m)=zdC(m)+(zFCM(j)+(1.0-zFCM(j))*zKhDO(j)/(DOX(k)+zKhDO(j)))*zBM(j) !ZB metabolism
-            if(m==1) zdDOX=zdDOX-o2c*((1.0-zFCM(j))*DOX(k)/(DOX(k)+zKhDO(1)))*zBM(j)         !ZB metabolism
-
-            zdN(m)=zdN(m)+zFNP(m)*zn2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFNM(j,m)*zn2c(j)*zBM(j)  !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
-            zdP(m)=zdP(m)+zFPP(m)*zp2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFPM(j,m)*zp2c(j)*zBM(j)  !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
-            if(m<=2) zdS(m)=zdS(m)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFSM(j,m)*zs2c(j)*zBM(j)
-          enddo
-        enddo
-      endif !iZB==1
+      if(iZB==1) call zoo_calc(k,PR)
 
       !PB1, PB2, PB3
       dPBS=GR-BM-PR !+zdPBS
      
-      !---------------------------------------------
-      !pre-calculation for nutrients
-
       do i=1,3; rKTM(i)=exp(KTRM(i)*(temp(k)-TRM(i))); enddo
 
       !RPOC
@@ -813,14 +403,12 @@ subroutine ecosystem(it)
 
       dRPOC=-rKRPOC*RPOC(k)
       do m=1,3; dRPOC=dRPOC+FCP(m,1)*PR(m); enddo 
-      dRPOC=dRPOC !+zdC(1)+sdC(1)+vdC(1)
 
       !LPOC
       rKLPOC=(KC0(2)+KCalg(2)*APB)*rKTM(2)
 
       dLPOC=-rKLPOC*LPOC(k)
       do m=1,3; dLPOC=dLPOC+FCP(m,2)*PR(m); enddo
-      dLPOC=dLPOC !+zdC(2)+sdC(2)+vdC(2)
 
       !DOC
       rKDOC=(KC0(3)+KCalg(3)*APB)*rKTM(3)
@@ -831,28 +419,24 @@ subroutine ecosystem(it)
       do m=1,3
         dDOC=dDOC+FCP(m,3)*PR(m)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m)
       enddo
-      dDOC=dDOC !+zdC(3)+sdC(3)+vdC(3)
 
       !RPON
       rKRPON=(KN0(1)+KNalg(1)*APB*mKhN/(mKhN+NH4(k)+NO3(k)))*rKTM(1)
 
       dRPON=-rKRPON*RPON(k) 
       do m=1,3; dRPON=dRPON+n2c(m)*(FNP(1)*PR(m)+FNM(m,1)*BM(m)); enddo
-      dRPON=dRPON !+zdN(1)+sdN(1)+vdN(1)
 
       !LPON
       rKLPON=(KN0(2)+KNalg(2)*APB*mKhN/(mKhN+NH4(k)+NO3(k)))*rKTM(2)
 
       dLPON=-rKLPON*LPON(k)
       do m=1,3; dLPON=dLPON+n2c(m)*(FNP(2)*PR(m)+FNM(m,2)*BM(m)); enddo
-      dLPON=dLPON !+zdN(2)+sdN(2)+vdN(2)
 
       !DON
       rKDON=(KN0(3)+KNalg(3)*APB*mKhN/(mKhN+NH4(k)+NO3(k)))*rKTM(3)
 
       dDON=-rKDON*DON(k)+rKRPON*RPON(k)+rKLPON*LPON(k)
       do m=1,3; dDON=dDON+n2c(m)*(FNP(3)*PR(m)+FNM(m,3)*BM(m)); enddo
-      dDON=dDON !+zdN(3)+sdN(3)+vdN(3)
 
       !NH4
       xT=temp(k)-TNit
@@ -864,37 +448,31 @@ subroutine ecosystem(it)
 
       dNH4=-xNit*NH4(k)+rKDON*DON(k)
       do m=1,3; dNH4=dNH4+n2c(m)*(FNP(4)*PR(m)+FNM(m,4)*BM(m)-fPN(k,m)*GR(m)); enddo
-      dNH4=dNH4 !+zdN(4)+ sdN(4)+vdN(4)
 
       dNO3=xNit*NH4(k)-dn2c*xDenit*DOC(k) 
       do m=1,3; dNO3=dNO3-n2c(m)*(1.0-fPN(k,m))*GR(m); enddo
-      dNO3=dNO3 !+sdN(5)
 
       !RPOP
       rKRPOP=(KP0(1)+KPalg(1)*APB*mKhP/(mKhP+PO4d(k)))*rKTM(1)
 
       dRPOP=-rKRPOP*RPOP(k)
       do m=1,3; dRPOP=dRPOP+p2c(m)*(FPP(1)*PR(m)+FPM(m,1)*BM(m)); enddo
-      dRPOP=dRPOP !+zdP(1)+sdP(1)+vdP(1)
 
       !LPOP
       rKLPOP=(KP0(2)+KPalg(2)*APB*mKhP/(mKhP+PO4d(k)))*rKTM(2)
 
       dLPOP=-rKLPOP*LPOP(k)
       do m=1,3; dLPOP=dLPOP+p2c(m)*(FPP(2)*PR(m)+FPM(m,2)*BM(m)); enddo
-      dLPOP=dLPOP !+zdP(2)+sdP(2)+vdP(2)
 
       !DOP
       rKDOP=(KP0(3)+KPalg(3)*APB*mKhP/(mKhP+PO4d(k)))*rKTM(3)
 
       dDOP=-rKDOP*DOP(k)+rKRPOP*RPOP(k)+rKLPOP*LPOP(k)
       do m=1,3; dDOP=dDOP+p2c(m)*(FPP(3)*PR(m)+FPM(m,3)*BM(m)); enddo
-      dDOP=dDOP !+zdP(3)+sdP(3)+vdP(3)
 
       !PO4
       dPO4=rKDOP*DOP(k)
       do m=1,3; dPO4=dPO4+p2c(m)*(FPP(4)*PR(m)+FPM(m,4)*BM(m)-GR(m)); enddo
-      dPO4=dPO4 !+zdP(4)+sdP(4)+vdP(4)
 
       !SU
       rKSUA=KS*exp(KTRS*(temp(k)-TRS)); tmp=KTRS*(temp(k)-TRS)
@@ -926,7 +504,6 @@ subroutine ecosystem(it)
       do m=1,3
         dDOX=dDOX-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*o2c*BM(m)+(1.3-0.3*fPN(k,m))*o2c*GR(m)
       enddo
-      dDOX=dDOX !+zdDOX+sdDOX+vdDOX
 
       !---------------------------------------------------------------------------------
       !PH model; concentration unit is mg/l
@@ -994,7 +571,7 @@ subroutine ecosystem(it)
 
       !update concentration of state variables
       do i=1,ntrs_icm
-        wqc(i,k)=wqc(i,k)+dtw*(dwqc(i)+sink(i)+(srat(k)*sflux(i)+brat(k)*bflux(i)/dz(k))+zdwqc(i)+sdwqc(i)+vdwqc(i))
+        wqc(i,k)=wqc(i,k)+dtw*(dwqc(i)+sink(i)+(srat(k)*sflux(i)+brat(k)*bflux(i)/dz(k))+zdwqc(i)+sdwqc(i,k)+vdwqc(i,k))
       enddo !i
     enddo !k=1,nv
 
@@ -1083,6 +660,458 @@ subroutine ecosystem(it)
   endif
 
 end subroutine ecosystem
+
+subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS) 
+!--------------------------------------------------------------------------------------
+!VEG computation
+!--------------------------------------------------------------------------------------
+  use schism_glbl,only : rkind,nvrt,idry_e
+  use schism_msgp, only : myrank,parallel_abort
+  use icm_mod
+  implicit none
+  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
+  integer,intent(in) :: id,kb
+  real(rkind),intent(in) :: vhtz(3),rIa0,tdep,zid(nvrt),dz(nvrt),rKe0(nvrt),rKeS(nvrt)
+  !real(rkind),intent(out) :: vGP(3)
+
+  !local variables
+  integer :: k,j,m
+  real(rkind) :: rKehV(3,2),atemp,asalt,xT,xS,vfT,vfST,vrat,vfI,vLight,tmp,mLight
+  real(rkind) :: rIK,vfR,vfN,vfP,sdveg,vGP(3),vfMT(3,3),rtmp,vdzm,vdz,vPBM(3,3),a,b
+  real(rkind) :: vBM(3),vGM(3)
+
+  !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
+  !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
+  !if(iTBen/=0) then !simplified sediment fluxes
+  !  CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
+  !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
+  !endif !iTBen
+
+  !light attenuation for veg growth
+  rKehV=0.0; vGP=0.0
+  if(rIa0>30) then
+    !pre-compute light for VEG
+    do k=nvrt,kb+1,-1
+      if(idry_e(id)==1) then !dry elem
+        do j=1,3
+          if(tdep-vht(id,j)>1.e-5) then
+            !if canopy is in this layer !potentail bug, dep-> tdep
+            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-vht(id,j))
+            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*vht(id,j)
+          else
+            !if this layer is under canopy
+            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
+          endif !tdep
+        enddo !j::veg species
+      else !wet elem
+        do j=1,3
+          if(zid(k-1)>=vhtz(j)) then
+            !if there are layers above canopy
+            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*dz(k)
+          elseif(zid(k-1)<vhtz(j).and.zid(k)>=vhtz(j)) then
+            !if canopy is in this layer
+            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-(vhtz(j)-zid(k-1)))
+            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*(vhtz(j)-zid(k-1))
+          else
+            !if this layer is under canopy
+            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
+          endif !zid
+        enddo !j::veg species
+      endif !idry_e
+    enddo !k
+
+    sdveg=dot_product(vKe(1:3),vtleaf(id,1:3)+vtstem(id,1:3)/2) !shading effect
+    do j=1,3
+      !tempreture effect
+      atemp=0.0; do k=kb+1,nvrt; atemp=atemp+temp(k)*dz(k); enddo
+      xT=atemp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
+      if(xT<=0.0)then
+        vfT=exp(-vKTGP(j,1)*xT*xT)
+      else
+        vfT=exp(-vKTGP(j,2)*xT*xT)
+      endif
+
+      !salinty stress
+      asalt=0.0; do k=kb+1,nvrt; asalt=asalt+salt(k)*dz(k); enddo
+      xS=asalt/max(tdep,1.d-2)-vSopt(j)
+      vfST=vScr(j)/(max(vScr(j)+xS*xS,1.d-2))
+
+      !inundation stress in wet elem !ratio of tdep versus vht, tdep>0 checked
+      vrat=vht(id,j)/tdep
+      vfI=vrat/max(vInun(j)+vrat,1.d-2)
+
+      !light supply
+      vLight=rIa0*exp(-rKehV(j,1)) !accumulated attenuation from PB, sav and other marsh species
+      tmp=sdveg+rKehV(j,2)
+
+      if(tmp>20) then
+        mLight=vLight*rrat/tmp
+      elseif(tmp<0.02)then
+        mLight=vLight*rrat
+      else
+        mLight=vLight*rrat*(1-exp(-tmp))/tmp
+      endif
+      rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
+      vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
+
+      vfN=CNH4(id)/(vKhNs(j)+CNH4(id))
+      vfP=CPIP(id)/(vKhPs(j)+CPIP(id))
+      if(ivNs==0) vfN=1
+      if(ivPs==0) vfP=1
+
+      !lf growth rate as function of temp, salinty stress, inundation
+      !stress, light and nutrients
+      vGP(j)=vGPM(j)*vfT*vfST*vfI*vfR*min(vfN,vfP)/vc2dw(j)
+    enddo !j::veg species
+  endif !rIa>30
+
+  do k=kb+1,nvrt
+    if(k==(kb+1)) then
+      !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
+      vfMT=1.0
+      do j=1,3
+        if(ivMT==1) then
+          rtmp=vKTMT(j,1)*(mtemp-vTMT(j,1))-vMT0(j,1)
+          vfMT(j,1)=1+vMTcr(j,1)/(1+exp(rtmp))
+
+          rtmp=vKTMT(j,2)*(mtemp-vTMT(j,2))-vMT0(j,2)
+          vfMT(j,2)=1+vMTcr(j,2)/(1+exp(rtmp))
+        endif !iMortvey
+
+        !----------metabolism rate----------
+        do m=1,3; vPBM(j,m)=vfMT(j,m)*vBMP(j,m)*exp(vKTBP(j,m)*(mtemp-vTBP(j,m))); enddo
+
+        !calculation of biomass, lfveg(j)
+        a=vGP(j)*(1-vFAM(j))*vFCP(j,1)-vPBM(j,1) !1/day
+        vtleaf(id,j)=(1+dtw*a)*vtleaf(id,j)
+
+        !stveg
+        a=-vPBM(j,2)
+        b=vGP(j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(id,j)
+        vtstem(id,j)=(1+dtw*a)*vtstem(id,j)+dtw*b
+
+        !rtveg
+        a=-vPBM(j,3)
+        b=vGP(j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(id,j)
+        vtroot(id,j)=(1+dtw*a)*vtroot(id,j)+dtw*b
+
+        !compute veg canopy height
+        if(vtleaf(id,j)+vtstem(id,j)<vcrit(j)) then
+          vht(id,j)=vht0(j)+v2ht(j,1)*(vtleaf(id,j)+vtstem(id,j))
+        else
+          vht(id,j)=max(vht0(j)+v2ht(j,1)*vcrit(j)-v2ht(j,2)*(vtleaf(id,j)+vtstem(id,j)-vcrit(j)),1.d-2)
+        endif !
+        if(vht(id,j)<1.d-8) call parallel_abort('check vht computation')
+
+        !seeds
+        vtleaf(id,j)=max(vtleaf(id,j),1.d-5)
+        vtstem(id,j)=max(vtstem(id,j),1.d-5)
+        vtroot(id,j)=max(vtroot(id,j),1.d-5)
+
+        !nutrient fluxes, sum of (g/m^2/day)
+        vBM(j)=(vPBM(j,1)+vGP(j)*vFAM(j))*vtleaf(id,j)+vPBM(j,2)*vtstem(id,j)
+        vGM(j)=vGP(j)*vtleaf(id,j)
+
+        !nutrient fluxes into sediment ( g/m^2/day)
+        vleaf_NH4(id,j)=vn2c(j)*vGM(j)
+        vleaf_PO4(id,j)=vp2c(j)*vGM(j)
+        vroot_POC(id,j)=(1-vFCM(j,4))*vPBM(j,3)*vtroot(id,j)
+        vroot_PON(id,j)=vn2c(j)*vPBM(j,3)*vtroot(id,j)
+        vroot_POP(id,j)=vp2c(j)*vPBM(j,3)*vtroot(id,j)
+        vroot_DOX(id,j)=vo2c(j)*vFCM(j,4)*vPBM(j,3)*vtroot(id,j)
+        if(ivNc==0) then
+          vleaf_NH4(id,j)=vleaf_NH4(id,j)-vn2c(j)*vFNM(j,4)*vBM(j)
+          vroot_PON(id,j)=vroot_PON(id,j)+vn2c(j)*(1-vFNM(j,4))*vBM(j)
+        endif
+        if(ivPc==0) then
+          vleaf_PO4(id,j)=vleaf_PO4(id,j)-vp2c(j)*vFPM(j,4)*vBM(j)
+          vroot_POP(id,j)=vroot_POP(id,j)+vp2c(j)*(1-vFPM(j,4))*vBM(j)
+        endif
+      enddo !
+    endif !k==1
+
+    !compute VEG metabolism into C/N/P/DO
+    vdzm=max(1.e-5,min(tdep,vht(id,j))); vdz=max(1.e-5,vht(id,j))
+
+    do j=1,3
+      if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then
+        vdwqc(iRPOC,k)=vdwqc(iRPOC,k)+vFCM(j,1)*vBM(j)/vdzm
+        vdwqc(iLPOC,k)=vdwqc(iLPOC,k)+vFCM(j,2)*vBM(j)/vdzm
+        vdwqc(iDOC,k) =vdwqc(iDOC,k) +vFCM(j,3)*vBM(j)/vdzm
+        vdwqc(iDOX,k) =vdwqc(iDOX,k) -vo2c(j)*vFCM(j,4)*vBM(j)/vdzm 
+        if(ivNc==1) then
+          vdwqc(iRPON,k)=vdwqc(iRPON,k)+vn2c(j)*vFNM(j,1)*vBM(j)/vdzm
+          vdwqc(iLPON,k)=vdwqc(iLPON,k)+vn2c(j)*vFNM(j,2)*vBM(j)/vdzm
+          vdwqc(iDON,k) =vdwqc(iDON,k) +vn2c(j)*vFNM(j,3)*vBM(j)/vdzm
+          vdwqc(iNH4,k) =vdwqc(iNH4,k) +vn2c(j)*vFNM(j,4)*vBM(j)/vdzm
+        endif 
+        if(ivPc==1) then
+          vdwqc(iRPOP,k)=vdwqc(iRPOP,k)+vp2c(j)*vFPM(j,1)*vBM(j)/vdzm
+          vdwqc(iLPOP,k)=vdwqc(iLPOP,k)+vp2c(j)*vFPM(j,2)*vBM(j)/vdzm
+          vdwqc(iDOP,k) =vdwqc(iDOP,k) +vp2c(j)*vFPM(j,3)*vBM(j)/vdzm
+          vdwqc(iPO4,k) =vdwqc(iPO4,k) +vp2c(j)*vFPM(j,4)*vBM(j)/vdzm
+        endif 
+      endif
+
+      if(tdep-vht(id,j)>1.e-5.or.(tdep-vht(id,j)<=1.e-5.and.zid(k-1)<vhtz(j))) then
+        vdwqc(iDOX,k) =vdwqc(iDOX,k)+vo2c(j)*vGM(j)/vdz 
+      endif
+    enddo !j
+  enddo !k
+
+end subroutine veg_calc
+
+subroutine zoo_calc(k,PR)
+!--------------------------------------------------------------------------------------
+!note: fish can eat zooplanktons and phytoplanktons, while zooplankton can eat
+!other zooplanktons, all phytoplankton and carbon species
+!--------------------------------------------------------------------------------------
+  use schism_glbl, only : rkind
+  use icm_mod
+  implicit none
+  integer,intent(in) :: k
+  real(rkind),intent(inout) :: PR(:)
+
+  !local variables
+  integer :: i,j,m
+  real(rkind) :: xT,fT,zBG(8,2),zBM(2),zMTB(2),fishZ(2),fishP(3)
+  real(rkind) :: prey(8),nprey(8,2)
+  
+  !prey and normalized prey of zooplankton
+  prey=(/ZBS(1:2,k),PBS(1:3,k),RPOC(k),LPOC(k),DOC(k)/)
+  do i=1,2; do j=1,8; nprey(j,i)=prey(j)/zKhG(j,i); enddo; enddo
+
+  !zooplankton predation rate: zBG(prey=1:8,ZB=1:2)
+  do i=1,2
+    !temp. effect
+    xT=temp(k)-zTGP(i)
+    if(xT<0.0) then
+      fT=exp(-zKTGP(i,1)*xT*xT)
+    else
+      fT=exp(-zKTGP(i,2)*xT*xT)
+    endif
+
+    !growth rate (predation rate)
+    do j=1,8
+      zBG(j,i)=zGPM(j,i)*ZBS(i,k)*fT*nprey(j,i)/(1.0+sum(nprey(1:8,i)))
+    enddo
+
+    !metabolism, mortality and predation
+    zBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i)))*ZBS(i,k)
+    zMTB(i)=zMT(i)*ZBS(i,k)
+    fishZ(i)=z2pr(i)*sum(prey(1:5))*ZBS(i,k)
+  enddo !i
+
+  !ZB1, ZB2
+  dZB1=sum(zBG(1:8,1))*zAG*(1-zRG)-zBM(1)-zMTB(1)-fishZ(1)-zBG(1,2)
+  dZB2=sum(zBG(1:8,2))*zAG*(1-zRG)-zBM(2)-zMTB(2)-fishZ(2)-zBG(2,1)
+
+  !Fish/ZB predation on PB
+  do m=1,3 !PB
+    !modified PB predation . The actual predation on PB is: fishP(m)+sum(zBG(m+2,1:2)) 
+    fishP(m)=p2pr*sum(prey(1:5))*PBS(m,k) !Fish=>PB
+    PR(m)=fishP(m)+(1.0-zAG*(1.0-zRG))*sum(zBG(m+2,1:2))  !Fish=>PB, ZB=>PB (partial)
+    zdPBS(m)=-zAG*(1.0-zRG)*sum(zBG(m+2,1:2))  !ZB=>PB (partial)
+  enddo
+
+  !compute additional C/N/P/S terms
+  do m=1,4 !nutrient species
+    if(m<=3) zdC(m)=zdC(m)-(zRG+zAG*(1.0-zRG))*sum(zBG(m+5,1:2)) !ZB=>C
+
+    !respiration cost 
+    do j=1,3 !PB
+      if(m<=3) zdC(m)=zdC(m)-FCP(j,m)*zRG*sum(zBG(j+2,1:2)) !ZB=>PB (respiration cost)
+    enddo
+
+    !ZB/Fish predation on ZB, and ZB mortality, ZB metabolism
+    do j=1,2 !ZB
+      if(m<=3) zdC(m)=zdC(m)+zFCP(m)*((1.0-zAG)*(1.0-zRG)*sum(zBG(1:2,j))+fishZ(j)+zMTB(j)) !ZB=>ZB, Fish=>ZB, ZB mortality
+      if(m==3) zdC(m)=zdC(m)+(zFCM(j)+(1.0-zFCM(j))*zKhDO(j)/(DOX(k)+zKhDO(j)))*zBM(j) !ZB metabolism
+      if(m==1) zdDOX=zdDOX-o2c*((1.0-zFCM(j))*DOX(k)/(DOX(k)+zKhDO(1)))*zBM(j)         !ZB metabolism
+
+      zdN(m)=zdN(m)+zFNP(m)*zn2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFNM(j,m)*zn2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
+      zdP(m)=zdP(m)+zFPP(m)*zp2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFPM(j,m)*zp2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
+      if(m<=2) zdS(m)=zdS(m)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFSM(j,m)*zs2c(j)*zBM(j)
+    enddo
+  enddo
+
+end subroutine zoo_calc
+
+subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
+  use schism_glbl, only : rkind,errmsg,idry_e,nvrt
+  use icm_mod
+  implicit none
+  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
+  integer,intent(in) :: id,kb
+  real(rkind),intent(in) :: rIa0,shtz,tdep
+  real(rkind),intent(in),dimension(nvrt) :: dz,zid,rKe0,rKeV,PO4d
+  !real(rkind),intent(out) :: sGP(nvrt)
+  !real(rkind),intent(out) :: sdwqca(ntrs_icm,nvrt)
+
+  !local variables
+  integer :: knp,k,m
+  real(rkind) :: a,b,hdep,sdep,rKeh0,rKeh2,xT,sfT,sfR,sfN,sfP,sLight0,sLight
+  real(rkind) :: dzt,tmp,mLight,rIK,sdz,sBM,sGM,sRM,sPBM(nvrt,3),sfPN,sfNs,sfPs
+  real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1),sGP(nvrt)
+
+  sGP=0.0
+  if(idry_e(id)/=1) then
+    !compute total leaf and stem biomass down to each layer; for wet elem.
+    !only
+    szleaf=-99; szstem=-99
+    do k=kb+1,nvrt
+      if(zid(k-1)<shtz) then
+        szleaf(k-1)=sum(sleaf(k:nvrt,id))
+        szstem(k-1)=sum(sstem(k:nvrt,id))
+      endif
+    enddo
+
+    !Init for every layer and timestep at current elem
+    hdep=0.0
+    sdep=max(tdep-sht(id),0.d0) !submergence
+
+    !canopy (sht) is always at or below surface and so knp would stay at 1 or
+    !more
+    knp=nvrt
+    do k=kb+1,nvrt
+      if(zid(k-1)<shtz.and.zid(k)>=shtz) then
+        knp=k
+        exit
+      endif !knp
+    enddo !k
+  endif!jsav
+
+  if(rIa0>30) then
+    !above canopy; new half layer under canopy;  accumulated above current layer
+    !under canopy
+    rKeh0=0.0;  rKeh2=0.0
+
+    do k=nvrt,kb+1,-1
+      !rKeh0 accumulate basic water column attenuation from surface to layer above canopy
+      !hdep: total distance from surface to the bottom level of the layer above sav canopy
+      if(zid(k-1)>=shtz) then
+          rKeh0=rKeh0+(rKe0(k)+rKeV(k))*dz(k);  hdep=hdep+dz(k)
+      endif !isav
+
+      if(zid(k-1)<shtz) then
+        xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
+        if(xT<=0.0) then
+          sfT=exp(-sKTGP(1)*xT*xT)
+        else
+          sfT=exp(-sKTGP(2)*xT*xT)
+        endif
+
+        sLight0=max(rIa0*exp(-rKeh0),0.d0) !account from light at water surface light at canopy height
+        if (k==knp) then!k from surface downwards, knp is the first, so no need to over init
+          sLight=sLight0*max(exp(-(rKe0(k)+rKeV(k))*(sdep-hdep)),1.d-5)
+        endif !k==knp
+
+        !light on leave
+        if(szleaf(k-1)>=0.0.and.szstem(k-1)>=0.0) then !below canopy
+          if (k==knp) then
+            !half of thickness for light attenuation
+            dzt=(shtz-zid(k-1))/2.0
+            tmp=(rKe0(k)+rKeV(k))*dzt+sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
+            rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt  !accumulation from canopy downwards
+          else
+            dzt=(zid(k)-zid(k-1))/2.0
+            tmp=rKeh2+ (rKe0(k)+rKeV(k))*dzt+sKe*(szleaf(k-1)+szstem(k-1)-(sleaf(k,id)+sstem(k,id))/2.)
+            rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
+          endif !knp
+
+          mLight=max(sLight*rrat*(1-exp(-tmp))/tmp,1.d-5)
+          rIK=sGPM*sfT/salpha
+
+          !light limitation function for sav
+          sfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
+
+        else
+          sfR=1
+        endif !szleaf(k+1)>0.and.szstem(k+1)>0
+
+        !N/P limitation function
+        sfN=(NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)
+        sfP=(PO4d(k)+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+CPIP(id)*sKhPw/sKhPs)
+
+        !calculation of lf growth rate [1/day] as function of temp, light, N/P
+        !sc2dw checked !>=0 with seeds, =0 for no seeds
+        sGP(k)=sGPM*sfT*min(sfR,sfN,sfP)/sc2dw
+      endif
+    enddo !k
+
+    !extend sav growth rate upward
+    if(knp<nvrt)then
+      do k=knp+1,nvrt
+        if(sleaf(k,id)>1.e-3)then
+          sGP(k)=sGP(knp)
+        endif !sleaf>0
+      enddo !k
+    endif !knp
+  endif !rIa>30
+
+  !---------------------------------------------------------------
+  !SAV computation
+  !---------------------------------------------------------------
+  do k=kb+1,nvrt   
+    sBM=0; sdz=max(1.e-5,dz(k))
+    !pre-calculation for metabolism rate;  no relation with light, alweys respire
+    do m=1,3; sPBM(k,m)=sBMP(m)*exp(sKTBP(m)*(temp(k)-sTBP(m))); enddo
+
+    !calculation of biomass !sleaf
+    a=sGP(k)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
+    sleaf(k,id)=(1+dtw*a)*sleaf(k,id)
+
+    !sstem
+    a=-sPBM(k,2) !>0
+    b=sGP(k)*(1.-sFAM)*sFCP(2)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+    sstem(k,id)=(1+dtw*a)*sstem(k,id)+dtw*b
+
+    !sroot
+    a=-sPBM(k,3) !>0
+    b=sGP(k)*(1.-sFAM)*sFCP(3)*sleaf(k,id) !RHS>=0, =0 for night with sleaf>0 with seeds
+    sroot(k,id)=(1+dtw*a)*sroot(k,id)+dtw*b
+   
+    !Pre-compute SAV terms
+    !if(k==nvrt) then
+    if(k==(kb+1)) then
+      sleaf_NH4(id)=0; sleaf_PO4(id)=0; sroot_POC(id)=0
+      sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0
+    endif
+    if (zid(k-1)<shtz) then
+      sBM=((sPBM(k,1)+sGP(k)*sFAM)*sleaf(k,id)+sPBM(k,2)*sstem(k,id))/sdz
+      sGM=sGP(k)*sleaf(k,id)/sdz
+      sRM=sPBM(k,3)*sroot(k,id)
+
+      !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
+      sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(NH4(k)+NO3(k)+1.e-6))
+      sfNs=CNH4(id)/(CNH4(id)+(NH4(k)+NO3(k))*sKhNs/sKhNw+1.e-8)
+      sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
+
+      sdwqc(iRPOC,k) = sFCM(1)*sBM                        
+      sdwqc(iLPOC,k) = sFCM(2)*sBM                          
+      sdwqc(iDOC,k)  = sFCM(3)*sBM                          
+      sdwqc(iRPON,k) = sn2c*sFNM(1)*sBM                     
+      sdwqc(iLPON,k) = sn2c*sFNM(2)*sBM                     
+      sdwqc(iDON,k)  = sn2c*sFNM(3)*sBM                     
+      sdwqc(iNH4,k)  = sn2c*(sFNM(4)*sBM-(1-sfNs)*sfPN*sGM) 
+      sdwqc(iNO3,k)  =-sn2c*(1-sfNs)*(1-sfPN)*sGM           
+      sdwqc(iRPOP,k) = sp2c*sFPM(1)*sBM             
+      sdwqc(iLPOP,k) = sp2c*sFPM(2)*sBM                  
+      sdwqc(iDOP,k)  = sp2c*sFPM(3)*sBM                  
+      sdwqc(iPO4,k)  = sp2c*(sFPM(4)*sBM-(1-sfPs)*sGM)      
+      sdwqc(iDOX,k)  = so2c*(-sFCM(4)*sBM+sGM)              
+
+      !N/P uptake from sediemnt; and root metabolism into sediment 
+      sleaf_NH4(id)=sleaf_NH4(id)+sn2c*sfNs*sGM*sdz
+      sleaf_PO4(id)=sleaf_PO4(id)+sp2c*sfPs*sGM*sdz
+      sroot_POC(id)=sroot_POC(id)+(1-sFCM(4))*sRM
+      sroot_PON(id)=sroot_PON(id)+sn2c*sRM
+      sroot_POP(id)=sroot_POP(id)+sp2c*sRM
+      sroot_DOX(id)=sroot_DOX(id)+so2c*sFCM(4)*sRM
+    endif
+  enddo
+
+end subroutine sav_calc
 
 subroutine ph_calc(temp,salt,TIC,ALK,pH,CO2,CAsat)
 !----------------------------------------------------------------------------
@@ -1333,19 +1362,3 @@ subroutine ph_f(f,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
   endif
 
 end subroutine ph_f
-
-function fnan(rval)
-  implicit none
-  real(8), intent(in) :: rval
-  logical :: fnan
-
-  fnan=rval/=rval
-end function fnan
-
-function frange(rval,vmin,vmax)
-  implicit none
-  real(8), intent(in) :: rval,vmin,vmax
-  logical :: frange
-
-  frange=.not.(rval>=vmin .and. rval<=vmax)
-end function frange
