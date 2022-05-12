@@ -13,7 +13,7 @@
 #####################################################################
 #
 #Default is NO_PARMETIS=OFF, i.e. use ParMETIS
-set(NO_PARMETIS ON CACHE BOOLEAN "Turn off ParMETIS")
+set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
 
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
