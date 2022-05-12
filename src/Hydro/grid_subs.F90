@@ -296,7 +296,7 @@ subroutine partition_hgrid
 #ifdef NO_PARMETIS
     !Offline paritition by reading from input similar to global_to_local.prop
     if(myrank==0) then
-      open(10,file=in_dir(1:len_in_dir)//'global_to_local.in',status='old')
+      open(10,file=in_dir(1:len_in_dir)//'partition.prop',status='old')
       do i=1,ne_global 
         read(10,*)j,iegrpv(i)
       enddo

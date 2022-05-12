@@ -40,8 +40,7 @@
 ! Optional parameters. The values shown below are default unless otherwise noted
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !-----------------------------------------------------------------------
-! Optional offline partitioning using NO_PARMETIS. If on, need global_to_local.in (like global_to_local.prop).
-! The default (0) is off i.e. use ParMETIS
+! Optional offline partitioning using NO_PARMETIS. If on, need partition.prop (like global_to_local.prop).
 !-----------------------------------------------------------------------
 
 
