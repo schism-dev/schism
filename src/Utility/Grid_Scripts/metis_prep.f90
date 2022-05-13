@@ -32,8 +32,8 @@
   real(4),allocatable :: tpwgts(:),ubvec(:)
   
 
-  print*, 'Input # of MPI processes (compute):'
-  read*, nproc
+!  print*, 'Input # of MPI processes (compute):'
+!  read*, nproc
 
   do k=3,4 !elem. type
     do i=1,k  !local index
