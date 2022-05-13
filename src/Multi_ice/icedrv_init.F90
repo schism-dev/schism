@@ -30,6 +30,7 @@
       subroutine init_state()
  
           use icepack_intfc, only: icepack_aggregate
+          use mice_module,             only: ihot_mice   
     
           implicit none
     
@@ -199,7 +200,9 @@
           ! Set state variables
           !-----------------------------------------------------------------
 
-          call init_state_var()        
+          call init_state_var()    
+
+          if(ihot_mice == 1)    call mice_hotstart_var()
     
       end subroutine init_state
 
@@ -512,6 +515,7 @@
           dardg1dt(:) = c0
           dardg2dt(:) = c0
           dvirdgdt(:) = c0
+          opening (:) = c0
           daidtd  (:) = aice(:) ! temporary initial area
           dvidtd  (:) = vice(:) ! temporary initial volume
           if (tr_iage) &
@@ -1210,6 +1214,468 @@
       end subroutine init_state_var
 
 !=======================================================================
+
+      subroutine mice_hotstart_var ()
+         use schism_glbl, only:in_dir,np,len_in_dir,np_global,ipgl,npa
+         use schism_msgp, only: parallel_abort,exchange_p2d
+         use netcdf
+        implicit none
+
+        integer (kind=int_kind)   :: i, j, k, iblk, &     ! counting indices
+                                     nt_Tsfc, nt_sice, nt_qice, nt_qsno,    &
+                                     nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
+                                     nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
+                                     ktherm,  nt_fbri,                      &
+                                     var1d_dim(1),var2d_dim(2),var3d_dim(3),&
+                                     ice_ntr_dim,ncid2,mm,ip
+
+        logical (kind=log_kind)   ::                        &
+             solve_zsal, skl_bgc, z_tracers,                &
+             tr_iage, tr_FY, tr_lvl, tr_aero, tr_pond_cesm, &
+             tr_pond_topo, tr_pond_lvl, tr_brine,           &
+             tr_bgc_N, tr_bgc_C, tr_bgc_Nit,                &
+             tr_bgc_Sil,  tr_bgc_DMS,                       &
+             tr_bgc_chl,  tr_bgc_Am,                        &
+             tr_bgc_PON,  tr_bgc_DON,                       &
+             tr_zaero,    tr_bgc_Fe,                        &
+             tr_bgc_hum
+        real(kind=dbl_kind), allocatable, dimension(:,:) :: &
+         swild,swild2
+        character(500)            :: longname
+        character(500)            :: filename
+        character(500)            :: trname, units
+
+
+
+         call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_sice_out=nt_sice, &
+             nt_qice_out=nt_qice, nt_qsno_out=nt_qsno)
+        call icepack_query_tracer_indices(                                          &
+             nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, nt_ipnd_out=nt_ipnd,         &
+             nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_Tsfc_out=nt_Tsfc,         &
+             nt_iage_out=nt_iage, nt_FY_out=nt_FY,                                  &
+             nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
+             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno)
+        call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
+             skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
+        call icepack_query_tracer_flags(                                            &
+             tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
+             tr_aero_out=tr_aero, tr_pond_cesm_out=tr_pond_cesm,                    &
+             tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
+             tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
+             tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
+             tr_bgc_DMS_out=tr_bgc_DMS,                                             &
+             tr_bgc_chl_out=tr_bgc_chl, tr_bgc_Am_out=tr_bgc_Am,                    &
+             tr_bgc_PON_out=tr_bgc_PON, tr_bgc_DON_out=tr_bgc_DON,                  &
+             tr_zaero_out=tr_zaero,     tr_bgc_Fe_out=tr_bgc_Fe,                    &
+             tr_bgc_hum_out=tr_bgc_hum)
+        call icepack_warnings_flush(nu_diag)
+         
+         allocate(swild2(ncat,npa),swild(npa,ncat)) 
+
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('mice_init: hotstart.nc not found')
+
+
+          !hotstart var
+        j=nf90_inq_varid(ncid2, "aicen",mm)
+        if(j/=NF90_NOERR) call parallel_abort('mice_init: nc aicen1')
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+            j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc aicen2')
+          endif
+        enddo
+        swild = transpose(swild2)
+        aicen(1:npa,1:ncat) = swild
+
+
+        j=nf90_inq_varid(ncid2, "vicen",mm)
+        if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vicen1')
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+            j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vicen2')
+          endif
+        enddo
+        swild = transpose(swild2)
+        vicen(1:npa,1:ncat) = swild
+
+         j=nf90_inq_varid(ncid2, "vsnon",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vsnon1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vsnon2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         vsnon(1:npa,1:ncat) = swild
+
+         j=nf90_inq_varid(ncid2, "Tsfc",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc Tsfc1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc Tsfc2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_Tsfc,1:ncat) = swild
+
+        !call def_variable_2d(ip_id, 'aicen',  (/nod2D, ncat/), 'sea ice concentration',       'none', aicen(:,:));
+        !call def_variable_2d(ip_id, 'vicen',  (/nod2D, ncat/), 'volum per unit area of ice',  'm',    vicen(:,:));
+        !call def_variable_2d(ip_id, 'vsnon',  (/nod2D, ncat/), 'volum per unit area of snow', 'm',    vsnon(:,:));
+        !call def_variable_2d(ip_id, 'Tsfc',   (/nod2D, ncat/), 'sea ice surf. temperature',   'degC', trcrn(:,nt_Tsfc,:));
+
+        if (tr_iage) then
+
+         j=nf90_inq_varid(ncid2, "iage",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc iage1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc iage2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_iage,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'iage',  (/nod2D, ncat/), 'sea ice age', 's', trcrn(:,nt_iage,:));
+      end if
+    
+      if (tr_FY) then
+
+         j=nf90_inq_varid(ncid2, "FY",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc FY1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc FY2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_FY,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'FY',  (/nod2D, ncat/), 'first year ice', 'none', trcrn(:,nt_FY,:));
+      end if
+    
+      if (tr_lvl) then
+
+         j=nf90_inq_varid(ncid2, "alvl",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc alvl1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc alvl2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_alvl,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'alvl',  (/nod2D, ncat/), 'ridged sea ice area',   'none', trcrn(:,nt_alvl,:));
+
+         j=nf90_inq_varid(ncid2, "vlvl",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vlvl1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc vlvl2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_vlvl,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'vlvl',  (/nod2D, ncat/), 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:));
+      end if
+    
+      if (tr_pond_cesm) then
+
+         j=nf90_inq_varid(ncid2, "apnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm apnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm apnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_apnd,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
+
+         j=nf90_inq_varid(ncid2, "hpnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm hpnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm hpnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_hpnd,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
+      end if
+    
+      if (tr_pond_topo) then
+
+         j=nf90_inq_varid(ncid2, "apnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo apnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo apnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_apnd,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction',  'none', trcrn(:,nt_apnd,:));
+
+         j=nf90_inq_varid(ncid2, "hpnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo hpnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo hpnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_hpnd,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',          'm',    trcrn(:,nt_hpnd,:));
+
+         j=nf90_inq_varid(ncid2, "ipnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo ipnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc topo ipnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_ipnd,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'ipnd',  (/nod2D, ncat/), 'melt pond refrozen lid thickness', 'm',    trcrn(:,nt_ipnd,:));
+      end if
+    
+      if (tr_pond_lvl) then
+
+         j=nf90_inq_varid(ncid2, "apnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl apnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl apnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_apnd,1:ncat) = swild
+
+         ! call def_variable_2d(ip_id, 'apnd',    (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
+
+         j=nf90_inq_varid(ncid2, "hpnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl hpnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl hpnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_hpnd,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'hpnd',    (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
+
+         j=nf90_inq_varid(ncid2, "ipnd",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl ipnd1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl ipnd2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_ipnd,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'ipnd',    (/nod2D, ncat/), 'melt pond refrozen lid thickness', 'm',    trcrn(:,nt_ipnd,:));
+
+         j=nf90_inq_varid(ncid2, "ffracn",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl ffracn1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl ffracn2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         ffracn(1:npa,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'ffracn',  (/nod2D, ncat/), 'fraction of fsurfn over pond used to melt ipond',   'none', ffracn);
+
+         j=nf90_inq_varid(ncid2, "dhsn",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl dhsn1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc lvl dhsn2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         dhsn(1:npa,1:ncat) = swild
+
+
+          !call def_variable_2d(ip_id, 'dhsn',    (/nod2D, ncat/), 'depth difference for snow on sea ice and pond ice', 'm',    dhsn);
+      end if
+    
+      if (tr_brine) then
+
+         j=nf90_inq_varid(ncid2, "fbri",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc fbri1')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc fbri2')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_fbri,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'fbri',       (/nod2D, ncat/), 'volume fraction of ice with dynamic salt', 'none',    trcrn(:,nt_fbri,:));
+
+         j=nf90_inq_varid(ncid2, "first_ice",mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc first_icea')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc first_iceb')
+            endif
+         enddo
+         swild = transpose(swild2)
+         first_ice_real(1:npa,1:ncat) = swild
+
+          !call def_variable_2d(ip_id, 'first_ice',  (/nod2D, ncat/), 'distinguishes ice that disappears',        'logical', first_ice_real(:,:));
+      end if
+            
+        !-----------------------------------------------------------------
+        ! 4D restart fields, written as layers of 3D
+        !------------------------------------------------
+      !ice
+      do k = 1,nilyr
+        write(trname,'(A6,i1)') 'sicen_', k
+        write(longname,'(A21,i1)') 'sea ice salinity lyr:', k
+        units='psu'
+
+         j=nf90_inq_varid(ncid2, trim(trname),mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_a')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_b')
+               !write(12,*) mm,ip,np,npa,swild2(:,ip)
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_sice+k-1,1:ncat) = swild
+
+        !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_sice+k-1,:));
+      end do
+
+      do k = 1,nilyr
+
+        write(trname,'(A6,i1)') 'qicen_', k
+        write(longname,'(A21,i1)') 'sea ice enthalpy lyr:', k
+        units='J/m3'
+
+         j=nf90_inq_varid(ncid2, trim(trname),mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_a')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_b')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_qice+k-1,1:ncat) = swild
+
+        !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qice+k-1,:));
+     end do
+   
+     ! Snow
+   
+     do k = 1,nslyr
+        write(trname,'(A6,i1)') 'qsnon_', k
+        write(longname,'(A18,i1)') 'snow enthalpy lyr:', k
+        units='J/m3'
+
+         j=nf90_inq_varid(ncid2, trim(trname),mm)
+         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_a')
+         do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+               ip=ipgl(i)%id
+               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sicen_b')
+            endif
+         enddo
+         swild = transpose(swild2)
+         trcrn(1:npa,nt_qsno+k-1,1:ncat) = swild
+
+        !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qsno+k-1,:));
+     end do
+        j=nf90_close(ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('mice_init: nc close')
+      deallocate(swild,swild2)
+      end subroutine mice_hotstart_var
 
       end submodule icedrv_init
 

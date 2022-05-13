@@ -13,13 +13,13 @@ subroutine ice_init
     real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
    &det,der_transp(3,2),derivative_stdbf(2,3),ar1,ar2
 
-    namelist /ice_in/ice_tests,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
+    namelist /ice_in/ice_tests,ihot_mice,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
    &delta_min,theta_io,mevp_alpha1,mevp_alpha2,pstar,ellipse,c_pressure,niter_fct, &
    &ice_gamma_fct,h_ml0,salt_ice,salt_water
     
     !Init parameters
     !integers
-    ice_tests=-1e6; ice_advection=-1e6; ice_therm_on=-1e6; ievp=-1e6; evp_rheol_steps=-1e6;
+    ice_tests=-1e6;ihot_mice=-1e6; ice_advection=-1e6; ice_therm_on=-1e6; ievp=-1e6; evp_rheol_steps=-1e6;
     mevp_rheol_steps=-1e6; niter_fct=-1e6; 
     !Doubles
     ice_cutoff=-huge(1.d0); delta_min=-huge(1.d0); theta_io=-huge(1.d0);
@@ -32,6 +32,7 @@ subroutine ice_init
     close(10)
   !Check
     if(ice_tests/=0.and.ice_tests/=1) call parallel_abort('ice_init: ice_tests')
+    if(ihot_mice/=0.and.ihot_mice/=1) call parallel_abort('ice_init: ihot_mice')
     if(ice_advection/=0.and.ice_advection/=1.and.ice_advection/=2.and.ice_advection/=3) call parallel_abort('ice_init: ice_advection')
     if(ice_therm_on/=0.and.ice_therm_on/=1) call parallel_abort('ice_init: ice_therm_on')
     if(ievp/=0.and.ievp/=1.and.ievp/=2) call parallel_abort('ice_init: ievp')
@@ -56,7 +57,7 @@ subroutine ice_init
      &v_ocean(npa),area_median(np),voltriangle(nea),bafux(3,nea),bafuy(3,nea), &
      &ice_matrix(0:mnei_p,np),lump_ice_matrix(npa),delta_ice(nea),t_oi(npa),fresh_wa_flux0(npa), &
      &net_heat_flux0(npa),m_snow0(npa),a_ice0(npa),m_ice0(npa),evaporation(npa),stress_atmice_x(npa),&
-     &stress_atmice_y(npa),fsrad_ice_out0(npa),stat=istat)
+     &stress_atmice_y(npa),fsrad_ice_out0(npa),Tbu(npa),strength(npa),stat=istat)
      if(istat/=0) call parallel_abort('ice_init: alloc (1)')
      !  if(ice_therm_on==1) then
      !    allocate(t_oi(npa),stat=istat)
@@ -66,7 +67,7 @@ subroutine ice_init
        t_oi=0 !init T @snow/ice surface in C
        u_ice=0; v_ice=0; sigma11=0; sigma12=0; sigma22=0
        fresh_wa_flux0=0; net_heat_flux0=0;m_ice0=0;m_snow0=0;a_ice0=0
-       evaporation=0; fsrad_ice_out0=0
+       evaporation=0; fsrad_ice_out0=0;Tbu=0
        !Box test
        if(ice_tests==0) then !normal
          ice_tr=0

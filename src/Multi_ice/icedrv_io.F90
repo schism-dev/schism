@@ -187,15 +187,18 @@
              case ('pond_lvln ')
                 if (tr_pond_lvl) then
                   do k = 1,ncat
-                     call writeout_nc(id_out_var(noutput+128+k), 'melt pond area fraction',1,1,npa, trcrn(:,nt_apnd,k))
+                     write(longname,'(A23,i1)') 'melt pond area fraction', k 
+                     call writeout_nc(id_out_var(noutput+128+k), trim(longname),1,1,npa, trcrn(:,nt_apnd,k))
                   enddo
                   !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'apnd', 'melt pond area fraction',          'none', trcrn(:,nt_apnd,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                   do k = 1,ncat
-                     call writeout_nc(id_out_var(noutput+138+k), 'melt pond depth',1,1,npa, trcrn(:,nt_hpnd,k))
+                     write(longname,'(A15,i1)') 'melt pond depth', k 
+                     call writeout_nc(id_out_var(noutput+138+k), trim(longname),1,1,npa, trcrn(:,nt_hpnd,k))
                   enddo
                   !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'hpnd', 'melt pond depth',                  'm',    trcrn(:,nt_hpnd,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                   do k = 1,ncat
-                     call writeout_nc(id_out_var(noutput+148+k), 'melt pond refrozen lid thickness',1,1,npa, trcrn(:,nt_ipnd,k))
+                     write(longname,'(A32,i1)') 'melt pond refrozen lid thickness', k 
+                     call writeout_nc(id_out_var(noutput+148+k), trim(longname),1,1,npa, trcrn(:,nt_ipnd,k))
                   enddo
                   !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'ipnd', 'melt pond refrozen lid thickness', 'm',    trcrn(:,nt_ipnd,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                 end if
@@ -259,7 +262,7 @@
                 if (tr_pond_topo) then
                   call writeout_nc(id_out_var(noutput+174), 'melt pond area fraction',1,1,npa, trcr(:,nt_apnd))
                   !call def_stream2D(nod2D,  nx_nh,  'apnd', 'melt pond area fraction',          'none', trcr(:,nt_apnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
-                  call writeout_nc(id_out_var(noutput+174), 'melt pond depth',1,1,npa, trcr(:,nt_hpnd))
+                  call writeout_nc(id_out_var(noutput+175), 'melt pond depth',1,1,npa, trcr(:,nt_hpnd))
                   !call def_stream2D(nod2D,  nx_nh,  'hpnd', 'melt pond depth',                  'm',    trcr(:,nt_hpnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                   call writeout_nc(id_out_var(noutput+176), 'melt pond refrozen lid thickness',1,1,npa, trcr(:,nt_ipnd))
                   !call def_stream2D(nod2D,  nx_nh,  'ipnd', 'melt pond refrozen lid thickness', 'm',    trcr(:,nt_ipnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
@@ -270,11 +273,12 @@
                   !call def_stream2D(nod2D,  nx_nh,  'apnd', 'melt pond area fraction',          'none', trcr(:,nt_apnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                   call writeout_nc(id_out_var(noutput+178), 'melt pond depth',1,1,npa, trcr(:,nt_hpnd))
                   !call def_stream2D(nod2D,  nx_nh,  'hpnd', 'melt pond depth',                  'm',    trcr(:,nt_hpnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
+                  call writeout_nc(id_out_var(noutput+179), 'melt pond refrozen lid thickness',1,1,npa, trcr(:,nt_ipnd))
                   !call def_stream2D(nod2D,  nx_nh,  'ipnd', 'melt pond refrozen lid thickness', 'm',    trcr(:,nt_ipnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                 end if
              case ('brine     ')
                 if (tr_brine) then
-                  call writeout_nc(id_out_var(noutput+179), 'volume fraction of ice with dynamic salt',1,1,npa, trcr(:,nt_fbri))
+                  call writeout_nc(id_out_var(noutput+180), 'volume fraction of ice with dynamic salt',1,1,npa, trcr(:,nt_fbri))
                   !call def_stream2D(nod2D,  nx_nh,  'fbri', 'volume fraction of ice with dynamic salt', 'none',    trcr(:,nt_fbri), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                 end if
              case ('qice      ')
@@ -349,6 +353,8 @@
         character(500)            :: filename
         character(500)            :: trname, units
         character(4)              :: cyear
+        real(kind=dbl_kind), allocatable, dimension(:,:) :: &
+         swild,swild2
     
         logical (kind=log_kind)   ::                        &
              solve_zsal, skl_bgc, z_tracers,                &
@@ -414,10 +420,12 @@
         !-----------------------------------------------------------------
         ! 3D restart fields (ncat) with schism output
         !-----------------------------------------------------------------
+        allocate(swild2(ncat,np),swild(np,ncat)) 
         nvars_hot0=nvars_hot
         j=nf90_redef(ncid_hot)
         j=nf90_def_dim(ncid_hot,'ice_ncat',ncat,ice_ntr_dim)
-        var2d_dim(1)=node_dim; var2d_dim(2)=ice_ntr_dim
+        !var2d_dim(1)=node_dim; var2d_dim(2)=ice_ntr_dim
+        var2d_dim(1)=ice_ntr_dim; var2d_dim(2)=node_dim
 
         j=nf90_def_var(ncid_hot,'aicen',NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
         j=nf90_def_var(ncid_hot,'vicen',NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+2))        
@@ -504,6 +512,9 @@
         j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
         nvars_hot0=nvars_hot0+1 
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_sice+k-1,:));
+      enddo
+      
+      do k = 1,nilyr
         write(trname,'(A6,i1)') 'qicen_', k
         write(longname,'(A21,i1)') 'sea ice enthalpy lyr:', k
         units='J/m3'
@@ -527,10 +538,18 @@
 
 
         !outputs
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),aicen(1:np,1:ncat),(/1,1/),(/np,ncat/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),vicen(1:np,1:ncat),(/1,1/),(/np,ncat/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),vsnon(1:np,1:ncat),(/1,1/),(/np,ncat/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),trcrn(1:np,nt_Tsfc,1:ncat),(/1,1/),(/np,ncat/))
+        swild = aicen(1:np,1:ncat)
+        swild2 = transpose(swild)
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+        swild = vicen(1:np,1:ncat)
+        swild2 = transpose(swild)
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),swild2,(/1,1/),(/ncat,np/))
+        swild = vsnon(1:np,1:ncat)
+        swild2 = transpose(swild)
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),swild2,(/1,1/),(/ncat,np/))
+        swild = trcrn(1:np,nt_Tsfc,1:ncat)
+        swild2 = transpose(swild)       
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),swild2,(/1,1/),(/ncat,np/))
 
         !call def_variable_2d(ip_id, 'aicen',  (/nod2D, ncat/), 'sea ice concentration',       'none', aicen(:,:));
         !call def_variable_2d(ip_id, 'vicen',  (/nod2D, ncat/), 'volum per unit area of ice',  'm',    vicen(:,:));
@@ -538,70 +557,102 @@
         !call def_variable_2d(ip_id, 'Tsfc',   (/nod2D, ncat/), 'sea ice surf. temperature',   'degC', trcrn(:,nt_Tsfc,:));
         nvars_hot=nvars_hot+4
         if (tr_iage) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_iage,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_iage,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'iage',  (/nod2D, ncat/), 'sea ice age', 's', trcrn(:,nt_iage,:));
       end if
     
       if (tr_FY) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_FY,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_FY,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'FY',  (/nod2D, ncat/), 'first year ice', 'none', trcrn(:,nt_FY,:));
       end if
     
       if (tr_lvl) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_alvl,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_alvl,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'alvl',  (/nod2D, ncat/), 'ridged sea ice area',   'none', trcrn(:,nt_alvl,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_vlvl,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_vlvl,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'vlvl',  (/nod2D, ncat/), 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:));
       end if
     
       if (tr_pond_cesm) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_apnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_apnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_hpnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_hpnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
       end if
     
       if (tr_pond_topo) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_apnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_apnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1 
           !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction',  'none', trcrn(:,nt_apnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_hpnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_hpnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',          'm',    trcrn(:,nt_hpnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_ipnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_ipnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'ipnd',  (/nod2D, ncat/), 'melt pond refrozen lid thickness', 'm',    trcrn(:,nt_ipnd,:));
       end if
     
       if (tr_pond_lvl) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_apnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_apnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
          ! call def_variable_2d(ip_id, 'apnd',    (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_hpnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_hpnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'hpnd',    (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_ipnd,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_ipnd,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'ipnd',    (/nod2D, ncat/), 'melt pond refrozen lid thickness', 'm',    trcrn(:,nt_ipnd,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),ffracn(1:np,1:ncat),(/1,1/),(/np,ncat/))
+         swild = ffracn(1:np,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'ffracn',  (/nod2D, ncat/), 'fraction of fsurfn over pond used to melt ipond',   'none', ffracn);
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dhsn(1:np,1:ncat),(/1,1/),(/np,ncat/))
+         swild = dhsn(1:np,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'dhsn',    (/nod2D, ncat/), 'depth difference for snow on sea ice and pond ice', 'm',    dhsn);
       end if
     
       if (tr_brine) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_fbri,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_fbri,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'fbri',       (/nod2D, ncat/), 'volume fraction of ice with dynamic salt', 'none',    trcrn(:,nt_fbri,:));
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),first_ice_real(1:np,1:ncat),(/1,1/),(/np,ncat/))
+         swild = first_ice_real(1:np,1:ncat)
+         swild2 = transpose(swild) 
+          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
           nvars_hot=nvars_hot+1
           !call def_variable_2d(ip_id, 'first_ice',  (/nod2D, ncat/), 'distinguishes ice that disappears',        'logical', first_ice_real(:,:));
       end if
@@ -614,13 +665,21 @@
         write(trname,'(A6,i1)') 'sicen_', k
         write(longname,'(A21,i1)') 'sea ice salinity lyr:', k
         units='psu'
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_sice+k-1,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_sice+k-1,1:ncat)
+         swild2 = transpose(swild) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
         nvars_hot=nvars_hot+1
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_sice+k-1,:));
+      end do
+
+      do k = 1,nilyr
+
         write(trname,'(A6,i1)') 'qicen_', k
         write(longname,'(A21,i1)') 'sea ice enthalpy lyr:', k
         units='J/m3'
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_qice+k-1,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_qice+k-1,1:ncat)
+         swild2 = transpose(swild) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
         nvars_hot=nvars_hot+1
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qice+k-1,:));
      end do
@@ -631,7 +690,9 @@
         write(trname,'(A6,i1)') 'qsnon_', k
         write(longname,'(A18,i1)') 'snow enthalpy lyr:', k
         units='J/m3'
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),trcrn(1:np,nt_qsno+k-1,1:ncat),(/1,1/),(/np,ncat/))
+         swild = trcrn(1:np,nt_qsno+k-1,1:ncat)
+         swild2 = transpose(swild) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
         nvars_hot=nvars_hot+1
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qsno+k-1,:));
      end do
@@ -710,7 +771,7 @@
         ! in using the biogeochemistry modules. At this stage, I do not know the model
         ! enough to use these options. Lorenzo Zampieri - 16/10/2019.
         !
-      
+         deallocate(swild,swild2)
     end subroutine restart_icepack
 
     end submodule icedrv_io

@@ -17,6 +17,8 @@ MODULE mice_module
   save
   ! ice model parameters:
   integer,parameter :: ntr_ice=3 !# of ice tracers
+  ! mice model hotstart
+  integer :: ihot_mice !# 0=coldstart 1=hotstart
   ! RHEOLOGY
   real(rkind)             :: Pstar = 30000.0        ![N/m^2]
   real(rkind)             :: ellipse =2.0           !
@@ -63,7 +65,7 @@ ice_gamma_fct, ice_diff, theta_io,ice_ave_steps, c_pressure
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: u_ice_aux, v_ice_aux  ! of the size of u_ice, v_ice
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: rhs_mdiv, rhs_adiv, rhs_msdiv
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: elevation
-  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: sigma11, sigma12, sigma22
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)       :: sigma11, sigma12, sigma22
   real(rkind),allocatable :: weit_elem2node(:,:) !(mnei,np)- weights for interpolating from elem to node (via the ball)
   !REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: eps11, eps12, eps22
   real(rkind),allocatable :: delta_ice(:) !(nea). Strain rate [1/sec]
@@ -71,6 +73,8 @@ ice_gamma_fct, ice_diff, theta_io,ice_ave_steps, c_pressure
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: net_heat_flux0,evaporation,fsrad_ice_out0
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_x
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_y
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tbu   !seabed stress factor
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: strength   !seabed stress factor
   real(rkind),allocatable :: u_ocean(:),v_ocean(:) !ocean surface current@nodes
 
 #if defined (__oasis)

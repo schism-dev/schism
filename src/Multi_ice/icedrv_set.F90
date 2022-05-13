@@ -400,6 +400,10 @@
              if (myrank == 0) print*,'Reading forcing_nml'
              read(nu_nml, nml=forcing_nml,iostat=nml_error)
              if (nml_error /= 0) exit
+             
+             if (myrank == 0) print*,'Reading dynamics_nml'
+             read(nu_nml, nml=dynamics_nml,iostat=nml_error)
+             if (nml_error /= 0) exit
           end do
 
           if (nml_error == 0) close(nu_nml)
@@ -658,7 +662,7 @@
              write(nu_diag,1010) ' calc_Tsfc                 = ', calc_Tsfc    
              write(nu_diag,1010) ' update_ocn_f              = ', update_ocn_f
              write(nu_diag,1010) ' wave_spec                 = ', wave_spec
-             write(nu_diag,1030) ' dragio                    = ', dragio
+             write(nu_diag,1000) ' dragio                    = ', dragio
 
              if (wave_spec) then
                 write(nu_diag,*)    ' wave_spec_type            = ', wave_spec_type
@@ -799,8 +803,8 @@
 
           endif ! myrank == 0
 
- 1000     format (a30,2x,f9.2)  ! a30 to align formatted, unformatted statements
- 1005     format (a30,2x,f9.6)  ! float
+ 1000     format (a30,2x,f9.5)  ! a30 to align formatted, unformatted statements
+ 1005     format (a30,2x,f9.8)  ! float
  1010     format (a30,2x,l6)    ! logical
  1020     format (a30,2x,i6)    ! integer
  1030     format (a30,   a8)    ! character
