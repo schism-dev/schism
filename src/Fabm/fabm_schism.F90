@@ -1100,6 +1100,9 @@ subroutine fabm_schism_do()
 
   ! get rhs and put tendencies into schism-array
   do i=1,ne
+
+    if (idry_e(i) /= 0) cycle
+
 !write(0,*) 'fabm: get rhs'
     rhs = 0.0_rk
 #if _FABM_API_VERSION_ < 1
