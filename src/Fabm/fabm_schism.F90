@@ -1703,11 +1703,11 @@ subroutine link_environmental_data(self, rc)
 !    cf_names='specific_turbulent_kinetic_energy_dissipation_at_soil_surface'), self%bottom_tke)
   !> @todo correct unit of TKE to Wm kg-1, for now leave it as m-3 as needed by maecs model
   call fabm_link_horizontal_data(self%model, &
-      type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
+    type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
       units='m2 s-2'), self%bottom_tke)
-    call fabm_link_horizontal_data(self%model, &
-      type_horizontal_standard_variable(name='bottom_speed', &
-      units='m s-1'), self%bottom_speed)
+  call fabm_link_horizontal_data(self%model, &
+    type_horizontal_standard_variable(name='bottom_speed', &
+      units='m s-1', cf_names='water_speed_at_sea_floor'), self%bottom_speed)
   !call fabm_link_bulk_data(self%model, &
   !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
   !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
@@ -1764,7 +1764,7 @@ subroutine link_environmental_data(self, rc)
     name='turbulent_kinetic_energy_at_soil_surface',units='m2 s-2'),self%bottom_tke(:))
 
   call self%model%link_horizontal_data(type_bottom_standard_variable( &
-    name='bottom_speed',units='m s-1'),self%bottom_speed(:))
+    name='bottom_speed',units='m s-1', cf_names='water_speed_at_sea_floor'),self%bottom_speed(:))
   !call self%model%link_horizontal_data( &
   !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
   !        units='Wm kg-1'), self%eps(1,:))
