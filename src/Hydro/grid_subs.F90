@@ -300,10 +300,14 @@ subroutine partition_hgrid
       do i=1,ne_global 
         read(10,*)j,iegrpv(i)
       enddo
-      read(10,*); read(10,*)k
+!      read(10,*); read(10,*)k
       close(10)
 
-      if(k/=nproc) call parallel_abort('offline partition: different nproc')
+      k=maxval(iegrpv); l=minval(iegrpv)
+      if(k/=nproc-1.or.l/=0) then
+        write(errmsg,*)'Offline partition: different nproc,',k,l
+        call parallel_abort(errmsg)
+      endif
     endif !myrank
     call mpi_bcast(iegrpv,ne_global,itype,0,comm,stat)
 
@@ -2700,10 +2704,10 @@ subroutine dump_hgrid
   ! Rank 0 writes global to local element info
   if(myrank==0) then
     open(32,file=out_dir(1:len_out_dir)//'global_to_local.prop',status='unknown')
-    write(32,'(i8,1x,i4)')(ie,iegrpv(ie),ie=1,ne_global)
+    write(32,'(i8,1x,i6)')(ie,iegrpv(ie),ie=1,ne_global)
     !Add more info
-    write(32,*)
-    write(32,*)nproc
+!    write(32,*)
+!    write(32,*)nproc
     close(32)
   endif
 

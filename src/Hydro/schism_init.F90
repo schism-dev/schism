@@ -3176,6 +3176,8 @@
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
         call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
         lreadll=.true.
+        bounds_lon(1)=minval(buf3(1:np_global)) !deg
+        bounds_lon(2)=maxval(buf3(1:np_global))
  
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then

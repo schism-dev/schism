@@ -45,7 +45,7 @@
 !       idry
 !       nvrt
 !       ivcor
-!       xlon 
+!       xlon, bounds_lon(1:2)
 !       ylat
 !       ipgl()
 !       errmsg
@@ -2374,7 +2374,7 @@
      &                       num_nodes_out, in_elem_for_out_node, &
      &                       weight)
 
-        use schism_glbl, only : rkind,errmsg
+        use schism_glbl, only : rkind,errmsg,bounds_lon,pi
         use schism_msgp, only : myrank,parallel_abort
         implicit none
 
@@ -2403,6 +2403,8 @@
 
 ! calculate and store the areas of the input grid elements
         isign_area=1 !init as counter-clockwise
+        a1=huge(1.d0) !min lon in deg
+        a2=-a1 !max lon in deg
         do i_elem = 1, num_elems !sflux grid; already split into pair of triangles like .gr3 format
           i1 = node_i(elem_nodes(i_elem,1))
           j1 = node_j(elem_nodes(i_elem,1))
@@ -2430,7 +2432,17 @@
             write(errmsg,*) 'get_weight, orientation not consistent:',isign_area,area_in(i_elem),i_elem
             call parallel_abort(errmsg)
           endif
-        enddo
+
+          !Min/max
+          a1=min(a1,x1,x2,x3)
+          a2=max(a2,x1,x2,x3)
+        enddo !i_elem
+
+!       Output lon range for diagnostics
+        if(myrank==0) then
+          write(16,*)'Longitude range in hgrid.ll=',bounds_lon(1:2)
+          write(16,*)'Longitude range in sflux =',a1/pi*180.d0,a2/pi*180.d0
+        endif
 
 ! now loop over the nodes of the output grid, searching for the
 ! surrounding elements on the input grid
