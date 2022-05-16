@@ -159,6 +159,8 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: bottom_depth => null()
     real(rk), dimension(:), pointer     :: windvel => null()
     real(rk), dimension(:), pointer     :: tau_bottom => null()
+    real(rk), dimension(:), pointer     :: bottom_speed => null()
+    real(rk), dimension(:), pointer     :: bottom_roughness => null()
 
     integer, dimension(:,:), pointer   :: mask => null()
     integer, dimension(:), pointer     :: mask_hz => null()
@@ -177,6 +179,8 @@ module fabm_schism
     real(rk)                            :: time_since_last_output = 0.0_rk
     real(rk)                            :: time_since_last_hor_output = 0.0_rk
     real(rk)                            :: time_fabm(1)=-999.0_rk  !time in forcing files
+
+    type(type_bottom_standard_variable), dimension(:), allocatable :: bottom_standard_variables
 
     contains
 #if _FABM_API_VERSION_ < 1
@@ -206,6 +210,7 @@ subroutine fabm_schism_init_model(ntracers)
 
   use misc_modules, only: get_param
   use schism_glbl, only: start_day, start_year, start_month, start_hour
+  
   implicit none
 
   integer, intent(out), optional :: ntracers
@@ -619,6 +624,14 @@ subroutine fabm_schism_init_stage2
     call driver%log_message('Linked requested downwelling PAR flux')
   endif
 
+  if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
+
+    allocate(fs%par(nvrt, ne))
+    fs%par = missing_value
+    call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
+    call driver%log_message('Linked requested downwelling PAR flux')
+  endif
+
 #else
 
   if (fs%model%variable_needs_values(fabm_standard_variables%surface_downwelling_shortwave_flux) &
@@ -670,6 +683,12 @@ subroutine fabm_schism_init_stage2
   ! todo  if (fabm_variable_needs_values(model,pres_id)) then
   allocate(fs%pres(nvrt,ne)) !ADDED !todo add to declaration
   fs%pres = missing_value
+
+  allocate(fs%bottom_speed(ne))
+  fs%bottom_speed = missing_value
+
+  allocate(fs%bottom_roughness(ne))
+  fs%bottom_roughness = missing_value
 
   ! Link ice environment
 #ifdef USE_ICEBGC
@@ -959,6 +978,8 @@ end subroutine
 !> do FABM timestep
 subroutine fabm_schism_do()
 
+  use schism_glbl, only : uu2, vv2, rough_p
+
   real(rk),dimension(:,:),pointer,save :: rhs => null()
   real(rk),dimension(:,:),pointer,save :: w => null()
   real(rk),dimension(:,:),pointer,save :: upper_flux => null()
@@ -967,7 +988,7 @@ subroutine fabm_schism_do()
   real(rk),dimension(:),pointer,save   :: rhs_sf => null()
   real(rk),dimension(:),pointer,save   :: rhs_bt => null()
   real(rk),dimension(:),pointer,save   :: h_inv => null()
-  integer :: i,k,n
+  integer :: i,k,n, ie, j
 
   ! allocate space
   if (.not.associated(rhs)) allocate(rhs(1:nvrt,1:fs%nvar))
@@ -1038,6 +1059,24 @@ subroutine fabm_schism_do()
     do i=1,ne
       fs%par0(i) = fs%I_0(i) * fs%par_fraction
     end do
+  endif
+
+  if (associated(fs%bottom_speed)) then
+    do ie=1,ne
+      fs%bottom_speed(ie) = 0
+      do j=1,i34(ie)
+        fs%bottom_speed(ie) = fs%bottom_speed(ie)  + sqrt( &
+          uu2(kbe(ie), elnode(ie,j))**2 + &
+          vv2(kbe(ie), elnode(ie,j))**2 )
+      enddo
+      fs%bottom_speed(ie) = fs%bottom_speed(ie)/i34(ie)
+    end do
+  endif
+
+  if (associated(fs%bottom_roughness)) then
+    do ie=1,ne
+      fs%bottom_roughness(ie) = sum(rough_p(elnode(1:i34(i),i)))/i34(i)
+    enddo
   endif
 
   !update spm concentration
@@ -1666,12 +1705,17 @@ subroutine link_environmental_data(self, rc)
   call fabm_link_horizontal_data(self%model, &
       type_horizontal_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
       units='m2 s-2'), self%bottom_tke)
+    call fabm_link_horizontal_data(self%model, &
+      type_horizontal_standard_variable(name='bottom_speed', &
+      units='m s-1'), self%bottom_speed)
   !call fabm_link_bulk_data(self%model, &
   !   type_bulk_standard_variable(name='momentum_diffusivity',units='m2 s-1', &
   !   cf_names='ocean_vertical_momentum_diffusivity'),self%num)
   !call driver%log_message('linked bulk variable "momentum diffusivity"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_depth,self%bottom_depth)
   call driver%log_message('linked horizontal standard variable "bottom_depth"')
+  call fabm_link_horizontal_data(self%model,standard_variables%bottom_roughness_length,self%bottom_roughness)
+  call driver%log_message('linked horizontal standard variable "bottom_roughness"')
   call fabm_link_horizontal_data(self%model,standard_variables%bottom_stress,self%tau_bottom)
   call driver%log_message('linked horizontal standard variable "bottom_stress"')
 #ifdef USE_ICEBGC
@@ -1692,6 +1736,7 @@ subroutine link_environmental_data(self, rc)
   call self%model%link_interior_data(fabm_standard_variables%pressure,self%pres) !ADDED
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_stress,self%tau_bottom)
   call self%model%link_horizontal_data(fabm_standard_variables%bottom_depth,self%bottom_depth)
+  call self%model%link_horizontal_data(fabm_standard_variables%bottom_roughness_length,self%bottom_roughness)
 #ifdef USE_ICEBGC
   call self%model%link_horizontal_data(fabm_standard_variables%ice_thickness,self%ice_thick)
   call self%model%link_horizontal_data(fabm_standard_variables%ice_conc,self%ice_cover)
@@ -1716,9 +1761,10 @@ subroutine link_environmental_data(self, rc)
   !    units='W kg-1', &
   !    cf_names='specific_turbulent_kinetic_energy_dissipation_in_sea_water'), self%eps)
   call self%model%link_horizontal_data(type_bottom_standard_variable( &
-  !name='turbulent_kinetic_energy_at_soil_surface',units='Wm kg-1'),self%bottom_tke(:))
-  name='turbulent_kinetic_energy_at_soil_surface',units='m2 s-2'),self%bottom_tke(:))
+    name='turbulent_kinetic_energy_at_soil_surface',units='m2 s-2'),self%bottom_tke(:))
 
+  call self%model%link_horizontal_data(type_bottom_standard_variable( &
+    name='bottom_speed',units='m s-1'),self%bottom_speed(:))
   !call self%model%link_horizontal_data( &
   !    type_standard_variable(name='turbulent_kinetic_energy_at_soil_surface', &
   !        units='Wm kg-1'), self%eps(1,:))
