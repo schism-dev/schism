@@ -38,11 +38,12 @@ module icm_mod
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                                          & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
-  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:),sdwqc(:,:),vdwqc(:,:) 
-  real(rkind),save,pointer,dimension(:) :: dZBS,dPBS, sdC,sdN,sdP, vdC,vdN,vdP, zdPBS,zdC,zdN,zdP,zdS
+  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
+  real(rkind),save,pointer,dimension(:) :: dZBS,dPBS, zdDOX !, sdC,sdN,sdP, vdC,vdN,vdP
+  real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
                             & dNO3,dRPOP,dLPOP,dDOP,dPO4,dSU,dSA,dCOD,dDOX,dTIC,dALK,dCA,dCACO3
-  real(rkind),save,pointer :: sdDOX,vdDOX,zdDOX
+  !real(rkind),save,pointer :: sdDOX,vdDOX
   
  
   !-------------------------------------------------------------------------------
@@ -61,8 +62,6 @@ module icm_mod
   real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
-  real(rkind),save,allocatable,dimension(:,:) :: fPN
-  real(rkind),save,allocatable,dimension(:) :: WMS
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   !additional time series of benthic flux
   real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea)
@@ -85,9 +84,7 @@ module icm_mod
   integer, save :: irec_ph
   integer,save,allocatable :: iphgb(:)
   real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:)
-  real(rkind),save,allocatable,dimension(:,:) :: PH_el,PH_nd,TIC_el,ALK_el
-  !real(rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3
-  !real(rkind),save,allocatable,dimension(:) :: PH,CAsat,CO2
+  real(rkind),save,allocatable,dimension(:,:) :: TIC_el,ALK_el
 
   !-------------------------------------------------------------------------------
   !SAV parameters and variables

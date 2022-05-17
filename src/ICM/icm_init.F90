@@ -150,7 +150,7 @@ subroutine read_icm_param(imode)
     !pre-processing
     !------------------------------------------------------------------------------------
     !assign pointers
-    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
+    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
 
     !concentration changes
@@ -165,7 +165,8 @@ subroutine read_icm_param(imode)
       dTIC=>dwqc(22); dALK=>dwqc(23); dCA=>dwqc(24); dCACO3=>dwqc(25)
     endif
 
-    zdPBS=>zdwqc(3:5); zdC=>zdwqc(6:8); zdN=>zdwqc(9:13); zdP=>zdwqc(14:17); zdS=>zdwqc(18:19); zdDOX=>zdwqc(21)
+    zdPBS=>zdwqc(3:5,:); zdC=>zdwqc(6:8,:);   zdN=>zdwqc(9:13,:)
+    zdP=>zdwqc(14:17,:); zdS=>zdwqc(18:19,:); zdDOX=>zdwqc(21,:)
     !sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
     !vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
 
@@ -546,24 +547,23 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(fPN(nvrt,3),temp(nvrt),WMS(nea),EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &
+  allocate(temp(nvrt),EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &
          & tthcan(nea),ttdens(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  fPN=0.0;     WMS=0.0;     temp=0.0
+  temp=0.0
   EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
 
   !-------------------------------------------------------------------------------
   !pH variables
   !-------------------------------------------------------------------------------
   if(iPh==1) then
-    allocate( PH_el(nvrt,nea),PH_nd(nvrt,npa),iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
+    allocate(iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
       ! TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), CAsat(nvrt),CO2(nvrt),
       & TIC_el(nvrt,nea),ALK_el(nvrt,nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. pH variables')
 
-    !TIC=0.0;     ALK=0.0;     CACO3=0.0;   CA=0.0;     PH=0.0;  CAsat=0.0;  CO2=0.0;     
-    PH_el=0.0;   PH_nd=0.0;   iphgb=0.0;  ph_nudge=0.0; ph_nudge_nd=0.0;
+    iphgb=0.0;  ph_nudge=0.0; ph_nudge_nd=0.0;
     TIC_el=0.0;  ALK_el=0.0;
   endif
 
@@ -635,18 +635,31 @@ subroutine icm_vars_init
 
 end subroutine icm_vars_init
 
-subroutine update_vars(id)
+subroutine update_vars(id,usf,wspd)
 !--------------------------------------------------------------------
 !get 2D parameter value of element
 !--------------------------------------------------------------------
-  use schism_glbl, only : irange_tr,tr_el,nvrt
+  use schism_glbl, only : rkind,irange_tr,tr_el,nvrt,i34,elside,isdel, &
+                        & elnode,su2,sv2,windx,windy
   use icm_mod
   implicit none
   integer, intent(in) :: id
+  real(rkind),intent(out) :: usf,wspd
 
   !local variable
-  integer :: j
+  integer :: j,icount,jsj
 
+  !wind speed, surface velocity
+  wspd=sum(sqrt(windx(elnode(1:i34(id),id))**2.d0+windy(elnode(1:i34(id),id))**2.d0))/dble(i34(id))
+  usf=0.0; icount=0
+  do j=1,i34(id)
+    jsj=elside(j,id)
+    if(isdel(2,jsj)==0) cycle
+    usf=usf+sqrt(max(su2(nvrt,jsj)**2+sv2(nvrt,jsj)**2,1.d-6)); icount=icount+1
+  enddo !j
+  if(icount/=0) usf=usf/icount    
+
+  !links of state variables
   j=irange_tr(1,7);    wqc=>tr_el(j:(j+ntrs_icm-1),1:nvrt,id)
   temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
   ZB1=>wqc(1,:);   ZB2=>wqc(2,:);   ZBS=>wqc(1:2,:)
@@ -660,6 +673,13 @@ subroutine update_vars(id)
     TIC=>wqc(22,:);  ALK=>wqc(23,:);  CA=>wqc(24,:); CACO3=>wqc(25,:)
   endif
 
+  !SAV and VEG
+  sleaf_NH4(id)=0;   sleaf_PO4(id)=0;   sroot_POC(id)=0
+  sroot_PON(id)=0;   sroot_POP(id)=0;   sroot_DOX(id)=0
+  vleaf_NH4(id,:)=0; vleaf_PO4(id,:)=0; vroot_POC(id,:)=0
+  vroot_PON(id,:)=0; vroot_POP(id,:)=0; vroot_DOX(id,:)=0
+
+  !parameters
   GPM=wp%GPM(id,:);     TGP=wp%TGP(id,:);       KTGP=wp%KTGP(id,:,:); PRP=wp%PRP(id,:)
   WSSED=wp%WSSED(id);   WSPOM=wp%WSPOM(id,:);   WSPBS=wp%WSPBS(id,:);
   WSSEDn=wp%WSSEDn(id); WSPOMn=wp%WSPOMn(id,:); WSPBSn=wp%WSPBSn(id,:)

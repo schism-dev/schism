@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : WMS,iPh,PH_nd,isav_icm,iveg_icm, &
+      use icm_mod, only : iPh,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                         & CTEMP,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
@@ -657,17 +657,6 @@
           windy(i)=windy(i)*windfactor(i)
         enddo !i
       endif; endif
-
-#ifdef USE_ICM
-!$OMP parallel do default(shared) private(i)
-        !computing WMS used for DO reareation
-        do i=1,nea
-          if(idry_e(i)==1) cycle
-          WMS(i)=sum(sqrt(windx(elnode(1:i34(i),i))**2.d0+windy(elnode(1:i34(i),i))**2.d0))/real(i34(i),rkind)
-        enddo 
-!$OMP end parallel do
-#endif
-
 
 !-------------------------------------------------------------------------------
 !   Wind wave model (WWM)
