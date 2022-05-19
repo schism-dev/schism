@@ -24,8 +24,8 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen
-  integer,save,target :: iZB,iPh,isav_icm,iveg_icm,idry_icm
+  integer,save,target :: iRad,iKe,iLight,iLimit,iSettle,iAtm,iSed,iBen,iTBen
+  integer,save,target :: iSilica,iZB,iPh,isav_icm,iveg_icm,idry_icm
   real(rkind),save :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
   real(rkind),save,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
   real(rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben !todo, ZG
@@ -38,25 +38,24 @@ module icm_mod
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                                          & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
-  real(rkind),save,target,allocatable :: dwqc(:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
-  real(rkind),save,pointer,dimension(:) :: dZBS,dPBS, zdDOX !, sdC,sdN,sdP, vdC,vdN,vdP
-  real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
-  real(rkind),save,pointer :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
+  real(rkind),save,target,allocatable :: dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
+  real(rkind),save,pointer,dimension(:) :: zdDOX !, sdC,sdN,sdP, vdC,vdN,vdP
+  real(rkind),save,pointer,dimension(:,:) :: dZBS,dPBS,zdPBS,zdC,zdN,zdP,zdS
+  real(rkind),save,pointer,dimension(:) :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
                             & dNO3,dRPOP,dLPOP,dDOP,dPO4,dSU,dSA,dCOD,dDOX,dTIC,dALK,dCA,dCACO3
   !real(rkind),save,pointer :: sdDOX,vdDOX
-  
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,dimension(3) :: GPM,TGP,PRP,BMP,TBP,KTBP,WSPBS
   real(rkind),save :: KTGP(3,2),WSPOM(2),WSSED
-  real(rkind),save :: FCP(3,3),FNP(4),FPP(4),FSP(2),FCM(3),FNM(3,4),FPM(3,4),FSM(2)
+  real(rkind),save :: FCP(3,3),FNP(4),FPP(4),FCM(3),FNM(3,4),FPM(3,4)
   real(rkind),save :: Nit,TNit,KTNit(2),KhDOnit,KhNH4nit,KhDOox,KhNO3denit
   real(rkind),save,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM
-  real(rkind),save :: KS,TRS,KTRS,KCD,TRCOD,KTRCOD,KhCOD
-  real(rkind),save,dimension(3) :: KhN,KhP,c2chl,n2c,p2c,KhDO
-  real(rkind),save :: KhS,KhSal,s2c,o2c,o2n,dn2c,an2c,KPO4p,KSAp,WRea
+  real(rkind),save :: KCD,TRCOD,KTRCOD,KhCOD
+  real(rkind),save,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO
+  real(rkind),save :: o2c,o2n,dn2c,an2c,KPO4p,WRea
 
   real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)
   real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
@@ -65,6 +64,11 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
   !additional time series of benthic flux
   real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea)
+
+  !-------------------------------------------------------------------------------
+  !silica parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save :: FSP(2),FSM(2),KS,TRS,KTRS,KhS(3),s2c(3),KSAp
 
   !-------------------------------------------------------------------------------
   !zooplankton parameters and variables

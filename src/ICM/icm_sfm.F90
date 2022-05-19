@@ -265,7 +265,10 @@ subroutine sed_calc(id,dep,btemp,bsalt,bPB1,bPB2,bPB3,bRPOC,bLPOC,bRPON,bLPON,&
   enddo !i
   !combination of PB1 and two groups of Si, need future work for SA
   !flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxu*SED_SU(id)
-  flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxp(1)*SED_SU(id)
+  flxpos(id)=flxp(1)*SED_SU(id)
+  do j=1,3
+    flxpos(id)=flxpos(id)+flxp(j)*s2c(j)*SED_B(id,j)
+  enddo
 
   !split settling POM from water column
   !SED_???? in unit of g/m^3, flx? in unit of m/day, flxpo? in unit of g/m^2 day

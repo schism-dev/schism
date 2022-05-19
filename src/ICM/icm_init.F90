@@ -37,15 +37,16 @@ subroutine read_icm_param(imode)
   character(len=2) :: pid
 
   !define namelists
-  namelist /MARCO/ iRad,iKe,iLight,iLimit,iLimitSi,iSettle,iAtm,iSed,iBen,iTBen,&
+  namelist /MARCO/ iRad,iKe,iLight,iLimit,iSettle,iAtm,iSed,iBen,iTBen,iSilica,&
            & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
            & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben, &
            & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
-  namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,FSP,&
-           & FCM,FNM,FPM,FSM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
-           & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KS,TRS,KTRS,KCD,TRCOD,KTRCOD, &
-           & KhCOD,KhN,KhP,KhS,KhSal,c2chl,n2c,p2c,s2c,o2c,o2n,dn2c,an2c,KhDO, &
-           & KPO4p,KSAp,WRea
+  namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,&
+           & FCM,FNM,FPM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
+           & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
+           & KhCOD,KhN,KhP,KhSal,c2chl,n2c,p2c,o2c,o2n,dn2c,an2c,KhDO, &
+           & KPO4p,WRea
+  namelist /Silica/ FSP,FSM,KS,TRS,KTRS,KhS,s2c,KSAp 
   namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMT,zBMP,zTBP,zKTBP,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ inu_ph,pWSCACO3,pKCACO3,pKCA,pRea
@@ -72,7 +73,7 @@ subroutine read_icm_param(imode)
     !read ICM; compute total # of state variables 
     !------------------------------------------------------------------------------------
     !initilize global switches
-    iRad=0; iKe=0; iLight=0; iLimit=0; iLimitSi=1; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0
+    iRad=0; iKe=0; iLight=0; iLimit=0; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0; iSilica=1; 
     iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
     Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
     thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4_tben=0; SA_tben=0
@@ -92,25 +93,27 @@ subroutine read_icm_param(imode)
       iTIC=itrs(1,2); iALK=itrs(1,2)+1; iCA=itrs(1,2)+2; iCACO3=itrs(1,2)+3
     endif
 
-
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
     !read module variables
     !------------------------------------------------------------------------------------
-    !init. CORE modules
+    !init. CORE module
     GPM=0; TGP=0; KTGP=0; PRP=0; BMP=0; TBP=0; KTBP=0; WSPBS=0; WSPOM=0; WSSED=0;
-    FCP=0; FNP=0; FPP=0; FSP=0; FCM=0; FNM=0; FPM=0; FSM=0; Nit=0; TNit=0; KTNit=0;
+    FCP=0; FNP=0; FPP=0;  FCM=0; FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0;
     KhDOnit=0; KhNH4nit=0; KhDOox=0; KhNO3denit=0; KC0=0; KN0=0; KP0=0; KCalg=0;
-    KNalg=0; KPalg=0; TRM=0; KTRM=0; KS=0; TRS=0; KTRS=0; KCD=0; TRCOD=0; KTRCOD=0;
-    KhCOD=0; KhN=0; KhP=0; KhS=0; KhSal=0; c2chl=0; n2c=0; p2c=0; s2c=0; o2c=0;
-    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0; KSAp=0; WRea=0
+    KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
+    KhCOD=0; KhN=0; KhP=0; KhSal=0; c2chl=0; n2c=0; p2c=0; o2c=0;
+    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0
 
-    !init. ZB modules
+    !init. Silica module
+    FSP=0; FSM=0; KS=0; TRS=0; KTRS=0; KhS=0; s2c=0; KSAp=0 
+
+    !init. ZB module
     zGPM=0; zKhG=0; zTGP=0; zKTGP=0; zAG=0; zRG=0; zMT=0; zBMP=0; zTBP=0; zKTBP=0;
     zFCP=0; zFNP=0; zFPP=0; zFSP=0; zFCM=0; zFNM=0; zFPM=0; zFSM=0; zKhDO=0; zn2c=0;
     zp2c=0; zs2c=0; z2pr=0; p2pr=0
 
-    !init. PH modules
+    !init. PH module
     inu_ph=0; pWSCACO3=0; pKCACO3=0; pKCA=0; pRea=0
 
     !init. SAV module
@@ -150,19 +153,19 @@ subroutine read_icm_param(imode)
     !pre-processing
     !------------------------------------------------------------------------------------
     !assign pointers
-    allocate(dwqc(ntrs_icm),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
+    allocate(dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
 
     !concentration changes
-    dZB1=>dwqc(1);   dZB2=>dwqc(2);   dZBS=>dwqc(1:2)
-    dPB1=>dwqc(3);   dPB2=>dwqc(4);   dPB3=>dwqc(5);   dPBS=>dwqc(3:5)
-    dRPOC=>dwqc(6);  dLPOC=>dwqc(7);  dDOC=>dwqc(8)
-    dRPON=>dwqc(9);  dLPON=>dwqc(10); dDON=>dwqc(11);  dNH4=>dwqc(12); dNO3=>dwqc(13)
-    dRPOP=>dwqc(14); dLPOP=>dwqc(15); dDOP=>dwqc(16);  dPO4=>dwqc(17)
-    dSU=>dwqc(18);   dSA=>dwqc(19)
-    dCOD=>dwqc(20);  dDOX=>dwqc(21)
+    dZB1=>dwqc(1,:);   dZB2=>dwqc(2,:);   dZBS=>dwqc(1:2,:)
+    dPB1=>dwqc(3,:);   dPB2=>dwqc(4,:);   dPB3=>dwqc(5,:);   dPBS=>dwqc(3:5,:)
+    dRPOC=>dwqc(6,:);  dLPOC=>dwqc(7,:);  dDOC=>dwqc(8,:)
+    dRPON=>dwqc(9,:);  dLPON=>dwqc(10,:); dDON=>dwqc(11,:);  dNH4=>dwqc(12,:); dNO3=>dwqc(13,:)
+    dRPOP=>dwqc(14,:); dLPOP=>dwqc(15,:); dDOP=>dwqc(16,:);  dPO4=>dwqc(17,:)
+    dSU=>dwqc(18,:);   dSA=>dwqc(19,:)
+    dCOD=>dwqc(20,:);  dDOX=>dwqc(21,:)
     if(iPh==1) then
-      dTIC=>dwqc(22); dALK=>dwqc(23); dCA=>dwqc(24); dCACO3=>dwqc(25)
+      dTIC=>dwqc(22,:); dALK=>dwqc(23,:); dCA=>dwqc(24,:); dCACO3=>dwqc(25,:)
     endif
 
     zdPBS=>zdwqc(3:5,:); zdC=>zdwqc(6:8,:);   zdN=>zdwqc(9:13,:)
@@ -342,7 +345,6 @@ end subroutine read_icm_param
     !if(iKe>2)      call parallel_abort('check parameter: iKe>1')
     !if(iLight>1)   call parallel_abort('check parameter: iLight>1')
     !if(iLimit>1)   call parallel_abort('check parameter: iLimit>1')
-    !if(iLimitSi>1) call parallel_abort('check parameter: iLimitSi>1')
     !if(iSettle>1)  call parallel_abort('check parameter: iSettle>1')
     !if(iZB>1)      call parallel_abort('check parameter: iZB>1')
     !if(jsav>1)     call parallel_abort('check parameter: isav_icm>1')

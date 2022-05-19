@@ -79,10 +79,8 @@ Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
 !-----------------------------------------------------------------------
 !options of nutrient limitation on phytoplankton growth
 !  iLimit=0: f=min[f(N),f(P)]*f(I);  iLimit=1: f=min[f(N),f(P),f(I)]
-!  iLimitSi: silica limitation on diatom growth (0: OFF;  1: ON)
 !-----------------------------------------------------------------------
 iLimit   = 0
-iLimitSi = 1
 
 !-----------------------------------------------------------------------
 !net settling velocity (WS) into sediment
@@ -93,6 +91,11 @@ iSettle = 1
 WSSEDn  = 0.20              !net settling velocity of TSS (m.day-1)
 WSPOMn  = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
 WSPBSn  = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
+
+!-----------------------------------------------------------------------
+!Silica model (0: OFF;  1: ON)
+!-----------------------------------------------------------------------
+iSilica = 1 
 
 !-----------------------------------------------------------------------
 !Zooplankton(iZB=1: use zooplankton dynamics; iZB=0: don't use)
@@ -179,7 +182,6 @@ WSSED  = 1.00                     !settling velocity of TSS (m.day-1)
 FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30
 FNP  = 0.35  0.50  0.10  0.05     !fractions of PB nitrogen into (RPON,LPON,DON,NH4) 
 FPP  = 0.10  0.20  0.50  0.20     !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4)
-FSP  = 0.90 0.10                  !fractions of diatom silica into (SU,SA)
 
 !partition of metabolized phytoplankton biomass
 !  FNM: fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
@@ -187,7 +189,6 @@ FSP  = 0.90 0.10                  !fractions of diatom silica into (SU,SA)
 FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
 FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
 FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
-FSM  = 0.50   0.50                !fractions of diatom metabolism Si into (SU,SA)
 
 !nitrification
 Nit      = 0.07                   !maximum nitrification rate (day-1)
@@ -210,11 +211,6 @@ KPalg = 0.0    0.0    0.0         !algae effect on RPOP,LPOP,DOP decay (day-1.m3
 TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
 KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
 
-!decay coefficient for biogenic silica (SU)
-KS    = 0.03                      !dissolution rate of SU at TRS (day-1)
-TRS   = 20.0                      !reference temp. for SU dissolution (oC)
-KTRS  = 0.092                     !temp. dependence for SU dissolution (oC-1)
-
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
 TRCOD = 20.0                      !reference temp. for COD oxidation (oC)
@@ -224,14 +220,12 @@ KhCOD=  1.5                       !COD half saturation for COD oxidation (mg[O2]
 !nutrient limitation & salinity stress
 KhN  = 0.01   0.01   0.01         !nitrogen half saturation (mg/L)
 KhP  = 0.001  0.001  0.001        !phosphorus half saturation (mg/L)
-KhS  = 0.05                       !silica half saturation on diatom (mg/L)
-KhSal= 0.1                        !salinity when PB3 growth is halved (PSU)
+KhSal= 1e6    1e6    0.1          !salinity when PB growth is halved (PSU); (1e6: no salinity stress)
 
 !conversion coeffiecients
 c2chl= 0.059 0.059 0.059          !carbon to chlorophyll ratio (g[C]/mg[Chl])
 n2c  = 0.167 0.167 0.167          !nitrogen to carbon ratio for phytoplankton
 p2c  = 0.02  0.02  0.02           !phosphorus to carbon ratio for phytoplankton
-s2c  = 0.50                       !silica to carbon ratio for phytolankton
 o2c  = 2.67                       !oxygen to carbon ratio in respiration
 o2n  = 4.33                       !oxygen to ammonium ratio (g[O2]/g[NH4])
 dn2c = 0.933                      !mass of NO3 consumed per mass of DOC oxidized in denit. (g[N]/g[C])
@@ -240,8 +234,22 @@ an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration 
 !misc
 KhDO = 0.5   0.5   0.5            !DO half saturation for PB's DOC excretion (mg/L)
 KPO4p= 0.0                        !coefficient relating PO4 sorption to TSS
-KSAp = 0.0                        !coefficient relating Silicate(SA) sorption to TSS
 WRea = 0.0                        !baseline wind-induced reaeration coefficient for DO (day-1)
+/
+
+&Silica
+!-----------------------------------------------------------------------
+!Silica parameters
+!-----------------------------------------------------------------------
+!silica
+FSP  = 0.90   0.10                !fractions of diatom silica into (SU,SA)
+FSM  = 0.50   0.50                !fractions of diatom metabolism Si into (SU,SA)
+KS   = 0.03                       !dissolution rate of SU at TRS (day-1)
+TRS  = 20.0                       !reference temp. for SU dissolution (oC)
+KTRS = 0.092                      !temp. dependence for SU dissolution (oC-1)
+KhS  = 0.05   0.0   0.0           !silica half saturation (mg/L); (0.0: no Si limitation)
+s2c  = 0.50   0.0   0.0           !silica to carbon ratio for phytolankton; (0.0: no Si uptake)
+KSAp = 0.0                        !coefficient relating Silicate(SA) sorption to TSS
 /
 
 &ZB

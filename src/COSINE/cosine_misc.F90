@@ -576,4 +576,19 @@ contains
      return
    end subroutine ph_f
 
+   function signf(a)
+   !----------------------------------------------
+   !step function
+   !----------------------------------------------
+     implicit none
+     real(rkind), intent(in) :: a
+     real(rkind) :: signf
+
+     if(a>=0) then
+       signf=1.d0
+     else
+       signf=-1.d0
+     endif
+   end function signf
+
 end module 
