@@ -29,31 +29,37 @@
 !---------------------------------------------------------------------------------
 !---------------------------state variables in ICM--------------------------------
 !---------------------------------------------------------------------------------
-! 1  ZB1   :  1st zooplankton                            g/m^3
-! 2  ZB2   :  2nd zooplankton                            g/m^3
-! 3  PB1   :  Diatom                                     g/m^3
-! 4  PB2   :  Green Algae                                g/m^3
-! 5  PB3   :  Cyanobacteria                              g/m^3
-! 6  RPOC  :  Refractory Particulate Organic Carbon      g/m^3
-! 7  LPOC  :  Labile Particulate Organic Carbon          g/m^3
-! 8  DOC   :  Dissolved Orgnaic Carbon                   g/m^3
-! 9  RPON  :  Refractory Particulate Organic Nitrogen    g/m^3
-! 10 LPON  :  Labile Particulate Organic Nitrogen        g/m^3
-! 11 DON   :  Dissolved Orgnaic Nitrogen                 g/m^3
-! 12 NH4   :  Ammonium Nitrogen                          g/m^3
-! 13 NO3   :  Nitrate Nitrogen                           g/m^3
-! 14 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
-! 15 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
-! 16 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
-! 17 PO4   :  Total Phosphate                            g/m^3
-! 18 SU    :  Particulate Biogenic Silica                g/m^3
-! 19 SA    :  Available Silica                           g/m^3
-! 20 COD   :  Chemical Oxygen Demand                     g/m^3
-! 21 DOX   :  Dissolved Oxygen                           g/m^3
-! 22 TIC   :  Total Inorganic Carbon                     g/m^3
-! 23 ALK   :  Alkalinity                                 g[CaCO3]/m^3
-! 24 CA    :  Dissolved Calcium                          g[CaCO3]/m^3
-! 25 CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!Core Module
+!     1  PB1   :  Diatom                                     g/m^3
+!     2  PB2   :  Green Algae                                g/m^3
+!     3  PB3   :  Cyanobacteria                              g/m^3
+!     4  RPOC  :  Refractory Particulate Organic Carbon      g/m^3
+!     5  LPOC  :  Labile Particulate Organic Carbon          g/m^3
+!     6  DOC   :  Dissolved Orgnaic Carbon                   g/m^3
+!     7  RPON  :  Refractory Particulate Organic Nitrogen    g/m^3
+!     8  LPON  :  Labile Particulate Organic Nitrogen        g/m^3
+!     9  DON   :  Dissolved Orgnaic Nitrogen                 g/m^3
+!     10 NH4   :  Ammonium Nitrogen                          g/m^3
+!     11 NO3   :  Nitrate Nitrogen                           g/m^3
+!     12 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
+!     13 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
+!     14 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
+!     15 PO4   :  Total Phosphate                            g/m^3
+!     16 COD   :  Chemical Oxygen Demand                     g/m^3
+!     17 DOX   :  Dissolved Oxygen                           g/m^3
+!Silica Module
+!     1  SU    :  Particulate Biogenic Silica                g/m^3
+!     2  SA    :  Available Silica                           g/m^3
+!Zooplankton Module
+!     1  ZB1   :  1st zooplankton                            g/m^3
+!     2  ZB2   :  2nd zooplankton                            g/m^3
+!pH Module
+!     1  TIC   :  Total Inorganic Carbon                     g/m^3
+!     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
+!     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
+!     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!SAV Module (no transport variables)
+!VEG Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -78,7 +84,7 @@ subroutine ecosystem(it)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,BM,PR,GP,fPN
-  real(rkind),dimension(ntrs_icm) :: WS0,WS,sflux,bflux
+  real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
   real(rkind) :: shtz,vhtz(3),denssav, densveg(3) !SAV &VEG
 
@@ -123,7 +129,9 @@ subroutine ecosystem(it)
         TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
       endif
       rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k); PO4a(k)=(1.0-1.0/(1.0+KPO4p*TSS(max(kb+1,k-1))))*PO4(k)
-      rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
+      if(iSilica==1) then
+        rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
+      endif
     enddo!
 
     !----------------------------------------------------------------------------------
@@ -191,7 +199,7 @@ subroutine ecosystem(it)
         fT=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
         fN=(NH4(k)+NO3(k))/(NH4(k)+NO3(k)+KhN(i)) !nitrogen
         fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
-        if(KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
+        if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
         if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
         if(iPh==1.and.iphgb(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
@@ -335,25 +343,26 @@ subroutine ecosystem(it)
     !----------------------------------------------------------------------------------
     sink=0
     do k=kb+1,nvrt
-      !dwqc=0.0; m=min(nvrt,k+1)
+      !settling velocities at upper and lower interfaces
+      WS(itrs(1,1):itrs(2,1))=(/WSPBS(1:3), WSPOM(1:2),0.d0, WSPOM(1:2),0.d0,0.d0,0.d0, WSPOM(1:2),0.d0,WSSED, 0.d0,0.d0/)
+      if(iSilica==1) WS(itrs(1,2):itrs(2,2))=(/WSPBS(1),WSSED/)
+      if(iZB==1) WS(itrs(1,3):itrs(2,3))=(/0.d0, 0.d0/)
+      if(iPh==1) WS(itrs(1,4):itrs(2,4))=(/0.d0,0.d0,0.d0,pWSCACO3/)
+      WB=WS
+
+      if(k==nvrt) WS=0 !surface layer
+      if(k==(kb+1)) then !bottom layer
+        WB(itrs(1,1):itrs(2,1))=(/WSPBSn(1:3), WSPOMn(1:2),0.d0, WSPOMn(1:2),0.d0,0.d0,0.d0, WSPOMn(1:2),0.d0,WSSEDn, 0.d0,0.d0/)
+        if(iSilica==1) WB(itrs(1,2):itrs(2,2))=(/WSPBSn(1),WSSEDn/)
+      endif
+
       m=min(nvrt,k+1)
-
-      WS(itrs(1,1):itrs(2,1))=(/0.d0,0.d0, WSPBS(1:3), WSPOM(1:2),0.d0, WSPOM(1:2),0.d0,0.d0,0.d0, WSPOM(1:2),0.d0,WSSED, WSPBS(1),WSSED, 0.d0,0.d0/)
-      if(iPh==1) WS(itrs(1,2):itrs(2,2))=(/0.d0,0.d0,0.d0,pWSCACO3/)
-      WS0=WS; 
-      if(k==nvrt) WS0=0
-      if(k==(kb+1)) WS(1:21)=(/0.d0,0.d0, WSPBSn(1:3), WSPOMn(1:2),0.d0, WSPOMn(1:2),0.d0,0.d0,0.d0, WSPOMn(1:2),0.d0,WSSEDn, WSPBSn(1),WSSEDn, 0.d0,0.d0/)
-
       do i=1,ntrs_icm
-        if(i==iPO4) then
-          !sink(i)=(WS0(i)*PO4p(m)-WS(i)*PO4p(k))/dz(k)
-          sink(i,k)=(WS0(i)*PO4a(m)-WS(i)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
-        elseif (i==iSA) then
-          sink(i,k)=(WS0(i)*SAp(m)-WS(i)*SAp(k))/dz(k)
-        else
-          sink(i,k)=(WS0(i)*wqc(i,m)-WS(i)*wqc(i,k))/dz(k)
-        endif
+        sink(i,k)=(WS(i)*wqc(i,m)-WB(i)*wqc(i,k))/dz(k)
       enddo
+      !sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
+      sink(iPO4,k)=(WS(iPO4)*PO4a(m)-WB(iPO4)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
+      if(iSilica==1) sink(iSA,k)=(WS(iSA)*SAp(m)-WB(iSA)*SAp(k))/dz(k)
     enddo !k
 
     !----------------------------------------------------------------------------------
@@ -367,50 +376,50 @@ subroutine ecosystem(it)
       enddo
      
       !RPOC, LPOC, DOC
-      dRPOC(k)=-rKC(1,k)*RPOC(k) !dissolution
-      dLPOC(k)=-rKC(2,k)*LPOC(k) !dissolution
-      dDOC(k) = rKC(1,k)*RPOC(k)+rKC(2,k)*LPOC(k)-(rKHR(k)+rDenit(k))*DOC(k) !dissolution, respiration, denitrification
+      dwqc(iRPOC,k)=-rKC(1,k)*RPOC(k) !dissolution
+      dwqc(iLPOC,k)=-rKC(2,k)*LPOC(k) !dissolution
+      dwqc(iDOC,k) = rKC(1,k)*RPOC(k)+rKC(2,k)*LPOC(k)-(rKHR(k)+rDenit(k))*DOC(k) !dissolution, respiration, denitrification
       do m=1,3
-        dRPOC(k)=dRPOC(k)+FCP(m,1)*PR(m,k) !predation
-        dLPOC(k)=dLPOC(k)+FCP(m,2)*PR(m,k) !predation
-        dDOC(k) =dDOC(k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m,k) !predation, metabolism
+        dwqc(iRPOC,k)=dwqc(iRPOC,k)+FCP(m,1)*PR(m,k) !predation
+        dwqc(iLPOC,k)=dwqc(iLPOC,k)+FCP(m,2)*PR(m,k) !predation
+        dwqc(iDOC,k) =dwqc(iDOC,k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m,k) !predation, metabolism
       enddo
 
       !RPON, LPON, DON, NH4, NO3
-      dRPON(k)=-rKN(1,k)*RPON(k) !dissolution
-      dLPON(k)=-rKN(2,k)*LPON(k) !dissolution
-      dDON(k) = rKN(1,k)*RPON(k)+rKN(2,k)*LPON(k)-rKN(3,k)*DON(k) !dissolution, mineralization
-      dNH4(k) = rKN(3,k)*DON(k)-rNit(k)*NH4(k)  !mineralization, nitrification
-      dNO3(k) = rNit(k)*NH4(k)-dn2c*rDenit(k)*DOC(k)  !nitrification, denitrification
+      dwqc(iRPON,k)=-rKN(1,k)*RPON(k) !dissolution
+      dwqc(iLPON,k)=-rKN(2,k)*LPON(k) !dissolution
+      dwqc(iDON,k) = rKN(1,k)*RPON(k)+rKN(2,k)*LPON(k)-rKN(3,k)*DON(k) !dissolution, mineralization
+      dwqc(iNH4,k) = rKN(3,k)*DON(k)-rNit(k)*NH4(k)  !mineralization, nitrification
+      dwqc(iNO3,k) = rNit(k)*NH4(k)-dn2c*rDenit(k)*DOC(k)  !nitrification, denitrification
       do m=1,3
-        dRPON(k)=dRPON(k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*BM(m,k)) !predation, metabolism 
-        dLPON(k)=dLPON(k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*BM(m,k)) !predation, metabolism 
-        dDON(k) =dDON(k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*BM(m,k)) !predation, metabolism  
-        dNH4(k) =dNH4(k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*BM(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
-        dNO3(k) =dNO3(k) -n2c(m)*(1.0-fPN(m,k))*GP(m,k) !growth
+        dwqc(iRPON,k)=dwqc(iRPON,k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*BM(m,k)) !predation, metabolism 
+        dwqc(iLPON,k)=dwqc(iLPON,k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*BM(m,k)) !predation, metabolism 
+        dwqc(iDON,k) =dwqc(iDON,k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*BM(m,k)) !predation, metabolism  
+        dwqc(iNH4,k) =dwqc(iNH4,k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*BM(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
+        dwqc(iNO3,k) =dwqc(iNO3,k) -n2c(m)*(1.0-fPN(m,k))*GP(m,k) !growth
       enddo
 
       !RPOP, LPOP, DOP, PO4
-      dRPOP(k)=-rKP(1,k)*RPOP(k) !dissolution
-      dLPOP(k)=-rKP(2,k)*LPOP(k) !dissolution
-      dDOP(k) = rKP(1,k)*RPOP(k)+rKP(2,k)*LPOP(k)-rKP(3,k)*DOP(k) !dissolution, mineralization
-      dPO4(k) = rKP(3,k)*DOP(k) !mineralization
+      dwqc(iRPOP,k)=-rKP(1,k)*RPOP(k) !dissolution
+      dwqc(iLPOP,k)=-rKP(2,k)*LPOP(k) !dissolution
+      dwqc(iDOP,k) = rKP(1,k)*RPOP(k)+rKP(2,k)*LPOP(k)-rKP(3,k)*DOP(k) !dissolution, mineralization
+      dwqc(iPO4,k) = rKP(3,k)*DOP(k) !mineralization
       do m=1,3
-        dRPOP(k)=dRPOP(k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*BM(m,k)) !predation, metabolism 
-        dLPOP(k)=dLPOP(k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*BM(m,k)) !predation, metabolism 
-        dDOP(k) =dDOP(k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*BM(m,k)) !predation, metabolism  
-        dPO4(k) =dPO4(k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
+        dwqc(iRPOP,k)=dwqc(iRPOP,k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*BM(m,k)) !predation, metabolism 
+        dwqc(iLPOP,k)=dwqc(iLPOP,k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*BM(m,k)) !predation, metabolism 
+        dwqc(iDOP,k) =dwqc(iDOP,k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*BM(m,k)) !predation, metabolism  
+        dwqc(iPO4,k) =dwqc(iPO4,k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
       enddo
 
       !COD 
-      dCOD(k)=-rKCOD(k)*COD(k) !oxidation
+      dwqc(iCOD,k)=-rKCOD(k)*COD(k) !oxidation
 
       !DO
-      dDOX(k)=-o2n*rNit(k)*NH4(k)-o2c*rKHR(k)*DOC(k)-rKCOD(k)*COD(k) !nitrification, respiration, COD oxidiation
+      dwqc(iDOX,k)=-o2n*rNit(k)*NH4(k)-o2c*rKHR(k)*DOC(k)-rKCOD(k)*COD(k) !nitrification, respiration, COD oxidiation
       do m=1,3
-        dDOX(k)=dDOX(k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)) !growth, metabolism
+        dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)) !growth, metabolism
       enddo
-      if(k==nvrt) dDOX(k)=dDOX(k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
+      if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
     enddo !k
 
     !----------------------------------------------------------------------------------
@@ -452,11 +461,11 @@ subroutine silica_calc(kb,PR,BM,GP)
   !SU, SA
   do k=kb+1,nvrt
     rKSUA =KS*exp(KTRS*(temp(k)-TRS))
-    dSU=-rKSUA*SU(k) !dissolution
-    dSA= rKSUA*SU(k) !dissolution
+    dwqc(iSU,k)=-rKSUA*SU(k) !dissolution
+    dwqc(iSA,k)= rKSUA*SU(k) !dissolution
     do m=1,3
-      dSU=dSU+s2c(m)*(FSP(1)*PR(m,k)+FSM(1)*BM(m,k)) !predation, metabolism
-      dSA=dSA+s2c(m)*(FSP(2)*PR(m,k)+FSM(2)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
+      dwqc(iSU,k)=dwqc(iSU,k)+s2c(m)*(FSP(1)*PR(m,k)+FSM(1)*BM(m,k)) !predation, metabolism
+      dwqc(iSA,k)=dwqc(iSA,k)+s2c(m)*(FSP(2)*PR(m,k)+FSM(2)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
     enddo !m
   enddo !k
 
@@ -528,7 +537,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN)
 
       !ALK unit in Mg[CaCO3]/L
       rat=0.5*mCACO3/mN
-      dALK=xKCACO3+xKCA-rat*2.0*rNit(k)*NH4(k)
+      dwqc(iALK,k)=xKCACO3+xKCA-rat*2.0*rNit(k)*NH4(k)
       do m=1,3; dwqc(iALK,k)=dwqc(iALK,k)-rat*n2c(m)*GP(m,k)*((15.0/14.0)*fPN(m,k)+(17.0/16.0)*(1.0-fPN(m,k))); enddo
 
     else !doesn't invoke PH calculation
@@ -786,8 +795,8 @@ subroutine zoo_calc(kb,PR)
    enddo !i
 
    !ZB1, ZB2
-   dZB1(k)=sum(zBG(1:8,1))*zAG*(1-zRG)-zBM(1)-zMTB(1)-fishZ(1)-zBG(1,2)
-   dZB2(k)=sum(zBG(1:8,2))*zAG*(1-zRG)-zBM(2)-zMTB(2)-fishZ(2)-zBG(2,1)
+   dwqc(iZB1,k)=sum(zBG(1:8,1))*zAG*(1-zRG)-zBM(1)-zMTB(1)-fishZ(1)-zBG(1,2)
+   dwqc(iZB2,k)=sum(zBG(1:8,2))*zAG*(1-zRG)-zBM(2)-zMTB(2)-fishZ(2)-zBG(2,1)
 
    !Fish/ZB predation on PB
    do m=1,3 !PB
@@ -814,7 +823,7 @@ subroutine zoo_calc(kb,PR)
 
        zdN(m,k)=zdN(m,k)+zFNP(m)*zn2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFNM(j,m)*zn2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
        zdP(m,k)=zdP(m,k)+zFPP(m)*zp2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFPM(j,m)*zp2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
-       if(m<=2) zdS(m,k)=zdS(m,k)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFSM(j,m)*zs2c(j)*zBM(j)
+       if(iSilica==1.and.m<=2) zdS(m,k)=zdS(m,k)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFSM(j,m)*zs2c(j)*zBM(j)
      enddo !j
    enddo !m
   enddo !k

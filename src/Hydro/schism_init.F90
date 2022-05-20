@@ -48,7 +48,8 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,iSilica,iZB,iPh, &
+                    & rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
                     & isav_icm,iveg_icm,sedDOX,CTEMP,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
                     & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
                     & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
@@ -206,7 +207,8 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,ioffline_partition
 
-     namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
+     namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_sav,iof_icm_veg,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
@@ -432,7 +434,8 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(44),iof_cos(20),iof_fib(5), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
+     &iof_icm_ph(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
@@ -493,12 +496,23 @@
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
-      iof_icm=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
+      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_sav=0
+      iof_icm_veg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
       nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
       close(15)
+
+#ifdef USE_ICM
+      !get value of iof_icm from ICM submodules
+      iof_icm(1:17)=iof_icm_core
+      if(iSilica==1) iof_icm(itrs_icm(1,2):itrs_icm(2,2))=iof_icm_silica
+      if(iZB==1) iof_icm(itrs_icm(1,3):itrs_icm(2,3))=iof_icm_zb
+      if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
+      if(isav_icm==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_sav
+      if(iveg_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_veg
+#endif
 
       !zcor should be on usually
 !      iof_hydro(25)=1
@@ -6500,57 +6514,23 @@
 
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=29,32
-          if(iof_icm(i)==1) then
+        do i=1,4
+          if(iof_icm_sav(i)==1) then
             ncount_2delem=ncount_2delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=4
-            select case(i)
-              case(29)
-                out_name(counter_out_name)='ICM_stleaf'
-              case(30)
-                out_name(counter_out_name)='ICM_ststem'
-              case(31)
-                out_name(counter_out_name)='ICM_stroot'
-              case(32)
-                out_name(counter_out_name)='ICM_sht'
-            end select
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+i+2)))
           endif !iof
         enddo !i
       endif !isav_icm/
 
       if(iveg_icm/=0) then
-        do i=33,44
-          if(iof_icm(i)==1) then
+        do i=1,nout_veg
+          if(iof_icm_veg(i)==1) then
             ncount_2delem=ncount_2delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=4
-            select case(i)
-              case(33)
-                out_name(counter_out_name)='ICM_vtleaf1'
-              case(34)
-                out_name(counter_out_name)='ICM_vtleaf2'
-              case(35)
-                out_name(counter_out_name)='ICM_vtleaf3'
-              case(36)
-                out_name(counter_out_name)='ICM_vtstem1'
-              case(37)
-                out_name(counter_out_name)='ICM_vtstem2'
-              case(38)
-                out_name(counter_out_name)='ICM_vtstem3'
-              case(39)
-                out_name(counter_out_name)='ICM_vtroot1'
-              case(40)
-                out_name(counter_out_name)='ICM_vtroot2'
-              case(41)
-                out_name(counter_out_name)='ICM_vtroot3'
-              case(42)
-                out_name(counter_out_name)='ICM_vht1'
-              case(43)
-                out_name(counter_out_name)='ICM_vht2'
-              case(44)
-                out_name(counter_out_name)='ICM_vht3'
-            end select
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
           endif !iof
         enddo !i
       endif !iveg_icm/
@@ -6755,12 +6735,10 @@
 #ifdef USE_ICM
       do i=1,ntrs(7)
         if(iof_icm(i)==1) then
-          write(ifile_char,'(i12)')i
-          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=2
-          out_name(counter_out_name)='ICM_'//ifile_char(1:itmp2)
+          out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(i)))
         endif
       enddo !i
 #endif/*USE_ICM*/
@@ -6896,18 +6874,12 @@
       !Modules
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=26,28
-          if(iof_icm(i)==1) then
+        do i=1,3
+          if(iof_icm_sav(i)==1) then
             ncount_3delem=ncount_3delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=6
-            if(i==26) then
-              out_name(counter_out_name)='ICM_sleaf'
-            else if(i==27) then
-              out_name(counter_out_name)='ICM_sstem'
-            else
-              out_name(counter_out_name)='ICM_sroot'
-            endif
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+i-1)))
           endif
         enddo !i
       endif !isav_icm/
@@ -6955,6 +6927,13 @@
       if(myrank==0) then 
         write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
         do i=1,nscribes
+#ifdef USE_ICM
+          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
+          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
+          call mpi_send(nout_sav,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,123,comm_schism,ierr)
+          call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,144,comm_schism,ierr)
+#endif
           call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
           call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
           call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,102,comm_schism,ierr)
@@ -6979,7 +6958,6 @@
           call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
           call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
           call mpi_send(ntrs,natrm,itype,nproc_schism-i,122,comm_schism,ierr)
-          call mpi_send(iof_icm,44,itype,nproc_schism-i,123,comm_schism,ierr)
           call mpi_send(iof_cos,20,itype,nproc_schism-i,124,comm_schism,ierr)
           call mpi_send(iof_fib,5,itype,nproc_schism-i,125,comm_schism,ierr)
           call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
@@ -6998,9 +6976,6 @@
           call mpi_send(start_day,1,itype,nproc_schism-i,138,comm_schism,ierr)
           call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
           call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
-#ifdef USE_ICM
-          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
-#endif
         enddo !i
       endif !myrank=0
 

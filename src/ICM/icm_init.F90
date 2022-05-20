@@ -73,7 +73,7 @@ subroutine read_icm_param(imode)
     !read ICM; compute total # of state variables 
     !------------------------------------------------------------------------------------
     !initilize global switches
-    iRad=0; iKe=0; iLight=0; iLimit=0; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0; iSilica=1; 
+    iRad=0; iKe=0; iLight=0; iLimit=0; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0; iSilica=0; 
     iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
     Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
     thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4_tben=0; SA_tben=0
@@ -85,13 +85,43 @@ subroutine read_icm_param(imode)
     close(31)
 
     !compute total number of ICM 3D state variables
-    itrs(1,1)=1; itrs(2,1)=21; ntrs_icm=21
-    iZB1=1;  iZB2=2;  iPB1=3;  iPB2=4;  iPB3=5;  iRPOC=6;  iLPOC=7;  iDOC=8;  iRPON=9;  iLPON=10
-    iDON=11; iNH4=12; iNO3=13; iRPOP=14;iLPOP=15;iDOP=16;  iPO4=17;  iSU=18;  iSA=19;   iCOD=20;  iDOX=21
-    if(iPh==1) then
-      itrs(1,2)=ntrs_icm+1; itrs(2,2)=ntrs_icm+4; ntrs_icm=ntrs_icm+4; 
-      iTIC=itrs(1,2); iALK=itrs(1,2)+1; iCA=itrs(1,2)+2; iCACO3=itrs(1,2)+3
+    itrs(1,1)=1; itrs(2,1)=17; ntrs_icm=17
+    iPB1=1;  iPB2=2;  iPB3=3;  iRPOC=4;  iLPOC=5;  iDOC=6;  iRPON=7;  iLPON=8
+    iDON=9;  iNH4=10; iNO3=11; iRPOP=12; iLPOP=13; iDOP=14; iPO4=15;  iCOD=16;  iDOX=17
+
+    if(iSilica==1) then
+      itrs(1,2)=ntrs_icm+1; itrs(2,2)=ntrs_icm+2; ntrs_icm=ntrs_icm+2
+      iSU=itrs(1,2); iSA=itrs(1,2)+1
     endif
+
+    if(iZB==1) then
+      itrs(1,3)=ntrs_icm+1; itrs(2,3)=ntrs_icm+2; ntrs_icm=ntrs_icm+2
+      iZB1=itrs(1,3); iZB2=itrs(1,3)+1
+    endif
+
+    if(iPh==1) then
+      itrs(1,4)=ntrs_icm+1; itrs(2,4)=ntrs_icm+4; ntrs_icm=ntrs_icm+4
+      iTIC=itrs(1,4); iALK=itrs(1,4)+1; iCA=itrs(1,4)+2; iCACO3=itrs(1,4)+3
+    endif
+
+    !variable names for outputs
+    nout_icm=ntrs_icm; itrs_icm=>itrs
+    if(jsav==1) then
+       itrs(1,5)=nout_icm+1; itrs(2,5)=nout_icm+nout_sav;  nout_icm=nout_icm+nout_sav
+    endif
+    if(jveg==1) then
+       itrs(1,6)=nout_icm+1; itrs(2,6)=nout_icm+nout_veg;  nout_icm=nout_icm+nout_veg
+    endif
+    allocate(name_icm(nout_icm),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. name_icm')
+    name_icm(itrs(1,1):itrs(2,1))=(/'PB1 ','PB2 ','PB3 ','RPOC','LPOC','DOC ','RPON', &
+              & 'LPON','DON ','NH4 ','NO3 ','RPOP','LPOP','DOP ','PO4 ','COD ','DOX '/)
+    if(iSilica==1) name_icm(itrs(1,2):itrs(2,2))=(/'SU  ','SA  '/)
+    if(iZB==1) name_icm(itrs(1,3):itrs(2,3))=(/'ZB1  ','ZB2  '/)
+    if(iPh==1) name_icm(itrs(1,4):itrs(2,4))=(/'TIC  ','ALK  ','CA   ','CACO3'/)
+    if(jsav==1) name_icm(itrs(1,5):itrs(2,5))=(/'sleaf ','sstem ','sroot ','stleaf','ststem','stroot','sht   '/)
+    if(jveg==1) name_icm(itrs(1,6):itrs(2,6))=(/'vtleaf1','vtleaf2','vtleaf3','vtstem1','vtstem2','vtstem3', & 
+                                              & 'vtroot1','vtroot2','vtroot3','vht1   ','vht2   ','vht3   '/)
 
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
@@ -157,19 +187,24 @@ subroutine read_icm_param(imode)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
 
     !concentration changes
-    dZB1=>dwqc(1,:);   dZB2=>dwqc(2,:);   dZBS=>dwqc(1:2,:)
-    dPB1=>dwqc(3,:);   dPB2=>dwqc(4,:);   dPB3=>dwqc(5,:);   dPBS=>dwqc(3:5,:)
-    dRPOC=>dwqc(6,:);  dLPOC=>dwqc(7,:);  dDOC=>dwqc(8,:)
-    dRPON=>dwqc(9,:);  dLPON=>dwqc(10,:); dDON=>dwqc(11,:);  dNH4=>dwqc(12,:); dNO3=>dwqc(13,:)
-    dRPOP=>dwqc(14,:); dLPOP=>dwqc(15,:); dDOP=>dwqc(16,:);  dPO4=>dwqc(17,:)
-    dSU=>dwqc(18,:);   dSA=>dwqc(19,:)
-    dCOD=>dwqc(20,:);  dDOX=>dwqc(21,:)
-    if(iPh==1) then
-      dTIC=>dwqc(22,:); dALK=>dwqc(23,:); dCA=>dwqc(24,:); dCACO3=>dwqc(25,:)
+    dPBS=>dwqc(1:3,:)
+    if(iZB==1) then
+      zdPBS=>zdwqc(1:3,:); zdC=>zdwqc(4:6,:);   zdN=>zdwqc(8:11,:)
+      zdP=>zdwqc(12:15,:); zdDOX=>zdwqc(17,:)
+      if(iSilica==1) zds=>zdwqc(itrs(1,2):itrs(2,2),:)
     endif
+    !dZBS=>dwqc(1:2,:)
+    !dZB1=>dwqc(1,:);   dZB2=>dwqc(2,:);   
+    !dPB1=>dwqc(3,:);   dPB2=>dwqc(4,:);   dPB3=>dwqc(5,:);   
+    !dRPOC=>dwqc(6,:);  dLPOC=>dwqc(7,:);  dDOC=>dwqc(8,:)
+    !dRPON=>dwqc(9,:);  dLPON=>dwqc(10,:); dDON=>dwqc(11,:);  dNH4=>dwqc(12,:); dNO3=>dwqc(13,:)
+    !dRPOP=>dwqc(14,:); dLPOP=>dwqc(15,:); dDOP=>dwqc(16,:);  dPO4=>dwqc(17,:)
+    !dSU=>dwqc(18,:);   dSA=>dwqc(19,:)
+    !dCOD=>dwqc(20,:);  dDOX=>dwqc(21,:)
+    !if(iPh==1) then
+    !  dTIC=>dwqc(22,:); dALK=>dwqc(23,:); dCA=>dwqc(24,:); dCACO3=>dwqc(25,:)
+    !endif
 
-    zdPBS=>zdwqc(3:5,:); zdC=>zdwqc(6:8,:);   zdN=>zdwqc(9:13,:)
-    zdP=>zdwqc(14:17,:); zdS=>zdwqc(18:19,:); zdDOX=>zdwqc(21,:)
     !sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
     !vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
 
@@ -664,15 +699,19 @@ subroutine update_vars(id,usf,wspd)
   !links of state variables
   j=irange_tr(1,7);    wqc=>tr_el(j:(j+ntrs_icm-1),1:nvrt,id)
   temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
-  ZB1=>wqc(1,:);   ZB2=>wqc(2,:);   ZBS=>wqc(1:2,:)
-  PB1=>wqc(3,:);   PB2=>wqc(4,:);   PB3=>wqc(5,:);   PBS=>wqc(3:5,:)
-  RPOC=>wqc(6,:);  LPOC=>wqc(7,:);  DOC=>wqc(8,:)
-  RPON=>wqc(9,:);  LPON=>wqc(10,:); DON=>wqc(11,:);  NH4=>wqc(12,:); NO3=>wqc(13,:)
-  RPOP=>wqc(14,:); LPOP=>wqc(15,:); DOP=>wqc(16,:);  PO4=>wqc(17,:)
-  SU=>wqc(18,:);   SA=>wqc(19,:)
-  COD=>wqc(20,:);  DOX=>wqc(21,:)
+  PB1=> wqc(iPB1,:);   PB2=>wqc(iPB2,:);    PB3=>wqc(iPB3,:);  PBS=>wqc(iPB1:iPB3,:)
+  RPOC=>wqc(iRPOC,:);  LPOC=>wqc(iLPOC,:);  DOC=>wqc(iDOC,:)
+  RPON=>wqc(iRPON,:);  LPON=>wqc(iLPON,:);  DON=>wqc(iDON,:);  NH4=>wqc(iNH4,:); NO3=>wqc(iNO3,:)
+  RPOP=>wqc(iRPOP,:);  LPOP=>wqc(iLPOP,:);  DOP=>wqc(iDOP,:);  PO4=>wqc(iPO4,:)
+  COD=>wqc(iCOD,:);    DOX=>wqc(iDOX,:)
+  if(iSilica==1) then
+    SU=>wqc(iSU,:);   SA=>wqc(iSA,:)
+  endif
+  if(iZB==1) then
+    ZB1=>wqc(iZB1,:); ZB2=>wqc(iZB2,:);  ZBS=>wqc(iZB1:iZB2,:)
+  endif
   if(iPh==1) then
-    TIC=>wqc(22,:);  ALK=>wqc(23,:);  CA=>wqc(24,:); CACO3=>wqc(25,:)
+    TIC=>wqc(iTIC,:); ALK=>wqc(iALK,:);  CA=>wqc(iCA,:); CACO3=>wqc(iCACO3,:)
   endif
 
   !SAV and VEG

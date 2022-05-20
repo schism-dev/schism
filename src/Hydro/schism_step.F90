@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iPh,isav_icm,iveg_icm, &
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
                         & CTEMP,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
@@ -8686,46 +8686,39 @@
 #endif 
 
 #ifdef USE_ICM
-        !default ICM variables and pH model variables
         do i=1,ntrs(7)
-          write(it_char,'(i72)')i
-          it_char=adjustl(it_char); lit=len_trim(it_char)
-          itmp=irange_tr(1,7)+i-1 !global tracer #
-          if(iof_icm(i)==1) call writeout_nc(id_out_var(noutput+i+4), &
-     &'ICM_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
+          if(iof_icm(i)==1) call writeout_nc(id_out_var(noutput+i+4),'ICM_'//trim(adjustl(name_icm(i))),2,nvrt,npa,tr_nd(irange_tr(1,7)+i-1,:,:))
         enddo !i
         noutput=noutput+ntrs(7)
-
-        if(iPh==1) noutput=noutput+4
          
         !SAV model
         if(isav_icm/=0) then
-          if(iof_icm(26)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_sleaf', 6,nvrt,nea,dble(sleaf))
-          if(iof_icm(27)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_sstem', 6,nvrt,nea,dble(sstem))
-          if(iof_icm(28)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_sroot', 6,nvrt,nea,dble(sroot))
-          if(iof_icm(29)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_stleaf',4,1,nea,dble(stleaf))
-          if(iof_icm(30)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_ststem',4,1,nea,dble(ststem))
-          if(iof_icm(31)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_stroot',4,1,nea,dble(stroot))
-          if(iof_icm(32)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_sht',4,1,nea,dble(sht))
+          if(iof_icm_sav(1)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+1-1))), 6,nvrt,nea,dble(sleaf))
+          if(iof_icm_sav(2)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+2-1))), 6,nvrt,nea,dble(sstem))
+          if(iof_icm_sav(3)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+3-1))), 6,nvrt,nea,dble(sroot))
+          if(iof_icm_sav(4)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+4-1))),4,1,nea,dble(stleaf))
+          if(iof_icm_sav(5)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+5-1))),4,1,nea,dble(ststem))
+          if(iof_icm_sav(6)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+6-1))),4,1,nea,dble(stroot))
+          if(iof_icm_sav(7)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+7-1))),4,1,nea,dble(sht))
+          noutput=noutput+7
         endif
-        noutput=noutput+7
 
         !VEG model
         if(iveg_icm/=0) then
-          if(iof_icm(33)==1) call writeout_nc(id_out_var(noutput+4+1), 'ICM_vtleaf1',4,1,nea,dble(vtleaf(:,1)))
-          if(iof_icm(34)==1) call writeout_nc(id_out_var(noutput+4+2), 'ICM_vtleaf2',4,1,nea,dble(vtleaf(:,2)))
-          if(iof_icm(35)==1) call writeout_nc(id_out_var(noutput+4+3), 'ICM_vtleaf3',4,1,nea,dble(vtleaf(:,3)))
-          if(iof_icm(36)==1) call writeout_nc(id_out_var(noutput+4+4), 'ICM_vtstem1',4,1,nea,dble(vtstem(:,1)))
-          if(iof_icm(37)==1) call writeout_nc(id_out_var(noutput+4+5), 'ICM_vtstem2',4,1,nea,dble(vtstem(:,2)))
-          if(iof_icm(38)==1) call writeout_nc(id_out_var(noutput+4+6), 'ICM_vtstem3',4,1,nea,dble(vtstem(:,3)))
-          if(iof_icm(39)==1) call writeout_nc(id_out_var(noutput+4+7), 'ICM_vtroot1',4,1,nea,dble(vtroot(:,1)))
-          if(iof_icm(40)==1) call writeout_nc(id_out_var(noutput+4+8), 'ICM_vtroot2',4,1,nea,dble(vtroot(:,2)))
-          if(iof_icm(41)==1) call writeout_nc(id_out_var(noutput+4+9), 'ICM_vtroot3',4,1,nea,dble(vtroot(:,3)))
-          if(iof_icm(42)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_vht1',   4,1,nea,dble(vht(:,1)))
-          if(iof_icm(43)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_vht2',   4,1,nea,dble(vht(:,2)))
-          if(iof_icm(44)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_vht3',   4,1,nea,dble(vht(:,3)))
+          if(iof_icm_veg(1)==1)  call writeout_nc(id_out_var(noutput+4+1), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+1-1))),4,1,nea,dble(vtleaf(:,1)))
+          if(iof_icm_veg(2)==1)  call writeout_nc(id_out_var(noutput+4+2), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+2-1))),4,1,nea,dble(vtleaf(:,2)))
+          if(iof_icm_veg(3)==1)  call writeout_nc(id_out_var(noutput+4+3), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+3-1))),4,1,nea,dble(vtleaf(:,3)))
+          if(iof_icm_veg(4)==1)  call writeout_nc(id_out_var(noutput+4+4), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+4-1))),4,1,nea,dble(vtstem(:,1)))
+          if(iof_icm_veg(5)==1)  call writeout_nc(id_out_var(noutput+4+5), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+5-1))),4,1,nea,dble(vtstem(:,2)))
+          if(iof_icm_veg(6)==1)  call writeout_nc(id_out_var(noutput+4+6), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+6-1))),4,1,nea,dble(vtstem(:,3)))
+          if(iof_icm_veg(7)==1)  call writeout_nc(id_out_var(noutput+4+7), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+7-1))),4,1,nea,dble(vtroot(:,1)))
+          if(iof_icm_veg(8)==1)  call writeout_nc(id_out_var(noutput+4+8), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+8-1))),4,1,nea,dble(vtroot(:,2)))
+          if(iof_icm_veg(9)==1)  call writeout_nc(id_out_var(noutput+4+9), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+9-1))),4,1,nea,dble(vtroot(:,3)))
+          if(iof_icm_veg(10)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+10-1))),4,1,nea,dble(vht(:,1)))
+          if(iof_icm_veg(11)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+11-1))),4,1,nea,dble(vht(:,2)))
+          if(iof_icm_veg(12)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+12-1))),4,1,nea,dble(vht(:,3)))
+          noutput=noutput+12
         endif
-        noutput=noutput+12
 
 #endif /*USE_ICM*/
 
@@ -9227,18 +9220,18 @@
 
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=29,32
-          if(iof_icm(i)==1) then
+        do i=1,4
+          if(iof_icm_sav(i+3)==1) then
             icount=icount+1
             if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.131)')
             select case(i)
-              case(29)
+              case(1)
                 varout_2delem(icount,:)=stleaf(1:ne)
-              case(30)
+              case(2)
                 varout_2delem(icount,:)=ststem(1:ne)
-              case(31)
+              case(3)
                 varout_2delem(icount,:)=stroot(1:ne)
-              case(32)
+              case(4)
                 varout_2delem(icount,:)=sht(1:ne)
             end select
           endif !iof_icm
@@ -9246,34 +9239,34 @@
       endif !isav_icm/
 
       if(iveg_icm/=0) then
-        do i=33,44
-          if(iof_icm(i)==1) then
+        do i=1,nout_veg
+          if(iof_icm_veg(i)==1) then
             icount=icount+1
             if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.132)')
             select case(i)
-              case(33)
+              case(1)
                 varout_2delem(icount,:)=vtleaf(1:ne,1)
-              case(34)
+              case(2)
                 varout_2delem(icount,:)=vtleaf(1:ne,2)
-              case(35)
+              case(3)
                 varout_2delem(icount,:)=vtleaf(1:ne,3)
-              case(36)
+              case(4)
                 varout_2delem(icount,:)=vtstem(1:ne,1)
-              case(37)
+              case(5)
                 varout_2delem(icount,:)=vtstem(1:ne,2)
-              case(38)
+              case(6)
                 varout_2delem(icount,:)=vtstem(1:ne,3)
-              case(39)
+              case(7)
                 varout_2delem(icount,:)=vtroot(1:ne,1)
-              case(40)
+              case(8)
                 varout_2delem(icount,:)=vtroot(1:ne,2)
-              case(41)
+              case(9)
                 varout_2delem(icount,:)=vtroot(1:ne,3)
-              case(42)
+              case(10)
                 varout_2delem(icount,:)=vht(1:ne,1)
-              case(43)
+              case(11)
                 varout_2delem(icount,:)=vht(1:ne,2)
-              case(44)
+              case(12)
                 varout_2delem(icount,:)=vht(1:ne,3)
             end select     
           endif !iof_icm
@@ -9723,11 +9716,11 @@
         !Modules
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=26,28
-          if(iof_icm(i)==1) then
-            if(i==26) then
+        do i=1,3
+          if(iof_icm_sav(i)==1) then
+            if(i==1) then
               call savensend3D_scribe(icount,2,1,nvrt,ne,sleaf(:,1:ne))
-            else if(i==27) then
+            else if(i==2) then
               call savensend3D_scribe(icount,2,1,nvrt,ne,sstem(:,1:ne))
             else
               call savensend3D_scribe(icount,2,1,nvrt,ne,sroot(:,1:ne))

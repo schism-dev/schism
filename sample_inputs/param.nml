@@ -911,57 +911,61 @@
 !-----------------------------------------------------------------------
 ! ICM outputs 
 !-----------------------------------------------------------------------
-  !default ICM state variables
-  iof_icm(1)  = 0 !Zoo.  #1 {ICM_1}
-  iof_icm(2)  = 0 !Zoo.  #2 {ICM_2}
-  iof_icm(3)  = 0 !phyto #1 {ICM_3}
-  iof_icm(4)  = 0 !phyto #2 {ICM_4}
-  iof_icm(5)  = 0 !phyto #3 {ICM_5}
-  iof_icm(6)  = 0 !RPOC     {ICM_6}
-  iof_icm(7)  = 0 !LPOC     {ICM_7}
-  iof_icm(8)  = 0 !DOC      {ICM_8}
-  iof_icm(9)  = 0 !RPON     {ICM_9}
-  iof_icm(10) = 0 !LPON     {ICM_10}
-  iof_icm(11) = 0 !DON      {ICM_11}
-  iof_icm(12) = 0 !NH4      {ICM_12}
-  iof_icm(13) = 0 !NO3      {ICM_13}
-  iof_icm(14) = 0 !RPOP     {ICM_14}
-  iof_icm(15) = 0 !LPOP     {ICM_15}
-  iof_icm(16) = 0 !DOP      {ICM_16}
-  iof_icm(17) = 0 !PO4t     {ICM_17}
-  iof_icm(18) = 0 !biogenic Si  {ICM_18}
-  iof_icm(19) = 0 !available Si {ICM_19}
-  iof_icm(20) = 0 !COD {ICM_20}
-  iof_icm(21) = 0 !DO  {ICM_21}
-
-  !pH model: need to turn on ICM_PH model
-  iof_icm(22) = 0 !TIC   {ICM_22}
-  iof_icm(23) = 0 !ALK   {ICM_23}  
-  iof_icm(24) = 0 !CA    {ICM_24}  
-  iof_icm(25) = 0 !CACO3 {ICM_25}
-
-  !SAV model
-  iof_icm(26) = 0 !ICM SAV leaf biomass @elem [gC/m^3] (k=1 is surface) {ICM_lfsav}
-  iof_icm(27) = 0 !ICM SAV stem biomass @elem [gC/m^3] {ICM_stsav}
-  iof_icm(28) = 0 !ICM SAV root biomass @elem [gC/m^3] {ICM_rtsav}
-  iof_icm(29) = 0 !ICM SAV total leaf biomass @elem [gC/m^2] {ICM_tlfsav}
-  iof_icm(30) = 0 !ICM SAV total stem biomass @elem [gC/m^2] {ICM_tstsav}
-  iof_icm(31) = 0 !ICM SAV total root biomass @elem [gC/m^2] {ICM_trtsav}
-  iof_icm(32) = 0 !ICM SAV canopy height @elem [m] {ICM_hcansav}
-
-  !VEG model
-  iof_icm(33) = 0 !veg lf biomass group 1 [gC/m^2] {ICM_tlfveg1}
-  iof_icm(34) = 0 !veg lf biomass group 2 [gC/m^2] {ICM_tlfveg2}
-  iof_icm(35) = 0 !veg lf biomass group 3 [gC/m^2] {ICM_tlfveg3}
-  iof_icm(36) = 0 !veg st biomass group 1 [gC/m^2] {ICM_tstveg1}
-  iof_icm(37) = 0 !veg st biomass group 2 [gC/m^2] {ICM_tstveg2}
-  iof_icm(38) = 0 !veg st biomass group 3 [gC/m^2] {ICM_tstveg3}
-  iof_icm(39) = 0 !veg rt biomass group 1 [gC/m^2] {ICM_trtveg1}
-  iof_icm(40) = 0 !veg rt biomass group 2 [gC/m^2] {ICM_trtveg2}
-  iof_icm(41) = 0 !veg rt biomass group 3 [gC/m^2] {ICM_trtveg3}
-  iof_icm(42) = 0 !veg canopy height group 1 [m] {ICM_hcanveg1}
-  iof_icm(43) = 0 !veg canopy height group 2 [m] {ICM_hcanveg2}
-  iof_icm(44) = 0 !veg canopy height group 3 [m] {ICM_hcanveg3}
+!  !core Module
+!  iof_icm_core(1)  = 0 !PB1
+!  iof_icm_core(2)  = 0 !PB2
+!  iof_icm_core(3)  = 0 !PB3
+!  iof_icm_core(4)  = 0 !RPOC
+!  iof_icm_core(5)  = 0 !LPOC
+!  iof_icm_core(6)  = 0 !DOC
+!  iof_icm_core(7)  = 0 !RPON
+!  iof_icm_core(8)  = 0 !LPON
+!  iof_icm_core(9)  = 0 !DON
+!  iof_icm_core(10) = 0 !NH4
+!  iof_icm_core(11) = 0 !NO3
+!  iof_icm_core(12) = 0 !RPOP
+!  iof_icm_core(13) = 0 !LPOP
+!  iof_icm_core(14) = 0 !DOP
+!  iof_icm_core(15) = 0 !PO4
+!  iof_icm_core(16) = 0 !COD
+!  iof_icm_core(17) = 0 !DOX
+!
+!  !silica module
+!  iof_icm_silica(1) = 0 !SU
+!  iof_icm_silica(2) = 0 !SA
+!
+!  !zooplankton module
+!  iof_icm_zb(1)  = 0 !ZB1
+!  iof_icm_zb(2)  = 0 !ZB2
+!
+!  !pH model
+!  iof_icm_ph(1) = 0 !TIC
+!  iof_icm_ph(2) = 0 !ALK
+!  iof_icm_ph(3) = 0 !CA
+!  iof_icm_ph(4) = 0 !CACO3
+!
+!  !SAV model
+!  iof_icm_sav(1) = 0 !sleaf:  leaf biomass @elem [gC/m^3]
+!  iof_icm_sav(2) = 0 !sstem:  stem biomass @elem [gC/m^3]
+!  iof_icm_sav(3) = 0 !sroot:  root biomass @elem [gC/m^3]
+!  iof_icm_sav(4) = 0 !stleaf: total leaf biomass @elem [gC/m^2]
+!  iof_icm_sav(5) = 0 !ststem: total stem biomass @elem [gC/m^2]
+!  iof_icm_sav(6) = 0 !stroot: total root biomass @elem [gC/m^2]
+!  iof_icm_sav(7) = 0 !sht:    canopy height @elem [m]
+!
+!  !VEG model
+!  iof_icm_veg(1)  = 0 !vtleaf1: leaf biomass group 1 [gC/m^2]
+!  iof_icm_veg(2)  = 0 !vtleaf2: leaf biomass group 2 [gC/m^2]
+!  iof_icm_veg(3)  = 0 !vtleaf3: leaf biomass group 3 [gC/m^2]
+!  iof_icm_veg(4)  = 0 !vtstem1: stem biomass group 1 [gC/m^2]
+!  iof_icm_veg(5)  = 0 !vtstem2: stem biomass group 2 [gC/m^2]
+!  iof_icm_veg(6)  = 0 !vtstem3: stem biomass group 3 [gC/m^2]
+!  iof_icm_veg(7)  = 0 !vtroot1: root biomass group 1 [gC/m^2]
+!  iof_icm_veg(8)  = 0 !vtroot2: root biomass group 2 [gC/m^2]
+!  iof_icm_veg(9)  = 0 !vtroot3: root biomass group 3 [gC/m^2]
+!  iof_icm_veg(10) = 0 !vht1:    canopy height group 1 [m]
+!  iof_icm_veg(11) = 0 !vht2:    canopy height group 2 [m]
+!  iof_icm_veg(12) = 0 !vht3:    canopy height group 3 [m]
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D
