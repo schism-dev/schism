@@ -176,6 +176,10 @@
       real(rkind), allocatable :: sink0(:), fraction0(:), kk10(:), kk20(:)
 #endif
 
+#ifndef USE_ICM
+      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12
+#endif
+
 #ifdef USE_OIL
 #endif
 
