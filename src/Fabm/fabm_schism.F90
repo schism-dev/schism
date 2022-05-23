@@ -180,8 +180,6 @@ module fabm_schism
     real(rk)                            :: time_since_last_hor_output = 0.0_rk
     real(rk)                            :: time_fabm(1)=-999.0_rk  !time in forcing files
 
-    type(type_bottom_standard_variable), dimension(:), allocatable :: bottom_standard_variables
-
     contains
 #if _FABM_API_VERSION_ < 1
     procedure :: get_light
