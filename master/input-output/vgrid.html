@@ -1297,9 +1297,9 @@ above. For example, using vgrid.in below leads to a 2D model.</p>
 <p>This type of grid requires some user experience and can be generated using scripts (e.g., <code>Utility/Pre-Processing/gen_vqs.f90</code>).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>1 !ivcor (1: LSC2; 2: SZ)
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>39 !nvrt(=Nz)
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>1 29 -1. -0.893491 -0.793885 -0.694399 -0.595016 -0.495718 -0.396491 -0.297320 -0.198191 -0.099089 0. !node ID, bottom level index, sigma coordinate from bottom (-1) to surface (0)
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>....
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>19520 12 -1.0 -0.985926 -0.918190 -0.854562 -0.794749 -0.738477 -0.685488 -0.635540 -0.588405 -0.543870 -0.501733 -0.461804 -0.423903 -0.387860 -0.353515 -0.320714 -0.289311 -0.259169 -0.230153 -0.202137 -0.174997 -0.148616 -0.122878 -0.097671 -0.072887 -0.048417 -0.024156 0.0 !@last node
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>10 4 4 4 4 10 4 10 10 ...  !bottom level indces at all nodes
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>1 -1. -1. -1. -1. -9. -9. -9. ... !level index, sigma coordinates at level 1 for all nodes
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>2 -0.884251  -0.874424  -0.888763 -0.884930 -0.884607 ... 
 </code></pre></div>
 
               

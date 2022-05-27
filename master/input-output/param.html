@@ -812,8 +812,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#ic_elev0-int" class="md-nav__link">
-    ic_elev=0 (int)
+  <a href="#ic_elev0-int-nramp_elev0-int-int" class="md-nav__link">
+    ic_elev=0 (int), nramp_elev=0 (int) (int)
   </a>
   
 </li>
@@ -833,8 +833,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#i_hmin_airsea_ex-hmin_airsea_ex" class="md-nav__link">
-    i_hmin_airsea_ex, hmin_airsea_ex
+  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double" class="md-nav__link">
+    i_hmin_airsea_ex (int), hmin_airsea_ex (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i_hmin_salt_ex-int-hmin_salt_ex-double" class="md-nav__link">
+    i_hmin_salt_ex (int), hmin_salt_ex (double)
   </a>
   
 </li>
@@ -861,8 +868,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#if_source0-int" class="md-nav__link">
-    if_source=0 (int)
+  <a href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" class="md-nav__link">
+    if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
   </a>
   
 </li>
@@ -910,6 +917,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#loadtide_coef0-int" class="md-nav__link">
+    loadtide_coef=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#imm0-ibdef10-int" class="md-nav__link">
     imm=0, ibdef=10 (int)
   </a>
@@ -938,8 +952,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#inu_tr0-int-array-step_nu_tr86400-double" class="md-nav__link">
-    inu_tr(:)=0 (int array), step_nu_tr=86400. (double)
+  <a href="#inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double" class="md-nav__link">
+    inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)
   </a>
   
 </li>
@@ -1008,15 +1022,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#nramp1-int-dramp1-double-nrampbc0-int-drampbc1-double" class="md-nav__link">
-    nramp=1 (int), dramp=1. (double), nrampbc=0 (int), drampbc=1. (double)
+  <a href="#dramp1-double-drampbc1-double" class="md-nav__link">
+    dramp=1. (double), drampbc=1. (double)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#nws0-iwind_form-1-int-wtimincdt-double" class="md-nav__link">
-    nws=0, iwind_form=-1 (int), wtiminc=dt (double)
+  <a href="#nws0-iwind_form-1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
+    nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
   </a>
   
 </li>
@@ -1669,8 +1683,12 @@
 <p>Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if <code>h&gt;=h2_bcc</code> (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if <code>h&lt;=h1_bcc(&lt;h2_bcc)</code>. A linear transition is used if the local depth <code>h1_bcc&lt;h&lt;h2_bcc</code>.</p>
 <h3 id="ibcc_mean0-int">ibcc_mean=0 (int)<a class="headerlink" href="#ibcc_mean0-int" title="Permanent link">&para;</a></h3>
 <p>Mean T,S profile option. If <code>ibcc_mean=1</code> (or <code>ihot=0</code> and <code>icst=2</code>), mean T/S profile is read in from <code>ts.ic</code>, and will be removed when calculating baroclinic force. No <code>ts.ic</code> is needed if <code>ibcc_mean=0</code>.</p>
-<h3 id="ic_elev0-int">ic_elev=0 (int)<a class="headerlink" href="#ic_elev0-int" title="Permanent link">&para;</a></h3>
-<p>Elevation initial condition flag for cold start only (<code>ihot=0</code>). If <code>ic_elev=1</code>, <code>elev.ic</code> (in <code>*.gr3</code> format) is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only).</p>
+<h3 id="ic_elev0-int-nramp_elev0-int-int">ic_elev=0 (int), nramp_elev=0 (int) (int)<a class="headerlink" href="#ic_elev0-int-nramp_elev0-int-int" title="Permanent link">&para;</a></h3>
+<p>Elevation initial condition flag for cold start only (<code>ihot=0</code>). If <code>ic_elev=1</code>, <code>elev.ic</code> (in <code>*.gr3</code> format) 
+is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only). 
+If <code>ic_elev=1</code>, the user can ramp up the elevation
+ smoothly starting from the specified <code>elev.ic</code> or <code>hotstart.nc</code> (if <span class="arithmatex">\(ihot\neq 0\)</span>) by setting <code>nramp_elev=1</code> (and the ramp-up
+ period in this case is <code>dramp</code>).</p>
 <h3 id="icou_elfe_wwm0-iwbl0-int">icou_elfe_wwm=0, iwbl=0 (int)<a class="headerlink" href="#icou_elfe_wwm0-iwbl0-int" title="Permanent link">&para;</a></h3>
 <p>Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. <code>icou_elfe_wwm = 0</code>: no feedback from WWM to SCHISM (decoupled); <code>1</code>: coupled SCHISM-WWM.</p>
 <p><code>iwbl=1</code>: modified Grant-Madsen formulation for wave enhanced boundary layer; =2: Soulsby (1997) formulation; <code>=0</code>: off.</p>
@@ -1681,20 +1699,29 @@
 </ul>
 <h3 id="ics1-int">ics=1 (int)<a class="headerlink" href="#ics1-int" title="Permanent link">&para;</a></h3>
 <p>Coordinate frame flag. If <code>ics=1</code>, Cartesian coordinates are used; if <code>ics=2</code>, both <code>hgrid.ll</code> and <code>hgrid.gr3</code> use degrees latitude/longitude (and they should be identical to each other in this case).</p>
-<h3 id="i_hmin_airsea_ex-hmin_airsea_ex">i_hmin_airsea_ex, hmin_airsea_ex<a class="headerlink" href="#i_hmin_airsea_ex-hmin_airsea_ex" title="Permanent link">&para;</a></h3>
-<p>Option to locally turn off heat/salt exchange.</p>
+<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double">i_hmin_airsea_ex (int), hmin_airsea_ex (double)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double" title="Permanent link">&para;</a></h3>
+<p>Option to locally turn off heat exchange.</p>
 <ul>
 <li><code>i_hmin_airsea_ex=1</code>: exchange turned off if <code>local grid depth&lt;hmin_airsea_ex</code></li>
 <li><code>i_hmin_airsea_ex=2</code>: exchange turned off if <code>local water depth&lt;hmin_airsea_ex</code></li>
 </ul>
+<h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double">i_hmin_salt_ex (int), hmin_salt_ex (double)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double" title="Permanent link">&para;</a></h3>
+<p>Simialr tpo <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
 <h3 id="ielm_transport-0-max_subcyc-10-int">ielm_transport = 0, max_subcyc = 10 (int)<a class="headerlink" href="#ielm_transport-0-max_subcyc-10-int" title="Permanent link">&para;</a></h3>
 <p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, more efficient ELM transport is used locally (at the expense of mass conservation, so make sure this option is used sparingly).</p>
 <h3 id="ieos_type0-ieos_pres0-int">ieos_type=0, ieos_pres=0 (int)<a class="headerlink" href="#ieos_type0-ieos_pres0-int" title="Permanent link">&para;</a></h3>
 <p>By default, use the nonlinear equation of state: <code>ieos_type==0</code>. If the potential temperature is used, the pressure effect has been accounted for: <code>ieos_pres=0.</code></p>
 <h3 id="iloadtide0-int">iloadtide=0 (int)<a class="headerlink" href="#iloadtide0-int" title="Permanent link">&para;</a></h3>
 <p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) and phases (degrees behind GMT). If <code>iloadtide=2</code>, a simple scaling is used to reduce the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004).</p>
-<h3 id="if_source0-int">if_source=0 (int)<a class="headerlink" href="#if_source0-int" title="Permanent link">&para;</a></h3>
-<p>Point sources/sinks option (0: no; 1: on). If <code>if_source=1</code>, needs <code>source_sink.in</code>, <code>vsource.th</code>, <code>vsink.th</code>, and <code>msource.th</code> (see sample files in the source code directory src/ for their formats). If <code>if_source=-1</code>, the input is <code>source.nc</code>, which includes element list inside and allows for different time steps and # of records for volume/mass source/sinks.</p>
+<h3 id="if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array">if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)<a class="headerlink" href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" title="Permanent link">&para;</a></h3>
+<p>Point sources/sinks option (0: no; 1: on). If <code>if_source=1</code>, needs <code>source_sink.in</code>, <code>vsource.th</code>, <code>vsink.th</code>, 
+and <code>msource.th</code> (see sample files in the source code directory src/ for their formats). 
+If <code>if_source=-1</code>, the input is <code>source.nc</code>, which includes element list inside and allows for different time 
+steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code>, specify ramp-up period (in days) with <code>dramp_ss</code> (no
+ ramp-up if &lt;=0). </p>
+<p>The tracers are injected into an element at a particular level, as specified by <code>lev_tr_source(1:ntr)</code> (where <code>ntr</code> is
+ # of tracer modules, i.e. 1 input for each module). The code will extrapolate below bottom/above surface if necessary, 
+ so e.g., '-9' means bottom.</p>
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
 <p>Parameter for checking volume and salt conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
@@ -1707,6 +1734,16 @@
 <p>Hot start flag. If <code>ihot=0</code>, cold start; if <code>ihot≠0</code>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>, and in this case, you do not need to adjust other inputs.</p>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
 <p>Hydraulic model option. If <code>ihydraulics≠0</code>, <code>hydraulics.in</code> is required.</p>
+<h3 id="loadtide_coef0-int">loadtide_coef=0 (int)<a class="headerlink" href="#loadtide_coef0-int" title="Permanent link">&para;</a></h3>
+<p>Option to add self-attraction loading tide (SAL) into tidal potential (usually for basin-scale applications).</p>
+<p>If <code>iloadtide=0</code>, no SAL is applied.</p>
+<p>If <code>iloadtide=1</code>, needs inputs: <code>loadtide_[FREQ].gr3</code>, where [FREQ] are freq names (shared with tidal potential, 
+in upper cases) and the <em>two</em> ‘depths' inside are amplitude (m) and phases (degrees behind GMT), 
+interpolated from global tide model (e.g. FES2014). In this option, SAL is lumped into tidal potential so it 
+ shares some parameters with tidal potential in <code>bctides.in</code> (cut-off depth, frequencies).</p>
+<p>If <code>iloadtide</code>=2 or 3, use a simple scaling for gravity approach (in this option, SAL is applied everywhere 
+ and does not share parameters with tidal potential). For <code>iloadtide=2</code>, a const scaling of (1-loadtide_coef) is applied; 
+for <code>iloadtide</code>=3, the scaling is dependent on the local depth (Stepanov &amp; Hughes 2004) with max of loadtide_coef.</p>
 <h3 id="imm0-ibdef10-int">imm=0, ibdef=10 (int)<a class="headerlink" href="#imm0-ibdef10-int" title="Permanent link">&para;</a></h3>
 <p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>ibdef</code> (# of steps during which deformation occurs), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
@@ -1737,11 +1774,15 @@
 \frac{\partial \varphi}{\partial t} = \frac{\gamma}{\Delta t} \left( \varphi_{target} - \varphi \right)
 \end{equation}\]</div>
 <p>If <code>inu_elev=0</code>, no relaxation is applied to elevation. If <code>inu_elev=1</code>, relaxation constants are specified in <code>elev_nudge.gr3</code> (depth=0 means no relaxation, depth=1 means strongest nudging) and the elevations are relaxed toward 0. Similarly for <code>inu_uv</code> (with input <code>uv_nudge.gr3</code>).</p>
-<h3 id="inu_tr0-int-array-step_nu_tr86400-double">inu_tr(:)=0 (int array), step_nu_tr=86400. (double)<a class="headerlink" href="#inu_tr0-int-array-step_nu_tr86400-double" title="Permanent link">&para;</a></h3>
+<h3 id="inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double">inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)<a class="headerlink" href="#inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double" title="Permanent link">&para;</a></h3>
 <p>Nudging flag for tracer models (e.g. temperature), and nudging step (in sec). When <code>inu_tr=0</code>, no nudging is done.</p>
 <p>When <code>inu_tr=1</code>, relax back to initial conditions.</p>
 <p>When <code>inu_tr=2</code>, nudge to values specified in <code>[MOD]_nu.nc</code>, which has a time step of <code>step_nu_tr</code>.</p>
-<p>If <code>inu_tr≠0</code>, the horizontal relaxation factors are specified in <code>[MOD]_nudge.gr3</code> (as depths info), and the vertical relaxation factors are specified as a linear function of depths with: <code>vnh[1,2]</code> (transitional depths) and <code>vnf[1,2]</code> (relaxation constants at the 2 depths). The final relaxation constant is the sum (horizontal+vertical relaxation factors) times <code>dt</code>.</p>
+<p>If <code>inu_tr≠0</code>, the horizontal relaxation factors are specified in <code>[MOD]_nudge.gr3</code> (as depths info), 
+ and the vertical relaxation factors are specified as a linear function of depths with: <code>vnh[1,2]</code> 
+(transitional depths) and <code>vnf[1,2]</code> (relaxation constants at the 2 depths). The final relaxation 
+constant is either the sum (if <code>nu_sum_mult=1</code>) or product (if <code>nu_sum_mult=2</code>) of the two, 
+i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt</code>.</p>
 <h3 id="inunfl0-int">inunfl=0 (int)<a class="headerlink" href="#inunfl0-int" title="Permanent link">&para;</a></h3>
 <p>Choice of inundation algorithm. <code>inunfl=1</code> can be used if the horizontal resolution is fine enough, and this is critical for tsunami simulations. Otherwise use <code>inunfl=0</code>.</p>
 <h3 id="isav0-int">isav=0 (int)<a class="headerlink" href="#isav0-int" title="Permanent link">&para;</a></h3>
@@ -1769,11 +1810,23 @@
 <h3 id="ncor0-int">ncor=0 (int)<a class="headerlink" href="#ncor0-int" title="Permanent link">&para;</a></h3>
 <p>Coriolis option. If <code>ncor=0</code> or <code>-1</code>, a constant Coriolis parameter is specified. If <code>ncor=0</code>, <code>coricoef</code> specifies the Coriolis factor. If <code>ncor=-1</code>, <code>rlatitude</code> specifies the mean latitude used to calculate the Coriolis factor.</p>
 <p>If <code>ncor=1</code>, a variable Coriolis parameter, based either on a beta-plane approximation (<code>ics=1</code>) or on the latitude-dependent Coriolis (<code>ics=2</code>), is used, with the lat/lon coordinates read in from <code>hgrid.ll</code>. For <code>ics=1</code>, the center of beta-plane approximation must be correctly specified in <code>sfea0</code>.</p>
-<h3 id="nramp1-int-dramp1-double-nrampbc0-int-drampbc1-double">nramp=1 (int), dramp=1. (double), nrampbc=0 (int), drampbc=1. (double)<a class="headerlink" href="#nramp1-int-dramp1-double-nrampbc0-int-drampbc1-double" title="Permanent link">&para;</a></h3>
-<p>Ramp options for the tides, B.C. or baroclincity, and ramp-up periods in days (not used if the corresponding ramp flag is <code>0</code>). If <code>ibc=0</code>, the ramp-up function is specified with <code>nrampbc</code>, <code>drampbc</code>: ramp option flag and ramp-up period (in days). If <code>nrampbc=0</code>, <code>drampbc</code> is not used. The ramp function is a hyperbolic tangent function: <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
-<h3 id="nws0-iwind_form-1-int-wtimincdt-double">nws=0, iwind_form=-1 (int), wtiminc=dt (double)<a class="headerlink" href="#nws0-iwind_form-1-int-wtimincdt-double" title="Permanent link">&para;</a></h3>
-<p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code> or <code>3</code>, spatially and temporally variable wind is applied and the input consists of a number of netcdf files in the directory <code>sflux/</code>. The option <code>nws=3</code> is only for checking heat conservation and needs <code>sflux.th</code>. If <code>nws=4</code>, the required input <code>wind.th</code> specifies wind and pressure at each node and at each time step <code>n*wtiminc</code>.</p>
-<p>If <code>nws&gt;0</code>, the ramp-up option is specified with <code>nrampwind</code> and <code>drampwind</code>. These are ramp flag and period (in days) for wind.</p>
+<h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
+<p>Ramp periods in days for the tides, B.C. or baroclincity. 
+If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
+In SCHISM, turn off ramp-up by setting the ramp-up period &lt;=0. 
+The ramp function is a hyperbolic tangent function: <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
+<h3 id="nws0-iwind_form-1-int-iwindoffint-wtimincdt-double">nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-iwind_form-1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
+<p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no 
+wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain 
+at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code> or <code>3</code>, spatially 
+and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
+ <code>sflux/</code>. The option <code>nws=3</code> is only for checking heat conservation and needs <code>sflux.th</code>. If <code>nws=4</code>, 
+the required input <code>wind.th</code> specifies wind and pressure at each node and at each time step <code>n*wtiminc</code>.
+If <code>nws=-1</code>, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+ In this case, the Holland model is called every step so wtiminc is not used. An extra
+ input is needed: <code>hurricane-track.dat</code>.</p>
+<p>If <code>nws&gt;0</code>, the ramp-up period (in days) is specified with <code>drampwind</code>. Also
+ the user has the option to scale the wind speed using <code>iwindoff</code>=1 (which requires an additional input <code>windfactor.gr3</code>).</p>
 <p>The wind stress formulation is selected with <code>iwind_form</code>. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=-1</code>, the stress is calculated from Pond &amp; Pichard formulation. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=1</code>, the stress is calculated from Hwang (2018) formulation. If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated from heat exchange routine. If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, stress is calculated by WWM; otherwise the formulations above are used.</p>
 <h3 id="rmaxvel10-double">rmaxvel=10. (double)<a class="headerlink" href="#rmaxvel10-double" title="Permanent link">&para;</a></h3>
 <p>Maximum velocity. This is needed mainly for the air-water exchange as the model may blow up if the water velocity is above 20m/s.</p>
@@ -1804,7 +1857,7 @@
 </code></pre></div>
 <p>Some outputs are conditional upon you turn on certain module; e.g. <code>iof_sed(1) = 1</code> won’t output the bottom depth change unless you turn on <code>USE_SED</code> in makefile.</p>
 <p>Some ‘native’ variables (e.g., element- or side-centered) are:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>iof_hydro(26) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>iof_hydro(27) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
 </code></pre></div>
 
               
