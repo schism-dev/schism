@@ -65,8 +65,8 @@
   itransport_only = 0
 
 !-----------------------------------------------------------------------
-! Option to add self-attrection loading tide (SAL) into tidal potential 
-! (usually for basin-scale model). 
+! Option to add self-attracting and loading tide (SAL) into tidal potential 
+! (usually for basin-scale applications). 
 ! If iloadtide=0, no SAL.
 ! If iloadtide=1, needs inputs: loadtide_[FREQ].gr3, 
 ! where [FREQ] are freq names (shared with tidal potential, in upper cases) 
@@ -279,7 +279,7 @@
 !-----------------------------------------------------------------------
   if_source = 0
 !  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
-  dramp_ss = 2 !needed if if_source=1; ramp-up period in days for source/sinks (no ramp-up if <=0)
+  dramp_ss = 2 !needed if if_source/=0; ramp-up period in days for source/sinks (no ramp-up if <=0)
   meth_sink = 1 !options to treat sinks @ dry elem
 
 ! Specify vertical level to inject source concentration for each tracer _module_.

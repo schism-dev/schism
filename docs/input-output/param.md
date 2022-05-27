@@ -61,8 +61,12 @@ Option on how the baroclinic gradient is calculated below bottom. The 'below-bot
 ### ibcc_mean=0 (int)
 Mean T,S profile option. If `ibcc_mean=1` (or `ihot=0` and `icst=2`), mean T/S profile is read in from `ts.ic`, and will be removed when calculating baroclinic force. No `ts.ic` is needed if `ibcc_mean=0`.
 
-### ic_elev=0 (int)
-Elevation initial condition flag for cold start only (`ihot=0`). If `ic_elev=1`, `elev.ic` (in `*.gr3` format) is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only).
+### ic_elev=0 (int), nramp_elev=0 (int) (int)
+Elevation initial condition flag for cold start only (`ihot=0`). If `ic_elev=1`, `elev.ic` (in `*.gr3` format) 
+is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only). 
+If `ic_elev=1`, the user can ramp up the elevation
+ smoothly starting from the specified `elev.ic` or `hotstart.nc` (if $ihot\neq 0$) by setting `nramp_elev=1` (and the ramp-up
+ period in this case is `dramp`).
 
 ### icou_elfe_wwm=0, iwbl=0 (int)
 Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. `icou_elfe_wwm = 0`: no feedback from WWM to SCHISM (decoupled); `1`: coupled SCHISM-WWM.
@@ -77,11 +81,14 @@ If `icou_elfe_wwm=1`, additional parameters are:
 ### ics=1 (int)
 Coordinate frame flag. If `ics=1`, Cartesian coordinates are used; if `ics=2`, both `hgrid.ll` and `hgrid.gr3` use degrees latitude/longitude (and they should be identical to each other in this case).
 
-### i_hmin_airsea_ex, hmin_airsea_ex
-Option to locally turn off heat/salt exchange.
+### i_hmin_airsea_ex (int), hmin_airsea_ex (double)
+Option to locally turn off heat exchange.
 
 - `i_hmin_airsea_ex=1`: exchange turned off if `local grid depth<hmin_airsea_ex`
 - `i_hmin_airsea_ex=2`: exchange turned off if `local water depth<hmin_airsea_ex`
+
+### i_hmin_salt_ex (int), hmin_salt_ex (double)
+Simialr tpo `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 
 ### ielm_transport = 0, max_subcyc = 10 (int)
 Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_transport=1`, the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, more efficient ELM transport is used locally (at the expense of mass conservation, so make sure this option is used sparingly).
@@ -92,8 +99,16 @@ By default, use the nonlinear equation of state: `ieos_type==0`. If the potentia
 ### iloadtide=0 (int)
 Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) and phases (degrees behind GMT). If `iloadtide=2`, a simple scaling is used to reduce the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004).
 
-### if_source=0 (int)
-Point sources/sinks option (0: no; 1: on). If `if_source=1`, needs `source_sink.in`, `vsource.th`, `vsink.th`, and `msource.th` (see sample files in the source code directory src/ for their formats). If `if_source=-1`, the input is `source.nc`, which includes element list inside and allows for different time steps and # of records for volume/mass source/sinks.
+### if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
+Point sources/sinks option (0: no; 1: on). If `if_source=1`, needs `source_sink.in`, `vsource.th`, `vsink.th`, 
+and `msource.th` (see sample files in the source code directory src/ for their formats). 
+If `if_source=-1`, the input is `source.nc`, which includes element list inside and allows for different time 
+steps and # of records for volume/mass source/sinks. If `if_source/=0`, specify ramp-up period (in days) with `dramp_ss` (no
+ ramp-up if <=0). 
+
+The tracers are injected into an element at a particular level, as specified by `lev_tr_source(1:ntr)` (where `ntr` is
+ # of tracer modules, i.e. 1 input for each module). The code will extrapolate below bottom/above surface if necessary, 
+ so e.g., '-9' means bottom.
 
 ### iflux=0 (int)
 Parameter for checking volume and salt conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
@@ -112,6 +127,21 @@ Hot start flag. If `ihot=0`, cold start; if `ihot≠0`, hot start from `hotstart
 
 ### ihydraulics=0 (int)
 Hydraulic model option. If `ihydraulics≠0`, `hydraulics.in` is required.
+
+### loadtide_coef=0 (int)
+Option to add self-attraction loading tide (SAL) into tidal potential (usually for basin-scale applications).
+
+If `iloadtide=0`, no SAL is applied.
+
+If `iloadtide=1`, needs inputs: `loadtide_[FREQ].gr3`, where [FREQ] are freq names (shared with tidal potential, 
+in upper cases) and the _two_ ‘depths' inside are amplitude (m) and phases (degrees behind GMT), 
+interpolated from global tide model (e.g. FES2014). In this option, SAL is lumped into tidal potential so it 
+ shares some parameters with tidal potential in `bctides.in` (cut-off depth, frequencies).
+
+If `iloadtide`=2 or 3, use a simple scaling for gravity approach (in this option, SAL is applied everywhere 
+ and does not share parameters with tidal potential). For `iloadtide=2`, a const scaling of (1-loadtide_coef) is applied; 
+for `iloadtide`=3, the scaling is dependent on the local depth (Stepanov & Hughes 2004) with max of loadtide_coef.
+
 
 ### imm=0, ibdef=10 (int)
 Bed deformation option. Default: `0` (no bed deformation); `1`: with bed deformation (needs `ibdef` (# of steps during which deformation occurs), and `bdef.gr3`); 2: 3D bottom deformation (need to interact with code).
@@ -157,17 +187,22 @@ which is a discrete analogue of the restoration equation:
 
 If `inu_elev=0`, no relaxation is applied to elevation. If `inu_elev=1`, relaxation constants are specified in `elev_nudge.gr3` (depth=0 means no relaxation, depth=1 means strongest nudging) and the elevations are relaxed toward 0. Similarly for `inu_uv` (with input `uv_nudge.gr3`).
 
-### inu_tr(:)=0 (int array), step_nu_tr=86400. (double)
+### inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)
 Nudging flag for tracer models (e.g. temperature), and nudging step (in sec). When `inu_tr=0`, no nudging is done.
 
 When `inu_tr=1`, relax back to initial conditions.
 
 When `inu_tr=2`, nudge to values specified in `[MOD]_nu.nc`, which has a time step of `step_nu_tr`.
 
-If `inu_tr≠0`, the horizontal relaxation factors are specified in `[MOD]_nudge.gr3` (as depths info), and the vertical relaxation factors are specified as a linear function of depths with: `vnh[1,2]` (transitional depths) and `vnf[1,2]` (relaxation constants at the 2 depths). The final relaxation constant is the sum (horizontal+vertical relaxation factors) times `dt`.
+If `inu_tr≠0`, the horizontal relaxation factors are specified in `[MOD]_nudge.gr3` (as depths info), 
+ and the vertical relaxation factors are specified as a linear function of depths with: `vnh[1,2]` 
+(transitional depths) and `vnf[1,2]` (relaxation constants at the 2 depths). The final relaxation 
+constant is either the sum (if `nu_sum_mult=1`) or product (if `nu_sum_mult=2`) of the two, 
+i.e. (horizontal `+ or *` vertical relaxation factors) times `dt`.
 
 ### inunfl=0 (int)
 Choice of inundation algorithm. `inunfl=1` can be used if the horizontal resolution is fine enough, and this is critical for tsunami simulations. Otherwise use `inunfl=0`.
+
 
 ### isav=0 (int)
 Parameters for submerged or emergent vegetation. If `isav=1` (module on), you need to supply 4 extra inputs: `sav_cd.gr3` (form drag coefficient), `sav_D.gr3` (depth is stem diameter in meters); `sav_N.gr3` (depth is # of stems per m2); and `sav_h.gr3` (height of canopy in meters).
@@ -211,13 +246,26 @@ Coriolis option. If `ncor=0` or `-1`, a constant Coriolis parameter is specified
 
 If `ncor=1`, a variable Coriolis parameter, based either on a beta-plane approximation (`ics=1`) or on the latitude-dependent Coriolis (`ics=2`), is used, with the lat/lon coordinates read in from `hgrid.ll`. For `ics=1`, the center of beta-plane approximation must be correctly specified in `sfea0`.
 
-### nramp=1 (int), dramp=1. (double), nrampbc=0 (int), drampbc=1. (double)
-Ramp options for the tides, B.C. or baroclincity, and ramp-up periods in days (not used if the corresponding ramp flag is `0`). If `ibc=0`, the ramp-up function is specified with `nrampbc`, `drampbc`: ramp option flag and ramp-up period (in days). If `nrampbc=0`, `drampbc` is not used. The ramp function is a hyperbolic tangent function: $f(t) = \tanh(2t/86400/\text{drampbc})$.
+###  dramp=1. (double), drampbc=1. (double)
+Ramp periods in days for the tides, B.C. or baroclincity. 
+If `ibc=0`, the ramp-up for baroclinicity is specified with `drampbc` (in days). 
+In SCHISM, turn off ramp-up by setting the ramp-up period <=0. 
+The ramp function is a hyperbolic tangent function: $f(t) = \tanh(2t/86400/\text{drampbc})$.
 
-### nws=0, iwind_form=-1 (int), wtiminc=dt (double)
-Wind forcing options and the interval (in seconds) with which the wind input is read in. If `nws=0`, no wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is applied to the whole domain at any given time, and the time history of wind is read in from `wind.th`. If `nws=2` or `3`, spatially and temporally variable wind is applied and the input consists of a number of netcdf files in the directory `sflux/`. The option `nws=3` is only for checking heat conservation and needs `sflux.th`. If `nws=4`, the required input `wind.th` specifies wind and pressure at each node and at each time step `n*wtiminc`.
+### nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+Wind forcing options and the interval (in seconds) with which the wind input is read in. If `nws=0`, no 
+wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is applied to the whole domain 
+at any given time, and the time history of wind is read in from `wind.th`. If `nws=2` or `3`, spatially 
+and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
+ `sflux/`. The option `nws=3` is only for checking heat conservation and needs `sflux.th`. If `nws=4`, 
+the required input `wind.th` specifies wind and pressure at each node and at each time step `n*wtiminc`.
+If `nws=-1`, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+ In this case, the Holland model is called every step so wtiminc is not used. An extra
+ input is needed: `hurricane-track.dat`.
 
-If `nws>0`, the ramp-up option is specified with `nrampwind` and `drampwind`. These are ramp flag and period (in days) for wind.
+
+If `nws>0`, the ramp-up period (in days) is specified with `drampwind`. Also
+ the user has the option to scale the wind speed using `iwindoff`=1 (which requires an additional input `windfactor.gr3`).
 
 The wind stress formulation is selected with `iwind_form`. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=-1`, the stress is calculated from Pond & Pichard formulation. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=1`, the stress is calculated from Hwang (2018) formulation. If `nws=2, ihconsv=1 && iwind_form=0`, the stress is calculated from heat exchange routine. If `WWM` is enabled and `icou_elfe_wwm > 0` and `iwind_form=-2`, stress is calculated by WWM; otherwise the formulations above are used.
 
@@ -266,5 +314,5 @@ Some outputs are conditional upon you turn on certain module; e.g. `iof_sed(1) =
 Some ‘native’ variables (e.g., element- or side-centered) are:
 
 ```
-iof_hydro(26) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
+iof_hydro(27) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
 ```

@@ -63,7 +63,7 @@ This type of grid requires some user experience and can be generated using scrip
 ```
 1 !ivcor (1: LSC2; 2: SZ)
 39 !nvrt(=Nz)
-1 29 -1. -0.893491 -0.793885 -0.694399 -0.595016 -0.495718 -0.396491 -0.297320 -0.198191 -0.099089 0. !node ID, bottom level index, sigma coordinate from bottom (-1) to surface (0)
-....
-19520 12 -1.0 -0.985926 -0.918190 -0.854562 -0.794749 -0.738477 -0.685488 -0.635540 -0.588405 -0.543870 -0.501733 -0.461804 -0.423903 -0.387860 -0.353515 -0.320714 -0.289311 -0.259169 -0.230153 -0.202137 -0.174997 -0.148616 -0.122878 -0.097671 -0.072887 -0.048417 -0.024156 0.0 !@last node
+10 4 4 4 4 10 4 10 10 ...  !bottom level indces at all nodes
+1 -1. -1. -1. -1. -9. -9. -9. ... !level index, sigma coordinates at level 1 for all nodes
+2 -0.884251  -0.874424  -0.888763 -0.884930 -0.884607 ... 
 ```
