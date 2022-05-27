@@ -1308,23 +1308,23 @@ complex 3D baroclinic or coupled applications. </p>
 <h2 id="notations-used-in-this-manual">Notations used in this manual<a class="headerlink" href="#notations-used-in-this-manual" title="Permanent link">&para;</a></h2>
 <p>We will use bold characters to denote vectors and matrices, and unbold characters to denote scalars in mathematical equations.
  In addition, superscripts usually denote time step and subscripts denote spatial locations. 
-E.g., 𝑇𝑖,𝑘 𝑛+1may mean the temperature at step n+1 (i.e., new time step) and prism (i,k), where i is 
-the element number and k is the (whole) vertical index. We will use red words to denote input file names 
-(e.g. param.nml), purple words to denote output file names (e.g. mirror.out), and green words to 
-denote parameters specified in param.nml; e.g. nchi (the bottom friction option flag). Code/pseudo-code 
-fragments are written in italic. Below are some notations used in this manual: </p>
-<p>-<span class="arithmatex">\(N_p\)</span>: # (number) of nodes 
--<span class="arithmatex">\(N_s\)</span>: # of sides 
--<span class="arithmatex">\(N_e\)</span>: # of elements 
--<span class="arithmatex">\(N_z\)</span>: maximum # of vertical levels 
--<span class="arithmatex">\(i34(j)\)</span>: type of an element <em>j</em> (3: triangle; 4: quad) 
--<span class="arithmatex">\(N_b(i)\)</span>: # of surrounding elements of a node <em>i</em> 
--<span class="arithmatex">\(kbp(i)\)</span>: bottom index as seen by a node <em>i</em> 
--<span class="arithmatex">\(kbs(i)\)</span>: bottom index as seen by a side <em>i</em> 
--<span class="arithmatex">\(kbe(i)\)</span>: bottom index as seen by an element <em>i</em> 
--<span class="arithmatex">\(A\)</span>: area of an element 
--<span class="arithmatex">\(\Delta z\)</span>: layer thickness (at a node, side or elem.) 
--<span class="arithmatex">\(\delta_{ij}\)</span>: Dirac’s Delta function (=1 when <span class="arithmatex">\(i=j\)</span>; 0 otherwise) </p>
+E.g., <span class="arithmatex">\(𝑇i_{𝑖,𝑘}^{𝑛+1}\)</span> may mean the temperature at step <span class="arithmatex">\(n+1\)</span> (i.e., new time step) and prism <span class="arithmatex">\((i,k)\)</span>, where <span class="arithmatex">\(i\)</span> is 
+the element number and <span class="arithmatex">\(k\)</span> is the (whole) vertical index. 
+Below are some notations used in this manual: </p>
+<ul>
+<li><span class="arithmatex">\(N_p\)</span>: # (number) of nodes </li>
+<li><span class="arithmatex">\(N_s\)</span>: # of sides </li>
+<li><span class="arithmatex">\(N_e\)</span>: # of elements </li>
+<li><span class="arithmatex">\(N_z\)</span>: maximum # of vertical levels </li>
+<li><span class="arithmatex">\(i34(j)\)</span>: type of an element <em>j</em> (3: triangle; 4: quad) </li>
+<li><span class="arithmatex">\(N_b(i)\)</span>: # of surrounding elements of a node <em>i</em> </li>
+<li><span class="arithmatex">\(kbp(i)\)</span>: bottom index as seen by a node <em>i</em> </li>
+<li><span class="arithmatex">\(kbs(i)\)</span>: bottom index as seen by a side <em>i</em> </li>
+<li><span class="arithmatex">\(kbe(i)\)</span>: bottom index as seen by an element <em>i</em> </li>
+<li><span class="arithmatex">\(A\)</span>: area of an element </li>
+<li><span class="arithmatex">\(\Delta z\)</span>: layer thickness (at a node, side or elem.) </li>
+<li><span class="arithmatex">\(\delta_{ij}\)</span>: Dirac’s Delta function (=1 when <span class="arithmatex">\(i=j\)</span>; 0 otherwise) </li>
+</ul>
 
               
             </article>
