@@ -36,54 +36,54 @@ Following is a curated changelog of the code. The IDs starts with `R` represents
 123. [`5e87c24`](https://github.com/schism-dev/schism/commit/5e87c24) (June 9, 2021): more changes in `interpolate_depth_structured2*` to extrap also into right/upper sides.
 124. [`843c40f`](https://github.com/schism-dev/schism/commit/843c40f) (19 June, 2021): fixed a bug in `ptrack3` (pt_in_poly3; c/o Jilian Xiong) that affects quads;
 125. [`b2cf92b`](https://github.com/schism-dev/schism/commit/b2cf92b) (29 June, 2021): fixed a bug in station outputs in basin scale cases `ics=2` (local proj is not accurate if the station is far away from the local frame);
-126. [`a9f8f6c`] (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
+126. `a9f8f6c` (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
                               for large core counts.
-127. [`ab46def`] (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
-128. [`70db927`] (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
-129. [`8efc374`] (30 Aug 2021): first version of scribe dictated I/O (as an option)
-130. [`53689f4`] (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
-131. [`c7dd516`] (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
+127. `ab46def` (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
+128. `70db927` (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
+129. `8efc374` (30 Aug 2021): first version of scribe dictated I/O (as an option)
+130. `53689f4` (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
+131. `c7dd516` (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
 132. (19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);
-133. [`7455d5d`] (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
-134. [`7455d5d`] (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;
-135. [`e288f9a`] (31 Jan 2022): removed the restriction of counter-clockwise orientation in sflux grid;
-136. [`dde345f`] (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0:
+133. `7455d5d` (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
+134. `7455d5d` (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;
+135. `e288f9a` (31 Jan 2022): removed the restriction of counter-clockwise orientation in sflux grid;
+136. `dde345f` (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0:
                               uninit'ed stress values.
-137. [`6524e19`] (27 April 2022): merged with La Rochelle group on WWM  (VOR);
+137. `6524e19` (27 April 2022): merged with La Rochelle group on WWM  (VOR);
 
 
 ## Changes in input and output format
 The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as [param.nml](input-output/param.md)).
 
-- [`d03830e`] (16 May 2022): removed the 2 extra lines required in `partition.prop` (so it's identical to `global_to_local.prop` now);
-- [`a71ea69`] (12 May 2022): removed `ioffline_partition` and replaced it with CPP (`NO_PARMETIS`) to allow build without ParMETIS lib; renamed global_to_local.in as partition.prop;
-- [`da90a33`] (2 May 2022): removed itr_met=1,2;
-- [`2165224`] (29 April 2022): added optional offline partitioning 'ioffline_partition' to bypass ParMETIS;
-                         if on, needs global_to_local.in;
-- [`567b612`] (28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
-- [`6524e19`] (27 April 2022): a few more WWM related parameters under VOR (turbinjds,alpha,wfwvor_streaming)
-                         and new WWM outputs, after merging with lrdev_updates;
-- [`d44dbdf`] (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'
-- [`6f367d0`] (30 Mar 2022): added optional vertical levels to inject source tracer conventration: 'lev_tr_source';
-- [`7cc7f27`] (30 Mar 2022): added an optional threshold depth for mass conversation for ICM: 'h_massconsv';
-- [`1788867`] (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): i_hmin_salt_ex,hmin_salt_ex;
-- [`dcd5356`] (31 Jan 2022): removed ramp flags except for nramp_elev (use dramp*<=0 to turn off ramp):
-      nramp, nrampbc, nrampwind, nrampwafo,nramp_ss; removed the optional input 'shapiro_min.gr3';
-- [`80f1caa`] (26 Jan 2022): added 4 parameters in ice.nml: albsn,albsnm, albi,albm
-- [`d792ed0`] (18 Jan 2022): added 2 new ice parameters: 'ice_atmos_stress_form' and 'cdwin0';
-- [`b4d2214`] (7 Jan 2022): added a new parameter 'nu_sum_mult' to allow sum/product of final relax constants for tracer nudging;
-- [`f9f0844`] (3 Jan 2022): ICE module, added 2 new parameters: lead_closing, Saterm. Also changed ice-wind stress formula;
-- [`7455d5d`] (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
-- [`91c91a7`] (17 Dec 2021): ICE module, added new parameters: ncyc_fct, depth_ice_fct. Also requires ice_fct.gr3 now;
-- [`0e2f90e`] (17 Dec 2021): added a new parameter in ice.nml 'mevp_coef' and 2 related ones: mevp_alpha[34]
-- [`2a7647d`] (24&29 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2,3;
-- [`a7a0b2b`] (17 Oct 2021): restored iwindoff;
-- [`afc7b1a`] (11 Oct 2021): changed vgrid.in format for ivcor=1 to facilitate parallel read (use
-                       change_vgrid.f90 to convert)
-- [`e9aec89`] (1 Oct 2021): added most module outputs; order of flags changed in: ICE, ANALYSIS, SED;
-- [`85b585a`] (1 Sept 2021): add zcor output flag as iof_hydro(25); rest of hydro output flags (iof_hydro) shifted by 1;
-- [`8efc374`] (30 Aug 2021): first version of scribe dictated I/O (as an option);
-- [`1902c1e`] (16 July 2021): changed hotstart.nc: added nsteps_from_cold and cumsum_eta for DA;
+- `d03830e` (16 May 2022): removed the 2 extra lines required in `partition.prop` (so it's identical to `global_to_local.prop` now);
+- `a71ea69` (12 May 2022): removed `ioffline_partition` and replaced it with CPP (`NO_PARMETIS`) to allow build without ParMETIS lib; renamed `global_to_local.in` as `partition.prop`;
+- `da90a33` (2 May 2022): removed `itr_met=1,2`;
+- `2165224` (29 April 2022): added optional offline partitioning `ioffline_partition` to bypass ParMETIS;
+                         if on, needs `global_to_local.in`;
+- `567b612` (28 April 2022): added new WWM outputs and re-ordered after `iof_wwm(26)`; `zCoordinate` outputs made optional (for performance test);
+- `6524e19` (27 April 2022): a few more WWM related parameters under VOR (`turbinjds,alpha,wfwvor_streaming`)
+                         and new WWM outputs, after merging with `lrdev_updates`;
+- `d44dbdf` (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: `rinflation_icm`
+- `6f367d0` (30 Mar 2022): added optional vertical levels to inject source tracer conventration: `lev_tr_source`;
+- `7cc7f27` (30 Mar 2022): added an optional threshold depth for mass conversation for ICM: `h_massconsv`;
+- `1788867` (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): `i_hmin_salt_ex,hmin_salt_ex`;
+- `dcd5356` (31 Jan 2022): removed ramp flags except `nramp_elev` (use `dramp*`<=0 to turn off ramp):
+      `nramp, nrampbc, nrampwind, nrampwafo,nramp_ss`; removed the optional input `shapiro_min.gr3`;
+- `80f1caa` (26 Jan 2022): added 4 parameters in `ice.nml`: `albsn,albsnm, albi,albm`
+- `d792ed0` (18 Jan 2022): added 2 new ice parameters: `ice_atmos_stress_form` and `cdwin0`;
+- `b4d2214` (7 Jan 2022): added a new parameter `nu_sum_mult` to allow sum/product of final relax constants for tracer nudging;
+- `f9f0844` (3 Jan 2022): ICE module, added 2 new parameters: `lead_closing, Saterm`. Also changed ice-wind stress formula;
+- `7455d5d` (30 Dec 2021): added a new option `nws=-1` (PaHM, Parametric Hurricane Model);
+- `91c91a7` (17 Dec 2021): ICE module, added new parameters: `ncyc_fct, depth_ice_fct`. Also requires `ice_fct.gr3` now;
+- `0e2f90e` (17 Dec 2021): added a new parameter in `ice.nml` `mevp_coef` and 2 related ones: `mevp_alpha[34]`
+- `2a7647d` (24&29 Nov 2021): added a new parmater `loadtide_coef` for `iloadtide=2,3`;
+- `a7a0b2b` (17 Oct 2021): restored `iwindoff`;
+- `afc7b1a` (11 Oct 2021): changed `vgrid.in` format for `ivcor=1` to facilitate parallel read (use
+                       `change_vgrid.f90` to convert)
+- `e9aec89` (1 Oct 2021): added most module outputs; order of flags changed in: ICE, ANALYSIS, SED;
+- `85b585a` (1 Sept 2021): add zcor output flag as `iof_hydro(25)`; rest of hydro output flags (`iof_hydro`) shifted by 1;
+- `8efc374` (30 Aug 2021): first version of scribe dictated I/O (as an option);
+- `1902c1e` (16 July 2021): changed `hotstart.nc`: added `nsteps_from_cold` and `cumsum_eta` for DA;
 
 - Tag v5.9.0: 657157a (1 July, 2021)
 - [`e281d94`](https://github.com/schism-dev/schism/commit/e281d94) (25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): `iloadtide=3`;
