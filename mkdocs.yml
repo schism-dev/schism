@@ -51,7 +51,7 @@ nav:
   - Home: index.md
   - Changelog: changelog.md
   - Getting started:
-    - Getting the sourcecode: getting-started/getting-sourcecode.md
+    - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
     - Typical workflow: getting-started/typical-workflow.md
     - Grid generation: getting-started/grid-generation.md
