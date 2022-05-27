@@ -41,3 +41,27 @@ SCHISM (Semi-implicit Cross-scale Hydroscience Integrated System Model) is a der
 
 - Zhang, Y. and Baptista, A.M. (2008) SELFE: A semi-implicit Eulerian-Lagrangian finite-element model for cross-scale ocean circulation", Ocean Modelling, 21(3-4), 71-96.
 - Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81.
+
+### How to read this manual
+This manual contains detailed information on physical and numerical formulations, as well as usage for SCHISM. 
+For beginners, we suggest you familiarize yourself with the basic notations in Chapters 2 and 3 but skip some 
+details in those two chapters; there is also a ‘cheat sheet’ near the end of this chapter. 
+Chapters 4&5 describe how to set up the model, including grid generation, and so should be read carefully, 
+in consultation with appropriate sections in the previous 2 chapters. Since SCHISM is quite a sophisticated package, 
+we strongly recommend you start from the simple test cases in Chapter 5.5 and gradually progress toward more 
+complex 3D baroclinic or coupled applications. 
+
+####Notations used in this manual 
+We will use bold characters to denote vectors and matrices, and unbold characters to denote scalars in mathematical equations.
+ In addition, superscripts usually denote time step and subscripts denote spatial locations. 
+E.g., 𝑇𝑖,𝑘 𝑛+1may mean the temperature at step n+1 (i.e., new time step) and prism (i,k), where i is 
+the element number and k is the (whole) vertical index. We will use red words to denote input file names 
+(e.g. param.nml), purple words to denote output file names (e.g. mirror.out), and green words to 
+denote parameters specified in param.nml; e.g. nchi (the bottom friction option flag). Code/pseudo-code 
+fragments are written in italic. Below are some notations used in this manual: 
+
+Np: # (number) of nodes 
+Ns: # of sides 
+Ne: # of elements 
+Nz: maximum # of vertical levels i34(j): type of an element j (3: triangle; 4: quad) 
+Nb(i): # of surrounding elements of a node i;  kbp(i): bottom index as seen by a node i kbs(i): bottom index as seen by a side i kbe(i): bottom index as seen by an element i A: area of an element ∆z: layer thickness (at a node, side or elem.) δij: Dirac’s Delta function (=1 when i=j; 0 otherwise) 
