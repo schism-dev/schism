@@ -54,21 +54,19 @@ complex 3D baroclinic or coupled applications.
 ##Notations used in this manual 
 We will use bold characters to denote vectors and matrices, and unbold characters to denote scalars in mathematical equations.
  In addition, superscripts usually denote time step and subscripts denote spatial locations. 
-E.g., 𝑇𝑖,𝑘 𝑛+1may mean the temperature at step n+1 (i.e., new time step) and prism (i,k), where i is 
-the element number and k is the (whole) vertical index. We will use red words to denote input file names 
-(e.g. param.nml), purple words to denote output file names (e.g. mirror.out), and green words to 
-denote parameters specified in param.nml; e.g. nchi (the bottom friction option flag). Code/pseudo-code 
-fragments are written in italic. Below are some notations used in this manual: 
+E.g., $𝑇i_{𝑖,𝑘}^{𝑛+1}$ may mean the temperature at step $n+1$ (i.e., new time step) and prism $(i,k)$, where $i$ is 
+the element number and $k$ is the (whole) vertical index. 
+Below are some notations used in this manual: 
 
--$N_p$: # (number) of nodes 
--$N_s$: # of sides 
--$N_e$: # of elements 
--$N_z$: maximum # of vertical levels 
--$i34(j)$: type of an element _j_ (3: triangle; 4: quad) 
--$N_b(i)$: # of surrounding elements of a node _i_ 
--$kbp(i)$: bottom index as seen by a node _i_ 
--$kbs(i)$: bottom index as seen by a side _i_ 
--$kbe(i)$: bottom index as seen by an element _i_ 
--$A$: area of an element 
--$\Delta z$: layer thickness (at a node, side or elem.) 
--$\delta_{ij}$: Dirac’s Delta function (=1 when $i=j$; 0 otherwise) 
+- $N_p$: # (number) of nodes 
+- $N_s$: # of sides 
+- $N_e$: # of elements 
+- $N_z$: maximum # of vertical levels 
+- $i34(j)$: type of an element _j_ (3: triangle; 4: quad) 
+- $N_b(i)$: # of surrounding elements of a node _i_ 
+- $kbp(i)$: bottom index as seen by a node _i_ 
+- $kbs(i)$: bottom index as seen by a side _i_ 
+- $kbe(i)$: bottom index as seen by an element _i_ 
+- $A$: area of an element 
+- $\Delta z$: layer thickness (at a node, side or elem.) 
+- $\delta_{ij}$: Dirac’s Delta function (=1 when $i=j$; 0 otherwise) 
