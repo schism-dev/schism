@@ -1,6 +1,7 @@
 The 3D sediment model inside SCHISM (USE_SED, also referred to as ‘SED3D’ sometimes to differentiate it from the 2D sediment module ‘SED2D’) is adapted from Community Sediment Transport Model ([Warner et al. 2008](#warner2008)). The algorithm is implemented on UGs and we have also reworked several components and added a morphological module (Exner equation). Detailed are reported in [Pinto et al. (2012)](#pinto2012). Also note that for best results this module should be run in conjunction with the wave model (WWM) to account for the wave-enhanced bottom stress.
 
-The main parameter input is sediment.in, which is a free-format file. The sample file has comments /explanations for each parameter; a few important ones are explained below:
+The main parameter input is `sediment.nml`, which is a namelist file. 
+The sample file has comments /explanations for each parameter; a few important ones are explained below:
 
 - `sed_morph`: This parameter controls active morphology.
 - `Nbed`: The # of bed layers affects the stability of the sorting, and `Nbed=1` works robustly with `sed_morph>0`.

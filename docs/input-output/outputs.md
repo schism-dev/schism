@@ -1,4 +1,4 @@
-All SCHISM outputs can be found in `outputs/` directory.
+All SCHISM outputs (except system outputs) can be found in `outputs/` directory.
 
 ## Run info output (mirror.out)
 This is a mirror image of now-defunct screen output. Below is a sample:
@@ -74,9 +74,26 @@ TIME STEP=            1;  TIME=           300.000000
     The ‘average |eta|’ above can be used as a quick and easy way to check if the run is progressing smoothly; it is the average of the absolute value of surface elevation at all nodes. If it’s too large or NaN, you have a problem.
 
 ## Global output
-SCHISM netcdf4 output is emitted in a directory called outputs/. This directory must exist or you will get an immediate crash from the model.
+SCHISM netcdf4 outputs are emitted in a directory called outputs/. This directory must exist or you 
+will get an immediate crash from the model. 
 
-An example file name is `outputs/schout_0000_2.nc`. More generally, the file name is: `schout_[processor_no]_[time_block /stack #].nc`
+Depending on whether or not you turned on OLDIO, the global netcdf outputs will look different.
+
+### Scribed I/O (OLDIO is OFF)
+Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
+ using latest FORTRAN (e.g., read_output10*), matlab or python scripts. 
+For example the latest VisIT plugins can visualize these outputs directly.
+
+All 2D variables (e.g. `elevation`, `sigWaveHeight` etc) as well as static information such as geometry
+ and connectivity info are grouped into `out2d_*.nc`. On the other hand, each 3D variable has its own 
+ output, and vector variables have X and  Y components in separate outputs (e.g. `horizontalVelX` and
+ `horizontalVelY`).
+
+### Old I/O (OLDIO is ON)
+Under this mode, each MPI process will dump its own output and a post-processing script (`combin_output*.f90`)
+ will need to be used to combine these into global netcdf outputs.  
+
+An example output file name is `outputs/schout_0000_2.nc`. More generally, the file name is: `schout_[processor_no]_[time_block /stack #].nc`
 
 !!!notes "Processor number"
     The mpi_processor number starts at 0 and represents the MPI processor ID from the task that wrote the output. 

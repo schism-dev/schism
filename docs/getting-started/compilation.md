@@ -32,7 +32,16 @@ Note: the Makefile will automatically invoke `Core/gen_version.py`, which will g
 ## Cmake
 Alternatively, the cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.
 
-1. `SCHISM.local.build`: used to toggle on/off optional modules (similar to include_modules);
+1. `SCHISM.local.build`: used to toggle on/off optional modules (similar to include_modules used in make).
+ `TVD_LIM` should always have a valid value, but all other 'modules' are usually turned off for pure hydrodynamic 
+  applications. 
+  `NO_PARMETIS`: you can bypass ParMETIS lib and provide a domain partitioning map (`partition.prop`
+  which is identical to the output from ParMETIS `global_to_local.prop`) at runtime. 
+  `OLDIO`: this swtich controls the global outputs. We have implemented asynchronous I/O (aka 'scribed' I/O)
+  where combined global variables are outputted by dedicated scribes cores. To use this option, `OLDIO` should
+  be off, and the user needs to specify number of scribe cores at command line. See 'Running the model' for
+  more details. If `OLDIO` is turned on, previous I/O mode (i.e. outputs per MPI process) is used and 
+  the user needs to use post-processing scripts to combine outputs;
 2. `SCHISM.local.cluster_name`: similar to Make.defs.local, this file specifies the most important environment variables like name/path of compiler, netcdf library etc. In general, cmake is quite adept at inferring some of these variables but sometimes you might need to overwrite the `defaults` in this file. You can start from an existing file for a similar cluster e.g. `cp –L SCHISM.local.whirlwind SCHISM.local.myown`
 
 Once these two files are set, run - 

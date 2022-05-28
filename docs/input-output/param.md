@@ -96,9 +96,6 @@ Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_t
 ### ieos_type=0, ieos_pres=0 (int)
 By default, use the nonlinear equation of state: `ieos_type==0`. If the potential temperature is used, the pressure effect has been accounted for: `ieos_pres=0.`
 
-### iloadtide=0 (int)
-Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) and phases (degrees behind GMT). If `iloadtide=2`, a simple scaling is used to reduce the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004).
-
 ### if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
 Point sources/sinks option (0: no; 1: on). If `if_source=1`, needs `source_sink.in`, `vsource.th`, `vsink.th`, 
 and `msource.th` (see sample files in the source code directory src/ for their formats). 
@@ -128,20 +125,21 @@ Hot start flag. If `ihot=0`, cold start; if `ihot≠0`, hot start from `hotstart
 ### ihydraulics=0 (int)
 Hydraulic model option. If `ihydraulics≠0`, `hydraulics.in` is required.
 
-### loadtide_coef=0 (int)
-Option to add self-attraction loading tide (SAL) into tidal potential (usually for basin-scale applications).
 
-If `iloadtide=0`, no SAL is applied.
+### iloadtide=0 (int)  loadtide_coef (double)
+Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. 
+If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from a tide database,
+ e.g., FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with 
+tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) 
+and phases (degrees behind GMT). In this option, SAL is
+ lumped into tidal potential so it shares some parameters with tidal potential
+ in bctides.in (cut-off depth, frequencies).
 
-If `iloadtide=1`, needs inputs: `loadtide_[FREQ].gr3`, where [FREQ] are freq names (shared with tidal potential, 
-in upper cases) and the _two_ ‘depths' inside are amplitude (m) and phases (degrees behind GMT), 
-interpolated from global tide model (e.g. FES2014). In this option, SAL is lumped into tidal potential so it 
- shares some parameters with tidal potential in `bctides.in` (cut-off depth, frequencies).
-
-If `iloadtide`=2 or 3, use a simple scaling for gravity approach (in this option, SAL is applied everywhere 
- and does not share parameters with tidal potential). For `iloadtide=2`, a const scaling of (1-loadtide_coef) is applied; 
-for `iloadtide`=3, the scaling is dependent on the local depth (Stepanov & Hughes 2004) with max of loadtide_coef.
-
+If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
+ SAL is applied everywhere and does not share parameters with tidal potential).
+If `iloadtide=2`, a simple scaling is used to reduce 
+the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004),
+ with a maximum value of `loadtide_coef`.
 
 ### imm=0, ibdef=10 (int)
 Bed deformation option. Default: `0` (no bed deformation); `1`: with bed deformation (needs `ibdef` (# of steps during which deformation occurs), and `bdef.gr3`); 2: 3D bottom deformation (need to interact with code).
