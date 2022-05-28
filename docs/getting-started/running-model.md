@@ -22,7 +22,9 @@ Each 3D output has its own netcdf output (e.g. `salinity_*.nc`) and all 2D outpu
 `out2d_*.nc`. Each vector output is splitted into X,Y components, e.g. `horizontalVel[X,Y]_*.nc`.
 The output `zCoordinates_*.nc` is needed for VisIT. Efficient asynchronous message passing is 
 done inside the code for I/O that minimizes latency.
+    Users must specify # of scribes on cmd line as 
 
-    Users must specify # of scribes on cmd line as `mpirun -np NPROC pschism nscribe`; the 
-specified number can be >= min required as in `param.nml` and explained above. If not 
+`mpirun -np NPROC pschism nscribe`
+
+ the specified number can be >= min required as in `param.nml` and explained above. If not 
 you'll get an error. If you specify more than needed, you waste some cores but otherwise fine.
