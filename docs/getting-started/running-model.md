@@ -7,8 +7,10 @@ To simulate the model, the model executable needs to be run inside the folder wh
 5. bctides.in
 
 The model is usually run through a batch script, which in essence executes the code like:
+
 - `mpirun -np NPROC pschism  <# scribes>` if OLDIO is OFF 
 - `mpirun -np NPROC pschism ` if OLDIO is ON
+
 where NPROC is the number of process used for parallel computing. Note that your system may require 
  other command then `mpirun` or more arguments.
 
@@ -20,6 +22,7 @@ Each 3D output has its own netcdf output (e.g. `salinity_*.nc`) and all 2D outpu
 `out2d_*.nc`. Each vector output is splitted into X,Y components, e.g. `horizontalVel[X,Y]_*.nc`.
 The output `zCoordinates_*.nc` is needed for VisIT. Efficient asynchronous message passing is 
 done inside the code for I/O that minimizes latency.
+
     Users must specify # of scribes on cmd line as `mpirun -np NPROC pschism nscribe`; the 
 specified number can be >= min required as in `param.nml` and explained above. If not 
 you'll get an error. If you specify more than needed, you waste some cores but otherwise fine.

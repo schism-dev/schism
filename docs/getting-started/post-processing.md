@@ -3,7 +3,7 @@ You can find some useful post-processing tools in the src/Utility directory.
 ## Combining scripts
 `combine_output11.f90` is used to combine process-specific netcdf to global netcdf. 
 `autocombine_MPI_elfe.pl` is a simple perl wrapper script that automatically combines 
-all available outputs during or after the run. Usde these if you invoked OLDIO.
+all available outputs during or after the run. Use these if you invoked OLDIO.
 
 `combine_hotstart7.f90` is used combine process-specific hotstart outputs (`outputs/hotstart_0*.nc`)
  into `hotstart.nc`. This is required even if you used scribed I/O.
