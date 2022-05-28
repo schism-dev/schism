@@ -51,6 +51,7 @@ nav:
   - Home: index.md
   - Changelog: changelog.md
   - Getting started:
+    - Overview: schism/overview.md
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
     - Typical workflow: getting-started/typical-workflow.md
@@ -60,7 +61,6 @@ nav:
     - Visualization: getting-started/visualization.md
     - Postprocessing: getting-started/post-processing.md
   - Model formulation:
-    - Overview: schism/overview.md
     - Physical formulation: schism/physical-formulation.md
     - Numerical formulation:
       - Geometry and discretization: schism/geometry-discretization.md
