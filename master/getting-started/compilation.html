@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.16">
     
     
       
@@ -17,7 +17,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.1c3799f8.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -1178,21 +1178,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../publications.html" class="md-nav__link">
-        Publications
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../faq.html" class="md-nav__link">
         Frequently Asked Questions
       </a>
@@ -1257,7 +1242,16 @@
 <h2 id="cmake">Cmake<a class="headerlink" href="#cmake" title="Permanent link">&para;</a></h2>
 <p>Alternatively, the cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.</p>
 <ol>
-<li><code>SCHISM.local.build</code>: used to toggle on/off optional modules (similar to include_modules);</li>
+<li><code>SCHISM.local.build</code>: used to toggle on/off optional modules (similar to include_modules used in make).
+ <code>TVD_LIM</code> should always have a valid value, but all other 'modules' are usually turned off for pure hydrodynamic 
+  applications. 
+  <code>NO_PARMETIS</code>: you can bypass ParMETIS lib and provide a domain partitioning map (<code>partition.prop</code>
+  which is identical to the output from ParMETIS <code>global_to_local.prop</code>) at runtime. 
+  <code>OLDIO</code>: this swtich controls the global outputs. We have implemented asynchronous I/O (aka 'scribed' I/O)
+  where combined global variables are outputted by dedicated scribes cores. To use this option, <code>OLDIO</code> should
+  be off, and the user needs to specify number of scribe cores at command line. See 'Running the model' for
+  more details. If <code>OLDIO</code> is turned on, previous I/O mode (i.e. outputs per MPI process) is used and 
+  the user needs to use post-processing scripts to combine outputs;</li>
 <li><code>SCHISM.local.cluster_name</code>: similar to Make.defs.local, this file specifies the most important environment variables like name/path of compiler, netcdf library etc. In general, cmake is quite adept at inferring some of these variables but sometimes you might need to overwrite the <code>defaults</code> in this file. You can start from an existing file for a similar cluster e.g. <code>cp –L SCHISM.local.whirlwind SCHISM.local.myown</code></li>
 </ol>
 <p>Once these two files are set, run - </p>
@@ -1339,7 +1333,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../assets/javascripts/bundle.3a4b43e5.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       

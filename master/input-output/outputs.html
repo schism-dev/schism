@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.16">
     
     
       
@@ -17,7 +17,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.1c3799f8.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -788,6 +788,26 @@
     Global output
   </a>
   
+    <nav class="md-nav" aria-label="Global output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scribed-io-oldio-is-off" class="md-nav__link">
+    Scribed I/O (OLDIO is OFF)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#old-io-oldio-is-on" class="md-nav__link">
+    Old I/O (OLDIO is ON)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1192,21 +1212,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../publications.html" class="md-nav__link">
-        Publications
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../faq.html" class="md-nav__link">
         Frequently Asked Questions
       </a>
@@ -1249,7 +1254,7 @@
 
   <h1>Outputs</h1>
 
-<p>All SCHISM outputs can be found in <code>outputs/</code> directory.</p>
+<p>All SCHISM outputs (except system outputs) can be found in <code>outputs/</code> directory.</p>
 <h2 id="run-info-output-mirrorout">Run info output (mirror.out)<a class="headerlink" href="#run-info-output-mirrorout" title="Permanent link">&para;</a></h2>
 <p>This is a mirror image of now-defunct screen output. Below is a sample:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Barotropic model without ST calculation
@@ -1322,8 +1327,21 @@
 <p>The ‘average |eta|’ above can be used as a quick and easy way to check if the run is progressing smoothly; it is the average of the absolute value of surface elevation at all nodes. If it’s too large or NaN, you have a problem.</p>
 </div>
 <h2 id="global-output">Global output<a class="headerlink" href="#global-output" title="Permanent link">&para;</a></h2>
-<p>SCHISM netcdf4 output is emitted in a directory called outputs/. This directory must exist or you will get an immediate crash from the model.</p>
-<p>An example file name is <code>outputs/schout_0000_2.nc</code>. More generally, the file name is: <code>schout_[processor_no]_[time_block /stack #].nc</code></p>
+<p>SCHISM netcdf4 outputs are emitted in a directory called outputs/. This directory must exist or you 
+will get an immediate crash from the model. </p>
+<p>Depending on whether or not you turned on OLDIO, the global netcdf outputs will look different.</p>
+<h3 id="scribed-io-oldio-is-off">Scribed I/O (OLDIO is OFF)<a class="headerlink" href="#scribed-io-oldio-is-off" title="Permanent link">&para;</a></h3>
+<p>Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
+ using latest FORTRAN (e.g., read_output10*), matlab or python scripts. 
+For example the latest VisIT plugins can visualize these outputs directly.</p>
+<p>All 2D variables (e.g. <code>elevation</code>, <code>sigWaveHeight</code> etc) as well as static information such as geometry
+ and connectivity info are grouped into <code>out2d_*.nc</code>. On the other hand, each 3D variable has its own 
+ output, and vector variables have X and  Y components in separate outputs (e.g. <code>horizontalVelX</code> and
+ <code>horizontalVelY</code>).</p>
+<h3 id="old-io-oldio-is-on">Old I/O (OLDIO is ON)<a class="headerlink" href="#old-io-oldio-is-on" title="Permanent link">&para;</a></h3>
+<p>Under this mode, each MPI process will dump its own output and a post-processing script (<code>combin_output*.f90</code>)
+ will need to be used to combine these into global netcdf outputs.  </p>
+<p>An example output file name is <code>outputs/schout_0000_2.nc</code>. More generally, the file name is: <code>schout_[processor_no]_[time_block /stack #].nc</code></p>
 <div class="admonition notes">
 <p class="admonition-title">Processor number</p>
 <p>The mpi_processor number starts at 0 and represents the MPI processor ID from the task that wrote the output. </p>
@@ -1426,7 +1444,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../assets/javascripts/bundle.3a4b43e5.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       

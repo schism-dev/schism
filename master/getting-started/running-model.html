@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.16">
     
     
       
@@ -17,7 +17,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.1c3799f8.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -1137,21 +1137,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../publications.html" class="md-nav__link">
-        Publications
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../faq.html" class="md-nav__link">
         Frequently Asked Questions
       </a>
@@ -1202,12 +1187,25 @@
 <li>[bottom_friction].gr3</li>
 <li>bctides.in</li>
 </ol>
-<p>The model is run through <code>mpirun -np NPROC pschism</code>, where NPROC is the number of process used for parallel computing.</p>
+<p>The model is usually run through a batch script, which in essence executes the code like:
+<code>mpirun -np NPROC pschism  &lt;# scribes&gt;</code> if OLDIO is OFF 
+<code>mpirun -np NPROC pschism</code> if OLDIO is ON
+where NPROC is the number of process used for parallel computing. Note that your system may require 
+ other command then <code>mpirun</code> or more arguments.</p>
 <div class="admonition caution">
 <p class="admonition-title">Scribe IO</p>
-<p>Shortly after v5.9.0 we have implemented a new I/O mode called scribed I/O. Under this mode, the user needs to specify at runtime how many 'scribe' cores they want to use. The # of scribes= # of 3D outputs (vectors counted as 2) plus 2. Each 3D output has its own netcdf output (e.g. salinity_<em>.nc) and all 2D outputs share same output out2d_</em>.nc. The code always outputs zCoordinates_*.nc for VisIT. Efficient message passing is done inside the code for I/O that minimizes latency.</p>
-<p>Users must specify # of scribes on cmd line as <code>mpirun -np NPROC pschism nscribe</code>; the specified number can be &gt;= min required as in <code>param.nml</code> and explained above. If not you get an error. If you specify more than needed, you waste some cores but otherwise fine.</p>
+<p>Shortly after v5.9.0 we have implemented a new I/O mode called scribed I/O. Under this mode, </p>
 </div>
+<p>the user needs to specify at runtime how many 'scribe' cores they want to use. The # 
+of scribes= # of 3D outputs (vectors counted as 2) plus 1 (which is used for all 2D variables). 
+Each 3D output has its own netcdf output (e.g. <code>salinity_*.nc</code>) and all 2D outputs share same output 
+<code>out2d_*.nc</code>. Each vector output is splitted into X,Y components, e.g. <code>horizontalVel[X,Y]_*.nc</code>.
+The output <code>zCoordinates_*.nc</code> is needed for VisIT. Efficient asynchronous message passing is 
+done inside the code for I/O that minimizes latency.</p>
+<div class="highlight"><pre><span></span><code>Users must specify # of scribes on cmd line as `mpirun -np NPROC pschism nscribe`; the
+</code></pre></div>
+<p>specified number can be &gt;= min required as in <code>param.nml</code> and explained above. If not 
+you'll get an error. If you specify more than needed, you waste some cores but otherwise fine.</p>
 
               
             </article>
@@ -1276,7 +1274,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../assets/javascripts/bundle.3a4b43e5.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       

@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.16">
     
     
       
@@ -17,7 +17,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.1c3799f8.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -861,13 +861,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#iloadtide0-int" class="md-nav__link">
-    iloadtide=0 (int)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" class="md-nav__link">
     if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
   </a>
@@ -917,8 +910,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#loadtide_coef0-int" class="md-nav__link">
-    loadtide_coef=0 (int)
+  <a href="#iloadtide0-int-loadtide_coef-double" class="md-nav__link">
+    iloadtide=0 (int)  loadtide_coef (double)
   </a>
   
 </li>
@@ -1581,21 +1574,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../publications.html" class="md-nav__link">
-        Publications
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../faq.html" class="md-nav__link">
         Frequently Asked Questions
       </a>
@@ -1711,8 +1689,6 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, more efficient ELM transport is used locally (at the expense of mass conservation, so make sure this option is used sparingly).</p>
 <h3 id="ieos_type0-ieos_pres0-int">ieos_type=0, ieos_pres=0 (int)<a class="headerlink" href="#ieos_type0-ieos_pres0-int" title="Permanent link">&para;</a></h3>
 <p>By default, use the nonlinear equation of state: <code>ieos_type==0</code>. If the potential temperature is used, the pressure effect has been accounted for: <code>ieos_pres=0.</code></p>
-<h3 id="iloadtide0-int">iloadtide=0 (int)<a class="headerlink" href="#iloadtide0-int" title="Permanent link">&para;</a></h3>
-<p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) and phases (degrees behind GMT). If <code>iloadtide=2</code>, a simple scaling is used to reduce the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004).</p>
 <h3 id="if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array">if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)<a class="headerlink" href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" title="Permanent link">&para;</a></h3>
 <p>Point sources/sinks option (0: no; 1: on). If <code>if_source=1</code>, needs <code>source_sink.in</code>, <code>vsource.th</code>, <code>vsink.th</code>, 
 and <code>msource.th</code> (see sample files in the source code directory src/ for their formats). 
@@ -1734,16 +1710,19 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <p>Hot start flag. If <code>ihot=0</code>, cold start; if <code>ihot≠0</code>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>, and in this case, you do not need to adjust other inputs.</p>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
 <p>Hydraulic model option. If <code>ihydraulics≠0</code>, <code>hydraulics.in</code> is required.</p>
-<h3 id="loadtide_coef0-int">loadtide_coef=0 (int)<a class="headerlink" href="#loadtide_coef0-int" title="Permanent link">&para;</a></h3>
-<p>Option to add self-attraction loading tide (SAL) into tidal potential (usually for basin-scale applications).</p>
-<p>If <code>iloadtide=0</code>, no SAL is applied.</p>
-<p>If <code>iloadtide=1</code>, needs inputs: <code>loadtide_[FREQ].gr3</code>, where [FREQ] are freq names (shared with tidal potential, 
-in upper cases) and the <em>two</em> ‘depths' inside are amplitude (m) and phases (degrees behind GMT), 
-interpolated from global tide model (e.g. FES2014). In this option, SAL is lumped into tidal potential so it 
- shares some parameters with tidal potential in <code>bctides.in</code> (cut-off depth, frequencies).</p>
-<p>If <code>iloadtide</code>=2 or 3, use a simple scaling for gravity approach (in this option, SAL is applied everywhere 
- and does not share parameters with tidal potential). For <code>iloadtide=2</code>, a const scaling of (1-loadtide_coef) is applied; 
-for <code>iloadtide</code>=3, the scaling is dependent on the local depth (Stepanov &amp; Hughes 2004) with max of loadtide_coef.</p>
+<h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int)  loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
+<p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. 
+If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from a tide database,
+ e.g., FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with 
+tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) 
+and phases (degrees behind GMT). In this option, SAL is
+ lumped into tidal potential so it shares some parameters with tidal potential
+ in bctides.in (cut-off depth, frequencies).</p>
+<p>If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
+ SAL is applied everywhere and does not share parameters with tidal potential).
+If <code>iloadtide=2</code>, a simple scaling is used to reduce 
+the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004),
+ with a maximum value of <code>loadtide_coef</code>.</p>
 <h3 id="imm0-ibdef10-int">imm=0, ibdef=10 (int)<a class="headerlink" href="#imm0-ibdef10-int" title="Permanent link">&para;</a></h3>
 <p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>ibdef</code> (# of steps during which deformation occurs), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
@@ -1927,7 +1906,7 @@ If <code>nws=-1</code>, use Holland parametric wind model (barotropic only with 
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../assets/javascripts/bundle.3a4b43e5.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       
