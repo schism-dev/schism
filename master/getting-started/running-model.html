@@ -1187,10 +1187,12 @@
 <li>[bottom_friction].gr3</li>
 <li>bctides.in</li>
 </ol>
-<p>The model is usually run through a batch script, which in essence executes the code like:
-- <code>mpirun -np NPROC pschism  &lt;# scribes&gt;</code> if OLDIO is OFF 
-- <code>mpirun -np NPROC pschism</code> if OLDIO is ON
-where NPROC is the number of process used for parallel computing. Note that your system may require 
+<p>The model is usually run through a batch script, which in essence executes the code like:</p>
+<ul>
+<li><code>mpirun -np NPROC pschism  &lt;# scribes&gt;</code> if OLDIO is OFF </li>
+<li><code>mpirun -np NPROC pschism</code> if OLDIO is ON</li>
+</ul>
+<p>where NPROC is the number of process used for parallel computing. Note that your system may require 
  other command then <code>mpirun</code> or more arguments.</p>
 <div class="admonition caution">
 <p class="admonition-title">Scribe IO</p>
@@ -1201,9 +1203,10 @@ of scribes= # of 3D outputs (vectors counted as 2) plus 1 (which is used for all
 Each 3D output has its own netcdf output (e.g. <code>salinity_*.nc</code>) and all 2D outputs share same output 
 <code>out2d_*.nc</code>. Each vector output is splitted into X,Y components, e.g. <code>horizontalVel[X,Y]_*.nc</code>.
 The output <code>zCoordinates_*.nc</code> is needed for VisIT. Efficient asynchronous message passing is 
-done inside the code for I/O that minimizes latency.
-    Users must specify # of scribes on cmd line as <code>mpirun -np NPROC pschism nscribe</code>; the 
-specified number can be &gt;= min required as in <code>param.nml</code> and explained above. If not 
+done inside the code for I/O that minimizes latency.</p>
+<div class="highlight"><pre><span></span><code>Users must specify # of scribes on cmd line as `mpirun -np NPROC pschism nscribe`; the
+</code></pre></div>
+<p>specified number can be &gt;= min required as in <code>param.nml</code> and explained above. If not 
 you'll get an error. If you specify more than needed, you waste some cores but otherwise fine.</p>
 
               
