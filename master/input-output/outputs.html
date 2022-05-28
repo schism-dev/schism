@@ -266,6 +266,20 @@
   
   
     <li class="md-nav__item">
+      <a href="../schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../getting-started/getting-sourcecode.html" class="md-nav__link">
         Getting the source code
       </a>
@@ -412,20 +426,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../schism/overview.html" class="md-nav__link">
-        Overview
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../schism/physical-formulation.html" class="md-nav__link">
         Physical formulation
       </a>
@@ -443,18 +443,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_3" type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
       
       
       
       
-        <label class="md-nav__link" for="__nav_4_3">
+        <label class="md-nav__link" for="__nav_4_2">
           Numerical formulation
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
-        <label class="md-nav__title" for="__nav_4_3">
+        <label class="md-nav__title" for="__nav_4_2">
           <span class="md-nav__icon md-icon"></span>
           Numerical formulation
         </label>
@@ -787,26 +787,6 @@
   <a href="#global-output" class="md-nav__link">
     Global output
   </a>
-  
-    <nav class="md-nav" aria-label="Global output">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scribed-io-oldio-is-off" class="md-nav__link">
-    Scribed I/O (OLDIO is OFF)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#old-io-oldio-is-on" class="md-nav__link">
-    Old I/O (OLDIO is ON)
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1330,16 +1310,16 @@
 <p>SCHISM netcdf4 outputs are emitted in a directory called outputs/. This directory must exist or you 
 will get an immediate crash from the model. </p>
 <p>Depending on whether or not you turned on OLDIO, the global netcdf outputs will look different.</p>
-<h3 id="scribed-io-oldio-is-off">Scribed I/O (OLDIO is OFF)<a class="headerlink" href="#scribed-io-oldio-is-off" title="Permanent link">&para;</a></h3>
-<p>Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
+<p>1) Scribed I/O (OLDIO is OFF)
+Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
  using latest FORTRAN (e.g., read_output10*), matlab or python scripts. 
 For example the latest VisIT plugins can visualize these outputs directly.</p>
 <p>All 2D variables (e.g. <code>elevation</code>, <code>sigWaveHeight</code> etc) as well as static information such as geometry
  and connectivity info are grouped into <code>out2d_*.nc</code>. On the other hand, each 3D variable has its own 
- output, and vector variables have X and  Y components in separate outputs (e.g. <code>horizontalVelX</code> and
- <code>horizontalVelY</code>).</p>
-<h3 id="old-io-oldio-is-on">Old I/O (OLDIO is ON)<a class="headerlink" href="#old-io-oldio-is-on" title="Permanent link">&para;</a></h3>
-<p>Under this mode, each MPI process will dump its own output and a post-processing script (<code>combin_output*.f90</code>)
+ output, and vector variables have X and  Y components in separate outputs (e.g. <code>horizontalVelX_*.nc</code> and
+ <code>horizontalVelY_*.nc</code>).</p>
+<p>2) Old I/O (OLDIO is ON)
+Under this mode, each MPI process will dump its own output and a post-processing script (<code>combin_output*.f90</code>)
  will need to be used to combine these into global netcdf outputs.  </p>
 <p>An example output file name is <code>outputs/schout_0000_2.nc</code>. More generally, the file name is: <code>schout_[processor_no]_[time_block /stack #].nc</code></p>
 <div class="admonition notes">

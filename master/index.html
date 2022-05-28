@@ -264,20 +264,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#how-to-read-this-manual" class="md-nav__link">
-    How to read this manual
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notations-used-in-this-manual" class="md-nav__link">
-    Notations used in this manual
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -328,6 +314,20 @@
           Getting started
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
           
             
               
@@ -481,20 +481,6 @@
   
   
     <li class="md-nav__item">
-      <a href="schism/overview.html" class="md-nav__link">
-        Overview
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
       <a href="schism/physical-formulation.html" class="md-nav__link">
         Physical formulation
       </a>
@@ -512,18 +498,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_3" type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
       
       
       
       
-        <label class="md-nav__link" for="__nav_4_3">
+        <label class="md-nav__link" for="__nav_4_2">
           Numerical formulation
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
-        <label class="md-nav__title" for="__nav_4_3">
+        <label class="md-nav__title" for="__nav_4_2">
           <span class="md-nav__icon md-icon"></span>
           Numerical formulation
         </label>
@@ -1281,34 +1267,6 @@
 <ul>
 <li>Zhang, Y. and Baptista, A.M. (2008) SELFE: A semi-implicit Eulerian-Lagrangian finite-element model for cross-scale ocean circulation", Ocean Modelling, 21(3-4), 71-96.</li>
 <li>Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81.</li>
-</ul>
-<h2 id="how-to-read-this-manual">How to read this manual<a class="headerlink" href="#how-to-read-this-manual" title="Permanent link">&para;</a></h2>
-<p>This manual contains detailed information on physical and numerical formulations, as well as usage for SCHISM. 
-For beginners, we suggest you familiarize yourself with the basic notations in Chapters 2 and 3 but skip some 
-details in those two chapters; there is also a ‘cheat sheet’ near the end of this chapter. 
-Chapters 4&amp;5 describe how to set up the model, including grid generation, and so should be read carefully, 
-in consultation with appropriate sections in the previous 2 chapters. Since SCHISM is quite a sophisticated package, 
-we strongly recommend you start from the simple test cases in Chapter 5.5 and gradually progress toward more 
-complex 3D baroclinic or coupled applications. </p>
-<h2 id="notations-used-in-this-manual">Notations used in this manual<a class="headerlink" href="#notations-used-in-this-manual" title="Permanent link">&para;</a></h2>
-<p>We will use bold characters to denote vectors and matrices, and unbold characters to denote scalars in mathematical equations.
- In addition, superscripts usually denote time step and subscripts denote spatial locations. 
-E.g., <span class="arithmatex">\(𝑇i_{𝑖,𝑘}^{𝑛+1}\)</span> may mean the temperature at step <span class="arithmatex">\(n+1\)</span> (i.e., new time step) and prism <span class="arithmatex">\((i,k)\)</span>, where <span class="arithmatex">\(i\)</span> is 
-the element number and <span class="arithmatex">\(k\)</span> is the (whole) vertical index. 
-Below are some notations used in this manual: </p>
-<ul>
-<li><span class="arithmatex">\(N_p\)</span>: # (number) of nodes </li>
-<li><span class="arithmatex">\(N_s\)</span>: # of sides </li>
-<li><span class="arithmatex">\(N_e\)</span>: # of elements </li>
-<li><span class="arithmatex">\(N_z\)</span>: maximum # of vertical levels </li>
-<li><span class="arithmatex">\(i34(j)\)</span>: type of an element <em>j</em> (3: triangle; 4: quad) </li>
-<li><span class="arithmatex">\(N_b(i)\)</span>: # of surrounding elements of a node <em>i</em> </li>
-<li><span class="arithmatex">\(kbp(i)\)</span>: bottom index as seen by a node <em>i</em> </li>
-<li><span class="arithmatex">\(kbs(i)\)</span>: bottom index as seen by a side <em>i</em> </li>
-<li><span class="arithmatex">\(kbe(i)\)</span>: bottom index as seen by an element <em>i</em> </li>
-<li><span class="arithmatex">\(A\)</span>: area of an element </li>
-<li><span class="arithmatex">\(\Delta z\)</span>: layer thickness (at a node, side or elem.) </li>
-<li><span class="arithmatex">\(\delta_{ij}\)</span>: Dirac’s Delta function (=1 when <span class="arithmatex">\(i=j\)</span>; 0 otherwise) </li>
 </ul>
 
               
