@@ -5,11 +5,12 @@ git clone https://github.com/schism-dev/schism.git
 cd schism
 ```
 
-This will give you the latest branch. If you want to get certain tagged versions use the `tag` command of git as `git checkout tags/v5.9.0` - for v5.9.0.
+This will give you the latest master branch. If you want to get certain tagged versions use the `tag` command of git as `git checkout tags/v5.9.0` - for v5.9.0.
 
 Note that if you are interested in the development, you might need to add your system’s ssh public key to your github.com account first before cloning. Alternatively, you can also go to https://github.com/schism-dev and directly download the zip files.
 
-General users also have access to master branch of the development repository (https://github.com/schism-dev/schism), but this manual is currently for the tag version v5.9.0 only. An live documentation for the master version is currently in discussion. Currently, the web site and this manual is be updated when a newer version/bug fixes becomes available. 
+General users have access to all branches and tags  of the repository (https://github.com/schism-dev/schism). You can find online manuals for the latest stable
+ master or newer tags after v5.9.0. The developers will constantly update the manuals to update them up to date as much as possible. 
 
 Due to the large file size inside, the test suite used to test the code is still being distributed via svn. You’ll need svn v1.8 or above (see http://svnbook.red-bean.com/ for a manual for using svn). Svn clients on linux/unix/windows/Mac should all work. Following command will give you access to the verification tests - 
 
@@ -17,6 +18,6 @@ Due to the large file size inside, the test suite used to test the code is still
 svn co https://columbia.vims.edu/schism/schism_verification_tests
 ```
 
-Note that the test suite is used to test the master branch. Due to the differences between the release tags and master branch, you may need to modify some input files (e.g. param.nml) but we hope these tests  how you how we set up models for different problems.
+Note that the test suite is used to test the latest master branch. Due to the differences between the release tags and master branch, you may need to modify some input files (e.g. param.nml) but we hope these tests  how you how we set up models for different problems.
 
 Useful user info can be found in src/Readme.beta_notes (including change of format for input files and bug fixes).
