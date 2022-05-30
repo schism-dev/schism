@@ -44,12 +44,9 @@
 
 &MARCO
 !-----------------------------------------------------------------------
-!solar radiation
-!  iRad=0: short wave from sflux; require ihconsv =1, nws=2
-!  iRad=1: read PAR(time) from ICM_rad.th; (unit: W/m2)
-!  iRad=2: read PAR(time,location) from ICM_rad.th; (unit: W/m2)
+!number of subcycles in ICM kinetics
 !-----------------------------------------------------------------------
-iRad = 0
+nsub=1
 
 !-----------------------------------------------------------------------
 !options of formulations for computing light attenuation coefficients
@@ -118,37 +115,27 @@ isav_icm = 0
 iveg_icm = 0                   !0: VEG off;  1: VEG on
 
 !-----------------------------------------------------------------------
-!Atmospheric loading(iAtm=1: uniform atmospheric load; iAtm=2: spatially varying )
-!-----------------------------------------------------------------------
-iAtm = 0 
-
-!-----------------------------------------------------------------------
 !Sediment module switch. iSed=1: Use sediment flux model
 !benthic flux provided by sed_flux_model
 !-----------------------------------------------------------------------
 iSed = 1 
 
 !-----------------------------------------------------------------------
-!time series of benthic flux(iBen=0: no time series of manually added benthic flux; 
-!iBen=1: add uniform benthic flux time series for the whole domain; iBen=2; spatially varying )
-!it is allowed to have iSed=1.and.iBen/=0
+!solar radiation
+!  iRad=0: short wave from sflux; require ihconsv =1, nws=2
+!  iRad=1: short wave from ICM_rad.th.nc (unit: W/m2); dim=(npt,time)
+!  note: npt=1/np/ne; need to define mapping data if npt=other number
 !-----------------------------------------------------------------------
-iBen = 0
+iRad = 0
 
 !-----------------------------------------------------------------------
-!simplified benthic flux as funtion of temperature (iTBen=0: no benthic flux estimations;
-!iTben=1: read horizontally uniform adjusting coefficent thata_tben and magnitude *_tben;
-!iTben=2: spatially varying sets of thata_tben and *_tben, currently unavailable
-!it is not allowed to have iTBen=1 with iSed=1.or.iBen/=0 at the same time
+!Atmospheric nutrient fluxes, and Benthic nutrient fluxes
+!  isflux/ibflux=1: additional nutrient fluxes; dim(npt,ntrs_icm,time) 
+!  units: g/m2,(consistent with variable units in the model)
+!  note: npt=1/np/ne; need to define mapping data if npt=other number
 !-----------------------------------------------------------------------
-iTBen = 0
-thata_tben = 1.06
-SOD_tben = 2.0
-DOC_tben = 0.0
-NH4_tben = 0.1
-NO3_tben = 0.1
-PO4_tben = 0.01
-SA_tben  = 0.0
+isflux = 0 
+ibflux = 0
 
 !-----------------------------------------------------------------------
 !idry_icm=1: turn on shallow kinetic biochemical process

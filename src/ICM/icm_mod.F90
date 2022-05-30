@@ -25,29 +25,29 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: iRad,iKe,iLight,iLimit,iSettle,iAtm,iSed,iBen,iTBen
+  integer,save,target :: nsub,iKe,iLight,iLimit,iSettle,iSed,iRad,isflux,ibflux
   integer,save,target :: iSilica,iZB,iPh,isav_icm,iveg_icm,idry_icm
   real(rkind),save :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
   real(rkind),save,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
-  real(rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben !todo, ZG
   integer,save,pointer :: jdry,jsav,jveg
 
   integer,parameter :: nout_sav=7, nout_veg=12
   integer,save,target :: ntrs_icm,itrs(2,6),nout_icm
+  integer,save,pointer :: itrs_icm(:,:)
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
                 & iLPOP,iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3
   character(len=6),save,allocatable :: name_icm(:)
-  integer,save,pointer :: itrs_icm(:,:)
+  integer,save,target :: ncid_icm(3),npt_icm(3)
+  real(rkind),target,save :: time_icm(2,3),dt_icm(3)
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:) 
+
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                                          & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
-  real(rkind),save,target,allocatable :: dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
-  real(rkind),save,pointer,dimension(:,:) :: dZBS,dPBS,zdPBS,zdC,zdN,zdP,zdS
-  real(rkind),save,pointer,dimension(:) :: zdDOX !, sdC,sdN,sdP, vdC,vdN,vdP
-  !real(rkind),save,pointer,dimension(:) :: dZB1,dZB2,dPB1,dPB2,dPB3,dRPOC,dLPOC,dDOC,dRPON,dLPON,dDON,dNH4,& 
-  !                          & dNO3,dRPOP,dLPOP,dDOP,dPO4,dSU,dSA,dCOD,dDOX,dTIC,dALK,dCA,dCACO3
-  !real(rkind),save,pointer :: sdDOX,vdDOX
+  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
+  real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
+  real(rkind),save,pointer,dimension(:) :: zdDOX 
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -62,12 +62,10 @@ module icm_mod
   real(rkind),save :: o2c,o2n,dn2c,an2c,KPO4p,WRea
 
   real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)
-  real(rkind),save:: time_icm(5),time_ph  !time stamp for WQinput
+  real(rkind),save:: time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
-  real(rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !erosion
-  !additional time series of benthic flux
-  real(rkind),save,allocatable,dimension(:) :: tthcan,ttdens !(nea)
+  real(rkind),save,allocatable,dimension(:) :: eroH2S, eroLPOC,eroRPOC !erosion
 
   !-------------------------------------------------------------------------------
   !silica parameters and variables
@@ -219,7 +217,7 @@ module icm_mod
   real(rkind),save,allocatable,dimension(:) :: sedDOX,sedCOD,sedNH4,sedNO3,sedPO4,sedDOC,sedSA
 
   !erosion fluxes
-  real(rkind),save,allocatable,dimension(:) :: SED_EROH2S,SED_EROLPOC,SED_ERORPOC !nea
+  real(rkind),save,allocatable,dimension(:) :: SED_eroH2S,SED_eroLPOC,SED_eroRPOC !nea
 
   !bottom Light (nea)
   real(rkind),save,allocatable,dimension(:) :: bLight

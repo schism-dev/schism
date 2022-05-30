@@ -67,7 +67,7 @@ subroutine ecosystem(it)
 !calculate kinetic source/sink
 !---------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,dt,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
-                        & ielg,kbe,ze,elnode,srad,airt1,pi
+                        & ielg,kbe,ze,elnode,srad,airt1,pi,dt
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : signf
   use icm_mod
@@ -76,239 +76,217 @@ subroutine ecosystem(it)
   real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
 
   !local variables
-  integer :: i,j,k,m,istat
+  integer :: i,j,k,m,istat,isub
   integer :: id,kb
-  real(rkind) :: tmp,rat,s,z1,z2 
+  real(rkind) :: tmp,time,rat,s,z1,z2 
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC
-  real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA
+  real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,BM,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
-  real(rkind) :: shtz,vhtz(3),denssav, densveg(3) !SAV &VEG
+  real(rkind),pointer :: mtime(:)
 
-  do id=1,nea
-    if(jdry==0.and.idry_e(id)==1.and.(jveg==0.or.vpatch(id)==0)) cycle
-    !update parameter and variable values for current element
-    call update_vars(id,usf,wspd)
 
-    !-----------------------------------------------------------------------------------
-    !link ICM variables to SCHISM variables
-    !-----------------------------------------------------------------------------------
-    kb=min(kbe(id),nvrt-1)                                !kb  : bottom-level index
-    do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo           !zid : zcoor of each level
-    dz((1+kb):nvrt)=zid((1+kb):nvrt)-zid(kb:(nvrt-1))     !dz : depth of each layer; todo? min later
-    tdep=sum(dz((kb+1):nvrt))                             !tdep: total water depth
-    if(jsav==1) shtz=sht(id)+zid(kb)                      !shtz: zcoor of SAV canopy 
-    if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)             !vhtz: zcoor of VEG canopy 
+  do isub=1,nsub  !sub-cycling
+    time=(it+isub/dble(nsub)-1)*dt; call update_icm_input(time) !update ICM inputs 
+    do id=1,nea
+      if(jdry==0.and.idry_e(id)==1.and.(jveg==0.or.vpatch(id)==0)) cycle
+      !update parameter and variable values for current element
+      call update_vars(id,usf,wspd)
 
-    s=min(tdep,1.d0); srat=0; brat=0
-    do k=kb+1,nvrt
-      !compute ratiofor linearly distributing surface/bottom fluxes to aviod large value in thin layer
-      z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
-      srat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
-      z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-      brat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !bottom ratio: y=1-x/2
+      !-----------------------------------------------------------------------------------
+      !link ICM variables to SCHISM variables
+      !-----------------------------------------------------------------------------------
+      kb=min(kbe(id),nvrt-1)                                !kb  : bottom-level index
+      do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo           !zid : zcoor of each level
+      dz((1+kb):nvrt)=zid((1+kb):nvrt)-zid(kb:(nvrt-1))     !dz : depth of each layer; todo? min later
+      tdep=sum(dz((kb+1):nvrt))                             !tdep: total water depth
+      if(jsav==1) shtz=sht(id)+zid(kb)                      !shtz: zcoor of SAV canopy 
+      if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)             !vhtz: zcoor of VEG canopy 
 
-      !compute ratiofor linearly distributing surface/bottom fluxes to aviod large value in thin layer
-      !z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
-      !srat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
-      !z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-      !brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
+      s=min(tdep,1.d0); srat=0; brat=0
+      do k=kb+1,nvrt
+        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
+        z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
+        srat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
+        z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
+        brat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !bottom ratio: y=1-x/2
 
-      !impose minimum values (todo: check these measures, they will cause mass inbalance in the system) 
-      dz(k)=max(dz(k),1.d-1) 
-      do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
-      do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo
-     
-      !temp,TSS 
-      if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
-      if(iKe==0) TSS(k)=(RPOC(k)+LPOC(k))*tss2c  !TSS values from POC
-      if(iKe==1) then !TSS from 3D sediment model
-        TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
+        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
+        !z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
+        !srat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
+        !z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
+        !brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
+
+        !impose minimum values (todo: check these measures, they will cause mass inbalance in the system) 
+        dz(k)=max(dz(k),1.d-1) 
+        do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
+        do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo
+       
+        !temp,TSS
+        if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
+        if(iKe==0) TSS(k)=(RPOC(k)+LPOC(k))*tss2c  !TSS values from POC
+        if(iKe==1) then !TSS from 3D sediment model
+          TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
+        endif
+        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k); PO4a(k)=(1.0-1.0/(1.0+KPO4p*TSS(max(kb+1,k-1))))*PO4(k)
+        if(iSilica==1) then
+          rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
+        endif
+      enddo!
+
+      !----------------------------------------------------------------------------------
+      !Light Attenuation
+      !----------------------------------------------------------------------------------
+      Light=0; rKe=0; rKe0=0; rKeS=0; rKeV=0 !initilization
+
+      !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
+      if(iRad==0) then 
+        rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
+      else
+        mtime=>time_icm(:,1); rat=max(min((time-mtime(1))/(mtime(2)-mtime(1)),1.d0),0.d0)
+        rIa=rad_in(id,1)+rat*(rad_in(id,2)-rad_in(id,1))
       endif
-      rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k); PO4a(k)=(1.0-1.0/(1.0+KPO4p*TSS(max(kb+1,k-1))))*PO4(k)
-      if(iSilica==1) then
-        rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
+      Light(nvrt)=rIa
+
+
+      if(jveg==1.and.vpatch(id)==1) then !light attenuation due to VEG above water
+        s=sum(vKe(:)*(vtleaf(id,:)+vtstem(id,:))*max(vht(id,:)-tdep,0.d0)/max(1.d-5,vht(id,:)))
+        Light(nvrt)=max(rIa*exp(-s),1.d-8)
       endif
-    enddo!
 
-    !----------------------------------------------------------------------------------
-    !Light Attenuation
-    !----------------------------------------------------------------------------------
-    !init
-    bLight(id)=0; Light=0; rKe0=0; rKeS=0; rKeV=0
+      !compute light attenuation
+      do k=kb+1,nvrt
+        !light attenuation due to (water,chlorophyll,TSS)
+        chl=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0)
+        if(iKe==0.or.iKe==1) then
+          rKe0(k)=Ke0+KeC*chl+KeS*TSS(k)
+        elseif(iKe==2) then
+          rKe0(k)=Ke0+KeC*chl+KeSalt*salt(k)
+        endif !iKe
 
-    !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
-    if(iRad==0) rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
-    Light(nvrt)=rIa
+        !light attenuation due to SAV 
+        if(jsav==1.and.spatch(id)==1.and.zid(k-1)<shtz) rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
 
-    !compute light attenuation
-    do k=nvrt,kb+1,-1
-      !light attenuation due to (water,chlorophyll,TSS)
-      chl=max(PB1(k)/c2chl(1)+PB2(k)/c2chl(2)+PB3(k)/c2chl(3),0.d0)
-      if(iKe==0.or.iKe==1) then
-        rKe0(k)=Ke0+KeC*chl+KeS*TSS(k)
-      elseif(iKe==2) then
-        rKe0(k)=Ke0+KeC*chl+KeSalt*salt(k)
-      endif !iKe
-
-      !light attenuation due to SAV 
-      if(jsav==1.and.spatch(id)==1) then !spatch==1::wet elem
-        if(zid(k-1)<shtz) then
-          rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
+        !light attenuation due to VEG
+        if((jveg==1.and.vpatch(id)==1).and.(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j)))) then 
+            rKeV(k)=sum(vKe(:)*(vtleaf(id,:)+vtstem(id,:))/max(1.d-5,min(tdep,vht(id,:))))
         endif 
-      endif !isav
 
-      !light attenuation due to VEG
-      if(jveg==1.and.vpatch(id)==1) then
-        !light attenuation due to VEG above water
-        if(k==nvrt) then
-          tmp=0
-          do j=1,3
-            tmp=tmp+vKe(j)*(vtleaf(id,j)+vtstem(id,j))*max(vht(id,j)-tdep,1.d-5)/max(1.e-5,vht(id,j))
-          enddo
-          Light(nvrt)=max(rIa*exp(-tmp),1.d-8)
-        endif
+        rKe(k)=rKe0(k)+rKeS(k)+rKeV(k) !total light attenuation
+      enddo !k
+      do k=nvrt,kb+1,-1; Light(k-1)=Light(k)*exp(-max(rKe(k)*dz(k),0.d0)); enddo
+      bLight(id)=Light(kb) !light @sediment (e.g. benthic algae)
 
-        !light attenuation due to VEG at each layer
-        do j=1,3
-          if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then 
-            rKeV(k)=rKeV(k)+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.e-5,min(tdep,vht(id,j)))
-          endif 
-        enddo 
-      endif !jveg
+      !----------------------------------------------------------------------------------
+      !compute phytoplankton growth rate
+      !----------------------------------------------------------------------------------
+      GP=0; rKC=0; rKN=0; rKP=0; rKHR=0; rDenit=0; rKCOD=0; fPN=1.0
+      do k=kb+1,nvrt
+        APB=sum(PBS(1:3,k))
+        do i=1,3
+          fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
+          
+          !limitation factors: T/N/P/Si/Sal/CO2
+          fT=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
+          fN=DIN(k)/(DIN(k)+KhN(i))   !nitrogen
+          fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
+          if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
+          if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
+          if(iPh==1.and.iphgb(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
-      !total light attenuation
-      rKe(k)=rKe0(k)+rKeS(k)+rKeV(k);  rKeh(k)=min(rKe(k)*dz(k),20.d0)
-      Light(k-1)=Light(k)*exp(-rKeh(k))
-    enddo !k
-    bLight(id)=Light(kb) !light @sediment (e.g. benthic algae)
+          !light factor
+          if(iLight==0) then !Cerco
+            mLight=rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
+            rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
+            fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
+          elseif(iLight==1) then !Chapra S.C. #todo: change this option
+            !calculate optimal light intensity for PB
+            if(k==nvrt) rIs(i)=max(rIavg*exp(-rKe(k)*Hopt(i)),Iopt(i))
+            fR=2.718*(exp(-Light(k-1)/rIs(i))-exp(-Light(k)/rIs(i)))/max(rKe(k)*dz(k),1.d-8) 
+          endif
 
-    !----------------------------------------------------------------------------------
-    !compute phytoplankton growth rate
-    !----------------------------------------------------------------------------------
-    GP=0; rKC=0; rKN=0; rKP=0; rKHR=0; rDenit=0; rKCOD=0; fPN=1.0
-    do k=kb+1,nvrt
-      APB=sum(PBS(1:3,k))
-      do i=1,3
-        fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
-        
-        !limitation factors: T/N/P/Si/Sal/CO2
-        fT=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
-        fN=(NH4(k)+NO3(k))/(NH4(k)+NO3(k)+KhN(i)) !nitrogen
-        fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
-        if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
-        if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
-        if(iPh==1.and.iphgb(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
+          !growth
+          GP(i,k)=GPM(i)*fT*fST*fR*min(fN,fP,fS)*fC*PBS(i,k)
+          if(iLimit==1) GP(i,k)=GPM(i)*fT*fST*min(fR,fN,fP,fS)*fC*PBS(i,k)
 
-        !light factor
-        if(iLight==0) then !Cerco
-          mLight=rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
-          rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
-          fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
-        elseif(iLight==1) then !Chapra S.C.
-          !calculate optimal light intensity for PB
-          if(k==nvrt) rIs(i)=max(rIavg*exp(-rKe(k)*Hopt(i)),Iopt(i))
-          fR=2.718*(exp(-Light(k-1)/rIs(i))-exp(-Light(k)/rIs(i)))/rKeh(k)
-        endif
+          !metabolism, predation
+          BM(i,k)=BMP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
+          PR(i,k)=PRP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
 
-        !growth
-        GP(i,k)=GPM(i)*fT*fST*fR*min(fN,fP,fS)*fC*PBS(i,k)
-        if(iLimit==1) GP(i,k)=GPM(i)*fT*fST*min(fR,fN,fP,fS)*fC*PBS(i,k)
+          !decay rates of organic matter
+          rKTM=exp(KTRM(i)*(temp(k)-TRM(i)))
+          rKC(i,k)=(KC0(i)+KCalg(i)*APB)*rKTM
+          rKN(i,k)=(KN0(i)+KNalg(i)*APB*mKhN/(mKhN+DIN(k)))*rKTM
+          rKP(i,k)=(KP0(i)+KPalg(i)*APB*mKhP/(mKhP+PO4d(k)))*rKTM
 
-        !metabolism, predation
-        BM(i,k)=BMP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
-        PR(i,k)=PRP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
+          !nitrogen preference
+          if(DIN(k)>0.d0) fPN(i,k)=(NH4(k)/(KhN(i)+NO3(k)))*(NO3(k)/(KhN(i)+NH4(k))+KhN(i)/(DIN(k)+1.d-6))
+          if(rIa<=30)  GP(i,k)=0 !todo: remove
+        enddo !i
 
-        !decay rates of organic matter
-        rKTM=exp(KTRM(i)*(temp(k)-TRM(i)))
-        rKC(i,k)=(KC0(i)+KCalg(i)*APB)*rKTM
-        rKN(i,k)=(KN0(i)+KNalg(i)*APB*mKhN/(mKhN+NH4(k)+NO3(k)))*rKTM
-        rKP(i,k)=(KP0(i)+KPalg(i)*APB*mKhP/(mKhP+PO4d(k)))*rKTM
+        !respiration, denitrification, decay of COD, nitrification
+        xT=temp(k)-TNit
+        rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
+        rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
+        rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3denit+NO3(k))
+        rNit(k)=(DOX(k)*Nit*KhNH4nit/((KhNH4nit+NH4(k))*(KhDOnit+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
+      enddo !k
 
-        !nitrogen preference
-        if(NH4(k)+NO3(k)>0.d0) fPN(i,k)=(NH4(k)/(KhN(i)+NO3(k)))*(NO3(k)/(KhN(i)+NH4(k))+KhN(i)/(NH4(k)+NO3(k)+1.d-6))
-        if(rIa<=30)  GP(i,k)=0 !todo: remove
-      enddo !i
+      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
+      !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
+      DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
+      rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
 
-      !respiration, denitrification, decay of COD, nitrification
-      xT=temp(k)-TNit
-      rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
-      rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
-      rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3denit+NO3(k))
-      rNit(k)=(DOX(k)*Nit*KhNH4nit/((KhNH4nit+NH4(k))*(KhDOnit+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
-    enddo !k
+      !----------------------------------------------------------------------------------
+      !modules
+      !----------------------------------------------------------------------------------
+      sdwqc=0; vdwqc=0; zdwqc=0
+      !silica module
+      if(iSilica==1) call silica_calc(kb,PR,BM,GP)
 
-    !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
-    !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
-    DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
-    rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
+      !SAV
+      if(jsav==1.and.spatch(id)==1) call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
 
-    !----------------------------------------------------------------------------------
-    !modules
-    !----------------------------------------------------------------------------------
-    !silica module
-    if(iSilica==1) call silica_calc(kb,PR,BM,GP)
+      !VEG
+      if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
-    !SAV
-    sdwqc=0; denssav=0;  ttdens(id)=0; tthcan(id)=0  
-    if(jsav==1.and.spatch(id)==1) then 
-      call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d,denssav)
-      ttdens(id)=ttdens(id)+denssav; tthcan(id)=tthcan(id)+sht(id)*denssav 
-    endif
+      !sediment flux module
+      if(iSed==1) call sed_calc(id,kb,dz(kb+1),TSS(kb+1))
 
-    !VEG
-    vdwqc=0; densveg=0
-    if(jveg==1.and.vpatch(id)==1) then 
-      call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS,densveg) 
-      ttdens(id)=ttdens(id)+sum(densveg)
-      tthcan(id)=tthcan(id)+dot_product(vht(id,1:3),densveg(1:3))
-    endif
-    tthcan(id)=tthcan(id)/max(ttdens(id),1.d-8)
+      !zooplankton
+      if(iZB==1) call zoo_calc(kb,PR)
 
-    !sediment flux module
-    if(iSed==1) then 
-      k=kb+1
-      call sed_calc(id,dz(k),temp(k),salt(k),PB1(k),PB2(k),PB3(k),RPOC(k),LPOC(k),RPON(k),LPON(k), &
-                  & RPOP(k),LPOP(k),SU(k),PO4(k),NH4(k),NO3(k),SA(k),DOX(k),COD(k),TSS(k))
-    endif
+      !pH model
+      if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN) 
 
-    !zooplankton
-    zdwqc=0
-    if(iZB==1) call zoo_calc(kb,PR)
+      !----------------------------------------------------------------------------------
+      !surface and bottom flux
+      !----------------------------------------------------------------------------------
+      sflux=0; bflux=0
 
-    !pH model
-    if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN) 
-
-    !----------------------------------------------------------------------------------
-    !bottom flux
-    !----------------------------------------------------------------------------------
-    bflux=0
-    if(iBen/=0.or.iSed==1) then
-      !sediment fluxes addition from ICM_ben.th
-      if(iBen/=0) then
+      !atmospheric fluxes from ICM_rad.th.nc
+      if(isflux/=0) then
+        mtime=>time_icm(:,2); rat=max(min((time-mtime(1))/(mtime(2)-mtime(1)),1.d0),0.d0)
+        do m=1,ntrs_icm
+          sflux(m)=sflux(m)+sflux_in(id,m,1)+rat*(sflux_in(id,m,2)-sflux_in(id,m,1))
+        enddo
       endif
 
-      !todo: SAV and VEG uptake, need to revise
-      !if(jsav==1.and.spatch(id)==1) then
-      !  bflux(iNH4)=bflux(iNH4)-sleaf_NH4(id)+sroot_PON(id)*(frnsav(1)+0.05*frnsav(2))
-      !  bflux(iPO4)=bflux(iPO4)-sleaf_PO4(id)+sroot_POP(id)*(frpsav(1)+0.05*frpsav(2))
-      !  bflux(iDOX)=blfux(iDOX)-sroot_DOX(id)
-      !endif 
-      !if(jveg==1.and.vpatch(id)==1) then
-      !  do j=1,3
-      !    bflux(iNH4)=bflux(iNH4)-vleaf_NH4(id,j)+vroot_PON(id,j)*(frnveg(1,j)+0.05*frnveg(2,j))
-      !    bflux(iPO4)=bflux(iPO4)-vleaf_PO4(id,j)+vroot_POP(id,j)*(frpveg(1,j)+0.05*frpveg(2,j))
-      !    bflux(iDOX)=bflux(iDOX)-vroot_DOX(id,j)
-      !  enddo
-      !endif
+      !benthic fluxes from ICM_rad.th.nc
+      if(ibflux/=0) then
+        mtime=>time_icm(:,3); rat=max(min((time-mtime(1))/(mtime(2)-mtime(1)),1.d0),0.d0)
+        do m=1,ntrs_icm
+          bflux(m)=bflux(m)+bflux_in(id,m,1)+rat*(bflux_in(id,m,2)-bflux_in(id,m,1))
+        enddo
+      endif
 
       !sediment fluxes addition from SFM
       if(iSed==1) then
         !pH effect on sediment PO4 release
-        if(iPh==1 .and.  iphgb(id)/=0) then
+        if(iPh==1 .and.iphgb(id)/=0) then
           sedPO4(id)=max(sedPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
           !BnPO4=max(BnPO4*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
           !nPO4=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
@@ -318,129 +296,126 @@ subroutine ecosystem(it)
         bflux(iNH4)=bflux(iNH4)+sedNH4(id)
         bflux(iNO3)=bflux(iNO3)+sedNO3(id)
         bflux(iPO4)=bflux(iPO4)+sedPO4(id)
-        bflux(iSA) =bflux(iSA) +sedSA(id)
         bflux(iCOD)=bflux(iCOD)+sedCOD(id)
         bflux(iDOX)=bflux(iDOX)+sedDOX(id)    
-      endif
-    endif
-
-    !erosion flux
-    if(ierosion/=0) then
-      bflux(iRPOC)=bflux(iRPOC)+ERORPOC(id)
-      bflux(iLPOC)=bflux(iLPOC)+EROLPOC(id)
-      bflux(iCOD) =bflux(iCOD) +EROH2S(id)
-    endif
-
-    !----------------------------------------------------------------------------------
-    !add surface flux
-    !----------------------------------------------------------------------------------
-    sflux=0;
-    !if(iSurf/=0) then
-    !endif
-
-    !----------------------------------------------------------------------------------
-    !sinking of each tracers
-    !----------------------------------------------------------------------------------
-    sink=0
-    do k=kb+1,nvrt
-      !settling velocities at upper and lower interfaces
-      WS(itrs(1,1):itrs(2,1))=(/WSPBS(1:3), WSPOM(1:2),0.d0, WSPOM(1:2),0.d0,0.d0,0.d0, WSPOM(1:2),0.d0,WSSED, 0.d0,0.d0/)
-      if(iSilica==1) WS(itrs(1,2):itrs(2,2))=(/WSPBS(1),WSSED/)
-      if(iZB==1) WS(itrs(1,3):itrs(2,3))=(/0.d0, 0.d0/)
-      if(iPh==1) WS(itrs(1,4):itrs(2,4))=(/0.d0,0.d0,0.d0,pWSCACO3/)
-      WB=WS
-
-      if(k==nvrt) WS=0 !surface layer
-      if(k==(kb+1)) then !bottom layer
-        WB(itrs(1,1):itrs(2,1))=(/WSPBSn(1:3), WSPOMn(1:2),0.d0, WSPOMn(1:2),0.d0,0.d0,0.d0, WSPOMn(1:2),0.d0,WSSEDn, 0.d0,0.d0/)
-        if(iSilica==1) WB(itrs(1,2):itrs(2,2))=(/WSPBSn(1),WSSEDn/)
+        if(iSilica==1) bflux(iSA) =bflux(iSA) +sedSA(id)
       endif
 
-      m=min(nvrt,k+1)
-      do i=1,ntrs_icm
-        sink(i,k)=(WS(i)*wqc(i,m)-WB(i)*wqc(i,k))/dz(k)
-      enddo
-      !sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
-      sink(iPO4,k)=(WS(iPO4)*PO4a(m)-WB(iPO4)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
-      if(iSilica==1) sink(iSA,k)=(WS(iSA)*SAp(m)-WB(iSA)*SAp(k))/dz(k)
-    enddo !k
+      !erosion flux
+      if(ierosion/=0) then
+        bflux(iRPOC)=bflux(iRPOC)+eroRPOC(id)
+        bflux(iLPOC)=bflux(iLPOC)+eroLPOC(id)
+        bflux(iCOD) =bflux(iCOD) +eroH2S(id)
+      endif
 
-    !----------------------------------------------------------------------------------
-    !changes of state variables at each layer
-    !----------------------------------------------------------------------------------
-    dwqc=0.0
-    do k=kb+1,nvrt
-      !PB1, PB2, PB3
-      do m=1,3
-        dPBS(m,k)=GP(m,k)-BM(m,k)-PR(m,k) !growth, metabolism, predation
-      enddo
-     
-      !RPOC, LPOC, DOC
-      dwqc(iRPOC,k)=-rKC(1,k)*RPOC(k) !dissolution
-      dwqc(iLPOC,k)=-rKC(2,k)*LPOC(k) !dissolution
-      dwqc(iDOC,k) = rKC(1,k)*RPOC(k)+rKC(2,k)*LPOC(k)-(rKHR(k)+rDenit(k))*DOC(k) !dissolution, respiration, denitrification
-      do m=1,3
-        dwqc(iRPOC,k)=dwqc(iRPOC,k)+FCP(m,1)*PR(m,k) !predation
-        dwqc(iLPOC,k)=dwqc(iLPOC,k)+FCP(m,2)*PR(m,k) !predation
-        dwqc(iDOC,k) =dwqc(iDOC,k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m,k) !predation, metabolism
-      enddo
 
-      !RPON, LPON, DON, NH4, NO3
-      dwqc(iRPON,k)=-rKN(1,k)*RPON(k) !dissolution
-      dwqc(iLPON,k)=-rKN(2,k)*LPON(k) !dissolution
-      dwqc(iDON,k) = rKN(1,k)*RPON(k)+rKN(2,k)*LPON(k)-rKN(3,k)*DON(k) !dissolution, mineralization
-      dwqc(iNH4,k) = rKN(3,k)*DON(k)-rNit(k)*NH4(k)  !mineralization, nitrification
-      dwqc(iNO3,k) = rNit(k)*NH4(k)-dn2c*rDenit(k)*DOC(k)  !nitrification, denitrification
-      do m=1,3
-        dwqc(iRPON,k)=dwqc(iRPON,k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*BM(m,k)) !predation, metabolism 
-        dwqc(iLPON,k)=dwqc(iLPON,k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*BM(m,k)) !predation, metabolism 
-        dwqc(iDON,k) =dwqc(iDON,k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*BM(m,k)) !predation, metabolism  
-        dwqc(iNH4,k) =dwqc(iNH4,k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*BM(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
-        dwqc(iNO3,k) =dwqc(iNO3,k) -n2c(m)*(1.0-fPN(m,k))*GP(m,k) !growth
-      enddo
+      !----------------------------------------------------------------------------------
+      !sinking of each tracers
+      !----------------------------------------------------------------------------------
+      sink=0
+      do k=kb+1,nvrt
+        !settling velocities at upper and lower interfaces
+        WS(itrs(1,1):itrs(2,1))=(/WSPBS(1:3), WSPOM(1:2),0.d0, WSPOM(1:2),0.d0,0.d0,0.d0, WSPOM(1:2),0.d0,WSSED, 0.d0,0.d0/)
+        if(iSilica==1) WS(itrs(1,2):itrs(2,2))=(/WSPBS(1),WSSED/)
+        if(iZB==1) WS(itrs(1,3):itrs(2,3))=(/0.d0, 0.d0/)
+        if(iPh==1) WS(itrs(1,4):itrs(2,4))=(/0.d0,0.d0,0.d0,pWSCACO3/)
+        WB=WS
 
-      !RPOP, LPOP, DOP, PO4
-      dwqc(iRPOP,k)=-rKP(1,k)*RPOP(k) !dissolution
-      dwqc(iLPOP,k)=-rKP(2,k)*LPOP(k) !dissolution
-      dwqc(iDOP,k) = rKP(1,k)*RPOP(k)+rKP(2,k)*LPOP(k)-rKP(3,k)*DOP(k) !dissolution, mineralization
-      dwqc(iPO4,k) = rKP(3,k)*DOP(k) !mineralization
-      do m=1,3
-        dwqc(iRPOP,k)=dwqc(iRPOP,k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*BM(m,k)) !predation, metabolism 
-        dwqc(iLPOP,k)=dwqc(iLPOP,k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*BM(m,k)) !predation, metabolism 
-        dwqc(iDOP,k) =dwqc(iDOP,k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*BM(m,k)) !predation, metabolism  
-        dwqc(iPO4,k) =dwqc(iPO4,k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
-      enddo
-
-      !COD 
-      dwqc(iCOD,k)=-rKCOD(k)*COD(k) !oxidation
-
-      !DO
-      dwqc(iDOX,k)=-o2n*rNit(k)*NH4(k)-o2c*rKHR(k)*DOC(k)-rKCOD(k)*COD(k) !nitrification, respiration, COD oxidiation
-      do m=1,3
-        dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)) !growth, metabolism
-      enddo
-      if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
-    enddo !k
-
-    !----------------------------------------------------------------------------------
-    !update concentration of state variables
-    !----------------------------------------------------------------------------------
-    do k=kb+1,nvrt
-      do i=1,ntrs_icm
-        wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i)/dz(k))+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
-      enddo !i
-    enddo !k=1,nv
-
-    !nan check
-    do k=kb,nvrt
-      do i=1,ntrs_icm
-        if(wqc(i,k)/=wqc(i,k)) then
-          write(errmsg,*)'nan found in ICM(2) : ',wqc(i,k),ielg(id),i,k
+        if(k==nvrt) WS=0 !surface layer
+        if(k==(kb+1)) then !bottom layer
+          WB(itrs(1,1):itrs(2,1))=(/WSPBSn(1:3), WSPOMn(1:2),0.d0, WSPOMn(1:2),0.d0,0.d0,0.d0, WSPOMn(1:2),0.d0,WSSEDn, 0.d0,0.d0/)
+          if(iSilica==1) WB(itrs(1,2):itrs(2,2))=(/WSPBSn(1),WSSEDn/)
         endif
-      enddo!i
-    enddo
 
-  enddo !id
+        m=min(nvrt,k+1)
+        do i=1,ntrs_icm
+          sink(i,k)=(WS(i)*wqc(i,m)-WB(i)*wqc(i,k))/dz(k)
+        enddo
+        !sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
+        sink(iPO4,k)=(WS(iPO4)*PO4a(m)-WB(iPO4)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
+        if(iSilica==1) sink(iSA,k)=(WS(iSA)*SAp(m)-WB(iSA)*SAp(k))/dz(k)
+      enddo !k
+
+      !----------------------------------------------------------------------------------
+      !changes of state variables at each layer
+      !----------------------------------------------------------------------------------
+      dwqc=0.0
+      do k=kb+1,nvrt
+        !PB1, PB2, PB3
+        !do m=1,3
+        !  dPBS(m,k)=GP(m,k)-BM(m,k)-PR(m,k) !growth, metabolism, predation
+        !enddo
+        dwqc(iPB1,k)=GP(1,k)-BM(1,k)-PR(1,k) !growth, metabolism, predation
+        dwqc(iPB2,k)=GP(2,k)-BM(2,k)-PR(2,k) !growth, metabolism, predation
+        dwqc(iPB3,k)=GP(3,k)-BM(3,k)-PR(3,k) !growth, metabolism, predation
+       
+        !RPOC, LPOC, DOC
+        dwqc(iRPOC,k)=-rKC(1,k)*RPOC(k) !dissolution
+        dwqc(iLPOC,k)=-rKC(2,k)*LPOC(k) !dissolution
+        dwqc(iDOC,k) = rKC(1,k)*RPOC(k)+rKC(2,k)*LPOC(k)-(rKHR(k)+rDenit(k))*DOC(k) !dissolution, respiration, denitrification
+        do m=1,3
+          dwqc(iRPOC,k)=dwqc(iRPOC,k)+FCP(m,1)*PR(m,k) !predation
+          dwqc(iLPOC,k)=dwqc(iLPOC,k)+FCP(m,2)*PR(m,k) !predation
+          dwqc(iDOC,k) =dwqc(iDOC,k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m,k) !predation, metabolism
+        enddo
+
+        !RPON, LPON, DON, NH4, NO3
+        dwqc(iRPON,k)=-rKN(1,k)*RPON(k) !dissolution
+        dwqc(iLPON,k)=-rKN(2,k)*LPON(k) !dissolution
+        dwqc(iDON,k) = rKN(1,k)*RPON(k)+rKN(2,k)*LPON(k)-rKN(3,k)*DON(k) !dissolution, mineralization
+        dwqc(iNH4,k) = rKN(3,k)*DON(k)-rNit(k)*NH4(k)  !mineralization, nitrification
+        dwqc(iNO3,k) = rNit(k)*NH4(k)-dn2c*rDenit(k)*DOC(k)  !nitrification, denitrification
+        do m=1,3
+          dwqc(iRPON,k)=dwqc(iRPON,k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*BM(m,k)) !predation, metabolism 
+          dwqc(iLPON,k)=dwqc(iLPON,k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*BM(m,k)) !predation, metabolism 
+          dwqc(iDON,k) =dwqc(iDON,k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*BM(m,k)) !predation, metabolism  
+          dwqc(iNH4,k) =dwqc(iNH4,k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*BM(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
+          dwqc(iNO3,k) =dwqc(iNO3,k) -n2c(m)*(1.0-fPN(m,k))*GP(m,k) !growth
+        enddo
+
+        !RPOP, LPOP, DOP, PO4
+        dwqc(iRPOP,k)=-rKP(1,k)*RPOP(k) !dissolution
+        dwqc(iLPOP,k)=-rKP(2,k)*LPOP(k) !dissolution
+        dwqc(iDOP,k) = rKP(1,k)*RPOP(k)+rKP(2,k)*LPOP(k)-rKP(3,k)*DOP(k) !dissolution, mineralization
+        dwqc(iPO4,k) = rKP(3,k)*DOP(k) !mineralization
+        do m=1,3
+          dwqc(iRPOP,k)=dwqc(iRPOP,k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*BM(m,k)) !predation, metabolism 
+          dwqc(iLPOP,k)=dwqc(iLPOP,k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*BM(m,k)) !predation, metabolism 
+          dwqc(iDOP,k) =dwqc(iDOP,k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*BM(m,k)) !predation, metabolism  
+          dwqc(iPO4,k) =dwqc(iPO4,k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
+        enddo
+
+        !COD 
+        dwqc(iCOD,k)=-rKCOD(k)*COD(k) !oxidation
+
+        !DO
+        dwqc(iDOX,k)=-o2n*rNit(k)*NH4(k)-o2c*rKHR(k)*DOC(k)-rKCOD(k)*COD(k) !nitrification, respiration, COD oxidiation
+        do m=1,3
+          dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)) !growth, metabolism
+        enddo
+        if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
+      enddo !k
+
+      !----------------------------------------------------------------------------------
+      !update concentration of state variables
+      !----------------------------------------------------------------------------------
+      do k=kb+1,nvrt
+        do i=1,ntrs_icm
+          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i)/dz(k))+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
+        enddo !i
+      enddo !k=1,nv
+
+      !nan check
+      do k=kb,nvrt
+        do i=1,ntrs_icm
+          if(wqc(i,k)/=wqc(i,k)) then
+            write(errmsg,*)'nan found in ICM(2) : ',wqc(i,k),ielg(id),i,k
+          endif
+        enddo!i
+      enddo
+
+    enddo !id
+  enddo !isub
 
 end subroutine ecosystem
 
@@ -553,7 +528,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN)
 
 end subroutine ph_calc
 
-subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS,densveg) 
+subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS) 
 !--------------------------------------------------------------------------------------
 !VEG computation
 !--------------------------------------------------------------------------------------
@@ -565,20 +540,12 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS,densveg)
   real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: vhtz(3),rIa0,tdep,zid(nvrt),dz(nvrt),rKe0(nvrt),rKeS(nvrt)
-  real(rkind),intent(out) :: densveg(3) ! vGP(3)
 
   !local variables
   integer :: k,j,m
   real(rkind) :: rKehV(3,2),atemp,asalt,xT,xS,vfT,vfST,vrat,vfI,vLight,tmp,mLight
   real(rkind) :: rIK,vfR,vfN,vfP,sdveg,vGP(3),vfMT(3,3),rtmp,vdzm,vdz,vPBM(3,3),a,b
   real(rkind) :: vBM(3),vGM(3)
-
-  !inti for CNH4 e.g. every time step if iSed==0, iTBen/=0
-  !todo; ZG: this is a bug. CNH4(nea) shouldn't be modified by temp(id,nv)
-  !if(iTBen/=0) then !simplified sediment fluxes
-  !  CNH4 = NH4T2I*thata_tben**(temp(nv)-20.d0)
-  !  CPIP = PO4T2I*thata_tben**(temp(nv)-20.d0)
-  !endif !iTBen
 
   !light attenuation for veg growth
   rKehV=0.0; vGP=0.0
@@ -749,9 +716,9 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS,densveg)
   enddo !k
 
  !total canopy height for hydro
-  do j=1,3
-    densveg(j)=(vtleaf(id,j)+vtstem(id,j))/(v2den(j)*max(vht(id,j),1.e-4))
-  enddo 
+  !do j=1,3
+  !  densveg(j)=(vtleaf(id,j)+vtstem(id,j))/(v2den(j)*max(vht(id,j),1.e-4))
+  !enddo 
 
 end subroutine veg_calc
 
@@ -830,7 +797,7 @@ subroutine zoo_calc(kb,PR)
 
 end subroutine zoo_calc
 
-subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
+subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   use schism_glbl, only : rkind,errmsg,idry_e,nvrt
   use icm_misc, only : signf
   use icm_mod
@@ -839,7 +806,6 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: rIa0,shtz,tdep
   real(rkind),intent(in),dimension(nvrt) :: dz,zid,rKe0,rKeV,PO4d
-  real(rkind),intent(out) :: denssav
   !real(rkind),intent(out) :: sGP(nvrt)
   !real(rkind),intent(out) :: sdwqca(ntrs_icm,nvrt)
 
@@ -849,7 +815,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
   real(rkind) :: dzt,tmp,mLight,rIK,sdz,sBM,sGM,sRM,sPBM(nvrt,3),sfPN,sfNs,sfPs
   real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1),sGP(nvrt)
 
-  sGP=0.0; denssav=0.0 
+  sGP=0.0
   if(idry_e(id)/=1) then
     !compute total leaf and stem biomass down to each layer; for wet elem.
     !only
@@ -924,7 +890,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
         endif !szleaf(k+1)>0.and.szstem(k+1)>0
 
         !N/P limitation function
-        sfN=(NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+NH4(k)+NO3(k)+CNH4(id)*sKhNw/sKhNs)
+        sfN=(DIN(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+DIN(k)+CNH4(id)*sKhNw/sKhNs)
         sfP=(PO4d(k)+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+CPIP(id)*sKhPw/sKhPs)
 
         !calculation of lf growth rate [1/day] as function of temp, light, N/P
@@ -977,8 +943,8 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
       sRM=sPBM(k,3)*sroot(k,id)
 
       !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
-      sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(NH4(k)+NO3(k)+1.e-6))
-      sfNs=CNH4(id)/(CNH4(id)+(NH4(k)+NO3(k))*sKhNs/sKhNw+1.e-8)
+      sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(DIN(k)+1.e-6))
+      sfNs=CNH4(id)/(CNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
       sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
 
       sdwqc(iRPOC,k) = sFCM(1)*sBM                        
@@ -1021,8 +987,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d,denssav)
   enddo !k
 
   !total density
-  !ttdens(id)=ttdens(id)+(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
-  denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
+  !denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
 
 end subroutine sav_calc
 

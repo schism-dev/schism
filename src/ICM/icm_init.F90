@@ -26,7 +26,6 @@ subroutine read_icm_param(imode)
                    & idry_e,ze,kbe
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : read_gr3_prop
-  !use misc_modules
   use icm_mod
   implicit none
   integer,intent(in) :: imode
@@ -37,9 +36,8 @@ subroutine read_icm_param(imode)
   character(len=2) :: pid
 
   !define namelists
-  namelist /MARCO/ iRad,iKe,iLight,iLimit,iSettle,iAtm,iSed,iBen,iTBen,iSilica,&
+  namelist /MARCO/ nsub,iRad,iKe,iLight,iLimit,iSettle,isflux,iSed,ibflux,iSilica,&
            & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
-           & thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4_tben,SA_tben, &
            & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
   namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,&
            & FCM,FNM,FPM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
@@ -73,10 +71,9 @@ subroutine read_icm_param(imode)
     !read ICM; compute total # of state variables 
     !------------------------------------------------------------------------------------
     !initilize global switches
-    iRad=0; iKe=0; iLight=0; iLimit=0; iSettle=0; iAtm=0; iSed=1; iBen=0; iTBen=0; iSilica=0; 
+    nsub=1; iRad=0; iKe=0; iLight=0; iLimit=0; iSettle=0; isflux=0; iSed=1; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02; alpha=5.0; Iopt=40.0; Hopt=1.0
     Ke0=0.26; tss2c=6.0; WSSEDn=1.0; WSPBSn=(/0.35,0.15,0.0/); WSPOMn=1.0
-    thata_tben=0; SOD_tben=0; DOC_tben=0; NH4_tben=0; NO3_tben=0; PO4_tben=0; SA_tben=0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm
 
     !read global switches
@@ -172,41 +169,25 @@ subroutine read_icm_param(imode)
     idepo=0;  etau=0;  eroporo=0;  erorate=0;  erofrac=0;  erodiso=0;  depofracR=0; 
     depofracL=0;  depoWSR=0;  depoWSL=0
 
-
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
     read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM)
     close(31)
     if(myrank==0) write(16,*) 'done read ICM parameters'
 
+    !allocate variables
+    allocate(DIN(nvrt),dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt), &
+           & vdwqc(ntrs_icm,nvrt),rad_in(nea,2),sflux_in(nea,ntrs_icm,2),bflux_in(nea,ntrs_icm,2), stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
-    !assign pointers
-    allocate(dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
-
-    !concentration changes
-    dPBS=>dwqc(1:3,:)
+    !concentration changes: assign pointers
     if(iZB==1) then
       zdPBS=>zdwqc(1:3,:); zdC=>zdwqc(4:6,:);   zdN=>zdwqc(8:11,:)
       zdP=>zdwqc(12:15,:); zdDOX=>zdwqc(17,:)
-      if(iSilica==1) zds=>zdwqc(itrs(1,2):itrs(2,2),:)
+      if(iSilica==1) zdS=>zdwqc(itrs(1,2):itrs(2,2),:)
     endif
-    !dZBS=>dwqc(1:2,:)
-    !dZB1=>dwqc(1,:);   dZB2=>dwqc(2,:);   
-    !dPB1=>dwqc(3,:);   dPB2=>dwqc(4,:);   dPB3=>dwqc(5,:);   
-    !dRPOC=>dwqc(6,:);  dLPOC=>dwqc(7,:);  dDOC=>dwqc(8,:)
-    !dRPON=>dwqc(9,:);  dLPON=>dwqc(10,:); dDON=>dwqc(11,:);  dNH4=>dwqc(12,:); dNO3=>dwqc(13,:)
-    !dRPOP=>dwqc(14,:); dLPOP=>dwqc(15,:); dDOP=>dwqc(16,:);  dPO4=>dwqc(17,:)
-    !dSU=>dwqc(18,:);   dSA=>dwqc(19,:)
-    !dCOD=>dwqc(20,:);  dDOX=>dwqc(21,:)
-    !if(iPh==1) then
-    !  dTIC=>dwqc(22,:); dALK=>dwqc(23,:); dCA=>dwqc(24,:); dCACO3=>dwqc(25,:)
-    !endif
-
-    !sdC=>sdwqc(6:8); sdN=>sdwqc(9:13); sdP=>sdwqc(14:17); sdDOX=>sdwqc(21)
-    !vdC=>vdwqc(6:8); vdN=>vdwqc(9:13); vdP=>vdwqc(14:17); vdDOX=>vdwqc(21)
 
 #ifndef USE_SED 
     if(iKe==1) then
@@ -214,7 +195,7 @@ subroutine read_icm_param(imode)
     endif
 #endif
     !Water
-    dtw=dt/86400.0;  dtw2=dtw/2.0 !days
+    dtw=dt/86400.0/dble(nsub);  dtw2=dtw/2.0 !days
     mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
     
     !SFM
@@ -346,29 +327,13 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !time varying input of ICM model
     !------------------------------------------------------------------------------------
-    !iAtm: atmospheric load; iBen: benthic flux; iRad: radiation 
-    if(iAtm==1) then
-      open(401,file=in_dir(1:len_in_dir)//'ICM_atm.th',status='old')
-    endif 
-    if(iBen/=0) then
-      open(402,file=in_dir(1:len_in_dir)//'ICM_ben.th',status='old')
-    endif 
-    if(iRad==1.or.iRad==2) then
-      open(403,file=in_dir(1:len_in_dir)//'ICM_rad.th',status='old')
-    endif
-    if(jveg==1) then
-      open(404,file=in_dir(1:len_in_dir)//'ICM_mtemp.th',status='old')
-    endif
-    time_icm=-999.0  !initializing time stamp
+    time_icm=-999.d0;  call update_icm_input(0.d0)
  
     !PH nudge for TIC and ALK
     if(iPh==1.and.inu_ph==1) then
       open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
-      time_ph=-999.0
-      irec_ph=1
+      time_ph=-999.0;  irec_ph=1
     endif
-
-    call WQinput(0.d0)
 
     if(myrank==0) write(16,*) 'done ICM initialization'
   endif
@@ -385,10 +350,9 @@ end subroutine read_icm_param
     !if(jsav>1)     call parallel_abort('check parameter: isav_icm>1')
     !if(jveg>1)     call parallel_abort('check parameter: iveg_icm>1')
     !if(jdry>1)     call parallel_abort('check parameter: idry_icm>1')
-    !if(iAtm>1)     call parallel_abort('check parameter: iAtm>1')
+    !if(isflux>1)     call parallel_abort('check parameter: isflux>1')
     !if(iSed>1)     call parallel_abort('check parameter: iSed>1')
-    !if(iBen>1)     call parallel_abort('check parameter: iBen>1')
-    !if(iTBen>1)    call parallel_abort('check parameter: iTBen>1')
+    !if(ibflux>1)     call parallel_abort('check parameter: ibflux>1')
 
     !put these check later as SCHISM hasn't been initilized
     !if(iRad==0.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=0 needs heat exchange')
@@ -421,6 +385,94 @@ end subroutine read_icm_param
     !  enddo !j::veg species
     !endif !jveg
 
+subroutine update_icm_input(time)
+!---------------------------------------------------------------------
+!update time dependent inputs of ICM
+!1). solar radiation: dim(npt,time)
+!2). surface flux input: dim(npt,ntrs_icm,time)
+!3). bottom flux input: time(npt,ntrs_icm,time)
+!note: npt=1/np/ne; need to define mapping data if npt=other number 
+!---------------------------------------------------------------------
+  use schism_glbl,only : rkind,dt,np_global,ne_global,i34,nea,elnode, &
+                       & in_dir,len_in_dir,iplg,ielg
+  use schism_msgp, only : myrank,comm,parallel_abort,itype,rtype
+  use netcdf
+  use icm_mod
+  implicit none
+  real(rkind),intent(in) :: time
+
+  !local variables
+  integer :: i,j,k,n,m,ie,mm,itmp,irec,istat,jof(3),ntr(3)
+  integer,pointer :: ncid,npt
+  real(rkind):: mtime(2),ath(max(np_global,ne_global))
+  real(rkind),pointer :: mdt,bth(:,:)
+  character(len=20) :: fnames(3)
+
+  fnames=(/'ICM_rad.th.nc  ','ICM_sflux.th.nc','ICM_bflux.th.nc'/)
+  jof=(/iRad,isflux,ibflux/); ntr=(/1,ntrs_icm,ntrs_icm/)
+  do n=1,3
+    if(jof(n)==0) cycle
+    ncid=>ncid_icm(n); npt=>npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n)
+
+    !open file
+    if(myrank==0.and.mtime(2)<0.d0) then 
+      j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      j=nf90_inq_dimid(ncid,'npt',mm); j=nf90_inquire_dimension(ncid,mm,len=npt)
+      j=nf90_inq_varid(ncid, "time_step",mm); j=nf90_get_var(ncid,mm,mdt)
+      if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
+      if(n==2.or.n==3) then 
+        j=nf90_inq_dimid(ncid,'ntracer',mm); j=nf90_inquire_dimension(ncid,mm,len=itmp)
+        if(itmp/=ntr(n)) call parallel_abort(trim(adjustl(fnames(n)))//': wrong ntracer')
+      endif
+    endif !myrank=0
+    if(mtime(2)<0.d0) call mpi_bcast(npt,1,itype,0,comm,istat)
+    
+    !update record
+    if(mtime(2)<time) then
+      do m=1,ntr(n)
+        !update 1st record
+        if(n==1) then
+           bth=>rad_in
+        elseif(n==2) then
+           bth=>sflux_in(:,m,:)
+        else
+           bth=>bflux_in(:,m,:)
+        endif
+        bth(:,1)=bth(:,2); bth(:,2)=0.0
+
+        !read new record
+        if(myrank==0) then
+          irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt
+          j=nf90_inq_varid(ncid, "time_series",mm)
+          if(n==1) then
+            j=nf90_get_var(ncid,mm,ath(1:npt), (/1,irec+1/),(/npt,1/))
+          else
+            j=nf90_get_var(ncid,mm,ath(1:npt), (/1,m,irec+1/),(/npt,1,1/))
+          endif
+        endif
+
+        !bcast record
+        call mpi_bcast(ath(1:npt),npt,rtype,0,comm,istat)
+     
+        !interp record
+        do ie=1,nea
+          if(npt==1) then  !uniform
+            bth(ie,2)=ath(1)
+          elseif(npt==ne_global) then !elem. based
+            bth(ie,2)=ath(ielg(ie))
+          elseif(npt==np_global) then !node based
+            do i=1,i34(ie); bth(ie,2)=bth(ie,2)+ath(iplg(elnode(i,ie)))/dble(i34(ie)); enddo
+          else
+            call parallel_abort(trim(adjustl(fnames(n)))//': need to define the mapping element')
+          endif
+        enddo !ie
+      enddo !m 
+      call mpi_bcast(mtime,2,rtype,0,comm,istat); time_icm(:,2)=mtime
+    endif !mtime
+  enddo !n
+
+end subroutine update_icm_input
+
 subroutine WQinput(time)
 !---------------------------------------------------------------------
 !read time varying input:
@@ -437,104 +489,6 @@ subroutine WQinput(time)
   integer :: i,j,k,ie,iegb,neben
   real(rkind) :: rtmp
   real(rkind) :: TIC_t(nvrt,ne_global),ALK_t(nvrt,ne_global) 
-
-  !!read atmospheric loading (unit: g/m2/day)
-  !if(iAtm==1.and.time_icm(1)<time) then
-  !  do while(time_icm(1)<time)
-  !    read(401,*)rtmp,SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3, &
-  !              & SRPOP,SLPOP,SDOP,SPO4,SSU,SSA,SCOD,SDO 
-  !    time_icm(1)=rtmp
-  !  enddo
-  !endif !iAtm
- 
-  !!read benthic flux (unit: g/m2/day; positive value means from sediment to water column)
-  !if(iBen/=0.and.time_icm(2)<time) then
-  !  do while(time_icm(2)<time)
-  !    if(iBen==1) then !uniform Benthic flux
-  !      read(402,*)rtmp,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-  !                &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
-  !      if(rtmp<time) then
-  !        read(402,*)
-  !        cycle
-  !      endif
-  !      BRPOC=tRPOC
-  !      BLPOC=tLPOC
-  !      BDOC =tDOC
-  !      BRPON=tRPON
-  !      BLPON=tLPON
-  !      BDON =tDON
-  !      BNH4 =tNH4
-  !      BNO3 =tNO3
-  !      BRPOP=tRPOP
-  !      BLPOP=tLPOP
-  !      BDOP =tDOP
-  !      BPO4 =tPO4
-  !      BSU  =tSU
-  !      BSA  =tSA
-  !      BCOD =tCOD
-  !      BDO  =tDO
-  !      time_icm(2)=rtmp
-  !      read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-  !                &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
-  !    elseif(iBen==2) then !spatially varying benthic flux 
-  !      read(402,*)rtmp,neben
-  !      if(rtmp<time) then
-  !        do i=1,neben+1; read(402,*); enddo
-  !        cycle
-  !      endif
-  !      do ie=1,neben
-  !        read(402,*)iegb,tRPOC,tLPOC,tDOC,tRPON,tLPON,tDON,tNH4,tNO3, &
-  !                &  tRPOP,tLPOP,tDOP,tPO4,tSU,tSA,tCOD,tDO
-  !        if(iegl(iegb)%rank==myrank) then
-  !          BRPOC(iegl(iegb)%id) = tRPOC
-  !          BLPOC(iegl(iegb)%id) = tLPOC
-  !          BDOC(iegl(iegb)%id)  = tDOC
-  !          BRPON(iegl(iegb)%id) = tRPON
-  !          BLPON(iegl(iegb)%id) = tLPON
-  !          BDON(iegl(iegb)%id)  = tDON
-  !          BNH4(iegl(iegb)%id)  = tNH4
-  !          BNO3(iegl(iegb)%id)  = tNO3
-  !          BRPOP(iegl(iegb)%id) = tRPOP
-  !          BLPOP(iegl(iegb)%id) = tLPOP
-  !          BDOP(iegl(iegb)%id)  = tDOP
-  !          BPO4(iegl(iegb)%id)  = tPO4
-  !          BSU(iegl(iegb)%id)   = tSU
-  !          BSA(iegl(iegb)%id)   = tSA
-  !          BCOD(iegl(iegb)%id)  = tCOD
-  !          BDO(iegl(iegb)%id)   = tDO
-  !        endif
-  !      enddo
-  !      time_icm(2)=rtmp
-  !      read(402,*)TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3, &
-  !                &  TBRPOP,TBLPOP,TBDOP,TBPO4,TBSU,TBSA,TBCOD,TBDO
-  !    else
-  !      write(errmsg,*)'Unknown ICM value: ', iBen
-  !      call parallel_abort(errmsg)
-  !    endif !iBen=1 or iBen=2
-  !  enddo !while
-  !endif !iBen>0
-
-  !read solar radiation (unit: ly/day)
-  if((iRad==1.or.iRad==2).and.time_icm(3)<time) then!manually input
-    do while(time_icm(3)<time)
-      if(iRad==1) then !uniform solar radiation
-        read(403,*)rtmp,rIa !time, PAR; unit W/m2
-        time_icm(3)=rtmp
-        if(time==0.0) rIavg=rIa
-        rIavg=0.7*rIa+0.3*rIavg
-      elseif(iRad==2) then !spatially varying solar radiation
-        ! need more work if necessary 
-      endif 
-    enddo !while 
-  endif!time_icm
-
-  !veg !time_icm(4) for veg module !manually input
-  if(jveg==1.and.time_icm(4)<time) then
-    do while(time_icm(4)<time)
-      read(404,*)rtmp,mtemp
-      time_icm(4)=rtmp
-    enddo !while
-  endif!time_icm
 
   !read PH nudge file
   if(iPh==1.and.inu_ph==1.and.time_ph<time) then
@@ -561,7 +515,6 @@ subroutine icm_vars_init
   use schism_glbl, only : rkind,nea,npa,nvrt,ntrs
   use schism_msgp, only : parallel_abort,myrank
   use icm_mod
-  !use icm_sed_mod
   use misc_modules
   implicit none
 
@@ -584,12 +537,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(temp(nvrt),EROH2S(nea),EROLPOC(nea),ERORPOC(nea), &
-         & tthcan(nea),ttdens(nea),stat=istat) !erosion
+  allocate(temp(nvrt),eroH2S(nea),eroLPOC(nea),eroRPOC(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  temp=0.0
-  EROH2S=0.0;  EROLPOC=0.0; ERORPOC=0.0; tthcan=0.0;  ttdens=0.0;
+  temp=0.0;  eroH2S=0.0;  eroLPOC=0.0; eroRPOC=0.0
 
   !-------------------------------------------------------------------------------
   !pH variables
@@ -639,7 +590,7 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(sp%etau(nea),SED_EROH2S(nea),SED_EROLPOC(nea),SED_ERORPOC(nea), &
+  allocate(sp%etau(nea),SED_eroH2S(nea),SED_eroLPOC(nea),SED_eroRPOC(nea), &
     & SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
     & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
     & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea),SSI(nea), &
@@ -655,7 +606,7 @@ subroutine icm_vars_init
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  sp%etau=0.0; SED_EROH2S=0.0;  SED_EROLPOC=0.0; SED_ERORPOC=0.0; 
+  sp%etau=0.0; SED_eroH2S=0.0;  SED_eroLPOC=0.0; SED_eroRPOC=0.0; 
   SED_BL=0.0;     ZD=0.0;          SED_B=0.0;       SED_LPOP=0.0;    SED_RPOP=0.0;   SED_LPON=0.0;   SED_RPON=0.0;
   SED_LPOC=0.0;   SED_RPOC=0.0;    SED_TSS=0.0;     SED_SU=0.0;      SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;
   SED_SA=0.0;     SED_DO=0.0;      SED_COD=0.0;     SED_SALT=0.0;    SED_T=0.0;      SSI=0.0;
@@ -701,7 +652,7 @@ subroutine update_vars(id,usf,wspd)
   temp=tr_el(1,:,id);  salt=>tr_el(2,:,id)
   PB1=> wqc(iPB1,:);   PB2=>wqc(iPB2,:);    PB3=>wqc(iPB3,:);  PBS=>wqc(iPB1:iPB3,:)
   RPOC=>wqc(iRPOC,:);  LPOC=>wqc(iLPOC,:);  DOC=>wqc(iDOC,:)
-  RPON=>wqc(iRPON,:);  LPON=>wqc(iLPON,:);  DON=>wqc(iDON,:);  NH4=>wqc(iNH4,:); NO3=>wqc(iNO3,:)
+  RPON=>wqc(iRPON,:);  LPON=>wqc(iLPON,:);  DON=>wqc(iDON,:);  NH4=>wqc(iNH4,:); NO3=>wqc(iNO3,:); DIN(:)=NH4(:)+NO3(:)
   RPOP=>wqc(iRPOP,:);  LPOP=>wqc(iLPOP,:);  DOP=>wqc(iDOP,:);  PO4=>wqc(iPO4,:)
   COD=>wqc(iCOD,:);    DOX=>wqc(iDOX,:)
   if(iSilica==1) then
