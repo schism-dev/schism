@@ -5,7 +5,7 @@
 ##128cores/node but leave a few idle
 #SBATCH --ntasks-per-node=120
 #SBATCH --exclusive
-##Compute partitin up to 8 hrs
+##Compute partition up to 8 hrs
 #SBATCH --time=08:00:00
 #SBATCH --mail-type=NONE
 #SBATCH --account=gg0028
@@ -19,7 +19,6 @@ ulimit -c 0
 
 #Load appropriate toolset fro gcc/intel etc
 source /home/g/g260135/gcc_tool
-#source /home/g/g260135/intel_tool
 
 export OMPI_MCA_pml="ucx"
 export OMPI_MCA_btl=self
