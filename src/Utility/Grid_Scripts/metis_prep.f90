@@ -9,9 +9,6 @@
 ! ./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15
 ! Afterward, use awk to generate partition.prop:
 ! awk '{print NR,$0}' graphinfo.part.88 > partition.prop      (using nproc=88 cores)
-! and add 2 extra lines at the end of partition.prop:
-! nproc
-! <nproc value>
 
   program metis_prep
   implicit none
@@ -574,7 +571,7 @@
     xadj(ie+1)=xadj(ie)+nedge
   enddo !ie=1,ne
 
-  !Output
+  !Output graph info
   open(10,file='graphinfo',status='replace')
   !Edge cuts in METIS count only once for 2 of the same edge btw 2 elements
   !Vertex/edge counts start from 1
@@ -586,16 +583,6 @@
   enddo !ie=1,ne
   close(10)
 
-  ! ParMeTiS vertex distribution array (starts at 1)
-!  allocate(vtxdist(nproc+1),stat=stat)
-!  vtxdist(nproc+1)=ne+1
-!
-!  ! Fortran-style numbering that starts from 1
-!  numflag = 1
-!
-!  ! Number of dimensions of the space in which the graph is embedded
-!  ndims = 2
-!
 !  ! Vertex weight fraction
 !  allocate(tpwgts(ncon*nproc),stat=stat)
 !  tpwgts=1.0/real(nproc)

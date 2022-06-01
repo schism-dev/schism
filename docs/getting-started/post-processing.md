@@ -12,7 +12,10 @@ all available outputs during or after the run. Use these if you invoked OLDIO.
 
 
 ## One-way nesting
-`OneWayNestScripts/interpolate_variables7.f90`: The purpose of this script is to generate `elev2D.th.nc`, `SAL_3D.th.nc`, `TEM_3D.th.nc` and/or `uv3D.th.nc` from a large-domain run to be used in a small-domain run. This is of limited utility now because `uv3D.th.nc` for the sub-tidal component can be generated using tidal packages such as FES.
+`OneWayNestScripts/interpolate_variables7.f90`: The purpose of this script is to generate `elev2D.th.nc`, 
+`SAL_3D.th.nc`, `TEM_3D.th.nc` and/or `uv3D.th.nc` from a large-domain run to be used in a small-domain run. 
+This is of limited utility now because `uv3D.th.nc` for the sub-tidal component 
+can be generated using e.g. HYCOM.
 
 To prepare for the nesting, first do a 2D barotropic run for a larger or same grid, with only elevation b.c. Note that 2D model is inherently more stable than 3D model, and to further enhance stability, make sure you use `indvel=1 (ishapiro=ihorcon=0)`, `thetai=1`, and also use a large Manning’s $n$ (e.g., 0.025 or larger) near the boundary. Once this is done
 

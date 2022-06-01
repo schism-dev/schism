@@ -12,7 +12,7 @@ The model is usually run through a batch script, which in essence executes the c
 - `mpirun -np NPROC pschism ` if OLDIO is ON
 
 where NPROC is the number of process used for parallel computing. Note that your system may require 
- other command then `mpirun` or more arguments.
+ other commands than `mpirun` or more arguments.
 
 !!!caution "Scribe IO"
     Shortly after v5.9.0 we have implemented a new I/O mode called scribed I/O. Under this mode, the outputs are combined during the model 
