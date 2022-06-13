@@ -126,11 +126,6 @@ subroutine sed_calc(id,kb,dep,TSED)
   real(rkind) :: tau_bot_elem,ero_elem
   real(rkind) :: PO40
 
-  !spatailly varying parameter
-  HSED=sp%HSED(id); VSED=sp%VSED(id); VPMIX=sp%VPMIX(id); VDMIX=sp%VDMIX(id) 
-  FRPOP=sp%FRPOP(id,:); FRPON=sp%FRPON(id,:); FRPOC=sp%FRPOC(id,:)
-  etau=sp%etau(id)
-
   !total depth and other variables from water column
   ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
   SED_BL=dep
@@ -159,7 +154,7 @@ subroutine sed_calc(id,kb,dep,TSED)
 
   !calculate bottom layer TSS. Need more work, ZG
   if(iKe==0) then
-    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*wp%tss2c(id)
+    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*tss2c
   else
     SSI(id)=SED_TSS(id)
   endif
@@ -251,12 +246,10 @@ subroutine sed_calc(id,kb,dep,TSED)
 
   !flux rate, in unit of m/day
   !in order of inert, refractory, labile, PB(1:3), Si
-  flxs=wp%WSSEDn(id)
-  flxr=wp%WSPOMn(id,1)
-  flxl=wp%WSPOMn(id,2)
-  flxp(1)=wp%WSPBSn(id,1)
-  flxp(2)=wp%WSPBSn(id,2)
-  flxp(3)=wp%WSPBSn(id,3)
+  flxs=WSSEDn
+  flxr=WSPOMn(1)
+  flxl=WSPOMn(2)
+  flxp(1:3)=WSPBSn(1:3)
 
   !error
   !net settling velocity is going to be transfered from advanced hydrodynamics model, more work later on
@@ -522,8 +515,8 @@ subroutine sed_calc(id,kb,dep,TSED)
     !calculate depostion fraction for elem #id :: E/(k+W)
     if(idepo==1) then
 !Error: check exponent magnitude
-      depofracR=ero_elem/(wp%WSPOM(id,1)*depoWSL/max(1.d-7,SED_BL(id))+wp%KP0(id,1)*exp(KTRM(1)*(SED_T(id)-TRM(1))))
-      depofracL=ero_elem/(wp%WSPOM(id,2)*depoWSL/max(1.d-7,SED_BL(id))+wp%KP0(id,2)*exp(KTRM(2)*(SED_T(id)-TRM(2))))
+      depofracR=ero_elem/(WSPOM(1)*depoWSL/max(1.d-7,SED_BL(id))+KP0(1)*exp(KTRM(1)*(SED_T(id)-TRM(1))))
+      depofracL=ero_elem/(WSPOM(2)*depoWSL/max(1.d-7,SED_BL(id))+KP0(2)*exp(KTRM(2)*(SED_T(id)-TRM(2))))
     endif 
 
     !sediemnt erosion >> nutrient erosion flux

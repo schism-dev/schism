@@ -152,8 +152,4 @@
       call fabm_schism_close_output_netcdf()
 #endif
 
-#ifdef USE_ICM
-      call icm_finalize()
-#endif
-
       end subroutine schism_finalize

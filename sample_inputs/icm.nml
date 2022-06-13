@@ -8,39 +8,44 @@
 ! (3) value is an integer, double, or string (no single quote needed); for double,
 !     any of the format is acceptable: 40 40. 4.e1; ! Use of decimal point in integers
 !     is OK but discouraged.
-! (4) spatially varying values (2D) are available for some parameters
-!        value=-999:  value read from *.gr3 file   (e.g. GPM(1)=-999 => GPM_1.gr3; Ke0=-999 => Ke0.gr3)
-!        value=-9999: value read from *.prop file  (e.g. GPM(1)=-9999 => GPM_1.prop; Ke0=-999 => Ke0.prop)
-!        value=const: const value is applied in 2D space
-!-----------------------------------------------------------------------
-!---------------------------state variables in ICM----------------------
-!-----------------------------------------------------------------------
-! 1  ZB1   :  1st zooplankton                            g/m^3 
-! 2  ZB2   :  2nd zooplankton                            g/m^3 
-! 3  PB1   :  Diatom                                     g/m^3
-! 4  PB2   :  Green Algae                                g/m^3
-! 5  PB3   :  Cyanobacteria                              g/m^3
-! 6  RPOC  :  Refractory Particulate Organic Carbon      g/m^3
-! 7  LPOC  :  Labile Particulate Organic Carbon          g/m^3
-! 8  DOC   :  Dissolved Orgnaic Carbon                   g/m^3
-! 9  RPON  :  Refractory Particulate Organic Nitrogen    g/m^3
-! 10 LPON  :  Labile Particulate Organic Nitrogen        g/m^3
-! 11 DON   :  Dissolved Orgnaic Nitrogen                 g/m^3
-! 12 NH4   :  Ammonium Nitrogen                          g/m^3
-! 13 NO3   :  Nitrate Nitrogen                           g/m^3
-! 14 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
-! 15 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
-! 16 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
-! 17 PO4   :  Total Phosphate                            g/m^3
-! 18 SU    :  Particulate Biogenic Silica                g/m^3
-! 19 SA    :  Available Silica                           g/m^3
-! 20 COD   :  Chemical Oxygen Demand                     g/m^3
-! 21 DOO   :  Dissolved Oxygen                           g/m^3
-! 22 TIC   :  Total Inorganic Carbon                     g/m^3
-! 23 ALK   :  Alkalinity                                 g[CaCO3]/m^3
-! 24 CA    :  Dissolved Calcium                          g[CaCO3]/m^3
-! 25 CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
-!-----------------------------------------------------------------------
+! (4) spatially varying parameters are available for most parameters when value=-999;
+!     spatial value will be read from "ICM_param.nc"
+!     dimension=(npt),(npt,d1),or (npt,d1,d2) for scalar/1D/2D param, where npt=ne/np
+!---------------------------------------------------------------------------------
+!---------------------------state variables in ICM--------------------------------
+!---------------------------------------------------------------------------------
+!Core Module
+!     1  PB1   :  Diatom                                     g/m^3
+!     2  PB2   :  Green Algae                                g/m^3
+!     3  PB3   :  Cyanobacteria                              g/m^3
+!     4  RPOC  :  Refractory Particulate Organic Carbon      g/m^3
+!     5  LPOC  :  Labile Particulate Organic Carbon          g/m^3
+!     6  DOC   :  Dissolved Orgnaic Carbon                   g/m^3
+!     7  RPON  :  Refractory Particulate Organic Nitrogen    g/m^3
+!     8  LPON  :  Labile Particulate Organic Nitrogen        g/m^3
+!     9  DON   :  Dissolved Orgnaic Nitrogen                 g/m^3
+!     10 NH4   :  Ammonium Nitrogen                          g/m^3
+!     11 NO3   :  Nitrate Nitrogen                           g/m^3
+!     12 RPOP  :  Refractory Particulate Organic Phosphorus  g/m^3
+!     13 LPOP  :  Labile Particulate Organic Phosphorus      g/m^3
+!     14 DOP   :  Dissolved Orgnaic Phosphorus               g/m^3
+!     15 PO4   :  Total Phosphate                            g/m^3
+!     16 COD   :  Chemical Oxygen Demand                     g/m^3
+!     17 DOX   :  Dissolved Oxygen                           g/m^3
+!Silica Module
+!     1  SU    :  Particulate Biogenic Silica                g/m^3
+!     2  SA    :  Available Silica                           g/m^3
+!Zooplankton Module
+!     1  ZB1   :  1st zooplankton                            g/m^3
+!     2  ZB2   :  2nd zooplankton                            g/m^3
+!pH Module
+!     1  TIC   :  Total Inorganic Carbon                     g/m^3
+!     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
+!     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
+!     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!SAV Module (no transport variables)
+!VEG Module (no transport variables)
+!---------------------------------------------------------------------------------
 
 &MARCO
 !-----------------------------------------------------------------------
@@ -72,12 +77,6 @@ iLight = 0
 alpha  = 8.0   10.0  3.15  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0)
 Iopt   = 40.0  40.0  40.0  !optimal irradiance for PB growth (iLight=1)
 Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
-
-!-----------------------------------------------------------------------
-!options of nutrient limitation on phytoplankton growth
-!  iLimit=0: f=min[f(N),f(P)]*f(I);  iLimit=1: f=min[f(N),f(P),f(I)]
-!-----------------------------------------------------------------------
-iLimit   = 0
 
 !-----------------------------------------------------------------------
 !net settling velocity (WS) into sediment
@@ -121,21 +120,27 @@ iveg_icm = 0                   !0: VEG off;  1: VEG on
 iSed = 1 
 
 !-----------------------------------------------------------------------
-!solar radiation
+!solar radiation: dim=(npt,time) or (time,)
 !  iRad=0: short wave from sflux; require ihconsv =1, nws=2
-!  iRad=1: short wave from ICM_rad.th.nc (unit: W/m2); dim=(npt,time)
-!  note: npt=1/np/ne; need to define mapping data if npt=other number
+!  iRad=1: short wave from ICM_rad.th.nc (unit: W/m2)
+!  note: npt=1/np/ne/other; need to add "elements" number if npt=other 
 !-----------------------------------------------------------------------
 iRad = 0
 
 !-----------------------------------------------------------------------
-!Atmospheric nutrient fluxes, and Benthic nutrient fluxes
-!  isflux/ibflux=1: additional nutrient fluxes; dim(npt,ntrs_icm,time) 
+!Atmospheric and Bottom fluxes: dim=(npt,ntrs_icm,time)
+!  isflux/ibflux=1: additional nutrient fluxes from ICM_sflux.th.nc/ICM_bflux.th.nc
 !  units: g/m2,(consistent with variable units in the model)
-!  note: npt=1/np/ne; need to define mapping data if npt=other number
+!  note: npt=1/np/ne/other; need to add "elements" number if npt=other
 !-----------------------------------------------------------------------
 isflux = 0 
 ibflux = 0
+
+!-----------------------------------------------------------------------
+!options of nutrient limitation on phytoplankton growth
+!  iLimit=0: f=min[f(N),f(P)]*f(I);  iLimit=1: f=min[f(N),f(P),f(I)]
+!-----------------------------------------------------------------------
+iLimit   = 0
 
 !-----------------------------------------------------------------------
 !idry_icm=1: turn on shallow kinetic biochemical process
@@ -154,10 +159,10 @@ TGP  = 15.0   22.0   27.0         !optimal temp. for PB growth (oC)
 KTGP = 0.004  0.008  0.005    0.006  0.010  0.004  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
 !phytoplankton predation & metabolism
-PRP  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
-BMP  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
-TBP  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
-KTBP = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
+PRR  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
+MTB  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
+TMT  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
+KTMT = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
 
 !water column settling velocity and net settling velocity
 WSPBS  = 0.35  0.10  0.00         !settling velocity of (PB1,PB2,PB3) (m.day-1)
@@ -255,10 +260,10 @@ zAG  = 0.75                      !ZB assimilation efficiency ratio (0-1)
 zRG  = 0.1                       !ZB respiration ratio when it grazes (0-1)
 
 !zooplankton mortality & metabolism
-zMT   = 0.02   0.02              !ZB mortality rates (day-1)
-zBMP  = 0.254  0.186             !ZB metabolism rates (day-1)
-zTBP  = 20.0   20.0              !reference temp. for ZB metabolism (oC)
-zKTBP = 0.0693 0.0693            !temp. dependence for ZB metabolism (oC-1)
+zMRT  = 0.02   0.02              !ZB mortality rates (day-1)
+zMTB  = 0.254  0.186             !ZB metabolism rates (day-1)
+zTMT  = 20.0   20.0              !reference temp. for ZB metabolism (oC)
+zKTMT = 0.0693 0.0693            !temp. dependence for ZB metabolism (oC-1)
 
 !partition of zooplankton biomass
 zFCP = 0.35   0.55   0.10        !fractions of ZB carbon into (RPOC,LPOC,DOC)
@@ -310,9 +315,9 @@ sFAM  = 0.2                 !fraction of leaf production to active metabolism
 sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
 
 !metabolism coefficients
-sBMP  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
-sTBP  = 20     20     20    !reference temp. for leaf/stem/root metabolism
-sKTBP = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
+sMTB  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
+sTMT  = 20     20     20    !reference temp. for leaf/stem/root metabolism
+sKTMT = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
 sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism C into (RPOC,LPOC,DOC,CO2)
 sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism N into (RPON,LPON,DON,NH4)
 sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism P into (RPOP,LPOP,DOP,PO4)
@@ -341,9 +346,9 @@ so2c   = 2.67               !oxygen to carbon ratio
 !Intertidal Vegetation (VEG), paramters
 !  vKTGP : temp. dependence(3,2) for growth (T<=vTGP & T>vTGP)
 !  vFCP  : fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
-!  vBMP  : metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
-!  vTBP  : reference temp. for leaf/stem/root metabolism
-!  vKTBP : temp. depdenpence for leaf/stem/root metabolism
+!  vMTB  : metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
+!  vTMT  : reference temp. for leaf/stem/root metabolism
+!  vKTMT : temp. depdenpence for leaf/stem/root metabolism
 !  vFNM  : fractions(3,4) of metabolism N into (RPON,LPON,DON,NH4)
 !  vFPM  : fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
 !  vFCM  : fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
@@ -360,9 +365,9 @@ vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence(3,2)
 vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1
 
 !metabolism coefficients: see description of variable meanings above
-vBMP  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01
-vTBP  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0
-vKTBP = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069
+vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01
+vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0
+vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069
 vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
 vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5
 vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
@@ -379,11 +384,11 @@ ivNs  = 1                   !N limitation on veg growth(0: OFF; 1: ON)
 ivPs  = 1                   !P limitation on veg growth(0: OFF; 1: ON)
 
 !mortality (seasonal?)
-ivMT  = 0                    !veg mortality term (0: OFF;  1: ON)
-vTMT  = 17.0   17.0  17.0    17.0  17.0  17.0  !reference temp(3,2) for leaf/stem mortality
-vKTMT = 4.0    4.0   4.0     4.0   4.0   4.0   !temp dependence(3,2) for leaf/stem mortality
-vMT0  = 12.8   12.8  12.8    12.8  12.8  12.8  !base value(3,2) of temp effect on mortality (unit: None)
-vMTcr = 15.0   15.0  15.0    15.0  15.0  15.0  !reference value(3,2) for computing mortality (unit: None)
+ivMRT = 0                    !veg mortality term (0: OFF;  1: ON)
+vTMR  = 17.0   17.0  17.0    17.0  17.0  17.0  !reference temp(3,2) for leaf/stem mortality
+vKTMR = 4.0    4.0   4.0     4.0   4.0   4.0   !temp dependence(3,2) for leaf/stem mortality
+vMR0  = 12.8   12.8  12.8    12.8  12.8  12.8  !base value(3,2) of temp effect on mortality (unit: None)
+vMRcr = 15.0   15.0  15.0    15.0  15.0  15.0  !reference value(3,2) for computing mortality (unit: None)
 
 !misc. coefficients
 valpha = 0.006  0.006  0.006  !init. slope of P-I curve

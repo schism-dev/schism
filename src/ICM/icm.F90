@@ -18,13 +18,15 @@
 !   limitations under the License.
 
 !Routines & functions:
-!ecosystem: main routine
-!link_icm: link between ICM variables and SCHISM tr_el
-!photosynthesis: compute algae growth rates
-!calkwq: solve ICM mass balance equations
-!ph_calc: PH calculation
-!ph_zbrent: Brent's method for PH equation
-!ph_f:  PH equation
+!ecosystem:   ICM core biogeochemical processes 
+!silica_calc: silica module
+!zoo_calc:    zooplankton module
+!ph_calc:     pH module
+!sav_cal      SAV module
+!veg_calc:    Marsh module
+!get_ph:      pH calculation based on TIC and ALK
+!ph_zbrent:   Brent's method for pH equation
+!ph_f:        pH equation
 
 !---------------------------------------------------------------------------------
 !---------------------------state variables in ICM--------------------------------
@@ -73,7 +75,7 @@ subroutine ecosystem(it)
   use icm_mod
   implicit none
   integer, intent(in) :: it
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
+  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day; todo: add in the module
 
   !local variables
   integer :: i,j,k,m,istat,isub
@@ -83,12 +85,12 @@ subroutine ecosystem(it)
   real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a,pH,rKHR,rDenit,rNit,rKCOD
-  real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,BM,PR,GP,fPN
+  real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
   real(rkind),pointer :: mtime(:)
 
-
+  !todo: 1) debug module, 2) add flexible channel outputs
   do isub=1,nsub  !sub-cycling
     time=(it+isub/dble(nsub)-1)*dt; call update_icm_input(time) !update ICM inputs 
     do id=1,nea
@@ -109,21 +111,22 @@ subroutine ecosystem(it)
       s=min(tdep,1.d0); srat=0; brat=0
       do k=kb+1,nvrt
         !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
-        z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
-        srat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
+        m=nvrt+kb+1-k
+        z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
+        srat(m)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
         z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
         brat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !bottom ratio: y=1-x/2
 
         !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
-        !z1=min(zid(nvrt)-zid(nvrt+kb+1-k),s); z2=min(zid(nvrt)-zid(nvrt+kb-k),s)
-        !srat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
+        !z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
+        !srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
         !z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
         !brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
 
         !impose minimum values (todo: check these measures, they will cause mass inbalance in the system) 
         dz(k)=max(dz(k),1.d-1) 
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
-        do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo
+        do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo !todo: add PBmin in the parameter files
        
         !temp,TSS
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
@@ -150,7 +153,6 @@ subroutine ecosystem(it)
         rIa=rad_in(id,1)+rat*(rad_in(id,2)-rad_in(id,1))
       endif
       Light(nvrt)=rIa
-
 
       if(jveg==1.and.vpatch(id)==1) then !light attenuation due to VEG above water
         s=sum(vKe(:)*(vtleaf(id,:)+vtstem(id,:))*max(vht(id,:)-tdep,0.d0)/max(1.d-5,vht(id,:)))
@@ -213,8 +215,8 @@ subroutine ecosystem(it)
           if(iLimit==1) GP(i,k)=GPM(i)*fT*fST*min(fR,fN,fP,fS)*fC*PBS(i,k)
 
           !metabolism, predation
-          BM(i,k)=BMP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
-          PR(i,k)=PRP(i)*exp(KTBP(i)*(temp(k)-TBP(i)))*PBS(i,k)
+          MT(i,k)=MTB(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
+          PR(i,k)=PRR(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
 
           !decay rates of organic matter
           rKTM=exp(KTRM(i)*(temp(k)-TRM(i)))
@@ -245,7 +247,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       sdwqc=0; vdwqc=0; zdwqc=0
       !silica module
-      if(iSilica==1) call silica_calc(kb,PR,BM,GP)
+      if(iSilica==1) call silica_calc(kb,PR,MT,GP)
 
       !SAV
       if(jsav==1.and.spatch(id)==1) call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
@@ -260,7 +262,7 @@ subroutine ecosystem(it)
       if(iZB==1) call zoo_calc(kb,PR)
 
       !pH model
-      if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN) 
+      if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN) 
 
       !----------------------------------------------------------------------------------
       !surface and bottom flux
@@ -308,7 +310,6 @@ subroutine ecosystem(it)
         bflux(iCOD) =bflux(iCOD) +eroH2S(id)
       endif
 
-
       !----------------------------------------------------------------------------------
       !sinking of each tracers
       !----------------------------------------------------------------------------------
@@ -342,12 +343,9 @@ subroutine ecosystem(it)
       dwqc=0.0
       do k=kb+1,nvrt
         !PB1, PB2, PB3
-        !do m=1,3
-        !  dPBS(m,k)=GP(m,k)-BM(m,k)-PR(m,k) !growth, metabolism, predation
-        !enddo
-        dwqc(iPB1,k)=GP(1,k)-BM(1,k)-PR(1,k) !growth, metabolism, predation
-        dwqc(iPB2,k)=GP(2,k)-BM(2,k)-PR(2,k) !growth, metabolism, predation
-        dwqc(iPB3,k)=GP(3,k)-BM(3,k)-PR(3,k) !growth, metabolism, predation
+        dwqc(iPB1,k)=GP(1,k)-MT(1,k)-PR(1,k) !growth, metabolism, predation
+        dwqc(iPB2,k)=GP(2,k)-MT(2,k)-PR(2,k) !growth, metabolism, predation
+        dwqc(iPB3,k)=GP(3,k)-MT(3,k)-PR(3,k) !growth, metabolism, predation
        
         !RPOC, LPOC, DOC
         dwqc(iRPOC,k)=-rKC(1,k)*RPOC(k) !dissolution
@@ -356,7 +354,7 @@ subroutine ecosystem(it)
         do m=1,3
           dwqc(iRPOC,k)=dwqc(iRPOC,k)+FCP(m,1)*PR(m,k) !predation
           dwqc(iLPOC,k)=dwqc(iLPOC,k)+FCP(m,2)*PR(m,k) !predation
-          dwqc(iDOC,k) =dwqc(iDOC,k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*BM(m,k) !predation, metabolism
+          dwqc(iDOC,k) =dwqc(iDOC,k) +FCP(m,3)*PR(m,k)+(FCM(m)+(1.0-FCM(m))*KhDO(m)/(DOX(k)+KhDO(m)))*MT(m,k) !predation, metabolism
         enddo
 
         !RPON, LPON, DON, NH4, NO3
@@ -366,10 +364,10 @@ subroutine ecosystem(it)
         dwqc(iNH4,k) = rKN(3,k)*DON(k)-rNit(k)*NH4(k)  !mineralization, nitrification
         dwqc(iNO3,k) = rNit(k)*NH4(k)-dn2c*rDenit(k)*DOC(k)  !nitrification, denitrification
         do m=1,3
-          dwqc(iRPON,k)=dwqc(iRPON,k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*BM(m,k)) !predation, metabolism 
-          dwqc(iLPON,k)=dwqc(iLPON,k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*BM(m,k)) !predation, metabolism 
-          dwqc(iDON,k) =dwqc(iDON,k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*BM(m,k)) !predation, metabolism  
-          dwqc(iNH4,k) =dwqc(iNH4,k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*BM(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
+          dwqc(iRPON,k)=dwqc(iRPON,k)+n2c(m)*(FNP(1)*PR(m,k)+FNM(m,1)*MT(m,k)) !predation, metabolism 
+          dwqc(iLPON,k)=dwqc(iLPON,k)+n2c(m)*(FNP(2)*PR(m,k)+FNM(m,2)*MT(m,k)) !predation, metabolism 
+          dwqc(iDON,k) =dwqc(iDON,k) +n2c(m)*(FNP(3)*PR(m,k)+FNM(m,3)*MT(m,k)) !predation, metabolism  
+          dwqc(iNH4,k) =dwqc(iNH4,k) +n2c(m)*(FNP(4)*PR(m,k)+FNM(m,4)*MT(m,k)-fPN(m,k)*GP(m,k)) !predation, metabolism, growth
           dwqc(iNO3,k) =dwqc(iNO3,k) -n2c(m)*(1.0-fPN(m,k))*GP(m,k) !growth
         enddo
 
@@ -379,10 +377,10 @@ subroutine ecosystem(it)
         dwqc(iDOP,k) = rKP(1,k)*RPOP(k)+rKP(2,k)*LPOP(k)-rKP(3,k)*DOP(k) !dissolution, mineralization
         dwqc(iPO4,k) = rKP(3,k)*DOP(k) !mineralization
         do m=1,3
-          dwqc(iRPOP,k)=dwqc(iRPOP,k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*BM(m,k)) !predation, metabolism 
-          dwqc(iLPOP,k)=dwqc(iLPOP,k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*BM(m,k)) !predation, metabolism 
-          dwqc(iDOP,k) =dwqc(iDOP,k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*BM(m,k)) !predation, metabolism  
-          dwqc(iPO4,k) =dwqc(iPO4,k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
+          dwqc(iRPOP,k)=dwqc(iRPOP,k)+p2c(m)*(FPP(1)*PR(m,k)+FPM(m,1)*MT(m,k)) !predation, metabolism 
+          dwqc(iLPOP,k)=dwqc(iLPOP,k)+p2c(m)*(FPP(2)*PR(m,k)+FPM(m,2)*MT(m,k)) !predation, metabolism 
+          dwqc(iDOP,k) =dwqc(iDOP,k) +p2c(m)*(FPP(3)*PR(m,k)+FPM(m,3)*MT(m,k)) !predation, metabolism  
+          dwqc(iPO4,k) =dwqc(iPO4,k) +p2c(m)*(FPP(4)*PR(m,k)+FPM(m,4)*MT(m,k)-GP(m,k)) !predation, metabolism, growth
         enddo
 
         !COD 
@@ -391,7 +389,7 @@ subroutine ecosystem(it)
         !DO
         dwqc(iDOX,k)=-o2n*rNit(k)*NH4(k)-o2c*rKHR(k)*DOC(k)-rKCOD(k)*COD(k) !nitrification, respiration, COD oxidiation
         do m=1,3
-          dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)) !growth, metabolism
+          dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*MT(m,k)) !growth, metabolism
         enddo
         if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
       enddo !k
@@ -401,7 +399,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       do k=kb+1,nvrt
         do i=1,ntrs_icm
-          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i)/dz(k))+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
+          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k)+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
         enddo !i
       enddo !k=1,nv
 
@@ -419,7 +417,7 @@ subroutine ecosystem(it)
 
 end subroutine ecosystem
 
-subroutine silica_calc(kb,PR,BM,GP)
+subroutine silica_calc(kb,PR,MT,GP)
 !--------------------------------------------------------------------------------------
 !Silica modules
 !--------------------------------------------------------------------------------------
@@ -427,7 +425,7 @@ subroutine silica_calc(kb,PR,BM,GP)
   use icm_mod
   implicit none
   integer,intent(in) :: kb
-  real(rkind),intent(in) :: PR(3,nvrt),BM(3,nvrt),GP(3,nvrt)
+  real(rkind),intent(in) :: PR(3,nvrt),MT(3,nvrt),GP(3,nvrt)
 
   !local variables
   integer :: m,k
@@ -439,14 +437,14 @@ subroutine silica_calc(kb,PR,BM,GP)
     dwqc(iSU,k)=-rKSUA*SU(k) !dissolution
     dwqc(iSA,k)= rKSUA*SU(k) !dissolution
     do m=1,3
-      dwqc(iSU,k)=dwqc(iSU,k)+s2c(m)*(FSP(1)*PR(m,k)+FSM(1)*BM(m,k)) !predation, metabolism
-      dwqc(iSA,k)=dwqc(iSA,k)+s2c(m)*(FSP(2)*PR(m,k)+FSM(2)*BM(m,k)-GP(m,k)) !predation, metabolism, growth
+      dwqc(iSU,k)=dwqc(iSU,k)+s2c(m)*(FSP(1)*PR(m,k)+FSM(1)*MT(m,k)) !predation, metabolism
+      dwqc(iSA,k)=dwqc(iSA,k)+s2c(m)*(FSP(2)*PR(m,k)+FSM(2)*MT(m,k)-GP(m,k)) !predation, metabolism, growth
     enddo !m
   enddo !k
 
 end subroutine silica_calc
 
-subroutine ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN)
+subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
 !--------------------------------------------------------------------------------------
 !PH model; concentration unit is mg/l
 !mole weight: CACO3=100.086; CA=40.078; C=12.011; O=15.999
@@ -457,7 +455,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN)
   use icm_mod
   implicit none
   integer, intent(in) :: id,kb
-  real(rkind),intent(in) :: dz(nvrt),usf,wspd,BM(3,nvrt),GP(3,nvrt),rKHR(nvrt),rNit(nvrt),fPN(3,nvrt)
+  real(rkind),intent(in) :: dz(nvrt),usf,wspd,MT(3,nvrt),GP(3,nvrt),rKHR(nvrt),rNit(nvrt),fPN(3,nvrt)
 
   !local variables
   integer :: k,m
@@ -508,7 +506,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,BM,GP,rKHR,rNit,fPN)
 
       ! rKa*(CO2sat-CO2(k))+rKHR*DOC(k)+(xKCACO3+xKCA)*(mC/mCACO3)+znDO(k)/(o2c*dz(k)); !todo: need to add sedDOX e
       dwqc(iTIC,k)=rKa*(CO2sat-CO2)+rKHR(k)*DOC(k)+(xKCACO3+xKCA)*(mC/mCACO3)
-      do m=1,3; dwqc(iTIC,k)=dwqc(iTIC,k)+((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*BM(m,k)-GP(m,k); enddo
+      do m=1,3; dwqc(iTIC,k)=dwqc(iTIC,k)+((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*MT(m,k)-GP(m,k); enddo
 
       !ALK unit in Mg[CaCO3]/L
       rat=0.5*mCACO3/mN
@@ -626,16 +624,16 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
       vfMT=1.0
       do j=1,3
-        if(ivMT==1) then
-          rtmp=vKTMT(j,1)*(mtemp-vTMT(j,1))-vMT0(j,1)
-          vfMT(j,1)=1+vMTcr(j,1)/(1+exp(rtmp))
+        if(ivMRT==1) then
+          rtmp=vKTMR(j,1)*(mtemp-vTMR(j,1))-vMR0(j,1)
+          vfMT(j,1)=1+vMRcr(j,1)/(1+exp(rtmp))
 
-          rtmp=vKTMT(j,2)*(mtemp-vTMT(j,2))-vMT0(j,2)
-          vfMT(j,2)=1+vMTcr(j,2)/(1+exp(rtmp))
+          rtmp=vKTMR(j,2)*(mtemp-vTMR(j,2))-vMR0(j,2)
+          vfMT(j,2)=1+vMRcr(j,2)/(1+exp(rtmp))
         endif !iMortvey
 
         !----------metabolism rate----------
-        do m=1,3; vPBM(j,m)=vfMT(j,m)*vBMP(j,m)*exp(vKTBP(j,m)*(mtemp-vTBP(j,m))); enddo
+        do m=1,3; vPBM(j,m)=vfMT(j,m)*vMTB(j,m)*exp(vKTMT(j,m)*(mtemp-vTMT(j,m))); enddo
 
         !calculation of biomass, lfveg(j)
         a=vGP(j)*(1-vFAM(j))*vFCP(j,1)-vPBM(j,1) !1/day
@@ -736,7 +734,7 @@ subroutine zoo_calc(kb,PR)
 
   !local variables
   integer :: i,j,m,k
-  real(rkind) :: xT,fT,zBG(8,2),zBM(2),zMTB(2),fishZ(2),fishP(3)
+  real(rkind) :: xT,fT,zBG(8,2),zMT(2),zMR(2),fishZ(2),fishP(3)
   real(rkind) :: prey(8),nprey(8,2)
 
   do k=kb+1,nvrt 
@@ -756,14 +754,14 @@ subroutine zoo_calc(kb,PR)
      enddo
 
      !metabolism, mortality and predation
-     zBM(i)=zBMP(i)*exp(zKTBP(i)*(temp(k)-zTBP(i)))*ZBS(i,k)
-     zMTB(i)=zMT(i)*ZBS(i,k)
+     zMT(i)=zMTB(i)*exp(zKTMT(i)*(temp(k)-zTMT(i)))*ZBS(i,k)
+     zMR(i)=zMRT(i)*ZBS(i,k)
      fishZ(i)=z2pr(i)*sum(prey(1:5))*ZBS(i,k)
    enddo !i
 
    !ZB1, ZB2
-   dwqc(iZB1,k)=sum(zBG(1:8,1))*zAG*(1-zRG)-zBM(1)-zMTB(1)-fishZ(1)-zBG(1,2)
-   dwqc(iZB2,k)=sum(zBG(1:8,2))*zAG*(1-zRG)-zBM(2)-zMTB(2)-fishZ(2)-zBG(2,1)
+   dwqc(iZB1,k)=sum(zBG(1:8,1))*zAG*(1-zRG)-zMT(1)-zMR(1)-fishZ(1)-zBG(1,2)
+   dwqc(iZB2,k)=sum(zBG(1:8,2))*zAG*(1-zRG)-zMT(2)-zMR(2)-fishZ(2)-zBG(2,1)
 
    !Fish/ZB predation on PB
    do m=1,3 !PB
@@ -784,13 +782,13 @@ subroutine zoo_calc(kb,PR)
 
      !ZB/Fish predation on ZB, and ZB mortality, ZB metabolism
      do j=1,2 !ZB
-       if(m<=3) zdC(m,k)=zdC(m,k)+zFCP(m)*((1.0-zAG)*(1.0-zRG)*sum(zBG(1:2,j))+fishZ(j)+zMTB(j)) !ZB=>ZB, Fish=>ZB, ZB mortality
-       if(m==3) zdC(m,k)=zdC(m,k)+(zFCM(j)+(1.0-zFCM(j))*zKhDO(j)/(DOX(k)+zKhDO(j)))*zBM(j) !ZB metabolism
-       if(m==1) zdDOX(k)=zdDOX(k)-o2c*((1.0-zFCM(j))*DOX(k)/(DOX(k)+zKhDO(1)))*zBM(j)         !ZB metabolism
+       if(m<=3) zdC(m,k)=zdC(m,k)+zFCP(m)*((1.0-zAG)*(1.0-zRG)*sum(zBG(1:2,j))+fishZ(j)+zMR(j)) !ZB=>ZB, Fish=>ZB, ZB mortality
+       if(m==3) zdC(m,k)=zdC(m,k)+(zFCM(j)+(1.0-zFCM(j))*zKhDO(j)/(DOX(k)+zKhDO(j)))*zMT(j) !ZB metabolism
+       if(m==1) zdDOX(k)=zdDOX(k)-o2c*((1.0-zFCM(j))*DOX(k)/(DOX(k)+zKhDO(1)))*zMT(j)         !ZB metabolism
 
-       zdN(m,k)=zdN(m,k)+zFNP(m)*zn2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFNM(j,m)*zn2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
-       zdP(m,k)=zdP(m,k)+zFPP(m)*zp2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFPM(j,m)*zp2c(j)*zBM(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
-       if(iSilica==1.and.m<=2) zdS(m,k)=zdS(m,k)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMTB(j))+zFSM(j,m)*zs2c(j)*zBM(j)
+       zdN(m,k)=zdN(m,k)+zFNP(m)*zn2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMR(j))+zFNM(j,m)*zn2c(j)*zMT(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
+       zdP(m,k)=zdP(m,k)+zFPP(m)*zp2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMR(j))+zFPM(j,m)*zp2c(j)*zMT(j) !ZB=>ZB, Fish=>ZB, ZB mortality, ZB metabolism
+       if(iSilica==1.and.m<=2) zdS(m,k)=zdS(m,k)+zFSP(m)*zs2c(j)*((1.0-zAG*(1.0-zRG))*sum(zBG(1:2,j))+fishZ(j)+zMR(j))+zFSM(j,m)*zs2c(j)*zMT(j)
      enddo !j
    enddo !m
   enddo !k
@@ -812,7 +810,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   !local variables
   integer :: knp,k,m
   real(rkind) :: a,b,hdep,sdep,rKeh0,rKeh2,xT,sfT,sfR,sfN,sfP,sLight0,sLight
-  real(rkind) :: dzt,tmp,mLight,rIK,sdz,sBM,sGM,sRM,sPBM(nvrt,3),sfPN,sfNs,sfPs
+  real(rkind) :: dzt,tmp,mLight,rIK,sdz,sMT,sGM,sRM,sPBM(nvrt,3),sfPN,sfNs,sfPs
   real(rkind) :: szleaf(nvrt+1),szstem(nvrt+1),sGP(nvrt)
 
   sGP=0.0
@@ -913,9 +911,9 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   !SAV computation
   !---------------------------------------------------------------
   do k=kb+1,nvrt   
-    sBM=0; sdz=max(1.e-5,dz(k))
+    sMT=0; sdz=max(1.e-5,dz(k))
     !pre-calculation for metabolism rate;  no relation with light, alweys respire
-    do m=1,3; sPBM(k,m)=sBMP(m)*exp(sKTBP(m)*(temp(k)-sTBP(m))); enddo
+    do m=1,3; sPBM(k,m)=sMTB(m)*exp(sKTMT(m)*(temp(k)-sTMT(m))); enddo
 
     !calculation of biomass !sleaf
     a=sGP(k)*(1-sFAM)*sFCP(1)-sPBM(k,1) !1/day
@@ -938,7 +936,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
       sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0
     endif
     if (zid(k-1)<shtz) then
-      sBM=((sPBM(k,1)+sGP(k)*sFAM)*sleaf(k,id)+sPBM(k,2)*sstem(k,id))/sdz
+      sMT=((sPBM(k,1)+sGP(k)*sFAM)*sleaf(k,id)+sPBM(k,2)*sstem(k,id))/sdz
       sGM=sGP(k)*sleaf(k,id)/sdz
       sRM=sPBM(k,3)*sroot(k,id)
 
@@ -947,19 +945,19 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
       sfNs=CNH4(id)/(CNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
       sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
 
-      sdwqc(iRPOC,k) = sFCM(1)*sBM                        
-      sdwqc(iLPOC,k) = sFCM(2)*sBM                          
-      sdwqc(iDOC,k)  = sFCM(3)*sBM                          
-      sdwqc(iRPON,k) = sn2c*sFNM(1)*sBM                     
-      sdwqc(iLPON,k) = sn2c*sFNM(2)*sBM                     
-      sdwqc(iDON,k)  = sn2c*sFNM(3)*sBM                     
-      sdwqc(iNH4,k)  = sn2c*(sFNM(4)*sBM-(1-sfNs)*sfPN*sGM) 
+      sdwqc(iRPOC,k) = sFCM(1)*sMT                        
+      sdwqc(iLPOC,k) = sFCM(2)*sMT                          
+      sdwqc(iDOC,k)  = sFCM(3)*sMT                         
+      sdwqc(iRPON,k) = sn2c*sFNM(1)*sMT                     
+      sdwqc(iLPON,k) = sn2c*sFNM(2)*sMT                     
+      sdwqc(iDON,k)  = sn2c*sFNM(3)*sMT                     
+      sdwqc(iNH4,k)  = sn2c*(sFNM(4)*sMT-(1-sfNs)*sfPN*sGM) 
       sdwqc(iNO3,k)  =-sn2c*(1-sfNs)*(1-sfPN)*sGM           
-      sdwqc(iRPOP,k) = sp2c*sFPM(1)*sBM             
-      sdwqc(iLPOP,k) = sp2c*sFPM(2)*sBM                  
-      sdwqc(iDOP,k)  = sp2c*sFPM(3)*sBM                  
-      sdwqc(iPO4,k)  = sp2c*(sFPM(4)*sBM-(1-sfPs)*sGM)      
-      sdwqc(iDOX,k)  = so2c*(-sFCM(4)*sBM+sGM)              
+      sdwqc(iRPOP,k) = sp2c*sFPM(1)*sMT             
+      sdwqc(iLPOP,k) = sp2c*sFPM(2)*sMT                  
+      sdwqc(iDOP,k)  = sp2c*sFPM(3)*sMT                  
+      sdwqc(iPO4,k)  = sp2c*(sFPM(4)*sMT-(1-sfPs)*sGM)      
+      sdwqc(iDOX,k)  = so2c*(-sFCM(4)*sMT+sGM)              
 
       !N/P uptake from sediemnt; and root metabolism into sediment 
       sleaf_NH4(id)=sleaf_NH4(id)+sn2c*sfNs*sGM*sdz

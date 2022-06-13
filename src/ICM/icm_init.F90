@@ -39,21 +39,21 @@ subroutine read_icm_param(imode)
   namelist /MARCO/ nsub,iRad,iKe,iLight,iLimit,iSettle,isflux,iSed,ibflux,iSilica,&
            & iZB,iPh,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
            & Ke0,tss2c,WSSEDn,WSPBSn,WSPOMn
-  namelist /CORE/ GPM,TGP,KTGP,PRP,BMP,TBP,KTBP,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,&
+  namelist /CORE/ GPM,TGP,KTGP,PRR,MTB,TMT,KTMT,WSPBS,WSPOM,WSSED,FCP,FNP,FPP,&
            & FCM,FNM,FPM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
            & KhCOD,KhN,KhP,KhSal,c2chl,n2c,p2c,o2c,o2n,dn2c,an2c,KhDO, &
            & KPO4p,WRea
   namelist /Silica/ FSP,FSM,KS,TRS,KTRS,KhS,s2c,KSAp 
-  namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMT,zBMP,zTBP,zKTBP,zFCP,zFNP,zFPP, &
+  namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMRT,zMTB,zTMT,zKTMT,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ inu_ph,pWSCACO3,pKCACO3,pKCA,pRea
-  namelist /SAV/ stleaf0,ststem0,stroot0,sGPM,sTGP,sKTGP,sFAM,sFCP,sBMP,sTBP,sKTBP,&
+  namelist /SAV/ stleaf0,ststem0,stroot0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,&
            & sFNM,sFPM,sFCM,sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs,salpha,sKe,shtm,s2ht, &
            & sc2dw,s2den,sn2c,sp2c,so2c
-  namelist /VEG/ vtleaf0,vtstem0,vtroot0,vGPM,vFAM,vTGP,vKTGP,vFCP,vBMP,vTBP,vKTBP,&
-           & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMT, &
-           & vTMT,vKTMT,vMT0,vMTcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
+  namelist /VEG/ vtleaf0,vtstem0,vtroot0,vGPM,vFAM,vTGP,vKTGP,vFCP,vMTB,vTMT,vKTMT,&
+           & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMRT, &
+           & vTMR,vKTMR,vMR0,vMRcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
            & vo2c 
   namelist /SFM/ HSED,VSED,DIFFT,SALTSW,SALTND,m1,m2,THTADP,THTADD,VPMIX,VDMIX,CTEMPI,&
            & CPOPI,CPONI,CPOCI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,&
@@ -125,7 +125,7 @@ subroutine read_icm_param(imode)
     !read module variables
     !------------------------------------------------------------------------------------
     !init. CORE module
-    GPM=0; TGP=0; KTGP=0; PRP=0; BMP=0; TBP=0; KTBP=0; WSPBS=0; WSPOM=0; WSSED=0;
+    GPM=0; TGP=0; KTGP=0; PRR=0; MTB=0; TMT=0; KTMT=0; WSPBS=0; WSPOM=0; WSSED=0;
     FCP=0; FNP=0; FPP=0;  FCM=0; FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0;
     KhDOnit=0; KhNH4nit=0; KhDOox=0; KhNO3denit=0; KC0=0; KN0=0; KP0=0; KCalg=0;
     KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
@@ -136,7 +136,7 @@ subroutine read_icm_param(imode)
     FSP=0; FSM=0; KS=0; TRS=0; KTRS=0; KhS=0; s2c=0; KSAp=0 
 
     !init. ZB module
-    zGPM=0; zKhG=0; zTGP=0; zKTGP=0; zAG=0; zRG=0; zMT=0; zBMP=0; zTBP=0; zKTBP=0;
+    zGPM=0; zKhG=0; zTGP=0; zKTGP=0; zAG=0; zRG=0; zMRT=0; zMTB=0; zTMT=0; zKTMT=0;
     zFCP=0; zFNP=0; zFPP=0; zFSP=0; zFCM=0; zFNM=0; zFPM=0; zFSM=0; zKhDO=0; zn2c=0;
     zp2c=0; zs2c=0; z2pr=0; p2pr=0
 
@@ -144,14 +144,14 @@ subroutine read_icm_param(imode)
     inu_ph=0; pWSCACO3=0; pKCACO3=0; pKCA=0; pRea=0
 
     !init. SAV module
-    stleaf0=0; ststem0=0; stroot0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sBMP=0;
-    sTBP=0; sKTBP=0; sFNM=0; sFPM=0; sFCM=0; sKhNw=0; sKhNs=0; sKhNH4=0; sKhPw=0;
+    stleaf0=0; ststem0=0; stroot0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0;
+    sTMT=0; sKTMT=0; sFNM=0; sFPM=0; sFCM=0; sKhNw=0; sKhNs=0; sKhNH4=0; sKhPw=0;
     sKhPs=0; salpha=0; sKe=0; shtm=0; s2ht=0; sc2dw=0; s2den=0; sn2c=0; sp2c=0; so2c=0
     
     !init. VEG module
-    vtleaf0=0; vtstem0=0; vtroot0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vBMP=0;
-    vTBP=0; vKTBP=0; vFNM=0; vFPM=0; vFCM=0; ivNc=0; ivPc=0; vKhNs=0; vKhPs=0; vScr=0;
-    vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMT=0; vTMT=0; vKTMT=0; vMT0=0; vMTcr=0; valpha=0;
+    vtleaf0=0; vtstem0=0; vtroot0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vMTB=0;
+    vTMT=0; vKTMT=0; vFNM=0; vFPM=0; vFCM=0; ivNc=0; ivPc=0; vKhNs=0; vKhPs=0; vScr=0;
+    vSopt=0; vInun=0; ivNs=0; ivPs=0; ivMRT=0; vTMR=0; vKTMR=0; vMR0=0; vMRcr=0; valpha=0;
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
     !init. SFM module
@@ -176,8 +176,9 @@ subroutine read_icm_param(imode)
     if(myrank==0) write(16,*) 'done read ICM parameters'
 
     !allocate variables
-    allocate(DIN(nvrt),dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt), &
-           & vdwqc(ntrs_icm,nvrt),rad_in(nea,2),sflux_in(nea,ntrs_icm,2),bflux_in(nea,ntrs_icm,2), stat=istat)
+    allocate(dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt), &
+           & vdwqc(ntrs_icm,nvrt),rad_in(nea,2),sflux_in(nea,ntrs_icm,2), &
+           & bflux_in(nea,ntrs_icm,2),elem_in(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
     !------------------------------------------------------------------------------------
     !pre-processing
@@ -214,34 +215,6 @@ subroutine read_icm_param(imode)
     !1) allocate ICM variables; 2) read spatially varying parameters
     !------------------------------------------------------------------------------------
     call icm_vars_init
-
-    !ICM variables init
-    if(iKe==0) call read_gr3_prop('tss2c',tss2c,wp%tss2c,nea)
-    call read_gr3_prop('WSSED', WSSED,  wp%WSSED,  nea)
-    call read_gr3_prop('WSSEDn',WSSEDn, wp%WSSEDn, nea)
-    call read_gr3_prop('Ke0',   Ke0,    wp%Ke0,    nea)
-    call read_gr3_prop('WRea',  WRea,   wp%WRea,   nea)
-    do i=1,2
-        write(pid,'(i1)') i
-        call read_gr3_prop('WSPOM_'//trim(adjustl(pid)), WSPOM(i), wp%WSPOM(:,i), nea)
-        call read_gr3_prop('WSPOMn_'//trim(adjustl(pid)),WSPOMn(i),wp%WSPOMn(:,i),nea)
-    enddo
-    do i=1,3
-      write(pid,'(i1)') i
-      call read_gr3_prop('GPM_'//trim(adjustl(pid)),   GPM(i),   wp%GPM(:,i),   nea)
-      call read_gr3_prop('TGP_'//trim(adjustl(pid)),   TGP(i),   wp%TGP(:,i),   nea)
-      call read_gr3_prop('PRP_'//trim(adjustl(pid)),   PRP(i),   wp%PRP(:,i),   nea)
-      call read_gr3_prop('c2chl_'//trim(adjustl(pid)), c2chl(i), wp%c2chl(:,i), nea)
-      call read_gr3_prop('KC0_'//trim(adjustl(pid)),   KC0(i),   wp%KC0(:,i),   nea)
-      call read_gr3_prop('KP0_'//trim(adjustl(pid)),   KP0(i),   wp%KP0(:,i),   nea)
-      call read_gr3_prop('KPalg_'//trim(adjustl(pid)), KPalg(i), wp%KPalg(:,i), nea)
-      call read_gr3_prop('WSPBS_'//trim(adjustl(pid)), WSPBS(i), wp%WSPBS(:,i), nea)
-      call read_gr3_prop('WSPBSn_'//trim(adjustl(pid)),WSPBSn(i),wp%WSPBSn(:,i),nea)
-      do j=1,2
-        write(pid,'(i1,i1)') i,j
-        call read_gr3_prop('KTGP_'//trim(adjustl(pid)),KTGP(i,j),wp%KTGP(:,i,j),nea)
-      enddo
-    enddo
 
     !pH init
     if(iPh==1) then
@@ -310,17 +283,6 @@ subroutine read_icm_param(imode)
 
     !veg init
     if(iSed==1) then 
-      call read_gr3_prop('HSED', HSED,  sp%HSED,  nea)
-      call read_gr3_prop('VSED', VSED,  sp%VSED,  nea)
-      call read_gr3_prop('VPMIX',VPMIX, sp%VPMIX, nea)
-      call read_gr3_prop('VDMIX',VDMIX, sp%VDMIX, nea)
-      if(ierosion==1) call read_gr3_prop('etau', etau,  sp%etau,  nea)
-      do i=1,3
-        write(pid,'(i1)') i
-        call read_gr3_prop('FRPOP_'//trim(adjustl(pid)), FRPOP(i), sp%FRPOP(:,i), nea)
-        call read_gr3_prop('FRPON_'//trim(adjustl(pid)), FRPON(i), sp%FRPON(:,i), nea) 
-        call read_gr3_prop('FRPOC_'//trim(adjustl(pid)), FRPOC(i), sp%FRPOC(:,i), nea)
-      enddo
       call icm_sfm_init
     endif
 
@@ -371,7 +333,7 @@ end subroutine read_icm_param
     !  if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
     !  if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
     !  if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
-    !  if(sBMP(1)<=0.or.sBMP(2)<=0.or.sBMP(3)<=0) call parallel_abort('read_icm_input: sBMP')
+    !  if(sMTB(1)<=0.or.sMTB(2)<=0.or.sMTB(3)<=0) call parallel_abort('read_icm_input: sMTB')
     !endif !jsav
 
     !if(jveg==1) then
@@ -381,7 +343,7 @@ end subroutine read_icm_param
     !    if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
     !    if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
     !    if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
-    !    if(vBMP(j,1)<=0.or.vBMP(j,2)<=0.or.vBMP(j,3)<=0) call parallel_abort('read_icm_input: vBMP')
+    !    if(vMTB(j,1)<=0.or.vMTB(j,2)<=0.or.vMTB(j,3)<=0) call parallel_abort('read_icm_input: vMTB')
     !  enddo !j::veg species
     !endif !jveg
 
@@ -394,7 +356,7 @@ subroutine update_icm_input(time)
 !note: npt=1/np/ne; need to define mapping data if npt=other number 
 !---------------------------------------------------------------------
   use schism_glbl,only : rkind,dt,np_global,ne_global,i34,nea,elnode, &
-                       & in_dir,len_in_dir,iplg,ielg
+                       & in_dir,len_in_dir,iplg,ielg,iegl
   use schism_msgp, only : myrank,comm,parallel_abort,itype,rtype
   use netcdf
   use icm_mod
@@ -402,8 +364,9 @@ subroutine update_icm_input(time)
   real(rkind),intent(in) :: time
 
   !local variables
-  integer :: i,j,k,n,m,ie,mm,itmp,irec,istat,jof(3),ntr(3)
-  integer,pointer :: ncid,npt
+  integer :: i,j,k,n,m,ie,itmp,irec,istat,varid,jof(3),ntr(3)
+  integer :: ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
+  integer,pointer :: ncid,npt,elem(:)
   real(rkind):: mtime(2),ath(max(np_global,ne_global))
   real(rkind),pointer :: mdt,bth(:,:)
   character(len=20) :: fnames(3)
@@ -412,20 +375,51 @@ subroutine update_icm_input(time)
   jof=(/iRad,isflux,ibflux/); ntr=(/1,ntrs_icm,ntrs_icm/)
   do n=1,3
     if(jof(n)==0) cycle
-    ncid=>ncid_icm(n); npt=>npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n)
+    ncid=>ncid_icm(n); npt=>npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n); elem=>elem_in(:,n)
 
     !open file
     if(myrank==0.and.mtime(2)<0.d0) then 
       j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
-      j=nf90_inq_dimid(ncid,'npt',mm); j=nf90_inquire_dimension(ncid,mm,len=npt)
-      j=nf90_inq_varid(ncid, "time_step",mm); j=nf90_get_var(ncid,mm,mdt)
-      if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
-      if(n==2.or.n==3) then 
-        j=nf90_inq_dimid(ncid,'ntracer',mm); j=nf90_inquire_dimension(ncid,mm,len=itmp)
-        if(itmp/=ntr(n)) call parallel_abort(trim(adjustl(fnames(n)))//': wrong ntracer')
+      if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
+
+      !determine npt
+      j=nf90_inq_varid(ncid,"time_series",varid)
+      if(j/=NF90_NOERR) call parallel_abort('wrong varid in ICM: '//trim(adjustl(fnames(n))))
+      j=nf90_inquire_variable(ncid,varid,ndims=ndim)
+      if(j/=NF90_NOERR) call parallel_abort('wrong ndim in ICM: '//trim(adjustl(fnames(n))))
+      if((n==1.and.ndim/=1.and.ndim/=2).or.(n/=1.and.ndim/=3)) call parallel_abort('wrong ndim (2):'//trim(adjustl(fnames(n))))
+      j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+      if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM: '//trim(adjustl(fnames(n))))
+      j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+      if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM: '//trim(adjustl(fnames(n))))
+      if(n==1.and.ndim==1) npt=1  !in case ICM_rad is just 1D variable
+      if(npt<1.or.npt>max(np_global,ne_global)) call parallel_abort(trim(adjustl(fnames(n)))//': npt<1 or npt>max(np,ne)')
+      if(n==2.or.n==3) then !check ntracer
+        j=nf90_inquire_dimension(ncid,dimid(2),len=itmp)
+        if(itmp/=ntr(n)) call parallel_abort('wrong ntr in ICM: '//trim(adjustl(fnames(n))))
       endif
+      if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !specify elements with inputs
+        j=nf90_inq_varid(ncid,"elements",varid)
+        j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:1))
+        if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM (2): '//trim(adjustl(fnames(n))))
+        j=nf90_inquire_dimension(ncid,dimid(1),len=itmp)
+        if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM (2): '//trim(adjustl(fnames(n))))
+        if(itmp/=npt) call parallel_abort('elements/=npt in ICM: '//trim(adjustl(fnames(n))))
+        j=nf90_get_var(ncid,varid,elem_gb(1:npt), (/1/),(/npt/))
+      endif
+      j=nf90_inq_varid(ncid, "time_step",varid); j=nf90_get_var(ncid,varid,mdt) 
+      if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
     endif !myrank=0
-    if(mtime(2)<0.d0) call mpi_bcast(npt,1,itype,0,comm,istat)
+    if(mtime(2)<0.d0) then
+      call mpi_bcast(npt,1,itype,0,comm,istat)
+      if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !mapping elements
+        call mpi_bcast(elem_gb(1:npt),npt,itype,0,comm,istat)
+        elem=0
+        do ie=1,npt
+          if(iegl(elem_gb(ie))%rank==myrank) elem(iegl(elem_gb(ie))%id)=ie
+        enddo !ie
+      endif !npt/=1
+    endif !mtime
     
     !update record
     if(mtime(2)<time) then
@@ -443,12 +437,15 @@ subroutine update_icm_input(time)
         !read new record
         if(myrank==0) then
           irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt
-          j=nf90_inq_varid(ncid, "time_series",mm)
+          j=nf90_inq_varid(ncid, "time_series",varid)
+          j=nf90_inquire_variable(ncid,varid,ndims=ndim)
           if(n==1) then
-            j=nf90_get_var(ncid,mm,ath(1:npt), (/1,irec+1/),(/npt,1/))
+            if(ndim==1) j=nf90_get_var(ncid,varid,ath(1:npt), (/irec+1/),(/1/))
+            if(ndim==2) j=nf90_get_var(ncid,varid,ath(1:npt), (/1,irec+1/),(/npt,1/))
           else
-            j=nf90_get_var(ncid,mm,ath(1:npt), (/1,m,irec+1/),(/npt,1,1/))
+            j=nf90_get_var(ncid,varid,ath(1:npt), (/1,m,irec+1/),(/npt,1,1/))
           endif
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': wrong time series')
         endif
 
         !bcast record
@@ -463,11 +460,11 @@ subroutine update_icm_input(time)
           elseif(npt==np_global) then !node based
             do i=1,i34(ie); bth(ie,2)=bth(ie,2)+ath(iplg(elnode(i,ie)))/dble(i34(ie)); enddo
           else
-            call parallel_abort(trim(adjustl(fnames(n)))//': need to define the mapping element')
-          endif
+            if(elem(ie)/=0) bth(ie,2)=ath(elem(ie))
+          endif !npt
         enddo !ie
       enddo !m 
-      call mpi_bcast(mtime,2,rtype,0,comm,istat); time_icm(:,2)=mtime
+      call mpi_bcast(mtime,2,rtype,0,comm,istat); time_icm(:,n)=mtime
     endif !mtime
   enddo !n
 
@@ -512,42 +509,134 @@ subroutine icm_vars_init
   !--------------------------------------------------------------------------------
   !allocate ICM arrays and initialize
   !--------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs
-  use schism_msgp, only : parallel_abort,myrank
+  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs,in_dir,len_in_dir,np_global, &
+                        & ne_global,ielg,iplg,i34,elnode
+  use schism_msgp, only : parallel_abort,myrank,comm,itype,rtype
+  use netcdf
   use icm_mod
   use misc_modules
   implicit none
 
   !local variables
-  integer :: istat
+  integer :: istat,i,j,k,ie,m,n,ip,ncid,varid,npt,nsp,ndim,dimid(3),dims(3)
+  real(rkind) :: data0,swild(max(np_global,ne_global))
+  character(len=15),allocatable :: pname(:)
+  character(len=20) :: fname
+  type(icm_spatial_param),pointer :: p
 
   !---------------------------------------------------------------------------
-  !spatially varying parameter
+  !to add a spatially varying parameter
+  !  1). append parameter name in pname array
+  !  2). make links by piointing p/p1/p2 for scalar/1D/2D variable
   !---------------------------------------------------------------------------
-  allocate(wp%tss2c(nea),wp%WSSED(nea),wp%KC0(nea,3),wp%KP0(nea,3),wp%KPalg(nea,3),&
-    & wp%WSPOM(nea,2),wp%WSPBS(nea,3),wp%Ke0(nea),wp%WRea(nea),wp%GPM(nea,3), &
-    & wp%TGP(nea,3),wp%PRP(nea,3),wp%c2chl(nea,3),wp%KTGP(nea,3,2),wp%WSSEDn(nea), &
-    & wp%WSPOMn(nea,2),wp%WSPBSn(nea,3),stat=istat)
-  if(istat/=0) call parallel_abort('Failed in alloc. spatially varying parameter')
+  !define spatial varying parameters 
+  fname='ICM_param.nc';  nsp=100 !add all parameters ; change sp(m)%p1=> sp(m)%p
+  allocate(pname(nsp),sp(nsp),stat=istat)
+  if(istat/=0) call parallel_abort('Failed in alloc. pname')
 
-  wp%tss2c=0.0;  wp%WSSED=0.0; wp%KC0=0.0;    wp%KP0=0.0;    wp%KPalg=0.0; wp%WSPOM=0.0
-  wp%WSPBS=0.0;  wp%Ke0=0.0;   wp%WRea=0.0;   wp%PRP=0.0;    wp%GPM=0.0;   wp%TGP=0.0
-  wp%c2chl=0.0;  wp%KTGP=0.0;  wp%WSSEDn=0.0; wp%WSPOMn=0.0; wp%WSPBSn=0.0
+  m=0
+  !global and core modules
+  pname(1:57)=(/'KeC   ','KeS   ','KeSalt','Ke0   ','tss2c ','WSSEDn','WSPOMn','WSPBSn','alpha ','GPM   ', &
+              & 'TGP   ','PRR   ','MTB   ','TMT   ','KTMT  ','WSPBS ','KTGP  ','WSPOM ','WSSED ','FCP   ', &
+              & 'FNP   ','FPP   ','FCM   ','FNM   ','FPM   ','Nit   ','TNit  ','KTNit ','KhDOnit','KhNH4nit',&
+          & 'KhDOox','KhNO3denit','KC0   ','KN0   ','KP0   ','KCalg ','KNalg ','KPalg ','TRM   ','KTRM  ', &
+              & 'KCD   ','TRCOD ','KTRCOD','KhCOD ','KhN   ','KhP   ','KhSal ','c2chl ','n2c   ','p2c   ', &
+              & 'KhDO  ','o2c   ','o2n   ','dn2c  ','an2c  ','KPO4p ','WRea '/)
+  sp(m+1)%p=>KeC;    sp(m+2)%p=>KeS;        sp(m+3)%p=>KeSalt;  sp(m+4)%p=>Ke0;     sp(m+5)%p=>tss2c;    m=m+5
+  sp(m+1)%p=>WSSEDn; sp(m+2)%p1=>WSPOMn;    sp(m+3)%p1=>WSPBSn; sp(m+4)%p1=>alpha;  sp(m+5)%p1=>GPM;     m=m+5
+  sp(m+1)%p1=>TGP;   sp(m+2)%p1=>PRR;       sp(m+3)%p1=>MTB;    sp(m+4)%p1=>TMT;    sp(m+5)%p1=>KTMT;    m=m+5
+  sp(m+1)%p1=>WSPBS; sp(m+2)%p2=>KTGP;      sp(m+3)%p1=>WSPOM;  sp(m+4)%p=>WSSED;   sp(m+5)%p2=>FCP;     m=m+5
+  sp(m+1)%p1=>FNP;   sp(m+2)%p1=>FPP;       sp(m+3)%p1=>FCM;    sp(m+4)%p2=>FNM;    sp(m+5)%p2=>FPM;     m=m+5
+  sp(m+1)%p=>Nit;    sp(m+2)%p=>TNit;       sp(m+3)%p1=>KTNit;  sp(m+4)%p=>KhDOnit; sp(m+5)%p=>KhNH4nit; m=m+5
+  sp(m+1)%p=>KhDOox; sp(m+2)%p=>KhNO3denit; sp(m+3)%p1=>KC0;    sp(m+4)%p1=>KN0;    sp(m+5)%p1=>KP0;     m=m+5
+  sp(m+1)%p1=>KCalg; sp(m+2)%p1=>KNalg;     sp(m+3)%p1=>KPalg;  sp(m+4)%p1=>TRM;    sp(m+5)%p1=>KTRM;    m=m+5
+  sp(m+1)%p=>KCD;    sp(m+2)%p=>TRCOD;      sp(m+3)%p=>KTRCOD;  sp(m+4)%p=>KhCOD;   sp(m+5)%p1=>KhN;     m=m+5
+  sp(m+1)%p1=>KhP;   sp(m+2)%p1=>KhSal;     sp(m+3)%p1=>c2chl;  sp(m+4)%p1=>n2c;    sp(m+5)%p1=>p2c;     m=m+5
+  sp(m+1)%p1=>KhDO;  sp(m+2)%p=>o2c;        sp(m+3)%p=>o2n;     sp(m+4)%p=>dn2c;    sp(m+5)%p=>an2c;     m=m+5
+  sp(m+1)%p=>KPO4p;  sp(m+2)%p=>WRea;       m=m+2
+
+  !SFM modules
+  pname((m+1):(m+8))=(/'HSED  ','VSED  ','VPMIX ','VDMIX ','etau  ','FRPOP ','FRPON ','FRPOC '/)
+  sp(m+1)%p=>HSED;   sp(m+2)%p=>VSED;   sp(m+3)%p=>VPMIX;  sp(m+4)%p=>VDMIX; sp(m+5)%p=>etau;   m=m+5
+  sp(m+1)%p1=>FRPOP; sp(m+2)%p1=>FRPON; sp(m+3)%p1=>FRPOC; m=m+3
+
+  !read spatially varying parameters
+  do m=1,nsp
+    p=>sp(m)
+    !get dimension info. about parameter
+    p%dims=(/1,1/)
+    if(associated(p%p)) then 
+      p%ndim=1; p%data0(1)=p%p
+    elseif(associated(p%p1)) then 
+      p%ndim=2; p%data0(1:size(p%p1))=p%p1; p%dims(1)=size(p%p1)
+    elseif(associated(p%p2)) then 
+      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/n/)); p%dims=shape(p%p2)
+    else
+      cycle
+    endif
+    p%varname=trim(adjustl(pname(m)))
+    allocate(p%istat(p%dims(1),p%dims(2))); p%istat=0
+
+    !read parameter data
+    ip=0
+    do i=1,p%dims(2)
+      do k=1,p%dims(1)
+        ip=ip+1; data0=p%data0(ip); npt=0
+        if(abs(data0+999.d0)>1.d-6.and.abs(data0+9999.d0)>1.d-6) cycle
+        if(.not.allocated(p%data)) allocate(p%data(nea,p%dims(1),p%dims(2)))
+        p%istat(k,i)=1
+
+        !read value on myrank=0, then bcast
+        if(myrank==0) then
+          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fname))//': open')
+          j=nf90_inq_varid(ncid,trim(adjustl(p%varname)),varid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong varid' )
+          j=nf90_inquire_variable(ncid,varid,ndims=ndim) 
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong ndim')
+          j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong dimid')
+          j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          if(npt/=np_global.and.npt/=ne_global) call parallel_abort(trim(adjustl(p%varname))//': npt/=ne,np' ) 
+          if(p%ndim==1) j=nf90_get_var(ncid,varid,swild(1:npt), (/1/),(/npt/)) 
+          if(p%ndim==2) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k/),(/npt,1/)) 
+          if(p%ndim==3) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k,i/),(/npt,1,1/)) 
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong in read value')
+          j=nf90_close(ncid)
+        endif
+        call mpi_bcast(npt,1,itype,0,comm,istat)
+        call mpi_bcast(swild(1:npt),npt,rtype,0,comm,istat)
+
+        !get parameter value for each rank
+        do ie=1,nea
+          p%data(ie,k,i)=0.d0
+          if(npt==ne_global) then
+            p%data(ie,k,i)=swild(ielg(ie))
+          elseif(npt==np_global) then
+            do n=1,i34(ie); p%data(ie,k,i)=p%data(ie,k,i)+swild(iplg(elnode(n,ie)))/dble(i34(ie)); enddo
+          else
+            call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          endif
+        enddo !ie
+
+      enddo !k
+    enddo !i
+  enddo !m
 
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(temp(nvrt),eroH2S(nea),eroLPOC(nea),eroRPOC(nea),stat=istat) !erosion
+  allocate(DIN(nvrt),temp(nvrt),eroH2S(nea),eroLPOC(nea),eroRPOC(nea),stat=istat) !erosion
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  temp=0.0;  eroH2S=0.0;  eroLPOC=0.0; eroRPOC=0.0
+  DIN=0.0; temp=0.0;  eroH2S=0.0;  eroLPOC=0.0; eroRPOC=0.0
 
   !-------------------------------------------------------------------------------
   !pH variables
   !-------------------------------------------------------------------------------
   if(iPh==1) then
     allocate(iphgb(nea),ph_nudge(nea),ph_nudge_nd(npa), &
-      ! TIC(nvrt,2),ALK(nvrt,2),CACO3(nvrt,2),CA(nvrt,2),PH(nvrt), CAsat(nvrt),CO2(nvrt),
       & TIC_el(nvrt,nea),ALK_el(nvrt,nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. pH variables')
 
@@ -590,12 +679,12 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(sp%etau(nea),SED_eroH2S(nea),SED_eroLPOC(nea),SED_eroRPOC(nea), &
+  allocate(SED_eroH2S(nea),SED_eroLPOC(nea),SED_eroRPOC(nea), &
     & SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
     & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
     & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea),SSI(nea), &
-    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),sp%HSED(nea),sp%VSED(nea),sp%VPMIX(nea),sp%VDMIX(nea), &
-    & sp%FRPOP(nea,3),sp%FRPON(nea,3),sp%FRPOC(nea,3), flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
+    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),&
+    & flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
     & CTEMP(nea),CPIP(nea),CNO3(nea),CNH4(nea),CCH4(nea),CSO4(nea),CPOS(nea),CH2S(nea),CPOP(nea,3),CPON(nea,3),CPOC(nea,3), &
     & CH4T2TM1S(nea),CH41TM1S(nea),SO4T2TM1S(nea),BENSTR1S(nea),BFORMAXS(nea),ISWBENS(nea),POP1TM1S(nea), &
     & POP2TM1S(nea),POP3TM1S(nea),PON1TM1S(nea),PON2TM1S(nea),PON3TM1S(nea),POC1TM1S(nea),POC2TM1S(nea), &
@@ -606,12 +695,12 @@ subroutine icm_vars_init
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  sp%etau=0.0; SED_eroH2S=0.0;  SED_eroLPOC=0.0; SED_eroRPOC=0.0; 
+  SED_eroH2S=0.0;  SED_eroLPOC=0.0; SED_eroRPOC=0.0; 
   SED_BL=0.0;     ZD=0.0;          SED_B=0.0;       SED_LPOP=0.0;    SED_RPOP=0.0;   SED_LPON=0.0;   SED_RPON=0.0;
   SED_LPOC=0.0;   SED_RPOC=0.0;    SED_TSS=0.0;     SED_SU=0.0;      SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;
   SED_SA=0.0;     SED_DO=0.0;      SED_COD=0.0;     SED_SALT=0.0;    SED_T=0.0;      SSI=0.0;
-  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      sp%HSED=0.0;    sp%VSED=0.0;    sp%VPMIX=0.0;   sp%VDMIX=0.0;
-  sp%FRPOP=0.0;  sp%FRPON=0.0;     sp%FRPOC=0.0;    flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
+  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      
+  flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
   CTEMP=0.0;      CPIP=0.0;        CNO3=0.0;        CH2S=0.0;        CNH4=0.0;       CCH4=0.0;       CSO4=0.0;       CPOS=0.0;      CPOP=0.0;      CPON=0.0; CPOC=0.0;
   CH4T2TM1S=0.0;  CH41TM1S=0.0;    SO4T2TM1S=0.0;   BENSTR1S=0.0;    BFORMAXS=0.0;   ISWBENS=0.0;    POP1TM1S=0.0;
   POP2TM1S=0.0;   POP3TM1S=0.0;    PON1TM1S=0.0;    PON2TM1S=0.0;    PON3TM1S=0.0;   POC1TM1S=0.0;   POC2TM1S=0.0;
@@ -635,7 +724,8 @@ subroutine update_vars(id,usf,wspd)
   real(rkind),intent(out) :: usf,wspd
 
   !local variable
-  integer :: j,icount,jsj
+  integer :: i,j,k,m,icount,jsj
+  type(icm_spatial_param),pointer :: p
 
   !wind speed, surface velocity
   wspd=sum(sqrt(windx(elnode(1:i34(id),id))**2.d0+windy(elnode(1:i34(id),id))**2.d0))/dble(i34(id))
@@ -671,33 +761,18 @@ subroutine update_vars(id,usf,wspd)
   vleaf_NH4(id,:)=0; vleaf_PO4(id,:)=0; vroot_POC(id,:)=0
   vroot_PON(id,:)=0; vroot_POP(id,:)=0; vroot_DOX(id,:)=0
 
-  !parameters
-  GPM=wp%GPM(id,:);     TGP=wp%TGP(id,:);       KTGP=wp%KTGP(id,:,:); PRP=wp%PRP(id,:)
-  WSSED=wp%WSSED(id);   WSPOM=wp%WSPOM(id,:);   WSPBS=wp%WSPBS(id,:);
-  WSSEDn=wp%WSSEDn(id); WSPOMn=wp%WSPOMn(id,:); WSPBSn=wp%WSPBSn(id,:)
-  KC0=wp%KC0(id,:);     KP0=wp%KP0(id,:);       KPalg=wp%KPalg(id,:)
-  c2chl=wp%c2chl(id,:); WRea=wp%WRea(id);       Ke0=wp%Ke0(id);   tss2c=wp%tss2c(id)
+  !spatial varying parameters
+  do m=1,size(sp)
+    p=>sp(m) 
+    if(p.ndim==0) cycle
+    do i=1,p%dims(2) 
+      do k=1,p%dims(1)
+        if(p%istat(k,i)==0) cycle
+        if(p%ndim==1) p%p=p%data(id,1,1) 
+        if(p%ndim==2) p%p1(k)=p%data(id,k,1) 
+        if(p%ndim==3) p%p2(k,i)=p%data(id,k,i) 
+      enddo !k
+    enddo !i
+  enddo !m
 
 end subroutine update_vars
-
-subroutine icm_finalize()
-!--------------------------------------------------------------------
-!free memory assocated with pointers, to aviod memory leak
-!--------------------------------------------------------------------
-  use icm_mod
-  deallocate(wp%Ke0);  deallocate(wp%tss2c);deallocate(wp%WSSED);deallocate(wp%WSSEDn);
-  deallocate(wp%WRea); deallocate(wp%GPM);  deallocate(wp%TGP);  deallocate(wp%PRP)
-  deallocate(wp%c2chl);deallocate(wp%WSPOM);deallocate(wp%WSPBS);deallocate(wp%WSPOMn)
-  deallocate(wp%WSPBSn);deallocate(wp%KC0); deallocate(wp%KP0);  deallocate(wp%KPalg);
-  deallocate(wp%KTGP)
-  nullify(wp%Ke0);     nullify(wp%tss2c);   nullify(wp%WSSED);   nullify(wp%WSSEDn);
-  nullify(wp%WRea);    nullify(wp%GPM);     nullify(wp%TGP);     nullify(wp%PRP);
-  nullify(wp%c2chl);   nullify(wp%WSPOM);   nullify(wp%WSPBS);   nullify(wp%WSPOMn);
-  nullify(wp%WSPBSn);  nullify(wp%KC0);     nullify(wp%KP0);     nullify(wp%KPalg);
-  nullify(wp%KTGP);
-
-  deallocate(sp%HSED); deallocate(sp%VSED);
-  nullify(sp%HSED); nullify(sp%VSED)
-
-end subroutine icm_finalize
-
