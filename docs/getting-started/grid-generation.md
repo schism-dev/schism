@@ -128,7 +128,11 @@ There are a few approaches to resolve this issue. First, make sure the channel i
 !!!important "Dredging open boundary"
     A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an entire open boundary segment to become dry at ANY time (while drying at individual nodes is fine). Therefore you need to make sure the depths there are deep enough compared to expected tidal range. An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.
 
-    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if any of its surrounding elements becomes dry. As a result, you need to impose a minimum depth a couple of rows of elements into the domain, not just at open boundary nodes. This ensures that water can come into the domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries.
+    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding 
+elements become dry. As a result, you may need to impose a minimum depth a couple of rows of 
+elements into the domain, not just at open boundary nodes. This ensures that water can come into the 
+domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries
+ or interior nodes.
 
     If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location. Another robust option is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code.
 
