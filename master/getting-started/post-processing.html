@@ -418,15 +418,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#one-way-nesting" class="md-nav__link">
-    One-way nesting
+  <a href="#extraction" class="md-nav__link">
+    Extraction
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction" class="md-nav__link">
-    Extraction
+  <a href="#one-way-nesting" class="md-nav__link">
+    One-way nesting
   </a>
   
 </li>
@@ -1236,6 +1236,13 @@ all available outputs during or after the run. Use these if you invoked OLDIO.</
 <p><code>combine_hotstart7.f90</code> is used combine process-specific hotstart outputs (<code>outputs/hotstart_0*.nc</code>)
  into <code>hotstart.nc</code>. This is required even if you used scribed I/O.</p>
 <p><code>combine_gr3.f90</code> is used to combine process-specific <code>maxelev_*</code> and <code>maxdahv_*</code> (ASCII) into <code>maxelev.gr3</code> or <code>maxdahv.gr3</code>.</p>
+<h2 id="extraction">Extraction<a class="headerlink" href="#extraction" title="Permanent link">&para;</a></h2>
+<p><code>read_output*.f90</code>: This group of scripts read multiple nc4 outputs and extract time series of a point, 
+a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
+format as well as how to do your own processing. You may start from <code>read_output*_xyz.f90</code>. 
+After you are familiar with these scripts, you can easily customize them for your own purpose.</p>
+<p>Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
+ E.g., if you use scribe I/O, the FORTRAN extraction scripts are <code>read_output10*.f90</code>.</p>
 <h2 id="one-way-nesting">One-way nesting<a class="headerlink" href="#one-way-nesting" title="Permanent link">&para;</a></h2>
 <p><code>OneWayNestScripts/interpolate_variables7.f90</code>: The purpose of this script is to generate <code>elev2D.th.nc</code>, 
 <code>SAL_3D.th.nc</code>, <code>TEM_3D.th.nc</code> and/or <code>uv3D.th.nc</code> from a large-domain run to be used in a small-domain run. 
@@ -1247,13 +1254,6 @@ can be generated using e.g. HYCOM.</p>
 <li>use the new *[23]D.th.nc as inputs for the small-domain run.</li>
 </ol>
 <p>Note that <code>interpolate_variables.in</code> in the directory are sample inputs for the script. A common mistake is that the parent elements of some open boundary nodes in <code>fg.gr3</code> (i.e. ‘small-domain’ hgrid) become dry and the script then fails to find a wet element to interpolate from. So make sure all open boundary nodes in <code>fg.gr3</code> are located in wet region of <code>bg.gr3</code>; this is especially important for those nodes near the coast. You can use xmgredit5 to ascertain this. If necessary, modify <code>fg.gr3</code> by moving some nodes to deeper depths.</p>
-<h2 id="extraction">Extraction<a class="headerlink" href="#extraction" title="Permanent link">&para;</a></h2>
-<p><code>read_output*.f90</code>: This group of scripts read multiple nc4 outputs and extract time series of a point, 
-a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
-format as well as how to do your own processing. You may start from <code>read_output*_xyz.f90</code>. 
-After you are familiar with these scripts, you can easily customize them for your own purpose.</p>
-<p>Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
- E.g., if you use scribe I/O, the FORTRAN extraction scripts are <code>read_output10*.f90</code>.</p>
 
               
             </article>
