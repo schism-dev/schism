@@ -3,10 +3,7 @@ Your system must have a FORTRAN and C compiler (and MPI wrapper like mpif90, mpi
 Two build system is currenlty available - GNU Make and Cmake
 
 ## GNU Make
-You need the following two directories for gnu make. `src/` where the source code resides and 
-the `Makefile` which is the main makefile. In general this `src/Makefile` should not be changed. 
-In `mk/`, there are other makefiles `Make.defs.*` which can be used to provide system specific information (e.g., name
- of compilers). 
+You need the following two directories for gnu make. `src/` where the sourcecode resides and the `Makefile` which is the main makefile. In general this `src/Makefile` should not be changed. In `mk`, there are other makefiles `Make.defs.*` which can be used to provide system specific information. 
 
 You need a `mk/Make.defs.local` file for compilation. To help you design this file, we have put `Make.defs.*` which are from various clusters around the world as well as common linux operating systems. You should copy/link one of these to `Make.defs.local`. For example, if your MPI compiler is Intel based ifort, you may try - 
 
@@ -14,17 +11,11 @@ You need a `mk/Make.defs.local` file for compilation. To help you design this fi
 # Copy
 cp Make.defs.bora Make.defs.myown
 
-# and then link
+# or link
 ln -sf Make.defs.myown Make.defs.local
 ```
 
-Then you need to edit `Make.defs.local` for e.g. the MPI compiler name, path names for `netcdf` library 
-(v4.4 and above preferred) on your local cluster (sometimes you may also need to add `FORTRAN` support 
-for netcdf, e.g. `–lnetcdff`), and name of the executable (`EXEC`). Also the graph partitioning 
-lib ParMETIS is compiled each time together with the SCHISM code, and you may need to update the MPI 
-C compiler names in `src/ParMetis-*` (consult also `INSTALL` inside the `ParMETIS` directory). 
-Lastly, turn on/off modules in `include_modules` (note that `TVD_LIM` should always have a valid value). 
-Make sure `mk/sfmakedepend.pl` and `mk/cull_depends.py` are executable (otherwise make them executable with `chmod +x`).
+Then you need to edit `Make.defs.local` for e.g. the MPI compiler name, path names for `netcdf` library (v4.4 and above preferred) on your local cluster (sometimes you may also need to add `FORTRAN` support for netcdf, e.g. `–lnetcdff`), and name of the executable (`EXEC`). Also the graph partitioning lib ParMETIS is compiled each time together with the SCHISM code, and you may need to update the MPI C compiler names in `src/ParMetis-*` (consult also `INSTALL` inside the `ParMETIS` directory). Lastly, turn on/off modules in `include_modules` (note that `TVD_LIM` should always have a valid value). Make sure `mk/sfmakedepend.pl` and `mk/cull_depends.py` are executable (otherwise make them executable with `chmod +x`).
 
 After all of these are done - 
 
@@ -34,30 +25,24 @@ make clean
 make pschism
 ```
 
-You might get some errors if you did not use git to clone so the make cannot find the hash information; 
-ignore it and proceed in making. The final name of executable has the cluster name and also additional suffixes
- if you turn on modules: pschism_* (note that you get a preview of this name when you do make clean
- so you know which modules you have turned on).
+You might get some errors if you did not use git to clone so the make cannot find the hash information; ignore it and proceed in making. The final name of executable has the cluster name and also additional suffixes if you turn on modules: pschism_* (note that you get a preview of this name when you do make clean so you know which modules you have turned on).
 
 Note: the Makefile will automatically invoke `Core/gen_version.py`, which will generate `Core/schism_version.F90`, needed for querying the hash/version.
 
 ## Cmake
-The cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.
+Alternatively, the cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.
 
 1. `SCHISM.local.build`: used to toggle on/off optional modules (similar to include_modules used in make).
  `TVD_LIM` should always have a valid value, but all other 'modules' are usually turned off for pure hydrodynamic 
   applications. 
-  `NO_PARMETIS`: you can bypass ParMETIS lib by providing instead a domain partitioning map (`partition.prop`
+  `NO_PARMETIS`: you can bypass ParMETIS lib and provide a domain partitioning map (`partition.prop`
   which is identical to the output from ParMETIS `global_to_local.prop`) at runtime. 
   `OLDIO`: this swtich controls the global outputs. We have implemented asynchronous I/O (aka 'scribed' I/O)
   where combined global variables are outputted by dedicated scribes cores. To use this option, `OLDIO` should
   be off, and the user needs to specify number of scribe cores at command line. See 'Running the model' for
   more details. If `OLDIO` is turned on, previous I/O mode (i.e. outputs per MPI process) is used and 
   the user needs to use post-processing scripts to combine outputs;
-2. `SCHISM.local.cluster_name`: similar to Make.defs.local, this file specifies the most important environment 
-  variables like name/path of compiler, netcdf library etc. In general, cmake is quite adept at 
-  inferring some of these variables but sometimes you might need to overwrite the `defaults` in this file. 
-  You can start from an existing file for a similar cluster e.g. `cp –L SCHISM.local.whirlwind SCHISM.local.myown`
+2. `SCHISM.local.cluster_name`: similar to Make.defs.local, this file specifies the most important environment variables like name/path of compiler, netcdf library etc. In general, cmake is quite adept at inferring some of these variables but sometimes you might need to overwrite the `defaults` in this file. You can start from an existing file for a similar cluster e.g. `cp –L SCHISM.local.whirlwind SCHISM.local.myown`
 
 Once these two files are set, run - 
 
@@ -67,11 +52,10 @@ cd ../build; rm -rf * # Clean old cache
 cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.myown ../src/
 ```
 
-The cmake is essentially a pre-processor for make, and it creates cache files (e.g. build/ CMakeCache.txt, 
-where you can inspect all env variables). After cmake is done, make can be executed in parallel or in serial mode.
+The cmake is essentially a pre-processor for make, and it creates cache files (e.g. build/ CMakeCache.txt, where you can inspect all env variables). After cmake is done, make can be executed in parallel or in serial mode.
 
 ```bash
-make -j8 pschism # efficient parallel build; you can replace "8" with number of processes you want
+make -j8 pschism # efficient parallel build, replace 8 with number of process you want
 # or
 make VERBOSE=1 pschism # serial build with a lot of messages
 ```

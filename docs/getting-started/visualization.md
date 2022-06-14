@@ -7,7 +7,7 @@ The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs 
 [more coming]
 
 ## Visualization with VisIT
-The most comprehensive way to visualize SCHISM nc4 outputs is via VisIT.
+The easiest way to visualize SCHISM nc4 outputs is via VisIT.
 
 Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'.
  At runtime, the user needs to specify number of scribe cores (= # of 3D outputs variables 
