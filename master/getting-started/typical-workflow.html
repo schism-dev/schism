@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.4">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.5">
     
     
       
@@ -1252,7 +1252,7 @@
 <li>Check the following things immediately after a grid is generated (via ACE/xmgredit5)<ul>
 <li><span class="arithmatex">\(CFL&gt;0.4\)</span> (at least in ‘wet’ areas). Note that you need to do this check in map projection (meters), not in lon/lat!</li>
 <li>Minimum area: make sure there are no negative elements.</li>
-<li>Maximum skewness for triangle: use a generous limit of 13, mainly to find excessive "collapsed" elements.</li>
+<li>Maximum skewness for triangle: use a generous threshold of 13, mainly to find excessive "collapsed" elements.</li>
 <li>Quad quality: use 0.5 (ratio of min and max internal angles) as threshold.</li>
 </ul>
 </li>
@@ -1269,7 +1269,8 @@
 <h2 id="2d-model-calibration">2D model: calibration<a class="headerlink" href="#2d-model-calibration" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Start from simple and then build up complexity. Simplest may be a tidal run with a constant Manning’s <span class="arithmatex">\(n\)</span>.</li>
-<li>Remember most of the outputs are on a per-core basis and need to be combined using the utility scripts; e.g., for global outputs (schout*.nc), use <code>combine_output11.f90</code> to get global netcdf outputs that can be visualized by VisIT; for hotstart, use <code>combine_hotstart7.f90</code>.</li>
+<li>Remember most outputs are on a per-core basis if you use OLDIO and need to be combined using the 
+ utility scripts; e.g., for global outputs (schout*.nc), use <code>combine_output11.f90</code> to get global netcdf outputs that can be visualized by VisIT; for hotstart, use <code>combine_hotstart7.f90</code>.</li>
 <li>Examine surface velocity in animation mode to find potential issues (e.g. blockage of channels)</li>
 <li>Negative river flow values for inflow</li>
 <li>Check all inputs: ‘junk in, junk out’. There are several pre-processing scripts for this purpose. Xmgredit5 or SMS is very useful also. </li>
@@ -1362,7 +1363,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.f758a944.min.js"></script>
+      <script src="../assets/javascripts/bundle.431f3d41.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       

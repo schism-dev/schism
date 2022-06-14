@@ -9,7 +9,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.4">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.5">
     
     
       
@@ -1242,11 +1242,15 @@
 
   <h1>Grid generation</h1>
 
-<p>UG modelling starts with grid generation, and the latter is often an <strong>iterative</strong> process. Here lies the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).</p>
+<p>UG modelling starts with grid generation, and the latter is often an <strong>iterative</strong> process. Here lies
+ the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come 
+a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever 
+higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>We will only cover SCHISM specific aspects of gridgen using SMS <a href="https://aquaveo.com">aquaveo.com</a> in this chapter; you are referred to schism.wiki for other info related to DEM preparation etc. Please also refer to <a href="http://ccrm.vims.edu/yinglong/wiki_files/Wood_MScThesis_2012-SMS-WMS-Chesapeake&amp;DelawareBays-Grid.pdf">Dr. Wood’s thesis</a> for some insight info on using SMS.</p>
+<p>We will only cover SCHISM specific aspects of gridgen using <a href="https://aquaveo.com">SMS</a> </p>
 </div>
+<p>in this chapter; you are referred to schism.wiki for other info related to DEM preparation etc. Please also refer to <a href="http://ccrm.vims.edu/yinglong/wiki_files/Wood_MScThesis_2012-SMS-WMS-Chesapeake&amp;DelawareBays-Grid.pdf">Dr. Wood’s thesis</a> for some insight info on using SMS.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>One important point to remember is that grid generation for SCHISM always starts from raw high-resolution DEMs; do NOT use computational grids from another model as DEM.</p>
@@ -1273,7 +1277,11 @@
 <p><img alt="Operating timestep" src="../assets/timestep-range.png" width="800" /></p>
 <figcaption>Operational range for time step for a given grid size.</figcaption>
 </figure>
-<p>The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for baroclinic applications. Eqn. <span class="arithmatex">\(\ref{eq02}\)</span> is then used to calculate the coarsest grid size at each depth (in anticipation of the smallest possible <span class="arithmatex">\(\Delta t = 100s\)</span>). Table <a href="#table01">1</a> shows some examples. You can see that the inverse CFL restriction is not restrictive.</p>
+<p>The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the
+ following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for
+ baroclinic applications. Eqn. <span class="arithmatex">\(\ref{eq02}\)</span> is then used to calculate the <span class="arithmatex">\(coarsest\)</span> grid size at each depth 
+(in anticipation of the smallest possible <span class="arithmatex">\(\Delta t = 100s\)</span>). Table <a href="#table01">1</a> shows some examples. 
+You can see that the inverse CFL restriction is not restrictive.</p>
 <div id='table01'></div>
 <p><strong>Table 1. Coarsest grid resolution at sample depths, assuming a ‘worse case’ scenario of <span class="arithmatex">\(\Delta t=100s\)</span>.</strong></p>
 <table>
@@ -1326,7 +1334,7 @@
 <p>With xmgredit5, you can very easily visualize CFL for the entire grid.</p>
 <ul>
 <li><code>xmgredit5 -belel -1.e-10 hgrid.gr3</code>. <code>-belel -1.e-10</code> is used mainly to increase precision for lat/lon grid. <strong>if your hgrid.gr3 is in lat/lon, you need to first project it, as the grid size dx in lat/lon is not in meters)</strong></li>
-<li>Since the CFL inside ACE is calculated without <span class="arithmatex">\(\pmb{u}\)</span>, and a different form is used for CFL in the shallow <span class="arithmatex">\(h \lt 0.1m\)</span>, we should impose a min depth of 0.1m, where <span class="arithmatex">\(\sqrt{gh} = 1m/s\)</span>. You can do this by - </li>
+<li>Since the CFL inside ACE is calculated without <span class="arithmatex">\(\pmb{u}\)</span>, and a different form is used for CFL in the shallow <span class="arithmatex">\(h \lt 0.1m\)</span>, we should impose a min depth of 0.1m, so that <span class="arithmatex">\(\sqrt{gh} = 1m/s\)</span>. You can do this by - </li>
 <li>Edit <span class="arithmatex">\(\rightarrow\)</span> Edit over grid/regions <span class="arithmatex">\(\rightarrow\)</span> Evaluate.</li>
 <li>In the dialogue box, type <code>depth=max(depth,0.1)</code></li>
 <li>The Evaluate function is also very useful for generation of other .gr3 files needed by SCHISM</li>
@@ -1379,18 +1387,16 @@
 <p><img alt="Channel noisy velogity" src="../assets/channel-noisy-velocity.png" width="800" /></p>
 <figcaption>Noisy velocity field in shallow areas in SCHISM 3D.</figcaption>
 </figure>
-<p>There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, try to use 2D prisms in shallows. Lastly, using a larger <code>thetai</code> would also stabilize the wetting and drying fronts.</p>
+<p>There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, 
+try to use 2D prisms in shallows (so you can use large friction). Using a larger <code>thetai</code> would 
+also stabilize the wetting and drying fronts. As a last resort if you have to use 3D configuration in shallows,
+ reduce friction (or even set it to 0).</p>
 <div class="admonition important">
 <p class="admonition-title">Dredging open boundary</p>
 <p>A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an entire open boundary segment to become dry at ANY time (while drying at individual nodes is fine). Therefore you need to make sure the depths there are deep enough compared to expected tidal range. An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.</p>
-<p>Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding </p>
+<p>Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements into the domain, not just at open boundary nodes. This ensures that water can come into the domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries or interior nodes.</p>
+<p>If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (<code>imm=1</code>): start with a dredged boundary, and then gradually move the bed back to its original location. The most robust option, however, is to use point sources (<code>if_source=1</code>): in this case no open boundary is required there so wet/dry can happen without crashing the code.</p>
 </div>
-<p>elements become dry. As a result, you may need to impose a minimum depth a couple of rows of 
-elements into the domain, not just at open boundary nodes. This ensures that water can come into the 
-domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries
- or interior nodes.</p>
-<div class="highlight"><pre><span></span><code>If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location. Another robust option is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code.
-</code></pre></div>
 <h2 id="periodic-boundary-condition">Periodic boundary condition<a class="headerlink" href="#periodic-boundary-condition" title="Permanent link">&para;</a></h2>
 <p>Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in <code>Utility/Pre-Processing/periodic_grid.f90</code>.</p>
 <div class="admonition note">
@@ -1467,7 +1473,7 @@ domain without being blocked at the open boundary. Note that wet/dry is allowed 
     <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.f758a944.min.js"></script>
+      <script src="../assets/javascripts/bundle.431f3d41.min.js"></script>
       
         <script src="../javascripts/mathjax.js"></script>
       
