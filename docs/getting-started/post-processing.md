@@ -6,7 +6,8 @@ You can find some useful post-processing tools in the src/Utility directory.
 all available outputs during or after the run. Use these if you invoked OLDIO.
 
 `combine_hotstart7.f90` is used combine process-specific hotstart outputs (`outputs/hotstart_0*.nc`)
- into `hotstart.nc`. This is required even if you used scribed I/O.
+ into `hotstart.nc`. This is required even if you used scribed I/O (as hotstart outputs are still be emitted per MPI
+ process).
 
 `combine_gr3.f90` is used to combine process-specific `maxelev_*` and `maxdahv_*` (ASCII) into `maxelev.gr3` or `maxdahv.gr3`.
 

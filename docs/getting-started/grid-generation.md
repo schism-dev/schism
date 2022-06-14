@@ -1,7 +1,11 @@
-UG modelling starts with grid generation, and the latter is often an **iterative** process. Here lies the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).
+UG modelling starts with grid generation, and the latter is often an **iterative** process. Here lies
+ the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come 
+a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever 
+higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).
 
 !!!note
-    We will only cover SCHISM specific aspects of gridgen using SMS [aquaveo.com](https://aquaveo.com) in this chapter; you are referred to schism.wiki for other info related to DEM preparation etc. Please also refer to [Dr. Wood’s thesis](http://ccrm.vims.edu/yinglong/wiki_files/Wood_MScThesis_2012-SMS-WMS-Chesapeake&DelawareBays-Grid.pdf) for some insight info on using SMS.
+    We will only cover SCHISM specific aspects of gridgen using [SMS](https://aquaveo.com) 
+in this chapter; you are referred to schism.wiki for other info related to DEM preparation etc. Please also refer to [Dr. Wood’s thesis](http://ccrm.vims.edu/yinglong/wiki_files/Wood_MScThesis_2012-SMS-WMS-Chesapeake&DelawareBays-Grid.pdf) for some insight info on using SMS.
 
 !!!important
     One important point to remember is that grid generation for SCHISM always starts from raw high-resolution DEMs; do NOT use computational grids from another model as DEM.
@@ -37,7 +41,11 @@ You may be able to get away with $\text{CFL}\gt 0.2$ in some applications like t
 <figcaption>Operational range for time step for a given grid size.</figcaption>
 </figure>
 
-The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for baroclinic applications. Eqn. $\ref{eq02}$ is then used to calculate the coarsest grid size at each depth (in anticipation of the smallest possible $\Delta t = 100s$). Table [1](#table01) shows some examples. You can see that the inverse CFL restriction is not restrictive.
+The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the
+ following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for
+ baroclinic applications. Eqn. $\ref{eq02}$ is then used to calculate the $coarsest$ grid size at each depth 
+(in anticipation of the smallest possible $\Delta t = 100s$). Table [1](#table01) shows some examples. 
+You can see that the inverse CFL restriction is not restrictive.
 
 <div id='table01'></div>
 **Table 1. Coarsest grid resolution at sample depths, assuming a ‘worse case’ scenario of $\Delta t=100s$.**
@@ -64,7 +72,7 @@ The first consequence embodies the greatest strength (efficiency) of SCHISM as a
     With xmgredit5, you can very easily visualize CFL for the entire grid.
 
     - `xmgredit5 -belel -1.e-10 hgrid.gr3`. `-belel -1.e-10` is used mainly to increase precision for lat/lon grid. **if your hgrid.gr3 is in lat/lon, you need to first project it, as the grid size dx in lat/lon is not in meters)**
-    - Since the CFL inside ACE is calculated without $\pmb{u}$, and a different form is used for CFL in the shallow $h \lt 0.1m$, we should impose a min depth of 0.1m, where $\sqrt{gh} = 1m/s$. You can do this by - 
+    - Since the CFL inside ACE is calculated without $\pmb{u}$, and a different form is used for CFL in the shallow $h \lt 0.1m$, we should impose a min depth of 0.1m, so that $\sqrt{gh} = 1m/s$. You can do this by - 
       - Edit $\rightarrow$ Edit over grid/regions $\rightarrow$ Evaluate.
       - In the dialogue box, type `depth=max(depth,0.1)`
       - The Evaluate function is also very useful for generation of other .gr3 files needed by SCHISM
@@ -123,18 +131,17 @@ In 2D model, the velocity is depth-averaged and vertical shear is not represente
 <figcaption>Noisy velocity field in shallow areas in SCHISM 3D.</figcaption>
 </figure>
 
-There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, try to use 2D prisms in shallows. Lastly, using a larger `thetai` would also stabilize the wetting and drying fronts.
+There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, 
+try to use 2D prisms in shallows (so you can use large friction). Using a larger `thetai` would 
+also stabilize the wetting and drying fronts. As a last resort if you have to use 3D configuration in shallows,
+ reduce friction (or even set it to 0).
 
 !!!important "Dredging open boundary"
     A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an entire open boundary segment to become dry at ANY time (while drying at individual nodes is fine). Therefore you need to make sure the depths there are deep enough compared to expected tidal range. An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.
 
-    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding 
-elements become dry. As a result, you may need to impose a minimum depth a couple of rows of 
-elements into the domain, not just at open boundary nodes. This ensures that water can come into the 
-domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries
- or interior nodes.
+    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements into the domain, not just at open boundary nodes. This ensures that water can come into the domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries or interior nodes.
 
-    If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location. Another robust option is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code.
+    If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location. The most robust option, however, is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code.
 
 ## Periodic boundary condition
 Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in `Utility/Pre-Processing/periodic_grid.f90`.
