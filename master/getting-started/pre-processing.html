@@ -384,7 +384,7 @@
       
         <li class="md-nav__item">
   <a href="#lsc2-scripts" class="md-nav__link">
-    LSC2 scripts
+    \(LSC^2\) scripts
   </a>
   
 </li>
@@ -1253,16 +1253,22 @@
 <h2 id="grid-conversion">Grid conversion<a class="headerlink" href="#grid-conversion" title="Permanent link">&para;</a></h2>
 <p><code>2dm2gr3_m2m.pl</code> and <code>grd2sms.pl</code> : These 2 perl scripts are used to convert between .2dm (SMS) and .gr3.</p>
 <h2 id="interpolation">Interpolation<a class="headerlink" href="#interpolation" title="Permanent link">&para;</a></h2>
-<p><code>interpolate_unstructured.f90</code>: This efficient script can be used to interpolate depths from .gr3 onto another .gr3 quickly. It uses a bucket search algorithm along either x or y direction.</p>
-<h2 id="lsc2-scripts">LSC2 scripts<a class="headerlink" href="#lsc2-scripts" title="Permanent link">&para;</a></h2>
+<p><code>interpolate_unstructured.f90</code>: This efficient script can be used to interpolate depths from .gr3 onto another 
+.gr3 quickly. It uses a bucket search algorithm along either x or y direction.</p>
+<h2 id="lsc2-scripts"><span class="arithmatex">\(LSC^2\)</span> scripts<a class="headerlink" href="#lsc2-scripts" title="Permanent link">&para;</a></h2>
 <p><code>gen_vqs.f90</code> and <code>plot_VQS.m</code>: The FORTRAN script can be used as a start for creating a LSC2 grid and you need to use the matlab script to plot out transects to see if the vertical grid makes sense. You may lump multiple transects into 1 transect.bp. If you want to use this type of vgrid, make sure you go through the FORTRAN carefully and understand the details.</p>
 <h2 id="nudging-scripts">Nudging scripts<a class="headerlink" href="#nudging-scripts" title="Permanent link">&para;</a></h2>
-<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>, <code>gen_nudge_from_hycom.f90</code>: The 1st two scripts generate a simple elliptic nudging zone or a zone with fixed distance from boundary as <em>_nudge.gr3. The 2nd script generates </em>_nu.nc from HYCOM (you may modify this for other gridded data sources from other structured-grid models).</p>
+<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>: the two scripts generate either a 
+simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. 
+<code>gen_nudge_from_hycom.f90</code>: This
+script generates the actual nudge data for tracers <code>*_nu.nc</code> from HYCOM (you may modify this 
+for other gridded data sources from other structured-grid models).</p>
 <h2 id="hotstart">Hotstart<a class="headerlink" href="#hotstart" title="Permanent link">&para;</a></h2>
 <p><code>Gen_Hotstart/change_hotstart4.f90</code>: This simple script shows you the internal structure of hotstart.nc and how to manipulate it.</p>
-<p><code>Gen_Hotstart /gen_hot_3Dth_from_hycom.f90</code>: This script shows you an example of how to create hotstart.nc and *.th.nc from gridded outputs. It essentially consists of 3D interpolations.</p>
+<p><code>Gen_Hotstart/gen_*_from_hycom.f90</code>: These scripts show you how to create hotstart.nc and *.th.nc from gridded outputs 
+ like HYCOM. It essentially consists of 3D interpolations.</p>
 <h2 id="sflux_nc">Sflux_nc<a class="headerlink" href="#sflux_nc" title="Permanent link">&para;</a></h2>
-<p>The m-lab scripts inside Sflux_nc dir show you the structure of sflux*.nc as well as how to generate your own files.</p>
+<p>The matlab scripts inside Sflux_nc dir show you the structure of sflux*.nc as well as how to generate your own files.</p>
 
               
             </article>

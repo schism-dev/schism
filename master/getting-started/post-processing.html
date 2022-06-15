@@ -1234,7 +1234,8 @@
 <code>autocombine_MPI_elfe.pl</code> is a simple perl wrapper script that automatically combines 
 all available outputs during or after the run. Use these if you invoked OLDIO.</p>
 <p><code>combine_hotstart7.f90</code> is used combine process-specific hotstart outputs (<code>outputs/hotstart_0*.nc</code>)
- into <code>hotstart.nc</code>. This is required even if you used scribed I/O.</p>
+ into <code>hotstart.nc</code>. This is required even if you used scribed I/O (as hotstart outputs are still be emitted per MPI
+ process).</p>
 <p><code>combine_gr3.f90</code> is used to combine process-specific <code>maxelev_*</code> and <code>maxdahv_*</code> (ASCII) into <code>maxelev.gr3</code> or <code>maxdahv.gr3</code>.</p>
 <h2 id="extraction">Extraction<a class="headerlink" href="#extraction" title="Permanent link">&para;</a></h2>
 <p><code>read_output*.f90</code>: This group of scripts read multiple nc4 outputs and extract time series of a point, 
