@@ -18,8 +18,7 @@
 !	Read nc outputs from scribe I/O versions for multiple files at all nodes 
 !       Works for mixed tri/quad outputs on NODE/ELEMENT based vars.
 !       Inputs: screen; nc file; vgrid.in (in this dir or ../)
-!       Outputs: extract.out (ascii); optional: max/min/avg 2D output, with
-!       self-explanatory file names
+!       Outputs: extract.out (ascii); optional: max/min/avg 2D output (*_[max|min|avg].gr3 and *_violators.bp)
 !****************************************************************************************
 !     ifort -O2 -assume byterecl -o read_output10_allnodes.exe ../UtilLib/extract_mod2.f90 ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 read_output10_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
@@ -48,7 +47,7 @@
 
       integer :: icomp_stats(3)
 
-      print*, 'Input NODE-based variable name to read from nc (e.g. elev):'
+      print*, 'Input NODE-based variable name to read from nc (e.g. elevation):'
       read(*,'(a30)')varname
 !!'
       print*, '<<<<<var name: ',varname
@@ -263,7 +262,8 @@
         !Available now: outvar(nvrt,np|ne), eta2(np)
           if(i23d==1) then !2D
 !           Output: time, 2D variable at all nodes
-            write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i),i=1,np)
+            if(maxval(icomp_stats(1:3)/=0)) &
+     &write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i),i=1,np)
 
             !Compute stats (magnitude for vectors)
             if(sum(icomp_stats(:))/=0) then
