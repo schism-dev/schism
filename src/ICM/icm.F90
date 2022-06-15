@@ -75,7 +75,6 @@ subroutine ecosystem(it)
   use icm_mod
   implicit none
   integer, intent(in) :: it
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day; todo: add in the module
 
   !local variables
   integer :: i,j,k,m,istat,isub
@@ -84,7 +83,7 @@ subroutine ecosystem(it)
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC
   real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
-  real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a,pH,rKHR,rDenit,rNit,rKCOD
+  real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
@@ -101,32 +100,25 @@ subroutine ecosystem(it)
       !-----------------------------------------------------------------------------------
       !link ICM variables to SCHISM variables
       !-----------------------------------------------------------------------------------
-      kb=min(kbe(id),nvrt-1)                                !kb  : bottom-level index
-      do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo           !zid : zcoor of each level
-      dz((1+kb):nvrt)=zid((1+kb):nvrt)-zid(kb:(nvrt-1))     !dz : depth of each layer; todo? min later
-      tdep=sum(dz((kb+1):nvrt))                             !tdep: total water depth
-      if(jsav==1) shtz=sht(id)+zid(kb)                      !shtz: zcoor of SAV canopy 
-      if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)             !vhtz: zcoor of VEG canopy 
+      kb=min(kbe(id),nvrt-1)                                  !kb  : bottom-level index
+      do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo             !zid : zcoor of each level
+      do k=kb+1,nvrt; dz(k)=max(zid(k)-zid(k-1),1.d-2); enddo !dz : depth of each layer
+      tdep=sum(dz((kb+1):nvrt))                               !tdep: total water depth
+      if(jsav==1) shtz=sht(id)+zid(kb)                        !shtz: zcoor of SAV canopy 
+      if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)               !vhtz: zcoor of VEG canopy 
 
       s=min(tdep,1.d0); srat=0; brat=0
       do k=kb+1,nvrt
-        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
+        !ratios for linearly distributing surface/bottom fluxes within (0,s); to aviod large value in thin layer
         m=nvrt+kb+1-k
         z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
-        srat(m)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
+        srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
         z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-        brat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !bottom ratio: y=1-x/2
+        brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
 
-        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
-        !z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
-        !srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
-        !z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-        !brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
-
-        !impose minimum values (todo: check these measures, they will cause mass inbalance in the system) 
-        dz(k)=max(dz(k),1.d-1) 
+        !impose minimum values (note: these measures may cause mass inbalance in the system) 
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
-        do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo !todo: add PBmin in the parameter files
+        do m=1,3; PBS(m,k)=max(PBS(m,k),PBmin(m)); enddo !todo: add PBmin in the parameter files
        
         !temp,TSS
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
@@ -134,7 +126,7 @@ subroutine ecosystem(it)
         if(iKe==1) then !TSS from 3D sediment model
           TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
         endif
-        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k); PO4a(k)=(1.0-1.0/(1.0+KPO4p*TSS(max(kb+1,k-1))))*PO4(k)
+        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
         if(iSilica==1) then
           rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
         endif
@@ -145,7 +137,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       Light=0; rKe=0; rKe0=0; rKeS=0; rKeV=0 !initilization
 
-      !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
+      !rIa from sflux (unit: W/m2; 0.47 used to convert srad to PAR)
       if(iRad==0) then 
         rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
       else
@@ -201,7 +193,7 @@ subroutine ecosystem(it)
 
           !light factor
           if(iLight==0) then !Cerco
-            mLight=rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
+            mLight=Rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
             rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
             fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
           elseif(iLight==1) then !Chapra S.C. #todo: change this option
@@ -226,7 +218,6 @@ subroutine ecosystem(it)
 
           !nitrogen preference
           if(DIN(k)>0.d0) fPN(i,k)=(NH4(k)/(KhN(i)+NO3(k)))*(NO3(k)/(KhN(i)+NH4(k))+KhN(i)/(DIN(k)+1.d-6))
-          if(rIa<=30)  GP(i,k)=0 !todo: remove
         enddo !i
 
         !respiration, denitrification, decay of COD, nitrification
@@ -240,7 +231,8 @@ subroutine ecosystem(it)
       !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
       !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
       DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
-      rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
+      !rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
+      rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
       !----------------------------------------------------------------------------------
       !modules
@@ -276,6 +268,7 @@ subroutine ecosystem(it)
           sflux(m)=sflux(m)+sflux_in(id,m,1)+rat*(sflux_in(id,m,2)-sflux_in(id,m,1))
         enddo
       endif
+      sflux(iDOX)=rKa*(DOsat-DOX(nvrt))
 
       !benthic fluxes from ICM_rad.th.nc
       if(ibflux/=0) then
@@ -332,8 +325,7 @@ subroutine ecosystem(it)
         do i=1,ntrs_icm
           sink(i,k)=(WS(i)*wqc(i,m)-WB(i)*wqc(i,k))/dz(k)
         enddo
-        !sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
-        sink(iPO4,k)=(WS(iPO4)*PO4a(m)-WB(iPO4)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
+        sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
         if(iSilica==1) sink(iSA,k)=(WS(iSA)*SAp(m)-WB(iSA)*SAp(k))/dz(k)
       enddo !k
 
@@ -391,7 +383,6 @@ subroutine ecosystem(it)
         do m=1,3
           dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*MT(m,k)) !growth, metabolism
         enddo
-        if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
       enddo !k
 
       !----------------------------------------------------------------------------------
@@ -535,7 +526,6 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
   use icm_misc, only : signf
   use icm_mod
   implicit none
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: vhtz(3),rIa0,tdep,zid(nvrt),dz(nvrt),rKe0(nvrt),rKeS(nvrt)
 
@@ -599,11 +589,11 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       tmp=sdveg+rKehV(j,2)
 
       if(tmp>20) then
-        mLight=vLight*rrat/tmp
+        mLight=vLight*Rrat/tmp
       elseif(tmp<0.02)then
-        mLight=vLight*rrat
+        mLight=vLight*Rrat
       else
-        mLight=vLight*rrat*(1-exp(-tmp))/tmp
+        mLight=vLight*Rrat*(1-exp(-tmp))/tmp
       endif
       rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
@@ -800,7 +790,6 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   use icm_misc, only : signf
   use icm_mod
   implicit none
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: rIa0,shtz,tdep
   real(rkind),intent(in),dimension(nvrt) :: dz,zid,rKe0,rKeV,PO4d
@@ -877,7 +866,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
             rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
           endif !knp
 
-          mLight=max(sLight*rrat*(1-exp(-tmp))/tmp,1.d-5)
+          mLight=max(sLight*Rrat*(1-exp(-tmp))/tmp,1.d-5)
           rIK=sGPM*sfT/salpha
 
           !light limitation function for sav

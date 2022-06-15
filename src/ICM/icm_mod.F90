@@ -21,6 +21,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   integer,parameter :: nPB=3,nZB=2
   real(rkind),parameter :: mC=12.011,mCACO3=100.086,mN=14.007
+  real(rkind),parameter :: Rrat=0.397 !W/m2 to E/m2/day
 
   !-------------------------------------------------------------------------------
   !global switch and variables
@@ -58,7 +59,7 @@ module icm_mod
   real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOnit,KhNH4nit,KhDOox,KhNO3denit
   real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM
   real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD
-  real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO
+  real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
   real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea
 
   real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)

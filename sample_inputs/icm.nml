@@ -227,6 +227,7 @@ an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration 
 KhDO = 0.5   0.5   0.5            !DO half saturation for PB's DOC excretion (mg/L)
 KPO4p= 0.0                        !coefficient relating PO4 sorption to TSS
 WRea = 0.0                        !baseline wind-induced reaeration coefficient for DO (day-1)
+PBmin= 0.03  0.03  0.03           !minimum PB concentration (mg[C]/L)
 /
 
 &Silica

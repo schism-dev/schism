@@ -6931,13 +6931,6 @@
       if(myrank==0) then 
         write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
         do i=1,nscribes
-#ifdef USE_ICM
-          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
-          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
-          call mpi_send(nout_sav,1,itype,nproc_schism-i,143,comm_schism,ierr)
-          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,123,comm_schism,ierr)
-          call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,144,comm_schism,ierr)
-#endif
           call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
           call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
           call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,102,comm_schism,ierr)
@@ -6980,6 +6973,13 @@
           call mpi_send(start_day,1,itype,nproc_schism-i,138,comm_schism,ierr)
           call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
           call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
+#ifdef USE_ICM
+          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
+          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
+          call mpi_send(nout_sav,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
+          call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,145,comm_schism,ierr)
+#endif
         enddo !i
       endif !myrank=0
 
