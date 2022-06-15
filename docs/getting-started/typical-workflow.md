@@ -15,7 +15,7 @@
 9. Check the following things immediately after a grid is generated (via ACE/xmgredit5)
     - $CFL>0.4$ (at least in ‘wet’ areas). Note that you need to do this check in map projection (meters), not in lon/lat!
     - Minimum area: make sure there are no negative elements.
-    - Maximum skewness for triangle: use a generous limit of 13, mainly to find excessive "collapsed" elements.
+    - Maximum skewness for triangle: use a generous threshold of 13, mainly to find excessive "collapsed" elements.
     - Quad quality: use 0.5 (ratio of min and max internal angles) as threshold.
 
 ## 2D model: pre-processing
@@ -26,7 +26,8 @@
 
 ## 2D model: calibration
 1. Start from simple and then build up complexity. Simplest may be a tidal run with a constant Manning’s $n$.
-2. Remember most of the outputs are on a per-core basis and need to be combined using the utility scripts; e.g., for global outputs (schout*.nc), use `combine_output11.f90` to get global netcdf outputs that can be visualized by VisIT; for hotstart, use `combine_hotstart7.f90`.
+2. Remember most outputs are on a per-core basis if you use OLDIO and need to be combined using the 
+ utility scripts; e.g., for global outputs (schout*.nc), use `combine_output11.f90` to get global netcdf outputs that can be visualized by VisIT; for hotstart, use `combine_hotstart7.f90`.
 3. Examine surface velocity in animation mode to find potential issues (e.g. blockage of channels)
 4. Negative river flow values for inflow
 5. Check all inputs: ‘junk in, junk out’. There are several pre-processing scripts for this purpose. Xmgredit5 or SMS is very useful also. 
