@@ -64,6 +64,6 @@ This type of grid requires some user experience and can be generated using scrip
 1 !ivcor (1: LSC2; 2: SZ)
 39 !nvrt(=Nz)
 10 4 4 4 4 10 4 10 10 ...  !bottom level indces at all nodes
-1 -1. -1. -1. -1. -9. -9. -9. ... !level index, sigma coordinates at level 1 for all nodes
-2 -0.884251  -0.874424  -0.888763 -0.884930 -0.884607 ... 
+1 -1. -1. -1. -1. -9. -9. -9. ... !level #, sigma coordinates $\in [-1,0]$ at level 1 for all nodes. '-9' means level 1 is below the bottom of this node
+2 -0.884251  -0.874424  -0.888763 -0.884930 -1. ... 
 ```
