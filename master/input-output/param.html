@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#core" class="md-skip">
+        <a href="#core-block" class="md-skip">
           Skip to content
         </a>
       
@@ -708,11 +708,11 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#core" class="md-nav__link">
-    CORE
+  <a href="#core-block" class="md-nav__link">
+    CORE block
   </a>
   
-    <nav class="md-nav" aria-label="CORE">
+    <nav class="md-nav" aria-label="CORE block">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -770,11 +770,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#opt" class="md-nav__link">
-    OPT
+  <a href="#opt-block" class="md-nav__link">
+    OPT block
   </a>
   
-    <nav class="md-nav" aria-label="OPT">
+    <nav class="md-nav" aria-label="OPT block">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1023,8 +1023,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#nws0-iwind_form-1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
-    nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+  <a href="#nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
+    nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rho01000-shw4184-double" class="md-nav__link">
+    rho0=1000, shw=4184. (double)
   </a>
   
 </li>
@@ -1058,13 +1065,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rho01000-shw4184-double" class="md-nav__link">
-    rho0=1000, shw=4184. (double)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#thetai06-double" class="md-nav__link">
     thetai=0.6 (double)
   </a>
@@ -1077,11 +1077,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#schout" class="md-nav__link">
-    SCHOUT
+  <a href="#schout-block" class="md-nav__link">
+    SCHOUT block
   </a>
   
-    <nav class="md-nav" aria-label="SCHOUT">
+    <nav class="md-nav" aria-label="SCHOUT block">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1627,15 +1627,19 @@
 <li>array inputs follow column major (like FORTRAN) and can spill to multiple line.</li>
 </ul>
 <p>The namelist file is divided into 3 major sections: <a href="#core">CORE</a>, <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a>. <a href="#core">CORE</a> lists out all core parameters that <em>must</em> be specified by the user, i.e., no defaults are provided by the code. <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a> sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file <code>param_out.nml</code>.</p>
-<p>Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not have to follow the order below (cf. <code>param.nml</code>). In some cases we have grouped some parameters for easier explanation, but you should specify them on separate lines. Also you'll find additional useful info in the comments of param.nml. The parameters are listed out below in alphabetic order.</p>
-<h2 id="core">CORE<a class="headerlink" href="#core" title="Permanent link">&para;</a></h2>
+<p>Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should 
+not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not 
+have to follow the order below (cf. <code>param.nml</code>). In many cases we have grouped related parameters 
+for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
+ info in the comments of the sample <code>param.nml</code>. The parameters are listed out below in alphabetic order.</p>
+<h2 id="core-block">CORE block<a class="headerlink" href="#core-block" title="Permanent link">&para;</a></h2>
 <p>The following parameters have to be specified by the user; otherwise you’ll get a fatal error.</p>
 <h3 id="ipre-int">ipre (int)<a class="headerlink" href="#ipre-int" title="Permanent link">&para;</a></h3>
 <p>Pre-processing flag (1: on; 0: off). <code>ipre=0</code>: normal run.</p>
 <p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code>. </p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p><code>ipre=1</code> only works for single CPU!</p>
+<p><code>ipre/=0</code> only works for single CPU!</p>
 </div>
 <h3 id="ibc-int-ibtp-int">ibc (int), ibtp (int)<a class="headerlink" href="#ibc-int-ibtp-int" title="Permanent link">&para;</a></h3>
 <p>Barotropic/baroclinic flags.</p>
@@ -1645,12 +1649,14 @@
 <h3 id="dt-double">dt (double)<a class="headerlink" href="#dt-double" title="Permanent link">&para;</a></h3>
 <p>Time step in seconds.</p>
 <h3 id="msc2-int-mdc2-int">msc2 (int), mdc2 (int)<a class="headerlink" href="#msc2-int-mdc2-int" title="Permanent link">&para;</a></h3>
-<p>These two parameters are only used if the wave module WWM is invoked (<code>USE_WWM</code> is on, i.e. <code>icou_elfe_wwm=1</code>). The values represent the spectral resolution used in WWM and must match those in <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3">wwminput.nml</a>;</p>
+<p>These two parameters are only used if the wave module WWM is invoked (<code>USE_WWM</code> is on and <code>icou_elfe_wwm=1</code>).
+ The values represent the spectral resolution used in WWM and must match those in 
+<a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3">wwminput.nml</a>;</p>
 <h3 id="eco_class-ntracer_gen-ntracer_age-sed_class-int">eco_class, ntracer_gen, ntracer_age, sed_class (int)<a class="headerlink" href="#eco_class-ntracer_gen-ntracer_age-sed_class-int" title="Permanent link">&para;</a></h3>
 <p>These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED3D), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.</p>
 <h3 id="nspool-ihfskip-int">nspool, ihfskip (int)<a class="headerlink" href="#nspool-ihfskip-int" title="Permanent link">&para;</a></h3>
 <p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps.</p>
-<h2 id="opt">OPT<a class="headerlink" href="#opt" title="Permanent link">&para;</a></h2>
+<h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
 <p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
 <h3 id="dtb_min10-dtb_max30-double">dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
 <p>Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local gradients.</p>
@@ -1687,7 +1693,11 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double">i_hmin_salt_ex (int), hmin_salt_ex (double)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double" title="Permanent link">&para;</a></h3>
 <p>Simialr tpo <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
 <h3 id="ielm_transport-0-max_subcyc-10-int">ielm_transport = 0, max_subcyc = 10 (int)<a class="headerlink" href="#ielm_transport-0-max_subcyc-10-int" title="Permanent link">&para;</a></h3>
-<p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, more efficient ELM transport is used locally (at the expense of mass conservation, so make sure this option is used sparingly).</p>
+<p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, 
+the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in 
+transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
+more efficient ELM transport is used locally (at the expense of mass conservation, 
+so make sure this option is used sparingly).</p>
 <h3 id="ieos_type0-ieos_pres0-int">ieos_type=0, ieos_pres=0 (int)<a class="headerlink" href="#ieos_type0-ieos_pres0-int" title="Permanent link">&para;</a></h3>
 <p>By default, use the nonlinear equation of state: <code>ieos_type==0</code>. If the potential temperature is used, the pressure effect has been accounted for: <code>ieos_pres=0.</code></p>
 <h3 id="if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array">if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)<a class="headerlink" href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" title="Permanent link">&para;</a></h3>
@@ -1776,13 +1786,21 @@ i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt
 <p>If <code>itur=-1</code>, horizontally homogeneous but vertically varying diffusivities are used, which are read in from <code>vvd.dat</code>.</p>
 <p>If <code>itur=2</code>, the zero-equation Pacanowski and Philander closure is used. In this case, a few extra parameters are required: <code>h1_pp</code>, <code>vdmax_pp1</code>, <code>vdmin_pp1</code>, <code>tdmin_pp1</code>, <code>h2_pp</code>, <code>vdmax_pp2</code>, <code>vdmin_pp2</code>, <code>tdmin_pp2</code>. Eddy viscosity is computed as: <span class="arithmatex">\(\text{vdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{vdiff_min}\)</span>, and diffusivity <span class="arithmatex">\(\text{tdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{tdiff_min}\)</span>, where <span class="arithmatex">\(\text{rich}\)</span> is a Richardson number. The limits (<code>vdiff_max</code>, <code>vdiff_min</code> and <code>tdiff_min</code>) vary linearly with depth between depths <code>h1_pp</code> and <code>h2_pp</code>.</p>
 <p>If <code>itur=3</code>, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: <code>mid</code>, <code>stab</code>, which specify the closure scheme and stability function used: <code>mid=</code> <code>MY</code> is Mellor &amp; Yamada; <code>=KL</code> is GLS as k-kl; KE is GLS as <span class="arithmatex">\(k-\varepsilon\)</span> =KW is GLS as <span class="arithmatex">\(k-\omega\)</span> =UB is Umlauf &amp; Burchard's optimal; <code>stab=</code> GA is Galperin's clipping (only for MY); =KC is Kantha &amp; Clayson's stability function) Also the user needs to specify max/min diffusivity/viscosity in <code>diffmax.gr3</code> and <code>diffmin.gr3</code>, as well as a surface mixing length scale constant <code>xlsc0</code>.</p>
-<p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first (see README inside GOTM/ for instructions), and turn on pre-processing flag <code>USE_GOTM</code> in makefile and recompile. In this case, the minimum and maximum viscosity/diffusivity are still specified in <code>diffmin.gr3</code> and <code>diffmax.gr3</code>. In addition, GOTM also requires an input called <code>gotmturb.inp</code>. There are some ready-made samples for this input in the source code bundle. If you wish to tune some parameters inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
+<p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first 
+(see README inside GOTM/ for instructions), and turn on pre-processing flag <code>USE_GOTM</code> in makefile 
+and recompile. In this case, the minimum and maximum viscosity/diffusivity are still specified in <code>diffmin.gr3</code> 
+and <code>diffmax.gr3</code>. In addition, GOTM also requires an input called <code>gotmturb.inp</code>. There are some 
+ready-made samples for this input in the source code bundle. If you wish to tune some parameters 
+inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
 <h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
 <p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.</p>
 <h3 id="meth_sink0-int">meth_sink=0 (int)<a class="headerlink" href="#meth_sink0-int" title="Permanent link">&para;</a></h3>
-<p>Option for sinks. If <code>meth_sink =1</code>, the sink value is reset to <code>0</code> if an element is dry with a net sink value locally to prevent further drawdown of groundwater.</p>
+<p>Option for sinks. If <code>meth_sink =1</code>, the sink value is reset to <code>0</code> if an element is dry with 
+a net sink value locally to prevent further drawdown of groundwater.</p>
 <h3 id="nadv1-int">nadv=1 (int)<a class="headerlink" href="#nadv1-int" title="Permanent link">&para;</a></h3>
-<p>Advection on/off option. If <code>nadv=0</code>, advection is selectively turned off based on the input file <code>adv.gr3</code>. If <code>nadv=1</code> or <code>2</code>, advection is on for the whole domain, and backtracking is done using either Euler or 2nd-order Runge-Kutta scheme.</p>
+<p>Advection on/off option. If <code>nadv=0</code>, advection is selectively turned off based on the input file <code>adv.gr3</code>. 
+If <code>nadv=1</code> or <code>2</code>, advection is on for the whole domain, and backtracking is done using either 
+Euler or 2nd-order Runge-Kutta scheme.</p>
 <h3 id="nchi0-int">nchi=0 (int)<a class="headerlink" href="#nchi0-int" title="Permanent link">&para;</a></h3>
 <p>Bottom friction option. If <code>nchi=-1</code>, and Manning's n is specified in <code>manning.gr3</code>. If <code>nchi=0</code>, spatially varying drag coefficients are read in from <code>drag.gr3</code> (as depth info). For <code>nchi=1</code>, bottom roughnesses (in meters) are read in from <code>rough.gr3</code>.</p>
 <p>If <code>nchi=-1</code>, an additional parameter is required: <code>hmin_man</code> (in meters) which sets the minimum depth used in the Manning formulation.</p>
@@ -1793,21 +1811,28 @@ i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt
 <h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
 <p>Ramp periods in days for the tides, B.C. or baroclincity. 
 If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
-In SCHISM, turn off ramp-up by setting the ramp-up period &lt;=0. 
+Turn off ramp-up by setting the ramp-up period &lt;=0. 
 The ramp function is a hyperbolic tangent function: <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
-<h3 id="nws0-iwind_form-1-int-iwindoffint-wtimincdt-double">nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-iwind_form-1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
+<h3 id="nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double">nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
 <p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no 
 wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain 
-at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code> or <code>3</code>, spatially 
+at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code>, spatially 
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
- <code>sflux/</code>. The option <code>nws=3</code> is only for checking heat conservation and needs <code>sflux.th</code>. If <code>nws=4</code>, 
-the required input <code>wind.th</code> specifies wind and pressure at each node and at each time step <code>n*wtiminc</code>.
+ <code>sflux/</code>. The option <code>nws=3</code> is reserved for coupling with atmospheric model via ESMF caps. If <code>nws=4</code>, 
+the required input <code>wind.th</code> specifies wind and pressure at each node and at time of multiple of <code>wtiminc</code>. 
 If <code>nws=-1</code>, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: <code>hurricane-track.dat</code>.</p>
 <p>If <code>nws&gt;0</code>, the ramp-up period (in days) is specified with <code>drampwind</code>. Also
  the user has the option to scale the wind speed using <code>iwindoff</code>=1 (which requires an additional input <code>windfactor.gr3</code>).</p>
-<p>The wind stress formulation is selected with <code>iwind_form</code>. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=-1</code>, the stress is calculated from Pond &amp; Pichard formulation. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=1</code>, the stress is calculated from Hwang (2018) formulation. If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated from heat exchange routine. If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, stress is calculated by WWM; otherwise the formulations above are used.</p>
+<p>The wind stress formulation is selected with <code>iwind_form</code>. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, 
+or <code>nws=2 &amp;&amp; iwind_form=-1</code>, the stress is calculated from Pond &amp; Pichard formulation (originally from Garret). 
+If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=1</code>, the stress is calculated from 
+Hwang (2018) formulation. If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated 
+from heat exchange routine. If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, 
+stress is calculated by WWM; otherwise the formulations above are used.</p>
+<h3 id="rho01000-shw4184-double">rho0=1000, shw=4184. (double)<a class="headerlink" href="#rho01000-shw4184-double" title="Permanent link">&para;</a></h3>
+<p>Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.</p>
 <h3 id="rmaxvel10-double">rmaxvel=10. (double)<a class="headerlink" href="#rmaxvel10-double" title="Permanent link">&para;</a></h3>
 <p>Maximum velocity. This is needed mainly for the air-water exchange as the model may blow up if the water velocity is above 20m/s.</p>
 <h3 id="s1_mxbnt05-s2_mxnbnt35-double">s1_mxbnt=0.5, s2_mxnbnt=3.5 (double)<a class="headerlink" href="#s1_mxbnt05-s2_mxnbnt35-double" title="Permanent link">&para;</a></h3>
@@ -1816,26 +1841,38 @@ If <code>nws=-1</code>, use Holland parametric wind model (barotropic only with 
 <p>Centers of projection used to convert lat/lon to Cartesian coordinates. These are used if a variable Coriolis parameter is employed (ncor=1).</p>
 <h3 id="start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double">start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)<a class="headerlink" href="#start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double" title="Permanent link">&para;</a></h3>
 <p>Starting time for simulation. <code>utc_start</code> is hours behind the GMT, and is used to adjust time zone. For example, <code>utc_start=5</code> is US Eastern Time, and <code>utc_start= -8</code> is Beijing Time.</p>
-<h3 id="rho01000-shw4184-double">rho0=1000, shw=4184. (double)<a class="headerlink" href="#rho01000-shw4184-double" title="Permanent link">&para;</a></h3>
-<p>Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.</p>
 <h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
 <p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6.</p>
-<h2 id="schout">SCHOUT<a class="headerlink" href="#schout" title="Permanent link">&para;</a></h2>
+<h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
 <h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
 <p>Station output flag. If <code>iout_sta≠1</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output.</p>
 <h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
 <p>Main switch to turn on/off netcdf outputs, useful for other programs to control outputs.</p>
 <h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
-<p>Hot start output control parameters. If <code>nhot=0</code>, no hot start output is generated. If <code>nhot=1</code>, hotstart output is named <code>outputs/hotstart_[process_id]_[time_step].nc</code> every <code>nhot_write</code> steps, where <code>it</code> is the corresponding time iteration number. <code>nhot_write</code> must be a multiple of <code>ihfskip</code>. If you want to hotstart a run from step <code>it</code>, you need to combine all process-specific hotstart outputs into a <code>hotstart.nc</code> using <code>combine_hotstart7.f90</code> (<code>./combine_hotstart7 –h</code> for help).</p>
+<p>Hot start output control parameters. If <code>nhot=0</code>, no hot start output is generated. If <code>nhot=1</code>, 
+hotstart output is named <code>outputs/hotstart_[process_id]_[time_step].nc</code> every <code>nhot_write</code> 
+steps, where <code>it</code> is the corresponding time iteration number. <code>nhot_write</code> must be a multiple of 
+<code>ihfskip</code>. If you want to hotstart a run from step <code>it</code>, you need to combine all process-specific 
+hotstart outputs into a <code>hotstart.nc</code> using <code>combine_hotstart7.f90</code> (<code>./combine_hotstart7 –h</code> for help).</p>
 <h3 id="iof_-int">iof_* (int)<a class="headerlink" href="#iof_-int" title="Permanent link">&para;</a></h3>
-<p>Global output (in netcdf4 format) options, where <code>*</code> stands for module name (e.g. hydro, wwm etc). The frequency of global outputs is controlled by 2 parameters in <a href="#core">CORE</a>: <a href="#nspool-ihfskip-int"><code>nspool</code></a> and <a href="#nspool-ihfskip-int"><code>ihfskip</code></a>. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. Therefore the outputs are named as <code>outputs/schout_[MPI process id]_[1,2,3,...].nc</code> etc. The combine scripts are then used to gather each output variable across all MPI processes into a single output, e.g., <code>schout_[1,2,3…].nc</code>.</p>
-<p>Each output variable is controlled by <code>1</code> flag in <code>param.nml</code>. We only show a few examples below; the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels, and most post-processing FORTRAN scripts can only handle this type of outputs.</p>
+<p>Global output (in netcdf4 format) options, where <code>*</code> stands for module name (e.g. "hydro", "wwm" etc). 
+The frequency of global outputs is controlled by 2 parameters in <a href="#core">CORE</a>: 
+<a href="#nspool-ihfskip-int"><code>nspool</code></a> and <a href="#nspool-ihfskip-int"><code>ihfskip</code></a>. Output is done every
+ <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. 
+Under OLDIO, the outputs are named as <code>outputs/schout_[MPI process id]_[1,2,3,...].nc</code> etc. The combine scripts 
+are then used to gather each output variable across all MPI processes into a single output, e.g., <code>schout_[1,2,3…].nc</code>.
+With new scribed I/O, outputs look like <code>out2d_1,2,3…].nc</code> etc (and no combining is necessary).</p>
+<p>Each output variable is controlled by <code>1</code> flag in <code>param.nml</code>. We only show a few examples below; 
+the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and 
+whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels,
+ and most post-processing FORTRAN scripts can only handle this type of outputs.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>iof_hydro(1) = 1 !global elevation output control. If iof_hydro(1)=0, no global elevation is recorded. 
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                 !If iof_hydro(1)= 1, global elevation for each node of a sub-domain is recorded in
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                 !schout*.nc. The output is either starting from scratch or appended to existing ones depending
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                 !If iof_hydro(1)= 1, global elevation for each node is recorded.
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                 !The output is either starting from scratch or appended to existing ones depending
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                 !on ihot.
 </code></pre></div>
-<p>Some outputs are conditional upon you turn on certain module; e.g. <code>iof_sed(1) = 1</code> won’t output the bottom depth change unless you turn on <code>USE_SED</code> in makefile.</p>
+<p>Some outputs are conditional upon you turn on certain module; e.g. <code>iof_sed(7) = 1</code> won’t output 
+the bottom depth change unless you turn on <code>USE_SED</code> in makefile.</p>
 <p>Some ‘native’ variables (e.g., element- or side-centered) are:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>iof_hydro(27) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
 </code></pre></div>
