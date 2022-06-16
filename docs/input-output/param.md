@@ -10,9 +10,13 @@ The file uses the FORTRAN namelist format. The order of input parameters is not 
 
 The namelist file is divided into 3 major sections: [CORE](#core), [OPT](#opt) and [SCHOUT](#schout). [CORE](#core) lists out all core parameters that _must_ be specified by the user, i.e., no defaults are provided by the code. [OPT](#opt) and [SCHOUT](#schout) sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file `param_out.nml`.
 
-Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not have to follow the order below (cf. `param.nml`). In some cases we have grouped some parameters for easier explanation, but you should specify them on separate lines. Also you'll find additional useful info in the comments of param.nml. The parameters are listed out below in alphabetic order.
+Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should 
+not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not 
+have to follow the order below (cf. `param.nml`). In many cases we have grouped related parameters 
+for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
+ info in the comments of the sample `param.nml`. The parameters are listed out below in alphabetic order.
 
-## CORE
+## CORE block
 The following parameters have to be specified by the user; otherwise you’ll get a fatal error.
 
 ### ipre (int)
@@ -21,7 +25,7 @@ Pre-processing flag (1: on; 0: off). `ipre=0`: normal run.
 Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. `ipre=1`: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and `mirror.out` and stop. Check errors in `fatal.error`. 
 
 !!!important 
-    `ipre=1` only works for single CPU!
+    `ipre/=0` only works for single CPU!
 
 ### ibc (int), ibtp (int)
 Barotropic/baroclinic flags.
@@ -35,7 +39,9 @@ Total simulation time in days.
 Time step in seconds.
 
 ### msc2 (int), mdc2 (int)
-These two parameters are only used if the wave module WWM is invoked (`USE_WWM` is on, i.e. `icou_elfe_wwm=1`). The values represent the spectral resolution used in WWM and must match those in [wwminput.nml](https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3);
+These two parameters are only used if the wave module WWM is invoked (`USE_WWM` is on and `icou_elfe_wwm=1`).
+ The values represent the spectral resolution used in WWM and must match those in 
+[wwminput.nml](https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3);
 
 ### eco_class, ntracer_gen, ntracer_age, sed_class (int)
 These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED3D), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.
@@ -43,7 +49,7 @@ These parameters set the # of tracer ‘classes’ for each tracer module (EcoSi
 ### nspool, ihfskip (int)
 These two flags control the global netcdf outputs. Output is done every `nspool` steps, and a new output stack is opened every `ihfskip` steps.
 
-## OPT
+## OPT block
 The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).
 
 ### dtb_min=10, dtb_max=30 (double)
@@ -91,7 +97,11 @@ Option to locally turn off heat exchange.
 Simialr tpo `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 
 ### ielm_transport = 0, max_subcyc = 10 (int)
-Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_transport=1`, the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, more efficient ELM transport is used locally (at the expense of mass conservation, so make sure this option is used sparingly).
+Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_transport=1`, 
+the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in 
+transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
+more efficient ELM transport is used locally (at the expense of mass conservation, 
+so make sure this option is used sparingly).
 
 ### ieos_type=0, ieos_pres=0 (int)
 By default, use the nonlinear equation of state: `ieos_type==0`. If the potential temperature is used, the pressure effect has been accounted for: `ieos_pres=0.`
@@ -221,16 +231,24 @@ If `itur=2`, the zero-equation Pacanowski and Philander closure is used. In this
 
 If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability function used: `mid=` `MY` is Mellor & Yamada; `=KL` is GLS as k-kl; KE is GLS as $k-\varepsilon$ =KW is GLS as $k-\omega$ =UB is Umlauf & Burchard's optimal; `stab=` GA is Galperin's clipping (only for MY); =KC is Kantha & Clayson's stability function) Also the user needs to specify max/min diffusivity/viscosity in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`.
 
-If `itur=4`, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first (see README inside GOTM/ for instructions), and turn on pre-processing flag `USE_GOTM` in makefile and recompile. In this case, the minimum and maximum viscosity/diffusivity are still specified in `diffmin.gr3` and `diffmax.gr3`. In addition, GOTM also requires an input called `gotmturb.inp`. There are some ready-made samples for this input in the source code bundle. If you wish to tune some parameters inside, you may consult [gotm.net](https://gotm.net) for more details.
+If `itur=4`, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first 
+(see README inside GOTM/ for instructions), and turn on pre-processing flag `USE_GOTM` in makefile 
+and recompile. In this case, the minimum and maximum viscosity/diffusivity are still specified in `diffmin.gr3` 
+and `diffmax.gr3`. In addition, GOTM also requires an input called `gotmturb.inp`. There are some 
+ready-made samples for this input in the source code bundle. If you wish to tune some parameters 
+inside, you may consult [gotm.net](https://gotm.net) for more details.
 
 ### level_age(:)=-999 (int array)
 If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.
 
 ### meth_sink=0 (int)
-Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with a net sink value locally to prevent further drawdown of groundwater.
+Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with 
+a net sink value locally to prevent further drawdown of groundwater.
 
 ### nadv=1 (int)
-Advection on/off option. If `nadv=0`, advection is selectively turned off based on the input file `adv.gr3`. If `nadv=1` or `2`, advection is on for the whole domain, and backtracking is done using either Euler or 2nd-order Runge-Kutta scheme.
+Advection on/off option. If `nadv=0`, advection is selectively turned off based on the input file `adv.gr3`. 
+If `nadv=1` or `2`, advection is on for the whole domain, and backtracking is done using either 
+Euler or 2nd-order Runge-Kutta scheme.
 
 ### nchi=0 (int)
 Bottom friction option. If `nchi=-1`, and Manning's n is specified in `manning.gr3`. If `nchi=0`, spatially varying drag coefficients are read in from `drag.gr3` (as depth info). For `nchi=1`, bottom roughnesses (in meters) are read in from `rough.gr3`.
@@ -247,16 +265,16 @@ If `ncor=1`, a variable Coriolis parameter, based either on a beta-plane approxi
 ###  dramp=1. (double), drampbc=1. (double)
 Ramp periods in days for the tides, B.C. or baroclincity. 
 If `ibc=0`, the ramp-up for baroclinicity is specified with `drampbc` (in days). 
-In SCHISM, turn off ramp-up by setting the ramp-up period <=0. 
+Turn off ramp-up by setting the ramp-up period <=0. 
 The ramp function is a hyperbolic tangent function: $f(t) = \tanh(2t/86400/\text{drampbc})$.
 
-### nws=0, iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+### nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
 Wind forcing options and the interval (in seconds) with which the wind input is read in. If `nws=0`, no 
 wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is applied to the whole domain 
-at any given time, and the time history of wind is read in from `wind.th`. If `nws=2` or `3`, spatially 
+at any given time, and the time history of wind is read in from `wind.th`. If `nws=2`, spatially 
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
- `sflux/`. The option `nws=3` is only for checking heat conservation and needs `sflux.th`. If `nws=4`, 
-the required input `wind.th` specifies wind and pressure at each node and at each time step `n*wtiminc`.
+ `sflux/`. The option `nws=3` is reserved for coupling with atmospheric model via ESMF caps. If `nws=4`, 
+the required input `wind.th` specifies wind and pressure at each node and at time of multiple of `wtiminc`. 
 If `nws=-1`, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: `hurricane-track.dat`.
@@ -265,7 +283,15 @@ If `nws=-1`, use Holland parametric wind model (barotropic only with wind and at
 If `nws>0`, the ramp-up period (in days) is specified with `drampwind`. Also
  the user has the option to scale the wind speed using `iwindoff`=1 (which requires an additional input `windfactor.gr3`).
 
-The wind stress formulation is selected with `iwind_form`. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=-1`, the stress is calculated from Pond & Pichard formulation. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=1`, the stress is calculated from Hwang (2018) formulation. If `nws=2, ihconsv=1 && iwind_form=0`, the stress is calculated from heat exchange routine. If `WWM` is enabled and `icou_elfe_wwm > 0` and `iwind_form=-2`, stress is calculated by WWM; otherwise the formulations above are used.
+The wind stress formulation is selected with `iwind_form`. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, 
+or `nws=2 && iwind_form=-1`, the stress is calculated from Pond & Pichard formulation (originally from Garret). 
+If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=1`, the stress is calculated from 
+Hwang (2018) formulation. If `nws=2, ihconsv=1 && iwind_form=0`, the stress is calculated 
+from heat exchange routine. If `WWM` is enabled and `icou_elfe_wwm > 0` and `iwind_form=-2`, 
+stress is calculated by WWM; otherwise the formulations above are used.
+
+### rho0=1000, shw=4184. (double)
+Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.
 
 ### rmaxvel=10. (double)
 Maximum velocity. This is needed mainly for the air-water exchange as the model may blow up if the water velocity is above 20m/s.
@@ -279,13 +305,10 @@ Centers of projection used to convert lat/lon to Cartesian coordinates. These ar
 ### start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)
 Starting time for simulation. `utc_start` is hours behind the GMT, and is used to adjust time zone. For example, `utc_start=5` is US Eastern Time, and `utc_start= -8` is Beijing Time.
 
-### rho0=1000, shw=4184. (double)
-Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.
-
 ### thetai=0.6 (double)
 Implicitness parameter (between 0.5 and 1). Recommended value: 0.6.
 
-## SCHOUT
+## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
 Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output.
 
@@ -293,21 +316,35 @@ Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addi
 Main switch to turn on/off netcdf outputs, useful for other programs to control outputs.
 
 ### nhot=0, nhot_write=8640 (int)
-Hot start output control parameters. If `nhot=0`, no hot start output is generated. If `nhot=1`, hotstart output is named `outputs/hotstart_[process_id]_[time_step].nc` every `nhot_write` steps, where `it` is the corresponding time iteration number. `nhot_write` must be a multiple of `ihfskip`. If you want to hotstart a run from step `it`, you need to combine all process-specific hotstart outputs into a `hotstart.nc` using `combine_hotstart7.f90` (`./combine_hotstart7 –h` for help).
+Hot start output control parameters. If `nhot=0`, no hot start output is generated. If `nhot=1`, 
+hotstart output is named `outputs/hotstart_[process_id]_[time_step].nc` every `nhot_write` 
+steps, where `it` is the corresponding time iteration number. `nhot_write` must be a multiple of 
+`ihfskip`. If you want to hotstart a run from step `it`, you need to combine all process-specific 
+hotstart outputs into a `hotstart.nc` using `combine_hotstart7.f90` (`./combine_hotstart7 –h` for help).
 
 ### iof_* (int)
-Global output (in netcdf4 format) options, where `*` stands for module name (e.g. hydro, wwm etc). The frequency of global outputs is controlled by 2 parameters in [CORE](#core): [`nspool`](#nspool-ihfskip-int) and [`ihfskip`](#nspool-ihfskip-int). Output is done every `nspool` steps, and a new output stack is opened every `ihfskip` steps. Therefore the outputs are named as `outputs/schout_[MPI process id]_[1,2,3,...].nc` etc. The combine scripts are then used to gather each output variable across all MPI processes into a single output, e.g., `schout_[1,2,3…].nc`.
+Global output (in netcdf4 format) options, where `*` stands for module name (e.g. "hydro", "wwm" etc). 
+The frequency of global outputs is controlled by 2 parameters in [CORE](#core): 
+[`nspool`](#nspool-ihfskip-int) and [`ihfskip`](#nspool-ihfskip-int). Output is done every
+ `nspool` steps, and a new output stack is opened every `ihfskip` steps. 
+Under OLDIO, the outputs are named as `outputs/schout_[MPI process id]_[1,2,3,...].nc` etc. The combine scripts 
+are then used to gather each output variable across all MPI processes into a single output, e.g., `schout_[1,2,3…].nc`.
+With new scribed I/O, outputs look like `out2d_1,2,3…].nc` etc (and no combining is necessary).
 
-Each output variable is controlled by `1` flag in `param.nml`. We only show a few examples below; the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels, and most post-processing FORTRAN scripts can only handle this type of outputs.
+Each output variable is controlled by `1` flag in `param.nml`. We only show a few examples below; 
+the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and 
+whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels,
+ and most post-processing FORTRAN scripts can only handle this type of outputs.
 
 ```
 iof_hydro(1) = 1 !global elevation output control. If iof_hydro(1)=0, no global elevation is recorded. 
-                 !If iof_hydro(1)= 1, global elevation for each node of a sub-domain is recorded in
-                 !schout*.nc. The output is either starting from scratch or appended to existing ones depending
+                 !If iof_hydro(1)= 1, global elevation for each node is recorded.
+                 !The output is either starting from scratch or appended to existing ones depending
                  !on ihot.
 ```
 
-Some outputs are conditional upon you turn on certain module; e.g. `iof_sed(1) = 1` won’t output the bottom depth change unless you turn on `USE_SED` in makefile.
+Some outputs are conditional upon you turn on certain module; e.g. `iof_sed(7) = 1` won’t output 
+the bottom depth change unless you turn on `USE_SED` in makefile.
 
 Some ‘native’ variables (e.g., element- or side-centered) are:
 

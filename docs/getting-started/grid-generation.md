@@ -1,4 +1,4 @@
-UG modelling starts with grid generation, and the latter is often an **iterative** process. Here lies
+UG (unstructured grid) modelling starts with grid generation, and the latter is often an **iterative** process. Here lies
  the greatest strength and challenges of using an UG model like SCHISM. Fortunately the gridgen tools have come 
 a long way since 2000s and at the moment we are routinely generating large UGs with millions of nodes and ever 
 higher resolution, all within a few hours (after the Digital Elevation Model (DEM) has been assembled).
@@ -10,7 +10,7 @@ in this chapter; you are referred to schism.wiki for other info related to DEM p
 !!!important
     One important point to remember is that grid generation for SCHISM always starts from raw high-resolution DEMs; do NOT use computational grids from another model as DEM.
 
-With some practice and care, you can generate great-looking UG like Figure [1](#figure01).
+With some practice and care, you can generate complex UG like Figure [1](#figure01).
 
 <figure markdown id='figure01'>
 ![Bay-Delta SCHISM grid](../assets/bay-delta-schism-grid.png){width=1000}
