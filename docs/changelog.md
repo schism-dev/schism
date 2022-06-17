@@ -1,4 +1,5 @@
 Following is a curated changelog of the code. The IDs starts with `R` represents the `svn` era id, others are `git` hash.
+To find all the changes between tag releases, search for 'Tag'.
 
 ## Bug fixes and major algorithmic changes
 91. `R5178`: fix bug of saturate `DO` in [ICM](modules/icm.md)
@@ -36,9 +37,13 @@ Following is a curated changelog of the code. The IDs starts with `R` represents
 123. [`5e87c24`](https://github.com/schism-dev/schism/commit/5e87c24) (June 9, 2021): more changes in `interpolate_depth_structured2*` to extrap also into right/upper sides.
 124. [`843c40f`](https://github.com/schism-dev/schism/commit/843c40f) (19 June, 2021): fixed a bug in `ptrack3` (pt_in_poly3; c/o Jilian Xiong) that affects quads;
 125. [`b2cf92b`](https://github.com/schism-dev/schism/commit/b2cf92b) (29 June, 2021): fixed a bug in station outputs in basin scale cases `ics=2` (local proj is not accurate if the station is far away from the local frame);
+
+- Tag v5.9.0: 657157a (1 July, 2021)
+
 126. `a9f8f6c` (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
                               for large core counts.
 127. `ab46def` (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
+
 128. `70db927` (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
 129. `8efc374` (30 Aug 2021): first version of scribe dictated I/O (as an option)
 130. `53689f4` (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).

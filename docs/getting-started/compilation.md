@@ -76,4 +76,4 @@ make -j8 pschism # efficient parallel build; you can replace "8" with number of 
 make VERBOSE=1 pschism # serial build with a lot of messages
 ```
 
-The executable (`pschism*`) is found in `build/bin/` and the compiled libraries are in `build/lib/`. If `pschism` is omitted above, the main executable and all utility scripts will be built in `bin/`.
+The executable (`pschism_` with extensions) is found in `build/bin/` and the compiled libraries are in `build/lib/`. If `pschism` is omitted above, the main executable and all utility scripts will be built in `bin/`.

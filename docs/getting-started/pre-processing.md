@@ -11,8 +11,8 @@ All .gr3 and .prop inputs can be visualized/generated using xmgredit5. For other
 `gen_vqs.f90` and `plot_VQS.m`: The FORTRAN script can be used as a start for creating a LSC2 grid and you need to use the matlab script to plot out transects to see if the vertical grid makes sense. You may lump multiple transects into 1 transect.bp. If you want to use this type of vgrid, make sure you go through the FORTRAN carefully and understand the details.
 
 ## Nudging scripts
-`gen_nudge.f90`, `gen_nudge2.f90`: the two scripts generate either a 
-simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. 
+`gen_nudge.f90`, `gen_nudge2.f90`: the two scripts generate either a simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. 
+
 `gen_nudge_from_hycom.f90`: This
 script generates the actual nudge data for tracers `*_nu.nc` from HYCOM (you may modify this 
 for other gridded data sources from other structured-grid models).

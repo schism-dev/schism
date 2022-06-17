@@ -1,7 +1,7 @@
 ## Visualization with Matlab
 The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs along a horizontal slab (at a fixed
- z level or at a sigma level) or vertical transects. In particular, SCHISM_SLAB2.m  and SCHISM_TRANSECT2.m for for 
- the new scribed outputs, while SCHISM_SLAB.m and SCHISM_TRANSECT.m are for the old outputs (schout*.nc).
+ z level or at a sigma level) or vertical transects. In particular, `SCHISM_SLAB2.m`  and `SCHISM_TRANSECT2.m` for for 
+ the new scribed outputs, while `SCHISM_SLAB.m` and `SCHISM_TRANSECT.m` are for the old outputs (schout*.nc).
 
 ## Visualization with Python
 [more coming]
