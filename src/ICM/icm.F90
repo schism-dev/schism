@@ -107,14 +107,17 @@ subroutine ecosystem(it)
       if(jsav==1) shtz=sht(id)+zid(kb)                        !shtz: zcoor of SAV canopy 
       if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)               !vhtz: zcoor of VEG canopy 
 
-      s=min(tdep,1.d0); srat=0; brat=0
+      srat=0; brat=0 !distribute surface/bottom fluxes to aviod large value in thin layer
       do k=kb+1,nvrt
-        !ratios for linearly distributing surface/bottom fluxes within (0,s); to aviod large value in thin layer
-        m=nvrt+kb+1-k
+        !surface flux ratio: y=2*(s-x)/s**2
+        s=min(tdep,dz_flux(1)); m=nvrt+kb+1-k
         z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
-        srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
+        srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0)
+
+        !bottom flux ratio: y=2*(s-x)/s**2
+        s=min(tdep,dz_flux(2))
         z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-        brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
+        brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0)
 
         !impose minimum values (note: these measures may cause mass inbalance in the system) 
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
@@ -248,7 +251,7 @@ subroutine ecosystem(it)
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
       !sediment flux module
-      if(iSed==1) call sed_calc(id,kb,dz(kb+1),TSS(kb+1))
+      if(iSed==1) call sed_calc(id,kb,dz,TSS)
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -598,8 +601,8 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
 
-      vfN=CNH4(id)/(vKhNs(j)+CNH4(id))
-      vfP=CPIP(id)/(vKhPs(j)+CPIP(id))
+      vfN=bNH4(id)/(vKhNs(j)+bNH4(id))
+      vfP=bPO4(id)/(vKhPs(j)+bPO4(id))
       if(ivNs==0) vfN=1
       if(ivPs==0) vfP=1
 
@@ -877,8 +880,8 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
         endif !szleaf(k+1)>0.and.szstem(k+1)>0
 
         !N/P limitation function
-        sfN=(DIN(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+DIN(k)+CNH4(id)*sKhNw/sKhNs)
-        sfP=(PO4d(k)+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+CPIP(id)*sKhPw/sKhPs)
+        sfN=(DIN(k)+bNH4(id)*sKhNw/sKhNs)/(sKhNw+DIN(k)+bNH4(id)*sKhNw/sKhNs)
+        sfP=(PO4d(k)+bPO4(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+bPO4(id)*sKhPw/sKhPs)
 
         !calculation of lf growth rate [1/day] as function of temp, light, N/P
         !sc2dw checked !>=0 with seeds, =0 for no seeds
@@ -931,8 +934,8 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
 
       !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
       sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(DIN(k)+1.e-6))
-      sfNs=CNH4(id)/(CNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
-      sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
+      sfNs=bNH4(id)/(bNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
+      sfPs=bPO4(id)/(bPO4(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
 
       sdwqc(iRPOC,k) = sFCM(1)*sMT                        
       sdwqc(iLPOC,k) = sFCM(2)*sMT                          
