@@ -312,7 +312,7 @@
   
     <li class="md-nav__item">
       <a href="typical-workflow.html" class="md-nav__link">
-        Typical workflow
+        Typical workflow (a cheat sheet)
       </a>
     </li>
   
@@ -1258,9 +1258,8 @@
 <h2 id="lsc2-scripts"><span class="arithmatex">\(LSC^2\)</span> scripts<a class="headerlink" href="#lsc2-scripts" title="Permanent link">&para;</a></h2>
 <p><code>gen_vqs.f90</code> and <code>plot_VQS.m</code>: The FORTRAN script can be used as a start for creating a LSC2 grid and you need to use the matlab script to plot out transects to see if the vertical grid makes sense. You may lump multiple transects into 1 transect.bp. If you want to use this type of vgrid, make sure you go through the FORTRAN carefully and understand the details.</p>
 <h2 id="nudging-scripts">Nudging scripts<a class="headerlink" href="#nudging-scripts" title="Permanent link">&para;</a></h2>
-<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>: the two scripts generate either a 
-simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. 
-<code>gen_nudge_from_hycom.f90</code>: This
+<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>: the two scripts generate either a simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. </p>
+<p><code>gen_nudge_from_hycom.f90</code>: This
 script generates the actual nudge data for tracers <code>*_nu.nc</code> from HYCOM (you may modify this 
 for other gridded data sources from other structured-grid models).</p>
 <h2 id="hotstart">Hotstart<a class="headerlink" href="#hotstart" title="Permanent link">&para;</a></h2>

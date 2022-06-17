@@ -354,7 +354,7 @@
   
     <li class="md-nav__item">
       <a href="getting-started/typical-workflow.html" class="md-nav__link">
-        Typical workflow
+        Typical workflow (a cheat sheet)
       </a>
     </li>
   
@@ -1219,7 +1219,8 @@
 
   <h1>Changelog</h1>
 
-<p>Following is a curated changelog of the code. The IDs starts with <code>R</code> represents the <code>svn</code> era id, others are <code>git</code> hash.</p>
+<p>Following is a curated changelog of the code. The IDs starts with <code>R</code> represents the <code>svn</code> era id, others are <code>git</code> hash.
+To find all the changes between tag releases, search for 'Tag'.</p>
 <h2 id="bug-fixes-and-major-algorithmic-changes">Bug fixes and major algorithmic changes<a class="headerlink" href="#bug-fixes-and-major-algorithmic-changes" title="Permanent link">&para;</a></h2>
 <ol>
 <li><code>R5178</code>: fix bug of saturate <code>DO</code> in <a href="modules/icm.html">ICM</a></li>
@@ -1256,11 +1257,22 @@
 <li><a href="https://github.com/schism-dev/schism/commit/fb79cdc"><code>fb79cdc</code></a> (May 26, 2021): in <code>interpolate_depth_structured2*</code>, added an option to shift 1/2 cell for ll corner (c/o Charles Seaton);</li>
 <li><a href="https://github.com/schism-dev/schism/commit/5e87c24"><code>5e87c24</code></a> (June 9, 2021): more changes in <code>interpolate_depth_structured2*</code> to extrap also into right/upper sides.</li>
 <li><a href="https://github.com/schism-dev/schism/commit/843c40f"><code>843c40f</code></a> (19 June, 2021): fixed a bug in <code>ptrack3</code> (pt_in_poly3; c/o Jilian Xiong) that affects quads;</li>
-<li><a href="https://github.com/schism-dev/schism/commit/b2cf92b"><code>b2cf92b</code></a> (29 June, 2021): fixed a bug in station outputs in basin scale cases <code>ics=2</code> (local proj is not accurate if the station is far away from the local frame);</li>
-<li><code>a9f8f6c</code> (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
-                              for large core counts.</li>
-<li><code>ab46def</code> (20 July, 2021): merged multi ice model (CICE) from Qian Wang.</li>
-<li><code>70db927</code> (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)</li>
+<li>
+<p><a href="https://github.com/schism-dev/schism/commit/b2cf92b"><code>b2cf92b</code></a> (29 June, 2021): fixed a bug in station outputs in basin scale cases <code>ics=2</code> (local proj is not accurate if the station is far away from the local frame);</p>
+</li>
+<li>
+<p>Tag v5.9.0: 657157a (1 July, 2021)</p>
+</li>
+<li>
+<p><code>a9f8f6c</code> (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
+                              for large core counts.</p>
+</li>
+<li>
+<p><code>ab46def</code> (20 July, 2021): merged multi ice model (CICE) from Qian Wang.</p>
+</li>
+<li>
+<p><code>70db927</code> (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)</p>
+</li>
 <li><code>8efc374</code> (30 Aug 2021): first version of scribe dictated I/O (as an option)</li>
 <li><code>53689f4</code> (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).</li>
 <li><code>c7dd516</code> (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).</li>
