@@ -1,7 +1,7 @@
 # How to read this manual
 This manual contains detailed information on physical and numerical formulations, as well as usage for 
 SCHISM. For beginners, we suggest you familiarize yourself with the basic notations in 
-[Physical formulation](physical-formulation.md) and [Numerical formulation](#) 
+[Physical formulation](physical-formulation.md) and [Numerical formulation](geometry-discretization.md) 
 but skip some details in those two chapters; there is also a ‘cheat sheet’ in 'Typical workflow'. [Getting started](#) describe how to set up the model, including grid generation, and 
 so should be read carefully, in consultation with appropriate sections in the previous 2 chapters.
 Since SCHISM is quite a sophisticated package, we strongly recommend you start from the simple 

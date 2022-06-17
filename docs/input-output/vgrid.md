@@ -1,4 +1,4 @@
-See [Numetical Formulation](/schism/numerical-formulation) chapter for details of different types of vgrid supported in SCHISM. Following are a few example `vgrid.in`.
+See [Numetical Formulation](../schism/geometry-discretization.md) chapter for details of different types of vgrid supported in SCHISM. Following are a few example `vgrid.in`.
 
 ### An example of SZ grid 
 
