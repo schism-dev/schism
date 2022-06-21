@@ -627,10 +627,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(DIN(nvrt),temp(nvrt),eroH2S(nea),eroLPOC(nea),eroRPOC(nea),stat=istat) !erosion
+  allocate(DIN(nvrt),temp(nvrt),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  DIN=0.0; temp=0.0;  eroH2S=0.0;  eroLPOC=0.0; eroRPOC=0.0
+  DIN=0.0; temp=0.0
 
   !-------------------------------------------------------------------------------
   !pH variables
@@ -679,24 +679,19 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(SED_eroH2S(nea),SED_eroLPOC(nea),SED_eroRPOC(nea), &
-    & btemp(nea), &
-    & bCH4(nea),bSO4(nea),bSTR(nea),bSTRm(nea),ibSTR(nea), &
-    & bPOC(nea,3),bPON(nea,3),bPOP(nea,3), &
-    & bPOS(nea), bNH4s(nea), &
+  allocate(btemp(nea),bCH4(nea),bSO4(nea),bSTR(nea),bSTRm(nea),ibSTR(nea), &
+    & bPOC(nea,3),bPON(nea,3),bPOP(nea,3),bPOS(nea),bNH4s(nea), &
     & bNH4(nea),bNO3(nea),bH2S(nea),bSA(nea),bPO4(nea), &
     & sedDOX(nea),sedCOD(nea),sedNH4(nea),sedNO3(nea),sedPO4(nea),sedDOC(nea),sedSA(nea), &
-    & bLight(nea), stat=istat)
+    & bLight(nea),eH2S(nea),eLPOC(nea),eRPOC(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  SED_eroH2S=0.0;  SED_eroLPOC=0.0; SED_eroRPOC=0.0; 
-  btemp=0.0;      bCH4=0.0;     bSO4=0.0;   bSTR=0.0;    bSTRm=0.0;   ibSTR=0.0
-  bPOC=0.0;   bPON=0.0;        bPOP=0.0; 
-  bPOS=0.0;    bNH4s=0.0
-  bNH4=0.0;  bNO3=0.0;   bH2S=0.0;    bSA=0.0;   bPO4=0.0;   
-  sedDOX=0.0;  sedCOD=0.0;  sedNH4=0.0;  sedNO3=0.0;  sedPO4=0.0; sedDOC=0.0; sedSA=0.0;
-  bLight=0.0;
+  btemp=0.0;  bCH4=0.0;   bSO4=0.0;   bSTR=0.0;   bSTRm=0.0;   ibSTR=0.0
+  bPOC=0.0;   bPON=0.0;   bPOP=0.0;   bPOS=0.0;   bNH4s=0.0
+  bNH4=0.0;   bNO3=0.0;   bH2S=0.0;   bSA=0.0;    bPO4=0.0;   
+  sedDOX=0.0; sedCOD=0.0; sedNH4=0.0; sedNO3=0.0; sedPO4=0.0; sedDOC=0.0; sedSA=0.0;
+  bLight=0.0; eH2S=0.0;   eLPOC=0.0;  eRPOC=0.0
 !$OMP end parallel workshare
 
 end subroutine icm_vars_init

@@ -51,7 +51,7 @@
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & btemp,bPO4,bNH4,bNO3,bH2S,bCH4,bSO4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR,&
-                        & sedDOX,sedDOX,sedNH4,sedNO3,sedPO4,sedCOD,sedSA
+                        & sedDOX,sedNH4,sedNO3,sedPO4,sedCOD,sedSA
 #endif
 
 #ifdef USE_COSINE
@@ -10128,14 +10128,14 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),dble(bNO3),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),dble(bH2S),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),dble(bCH4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(bSO4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bSA),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bSTR),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bNH4s),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+17),dble(bPOS),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+18),dble(bSTRm),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+19),dble(ibSTR),(/1/),(/ne/))
-        nvars_hot_icm=nvars_hot+19
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),dble(bSO4),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(bSA),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bSTR),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bNH4s),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bPOS),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(bSTRm),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(ibSTR),(/1/),(/ne/))
+        nvars_hot_icm=nvars_hot+14
 
         if(isav_icm==1) then
           j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))

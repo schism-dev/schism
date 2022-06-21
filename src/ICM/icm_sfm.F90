@@ -84,11 +84,12 @@ subroutine sed_calc(id,kb,dz,TSS)
   real(rkind) :: pie1,pie2,j1,j2,fd2,rval
   real(rkind) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2
   real(rkind) :: tau_bot_elem,ero_elem
-  real(rkind) :: wPO4d,wSAd,POC(3),PON(3),POP(3),POS
+  real(rkind) :: wPO4d,wSAd,POC(3),PON(3),POP(3),POS,XJC,XJN,XJP
   real(rkind) :: tdep,wdz,wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON
   real(rkind) :: wRPOP,wLPOP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA
   real(rkind) :: rKTC(3),rKTN(3),rKTP(3),rKTS
   real(rkind) :: FPOC(3),FPON(3),FPOP(3),FPOS
+  real(rkind) :: iSTR,STRm,STR,SODrt,eroH2S,eroLPOC,eroRPOC,JSI,JPO4
 
   !total depth and other variables from water column
   tdep=sum(dz((kb+1):nvrt));   wdz=dz(kb+1)
@@ -96,7 +97,7 @@ subroutine sed_calc(id,kb,dz,TSS)
   wPBS =PBS(:,kb+1); wRPOC=RPOC(kb+1); wLPOC=LPOC(kb+1)
   wRPON=RPON(kb+1);  wLPON=LPON(kb+1); wRPOP=RPOP(kb+1)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
-  wNO3 =NO3(kb+1);   wDOX =DOX(kb+1);  wCOD =COD(kb+1)
+  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =max(DOX(kb+1),1.d-2)
 
   if(iSilica==1) then
     wSU =SU(kb+1);  wSA =SA(kb+1) 
@@ -107,33 +108,26 @@ subroutine sed_calc(id,kb,dz,TSS)
 
   !water column concentrations !in unit of g/m^3
   wPO4d=wPO4/(1.0+KPO4p*wTSS)
-  NH40=wNH4
-  NO30=wNO3
-  O20=max(wDOX,1.e-2)
-  HS0=wCOD
-  SAL0=wsalt
   if(iSilica==1) wSAd=wSA/(1.0+KSAp*wTSS)
 
-  ROOTDO   = 0.0 !unit: g/m^2 day
 
   !rt uptake of NH4, PO4, DO
   !calculate flux amount on N/P, while account concentration of DO directly
   !put vegetation effect dirctly ahead after assign previous dt, before start going to
   !RHS of mass balance of layer 2 in sedimentation flux
 
-  !sav !unit: g/m^3
+  !sav & veg (g/m^3)
+  SODrt=0.0 !g.m-2.day-1
   if(jsav==1.and.spatch(id)==1)then
     bNH4(id)=max(1.0d-10,bNH4(id)-sleaf_NH4(id)*dtw/HSED)
     bPO4(id)=max(1.0d-10,bPO4(id)-sleaf_PO4(id)*dtw/HSED)
-    ROOTDO=ROOTDO+sroot_DOX(id) !unit: g/m^2 day
-  endif !jsav
-
-  !veg
+    SODrt=SODrt+sroot_DOX(id)
+  endif 
   if(jveg==1.and.vpatch(id)==1)then
     bNH4(id)=max(1.0d-10,bNH4(id)-sum(vleaf_NH4(id,1:3))*dtw/HSED)
     bPO4(id)=max(1.0d-10,bPO4(id)-sum(vleaf_PO4(id,1:3))*dtw/HSED)
-    ROOTDO=ROOTDO+sum(vroot_DOX(id,1:3)) !unit: g/m^2 day
-  endif !jveg
+    SODrt=SODrt+sum(vroot_DOX(id,1:3))
+  endif 
 
   !calculate POM fluxes
   FPOC=0.0; FPON=0.0; FPOP=0.0
@@ -194,8 +188,8 @@ subroutine sed_calc(id,kb,dz,TSS)
   !------------------------------------------------------------------------
 
   !benthic stress
-  BFORMAX=bSTRm(id)
-  ISWBEN=ibSTR(id)
+  STRm=bSTRm(id)
+  iSTR=ibSTR(id)
 
   !layer 2 depth: 10cm
   H2=HSED !unit: m
@@ -243,45 +237,42 @@ subroutine sed_calc(id,kb,dz,TSS)
   !************************************************************************
   !benthic stress. This part deviated from HEM3D manual
   !************************************************************************
-  if(ISWBEN==0) then
+  if(iSTR==0) then
     if(btemp(id)>=TEMPBEN) then
-      ISWBEN=1
-      BFORMAX=0.0
+      iSTR=1
+      STRm=0.0
     endif
-    BFOR=KMO2DP/(KMO2DP+O20)
+    rtmp=KMO2DP/(KMO2DP+wDOX)
   else
     if(btemp(id)<TEMPBEN) then
-      ISWBEN=0
+      iSTR=0
     endif
-    BFORMAX=max(KMO2DP/(KMO2DP+O20),BFORMAX)
-    BFOR=BFORMAX
+    STRm=max(KMO2DP/(KMO2DP+wDOX),STRm)
+    rtmp=STRm
   endif
-  BENSTR=(bSTR(id)+dtw*BFOR)/(1.0+KBENSTR*dtw)
+  STR=(bSTR(id)+dtw*rtmp)/(1.0+KBENSTR*dtw)
   !************************************************************************
 
-  ZL12NOM  = THTADD**(btemp(id)-20.0) !diffusion KL
-  ZW12NOM  = THTADP**(btemp(id)-20.0) !P mixing, W
-
   !put POC or G(poc,r) unit back to g/m^3
-  W12=(VPMIX*ZW12NOM/H2)*(POC(1)/1.0e2)*(1.0-KBENSTR*BENSTR)+DPMIN/H2
+  W12=(VPMIX*THTADP**(btemp(id)-20.0)/H2)*(POC(1)/1.0e2)*(1.0-KBENSTR*STR)+DPMIN/H2
 
   !diffusion mixing velocity [m/day]
-  KL12=(VDMIX*ZL12NOM/H2)+KLBNTH*W12
+  KL12=(VDMIX*THTADD**(btemp(id)-20.0)/H2)+KLBNTH*W12
 
   !Methane saturation, !CSOD
   !CH4SAT=0.099*(1.0+0.1*(tdep+H2))*0.9759**(btemp(id)-20.0)
-  CH4SAT=100*(1.0+0.1*(tdep+H2))*0.9759**(btemp(id)-20.0) !in unit of g/m^3
+  !CH4SAT=100*(1.0+0.1*(tdep+H2))*0.9759**(btemp(id)-20.0) ! g/m3
 
   !------------------
   !SOD calculation
   !------------------
   !calculate SOD by evaluating NH4, NO3 and SOD equations
-  if(O20<dO2c) then
+  if(wDOX<dO2c) then
     !surface transfer coefficient, not include velocity for now
     stc=dstc*dtheta**(btemp(id)-20.0)
-    call sedsod(id)
+    call sedsod(id,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
   else
-    SOD=sed_zbrent(id,ierr)
+    SOD=sed_zbrent(id,ierr,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
   endif !hypoxia diffusion with little SOD, negalectable first layer
 
   !debug if SOD calculation fails, need more work,ZG
@@ -292,8 +283,8 @@ subroutine sed_calc(id,kb,dz,TSS)
 
   !mass balance equation for Si
   if(iSilica==1) then
-    if(O20<O2CRITSI) then
-      pie1=PIE2SI*DPIE1SI**(O20/O2CRITSI)
+    if(wDOX<O2CRITSI) then
+      pie1=PIE2SI*DPIE1SI**(wDOX/O2CRITSI)
     else
       pie1=PIE2SI*DPIE1SI
     endif
@@ -312,14 +303,14 @@ subroutine sed_calc(id,kb,dz,TSS)
 
   !mass balance equation for PO4
   !salinity dependence of pie1
-  if(SAL0<=SALTSW) then
+  if(wsalt<=SALTSW) then
     rtmp=DPIE1PO4F
   else
     rtmp=DPIE1PO4S
   endif
   !oxygen dependence of pie1
-  if(O20<O2CRIT) then
-    pie1=PIE2PO4*rtmp**(O20/O2CRIT)
+  if(wDOX<O2CRIT) then
+    pie1=PIE2PO4*rtmp**(wDOX/O2CRIT)
   else
     pie1=PIE2PO4*rtmp
   endif
@@ -338,14 +329,14 @@ subroutine sed_calc(id,kb,dz,TSS)
   sedNH4(id)=JNH4
   sedNO3(id)=JNO3
   sedPO4(id)=JPO4
-!Error: DOC
-  sedDOC(id)=0.0
+  sedDOC(id)=0.0  !todo check this
   sedCOD(id)=JHS !+JCH4AQ
   if(iSilica==1) sedSA(id)=JSI
 
   !************************************************************************
   !erosion flux
   !************************************************************************
+  eH2S(id)=0; eLPOC(id)=0;  eRPOC(id)=0
   if(ierosion>0.and.idry_e(id)/=1)then
     !calculate bottom shear stress for elem #id
     tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
@@ -359,7 +350,6 @@ subroutine sed_calc(id,kb,dz,TSS)
 
     !calculate depostion fraction for elem #id :: E/(k+W)
     if(idepo==1) then
-!Error: check exponent magnitude
       depofracR=ero_elem/(WSPOM(1)*depoWSL/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
       depofracL=ero_elem/(WSPOM(2)*depoWSL/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
     endif 
@@ -367,23 +357,28 @@ subroutine sed_calc(id,kb,dz,TSS)
     !sediemnt erosion >> nutrient erosion flux
     !dissolved sulfur + resuspended POM
     if(ierosion==1)then
-      SED_eroH2S(id)=bH2S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
-      SED_eroLPOC(id)=0
-      SED_eroRPOC(id)=0
+      eroH2S =bH2S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
+      eroLPOC=0
+      eroRPOC=0
     elseif(ierosion==2)then
-      SED_eroH2S(id)=0
-      SED_eroLPOC(id)=bPOC(id,1)*ero_elem*depofracL
-      SED_eroRPOC(id)=bPOC(id,2)*ero_elem*depofracR
+      eroH2S =0
+      eroLPOC=bPOC(id,1)*ero_elem*depofracL
+      eroRPOC=bPOC(id,2)*ero_elem*depofracR
     elseif(ierosion==3)then
-      SED_eroH2S(id)=bH2S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
-      SED_eroLPOC(id)=bPOC(id,1)*ero_elem*depofracL
-      SED_eroRPOC(id)=bPOC(id,2)*ero_elem*depofracR
+      eroH2S =bH2S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
+      eroLPOC=bPOC(id,1)*ero_elem*depofracL
+      eroRPOC=bPOC(id,2)*ero_elem*depofracR
     endif !ierosion
 
     !minus erosion in sediment for mass balance
-    bH2S(id)=max(1.d-10,bH2S(id)-SED_eroH2S(id)*dtw/HSED)
-    bPOC(id,1)=max(1.d-10,bPOC(id,1)-SED_eroLPOC(id)*dtw/HSED)
-    bPOC(id,2)=max(1.d-10,bPOC(id,2)-SED_eroRPOC(id)*dtw/HSED)
+    bH2S(id)  =max(1.d-10,bH2S(id)-eroH2S*dtw/HSED)
+    bPOC(id,1)=max(1.d-10,bPOC(id,1)-eroLPOC*dtw/HSED)
+    bPOC(id,2)=max(1.d-10,bPOC(id,2)-eroRPOC*dtw/HSED)
+
+    !erosion flux into water column
+    eH2S(id) =eroH2S/2.0  !S to 0.5*O2
+    eLPOC(id)=eroLPOC
+    eRPOC(id)=eroRPOC
   endif !ierosion
   !************************************************************************
 
@@ -399,9 +394,9 @@ subroutine sed_calc(id,kb,dz,TSS)
   bPON(id,:)=PON
   bPOP(id,:)=POP
 
-  bSTR(id)  = BENSTR      !benthic stress
-  bSTRm(id) = BFORMAX     !benthic stress
-  ibSTR(id) = ISWBEN      !benthic stress
+  bSTR(id)  = STR      !benthic stress
+  bSTRm(id) = STRm     !benthic stress
+  ibSTR(id) = iSTR      !benthic stress
 
   bCH4(id) = CH4T2       ! CH4 in 2nd layer
   bSO4(id) = SO4T2       ! SO4 in 2nd layer
@@ -420,46 +415,42 @@ subroutine sed_calc(id,kb,dz,TSS)
   !update sediment temperature
   btemp(id)=btemp(id)+dt*DIFFT*(wtemp-btemp(id))/H2/H2
 
-  !erosion flux, H2S>S
-  if(ierosion>0.and.idry_e(id)/=1)then
-    eroH2S(id)=SED_eroH2S(id)/2 !S to 0.5*O2
-    eroLPOC(id)=SED_eroLPOC(id)
-    eroRPOC(id)=SED_eroRPOC(id)
-  endif !ierosion
-
 end subroutine sed_calc
 
-subroutine sedsod(id)
+subroutine sedsod(id,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
   !use icm_sed_mod
   !use icm_mod, only : dtw,o2n,o2c,dn2c,jsav,jveg
   use icm_mod
   use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
-  integer,intent(in) :: id !elem #
+  integer,intent(in) :: id 
+  real(rkind),intent(in) :: tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt
+
   !local variables
   real(rkind) :: rtmp,C0d,j1,j2,k12,k2,pie1,pie2
   real(rkind) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
-  real(rkind) :: XJC1,SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
+  real(rkind) :: SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
   real(rkind) :: HS2AV,SO42AV,XJ2,XJ2CH4,CSODHS,CH42AV,CH4T2AV,CH40
   real(rkind) :: X1J2,DCH4T2,DHST2,CSODCH4,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
-  integer :: ind
+  real(rkind) :: CH4sat,JN2GAS
+ 
 
   !NH4 flux
   pie1=PIENH4; pie2=PIENH4
 
-  C0d=NH40
+  C0d=wNH4
   j1=0.0
   j2=XJN
-  if(SAL0<=SALTND) then
-    k12=(bKNH4f**2)*(bDTNH4**(btemp(id)-20.0))*bKhNH4*O20/((bKhDO+O20)*(bKhNH4+bNH4s(id)))
+  if(wsalt<=SALTND) then
+    k12=(bKNH4f**2)*(bDTNH4**(btemp(id)-20.0))*bKhNH4*wDOX/((bKhDO+wDOX)*(bKhNH4+bNH4s(id)))
   else
-    k12=(bKNH4s**2)*(bDTNH4**(btemp(id)-20.0))*bKhNH4*O20/((bKhDO+O20)*(bKhNH4+bNH4s(id)))
+    k12=(bKNH4s**2)*(bDTNH4**(btemp(id)-20.0))*bKhNH4*wDOX/((bKhDO+wDOX)*(bKhNH4+bNH4s(id)))
   endif
   if(k12<0.) call parallel_abort('icm_sed_flux, k12<0')
   k2=0.0
   call sed_eq(3,NH41,NH42,NH4T1,NH4T2,bNH4(id),pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNH4=stc*(NH41-NH40)
+  JNH4=stc*(NH41-wNH4)
 
   !oxygen consumed by nitrification
   JO2NH4=o2n*k12*NH41/stc !unit: g/m^2/day
@@ -467,32 +458,32 @@ subroutine sedsod(id)
   !NO3 flux
   pie1=0.0; pie2=0.0 !W12=0 for no particle exits, no need to switch W12 because fp1=fp2=0
 
-  C0d=NO30
+  C0d=wNO3
   j1=k12*NH41/stc
   j2=0.0
-  if(SAL0<=SALTND) then
+  if(wsalt<=SALTND) then
     k12=(bKNO3f**2)*(bDTNO3**(btemp(id)-20.0))
   else
     k12=(bKNO3s**2)*(bDTNO3**(btemp(id)-20.0))
   endif
   k2=bKNO3*(bDTNO3**(btemp(id)-20.0))
   call sed_eq(4,NO31,NO32,NO3T1,NO3T2,bNO3(id),pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNO3=stc*(NO31-NO30)
+  JNO3=stc*(NO31-wNO3)
   JN2GAS=k12*NO31/stc+k2*NO32
 
-  if(SAL0>1.) then !salt water
+  if(wsalt>1.) then !salt water
     !sulfide
     pie1=PIE1S; pie2=PIE2S
     fd1=1./(1.+m1*pie1)
     fp1=1.-fd1;
 
-    C0d=HS0 !unit: g/m^3
+    C0d=wCOD !unit: g/m^3
     j1=0.0
     j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
-    k12=(fp1*(bKH2Sp**2)+fd1*(bKH2Sd**2))*(bDTH2S**(btemp(id)-20.0))*O20/KMHSO2
+    k12=(fp1*(bKH2Sp**2)+fd1*(bKH2Sd**2))*(bDTH2S**(btemp(id)-20.0))*wDOX/KMHSO2
     k2=0.0
     call sed_eq(5,HS1,HS2,HST1,HST2,bH2S(id),pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-    JHS=stc*(HS1-HS0)
+    JHS=stc*(HS1-wCOD)
 
     !oxygen consumption
     CSODHS=k12*HS1/stc
@@ -512,17 +503,18 @@ subroutine sedsod(id)
     !j2=XJ2 !need future work
     j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     !Error: different from manual
-    k12=(bKCH4**2)*(bDTCH4**(btemp(id)-20.0))*(O20/(KMCH4O2+O20))
+    k12=(bKCH4**2)*(bDTCH4**(btemp(id)-20.0))*(wDOX/(KMCH4O2+wDOX))
     k2=0.0
     call sed_eq(6,CH41,CH42,CH4T1,CH4T2,bCH4(id),pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
     !CH42AV=CH42!no use
     !CH4T2AV=CH4T2
 
-    if(CH42>CH4SAT) then
-      CH42=CH4SAT
-      rtmp=stc**2+KL12*stc+(bKCH4**2)*(bDTCH4**(btemp(id)-20.0))*(O20/(KMCH4O2+O20))
+    CH4sat=100*(1.0+0.1*(tdep+H2))*0.9759**(btemp(id)-20.0) ! g/m3
+    if(CH42>CH4sat) then
+      CH42=CH4sat
+      rtmp=stc**2+KL12*stc+(bKCH4**2)*(bDTCH4**(btemp(id)-20.0))*(wDOX/(KMCH4O2+wDOX))
       if(rtmp<=0) call parallel_abort('icm_sed_flux, rtmp<=0')
-      CH41=(CH40*stc**2+CH42*KL12*stc)/rtmp !(s**2+KL12*s+ZHTACH4**2*(O20/(KMCH4O2+O20)))
+      CH41=(CH40*stc**2+CH42*KL12*stc)/rtmp !(s**2+KL12*s+ZHTACH4**2*(wDOX/(KMCH4O2+wDOX)))
     endif
 
     !calculate CSOD
@@ -532,14 +524,14 @@ subroutine sedsod(id)
       write(errmsg,*)'icm_sed_flux, CSODCH4<0:',CSODCH4,k12,CH41,stc
       call parallel_abort(errmsg)
     endif
-  endif !SAL0
+  endif !wsalt
 
   ! SOD FUNCTION: SOD=CSOD+NSOD
   SOD=CSOD+JO2NH4
 
   !sav, veg
   if(jsav==1.or.jveg==1) then
-    SOD=SOD+ROOTDO !consume DO by root metabolism
+    SOD=SOD+SODrt !consume DO by root metabolism
   endif
 
 end subroutine sedsod
@@ -604,22 +596,21 @@ subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0
 
 end subroutine sed_eq
 
-function sed_zbrent(id,ierr)
+function sed_zbrent(id,ierr,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
 !---------------------------------------------------------------------
 !Brent's method to find SOD value
 !numerical recipes from William H. Press, 1992
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : O20,SOD,stc
+  use icm_mod, only : SOD,stc
   implicit none
   integer,intent(in) :: id !elem #
   integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
-!Error: tweak single
+  real(rkind),intent(in) :: tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt
+
   real(rkind), parameter :: eps=3.0e-8, tol=1.e-5,sodmin=1.e-8,sodmax=100.d0
-  !real(rkind),intent(out) :: fout
-!  real(rkind), external :: sedf
   real(rkind) :: sed_zbrent
 
   !local variables
@@ -633,12 +624,12 @@ function sed_zbrent(id,ierr)
   b=sodmax
 
   !surface transfer coefficient
-  stc=a/O20 
-  call sedsod(id)
+  stc=a/wDOX 
+  call sedsod(id,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
   fa=SOD-a
 
-  stc=b/O20
-  call sedsod(id)
+  stc=b/wDOX
+  call sedsod(id,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
   fb=SOD-b
 
   !fa=sedf(a)
@@ -653,7 +644,7 @@ function sed_zbrent(id,ierr)
   endif !fa
 
   if(fa*fb>0.0) then
-    if(O20<0.02)then
+    if(wDOX<0.02)then
       sed_zbrent=a
       return
     else
@@ -726,8 +717,8 @@ function sed_zbrent(id,ierr)
       b=b+sign(tol1,xm)
     endif !abs(d)
 
-    stc=b/O20
-    call sedsod(id)
+    stc=b/wDOX
+    call sedsod(id,tdep,wsalt,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt)
     fb=SOD-b
   enddo !i=nloop=100
 

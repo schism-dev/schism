@@ -66,7 +66,6 @@ module icm_mod
   real(rkind),save:: time_ph  !time stamp for WQinput
   real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
-  real(rkind),save,allocatable,dimension(:) :: eroH2S, eroLPOC,eroRPOC !erosion
 
   !-------------------------------------------------------------------------------
   !silica parameters and variables
@@ -166,26 +165,11 @@ module icm_mod
   real(rkind), save,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4
   real(rkind), save,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
 
-  real(rkind),save :: ROOTDO !sav
-
   real(rkind),save :: SI1,SI2,SIT1,SIT2,PO41,PO42,PO4T1,PO4T2,NH41,NH42,NH4T1,NH4T2
   real(rkind),save :: NO31,NO32,NO3T1,NO3T2,HS1,HS2,HST1,HST2,CH41,CH42,CH4T1,CH4T2,SO41,SO42,SO4T1,SO4T2
 
-  !diagenesis fluxes
-  real(rkind),save :: XJN,XJC,XJP
-
   !sediment fluxes
-  real(rkind),save :: JSI,JPO4,JNH4,JNO3,JHS,JCH4,JCH4AQ,JCH4G,JN2GAS,JGAS
-
-  !nutrient concentration in water column
-  real(rkind),save :: NH40,NO30,O20,HS0,SAL0,SO40MG
-  real(rkind),save :: CH4SAT
-
-  !reaction rate (temp vars)
-  real(rkind),save :: ZL12NOM,ZW12NOM,ZHTAI0,ZHTAR,ZHTABETA
-
-  !benthic stress
-  real(rkind),save :: BFORMAX,ISWBEN,BFOR,BENSTR
+  real(rkind),save :: JNH4,JNO3,JHS
 
   !SOD calculation
   real(rkind),save :: SOD,stc
@@ -193,11 +177,8 @@ module icm_mod
   !sediment fluxes
   real(rkind),save,allocatable,dimension(:) :: sedDOX,sedCOD,sedNH4,sedNO3,sedPO4,sedDOC,sedSA
 
-  !erosion fluxes
-  real(rkind),save,allocatable,dimension(:) :: SED_eroH2S,SED_eroLPOC,SED_eroRPOC !nea
-
-  !bottom Light (nea)
-  real(rkind),save,allocatable,dimension(:) :: bLight
+  real(rkind),save,allocatable,dimension(:) :: bLight !bottom Light 
+  real(rkind),save,allocatable,dimension(:) :: eH2S,eLPOC,eRPOC !erosion flux
 
   !---------------------------------------------------------------------------
   !spatially varying parameters: for different dimensions 

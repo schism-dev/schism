@@ -301,9 +301,9 @@ subroutine ecosystem(it)
 
       !erosion flux
       if(ierosion/=0) then
-        bflux(iRPOC)=bflux(iRPOC)+eroRPOC(id)
-        bflux(iLPOC)=bflux(iLPOC)+eroLPOC(id)
-        bflux(iCOD) =bflux(iCOD) +eroH2S(id)
+        bflux(iRPOC)=bflux(iRPOC)+eRPOC(id)
+        bflux(iLPOC)=bflux(iLPOC)+eLPOC(id)
+        bflux(iCOD) =bflux(iCOD) +eH2S(id)
       endif
 
       !----------------------------------------------------------------------------------
