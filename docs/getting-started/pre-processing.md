@@ -25,3 +25,18 @@ for other gridded data sources from other structured-grid models).
 
 ## Sflux_nc
 The matlab scripts inside Sflux_nc dir show you the structure of sflux*.nc as well as how to generate your own files.
+
+## METIS for offline domain decomposition
+You'll only need to do this if you invoked offline partitioning in compilation (e.g. with `NO_PARMETIS` turned ON in cmake)
+ to bypass ParMETIS.
+If so, you'll need to prepare an input called `partion.prop` (which is essentially the MPI process # for each element).
+
+Step 1: build METIS v5.1.0 by (`src/metis-5.1.0`) following README inside. You only need gpmetis (for VIMS users, it's in `/sciclone/home10/yinglong/git/schism/src/metis-5.1.0/build/Linux-x86_64/programs/gpmetis`)
+
+Step 2: run a pre-processor for METIS: `src/Utility/Grid_Scripts/metis_prep.f90`, which only requires hgrid.gr3 
+   (with B.C. parts) and vgrid.in, to get `graphinfo`;
+
+Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15` where <nproc> is # of 
+   compute cores excluding scribes. The output is `graphinfo.part.<nproc>`, and then use awk to get `partion.prop`:
+   awk '{print NR,$0}' graphinfo.part.<nproc> > partition.prop
+   (replace `<nproc>` with actual # of cores).

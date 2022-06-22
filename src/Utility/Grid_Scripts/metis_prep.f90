@@ -6,9 +6,9 @@
 ! ifort -mcmodel=medium  -O2 -CB -g -traceback -o metis_prep metis_prep.f90 
 
 ! METIS usage:
-! ./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15
+! ./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15     (nproc is # of compute cores excluding scribes)
 ! Afterward, use awk to generate partition.prop:
-! awk '{print NR,$0}' graphinfo.part.88 > partition.prop      (using nproc=88 cores)
+! awk '{print NR,$0}' graphinfo.part.88 > partition.prop      (using nproc=88 cores as e.g.)
 
   program metis_prep
   implicit none
