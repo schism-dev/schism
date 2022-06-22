@@ -410,7 +410,7 @@ vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
 ! sediment flux model (SFM) parameter 
 !-----------------------------------------------------------------------
 !basic 
-HSED   = 10.0                 !sediment thickness (cm)
+bdz    = 0.1                  !sediment thickness (m)
 VSED   = 0.50                 !burial rate (cm/yr)
 DIFFT  = 0.0018               !?
 SALTSW = 1.0                  !?

@@ -55,7 +55,7 @@ subroutine read_icm_param(imode)
            & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMRT, &
            & vTMR,vKTMR,vMR0,vMRcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
            & vo2c 
-  namelist /SFM/ HSED,VSED,DIFFT,SALTSW,SALTND,m1,m2,THTADP,THTADD,VPMIX,VDMIX,btemp0,&
+  namelist /SFM/ bdz,VSED,DIFFT,SALTSW,SALTND,m1,m2,THTADP,THTADD,VPMIX,VDMIX,btemp0,&
            & bPOP0,bPON0,bPOC0,bPOS0,bPO40,bNH40,bNO30,bH2S0,bCH40,bSO40,&
            & bSA0,bSTR0,bKC,bKN,bKP,bDTC,bDTN,bDTP,bKS,bDTS,FRPPH,&
            & FRNPH,FRCPH,frnveg,frpveg,frcveg,frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC,&
@@ -155,7 +155,7 @@ subroutine read_icm_param(imode)
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
     !init. SFM module
-    HSED=0;  VSED=0;  DIFFT=0;  SALTSW=0;  SALTND=0;  m1=0;  m2=0;  THTADP=0;  THTADD=0;
+    bdz=0;  VSED=0;  DIFFT=0;  SALTSW=0;  SALTND=0;  m1=0;  m2=0;  THTADP=0;  THTADD=0;
     VPMIX=0;  VDMIX=0;  btemp0=0;  bPOP0=0;  bPON0=0;  bPOC0=0;  bPOS0=0;  bPO40=0;  
     bNH40=0;  bNO30=0;  bH2S0=0;  bCH40=0;   bSO40=0;  bSA0=0;  bSTR0=0; 
     bKC=0;  bKN=0;  bKP=0;  bDTC=0;  bDTN=0;  bDTP=0;  bKS=0;  bDTS=0;
@@ -200,7 +200,6 @@ subroutine read_icm_param(imode)
     mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
     
     !SFM
-    HSED=1.d-2*HSED !unit: m
     VSED=2.73791e-5*VSED !unit: m/day 
     DIFFT=1.0e-4*DIFFT !m2/s
 
@@ -536,12 +535,18 @@ subroutine icm_vars_init
 
   m=0
   !global and core modules
-  pname(1:59)=(/'KeC   ','KeS   ','KeSalt','Ke0   ','tss2c ','WSSEDn','WSPOMn','WSPBSn','alpha ','GPM   ', &
-              & 'TGP   ','PRR   ','MTB   ','TMT   ','KTMT  ','WSPBS ','KTGP  ','WSPOM ','WSSED ','FCP   ', &
-              & 'FNP   ','FPP   ','FCM   ','FNM   ','FPM   ','Nit   ','TNit  ','KTNit ','KhDOnit','KhNH4nit',&
-          & 'KhDOox','KhNO3denit','KC0   ','KN0   ','KP0   ','KCalg ','KNalg ','KPalg ','TRM   ','KTRM  ', &
-              & 'KCD   ','TRCOD ','KTRCOD','KhCOD ','KhN   ','KhP   ','KhSal ','c2chl ','n2c   ','p2c   ', &
-              & 'KhDO  ','o2c   ','o2n   ','dn2c  ','an2c  ','KPO4p ','WRea ', 'PBmin ', 'dz_flux '/)
+  pname(1:59)=(/'KeC       ','KeS       ','KeSalt    ','Ke0       ','tss2c     ', &
+              & 'WSSEDn    ','WSPOMn    ','WSPBSn    ','alpha     ','GPM       ', &
+              & 'TGP       ','PRR       ','MTB       ','TMT       ','KTMT      ', &
+              & 'WSPBS     ','KTGP      ','WSPOM     ','WSSED     ','FCP       ', &
+              & 'FNP       ','FPP       ','FCM       ','FNM       ','FPM       ', &
+              & 'Nit       ','TNit      ','KTNit     ','KhDOnit   ','KhNH4nit  ', &
+              & 'KhDOox    ','KhNO3denit','KC0       ','KN0       ','KP0       ', &
+              & 'KCalg     ','KNalg     ','KPalg     ','TRM       ','KTRM      ', &
+              & 'KCD       ','TRCOD     ','KTRCOD    ','KhCOD     ','KhN       ', &
+              & 'KhP       ','KhSal     ','c2chl     ','n2c       ','p2c       ', &
+              & 'KhDO      ','o2c       ','o2n       ','dn2c      ','an2c      ', &
+              & 'KPO4p     ','WRea      ','PBmin     ','dz_flux   '/)
   sp(m+1)%p=>KeC;    sp(m+2)%p=>KeS;        sp(m+3)%p=>KeSalt;  sp(m+4)%p=>Ke0;     sp(m+5)%p=>tss2c;    m=m+5
   sp(m+1)%p=>WSSEDn; sp(m+2)%p1=>WSPOMn;    sp(m+3)%p1=>WSPBSn; sp(m+4)%p1=>alpha;  sp(m+5)%p1=>GPM;     m=m+5
   sp(m+1)%p1=>TGP;   sp(m+2)%p1=>PRR;       sp(m+3)%p1=>MTB;    sp(m+4)%p1=>TMT;    sp(m+5)%p1=>KTMT;    m=m+5
@@ -556,8 +561,8 @@ subroutine icm_vars_init
   sp(m+1)%p=>KPO4p;  sp(m+2)%p=>WRea;       sp(m+3)%p1=>PBmin;  sp(m+4)%p1=>dz_flux; m=m+4
 
   !SFM modules
-  pname((m+1):(m+8))=(/'HSED  ','VSED  ','VPMIX ','VDMIX ','etau  ','FRPOP ','FRPON ','FRPOC '/)
-  sp(m+1)%p=>HSED;   sp(m+2)%p=>VSED;   sp(m+3)%p=>VPMIX;  sp(m+4)%p=>VDMIX; sp(m+5)%p=>etau;   m=m+5
+  pname((m+1):(m+8))=(/'bdz   ','VSED  ','VPMIX ','VDMIX ','etau  ','FRPOP ','FRPON ','FRPOC '/)
+  sp(m+1)%p=>bdz;   sp(m+2)%p=>VSED;   sp(m+3)%p=>VPMIX;  sp(m+4)%p=>VDMIX; sp(m+5)%p=>etau;   m=m+5
   sp(m+1)%p1=>FRPOP; sp(m+2)%p1=>FRPON; sp(m+3)%p1=>FRPOC; m=m+3
 
   !read spatially varying parameters
@@ -748,7 +753,7 @@ subroutine update_vars(id,usf,wspd)
   !spatial varying parameters
   do m=1,size(sp)
     p=>sp(m) 
-    if(p.ndim==0) cycle
+    if(p%ndim==0) cycle
     do i=1,p%dims(2) 
       do k=1,p%dims(1)
         if(p%istat(k,i)==0) cycle

@@ -718,12 +718,12 @@ subroutine zoo_calc(kb,PR)
 !note: fish can eat zooplanktons and phytoplanktons, while zooplankton can eat
 !other zooplanktons, all phytoplankton and carbon species
 !--------------------------------------------------------------------------------------
-  use schism_glbl, only : rkind
+  use schism_glbl, only : rkind,nvrt
   use icm_misc, only : signf
   use icm_mod
   implicit none
   integer,intent(in) :: kb
-  real(rkind),intent(inout) :: PR(:,:)
+  real(rkind),intent(inout) :: PR(3,nvrt)
 
   !local variables
   integer :: i,j,m,k

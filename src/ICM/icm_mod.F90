@@ -132,7 +132,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: HSED,VSED,DIFFT,SALTSW,SALTND
+  real(rkind),save,target :: bdz,VSED,DIFFT,SALTSW,SALTND
   real(rkind),save,target :: m1,m2,THTADP,THTADD,VPMIX,VDMIX
   real(rkind),save,target :: btemp0,bPOP0(3),bPON0(3),bPOC0(3),bPOS0,bPO40,bNH40,bNO30 !init conc.
   real(rkind),save,target :: bH2S0,bCH40,bSO40,bSA0,bSTR0   !init conc.
@@ -155,7 +155,7 @@ module icm_mod
   !---------------------------------
   !variables
   !---------------------------------
-  real(rkind),save :: W2,H2
+  real(rkind),save :: W2
 
   !Sediment thickness, burial and mixing rates
   real(rkind),save :: W12,W12MIN,KL12
