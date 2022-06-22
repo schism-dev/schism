@@ -1282,10 +1282,11 @@ If so, you'll need to prepare an input called <code>partion.prop</code> (which i
 <p>Step 1: build METIS v5.1.0 by (<code>src/metis-5.1.0</code>) following README inside. You only need gpmetis (for VIMS users, it's in <code>/sciclone/home10/yinglong/git/schism/src/metis-5.1.0/build/Linux-x86_64/programs/gpmetis</code>)</p>
 <p>Step 2: run a pre-processor for METIS: <code>src/Utility/Grid_Scripts/metis_prep.f90</code>, which only requires hgrid.gr3 
    (with B.C. parts) and vgrid.in, to get <code>graphinfo</code>;</p>
-<p>Step 3: run METIS: <code>./gpmetis graphinfo &lt;nproc&gt; -ufactor=1.01 -seed=15</code> where <nproc> is # of 
-   compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:
-   awk '{print NR,$0}' graphinfo.part.<nproc> &gt; partition.prop
-   (replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
+<p>Step 3: run METIS: <code>./gpmetis graphinfo &lt;nproc&gt; -ufactor=1.01 -seed=15</code> </p>
+<p>where <code>&lt;nproc&gt;</code> is # of 
+   compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:</p>
+<p>awk '{print NR,$0}' graphinfo.part.<nproc> &gt; partition.prop</p>
+<p>(replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
 
               
             </article>
