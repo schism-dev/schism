@@ -36,7 +36,13 @@ Step 1: build METIS v5.1.0 by (`src/metis-5.1.0`) following README inside. You o
 Step 2: run a pre-processor for METIS: `src/Utility/Grid_Scripts/metis_prep.f90`, which only requires hgrid.gr3 
    (with B.C. parts) and vgrid.in, to get `graphinfo`;
 
-Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15` where <nproc> is # of 
+Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15` 
+
+ where `<nproc>` is # of 
    compute cores excluding scribes. The output is `graphinfo.part.<nproc>`, and then use awk to get `partion.prop`:
+
+
    awk '{print NR,$0}' graphinfo.part.<nproc> > partition.prop
+
+
    (replace `<nproc>` with actual # of cores).
