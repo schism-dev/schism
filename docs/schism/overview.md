@@ -34,4 +34,4 @@ $A$: area of an element
 
 $\Delta z$: layer thickness (at a node, side or elem.)
 
-$\delta_{ij}$: Dirac’s Delta function ($=1$ when $i=j$; $0$ otherwise)
+$\delta_{ij}$: Kronecker Delta function ($=1$ when $i=j$; $0$ otherwise)
