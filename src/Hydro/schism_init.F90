@@ -51,7 +51,7 @@
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,iSilica,iZB,iPh, &
                     & rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
                     & isav_icm,iveg_icm,sedDOX,btemp,bPO4,bNH4,bNO3, &
-                    & bH2S,bCH4,bSO4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR
+                    & bH2S,bCH4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR
 #endif
 
 #ifdef USE_COSINE
@@ -5605,12 +5605,12 @@
 
 #ifdef USE_ICM
         !gfortran requires all chars have same length
-        ar_name(1:15)=(/'sedDOX','btemp ','bPO4  ','bNH4  ','bNO3  ', &
-                      & 'bH2S  ','bCH4  ','bSO4  ','bSA   ','bSTR  ', &
-                      & 'bNH4s ','bPOS  ','bSTRm ','ibSTR ','sht   '/)
+        ar_name(1:14)=(/'sedDOX','btemp ','bPO4  ','bNH4  ','bNO3  ', &
+                      & 'bH2S  ','bCH4  ','bSA   ','bSTR  ','bNH4s ', &
+                      & 'bPOS  ','bSTRm ','ibSTR ','sht   '/)
 !'
-        do k=1,15 !# of 1D arrays
-          if(isav_icm==0.and.k==15) cycle
+        do k=1,14 !# of 1D arrays
+          if(isav_icm==0.and.k==14) cycle
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
@@ -5637,20 +5637,18 @@
               else if(k==7) then
                 bCH4(ie)=buf3(i)
               else if(k==8) then
-                bSO4(ie)=buf3(i)
-              else if(k==9) then
                 bSA(ie)=buf3(i)
-              else if(k==10) then
+              else if(k==9) then
                 bSTR(ie)=buf3(i)
-              else if(k==11) then
+              else if(k==10) then
                 bNH4s(ie)=buf3(i)
-              else if(k==12) then
+              else if(k==11) then
                 bPOS(ie)=buf3(i)
-              else if(k==13) then
+              else if(k==12) then
                 bSTRm(ie)=buf3(i)
-              else if(k==14) then
+              else if(k==13) then
                 ibSTR(ie)=buf3(i)
-              else if(k==15) then
+              else if(k==14) then
                 sht(ie)=buf3(i)
               endif
             endif !iegl

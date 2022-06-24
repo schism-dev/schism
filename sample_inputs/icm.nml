@@ -81,7 +81,7 @@ Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
 !-----------------------------------------------------------------------
 !net settling velocity (WS) into sediment
 !  iSettle=0: bottom-layer WS same as water column WS
-!  iSettle=1: assign bottom-layer WS from WSSEDn, WSPOMn,WSPBSn
+!  iSettle=1: assign bottom-layer WS from WSSEDn, WSPOMn,WSPBSn; todo: put this into core module
 !-----------------------------------------------------------------------
 iSettle = 1
 WSSEDn  = 0.20              !net settling velocity of TSS (m.day-1)
@@ -411,12 +411,12 @@ vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
 !-----------------------------------------------------------------------
 !basic 
 bdz    = 0.1                  !sediment thickness (m)
-VSED   = 0.50                 !burial rate (cm/yr)
-DIFFT  = 0.0018               !?
-SALTSW = 1.0                  !?
-SALTND = 1.0                  !?
-m1     = 0.5                  !?
-m2     = 0.5                  !?
+bury   = 1.37e-5              !burial rate (m.day-1); 1 cm/yr=2.74e-5 m.day-1
+bdiff  = 1.8e-7               !diffusion coefficient for sediment temp. (m2/s)
+bsalt  = 1.0                  !salinity criteria of fresh/salty water (PSU)
+bsaltn = 1.0                  !salinity criteria of fresh/salty water for NH4/NO3 reaction (PSU)
+bsaltp = 1.0                  !salinity criteria of fresh/salty water for PO4 partition (PSU)
+bsc    = 0.5  0.5             !sediment solid conc. in Layer 1 and Layer 2 (Kg.L-1)
 THTADP = 1.117                !?
 THTADD = 1.08                 !?
 VPMIX  = 0.00012              !unit: m^2/day
@@ -434,18 +434,17 @@ bNH40  = 4.0
 bNO30  = 1.0
 bH2S0  = 250.0
 bCH40  = 40.01  
-bSO40  = 54.01
 bSA0   = 500.0
 
 !decay rates of sediment POM
 bKC    = 0.035   0.0018   0.00     !decay rate of POC (3G class) at 20C
 bKN    = 0.035   0.0018   0.00     !decay rate of PON (3G class) at 20C
 bKP    = 0.035   0.0018   0.00     !decay rate of POP (3G class) at 20C
-bDTC   = 1.10    1.150    1.17     !temp. dependence of POC decay
-bDTN   = 1.10    1.150    1.17     !temp. dependence of PON decay
-bDTP   = 1.10    1.150    1.17     !temp. dependence of POP decay
+bKTC   = 1.10    1.150    1.17     !temp. dependence of POC decay
+bKTN   = 1.10    1.150    1.17     !temp. dependence of PON decay
+bKTP   = 1.10    1.150    1.17     !temp. dependence of POP decay
 bKS    = 0.50                      !decay rate of POS (3G class) at 20C
-bDTS   = 1.10                      !temp. dependence of POS decay
+bKTS   = 1.10                      !temp. dependence of POS decay
 
 !parition of PB matter
 FRPPH  = 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095  ! 3 phyto. into 3G POP classes,(3G,3PB) 
@@ -475,7 +474,7 @@ dtheta    = 1.08                   !temp. dependence for modifying stc under hyp
 !nitrification
 bKNH4f  = 0.20      !NH4 reaction rate in freshwater  at 20C (1st layer) (m/day)
 bKNH4s  = 0.140     !NH4 reaction rate in salty water at 20C (1st layer) (m/day)
-bDTNH4  = 1.08      !temp. dependency for NH4 reaction 
+bKTNH4  = 1.08      !temp. dependency for NH4 reaction 
 bKhNH4  = 1.5       !half-stauration NH4 for nitrification (g/m3)
 bKhDO   = 2.00      !half-stauration DO for nitrification (g/m3)
 PIENH4  = 1.0             !?
@@ -484,12 +483,12 @@ PIENH4  = 1.0             !?
 bKNO3f = 0.30       !NO3 reaction rate in freshwater  at 20C (1st layer) (m/day)
 bKNO3s = 0.125      !NO3 reaction rate in salty water at 20C (1st layer) (m/day)
 bKNO3  = 0.25       !NO3 reaction rate (2nd layer) (m/day)
-bDTNO3 = 1.08       !temp. dependency for NO3 reaction
+bKTNO3 = 1.08       !temp. dependency for NO3 reaction
 
 !H2S (particulate and dissolve) oxidation
 bKH2Sd  = 0.2       !dissolved H2S reaction rate at 20C (1st layer) (m/day)
 bKH2Sp  = 0.4       !particulate H2S reaction rate at 20C (1st layer) (m/day)
-bDTH2S  = 1.08      !temp. dependency for H2S reaction
+bKTH2S  = 1.08      !temp. dependency for H2S reaction
 
 PIE1S     = 100.0
 PIE2S     = 100.0
@@ -497,10 +496,9 @@ KMHSO2    =  8.0                   !doubled for 4.0 !unit: g/m^3
 
 !CH4 reaction
 bKCH4   = 0.2        !CH4 reaction rate at 20C (1st layer) (m/day)
-bDTCH4  = 1.08       !temp. dependency for CH4 reaction
+bKTCH4  = 1.08       !temp. dependency for CH4 reaction
 
 KMCH4O2   = 0.2
-KMSO4     = 1.08
 AONO      = 2.86          !from icm.in, moved by ZG (oxygen to carbon ratio?)
 
 !Silica dissolution

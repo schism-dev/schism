@@ -62,9 +62,8 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
   real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,dz_flux(2)
 
-  real(rkind),save :: dtw,dtw2 !dtw2=dtw/2; time step in ICM (day)
+  real(rkind),save :: dtw     !ICM time step (day)
   real(rkind),save:: time_ph  !time stamp for WQinput
-  real(rkind),save :: mKhN,mKhP
   real(rkind),save :: rIa,rIavg
 
   !-------------------------------------------------------------------------------
@@ -132,22 +131,22 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: bdz,VSED,DIFFT,SALTSW,SALTND
-  real(rkind),save,target :: m1,m2,THTADP,THTADD,VPMIX,VDMIX
+  real(rkind),save,target :: bdz,bury,bdiff,bsalt,bsaltp,bsaltn,bsc(2)
+  real(rkind),save,target :: THTADP,THTADD,VPMIX,VDMIX
   real(rkind),save,target :: btemp0,bPOP0(3),bPON0(3),bPOC0(3),bPOS0,bPO40,bNH40,bNO30 !init conc.
-  real(rkind),save,target :: bH2S0,bCH40,bSO40,bSA0,bSTR0   !init conc.
-  real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bDTC,bDTN,bDTP
-  real(rkind),save,target :: bKS,bDTS
+  real(rkind),save,target :: bH2S0,bCH40,bSA0,bSTR0   !init conc.
+  real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bKTC,bKTN,bKTP
+  real(rkind),save,target :: bKS,bKTS
   real(rkind),save,target,dimension(3,3) :: FRPPH,FRNPH,FRCPH, frnveg,frpveg,frcveg !(G1:G3,veg/PB)
   real(rkind),save,target,dimension(3) :: frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC !(G1:G3)
   real(rkind),save,target :: dO2c,dstc,dtheta !diffusion under hypoxia
-  real(rkind),save,target :: bKNH4f,bKNH4s,PIENH4,bDTNH4,bKhNH4,bKhDO !!nitrification
-  real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bDTNO3 !denitrification
-  real(rkind),save,target :: bKH2Sd,bKH2Sp,PIE1S,PIE2S,bDTH2S,KMHSO2 !H2S oxidation
+  real(rkind),save,target :: bKNH4f,bKNH4s,PIENH4,bKTNH4,bKhNH4,bKhDO !!nitrification
+  real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bKTNO3 !denitrification
+  real(rkind),save,target :: bKH2Sd,bKH2Sp,PIE1S,PIE2S,bKTH2S,KMHSO2 !H2S oxidation
   real(rkind),save,target :: CSISAT,DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR  !Silica dissolution
   real(rkind),save,target :: DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT  !PO4
   real(rkind),save,target :: TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP !benthic stress
-  real(rkind),save,target :: bKCH4,bDTCH4,KMCH4O2,KMSO4,AONO !CH4 reaction
+  real(rkind),save,target :: bKCH4,bKTCH4,KMCH4O2,AONO !CH4 reaction
   integer,save,target :: ierosion,idepo                     !erosion
   real(rkind),save,target :: etau,eroporo,erorate,erofrac,erodiso !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand
   real(rkind),save,target :: depofracR,depofracL,depoWSR,depoWSL
@@ -155,24 +154,15 @@ module icm_mod
   !---------------------------------
   !variables
   !---------------------------------
-  real(rkind),save :: W2
-
   !Sediment thickness, burial and mixing rates
-  real(rkind),save :: W12,W12MIN,KL12
 
   !sediment concentration !unit:mg/m^3
-  real(rkind), save,allocatable,dimension(:) :: btemp,bCH4,bSO4,bSTR,bSTRm,ibSTR,bPOS
+  real(rkind), save,allocatable,dimension(:) :: btemp,bCH4,bSTR,bSTRm,ibSTR,bPOS
   real(rkind), save,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4
   real(rkind), save,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
 
-  real(rkind),save :: SI1,SI2,SIT1,SIT2,PO41,PO42,PO4T1,PO4T2,NH41,NH42,NH4T1,NH4T2
-  real(rkind),save :: NO31,NO32,NO3T1,NO3T2,HS1,HS2,HST1,HST2,CH41,CH42,CH4T1,CH4T2,SO41,SO42,SO4T1,SO4T2
-
-  !sediment fluxes
-  real(rkind),save :: JNH4,JNO3,JHS
-
-  !SOD calculation
-  real(rkind),save :: SOD,stc
+  real(rkind),save :: NH41,NH4T2,NO3T2,HST2,CH4T2
+  real(rkind),save :: JNH4,JNO3,JHS,SOD,stc
 
   !sediment fluxes
   real(rkind),save,allocatable,dimension(:) :: sedDOX,sedCOD,sedNH4,sedNO3,sedPO4,sedDOC,sedSA

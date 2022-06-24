@@ -50,7 +50,7 @@
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
-                        & btemp,bPO4,bNH4,bNO3,bH2S,bCH4,bSO4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR,&
+                        & btemp,bPO4,bNH4,bNO3,bH2S,bCH4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR,&
                         & sedDOX,sedNH4,sedNO3,sedPO4,sedCOD,sedSA
 #endif
 
@@ -10089,17 +10089,16 @@
         j=nf90_def_var(ncid_hot,'bNO3',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+5))
         j=nf90_def_var(ncid_hot,'bH2S',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+6))
         j=nf90_def_var(ncid_hot,'bCH4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+7))
-        j=nf90_def_var(ncid_hot,'bSO4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
-        j=nf90_def_var(ncid_hot,'bSA',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
-        j=nf90_def_var(ncid_hot,'bSTR',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+10))
-        j=nf90_def_var(ncid_hot,'bNH4s', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+11))
-        j=nf90_def_var(ncid_hot,'bPOS',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+12))
-        j=nf90_def_var(ncid_hot,'bSTRm', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+13))
-        j=nf90_def_var(ncid_hot,'ibSTR', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+14))
+        j=nf90_def_var(ncid_hot,'bSA',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
+        j=nf90_def_var(ncid_hot,'bSTR',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
+        j=nf90_def_var(ncid_hot,'bNH4s', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+10))
+        j=nf90_def_var(ncid_hot,'bPOS',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+11))
+        j=nf90_def_var(ncid_hot,'bSTRm', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+12))
+        j=nf90_def_var(ncid_hot,'ibSTR', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+13))
         !last dim must be node/elem/side- I suggest we swap indices for these
         !2D arrays
         var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim
-        nvars_hot_icm=nvars_hot+14
+        nvars_hot_icm=nvars_hot+13
 
         if(isav_icm==1) then
           var1d_dim(1)=elem_dim;  !1D array
@@ -10128,14 +10127,13 @@
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),dble(bNO3),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),dble(bH2S),(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),dble(bCH4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),dble(bSO4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(bSA),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bSTR),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bNH4s),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bPOS),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(bSTRm),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(ibSTR),(/1/),(/ne/))
-        nvars_hot_icm=nvars_hot+14
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),dble(bSA),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(bSTR),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bNH4s),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bPOS),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bSTRm),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(ibSTR),(/1/),(/ne/))
+        nvars_hot_icm=nvars_hot+13
 
         if(isav_icm==1) then
           j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))

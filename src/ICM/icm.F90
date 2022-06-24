@@ -81,7 +81,7 @@ subroutine ecosystem(it)
   integer :: id,kb
   real(rkind) :: tmp,time,rat,s,z1,z2 
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC
-  real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
+  real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
@@ -121,7 +121,7 @@ subroutine ecosystem(it)
 
         !impose minimum values (note: these measures may cause mass inbalance in the system) 
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
-        do m=1,3; PBS(m,k)=max(PBS(m,k),PBmin(m)); enddo !todo: add PBmin in the parameter files
+        do m=1,3; PBS(m,k)=max(PBS(m,k),PBmin(m)); enddo 
        
         !temp,TSS
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
@@ -182,7 +182,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       GP=0; rKC=0; rKN=0; rKP=0; rKHR=0; rDenit=0; rKCOD=0; fPN=1.0
       do k=kb+1,nvrt
-        APB=sum(PBS(1:3,k))
+        APB=sum(PBS(1:3,k)); mKhN=sum(KhN)/3.0; mKhP=sum(KhP)/3.0
         do i=1,3
           fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
           
