@@ -204,6 +204,9 @@
       if(myrank_scribe==0) write(16,*)'max dim:',np_max,ne_max,ns_max,myrank_schism 
       
       !Alloc
+      !For gcc?
+      if(allocated(iwork3)) deallocate(iwork3)
+
       allocate(iplg(np_max,nproc_schism),ielg(ne_max,nproc_schism),islg(ns_max,nproc_schism))
       allocate(iwork(max(np_max,ne_max)),iwork2(4,ne_max),iwork3(2,ns_max),work(np_max),xnd(np_global), &
      &ynd(np_global),dp(np_global),kbp00(np_global),i34(ne_global),elnode(4,ne_global),isidenode(2,ns_global))
