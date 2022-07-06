@@ -262,7 +262,7 @@
         !Available now: outvar(nvrt,np|ne), eta2(np)
           if(i23d==1) then !2D
 !           Output: time, 2D variable at all nodes
-            if(maxval(icomp_stats(1:3)/=0)) &
+            if(maxval(icomp_stats(1:3))/=0) &
      &write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i),i=1,np)
 
             !Compute stats (magnitude for vectors)
