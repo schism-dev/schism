@@ -17,7 +17,7 @@
 
 !	Read nc outputs from scribe I/O versions for multiple files at all nodes 
 !       Works for mixed tri/quad outputs on NODE/ELEMENT based vars.
-!       Inputs: screen; nc file; vgrid.in (in this dir or ../)
+!       Inputs: screen; nc file and out2d*.nc; vgrid.in (in this dir or ../)
 !       Outputs: extract.out (ascii); optional: max/min/avg 2D output (*_[max|min|avg].gr3 and *_violators.bp)
 !****************************************************************************************
 !     ifort -O2 -assume byterecl -o read_output10_allnodes.exe ../UtilLib/extract_mod2.f90 ../UtilLib/schism_geometry.f90 ../UtilLib/compute_zcor.f90 read_output10_allnodes.f90 -I$NETCDF/include  -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
