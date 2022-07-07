@@ -409,130 +409,126 @@ vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
 !-----------------------------------------------------------------------
 ! sediment flux model (SFM) parameter 
 !-----------------------------------------------------------------------
-!basic 
-bdz    = 0.1                  !sediment thickness (m)
-bury   = 1.37e-5              !burial rate (m.day-1); 1 cm/yr=2.74e-5 m.day-1
-bdiff  = 1.8e-7               !diffusion coefficient for sediment temp. (m2/s)
-bsalt  = 1.0                  !salinity criteria of fresh/salty water (PSU)
-bsaltn = 1.0                  !salinity criteria of fresh/salty water for NH4/NO3 reaction (PSU)
-bsaltp = 1.0                  !salinity criteria of fresh/salty water for PO4 partition (PSU)
-bsc    = 0.5  0.5             !sediment solid conc. in Layer 1 and Layer 2 (Kg.L-1)
-THTADP = 1.117                !?
-THTADD = 1.08                 !?
-VPMIX  = 0.00012              !unit: m^2/day
-VDMIX  = 0.0010               !unit: m^2/day
+!basic information about sediment 
+bdz    = 0.1         !sediment thickness (m)
+bury   = 1.37e-5     !burial rate (m.day-1); 1 cm/yr=2.74e-5 m.day-1
+bsolid = 0.5  0.5    !sediment solid conc. in Layer 1 and Layer 2 (Kg.L-1)
+bdiff  = 1.8e-7      !diffusion coefficient for sediment temp. (m2/s)
+bTR    = 20          !reference temp. for sediment processes
 
-!init conc. (unit:  g/m^3)
-btemp0 = 5.0
-bSTR0  = 20.0   !benthic stress
-bPOP0  = 20.0    100.0    150.0     !initial POP conc.
-bPON0  = 50.0    150.0    250.0
-bPOC0  = 1000.0  3000.0   5000.0
-bPOS0  = 500.0
-bPO40  = 5.0
-bNH40  = 4.0
-bNO30  = 1.0
-bH2S0  = 250.0
-bCH40  = 40.01  
-bSA0   = 500.0
+!particle mixing and diffusion coefficients, benthic stress
+bVpmin   = 3.0e-6   !minimum particle mixing velocity coefficient (m2.day-1)
+bVp      = 1.2e-4   !particle mixing velocity coefficient (m2.day-1) 
+bVd      = 1.0e-3   !diffusion velocity coefficient (m2.day-1)
+bKTVp    = 1.117    !temp. dependece of particle mixing velocity 
+bKTVd    = 1.08     !temp. dependece of diffusion velocity
+bKST     = 0.03     !1st order decay rate of benthic stress  (day-1)
+bSTmax   = 20.0     !maximum value of benthic stress (day) (note: smaller than 1/bKST)
+bKhDO_Vp = 4.0      !DO half-saturation of particle mixing (mg/L)
+bDOc_ST  = 1.0      !DO criteria for benthic stress (mg/L)
+banoxic  = 10.0     !consective days of hypoxia causing maximum benthic stress (day)
+boxic    = 45.0     !time lag for bethos recovery from hypoxia event (day) 
+bp2d     = 0.0      !ratio from mixing coef. to diffusion coef. (benthos enhanced effect)
 
-!decay rates of sediment POM
-bKC    = 0.035   0.0018   0.00     !decay rate of POC (3G class) at 20C
-bKN    = 0.035   0.0018   0.00     !decay rate of PON (3G class) at 20C
-bKP    = 0.035   0.0018   0.00     !decay rate of POP (3G class) at 20C
+!initial sediment concentrations in lower layer (g/m3)
+btemp0 = 5.0        !initial temp. (oC)
+bstc0  = 0.1        !surface transfer coefficient
+bSTR0  = 0.0        !benthic stress (day)
+bThp0  = 0.0        !consective days of hypoxia (day)
+bTox0  = 0.0        !consective days of oxic condition after hypoxia event (day)
+bNH40  = 4.0        !NH4 
+bNO30  = 1.0        !NO3 
+bPO40  = 5.0        !PO4 
+bH2S0  = 250.0      !H2S 
+bCH40  = 40.01      !CH4 
+bPOS0  = 500.0      !POS 
+bSA0   = 500.0      !SA  
+bPOC0  = 1000.0  3000.0   5000.0    !POC 
+bPON0  = 50.0    150.0    250.0     !PON 
+bPOP0  = 20.0    100.0    150.0     !POP 
+
+!decay rates of sediment POM (diagenesis flux)
+bKC    = 0.035   0.0018   0.00     !decay rate of POC (3G class) at bTR
+bKN    = 0.035   0.0018   0.00     !decay rate of PON (3G class) at bTR
+bKP    = 0.035   0.0018   0.00     !decay rate of POP (3G class) at bTR
 bKTC   = 1.10    1.150    1.17     !temp. dependence of POC decay
 bKTN   = 1.10    1.150    1.17     !temp. dependence of PON decay
 bKTP   = 1.10    1.150    1.17     !temp. dependence of POP decay
-bKS    = 0.50                      !decay rate of POS (3G class) at 20C
-bKTS   = 1.10                      !temp. dependence of POS decay
 
-!parition of PB matter
-FRPPH  = 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095  ! 3 phyto. into 3G POP classes,(3G,3PB) 
-FRNPH  = 0.65 0.300 0.050   0.65 0.300 0.050   0.65 0.300 0.050  ! 3 phyto. into 3G PON classes 
-FRCPH  = 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095  ! 3 phyto. into 3G POC classes 
+!fraction of refractory/PB/SAV/VEG POM into sediment 3G POM  (depositional flux)
+bFCM = 0.0   0.43   0.57          !refractory POC into sed POC(3G) 
+bFNM = 0.0   0.54   0.46          !refractory PON into sed PON(3G)
+bFPM = 0.0   0.43   0.57          !refractory POP into sed POP(3G)
+bFCP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POC into sed POC (G3,PB=1:3)
+bFNP = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !Phyto PON into sed PON (G3,PB=1:3) 
+bFPP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POP into sed POP (G3,PB=1:3) 
 
-!parition of POM
-FRPOP  = 0.0   0.43   0.57  !fraction for refractory (0,1)
-FRPON  = 0.0   0.54   0.46  !fraction for refractory (0,1)
-FRPOC  = 0.0   0.43   0.57  !fraction for refractory (0,1)
+!nitrification (NH4)
+bKNH4f    = 0.20    !NH4 reaction rate in freshwater  at bTR (1st layer) (m/day)
+bKNH4s    = 0.140   !NH4 reaction rate in salty water at bTR (1st layer) (m/day)
+bKTNH4    = 1.08    !temp. dependency for NH4 reaction 
+bKhNH4    = 1.5     !half-stauration NH4 for nitrification (g/m3)
+bKhDO_NH4 = 2.00    !half-stauration DO for nitrification (g/m3)
+bpieNH4   = 1.0     !partition coefficients of NH4 in Layer 1 & 2 (Kg-1.L)
+bsaltn    = 1.0     !salinity criteria of fresh/salty water for NH4/NO3 reaction (PSU)
 
-!partition of POM produced by sav root
-frnsav = 0.65    0.300    0.050    !fraction of PON produced by rt metabolism goes to G1, G2, G3
-frpsav = 0.65    0.255    0.095    !fraction of POP produced by rt metabolism goes to G1, G2, G3
-frcsav = 0.65    0.255    0.095    !fraction of POC produced by rt metabolism goes to G1, G2, G3
+!denitrification (NO3)
+bKNO3f    = 0.30    !NO3 reaction rate in freshwater at bTR (1st layer) (m/day)
+bKNO3s    = 0.125   !NO3 reaction rate in salty water at bTR (1st layer) (m/day)
+bKNO3     = 0.25    !NO3 reaction rate (2nd layer) (m/day)
+bKTNO3    = 1.08    !temp. dependency for NO3 reaction
 
-!partition of POM produced by veg root metabolism goes to G1, G2, G3, (3G,3veg)
-frnveg = 0.65 0.300 0.050   0.65 0.300 0.050   0.65 0.300 0.050  
-frpveg = 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095   
-frcveg = 0.65 0.255 0.095   0.65 0.255 0.095   0.65 0.255 0.095 
+!sulfide oxidation (H2S)
+bKH2Sd    = 0.2     !dissolved H2S reaction rate at bTR (1st layer) (m/day)
+bKH2Sp    = 0.4     !particulate H2S reaction rate at bTR (1st layer) (m/day)
+bKTH2S    = 1.08    !temp. dependency for H2S reaction
+bpieH2Ss  = 100.0   !partition coefficient of NH4 in Layer 1 (Kg-1.L)
+bpieH2Sb  = 100.0   !partition coefficient of NH4 in Layer 2 (Kg-1.L)
+bKhDO_H2S = 8.0     !O2 constant to normalize H2S oxidation (g[O2]/m3)
+bsaltc    = 1.0     !salinity criteria of fresh/salty water for carbon reaction (PSU)
 
-!diffusion under hypoxia
-dO2c      = 0.2                    !O2 criteria for diff. under hypoxia  g/m^3
-dstc      = 0.1                    !reference surface transfer coeff. m/day
-dtheta    = 1.08                   !temp. dependence for modifying stc under hypoxia  
+!methane oxidation (CH4)
+bKCH4     = 0.2     !CH4 reaction rate at bTR (1st layer) (m/day)
+bKTCH4    = 1.08    !temp. dependency for CH4 reaction
+bKhDO_CH4 = 0.2     !half-saturation DO for CH4 oxidation (g[O2]/m3)
+bo2n      = 2.86    !oxygen to nitrogen ratio in sediment (denitrification)
 
-!nitrification
-bKNH4f  = 0.20      !NH4 reaction rate in freshwater  at 20C (1st layer) (m/day)
-bKNH4s  = 0.140     !NH4 reaction rate in salty water at 20C (1st layer) (m/day)
-bKTNH4  = 1.08      !temp. dependency for NH4 reaction 
-bKhNH4  = 1.5       !half-stauration NH4 for nitrification (g/m3)
-bKhDO   = 2.00      !half-stauration DO for nitrification (g/m3)
-PIENH4  = 1.0             !?
+!phosphate reaction (PO4)
+bpiePO4   = 100.0   !partition coefficient of PO4 in Layer 2 (Kg-1.L)
+bKOPO4f   = 3000.0  !oxygen dependency for PO4 sorption in freshwater in Layer 1
+bKOPO4s   = 300.0   !oxygen dependency for PO4 sorption in salty water in Layer 1
+bDOc_PO4  = 1.0     !DO criteria for PO4 sorptiona (g[O2]/m3)
+bsaltp    = 1.0     !salinity criteria of fresh/salty water for PO4 partition (PSU)
 
-!denitrification
-bKNO3f = 0.30       !NO3 reaction rate in freshwater  at 20C (1st layer) (m/day)
-bKNO3s = 0.125      !NO3 reaction rate in salty water at 20C (1st layer) (m/day)
-bKNO3  = 0.25       !NO3 reaction rate (2nd layer) (m/day)
-bKTNO3 = 1.08       !temp. dependency for NO3 reaction
+!silica dissolution (SI)
+bKS       = 0.50    !decay rate of POS (3G class) at bTR 
+bKTS      = 1.10    !temp. dependence of POS decay
+bSIsat    = 40.0    !silica saturation conc. in pore water (g[Si]/m3)
+bpieSI    = 100.0   !partition coefficient of silica in Layer 2 (Kg-1.L)
+bKOSI     = 10.0    !oxygen dependency for silica sorption in Layer 1
+bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
+bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
+bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
 
-!H2S (particulate and dissolve) oxidation
-bKH2Sd  = 0.2       !dissolved H2S reaction rate at 20C (1st layer) (m/day)
-bKH2Sp  = 0.4       !particulate H2S reaction rate at 20C (1st layer) (m/day)
-bKTH2S  = 1.08      !temp. dependency for H2S reaction
+!SAV and VEG contribution to sediment POM
+bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
+bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
+bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
+bFCv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POC into sed POC (G3,PB=1:3) 
+bFNv = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !VEG PON into sed PON (G3,PB=1:3)  
+bFPv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POP into sed POP (G3,PB=1:3)   
+/
 
-PIE1S     = 100.0
-PIE2S     = 100.0
-KMHSO2    =  8.0                   !doubled for 4.0 !unit: g/m^3
-
-!CH4 reaction
-bKCH4   = 0.2        !CH4 reaction rate at 20C (1st layer) (m/day)
-bKTCH4  = 1.08       !temp. dependency for CH4 reaction
-
-KMCH4O2   = 0.2
-AONO      = 2.86          !from icm.in, moved by ZG (oxygen to carbon ratio?)
-
-!Silica dissolution
-CSISAT    = 40.0                   !unit: g/m^3
-DPIE1SI   = 10.0
-PIE2SI    = 100.0
-KMPSI     = 5.0e4                  !unit g/m^3
-O2CRITSI  = 1.0
-JSIDETR   = 0.1                    !unit: g/m^2 day
-
-!PO4
-DPIE1PO4F = 3000.0
-DPIE1PO4S = 300.0
-PIE2PO4   = 100.0
-O2CRIT    = 1.0
-
-!benthic stress
-TEMPBEN   = 10.0
-KBENSTR   = 0.03                   !unit: /day
-KLBNTH    = 0.0
-DPMIN     = 3.0e-6                 !unit: m^2/day
-KMO2DP    = 4.0
-
-
-!erosion flux
-ierosion  = 0        !1: sulfur erosion flux; 2: POC erosion flux;3: both sulfur&POC erosion flux;
-idepo     = 0        !0:constant fraction; 1:calculated fraction
-etau      = 1.e-6    !*2D variables (bottom shear stress)
-eroporo   = 0.8      !(1-eroporo) in erosion formula
-erorate   = 864      !kg/m2/day
-erofrac   = 0.5      !0~1
-erodiso   = 2.5
-depofracR = 0.02     !0~1
-depofracL = 0.02
-depoWSR   = 3
-depoWSL   = 3
+&ERO
+!-----------------------------------------------------------------------
+! benthic erosion parameter
+!-----------------------------------------------------------------------
+ierosion = 0         !1: H2S flux; 2: POC flux; 3:  H2S&POC flux
+erosion  = 864       !erosion rate (kg.m-2.day)
+etau     = 1.e-6     !critical bottom shear stress (Pa)
+eporo    = 0.8       !coefficinet in erosion formula (see code in icm_sfm.F90)
+efrac    = 0.5       !fraction coefficinet in erosion formula (see code in icm_sfm.F90) 
+ediso    = 2.5       !H2S erosion coeffcient (see code in icm_sfm.F90)
+dfrac    = 0.02 0.02 !deposition fraction of POC (negative value: dfrac will be computed) 
+dWS_POC  = 3.0  3.0  !coefficient in POC erosion (see code in icm_sfm.F90)
 /

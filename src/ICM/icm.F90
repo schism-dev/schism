@@ -168,8 +168,11 @@ subroutine ecosystem(it)
         if(jsav==1.and.spatch(id)==1.and.zid(k-1)<shtz) rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
 
         !light attenuation due to VEG
-        if((jveg==1.and.vpatch(id)==1).and.(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j)))) then 
-            rKeV(k)=sum(vKe(:)*(vtleaf(id,:)+vtstem(id,:))/max(1.d-5,min(tdep,vht(id,:))))
+        if(jveg==1.and.vpatch(id)==1) then
+          do j=1,3
+            if(idry_e(id)==0.and.zid(k-1)>=vhtz(j)) cycle
+            rKeV(k)=rKeV(k)+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.d-5,min(tdep,vht(id,j)))
+          enddo
         endif 
 
         rKe(k)=rKe0(k)+rKeS(k)+rKeV(k) !total light attenuation
@@ -251,7 +254,7 @@ subroutine ecosystem(it)
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
       !sediment flux module
-      if(iSed==1) call sed_calc(id,kb,dz,TSS)
+      if(iSed==1) call sed_calc(id,kb,tdep,dz(kb+1),TSS)
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -285,18 +288,17 @@ subroutine ecosystem(it)
       if(iSed==1) then
         !pH effect on sediment PO4 release
         if(iPh==1 .and.iphgb(id)/=0) then
-          sedPO4(id)=max(sedPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
+          JPO4(id)=max(JPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
           !BnPO4=max(BnPO4*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
           !nPO4=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
         endif
 
-        bflux(iDOC)=bflux(iDOC)+sedDOC(id)
-        bflux(iNH4)=bflux(iNH4)+sedNH4(id)
-        bflux(iNO3)=bflux(iNO3)+sedNO3(id)
-        bflux(iPO4)=bflux(iPO4)+sedPO4(id)
-        bflux(iCOD)=bflux(iCOD)+sedCOD(id)
-        bflux(iDOX)=bflux(iDOX)+sedDOX(id)    
-        if(iSilica==1) bflux(iSA) =bflux(iSA) +sedSA(id)
+        bflux(iNH4)=bflux(iNH4)+JNH4(id)
+        bflux(iNO3)=bflux(iNO3)+JNO3(id)
+        bflux(iPO4)=bflux(iPO4)+JPO4(id)
+        bflux(iCOD)=bflux(iCOD)+JCOD(id)
+        bflux(iDOX)=bflux(iDOX)+SOD(id)    
+        if(iSilica==1) bflux(iSA) =bflux(iSA) +JSA(id)
       endif
 
       !erosion flux
@@ -988,7 +990,7 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
   use schism_glbl, only : rkind,errmsg,nvrt
   use schism_msgp, only : parallel_abort
   !use icm_mod, only : TIC,ALK,CA,CACO3,pH,CO2,CAsat,mCACO3,mC
-  use icm_mod, only : mCACO3,mC
+  use icm_mod, only : mCACO3,mC,brent_var
   implicit none
   !integer,intent(in) :: id,nv
   real(rkind),intent(in) :: temp,salt,TIC,ALK
@@ -998,8 +1000,9 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
   integer :: i,j,k,ierr,imed
   real(rkind) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc
   real(rkind) :: sth,sth2,r1,r2,r3,T,S,S2,rH2CO3,rHCO3,rCO3,rOH,rH,Kw,K1,K2,Kb
-  real(rkind) :: phi,h,a,f0,f1,f2,pKsp,Ksp
+  real(rkind) :: h,a,f0,f1,f2,pKsp,Ksp
   real(rkind) :: rval
+  type(brent_var) :: bv
 
   mmCACO3=1.d3*mCACO3; mmC=1.d3*mC
   !do k=1,nv
@@ -1015,9 +1018,7 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
     !Ct=sTIC-sCACO3 !total carbon (exclude CaCO3s)
     !Ca=sALK-sCACO3 !alkalintiy (exclude CaCO3s)
 
-    T=temp+273.15
-    S=salt
-    S2=sqrt(S)
+    T=temp+273.15;  S=salt;  S2=sqrt(S)
 
     if(T<250.d0.or.T>325.d0.or.S>50.d0.or.S<0.d0) then
       write(errmsg,*)'check salinity and temperature values: ',T,S
@@ -1025,10 +1026,6 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
     endif
     !ionic strength
     sth=1.47e-3+1.9885e-2*salt+3.8e-5*salt*salt
-    if(sth<0.d0) then
-      write(errmsg,*)'check ICM ionic stength: ',salt,sth
-      call parallel_abort(errmsg)
-    endif
     sth2=sqrt(sth)
 
     r3=-0.5085*sth2/(1.d0+2.9529*sth2) !for H+
@@ -1049,15 +1046,12 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
       K2=10.0**(-2902.39/T+6.4980-0.023790*T)*rHCO3/rCO3
     else !S>=1
       rval=148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S; !DOE
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kw')
       Kw=exp(rval)
 
       rval=2.83655-2307.1266/T-1.5529413*log(T)-(0.207608410+4.0484/T)*S2+0.0846834*S-0.00654208*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K1')
       K1=exp(rval)
 
       rval=-9.226508-3351.6106/T-0.2005743*log(T)-(0.106901773+23.9722/T)*S2+0.1130822*S-0.00846934*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K2')
       K2=exp(rval)
 
       !Kw=exp(148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S); !DOE
@@ -1067,24 +1061,23 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
 
     rval=(-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
        &  +1.62142*S-(24.4344+25.085*S2+0.2474*S)*log(T)+0.053105*S2*T  !*rBOH3/rBOH4
-    if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kb')
     Kb=exp(rval)
 
     !Kb=exp((-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
     !   &  +1.62142*S-(24.4344+25.085*S2+0.2474*S)*log(T)+0.053105*S2*T)  !*rBOH3/rBOH4
 
-    !brent method
-    !call ph_zbrent(ierr,imed,phi,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-    imed=3
-    call ph_zbrent(ierr,imed,phi,K1,K2,Kw,Kb,sTIC,sALK,sB,rH)
+    !brent method to compute pH
+    bv%imed=1; bv%vmin=3.0; bv%vmax=13.0
+    bv%K1=K1; bv%K2=K2; bv%Kw=Kw; bv%Kb=Kb; bv%Ct=sTIC; bv%Ca=sALK; bv%Bt=sB; bv%rH=rH
+    call brent(bv)
 
-    if(ierr/=0) then
-      write(errmsg,*)'pH calculation failure, ierr=',ierr
+    if(bv%ierr/=0) then
+      write(errmsg,*)'pH calculation failure, ierr=',bv%ierr
       call parallel_abort(errmsg)
     endif
 
     !output variables
-    h=10.0**(-phi)
+    h=10.0**(-bv%ph)
     a=h*h+K1*h+K1*K2;
     f0=h*h/a; f2=K1*K2/a;
 
@@ -1096,137 +1089,33 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
     Ksp=10.d0**(pKsp)
 
-    pH=phi
+    pH=bv%ph
     CO2=f0*sTIC*mmC
     CAsat=Ksp*mmCACO3/(f2*sTIC)
   !enddo !k
 
 end subroutine get_ph
 
-subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-!---------------------------------------------------------------------
-!Brent's method to find ph value
-!numerical recipes from William H. Press, 1992
-!---------------------------------------------------------------------
-  use schism_glbl, only : rkind
-
-  implicit none
-  !integer, parameter :: rkind=8,nloop=100
-  integer, parameter :: nloop=100
-!Error: tweak single
-  real(rkind), parameter :: eps=3.0e-8, tol=1.e-6,phmin=3.0,phmax=13.0
-  integer, intent(in) :: imed
-  integer, intent(out) :: ierr
-  real(rkind),intent(in) :: K1,K2,Kw,Kb,Ct,Ca,Bt,rH
-  real(rkind),intent(out) :: ph
-
-  !local variables
-  integer :: i
-  real(rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,s,tol1,xm
-  real(rkind) :: rtmp,h
-
-  !initilize upper and lower limits
-  ierr=0
-  a=phmin
-  b=phmax
-
-  h=10.0**(-a); call ph_f(fa,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-  h=10.0**(-b); call ph_f(fb,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-
-  !root must be bracketed in brent
-  if(fa*fb>0.d0) then
-    ierr=5
-    return
-  endif
-
-  fc=fb
-  do i=1,nloop
-    if(fb*fc>0.d0) then
-      c=a
-      fc=fa
-      d=b-a
-      e=d
-    endif !fb*fc>0.
-    if(abs(fc)<abs(fb)) then
-      a=b
-      b=c
-      c=a
-      fa=fb
-      fb=fc
-      fc=fa
-    endif !abs(fc)
-    tol1=2.d0*eps*abs(b)+0.5d0*tol !convergence check
-    xm=0.5d0*(c-b)
-    if(abs(xm)<=tol1.or.fb==0.d0) then
-    !if(abs(xm)<=tol1.or.abs(fb)<=1.d-8) then
-      ph=b
-      return
-    endif
-    if(abs(e)>=tol1.and.abs(fa)>abs(fb)) then
-      s=fb/fa
-      if(a==c) then
-        p=2.d0*xm*s
-        q=1.d0-s
-      else
-        q=fa/fc
-        r=fb/fc
-        p=s*(2.d0*xm*q*(q-r)-(b-a)*(r-1.d0))
-        q=(q-1.d0)*(r-1.d0)*(s-1.d0)
-      endif !a==c
-      if(p>0.d0) q=-q
-      p=abs(p)
-      m1=3.d0*xm*q-abs(tol1*q)
-      m2=abs(e*q)
-      if(2.d0*p<min(m1,m2)) then
-        e=d
-        d=p/q
-      else
-        d=xm
-        e=d
-      endif !2.*p<min
-    else
-      d=xm
-      e=d
-    endif !abs(e)
-    a=b;
-    fa=fb
-    if(abs(d)>tol1) then
-      b=b+d
-    else
-      b=b+sign(tol1,xm)
-    endif !abs(d)
-    h=10.0**(-b); !fb=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h
-    call ph_f(fb,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-  enddo !i
-
-  ierr=6
-  ph=b
-
-end subroutine ph_zbrent
-
-subroutine ph_f(f,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
+subroutine ph_f(f,bv)
 !--------------------------------------------------------------------
 !calculate the nonlinear equation value of PH
 !--------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
+  use icm_mod, only : brent_var
   implicit none
-!Error: tweak single
-!  integer, parameter :: rkind=8
-  integer, intent(in) :: imed
-  real(rkind), intent(in) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
+  type(brent_var),intent(in) :: bv
   real(rkind), intent(out):: f
+  
+  !local variabels
+  real(rkind) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
 
-  if(imed==1) then !no boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h/rH
-  elseif(imed==2) then !contain boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h/rH
-  elseif(imed==3) then !contain boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h
-  else
-    !stop 'unknown imed in PH calculation'
-    write(errmsg,*)'unknown imed in PH calculation'
-    call parallel_abort(errmsg)
-  endif
+  h=10.0**(-bv%ph); K1=bv%K1; K2=bv%K2; Kw=bv%Kw; Kb=bv%Kb; Ct=bv%Ct
+  Ca=bv%Ca; Bt=bv%Bt; rH=bv%rH
+
+  !function for different forms of pH equation
+  !f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h/rH  !no boric
+  !f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h/rH !contain boric
+  f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h !contain boric
 
 end subroutine ph_f

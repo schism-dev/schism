@@ -55,16 +55,15 @@ subroutine read_icm_param(imode)
            & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMRT, &
            & vTMR,vKTMR,vMR0,vMRcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
            & vo2c 
-  namelist /SFM/ bdz,bury,bdiff,bsalt,bsaltn,bsaltp,bsc,THTADP,THTADD,VPMIX,VDMIX,btemp0,&
-           & bPOP0,bPON0,bPOC0,bPOS0,bPO40,bNH40,bNO30,bH2S0,bCH40,&
-           & bSA0,bSTR0,bKC,bKN,bKP,bKTC,bKTN,bKTP,bKS,bKTS,FRPPH,&
-           & FRNPH,FRCPH,frnveg,frpveg,frcveg,frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC,&
-           & dO2c,dstc,dtheta,bKNH4f,bKNH4s,PIENH4,bKTNH4,bKhNH4,bKhDO,bKNO3f,&
-           & bKNO3s,bKNO3,bKTNO3,bKH2Sd,bKH2Sp,PIE1S,PIE2S,bKTH2S,KMHSO2,CSISAT, &
-           & DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR,DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT, &
-           & TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP,bKCH4,bKTCH4,KMCH4O2,AONO, &
-           & ierosion,idepo,etau,eroporo,erorate,erofrac,erodiso,depofracR,depofracL, &
-           & depoWSR,depoWSL
+  namelist /SFM/ bdz,bury,bdiff,bsaltc,bsaltn,bsaltp,bsolid,bKTVp,bKTVd,bVp,bVd,bTR,&
+           & btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0,bCH40,bPOS0,bSA0,&
+           & bPOP0,bPON0,bPOC0,bPOS0,bKC,bKN,bKP,bKTC,bKTN,bKTP,bKS,bKTS,bFPP,&
+           & bFNP,bFCP,bFCv,bFNv,bFPv,bFCs,bFNs,bFPs,bFCM,bFNM,bFPM,&
+           & bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4,bKNO3f,&
+           & bKNO3s,bKNO3,bKTNO3,bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S,bSIsat, &
+           & bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa,bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4, &
+           & bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic,bKCH4,bKTCH4,bKhDO_CH4,bo2n
+  namelist /ERO/ ierosion,erosion,etau,eporo,efrac,ediso,dfrac,dWS_POC 
 
   if(imode==0) then
     !------------------------------------------------------------------------------------
@@ -155,23 +154,24 @@ subroutine read_icm_param(imode)
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
     !init. SFM module
-    bdz=0;  bury=0;  bdiff=0;  bsalt=0; bsaltn=0; bsaltp=0;  bsc=0; THTADP=0;  THTADD=0;
-    VPMIX=0;  VDMIX=0;  btemp0=0;  bPOP0=0;  bPON0=0;  bPOC0=0;  bPOS0=0;  bPO40=0;  
-    bNH40=0;  bNO30=0;  bH2S0=0;  bCH40=0;   bSA0=0;  bSTR0=0; 
+    bdz=0;  bury=0;  bdiff=0; bsaltc=0; bsaltn=0; bsaltp=0; bsolid=0; bKTVp=0;  bKTVd=0;
+    bVp=0;  bVd=0;  bTR=0;  btemp0=0; bstc0=0;  bSTR0=0;  bThp0=0;  bTox0=0; bNH40=0;  
+    bNO30=0; bPO40=0;  bH2S0=0;  bCH40=0;  bPOS0=0;  bSA0=0;   bPOP0=0; bPON0=0;  bPOC0=0;  
     bKC=0;  bKN=0;  bKP=0;  bKTC=0;  bKTN=0;  bKTP=0;  bKS=0;  bKTS=0;
-    FRPPH=0;  FRNPH=0;  FRCPH=0;  frnveg=0;  frpveg=0;  frcveg=0;  frnsav=0;  frpsav=0;
-    frcsav=0;  FRPOP=0;  FRPON=0;  FRPOC=0;  dO2c=0;  dstc=0;  dtheta=0;  bKNH4f=0;
-    bKNH4s=0;  PIENH4=0;  bKTNH4=0;  bKhNH4=0;  bKhDO=0;  bKNO3f=0;  bKNO3s=0;  
-    bKNO3=0;  bKTNO3=0;  bKH2Sd=0;  bKH2Sp=0;  PIE1S=0;  PIE2S=0;  bKTH2S=0;  KMHSO2=0; 
-    CSISAT=0;  DPIE1SI=0;  PIE2SI=0;  KMPSI=0;  O2CRITSI=0;  JSIDETR=0;  DPIE1PO4F=0;  
-    DPIE1PO4S=0;  PIE2PO4=0;  O2CRIT=0;  TEMPBEN=0;  KBENSTR=0;  KLBNTH=0;  DPMIN=0; 
-    KMO2DP=0;  bKCH4=0;  bKTCH4=0;  KMCH4O2=0;  AONO=0;  ierosion=0; 
-    idepo=0;  etau=0;  eroporo=0;  erorate=0;  erofrac=0;  erodiso=0;  depofracR=0; 
-    depofracL=0;  depoWSR=0;  depoWSL=0
+    bFPP=0;  bFNP=0;  bFCP=0; bFCv=0; bFNv=0; bFPv=0;  bFCs=0; bFNs=0; bFPs=0
+    bFCM=0; bFNM=0; bFPM=0;  bKNH4f=0;
+    bKNH4s=0;  bpieNH4=0;  bKTNH4=0;  bKhNH4=0;  bKhDO_NH4=0;  bKNO3f=0;  bKNO3s=0;  
+    bKNO3=0;  bKTNO3=0;  bKH2Sd=0;  bKH2Sp=0;  bpieH2Ss=0; bpieH2Sb=0; bKTH2S=0; bKhDO_H2S=0; 
+    bSIsat=0;  bKOSI=0;  bpieSI=0;  bKhPOS=0;  bDOc_SI=0;  bJPOSa=0;  bKOPO4f=0;  
+    bKOPO4s=0;  bpiePO4=0;  bDOc_PO4=0;  bKST=0; bSTmax=0;  bp2d=0;  bVpmin=0; 
+    bKhDO_Vp=0; bDOc_ST=0;  banoxic=0; boxic=0; bKCH4=0;  bKTCH4=0;  bKhDO_CH4=0;  bo2n=0;  
+
+    !init. ERO module
+    ierosion=0; erosion=0; etau=0;  eporo=0;  efrac=0;  ediso=0;  dfrac=0; dWS_POC=0 
 
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
-    read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM)
+    read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM); read(31,nml=ERO)
     close(31)
     if(myrank==0) write(16,*) 'done read ICM parameters'
 
@@ -280,7 +280,7 @@ subroutine read_icm_param(imode)
       do i=1,nea
         bPOC(i,:)=bPOC0(:); bPON(i,:)=bPON0(:); bPOP(i,:)=bPOP0(:)
         bNH4(i)=bNH40;      bNO3(i)=bNO30;      bPO4(i)=bPO40
-        bH2S(i)=bH2S0;      bCH4(i)=bCH40;     
+        bH2S(i)=bH2S0;      bCH4(i)=bCH40;      bstc(i)=bstc0 
         btemp(i)=btemp0;    bSTR(i) =bSTR0;     bNH4s(i)= bNH40 !bNH4s: upper layer
         if(iSilica==1) then !silica module
           bPOS(i)=bPOS0;  bSA(i) =bSA0
@@ -564,9 +564,9 @@ subroutine icm_vars_init
   sp(m+1)%p=>KPO4p;  sp(m+2)%p=>WRea;       sp(m+3)%p1=>PBmin;  sp(m+4)%p1=>dz_flux; m=m+4
 
   !SFM modules
-  pname((m+1):(m+8))=(/'bdz   ','bury  ','VPMIX ','VDMIX ','etau  ','FRPOP ','FRPON ','FRPOC '/)
-  sp(m+1)%p=>bdz;   sp(m+2)%p=>bury;   sp(m+3)%p=>VPMIX;  sp(m+4)%p=>VDMIX; sp(m+5)%p=>etau;   m=m+5
-  sp(m+1)%p1=>FRPOP; sp(m+2)%p1=>FRPON; sp(m+3)%p1=>FRPOC; m=m+3
+  pname((m+1):(m+8))=(/'bdz   ','bury  ','bVp   ','bVd   ','etau  ','bFCM  ','bFNM  ','bFPM  '/)
+  sp(m+1)%p=>bdz;   sp(m+2)%p=>bury;   sp(m+3)%p=>bVp;  sp(m+4)%p=>bVd; sp(m+5)%p=>etau;   m=m+5
+  sp(m+1)%p1=>bFCM; sp(m+2)%p1=>bFNM; sp(m+3)%p1=>bFPM; m=m+3
 
   !read spatially varying parameters
   do m=1,nsp
@@ -635,10 +635,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(DIN(nvrt),temp(nvrt),stat=istat)
+  allocate(DIN(nvrt),temp(nvrt),spatch(nea),vpatch(nea),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  DIN=0.0; temp=0.0
+  DIN=0.0; temp=0.0; spatch=0; vpatch=0
 
   !-------------------------------------------------------------------------------
   !pH variables
@@ -656,14 +656,14 @@ subroutine icm_vars_init
   !SAV variables
   !-------------------------------------------------------------------------------
   if(jsav==1) then
-    allocate(spatch(nea),stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
+    allocate(stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
       & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), &
       & sroot_POC(nea),sroot_PON(nea), &
       & sroot_POP(nea),sroot_DOX(nea),sleaf_NH4(nea),sleaf_PO4(nea), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
 
     !init
-    spatch=0;     stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
+    stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
     sstem=0.0;    sroot=0.0;    sht=0.0;        
     sroot_POC=0.0; sroot_PON=0.0;
     sroot_POP=0.0; sroot_DOX=0.0; sleaf_NH4=0.0;  sleaf_PO4=0.0;
@@ -673,13 +673,13 @@ subroutine icm_vars_init
   !VEG variables
   !-------------------------------------------------------------------------------
   if(jveg==1) then
-    allocate(vpatch(nea),vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
+    allocate(vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
       & vroot_POC(nea,3),vroot_PON(nea,3),vroot_POP(nea,3),vroot_DOX(nea,3), &
       & vleaf_NH4(nea,3),vleaf_PO4(nea,3), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. VEG variables')
 
     !init
-    vpatch=0;      vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
+    vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
     vroot_POC=0.0; vroot_PON=0.0; vroot_POP=0.0;  vroot_DOX=0.0;
     vleaf_NH4=0.0;  vleaf_PO4=0.0
   endif
@@ -687,19 +687,19 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(btemp(nea),bCH4(nea),bSTR(nea),bSTRm(nea),ibSTR(nea), &
+  allocate(btemp(nea),bCH4(nea),bSTR(nea), &
     & bPOC(nea,3),bPON(nea,3),bPOP(nea,3),bPOS(nea),bNH4s(nea), &
-    & bNH4(nea),bNO3(nea),bH2S(nea),bSA(nea),bPO4(nea), &
-    & sedDOX(nea),sedCOD(nea),sedNH4(nea),sedNO3(nea),sedPO4(nea),sedDOC(nea),sedSA(nea), &
-    & bLight(nea),eH2S(nea),eLPOC(nea),eRPOC(nea),stat=istat)
+    & bNH4(nea),bNO3(nea),bH2S(nea),bSA(nea),bPO4(nea),bstc(nea), &
+    & SOD(nea),JCOD(nea),JNH4(nea),JNO3(nea),JPO4(nea),JSA(nea), &
+    & bLight(nea),bTox(nea),bThp(nea),eH2S(nea),eLPOC(nea),eRPOC(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  btemp=0.0;  bCH4=0.0;   bSTR=0.0;   bSTRm=0.0;   ibSTR=0.0
+  btemp=0.0;  bCH4=0.0;   bSTR=0.0
   bPOC=0.0;   bPON=0.0;   bPOP=0.0;   bPOS=0.0;   bNH4s=0.0
-  bNH4=0.0;   bNO3=0.0;   bH2S=0.0;   bSA=0.0;    bPO4=0.0;   
-  sedDOX=0.0; sedCOD=0.0; sedNH4=0.0; sedNO3=0.0; sedPO4=0.0; sedDOC=0.0; sedSA=0.0;
-  bLight=0.0; eH2S=0.0;   eLPOC=0.0;  eRPOC=0.0
+  bNH4=0.0;   bNO3=0.0;   bH2S=0.0;   bSA=0.0;    bPO4=0.0;   bstc=0.0
+  SOD=0.0;    JCOD=0.0;   JNH4=0.0;   JNO3=0.0;   JPO4=0.0;   JSA=0.0
+  bLight=0.0; bThp=0.0;   bTox=0.0;   eH2S=0.0;   eLPOC=0.0;  eRPOC=0.0
 !$OMP end parallel workshare
 
 end subroutine icm_vars_init

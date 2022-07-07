@@ -121,7 +121,7 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: vc2dw,v2den,vn2c,vp2c,vo2c!convert ratios
   integer,save,target :: ivNc,ivPc,ivNs,ivPs,ivMRT              !flags for (N,P) limit, recycled (N,P) dest., mortality
 
-  real(rkind),save :: airtveg,mtemp
+  real(rkind),save :: mtemp !todo add function to read mtemp
   integer,save,allocatable :: vpatch(:)                     !reg region
   real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
   real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
@@ -131,44 +131,47 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: bdz,bury,bdiff,bsalt,bsaltp,bsaltn,bsc(2)
-  real(rkind),save,target :: THTADP,THTADD,VPMIX,VDMIX
-  real(rkind),save,target :: btemp0,bPOP0(3),bPON0(3),bPOC0(3),bPOS0,bPO40,bNH40,bNO30 !init conc.
-  real(rkind),save,target :: bH2S0,bCH40,bSA0,bSTR0   !init conc.
+  real(rkind),save,target :: bdz,bury,bdiff,bsaltc,bsaltp,bsaltn,bsolid(2)
+  real(rkind),save,target :: bKTVp,bKTVd,bVp,bVd,bTR
+  real(rkind),save,target :: btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0
+  real(rkind),save,target :: bCH40,bPOS0,bSA0,bPOP0(3),bPON0(3),bPOC0(3)
   real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bKTC,bKTN,bKTP
   real(rkind),save,target :: bKS,bKTS
-  real(rkind),save,target,dimension(3,3) :: FRPPH,FRNPH,FRCPH, frnveg,frpveg,frcveg !(G1:G3,veg/PB)
-  real(rkind),save,target,dimension(3) :: frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC !(G1:G3)
-  real(rkind),save,target :: dO2c,dstc,dtheta !diffusion under hypoxia
-  real(rkind),save,target :: bKNH4f,bKNH4s,PIENH4,bKTNH4,bKhNH4,bKhDO !!nitrification
+  real(rkind),save,target,dimension(3,3) :: bFPP,bFNP,bFCP,bFCv,bFNv,bFPv !(G1:G3,veg/PB)
+  real(rkind),save,target,dimension(3) :: bFCs,bFNs,bFPs,bFCM,bFNM,bFPM !(G1:G3)
+  real(rkind),save,target :: bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4 !!nitrification
   real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bKTNO3 !denitrification
-  real(rkind),save,target :: bKH2Sd,bKH2Sp,PIE1S,PIE2S,bKTH2S,KMHSO2 !H2S oxidation
-  real(rkind),save,target :: CSISAT,DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR  !Silica dissolution
-  real(rkind),save,target :: DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT  !PO4
-  real(rkind),save,target :: TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP !benthic stress
-  real(rkind),save,target :: bKCH4,bKTCH4,KMCH4O2,AONO !CH4 reaction
-  integer,save,target :: ierosion,idepo                     !erosion
-  real(rkind),save,target :: etau,eroporo,erorate,erofrac,erodiso !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand
-  real(rkind),save,target :: depofracR,depofracL,depoWSR,depoWSL
+  real(rkind),save,target :: bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S !H2S oxidation
+  real(rkind),save,target :: bSIsat,bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa  !Silica dissolution
+  real(rkind),save,target :: bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4  !PO4
+  real(rkind),save,target :: bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic !benthic stress
+  real(rkind),save,target :: bKCH4,bKTCH4,bKhDO_CH4,bo2n !CH4 reaction
 
-  !---------------------------------
-  !variables
-  !---------------------------------
-  !Sediment thickness, burial and mixing rates
+  !sediment concentrations and fluxes
+  real(rkind),save,target,allocatable,dimension(:) :: bLight,bThp,bTox,btemp,bCH4,bSTR,bPOS
+  real(rkind),save,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
+  real(rkind),save,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
+  real(rkind),save,allocatable,dimension(:) :: SOD,JNH4,JNO3,JPO4,JCOD,JSA
 
-  !sediment concentration !unit:mg/m^3
-  real(rkind), save,allocatable,dimension(:) :: btemp,bCH4,bSTR,bSTRm,ibSTR,bPOS
-  real(rkind), save,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4
-  real(rkind), save,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
+  !-------------------------------------------------------------------------------
+  !benthic erosion (ERO) parameters and variables
+  !-------------------------------------------------------------------------------
+  integer,save,target :: ierosion !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand 
+  real(rkind),save,target :: erosion,etau,eporo,efrac,ediso,dfrac(2),dWS_POC(2)
 
-  real(rkind),save :: NH41,NH4T2,NO3T2,HST2,CH4T2
-  real(rkind),save :: JNH4,JNO3,JHS,SOD,stc
-
-  !sediment fluxes
-  real(rkind),save,allocatable,dimension(:) :: sedDOX,sedCOD,sedNH4,sedNO3,sedPO4,sedDOC,sedSA
-
-  real(rkind),save,allocatable,dimension(:) :: bLight !bottom Light 
   real(rkind),save,allocatable,dimension(:) :: eH2S,eLPOC,eRPOC !erosion flux
+
+  !---------------------------------------------------------------------------
+  !arguments for zbrent function
+  !---------------------------------------------------------------------------
+  type :: brent_var
+    integer :: imed=0  !0: SFM;  1: pH
+    integer :: id,ierr=0
+    real(rkind) :: vmin,vmax
+    real(rkind),pointer :: data 
+    real(rkind) :: tdep,wsalt,Kd,Kp,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt,stc,SOD !SFM
+    real(rkind) :: ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH !pH
+  end type brent_var
 
   !---------------------------------------------------------------------------
   !spatially varying parameters: for different dimensions 

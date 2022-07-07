@@ -49,9 +49,8 @@
 
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,iSilica,iZB,iPh, &
-                    & rIa,rIavg,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & !sav & veg
-                    & isav_icm,iveg_icm,sedDOX,btemp,bPO4,bNH4,bNO3, &
-                    & bH2S,bCH4,bSA,bSTR,bNH4s,bPOC,bPON,bPOP,bPOS,bSTRm,ibSTR
+                    & isav_icm,iveg_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
+                    & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP
 #endif
 
 #ifdef USE_COSINE
@@ -5605,9 +5604,9 @@
 
 #ifdef USE_ICM
         !gfortran requires all chars have same length
-        ar_name(1:14)=(/'sedDOX','btemp ','bPO4  ','bNH4  ','bNO3  ', &
-                      & 'bH2S  ','bCH4  ','bSA   ','bSTR  ','bNH4s ', &
-                      & 'bPOS  ','bSTRm ','ibSTR ','sht   '/)
+        ar_name(1:14)=(/'btemp ','bstc  ','bSTR  ','bThp  ','bTox  ', &
+                      & 'bNH4  ','bNH4s ','bNO3  ','bPO4  ','bH2S  ', &
+                      & 'bCH4  ','bPOS  ','bSA   ','sht   '/)
 !'
         do k=1,14 !# of 1D arrays
           if(isav_icm==0.and.k==14) cycle
@@ -5623,31 +5622,31 @@
             if(iegl(i)%rank==myrank) then
               ie=iegl(i)%id
               if(k==1) then
-                sedDOX(ie)=buf3(i)
-              else if(k==2) then
                 btemp(ie)=buf3(i)
+              else if(k==2) then
+                bstc(ie)=buf3(i)
               else if(k==3) then
-                bPO4(ie)=buf3(i)
-              else if(k==4) then
-                bNH4(ie)=buf3(i)
-              else if(k==5) then
-                bNO3(ie)=buf3(i)
-              else if(k==6) then
-                bH2S(ie)=buf3(i)
-              else if(k==7) then
-                bCH4(ie)=buf3(i)
-              else if(k==8) then
-                bSA(ie)=buf3(i)
-              else if(k==9) then
                 bSTR(ie)=buf3(i)
-              else if(k==10) then
+              else if(k==4) then
+                bThp(ie)=buf3(i)
+              else if(k==5) then
+                bTox(ie)=buf3(i)
+              else if(k==6) then
+                bNH4(ie)=buf3(i)
+              else if(k==7) then
                 bNH4s(ie)=buf3(i)
+              else if(k==8) then
+                bNO3(ie)=buf3(i)
+              else if(k==9) then
+                bPO4(ie)=buf3(i)
+              else if(k==10) then
+                bH2S(ie)=buf3(i)
               else if(k==11) then
-                bPOS(ie)=buf3(i)
+                bCH4(ie)=buf3(i)
               else if(k==12) then
-                bSTRm(ie)=buf3(i)
+                bPOS(ie)=buf3(i)
               else if(k==13) then
-                ibSTR(ie)=buf3(i)
+                bSA(ie)=buf3(i)
               else if(k==14) then
                 sht(ie)=buf3(i)
               endif
