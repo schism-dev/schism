@@ -1285,7 +1285,7 @@ If so, you'll need to prepare an input called <code>partion.prop</code> (which i
 <p>Step 3: run METIS: <code>./gpmetis graphinfo &lt;nproc&gt; -ufactor=1.01 -seed=15</code> </p>
 <p>where <code>&lt;nproc&gt;</code> is # of 
    compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:</p>
-<p>awk '{print NR,$0}' graphinfo.part.<nproc> &gt; partition.prop</p>
+<p><code>awk '{print NR,$0}' graphinfo.part.&lt;nproc&gt; &gt; partition.prop</code></p>
 <p>(replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
 
               
