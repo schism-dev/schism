@@ -42,7 +42,7 @@ Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15`
    compute cores excluding scribes. The output is `graphinfo.part.<nproc>`, and then use awk to get `partion.prop`:
 
 
-   awk '{print NR,$0}' graphinfo.part.<nproc> > partition.prop
+   `awk '{print NR,$0}' graphinfo.part.<nproc> > partition.prop`
 
 
    (replace `<nproc>` with actual # of cores).
