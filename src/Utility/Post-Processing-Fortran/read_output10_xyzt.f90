@@ -19,7 +19,7 @@
 !         for 3D variables (surface values for 2D variables) DEFINED @ nodes or elem. Interpolation in time.
 !         Not working for lon/lat.
 !         Works for mixed tri/quad outputs, combined or uncombined nc outputs.
-!       Inputs: (1) nc files;
+!       Inputs: (1) nc files and out2d*.nc;
 !               (2) station.xyzt: make sure all times are after 1st record (to ensure interpolation in time); 
 !                                 pad extra days before and after if necessary.
 !                                 z>=0 from surface.

@@ -22,4 +22,4 @@ These inputs are required for all SCHISM simulations:
 4. B.C. input (`bctides.in`)
 5. Bottom friction input (`drag.gr3`, or `rough.gr3` or `manning.gr3`)
 
-We’ll explain these inputs in detail below. Comments/explanations are in **bold**.
+We’ll explain these inputs in detail below. Comments/explanations are usually preceded by '!'.

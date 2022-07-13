@@ -292,7 +292,6 @@ subroutine partition_hgrid
     deallocate(nlev)
   endif !ivcor==1
 
-!  if(ioffline_partition/=0) then
 #ifdef NO_PARMETIS
     !Offline paritition by reading from input similar to global_to_local.prop
     if(myrank==0) then

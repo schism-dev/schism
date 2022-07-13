@@ -6,10 +6,19 @@ You can find some useful post-processing tools in the src/Utility directory.
 all available outputs during or after the run. Use these if you invoked OLDIO.
 
 `combine_hotstart7.f90` is used combine process-specific hotstart outputs (`outputs/hotstart_0*.nc`)
- into `hotstart.nc`. This is required even if you used scribed I/O.
+ into `hotstart.nc`. This is required even if you used scribed I/O (as hotstart outputs are still be emitted per MPI
+ process).
 
 `combine_gr3.f90` is used to combine process-specific `maxelev_*` and `maxdahv_*` (ASCII) into `maxelev.gr3` or `maxdahv.gr3`.
 
+## Extraction
+`read_output*.f90`: This group of scripts read multiple nc4 outputs and extract time series of a point, 
+a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
+format as well as how to do your own processing. You may start from `read_output*_xyz.f90`. 
+After you are familiar with these scripts, you can easily customize them for your own purpose.
+
+Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
+ E.g., if you use scribe I/O, the FORTRAN extraction scripts are `read_output10*.f90`.
 
 ## One-way nesting
 `OneWayNestScripts/interpolate_variables7.f90`: The purpose of this script is to generate `elev2D.th.nc`, 
@@ -24,11 +33,3 @@ To prepare for the nesting, first do a 2D barotropic run for a larger or same gr
 
 Note that `interpolate_variables.in` in the directory are sample inputs for the script. A common mistake is that the parent elements of some open boundary nodes in `fg.gr3` (i.e. ‘small-domain’ hgrid) become dry and the script then fails to find a wet element to interpolate from. So make sure all open boundary nodes in `fg.gr3` are located in wet region of `bg.gr3`; this is especially important for those nodes near the coast. You can use xmgredit5 to ascertain this. If necessary, modify `fg.gr3` by moving some nodes to deeper depths.
 
-## Extraction
-`read_output*.f90`: This group of scripts read multiple nc4 outputs and extract time series of a point, 
-a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
-format as well as how to do your own processing. You may start from `read_output*_xyz.f90`. 
-After you are familiar with these scripts, you can easily customize them for your own purpose.
-
-Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
- E.g., if you use scribe I/O, the FORTRAN extraction scripts are `read_output10*.f90`.

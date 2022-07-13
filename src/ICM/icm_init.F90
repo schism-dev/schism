@@ -43,7 +43,7 @@ subroutine read_icm_param(imode)
            & FCM,FNM,FPM,Nit,TNit,KTNit,KhDOnit,KhNH4nit,KhDOox,KhNO3denit,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
            & KhCOD,KhN,KhP,KhSal,c2chl,n2c,p2c,o2c,o2n,dn2c,an2c,KhDO, &
-           & KPO4p,WRea
+           & KPO4p,WRea,PBmin,dz_flux
   namelist /Silica/ FSP,FSM,KS,TRS,KTRS,KhS,s2c,KSAp 
   namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMRT,zMTB,zTMT,zKTMT,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
@@ -55,16 +55,15 @@ subroutine read_icm_param(imode)
            & vFNM,vFPM,vFCM,ivNc,ivPc,vKhNs,vKhPs,vScr,vSopt,vInun,ivNs,ivPs,ivMRT, &
            & vTMR,vKTMR,vMR0,vMRcr,valpha,vKe,vht0,vcrit,v2ht,vc2dw,v2den,vp2c,vn2c,& 
            & vo2c 
-  namelist /SFM/ HSED,VSED,DIFFT,SALTSW,SALTND,m1,m2,THTADP,THTADD,VPMIX,VDMIX,CTEMPI,&
-           & CPOPI,CPONI,CPOCI,CPOSI,PO4T2I,NH4T2I,NO3T2I,HST2I,CH4T2I,CH41TI,SO4T2I,&
-           & SIT2I,BENSTI,KCDIAG,KNDIAG,KPDIAG,DCTHTA,DNTHTA,DPTHTA,KSI,THTASI,FRPPH,&
-           & FRNPH,FRCPH,frnveg,frpveg,frcveg,frnsav,frpsav,frcsav,FRPOP,FRPON,FRPOC,&
-           & dO2c,dstc,dtheta,KAPPNH4F,KAPPNH4S,PIENH4,THTANH4,KMNH4,KMNH4O2,KAPPNO3F,&
-           & KAPPNO3S,K2NO3,THTANO3,KAPPD1,KAPPP1,PIE1S,PIE2S,THTAPD1,KMHSO2,CSISAT, &
-           & DPIE1SI,PIE2SI,KMPSI,O2CRITSI,JSIDETR,DPIE1PO4F,DPIE1PO4S,PIE2PO4,O2CRIT, &
-           & TEMPBEN,KBENSTR,KLBNTH,DPMIN,KMO2DP,KAPPCH4,THTACH4,KMCH4O2,KMSO4,AONO, &
-           & ierosion,idepo,etau,eroporo,erorate,erofrac,erodiso,depofracR,depofracL, &
-           & depoWSR,depoWSL
+  namelist /SFM/ bdz,bury,bdiff,bsaltc,bsaltn,bsaltp,bsolid,bKTVp,bKTVd,bVp,bVd,bTR,&
+           & btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0,bCH40,bPOS0,bSA0,&
+           & bPOP0,bPON0,bPOC0,bPOS0,bKC,bKN,bKP,bKTC,bKTN,bKTP,bKS,bKTS,bFPP,&
+           & bFNP,bFCP,bFCv,bFNv,bFPv,bFCs,bFNs,bFPs,bFCM,bFNM,bFPM,&
+           & bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4,bKNO3f,&
+           & bKNO3s,bKNO3,bKTNO3,bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S,bSIsat, &
+           & bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa,bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4, &
+           & bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic,bKCH4,bKTCH4,bKhDO_CH4,bo2n
+  namelist /ERO/ ierosion,erosion,etau,eporo,efrac,ediso,dfrac,dWS_POC 
 
   if(imode==0) then
     !------------------------------------------------------------------------------------
@@ -130,7 +129,7 @@ subroutine read_icm_param(imode)
     KhDOnit=0; KhNH4nit=0; KhDOox=0; KhNO3denit=0; KC0=0; KN0=0; KP0=0; KCalg=0;
     KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
     KhCOD=0; KhN=0; KhP=0; KhSal=0; c2chl=0; n2c=0; p2c=0; o2c=0;
-    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0
+    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0; PBmin=0; dz_flux=0
 
     !init. Silica module
     FSP=0; FSM=0; KS=0; TRS=0; KTRS=0; KhS=0; s2c=0; KSAp=0 
@@ -155,23 +154,24 @@ subroutine read_icm_param(imode)
     vKe=0; vht0=0; vcrit=0; v2ht=0; vc2dw=0; v2den=0; vp2c=0; vn2c=0; vo2c=0
 
     !init. SFM module
-    HSED=0;  VSED=0;  DIFFT=0;  SALTSW=0;  SALTND=0;  m1=0;  m2=0;  THTADP=0;  THTADD=0;
-    VPMIX=0;  VDMIX=0;  CTEMPI=0;  CPOPI=0;  CPONI=0;  CPOCI=0;  CPOSI=0;  PO4T2I=0;  
-    NH4T2I=0;  NO3T2I=0;  HST2I=0;  CH4T2I=0;  CH41TI=0;  SO4T2I=0;  SIT2I=0;  BENSTI=0; 
-    KCDIAG=0;  KNDIAG=0;  KPDIAG=0;  DCTHTA=0;  DNTHTA=0;  DPTHTA=0;  KSI=0;  THTASI=0; 
-    FRPPH=0;  FRNPH=0;  FRCPH=0;  frnveg=0;  frpveg=0;  frcveg=0;  frnsav=0;  frpsav=0;
-    frcsav=0;  FRPOP=0;  FRPON=0;  FRPOC=0;  dO2c=0;  dstc=0;  dtheta=0;  KAPPNH4F=0;
-    KAPPNH4S=0;  PIENH4=0;  THTANH4=0;  KMNH4=0;  KMNH4O2=0;  KAPPNO3F=0;  KAPPNO3S=0;  
-    K2NO3=0;  THTANO3=0;  KAPPD1=0;  KAPPP1=0;  PIE1S=0;  PIE2S=0;  THTAPD1=0;  KMHSO2=0; 
-    CSISAT=0;  DPIE1SI=0;  PIE2SI=0;  KMPSI=0;  O2CRITSI=0;  JSIDETR=0;  DPIE1PO4F=0;  
-    DPIE1PO4S=0;  PIE2PO4=0;  O2CRIT=0;  TEMPBEN=0;  KBENSTR=0;  KLBNTH=0;  DPMIN=0; 
-    KMO2DP=0;  KAPPCH4=0;  THTACH4=0;  KMCH4O2=0;  KMSO4=0;  AONO=0;  ierosion=0; 
-    idepo=0;  etau=0;  eroporo=0;  erorate=0;  erofrac=0;  erodiso=0;  depofracR=0; 
-    depofracL=0;  depoWSR=0;  depoWSL=0
+    bdz=0;  bury=0;  bdiff=0; bsaltc=0; bsaltn=0; bsaltp=0; bsolid=0; bKTVp=0;  bKTVd=0;
+    bVp=0;  bVd=0;  bTR=0;  btemp0=0; bstc0=0;  bSTR0=0;  bThp0=0;  bTox0=0; bNH40=0;  
+    bNO30=0; bPO40=0;  bH2S0=0;  bCH40=0;  bPOS0=0;  bSA0=0;   bPOP0=0; bPON0=0;  bPOC0=0;  
+    bKC=0;  bKN=0;  bKP=0;  bKTC=0;  bKTN=0;  bKTP=0;  bKS=0;  bKTS=0;
+    bFPP=0;  bFNP=0;  bFCP=0; bFCv=0; bFNv=0; bFPv=0;  bFCs=0; bFNs=0; bFPs=0
+    bFCM=0; bFNM=0; bFPM=0;  bKNH4f=0;
+    bKNH4s=0;  bpieNH4=0;  bKTNH4=0;  bKhNH4=0;  bKhDO_NH4=0;  bKNO3f=0;  bKNO3s=0;  
+    bKNO3=0;  bKTNO3=0;  bKH2Sd=0;  bKH2Sp=0;  bpieH2Ss=0; bpieH2Sb=0; bKTH2S=0; bKhDO_H2S=0; 
+    bSIsat=0;  bKOSI=0;  bpieSI=0;  bKhPOS=0;  bDOc_SI=0;  bJPOSa=0;  bKOPO4f=0;  
+    bKOPO4s=0;  bpiePO4=0;  bDOc_PO4=0;  bKST=0; bSTmax=0;  bp2d=0;  bVpmin=0; 
+    bKhDO_Vp=0; bDOc_ST=0;  banoxic=0; boxic=0; bKCH4=0;  bKTCH4=0;  bKhDO_CH4=0;  bo2n=0;  
+
+    !init. ERO module
+    ierosion=0; erosion=0; etau=0;  eporo=0;  efrac=0;  ediso=0;  dfrac=0; dWS_POC=0 
 
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=ZB); read(31,nml=PH_ICM); 
-    read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM)
+    read(31,nml=SAV);  read(31,nml=VEG);  read(31,nml=SFM); read(31,nml=ERO)
     close(31)
     if(myrank==0) write(16,*) 'done read ICM parameters'
 
@@ -196,14 +196,8 @@ subroutine read_icm_param(imode)
     endif
 #endif
     !Water
-    dtw=dt/86400.0/dble(nsub);  dtw2=dtw/2.0 !days
-    mKhN=sum(KhN(1:3))/3.0; mKhP=sum(KhP(1:3))/3.0 
+    dtw=dt/86400.0/dble(nsub)
     
-    !SFM
-    HSED=1.d-2*HSED !unit: m
-    VSED=2.73791e-5*VSED !unit: m/day 
-    DIFFT=1.0e-4*DIFFT !m2/s
-
     !net settling velocity
     if(iSettle==0) then
       WSPBSn=WSPBS; WSPOMn=WSPOM; WSSEDn=WSSED
@@ -281,9 +275,17 @@ subroutine read_icm_param(imode)
       endif!ihot=0
     endif !jveg
 
-    !veg init
-    if(iSed==1) then 
-      call icm_sfm_init
+    !SFM init
+    if(iSed==1.and.ihot==0) then 
+      do i=1,nea
+        bPOC(i,:)=bPOC0(:); bPON(i,:)=bPON0(:); bPOP(i,:)=bPOP0(:)
+        bNH4(i)=bNH40;      bNO3(i)=bNO30;      bPO4(i)=bPO40
+        bH2S(i)=bH2S0;      bCH4(i)=bCH40;      bstc(i)=bstc0 
+        btemp(i)=btemp0;    bSTR(i) =bSTR0;     bNH4s(i)= bNH40 !bNH4s: upper layer
+        if(iSilica==1) then !silica module
+          bPOS(i)=bPOS0;  bSA(i) =bSA0
+        endif
+      enddo
     endif
 
     !------------------------------------------------------------------------------------
@@ -536,12 +538,18 @@ subroutine icm_vars_init
 
   m=0
   !global and core modules
-  pname(1:57)=(/'KeC   ','KeS   ','KeSalt','Ke0   ','tss2c ','WSSEDn','WSPOMn','WSPBSn','alpha ','GPM   ', &
-              & 'TGP   ','PRR   ','MTB   ','TMT   ','KTMT  ','WSPBS ','KTGP  ','WSPOM ','WSSED ','FCP   ', &
-              & 'FNP   ','FPP   ','FCM   ','FNM   ','FPM   ','Nit   ','TNit  ','KTNit ','KhDOnit','KhNH4nit',&
-          & 'KhDOox','KhNO3denit','KC0   ','KN0   ','KP0   ','KCalg ','KNalg ','KPalg ','TRM   ','KTRM  ', &
-              & 'KCD   ','TRCOD ','KTRCOD','KhCOD ','KhN   ','KhP   ','KhSal ','c2chl ','n2c   ','p2c   ', &
-              & 'KhDO  ','o2c   ','o2n   ','dn2c  ','an2c  ','KPO4p ','WRea '/)
+  pname(1:59)=(/'KeC       ','KeS       ','KeSalt    ','Ke0       ','tss2c     ', &
+              & 'WSSEDn    ','WSPOMn    ','WSPBSn    ','alpha     ','GPM       ', &
+              & 'TGP       ','PRR       ','MTB       ','TMT       ','KTMT      ', &
+              & 'WSPBS     ','KTGP      ','WSPOM     ','WSSED     ','FCP       ', &
+              & 'FNP       ','FPP       ','FCM       ','FNM       ','FPM       ', &
+              & 'Nit       ','TNit      ','KTNit     ','KhDOnit   ','KhNH4nit  ', &
+              & 'KhDOox    ','KhNO3denit','KC0       ','KN0       ','KP0       ', &
+              & 'KCalg     ','KNalg     ','KPalg     ','TRM       ','KTRM      ', &
+              & 'KCD       ','TRCOD     ','KTRCOD    ','KhCOD     ','KhN       ', &
+              & 'KhP       ','KhSal     ','c2chl     ','n2c       ','p2c       ', &
+              & 'KhDO      ','o2c       ','o2n       ','dn2c      ','an2c      ', &
+              & 'KPO4p     ','WRea      ','PBmin     ','dz_flux   '/)
   sp(m+1)%p=>KeC;    sp(m+2)%p=>KeS;        sp(m+3)%p=>KeSalt;  sp(m+4)%p=>Ke0;     sp(m+5)%p=>tss2c;    m=m+5
   sp(m+1)%p=>WSSEDn; sp(m+2)%p1=>WSPOMn;    sp(m+3)%p1=>WSPBSn; sp(m+4)%p1=>alpha;  sp(m+5)%p1=>GPM;     m=m+5
   sp(m+1)%p1=>TGP;   sp(m+2)%p1=>PRR;       sp(m+3)%p1=>MTB;    sp(m+4)%p1=>TMT;    sp(m+5)%p1=>KTMT;    m=m+5
@@ -553,12 +561,12 @@ subroutine icm_vars_init
   sp(m+1)%p=>KCD;    sp(m+2)%p=>TRCOD;      sp(m+3)%p=>KTRCOD;  sp(m+4)%p=>KhCOD;   sp(m+5)%p1=>KhN;     m=m+5
   sp(m+1)%p1=>KhP;   sp(m+2)%p1=>KhSal;     sp(m+3)%p1=>c2chl;  sp(m+4)%p1=>n2c;    sp(m+5)%p1=>p2c;     m=m+5
   sp(m+1)%p1=>KhDO;  sp(m+2)%p=>o2c;        sp(m+3)%p=>o2n;     sp(m+4)%p=>dn2c;    sp(m+5)%p=>an2c;     m=m+5
-  sp(m+1)%p=>KPO4p;  sp(m+2)%p=>WRea;       m=m+2
+  sp(m+1)%p=>KPO4p;  sp(m+2)%p=>WRea;       sp(m+3)%p1=>PBmin;  sp(m+4)%p1=>dz_flux; m=m+4
 
   !SFM modules
-  pname((m+1):(m+8))=(/'HSED  ','VSED  ','VPMIX ','VDMIX ','etau  ','FRPOP ','FRPON ','FRPOC '/)
-  sp(m+1)%p=>HSED;   sp(m+2)%p=>VSED;   sp(m+3)%p=>VPMIX;  sp(m+4)%p=>VDMIX; sp(m+5)%p=>etau;   m=m+5
-  sp(m+1)%p1=>FRPOP; sp(m+2)%p1=>FRPON; sp(m+3)%p1=>FRPOC; m=m+3
+  pname((m+1):(m+8))=(/'bdz   ','bury  ','bVp   ','bVd   ','etau  ','bFCM  ','bFNM  ','bFPM  '/)
+  sp(m+1)%p=>bdz;   sp(m+2)%p=>bury;   sp(m+3)%p=>bVp;  sp(m+4)%p=>bVd; sp(m+5)%p=>etau;   m=m+5
+  sp(m+1)%p1=>bFCM; sp(m+2)%p1=>bFNM; sp(m+3)%p1=>bFPM; m=m+3
 
   !read spatially varying parameters
   do m=1,nsp
@@ -627,10 +635,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(DIN(nvrt),temp(nvrt),eroH2S(nea),eroLPOC(nea),eroRPOC(nea),stat=istat) !erosion
+  allocate(DIN(nvrt),temp(nvrt),spatch(nea),vpatch(nea),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  DIN=0.0; temp=0.0;  eroH2S=0.0;  eroLPOC=0.0; eroRPOC=0.0
+  DIN=0.0; temp=0.0; spatch=0; vpatch=0
 
   !-------------------------------------------------------------------------------
   !pH variables
@@ -648,14 +656,14 @@ subroutine icm_vars_init
   !SAV variables
   !-------------------------------------------------------------------------------
   if(jsav==1) then
-    allocate(spatch(nea),stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
+    allocate(stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
       & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), &
       & sroot_POC(nea),sroot_PON(nea), &
       & sroot_POP(nea),sroot_DOX(nea),sleaf_NH4(nea),sleaf_PO4(nea), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
 
     !init
-    spatch=0;     stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
+    stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
     sstem=0.0;    sroot=0.0;    sht=0.0;        
     sroot_POC=0.0; sroot_PON=0.0;
     sroot_POP=0.0; sroot_DOX=0.0; sleaf_NH4=0.0;  sleaf_PO4=0.0;
@@ -665,13 +673,13 @@ subroutine icm_vars_init
   !VEG variables
   !-------------------------------------------------------------------------------
   if(jveg==1) then
-    allocate(vpatch(nea),vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
+    allocate(vht(nea,3),vtleaf(nea,3),vtstem(nea,3),vtroot(nea,3), &
       & vroot_POC(nea,3),vroot_PON(nea,3),vroot_POP(nea,3),vroot_DOX(nea,3), &
       & vleaf_NH4(nea,3),vleaf_PO4(nea,3), stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. VEG variables')
 
     !init
-    vpatch=0;      vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
+    vht=0.0;       vtleaf=0.0;     vtstem=0.0;     vtroot=0.0;
     vroot_POC=0.0; vroot_PON=0.0; vroot_POP=0.0;  vroot_DOX=0.0;
     vleaf_NH4=0.0;  vleaf_PO4=0.0
   endif
@@ -679,35 +687,19 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !SFM variables
   !-------------------------------------------------------------------------------
-  allocate(SED_eroH2S(nea),SED_eroLPOC(nea),SED_eroRPOC(nea), &
-    & SED_BL(nea),ZD(nea),SED_B(nea,3),SED_LPOP(nea),SED_RPOP(nea),SED_LPON(nea),SED_RPON(nea), &
-    & SED_LPOC(nea),SED_RPOC(nea),SED_TSS(nea),SED_SU(nea),SED_PO4(nea),SED_NH4(nea),SED_NO3(nea), &
-    & SED_SA(nea),SED_DO(nea),SED_COD(nea),SED_SALT(nea),SED_T(nea),SSI(nea), &
-    & AG3CFL(nea),AG3NFL(nea),AG3PFL(nea),ASDTMP(nea),&
-    & flxpop(nea,3),flxpon(nea,3),flxpoc(nea,3), flxpos(nea), &
-    & CTEMP(nea),CPIP(nea),CNO3(nea),CNH4(nea),CCH4(nea),CSO4(nea),CPOS(nea),CH2S(nea),CPOP(nea,3),CPON(nea,3),CPOC(nea,3), &
-    & CH4T2TM1S(nea),CH41TM1S(nea),SO4T2TM1S(nea),BENSTR1S(nea),BFORMAXS(nea),ISWBENS(nea),POP1TM1S(nea), &
-    & POP2TM1S(nea),POP3TM1S(nea),PON1TM1S(nea),PON2TM1S(nea),PON3TM1S(nea),POC1TM1S(nea),POC2TM1S(nea), &
-    & POC3TM1S(nea),PSITM1S(nea), NH41TM1S(nea),NO31TM1S(nea),HS1TM1S(nea),SI1TM1S(nea),PO41TM1S(nea), &
-    & NH4T2TM1S(nea),NO3T2TM1S(nea),HST2TM1S(nea),SIT2TM1S(nea),PO4T2TM1S(nea),DFEEDM1S(nea), &
-    & sedDOX(nea),sedCOD(nea),sedNH4(nea),sedNO3(nea),sedPO4(nea),sedDOC(nea),sedSA(nea), &
-    & bLight(nea), stat=istat)
+  allocate(btemp(nea),bCH4(nea),bSTR(nea), &
+    & bPOC(nea,3),bPON(nea,3),bPOP(nea,3),bPOS(nea),bNH4s(nea), &
+    & bNH4(nea),bNO3(nea),bH2S(nea),bSA(nea),bPO4(nea),bstc(nea), &
+    & SOD(nea),JCOD(nea),JNH4(nea),JNO3(nea),JPO4(nea),JSA(nea), &
+    & bLight(nea),bTox(nea),bThp(nea),eH2S(nea),eLPOC(nea),eRPOC(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SFM variables')
 
 !$OMP parallel workshare default(shared)
-  SED_eroH2S=0.0;  SED_eroLPOC=0.0; SED_eroRPOC=0.0; 
-  SED_BL=0.0;     ZD=0.0;          SED_B=0.0;       SED_LPOP=0.0;    SED_RPOP=0.0;   SED_LPON=0.0;   SED_RPON=0.0;
-  SED_LPOC=0.0;   SED_RPOC=0.0;    SED_TSS=0.0;     SED_SU=0.0;      SED_PO4=0.0;    SED_NH4=0.0;    SED_NO3=0.0;
-  SED_SA=0.0;     SED_DO=0.0;      SED_COD=0.0;     SED_SALT=0.0;    SED_T=0.0;      SSI=0.0;
-  AG3CFL=0.0;     AG3NFL=0.0;      AG3PFL=0.0;      ASDTMP=0.0;      
-  flxpop=0.0;      flxpon=0.0;     flxpoc=0.0;     flxpos=0.0;
-  CTEMP=0.0;      CPIP=0.0;        CNO3=0.0;        CH2S=0.0;        CNH4=0.0;       CCH4=0.0;       CSO4=0.0;       CPOS=0.0;      CPOP=0.0;      CPON=0.0; CPOC=0.0;
-  CH4T2TM1S=0.0;  CH41TM1S=0.0;    SO4T2TM1S=0.0;   BENSTR1S=0.0;    BFORMAXS=0.0;   ISWBENS=0.0;    POP1TM1S=0.0;
-  POP2TM1S=0.0;   POP3TM1S=0.0;    PON1TM1S=0.0;    PON2TM1S=0.0;    PON3TM1S=0.0;   POC1TM1S=0.0;   POC2TM1S=0.0;
-  POC3TM1S=0.0;   PSITM1S=0.0;     NH41TM1S=0.0;    NO31TM1S=0.0;    HS1TM1S=0.0;    SI1TM1S=0.0;    PO41TM1S=0.0;
-  NH4T2TM1S=0.0;  NO3T2TM1S=0.0;   HST2TM1S=0.0;    SIT2TM1S=0.0;    PO4T2TM1S=0.0;  DFEEDM1S=0.0;
-  sedDOX=0.0;  sedCOD=0.0;  sedNH4=0.0;  sedNO3=0.0;  sedPO4=0.0; sedDOC=0.0; sedSA=0.0;
-  bLight=0.0;
+  btemp=0.0;  bCH4=0.0;   bSTR=0.0
+  bPOC=0.0;   bPON=0.0;   bPOP=0.0;   bPOS=0.0;   bNH4s=0.0
+  bNH4=0.0;   bNO3=0.0;   bH2S=0.0;   bSA=0.0;    bPO4=0.0;   bstc=0.0
+  SOD=0.0;    JCOD=0.0;   JNH4=0.0;   JNO3=0.0;   JPO4=0.0;   JSA=0.0
+  bLight=0.0; bThp=0.0;   bTox=0.0;   eH2S=0.0;   eLPOC=0.0;  eRPOC=0.0
 !$OMP end parallel workshare
 
 end subroutine icm_vars_init
@@ -764,7 +756,7 @@ subroutine update_vars(id,usf,wspd)
   !spatial varying parameters
   do m=1,size(sp)
     p=>sp(m) 
-    if(p.ndim==0) cycle
+    if(p%ndim==0) cycle
     do i=1,p%dims(2) 
       do k=1,p%dims(1)
         if(p%istat(k,i)==0) cycle

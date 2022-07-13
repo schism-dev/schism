@@ -93,14 +93,6 @@
       endif !myrank_scribe
 
       !Get basic info
-#ifdef USE_ICM
-      call mpi_recv(isav_icm,1,itype,0,141,comm_schism,rrqst,ierr)
-      call mpi_recv(nout_icm,1,itype,0,142,comm_schism,rrqst,ierr)
-      call mpi_recv(nout_sav,1,itype,0,143,comm_schism,rrqst,ierr)
-      allocate(iof_icm(nout_icm),iof_icm_sav(nout_sav))
-      call mpi_recv(iof_icm,nout_icm,itype,0,123,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_icm_sav,nout_sav,itype,0,144,comm_schism,rrqst,ierr)
-#endif
       call mpi_recv(dt,1,rtype,0,100,comm_schism,rrqst,ierr)
       if(ierr/=MPI_SUCCESS) call parallel_abort('scribe_init: recv error')
       call mpi_recv(nspool,1,itype,0,101,comm_schism,rrqst,ierr)
@@ -133,6 +125,14 @@
       call mpi_recv(iof_ice,10,itype,0,127,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ana,20,itype,0,128,comm_schism,rrqst,ierr)
       call mpi_recv(iof_marsh,2,itype,0,129,comm_schism,rrqst,ierr)
+#ifdef USE_ICM
+      call mpi_recv(isav_icm,1,itype,0,141,comm_schism,rrqst,ierr)
+      call mpi_recv(nout_icm,1,itype,0,142,comm_schism,rrqst,ierr)
+      call mpi_recv(nout_sav,1,itype,0,143,comm_schism,rrqst,ierr)
+      allocate(iof_icm(nout_icm),iof_icm_sav(nout_sav))
+      call mpi_recv(iof_icm,nout_icm,itype,0,144,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_icm_sav,nout_sav,itype,0,145,comm_schism,rrqst,ierr)
+#endif
 
       if(myrank_scribe==0) then
         write(16,*)'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute

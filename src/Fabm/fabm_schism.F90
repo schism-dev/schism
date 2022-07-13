@@ -1064,8 +1064,8 @@ subroutine fabm_schism_do()
       fs%bottom_speed(ie) = 0
       do j=1,i34(ie)
         fs%bottom_speed(ie) = fs%bottom_speed(ie)  + sqrt( &
-          uu2(kbe(ie), elnode(ie,j))**2 + &
-          vv2(kbe(ie), elnode(ie,j))**2 )
+          uu2(kbe(ie), elnode(j,ie))**2 + &
+          vv2(kbe(ie), elnode(j,ie))**2 )
       enddo
       fs%bottom_speed(ie) = fs%bottom_speed(ie)/i34(ie)
     end do
@@ -1073,7 +1073,7 @@ subroutine fabm_schism_do()
 
   if (associated(fs%bottom_roughness)) then
     do ie=1,ne
-      fs%bottom_roughness(ie) = sum(rough_p(elnode(1:i34(i),i)))/i34(i)
+      fs%bottom_roughness(ie) = sum(rough_p(elnode(1:i34(ie),ie)))/i34(ie)
     enddo
   endif
 

@@ -54,7 +54,7 @@ nav:
     - Overview: schism/overview.md
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
-    - Typical workflow: getting-started/typical-workflow.md
+    - Typical workflow (a cheat sheet): getting-started/typical-workflow.md
     - Grid generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
     - Running the model: getting-started/running-model.md
@@ -97,7 +97,7 @@ nav:
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
     - FABM: modules/fabm.md
-  - Code contribution: code-contribution.md
+  - Code structure: code-contribution.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
   - SCHISM external coupling:

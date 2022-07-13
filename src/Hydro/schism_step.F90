@@ -50,12 +50,7 @@
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,isav_icm,iveg_icm, &
                         & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
-                        & CNH4,CNO3,CPIP,CPOS,CCH4,CSO4,CH2S,CPON,CPOP,CPOC, &
-                        & CTEMP,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
-                        & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,&
-                        & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
-                        & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S, & !added by wangzg
-                        & sedDOX,sedDOX,sedNH4,sedNO3,sedPO4,sedCOD,sedSA
+                        & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP
 #endif
 
 #ifdef USE_COSINE
@@ -8446,7 +8441,7 @@
             vnn=(su2(k+1,i)+su2(k,i))/2.d0*snx(i)+(sv2(k+1,i)+sv2(k,i))/2.d0*sny(i) 
             ftmp=fac*distj(i)*(zs(k+1,i)-zs(k,i))*vnn !m^3/s
             fluxes_tr(itmp1,1)=fluxes_tr(itmp1,1)+ftmp
-#ifdef USE_ANALYSIS
+!#ifdef USE_ANALYSIS
             !Other fluxes
             if(ftmp>=0.d0) then !positive flux
               fluxes_tr(itmp1,2)=fluxes_tr(itmp1,2)+ftmp
@@ -8458,7 +8453,7 @@
               fluxes_tr(itmp1,5:(3+2*ntracers):2)=fluxes_tr(itmp1,5:(3+2*ntracers):2)+ &
      &ftmp*tr_el(1:ntracers,k+1,ie)
             endif
-#endif
+!#endif
           enddo !k
         endif !side bordering 2 regions
       enddo !i=1,ns
@@ -8473,10 +8468,10 @@
       wtimer(11,2)=wtimer(11,2)+mpi_wtime()-cwtmp
 #endif
       if(myrank==0) then
-        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1)
+        write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1:3)
 #ifdef USE_ANALYSIS
-        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
-        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
+!        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
+!        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
         do m=1,ntracers
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+2)
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+3)
@@ -10086,43 +10081,26 @@
         j=nf90_def_dim(ncid_hot,'ICM_ntr',ntrs(7),ICM_ntr_dim)
 
         var1d_dim(1)=elem_dim; 
-        j=nf90_def_var(ncid_hot,'sedDOX',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
-        j=nf90_def_var(ncid_hot,'CTEMP',    NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2))
-        j=nf90_def_var(ncid_hot,'CPOS',     NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
-        j=nf90_def_var(ncid_hot,'PO4T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+4))
-        j=nf90_def_var(ncid_hot,'NH4T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+5))
-        j=nf90_def_var(ncid_hot,'NO3T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+6))
-        j=nf90_def_var(ncid_hot,'HST2TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+7))
-        j=nf90_def_var(ncid_hot,'CH4T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
-        j=nf90_def_var(ncid_hot,'CH41TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
-        j=nf90_def_var(ncid_hot,'SO4T2TM1S',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+10))
-        j=nf90_def_var(ncid_hot,'SIT2TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+11))
-        j=nf90_def_var(ncid_hot,'BENSTR1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+12))
-        j=nf90_def_var(ncid_hot,'NH41TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+13))
-        j=nf90_def_var(ncid_hot,'NO31TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+14))
-        j=nf90_def_var(ncid_hot,'HS1TM1S',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+15))
-        j=nf90_def_var(ncid_hot,'SI1TM1S',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+16))
-        j=nf90_def_var(ncid_hot,'PO41TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+17))
-        j=nf90_def_var(ncid_hot,'PON1TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+18))
-        j=nf90_def_var(ncid_hot,'PON2TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+19))
-        j=nf90_def_var(ncid_hot,'PON3TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+20))
-        j=nf90_def_var(ncid_hot,'POC1TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+21))
-        j=nf90_def_var(ncid_hot,'POC2TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+22))
-        j=nf90_def_var(ncid_hot,'POC3TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+23))
-        j=nf90_def_var(ncid_hot,'POP1TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+24))
-        j=nf90_def_var(ncid_hot,'POP2TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+25))
-        j=nf90_def_var(ncid_hot,'POP3TM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+26))
-        j=nf90_def_var(ncid_hot,'PSITM1S',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+27))
-        j=nf90_def_var(ncid_hot,'BFORMAXS', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+28))
-        j=nf90_def_var(ncid_hot,'ISWBENS',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+29))
-        j=nf90_def_var(ncid_hot,'DFEEDM1S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+30))
+        j=nf90_def_var(ncid_hot,'btemp',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
+        j=nf90_def_var(ncid_hot,'bstc', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2))
+        j=nf90_def_var(ncid_hot,'bSTR',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
+        j=nf90_def_var(ncid_hot,'bThp',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+4))
+        j=nf90_def_var(ncid_hot,'bTox',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+5))
+        j=nf90_def_var(ncid_hot,'bNH4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+6))
+        j=nf90_def_var(ncid_hot,'bNH4s',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+7))
+        j=nf90_def_var(ncid_hot,'bNO3',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
+        j=nf90_def_var(ncid_hot,'bPO4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
+        j=nf90_def_var(ncid_hot,'bH2S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+10))
+        j=nf90_def_var(ncid_hot,'bCH4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+11))
+        j=nf90_def_var(ncid_hot,'bPOS', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+12))
+        j=nf90_def_var(ncid_hot,'bSA', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+13))
         !last dim must be node/elem/side- I suggest we swap indices for these
         !2D arrays
         var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'CPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+31))
-        j=nf90_def_var(ncid_hot,'CPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+32))
-        j=nf90_def_var(ncid_hot,'CPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+33))
-        nvars_hot_icm=nvars_hot+33
+        j=nf90_def_var(ncid_hot,'bPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+14))
+        j=nf90_def_var(ncid_hot,'bPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+15))
+        j=nf90_def_var(ncid_hot,'bPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+16))
+        nvars_hot_icm=nvars_hot+16
 
         if(isav_icm==1) then
           var1d_dim(1)=elem_dim;  !1D array
@@ -10144,40 +10122,23 @@
         endif
         j=nf90_enddef(ncid_hot)
 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),dble(sedDOX),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2),dble(CTEMP),(/1/),(/ne/))  
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3),dble(CPOS),(/1/),(/ne/))        
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4),dble(PO4T2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5),dble(NH4T2TM1S),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6),dble(NO3T2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7),dble(HST2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8),dble(CH4T2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9),dble(CH41TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(SO4T2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(SIT2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(BENSTR1S),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(NH41TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(NO31TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+15),dble(HS1TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+16),dble(SI1TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+17),dble(PO41TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+18),dble(PON1TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+19),dble(PON2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+20),dble(PON3TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+21),dble(POC1TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+22),dble(POC2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+23),dble(POC3TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+24),dble(POP1TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+25),dble(POP2TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+26),dble(POP3TM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+27),dble(PSITM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+28),dble(BFORMAXS),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+29),dble(ISWBENS),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+30),dble(DFEEDM1S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+31),dble(transpose(CPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+32),dble(transpose(CPON(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+33),dble(transpose(CPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        nvars_hot_icm=nvars_hot+33
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1), dble(btemp),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2), dble(bstc),(/1/),(/ne/))  
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3), dble(bSTR),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4), dble(bThp),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5), dble(bTox),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6), dble(bNH4),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7), dble(bNH4s),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8), dble(bNO3),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9), dble(bPO4),(/1/),(/ne/)) 
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bH2S),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bCH4),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bPOS),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(bSA),(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(transpose(bPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+15),dble(transpose(bPON(1:ne,1:3))),(/1,1/),(/3,ne/))
+        j=nf90_put_var(ncid_hot,nwild(nvars_hot+16),dble(transpose(bPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
+        nvars_hot_icm=nvars_hot+16
 
         if(isav_icm==1) then
           j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))

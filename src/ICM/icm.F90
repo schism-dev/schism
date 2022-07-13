@@ -75,16 +75,15 @@ subroutine ecosystem(it)
   use icm_mod
   implicit none
   integer, intent(in) :: it
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day; todo: add in the module
 
   !local variables
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
   real(rkind) :: tmp,time,rat,s,z1,z2 
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC
-  real(rkind) :: usf,wspd,tdep,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
+  real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
-  real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,PO4a,pH,rKHR,rDenit,rNit,rKCOD
+  real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
@@ -101,32 +100,28 @@ subroutine ecosystem(it)
       !-----------------------------------------------------------------------------------
       !link ICM variables to SCHISM variables
       !-----------------------------------------------------------------------------------
-      kb=min(kbe(id),nvrt-1)                                !kb  : bottom-level index
-      do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo           !zid : zcoor of each level
-      dz((1+kb):nvrt)=zid((1+kb):nvrt)-zid(kb:(nvrt-1))     !dz : depth of each layer; todo? min later
-      tdep=sum(dz((kb+1):nvrt))                             !tdep: total water depth
-      if(jsav==1) shtz=sht(id)+zid(kb)                      !shtz: zcoor of SAV canopy 
-      if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)             !vhtz: zcoor of VEG canopy 
+      kb=min(kbe(id),nvrt-1)                                  !kb  : bottom-level index
+      do k=1,nvrt; zid(k)=ze(max(k,kb),id); enddo             !zid : zcoor of each level
+      do k=kb+1,nvrt; dz(k)=max(zid(k)-zid(k-1),1.d-2); enddo !dz : depth of each layer
+      tdep=sum(dz((kb+1):nvrt))                               !tdep: total water depth
+      if(jsav==1) shtz=sht(id)+zid(kb)                        !shtz: zcoor of SAV canopy 
+      if(jveg==1) vhtz(1:3)=vht(id,1:3)+zid(kb)               !vhtz: zcoor of VEG canopy 
 
-      s=min(tdep,1.d0); srat=0; brat=0
+      srat=0; brat=0 !distribute surface/bottom fluxes to aviod large value in thin layer
       do k=kb+1,nvrt
-        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
-        m=nvrt+kb+1-k
+        !surface flux ratio: y=2*(s-x)/s**2
+        s=min(tdep,dz_flux(1)); m=nvrt+kb+1-k
         z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
-        srat(m)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !surface ratio: y=1-x/2
+        srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0)
+
+        !bottom flux ratio: y=2*(s-x)/s**2
+        s=min(tdep,dz_flux(2))
         z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-        brat(k)=min(max((z2-z1)*(1.0-(z1+z2)/4)/(s*(1-s/4)),0.d0),1.d0) !bottom ratio: y=1-x/2
+        brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0)
 
-        !compute ratio for linearly distributing surface/bottom fluxes to aviod large value in thin layer
-        !z1=min(zid(nvrt)-zid(m),s); z2=min(zid(nvrt)-zid(m-1),s)
-        !srat(m)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !surface ratio: y=2*(s-x)/s**2
-        !z1=min(zid(k-1)-zid(kb),s); z2=min(zid(k)-zid(kb),s)
-        !brat(k)=min(max((z2-z1)*(2.0-(z1+z2)/s)/s,0.d0),1.d0) !bottom ratio: y=2*(s-x)/s**2
-
-        !impose minimum values (todo: check these measures, they will cause mass inbalance in the system) 
-        dz(k)=max(dz(k),1.d-1) 
+        !impose minimum values (note: these measures may cause mass inbalance in the system) 
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
-        do m=1,3; PBS(m,k)=max(PBS(m,k),3.d-2); enddo !todo: add PBmin in the parameter files
+        do m=1,3; PBS(m,k)=max(PBS(m,k),PBmin(m)); enddo 
        
         !temp,TSS
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
@@ -134,7 +129,7 @@ subroutine ecosystem(it)
         if(iKe==1) then !TSS from 3D sediment model
           TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
         endif
-        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k); PO4a(k)=(1.0-1.0/(1.0+KPO4p*TSS(max(kb+1,k-1))))*PO4(k)
+        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
         if(iSilica==1) then
           rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
         endif
@@ -145,7 +140,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       Light=0; rKe=0; rKe0=0; rKeS=0; rKeV=0 !initilization
 
-      !rIa from sflux (unit: W/m2); todo: more work to read 1D/2D radition
+      !rIa from sflux (unit: W/m2; 0.47 used to convert srad to PAR)
       if(iRad==0) then 
         rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
       else
@@ -173,8 +168,11 @@ subroutine ecosystem(it)
         if(jsav==1.and.spatch(id)==1.and.zid(k-1)<shtz) rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
 
         !light attenuation due to VEG
-        if((jveg==1.and.vpatch(id)==1).and.(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j)))) then 
-            rKeV(k)=sum(vKe(:)*(vtleaf(id,:)+vtstem(id,:))/max(1.d-5,min(tdep,vht(id,:))))
+        if(jveg==1.and.vpatch(id)==1) then
+          do j=1,3
+            if(idry_e(id)==0.and.zid(k-1)>=vhtz(j)) cycle
+            rKeV(k)=rKeV(k)+vKe(j)*(vtleaf(id,j)+vtstem(id,j))/max(1.d-5,min(tdep,vht(id,j)))
+          enddo
         endif 
 
         rKe(k)=rKe0(k)+rKeS(k)+rKeV(k) !total light attenuation
@@ -187,7 +185,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       GP=0; rKC=0; rKN=0; rKP=0; rKHR=0; rDenit=0; rKCOD=0; fPN=1.0
       do k=kb+1,nvrt
-        APB=sum(PBS(1:3,k))
+        APB=sum(PBS(1:3,k)); mKhN=sum(KhN)/3.0; mKhP=sum(KhP)/3.0
         do i=1,3
           fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
           
@@ -201,7 +199,7 @@ subroutine ecosystem(it)
 
           !light factor
           if(iLight==0) then !Cerco
-            mLight=rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
+            mLight=Rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
             rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
             fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
           elseif(iLight==1) then !Chapra S.C. #todo: change this option
@@ -226,7 +224,6 @@ subroutine ecosystem(it)
 
           !nitrogen preference
           if(DIN(k)>0.d0) fPN(i,k)=(NH4(k)/(KhN(i)+NO3(k)))*(NO3(k)/(KhN(i)+NH4(k))+KhN(i)/(DIN(k)+1.d-6))
-          if(rIa<=30)  GP(i,k)=0 !todo: remove
         enddo !i
 
         !respiration, denitrification, decay of COD, nitrification
@@ -240,7 +237,8 @@ subroutine ecosystem(it)
       !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
       !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
       DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
-      rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
+      !rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
+      rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
       !----------------------------------------------------------------------------------
       !modules
@@ -256,7 +254,7 @@ subroutine ecosystem(it)
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
       !sediment flux module
-      if(iSed==1) call sed_calc(id,kb,dz(kb+1),TSS(kb+1))
+      if(iSed==1) call sed_calc(id,kb,tdep,dz(kb+1),TSS)
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -276,6 +274,7 @@ subroutine ecosystem(it)
           sflux(m)=sflux(m)+sflux_in(id,m,1)+rat*(sflux_in(id,m,2)-sflux_in(id,m,1))
         enddo
       endif
+      sflux(iDOX)=rKa*(DOsat-DOX(nvrt))
 
       !benthic fluxes from ICM_rad.th.nc
       if(ibflux/=0) then
@@ -289,25 +288,24 @@ subroutine ecosystem(it)
       if(iSed==1) then
         !pH effect on sediment PO4 release
         if(iPh==1 .and.iphgb(id)/=0) then
-          sedPO4(id)=max(sedPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
+          JPO4(id)=max(JPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
           !BnPO4=max(BnPO4*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
           !nPO4=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
         endif
 
-        bflux(iDOC)=bflux(iDOC)+sedDOC(id)
-        bflux(iNH4)=bflux(iNH4)+sedNH4(id)
-        bflux(iNO3)=bflux(iNO3)+sedNO3(id)
-        bflux(iPO4)=bflux(iPO4)+sedPO4(id)
-        bflux(iCOD)=bflux(iCOD)+sedCOD(id)
-        bflux(iDOX)=bflux(iDOX)+sedDOX(id)    
-        if(iSilica==1) bflux(iSA) =bflux(iSA) +sedSA(id)
+        bflux(iNH4)=bflux(iNH4)+JNH4(id)
+        bflux(iNO3)=bflux(iNO3)+JNO3(id)
+        bflux(iPO4)=bflux(iPO4)+JPO4(id)
+        bflux(iCOD)=bflux(iCOD)+JCOD(id)
+        bflux(iDOX)=bflux(iDOX)+SOD(id)    
+        if(iSilica==1) bflux(iSA) =bflux(iSA) +JSA(id)
       endif
 
       !erosion flux
       if(ierosion/=0) then
-        bflux(iRPOC)=bflux(iRPOC)+eroRPOC(id)
-        bflux(iLPOC)=bflux(iLPOC)+eroLPOC(id)
-        bflux(iCOD) =bflux(iCOD) +eroH2S(id)
+        bflux(iRPOC)=bflux(iRPOC)+eRPOC(id)
+        bflux(iLPOC)=bflux(iLPOC)+eLPOC(id)
+        bflux(iCOD) =bflux(iCOD) +eH2S(id)
       endif
 
       !----------------------------------------------------------------------------------
@@ -332,8 +330,7 @@ subroutine ecosystem(it)
         do i=1,ntrs_icm
           sink(i,k)=(WS(i)*wqc(i,m)-WB(i)*wqc(i,k))/dz(k)
         enddo
-        !sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
-        sink(iPO4,k)=(WS(iPO4)*PO4a(m)-WB(iPO4)*PO4p(k))/dz(k) !todo: remove PO4a, this is a bug
+        sink(iPO4,k)=(WS(iPO4)*PO4p(m)-WB(iPO4)*PO4p(k))/dz(k)
         if(iSilica==1) sink(iSA,k)=(WS(iSA)*SAp(m)-WB(iSA)*SAp(k))/dz(k)
       enddo !k
 
@@ -391,7 +388,6 @@ subroutine ecosystem(it)
         do m=1,3
           dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-FCM(m))*DOX(k)/(DOX(k)+KhDO(m)))*MT(m,k)) !growth, metabolism
         enddo
-        if(k==nvrt) dwqc(iDOX,k)=dwqc(iDOX,k)+rKa*(DOsat-DOX(k)) !reaeration; todo: add to sflux
       enddo !k
 
       !----------------------------------------------------------------------------------
@@ -535,7 +531,6 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
   use icm_misc, only : signf
   use icm_mod
   implicit none
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: vhtz(3),rIa0,tdep,zid(nvrt),dz(nvrt),rKe0(nvrt),rKeS(nvrt)
 
@@ -599,17 +594,17 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       tmp=sdveg+rKehV(j,2)
 
       if(tmp>20) then
-        mLight=vLight*rrat/tmp
+        mLight=vLight*Rrat/tmp
       elseif(tmp<0.02)then
-        mLight=vLight*rrat
+        mLight=vLight*Rrat
       else
-        mLight=vLight*rrat*(1-exp(-tmp))/tmp
+        mLight=vLight*Rrat*(1-exp(-tmp))/tmp
       endif
       rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
 
-      vfN=CNH4(id)/(vKhNs(j)+CNH4(id))
-      vfP=CPIP(id)/(vKhPs(j)+CPIP(id))
+      vfN=bNH4(id)/(vKhNs(j)+bNH4(id))
+      vfP=bPO4(id)/(vKhPs(j)+bPO4(id))
       if(ivNs==0) vfN=1
       if(ivPs==0) vfP=1
 
@@ -725,12 +720,12 @@ subroutine zoo_calc(kb,PR)
 !note: fish can eat zooplanktons and phytoplanktons, while zooplankton can eat
 !other zooplanktons, all phytoplankton and carbon species
 !--------------------------------------------------------------------------------------
-  use schism_glbl, only : rkind
+  use schism_glbl, only : rkind,nvrt
   use icm_misc, only : signf
   use icm_mod
   implicit none
   integer,intent(in) :: kb
-  real(rkind),intent(inout) :: PR(:,:)
+  real(rkind),intent(inout) :: PR(3,nvrt)
 
   !local variables
   integer :: i,j,m,k
@@ -800,7 +795,6 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   use icm_misc, only : signf
   use icm_mod
   implicit none
-  real(rkind), parameter :: rrat=0.397  !!W/m2 to E/m2/day
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: rIa0,shtz,tdep
   real(rkind),intent(in),dimension(nvrt) :: dz,zid,rKe0,rKeV,PO4d
@@ -877,7 +871,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
             rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
           endif !knp
 
-          mLight=max(sLight*rrat*(1-exp(-tmp))/tmp,1.d-5)
+          mLight=max(sLight*Rrat*(1-exp(-tmp))/tmp,1.d-5)
           rIK=sGPM*sfT/salpha
 
           !light limitation function for sav
@@ -888,8 +882,8 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
         endif !szleaf(k+1)>0.and.szstem(k+1)>0
 
         !N/P limitation function
-        sfN=(DIN(k)+CNH4(id)*sKhNw/sKhNs)/(sKhNw+DIN(k)+CNH4(id)*sKhNw/sKhNs)
-        sfP=(PO4d(k)+CPIP(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+CPIP(id)*sKhPw/sKhPs)
+        sfN=(DIN(k)+bNH4(id)*sKhNw/sKhNs)/(sKhNw+DIN(k)+bNH4(id)*sKhNw/sKhNs)
+        sfP=(PO4d(k)+bPO4(id)*sKhPw/sKhPs)/(sKhPw+PO4d(k)+bPO4(id)*sKhPw/sKhPs)
 
         !calculation of lf growth rate [1/day] as function of temp, light, N/P
         !sc2dw checked !>=0 with seeds, =0 for no seeds
@@ -942,8 +936,8 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
 
       !pre-calculation for (NH4,NO3,PO4,DOX) effect in water column
       sfPN=(NH4(k)/(sKhNH4+NO3(k)))*(NO3(k)/(sKhNH4+NH4(k))+sKhNH4/(DIN(k)+1.e-6))
-      sfNs=CNH4(id)/(CNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
-      sfPs=CPIP(id)/(CPIP(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
+      sfNs=bNH4(id)/(bNH4(id)+DIN(k)*sKhNs/sKhNw+1.e-8)
+      sfPs=bPO4(id)/(bPO4(id)+PO4(k)*sKhPs/sKhPw+1.e-8)
 
       sdwqc(iRPOC,k) = sFCM(1)*sMT                        
       sdwqc(iLPOC,k) = sFCM(2)*sMT                          
@@ -996,7 +990,7 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
   use schism_glbl, only : rkind,errmsg,nvrt
   use schism_msgp, only : parallel_abort
   !use icm_mod, only : TIC,ALK,CA,CACO3,pH,CO2,CAsat,mCACO3,mC
-  use icm_mod, only : mCACO3,mC
+  use icm_mod, only : mCACO3,mC,brent_var
   implicit none
   !integer,intent(in) :: id,nv
   real(rkind),intent(in) :: temp,salt,TIC,ALK
@@ -1006,8 +1000,9 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
   integer :: i,j,k,ierr,imed
   real(rkind) :: mmCACO3,mmC,sTIC,sALK,sCA,sB,sCACO3  !,Ct,Ca,Cc
   real(rkind) :: sth,sth2,r1,r2,r3,T,S,S2,rH2CO3,rHCO3,rCO3,rOH,rH,Kw,K1,K2,Kb
-  real(rkind) :: phi,h,a,f0,f1,f2,pKsp,Ksp
+  real(rkind) :: h,a,f0,f1,f2,pKsp,Ksp
   real(rkind) :: rval
+  type(brent_var) :: bv
 
   mmCACO3=1.d3*mCACO3; mmC=1.d3*mC
   !do k=1,nv
@@ -1023,9 +1018,7 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
     !Ct=sTIC-sCACO3 !total carbon (exclude CaCO3s)
     !Ca=sALK-sCACO3 !alkalintiy (exclude CaCO3s)
 
-    T=temp+273.15
-    S=salt
-    S2=sqrt(S)
+    T=temp+273.15;  S=salt;  S2=sqrt(S)
 
     if(T<250.d0.or.T>325.d0.or.S>50.d0.or.S<0.d0) then
       write(errmsg,*)'check salinity and temperature values: ',T,S
@@ -1033,10 +1026,6 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
     endif
     !ionic strength
     sth=1.47e-3+1.9885e-2*salt+3.8e-5*salt*salt
-    if(sth<0.d0) then
-      write(errmsg,*)'check ICM ionic stength: ',salt,sth
-      call parallel_abort(errmsg)
-    endif
     sth2=sqrt(sth)
 
     r3=-0.5085*sth2/(1.d0+2.9529*sth2) !for H+
@@ -1057,15 +1046,12 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
       K2=10.0**(-2902.39/T+6.4980-0.023790*T)*rHCO3/rCO3
     else !S>=1
       rval=148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S; !DOE
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kw')
       Kw=exp(rval)
 
       rval=2.83655-2307.1266/T-1.5529413*log(T)-(0.207608410+4.0484/T)*S2+0.0846834*S-0.00654208*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K1')
       K1=exp(rval)
 
       rval=-9.226508-3351.6106/T-0.2005743*log(T)-(0.106901773+23.9722/T)*S2+0.1130822*S-0.00846934*S*S2+log(1-0.001005*S);
-      if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: K2')
       K2=exp(rval)
 
       !Kw=exp(148.96502-13847.26/T-23.6521*log(T)+(118.67/T-5.977+1.0495*log(T))*S2-0.01615*S); !DOE
@@ -1075,24 +1061,23 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
 
     rval=(-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
        &  +1.62142*S-(24.4344+25.085*S2+0.2474*S)*log(T)+0.053105*S2*T  !*rBOH3/rBOH4
-    if(abs(rval)>50.d0) call parallel_abort('value in ICM ph too large: Kb')
     Kb=exp(rval)
 
     !Kb=exp((-8966.90-2890.53*S2-77.942*S+1.728*S*S2-0.0996*S*S)/T+148.0248+137.1942*S2 &
     !   &  +1.62142*S-(24.4344+25.085*S2+0.2474*S)*log(T)+0.053105*S2*T)  !*rBOH3/rBOH4
 
-    !brent method
-    !call ph_zbrent(ierr,imed,phi,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-    imed=3
-    call ph_zbrent(ierr,imed,phi,K1,K2,Kw,Kb,sTIC,sALK,sB,rH)
+    !brent method to compute pH
+    bv%imed=1; bv%vmin=3.0; bv%vmax=13.0
+    bv%K1=K1; bv%K2=K2; bv%Kw=Kw; bv%Kb=Kb; bv%Ct=sTIC; bv%Ca=sALK; bv%Bt=sB; bv%rH=rH
+    call brent(bv)
 
-    if(ierr/=0) then
-      write(errmsg,*)'pH calculation failure, ierr=',ierr
+    if(bv%ierr/=0) then
+      write(errmsg,*)'pH calculation failure, ierr=',bv%ierr
       call parallel_abort(errmsg)
     endif
 
     !output variables
-    h=10.0**(-phi)
+    h=10.0**(-bv%ph)
     a=h*h+K1*h+K1*K2;
     f0=h*h/a; f2=K1*K2/a;
 
@@ -1104,137 +1089,33 @@ subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
         & 88.135/T)*S2-0.10018*S+0.0059415*S*S2
     Ksp=10.d0**(pKsp)
 
-    pH=phi
+    pH=bv%ph
     CO2=f0*sTIC*mmC
     CAsat=Ksp*mmCACO3/(f2*sTIC)
   !enddo !k
 
 end subroutine get_ph
 
-subroutine ph_zbrent(ierr,imed,ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-!---------------------------------------------------------------------
-!Brent's method to find ph value
-!numerical recipes from William H. Press, 1992
-!---------------------------------------------------------------------
-  use schism_glbl, only : rkind
-
-  implicit none
-  !integer, parameter :: rkind=8,nloop=100
-  integer, parameter :: nloop=100
-!Error: tweak single
-  real(rkind), parameter :: eps=3.0e-8, tol=1.e-6,phmin=3.0,phmax=13.0
-  integer, intent(in) :: imed
-  integer, intent(out) :: ierr
-  real(rkind),intent(in) :: K1,K2,Kw,Kb,Ct,Ca,Bt,rH
-  real(rkind),intent(out) :: ph
-
-  !local variables
-  integer :: i
-  real(rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,s,tol1,xm
-  real(rkind) :: rtmp,h
-
-  !initilize upper and lower limits
-  ierr=0
-  a=phmin
-  b=phmax
-
-  h=10.0**(-a); call ph_f(fa,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-  h=10.0**(-b); call ph_f(fb,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-
-  !root must be bracketed in brent
-  if(fa*fb>0.d0) then
-    ierr=5
-    return
-  endif
-
-  fc=fb
-  do i=1,nloop
-    if(fb*fc>0.d0) then
-      c=a
-      fc=fa
-      d=b-a
-      e=d
-    endif !fb*fc>0.
-    if(abs(fc)<abs(fb)) then
-      a=b
-      b=c
-      c=a
-      fa=fb
-      fb=fc
-      fc=fa
-    endif !abs(fc)
-    tol1=2.d0*eps*abs(b)+0.5d0*tol !convergence check
-    xm=0.5d0*(c-b)
-    if(abs(xm)<=tol1.or.fb==0.d0) then
-    !if(abs(xm)<=tol1.or.abs(fb)<=1.d-8) then
-      ph=b
-      return
-    endif
-    if(abs(e)>=tol1.and.abs(fa)>abs(fb)) then
-      s=fb/fa
-      if(a==c) then
-        p=2.d0*xm*s
-        q=1.d0-s
-      else
-        q=fa/fc
-        r=fb/fc
-        p=s*(2.d0*xm*q*(q-r)-(b-a)*(r-1.d0))
-        q=(q-1.d0)*(r-1.d0)*(s-1.d0)
-      endif !a==c
-      if(p>0.d0) q=-q
-      p=abs(p)
-      m1=3.d0*xm*q-abs(tol1*q)
-      m2=abs(e*q)
-      if(2.d0*p<min(m1,m2)) then
-        e=d
-        d=p/q
-      else
-        d=xm
-        e=d
-      endif !2.*p<min
-    else
-      d=xm
-      e=d
-    endif !abs(e)
-    a=b;
-    fa=fb
-    if(abs(d)>tol1) then
-      b=b+d
-    else
-      b=b+sign(tol1,xm)
-    endif !abs(d)
-    h=10.0**(-b); !fb=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h
-    call ph_f(fb,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
-  enddo !i
-
-  ierr=6
-  ph=b
-
-end subroutine ph_zbrent
-
-subroutine ph_f(f,imed,h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH)
+subroutine ph_f(f,bv)
 !--------------------------------------------------------------------
 !calculate the nonlinear equation value of PH
 !--------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
+  use icm_mod, only : brent_var
   implicit none
-!Error: tweak single
-!  integer, parameter :: rkind=8
-  integer, intent(in) :: imed
-  real(rkind), intent(in) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
+  type(brent_var),intent(in) :: bv
   real(rkind), intent(out):: f
+  
+  !local variabels
+  real(rkind) :: h,K1,K2,Kw,Kb,Ct,Ca,Bt,rH
 
-  if(imed==1) then !no boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h/rH
-  elseif(imed==2) then !contain boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h/rH
-  elseif(imed==3) then !contain boric
-    f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h
-  else
-    !stop 'unknown imed in PH calculation'
-    write(errmsg,*)'unknown imed in PH calculation'
-    call parallel_abort(errmsg)
-  endif
+  h=10.0**(-bv%ph); K1=bv%K1; K2=bv%K2; Kw=bv%Kw; Kb=bv%Kb; Ct=bv%Ct
+  Ca=bv%Ca; Bt=bv%Bt; rH=bv%rH
+
+  !function for different forms of pH equation
+  !f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h-Ca-h/rH  !no boric
+  !f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h/rH !contain boric
+  f=(h+2.0*K2)*Ct*K1/(h*h+K1*h+K1*K2)+Kw/h+Bt*Kb/(h+Kb)-Ca-h !contain boric
 
 end subroutine ph_f

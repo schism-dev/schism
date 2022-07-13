@@ -1,7 +1,19 @@
-## Visualization with VisIT
-The easiest way to visualize SCHISM nc4 outputs is via VisIT.
+## Visualization with Matlab
+The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs along a horizontal slab (at a fixed
+ z level or at a sigma level) or vertical transects. In particular, `SCHISM_SLAB2.m`  and `SCHISM_TRANSECT2.m` for for 
+ the new scribed outputs, while `SCHISM_SLAB.m` and `SCHISM_TRANSECT.m` are for the old outputs (schout*.nc).
 
-Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'. At runtime, the user needs to specify number of scribe cores (equal to # of 3D outputs variables (vectors counted as 2) plus 2), and the code, compiled without `USE_OLDIO`, will output combined netcdf outputs for each 3D variable and also all 2D variables in `out2d*.nc`. Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`.
+## Visualization with Python
+[more coming]
+
+## Visualization with VisIT
+The most comprehensive way to visualize SCHISM nc4 outputs is via VisIT.
+
+Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'.
+ At runtime, the user needs to specify number of scribe cores (= # of 3D outputs variables 
+(vectors counted as 2) plus 1), and the code, compiled without `OLDIO`, will output 
+ combined netcdf outputs for each 3D variable and also all 2D variables in `out2d*.nc`. 
+Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`.
 
 You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by following these steps:
 

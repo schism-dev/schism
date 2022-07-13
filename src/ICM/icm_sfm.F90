@@ -14,950 +14,488 @@
 
 !Routines & functions:
 !sed_eq: solve mass-balance equations of 2 layers in sediment
-!function sed_zbrent: Brent's method to find SOD value
-!read_icm_sed_param: read sediment flux model parameters
 !sed_calc: sediment flux; sub-models
 !sedsod: calculate SOD
-!link_sed_input: initialize sediment
-!link_sed_output: sediment fluxes to ICM
 
-subroutine icm_sfm_init
-!---------------------------------------------------------------------C
-!read sediment flux model parameters
-!---------------------------------------------------------------------C
-  use schism_glbl, only : rkind,ihot,nea,npa,errmsg,ne_global,np_global,ipgl,i34,elnode, &
- &in_dir,out_dir,len_in_dir,len_out_dir
-  use schism_msgp, only : myrank, parallel_abort
-  use icm_mod
-  implicit none
-
-  !local variables
-  integer :: npgb,negb,ip,nd,ne
-  integer :: i,j
-
-  !cold start
-  if(ihot==0) then
-    do i=1,nea
-      CTEMP(i)=CTEMPI
-      do j=1,3
-        !CPOP(i,j)=CPOPI(j)
-        !CPON(i,j)=CPONI(j)
-        !CPOC(i,j)=CPOCI(j)
-      enddo !j
-      POP1TM1S(i)=CPOPI(1)
-      POP2TM1S(i)=CPOPI(2)
-      POP3TM1S(i)=CPOPI(3)
-      PON1TM1S(i)=CPONI(1)
-      PON2TM1S(i)=CPONI(2)
-      PON3TM1S(i)=CPONI(3)
-      POC1TM1S(i)=CPOCI(1)
-      POC2TM1S(i)=CPOCI(2)
-      POC3TM1S(i)=CPOCI(3)
-
-      !layer 2
-      PO4T2TM1S(i)=PO4T2I
-      NH4T2TM1S(i)=NH4T2I
-      NO3T2TM1S(i)=NO3T2I
-      HST2TM1S(i) =HST2I
-      CH4T2TM1S(i)=CH4T2I
-      SO4T2TM1S(i)=SO4T2I
-      BENSTR1S(i) =BENSTI
-
-      !update concentration
-      CPON(i,1) = PON1TM1S(i)
-      CPON(i,2) = PON2TM1S(i)
-      CPON(i,3) = PON3TM1S(i)
-      CNH4(i)   = NH4T2TM1S(i)
-      CNO3(i)   = NO3T2TM1S(i)
-      CPOP(i,1) = POP1TM1S(i)
-      CPOP(i,2) = POP2TM1S(i)
-      CPOP(i,3) = POP3TM1S(i)
-      CPIP(i)   = PO4T2TM1S(i)
-      CPOC(i,1) = POC1TM1S(i)
-      CPOC(i,2) = POC2TM1S(i)
-      CPOC(i,3) = POC3TM1S(i)
-      CCH4(i)   = CH4T2TM1S(i)
-      CSO4(i)   = SO4T2TM1S(i)
-      CH2S(i)   = HST2TM1S(i)
-
-      !layer 1
-      PO41TM1S(i)= PO4T2I/2.
-      NH41TM1S(i)= NH4T2I/2.
-      NO31TM1S(i)= NO3T2I/2.
-      HS1TM1S(i)= HST2I/2.
-      CH41TM1S(i) =CH41TI
-    
-      !silica module
-      if(iSilica==1) then
-        PSITM1S(i)  =CPOSI
-        SIT2TM1S(i) =SIT2I
-        CPOS(i)     =PSITM1S(i)
-        SI1TM1S(i)  =SIT2I/2.
-      endif    
-    enddo
-  endif !ihot
-
-  !TSS calculation
-  do i=1,nea
-    SSI(i)=(SED_LPOC(i)+SED_RPOC(i))*6.
-  enddo !
-
-end subroutine icm_sfm_init
-
-subroutine sed_calc(id,kb,dep,TSED)
+subroutine sed_calc(id,kb,tdep,wdz,TSS)
 !-----------------------------------------------------------------------
 ! 1) calculate sediment flux
 ! 2) included sub-models: a)deposit feeder
 !-----------------------------------------------------------------------
-  use schism_glbl, only : dt,rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode, &
-                        & idry_e,eta2,dpe
+  use schism_glbl, only : rkind,errmsg,ielg,tau_bot_node,nea,i34,elnode, &
+                        & idry_e,eta2,dpe,nvrt
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
-  real(rkind),intent(in) :: dep,TSED
-  real(rkind),external :: sed_zbrent
+  real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
 
   !local variables
-  integer :: i,j,k,itmp,ind,ierr
-  real(rkind) :: pie1,pie2,j1,j2,fd2,rval
-  real(rkind) :: rtmp,rtmp1,tmp1,rat,xlim1,xlim2,C0d,k12,k2
-  real(rkind) :: flxs,flxr,flxl,flxp(3),flxu !flux rate of POM
-  real(rkind) :: tau_bot_elem,ero_elem
-  real(rkind) :: PO40
+  integer :: i,j,k,m,ierr
+  real(rkind) :: Kd,Kp,j1,j2,k1,k2,fd0,fd1,fd2
+  real(rkind) :: rtmp,SA1,SA2,PO41,PO42
+  real(rkind) :: wPO4d,wPO4p,wSAd,XJC,XJN,XJP
+  real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON
+  real(rkind) :: wRPOP,wLPOP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA
+  real(rkind) :: rKTC(3),rKTN(3),rKTP(3),rKTS
+  real(rkind) :: FPOC(3),FPON(3),FPOP(3),FPOS
+  real(rkind) :: fSTR,SODrt
+  real(rkind) :: tau,erate,edfrac(2)
+  real(rkind),pointer :: dz,Tp,To,STR
+  real(rkind) :: stc
+  type(brent_var) :: bv
 
-  !total depth and other variables from water column
-  ZD(id)=max(dpe(id)+sum(eta2(elnode(1:i34(id),id)))/i34(id),0.d0)
-  SED_BL=dep
-  SED_TSS(id) =TSED
-  SED_T(id)   =temp(kb+1)
-  SED_SALT(id)=salt(kb+1)
-  SED_B(id,1) =PB1(kb+1) 
-  SED_B(id,2) =PB2(kb+1) 
-  SED_B(id,3) =PB3(kb+1) 
-  SED_RPOC(id)=RPOC(kb+1)
-  SED_LPOC(id)=LPOC(kb+1)
-  SED_RPON(id)=RPON(kb+1)
-  SED_LPON(id)=LPON(kb+1)
-  SED_RPOP(id)=RPOP(kb+1)
-  SED_LPOP(id)=LPOP(kb+1)
-  SED_PO4(id) =PO4(kb+1)
-  SED_NH4(id) =NH4(kb+1) 
-  SED_NO3(id) =NO3(kb+1) 
-  SED_DO(id)  =DOX(kb+1) 
-  SED_COD(id) =COD(kb+1) 
+  dz=>bdz !for simplicity
+  !------------------------------------------------------------------------
+  !bottom water concs. and other variables
+  !------------------------------------------------------------------------
+  wTSS =TSS(kb+1);   wtemp=temp(kb+1); wsalt=salt(kb+1)
+  wPBS =PBS(:,kb+1); wRPOC=RPOC(kb+1); wLPOC=LPOC(kb+1)
+  wRPON=RPON(kb+1);  wLPON=LPON(kb+1); wRPOP=RPOP(kb+1)
+  wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
+  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =max(DOX(kb+1),1.d-2)
+  if(iKe==0) wTSS=(wLPOC+wRPOC)*tss2c !ZG; todo: remove this 
+  fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
 
-  if(iSilica==1) then
-    SED_SU(id)  =SU(kb+1)  
-    SED_SA(id)  =SA(kb+1) 
-  endif
+  !------------------------------------------------------------------------
+  !POM fluxes (g.m-2.day-1)
+  !------------------------------------------------------------------------
+  FPOC=0.0; FPON=0.0; FPOP=0.0
+  do m=1,3 !G3 class
+    do i=1,3 !PBS contribution
+      FPOC(m)=FPOC(m)+bFCP(m,i)*WSPBSn(i)*wPBS(i)
+      FPON(m)=FPON(m)+bFNP(m,i)*WSPBSn(i)*wPBS(i)*n2c(i)
+      FPOP(m)=FPOP(m)+bFPP(m,i)*WSPBSn(i)*wPBS(i)*p2c(i)
+    enddo 
+    FPOC(m)=FPOC(m)+WSPOMn(1)*wRPOC*bFCM(m) !RPOM contribution
+    FPON(m)=FPON(m)+WSPOMn(1)*wRPON*bFNM(m)
+    FPOP(m)=FPOP(m)+WSPOMn(1)*wRPOP*bFPM(m)
+  enddo !m
+  FPOC(1)=FPOC(1)+WSPOMn(2)*wLPOC !LPOM contribution
+  FPON(1)=FPON(1)+WSPOMn(2)*wLPON
+  FPOP(1)=FPOP(1)+WSPOMn(2)*wLPOP
 
-  !calculate bottom layer TSS. Need more work, ZG
-  if(iKe==0) then
-    SSI(id)=(SED_LPOC(id)+SED_RPOC(id))*tss2c
-  else
-    SSI(id)=SED_TSS(id)
-  endif
-
-  !water column concentrations
-  !in unit of g/m^3
-  PO40=SED_PO4(id)/(1.0+KPO4p*SSI(id))
-  NH40=SED_NH4(id)
-  NO30=SED_NO3(id)
-  O20=max(SED_DO(id),1.e-2)
-  HS0=SED_COD(id)
-  SAL0=SED_SALT(id)
-  if(iSilica==1) SI0=SED_SA(id)/(1.0+KSAp*SSI(id))
-
-  !assign previous timestep POM concentration
-  !CPOP(id,1)=POP1TM1S(id)
-  !CPOP(id,2)=POP2TM1S(id)
-  !CPOP(id,3)=POP3TM1S(id)
-  !CPON(id,1)=PON1TM1S(id)
-  !CPON(id,2)=PON2TM1S(id)
-  !CPON(id,3)=PON3TM1S(id)
-  !CPOC(id,1)=POC1TM1S(id)
-  !CPOC(id,2)=POC2TM1S(id)
-  !CPOC(id,3)=POC3TM1S(id)
-  !CPOS(id)  =PSITM1S(id)
-
-  !assign previous timestep sediment concentration
-
-  !dissolved in layer 1
-  NH41TM1  = NH41TM1S(id)
-  NO31TM1  = NO31TM1S(id)
-  HS1TM1   = HS1TM1S(id)
-  PO41TM1  = PO41TM1S(id)
-
-  BENSTR1  = BENSTR1S(id) !benthic stress
-
-  !total in layer 2
-  NH4T2TM1 = NH4T2TM1S(id)
-  NO3T2TM1 = NO3T2TM1S(id)
-  HST2TM1  = HST2TM1S(id)
-  PO4T2TM1 = PO4T2TM1S(id)
-
-  !POM in layer 2
-  PON1TM1  = PON1TM1S(id)
-  PON2TM1  = PON2TM1S(id)
-  PON3TM1  = PON3TM1S(id)
-  POC1TM1  = POC1TM1S(id)
-  POC1     = POC1TM1!use for calculating mixing coefficient
-  POC2TM1  = POC2TM1S(id)
-  POC3TM1  = POC3TM1S(id)
-  POP1TM1  = POP1TM1S(id)
-  POP2TM1  = POP2TM1S(id)
-  POP3TM1  = POP3TM1S(id)
-
-  ROOTDO   = 0.0 !unit: g/m^2 day
-  DFEEDM1  = DFEEDM1S(id)
-  CH4T2TM1 = CH4T2TM1S(id)           ! CH4
-  CH41TM1  = CH41TM1S(id)            ! CH4
-  SO4T2TM1 = SO4T2TM1S(id)           ! CH4
-
-  if(iSilica==1) then
-    SI1TM1   = SI1TM1S(id)
-    SIT2TM1  = SIT2TM1S(id)
-    PSITM1   = PSITM1S(id) !particulate Si in layer 2
-  endif
-
-  !rt uptake of NH4, PO4, DO
-  !calculate flux amount on N/P, while account concentration of DO directly
-  !put vegetation effect dirctly ahead after assign previous dt, before start going to
-  !RHS of mass balance of layer 2 in sedimentation flux
-
-  !sav !unit: g/m^3
+  !------------------------------------------------------------------------
+  !SAV and VEG effects
+  !------------------------------------------------------------------------
+  SODrt=0.0 !g.m-2.day-1
+  !SAV: nutrient uptake and DO consumption
   if(jsav==1.and.spatch(id)==1)then
-    NH4T2TM1=max(1.0d-10,NH4T2TM1-sleaf_NH4(id)*dtw/HSED)
-    PO4T2TM1=max(1.0d-10,PO4T2TM1-sleaf_PO4(id)*dtw/HSED)
-    ROOTDO=ROOTDO+sroot_DOX(id) !unit: g/m^2 day
-  endif !jsav
+    do i=1,3
+      FPOC(i)=FPOC(i)+sroot_POC(id)*bFCs(i)
+      FPON(i)=FPON(i)+sroot_PON(id)*bFNs(i)
+      FPOP(i)=FPOP(i)+sroot_POP(id)*bFPs(i)
+    enddo
+    bNH4(id)=max(bNH4(id)-sleaf_NH4(id)*dtw/dz,0.d0)
+    bPO4(id)=max(bPO4(id)-sleaf_PO4(id)*dtw/dz,0.d0)
+    SODrt=SODrt+sroot_DOX(id)
+  endif
 
-  !veg
+  !VEG: nutrient uptake and DO consumption
   if(jveg==1.and.vpatch(id)==1)then
-    NH4T2TM1=max(1.0d-10,NH4T2TM1-sum(vleaf_NH4(id,1:3))*dtw/HSED)
-    PO4T2TM1=max(1.0d-10,PO4T2TM1-sum(vleaf_PO4(id,1:3))*dtw/HSED)
-    ROOTDO=ROOTDO+sum(vroot_DOX(id,1:3)) !unit: g/m^2 day
-  endif !jveg
-
-  !------------------------------------------------------------------------
-  !depositional flux
-  !------------------------------------------------------------------------
-
-  !flux rate, in unit of m/day
-  !in order of inert, refractory, labile, PB(1:3), Si
-  flxs=WSSEDn
-  flxr=WSPOMn(1)
-  flxl=WSPOMn(2)
-  flxp(1:3)=WSPBSn(1:3)
-
-  !error
-  !net settling velocity is going to be transfered from advanced hydrodynamics model, more work later on
-
-  !calculate POM fluxes
-  flxpop(id,:)=0.0; flxpon(id,:)=0.0; flxpoc(id,:)=0.0
-
-  do i=1,3 !for 3 classes of POM
-    do j=1,3 !for 3 phytoplankton species
-      flxpop(id,i)=flxpop(id,i)+FRPPH(i,j)*flxp(j)*p2c(j)*SED_B(id,j)
-      flxpon(id,i)=flxpon(id,i)+FRNPH(i,j)*flxp(j)*n2c(j)*SED_B(id,j)
-      flxpoc(id,i)=flxpoc(id,i)+FRCPH(i,j)*flxp(j)*SED_B(id,j)
-    enddo !j
-  enddo !i
-  !combination of PB1 and two groups of Si, need future work for SA
-  !flxpos(id)=flxp(1)*s2c*SED_B(id,1)+flxu*SED_SU(id)
-  if(iSilica==1) then
-    flxpos(id)=flxp(1)*SED_SU(id)
-    do j=1,3
-      flxpos(id)=flxpos(id)+flxp(j)*s2c(j)*SED_B(id,j)
-    enddo
-  endif
-
-  !split settling POM from water column
-  !SED_???? in unit of g/m^3, flx? in unit of m/day, flxpo? in unit of g/m^2 day
-  !future: mapping flag
-  flxpop(id,1)=flxpop(id,1)+flxl*SED_LPOP(id)
-  flxpop(id,2)=flxpop(id,2)+flxr*SED_RPOP(id)*FRPOP(2)
-  flxpop(id,3)=flxpop(id,3)+flxr*SED_RPOP(id)*FRPOP(3)
-
-  flxpon(id,1)=flxpon(id,1)+flxl*SED_LPON(id)
-  flxpon(id,2)=flxpon(id,2)+flxr*SED_RPON(id)*FRPON(2)
-  flxpon(id,3)=flxpon(id,3)+flxr*SED_RPON(id)*FRPON(3)
-
-  flxpoc(id,1)=flxpoc(id,1)+flxl*SED_LPOC(id)
-  flxpoc(id,2)=flxpoc(id,2)+flxr*SED_RPOC(id)*FRPOC(2)
-  flxpoc(id,3)=flxpoc(id,3)+flxr*SED_RPOC(id)*FRPOC(3)
-
-  !rt metaolism adding the RHS of mass balance of POM on layer 2
-  !trtpo?sav in unit of g/m^2 day
-  !sav
-  if(jsav==1.and.spatch(id)==1) then
-    do i=1,3
-      flxpoc(id,i)=flxpoc(id,i)+sroot_POC(id)*frcsav(i)
-      flxpon(id,i)=flxpon(id,i)+sroot_PON(id)*frnsav(i)
-      flxpop(id,i)=flxpop(id,i)+sroot_POP(id)*frpsav(i)
-    enddo
-  endif
-
-  !veg
-  if(jveg==1.and.vpatch(id)==1) then
-    do i=1,3
+    do m=1,3
       do j=1,3
-        flxpoc(id,i)=flxpoc(id,i)+vroot_POC(id,j)*frcveg(i,j)
-        flxpon(id,i)=flxpon(id,i)+vroot_PON(id,j)*frnveg(i,j)
-        flxpop(id,i)=flxpop(id,i)+vroot_POP(id,j)*frpveg(i,j)
-      enddo !j::veg species
-    enddo !i::POM group
+        FPOC(m)=FPOC(m)+vroot_POC(id,j)*bFCv(m,j)
+        FPON(m)=FPON(m)+vroot_PON(id,j)*bFNv(m,j)
+        FPOP(m)=FPOP(m)+vroot_POP(id,j)*bFPv(m,j)
+      enddo 
+    enddo 
+    bNH4(id)=max(bNH4(id)-sum(vleaf_NH4(id,1:3))*dtw/dz,0.d0)
+    bPO4(id)=max(bPO4(id)-sum(vleaf_PO4(id,1:3))*dtw/dz,0.d0)
+    SODrt=SODrt+sum(vroot_DOX(id,1:3))
   endif
 
   !------------------------------------------------------------------------
   !diagenesis flux
   !------------------------------------------------------------------------
+  XJC=0.0; XJN=0.0; XJP=0.0
+  do m=1,3
+    rKTC(m)=bKC(m)*bKTC(m)**(btemp(id)-bTR) !decay rate
+    rKTN(m)=bKN(m)*bKTN(m)**(btemp(id)-bTR)
+    rKTP(m)=bKP(m)*bKTP(m)**(btemp(id)-bTR)
+    bPOC(id,m)=max(bPOC(id,m)+dtw*FPOC(m)/dz-dtw*(bury/dz+rKTC(m))*bPOC(id,m),0.d0) !update POM
+    bPON(id,m)=max(bPON(id,m)+dtw*FPON(m)/dz-dtw*(bury/dz+rKTN(m))*bPON(id,m),0.d0)
+    bPOP(id,m)=max(bPOP(id,m)+dtw*FPOP(m)/dz-dtw*(bury/dz+rKTP(m))*bPOP(id,m),0.d0)
+    XJC=XJC+rKTC(m)*bPOC(id,m)*dz !diagenesis flux
+    XJN=XJN+rKTN(m)*bPON(id,m)*dz
+    XJP=XJP+rKTP(m)*bPOP(id,m)*dz
+  enddo
 
-  !benthic stress
-  BFORMAX=BFORMAXS(id)
-  ISWBEN=ISWBENS(id)
-
-  !layer 2 depth: 10cm
-  H2=HSED !unit: m
-
-  !sedimentation/burial rates: 0.25~0.5cm/yr
-  W2=VSED !unit: m/day
-
-  !sediment temp
-  TEMPD=CTEMP(id)
-
-  !calculate sediment concentration, implicit
-  TEMP20= TEMPD-20.0
-  TEMP202= TEMP20/2.0
-  ZHTAPON1 = KNDIAG(1)*DNTHTA(1)**TEMP20
-  ZHTAPON2 = KNDIAG(2)*DNTHTA(2)**TEMP20
-  ZHTAPON3 = KNDIAG(3)*DNTHTA(3)**TEMP20 !inert ==0
-  ZHTAPOC1 = KCDIAG(1)*DCTHTA(1)**TEMP20
-  ZHTAPOC2 = KCDIAG(2)*DCTHTA(2)**TEMP20
-  ZHTAPOC3 = KCDIAG(3)*DCTHTA(3)**TEMP20 !inert ==0
-  ZHTAPOP1 = KPDIAG(1)*DPTHTA(1)**TEMP20
-  ZHTAPOP2 = KPDIAG(2)*DPTHTA(2)**TEMP20
-  ZHTAPOP3 = KPDIAG(3)*DPTHTA(3)**TEMP20 !inert ==0
-  if(iSilica==1) ZHTASI  = KSI*THTASI**TEMP20  !Si
-
-  PON1=(flxpon(id,1)*dtw/H2+PON1TM1)/(1.0+dtw*(W2/H2+ZHTAPON1))
-  PON2=(flxpon(id,2)*dtw/H2+PON2TM1)/(1.0+dtw*(W2/H2+ZHTAPON2))
-  PON3=(flxpon(id,3)*dtw/H2+PON3TM1)/(1.0+dtw*(W2/H2+ZHTAPON3))
-  POC1=(flxpoc(id,1)*dtw/H2+POC1TM1)/(1.0+dtw*(W2/H2+ZHTAPOC1))
-  POC2=(flxpoc(id,2)*dtw/H2+POC2TM1)/(1.0+dtw*(W2/H2+ZHTAPOC2))
-  POC3=(flxpoc(id,3)*dtw/H2+POC3TM1)/(1.0+dtw*(W2/H2+ZHTAPOC3))
-  POP1=(flxpop(id,1)*dtw/H2+POP1TM1)/(1.0+dtw*(W2/H2+ZHTAPOP1))
-  POP2=(flxpop(id,2)*dtw/H2+POP2TM1)/(1.0+dtw*(W2/H2+ZHTAPOP2))
-  POP3=(flxpop(id,3)*dtw/H2+POP3TM1)/(1.0+dtw*(W2/H2+ZHTAPOP3))
-
-  !rtmp=ZHTASI*(CSISAT-SIT2TM1/(1.0+m2*PIE2SI))/(PSITM1+KMPSI)
-  !tmp1=1.0+dtw*(W2/H2+rtmp)
-  !PSI=((flxpos(id)+JSIDETR)*dtw/H2+PSITM1)/tmp1
-  !if(tmp1<=0) call parallel_abort('icm_sed_flux: tmp1<=0')
-
-  if(iSilica==1) then
-    rtmp=ZHTASI*max((CSISAT-SIT2TM1/(1.0+m2*PIE2SI)),0.d0)/(PSITM1+KMPSI)
-    PSI=PSITM1+dtw*((flxpos(id)+JSIDETR)/H2-(rtmp+W2/H2)*PSITM1)
-    !if(tmp1<=0) call parallel_abort('icm_sed_flux: tmp1<=0')
-    if(PSI<=0) call parallel_abort('icm_sed_flux: PSI<=0')
+  !------------------------------------------------------------------------
+  !particle mixing velocity and diffusion velocity between two layers (m.day-1)
+  !------------------------------------------------------------------------
+  !compute consective days of anoxic (Tp) and oxic (To) conditions (Park, 1995)
+  Tp=>bThp(id); To=>bTox(id); STR=>bSTR(id)
+  if(abs(Tp-banoxic)<=1.d-6) then !anoxia event
+    if(wDOX<bDOc_ST) then !anoxic condition
+      To=0.0; Tp=banoxic
+    else !oxic condition
+      To=min(To+dtw,boxic)
+      if(abs(To-boxic)<=1.d-6) then !end of anoxia event
+        Tp=0.0; To=0.0 
+      endif
+    endif
+  else !non-anoxia event
+    To=0.0
+    if(wDOX<bDOc_ST) then 
+      Tp=min(Tp+dtw,banoxic) !count consective days of anoxia
+    else
+      Tp=0.0 
+    endif
   endif
 
-  !assign diagenesis fluxes, no flux from inert group 3
-  XJP=(ZHTAPOP1*POP1+ZHTAPOP2*POP2+ZHTAPOP3*POP3)*H2
-  XJN=(ZHTAPON1*PON1+ZHTAPON2*PON2+ZHTAPON3*PON3)*H2
-  XJC=(ZHTAPOC1*POC1+ZHTAPOC2*POC2+ZHTAPOC3*POC3)*H2
+  !compute bethic stress
+  STR=min(STR+dtw*(max(1.0-wDOX/bKhDO_Vp,0.0)-bKST*STR),bSTmax)
+  if(abs(Tp-banoxic)<=1.d-6) STR=bSTmax !under anoxia event
+  fSTR=min(max(0.d0,1.0-bKST*STR),1.d0) !effect of benthic stress
+  
+  !particle mixing velocity (Kp), diffusion velocity (Kd)
+  Kp=(bVp*bKTVp**(btemp(id)-bTR)/dz)*(bPOC(id,1)/1.0e2)*(wDOX/(bKhDO_Vp+wDOX))*fSTR+bVpmin/dz
+  Kd=(bVd*bKTVd**(btemp(id)-bTR)/dz)+bp2d*Kp
 
-  !don't go negative
-  if(PON1<0.0) PON1=0.0
-  if(PON2<0.0) PON2=0.0
-  if(PON3<0.0) PON3=0.0
-  if(POC1<0.0) POC1=0.0
-  if(POC2<0.0) POC2=0.0
-  if(POC3<0.0) POC3=0.0
-  if(POP1<0.0) POP1=0.0
-  if(POP2<0.0) POP2=0.0
-  if(POP3<0.0) POP3=0.0
-
-
-!------------------------------------------------------------------------
-!sediment flux
-!------------------------------------------------------------------------
-
-!Error
-  !************************************************************************
-  !benthic stress. This part deviated from HEM3D manual
-  !************************************************************************
-  if(ISWBEN==0) then
-    if(TEMPD>=TEMPBEN) then
-      ISWBEN=1
-      BFORMAX=0.0
-    endif
-    BFOR=KMO2DP/(KMO2DP+O20)
-  else
-    if(TEMPD<TEMPBEN) then
-      ISWBEN=0
-    endif
-    BFORMAX=max(KMO2DP/(KMO2DP+O20),BFORMAX)
-    BFOR=BFORMAX
-  endif
-  BENSTR=(BENSTR1+dtw*BFOR)/(1.0+KBENSTR*dtw)
-  !************************************************************************
-
-  ZL12NOM  = THTADD**TEMP20 !diffusion KL
-  ZW12NOM  = THTADP**TEMP20 !P mixing, W
-
-  !put POC or G(poc,r) unit back to g/m^3
-  W12=(VPMIX*ZW12NOM/H2)*(POC1/1.0e2)*(1.0-KBENSTR*BENSTR)+DPMIN/H2
-
-  !diffusion mixing velocity [m/day]
-  KL12=(VDMIX*ZL12NOM/H2)+KLBNTH*W12
-
-  !Methane saturation, !CSOD
-  !CH4SAT=0.099*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0)
-  CH4SAT=100*(1.0+0.1*(ZD(id)+H2))*0.9759**(TEMPD-20.0) !in unit of g/m^3
-
-  !------------------
+  !------------------------------------------------------------------------
   !SOD calculation
-  !------------------
-  !calculate SOD by evaluating NH4, NO3 and SOD equations
-  if(O20<dO2c) then
-    !surface transfer coefficient, not include velocity for now
-    stc=dstc*dtheta**(TEMPD-20.0)
-    call sedsod(id)
-  else
-    SOD=sed_zbrent(id,ierr)
-  endif !hypoxia diffusion with little SOD, negalectable first layer
+  !------------------------------------------------------------------------
+  bv%id=id; bv%tdep=tdep; bv%wsalt=wsalt; bv%Kd=Kd; bv%Kp=Kp; bv%wNH4=wNH4
+  bv%wNO3=wNO3; bv%wCOD=wCOD; bv%wDOX=wDOX; bv%XJC=XJC; bv%XJN=XJN; bv%SODrt=SODrt
 
-  !debug if SOD calculation fails, need more work,ZG
-  if(ierr==1) then
-    write(errmsg,*)'icm_sed_flux: elem=',ielg(id),SOD
-    call parallel_abort(errmsg) !out of range
-  elseif(ierr==2) then
-    write(errmsg,*)'sediment flux model: SOD (2): elem=',ielg(id),SOD
-    call parallel_abort(errmsg)
-  elseif(ierr==3) then
-    write(errmsg,*)'sediment flux model: SOD (3): elem=',ielg(id),SOD
-    call parallel_abort(errmsg)
-  elseif(ierr==4) then
-    write(errmsg,*)'sediment flux model: SOD (4): elem=',ielg(id),SOD
-    call parallel_abort(errmsg)
-  endif
+  !brent method in computing SOD and stc
+  bv%imed=0; bv%vmin=1.d-8; bv%vmax=100.0; call brent(bv)
+  stc=bv%SOD/max(wDOX,1.d-2)
 
-  !mass balance equation for Si
-  if(iSilica==1) then
-    if(O20<O2CRITSI) then
-      pie1=PIE2SI*DPIE1SI**(O20/O2CRITSI)
+  !temp fix for low DO ; todo: remove this
+  !if(wDOX<1.0) stc=0.1*1.08**(btemp(id)-bTR)
+
+  if(bv%ierr/=0) then
+    if(wDOX<1.0) then
+      stc=bstc(id)
     else
-      pie1=PIE2SI*DPIE1SI
+      call parallel_abort('wrong in computing SOD')
     endif
-    pie2=PIE2SI
-
-    C0d=SI0
-    j1=0.0
-    !j2=ZHTASI(ind)*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SED_SA(id)*KSAp*SSI(id)/(1.0+KSAp*SSI(id))
-    !from init transfer: SI0=SED_SA(id)/(1.0+KSAp*SSI(id)
-    j2=ZHTASI*H2*CSISAT*PSI/(PSI+KMPSI)+flxs*SI0*KSAp*SSI(id) !KSAp ==0,future app with TSS
-
-    k12=0.0
-    k2=ZHTASI*H2*PSI/((PSI+KMPSI)*(1.0+m2*pie2))
-    call sed_eq(1,SI1,SI2,SIT1,SIT2,SIT2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-    JSI=stc*(SI1-SI0)
   endif
 
-  !mass balance equation for PO4
-  !salinity dependence of pie1
-  if(SAL0<=SALTSW) then
-    rtmp=DPIE1PO4F
-  else
-    rtmp=DPIE1PO4S
-  endif
-  !oxygen dependence of pie1
-  if(O20<O2CRIT) then
-    pie1=PIE2PO4*rtmp**(O20/O2CRIT)
-  else
-    pie1=PIE2PO4*rtmp
-  endif
-  pie2=PIE2PO4
+  !update sediment concentrations (NH4,NO3,H2S,CH4)
+  bv%stc=stc;  bstc(id)=stc
+  call sedsod(1,bv)
 
-  C0d=PO40
-  j1=0.0
-  j2=XJP+flxs*SED_PO4(id)*KPO4p*SSI(id)/(1.0+KPO4p*SSI(id))
-  k12=0.0
-  k2=0.0
-  call sed_eq(2,PO41,PO42,PO4T1,PO4T2,PO4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JPO4=stc*(PO41-PO40)
-
-  !assign flux arrays, in unit of g/m^2 day; with all state variables in unit of g/ , no need to convert
-  sedDOX(id)=-SOD !negatvie
-  sedNH4(id)=JNH4
-  sedNO3(id)=JNO3
-  sedPO4(id)=JPO4
-!Error: DOC
-  sedDOC(id)=0.0
-  sedCOD(id)=JHS !+JCH4AQ
-  if(iSilica==1) sedSA(id)=JSI
-
-  !************************************************************************
-  !erosion flux
-  !************************************************************************
-  if(ierosion>0.and.idry_e(id)/=1)then
-    !calculate bottom shear stress for elem #id
-    tau_bot_elem=sum(tau_bot_node(3,elnode(1:i34(i),i)))/i34(id)
-
-    !calculate erosion rate for elem #id
-    if ((tau_bot_elem-etau)>10.e-8)then
-      ero_elem=erorate*(1-eroporo)*erofrac*(tau_bot_elem-etau)/(2650*etau) !erosion rate /day
-    else
-      ero_elem=0
-    endif !tau_bot_elem
-
-    !calculate depostion fraction for elem #id :: E/(k+W)
-    if(idepo==1) then
-!Error: check exponent magnitude
-      depofracR=ero_elem/(WSPOM(1)*depoWSL/max(1.d-7,SED_BL(id))+KP0(1)*exp(KTRM(1)*(SED_T(id)-TRM(1))))
-      depofracL=ero_elem/(WSPOM(2)*depoWSL/max(1.d-7,SED_BL(id))+KP0(2)*exp(KTRM(2)*(SED_T(id)-TRM(2))))
-    endif 
-
-    !sediemnt erosion >> nutrient erosion flux
-    !dissolved sulfur + resuspended POM
-    if(ierosion==1)then
-      SED_eroH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
-      SED_eroLPOC(id)=0
-      SED_eroRPOC(id)=0
-    elseif(ierosion==2)then
-      SED_eroH2S(id)=0
-      SED_eroLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
-      SED_eroRPOC(id)=POC2TM1S(id)*ero_elem*depofracR
-    elseif(ierosion==3)then
-      SED_eroH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
-      SED_eroLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
-      SED_eroRPOC(id)=POC2TM1S(id)*ero_elem*depofracR
-    endif !ierosion
-
-    !minus erosion in sediment for mass balance
-    HST2TM1S(id)=max(1.d-10,HST2TM1S(id)-SED_eroH2S(id)*dtw/HSED)
-    POC1TM1S(id)=max(1.d-10,POC1TM1S(id)-SED_eroLPOC(id)*dtw/HSED)
-    POC2TM1S(id)=max(1.d-10,POC2TM1S(id)-SED_eroRPOC(id)*dtw/HSED)
-  endif !ierosion
-  !************************************************************************
-
-  !update sediment concentration
-  NH41TM1S(id)  = NH41        !dissolved NH4 in 1st layer
-  NO31TM1S(id)  = NO31        !dissolved NO3 in 1st layer
-  HS1TM1S(id)   = HS1         !dissolved H2S in 1st layer
-  PO41TM1S(id)  = PO41        !dissolved PO4 in 1st layer
-
-  NH4T2TM1S(id) = NH4T2       !total NH4 in 2nd layer
-  NO3T2TM1S(id) = NO3T2       !total NO3 in 2nd layer
-  HST2TM1S(id)  = HST2        !total H2S in 2nd layer
-  PO4T2TM1S(id) = PO4T2       !total PO4 in 2nd layer
-
-  PON1TM1S(id)  = PON1        !1st class PON
-  PON2TM1S(id)  = PON2        !2nd class PON
-  PON3TM1S(id)  = PON3        !3rd class PON
-  POC1TM1S(id)  = POC1        !1st class POC
-  POC2TM1S(id)  = POC2        !2nd class POC
-  POC3TM1S(id)  = POC3        !3rd class POC
-  POP1TM1S(id)  = POP1        !1st class POP
-  POP2TM1S(id)  = POP2        !2nd class POP
-  POP3TM1S(id)  = POP3        !3rd class POP
-
-  BENSTR1S(id)  = BENSTR      !benthic stress
-  BFORMAXS(id)  = BFORMAX     !benthic stress
-  ISWBENS(id)   = ISWBEN      !benthic stress
-
-  DFEEDM1S(id)  = DFEED       !deposit feeder
-
-  CH4T2TM1S(id) = CH4T2       ! CH4 in 2nd layer
-  CH41TM1S(id)  = CH41        ! CH4 in 1st layer
-  SO4T2TM1S(id) = SO4T2       ! SO4 in 2nd layer
-
-  !update concentration
-  CPON(id,1) = PON1TM1S(id)
-  CPON(id,2) = PON2TM1S(id)
-  CPON(id,3) = PON3TM1S(id)
-  CNH4(id)   = NH4T2TM1S(id)
-  CNO3(id)   = NO3T2TM1S(id)
-  CPOP(id,1) = POP1TM1S(id)
-  CPOP(id,2) = POP2TM1S(id)
-  CPOP(id,3) = POP3TM1S(id)
-  CPIP(id)   = PO4T2TM1S(id)
-  CPOC(id,1) = POC1TM1S(id)
-  CPOC(id,2) = POC2TM1S(id)
-  CPOC(id,3) = POC3TM1S(id)
-  CCH4(id)   = CH4T2TM1S(id)
-  CSO4(id)   = SO4T2TM1S(id)
-  CH2S(id)   = HST2TM1S(id)
-
+  !------------------------------------------------------------------
+  !mass balance equation for Silica (SU/POS, SA)
+  !------------------------------------------------------------------
   if(iSilica==1) then
-    SI1TM1S(id)   = SI1         !dissolved SA in 1st lyaer
-    SIT2TM1S(id)  = SIT2        !total SA in 2nd layer
-    PSITM1S(id)   = PSI         !PSI
-    CPOS(id)   = PSITM1S(id)
+    wSU=SU(kb+1); wSA=SA(kb+1); wSAd=wSA/(1.0+KSAp*wTSS)!bottom water conc.
+    FPOS=WSPBSn(1)*wSU+WSSEDn*wSAd                      !depositional flux due to SU/SA 
+    do j=1,3; FPOS=FPOS+s2c(j)*WSPBSn(j)*wPBS(j); enddo !depositional flux due to algae
+
+    !POS(SU) and SA in sediment
+    rKTS=bKS*bKTS**(btemp(id)-bTR)*bPOS(id)/(bPOS(id)+bKhPOS)    !decay rate of POS
+    fd1=1.0/(1.0+bpieSI*(bKOSI**min(wDOX/bDOc_SI,1.d0))*bsolid(1)) !partition of SA in layer 1
+    fd2=1.0/(1.0+bpieSI*bsolid(2))                                 !partition of SA in layer 2
+    bPOS(id)=bPOS(id)+dtw*((FPOS+bJPOSa)/dz-rKTS*max(bSIsat-fd2*bSA(id),0.d0)-bury*bPOS(id)/dz) !update POS
+    j1=0.0;  j2=rKTS*bSIsat*dz   !source terms 
+    k1=0.0;  k2=rKTS*fd2*dz      !reaction rates
+    call sed_eq(1,SA1,SA2,wSAd,bSA(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+    JSA(id)=stc*(fd1*SA1-wSAd);  bSA(id)=SA2
   endif
 
-  !checking before inorganic nutri conc go to water column
-  if(CNH4(id)<=0.or.CNO3(id)<0.or.CPIP(id)<0) then
-    write(errmsg,*)'icm_sed_flux, conc<0.0:',id,CNH4(id),CNO3(id),CPIP(id)
-    call parallel_abort(errmsg)
-  endif !sed conc
+  !------------------------------------------------------------------
+  !mass balance equation for PO4
+  !------------------------------------------------------------------
+  if(wsalt<=bsaltp) then
+    fd1=1.0/(1.0+bpiePO4*bKOPO4f**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
+  else
+    fd1=1.0/(1.0+bpiePO4*bKOPO4s**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
+  endif
+  fd2=1.0/(1.0+bpiePO4*bsolid(2))
+  j1=0.0;  j2=XJP+WSSEDn*wPO4p
+  k1=0.0;  k2=0.0  !no reactions 
+  call sed_eq(2,PO41,PO42,wPO4d,bPO4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+  JPO4(id)=stc*(fd1*PO41-wPO4d);  bPO4(id)=PO42
+
+  !------------------------------------------------------------------
+  !sediment erosion: this part needs more documentation
+  !------------------------------------------------------------------
+  eH2S(id)=0; eLPOC(id)=0;  eRPOC(id)=0
+  if(ierosion>0.and.idry_e(id)/=1)then
+    tau=sum(tau_bot_node(3,elnode(1:i34(id),id)))/i34(id) !bottom shear stress 
+    erate=erosion*(1-eporo)*efrac*max((tau-etau),0.d0)/(2650*etau) !erosion rate 
+
+    !compute depostion fraction: E/(k+W)
+    edfrac=dfrac
+    if(dfrac(1)<0.d0) edfrac(1)=erate/(WSPOM(1)*dWS_POC(1)/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
+    if(dfrac(2)<0.d0) edfrac(2)=erate/(WSPOM(2)*dWS_POC(2)/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
+
+    !compute erosion flux
+    eH2S(id) =bH2S(id)*erate*ediso/(1.+bsolid(1)*bpieH2Ss)/2.0 !todo: 2.0 (S to O2) unnecessary 
+    eLPOC(id)=bPOC(id,1)*erate*edfrac(1)
+    eRPOC(id)=bPOC(id,2)*erate*edfrac(2)
+    if(ierosion==2) eH2S(id)=0.0
+    if(ierosion==1) then; eLPOC(id)=0.0; eRPOC(id)=0.0; endif
+
+    !update sediment concentration: H2S, POC
+    bH2S(id)  =max(bH2S(id)-2.0*eH2S(id)*dtw/dz,0.d0)
+    bPOC(id,1)=max(bPOC(id,1)-eLPOC(id)*dtw/dz,0.d0)
+    bPOC(id,2)=max(bPOC(id,2)-eRPOC(id)*dtw/dz,0.d0)
+  endif 
 
   !update sediment temperature
-  CTEMP(id)=CTEMP(id)+dt*DIFFT*(SED_T(id)-CTEMP(id))/H2/H2
+  btemp(id)=btemp(id)+86400.d0*dtw*bdiff*(wtemp-btemp(id))/(dz**2.0)
 
-  !erosion flux, H2S>S
-  if(ierosion>0.and.idry_e(id)/=1)then
-    eroH2S(id)=SED_eroH2S(id)/2 !S to 0.5*O2
-    eroLPOC(id)=SED_eroLPOC(id)
-    eroRPOC(id)=SED_eroRPOC(id)
-  endif !ierosion
+  !checking before inorganic nutri conc go to water column
+  !if(bNH4(id)<=0.or.bNO3(id)<0.or.bPO4(id)<0) then
+  !  write(errmsg,*)'icm_sed_flux, conc<0.0:',id,bNH4(id),bNO3(id),bPO4(id)
+  !  call parallel_abort(errmsg)
+  !endif !sed conc
+
 
 end subroutine sed_calc
 
-subroutine sedsod(id)
-  !use icm_sed_mod
-  !use icm_mod, only : dtw,o2n,o2c,dn2c,jsav,jveg
+subroutine sedsod(imode,s)
+!-----------------------------------------------------------------------
+!compute SOD value by evaluating Eqs. of NH4/NO3/H2S/CH4
+!  imode=0: stc is computed by SOD input
+!  imode=1: stc is an input
+!-----------------------------------------------------------------------
   use icm_mod
   use schism_glbl, only : errmsg,rkind,idry_e
   use schism_msgp, only : myrank,parallel_abort
   implicit none
-  integer,intent(in) :: id !elem #
+  integer,intent(in) :: imode 
+  type(brent_var),intent(inout) :: s
+
   !local variables
-  real(rkind) :: rtmp,rat,C0d,j1,j2,k12,k2,pie1,pie2
-  real(rkind) :: JO2NH4,HSO4,KHS_1,AD(4,4),BX(4),G(2),H(2,2)
-  real(rkind) :: XJC1,SO40,KL12SO4,fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc,DBLSO42,DBLSO41
-  real(rkind) :: HS2AV,SO42AV,XJ2,XJ2CH4,CSODHS,CH42AV,CH4T2AV,CH40
-  real(rkind) :: X1J2,DCH4T2,DHST2,CSODCH4,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
-  integer :: ind
+  integer :: id
+  real(rkind) :: rtmp,j1,j2,k1,k2,pie1,pie2,k1_NH4
+  real(rkind) :: NSOD,Jnit,bKNH4,bKNO3_1
+  real(rkind) :: fd1,fp1,fd2,fp2,RA0,RA1,RA2,disc
+  real(rkind) :: XJ2,XJ2CH4,CH40
+  real(rkind) :: X1J2,DHST2,CSOD,FLUXHS,FLUXHSCH4,VJCH4G
+  real(rkind) :: CH4sat,JN2GAS,NH41,NO31,H2S1d,H2S1,CH41d,CH42d,CH41
+  real(rkind) :: NH41d,NH42,NO32,H2S2,CH42
+  real(rkind) :: stc,Kd,Kp,wDOX,XJC,XJN,JNH4e,JNO3e,JH2Se
 
-!  ind=10.0*max(0.d0,TEMPD)+1
-  rat=1000.0
+  if(imode==0) s%stc=s%SOD/s%wDOX !compute surface transfer coefficient
+  id=s%id; stc=s%stc; Kd=s%Kd; Kp=s%Kp; wDOX=s%wDOX; XJC=s%XJC; XJN=s%XJN
 
-  TEMP20   = TEMPD-20.0
-  TEMP202  = TEMP20/2.0
-  ZHTANH4F = KAPPNH4F*THTANH4**TEMP202 !nitrification in 1st layer
-  ZHTANH4S = KAPPNH4S*THTANH4**TEMP202 !nitrificaiton in 1st layer
-  ZHTANO3F = KAPPNO3F*THTANO3**TEMP202 !denitrification in the 1st layer
-  ZHTANO3S = KAPPNO3S*THTANO3**TEMP202 !denitrification in the 1st layer
-  ZHTAD1   = KAPPD1*THTAPD1**TEMP202 !dissolved H2S
-  ZHTAP1   = KAPPP1*THTAPD1**TEMP202 !particulate H2S
-  ZHTA2NO3 = K2NO3*THTANO3**TEMP20 !denitrification in the 2nd layer
-  ZHTACH4  = KAPPCH4*THTACH4**TEMP202 !CH4
-
-  !NH4 flux
-  pie1=PIENH4; pie2=PIENH4
-
-  C0d=NH40
-  j1=0.0
-  j2=XJN
-  if(SAL0<=SALTND) then
-    k12=ZHTANH4F**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+  !NH4 and NO3 reaction rate in 1st layer
+  if(s%wsalt<=bsaltn) then
+     bKNH4=bKNH4f; bKNO3_1=bKNO3f
   else
-    k12=ZHTANH4S**2*KMNH4*O20/((KMNH4O2+O20)*(KMNH4+NH41TM1))
+     bKNH4=bKNH4s; bKNO3_1=bKNO3s
   endif
-  if(k12<0.) call parallel_abort('icm_sed_flux, k12<0')
-  k2=0.0
-  call sed_eq(3,NH41,NH42,NH4T1,NH4T2,NH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNH4=stc*(NH41-NH40)
 
-  !oxygen consumed by nitrification
-  JO2NH4=o2n*k12*NH41/stc !unit: g/m^2/day
+  !------------------------------------------------------------------
+  !mass balance equation for NH4
+  !------------------------------------------------------------------
+  fd1=1.0/(1.0+bpieNH4*bsolid(1));  fd2=1.0/(1.0+bpieNH4*bsolid(2))
+  j1=0.0;  j2=XJN;  k2=0.0
+  k1_NH4=max((bKNH4**2)*(bKTNH4**(btemp(id)-bTR))*bKhNH4*wDOX/((bKhDO_NH4+wDOX)*(bKhNH4+bNH4s(id))),0.d0)
+  call sed_eq(3,NH41,NH42,s%wNH4,bNH4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1_NH4,k2)
+  JNH4e=stc*(fd1*NH41-s%wNH4); NH41d=fd1*NH41
+  Jnit=k1_NH4*NH41d/stc;  NSOD=o2n*Jnit !!nitrification flux (g.m-2.day-1); todo: NH41d->NH41
 
-  !NO3 flux
-  pie1=0.0; pie2=0.0 !W12=0 for no particle exits, no need to switch W12 because fp1=fp2=0
+  !------------------------------------------------------------------
+  !mass balance equation for NO3
+  !------------------------------------------------------------------
+  fd1=1.0; fd2=1.0;  j1=Jnit;  j2=0.0
+  k1=(bKNO3_1**2)*(bKTNO3**(btemp(id)-bTR));  k2=bKNO3*(bKTNO3**(btemp(id)-bTR))
+  call sed_eq(4,NO31,NO32,s%wNO3,bNO3(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+  JNO3e=stc*(fd1*NO31-s%wNO3)
+  JN2GAS=k1*NO31/stc+k2*NO32 !todo: check this formulation, depth may need to be included
 
-  C0d=NO30
-  j1=k12*NH41/stc
-  j2=0.0
-  if(SAL0<=SALTND) then
-    k12=ZHTANO3F**2
-  else
-    k12=ZHTANO3S**2
-  endif
-  k2=ZHTA2NO3
-  call sed_eq(4,NO31,NO32,NO3T1,NO3T2,NO3T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-  JNO3=stc*(NO31-NO30)
-  JN2GAS=k12*NO31/stc+k2*NO32
+  if(s%wsalt>bsaltc) then !salt water
+    !------------------------------------------------------------------
+    !mass balance equation for H2S (sulfide)
+    !------------------------------------------------------------------
+    fd1=1.0/(1.0+bsolid(1)*bpieH2Ss); fd2=1.0/(1.0+bsolid(2)*bpieH2Sb); fp1=1.0-fd1
+    j1=0.0;  j2=max(o2c*XJC-bo2n*JN2GAS,0.0); k2=0.0
+    k1=(fp1*(bKH2Sp**2)+fd1*(bKH2Sd**2))*(bKTH2S**(btemp(id)-bTR))*wDOX/bKhDO_H2S
+    call sed_eq(5,H2S1,H2S2,s%wCOD,bH2S(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+    JH2Se=stc*(fd1*H2S1-s%wCOD); H2S1d=fd1*H2S1
 
-  if(SAL0>1.) then !salt water
-    !sulfide
-    pie1=PIE1S; pie2=PIE2S
-    fd1=1./(1.+m1*pie1)
-    fp1=1.-fd1;
+    CSOD=k1*H2S1d/stc !todo: check H2S1d 
 
-    C0d=HS0 !unit: g/m^3
-    j1=0.0
-    j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
-    k12=(fp1*ZHTAP1**2+fd1*ZHTAD1**2)*O20/KMHSO2
-    k2=0.0
-    call sed_eq(5,HS1,HS2,HST1,HST2,HST2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-    JHS=stc*(HS1-HS0)
-
-    !oxygen consumption
-    CSODHS=k12*HS1/stc
-    CSOD=CSODHS
-    if(CSODHS<0.) then
-      write(errmsg,*)'icm_sed_flux, CSODHS<0:',CSODHS,k12,HS1,stc
+    if(CSOD<0.) then
+      write(errmsg,*)'icm_sed_flux, CSOD<0:',CSOD,k1,H2S1d,stc
       call parallel_abort(errmsg)
     endif
-
   else !fresh water
-    !methane
-    CH40=0.0
-    pie1=0.0; pie2=0.0
-
-    C0d=CH40
-    j1=0.0
+    !------------------------------------------------------------------
+    !mass balance equation for CH4 (methane)
     !j2=XJ2 !need future work
-    j2=max(o2c*XJC-AONO*JN2GAS,1.d-10) !unit: g/m^2/day
     !Error: different from manual
-    k12=ZHTACH4**2*(O20/(KMCH4O2+O20))
-    k2=0.0
-    call sed_eq(6,CH41,CH42,CH4T1,CH4T2,CH4T2TM1,pie1,pie2,m1,m2,stc,KL12,W12,W2,H2,dtw,C0d,j1,j2,k12,k2)
-    !CH42AV=CH42!no use
-    !CH4T2AV=CH4T2
+    !------------------------------------------------------------------
+    CH40=0.0
+    fd1=1.0;  fd2=1.0
+    j1=0.0;   j2=max(o2c*XJC-bo2n*JN2GAS,1.d-10) !unit: g/m^2/day
+    k1=(bKCH4**2)*(bKTCH4**(btemp(id)-bTR))*(wDOX/(bKhDO_CH4+wDOX));  k2=0.0
+    call sed_eq(6,CH41,CH42,CH40,bCH4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+    CH41d=fd1*CH41; CH42d=fd2*CH42
 
-    if(CH42>CH4SAT) then
-      CH42=CH4SAT
-      rtmp=stc**2+KL12*stc+ZHTACH4**2*(O20/(KMCH4O2+O20))
+    CH4sat=100*(1.0+0.1*(s%tdep+bdz))*0.9759**(btemp(id)-bTR) ! g/m3
+    if(CH42d>CH4sat) then
+      CH42d=CH4sat
+      rtmp=stc**2+Kd*stc+(bKCH4**2)*(bKTCH4**(btemp(id)-bTR))*(wDOX/(bKhDO_CH4+wDOX))
       if(rtmp<=0) call parallel_abort('icm_sed_flux, rtmp<=0')
-      CH41=(CH40*stc**2+CH42*KL12*stc)/rtmp !(s**2+KL12*s+ZHTACH4**2*(O20/(KMCH4O2+O20)))
+      CH41d=(CH40*stc**2+CH42d*Kd*stc)/rtmp !(s**2+Kd*s+ZHTACH4**2*(wDOX/(bKhDO_CH4+wDOX)))
     endif
-
-    !************************************************************************
-    !calculation on Gas flux
-    !************************************************************************
-!    !calculate changes in CH4 and HS stored in sediment
-!    DCH4T2=(CH4T2-CH4T2TM1)*H2/dtw
-!    DHST2=(HST2-HST2TM1)*H2/dtw
-!
-!    !calculate fluxes
-!    JCH4=s*(CH41-CH40)
-!    JCH4AQ=s*CH41
-!    FLUXHS=s*HS1
-!    FLUXHSCH4=JCH4AQ+FLUXHS
-!
-!    ! IF NOT FLUX OR SOD OR STORED THEN IT MUST ESCAPE AS GAS FLUX
-!    JCH4G=0.0
-!    if(CH42>CH4SAT) then
-!      JCH4G=XJC1-DCH4T2-DHST2-CSOD-FLUXHSCH4
-!    endif
-!
-!    ! VOLUMETRIC METHANE AND TOTAL GAS FLUX (L/M2-D)
-!    VJCH4G=22.4/64.0*JCH4G
-!    JGAS=JN2GAS+VJCH4G
-    !************************************************************************
 
     !calculate CSOD
-    CSODCH4=k12*CH41/stc !unit: g/m^2 day
-    CSOD=CSODCH4
-    if(CSODCH4<0.) then
-      write(errmsg,*)'icm_sed_flux, CSODCH4<0:',CSODCH4,k12,CH41,stc
+    CSOD=k1*CH41d/stc !unit: g/m^2 day !todo should be CH41
+    if(CSOD<0.) then
+      write(errmsg,*)'icm_sed_flux, CSOD<0:',CSOD,k1,CH41d,stc
       call parallel_abort(errmsg)
     endif
-  endif !SAL0
+  endif !wsalt
 
-  ! SOD FUNCTION: SOD=CSOD+NSOD
-  SOD=CSOD+JO2NH4
+  !compute SOD
+  s%SOD=CSOD+NSOD+s%SODrt
 
-  !sav, veg
-  if(jsav==1.or.jveg==1) then
-    SOD=SOD+ROOTDO !consume DO by root metabolism
+  !update conc. 
+  if(imode==1) then
+    bNH4(id)=NH42;  bNH4s(id)=NH41; bNO3(id)=NO32; bH2S(id)=H2S2; bCH4(id)=CH42;
+    JNH4(id)=JNH4e; JNO3(id)=JNO3e; JCOD(id)=JH2Se !todo: sedCOD=JHS+JCH4AQ
+    SOD(id)=-s%SOD
   endif
 
 end subroutine sedsod
 
-
-subroutine sed_eq(itag,C1td,C2td,C1t,C2t,C2,pie1,pie2,m1,m2,stc,KL,w,WS,H2,dt,C0d,j1,j2,k12,k2)
+subroutine sed_eq(itag,C1t,C2t,C0,C2,stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
 !-----------------------------------------------------------------------
 !solve mass-balance equations for two layers,written by ZG
 ! equations: [a11,a12; a21 a22]*[C1';C2']=[b1;b2]
-! a11=(KL*fd1+w*fp1+WS)+s*fd1+k12/s
-! a12=-(KL*fd2+w*fp2)
-! a21=-(KL*fd1+w*fp1+WS)
-! a22=(KL*fd2+w*fp2)+WS+k2+H2/dt
+! a11=(Kd*fd1+Kp*fp1+bury)+s*fd1+k1/s
+! a12=-(Kd*fd2+Kp*fp2)
+! a21=-(Kd*fd1+Kp*fp1+bury)
+! a22=(Kd*fd2+Kp*fp2)+bury+k2+dz/dt
 ! b1=j1+s*fd0*C0
-! b2=j2+H2*C2/dt
+! b2=j2+dz*C2/dt
 !-----------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank, parallel_abort
+  use icm_mod, only : bsolid,bdz,bury,dtw
   implicit none
 
   integer, intent(in) :: itag !debug info only
-  real(rkind),intent(in) :: C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt
-  real(rkind),intent(out) :: C1td,C2td,C1t,C2t
+  real(rkind),intent(in) :: C0,C2,j1,j2,fd1,fd2,stc,Kd,Kp,k1,k2
+  real(rkind),intent(out) :: C1t,C2t
 
   !local variables
-  real(rkind) :: a11,a12,a21,a22,b1,b2,fd1,fd2,fp1,fp2
-  real(rkind) :: a1,a2,delta
+  real(rkind) :: a11,a12,a21,a22,b1,b2,fp1,fp2,a1,a2,delta
 
-  !calculate partition coefficents
-  fd1=1.0/(1.0+m1*pie1)
-  fd2=1.0/(1.0+m2*pie2)
-  fp1=1.0-fd1;
-  fp2=1.0-fd2;
+  fp1=1.0-fd1; fp2=1.0-fd2
 
-  a1=KL*fd1+w*fp1+WS
-  a2=KL*fd2+w*fp2
+  a1=Kd*fd1+Kp*fp1+bury
+  a2=Kd*fd2+Kp*fp2
 
-  a11=a1+stc*fd1+k12/stc
+  a11=a1+stc*fd1+k1/stc
   a12=-a2
   a21=-a1
-  a22=a2+WS+k2+H2/dt
-  b1=j1+stc*C0d
-  b2=j2+H2*C2/dt
+  a22=a2+bury+k2+bdz/dtw
+  b1=j1+stc*C0
+  b2=j2+bdz*C2/dtw
 
   delta=a11*a22-a12*a21
-  if(delta==0.0) then
-!    write(11,*)'ICM: delta=0 in solve sediment equations in two layers'
-!    write(11,*)C2,C0d,j1,j2,pie1,pie2,m1,m2,s,KL,w,WS,k12,k2,H2,dt
-    write(errmsg,*)'icm_sed_flux: delta=0 in solve sediment equations in two layers,', &
-    &C2,C0d,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
-    call parallel_abort(errmsg)
-  endif
-
   C1t=(a22*b1-a12*b2)/delta
   C2t=(a11*b2-a21*b1)/delta
-  if(C1t<0.0.or.C2t<0.0) then
-    write(errmsg,*)'icm_sed_flux: conc<0,',C1t,C2t,a11,a22,a12,a21,a1,a2,b1,b2,'variable=',C0d,C2,j1,j2,pie1,pie2,m1,m2,stc,KL,w,WS,k12,k2,H2,dt,itag
+
+  if(delta==0.0.or.C1t<0.0.or.C2t<0.0) then
+    write(errmsg,*)'error in solving sediment equations: ',delta,bsolid,bdz,bury,dtw, &
+                 & ',\n param: ',C0,C2,stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2,C1t,C2t,itag
     call parallel_abort(errmsg)
   endif
-  C1td=C1t*fd1
-  C2td=C2t*fd2
 
 end subroutine sed_eq
 
-function sed_zbrent(id,ierr)
+subroutine brent(bv)
 !---------------------------------------------------------------------
 !Brent's method to find SOD value
 !numerical recipes from William H. Press, 1992
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
-  use icm_mod, only : O20,SOD,stc
+  use icm_mod, only : brent_var
   implicit none
-  integer,intent(in) :: id !elem #
-  integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
-!Error: tweak single
-  real(rkind), parameter :: eps=3.0e-8, tol=1.e-5,sodmin=1.e-8,sodmax=100.d0
-  !real(rkind),intent(out) :: fout
-!  real(rkind), external :: sedf
-  real(rkind) :: sed_zbrent
+  real(rkind), parameter :: eps=3.0e-8, tol=1.e-5
+  type(brent_var),target,intent(inout) :: bv
 
   !local variables
   integer :: i
   real(rkind) :: a,b,c,d,e,m1,m2,fa,fb,fc,p,q,r,rs,tol1,xm
-  real(rkind) :: rtmp
 
   !initilize upper and lower limits
-  ierr=0
-  a=sodmin
-  b=sodmax
+  bv%ierr=0; a=bv%vmin; b=bv%vmax
 
-  !surface transfer coefficient
-  stc=a/O20 !O20=max(SED_DO(id),1.d-2)
-  call sedsod(id)
-  fa=SOD-a
+  if(bv%imed==0) then !SFM
+    bv%data=>bv%SOD
+    bv%SOD=a; call sedsod(0,bv);  fa=bv%SOD-a
+    bv%SOD=b; call sedsod(0,bv);  fb=bv%SOD-b
 
-  stc=b/O20
-  call sedsod(id)
-  fb=SOD-b
-
-  !fa=sedf(a)
-  !fb=sedf(b)
-  !call sedf(fa,a)
-  !call sedf(fb,b)
+    !SOD found
+    if(abs(fa)<2.d-6) then
+      bv%SOD=a; return
+    endif
+  elseif(bv%imed==1) then !pH model
+    bv%data=>bv%ph
+    bv%ph=a; call ph_f(fa,bv)
+    bv%ph=b; call ph_f(fb,bv)
+  else
+    call parallel_abort('bv%imed not defined')
+  endif
 
   !root must be bracketed in brent
-  if(abs(fa)<2.e-6) then
-    sed_zbrent=a
-    return
-  endif !fa
-
   if(fa*fb>0.0) then
-    if(O20<0.02)then
-      sed_zbrent=a
-      return
-    else
-      ierr=1
-      write(12,*)'sed_zbrent: sod=',fa,fb,myrank
-      return
-    endif !water column hypoxia
-
+    bv%data=a; bv%ierr=1; return
   endif
 
   fc=fb
   do i=1,nloop
     if(fb*fc>0.0) then
-      c=a
-      fc=fa
-      d=b-a
-      e=d
+      c=a; fc=fa; d=b-a; e=d
     endif !fb*fc>0.
     if(abs(fc)<abs(fb)) then
-      a=b
-      b=c
-      c=a
-      fa=fb
-      fb=fc
-      fc=fa
+      a=b; b=c; c=a; fa=fb; fb=fc; fc=fa
     endif !abs(fc)
     tol1=2.0*eps*abs(b)+0.5*tol !convergence check
     xm=0.5*(c-b)
-    if(abs(xm)<=tol1.or.fb==0.0) then
-      sed_zbrent=b
-      if(b<sodmin*(1-1.e-10)) then !out of init bound
-        ierr=3
-      endif
-      if(b>sodmax*(1+1.e-10)) then !out of init bound
-        ierr=4
-      endif
+    if(abs(xm)<=tol1.or.abs(fb)<=1.d-12) then
+      bv%data=b
       return
     endif
     if(abs(e)>=tol1.and.abs(fa)>abs(fb)) then
       rs=fb/fa
       if(a==c) then
-        p=2.*xm*rs
-        q=1.-rs
+        p=2.0*xm*rs; q=1.0-rs
       else
-        q=fa/fc
-        r=fb/fc
-        p=rs*(2.*xm*q*(q-r)-(b-a)*(r-1.))
-        q=(q-1.)*(r-1.)*(rs-1.)
+        q=fa/fc; r=fb/fc
+        p=rs*(2.0*xm*q*(q-r)-(b-a)*(r-1.0))
+        q=(q-1.0)*(r-1.0)*(rs-1.0)
       endif !a==c
       if(p>0.) q=-q
       p=abs(p)
-      m1=3.*xm*q-abs(tol1*q)
-      m2=abs(e*q)
-      if(2.*p<min(m1,m2)) then
-        e=d
-        d=p/q
+      m1=3.0*xm*q-abs(tol1*q);  m2=abs(e*q)
+      if(2.0*p<min(m1,m2)) then
+        e=d; d=p/q
       else
-        d=xm
-        e=d
+        d=xm; e=d
       endif !2.d0*p<min
     else
-      d=xm
-      e=d
+      d=xm; e=d
     endif !abs(e)
-    a=b;
-    fa=fb
+    a=b; fa=fb
     if(abs(d)>tol1) then
       b=b+d
     else
       b=b+sign(tol1,xm)
     endif !abs(d)
 
-    stc=b/O20
-    call sedsod(id)
-    fb=SOD-b
-    !fb=sedf(b)
-    !call sedf(fb,b)
-  enddo !i=nloop=100
+    if(bv%imed==0) then !SFM
+      bv%SOD=b; call sedsod(0,bv); fb=bv%SOD-b
+    elseif(bv%imed==1) then !pH model
+      bv%ph=b; call ph_f(fb,bv)
+    endif
+  enddo !i
 
-  ierr=2
-  sed_zbrent=b
+  bv%data=b; bv%ierr=2
 
-end function sed_zbrent
+end subroutine brent

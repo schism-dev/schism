@@ -22,7 +22,7 @@
 !       scribe I/O versions.
 !       Will extrapolate above surface but not below bottom.
 
-!       Inputs: screen; vgrid (in this dir or ../); station.bp (build pts; depths not used); nc
+!       Inputs: screen; vgrid (in this dir or ../); station.bp (build pts; depths not used); relevant nc and out2d*.nc
 !       Outputs: transect.out & transect_grd.[zr]0 (ascii on struc'ed grid; 
 !                use plot_transect.m, but also consider using SCHISM_TRANSECT.m)
 !                average_transect.out (averaged; in .bp with header) 

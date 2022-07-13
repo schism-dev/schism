@@ -20,7 +20,7 @@
 !       Interpolation in time, and
 !       add extra times before and after to examine phase errors.
 !       Works for mixed tri/quad outputs from scribe I/O versions.
-!       Inputs: (1) nc files;
+!       Inputs: (1) nc files and out2d*.nc;
 !               (2) station.xyt (bp format): make sure all times (in sec) are after 1st record (to ensure interpolation in time); 
 !                                pad extra days before and after if necessary.
 !               (3) read_output_xyt.in: 
