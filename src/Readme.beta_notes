@@ -9,6 +9,9 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.10.0: (13 July, 2022)
+
 d03830e (16 May 2022): removed the 2 extra lines required in partition.prop (so it's identical to global_to_local.prop now);
 a71ea69 (12 May 2022): removed 'ioffline_partition' and replaced it with CPP (NO_PARMETIS) to allow build without ParMETIS lib; renamed global_to_local.in as partition.prop;
 da90a33 (2 May 2022): removed itr_met=1,2;
