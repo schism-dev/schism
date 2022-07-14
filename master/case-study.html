@@ -1078,6 +1078,26 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#known-issues-and-work-around" class="md-nav__link">
+    Known issues and work-around
+  </a>
+  
+    <nav class="md-nav" aria-label="Known issues and work-around">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#freshwater-injection-stuck-near-injection-place" class="md-nav__link">
+    Freshwater injection stuck near injection place
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1287,6 +1307,21 @@
 <p><img alt="Guam case study zoom" src="assets/case-study-nwm-2.png" width="800" /></p>
 <figcaption>Pathologic cases for hydrologic flows.</figcaption>
 </figure>
+<h2 id="known-issues-and-work-around">Known issues and work-around<a class="headerlink" href="#known-issues-and-work-around" title="Permanent link">&para;</a></h2>
+<h3 id="freshwater-injection-stuck-near-injection-place">Freshwater injection stuck near injection place<a class="headerlink" href="#freshwater-injection-stuck-near-injection-place" title="Permanent link">&para;</a></h3>
+<p>This can happen with the combined use of (1) point source/sink (<code>if_source</code>=1); (2) LSC2 with 1-2 layers near 
+injection places; (3) baroclinic model. The main symptom is that the freshwater seemingly gets stuck near the 
+ injection points and does not flow out as expected.</p>
+<p>The reason is that insufficient number of vertical layers cannot properly support exchange flow (that 
+requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expects.
+Some work-arounds are:</p>
+<ol>
+<li>Use more vertical layers near injection (one way to do this is to deepen the local depths to allow more layers)</li>
+<li>Nudge (inu_SAL=1 or 2) strongly in a region near injection</li>
+<li>Change to open boundary condition approach</li>
+<li>If the salt intrusion should never reach the injection place, change salinity initial condition by creating
+   a freswater zone from injection to somewhere downstream near the max intrusion.</li>
+</ol>
 
               
             </article>
