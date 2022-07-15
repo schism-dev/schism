@@ -15,3 +15,5 @@ target_link_libraries (convert_hotstart_nc utillib ${NetCDFLIBS} ${HDF5_LIBRARIE
 target_link_libraries (gen_hot_3Dth_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIES} )
 target_link_libraries (gen_hot_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIES} )
 target_link_libraries (gen_3Dth_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIES} )
+
+add_dependencies(utility convert_hotstart_nc gen_hot_3Dth_from_hycom gen_hot_from_hycom gen_3Dth_from_hycom)
