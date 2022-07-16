@@ -24,6 +24,8 @@ jobs:
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
         id: tag_name
+      - name: Get branch names
+        id: branch-name
+        uses: tj-actions/branch-names@v5.4
       - name: Deploy with mike
-        run: mike deploy --force --push $GIT_TAG_NAME $GIT_TAG_NAME
-
+        run: mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
