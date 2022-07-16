@@ -25,4 +25,4 @@ jobs:
         uses: olegtarasov/get-tag@v2.1
         id: tag_name
       - name: Deploy with mike
-        run: mike deploy --force --push $GIT_TAG_NAME $GIT_TAG_NAME
+        run: mike deploy --force --push ${{ steps.tag_name.outputs.tag }}
