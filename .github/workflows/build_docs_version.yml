@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Install python packages
-        run: pip install mkdocs-material mike
+        run: pip install mkdocs-material==8.3.4 mike
       - name: Configure git user
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -25,5 +25,5 @@ jobs:
         uses: olegtarasov/get-tag@v2.1
         id: tag_name
       - name: Deploy with mike
-        run: mike deploy --force --push $GIT_TAG_NAME
+        run: mike deploy --force --push $GIT_TAG_NAME $GIT_TAG_NAME
 
