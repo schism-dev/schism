@@ -417,6 +417,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#pre-processing-with-pyschism" class="md-nav__link">
+    Pre-processing with PySCHISM
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1287,6 +1294,10 @@ If so, you'll need to prepare an input called <code>partion.prop</code> (which i
    compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:</p>
 <p><code>awk '{print NR,$0}' graphinfo.part.&lt;nproc&gt; &gt; partition.prop</code></p>
 <p>(replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
+<h2 id="pre-processing-with-pyschism">Pre-processing with PySCHISM<a class="headerlink" href="#pre-processing-with-pyschism" title="Permanent link">&para;</a></h2>
+<p>PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by HYCOM and
+ a few pre-selected atmospheric models. PySCHISM has its own repository (in parallel to SCHISM) and you can
+ find a user manual <a href="https://pyschism.readthedocs.io/en/latest/index.html">here</a>.</p>
 
               
             </article>
