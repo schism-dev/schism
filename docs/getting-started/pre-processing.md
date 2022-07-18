@@ -46,3 +46,8 @@ Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15`
 
 
    (replace `<nproc>` with actual # of cores).
+
+## Pre-processing with PySCHISM
+PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by HYCOM and
+ a few pre-selected atmospheric models. PySCHISM has its own repository (in parallel to SCHISM) and you can
+ find a user manual [here](https://pyschism.readthedocs.io/en/latest/index.html).
