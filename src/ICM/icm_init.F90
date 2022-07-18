@@ -748,10 +748,14 @@ subroutine update_vars(id,usf,wspd)
   endif
 
   !SAV and VEG
-  sleaf_NH4(id)=0;   sleaf_PO4(id)=0;   sroot_POC(id)=0
-  sroot_PON(id)=0;   sroot_POP(id)=0;   sroot_DOX(id)=0
-  vleaf_NH4(id,:)=0; vleaf_PO4(id,:)=0; vroot_POC(id,:)=0
-  vroot_PON(id,:)=0; vroot_POP(id,:)=0; vroot_DOX(id,:)=0
+  if(jsav/=0) then
+    sleaf_NH4(id)=0;   sleaf_PO4(id)=0;   sroot_POC(id)=0
+    sroot_PON(id)=0;   sroot_POP(id)=0;   sroot_DOX(id)=0
+  endif
+  if(jveg/=0) then
+    vleaf_NH4(id,:)=0; vleaf_PO4(id,:)=0; vroot_POC(id,:)=0
+    vroot_PON(id,:)=0; vroot_POP(id,:)=0; vroot_DOX(id,:)=0
+  endif
 
   !spatial varying parameters
   do m=1,size(sp)

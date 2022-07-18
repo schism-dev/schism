@@ -660,6 +660,16 @@ subroutine fabm_schism_init_stage2
   !if (fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
   !  call driver%fatal_error('fabm_init', 'Not implemented: requested downwelling PAR flux')
   !!endif
+
+  !link time step
+  if (fs%model%variable_needs_values(fs%model%get_scalar_variable_id('time_step_of_host_model'))) then
+    call fs%model%link_scalar_by_name('time_step_of_host_model',dt)
+  endif
+  !todo: link additional horizontal data (spatial varaying parameters); !addedy by Zhengui
+  !if (fs%model%variable_needs_values(fs%model%get_horizontal_variable_id('GPM_1'))) then
+  !  call fs%model%link_horizontal_data_by_name('GPM_1',dpe)
+  !endif
+
 #endif
 
   allocate(fs%bottom_depth(ne))
