@@ -97,12 +97,13 @@
       !itran = 1
 
       IF(itran) THEN 
-        TRANSECT_FILE = 'transects.bp'
+        TRANSECT_FILE = 'transect.bp'
         INQUIRE(FILE=trim(TRANSECT_FILE),EXIST=FEXIST)
         IF(.NOT. FEXIST)THEN
-           itran=0
-           WRITE(*,*)'WARNING ',TRANSECT_FILE,' not found ! No transect&
-     &                output will be supplied'
+           stop 'transect.bp not found'
+!           itran=0
+!           WRITE(*,*)'WARNING ',TRANSECT_FILE,' not found ! No transect&
+!     &                output will be supplied'
         ENDIF
       ENDIF
 
