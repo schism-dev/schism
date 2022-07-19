@@ -13,45 +13,6 @@
 !> @note Adopted from the ADCIRC source code.
 !----------------------------------------------------------------
 
-!Routines & functions
-! CalcIntensityChange
-! UVTrans
-! UVTransPoint
-! NewVortex
-! NewVortexFull
-! SetVortex
-! SetRMaxes
-! GetRMaxes
-! CalcRMaxes
-! CalcRMaxesFull
-! FitRMaxes
-! FitRMaxes4
-! SetVMaxesBL
-! GetVMaxesBL
-! SetUseVMaxesBL
-! SetShapeParameter
-! GetShapeParameter (fun)
-! GetShapeParameters (fun)
-! GetPhiFactors (fun)
-! SetIsotachRadii
-! SetIsotachWindSpeeds
-! SetUsequadrantVR
-! GetUsequadrantVR (fun)
-! SpInterp (fun)
-! InterpR (fun)
-! Rmw (fun)
-! UVP
-! UVPR
-! FAng (fun)
-! Rotate
-! GetLatestRMax (fun)
-! GetLatestAngle (fun)
-! VhWithCoriFull (fun)
-! VhWithCori (fun)
-! VhNoCori (fun)
-! FindRoot (fun)
-
-
 MODULE PaHM_Vortex
 
   USE PaHM_Sizes
@@ -59,6 +20,25 @@ MODULE PaHM_Vortex
 
   IMPLICIT NONE
   SAVE
+
+   PUBLIC :: newVortex, calcRmaxes, fitRmaxes,        &
+             Rmw, uvp, uvtrans, fang,                 &
+             getShapeParameter, setShapeParameter,    &
+             getLatestRmax, getLatestAngle,           &
+             getUseQuadrantVr, getRmaxes,             &
+             setUseQuadrantVr,     setRmaxes,         &
+             setIsotachWindSpeed,                     &
+             getShapeParameters,   getPhiFactors,     &
+             setIsotachWindSpeeds, setIsotachRadii,   &
+             setVortex, spInterp, interpR,            &
+             setUseVmaxesBL,                          &
+             getVmaxesBL, setVmaxesBL,                &
+             fitRmaxes4, calcRmaxesFull,              &
+             UVPR, newVortexFull,                     &
+             rMaxes4, quadFlag4, quadIr4, bs4, vmBL4, &
+             CalcIntensityChange, UVTransPoint
+
+  PRIVATE
 
   INTEGER, PARAMETER              :: NQUADS  = 4            ! Number of quadrants for which wind radii are provided
   INTEGER, PARAMETER              :: NPOINTS = NQUADS + 2   ! Number of (theta, rMax) points for curve fit
@@ -101,19 +81,29 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   C A L C  I N T E N S I T Y  C H A N G E
   !----------------------------------------------------------------
-  !> This subroutine calculates the intensity time change of a variable
-  !> using second order mumerical accuracy and uneven spacing.
   !>
-  !> On input:
-  !>    var         The input variable (vector)
-  !>    times       Time values (vector) at the center locations
-  !>    order       The accuracy order required for the calculations (1, 2)
-  !>                  <= 1: first order approximation for finite differences
-  !>                  >= 2: second order approximation for finite differences
+  !> @brief
+  !>   This subroutine calculates the intensity time change of a variable
+  !>   using second order mumerical accuracy and uneven spacing.
   !>
-  !> On output:
-  !>   calcInt      the calculated intensity change (df/dt)
-  !>    status      error status (0 means no error)
+  !> @details
+  !>
+  !>
+  !> @param[in]
+  !>   var         The input variable (vector)
+  !> @param[in]
+  !>   times       Time values (vector) at the center locations
+  !> @param[out]
+  !>   calcInt     The calculated intensity change (df/dt)
+  !> @param[out]
+  !>   status      Error status (0 means no error)
+  !> @param[in]
+  !>   order       The accuracy order required for the calculations (1, 2)
+  !> @verbatim
+  !>   order   <= 1: first order approximation for finite differences
+  !>   order   >= 2: second order approximation for finite differences
+  !> @endverbatim
+  !>
   !----------------------------------------------------------------
   SUBROUTINE CalcIntensityChange(var, times, calcInt, status, order)
 
@@ -261,21 +251,33 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   U V  T R A N S
   !----------------------------------------------------------------
-  !> This subroutine calculates the translational velocity of a moving hurricane
-  !> using second order mumerical accuracy and uneven spacing.
   !>
-  !> On input:
-  !>    lat         Latitude values (vector) of the center (degrees north)
-  !>    lon         Longitude values (vector) of the center (degrees east )
-  !>    times       Time values (vector) at the center locations (seconds)
-  !>    order       The accuracy order required for the calculations (1, 2)
-  !>                  <= 1: first order approximation for finite differences
-  !>                  >= 2: second order approximation for finite differences
+  !> @brief
+  !>   This subroutine calculates the translational velocity of a moving hurricane
+  !>   using second order mumerical accuracy and uneven spacing.
   !>
-  !> On output:
-  !>    u           x component of the translational velocities (m/s)
-  !>    v           y component of the translational velocities (m/s)
-  !>    status      error status (0 means no error)
+  !> @details
+  !>
+  !>
+  !> @param[in]
+  !>   lat         Latitude values (vector) of the center (degrees north)
+  !> @param[in]
+  !>   lon         Longitude values (vector) of the center (degrees east)
+  !> @param[in]
+  !>   times       Time values (vector) at the center locations (seconds)
+  !> @param[out]
+  !>   u           x component of the translational velocities (m/s)
+  !> @param[out]
+  !>   v           y component of the translational velocities (m/s)
+  !> @param[out]
+  !>   status      Error status (0 means no error)
+  !> @param[in]
+  !>   order       The accuracy order required for the calculations (1, 2)
+  !> @verbatim
+  !>   order   <= 1: first order approximation for finite differences
+  !>   order   >= 2: second order approximation for finite differences
+  !> @endverbatim
+  !>
   !----------------------------------------------------------------
   SUBROUTINE UVTrans(lat, lon, times, u, v, status, order)
 
@@ -479,19 +481,30 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   U V  T R A N S  P O I N T
   !----------------------------------------------------------------
-  !> This subroutine calculates the translational velocity of a moving hurricane.
   !>
-  !> On input:
-  !>    lat1      Previous latitude  of center (degrees north)
-  !>    lon1      Previous longitude of center (degrees east )
-  !>    lat2      Current  latitude  of center (degrees north)
-  !>    lon2      Current  longitude of center (degrees east)
-  !>    time1     Previous time (seconds)
-  !>    time1     Current  time (seconds)
+  !> @brief
+  !>   This subroutine calculates the translational velocity of a moving hurricane.
   !>
-  !> On output:
-  !>    u         x component of translational velocity (m/s)
-  !>    v         y component of translational velocity (m/s)
+  !> @details
+  !>
+  !>
+  !> @param[in]
+  !>   lat1      Previous latitude  of center (degrees north)
+  !> @param[in]
+  !>   lon1      Previous longitude of center (degrees east)
+  !> @param[in]
+  !>   lat2      Current  latitude  of center (degrees north)
+  !> @param[in]
+  !>   lon2      Current  longitude of center (degrees east)
+  !> @param[in]
+  !>   time1     Previous time (seconds)
+  !> @param[out]
+  !>   time2     Current  time (seconds)
+  !> @param[out]
+  !>   u         x component of translational velocity (m/s)
+  !> @param[out]
+  !>   v         y component of translational velocity (m/s)
+  !>
   !----------------------------------------------------------------
   SUBROUTINE UVTransPoint(lat1, lon1, lat2, lon2, time1, time2, u, v)
 
@@ -528,18 +541,24 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   N E W  V O R T E X
   !----------------------------------------------------------------
-  !
-  !> Create a new Vortex object.
   !>
-  !> On input:
-  !>    pn           Ambient surface pressure (mb)
-  !>    pc           Surface pressure at center of storm (mb)
-  !>    cLat         Latitude  of storm center (degrees north)
-  !>    cLon         Longitude of storm center (degrees east )
-  !>    vMax         Max sustained wind velocity in storm (knots)
+  !> @brief
+  !>   Creates a new Vortex object.
   !>
-  !> On output:
-  !>    A new vortex is created with essential parameters calculated.
+  !> @details
+  !>   A new vortex is created with the essential parameters calculated.
+  !>
+  !> @param[in]
+  !>   pinf      Ambient surface pressure (mb)
+  !> @param[in]
+  !>   p0        Surface pressure at center of storm (mb)
+  !> @param[in]
+  !>   lat       Latitude  of storm center (degrees north)
+  !> @param[in]
+  !>   lon       Longitude of storm center (degrees east)
+  !> @param[in]
+  !>   vm        Max sustained wind velocity in storm (knots)
+  !>
   !----------------------------------------------------------------
   SUBROUTINE NewVortex(pinf, p0, lat, lon, vm)
 
@@ -576,7 +595,23 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   N E W  V O R T E X  F U L L
   !----------------------------------------------------------------
-  !> A new vortex is created for the full gradient wind balance
+  !>
+  !> @brief
+  !>   Creates a new Vortex object.
+  !>
+  !> @details
+  !>   A new vortex is created for the full gradient wind balance.
+  !>
+  !> @param[in]
+  !>   pinf      Ambient surface pressure (mb)
+  !> @param[in]
+  !>   p0        Surface pressure at center of storm (mb)
+  !> @param[in]
+  !>   lat       Latitude  of storm center (degrees north)
+  !> @param[in]
+  !>   lon       Longitude of storm center (degrees east)
+  !> @param[in]
+  !>   vm        Max sustained wind velocity in storm (knots)
   !>
   !----------------------------------------------------------------
   SUBROUTINE NewVortexFull(pinf, p0, lat, lon, vm)
@@ -606,7 +641,6 @@ MODULE PaHM_Vortex
     phis(1:6) = phi
     vmBL(1:6) = vMax
 
-    ! Jie 2013.01 
     ! B = MAX(MIN(B, 2.0_SZ), 1.0_SZ) ! limit B to range 1.0->2.5
 
   END SUBROUTINE NewVortexFull
@@ -616,16 +650,22 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   S E T  V O R T E X
   !----------------------------------------------------------------
-  !> Set basic parameter for a new Vortex object.
   !>
-  !> On input:
-  !>    pinf         hurricane Ambient pressure
-  !>    p0           hurricane central pressure
-  !>    lat          Latitude  of storm center (degrees north)
-  !>    lon          Longitude of storm center (degrees east )
+  !> @brief
+  !>   Sets basic parameters for a new Vortex object.
   !>
-  !> On output:
-  !>    Aim is to define pn, pc, and corio
+  !> @details
+  !>   Aim is to define pn, pc, and corio.
+  !>
+  !> @param[in]
+  !>   pinf      Hurricane Ambient pressure (mb)
+  !> @param[in]
+  !>   p0        Hurricane central pressure (mb)
+  !> @param[in]
+  !>   lat       Latitude  of storm center (degrees north)
+  !> @param[in]
+  !>   lon       Longitude of storm center (degrees east)
+  !>
   !----------------------------------------------------------------
   SUBROUTINE SetVortex(pinf, p0, lat, lon)
 
@@ -691,16 +731,14 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   C A L C  R M A X E S
   !----------------------------------------------------------------
-  !> Calculate the radius of maximum winds for all storm quadrants.
   !>
-  !> On input:
-  !>    none
+  !> @brief
+  !>   Calculates the radius of maximum winds for all storm quadrants.
   !>
-  !> On output:
-  !>    rMax    radius of maximum winds (nm) in all quadrants, plus
-  !>            2 extra values to tie down circular periodicity
-  !  Jie 2014.07 Modified with quadrant-varying vmBL, which not only
-  !  works for nws19 but for the simplified nws20
+  !> @details
+  !>   Calculates rMax, the radius of maximum winds (nm) in all quadrants, plus
+  !>   2 extra values to tie down circular periodicity
+  !>
   !----------------------------------------------------------------
   SUBROUTINE CalcRMaxes()
 
@@ -743,8 +781,14 @@ MODULE PaHM_Vortex
       ! and if so, take another shot at finding the
       ! rMax using the gradient wind balance that neglects
       ! coriolis (and is appropriate in the vicinity of rMax)
+      !
+      ! CompareReals(r1, r2)
+      !   -1 (if r1 < r2)
+      !    0 (if r1 = r2)
+      !   +1 (if r1 > r2)
       vicinity = ABS(root - radius(quad)) / root
-      IF ((root < 0.0_SZ) .OR. (vicinity <= 0.0_SZ)) THEN
+      !PV DEL IF ((root < 0.0_SZ) .OR. (vicinity <= 0.1_SZ)) THEN
+      IF (CompareReals(root, 0.0_SZ) == -1 .OR. CompareReals(vicinity, 0.1_SZ) /= 1) THEN
         r1 = INNERRADIUS
         r2 = OUTERRADIUS
         dr = 1.0_SZ
@@ -766,18 +810,15 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   C A L C  R M A X E S  F U L L
   !----------------------------------------------------------------
-  !> Calculate the radius of maximum winds for all storm quadrants.
-  !> Solving the full gradient wind equation without the assumption
-  !> of cyclostrohpic balance.
   !>
-  !> On input:
-  !>    none
+  !> @brief
+  !>   Calculates the radius of maximum winds for all storm quadrants.
   !>
-  !> On output:
-  !>    rMax    radius of maximum winds (nm) in all quadrants, plus
-  !>            2 extra values to tie down circular periodicity
+  !> @details
+  !>   Solves the full gradient wind equation without the assumption
+  !>   of cyclostrohpic balance. Calculates rMax, the radius of maximum winds (nm)
+  !>   in all quadrants, plus 2 extra values to tie down circular periodicity.
   !>
-  ! Jie 2013.02 added looping procedures to calculate bs and phis
   !----------------------------------------------------------------
   SUBROUTINE CalcRMaxesFull()
 
@@ -797,8 +838,6 @@ MODULE PaHM_Vortex
     REAL(SZ)            :: phiNew
     INTEGER, PARAMETER  :: cont = 400     ! Max # of iterations
     INTEGER             :: iCont, ibCont  ! iteration counter
-
-    211 FORMAT(a7, x ,i2, x, a38)
 
     !-----------------------------
     ! Loop over quadrants of storm
@@ -820,6 +859,7 @@ MODULE PaHM_Vortex
         r1 = INNERRADIUS
         r2 = OUTERRADIUS
         dr = 1.0_SZ
+
         DO iter = 1, ITERMAX
           root = FindRoot(VhWithCoriFull, r1, r2, dr, r3, r4)
           r1 = r3
@@ -827,7 +867,7 @@ MODULE PaHM_Vortex
           dr = dr * ZOOM
         END DO
 
-        ! avoid invalid B value when root is not found        
+        ! Avoid invalid B value when root is not found        
         IF (root < 0.0_SZ) THEN
         !  r1 = INNERRADIUS
         !  r2 = OUTERRADIUS
@@ -838,14 +878,13 @@ MODULE PaHM_Vortex
         !    r2 = r4
         !    dr = dr * ZOOM
         !  END DO
-          root = 1.0 * radius(quad)
+          root = 1.0_SZ * radius(quad)
           noRootFlag = 1
         END IF
 
         rMaxes(n + 1) = root  
-              
-        ! Jie 2013.02
-        ! determine if B converges, if yes, break loop and assign 
+
+        ! Determine if B converges, if yes, break loop and assign 
         ! values to rMaxes, if not, continue the loop to re-calculate 
         ! root and re-evaluate bs
         phiNew = 1 + vMax * KT2MS * root * NM2M * corio /                                &
@@ -862,13 +901,16 @@ MODULE PaHM_Vortex
           IF (ABS(bNew - bNew1) <= 0.01_SZ) EXIT
         END DO
 
-        ! debug with aswip          
         !IF (ibCont >= cont) THEN
-        !  WRITE(1111, 211) "iquad=", n, "bNew did not fully converge, procede"
+        !  WRITE(1111, '(a7, x ,i2, x, a38)') "iquad=", n, "bNew did not fully converge, procede"
         !END IF
-        ! end debug with aswip         
 
-        IF (ABS(B - bNew) <= 0.01_SZ) EXIT
+        ! CompareReals(r1, r2)
+        !   -1 (if r1 < r2)
+        !    0 (if r1 = r2)
+        !   +1 (if r1 > r2)
+        !PV DEL IF IF (ABS(B - bNew) <= 0.01_SZ) EXIT
+        IF (CompareReals(ABS(B - bNew), 0.01_SZ) /= 1) EXIT
  
         ! update B and phi for next iteration
         ! warning: modifications made here also affect other subroutines
@@ -880,18 +922,15 @@ MODULE PaHM_Vortex
       bs(n + 1)   = bNew
       phis(n +1 ) = phiNew
 
-      ! debug with aswip         
       !IF (iCont >= cont) THEN
-      !  WRITE(1111, 211) "iquad=", n, "B did not fully converge, procede"
+      !  WRITE(1111, '(a7, x ,i2, x, a38)') "iquad=", n, "B did not fully converge, procede"
       !END IF
-      ! end debug with aswip 
 
-      ! determine if rMax is actually in the vicinity of the
+      ! Determine if rMax is actually in the vicinity of the
       ! isotach radius that we are using to solve for rMax,
       ! and if so, take another shot at finding the
       ! rMax using the gradient wind equation that neglects
       ! coriolis (and is appropriate in the vicinity of rMax)
-      ! Jie 2013.01
       !vicinity = ABS(root - radius(quad)) / root
       IF (noRootFlag == 1) THEN
          WRITE(*, *) "iquad=", n, "No root found, return dist. to Isotach"  
@@ -905,16 +944,14 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   F I T   R M A X E S
   !----------------------------------------------------------------
-  !  RJW 07 - 2009
-  !> Calculates the coefficients that fit the given
-  !> radius of maximum winds for all storm quadrants.
   !>
-  !> On input:
-  !>   rMax in all 4 quadrants plus 2 extra values to tie down circular periodicity
+  !> @brief
+  !>   Calculates the coefficients that fit the given
+  !>   radius of maximum winds for all storm quadrants.
   !>
-  !> On output:
-  !>    rMax    radius of maximum winds (nm) in all quadrants, plus
-  !>            2 extra values to tie down circular periodicity
+  !> @details
+  !>   Generates 2 additional (theta, rMax) points for curve fitting.
+  !>
   !----------------------------------------------------------------
   SUBROUTINE FitRMaxes()
 
@@ -1112,6 +1149,21 @@ MODULE PaHM_Vortex
 !================================================================================
 
   !----------------------------------------------------------------
+  ! S U B R O U T I N E   S E T  I S O T A C H  W I N D  S P E E D 
+  !----------------------------------------------------------------
+  SUBROUTINE SetIsotachWindSpeed(sp)
+
+    IMPLICIT NONE
+
+    REAL(SZ), INTENT(IN) :: sp
+
+    vr = sp
+
+  END SUBROUTINE SetIsotachWindSpeed
+
+!================================================================================
+
+  !----------------------------------------------------------------
   ! S U B R O U T I N E   S E T  U S E  Q U A D R A N T  V R
   !----------------------------------------------------------------
   SUBROUTINE SetUsequadrantVR(u)
@@ -1142,23 +1194,30 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   S P I N T E R P
   !----------------------------------------------------------------
-  !
-  !> Spatial Interpolation function based on angle and r.
   !>
-  !> On input:
-  !>    angle        Azimuthal angle (degrees)
-  !>    r            Distnace to storm Center (nm)
+  !> @brief
+  !>   Spatial Interpolation function based on angle and r.
   !>
-  !> On output:
-  !>    interpolated value for rMax/vMax/B          
+  !> @details
+  !>   Aim is to define pn, pc, and corio.
   !>
-  !> INTEGER validIsot is used as a marker to indicate how many isotachs
-  !> are available in a certain quadrant
-  !> SELECT CASE(validIsot)
-  !> CASE(1): 1 situation
-  !> CASE(2): 3 situations
-  !> CASE(3): 4 situations
-  !> CASE(4): 5 situations                    
+  !> @param[in]
+  !>   angle     Azimuthal angle (degrees)
+  !> @param[in]
+  !>   dist      Distnace to storm Center (nm)
+  !> @param[in]
+  !>   opt       Flag to calculate one of rMax/vMax/B
+  !> 
+  !> @return
+  !>   myValOut  The interpolated value for rMax/vMax/B
+  !>
+  ! INTEGER validIsot is used as a marker to indicate how many isotachs
+  ! are available in a certain quadrant
+  ! SELECT CASE(validIsot)
+  ! CASE(1): 1 situation
+  ! CASE(2): 3 situations
+  ! CASE(3): 4 situations
+  ! CASE(4): 5 situations                    
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION SpInterp(angle, dist, opt) RESULT(myValOut)
 
@@ -1178,17 +1237,23 @@ MODULE PaHM_Vortex
     ELSE IF (opt == 3) THEN
       param = vmBL4    
     END IF   
-    
-    IF (angle <= 45.0_SZ) THEN
+
+    deltaAngle = 0.0_SZ
+
+    ! CompareReals(r1, r2)
+    !   -1 (if r1 < r2)
+    !    0 (if r1 = r2)
+    !   +1 (if r1 > r2)
+    IF (CompareReals(angle, 45.0_SZ) /= 1) THEN
       iQuad = 5
       deltaAngle = 45.0_SZ + angle
-    ELSE IF (angle <= 135.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 135.0_SZ) /= 1) THEN
       iQuad = 2
       deltaAngle = angle - 45.0_SZ
-    ELSE IF (angle <= 225.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 225.0_SZ) /= 1) THEN
       iQuad = 3
       deltaAngle = angle - 135.0_SZ
-    ELSE IF (angle <= 315.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 315.0_SZ) /= 1) THEN
       iQuad = 4
       deltaAngle = angle - 225.0_SZ
     ELSE IF (angle > 315.0_SZ) THEN
@@ -1270,7 +1335,7 @@ MODULE PaHM_Vortex
         ! For whatever reason if our algorithm fails, add the following
         ! line to avoid run-time errors
         myValOut = quadVal(quadSel, MAXLOC(quadFlag4(quadSel, :), 1)) 
-        WRITE(*, *) "ERROR: InterpR failed in nws20get." !PV remove it of modify it?
+        !WRITE(*, *) "ERROR: InterpR failed in nws20get." !PV remove it of modify it?
     END SELECT
          
   END FUNCTION InterpR
@@ -1280,15 +1345,19 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   R M W
   !----------------------------------------------------------------
-  !
-  !> Calculate the radius of maximum winds.
   !>
-  !> On input:
-  !>    angle        Azimuthal angle (degrees)
+  !> @brief
+  !>   Calculate the radius of maximum winds.
   !>
-  !> On output:
-  !>    Rmw          Radius of maximum winds (meters) from curve fit
-  !>                      I DO NOT BELIEVE IT IS IN METERS rjw
+  !> @details
+  !>   
+  !>
+  !> @param[in]
+  !>   angle     Azimuthal angle (degrees)
+  !> 
+  !> @return
+  !>   myValOut  Rmw: Radius of maximum winds (meters) from curve fit
+  !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION Rmw(angle) RESULT(myValOut)
 
@@ -1298,16 +1367,23 @@ MODULE PaHM_Vortex
     INTEGER              :: baseQuadrant
     REAL(SZ)             :: deltaAngle
 
-    IF (angle <= 45.0_SZ) THEN
+    deltaAngle = 0.0_SZ
+    baseQuadrant = 5
+
+    ! CompareReals(r1, r2)
+    !   -1 (if r1 < r2)
+    !    0 (if r1 = r2)
+    !   +1 (if r1 > r2)
+    IF (CompareReals(angle, 45.0_SZ) /= 1) THEN
       baseQuadrant = 5
       deltaAngle = 45.0_SZ + angle
-    ELSE IF (angle <= 135.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 135.0_SZ) /= 1) THEN
       baseQuadrant = 2
       deltaAngle = angle - 45.0_SZ
-    ELSE IF (angle <= 225.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 225.0_SZ) /= 1) THEN
       baseQuadrant = 3
       deltaAngle = angle - 135.0_SZ
-    ELSE IF (angle <= 315.0_SZ) THEN
+    ELSE IF (CompareReals(angle, 315.0_SZ) /= 1) THEN
       baseQuadrant = 4
       deltaAngle = angle - 225.0_SZ
     ELSE IF (angle > 315.0_SZ) THEN
@@ -1338,27 +1414,29 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   U V P
   !----------------------------------------------------------------
-  !
-  !> Calculate (u, v) wind components and surface pressure from an
-  !> asymmetric hurricane wind model.
   !>
-  !> On input:
-  !>    lat         Latitude  of nodal point (degrees north)
-  !>    lon         Longitude of nodal point (degrees east )
-  !>    uTrans      x component of translational velocity (kts)
-  !>    vTrans      y component of translational velocity (kts)
+  !> @brief
+  !>   Calculates (u, v) wind components and surface pressure from an
+  !>   asymmetric hurricane wind model.
   !>
-  !> On output:
-  !>    u           x component of wind velocity at nodal point (m/s)
-  !>    v           y component of wind velocity at nodal point (m/s)
-  !>    p           Surface pressure at nodal point (Pa)
+  !> @details
   !>
-  !> Internal parameters:
-  !>    dampRadii   How far out (# of rMax radii) to begin damping
-  !>                out the translational velocity
   !>
-  !> Note:
-  !>    Subroutine directly accesses global class instance variables
+  !> @param[in]
+  !>   lat       Latitude of nodal point (degrees north)
+  !> @param[in]
+  !>   lon       Longitude of nodal point (degrees east)
+  !> @param[in]
+  !>   uTrans    x component of translational velocity (knts)
+  !> @param[in]
+  !>   vTrans    y component of translational velocity (knts)
+  !> @param[out]
+  !>   u         x component of wind velocity at nodal point (m/s)
+  !> @param[out]
+  !>   v         y component of wind velocity at nodal point (m/s)
+  !> @param[out]
+  !>   p         Surface pressure at nodal point (Pa)
+  !>
   !----------------------------------------------------------------
   SUBROUTINE UVP(lat, lon, uTrans, vTrans, u, v, p)
 
@@ -1434,23 +1512,23 @@ MODULE PaHM_Vortex
                  (NM2M * dist * percentCoriolis * corio / 2.0_SZ)**2)                    &
                 - NM2M * dist * percentCoriolis * corio / 2.0_SZ
 
-    ! calculate the wind speed (m/s) at rMax, using
+    ! Calculate the wind speed (m/s) at rMax, using
     ! equation that includes full coriolis
     speedAtRMax = SQRT((vMax * KT2MS)**2 * EXP(0.0_SZ) +                      &
                        (NM2M * dist * percentCoriolis * corio / 2.0_SZ)**2)   &
                       - NM2M * dist * percentCoriolis * corio / 2.0_SZ
 
-    ! calculate a factor to place the velocity profile so that
+    ! Calculate a factor to place the velocity profile so that
     ! it hits vMax
     vMaxFactor = vMax * KT2MS / speedAtRMax
 
-    ! jgf20111007: Calculate NWS8-like translation speed
+    ! Calculate NWS8-like translation speed
     transSpdX = (ABS(speed / speedAtRMax)) * uTrans * KT2MS
     transSpdY = (ABS(speed / speedAtRMax)) * vTrans * KT2MS
 
     speed = speed * vMaxFactor
 
-    ! now reduce the wind speed to the surface
+    ! Now reduce the wind speed to the surface
     speed = speed * windReduction
 
     u = -speed * COS(DEG2RAD * angle)
@@ -1473,7 +1551,7 @@ MODULE PaHM_Vortex
     ! Compute surface pressure from asymmetric hurricane vortex
     p = MB2PA * (pc + (pn - pc) * EXP(-(rmx / dist)**B))
 
-    ! cut off the vortex field after 401nm
+    ! cut off the vortex field after 401nm !PV Attend to this
     ! TODO: 401nm should be replaced with something less
     ! arbitrary ... and find a better way to blend this
     !IF ( dist > 401.0_SZ ) THEN
@@ -1490,33 +1568,42 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   U V P R
   !----------------------------------------------------------------
-  !
-  !> Calculate (u, v) wind components and surface pressure from an
-  !> asymmetric hurricane wind model.
   !>
-  !> On input:
-  !>    pinf         hurricane Ambient pressure
-  !>    p0           hurricane central pressure
-  !>    iDist        dist to hurricane center in nautical mile
-  !>    iRmx         Rmw
-  !>    iAngle       Azimuth Angle
-  !>    iB           Holland B parameter
-  !>    iVm          vortex maximum velocity at upper boundary
-  !>    iPhi         vortex correction factor
-  !>    uTrans       x component of translational velocity (kts)
-  !>    vTrans       y component of translational velocity (kts)
+  !> @brief
+  !>   Calculates (u, v) wind components and surface pressure from an
+  !>   asymmetric hurricane wind model.
   !>
-  !> On output:
-  !>    u            x component of wind velocity at nodal point (m/s)
-  !>    v            y component of wind velocity at nodal point (m/s)
-  !>    p            Surface pressure at nodal point (Pa)
+  !> @details
   !>
-  !> Internal parameters:
-  !>    dampRadii   How far out (# of rMax radii) to begin damping
-  !>                out the translational velocity
   !>
-  !> Note:
-  !>    Subroutine directly accesses global class instance variables
+  !> @param[in]
+  !>   iDist     Distance to hurricane center in nautical miles
+  !> @param[in]
+  !>   iAngle    Azimuthal angle (degrees)
+  !> @param[in]
+  !>   iRmx      Radius of maximum wind (Rmw)
+  !> @param[in]
+  !>   iRmxTrue
+  !> @param[in]
+  !>   iB        Holland B parameter
+  !> @param[in]
+  !>   iVm       Vortex maximum velocity at upper boundary
+  !> @param[in]
+  !>   iPhi      Vortex correction factor
+  !> @param[in]
+  !>   uTrans    x component of translational velocity (knts)
+  !> @param[in]
+  !>   vTrans    y component of translational velocity (knts)
+  !> @param[in]
+  !>   geof      Factor to calculate wind parameters from the
+  !>             asymmetric hurricane vortex (geof = 1)
+  !> @param[out]
+  !>   u         x component of wind velocity at nodal point (m/s)
+  !> @param[out]
+  !>   v         y component of wind velocity at nodal point (m/s)
+  !> @param[out]
+  !>   p         Surface pressure at nodal point (Pa)
+  !>
   !----------------------------------------------------------------
   SUBROUTINE UVPR(iDist, iAngle, iRmx, iRmxTrue, iB, iVm, iPhi, &
                   uTrans, vTrans, geof, u, v, p)
@@ -1576,34 +1663,34 @@ MODULE PaHM_Vortex
     ! model.
     !---------------------------------------------------
     percentCoriolis = 1.0_SZ
-    ! Jie 2014.07
+
     IF (geof == 1) THEN
       speed = SQRT(((vMax * KT2MS)**2 + vMax * KT2MS * rmx * NM2M * percentCoriolis * corio) *   &
-                   (rmx / iDist)**B * EXP(phi * (1.0_SZ - (rmx / iDist)**B)) +                        &
-                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -                         &
+                   (rmx / iDist)**B * EXP(phi * (1.0_SZ - (rmx / iDist)**B)) +                   &
+                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -                       &
                   NM2M * iDist * percentCoriolis * corio / 2.0_SZ 
     ELSE 
-      speed = SQRT((vMax * KT2MS)**2 * (rmx / iDist)**B * EXP(1.0_SZ - (rmx / iDist)**B) +   &
-                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -   &
+      speed = SQRT((vMax * KT2MS)**2 * (rmx / iDist)**B * EXP(1.0_SZ - (rmx / iDist)**B) + &
+                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -                 &
                   NM2M * iDist * percentCoriolis * corio / 2.0_SZ      
     ENDIF
 
-    ! jgf20111007: Calculate NWS8-like translation speed
+    ! Calculate NWS8-like translation speed
     transSpdX = (ABS(speed / (vMax * KT2MS))) * uTrans * KT2MS
     transSpdY = (ABS(speed / (vMax * KT2MS))) * vTrans * KT2MS
 
-    ! now reduce the wind speed to the surface
+    ! Now reduce the wind speed to the surface
     speed = speed * windReduction
 
     u = -speed * COS(DEG2RAD * iAngle)
     v =  speed * SIN(DEG2RAD * iAngle)
-    !
+
     ! Alter wind direction by adding a frictional inflow angle
     CALL Rotate(u, v, FAng(iDist, iRmxTrue), cLat, uf, vf)
     u = uf
     v = vf
-    !
-    ! jgf20111007: Add in the translation velocity
+
+    ! Add in the translation velocity
     u = u + transSpdX
     v = v + transSpdY
 
@@ -1619,7 +1706,7 @@ MODULE PaHM_Vortex
       p = MB2PA * (pc + (pn - pc) * EXP(-(rmx / iDist)**B))
     ENDIF
 
-    ! cut off the vortex field after 401nm
+    ! cut off the vortex field after 401nm !PV Attend to this
     ! TODO: 401nm should be replaced with something less
     ! arbitrary ... and find a better way to blend this
     !if ( dist > 401.0_SZ ) then
@@ -1635,16 +1722,22 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   F A N G
   !----------------------------------------------------------------
-  !
-  !> Compute a wind angle to parameterize frictional inflow
-  !> across isobars.
   !>
-  !> On input:
-  !>    r           distance from center of storm
-  !>    rmx         radius of maximum winds
+  !> @brief
+  !>   Compute a wind angle to parameterize frictional inflow
+  !>   across isobars.
   !>
-  !> On output:
-  !>    FAng        frictional inflow angle (degrees)
+  !> @details
+  !>   
+  !>
+  !> @param[in]
+  !>   r         Distance from center of storm
+  !> @param[in]
+  !>   rmx       Radius of maximum winds
+  !> 
+  !> @return
+  !>   myValOut  Frictional inflow angle (degrees)
+  !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION FAng(r, rmx) RESULT(myValOut)
 
@@ -1653,11 +1746,15 @@ MODULE PaHM_Vortex
     REAL(SZ), INTENT(IN) :: r
     REAL(SZ), INTENT(IN) :: rmx
 
-    IF ((0.0_SZ <= r) .AND. (r < rmx)) THEN
+    ! CompareReals(r1, r2)
+    !   -1 (if r1 < r2)
+    !    0 (if r1 = r2)
+    !   +1 (if r1 > r2)
+    IF (CompareReals(0.0_SZ, r) /= 1 .AND. CompareReals(r, rmx) == -1) THEN
       myValOut = 10.0_SZ * r / rmx
-    ELSE IF ((rmx <= r) .AND. (r < 1.0_SZ * rmx)) THEN
+    ELSE IF (CompareReals(rmx, r) /= 1 .AND. CompareReals(r, 1.2_SZ * rmx) == -1) THEN
       myValOut = 10.0_SZ + 75.0_SZ * (r / rmx - 1.0_SZ)
-    ELSE IF (r >= 1.0_SZ * rmx) THEN
+    ELSE IF (CompareReals(r, 1.2_SZ * rmx) /= -1) THEN
       myValOut = 25.0_SZ
     ELSE
       myValOut = 0.0_SZ
@@ -1670,19 +1767,30 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! S U B R O U T I N E   R O T A T E
   !----------------------------------------------------------------
-  !
-  !> Rotate a 2D vector (x, y) by an angle.
   !>
-  !> On input:
-  !>    x           x component of vector
-  !>    y           y component of vector
-  !>    angle       angle to rotate vector (degrees)
-  !>    whichWay    direction of rotation:
-  !>                   - = clockwise, + = counter-clockwise
+  !> @brief
+  !>   Rotate a 2D vector (x, y) by an angle.
   !>
-  !> On output:
-  !>    xr          x component of rotated vector
-  !>    yr          y component of rotated vector
+  !> @details
+  !>   
+  !>
+  !> @param[in]
+  !>   x         x component of vector
+  !> @param[in]
+  !>   y         y component of vector
+  !> @param[in]
+  !>   angle     Angle to rotate the vector (degrees)
+  !> @param[in]
+  !>   whichWay  direction of the rotation
+  !> @verbatim
+  !>   whichWay  < 0: clockwise
+  !>   whichWay  > 0: counter-clockwise
+  !> @endverbatim
+  !> @param[out]
+  !>   xr        x component of rotated vector
+  !> @param[out]
+  !>   yr        y component of rotated vector
+  !>
   !----------------------------------------------------------------
   SUBROUTINE Rotate(x, y, angle, whichWay, xr, yr)
 
@@ -1740,19 +1848,20 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   V H  W I T H  C O R I  F U L L
   !----------------------------------------------------------------
-  !> External function f(x) = 0 for which a root is
-  !> sought using Brent's root-finding method.
   !>
-  !> On input:
-  !>    x       iterative values which converge to root
+  !> @brief
+  !>   External function f(x) = 0 for which a root is
+  !>   sought using Brent's root-finding method.
   !>
-  !> On output:
-  !>    func    f(x)
+  !> @details
+  !>   
   !>
-  !> Internal parameters:
-  !>    vortex instance variables via accessor functions
+  !> @param[in]
+  !>   testRMax  Iterative values which converge to root
   !>
-  ! Jie 2013.02 Modified to use the full gradient wind eq.
+  !> @return
+  !>   myValOut  The function's result
+  !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION VhWithCoriFull(testRMax) RESULT(myValOut)
 
@@ -1774,11 +1883,10 @@ MODULE PaHM_Vortex
       thisVR = vr
     END IF
 
-    ! Jie 2013.02
-    vh = MS2KT * (SQRT(((vMax * KT2MS)**2 + vMax * KT2MS * testRMax * NM2M * corio) *     &
-                       (testRMax / radius(quad))**B *                                        &
-                       EXP(phi * (1.0_SZ - (testRMax / radius(quad))**B)) +                   &
-                       (NM2M * radius(quad) * corio / 2.0_SZ)**2) -                         &
+    vh = MS2KT * (SQRT(((vMax * KT2MS)**2 + vMax * KT2MS * testRMax * NM2M * corio) * &
+                       (testRMax / radius(quad))**B *                                 &
+                       EXP(phi * (1.0_SZ - (testRMax / radius(quad))**B)) +           &
+                       (NM2M * radius(quad) * corio / 2.0_SZ)**2) -                   &
                   NM2M * radius(quad) * corio / 2.0_SZ)
 
     myValOut = vh - thisVR
@@ -1792,17 +1900,20 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   V H  W I T H  C O R I
   !----------------------------------------------------------------
-  !> External function f(x) = 0 for which a root is
-  !> sought using Brent's root-finding method.
   !>
-  !> On input:
-  !>    x       iterative values which converge to root
+  !> @brief
+  !>   External function f(x) = 0 for which a root is
+  !>   sought using Brent's root-finding method.
   !>
-  !> On output:
-  !>    func    f(x)
+  !> @details
+  !>   
   !>
-  !> Internal parameters:
-  !>    vortex instance variables via accessor functions
+  !> @param[in]
+  !>   testRMax  Iterative values which converge to root
+  !>
+  !> @return
+  !>   myValOut  The function's result
+  !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION VhWithCori(testRMax) RESULT(myValOut)
 
@@ -1824,9 +1935,9 @@ MODULE PaHM_Vortex
       thisVR = vr
     END IF
 
-    vh = MS2KT * (SQRT((vMax * KT2MS)**2 * (testRMax / radius(quad))**B *                 &
-                                              EXP(1.0_SZ - (testRMax / radius(quad))**B) +     &
-                       (NM2M * radius(quad) * corio / 2.0_SZ)**2) -                       &
+    vh = MS2KT * (SQRT((vMax * KT2MS)**2 * (testRMax / radius(quad))**B *                  &
+                                              EXP(1.0_SZ - (testRMax / radius(quad))**B) + &
+                       (NM2M * radius(quad) * corio / 2.0_SZ)**2) -                        &
                   NM2M * radius(quad) * corio / 2.0_SZ)
 
     myValOut = vh - thisVR
@@ -1856,7 +1967,7 @@ MODULE PaHM_Vortex
       thisVR = vr
     END IF
 
-    myValOut = ABS(MS2KT * SQRT((vMax * KT2MS)**2 * (testRMax / radius(quad))**B *     &
+    myValOut = ABS(MS2KT * SQRT((vMax * KT2MS)**2 * (testRMax / radius(quad))**B * &
                                 EXP(1 - (testRMax / radius(quad))**B))) - thisVR
 
     RETURN
@@ -1868,18 +1979,29 @@ MODULE PaHM_Vortex
   !----------------------------------------------------------------
   ! F U N C T I O N   F I N D  R O O T
   !----------------------------------------------------------------
-  !> Use brute-force marching to find a root the interval [x1,x2].
   !>
-  !> On input:
-  !>    func        function f(x)=0 for which root is sough
-  !>    x1          left  side of interval
-  !>    x2          right side of interval
-  !>    dx          x increment for march
+  !> @brief
+  !>   Use brute-force marching to find a root the interval [x1,x2].
   !>
-  !> On output:
-  !>    a           left  side of interval that brackets the root
-  !>    b           right side of interval that brackets the root
-  !>    FindRoot    root returned
+  !> @details
+  !>   
+  !>
+  !> @param[in]
+  !>   func      Function f(x)=0 for which root is sought
+  !> @param[in]
+  !>   x1        Left  side of the interval
+  !> @param[in]
+  !>   x2        Right side of the interval
+  !> @param[in]
+  !>   dx        x increment for march
+  !> @param[out]
+  !>   a         Left  side of interval that brackets the root
+  !> @param[out]
+  !>   b         Right side of interval that brackets the root
+  !>
+  !> @return
+  !>   myRoot    The value of the root
+  !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION FindRoot(func, x1, x2, dx, a, b) RESULT(myRoot)
 !PV Need to check for the x2 variable is not used anywhere next
@@ -1893,6 +2015,11 @@ MODULE PaHM_Vortex
     INTEGER , PARAMETER   :: ITERMAX = 400   ! Max # of iterations
     INTEGER               :: iter            ! iteration counter
     REAL(SZ)              :: fa, fb          ! function values f(x)
+
+    ! For the time being keep the x2 parameter, set it to
+    ! dummy to eliminate unused variable messages from the compiler
+    REAL(SZ)              :: xdummy
+    xdummy = x2
 
     ! Initialize left side of interval
     a  = x1

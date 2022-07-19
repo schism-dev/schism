@@ -106,19 +106,19 @@ MODULE TimeDateUtils
   !>   It uses GregToJulDay and ElapsedSecs functions to calculate the
   !>   elapsed time from the reference date.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (integer)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (1-12, integer)
-  !> @param
+  !> @param[in]
   !>   iDay      The day of the month (1-31, integer)
-  !> @param
+  !> @param[in]
   !>   iHour     The hour of the day (0-23, integer)
-  !> @param
+  !> @param[in]
   !>   iMin      The minute of the hour (0-59, integer)
-  !> @param
+  !> @param[in]
   !>   iSec      The second of the minute (0-59, integer)
-  !> @param
+  !> @param[out]
   !>   timeSec   The elapsed time in seconds (real, output)
   !>
   !----------------------------------------------------------------
@@ -183,19 +183,19 @@ MODULE TimeDateUtils
   !>   Similar to TimeConvISEC but seconds are entered as real numbers
   !>   to allow for fractions of a second.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (integer)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (1-12, integer)
-  !> @param
+  !> @param[in]
   !>   iDay      The day of the month (1-31, integer)
-  !> @param
+  !> @param[in]
   !>   iHour     The hour of the day (0-23, integer)
-  !> @param
+  !> @param[in]
   !>   iMin      The minute of the hour (0-59, integer)
-  !> @param
+  !> @param[in]
   !>   rSec      The second of the minute (0-59, real)
-  !> @param
+  !> @param[out]
   !>   timeSec   The elapsed time in seconds (real, output)
   !>
   !----------------------------------------------------------------
@@ -305,11 +305,11 @@ MODULE TimeDateUtils
   !>   This function tries to determine if a Gregorian year (>= 1582) 
   !>   is a leap year or not.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
   !>
   !> @return
-  !>   myVal: .TRUE. if it is a leap year or .FALSE. otherwise
+  !>   myVal .TRUE. if it is a leap year or .FALSE. otherwise
   !>
   !----------------------------------------------------------------
   LOGICAL FUNCTION LeapYear(iYear) RESULT(myVal)
@@ -320,7 +320,7 @@ MODULE TimeDateUtils
 
     !----- START CALCULATIONS -----
 
-    IF (iYear < 1582) Then
+    IF (iYear < 1582) THEN
       myVal = .FALSE.
 
       RETURN
@@ -356,11 +356,11 @@ MODULE TimeDateUtils
   !>   This function calculates the number of calendar days of a 
   !>   Gregorian year (>= 1582).
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
   !>
   !> @return
-  !>   myVal:  The days of the year (365 or 366)
+  !>   myVal     The days of the year (365 or 366)
   !>
   !----------------------------------------------------------------
   INTEGER FUNCTION YearDays(iYear) RESULT(myVal)
@@ -391,13 +391,13 @@ MODULE TimeDateUtils
   !>   of a Gregorian year (>= 1582). In case of an error, the value
   !>   IMISSV (-999999) is returned.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <= 12)
   !>
   !> @return
-  !>   myVal:  The days of the month
+  !>   myVal     The days of the month
   !>
   !----------------------------------------------------------------
   INTEGER FUNCTION MonthDays(iYear, iMonth) RESULT(myVal)
@@ -445,16 +445,16 @@ MODULE TimeDateUtils
   !>   month, day, for a Gregorian year (>= 1582). In case of an error,
   !>   the value  IMISSV (-999999) is returned.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <= 12)
-  !> @param
+  !> @param[in]
   !>   iDay      The day of the month (DD, integer, 1 <= DD <= 31)
   !>
   !> @return
-  !>   myVal:  The day of the year number (also erroneously known as Julian day).
-  !>           This the number of days since the first day of the year (01/01).
+  !>   myVal     The day of the year number (also erroneously known as Julian day).
+  !>             This the number of days since the first day of the year (01/01).
   !>
   !----------------------------------------------------------------
   INTEGER FUNCTION DayOfYear(iYear, iMonth, iDay) RESULT(myVal)
@@ -500,19 +500,19 @@ MODULE TimeDateUtils
   !>   since January 1, 4712 BC at 12h00 (Gregorian). It is usefull
   !>   to compute differences between dates.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <=12)
-  !> @param
+  !> @param[in]
   !>   iDay      The day of the month (DD, integer, 1 <= DD <=31)
-  !> @param
+  !> @param[in]
   !>   iHour     The hour of the day (hh, integer, 0 <= hh <= 23)
-  !> @param
+  !> @param[in]
   !>   iMin      The minute of the hour (mm, integer, 0 <= mm <= 59)
-  !> @param
+  !> @param[in]
   !>   iSec      iSec      The second of the minute (ss, integer, 0 <= ss <= 59)
-  !> @param
+  !> @param[in]
   !>    mJD      Flag to use a modified julian day number or not
   !> @verbatim
   !>   To use a modified julian day number use: mJD >= 1
@@ -528,7 +528,7 @@ MODULE TimeDateUtils
   !> @endverbatim
   !>
   !> @return
-  !>   myVal: The julian day number (days) since January 1, 4713 BC at 12h00
+  !>   myVal  The julian day number (days) since January 1, 4713 BC at 12h00
   !>
   !> @note The code was adopted from the D-Flow FM source (time_module.f90/JULIAN)
   !>
@@ -591,7 +591,6 @@ MODULE TimeDateUtils
               + REAL(iSec, HP) - 43200.0_HP
 
       IF (modJul) THEN
-      print *, 'we are using mod jul with MDJOFFSET = ', MDJOFFSET
         myVal = temp2 + (temp1 / 86400.0_HP) - MDJOFFSET
       ELSE
         myVal = temp2 + (temp1 / 86400.0_HP)
@@ -619,19 +618,19 @@ MODULE TimeDateUtils
   !>   to compute differences between dates. \n
   !>   Similar to GregToJulDayISEC but the seconds number is real to allow for second fractions.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <=12)
-  !> @param
+  !> @param[in]
   !>   iDay      The day of the month (DD, integer, 1 <= DD <=31)
-  !> @param
+  !> @param[in]
   !>   iHour     The hour of the day (hh, integer, 0 <= hh <= 23)
-  !> @param
+  !> @param[in]
   !>   iMin      The minute of the hour (mm, integer, 0 <= mm <= 59)
-  !> @param
+  !> @param[in]
   !>   rSec      The second of the minute (ss, real, 0 <= ss <= 59)
-  !> @param
+  !> @param[in]
   !>    mJD      Flag to use a modified julian day number or not
   !> @verbatim
   !>   To use a modified julian day number use: mJD >= 1
@@ -647,7 +646,7 @@ MODULE TimeDateUtils
   !> @endverbatim
   !>
   !> @return
-  !>   myVal: The julian day number (days) since January 1, 4713 BC at 12h00
+  !>   myVal  The julian day number (days) since January 1, 4713 BC at 12h00
   !>
   !> @note The code was adopted from the D-Flow FM source (time_module.f90/JULIAN)
   !>
@@ -738,21 +737,21 @@ MODULE TimeDateUtils
   !>   to compute differences between dates. \n
   !>   Similar to GregToJulDayISEC but the seconds number is real to allow for second fractions.
   !>
-  !> @param
+  !> @param[in]
   !>   iDate      The date as YYYYMMDD (integer)
   !> @verbatim
   !> YYYY      The year (YYYY, integer, 1582 <= YYYY)
   !>   MM      The month of the year (MM, integer, 1 <= MM <=12)
   !>   DD      The day of the month (DD, integer, 1 <= DD <=31)
   !> @endverbatim
-  !> @param
+  !> @param[in]
   !>   iTime      The time as hhmmss (integer)
   !> @verbatim
   !>   hh      The hour of the day (integer, 0 <= hh <= 23)
   !>   mm      The minute of the hour (integer, 0 <= mm <= 59)
   !>   ss      The second of the minute (integer, 0 <= ss <= 60)
   !> @endverbatim
-  !> @param
+  !> @param[in]
   !>    mJD      Flag to use a modified julian day number or not
   !> @verbatim
   !>   To use a modified julian day number use: mJD >= 1
@@ -768,7 +767,7 @@ MODULE TimeDateUtils
   !> @endverbatim
   !>
   !> @return
-  !>   myVal: The julian day number (days) since January 1, 4713 BC at 12h00
+  !>   myVal  The julian day number (days) since January 1, 4713 BC at 12h00
   !>
   !> @note The code was adopted from the D-Flow FM source (time_module.f90/JULIAN)
   !>
@@ -805,18 +804,18 @@ MODULE TimeDateUtils
     ! purposes the min date supported 1582/10/05 is sufficient. Most likely,
     ! it is not necessary to go beyond that date.
 
+    CALL SplitDate(iDate, iYear, iMonth, iDay)
+    CALL SplitDate(iTime, iHour, iMin, iSec)
+
     ! Is this a LEAP year?
     leap = 1
     IF (LeapYear(iYear)) leap = 2
 
-    CALL SplitDate(iDate, iYear, iMonth, iDay)
-    CALL SplitDate(iTime, iHour, iMin, iSec)
-
-    IF ((iYear  < 1582) .OR. (iMonth < 1) .OR. (iMonth > 12)                     &
-                        .OR. (iDay   < 1) .OR. (iDay   > monLen(iMonth, leap))   &
-                        .OR. (iHour  < 0) .OR. (iHour  > 23)                     &
-                        .OR. (iMin   < 0) .OR. (iMin   > 59)                     &
-                        .OR. (iSec   < 0) .OR. (iSec   > 60)) THEN
+    IF ((iYear < 1582) .OR. (iMonth < 1) .OR. (iMonth > 12)                     &
+                       .OR. (iDay   < 1) .OR. (iDay   > monLen(iMonth, leap))   &
+                       .OR. (iHour  < 0) .OR. (iHour  > 23)                     &
+                       .OR. (iMin   < 0) .OR. (iMin   > 59)                     &
+                       .OR. (iSec   < 0) .OR. (iSec   > 60)) THEN
       myVal = RMISSV
 
       RETURN
@@ -864,9 +863,9 @@ MODULE TimeDateUtils
   !>   since January 1, 4712 BC at 12h00 (Gregorian). It is usefull
   !>   to compute differences between dates.
   !>
-  !> @param
+  !> @param[in]
   !>   julDay      The Julian day number (double).
-  !> @param
+  !> @param[in]
   !>    mJD      Flag to use a modified julian day number or not
   !> @verbatim
   !>   To use a modified julian day number use: mJD >= 1
@@ -880,17 +879,17 @@ MODULE TimeDateUtils
   !>   recent time (November 17, 1858, midnight) allowing smaller numbers
   !>   to represent time.
   !> @endverbatim
-  !> @param
+  !> @param[out]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY, output)
-  !> @param
+  !> @param[out]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <=12, output)
-  !> @param
+  !> @param[out]
   !>   iDay      The day of the month (DD, integer, 1 <= DD <=31, output)
-  !> @param
+  !> @param[out]
   !>   iHour     The hour of the day (hh, integer, 0 <= hh <= 23, output)
-  !> @param
+  !> @param[out]
   !>   iMin      The minute of the hour (mm, integer, 0 <= mm <= 59, output)
-  !> @param
+  !> @param[out]
   !>   iSec      The second of the minute (ss, integer, 0 <= ss <= 59, output)
   !>
   !> @note The code was adopted from the D-Flow FM source (time_module.f90/JULIAN)
@@ -996,15 +995,15 @@ MODULE TimeDateUtils
   !>   "year" and "day of the year". In case of error, year is set equal to IMISSV (-999999).
   !>   Gregorian date (after 10/05/1582), or the value RMISSV if an error occurred.
   !>
-  !> @param
+  !> @param[in]
   !>   inYR      The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>    inDY      The day of the year (DDD, integer, 1 <= DDD <= 366)
-  !> @param
+  !> @param[out]
   !>   iYear     The year (YYYY, integer, 1582 <= YYYY, output)
-  !> @param
+  !> @param[out]
   !>   iMonth    The month of the year (MM, integer, 1 <= MM <=12, output)
-  !> @param
+  !> @param[out]
   !>   iDay      The day of the month (DD, integer, 1 <= DD <=31, output)
   !>
   !----------------------------------------------------------------
@@ -1054,19 +1053,19 @@ MODULE TimeDateUtils
   !>   This subroutine splits the string inDate (YYYYMMDDhhmmss) in six integers that is,
   !>   "iYear (YYYY)", "iMonth (MM)", "iDay (DD)", "iHour (hh)", "iMin (mm)" and "iSec (ss)".
   !>
-  !> @param
+  !> @param[in]
   !>   inDateTime  The input date string: YYYYMMDDhhmmss
-  !> @param
+  !> @param[out]
   !>   iYear       The year (YYYY, integer, 1582 <= YYYY, output)
-  !> @param
+  !> @param[out]
   !>   iMonth      The month of the year (MM, integer, 1 <= MM <=12, output)
-  !> @param
+  !> @param[out]
   !>   iDay        The day of the month (DD, integer, 1 <= DD <=31, output)
-  !> @param
+  !> @param[out]
   !>   iHour       The hour of the day (hh, integer, 0 <= hh <= 23, output)
-  !> @param
+  !> @param[out]
   !>   iMin        The minute of the hour (mm, integer, 0 <= mm <= 59, output)
-  !> @param
+  !> @param[out]
   !>   iSec        The second of the minute (ss, integer, 0 <= ss <= 59, output)
   !>
   !----------------------------------------------------------------
@@ -1130,11 +1129,11 @@ MODULE TimeDateUtils
   !>   This subroutine splits the string inDate (YYYYMMDDhhmmss) in two integers that is,
   !>   "iDate (YYYYMMDD)" and "iTime (hhmmss)".
   !>
-  !> @param
+  !> @param[in]
   !>   inDateTime  The input date string: YYYYMMDDhhmmss
-  !> @param
+  !> @param[out]
   !>   iDate      The integer date (YYYYMMDD, output)
-  !> @param
+  !> @param[out]
   !>   iTime      The integer time (hhmmss, output)
   !>
   !----------------------------------------------------------------
@@ -1176,11 +1175,11 @@ MODULE TimeDateUtils
   !>   This function returns a date/time string in the format YYYYMMDDhhmmss by
   !>   removing all non-numeric characters from the string.
   !>
-  !> @param
+  !> @param[in]
   !>   inDateTime  The input date string
   !>
   !> @return
-  !>   myValOut: The string datetime as an integer in the form: YYYYMMDDhhmmss
+  !>   myValOut    The string datetime as an integer in the form: YYYYMMDDhhmmss
   !>
   !----------------------------------------------------------------
   FUNCTION PreProcessDateTimeString(inDateTime) Result(myValOut)
@@ -1227,15 +1226,15 @@ MODULE TimeDateUtils
   !>   There is no check on the validity of iYear, iMonth, iDay, therefore
   !>   the user is responsible to supply valid input values.
   !>
-  !> @param
+  !> @param[in]
   !>   iYear       The year (YYYY, integer, 1582 <= YYYY)
-  !> @param
+  !> @param[in]
   !>   iMonth      The month of the year (MM, integer, 1 <= MM <=12)
-  !> @param
+  !> @param[in]
   !>   iDay        The day of the month (DD, integer, 1 <= DD <=31)
   !>
   !> @return
-  !>   myValOut: The integer date (YYYYMMDD)
+  !>   myValOut    The integer date (YYYYMMDD)
   !>
   !----------------------------------------------------------------
   INTEGER FUNCTION JoinDate(iYear, iMonth, iDay) RESULT(myVal)
@@ -1266,13 +1265,13 @@ MODULE TimeDateUtils
   !>   There is no check on the validity of inDate, the user is responsible to supply
   !>   a valid input date.
   !>
-  !> @param
+  !> @param[in]
   !>   inDate   The integer date (YYYYMMDD)
-  !> @param
+  !> @param[out]
   !>   iYear    The year (YYYY, integer, 1582 <= YYYY, output)
-  !> @param
+  !> @param[out]
   !>   iMonth   The month of the year (MM, integer, 1 <= MM <=12, output)
-  !> @param
+  !> @param[out]
   !>   iDay     The day of the month (DD, integer, 1 <= DD <=31, output)
   !>
   !> @note The code was adopted from the D-Flow FM source (time_module.f90/splitDate)
@@ -1306,31 +1305,31 @@ MODULE TimeDateUtils
   !>   This function joins the values of the year, month, day, hour, min, sec to
   !>   construct the date string used in NetCDF files.
   !>
-  !> @param
+  !> @param[in]
   !>   year      The year (YYYY)
-  !> @param
+  !> @param[in]
   !>   month     The month of the year (MM)
-  !> @param
+  !> @param[in]
   !>   day       The day of the month (DD)
-  !> @param
+  !> @param[in]
   !>   hour      The hour of the day (hh)      (optional - 0 is substituded if not supplied)
-  !> @param
+  !> @param[in]
   !>   min       The minute of the hour (mm)   (optional - 0 is substituded if not supplied)
-  !> @param
+  !> @param[in]
   !>   sec       The second of the minute (ss) (optional - 0 is substituded if not supplied)
-  !> @param
+  !> @param[in]
   !>   sep       The seperation character between the date part and the time part
   !             (optional - for sep <= 0 use ' ', for sep > 0 use 'T')
-  !> @param
+  !> @param[in]
   !>   units     The units part to be prepented to the datetime string in the form '<units> since'
   !             (optional - units = [S(seconds), M(minutes), H(hours), D(days), W(weeks)])
-  !> @param
+  !> @param[in]
   !>   zone      The timezone to use (default none/UTC, optional)
-  !> @param
+  !> @param[out]
   !>   err       The error status, no error: status = 0 (output)
   !>
   !> @return
-  !>   myValOut: The datetime string ([<units> since ]YYYY-MM-DD hh:mm:ss)
+  !>   myValOut  The datetime string ([<units> since ]YYYY-MM-DD hh:mm:ss)
   !>
   !----------------------------------------------------------------
   FUNCTION DateTime2String(year, month, day, hour, min, sec, sep, units, zone, err) result(myValOut)
@@ -1418,14 +1417,14 @@ MODULE TimeDateUtils
   !>   If invert > 0 then the function returns the inverse conversion factor,
   !>   seconds to timeUnit.
   !>
-  !> @param
+  !> @param[in]
   !>   units      The time unit used in the calculations (string: S, M, H, D, W)
-  !> @param
+  !> @param[in]
   !>   invert     To perform the inverted conversion, froms seconds to timeUnit (optional) \n
   !>              where: S=seconds, M=minutes, H=hours, D=days, W=weeks
   !>
   !> @return
-  !>   myValOut: The conversion factor
+  !>   myValOut   The conversion factor
   !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION GetTimeConvSec(units, invert) result(myValOut)
@@ -1498,11 +1497,11 @@ MODULE TimeDateUtils
   !>   This function computes the elapsed time in sec, between times1 and time2,
   !>   given the units of the times.
   !>
-  !> @param
+  !> @param[in]
   !>   inTime1      The start time (real)
-  !> @param
+  !> @param[in]
   !>   inTime2      The end time (real)
-  !> @param
+  !> @param[in]
   !>   inUnits      The units (string, optional) of the time variables. Available options: \n
   !>                For converting days to seconds :   inUnits = ['DAYS', 'DAY', 'DA', 'D'] \n
   !>                For converting hours to seconds:   inUnits = ['HOURS', 'HOUR', 'HOU', 'HO', 'H'] \n
@@ -1510,8 +1509,8 @@ MODULE TimeDateUtils
   !>                Default:                           inUnits = ['SEC', 'SE', 'SC', 'S'] \n
   !>
   !> @return
-  !>   myVal: The elapsed time in seconds (real). If this value is very close,
-  !>          within a tolerance, to the nearest whole number, it is set equal to that number.
+  !>   myVal        The elapsed time in seconds (real). If this value is very close,
+  !>                within a tolerance, to the nearest whole number, it is set equal to that number.
   !>
   !----------------------------------------------------------------
   REAL(SZ) FUNCTION ElapsedSecs(inTime1, inTime2, inUnits) RESULT(myVal)
@@ -1557,11 +1556,11 @@ MODULE TimeDateUtils
   !>
   !> @details
   !>   
-  !> @param
+  !> @param[in]
   !>   inpString   The input string
   !>
   !> @return
-  !>   outString: The input string converted to upper case string
+  !>   outString   The input string converted to upper case string
   !>
   !----------------------------------------------------------------
   FUNCTION upp(inpString) RESULT(outString)
