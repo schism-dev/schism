@@ -206,7 +206,7 @@ end subroutine
 
 subroutine report_fail(expression,file,line,message)
 character(LEN=*) expression, message,file
-integer :: lin
+integer :: line
 logical :: required
 write(*,'(a,a,a,i6,a)') "ASSERTION FAILED: ",trim(file),"(",line,"):"
 write(*,'(a)') trim(expression)
