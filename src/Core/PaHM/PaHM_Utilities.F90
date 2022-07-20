@@ -1870,7 +1870,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: x
     REAL(SZ), INTENT(OUT) :: y
 
-    x = DEG2RAD * REARTH * (lon - lon0) * COS(lat0)
+    x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
     y = DEG2RAD * REARTH * lat
 
   END SUBROUTINE GeoToCPP_Scalar
@@ -1917,7 +1917,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: x(:)
     REAL(SZ), INTENT(OUT) :: y(:)
 
-    x = DEG2RAD * REARTH * (lon - lon0) * COS(lat0)
+    x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
     y = DEG2RAD * REARTH * lat
 
   END SUBROUTINE GeoToCPP_1D
