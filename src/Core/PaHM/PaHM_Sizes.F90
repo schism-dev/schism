@@ -82,11 +82,11 @@ MODULE PaHM_Sizes
   !> @details
   !>   Allow users to define the value of eps. If not, eps equals to the default machine eps.
   !>
-  !> @param
+  !> @param[in]
   !>   rVal1   The first value (double precision number) in the comparison
-  !> @param
+  !> @param[in]
   !>   rVal2   The second value (double precision number) in the comparison
-  !> @param
+  !> @param[in]
   !>   eps     The tolerance (optional) for the comparison
   !>
   !> @return myValOut
@@ -149,11 +149,11 @@ MODULE PaHM_Sizes
   !> @details
   !>   Allow users to define the value of eps. If not, eps equals to the default machine eps.
   !>
-  !> @param
+  !> @param[in]
   !>   rVal1   The first value (single precision number) in the comparison
-  !> @param
+  !> @param[in]
   !>   rVal2   The second value (single precision number) in the comparison
-  !> @param
+  !> @param[in]
   !>   eps     The tolerance (optional) for the comparison
   !>
   !> @return myValOut
@@ -220,9 +220,9 @@ MODULE PaHM_Sizes
   !>   Allow users to define the value of the tolerance "eps". If not, then eps equals
   !>   to the default machine eps.
   !>
-  !> @param
+  !> @param[in]
   !>   rVal   The real number value (double precision) in the comparison
-  !> @param
+  !> @param[in]
   !>   eps    The tolerance (optional) for the comparison
   !>
   !> @return myValOut : Either **rVal** or its nearest integer **iVar** converted to double
@@ -276,9 +276,9 @@ MODULE PaHM_Sizes
   !>   Allow users to define the value of the tolerance "eps". If not, then eps equals
   !>   to the default machine eps.
   !>
-  !> @param
+  !> @param[in]
   !>   rVal   The real number value (single precision) in the comparison
-  !> @param
+  !> @param[in]
   !>   eps    The tolerance (optional) for the comparison
   !>
   !> @return myValOut : Either **rVal** or its nearest integer **iVar** converted to real

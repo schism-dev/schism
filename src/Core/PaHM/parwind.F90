@@ -35,11 +35,11 @@ MODULE ParWind
   ! switch to turn on or off geostrophic balance in GAHM
   ! on (default): Coriolis term included, phiFactors will be calculated before being used 
   ! off         : parameter is set to 'TRUE', phiFactors will be set to constant 1
-  !LOGICAL :: geostrophicSwitch = .TRUE.
-  !INTEGER :: geoFactor = 1               !turn on or off gostrophic balance
+!  LOGICAL :: geostrophicSwitch = .TRUE.  !PV shouldn't be a user input?
+!  INTEGER :: geoFactor = 1               !turn on or off gostrophic balance  !PV shouldn't be a user input?
+!  INTEGER :: method = 4, approach = 2    !PV shouldn't be a user input?
 
-  REAL(SZ) :: WindRefTime !jgf46.29 seconds since beginning of year, this          !PV check
-                          !corresponds to time=0 of the simulation
+  INTEGER, PARAMETER, PRIVATE :: STORMNAMELEN = 10
 
   !----------------------------------------------------------------
   ! The BestTrackData_T structure holds all data read from the best track files(s)
@@ -52,8 +52,8 @@ MODULE ParWind
     INTEGER                          :: numRec           ! number of records in the structure
     
     !----- input data from best track file (ATCF format)
-    CHARACTER(LEN=2), ALLOCATABLE    :: basin(:)         ! basin, e.g. WP, IO, SH, CP, EP, AL, LS  (numRec)
-    INTEGER, ALLOCATABLE             :: cyNum(:)         ! annual cyclone number: 1 - 99 (numRec)
+    CHARACTER(LEN=2), ALLOCATABLE    :: basin(:)         ! basin, e.g. WP, IO, SH, CP, EP, AL, LS
+    INTEGER, ALLOCATABLE             :: cyNum(:)         ! annual cyclone number: 1 - 99
     CHARACTER(LEN=10), ALLOCATABLE   :: dtg(:)           ! warning Date-Time-Group (DTG), YYYYMMDDHH
     INTEGER, ALLOCATABLE             :: techNum(:)       ! objective technique sorting number, minutes for best track: 00 - 99
     CHARACTER(LEN=4), ALLOCATABLE    :: tech(:)          ! acronym for each objective technique or CARQ or WRNG,
@@ -117,10 +117,11 @@ MODULE ParWind
     CHARACTER(LEN=3), ALLOCATABLE    :: initials(:)      ! forecaster's initials used for tau 0 WRNG or OFCL, up to 3 chars
     INTEGER, ALLOCATABLE             :: dir(:)           ! storm direction, 0 - 359 degrees
     INTEGER, ALLOCATABLE             :: intSpeed(:)      ! storm speed, 0 - 999 kts
-    CHARACTER(LEN=10), ALLOCATABLE   :: stormName(:)     ! literal storm name, number, NONAME or INVEST, or TCcyx where:
+    CHARACTER(LEN=STORMNAMELEN), ALLOCATABLE &
+                                     :: stormName(:)     ! literal storm name, number, NONAME or INVEST, or TCcyx where:
                                                          !   cy = Annual cyclone number 01 - 99
                                                          !   x  = Subregion code: W,A,B,S,P,C,E,L,Q.
-    INTEGER, ALLOCATABLE             :: cycleNum(:)      ! the cycle number !PV check if this is OK
+    INTEGER, ALLOCATABLE             :: cycleNum(:)      ! the cycle number
 
 !    !----- converted data from the above values (if needed)
     INTEGER, DIMENSION(:), ALLOCATABLE  :: year, month, day, hour
@@ -128,7 +129,7 @@ MODULE ParWind
   END TYPE BestTrackData_T
 
   ! Array of info about the best track data (extension to use multiple storms)
-  TYPE(BestTrackData_T), ALLOCATABLE, TARGET :: bestTrackData(:)
+  TYPE(BestTrackData_T), ALLOCATABLE    :: bestTrackData(:)
 
   !----------------------------------------------------------------
   ! The HollandData_T structure holds all required data for the Holland model
@@ -168,6 +169,9 @@ MODULE ParWind
                                                             ! moving hurricane (m/s)
   END TYPE HollandData_T
 
+  TYPE(HollandData_T), ALLOCATABLE      :: holStru(:)       ! array of Holland data structures
+
+
 
   CONTAINS
 
@@ -195,6 +199,7 @@ MODULE ParWind
     USE PaHM_Global, ONLY : nBTrFiles, bestTrackFileName
     USE PaHM_Utilities, ONLY : GetLineRecord, OpenFileForRead, ToUpperCase, CharUnique, &
                           IntValStr
+    USE TimeDateUtils, ONLY : TimeConv
     USE SortUtils, ONLY : Arth, Indexx, ArrayEqual
     USE Csv_Module
 
@@ -208,6 +213,8 @@ MODULE ParWind
     CHARACTER(LEN=512)             :: line
     CHARACTER(LEN=64)              :: tmpStr
 
+    !CHARACTER(LEN=4)               :: castType
+
     INTEGER                        :: iFile, nLines, lenLine
     INTEGER                        :: iCnt, jCnt, kCnt, kMax       ! loop counters
     INTEGER                        :: ios, status
@@ -217,7 +224,7 @@ MODULE ParWind
     INTEGER                        :: nUnique, maxCnt
 
     INTEGER, ALLOCATABLE           :: idx0(:), idx1(:)
-
+    REAL(SZ)                       :: tmpFcstTime, refFcstTime
 
     CALL SetMessageSource("ReadCsvBestTrackFile")
     
@@ -244,6 +251,7 @@ MODULE ParWind
       nLines = f%n_rows
       CALL AllocBTrStruct(bestTrackData(iFile), nLines)
 
+      kCnt = 0
       DO iCnt = 1, nLines
         DO jCnt = 1 , f%n_cols
           line = line // TRIM(ADJUSTL(sval2D(iCnt, jCnt)))
@@ -254,15 +262,24 @@ MODULE ParWind
  
         IF (lenLine /= 0) THEN
           !--- col:  1
-          bestTrackData(iFile)%basin(iCnt)     = TRIM(ADJUSTL(sval2D(iCnt, 1)))
+          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 1)))
+          READ(tmpStr, '(a2)') &
+               bestTrackData(iFile)%basin(iCnt)
+          !PV bestTrackData(iFile)%basin(iCnt)     = TRIM(ADJUSTL(sval2D(iCnt, 1)))
           !--- col:  2
           bestTrackData(iFile)%cyNum(iCnt)     = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 2))))
           !--- col:  3
-          bestTrackData(iFile)%dtg(iCnt)       = TRIM(ADJUSTL(sval2D(iCnt, 3)))
+          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 3)))
+          READ(tmpStr, '(a10)') &
+               bestTrackData(iFile)%dtg(iCnt)
+          !PV bestTrackData(iFile)%dtg(iCnt)       = TRIM(ADJUSTL(sval2D(iCnt, 3)))
           !--- col:  4
           bestTrackData(iFile)%techNum(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 4))))
           !--- col:  5
-          bestTrackData(iFile)%tech(iCnt)      = TRIM(ADJUSTL(sval2D(iCnt, 5)))
+          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 5)))
+          READ(tmpStr, '(a4)') &
+               bestTrackData(iFile)%tech(iCnt)
+          !PV bestTrackData(iFile)%tech(iCnt)      = TRIM(ADJUSTL(sval2D(iCnt, 5)))
           !--- col:  6
           bestTrackData(iFile)%tau(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 6))))
           !--- col:  7
@@ -278,11 +295,11 @@ MODULE ParWind
           !--- col: 10
           bestTrackData(iFile)%intMslp(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 10))))
           !--- col: 11
-          bestTrackData(iFile)%ty(iCnt)        = TRIM(ADJUSTL(sval2D(iCnt, 11)))
+          WRITE(bestTrackData(iFile)%ty(iCnt), '(a2)') TRIM(ADJUSTL(sval2D(iCnt, 11)))
           !--- col: 12
           bestTrackData(iFile)%rad(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 12))))
           !--- col: 13
-          bestTrackData(iFile)%windCode(iCnt)  = TRIM(ADJUSTL(sval2D(iCnt, 13)))
+          WRITE(bestTrackData(iFile)%windCode(iCnt), '(a3)') TRIM(ADJUSTL(sval2D(iCnt, 13)))
           !--- col: 14
           bestTrackData(iFile)%intRad1(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 14))))
           !--- col: 15
@@ -302,7 +319,7 @@ MODULE ParWind
           !--- col: 22
           bestTrackData(iFile)%eye(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 22))))
           !--- col: 23
-          bestTrackData(iFile)%subregion(iCnt) = TRIM(ADJUSTL(sval2D(iCnt, 23)))
+          WRITE(bestTrackData(iFile)%subregion(iCnt), '(a3)') TRIM(ADJUSTL(sval2D(iCnt, 23)))
           !--- col: 24
           bestTrackData(iFile)%maxseas(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 24))))
           !--- col: 25
@@ -312,21 +329,7 @@ MODULE ParWind
           !--- col: 27
           bestTrackData(iFile)%intSpeed(iCnt)  = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 27))))
           !--- col: 28
-          bestTrackData(iFile)%stormName(iCnt) = TRIM(ADJUSTL(sval2D(iCnt, 28)))          
-          
-          ! This is for the cycleNum, the last column we consider
-          IF (iCnt == 1) THEN
-            kCnt = iCnt
-            bestTrackData(iFile)%cycleNum(iCnt) = iCnt
-          ELSE
-            kCnt = kCnt + 1
-            IF (bestTrackData(iFile)%dtg(iCnt) == bestTrackData(iFile)%dtg(iCnt-1)) THEN
-              bestTrackData(iFile)%cycleNum(iCnt) = bestTrackData(iFile)%cycleNum(iCnt-1)
-              kCnt = kCnt - 1
-            ELSE
-              bestTrackData(iFile)%cycleNum(iCnt) = kCnt
-            END IF
-          END IF
+          WRITE(bestTrackData(iFile)%stormName(iCnt), '(a10)') TRIM(ADJUSTL(sval2D(iCnt, 28)))
 
           !---------- Convert lat/lon values to S/N and W/E notations
           IF (ToUpperCase(bestTrackData(iFile)%ns(iCnt)) == 'S') THEN
@@ -354,7 +357,7 @@ MODULE ParWind
           !----------
 
         END IF
-      END DO !iCnt
+      END DO
 
       bestTrackData(iFile)%thisStorm = ''
       bestTrackData(iFile)%loaded    = .TRUE.
@@ -437,7 +440,40 @@ MODULE ParWind
 
       CALL f%Destroy()
 
-      CALL WriteBestTrackData(bestTrackFileName(iFile), bestTrackData(iFile), '_fort22fmt')
+      !---------- This should be last after the fields are indexed in ascending order.
+      !           It set the cycle number array in the data structure
+      DO iCnt = 1, bestTrackData(iFile)%numRec
+        ! This is for the cycleNum, the last column we consider
+        IF (iCnt == 1) THEN
+          kCnt = iCnt
+          bestTrackData(iFile)%cycleNum(iCnt) = kCnt
+        ELSE
+          kCnt = kCnt + 1
+          IF (bestTrackData(iFile)%dtg(iCnt) == bestTrackData(iFile)%dtg(iCnt-1)) THEN
+            bestTrackData(iFile)%cycleNum(iCnt) = bestTrackData(iFile)%cycleNum(iCnt-1)
+            kCnt = kCnt - 1
+          ELSE
+            bestTrackData(iFile)%cycleNum(iCnt) = kCnt
+          END IF
+        END IF
+      END DO
+
+      !---------- This should be last after the fields are indexed in ascending order.  !PV NEED TO CHECK ON THIS
+      !           We generate arbitrarily the forecast increments for internal use only.
+      !           In the best track file, for the BEST track fields the forecast period
+      !           is always 0.
+      ! This is our reference time for the subsequent calculations
+      CALL TimeConv(bestTrackData(iFile)%year(1), bestTrackData(iFile)%month(1), &
+                    bestTrackData(iFile)%day(1),  0, 0, 0.0_SZ, refFcstTime)
+
+      DO iCnt = 1, bestTrackData(iFile)%numRec
+        CALL TimeConv(bestTrackData(iFile)%year(iCnt), bestTrackData(iFile)%month(iCnt), &
+                      bestTrackData(iFile)%day(iCnt),  bestTrackData(iFile)%hour(iCnt),  &
+                      0, 0.0_SZ, tmpFcstTime)
+        bestTrackData(iFile)%tau(iCnt) = NINT((tmpFcstTime - refFcstTime) / 3600.0_SZ)
+      END DO
+
+      CALL WriteBestTrackData(bestTrackFileName(iFile), bestTrackData(iFile))
 
     END DO ! End of "iFile" loop
 
@@ -452,21 +488,21 @@ MODULE ParWind
   !----------------------------------------------------------------
   !>
   !> @brief
-  !>   Subroutine to support the Holland model (GetHolland).
+  !>   Subroutine to support the Holland model(s) (GetHollandFields).
   !>
   !> @details
-  !>   Subroutine to support the Holland model (GetHolland).
+  !>   Subroutine to support the Holland model (GetHollandFields).
   !>   Gets the next line from the file, skipping lines that are time repeats.
   !>   - Does conversions to the proper units.
   !>   - Uses old values of central pressure and rmw if the line is a
   !>     forecast, since forecasts do not have that data in them.
   !>   - Assumes longitude is WEST longitude, latitude is NORTH latitude.
   !>
-  !> @param
+  !> @param[in]
   !>   idTrFile   The ID of the input track file (1, 2, ...)
-  !> @param
+  !> @param[out]
   !>   strOut     The HollandData_T structure that stores all Holland model generated data (output)
-  !> @param
+  !> @param[out]
   !>   status     Error status, 0 = no error (output)
   !>
   !----------------------------------------------------------------
@@ -559,7 +595,7 @@ MODULE ParWind
     DO iCnt = 1, numUniqRec
       plIdx = idxDTG(iCnt)
 
-      castType = ToUpperCase(TRIM(ADJUSTL(bestTrackData(idTrFile)%tech(plIdx))))
+      castType = ToUpperCase(TRIM(ADJUSTL(bestTrackData(idTrFile)%tech(iCnt))))
 
       ! Convert speeds from knots to m/s
       spdVal = KT2MS * bestTrackData(idTrFile)%intVMax(plIdx)
@@ -639,7 +675,7 @@ MODULE ParWind
 
           IF (strOut%fcstInc(iCnt) == 0) THEN
             CALL TimeConv(strOut%year(iCnt), strOut%month(iCnt), strOut%day(iCnt), &
-                          strOut%hour(iCnt), 0, 0.0_SZ, castTime(iCnt)) !sec from ref time
+                          strOut%hour(iCnt), 0, 0.0_SZ, castTime(iCnt))
           ELSE
             castTime(iCnt) = castTime(iCnt - 1) + (strOut%fcstInc(iCnt) - strOut%fcstInc(iCnt - 1)) * 3600.0_SZ 
           END IF
@@ -695,7 +731,7 @@ MODULE ParWind
   !>
   !>   Assumes geographical coordinates.
   !>
-  !> @param
+  !> @param[in]
   !>   timeIDX   The time location to generate the fields for
   !>
   !----------------------------------------------------------------
@@ -703,13 +739,13 @@ MODULE ParWind
 
 !    USE PaHM_Mesh, ONLY : slam, sfea, xcSlam, ycSfea, np, isMeshOK
     USE PaHM_Global, ONLY : gravity, rhoWater, rhoAir,                     &
-                       backgroundAtmPress, blAdjustFac, ONE2TEN,      &
+                       backgroundAtmPress, windReduction, ONE2TEN,      &
                        DEG2RAD, RAD2DEG, BASEE, OMEGA, MB2PA, MB2KPA, &
                        nBTrFiles, bestTrackFileName,                  &
                        nOutDT, mdBegSimTime, mdEndSimTime, mdOutDT   !,   &
 !                       wVelX, wVelY, wPress, Times
     USE PaHM_Utilities, ONLY : SphericalDistance, SphericalFracPoint, GetLocAndRatio
-    USE TimeDateUtils, ONLY : JulDayToGreg, GregToJulDay
+    USE TimeDateUtils, ONLY : JulDayToGreg, GregToJulDay, GetTimeConvSec, DateTime2String
     !USE PaHM_NetCDFIO
 
     IMPLICIT NONE
@@ -718,7 +754,6 @@ MODULE ParWind
     INTEGER, INTENT(IN)                  :: np_gb
     real(rkind), intent(inout)           :: atmos_1(np_gb,3) !1:2 wind; 3: pressure
 
-    TYPE(HollandData_T), ALLOCATABLE     :: holStru(:)          ! array of Holland data structures
     INTEGER                              :: stormNumber         ! storm identification number
     REAL(SZ)                             :: hlB                 ! Holland B parameter
     REAL(SZ)                             :: rrp                 ! radius of the last closed isobar (m)
@@ -729,7 +764,6 @@ MODULE ParWind
     REAL(SZ)                             :: trVX, trVY, trSPD   ! storm translation velocities (m/s)
     REAL(SZ)                             :: trSpdX, trSpdY      ! adjusted translation velocities (m/s)
     REAL(SZ)                             :: lon, lat            ! current eye location
-
 
     REAL(SZ), ALLOCATABLE                :: rad(:)              ! distance of nodal points from the eye location
     INTEGER, ALLOCATABLE                 :: radIDX(:)           ! indices of nodal points duch that rad <= rrp
@@ -843,19 +877,17 @@ MODULE ParWind
 
     !------------------------------
 !YJZ: this block should be in _init, not in _run?
-    ! ALLOCATE THE HOLLAND DATA STRUCTURES AND STORE THE HOLLAND
-    ! DATA INTO THE DATA STRUCTURE ARRAY FOR SUBSEQUENT USE
-    !------------------------------
-    !
-    ! Allocate the array of Holland data structures. The Holland
-    ! structures are allocated by calling the ProcessHollandData
+    ! Allocate the Holland data structures and store the Holland
+    ! data into the data structure array for subsequent use.
+    ! The Holland structures are allocated by calling the ProcessHollandData
     ! subroutine.
-    ALLOCATE(holStru(nBTrFiles))
-
     ! Process and store the "best track" data into the array of Holland structures
     ! for subsequent use. All required data to generate the P-W model wind fields
     ! are contained in these structures. We take into consideration that might be
     ! more than one "best track" file for the simulation period.
+    !------------------------------
+    ALLOCATE(holStru(nBTrFiles))
+
     DO stCnt = 1, nBTrFiles
       CALL ProcessHollandData(stCnt, holStru(stCnt), status)
 
@@ -920,7 +952,7 @@ MODULE ParWind
      &holStru(stCnt)%castTime
 !          CALL LogMessage(INFO, scratchMessage)
 
-          EXIT
+          CYCLE
         END IF
 
         ! Perform linear interpolation in time
@@ -946,6 +978,7 @@ MODULE ParWind
         ! Radius of the last closed isobar
         rrp = holStru(stCnt)%rrp(jl1) + &
                 wtRatio * (holStru(stCnt)%rrp(jl2) - holStru(stCnt)%rrp(jl1))
+
         ! Radius of maximum winds
         rmw = holStru(stCnt)%rmw(jl1) + &
                 wtRatio * (holStru(stCnt)%rmw(jl2) - holStru(stCnt)%rmw(jl1))
@@ -972,7 +1005,7 @@ MODULE ParWind
         radIDX = PACK([(i, i = 1, np_gb)], rad <= rrp) !leave dim of radIDX undefined to receive values from pack()
         maxRadIDX = SIZE(radIDX)
 
-        ! Exit this loop if no nodes are inside last closed isobar
+      ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
         IF (maxRadIDX == 0) THEN
           WRITE(tmpStr1, '(f20.3)') rrp
           tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
@@ -1006,8 +1039,10 @@ MODULE ParWind
         !Max wind speed
         speed  = holStru(stCnt)%speed(jl1) + &
                  wtRatio * (holStru(stCnt)%speed(jl2) - holStru(stCnt)%speed(jl1))
+
         cPress = holStru(stCnt)%cPress(jl1) + &
                  wtRatio * (holStru(stCnt)%cPress(jl2) - holStru(stCnt)%cPress(jl1))
+
         trVX   = holStru(stCnt)%trVx(jl1) + &
                 wtRatio * (holStru(stCnt)%trVx(jl2) - holStru(stCnt)%trVx(jl1))
         trVY   = holStru(stCnt)%trVy(jl1) + &
@@ -1043,7 +1078,7 @@ MODULE ParWind
        
         ! Calculate and limit central pressure deficit; some track files (e.g., Charley 2004)
         ! may have a central pressure greater than the ambient pressure that this subroutine assumes
-        cPressDef = backgroundAtmPress * MB2PA - cPress !Pa
+        cPressDef = backgroundAtmPress * MB2PA - cPress
         IF (cPressDef < 100.0_SZ) cPressDef = 100.0_SZ
 
         ! Subtract the translational speed of the storm from the observed max wind speed to avoid
@@ -1054,7 +1089,7 @@ MODULE ParWind
         ! Convert wind speed from 10 meter altitude (which is what the
         ! NHC forecast contains) to wind speed at the top of the atmospheric
         ! boundary layer (which is what the Holland curve fit requires).
-        speed = speed / blAdjustFac
+        speed = speed / windReduction
 
         ! Calculate Holland parameters and limit the result to its appropriate range.
         hlB = rhoAir * BASEE * (speed**2) / cPressDef
@@ -1070,8 +1105,11 @@ MODULE ParWind
           i = radIDX(npCnt)
 
           !dx,dy can be <0?
-          dx    = SphericalDistance(lat, lon, lat, xlon_gb(i))
-          dy    = SphericalDistance(lat, lon, ylat_gb(i), lon)
+!          dx    = SphericalDistance(lat, lon, lat, xlon_gb(i))
+!          dy    = SphericalDistance(lat, lon, ylat_gb(i), lon)
+          dx    = DEG2RAD * (xlon_gb(i) - lon)
+          dy    = DEG2RAD * (ylat_gb(i) - lat)
+        
           theta = ATAN2(dy, dx)
 
           ! Compute coriolis
@@ -1112,21 +1150,21 @@ MODULE ParWind
           ! Find the wind velocity components.
           sfVelX = -grVel * SIN(theta)
           sfVelY =  grVel * COS(theta)
-          !print *, sfVelX, sfVelY
+
           ! Convert wind velocity from the gradient level (top of atmospheric boundary layer)
           ! which, is what the Holland curve fit produces, to 10-m wind velocity.
-          sfVelX = sfVelX * blAdjustFac
-          sfVelY = sfVelY * blAdjustFac
-          !print *, sfVelX, sfVelY
+          sfVelX = sfVelX * windReduction
+          sfVelY = sfVelY * windReduction
+
           ! Convert from 1-minute averaged winds to 10-minute averaged winds.
           sfVelX = sfVelX * ONE2TEN
           sfVelY = sfVelY * ONE2TEN
-          !print *, sfVelX, sfVelY
+
           ! Add back the storm translation speed.
           sfVelX = sfVelX + trSpdX
           sfVelY = sfVelY + trSpdY
 
-          !print *, sfVelX, sfVelY, wVelX(i), wVelY(i)
+          !PV Need to account for multiple storms in the basin
           !YJZ, PV: Need to interpolate between storms if this nodal point
           !   is affected by more than on storm
           !Impose reasonable bounds
@@ -1143,7 +1181,10 @@ MODULE ParWind
 !    WRITE(scratchMessage, '(a)') 'End of the main time loop'
 !    CALL AllMessage(INFO, scratchMessage)
 
-    !---------- Deallocate the arrays
+
+    !------------------------------
+    ! Deallocate the arrays
+    !------------------------------
     IF (ALLOCATED(rad)) DEALLOCATE(rad)
     IF (ALLOCATED(radIDX)) DEALLOCATE(radIDX)
     DO iCnt = 1, nBTrFiles
@@ -1176,23 +1217,23 @@ MODULE ParWind
   !>   Writes the adjusted (or not) best track data to the "adjusted"
   !>   best track output file.
   !>
-  !> @param
+  !> @param[in]
   !>   inpFile    The name of the input best track file
-  !> @param
-  !>   btrStruc   The "adjusted"  best track data structure that corresponds to the inpFile
-  !> @param
+  !> @param[in]
+  !>   trackStruc The "adjusted"  best track data structure that corresponds to the inpFile
+  !> @param[in]
   !>   suffix     The suffix (optional) to be appended to the inpFile (default '_adj')
   !>
   !----------------------------------------------------------------
-  SUBROUTINE WriteBestTrackData(inpFile, btrStruc, suffix)
+  SUBROUTINE WriteBestTrackData(inpFile, trackStruc, suffix)
 
     USE PaHM_Global, ONLY : LUN_BTRK, LUN_BTRK1
 
     IMPLICIT NONE
 
     ! Global variables
-    CHARACTER(LEN=*)                       :: inpFile
-    TYPE(BestTrackData_T), INTENT(IN)      :: btrStruc
+    CHARACTER(LEN=*), INTENT(IN)           :: inpFile
+    TYPE(BestTrackData_T), INTENT(IN)      :: trackStruc
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: suffix
 
     ! Local variables
@@ -1207,10 +1248,12 @@ MODULE ParWind
     iUnit  = LUN_BTRK1
     errIO  = 0
 
-    fmtStr = '(a2, ",", 1x, i2.2, ",", 1x, a10, ",", 1x, i2, ",", 1x, a4, ",", 1x, i3, ",", 1x, i3, a1, ",", 1x, i4, a1, ",", '
+    fmtStr = '(a2, ",", 1x, i2.2, ",", 1x, a10, ",", 1x, i2, ",", 1x, a4, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, i3, a1, ",", 1x, i4, a1, ",",'
       fmtStr = TRIM(fmtStr) // ' 1x, i3, ",", 1x, i4, ",", 1x, a2, ",", 1x, i3, ",", 1x, a3, ",", '
-      fmtStr = TRIM(fmtStr) // ' 4(1x, i4, ","), 1x, i4, ",", 1x, i4, ",", 1x, i3, ",", 1x, i4, ",", 1x, i3, ",", '
-      fmtStr = TRIM(fmtStr) // ' 1x, a3,",", 1x, i3,",", 1x, a3, ",", i3,",", 1x, i3,",", 1x, a11,",", 1x, i3, ",")'
+    fmtStr = TRIM(fmtStr) // ' 4(1x, i4, ","), 1x, i4, ",", 1x, i4, ",", 1x, i3, ",", 1x, i3, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, a3,",", 1x, i3,",", 1x, a3, ",", 1x, i3, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, a10, ",", 1x, i4, ",")'
     !----------
 
     fSuf = '_adj'
@@ -1218,7 +1261,7 @@ MODULE ParWind
 
     CALL SetMessageSource("WriteBestTrackData")
 
-    IF (.NOT. btrStruc%loaded) THEN
+    IF (.NOT. trackStruc%loaded) THEN
       WRITE(scratchMessage, '(a)') "The input best track structure is empty. Best track data won't be written."
       CALL AllMessage(INFO, scratchMessage)
       
@@ -1240,24 +1283,24 @@ MODULE ParWind
       RETURN
     END IF
 
-    DO iCnt = 1, btrStruc%numRec
+    DO iCnt = 1, trackStruc%numRec
       WRITE(iUnit, fmtStr)                                     &
-          btrStruc%basin(iCnt),     btrStruc%cyNum(iCnt),      &
-          btrStruc%dtg(iCnt),       btrStruc%techNum(iCnt),    &
-          btrStruc%tech(iCnt),      btrStruc%tau(iCnt),        &
-          btrStruc%intLat(iCnt),    btrStruc%ns(iCnt),         &
-          btrStruc%intLon(iCnt),    btrStruc%ew(iCnt),         &
-          btrStruc%intVMax(iCnt),   btrStruc%intMslp(iCnt),    &
-          btrStruc%ty(iCnt),        btrStruc%rad(iCnt),        &
-          btrStruc%windCode(iCnt),  btrStruc%intRad1(iCnt),    &
-          btrStruc%intRad2(iCnt),   btrStruc%intRad3(iCnt),    &
-          btrStruc%intRad4(iCnt),   btrStruc%intPOuter(iCnt),  &
-          btrStruc%intROuter(iCnt), btrStruc%intRmw(iCnt),     &
-          btrStruc%gusts(iCnt),     btrStruc%eye(iCnt),        &
-          btrStruc%subregion(iCnt), btrStruc%maxseas(iCnt),    &
-          btrStruc%initials(iCnt),  btrStruc%dir(iCnt),        &
-          btrStruc%intSpeed(iCnt),  btrStruc%stormName(iCnt),  &
-          btrStruc%cycleNum(iCnt)
+          trackStruc%basin(iCnt),     trackStruc%cyNum(iCnt),      &
+          trackStruc%dtg(iCnt),       trackStruc%techNum(iCnt),    &
+          trackStruc%tech(iCnt),      trackStruc%tau(iCnt),        &
+          trackStruc%intLat(iCnt),    trackStruc%ns(iCnt),         &
+          trackStruc%intLon(iCnt),    trackStruc%ew(iCnt),         &
+          trackStruc%intVMax(iCnt),   trackStruc%intMslp(iCnt),    &
+          trackStruc%ty(iCnt),        trackStruc%rad(iCnt),        &
+          trackStruc%windCode(iCnt),  trackStruc%intRad1(iCnt),    &
+          trackStruc%intRad2(iCnt),   trackStruc%intRad3(iCnt),    &
+          trackStruc%intRad4(iCnt),   trackStruc%intPOuter(iCnt),  &
+          trackStruc%intROuter(iCnt), trackStruc%intRmw(iCnt),     &
+          trackStruc%gusts(iCnt),     trackStruc%eye(iCnt),        &
+          trackStruc%subregion(iCnt), trackStruc%maxseas(iCnt),    &
+          trackStruc%initials(iCnt),  trackStruc%dir(iCnt),        &
+          trackStruc%intSpeed(iCnt),  trackStruc%stormName(iCnt),  &
+          trackStruc%cycleNum(iCnt)
     END DO
 
     CLOSE(iUnit)
@@ -1278,9 +1321,9 @@ MODULE ParWind
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   str    The best track structure of type BestTrackData_T
-  !> @param
+  !> @param[in]
   !>   nRec   The number of records in the structure
   !>
   !----------------------------------------------------------------
@@ -1288,7 +1331,7 @@ MODULE ParWind
 
     IMPLICIT NONE
 
-    TYPE(BestTrackData_T) :: str
+    TYPE(BestTrackData_T), INTENT(INOUT) :: str
     INTEGER, INTENT(IN)   :: nRec
 
     str%numRec = nRec
@@ -1349,7 +1392,7 @@ MODULE ParWind
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   str    The best track structure of type BestTrackData_T
   !>
   !----------------------------------------------------------------
@@ -1357,7 +1400,7 @@ MODULE ParWind
 
     IMPLICIT NONE
 
-    TYPE(BestTrackData_T) :: str
+    TYPE(BestTrackData_T), INTENT(INOUT) :: str
 
     str%numRec = -1
     str%loaded = .FALSE.
@@ -1417,9 +1460,9 @@ MODULE ParWind
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   str    The holland structure of type HollandData_T
-  !> @param
+  !> @param[in]
   !>   nRec   The number of records in the structure
   !>
   !----------------------------------------------------------------
@@ -1427,7 +1470,7 @@ MODULE ParWind
 
     IMPLICIT NONE
 
-    TYPE(HollandData_T) :: str
+    TYPE(HollandData_T), INTENT(INOUT) :: str
     INTEGER, INTENT(IN) :: nRec
 
     str%numRec = nRec
@@ -1483,7 +1526,7 @@ MODULE ParWind
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   str    The holland structure of type HollandData_T
   !>
   !----------------------------------------------------------------
@@ -1491,7 +1534,7 @@ MODULE ParWind
 
     IMPLICIT NONE
 
-    TYPE(HollandData_T), INTENT(OUT) :: str
+    TYPE(HollandData_T), INTENT(INOUT) :: str
 
     str%numRec = -1
     str%loaded = .FALSE.

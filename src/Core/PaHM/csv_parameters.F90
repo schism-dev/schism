@@ -13,19 +13,23 @@
 !> @copyright License BSD
 !----------------------------------------------------------------
 
-    module csv_parameters
+MODULE csv_parameters
 
-    USE PaHM_Sizes, ONLY : WP, IP
+  USE PaHM_Sizes, ONLY : WP, IP
 
-    private
+  PRIVATE
 
-    integer(ip),parameter,public :: max_real_str_len = 27 !> maximum string length of a real number
-    character(len=*),parameter,public :: default_real_fmt = '(E27.17E4)'
-        !> default real number format statement (for writing real values to strings and files).
+  ! maximum string length of a real number
+  INTEGER(IP), PARAMETER, PUBLIC      :: max_real_str_len = 27
 
-    integer(ip),parameter,public :: max_integer_str_len = 256 !> maximum string length of an integer.
-    character(len=*),parameter,public :: default_int_fmt  = '(I256)'
-        !> default integer number format statement (for writing real values to strings and files).
+  ! default real number format statement (for writing real values to strings and files)
+  CHARACTER(LEN=*), PARAMETER, PUBLIC :: default_real_fmt = '(E27.17E4)'
 
-    end module csv_parameters
-!*******************************************************************************
+  ! maximum string length of an integer
+  INTEGER(IP), PARAMETER, PUBLIC      :: max_integer_str_len = 256
+
+  ! default integer number format statement (for writing real values to strings and files)
+  CHARACTER(LEN=*), PARAMETER, PUBLIC :: default_int_fmt  = '(I256)'
+     
+
+END MODULE csv_parameters

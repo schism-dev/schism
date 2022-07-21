@@ -173,6 +173,9 @@ MODULE PaHM_Messages
   !>   of the subroutine that calls this one, and UnsetMessageSource
   !>   must be called at the end.
   !>
+  !> @param[in]
+  !>   message     The message to display
+  !>
   !--------------------------------------------------------------------
   SUBROUTINE ScreenMessage_1(message)
 
@@ -241,6 +244,9 @@ MODULE PaHM_Messages
   !>   of the subroutine that calls this one, and UnsetMessageSource
   !>   must be called at the end.
   !>
+  !> @param[in]
+  !>   message     The message to display
+  !>
   !--------------------------------------------------------------------
   SUBROUTINE LogMessage_1(message)
 
@@ -305,6 +311,9 @@ MODULE PaHM_Messages
   !> @details
   !>   
   !>
+  !> @param[in]
+  !>   message     The message to display
+  !>
   !--------------------------------------------------------------------
   SUBROUTINE AllMessage_1(message)
 
@@ -344,6 +353,9 @@ MODULE PaHM_Messages
   !> @details
   !>   Sets the name of the subroutine that is writing log and/or screen messages.
   !>   Must use at the start of any subroutine that calls ScreenMessage, LogMessage, or AllMessage.
+  !>
+  !> @param[in]
+  !>   source     The name of the calling procedure
   !>
   !--------------------------------------------------------------------
   SUBROUTINE SetMessageSource(source)

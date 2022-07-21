@@ -13,9 +13,6 @@
 !> @author Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>
 !----------------------------------------------------------------
 
-!Relevant routines
-! ReadControlFile
-
 MODULE PaHM_Utilities
 
   USE PaHM_Sizes
@@ -62,11 +59,11 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   lun        The logical unit number (LUN) to use
-  !> @param
+  !> @param[in]
   !>   fileName   The full pathname of the input file
-  !> @param
+  !> @param[out]
   !>   errorIO    The error status, no error: status = 0 (output)
   !>
   !----------------------------------------------------------------
@@ -151,11 +148,11 @@ MODULE PaHM_Utilities
   !>   settings (user configured) required to run the program. Most of the settings
   !>   have default values, in case the user hasn't supplied a value.
   !>
-  !> @param
+  !> @param[in]
   !>   inpFile   The full pathname of the input file
   !>
   !----------------------------------------------------------------
-  SUBROUTINE ReadControlFile !(inpFile)
+  SUBROUTINE ReadControlFile() !(inpFile)
 
     USE PaHM_Global
     USE PaHM_Messages
@@ -170,27 +167,34 @@ MODULE PaHM_Utilities
 !    CHARACTER(LEN=*), INTENT(IN)        :: inpFile
 
     ! Local variables
-    LOGICAL                             :: fileFound   ! .TRUE. if the file is present
-!    CHARACTER(LEN=LEN(inpFile))         :: tmpFileName
-    CHARACTER(LEN=512)                  :: inpLine, outLine
-    CHARACTER(LEN=40)                   :: keyWord
+!    INTEGER, PARAMETER                    :: maxNumELEM = 200
+!    INTEGER, PARAMETER                    :: maxStrLEN = 512
 
-    INTEGER                             :: iUnit, errIO, status
+!    LOGICAL                               :: fileFound   ! .TRUE. if the file is present
+!    CHARACTER(LEN=LEN(inpFile))           :: tmpFileName
+!    CHARACTER(LEN=maxStrLEN)              :: inpLine, outLine
+!    CHARACTER(LEN=40)                     :: keyWord
 
-    INTEGER                             :: nPnts
-    INTEGER                             :: nVal, i
-    REAL(SZ), DIMENSION(200)            :: realVal
-    CHARACTER(LEN=512), DIMENSION(200)  :: charVal
-    CHARACTER(LEN=512)                  :: tmpCharVal
+!    INTEGER                               :: iUnit, errIO, status
 
-    INTEGER                             :: iValOut(1)
-    REAL(SZ)                            :: rValOut(1)
+!    INTEGER                               :: nPnts
+!    INTEGER                               :: nVal
+!    REAL(SZ), ALLOCATABLE                 :: realVal(:)
+!    CHARACTER(LEN=maxStrLEN), ALLOCATABLE :: charVal(:)
+!    CHARACTER(LEN=maxStrLEN)              :: tmpCharVal
+
+!    INTEGER                               :: iValOut(1)
+!    REAL(SZ)                              :: rValOut(1)
     
-    LOGICAL                             :: wrtPARS, gotNBTRFILES = .FALSE.
+!    LOGICAL                               :: gotNBTRFILES = .FALSE.
     
-    CHARACTER(LEN=512)                  :: cntlFmtStr, fmtDimParInvalid, fmtParNotFound
-    CHARACTER(LEN=FNAMELEN)             :: tmpStr
-    REAL(SZ)                            :: jday
+!    CHARACTER(LEN=maxStrLEN)              :: cntlFmtStr, fmtDimParInvalid, fmtParNotFound
+!    CHARACTER(LEN=FNAMELEN)               :: tmpStr
+!    REAL(SZ)                              :: jday
+
+
+!    ALLOCATE(realVal(maxNumELEM))
+!    ALLOCATE(charVal(maxNumELEM))
 
 
     !---------- Initialize variables
@@ -198,17 +202,17 @@ MODULE PaHM_Utilities
 !    numBTFiles                 = 0
 
     ! Local variables
-    inpLine                    = BLANK
-    outLine                    = BLANK
-    keyWord                    = BLANK
-    charVal                    = BLANK
-    cntlFmtStr                 = BLANK
-    fmtDimParInvalid           = BLANK
-    fmtParNotFound             = BLANK
-    tmpStr                     = BLANK
+!    inpLine                    = BLANK
+!    outLine                    = BLANK
+!    keyWord                    = BLANK
+!    charVal                    = BLANK
+!    cntlFmtStr                 = BLANK
+!    fmtDimParInvalid           = BLANK
+!    fmtParNotFound             = BLANK
+!    tmpStr                     = BLANK
 
-    iUnit = LUN_CTRL
-    errIO = 0
+!    iUnit = LUN_CTRL
+!    errIO = 0
     !----------
 
     nBTrFiles=1 !#of track files 
@@ -219,7 +223,7 @@ MODULE PaHM_Utilities
     rhoWater=rho0
     rhoAir=1.1478d0 
     backgroundAtmPress=1013.25d0
-    blAdjustFac=0.9d0
+    windReduction=0.9d0
 !    refDateTime=
     refYear=start_year
     refMonth=start_month
@@ -273,28 +277,28 @@ MODULE PaHM_Utilities
 !      fmtParNotFound = TRIM(fmtParNotFound) // TRIM(cntlFmtStr) // ', 1x, a)'
     !----------
     
-!    tmpFileName = ADJUSTL(inpFile)
+!   tmpFileName = ADJUSTL(inpFile)
 
-!    INQUIRE(FILE=TRIM(tmpFileName), EXIST=fileFound)
-!    IF (.NOT. fileFound) THEN
-!      WRITE(LUN_SCREEN, '("The control file : ", a, " was not found, cannot continue.")') TRIM(tmpFileName)
+!   INQUIRE(FILE=TRIM(tmpFileName), EXIST=fileFound)
+!   IF (.NOT. fileFound) THEN
+!     WRITE(LUN_SCREEN, '("The control file : ", a, " was not found, cannot continue.")') TRIM(tmpFileName)
 !
-!      STOP  ! file not found
-!    ELSE
-!      WRITE(LUN_SCREEN, '("The contol file : ", a, " was found and will be opened for reading.")') TRIM(tmpFileName)
-!    END IF
-!    
-!    ! Open existing file
-!    OPEN(UNIT=iUnit, FILE=TRIM(tmpFileName), STATUS='OLD', ACTION='READ', IOSTAT=errIO)
-!    IF (errIO /= 0) THEN
-!      WRITE(LUN_SCREEN, '("Could not open the contol file: ", a, ".")') TRIM(tmpFileName)
+!     STOP  ! file not found
+!   ELSE
+!     WRITE(LUN_SCREEN, '("The contol file : ", a, " was found and will be opened for reading.")') TRIM(tmpFileName)
+!   END IF
+!   
+!   ! Open existing file
+!   OPEN(UNIT=iUnit, FILE=TRIM(tmpFileName), STATUS='OLD', ACTION='READ', IOSTAT=errIO)
+!   IF (errIO /= 0) THEN
+!     WRITE(LUN_SCREEN, '("Could not open the contol file: ", a, ".")') TRIM(tmpFileName)
 !
-!      STOP  ! file found but could not be opened
-!    END IF
+!     STOP  ! file found but could not be opened
+!   END IF
 
 !   DO WHILE (.TRUE.)
 !     READ(UNIT=iUnit, FMT='(a)', ERR=10, END=20) inpLine
-!     status = ParseLine(inpLine, outLine, keyWord, nVal, charVal, realVal)
+!      status = ParseLine(inpLine, outLine, keyWord, nVal, charVal, realVal)
 
 !     IF (status > 0) THEN
 !       SELECT CASE (ToUpperCase(TRIM(KeyWord)))
@@ -311,10 +315,10 @@ MODULE PaHM_Utilities
 !           IF (nVal == 1) THEN
 !             logFileName = TRIM(ADJUSTL(charVal(nVal)))
 !           ELSE
-!             IF (TRIM(ADJUSTL(logFileName)) == '') THEN
+!              IF (TRIM(ADJUSTL(logFileName)) == '') THEN
 !               logFileName = TRIM(ADJUSTL(charVal(nVal)))
-!             END IF
-!           END IF
+!              END IF
+!            END IF
 
 !         !----- CASE
 !         CASE ('WRITEPARAMS')
@@ -407,9 +411,9 @@ MODULE PaHM_Utilities
 !           backgroundAtmPress = rValOut(1)
 
 !         !----- CASE
-!         CASE ('BLADJUSTFAC')
+!         CASE ('WINDREDUCTION')
 !           nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
-!           blAdjustFac = rValOut(1)
+!           windReduction = rValOut(1)
 
 !         !----- CASE
 !         CASE ('REFDATETIME')
@@ -648,16 +652,19 @@ MODULE PaHM_Utilities
 !           nPnts = LoadINTVar(nVal, realVal, 1, iValOut)
 !           modelType = iValOut(1)
 
-!         !----- CASE
-!         CASE DEFAULT
-!           ! Do nothing
-!       END SELECT
-!     END IF
-!   END DO
+!          !----- CASE
+!          CASE DEFAULT
+!            ! Do nothing
+!        END SELECT
+!      END IF
+!    END DO
+
 !    10 WRITE(LUN_SCREEN, '("Error while processing line: ", a, " in file: ", a)') &
 !          TRIM(ADJUSTL(inpLine)), TRIM(tmpFileName)
+
 !    CLOSE(iUnit)
 !    STOP
+
 !    20 CLOSE(iUnit)
 
 !    WRITE(LUN_SCREEN, '(a)') 'Finished processing the input fields from the control file ...'
@@ -725,8 +732,8 @@ MODULE PaHM_Utilities
       WRITE(*, '(a, a)')    '   rhoAir               = ', TRIM(ADJUSTL(tmpStr)) // " kg/m^3"
          WRITE(tmpStr, '(f20.5)') backgroundAtmPress
       WRITE(*, '(a, a)')    '   backgroundAtmPress   = ', TRIM(ADJUSTL(tmpStr)) // " mbar"
-         WRITE(tmpStr, '(f20.2)') blAdjustFac
-      WRITE(*, '(a, a)')    '   blAdjustFac          = ', TRIM(ADJUSTL(tmpStr))
+         WRITE(tmpStr, '(f20.2)') windReduction
+      WRITE(*, '(a, a)')    '   windReduction        = ', TRIM(ADJUSTL(tmpStr))
 
         PRINT *, ''
       WRITE(*, '(a, a)')    '   refDateTime          = ', TRIM(ADJUSTL(refDateTime))
@@ -809,14 +816,14 @@ MODULE PaHM_Utilities
   !>   from a file for further processing.
   !>   Commented lines are those with a first character either "#" or "!".
   !>
-  !> @param
+  !> @param[in]
   !>   inpLine    The input text line
-  !> @param
+  !> @param[in]
   !>   lastCommFlag    Optional flag to check/remove commented portion at the right of the text line \n
   !>                   lastCommFlag <= 0 do nothing \n
   !>                   lastCommFlag  > 0 check for "#!" symbols at the right of the
   !>                   text line and remove that portion of the line
-  !> @param
+  !> @param[out]
   !>   outLine    The output line (the left adjusted input line)
   !>
   !> @return
@@ -900,17 +907,17 @@ MODULE PaHM_Utilities
   !>   the settings for the program's variables. It is called repeatedly from
   !>   ReadControlFile that sets all required program variables.
   !>
-  !> @param
+  !> @param[in]
   !>   inpLine    The input text line
-  !> @param
+  !> @param[out]
   !>   outLine    The output line, left adjusted input line (output)
-  !> @param
+  !> @param[in,out]
   !>   keyWord    The keyword to extract settings for (input/output)
-  !> @param
+  !> @param[in,out]
   !>   nVal       The number of values provided for the keyword (input/output)
-  !> @param
+  !> @param[in,out]
   !>   cVal       String array (cVal(nVal)) that holds the string values provided for the keyword (input/output)
-  !> @param
+  !> @param[in,out]
   !>   rVal       Real array (rVal(nVal)) that holds the values provided for the keyword (input/output)
   !>
   !> @return
@@ -937,7 +944,7 @@ MODULE PaHM_Utilities
     INTEGER                                           :: lEnd, lEns, lStr, lVal, nMul, sChar
     INTEGER                                           :: copies, i, ic, ie, ierr, is, j, status
     INTEGER, DIMENSION(20)                            :: iMul
-    CHARACTER(LEN=256)                                :: vString, string
+    CHARACTER(LEN=512)                                :: vString, string
     CHARACTER(LEN=LEN(inpLine))                       :: line
     INTEGER                                           :: lenLine
 
@@ -1203,7 +1210,7 @@ MODULE PaHM_Utilities
     INTEGER                      :: iCnt
     LOGICAL                      :: fileFound
     REAL(SZ)                     :: gregJD, refJD, jd0, jd1
-    REAL(SZ)                     :: timeSec, timeConvFac
+    REAL(SZ)                     :: timeSec
     CHARACTER(LEN=64)            :: tmpStr, tmpStr1, tmpStr2
 
 
@@ -1422,7 +1429,7 @@ MODULE PaHM_Utilities
     !----- 5) modelType (mandatory variable) -----
     SELECT CASE (modelType)
       !CASE (1, 2, 3, 4)
-      CASE (1)
+      CASE (1, 10)
         ! These are all valid values
     
       CASE DEFAULT
@@ -1473,7 +1480,7 @@ MODULE PaHM_Utilities
       rhoAir = DEFV_RHOAIR
     END IF
 
-    IF ((backgroundAtmPress < 900.0) .OR. (backgroundAtmPress > 1025.0)) THEN
+    IF ((backgroundAtmPress < 1000.0) .OR. (backgroundAtmPress > 1025.0)) THEN
       WRITE(tmpStr1, '(f20.5, a)') backgroundAtmPress
         tmpStr1 = TRIM(tmpStr1) // ' mb'
       WRITE(tmpStr2, '(f20.5, a)') DEFV_ATMPRESS
@@ -1486,15 +1493,15 @@ MODULE PaHM_Utilities
       backgroundAtmPress = DEFV_ATMPRESS
     END IF    
 
-    IF ((blAdjustFac < 0.65) .OR. (blAdjustFac > 1.0)) THEN
-      WRITE(tmpStr1, '(f20.5)') blAdjustFac
-      WRITE(tmpStr2, '(f20.5)') DEFV_BLADJUSTFAC
-      WRITE(scratchMessage, '(a)') 'The value of blAdjustFac = ' // TRIM(ADJUSTL(tmpStr1)) // &
-                                   ' is adjusted to: blAdjustFac = ' // TRIM(ADJUSTL(tmpStr2))
+    IF ((windReduction < 0.65) .OR. (windReduction > 1.0)) THEN
+      WRITE(tmpStr1, '(f20.5)') windReduction
+      WRITE(tmpStr2, '(f20.5)') DEFV_WINDREDUCTION
+      WRITE(scratchMessage, '(a)') 'The value of windReduction = ' // TRIM(ADJUSTL(tmpStr1)) // &
+                                   ' is adjusted to: windReduction = ' // TRIM(ADJUSTL(tmpStr2))
 
       CALL LogMessage(INFO, scratchMessage)
 
-      blAdjustFac = DEFV_BLADJUSTFAC
+      windReduction = DEFV_WINDREDUCTION
     END IF
 
     errStatus = errNum
@@ -1513,13 +1520,13 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   nInp       Number of input values
-  !> @param
+  !> @param[in]
   !>   vInp       Array of input values
-  !> @param
+  !> @param[in]
   !>   nOut       Number of output values
-  !> @param
+  !> @param[out]
   !>   vOut       Array of output values (integer, output)
   !>
   !> @return
@@ -1579,13 +1586,13 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   nInp       Number of input values
-  !> @param
+  !> @param[in]
   !>   vInp       Array of input values
-  !> @param
+  !> @param[in]
   !>   nOut       Number of output values
-  !> @param
+  !> @param[out]
   !>   vOut       Array of output values (logical, output)
   !>
   !> @return
@@ -1657,13 +1664,13 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   nInp       Number of input values
-  !> @param
+  !> @param[in]
   !>   vInp       Array of input values
-  !> @param
+  !> @param[in]
   !>   nOut       Number of output values
-  !> @param
+  !> @param[out]
   !>   vOut       Array of output values (real, output)
   !>
   !> @return
@@ -1723,7 +1730,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   inpString   The input string
   !>
   !> @return
@@ -1763,7 +1770,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   inpString   The input string
   !>
   !> @return
@@ -1803,7 +1810,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   inpLon   The longitude value to be converted
   !>
   !> @return
@@ -1814,7 +1821,7 @@ MODULE PaHM_Utilities
 
     IMPLICIT NONE
 
-    REAL(SZ) :: inpLon
+    REAL(SZ), INTENT(IN) :: inpLon
 
     myValOut = MOD(inpLon + 180.0_SZ, 360.0_SZ) - 180.0_SZ
 
@@ -1836,17 +1843,17 @@ MODULE PaHM_Utilities
   !>   equidirectional projection,  geographic projection, plate carree or
   !>   carte parallelogrammatique projection.
   !>
-  !> @param
+  !> @param[in]
   !>   lat     Latitude  (degrees north) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon     Longitude (degrees east ) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude  of projection origin (degrees north) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of projection origin (degrees east ) - real, scalar
-  !> @param
+  !> @param[out]
   !>   x       Calculated X coordinate: x (m) - real, scalar (output)
-  !> @param
+  !> @param[out]
   !>   y       Calculated Y coordinate: y (m) - real, scalar (output)
   !>
   !----------------------------------------------------------------
@@ -1863,8 +1870,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: x
     REAL(SZ), INTENT(OUT) :: y
 
-!YJZ error: lat0 in degrees
-    x = DEG2RAD * REARTH * (lon - lon0) * COS(lat0)
+    x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
     y = DEG2RAD * REARTH * lat
 
   END SUBROUTINE GeoToCPP_Scalar
@@ -1884,17 +1890,17 @@ MODULE PaHM_Utilities
   !>   equidirectional projection,  geographic projection, plate carree or
   !>   carte parallelogrammatique projection.
   !>
-  !> @param
+  !> @param[in]
   !>   lat     Latitude  (degrees north) - real, 1D array
-  !> @param
+  !> @param[in]
   !>   lon     Longitude (degrees east ) - real, 1D array
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude  of projection origin (degrees north) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of projection origin (degrees east ) - real, scalar
-  !> @param
+  !> @param[out]
   !>   x       Calculated X coordinate: x (m) - real, 1D array (output)
-  !> @param
+  !> @param[out]
   !>   y       Calculated Y coordinate: y (m) - real, 1D array (output)
   !>
   !----------------------------------------------------------------
@@ -1911,7 +1917,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: x(:)
     REAL(SZ), INTENT(OUT) :: y(:)
 
-    x = DEG2RAD * REARTH * (lon - lon0) * COS(lat0)
+    x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
     y = DEG2RAD * REARTH * lat
 
   END SUBROUTINE GeoToCPP_1D
@@ -1930,17 +1936,17 @@ MODULE PaHM_Utilities
   !>   equidirectional projection,  geographic projection, plate carree or
   !>   carte parallelogrammatique projection.
   !>
-  !> @param
+  !> @param[in]
   !>   x       X coordinate: x (m) - real, scalar
-  !> @param
+  !> @param[in]
   !>   y       Y coordinate: y (m) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude  of projection origin (degrees north) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of projection origin (degrees east ) - real, scalar
-  !> @param
+  !> @param[out]
   !>   lat     Latitude  (degrees north) - real, scalar (output)
-  !> @param
+  !> @param[out]
   !>   lon     Longitude (degrees east ) - real, scalar (output)
   !>
   !----------------------------------------------------------------
@@ -1977,17 +1983,17 @@ MODULE PaHM_Utilities
   !>   equidirectional projection,  geographic projection, plate carree or
   !>   carte parallelogrammatique projection.
   !>
-  !> @param
+  !> @param[in]
   !>   x       X coordinate: x (m) - real, 1D array
-  !> @param
+  !> @param[in]
   !>   y       Y coordinate: y (m) - real, 1D array
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude  of projection origin (degrees north) - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of projection origin (degrees east ) - real, scalar
-  !> @param
+  !> @param[out]
   !>   lat     Latitude  (degrees north) - real, 1D array (output)
-  !> @param
+  !> @param[out]
   !>   lon     Longitude (degrees east ) - real, 1D array (output)
   !>
   !----------------------------------------------------------------
@@ -2032,13 +2038,13 @@ MODULE PaHM_Utilities
   !> @see Vincenty, Thaddeus (August 1975b). Geodetic inverse solution between antipodal points \n
   !>      (Technical report). DMAAC Geodetic Survey Squadron. doi:10.5281/zenodo.32999.
   !>
-  !> @param
+  !> @param[in]
   !>   lat1    Latitude of first point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon1    Longitude of first point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lat2    Latitude of second point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon2    Longitude of second point - real, scalar
   !>
   !> @return   myValOut: The great-circle distance in meters
@@ -2069,7 +2075,7 @@ MODULE PaHM_Utilities
     dsigma = ATAN(SQRT((COS(phi2) * SIN(dlamda))**2 + &
                        (COS(phi1) * SIN(phi2) - SIN(phi1) * COS(phi2) * COS(dlamda))**2)) !>=0
     tmp4=SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda) !can be <0?
-    if(tmp4==0.d0) then
+    if(CompareReals(tmp4, 0.0_SZ) == 0) then
       write(errmsg,*)'SphericalDistance_Scalar, div by 0:',tmp4
       call parallel_abort(errmsg)
     endif
@@ -2106,13 +2112,13 @@ MODULE PaHM_Utilities
   !> @see Vincenty, Thaddeus (August 1975b). Geodetic inverse solution between antipodal points \n
   !>      (Technical report). DMAAC Geodetic Survey Squadron. doi:10.5281/zenodo.32999.
   !>
-  !> @param
+  !> @param[in]
   !>   lats    Latitude of first points - real, 1D array
-  !> @param
+  !> @param[in]
   !>   lons    Longitude of first points - real, 1D array
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude of second point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of second point - real, scalar
   !>
   !> @return   myValOut: The great-circle distance in meters, 1D array
@@ -2170,6 +2176,7 @@ MODULE PaHM_Utilities
     dsigma = ATAN(SQRT((COS(phi0) * SIN(dlamda))**2 + &
                        (COS(phis) * SIN(phi0) - SIN(phis) * COS(phi0) * COS(dlamda))**2))
     tmp5=SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda)
+!PV    if(any(CompareReals(tmp5, 0.0_SZ) == 0)) then
     if(any(tmp5==0.d0)) then
       write(errmsg,*)'SphericalDistance_1D, div by 0:',tmp5
       call parallel_abort(errmsg)
@@ -2210,13 +2217,13 @@ MODULE PaHM_Utilities
   !> @see Vincenty, Thaddeus (August 1975b). Geodetic inverse solution between antipodal points \n
   !>      (Technical report). DMAAC Geodetic Survey Squadron. doi:10.5281/zenodo.32999.
   !>
-  !> @param
+  !> @param[in]
   !>   lats    Latitude of first points - real, 2D array
-  !> @param
+  !> @param[in]
   !>   lons    Longitude of first points - real, 2D array
-  !> @param
+  !> @param[in]
   !>   lat0    Latitude of second point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon0    Longitude of second point - real, scalar
   !>
   !> @return   myValOut: The great-circle distance in meters, 2D array
@@ -2309,13 +2316,13 @@ MODULE PaHM_Utilities
   !> @see van Brummelen, Glen Robert (2013). Heavenly Mathematics: The Forgotten Art \n
   !>      of Spherical Trigonometry. Princeton University Press. ISBN 9780691148922.0691148929.
   !>
-  !> @param
+  !> @param[in]
   !>   lat1    Latitude of first point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon1    Longitude of first point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lat2    Latitude of second point - real, scalar
-  !> @param
+  !> @param[in]
   !>   lon2    Longitude of second point - real, scalar
   !>
   !> @return   myValOut: The great-circle distance in meters
@@ -2355,38 +2362,6 @@ MODULE PaHM_Utilities
 
 !================================================================================
 
-!DEL ! ----------------------------------------------------------------
-!DEL !  F U N C T I O N   S P H E R I C A L   D I S T A N C E  A D C I R C
-!DEL ! ----------------------------------------------------------------
-!DEL !  jgf49.1001 PV to be deleted
-!DEL !> Function to get the distance along the surface of
-!DEL !> a sphere (the earth's surface in this case).
-!DEL ! ----------------------------------------------------------------
-!DEL REAL(SZ) FUNCTION SphericalDistanceADCIRC(dx, dy, y1, y2) RESULT(myValOut)
-
-!DEL   USE PaHM_Global, ONLY : REARTH, DEG2RAD
-
-!DEL   IMPLICIT NONE
-
-!DEL   REAL(SZ), INTENT(IN) :: dx    ! longitude distance in radians
-!DEL   REAL(SZ), INTENT(IN) :: dy    ! latitude distance in radians
-!DEL   REAL(SZ), INTENT(IN) :: y1    ! degrees latitude of starting point
-!DEL   REAL(SZ), INTENT(IN) :: y2    ! degrees latitude of ending point
-
-!DEL   ! compute the distances based on haversine formula for
-!DEL   ! distance along a sphere
-!DEL   myValOut = SQRT(SIN(dy / 2.0_SZ)**2 +                                         &
-!DEL                   COS(y1 * DEG2RAD) * COS(y2 * DEG2RAD) * SIN(dx / 2.0_SZ)**2)
-
-!DEL   ! This is the great-circle distance; REARTH in meters
-!DEL   myValOut = REARTH * (2.0_SZ * ASIN(myValOut))
-
-!DEL   RETURN
-
-!DEL END FUNCTION SphericalDistanceADCIRC
-
-!DEL================================================================================
-
   ! ----------------------------------------------------------------
   !  S U B R O U T I N E   S P H E R I C A L  F R A C  P O I N T
   ! ----------------------------------------------------------------
@@ -2403,24 +2378,24 @@ MODULE PaHM_Utilities
   !> @see https://en.wikipedia.org/wiki/Great-circle_distance#Computational_formulas
   !> @see http://www.movable-type.co.uk/scripts/latlong.html
   !>
-  !> @param
+  !> @param[in]
   !>   lat1       Latitude of the first point (degrees north)
-  !> @param
+  !> @param[in]
   !>   lon1       Longitude of the first point (degrees east)
-  !> @param
+  !> @param[in]
   !>   lat2       Latitude of the second point (degrees north)
-  !> @param
+  !> @param[in]
   !>   lon2       Longitude of the second point (degrees east)
-  !> @param
+  !> @param[in]
   !>   fraction   The fraction of the distance between points 1 and 2 \n
   !>              where the intemediate point is located (0 <= fraction <= 1)
-  !> @param
+  !> @param[out]
   !>   latf       The caclulated latitude of the intermidiate point (degrees north, output)
-  !> @param
+  !> @param[out]
   !>   lonf       The caclulated longitude of the intermidiate point (degrees east, output)
-  !> @param
+  !> @param[out]
   !>   distf      The great circle distance between the first and the intermediate point (m, output)
-  !> @param
+  !> @param[out]
   !>   dist12     The great circle distance between the first and the second point (m, output)
   !>
   !----------------------------------------------------------------
@@ -2508,15 +2483,15 @@ MODULE PaHM_Utilities
   !>   array arrVal and the search value val. The linear interpolation is performed
   !>   using the equation: VAR(estimated) = VAR(idx1) + wtRatio * (VAR(idx2) - VAR(idx1)).
   !>
-  !> @param
+  !> @param[in]
   !>   val      The value to search for, such that arrVal(idx1) <= val <= arrVal(idx2)
-  !> @param
+  !> @param[in]
   !>  arrVal    The one-dimensional array to search (PV ordered in ascending order?)
-  !> @param
+  !> @param[out]
   !>   idx1     The index of the lowest array bound such that: arrVal(idx1) <= val (output)
-  !> @param
+  !> @param[out]
   !>   idx2     The index of the highest array bound such that: arrVal(idx2) >= val (output)
-  !> @param
+  !> @param[out]
   !>   wtRatio: The ratio factor used in the linear interpolation calculation: \n
   !>            VAR(estimated) = VAR(idx1) + wtRatio * (VAR(idx2) - VAR(idx1)) \n
   !>            where VAR is the variable to be interpolated
@@ -2548,7 +2523,7 @@ MODULE PaHM_Utilities
     jl = MINLOC(ABS(val - arrVal), 1)
 
     !---------- Check if we got an exact bin value
-    IF (CompareReals(val - arrVal(jl), 0.0_SZ, 0.0001_SZ) == 0) THEN
+    IF (CompareReals(val - arrVal(jl), 0.0_SZ) == 0) THEN
       idx1 = jl
       idx2 = jl
       wtRatio = 0.0_SZ
@@ -2569,16 +2544,18 @@ MODULE PaHM_Utilities
 
       diffVal = arrVal(jl2) - arrVal(jl1)
 
-      IF (CompareReals(diffVal, 0.0_SZ, 0.0001_SZ) == 0) THEN
+      IF (CompareReals(diffVal, 0.0_SZ) == 0) THEN
         idx1 = jl1
         idx2 = jl1
         wtRatio = 0.0_SZ
+
       ELSE
         IF (CompareReals(val - arrVal(jl1), 0.0_SZ) * &
             CompareReals(val - arrVal(jl2), 0.0_SZ) < 0) THEN
           idx1 = jl1
           idx2 = jl2
           wtRatio = (val - arrVal(jl1)) / diffVal
+
         END IF
       END IF
 
@@ -2625,11 +2602,11 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   inpVec   The input 1D string array
-  !> @param
+  !> @param[out]
   !>  outVec    The output 1D string array of the unique elements (output)
-  !> @param
+  !> @param[out]
   !>   idxVec   The 1D array of indexes of the unique elements in the inpVec array (output)
   !>
   !> @return
@@ -2690,7 +2667,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
   !>
   !> @return
@@ -2732,7 +2709,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
   !>
   !> @return
@@ -2774,7 +2751,7 @@ MODULE PaHM_Utilities
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
   !>
   !> @return
@@ -2831,11 +2808,11 @@ MODULE PaHM_Utilities
   !>   the numeric string ends plus one (i.e., the break character).
   !> @endverbatim
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
-  !> @param
+  !> @param[in]
   !>   Pos       The position in the input string where the scanning begins
-  !> @param
+  !> @param[out]
   !>   Value     The numeric value of the string
   !>
   !> @return
@@ -2862,7 +2839,7 @@ MODULE PaHM_Utilities
 
     ! CHECK POS.
     myVal = Pos
-    Value = 0.0
+    Value = 0.0_SP
     IF(Pos < 1 .OR. LEN(String) < Pos)RETURN
 
     ! SET UP WORKING VARIABLES.
@@ -2934,7 +2911,7 @@ MODULE PaHM_Utilities
                    ! THAT THE 'E' IS A TERMINATOR (E.G., 5.3EV) AND
                    ! RETURN WHAT WE HAVE SO FAR (E.G., 5.3).
                    myVal = myVal - 1
-                   Value = intg + fract/10.0**kfract
+                   Value = intg + REAL(fract/10.0**kfract, SP)
                    IF(pmsign == -1)Value = -Value
                    RETURN
                 ELSE
@@ -2946,9 +2923,9 @@ MODULE PaHM_Utilities
 
        ! COMPUTE REAL VALUE FROM ITS PARTS.
        IF(kfract.NE.0) THEN
-          Value = (intg+fract/10.0**kfract)*10.0**power
+          Value = REAL((intg + fract/10.0**kfract)*10.0**power, SP)
        ELSE
-          Value = intg*10.0**power
+          Value = REAL(intg*10.0**power, SP)
        END IF
        IF(pmsign == -1)Value = -Value
        EXIT
@@ -2985,11 +2962,11 @@ MODULE PaHM_Utilities
   !>   the numeric string ends plus one (i.e., the break character).
   !> @endverbatim
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
-  !> @param
+  !> @param[in]
   !>   Pos       The position in the input string where the scanning begins
-  !> @param
+  !> @param[out]
   !>   Value     The numeric value of the string
   !>
   !> @return
@@ -3136,13 +3113,13 @@ MODULE PaHM_Utilities
   !>   the numeric string ends plus one (i.e., the break character).
   !> @endverbatim
   !>
-  !> @param
+  !> @param[in]
   !>   String    The input string
-  !> @param
+  !> @param[in]
   !>   Pos       The position in the input string where the scanning begins
-  !> @param
+  !> @param[in]
   !>   Signed    The sign (+, -) of the numeric string, if present
-  !> @param
+  !> @param[out]
   !>   Value     The numeric value of the string
   !>
   !> @return

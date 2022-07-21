@@ -72,11 +72,11 @@ MODULE SortUtils
   !>   Indexes the 1D array arr1D, i.e., outputs the array index of length N such that arr1D(idx1D(j ))
   !>   is in ascending order for j = 1, 2, . . . , N. The input quantity arr1D is not changed.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1D    The array to be indexed (integer)
-  !> @param
+  !> @param[out]
   !>   idx1D    The array of "indexed" indexes of arr1D (output)
-  !> @param
+  !> @param[out]
   !>   status   The error status, no error: status = 0 (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -244,11 +244,11 @@ MODULE SortUtils
   !>   Indexes the 1D array arr1D, i.e., outputs the array index of length N such that arr1D(idx1D(j ))
   !>   is in ascending order for j = 1, 2, . . . , N. The input quantity arr1D is not changed.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1D    The array to be indexed (integer)
-  !> @param
+  !> @param[out]
   !>   idx1D    The array of "indexed" indexes of arr1D (output)
-  !> @param
+  !> @param[out]
   !>   status   The error status, no error: status = 0 (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -417,13 +417,13 @@ MODULE SortUtils
   !>   is in ascending order for j = 1, 2, . . . , N. The input quantity arr1D is not changed.
   !>   Modified version of IndexxInt to account for string comparisons
   !>
-  !> @param
+  !> @param[in]
   !>   arr1D      The array to be indexed (string)
-  !> @param
+  !> @param[out]
   !>   idx1D      The array of "indexed" indexes of arr1D (output)
-  !> @param
+  !> @param[out]
   !>   status     The error status, no error: status = 0 (output)
-  !> @param
+  !> @param[in]
   !>   caseSens   Logical flag to request case sensitive sort
   !>
   !----------------------------------------------------------------
@@ -594,11 +594,11 @@ MODULE SortUtils
   !>   Indexes the 1D array arr1D, i.e., outputs the array index of length N such that arr1D(idx1D(j ))
   !>   is in ascending order for j = 1, 2, . . . , N. The input quantity arr1D is not changed.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1D      The array to be indexed (single precision)
-  !> @param
+  !> @param[out]
   !>   idx1D      The array of "indexed" indexes of arr1D (output)
-  !> @param
+  !> @param[out]
   !>   status     The error status, no error: status = 0 (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -766,11 +766,11 @@ MODULE SortUtils
   !>   Indexes the 1D array arr1D, i.e., outputs the array index of length N such that arr1D(idx1D(j ))
   !>   is in ascending order for j = 1, 2, . . . , N. The input quantity arr1D is not changed.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1D      The array to be indexed (double precision)
-  !> @param
+  !> @param[out]
   !>   idx1D      The array of "indexed" indexes of arr1D (output)
-  !> @param
+  !> @param[out]
   !>   status     The error status, no error: status = 0 (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -940,9 +940,9 @@ MODULE SortUtils
   !>   - NN is the size of subarrays sorted by straight insertion, and
   !>   - NSTACK is the required auxiliary storage
   !>
-  !> @param
+  !> @param[in,out]
   !>   arr1D      The one-dimensional array to be sorted
-  !> @param
+  !> @param[out]
   !>   status     The error status, no error: status = 0 (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -1082,15 +1082,12 @@ MODULE SortUtils
   !>   rearrangement of the same-size array slv1D. The sorting and rearrangement are performed
   !>   by means of the index array.
   !>
-  !> @param
+  !> @param[in,out]
   !>   arr1D      The first one-dimensional array to be sorted in ascending order
-  !> @param
+  !> @param[in,out]
   !>   slv1D      The second one-dimensional array to be sorted in ascending order
-  !> @param
+  !> @param[out]
   !>   status     The error status, no error: status = 0 (output)
-  !>
-  !> @return
-  !>   The two sorted arrays arr1D and slv1D
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
   !>
@@ -1154,13 +1151,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   src    The one-dimensional array to be copied (integer)
-  !> @param
+  !> @param[out]
   !>   dest   The copied array (output)
-  !> @param
+  !> @param[out]
   !>   nCP    The number of elements of "src" array that copied (output)
-  !> @param
+  !> @param[out]
   !>   nNCP   The number of elements of "src" array that failed to be copied (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -1193,13 +1190,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   src    The one-dimensional array to be copied (single precision)
-  !> @param
+  !> @param[out]
   !>   dest   The copied array (output)
-  !> @param
+  !> @param[out]
   !>   nCP    The number of elements of "src" array that copied (output)
-  !> @param
+  !> @param[out]
   !>   nNCP   The number of elements of "src" array that failed to be copied (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -1232,13 +1229,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   src    The one-dimensional array to be copied (double precision)
-  !> @param
+  !> @param[out]
   !>   dest   The copied array (output)
-  !> @param
+  !> @param[out]
   !>   nCP    The number of elements of "src" array that copied (output)
-  !> @param
+  !> @param[out]
   !>   nNCP   The number of elements of "src" array that failed to be copied (output)
   !>
   !> @note Adopted from Numerical Recipes for Fortran 90
@@ -1262,7 +1259,7 @@ MODULE SortUtils
   !================================================================================
 
   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R R A Y  E Q U A L  I N T
+  ! F U N C T I O N   A R R A Y  E Q U A L  I N T
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1271,9 +1268,9 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   arr1    The first array in the comparison (integer)
-  !> @param
+  !> @param[in]
   !>   arr2    The second array in the comparison (integer)
   !>
   !> @return
@@ -1305,7 +1302,7 @@ MODULE SortUtils
   !================================================================================
 
   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R R A Y  E Q U A L  S I N G L E
+  ! F U N C T I O N   A R R A Y  E Q U A L  S I N G L E
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1316,9 +1313,9 @@ MODULE SortUtils
   !>   the two arrays are considered to be essentially equal on single
   !>   precision calculations.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1    The first array in the comparison (single precision)
-  !> @param
+  !> @param[in]
   !>   arr2    The second array in the comparison (single precision)
   !>
   !> @return
@@ -1360,7 +1357,7 @@ MODULE SortUtils
   !================================================================================
 
   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R R A Y  E Q U A L  S I N G L E
+  ! F U N C T I O N   A R R A Y  E Q U A L  S I N G L E
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1371,9 +1368,9 @@ MODULE SortUtils
   !>   the two arrays are considered to be essentially equal on double
   !>   precision calculations.
   !>
-  !> @param
+  !> @param[in]
   !>   arr1    The first array in the comparison (double precision)
-  !> @param
+  !> @param[in]
   !>   arr2    The second array in the comparison (double precision)
   !>
   !> @return
@@ -1424,11 +1421,11 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>   str1          The first string in the comparison
-  !> @param
+  !> @param[in]
   !>   str2          The second string in the comparison
-  !> @param
+  !> @param[in]
   !>   mSensitive    Logical flag (.TRUE., .FALSE.) to perform case sensitive lexical comparison
   !>
   !> @return
@@ -1491,14 +1488,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first value to be swapped (integer)
-  !> @param
+  !> @param[in,out]
   !>   b      The second value to be swapped (integer)
-  !> @param
+  !> @param[in]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped value
   !>   b: The first swapped value
@@ -1543,14 +1539,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first value to be swapped (single precision)
-  !> @param
+  !> @param[in,out]
   !>   b      The second value to be swapped (single precision)
-  !> @param
+  !> @param[in]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped value
   !>   b: The first swapped value
@@ -1595,14 +1590,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first value to be swapped (double precision)
-  !> @param
+  !> @param[in]
   !>   b      The second value to be swapped (double precision)
-  !> @param
+  !> @param[in,out]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped value
   !>   b: The first swapped value
@@ -1647,14 +1641,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first 1D array to be swapped (integer)
-  !> @param
+  !> @param[in,out]
   !>   b      The second 1D array to be swapped (integer)
-  !> @param
+  !> @param[in]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped 1D array
   !>   b: The first swapped 1D array
@@ -1699,14 +1692,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first 1D array to be swapped (single precision)
-  !> @param
+  !> @param[in,out]
   !>   b      The second 1D array to be swapped (single precision)
-  !> @param
+  !> @param[in]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped 1D array
   !>   b: The first swapped 1D array
@@ -1751,14 +1743,13 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   a      The first 1D array to be swapped (double precision)
-  !> @param
+  !> @param[in,out]
   !>   b      The second 1D array to be swapped (double precision)
-  !> @param
+  !> @param[in]
   !>   mask   Logical flag to perform the swap, default mask = 'TRUE. (optional)
   !>
-  !> @return
   !> @verbatim
   !>   a: The second swapped 1D array
   !>   b: The first swapped 1D array
@@ -1792,8 +1783,8 @@ MODULE SortUtils
 
   !================================================================================
  
-   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R T H  I N T
+  !----------------------------------------------------------------
+  ! F U N C T I O N   A R T H  I N T
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1803,11 +1794,11 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>       first    The value of the first term (integer)
-  !> @param
+  !> @param[in]
   !>   increment    The value of the increment (integer)
-  !> @param
+  !> @param[in]
   !>           n    The total number of terms in the return 1D array (integer)
   !>
   !> @return
@@ -1860,7 +1851,7 @@ MODULE SortUtils
   !================================================================================ 
 
   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R T H  S I N G L E
+  ! F U N C T I O N   A R T H  S I N G L E
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1870,11 +1861,11 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>       first    The value of the first term (single precision)
-  !> @param
+  !> @param[in]
   !>   increment    The value of the increment (single precision)
-  !> @param
+  !> @param[in]
   !>           n    The total number of terms in the return 1D array (integer)
   !>
   !> @return
@@ -1927,7 +1918,7 @@ MODULE SortUtils
   !================================================================================
 
   !----------------------------------------------------------------
-  ! S U B R O U T I N E   A R T H  D O U B L E
+  ! F U N C T I O N   A R T H  D O U B L E
   !----------------------------------------------------------------
   !>
   !> @brief
@@ -1937,11 +1928,11 @@ MODULE SortUtils
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in]
   !>       first    The value of the first term (double precision)
-  !> @param
+  !> @param[in]
   !>   increment    The value of the increment (double precision)
-  !> @param
+  !> @param[in]
   !>           n    The total number of terms in the return 1D array (integer)
   !>
   !> @return

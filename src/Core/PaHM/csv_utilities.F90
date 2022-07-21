@@ -13,21 +13,22 @@
 !> @copyright License BSD
 !----------------------------------------------------------------
 
-    module csv_utilities
+MODULE csv_utilities
 
-    USE PaHM_Sizes, ONLY : WP, IP
-    use csv_parameters
+  USE PaHM_Sizes, ONLY : WP, IP
+  USE csv_parameters
 
-    private
+  PRIVATE
 
-    integer,parameter :: max_size_for_insertion_sort = 20 !> max size for using insertion sort.
+  INTEGER, PARAMETER :: max_size_for_insertion_sort = 20 ! max size for using insertion sort.
 
-    public :: unique
-    public :: expand_vector
-    public :: sort_ascending
+  PUBLIC :: unique
+  PUBLIC :: expand_vector
+  PUBLIC :: sort_ascending
 
-    contains
-!*******************************************************************************
+
+  CONTAINS
+
 
   !----------------------------------------------------------------
   ! S U B R O U T I N E   E X P A N D _ V E C T O R
@@ -38,16 +39,16 @@
   !> @details
   !>   
   !>
-  !> @param
+  !> @param[in,out]
   !>   vec          The input integer vector (input/output)
-  !> @param
+  !> @param[in,out]
   !>   n            Counter for last element added to `vec`; must be initialized to `size(vec)` \n
   !>                (or 0 if not allocated) before first call  (input/output)
-  !> @param
+  !> @param[in]
   !>   chunk_size   Allocate `vec` in blocks of this size (>0)
-  !> @param
+  !> @param[in]
   !>   val          The value to add to `vec` (optional)
-  !> @param
+  !> @param[in]
   !>   finished     Set to true to return `vec` as its correct size (`n`) (optional)
   !>
   !----------------------------------------------------------------
@@ -94,147 +95,181 @@
     end if
 
     end subroutine expand_vector
-!*******************************************************************************
+!================================================================================
 
-!*******************************************************************************
-!
-!> Returns only the unique elements of the vector.
+  !----------------------------------------------------------------
+  ! F U N C T I O N   U N I Q U E
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Finds the unique elements in a vector of integers.
+  !>
+  !> @details
+  !>   
+  !>
+  !> @param[in]
+  !>   vec     A vector of integers
+  !> @param[in]
+  !>   chunk_size   Chunk size for adding to arrays
+  !>
+  !> @return
+  !>   ivec_unique     The unique elements of the vector "vec"
+  !>
+  !----------------------------------------------------------------
+  function unique(vec,chunk_size) result(ivec_unique)
 
-    function unique(vec,chunk_size) result(ivec_unique)
+  implicit none
 
-    implicit none
+  integer,dimension(:),intent(in)    :: vec
+  integer,intent(in)                 :: chunk_size
+  integer,dimension(:),allocatable   :: ivec_unique
 
-    integer,dimension(:),intent(in)    :: vec        !> a vector of integers
-    integer,intent(in)                 :: chunk_size  !> chunk size for adding to arrays
-    integer,dimension(:),allocatable   :: ivec_unique !> unique elements of `ivec`
+  integer,dimension(size(vec)) :: ivec ! temp copy of vec
+  integer :: i ! counter
+  integer :: n ! number of unique elements
 
-    integer,dimension(size(vec)) :: ivec !> temp copy of vec
-    integer :: i !> counter
-    integer :: n !> number of unique elements
+  ! first we sort it:
+  ivec = vec ! make a copy
+  call sort_ascending(ivec)
 
-    ! first we sort it:
-    ivec = vec ! make a copy
-    call sort_ascending(ivec)
+  ! add the first element:
+  n = 1
+  ivec_unique = [ivec(1)]
 
-    ! add the first element:
-    n = 1
-    ivec_unique = [ivec(1)]
+  ! walk through array and get the unique ones:
+  if (size(ivec)>1) then
+      do i = 2, size(ivec)
+          if (ivec(i)/=ivec(i-1)) then
+              call expand_vector(ivec_unique,n,chunk_size,val=ivec(i))
+          end if
+      end do
+      call expand_vector(ivec_unique,n,chunk_size,finished=.true.)
+  end if
 
-    ! walk through array and get the unique ones:
-    if (size(ivec)>1) then
-        do i = 2, size(ivec)
-            if (ivec(i)/=ivec(i-1)) then
-                call expand_vector(ivec_unique,n,chunk_size,val=ivec(i))
-            end if
-        end do
-        call expand_vector(ivec_unique,n,chunk_size,finished=.true.)
-    end if
+  end function unique
+!================================================================================
 
-    end function unique
-!*******************************************************************************
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   U N I Q U E
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Sorts an integer array `ivec` in increasing order.
+  !>
+  !> @details
+  !>   Uses a basic recursive quicksort (with insertion sort for partitions
+  !>   with @f$ \le @f$ 20 elements).
+  !>
+  !> @param[in,out]
+  !>   ivec     A vector of integers
+  !>
+  !----------------------------------------------------------------
+  subroutine sort_ascending(ivec)
 
-!*******************************************************************************
-!>
-!> Sorts an integer array `ivec` in increasing order.
-!> Uses a basic recursive quicksort
-!> (with insertion sort for partitions with \f$ \le \f$ 20 elements).
+  implicit none
 
-    subroutine sort_ascending(ivec)
+  integer,dimension(:),intent(inout) :: ivec
 
-    implicit none
+  call quicksort(1,size(ivec))
 
-    integer,dimension(:),intent(inout) :: ivec
+  contains
 
-    call quicksort(1,size(ivec))
+      recursive subroutine quicksort(ilow,ihigh)
 
-    contains
+      ! Sort the array
 
-        recursive subroutine quicksort(ilow,ihigh)
+      implicit none
 
-        !> Sort the array
+      integer,intent(in) :: ilow
+      integer,intent(in) :: ihigh
 
-        implicit none
+      integer :: ipivot ! pivot element
+      integer :: i      ! counter
+      integer :: j      ! counter
 
-        integer,intent(in) :: ilow
-        integer,intent(in) :: ihigh
+      if ( ihigh-ilow<=max_size_for_insertion_sort .and. ihigh>ilow ) then
 
-        integer :: ipivot !> pivot element
-        integer :: i      !> counter
-        integer :: j      !> counter
+          ! do insertion sort:
+          do i = ilow + 1,ihigh
+              do j = i,ilow + 1,-1
+                  if ( ivec(j) < ivec(j-1) ) then
+                      call swap(ivec(j),ivec(j-1))
+                  else
+                      exit
+                  end if
+              end do
+          end do
 
-        if ( ihigh-ilow<=max_size_for_insertion_sort .and. ihigh>ilow ) then
+      else if ( ihigh-ilow>max_size_for_insertion_sort ) then
 
-            ! do insertion sort:
-            do i = ilow + 1,ihigh
-                do j = i,ilow + 1,-1
-                    if ( ivec(j) < ivec(j-1) ) then
-                        call swap(ivec(j),ivec(j-1))
-                    else
-                        exit
-                    end if
-                end do
-            end do
+          ! do the normal quicksort:
+          call partition(ilow,ihigh,ipivot)
+          call quicksort(ilow,ipivot - 1)
+          call quicksort(ipivot + 1,ihigh)
 
-        else if ( ihigh-ilow>max_size_for_insertion_sort ) then
+      end if
 
-            ! do the normal quicksort:
-            call partition(ilow,ihigh,ipivot)
-            call quicksort(ilow,ipivot - 1)
-            call quicksort(ipivot + 1,ihigh)
+      end subroutine quicksort
 
-        end if
+      subroutine partition(ilow,ihigh,ipivot)
 
-        end subroutine quicksort
+      ! Partition the array, based on the
+      ! lexical ivecing comparison.
 
-        subroutine partition(ilow,ihigh,ipivot)
+      implicit none
 
-        !> Partition the array, based on the
-        !> lexical ivecing comparison.
+      integer,intent(in)  :: ilow
+      integer,intent(in)  :: ihigh
+      integer,intent(out) :: ipivot
 
-        implicit none
+      integer :: i,ip
 
-        integer,intent(in)  :: ilow
-        integer,intent(in)  :: ihigh
-        integer,intent(out) :: ipivot
+      call swap(ivec(ilow),ivec((ilow+ihigh)/2))
+      ip = ilow
+      do i = ilow + 1, ihigh
+          if ( ivec(i) < ivec(ilow) ) then
+              ip = ip + 1
+              call swap(ivec(ip),ivec(i))
+          end if
+      end do
+      call swap(ivec(ilow),ivec(ip))
+      ipivot = ip
 
-        integer :: i,ip
+      end subroutine partition
 
-        call swap(ivec(ilow),ivec((ilow+ihigh)/2))
-        ip = ilow
-        do i = ilow + 1, ihigh
-            if ( ivec(i) < ivec(ilow) ) then
-                ip = ip + 1
-                call swap(ivec(ip),ivec(i))
-            end if
-        end do
-        call swap(ivec(ilow),ivec(ip))
-        ipivot = ip
+  end subroutine sort_ascending
+!================================================================================
 
-        end subroutine partition
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   U N I Q U E
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Swap two integer values.
+  !>
+  !> @details
+  !>   
+  !>
+  !> @param[in,out]
+  !>   i1     The first integer value to swap
+  !> @param[in,out]
+  !>   i2     The second integer value to swap
+  !>
+  !----------------------------------------------------------------
+  pure elemental subroutine swap(i1,i2)
 
-    end subroutine sort_ascending
-!*******************************************************************************
+  implicit none
 
-!*******************************************************************************
-!>
-!> Swap two integer values.
+  integer,intent(inout) :: i1
+  integer,intent(inout) :: i2
 
-    pure elemental subroutine swap(i1,i2)
+  integer :: tmp
 
-    implicit none
+  tmp = i1
+  i1  = i2
+  i2  = tmp
 
-    integer,intent(inout) :: i1
-    integer,intent(inout) :: i2
+  end subroutine swap
+!================================================================================
 
-    integer :: tmp
-
-    tmp = i1
-    i1  = i2
-    i2  = tmp
-
-    end subroutine swap
-!*******************************************************************************
-
-!*******************************************************************************
-    end module csv_utilities
-!*******************************************************************************
+END MODULE csv_utilities
