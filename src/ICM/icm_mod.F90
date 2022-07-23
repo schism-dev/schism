@@ -18,10 +18,11 @@ module icm_mod
 
   !-------------------------------------------------------------------------------
   !constants: molar weight for C,Ca,CaCo3,N
+  !C1_PAR: srad to PAR; C2_PAR: PAR(W/m2) to PAR(E/m2/day) 
   !-------------------------------------------------------------------------------
   integer,parameter :: nPB=3,nZB=2
   real(rkind),parameter :: mC=12.011,mCACO3=100.086,mN=14.007
-  real(rkind),parameter :: Rrat=0.397 !W/m2 to E/m2/day
+  real(rkind),parameter :: C1_PAR=0.47, C2_PAR=0.397
 
   !-------------------------------------------------------------------------------
   !global switch and variables
@@ -30,10 +31,10 @@ module icm_mod
   integer,save,target :: iSilica,iZB,iPh,isav_icm,iveg_icm,idry_icm
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
   real(rkind),save,target,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
-  integer,save,pointer :: jdry,jsav,jveg
+  integer,save,pointer :: jdry,jsav,jveg,ised_icm
 
-  integer,parameter :: nout_sav=7, nout_veg=12
-  integer,save,target :: ntrs_icm,itrs(2,6),nout_icm
+  integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26
+  integer,save,target :: ntrs_icm,itrs(2,7),nout_icm
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
                 & iLPOP,iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3
@@ -56,7 +57,7 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: GPM,TGP,PRR,MTB,TMT,KTMT,WSPBS
   real(rkind),save,target :: KTGP(3,2),WSPOM(2),WSSED
   real(rkind),save,target :: FCP(3,3),FNP(4),FPP(4),FCM(3),FNM(3,4),FPM(3,4)
-  real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOnit,KhNH4nit,KhDOox,KhNO3denit
+  real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOn,KhNH4n,KhDOox,KhNO3dn
   real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM
   real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD
   real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
@@ -131,7 +132,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: bdz,bury,bdiff,bsaltc,bsaltp,bsaltn,bsolid(2)
+  real(rkind),save,target :: bdz,bVb,bdiff,bsaltc,bsaltp,bsaltn,bsolid(2)
   real(rkind),save,target :: bKTVp,bKTVd,bVp,bVd,bTR
   real(rkind),save,target :: btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0
   real(rkind),save,target :: bCH40,bPOS0,bSA0,bPOP0(3),bPON0(3),bPOC0(3)
@@ -149,9 +150,9 @@ module icm_mod
 
   !sediment concentrations and fluxes
   real(rkind),save,target,allocatable,dimension(:) :: bLight,bThp,bTox,btemp,bCH4,bSTR,bPOS
-  real(rkind),save,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
-  real(rkind),save,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
-  real(rkind),save,allocatable,dimension(:) :: SOD,JNH4,JNO3,JPO4,JCOD,JSA
+  real(rkind),save,target,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
+  real(rkind),save,target,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
+  real(rkind),save,target,allocatable,dimension(:) :: SOD,JNH4,JNO3,JPO4,JCOD,JSA
 
   !-------------------------------------------------------------------------------
   !benthic erosion (ERO) parameters and variables

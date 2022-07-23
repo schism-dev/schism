@@ -25,7 +25,6 @@
 !sav_cal      SAV module
 !veg_calc:    Marsh module
 !get_ph:      pH calculation based on TIC and ALK
-!ph_zbrent:   Brent's method for pH equation
 !ph_f:        pH equation
 
 !---------------------------------------------------------------------------------
@@ -62,6 +61,7 @@
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
 !SAV Module (no transport variables)
 !VEG Module (no transport variables)
+!SFM Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -123,7 +123,7 @@ subroutine ecosystem(it)
         do m=1,ntrs_icm; wqc(m,k)=max(wqc(m,k),0.d0); enddo 
         do m=1,3; PBS(m,k)=max(PBS(m,k),PBmin(m)); enddo 
        
-        !temp,TSS
+        !temp,TSS; todo: TSS from inputs
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
         if(iKe==0) TSS(k)=(RPOC(k)+LPOC(k))*tss2c  !TSS values from POC
         if(iKe==1) then !TSS from 3D sediment model
@@ -140,9 +140,9 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       Light=0; rKe=0; rKe0=0; rKeS=0; rKeV=0 !initilization
 
-      !rIa from sflux (unit: W/m2; 0.47 used to convert srad to PAR)
+      !rIa from sflux (unit: W/m2; C1_PAR is used to convert srad to PAR)
       if(iRad==0) then 
-        rIa=max(0.47d0*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
+        rIa=max(C1_PAR*sum(srad(elnode(1:i34(id),id)))/i34(id),0.d0)
       else
         mtime=>time_icm(:,1); rat=max(min((time-mtime(1))/(mtime(2)-mtime(1)),1.d0),0.d0)
         rIa=rad_in(id,1)+rat*(rad_in(id,2)-rad_in(id,1))
@@ -199,7 +199,7 @@ subroutine ecosystem(it)
 
           !light factor
           if(iLight==0) then !Cerco
-            mLight=Rrat*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
+            mLight=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
             rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
             fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
           elseif(iLight==1) then !Chapra S.C. #todo: change this option
@@ -230,11 +230,11 @@ subroutine ecosystem(it)
         xT=temp(k)-TNit
         rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
         rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
-        rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3denit+NO3(k))
-        rNit(k)=(DOX(k)*Nit*KhNH4nit/((KhNH4nit+NH4(k))*(KhDOnit+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
+        rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3dn+NO3(k))
+        rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
       enddo !k
 
-      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
+      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?) todo: put this in sflux
       !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
       DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
       !rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
@@ -254,7 +254,7 @@ subroutine ecosystem(it)
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
       !sediment flux module
-      if(iSed==1) call sed_calc(id,kb,tdep,dz(kb+1),TSS)
+      if(iSed==1) call sfm_calc(id,kb,tdep,dz(kb+1),TSS)
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -297,7 +297,7 @@ subroutine ecosystem(it)
         bflux(iNO3)=bflux(iNO3)+JNO3(id)
         bflux(iPO4)=bflux(iPO4)+JPO4(id)
         bflux(iCOD)=bflux(iCOD)+JCOD(id)
-        bflux(iDOX)=bflux(iDOX)+SOD(id)    
+        bflux(iDOX)=bflux(iDOX)-SOD(id)    
         if(iSilica==1) bflux(iSA) =bflux(iSA) +JSA(id)
       endif
 
@@ -594,11 +594,11 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       tmp=sdveg+rKehV(j,2)
 
       if(tmp>20) then
-        mLight=vLight*Rrat/tmp
+        mLight=vLight*C2_PAR/tmp
       elseif(tmp<0.02)then
-        mLight=vLight*Rrat
+        mLight=vLight*C2_PAR
       else
-        mLight=vLight*Rrat*(1-exp(-tmp))/tmp
+        mLight=vLight*C2_PAR*(1-exp(-tmp))/tmp
       endif
       rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
@@ -871,7 +871,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
             rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
           endif !knp
 
-          mLight=max(sLight*Rrat*(1-exp(-tmp))/tmp,1.d-5)
+          mLight=max(sLight*C2_PAR*(1-exp(-tmp))/tmp,1.d-5)
           rIK=sGPM*sfT/salpha
 
           !light limitation function for sav
@@ -924,7 +924,6 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
     sroot(k,id)=(1+dtw*a)*sroot(k,id)+dtw*b
    
     !Pre-compute SAV terms
-    !if(k==nvrt) then
     if(k==(kb+1)) then
       sleaf_NH4(id)=0; sleaf_PO4(id)=0; sroot_POC(id)=0
       sroot_PON(id)=0; sroot_POP(id)=0; sroot_DOX(id)=0

@@ -48,9 +48,10 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,iSilica,iZB,iPh, &
-                    & isav_icm,iveg_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
-                    & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,name_icm,iSilica,iZB,iPh, &
+                    & isav_icm,iveg_icm,ised_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
+                    & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
+                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA
 #endif
 
 #ifdef USE_COSINE
@@ -175,7 +176,7 @@
 #endif
 
 #ifndef USE_ICM
-      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12
+      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12,nout_sed=26
 #endif
 
 #ifdef USE_OIL
@@ -210,7 +211,7 @@
      &rinflation_icm
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
-     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_sav,iof_icm_veg,iof_cos,iof_fib, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_sav,iof_icm_veg,iof_icm_sed,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
@@ -437,7 +438,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
-     &iof_icm_ph(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_cos(20),iof_fib(5), &
+     &iof_icm_ph(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
@@ -498,8 +499,8 @@
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
-      nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
+      iof_icm_veg=0; iof_icm_sed=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
+      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -513,6 +514,7 @@
       if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
       if(isav_icm==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_sav
       if(iveg_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_veg
+      if(ised_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_sed
 #endif
 
       !zcor should be on usually
@@ -6498,6 +6500,17 @@
           endif !iof
         enddo !i
       endif !iveg_icm/
+
+      if(ised_icm/=0) then
+        do i=1,nout_sed
+          if(iof_icm_sed(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+i-1)))
+          endif !iof
+        enddo !i
+      endif
 #endif
 
 #ifdef USE_MARSH

@@ -48,9 +48,10 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,isav_icm,iveg_icm, &
-                        & sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
-                        & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,name_icm,isav_icm,iveg_icm, &
+                        & ised_icm,sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
+                        & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP,& 
+                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA
 #endif
 
 #ifdef USE_COSINE
@@ -8715,6 +8716,37 @@
           noutput=noutput+12
         endif
 
+        !SFM model
+        if(ised_icm/=0) then
+          if(iof_icm_sed(1)==1)  call writeout_nc(id_out_var(noutput+4+1), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+1-1))),4,1,nea,dble(bPOC(:,1)))
+          if(iof_icm_sed(2)==1)  call writeout_nc(id_out_var(noutput+4+2), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+2-1))),4,1,nea,dble(bPOC(:,2)))
+          if(iof_icm_sed(3)==1)  call writeout_nc(id_out_var(noutput+4+3), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+3-1))),4,1,nea,dble(bPOC(:,3)))
+          if(iof_icm_sed(4)==1)  call writeout_nc(id_out_var(noutput+4+4), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+4-1))),4,1,nea,dble(bPON(:,1)))
+          if(iof_icm_sed(5)==1)  call writeout_nc(id_out_var(noutput+4+5), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+5-1))),4,1,nea,dble(bPON(:,2)))
+          if(iof_icm_sed(6)==1)  call writeout_nc(id_out_var(noutput+4+6), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+6-1))),4,1,nea,dble(bPON(:,3)))
+          if(iof_icm_sed(7)==1)  call writeout_nc(id_out_var(noutput+4+7), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+7-1))),4,1,nea,dble(bPOP(:,1)))
+          if(iof_icm_sed(8)==1)  call writeout_nc(id_out_var(noutput+4+8), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+8-1))),4,1,nea,dble(bPOP(:,2)))
+          if(iof_icm_sed(9)==1)  call writeout_nc(id_out_var(noutput+4+9), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+9-1))),4,1,nea,dble(bPOP(:,3)))
+          if(iof_icm_sed(10)==1) call writeout_nc(id_out_var(noutput+4+10), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+10-1))),4,1,nea,dble(bNH4))
+          if(iof_icm_sed(11)==1) call writeout_nc(id_out_var(noutput+4+11), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+11-1))),4,1,nea,dble(bNO3))
+          if(iof_icm_sed(12)==1) call writeout_nc(id_out_var(noutput+4+12), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+12-1))),4,1,nea,dble(bPO4))
+          if(iof_icm_sed(13)==1) call writeout_nc(id_out_var(noutput+4+13), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+13-1))),4,1,nea,dble(bH2S))
+          if(iof_icm_sed(14)==1) call writeout_nc(id_out_var(noutput+4+14), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+14-1))),4,1,nea,dble(bCH4))
+          if(iof_icm_sed(15)==1) call writeout_nc(id_out_var(noutput+4+15), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+15-1))),4,1,nea,dble(bPOS))
+          if(iof_icm_sed(16)==1) call writeout_nc(id_out_var(noutput+4+16), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+16-1))),4,1,nea,dble(bSA))
+          if(iof_icm_sed(17)==1) call writeout_nc(id_out_var(noutput+4+17), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+17-1))),4,1,nea,dble(bstc))
+          if(iof_icm_sed(18)==1) call writeout_nc(id_out_var(noutput+4+18), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+18-1))),4,1,nea,dble(bSTR))
+          if(iof_icm_sed(19)==1) call writeout_nc(id_out_var(noutput+4+19), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+19-1))),4,1,nea,dble(bThp))
+          if(iof_icm_sed(20)==1) call writeout_nc(id_out_var(noutput+4+20), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+20-1))),4,1,nea,dble(bTox))
+          if(iof_icm_sed(21)==1) call writeout_nc(id_out_var(noutput+4+21), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+21-1))),4,1,nea,dble(SOD))
+          if(iof_icm_sed(22)==1) call writeout_nc(id_out_var(noutput+4+22), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+22-1))),4,1,nea,dble(JNH4))
+          if(iof_icm_sed(23)==1) call writeout_nc(id_out_var(noutput+4+23), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+23-1))),4,1,nea,dble(JNO3))
+          if(iof_icm_sed(24)==1) call writeout_nc(id_out_var(noutput+4+24), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+24-1))),4,1,nea,dble(JPO4))
+          if(iof_icm_sed(25)==1) call writeout_nc(id_out_var(noutput+4+25), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+25-1))),4,1,nea,dble(JSA))
+          if(iof_icm_sed(26)==1) call writeout_nc(id_out_var(noutput+4+26), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+26-1))),4,1,nea,dble(JCOD))
+          noutput=noutput+26
+        endif
+
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -9267,6 +9299,69 @@
           endif !iof_icm
         enddo !i
       endif !iveg_icm/
+
+      if(ised_icm/=0) then
+        do i=1,nout_sed
+          if(iof_icm_sed(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.134)')
+            select case(i)
+              case(1)
+                varout_2delem(icount,:)=bPOC(1:ne,1)
+              case(2)
+                varout_2delem(icount,:)=bPOC(1:ne,2)
+              case(3)
+                varout_2delem(icount,:)=bPOC(1:ne,3)
+              case(4)
+                varout_2delem(icount,:)=bPON(1:ne,1)
+              case(5)
+                varout_2delem(icount,:)=bPON(1:ne,2)
+              case(6)
+                varout_2delem(icount,:)=bPON(1:ne,3)
+              case(7)
+                varout_2delem(icount,:)=bPOP(1:ne,1)
+              case(8)
+                varout_2delem(icount,:)=bPOP(1:ne,2)
+              case(9)
+                varout_2delem(icount,:)=bPOP(1:ne,3)
+              case(10)
+                varout_2delem(icount,:)=bNH4(1:ne)
+              case(11)
+                varout_2delem(icount,:)=bNO3(1:ne)
+              case(12)
+                varout_2delem(icount,:)=bPO4(1:ne)
+              case(13)
+                varout_2delem(icount,:)=bH2S(1:ne)
+              case(14)
+                varout_2delem(icount,:)=bCH4(1:ne)
+              case(15)
+                varout_2delem(icount,:)=bPOS(1:ne)
+              case(16)
+                varout_2delem(icount,:)=bSA(1:ne)
+              case(17)
+                varout_2delem(icount,:)=bstc(1:ne)
+              case(18)
+                varout_2delem(icount,:)=bSTR(1:ne)
+              case(19)
+                varout_2delem(icount,:)=bThp(1:ne)
+              case(20)
+                varout_2delem(icount,:)=bTox(1:ne)
+              case(21)
+                varout_2delem(icount,:)=SOD(1:ne)
+              case(22)
+                varout_2delem(icount,:)=JNH4(1:ne)
+              case(23)
+                varout_2delem(icount,:)=JNO3(1:ne)
+              case(24)
+                varout_2delem(icount,:)=JPO4(1:ne)
+              case(25)
+                varout_2delem(icount,:)=JSA(1:ne)
+              case(26)
+                varout_2delem(icount,:)=JCOD(1:ne)
+            end select
+          endif
+        enddo
+      endif
 #endif
 
 #ifdef USE_MARSH
@@ -10108,7 +10203,7 @@
           var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim !2D array
           j=nf90_def_var(ncid_hot,'sleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+2))
           j=nf90_def_var(ncid_hot,'sstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+3))
-          j=nf90_def_var(ncid_hot,'stoot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
+          j=nf90_def_var(ncid_hot,'sroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
           nvars_hot_icm=nvars_hot_icm+4
         endif
         

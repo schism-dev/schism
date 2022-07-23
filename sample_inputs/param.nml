@@ -966,6 +966,34 @@
 !  iof_icm_veg(10) = 0 !vht1:    canopy height group 1 [m]
 !  iof_icm_veg(11) = 0 !vht2:    canopy height group 2 [m]
 !  iof_icm_veg(12) = 0 !vht3:    canopy height group 3 [m]
+!
+!  !SFM model
+!  iof_icm_sed(1)   = 0 !bPOC1 (g.m-3)
+!  iof_icm_sed(2)   = 0 !bPOC2 (g.m-3)
+!  iof_icm_sed(3)   = 0 !bPOC3 (g.m-3)
+!  iof_icm_sed(4)   = 0 !bPON1 (g.m-3)
+!  iof_icm_sed(5)   = 0 !bPON2 (g.m-3)
+!  iof_icm_sed(6)   = 0 !bPON3 (g.m-3)
+!  iof_icm_sed(7)   = 0 !bPOP1 (g.m-3)
+!  iof_icm_sed(8)   = 0 !bPOP2 (g.m-3)
+!  iof_icm_sed(9)   = 0 !bPOP3 (g.m-3)
+!  iof_icm_sed(10)  = 0 !bNH4  (g.m-3)
+!  iof_icm_sed(11)  = 0 !bNO3  (g.m-3)
+!  iof_icm_sed(12)  = 0 !bPO4  (g.m-3)
+!  iof_icm_sed(13)  = 0 !bH2S  (g.m-3)
+!  iof_icm_sed(14)  = 0 !bCH4  (g.m-3)
+!  iof_icm_sed(15)  = 0 !bPOS  (g.m-3)
+!  iof_icm_sed(16)  = 0 !bSA   (g.m-3)
+!  iof_icm_sed(17)  = 0 !bstc: surface transfer coeff. (m/day)
+!  iof_icm_sed(18)  = 0 !bSTR: benthic stress      (day)
+!  iof_icm_sed(19)  = 0 !bThp: consective days of hypoxia (day)
+!  iof_icm_sed(20)  = 0 !bTox: consective days of oxic condition after hypoxia (day)
+!  iof_icm_sed(21)  = 0 !SOD   (g.m-2.day-1)
+!  iof_icm_sed(22)  = 0 !JNH4  (g.m-2.day-1)
+!  iof_icm_sed(23)  = 0 !JNO3  (g.m-2.day-1)
+!  iof_icm_sed(24)  = 0 !JPO4  (g.m-2.day-1)
+!  iof_icm_sed(25)  = 0 !JSA   (g.m-2.day-1)
+!  iof_icm_sed(26)  = 0 !JCOD  (g.m-2.day-1)
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D
