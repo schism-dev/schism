@@ -5,10 +5,10 @@
 clear all; close all;
 
 r0=6378206.4; %earth radius
-nstacks=[10:20]; %stacks to be processed
+nstacks=[90:103]; %stacks to be processed
 
-if(exist('outputs_new')); status=rmdir('outputs_new','s'); end;
-mkdir outputs_new;
+%if(exist('outputs_new')); status=rmdir('outputs_new','s'); end;
+if(~exist('outputs_new')); mkdir outputs_new; end;
 
 for istack=nstacks
   disp(['doing stack ' num2str(istack)]);
