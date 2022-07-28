@@ -336,7 +336,7 @@
 
       ELSE
 
-        WRITE(errmsg,*)'Sediment diameter out of range:',ised,       &
+        WRITE(errmsg,*)'sed_bedload_vr: Sediment diameter out of range:',ised,       &
         &              Sd50(ised)
         CALL parallel_abort(errmsg)
 
