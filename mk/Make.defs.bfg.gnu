@@ -67,8 +67,11 @@ FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 ##### Libraries
 # ParMETIS
 #MTSLIBS = -L./ParMetis-3.1-Sep2010  -lparmetis -lmetis  
-CDFLIBS = -L/usr/lib64 -lnetcdf  -L/opt/netcdf-fortran/lib -lnetcdff #-L/opt/mvapich2-2.1rc2/lib -lfmpich -lmpich -lmpi # oss-hpc01
-CDFMOD = -I/usr/include -I/opt/netcdf-fortran/include # modules for netcdf 
+#CDFLIBS = -L/usr/lib64 -lnetcdf  -L/opt/netcdf-fortran/lib -lnetcdff #-L/opt/mvapich2-2.1rc2/lib -lfmpich -lmpich -lmpi # oss-hpc01
+#CDFMOD = -I/usr/include -I/opt/netcdf-fortran/include # modules for netcdf 
+CDFLIBS = -L/usr/lib64 -L$(NETCDF_HOME)/lib -lnetcdf -L$(NETCDFF_HOME)/lib -lnetcdff 
+#-L/opt/mvapich2-2.1rc2/lib -lfmpich -lmpich -lmpi # oss-hpc01
+CDFMOD = -I/usr/include -I$(NETCDFF_HOME)/include # modules for netcdf 
 
 
 
