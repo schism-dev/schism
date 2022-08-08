@@ -252,8 +252,8 @@ module schism_glbl
   !centroid
   real(rkind),save,allocatable :: dldxy(:,:,:)
   !Transformation tensor for element (ll) frame: eframe(i,j,ie) for ics=2
-  !where j is the axis id, i is the component id, ie is the local element id (aug.)
-  !Undefined for ics=1
+  !where j is the axis id, i is the component id, ie is the local element id (aug.). The frame aligns with
+  !local zonal-meridional axes. Undefined for ics=1
   real(rkind),save,allocatable :: eframe(:,:,:)
   !x,y coordinates of each element node/side in the _element_ frame
   !xel(4,nea), xs_el(4,nea)
@@ -303,8 +303,8 @@ module schism_glbl
   real(rkind),save,allocatable :: hmod(:)        ! constrained depth
   real(rkind),save,allocatable :: znl(:,:)        ! z-coord in local Z-axis (vertical up)
   ! Transformation tensor for node (ll) frame: pframe(i,j,ip) for ics=2.
-  ! where j is the axis id, i is the component id, ip is the local node id (aug.)
-  ! For ics=1, this is not used
+  ! where j is the axis id, i is the component id, ip is the local node id (aug.). The frame aligns with
+  ! local zonal-meridional axes. For ics=1, this is not used
   real(rkind),save,allocatable :: pframe(:,:,:)
   integer,save,allocatable :: iplg2(:)      ! Local-to-global node index table (2-tier augmented)
   integer,save,allocatable :: ipgl2(:,:)      ! Global-to-local node index table (2-tier augmented)
