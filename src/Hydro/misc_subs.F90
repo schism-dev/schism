@@ -2296,7 +2296,7 @@
           !Save side vel.
           do j=1,i34(i) !side index
             isd=elside(j,i)
-!new37
+!new37: do frame change - better for near-pole region
             if(ics==1) then
               swild5(j,1)=su2(k,isd)
               swild5(j,2)=sv2(k,isd)
@@ -2364,17 +2364,17 @@
             if(idry_e(ie)==0) then
               icount=icount+1
 
-!new37
-              if(ics==1) then
-                uu2(k,i)=uu2(k,i)+ufg(id,k,ie)
-                vv2(k,i)=vv2(k,i)+vfg(id,k,ie)
-              else !lat/lon
-                !To node frame
-                uu2(k,i)=uu2(k,i)+ufg(id,k,ie)*dot_product(eframe(:,1,ie),pframe(:,1,i))+ &
-                                 &vfg(id,k,ie)*dot_product(eframe(:,2,ie),pframe(:,1,i)) 
-                vv2(k,i)=vv2(k,i)+ufg(id,k,ie)*dot_product(eframe(:,1,ie),pframe(:,2,i))+ &
-                                 &vfg(id,k,ie)*dot_product(eframe(:,2,ie),pframe(:,2,i)) 
-              endif !ics
+!new37: no frame change here to average out - better for near-pole region (c/o Qian Wang)
+!              if(ics==1) then
+              uu2(k,i)=uu2(k,i)+ufg(id,k,ie)
+              vv2(k,i)=vv2(k,i)+vfg(id,k,ie)
+!              else !lat/lon
+!                !To node frame
+!                uu2(k,i)=uu2(k,i)+ufg(id,k,ie)*dot_product(eframe(:,1,ie),pframe(:,1,i))+ &
+!                                 &vfg(id,k,ie)*dot_product(eframe(:,2,ie),pframe(:,1,i)) 
+!                vv2(k,i)=vv2(k,i)+ufg(id,k,ie)*dot_product(eframe(:,1,ie),pframe(:,2,i))+ &
+!                                 &vfg(id,k,ie)*dot_product(eframe(:,2,ie),pframe(:,2,i)) 
+!              endif !ics
             endif !idry_e
 
             !Vertical direction same between element and node frames
@@ -2493,7 +2493,7 @@
 !              endif !ics
 !              endif !Z or S
 
-!new37: reproj su2,sv2 if ics=2?
+!new37: 
               uu2(k,i)=uu2(k,i)+su2(k,isd)/distj(isd)*real(nfac,rkind)
               vv2(k,i)=vv2(k,i)+sv2(k,isd)/distj(isd)*real(nfac,rkind)
               weit=weit+1._rkind/distj(isd)*real(nfac,rkind)
