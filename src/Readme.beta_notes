@@ -547,6 +547,8 @@ git versions:
 (135) dde345f (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0: 
                               uninit'ed stress values.
 (136) 6524e19 (27 April 2022): merged with La Rochelle group on WWM  (VOR);
+(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a fram change
+                             for better vel near poles.
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
