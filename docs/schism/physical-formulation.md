@@ -6,7 +6,7 @@ Momentum equation:
 \begin{equation}
 \begin{aligned}
 \frac{Du}{dt} = \pmb{f} - g \nabla \eta + \pmb{m}_z - \alpha \left| \pmb{u} \right| \pmb{u} L(x, y, z)\\
-\pmb{f} = f(v, -u) - \frac{g}{\rho_0} \int_z^{\eta} \nabla \rho d\zeta - \frac{\nabla p_A}{\rho_0} + \alpha a \nabla \Psi + \pmb{F}_m + other
+\pmb{f} = f(v, -u) - \frac{g}{\rho_0} \int_z^{\eta} \nabla \rho d\zeta - \frac{\nabla p_A}{\rho_0} + a g \nabla \Psi + \pmb{F}_m + other
 \end{aligned}
 \label{eq:momentum}
 \end{equation}
