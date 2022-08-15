@@ -55,7 +55,7 @@
 #endif
 
 #ifdef USE_COSINE
-      USE cosine_mod,only :mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
+      USE cosine_mod,only : name_cos,mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
 #endif
 
 #ifdef USE_NAPZD
@@ -6723,12 +6723,10 @@
 #ifdef USE_COSINE
       do i=1,ntrs(8)
         if(iof_cos(i)==1) then
-          write(ifile_char,'(i12)')i
-          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=2
-          out_name(counter_out_name)='COS_'//ifile_char(1:itmp2)
+          out_name(counter_out_name)='COS_'//trim(adjustl(name_cos(i)))
         endif
       enddo !i
 #endif

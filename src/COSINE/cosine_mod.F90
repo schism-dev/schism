@@ -13,31 +13,18 @@ module cosine_mod
   !------------------------------------------------------------------
  
   !-------------switches and marco parameters------------------------------------
-  integer, save :: nspool_cosine,ndelay
-  integer, save :: idelay,ibgraze,idapt,iz2graze,iout_cosine,ico2s,ispm,icheck
-  integer, save :: ised,iws,iclam,ipo4
+  integer,save :: nspool_cosine,ndelay
+  integer,save :: idelay,ibgraze,idapt,iz2graze,iout_cosine,ico2s,ispm,icheck
+  integer,save :: ised,iws,iclam,ipo4
 
   !-------------cosine kinetics parameters---------------------------------------
-  !phytoplankton
-  real(rkind),save :: gmaxs1,alpha1,pis1,kno3s1,knh4s1,kpo4s1,kco2s1,kns1,gammas1 
-
-  real(rkind),save :: gmaxs2,alpha2,pis2,kno3s2,knh4s2,kpo4s2,kco2s2,kns2,gammas2
-  real(rkind),save :: ksio4s2
-
-  real(rkind),save :: ak1,ak2,ak3,alpha_corr,zeptic,beta
-
-  !zooplankton
-  real(rkind),save :: kex1,gamma1
-
-  real(rkind),save :: kex2,gamma2
-  real(rkind),save :: beta1,beta2,kgz1,kgz2,rho1,rho2,rho3
- 
-  real(rkind),save :: gammaz
-
-  !other
-  real(rkind),save :: kox,kbmdn,kmdn1,kmdn2,kbmdsi,kmdsi1,kmdsi2,gamman,TR,pco2a
-  real(rkind),save :: wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n
-  real(rkind),save :: spm0,NO3c,ws1,ws2
+  !phytoplankton, zooplankton, other
+  real(rkind),target,save,dimension(2) :: gmaxs,alphas,betas,pis,kno3s,knh4s,kpo4s,kco2s,kns
+  real(rkind),target,save,dimension(2) :: gammas,betaz,kgz,alphaz,gammaz,kez,kmdn,kmdsi
+  real(rkind),target,save :: ksio4,aks(3),rhoz(3),alpha_corr,zeptic
+  real(rkind),target,save :: kox,gamman,TR,pco2a
+  real(rkind),target,save :: wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n
+  real(rkind),target,save :: spm0,NO3c,ws1,ws2
 
   !------------------------------------------------------------------
   !COSINE variables
@@ -46,6 +33,7 @@ module cosine_mod
   real(rkind),save,allocatable,dimension(:) :: NO3,NH4,SiO4,S1,S2,Z1,Z2,DN,DSi,PO4,DOX,CO2,ALK
   real(rkind),save,allocatable,dimension(:) :: temp,salt,bgraze
   real(rkind),save,allocatable,dimension(:,:) :: SPM
+  character(len=6),save,allocatable :: name_cos(:)
   
   !link SCHISM to CoSiNE
   real(rkind),save,allocatable :: bcos(:,:) 
@@ -117,18 +105,20 @@ module cosine_mod
   real(rkind),save,allocatable :: RS2(:,:), RDN(:,:), RDSi(:,:)
 
   !---------------------------------------------------------------------------
-  !spatially varying parameter
+  !spatially varying parameters: for different dimensions 
   !---------------------------------------------------------------------------
-  !parameter in water column
-  type,public :: cos_spatial_param
-    real(rkind),dimension(:),pointer :: gmaxs1,gmaxs2,pis1,pis2,kno3s1,knh4s1, &
-        & kpo4s1,kco2s1,kno3s2,knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1, &
-        & alpha2,beta,ak1,ak2,ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1, &
-        & rho2,rho3,gamma1,gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n, &
-        & o2no,o2nh,c2n,kox,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a 
-  end type
-  type(cos_spatial_param) :: wp
-
+  type :: cosine_spatial_param
+    character(len=30) :: varname  !parameter name
+    integer :: ndim=0  !parameter dimension
+    integer :: dims(2) !dimension info
+    real(rkind),dimension(30) :: data0 !oirginal value of data
+    integer,allocatable,dimension(:,:) :: istat
+    real(rkind),pointer :: p=>null()                !param. of single value
+    real(rkind),pointer,dimension(:) :: p1=>null()   !param. of 1D array
+    real(rkind),pointer,dimension(:,:) :: p2=>null() !param of 2D array
+    real(rkind),allocatable,dimension(:,:,:) :: data
+  end type cosine_spatial_param
+  type(cosine_spatial_param),save,target,allocatable,dimension(:) :: sp
 
 end module cosine_mod
 

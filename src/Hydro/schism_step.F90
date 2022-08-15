@@ -55,7 +55,7 @@
 #endif
 
 #ifdef USE_COSINE
-      USE cosine_mod,only :mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay 
+      USE cosine_mod,only : name_cos,mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay 
 #endif
 
 #ifdef USE_NAPZD
@@ -8751,11 +8751,7 @@
 
 #ifdef USE_COSINE
         do i=1,ntrs(8)
-          write(it_char,'(i72)')i
-          it_char=adjustl(it_char); lit=len_trim(it_char)
-          itmp=irange_tr(1,8)+i-1 !global tracer #
-          if(iof_cos(i)==1) call writeout_nc(id_out_var(noutput+i+4), &
-     &'COS_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
+          if(iof_cos(i)==1) call writeout_nc(id_out_var(noutput+i+4),'COS_'//trim(adjustl(name_cos(i))),2,nvrt,npa,tr_nd(irange_tr(1,8)+i-1,:,:))
         enddo !i
         noutput=noutput+ntrs(8)
 #endif

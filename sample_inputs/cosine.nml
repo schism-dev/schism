@@ -66,163 +66,50 @@ ised = 1
 /
 
 &CORE
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!------------------------------------------------------------------------
 !phytoplankton
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!------------------------------------------------------------------------
+gmaxs  = 2.0   2.5    !maximum growth rate
+gammas = 0.2   0.075  !mortality rate
+pis    = 1.5   1.5    !ammonium inhibition 
+kno3s  = 1.0   3.0    !NO3 half saturation 
+knh4s  = 0.15  0.45   !NH4 half saturation
+kpo4s  = 0.1   0.1    !PO4 half saturation
+kco2s  = 50.0  50.0   !CO2 half saturation
+ksio4  = 4.5          !SiO4 half saturation for diatom 
+kns    = 0.0   0.0    !nighttime uptake rate of NH4
+alphas = 0.1   0.1    !initial slopes of P-I curve
+betas  = 0.0   0.0    !slope for photo-inhibition 
+aks    = 0.75  0.03  0.066  !light extinction coefficients: rKe=ak1+ak2*(S1+S2)+ak3*SPM
 
-!-----------------------------------------------------------------------
-!maximum growth rate
-!-----------------------------------------------------------------------
-gmaxs1= 2.0
-gmaxs2= 2.5
-
-!-----------------------------------------------------------------------
-!ammonium inhibition 
-!-----------------------------------------------------------------------
-pis1=  1.5
-pis2=  1.5
-
-!-----------------------------------------------------------------------
-!nutrient half saturation
-!-----------------------------------------------------------------------
-kno3s1= 1.0
-knh4s1= 0.15
-kpo4s1= 0.1
-kco2s1= 50
-
-kno3s2= 3.0
-knh4s2= 0.45
-kpo4s2= 0.1
-kco2s2= 50
-ksio4s2= 4.5
-
-!-----------------------------------------------------------------------
-!nighttime uptake rate of NH4
-!-----------------------------------------------------------------------
-kns1=0.0
-kns2=0.0
-
-!-----------------------------------------------------------------------
-!light coefficient
-!alpha?   :  initial slopes of P-I curve
-!beta     :  the slope for photo-inhibition 
-!ak1,ak2,ak3 : light extinction coefficients rKe=ak1+ak2*(S1+S2)+ak3*SPM
-!-----------------------------------------------------------------------
-alpha1= 0.1
-alpha2= 0.1
-beta= 0.0
-ak1= 0.75
-ak2= 0.03
-ak3= 0.066
-
-!-----------------------------------------------------------------------
-!mortality rate
-!-----------------------------------------------------------------------
-gammas1= 0.2
-gammas2= 0.075
-
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!------------------------------------------------------------------------
 !zooplankton
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!------------------------------------------------------------------------
+betaz  = 1.35  0.4    !maximum grazing rate
+alphaz = 0.75  0.75   !assimilation rate
+gammaz = 0.2   0.2    !mortality rate
+kez    = 0.2   0.2    !excretion rate
+kgz    = 0.5   0.25   !reference prey concentration for grazing
+rhoz   = 0.6   0.3   0.1  !prey preference factors of Z2 on (S2,Z1,DN)
 
-!-----------------------------------------------------------------------
-!maximum grzaing rate
-!-----------------------------------------------------------------------
-beta1= 1.35
-beta2= 0.4
-
-!-----------------------------------------------------------------------
-!reference prey concentration for grzaing
-!-----------------------------------------------------------------------
-kgz1= 0.5
-kgz2= 0.25
-
-!-----------------------------------------------------------------------
-!prey preference factors for Z2
-!-----------------------------------------------------------------------
-rho1= 0.6
-rho2= 0.3
-rho3= 0.1
-
-!-----------------------------------------------------------------------
-!assimilation rate
-!-----------------------------------------------------------------------
-gamma1= 0.75
-gamma2= 0.75
-
-!-----------------------------------------------------------------------
-!mortality rate
-!-----------------------------------------------------------------------
-gammaz= 0.2
-
-!-----------------------------------------------------------------------
-!excretion rate
-!-----------------------------------------------------------------------
-kex1= 0.2
-kex2= 0.2
-
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!------------------------------------------------------------------------
 !other
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-!-----------------------------------------------------------------------
-!settling velocity
-!-----------------------------------------------------------------------
-wss2=  0.2
-wsdn=  1.0
-wsdsi= 1.0
-
-!-----------------------------------------------------------------------
-!conversion coefficens
-!-----------------------------------------------------------------------
-si2n= 1.2
-p2n= 0.0625 ! 1/16
-o2no= 8.625 ! 138/16
-o2nh= 6.625 ! 106/16
-c2n= 7.3      
-
-!-----------------------------------------------------------------------
-!reference oxygen concentration for oxidation
-!-----------------------------------------------------------------------
-kox= 30.0
-
-!-----------------------------------------------------------------------
-!add additional PO4 from biogenic silica dissolution
-!-----------------------------------------------------------------------
-ipo4=1
-
-!-----------------------------------------------------------------------
-!remineralization coefficients for DN
-!kdmdn is bottom remineralization coefficient, while water column 
-!coefficient=kmdn1*T+kmdn2, where T is temperature
-!-----------------------------------------------------------------------
-kmdn1=0.009
-kmdn2=0.075
-
-!-----------------------------------------------------------------------
-!remineralization coefficients for DSi
-!kdmdsi is bottom remineralization coefficient, while water column 
-!coefficient=kmdsi1*T+kmdsi2, where T is temperature
-!-----------------------------------------------------------------------
-kmdsi1=0.0114
-kmdsi2=0.015
-
-!-----------------------------------------------------------------------
-!nitrification coefficent
-!-----------------------------------------------------------------------
-gamman= 0.07
-
-!-----------------------------------------------------------------------
-!Reference temperature for temperature adjust for CoSiNE sink and source
-!-----------------------------------------------------------------------
-TR= 20 
-
-!-----------------------------------------------------------------------
-!atmospheric CO2 concentration
-!-----------------------------------------------------------------------
-pco2a= 391.63
+!------------------------------------------------------------------------
+ipo4  = 1      !add additional PO4 from biogenic silica dissolution
+TR    = 20.0   !Reference temperature for temperature adjust for CoSiNE sink and source
+kox   = 30.0   !reference oxygen concentration for oxidation
+wss2  = 0.2    !settling velocity of S2
+wsdn  = 1.0    !settling velocity of DN
+wsdsi = 1.0    !settling velocity of DSi
+si2n  = 1.2    !silica to nitrogen conversion coefficient 
+p2n   = 0.0625 !phosphorus to nitrogen conversion coefficient (1/16)
+o2no  = 8.625  !oxygen to nitrogen (NO3) conversion coefficient (138/16)
+o2nh  = 6.625  !oxygen to nitrogen (NH4) conversion coefficient (106/16)
+c2n   = 7.3    !carbon to nitrogen conversion coefficient  
+gamman= 0.07   !nitrification coefficent
+pco2a = 391.63 !atmospheric CO2 concentration
+kmdn  = 0.009   0.075  !remineralization coefficients for DN: rate=kmdn(1)*T+kmdn(2) 
+kmdsi = 0.0114  0.015  !remineralization coefficients for DSi: rate=kmdsi(1)*T+kmdsi(2)
 /
 
 &MISC

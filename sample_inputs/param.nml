@@ -998,19 +998,19 @@
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D
 !-----------------------------------------------------------------------
-!  iof_cos(1) = 0 ! {COS_1}
-!  iof_cos(2) = 0 ! {COS_2}
-!  iof_cos(3) = 0 ! {COS_3}
-!  iof_cos(4) = 0 ! {COS_4}
-!  iof_cos(5) = 0 ! {COS_5}
-!  iof_cos(6) = 0 ! {COS_6}
-!  iof_cos(7) = 0 ! {COS_7}
-!  iof_cos(8) = 0 ! {COS_8}
-!  iof_cos(9) = 0 ! {COS_9}
-!  iof_cos(10) = 0 ! {COS_10}
-!  iof_cos(11) = 0 ! {COS_11}
-!  iof_cos(12) = 0 ! {COS_12}
-!  iof_cos(13) = 0 ! {COS_13}
+!  iof_cos(1)  = 0 !NO3 (uM)
+!  iof_cos(2)  = 0 !SiO4(uM)
+!  iof_cos(3)  = 0 !NH4 (uM)
+!  iof_cos(4)  = 0 !S1  (uM)
+!  iof_cos(5)  = 0 !S2  (uM)
+!  iof_cos(6)  = 0 !Z1  (uM)
+!  iof_cos(7)  = 0 !Z2  (uM)
+!  iof_cos(8)  = 0 !DN  (uM) 
+!  iof_cos(9)  = 0 !DSi (uM) 
+!  iof_cos(10) = 0 !PO4 (uM) 
+!  iof_cos(11) = 0 !DOX (uM) 
+!  iof_cos(12) = 0 !CO2 (uM) 
+!  iof_cos(13) = 0 !ALK (uM) 
 
 !-----------------------------------------------------------------------
 ! Fecal indicating bacteria module
