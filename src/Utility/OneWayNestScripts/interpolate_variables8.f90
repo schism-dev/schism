@@ -1,15 +1,15 @@
 !********************************************************************************
 !										
-!	Interpolate 2 or 3D variables from SCHISM nc outputs to get *3D.th.nc 
+!	Interpolate 2 or 3D variables from SCHISM _scribe_ nc outputs to get *3D.th.nc 
 !       Use generic method to find parents.
 !       Changes from interpolate_variables_selfe2: abandoned bucket sort; vgrid.fg can be SZ now.
 !       Changes from interpolate_variables_selfe3: *3D.th now binary; added ivcor=1.
 !       Changes from interpolate_variables_selfe4: added 1 extra record at the beginning for new .th format
 !       Changes from interpolate_variables_selfe5: add quads
 !       Changes from interpolate_variables6: changed to nc
+!       Changes from interpolate_variables7: for scribed nc outputs
 !										
 !       Inputs: 
-!          (1) bg.gr3 (for more precise x,y): hgrid.gr3 from large-domain run;
 ! 	   (2) fg.gr3: hgrid.gr3 from small-domain run; boundary segments 
 !                      (specified in interpolate_variables.in) that need *3D.th 
 !                      may be lumped
@@ -20,31 +20,31 @@
 !                        and TEM_3D.th; =3: uv3D.th); rndays is the # of days needed;
 !              2nd line: total # of open bnd seg. (that need *3D.th in fg.gr3), list of segments IDs
 !              3rd line: idebug - more outputs for debug if idebug=1
-!          (6) combined nc outputs (schout*.nc) from large-domain run (must have elev or temp or salt or hvel depending on ifile)
+!          (6) scribed nc outputs from large-domain run (must have out2d*.nc and the 3D vars as requested)
 !       Outputs: 
 !          (1) *[23]D.th.nc, depending on the choice in interpolate_variables.in. The code will not complain if parent elements
 !              have dry nodes; make sure the entire open bnd won't become dry.
 !          (2) fort.11: fatal errors; fort.12: non-fatal errors.
 !
-! ifort -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.exe ../UtilLib/extract_mod.f90 \
-!../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 interpolate_variables7.f90 \
+! ifort -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables8.exe ../UtilLib/extract_mod2.f90 \
+!../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 interpolate_variables8.f90 \
 !-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
 !
       program interpolate
       use netcdf
-      use extract_mod
+      use extract_mod2
       use compute_zcor
       use pt_in_poly_test
 
 !      implicit real*8(a-h,o-z)
-      character(len=30) :: file63,varname(2),varname2
+      character(len=30) :: file62,file63,file64,varname(2),varname2
       character(len=12) :: it_char
       !bg arrays: whole grid
-      real,allocatable :: area(:),eta2(:),tnd(:,:),snd(:,:), &
+      real,allocatable :: dp(:),area(:),eta2(:),tnd(:,:),snd(:,:), &
      &ztot(:),sigma2(:),sigma_lcl(:,:),z(:,:),ze(:),x_fg(:),y_fg(:), &
      &dp_fg(:),ztot_fg(:),sigma_fg(:),sigma_lcl_fg(:,:),cs_fg(:)
-      integer,allocatable :: kbp(:),kbp_fg(:)
+      integer,allocatable :: kbp(:),kbp_fg(:),i34(:),elnode(:,:)
       !fg arrays: open bnd part only
       real,allocatable :: xfg(:),yfg(:),dpfg(:),zfg(:,:),etafg(:),ratmin(:), &
      &tfg(:,:),sfg(:,:),arco(:,:),outvar(:,:,:),outvar0(:,:,:)
@@ -52,11 +52,9 @@
       integer :: nwild(3),one_dim
       !long int for large files
 !      integer(kind=8) :: irec,long_rec
-      integer :: var1d_dims(1),var4d_dims(4) !dimids(100),idims(100), &
-!     &start_2d(2),start_3d(3),start_4d(4), &
-!     &var1d_dims(1),var4d_dims(4)
+      integer :: var1d_dims(1),var4d_dims(4),start_2d(2),start_3d(3),count_2d(2),count_3d(3)
       real*8 :: aa1(1)
-      real*8,allocatable :: timeout(:)
+      real*8,allocatable :: timeout(:),x(:),y(:)
 
       open(21,file='interpolate_variables.in',status='old')
       read(21,*)ifile,rndays
@@ -69,41 +67,44 @@
       close(21)
 
 !..   Read bg.gr3 for more precise x,y
-      open(14,file='bg.gr3',status='old')
-      read(14,*)
-      read(14,*)ne,np
-      allocate(x(np),y(np),dp(np),i34(ne),elnode(4,ne),kbp(np),kbp00(np),area(ne), &
-     &eta2(np),stat=istat)
-      if(istat/=0) stop 'Failed to alloc (1)'
-      do i=1,np
-        read(14,*)j,x(i),y(i),dp(i)
-      enddo !i
-      close(14)
+!      open(14,file='bg.gr3',status='old')
+!      read(14,*)
+!      read(14,*)ne,np
+!      allocate(x(np),y(np),dp(np),i34(ne),elnode(4,ne),kbp(np),area(ne), &
+!     &eta2(np),stat=istat)
+!      if(istat/=0) stop 'Failed to alloc (1)'
+!      do i=1,np
+!        read(14,*)j,x(i),y(i),dp(i)
+!      enddo !i
+!      close(14)
 
 !...  Read header 
       if(ifile==1) then
-        varname(1)=adjustl('elev')
+        varname(1)=adjustl('elevation')
         n_vars=1
       else if(ifile==2) then
-        varname(1)=adjustl('temp')
-        varname(2)=adjustl('salt')
+        varname(1)=adjustl('temperature')
+        varname(2)=adjustl('salinity')
         n_vars=2
       else if(ifile==3) then
-        varname(1)=adjustl('hvel')
-        n_vars=1
+        varname(1)=adjustl('horizontalVelX')
+        varname(2)=adjustl('horizontalVelY')
+        n_vars=2
       else 
         stop 'unknown ifile'
       endif
-      len_var=4
-!      step_nu=900
 
-!...  Header
-      call readheader(1) !'schout_1.nc')
-      !Returned vars: ne,np,ns,nrec,[x y dp kbp00](np),
-      !elnode,i34,nvrt,h0,dtout
+!...  Get basic info from out2d*.nc
+      !Returned vars: ne,np,ns,nrec,[x y dp](np),
+      !elnode,i34,nvrt,h0,dtout,kbp
+      call get_dims(1,np,ne,ns,nvrt,h0)
+      allocate(x(np),y(np),dp(np),i34(ne),elnode(4,ne),kbp(np),area(ne), &
+     &eta2(np),stat=istat)
+      if(istat/=0) stop 'Failed to alloc (1)'
+      call readheader(1,np,ne,ns,kbp,i34,elnode,nrec,x,y,dp,dtout)
 
-      print*, 'After header:',ne,np,nrec,i34(ne), &
-     &elnode(1:i34(ne),ne),nvrt,h0,x(np),y(np),dp(np),kbp00(np) !,start_time
+      print*, 'After header:',ne,np,ns,nvrt,nrec,i34(ne), &
+     &elnode(1:i34(ne),ne),h0,x(np),y(np),dp(np),dtout !,start_time
 
 !     Read in vgrid.in from bg grid
       allocate(timeout(nrec),ztot(nvrt),sigma2(nvrt),sigma_lcl(nvrt,np),z(np,nvrt), &
@@ -241,7 +242,7 @@
         !zcor
         do i=1,npfg
           if(dpfg(i)<=h0) then
-            write(11,*)'Small-domain run depth too small:',imap(i),h0
+            write(11,*)'Small-domain run depth too shallow:',imap(i),h0
             stop
           endif
 
@@ -409,49 +410,54 @@
 !      !time is double
 !      iret=nf90_inq_varid(ncid3,'time',itime_id)
 !      iret=nf90_get_var(ncid3,itime_id,timeout,(/1/),(/nrec/))
-      call get_timeout(iday,nrec,timeout)
       !write(98,*)'time=',timeout,trim(adjustl(file63))
+
+      write(it_char,'(i12)')iday
+      it_char=adjustl(it_char)
+      leng=len_trim(it_char)
+      file62='out2d_'//it_char(1:leng)//'.nc'
+      iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+      if(iret/=NoErr) stop 'failed to open out2d'
+      !time is double
+      iret=nf90_inq_varid(ncid4,'time',itime_id)
+      iret=nf90_get_var(ncid4,itime_id,timeout,(/1/),(/nrec/))
+      print*, 'time=',timeout !,trim(adjustl(file63))
+
+      !More nc files for 3D vars
+      if(ifile>1) then !TS or uv
+        varname2=adjustl(varname(1))
+        file63=trim(varname2)//'_'//it_char(1:leng)//'.nc'
+        varname2=adjustl(varname(2))
+        file64=trim(varname2)//'_'//it_char(1:leng)//'.nc'
+        iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid5)
+        if(iret/=NoErr) stop 'failed to open(1)'
+        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid6)
+        if(iret/=NoErr) stop 'failed to open(2)'
+      endif !ifile
 
       do it1=1,nrec
         !Get elev
-!        start_2d(1)=1; start_2d(2)=it1
-!        count_2d(1)=np; count_2d(2)=1
-!        iret=nf90_get_var(ncid3,ielev_id,eta2,start_2d,count_2d)
-        call get_elev(iday,it1,np,eta2)
+        iret=nf90_inq_varid(ncid4,'elevation',itmp)
+        if(iret/=NoErr) stop 'Failed to find elev'
+        start_2d(1)=1; start_2d(2)=it1
+        count_2d(1)=np; count_2d(2)=1
+        iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)
+        if(iret/=NoErr) stop 'Failed to fetch elev'
+        write(98,*)it1,eta2
 
         if(ifile>1) then !get 3D vars
           do ii=1,n_vars
-            if(ifile==2) then !TS
-              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar0,i23d,ivs,eta2)
-              outvar(ii,:,:)=outvar0(1,:,:)
-            else if(ifile==3) then !uv
-              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar,i23d,ivs,eta2)
-            endif !
-
-!            varname2=adjustl(varname(ii))
-!            iret=nf90_inq_varid(ncid3,varname2(1:len_var),ivarid1)
-!            if(iret/=nf90_NoErr) stop 'Var not found'
-!            iret=nf90_Inquire_Variable(ncid3,ivarid1,ndims=ndims,dimids=dimids)
-!            if(ndims>100) stop 'increase dimension of dimids & idims'
-!            do i=1,ndims
-!              iret=nf90_Inquire_Dimension(ncid3,dimids(i),len=idims(i))
-!            enddo !i
-!            if(idims(ndims-1)/=np) stop 'can only handle node-based'
-!            if(idims(ndims)/=nrec) stop 'last dim is not time'
-!
-!            iret=nf90_get_att(ncid3,ivarid1,'i23d',i23d)
-!            iret=nf90_get_att(ncid3,ivarid1,'ivs',ivs)
-!            !print*, 'i23d:',i23d,ivs,idims(1:ndims)
-!
-!            if(ifile==2) then !TS
-!              start_3d(1:2)=1; start_3d(3)=it1
-!              count_3d(2)=np; count_3d(1)=nvrt; count_3d(3)=1
-!              iret=nf90_get_var(ncid3,ivarid1,outvar(ii,:,:),start_3d,count_3d)
-!            else if(ifile==3) then !uv
-!              start_4d(1:3)=1; start_4d(4)=it1
-!              count_4d(3)=np; count_4d(2)=nvrt; count_4d(1)=2; count_4d(4)=1
-!              iret=nf90_get_var(ncid3,ivarid1,outvar(:,:,:),start_4d,count_4d)
-!            endif !ivs
+            if(ii==1) then
+              ncid0=ncid5
+            else
+              ncid0=ncid6
+            endif
+            start_3d(1:2)=1; start_3d(3)=it1
+            count_3d(1)=nvrt; count_3d(2)=np; count_3d(3)=1
+            iret=nf90_inq_varid(ncid0,trim(adjustl(varname(ii))),itmp)
+            if(iret/=NoErr) stop 'Failed to find var'
+            iret=nf90_get_var(ncid0,itmp,outvar(ii,:,1:np),start_3d,count_3d)
+            if(iret/=NoErr) stop 'Failed to fetch'
           enddo !ii
 
           !Available now: outvar(2,nvrt,np) (for ifile=2, 1:T; 2:S)
@@ -486,12 +492,10 @@
             aa1(1)=0
             iret=nf90_put_var(ncid,itimeout_id,aa1,(/irec_out/),(/1/))
             iret=nf90_put_var(ncid,ivarid,etafg(1:npfg),(/1,1,1,irec_out/),(/1,1,npfg,1/))
-!            write(16,rec=irec_out+1)0.,(etafg(i),i=1,npfg)
           endif
           irec_out=irec_out+1
           aa1(1)=timeout(it1)
           iret=nf90_put_var(ncid,itimeout_id,aa1,(/irec_out/),(/1/))
-!          write(16,rec=irec_out+1)time,(etafg(i),i=1,npfg)
           iret=nf90_put_var(ncid,ivarid,etafg(1:npfg),(/1,1,1,irec_out/),(/1,1,npfg,1/))
 
           e_max=max(e_max,maxval(etafg(1:npfg)))
@@ -627,7 +631,7 @@
             write(23,'(70000(1x,e16.8))')time,((tfg(i,k),k=1,nvrt_fg),i=1,npfg)
             write(24,'(70000(1x,e16.8))')time,((sfg(i,k),k=1,nvrt_fg),i=1,npfg)
           endif
-        endif !i23d
+        endif !ifile
 !        print*, 'finished writing time (days) = ',time/86400
       enddo !it1=1,nrec
       iret=nf90_close(ncid3)
