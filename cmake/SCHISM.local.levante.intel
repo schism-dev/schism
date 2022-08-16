@@ -1,5 +1,5 @@
 ###DKRZ Levante
-##Intel compilers (working for small to medium meshes)
+##Intel compilers (working now for all sizes of meshes)
 
 set (SCHISM_EXE_BASENAME pschism_LEVANTE_INTEL CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
