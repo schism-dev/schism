@@ -1,0 +1,23 @@
+NETCDF_Fortran_MODULE=netcdf-fortran/4.5.3-intel-oneapi-mpi-2021.5.0-intel-2021.5.0
+NETCDF_C_MODULE=netcdf-c/4.8.1-intel-oneapi-mpi-2021.5.0-intel-2021.5.0
+
+module purge
+module load python3
+module load git
+module load intel-oneapi-compilers/2022.0.1-gcc-11.2.0
+#module load intel-oneapi-mpi/2021.5.0-gcc-11.2.0
+module load intel-oneapi-mpi/2021.5.0-intel-2021.5.0
+module load ${NETCDF_C_MODULE}
+module load ${NETCDF_Fortran_MODULE}
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+
+#echo MPIF90=mpiifort
+#echo MPICC=mpiicc
+
+P=$(module show  ${NETCDF_C_MODULE}|awk  '/bin/{print $3}')
+export NetCDF_C_DIR=${P##}
+echo NetCDF_C_DIR=${NetCDF_C_DIR}
+
+P=$(module show ${NETCDF_Fortran_MODULE}|awk  '/bin/{print $3}')
+export NetCDF_FORTRAN_DIR=${P##}
+echo NetCDF_FORTRAN_DIR=${NetCDF_FORTRAN_DIR}
