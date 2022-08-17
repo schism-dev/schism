@@ -29,7 +29,7 @@
     module scribe_io
     !Limit global vars to those essentials for communication, as scribe ranks do
     !not have access to other vars read in from .nml etc
-    use schism_glbl, only : rkind,errmsg,natrm,max_ncoutvar
+    use schism_glbl, only : rkind,errmsg,natrm,max_ncoutvar,ics
     use schism_msgp, only : comm_schism,comm_scribe,nproc_schism,nproc_scribe,nscribes, &
   &myrank_scribe,myrank_schism,rtype,itype,parallel_abort
     use netcdf
@@ -895,6 +895,24 @@
         iret=nf90_put_att(ncid_schism_2d,ivarid,'face_node_connectivity',"SCHISM_hgrid_face_nodes")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
         
+        !> The UGRID conventions requires a crs for mapping data that needs to be 
+        ! projected (e.g. on UTM32). For simple lat_lon unprojected (ics=2), this can be automated:
+        !> @todo implement this for ics = 1
+        if (ics > 1) then 
+          iret=nf90_def_var(ncid_schism_2d,'crs',NF90_INT,time_dims,ivarid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+          iret=nf90_put_att(ncid_schism_2d,ivarid,'long_name',"Coordinate reference system (CRS) definition")
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+          iret=nf90_put_att(ncid_schism_2d,ivarid,'grid_mapping_name',"latitude_longitude")
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+          iret=nf90_put_att(ncid_schism_2d,ivarid,'longitude_of_prime_meridian',0.0)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+          iret=nf90_put_att(ncid_schism_2d,ivarid,'semi_major_axis',6378137.0)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+          iret=nf90_put_att(ncid_schism_2d,ivarid,'inverse_flattening',298.257223563)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+        endif
+
         time_dims(1)=node_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xnd')
@@ -1058,6 +1076,22 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
         iret=nf90_put_att(ncid_schism_3d,ivarid,'face_node_connectivity',"SCHISM_hgrid_face_nodes")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+
+        ! Coordinate reference system
+        if (ics > 1) then 
+          iret=nf90_def_var(ncid_schism_3d,'crs',NF90_INT,time_dims,ivarid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+          iret=nf90_put_att(ncid_schism_3d,ivarid,'long_name',"Coordinate reference system (CRS) definition")
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+          iret=nf90_put_att(ncid_schism_3d,ivarid,'grid_mapping_name',"latitude_longitude")
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+          iret=nf90_put_att(ncid_schism_3d,ivarid,'longitude_of_prime_meridian',0.0)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+          iret=nf90_put_att(ncid_schism_3d,ivarid,'semi_major_axis',6378137.0)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+          iret=nf90_put_att(ncid_schism_3d,ivarid,'inverse_flattening',298.257223563)
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: crs')
+        endif
 
 !        time_dims(1)=node_dim
 !        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
