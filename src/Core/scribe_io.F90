@@ -961,11 +961,11 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
         iret=nf90_put_att(ncid_schism_2d,ih_id2,'units','m')
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        call add_mesh_attributes(ncid_schism_2d,ih_id2,'node')
+        call add_mesh_attributes(ncid_schism_2d,ih_id2)
 
         iret=nf90_def_var(ncid_schism_2d,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: kbp')
-        call add_mesh_attributes(ncid_schism_2d,ikbp_id2,'node')
+        call add_mesh_attributes(ncid_schism_2d,ikbp_id2)
 
         !        time_dims(1)=nele_dim2
 !        iret=nf90_def_var(ncid_schism_2d,'element_vertices',NF90_INT,time_dims,i34_id2)
@@ -996,7 +996,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i),'node')
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
         do i=1,ncount_e
@@ -1005,7 +1005,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p),'edge')
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
         do i=1,ncount_s
@@ -1016,7 +1016,7 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'edge')
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
         iret=nf90_enddef(ncid_schism_2d)
@@ -1220,10 +1220,11 @@
 !!        iret=nf90_def_var(ncid_schism_3d,'element_vertices',NF90_INT,time_dims,i34_id)
 !!        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: i34')
 
-        var3d_dims(1)=nv_dim; var3d_dims(3)=time_dim
+        var3d_dims(1)=nv_dim
+        var3d_dims(3)=time_dim
         if(imode==1) then
           var3d_dims(2)=node_dim
-        else if(imode==2) then
+        elseif(imode==2) then
           var3d_dims(2)=nele_dim
         else !3
           var3d_dims(2)=nedge_dim
@@ -1233,6 +1234,7 @@
         iret=nf90_put_att(ncid_schism_3d,ivar_id,'i23d',i23d) !set i23d flag
         iret=nf90_put_att(ncid_schism_3d,ivar_id,'missing_value',NF90_FILL_FLOAT) 
         !iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
+        call add_mesh_attributes(ncid_schism_3d, ivar_id)
         iret=nf90_enddef(ncid_schism_3d)
 
 !        !Write static info (x,y...)
@@ -1330,22 +1332,34 @@
 
       end subroutine scribe_finalize
 
-      subroutine add_mesh_attributes(ncid, varid, location)
+      subroutine add_mesh_attributes(ncid, varid)
 
         implicit none
         integer, intent(inout) :: ncid, varid
-        character(len=4), intent(in) :: location
 
-        integer :: iret
-        character(len=39) :: coordinates
-        character(len=255)  :: varname
+        integer :: iret, ndims, i
+        character(len=4)     :: location
+        character(len=39)    :: coordinates
+        character(len=255)   :: varname, dimname
+        integer, allocatable :: dimids(:)
 
+        iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
+
+        allocate(dimids(ndims))
+        iret = nf90_inquire_variable(ncid, varid, dimids=dimids)
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
+        do i = 1, ndims
+          iret = nf90_inquire_dimension(ncid, dimids(i), name=dimname)
+          if (trim(dimname) == 'nSCHISM_hgrid_node') location = 'node'
+          if (trim(dimname) == 'nSCHISM_hgrid_face') location = 'face'
+          if (trim(dimname) == 'nSCHISM_hgrid_edge') location = 'edge'
+        enddo
+        deallocate(dimids)
         write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
           'SCHISM_hgrid_', location, '_y'
-        iret = nf90_inquire_variable(ncid, varid, name=varname)
-        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: get_varname')
-        write(varname, '(A,A)') 'add_mesh_attributes: ', trim(varname)
 
+        write(varname, '(A,A)') 'add_mesh_attributes: ', trim(varname)
         iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname)
         iret=nf90_put_att(ncid,varid,'location',trim(location))
@@ -1354,6 +1368,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort(varname)
         iret=nf90_put_att(ncid,varid,'mesh','SCHISM_hgrid')
         if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        ! todo add xtype-dependent fill value
+        !iret=nf90_put_att(ncid,varid,'_FillValue',NF90_FILL_FLOAT)
+        !if(iret.ne.NF90_NOERR) call parallel_abort(varname)
 
       end subroutine add_mesh_attributes
 
