@@ -838,7 +838,7 @@
       real(4), intent(in) :: var2dnode_gb2(np_gb,ncount_p),var2delem_gb2(ne_gb,ncount_e),var2dside_gb2(ns_gb,ncount_s)
       character(len=20), intent(in) :: vname(ncount_p+ncount_e+ncount_s)
 
-      integer :: irec,iret,i,j,k,ih0_id2,ikbp_id2
+      integer :: irec,iret,i,j,k,ih0_id2,ikbp_id2, ivarid
       character(len=140) :: fname
       character(len=12) :: ifile_char
       real(rkind) :: a1d(1)
@@ -858,18 +858,43 @@
         iret=nf90_def_dim(ncid_schism_2d,'two',2,two_dim2)
         iret=nf90_def_dim(ncid_schism_2d,'time', NF90_UNLIMITED,time_dim2)
 
+        ! Write the coordinate axis for the time dimension
         time_dims(1)=time_dim2
         iret=nf90_def_var(ncid_schism_2d,'time',NF90_DOUBLE,time_dims,itime_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: time dim')
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'i23d',0) !set i23d flag
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'base_date',start_time) 
-        iret=nf90_put_att(ncid_schism_2d,itime_id2,'units',isotimestring) 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'units',trim(isotimestring)) 
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'standard_name','time') 
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'axis','T') 
 
+        ! Metadata that is dimensionless (dimension "one") should come here
         time_dims(1)=one_dim2
         iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
+
+        ! The CF convention requires for unstructured data a dimensionless 
+        ! field with the cf_role "mesh_topology", with pointers to the node/face/edge information
+        iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid',NF90_INT,time_dims,ivarid)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'long_name',"Topology data of 2d unstructured mesh")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'topology_dimension',2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'cf_role',"mesh_topology")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'node_coordinatesf_role',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        !> @todo the following should be enabled once we actually write the coordinates
+        !iret=nf90_put_att(ncid_schism_2d,ivarid,'edge_coordinates',"SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y_topology")
+        !if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        !iret=nf90_put_att(ncid_schism_2d,ivarid,'face_coordinates',"SCHISM_hgrid_face_x SCHISM_hgrid_face_y")
+        !if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'edge_node_connectivity',"SCHISM_hgrid_edge_nodes")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'face_node_connectivity',"SCHISM_hgrid_face_nodes")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
+        
         time_dims(1)=node_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xnd')
@@ -971,7 +996,7 @@
       real(4), intent(in) :: var3d_gb2(idim1,idim2)
       character(len=*), intent(in) :: vname
 
-      integer :: irec,iret
+      integer :: irec,iret, ivarid
       character(len=140) :: fname
       character(len=12) :: ifile_char
       real(rkind) :: a1d(1)
@@ -1008,9 +1033,30 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: time dim')
         iret=nf90_put_att(ncid_schism_3d,itime_id,'i23d',0) !set i23d flag
         iret=nf90_put_att(ncid_schism_3d,itime_id,'base_date',start_time) 
-        iret=nf90_put_att(ncid_schism_2d,itime_id2,'units',isotimestring) 
-        iret=nf90_put_att(ncid_schism_2d,itime_id2,'standard_name','time') 
-        iret=nf90_put_att(ncid_schism_2d,itime_id2,'axis','T') 
+        iret=nf90_put_att(ncid_schism_3d,itime_id2,'units',trim(isotimestring)) 
+        iret=nf90_put_att(ncid_schism_3d,itime_id2,'standard_name','time') 
+        iret=nf90_put_att(ncid_schism_3d,itime_id2,'axis','T') 
+
+        ! Mesh topology
+        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid',NF90_INT,time_dims,ivarid)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'long_name',"Topology data of 2d unstructured mesh")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'topology_dimension',2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'cf_role',"mesh_topology")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'node_coordinatesf_role',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        !> @todo the following should be enabled once we actually write the coordinates
+        !iret=nf90_put_att(ncid_schism_3d,ivarid,'edge_coordinates',"SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y_topology")
+        !if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        !iret=nf90_put_att(ncid_schism_3d,ivarid,'face_coordinates',"SCHISM_hgrid_face_x SCHISM_hgrid_face_y")
+        !if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'edge_node_connectivity',"SCHISM_hgrid_edge_nodes")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'face_node_connectivity',"SCHISM_hgrid_face_nodes")
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
 
 !        time_dims(1)=node_dim
 !        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
