@@ -8,7 +8,6 @@ if(USE_FABM)
   mark_as_advanced(CLEAR FABM_BASE)
   if(FABM_BASE)
     # Build FABM from source by including its CMakeLists.txt directory.
-    set(FABM_HOST schism)
     set(FABM_FORCED_HOST schism)
     add_subdirectory(${FABM_BASE}/src fabm_src)
     set(FABM_LIBRARIES fabm)
