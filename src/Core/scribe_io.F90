@@ -56,6 +56,7 @@
     integer, save :: iout_23d(max_ncoutvar)
     character(len=1000),save :: out_dir
     character(len=48),save :: start_time
+    character(len=48), save :: isotimestring
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:),ivar_id2(:),iof_gen(:),iof_age(:),iof_sed(:),iof_eco(:), &
@@ -160,8 +161,16 @@
       call mpi_recv(start_hour,1,rtype,0,139,comm_schism,rrqst,ierr)
       call mpi_recv(utc_start,1,rtype,0,140,comm_schism,rrqst,ierr)
 
-      !Write start time into a string for later write      
+      !Write start time into a string for later write 
+      !> @todo fix fractional start_hour and utc_start      
       write(start_time,'(i5,2(1x,i2),2(1x,f10.2))')start_year,start_month,start_day,start_hour,utc_start
+      write(isotimestring,'(A,I4.4,A,I2.2,A,I2.2,A,I2.2,A)') 'seconds since ', start_year, '-', start_month, &
+        '-', start_day, 'T', int(start_hour), ':00:00'
+      if (utc_start < 0) then 
+        write(isotimestring,'(A,I3.2)') trim(isotimestring),int(utc_start)
+      else
+        write(isotimestring,'(A,A,I2.2)') trim(isotimestring),'+', int(utc_start)
+      endif
 
       iths0=iths !save to global var
    
@@ -854,6 +863,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: time dim')
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'i23d',0) !set i23d flag
         iret=nf90_put_att(ncid_schism_2d,itime_id2,'base_date',start_time) 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'units',isotimestring) 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'standard_name','time') 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'axis','T') 
 
         time_dims(1)=one_dim2
         iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
@@ -996,6 +1008,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: time dim')
         iret=nf90_put_att(ncid_schism_3d,itime_id,'i23d',0) !set i23d flag
         iret=nf90_put_att(ncid_schism_3d,itime_id,'base_date',start_time) 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'units',isotimestring) 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'standard_name','time') 
+        iret=nf90_put_att(ncid_schism_2d,itime_id2,'axis','T') 
 
 !        time_dims(1)=node_dim
 !        iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid_node_x',NF90_DOUBLE,time_dims,ix_id)
