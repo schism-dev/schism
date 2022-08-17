@@ -1038,6 +1038,7 @@
         iret=nf90_put_att(ncid_schism_3d,itime_id2,'axis','T') 
 
         ! Mesh topology
+        time_dims(1)=one_dim
         iret=nf90_def_var(ncid_schism_3d,'SCHISM_hgrid',NF90_INT,time_dims,ivarid)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
         iret=nf90_put_att(ncid_schism_3d,ivarid,'long_name',"Topology data of 2d unstructured mesh")
