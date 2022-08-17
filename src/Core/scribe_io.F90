@@ -898,10 +898,10 @@
         !> The UGRID conventions requires a crs for mapping data that needs to be 
         ! projected (e.g. on UTM32). For simple lat_lon unprojected (ics=2), this can be automated:
         !> @todo implement this for ics = 1
+        iret=nf90_def_var(ncid_schism_2d,'crs',NF90_INT,time_dims,ivarid)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'long_name',"Coordinate reference system (CRS) definition")
         if (ics > 1) then 
-          iret=nf90_def_var(ncid_schism_2d,'crs',NF90_INT,time_dims,ivarid)
-          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
-          iret=nf90_put_att(ncid_schism_2d,ivarid,'long_name',"Coordinate reference system (CRS) definition")
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
           iret=nf90_put_att(ncid_schism_2d,ivarid,'grid_mapping_name',"latitude_longitude")
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: crs')
@@ -959,27 +959,24 @@
         !> @todo add standard_name
         iret=nf90_def_var(ncid_schism_2d,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        iret=nf90_put_att(ncid_schism_2d,ih_id2,'unit','m')
+        iret=nf90_put_att(ncid_schism_2d,ih_id2,'units','m')
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        iret=nf90_put_att(ncid_schism_2d,ih_id2,'coordinates','SCHISM_hgrid_node_x SCHISM_hgrid_node_y')
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        iret=nf90_put_att(ncid_schism_2d,ih_id2,'location','node')
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        iret=nf90_put_att(ncid_schism_2d,ih_id2,'grid_mapping','crs')
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
-        iret=nf90_put_att(ncid_schism_2d,ih_id2,'mesh','SCHISM_hgrid')
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
+        call add_mesh_attributes(ncid_schism_2d,ih_id2,'node')
 
         iret=nf90_def_var(ncid_schism_2d,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: kbp')
-
+        call add_mesh_attributes(ncid_schism_2d,ikbp_id2,'node')
 
         !        time_dims(1)=nele_dim2
 !        iret=nf90_def_var(ncid_schism_2d,'element_vertices',NF90_INT,time_dims,i34_id2)
 !        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: i34')
-        var2d_dims(1)=four_dim2; var2d_dims(2)=nele_dim2
+        var2d_dims(1)=four_dim2
+        var2d_dims(2)=nele_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_face_nodes',NF90_INT,var2d_dims,elnode_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
+
+
+        
         var2d_dims(1)=two_dim2; var2d_dims(2)=nedge_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_edge_nodes',NF90_INT,var2d_dims,iside_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
@@ -1267,6 +1264,33 @@
       implicit none
 
       end subroutine scribe_finalize
+
+      subroutine add_mesh_attributes(ncid, varid, location)
+
+        implicit none
+        integer, intent(inout) :: ncid, varid
+        character(len=4), intent(in) :: location
+
+        integer :: iret
+        character(len=39) :: coordinates
+        character(len=255)  :: varname
+
+        write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
+          'SCHISM_hgrid_', location, '_y'
+        iret = nf90_inquire_variable(ncid, varid, name=varname)
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: get_varname')
+        write(varname, '(A,A)') 'add_mesh_attributes: ', trim(varname)
+
+        iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        iret=nf90_put_att(ncid,varid,'location',trim(location))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        iret=nf90_put_att(ncid,varid,'grid_mapping','crs')
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        iret=nf90_put_att(ncid,varid,'mesh','SCHISM_hgrid')
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+
+      end subroutine add_mesh_attributes
 
 !===============================================================================
 ! END FILE I/O module
