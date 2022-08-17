@@ -34,7 +34,7 @@ CBP Module
      1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
      2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
      3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
-     4  PIP   :  Total Phosphate                            g/m^3
+     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
 SAV Module (no transport variables)
 VEG Module (no transport variables)
 SFM Module (no transport variables)
@@ -112,7 +112,7 @@ SFM Module (no transport variables)
   & d\text{RPOP}= -KP_1 \cdot \text{RPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_1 \cdot \text{PR}^m + FPM_1^m \cdot \text{MT}^m \right) \\
   & d\text{LPOP}= -KP_2 \cdot \text{LPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_2 \cdot \text{PR}^m + FPM_2^m \cdot \text{MT}^m \right) \\
   & d\text{DOP} = KP_1 \cdot \text{RPOP} + KP_2 \cdot \text{LPOP} -KP_3 \cdot \text{DOP}  + \sum_{m=1,3} p2c^m \cdot \left( FPP_3 \cdot \text{PR}^m + FPM_3^m \cdot \text{MT}^m \right) \\ 
-  & d\text{PO4} = KP_3 \cdot \text{PO4} + \sum_{m=1,3} p2c^m \cdot \left( FPP_4 \cdot \text{PR}^m + FPM_4^m \cdot \text{MT}^m - \text{GP}^m \right) \\
+  & d\text{PO4} = KP_3 \cdot \text{DOP} + \sum_{m=1,3} p2c^m \cdot \left( FPP_4 \cdot \text{PR}^m + FPM_4^m \cdot \text{MT}^m - \text{GP}^m \right) \\
 \end{flalign}
 
 <p style="color:red","bold"> 
@@ -129,7 +129,7 @@ SFM Module (no transport variables)
      & d\text{DOP} = KP_1 \cdot \text{RPOP} + KP_2 \cdot \text{LPOP} + KP_S \cdot \text{SRPOP} -KP_3 \cdot \text{DOP}  \\
      & + \sum_{m=1,3} p2c^m \cdot \left( FPP_3^m \cdot \text{PR}^m + FPM_3^m \cdot \text{MT}^m \right) 
   & \end{split} \\
-  & d\text{PO4} = KP_3 \cdot \text{PO4} + KP_P \cdot \text{PIP} + \sum_{m=1,3} p2c^m \cdot \left( FPP_4^m \cdot \text{PR}^m + FPM_4^m \cdot \text{MT}^m - \text{GP}^m \right) \\
+  & d\text{PO4} = KP_3 \cdot \text{DOP} + KP_P \cdot \text{PIP} + \sum_{m=1,3} p2c^m \cdot \left( FPP_4^m \cdot \text{PR}^m + FPM_4^m \cdot \text{MT}^m - \text{GP}^m \right) \\
   & d\text{SRPOP} = -KP_S \cdot \text{SRPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_5^m \cdot \text{PR}^m + FPM_5^m \cdot \text{MT}^m \right)\\
   & d\text{PIP} = -KP_P \cdot \text{PIP} \\
 \end{flalign}
