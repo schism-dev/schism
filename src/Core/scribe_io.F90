@@ -987,6 +987,7 @@
         iret=nf90_put_att(ncid_schism_2d,iside_id2,'_FillValue',-1)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
 
+        !> Deal with all the variables with time/node dimension
         do i=1,ncount_p
           var2d_dims(1)=node_dim2
           var2d_dims(2)=time_dim2
@@ -994,6 +995,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i),'node')
         enddo !i
 
         do i=1,ncount_e
@@ -1002,6 +1004,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p),'edge')
         enddo !i
 
         do i=1,ncount_s
@@ -1012,6 +1015,7 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'edge')
         enddo !i
 
         iret=nf90_enddef(ncid_schism_2d)
