@@ -974,15 +974,22 @@
         var2d_dims(2)=nele_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_face_nodes',NF90_INT,var2d_dims,elnode_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
+        iret=nf90_put_att(ncid_schism_2d,elnode_id2,'start_index','1')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
+        iret=nf90_put_att(ncid_schism_2d,elnode_id2,'_FillValue',-1)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
 
-
-        
         var2d_dims(1)=two_dim2; var2d_dims(2)=nedge_dim2
         iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_edge_nodes',NF90_INT,var2d_dims,iside_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
+        iret=nf90_put_att(ncid_schism_2d,iside_id2,'start_index','1')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
+        iret=nf90_put_att(ncid_schism_2d,iside_id2,'_FillValue',-1)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
 
         do i=1,ncount_p
-          var2d_dims(1)=node_dim2; var2d_dims(2)=time_dim2
+          var2d_dims(1)=node_dim2
+          var2d_dims(2)=time_dim2
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i))),NF90_FLOAT,var2d_dims,ivar_id2(i))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
