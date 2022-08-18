@@ -43,6 +43,11 @@
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!CBP Module
+!     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
+!     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
+!     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
+!     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
 !SAV Module (no transport variables)
 !VEG Module (no transport variables)
 !SFM Module (no transport variables)
@@ -80,14 +85,19 @@ Iopt   = 40.0  40.0  40.0  !optimal irradiance for PB growth (iLight=1)
 Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
 
 !-----------------------------------------------------------------------
-!net settling velocity (WS) into sediment
-!  iSettle=0: bottom-layer WS same as water column WS
-!  iSettle=1: assign bottom-layer WS from WSSEDn, WSPOMn,WSPBSn; todo: put this into core module
+!options of phytoplankton' predation term
 !-----------------------------------------------------------------------
-iSettle = 1
-WSSEDn  = 0.20              !net settling velocity of TSS (m.day-1)
-WSPOMn  = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
-WSPBSn  = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
+iPR = 1   !(0: linear formulation; 1: quadratic)
+
+!PRR = 0.215  0.215  0.01    !linear:  predation rate by higher trophic level (day-1)
+PRR = 0.1    0.1    0.02    !quadratic: predation rate by higher trophic level (day-1.g-1.m3)
+
+!-----------------------------------------------------------------------
+!settling velocity and net settling velocity of all ICM tracers (m.day-1)
+!-----------------------------------------------------------------------
+!name: (PB1,PB2,PB3)  (RPOC,LPOC,DOC) (RPON,LPON,DON,NH4,NO3)  (RPOP,LPOP,DOP,PO4)  (COD,DO) 
+WSP  = 0.35 0.10 0.0    1.0 1.0 0.0     1.0 1.0 0.0 0.0 0.0     1.0 1.0 0.0 1.0     0.0 0.0
+WSPn = 0.35 0.10 0.0    1.0 1.0 0.0     1.0 1.0 0.0 0.0 0.0     1.0 1.0 0.0 1.0     0.0 0.0
 
 !-----------------------------------------------------------------------
 !Silica model (0: OFF;  1: ON)
@@ -103,6 +113,11 @@ iZB = 0
 !PH model (0: OFF;  1: ON)
 !-----------------------------------------------------------------------
 iPh = 0
+
+!-----------------------------------------------------------------------
+!ChesBay Program Model (0: OFF;  1: ON)
+!-----------------------------------------------------------------------
+iCBP = 0
 
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation switch
@@ -153,6 +168,7 @@ idry_icm = 0
 &CORE
 !-----------------------------------------------------------------------
 !ICM parameters for water column; PB: phytoplankton
+!CBP module parameters are included: (SRPOC,SRPON,SRPOP,PIP)
 !-----------------------------------------------------------------------
 !phytoplankton growth
 GPM  = 3.0    3.0    2.5          !PB growth rates (day-1)
@@ -160,25 +176,20 @@ TGP  = 15.0   22.0   27.0         !optimal temp. for PB growth (oC)
 KTGP = 0.004  0.008  0.005    0.006  0.010  0.004  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
 !phytoplankton predation & metabolism
-PRR  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
+MTR  = 0.0    0.0    0.0          !PB photorespiration coefficient (0<MTR<1)
 MTB  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
 TMT  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
 KTMT = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
 
-!water column settling velocity and net settling velocity
-WSPBS  = 0.35  0.10  0.00         !settling velocity of (PB1,PB2,PB3) (m.day-1)
-WSPOM  = 1.00  1.00               !settling velocity of RPOM and LPOM (m.day-1)
-WSSED  = 1.00                     !settling velocity of TSS (m.day-1)
-
 !partition of phytoplankton biomass (predation)
-FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30 !fractions of PB carbon into (RPOC,LPOC,DOC); dim(PB=1:3,3)
-FNP  = 0.35  0.50  0.10  0.05     !fractions of PB nitrogen into (RPON,LPON,DON,NH4) 
-FPP  = 0.10  0.20  0.50  0.20     !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4)
+FCP  = 0.35 0.30 0.20  0.55 0.50 0.50  0.10 0.20 0.30  0.0  0.0  0.0 !fractions of PB carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,3)
+FNP  = 0.35 0.35 0.35  0.50 0.50 0.50  0.10 0.10 0.10  0.05 0.05 0.05  0.0 0.0 0.0  !fractions of PB nitrogen into (RPON,LPON,DON,NH4,SRPON) 
+FPP  = 0.10 0.10 0.10  0.20 0.20 0.20  0.50 0.50 0.50  0.20 0.20 0.20  0.0 0.0 0.0  !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4,SRPOP)
 
 !partition of metabolized phytoplankton biomass
-FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
-FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
-FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
+FCM  = 0.0 0.0 0.0   0.0 0.0 0.0   0.1 0.1 0.1   0.0 0.0 0.0 !fractions of PB metabolism carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,4)
+FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4,SRPON); dim(PB=1:3,5)
+FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4,SRPOP); dim(PB=1:3,5)
 
 !nitrification
 Nit    = 0.07                     !maximum nitrification rate (day-1)
@@ -191,7 +202,7 @@ KhNH4n = 1.0                      !NH4 half saturation for nitrification (mg/L)
 KhDOox  = 0.5                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
 KhNO3dn = 0.1                     !NO3 half saturation for denitrification (mg/L)
 
-!decay coefficients for organic matters (C,N,P)
+!decay coefficients for organic matters (C,N,P); CBP module: (KSR,TRSR,KTRSR,KPIP) 
 KC0   = 0.005  0.075  0.20        !minimum decay rate of RPOC,LPOC,DOC (day-1)
 KN0   = 0.005  0.075  0.015       !minimum decay rate of RPON,LPON,DON (day-1)
 KP0   = 0.005  0.075  0.010       !minimum decay rate of RPOP,LPOP,DOP (day-1)
@@ -200,6 +211,10 @@ KNalg = 0.0    0.0    0.0         !algae effect on RPON,LPON,DON decay (day-1.m3
 KPalg = 0.0    0.0    0.0         !algae effect on RPOP,LPOP,DOP decay (day-1.m3.g[C]-1)
 TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
 KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
+KSR0  = 0.001  0.001  0.001       !decay rates of SRPOC,SRPON,SRPOP (day-1)
+TRSR  = 20.0   20.0   20.0        !reference temp. for (SRPOC,SRPON,SRPOP) decay (oC)
+KTRSR = 0.069  0.069  0.069       !temp. dependence for (SRPOC,SRPON,SRPOP) decay (oC-1)
+KPIP  = 0.0                       !dissolution rate of PIP (day-1)
 
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
@@ -403,7 +418,6 @@ p2pr = 0.25                       !ratio converting ZB+PB biomass to predation r
 !PH model parameter
 !-----------------------------------------------------------------------
 inu_ph= 0                     !nudge option for pH model
-pWSCACO3 = 0.1                !settling velocity of pWSCACO3
 pKCACO3  = 60.0               !dissulution bewteen CaCO3 and Ca++
 pKCA     = 60.0               !sediment surface transfer coefficient from CaCO3 to Ca++
 pRea     = 1.0                !reaeration rate for CO2

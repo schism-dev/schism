@@ -27,17 +27,17 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iLimit,iSettle,iSed,iRad,isflux,ibflux
-  integer,save,target :: iSilica,iZB,iPh,isav_icm,iveg_icm,idry_icm
-  real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,WSSEDn,WSPOMn(2)
-  real(rkind),save,target,dimension(3) :: WSPBSn,alpha,Iopt,Hopt
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iRad,isflux,ibflux
+  integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
+  real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),WSP(29),WSPn(29)
+  real(rkind),save,target,dimension(3) :: alpha,Iopt,Hopt
   integer,save,pointer :: jdry,jsav,jveg,ised_icm
 
   integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26
-  integer,save,target :: ntrs_icm,itrs(2,7),nout_icm
+  integer,save,target :: ntrs_icm,itrs(2,8),nout_icm
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
-  integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP, &
-                & iLPOP,iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3
+  integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
+        & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
   character(len=6),save,allocatable :: name_icm(:)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
@@ -46,7 +46,7 @@ module icm_mod
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
-                                         & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3
+                              & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
   real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
   real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer,dimension(:) :: zdDOX 
@@ -54,12 +54,12 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target,dimension(3) :: GPM,TGP,PRR,MTB,TMT,KTMT,WSPBS
-  real(rkind),save,target :: KTGP(3,2),WSPOM(2),WSSED
-  real(rkind),save,target :: FCP(3,3),FNP(4),FPP(4),FCM(3),FNM(3,4),FPM(3,4)
+  real(rkind),save,target,dimension(3) :: GPM,TGP,MTB,TMT,KTMT,MTR
+  real(rkind),save,target :: KTGP(3,2)
+  real(rkind),save,target :: FCP(3,4),FNP(3,5),FPP(3,5),FCM(3,4),FNM(3,5),FPM(3,5)
   real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOn,KhNH4n,KhDOox,KhNO3dn
-  real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM
-  real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD
+  real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KSR0,TRSR,KTRSR
+  real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD,KPIP
   real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
   real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,dz_flux(2)
 
@@ -85,7 +85,7 @@ module icm_mod
   !pH parameters and variables
   !-------------------------------------------------------------------------------
   integer,save,target :: inu_ph
-  real(rkind),save,target :: pWSCACO3,pKCACO3,pKCA,pRea
+  real(rkind),save,target :: pKCACO3,pKCA,pRea
 
   integer, save :: irec_ph
   integer,save,allocatable :: iphgb(:)

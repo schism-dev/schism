@@ -30,7 +30,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
 
   !local variables
-  integer :: i,j,k,m,ierr
+  integer :: i,j,k,m,ierr,iPBS(3)
   real(rkind) :: stc,Kd,Kp,j1,j2,k1,k2,fd0,fd1,fd2,SA1,SA2,PO41,PO42
   real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON
   real(rkind) :: wRPOP,wLPOP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA,wPO4d,wPO4p,wSAd
@@ -54,20 +54,20 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   !------------------------------------------------------------------------
   !POM fluxes (g.m-2.day-1)
   !------------------------------------------------------------------------
-  FPOC=0.0; FPON=0.0; FPOP=0.0
+  FPOC=0.0; FPON=0.0; FPOP=0.0; iPBS=(/iPB1,iPB2,iPB3/)
   do m=1,3 !G3 class
     do i=1,3 !PBS contribution
-      FPOC(m)=FPOC(m)+bFCP(m,i)*WSPBSn(i)*wPBS(i)
-      FPON(m)=FPON(m)+bFNP(m,i)*WSPBSn(i)*wPBS(i)*n2c(i)
-      FPOP(m)=FPOP(m)+bFPP(m,i)*WSPBSn(i)*wPBS(i)*p2c(i)
+      FPOC(m)=FPOC(m)+bFCP(m,i)*WSPn(iPBS(i))*wPBS(i)
+      FPON(m)=FPON(m)+bFNP(m,i)*WSPn(iPBS(i))*wPBS(i)*n2c(i)
+      FPOP(m)=FPOP(m)+bFPP(m,i)*WSPn(iPBS(i))*wPBS(i)*p2c(i)
     enddo 
-    FPOC(m)=FPOC(m)+WSPOMn(1)*wRPOC*bFCM(m) !RPOM contribution
-    FPON(m)=FPON(m)+WSPOMn(1)*wRPON*bFNM(m)
-    FPOP(m)=FPOP(m)+WSPOMn(1)*wRPOP*bFPM(m)
+    FPOC(m)=FPOC(m)+WSPn(iRPOC)*wRPOC*bFCM(m) !RPOM contribution
+    FPON(m)=FPON(m)+WSPn(iRPON)*wRPON*bFNM(m)
+    FPOP(m)=FPOP(m)+WSPn(iRPOP)*wRPOP*bFPM(m)
   enddo !m
-  FPOC(1)=FPOC(1)+WSPOMn(2)*wLPOC !LPOM contribution
-  FPON(1)=FPON(1)+WSPOMn(2)*wLPON
-  FPOP(1)=FPOP(1)+WSPOMn(2)*wLPOP
+  FPOC(1)=FPOC(1)+WSPn(iLPOC)*wLPOC !LPOM contribution
+  FPON(1)=FPON(1)+WSPn(iLPON)*wLPON
+  FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
 
   !------------------------------------------------------------------------
   !SAV and VEG effects
@@ -174,8 +174,8 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   !------------------------------------------------------------------
   if(iSilica==1) then
     wSU=SU(kb+1); wSA=SA(kb+1); wSAd=wSA/(1.0+KSAp*wTSS)!bottom water conc.
-    FPOS=WSPBSn(1)*wSU+WSSEDn*wSAd                      !depositional flux due to SU/SA 
-    do j=1,3; FPOS=FPOS+s2c(j)*WSPBSn(j)*wPBS(j); enddo !depositional flux due to algae
+    FPOS=WSPn(iSU)*wSU+WSPn(iSA)*wSAd                       !depositional flux due to SU/SA 
+    do j=1,3; FPOS=FPOS+s2c(j)*WSPn(iPBS(j))*wPBS(j); enddo !depositional flux due to algae
 
     !POS(SU) and SA in sediment
     rKTS=bKS*bKTS**(btemp(id)-bTR)*bPOS(id)/(bPOS(id)+bKhPOS)    !decay rate of POS
@@ -197,7 +197,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
     fd1=1.0/(1.0+bpiePO4*bKOPO4s**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
   endif
   fd2=1.0/(1.0+bpiePO4*bsolid(2))
-  j1=0.0;  j2=XJP+WSSEDn*wPO4p
+  j1=0.0;  j2=XJP+WSPn(iPO4)*wPO4p
   k1=0.0;  k2=0.0  !no reactions 
   call sfm_eq(2,PO41,PO42,wPO4d,bPO4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
   JPO4(id)=stc*(fd1*PO41-wPO4d);  bPO4(id)=PO42
@@ -212,8 +212,8 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
 
     !compute depostion fraction: E/(k+W)
     edfrac=dfrac
-    if(dfrac(1)<0.d0) edfrac(1)=erate/(WSPOM(1)*dWS_POC(1)/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
-    if(dfrac(2)<0.d0) edfrac(2)=erate/(WSPOM(2)*dWS_POC(2)/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
+    if(dfrac(1)<0.d0) edfrac(1)=erate/(WSP(iRPOC)*dWS_POC(1)/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
+    if(dfrac(2)<0.d0) edfrac(2)=erate/(WSP(iLPOC)*dWS_POC(2)/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
 
     !compute erosion flux
     eH2S(id) =bH2S(id)*erate*ediso/(1.+bsolid(1)*bpieH2Ss)/2.0 !todo: 2.0 (S to O2) unnecessary 
