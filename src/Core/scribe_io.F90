@@ -883,7 +883,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
         iret=nf90_put_att(ncid_schism_2d,ivarid,'cf_role',"mesh_topology")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
-        iret=nf90_put_att(ncid_schism_2d,ivarid,'node_coordinatesf_role',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'node_coordinates',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: SCHISM_hgrid')
         !> @todo the following should be enabled once we actually write the coordinates
         !iret=nf90_put_att(ncid_schism_2d,ivarid,'edge_coordinates',"SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y_topology")
@@ -978,6 +978,8 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
         iret=nf90_put_att(ncid_schism_2d,elnode_id2,'_FillValue',-1)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
+        iret=nf90_put_att(ncid_schism_2d,elnode_id2,'cf_role','face_node_connectivity')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: elnode')
 
         var2d_dims(1)=two_dim2
         var2d_dims(2)=nedge_dim2
@@ -986,6 +988,8 @@
         iret=nf90_put_att(ncid_schism_2d,iside_id2,'start_index',1)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
         iret=nf90_put_att(ncid_schism_2d,iside_id2,'_FillValue',-1)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
+        iret=nf90_put_att(ncid_schism_2d,iside_id2,'cf_role','edge_node_connectivity')
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: iside')
 
         !> Deal with all the variables with time/node dimension
@@ -1125,7 +1129,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
         iret=nf90_put_att(ncid_schism_3d,ivarid,'cf_role',"mesh_topology")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
-        iret=nf90_put_att(ncid_schism_3d,ivarid,'node_coordinatesf_role',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
+        iret=nf90_put_att(ncid_schism_3d,ivarid,'node_coordinates',"SCHISM_hgrid_node_x SCHISM_hgrid_node_y")
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: SCHISM_hgrid')
         !> @todo the following should be enabled once we actually write the coordinates
         !iret=nf90_put_att(ncid_schism_3d,ivarid,'edge_coordinates',"SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y_topology")
