@@ -944,6 +944,12 @@
 !  iof_icm_ph(3) = 0 !CA
 !  iof_icm_ph(4) = 0 !CACO3
 !
+!  !CBP model
+!  iof_icm_cbp(1) = 0 !SRPOC
+!  iof_icm_cbp(2) = 0 !SRPON
+!  iof_icm_cbp(3) = 0 !SRPOP
+!  iof_icm_cbp(4) = 0 !PIP
+!
 !  !SAV model
 !  iof_icm_sav(1) = 0 !sleaf:  leaf biomass @elem [gC/m^3]
 !  iof_icm_sav(2) = 0 !sstem:  stem biomass @elem [gC/m^3]
