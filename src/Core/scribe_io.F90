@@ -39,6 +39,7 @@
 
     integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
     &one_dim,two_dim,time_dim,itime_id,ivar_id,elnode_id, iside_id, i34_id,ix_id,iy_id,ih_id 
+    integer, save:: ixel_id2, iyel_id2, ixsd_id2, iysd_id2
     integer,save :: node_dim2,nele_dim2,nedge_dim2,four_dim2,nv_dim2, &
     &one_dim2,two_dim2,time_dim2,itime_id2,elnode_id2,iside_id2,i34_id2,ix_id2,iy_id2,ih_id2
     integer,save :: time_dims(1),var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
@@ -216,7 +217,7 @@
       allocate(iplg(np_max,nproc_schism),ielg(ne_max,nproc_schism),islg(ns_max,nproc_schism))
       allocate(iwork(max(np_max,ne_max)),iwork2(4,ne_max),iwork3(2,ns_max),work(np_max),xnd(np_global), &
      &ynd(np_global),dp(np_global),kbp00(np_global),i34(ne_global),elnode(4,ne_global),isidenode(2,ns_global))
-      allocate(xsd(ns_global),ysd(ns_global),xel(ns_global),yel(ne_global))
+      allocate(xsd(ns_global),ysd(ns_global),xel(ne_global),yel(ne_global))
       elnode=-1 !init
       if(myrank_schism==nproc_schism-1) then
         !Mapping index arrays first. Do not combine multiple into same loop
@@ -945,8 +946,8 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ynd')
         !  iret=nf90_put_att(ncid_schism_2d,iy_id2,'units','m')
         !  iret=nf90_put_att(ncid_schism_2d,iy_id2,'standard_name','projection_y_coordinate')
-        
-        !> @todo add standard_name
+ 
+         !> @todo add standard_name
         iret=nf90_def_var(ncid_schism_2d,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
         iret=nf90_put_att(ncid_schism_2d,ih_id2,'units','m')
@@ -960,6 +961,71 @@
         iret=nf90_def_var(ncid_schism_2d,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: kbp')
         call add_mesh_attributes(ncid_schism_2d,ikbp_id2)
+
+        ! Switch dimension to elements
+        time_dims(1)=nele_dim2
+        iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_face_x',NF90_DOUBLE,time_dims,ixel_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        iret=nf90_put_att(ncid_schism_2d,ixel_id2,'axis','X')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        iret=nf90_put_att(ncid_schism_2d,ixel_id2,'location','face')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        iret=nf90_put_att(ncid_schism_2d,ixel_id2,'mesh','SCHISM_hgrid')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        iret=nf90_put_att(ncid_schism_2d,ixel_id2,'units','degree_E')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        iret=nf90_put_att(ncid_schism_2d,ixel_id2,'standard_name','longitude')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xel')
+        !  iret=nf90_put_att(ncid_schism_2d,ixel_id2,'units','m')
+        !  iret=nf90_put_att(ncid_schism_2d,ixel_id2,'standard_name','projection_x_coordinate')
+ 
+        iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_face_y',NF90_DOUBLE,time_dims,iyel_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        iret=nf90_put_att(ncid_schism_2d,iyel_id2,'axis','Y')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        iret=nf90_put_att(ncid_schism_2d,iyel_id2,'location','face')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        iret=nf90_put_att(ncid_schism_2d,iyel_id2,'mesh','SCHISM_hgrid')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        iret=nf90_put_att(ncid_schism_2d,iyel_id2,'units','degree_N')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        iret=nf90_put_att(ncid_schism_2d,iyel_id2,'standard_name','latitude')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: yel')
+        !  iret=nf90_put_att(ncid_schism_2d,iyel_id2,'units','m')
+        !  iret=nf90_put_att(ncid_schism_2d,iyel_id2,'standard_name','projection_y_coordinate')
+
+        ! Switch dimension to elements
+        time_dims(1)=nedge_dim2
+        iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_edge_x',NF90_DOUBLE,time_dims,ixsd_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'axis','X')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'location','edge')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'mesh','SCHISM_hgrid')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'units','degree_E')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'standard_name','longitude')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: xsd')
+        !  iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'units','m')
+        !  iret=nf90_put_att(ncid_schism_2d,ixsd_id2,'standard_name','projection_x_coordinate')
+ 
+        iret=nf90_def_var(ncid_schism_2d,'SCHISM_hgrid_edge_y',NF90_DOUBLE,time_dims,iysd_id2)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        iret=nf90_put_att(ncid_schism_2d,iysd_id2,'axis','Y')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        iret=nf90_put_att(ncid_schism_2d,iysd_id2,'location','edge')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        iret=nf90_put_att(ncid_schism_2d,iysd_id2,'mesh','SCHISM_hgrid')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        iret=nf90_put_att(ncid_schism_2d,iysd_id2,'units','degree_N')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        iret=nf90_put_att(ncid_schism_2d,iysd_id2,'standard_name','latitude')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: ysd')
+        !  iret=nf90_put_att(ncid_schism_2d,iysd_id2,'units','m')
+        !  iret=nf90_put_att(ncid_schism_2d,iysd_id2,'standard_name','projection_y_coordinate')
+
 
         !        time_dims(1)=nele_dim2
 !        iret=nf90_def_var(ncid_schism_2d,'element_vertices',NF90_INT,time_dims,i34_id2)
@@ -1019,6 +1085,18 @@
 
         iret=nf90_enddef(ncid_schism_2d)
 
+        ! Calculate side centers as edge_x/y location
+        do i=1,ns_global
+          xsd(i) = xnd(isidenode(1,i)) + xnd(isidenode(2,i)) / 2.0
+          ysd(i) = ynd(isidenode(1,i)) + ynd(isidenode(2,i)) / 2.0
+        enddo
+
+       ! Calculate side centers as edge_x/y location
+        do i=1,ne_global
+          xel(i) = sum(xnd(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          yel(i) = sum(ynd(elnode(1:i34(i),i)))/real(i34(i),rkind)
+        enddo
+
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism_2d,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D:put  h0')
@@ -1026,6 +1104,14 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_x')
         iret=nf90_put_var(ncid_schism_2d,iy_id2,ynd,(/1/),(/np_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_y')
+        iret=nf90_put_var(ncid_schism_2d,ixel_id2,xel,(/1/),(/ne_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put face_x')
+        iret=nf90_put_var(ncid_schism_2d,iyel_id2,yel,(/1/),(/ne_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put face_y')
+        iret=nf90_put_var(ncid_schism_2d,ixsd_id2,xsd,(/1/),(/ns_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put edge_x')
+        iret=nf90_put_var(ncid_schism_2d,iysd_id2,ysd,(/1/),(/np_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put edge_y')
         iret=nf90_put_var(ncid_schism_2d,ih_id2,real(dp),(/1/),(/np_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put depth')
         iret=nf90_put_var(ncid_schism_2d,ikbp_id2,kbp00,(/1/),(/np_global/)) 
