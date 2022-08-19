@@ -61,7 +61,7 @@
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:),ivar_id2(:),iof_gen(:),iof_age(:),iof_sed(:),iof_eco(:), &
   &iof_dvd(:),isidenode(:,:),iof_icm(:),iof_icm_sav(:)
-    real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:)
+    real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:),xel(:),yel(:),xsd(:),ysd(:)
     real(4),save,allocatable :: var2dnode(:,:,:),var2dnode_gb(:,:),var2delem(:,:,:),var2delem_gb(:,:), &
   &var2dside(:,:,:),var2dside_gb(:,:),var3dnode(:,:,:),var3dnode_gb(:,:),var3dside(:,:,:),var3dside_gb(:,:), &
   &var3delem(:,:,:),var3delem_gb(:,:)
@@ -216,6 +216,7 @@
       allocate(iplg(np_max,nproc_schism),ielg(ne_max,nproc_schism),islg(ns_max,nproc_schism))
       allocate(iwork(max(np_max,ne_max)),iwork2(4,ne_max),iwork3(2,ns_max),work(np_max),xnd(np_global), &
      &ynd(np_global),dp(np_global),kbp00(np_global),i34(ne_global),elnode(4,ne_global),isidenode(2,ns_global))
+      allocate(xsd(ns_global),ysd(ns_global),xel(ns_global),yel(ne_global))
       elnode=-1 !init
       if(myrank_schism==nproc_schism-1) then
         !Mapping index arrays first. Do not combine multiple into same loop
@@ -1021,10 +1022,12 @@
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism_2d,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D:put  h0')
+        iret=nf90_put_var(ncid_schism_2d,ix_id2,xnd,(/1/),(/np_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_x')
         iret=nf90_put_var(ncid_schism_2d,iy_id2,ynd,(/1/),(/np_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_y')
         iret=nf90_put_var(ncid_schism_2d,ih_id2,real(dp),(/1/),(/np_global/)) 
-        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_x')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put depth')
         iret=nf90_put_var(ncid_schism_2d,ikbp_id2,kbp00,(/1/),(/np_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put bottom_index')
         !iret=nf90_put_var(ncid_schism_2d,i34_id2,i34,(/1/),(/ne_global/)) 
@@ -1227,7 +1230,7 @@
         call add_mesh_attributes(ncid_schism_3d, ivar_id)
         iret=nf90_enddef(ncid_schism_3d)
 
-!        !Write static info (x,y...)
+!        !Write static info (x,y...), but this is contained already in 2D file
 !        iret=nf90_put_var(ncid_schism_3d,ix_id,xnd,(/1/),(/np_global/)) 
 !        iret=nf90_put_var(ncid_schism_3d,iy_id,ynd,(/1/),(/np_global/)) 
 !        iret=nf90_put_var(ncid_schism_3d,ih_id,real(dp),(/1/),(/np_global/)) 
