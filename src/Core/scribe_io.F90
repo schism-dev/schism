@@ -870,7 +870,9 @@
 
         ! Metadata that is dimensionless (dimension "one") should come here
         time_dims(1)=one_dim2
-        iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
+        iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ivarid)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
+        iret=nf90_put_att(ncid_schism_2d,ivarid,'units','m')         
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
 
         ! The CF convention requires for unstructured data a dimensionless 
@@ -947,6 +949,10 @@
         iret=nf90_def_var(ncid_schism_2d,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
         iret=nf90_put_att(ncid_schism_2d,ih_id2,'units','m')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
+        iret=nf90_put_att(ncid_schism_2d,ih_id2,'axis','Z')
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
+        iret=nf90_put_att(ncid_schism_2d,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: dp')
         call add_mesh_attributes(ncid_schism_2d,ih_id2)
 
