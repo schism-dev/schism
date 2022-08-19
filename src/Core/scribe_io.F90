@@ -870,9 +870,9 @@
 
         ! Metadata that is dimensionless (dimension "one") should come here
         time_dims(1)=one_dim2
-        iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ivarid)
+        iret=nf90_def_var(ncid_schism_2d,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
-        iret=nf90_put_att(ncid_schism_2d,ivarid,'units','m')         
+        iret=nf90_put_att(ncid_schism_2d,ih0_id2,'units','m')         
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: h0')
 
         ! The CF convention requires for unstructured data a dimensionless 
@@ -1020,13 +1020,19 @@
 
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism_2d,ih0_id2,h0)
-        iret=nf90_put_var(ncid_schism_2d,ix_id2,xnd,(/1/),(/np_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D:put  h0')
         iret=nf90_put_var(ncid_schism_2d,iy_id2,ynd,(/1/),(/np_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_y')
         iret=nf90_put_var(ncid_schism_2d,ih_id2,real(dp),(/1/),(/np_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put node_x')
         iret=nf90_put_var(ncid_schism_2d,ikbp_id2,kbp00,(/1/),(/np_global/)) 
-!        iret=nf90_put_var(ncid_schism_2d,i34_id2,i34,(/1/),(/ne_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put bottom_index')
+        !iret=nf90_put_var(ncid_schism_2d,i34_id2,i34,(/1/),(/ne_global/)) 
+        !if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: i34')
         iret=nf90_put_var(ncid_schism_2d,elnode_id2,elnode,(/1,1/),(/4,ne_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put elnode')
         iret=nf90_put_var(ncid_schism_2d,iside_id2,isidenode,(/1,1/),(/2,ns_global/)) 
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put sidenode')
       endif !mod(it-
 
       !Output
