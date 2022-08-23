@@ -9673,7 +9673,7 @@
 
 !          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
 !     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!        endif
+        endif !iof_ana
       enddo !i
 #endif /*USE_ANALYSIS*/
 
