@@ -83,7 +83,7 @@ module schism_glbl
   integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
   !Parameters from param.nml
-  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
+  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
