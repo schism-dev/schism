@@ -587,7 +587,8 @@
 #endif
      &                       nws ) 
 
-!$OMP parallel do default(shared) private(i)
+!$OMP parallel default(shared) private(i,j)
+!$OMP       do
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
@@ -605,8 +606,28 @@
                 !fluxprc is net P-E 
 !              endif
 #endif
-            enddo
-!$OMP end parallel do
+            enddo !i
+!$OMP       end do
+
+            !Turn off precip near land bnd
+            if(iprecip_off_bnd/=0) then
+!$OMP         do
+              loop_prc: do i=1,np
+                if(isbnd(1,i)==-1) then
+                  fluxprc(i)=0.d0; cycle loop_prc
+                endif
+
+                do j=1,nnp(i)
+                  if(isbnd(1,indnd(j,i))==-1) then
+                    fluxprc(i)=0.d0; cycle loop_prc
+                  endif
+                enddo !j
+              end do loop_prc !i=1,np
+!$OMP         end do
+!$OMP end parallel
+              call exchange_p2d(fluxprc)
+            endif !iprecip_off_bnd
+
             if(myrank==0) write(16,*)'heat budge model completes...'
           endif !ihconsv.ne.0
 

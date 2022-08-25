@@ -23,7 +23,7 @@ set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
-set (IMPOSE_NET_FLUX  ON CACHE BOOLEAN "Specify net heat and salt fluxes in sflux")
+set (IMPOSE_NET_FLUX  OFF CACHE BOOLEAN "Specify net heat and salt fluxes in sflux")
 ##Older versions of GOTM (3.*) have issues with netcdf v4, so are not maintained
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")

@@ -553,6 +553,7 @@
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
   i_hmin_salt_ex = 2 ! no effect if isconsv=0 
   hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
+  iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.

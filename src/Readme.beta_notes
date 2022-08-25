@@ -8,8 +8,9 @@ This beta notes are divided into 5 part:
 (A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
-
-(25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
+(25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes 
+               near tropical islands etc);
+ed26f60 (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
 
 Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
 Tag v5.10.0: (13 July, 2022)
