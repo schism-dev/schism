@@ -1087,8 +1087,8 @@
 
         ! Calculate side centers as edge_x/y location
         do i=1,ns_global
-          xsd(i) = xnd(isidenode(1,i)) + xnd(isidenode(2,i)) / 2.0
-          ysd(i) = ynd(isidenode(1,i)) + ynd(isidenode(2,i)) / 2.0
+          xsd(i) = sum(xnd(isidenode(1:2,i))) / 2.0
+          ysd(i) = sum(ynd(isidenode(1:2,i))) / 2.0
         enddo
 
        ! Calculate side centers as edge_x/y location
