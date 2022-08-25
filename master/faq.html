@@ -1185,7 +1185,16 @@
 </details>
 <details class="faq">
 <summary>Run crashed with a fatal.error error message "QUICKSEARCH: no intersecting edge...."</summary>
-<p>First you need to viz the results before the crash (e.g. surface velocity) to see if anything is outrageously wrong. If the results look reasonable, contact the developers for more info.</p>
+<p>First you need to viz the results before the crash (e.g. surface velocity) to see if anything is 
+outrageously wrong. Often times, errors such as this, related to the backtracking, come from
+other errors (e.g. NaN in inputs). 
+Very rarely, the error originates from the underflow issue in the backtracking/ELM (and the results otherwise 
+look reasonable). In the backtracking step, the code assumes that the path intersects sides of elements at 1 unique
+point that does not coincide with any node. Obviously this causes problem especially in some academic cases (e.g.
+the velocity aligns perfectly with grid line). To avoid this issue, the code nudges the starting position
+of backtracking (with parameter <code>btrack_nudge</code>) toward the starting element's centroid. Occasionally, this is still
+insufficient when the velocity is large on very fine meshes. One way out of this is to reduce <code>dtb_max</code> and <code>dtb_min</code>
+to get more accurate trajectory.</p>
 </details>
 <details class="faq">
 <summary>Run crashed with a fatal.error error message "bktrk_subs: overflow..." or "MAIN: nbtrk &gt; mxnbt"</summary>
