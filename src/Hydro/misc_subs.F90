@@ -561,14 +561,14 @@
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
           j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
-          if(j/=NF90_NOERR) call parallel_abort('MISC: <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: '//tr_mname(i)//'_3D.th.nc')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
-          if(itmp/=nnode_tr2(i)) call parallel_abort('MISC: # of open nodes in <tr>_3D.th')
+          if(itmp/=nnode_tr2(i)) call parallel_abort('MISC: # of open nodes in '//tr_mname(i)//'_3D.th.nc')
           j=nf90_inq_varid(ncid_tr3D(i), "time_step",mm)
-          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in '//tr_mname(i)//'_3D.th')
           j=nf90_get_var(ncid_tr3D(i),mm,floatout);
-          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in <tr>_3D.th (2)')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: nc dt in '//tr_mname(i)//'_3D.th (2)')
           if(floatout<dt) call parallel_abort('MISC: tr3D.th dt wrong')
           if(icount==1) then
             th_dt2(5)=floatout
@@ -582,16 +582,16 @@
           th_time2(2,5)=th_time2(1,5)+th_dt2(5)
 
           j=nf90_inq_varid(ncid_tr3D(i), "time_series",mm)
-          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in '//tr_mname(i)//'_3D.th')
           itmp=irange_tr(2,i)-irange_tr(1,i)+1
           j=nf90_get_var(ncid_tr3D(i),mm, &
      &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),1,5), &
      &(/1,1,1,ninv+1/),(/itmp,nvrt,nnode_tr2(i),1/))
-          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th(1)')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in '//tr_mname(i)//'_3D.th(1)')
           j=nf90_get_var(ncid_tr3D(i),mm, &
      &ath2(irange_tr(1,i):irange_tr(2,i),1:nvrt,1:nnode_tr2(i),2,5), &
      &(/1,1,1,ninv+2/),(/itmp,nvrt,nnode_tr2(i),1/))
-          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in <tr>_3D.th (2)')
+          if(j/=NF90_NOERR) call parallel_abort('MISC: time_series in '//tr_mname(i)//'_3D.th (2)')
 !'
         endif !ntrs
       enddo !i=1,natrm
