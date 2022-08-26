@@ -172,11 +172,11 @@ A quick reference of the [Markdown syntax](https://www.markdownguide.org/cheat-s
 
 #Cross-referencing
 Most equations, figures and papers in this document are labeled, so these can be referenced in another place in the
- same or different .md files. The general syntax is [] followed by (#<label>). Some examples are: 
+ same or different .md files. The general syntax is [ ] followed by (#<label>). Some examples are: 
 
 ```
- [Zhang et al. 2016](#zhang2016)   (#zhang2016 in same .md)
- (Figure [5ab](./barotropic-solver.md#figure05))   (refer to figure05 inside barotropic-solver.md in the same dir)
+ [Zhang et al. 2016](#zhang2016)   <--refers to #zhang2016 in same .md
+ (Figure [5ab](./barotropic-solver.md#figure05))   <-- refers to figure05 inside barotropic-solver.md in the same dir
 ```
 
 # More features
