@@ -7,9 +7,10 @@ Besides the following info, you may also search archived messages from the SCHIS
     First you need to viz the results before the crash (e.g. surface velocity) to see if anything is 
     outrageously wrong. Often times, errors such as this, related to the backtracking, come from
     other errors (e.g. NaN in inputs). 
+
     Very rarely, the error originates from the underflow issue in the backtracking/ELM (and the results otherwise 
     look reasonable). In the backtracking step, the code assumes that the path intersects sides of elements at 1 unique
-    point that does not coincide with any node. Obviously this causes problem especially in some academic cases (e.g.
+    point that does not coincide with any node (cf. Fig. [1](./schism/eulerian-lagrangian-method.md#figure01)). Obviously this causes problem especially in some academic cases (e.g.
     the velocity aligns perfectly with grid line). To avoid this issue, the code nudges the starting position
     of backtracking (with parameter `btrack_nudge`) toward the starting element's centroid. Occasionally, this is still
     insufficient when the velocity is large on very fine meshes. One way out of this is to reduce `dtb_max` and `dtb_min`
