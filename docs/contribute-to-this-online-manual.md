@@ -174,8 +174,10 @@ A quick reference of the [Markdown syntax](https://www.markdownguide.org/cheat-s
 Most equations, figures and papers in this document are labeled, so these can be referenced in another place in the
  same or different .md files. The general syntax is [] followed by (#<label>). Some examples are: 
 
-- `[Zhang et al. 2016](#zhang2016)   (#zhang2016 in same .md)`
-- `(Figure [5ab](./barotropic-solver.md#figure05))   (refer to figure05 inside barotropic-solver.md in the same dir)`
+```
+ [Zhang et al. 2016](#zhang2016)   (#zhang2016 in same .md)
+ (Figure [5ab](./barotropic-solver.md#figure05))   (refer to figure05 inside barotropic-solver.md in the same dir)
+```
 
 # More features
 If you need advanced features for your tutorial page, you can use some HTML syntax in your \*.md files.
