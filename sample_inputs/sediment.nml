@@ -34,23 +34,37 @@ Erate = 1.6d-3, 1.6d-3, 1.6d-3, 1.6d-3, 1.6d-3 !ierosion=0
 !- (MUD-like or GRAVEL-like) user-defined values (defined below) will be 
 !- applied.
 !------------------------------------------------------------------------------
-!iSedtype= 1, 1, 1, 1, 1 !5 classes
+iSedtype= 1, 1, 1, 1, 1 !5 classes
 
 !- SEDIMENT GRAIN DENSITY (kg/m3) - [1:Ntracers] ------------------------------
 !------------------------------------------------------------------------------
-!Srho = 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0
+Srho = 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0
+
+!- COMPUTATION OF SEDIMENT SETTLING VELOCITY ----------------------------------
+!- (Soulsby, 1997)
+!- 0 = Disabled (user-defined settling velocity)
+!- 1 = Enabled (Computed from SAND_SD50 and SAND_SRHO)
+!------------------------------------------------------------------------------
+comp_ws = 0
+
+!- COMPUTATION OF SEDIMENT CRITICAL SHEAR STRESS ------------------------------
+!- (Soulsby, 1997), from critical Shields parameter
+!- 0 = Disabled (user defined)
+!- 1 = Enabled (Computed from SAND_SD50 and SAND_SRHO)
+!------------------------------------------------------------------------------
+comp_tauce = 0
 
 !- PATICLES SETTLING VELOCITY (mm/s) - [1:Ntracers] ---------------------------
 ! These will be overwritten if comp_ws=1 & Sedtype(i)=1  (so in that case you can
 ! comment this line out)
 !------------------------------------------------------------------------------
-!Wsed = 1.06d0, 3.92d0, 5.43d0, 10.19d0, 28.65d0
+Wsed = 1.06d0, 3.92d0, 5.43d0, 10.19d0, 28.65d0
 
 !- CRITICAL SHEAR STRESS FOR EROSION (Pa) - [1:Ntracers] -----
 !  These will be overwritten if comp_tauce=1 and Sedtype(i)=1 (so in that case you can
 ! comment this line out)
 !------------------------------------------------------------------------------
-!tau_ce = 0.15d0, 0.17d0, 0.23d0, 0.3d0, 0.6d0
+tau_ce = 0.15d0, 0.17d0, 0.23d0, 0.3d0, 0.6d0
 
 
 !- DEBUG ----------------------------------------------------------------------
@@ -242,20 +256,6 @@ drag_formulation = 1
 !------------------------------------------------------------------------------
 ddensed = 0
 
-!- COMPUTATION OF SEDIMENT SETTLING VELOCITY ----------------------------------
-!- (Soulsby, 1997)
-!- 0 = Disabled (user-defined settling velocity)
-!- 1 = Enabled (Computed from SAND_SD50 and SAND_SRHO)
-!------------------------------------------------------------------------------
-comp_ws = 1
-
-!- COMPUTATION OF SEDIMENT CRITICAL SHEAR STRESS ------------------------------
-!- (Soulsby, 1997), from critical Shields parameter
-!- 0 = Disabled (user defined)
-!- 1 = Enabled (Computed from SAND_SD50 and SAND_SRHO)
-!------------------------------------------------------------------------------
-comp_tauce = 1
-
 !- ROUGHNESS LENGTH PREDICTION FROM BEDFORMS ----------------------------------
 !- bedforms_rough:
 !- 0 = Disabled (rough.gr3 for hydrodynamic and sediment) 
@@ -324,7 +324,7 @@ Cdb_max = 0.01
 !-   equivalent to no limitation of the active layer thickness computed 
 !-   according to Harris and Wiberg (1997)
 !------------------------------------------------------------------------------
-actv_max = 1.d0
+actv_max = 0.05d0
 
 
 !==============================================================================
@@ -350,9 +350,8 @@ toplay_inithick = 10.0d-2
 !- BED LAYER THICKNESS THRESHOLD (m) ------------------------------------------
 !- If deposition exceeds this value, a new layer is created
 !  but the active layer thickness is given in bottom(:,:,iactv)
-!  Use a large value to bypass this, to enhance stability
 !------------------------------------------------------------------------------
-newlayer_thick = 100.d0
+newlayer_thick = 0.001d0
 
 !- EXNER EQUATION -------------------------------------------------------------
 !- Numerical method for the resolution of the sediment continuity equation to

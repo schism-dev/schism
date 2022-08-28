@@ -1,4 +1,5 @@
 #!/bin/bash
+## Batch file for gcc+OMPI
 #SBATCH --job-name=R01a
 #SBATCH --partition=compute
 #SBATCH --nodes=30

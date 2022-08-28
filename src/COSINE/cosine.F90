@@ -67,7 +67,7 @@ subroutine cosine(it)
 
   do i=1,nea
     if(idry_e(i)==1) cycle  !element becomes dry
-    call update_vars(i)
+    call update_cosine_vars(i)
 
     !assign SCHISM tracer values to local variables
     do m=1,ntrs(8)
@@ -142,9 +142,9 @@ subroutine cosine(it)
     sLight(nvrt+1)=max(0.46d0*sum(srad(elnode(1:i34(i),i)))/i34(i),0.d0) 
     do k=nvrt,kbe(i)+1,-1
       if(k==nvrt) then
-        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*dep(k)/2.0
+        rKe=(aks(1)+aks(2)*(S1(k)+S2(k))+aks(3)*SPM(k,i))*dep(k)/2.0
       else
-        rKe=(ak1+ak2*(S1(k)+S2(k))+ak3*SPM(k,i))*(dep(k)+dep(k+1))/2.0
+        rKe=(aks(1)+aks(2)*(S1(k)+S2(k))+aks(3)*SPM(k,i))*(dep(k)+dep(k+1))/2.0
       endif
       sLight(k)=sLight(k+1)*exp(-rKe)
     enddo !k
@@ -175,30 +175,30 @@ subroutine cosine(it)
       !Light limitation factor including photo-inhibition and light adaptation
       ADPT=1.0
       if(idapt==1) ADPT=alpha_corr*(1.0-4.0*zr(k)/zeptic)
-      pih1=(1.0-exp(-sLight(k)*ADPT*alpha1/gmaxs1))*exp(-beta*sLight(k)/gmaxs1)
-      pih2=(1.0-exp(-sLight(k)*ADPT*alpha2/gmaxs2))*exp(-beta*sLight(k)/gmaxs2)
+      pih1=(1.0-exp(-sLight(k)*ADPT*alphas(1)/gmaxs(1)))*exp(-betas(1)*sLight(k)/gmaxs(1))
+      pih2=(1.0-exp(-sLight(k)*ADPT*alphas(2)/gmaxs(2)))*exp(-betas(2)*sLight(k)/gmaxs(2))
 
       !NH4 inhibition for S1 and S2
-      !pnh4s1=min(1.0,exp(-pis1*NH4(k))+0.1)
-      !pnh4s2=min(1.0,exp(-pis2*NH4(k))+0.1)
-      pnh4s1=min(1.0,exp(-pis1*NH4(k)))
-      pnh4s2=min(1.0,exp(-pis2*NH4(k)))
+      !pnh4s1=min(1.0,exp(-pis(1)*NH4(k))+0.1)
+      !pnh4s2=min(1.0,exp(-pis(2)*NH4(k))+0.1)
+      pnh4s1=min(1.0,exp(-pis(1)*NH4(k)))
+      pnh4s2=min(1.0,exp(-pis(2)*NH4(k)))
       
       !PO4,CO2,and SiO4 limiation factors 
-      fPO4S1=PO4(k)/(kpo4s1+PO4(k))
-      fCO2S1=CO2(k)/(kco2s1+CO2(k))
-      fPO4S2=PO4(k)/(kpo4s2+PO4(k))
-      fCO2S2=CO2(k)/(kco2s2+CO2(k))
-      fSiO4S2=SiO4(k)/(ksio4s2+SiO4(k))
+      fPO4S1=PO4(k)/(kpo4s(1)+PO4(k))
+      fCO2S1=CO2(k)/(kco2s(1)+CO2(k))
+      fPO4S2=PO4(k)/(kpo4s(2)+PO4(k))
+      fCO2S2=CO2(k)/(kco2s(2)+CO2(k))
+      fSiO4S2=SiO4(k)/(ksio4 +SiO4(k))
 
       !Nitrogen limitation factors 
-      rtmp=1+NH4(k)/knh4s1+pnh4s1*NO3(k)/kno3s1
-      bfNO3S1=pnh4s1*NO3(k)/(kno3s1*rtmp)
-      bfNH4S1=NH4(k)/(knh4s1*rtmp)
+      rtmp=1+NH4(k)/knh4s(1)+pnh4s1*NO3(k)/kno3s(1)
+      bfNO3S1=pnh4s1*NO3(k)/(kno3s(1)*rtmp)
+      bfNH4S1=NH4(k)/(knh4s(1)*rtmp)
 
-      rtmp=1+NH4(k)/knh4s2+pnh4s2*NO3(k)/kno3s2
-      bfNO3S2=pnh4s2*NO3(k)/(kno3s2*rtmp)
-      bfNH4S2=NH4(k)/(knh4s2*rtmp)
+      rtmp=1+NH4(k)/knh4s(2)+pnh4s2*NO3(k)/kno3s(2)
+      bfNO3S2=pnh4s2*NO3(k)/(kno3s(2)*rtmp)
+      bfNH4S2=NH4(k)/(knh4s(2)*rtmp)
 
       !final limitation
       if(ico2s==0) then
@@ -217,7 +217,7 @@ subroutine cosine(it)
       fNH4S2=bfS2*bfNH4S2/(bfNO3S2+bfNH4S2+1.0E-6)
 
       !Zooplankton grazing
-      GS1Z1=beta1*Z1(k)*S1(k)/(kgz1+S1(k))
+      GS1Z1=betaz(1)*Z1(k)*S1(k)/(kgz(1)+S1(k))
       if(S1(k)<=0.25d0) GS1Z1=0.0
 
       if(idelay==1 .and. time>=(ndelay*d2s)) then
@@ -227,12 +227,12 @@ subroutine cosine(it)
       else
         mS2i=S2(k); mZ1i=Z1(k); mDNi=DN(k); mZ2i=Z2(k)
       endif
-      rhot=rho1*mS2i+rho2*mZ1i+rho3*mDNi
-      rhop=rho1*mS2i*mS2i+rho2*mZ1i*mZ1i+rho3*mDNi*mDNi
+      rhot=rhoz(1)*mS2i+rhoz(2)*mZ1i+rhoz(3)*mDNi
+      rhop=rhoz(1)*mS2i*mS2i+rhoz(2)*mZ1i*mZ1i+rhoz(3)*mDNi*mDNi
 
-      GS2Z2=beta2*rho1*mS2i*mS2i*mZ2i/(kgz2*rhot+rhop)
-      GZ1Z2=beta2*rho2*mZ1i*mZ1i*mZ2i/(kgz2*rhot+rhop)
-      GDNZ2=beta2*rho3*mDNi*mDNi*mZ2i/(kgz2*rhot+rhop)
+      GS2Z2=betaz(2)*rhoz(1)*mS2i*mS2i*mZ2i/(kgz(2)*rhot+rhop)
+      GZ1Z2=betaz(2)*rhoz(2)*mZ1i*mZ1i*mZ2i/(kgz(2)*rhot+rhop)
+      GDNZ2=betaz(2)*rhoz(3)*mDNi*mDNi*mZ2i/(kgz(2)*rhot+rhop)
 
       !turn off mesozooplankton grazing at certain conditions
       if((rhot<=0.d0 .and. rhop<=0.d0) .or. iz2graze==0) then
@@ -251,20 +251,20 @@ subroutine cosine(it)
       !-------------------------------------------------------------------
 
       !S1
-      NPS1=gmaxs1*fNO3S1*pih1*S1(k) !Growth
-      RPS1=gmaxs1*max(kns1*nh4(k)/(knh4s1+nh4(k)),fNH4S1*pih1)*S1(k) !Growth, nighttime uptake
-      MTS1=gammas1*S1(k) !Mortality
+      NPS1=gmaxs(1)*fNO3S1*pih1*S1(k) !Growth
+      RPS1=gmaxs(1)*max(kns(1)*nh4(k)/(knh4s(1)+nh4(k)),fNH4S1*pih1)*S1(k) !Growth, nighttime uptake
+      MTS1=gammas(1)*S1(k) !Mortality
       qcos(4)=NPS1+RPS1-GS1Z1-MTS1
       if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
         qcos(4)=qcos(4)-grzc*S1(k)
       endif
 
       !S2 
-      NPS2=gmaxs2*fNO3S2*pih2*S2(k) !Growth
-      RPS2=gmaxs2*max(kns2*nh4(k)/(knh4s2+nh4(k)),fNH4S2*pih2)*S2(k) !Growth, nighttime uptake
-      MTS2=gammas2*S2(k) !Mortality
+      NPS2=gmaxs(2)*fNO3S2*pih2*S2(k) !Growth
+      RPS2=gmaxs(2)*max(kns(2)*nh4(k)/(knh4s(2)+nh4(k)),fNH4S2*pih2)*S2(k) !Growth, nighttime uptake
+      MTS2=gammas(2)*S2(k) !Mortality
       if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
-        MTS2=bgraze(i)*gammas2*s2(k)
+        MTS2=bgraze(i)*gammas(2)*s2(k)
       endif
       qcos(5)=NPS2+RPS2-GS2Z2-MTS2
       if(iclam/=0.and.abs(zr(kbe(i)+1)-zr(k))<=deltaZ) then !clam grazing
@@ -272,25 +272,25 @@ subroutine cosine(it)
       endif
 
       !Z1
-      EXZ1=OXR*kex1*Z1(k) !excretion
-      MTZ1=gammaz*Z1(k)*Z1(k) !Mortality
-      qcos(6)=gamma1*GS1Z1-EXZ1-GZ1Z2-MTZ1
+      EXZ1=OXR*kez(1)*Z1(k) !excretion
+      MTZ1=gammaz(1)*Z1(k)*Z1(k) !Mortality
+      qcos(6)=alphaz(1)*GS1Z1-EXZ1-GZ1Z2-MTZ1
 
       !Z2
-      EXZ2=OXR*kex2*Z2(k) !excretion
-      MTZ2=gammaz*Z2(k)*Z2(k) !Mortality
+      EXZ2=OXR*kez(2)*Z2(k) !excretion
+      MTZ2=gammaz(2)*Z2(k)*Z2(k) !Mortality
       if(ibgraze>=1 .and. (abs(zr(kbe(i)+1))-abs(zr(k)))<=1.0) then !mimic bottom grazing 
-        MTZ2=bgraze(i)*gammaz*Z2(k)*Z2(k)
+        MTZ2=bgraze(i)*gammaz(2)*Z2(k)*Z2(k)
       endif
-      qcos(7)=gamma2*GTZ2-EXZ2-MTZ2 
+      qcos(7)=alphaz(2)*GTZ2-EXZ2-MTZ2 
      
       !DN
-      MIDN=max(kmdn1*temp(k)+kmdn2, 0.05)*OXR*DN(k) !remineralization, 1.5 to increase dissolution
-      qcos(8)=(1-gamma1)*GS1Z1+(1-gamma2)*GTZ2-GDNZ2 &
+      MIDN=max(kmdn(1)*temp(k)+kmdn(2), 0.05)*OXR*DN(k) !remineralization, 1.5 to increase dissolution
+      qcos(8)=(1-alphaz(1))*GS1Z1+(1-alphaz(2))*GTZ2-GDNZ2 &
              & +MTS1+MTS2+MTZ1+MTZ2-MIDN
 
       !DSi
-      MIDSi=max(kmdsi1*temp(k)+kmdsi2, 0.01)*DSi(k) !remineralization, 1.5 to increase dissolution
+      MIDSi=max(kmdsi(1)*temp(k)+kmdsi(2), 0.01)*DSi(k) !remineralization, 1.5 to increase dissolution
       qcos(9)=(GS2Z2+MTS2)*si2n-MIDSi
 
       !NO3
@@ -464,8 +464,8 @@ subroutine cosine(it)
             if(iout_cosine==1 .or. iout_cosine==4) then
               call cosine_output(0,j,'sLight', 1, sLight(k))
               call cosine_output(0,j,'SPM',    1, SPM(k,i))
-              call cosine_output(0,j,'ak2',    1, ak2*(S1(k)+S2(k)))
-              call cosine_output(0,j,'ak3',    1, ak3*SPM(k,i))
+              call cosine_output(0,j,'ak2',    1, aks(2)*(S1(k)+S2(k)))
+              call cosine_output(0,j,'ak3',    1, aks(3)*SPM(k,i))
               call cosine_output(0,j,'ADPT',   1, ADPT)
               call cosine_output(0,j,'dep',    1, dep(k))
               call cosine_output(0,j,'OXR',    1, OXR)

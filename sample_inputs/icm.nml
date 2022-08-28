@@ -43,8 +43,14 @@
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
+!CBP Module
+!     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
+!     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
+!     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
+!     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
 !SAV Module (no transport variables)
 !VEG Module (no transport variables)
+!SFM Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 &MARCO
@@ -79,14 +85,19 @@ Iopt   = 40.0  40.0  40.0  !optimal irradiance for PB growth (iLight=1)
 Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
 
 !-----------------------------------------------------------------------
-!net settling velocity (WS) into sediment
-!  iSettle=0: bottom-layer WS same as water column WS
-!  iSettle=1: assign bottom-layer WS from WSSEDn, WSPOMn,WSPBSn; todo: put this into core module
+!options of phytoplankton' predation term
 !-----------------------------------------------------------------------
-iSettle = 1
-WSSEDn  = 0.20              !net settling velocity of TSS (m.day-1)
-WSPOMn  = 1.00  1.00        !net settling velocity of RPOM and LPOM (m.day-1)
-WSPBSn  = 0.35  0.10  0.00  !net settling velocity of (PB1,PB2,PB3) (m.day-1)
+iPR = 1   !(0: linear formulation; 1: quadratic)
+
+!PRR = 0.215  0.215  0.01    !linear:  predation rate by higher trophic level (day-1)
+PRR = 0.1    0.1    0.02    !quadratic: predation rate by higher trophic level (day-1.g-1.m3)
+
+!-----------------------------------------------------------------------
+!settling velocity and net settling velocity of all ICM tracers (m.day-1)
+!-----------------------------------------------------------------------
+!name: (PB1,PB2,PB3)  (RPOC,LPOC,DOC) (RPON,LPON,DON,NH4,NO3)  (RPOP,LPOP,DOP,PO4)  (COD,DO) 
+WSP  = 0.35 0.10 0.0    1.0 1.0 0.0     1.0 1.0 0.0 0.0 0.0     1.0 1.0 0.0 1.0     0.0 0.0
+WSPn = 0.35 0.10 0.0    1.0 1.0 0.0     1.0 1.0 0.0 0.0 0.0     1.0 1.0 0.0 1.0     0.0 0.0
 
 !-----------------------------------------------------------------------
 !Silica model (0: OFF;  1: ON)
@@ -102,6 +113,11 @@ iZB = 0
 !PH model (0: OFF;  1: ON)
 !-----------------------------------------------------------------------
 iPh = 0
+
+!-----------------------------------------------------------------------
+!ChesBay Program Model (0: OFF;  1: ON)
+!-----------------------------------------------------------------------
+iCBP = 0
 
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation switch
@@ -152,6 +168,7 @@ idry_icm = 0
 &CORE
 !-----------------------------------------------------------------------
 !ICM parameters for water column; PB: phytoplankton
+!CBP module parameters are included: (SRPOC,SRPON,SRPOP,PIP)
 !-----------------------------------------------------------------------
 !phytoplankton growth
 GPM  = 3.0    3.0    2.5          !PB growth rates (day-1)
@@ -159,41 +176,33 @@ TGP  = 15.0   22.0   27.0         !optimal temp. for PB growth (oC)
 KTGP = 0.004  0.008  0.005    0.006  0.010  0.004  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
 !phytoplankton predation & metabolism
-PRR  = 0.215  0.215  0.01         !predation rate by higher trophic level (day-1)
+MTR  = 0.0    0.0    0.0          !PB photorespiration coefficient (0<MTR<1)
 MTB  = 0.01   0.01   0.04         !PB metabolism rates (day-1)
 TMT  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
 KTMT = 0.0322 0.0322 0.0322       !temp. dependence for PB metabolism (oC-1)
 
-!water column settling velocity and net settling velocity
-WSPBS  = 0.35  0.10  0.00         !settling velocity of (PB1,PB2,PB3) (m.day-1)
-WSPOM  = 1.00  1.00               !settling velocity of RPOM and LPOM (m.day-1)
-WSSED  = 1.00                     !settling velocity of TSS (m.day-1)
-
 !partition of phytoplankton biomass (predation)
-!  FCP: fractions of PB carbon into (RPOC,LPOC,DOC); dim(PB=1:3,3)
-FCP  = 0.35 0.30 0.20  0.55 0.50 0.50   0.10 0.20 0.30
-FNP  = 0.35  0.50  0.10  0.05     !fractions of PB nitrogen into (RPON,LPON,DON,NH4) 
-FPP  = 0.10  0.20  0.50  0.20     !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4)
+FCP  = 0.35 0.30 0.20  0.55 0.50 0.50  0.10 0.20 0.30  0.0  0.0  0.0 !fractions of PB carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,3)
+FNP  = 0.35 0.35 0.35  0.50 0.50 0.50  0.10 0.10 0.10  0.05 0.05 0.05  0.0 0.0 0.0  !fractions of PB nitrogen into (RPON,LPON,DON,NH4,SRPON) 
+FPP  = 0.10 0.10 0.10  0.20 0.20 0.20  0.50 0.50 0.50  0.20 0.20 0.20  0.0 0.0 0.0  !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4,SRPOP)
 
 !partition of metabolized phytoplankton biomass
-!  FNM: fractions of PB metabolism N. into (RPON,LPON,DON,NH4); dim(PB=1:3,4)
-!  FPM: fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(PB=1:3,4)
-FCM  = 0.10   0.10   0.10         !fractions of PB metabolism carbon into DOC; dim(PB=1:3)
-FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
-FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0
+FCM  = 0.0 0.0 0.0   0.0 0.0 0.0   0.1 0.1 0.1   0.0 0.0 0.0 !fractions of PB metabolism carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,4)
+FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4,SRPON); dim(PB=1:3,5)
+FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4,SRPOP); dim(PB=1:3,5)
 
 !nitrification
-Nit      = 0.07                   !maximum nitrification rate (day-1)
-TNit     = 27.0                   !optimal temp. for nitrification (oC)
-KTNit    = 0.0045  0.0045         !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
-KhDOnit  = 1.0                    !DO half saturation for nitrification (mg/L)
-KhNH4nit = 1.0                    !NH4 half saturation for nitrification (mg/L)
+Nit    = 0.07                     !maximum nitrification rate (day-1)
+TNit   = 27.0                     !optimal temp. for nitrification (oC)
+KTNit  = 0.0045  0.0045           !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
+KhDOn  = 1.0                      !DO half saturation for nitrification (mg/L)
+KhNH4n = 1.0                      !NH4 half saturation for nitrification (mg/L)
 
 !denitrifcation
-KhDOox     = 0.5                  !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
-KhNO3denit = 0.1                  !NO3 half saturation for denitrification (mg/L)
+KhDOox  = 0.5                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
+KhNO3dn = 0.1                     !NO3 half saturation for denitrification (mg/L)
 
-!decay coefficients for organic matters (C,N,P)
+!decay coefficients for organic matters (C,N,P); CBP module: (KSR,TRSR,KTRSR,KPIP) 
 KC0   = 0.005  0.075  0.20        !minimum decay rate of RPOC,LPOC,DOC (day-1)
 KN0   = 0.005  0.075  0.015       !minimum decay rate of RPON,LPON,DON (day-1)
 KP0   = 0.005  0.075  0.010       !minimum decay rate of RPOP,LPOP,DOP (day-1)
@@ -202,6 +211,10 @@ KNalg = 0.0    0.0    0.0         !algae effect on RPON,LPON,DON decay (day-1.m3
 KPalg = 0.0    0.0    0.0         !algae effect on RPOP,LPOP,DOP decay (day-1.m3.g[C]-1)
 TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
 KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
+KSR0  = 0.001  0.001  0.001       !decay rates of SRPOC,SRPON,SRPOP (day-1)
+TRSR  = 20.0   20.0   20.0        !reference temp. for (SRPOC,SRPON,SRPOP) decay (oC)
+KTRSR = 0.069  0.069  0.069       !temp. dependence for (SRPOC,SRPON,SRPOP) decay (oC-1)
+KPIP  = 0.0                       !dissolution rate of PIP (day-1)
 
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
@@ -231,6 +244,120 @@ PBmin=   0.0   0.0   0.0          !minimum PB concentration (mg[C]/L)
 dz_flux= 1.0   1.0                !surface/bottom thikness (m) within which sflux/bflux are redistributed
 /
 
+&SFM
+!-----------------------------------------------------------------------
+! sediment flux model (SFM) parameter 
+!-----------------------------------------------------------------------
+!initial sediment concentrations in lower layer (g/m3); For cold start
+btemp0 = 5.0     !initial temp. (oC)
+bstc0  = 0.1     !surface transfer coefficient
+bSTR0  = 0.0     !benthic stress (day)
+bThp0  = 0.0     !consective days of hypoxia (day)
+bTox0  = 0.0     !consective days of oxic condition after hypoxia event (day)
+bNH40  = 4.0     !NH4 
+bNO30  = 1.0     !NO3 
+bPO40  = 5.0     !PO4 
+bH2S0  = 250.0   !H2S 
+bCH40  = 40.0    !CH4 
+bPOS0  = 500.0   !POS 
+bSA0   = 500.0   !SA  
+bPOC0  = 1000.0  3000.0   5000.0    !POC(G=1:3) 
+bPON0  = 50.0    150.0    250.0     !PON(G=1:3) 
+bPOP0  = 20.0    100.0    150.0     !POP(G=1:3) 
+
+!basic information about sediment 
+bdz    = 0.1         !sediment thickness (m)
+bVb    = 1.37e-5     !burial rate (m.day-1); 1 cm/yr=2.74e-5 m.day-1
+bsolid = 0.5  0.5    !sediment solid conc. in Layer 1 and Layer 2 (Kg.L-1)
+bdiff  = 1.8e-7      !diffusion coefficient for sediment temp. (m2/s)
+bTR    = 20          !reference temp. for sediment processes
+
+!particle mixing and diffusion coefficients, benthic stress
+bVpmin   = 3.0e-6   !minimum particle mixing velocity coefficient (m.day-1)
+bVp      = 1.2e-4   !particle mixing velocity coefficient (m.day-1) 
+bVd      = 1.0e-3   !diffusion velocity coefficient (m.day-1)
+bKTVp    = 1.117    !temp. dependece of particle mixing velocity 
+bKTVd    = 1.08     !temp. dependece of diffusion velocity
+bKST     = 0.03     !1st order decay rate of benthic stress  (day-1)
+bSTmax   = 20.0     !maximum value of benthic stress (day) (note: smaller than 1/bKST)
+bKhDO_Vp = 4.0      !DO half-saturation of particle mixing (mg/L)
+bDOc_ST  = 1.0      !DO criteria for benthic stress (mg/L)
+banoxic  = 10.0     !consective days of hypoxia causing maximum benthic stress (day)
+boxic    = 45.0     !time lag for bethos recovery from hypoxia event (day) 
+bp2d     = 0.0      !ratio from mixing coef. to diffusion coef. (benthos enhanced effect)
+
+!decay rates of sediment POM (diagenesis flux)
+bKC    = 0.035   0.0018   0.00     !decay rate of POC (3G class) at bTR (day-1)
+bKN    = 0.035   0.0018   0.00     !decay rate of PON (3G class) at bTR (day-1)
+bKP    = 0.035   0.0018   0.00     !decay rate of POP (3G class) at bTR (day-1)
+bKTC   = 1.10    1.150    1.17     !temp. dependence of POC decay (oC-1)
+bKTN   = 1.10    1.150    1.17     !temp. dependence of PON decay (oC-1)
+bKTP   = 1.10    1.150    1.17     !temp. dependence of POP decay (oC-1)
+
+!fraction of refractory/PB/SAV/VEG POM into sediment 3G POM  (depositional flux)
+bFCM = 0.0   0.43   0.57          !refractory POC into sed POC(3G) 
+bFNM = 0.0   0.54   0.46          !refractory PON into sed PON(3G)
+bFPM = 0.0   0.43   0.57          !refractory POP into sed POP(3G)
+bFCP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POC into sed POC (G3,PB=1:3)
+bFNP = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !Phyto PON into sed PON (G3,PB=1:3) 
+bFPP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POP into sed POP (G3,PB=1:3) 
+
+!nitrification (NH4)
+bKNH4f    = 0.20    !NH4 reaction rate in freshwater  at bTR (1st layer) (m/day)
+bKNH4s    = 0.140   !NH4 reaction rate in salty water at bTR (1st layer) (m/day)
+bKTNH4    = 1.08    !temp. dependency for NH4 reaction (oC-1)
+bKhNH4    = 1.5     !half-stauration NH4 for nitrification (g/m3)
+bKhDO_NH4 = 2.00    !half-stauration DO for nitrification (g/m3)
+bpieNH4   = 1.0     !partition coefficients of NH4 in Layer 1 & 2 (Kg-1.L)
+bsaltn    = 1.0     !salinity criteria of fresh/salty water for NH4/NO3 reaction (PSU)
+
+!denitrification (NO3)
+bKNO3f    = 0.30    !NO3 reaction rate in freshwater at bTR (1st layer) (m/day)
+bKNO3s    = 0.125   !NO3 reaction rate in salty water at bTR (1st layer) (m/day)
+bKNO3     = 0.25    !NO3 reaction rate (2nd layer) (m/day)
+bKTNO3    = 1.08    !temp. dependency for NO3 reaction (oC-1)
+
+!sulfide oxidation (H2S)
+bKH2Sd    = 0.2     !dissolved H2S reaction rate at bTR (1st layer) (m/day)
+bKH2Sp    = 0.4     !particulate H2S reaction rate at bTR (1st layer) (m/day)
+bKTH2S    = 1.08    !temp. dependency for H2S reaction (oC-1)
+bpieH2Ss  = 100.0   !partition coefficient of NH4 in Layer 1 (Kg-1.L)
+bpieH2Sb  = 100.0   !partition coefficient of NH4 in Layer 2 (Kg-1.L)
+bKhDO_H2S = 8.0     !O2 constant to normalize H2S oxidation (g[O2]/m3)
+bsaltc    = 1.0     !salinity criteria of fresh/salty water for carbon reaction (PSU)
+
+!methane oxidation (CH4)
+bKCH4     = 0.2     !CH4 reaction rate at bTR (1st layer) (m/day)
+bKTCH4    = 1.08    !temp. dependency for CH4 reaction
+bKhDO_CH4 = 0.2     !half-saturation DO for CH4 oxidation (g[O2]/m3)
+bo2n      = 2.86    !oxygen to nitrogen ratio in sediment (denitrification)
+
+!phosphate reaction (PO4)
+bpiePO4   = 100.0   !partition coefficient of PO4 in Layer 2 (Kg-1.L)
+bKOPO4f   = 3000.0  !oxygen dependency for PO4 sorption in freshwater in Layer 1
+bKOPO4s   = 300.0   !oxygen dependency for PO4 sorption in salty water in Layer 1
+bDOc_PO4  = 1.0     !DO criteria for PO4 sorptiona (g[O2]/m3)
+bsaltp    = 1.0     !salinity criteria of fresh/salty water for PO4 partition (PSU)
+
+!silica dissolution (SI)
+bKS       = 0.50    !decay rate of POS (3G class) at bTR 
+bKTS      = 1.10    !temp. dependence of POS decay
+bSIsat    = 40.0    !silica saturation conc. in pore water (g[Si]/m3)
+bpieSI    = 100.0   !partition coefficient of silica in Layer 2 (Kg-1.L)
+bKOSI     = 10.0    !oxygen dependency for silica sorption in Layer 1
+bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
+bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
+bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
+
+!SAV and VEG contribution to sediment POM
+bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
+bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
+bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
+bFCv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POC into sed POC (G3,PB=1:3) 
+bFNv = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !VEG PON into sed PON (G3,PB=1:3)  
+bFPv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POP into sed POP (G3,PB=1:3)   
+/
+
 &Silica
 !-----------------------------------------------------------------------
 !Silica parameters
@@ -249,13 +376,11 @@ KSAp = 0.0                        !coefficient relating Silicate(SA) sorption to
 &ZB
 !-----------------------------------------------------------------------
 !Zooplankton (ZB) parameters
+!ZB prey(1:8)=(ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC)
 !-----------------------------------------------------------------------
 !zooplankton growth
-!  zGPM: ZB predation rate(day-1);   dim(prey=1:8, ZB=1:2)
-!  zKhG: reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
-!  prey(1:8)=(ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC)
-zGPM = 0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0
-zKhG = 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175
+zGPM = 0.0   0.0   1.75  1.75  1.75  1.75  1.75  1.75    1.0   0.0   2.0   2.0   2.0   2.0   2.0   2.0   !ZB predation rate(day-1); dim(prey=1:8, ZB=1:2)
+zKhG = 0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175   0.175 0.175 0.175 0.175 0.175 0.175 0.175 0.175 !reference prey conc.(mg/L); dim(prey=1:8, ZB=1:2)
 zTGP = 25.0   25.0               !optimal temp. for ZB growth (oC)
 zKTGP= 0.0035 0.008  0.025 0.030 !temp. dependence for ZB growth (T<=zTGP & T>zTGP); dim(ZB=1:2,1:2) (oC-2)
 zAG  = 0.75                      !ZB assimilation efficiency ratio (0-1)
@@ -274,11 +399,9 @@ zFPP = 0.10   0.20   0.50  0.20  !fractions of ZB Phosphorus into (RPOP,LPOP,DOP
 zFSP = 0.70   0.25               !fractions of ZB silica into (SU,SA)
 
 !partition of metabolized zooplankton biomass
-!  zFNM: fractions of ZB metabolism N. into (RPON,LPON,DON,NH4); dim(ZB=1:2,4)
-!  zFPM: fractions of ZB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(ZB=1:2,4)
 zFCM = 0.10   0.0                !fractions of ZB metabolism carbon into DOC; dim(ZB=1:2)
-zFNM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10
-zFPM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10
+zFNM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism N. into (RPON,LPON,DON,NH4); dim(ZB=1:2,4)
+zFPM = 0.35 0.30   0.50 0.40   0.10 0.20   0.05 0.10 !fractions of ZB metabolism P. into (RPOP,LPOP,DOP,PO4); dim(ZB=1:2,4)
 zFSM = 0.50 0.40   0.50 0.60     !fractions of ZB metabolism Si into (SU,SA); dim(ZB=1:2,2)
 
 !misc
@@ -295,7 +418,6 @@ p2pr = 0.25                       !ratio converting ZB+PB biomass to predation r
 !PH model parameter
 !-----------------------------------------------------------------------
 inu_ph= 0                     !nudge option for pH model
-pWSCACO3 = 0.1                !settling velocity of pWSCACO3
 pKCACO3  = 60.0               !dissulution bewteen CaCO3 and Ca++
 pKCA     = 60.0               !sediment surface transfer coefficient from CaCO3 to Ca++
 pRea     = 1.0                !reaeration rate for CO2
@@ -346,14 +468,6 @@ so2c   = 2.67               !oxygen to carbon ratio
 &VEG
 !-----------------------------------------------------------------------
 !Intertidal Vegetation (VEG), paramters
-!  vKTGP : temp. dependence(3,2) for growth (T<=vTGP & T>vTGP)
-!  vFCP  : fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
-!  vMTB  : metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
-!  vTMT  : reference temp. for leaf/stem/root metabolism
-!  vKTMT : temp. depdenpence for leaf/stem/root metabolism
-!  vFNM  : fractions(3,4) of metabolism N into (RPON,LPON,DON,NH4)
-!  vFPM  : fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
-!  vFCM  : fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
 !-----------------------------------------------------------------------
 vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
 vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
@@ -363,16 +477,16 @@ vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
 vGPM  = 0.1    0.1    0.1      !maximum growth rate (day-1)
 vFAM  = 0.2    0.2    0.2      !fractions of leaf production to active metabolism
 vTGP  = 32.0   32.0   32.0     !optimal growth temperature (oC)
-vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence(3,2)
-vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1
+vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence(3,2) for growth (T<=vTGP & T>vTGP)
+vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1  !fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
 
 !metabolism coefficients: see description of variable meanings above
-vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01
-vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0
-vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069
-vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
-vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5
-vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5
+vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01  !metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
+vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0  !reference temp. for leaf/stem/root metabolism
+vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069 !temp. depdenpence for leaf/stem/root metabolism
+vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !fractions(3,4) of metabolism N into (RPON,LPON,DON,NH4)
+vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5 !fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
+vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
 ivNc  = 1                   !recycled veg N goes to (0: sediment; 1: water)
 ivPc  = 1                   !recycled veg P goes to (0: sediment; 1: water)
 
@@ -403,120 +517,6 @@ v2den  = 10     10     10     !coeff. computing veg density
 vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
 vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
 vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
-/
-
-&SFM
-!-----------------------------------------------------------------------
-! sediment flux model (SFM) parameter 
-!-----------------------------------------------------------------------
-!basic information about sediment 
-bdz    = 0.1         !sediment thickness (m)
-bury   = 1.37e-5     !burial rate (m.day-1); 1 cm/yr=2.74e-5 m.day-1
-bsolid = 0.5  0.5    !sediment solid conc. in Layer 1 and Layer 2 (Kg.L-1)
-bdiff  = 1.8e-7      !diffusion coefficient for sediment temp. (m2/s)
-bTR    = 20          !reference temp. for sediment processes
-
-!particle mixing and diffusion coefficients, benthic stress
-bVpmin   = 3.0e-6   !minimum particle mixing velocity coefficient (m2.day-1)
-bVp      = 1.2e-4   !particle mixing velocity coefficient (m2.day-1) 
-bVd      = 1.0e-3   !diffusion velocity coefficient (m2.day-1)
-bKTVp    = 1.117    !temp. dependece of particle mixing velocity 
-bKTVd    = 1.08     !temp. dependece of diffusion velocity
-bKST     = 0.03     !1st order decay rate of benthic stress  (day-1)
-bSTmax   = 20.0     !maximum value of benthic stress (day) (note: smaller than 1/bKST)
-bKhDO_Vp = 4.0      !DO half-saturation of particle mixing (mg/L)
-bDOc_ST  = 1.0      !DO criteria for benthic stress (mg/L)
-banoxic  = 10.0     !consective days of hypoxia causing maximum benthic stress (day)
-boxic    = 45.0     !time lag for bethos recovery from hypoxia event (day) 
-bp2d     = 0.0      !ratio from mixing coef. to diffusion coef. (benthos enhanced effect)
-
-!initial sediment concentrations in lower layer (g/m3)
-btemp0 = 5.0        !initial temp. (oC)
-bstc0  = 0.1        !surface transfer coefficient
-bSTR0  = 0.0        !benthic stress (day)
-bThp0  = 0.0        !consective days of hypoxia (day)
-bTox0  = 0.0        !consective days of oxic condition after hypoxia event (day)
-bNH40  = 4.0        !NH4 
-bNO30  = 1.0        !NO3 
-bPO40  = 5.0        !PO4 
-bH2S0  = 250.0      !H2S 
-bCH40  = 40.01      !CH4 
-bPOS0  = 500.0      !POS 
-bSA0   = 500.0      !SA  
-bPOC0  = 1000.0  3000.0   5000.0    !POC 
-bPON0  = 50.0    150.0    250.0     !PON 
-bPOP0  = 20.0    100.0    150.0     !POP 
-
-!decay rates of sediment POM (diagenesis flux)
-bKC    = 0.035   0.0018   0.00     !decay rate of POC (3G class) at bTR
-bKN    = 0.035   0.0018   0.00     !decay rate of PON (3G class) at bTR
-bKP    = 0.035   0.0018   0.00     !decay rate of POP (3G class) at bTR
-bKTC   = 1.10    1.150    1.17     !temp. dependence of POC decay
-bKTN   = 1.10    1.150    1.17     !temp. dependence of PON decay
-bKTP   = 1.10    1.150    1.17     !temp. dependence of POP decay
-
-!fraction of refractory/PB/SAV/VEG POM into sediment 3G POM  (depositional flux)
-bFCM = 0.0   0.43   0.57          !refractory POC into sed POC(3G) 
-bFNM = 0.0   0.54   0.46          !refractory PON into sed PON(3G)
-bFPM = 0.0   0.43   0.57          !refractory POP into sed POP(3G)
-bFCP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POC into sed POC (G3,PB=1:3)
-bFNP = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !Phyto PON into sed PON (G3,PB=1:3) 
-bFPP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POP into sed POP (G3,PB=1:3) 
-
-!nitrification (NH4)
-bKNH4f    = 0.20    !NH4 reaction rate in freshwater  at bTR (1st layer) (m/day)
-bKNH4s    = 0.140   !NH4 reaction rate in salty water at bTR (1st layer) (m/day)
-bKTNH4    = 1.08    !temp. dependency for NH4 reaction 
-bKhNH4    = 1.5     !half-stauration NH4 for nitrification (g/m3)
-bKhDO_NH4 = 2.00    !half-stauration DO for nitrification (g/m3)
-bpieNH4   = 1.0     !partition coefficients of NH4 in Layer 1 & 2 (Kg-1.L)
-bsaltn    = 1.0     !salinity criteria of fresh/salty water for NH4/NO3 reaction (PSU)
-
-!denitrification (NO3)
-bKNO3f    = 0.30    !NO3 reaction rate in freshwater at bTR (1st layer) (m/day)
-bKNO3s    = 0.125   !NO3 reaction rate in salty water at bTR (1st layer) (m/day)
-bKNO3     = 0.25    !NO3 reaction rate (2nd layer) (m/day)
-bKTNO3    = 1.08    !temp. dependency for NO3 reaction
-
-!sulfide oxidation (H2S)
-bKH2Sd    = 0.2     !dissolved H2S reaction rate at bTR (1st layer) (m/day)
-bKH2Sp    = 0.4     !particulate H2S reaction rate at bTR (1st layer) (m/day)
-bKTH2S    = 1.08    !temp. dependency for H2S reaction
-bpieH2Ss  = 100.0   !partition coefficient of NH4 in Layer 1 (Kg-1.L)
-bpieH2Sb  = 100.0   !partition coefficient of NH4 in Layer 2 (Kg-1.L)
-bKhDO_H2S = 8.0     !O2 constant to normalize H2S oxidation (g[O2]/m3)
-bsaltc    = 1.0     !salinity criteria of fresh/salty water for carbon reaction (PSU)
-
-!methane oxidation (CH4)
-bKCH4     = 0.2     !CH4 reaction rate at bTR (1st layer) (m/day)
-bKTCH4    = 1.08    !temp. dependency for CH4 reaction
-bKhDO_CH4 = 0.2     !half-saturation DO for CH4 oxidation (g[O2]/m3)
-bo2n      = 2.86    !oxygen to nitrogen ratio in sediment (denitrification)
-
-!phosphate reaction (PO4)
-bpiePO4   = 100.0   !partition coefficient of PO4 in Layer 2 (Kg-1.L)
-bKOPO4f   = 3000.0  !oxygen dependency for PO4 sorption in freshwater in Layer 1
-bKOPO4s   = 300.0   !oxygen dependency for PO4 sorption in salty water in Layer 1
-bDOc_PO4  = 1.0     !DO criteria for PO4 sorptiona (g[O2]/m3)
-bsaltp    = 1.0     !salinity criteria of fresh/salty water for PO4 partition (PSU)
-
-!silica dissolution (SI)
-bKS       = 0.50    !decay rate of POS (3G class) at bTR 
-bKTS      = 1.10    !temp. dependence of POS decay
-bSIsat    = 40.0    !silica saturation conc. in pore water (g[Si]/m3)
-bpieSI    = 100.0   !partition coefficient of silica in Layer 2 (Kg-1.L)
-bKOSI     = 10.0    !oxygen dependency for silica sorption in Layer 1
-bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
-bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
-bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
-
-!SAV and VEG contribution to sediment POM
-bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
-bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
-bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
-bFCv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POC into sed POC (G3,PB=1:3) 
-bFNv = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !VEG PON into sed PON (G3,PB=1:3)  
-bFPv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POP into sed POP (G3,PB=1:3)   
 /
 
 &ERO

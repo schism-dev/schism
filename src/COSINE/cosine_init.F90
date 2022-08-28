@@ -32,30 +32,6 @@ subroutine cosine_init
   sS2=0.0;  sDN=0.0; sZ1=0.0;  sZ2=0.0; nstep=0
   nclam=0;
 
-  !---------------------------------------------------------------------------
-  !spatially varying parameter
-  !---------------------------------------------------------------------------
-  allocate(wp%gmaxs1(nea),wp%gmaxs2(nea),wp%pis1(nea),wp%pis2(nea),wp%kno3s1(nea), &
-         & wp%knh4s1(nea),wp%kpo4s1(nea),wp%kco2s1(nea),wp%kno3s2(nea),wp%knh4s2(nea), &
-         & wp%kpo4s2(nea),wp%kco2s2(nea),wp%ksio4s2(nea),wp%kns1(nea),wp%kns2(nea), &
-         & wp%alpha1(nea),wp%alpha2(nea),wp%beta(nea),wp%ak1(nea),wp%ak2(nea),wp%ak3(nea), &
-         & wp%gammas1(nea),wp%gammas2(nea),wp%beta1(nea),wp%beta2(nea),wp%kgz1(nea), &
-         & wp%kgz2(nea),wp%rho1(nea),wp%rho2(nea),wp%rho3(nea),wp%gamma1(nea),wp%gamma2(nea), &
-         & wp%gammaz(nea),wp%kex1(nea),wp%kex2(nea),wp%wss2(nea),wp%wsdn(nea),wp%wsdsi(nea), &
-         & wp%si2n(nea),wp%p2n(nea),wp%o2no(nea),wp%o2nh(nea),wp%c2n(nea),wp%kox(nea), &
-         & wp%kmdn1(nea),wp%kmdn2(nea),wp%kmdsi1(nea),wp%kmdsi2(nea),wp%gamman(nea), &
-         & wp%TR(nea),wp%pco2a(nea),stat=istat) 
-  if(istat/=0) call parallel_abort('failure in alloc. gmaxs1')
-
-  wp%gmaxs1=0; wp%gmaxs2=0; wp%pis1=0; wp%pis2=0; wp%kno3s1=0; wp%knh4s1=0; wp%kpo4s1=0;
-  wp%kco2s1=0; wp%kno3s2=0; wp%knh4s2=0; wp%kpo4s2=0; wp%kco2s2=0; wp%ksio4s2=0; 
-  wp%kns1=0; wp%kns2=0; wp%alpha1=0; wp%alpha2=0; wp%beta=0; wp%ak1=0; wp%ak2=0; 
-  wp%ak3=0; wp%gammas1=0; wp%gammas2=0; wp%beta1=0; wp%beta2=0; wp%kgz1=0; wp%kgz2=0; 
-  wp%rho1=0; wp%rho2=0; wp%rho3=0; wp%gamma1=0; wp%gamma2=0; wp%gammaz=0; wp%kex1=0; 
-  wp%kex2=0; wp%wss2=0; wp%wsdn=0; wp%wsdsi=0; wp%si2n=0; wp%p2n=0; wp%o2no=0; wp%o2nh=0;
-  wp%c2n=0; wp%kox=0; wp%kmdn1=0; wp%kmdn2=0; wp%kmdsi1=0; wp%kmdsi2=0; wp%gamman=0; 
-  wp%TR=0; wp%pco2a=0
-
   !read cosine parameters
   call read_cosine_param
    
@@ -83,25 +59,21 @@ subroutine read_cosine_param
   !define namelist
   namelist /MARCO/ idelay,ndelay,ibgraze,idapt,alpha_corr,zeptic,iz2graze,&
           & iout_cosine,nspool_cosine,ico2s,ispm,spm0,ised 
-  namelist /CORE/ gmaxs1,gmaxs2,pis1,pis2,kno3s1,knh4s1,kpo4s1,kco2s1,kno3s2,&
-          & knh4s2,kpo4s2,kco2s2,ksio4s2,kns1,kns2,alpha1,alpha2,beta,ak1,ak2,&
-          & ak3,gammas1,gammas2,beta1,beta2,kgz1,kgz2,rho1,rho2,rho3,gamma1,&
-          & gamma2,gammaz,kex1,kex2,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
-          & kox,ipo4,kmdn1,kmdn2,kmdsi1,kmdsi2,gamman,TR,pco2a
+  namelist /CORE/ gmaxs,pis,kno3s,knh4s,kpo4s,kco2s,&
+          & ksio4,kns,alphas,betas,aks,gammas,betaz,kgz,rhoz,alphaz,&
+          & gammaz,kez,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
+          & kox,ipo4,kmdn,kmdsi,gamman,TR,pco2a
   namelist /MISC/ iws,NO3c,ws1,ws2,iclam,deltaZ,kcex,Nperclam,Wclam,Fclam,&
           & nclam0,fS2,fDN,fDSi,rkS2,rkDN,rkDSi,mkS2,mkDN,mkDSi
 
   !initialize parameter values
   idelay=0; ndelay=7; ibgraze=0; idapt=0; alpha_corr=1.25; zeptic=10.0; iz2graze=1
   iout_cosine=0; nspool_cosine=60; ico2s=0; ispm=0; spm0=20.0; ised=1; 
-  gmaxs1=3.0; gmaxs2=2.5; pis1=1.5; pis2=1.5; kno3s1=1.0; 
-  knh4s1=0.15; kpo4s1=0.1; kco2s1=50.0; kno3s2=3.0; knh4s2=0.45; kpo4s2=0.1;
-  kco2s2=50.0; ksio4s2=4.5; kns1=0.0; kns2=0.0; alpha1=0.1; alpha2=0.1; beta=0.0; 
-  ak1=0.75; ak2=0.03; ak3=0.066; gammas1=0.5; gammas2=0.3; beta1=0.75; beta2=0.5; 
-  kgz1=0.5; kgz2=0.25; rho1=0.6; rho2=0.3; rho3=0.1; gamma1=0.75; gamma2=0.75; 
-  gammaz=0.05; kex1=0.2; kex2=0.3; wss2=0.25; wsdn=0.5; wsdsi=0.5; si2n=1.2; p2n=0.0625; 
-  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; ipo4=0; kmdn1=0.009; kmdn2=0.075; kmdsi1=0.0114; 
-  kmdsi2=0.015; gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
+  gmaxs=0; pis=0; kno3s=0; knh4s=0; kpo4s=0; kco2s=0; ksio4=0; kns=0; alphas=0; betas=0; 
+  aks=0; gammas=0;  betaz=0; kgz=0; rhoz=0;  alphaz=0;
+  gammaz=0; kez=0; wss2=0.25; wsdn=0.5; wsdsi=0.5; si2n=1.2; p2n=0.0625; 
+  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; ipo4=0; kmdn=0; kmdsi=0; 
+  gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
   iclam=0; deltaZ=1.0; kcex=0.002; Nperclam=0.39032; Wclam=5.45e-3; Fclam=40.0; 
   nclam0=2000; fS2=0.0; fDN=0.0; fDSi=0.0; rkS2=4e-3; rkDN=4e-3; rkDSi=4e-3;
   mkS2=0.1; mkDN=0.1; mkDSi=0.1
@@ -123,60 +95,11 @@ subroutine read_cosine_param
     close(31)
   endif
 
-  !------------------------------------------------------------------------------------
-  !read spatially varying parameters
-  !------------------------------------------------------------------------------------
-  call read_gr3_prop('gmaxs1' ,gmaxs1 ,wp%gmaxs1 ,nea)
-  call read_gr3_prop('gmaxs2' ,gmaxs2 ,wp%gmaxs2 ,nea)
-  call read_gr3_prop('pis1'   ,pis1   ,wp%pis1   ,nea)
-  call read_gr3_prop('pis2'   ,pis2   ,wp%pis2   ,nea)
-  call read_gr3_prop('kno3s1' ,kno3s1 ,wp%kno3s1 ,nea)
-  call read_gr3_prop('knh4s1' ,knh4s1 ,wp%knh4s1 ,nea)
-  call read_gr3_prop('kpo4s1' ,kpo4s1 ,wp%kpo4s1 ,nea)
-  call read_gr3_prop('kco2s1' ,kco2s1 ,wp%kco2s1 ,nea)
-  call read_gr3_prop('kno3s2' ,kno3s2 ,wp%kno3s2 ,nea)
-  call read_gr3_prop('knh4s2' ,knh4s2 ,wp%knh4s2 ,nea)
-  call read_gr3_prop('kpo4s2' ,kpo4s2 ,wp%kpo4s2 ,nea)
-  call read_gr3_prop('kco2s2' ,kco2s2 ,wp%kco2s2 ,nea)
-  call read_gr3_prop('ksio4s2',ksio4s2,wp%ksio4s2,nea)
-  call read_gr3_prop('kns1'   ,kns1   ,wp%kns1   ,nea)
-  call read_gr3_prop('kns2'   ,kns2   ,wp%kns2   ,nea)
-  call read_gr3_prop('alpha1' ,alpha1 ,wp%alpha1 ,nea)
-  call read_gr3_prop('alpha2' ,alpha2 ,wp%alpha2 ,nea)
-  call read_gr3_prop('beta'   ,beta   ,wp%beta   ,nea)
-  call read_gr3_prop('ak1'    ,ak1    ,wp%ak1    ,nea)
-  call read_gr3_prop('ak2'    ,ak2    ,wp%ak2    ,nea)
-  call read_gr3_prop('ak3'    ,ak3    ,wp%ak3    ,nea)
-  call read_gr3_prop('gammas1',gammas1,wp%gammas1,nea)
-  call read_gr3_prop('gammas2',gammas2,wp%gammas2,nea)
-  call read_gr3_prop('beta1'  ,beta1  ,wp%beta1  ,nea)
-  call read_gr3_prop('beta2'  ,beta2  ,wp%beta2  ,nea)
-  call read_gr3_prop('kgz1'   ,kgz1   ,wp%kgz1   ,nea)
-  call read_gr3_prop('kgz2'   ,kgz2   ,wp%kgz2   ,nea)
-  call read_gr3_prop('rho1'   ,rho1   ,wp%rho1   ,nea)
-  call read_gr3_prop('rho2'   ,rho2   ,wp%rho2   ,nea)
-  call read_gr3_prop('rho3'   ,rho3   ,wp%rho3   ,nea)
-  call read_gr3_prop('gamma1' ,gamma1 ,wp%gamma1 ,nea)
-  call read_gr3_prop('gamma2' ,gamma2 ,wp%gamma2 ,nea)
-  call read_gr3_prop('gammaz' ,gammaz ,wp%gammaz ,nea)
-  call read_gr3_prop('kex1'   ,kex1   ,wp%kex1   ,nea)
-  call read_gr3_prop('kex2'   ,kex2   ,wp%kex2   ,nea)
-  call read_gr3_prop('wss2'   ,wss2   ,wp%wss2   ,nea)
-  call read_gr3_prop('wsdn'   ,wsdn   ,wp%wsdn   ,nea)
-  call read_gr3_prop('wsdsi'  ,wsdsi  ,wp%wsdsi  ,nea)
-  call read_gr3_prop('si2n'   ,si2n   ,wp%si2n   ,nea)
-  call read_gr3_prop('p2n'    ,p2n    ,wp%p2n    ,nea)
-  call read_gr3_prop('o2no'   ,o2no   ,wp%o2no   ,nea)
-  call read_gr3_prop('o2nh'   ,o2nh   ,wp%o2nh   ,nea)
-  call read_gr3_prop('c2n'    ,c2n    ,wp%c2n    ,nea)
-  call read_gr3_prop('kox'    ,kox    ,wp%kox    ,nea)
-  call read_gr3_prop('kmdn1'  ,kmdn1  ,wp%kmdn1  ,nea)
-  call read_gr3_prop('kmdn2'  ,kmdn2  ,wp%kmdn2  ,nea)
-  call read_gr3_prop('kmdsi1' ,kmdsi1 ,wp%kmdsi1 ,nea)
-  call read_gr3_prop('kmdsi2' ,kmdsi2 ,wp%kmdsi2 ,nea)
-  call read_gr3_prop('gamman' ,gamman ,wp%gamman ,nea)
-  call read_gr3_prop('TR'     ,TR     ,wp%TR     ,nea)
-  call read_gr3_prop('pco2a'  ,pco2a  ,wp%pco2a  ,nea)
+  !variable names for outputs
+  allocate(name_cos(ntrc),stat=istat)
+  if(istat/=0) call parallel_abort('failed in alloc. name_cos')
+  name_cos(1:13)=(/'NO3 ','SiO4','NH4 ','S1  ','S2  ','Z1  ','Z2  ', & 
+                 & 'DN  ','DSi ','PO4 ','DOX ','CO2 ','ALK '/)
 
   !read in station info. 
   if(iout_cosine/=0) call read_cosine_stainfo
@@ -256,32 +179,154 @@ subroutine read_cosine_param
       enddo
     endif! ihot=0
   endif !ised
+
+  !read spatially varying parameters
+  call cosine_vars_init
  
-  return
 end subroutine read_cosine_param
 
-subroutine update_vars(id)
+subroutine cosine_vars_init
+  !--------------------------------------------------------------------------------
+  !allocate cosine arrays and initialize
+  !--------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs,in_dir,len_in_dir,np_global, &
+                        & ne_global,ielg,iplg,i34,elnode
+  use schism_msgp, only : parallel_abort,myrank,comm,itype,rtype
+  use netcdf
+  use cosine_mod
+  use misc_modules
+  implicit none
+
+  !local variables
+  integer :: istat,i,j,k,ie,m,n,ip,ncid,varid,npt,nsp,ndim,dimid(3),dims(3)
+  real(rkind) :: data0,swild(max(np_global,ne_global))
+  character(len=15),allocatable :: pname(:)
+  character(len=20) :: fname
+  type(cosine_spatial_param),pointer :: p
+
+  !---------------------------------------------------------------------------
+  !to add a spatially varying parameter
+  !  1). append parameter name in pname array
+  !  2). make links by piointing p/p1/p2 for scalar/1D/2D variable
+  !---------------------------------------------------------------------------
+  !define spatial varying parameters 
+  fname='COS_param.nc';  nsp=40
+  allocate(pname(nsp),sp(nsp),stat=istat)
+  if(istat/=0) call parallel_abort('Failed in alloc. pname')
+
+  m=0
+  !global and core modules
+  pname(1:32)=(/'gmaxs ','gammas','pis   ','kno3s ','knh4s ', &
+              & 'kpo4s ','kco2s ','ksio4 ','kns   ','alphas', &
+              & 'betas ','aks   ','betaz ','alphaz','gammaz', &
+              & 'kez   ','kgz   ','rhoz  ','TR    ','kox   ', &
+              & 'wss2  ','wsdn  ','wsdsi ','si2n  ','p2n   ', &
+              & 'o2no  ','o2nh  ','c2n   ','gamman','pco2a ', &
+              & 'kmdn  ','kmdsi '/)
+
+  sp(m+1)%p1=>gmaxs; sp(m+2)%p1=>gammas; sp(m+3)%p1=>pis;    sp(m+4)%p1=>kno3s; sp(m+5)%p1=>knh4s;   m=m+5
+  sp(m+1)%p1=>kpo4s; sp(m+2)%p1=>kco2s;  sp(m+3)%p=>ksio4;   sp(m+4)%p1=>kns;   sp(m+5)%p1=>alphas;  m=m+5
+  sp(m+1)%p1=>betas; sp(m+2)%p1=>aks;    sp(m+3)%p1=>betaz;  sp(m+4)%p1=>alphaz;sp(m+5)%p1=>gammaz;  m=m+5
+  sp(m+1)%p1=>kez;   sp(m+2)%p1=>kgz;    sp(m+3)%p1=>rhoz;   sp(m+4)%p=>TR;     sp(m+5)%p=>kox;      m=m+5
+  sp(m+1)%p=>wss2;   sp(m+2)%p=>wsdn;    sp(m+3)%p=>wsdsi;   sp(m+4)%p=>si2n;   sp(m+5)%p=>p2n;      m=m+5
+  sp(m+1)%p=>o2no;   sp(m+2)%p=>o2nh;    sp(m+3)%p=>c2n;     sp(m+4)%p=>gamman; sp(m+5)%p=>pco2a;    m=m+5
+  sp(m+1)%p1=>kmdn;  sp(m+2)%p1=>kmdsi;  m=m+2
+
+  !read spatially varying parameters
+  do m=1,nsp
+    p=>sp(m)
+    !get dimension info. about parameter
+    p%dims=(/1,1/)
+    if(associated(p%p)) then
+      p%ndim=1; p%data0(1)=p%p
+    elseif(associated(p%p1)) then
+      p%ndim=2; p%data0(1:size(p%p1))=p%p1; p%dims(1)=size(p%p1)
+    elseif(associated(p%p2)) then
+      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/n/)); p%dims=shape(p%p2)
+    else
+      cycle
+    endif
+    p%varname=trim(adjustl(pname(m)))
+    allocate(p%istat(p%dims(1),p%dims(2))); p%istat=0
+
+    !read parameter data
+    ip=0
+    do i=1,p%dims(2)
+      do k=1,p%dims(1)
+        ip=ip+1; data0=p%data0(ip); npt=0
+        if(abs(data0+999.d0)>1.d-6.and.abs(data0+9999.d0)>1.d-6) cycle
+        if(.not.allocated(p%data)) allocate(p%data(nea,p%dims(1),p%dims(2)))
+        p%istat(k,i)=1
+
+        !read value on myrank=0, then bcast
+        if(myrank==0) then
+          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fname))//': open')
+          j=nf90_inq_varid(ncid,trim(adjustl(p%varname)),varid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong varid' )
+          j=nf90_inquire_variable(ncid,varid,ndims=ndim)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong ndim')
+          j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong dimid')
+          j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          if(npt/=np_global.and.npt/=ne_global) call parallel_abort(trim(adjustl(p%varname))//': npt/=ne,np' )
+          if(p%ndim==1) j=nf90_get_var(ncid,varid,swild(1:npt), (/1/),(/npt/))
+          if(p%ndim==2) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k/),(/npt,1/))
+          if(p%ndim==3) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k,i/),(/npt,1,1/))
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong in read value')
+          j=nf90_close(ncid)
+        endif
+        call mpi_bcast(npt,1,itype,0,comm,istat)
+        call mpi_bcast(swild(1:npt),npt,rtype,0,comm,istat)
+
+        !get parameter value for each rank
+        do ie=1,nea
+          p%data(ie,k,i)=0.d0
+          if(npt==ne_global) then
+            p%data(ie,k,i)=swild(ielg(ie))
+          elseif(npt==np_global) then
+            do n=1,i34(ie); p%data(ie,k,i)=p%data(ie,k,i)+swild(iplg(elnode(n,ie)))/dble(i34(ie)); enddo
+          else
+            call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          endif
+        enddo !ie
+
+      enddo !k
+    enddo !i
+  enddo !m
+end subroutine cosine_vars_init
+
+
+subroutine update_cosine_vars(id)
 !--------------------------------------------------------------------
 !get 2D parameter value of element
 !--------------------------------------------------------------------
+  use schism_glbl, only : rkind,irange_tr,tr_el,nvrt,i34,elside,isdel, &
+                        & elnode
   use cosine_mod
   implicit none
   integer, intent(in) :: id
 
-  gmaxs1=wp%gmaxs1(id); gmaxs2=wp%gmaxs2(id); pis1=wp%pis1(id); pis2=wp%pis2(id); 
-  kno3s1=wp%kno3s1(id); knh4s1=wp%knh4s1(id); kpo4s1=wp%kpo4s1(id); kco2s1=wp%kco2s1(id); 
-  kno3s2=wp%kno3s2(id); knh4s2=wp%knh4s2(id); kpo4s2=wp%kpo4s2(id); kco2s2=wp%kco2s2(id); 
-  ksio4s2=wp%ksio4s2(id); kns1=wp%kns1(id); kns2=wp%kns2(id); alpha1=wp%alpha1(id); 
-  alpha2=wp%alpha2(id); beta=wp%beta(id); ak1=wp%ak1(id); ak2=wp%ak2(id); ak3=wp%ak3(id); 
-  gammas1=wp%gammas1(id); gammas2=wp%gammas2(id); beta1=wp%beta1(id); beta2=wp%beta2(id); 
-  kgz1=wp%kgz1(id); kgz2=wp%kgz2(id); rho1=wp%rho1(id); rho2=wp%rho2(id); rho3=wp%rho3(id); 
-  gamma1=wp%gamma1(id); gamma2=wp%gamma2(id); gammaz=wp%gammaz(id); kex1=wp%kex1(id); 
-  kex2=wp%kex2(id); wss2=wp%wss2(id); wsdn=wp%wsdn(id); wsdsi=wp%wsdsi(id); si2n=wp%si2n(id); 
-  p2n=wp%p2n(id); o2no=wp%o2no(id); o2nh=wp%o2nh(id); c2n=wp%c2n(id); kox=wp%kox(id); 
-  kmdn1=wp%kmdn1(id); kmdn2=wp%kmdn2(id); kmdsi1=wp%kmdsi1(id); kmdsi2=wp%kmdsi2(id); 
-  gamman=wp%gamman(id); TR=wp%TR(id); pco2a=wp%pco2a(id);
+  !local variable
+  integer :: i,j,k,m
+  type(cosine_spatial_param),pointer :: p
 
-end subroutine update_vars
+  !spatial varying parameters
+  do m=1,size(sp)
+    p=>sp(m)
+    if(p%ndim==0) cycle
+    do i=1,p%dims(2)
+      do k=1,p%dims(1)
+        if(p%istat(k,i)==0) cycle
+        if(p%ndim==1) p%p=p%data(id,1,1)
+        if(p%ndim==2) p%p1(k)=p%data(id,k,1)
+        if(p%ndim==3) p%p2(k,i)=p%data(id,k,i)
+      enddo !k
+    enddo !i
+  enddo !m
+
+end subroutine update_cosine_vars
 
 
 subroutine read_cosine_stainfo

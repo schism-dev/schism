@@ -83,7 +83,7 @@ module schism_glbl
   integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
   !Parameters from param.nml
-  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,impose_net_flux,iwindoff, &
+  integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
@@ -91,11 +91,11 @@ module schism_glbl
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
-                  &itransport_only,meth_sink,iloadtide,nc_out,nu_sum_mult
+                  &itransport_only,meth_sink,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
-     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_sav,iof_icm_veg, &
-     &iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv, &
+     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg, &
+     &iof_icm_sed,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv, &
      &lev_tr_source2(:)
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
@@ -252,8 +252,8 @@ module schism_glbl
   !centroid
   real(rkind),save,allocatable :: dldxy(:,:,:)
   !Transformation tensor for element (ll) frame: eframe(i,j,ie) for ics=2
-  !where j is the axis id, i is the component id, ie is the local element id (aug.)
-  !Undefined for ics=1
+  !where j is the axis id, i is the component id, ie is the local element id (aug.). The frame aligns with
+  !local zonal-meridional axes. Undefined for ics=1
   real(rkind),save,allocatable :: eframe(:,:,:)
   !x,y coordinates of each element node/side in the _element_ frame
   !xel(4,nea), xs_el(4,nea)
@@ -303,8 +303,8 @@ module schism_glbl
   real(rkind),save,allocatable :: hmod(:)        ! constrained depth
   real(rkind),save,allocatable :: znl(:,:)        ! z-coord in local Z-axis (vertical up)
   ! Transformation tensor for node (ll) frame: pframe(i,j,ip) for ics=2.
-  ! where j is the axis id, i is the component id, ip is the local node id (aug.)
-  ! For ics=1, this is not used
+  ! where j is the axis id, i is the component id, ip is the local node id (aug.). The frame aligns with
+  ! local zonal-meridional axes. For ics=1, this is not used
   real(rkind),save,allocatable :: pframe(:,:,:)
   integer,save,allocatable :: iplg2(:)      ! Local-to-global node index table (2-tier augmented)
   integer,save,allocatable :: ipgl2(:,:)      ! Global-to-local node index table (2-tier augmented)

@@ -47,7 +47,12 @@ N^2 = \frac{g}{\rho_0}\frac{\partial \rho}{\partial z}
 \varepsilon = (c_\mu^0)^3 K^{1.5} l^{-1}
 \end{equation}
 
-In the code, the natural B.C. is applied first (see the FEM formulation below), and the essential B.C. is then used to overwrite the boundary values of the unknown, as suggested by GOTM. In the FEM formulation, $K$, $\psi$ are defined at nodes and whole levels. Furthermore, the sums of $M^2$ and $N^2$ are treated explicitly/implicitly depending on the sign. The final equations look similar to those for the momentum equation: 
+In the code, the natural B.C. is applied first (see the FEM formulation below), and the essential B.C. is then used 
+to overwrite the boundary values of the unknown, as suggested by GOTM. We also follow some other models and neglect
+ the advection terms here.
+In the FEM formulation,
+ $K$, $\psi$ are defined at nodes and whole levels. Furthermore, the sums of $M^2$ and $N^2$ are
+ treated explicitly/implicitly depending on the sign. The final equations look similar to those for the momentum equation: 
 
 \begin{equation}
 \label{eq07}

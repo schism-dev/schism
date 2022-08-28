@@ -1,0 +1,36 @@
+#!/bin/bash
+##Batch script for Intel compiler + Intel MPI
+#SBATCH --job-name=R20c
+#SBATCH --partition=compute
+#SBATCH --nodes=40
+##Up to 128cores/node
+## recommend  --ntasks-per-node <= 100 for LARGE case
+## if > 100, memory allocation error will popup out
+#SBATCH --ntasks-per-node=100
+#SBATCH --exclusive
+##Compute partition up to 8 hrs
+#SBATCH --time=08:00:00
+#SBATCH --mail-type=NONE
+#SBATCH --account=gg0028
+#SBATCH --output=my_job.%j.out
+
+# limit stacksize ... adjust to your programs need
+# and core file size - try not to use unlimit
+
+#ulimit -s 102400  # smaller size is only working for OLD-IO
+ulimit -s unlimited # For SCRIBE-IO, unlimited is necessary
+ulimit -c 0
+
+source /home/g/g260135/intel_tool
+
+# Replace this block according to https://docs.dkrz.de/doc/levante/running-jobs/mpi-runtime-settings.rst
+#echo "Replace this block according to https://docs.dkrz.de/doc/levante/running-jobs/mpi-runtime-settings.rst"
+#exit 23
+# End of block to replace
+export UCX_UNIFIED_MODE=y
+
+
+# Use srun (not mpirun or mpiexec) command to launch
+# programs compiled with any MPI library
+srun -l --cpu_bind=verbose --hint=nomultithread \
+  --distribution=block:cyclic ./pschism_LEVANTE_INTEL_PREC_EVAP_TVD-VL 8

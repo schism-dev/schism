@@ -1,8 +1,8 @@
 function [xnd,ynd,dp,i34,nm]=read_gr3(fname)
 %xnd,ynd,dp,i34,nm]=read_gr3(fname)
-%e.g. read_gr3({'hgrid.gr3'},
+%e.g. read_gr3('hgrid.gr3')
 % fname: .gr3 name
-%Outputs: xnd(np),ynd,dp,i34,nm(4,ne)
+%Outputs: xnd(np),ynd(np),dp(np),i34(ne),nm(4,ne)
 
   fid=fopen(fname,'r');
   char=fgetl(fid);

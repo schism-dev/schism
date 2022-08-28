@@ -48,13 +48,14 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,name_icm,iSilica,iZB,iPh, &
-                    & isav_icm,iveg_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
-                    & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,name_icm,iSilica,iZB,iPh, &
+                    & iCBP,isav_icm,iveg_icm,ised_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
+                    & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
+                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA
 #endif
 
 #ifdef USE_COSINE
-      USE cosine_mod,only :mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
+      USE cosine_mod,only : name_cos,mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
 #endif
 
 #ifdef USE_NAPZD
@@ -175,7 +176,7 @@
 #endif
 
 #ifndef USE_ICM
-      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12
+      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12,nout_sed=26
 #endif
 
 #ifdef USE_OIL
@@ -190,7 +191,7 @@
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
-     &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form, &
+     &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
      &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
@@ -207,11 +208,11 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm
+     &rinflation_icm,iprecip_off_bnd
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
-     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_sav,iof_icm_veg,iof_cos,iof_fib, &
-     &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
+     &iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
 !-------------------------------------------------------------------------------
@@ -437,7 +438,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
-     &iof_icm_ph(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_cos(20),iof_fib(5), &
+     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_cos(20),iof_fib(5), &
      &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
@@ -458,7 +459,7 @@
       ihdif=0; thetai=0.6_rkind; drampbc=0.d0
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
-      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; iwindoff=0;
+      nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
@@ -492,14 +493,15 @@
       nu_sum_mult=1
       h_massconsv=2.d0; rinflation_icm=1.d-3
       lev_tr_source=-9 !bottom
+      iprecip_off_bnd=0
 
       !Output elev, hvel by detault
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
-      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; iof_ana=0; iof_marsh=0
-      nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
+      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
+      iof_icm_veg=0; iof_icm_sed=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
+      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -511,8 +513,10 @@
       if(iSilica==1) iof_icm(itrs_icm(1,2):itrs_icm(2,2))=iof_icm_silica
       if(iZB==1) iof_icm(itrs_icm(1,3):itrs_icm(2,3))=iof_icm_zb
       if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
-      if(isav_icm==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_sav
-      if(iveg_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_veg
+      if(iCBP==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_cbp
+      if(isav_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_sav
+      if(iveg_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_veg
+      if(ised_icm==1) iof_icm(itrs_icm(1,8):itrs_icm(2,8))=iof_icm_sed
 #endif
 
       !zcor should be on usually
@@ -710,10 +714,10 @@
         write(errmsg,*)'wtiminc < dt'
         call parallel_abort(errmsg)
       endif
-      if(impose_net_flux/=0.and.nws/=2) then
-        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
-        call parallel_abort(errmsg)
-      endif
+!      if(impose_net_flux/=0.and.nws/=2) then
+!        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
+!        call parallel_abort(errmsg)
+!      endif
 
       if(nws<0) then
 #ifndef USE_PAHM 
@@ -6483,7 +6487,7 @@
             ncount_2delem=ncount_2delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+i+2)))
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i+2)))
           endif !iof
         enddo !i
       endif !isav_icm/
@@ -6494,10 +6498,21 @@
             ncount_2delem=ncount_2delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+i-1)))
           endif !iof
         enddo !i
       endif !iveg_icm/
+
+      if(ised_icm/=0) then
+        do i=1,nout_sed
+          if(iof_icm_sed(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+i-1)))
+          endif !iof
+        enddo !i
+      endif
 #endif
 
 #ifdef USE_MARSH
@@ -6710,12 +6725,10 @@
 #ifdef USE_COSINE
       do i=1,ntrs(8)
         if(iof_cos(i)==1) then
-          write(ifile_char,'(i12)')i
-          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=2
-          out_name(counter_out_name)='COS_'//ifile_char(1:itmp2)
+          out_name(counter_out_name)='COS_'//trim(adjustl(name_cos(i)))
         endif
       enddo !i
 #endif
@@ -6843,7 +6856,7 @@
             ncount_3delem=ncount_3delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=6
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,5)+i-1)))
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
           endif
         enddo !i
       endif !isav_icm/
