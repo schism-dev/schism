@@ -120,8 +120,8 @@
       Sd50=-huge(1.d0); Erate=-huge(1.d0)
 
       Srho(:)=2650.d0; iSedtype(:)=1; 
-      newlayer_thick=100.d0; bedload_coeff=1
-      sed_debug=0; Cdb_min=1.d-6; Cdb_max=1.d-2; actv_max=1.d0 
+      newlayer_thick=0.001d0; bedload_coeff=1
+      sed_debug=0; Cdb_min=1.d-6; Cdb_max=1.d-2; actv_max=0.05d0
       poro_option=1; porosity=0.4d0; Awooster=0.42d0; Bwooster=-0.458d0
       sedlay_ini_opt=0; toplay_inithick=10.0d-2; bdldiffu=0.5d0; Nbed=1
       bedload=1; bedload_filter=0; bedload_limiter=0; suspended_load=1

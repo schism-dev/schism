@@ -16,6 +16,10 @@
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP
 
+# Impose net satl/heat fluxes in sflux*.nc
+# IMPOSE_NET_FLUX = yes
+# EXEC := $(EXEC)_IMPOSE_NET_FLUX
+
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
 # USE_SIMPLE_WIND = yes

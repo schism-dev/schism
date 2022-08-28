@@ -324,7 +324,7 @@ Cdb_max = 0.01
 !-   equivalent to no limitation of the active layer thickness computed 
 !-   according to Harris and Wiberg (1997)
 !------------------------------------------------------------------------------
-actv_max = 1.d0
+actv_max = 0.05d0
 
 
 !==============================================================================
@@ -350,9 +350,8 @@ toplay_inithick = 10.0d-2
 !- BED LAYER THICKNESS THRESHOLD (m) ------------------------------------------
 !- If deposition exceeds this value, a new layer is created
 !  but the active layer thickness is given in bottom(:,:,iactv)
-!  Use a large value to bypass this, to enhance stability
 !------------------------------------------------------------------------------
-newlayer_thick = 100.d0
+newlayer_thick = 0.001d0
 
 !- EXNER EQUATION -------------------------------------------------------------
 !- Numerical method for the resolution of the sediment continuity equation to

@@ -4,7 +4,17 @@ Besides the following info, you may also search archived messages from the SCHIS
     Due to some intricate differences between different compilers/platforms some minor differences in results are expected. Bit-by-bit match of results using different numbers of CPUs is impossible also. But the differences should be small and should stabilize over time iteration.
 
 ???faq "Run crashed with a fatal.error error message "QUICKSEARCH: no intersecting edge....""
-    First you need to viz the results before the crash (e.g. surface velocity) to see if anything is outrageously wrong. If the results look reasonable, contact the developers for more info.
+    First you need to viz the results before the crash (e.g. surface velocity) to see if anything is 
+    outrageously wrong. Often times, errors such as this, related to the backtracking, come from
+    other errors (e.g. NaN in inputs). 
+
+    Very rarely, the error originates from the underflow issue in the backtracking/ELM (and the results otherwise 
+    look reasonable). In the backtracking step, the code assumes that the path intersects sides of elements at 1 unique
+    point that does not coincide with any node (cf. Fig. [1](./schism/eulerian-lagrangian-method.md#figure01)). Obviously this causes problem especially in some academic cases (e.g.
+    the velocity aligns perfectly with grid line). To avoid this issue, the code nudges the starting position
+    of backtracking (with parameter `btrack_nudge`) toward the starting element's centroid. Occasionally, this is still
+    insufficient when the velocity is large on very fine meshes. One way out of this is to reduce `dtb_max` and `dtb_min`
+    to get more accurate trajectory.
 
 ???faq "Run crashed with a fatal.error error message "bktrk_subs: overflow..." or "MAIN: nbtrk > mxnbt""
     The backtracking (ELM) in SCHISM is parallelized across MPI processes, and some arrays need to be allocated to store trajectories that exited the augmented domain. The dimension of those arrays is defined in mxnbt and mnbt, which are proportional to local # of side and # of levels, and the proportionality constants are defined in param.nml:
