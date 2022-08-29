@@ -92,7 +92,7 @@ subroutine ecosystem(it)
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
-  real(rkind),pointer :: mtime(:)
+  real(rkind),pointer :: mtime(:) 
 
   !todo: 1) debug module, 2) add flexible channel outputs
   do isub=1,nsub  !sub-cycling
