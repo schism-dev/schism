@@ -191,7 +191,7 @@
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
-     &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form, &
+     &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
      &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
@@ -208,7 +208,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm
+     &rinflation_icm,iprecip_off_bnd
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
@@ -459,7 +459,7 @@
       ihdif=0; thetai=0.6_rkind; drampbc=0.d0
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
-      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=1; iwindoff=0;
+      nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
@@ -493,6 +493,7 @@
       nu_sum_mult=1
       h_massconsv=2.d0; rinflation_icm=1.d-3
       lev_tr_source=-9 !bottom
+      iprecip_off_bnd=0
 
       !Output elev, hvel by detault
       nc_out=1
@@ -713,10 +714,10 @@
         write(errmsg,*)'wtiminc < dt'
         call parallel_abort(errmsg)
       endif
-      if(impose_net_flux/=0.and.nws/=2) then
-        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
-        call parallel_abort(errmsg)
-      endif
+!      if(impose_net_flux/=0.and.nws/=2) then
+!        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
+!        call parallel_abort(errmsg)
+!      endif
 
       if(nws<0) then
 #ifndef USE_PAHM 

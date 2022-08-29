@@ -833,7 +833,7 @@
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
           sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
-          !fluxprc is net flux P-E if impose_net_flux/=0
+          !fluxprc is net flux P-E if IMPOSE_NET_FLUX is on
         enddo
 !$OMP end parallel do
         if(myrank==0) write(16,*)'heat budge model completes...'

@@ -587,7 +587,8 @@
 #endif
      &                       nws ) 
 
-!$OMP parallel do default(shared) private(i)
+!$OMP parallel default(shared) private(i,j)
+!$OMP       do
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
@@ -599,12 +600,34 @@
               endif
 #endif
 
-              if(impose_net_flux/=0) then
+#ifdef IMPOSE_NET_FLUX
+!              if(impose_net_flux/=0) then
                 sflux(i)=hradd(i) 
                 !fluxprc is net P-E 
-              endif
-            enddo
-!$OMP end parallel do
+!              endif
+#endif
+            enddo !i
+!$OMP       end do
+
+            !Turn off precip near land bnd
+            if(iprecip_off_bnd/=0) then
+!$OMP         do
+              loop_prc: do i=1,np
+                if(isbnd(1,i)==-1) then
+                  fluxprc(i)=0.d0; cycle loop_prc
+                endif
+
+                do j=1,nnp(i)
+                  if(isbnd(1,indnd(j,i))==-1) then
+                    fluxprc(i)=0.d0; cycle loop_prc
+                  endif
+                enddo !j
+              end do loop_prc !i=1,np
+!$OMP         end do
+!$OMP end parallel
+              call exchange_p2d(fluxprc)
+            endif !iprecip_off_bnd
+
             if(myrank==0) write(16,*)'heat budge model completes...'
           endif !ihconsv.ne.0
 
@@ -873,11 +896,13 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))+maxpice
           srad(i)=srad_o(i)*(1-ice_tr(2,i))+srad_th_ice(i)
           !Update fluxes
-          if(impose_net_flux==0) then
+!          if(impose_net_flux==0) then
+#ifndef   IMPOSE_NET_FLUX
             fluxprc(i)=fresh_wa_flux(i)*rampwind !kg/s/m/m
             sflux(i)=net_heat_flux(i)*rampwind !W/m/m
             fluxevp(i)=0
-          endif   
+!          endif   
+#endif
  
           tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
           if(tmp>tmp_max) tmp_max=tmp
@@ -928,10 +953,12 @@
         if(lhas_ice(i)) then
           tau(:,i)=tau_oi(:,i)*rampwind !m^2/s/s
           !Update fluxes
-          if(impose_net_flux==0) then
+#ifndef   IMPOSE_NET_FLUX
+!          if(impose_net_flux==0) then
             fluxprc(i)=fresh_wa_flux(i)*rho0 !kg/s/m/m
             sflux(i)=net_heat_flux(i) !W/m/m
-          endif   
+!          endif   
+#endif
  
           tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
           if(tmp>tmp_max) tmp_max=tmp
@@ -1596,18 +1623,21 @@
 !...  Volume sources from evap and precip
 !...  For nws=3, needs evap for atmos model 
       if(isconsv/=0) then
-        if(impose_net_flux/=0) then !impose net precip (nws=2)
+#ifdef  IMPOSE_NET_FLUX
+!        if(impose_net_flux/=0) then !impose net precip (nws=2)
           do i=1,nea
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
             vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
           enddo !i 
-        else !=0
+#else
+!        else !=0
           do i=1,nea
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
             vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
           enddo !i
-        endif !impose_net_flux
+!        endif !impose_net_flux
+#endif /*IMPOSE_NET_FLUX*/
       endif !isconsv/=0
 
 !...  Option to zero out net sink @dry elem
@@ -7045,14 +7075,16 @@
               if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
             endif
 
-            if(impose_net_flux/=0) then !imposed net 
+#ifdef      IMPOSE_NET_FLUX
+!            if(impose_net_flux/=0) then !imposed net 
               precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
               flx_sf(2,i)=tr_el(2,nvrt,i)*(-precip)/rho0
-            else !=0
+#else
               evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
               precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
               flx_sf(2,i)=tr_el(2,nvrt,i)*(evap-precip)/rho0
-            endif !impose_net_flux
+!            endif !impose_net_flux
+#endif
           enddo !i
 !$OMP     end do
         endif !isconsv/=0
