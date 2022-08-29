@@ -1110,7 +1110,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put face_y')
         iret=nf90_put_var(ncid_schism_2d,ixsd_id2,xsd,(/1/),(/ns_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put edge_x')
-        iret=nf90_put_var(ncid_schism_2d,iysd_id2,ysd,(/1/),(/np_global/)) 
+        iret=nf90_put_var(ncid_schism_2d,iysd_id2,ysd,(/1/),(/ns_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put edge_y')
         iret=nf90_put_var(ncid_schism_2d,ih_id2,real(dp),(/1/),(/np_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: put depth')
