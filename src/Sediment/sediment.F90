@@ -523,6 +523,7 @@
                     Uorbi_elfrink(i,t) = -U_trough(i)*DSIN(pi/2.d0*(tv-T0)/(T2-T0))
 
                   ELSEIF ((tv .GT. T2) .AND. (tv .LE. 1.d0)) THEN
+                    !Error: 1.d0-T2==0?
                     Uorbi_elfrink(i,t) = -U_trough(i)*DCOS(pi/2.d0*(tv-T2)/(1.d0-T2))
 
                   ENDIF
@@ -686,7 +687,7 @@
             WRITE(errmsg,*)'SED: MPM bedload not ready yet'
             CALL parallel_abort(errmsg)
               
-          ! Anouk Soulsby and Damgaard (2005) 
+          ! Anouk: Soulsby and Damgaard (2005) 
           ELSEIF (bedload == 3) THEN ! Anouk
             IF(iSedtype(ised).EQ.0) THEN
               !* MUD-like sediment type, no bedload
@@ -697,7 +698,7 @@
               CALL sed_bedload_sd(ised,i) 
             ENDIF    
 
-          ! BM Wu and Lin (2014), adapted from Sed2d
+          ! BM: Wu and Lin (2014), adapted from Sed2d
           ELSEIF (bedload == 4) THEN
             IF(iSedtype(ised).EQ.0) THEN
               !* MUD-like sediment type, no bedload
@@ -1001,8 +1002,7 @@
 !                  depo_mss=depo_mss+(min(ze(nvrt,i),cff9)-cff7)*tr_el(indx,nvrt,i)
 !                endif
 
-                !BM: Correction of depo_mss, otherwise conservativity
-                !    issues occur 
+                !BM: Correction of depo_mss, otherwise conservation issues would occur 
                 depo_mss=dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3
 
                 !BM: output
@@ -1159,9 +1159,6 @@
 
 ! - If first time step of deposit, create new layer and combine bottom
 ! two bed layers.
-!YJZ: the splitting/combining of layers may cause noise. Using a large
-!newlayer_thick would avoid this part.
-
         DO i=1,nea
           IF (idry_e(i)==1) CYCLE
 
@@ -1329,7 +1326,7 @@
 
           IF(Nbed==1) THEN
             bottom(i,iactv) = bed(top,i,ithck) !possibly 0
-          ELSE ! Nbded>1
+          ELSE ! Nbed>1
             !Increase top bed layer - entrain from layers below
             thck_to_add = bottom(i,iactv)-bed(top,i,ithck) !>0
             thck_avail = 0.0d0
@@ -1376,12 +1373,13 @@
                 DO k=1,Ksed
                   cff1 = cff1+bed_mass(k,i,nnew,ised)
                 ENDDO
-                cff3 = cff2*bed_mass(Ksed,i,nnew,ised) !what's left there
-                if(cff1-cff3<0) then
+                cff3 = cff2*bed_mass(Ksed,i,nnew,ised) !what's left there (>=0)
+                !Account for small underflow
+                if(cff1-cff3<-1.d-6) then
                   write(errmsg,*)'SED3D, cff1-cff3<0:',ielg(i),cff1-cff3
                   CALL parallel_abort(errmsg)
                 endif
-                bed_mass(top,i,nnew,ised)=cff1-cff3 !>=0
+                bed_mass(top,i,nnew,ised)=max(0.d0,cff1-cff3) !>=0
                 bed_mass(Ksed,i,nnew,ised)=cff3 !>=0
               ENDDO !ised
 
@@ -1527,13 +1525,13 @@
             bed_fracn(i,ised)=bed_fracn(i,ised)+bed_frac(1,ie,ised)*area(ie)
             eroflxn(i)=eroflxn(i)+eroflxel(ie,ised)*area(ie)
             depflxn(i)=depflxn(i)+depflxel(ie,ised)*area(ie)
-            if(bed_frac(1,ie,ised)<0) then
+            if(bed_frac(1,ie,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D, frac<0 (1):',bed_frac(1,ie,ised),ielg(ie)
               CALL parallel_abort(errmsg)
             endif
           ENDDO !ised
         ENDDO !j
-        IF(ta.EQ.0) THEN
+        IF(ta==0.d0) THEN
           CALL parallel_abort('SEDIMENT: elem2nod (1)')
         ELSE
           bed_d50n(i)=bed_d50n(i)/ta
@@ -1567,7 +1565,7 @@
             bed_taun(i)=bed_taun(i)+tau_wc(ie)*area(ie)
           ENDIF
         ENDDO !j
-        IF(ta==0)THEN
+        IF(ta==0.d0)THEN
           CALL parallel_abort('SEDIMENT: elem2nod (2)')
         ELSE
           bed_taun(i)=bed_taun(i)/ta
@@ -1585,7 +1583,7 @@
           bed(1,i,ithck)=tmp !bedthick_overall
           DO ised=1,ntr_l
             bed_mass(1,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(1,i,iporo))*bed_frac(1,i,ised)
-            if(bed_mass(1,i,nnew,ised)<0) then
+            if(bed_mass(1,i,nnew,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D: mass<0; ',bed_mass(1,i,nnew,ised),i,nnew,ised
               CALL parallel_abort(errmsg)
             endif
@@ -1609,14 +1607,14 @@
 !          end do
 
 
-!     Changing depth variation due to erosion/deposition from 
+!     Convert depth change due to erosion/deposition from 
 !     elements to nodes
       IF(sed_morph>=1) THEN
         DO i=1,np
           IF(idry(i)==1) CYCLE
   
-          tmp = 0
-          ta = 0
+          tmp = 0.d0
+          ta = 0.d0
           DO j=1,nne(i)
             ie=indel(j,i)
             IF(idry_e(ie)==0) THEN
@@ -1625,7 +1623,7 @@
             ENDIF
           ENDDO !j
 
-          IF(ta==0) THEN
+          IF(ta==0.d0) THEN
             CALL parallel_abort('SEDIMENT: (4)')
           ELSE
             hdep_nd(i)=tmp/ta
