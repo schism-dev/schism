@@ -3,11 +3,13 @@
 #####  Dependencies
 list(APPEND schism_libs ${NetCDFLIBS})
 
-if(PARMETIS_EXTERNAL_FOUND)
-  list(APPEND schism_libs ${PARMETIS_LIBRARIES})
-else()
-  list(APPEND schism_libs parmetis)
-endif()
+if(NOT NO_PARMETIS)
+  if(PARMETIS_EXTERNAL_FOUND)
+    list(APPEND schism_libs ${PARMETIS_LIBRARIES})
+  else()
+    list(APPEND schism_libs parmetis)
+  endif()
+endif(NOT NO_PARMETIS)
 
 if (USE_GOTM)
   list(APPEND schism_libs ${GOTMLIBS})

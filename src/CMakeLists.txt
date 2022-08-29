@@ -55,12 +55,12 @@ add_compile_options(${C_PREPROCESS_FLAG})
 
 message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
 
+define_opt(NO_PARMETIS "Disable ParMETIS" OFF)
 define_opt(DEBUG "Enable diagnostics (slow and not suitable for production simulations" OFF)
 define_opt(USE_ANALYSIS "Triggers detailed calculations and output options" OFF)
 define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
 define_opt(OLDIO "Old nc output option" OFF)
 define_opt(PREC_EVAP "Use  precipitation/evaporation option" OFF)
-define_opt(IMPOSE_NET_FLUX "Specify net heat and salt fluxes in sflux" OFF)
 define_opt(USE_BULK_FAIRALL "Enable Fairall scheme" OFF)
 define_opt(USE_PAHM "Enable USE_PAHM scheme" OFF)
 define_opt(USE_HA "Enable Harmonic Analysis output" OFF)
@@ -206,6 +206,8 @@ macro( add_module name option_name  default)
 endmacro(add_module)
 
 
+
+
 # Create list of modules
 add_module(WWMIII    USE_WWM   OFF)
 add_module(WW3    USE_WW3   OFF)
@@ -221,84 +223,83 @@ add_module(Sed2d    USE_SED2D OFF)
 add_module(Hydro    USE_HYDRO ON)
 add_module(Core     USE_SCHISM ON)
 
-
-########## BEG:: PARMETIS ##########
-### Panagiotis Velissariou 08/25/2022
-### Code block to allow the use of an externally compiled ParMETIS library.
-### The user can supply one of the following variables to provide the full path
-### to the installed ParMETIS librarie(s):
-### (a) Via the cmake command line:
-###   -DPARMETIS_HOME=PATH, or -DPARMETISHOME=PATH, or
-###   -DPARMETIS_ROOT=PATH, or -DPARMETISROOT=PATH, or
-###   -DPARMETIS_PATH=PATH, or -DPARMETISPATH=PATH
-### (b) Via the environment:
-###   PARMETIS_HOME=PATH, or PARMETISHOME=PATH, or
-###   PARMETIS_ROOT=PATH, or PARMETISROOT=PATH, or
-###   PARMETIS_PATH=PATH, or PARMETISPATH=PATH
-###  We keep PARMETIS_DIR for internal use only.
-### NOTE: If the supplied PATH is not a valid directory, then the PARMETIS_DIR
-###       below is not set and the compilation proceeds with the SCHISM's
-###       internal ParMetis library source.
-message(STATUS "\n### Configuring ParMETIS ")
-unset(PARMETIS_DIR CACHE)
-unset(ENV{PARMETIS_DIR})
-foreach( pm_sfx IN ITEMS HOME ROOT PATH)
-  foreach( pm_sep IN ITEMS "_" "" )
-    set(pm_tmp_nam "PARMETIS${pm_sep}${pm_sfx}")
-    if(DEFINED ${pm_tmp_nam})
-      if(NOT "${${pm_tmp_nam}}" STREQUAL "")
-        get_filename_component(pm_tmp_val "${${pm_tmp_nam}}" ABSOLUTE REALPATH)
-        if(IS_DIRECTORY ${pm_tmp_val})
-          set(PARMETIS_DIR "${pm_tmp_val}")
-          break()
+if(NOT NO_PARMETIS)
+  ########## BEG:: PARMETIS ##########
+  ### Panagiotis Velissariou 08/25/2022
+  ### Code block to allow the use of an externally compiled ParMETIS library.
+  ### The user can supply one of the following variables to provide the full path
+  ### to the installed ParMETIS librarie(s):
+  ### (a) Via the cmake command line:
+  ###   -DPARMETIS_HOME=PATH, or -DPARMETISHOME=PATH, or
+  ###   -DPARMETIS_ROOT=PATH, or -DPARMETISROOT=PATH, or
+  ###   -DPARMETIS_PATH=PATH, or -DPARMETISPATH=PATH
+  ### (b) Via the environment:
+  ###   PARMETIS_HOME=PATH, or PARMETISHOME=PATH, or
+  ###   PARMETIS_ROOT=PATH, or PARMETISROOT=PATH, or
+  ###   PARMETIS_PATH=PATH, or PARMETISPATH=PATH
+  ###  We keep PARMETIS_DIR for internal use only.
+  ### NOTE: If the supplied PATH is not a valid directory, then the PARMETIS_DIR
+  ###       below is not set and the compilation proceeds with the SCHISM's
+  ###       internal ParMetis library source.
+  message(STATUS "\n### Configuring ParMETIS ")
+  unset(PARMETIS_DIR CACHE)
+  unset(ENV{PARMETIS_DIR})
+  foreach( pm_sfx IN ITEMS HOME ROOT PATH)
+    foreach( pm_sep IN ITEMS "_" "" )
+      set(pm_tmp_nam "PARMETIS${pm_sep}${pm_sfx}")
+      if(DEFINED ${pm_tmp_nam})
+        if(NOT "${${pm_tmp_nam}}" STREQUAL "")
+          get_filename_component(pm_tmp_val "${${pm_tmp_nam}}" ABSOLUTE REALPATH)
+          if(IS_DIRECTORY ${pm_tmp_val})
+            set(PARMETIS_DIR "${pm_tmp_val}")
+            break()
+          endif()
+        endif()
+      elseif(DEFINED ENV{${pm_tmp_nam}})
+        if(NOT "$ENV{${pm_tmp_nam}}" STREQUAL "")
+          get_filename_component(pm_tmp_val "$ENV{${pm_tmp_nam}}" ABSOLUTE REALPATH)
+          if(IS_DIRECTORY ${pm_tmp_val})
+            set(PARMETIS_DIR "${pm_tmp_val}")
+            break()
+          endif()
         endif()
       endif()
-    elseif(DEFINED ENV{${pm_tmp_nam}})
-      if(NOT "$ENV{${pm_tmp_nam}}" STREQUAL "")
-        get_filename_component(pm_tmp_val "$ENV{${pm_tmp_nam}}" ABSOLUTE REALPATH)
-        if(IS_DIRECTORY ${pm_tmp_val})
-          set(PARMETIS_DIR "${pm_tmp_val}")
-          break()
-        endif()
-      endif()
-    endif()
+    endforeach()
   endforeach()
-endforeach()
-unset(pm_sfx)
-unset(pm_sep)
-unset(pm_tmp_nam)
-unset(pm_tmp_val)
+  unset(pm_sfx)
+  unset(pm_sep)
+  unset(pm_tmp_nam)
+  unset(pm_tmp_val)
 
-if(DEFINED PARMETIS_DIR)
-  message(STATUS "Trying to Use an externally compiled ParMETIS library.")
+  if(DEFINED PARMETIS_DIR)
+    message(STATUS "Trying to Use an externally compiled ParMETIS library.")
 
-  find_package(ParMETIS REQUIRED C CXX)
+    find_package(ParMETIS REQUIRED C CXX)
 
-  if(PARMETIS_EXTERNAL_FOUND)
-    set(PARMETIS_DIR "${PARMETIS_DIR}/" CACHE PATH "Path to already compiled ParMetis external library." FORCE)
-    message(STATUS "Using ParMETIS in: ${PARMETIS_DIR}")
-  else()
-    message(WARNING "The externaly compiled ParMETIS library could not be found. Reverting back to SCHISM's internal ParMETIS.")
-    unset(PARMETIS_DIR CACHE)
+    if(PARMETIS_EXTERNAL_FOUND)
+      set(PARMETIS_DIR "${PARMETIS_DIR}/" CACHE PATH "Path to already compiled ParMetis external library." FORCE)
+      message(STATUS "Using ParMETIS in: ${PARMETIS_DIR}")
+    else()
+      message(WARNING "The externaly compiled ParMETIS library could not be found. Reverting back to SCHISM's internal ParMETIS.")
+      unset(PARMETIS_DIR CACHE)
+    endif()
   endif()
-endif()
 
-if(NOT DEFINED PARMETIS_DIR)
-  message(STATUS "Using SCHISM's internal ParMETIS library.")
+  if(NOT DEFINED PARMETIS_DIR)
+    message(STATUS "Using SCHISM's internal ParMETIS library.")
 
-  set(PARMETIS_VER ParMetis-4.0.3 CACHE STRING "Version and relative path to Parmetis library inside /src.")
-  set(PARMETIS_DIR "${CMAKE_SOURCE_DIR}/${PARMETIS_VER}/" CACHE PATH "Path to ParMetis which defaults to /src/PARMETIS_VER in the schism source directory. Support for other locations not tested." FORCE)
-  add_subdirectory( ${PARMETIS_VER} )
+    set(PARMETIS_VER ParMetis-4.0.3 CACHE STRING "Version and relative path to Parmetis library inside /src.")
+    set(PARMETIS_DIR "${CMAKE_SOURCE_DIR}/${PARMETIS_VER}/" CACHE PATH "Path to ParMetis which defaults to /src/PARMETIS_VER in the schism source directory. Support for other locations not tested." FORCE)
+    add_subdirectory( ${PARMETIS_VER} )
 
-  message(STATUS "PARMETIS_DIR: ${PARMETIS_DIR}")
-  message(STATUS "PARMETIS_VER: ${PARMETIS_VER}")
-endif()
-########## END:: PARMETIS ##########
-
+    message(STATUS "PARMETIS_DIR: ${PARMETIS_DIR}")
+    message(STATUS "PARMETIS_VER: ${PARMETIS_VER}")
+  endif()
+  ########## END:: PARMETIS ##########
+endif(NOT NO_PARMETIS)
 
 # Now recurse them and process the contents. 
 # In the process, we accumulate a (global) list of compile options and libraries
-message(STATUS "\n### Adding compile options and libraries") ######
 foreach (moddir ${schismmoddirs})
    add_subdirectory( ${moddir} )
    #if(EXISTS "${PROJECT_SOURCE_DIR}/../test/unittest/${moddir}/CMakeLists.txt")
