@@ -74,7 +74,7 @@ foreach( _comp IN ITEMS "_" "" )
     foreach( _var IN ITEMS HOME ROOT PATH)
         get_filename_component(_tmp_val "${${_name}${_comp}${_var}}" ABSOLUTE REALPATH)
       list(APPEND pmetis_search_hints ${_tmp_val})
-        get_filename_component(tmp_val "$ENV{${_name}${_comp}${_var}}" ABSOLUTE REALPATH)
+        get_filename_component(_tmp_val "$ENV{${_name}${_comp}${_var}}" ABSOLUTE REALPATH)
       list(APPEND pmetis_search_hints ${_tmp_val} ${_tmp_val}/.. ${_tmp_val}/../.. )
       list(APPEND pmetis_include_search_hints
                 ${${_name}${_comp}INCLUDE_DIR} $ENV{${_name}${_comp}INCLUDE_DIR}
