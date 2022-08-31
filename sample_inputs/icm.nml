@@ -136,6 +136,11 @@ iveg_icm = 0                   !0: VEG off;  1: VEG on
 iSed = 1 
 
 !-----------------------------------------------------------------------
+!Benthic Algae
+!-----------------------------------------------------------------------
+iBA = 0
+
+!-----------------------------------------------------------------------
 !solar radiation: dim=(npt,time) or (time,)
 !  iRad=0: short wave from sflux; require ihconsv =1, nws=2
 !  iRad=1: short wave from ICM_rad.th.nc (unit: W/m2)
@@ -417,16 +422,18 @@ p2pr = 0.25                       !ratio converting ZB+PB biomass to predation r
 !-----------------------------------------------------------------------
 !PH model parameter
 !-----------------------------------------------------------------------
-inu_ph= 0                     !nudge option for pH model
+ppatch0  = -999               !region flag for pH (1: ON all elem.; -999: spatial)
 pKCACO3  = 60.0               !dissulution bewteen CaCO3 and Ca++
 pKCA     = 60.0               !sediment surface transfer coefficient from CaCO3 to Ca++
 pRea     = 1.0                !reaeration rate for CO2
+inu_ph   = 0                  !nudge option for pH model
 /
 
 &SAV
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
+spatch0 = -999              !region flag for SAV. (1: ON all elem.; -999: spatial)
 stleaf0 = -9999             !init conc of total sav leaf
 ststem0 = -9999             !init conc of total sav stem
 stroot0 = -9999             !init conc of total sav root
@@ -469,6 +476,7 @@ so2c   = 2.67               !oxygen to carbon ratio
 !-----------------------------------------------------------------------
 !Intertidal Vegetation (VEG), paramters
 !-----------------------------------------------------------------------
+vpatch0 = -999                 !region flag for VEG. (1: ON all elem.; -999: spatial)
 vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
 vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
 vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
@@ -517,6 +525,32 @@ v2den  = 10     10     10     !coeff. computing veg density
 vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
 vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
 vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
+/
+
+&BAG
+!-----------------------------------------------------------------------
+!Benthic Algae
+!-----------------------------------------------------------------------
+gpatch0 =  -999          !region flag for BA. (1: ON all elem.; -999: spatial) 
+BA0     =  5.0           !initial BA concentration (g[C].m-2)
+gGPM    =  2.25          !BA maximum growth rate (day-1) 
+gTGP    =  20.0          !optimal temp. for BA growth (oC)
+gKTGP   =  0.004  0.006  !temp. dependence for BA growth (oC-2)
+gMTB    =  0.05          !respiration rate at temp. of gTR (day-1)
+gPRR    =  0.1           !predation rate at temp. of gTR (day-1)
+gTR     =  20.0          !reference temperature for BA respiration (oC)
+gKTR    =  0.069         !temp. dependence for BA respiration (oC-1)
+galpha  =  0.1           !init. slope of P-I curve (m2/E)
+gKSED   =  0.0           !light attenuation due to sediment (None)
+gKBA    =  0.01          !light attenuation coef. due to BA self-shading (g[C]-1.m2)
+gKhN    =  0.01          !nitrogen half saturation for BA growth (g[N]/m2)
+gKhP    =  0.001         !phosphorus half saturation for BA growth (g[P]/2)
+gp2c    = 0.0167         !phosphorus to carbon ratio
+gn2c    = 0.167          !nitrogen to carbon ratio
+go2c    = 2.67           !oxygen to carbon ratio
+gFCP    = 0.5 0.45 0.05  !fraction of predation BA C into 3G classes in sediment 
+gFNP    = 0.5 0.45 0.05  !fraction of predation BA N into 3G classes in sediment 
+gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment 
 /
 
 &ERO

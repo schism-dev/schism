@@ -67,6 +67,7 @@
 !SAV Module (no transport variables)
 !VEG Module (no transport variables)
 !SFM Module (no transport variables)
+!BA  Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -200,7 +201,7 @@ subroutine ecosystem(it)
           fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
           if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
           if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
-          if(iPh==1.and.iphgb(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
+          if(iPh==1.and.ppatch(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
           !light factor
           if(iLight==0) then !Cerco
@@ -252,7 +253,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       !modules (exception: CBP sub-module is embeded in the core module)
       !----------------------------------------------------------------------------------
-      sdwqc=0; vdwqc=0; zdwqc=0
+      sdwqc=0; vdwqc=0; zdwqc=0; gdwqc=0;
       !silica module
       if(iSilica==1) call silica_calc(kb,PR,MT,GP)
 
@@ -270,6 +271,9 @@ subroutine ecosystem(it)
 
       !pH model
       if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN) 
+
+      !BA module
+      if(iBA==1) call ba_calc(id,kb,dz(kb+1))
 
       !----------------------------------------------------------------------------------
       !surface and bottom flux
@@ -296,7 +300,7 @@ subroutine ecosystem(it)
       !sediment fluxes addition from SFM
       if(iSed==1) then
         !pH effect on sediment PO4 release
-        if(iPh==1 .and.iphgb(id)/=0) then
+        if(iPh==1 .and.ppatch(id)/=0) then
           JPO4(id)=max(JPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
           !BnPO4=max(BnPO4*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
           !nPO4=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
@@ -413,7 +417,8 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       do k=kb+1,nvrt
         do i=1,ntrs_icm
-          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k)+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
+          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k) &
+                  & +zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k)+gdwqc(i,k))
         enddo !i
       enddo !k=1,nv
 
@@ -479,7 +484,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
   do k=kb+1,nvrt
     call get_ph(temp(k),salt(k),TIC(k),ALK(k),pH,CO2,CAsat)
 
-    if(iphgb(id)/=0) then
+    if(ppatch(id)/=0) then
       !pre-compute the dissolution terms
       xKCA=0.0; xKCACO3=0.0
       if(.not.(CA(k)<CAsat.and.CACO3(k)==0.0)) then
@@ -535,7 +540,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
         TIC(k)=TIC(k)*(1.0-ph_nudge(id))+TIC_el(k,id)*ph_nudge(id)
         ALK(k)=ALK(k)*(1.0-ph_nudge(id))+ALK_el(k,id)*ph_nudge(id)
       endif
-    endif !iphgb(id)/=0
+    endif !ppatch(id)/=0
   enddo !k
 
 end subroutine ph_calc
@@ -999,6 +1004,68 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   !denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
 
 end subroutine sav_calc
+
+subroutine ba_calc(id,kb,wdz)
+!----------------------------------------------------------------------------
+!Benthic algae computation
+!----------------------------------------------------------------------------
+  use schism_glbl,only : rkind
+  use icm_mod
+  use icm_misc, only : signf
+  implicit none
+  integer,intent(in) :: id,kb
+  real(rkind),intent(in) :: wdz
+
+  !local variables
+  integer :: i,j,k
+  real(rkind) :: xT,mLight,rIK,wNH4,wNO3,wPO4,sNH4,sNO3,sPO4,gNH4,gNO3,gDIN,gPO4
+  real(rkind) :: fT,fR,fN,fP,fPN,GP,MT,PR
+  real(rkind),parameter :: mval=1.d-16
+
+  if(iBA==1.and.gpatch(id)/=0) then
+    !temp. effect
+    xT=temp(kb+1)-gTGP; fT=exp(-max(-gKTGP(1)*signf(xT),gKTGP(2)*signf(xT))*xT*xT) 
+
+    !light effect
+    mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA(id))
+    rIK=gGPM*fT/galpha
+    fR=mLight/sqrt(mLight*mLight+rIK*rIK+mval)
+
+    !nutrient effect
+    wNH4=NH4(kb+1)*wdz; sNH4=max(JNH4(id),0.d0)*dtw; gNH4=wNH4+sNH4 !g[N]/m2
+    wNO3=NO3(kb+1)*wdz; sNO3=max(JNO3(id),0.d0)*dtw; gNO3=wNO3+sNO3 !g[N]/m2
+    wPO4=PO4(kb+1)*wdz; sPO4=max(JPO4(id),0.d0)*dtw; gPO4=wPO4+sPO4 !g[P]/m2
+    gDIN=gNH4+gNO3; fPN=(gNH4/(gKhN+gNO3+mval))*(gNO3/(gKhN+gNH4+mval)+gKhN/(gDIN+mval)) !NH4 preference
+    fN=gDIN/(gDIN+gKhN+mval); fP=gPO4/(gPO4+gKhP+mval)
+
+    !growth,metabolism and predation
+    GP=gGPM*fT*fR*min(fN,fP)*BA(id)*dtw
+    MT=gMTB*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
+    PR=gPRR*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
+    if((GP*gn2c*fPN>gNH4).or.(GP*gn2c*(1.0-fPN)>gNO3).or.(GP*gp2c>gPO4)) then !check BA growth term
+      GP=min(gNH4/(gn2c*max(fPN,mval)),gNO3/(gn2c*max(1.0-fPN,mval)),gPO4/gp2c)
+    endif
+    if((MT+PR)>BA(id)) then !check sink terms 
+      MT=BA(id)*(gMTB/(gMTB+gPRR)); PR=BA(id)*(gPRR/(gMTB+gPRR))
+    endif
+
+    !update BA biomass
+    BA(id)=BA(id)+GP-MT-PR
+
+    !BA effect on bottom water
+    gdwqc(iPO4,kb+1)=gp2c*(MT-GP*wPO4/(gPO4+mval))/(wdz*dtw)
+    gdwqc(iNH4,kb+1)=gn2c*(MT-GP*fPN*wNH4/(gNH4+mval))/(wdz*dtw)
+    gdwqc(iNO3,kb+1)=gn2c*(-GP*(1.0-fPN)*wNO3/(gNO3+mval))/(wdz*dtw)
+    gdwqc(iDOX,kb+1)=go2c*(GP-MT)/(wdz*dtw)
+
+    !BA effect on benthic N/P flux (JN*dtw is normally much samller than wN*wdz)
+    JNH4(id)=JNH4(id)-gn2c*GP*fPN*sNH4/(gNH4*dtw+mval)
+    JNO3(id)=JNO3(id)-gn2c*GP*(1.0-fPN)*sNO3/(gNO3*dtw+mval)
+    JPO4(id)=JPO4(id)-gp2c*GP*sPO4/(gPO4*dtw+mval)
+    gPR(id)=PR/dtw
+  endif !iBA==1
+
+end subroutine ba_calc
 
 subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
 !----------------------------------------------------------------------------
