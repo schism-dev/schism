@@ -48,10 +48,10 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,name_icm,isav_icm,iveg_icm, &
-                        & ised_icm,sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,isav_icm,iveg_icm, &
+                        & ised_icm,iBA_icm,sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP,& 
-                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA
+                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA
 #endif
 
 #ifdef USE_COSINE
@@ -8779,6 +8779,12 @@
           noutput=noutput+26
         endif
 
+        !Benthic Algea model
+        if(iBA_icm/=0) then
+          if(iof_icm_ba(1)==1)  call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+1-1))),4,1,nea,dble(BA))
+          noutput=noutput+1
+        endif
+
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -9388,6 +9394,16 @@
                 varout_2delem(icount,:)=JCOD(1:ne)
             end select
           endif
+        enddo
+      endif
+
+      if(iBA_icm/=0) then
+        do i=1,nout_ba
+          if(iof_icm_ba(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.134)')
+            if(i==1) varout_2delem(icount,:)=BA(1:ne)
+          endif !iof_icm_ba
         enddo
       endif
 #endif

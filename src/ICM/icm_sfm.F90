@@ -70,7 +70,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
 
   !------------------------------------------------------------------------
-  !SAV and VEG effects
+  !SAV,VEG,BA effects
   !------------------------------------------------------------------------
   SODrt=0.0 !SOD due to SAV/VEG (g.m-2.day-1)
   !SAV: nutrient uptake and DO consumption
@@ -97,6 +97,15 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
     bNH4(id)=max(bNH4(id)-sum(vleaf_NH4(id,1:3))*dtw/dz,0.d0)
     bPO4(id)=max(bPO4(id)-sum(vleaf_PO4(id,1:3))*dtw/dz,0.d0)
     SODrt=SODrt+sum(vroot_DOX(id,1:3))
+  endif
+
+  !BA effect: organic depostion
+  if(iBA==1.and.gpatch(id)==1) then
+    do m=1,3
+      FPOC(m)=FPOC(m)+gFCP(m)*gPR(id)
+      FPON(m)=FPON(m)+gFNP(m)*gPR(id)*gn2c
+      FPOP(m)=FPOP(m)+gFPP(m)*gPR(id)*gp2c
+    enddo
   endif
 
   !------------------------------------------------------------------------
