@@ -6965,6 +6965,7 @@
           call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
           call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
+        call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
         enddo !i
       endif !myrank=0
 
