@@ -206,7 +206,7 @@ subroutine ecosystem(it)
           !light factor
           if(iLight==0) then !Cerco
             mLight=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
-            rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
+            rIK=(1.d3*c2chl(i))*GPM(i)/alpha(i)
             fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
           elseif(iLight==1) then !Chapra S.C. #todo: change this option
             !calculate optimal light intensity for PB
@@ -623,7 +623,7 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       else
         mLight=vLight*C2_PAR*(1-exp(-tmp))/tmp
       endif
-      rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
+      rIK=vGPM(j)/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
 
       vfN=bNH4(id)/(vKhNs(j)+bNH4(id))
@@ -895,7 +895,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
           endif !knp
 
           mLight=max(sLight*C2_PAR*(1-exp(-tmp))/tmp,1.d-5)
-          rIK=sGPM*sfT/salpha
+          rIK=sGPM/salpha
 
           !light limitation function for sav
           sfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
@@ -1028,7 +1028,7 @@ subroutine ba_calc(id,kb,wdz)
 
     !light effect
     mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA(id))
-    rIK=gGPM*fT/galpha
+    rIK=gGPM/galpha
     fR=mLight/sqrt(mLight*mLight+rIK*rIK+mval)
 
     !nutrient effect
