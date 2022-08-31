@@ -1,5 +1,14 @@
 # Contributing developers: please read
 
+## License and copyright
+
+According to section 5 of SCHISM's Apache License, your contribution is accepted
+under the terms of the Apache 2.0 License, unless agreed otherwise.  By submitting your
+contribution, you acknowledge that you have the legal right to contribute your work
+to SCHISM, and you hereby irrevocably grant to SCHISM a perpetual license to use, redistribute, and re-license
+your contribution under any open source license endorsed by the Open Software Initiative. 
+
+
 ## SCHISM github Workflow (Trunk Based Development)
 
 The following is tested on linux git. Should work same on other platforms.
@@ -18,9 +27,9 @@ $ git clone clone https://github.com/schism-dev/schism.git
 $ cd schism
 ```
 
-This will not ask for any username-password combo. If you would like to push, you need to have developers credentials and have to provide your username and password to validate your write access to the repository.
+This will not ask for any username-password combo. If you would like to push, you need to have developers credentials, create a github access token, and provide your username and access token to validate your write access to the repository.
 
-For password-less ssh-based authentication, you need to first add ssh key (e.g. .ssh/id_rsa.pub) to your github account under ‘Settings->SSH and GPG keys’.
+For password-less ssh-based authentication, you need to first add your ssh key (e.g. .ssh/id_rsa.pub) to your github account under ‘Settings->SSH and GPG keys’.
 
 ```bash
 $ mkdir schism_git #or whatever name you want
@@ -49,7 +58,7 @@ $ git branch -a
 ```
 ### Working with repo
 After cloning as explained above your working directory (local HEAD) will be pointing to origin/master.
-In principle, you can create changes and push directly to the master. 
+In principle, you can create changes and push directly to the master.
 
 Since git uses distributed repos, ‘pull’ from remote (i.e. fetch and merge with your local copy) will incorporate changes from others into your local repo, which is considered a ‘delta’ that will be recorded in commit history log when you try to ‘push’ back into remote. This is burdensome for reviewers because the merge does not represent your own commits. One way to squash this ‘delta’ is to rebase, which carries its own risk of entangling commit history and thus divergence when multiple users are working on a same branch. Therefore, as a general rule, if git asks you for a commit message during pull, please indicate it as ‘PULL MERGE’ so reviewers can safely ignore.
 
@@ -65,7 +74,7 @@ $ git add schism_newmodule.F90 #since this is a new file, need to add first
 $ git commit –av  # ‘-a’ bypasses staging step
 # this cmd can be issued in any dir under schism/ and it will actually commit all new changes to local repo
 $ git pull #pull others’ changes from official repo; do this often to be in sync with remote
-$ git status # useful for examining uncommitted files etc. 
+$ git status # useful for examining uncommitted files etc.
 ```
 Note that .gitignore is a great way to ignore some intermediate files such as *.o etc)
 
@@ -100,6 +109,9 @@ nothing to commit (working directory clean)
 
 `$ git push --set-upstream origin new_branch`
 
+(Get updates from other with pull)
+`$ git pull origin new_branch`
+
 When ready to merge your branch with master, there are two approaches: via pull request (PR) or local merge+push
 
 2.1 Local merge + push
@@ -108,11 +120,11 @@ When ready to merge your branch with master, there are two approaches: via pull 
 $ git checkout master #switch to master branch
 $ git pull origin master   #or:  git reset --hard origin/master  (bring it up to date)
 $ git merge --squash new_branch #merge ‘new_branch’ to master; resolve conflict if necessary; write a single commit message
-$ git commit -av 
+$ git commit -av
 $ git push origin master #push to master branch of remote repo
 ```
 
-Clean up: 
+Clean up:
 (need to switch to another branch than ‘new_branch’’ first by using git checkout...)
 
 ```bash
@@ -139,8 +151,16 @@ Use PR function to manage merge.
 2) git clone into a separate dir. Better rename the dir to some meaningful name
 3) git describe 40b5ad0 #(outputs a SHA1 that can be used to checkout)
 r5255-43-g40b5ad0
-4) git checkout r5255-43-g40b5ad0 
+4) git checkout r5255-43-g40b5ad0
 ```
+
+#### Cherry pick merge
+To merge a specific (or a few) commits from one branch to another. E.g. from an dev branch to master:
+1. Find the sha of the commit(s), with git log in the branch where the commit was made
+2. checkout to master - $ git checkout master
+3. cherry-pick the commit(s) to master $ git cherry-pick <sha> (<sha2>...)
+4. git push ...
+
 
 #### Misc
 ```bash

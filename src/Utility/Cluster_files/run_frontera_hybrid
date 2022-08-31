@@ -1,0 +1,56 @@
+#!/bin/bash
+#----------------------------------------------------
+# Example Slurm job script
+# for TACC Frontera CLX nodes
+#
+#   *** Hybrid Job in Normal Queue ***
+# 
+#       This sample script specifies:
+#         10 nodes (capital N)
+#         40 total MPI tasks (lower case n); this is 4 tasks/node
+#         14 OpenMP threads per MPI task (56 threads per node)
+#
+# Last revised: 20 May 2019
+#
+# Notes:
+#
+#   -- Launch this script by executing
+#      "sbatch clx.hybrid.slurm" on Frontera login node.
+#
+#   -- Use ibrun to launch MPI codes on TACC systems.
+#      Do NOT use mpirun or mpiexec.
+#
+#   -- In most cases it's best to keep
+#      ( MPI ranks per node ) x ( threads per rank )
+#      to a number no more than 56 (total cores).
+#
+#   -- If you're running out of memory, try running
+#      fewer tasks and/or threads per node to give each 
+#      process access to more memory.
+#
+#   -- IMPI does sensible process pinning by default.
+#
+#----------------------------------------------------
+
+#SBATCH -J R19fw          # Job name
+#SBATCH -o myjob.o%j       # Name of stdout output file
+#SBATCH -e myjob.e%j       # Name of stderr error file
+#SBATCH -p flex          # Queue (partition) name
+#SBATCH -N 60              # Total # of nodes 
+#SBATCH -n 840           # Total # of mpi tasks [ppn=this/(# of nodes) ]
+#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
+#SBATCH --mail-type=all    # Send email at begin and end of job
+####SBATCH -A CDA21001      # Project/Allocation name (req'd if you have more than 1)
+#SBATCH --mail-user=yjzhang@vims.edu
+
+# Any other commands must follow all #SBATCH directives...
+module list
+pwd
+date
+
+# Set thread count (normally, (MPI proc)x Threads/(# of nodes)=56. No hyperthreading
+export OMP_NUM_THREADS=4
+
+# Launch MPI code... 
+ibrun ./pschism_FRONTERA_OMP_PREC_EVAP_TVD-VL  7    # Use ibrun instead of mpirun or mpiexec
+

@@ -1,0 +1,1 @@
+The manual for this module can be found [here](http://ccrm.vims.edu/yinglong/wiki_files/Manual_SED2D.pdf).

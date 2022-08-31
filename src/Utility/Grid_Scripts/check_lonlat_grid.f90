@@ -1,9 +1,9 @@
-! Check quality of lon/lat grid (including global with or w/o poles), b/cos
+! Check quality of lon/lat grid (tri/quad; including global with or w/o poles), b/cos
 ! gredit has issues (e.g. hi distortion near poles), using SCHISM's 3D coordinates on an ellipsoid.
-! Fix negative elements and output list of skew elem.
+! Fix negative tri elements and output list of skew tri elem, CFL violation etc.
 !
 ! Inputs: screen; hgrid.ll (tri only)
-! Outputs: hgrid.ll.new; fort.99 (diagnostics)
+! Outputs: hgrid.ll.new; fort.99 (diagnostics; depths are error code)
 
 ! ifort -O2 -mcmodel=medium -CB -Bstatic -o check_lonlat_grid check_lonlat_grid.f90
 
@@ -22,11 +22,14 @@
   print*, 'Input max allowable skewness for triangles:'
   read*, skew_max
   
+  print*, 'Input time step:'
+  read*, dt
+  
   open(14,file='hgrid.ll',status='old')
   read(14,*); read(14,*)ne,np
 
   allocate(xlon(np),ylat(np),dp(np),area(ne),i34(ne),elnode(4,ne), &
- &i34_new(2*ne),elnode_new(4,2*ne),quad_loc(2,ne),xctr(ne),yctr(ne),xnd(np),ynd(np),znd(np), &
+ &i34_new(ne),elnode_new(4,ne),quad_loc(2,ne),xctr(ne),yctr(ne),xnd(np),ynd(np),znd(np), &
  &pframe(3,3,np))
 
   do i=1,np
@@ -54,7 +57,7 @@
 
   do i=1,ne
     read(14,*) j,i34(i),elnode(1:i34(i),i)
-    if(i34(i)/=3) stop 'No quads plz'
+    if(i34(i)/=3.and.i34(i)/=4) stop 'Unknown elem type'
   enddo !i
   close(14)  
   
@@ -80,29 +83,46 @@
     n3=elnode(3,i)
     area(i)=signa(xx(1),xx(2),xx(3),yy(1),yy(2),yy(3))
 
+    ifl=0
     if(i34(i)==3) then !tria
-      ifl=0
       if(area(i)<0) then
         write(*,*)'Fixing negative area at elem:',i,area(i)
-        write(99,*)'Fixing negative area at elem:',i,area(i)
+        !write(99,*)'Fixing negative area at elem:',i,area(i)
         elnode_new(1,i)=elnode(2,i)
         elnode_new(2,i)=elnode(1,i)
         area(i)=-area(i)
       else if(area(i)==0) then
         ifl=1
-        write(99,*)'Elem_has_0_area:',i,xlon(i),ylat(i)
+        write(99,*)i,real(xlon(n1)),real(ylat(n1)),0
       endif
 
       !Skewness
       if(ifl==0) then
         skew=maxval(swild(1:3))/sqrt(area(i)/pi)
-        if(skew>skew_max) write(99,*)'Skew_elem:',i,xlon(i),ylat(i)
+        if(skew>skew_max) write(99,*)i,real(xlon(n1)),real(ylat(n1)),1
       endif !ifl
-    !else if(i34(i)==4) then !quad
-      
-    else 
+    else if(i34(i)==4) then !quad
+      n4=elnode(4,i)
+      ar2=signa(xx(1),xx(3),xx(4),yy(1),yy(3),yy(4))
+      if(area(i)<=0.or.ar2<=0) then
+        ifl=1
+        write(99,*)i,real(xlon(n1)),real(ylat(n1)),4
+      endif
+      area(i)=area(i)+ar2 
+    else
       stop 'unknown elem type'
     endif !i34(i)
+
+    !CFL
+    if(ifl==0.and.area(i)>0) then
+      dpe=sum(dp(elnode(1:i34(i),i)))/i34(i)
+      diameter=sqrt(area(i)/pi)*2
+      cfl=dt*sqrt(9.81*max(0.1d0,dpe))/diameter
+      if(cfl<0.4) then
+        write(99,*)i,real(xlon(n1)),real(ylat(n1)),5,real(cfl)
+      endif
+    endif !ifl
+    
   enddo !i=1,ne
 
 ! Output

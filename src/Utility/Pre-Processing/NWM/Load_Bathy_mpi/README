@@ -1,0 +1,32 @@
+Loading DEMs to horizontal grid:
+1)You need have DEM tiles ready. You can find them under:
+# james    : '/ches/data10/whuang07/Case1/DEMs/DEM_pre/DEM/';
+# sciclone : '/sciclone/data10/whuang07/NWM/DEM/DEM/';
+# stampede2: "/work/06923/wendy611/stampede2/NWM/DEM/DEM/";
+# corral3 (designsafe): "/gpfs/corral3/repl/projects/NHERI/projects/8958936882960536041-242ac11a-0001-012/vims_noaa_archive/DEM/"
+
+2)you need an input hgrid.old: the old hgrid.gr3 that the DEMs to be loaded, note that the projection must be lat/lon
+
+3)All DEMs should be linked under the current DEM folder
+
+4) Follow the steps below:
+  1 cd DEM, run sym*_dems.pl.
+  2 cd ../
+  3 ln -sf DEM/dem_*.asc .
+  4 edit dems.in, the first number is the total number of dem_*.asc
+    the second number is the total nodes you want to use.
+  5 submit run_james or other bash files 
+  6 If you need to set some minimum values for certain region without high quality of DEM, you'll need the next steps 7-9. If not, the hgrid.new will be the final one with all DEMs loaded.
+  7 set minimum depth to 5 m in the region of min_5m_ll.reg (sample provided)
+  8 set minimum depth to 2 m in the region of BergenPoint.reg (sample provided)
+  9 set minimum depth to 7 m in the region of SabinePass.reg (sample provided)
+
+5) alternatively, you can simply run the auto.pl under this folder by the following steps:
+  1 copy this folder to your dir, e.g.:
+  2 cp -rL . $somedir 
+  3 or cp -rL /schism/src/Utility/Pre-Processing/NWM/Load_Bathy_mpi $somedir
+  then, run the automation under $somedir:
+     cp hgrid.old hgrid.ll
+     ./auto.pl (see comments inside; tested on James and Stampede2)
+  
+Note: The best DEMs we have in the regions around Bergen Point and Sabine Pass and [Ches Bay] show clogged channels which contradicts NOAA navigation charts. This has led to excessive blockage of tides in these regions. Therefore, we have used the navigation charts and our best judgement as DEMs in those regions (BergenPoint.reg, SabinePass.reg, Washington_3.reg). 

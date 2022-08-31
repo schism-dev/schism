@@ -73,7 +73,7 @@ FLDFLAGS = -O2
 NC_CONFIG ?=nc-config
 NETCDF_PATH=$(shell $(NC_CONFIG) --prefix)
 METIS_PATH=./ParMetis-3.1-Sep2010
-MTSLIBS = -L$(METIS_PATH) -lparmetis -lmetis
+##MTSLIBS = -L$(METIS_PATH) -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF_PATH)/lib -lnetcdf -lnetcdff
 CDFMOD = -I$(NETCDF_PATH)/include # modules for netcdf
 

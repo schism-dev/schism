@@ -26,7 +26,7 @@
 !
 
 !     Do upwind and TVD transport
-      subroutine do_transport_tvd_imp(it,ltvd,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
+      subroutine do_transport_tvd_imp(it,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
 
 !#ifdef USE_MPIMODULE
 !      use mpi
@@ -44,7 +44,7 @@
 !#endif
 
       integer, intent(in) :: it !time stepping #; info only
-      logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine
+!      logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine
 !      character(len=2), intent(in) :: flimiter
       integer, intent(in) :: ntr !# of tracers (=ntracers)
 !      integer, intent(in) :: nvrt1 !,npa1 !for dimensioning
@@ -88,7 +88,7 @@
       real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr),tmass(ntr),h_mass_in(ntr), &
      &alow(nvrt),bdia(nvrt),cupp(nvrt),rrhs(1,nvrt),soln(1,nvrt),gam(nvrt), &
      &swild(max(3,nvrt)),swild4(3,2),trel_tmp_outside(ntr),swild5(3)
-      integer :: nwild(2)
+      integer :: nwild(2),ielem_elm(ne)
 
       integer :: istat,i,j,k,kk,l,m,khh2,ie,n1,n2,n3,n4,isd,isd0,isd1,isd2,isd3,j0,je, &
                  &nd,it_sub,ntot_v,ntot_vgb,kup,kdo,jsj,jsj0,kb, &
@@ -256,6 +256,12 @@
       enddo !i=1,nea
 !$OMP end do
 
+#ifdef USE_DVD
+      !Init rkai_num. Use it to first store the value of RHS
+!$OMP workshare
+      rkai_num(1:ntrs(12),:,1:ne)=tr_el(irange_tr(1,12):irange_tr(2,12),:,1:ne) 
+!$OMP end workshare
+#endif
 !$OMP end parallel
 
 
@@ -324,6 +330,11 @@
 !$OMP   end workshare
 
         if (it_sub==1) then !only compute dtb for the first step, not related to scalar field
+
+!$OMP     workshare
+          ielem_elm=0
+!$OMP     end workshare
+
 !$OMP     do 
           do i=1,ne
             if(idry_e(i)==1) cycle
@@ -379,7 +390,17 @@
 
             enddo !k=kbe(i)+1,nvrt
 
+            !Hybrid ELM
+            if(ielm_transport/=0) then
+              if(dtbl2<dtb_min_transport) then
+                !write(99,*) iplg(i)
+                ielem_elm(i)=1
+                dtbl2=dt !unlimited
+              endif
+            endif
+
             dtb_min3(i)=dtbl2
+
 
 #ifdef USE_ANALYSIS
             dtbe(i)=dtb_min3(i) !only calculate during 1st iteration
@@ -427,7 +448,7 @@
 !$OMP     end master
 !$OMP     barrier
 
-        endif !if it_sub==1; compute dtb
+        endif !if it_sub==1; compute dtb, todo: see if it's necessary to compute dtb for each sub_step
 
 !debug>
 !#ifdef DEBUG
@@ -747,6 +768,29 @@
               tr_el(1:ntr,k,i)=adv_tr(1:ntr) 
             enddo !k=kbe(i)+1,nvrt
 
+            !Overwrite with ELM value if enabled.
+            if(ielem_elm(i)/=0) then
+              rat=time_r/dt !time ratio
+              rat=max(0.d0,min(1.d0,rat))
+              do k=kbe(i)+1,nvrt
+                do jj=1,ntr
+                  psumtr(jj)=0.d0
+                  do j=1,i34(i)
+                    jsj=elside(j,i)
+                    n1=isidenode(1,jsj); n2=isidenode(2,jsj)
+                    swild4(1,1)=0.5d0*(tr_nd(jj,k,n1)+tr_nd(jj,k,n2))
+                    swild4(2,1)=0.5d0*(tr_nd(jj,k-1,n1)+tr_nd(jj,k-1,n2))
+  
+                    swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
+                    swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
+                    psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) 
+                  enddo !j
+                enddo !jj
+                tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))
+              enddo !k
+            endif !ielem_elm(i)/=0
+
+
 !           Extend
             do k=1,kbe(i)
               tr_el(1:ntr,k,i)=tr_el(1:ntr,kbe(i)+1,i)
@@ -796,6 +840,8 @@
 
 !     Deallocate temp. arrays
       deallocate(trsd_tmp,trsd_tmp0,wm1,wm2,wm)
+      if(allocated(trel_tmp0)) deallocate(trel_tmp0)
+
 !     write number of sub steps
       if(myrank==0) then
         write(17,*)it,it_sub
@@ -810,7 +856,7 @@
 
 !$OMP parallel default(shared) private(i,k,iup,ido,psum,psumtr,j,jsj,ie,ind1,ind2,tmp, &
 !$OMP delta_tr,jj,rat,ref_flux,same_sign,vj,bigv,dtb_by_bigv,adv_tr,iel,trel_tmp_outside, &
-!$OMP ibnd,nwild,ll,ndo,lll,dtbl2,ie02,lev02,in_st2)
+!$OMP ibnd,nwild,ll,ndo,lll,dtbl2,ie02,lev02,in_st2,n1,n2,swild4)
 
 #ifdef USE_ANALYSIS
 !$OMP workshare
@@ -1033,7 +1079,7 @@
 !       Implicit vertical flux for upwind; explicit for TVD
 
 !        if(ltvd.or.it_sub==1) then !for upwind, only compute dtb for the first step
-        if(h_tvd<1.d5.or.it_sub==1) then !for upwind, only compute dtb for the first step
+        if(h_tvd<1.d5.or.it_sub==1) then !for upwind in entire domain, only compute dtb for the first step
 !$OMP     single
           dtbl=time_r !init
           ie01=0 !element # where the exteme is attained (local)
@@ -1048,6 +1094,10 @@
 !!!$OMP     workshare
 !          psum2=-1.e34
 !!!$OMP     end workshare
+
+!$OMP     workshare
+          ielem_elm=0
+!$OMP     end workshare
 
 !$OMP     do 
           do i=1,ne
@@ -1116,6 +1166,12 @@
 !            if(qj/=0) dtb_altl=min(dtb_altl,vj/(1+nplus)/qj*(1-1.e-10)) !safety factor included
             enddo !k=kbe(i)+1,nvrt
 
+            if(ielm_transport/=0) then
+              if(dtbl2<dtb_min_transport) then
+                ielem_elm(i)=1
+                dtbl2=dt !unlimited
+              endif
+            endif
             dtb_min3(i)=dtbl2
 
 #ifdef USE_ANALYSIS
@@ -1278,9 +1334,13 @@
                   psumtr(jj)=psumtr(jj)+abs(flux_mod_hface(jj,k,jsj))
                   adv_tr(jj)=adv_tr(jj)+dtb_by_bigv*abs(flux_adv_hface(k,jsj))*(trel_tmp_outside(jj)-trel_tmp(jj,k,i))
                 enddo !jj
+
+#ifdef USE_DVD
+                rkai_num(1:ntrs(12),k,i)=rkai_num(1:ntrs(12),k,i)+dtb_by_bigv*flux_mod_hface(irange_tr(1,12):irange_tr(2,12),k,jsj)* &
+     &(trel_tmp_outside(irange_tr(1,12):irange_tr(2,12))-trel_tmp(irange_tr(1,12):irange_tr(2,12),k,i))
+#endif
               endif !inflow
 
-              !if(ltvd.and.k>=kbs(jsj)+1) then
               if(h_tvd<1.d5.and.k>=kbs(jsj)+1) then
                 do jj=1,ntr
                   adv_tr(jj)=adv_tr(jj)+dtb_by_bigv*abs(flux_adv_hface(k,jsj))*(trel_tmp(jj,k,i)-trel_tmp_outside(jj))* &
@@ -1315,6 +1375,29 @@
 !                stop
 !              endif
 !            endif !TVD
+
+          !Overwrite with ELM value if enabled. The previous sections
+          !are necessary for diagnostics like DVD etc
+          if(ielem_elm(i)/=0) then
+            rat=time_r/dt !time ratio
+            rat=max(0.d0,min(1.d0,rat))
+            do k=kbe(i)+1,nvrt
+              do jj=1,ntr
+                psumtr(jj)=0.d0
+                do j=1,i34(i)
+                  jsj=elside(j,i)
+                  n1=isidenode(1,jsj); n2=isidenode(2,jsj)
+                  swild4(1,1)=0.5d0*(tr_nd(jj,k,n1)+tr_nd(jj,k,n2))
+                  swild4(2,1)=0.5d0*(tr_nd(jj,k-1,n1)+tr_nd(jj,k-1,n2))
+
+                  swild4(1,1)=swild4(1,1)*rat+sdbt(2+jj,max(k,kbs(jsj)),jsj)*(1-rat)
+                  swild4(2,1)=swild4(2,1)*rat+sdbt(2+jj,max(k-1,kbs(jsj)),jsj)*(1-rat)
+                  psumtr(jj)=psumtr(jj)+0.5d0*(swild4(1,1)+swild4(2,1)) 
+                enddo !j
+              enddo !jj
+              tr_el(1:ntr,k,i)=psumtr(:)/dble(i34(i))
+            enddo !k
+          endif !ielem_elm(i)/=0
 
 !         Extend
           do k=1,kbe(i)
@@ -1355,6 +1438,8 @@
 !-------------------------------------------------------------------------------------
       endif !itr_met=3,4
       
+!      write(12,*)'done 1st transport step...'
+
 !'    Save the final array from horizontal part as trel_tmp
 !$OMP parallel default(shared) private(i,k,bigv_m,r_s,r_s0,m,iterK,rrat,phi,kup,kdo,psumtr, &
 !$OMP tmp,flux_mod_v1,flux_mod_v2,psum,l,srat,psi1,kin,ndim,alow,bdia,cupp,dt_by_bigv,denom, &
@@ -1597,7 +1682,7 @@
                 psi1(:)=0.d0 !reset for conservation check
               endif
 
-              !DEBUG; new23
+              !DEBUG 
               !denom=1.d0
 
               bdia(kin)=bdia(kin)+denom
@@ -1640,20 +1725,43 @@
             if(iterK==iter_back-1) strat1=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
 
             !Done upwind for abnormal cases and exit
-            if(iterK==iter_back) then
-              strat2=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
+            if(iterK==iter_back.or.term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
+              !strat2=maxval(soln(1,1:ndim))-minval(soln(1,1:ndim))
               !DEBUG
               !write(12,*)'TRANS_IMP, strat loss:',real(strat1),real(strat2),real(strat2-strat1),ielg(i),m,it
+#ifdef USE_DVD
+!Error: did not add time limiter yet due to complication @F.S.
+              if(i<=ne.and.m>=irange_tr(1,12).and.m<=irange_tr(2,12)) then
+                l=m-irange_tr(1,12)+1
+                do k=kbe(i)+1,nvrt !prism
+                  if(k/=nvrt.and.flux_adv_vface(k,m,i)<0.d0) then !inflow at upper face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)+dt_by_bigv* &
+     &abs(flux_adv_vface(k,m,i))*(tr_el(m,k+1,i)-tr_el(m,k,i))*(1.d0-0.5d0*phi(k))
+                  else if(k/=nvrt.and.flux_adv_vface(k,m,i)>0.d0) then !outflow at upper face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)-0.5d0*dt_by_bigv* &
+     &abs(flux_adv_vface(k,m,i))*(tr_el(m,k+1,i)-tr_el(m,k,i))*phi(k)
+                  endif
+
+                  if(k-1/=kbe(i).and.flux_adv_vface(k-1,m,i)>0.d0) then !inflow at lower face
+                    rkai_num(l,k,i)=rkai_num(l,k,i)+dt_by_bigv* &
+     &abs(flux_adv_vface(k-1,m,i))*(tr_el(m,k-1,i)-tr_el(m,k,i))*(1.d0-0.5d0*phi(k-1))
+                  else if(k-1/=kbe(i).and.flux_adv_vface(k-1,m,i)<0.d0) then !outflow at lower
+                    rkai_num(l,k,i)=rkai_num(l,k,i)-0.5d0*dt_by_bigv* &
+     &abs(flux_adv_vface(k-1,m,i))*(tr_el(m,k-1,i)-tr_el(m,k,i))*phi(k-1)
+                  endif
+               enddo !k
+             endif !i<=ne etc
+#endif /*USE_DVD*/
+
               exit
             endif !iterK
 
-            !if(term1<=eps1*term6+eps2) then
-            if(term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
-              !DEBUG
-              !write(12,*) "converged in ", iterK,i,ielg(i),m,it
-              exit
-            endif   
-          enddo !iteration
+!            if(term1<=eps1_tvd_imp*term6+eps2_tvd_imp) then
+!              !DEBUG
+!              !write(12,*) "converged in ", iterK,i,ielg(i),m,it
+!              exit
+!            endif   
+          enddo !nonlinear iteration
 
 !          if(iterK>=iterK_MAX) then
 !            iterK_MAX=iterK
@@ -1681,6 +1789,14 @@
 !      if(myrank==0) write(20,*)it,real(it_sum2)/ne_global/ntr !,jj
 !!!$OMP end master
 
+!     Finalize DVD
+#ifdef USE_DVD
+!$OMP workshare
+      !Dim= [C^2]/sec
+      rkai_num(1:ntrs(12),:,1:ne)=(rkai_num(1:ntrs(12),:,1:ne)-tr_el(irange_tr(1,12):irange_tr(2,12),:,1:ne))/dt
+!$OMP end workshare
+#endif /*USE_DVD*/
+
 !$OMP master
 !     conservation
       if(max_iadjust_mass_consv>0) then
@@ -1699,6 +1815,8 @@
 !        if(myrank==0) write(25,*)'mass after 2 steps with correction:',real(time_stamp/86400),adv_tr(1:ntr)+total_mass_error(1:ntr)
       endif
 !$OMP end master
+
+!      write(12,*)'done 2nd transport step...'
 
 !     3rd step: non-advection terms 
 !     Save the final array from previous step as trel_tmp
@@ -1899,8 +2017,7 @@
 #endif
 
 !     Deallocate temp. arrays
-      deallocate(trel_tmp,flux_adv_hface,flux_mod_hface,up_rat_hface)
-!      deallocate(psum2)
+      deallocate(trel_tmp,flux_adv_hface,flux_mod_hface,up_rat_hface,tr_min_max)
 
       end subroutine do_transport_tvd_imp
 

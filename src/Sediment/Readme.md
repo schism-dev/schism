@@ -11,7 +11,10 @@ sed_roughness (inside sed_friction.F90) - calculate bottom roughness
 
 sediment - routine to compute the sediment source and sinks. It includes the vertical settling of 
            the sediment, erosional and depositional flux, transport of multiple grain sizes, bedload 
-           based on Meyer Peter and Mueller (not active yet) or van Rijn. Morphological model is found inside.
+           based on Meyer Peter and Mueller (not active yet), van Rijn, Soulsby and Damgaard (2005)
+           or Wu and Lin (2014). Specific bedload transport caused by wave asymmetry (acceleration
+           skewness) can be included.
+           Morphological model is found inside.
            Vertical settling is handled with semi-Lagrangian PPM and eventually cast into a body force for
            the transport solver.
 
@@ -20,6 +23,7 @@ sed_bedload - bedload routines (including call to solve_jcg() for morphol. model
 sed_friction - bottom formulations
 sed_filter - morphological filters
 sed_misc_subs - misc routines
+sed_poro - compute sediment porosity
 ]
 
 ----------------------------------------------------------------------------------------------------

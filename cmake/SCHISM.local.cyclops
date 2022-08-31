@@ -1,0 +1,11 @@
+###W&M Femto cluster
+
+set (SCHISM_EXE_BASENAME pschism_CYCLOPS CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
+
+###Relative paths won't work
+set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
+set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
+set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN}" CACHE PATH "Path to NetCDF Fortran library")
+###Compile flags
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -xCORE-AVX2 -fma -align array64byte -finline-functions -mcmodel medium -shared-intel" CACHE STRING "Fortran flags" FORCE)
+

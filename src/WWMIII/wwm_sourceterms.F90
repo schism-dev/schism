@@ -5,17 +5,20 @@
 !2do add mean quantities for 
       SUBROUTINE SOURCETERMS (IP, ACLOC, IMATRA, IMATDA, LRECALC, ISELECT, CALLFROM)
       
-      USE DATAPOOL, ONLY : MSC, MDC, MNP, WK, LINID, THR, UFRIC
+      USE DATAPOOL, ONLY : MSC, MDC, MNP, WK, LINID, THR, UFRIC, RADFLAG
       USE DATAPOOL, ONLY : CD, TAUTOT, TAUWX, TAUWY, DEP, AC1, AC2
       USE DATAPOOL, ONLY : PI2, CG, G9, ZERO, ALPHA_CH, QBLOCAL
       USE DATAPOOL, ONLY : USTDIR, Z0, SMALL, VERYSMALL, MSC_HF
       USE DATAPOOL, ONLY : DDIR, SPSIG, SPDIR, FRINTF, LMAXETOT, LADVTEST
       USE DATAPOOL, ONLY : USTDIR, Z0, SMALL, VERYSMALL, MSC_HF, DDIR
       USE DATAPOOL, ONLY : SPSIG, SPDIR, FRINTF, ONE, RHOA, RHOAW, TAUHF
-      USE DATAPOOL, ONLY : TAUW, FR, MESNL, MESIN, MESDS, MESBF, MESBR
+      USE DATAPOOL, ONLY : TAUW, FR, MESNL, MESIN, MESDS, MESBF, MESBR, IBREAK
       USE DATAPOOL, ONLY : MESTR, ISHALLOW, DS_INCR, IOBP, IOBPD, MEVEG
-      USE DATAPOOL, ONLY : LNANINFCHK, DBG, IFRIC, RTIME, DISSIPATION
-      USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP
+      USE DATAPOOL, ONLY : LNANINFCHK, DBG, WRITEDBGFLAG, IFRIC, RTIME, DISSIPATION
+      USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP, IROLLER
+      USE DATAPOOL, ONLY : WAVE_SBRTOT, WAVE_SBFTOT, WAVE_SINTOT, WAVE_SDSTOT
+      USE DATAPOOL, ONLY : EPS_W, EPS_BR
+      USE DATAPOOL, ONLY : RHOW
 #ifdef WWM_MPI
       USE DATAPOOL, ONLY : myrank
 #endif
@@ -42,7 +45,7 @@
          INTEGER        :: IS, ID, IS0, IK, ITH, IDISP, JU, NZZ
          REAL(rkind)    :: WIND10, WINDTH
          REAL(rkind)    :: FPM
-         REAL(rkind)    :: SME01, SME10, KME01, KMWAM, KMWAM2
+         REAL(rkind)    :: SME01, SME10, SMECP, KME01, KMWAM, KMWAM2
          REAL(rkind)    :: SME01WS, SME10WS
          REAL(rkind)    :: HS, ETOT, FPMH,FPM4 
          REAL(rkind)    :: LPOW, MPOW, a1, a2, ETOTWS
@@ -55,9 +58,10 @@
 
 
          REAL(rkind)    :: SSNL3(MSC,MDC), SSNL4(MSC,MDC), SSINL(MSC,MDC), SSDS(MSC,MDC), DSSNL4(MSC,MDC)
-         REAL(rkind)    :: SSVEG(MSC,MDC),DSSVEG(MSC,MDC)
+         REAL(rkind)    :: SSVEG(MSC,MDC),DSSVEG(MSC,MDC), DSSBF(MSC,MDC)
          REAL(rkind)    :: SSBF(MSC,MDC), SSBR(MSC,MDC), SSINE(MSC,MDC), DSSNL3(MSC,MDC), DSSBR(MSC,MDC)
          REAL(rkind)    :: TMP_IN(MSC), TMP_DS(MSC), WN2(MSC*MDC),SPRDD(MDC),AK2VGM1,AKM1
+         REAL(rkind)    :: SINTOT,SDSTOT,SBRTOT,SBFTOT
 
          REAL(rkind)    :: EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, AS
          REAL(rkind)    :: FMEANWS, TAUWAX, TAUWAY, XJ, FLLOWEST, GADIAG
@@ -91,7 +95,7 @@
 
          IF (.NOT. LRECALC) THEN
            ACLOC1 = AC1(:,:,IP)
-           CALL MEAN_WAVE_PARAMETER(IP,ACLOC1,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2) ! 1st guess ... 
+           CALL MEAN_WAVE_PARAMETER(IP,ACLOC1,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2) ! 1st guess ... 
          END IF
 
          SUMACLOC    = SUM(ACLOC)
@@ -105,6 +109,8 @@
          DSSNL4      = zero
          SSBR        = zero
          SSBF        = zero
+         SSDS        = zero
+         DSSBF       = zero
          SSVEG       = zero
          DSSVEG      = zero
          IMATRA_WAM  = zero
@@ -175,7 +181,7 @@
                  CALL W3SPR4 ( AWW3, CG(:,IP), WK(:,IP), EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, WIND10, WINDTH, UFRIC(IP), USTDIR(IP), TAUWX(IP), TAUWY(IP), CD(IP), Z0(IP), ALPHA_CH(IP), LLWS, FMEANWS)  
                  CALL W3SIN4 ( IP, AWW3, CG(:,IP), WN2, WIND10, UFRIC(IP), RHOAW, AS, WINDTH, Z0(IP), CD(IP), TAUWX(IP), TAUWY(IP), TAUWAX, TAUWAY, IMATRA1D, IMATDA1D, LLWS, BRLAMBDA) 
 #else
-                 WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
+                 IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
                  CALL WWM_ABORT('stop wwm_sourceterms l.176')
 #endif
                  CALL ONED2TWOD(IMATRA1D,IMATRAWW3)
@@ -188,7 +194,7 @@
                END IF
                IF (LNANINFCHK) THEN
                  IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-                   WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT NORMAL', IP, 'DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
+                   IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT NORMAL', IP, 'DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
                    CALL WWM_ABORT('NAN AT wwm_sourceterms.F90 l.189')
                  END IF
                ENDIF
@@ -229,7 +235,7 @@
 #endif 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SIN', SUM(IMATRA), SUM(IMATDA)
              CALL WWM_ABORT('NAN in wwm_sourceterm.F90 l.311')
            END IF
          ENDIF
@@ -286,7 +292,7 @@
 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, 'DUE TO SNL4'
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, 'DUE TO SNL4'
              CALL WWM_ABORT('NAN at wwm_sourceterms.F90 l.368')
            END IF
          ENDIF
@@ -300,7 +306,7 @@
          call WAV_MY_WTIME(TIME4)
 #endif 
          IF ((ISELECT.EQ.3 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.20) .AND. .NOT. LRECALC) THEN
-
+           
            IMATRAT = IMATRA
 
            IF (IOBP(IP) .EQ. 0 .OR. IOBP(IP) .EQ. 4) THEN
@@ -315,9 +321,15 @@
                CALL ONED2TWOD(IMATDA1D,IMATDAWW3)
                DO ID = 1, MDC
                  SSDS(:,ID)   = IMATRAWW3(:,ID) / CG(:,IP)
-                 IMATRA(:,ID) = IMATRA(:,ID)+IMATRAWW3(:,ID) / CG(:,IP)
-                 !IMATDA(:,ID) = IMATDA(:,ID)+IMATDAWW3(:,ID) !/ CG(:,IP)
+                 IF (ISELECT.EQ.3 .OR. ISELECT.EQ.20) THEN
+                   IMATRA(:,ID) = IMATRA(:,ID)+IMATRAWW3(:,ID) / CG(:,IP)
+                   !IMATDA(:,ID) = IMATDA(:,ID) + IMATDAWW3(:,ID) !/ CG(:,IP)
+                 ELSE IF (ISELECT.EQ.10) THEN
+                   IMATDA(:,ID) = IMATDA(:,ID) - IMATDAWW3(:,ID)
+                 END IF
                END DO
+               CALL COMPUTE_WAVE_SDSTOT(SSDS,SDSTOT)
+               WAVE_SDSTOT(IP) = SDSTOT
              ELSE IF (MESDS == 2) THEN
                CALL WWM_ABORT('PLEASE USE LSOURCEWAM FOR ECWAM SOURCE TERM FORMULATION')
              ELSE IF (MESDS == 3) THEN
@@ -344,6 +356,9 @@
 !              CALL SSWELL(IP,ETOT,ACLOC,IMATRA,IMATDA,URMSTOP,CG0)
              ELSE IF (MESDS == 5) THEN
                CALL SDS_CYCLE3 ( IP, KMWAM, SME10, ETOT, ACLOC, IMATRA, IMATDA, SSDS ) 
+             END IF
+             IF ( MESDS/=0 .AND. RADFLAG .EQ. 'VOR' ) THEN
+                 CALL COMPUTE_SDS(IP,SSDS)
              END IF
            END IF
 #ifdef VDISLIN
@@ -394,7 +409,22 @@
          IF (MESBR .EQ. 1) THEN
            IF (((ISELECT.EQ.5 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.30) .AND. ISHALLOW(IP) .EQ. 1) .AND. .NOT. LRECALC) THEN
              IF (IOBP(IP) == 0 .OR. IOBP(IP) == 4 .OR. IOBP(IP) == 3) THEN
-               CALL SDS_SWB(IP,SME01,KMWAM,ETOT,HS,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
+               ! Compute source term
+               IF (IBREAK .EQ. 1 .OR. IBREAK .EQ. 4) THEN
+                 CALL SDS_SWB(IP,SME01,KMWAM,ETOT,HS,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
+               ELSE
+                 CALL SDS_SWB(IP,SMECP,KMWAM,ETOT,HS,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
+               ENDIF
+               ! In case of VOR + implicit mode, we deal with the SBR term here
+               ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
+               ! In exlicit, we should use SMETHOD = 6, and SBR is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+               IF ( ISELECT.EQ.10 ) THEN 
+                 CALL COMPUTE_WAVE_SBRTOT(-(DSSBR*ACLOC-SSBR),SBRTOT)
+                 WAVE_SBRTOT(IP) = SBRTOT
+                 EPS_W(IP) = - WAVE_SBRTOT(IP)/RHOW
+                 IF (IROLLER == 0) EPS_BR(IP) = EPS_W(IP)
+               ENDIF
+               IF ( ISELECT.EQ.10 .AND. RADFLAG .EQ. 'VOR' ) CALL COMPUTE_SBR(IP, -(DSSBR*ACLOC-SSBR))
              END IF
            ENDIF
          END IF
@@ -409,7 +439,18 @@
          IF (MESBF .GE. 1) THEN
            IF (((ISELECT.EQ.6 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.30) .AND. ISHALLOW(IP) .EQ. 1) .AND. .NOT. LRECALC) THEN
              IF (IOBP(IP) == 0 .OR. IOBP(IP) == 4 .OR. IOBP(IP) == 3) THEN
-              CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBR,DSSBR)
+              CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+              ! In case of VOR + implicit mode, we deal with the SBF term here
+              ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
+              ! In exlicit, we should use SMETHOD = 6, and SBF is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+              ! In contrast to the breaking source term, the friction source term is not linearized (hence SSBF) 
+              IF ( ISELECT.EQ.10 ) THEN 
+                CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+                WAVE_SBFTOT(IP) = SBFTOT
+              ENDIF
+              IF ( ISELECT.EQ.10 .AND. RADFLAG .EQ. 'VOR' ) THEN
+                 CALL COMPUTE_SBF(IP,SSBF)
+              END IF
              END IF
            END IF
          ENDIF
@@ -424,7 +465,7 @@
 
          IF (LNANINFCHK) THEN
            IF (SUM(IMATRA) .NE. SUM(IMATRA) .OR. SUM(IMATDA) .NE. SUM(IMATDA)) THEN
-             WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SBF' 
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NAN AT GRIDPOINT', IP, '   DUE TO SBF' 
              CALL WWM_ABORT('NAN in wwm_sourceterms.F90 at l.419')
            END IF
          ENDIF
@@ -452,7 +493,7 @@
              CALL W3SIN4 ( IP, AWW3, CG(:,IP), WN2,  WIND10, UFRIC(IP), RHOAW, AS, WINDTH, Z0(IP), CD(IP), TAUWX(IP), TAUWY(IP), TAUWAX, TAUWAY, IMATRA1D, IMATDA1D, LLWS, BRLAMBDA)
              CALL W3SPR4 ( AWW3, CG(:,IP), WK(:,IP), EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, WIND10, WINDTH, UFRIC(IP), USTDIR(IP), TAUWX(IP), TAUWY(IP), CD(IP), Z0(IP), ALPHA_CH(IP), LLWS, FMEANWS)
 #else
-             WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
+             IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'NO ST42 or ST41 chosen but MESIN == 1'
              CALL WWM_ABORT('stop wwm_sourceterms l.186')
 #endif
            ELSEIF (MESIN == 2) THEN
@@ -461,16 +502,17 @@
            ELSEIF (MESIN == 5) THEN
            ENDIF
 
-           DISSIPATION(IP) = 0.
-           AIRMOMENTUM(IP) = 0.
-           DO ID = 1, MDC
-             TMP_DS = ( SSBR(:,ID) + SSBF(:,ID) + SSDS(:,ID) ) * SPSIG * DDIR
-             TMP_IN = ( SSINE(:,ID) + SSINL(:,ID) ) * SPSIG * DDIR
-             DO IS = 2, MSC
-               DISSIPATION(IP) = DISSIPATION(IP) + ONEHALF * ( TMP_DS(IS) + TMP_DS(IS-1) ) * DS_INCR(IS)
-               AIRMOMENTUM(IP) = AIRMOMENTUM(IP) + ONEHALF * ( TMP_IN(IS) + TMP_IN(IS-1) ) * DS_INCR(IS)
-             END DO
-           END DO
+           ! Only used for nesting, will be removed in the future
+           !DISSIPATION(IP) = 0.
+           !AIRMOMENTUM(IP) = 0.
+           !DO ID = 1, MDC
+           !  TMP_DS = ( SSBR(:,ID) + SSBF(:,ID) + SSDS(:,ID) ) * SPSIG * DDIR
+           !  TMP_IN = ( SSINE(:,ID) + SSINL(:,ID) ) * SPSIG * DDIR
+           !  DO IS = 2, MSC
+           !    DISSIPATION(IP) = DISSIPATION(IP) + ONEHALF * ( TMP_DS(IS) + TMP_DS(IS-1) ) * DS_INCR(IS)
+           !    AIRMOMENTUM(IP) = AIRMOMENTUM(IP) + ONEHALF * ( TMP_IN(IS) + TMP_IN(IS-1) ) * DS_INCR(IS)
+           !  END DO
+           !END DO
 
          ENDIF
 
@@ -481,22 +523,138 @@
 #else 
          IF (IP == MNP) THEN
 #endif
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '-----SOURCE TIMINGS-----'
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPARATION        ', TIME2-TIME1
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SIN                ', TIME3-TIME2
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SDS                ', TIME4-TIME3
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL4               ', TIME5-TIME4
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL3               ', TIME6-TIME5
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBR                ', TIME7-TIME6
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBF                ', TIME8-TIME7
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'RECALC             ', TIME9-TIME8
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'TOTAL              ', TIME9-TIME1
-!           WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '------END-TIMINGS-  ---'
-         ENDIF
+           IF (WRITESTATFLAG == 1) THEN
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '-----SOURCE TIMINGS-----'
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'PREPARATION        ', TIME2-TIME1
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SIN                ', TIME3-TIME2
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SDS                ', TIME4-TIME3
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL4               ', TIME5-TIME4
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SNL3               ', TIME6-TIME5
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBR                ', TIME7-TIME6
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'SBF                ', TIME8-TIME7
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'RECALC             ', TIME9-TIME8
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') 'TOTAL              ', TIME9-TIME1
+             WRITE(STAT%FHNDL,'("+TRACE...",A,F15.6)') '------END-TIMINGS-  ---'
+             FLUSH(STAT%FHNDL)
+           END IF
+         END IF
 #endif 
 
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSBF(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SBFTOT
+
+      ! Initialization
+      SBFTOT = ZERO
+       
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SBFTOT = SBFTOT + SPSIG(IS)*SSBF(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SBRTOT(SSBR, SBRTOT)
+      !This serves mostly for implicit solvers. For the explicit
+      !solver, a more accurate computation is performed during 
+      !the call to routine INT_SHALLOW_SOURCETERMS.
+      !As the source term is linearized with implicit solver,
+      !take as input : DSSBR*ACLOC - SSBR
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSBR(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SBRTOT
+	  
+      ! Initialization
+      SBRTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SBRTOT = SBRTOT + SPSIG(IS)*SSBR(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SINTOT(SSIN,SINTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                  :: IS, ID
+      REAL(rkind), INTENT(IN)  :: SSIN(MSC,MDC)
+      REAL(rkind), INTENT(OUT) :: SINTOT
+	  
+      ! Initialization
+      SINTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SINTOT = SINTOT + SPSIG(IS)*SSIN(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SDSTOT(SSDS,SDSTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                 :: IS, ID
+      REAL(rkind), INTENT(IN) :: SSDS(MSC,MDC)
+      REAL(rkind), INTENT(OUT):: SDSTOT
+	  
+      ! Initialization
+      SDSTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SDSTOT = SDSTOT + SPSIG(IS)*SSDS(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_SDS(IP,SSDS)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                 :: IS, ID
+      INTEGER, INTENT(IN)     :: IP
+      REAL(rkind), INTENT(IN) :: SSDS(MSC,MDC)
+
+      ! Initialization
+      SDS(:,IP) = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SDS(1,IP) = SDS(1,IP) + G9*COSTH(ID)*WK(IS,IP)*SSDS(IS,ID)*DS_INCR(IS)*DDIR
+          SDS(2,IP) = SDS(2,IP) + G9*SINTH(ID)*WK(IS,IP)*SSDS(IS,ID)*DS_INCR(IS)*DDIR
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
 

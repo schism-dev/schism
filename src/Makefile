@@ -105,8 +105,8 @@ endif
 # rules to build objects for executable programs and libraries
 
 #Search path
-VPATH = Core/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
-        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Fabm/
+VPATH = Core/ Core/PaHM/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
+        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Multi_ice/ Fabm/
 
 ifdef FUJITSU
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DFUJITSU
@@ -115,7 +115,10 @@ endif
 include o/$(config)/autosrc.mk
 
 #Cores
-OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o 
+#OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
+#        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
+#        csv_utilities.o  parwind.o 
+OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -128,8 +131,20 @@ else
   PETSCMOD =
 endif
 
+ifdef NO_PARMETIS
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DNO_PARMETIS
+endif
+
+ifdef USE_OLDIO
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DOLDIO
+endif
+
 ifdef USE_PREC_EVAP
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DPREC_EVAP
+endif
+
+ifdef USE_BULK_FAIRALL
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_BULK_FAIRALL
 endif
 
 ifdef USE_MM5
@@ -191,6 +206,13 @@ ifdef USE_HA
   OBJS := $(OBJS) harm.o
 endif
 
+ifdef USE_PAHM
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PAHM
+  OBJS := $(OBJS) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
+        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
+        csv_utilities.o  parwind.o
+endif
+
 ifdef USE_GEN
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_GEN
 endif
@@ -211,7 +233,7 @@ endif
 
 ifdef USE_COSINE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_COSINE
-  OBJS := $(OBJS) cosine_mod.o cosine_init.o cosine.o 
+  OBJS := $(OBJS) cosine_misc.o cosine_mod.o cosine_init.o cosine.o 
 endif
 
 ifdef USE_FIB
@@ -242,6 +264,10 @@ ifdef USE_FABM
   FCPFLAGS += -I$(FABMINSTALLDIR)/include
 endif
 
+ifdef USE_DVD
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_DVD
+endif
+
 ifdef USE_OIL
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_OIL
 endif
@@ -257,14 +283,28 @@ ifdef USE_WWM
        wwm_bdcons_init.o wwm_bdcons.o wwm_bdcons_wam.o wwm_nesting.o wwm_export_ww3.o \
        wwm_specparam.o wwm_windinput.o wwm_dissipation.o wwm_snl3.o wwm_snl4.o wwm_snl42.o wwm_babanin.o wwm_sourceterms.o \
        wwm_specint.o wwm_nums1d.o wwm_numtheta.o wwm_numsigma.o wwm_fluctsplit.o \
-       wwm_snonlin.o wwm_snonlin_local.o wwm_stress.o wwm_stresso.o wwm_stresso_local.o wwm_sbottom.o wwm_sdiss_ardh_vec.o wwm_sdiss_ardh_vec_local.o wwm_sinput.o wwm_sinput_local.o wwm_sinput_ard.o wwm_sinput_ard_local.o wwm_wsigstar.o wwm_wsigstar_local.o wwm_tauhf.o wwm_airsea.o wwm_airsea_local.o wwm_jafu.o wwm_nlweigt.o wwm_buildstress.o wwm_inisnonlin.o wwm_fkmean.o wwm_fkmean_local.o wwm_frcutindex.o wwm_frcutindex_local.o wwm_femeanws.o wwm_femeanws_local.o wwm_sdissip.o wwm_sdissip_local.o wwm_implsch.o wwm_implsch_local.o wwm_implsch2.o \
-       wwm_output.o wwm_compute.o wwm_diffrac.o wwm_coupl_roms_pipe.o wwm_coupl_roms_pgmcl.o wwm_jacobi.o wwm_coupl_shyfem.o wwm_coupl_selfe.o wwm_coupl_timor.o wwm_vegdiss.o wwm_main.o
+       wwm_snonlin.o wwm_stress.o wwm_stresso.o wwm_sbottom.o wwm_sdiss_ardh_vec.o wwm_sinput.o wwm_sinput_ard.o wwm_wsigstar.o wwm_tauhf.o wwm_airsea.o wwm_jafu.o wwm_nlweigt.o wwm_buildstress.o wwm_inisnonlin.o wwm_fkmean.o wwm_frcutindex.o wwm_femeanws.o wwm_sdissip.o wwm_implsch.o wwm_implsch2.o \
+       wwm_output.o wwm_compute.o wwm_compute_roller.o wwm_diffrac.o wwm_coupl_roms_pipe.o wwm_coupl_roms_pgmcl.o wwm_jacobi.o wwm_coupl_shyfem.o wwm_coupl_selfe.o wwm_coupl_timor.o wwm_vegdiss.o wwm_main.o wwm_lpp_filter.o
 endif
 
 ifdef USE_ICE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_ICE
   OBJS := $(OBJS) ice_module.o ice_therm_mod.o ice_init.o ice_step.o ice_evp.o ice_mevp.o \
                   ice_fct.o ice_thermodynamics.o
+endif
+
+ifdef USE_MICE
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_MICE
+  OBJS := $(OBJS) icepack_kinds.o icepack_warnings.o icepack_parameters.o icepack_age.o icepack_tracers.o \
+                  icepack_mushy_physics.o icepack_orbital.o icepack_ocean.o icepack_firstyear.o \
+                  icepack_meltpond_cesm.o icepack_therm_shared.o icepack_therm_bl99.o icepack_meltpond_lvl.o \
+                  icepack_meltpond_topo.o icepack_zbgc_shared.o icepack_fsd.o icepack_atmo.o icepack_therm_mushy.o \
+                  icepack_isotope.o icepack_flux.o icepack_itd.o icepack_shortwave.o icepack_brine.o \
+                  icepack_aerosol.o icepack_therm_0layer.o icepack_zsalinity.o icepack_wavefracspec.o \
+                  icepack_mechred.o icepack_algae.o icepack_therm_vertical.o icepack_zbgc.o icepack_therm_itd.o \
+                  icepack_intfc.o icedrv_kinds.o icedrv_constants.o mice_module.o icedrv_system.o \
+                  icedrv_main.o icedrv_allocate.o icedrv_set.o mice_init.o mice_evp.o icedrv_init.o\
+                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o
 endif
 
 ifdef USE_MARSH
@@ -286,7 +326,7 @@ endif
 OBJS := $(OBJS) grid_subs.o hydraulic_structures.o schism_init.o \
         schism_step.o schism_finalize.o bktrk_subs.o solver_subs.o \
         misc_subs.o transport_TVD.o transport_TVD_imp.o \
-        sflux_9c.o lap.o single_netcdf.o
+        sflux_9c.o lap.o
 
 ifdef USE_SIMPLE_WIND
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_SIMPLE_WIND
@@ -299,10 +339,36 @@ CONFIG_OBJS :=  $(addprefix o/$(config)/, $(OBJS))
 # Names of source files with relative path as found on $VPATH
 FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%=%$f) not-found:$f)))
 
+#PARMETISDIR := ./ParMetis-3.1-Sep2010
+PARMETISDIR := ./ParMetis-4.0.3
+ifeq ($(ENV),EDISON)
+    PARMETISDIR := $(PARMETISDIR).cray
+endif
+ifeq ($(ENV),CORI2)
+    PARMETISDIR := $(PARMETISDIR).cray
+endif
+ifeq ($(ENV),BEBOP)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),ANVIL)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),COMET)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
+ifeq ($(ENV),STAMPEDE2)
+    PARMETISDIR := $(PARMETISDIR).mpiicc
+endif
 
 ################################################################################
 # Library list
 ################################################################################
+ifdef NO_PARMETIS
+#Use offline partitioning and disable ParMETIS
+  MTSLIBS= 
+else
+  MTSLIBS= -L$(PARMETISDIR) -lparmetis -lmetis
+endif
 LIBS = $(MTSLIBS) $(FABMLIBS) $(CDFLIBS) $(GTMLIBS) $(PETSCLIBS)
 
 ################################################################################
@@ -336,39 +402,27 @@ psc: $(EXEC) o/$(config)/.dummy
 all: pschism utility
 
 
-PARMETISDIR := ./ParMetis-3.1-Sep2010
-ifeq ($(ENV),EDISON)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.cray
-endif
-ifeq ($(ENV),CORI2)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.cray
-endif
-ifeq ($(ENV),BEBOP)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),ANVIL)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),COMET)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-ifeq ($(ENV),STAMPEDE2)
-    PARMETISDIR := ./ParMetis-3.1-Sep2010.mpiicc
-endif
-
 # This is the main executable target
-$(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a $(PARMETISDIR)/metis.a
+ifdef NO_PARMETIS
+$(EXEC): $(CONFIG_OBJS) 
+	$(FLD) $(FLDFLAGS) $(CONFIG_OBJS) $(LIBS) ${MODULEOUTDIR}. -I. -o $@
+	ar -ru libschism.a $(CONFIG_OBJS)
+else
+$(EXEC): $(CONFIG_OBJS) $(PARMETISDIR)/parmetis.a 
 	$(FLD) $(FLDFLAGS) $(CONFIG_OBJS) $(LIBS) ${MODULEOUTDIR}. -I. -o $@
 	ar -ru libschism.a $(CONFIG_OBJS)
 
 
-$(PARMETISDIR)/%.a:
+$(PARMETISDIR)/parmetis.a:
+##	+$(MAKE) distclean --directory=$(PARMETISDIR)
+	+$(MAKE) config --directory=$(PARMETISDIR)
 	+$(MAKE) --directory=$(PARMETISDIR)
+endif
 
-.PHONY: parmetis
-parmetis:
-	+$(MAKE) clean --directory=$(PARMETISDIR)
-	+$(MAKE) --directory=$(PARMETISDIR)
+#.PHONY: parmetis
+#parmetis:
+#	+$(MAKE) clean --directory=$(PARMETISDIR)
+#	+$(MAKE) --directory=$(PARMETISDIR)
 
 
 .PHONY: depend
@@ -514,8 +568,7 @@ clean:
 	$(QUIET)rm -rf ../bin/*
 	$(QUIET)rm -rf WWMIII/*.mod
 	$(QUIET)rm -rf WWMIII/*.o
-###	$(QUIET)rm -rf $(PARMETISDIR)/*.a
-	(cd $(PARMETISDIR)/METISLib ; make realclean )
-	(cd $(PARMETISDIR)/ParMETISLib ; make realclean )
+	(cd $(PARMETISDIR); make distclean; rm -f *.a )
+	##(cd $(PARMETISDIR)/ParMETISLib ; make realclean )
 	$(QUIET)rm -rf $(FABMINSTALLDIR)
 

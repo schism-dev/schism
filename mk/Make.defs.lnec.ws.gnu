@@ -50,7 +50,7 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
 FCPFLAGS = $(PPFLAGS) -O2 -Bstatic -ffree-line-length-none #MPI code
 FLDFLAGS = -O2 #for final linking of object files
 #####Libraries
-MTSLIBS = -L/home/share/binec/AAzevedo/SELFE_DEV/ParMetis-3.1-Sep2010 -lparmetis -lmetis -L/usr/lib64/openmpi/lib -lmpi -lmpi_f90
+##MTSLIBS = -L/home/share/binec/AAzevedo/SELFE_DEV/ParMetis-3.1-Sep2010 -lparmetis -lmetis -L/usr/lib64/openmpi/lib -lmpi -lmpi_f90
 CDFLIBS = -L/usr/lib64 -lnetcdf -lnetcdff
 CDFMOD = -I/usr/include -I/usr/lib64/gfortran/modules # modules for netcdf
 

@@ -4,6 +4,15 @@ set(schismmodlibs hydro ${schismmodlibs} PARENT_SCOPE)
 
 add_compile_definitions(TVD_${TVD_LIM})
 
+# @todo this is a temporary fix for gcc10 and greater until this is
+# resolved in later versions of gcc
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
+	  add_compile_options(-fallow-argument-mismatch)
+  endif()
+endif()
+
+
 ### Incorporate code that is dependent on options
 set(hydro_extra_src "")
 if(${USE_SIMPLE_WIND})
@@ -15,6 +24,11 @@ endif()
 
 message(STATUS "hydro_extra_src=${hydro_extra_src}")
 
+if(USE_FABM)
+  if(FABM_BASE)
+    include_directories(${FABM_BASE}/include)
+  endif()
+endif()
 
 add_library(hydro schism_init.F90
                   schism_step.F90

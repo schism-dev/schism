@@ -18,9 +18,10 @@
 #else
 # if defined(SCHISM) || defined(WWM_MPI)
       use schism_msgp !, only: comm,             & ! MPI communicator
+! WARNING: DO NOT USE SCHISM CONECTIVITY ARRAYS WITHOTU CHECKING, AS WWM
+! CANNOT HANDLE QUADS!
       use schism_glbl, only  : MNE => nea_wwm,       & ! Elements of the augmented domain
      &                         MNP => npa,       & ! Nodes in the augmented domain
-     !&                         MNS => nsa,       & ! Sides in the augmented domain
      &                         NP_RES => np,     & ! Local number of resident nodes
      &                         np,               &
      &                         npg,              & ! number of ghost nodes
@@ -38,7 +39,10 @@
      &                         iplg,             & ! node local to global mapping
      &                         ipgl,             & ! node global to local mapping
 !     &                         ielg,             & ! element local to global mapping
-     &                         nx1=>nx             ! nx is often used as a function parameter. So I renamed it to avoid name conflicts
+     &                         nx1=>nx,          & ! nx is often used as a function parameter. So I renamed it to avoid name conflicts
+     &                         tanbeta_x,        & !bed slope in x direction
+     &                         tanbeta_y           !bed slope in ydirection
+
 
 #  if !defined ROMS_WWM_PGMCL_COUPLING && !defined MODEL_COUPLING_ATM_WAV && !defined MODEL_COUPLING_OCN_WAV
       use MPI
@@ -46,21 +50,16 @@
      
 # endif
 # ifdef SCHISM
-     use schism_glbl, only :   &  !NE_RES => ne,                 & ! Local number of resident elements
+     use schism_glbl, only :   &  
      &                         DMIN_SCHISM => h0,            & ! Dmin
-!     &                         NNE => nne,                   & !
-!     &                         ISELF => iself,               & !
      &                         NVRT => nvrt,                 & ! Max. Number of vertical Layers ...
      &                         KBP  => kbp,                  & ! Bottom index
      &                         IDRY => idry,                 & ! Dry/Wet flag
      &                         ZETA => znl,                  & ! Z-Levels of SCHISM
      &                         ibnd_ext_int => ibnd_ext_int, & ! bounday flag ...
-!     &                         nsa,                          & ! Sides in the augmented domain
-!     &                         NS_RES => ns,                 & ! Local number of resident sides
-!     &                         isidenode,                    & ! 2 nodes of a side
-!     &                         idry_s,                       & ! wet/dry for a side
      &                         eta1,eta2,                    & ! elevation at 2 time steps
      &                         uu2,vv2,                      & ! horizontal vel.
+     &                         curx_wwm,cury_wwm,             & ! BM:coupling current from SCHISM
      &                         KZ,THETA_F,                   & !vertical coord. parameters
      &                         SIGMACOR=>SIGMA,              & !sigma coord.
      &                         WINDX0=>WINDX,                & !x-wind
@@ -69,12 +68,30 @@
      &                         MDC_SCHISM => MDC2,           & !mdc2 from SCHISM ...
      &                         WWAVE_FORCE=>wwave_force,     & !wave-induced force
      &                         OUTT_INTPAR=>out_wwm,         & !outputs from WWM
+     &                         WAVE_SBRTOT => wave_sbrtot,   & ! Total wave energy dissipation rate by depth-induced breaking [W/m²]
+     &                         WAVE_SBFTOT => wave_sbftot,   & ! Total wave energy dissipation rate by bottom friction [W/m²]
+     &                         WAVE_SINTOT => wave_sintot,   & ! Total wave energy input rate from atmospheric forcing [W/m²]
+     &                         WAVE_SDSTOT => wave_sdstot,   & ! Total wave energy dissipation rate by whitecapping [W/m²]
+     &                         OUTT_INTPARROL=>out_wwm_rol,  & !outputs from WWM
      &                         WIND_INTPAR=>out_wwm_windpar, & ! boundary layer stuff from wwm ...
      &                         ISBND,                        & !bnd flags
      &                         RKIND,                        &
-     &                         JPRESS,SBR,SBF,STOKES_VEL,STOKES_VEL_SD,STOKES_W_ND, & !for vortex formulation
+     &                         JPRESS,SBR,SBF,SROL,SDS, & !for vortex formulation
+     &                         EPS_W, EPS_R, EPS_BR,         & ! energy dissipation of wave and roller, and total forcing
+     &                         STOKES_HVEL, STOKES_HVEL_SIDE, & !horizontal Stokes drift velocities (u,v)
+     &                         STOKES_WVEL, STOKES_WVEL_SIDE, & !vertical Stokes drift velocities
+     &                         ROLLER_STOKES_HVEL,ROLLER_STOKES_HVEL_SIDE, & ! horizontal Stokes drift velocities (u,v)for the surface rollers
      &                         SHOREWAFO,                    & ! wave forces at the shoreline
-     &                         SAV_ALPHA, SAV_H
+     &                         SAV_ALPHA, SAV_H,             &
+     &                         fwvor_advxy_stokes,            & ! BM: accounting (1) or not (0) for the different 
+     &                         fwvor_advz_stokes,             & ! terms involved in the vortex force formalism (RADFLAG='VOR')
+     &                         fwvor_gradpress,               &
+     &                         fwvor_breaking,                &
+     &                         fwvor_streaming,               &
+     &                         wafo_obcramp                   ! BM: flag (0/1:off/on) to apply a ramp on wave forces at open boundary
+!     &                         wafo_opbnd_ramp                  ! The corresponding ramp value defined at sides
+
+
 # endif
 #endif
       IMPLICIT NONE
@@ -175,6 +192,21 @@
          INTEGER                            :: NMAX
          REAL(rkind), PARAMETER             :: DEPFAC   = 6.d0
          REAL(rkind)                        :: DSIGTAB
+
+		 ! MP: the following parameters are used for erf function tabulation
+		 ! within SHOWEX bottom friction source term
+		 INTEGER, PARAMETER                 :: SIZEERFTABLE=300         
+         REAL(rkind)                        :: ERFTABLE(0:SIZEERFTABLE) 
+         REAL(rkind)                        :: DELXERF                  
+         REAL(rkind), PARAMETER             :: XERFMAX =  4.
+		 ! MP: the following parameters are used for fw tabulation
+		 ! within SHOWEX bottom friction source term and W3SRC4MD (wwm_ardhuin_new.F90) 
+	     INTEGER, PARAMETER                 :: SIZEFWTABLE=300  
+         REAL(rkind)                        :: FWTABLE(0:SIZEFWTABLE)
+         REAL(rkind)                        :: DELAB
+         REAL(rkind), PARAMETER             :: ABMIN = -1. 
+         REAL(rkind), PARAMETER             :: ABMAX = 8.
+         
 !
 ! Fundamental data types 
 !
@@ -679,6 +711,17 @@
          REAL(rkind), ALLOCATABLE        :: AC1(:,:,:)
          REAL(rkind), ALLOCATABLE        :: AC2(:,:,:)
 !
+! ... surface roller arrays
+!
+         REAL(rkind), ALLOCATABLE        :: EROL1(:), EROL2(:) ! Bulk energy of surface rollers [m^3/s^2]
+         REAL(rkind), ALLOCATABLE        :: SINBETAROL(:)      ! Surface roller slope [-]
+         REAL(rkind), ALLOCATABLE        :: KROLP(:)           ! Peak wave number [m^-1], mainly for forcing terms in VOR formalism
+         REAL(rkind), ALLOCATABLE        :: SIGROLP(:)         ! Peak wave frequency [s^-1], mainly for forcing terms in VOR formalism
+         REAL(rkind), ALLOCATABLE        :: DROLP(:)           ! Mean wave direction [rad]: surface roller direction of propagation
+         REAL(rkind), ALLOCATABLE        :: CROLP(:)           ! Peak wave phase [m/s]: surface roller propagation speed, used for computing dissipation
+         REAL(rkind), ALLOCATABLE        :: CROL(:,:)          ! Peak wave phase components [m/s]: used for comuting advection
+         REAL(rkind), ALLOCATABLE        :: AROL(:)            ! Alpha constant in roller source term [-]; array mostly used to cancel roller near shoreline
+!
 ! ... implicit splitting
 !
          REAL(rkind), ALLOCATABLE      :: DAC_ADV(:,:,:,:)
@@ -882,6 +925,8 @@
          LOGICAL                          :: LMONO_OUT = .FALSE.
 
          CHARACTER(LEN=3)                 :: RADFLAG  = 'LON'
+         LOGICAL                          :: LPP_FILT_FLAG = .FALSE.
+         REAL(rkind)                      :: LPP_FRAC = 0.50
 
          INTEGER                          :: ICPLT = 1
          INTEGER                          :: NLVT
@@ -905,15 +950,30 @@
          INTEGER                :: MESCU = 0
          INTEGER                :: ICRIT = 1
          INTEGER                :: IBREAK = 1
+         ! MP: Parameterization for the breaking coefficient
+         INTEGER                :: BR_COEF_METHOD = 1
          INTEGER                :: IFRIC = 1
+         INTEGER                :: BC_BREAK = 1
+         INTEGER                :: IROLLER = 0
+         INTEGER                :: ZPROF_BREAK = 1
           
 
          REAL(rkind)             :: FRICC = -0.067
+         ! MP D50 for SHOWEX friction source term
+         REAL(rkind), ALLOCATABLE :: D50_SHOWEX(:)
          REAL(rkind)             :: TRICO = 0.05
          REAL(rkind)             :: TRIRA = 2.5
          REAL(rkind)             :: TRIURS = 0.1
-         REAL(rkind)             :: ALPBJ
-         REAL(rkind)             :: BRHD = 0.78
+         REAL(rkind)             :: B_ALP = 1
+         REAL(rkind)             :: ALPROL = 0.65
+         REAL(rkind)             :: BRCR = 0.73
+         ! MP: Coefficient for BRCR adaptative
+         REAL(rkind)             :: a_BRCR
+         REAL(rkind)             :: b_BRCR
+         REAL(rkind)             :: min_BRCR
+         REAL(rkind)             :: max_BRCR
+         ! MP: Coefficient for Biphase computation
+         REAL(rkind)             :: a_BIPH = 0.2
 
          REAL(rkind), ALLOCATABLE      :: ETRIAD(:), SATRIAD(:,:)
 
@@ -924,12 +984,20 @@
          REAL(rkind)                   :: PTAIL(8), PSHAP(6), PBOTF(6), PTRIAD(5), TRI_ARR(5)
          REAL(rkind)                   :: PSURF(6)
 
-         REAL(rkind), ALLOCATABLE      :: QBLOCAL(:) !, SBR(:,:), SBF(:,:)
+         ! MP: Add variables for depth-induced breaking
+         REAL(rkind), ALLOCATABLE      :: QBLOCAL(:), A_BR_COEF(:), BRCRIT(:) !, SBR(:,:), SBF(:,:)
 #ifndef SCHISM
          REAL(rkind), allocatable      :: STOKES_X(:,:), STOKES_Y(:,:), JPRESS(:)
 #endif
          REAL(rkind), ALLOCATABLE      :: DISSIPATION(:)
          REAL(rkind), ALLOCATABLE      :: AIRMOMENTUM(:)
+
+! MP : not needed...
+!!
+!! ... Wave breaking-induced source term summed over sub-cycles (needed for computing SBR and for the roller source term when used)
+!!
+!!         REAL(rkind), ALLOCATABLE :: SSBR_TOTAL(:,:,:)
+
 
          INTEGER                :: MELIM   = 1
          INTEGER                :: IDIFFR  = 1
@@ -1011,6 +1079,9 @@
          LOGICAL                :: LOUTS   = .FALSE.
          INTEGER                :: IOUTS
 
+         LOGICAL                :: LFRCOUT = .FALSE.
+         REAL(rkind)            :: FRCOUT = 0.4
+
          LOGICAL                :: LWW3GLOBALOUT = .FALSE.
          REAL(rkind), ALLOCATABLE      :: WW3GLOBAL(:,:)
 
@@ -1084,14 +1155,13 @@
          END TYPE
 
          TYPE (LINEOUTS), ALLOCATABLE :: LINES(:)
-!
-! global hmax for wave breaking
-!
+
          REAL(rkind), ALLOCATABLE ::   HMAX(:)
          INTEGER, ALLOCATABLE     ::   ISHALLOW(:)
 
          REAL(rkind), ALLOCATABLE ::   RSXX(:), RSXY(:), RSYY(:), FORCEXY(:,:)
          REAL(rkind), ALLOCATABLE ::   SXX3D(:,:), SXY3D(:,:), SYY3D(:,:)
+
 !
 ! switch for the numerics ... wwmDnumsw.mod
 !
@@ -1501,4 +1571,9 @@
       LOGICAL DO_SYNC_UPP_2_LOW
       LOGICAL DO_SYNC_FINAL
 #endif
+!
+! Writing comments all along the code
+!
+      INTEGER :: WRITEDBGFLAG = 0, WRITESTATFLAG = 0, WRITEWINDBGFLAG = 0  
+
       END MODULE

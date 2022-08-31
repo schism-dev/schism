@@ -100,15 +100,17 @@
           END IF
         END DO
         IF (IEfound .eq. -1) THEN
-          write(DBG%FHNDL,*) 'IE=', IE
-          write(DBG%FHNDL,*) 'IP123=', IP1, IP2, IP3
-          write(DBG%FHNDL,*) 'IPglob123=', IPglob1, IPglob2, IPglob3
-          write(DBG%FHNDL,*) 'CCON_TOTAL=', CCON_TOTAL(IPglob1)
-          DO J=1,CCON_TOTAL(IPglob1)
-            IE2=INDX_IE(J, IPglob1)
-            write(DBG%FHNDL,*) 'J=', J, 'IE2=', IE2
-            write(DBG%FHNDL,*) 'INE(:,IE2)=', INEtotal(1,IE2), INEtotal(2,IE2), INEtotal(3,IE2)
-          END DO
+          IF (WRITEDBGFLAG == 1) THEN
+            WRITE(DBG%FHNDL,*) 'IE=', IE
+            WRITE(DBG%FHNDL,*) 'IP123=', IP1, IP2, IP3
+            WRITE(DBG%FHNDL,*) 'IPglob123=', IPglob1, IPglob2, IPglob3
+            WRITE(DBG%FHNDL,*) 'CCON_TOTAL=', CCON_TOTAL(IPglob1)
+            DO J=1,CCON_TOTAL(IPglob1)
+              IE2=INDX_IE(J, IPglob1)
+              WRITE(DBG%FHNDL,*) 'J=', J, 'IE2=', IE2
+              WRITE(DBG%FHNDL,*) 'INE(:,IE2)=', INEtotal(1,IE2), INEtotal(2,IE2), INEtotal(3,IE2)
+            END DO
+          END IF
           CALL WWM_ABORT('Did not find the triangle')
         END IF
         IE_LocalGlobal(IE)=IEfound
@@ -297,7 +299,10 @@
 #else
       IEstatus=1      
 #endif
-      WRITE(STAT%FHNDL,*) 'sum(IEstatus)=', sum(IEstatus)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'sum(IEstatus)=', sum(IEstatus)
+      END IF
+      
 #ifdef MPI_PARALL_GRID
       !
       ! Now building synchronization arrays
@@ -496,7 +501,9 @@
       real(rkind) :: Lsum(MSC,MDC)
 !      WRITE(STAT%FHNDL,*) 'Direct sum(AC2)=', sum(AC2)
       CALL TOTAL_SUMMATION_AC(AC2, Lsum)
-      WRITE(STAT%FHNDL,*) 'sum(AC2)=', sum(Lsum),' at step:', TRIM(string)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'sum(AC2)=', sum(Lsum),' at step:', TRIM(string)
+      END IF      
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -508,7 +515,9 @@
       character(len=*) :: string
       real(rkind) :: eSum
       CALL TOTAL_SUMMATION_SCALAR(F, eSum)
-      WRITE(STAT%FHNDL,*) 'sum(F)=', eSum,' mesg:', TRIM(string)
+      IF (WRITESTATFLAG == 1) THEN
+        WRITE(STAT%FHNDL,*) 'sum(F)=', eSum,' mesg:', TRIM(string)
+      END IF      
       END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
@@ -1026,7 +1035,9 @@
         IF (istat/=0) CALL WWM_ABORT('error in IOBPtotal allocate')
         DO iProc=2,nproc
           MNPloc=ListMNP(iProc)
-          WRITE(STAT%FHNDL,*) 'iProc, MNPloc=', iProc, MNPloc
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'iProc, MNPloc=', iProc, MNPloc
+          END IF          
           allocate(dspl_oned(MNPloc), dspl_twod(MNPloc), stat=istat)
           IF (istat/=0) CALL WWM_ABORT('error in IOBPtotal allocate')
           DO IP=1,MNPloc
@@ -1040,7 +1051,9 @@
           call mpi_type_commit(twod_send_type(iProc-1), ierr)
           deallocate(dspl_oned, dspl_twod)
         END DO
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          FLUSH(STAT%FHNDL)
+        END IF        
       END IF
       END SUBROUTINE
 #endif
@@ -1139,12 +1152,16 @@
           END IF
         END IF
         NbSend(iProc)=eSend
-        WRITE(STAT%FHNDL,*) 'iProc=', iProc, ' eSend=', eSend
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'iProc=', iProc, ' eSend=', eSend
+          FLUSH(STAT%FHNDL)
+        END IF        
       END DO
       IF (myrank .eq. rank_boundary) THEN
-        WRITE(STAT%FHNDL,*) 'bound_nbproc=', bound_nbproc
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'bound_nbproc=', bound_nbproc
+          FLUSH(STAT%FHNDL)
+        END IF          
         allocate(bound_listproc(bound_nbproc), Indexes(np_total), stat=istat)
         IF (istat/=0) CALL WWM_ABORT('allocate error')
         !
@@ -1161,8 +1178,10 @@
             Indexes(IP_glob)=idx
           END IF
         END DO
-        WRITE(STAT%FHNDL,*) 'idx=', idx
-        FLUSH(STAT%FHNDL)
+        IF (WRITESTATFLAG == 1) THEN
+          WRITE(STAT%FHNDL,*) 'idx=', idx
+          FLUSH(STAT%FHNDL)
+        END IF
 
         IF (IWBMNP .gt. 0) THEN
           allocate(Indexes_boundary(IWBMNP), stat=istat)
@@ -1190,8 +1209,10 @@
                 eIdx=Indexes(IP_glob)
                 dspl_spparm(idx)=8*(eIdx-1)
                 dspl_wbac(idx)=MSC*MDC*(eIdx-1)
-                WRITE(STAT%FHNDL,*) 'idx=', idx, 'eIdx=', eIdx
-                FLUSH(STAT%FHNDL)
+                IF (WRITESTATFLAG == 1) THEN
+                  WRITE(STAT%FHNDL,*) 'idx=', idx, 'eIdx=', eIdx
+                  FLUSH(STAT%FHNDL)
+                END IF
               END IF
             END DO
             call mpi_type_create_indexed_block(eSend,8,dspl_spparm,rtype,spparm_type(idx_nbproc), ierr)
@@ -1333,40 +1354,57 @@
       END IF
       IF (LINHOM) THEN
         IF (myrank .eq. rank_boundary) THEN
-          WRITE(STAT%FHNDL,*) 'Before data receiving'
-          WRITE(STAT%FHNDL,*) 'IWBMNPGL=', IWBMNPGL
-          WRITE(STAT%FHNDL,*) 'MSC/MDC=', MSC,MDC
-          WRITE(STAT%FHNDL,*) 'allocated(WBAC_GL)=', allocated(WBAC_GL)
-          WRITE(STAT%FHNDL,*) 'size(WBAC_GL)=', size(WBAC_GL)
-          FLUSH(STAT%FHNDL)
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'Before data receiving'
+            WRITE(STAT%FHNDL,*) 'IWBMNPGL=', IWBMNPGL
+            WRITE(STAT%FHNDL,*) 'MSC/MDC=', MSC,MDC
+            WRITE(STAT%FHNDL,*) 'allocated(WBAC_GL)=', allocated(WBAC_GL)
+            WRITE(STAT%FHNDL,*) 'size(WBAC_GL)=', size(WBAC_GL)
+            FLUSH(STAT%FHNDL)
+          END IF
+          
           WBAC_GL=0
           DO idx_proc=1,bound_nbproc
-            WRITE(STAT%FHNDL,*) 'idx_proc/eProc=', idx_proc, bound_listproc(idx_proc)
-            FLUSH(STAT%FHNDL)
+            IF (WRITESTATFLAG == 1) THEN
+              WRITE(STAT%FHNDL,*) 'idx_proc/eProc=', idx_proc, bound_listproc(idx_proc)
+              FLUSH(STAT%FHNDL)
+            END IF            
             CALL mpi_irecv(WBAC_GL, 1, wbac_type(idx_proc), bound_listproc(idx_proc), 2040, comm, wbac_rqst(idx_proc), ierr)
-            WRITE(STAT%FHNDL,*) 'MPI_IRECV ierr=', ierr
-            FLUSH(STAT%FHNDL)
+            IF (WRITESTATFLAG == 1) THEN
+              WRITE(STAT%FHNDL,*) 'MPI_IRECV ierr=', ierr
+              FLUSH(STAT%FHNDL)
+            END IF
           END DO
-          WRITE(STAT%FHNDL,*) 'IWBMNP=', IWBMNP
-          WRITE(STAT%FHNDL,*) 'IWBMNPGL=', IWBMNPGL
-          FLUSH(STAT%FHNDL)
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'IWBMNP=', IWBMNP
+            WRITE(STAT%FHNDL,*) 'IWBMNPGL=', IWBMNPGL
+            FLUSH(STAT%FHNDL)
+          END IF          
           DO IP=1,IWBMNP
             WBAC_GL(:,:,Indexes_boundary(IP))=WBAC(:,:,IP)
           END DO
           IF (bound_nbproc > 0) THEN
             CALL MPI_WAITALL(bound_nbproc, wbac_rqst, wbac_stat, ierr)
-            WRITE(STAT%FHNDL,*) 'MPI_WAITALL ierr=', ierr
+            IF (WRITESTATFLAG == 1) THEN
+              WRITE(STAT%FHNDL,*) 'MPI_WAITALL ierr=', ierr
+              FLUSH(STAT%FHNDL)
+            END IF
+          END IF
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'sum(WBAC_GL)=', sum(WBAC_GL)
             FLUSH(STAT%FHNDL)
           END IF
-          WRITE(STAT%FHNDL,*) 'sum(WBAC_GL)=', sum(WBAC_GL)
-          FLUSH(STAT%FHNDL)
         ELSE
-          WRITE(STAT%FHNDL,*) 'Before data sending IWBMNP=', IWBMNP
-          WRITE(STAT%FHNDL,*) 'sum(WBAC)=', sum(WBAC)
-          FLUSH(STAT%FHNDL)
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'Before data sending IWBMNP=', IWBMNP
+            WRITE(STAT%FHNDL,*) 'sum(WBAC)=', sum(WBAC)
+            FLUSH(STAT%FHNDL)
+          END IF
           CALL MPI_SEND(WBAC, MSC*MDC*IWBMNP, rtype, rank_boundary, 2040, comm, ierr)
-          WRITE(STAT%FHNDL,*) 'MPI_SEND ierr=', ierr
-          FLUSH(STAT%FHNDL)
+          IF (WRITESTATFLAG == 1) THEN
+            WRITE(STAT%FHNDL,*) 'MPI_SEND ierr=', ierr
+            FLUSH(STAT%FHNDL)
+          END IF
         END IF
       ELSE
         IF (rank_boundary .ne. rank_hasboundary) THEN

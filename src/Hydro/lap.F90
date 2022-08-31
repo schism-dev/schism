@@ -139,7 +139,7 @@
       EXTERNAL           LSAME, IDAMAX
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL           DSCAL, DSPR, DSWAP, XERBLA
+      EXTERNAL           DSCAL, DSPR, DSWAP, XERBLA5
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, SQRT
@@ -156,7 +156,7 @@
          INFO = -2
       END IF
       IF( INFO.NE.0 ) THEN
-         CALL XERBLA( 'DSPTRF', -INFO )
+         CALL XERBLA5( 'DSPTRF', -INFO )
          RETURN
       END IF
 !
@@ -623,7 +623,7 @@
       EXTERNAL           LSAME, DDOT
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL           DCOPY, DSPMV, DSWAP, XERBLA
+      EXTERNAL           DCOPY, DSPMV, DSWAP, XERBLA5
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC          ABS
@@ -640,7 +640,7 @@
          INFO = -2
       END IF
       IF( INFO.NE.0 ) THEN
-         CALL XERBLA( 'DSPTRI', -INFO )
+         CALL XERBLA5( 'DSPTRI', -INFO )
          RETURN
       END IF
 !
@@ -862,7 +862,7 @@
 !     End of DSPTRI
 !
       END
-      SUBROUTINE XERBLA(SRNAME,INFO)
+      SUBROUTINE XERBLA5(SRNAME,INFO)
 !
 !  -- LAPACK auxiliary routine (preliminary version) --
 !     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd..
@@ -876,7 +876,7 @@
 !  Purpose
 !  =======
 !
-!  XERBLA  is an error handler for the LAPACK routines.
+!  XERBLA5  is an error handler for the LAPACK routines.
 !  It is called by an LAPACK routine if an input parameter has an
 !  invalid value.  A message is printed and execution stops.
 !
@@ -887,7 +887,7 @@
 !  =========
 !
 !  SRNAME  (input) CHARACTER*6
-!          The name of the routine which called XERBLA.
+!          The name of the routine which called XERBLA5.
 !
 !  INFO    (input) INTEGER
 !          The position of the invalid parameter in the parameter list
@@ -901,7 +901,7 @@
  9999 FORMAT (' ** On entry to ',A6,' parameter number ',I2,' had ', &
      &       'an illegal value')
 !
-!     End of XERBLA
+!     End of XERBLA5
 !
       END
       SUBROUTINE DSPMV(UPLO,N,ALPHA,AP,X,INCX,BETA,Y,INCY)
@@ -1013,7 +1013,7 @@
       EXTERNAL LSAME
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL XERBLA
+      EXTERNAL XERBLA5
 !     ..
 !
 !     Test the input parameters.
@@ -1029,7 +1029,7 @@
           INFO = 9
       END IF
       IF (INFO.NE.0) THEN
-          CALL XERBLA('DSPMV ',INFO)
+          CALL XERBLA5('DSPMV ',INFO)
           RETURN
       END IF
 !
@@ -1332,7 +1332,7 @@
       EXTERNAL LSAME
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL XERBLA
+      EXTERNAL XERBLA5
 !     ..
 !
 !     Test the input parameters.
@@ -1346,7 +1346,7 @@
           INFO = 5
       END IF
       IF (INFO.NE.0) THEN
-          CALL XERBLA('DSPR  ',INFO)
+          CALL XERBLA5('DSPR  ',INFO)
           RETURN
       END IF
 !

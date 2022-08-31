@@ -11,7 +11,6 @@ function []=SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % May need to adjust some parameters inside (e.g. caxis) to get right appearance of images
 % (search for 'Adjust')
 % Requires get_global_info.m (in this dir)
- 
 % SCHISM_TRANSECT(icomb,base,transect_bp,varname,stacks,nspool,test)
 % Inputs: 
 %         icomb: work with uncombined (0) or combined (1) nc
@@ -145,7 +144,7 @@ for day=stacks2
   istep=istep+1;
 
   if(icomb==0)
-    fname=[base,'/outputs/' 'schout_0000_' num2str(day) '.nc'];
+    fname=[base,'/outputs/' 'schout_000000_' num2str(day) '.nc'];
   else
     fname=[base,'/outputs/' 'schout_' num2str(day) '.nc'];
   end
@@ -180,7 +179,7 @@ for day=stacks2
       for irank=0:nproc-1
         if(rank_read(irank+1)==0); continue; end;
         
-        fname3=[base '/outputs/schout_' num2str(irank,'%04.f') '_' num2str(day) '.nc'];
+        fname3=[base '/outputs/schout_' num2str(irank,'%06.f') '_' num2str(day) '.nc'];
         ncid3 = netcdf.open(fname3,'NC_NOWRITE');
         clear tmp tmp2 tmp3;
         if(ivs==1)
@@ -218,6 +217,7 @@ for day=stacks2
       uout(:,:,i)=nan;
       zout(:,i)=nan;
       if(idry_e(ie)~=0)
+        kbp_e(i)=0;
         continue; 
       end
      

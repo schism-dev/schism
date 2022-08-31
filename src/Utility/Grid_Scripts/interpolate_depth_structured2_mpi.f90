@@ -14,11 +14,12 @@
 
 !     Interpolate depths from structured grid DEMs (.asc) to unstructured grid in
 !     parallel (in overlapping regions, the depth from larger rank/DEM prevails)
-!     Inputs: dems.in (# of DEMs; # of compute nodes (for load balancing
+!     Inputs: (1) dems.in (# of DEMs; # of compute nodes (for load balancing
 !     purpose))
-!             dem_????.asc (ordered properly for precedence, starting
-!             from 0000. Depth negative for water);
-!             hgrid.old (unstructured grid, mixed tri and quads)
+!             (2) dem_????.asc (ordered properly for precedence, starting
+!               from 0000. Depth negative for water);
+!             (3) hgrid.old (unstructured grid, mixed tri and quads)
+!             (4) Also remember to edit min depth and datum diff's to be imposed for each tile below ('new22')
 !     Output: hgrid.new (for pts outside the DEMs or the DEM depth is junk there, 
 !                        the original depths are preserved).
 !     mpif90 -O2 -mcmodel=medium -o interpolate_depth_structured2_mpi interpolate_depth_structured2_mpi.f90
@@ -31,8 +32,9 @@
       character*9 cha2
       character*12 cha3,fdb
       integer :: myrank,myrank2,errcode,color,comm,mycomm,itmp,ierr,i,j,k,nproc,nm(4)
-      integer, allocatable :: indx_sorted(:),imap(:)
-      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:)
+      integer, allocatable :: indx_sorted(:),imap(:),ndems_on_rank(:),iout_dem(:)
+      real(kind=8), allocatable :: dp1(:,:),x0(:),y0(:),dp0(:),dpout(:),dims0(:),dims(:), &
+     &h_min(:),vdatum(:)
 
       call MPI_INIT(errcode)
       call mpi_comm_dup(MPI_COMM_WORLD,comm,errcode)
@@ -40,7 +42,8 @@
       call MPI_COMM_RANK(comm, myrank, errcode)
 
       ih=-1 !sign change
-      vshift=0 !vertical datum diff
+!      vshift=0 !vertical datum diff
+!      iadjust_corner=0 !adjustll corner for corner based .asc
       open(10,file='dems.in',status='old')
       read(10,*)ndems
       read(10,*)ncompute !# of compute nodes
@@ -50,18 +53,27 @@
         print*, 'Plz use whole node:',nproc,ncompute
         call mpi_abort(comm,0,j)
       endif
-      if(nproc<ndems) then
-        print*, 'Please use more cores than DEMs:',nproc,ndems
-        call mpi_abort(comm,0,j)
-      endif
+!      if(nproc<ndems) then
+!        print*, 'Please use more cores than DEMs:',nproc,ndems
+!        call mpi_abort(comm,0,j)
+!      endif
 
       open(14,file='hgrid.old',status='old')
       read(14,*)
       read(14,*)ne,np
-      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems))
+      allocate(x0(np),y0(np),dp0(np),indx_sorted(ndems),imap(ndems),dims(ndems),h_min(ndems), &
+     &vdatum(ndems),ndems_on_rank(0:nproc-1),iout_dem(np))
       do i=1,np
         read(14,*)j,x0(i),y0(i),dp0(i)
       enddo !i
+
+!     Prescribe the min depth and vdatum adjustments to be imposed for each tile
+!new22
+      h_min(:)=-20. !init
+      !First 7 are gebco
+      h_min(1:7)=5.
+      !vdatum is [datum]-MSL in meters
+      vdatum(:)=0
 
 !     Read in dimensions from DEMs and remap to balance the load,
 !     assuming the sequential ordering of ranks by scheduler
@@ -71,8 +83,8 @@
         write(fdb(lfdb-3:lfdb),'(i4.4)') idem
 
         open(62,file=trim(adjustl(fdb))//'.asc',status='old')
-        read(62,*) cha1,nx !# of nodes in x
-        read(62,*) cha1,ny !# of nodes in y
+        read(62,*) cha1,nx !# of pts in x
+        read(62,*) cha1,ny !# of pts in y
         close(62)
         dims(idem+1)=nx*ny
       enddo !idem
@@ -83,14 +95,17 @@
       call mpi_barrier(comm,ierr)
 
 !     Distribute ranks, assuming scheduler orders the ranks sequentially
+!     (may not be optimal if nproc<ndems)
       ngroups=ndems/ncompute+1
       ncores=nproc/ncompute
       icount=0 !index in the sorted list
+      imap=-9999
       do j=1,ngroups
         do i=1,ncompute
           icount=icount+1
           if(icount<=ndems) then
-            itmp=(i-1)*ncores+(j-1) !rank
+            itmp=(i-1)*ncores+(j-1) !rank if nproc>=ndems
+            itmp=mod(itmp,nproc)
             if(itmp<0.or.itmp>nproc-1) then
               print*, 'Rank overflow:',itmp
               call mpi_abort(comm,0,k)
@@ -106,8 +121,29 @@
         call mpi_abort(comm,0,k)
       endif
    
-      if(myrank==0) print*, 'mapping to ranks:',ngroups,ncores,imap
+      !Output # of DEMs to be processed by each rank
+      ndems_on_rank=0
+      do i=1,ndems
+        if(imap(i)<0.or.imap(i)>nproc-1) then
+          print*, 'imap<0:',i,imap(i)
+          call mpi_abort(comm,0,k)   
+        endif
+        ndems_on_rank(imap(i))=ndems_on_rank(imap(i))+1
+      enddo !i
+      if(sum(ndems_on_rank)/=ndems) then
+        print*, 'Some DEM not processed:',sum(ndems_on_rank),ndems
+        call mpi_abort(comm,0,k)
+      endif
+
+      if(myrank==0) then
+        print*, 'mapping to ranks:',ngroups,ncores,imap
+        print*, '# of DEMs to be processed by each rank:'
+        do i=0,nproc-1
+          print*, i,ndems_on_rank(i)
+        enddo !i
+      endif
       call mpi_barrier(comm,ierr)
+
 !      call MPI_FINALIZE(errcode)
 !      stop
 
@@ -121,16 +157,36 @@
           print*, 'Rank ',myrank,' is doing DEM # ',idem, '; DEM size=',dims0(idem+1)
 
           open(62,file=trim(adjustl(fdb))//'.asc',status='old')
-          open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank
-          read(62,*) cha1,nx !# of nodes in x
-          read(62,*) cha1,ny !# of nodes in y
-          read(62,*) cha2,xmin
-          read(62,*) cha2,ymin
+          open(19,file=trim(adjustl(fdb))//'.out',status='replace') !temp output from each rank using DEM ID
+          read(62,*) cha1,nx !# of pts in x
+          read(62,*) cha1,ny !# of pts in y
+          read(62,*) cha2,xmin0
+          cha2=adjustl(cha2)
+          if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
+            iadjust_corner=1
+          else !center based
+            iadjust_corner=0
+          endif
+
+          read(62,*) cha2,ymin0
           read(62,*) cha2,dxy
           read(62,*) cha3,fill_value
           dx=dxy
           dy=dxy
-    
+
+!         Calculate locations of min/max @vertex (corner) and center.
+!         '0' denotes vertex location; xmin/xmax etc denote center
+!         location
+          if(iadjust_corner/=0) then !vertex based
+            xmin = xmin0 + dx/2
+            ymin = ymin0 + dy/2
+          else
+            xmin = xmin0
+            ymin = ymin0
+            xmin0=xmin0-dx/2 !redefine corner
+            ymin0=ymin0-dy/2
+          endif
+
           allocate(dp1(nx,ny),stat=istat)
           if(istat/=0) then
             print*, 'Failed to allocate (1)'
@@ -138,9 +194,10 @@
           endif
     
 !         Coordinates for upper left corner (the starting point for *.asc)
-          ymax=ymin+(ny-1)*dy
-!         xmax
+          ymax=ymin+(ny-1)*dy !center
           xmax=xmin+(nx-1)*dx
+          xmax0=xmax+dx/2 ! right edge of raster
+          ymax0=ymax+dy/2 ! top edge of raster
     
 !         .asc starts from upper left corner and goes along x
           do iy=1,ny
@@ -153,12 +210,22 @@
             x=x0(i); y=y0(i)
     
             !Interpolate
-            if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
+            if(x.gt.xmax0.or.x.lt.xmin0.or.y.gt.ymax0.or.y.lt.ymin0) then
 !              write(13,101)j,x,y,dp
 !              dpout(i)=dp0(i)
             else !inside structured grid
-              x2=x 
-              y2=y 
+!              !1/2 cell shift case: extrap to cover lower&left
+!              if(iadjust_corner/=0) then
+!                x=max(x,xmin)
+!                y=max(y,ymin)
+!              endif
+!              x2=x 
+!              y2=y 
+
+              !Extrap min/max 1/2 cells
+              x2=min(xmax,max(x,xmin))
+              y2=min(ymax,max(y,ymin))
+
               ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
               iy=(y2-ymin)/dy+1
               if(ix.lt.1.or.ix.gt.nx.or.iy.lt.1.or.iy.gt.ny) then
@@ -191,19 +258,18 @@
                 hy1=dp1(ix,iy)*(1-xrat)+xrat*dp1(ix+1,iy)
                 hy2=dp1(ix,iy+1)*(1-xrat)+xrat*dp1(ix+1,iy+1)
                 h=hy1*(1-yrat)+hy2*yrat
-                h=h*ih+vshift
+                h=h*ih !+vshift
 
                 !Write temp output (in 'valid' region only)
-                write(19,*)i,h
-!                call flush(19)
+                write(19,*)i,max(h-vdatum(idem+1),h_min(idem+1)),iout_dem0
               endif !junk
     
-            endif
+            endif !in/outside DEM
           enddo !i=1,np
 
           deallocate(dp1)
         endif !irank==myrank
-      enddo !idem
+      enddo !idem=0,ndems-1
       close(19)
 
 !Debug
@@ -212,27 +278,28 @@
       call mpi_barrier(comm,ierr)
 
       !Combine on rank 0
+      print*, 'start final assembly on rank 0...'
       if(myrank==0) then
-        do irank=0,ndems-1
+        do idem=0,ndems-1
           fdb='dem_0000'
           lfdb=len_trim(fdb)
-          write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+          write(fdb(lfdb-3:lfdb),'(i4.4)') idem
           open(19,file=trim(adjustl(fdb))//'.out',status='old')
           lines=0
           do
-            read(19,*,end=100,err=100)i,dp0(i)
+            read(19,*,end=100,err=100)i,dp0(i),iout_dem(i)
             lines=lines+1
           enddo
 
-100       print*, lines,' lines read from rank ',irank
+100       print*, lines,' lines read from DEM # ',idem
           close(19)
-        enddo !irank
+        enddo !idem
 
         open(13,file='hgrid.new',status='replace')
         write(13,*)'Bathymetry loaded grid'
         write(13,*)ne,np
         do i=1,np
-          write(13,101)i,x0(i),y0(i),dp0(i)
+          write(13,101)i,x0(i),y0(i),dp0(i),iout_dem(i)
         enddo !i
         do i=1,ne
           read(14,*)j,k,(nm(l),l=1,k)
@@ -240,7 +307,7 @@
         enddo !i
         close(13)
       endif !myrank=0
-101   format(i9,2(1x,e24.16),1x,f13.6)
+101   format(i9,2(1x,e24.16),1x,f13.6,1x,i6)
       close(14)
 
       call MPI_FINALIZE(errcode)

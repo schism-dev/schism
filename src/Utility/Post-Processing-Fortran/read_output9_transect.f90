@@ -28,9 +28,7 @@
 !                average_transect.out (averaged; in .bp with header for scalar and in
 !                .xyuv for vector)
 
-! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_transect.exe ../UtilLib/extract_mod.f90 \
-!../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_transect.f90 \
-!-I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output9_transect.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output9_transect.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !											*
 !****************************************************************************************
 !
@@ -201,7 +199,8 @@
         do l=1,nxy
           if(iep(l)/=0) cycle
 
-          call pt_in_poly_single(i34(i),x(elnode(1:i34(i),i)),y(elnode(1:i34(i),i)),x00(l),y00(l),inside,arco(l,1:3),nodel)
+          call pt_in_poly_single(i34(i),real(x(elnode(1:i34(i),i))), &
+     &real(y(elnode(1:i34(i),i))),x00(l),y00(l),inside,arco(l,1:3),nodel)
           if(inside==1) then
             iep(l)=i
             !print*, 'Found:',l,arco(l,1:3),nodel
@@ -319,11 +318,11 @@
         if(icomb==0) then !uncombined
           do irank=0,nproc-1
             if(irank_read(irank)>0) then
-              call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
+              call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
             endif
           enddo !irank
         else
-          call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
+          call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
         endif
         if(inode_elem==1) then !node based
           if(i23d>3) stop 'U said it is node based'

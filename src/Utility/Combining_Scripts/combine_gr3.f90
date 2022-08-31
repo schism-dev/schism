@@ -53,14 +53,14 @@ program combine_gr3
   allocate(x(np),y(np),elevmax(nscal,np),stat=istat)
   if(istat/=0) stop 'Allocation error: x,y'
 
-  open(10,file='outputs/'//filenm(1:lfilenm)//'_0000',status='old')
+  open(10,file='outputs/'//filenm(1:lfilenm)//'_000000',status='old')
   read(10,*)icount,nproc
   close(10)
 
 !-------------------------------------------------------------------------------
 ! Combine
 !-------------------------------------------------------------------------------
-  fdb=filenm(1:lfilenm)//'_0000'
+  fdb=filenm(1:lfilenm)//'_000000'
   lfdb=len_trim(fdb)
 
   do irank=0,nproc-1

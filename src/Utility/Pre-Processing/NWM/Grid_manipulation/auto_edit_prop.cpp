@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
   if ( argc !=5  ) {
     cout << "wrong arguments" << endl;
-    cout << "usage: ptNpoly input.reg hgrid.gr3 in_value out_value" <<endl;
+    cout << "usage: $this_script input.reg hgrid.gr3 in_value out_value" <<endl;
     cout << "options:" << endl;
     return -1;
   } else {

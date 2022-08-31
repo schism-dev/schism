@@ -19,10 +19,11 @@
          REAL(rkind)                :: SSNL4(MSC,MDC),DSSNL4(MSC,MDC)
          REAL(rkind)                :: SSNL3(MSC,MDC),DSSNL3(MSC,MDC)
          REAL(rkind)                :: SSBR(MSC,MDC),DSSBR(MSC,MDC)
+         REAL(rkind)                :: SSVEG(MSC,MDC), DSSVEG(MSC,MDC)
          REAL(rkind)                :: SSBF(MSC,MDC),DSSBF(MSC,MDC)
          REAL(rkind)                :: SSBRL(MSC,MDC),DSSBRL(MSC,MDC)
          REAL(rkind)                :: SSLIM(MSC,MDC), DSSLIM(MSC,MDC)
-         REAL(rkind)                :: ETOT,SME01,SME10,KME01,KMWAM,KMWAM2,HS,WIND10
+         REAL(rkind)                :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS,WIND10
          REAL(rkind)                :: ETAIL,EFTAIL,EMAX,LIMAC,NEWDAC,MAXDAC,FPM,WINDTH
          REAL(rkind)                :: RATIO,LIMFAC,LIMDAC
 
@@ -32,6 +33,7 @@
          SSNL4 = ZERO; DSSNL4 = ZERO
          SSNL3 = ZERO; DSSNL3 = ZERO
          SSBR  = ZERO; DSSBR  = ZERO
+         SSVEG  = ZERO; DSSVEG  = ZERO
          SSBF  = ZERO; DSSBF  = ZERO
          SSBRL = ZERO; DSSBRL = ZERO
          SSDS = ZERO; DSSDS = ZERO
@@ -41,7 +43,7 @@
          TESTNODE = 339
          TESTNODE = -1
 
-         CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,KME01,KMWAM,KMWAM2) 
+         CALL MEAN_WAVE_PARAMETER(IP,ACLOC,HS,ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2) 
 
          IF (MESIN .GT. 0) THEN
            CALL SET_WIND( IP, WIND10, WINDTH )
@@ -57,6 +59,7 @@
            IF (MESTR .GT. 0) CALL triad_eldeberky (ip, hs, sme01, acloc, imatra, imatda, ssnl3, dssnl3)
            IF (MESBR .GT. 0) CALL SDS_SWB(IP, SME01, KMWAM, ETOT, HS, ACLOC, IMATRA, IMATDA, SSBR, DSSBR) ! Maybe not KMWAM
            IF (MESBF .GT. 0) CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
+           IF (MEVEG .GT. 0) CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG , ACLOC, DEP(IP), ETOT, SME01, KME01)																																						 
          ENDIF
 
          IMATRA = SSINL + SSDS + SSINE + SSNL4 + SSNL3
@@ -75,14 +78,15 @@
            ENDDO
          ENDDO
 
-         IMATRA = IMATRA + SSBR 
-         IMATDA = IMATDA + DSSBR + DSSBF
+         IMATRA = IMATRA + SSBR + SSVEG
+         IMATDA = IMATDA + DSSBR + DSSBF + DSSVEG
 
          IF (LMAXETOT) THEN
            NEWAC = ACLOC + IMATRA*DT4A/MAX((ONE-DT4A*IMATDA),ONE)
            EFTAIL = ONE / (PTAIL(1)-ONE)
            HS = 4._rkind*SQRT(ETOT)
-           EMAX = 1._rkind/16._rkind * (HMAX(IP))**2 ! HMAX is defined in the breaking routine or has some default value
+           !EMAX = 1._rkind/16._rkind * (HMAX(IP))**2 ! HMAX is defined in the breaking routine or has some default value
+           EMAX = 1._rkind/16._rkind * (1.6*DEP(IP))**2 ! MP : Same as in BREAK_LIMIT
            IF (ETOT .GT. EMAX) THEN
              RATIO  = EMAX/ETOT
              SSBRL  = ACLOC*(RATIO-ONE)/DT4A
@@ -194,7 +198,7 @@
 
          INTEGER                      :: IS, ID
          REAL(rkind)                  :: AUX1, AUX2, AUX3
-         REAL(rkind)                  :: SWINB, CINV, COSDIF, SFIE(MSC,MDC)
+         REAL(rkind)                  :: SWINB, CINV, COSDIF
 
          AUX1 = 0.25_rkind * RHOAW
          AUX2 = 28._rkind * UFRIC(IP)

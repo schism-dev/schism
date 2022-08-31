@@ -32,12 +32,13 @@
 !    include 'netcdf.inc'
     private
 
-    integer,save :: ncid,node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
+    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
     &one_dim,two_dim,time_dim,time_dims(1),itime_id,ele_dims(2),x_dims(1), &
     &y_dims(1),z_dims(1),var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
     &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
     &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4)
 
+    integer,save,public :: ncid_schism_io
     public :: write_obe
     public :: report_timers
     public :: writeout_nc
@@ -266,7 +267,7 @@
       var_nm2=adjustl(var_nm2); len_var=len_trim(var_nm2)
 
       !Define dim/vars
-      !nf90_put_var(ncid,varid,values,start,count,stride)
+      !nf90_put_var(ncid_schism_io,varid,values,start,count,stride)
       !values can be of any type, (optional) start, count, stride are of same dim
       !as values. e.g., to write to 1st entry in an array, start=count=1
 
@@ -274,7 +275,7 @@
       !Note: using scalar directly won't work; must use array
       a1d(1)=real(time_stamp)
       data_start_1d(1)=irec; data_count_1d(1)=1
-      iret=nf90_put_var(ncid,itime_id,a1d,data_start_1d,data_count_1d)
+      iret=nf90_put_var(ncid_schism_io,itime_id,a1d,data_start_1d,data_count_1d)
 
       !Use original dim order in nc
       if(i23d<=3) then !node
@@ -296,63 +297,63 @@
         call parallel_abort('writeout_nc: unknown i23d')       
       endif
 
-      iret2=nf90_inq_varid(ncid,var_nm2(1:len_var),i)
+      iret2=nf90_inq_varid(ncid_schism_io,var_nm2(1:len_var),i)
 
       if(mod(i23d-1,3)==0) then !2D var (2D array in nc that has time dim)
         if(iret2/=NF90_NOERR) then !not defined yet
-          iret=nf90_redef(ncid)
+          iret=nf90_redef(ncid_schism_io)
           if(ivs==1) then
             var2d_dims(2)=time_dim
-            iret=nf90_def_var(ncid,var_nm2(1:len_var),NF90_FLOAT,var2d_dims,varid)
+            iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var2d_dims,varid)
           else
             var3d_dims(1)=two_dim; var3d_dims(3)=time_dim
-            iret=nf90_def_var(ncid,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
+            iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
           endif !ivs
-          iret=nf90_put_att(ncid,varid,'i23d',i23d)
-          iret=nf90_put_att(ncid,varid,'ivs',ivs)
-          iret=nf90_enddef(ncid)
+          iret=nf90_put_att(ncid_schism_io,varid,'i23d',i23d)
+          iret=nf90_put_att(ncid_schism_io,varid,'ivs',ivs)
+          iret=nf90_enddef(ncid_schism_io)
         endif !iret
 
         if(ivs==1) then
           data_start_2d(1)=1; data_start_2d(2)=irec
           data_count_2d(1)=idim2p; data_count_2d(2)=1
-          iret=nf90_put_var(ncid,varid,real(outvar1(1,1:idim2p)),data_start_2d,data_count_2d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(1,1:idim2p)),data_start_2d,data_count_2d)
         else !vector
           data_start_3d(1)=1; data_start_3d(2)=1; data_start_3d(3)=irec
           data_count_3d(1)=1; data_count_3d(2)=idim2p; data_count_3d(3)=1
-          iret=nf90_put_var(ncid,varid,real(outvar1(1,1:idim2p)),data_start_3d,data_count_3d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(1,1:idim2p)),data_start_3d,data_count_3d)
           data_start_3d(1)=2
-          iret=nf90_put_var(ncid,varid,real(outvar2(1,1:idim2p)),data_start_3d,data_count_3d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar2(1,1:idim2p)),data_start_3d,data_count_3d)
         endif !ivs
         !write(12,*)'2D:',it_main,varid,var_nm2(1:len_var),iret2
       else !3D
         if(iret2/=NF90_NOERR) then !not defined yet
-          iret=nf90_redef(ncid)
+          iret=nf90_redef(ncid_schism_io)
           if(ivs==1) then
             var3d_dims(1)=nv_dim; var3d_dims(3)=time_dim
-            iret=nf90_def_var(ncid,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
+            iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
           else
             var4d_dims(1)=two_dim; var4d_dims(2)=nv_dim; var4d_dims(4)=time_dim
-            iret=nf90_def_var(ncid,var_nm2(1:len_var),NF90_FLOAT,var4d_dims,varid)
+            iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var4d_dims,varid)
           endif !ivs
           !write(12,*)'3D def:',var3d_dims,varid,var_nm2(1:len_var),iret
 !Add chunking option as well?
-          iret=nf90_def_var_deflate(ncid,varid,0,1,4)
-          iret=nf90_put_att(ncid,varid,'i23d',i23d)
-          iret=nf90_put_att(ncid,varid,'ivs',ivs)
-          iret=nf90_enddef(ncid)
+          iret=nf90_def_var_deflate(ncid_schism_io,varid,0,1,4)
+          iret=nf90_put_att(ncid_schism_io,varid,'i23d',i23d)
+          iret=nf90_put_att(ncid_schism_io,varid,'ivs',ivs)
+          iret=nf90_enddef(ncid_schism_io)
         endif !iret
 
         if(ivs==1) then
           data_start_3d(1)=1; data_start_3d(2)=1; data_start_3d(3)=irec
           data_count_3d(1)=nvrt; data_count_3d(2)=idim2p; data_count_3d(3)=1
-          iret=nf90_put_var(ncid,varid,real(outvar1(:,1:idim2p)),data_start_3d,data_count_3d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(:,1:idim2p)),data_start_3d,data_count_3d)
         else !vector
           data_start_4d(1:3)=1; data_start_4d(4)=irec
           data_count_4d(1)=1; data_count_4d(2)=nvrt; data_count_4d(3)=idim2p; data_count_4d(4)=1
-          iret=nf90_put_var(ncid,varid,real(outvar1(:,1:idim2p)),data_start_4d,data_count_4d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(:,1:idim2p)),data_start_4d,data_count_4d)
           data_start_4d(1)=2
-          iret=nf90_put_var(ncid,varid,real(outvar2(:,1:idim2p)),data_start_4d,data_count_4d)
+          iret=nf90_put_var(ncid_schism_io,varid,real(outvar2(:,1:idim2p)),data_start_4d,data_count_4d)
         endif !ivs
         !write(12,*)'3D:',it_main,varid,var_nm2(1:len_var),iret2,NF90_NOERR
       endif !2/3D
@@ -369,35 +370,35 @@
 
       integer, intent(in) :: iopen
       character(len=140) :: fname
-      character(len=4) :: fgb
+      character(len=6) :: fgb
 
       integer :: iret
 
       write(ifile_char,'(i12)') ifile !convert ifile to a string
       ifile_char=adjustl(ifile_char)  !place blanks at end
       ifile_len=len_trim(ifile_char)  !length without trailing blanks
-      fgb='0000' 
-      write(fgb,'(i4.4)') myrank
+      fgb='000000' 
+      write(fgb,'(i6.6)') myrank
       fname=out_dir(1:len_out_dir)//('schout_'//fgb//'_'//ifile_char(1:ifile_len)//'.nc')
 !'
 
-      if(iopen==1) iret=nf90_close(ncid)
-      iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
-      iret=nf90_def_dim(ncid,'nSCHISM_hgrid_node',np,node_dim)
-      iret=nf90_def_dim(ncid,'nSCHISM_hgrid_face',ne,nele_dim)
-      iret=nf90_def_dim(ncid,'nSCHISM_hgrid_edge',ns,nedge_dim)
-      iret=nf90_def_dim(ncid,'nMaxSCHISM_hgrid_face_nodes',4, four_dim)
-      iret=nf90_def_dim(ncid,'nSCHISM_vgrid_layers',nvrt,nv_dim)
-      iret=nf90_def_dim(ncid,'one',1,one_dim)
-      iret=nf90_def_dim(ncid,'two',2,two_dim)
-      iret=nf90_def_dim(ncid,'time', NF90_UNLIMITED,time_dim)
+      if(iopen==1) iret=nf90_close(ncid_schism_io)
+      iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_io)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_node',np,node_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',ne,nele_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',ns,nedge_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nMaxSCHISM_hgrid_face_nodes',4, four_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_vgrid_layers',nvrt,nv_dim)
+      iret=nf90_def_dim(ncid_schism_io,'one',1,one_dim)
+      iret=nf90_def_dim(ncid_schism_io,'two',2,two_dim)
+      iret=nf90_def_dim(ncid_schism_io,'time', NF90_UNLIMITED,time_dim)
 
       time_dims(1)=time_dim
-      iret=nf90_def_var(ncid,'time',NF90_FLOAT,time_dims,itime_id)
+      iret=nf90_def_var(ncid_schism_io,'time',NF90_FLOAT,time_dims,itime_id)
       if(iret.ne.NF90_NOERR) call parallel_abort('fill_nc_header: time dim')
 !'
-      iret=nf90_put_att(ncid,itime_id,'i23d',0) !set i23d flag
-      iret=nf90_enddef(ncid)
+      iret=nf90_put_att(ncid_schism_io,itime_id,'i23d',0) !set i23d flag
+      iret=nf90_enddef(ncid_schism_io)
 
       end subroutine fill_nc_header
 !===============================================================================

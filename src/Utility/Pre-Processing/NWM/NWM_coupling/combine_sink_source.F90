@@ -10,14 +10,11 @@
 !      hgrid.cpp        : hgrid in cpp projection
 !      source_sink.in   : contains the element ID for each
 !                         intersection of the NWM streams and the land boundary.
-!      msource.th       : contains the salinity and temprature
-!                         of the source element along the land boundary.
-!                         Salinity is set to be 0, temp = -9999.
 !      vsource.th       : input of the stream flows of source elements.
 !      vsink.th         : input of the stream flows of sink elements.
 !
 !Output files
-!      source_sink.in.1, msource.th.1, vsource.th.1, vsink.th.1
+!      vsource.th.1, vsink.th.1
 !
 !serial:
 !ifort -CB -O2 -o combine_sink_source combine_sink_source.F90 
@@ -63,7 +60,7 @@
        print*, 'Input search option (0: distance-based; 1: neighboring element based):'
        read*, inbr
        !inbr=1
-       print*, 'Input search radius (if inbr=0: distance; if inbr=1: neighboring tiers):'
+       print*, 'Input search radius (if inbr=0: distance (m); if inbr=1: number of neighboring tiers):'
        if (inbr==0) then
          read*, distance
        elseif (inbr==1) then

@@ -1,0 +1,10 @@
+mpi:
+  - openmpi  # [not win]
+  - mpich  # [not win]
+
+#pin_run_as_build:
+#    openmpi: x.x
+
+#pin_run_as_build:
+#    mpich: x.x
+

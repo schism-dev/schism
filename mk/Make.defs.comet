@@ -62,7 +62,7 @@ FLDFLAGS = -O2 -xHOST -mcmodel=medium -shared-intel #-CB -g -traceback #for fina
 #EXEC := $(EXEC)_OMP
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
 
 CDFLIBS = -L${NETCDFHOME}/lib -lnetcdff
 CDFMOD = -I${NETCDFHOME}/include # modules for netcdf

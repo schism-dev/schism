@@ -1,7 +1,7 @@
 !     Use spring to improve grid quality. All quad nodes are preserved,
 !     so are nodes on bnd or with depth>=threshold or specified inside fixed.gr3.
 !     Inputs: screen; hgrid.gr3 (in any projection or lon/lat; with b.c. part); fixed.gr3 (optional)
-!     Output: hgrid.spring (no depths or bndinfo); fixed_out.gr3 (debug)
+!     Output: hgrid.spring (no change in conn table; depths unreliable; no bnd info); fixed_out.gr3 (debug)
 
 !     ifort -O2 -CB -g -traceback -o grid_spring grid_spring.f90
 
@@ -13,10 +13,10 @@
 
       print*, 'Input # of spring iteration wanted:'
       read*, niter
-      print*, 'Input min area allowed:'
+      print*, 'Input min area allowed during movement of nodes:'
       read*, area_min_allowed
       if(area_min_allowed<0) stop 'area_min_allowed<0'
-      print*, 'Input depth (m) threshold (e.g. channel):'
+      print*, 'Input min depth (m) threshold (deeper region fixed):'
       read*, h_chan
       print*, 'Do you want (1) or not (0) to specify fixed.gr3?'
       read*, ifixed_gr3

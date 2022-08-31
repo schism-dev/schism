@@ -57,7 +57,7 @@
 !/
 !/ ------------------------------------------------------------------- /
 !/
-      USE DATAPOOL, ONLY : rkind
+      USE DATAPOOL, ONLY : rkind,SIZEFWTABLE,DELAB,ABMIN,ABMAX,FWTABLE
       SAVE
       PUBLIC
 !/
@@ -71,7 +71,6 @@
       REAL(rkind),    PARAMETER      :: nu_air  = 1.4E-5        
       INTEGER, PARAMETER      :: ITAUMAX=200,JUMAX=200
       INTEGER, PARAMETER      :: IUSTAR=100,IALPHA=200, ILEVTAIL=50
-      INTEGER, PARAMETER      :: SIZEFWTABLE=300
       INTEGER, PARAMETER      :: IAB=200  
       REAL(rkind)             :: TAUT(0:ITAUMAX,0:JUMAX), DELTAUW, DELU
       ! Table for H.F. stress as a function of 2 variables
@@ -81,12 +80,8 @@
       ! Table for swell damping 
       REAL(rkind)                    :: SWELLFT(0:IAB)
       REAL(rkind)                    :: DELTAIL
-      REAL(rkind)                    :: DELAB
       REAL(rkind),    PARAMETER      :: UMAX    = 50._rkind
       REAL(rkind),    PARAMETER      :: TAUWMAX = 2.2361 !SQRT(5.)
-      REAL(rkind),    PARAMETER      :: ABMIN = 0.3_rkind
-      REAL(rkind),    PARAMETER      :: ABMAX = 8._rkind
-      REAL(rkind)                    :: FWTABLE(0:SIZEFWTABLE)
       REAL(rkind), ALLOCATABLE       :: XSTRESS(:),YSTRESS(:)
       REAL(rkind), ALLOCATABLE       :: DCKI(:,:), SATWEIGHTS(:,:)
       REAL(rkind), ALLOCATABLE       :: CUMULW(:,:),QBI(:,:)
@@ -571,9 +566,9 @@
           EB(IK) = EB(IK) + A(ITH,IK)
           IF (LLWS(IS)) EB2(IK) = EB2(IK) + A(ITH,IK)
           AMAX   = MAX ( AMAX , A(ITH,IK) )
-          END DO
-!          WRITE(DBG%FHNDL,*) IK, EB(IK), IK, ITH, A(ITH,IK)
         END DO
+!          WRITE(DBG%FHNDL,*) IK, EB(IK), IK, ITH, A(ITH,IK)
+      END DO
 !
 ! 2.  Integrate over directions -------------------------------------- *
 
@@ -588,7 +583,7 @@
         WNMEAN   = WNMEAN + EB(IK) *(WN(IK)**WNMEANP)
         EMEANWS  = EMEANWS+ EB2(IK)
         FMEANWS  = FMEANWS+ EB2(IK)*(SIG(IK)**(2.*WNMEANPTAIL))
-        END DO
+      END DO
 !
 ! 3.  Add tail beyond discrete spectrum and get mean pars ------------ *
 !     ( DTH * SIG absorbed in FTxx )
@@ -1032,67 +1027,66 @@
 !
 !/T1      CALL OUTMAT (NDST, D, NTH, NTH, NK, 'diag Sin')
 !
-      ! Computes the high-frequency contribution
-      ! the difference in spectal density (kx,ky) to (f,theta)
-      ! is integrated in this modified CONST0
-      CONST0=DTH*SIG(NK)**5/((G9**2)*PI2) &
+        ! Computes the high-frequency contribution
+        ! the difference in spectal density (kx,ky) to (f,theta)
+        ! is integrated in this modified CONST0
+        CONST0=DTH*SIG(NK)**5/((G9**2)*PI2) &
      &   *PI2*SIG(NK) / CG(NK)  !conversion WAM (E(f,theta) to WW3 A(k,theta)
-      TEMP=0.
-      DO ITH=1,NTH
-         IS=ITH+(NK-1)*NTH
-         COSWIND=(ECOS(IS)*COSU+ESIN(IS)*SINU)
-         TEMP=TEMP+A(IS)*(MAX(COSWIND,ZERO))**3
-         !WRITE(DBG%FHNDL,*) ITH, IS, A(IS), (MAX(COSWIND,ZERO))**3
-         END DO
+        TEMP=0.
+        DO ITH=1,NTH
+          IS=ITH+(NK-1)*NTH
+          COSWIND=(ECOS(IS)*COSU+ESIN(IS)*SINU)
+          TEMP=TEMP+A(IS)*(MAX(COSWIND,ZERO))**3
+          !WRITE(DBG%FHNDL,*) ITH, IS, A(IS), (MAX(COSWIND,ZERO))**3
+        END DO
 
-      TAUPX=TAUX-ABS(TTAUWSHELTER)*XSTRESS
-      TAUPY=TAUY-ABS(TTAUWSHELTER)*YSTRESS
+        TAUPX=TAUX-ABS(TTAUWSHELTER)*XSTRESS
+        TAUPY=TAUY-ABS(TTAUWSHELTER)*YSTRESS
 
-      !WRITE(DBG%FHNDL,*) 'TAUPX', TAUPX, TAUPY, TTAUWSHELTER, XSTRESS, YSTRESS
+        !WRITE(DBG%FHNDL,*) 'TAUPX', TAUPX, TAUPY, TTAUWSHELTER, XSTRESS, YSTRESS
 
-      USTP=(TAUPX**2+TAUPY**2)**0.25
-      USDIRP=ATAN2(TAUPY,TAUPX)
+        USTP=(TAUPX**2+TAUPY**2)**0.25
+        USDIRP=ATAN2(TAUPY,TAUPX)
 
-      UST=USTP
-      ! finds the values in the tabulated stress TAUHFT
-      XI=UST/DELUST
-      IND  = MAX(1,MIN (IUSTAR-1, INT(XI)))
-      DELI1= MAX(MIN (ONE, XI-FLOAT(IND)),ZERO)
-      DELI2= ONE - DELI1
+        UST=USTP
+        ! finds the values in the tabulated stress TAUHFT
+        XI=UST/DELUST
+        IND  = MAX(1,MIN (IUSTAR-1, INT(XI)))
+        DELI1= MAX(MIN (ONE, XI-FLOAT(IND)),ZERO)
+        DELI2= ONE - DELI1
 !AR: this is tricky this runs out of int precision 
-      XJ=MIN(10E6,MAX(ZERO,(G9*Z0/MAX(UST,0.0001_rkind)**2-AALPHA) / DELALP))
-      J    = MAX(1 ,MIN (IALPHA-1, INT(XJ)))
-      DELJ1= MAX(0.,MIN (ONE     , XJ-FLOAT(J)))
-      DELJ2=ONE- DELJ1
-      IF (TTAUWSHELTER.GT.0) THEN 
-        XK = CONST0*TEMP / DELTAIL
-         I = MIN (ILEVTAIL-1, INT(XK))
-         !WRITE(*,*) XK, I, CONST0, TEMP, DELTAIL, SUM(A), IP
-         DELK1= MIN (ONE,XK-FLOAT(I))
-         DELK2=1. - DELK1
-         TAU1 =((TAUHFT2(IND,J,I)*DELI2+TAUHFT2(IND+1,J,I)*DELI1 )*DELJ2 &
+        XJ=MIN(10E6,MAX(ZERO,(G9*Z0/MAX(UST,0.0001_rkind)**2-AALPHA) / DELALP))
+        J    = MAX(1 ,MIN (IALPHA-1, INT(XJ)))
+        DELJ1= MAX(0.,MIN (ONE     , XJ-FLOAT(J)))
+        DELJ2=ONE- DELJ1
+        IF (TTAUWSHELTER.GT.0) THEN 
+          XK = CONST0*TEMP / DELTAIL
+          I = MIN (ILEVTAIL-1, INT(XK))
+          !WRITE(*,*) XK, I, CONST0, TEMP, DELTAIL, SUM(A), IP
+          DELK1= MIN (ONE,XK-FLOAT(I))
+          DELK2=1. - DELK1
+          TAU1 =((TAUHFT2(IND,J,I)*DELI2+TAUHFT2(IND+1,J,I)*DELI1 )*DELJ2 &
                +(TAUHFT2(IND,J+1,I)*DELI2+TAUHFT2(IND+1,J+1,I)*DELI1)*DELJ1)*DELK2 &
-              +((TAUHFT2(IND,J,I+1)*DELI2+TAUHFT2(IND+1,J,I+1)*DELI1 )*DELJ2 &
+               +((TAUHFT2(IND,J,I+1)*DELI2+TAUHFT2(IND+1,J,I+1)*DELI1 )*DELJ2 &
                +(TAUHFT2(IND,J+1,I+1)*DELI2+TAUHFT2(IND+1,J+1,I+1)*DELI1)*DELJ1)*DELK1 
-      ELSE
-        TAU1 =(TAUHFT(IND,J)*DELI2+TAUHFT(IND+1,J)*DELI1 )*DELJ2 &
-         +(TAUHFT(IND,J+1)*DELI2+TAUHFT(IND+1,J+1)*DELI1)*DELJ1
+        ELSE
+          TAU1 =(TAUHFT(IND,J)*DELI2+TAUHFT(IND+1,J)*DELI1 )*DELJ2 &
+               +(TAUHFT(IND,J+1)*DELI2+TAUHFT(IND+1,J+1)*DELI1)*DELJ1
         END IF
-      TAUHF = CONST0*TEMP*UST**2*TAU1
-      TAUWX = XSTRESS+TAUHF*COS(USDIRP)
-      TAUWY = YSTRESS+TAUHF*SIN(USDIRP)
+        TAUHF = CONST0*TEMP*UST**2*TAU1
+        TAUWX = XSTRESS+TAUHF*COS(USDIRP)
+        TAUWY = YSTRESS+TAUHF*SIN(USDIRP)
 !      
 ! Reduces tail effect to make sure that wave-supported stress 
 ! is less than total stress, this is borrowed from ECWAM Stresso.F      
 !
-      TAUW = SQRT(TAUWX**2+TAUWY**2)
-      UST2   = MAX(USTAR,EPS2)**2  
-      TAUWB = MIN(TAUW,MAX(UST2-EPS1,EPS2**2))
-      IF (TAUWB.LT.TAUW) THEN 
-        TAUWX=TAUWX*TAUWB/TAUW
-        TAUWY=TAUWY*TAUWB/TAUW
+        TAUW = SQRT(TAUWX**2+TAUWY**2)
+        UST2   = MAX(USTAR,EPS2)**2  
+        TAUWB = MIN(TAUW,MAX(UST2-EPS1,EPS2**2))
+        IF (TAUWB.LT.TAUW) THEN 
+          TAUWX=TAUWX*TAUWB/TAUW
+          TAUWY=TAUWY*TAUWB/TAUW
         END IF
-! 
       RETURN
 !
 ! Formats
@@ -1159,7 +1153,7 @@
 !
 !/ ------------------------------------------------------------------- /
       USE DATAPOOL, ONLY: G9, INVPI2, RADDEG, RKIND, LPRECOMP_EXIST, MSC, MDC
-      USE DATAPOOL, ONLY: ZERO, ONE, TWO, STAT, TH
+      USE DATAPOOL, ONLY: ZERO, ONE, TWO, STAT, TH, WRITESTATFLAG
       USE DATAPOOL, ONLY: myrank
       IMPLICIT NONE
 !/
@@ -1197,7 +1191,7 @@
         CALL TABU_STRESS
         CALL TABU_TAUHF(SIG(NK) * INVPI2)   !tabulate high-frequency stress
         IF (TTAUWSHELTER.GT.0) THEN
-          WRITE(STAT%FHNDL,*) 'Computing 3D lookup table... please wait ...'
+          IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,*) 'Computing 3D lookup table... please wait ...'
           CALL TABU_TAUHF2(SIG(NK) * INVPI2)   !tabulate high-frequency stress
           END IF
         END IF
@@ -2383,13 +2377,13 @@
 !
 ! Computes wave turbulence interaction
 !
-          COSWIND=(ECOS(IS)*MyCOS(USDIR)+ESIN(IS)*MySIN(USDIR))
-          DTURB=-2.*SIG(IK)*K(IK)*FACTURB*COSWIND  ! Theory -> stress direction
+            COSWIND=(ECOS(IS)*MyCOS(USDIR)+ESIN(IS)*MySIN(USDIR))
+            DTURB=-2.*SIG(IK)*K(IK)*FACTURB*COSWIND  ! Theory -> stress direction
 !
 ! Add effects
 !
-          SSDS(IS) = (SSDSC(3)*RENEWALFREQ+DTURB) 
-          !WRITE(DBG%FHNDL,*) 'TURBULENCE', IS, D(IS), (SSDSC(3)*RENEWALFREQ+DTURB)
+            SSDS(IS) = (SSDSC(3)*RENEWALFREQ+DTURB) 
+            !WRITE(DBG%FHNDL,*) 'TURBULENCE', IS, D(IS), (SSDSC(3)*RENEWALFREQ+DTURB)
           END DO
         END DO
 !

@@ -1,6 +1,7 @@
 # Don't track content of these folders
 build*/
 o/
+site/
 
 # Compiled source #
 ###################
@@ -27,3 +28,5 @@ o/
 *.tar
 *.zip
 
+src/Core/_version
+.DS_Store

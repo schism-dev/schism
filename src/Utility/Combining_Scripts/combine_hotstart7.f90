@@ -13,10 +13,10 @@
 !   limitations under the License.
 
 !===============================================================================
-! Read in rank-specific hotstart outputs and combine them into hotstart.in.
+! Read in rank-specific hotstart outputs and combine them into hotstart.nc.
 ! Gobal-local mappings are read in from separate files.
 
-! Usage: ./combine_hotstart6 -h for help, inside outputs/
+! Usage: ./combine_hotstart7 -h for help, inside outputs/
 ! Inputs:
 !        rank-specific hotstart files; 
 !        local_to_global_*; 
@@ -25,7 +25,7 @@
 !
 !  ifort -O2 -cpp -CB -mcmodel=medium -assume byterecl -g -traceback -o combine_hotstart7.exe ../UtilLib/argparse.f90 combine_hotstart7.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
-! Revisions: v6 with nc
+! Revisions: v7 with nc
 !================================================================================
 program combine_hotstart
 integer :: istep
@@ -80,18 +80,18 @@ subroutine combine_hotstart7(istep)
   print*, 'istep=',istep
 
 ! Read mapping info
-  open(10,file='local_to_global_0000',status='old')
+  open(10,file='local_to_global_000000',status='old')
   read(10,*)ns_global,ne_global,np_global,nvrt,nproc,ntracers
   close(10)
   !For dim purpose
   if(np_global>ns_global.or.ne_global>ns_global) stop 'ns_global not max'
   allocate(ner(0:nproc-1),npr(0:nproc-1),nsr(0:nproc-1))
 
-  fdb='local_to_global_0000'; fdb=adjustl(fdb)
+  fdb='local_to_global_000000'; fdb=adjustl(fdb)
   lfdb=len_trim(fdb)
   mxner=0; mxnpr=0; mxnsr=0
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*)!ns_global,ne_global,np_global,nvrt,nproc,ntracers
 
@@ -110,7 +110,7 @@ subroutine combine_hotstart7(istep)
   if(istat/=0) stop 'Allocation error (3)'
 
   do irank=0,nproc-1
-    write(fdb(lfdb-3:lfdb),'(i4.4)') irank
+    write(fdb(lfdb-5:lfdb),'(i6.6)') irank
     open(10,file=fdb,status='old')
     read(10,*); read(10,*)
     read(10,*)ner(irank)
@@ -138,12 +138,12 @@ subroutine combine_hotstart7(istep)
   write(it_char,'(i12)') istep
   it_char=adjustl(it_char)  !place blanks at end
   it_len=len_trim(it_char)  !length without trailing blanks
-  fgb='0000_'//it_char(1:it_len); 
+  fgb='000000_'//it_char(1:it_len); 
   fgb=adjustl(fgb); lfgb=len_trim(fgb);
   !print*, 'suffix is:',fgb(1:lfgb)
 
   !Query # of vars
-  iret=nf90_open('hotstart_0000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+  iret=nf90_open('hotstart_000000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
   iret=nf90_inquire(ncid2,nDimensions=ndimensions,nVariables=nvars)
   write(*,*)'nvars=',nvars,ndimensions
   allocate(idims(ndimensions),dim_name(ndimensions),dimids(ndimensions))
@@ -158,6 +158,9 @@ subroutine combine_hotstart7(istep)
   iret=nf90_get_var(ncid2,i,iths);
   iret=nf90_inq_varid(ncid2, "ifile",i);
   iret=nf90_get_var(ncid2,i,ifile);
+  nsteps_from_cold=0 !init for older versions
+  iret=nf90_inq_varid(ncid2, "nsteps_from_cold",i);
+  iret=nf90_get_var(ncid2,i,nsteps_from_cold);
   !From modules
   ice_free_flag=-99 !flag
   iret=nf90_inq_varid(ncid2, "ice_free_flag",i);
@@ -166,7 +169,7 @@ subroutine combine_hotstart7(istep)
     if(iret/=NF90_NOERR) stop 'cannot get ice_free_flag'
     print*, 'Found ice_free_flag:',ice_free_flag
   endif
-  print*, 'static info:',time,iths,ifile
+  print*, 'static info:',time,iths,ifile,nsteps_from_cold
   iret=nf90_close(ncid2)
 
   !Open output file
@@ -187,10 +190,11 @@ subroutine combine_hotstart7(istep)
     do irank=0,nproc-1
       fgb2=fgb
       fgb2=adjustl(fgb2)
-      write(fgb2(1:4),'(i4.4)') irank
+      write(fgb2(1:6),'(i6.6)') irank
       iret=nf90_open('hotstart_'//fgb2(1:lfgb)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
       if(iret.ne.NF90_NOERR) then
-        print*, nf90_strerror(iret); stop
+        print*, 'Input hot not there;', nf90_strerror(iret)
+        stop
       endif
 !      write(99,*)'file=',m,irank,'hotstart_'//fgb2(1:lfgb)//'.nc',ncid2
 
@@ -202,7 +206,7 @@ subroutine combine_hotstart7(istep)
       if(ndims>ndimensions) stop 'dim overflow'
       iret=nf90_inquire_variable(ncid2,m,dimids=dimids(1:ndims))
       if(iret.ne.NF90_NOERR) then
-        print*, nf90_strerror(iret); stop
+        print*, 'dimids error;',nf90_strerror(iret); stop
       endif
       !Re-read dims (rank specific)
       do i=1,ndimensions
@@ -370,17 +374,19 @@ subroutine combine_hotstart7(istep)
     deallocate(iwork2,work2)
   enddo loop1 !m: vars
 
-  !Append type II arrays
+  !Append type II static arrays
   iret=nf90_redef(ncid)
   var1d_dims(1)=one_dim
   iret=nf90_def_var(ncid,'time',NF90_DOUBLE,var1d_dims,i1)
   iret=nf90_def_var(ncid,'iths',NF90_INT,var1d_dims,i2)
   iret=nf90_def_var(ncid,'ifile',NF90_INT,var1d_dims,i3)
+  iret=nf90_def_var(ncid,'nsteps_from_cold',NF90_INT,var1d_dims,i5)
   if(ice_free_flag>=0) iret=nf90_def_var(ncid,'ice_free_flag',NF90_INT,var1d_dims,i4)
   iret=nf90_enddef(ncid)
   iret=nf90_put_var(ncid,i1,time)
   iret=nf90_put_var(ncid,i2,iths)
   iret=nf90_put_var(ncid,i3,ifile)
+  iret=nf90_put_var(ncid,i5,nsteps_from_cold)
   if(ice_free_flag>=0) iret=nf90_put_var(ncid,i4,ice_free_flag)
 
   iret=nf90_close(ncid)

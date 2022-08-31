@@ -2,8 +2,6 @@
 !cosine_init: allocate and initilize variables
 !read_cosine_param: read cosine parameters
 !read_cosine_stainfo: read info. for station outputs
-!check_cosine_param: output cosine parameters for check
-!pt_in_poly: determine if point is in a polygon
 
 subroutine cosine_init
 !---------------------------------------------------------------------------
@@ -20,7 +18,7 @@ subroutine cosine_init
   !allocate 
   allocate( NO3(nvrt),NH4(nvrt),SiO4(nvrt),S1(nvrt),S2(nvrt),Z1(nvrt),Z2(nvrt),&
           & DN(nvrt),DSi(nvrt),PO4(nvrt),DOX(nvrt),CO2(nvrt),ALK(nvrt),temp(nvrt),&
-          & salt(nvrt),bgraze(nea),SPM(nvrt,nea),bio(nvrt,ntrc),bio0(nvrt,ntrc),qcos(ntrc),sqcos(nvrt,ntrc),&
+          & salt(nvrt),bgraze(nea),SPM(nvrt,nea),bcos(nvrt,ntrc),& 
           & mS2(ndelay,nvrt,nea),mDN(ndelay,nvrt,nea),mZ1(ndelay,nvrt,nea),mZ2(ndelay,nvrt,nea),&
           & sS2(nvrt,nea),sDN(nvrt,nea),sZ1(nvrt,nea),sZ2(nvrt,nea),nstep(nvrt,nea), &
           & nclam(nea), stat=istat) 
@@ -29,10 +27,11 @@ subroutine cosine_init
   !initialize
   NO3=0.0;  NH4=0.0; SiO4=0.0; S1=0.0;   S2=0.0;   Z1=0.0;  Z2=0.0
   DN=0.0;   DSi=0.0; PO4=0.0;  DOX=0.0;  CO2=0.0;  ALK=0.0; temp=0.0
-  salt=0.0; SPM=0.0; bio=0.0;  bio0=0.0; qcos=0.0; sqcos=0.0 
+  salt=0.0; SPM=0.0; bcos=0.0  !;  bio0=0.0; qcos=0.0; sqcos=0.0 
   mS2=0.0;  mDN=0.0; mZ1=0.0;  mZ2=0.0; 
   sS2=0.0;  sDN=0.0; sZ1=0.0;  sZ2=0.0; nstep=0
   nclam=0;
+
   !read cosine parameters
   call read_cosine_param
    
@@ -43,132 +42,72 @@ subroutine read_cosine_param
 !read parameters in cosine.in
 !---------------------------------------------------------------------------
   use schism_glbl, only : rkind,npa,nea,ne_global,np_global,ipgl,iegl,elnode,i34, &
- &in_dir,out_dir,len_in_dir,len_out_dir
+ &in_dir,out_dir,len_in_dir,len_out_dir,ihot
   use schism_msgp, only : myrank,parallel_abort
+  use cosine_misc, only : read_gr3_prop
   use cosine_mod
-  use misc_modules
   implicit none
 
   !local variables
   integer :: i,j,k,m,negb,npgb,nd,itmp,itmp1(1),itmp2(1,1),istat
-  real(rkind) :: xtmp,ytmp,tSPM,tSPMs(npa),rtmp,rtmp1(1),rtmp2(1,1)
-  integer :: tnclam,nclams(npa)
+  real(rkind) :: xtmp,ytmp,tSPM,tSPMs(npa),rtmp,rtmp1(1),rtmp2(1,1) 
+  integer :: tnclam !,nclams(npa)
   character(len=2) :: stmp
+  character(len=100) :: snum 
+  logical :: lexist
 
-  !read switches and macro parameters
-  call get_param('cosine.in','niter',1,niter,rtmp,stmp)
-  call get_param('cosine.in','idelay',1,idelay,rtmp,stmp)
-  if(idelay==1) call get_param('cosine.in','ndelay',1,ndelay,rtmp,stmp)
-  call get_param('cosine.in','ibgraze',1,ibgraze,rtmp,stmp)
-  call get_param('cosine.in','idapt',1,idapt,rtmp,stmp)
-  call get_param('cosine.in','iz2graze',1,iz2graze,rtmp,stmp)
-  call get_param('cosine.in','iout_cosine',1,iout_cosine,rtmp,stmp)
-  call get_param('cosine.in','nspool_cosine',1,nspool_cosine,rtmp,stmp)
-  call get_param('cosine.in','ico2s',1,ico2s,rtmp,stmp)
-  call get_param('cosine.in','ispm',1,ispm,rtmp,stmp)
-  if(ispm==0) then
-    call get_param('cosine.in','spm0',2,itmp,spm0,stmp)
+  !define namelist
+  namelist /MARCO/ idelay,ndelay,ibgraze,idapt,alpha_corr,zeptic,iz2graze,&
+          & iout_cosine,nspool_cosine,ico2s,ispm,spm0,ised 
+  namelist /CORE/ gmaxs,pis,kno3s,knh4s,kpo4s,kco2s,&
+          & ksio4,kns,alphas,betas,aks,gammas,betaz,kgz,rhoz,alphaz,&
+          & gammaz,kez,wss2,wsdn,wsdsi,si2n,p2n,o2no,o2nh,c2n,&
+          & kox,ipo4,kmdn,kmdsi,gamman,TR,pco2a
+  namelist /MISC/ iws,NO3c,ws1,ws2,iclam,deltaZ,kcex,Nperclam,Wclam,Fclam,&
+          & nclam0,fS2,fDN,fDSi,rkS2,rkDN,rkDSi,mkS2,mkDN,mkDSi
+
+  !initialize parameter values
+  idelay=0; ndelay=7; ibgraze=0; idapt=0; alpha_corr=1.25; zeptic=10.0; iz2graze=1
+  iout_cosine=0; nspool_cosine=60; ico2s=0; ispm=0; spm0=20.0; ised=1; 
+  gmaxs=0; pis=0; kno3s=0; knh4s=0; kpo4s=0; kco2s=0; ksio4=0; kns=0; alphas=0; betas=0; 
+  aks=0; gammas=0;  betaz=0; kgz=0; rhoz=0;  alphaz=0;
+  gammaz=0; kez=0; wss2=0.25; wsdn=0.5; wsdsi=0.5; si2n=1.2; p2n=0.0625; 
+  o2no=8.625; o2nh=6.625; c2n=7.3; kox=30.0; ipo4=0; kmdn=0; kmdsi=0; 
+  gamman=0.07; TR=20.0; pco2a=400.0; iws=0; NO3c=2.0; ws1=2.5; ws2=2.0
+  iclam=0; deltaZ=1.0; kcex=0.002; Nperclam=0.39032; Wclam=5.45e-3; Fclam=40.0; 
+  nclam0=2000; fS2=0.0; fDN=0.0; fDSi=0.0; rkS2=4e-3; rkDN=4e-3; rkDSi=4e-3;
+  mkS2=0.1; mkDN=0.1; mkDSi=0.1
+
+  !read parameter values
+  open(31,file=in_dir(1:len_in_dir)//'cosine.nml',delim='apostrophe',status='old')
+  read(31,nml=MARCO); read(31,nml=CORE); read(31,nml=MISC)
+  close(31)
+  
+  !allocate sediment variables
+  if(ised==1) then
+    allocate(PS2(3,nea),PDN(3,nea),PDSi(3,nea),RS2(3,nea),RDN(3,nea),RDSi(3,nea),stat=istat)
+    if(istat/=0) call parallel_abort('Failed in alloc. fS2')
   endif
-  call get_param('cosine.in','icheck',1,icheck,rtmp,stmp)
-  call get_param('cosine.in','ised',1,ised,rtmp,stmp)
-  call get_param('cosine.in','iws',1,iws,rtmp,stmp)
-  if(iws/=0) then
-    call get_param('cosine.in','NO3c',2,itmp,NO3c,stmp)
-    call get_param('cosine.in','ws1',2,itmp,ws1,stmp)
-    call get_param('cosine.in','ws2',2,itmp,ws2,stmp)
-  endif
-  call get_param('cosine.in','iclam',1,iclam,rtmp,stmp)
-  if(iclam/=0) then
-    call get_param('cosine.in','deltaZ',2,itmp,deltaZ,stmp)
-    call get_param('cosine.in','kcex',2,itmp,kcex,stmp)
-    call get_param('cosine.in','Nperclam',2,itmp,Nperclam,stmp)
-    call get_param('cosine.in','Wclam',2,itmp,Wclam,stmp)
-    call get_param('cosine.in','Fclam',2,itmp,Fclam,stmp)
-    if(iclam==1) then
-      call get_param('cosine.in','nclam0',1,nclam0,rtmp,stmp)
-    endif
+
+  if(myrank==0) then
+    open(31,file=out_dir(1:len_out_dir)//'cosine.out.nml',status='replace')
+    write(31,nml=MARCO); write(31,nml=CORE); write(31,nml=MISC)
+    close(31)
   endif
 
-  !read cosine kinetics parameters
-  !phytoplankton
-  call get_param('cosine.in','gmaxs1',2,itmp,gmaxs1,stmp)
-  call get_param('cosine.in','alpha1',2,itmp,alpha1,stmp)
-  call get_param('cosine.in','pis1',2,itmp,pis1,stmp)
-  call get_param('cosine.in','kno3s1',2,itmp,kno3s1,stmp)
-  call get_param('cosine.in','knh4s1',2,itmp,knh4s1,stmp)
-  call get_param('cosine.in','kpo4s1',2,itmp,kpo4s1,stmp)
-  call get_param('cosine.in','kco2s1',2,itmp,kco2s1,stmp)
-  call get_param('cosine.in','kns1',2,itmp,kns1,stmp)
-  call get_param('cosine.in','gammas1',2,itmp,gammas1,stmp)
-
-  call get_param('cosine.in','gmaxs2',2,itmp,gmaxs2,stmp)
-  call get_param('cosine.in','alpha2',2,itmp,alpha2,stmp)
-  call get_param('cosine.in','pis2',2,itmp,pis2,stmp)
-  call get_param('cosine.in','kno3s2',2,itmp,kno3s2,stmp)
-  call get_param('cosine.in','knh4s2',2,itmp,knh4s2,stmp)
-  call get_param('cosine.in','kpo4s2',2,itmp,kpo4s2,stmp)
-  call get_param('cosine.in','kco2s2',2,itmp,kco2s2,stmp)
-  call get_param('cosine.in','kns2',2,itmp,kns2,stmp)
-  call get_param('cosine.in','gammas2',2,itmp,gammas2,stmp)
-  call get_param('cosine.in','ksio4s2',2,itmp,ksio4s2,stmp)
-
-  call get_param('cosine.in','ak1',2,itmp,ak1,stmp)
-  call get_param('cosine.in','ak2',2,itmp,ak2,stmp)
-  call get_param('cosine.in','ak3',2,itmp,ak3,stmp)
-  call get_param('cosine.in','alpha_corr',2,itmp,alpha_corr,stmp)
-  call get_param('cosine.in','zeptic',2,itmp,zeptic,stmp)
-  call get_param('cosine.in','beta',2,itmp,beta,stmp)
-
-  !zooplankton
-  call get_param('cosine.in','kex1',2,itmp,kex1,stmp)
-  call get_param('cosine.in','gamma1',2,itmp,gamma1,stmp)
-  call get_param('cosine.in','kex2',2,itmp,kex2,stmp)
-  call get_param('cosine.in','gamma2',2,itmp,gamma2,stmp)
-
-  call get_param('cosine.in','beta1',2,itmp,beta1,stmp)
-  call get_param('cosine.in','beta2',2,itmp,beta2,stmp)
-  call get_param('cosine.in','kgz1',2,itmp,kgz1,stmp)
-  call get_param('cosine.in','kgz2',2,itmp,kgz2,stmp)
-  call get_param('cosine.in','rho1',2,itmp,rho1,stmp)
-  call get_param('cosine.in','rho2',2,itmp,rho2,stmp)
-  call get_param('cosine.in','rho3',2,itmp,rho3,stmp)
-
-  call get_param('cosine.in','gammaz',2,itmp,gammaz,stmp)
-
-  !other
-  call get_param('cosine.in','kox',2,itmp,kox,stmp)
-  call get_param('cosine.in','kbmdn',2,itmp,kbmdn,stmp)
-  call get_param('cosine.in','kmdn1',2,itmp,kmdn1,stmp)
-  call get_param('cosine.in','kmdn2',2,itmp,kmdn2,stmp)
-  call get_param('cosine.in','kbmdsi',2,itmp,kbmdsi,stmp)
-  call get_param('cosine.in','kmdsi1',2,itmp,kmdsi1,stmp)
-  call get_param('cosine.in','kmdsi2',2,itmp,kmdsi2,stmp)
-  call get_param('cosine.in','TR',2,itmp,TR,stmp)
-  call get_param('cosine.in','gamman',2,itmp,gamman,stmp)
-  call get_param('cosine.in','pco2a',2,itmp,pco2a,stmp)
-  call get_param('cosine.in','wss2',2,itmp,wss2,stmp)
-  call get_param('cosine.in','wsdn',2,itmp,wsdn,stmp)
-  call get_param('cosine.in','wsdsi',2,itmp,wsdsi,stmp)
-  call get_param('cosine.in','si2n',2,itmp,si2n,stmp)
-  call get_param('cosine.in','p2n',2,itmp,p2n,stmp)
-  call get_param('cosine.in','o2no',2,itmp,o2no,stmp)
-  call get_param('cosine.in','o2nh',2,itmp,o2nh,stmp)
-  call get_param('cosine.in','c2n',2,itmp,c2n,stmp)
+  !variable names for outputs
+  allocate(name_cos(ntrc),stat=istat)
+  if(istat/=0) call parallel_abort('failed in alloc. name_cos')
+  name_cos(1:13)=(/'NO3 ','SiO4','NH4 ','S1  ','S2  ','Z1  ','Z2  ', & 
+                 & 'DN  ','DSi ','PO4 ','DOX ','CO2 ','ALK '/)
 
   !read in station info. 
-  if(iout_cosine==1) call read_cosine_stainfo
+  if(iout_cosine/=0) call read_cosine_stainfo
 
   !read bottom grazing information
   if(ibgraze==1) then
     bgraze=0.0
-    open(454,file=in_dir(1:len_in_dir)//'bgraze.prop',status='old')
-    do i=1,ne_global
-      read(454,*)itmp,ytmp
-      if(iegl(itmp)%rank==myrank) then
-        bgraze(iegl(itmp)%id)=ytmp 
-      endif
-    enddo
-    close(454)
+    call read_gr3_prop('bgraze',-9999.d0,bgraze,nea)
   elseif(ibgraze==2) then !temporally and spatially varying inputs
     open(455,file=in_dir(1:len_in_dir)//'bgraze.th',status='old') 
     bgraze=0.0
@@ -182,24 +121,7 @@ subroutine read_cosine_param
   if(iclam==1) then
     nclam=nclam0  
   elseif (iclam==2) then
-    open(452,file=in_dir(1:len_in_dir)//'nclam.gr3',status='old')
-    read(452,*);read(452,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check nclam.gr3')
-    do i=1,np_global
-      read(452,*)itmp,xtmp,ytmp,tnclam
-      if(ipgl(itmp)%rank==myrank) then
-        nclams(ipgl(itmp)%id)=tnclam
-      endif
-    enddo
-    close(452)
-
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        nclam(i)=nclam(i)+nclams(nd)
-      enddo
-      nclam(i)=nclam(i)/i34(i)
-    enddo
+    call read_gr3_prop('nclam',-999.d0,nclam,nea)
   elseif (iclam==3) then
     open(456,file=in_dir(1:len_in_dir)//'nclam.th',status='old') 
     time_cosine(3)=-999.0
@@ -210,23 +132,8 @@ subroutine read_cosine_param
   if(ispm==0) then !constant
     SPM=spm0
   elseif(ispm==1) then !spatial varying
-    open(452,file=in_dir(1:len_in_dir)//'SPM.gr3',status='old')
-    read(452,*); read(452,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check SPM.gr3')
-    do i=1,np_global
-      read(452,*)itmp,xtmp,ytmp,tSPM
-      if(ipgl(itmp)%rank==myrank) then
-        tSPMs(ipgl(itmp)%id)=tSPM
-      endif
-    enddo !i
-    close(452)
-
-    do i=1,nea
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        SPM(:,i)=SPM(:,i)+tSPMs(nd)/i34(i)
-      enddo !j
-    enddo !i
+    call read_gr3_prop('SPM',-999.d0,SPM(1,:),nea)
+    do k=2,nvrt; SPM(k,:)=SPM(1,:); enddo
   elseif(ispm==2) then !call SED3D model
 #ifndef USE_SED
     call parallel_abort('ispm=2, need to turn on SED module')
@@ -240,371 +147,564 @@ subroutine read_cosine_param
 
   !read sediment flux model parameters
   if(ised==1) then
-    call get_param('cosine.in','nsedS2',1,nsedS2,rtmp,stmp)
-    call get_param('cosine.in','nsedDN',1,nsedDN,rtmp,stmp)
-    call get_param('cosine.in','nsedDSi',1,nsedDSi,rtmp,stmp)
-    nsed=nsedS2+nsedDN+nsedDSi
-    allocate(psedS2(nsedS2),rsedS2(nsedS2),rsedS2m(nsedS2),psedDN(nsedDN), &
-          & rsedDN(nsedDN),rsedDNm(nsedDN),psedDSi(nsedDSi),rsedDSi(nsedDSi), &
-          & rsedDSim(nsedDSi),rsed(nsed),rsedm(nsed),sedcon(nsed,nea),  &
-          & sedrate(nsed,nea),stat=istat)
-    if(istat/=0) call parallel_abort('Failed in alloc. psedDN')
-    call get_param_1D('cosine.in','psedS2',2,itmp1,psedS2,stmp,nsedS2)
-    call get_param_1D('cosine.in','rsedS2',2,itmp1,rsedS2,stmp,nsedS2)
-    call get_param_1D('cosine.in','rsedS2m',2,itmp1,rsedS2m,stmp,nsedS2)
-    call get_param_1D('cosine.in','psedDN',2,itmp1,psedDN,stmp,nsedDN)
-    call get_param_1D('cosine.in','rsedDN',2,itmp1,rsedDN,stmp,nsedDN)
-    call get_param_1D('cosine.in','rsedDNm',2,itmp1,rsedDNm,stmp,nsedDN)
-    call get_param_1D('cosine.in','psedDSi',2,itmp1,psedDSi,stmp,nsedDSi)
-    call get_param_1D('cosine.in','rsedDSi',2,itmp1,rsedDSi,stmp,nsedDSi)
-    call get_param_1D('cosine.in','rsedDSim',2,itmp1,rsedDSim,stmp,nsedDSi)
+    !initialize sediment variables
+    !todo, include these variables in hotstart.nc; update to sediment flux model
+    PS2=0.0; PDN=0.0; PDSi=0.0; RS2=0.0; RDN=0.0; RDSi=0.0
+    if(ihot==0) then !temporary fix, need to update
+      do i=1,3
+        write(snum,*)i
+        inquire(file=in_dir(1:len_in_dir)//'PS2_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PS2_'//trim(adjustl(snum)),-999.d0,PS2(i,:),nea)
 
-    m=0
-    do i=1,nsedS2
-      m=m+1 
-      rsed(m)=rsedS2(i)
-      rsedm(m)=rsedS2m(i)
-    enddo
-    do i=1,nsedDN
-      m=m+1 
-      rsed(m)=rsedDN(i)
-      rsedm(m)=rsedDNm(i)
-    enddo
-    do i=1,nsedDSi
-      m=m+1 
-      rsed(m)=rsedDSi(i)
-      rsedm(m)=rsedDSim(i)
-    enddo
+        inquire(file=in_dir(1:len_in_dir)//'RS2_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RS2_'//trim(adjustl(snum)),-999.d0,RS2(i,:),nea)
+      enddo
 
-    !initialize
-    !ZG, include sedcon, sedrate in hotstart.in
-    sedcon=0.d0
-    sedrate=0.d0
+      do i=1,3
+        write(snum,*)i
+        inquire(file=in_dir(1:len_in_dir)//'PDN_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PDN_'//trim(adjustl(snum)),-999.d0,PDN(i,:),nea)
+
+        inquire(file=in_dir(1:len_in_dir)//'RDN_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RDN_'//trim(adjustl(snum)),-999.d0,RDN(i,:),nea)
+      enddo
+
+      do i=1,3
+        write(snum,*)i
+        inquire(file=in_dir(1:len_in_dir)//'PDSi_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('PDSi_'//trim(adjustl(snum)),-999.d0,PDSi(i,:),nea)
+
+        inquire(file=in_dir(1:len_in_dir)//'RDSi_'//trim(adjustl(snum))//'.gr3',exist=lexist)
+        if(lexist) call read_gr3_prop('RDSi_'//trim(adjustl(snum)),-999.d0,RDSi(i,:),nea)
+      enddo
+    endif! ihot=0
   endif !ised
- 
-  !output cosine parameter 
-  if(icheck==1) call check_cosine_param
 
-  return
+  !read spatially varying parameters
+  call cosine_vars_init
+ 
 end subroutine read_cosine_param
 
-subroutine read_cosine_stainfo
-!---------------------------------------------------------------------------
-!output cosine parameters to check
-!---------------------------------------------------------------------------
-  use cosine_mod, only : nsta,ista,depsta,stanum,nspool_cosine
-  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode, &
- &in_dir,out_dir,len_in_dir,len_out_dir
-  use schism_msgp, only : myrank,nproc,parallel_abort
-  implicit none
-
-  !local variables
-  integer,parameter :: maxsta=10000,maxl=100 !maximum station
-  integer :: i,j,istat,nstation,nodel(3),inside,id,iflag,mid,msta,nstai(ne),stanumi(maxl,ne)
-  real(rkind) :: slx(maxsta),sly(maxsta),sdep(maxsta),x(3),y(3),arco(3),depstai(maxl,ne)
-  character(len=4) :: fn
-  logical :: lexist
-
-  !read station info.
-  open(450,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
-  read(450,*)
-  read(450,*)nstation
-  do i=1,nstation
-    read(450,*)j,slx(i),sly(i),sdep(i) 
-  enddo
-  close(450)
-
-  !alloc.
-  allocate(ista(ne),stat=istat) 
-  if(istat/=0) call parallel_abort('failure in alloc. ista')
-
-  !determine the elements with values to be checked
-  id=0; ista=0; nstai=0;
-  msta=-100; depstai=-9999
-  do i=1,ne
-    iflag=0
-    do j=1,nstation
-      x=xnd(elnode(1:i34(i),i))
-      y=ynd(elnode(1:i34(i),i))
-      call pt_in_poly(i34(i),x,y,slx(j),sly(j),inside,arco,nodel)
-      if(inside==1) then
-        if(ista(i)==0) then
-          id=id+1
-          ista(i)=id
-        endif
-        nstai(id)=nstai(id)+1
-        depstai(nstai(id),id)=sdep(j)
-        stanumi(nstai(id),id)=j
-        msta=max(msta,nstai(id))
-      endif 
-    enddo !j
-  enddo !i
-  mid=id !number of elements
-
-  if(mid==0) return 
-
-  !alloc.
-  allocate(nsta(mid),depsta(msta,mid),stanum(msta,mid),stat=istat) 
-  if(istat/=0) call parallel_abort('failure in alloc. nsta')
-
-  nsta=0; depsta=-9999
-  do i=1,mid
-    nsta(i)=nstai(i)
-    do j=1,nsta(i)
-      depsta(j,i)=depstai(j,i)
-      stanum(j,i)=stanumi(j,i)
-    enddo
-  enddo
-
-  !open a station output file
-  write(fn,'(i4.4)')myrank
-  inquire(file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',exist=lexist)
-  if(ihot<=1.or.(ihot==2.and.(.not.lexist))) then
-    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',status='replace')
-    write(451)sum(nsta),dt*nspool_cosine
-  elseif(ihot==2.and.lexist) then
-    open(451,file=out_dir(1:len_out_dir)//'cstation_'//fn//'.out',form='unformatted',access='append',status='old')
-  else
-    call parallel_abort('unknown ihot, CoSiNE')
-  endif
-
-  return
-end subroutine read_cosine_stainfo
-
-subroutine check_cosine_param
-!---------------------------------------------------------------------------
-!output cosine parameters to check
-!---------------------------------------------------------------------------
+subroutine cosine_vars_init
+  !--------------------------------------------------------------------------------
+  !allocate cosine arrays and initialize
+  !--------------------------------------------------------------------------------
+  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs,in_dir,len_in_dir,np_global, &
+                        & ne_global,ielg,iplg,i34,elnode
+  use schism_msgp, only : parallel_abort,myrank,comm,itype,rtype
+  use netcdf
   use cosine_mod
-  use schism_msgp, only : myrank,parallel_abort
-  use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
-  implicit none
-
-  !local variables
-  integer :: i,j
-  if(myrank==0) then
-    open(31,file=out_dir(1:len_out_dir)//'cosine_param.out',status='replace')
-    write(31,*) 'Cosine Parameters used in the model'
-
-    write(31,*)
-    write(31,*)'!------switches and macro parameters-----'
-    write(31,'(a10,i5)')'niter = ',niter
-    write(31,'(a10,i5)')'idelay = ',idelay
-    write(31,'(a10,i5)')'ibgraze = ',ibgraze
-    write(31,'(a10,i5)')'idapt = ',idapt
-    write(31,'(a10,i5)')'iz2graze = ',iz2graze
-    write(31,'(a10,i5)')'iout_cosine = ',iout_cosine
-    write(31,'(a10,i5)')'nspool_cosine = ',nspool_cosine
-    write(31,'(a10,i5)')'ico2s = ',ico2s
-    write(31,'(a10,i5)')'ispm = ',ispm
-    if(ispm==0) then
-      write(31,'(a10,f12.3)')'spm0 = ',spm0
-    endif
-    write(31,'(a10,i5)')'icheck = ',icheck
-    write(31,'(a10,i5)')'ised = ',ised
-    write(31,'(a10,i5)')'iws = ',iws
-    if(iws/=0) then
-      write(31,'(a10,f12.3)')'NO3c = ',NO3c
-      write(31,'(a10,f12.3)')'ws1 = ',ws1
-      write(31,'(a10,f12.3)')'ws2 = ',ws2
-    endif
-    write(31,'(a10,i5)')'iclam = ',iclam
-    if(iclam/=0) then
-      write(31,'(a10,f12.3)')'deltaZ = ',deltaZ
-      write(31,'(a10,f12.3)')'kcex = ',kcex
-      write(31,'(a10,f12.3)')'Nperclam = ',Nperclam
-      write(31,'(a10,f12.3)')'Wclam = ',Wclam
-      write(31,'(a10,f12.3)')'Fclam = ',Fclam
-      if(iclam==1) then
-        write(31,'(a10,i5)')'nclam0 = ',nclam0
-      endif
-    endif
-
-    write(31,*)
-    write(31,*)'!--------cosine kinetics parameters------'
-    write(31,'(a10,i5)')'icheck = ',icheck
-    !write(31,'(a10,i5)')' =',
-
-    write(31,*)
-    write(31,*)'!--------cosine kinetics parameters------'
-    write(31,*)
-    write(31,*)'!phytoplankton'
-    write(31,'(a10,100(f8.5 x))')'gmaxs1 = ',gmaxs1
-    write(31,'(a10,100(f8.5 x))')'alpha1 = ',alpha1
-    write(31,'(a10,100(f8.5 x))')'pis1 = ',pis1
-    write(31,'(a10,100(f8.5 x))')'kno3s1 = ',kno3s1
-    write(31,'(a10,100(f8.5 x))')'knh4s1 = ',knh4s1
-    write(31,'(a10,100(f8.5 x))')'kpo4s1 = ',kpo4s1
-    write(31,'(a10,100(f18.9 x))')'kco2s1 = ',kco2s1
-    write(31,'(a10,100(f18.9 x))')'kns1 = ',kns1
-    write(31,'(a10,100(f8.5 x))')'gammas1 = ',gammas1
-
-    write(31,'(a10,100(f8.5 x))')'gmaxs2 = ',gmaxs2
-    write(31,'(a10,100(f8.5 x))')'alpha2 = ',alpha2
-    write(31,'(a10,100(f8.5 x))')'pis2 = ',pis2
-    write(31,'(a10,100(f8.5 x))')'kno3s2 = ',kno3s2
-    write(31,'(a10,100(f8.5 x))')'knh4s2 = ',knh4s2
-    write(31,'(a10,100(f8.5 x))')'kpo4s2 = ',kpo4s2
-    write(31,'(a10,100(f18.9 x))')'kco2s2 = ',kco2s2
-    write(31,'(a10,100(f18.9 x))')'kns2 = ',kns2
-    write(31,'(a10,100(f8.5 x))')'gammas2 = ',gammas2
-    write(31,'(a10,100(f8.5 x))')'ksio4s2 = ',ksio4s2
-
-    write(31,'(a10,100(f8.5 x))')'ak1 = ',ak1
-    write(31,'(a10,100(f8.5 x))')'ak2 = ',ak2
-    write(31,'(a10,100(f8.5 x))')'ak3 = ',ak3
-    write(31,'(a10,100(f8.5 x))')'alpha_corr = ',alpha_corr
-    write(31,'(a10,100(f8.5 x))')'zeptic = ', zeptic
-    write(31,'(a10,100(f8.5 x))')'beta = ',beta
-
-    write(31,*)
-    write(31,*)'!phytoplankton'
-    write(31,'(a10,100(f8.5 x))')'kex1 = ',kex1
-    write(31,'(a10,100(f8.5 x))')'gamma1 = ',gamma1
-    write(31,'(a10,100(f8.5 x))')'kex2 = ',kex2
-    write(31,'(a10,100(f8.5 x))')'gamma2 = ',gamma2
-
-    write(31,'(a10,100(f8.5 x))')'beta1 = ',beta1
-    write(31,'(a10,100(f8.5 x))')'beta2 = ',beta2
-    write(31,'(a10,100(f8.5 x))')'kgz1 = ',kgz1
-    write(31,'(a10,100(f8.5 x))')'kgz2 = ',kgz2
-    write(31,'(a10,100(f8.5 x))')'rho1 = ',rho1
-    write(31,'(a10,100(f8.5 x))')'rho2 = ',rho2
-    write(31,'(a10,100(f8.5 x))')'rho3 = ',rho3
-    write(31,'(a10,100(f8.5 x))')'gammaz = ',gammaz
-
-    write(31,*)
-    write(31,*)'!other'
-    write(31,'(a10,100(f8.5 x))')'kox = ',kox
-    write(31,'(a10,100(f8.5 x))')'kbmdn = ',kbmdn
-    write(31,'(a10,100(f8.5 x))')'kmdn1 = ',kmdn1
-    write(31,'(a10,100(f8.5 x))')'kmdn2 = ',kmdn2
-    write(31,'(a10,100(f8.5 x))')'kbmdsi = ',kbmdsi
-    write(31,'(a10,100(f8.5 x))')'kmdsi1 = ',kmdsi1
-    write(31,'(a10,100(f8.5 x))')'kmdsi2 = ',kmdsi2
-    write(31,'(a10,100(f8.5 x))')'TR = ',TR
-    write(31,'(a10,100(f8.5 x))')'gamman = ',gamman
-    write(31,'(a10,100(f18.9 x))')'pco2a = ',pco2a
-    write(31,'(a10,100(f8.5 x))')'wss2 = ',wss2
-    write(31,'(a10,100(f8.5 x))')'wsdn = ',wsdn
-    write(31,'(a10,100(f8.5 x))')'wsdsi = ',wsdsi
-    write(31,'(a10,100(f8.5 x))')'si2n = ',si2n
-    write(31,'(a10,100(f8.5 x))')'p2n = ',p2n
-    write(31,'(a10,100(f8.5 x))')'o2no = ',o2no
-    write(31,'(a10,100(f8.5 x))')'o2nh = ',o2nh
-    write(31,'(a10,100(f8.5 x))')'c2n = ',c2n
-
-    !write(31,'(a10,100(f8.5 x))')' = ',
-    close(31)
-  endif !myrank
-  
-  return
-end subroutine check_cosine_param
-
-subroutine pt_in_poly(i34,x,y,xp,yp,inside,arco,nodel)
-!---------------------------------------------------------------------------
-!subroutine from Utility/UtilLib
-!---------------------------------------------------------------------------
-!     (Single-precision) Routine to perform point-in-polygon
-!     (triangle/quads) test and if it's inside, calculate the area coord.
-!     (for quad, split it into 2 triangles and return the 3 nodes and
-!     area coord.)
-!     Inputs:
-!            i34: 3 or 4 (type of elem)
-!            x(i34),y(i34): coord. of polygon/elem. (counter-clockwise)
-!            xp,yp: point to be tested
-!     Outputs:
-!            inside: 0, outside; 1, inside
-!            arco(3), nodel(3) : area coord. and 3 local node indices (valid only if inside)
-      implicit real*8(a-h,o-z)
-      integer, intent(in) :: i34
-      real(kind=8), intent(in) :: x(i34),y(i34),xp,yp
-      integer, intent(out) :: inside,nodel(3)
-      real(kind=8), intent(out) :: arco(3)
-
-      !Local
-      integer :: list(3)
-      real(kind=8) :: ar(2),swild(2,3)
-
-      !Areas
-      ar(1)=signa(x(1),x(2),x(3),y(1),y(2),y(3))
-      ar(2)=0 !init
-      if(i34==4) ar(2)=signa(x(1),x(3),x(4),y(1),y(3),y(4))
-      if(ar(1)<=0.or.i34==4.and.ar(2)<=0) then
-        print*, 'Negative area:',i34,ar,x,y
-        stop
-      endif
-
-      inside=0
-      do m=1,i34-2 !# of triangles
-        if(m==1) then
-          list(1:3)=(/1,2,3/) !local indices
-        else !quads
-          list(1:3)=(/1,3,4/)
-        endif !m
-        aa=0
-        do j=1,3
-          j1=j+1
-          j2=j+2
-          if(j1>3) j1=j1-3
-          if(j2>3) j2=j2-3
-          swild(m,j)=signa(x(list(j1)),x(list(j2)),xp,y(list(j1)),y(list(j2)),yp) !temporary storage
-          aa=aa+abs(swild(m,j))
-        enddo !j=1,3
-
-        ae=abs(aa-ar(m))/ar(m)
-        if(ae<=1.e-5) then
-          inside=1
-          nodel(1:3)=list(1:3)
-          arco(1:3)=swild(m,1:3)/ar(m)
-          arco(1)=max(0.,min(1.,arco(1)))
-          arco(2)=max(0.,min(1.,arco(2)))
-          if(arco(1)+arco(2)>1) then
-            arco(3)=0
-            arco(2)=1-arco(1)
-          else
-            arco(3)=1-arco(1)-arco(2)
-          endif
-          exit
-        endif
-      enddo !m
-
-end subroutine pt_in_poly
-
-subroutine get_param_1D(fname,varname,vartype,ivar,rvar,svar,idim1)
-!--------------------------------------------------------------------
-!Read a one-Dimensional CoSiNE parameter
-!--------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
-  use schism_msgp, only : parallel_abort,myrank
   use misc_modules
   implicit none
 
-  character(*),intent(in) :: fname
-  character(*),intent(in) :: varname
-  integer,intent(in) :: vartype
-  integer,intent(in) :: idim1
-  integer,intent(out) :: ivar(idim1)
-  real(rkind),intent(out) :: rvar(idim1)
-  character(len=2),intent(out) :: svar
+  !local variables
+  integer :: istat,i,j,k,ie,m,n,ip,ncid,varid,npt,nsp,ndim,dimid(3),dims(3)
+  real(rkind) :: data0,swild(max(np_global,ne_global))
+  character(len=15),allocatable :: pname(:)
+  character(len=20) :: fname
+  type(cosine_spatial_param),pointer :: p
+
+  !---------------------------------------------------------------------------
+  !to add a spatially varying parameter
+  !  1). append parameter name in pname array
+  !  2). make links by piointing p/p1/p2 for scalar/1D/2D variable
+  !---------------------------------------------------------------------------
+  !define spatial varying parameters 
+  fname='COS_param.nc';  nsp=40
+  allocate(pname(nsp),sp(nsp),stat=istat)
+  if(istat/=0) call parallel_abort('Failed in alloc. pname')
+
+  m=0
+  !global and core modules
+  pname(1:32)=(/'gmaxs ','gammas','pis   ','kno3s ','knh4s ', &
+              & 'kpo4s ','kco2s ','ksio4 ','kns   ','alphas', &
+              & 'betas ','aks   ','betaz ','alphaz','gammaz', &
+              & 'kez   ','kgz   ','rhoz  ','TR    ','kox   ', &
+              & 'wss2  ','wsdn  ','wsdsi ','si2n  ','p2n   ', &
+              & 'o2no  ','o2nh  ','c2n   ','gamman','pco2a ', &
+              & 'kmdn  ','kmdsi '/)
+
+  sp(m+1)%p1=>gmaxs; sp(m+2)%p1=>gammas; sp(m+3)%p1=>pis;    sp(m+4)%p1=>kno3s; sp(m+5)%p1=>knh4s;   m=m+5
+  sp(m+1)%p1=>kpo4s; sp(m+2)%p1=>kco2s;  sp(m+3)%p=>ksio4;   sp(m+4)%p1=>kns;   sp(m+5)%p1=>alphas;  m=m+5
+  sp(m+1)%p1=>betas; sp(m+2)%p1=>aks;    sp(m+3)%p1=>betaz;  sp(m+4)%p1=>alphaz;sp(m+5)%p1=>gammaz;  m=m+5
+  sp(m+1)%p1=>kez;   sp(m+2)%p1=>kgz;    sp(m+3)%p1=>rhoz;   sp(m+4)%p=>TR;     sp(m+5)%p=>kox;      m=m+5
+  sp(m+1)%p=>wss2;   sp(m+2)%p=>wsdn;    sp(m+3)%p=>wsdsi;   sp(m+4)%p=>si2n;   sp(m+5)%p=>p2n;      m=m+5
+  sp(m+1)%p=>o2no;   sp(m+2)%p=>o2nh;    sp(m+3)%p=>c2n;     sp(m+4)%p=>gamman; sp(m+5)%p=>pco2a;    m=m+5
+  sp(m+1)%p1=>kmdn;  sp(m+2)%p1=>kmdsi;  m=m+2
+
+  !read spatially varying parameters
+  do m=1,nsp
+    p=>sp(m)
+    !get dimension info. about parameter
+    p%dims=(/1,1/)
+    if(associated(p%p)) then
+      p%ndim=1; p%data0(1)=p%p
+    elseif(associated(p%p1)) then
+      p%ndim=2; p%data0(1:size(p%p1))=p%p1; p%dims(1)=size(p%p1)
+    elseif(associated(p%p2)) then
+      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/n/)); p%dims=shape(p%p2)
+    else
+      cycle
+    endif
+    p%varname=trim(adjustl(pname(m)))
+    allocate(p%istat(p%dims(1),p%dims(2))); p%istat=0
+
+    !read parameter data
+    ip=0
+    do i=1,p%dims(2)
+      do k=1,p%dims(1)
+        ip=ip+1; data0=p%data0(ip); npt=0
+        if(abs(data0+999.d0)>1.d-6.and.abs(data0+9999.d0)>1.d-6) cycle
+        if(.not.allocated(p%data)) allocate(p%data(nea,p%dims(1),p%dims(2)))
+        p%istat(k,i)=1
+
+        !read value on myrank=0, then bcast
+        if(myrank==0) then
+          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fname))//': open')
+          j=nf90_inq_varid(ncid,trim(adjustl(p%varname)),varid)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong varid' )
+          j=nf90_inquire_variable(ncid,varid,ndims=ndim)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong ndim')
+          j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong dimid')
+          j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          if(npt/=np_global.and.npt/=ne_global) call parallel_abort(trim(adjustl(p%varname))//': npt/=ne,np' )
+          if(p%ndim==1) j=nf90_get_var(ncid,varid,swild(1:npt), (/1/),(/npt/))
+          if(p%ndim==2) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k/),(/npt,1/))
+          if(p%ndim==3) j=nf90_get_var(ncid,varid,swild(1:npt), (/1,k,i/),(/npt,1,1/))
+          if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong in read value')
+          j=nf90_close(ncid)
+        endif
+        call mpi_bcast(npt,1,itype,0,comm,istat)
+        call mpi_bcast(swild(1:npt),npt,rtype,0,comm,istat)
+
+        !get parameter value for each rank
+        do ie=1,nea
+          p%data(ie,k,i)=0.d0
+          if(npt==ne_global) then
+            p%data(ie,k,i)=swild(ielg(ie))
+          elseif(npt==np_global) then
+            do n=1,i34(ie); p%data(ie,k,i)=p%data(ie,k,i)+swild(iplg(elnode(n,ie)))/dble(i34(ie)); enddo
+          else
+            call parallel_abort(trim(adjustl(p%varname))//': wrong npt')
+          endif
+        enddo !ie
+
+      enddo !k
+    enddo !i
+  enddo !m
+end subroutine cosine_vars_init
+
+
+subroutine update_cosine_vars(id)
+!--------------------------------------------------------------------
+!get 2D parameter value of element
+!--------------------------------------------------------------------
+  use schism_glbl, only : rkind,irange_tr,tr_el,nvrt,i34,elside,isdel, &
+                        & elnode
+  use cosine_mod
+  implicit none
+  integer, intent(in) :: id
+
+  !local variable
+  integer :: i,j,k,m
+  type(cosine_spatial_param),pointer :: p
+
+  !spatial varying parameters
+  do m=1,size(sp)
+    p=>sp(m)
+    if(p%ndim==0) cycle
+    do i=1,p%dims(2)
+      do k=1,p%dims(1)
+        if(p%istat(k,i)==0) cycle
+        if(p%ndim==1) p%p=p%data(id,1,1)
+        if(p%ndim==2) p%p1(k)=p%data(id,k,1)
+        if(p%ndim==3) p%p2(k,i)=p%data(id,k,i)
+      enddo !k
+    enddo !i
+  enddo !m
+
+end subroutine update_cosine_vars
+
+
+subroutine read_cosine_stainfo
+!---------------------------------------------------------------------------
+!read CoSiNE station 
+!---------------------------------------------------------------------------
+  use schism_glbl, only : rkind,dt,ihot,ne,i34,xnd,ynd,elnode,ielg, &
+      & in_dir,out_dir,len_in_dir,len_out_dir,ne_global,np_global
+  use schism_msgp, only : myrank,nproc,comm,parallel_abort,parallel_barrier, &
+      & itype,rtype
+  use cosine_misc, only : pt_in_poly
+  use cosine_mod, only : dg,dl,mval
+  implicit none
+  include 'mpif.h'
 
   !local variables
-  integer :: itmp,iarray(10000)
-  real(rkind) :: rtmp,rarray(10000)
-  character(len=2) :: stmp
+  integer :: i,j,m,id,irank,istat,inside,nodel(3),ierr,negb,npgb,nsta
+  real(rkind) :: rtmp,xtmp,ytmp,x(4),y(4),arco(3)
+  integer,allocatable :: i34gb(:),elnodegb(:,:),ista(:),iep(:)
+  real(rkind), allocatable :: xgb(:),ygb(:),z(:)
 
-  svar='  '
-  if(vartype==1) then  !read 1D integer array
-    call get_param(fname,varname,3,itmp,rtmp,stmp,ndim1=idim1,iarr1=iarray)
-    ivar=iarray(1:idim1)
-  elseif(vartype==2) then !read 1D float array
-    call get_param(fname,varname,4,itmp,rtmp,stmp,ndim1=idim1,arr1=rarray)
-    rvar=rarray(1:idim1)
-  else
-    write(errmsg,*)'unknown vartype :',varname
-    call parallel_abort(errmsg)
+  !read grid and station information on myrank=0
+  if(myrank==0) then
+    !read hgird information
+    open(31,file=in_dir(1:len_in_dir)//'hgrid.gr3',status='old')
+    read(31,*); read(31,*)negb,npgb
+    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: negb and npgb in hgrid.gr3') 
+    allocate(i34gb(negb),elnodegb(4,negb),xgb(npgb),ygb(npgb),stat=istat)
+    if(istat/=0) call parallel_abort('failed to alloc. i34gb')
+    do i=1,npgb; read(31,*)j,xgb(i),ygb(i),rtmp; enddo
+    do i=1,negb; read(31,*)j,i34gb(i),elnodegb(1:i34gb(i),i); enddo
+    close(31)
+
+    !read station info. 
+    open(31,file=in_dir(1:len_in_dir)//'cstation.in',status='old')
+    read(31,*); read(31,*)nsta
+    allocate(dg%x(nsta),dg%y(nsta),dg%z(nsta),dg%nstas(nproc),dg%sids(nsta), &
+           & dg%displ(nproc),dg%iep(nsta),ista(nsta),iep(nsta),z(nsta),stat=istat)
+    if(istat/=0) call parallel_abort('failed to alloc. dcosine%x')
+    do i=1,nsta; read(31,*)j,dg%x(i),dg%y(i),dg%z(i); enddo
+    close(31)
+  
+    !find parent element
+    ista=0; dg%iep=-1
+    do m=1,nsta
+      do i=1,ne_global
+        x(1:i34gb(i))=xgb(elnodegb(1:i34gb(i),i))
+        y(1:i34gb(i))=ygb(elnodegb(1:i34gb(i),i))
+        call pt_in_poly(i34gb(i),x(1:i34gb(i)),y(1:i34gb(i)),dg%x(m),dg%y(m),inside,arco,nodel)
+        if(inside==1) then
+          ista(m)=1 
+          dg%iep(m)=i
+        endif !if
+        if(ista(m)==1) exit
+      enddo !i
+    enddo !m
+
+    deallocate(i34gb,elnodegb,xgb,ygb)
+  endif !if(myrank==0)
+
+  !boradcast global station information
+  call mpi_bcast(nsta,1,itype,0,comm,ierr) 
+  if(.not.allocated(dg%iep)) then
+     allocate(dg%iep(nsta),dg%z(nsta),stat=istat)
+     if(istat/=0) call parallel_abort('failed to alloc. iep')
+  endif  
+  call mpi_bcast(dg%iep,nsta,itype,0,comm,ierr) 
+  call mpi_bcast(dg%z,nsta,rtype,0,comm,ierr) 
+  dg%nsta=nsta
+  call parallel_barrier 
+
+  !compute local nsta,sid,iep
+  do m=1,2
+    !initilize
+    if(m==2) then
+      allocate(dl%z(nsta),dl%iep(nsta),stat=istat) 
+      if(istat/=0) call parallel_abort('failed to alloc. sdep')
+    endif
+
+    !check each station pt in local domain
+    nsta=0
+    do j=1,dg%nsta
+      do i=1,ne
+        if(ielg(i)==dg%iep(j)) then
+          nsta=nsta+1
+          if(m==1) exit
+          dl%z(nsta)=dg%z(j)
+          dl%iep(nsta)=dg%iep(j)
+        endif 
+      enddo !i
+    enddo !j
+  enddo!m
+  dl%nsta=nsta
+
+  !collect local nsta and iep,z
+  call mpi_gather(dl%nsta,1,itype,dg%nstas,1,itype,0,comm,ierr)
+  if(ierr/=MPI_SUCCESS) call parallel_abort('failed in gather local nsta')
+  if(myrank==0) then
+    dg%displ=0
+    do i=2,nproc
+      dg%displ(i)=dg%displ(i-1)+dg%nstas(i-1)
+    enddo
+  endif
+  call mpi_gatherv(dl%iep,dl%nsta,itype,iep,dg%nstas,dg%displ,itype,0,comm,ierr)
+  call mpi_gatherv(dl%z,dl%nsta,rtype,z,dg%nstas,dg%displ,rtype,0,comm,ierr)
+
+  !compute the indices of local iep
+  if(myrank==0) then
+    ista=0
+    do i=1,dg%nsta
+      do j=1,dg%nsta
+        if(ista(j)==1) cycle 
+        if(iep(i)==dg%iep(j) .and. abs(z(i)-dg%z(j))<mval) then
+          dg%sids(i)=j; ista(j)=1; exit
+        endif
+      enddo
+    enddo
+
+    deallocate(ista,z,iep)
   endif
 
-  return
-end subroutine get_param_1D
+end subroutine read_cosine_stainfo
 
+subroutine cosine_output(imode,id,varname,ndim,rarray)
+!---------------------------------------------------------------------------
+!CoSiNE station outputs
+!imode=0: for local rank to initialize and store local diagnostic variables
+!         id: the station index 
+!         varname: variable name
+!         ndim: number of variable dimensions
+!         rarray: variable values
+!imode=1: for myrank=0 to initialize and store all diagnostic variables
+!---------------------------------------------------------------------------
+  use schism_glbl, only : rkind,errmsg,out_dir,len_out_dir,ihot
+  use schism_msgp, only : myrank,nproc,comm,parallel_abort,parallel_barrier, &
+      & itype,rtype
+  use cosine_mod, only: dl,dg,dlv,dgv,cosine_diagnostic_variable
+  use netcdf
+  implicit none
+  include 'mpif.h'
+  
+  integer :: stype=MPI_CHARACTER
+  integer,intent(in) :: imode,id
+  character(*),intent(in) :: varname
+  integer,intent(in) :: ndim
+  real(rkind),dimension(*),intent(in) :: rarray
+ 
+  !local variables 
+  integer :: i,j,m,n,istat,iflag,ierr,id_x,id_y,id_z,id_iep
+  integer :: ndim_lc,ndim_nc,time_dim,nsta_dim,ncid,iret
+  integer,allocatable :: ndim_gb(:),dims_nc(:),var_dims_nc(:)
+  character(len=30) :: varname_lc
+  character(len=30), allocatable :: varname_gb(:)
+  real(rkind),allocatable :: swild_lc(:),swild_gb(:) 
+  type(cosine_diagnostic_variable), pointer :: dtv,drv
+  logical :: lexist
+
+  !1). initilize local diagnotic variable; 2) save variable values
+  if(imode==0) then
+    iflag=0
+    if(associated(dlv)) then
+      !dlv exists; search dlv for the variable
+      dtv=>dlv
+      do while(.True.)
+        if(.not. associated(dtv)) exit
+        if(trim(adjustl(dtv%varname)) .eq. trim(adjustl(varname))) then
+          dtv%data(:,id)=rarray(1:ndim) !if variable found
+          iflag=1; exit
+        endif
+        drv=>dtv; dtv=>dtv%next
+      enddo
+    endif
+
+    !varable not found 
+    if(iflag==0) then
+      !initialize new variable
+      allocate(dtv,stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. dtv')
+      if(associated(dlv)) drv%next=>dtv
+      if(.not. associated(dlv)) dlv=>dtv
+      
+      dtv%ndim=ndim
+      dtv%varname=varname
+      allocate(dtv%data(ndim,dl%nsta),stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. dtv%data')
+      dtv%data(:,id)=rarray(1:ndim)
+
+      dl%nvar=dl%nvar+1; dl%ndim=dl%ndim+ndim
+      if(trim(adjustl(varname)).eq.'temp') dl%istat=1
+    endif
+  
+  elseif(imode==1) then
+    !------------------------------------------------------------------------------ 
+    !compute total datasize for each station, and initilize dvars
+    !------------------------------------------------------------------------------ 
+    if(dg%istat==0) then
+      !sync total nvar and ndim
+      call mpi_allreduce(dl%nvar,dg%nvar,1,itype,MPI_MAX,comm,ierr)
+      call mpi_allreduce(dl%ndim,dg%ndim,1,itype,MPI_MAX,comm,ierr)
+      if(dg%nvar>0) dg%istat=1
+      if(dg%istat==0) return
+
+      if(myrank==0) then
+        allocate(varname_gb(nproc),ndim_gb(nproc),dims_nc(dg%nvar),var_dims_nc(dg%nvar),stat=istat)
+        if(istat/=0) call parallel_abort('failed in alloc. varname_gb')
+        ndim_nc=0; dims_nc=0
+      endif
+
+      !initialize dgv
+      if(associated(dlv)) dtv=>dlv
+      do i=1,dg%nvar
+        !get local ndim and varname
+        if(associated(dtv)) then
+          ndim_lc=dtv%ndim; varname_lc=dtv%varname
+          dtv=>dtv%next
+        else
+          ndim_lc=0; varname_lc=''
+        endif
+
+        !initialize dgv
+        call mpi_gather(ndim_lc,1,itype,ndim_gb,1,itype,0,comm,ierr)
+        call mpi_gather(varname_lc,30,stype,varname_gb,30,stype,0,comm,ierr)
+        if(myrank==0) then
+          if(i==1) then
+            allocate(drv,stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. drv')
+            dgv=>drv
+          else
+            allocate(drv%next,stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. drv%next')
+            drv=>drv%next
+          endif
+
+          !determine/check global ndim and varname
+          ndim_lc=0; varname_lc=''
+          do j=1,nproc
+            if((varname_lc.eq.'').and.(varname_gb(j).ne.'')) varname_lc=varname_gb(j) 
+            if(ndim_lc==0 .and. ndim_gb(j)/=0) ndim_lc=ndim_gb(j) 
+
+            if((varname_lc.ne.'').and.(varname_gb(j).ne.'').and.(varname_lc.ne.varname_gb(j))) call parallel_abort('varname_lc: cosine') 
+            if(ndim_lc/=0 .and. ndim_gb(j)/=0 .and. ndim_lc/=ndim_gb(j)) call parallel_abort('ndim_lc: cosine') 
+          enddo
+          drv%ndim=ndim_lc; drv%varname=varname_lc
+          allocate(drv%data(ndim_lc,dg%nsta),stat=istat)
+          if(istat/=0) call parallel_abort('failed in alloc. drv%data')
+
+          !find variable with ndim>1
+          if(ndim_lc>1) then
+            istat=0
+            do j=1,ndim_nc
+              if(ndim_lc==dims_nc(j)) istat=1
+            enddo
+           
+            !new dimension found
+            if(istat==0) ndim_nc=ndim_nc+1; dims_nc(ndim_nc)=ndim_lc
+          endif
+        endif !if(myrank==0)
+
+      enddo !i=1,dg%nvar
+
+      !initialize station output file
+      if(myrank==0) then
+        inquire(file=trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),exist=lexist)
+        if(ihot==2 .and. lexist) then
+          iret=nf90_open(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),NF90_WRITE,ncid)
+          dg%ncid=ncid
+
+          !get varid 
+          iret=nf90_inq_varid(ncid,'time',dg%id_time)
+          iret=nf90_inquire_dimension(ncid,dg%id_time,len=dg%it); dg%it=dg%it+1
+
+          dtv=>dgv
+          do i=1,dg%nvar
+            iret=nf90_inq_varid(ncid,trim(adjustl(dtv%varname)),dtv%varid)
+            dtv=>dtv%next
+          enddo
+        else
+          iret=nf90_create(trim(adjustl(out_dir(1:len_out_dir)//'cosine.nc')),OR(NF90_NETCDF4,NF90_CLOBBER),ncid)
+          dg%ncid=ncid
+
+          !define dimension
+          iret=nf90_def_dim(ncid,'time',NF90_UNLIMITED,time_dim)
+          iret=nf90_def_dim(ncid,'nstation',dg%nsta,nsta_dim)
+          do i=1,ndim_nc
+            write(varname_lc,*)dims_nc(i)
+            iret=nf90_def_dim(ncid,trim(adjustl(varname_lc)),dims_nc(i),var_dims_nc(i))
+          enddo
+
+          !define variables
+          iret=nf90_def_var(ncid,'time',nf90_double,(/time_dim/),dg%id_time)
+          iret=nf90_def_var(ncid,'x',nf90_double,(/nsta_dim/),id_x)
+          iret=nf90_def_var(ncid,'y',nf90_double,(/nsta_dim/),id_y)
+          iret=nf90_def_var(ncid,'z',nf90_double,(/nsta_dim/),id_z)
+          iret=nf90_def_var(ncid,'ie',nf90_int,(/nsta_dim/),id_iep)
+
+          dtv=>dgv
+          do i=1,dg%nvar
+            if(dtv%ndim==1) then
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,nsta_dim/),dtv%varid)
+            elseif(dtv%ndim>1) then
+              do j=1,ndim_nc; if(dims_nc(j)==dtv%ndim) exit; enddo
+              iret=nf90_def_var(ncid,trim(adjustl(dtv%varname)),nf90_FLOAT,(/time_dim,var_dims_nc(j),nsta_dim/),dtv%varid)
+            endif
+            dtv=>dtv%next
+          enddo
+          iret=nf90_enddef(ncid)
+
+          !put x,y,z and iep
+          iret=nf90_put_var(dg%ncid,id_iep,dg%iep,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_x,dg%x,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_y,dg%y,start=(/1/),count=(/dg%nsta/))
+          iret=nf90_put_var(dg%ncid,id_z,dg%z,start=(/1/),count=(/dg%nsta/))
+        endif!ihot
+
+        deallocate(varname_gb,ndim_gb,dims_nc,var_dims_nc) 
+      endif !myrank
+    endif !dg%istat==0
+
+    !------------------------------------------------------------------------------ 
+    !allocate data for storing all diagnostic values 
+    !------------------------------------------------------------------------------ 
+    !check nvar and ndim
+    !if(dl%nsta/=0) then !this can happen if dry_ie(i)==1
+    !  if(dl%nvar/=dg%nvar) call parallel_abort('dl%nvar/=dg%nvar')
+    !  if(dl%ndim/=dg%ndim) call parallel_abort('dl%ndim/=dg%ndim')
+    !endif
+  
+    allocate(swild_lc(dg%ndim*dl%nsta),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. swild_lc')
+    if(myrank==0) then
+      allocate(swild_gb(dg%ndim*dg%nsta),stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. swild_gb')
+    endif
+
+    !assemble data on each rank 
+    swild_lc=-9999; m=0 
+    do i=1,dl%nsta
+      if(.not. associated(dlv)) cycle
+      dtv=>dlv
+      do j=1,dl%nvar
+        do n=1,dtv%ndim
+          m=m+1
+          swild_lc(m)=dtv%data(n,i)
+        enddo !n
+        dtv=>dtv%next
+      enddo !j=1,dl%nvar
+    enddo !i=1,dl%nsta
+
+    !pass all data to myrank=0
+    call mpi_gatherv(swild_lc,dl%nsta*dg%ndim,rtype,swild_gb,dg%nstas*dg%ndim,dg%displ*dg%ndim,rtype,0,comm,ierr)
+    if(myrank==0) then
+      m=0
+      do i=1,dg%nsta
+        dtv=>dgv
+        do j=1,dg%nvar
+          do n=1,dtv%ndim
+            m=m+1; dtv%data(n,dg%sids(i))=swild_gb(m) 
+          enddo
+          dtv=>dtv%next
+        enddo !j1,dg%nvar
+      enddo !i=1,dg%nsta
+
+      !write station output
+      iret=nf90_put_var(dg%ncid,dg%id_time,(/dg%time/),start=(/dg%it/),count=(/1/))
+      dtv=>dgv
+      do i=1,dg%nvar
+        if(dtv%ndim==1) then
+          iret=nf90_put_var(dg%ncid,dtv%varid,dtv%data(:,1),start=(/dg%it,1/),count=(/1,dg%nsta/))
+        elseif(dtv%ndim>1) then
+          iret=nf90_put_var(dg%ncid,dtv%varid,dtv%data(:,:),start=(/dg%it,1,1/),count=(/1,dtv%ndim,dg%nsta/))
+        endif
+        dtv=>dtv%next
+      enddo
+      iret=nf90_sync(dg%ncid) 
+    endif !myrank
+
+    deallocate(swild_lc)
+    if(myrank==0) deallocate(swild_gb)
+  endif !imode
+    
+end subroutine cosine_output

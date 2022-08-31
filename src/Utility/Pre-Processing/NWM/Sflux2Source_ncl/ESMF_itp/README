@@ -1,0 +1,20 @@
+Preprocessing:
+  get_itpXYA.f90
+  Inputs: hgrid.cpp/hgrid.ll 
+  Outputs: itp_X,itp_Y: node 
+           itp_A:element area 
+           ele.dat (only output tri)
+
+Interpolation:
+  itp2nd_ESMF.ncl, using ESMF_regriding to itp on node
+  Inputs: sflux prc ncfiles, itp_X,itp_Y,ele.dat
+  Outputs: vsource_np.bin,dim.dat
+
+Output vsource.th:
+  cvt2th.f90 (recommend to use ifort) 
+  Inputs: vsource_np.bin,hgrid.cpp,dim.dat,itp_A
+  Outputs: vsource.th
+
+Usage:
+  run.sh 
+

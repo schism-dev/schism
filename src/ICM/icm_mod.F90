@@ -13,194 +13,191 @@
 !   limitations under the License.
 
 module icm_mod
-!-------------------------------------------------------------------------------
-!parameter definition for ICM
-!Warning: most column arrays index from surface to bottom!
-!-------------------------------------------------------------------------------
-  use schism_glbl,only: rkind,nea,nvrt
+  use schism_glbl,only: rkind,nvrt,nea
   implicit none
 
-  !integer, parameter ::iT=2
-  !real(kind=rkind), parameter :: CV1=1.0E8
-  !real(kind=rkind), parameter :: CV2=1.0E8
-  real(kind=rkind), parameter :: COV=1.0E-10
-  !molar weight for C,Ca,CaCo3,N
-  real(kind=rkind), parameter :: mC=12.011,mCACO3=100.086,mN=14.007
+  !-------------------------------------------------------------------------------
+  !constants: molar weight for C,Ca,CaCo3,N
+  !C1_PAR: srad to PAR; C2_PAR: PAR(W/m2) to PAR(E/m2/day) 
+  !-------------------------------------------------------------------------------
+  integer,parameter :: nPB=3,nZB=2
+  real(rkind),parameter :: mC=12.011,mCACO3=100.086,mN=14.007
+  real(rkind),parameter :: C1_PAR=0.47, C2_PAR=0.397
 
+  !-------------------------------------------------------------------------------
+  !global switch and variables
+  !-------------------------------------------------------------------------------
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux
+  integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
+  real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),WSP(29),WSPn(29)
+  real(rkind),save,target,dimension(3) :: alpha,Iopt,Hopt
+  integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
 
-  !time step in ICM [days]
-  real(kind=rkind), save :: dtw,dtw2 !dtw2=dtw/2
+  integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26, nout_ba=1
+  integer,save,target :: ntrs_icm,itrs(2,9),nout_icm
+  integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
+  integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
+        & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
+  character(len=6),save,allocatable :: name_icm(:)
+  integer,save,target :: ncid_icm(3),npt_icm(3)
+  real(rkind),target,save :: time_icm(2,3),dt_icm(3)
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:) 
 
-  !time stamp for WQinput
-  real(kind=rkind),save:: time_icm(5),time_ph
-  
-  !global switch 
-  integer,save :: iSun,iNPS,iPS
-  integer,save :: iLight,jLight,iRad
-  integer,save :: iSed,iRea,iBen,iTBen
-  integer,save :: iZoo,iPh
-  integer,save :: iAtm,iCheck,iout_icm
-  integer,save :: iSet,iTurb,iWRea,iTSS 
-  integer,save :: isav_icm 
+  !declear temporary variables to increase code readability (can be put in main loop)
+  real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
+  real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
+                              & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
+  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:) 
+  real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
+  real(rkind),save,pointer,dimension(:) :: zdDOX 
  
-!  !ICM region
-!  integer,save,allocatable :: reg_icm(:) !nea
+  !-------------------------------------------------------------------------------
+  !ICM parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target,dimension(3) :: GPM,TGP,MTB,TMT,KTMT,MTR
+  real(rkind),save,target :: KTGP(3,2)
+  real(rkind),save,target :: FCP(3,4),FNP(3,5),FPP(3,5),FCM(3,4),FNM(3,5),FPM(3,5)
+  real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOn,KhNH4n,KhDOox,KhNO3dn
+  real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KSR0,TRSR,KTRSR
+  real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD,KPIP
+  real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
+  real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,dz_flux(2)
 
-  !water quality state variables
-  real(kind=rkind),save,allocatable,dimension(:,:,:) :: wqc
-  !dep(1:nv=nvrt-kbe) (1- surface). dep(k) is Layer thickness btw level nvrt-k and nvrt-k+1
-  real(kind=rkind),save,allocatable,dimension(:) :: dep,Sal,Temp,TSED 
-  real(kind=rkind),save,allocatable,dimension(:,:) :: ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4,NO3
-  real(kind=rkind),save,allocatable,dimension(:,:) :: RPOP,LPOP,DOP,PO4t,SU,SAt,COD,DOO
-  real(kind=rkind),save,allocatable,dimension(:,:) :: Chl_el,PrmPrdt,DIN_el,PON_el,DO_consmp !(nvrt,nea), 1 to nvrt: bottom to surface
+  real(rkind),save :: dtw     !ICM time step (day)
+  real(rkind),save:: time_ph  !time stamp for WQinput
+  real(rkind),save :: rIa,rIavg
 
-  !(nvrt,nea)
-  real(kind=rkind),save,allocatable,dimension(:,:) :: lfsav,stsav,rtsav
-  real(kind=rkind),save,allocatable,dimension(:) :: tlfsav,tstsav,trtsav
-                                                    !tlfsav(nea)
-  real(kind=rkind),save,allocatable,dimension(:) :: hcansav,hcansavori !hcansav(nea)
-  real(kind=rkind),save,allocatable,dimension(:) :: rtpocsav, rtponsav,rtpopsav
-                                                    !rtpocsav(nvrt)
-  real(kind=rkind),save,allocatable,dimension(:) :: rtdosav
-                                                    !rtdosav(nvrt)
-  real(kind=rkind),save,allocatable,dimension(:) :: trtpocsav,trtponsav,trtpopsav,trtdosav
-                                                    !trtpocsav(nea)
-  real(kind=rkind),save,allocatable,dimension(:) :: lfNH4sav,lfPO4sav
-                                                    !lfNH4sav(nvrt)
-  real(kind=rkind),save,allocatable,dimension(:) :: tlfNH4sav,tlfPO4sav
-                                                    !tlfNH4sav(nea)
+  !-------------------------------------------------------------------------------
+  !silica parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: FSP(2),FSM(2),KS,TRS,KTRS,KhS(3),s2c(3),KSAp
 
+  !-------------------------------------------------------------------------------
+  !zooplankton parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: zGPM(8,2),zKhG(8,2),zTGP(2),zKTGP(2,2),zAG,zRG
+  real(rkind),save,target,dimension(2) :: zMRT,zMTB,zTMT,zKTMT
+  real(rkind),save,target :: zFCP(3),zFNP(4),zFPP(4),zFSP(2)
+  real(rkind),save,target :: zFCM(2),zFNM(2,4),zFPM(2,4),zFSM(2,2)
+  real(rkind),save,target :: zs2c(2),zn2c(2),zp2c(2),zKhDO(2),z2pr(2),p2pr
 
-  !PH model
-  integer, save :: inu_ph,irec_ph
-  integer,save,allocatable :: iphgb(:)
-  real(kind=rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:) 
-  real(kind=rkind),save,allocatable,dimension(:,:) :: TIC,ALK,CA,CACO3,PH_el,PH_nd,TIC_el,ALK_el                         
-  real(kind=rkind),save,allocatable,dimension(:) :: PH,CAsat,CO2
-  real(kind=rkind),save :: WSCACO3,rKCACO3,rKCA,rKa
+  !-------------------------------------------------------------------------------
+  !pH parameters and variables
+  !-------------------------------------------------------------------------------
+  integer,save,target :: inu_ph
+  real(rkind),save,target :: ppatch0,pKCACO3,pKCA,pRea
 
-  !phyto. growth rate
-  real(kind=rkind),save :: TU,TD,rIa,rIavg,Daylen
-  real(kind=rkind),save,allocatable,dimension(:,:) :: PrefN
-  real(kind=rkind),save,allocatable,dimension(:,:,:) :: GP
-  real(kind=rkind),save,allocatable,dimension(:) :: rIavg_save !(nea)
-  integer,save :: irSi, iLimit
- 
-  !sav growth rate and metabolism rate
-  real(kind=rkind),save,allocatable,dimension(:) :: plfsav !plfsav(nvrt); 1/day
-  real(kind=rkind),save,allocatable,dimension(:) :: bmlfsav,bmstsav,bmrtsav !1/day
-                                                    !bmlfsav(nvrt)
-  
-  !TSED
-  real(kind=rkind),save,allocatable,dimension(:) :: PC2TSS 
-  real(kind=rkind),save :: WSSED
-  
-  !DO
-  real(kind=rkind),save,allocatable,dimension(:) :: WMS 
+  integer, save :: irec_ph
+  integer,save,allocatable :: ppatch(:)
+  real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:)
+  real(rkind),save,allocatable,dimension(:,:) :: TIC_el,ALK_el
 
-  !---------general parameters from icm.in--------------------------------
-  !zooplankton paramters
-  real(kind=rkind),save :: Eff,RF,Pf
-  real(kind=rkind),save,dimension(8,2) :: GZM,rKhGE,PPC
-  real(kind=rkind),save,dimension(2) :: BMZR,DRZ,TGZ,rKTGZ1,rKTGZ2,TBZ,rKTBZ,RZ
+  !-------------------------------------------------------------------------------
+  !SAV parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: spatch0,stleaf0,ststem0,stroot0
+  real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(3) !growth related coefficients
+  real(rkind),save,target :: sMTB(3),sTMT(3),sKTMT(3)        !meta. coefficients (rate, temp, temp dependence)
+  real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save,target :: sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs  !half-saturation conc. of N&P
+  real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
+  real(rkind),save,target :: sc2dw,s2den,sn2c,sp2c,so2c      !convert ratios
 
-  !phytoplankton parameters 
-  integer,save :: iReg_PR,iReg_GP,iPRR
-  integer,save,allocatable :: reg_GP(:),reg_PR(:) !nea
-  real(kind=rkind),save :: rKhS,ST,rKeC1,rKeC2,rKeChl,rKeTSS,rKeSal,mKhN,mKhP,Dopt 
-  real(kind=rkind),save,dimension(3) :: BMPR,TBP,rKTBP,rKhN,rKhP,rIm,alpha_PB
-  real(kind=rkind),save,allocatable,dimension(:) :: PRR1,PRR2,PRR3,GPM1,GPM2,GPM3,TGP1,TGP2,TGP3,CChl1,CChl2,CChl3
-  real(kind=rkind),save,allocatable,dimension(:) :: rKTGP11,rKTGP12,rKTGP13,rKTGP21,rKTGP22,rKTGP23
+  integer,save,allocatable :: spatch(:)               !sav region
+  real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
+  real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
+  real(rkind),save,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
+  real(rkind),save,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
 
-  !ncai !sav parameters 
-  integer,save,allocatable :: patchsav(:) !(nea)
-  integer,save :: initsav
-  real(kind=rkind),save :: famsav,fplfsav,fpstsav,fprtsav
-  real(kind=rkind),save :: acdwsav,ancsav,apcsav,aocrsav !ratios
-  real(kind=rkind),save :: pmbssav,toptsav,ktg1sav,ktg2sav !temp 
-  real(kind=rkind),save :: alphasav,rkshsav !light
-  real(kind=rkind),save :: rlf,rst,rrt,hcansav0,hcansav_limit !height
-  real(kind=rkind),save :: fdosav, fcdsav, fclpsav, fcrpsav !carbon
-  real(kind=rkind),save :: khnwsav,khnssav,khnprsav !nitrogen
-  real(kind=rkind),save :: fnisav, fndsav, fnlpsav, fnrpsav
-  real(kind=rkind),save :: khpwsav,khpssav !phosphorus
-  real(kind=rkind),save :: fpisav, fpdsav, fplpsav, fprpsav
-  real(kind=rkind),save :: bmlfrsav,bmstrsav,bmrtrsav !reference metabolism
-  real(kind=rkind),save :: ktblfsav,ktbstsav,ktbrtsav 
-  real(kind=rkind),save :: trlfsav,trstsav,trrtsav
-  real(kind=rkind) :: pmaxsav,fisav,fnsav,fpsav !growth
+  !-------------------------------------------------------------------------------
+  !VEG parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
+  real(rkind),save,target :: vpatch0,vGPM(3),vFAM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
+  real(rkind),save,target,dimension(3,3) :: vMTB,vTMT,vKTMT    !meta. coefficients (rate,temp,temp dependence)
+  real(rkind),save,target,dimension(3,4) :: vFNM,vFPM,vFCM     !metabolism to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save,target,dimension(3) :: vKhNs,vKhPs,vScr,vSopt,vInun,valpha,vKe !growth limit(nutrent,light,salinity,inundation)
+  real(rkind),save,target,dimension(3,2) :: vTMR,vKTMR,vMR0,vMRcr    !mortality coeffs
+  real(rkind),save,target :: v2ht(3,2),vht0(3),vcrit(3)    !computing canopy height
+  real(rkind),save,target,dimension(3) :: vc2dw,v2den,vn2c,vp2c,vo2c!convert ratios
+  integer,save,target :: ivNc,ivPc,ivNs,ivPs,ivMRT              !flags for (N,P) limit, recycled (N,P) dest., mortality
 
-  !carbon parameters 
-  real(kind=rkind),save :: FCRPZ,FCLPZ,FCDPZ
-  real(kind=rkind),save :: rKRCalg,rKLCalg,rKDCalg,TRHDR,TRMNL,rKTHDR,rKTMNL
-  integer,save :: iReg_KC
-  integer,save,allocatable :: reg_KC(:) !nea
-  real(kind=rkind),save,allocatable,dimension(:) :: rKRC,rKLC,rKDC
-  real(kind=rkind),save :: rKHR1,rKHR2,rKHR3,rKHORDO,rKHDNn,AANOX
-  real(kind=rkind),save,dimension(3) :: FCD,FCRP,FCLP,FCDP
-  real(kind=rkind),save,dimension(2) :: FCDZ,rKHRZ
+  real(rkind),save :: mtemp !todo add function to read mtemp
+  integer,save,allocatable :: vpatch(:)                     !reg region
+  real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
+  real(rkind),save,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
 
-  !nitrogen parameters 
-  real(kind=rkind),save :: FNRPZ,FNLPZ,FNDPZ,FNIPZ,FNRP,FNLP,FNDP,FNIP,ANDC
-  real(kind=rkind),save :: rKRN,rKLN,rKDN,rKRNalg,rKLNalg,rKDNalg,rNitM,TNit,rKNit1,rKNit2,rKhNitDO,rKhNitN
-  real(kind=rkind),save,dimension(3) :: FNR,FNL,FND,FNI,ANC
-  real(kind=rkind),save,dimension(2) :: FNRZ,FNLZ,FNDZ,FNIZ,ANCZ
+  !-------------------------------------------------------------------------------
+  !sediment flux model (SFM) parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: bdz,bVb,bdiff,bsaltc,bsaltp,bsaltn,bsolid(2)
+  real(rkind),save,target :: bKTVp,bKTVd,bVp,bVd,bTR
+  real(rkind),save,target :: btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0
+  real(rkind),save,target :: bCH40,bPOS0,bSA0,bPOP0(3),bPON0(3),bPOC0(3)
+  real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bKTC,bKTN,bKTP
+  real(rkind),save,target :: bKS,bKTS
+  real(rkind),save,target,dimension(3,3) :: bFPP,bFNP,bFCP,bFCv,bFNv,bFPv !(G1:G3,veg/PB)
+  real(rkind),save,target,dimension(3) :: bFCs,bFNs,bFPs,bFCM,bFNM,bFPM !(G1:G3)
+  real(rkind),save,target :: bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4 !!nitrification
+  real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bKTNO3 !denitrification
+  real(rkind),save,target :: bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S !H2S oxidation
+  real(rkind),save,target :: bSIsat,bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa  !Silica dissolution
+  real(rkind),save,target :: bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4  !PO4
+  real(rkind),save,target :: bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic !benthic stress
+  real(rkind),save,target :: bKCH4,bKTCH4,bKhDO_CH4,bo2n !CH4 reaction
 
-  !phosphorus parameters 
-  real(kind=rkind),save :: FPRPZ,FPLPZ,FPDPZ,FPIPZ,FPRP,FPLP,FPDP,FPIP
-  real(kind=rkind),save :: rKPO4p
-  integer,save :: iReg_PO4
-  integer,save,allocatable :: reg_PO4(:) !nea
-  real(kind=rkind),save,allocatable,dimension(:) :: rKRP,rKLP,rKDP,rKRPalg,rKLPalg,rKDPalg 
-  real(kind=rkind),save,dimension(3) :: FPR,FPL,FPD,FPI,APC
-  real(kind=rkind),save,dimension(2) :: FPRZ,FPLZ,FPDZ,FPIZ,APCZ
+  !sediment concentrations and fluxes
+  real(rkind),save,target,allocatable,dimension(:) :: bLight,bThp,bTox,btemp,bCH4,bSTR,bPOS
+  real(rkind),save,target,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
+  real(rkind),save,target,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
+  real(rkind),save,target,allocatable,dimension(:) :: SOD,JNH4,JNO3,JPO4,JCOD,JSA
 
-  !silica parameters 
-  real(kind=rkind),save :: FSPPZ,FSIPZ,FSPP,FSIP,rKSAp,rKSU,TRSUA,rKTSUA
-  real(kind=rkind),save :: FSPd,FSId,ASCd
-  real(kind=rkind),save,dimension(2) :: FSPZ,FSIZ,ASCZ
+  !-------------------------------------------------------------------------------
+  !Benthic Algea model (BA) parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: gpatch0,BA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
+  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
 
-  !COD&DO parameters 
-  real(kind=rkind),save :: rKHCOD,rKCD,TRCOD,rKTCOD  
-  real(kind=rkind),save :: AOC,AON,AONO,rKro,rKTr         
-  !--------------------------------------------------------------------------------------
-  !erosion
-  real(kind=rkind),save,allocatable,dimension(:) :: EROH2S, EROLPOC,ERORPOC !nea
+  integer,save,allocatable,dimension(:) :: gpatch
+  real(rkind),save,target,allocatable,dimension(:) :: BA,gPR
 
-  !settling
-  integer,save :: iReg_WS,iWS
-  integer,save,allocatable :: reg_WS(:) !nea
-  real(kind=rkind),save,allocatable,dimension(:) :: WSRP,WSLP,WSPB1,WSPB2,WSPB3,turb,WRea
+  !-------------------------------------------------------------------------------
+  !benthic erosion (ERO) parameters and variables
+  !-------------------------------------------------------------------------------
+  integer,save,target :: ierosion !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand 
+  real(rkind),save,target :: erosion,etau,eporo,efrac,ediso,dfrac(2),dWS_POC(2)
 
-  !net settling velocity !unit:m/day
-  real(kind=rkind),save,allocatable,dimension(:) :: WSSBNET,WSLBNET,WSRBNET,WS1BNET,WS2BNET,WS3BNET
+  real(rkind),save,allocatable,dimension(:) :: eH2S,eLPOC,eRPOC !erosion flux
 
-  !benthic flux from sediment flux model
-  real(kind=rkind),save:: BnDOC,BnNH4,BnNO3,BnPO4t,BnSAt,BnCOD,BnDO
+  !---------------------------------------------------------------------------
+  !arguments for zbrent function
+  !---------------------------------------------------------------------------
+  type :: brent_var
+    integer :: imed=0  !0: SFM;  1: pH
+    integer :: id,ierr=0
+    real(rkind) :: vmin,vmax
+    real(rkind),pointer :: data 
+    real(rkind) :: tdep,wsalt,Kd,Kp,wNH4,wNO3,wCOD,wDOX,XJC,XJN,SODrt,stc,SOD !SFM
+    real(rkind) :: ph,K1,K2,Kw,Kb,Ct,Ca,Bt,rH !pH
+  end type brent_var
 
-  !additional time series of benthic flux 
-  real(kind=rkind),save:: TBRPOC,TBLPOC,TBDOC,TBRPON,TBLPON,TBDON,TBNH4,TBNO3,TBRPOP,TBLPOP,TBDOP,TBPO4t,TBSU,TBSAt,TBCOD,TBDO
-  real(kind=rkind),save,allocatable,dimension(:) :: BRPOC,BLPOC,BDOC,BRPON,BLPON,BDON,BNH4,BNO3,BRPOP,BLPOP,BDOP,BPO4t,BSU,BSAt,BCOD,BDO
-
-  !simplified benthic flux as function of temp
-  real(kind=rkind),save :: thata_tben,SOD_tben,DOC_tben,NH4_tben,NO3_tben,PO4t_tben,SAt_tben
-
-  !surface flux : atmospheric loading
-  real(kind=rkind),save :: SRPOC,SLPOC,SDOC,SRPON,SLPON,SDON,SNH4,SNO3,SRPOP,SLPOP,SDOP,SPO4t,SSU,SSAt,SCOD,SDO
-
-  !loading
-  real(kind=rkind),save,allocatable,dimension(:) :: WWPRPOC,WWPLPOC,WWPDOC,WWPRPON,WWPLPON,WWPDON,WWPNH4,WWPNO3,&
-                                                   & WWPRPOP,WWPLPOP,WWPDOP,WWPPO4t,WWPSU,WWPSAt,WWPCOD,WWPDO,WWPSalt 
-  real(kind=rkind),save :: WPRPOC,WPLPOC,WPDOC,WPRPON,WPLPON,WPDON,WPNH4,WPNO3,WPRPOP,WPLPOP,WPDOP,WPPO4t,WPSU,WPSAt,WPCOD,WPDO 
-  real(kind=rkind),save :: WZB1,WZB2,WPB1,WPB2,WPB3,WRPOC,WLPOC,WDOC,WRPON,WLPON,WDON,WNH4,WNO3,WRPOP,WLPOP,WDOP,WPO4t,WSU,WSAt,WCOD,WDO      
-
-  !for station output for intermediate parameters and ICM variables
-  !ista(ie) refers to local station index (lsi)
-  !nsta(lsi) refers to number of depth
-  !depsta(k,lsi) is depth,where k is depth index
-  !stanum is the station index from cstation.in
-  integer, save :: nspool_icm
-  integer,save,allocatable :: ista(:),nsta(:),stanum(:,:)
-  real(rkind),save,allocatable :: depsta(:,:)
+  !---------------------------------------------------------------------------
+  !spatially varying parameters: for different dimensions 
+  !---------------------------------------------------------------------------
+  type :: icm_spatial_param
+    character(len=30) :: varname  !parameter name
+    integer :: ndim=0  !parameter dimension
+    integer :: dims(2) !dimension info
+    real(rkind),dimension(30) :: data0 !oirginal value of data
+    integer,allocatable,dimension(:,:) :: istat
+    real(rkind),pointer :: p=>null()                !param. of single value
+    real(rkind),pointer,dimension(:) :: p1=>null()   !param. of 1D array
+    real(rkind),pointer,dimension(:,:) :: p2=>null() !param of 2D array
+    real(rkind),allocatable,dimension(:,:,:) :: data
+  end type icm_spatial_param
+  type(icm_spatial_param),save,target,allocatable,dimension(:) :: sp
 
 end module icm_mod
+

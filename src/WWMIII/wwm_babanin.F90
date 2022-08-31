@@ -26,7 +26,7 @@ CONTAINS
     real(rkind)             , INTENT(INOUT) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
     real(rkind)             , INTENT(OUT) ::  Kds(:)     ! Kds(f)=Sds(f)/E(f)
 
-    real(rkind)             ::  Sds(nfreq)     ! Sds(f), the source term
+    real(rkind)             ::  Sds_loc(nfreq)     ! Sds(f), the source term
     real(rkind)             ::  ndedens(nfreq) ! NDEDENS(f)=DEDENS(f)/EDENST(f)
     real(rkind)             ::  dedens(nfreq)  ! DEDENS(f)=EDENS(f)-EDENST(f)
     real(rkind)             ::  edenst(nfreq)  ! EDENST(f)=(2*g.^2)*((2*pi).^-4)*(f.^-5).*(A.^-1)*Bnt
@@ -62,7 +62,7 @@ CONTAINS
 !   ANAR=ANAR_IN ! option 2
 
 ! (point output write location 1)
-    if(.false.)then
+    if(.false. .AND. WRITEDBGFLAG == 1)then
        write(DBG%FHNDL,*)'a1,a2 = ',a1,a2
     endif
 ! two matrix operations follow:
@@ -135,7 +135,7 @@ CONTAINS
 
 ! (point output write location 2)
 
-    if(.false.)then
+    if(.false. .AND. WRITEDBGFLAG == 1)then
        do  is=1,nfreq
           write(DBG%FHNDL,205)f(is),EDENS(is),EDENST(is),T1(is),T2(is)
        end do
@@ -146,7 +146,7 @@ CONTAINS
 ! 3/9/2009 Since we have already non-dimensionalized by using NDEDENS instead of DEDENS, we do it backwards: Sds=Kds*Edens
 
     do is=1,nfreq
-       Sds(is)=Kds(is)*Edens(is) ! note that in most cases, the calling routine will not use Sds
+       Sds_loc(is)=Kds(is)*Edens(is) ! note that in most cases, the calling routine will not use Sds
        ST1(is)=T1(is)*Edens(is)
        ST2(is)=T2(is)*Edens(is)
     end do
@@ -165,10 +165,10 @@ CONTAINS
 
     CALL integrate(ST1_INT,f,ST1,nfreq)
     CALL integrate(ST2_INT,f,ST2,nfreq)
-    CALL integrate(Sds_int,f,Sds,nfreq)
+    CALL integrate(Sds_int,f,Sds_loc,nfreq)
 
 ! (point output write location 3)
-    if(.false.)then
+    if(.false. .AND. WRITEDBGFLAG == 1)then
        WRITE(DBG%FHNDL,*)'integral of T1,T2,Sds = ',ST1_INT,ST2_INT,Sds_INT
     endif
 
@@ -226,7 +226,7 @@ CONTAINS
 
 subroutine calc_Lfactor(ip,Lfactor_S,S_in,DDIR_RAD,SIGMA_S,FRINTF,CINV_S,grav,WIND10,TESTFL)
 
-    use datapool, only : rhoa, rhow, pi, ufric, rkind, DBG
+    use datapool, only : rhoa, rhow, pi, ufric, rkind, DBG, WRITEDBGFLAG
     use datapool, only : TAUTOT, CD, Z0, ALPHA_CH, G9, ac2
     implicit none
 
@@ -367,7 +367,7 @@ subroutine calc_Lfactor(ip,Lfactor_S,S_in,DDIR_RAD,SIGMA_S,FRINTF,CINV_S,grav,WI
     REDUC=0.0
     call calc_tau_normal(tau_normal,Lfactor_L,REDUC,S_in1D_L,df,CINV_L,U10MOD,grav,rhow)
 
-    if(TESTFL)then
+    if(TESTFL .AND. WRITEDBGFLAG == 1)then
 206    format('tau_total = ',f9.6,' ; tauv = ',f9.6,                    &
      &  ' ; tau_normal = ',f9.6,' ; TAUWLIM = ',f9.6)
        write(DBG%FHNDL,206)tau_total,tauv,tau_normal,TAUWLIM
@@ -379,7 +379,7 @@ subroutine calc_Lfactor(ip,Lfactor_S,S_in,DDIR_RAD,SIGMA_S,FRINTF,CINV_S,grav,WI
        END DO
        RETURN
     else
-       if(TESTFL)then
+       if(TESTFL .AND. WRITEDBGFLAG == 1)then
           write(DBG%FHNDL,*)'reducing Sin to make tau_normal match TAUWLIM'
        endif
     endif
@@ -415,7 +415,7 @@ subroutine calc_Lfactor(ip,Lfactor_S,S_in,DDIR_RAD,SIGMA_S,FRINTF,CINV_S,grav,WI
 
        sign_new=sign(1.0_rkind,err)
 
-       if(TESTFL)then
+       if(TESTFL .AND. WRITEDBGFLAG == 1)then
 207       format('iter = ',i3,' ; REDUC = ',f9.6,' ; RCHANGE = ',       &
      &  f9.6,' ; tau_normal = ',f9.6,' ; err = ',f9.6)
           write(DBG%FHNDL,207)iter,REDUC,RCHANGE,tau_normal,err
@@ -433,9 +433,12 @@ subroutine calc_Lfactor(ip,Lfactor_S,S_in,DDIR_RAD,SIGMA_S,FRINTF,CINV_S,grav,WI
     end do
 
     if(isol==0)then
-       write(DBG%FHNDL,*)'no solution found at gridpoint', IP, SUM(AC2(:,:,IP))
-       write(DBG%FHNDL,'(A20,F15.8,A20,F15.8,A10,F15.8,A20,F15.8)')'tau_normal = ',tau_normal,' TAUWLIM =', TAUWLIM,'err =',err,'(abs(err)/TAUWLIM)  = ',abs(err)/TAUWLIM
-       write(DBG%FHNDL,*) wind10, ufric(ip)
+       IF (WRITEDBGFLAG == 1) THEN
+         write(DBG%FHNDL,*)'no solution found at gridpoint', IP, SUM(AC2(:,:,IP))
+         write(DBG%FHNDL,'(A20,F15.8,A20,F15.8,A10,F15.8,A20,F15.8)')'tau_normal = ',tau_normal,' TAUWLIM =', & 
+& TAUWLIM,'err =',err,'(abs(err)/TAUWLIM)  = ',abs(err)/TAUWLIM
+         write(DBG%FHNDL,*) wind10, ufric(ip)
+       END IF       
 !       if((abs(err)/TAUWLIM).ge.1.0_rkind) then
           open(401,file='debug.dat',form='unformatted')
           write(401)nf_new     ! scalar

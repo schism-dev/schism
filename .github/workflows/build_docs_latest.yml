@@ -1,0 +1,33 @@
+name: stable documentation
+on:
+  push:
+    branches:
+      - master
+      - docs
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Install python packages
+        run: pip install mkdocs-material==8.3.4 mike
+      - name: Configure git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      - name: Get tag of the version
+        uses: olegtarasov/get-tag@v2.1
+        id: tag_name
+      - name: Deploy with mike
+        run: |
+          mike deploy --force --update-aliases master stable
+          mike retitle master stable
+          mike set-default --push stable
+

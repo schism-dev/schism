@@ -50,7 +50,7 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
 FCPFLAGS = $(PPFLAGS) -O2 -Bstatic -ffree-line-length-none #MPI code
 FLDFLAGS = -O2 #for final linking of object files
 #####Libraries
-MTSLIBS = -L$(PARMETIS_HOME)/lib -lparmetis -lmetis -L$(MPI_HOME)/lib -lmpi -lmpi_f90
+##MTSLIBS = -L$(PARMETIS_HOME)/lib -lparmetis -lmetis -L$(MPI_HOME)/lib -lmpi -lmpi_f90
 CDFLIBS = -L$(NETCDFHOME)/lib -lnetcdf -lnetcdff
 CDFMOD = -I$(NETCDFHOME)/include # modules for netcdf
 

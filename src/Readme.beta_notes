@@ -1,9 +1,93 @@
-Changes in param.in and main parameter inputs for other modules:
+This beta notes are divided into 5 part:
+(A) Changes made in param.nml and other major inputs (as these are most affected when we hop versions)
+(B) Changes in outputs
+(C) Algorithmic changes and bug fixes
+(D) Auto test history
+(E) History for Pre-svn versions
+================================================================================================
+(A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
+a0960ed (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes 
+               near tropical islands etc);
+ed26f60 (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
 
-7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
-73f7451 (Jan 14, 2020): changed ifltyp=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
+Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.10.0: (13 July, 2022)
+
+d03830e (16 May 2022): removed the 2 extra lines required in partition.prop (so it's identical to global_to_local.prop now);
+a71ea69 (12 May 2022): removed 'ioffline_partition' and replaced it with CPP (NO_PARMETIS) to allow build without ParMETIS lib; renamed global_to_local.in as partition.prop;
+da90a33 (2 May 2022): removed itr_met=1,2;
+2165224 (29 April 2022): added optional offline partitioning 'ioffline_partition' to bypass ParMETIS; 
+                         if on, needs global_to_local.in;
+567b612 (28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
+6524e19 (27 April 2022): a few more WWM related parameters under VOR (turbinjds,alpha,wfwvor_streaming) 
+                         and new WWM outputs, after merging with lrdev_updates;
+d44dbdf (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'
+6f367d0 (30 Mar 2022): added optional vertical levels to inject source tracer conventration: 'lev_tr_source'; 
+7cc7f27 (30 Mar 2022): added an optional threshold depth for mass conversation for ICM: 'h_massconsv';
+1788867 (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): i_hmin_salt_ex,hmin_salt_ex;
+dcd5356 (31 Jan 2022): removed ramp flags except for nramp_elev (use dramp*<=0 to turn off ramp): 
+      nramp, nrampbc, nrampwind, nrampwafo,nramp_ss; removed the optional input 'shapiro_min.gr3';
+80f1caa (26 Jan 2022): added 4 parameters in ice.nml: albsn,albsnm, albi,albm
+d792ed0 (18 Jan 2022): added 2 new ice parameters: 'ice_atmos_stress_form' and 'cdwin0';
+b4d2214 (7 Jan 2022): added a new parameter 'nu_sum_mult' to allow sum/product of final relax constants for tracer nudging;
+f9f0844 (3 Jan 2022): ICE module, added 2 new parameters: lead_closing, Saterm. Also changed ice-wind stress formula;
+7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
+91c91a7 (17 Dec 2021): ICE module, added new parameters: ncyc_fct, depth_ice_fct. Also requires ice_fct.gr3 now;
+0e2f90e (17 Dec 2021): added a new parameter in ice.nml 'mevp_coef' and 2 related ones: mevp_alpha[34]
+2a7647d (24&29 Nov 2021): added a new parmater 'loadtide_coef' for iloadtide=2,3;
+a7a0b2b (17 Oct 2021): restored iwindoff;
+afc7b1a (11 Oct 2021): changed vgrid.in format for ivcor=1 to facilitate parallel read (use
+                       change_vgrid.f90 to convert) 
+e9aec89 (1 Oct 2021): added most module outputs; order of flags changed in: ICE, ANALYSIS, SED;
+85b585a (1 Sept 2021): add zcor output flag as iof_hydro(25); rest of hydro output flags (iof_hydro) shifted by 1;
+8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option);
+1902c1e (16 July 2021): changed hotstart.nc: added nsteps_from_cold and cumsum_eta for DA;
+
+Tag v5.9.0: 657157a (1 July, 2021)
+
+e281d94 (25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
+bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
+d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);
+b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
+b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
+9150d86 (Mar 31, 2021): added a new SAL option (iloadtide=2) using scaling;
+084e149 (Feb 25, 2021): Removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
+                        removed option for negative roughness. Fixed race condition for marsh module.
+3576c9c (Jan 24, 2021): added new option for source/sink input: if_source=-1 requires source.nc (which
+                        includes elem list inside; allows different time steps and # of records for
+                        volume/mass source/sinks. Also, now the source/sink values in .th must be single
+                        precision (not double);
+bcdfce6 (Jan 6, 2021): added main switch for nc output 'nc_out' (useful for other programs to control outputs);
+28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides; if iloadtide/=0, need
+                        amp/phases in loadtide_[FREQ].gr3 (freq's shared with tidal potential);
+f8ba470 (Dec 3, 2020): Added a new option (meth_sink) to treat net sink: if an elem is dry with a net sink, vsource is reset
+                       to 0;
+f9043e2 (Nov. 12, 2020): merged with LRU branch wwm_lr; removed 'sav_cd' (isav=1 now requires sav_cd.gr3).
+      New parameters related to WWM: fwvor_advxy_stokes,fwvor_advz_stokes,
+      fwvor_advz_stokes,fwvor_breaking,cur_wwm,wafo_obcramp;
+      Changes in WWM: ALPBJ ->B_ALP, BRHD->BRCR.
+8083cfa (Nov. 10, 2020): added option for transport solver only ('itransport_only');
+7e9ff0a (Aug 20, 2020): added two options (selected by 'i_hmin_airsea_ex') for locally turning off heat/salt exchange.
+      i_hmin_airsea_ex=1: exchange turned off if local grid depth<hmin_airsea_ex
+      i_hmin_airsea_ex=2: exchange turned off if local water depth<hmin_airsea_ex
+      This replaces the change made by adde1aa (July 8, 2020): added a new parameter 'hmin_airsea_ex' (min total water depth for heat/salt exchange);
+2f7bab1 (Jun 28,2020): reorganized ICM process (rates/fluxes) and added output flag in param.nml.
+
+Tag v5.8.0: afd171c (June 14, 2020)
+
+1477780 (May 8, 2020): changed sediment.in to sediment.nml (and made parameters lower case: BEDLOAD_COEFF, 
+      NEWLAYER_THICK,IMETH_BED_EVOL, SAND_SD50=>Sd50, SAND_ERATE=>Erate, SED_TYPE=>iSedtype,
+      SAND_SRHO=>Srho, SAND_WSED=>Wsed, SAND_TAU_CE=>tau_ce, sed_morph_fac=>morph_fac,
+      poro_cst=>porosity);
+aaf1306 (April 4, 2020): added hybrid ELM transport parameters: ielm_transport, max_subcyc;
+eb00a00 (Mar 31, 2020): add 12th tracer model (USE_DVD of Klingbeil); if invoked, make sure: flag_ic(12)=0, and set b.c. flag and nudging option to 0;
+cd9664a (Mar 16, 2020): [1st PR from Baptiste Mengual] added iof_sed(12:15) for new SED code. In sediment.in: 
+                        new options for various parameters and a few new parameters;
+                        sed_morph=1 requires imorphogrid.gr3 (a scale applied to depth change at each node);
+                        also morp factors are replaced by a single 'sed_morph_fac' fro all classes;
+73f7451 (Jan 14, 2020): changed ifltype=3 to be consistent with '5' (i.e., now the amp/phases should be variable along open bnd);
 59741d4 (Jan 9, 2020): added another pre-proc flag 'ipre2' for more diagnostic outputs (can be used with >1 CPU; stops
                        after outputs);
 4e2eb86 (Dec 11, 2019): added optional flags 'iadjust_mass_consv0' to enforce mass conservation for each of (11) tracer models; 
@@ -251,8 +335,8 @@ Changes in other inputs:
 (2) R86: tvd.gr3 is needed if iupwind_t=2;
 (1) R??: if ihydraulics/=0, need hydraulics.in 
 
----------------------------------------------------------------
-Changes in outputs:
+================================================================================================
+(B) Changes in outputs:
 (1) R??: 3D profiles for station outputs;
 (2) R147: commented out (1);
 (3) R304: added non-standard outputs (*.67 etc) that users can also use.
@@ -264,8 +348,11 @@ Changes in outputs:
 (6) R1469; consolidated many output files to reduce I/O footprint;
 (7) R1776: hotstart outputs changed to include SED[23]D arrays; use combine_hotstart5.f90 for combining.
 
----------------------------------------------------------------
-Algorithmic changes & bug fixes:
+GIT versions:
+(1) e227f8579 (Dec 2020): added wet/dry flags @nodes/sides in nc outputs;
+
+================================================================================================
+(C) Algorithmic changes & bug fixes:
 (1) R97: found a bug in evaluate_cubic_spline
 (2) R212: changes in btrack routines to enhance robustness
 (3) R395: broke main routine into _init, _step, and _finalize
@@ -416,9 +503,57 @@ git versions:
 (100) c46c7bd (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);
 (101) d3adb2c (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);
 (102) 7506147 (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;
+(103) 5665418 (Mar 18, 2020): PR from Baptiste mengual for SED3D (sed_frition.F90 merged after the rest).
+(104) eb00a00 (Mar 31, 2020): added 12th tracer model (USE_DVD of Klingbeil)
+(105) aaf1306 (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);
+(106) 40955ab (April 16, 2020): replaced the fatal error in nadv=2 (aptivity trap) with exit
+(107) e703189 (May 6, 2020): reverted to old simple approach for deposional mass (c/o Baptiste Mengual);
+(108) 14e201f (May 7, 2020): switched to ParMETIS v4.0.3;
+(109) 33fb37f (Jun 30, 2020): fixed a bug in ielm_transport (Fei Y.).
+(110) 55910d1 (July 31, 2020; via branch mem_leak_nc4): reverted the change in schism_io (close/open 
+               nc output after/b4 each write, to accommodate PDAF's flexible mode), as this has caused a 
+               lot of mem leaking (discovered by Nicole C. when testing ICM).
+(111) eaf9093 (Aug 2020): Baptiste M. modified the computation of the bottom shear stress 
+              under combined waves and currents in SED3D
+(112) 4ac56df (Aug 2020): Paul Ryan and Claire Trenham (CSIRO) fixed some init array issues in hydro and WWM.
+(113) 7e9ff0a (Aug 20, 2020): Fei Y fixed a msource bug (init of msource at 0 at elem's not in source_sink.in
+                              led to ice rain;
+(114) f311026 (Aug. 27, 2020): reverted init of msource to 0 for tracers other than T,S, 
+      c/o Nicole Cai. Using ambient values for other tracers can lead to artificial and additional accumulation of nutrients e.g.
 
----------------------------------------------------------------
-Auto-test history:
+(115) 00b6f16 (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for LSC2.
+(116) 8083cfa (Nov. 10, 2020): added option for transport solver only (itransport_only)
+(117) 6dc44d3 (Dec 14, 2020): Fixed a bug, thanks to Kevin Kartin, on vortex formulism of wave force (missing a 
+                              factor of area() in I_4);
+(118) 28ff9d1 (Dec 16, 2020): added optional self-attraction loading tides. The option shares some constants
+                              with tidal potential: freq names and cut-off depth;
+(119) b1bcaa0 (April 20, 2021): removed most of 'goto'. Remaining ones: harm.F90, lap.F90, WWM
+(120) 0cec024 (April 21, 2021): bug fix in misc_subs c/o of Fei (inunfl=1: nodeA in final extrap stage may be interface node)
+(121) fb30239 (April 22, 2021): bug fix for ellipsoidal earth (tensor frames).
+(122) fb79cdc (May 26, 2021): in interpolate_depth_structured2*, added an option to shift 1/2 cell for ll corner
+                              (c/o Charles Seaton);
+(123) 5e87c24 (June 9, 2021): more changes in interpolate_depth_structured2* to extrap also into right/upper sides.
+(124) 843c40f (19 June, 2021): fixed a bug in ptrack3 (pt_in_poly3; c/o Jilian Xiong) that affects quads;
+(124) b2cf92b (29 June, 2021): fixed a bug in station outputs in basin scale cases ics=2 (local proj is not accurate
+                               if the station is far away from the local frame);
+(125) a9f8f6c (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
+                              for large core counts.
+(126) ab46def (20 July, 2021): merged multi ice model (CICE) from Qian Wang.
+(127) 70db927 (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)
+(128) 8efc374 (30 Aug 2021): first version of scribe dictated I/O (as an option)
+(129) 53689f4 (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).
+(130) c7dd516 (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).
+(131) (19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);
+(132) 7455d5d (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);
+(133) 7455d5d (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;
+(134) e288f9a (31 Jan 2022): removed the restriction of counter-clockwise orientation in sflux grid;
+(135) dde345f (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0: 
+                              uninit'ed stress values.
+(136) 6524e19 (27 April 2022): merged with La Rochelle group on WWM  (VOR);
+(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a fram change
+                             for better vel near poles.
+================================================================================================
+(D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
 (SCHISM) R2521: all modules tested;
 R2737: all modules except SED3D tested;
@@ -433,6 +568,7 @@ ICM notes:
 ---------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Tag (tag) releases:
+v5.8.0: afd171c (June 14, 2020)
 v5.7.0 (R5132)
 v5.6.1 (R4542)
 v5.5.0 (R4191)
@@ -463,8 +599,8 @@ Write your own env into mk/Make.defs.<your env name> (see mk/Make.defs.* from ot
 In addition, python is also needed.
 
 To add a new CPP or module, need to update all 3 files (in the order shown above).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Pre-svn versions:
+================================================================================================
+(E) Pre-svn versions:
 v3.0b:
 
 v3.0c:

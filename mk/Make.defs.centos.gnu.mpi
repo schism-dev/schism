@@ -53,7 +53,7 @@ FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -static -static-libgfortran #-g -fbacktrace #-
 FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
   #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L/usr/lib64/ -lnetcdff
 CDFMOD = -I/usr/include/ -I/usr/lib64/gfortran/modules/ # modules for netcdf
 

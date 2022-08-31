@@ -1,0 +1,9 @@
+##Intel
+module load intel
+module load mvapich2
+module load netcdf-c
+module load netcdf-fortran
+
+#Load python last
+module load python
+

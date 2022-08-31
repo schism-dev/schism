@@ -19,7 +19,7 @@
 !       at a particular Z-level (use above surface/below bottom to get surface/bottom).
 !       Skip dry times for 3D variables.
 !       Works for mixed quad/tri on NODE based variables only.
-!       Input: schout*.nc (combined or uncombined); vgrid.in; screen
+!       Input: schout*.nc (combined or uncombined); local_to_global*; vgrid.in; screen
 !       Output: average.out (gredit for scalar or xmgr5 format for vector)
 !										
 !       ifort -O2 -mcmodel=medium -assume byterecl -CB -o compute_average3.exe ../UtilLib/extract_mod.f90 ../UtilLib/compute_zcor.f90 compute_average3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -76,8 +76,8 @@
 !        stop
 !      endif
 
-      file63=adjustl(file63)
-      len_file63=len_trim(file63)
+!      file63=adjustl(file63)
+!      len_file63=len_trim(file63)
 
 !...  Header
       !Returned vars: ne,np,ns,nrec,[x y dp](np),
@@ -138,10 +138,10 @@
 
         if(icomb==0) then !uncombined
           do irank=0,nproc-1
-            call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
+            call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2,irank)
           enddo !irank
         else
-          call get_outvar_multirecord(1,iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
+          call get_outvar_multirecord(iday,varname,irec1,irec2,np,last_dim,nvrt,nrec3,outvar,i23d,ivs,eta2)
         endif
 !        print*, 'done reading records:',irec1,irec2
 

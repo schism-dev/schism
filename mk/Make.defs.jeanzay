@@ -49,7 +49,7 @@ FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -static #-g -fbacktrace #-finit-real=nan -fbou
 FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
   #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L/gpfslocalsup/spack_soft/netcdf-fortran/4.4.5/intel-19.0.4-nm7vlsr6edc7yqkb2v7l4p6mu4dcgkoy/lib -lnetcdff -L/gpfslocalsup/spack_soft/netcdf/4.7.0/intel-19.0.4-vtvxqookplcvgsso4wqgy4neczdipgfg/lib -lnetcdf -lnetcdf -lhdf5_hl -lhdf5 -lz -lm # from nc-config
 CDFMOD = -I/gpfslocalsup/spack_soft/netcdf-fortran/4.4.5/intel-19.0.4-nm7vlsr6edc7yqkb2v7l4p6mu4dcgkoy/include # modules for netcdf
 

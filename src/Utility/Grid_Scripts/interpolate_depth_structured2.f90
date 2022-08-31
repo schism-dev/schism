@@ -33,33 +33,51 @@
       read*, ih
       print*, 'Add vertical const. to outputs (i.e. change of vdatum):'
       read*, vshift
+!      print*, 'Adjust 1/2 cell (for corner based .asc)? 1: yes'
+!      read*, iadjust_corner
 
       open(62,file='struc.grd',status='old')
       read(62,*) cha1,nx !# of nodes in x
       read(62,*) cha1,ny !# of nodes in y
-      read(62,*) cha2,xmin
-      read(62,*) cha2,ymin
+      read(62,*) cha2,xmin0
+      cha2=adjustl(cha2)
+      if(cha2(7:7).eq."n".or.cha2(7:7).eq."N") then !lower-left is corner based
+        iadjust_corner=1
+      else !center based
+        iadjust_corner=0
+      endif
+
+      read(62,*) cha2,ymin0
       read(62,*) cha2,dxy
       read(62,*) cha3,fill_value
       dx=dxy
       dy=dxy
 
-!      if(nx.gt.mnx.or.ny.gt.mny) then
-!        print*, 'Increase mnx,y to ',nx,ny
-!        stop
-!      endif
+!     Define min/max for both vertex and center. '0' means corner/vertex location; otherwise
+!     (xmin/xmax etc) are cell center locations.
+      if(iadjust_corner/=0) then !corner based
+        xmin=xmin0+dx/2
+        ymin=ymin0+dy/2
+      else !cell center based
+        xmin = xmin0
+        ymin = ymin0
+        xmin0=xmin0-dx/2 !redefine vertex location
+        ymin0=ymin0-dy/2
+      endif
+
       allocate(dp1(nx,ny),stat=istat)
       if(istat/=0) stop 'Failed to allocate (1)'
 
-!     Coordinates for upper left corner (the starting point for *.asc)
-      ymax=ymin+(ny-1)*dy
-!     xmax
+!     Max
+      ymax=ymin+(ny-1)*dy !center location
       xmax=xmin+(nx-1)*dx
+      xmax0=xmax+dx/2 ! right edge of raster
+      ymax0=ymax+dy/2 ! upper edge of raster
 
-!     .asc starts from upper left corner and goes along x
+!     Read starts from upper left corner and goes along x
       do iy=1,ny
         read(62,*)(dp1(ix,ny-iy+1),ix=1,nx)
-        write(99,*)'line read in:',iy+6
+!        write(99,*)'line read in:',iy+6
       enddo !iy
       close(62)
    
@@ -73,11 +91,20 @@
         read(14,*)j,x,y,dp
 
 !       Interpolate
-        if(x.gt.xmax.or.x.lt.xmin.or.y.gt.ymax.or.y.lt.ymin) then
+        if(x>xmax0.or.x<xmin0.or.y>ymax0.or.y<ymin0) then
           write(13,101)j,x,y,dp
         else !inside structured grid
-          x2=x 
-          y2=y 
+          !1/2 cell shift case: extrap to cover lower&left
+!          if(iadjust_corner/=0) then
+!            x=max(x,xmin)
+!            y=max(y,ymin)
+!          endif
+!          x2=x 
+!          y2=y 
+
+          x2=min(xmax,max(x,xmin))
+          y2=min(ymax,max(y,ymin))
+
           ix=(x2-xmin)/dx+1 !i-index of the lower corner of the parent box 
           iy=(y2-ymin)/dy+1
           if(ix.lt.1.or.ix.gt.nx.or.iy.lt.1.or.iy.gt.ny) then

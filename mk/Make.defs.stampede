@@ -65,7 +65,7 @@ FLDFLAGS = -O1 -mcmodel=medium -shared-intel #for final linking of object files
 #FLDFLAGS = -O2 -ipo -assume buffered_io #for final linking of object files
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 
 CDFLIBS = -Wl,-rpath,${TACC_NETCDF_LIB} -L${TACC_NETCDF_LIB} -lnetcdf
 CDFMOD = -I${TACC_NETCDF_INC} # modules for netcdf

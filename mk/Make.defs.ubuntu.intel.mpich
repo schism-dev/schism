@@ -46,6 +46,8 @@ ENV = ubuntu.intel.mpich
 # netcdf-fortran and mpich may need be compiled with Intel compilers, if so, please replace
 # the path of netcdf-fortran and mpich in this file correspondingly.
 # Tests are passed on Ubuntu 12.04 64bit and Ubuntu 14.04 64bit
+# On Ubuntu 18.04 (after Netcdf version 4.2), an additional Netcdf Fortran library
+# "libnetcdff-dev" is needed
 #
 # Note: use /usr/bin/mpirun.mpich2 (Ubuntu 12.04) or /usr/bin/mpirun.mpich (Ubuntu 14.04)
 #       to run compiled SCHISM executable
@@ -61,8 +63,7 @@ FCPFLAGS = $(PPFLAGS) $(OPTFLAGS) -Bstatic -assume byterecl #-g -traceback #-che
 FLDFLAGS = $(OPTFLAGS) #for final linking of object files
 
 #####Libraries
-#MTSLIBS = -L/usr/lib/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L/usr/lib/ -lnetcdf -lnetcdff
 CDFMOD = -I/usr/include/ # modules for netcdf
 

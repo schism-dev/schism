@@ -138,6 +138,11 @@
       integer :: nodel2(3)
       integer :: varid1,varid2,dimids(3),istat,nvtx,iret
 
+      print*, 'Do you output *.pth.more for more infor?'
+      read(*,*)ismore
+      if(ismore/=0.and.ismore/=1) stop 'Unknown ismore'
+
+
       !Random seed used only for oil spill model
       iseed=5
       !Ekman effects
@@ -641,7 +646,9 @@
       end do lp1 !i=1,nparticle
 
       open(95,file='particle.pth',status='replace')
-      open(97,file='particle.pth.more',status='replace')
+      if(ismore==1)then
+        open(97,file='particle.pth.more',status='replace')
+      endif
       write(95,*)'Drogues'
       if(ibf==1) then
         write(95,*) ntime-iths+1
@@ -827,7 +834,9 @@
 
 !...  Particle tracking
       write(95,*) time,nparticle
-      write(97,*) time,nparticle
+      if(ismore==1)then
+        write(97,*) time,nparticle
+      endif
       do i=1,nparticle
         eta_p=0; dp_p=0 !for output before moving
         if((ibf==1.and.time<=st_p(i)).or.(ibf==-1.and.time>st_p(i)-dt)) go to 449 !output directly
@@ -929,8 +938,9 @@
             if(iwind==0) then
               cur_x=0; cur_y=0
             else
-              cur_x = speed*sin(dir)*drag_c !approx surface current
-              cur_y = speed*cos(dir)*drag_c
+!Error: original code used wrong sin/cos
+              cur_x = speed*cos(dir)*drag_c !approx surface current
+              cur_y = speed*sin(dir)*drag_c
             endif  
             if(z0<-0.1) then  ! sub_surface particles are not influenced by wind
               cur_x=0; cur_y=0
@@ -1093,14 +1103,15 @@
         !drogue format for xmvis6s; no extra lines after this
         write(95,'(i12,2(1x,e22.14),1x,f12.3)')i,xout,yout,zpar(i)-eta_p
 !       write(95,*) i,ist(i),amas(i),xout,yout,real(zpar(i)-eta_p)
-        write(97,*)i,real(xout),real(yout),real(zpar(i)),ielpar(i),levpar(i), &
-     &real(eta_p),real(dp_p),iabnorm(i),real(upar(i)),real(vpar(i)),real(wpar(i))
-        if(levpar(i)>0) then
-          ie4=ielpar(i)
-          write(97,*)'wet:',i34(ie4),real(arco(1:3)),real(uu2(elnode(1:i34(ie4),ie4),levpar(i))), &
-     &real(vv2(elnode(1:i34(ie4),ie4),levpar(i))),real(eta3(elnode(1:i34(ie4),ie4)))
-        endif !levpar
-
+        if(ismore==1)then
+          write(97,*)i,real(xout),real(yout),real(zpar(i)),ielpar(i),levpar(i), &
+       &real(eta_p),real(dp_p),iabnorm(i),real(upar(i)),real(vpar(i)),real(wpar(i))
+          if(levpar(i)>0) then
+            ie4=ielpar(i)
+            write(97,*)'wet:',i34(ie4),real(arco(1:3)),real(uu2(elnode(1:i34(ie4),ie4),levpar(i))), &
+       &real(vv2(elnode(1:i34(ie4),ie4),levpar(i))),real(eta3(elnode(1:i34(ie4),ie4)))
+          endif !levpar
+        endif
 !!        write(95,'(2e14.4)')time,ztmp2(nvrt)
 !!        write(*,'(2e14.4)')time,zpar(i)-eta3(ielpar(i))
       enddo !i=1,nparticle
@@ -1859,7 +1870,7 @@
 
         ae=abs(aa-ar(m))/ar(m)
         if(ae<=ae_min) then
-          ae=ae_min
+          ae_min=ae
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
           arco(1)=max(0.d0,min(1.d0,arco(1)))

@@ -1,0 +1,17 @@
+# This are the recipe files for conda.
+
+
+## Files:
+
+meta.yaml : conda config
+
+build.sh : Bash script for compiling based on CMake.
+
+conda_build_config.yaml: Used for defining various variants. Currently mpich options.
+
+cross-linux.cmake : left there for testing. Probably not needed.
+
+
+## Procedure:
+
+`conda build conda.recipe`

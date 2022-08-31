@@ -1,0 +1,4 @@
+Use read_output8* to look at efficiency-limiting elements:
+1. The inputs/outputs are listed at the beginning of the read_output8*.f90
+2. You can use the script interactively or simply "./read_output8*.exe < *.in"
+3. Two sample "*.in"s are provided.

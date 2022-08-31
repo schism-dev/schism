@@ -1,0 +1,1206 @@
+\documentclass[12pt]{amsart}
+\usepackage{amsfonts, amsmath, latexsym, epsfig}
+\usepackage{amssymb}
+\usepackage{epsf}
+\usepackage{url}
+%\usepackage{tikz}
+
+
+\newcommand{\sfA}{\ensuremath{\mathsf{A}}}
+\newcommand{\RR}{\ensuremath{\mathbb{R}}}
+\newcommand{\NN}{\ensuremath{\mathbb{N}}}
+\newcommand{\QQ}{\ensuremath{\mathbb{Q}}}
+\newcommand{\CC}{\ensuremath{\mathbb{C}}}
+\newcommand{\ZZ}{\ensuremath{\mathbb{Z}}}
+\newcommand{\TT}{\ensuremath{\mathbb{T}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Q}{\ensuremath{\mathbb{Q}}}
+\newcommand{\C}{\ensuremath{\mathbb{C}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+\newcommand{\T}{\ensuremath{\mathbb{T}}}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{algorithm}{Algorithm}
+\newtheorem{lemma}{Lemma}
+\newtheorem{problem}{Problem}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{claim}{Claim}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\def\QuotS#1#2{\leavevmode\kern-.0em\raise.2ex\hbox{$#1$}\kern-.1em/\kern-.1em\lower.25ex\hbox{$#2$}}
+
+
+\urlstyle{sf}
+
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Sym}{Sym}
+\DeclareMathOperator{\Isom}{Isom}
+\DeclareMathOperator{\vertt}{vert}
+\DeclareMathOperator{\conv}{conv}
+\DeclareMathOperator{\SC}{SC}
+\DeclareMathOperator{\SL}{SL}
+\DeclareMathOperator{\GL}{GL}
+\DeclareMathOperator{\PSL}{PSL}
+\DeclareMathOperator{\Out}{Out}
+\DeclareMathOperator{\Min}{Min}
+\DeclareMathOperator{\Dom}{Dom}
+\DeclareMathOperator{\cone}{cone}
+\DeclareMathOperator{\Stab}{Stab}
+
+
+\begin{document}
+
+\author{Mathieu Dutour Sikiri\'c}
+\address{Mathieu Dutour Sikiri\'c, Rudjer Boskovi\'c Institute, Bijenicka 54, 10000 Zagreb, Croatia}
+\email{mdsikir@irb.hr}
+
+
+\title{Short Manual of WWMIII}
+\date{}
+
+\maketitle
+
+
+\section{Introduction}
+WWMIII is a third generation wave model that solves the Wave Action Equation on an unstructured mesh.
+It provides following interesting features:
+\begin{enumerate}
+\item It has many different source term formulations.
+\item It is based on redistribution schemes and provide several advection
+  schemes that can be both explicit and implicit.
+\item It has coupling with many different geoscience models.
+\end{enumerate}
+
+
+
+\section{Compilation and running the model}
+
+The WWM model can be run in serial mode, with MPI (Message Passing Interface) and/or OpenMP.
+
+
+
+
+
+
+
+
+\section{Description of input file format}
+The input file is typically named {\tt wwminput.nml} and the program reads it as default by 
+\begin{verbatim}
+[mathieu@neptun ~]$ wwmadv
+\end{verbatim}
+But it is possible to give it other names, which are then used as
+\begin{verbatim}
+[mathieu@neptun ~]$ wwmadv wwminput_test.nml
+\end{verbatim}
+The input file is using a standard NAMELIST type:
+\begin{enumerate}
+\item Variables can be strings, logical, integers, floating point or list of those.
+\item Logical tests are indicated as {\bf F/T}.
+\item Optional items are set to a default value.
+\item Some systems are very strict with the input that they accept. All strings should be delimited by '   '. Final comma at the end 
+\end{enumerate}
+All sections need to be present and the order need to be the one specified below. But the section can be empty in which case default values are used.
+
+
+
+
+\section{Description of all options}
+Below is an exhaustive list of all options of WWM.
+Another parallel description is in {\tt wwminput.nml.ref} file.
+
+\subsection{Section {\tt PROC}}
+This is the main section of the input file. It chooses the kind of grid used (spherical or not) the time stepping and other setting.
+\begin{verbatim}
+&PROC
+ PROCNAME       = 'wwm_test'
+ DIMMODE        = 2                  
+ LSTEA          = F                  
+ LQSTEA         = F                  
+ LSPHE          = F                  
+ LNAUTIN        = T
+ LMONO_IN       = F                
+ LMONO_OUT      = F                
+ BEGTC          = '20071101.000000'
+ DELTC          = 600              
+ UNITC          = 'SEC'            
+ ENDTC          = '20071102.000000'
+ DMIN           = 0.001            
+/
+\end{verbatim}
+The meaning of those options is indicated below:
+\begin{enumerate}
+\item {\tt PROCNAME} (string): it is the name of the project simulation and is not used thereafter.
+\item {\tt DIMMODE} (integer): dimension mode. Default is 2 for two-dimensional waves.
+\item {\tt LSTEA} (logical): Whether ot use steady mode or not. Default value is true.
+\item {\tt LQSTEA} (logical): Whether to use the quasi-steady mode or not. Default is false.
+\item {\tt LSPHE} (logical): Whether to use spherical coordinates (lon/lat in degree) or plane coordinates (xy in meter)
+\item {\tt LNAUTIN} (logical): Whether to use nautical convention for wind direction as input.
+\item {\tt LMONO\_IN} (logical): If true the wave height used in the boundary condition is assumed to be monochromatic. If false it is assumed to be a significant wave height. Default is false.
+\item {\tt LMONO\_OUT} (logical): If true the wave height in output is assumed to be monochromatic. If false it is a significant wave height. Default is false.
+\item {\tt BEGTC} (string): The starting date of the simulation. No default.
+\item {\tt DELTC} (float): The size of the time step. No default.
+\item {\tt UNITC} (string): the unit of the time step. No default.
+\item {\tt ENDTC} (string): the end date of the simulation. No default.
+\item {\tt DMIN} (float): the minimum water depth.
+\end{enumerate}
+The nautical convention for direction is following: 0 degree is from the north and 90 degree is from the east.
+The mathematical convention for direction is following: 0 degree is to the east and 90 degree is to the north.
+Conversion is done via
+\begin{equation*}
+Dir_{naut} = 270 - Dir_{math}.
+\end{equation*}
+The conversion between monochromatic wave height and significant wave height is done via
+\begin{equation*}
+H_{significant} = \sqrt{2} H_{monochromatic}
+\end{equation*}
+
+
+
+
+\subsection{Section {\tt COUPL}}
+This is the coupling section of the namelist file. It specifies how the WWM is coupled to other models (if it is).
+\begin{verbatim}
+&COUPL
+ LCPL           = T                
+ LROMS          = F                
+ LTIMOR         = F                
+ LSHYFEM        = F                
+ RADFLAG        = 'LON'
+ LETOT          = F                
+ NLVT           = 10     
+ DTCOUP         = 600.   
+ IMET_DRY       = 1
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LCPL} (logical): Whether the model is coupled with another model. Default is false.
+\item {\tt LROMS} (logical): Whether the model is coupled with the circulation model ROMS by pipes.
+\item {\tt LTIMOR} (logical): Whether the model is coupled with the sediment model TIMOR by pipes
+\item {\tt LSHYFEM} (logical): Whether the model is coupled with the circulation model SHYFEM by pipes.
+\item {\tt RADFLAG} (string): specifies the kind of effect of waves on the circulation. Possible options:
+  \begin{enumerate}
+  \item {\tt "LON"}: The Longuet-Higgins formulation of barotropic coupling extended vertically.
+  \item {\tt "XIA"}: The Xia formulation of baroclinic effects.
+  \item {\tt "VOR"}: The vortex-force formulation of baroclinic effects.
+  \end{enumerate}
+\item {\tt LETOT} (logical): Whether the coupling effect is computed from the wave spectra (the right option but more expensive) or from the mean wave quantities.
+\item {\tt NLVT} (integer): The number of vertical levels in SHYFEM.
+\item {\tt DTCOUP} (float): the time coupling. It must be an integral multiple of the time stepping of WWM. Default is to set it equal to that value.
+\item {\tt IMET\_DRY} (integer): scheme for computing derivative at the wet/dry interface
+\end{enumerate}
+
+The logical {\tt LCPL} determines whether the WWM is coupled or not.
+If True, then it can be
+\begin{itemize}
+\item With SELFE when compiled with SELFE.
+\item With ROMS (using pipes) if LROMS=T
+\item With ROMS when compiled with the PGMCL library and ROMS
+\item With TIMOR (using pipes) if LTIMOR=T
+\item With SHYFEM (using pipes) if LSHYFEM=T
+\end{itemize}
+
+
+\subsection{Section {\tt GRID}}
+This section describe the spectral and spatial grid that are used by the wave model.
+The choice made there directly affects the running time of the model.
+
+\begin{verbatim}
+&GRID
+ LCIRD          = T                 
+ LSTAG          = F                 
+ MINDIR         = 340.              
+ MAXDIR         = 7.5               
+ MDC            = 36                
+ FRLOW          = 0.04              
+ FRHIGH         = 1.                
+ MSC            = 21                
+ IGRIDTYPE      = 3                 
+ FILEGRID       = 'hgrid.gr3'
+ LSLOP          = F          
+ SLMAX          = 0.2        
+ LVAR1D         = F          
+ LOPTSIG        = F          
+/
+\end{verbatim}
+The meaning of the options is following:
+\begin{enumerate}
+\item {\tt LCIRCD} (logical): Whether the directional grid go over the full circle or not. Default is true.
+\item {\tt LSTAG} (logical): Whether the directional grid is staggered or not. Default is False.
+\item {\tt MINDIR} (float): minimal direction. It only makes sense if LCIRCD=T. Default is 0.
+\item {\tt MAXDIR} (float): maximal direction. It only makes sense if LCIRCD=T. Default is 360.
+\item {\tt MDC} (integer): number of directions.
+\item {\tt FRLOW} (float): lowest frequency (in Hz)
+\item {\tt FRHIGH} (float): highest frequency (in Hz)
+\item {\tt MSC} (integer): number of frequency
+\item {\tt IGRIDTYPE} (integer): index describing the file format of the grid used.
+\item {\tt FILEGRID} (string): The filename of the grid file.
+\item {\tt LSLOP} (logical): bottom slope limiter. Default is false.
+\item {\tt SLMAX} (float): maximum slope.
+\item {\tt LVAR1D} (logical): This is for 1-dimensional mode only.
+\item {\tt LOPTSIG} (logical): use optimal frequency bins.
+\item {\tt APPLY\_DXP\_CORR} (logical): If true we try to resolve the -180 / 180 problem in global grids. Default is false.
+\item {\tt USE\_EXACT\_FORMULA\_SPHERICAL\_AREA} (logical): Use exact formula for computing spherical triangle area. Needed if the grid contains the North or South pole. Default is false.
+\item {\tt LEXPORT\_GRID\_WW3} (logical): If true the grid of WWM is exported to a WaveWatch III readable format. Default is false.
+\end{enumerate}
+For real applications, one should work with {\tt LCIRCD=T}. The choice {\tt LCIRCD=F} makes sense for laboratory experiments when the wave directions are in a specific quadrant.
+
+The frequencies of the model are put in an exponential grid {\tt FR(1:MSC)} with {\tt FR(1)=FRLOW}, {\tt FR(MSC)=FRHIGH}, and {\tt FR(i+1) = XFR FR(i)}. The value of {\tt XFR} should be around 1.1
+
+The {\tt IGRIDTYPE} value has following possibilities:
+\begin{enumerate}
+\item {\tt IGRIDTYPE=1}: This is the XFN {\tt system.dat} file format.
+\item {\tt IGRIDTYPE=2}: This is a special format for periodic grids, which are of interest for laboratory or idealized case simulations.
+\item {\tt IGRIDTYPE=3}: This is the SELFE format. Filename is typically {\tt hgrid.gr3}
+\item {\tt IGRIDTYPE=4}: This is an old WWM grid format that should no longer be used.
+\item {\tt IGRIDTYPE=5}: This is a netcdf grid format. It is produced for example by history files of WWM.
+\end{enumerate}
+
+
+
+
+\subsection{Section {\tt INIT}}
+This is to specify how the initial condition is set up
+\begin{verbatim}
+&INIT
+ LHOTR          = F   
+ LINID          = F   
+ INITSTYLE      = 1   
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LHOTR} (logical): specifies whether we use hotfile. By default set to false.
+\item {\tt LINID} (logical): It should be set to {\tt .NOT. LHOTR}.
+\item {\tt INITSTYLE} (integer): it specifies the kind of initial case:
+  \begin{enumerate}
+  \item if {\tt INITSTYLE=1} then the spectra is computed from JONSWAP spectrum using the initial wind.
+  \item if {\tt INITSTYLE=2 and IBOUNDFORMAT=3} then the spectra is computed from the WW3 forecasts according to the IFREMER format
+  \item if {\tt INITSTYLE=3} then the spectrum is the one obtained from the {\tt fort.10003} file (works only in serial mode.
+  \end{enumerate}
+\end{enumerate}
+The details of the hotfile initial are to be found in the {\tt HOTFILE} section of the input file.
+
+
+TODO: The LINID option possibly needs to be eliminated.
+
+
+
+
+
+\subsection{Section {\tt BOUC}}
+The construction of the boundary condition used in the model. The complex nature of this section is to take into account whether the spectrum is
+\begin{enumerate}
+\item time dependent (realistic case typically) or not.
+\item spatially dependent (realistic case typically) or not
+\item In parametric form (that is dependent on a few parameters) or not.
+\end{enumerate}
+Other important thing to decide is the origin of the spectrum. If it is time spatially dependent and/or time dependent then it has to come from another data source. This can be IFREMER wave forecasts. This can also be netcdf wave boundary which may be parametric or not.
+
+\begin{verbatim}
+&BOUC
+ LBCSE          = F  
+ LBCWA          = F  
+ LBCSP          = F  
+ LINHOM         = F  
+ LBSP1D         = F   
+ LBSP2D         = F   
+ LBINTER        = F   
+ LINDSPRDEG     = T   
+ LPARMDIR       = F   
+ FILEWAVE       = 'wave.bcd'        
+ BEGTC          = '20071101.000000' 
+ DELTC          = 1                 
+ UNITC          = 'HR'              
+ ENDTC          = '20071102.000000'
+ FILEBOUND      = 'wwmbnd.gr3'  
+ IBOUNDFORMAT   = 1     
+ WBHS           = 0.181         
+ WBSS           = 3.            
+ WBTP           = 1.50         
+ WBDM           = 90.0         
+ WBDSMS         = 1.           
+ WBDS           = 10.          
+ WBGAUSS        = 0.1          
+ WBPKEN         = 3.3        
+ NCDF_HS_NAME   = 'hs'       
+ NCDF_DIR_NAME  = 'dir'      
+ NCDF_SPR_NAME  = 'spr'      
+ NCDF_FP_NAME   = 'fp'       
+ NCDF_F02_NAME  = 't02'      
+ EXTRAPOLATION_ALLOWED = F
+ NETCDF_OUT_PARAM = F   
+ NETCDF_OUT_SPECTRA = F 
+ NETCDF_OUT_FILE        
+ USE_SINGLE_OUT = T  
+ HACK_HARD_SET_IOBP = F,
+ /
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LBCSE} (logical): If true the boundary condition is time dependent. Default is false.
+\item {\tt LBCWA} (logical): If true the boundary condition is parametric. Default is false.
+\item {\tt LBCSP} (logical): If true the (non-parametric) wave spectra is prescribed. Default is false.
+\item {\tt LINHOM} (logical): If true the wave spectra is spatially non-homogeneous. Default is false.
+\item {\tt LBSP1D} (logical): The input spectrum is 1-dimensional. Default is false.
+\item {\tt LBSP2D} (logical): The input spectra is 2-dimensional. Default is false.
+\item {\tt LBINTER} (logical): Time interpolation of spectrum between two times in which the spectrum is available. Default is true.
+\item {\tt LINDSPRDEG} (logical): If 1-d wave spectra are read this flag defines whether the input for the directional spreading is in degrees (true) or exponent (false).
+\item {\tt LPARMDIR} (logical): If LPARMDIR is true than directional spreading is read from WBDS and must be in exponential format at this time, only valid for 1d Spectra.
+\item {\tt HACK\_HARD\_SET\_IOBP} (logical): with this option, the IOBP from the input file is not corrected. This is useful for example if one wants to have a wave source in the middle of the Ocean. Default is false of course as it is only for hackish purpose.
+\item {\tt FILEWAVE} (logical): File containing the boundary spectra. Related entries to {\tt FILEWAVE} are:
+  \begin{itemize}
+  \item {\tt BEGTC} (string): beginning time of data availability in FILEWAVE
+  \item {\tt DELTC} (float): unit of time step
+  \item {\tt UNITC} (string): unit of time
+  \item {\tt ENDTC} (string): end time of data availability in FILEWAVE
+  \end{itemize}
+  This concerns the option XXX.
+\item {\tt FILEBOUND} (string): the file containing the description of the boundary condition. The format depends on the {\tt IGRIDTYPE}. Possible values:
+  \begin{itemize}
+  \item {\tt -1}: island boundary point
+  \item {\tt 1}: exterior boundary point.
+  \item {\tt 0}: not on boundary.
+  \item {\tt 2}: active boundary point.
+  \item {\tt 3}: Neumann boundary point.
+  \end{itemize}
+\item {\tt IBOUNDFORMAT} (integer): this specifies the nature of boundary data. Possible values:
+  \begin{itemize}
+  \item {\tt 1}: This is parametric wave boundary condition with WWM format. (Use FILEWAVE)
+  \item {\tt 2}: This is parametric wave boundary condition with FVCOM format. 
+  \item {\tt 3}: This is boundary condition using WW3 output from IFREMER.
+  \item {\tt 4}: This is boundary condition using netcdf output files.
+  \item {\tt 5}: This is boundary condition using grib 2DFD output from WAM at ECMWF
+  \end{itemize}
+\item If {\tt LINHOM=F}, {\tt LBCWA=T} and {\tt LBCSE=T} then the spectra is determined by just a few parameters that are actually in the WWM input file:
+  \begin{itemize}
+  \item {\tt WBHS} (float): the significant wave height on the boundary.
+  \item {\tt WBTP} (float): the wave period used.
+  \item {\tt WBSS} (integer): the type of spectrum chosen on the boundary:
+    \begin{itemize}
+    \item $\pm 1$: Pierson-Moskowitz
+    \item $\pm 2$: JONSWAP
+    \item $\pm 3$: all in one bin
+    \item $4$: Gauss
+    \end{itemize}
+    The sign determine whether the {\tt WBTP} is peak period (+) or mean period (-).
+  \item {\tt WBDM} (float): the mean wave direction.
+  \item {\tt WBDSMS} (float): Directional spreading value in degrees (1) or as exponent (2).
+  \item {\tt WBDS} (float): directional spreading at the boundary.
+  \item {\tt WBGAUSS} (float): factor for Gauss distribution if {\tt WBSS=1}.
+  \item {\tt WBPKEN} (float):  Peak enhancement factor for Jonswap Spectra if {\tt WBSS=2}.
+  \end{itemize}
+\item It is possible to output the boundary condition from an actual run and those boundary condition may later be used in another WWM run as forcing data. Relevant variables are:
+  \begin{itemize}
+  \item {\tt NETCDF\_OUT\_PARAM} (logical): whether to output the variable for parametric boundary condition-
+  \item {\tt NETCDF\_OUT\_SPECTRA} (logical): whether to output the spectra for the boundary condition
+  \item {\tt NETCDF\_OUT\_FILE} (string): the filename of the output.
+  \item {\tt USE\_SINGLE\_OUT} (logical): use single precision in the output file.
+  \end{itemize}
+\item When selecting {\tt IBOUNDFORMAT=3} 5 netcdf files are needed with the IFREMER. The relevant options with their default values are:
+  \begin{itemize}
+  \item {\tt NCDF\_HS\_NAME = 'hs'}
+  \item {\tt NCDF\_DIR\_NAME  = 'dir'}
+  \item {\tt NCDF\_SPR\_NAME  = 'spr'}
+  \item {\tt NCDF\_FP\_NAME   = 'fp'}
+  \item {\tt NCDF\_F02\_NAME  = 't02'}
+  \end{itemize}
+  All the files are contained in {\tt FILEWAVE}
+\item When selecting {\tt IBOUNDFORMAT=4} the boundary condition is obtained from a netCDF boundary file (created either by WWM, ww3ifr or any other method). The filename is {\tt FILEWAVE}. The data can be spectral or parametric.
+\item If {\tt IBOUNDFORMAT=5} then the boundary condition is taken from 2DFD wave spectra obtained from ECMWF are used. The list of files is contained in {\tt FILEWAVE}. It is allowed to have several wave spectrum per files. Following option is specific to this code:
+  \begin{itemize}
+  \item {\tt EXTRAPOLATION\_ALLOWED} (logical): sometimes the grid of origin is too small for effective runs. The idea is then to do extrapolation for the point outside. Default is false.
+  \end{itemize}
+
+\end{enumerate}
+
+
+
+
+
+
+\subsection{Section {\tt WIND}}
+The wind section specifies how the wind, is provided to the WWM model. It is the most essential forcing parameter.
+\begin{verbatim}
+&WIND
+ LWINDFROMWWM   = F      
+ LSEWD          = F      
+ LSTWD          = T      
+ LCWIN          = T      
+ LWDIR          = T      
+ WDIR           = 140.0  
+ WVEL           = 10.0   
+ CWINDX         = 30.0   
+ CWINDY         = 0.0    
+ BEGTC          = '20030101.000000'
+ DELTC          = 60.0             
+ UNITC          = 'MIN'            
+ ENDTC          = '20030102.000000'
+ LINTERWD       = T                
+ FILEWIND       = 'wind.dat'       
+ IWINDFORMAT    = 1                
+ GRIB_FILE_TYPE = 1
+ EXTRAPOLATION_ALLOWED = T,
+ USE_STEPRANGE = T,
+ MULTIPLE_IN   = T 
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LWINDFROMWWM} (logical): Whether wind should come from WWM. Default is True, but SELFE users may use False in which case the wind comes from SELFE.
+\item {\tt LSEWD} (logical): time dependent wind file
+\item {\tt LCWIN} (logical): Constant wind in space. Default is false.
+\item If {\tt LCWIN=T} and {\tt LSEWD=T} then the wind is constant in time and space. Thus it can be describe by two numbers:
+  \begin{itemize}
+  \item If {\tt LWDIR=T} then those are {\tt CWINDX} and {\tt CWINDY}.
+  \item if {\tt LWDIR=F} then those are {\tt WDIR} and {\tt WVEL}.
+  \end{itemize}
+\item Otherwise, the wind is obtained by the selection of {\tt IWINDFORMAT}. Possible values are:
+  \begin{itemize}
+  \item {\tt 1}: ASCII file {\tt FILEWAVE} with the relevant entry
+    \begin{itemize}
+    \item {\tt BEGTC} (string): Beginning of the file.
+    \item {\tt DELTC} (float): the separation between different data in {\tt FILEWAVE}
+    \item {\tt UNITC} (string): the unit of time separation
+    \item {\tt ENDTC} (string): ending of time 
+    \end{itemize}
+  \item {\tt 2}: DWD grib file converted to netcdf. List of files is in {\tt FILEWAVE}
+  \item {\tt 3}: NOAA CFRS grib netcdf files. List of files is in {\tt FILEWAVE}
+  \item {\tt 4}: NOAA NARR grib netcdf files. List of files is in {\tt FILEWAVE}
+  \item {\tt 5}: NetCDF CF file {\tt FILEWAVE} with wind field in Uwind / Vwind in a finite difference grid.
+  \item {\tt 6}: NetCDF CF file {\tt FILEWAVE} with wind field in Uwind / Vwind with values at the model nodes.
+  \item {\tt 7}: Grib files from meteorological models. List of files is in {\tt FILEWAVE}
+  \end{itemize}
+\item {\tt MULTIPLE\_IN} (logical): If true all MPI nodes are reading data at the same time. If false, only one node is reading and sending data to others via MPI sends/recvs. Default is false.
+\item {\tt LINTERWD} (logical): If true interpolate between time steps. Default is true.
+\end{enumerate}
+Following options are specific to the GRIB input files (option {\tt IWINDFORMAT=7}):
+\begin{enumerate}
+\item {\tt GRIB\_FILE\_TYPE} has to be selected. Possible options are:
+  \begin{itemize}
+  \item {\tt 1}: ECMWF (IFS) forecasts.
+  \item {\tt 2}: COSMO model outputs.
+  \item {\tt 3}: DHMZ (ALADIN) forecasts.
+  \end{itemize}
+\item {\tt EXTRAPOLATION\_ALLOWED} (logical): Sometimes some model grid points are outside of the forcing file. If it is only a few such points, then it makes sense to use extrapolation for them. Default is false. This option should be used with caution.
+\item {\tt USE\_STEPRANGE} (logical): The grib forcing file have this entry which specifies how advanced in the simulation the file is. If selected time of grib file is increased by {\tt steprange/24} days. But sometime the steprange is mangled. Default is true.
+\end{enumerate}
+
+TODO: Clear the LSTWD vs LSEWD issue.
+
+
+
+
+
+\subsection{Section {\tt CURR}}
+This is the section for currents in the model.
+
+\begin{verbatim}
+&CURR !NOT USED WITH SELFE
+ LSECU          = F                  ! Time dependend currents
+ LSTCU          = F                  ! Steady current
+ LCCUR          = F                  ! Constant current
+ CCURTX         = 0.0                ! current x-vec
+ CCURTY         = 0.0                ! current y-vec
+ BEGTC          = '20040901.030000'  ! Beginn time
+ DELTC          = 1800               ! Time step
+ UNITC          = 'SEC'              ! Unit
+ ENDTC          = '20040904.180000'  ! End time
+ LINTERCU       = F                  ! Interpolate linear within the wind input time step
+ FILECUR        = 'current.dat'      ! Current file name; input file format: write(*,*) curtx; write(*,*) curty
+ LERGINP        = F                  ! read timor file for input ... ergzus.bin
+ CURFAC         = 1.000000
+ ICURRFORMAT    = 1
+ MULTIPLE_IN   = T                   ! If T then all process are reading data
+                                     ! If F then only process 0 does it and
+                                     ! then spread to other nodes.
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LSECU} (logical): If selected we have time dependent currents. Default is false.
+\item {\tt LCCUR} (logical): If selected we have constant currents over the domain. Default is false.
+\item If {\tt LSECU=T} and {\tt LCCUR=T} then the current is described by two numbers, i.e. {\tt CCURTX} and {\tt CCURTY}.
+\item 
+\end{enumerate}
+TODO: clear the meaning with {\tt LSTCU}.
+
+
+\subsection{Section {\tt WALV}}
+\begin{verbatim}
+&WALV !NOT USED WITH SELFE
+ LSEWL          = F                  ! Time dependend currents
+ BEGTC          = ' '                ! Begin time
+ DELTC          = 1                  ! Time step
+ UNITC          = 'HR'               ! Unit
+ ENDTC          = ' '                ! End time
+ LINTERWL       = F                  ! Interpolate linear within the wind input time step
+ LSTWL          = T                  ! Steady water level
+ LCWLV          = T                  ! Constant water level
+ CWATLV         = 0.0                ! elevation of the water level [m]
+ IWATLVFORMAT   = 1
+ FILEWATL       = '_'                ! water level file name; input file format: write(*,*) eta
+ MULTIPLE_IN   = T                   ! If T then all process are reading data
+                                     ! If F then only process 0 does it and
+                                     ! then spread to other nodes.
+/
+\end{verbatim}
+
+
+\subsection{Section {\tt ENGS}}
+This section specifies the choices of physical parametrizations done in the WWM model.
+\begin{verbatim}
+&ENGS !SOURCE TERMS
+ MESNL          = 1      
+ MESIN          = 1      
+ IFRIC          = 1              
+ MESBF          = 1              
+ FRICC          = 0.067          
+ MESBR          = 1              
+ ICRIT          = 1              
+ IBREAK         = 1
+ ALPBJ          = 0.5            
+ BRHD           = 0.78           
+ LMAXETOT       = T              
+ MESDS          = 1              
+ MESTR          = 1          
+ TRICO          = 0.1        
+ TRIRA          = 5.       
+ TRIURS         = 0.1      
+ LPRECOMPST4    = T                  ! Precompute the indices and weightings for the Ardhuin et al. formulation and save to disk, if it is .F. then the saved
+                                     ! values are read from disk
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt MESNL} (integer): this is the option for nonlinear interactions:
+  \begin{itemize}
+  \item {\tt 0}: no nonlinear interactions
+  \item {\tt 1}: nonlinear interactions computed according to DIA.
+  \end{itemize}
+\item {\tt MESIN} (integer): the input source term. Possible values:
+  \begin{itemize}
+  \item {\tt 0}: no input source terms. 
+  \item {\tt 1}: The Ardhuin et al. (2010) formulation \cite{ArdhuinSurfaceStressFormulation}.
+  \item {\tt 2}: The Cycle 4 formulation \cite{CycleIV}.
+  \item {\tt 3}: The Makin \& Stam formulation \cite{MakinStam}.
+  \item {\tt 4}: The Donealan et al. formulation.
+  \item {\tt 5}: The Cycle 3 formulation
+  \end{itemize}
+Recommended option is {\tt MESIN=1}. Other options are for research purposes.
+\item {\tt MESDS} (integer): the whitecapping function. It is usually set to the same value as {\tt MESIN}.
+\item {\tt LPRECOMPST4} (logical): precompute ST4 data and save it to disk. This concerns only {\tt MESIN=1}. 
+\item {\tt IFRIC} (integer): atmospheric boundary layer formulation. Possible values:
+  \begin{itemize}
+  \item {\tt 1}: for {\tt MESIN=1}
+  \item {\tt 4}: for {\tt MESIN=3}
+  \end{itemize}
+\item {\tt MESBF} (integer): bottom friction. Possible values:
+  \begin{itemize}
+  \item {\tt 0}: nothing
+  \item {\tt 1}: JONSWAP (default)
+  \item {\tt 4}: Madsen formulation
+  \end{itemize}
+\item {\tt FRICC} (float): bottom friction coefficient (always positive).
+\item {\tt MESBR} (float): Shallow water wave breaking. Possible values:
+  \begin{itemize}
+  \item {\tt 0}: nothing
+  \item {\tt 1}: NF78
+  \end{itemize}
+\item {\tt ICRIT} (integer): wave breaking criterion. Set up:
+  \begin{itemize}
+  \item {\tt 1}: SWAN
+  \item {\tt 2}: Dingemans
+  \end{itemize}
+\item {\tt IBREAK} (integer): wave breaking function. Possible values:
+  \begin{itemize}
+  \item {\tt 1}: Battjes \& Janssen \cite{BattjesJanssen}.
+  \item {\tt 2}: Thornton \& Guza \cite{ThorntonGuza}.
+  \end{itemize}
+\item {\tt ALPBJ} (float): dissipation proportionality coefficient. Recommended value is 0.5
+\item {\tt BRHD} (float): Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-0.83 (suggested 0.78)
+\item {\tt LMAXETOT} (logical): Limit shallow water wave height by wave breaking limiter. default is true.
+\item {\tt MESTR} (integer): formulation for the triad formulation. Possible values:
+  \begin{itemize}
+  \item {\tt 0}: nothing
+  \item {\tt 1}: Lumped Triad Approximation \cite{LTA}.
+  \end{itemize}
+\item {\tt TRICO} (float): Triad proportionality constant $\alpha_{EB}$. Default is $0.1$.
+\item {\tt TRIRA} (float): ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
+\item {\tt TRIURS} (float): Critical Ursell number; if Ursell < TRIURS; triads are not computed.
+\end{enumerate}
+
+
+
+
+\subsection{Section {\tt NUMS}}
+This is the section about numerics of the WWM model.
+
+\begin{verbatim}
+&NUMS ! Numerical methods
+ ICOMP          = 0
+ AMETHOD        = 1
+   L_SOLVER_NORM = F   
+   JGS_SOLVERTHR = 1.e-10
+   ASPAR_LOCAL_LEVEL =        0
+   BLOCK_GAUSS_SEIDEL  = T,
+   JGS_DIFF_SOLVERTHR = 1.e-5
+   PMIN = 2,
+ SMETHOD        = 1
+ DMETHOD        = 2
+ RTHETA         = 0.5                ! Weighing factor for DMETHOD = 1, not really useful since Crank Nicholson integration can only be montotone for CFL .le. 2
+ FMETHOD        = 1
+ LITERSPLIT     = F                  ! T: double Strang split; F: simple split (more efficienct). Default: F
+
+ LFILTERTH      = F
+                                     ! LFILTERTH: use a CFL filter to limit the advection vel. In directional space. This is similar to WW3.
+                                     ! Mostly not used. WWMII is always stable.
+ MAXCFLTH       = 1.0                ! Max Cfl in Theta space; used only if LFILTERTH=T
+ LFILTERSIG     = F                  ! Limit the advection velocitiy in freq. space (usually F)
+ MAXCFLSIG      = 1.0                ! Max Cfl in freq. space; used only if LFILTERSIG=T
+ LLIMT          = T                  ! Switch on/off Action limiter, Action limiter must mostly be turned on.
+
+ MELIM          = 1
+                                     ! Formulation for the action limiter
+                                     ! MELIM = 1 (default)
+                                     ! Limiter according to the WAM group (1988)
+                                     ! MELIM = 2
+                                     ! Limiter according to Hersbach Janssen (1999)
+                                     ! For MESIN = 1 and MESDS = 1, which represents Cycle 3 formulation or Ardhuin, or other formulations except Cycle4, use MELIM = 1 and LIMFAK = 0.1
+                                     ! For MESIN = 2 and MESDS = 2, which represents Cycle 4 formulation, use MELIM = 2 and LIMFAK = 0.6
+                                     ! For WAM we need MELIM = 3
+ LIMFAK         = 0.6                ! Proportionality coefficient for the action limiter MAX_DAC_DT = Limfak * Limiter; see notes above for value
+ LDIFR          = T                  ! Use phase decoupled diffraction approximation according to Holthuijsen et al. (2003) (usually T; if crash, use F)
+ IDIFFR         = 1                  ! Extended WAE account for higher order effects WAE becomes nonlinear; 1: Holthuijsen et al. ; 2: Liau et al. ; 3: Toledo et al. (in preparation)
+ LCONV          = F                  ! Estimate convergence criterian and write disk (quasi-steady - qstea.out)
+ LCFL           = F                  ! Write out CFL numbers; use F to save time
+ NQSITER        = 1                  ! # of quasi-steady (Q-S) sub-divisions within each WWM time step (trial and errors)
+ QSCONV1        = 0.98               ! Number of grid points [%/100] that have to fulfill abs. wave height criteria EPSH1
+ QSCONV2        = 0.98               ! Number of grid points [%/100] that have to fulfill rel. wave height criteria EPSH2
+ QSCONV3        = 0.98               ! Number of grid points [%/100] that have to fulfill sum. rel. wave action criteria EPSH3
+ QSCONV4        = 0.98               ! Number of grid points [%/100] that have to fulfill rel. avg. wave steepness criteria EPSH4
+ QSCONV5        = 0.98               ! Number of grid points [%/100] that have to fulfill avg. rel. wave period criteria EPSH5
+ LEXPIMP        = F                  ! Use implicit schemes for freq. lower than given below by FREQEXP; used only if ICOMP=0
+ FREQEXP        = 0.1                ! Minimum frequency for explicit schemes; only used if LEXPIMP=T and ICOMP=0
+ EPSH1          = 0.01               ! Convergence criteria for rel. wave height ! EPSH1 < CONVK1 = REAL(ABS(HSOLD(IP)-HS2)/HS2)
+ EPSH2          = 0.01               ! Convergence criteria for abs. wave height ! EPSH2 < CONVK2 = REAL(ABS(HS2-HSOLD(IP)))
+ EPSH3          = 0.01               ! Convergence criteria for the rel. sum of wave action ! EPSH3 < CONVK3 = REAL(ABS(SUMACOLD(IP)-SUMAC)/SUMAC)
+ EPSH4          = 0.01               ! Convergence criteria for the rel. avg. wave steepness criteria ! EPSH4 < CONVK4 = REAL(ABS(KHS2-KHSOLD(IP))/KHSOLD(IP))
+ EPSH5          = 0.01               ! Convergence criteria for the rel. avg. waveperiod ! EPSH5 < REAL(ABS(TM02-TM02OLD(IP))/TM02OLD(IP))
+ LVECTOR        = T                  ! Use optmized propagation routines for large high performance computers e.g. at least more than 128 CPU. Try LVECTOR=F first.
+ IVECTOR        = 2                  ! USed if LVECTOR=T; Different flavours of communications
+                                     ! LVECTOR = 1; same propagation style as if LVECTOR = F, this is for testing and development
+                                     ! LVECTOR = 2; all spectral bins are propagated with the same time step and communications is done only once per sub-iteration
+                                     ! LVECTOR = 3; all directions with the same freq. are propgated using the same time step the communications is done for each freq.
+                                     ! LVECTOR = 4; 2 but for mixed open-mpi, code has to be compiled with -openmp
+                                     ! LVECTOR = 5; 3 but for mixed open-mpi, code has to be compiled with -openmp
+                                     ! LVECTOR = 6; same as 2 but highly optmizied with respect to memory usage, of course it is must less efficient than 2
+                                     ! remarks: if you are using this routines be aware that the memory amount that is used is approx. for LVECTOR 1-5 arround
+                                     ! 24 * MSC * MDC * MNP, so if you are trying this on 1 CPU you get a segmentation fault if your system has not enough memory or
+                                     ! if your system is not properly configured it may results into the fact that your computer starts blocking since it try's to swap to disk
+                                     ! The total amount of memoery used per CPU = 24 * MSC * MDC * MNP / No.CPU
+ LADVTEST       = F                  ! for testing the advection schemes, testcase will be added soon
+ LCHKCONV       = F                  ! needs to set to .true. for quasi-steady mode. in order to compute the QSCONVi criteria and check them
+ DTMIN_DYN      =   1.00000000000000 ! min. time step for dynamic integration 
+ NDYNITER       =         100,       ! max. iteration for dyn. scheme afterwards the limiter is applied in the last step 
+ DTMIN_SIN      =   1.00000000000000 ! min. time steps for the full fractional step method, where each source term is integrated with it's own fractional step
+ DTMIN_SNL4     =   1.00000000000000 !    
+ DTMIN_SDS      =   1.00000000000000 !    
+ DTMIN_SNL3     =   1.00000000000000 !   
+ DTMIN_SBR      =  0.100000000000000 !    
+ DTMIN_SBF      =   1.00000000000000 !    
+ NDYNITER_SIN   =          10,       ! max. iterations for each source term in the fractional step approach. 
+ NDYNITER_SNL4  =          10,       !
+ NDYNITER_SDS   =          10,       !
+ NDYNITER_SBR   =          10,       !
+ NDYNITER_SNL3  =          10,       ! 
+ NDYNITER_SBF   =          10,       !
+ LZETA_SETUP    = F,                 ! T/F, whether to compute the wave setup.
+ ZETA_METH      = 0,                 ! 0: use a simple conjugate gradient
+                                     !    preconditioner
+                                     ! 1: use PETSC
+ SOLVERTHR       =  1.000000000000000E-5, ! Thr for the Block-Jacobi or Block-Gauss-Seider solver
+ MAXITER =         100,                   ! Max. number of iterations 
+ LNANINFCHK      = T,                     ! Check for NaN and INF
+ LZETA_SETUP     = F,                     ! Compute wave setup 
+ ZETA_METH       =           0,           ! Method for wave setup, Mathieu please explain!
+ LSOURCESWAM     = T,                     ! Use ECMWF WAM formualtion for deep water physics 
+ LSOURCESWWIII   = F,                     ! WW3 Ardhuin et al. sources, not working yet in this code use MESIN = 1 
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt ICOMP} (integer): this essential option specifies the degree of implicitness in the solution of the WAE.
+  \begin{itemize}
+  \item {\tt 0}: all dimensions (geographic, direction, frequency, source) are integrated explicitly.
+  \item {\tt 1}: geographic advection is done implicitly, refraction, frequency shifting and source terms are integrated explicitly.
+  \item {\tt 2}: advection is done using implicit methods and the source terms are integrated semi-implicit using Patankar rules and linearized source terms. Spectral part is still a fractional step
+  \item {\tt 3}: the whole WAE is integrated implicitly.
+  \end{itemize}
+\item {\tt AMETHOD} (integer): the method used for geographic advection. Possible choices:
+  \begin{itemize}
+  \item {\tt 0}: no advection done
+  \item {\tt 1}: Explicit N-Scheme for ICOMP = 0 and Implicit N-Scheme for ICOMP > 0
+  \item {\tt 2}: PSI-Scheme for {\tt ICOMP=0} and Implicit Crank-Nicholson N-Scheme for ICOMP > 0
+  \item {\tt 3}: LFPSI Scheme for {\tt ICOMP=0} and Implicit two time level N2 scheme for ICOMP > 0
+  \item {\tt 4}: Like {\tt AMETHOD=1} but using PETSc and solving one equation for each bin.
+  \item {\tt 5}: Like {\tt AMETHOD=1} but using PETSc and solving one single equation.
+  \item {\tt 6}: Like {\tt AMETHOD=5} but using our own SOR based solver for the solutioning.
+  \item {\tt 7}: Like {\tt AMETHOD=7} but using our own Jacobi iteration for the solutioning.
+  \end{itemize}
+\item It is generally not a good idea to use {\tt AMETHOD} with a value of $4$, $5$ or $6$ as those methods are now obsoletes.
+\item The following options are specific to the option {\tt AMETHOD=7}:
+  \begin{itemize}
+  \item {\tt BLOCK\_GAUSS\_SEIDEL} (logical): Under this option, the Gauss-Seidel method is used for the solutioning on each block. It decreases the memory expenses of the computation. Experimentally, it tends to decrease the number of iteration needed to solve the system but the result become dependent on the number of processors used for solving the system. Default is true.
+  \item {\tt L\_SOLVER\_NORM} (logical): Under this option, we check for termination by the criterion
+  \begin{equation*}
+  \Vert Ax - b \Vert_2 \leq \epsilon
+  \end{equation*}
+  The norm is the $L^2$ norm. This doubles the runtime of the solver. Default is false.
+  \item {\tt WAE\_SOLVERTHR} (float): the value of $\epsilon$ in the above equation.
+  \item {\tt ASPAR\_LOCAL\_LEVEL} (integer): specifies the level of locality of the {\tt ASPAR} array. Essentially there is a balance between memory usage and computation. At highest level of locality less memory is used but things need to be recomputed at each step of the iteration. Default value is 0. Possible choices:
+    \begin{itemize}
+    \item {\tt 0}: the {\tt ASPAR\_JAC(MSC,MDC,NNZ)}, {\tt CAD\_THE(MSC,MDC,MNP)}, {\tt CAS\_SIG(MSC,MDC,MNP)} arrays are allocated.
+    \item {\tt 1}: only {\tt ASPAR\_JAC(MSC,MDC,NNZ)} is allocated.
+    \item {\tt 2} and above: smaller arrays are allocated.
+    \end{itemize}
+  \item {\tt LNONL} (logical): iteration also happens at the nonlinear level for the source terms. Default is false.
+  \item {\tt WAE\_JGS\_CFL\_LIM} (logical): provides a speed up in the solutioning by discarding points which have a stable solution for more than CFL time steps. Experimental code. Default is false.
+  \item {\tt JGS\_CHKCONV} (logical): check from one step of the iteration to the next. Compute the number $n$ of grid points such that
+  \begin{equation*}
+  \sum \vert ACLOC_{it+1} - ACLOC_{it}\vert < \epsilon_2 \sum \vert ACLOC_{it+1}\vert
+  \end{equation*}
+  if at least $100 - PMIN$ points are converged according to this criteria then we terminate the iteration.
+  \item {\tt JGS\_DIFF\_SOLVERTHR} (float): the value of $\epsilon_2$ above. Default is $1e-5$.
+  \item {\tt PMIN} (float): the value of PMIN in above equation.
+  \end{itemize}
+\item {\tt SMETHOD} (integer): the choice of source term integration method. Possible choices:
+  \begin{itemize}
+  \item {\tt 0}: no source term integration.
+  \item {\tt 1}: splitting using RK-3 and SI for fast and slow modes. Default value.
+  \item {\tt 2}: semi-implicit;
+  \item {\tt 3}: R-K3 (if ICOMP=0 or 1) - slow;
+  \item {\tt 4}: Dynamic Splitting (experimental)
+  \end{itemize}
+\item {\tt DMETHOD} (integer): the choice of refraction method integration:
+  \begin{itemize}
+  \item {\tt 0}: no refraction
+  \item {\tt 1}: Crank-Nicholson (RTHETA = 0.5) or Euler Implicit scheme (RTHETA = 1.0)
+  \item {\tt 2}: Ultimate Quickest. Recommended default value.
+  \item {\tt 3}: RK5-WENO
+  \item {\tt 4}: Explicit FVM Upwind scheme
+  \item {\tt 5}: Implicit FVM Upwind scheme
+  \end{itemize}
+\item {\tt RTHETA} (float): value used in case {\tt DMETHOD=1}.
+\item {\tt FMETHOD} (integer): the choice of frequency-shifting integration method:
+  \begin{itemize}
+  \item {\tt 0}: no frequency shifting advection
+  \item {\tt 1}: Ultimate Quickest. Recommended default value.
+  \item {\tt 2}: Explicit Upwind scheme
+  \item {\tt 3}: Implicit Upwind scheme
+  \end{itemize}
+\item {\tt MELIM} (integer): limiter for the action. Possible choices:
+  \begin{itemize}
+  \item {\tt 1}: (default) Limiter according to the WAM group (1988) \cite{WAMDIgroup}.
+  \item {\tt 2}: Limiter according to Hersbach Janssen (1999) \cite{HersbachJanssen}.
+  \item {\tt 3}: ????
+  \end{itemize}
+For {\tt MESIN=1} and {\tt MESDS=1}, which represents Cycle 3 formulation or Ardhuin,
+or other formulations except Cycle4, use {\tt MELIM=1} and {\tt LIMFAK=0.1}.
+For {\tt MESIN=2} and {\tt MESDS=2}, which represents Cycle 4 formulation, use {\tt MELIM=2} and {\tt LIMFAK=0.6}
+For WAM we need {\tt MELIM=3}.
+    
+\end{enumerate}
+
+
+
+
+\subsection{Section {\tt HISTORY}}
+This is the code for doing the history output, that is variable defined all over the domain.
+\begin{verbatim}
+&HISTORY
+ BEGTC          = '20110222.000000'
+ DELTC          = 600          
+ UNITC          = 'SEC'        
+ ENDTC          = '20110226.000000'
+ OUTSTYLE       = 'NC'       
+ DEFINETC       = 86400      
+ MULTIPLEOUT      = 0        
+ USE_SINGLE_OUT  = T         
+ PARAMWRITE      = T       
+ GRIDWRITE       = T       
+ IOBPD           = F       
+ PRINTMMA       = F        
+ FILEOUT        = 'misc.dat'
+ HS             = F                  ! 1: significant wave height
+ TM01           = F                  ! 2: mean period
+ TM02           = F                  ! 3: zero-crossing mean period
+ TM10           = F                  ! 4: 
+ KLM            = F                  ! 5: mean wave number
+ WLM            = F                  ! 6: mean wave length
+ ETOTC          = F                  ! 7: Variable ETOTC
+ ETOTS          = F                  ! 8: Variable ETOTS
+ DM             = F                  ! 9: mean wave direction
+ DSPR           = F                  !10: directional spreading
+ TPPD           = F                  !11: discrete peak wave period
+ CPPD           = F                  !12: discrete peak wave speed
+ KPPD           = F                  !13: discrete peak wave number
+ CGPD           = F                  !14: discrete peak group speed
+ TPP            = F                  !15: peak period  
+ CPP            = F                  !16: peak phase vel. 
+ WNPP           = F                  !17: peak wave number
+ CGPP           = F                  !18: peak group speed
+ KPP            = F                  !19: peak wave number
+ LPP            = F                  !20: peak wave length 
+ PEAKD          = F                  !21: peak direction
+ PEAKDSPR       = F                  !22: peak directional spreading
+ DPEAK          = F                  !23: discrete peak direction 
+ UBOT           = F                  !24: bottom exc. vel. 
+ ORBITAL        = F                  !25: bottom orbital vel. 
+ BOTEXPER       = F                  !26: bottom exc.  
+ TMBOT          = F                  !27: bottom period 
+ URSELL         = F                  !28: Ursell number
+ UFRIC          = F                  !29: air friction velocity
+ Z0             = F                  !30: air roughness length
+ ALPHA_CH       = F                  !31: Charnoch coefficient for air
+ WINDX          = F                  !32: Wind in X direction
+ WINDY          = F                  !33: Wind in Y direction
+ CD             = F                  !34: Drag coefficient
+ CURRTX         = F                  !35: current in X direction
+ CURRTY         = F                  !36: current in Y direction
+ WATLEV         = F                  !37: water level
+ WATLEVOLD      = F                  !38: water level at previous time step
+ DEPDT          = F                  !39: change of water level in time
+ DEP            = F                  !40: depth
+ WINDMAG        = F                  !41: Wind magnitude
+ TAUW           = F                  !42: surface stress from the wave
+ TAUWX          = F                  !43: surface stress in X direction
+ TAUWY          = F                  !44: surface stress in Y direction
+ TAUHF          = F                  !45: high frequency surface stress
+ TAUTOT         = F                  !46: total surface stress
+ STOKESBOTTX    = F                  !47: Bottom Stokes drift in X direction
+ STOKESBOTTY    = F                  !48: Bottom Stokes drift in X direction
+ STOKESSURFX    = F                  !49: Surface Stokes drift in X direction
+ STOKESSURFY    = F                  !50: Surface Stokes drift in X direction
+ STOKESBAROX    = F                  !51: Barotropic Stokes drift in X direction
+ STOKESBAROY    = F                  !52: Barotropic Stokes drift in Y direction
+ RSXX           = F                  !53: RSXX potential of LH
+ RSXY           = F                  !54: RSXY potential of LH
+ RSYY           = F                  !55: RSYY potential of LH
+ CFL1           = F                  !56: CFL number 1
+ CFL2           = F                  !57: CFL number 2
+ CFL3           = F                  !58: CFL number 3
+ ZETA_SETUP     = F                  !59: wave induced setup.
+/
+\end{verbatim}
+The meaning of the input file is the following:
+\begin{enumerate}
+\item {\tt BEGTC} (string): Beginning time of history output.
+\item {\tt DELTC} (float): the time between history 
+\item {\tt UNITC} (string): unit of output for the history.
+\item {\tt ENDTC} (string): ending time of output.
+\item {\tt OUTSTYLE} (string): type of output used. Possible values:
+  \begin{itemize}
+  \item {\tt ``NO''}: No history output is done.
+  \item {\tt ``NC''}: netCDF style of data output.
+  \item {\tt ``XFN''}: data output for the XFN plotting software.
+  \item {\tt ``SHP''}: data output for the SHP software.
+  \end{itemize}
+\item {\tt PRINTMMA} (logical): print the minimum, maximum and average value of the variables that are in input. The output file is {\tt wwmstat\_0000}.
+\item {\tt FILEOUT} (string): the filename of the output. If netCDF then it is edited to have {\tt .nc} as suffix.  
+\end{enumerate}
+Following options are only for netCDF:
+\begin{enumerate}
+\item {\tt DEFINETC} (float): time in second contained in the data output.
+If set to a negative value then only one file is generated.
+If set to a value of 86400 daily output files are created.
+\item {\tt MULTIPLEOUT} (integer): if 0 then all MPI process write output into a single netCDF file. If not then each process does its own output into separate independent files.
+\item {\tt USE\_SINGLE\_OUT} (logical): if true then the output is in single precision even if the model runs in double precision.
+\item {\tt PARAMWRITE} (logical): write the physical parametrization used by the WWM model. This can avoid some errors. Default is true.
+\item {\tt GRIDWRITE} (logical): write the model grid in the netCDF into the output file. In turn this can be used as input grid file for WWM in the case {\tt IGRIDTYPE=5}. Default is T.
+\item {\tt IOBPD} (logical): write the {\tt IOBPD} variable in the output file.
+\end{enumerate}
+The name of the variable are mostly self-explanatory.
+
+
+
+
+
+\subsection{Section {\tt STATION}}
+This is the section for doing station output at predefined locations. Maximum number of output locations is 50.
+\begin{verbatim}
+&STATION
+ BEGTC          = '20030101.000000' 
+ DELTC          = 600           
+ UNITC          = 'SEC'         
+ ENDTC          = '20030102.000000' 
+ DEFINETC       = 86400     
+ OUTSTYLE       = 'NO'     
+ MULTIPLEOUT      = 0       
+ USE_SINGLE_OUT  = T       
+ PARAMWRITE      = T     
+ FILEOUT        = 'misc.dat'
+ LOUTITER       = F
+ IOUTS          = 8                  ! Number of output stations
+ NOUTS          = 'P-1', 'P-2', 'P-3', 'P-4', 'P-5', 'P-6', 'P-7', 'P-8'! Name of output locations
+ XOUTS          = 7280., 7257., 7324., 7319., 7302., 7270., 7958., 8663.! X-Coordinate of output locations
+ YOUTS          = 19574., 18549., 17129., 15549., 14096., 12615., 8669., 5598.! Y-Coordinate of output locations
+ CUTOFF         = 8*0.44             ! cutoff freq (Hz) for each station - consistent with buoys
+ LSP1D          = T                  ! 1D spectral station output
+ LSP2D          = F                  ! 2D spectral station output
+ LSIGMAX        = T                  ! Adjust the cut-freq. for the output (e.g. consistent with buoy cut-off freq.)
+! Below is selection for station specific variables. Default is F for all variables.
+ AC             = F                  ! spectrum 
+ WK             = F                  ! variable WK
+ ACOUT_1D       = F                  ! variable ACOUT_1D
+ ACOUT_2D       = F                  ! variable ACOUT_2D
+! Below is selection for all variables. Default is F for all variables.
+ HS             = F                  ! 1: significant wave height
+ TM01           = F                  ! 2: mean period
+ TM02           = F                  ! 3: zero-crossing mean period
+ TM10           = F                  ! 4: 
+ KLM            = F                  ! 5: mean wave number
+ WLM            = F                  ! 6: mean wave length
+ ETOTC          = F                  ! 7: Variable ETOTC
+ ETOTS          = F                  ! 8: Variable ETOTS
+ DM             = F                  ! 9: mean wave direction
+ DSPR           = F                  !10: directional spreading
+ TPPD           = F                  !11: discrete peak wave period
+ CPPD           = F                  !12: discrete peak wave speed
+ KPPD           = F                  !13: discrete peak wave number
+ CGPD           = F                  !14: discrete peak group speed
+ TPP            = F                  !15: peak period  
+ CPP            = F                  !16: peak phase vel. 
+ WNPP           = F                  !17: peak wave number
+ CGPP           = F                  !18: peak group speed
+ KPP            = F                  !19: peak wave number
+ LPP            = F                  !20: peak wave length 
+ PEAKD          = F                  !21: peak direction
+ PEAKDSPR       = F                  !22: peak directional spreading
+ DPEAK          = F                  !23: discrete peak direction 
+ UBOT           = F                  !24: bottom exc. vel. 
+ ORBITAL        = F                  !25: bottom orbital vel. 
+ BOTEXPER       = F                  !26: bottom exc.  
+ TMBOT          = F                  !27: bottom period 
+ URSELL         = F                  !28: Ursell number
+ UFRIC          = F                  !29: air friction velocity
+ Z0             = F                  !30: air roughness length
+ ALPHA_CH       = F                  !31: Charnoch coefficient for air
+ WINDX          = F                  !32: Wind in X direction
+ WINDY          = F                  !33: Wind in Y direction
+ CD             = F                  !34: Drag coefficient
+ CURRTX         = F                  !35: current in X direction
+ CURRTY         = F                  !36: current in Y direction
+ WATLEV         = F                  !37: water level
+ WATLEVOLD      = F                  !38: water level at previous time step
+ DEPDT          = F                  !39: change of water level in time
+ DEP            = F                  !40: depth
+ WINDMAG        = F                  !41: Windmagnitude
+ TAUW           = F                  !42: surface stress from the wave
+ TAUWX          = F                  !43: surface stress in X direction
+ TAUWY          = F                  !44: surface stress in Y direction
+ TAUHF          = F                  !45: high frequency surface stress
+ TAUTOT         = F                  !46: total surface stress
+ STOKESBOTTX    = F                  !47: Bottom Stokes drift in X direction
+ STOKESBOTTY    = F                  !48: Bottom Stokes drift in X direction
+ STOKESSURFX    = F                  !49: Surface Stokes drift in X direction
+ STOKESSURFY    = F                  !50: Surface Stokes drift in X direction
+ STOKESBAROX    = F                  !51: Barotropic Stokes drift in X direction
+ STOKESBAROY    = F                  !52: Barotropic Stokes drift in Y direction
+ RSXX           = F                  !53: RSXX potential of LH
+ RSXY           = F                  !54: RSXY potential of LH
+ RSYY           = F                  !55: RSYY potential of LH
+ CFL1           = F                  !56: CFL number 1
+ CFL2           = F                  !57: CFL number 2
+ CFL3           = F                  !58: CFL number 3
+ ZETA_SETUP     = F                  !59: wave induced setup.
+/
+\end{verbatim}
+The measning of those options is the following:
+\begin{enumerate}
+\item {\tt BEGTC} (string): starting time of station output.
+\item {\tt DELTC} (float): unit of time between station output.
+\item {\tt UNITC} (string): unit of time between outputs.
+\item {\tt ENDTC} (string): end time of station output.
+\item {\tt OUTSTYLE} (string): type of output used. Possible values:
+  \begin{itemize}
+  \item {\tt ``NO''}: No history output is done.
+  \item {\tt ``NC''}: netCDF style of data output.
+  \item {\tt ``STE''}: ascii data output for text analysis.
+  \end{itemize}
+\end{enumerate}
+Following options are only for netCDF:
+\begin{enumerate}
+\item {\tt DEFINETC} (float): time in second contained in the data output.
+If set to a negative value then only one file is generated.
+If set to a value of 86400 daily output files are created.
+\item {\tt MULTIPLEOUT} (integer): if 0 then all MPI process write output into a single netCDF file. If not then each process does its own output into separate independent files.
+\item {\tt USE\_SINGLE\_OUT} (logical): if true then the output is in single precision even if the model runs in double precision.
+\item {\tt PARAMWRITE} (logical): write the physical parametrization used by the WWM model. This can avoid some errors. Default is true.
+\end{enumerate}
+The output data is then according to the options in a parallel way to section HISTORY.
+
+
+
+\subsection{Section {\tt HOTFILE}}
+This section specifies how the hotfile is written and read (but note that decision whether to use hotfile or not is done in the INIT section).
+
+\begin{verbatim}
+&HOTFILE
+ LHOTF          = F
+ BEGTC          = '20000101.000000' 
+ DELTC          = 1     
+ UNITC          = 'SEC' 
+ ENDTC          = '20000101.100000' 
+ LCYCLEHOT      = T
+ HOTSTYLE_OUT   = 2
+ MULTIPLEOUT    = 0
+ FILEHOT_OUT    = 'hotfile_out.dat' 
+ HOTSTYLE_IN    = 2 
+ IHOTPOS_IN        = 1
+ MULTIPLEIN     = 0 
+ FILEHOT_IN     = 'hotfile_in.dat'
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt LHOTF} (logical): Write hotfile. Default is false.
+\item {\tt BEGTC} (string): Beginning time of writing hotfile.
+\item {\tt DELTC} (float): separation between hotfile printing.
+\item {\tt UNITC} (string): unit of the separation time.
+\item {\tt ENDTC} (string): end time of writing hotfile.
+\item {\tt LCYCLEHOT} (logical): It is valid only if {\tt HOTFILE\_OUT=T}. If selected then we have in the netCDF file only the last two entries. Otherwise, the last N states are present.
+\item {\tt HOTSTYLE\_OUT} (integer): the kind of file format used for the hotfile output. Possible value:
+  \begin{itemize}
+  \item {\tt 1}: the file is binary.
+  \item {\tt 2}: the file is netCDF
+  \end{itemize}
+\item {\tt MULTIPLEOUT} (integer): If equal to zero there is a single hotfile. If 1 then each MPI process creates its own hotfile.
+\item {\tt FILEHOT\_OUT} (string): The name of the output file.
+\item {\tt HOTSTYLE\_IN} (integer): the kind of file format used for hotfile input. See {\tt HOTSTYLE\_OUT} for possible values.
+\item {\tt IHOTPOS\_IN} (integer): specific index of hotfile used (only for netCDF).
+\item {\tt MULTIPLEIN} (integer): Whether we read from a single file or several.
+\item {\tt FILEHOT\_IN} (string): the name of the hotfile used as input.
+\end{enumerate}
+
+
+
+\subsection{Section {\tt NESTING}}
+This section specifies how to do nesting of another grid in WWM. The nesting if offline and 1-way.
+One first runs the coarse grid model which output relevant NetCDF hotfiles and NetCDF boundary conditions to be
+used by fine grids.
+
+If one does not wish to have nesting then simply put
+\begin{verbatim}
+&NESTING
+/
+\end{verbatim}
+in your input file.
+
+The fullset of options is:
+\begin{verbatim}
+&NESTING
+ L_NESTING = F,      ! whether to produce nesting data or not
+ L_HOTFILE = F       ! whether to produce an hotfile as output
+ L_BOUC_PARAM = F    ! whether to produce a parametric boundary condition to be used by the nested grids
+ L_BOUC_SPEC = F     ! whether to produce a spectral   boundary condition to be used by the nested grids
+ NB_GRID_NEST = 0    ! number of nested grids. All lines below must contain NB_GRID_NEST entries.
+ ListIGRIDTYPE =     ! list of integers giving the type of nested grid
+ ListFILEGRID =      ! list of strings for the grid file names.
+ ListFILEBOUND =     ! list of boundary file names to be used
+ ListBEGTC = ....    ! list of beginning time of the runs (used for hotfile and boundary)
+ ListDELTC =         ! list of DELTC of the boundary output
+ ListUNITC =         ! list of UNITS of the boundary output
+ ListENDTC =         ! list of ENDTC of the boundary output
+ ListPrefix =        ! list of prefixes used for the data output.
+/
+\end{verbatim}
+The meaning of the options is as follows:
+\begin{enumerate}
+\item {\tt L\_NESTING} (logical): specifies whether we use nesting functionality or not.
+\item {\tt L\_HOTFILE} (logical): specifies whether we output hotfile to be used by the nested grids.
+\item {\tt L\_BOUC\_PARAM} (logical): specifies whether we output parametric boundary condition for the nested grids.
+\item {\tt L\_BOUC\_SPEC} (logical): specifies whether we output spectral boundary conditions
+\item {\tt NB\_GRID\_NEST} (integer): number of nested grids used.
+\end{enumerate}
+Below we give a list of entries. For each line item the number of entry should be equal to {\tt NB\_GRID\_NEST}.
+\begin{enumerate}
+\item {\tt ListIGRIDTYPE} (list of integers): list of grid file types
+\item {\tt ListFILEGRID} (list of strings): list of grid file names.
+\item {\tt ListFILEBOUND} (list of strings): list of grid file boundary.
+\item {\tt ListBEGTC} (list of strings): list beginning time of the runs.
+\item {\tt ListDELTC} (list of integer): list of separating times
+\item {\tt ListUNITC} (list of strings): list of UNITC
+\item {\tt ListENDTC} (list of strings): list of ENDTC
+\item {\tt ListPrefix} (list of strings): list of prefixes used for the output.
+\end{enumerate}
+If {\tt L\_HOTFILE} is true then the hotfile for the boundary is created at exactly time BEGTC.
+If {\tt L\_BOUC\_PARAM} and/or {\tt L\_BOUC\_SPEC} is true then the boundary output is done from time BEGTC to ENDTC with separating time interval specified by {\tt DELTC} and {\tt UNITC}.
+
+The files created are determined by {\tt ListPrefix}. For example if boundary and hotfiles are asked for
+\begin{verbatim}
+ ListPrefix = fine01, fine02
+\end{verbatim}
+then the files {\tt fine01\_hotfile.nc}, {\tt fine01\_boundary.nc}, {\tt fine02\_hotfile.nc}, {\tt fine02\_boundary.nc} are created.
+
+
+
+
+
+\subsection{Section {\tt PETScOptions}}
+In this section, we detail the options relevant to PETSC\footnote{For software availability and more details, see \url{http://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html}}, which are actually very rarely used.
+\begin{verbatim}
+&PETScOptions
+ KSPTYPE       = 'LGMRES'
+ RTOL          = 1.E-20    
+ ABSTOL        = 1.E-20    
+ DTOL          = 10000.    
+ MAXITS        = 1000        
+ INITIALGUESSNONZERO = F     
+ GMRESPREALLOCATE    = T     
+ SAMEPRECONDITIONER  = T     
+ PCTYPE        = 'SOR'
+/
+\end{verbatim}
+The meaning of the options is the following:
+\begin{enumerate}
+\item {\tt KSPTYPE} (string): the iterative solution algorithm used. Possible values are:
+  \begin{itemize}
+  \item {\tt ``GMRES''}: Generalized Minimal Residual method (Saad and Schultz, 1986) with restart
+  \item {\tt ``LGMRES''}: Augments the standard GMRES approximation space with approximations to the error from previous restart cycles.
+  \item {\tt ``DGMRES''}: In this implementation, the adaptive strategy allows to switch to the deflated GMRES when the stagnation occurs.
+  \item {\tt ``PGMRES''}: Pipelined Generalized Minimal Residual method.
+  \item {\tt ``KSPBCGSL''}: Implements a slight variant of the Enhanced BiCGStab(L) algorithm
+  \end{itemize}
+\item {\tt RTOL}: the relative convergence tolerance (relative decrease in the residual norm)
+\item {\tt ABSTOL}:the absolute convergence tolerance (absolute size of the residual norm)
+\item {\tt DTOL}: The divergence tolerance
+\item {\tt MAXITS} (integer): maximum number of iterations to use
+\item {\tt INITIALGUESSNONZERO} (logical): Tells the iterative solver that the initial guess is nonzero; otherwise KSP assumes the initial guess is to be zero
+\item {\tt GMRESPREALLOCATE} (logical): Causes GMRES and FGMRES to preallocate all its needed work vectors at initial setup rather than the default, which is to allocate them in chunks when needed.
+\item {\tt SAMEPRECONDITIONER} (logical): the preconditioner matrix is identical to that of the previous linear solve
+\item {\tt PCTYPE} (string): controls which preconditioner is to be used.
+  \begin{itemize}
+  \item {\tt ``NONE''}: No preconditioner is used.
+  \item {\tt ``SOR''}: Successive Over Relaxation Gauss Seidel preconditioner
+  \item {\tt ``ASM''}: Additive Schwartz Method
+  \item {\tt ``HYPRE''}: preconditioner based on LLNL hypre package
+  \item {\tt ``SPAI''}: Sparse Approximate Inverse method of Grote and Barnard as a preconditioner
+  \end{itemize}
+
+    
+
+  
+\end{enumerate}
+
+
+\bibliographystyle{amsplain_initials_eprint}
+\bibliography{WaveRef}
+
+
+
+
+\end{document}

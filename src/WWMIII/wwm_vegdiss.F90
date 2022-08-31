@@ -1,7 +1,7 @@
 !****************************************************************
 !
 !****************************************************************
-      SUBROUTINE VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEPTH,ETOT,SBAR,KBAR) 
+      SUBROUTINE VEGDISSIP(IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEPTH,ETOT,SBAR,KBAR) 
         USE DATAPOOL
         IMPLICIT NONE
  
@@ -17,17 +17,11 @@
         REAL(rkind)             :: BGDISS, KDBAR, KSBAR, ZAEHLER, NENNER
         REAL(rkind)             :: VCD, VDM, VNV, VLTH
         REAL(rkind)             :: VALPHAD, VALPHAP, VALPHADH
+        REAL(rkind)             :: SbrD, SURFA0, SURFA1
 
-        DSSVEG = ZERO
-        SSVEG  = ZERO
-        IF (ETOT .LT. THR) RETURN
-        KDBAR  = KBAR * DEPTH
-!       
-        IF (SBAR .GT. THR) THEN
-          KSBAR = KBAR/SBAR
-        ELSE
-          RETURN
-        ENDIF
+        ! Checking entries													   
+
+        IF (ETOT .LT. THR .OR. SBAR .LT. THR) RETURN
 
 #ifndef SCHISM
         VCD   = 1.  ! drag coefficient 
@@ -38,32 +32,55 @@
         VALPHAD   = VLTH/DEPTH 
         VALPHADH  = VLTH 
 #else
-        VALPHAP  = SAV_ALPHA(IP)
+        VALPHAP  = 2D0*SAV_ALPHA(IP)
         VALPHAD  = SAV_H(IP)/DEPTH
         VALPHADH = SAV_H(IP)
 #endif
-        ZAEHLER = SINH(MIN(KDMAX,KBAR*VALPHADH))**3+3*SINH(MIN(KDMAX,KBAR*VALPHADH))
-        NENNER  = 3*COSH(MIN(KDMAX,KBAR*DEPTH))**3
-        BGDISS  = - SQRT(TWO/PI)*G9**2*2*VALPHAP*KSBAR**3*ZAEHLER/NENNER*SQRT(ETOT)
-!
+
+        ! Initialization
+        DSSVEG = ZERO; SSVEG = ZERO
+        SURFA0 = ZERO; SURFA1 = ZERO
+
+        ! Computing numerator and denominator
+        ZAEHLER = SINH(MIN(KDMAX,KBAR*VALPHADH))**3D0+3D0*SINH(MIN(KDMAX,KBAR*VALPHADH))
+        NENNER  = 3D0*KBAR*COSH(MIN(KDMAX,KBAR*DEPTH))**3D0
+
+        ! Implicit solver
+        ! Source terms are linearized using a Newton-Raphson approach
         IF (ICOMP .GE. 2) THEN
-          DO IS = 1, MSC
-            DO ID = 1, MDC
-              DSSVEG(IS,ID) = BGDISS 
-              SSVEG(IS,ID)  = BGDISS * ACLOC(IS,ID)
-              IMATDA(IS,ID) = IMATDA(IS,ID) - DSSVEG(IS,ID)
-            ENDDO
-          ENDDO 
+          ! Dissipation term
+          BGDISS = SQRT(TWO/PI)*G9**2D0*VALPHAP*(KBAR/SBAR)**3D0*ZAEHLER/NENNER*SQRT(ETOT)
+          ! Diagonal term
+          SbrD = BGDISS
+
+          ! Terms used to fill the matrices
+          SURFA0 = SbrD
+          SURFA1 = BGDISS + SbrD
+
+        ! Explicit solver
+        ! Source terms enter with their sign
+        ELSE          
+          ! Dissipation term
+          BGDISS  = -SQRT(TWO/PI)*G9**2D0*VALPHAP*(KBAR/SBAR)**3D0*ZAEHLER/NENNER*SQRT(ETOT)
+          ! Diagonal term
+          SbrD = BGDISS
+
+          ! Terms used to fill the matrices
+          SURFA0 = SbrD
+        END IF
+
+        ! Filling the matrixes
+        IF (ICOMP .GE. 2) THEN
+          DSSVEG  = SURFA1
+          SSVEG   = SURFA0 * ACLOC
+          IMATDA  = IMATDA + DSSVEG
+          IMATRA  = IMATRA + SSVEG
         ELSE IF (ICOMP .LT. 2) THEN
-          DO IS = 1, MSC
-            DO ID = 1, MDC
-              DSSVEG(IS,ID) = BGDISS
-              SSVEG(IS,ID)  = BGDISS * ACLOC(IS,ID) 
-              IMATRA(IS,ID) = IMATRA(IS,ID) + SSVEG(IS,ID) * ACLOC(IS,ID)
-              IMATDA(IS,ID) = IMATDA(IS,ID) - DSSVEG(IS,ID)
-            ENDDO
-          ENDDO
-        ENDIF
+          DSSVEG  = SURFA0
+          SSVEG   = SURFA0 * ACLOC
+          IMATDA  = IMATDA + DSSVEG
+          IMATRA  = IMATRA + SSVEG
+        END IF
  
       END SUBROUTINE
 !****************************************************************

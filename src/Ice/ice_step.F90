@@ -37,7 +37,7 @@ subroutine ice_step
 !  real(rkind), intent(inout) :: tau_oi(2,npa1) !ocean-ice stress (junk if no ice)
 
   integer :: i
-  real(rkind) :: tmp1,uwind,vwind,umod
+  real(rkind) :: tmp1,tmp2,uwind,vwind,umod,cdwin2
   logical :: lice_free
 
   !Set wind and ocean vel
@@ -52,7 +52,14 @@ subroutine ice_step
       vwind=5+(sin(2*pi*time_stamp/4/86400)-3)*sin(2*pi*(ynd(i)-ymin_ice)/rly_ice)*sin(pi*(xnd(i)-xmin_ice)/rlx_ice)
     endif !ice_tests
 
-    tmp1=rhoair*cdwin*sqrt(uwind**2+vwind**2)
+    !Ice-atmos stress
+    tmp2=sqrt(uwind**2+vwind**2)
+    if(ice_atmos_stress_form==0) then !const Cd
+      cdwin2=cdwin0
+    else !FESOM formulation
+      cdwin2=(1.1+0.04*tmp2)*1.e-3
+    endif
+    tmp1=rhoair*cdwin2*tmp2 
     stress_atm_ice(1,i)=tmp1*uwind !Pa
     stress_atm_ice(2,i)=tmp1*vwind
 

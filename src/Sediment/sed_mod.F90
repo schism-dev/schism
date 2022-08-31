@@ -47,6 +47,18 @@
 !                                - MUD-like or SAND-like             !
 !          2013/05 - F.Ganthy : Re-introduction of the number of bed !
 !                               sediment layers within sediment.in   !
+!          2020/02 - B.Mengual : > Bedload: wave acceleration effects!
+!                               , filter, limiter, bedslope effects, !
+!                               numerical method to solve the Exner  !
+!                               equation                             !
+!                               > Wave asymmetry: filter, limiter    !
+!                               > Bottom shear stress: different     !
+!                               computational methods and limiter    !
+!                               > Bed compartment: top layer init.,  !
+!                                 porosity computations              !
+!                               > New outputs                        !
+!          2020/07 - M.Pezerat,B.Mengual : introduction of tau_m for !
+!                               bottom shear stress computations     !
 !                                                                    !
 !--------------------------------------------------------------------!
 !                                                                    !
@@ -121,8 +133,23 @@
        REAL(rkind) :: refht              !*D50   reference height of pick-up flux for zhong formulation
        REAL(rkind) :: Tbp                !Nodimesional bursting period Cao(1997)
        INTEGER :: im_pick_up             !bottom pick-up option flag
-       
-       INTEGER :: nstp,nnew     !used to store 2 steps for bed_mass
+       INTEGER :: nstp,nnew              !used to store 2 steps for bed_mass
+       !BM
+       INTEGER :: bedload_filter         ! activation key to apply a diffusive filter on bedload fluxes
+       INTEGER :: bedload_limiter        ! restriction of bedload fluxes according to the sediment stock in active layer
+       INTEGER :: imeth_bed_evol         ! Numerical method for the resolution of the sediment continuity equation to simulate bed evolution
+       INTEGER :: poro_option            ! assessment method for sediment porosity
+       INTEGER :: sedlay_ini_opt         ! initialisation method for the bed vertical discretisation
+       INTEGER :: tau_option             ! option to define at which height above the bed the current-induced bottom shear stress is derived 
+       INTEGER :: iasym                  ! activation key to account for wave asymmetry (Elfrinket al., 2006)
+       INTEGER :: elfrink_filter         ! activation to apply a diffusive filter on Elfrink outputs
+       INTEGER :: ech_uorb               ! Number of bins considered to reconstitute orbital velocity temporal
+                                         ! series along a wave period (Elfrink et al., 2006)
+       INTEGER :: bedload_acc            ! Methods to compute bedload transport caused by wave acceleration-skewness Qacc
+       INTEGER :: bedload_acc_filter     ! activation key to apply a diffusive filter on Qaccu / Qaccv
+       INTEGER :: thresh_acc_opt         ! Method to define a threshold above which Qacc is considered
+                                         ! (sediment transport caused by wave acceleration-skewness)
+
 
 !----------------------
 ! coming from sed_param
@@ -138,12 +165,29 @@
 ! will be read in from sediment.in
        REAL(rkind) :: newlayer_thick          ! New layer deposit thickness criteria (m)
        REAL(rkind) :: bedload_coeff           ! bedload rate coefficient [-]
-       REAL(rkind) :: porosity                ! bed sediment porosity: Vwater/(Vwater+Vsed)
        REAL(rkind) :: bdldiffu                ! bedload diffusivity coef. 
        REAL(rkind) :: dry_slope_cr            ! critical slope for dry nods
        REAL(rkind) :: wet_slope_cr            ! critical slope for wet nods
        REAL(rkind) :: bedmass_threshold       ! threshold for bedmass_filter
        REAL(rkind) :: sed_morph_time          ! active morpology is turned on after sed_morph_time (in days)
+       ! BM
+       REAL(rkind) :: morph_fac               ! morphological factor [-]
+       REAL(rkind) :: porosity                ! bed sediment porosity (If constant) : Vwater/(Vwater+Vsed)
+       REAL(rkind) :: Awooster                ! variable porosity, 1st coefficient in Wooster et al. (2008)
+       REAL(rkind) :: Bwooster                ! variable porosity, 2nd coefficient in Wooster et al. (2008)
+       REAL(rkind) :: toplay_inithick         ! Initial top layer thickness if sedlay_ini_opt=1
+       REAL(rkind) :: tau_max                 ! Maximum bed shear stress for current or waves in N/m2      
+       REAL(rkind) :: zstress                 ! fixed height above the bed to compute the bottom shear stress
+       REAL(rkind) :: w_asym_max              ! Maximum asymmetry coefficient considered for waves
+       REAL(rkind) :: kacc_hoe                ! Constant [m.s] used in Hoefel and Elgar (2003) formulation
+       REAL(rkind) :: kacc_dub                !                     in Dubarbier et al. (2015) formulation
+       REAL(rkind) :: acrit                   ! Critical acceleration [m.s-2] for Qacc if thresh_acc_opt==2
+                                              ! slope_formulation=4; Lesser et al., (2004):
+       REAL(rkind) :: alpha_bs,&              !    - coefficient for longitudinal slopes
+                      alpha_bn                !    - coefficient for transversal slopes
+       REAL(rkind) :: actv_max                ! maximum active layer thickness authorized for sediment erosion (m)
+
+
 !       REAL(rkind) :: depo_scale              !scale for depositional mass in 1 formulation
 !       REAL(rkind) :: relath                  !relative height of reference point for calculating the beddeformation    
 
@@ -157,11 +201,10 @@
        REAL(rkind), ALLOCATABLE :: Sd50(:)      ! mediam grain diameter; Sd50(ntr_l) [m]
        REAL(rkind), ALLOCATABLE :: Srho(:)      ! Sed grain density; Srho(ntr_l) [kg/m^3]
        REAL(rkind), ALLOCATABLE :: Wsed(:)      ! settling velocity (>0); Wsed(ntr_l) [m/s]
-       REAL(rkind), ALLOCATABLE :: poros(:)     ! porosity \in [0,1]; not used at the moment
+!       REAL(rkind), ALLOCATABLE :: poros(:)     ! porosity \in [0,1]; not used at the moment
        REAL(rkind), ALLOCATABLE :: tau_ce(:)    ! critical shear stress for erosion (>0); tau_ce(ntr_l) [m^2/s/s]
        INTEGER, ALLOCATABLE :: iSedtype(:)   ! Sediment type; iSedtype(ntr_l)
 !        REAL(rkind), ALLOCATABLE :: tau_cd(:)   ! critical shear stress for deposition - not used
-       REAL(rkind), ALLOCATABLE :: morph_fac(:) ! morphological factor; morph_fac(ntr_l) [-]
 
 ! Model parameters for a single layer bed model - these are no longer used 
 ! all below variables have dimension of (nea,ntr_l)
@@ -212,9 +255,10 @@
        ! Variable shared by sed_friction subroutines
        REAL(rkind), ALLOCATABLE  :: bustr(:)       !Current-induced bottom stress in direction x (m^2/s/s)
        REAL(rkind), ALLOCATABLE  :: bvstr(:)       !Current-induced bottom stress in direction y (m^2/s/s)
+       REAL(rkind), ALLOCATABLE  :: tau_m(:)       !Wave-current mean bottom stress (m^2/s/s)
        REAL(rkind), ALLOCATABLE  :: tau_c(:)       !Current-induced bottom stress (m^2/s/s) =|(bustr,bvstr)|
        REAL(rkind), ALLOCATABLE  :: tau_w(:)       !Wave-induced bottom stres (m^2/s/s)
-       REAL(rkind), ALLOCATABLE  :: tau_wc(:)      !Wave-current mean bottom stress (m^2/s/s)
+       REAL(rkind), ALLOCATABLE  :: tau_wc(:)      !Wave-current max bottom stress (m^2/s/s)
 
        ! Bed variables defined at nodes
        REAL(rkind), ALLOCATABLE :: vc_area(:)      !Volume control area (vc_area(npa))
@@ -222,6 +266,7 @@
        REAL(rkind), ALLOCATABLE :: bed_fracn(:,:)  !Sediment fraction (0-1) for each class (bed_fracn(npa,ntr_l))
        REAL(rkind), ALLOCATABLE :: bed_taun(:)     !Bottom shear stress (m^2/s/s)
        REAL(rkind), ALLOCATABLE :: bed_rough(:)    !Apparent Roughness length (bedform prediction)
+       REAL(rkind), ALLOCATABLE :: imnp(:)         !BM: morphological ramp value (-); imnp(npa)
 
        ! WWM variables defined at element centres
        REAL(rkind), ALLOCATABLE :: hs(:)     !Significant wave height from WWM (m) ; (hs(nea)
@@ -229,8 +274,34 @@
        REAL(rkind), ALLOCATABLE :: wlpeak(:) !Wave lenght associated with peak period from WWM (m); wlpeak(nea)
        REAL(rkind), ALLOCATABLE :: uorb(:)   !RMS Orbital velocity from WWM (m.s-1); uorb(nea)
        REAL(rkind), ALLOCATABLE :: uorbp(:)  !Peak orbital velocity from WWM (m.s-1); uorbp(nea) - not really used
+       REAL(rkind), ALLOCATABLE :: dirpeak(:) !Peak direction (degrees) Anouk 
+       REAL(rkind), ALLOCATABLE :: wdir(:)   ! Mean wave direction (radians) BM
 
        ! Variable shared by sed_carrying subroutines-Tsinghua group
-       REAL(rkind), ALLOCATABLE  :: sedcaty(:,:)   !Sedimeny carrying capacity (nea,ntr_l)    
+       REAL(rkind), ALLOCATABLE  :: sedcaty(:,:)   !Sedimeny carrying capacity (nea,ntr_l) 
+
+       !BM Variables for new outputs
+       REAL(rkind), ALLOCATABLE :: eroflxel(:,:) ! (nea, ntr_l)
+       REAL(rkind), ALLOCATABLE :: depflxel(:,:) ! (nea, ntr_l)
+       REAL(rkind), ALLOCATABLE :: eroflxn(:) ! (npa)
+       REAL(rkind), ALLOCATABLE :: depflxn(:) ! (npa)
+       REAL(rkind), ALLOCATABLE :: poron(:)   ! (npa)
+       REAL(rkind), ALLOCATABLE :: Qaccun(:), Qaccvn(:) ! (npa) 
+ 
+       !Near bottom velocity components used in bottom shear stress estimates
+       REAL(rkind), ALLOCATABLE :: ubott(:), vbott(:) ! (nea)
+
+       !BM Wave-induced bedload transport caused by acceleration-skewness
+       REAL(rkind), ALLOCATABLE :: Qaccu(:) ! (nea)
+       REAL(rkind), ALLOCATABLE :: Qaccv(:) ! (nea)
+       REAL(rkind), ALLOCATABLE :: r_accu(:) ! (nea)
+       REAL(rkind), ALLOCATABLE :: r_accv(:) ! (nea)
+
+       !BM Wave asymmetry computations
+       REAL(rkind), ALLOCATABLE :: U_crest(:),U_trough(:),T_crest(:),& ! (nea)
+                                   T_trough(:)
+       REAL(rkind), ALLOCATABLE :: Uorbi_elfrink(:,:) ! (nea,ech_uorb+1)
+
+
 !--------------------------------------------------------------------!
        END MODULE sed_mod

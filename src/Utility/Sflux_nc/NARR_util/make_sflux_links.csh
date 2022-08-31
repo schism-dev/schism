@@ -4,7 +4,7 @@
 #### On a new system, change util_bin and data_grandparent below
 ######## define locations and names for utilities ######################
 
-set util_bin = ~yinglong/SELFE/svn/trunk/src/Utility/Sflux_nc/NARR_util/src/
+set util_bin = ~yinglong/git/schism/src/Utility/Sflux_nc/NARR_util/src/
 set cjd_util       = $util_bin'cjd/cjd'
 
 
@@ -103,8 +103,7 @@ set src_1 = ""
 set src_2 = ""
 set domain_1 = "."
 set domain_2 = "."
-#set data_grandparent = '/home/workspace/ccalmr37/sflux_data/'
-set data_grandparent = '/home/dogami/'
+set data_grandparent = '~yinglong/DISKS/vims20/'
 
 if ($data_source_code == "1") then
   set src_1 = "nam"
@@ -186,11 +185,6 @@ echo "  " $dest_dir$inputs_file
 
 cat > $dest_dir$inputs_file << EOF
 &sflux_inputs
-start_year  = $year_start,
-start_month = $month_start,
-start_day   = $day_start,
-start_hour  = $start_hour,
-utc_start   = $utc_start,
 /
 EOF
 
@@ -229,12 +223,14 @@ foreach file_type (air rad prc)
     foreach in_file (`ls $src_1'_'$file_type$domain_1$date_string'.nc'`)
       set type_counter = `echo \($type_counter + 1\) | bc` >& /dev/null
 
-      if ($type_counter >= 100) then
+      if ($type_counter >= 1000) then
         set type_counter_label = $type_counter
-      else if ($type_counter >= 10) then
+      else if ($type_counter >= 100) then
         set type_counter_label = 0$type_counter
-      else
+      else if ($type_counter >= 10) then
         set type_counter_label = 00$type_counter
+      else
+        set type_counter_label = 000$type_counter
       endif
 
       set link_name = sflux_$file_type"_1."$type_counter_label.nc

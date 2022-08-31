@@ -1,0 +1,44 @@
+#!/bin/bash
+## Batch file for gcc+OMPI
+#SBATCH --job-name=R01a
+#SBATCH --partition=compute
+#SBATCH --nodes=30
+##128cores/node but leave a few idle
+#SBATCH --ntasks-per-node=120
+#SBATCH --exclusive
+##Compute partition up to 8 hrs
+#SBATCH --time=08:00:00
+#SBATCH --mail-type=NONE
+#SBATCH --account=gg0028
+#SBATCH --output=my_job.%j.out
+
+# limit stacksize ... adjust to your programs need
+# and core file size - try not to use unlimit
+ulimit -s 132400
+#ulimit -s unlimited
+ulimit -c 0
+
+#Load appropriate toolset fro gcc/intel etc
+source /home/g/g260135/gcc_tool
+
+export OMPI_MCA_pml="ucx"
+export OMPI_MCA_btl=self
+export OMPI_MCA_osc="pt2pt"
+export UCX_IB_ADDR_TYPE=ib_global
+# for most runs one may or may not want to disable HCOLL
+export OMPI_MCA_coll="^ml,hcoll"
+export OMPI_MCA_coll_hcoll_enable="0"
+export HCOLL_ENABLE_MCAST_ALL="0"
+export HCOLL_MAIN_IB=mlx5_0:1
+export UCX_NET_DEVICES=mlx5_0:1
+export UCX_TLS=mm,knem,cma,dc_mlx5,dc_x,self
+export UCX_UNIFIED_MODE=y
+export HDF5_USE_FILE_LOCKING=FALSE
+export OMPI_MCA_io="romio321"
+export UCX_HANDLE_ERRORS=bt
+
+
+# Use srun (not mpirun or mpiexec) command to launch
+# programs compiled with any MPI library
+srun -l --cpu_bind=verbose --hint=nomultithread \
+  --distribution=block:cyclic ./pschism_LEVANTE_GCC_PREC_EVAP_TVD-VL  8

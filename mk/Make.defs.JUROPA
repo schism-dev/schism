@@ -48,7 +48,7 @@ FCPFLAGS = $(PPFLAGS) -heap-arrays -ipo -assume byterecl #MPI code
 #FCSFLAGS = $(FFCPFLAGS)
 FLDFLAGS = -ipo #-I$(MPIHOME)/include/
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis  #MTSLIBS = -L/home/grashorn/selfe_source/ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis  #MTSLIBS = -L/home/grashorn/selfe_source/ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L/usr/local/netcdf/v4.1.1_classic/lib -lnetcdf -netcdff #-L$(NETCDF_HOME)/lib/ -lnetcdf -lnetcdff #-L$(NETCDFHOME)/lib/ -lnetcdf -lnetcdff #-L/opt/intel/fce/10.1.015/lib/ -lirc
 CDFMOD = -I/usr/local/netcdf/v4.1.1_classic/include #-I$(NETCDF_HOME)/include/ #-I$(NETCDFHOME)/include/
 ################################################################################

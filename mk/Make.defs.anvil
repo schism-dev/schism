@@ -58,7 +58,7 @@ FLDFLAGS = -O2 -mcmodel=medium -init=zero -xCORE-AVX2 -assume buffered_io
 #FLDFLAGS = -O3 -mcmodel=medium -shared-intel #for final linking of object files
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010.mpiicc/ -lparmetis -lmetis
 
 #CDFLIBS = -L/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-4.6.2-b2ikacatjnjjeuwajzmkzz3d4rrh5tr3/lib -L/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-x2wtfpgcyy7g5br6anfyny765db7f2ym/lib/ -lnetcdf -lnetcdff
 #CDFMOD = -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-4.6.2-b2ikacatjnjjeuwajzmkzz3d4rrh5tr3/include/ -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-x2wtfpgcyy7g5br6anfyny765db7f2ym/include/

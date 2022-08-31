@@ -217,18 +217,19 @@
                      DBLTMP = (DXP3*DYP1 - DYP3*DXP1)*ONEHALF
                      IF (LSPHE .and. USE_EXACT_FORMULA_SPHERICAL_AREA) THEN
                        CALL SPHERICAL_COORDINATE_AREA(XP(I1), XP(I2), XP(I3), YP(I1), YP(I2), YP(I3), AREA_RAD)
-                       AREA=AREA_RAD*RADDEG*RADDEG
-#ifdef DEBUG
-                       WRITE(STAT%FHNDL,*) 'IE=', IE
-                       WRITE(STAT%FHNDL,*) 'I123=', I1, I2, I3
-                       WRITE(STAT%FHNDL,*) 'XP123=', XP(I1), XP(I2), XP(I3)
-                       WRITE(STAT%FHNDL,*) 'YP123=', YP(I1), YP(I2), YP(I3)
-                       WRITE(STAT%FHNDL,*) '  AREA=', AREA
-                       WRITE(STAT%FHNDL,*) 'DBLTMP=', DBLTMP
-                       FLUSH(STAT%FHNDL)
-#endif
+                       AREA = AREA_RAD*RADDEG*RADDEG
+
+                       IF (WRITESTATFLAG == 1) THEN
+                         WRITE(STAT%FHNDL,*) 'IE=', IE
+                         WRITE(STAT%FHNDL,*) 'I123=', I1, I2, I3
+                         WRITE(STAT%FHNDL,*) 'XP123=', XP(I1), XP(I2), XP(I3)
+                         WRITE(STAT%FHNDL,*) 'YP123=', YP(I1), YP(I2), YP(I3)
+                         WRITE(STAT%FHNDL,*) '  AREA=', AREA
+                         WRITE(STAT%FHNDL,*) 'DBLTMP=', DBLTMP
+                         FLUSH(STAT%FHNDL)
+                       END IF
                      ELSE
-                       AREA=DBLTMP
+                       AREA = DBLTMP
                      END IF
                      TRIA(IE) = AREA
                    END IF
@@ -238,7 +239,7 @@
                       TMPINE = INE(2,IE)
                       INE(2,IE) = INE(3,IE)
                       INE(3,IE) = TMPINE
-                      IF (ANY(INE(:,IE) .GT. MNP)) CALL WWM_ABORT('WRITE ELEMENT CONNECTION TALBE HAS NODENUMBERS GT MNP')
+                      IF (ANY(INE(:,IE) .GT. MNP)) CALL WWM_ABORT('WRITE ELEMENT CONNECTION TABLE HAS NODENUMBERS GT MNP')
                       I2 = INE(2,IE)
                       I3 = INE(3,IE)
                       TRIA(IE) = -TRIA(IE)
@@ -257,28 +258,32 @@
                       LWRONG = .TRUE.
                       IEWRONG = IE
                       IEWRONGSUM = IEWRONGSUM + 1
-                      WRITE(DBG%FHNDL,*) 'WRONG ELEMENT', IE
+                      IF (WRITEDBGFLAG == 1) WRITE(DBG%FHNDL,*) 'WRONG ELEMENT', IE
                       J1=INE(1,IE)
                       J2=INE(2,IE)
                       J3=INE(3,IE)
-                      WRITE(DBG%FHNDL,*) 'NODENUMBERS I1=', J1
-                      WRITE(DBG%FHNDL,*) 'NODENUMBERS I2=', J2
-                      WRITE(DBG%FHNDL,*) 'NODENUMBERS I3=', J3
-                      WRITE(DBG%FHNDL,*) 'XP1, YP1=', XP(J1), YP(J1)
-                      WRITE(DBG%FHNDL,*) 'XP2, YP2=', XP(J2), YP(J2)
-                      WRITE(DBG%FHNDL,*) 'XP3, YP3=', XP(J3), YP(J3)
-                      WRITE(DBG%FHNDL,*) 'DXP1, DYP1=', DXP1, DYP1
-                      WRITE(DBG%FHNDL,*) 'DXP2, DYP2=', DXP2, DYP2
-                      WRITE(DBG%FHNDL,*) 'DXP3, DYP3=', DXP3, DYP3
-                      WRITE(DBG%FHNDL,'(A40,6F15.8)') 'EDGELENGTHS OF THE WRONG ELEMENT', IEN(:,IE)
+                      IF (WRITEDBGFLAG == 1) THEN
+                        WRITE(DBG%FHNDL,*) 'NODENUMBERS I1=', J1
+                        WRITE(DBG%FHNDL,*) 'NODENUMBERS I2=', J2
+                        WRITE(DBG%FHNDL,*) 'NODENUMBERS I3=', J3
+                        WRITE(DBG%FHNDL,*) 'XP1, YP1=', XP(J1), YP(J1)
+                        WRITE(DBG%FHNDL,*) 'XP2, YP2=', XP(J2), YP(J2)
+                        WRITE(DBG%FHNDL,*) 'XP3, YP3=', XP(J3), YP(J3)
+                        WRITE(DBG%FHNDL,*) 'DXP1, DYP1=', DXP1, DYP1
+                        WRITE(DBG%FHNDL,*) 'DXP2, DYP2=', DXP2, DYP2
+                        WRITE(DBG%FHNDL,*) 'DXP3, DYP3=', DXP3, DYP3
+                        WRITE(DBG%FHNDL,'(A40,6F15.8)') 'EDGELENGTHS OF THE WRONG ELEMENT', IEN(:,IE)
+                      END IF
                    ELSE IF (TRIA(IE) .LT. THR) THEN 
-                     write(DBG%FHNDL,*) 'IE=', IE, ' TRIA=', TRIA(IE)
-                     write(DBG%FHNDL,*) 'DXP1=', DXP1, ' DXP3=', DXP3
-                     write(DBG%FHNDL,*) 'DYP1=', DYP1, ' DYP3=', DYP3
-                     write(DBG%FHNDL,*) 'I123=', I1, I2, I3
-                     write(DBG%FHNDL,*) 'XP,YP(I1)=', XP(I1), YP(I1)
-                     write(DBG%FHNDL,*) 'XP,YP(I2)=', XP(I2), YP(I2)
-                     write(DBG%FHNDL,*) 'XP,YP(I3)=', XP(I3), YP(I3)
+                     IF (WRITEDBGFLAG == 1) THEN
+                       write(DBG%FHNDL,*) 'IE=', IE, ' TRIA=', TRIA(IE)
+                       write(DBG%FHNDL,*) 'DXP1=', DXP1, ' DXP3=', DXP3
+                       write(DBG%FHNDL,*) 'DYP1=', DYP1, ' DYP3=', DYP3
+                       write(DBG%FHNDL,*) 'I123=', I1, I2, I3
+                       write(DBG%FHNDL,*) 'XP,YP(I1)=', XP(I1), YP(I1)
+                       write(DBG%FHNDL,*) 'XP,YP(I2)=', XP(I2), YP(I2)
+                       write(DBG%FHNDL,*) 'XP,YP(I3)=', XP(I3), YP(I3)
+                     END IF
                      CALL WWM_ABORT('too small triangles')
                    END IF 
 
@@ -309,10 +314,12 @@
                 AVETL = (TLMIN+TLMAX)/TWO
 #endif
 #ifdef DEBUG
-                WRITE(STAT%FHNDL,*) 'AVETL=', AVETL
-                WRITE(STAT%FHNDL,*) 'TLMIN=', TLMIN
-                WRITE(STAT%FHNDL,*) 'TLMAX=', TLMAX
-                FLUSH(STAT%FHNDL)
+                IF (WRITESTATFLAG == 1) THEN
+                  WRITE(STAT%FHNDL,*) 'AVETL=', AVETL
+                  WRITE(STAT%FHNDL,*) 'TLMIN=', TLMIN
+                  WRITE(STAT%FHNDL,*) 'TLMAX=', TLMAX
+                  FLUSH(STAT%FHNDL)
+                END IF                
 #endif
 
                 IF (LWRONG) THEN
@@ -341,10 +348,12 @@
 #ifdef MPI_PARALL_GRID
                   END IF
 #endif
-                  WRITE(DBG%FHNDL,*) 'The Elements in your mesh are not correctly numbered!'
-                  WRITE(DBG%FHNDL,*) 'New mesh is written to', TRIM(GRDCOR%FNAME)
-                  WRITE(DBG%FHNDL,*) 'There are totally', IEWRONGSUM, 'wrong Elements' 
-                  WRITE(DBG%FHNDL,*) 'The last wrong element has the number', IEWRONG
+                  IF (WRITEDBGFLAG == 1) THEN
+                    WRITE(DBG%FHNDL,*) 'The Elements in your mesh are not correctly numbered!'
+                    WRITE(DBG%FHNDL,*) 'New mesh is written to', TRIM(GRDCOR%FNAME)
+                    WRITE(DBG%FHNDL,*) 'There are totally', IEWRONGSUM, 'wrong Elements' 
+                    WRITE(DBG%FHNDL,*) 'The last wrong element has the number', IEWRONG
+                  END IF
                   CALL WWM_ABORT('SPATIAL GRID - ELEMENTS NOT CORRECTLY NUMBERED')
                 END IF
              CASE DEFAULT
@@ -364,20 +373,21 @@
            INVSPHTRANS = 1.
          END IF 
 
-         IF (LTEST) THEN
-            SELECT CASE (DIMMODE)
+         IF (WRITESTATFLAG == 1) THEN
+           IF (LTEST) THEN
+             SELECT CASE (DIMMODE)
                CASE (1)
-                  WRITE(STAT%FHNDL,101) AVETL, TLMIN, TLMAX
+                 WRITE(STAT%FHNDL,101) AVETL, TLMIN, TLMAX
                CASE (2)
-                  WRITE(STAT%FHNDL,102) AVETA, AVETL, TLMIN, TLMAX
-                  IF (ITEST > 100) THEN
-                     WRITE(STAT%FHNDL,*) ' The element area = ' 
-                     DO IE = 1, MNE
-                        WRITE(STAT%FHNDL,*) 'IE = ', IE, TRIA(IE)
-                     END DO 
-                  END IF
-               CASE DEFAULT
-            END SELECT
+                 WRITE(STAT%FHNDL,102) AVETA, AVETL, TLMIN, TLMAX
+                 IF (ITEST > 100) THEN
+                   WRITE(STAT%FHNDL,*) ' The element area = ' 
+                   DO IE = 1, MNE
+                     WRITE(STAT%FHNDL,*) 'IE = ', IE, TRIA(IE)
+                   END DO 
+                 END IF
+             END SELECT
+           END IF
          END IF
 
          RETURN
@@ -483,10 +493,12 @@
          FRINTH = SQRT(SFAC)
          FR(1)  = FRLOW
 
-         WRITE(STAT%FHNDL,*) 'RESOLUTION IN SIGMA SPACE AND FACTORS'
-         WRITE(STAT%FHNDL,*) 'SGLOW', SGLOW
-         WRITE(STAT%FHNDL,*) 'LOPTSIG', LOPTSIG
-         WRITE(STAT%FHNDL,*) 'SFAC, FRINTF, FRINTH', SFAC, FRINTF, FRINTH
+         IF (WRITESTATFLAG == 1) THEN
+           WRITE(STAT%FHNDL,*) 'RESOLUTION IN SIGMA SPACE AND FACTORS'
+           WRITE(STAT%FHNDL,*) 'SGLOW', SGLOW
+           WRITE(STAT%FHNDL,*) 'LOPTSIG', LOPTSIG
+           WRITE(STAT%FHNDL,*) 'SFAC, FRINTF, FRINTH', SFAC, FRINTF, FRINTH
+         END IF
 
          DO IS = 2, MSC
            FR(IS) = FR(IS-1) * SFAC
@@ -494,9 +506,9 @@
 
          SPSIG = FR * PI2 
 
-         WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'REL. FREQ. Distribution is =', FRINTF 
+         IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL,'("+TRACE...",A,F15.4)') 'REL. FREQ. Distribution is =', FRINTF 
 
-         IF ( ABS(FRINTF - .1)/FRINTF * 100. .GT. 1. ) THEN
+         IF ( ABS(FRINTF - .1)/FRINTF * 100. .GT. 1. .AND. WRITEDBGFLAG == 1) THEN
            WRITE(DBG%FHNDL,*) 'Freq. resolution is not optimal for Snl4'
            WRITE(DBG%FHNDL,'(3F15.4)') 1. + FRINTF, ABS(FRINTF - .1)/FRINTF * 100.
            WRITE(DBG%FHNDL,*) 'rel. freq. res. should be 1.1 is now', 1. + FRINTF, 'ERROR IS:', ABS(FRINTF - .1)/FRINTF * 100.
@@ -651,6 +663,42 @@
       IMPLICIT NONE
       DEALLOCATE(DFIM, DFFR, DFFR2, DFIMOFR, FR5)
       END SUBROUTINE
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+         SUBROUTINE COMPUTE_BREAKING_COEFFICIENT
+         !
+         ! MP : Adaptive breaking coefficient
+         ! A_BR_COEF = B_ALP * slope with B_ALP is around 40
+         ! (Pezerat et al., 2020 - under review)
+         !
+         USE DATAPOOL, ONLY : AC2, PI, MNP, MSC, tanbeta_x, tanbeta_y, A_BR_COEF, rkind, B_ALP, LNAUTOUT
+         IMPLICIT NONE
+         INTEGER     :: IP
+         REAL(rkind) :: FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD
+         REAL(rkind) :: WAVEDIR,TANBETA,DEG
+
+         DO IP = 1, MNP
+           ! Computation of the bed slope in the wave direction
+           CALL PEAK_PARAMETER(IP,AC2(:,:,IP),MSC,FPP,TPP,CPP,WNPP,CGPP,KPP,LPP,PEAKDSPR,PEAKDM,DPEAK,TPPD,KPPD,CGPD,CPPD)
+           ! Conversion from nautical to mathematical convention (if LNAUTOUT = TRUE), and units in radian
+           CALL DEG2NAUT (PEAKDM, DEG, LNAUTOUT)
+           WAVEDIR = DEG*PI/180.d0
+           ! NB 1 : Although B is theoretically bound to 1,
+           !        air entrainment and other processes may induce
+           !        enhanced breaking, so we allow A_BR_COEF > 1
+           TANBETA = tanbeta_x(IP)*COS(WAVEDIR) + tanbeta_y(IP)*SIN(WAVEDIR)
+           IF (TANBETA .LT. 0.d0) THEN
+             A_BR_COEF(IP) = 0.1d0 !Manage negative slopes
+           ELSE
+             A_BR_COEF(IP) = MIN(B_ALP*TANBETA, 1.2D0)
+           ENDIF
+         END DO
+
+         DO IP = 1, 5
+           CALL smooth_2dvar(A_BR_COEF,MNP)
+         END DO
+         END SUBROUTINE
 !**********************************************************************
 !*                                                                    *
 !**********************************************************************

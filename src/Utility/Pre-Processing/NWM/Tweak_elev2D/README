@@ -1,0 +1,17 @@
+Add a shift to each ocean boundary node based on latitude as:
+linear transition:
+lats=[0, 27, 28, 32, 33, 90]  # degrees
+msl_shifts=[-0.25, -0.25, 0.0, 0.0, 0.56, 0.56]  # m
+
+1). Install Python library on your system: git clone git@github.com:wzhengui/pylibs.git 
+
+2). Add PYTHONPATH environmental variable to the python libaray
+   e.g. on C-Shell: setenv PYTHONPATH 'YourDir/pylibs/Scripts/:YourDir/pylibs/Utility/' 
+
+3). Copy this folder to your run folder and "cd Tweak_elev2D"
+
+4). Link the original elev2D.th.nc to the current folder.
+
+5). run ./modify_elev.py and the output is elev2D.th.modified.nc
+
+6). the script will replace the existing elev2D.th.nc in the run dir (../) with the modified one.

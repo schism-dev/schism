@@ -64,9 +64,9 @@ subroutine init_inter_btrack
   if(ierr/=MPI_SUCCESS) call parallel_abort('INIT_INTER_BTRACK: mpi_get_address',ierr)
   types(1)=itype
 
-  ! Second part of bt_type is block of 26 doubles (including arrays)
+  ! Second part of bt_type is block of 26+mntracers doubles (including arrays)
   ! (starting at bttmp%dtbk)
-  blockl(2)=26
+  blockl(2)=26+mntracers
 #if MPIVERSION==1
   call mpi_address(bttmp%dtbk,displ(2),ierr)
 #elif MPIVERSION==2
@@ -143,9 +143,9 @@ subroutine inter_btrack(itime,nbt,btlist)
 
 #ifdef DEBUG
   ncalls=ncalls+1
-  fdb='interbtrack_0000'
+  fdb='interbtrack_000000'
   lfdb=len_trim(fdb)
-  write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+  write(fdb(lfdb-6:lfdb),'(i6.6)') myrank
   if(ncalls==1) then
     open(30,file=out_dir(1:len_out_dir)//fdb,status='replace')
   else
@@ -710,7 +710,7 @@ end subroutine inter_btrack
 !             nnel,jlev: initial and final element and level;
 !
 !       Output:
-!             sclr(4): btrack'ed values of some variables;
+!             sclr(4+mntracers): btrack'ed values of some variables;
 !             iexit: logical flag indicating backtracking exits augmented subdomain. If
 !                    iexit=.true., nnel is inside the aug. domain and should also be inside
 !                    one of the neighboring processes. (xt,yt) is inside nnel.
@@ -727,7 +727,7 @@ end subroutine inter_btrack
       real(rkind), intent(in) :: gcor0(3),frame0(3,3),dtbk,vis_coe
       real(rkind), intent(inout) :: time_rm,time_rm2,uuint,vvint,wwint,xt,yt,zt
       integer, intent(inout) :: nnel,jlev
-      real(rkind), intent(out) :: sclr(4)
+      real(rkind), intent(out) :: sclr(4+mntracers)
       logical, intent(out) :: iexit
 
       !Local
@@ -868,10 +868,14 @@ end subroutine inter_btrack
 
         if(iflqs1==3) then 
 !         Exit during iteration in quicksearch; reduce time step and retry
-          !if(iadptive>=1) then
           if(iadptive>=5) then
-            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5_rkind*dtb,trm
-            call parallel_abort(errmsg)
+!            write(errmsg,*)'BTRACK: iadptive>=5:',iadptive,0.5_rkind*dtb,trm
+!            call parallel_abort(errmsg)
+            !Desperate measure
+            if(trm<=0) call parallel_abort('BTRACK: trm<=0 (2d)')
+            time_rm2=trm
+            time_rm=time_rm-(dtb-trm)
+            iexit=.true.; return
           endif !iadptive
           if(trm<=0) call parallel_abort('BTRACK: trm<=0 (2a)')
           dtb=dtb-2._rkind*trm
@@ -941,6 +945,11 @@ end subroutine inter_btrack
 !     Error: Kriging for wvel as well?
       if(l_ns==3) return
 
+      if(zrat<0._rkind.or.zrat>1._rkind) then
+        write(errmsg,*)'BTRACK: zrat wrong:',jlev,zrat
+        call parallel_abort(errmsg)
+      endif
+
 !     Calc max/min for ELAD
 !     If inter_mom/=0, sclr() will be updated below
       if(ibtrack_test==1) then
@@ -970,6 +979,18 @@ end subroutine inter_btrack
           sclr(3)=max(sclr(3),vv2(jlev,nd),vv2(jlev-1,nd))
           sclr(4)=min(sclr(4),vv2(jlev,nd),vv2(jlev-1,nd))
         enddo !j
+
+        !Interp tracers
+        sclr(5:4+ntracers)=0.d0 
+        do i=1,ntracers
+          do j=1,i34(nnel)
+            nd=elnode(j,nnel)
+            !tmp=tr_nd(i,jlev,nd)*(1._rkind-zrat)+tr_nd(i,jlev-1,nd)*zrat
+            !Transport uses split, so keep vertical level at original
+            tmp=tr_nd(i,j0,nd)
+            sclr(4+i)=sclr(4+i)+tmp*arco(j)
+          enddo !j
+        enddo !i=1,ntracers
       endif !ibtrack_test
 
 !     Kriging for vel. (excluding bnd sides)
@@ -997,14 +1018,16 @@ end subroutine inter_btrack
             if(idry(nd)==1) then !i.c.
               uvdata(i,1)=0._rkind
               uvdata(i,2)=0._rkind
+              uvdata(i,3)=0._rkind
             else !wet
-!              if(ics==1) then
-              vxl(1,1)=uu2(jlev,nd); vxl(1,2)=uu2(jlev-1,nd)
-              vxl(2,1)=vv2(jlev,nd); vxl(2,2)=vv2(jlev-1,nd)
-!              else
-!                call project_hvec(uu2(jlev,nd),vv2(jlev,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,1),vxl(2,1))
-!                call project_hvec(uu2(jlev-1,nd),vv2(jlev-1,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,2),vxl(2,2))
-!              endif !ics
+!new37
+              if(ics==1) then
+                vxl(1,1)=uu2(jlev,nd); vxl(1,2)=uu2(jlev-1,nd)
+                vxl(2,1)=vv2(jlev,nd); vxl(2,2)=vv2(jlev-1,nd)
+              else
+                call project_hvec(uu2(jlev,nd),vv2(jlev,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,1),vxl(2,1))
+                call project_hvec(uu2(jlev-1,nd),vv2(jlev-1,nd),pframe(:,:,nd),eframe(:,:,nnel),vxl(1,2),vxl(2,2))
+              endif !ics
               uvdata(i,1)=vxl(1,1)*(1._rkind-zrat)+vxl(1,2)*zrat
               uvdata(i,2)=vxl(2,1)*(1._rkind-zrat)+vxl(2,2)*zrat
               !For ibtrack_test only
@@ -1048,21 +1071,16 @@ end subroutine inter_btrack
             if(ibtrack_test==1) sclr(1)=sclr(1)+al_beta(i,3)*covar2
           enddo !i
 
-!          !Proj vel. back to frame0
-!          if(ics==2) then
-!            call project_hvec(uuint,vvint,eframe(:,:,nnel),frame0,uuint1,vvint1)
-!            uuint=uuint1
-!            vvint=vvint1
-!          endif !ics
+          !Proj vel. back to frame0 (new37)
+          if(ics==2) then
+            call project_hvec(uuint,vvint,eframe(:,:,nnel),frame0,uuint1,vvint1)
+            uuint=uuint1
+            vvint=vvint1
+          endif !ics
         endif !resident element
       endif !Kriging
 
 !     nnel wet
-      if(zrat<0._rkind.or.zrat>1._rkind) then
-        write(errmsg,*)'BTRACK: zrat wrong:',jlev,zrat
-        call parallel_abort(errmsg)
-      endif
-
       end subroutine btrack
 
 !===============================================================================
@@ -1127,6 +1145,7 @@ end subroutine inter_btrack
       real(rkind) :: signa1
 
       !Local
+      logical :: qsearch_done
       integer :: jk(4)
       real(rkind) :: wild(10,2),wild2(10,2),wild3(4,2) !,xy_l(3,2)
       real(rkind) :: vxl(4,2),vyl(4,2),vzl(4,2),vxn(4),vyn(4),vzn(4),ztmp2(nvrt,4)
@@ -1139,7 +1158,7 @@ end subroutine inter_btrack
                      &xvel,yvel,zvel,hvel,etal,dep,hmod2,uj,vj,uj1,vj1,uu,vv,uf,vf
 
 !     Debug
-!      fdb='qs_0000'
+!      fdb='qs_000000'
 !      lfdb=len_trim(fdb)
 !      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
 !      open(98,file=out_dir(1:len_out_dir)//fdb,status='unknown')
@@ -1187,17 +1206,19 @@ end subroutine inter_btrack
       endif
 
 !     Check start and end pts
+      qsearch_done=.false.
       if(i34(nel)==3) then 
         call area_coord(0,nel,gcor0,frame0,xcg,ycg,arco)
         ar_min1=minval(arco(1:3)) !info for debug only
         call area_coord(0,nel,gcor0,frame0,xt,yt,arco)
         ar_min2=minval(arco(1:3))
-        if(ar_min2>-small1) then
+        if(ar_min2>-small1) then !found & finish
           !Fix A.C. for 0/negative
           if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco)
           nnel=nel
           trm=0._rkind
-          go to 400
+!          go to 400
+          qsearch_done=.true.
         endif
       else !quad
         !Reproject pt in eframe of nel for ics=2
@@ -1210,19 +1231,20 @@ end subroutine inter_btrack
           call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
-        !call quad_shape(0,1,nel,xcg,ycg,inside1,arco) !info only
         call quad_shape(0,1,nel,xn1,yn1,inside1,arco) !info only
         ar_min1=minval(arco) !info for debug only
-        !call quad_shape(0,2,nel,xt,yt,inside2,arco)
         call quad_shape(0,2,nel,xn2,yn2,inside2,arco)
         ar_min2=minval(arco)
-        if(inside2/=0) then
+        if(inside2/=0) then !found & finish
           nnel=nel
           trm=0._rkind
-          go to 400
+          !go to 400
+          qsearch_done=.true.
         endif
       endif !i34
 
+      if(.not.qsearch_done) then
+!======================================================================
 !     (xt,yt) not in nel, and thus (x0,y0) and (xt,yt) are distinctive
 !     Find starting edge nel_j
 !     Try this twice to account for underflow (e.g. inter-btrack etc),
@@ -1424,7 +1446,8 @@ end subroutine inter_btrack
    
         vtan=-su2(jlev,isd)*sny(isd)+sv2(jlev,isd)*snx(isd)
         !If open bnd is hit, optionally stop with nfl=1
-        if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0._rkind
+        !if(ibtrack_openbnd/=0.and.isbs(isd)>0) vtan=0._rkind
+        if(isbs(isd)>0) vtan=0._rkind
         xvel=-vtan*sny(isd)
         yvel=vtan*snx(isd)
 
@@ -1555,8 +1578,10 @@ end subroutine inter_btrack
 
 !----------------------------------------------------------------------------------------
       end do loop4 
+!======================================================================
+      endif !(.not.qsearch_done) then
 
-400   continue
+!400   continue
 !     No vertical exit from domain
       if(idry_e(nnel)==1) then
         write(errmsg,*)'QUICKSEARCH: Ending element is dry:',ielg(nnel)
@@ -1654,15 +1679,16 @@ end subroutine inter_btrack
         do j=1,3 !sides and nodes
           nd=elnode(j,nnel)
           isd=elside(j,nnel)
-!          if(ics==1) then
-          vxn(j)=su2(jlev,isd)*(1._rkind-zrat)+su2(jlev-1,isd)*zrat
-          vyn(j)=sv2(jlev,isd)*(1._rkind-zrat)+sv2(jlev-1,isd)*zrat !side
-!          else !lat/lon
-!            call project_hvec(su2(jlev,isd),sv2(jlev,isd),sframe(:,:,isd),frame0,uj,vj)
-!            call project_hvec(su2(jlev-1,isd),sv2(jlev-1,isd),sframe(:,:,isd),frame0,uj1,vj1)
-!            vxn(j)=uj*(1-zrat)+uj1*zrat
-!            vyn(j)=vj*(1-zrat)+vj1*zrat
-!          endif !ics
+!new37
+          if(ics==1) then
+            vxn(j)=su2(jlev,isd)*(1._rkind-zrat)+su2(jlev-1,isd)*zrat
+            vyn(j)=sv2(jlev,isd)*(1._rkind-zrat)+sv2(jlev-1,isd)*zrat !side
+          else !lat/lon
+            call project_hvec(su2(jlev,isd),sv2(jlev,isd),sframe2(:,:,isd),frame0,uj,vj)
+            call project_hvec(su2(jlev-1,isd),sv2(jlev-1,isd),sframe2(:,:,isd),frame0,uj1,vj1)
+            vxn(j)=uj*(1-zrat)+uj1*zrat
+            vyn(j)=vj*(1-zrat)+vj1*zrat
+          endif !ics
           vzn(j)=ww2(jlev,nd)*(1._rkind-zrat)+ww2(jlev-1,nd)*zrat !node
         enddo !j=1,3
 
@@ -1677,13 +1703,14 @@ end subroutine inter_btrack
           nd=elnode(j,nnel)
           do l=1,2 !levels
             lev=jlev+l-2
-!            if(ics==1) then
-!              uu=uu2(lev,nd); vv=vv2(lev,nd)
-!            else !lat/lon
-!              call project_hvec(uu2(lev,nd),vv2(lev,nd),pframe(:,:,nd),frame0,uu,vv)
-!            endif !ics
-            vxl(j,l)=uu2(lev,nd) !uu !+vis_coe*uf
-            vyl(j,l)=vv2(lev,nd) !vv !+vis_coe*vf
+!new37
+            if(ics==1) then
+              uu=uu2(lev,nd); vv=vv2(lev,nd)
+            else !lat/lon
+              call project_hvec(uu2(lev,nd),vv2(lev,nd),pframe(:,:,nd),frame0,uu,vv)
+            endif !ics
+            vxl(j,l)=uu !uu2(lev,nd) !+vis_coe*uf
+            vyl(j,l)=vv !vv2(lev,nd) !vis_coe*vf
             vzl(j,l)=ww2(lev,nd)
           enddo !l
         enddo !j

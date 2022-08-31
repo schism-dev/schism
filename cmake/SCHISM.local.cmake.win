@@ -29,7 +29,7 @@ set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model")
 #
 
 
-set(PARMETIS_DIR D:/devtools/parmetis-4.0.3/parmetis-4.0.3 CACHE PATH "Path to ParMetis")
+##set(PARMETIS_DIR D:/devtools/parmetis-4.0.3/parmetis-4.0.3 CACHE PATH "Path to ParMetis")
 set(PARMETIS_INCLUDE_DIRS D:/devtools/parmetis-4.0.3/parmetis-4.0.3/include CACHE PATH "Path to ParMetis including file")
 set(PARMETIS_LIBRARY D:/devtools/parmetis-4.0.3/parmetis-4.0.3/lib/parmetis.lib CACHE PATH "Path to ParMetis lib file")
 set(METIS_LIBRARY D:/devtools/parmetis-4.0.3/parmetis-4.0.3/libmetis/Release/metis.lib CACHE PATH "Path to ParMetis lib file")

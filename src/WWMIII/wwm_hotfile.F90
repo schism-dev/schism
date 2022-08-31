@@ -428,11 +428,12 @@ MODULE wwm_hotfile_mod
 !*                                                                    *
 !**********************************************************************
       SUBROUTINE SETUP_RETURN_AC_VARONED
+      USE DATAPOOL, ONLY: WRITESTATFLAG
       IMPLICIT NONE
 #if defined NCDF && defined MPI_PARALL_GRID
       integer iProc, IP, IPglob
       IF (myrank .eq. 0) THEN
-        WRITE(STAT%FHNDL, *) 'Before allocation of ACreturn'
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL, *) 'Before allocation of ACreturn'
         allocate(ACreturn(MSC,MDC,np_global), stat=istat)
         IF (istat/=0) CALL WWM_ABORT('wwm_hotfile, allocate error 16')
         DO iProc=2,nproc
@@ -449,7 +450,7 @@ MODULE wwm_hotfile_mod
         CALL MPI_SEND(AC2, MSC*MDC*NP_RES, rtype, 0, 8123, comm, ierr)
       END IF
       IF (myrank .eq. 0) THEN
-        WRITE(STAT%FHNDL, *) 'Before allocation of VAR_ONEDreturnn'
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL, *) 'Before allocation of VAR_ONEDreturnn'
         allocate(VAR_ONEDreturn(nbOned,np_global), stat=istat)
         IF (istat/=0) CALL WWM_ABORT('wwm_hotfile, allocate error 16')
         DO iProc=2,nproc
@@ -534,9 +535,9 @@ MODULE wwm_hotfile_mod
       END IF
 #ifdef MPI_PARALL_GRID
       IF ((MULTIPLEOUT_HOT.eq.0).and.(myrank.eq.0)) THEN
-        WRITE(STAT%FHNDL, *) 'Before deallocation of ACreturn'
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL, *) 'Before deallocation of ACreturn'
         deallocate(ACreturn)
-        WRITE(STAT%FHNDL, *) 'Before deallocation of VAR_ONEDreturn'
+        IF (WRITESTATFLAG == 1) WRITE(STAT%FHNDL, *) 'Before deallocation of VAR_ONEDreturn'
         deallocate(VAR_ONEDreturn)
       END IF
 #endif

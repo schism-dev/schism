@@ -1,0 +1,9 @@
+0       !0: uncombined; 1:combined
+1       !for uncombined nc, specify max array size (e.g., <=2.e9); for combined nc, specify # of records to read each time.
+2.e9    !max array size or # of records
+ANA_transport_min_dt_elem
+1       !switch for node/ele based vars: 0,node; 1,ele
+19 20   !start and end stacks
+1 1 1   !switches for min, max, avg
+30      !threshold for outputing violators.bp, where violaters are nodes/eles with var values < threshold
+0       !initialization flag: (0) do nothing;  (1) intialized to -dp (useful for maxelev)

@@ -3,7 +3,7 @@
 !     determined by a small distance between corresponding bnd nodes from the 2 grids.
 !     It won't check negative elem (to accommodate global lon/lat grids).
 
-!     Input files: screen
+!     Input files: screen (2 grids to be combined; no bnd info needed)
 !
 !     Output files: merged.gr3 (with original depths; when depths mismatch at common bnd, grid 1 prevails)
 

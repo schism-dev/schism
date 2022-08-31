@@ -1,0 +1,13 @@
+###Anvil
+
+set (SCHISM_EXE_BASENAME pschism_ANVIL_INTEL CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
+
+###Relative paths won't work
+set(CMAKE_Fortran_COMPILER flang CACHE PATH "Path to serial Fortran compiler")
+set(CMAKE_C_COMPILER clang CACHE PATH "Path to serial C compiler")
+set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN_HOME}"  CACHE PATH "Path to NetCDF Fortran library")
+set(NetCDF_C_DIR "$ENV{NETCDF_C_HOME}" CACHE PATH "Path to NetCDF C library")
+
+#Compiler flags for openmpi/mvapich2
+#set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -march=core-avx2 -mcmodel=medium" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -march=znver3 " CACHE STRING "Fortran flags" FORCE)

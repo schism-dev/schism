@@ -65,9 +65,7 @@ FLDFLAGS = -O2 #-mcmodel=medium -shared-intel -lmpi #for final linking of object
 #FLDFLAGS = -O2  -Mcache_align -tp nehalem -m64 #for final linking of object files
 
 #####Libraries
-##MTSLIBS = -L/sciclone/home04/yinglong/ParMetis-3.1-Sep2010 -lparmetis -lmetis
-
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
 
 CDFLIBS = -L$(NETCDF_LIB_PATH) -lnetcdf
 CDFMOD = -I$(NETCDF_INC_PATH) # modules for netcdf

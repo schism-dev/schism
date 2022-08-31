@@ -55,6 +55,8 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
 #Pure MPI
 FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays 
 FLDFLAGS = -O2 -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays #for final linking of object files
+#FCPFLAGS = $(PPFLAGS) -O2 -CB -g -traceback -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays 
+#FLDFLAGS = -O2 -CB -g -traceback -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays #for final linking of object files
 
 #Hybrid 
 #FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 -qopenmp
@@ -62,8 +64,7 @@ FLDFLAGS = -O2 -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays #for fi
 #EXEC := $(EXEC)_OMP
 
 #####Libraries
-##MTSLIBS = -L/share/apps/ParMetis-3.1-Sep2010/ -lparmetis -lmetis
-MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
+#MTSLIBS = -L./ParMetis-3.1-Sep2010/ -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF_FORTRAN)/lib -L$(NETCDF)/lib -lnetcdf -lnetcdff
 CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
 

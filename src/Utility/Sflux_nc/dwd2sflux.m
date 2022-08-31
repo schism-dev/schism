@@ -86,6 +86,7 @@ for d=1:31
   tcount=0;
   time2=0.;
   for sl=1:ntime
+    %order is same as FORTRAN (reversed from ncdump), but 0 based
     start=[0 0 tcount];
     count=[length(lat) length(lon) 1];
     press2=rot90(squeeze(press(:,:,sl)));

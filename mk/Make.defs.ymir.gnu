@@ -51,7 +51,7 @@ PPFLAGS := $(PPFLAGS) -DMPIVERSION=2
 FCPFLAGS = $(PPFLAGS) -O2 -Bstatic #-g -fbacktrace #-finit-real=nan -fbounds-check
 FLDFLAGS = -O2  #for final linking of object files
   #####Libraries
-MTSLIBS = -L/Calcul/Apps/parmetis/distrib.ParMetis-3.1.1 -lparmetis -lmetis
+##MTSLIBS = -L/Calcul/Apps/parmetis/distrib.ParMetis-3.1.1 -lparmetis -lmetis
 CDFLIBS = -L/Calcul/Apps/intel/composerxe/lib/intel64 -lirc -limf -lintlc -lifcore -lsvml -lifport -L/Calcul/Apps/netcdf411/lib -lnetcdf -lnetcdff
 CDFMOD = -I/Calcul/Apps/netcdf411/include # -I/Calcul/Apps/netcdf/4.2.1.1.ifort/include   # modules for netcdf
 ifdef USE_GOTM

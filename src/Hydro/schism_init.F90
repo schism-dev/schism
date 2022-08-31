@@ -18,7 +18,7 @@
 !===============================================================================
 !===============================================================================
 
-      subroutine schism_init(indir,iths,ntime)
+      subroutine schism_init(iorder,indir,iths,ntime)
 
 !     Most mpi fortran compiler has mpif.h
 !#ifdef USE_MPIMODULE
@@ -29,6 +29,12 @@
       use schism_io
       use netcdf
       use misc_modules
+      use gen_modules_clock
+
+#ifdef USE_PAHM
+      use ParWind, only : ReadCsvBestTrackFile
+      use PaHM_Utilities, only : ReadControlFile
+#endif
 
 #ifdef USE_GOTM
       use turbulence, only: init_turbulence, cde, tke1d => tke, eps1d => eps, L1d => L, num1d => num, nuh1d => nuh
@@ -42,15 +48,14 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : iSun,wqc,rIa,rIavg,hcansav,lfsav,stsav,rtsav
-      use icm_sed_mod, only: SED_BENDO,CTEMP,BBM,CPOS,PO4T2TM1S,NH4T2TM1S,NO3T2TM1S, &
-                           & HST2TM1S,CH4T2TM1S,CH41TM1S,SO4T2TM1S,SIT2TM1S,BENSTR1S,CPOP,CPON,CPOC,  &
-                           & NH41TM1S,NO31TM1S,HS1TM1S,SI1TM1S,PO41TM1S,PON1TM1S,PON2TM1S,PON3TM1S,POC1TM1S,POC2TM1S,&
-                           & POC3TM1S,POP1TM1S,POP2TM1S,POP3TM1S,PSITM1S,BFORMAXS,ISWBENS,DFEEDM1S 
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,iSilica,iZB,iPh, &
+                    & iCBP,isav_icm,iveg_icm,ised_icm,iBA_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
+                    & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
+                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA
 #endif
 
 #ifdef USE_COSINE
-      USE cosine_mod,only :mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
+      USE cosine_mod,only : name_cos,mS2,mDN,mZ1,mZ2,sS2,sDN,sZ1,sZ2,nstep,ndelay
 #endif
 
 #ifdef USE_NAPZD
@@ -74,6 +79,7 @@
 #endif
 
 #ifdef USE_FABM
+#include "fabm_version.h"
       USE fabm_schism, only: fabm_schism_init_model, fabm_schism_init_stage2, fabm_schism_init_concentrations, fabm_istart=>istart, fs, fabm_schism_read_horizontal_state_from_netcdf
       USE fabm_schism, only: fabm_schism_create_output_netcdf
 #endif
@@ -84,6 +90,14 @@
 
       USE hydraulic_structures
 
+#ifdef USE_MICE
+      use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
+   &sigma12,sigma22
+      use mice_therm_mod, only: t_oi
+      use icedrv_main, only:io_icepack,restart_icepack
+      use icepack_intfc,    only: icepack_sea_freezing_temperature
+#endif
+
 #ifdef USE_ICE
       use ice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
@@ -92,10 +106,11 @@
 #endif
 
       implicit none
-!#ifndef USE_MPIMODULE
       include 'mpif.h'
-!#endif
-
+ 
+      !iorder: 0: normal; 1: bypass alloc and domain decomp (in this case we
+      !assume the domain decomp did not change)
+      integer, intent(in) :: iorder 
       character(len=*), intent(in) :: indir
       integer, intent(out) :: iths,ntime
 
@@ -109,19 +124,21 @@
       character(len=10) :: timestamp
 !      character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
+      character(len=6) :: char6
+      character(len=6), allocatable :: tp_name(:)
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout,floatout2
       real(rkind) :: double1 !for hotstart.in
 
 !     Misc. arrays
-      integer, allocatable :: ipiv(:),iwild(:)
+      integer, allocatable :: ipiv(:)
       integer, allocatable :: nwild(:),nwild2(:),ibuf1(:,:),ibuf2(:,:)
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
       real(rkind), allocatable :: swild4(:,:) !double precision for hotstart.in (only)
       real(rkind), allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange etc (deallocate immediately afterwards)
-      real(rkind), allocatable :: buf3(:)
+      real(rkind), allocatable :: buf3(:),buf4(:)
 !      real(4), allocatable :: swild9(:,:) !used in tracer nudging
 
 
@@ -129,6 +146,9 @@
       type(llist_type),pointer :: llp
       logical :: ltmp,ltmp1,ltmp2,lexist
       character(len=48) :: inputfile,ar_name(100)
+      !Dimensions of out_name,iout_23d should be same as in scribe_io
+      character(len=20) :: out_name(max_ncoutvar)
+      integer :: iout_23d(max_ncoutvar)
 
       integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
@@ -137,7 +157,9 @@
                 &jblock,jface,isd,n1,n2,n3,ndgb,ndgb1,ndgb2,irank, &
                 &iabort,ie,ie2,l0,id,id1,id2,iabort_gb,j1,j2, &
                 &ne_kr,nei_kr,npp,info,num,nz_r2,ip,IHABEG,il, &
-                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now,iadjust_mass_consv0(natrm)
+                &ninv,it,kl,noutput_ns,iside,ntrmod,ntr_l,ncid2,it_now, &
+                &iadjust_mass_consv0(natrm),nnonblock,srqst3(50),counter_out_name, &
+                &noutvars,ised_out_sofar,istart_sed_3dnode
 
       real(rkind) :: cwtmp2,wtmp1,tmp,slam0,sfea0,rlatitude,coricoef,dfv0,dfh0, &
                     &edge_min,edge_max,tmpmin,tmpmax,tmp1,tmp2,tmp3, &
@@ -146,11 +168,15 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,shapiro0,rmaxvel
+                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0,tf
 
 
 #ifdef USE_FIB
       real(rkind), allocatable :: sink0(:), fraction0(:), kk10(:), kk20(:)
+#endif
+
+#ifndef USE_ICM
+      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12,nout_sed=26,nout_ba=1
 #endif
 
 #ifdef USE_OIL
@@ -163,9 +189,9 @@
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
-     &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,nrampbc,drampbc, &
-     &nramp,dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min,dzb_decay, &
-     &hmin_man,ncor,rlatitude,coricoef,nws,impose_net_flux,wtiminc,iwind_form,nrampwind, &
+     &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
+     &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
+     &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
      &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
@@ -175,13 +201,18 @@
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
-     &iharind,icou_elfe_wwm,nrampwafo,drampwafo,nstep_wwm,hmin_radstress,turbinj, &
-     &iwbl,if_source,nramp_ss,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,sav_cd,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
-     &ibtrack_openbnd,level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2
+     &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj,turbinjds,alphaw, &
+     &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking,fwvor_streaming,wafo_obcramp, &
+     &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
+     &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
+     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
+     &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
+     &rinflation_icm,iprecip_off_bnd
 
-     namelist /SCHOUT/iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm,iof_cos,iof_fib, &
-     &iof_sed2d,iof_ice,iof_ana,iof_marsh, &
+     namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
+     &iof_icm_ba,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta
 
 !-------------------------------------------------------------------------------
@@ -213,29 +244,26 @@
       endif
       call parallel_rrsync(-1)
 
-      fdb='nonfatal_0000'
+      fdb='nonfatal_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-      !open(12,file='outputs/'//fdb,status='replace') !non-fatal errors
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(12,file=out_dir(1:len_out_dir)//fdb,status='replace') !non-fatal errors
 
 !     Temp.
-!      fdb='shapiro_0000'
+!      fdb='shapiro_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 !      open(38,file='outputs/'//fdb,status='replace')
 
 !     Echo date and time
       call date_and_time(date,timestamp)
 
-!...  Rank 0 writes mirror.out, global & local volume, energy etc data
+!...  Rank 0 writes mirror.out, global & local volume, energy etc data (more later)
       if(myrank==0) then
         open(16,file=out_dir(1:len_out_dir)//'mirror.out',status='replace')
         open(25,file=out_dir(1:len_out_dir)//'total_TR.out',status='replace')
-        open(9,file=out_dir(1:len_out_dir)//'flux.out',status='replace')
         open(13,file=out_dir(1:len_out_dir)//'total.out',status='replace')
         open(33,file=out_dir(1:len_out_dir)//'JCG.out',status='replace')
-!        open(29,file=out_dir(1:len_out_dir)//'qnon.out',status='replace')
         open(17,file=out_dir(1:len_out_dir)//'subcycling.out',status='replace')
 
         write(16,'(4a)')'Run begins at ',date,', ',timestamp
@@ -272,8 +300,6 @@
       if(ibtp/=0.and.ibtp/=1) call parallel_abort('Unknown ibtp')
       if(ibc==0) then
         if(myrank==0) write(16,*)'You are using baroclinic model'
-!        call get_param('param.in','nrampbc',1,nrampbc,tmp,stringvalue)
-!        if(nrampbc/=0) call get_param('param.in','drampbc',2,itmp,drampbc,stringvalue)
       else !ibc=1
         if(ibtp==0) then
           if(myrank==0) write(16,*)'Barotropic model without ST calculation'
@@ -305,6 +331,7 @@
 !     9: Feco
 !    10: TIMOR
 !    11: FABM
+!    12: DVD numerical mixing analysis of Klingbeit
 
       !Init. # of tracers in models 1:natrm
       !A tracer model is activated iff ntrs()>0
@@ -344,11 +371,8 @@
 #endif
 
 #ifdef USE_ICM
-!      call get_param('icm.in','iPh',1,iPh,tmp,stringvalue)
-      ntrs(7)=21
-#ifdef ICM_PH
-      ntrs(7)=25
-#endif
+      call read_icm_param(0)
+      ntrs(7)=ntrs_icm
       tr_mname(7)='ICM'
 #endif
 
@@ -360,7 +384,6 @@
 #ifdef USE_FIB
       ntrs(9)=2
       tr_mname(9)='FIB'
-!      call get_param('param.in','flag_fib',1,flag_fib,tmp,stringvalue)
 #endif
 
 #ifdef USE_TIMOR
@@ -380,10 +403,16 @@
       tr_mname(11)='FBM' !3-char
 #endif
 
+#ifdef USE_DVD
+      ntrs(12)=1 !S variance at the time. Remember to update: i.c., outputs, transport
+      tr_mname(12)='DVD'
+#endif
+
       !Total # of tracers (including T,S)
       !The big tracer arrays are: tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa)
       !The order of each tracer modules can be seen above
       ntracers=sum(ntrs(:)) !including T,S
+     if(mntracers<ntracers) call parallel_abort('INIT: mntracers<ntracers')
 
       !'Init. ranges for each model. These index into 1:ntracers
       do i=1,natrm !# of _available_ tracer models at the moment
@@ -406,52 +435,93 @@
       !To add new outputs, simply make sure the iof_* has sufficient size, and
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
-      allocate(iof_hydro(40),iof_wwm(30),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(70),iof_cos(20),iof_fib(5), &
-     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: iof failure')
+      if(iorder==0) then
+        allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
+     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_icm_ba(nout_ba), &
+     &iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+      !dim of srqst7 increased to account for 2D elem/side etc
+     &srqst7(nscribes+10),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: iof failure')
+        srqst7(:)=MPI_REQUEST_NULL
+        !Global output on/off flags
+        !Array to index into global output file # for modules (only used by
+        !single_netcdf.F90 and out of date)
+        !indx_out(i,j): i is model id (SED, NAPZD etc); j=1:2 is the start and end indices of each model
+        allocate(indx_out(12,2),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: indx_out failure')
+      endif !iorder
 
       !Init defaults
-      indvel=1; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=0; shapiro0=0.5_rkind; niter_shap=1
-      gen_wsett=real(1.d-4,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
+      indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
+      gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
-      ihdif=0; thetai=0.6_rkind; nrampbc=0; drampbc=1._rkind;  
-      nramp=1; dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind; dzb_decay=0._rkind;  
+      ihdif=0; thetai=0.6_rkind; drampbc=0.d0
+      dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
-      nws=0; impose_net_flux=0; wtiminc=dt; iwind_form=-1; nrampwind=1; 
-      drampwind=1; iwindoff=0; ihconsv=0; isconsv=0; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
+      drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=8._rkind;  
-      itr_met=1; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
+      itr_met=3; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
       courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-3; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
-      ihhat=1; kr_co=1; rmaxvel=10._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
+      ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
       ibtrack_test=0; irouse_test=0;  
       inunfl=0; shorewafo=0; ic_elev=0; nramp_elev=0; inv_atm_bnd=0; prmsl_ref=101325._rkind; 
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
-      iharind=0; icou_elfe_wwm=0; nrampwafo=0; drampwafo=1._rkind; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind; 
-      iwbl=0; if_source=0; nramp_ss=1; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; sav_cd=1.13_rkind; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
-      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; ibtrack_openbnd=0
-      iof_hydro=0; iof_wwm=1; iof_gen=1; iof_age=1; level_age=-999; iof_sed=1; iof_eco=1;
+      iharind=0; icou_elfe_wwm=0; drampwafo=0.d0; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
+      alphaw=1.0_rkind; fwvor_advxy_stokes=1; fwvor_advz_stokes=1;
+      fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; wafo_obcramp=0;
+      fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
+      iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
       iadjust_mass_consv0=0 !Enforce mass conservation for a tracer 
       ipre2=0
+      ielm_transport=0; max_subcyc=10
+      hmin_airsea_ex=0.2_rkind; hmin_salt_ex=0.2_rkind
+      itransport_only=0; meth_sink=1
+      iloadtide=0; loadtide_coef=0.1d0
+      nu_sum_mult=1
+      h_massconsv=2.d0; rinflation_icm=1.d-3
+      lev_tr_source=-9 !bottom
+      iprecip_off_bnd=0
 
       !Output elev, hvel by detault
-      iof_hydro(1)=1; iof_hydro(25)=1
-      iof_icm=1; iof_cos=1; iof_fib=1; iof_sed2d=1; iof_ice=1; iof_ana=1;
-      nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
+      nc_out=1
+      iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
+      iof_hydro(1)=1; iof_hydro(25:26)=1
+      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
+      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
+      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
       close(15)
+
+#ifdef USE_ICM
+      !get value of iof_icm from ICM submodules
+      iof_icm(1:17)=iof_icm_core
+      if(iSilica==1) iof_icm(itrs_icm(1,2):itrs_icm(2,2))=iof_icm_silica
+      if(iZB==1) iof_icm(itrs_icm(1,3):itrs_icm(2,3))=iof_icm_zb
+      if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
+      if(iCBP==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_cbp
+      if(isav_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_sav
+      if(iveg_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_veg
+      if(ised_icm==1) iof_icm(itrs_icm(1,8):itrs_icm(2,8))=iof_icm_sed
+      if(iBA_icm==1) iof_icm(itrs_icm(1,9):itrs_icm(2,9))=iof_icm_ba
+#endif
+
+      !zcor should be on usually
+!      iof_hydro(25)=1
 
 !...  Dump param.nml for checking
       if(myrank==0) then
@@ -469,6 +539,9 @@
         write(errmsg,*) 'Unknown ics',ics
         call parallel_abort(errmsg)
       endif
+
+!      if(itransport_only/=0.and.ielm_transport/=0) &
+!     &call parallel_abort('INIT: ielm_transport not available for itransport_only')
 
 !     Mass consv adjustment not working for SED
       if(iadjust_mass_consv0(5)>0) call parallel_abort('INIT: SED cannot use mass adjustment')
@@ -543,26 +616,31 @@
 
 !...  Shapiro filter 
 !      call get_param('param.in','ishapiro',1,ishapiro,tmp,stringvalue)
-      if(iabs(ishapiro)>1) then
+      if(ishapiro<-1.or.ishapiro>2) then
         write(errmsg,*)'Illegal ishapiro:',ishapiro
         call parallel_abort(errmsg)
       endif
 
       if(ishapiro==1) then
-!        call get_param('param.in','shapiro',2,itmp,shapiro0,stringvalue)   
         if(shapiro0<0._rkind.or.shapiro0>0.5_rkind) then
           write(errmsg,*)'Illegal shapiro:',shapiro0
           call parallel_abort(errmsg)
         endif
       endif !ishapiro==1
 
+      if(ishapiro==2) then
+        if(shapiro0<0._rkind) then
+          write(errmsg,*)'Illegal shapiro(2):',shapiro0
+          call parallel_abort(errmsg)
+        endif
+      endif !ishapiro
+
       if(ishapiro/=0) then
-!        call get_param('param.in','niter_shap',1,niter_shap,tmp,stringvalue)
         if(niter_shap<0) then
           write(errmsg,*)'Illegal niter_shap:',niter_shap
           call parallel_abort(errmsg)
         endif
-      endif !ishapiro==1
+      endif !ishapiro
 
 !...  Horizontal diffusivity option; only works for upwind/TVD
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
@@ -576,36 +654,10 @@
 !     vclose_surf_frac = 1.0.       
       if(myrank==0) write(16,*)'vclose_surf_frac is:',vclose_surf_frac 
 
-!...  Baroclinic flags
-!      call get_param('param.in','ibcc',1,ibc,tmp,stringvalue)
-!      call get_param('param.in','itransport',1,ibtp,tmp,stringvalue)
-!      if(ibc/=0.and.ibc/=1) call parallel_abort('Unknown ibcc')
-!      if(ibtp/=0.and.ibtp/=1) call parallel_abort('Unknown itransport')
-!
-!      if(ibc==0) then
-!        if(myrank==0) write(16,*)'You are using baroclinic model'
-!        call get_param('param.in','nrampbc',1,nrampbc,tmp,stringvalue)
-!        if(nrampbc/=0) call get_param('param.in','drampbc',2,itmp,drampbc,stringvalue)
-!      else !ibc=1
-!        if(ibtp==0) then
-!          if(myrank==0) write(16,*)'Barotropic model without ST calculation'
-!
-!        else !ibtp=1
-!          if(myrank==0) write(16,*)'Barotropic model with ST calculation'
-!
-!        endif
+!      if(nramp/=0.and.nramp/=1) then
+!        write(errmsg,*)'Unknown nramp',nramp
+!        call parallel_abort(errmsg)
 !      endif
-
-!     Run time in days
-!      call get_param('param.in','rnday',2,itmp,rnday,stringvalue)
-!...  dramp not used if nramp=0
-!      call get_param('param.in','nramp',1,nramp,tmp,stringvalue)
-!      if(nramp/=0) call get_param('param.in','dramp',2,itmp,dramp,stringvalue)
-
-      if(nramp/=0.and.nramp/=1) then
-        write(errmsg,*)'Unknown nramp',nramp
-        call parallel_abort(errmsg)
-      endif
 
 !     Time step in seconds
 !      call get_param('param.in','dt',2,itmp,dt,stringvalue)
@@ -633,9 +685,7 @@
       
       if(nchi==1) then
 !       dzb_min: min. bottom boundary layer thickness [m]
-!        call get_param('param.in','dzb_min',2,itmp,dzb_min,stringvalue)
-!        call get_param('param.in','dzb_decay',2,itmp,dzb_decay,stringvalue)
-        if(dzb_min<=0._rkind.or.dzb_decay>0._rkind) call parallel_abort('INIT: dzb_min<=0 or dzb_decay>0')
+        if(dzb_min<=0._rkind) call parallel_abort('INIT: dzb_min<=0') 
       endif
       if(nchi==-1) then
 !       Min depth used in Manning formulation
@@ -657,11 +707,7 @@
       endif
 
 !     Wind (nws=3: for coupling directly to atmos model; otherwise same as nws=2)
-!      call get_param('param.in','nws',1,nws,tmp,stringvalue)
-      !impose_net_flux/=0 works under nws=2
-!      call get_param('param.in','impose_net_flux',1,impose_net_flux,tmp,stringvalue)
-!      call get_param('param.in','wtiminc',2,itmp,wtiminc,stringvalue)
-      if(nws<0.or.nws>6) then
+      if(nws<-1.or.nws>6) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
       endif
@@ -669,36 +715,35 @@
         write(errmsg,*)'wtiminc < dt'
         call parallel_abort(errmsg)
       endif
-      if(impose_net_flux/=0.and.nws/=2) then
-        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
-        call parallel_abort(errmsg)
+!      if(impose_net_flux/=0.and.nws/=2) then
+!        write(errmsg,*)'impose_net_flux/=0 requires nws=2'
+!        call parallel_abort(errmsg)
+!      endif
+
+      if(nws<0) then
+#ifndef USE_PAHM 
+        call parallel_abort('INIT: nws<0 requires USE_PAHM')
+#endif
       endif
 
       if(nws==3) then
-#ifndef USE_ESMF
-        call parallel_abort('nws=3 requires coupler')
-#endif        
+!#ifndef USE_ESMF
+        !> @todo the USE_ESMF macro is not yet implemented in CMake, thus the 
+        !> following check is disabled
+        !call parallel_abort('nws=3 requires coupler')
+!#endif        
         !Error:overwrite wtiminc by coupling step
       endif !nws==3
 
 !      iwind_form=0 !init.
-      if(nws>0) then
-!        call get_param('param.in','iwind_form',1,iwind_form,tmp,stringvalue)
+      if(nws/=0) then
         if(iwind_form<-2.or.iwind_form>1) then
           write(errmsg,*)'Unknown iwind_form',iwind_form
           call parallel_abort(errmsg)
         endif
       endif !nws
 
-!      if(nws>0) then
-!        call get_param('param.in','nrampwind',1,nrampwind,tmp,stringvalue)
-!        call get_param('param.in','drampwind',2,itmp,drampwind,stringvalue)
-!        call get_param('param.in','iwindoff',1,iwindoff,tmp,stringvalue)
-!      endif !nws
-
 !     Heat and salt conservation flags
-!      call get_param('param.in','ihconsv',1,ihconsv,tmp,stringvalue)
-!      call get_param('param.in','isconsv',1,isconsv,tmp,stringvalue)
       if(ihconsv<0.or.ihconsv>1.or.isconsv<0.or.isconsv>1) then
         write(errmsg,*)'Unknown ihconsv or isconsv',ihconsv,isconsv
         call parallel_abort(errmsg)
@@ -706,7 +751,27 @@
       if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
 !'
       if(ihconsv/=0.and.(nws<2.or.nws>3)) call parallel_abort('Heat budge model must have nws>=2')
-!'
+
+#ifdef USE_BULK_FAIRALL
+      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
+#else
+      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
+#endif
+
+      if(ihconsv/=0) then
+        if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
+          write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
+          call parallel_abort(errmsg)
+        endif 
+      endif
+
+      if(isconsv/=0) then
+        if(i_hmin_salt_ex<0.or.i_hmin_salt_ex>2) then
+          write(errmsg,*)'INIT: illegal i_hmin_salt_ex',i_hmin_salt_ex
+          call parallel_abort(errmsg)
+        endif 
+      endif
+
       if(isconsv/=0) then
 #ifndef PREC_EVAP
         write(errmsg,*)'Pls enable PREC_EVAP:',isconsv
@@ -716,7 +781,7 @@
 #endif
       endif
 
-      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
+!      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -725,18 +790,8 @@
         call parallel_abort(errmsg)
       endif
       if(itur==0) then
-!        call get_param('param.in','dfv0',2,itmp,dfv0,stringvalue)
-!        call get_param('param.in','dfh0',2,itmp,dfh0,stringvalue)
 !!        dfv=dfv0; dfh=dfh0
       else if(itur==2) then !read in P&P coefficients
-!        call get_param('param.in','h1_pp',2,itmp,h1_pp,stringvalue)
-!        call get_param('param.in','h2_pp',2,itmp,h2_pp,stringvalue)
-!        call get_param('param.in','vdmax_pp1',2,itmp,vdmax_pp1,stringvalue)
-!        call get_param('param.in','vdmax_pp2',2,itmp,vdmax_pp2,stringvalue)
-!        call get_param('param.in','vdmin_pp1',2,itmp,vdmin_pp1,stringvalue)
-!        call get_param('param.in','vdmin_pp2',2,itmp,vdmin_pp2,stringvalue)
-!        call get_param('param.in','tdmin_pp1',2,itmp,tdmin_pp1,stringvalue)
-!        call get_param('param.in','tdmin_pp2',2,itmp,tdmin_pp2,stringvalue)
         if(h1_pp>=h2_pp) then
           write(errmsg,*)'h1_pp >= h2_pp in P&P'
           call parallel_abort(errmsg)
@@ -771,13 +826,6 @@
 !      enddo !i
       if(flag_ic(1)/=flag_ic(2)) call parallel_abort('INIT: T,S must have same i.c')
 
-!'    Start time
-!      call get_param('param.in','start_year',1,start_year,tmp,stringvalue)
-!      call get_param('param.in','start_month',1,start_month,tmp,stringvalue)
-!      call get_param('param.in','start_day',1,start_day,tmp,stringvalue)
-!      call get_param('param.in','start_hour',2,itmp,start_hour,stringvalue)
-!      call get_param('param.in','utc_start',2,itmp,utc_start,stringvalue)
-
 !     Pass time info to EcoSim and ICM
 #ifdef USE_ECO
       year=start_year
@@ -790,36 +838,23 @@
      
 !...  Transport method for all tracers including T,S
 !     1: upwind; 2: TVD (explicit); 3: TVD (implicit vertical); 4: WENO (implicit vertical)
-!      call get_param('param.in','itr_met',1,itr_met,tmp,stringvalue)
-      if(itr_met<1.or.itr_met>4) then
+      if(itr_met<3.or.itr_met>4) then
         write(errmsg,*)'Unknown tracer method',itr_met
         call parallel_abort(errmsg)
       endif
-!      if(itr_met>=2) then !TVD
-!        call get_param('param.in','h_tvd',2,itmp,h_tvd,stringvalue)
-!      endif
    
-      !For implicit transport, read in tolerances for convergence
-!      if(itr_met==3.or.itr_met==4) then
-!        call get_param('param.in','eps1_tvd_imp',2,itmp,eps1_tvd_imp,stringvalue)
-!        call get_param('param.in','eps2_tvd_imp',2,itmp,eps2_tvd_imp,stringvalue)
-!      endif
-
       !weno>
       if(itr_met==4) then !WENO
-!        call get_param('param.in','ip_weno',1,ip_weno,tmp,stringvalue)
         if(ip_weno<0.or.ip_weno>2) then
           write(errmsg,*)'Illegal ip_weno:',ip_weno
           call parallel_abort(errmsg)
         endif
 
-!        call get_param('param.in','courant_weno',2,itmp,courant_weno,stringvalue)
         if(courant_weno<=0._rkind) then
           write(errmsg,*)'Illegal courant_weno:',courant_weno
           call parallel_abort(errmsg)
         endif
 
-!        call get_param('param.in','ntd_weno',1,ntd_weno,tmp,stringvalue)
         if(ntd_weno.ne.1 .and. ntd_weno.ne.3) then
           write(errmsg,*)'Illegal ntd_weno:',ntd_weno
           call parallel_abort(errmsg)
@@ -870,9 +905,9 @@
       !<weno
 
 !...  Explicit transport solver cannot handle settling vel. yet
-#if defined USE_SED || defined USE_TIMOR
-      if(itr_met<=2) call parallel_abort('Some transport solver cannot handle settling vel.')
-#endif
+!#if defined USE_SED || defined USE_TIMOR
+!      if(itr_met<=2) call parallel_abort('Some transport solver cannot handle settling vel.')
+!#endif
 
 !'..  Nudging for each tracer model
       do i=1,natrm
@@ -885,295 +920,31 @@
         endif
       enddo !i
 
+#ifdef USE_DVD
+      if(inu_tr(12)/=0) call parallel_abort('INIT: nudging for DVD/=0')
+#endif
+
+      !1: final relax is sum of horizontal & vertical relax's; 2: product
+      if(nu_sum_mult/=1.and.nu_sum_mult/=2) call parallel_abort('INIT: check nu_sum_mult')
       !All tracers share time steps etc.
-!      call get_param('param.in','step_nu_tr',2,itmp,step_nu_tr,stringvalue)
       if(step_nu_tr<dt) then
         write(errmsg,*)'Wrong step_nu_tr:',step_nu_tr
         call parallel_abort(errmsg)
       endif
 
       !Vertical relax
-!      call get_param('param.in','vnh1',2,itmp,vnh1,stringvalue)
-!      call get_param('param.in','vnh2',2,itmp,vnh2,stringvalue)
-!      call get_param('param.in','vnf1',2,itmp,vnf1,stringvalue)
-!      call get_param('param.in','vnf2',2,itmp,vnf2,stringvalue)
       if(vnh1>=vnh2.or.vnf1<0.or.vnf1>1.or.vnf2<0.or.vnf2>1) then
         write(errmsg,*)'INIT: check vertical nudging limits:',vnh1,vnf1,vnh2,vnf2
         call parallel_abort(errmsg)
       endif
 
-!     Global output on/off flags
-!     Array to index into global output file # for modules (only used by
-!     single_netcdf.F90 and out of date)
-!     indx_out(i,j): i is model id (SED, NAPZD etc); j=1:2 is the start and end indices of each model
-      allocate(indx_out(12,2),stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: indx_out failure')
-
-!      !Hydro first
-!      outfile(1)='elev'
-!      outfile(2)='pres'
-!      outfile(3)='airt'
-!      outfile(4)='shum'
-!      outfile(5)='srad'
-!      outfile(6)='flsu'
-!      outfile(7)='fllu'
-!      outfile(8)='radu'
-!      outfile(9)='radd'
-!      outfile(10)='flux'
-!      outfile(11)='evap'
-!      outfile(12)='prcp'
-!      outfile(13)='bdrc'
-!      outfile(14)='wind'
-!      outfile(15)='wist'
-!      outfile(16)='dahv'
-!      outfile(17)='vert'
-!      outfile(18)='temp'
-!      outfile(19)='salt'
-!      outfile(20)='conc'
-!      outfile(21)='tdff'
-!      outfile(22)='vdff'
-!      outfile(23)='kine'
-!      outfile(24)='mixl'
-!      outfile(25)='hvel'
-!
-!      outfile(26)='hvel_side' !must be consistent when calling the output routine later
-!      outfile(27)='vert_elem'
-!      outfile(28)='temp_elem'
-!      outfile(29)='salt_elem'
-!
-!      noutput=29 !so far
-!
-!#ifdef USE_GEN
-!      do i=1,ntrs(3)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='GEN_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(3)
-!#endif
-!
-!#ifdef USE_AGE
-!      do i=1,ntrs(4)/2
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='AGE_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(4)/2
-!#endif
-!
-!#ifdef USE_SED
-!      do i=1,ntrs(5)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        itmp=noutput+3*i-2 
-!        outfile(itmp)='SED_'//ifile_char(1:ifile_len) !//'.63'
-!        outfile(itmp+1)='SED_qbdl_'//ifile_char(1:ifile_len) !//'.62'
-!        outfile(itmp+2)='SED_bfrac_'//ifile_char(1:ifile_len) !//'.61'
-!      enddo !i
-!      noutput=noutput+3*ntrs(5)
-!
-!      outfile(noutput+1)='SED_depth'
-!      outfile(noutput+2)='SED_bedd50'
-!      outfile(noutput+3)='SED_bstress'
-!      outfile(noutput+4)='SED_brough'
-!
-!      outfile(noutput+5)='z0st_elem'
-!      outfile(noutput+6)='z0cr_elem'
-!      outfile(noutput+7)='z0sw_elem'
-!      outfile(noutput+8)='z0wr_elem'
-!      outfile(noutput+9)='bthk_elem'
-!      outfile(noutput+10)='bage_elem'
-!      outfile(noutput+11)='SED_TSC'
-!      noutput=noutput+11
-!#endif /*USE_SED*/
-!
-!#ifdef USE_ECO
-!      do i=1,ntrs(6)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='ECO_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(6)
-!#endif
-!
-!#ifdef USE_ICM
-!      do i=1,ntrs(7)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='ICM_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(7)
-!
-!      !pH model in ICM: make sure PH.63=0 in param.in if ICM_PH
-!      outfile(noutput+1)='ICM_Chl'
-!      outfile(noutput+2)='ICM_pH'
-!      outfile(noutput+3)='ICM_PrmPrdt'
-!      outfile(noutput+4)='ICM_DIN'
-!      outfile(noutput+5)='ICM_PON'
-!      noutput=noutput+5
-!
-!      outfile(noutput+1)='ICM_SED_BENDOC_elem'
-!      outfile(noutput+2)='ICM_SED_BENNH4_elem'
-!      outfile(noutput+3)='ICM_SED_BENNO3_elem'
-!      outfile(noutput+4)='ICM_SED_BENPO4_elem'
-!      outfile(noutput+5)='ICM_SED_BENCOD_elem'
-!      outfile(noutput+6)='ICM_SED_BENDO_elem'
-!      outfile(noutput+7)='ICM_SED_BENSA_elem'
-!      outfile(noutput+8)='ICM_lfsav'
-!      outfile(noutput+9)='ICM_stsav'
-!      outfile(noutput+10)='ICM_rtsav'
-!      outfile(noutput+11)='ICM_tlfsav'
-!      outfile(noutput+12)='ICM_tstsav'
-!      outfile(noutput+13)='ICM_trtsav'
-!      outfile(noutput+14)='ICM_hcansav'
-!      noutput=noutput+14
-!#endif
-!
-!#ifdef USE_COSINE
-!      do i=1,ntrs(8)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='COS_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(8)
-!#endif
-!
-!#ifdef USE_FIB
-!      do i=1,ntrs(9)
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  !place blanks at end
-!        ifile_len=len_trim(ifile_char)  !length without trailing blanks
-!        outfile(noutput+i)='FIB_'//ifile_char(1:ifile_len) !//'.63'
-!      enddo !i
-!      noutput=noutput+ntrs(9)
-!#endif
-!
-!#ifdef USE_TIMOR
-!#endif
-!
-!#ifdef USE_SED2D
-!      outfile(noutput+1)='SED2D_depth'
-!      outfile(noutput+2)='SED2D_cdsed'
-!      outfile(noutput+3)='SED2D_cflsed'
-!      outfile(noutput+4)='SED2D_d50'
-!      outfile(noutput+5)='SED2D_qtot'
-!      outfile(noutput+6)='SED2D_qsus'
-!      outfile(noutput+7)='SED2D_qbdl'
-!      outfile(noutput+8)='SED2D_dpdxy'
-!      outfile(noutput+9)='SED2D_qav'
-!      outfile(noutput+10)='SED2D_z0eq_elem'
-!      outfile(noutput+11)='SED2D_z0cr_elem'
-!      outfile(noutput+12)='SED2D_z0sw_elem'
-!      outfile(noutput+13)='SED2D_z0wr_elem'
-!      noutput=noutput+13
-!#endif
-!
-!#ifdef USE_WWM
-!      do i=1,28
-!        if(i==7.or.i==8) cycle !skip vectors first
-!        noutput=noutput+1
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)  
-!        ifile_len=len_trim(ifile_char) 
-!        outfile(noutput)='WWM_'//ifile_char(1:ifile_len)
-!      enddo !i
-!      !Vectors
-!      outfile(noutput+1)='WWM_energy_dir'
-!      noutput=noutput+1
-!#endif
-!
-!      ! Barotropic gradient
-!      outfile(noutput+1)='bpgr_side'
-!      noutput=noutput+1
-!#ifdef USE_WWM
-!      outfile(noutput+1)='wave_force_side'
-!      noutput=noutput+1
-!#endif
-!
-!#ifdef USE_MARSH
-!      outfile(noutput+1)='mrsh_elem'
-!      noutput=noutput+1
-!#endif
-!
-!#ifdef USE_ICE
-!      do i=1,ntr_ice
-!        write(ifile_char,'(i03)')i
-!        ifile_char=adjustl(ifile_char)
-!        ifile_len=len_trim(ifile_char)
-!        outfile(noutput+i)='ICE_tracer_'//ifile_char(1:ifile_len)
-!      enddo !i
-!      noutput=noutput+ntr_ice
-! 
-!      outfile(noutput+1)='ICE_velocity'
-!      outfile(noutput+2)='ICE_strain_rate'
-!      outfile(noutput+3)='ICE_net_heat_flux'
-!      outfile(noutput+4)='ICE_fresh_water'
-!      outfile(noutput+5)='ICE_top_T'
-!      noutput=noutput+5
-!#endif
-!
-!#ifdef USE_ANALYSIS
-!      outfile(noutput+1)='ANA_air_pres_grad_x'
-!      outfile(noutput+2)='ANA_air_pres_grad_y'
-!      outfile(noutput+3)='ANA_tide_pot_grad_x'
-!      outfile(noutput+4)='ANA_tide_pot_grad_y'
-!      outfile(noutput+5)='ANA_hor_viscosity_x'
-!      outfile(noutput+6)='ANA_hor_viscosity_y'
-!      outfile(noutput+7)='ANA_bclinic_force_x'
-!      outfile(noutput+8)='ANA_bclinic_force_y'
-!      outfile(noutput+9)='ANA_vert_viscosity_x'
-!      outfile(noutput+10)='ANA_vert_viscosity_y'
-!      outfile(noutput+11)='ANA_mom_advection_x'
-!      outfile(noutput+12)='ANA_mom_advection_y'
-!      outfile(noutput+13)='ANA_Richardson'
-!      outfile(noutput+14)='ANA_transport_min_dt_elem'
-!      noutput=noutput+14
-!#endif
-!
-!      if(myrank==0) write(16,*)'Total # of available global outputs=',noutput
-!      if(noutput>mnout) then
-!        write(errmsg,*)'Increase mnout in schism_glbl to',noutput
-!        call parallel_abort(errmsg)
-!      endif
-
-!     nspool,ihfskip: output and file spools
-!      call get_param('param.in','nspool',1,nspool,tmp,stringvalue)
-!      call get_param('param.in','ihfskip',1,ihfskip,tmp,stringvalue)
-!      if(nspool==0.or.ihfskip==0) call parallel_abort('Zero nspool')
-!      if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
-
-!      do i=1,noutput
-!        call get_param('param.in',trim(adjustl(outfile(i))),1,iof(i),tmp,stringvalue)
-!        if(iof(i)/=0.and.iof(i)/=1) then
-!          write(errmsg,*)'Unknown output option',i,iof(i),outfile(i)
-!          call parallel_abort(errmsg)
-!        endif
-!      enddo !i=1,noutput
 
 !...  input information about hot start output
-!...
-!      call get_param('param.in','hotout',1,nhot,tmp,stringvalue)
-!      call get_param('param.in','hotout_write',1,nhot_write,tmp,stringvalue)
       if(nhot/=0.and.nhot/=1.or.nhot*mod(nhot_write,ihfskip)/=0) then
         write(errmsg,*)'Unknown hotout or hotout_write not multiple of ihfskip',nhot,ihfskip
 !'
         call parallel_abort(errmsg)
       endif
-
-!...  JCG/PETSc solver parameters
-!     moitn0: output interval; mxitn0: max iterations; rtol0: relative tolerance
-!      call get_param('param.in','slvr_output_spool',1,moitn0,tmp,stringvalue)
-!      call get_param('param.in','mxitn',1,mxitn0,tmp,stringvalue)
-!      call get_param('param.in','tolerance',2,itmp,rtol0,stringvalue)
-
-!...  Compute flux flag
-!      call get_param('param.in','consv_check',1,iflux,tmp,stringvalue)
 
 !...  Interpolation flag vel. in ELM
 !     Kriging in vel: no bnd nodes/sides vel. use Kriging as the filter is not
@@ -1185,29 +956,14 @@
         call parallel_abort(errmsg)
       endif
 
-!...  Cut-off depth for option for hgrad_nodes() near bottom (like baroc. force)
-!      call get_param('param.in','depth_zsigma',2,itmp,h_bcc1,stringvalue)
-
-!!...  For under-resolution on b-clinic force (used only if ibcc=0)
-!      call get_param('param.in','hw_depth',2,itmp,hw_depth,stringvalue)
-!      call get_param('param.in','hw_ratio',2,itmp,hw_ratio,stringvalue)
-!      if(hw_depth<=0.or.hw_ratio<=0) then
-!        write(errmsg,*)'Check hw_ratio:',hw_depth,hw_ratio
-!        call parallel_abort(errmsg)
-!      endif
-
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv
 !     similar to T,S)
-!      call get_param('param.in','inu_elev',1,inu_elev,tmp,stringvalue)
-!      call get_param('param.in','inu_uv',1,inu_uv,tmp,stringvalue)
       if(inu_elev<0.or.inu_elev>1.or.inu_uv<0.or.inu_uv>1) then
         write(errmsg,*)'Check sponge inputs:',inu_elev,inu_uv
         call parallel_abort(errmsg)
       endif
 
-!...  Option to limit \hat{H} to enhance stability for large friction in shallow
-!area
-!      call get_param('param.in','ihhat',1,ihhat,tmp,stringvalue)
+!...  Option to limit \hat{H} to enhance stability for large friction in shallow area
       if(ihhat/=0.and.ihhat/=1) then
         write(errmsg,*)'Unknown ihhat:',ihhat
         call parallel_abort(errmsg)
@@ -1300,7 +1056,6 @@
 
 !     Elev. b.c. ramp option (=0: ramp up from eta=0; =1: from eta2 before
 !     the time loop, after the hotstart loop)
-!      call get_param('param.in','nramp_elev',1,nramp_elev,tmp,stringvalue)
       if(nramp_elev/=0.and.nramp_elev/=1) then
         write(errmsg,*)'Illegal nramp_elev:',nramp_elev
         call parallel_abort(errmsg)
@@ -1355,25 +1110,16 @@
       endif
 
 !...  ramp for the wave forces
-!      call get_param('param.in','nrampwafo',1,nrampwafo,tmp,stringvalue)
-!      if(nrampwafo/=0) call get_param('param.in','drampwafo',2,itmp,drampwafo,stringvalue)
-      if(nrampwafo/=0.and.nrampwafo/=1) then
-        write(errmsg,*)'Unknown nrampwafo',nrampwafo
-        call parallel_abort(errmsg)
-      endif
+!      if(nrampwafo/=0.and.nrampwafo/=1) then
+!        write(errmsg,*)'Unknown nrampwafo',nrampwafo
+!        call parallel_abort(errmsg)
+!      endif
 
 !     Coupling interval (# of time steps)
-!      call get_param('param.in','nstep_wwm',1,nstep_wwm,tmp,stringvalue)
       if(nstep_wwm<1) then
         write(errmsg,*)'Wrong coupling interval:',nstep_wwm
         call parallel_abort(errmsg)
       endif
-
-!     Min (total) depth in radiation stress calculation
-!      call get_param('param.in','hmin_radstress',2,itmp,hmin_radstress,stringvalue)    
-
-!     % of energy dissipated by wave breaking processes injected to turbulence
-!      call get_param('param.in','turbinj',2,itmp,turbinj,stringvalue)      
 
 !     Wave boundary layer option
 !      call get_param('param.in','iwbl',1,iwbl,tmp,stringvalue)
@@ -1386,53 +1132,45 @@
         call parallel_abort(errmsg)
       endif
 
-!     Volume and mass sources/sinks option
-!      call get_param('param.in','if_source',1,if_source,tmp,stringvalue)
-      if(if_source/=0.and.if_source/=1) call parallel_abort('Wrong if_source')
-
-      if(if_source==1) then
-!        call get_param('param.in','nramp_ss',1,nramp_ss,tmp,stringvalue)
-!        call get_param('param.in','dramp_ss',2,itmp,dramp_ss,stringvalue)
-        if(dramp_ss<=0) call parallel_abort('INIT: wrong dramp_ss')
+! BM: coupling current for WWM
+      if(cur_wwm<0.or.cur_wwm>2) then
+        write(errmsg,*)'Wrong coupling current:',cur_wwm
+        call parallel_abort(errmsg)
       endif
 
-!'    Eq. of State type
-!     0: UNESCO 1980 (nonlinear); 1: linear function of T ONLY,
-!     i.e.\rho=eos_b+eos_a*T, where eos_a<=0 in kg/m^3/C
-!      call get_param('param.in','ieos_type',1,ieos_type,tmp,stringvalue)
-      !ieos_pres/=0: add pressure in EOS
-!      if(ieos_type==0) call get_param('param.in','ieos_pres',1,ieos_pres,tmp,stringvalue)
+!     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
+      if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
 
-!      if(ieos_type==1) then
-!        !Constants for linear EOS
-!        call get_param('param.in','eos_a',2,itmp,eos_a,stringvalue)
-!        call get_param('param.in','eos_b',2,itmp,eos_b,stringvalue)
+!     Check all ramp periods
+!      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')
+!      if(min(dramp,drampbc,drampwind,drampwafo)<=0.d0) then
+!        write(errmsg,*)'INIT: illegal ramp, ',dramp,drampbc,drampwind,drampwafo
+!        call parallel_abort(errmsg)
 !      endif
 
 #ifdef USE_MARSH
       !SLR rate in mm/year
-!      call get_param('param.in','slr_rate',2,itmp,slr_rate,stringvalue)
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
 #endif
 
-!      call get_param('param.in','rho0',2,itmp,rho0,stringvalue)
-!      call get_param('param.in','shw',2,itmp,shw,stringvalue)
-
 !     SAV
-!      call get_param('param.in','isav',1,isav,tmp,stringvalue)
-      if(isav==1) then
-!        call get_param('param.in','sav_cd',2,itmp,sav_cd,stringvalue)
-        if(sav_cd<0.d0) call parallel_abort('INIT: sav_cd<0')
-      else if(isav/=0) then
-        write(errmsg,*)'INIT: illegal isav',isav
-        call parallel_abort(errmsg)
+      if(isav/=0.and.isav/=1) then !LLa
+       write(errmsg,*)'INIT: illegal isav',isav
+       call parallel_abort(errmsg)
       endif
+!      if(rsav/=0.and.rsav/=1) then !LLa	
+!       write(errmsg,*)'INIT: illegal rsav',rsav
+!       call parallel_abort(errmsg)
+!      endif
 
 !     Ice
+#ifdef USE_MICE
+      if(nstep_ice<=0) call parallel_abort('INIT: nstep_ice<=0')
+#endif
+
 #ifdef USE_ICE
-!      call get_param('param.in','nstep_ice',1,nstep_ice,tmp,stringvalue)
       if(nstep_ice<=0) call parallel_abort('INIT: nstep_ice<=0')
 #endif
 
@@ -1449,28 +1187,32 @@
         call parallel_abort(errmsg)
       endif
 
-!      if(Two_phase_mix==1) then !1120:close
-!#ifndef USE_SED
-!        call parallel_abort('Two_phase_mix needs USE_SED')
-!#endif
-!      endif
-
-!      if(Two_phase_mix==0.and.itur==5) then !Tsinghua group:0825 1018:close
-!        call parallel_abort('2_phase_mix Turb needs Two_phase_mix=1')
-!      endif
-
+!...  TWO-PHASE-MIXTURE TSINGHUA GROUP------------------
       if(itur==5) then !1018
 #ifndef USE_SED
         call parallel_abort('Two_phase_mix needs USE_SED')
 #endif
       endif      
-!...  TWO-PHASE-MIXTURE TSINGHUA GROUP------------------
+
+      if(ielm_transport/=0) then
+        if(max_subcyc<=0) call parallel_abort('INIT: max_subcyc<=0')
+        dtb_min_transport=dt/max_subcyc !min dt for transport allowed
+      endif 
 
 !...  Check parameter read in from param.in
       if(myrank==0) write(16,*)'done reading param.nml'
 !'
 !-----------------------------------------------------------------
-!...  End reading param.nml
+!...  End reading & checking param.nml
+
+!...  Finish prep outputs to take care of hot start
+      if(myrank==0) then
+        if(ihot==2) then
+          open(9,file=out_dir(1:len_out_dir)//'flux.out',status='old')
+        else
+          open(9,file=out_dir(1:len_out_dir)//'flux.out',status='replace')
+        endif
+      endif
 
 !     Setup cyclic node index (used in decomp.)
 !     This part is kept for other modules only - nx() is not used in Hydro
@@ -1499,17 +1241,28 @@
         enddo !i
       enddo !k
 
-!     Aquire vertical grid
-      call aquire_vgrid
+      if(iorder==0) then
+!       Aquire vertical grid
+        call aquire_vgrid
+        if(myrank==0) then
+          write(16,*)'done reading vgrid...'        
+          call flush(16)
+        endif
 
-!     Partition horizontal grid into subdomains
-      call partition_hgrid
+!       Partition horizontal grid into subdomains
+        call partition_hgrid
 
-!     Aquire full horizontal grid based on partition
-      call aquire_hgrid(.true.) 
+!       Aquire full horizontal grid based on partition
+        call aquire_hgrid(.true.) 
 
-!     Dump horizontal grid
-      call dump_hgrid
+!       Dump horizontal grid
+        call dump_hgrid
+
+        if(myrank==0) then
+          write(16,*)'done domain decomp...'
+          call flush(16)
+        endif
+
 
 #ifdef DEBUG
 !     Test if ipgl and isgl are in ascending rank order for _residents_;
@@ -1547,19 +1300,26 @@
       enddo !i
 #endif
 
-!     Construct parallel message-passing tables
-      call msgp_tables
+!       Construct parallel message-passing tables
+        call msgp_tables
 
-!     Initialize parallel message-passing datatypes
-      call msgp_init
+!       Initialize parallel message-passing datatypes
+        call msgp_init
 
-!     Synchronize
-      call parallel_barrier
+        if(myrank==0) then
+          write(16,*)'done msg passing table...'
+          call flush(16)
+        endif
+
+
+!       Synchronize
+        call parallel_barrier
+      endif !iorder=0
 
 !     Debug
-!      fdb='list_0000'
+!      fdb='list_000000'
 !      lfdb=len_trim(fdb)
-!      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+!      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
 !      open(32,file=trim(fdb),status='unknown') 
 !      do i=1,np_global
 !        if(.not.associated(ipgl(i)%next)) write(32,*)i 
@@ -1589,6 +1349,13 @@
       if(npa>nsa.or.nea>nsa) call parallel_abort('npa>nsa.or.nea>nsa')
 !      if(np>ns.or.ne>ns) call parallel_abort('np>ns.or.ne>ns')
 
+!     Alloc arrays that are used only in this routine. Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
+      allocate(nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
+         &swild3(50+ntracers),swild4(ntracers,nvrt),buf3(ns_global),buf4(ns_global),stat=istat)
+      if(istat/=0) call parallel_abort('INIT: alloc wild')
+
+      if(iorder==0) then
+!===========================================================================
 !     Allocate message passing arrays
       allocate(rrqst(0:nproc-1),stat=istat)
       if(istat/=0) call parallel_abort('INIT: rrqst allocation failure')
@@ -1605,20 +1372,19 @@
      &kbp00(npa),kbp_e(np),idry(npa),hmod(npa),znl(nvrt,npa), &
      &kbs(nsa),idry_s(nsa),isidenei2(4,ns),zs(nvrt,nsa), &
      &delj(ns),ibnd_ext_int(npa),pframe(3,3,npa),sigma_lcl(nvrt,npa),shape_c2(4,2,nea), &
-     &snx(nsa),sny(nsa),stat=istat)
+     &xs_el(4,nea),ys_el(4,nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: grid geometry arrays allocation failure')
 !'
 
 !     Allocate the remaining arrays held in schism_glbl, except for Kriging related arrays 
-      !allocate(tem0(nvrt,npa),sal0(nvrt,npa),eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
-      allocate(eta1(npa),eta2(npa), & !tsel(2,nvrt,nea)
-          & we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa),ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
-          & prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
-          & uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
-          & bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
-          & xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
+      allocate(eta1(npa),eta2(npa),cumsum_eta(npa), & !tsel(2,nvrt,nea)
+          &we(nvrt,nea),su2(nvrt,nsa),sv2(nvrt,nsa), & !ufg(4,nvrt,nea),vfg(4,nvrt,nea), &
+          &prho(nvrt,npa),q2(nvrt,npa),xl(nvrt,npa),xlmin2(npa), &
+          &uu2(nvrt,npa),vv2(nvrt,npa),ww2(nvrt,npa),bdef(npa),bdef1(npa),bdef2(npa),dfh(nvrt,npa), &
+          &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
+          &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -1630,7 +1396,7 @@
           & eth(mnond_global,nope_global), & 
           & qthcon(nope_global),carea(nope_global),clen(nope_global), &
           & th_dt(ntracers,nthfiles),th_time(ntracers,2,nthfiles), &
-          & uth(nvrt,nsa),vth(nvrt,nsa),ath(nope_global,ntracers,2,nthfiles), &
+          & ath(nope_global,ntracers,2,nthfiles), &
           & ath2(ntracers,nvrt,neta_global,2,nthfiles2), &
           & uthnd(nvrt,mnond_global,nope_global),vthnd(nvrt,mnond_global,nope_global), &
           & eta_mean(npa),trth(ntracers,nvrt,mnond_global,max(1,nope_global)),stat=istat)
@@ -1639,32 +1405,52 @@
 !'
 
 !     All other arrays
-      allocate(sdbt(4,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
-         &  windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
-         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),windfactor(npa),pr1(npa),airt1(npa),shum1(npa), &
+!      allocate(sdbt(2+ntracers,nvrt,nsa), & !webt(nvrt,nea), bubt(2,nea), & 
+       allocate(windx1(npa),windy1(npa),windx2(npa),windy2(npa),windx(npa),windy(npa), &
+         &  tau(2,npa),tau_bot_node(3,npa),iadv(npa),pr1(npa),airt1(npa),shum1(npa),windfactor(npa), &
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         &  hdif(nvrt,npa),shapiro(nsa),d2uv(2,nvrt,nsa),fluxprc(npa),fluxevp(npa), & 
-         &  bcc(2,nvrt,nsa),sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
-         &  tr_nudge(natrm,npa),dr_dxy(2,nvrt,nsa), & !t_nudge(npa),s_nudge(npa)
+         & hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
+         &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
+         &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
-!         &  tnd_nu1(nvrt,npa),snd_nu1(nvrt,npa),tnd_nu2(nvrt,npa),snd_nu2(nvrt,npa),tnd_nu(nvrt,npa),snd_nu(nvrt,npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
-!          Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
-         &  nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &  swild3(50+ntracers),swild4(nvrt,1+ntracers),&
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),stat=istat)
+         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
+         & wwave_force(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
-      allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat) !trel(ntracers,nvrt,nea)
+      allocate(tr_el(ntracers,nvrt,nea2),tr_nd0(ntracers,nvrt,npa),tr_nd(ntracers,nvrt,npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
-      allocate(trnd_nu1(ntracers,nvrt,npa), &
-     &trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
+      allocate(trnd_nu1(ntracers,nvrt,npa),trnd_nu2(ntracers,nvrt,npa),trnd_nu(ntracers,nvrt,npa),stat=itmp)
       if(itmp/=0) call parallel_abort('INIT: alloc failed (56)')
+
+!     Conditional alloc to save mem
+      if(ielm_transport==0) then  
+        allocate(sdbt(2,nvrt,nsa),stat=istat)
+      else
+        allocate(sdbt(2+ntracers,nvrt,nsa),stat=istat)
+      endif
+      if(istat/=0) call parallel_abort('INIT: alloc sdbt failure')
+
+!     Offline transport
+      if(itransport_only/=0) then
+        allocate(ts_offline(4,nvrt,nea),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: failed to alloc ts_offline')
+      endif
+   
+      if(nws<0) then
+        allocate(xlon_gb(np_global),ylat_gb(np_global),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: alloc xlon_gb failure')
+      endif !nws
+
+#ifdef USE_DVD
+     allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
+     if(istat/=0) call parallel_abort('INIT: alloc rkai_num')
+#endif
 
 #ifdef USE_ANALYSIS
       allocate(dtbe(ne),stat=istat)
@@ -1692,6 +1478,15 @@
       allocate(nelem_age(ntrs(4)/2),ielem_age(nea,ntrs(4)/2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: AGE allocation failure')
 #endif
+!===========================================================================
+      endif !iorder=0
+
+!     Assign source level
+      do i=1,natrm
+        if(ntrs(i)>0) then
+           lev_tr_source2(irange_tr(1,i):irange_tr(2,i))=lev_tr_source(i)
+        endif !ntrs
+      enddo !i
 
 !     Adjust mass for conservation flags
       iadjust_mass_consv=0
@@ -1709,12 +1504,31 @@
 
 !     Wave model arrays
 #ifdef  USE_WWM
-      allocate(wwave_force(2,nvrt,nsa), out_wwm(npa,35), out_wwm_windpar(npa,10), &
-             & stokes_vel(2,nvrt,npa), jpress(npa), sbr(2,npa), sbf(2,npa), &
-             & stokes_w_nd(nvrt,npa), stokes_vel_sd(2,nvrt,nsa),nne_wwm(np), stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
-      wwave_force=0.d0; out_wwm=0.d0; out_wwm_windpar=0.d0
-      stokes_vel=0.d0; jpress=0.d0; sbr=0.d0; sbf=0.d0; stokes_w_nd=0.d0; stokes_vel_sd=0.d0
+      if(iorder==0) then
+        allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
+               & out_wwm_rol(npa,35),taub_wc(npa), &
+               & stokes_hvel(2,nvrt,npa), stokes_wvel(nvrt,npa),stokes_hvel_side(2,nvrt,nsa), stokes_wvel_side(nvrt,nsa), &
+               & roller_stokes_hvel(2,nvrt,npa), roller_stokes_hvel_side(2,nvrt,nsa), &
+               & jpress(npa), sbr(2,npa), sbf(2,npa), srol(2,npa), sds(2,npa), &
+               & nne_wwm(np), eps_w(npa), eps_r(npa), eps_br(npa), delta_wbl(npa), &
+               & wave_sbrtot(npa),wave_sbftot(npa),wave_sdstot(npa),wave_sintot(npa), stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: WWM allocation failure')
+      endif !iorder
+      out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0; eps_w=0.d0; eps_r=0.d0; eps_br=0.d0
+      jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0; sds=0.d0; taub_wc=0.d0
+      stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=0.D0
+      wave_sbrtot=0.0D0; wave_sbftot=0.0D0; wave_sintot=0.0D0; wave_sdstot=0.0D0
+      !BM: coupling current for WWM
+      allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: (2) WWM alloc failure')
+      curx_wwm=0.d0; cury_wwm=0.d0
+      !BM: ramp on wwave_force at open boundary
+      allocate(wafo_opbnd_ramp(nsa), stat=istat)
+      if(istat/=0) call parallel_abort('MAIN: (2.1) WWM alloc failure')
+      wafo_opbnd_ramp=1.0d0
+
+
 
 !...  Modified some geometry vars for WWM for quads (split)
 !...  Because WWM mostly uses node-based vars, we only need to update a small set of vars:
@@ -1743,8 +1557,10 @@
         nea_wwm=nea_wwm+itmp
         ne_wwm=ne_wwm+itmp1
         neg_wwm=neg_wwm+itmp2
-        allocate(elnode_wwm(3,nea_wwm),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm(0)')
+        if(iorder==0) then
+          allocate(elnode_wwm(3,nea_wwm),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm(0)')
+        endif
         
         ntmp=maxval(nne_wwm)
         call mpi_allreduce(ntmp,mnei_wwm,1,itype,MPI_MAX,comm,ierr)
@@ -1797,8 +1613,10 @@
 !        enddo !i
 
       else !pure tri's
-        allocate(elnode_wwm(3,nea),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm')
+        if(iorder==0) then
+          allocate(elnode_wwm(3,nea),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: alloc elnode_wwm')
+        endif
         elnode_wwm(1:3,:)=elnode(1:3,:)
       endif !lhas_quad
 #endif /*USE_WWM*/
@@ -1807,20 +1625,18 @@
 !     Allocate TIMOR arrays
 #endif 
 
-!#ifdef USE_ICM
-!      call icm_init
-!#endif 
 #ifdef USE_COSINE
-      call get_param('cosine.in','ndelay',1,ndelay,tmp,stringvalue)
+      call get_param('cosine.nml','ndelay',1,ndelay,tmp,stringvalue)
       call cosine_init
 #endif
 
+      if(iorder==0) then
 !Tsinghua group
 #ifdef USE_SED 
-      allocate(total_sus_conc(nvrt,npa),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: total_sus_conc')     
-      if(itur==5) then ! 0821 1018
-        allocate(Vpx(nvrt,nsa),Vpy(nvrt,nsa),Vpx2(nvrt,npa),Vpy2(nvrt,npa),Dpxz(nvrt,npa),Dpyz(nvrt,npa), & 
+        allocate(total_sus_conc(nvrt,npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: total_sus_conc')     
+        if(itur==5) then ! 0821 1018
+          allocate(Vpx(nvrt,nsa),Vpy(nvrt,nsa),Vpx2(nvrt,npa),Vpy2(nvrt,npa),Dpxz(nvrt,npa),Dpyz(nvrt,npa), & 
             &taufp_t(nvrt,npa),ws(nvrt,npa),epsf(nvrt,npa),miuft(nvrt,npa),trndtot(nvrt,npa), &
             &miup(nvrt,npa),miup_t(nvrt,npa),miup_c(nvrt,npa),q2fp(nvrt,npa),q2p(nvrt,npa),q2f(nvrt,npa), &
             &taup(nvrt,npa),g0(nvrt,npa),taup_c(nvrt,npa),SDav(nvrt,npa),Srhoav(nvrt,npa),kesit(nvrt,npa), &
@@ -1830,56 +1646,59 @@
             ! 0821+Vpx,Vpy,Dpxz,Dpyz,taufp_t,ws,epsf,miuft,miup,miup_t,miup_c,kfp_m,taup,q2p,g0,taup_c,SDav
             ! 0821+Srhoav,kesit,Kp_tc,Kp_t,Kp_c,Kft,miuepsf,q2f,kppian,Dpzz,Tpzz
             ! 0927.1+Vpx2,Vpy2 !1006+TDxz,TDyz,Vpz2,Phai !1007+dfhm
-        if(istat/=0) call parallel_abort('MAIN: TWO-PHASE-MIX TURB allocation failure')
-      endif !itur==5 0821
-
+          if(istat/=0) call parallel_abort('MAIN: TWO-PHASE-MIX TURB allocation failure')
+        endif !itur==5 0821
 #endif /*USE_SED*/
 
 #ifdef USE_FIB
-     allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
-     allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
+       allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
+       allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
+#endif
+
+#ifdef USE_MICE
+        allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
+     &ice_evap(npa),srad_o(npa),srad_th_ice(npa),lhas_ice(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: ice allocation failure')
 #endif
 
 #ifdef USE_ICE
-      allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa),lhas_ice(npa),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: ice allocation failure')
+        allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa),lhas_ice(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: ice allocation failure')
 #endif
 
-!     Non-hydrostatic arrays
-!     Keep qnon for the time being due to hotstart
-      allocate(qnon(nvrt,npa),stat=istat)
-      if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
-!'
-      qnon=0.d0 !initialize
-!
-!      if(nonhydro==1) then
-!        allocate(ihydro(npa),stat=istat) 
-!        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure')
-!!'
-!      endif
+!       Non-hydrostatic arrays
+!       Keep qnon for the time being due to hotstart
+!        allocate(qnon(nvrt,npa),stat=istat)
+!        if(istat/=0) call parallel_abort('MAIN: Nonhydro allocation failure (1)')
+      endif !iorder
+
+!      qnon=0.d0 !initialize
 
 !     Alloc flux output arrays
       if(iflux/=0) then
-        allocate(iflux_e(nea),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: iflux_e alloc')
+        if(iorder==0) then
+          allocate(iflux_e(nea),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: iflux_e alloc')
+        endif !iorder
 
-        open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
-        max_flreg=-1
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'fluxflag.prop',status='old')
+          max_flreg=-1
+          do i=1,ne_global
+            read(32,*)j,buf4(i) !tmp1
+            itmp=buf4(i) !tmp1
+            if(itmp<-1) call parallel_abort('INIT: fluxflag.prop has <-1')
+            if(itmp>max_flreg) max_flreg=itmp
+          enddo !i
+          close(32)
+          if(max_flreg<=0) call parallel_abort('INIT: fluxflag.prop flag wrong')
+        endif !myrank
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(max_flreg,1,itype,0,comm,istat)
+
         do i=1,ne_global
-          read(32,*)j,tmp1
-          itmp=tmp1
-          if(itmp<-1) call parallel_abort('MAIN: fluxflag.prop has <-1')
-          if(iegl(i)%rank==myrank) iflux_e(iegl(i)%id)=itmp
-          if(itmp>max_flreg) max_flreg=itmp
-        enddo
-        close(32)
-!        do i=1,nea !must be aug.
-!          iflux_e(i)=maxval(nwild2(elnode(1:3,i)))
-!        enddo !i
-
-!        itmp1=maxval(iflux_e)
-!        call mpi_allreduce(itmp1,max_flreg,1,itype,MPI_MAX,comm,ierr)
-        if(max_flreg<=0) call parallel_abort('INIT: fluxflag.prop flag wrong')
+          if(iegl(i)%rank==myrank) iflux_e(iegl(i)%id)=buf4(i) !itmp
+        enddo !
       endif !iflux
 
 !'     Test message passing here
@@ -1887,15 +1706,24 @@
 !      stop
 
 !     Initialize some arrays and constants
-      tempmin=-5.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
+      tempmin=-2.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
-      uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; uth=-99.d0; vth=-99.d0; !flags
+      uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
       elevmax=-1.d34; dav_maxmag=-1.d0; dav_max=0.d0
       tr_el=0.d0
       timer_ns=0.d0
       iwsett=0; wsett=0.d0 !settling vel.
       rough_p=1.d-4 !>0 for SED
       tau_bot_node=0.d0
+      uu2 = 0.0_rkind
+      vv2 = 0.0_rkind
+      ww2 = 0.0_rkind
+      tr_nd0=0.d0
+      istack0_schout=0
+      cumsum_eta=0.d0
+      nsteps_from_cold=0
+      wind_rotate_angle=0.d0
+      wwave_force=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -1923,12 +1751,14 @@
 !0821
 #endif /*Tsinghua group*/
 
-!     for output
+!     for output and init for abnormal cases
       airt1=0.d0; shum1=0.d0;  airt2=0.d0; shum2=0.d0; srad=0.d0; fluxsu=0.d0; fluxlu=0.d0
-      hradu=0.d0; hradd=0.d0; sflux=0.d0; windx=0.d0; windy=0.d0
+      hradu=0.d0; hradd=0.d0; sflux=0.d0; windx=0.d0; windy=0.d0; tauxz=0.d0; tauyz=0.d0
       q2=0.d0; xl=0.d0 !for hotstart with itur/=3 only
       dfq1=0.d0; dfq2=0.d0 !for hotstart
       fluxevp=0.d0; fluxprc=0.d0
+      prec_rain=0.d0; prec_snow=0.d0
+
 !     Fort.12 flags
 !      ifort12=0
 
@@ -1986,6 +1816,16 @@
 !      endif !ics
 
 !...  Finish off some remaining geometric calcualtions
+!     Sidecenter coord in the elem frame
+      do i=1,nea
+        do j=1,i34(i)
+          j1=nxq(1,j,i34(i))
+          j2=nxq(2,j,i34(i))
+          xs_el(j,i)=0.5d0*(xel(j1,i)+xel(j2,i))
+          ys_el(j,i)=0.5d0*(yel(j1,i)+yel(j2,i))
+        enddo !j
+      enddo !i
+
 !      !weno>
       if (itr_met==4) then !WENO
         call set_isbe !identify boundary elements
@@ -2001,6 +1841,11 @@
       ixi_n=(/-1,1,1,-1/)
       iet_n=(/-1,-1,1,1/)
 
+!...  Modified depth
+      dpmax=maxval(dp(1:npa))
+!     Save intial depth for bed deformation case
+      dp00=dp
+
 !...  Vgrid
       if(ivcor==2) then; if(ztot(1)>=-dpmax) then
         write(errmsg,*)'1st z-level must be below max. depth:',dpmax
@@ -2009,18 +1854,36 @@
 
 !...  Read in sigma coord. and kbp from vgrid.in if ivcor=1
       if(ivcor==1) then
-        open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
-        read(19,*); read(19,*) nvrt
+        if(myrank==0) then
+          open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old')
+          read(19,*); read(19,*) !nvrt
+          read(19,*)nwild2(1:np_global)
+        endif !myrank
+        call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
         do i=1,np_global
-          read(19,*)j,itmp,swild(itmp:nvrt)
           if(ipgl(i)%rank==myrank) then
             id1=ipgl(i)%id
-            kbp(id1)=itmp
-            sigma_lcl(itmp:nvrt,id1)=swild(itmp:nvrt)
+            kbp(id1)=nwild2(i)
           endif
         enddo !i
-        close(19)
+
+        do k=1,nvrt !np_global
+          if(myrank==0) read(19,*)j,buf3(1:np_global) !j,itmp,swild(itmp:nvrt)
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)    
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              id1=ipgl(i)%id
+              sigma_lcl(k,id1)=buf3(i)
+            endif
+          enddo !i
+        enddo !k
+        if(myrank==0) close(19)
       endif !ivcor==1
+      if(myrank==0) then
+        write(16,*)'done reading vgrid ivcor=1...'
+        call flush(16)
+      endif
 
 !...  Init some vars b4 OMP
       zdev_max=-1 !max. deviation of zp-axis and radial direction
@@ -2052,7 +1915,7 @@
 !...  pframe is along local ll direction: 2nd index indicates zonal or meridional or outward radial
 !...  directions. Note that the vectors are strictly undefined at 2 poles, but can be calculated 
 !...  as all we need is just a frame there.
-!...  For ics=1 pframe is not needed
+!...  For ics=1 pframe are not needed
 !$OMP workshare
       pframe=0 !for ics=1
 !$OMP end workshare
@@ -2065,12 +1928,34 @@
           pframe(3,1,i)=0.d0
           pframe(1,2,i)=-cos(xlon(i))*sin(ylat(i)) !meri. dir.
           pframe(2,2,i)=-sin(xlon(i))*sin(ylat(i))
-          pframe(3,2,i)=cos(ylat(i))
+          pframe(3,2,i)=rearth_pole/rearth_eq*cos(ylat(i))
+          ar1=sqrt(pframe(1,2,i)**2.d0+pframe(2,2,i)**2.d0+pframe(3,2,i)**2.d0)
+          if(ar1==0.d0) call parallel_abort('INIT: 0 y-axis')
+          pframe(1:3,2,i)=pframe(1:3,2,i)/ar1
           call cross_product(pframe(1,1,i),pframe(2,1,i),pframe(3,1,i), &
                             &pframe(1,2,i),pframe(2,2,i),pframe(3,2,i), &
                             &pframe(1,3,i),pframe(2,3,i),pframe(3,3,i))
         enddo !i=1,npa
 !$OMP   end do
+
+!        !sframe2: Qian's method C (new37)
+!!$OMP   do
+!        do i=1,nsa
+!          call compute_ll(xcj(i),ycj(i),zcj(i),ar1,ar2)
+!          sframe2(1,1,i)=-sin(ar1) !zonal dir.
+!          sframe2(2,1,i)=cos(ar1)
+!          sframe2(3,1,i)=0.d0
+!          sframe2(1,2,i)=-cos(ar1)*sin(ar2) !meri. dir.
+!          sframe2(2,2,i)=-sin(ar1)*sin(ar2)
+!          sframe2(3,2,i)=rearth_pole/rearth_eq*cos(ar2)
+!          tmp=sqrt(sframe2(1,2,i)**2.d0+sframe2(2,2,i)**2.d0+sframe2(3,2,i)**2.d0)
+!          if(tmp==0.d0) call parallel_abort('INIT: 0 y-axis')
+!          sframe2(1:3,2,i)=sframe2(1:3,2,i)/tmp
+!          call cross_product(sframe2(1,1,i),sframe2(2,1,i),sframe2(3,1,i), &
+!                            &sframe2(1,2,i),sframe2(2,2,i),sframe2(3,2,i), &
+!                            &sframe2(1,3,i),sframe2(2,3,i),sframe2(3,3,i))
+!        enddo
+!!$OMP   end do
 
         !Check dot products
 !$OMP   do reduction(max: zdev_max)
@@ -2097,33 +1982,27 @@
       endif !ics==2
 
 !...  Compute sn[xy] for side normal dir
-      if(ics==1) then
-!$OMP   workshare
-        snx(:)=sframe(1,1,:)
-        sny(:)=sframe(2,1,:)
-!$OMP   end workshare
-      else !lat/lon; use 1st node's ll frame
-!$OMP   do
-        do i=1,nsa
-          n1=isidenode(1,i)
-          snx(i)=dot_product(sframe(1:3,1,i),pframe(1:3,1,n1))
-          sny(i)=dot_product(sframe(1:3,1,i),pframe(1:3,2,n1))
-        enddo !i
-!$OMP   end do
-      endif !ics
-
-!...  Modified depth
-!      dpmax=-1.e25 !max. depth
-!$OMP workshare
-      dpmax=maxval(dp(1:npa))
-!     Save intial depth for bed deformation case
-      dp00=dp
-!$OMP end workshare
+!      if(ics==1) then
+!!$OMP   workshare
+!        snx(:)=sframe(1,1,:)
+!        sny(:)=sframe(2,1,:)
+!!$OMP   end workshare
+!      else !lat/lon; use 1st node's ll frame
+!!$OMP   do
+!        do i=1,nsa
+!!          n1=isidenode(1,i)
+!!          snx(i)=dot_product(sframe(1:3,1,i),pframe(1:3,1,n1))
+!!          sny(i)=dot_product(sframe(1:3,1,i),pframe(1:3,2,n1))
+!!new37: use sframe2
+!          snx(i)=dot_product(sframe(1:3,1,i),sframe2(1:3,1,i))
+!          sny(i)=dot_product(sframe(1:3,1,i),sframe2(1:3,2,i))
+!        enddo !i
+!!$OMP   end do
+!      endif !ics
 
 !$OMP do
       do i=1,npa
         if(ivcor==2) hmod(i)=min(dp(i),h_s)
-!        if(dp(i)>dpmax) dpmax=dp(i)
       enddo !i=1,npa
 !$OMP end do
 
@@ -2235,17 +2114,24 @@
 
 !...  Compute lat/lon at element center for EcoSim 
 #if defined USE_ECO || defined USE_COSINE 
-      open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-      read(32,*)
-      read(32,*) !ne,np
+      if(myrank==0) then
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+        read(32,*)
+        read(32,*) !ne,np
+        do i=1,np_global
+          read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+        enddo !i
+        close(32)
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat) 
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat) 
+
       do i=1,np_global
-        read(32,*)j,xtmp,ytmp
         if(ipgl(i)%rank==myrank) then
-          xlon(ipgl(i)%id)=xtmp*pi/180.d0
-          ylat(ipgl(i)%id)=ytmp*pi/180.d0
+          xlon(ipgl(i)%id)=buf3(i)*pi/180.d0 !xtmp*pi/180.d0
+          ylat(ipgl(i)%id)=buf4(i)*pi/180.d0 !ytmp*pi/180.d0
         endif
       enddo !i
-      close(32)
       lreadll=.true.
 
       do i=1,nea
@@ -2255,46 +2141,68 @@
       enddo !i
 #endif
 
+#if USE_COSINE
+      iwsett(irange_tr(1,8):irange_tr(2,8))=1
+#endif
+
 #ifdef USE_MARSH
 !...  Inputs for marsh migration model
-      open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
-      open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
+      if(myrank==0) then
+        open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
+        open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
+        do i=1,ne_global
+          read(10,*)j,buf3(i) !tmp1
+          read(32,*)j,buf4(i) !tmp2
+          itmp1=nint(buf3(i))
+          itmp2=nint(buf4(i))
+          if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
+            write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
+            call parallel_abort(errmsg)
+          endif
+        enddo !i
+        close(10); close(32)
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
       do i=1,ne_global
-        read(10,*)j,tmp1
-        read(32,*)j,tmp2
-        itmp1=nint(tmp1)
-        itmp2=nint(tmp2)
-        if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
-          write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
-          call parallel_abort(errmsg)
-        endif
         if(iegl(i)%rank==myrank) then
           ie=iegl(i)%id
-          imarsh(ie)=itmp1
-          ibarrier_m(ie)=itmp2
-          if(itmp2==1) imarsh(ie)=0
+          imarsh(ie)=nint(buf3(i)) !itmp1
+          ibarrier_m(ie)=nint(buf4(i)) !itmp2
+          if(ibarrier_m(ie)==1) imarsh(ie)=0
         endif
       enddo !i
-      close(10); close(32)
 #endif      
 
 !... Read lat/lon for spectral spatial interpolation  in WWM
 #ifdef USE_WWM
-      inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
+      if(myrank==0) then
+        inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
+        if(lexist) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+             read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+          enddo !i
+          close(32)
+          lreadll=.true. 
+        endif !lexist 
+      endif !myrank
+      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
+      call mpi_bcast(lreadll,1,MPI_LOGICAL,0,comm,istat)
+
       if(lexist) then
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
-        do i=1,np_global
-           read(32,*)j,xtmp,ytmp
-           if(ipgl(i)%rank==myrank) then
-             xlon(ipgl(i)%id)=xtmp*pi/180.d0
-             ylat(ipgl(i)%id)=ytmp*pi/180.d0
-           endif
+       do i=1,np_global
+         if(ipgl(i)%rank==myrank) then
+           xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+           ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
+         endif
         enddo !i
-        close(32)
-        lreadll=.true. 
-      endif 
+      endif !lexist
 #endif
 
 #ifdef USE_SIMPLE_WIND
@@ -2323,6 +2231,7 @@
       endif       
 #endif
 
+!Error: large I/O
 !...  Classify interior/exterior bnd node and calculate edge angles (for WWM only)
 !...  WARNING: if WWM is used, the _land_ b.c. part of hgrid.gr3 must have flags for (exterior) land (0) and
 !...           island (1) bnds, and no open bnd is allowed on islands
@@ -2370,29 +2279,46 @@
 !...  Earth tidal potential
       read(31,*) ntip,tip_dp !cut-off depth for applying tidal potential
       if(ntip>0) then
-        allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: allocation failure for tamp etc')
+        !Alloc local arrays separately to avoid crash under ESMF-PDAF flexible mode ensemble
+        if(.not.allocated(tp_name)) allocate(tp_name(ntip),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: allocation failure for tp_name')
+        if(iorder==0) then
+!         allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+          allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: allocation failure for tamp etc')
+          if(iloadtide==1) then !loading tide (SAL) interpolated from another model
+            allocate(rloadtide(2,ntip,npa),stat=istat)
+            if(istat/=0) call parallel_abort('INIT: alloc failure for SAL')
+          endif !iloadtide
+        endif !iorder
 !'
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+          enddo !i
+          close(32)
+        endif !myrank
+        lreadll=.true.
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp
           if(ipgl(i)%rank==myrank) then
             ii=ipgl(i)%id
-            xlon(ii)=xtmp*pi/180.d0
-            ylat(ii)=ytmp*pi/180.d0
+            xlon(ii)=buf3(i)*pi/180.d0
+            ylat(ii)=buf4(i)*pi/180.d0
             !Pre-compute species function to save time
             fun_lat(0,ii)=3.d0*sin(ylat(ii))**2.d0-1.d0
             fun_lat(1,ii)=sin(2.d0*ylat(ii))
             fun_lat(2,ii)=cos(ylat(ii))**2.d0
           endif
         enddo !i
-        close(32)
-        lreadll=.true.
       
         do i=1,ntip
-          read(31,*) !tag
+          read(31,'(a6)')tp_name(i) !tag
           read(31,*) jspc(i),tamp(i),tfreq(i),tnf(i),tear(i)
           if(jspc(i)<0.or.jspc(i)>2) then
             write(errmsg,*)'Illegal tidal species #',jspc(i)
@@ -2400,6 +2326,35 @@
           endif
           tear(i)=tear(i)*pi/180.d0
         enddo !i
+
+        if(iloadtide==1) then !loading tide
+          do i=1,ntip
+            char6=adjustl(tp_name(i))
+            itmp=len_trim(char6)
+!Debug
+!            write(12,*)'SAL grid name:',in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3'
+ 
+            !.gr3 has both amp, phase
+            if(myrank==0) then
+              open(32,file=in_dir(1:len_in_dir)//'loadtide_'//char6(1:itmp)//'.gr3',status='old')
+              read(32,*); read(32,*)
+              do j=1,np_global
+                read(32,*)k,xtmp,ytmp,buf3(j),buf4(j) !tmp1,tmp2
+              enddo !j
+              close(32)
+            endif !myrank
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+            call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+            do j=1,np_global
+              if(ipgl(j)%rank==myrank) then
+                ii=ipgl(j)%id
+                rloadtide(1,i,ii)=buf3(j) !tmp1 !amp [m]
+                rloadtide(2,i,ii)=buf4(j)*pi/180.d0 !tmp2*pi/180.d0 !phase [radian]
+              endif
+            enddo !j
+          enddo !i
+        endif !iloadtide
       endif !ntip>0
 
 !...  Boundary forcing freqs.
@@ -2407,11 +2362,13 @@
       read(31,*) nbfr
 
       if(nbfr>0) then
-        allocate(amig(nbfr),ff(nbfr),face(nbfr),emo(nope_global,mnond_global,nbfr), &
+        if(iorder==0) then
+          allocate(amig(nbfr),ff(nbfr),face(nbfr),emo(nope_global,mnond_global,nbfr), &
      &efa(nope_global,mnond_global,nbfr),umo(nope_global,mnond_global,nbfr), &
      &ufa(nope_global,mnond_global,nbfr),vmo(nope_global,mnond_global,nbfr), &
      &vfa(nope_global,mnond_global,nbfr),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: allocation failure for amig etc')
+          if(istat/=0) call parallel_abort('MAIN: allocation failure for amig etc')
+        endif !iorder
 !'
         do i=1,nbfr
           read(31,*) !tag
@@ -2435,11 +2392,12 @@
       nettype=0 !total # of type I bnds; global variable
       nfltype=0
       ntrtype1(:)=0 !total # of type I bnds
-      nettype2=0 !total # of type IV bnds (3D input)
+
+      nettype2=0 !total # of type IV bnds (netcdf input)
       nfltype2=0 
-      nnode_et=0 !total # of open bnd nodes that require elev2D.th
-      nnode_fl=0 !total # of open bnd nodes that require uv3D.th
-      nnode_tr2(:)=0 !total # of open bnd nodes that require tr3D.th
+      nnode_et=0 !total # of open bnd nodes that require elev2D.th.nc
+      nnode_fl=0 !total # of open bnd nodes that require uv3D.th.nc
+      nnode_tr2(:)=0 !total # of open bnd nodes that require <tr>_3D.th.nc
       itrtype(:,:)=-99 !init
       lflbc=.false. !flag to indicate existence of ifltype/=0
       do k=1,nope_global
@@ -2563,13 +2521,13 @@
             else if(itrtype(i,k)==1) then
               read(31,*) trobc(i,k) !nudging factor
               ntrtype1(i)=ntrtype1(i)+1
-              do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
-                write(ifile_char,'(i03)')m-irange_tr(1,i)+1
-                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
-                inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
-!'
-                open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              enddo !m
+!              do m=irange_tr(1,i),irange_tr(2,i) !1,ntracers
+!                write(ifile_char,'(i03)')m-irange_tr(1,i)+1
+!                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
+!                inputfile=tr_mname(i)//'_'//ifile_char(1:ifile_len)//'.th'
+!!'
+!                open(300+m,file=in_dir(1:len_in_dir)//inputfile,status='old')
+!              enddo !m
             else if(itrtype(i,k)==3) then !nudge to i.c.
               read(31,*) trobc(i,k) !nudging factor
             else if(itrtype(i,k)==4) then
@@ -2579,7 +2537,7 @@
             else if(itrtype(i,k)/=0) then
               write(errmsg,*)'Wrong itrtype:',k,itrtype(i,k)
               call parallel_abort(errmsg)
-            endif
+            endif !itrtype
 
             if(trobc(i,k)<0.d0.or.trobc(i,k)>1.d0) then
               write(errmsg,*)'Tr. obc nudging factor wrong:',trobc(i,k),k
@@ -2602,13 +2560,15 @@
         if(block_nudge<0.or.block_nudge>=1) call parallel_abort('MAIN: wrong block_nudge')
 !'
         if(nhtblocks>0) then
-          allocate(isblock_nd(2,npa), &
-                  &dir_block(3,nhtblocks), &
+          if(iorder==0) then
+            allocate(isblock_nd(2,npa), &
+                  &dir_block(2,nhtblocks), &
                   &isblock_sd(2,nsa), &
                   &isblock_el(nea),q_block(nhtblocks),vnth_block(2,nhtblocks), &
                   &q_block_lcl(nhtblocks),iq_block_lcl(nhtblocks), &
                   &iq_block(nhtblocks),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: Alloc failed (9)')
+            if(istat/=0) call parallel_abort('MAIN: Alloc failed (9)')
+          endif !iorder
 
           isblock_nd=0 !init.
 
@@ -2634,7 +2594,7 @@
 
           !Compute block elements and (mean) face directions for each block (assumed
           !to be outer normal of face "2" from the block element
-          allocate(swild99(3,nhtblocks),ibuf1(nhtblocks,1),ibuf2(nhtblocks,1),stat=istat)
+          allocate(swild99(2,nhtblocks),ibuf1(nhtblocks,1),ibuf2(nhtblocks,1),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: failed to alloc. (15)')
           swild99=0.d0 !local copy of dir
           ibuf1=0 !local counter
@@ -2650,7 +2610,8 @@
                   call parallel_abort(errmsg)
                 endif
                 if(isblock_nd(2,n1)==2.and.isblock_nd(2,n2)==2) then
-                  swild99(1:3,jblock)=swild99(1:3,jblock)+sframe(1:3,1,isd)*ssign(j,i)
+                  swild99(1,jblock)=swild99(1,jblock)+snx(isd)*ssign(j,i) !sframe(1:3,1,isd)*ssign(j,i)
+                  swild99(2,jblock)=swild99(2,jblock)+sny(isd)*ssign(j,i) 
                   ibuf1(jblock,1)=ibuf1(jblock,1)+1
                 endif
               enddo !j
@@ -2660,7 +2621,7 @@
 #ifdef INCLUDE_TIMING
           wtmp1=mpi_wtime()
 #endif
-          call mpi_allreduce(swild99,dir_block,3*nhtblocks,rtype,MPI_SUM,comm,ierr)
+          call mpi_allreduce(swild99,dir_block,2*nhtblocks,rtype,MPI_SUM,comm,ierr)
           call mpi_allreduce(ibuf1,ibuf2,nhtblocks,itype,MPI_SUM,comm,ierr)
 #ifdef INCLUDE_TIMING
           wtimer(3,2)=wtimer(3,2)+mpi_wtime()-wtmp1
@@ -2671,14 +2632,14 @@
               write(errmsg,*) 'MAIN: orphaned block face:',i
               call parallel_abort(errmsg)
             else
-              dir_block(1:3,i)=dir_block(1:3,i)/real(ibuf2(i,1),rkind)
+              dir_block(1:2,i)=dir_block(1:2,i)/real(ibuf2(i,1),rkind)
               !Re-normalize dir. vector
-              rmag=sqrt(dir_block(1,i)**2.d0+dir_block(2,i)**2.d0+dir_block(3,i)**2.d0)
+              rmag=sqrt(dir_block(1,i)**2.d0+dir_block(2,i)**2.d0) !+dir_block(3,i)**2.d0)
               if(rmag==0.d0) call parallel_abort('MAIN: 0 dir vector')
-              dir_block(1:3,i)=dir_block(1:3,i)/rmag
+              dir_block(1:2,i)=dir_block(1:2,i)/rmag
 
               !Check
-              !write(12,*)'Block face dir:',i,ibuf2(i,1),dir_block(1:3,i)
+              !write(12,*)'Block face dir:',i,ibuf2(i,1),dir_block(1:2,i)
             endif
           enddo !i
           deallocate(swild99,ibuf1,ibuf2)
@@ -2686,12 +2647,14 @@
           !open(49,file=in_dir(1:len_in_dir)//'flux_blocks.th',status='old')
           !Build message passing arrays for 2 ref. nodes
           !The proc that has ref. node 1 will calculate the flux first before broadcasting
-          allocate(nhtrecv1(0:nproc-1),nhtsend1(0:nproc-1), &
+          if(iorder==0) then
+            allocate(nhtrecv1(0:nproc-1),nhtsend1(0:nproc-1), &
      &ihtrecv1_ndgb(nhtblocks,0:nproc-1),ihtsend1_ndgb(nhtblocks,0:nproc-1), &
      &ihtrecv1(nhtblocks,0:nproc-1),ihtsend1(nhtblocks,0:nproc-1), &
      &block_refnd2_eta(nhtblocks),recv_bsize(nhtblocks),send_bsize(nhtblocks), &
      &htrecv_type(0:nproc-1),htsend_type(0:nproc-1),stat=istat)
-          if(istat/=0) call parallel_abort('MAIN: Failed to alloc (17)')
+            if(istat/=0) call parallel_abort('MAIN: Failed to alloc (17)')
+          endif !iorder
           nhtrecv1=0 !# of recvs
           do i=1,nhtblocks
             ndgb1=structures(i)%upnode
@@ -2800,26 +2763,106 @@
 
       endif !ihydraulics/=0
 
-!     Read in source_sink.in and open t.h. files
-      if(if_source==1) then
-        open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
-        read(31,*)nsources
-        allocate(ieg_source(max(1,nsources)),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: ieg_source failure')
-        do i=1,nsources
-          read(31,*)ieg_source(i) !global elem. #
-        enddo !i
+!     Read in source/sink info 
+      if(if_source==1) then !ASCII
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'source_sink.in',status='old')
+          read(31,*)nsources
+        endif !myrank
+        call mpi_bcast(nsources,1,itype,0,comm,istat)
 
-        read(31,*) !blank line
-        read(31,*)nsinks
-        allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
-        if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
-        do i=1,nsinks
-          read(31,*)ieg_sink(i)
-        enddo !i
-        close(31)
+        if(iorder==0) then
+          allocate(ieg_source(max(1,nsources)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_source failure')
+        endif
+
+        if(myrank==0) then
+          do i=1,nsources
+            read(31,*)ieg_source(i) !global elem. #
+          enddo !i
+          read(31,*) !blank line
+          read(31,*)nsinks
+        endif !myrank
+        call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(nsinks,1,itype,0,comm,istat)
+
+        if(iorder==0) then
+          allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+        endif
+
+        if(myrank==0) then
+          do i=1,nsinks
+            read(31,*)ieg_sink(i)
+          enddo !i
+          close(31)
+        endif !myrank
+        call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
 
+      if(if_source==-1) then !nc
+        if(myrank==0) then
+          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+          if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
+          j=nf90_inq_dimid(ncid_source,'nsources',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
+          if(j/=NF90_NOERR) call parallel_abort('init: nsources')
+          j=nf90_inq_dimid(ncid_source,'nsinks',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=nsinks)
+          if(j/=NF90_NOERR) call parallel_abort('init: nsinks')
+          j=nf90_inq_dimid(ncid_source,'ntracers',mm)
+          j=nf90_inquire_dimension(ncid_source,mm,len=itmp)
+          if(itmp/=ntracers) call parallel_abort('init: wrong ntracers in source.nc')
+
+          j=nf90_inq_varid(ncid_source, "time_step_vsource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsource(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_vsource wrong')
+          th_dt3(1)=dble(floatout)
+
+          j=nf90_inq_varid(ncid_source, "time_step_msource",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_msource(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_msource wrong')
+          th_dt3(3)=dble(floatout)
+
+          j=nf90_inq_varid(ncid_source, "time_step_vsink",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink')
+          j=nf90_get_var(ncid_source,mm,floatout)
+          if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
+          if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
+          th_dt3(2)=dble(floatout)
+        endif !myrank=0
+        call mpi_bcast(nsources,1,itype,0,comm,istat)
+        call mpi_bcast(nsinks,1,itype,0,comm,istat)
+        call mpi_bcast(th_dt3,nthfiles2,rtype,0,comm,istat)
+
+        if(iorder==0) then
+          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
+     &ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_source failure(3)')
+        endif
+
+        if(myrank==0) then
+          if(nsources>0) then
+            j=nf90_inq_varid(ncid_source, "source_elem",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
+            j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
+            if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
+          endif !nsources
+
+          if(nsinks>0) then
+            j=nf90_inq_varid(ncid_source, "sink_elem",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
+            j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
+            if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
+          endif !nsinks
+        endif !myrank=0
+        call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
+      endif !if_source=-1
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 !  Initialize model for cold and hot start
@@ -2829,9 +2872,9 @@
       ntime=rnday*86400.d0/dt+0.5d0
       nrec=min(ntime,ihfskip)/nspool
 
-!...  Compute neighborhood for internal sides for Shapiro filter
-!...  isidenei2(4,ns): 4 neighboring sides of a _resident_ side
-!...  Info for resident sides only!
+!...  Compute neighborhood for _internal_ sides for Shapiro filter
+!...  isidenei2(4,ns): 4 neighboring sides of a _resident internal_ side
+!...  Info for resident internal sides only!
 !$OMP parallel do default(shared) private(i,j,ie,l0,nwild)
       do i=1,ns !resident sides only
         if(isdel(2,i)==0) cycle 
@@ -2866,137 +2909,188 @@
 !     Initialize variables used in tsunami model (but bdef[1,2] and ibdef are available for all models)
       bdef=0.d0 !total deformation
       if(imm==1) then !read in deformation at all nodes
-        open(32,file=in_dir(1:len_in_dir)//'bdef.gr3',status='old') !connectivity part not used
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check bdef.gr3')
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'bdef.gr3',status='old') !connectivity part not used
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) call parallel_abort('Check bdef.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp !total deformation
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp !total deformation
-          if(ipgl(i)%rank==myrank) bdef(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) bdef(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !imm
 
 !...  Center of projection in degrees (used for beta-plane approx.)
       slam0=slam0*pi/180.d0
       sfea0=sfea0*pi/180.d0
 
-!...  Read in shaprio.gr3
+!...  Set shapiro(:). For ishapiro=2, this will be done in _step
       if(ishapiro==1) then
         shapiro(:)=shapiro0
       else if(ishapiro==-1) then
-        open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check shapiro.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+ 
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+      
         do i=1,nsa
           shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
           !Check range
           if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
 !'
         enddo !i
+!      else if(ishapiro==2) then 
+!        shapiro_min=0.d0 !init min in case shapiro_min.gr3 does not exist
+!        if(myrank==0) then
+!          inquire(file=in_dir(1:len_in_dir)//'shapiro_min.gr3', exist=lexist)
+!          if(lexist) then
+!            write(16,*)'Reading in shapiro_min.gr3'
+!            open(32,file=in_dir(1:len_in_dir)//'shapiro_min.gr3',status='old')
+!            read(32,*)
+!            read(32,*) itmp1,itmp2
+!            if(itmp1/=ne_global.or.itmp2/=np_global) &
+!     &call parallel_abort('Check shapiro_min.gr3')
+!            do i=1,np_global
+!              read(32,*)j,xtmp,ytmp,tmp
+!              if(tmp<0.d0.or.tmp>0.5d0) call parallel_abort('INIT: check shapiro_min')
+!              buf3(i)=tmp
+!!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=tmp
+!            enddo !i
+!            close(32)
+!          endif !lexist
+!        endif !myrank
+!        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!        call mpi_bcast(lexist,1,MPI_LOGICAL,0,comm,istat)
+!
+!        if(lexist) then
+!          do i=1,np_global
+!            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
+!          enddo !i
+!        endif !lexist
       endif !ishapiro==-1
 
-!...  Horizontal viscosity option
-!     ihorcon =0 means horizontal viscosity term=0
-!      if(ihorcon==1) then
-!        open(32,file=in_dir(1:len_in_dir)//'hvis_coef.gr3',status='old')
-!        read(32,*)
-!        read(32,*) itmp1,itmp2
-!        if(itmp1/=ne_global.or.itmp2/=np_global) &
-!     &call parallel_abort('Check hvis_coef.gr3')
-!        do i=1,np_global
-!          read(32,*)j,xtmp,ytmp,tmp 
-!          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
-!        enddo !i
-!        close(32)
-!        do i=1,nsa
-!          hvis_coef(:,i)=sum(swild(isidenode(1:2,i)))/2
-!          !Check range
-!          if(hvis_coef(1,i)>0.125) call parallel_abort('INIT: hvis_coef>0.125')
-!        enddo !i
-!      else if(ihorcon==2) then
-!        hvis_coef=hvis_coef0
-!      endif !ihorcon
-      
 !...  Horizontal diffusivity option; only works for upwind/TVD
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
       if(ihdif==0) then
         hdif=0.d0
       else
-        open(32,file=in_dir(1:len_in_dir)//'hdif.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hdif.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check hdif.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp 
+            if(tmp<0.d0) then
+              write(errmsg,*)'hdif out of bound:',tmp,i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+         
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp 
-          if(tmp<0.d0) then
-            write(errmsg,*)'hdif out of bound:',tmp,i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
       endif !ihdif/=0
       
 !     Advection flags
       if(nadv==0) then
-        open(10,file=in_dir(1:len_in_dir)//'adv.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'adv.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check adv.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp
+            if(int(tmp)<0.or.int(tmp)>2) then
+              write(errmsg,*)'Unknown iadv',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp
-          if(int(tmp)<0.or.int(tmp)>2) then
-            write(errmsg,*)'Unknown iadv',i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) iadv(ipgl(i)%id)=int(tmp)
+          if(ipgl(i)%rank==myrank) iadv(ipgl(i)%id)=int(buf3(i))
         enddo
-        close(10)
       else !nadv/=0
         iadv=nadv
       endif
 
 !...  Bottom friction
       if(nchi==-1) then !read in Manning's n for 2D model
-        open(32,file=in_dir(1:len_in_dir)//'manning.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'manning.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check manning.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0) then
+              write(errmsg,*)'Negative Manning',tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=tmp
+          enddo
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0) then
-            write(errmsg,*)'Negative Manning',tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) rmanning(ipgl(i)%id)=buf3(i) !tmp
         enddo
-        close(32)
+ 
       else if(nchi==0) then !read in drag coefficients for 3D model
-        open(32,file=in_dir(1:len_in_dir)//'drag.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'drag.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check drag.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0) then
+              write(errmsg,*)'Negative bottom drag',tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=tmp
+          enddo
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0) then
-            write(errmsg,*)'Negative bottom drag',tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) Cdp(ipgl(i)%id)=buf3(i) !tmp
         enddo
+
         do i=1,nsa
           n1=isidenode(1,i)
           n2=isidenode(2,i)
@@ -3004,18 +3098,30 @@
 !         Debug
 !          if(myrank==0) write(99,*)i,iplg(n1),iplg(n2),Cd(i)
         enddo
-        close(32)
       else if(nchi==1) then !read in roughness in meters (3D)
-        open(32,file=in_dir(1:len_in_dir)//'rough.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'rough.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check rough.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0) then
+              write(errmsg,*)'INIT: negative rough at node ',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) rough_p(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+
       else
         write(errmsg,*)'Unknown bfric', nchi
         call parallel_abort(errmsg)
@@ -3029,18 +3135,29 @@
       else !ncor=1
         if(ics==1.and.myrank==0) write(16,*)'Check slam0 and sfea0 as variable Coriolis is used'
 !'
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,buf3(i),buf4(i) !xtmp,ytmp
+!            if(ipgl(i)%rank==myrank) then
+!              xlon(ipgl(i)%id)=xtmp*pi/180.d0
+!              ylat(ipgl(i)%id)=ytmp*pi/180.d0
+!            endif
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        lreadll=.true.
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp
           if(ipgl(i)%rank==myrank) then
-            xlon(ipgl(i)%id)=xtmp*pi/180.d0
-            ylat(ipgl(i)%id)=ytmp*pi/180.d0
+            xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+            ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
           endif
         enddo !i
-        close(32)
-        lreadll=.true.
 
         fc=2*omega_e*sin(sfea0)
         beta=2*omega_e*cos(sfea0)
@@ -3062,47 +3179,83 @@
       endif !ncor
 
 !     Wind 
-      if(nws>=2.and.nws<=3) then !CORIE mode; read in hgrid.ll and open debug outputs
-        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
-        read(32,*)
-        read(32,*) !ne,np
-        do i=1,np_global
-          read(32,*)j,tmp1,tmp2
-          if(ipgl(i)%rank==myrank) then
-            xlon(ipgl(i)%id)=tmp1*pi/180.d0
-            ylat(ipgl(i)%id)=tmp2*pi/180.d0
-          endif
-        enddo !i
-        close(32)
-        lreadll=.true.
-
-#ifdef DEBUG
-        fdb='sflux_0000'
-        lfdb=len_trim(fdb)
-        write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
-        open(38,file=out_dir(1:len_out_dir)//fdb,status='replace')
-#endif
-      endif
-
-      windfactor=1 !intialize for default
-      if(nws>0) then
-        if(iwindoff/=0) then
-          open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
+      if(nws<0.or.(nws>=2.and.nws<=3)) then !CORIE mode; read in hgrid.ll and open debug outputs
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
           read(32,*)
-          read(32,*) itmp1,itmp2
-          if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check windfactor.gr3')
+          read(32,*) !ne,np
           do i=1,np_global
-            read(32,*)j,xtmp,ytmp,tmp
-            if(tmp<0.d0) then
-              write(errmsg,*)'Wind scaling factor must be positive:',i,tmp
-              call parallel_abort(errmsg)
+            read(32,*)j,buf3(i),buf4(i) !tmp1,tmp2
+            if(nws<0) then !save only on rank 0
+              xlon_gb(i)=buf3(i) !degr
+              ylat_gb(i)=buf4(i)
             endif
-            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=tmp
           enddo !i
           close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+        lreadll=.true.
+        bounds_lon(1)=minval(buf3(1:np_global)) !deg
+        bounds_lon(2)=maxval(buf3(1:np_global))
+ 
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            xlon(ipgl(i)%id)=buf3(i)*pi/180.d0
+            ylat(ipgl(i)%id)=buf4(i)*pi/180.d0
+          endif
+        enddo !i
+
+#ifdef DEBUG
+        fdb='sflux_000000'
+        lfdb=len_trim(fdb)
+        write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
+        open(38,file=out_dir(1:len_out_dir)//fdb,status='replace')
+#endif
+      endif !nws
+
+!...  Wind rotation angle input
+      if(nws==2) then
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'windrot_geo2proj.gr3',status='old')
+          read(32,*)
+          read(32,*) !ne,np
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !degr
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) wind_rotate_angle(ipgl(i)%id)=buf3(i)*pi/180.d0
+        enddo !i
+      endif !nws
+
+      windfactor=1 !intialize for default
+      if(nws/=0) then
+        if(iwindoff/=0) then
+          if(myrank==0) then
+            open(32,file=in_dir(1:len_in_dir)//'windfactor.gr3',status='old')
+            read(32,*)
+            read(32,*) itmp1,itmp2
+            if(itmp1/=ne_global.or.itmp2/=np_global) call parallel_abort('Check windfactor.gr3')
+            do i=1,np_global
+              read(32,*)j,xtmp,ytmp,buf3(i)
+              if(buf3(i)<0.d0) then
+                write(errmsg,*)'Wind scaling factor must be positive:',i,buf3(i)
+                call parallel_abort(errmsg)
+              endif
+            enddo !i
+            close(32)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) windfactor(ipgl(i)%id)=buf3(i)
+          enddo !i
         endif
-      endif !nws>0
+      endif !nws/=0
 
 !     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
 !      if(nws==4) then
@@ -3114,24 +3267,32 @@
       if(ihconsv/=0) then
         if(myrank==0) then
           write(16,*)'Warning: you have chosen a heat conservation model'
-          write(16,*)'which assumes start time specified in sflux_inputs.txt!'
+          write(16,*)'which assumes start time specified in param.nml!'
         endif
 
 !       Read in albedo
-        open(32,file=in_dir(1:len_in_dir)//'albedo.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'albedo.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check albedo.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp>1.d0) then
+              write(errmsg,*)'Albedo out of bound:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0.or.tmp>1.d0) then
-            write(errmsg,*)'Albedo out of bound:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) albedo(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
 
 !       Read in water type; the values for R, d_1, d_2 are given below 
 !       solar flux= R*exp(z/d_1))+(1-R)*exp(z/d_2) (d_[1,2] are attentuation depths; smaller values for muddier water)
@@ -3142,21 +3303,29 @@
 !       5: 0.78 1.40 7.9 (Jerlov type III)
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
-        open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check watertype.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(int(tmp)<1.or.int(tmp)>7) then
+              write(errmsg,*)'Unknown water type:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(int(tmp)<1.or.int(tmp)>7) then
-            write(errmsg,*)'Unknown water type:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !ihconsv/
    
 !...  Turbulence closure options
       if(itur==0) then
@@ -3193,30 +3362,43 @@
 !       Common variables for both models
         cmiu0=sqrt(0.3d0)
 !       read in mixing limits
-        open(31,file=in_dir(1:len_in_dir)//'diffmin.gr3',status='old')
-        open(32,file=in_dir(1:len_in_dir)//'diffmax.gr3',status='old')
-        read(31,*)
-        read(31,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) & 
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'diffmin.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'diffmax.gr3',status='old')
+          read(31,*)
+          read(31,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) & 
      &call parallel_abort('Check diffmin.gr3')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) & 
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) & 
      &call parallel_abort('Check diffmax.gr3')
+          do i=1,np_global
+            read(31,*)j,xtmp,ytmp,tmp1
+            read(32,*)j,xtmp,ytmp,tmp2
+            if(tmp2<tmp1) then
+              write(errmsg,*)'diffmin > diffmax:',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+            buf4(i)=tmp2
+!            if(ipgl(i)%rank==myrank) then
+!              diffmin(ipgl(i)%id)=tmp1
+!              diffmax(ipgl(i)%id)=tmp2
+!            endif
+          enddo !i
+          close(31)
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+   
         do i=1,np_global
-          read(31,*)j,xtmp,ytmp,tmp1
-          read(32,*)j,xtmp,ytmp,tmp2
-          if(tmp2<tmp1) then
-            write(errmsg,*)'diffmin > diffmax:',i
-            call parallel_abort(errmsg)
-          endif
           if(ipgl(i)%rank==myrank) then
-            diffmin(ipgl(i)%id)=tmp1
-            diffmax(ipgl(i)%id)=tmp2
+            diffmin(ipgl(i)%id)=buf3(i) !tmp1
+            diffmax(ipgl(i)%id)=buf4(i) !tmp2
           endif
         enddo !i
-        close(31)
-        close(32)
 
         if(itur==3.or.itur==5) then !Tsinghua group:0822+itur==5
 !	  Constants used in GLS; cpsi3 later
@@ -3367,20 +3549,29 @@
       if(inter_mom/=-1) then
         krvel=inter_mom
       else !-1
-        open(32,file=in_dir(1:len_in_dir)//'krvel.gr3',status='old')
-        read(32,*)
-        read(32,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'krvel.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check krvel.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp>1.d0) then
+              write(errmsg,*)'Unknown interpolation flag in krvel.gr3:',i
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+!            if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(tmp<0.d0.or.tmp>1.d0) then
-            write(errmsg,*)'Unknown interpolation flag in krvel.gr3:',i
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) swild(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
+
         do i=1,nea
           krvel(i)=minval(swild(elnode(1:i34(i),i)))
         enddo !i
@@ -3397,37 +3588,53 @@
 
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv -similar to T,S)
       if(inu_elev==1) then
-        open(10,file=in_dir(1:len_in_dir)//'elev_nudge.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'elev_nudge.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check elev_nudge.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1*dt>1.d0) then
+              write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+!            if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp1
-          if(tmp1<0.d0.or.tmp1*dt>1.d0) then
-            write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          if(ipgl(i)%rank==myrank) elev_nudge(ipgl(i)%id)=buf3(i) !Dimension: sec^-1
         enddo !i
-        close(10)
       endif !inu_elev
 
       if(inu_uv==1) then
-        open(10,file=in_dir(1:len_in_dir)//'uv_nudge.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        if(itmp1/=ne_global.or.itmp2/=np_global) &
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'uv_nudge.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check uv_nudge.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1*dt>1.d0) then
+              write(errmsg,*)'Wrong nudging factor at node (2):',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+!            if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
         do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp1
-          if(tmp1<0.d0.or.tmp1*dt>1.d0) then
-            write(errmsg,*)'Wrong nudging factor at node (2):',i,tmp1
-            call parallel_abort(errmsg)
-          endif
-          if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=tmp1 !Dimension: sec^-1
+          if(ipgl(i)%rank==myrank) uv_nudge(ipgl(i)%id)=buf3(i) !Dimension: sec^-1
         enddo !i
-        close(10)
       endif !inu_uv
 
 !...  Nudging for tracers
@@ -3436,30 +3643,42 @@
         if(ntrs(k)<=0) cycle
 
         if(inu_tr(k)/=0) then
-          open(10,file=in_dir(1:len_in_dir)//tr_mname(k)//'_nudge.gr3',status='old')
-          read(10,*)
-          read(10,*) itmp1,itmp2
-          if(itmp1/=ne_global.or.itmp2/=np_global) &
+          if(myrank==0) then
+            open(10,file=in_dir(1:len_in_dir)//tr_mname(k)//'_nudge.gr3',status='old')
+            read(10,*)
+            read(10,*) itmp1,itmp2
+            if(itmp1/=ne_global.or.itmp2/=np_global) &
      &call parallel_abort('Check tracer_nudge.gr3')
+            do i=1,np_global
+              read(10,*)j,xtmp,ytmp,tmp1
+              if(tmp1<0.d0.or.tmp1>1.d0) then
+                write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
+                call parallel_abort(errmsg)
+              endif
+              buf3(i)=tmp1
+!              if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=tmp1
+            enddo !i
+            close(10)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+ 
           do i=1,np_global
-            read(10,*)j,xtmp,ytmp,tmp1
-            if(tmp1<0.d0.or.tmp1>1.d0) then
-              write(errmsg,*)'Wrong nudging factor at node (1):',i,tmp1
-              call parallel_abort(errmsg)
-            endif
-            if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=tmp1
+            if(ipgl(i)%rank==myrank) tr_nudge(k,ipgl(i)%id)=buf3(i) !tmp1
           enddo !i
-          close(10)
         endif !inu_tr(k)/=0
 
         if(inu_tr(k)==2) then
-          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
-          if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
-          !Static info
-          j=nf90_inq_dimid(ncid_nu(k),'node',mm)
-          j=nf90_inquire_dimension(ncid_nu(k),mm,len=nnu_pts(k))
-          if(j/=NF90_NOERR) call parallel_abort('INIT: nnu_pts')
-          if(nnu_pts(k)<=0) call parallel_abort('INIT: nnu_pts<=0')
+          if(myrank==0) then
+            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+            if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
+            !Static info
+            j=nf90_inq_dimid(ncid_nu(k),'node',mm)
+            j=nf90_inquire_dimension(ncid_nu(k),mm,len=nnu_pts(k))
+            if(j/=NF90_NOERR) call parallel_abort('INIT: nnu_pts')
+            if(nnu_pts(k)<=0) call parallel_abort('INIT: nnu_pts<=0')
+          endif !myrank
+          call mpi_bcast(ncid_nu(k),1,itype,0,comm,istat)
+          call mpi_bcast(nnu_pts(k),1,itype,0,comm,istat)
         endif
       enddo !k
 
@@ -3467,16 +3686,21 @@
       mnu_pts=maxval(nnu_pts)
       if(myrank==0) write(16,*)'Max # of points in type II nudging=',mnu_pts
       mnu_pts=max(1,mnu_pts) !for dim only
-      allocate(inu_pts_gb(mnu_pts,natrm),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: inu_pts_gb')
+      if(iorder==0) then
+        allocate(inu_pts_gb(mnu_pts,natrm),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: inu_pts_gb')
+      endif
       do k=1,natrm
         if(ntrs(k)<=0) cycle
 
         if(inu_tr(k)==2) then
-          j=nf90_inq_varid(ncid_nu(k), "map_to_global_node",mm)
-          if(j/=NF90_NOERR) call parallel_abort('INIT: map(0)')
-          j=nf90_get_var(ncid_nu(k),mm,inu_pts_gb(1:nnu_pts(k),k),(/1/),(/nnu_pts(k)/))
-          if(j/=NF90_NOERR) call parallel_abort('INIT: map')
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_nu(k), "map_to_global_node",mm)
+            if(j/=NF90_NOERR) call parallel_abort('INIT: map(0)')
+            j=nf90_get_var(ncid_nu(k),mm,inu_pts_gb(1:nnu_pts(k),k),(/1/),(/nnu_pts(k)/))
+            if(j/=NF90_NOERR) call parallel_abort('INIT: map')
+          endif !myrank
+          call mpi_bcast(inu_pts_gb,mnu_pts*natrm,itype,0,comm,istat)
         endif
       enddo !k
 
@@ -3485,59 +3709,110 @@
       sav_h=0.d0 !veg height; not used at 2D sides
       sav_nv=0.d0 !Nv: # of stems per m^2
       sav_di=0.d0 !D [m]
-      if(isav==1) then
+      sav_cd=0.d0 !Cdv : drag coefficient
+      if(isav==1) then !LLa : rsav used for reading sav_?.gr3 files for vegetation-induced wave dissipation
         !\lambda=D*Nv [1/m]
-        open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
-        open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
-        !SAV height [m]
-        open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
-        read(10,*)
-        read(10,*) itmp1,itmp2
-        read(31,*); read(31,*)k,m
-        read(32,*); read(32,*)i,j
-        if(itmp1/=ne_global.or.itmp2/=np_global.or.i/=ne_global.or.j/=np_global.or. &
-     &k/=ne_global.or.m/=np_global) call parallel_abort('INIT: Check sav_.gr3')
-!'
-        do i=1,np_global
-          read(10,*)j,xtmp,ytmp,tmp
-          read(31,*)j,xtmp,ytmp,tmp1
-          read(32,*)j,xtmp,ytmp,tmp2
-          if(tmp<0.d0.or.tmp1<0.d0.or.tmp2<0.d0) then
-            write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1,tmp2
-            call parallel_abort(errmsg)
-          endif
-          !Make D, Nv and h consistent at no SAV places
-          if(tmp*tmp1*tmp2==0.d0) then
-            tmp=0.d0; tmp1=0.d0; tmp2=0.d0
-          endif
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          read(31,*); read(31,*)k,m
+          if(itmp1/=ne_global.or.itmp2/=np_global.or.k/=ne_global.or.m/=np_global) &
+     &call parallel_abort('INIT: Check sav_.gr3 (1)')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp
+            read(31,*)j,xtmp,ytmp,tmp1
+            if(tmp<0.d0.or.tmp1<0.d0) then
+              write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp; buf4(i)=tmp1
+            !Make D, Nv and h consistent at no SAV places
+!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
+!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
+!            endif
          
+!          if(ipgl(i)%rank==myrank) then
+!            nd=ipgl(i)%id
+!            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
+!            sav_nv(nd)=tmp1
+!            sav_h(nd)=tmp2
+!            sav_di(nd)=tmp
+!            sav_cd(nd)=tmp3
+!          endif
+          enddo !i
+          close(10)
+          close(31)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=tmp*tmp1*sav_cd/2.d0
-            sav_nv(nd)=tmp1
-            sav_h(nd)=tmp2
-            sav_di(nd)=tmp
+            sav_nv(nd)=buf4(i) !tmp1
+            sav_di(nd)=buf3(i) !tmp
           endif
         enddo !i
-        close(10)
-        close(31)
-        close(32)
+
+        if(myrank==0) then
+          !SAV height [m]
+          open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+          !Drag coefficient
+          open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
+          read(32,*); read(32,*)i,j
+          read(30,*); read(30,*)l,mm
+          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp2
+            read(30,*)j,xtmp,ytmp,tmp3
+            if(tmp2<0.d0.or.tmp3<0) then
+              write(errmsg,*)'INIT: illegal sav_:',i,tmp2,tmp3
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp2; buf4(i)=tmp3
+            !Make D, Nv and h consistent at no SAV places
+!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
+!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
+!            endif
+          enddo !i
+          close(32)
+          close(30)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            sav_alpha(nd)=sav_di(nd)*sav_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
+            sav_h(nd)=buf3(i) !tmp2
+            sav_cd(nd)=buf4(i) !tmp3
+
+            !Make D, Nv and h consistent at no SAV places
+            if(sav_di(nd)*sav_nv(nd)*sav_h(nd)*sav_cd(nd)==0.d0) then
+              sav_di(nd)=0.d0; sav_nv(nd)=0.d0; sav_h(nd)=0.d0; sav_cd(nd)=0.d0
+            endif
+          endif
+        enddo !i
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1
+        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1; sav_cd0=tmp3
         !Reset
-        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
+        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
             sav_di(elnode(1:i34(i),i))=sav_di0 
             sav_h(elnode(1:i34(i),i))=sav_h0 
             sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd/2.d0
+            sav_cd(elnode(1:i34(i),i))=sav_cd0
+            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
           endif
         enddo !i
 #endif
-      endif !isav=1
+      endif !isav=1 
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
@@ -3546,43 +3821,73 @@
 !     between T,S and all tracers. Also if h_tvd>=1.e5 and itr_met>=3, then upwind is used for all tracers 
 !     and some parts of the code are bypassed for efficiency
       itvd_e=0 !init. for upwind
-      if(itr_met>=2) then
-        open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
+      if(itr_met>=3.and.(ibc==0.or.ibtp==1)) then
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'tvd.prop',status='old')
+          do i=1,ne_global
+            read(32,*)j,tmp
+            itmp=nint(tmp)
+            if(itmp/=0.and.itmp/=1) then
+              write(errmsg,*)'Unknown TVD flag:',i,tmp
+              call parallel_abort(errmsg)
+            endif
+            buf4(i)=tmp
+!            if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=itmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+ 
         do i=1,ne_global
-          read(32,*)j,tmp
-          itmp=nint(tmp)
-          if(itmp/=0.and.itmp/=1) then
-            write(errmsg,*)'Unknown TVD flag:',i,tmp
-            call parallel_abort(errmsg)
-          endif
-          if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=itmp
+          if(iegl(i)%rank==myrank) itvd_e(iegl(i)%id)=nint(buf4(i)) !itmp
         enddo !i
-        close(32)
       endif !itr_met
 
 !     Station output option (/=0: need station.in)
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
       if(iout_sta/=0) then
         nvar_sta=9 !# of output variables
-        allocate(iof_sta(nvar_sta),stat=istat)
-        if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
-        open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
-!       Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
-        read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
-        read(32,*)nout_sta
-!       Following is needed for dimension of nwild2
-        if(nout_sta>ne_global) call parallel_abort('MAIN: too many stations')
+        if(iorder==0) then
+          allocate(iof_sta(nvar_sta),stat=istat)
+          if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
+        endif
+
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
+!         Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
+          read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
+          read(32,*)nout_sta
+!         Following is needed for dimension of nwild2
+          if(nout_sta>ne_global) call parallel_abort('MAIN: too many stations')
 !'
+        endif !myrank
+        call mpi_bcast(iof_sta,nvar_sta,itype,0,comm,istat)
+        call mpi_bcast(nout_sta,1,itype,0,comm,istat)
 
 !       Allocate: zstal is vertical up; xsta, ysta, zsta are global coord. if ics=2
-        allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
+        if(iorder==0) then
+          allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &zta_out3d(nvrt,nout_sta,nvar_sta),zta_out3d_gb(nvrt,nout_sta,nvar_sta),stat=istat)
-        if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
+          if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
+          iep_flag=0
+          sta_out=0.0_rkind
+          sta_out3d=0.0_rkind
+          zta_out3d=0.0_rkind
+        endif
+
+        if(myrank==0) then
+          do i=1,nout_sta
+            read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(xsta,nout_sta,rtype,0,comm,istat)
+        call mpi_bcast(ysta,nout_sta,rtype,0,comm,istat)
+        call mpi_bcast(zstal,nout_sta,rtype,0,comm,istat)
 
         do i=1,nout_sta
-          read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
           if(ics==2) then
             xtmp=xsta(i)/180.d0*pi
             ytmp=ysta(i)/180.d0*pi
@@ -3591,18 +3896,28 @@
             zsta(i)=rearth_pole*sin(ytmp)
           endif !ics
         enddo !i
-        close(32)
 
 !       Find parent elements and initialize outputs
         iep_sta=0 !flag for no-parent
         do i=1,ne
+          !Max side length
+          edge_max=maxval(distj(elside(1:i34(i),i)))
           do l=1,nout_sta
             if(iep_sta(l)/=0) cycle
+
+            !Estimate if the pt is far away from the local frame (ics=2) b/c the area coord/local proj
+            ! below are not reliable in this case. Init as false
+            ltmp=.false.
 
             if(ics==1) then
               xstal=xsta(l)
               ystal=ysta(l)
             else !to eframe
+              !Distance
+              tmp1=sqrt((xsta(l)-xctr(i))**2+(ysta(l)-yctr(i))**2+(zsta(l)-zctr(i))**2)
+              !Estimate if the pt is far away from the local frame
+              if(tmp1>10.d0*edge_max) ltmp=.true.  !far away
+
               call project_pt('g2l',xsta(l),ysta(l),zsta(l), &
      &(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,tmp)
             endif
@@ -3610,14 +3925,18 @@
             if(i34(i)==3) then
               call area_coord(0,i,(/xctr(i),yctr(i),zctr(i)/),eframe(:,:,i),xstal,ystal,arco_sta(l,1:3))
               tmp=minval(arco_sta(l,1:3))
-              if(tmp>-small2) then
+              if(tmp>-small2.and..not.ltmp) then
                 iep_sta(l)=i
                 if(tmp<0) call area_coord(1,i,(/xctr(i),yctr(i),zctr(i)/), &
      &eframe(:,:,i),xstal,ystal,arco_sta(l,1:3)) !fix A.C.
+
+                !Debug
+                !write(12,*)'Found station:',l,' in elem ',ielg(i),'; area coord=',arco_sta(l,1:3)
+
               endif
             else !quad
               call quad_shape(0,0,i,xstal,ystal,itmp,arco_sta(l,1:4)) !arco_sta are 4 shape functions
-              if(itmp/=0) iep_sta(l)=i
+              if(itmp/=0.and..not.ltmp) iep_sta(l)=i
             endif !i34
           enddo !l; build pts
 
@@ -3659,15 +3978,17 @@
 #ifdef USE_HA
 !...  Read harmonic analysis information (Adapted from ADCIRC)
       if(iharind/=0) then
-        open(31,file=in_dir(1:len_in_dir)//'harm.in',status='old')
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'harm.in',status='old')
 !...
 !...  READ AND CHECK INFORMATION ABOUT HARMONIC ANALYSIS OF MODEL RESULTS
 !...  
-        READ(31,*) NFREQ 
-        if (myrank==0) then
+          READ(31,*) NFREQ 
           WRITE(16,99392) NFREQ  
 99392     FORMAT(////,1X,'HARMONIC ANALYSIS INFORMATION OUTPUT : ',//,5X,'HARMONIC ANALYSIS PERFORMED FOR ',I4,' CONSTITUENTS',/)
-        endif
+        endif !myrank
+        call mpi_bcast(NFREQ,1,itype,0,comm,istat)
+
         MNHARF = NFREQ
         IF (NFREQ.EQ.0) MNHARF = 1
 
@@ -3687,16 +4008,36 @@
         IF(NFREQ.GT.0 .AND. myrank.EQ. 0) WRITE(16,2330)
  2330   FORMAT(/,7X,'FREQUENCY',4X,'NODAL FACTOR',6X,'EQU.ARG(DEG)',1X,'CONSTITUENT',/)
 !'
-        DO I=1,NFREQ  
+
+        if(myrank==0) then
+          DO I=1,NFREQ  
            READ(31,'(A10)') NAMEFR(I)
            READ(31,*) HAFREQ(I),HAFF(I),HAFACE(I)
-           if (myrank==0) WRITE(16,2331) HAFREQ(I),HAFF(I),HAFACE(I),NAMEFR(I)
+           WRITE(16,2331) HAFREQ(I),HAFF(I),HAFACE(I),NAMEFR(I)
  2331      FORMAT(4X,F15.12,2X,F10.7,5X,F10.3,7X,A10)
-        enddo
+          ENDDO !I
+        endif !myrank
+        call mpi_bcast(NAMEFR,10*MNHARF,MPI_CHAR,0,comm,istat)
+        call mpi_bcast(HAFREQ,MNHARF,rtype,0,comm,istat)
+        call mpi_bcast(HAFF,MNHARF,rtype,0,comm,istat)
+        call mpi_bcast(HAFACE,MNHARF,rtype,0,comm,istat)
 
 !...  read in interval information for harmonic analysis
 !...  compute thas and thaf in terms of the number of time steps
-        READ(31,*) THAS,THAF,NHAINC,FMV
+!...  read in and write out information on where harmonic analysis will
+!...  be done
+        if(myrank==0) then
+          READ(31,*) THAS,THAF,NHAINC,FMV
+          READ(31,*) NHAGE,NHAGV
+          close(31)
+        endif !myrank
+        call mpi_bcast(THAS,1,rtype,0,comm,istat)
+        call mpi_bcast(THAF,1,rtype,0,comm,istat)
+        call mpi_bcast(NHAINC,1,itype,0,comm,istat)
+        call mpi_bcast(FMV,1,rtype,0,comm,istat)
+        call mpi_bcast(NHAGE,1,itype,0,comm,istat)
+        call mpi_bcast(NHAGV,1,itype,0,comm,istat)
+
         ITHAS=INT(THAS*(86400.D0/dt) + 0.5d0)
         THAS=ITHAS*dt/86400.D0
         ITHAF=INT(THAF*(86400.D0/dt) + 0.5d0)
@@ -3720,14 +4061,11 @@
             WRITE(16,34645)
 34645       FORMAT(///,5X,'NO HARMONIC ANALYSIS WILL BE DONE')
           ENDIF
-        endif
+        endif !myrank
       
         IF ((FMV.GT.0.).AND.(NFREQ.GT.0)) CHARMV = .TRUE.
       
-!...  read in and write out information on where harmonic analysis will
-!...  be done
 
-        READ(31,*) NHAGE,NHAGV
         IF((NHAGE.LT.0).OR.(NHAGE.GT.1)) THEN
            WRITE(errmsg,99663)
 99663      FORMAT(////,1X,'!!!!!!!!!!  WARNING - INPUT ERROR  !!!!!!!!!',//,1X,'YOUR SELECTION OF NHAGE (A harm.in INPUT PARAMETER) IS NOT AN ALLOWABLE VALUE',/,1X,'PLEASE CHECK YOUR INPUT')
@@ -3752,7 +4090,6 @@
 !...  compute flag telling whether any harmonic analysis will be done
         iharind=NFREQ*(NHAGE+NHAGV)
         if (iharind.GT.0) iharind=1
-        close(31)
       endif !iharind/=0
 #endif /*USE_HA*/
 
@@ -3805,9 +4142,10 @@
       write(12,*)'Max. # of Kriging points = ',mnei_kr
 
 !     Allocate arrays
-      allocate(itier_nd(0:mnei_kr,ne_kr),akrmat_nd(mnei_kr+3,mnei_kr+3,ne_kr), &
-              &akr(mnei_kr+3,mnei_kr+3),akrp((mnei_kr+3)*(mnei_kr+4)/2), &
+      allocate(akr(mnei_kr+3,mnei_kr+3),akrp((mnei_kr+3)*(mnei_kr+4)/2), &
               &xy_kr(2,mnei_kr),ipiv(mnei_kr+3),work4(mnei_kr+3))
+
+      if(iorder==0) allocate(itier_nd(0:mnei_kr,ne_kr),akrmat_nd(mnei_kr+3,mnei_kr+3,ne_kr))
 
       err_max=0.d0 !max. error in computing the inverse matices
 !$OMP parallel default(shared) private(i,nei_kr,j,nd,m,nd2,l,ie,k,npp,n1,n2, &
@@ -3992,15 +4330,22 @@
       if(ic_elev==0) then
         eta2=0.d0
       else    
-        open(32,file=in_dir(1:len_in_dir)//'elev.ic',status='old')
-        read(32,*)
-        read(32,*)
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'elev.ic',status='old')
+          read(32,*)
+          read(32,*)
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i) !tmp
+!            if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+    
         do i=1,np_global
-          read(32,*)j,xtmp,ytmp,tmp
-          if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=tmp
+          if(ipgl(i)%rank==myrank) eta2(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
-        close(32)
-      endif
+      endif !ic_elev
 
 !     For ics=1, (su2,sv2) are defined in the _global_ Cartesian frame
 !     For ics=2, they are defined in the ll frame
@@ -4034,28 +4379,38 @@
 !...  at nodes and elements as well (which will be over-written for other cases)
       if(ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2) then !T,S share same i.c. flag
 !       Read in intial mean S,T
-        open(32,file=in_dir(1:len_in_dir)//'ts.ic',status='old')
-        read(32,*)nz_r
-        if(nz_r<2) then
-          write(errmsg,*)'Change nz_r:',nz_r
-          call parallel_abort(errmsg)
-        endif
-        allocate(z_r(nz_r),tem1(nz_r),sal1(nz_r),cspline_ypp(nz_r,2),stat=istat)
-        deallocate(swild,swild2,stat=istat)
-        allocate(swild(max(nsa+nvrt+12+ntracers,nz_r)),swild2(max(nvrt,nz_r),12),stat=istat)
-        do k=1,nz_r
-          !z_r in local frame if ics=2
-          read(32,*)j,z_r(k),tem1(k),sal1(k)
-          if(tem1(k)<tempmin.or.tem1(k)>tempmax.or.sal1(k)<saltmin.or.sal1(k)>saltmax) then
-            write(errmsg,*)'Initial invalid S,T at',k,tem1(k),sal1(k)
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'ts.ic',status='old')
+          read(32,*)nz_r
+          if(nz_r<2) then
+            write(errmsg,*)'Change nz_r:',nz_r
             call parallel_abort(errmsg)
           endif
-          if(k>=2) then; if(z_r(k)<=z_r(k-1)) then
-            write(errmsg,*)'Inverted z-level (0):',k
-            call parallel_abort(errmsg)
-          endif; endif
-        enddo !k
-        close(32)
+        endif !myrank
+        call mpi_bcast(nz_r,1,itype,0,comm,istat) 
+
+        if(iorder==0) allocate(z_r(nz_r),tem1(nz_r),sal1(nz_r),cspline_ypp(nz_r,2),stat=istat)
+        deallocate(swild,swild2,stat=istat)
+        allocate(swild(max(nsa+nvrt+12+ntracers,nz_r)),swild2(max(nvrt,nz_r),12),stat=istat)
+
+        if(myrank==0) then
+          do k=1,nz_r
+            !z_r in local frame if ics=2
+            read(32,*)j,z_r(k),tem1(k),sal1(k)
+            if(tem1(k)<tempmin.or.tem1(k)>tempmax.or.sal1(k)<saltmin.or.sal1(k)>saltmax) then
+              write(errmsg,*)'Initial invalid S,T at',k,tem1(k),sal1(k)
+              call parallel_abort(errmsg)
+            endif
+            if(k>=2) then; if(z_r(k)<=z_r(k-1)) then
+              write(errmsg,*)'Inverted z-level (0):',k
+              call parallel_abort(errmsg)
+            endif; endif
+          enddo !k
+          close(32)
+        endif !myrank
+        call mpi_bcast(z_r,nz_r,rtype,0,comm,istat)
+        call mpi_bcast(tem1,nz_r,rtype,0,comm,istat)
+        call mpi_bcast(sal1,nz_r,rtype,0,comm,istat)
 
 !       Cubic spline coefficients (save for interpolation later)
         call cubic_spline(nz_r,z_r,tem1,0._rkind,0._rkind,swild,swild2(1:nz_r,1))
@@ -4145,7 +4500,6 @@
 !$OMP end parallel 
       endif !ibcc_mean==1.or.ihot==0.and.flag_ic(1)==2
 
-
 !								   
 !*******************************************************************
 !								   
@@ -4166,33 +4520,45 @@
         tr_nd0(1,:,:)=10.d0; tr_nd0(2,:,:)=0.d0; tr_el(1,:,:)=10.d0; tr_el(2,:,:)=0.d0
       else !read in S,T
         if(flag_ic(1)==1) then !T,S share flag
-          open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
-          open(32,file=in_dir(1:len_in_dir)//'salt.ic',status='old')
-          read(31,*) 
-          read(31,*) !np
+          if(myrank==0) then
+            open(31,file=in_dir(1:len_in_dir)//'temp.ic',status='old')
+            open(32,file=in_dir(1:len_in_dir)//'salt.ic',status='old')
+            read(31,*) 
+            read(31,*) !np
+            do i=1,np_global
+              read(31,*) itmp,xtmp,ytmp,te
+              if(te<tempmin.or.te>tempmax) then
+                write(errmsg,*)'Initial invalid T at',i,te
+                call parallel_abort(errmsg)
+              endif
+!              if(ipgl(i)%rank==myrank) tr_nd0(1,:,ipgl(i)%id)=te
+              buf3(i)=te
+            enddo !i
+
+            read(32,*) 
+            read(32,*) !np
+            do i=1,np_global
+              read(32,*) itmp,xtmp,ytmp,sa
+              if(sa<saltmin.or.sa>saltmax) then
+                write(errmsg,*)'Initial invalid S at',i,sa
+                call parallel_abort(errmsg)
+              endif
+              buf4(i)=sa
+!              if(ipgl(i)%rank==myrank) tr_nd0(2,:,ipgl(i)%id)=sa
+            enddo
+            close(31)
+            close(32)
+          endif !myrank
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+
           do i=1,np_global
-            read(31,*) itmp,xtmp,ytmp,te
-            if(te<tempmin.or.te>tempmax) then
-              write(errmsg,*)'Initial invalid T at',i,te
-              call parallel_abort(errmsg)
+            if(ipgl(i)%rank==myrank) then
+              tr_nd0(1,:,ipgl(i)%id)=buf3(i) !te
+              tr_nd0(2,:,ipgl(i)%id)=buf4(i) !sa
             endif
-            !if(ipgl(i)%rank==myrank) tem0(:,ipgl(i)%id)=te
-            if(ipgl(i)%rank==myrank) tr_nd0(1,:,ipgl(i)%id)=te
           enddo !i
 
-          read(32,*) 
-          read(32,*) !np
-          do i=1,np_global
-            read(32,*) itmp,xtmp,ytmp,sa
-            if(sa<saltmin.or.sa>saltmax) then
-              write(errmsg,*)'Initial invalid S at',i,sa
-              call parallel_abort(errmsg)
-            endif
-            !if(ipgl(i)%rank==myrank) sal0(:,ipgl(i)%id)=sa
-            if(ipgl(i)%rank==myrank) tr_nd0(2,:,ipgl(i)%id)=sa
-          enddo
-          close(31)
-          close(32)
 
 !         T,S @ elements
 !$OMP parallel do default(shared) private(i,k)
@@ -4316,9 +4682,12 @@
 !          shum1=0; shum2=0
 !        endif
 !      endif !nws>=2
+!------------------------------------------------------------------
+      endif !ihot=0
+
+!...  Finish off init. for both cold and hotstart
 
 #ifdef USE_HA
-!...
 !....INITIALIZE HARMONIC ANALYSIS MATRICES, MEAN AND SQUARE VECTORS
 !... Adapted from ADCIRC
       IF (iharind.EQ.1) THEN
@@ -4344,11 +4713,7 @@
         ENDIF
       ENDIF
 #endif /*USE_HA*/
-
-!------------------------------------------------------------------
-      endif !ihot=0
      
-!...  Finish off init. for both cold and hotstart
 !...  Init. tracer models
 !     This part needs T,S i.c. 
       tr_nd(3:ntracers,:,:)=0.d0
@@ -4362,7 +4727,8 @@
 
 #ifdef USE_AGE
       !Tracer age
-      !Method: all i.c. =0; conc=1 at relevant bnd(s), and itrtype=0 at ocean bnd 
+      !Method: all i.c. =0 except 1 in specific regions (e.g. near each bnd) for
+      !1st half of tracers (=0 for 2nd half). Generally set itrtype=0 at all bnd's
       if(myrank==0) write(16,*)'tracer age calculation evoked'
       nelem_age(:)=0 !init count for # of non-0 age tracers
       flag_ic(4)=1 !AGE must have type 1 i.c.
@@ -4516,6 +4882,7 @@
 #ifdef USE_FABM
       call fabm_schism_init_stage2()
       call fabm_schism_create_output_netcdf()
+      call fabm_schism_init_concentrations()
 #endif
 
 !#ifdef USE_NAPZD
@@ -4599,53 +4966,70 @@
         select case(flag_ic(mm))
           case(1)                
 !	    Horizontally varying
-            do m=irange_tr(1,mm),irange_tr(2,mm) !1,ntracers
-              write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
-              ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
-              inputfile=tr_mname(mm)//'_hvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              read(10,*)
-              read(10,*) !np
+            do m=irange_tr(1,mm),irange_tr(2,mm) 
+              if(myrank==0) then
+                write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
+                ifile_char=adjustl(ifile_char); ifile_len=len_trim(ifile_char)
+                inputfile=tr_mname(mm)//'_hvar_'//ifile_char(1:ifile_len)//'.ic'
+                open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
+                read(10,*)
+                read(10,*) !np
+                do j=1,np_global
+                  read(10,*) num,xtmp,ytmp,tr_tmp1
+                  if(tr_tmp1<0.d0) then
+                    write(errmsg,*)'INIT: Initial invalid tracer at:',j,tr_tmp1,inputfile
+                    call parallel_abort(errmsg)
+                  endif
+                  buf3(j)=tr_tmp1
+!                  if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=tr_tmp1
+                enddo !j
+                close(10)
+              endif !myrank
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
               do j=1,np_global
-                read(10,*) num,xtmp,ytmp,tr_tmp1
-                if(tr_tmp1<0.d0) then
-                  write(errmsg,*)'INIT: Initial invalid tracer at:',j,tr_tmp1,inputfile
-                  call parallel_abort(errmsg)
-                endif
-                if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=tr_tmp1
+                if(ipgl(j)%rank==myrank) tr_nd(m,:,ipgl(j)%id)=buf3(j) !tr_tmp1
               enddo !j
-              close(10)
             enddo !m
           case(2)
 !	    Vertically varying
             allocate(swild99(nz_r2,1))
             do m=irange_tr(1,mm),irange_tr(2,mm) !1,ntracers
-              write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
-              ifile_char=adjustl(ifile_char) 
-              ifile_len=len_trim(ifile_char)
-              inputfile=tr_mname(mm)//'_vvar_'//ifile_char(1:ifile_len)//'.ic'
-              open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
-              read(10,*)nz_r2
-              if(nz_r2<2) then
-                write(errmsg,*)'Change nz_r2:',nz_r2
-                call parallel_abort(errmsg)
-              endif
+              if(myrank==0) then
+                write(ifile_char,'(i03)')m-irange_tr(1,mm)+1
+                ifile_char=adjustl(ifile_char) 
+                ifile_len=len_trim(ifile_char)
+                inputfile=tr_mname(mm)//'_vvar_'//ifile_char(1:ifile_len)//'.ic'
+                open(10,file=in_dir(1:len_in_dir)//inputfile,status='old')
+                read(10,*)nz_r2
+                if(nz_r2<2) then
+                  write(errmsg,*)'Change nz_r2:',nz_r2
+                  call parallel_abort(errmsg)
+                endif
+              endif !myrank
+              call mpi_bcast(nz_r2,1,itype,0,comm,istat)
+
               deallocate(swild10,swild,swild2,stat=istat)
               allocate(z_r2(nz_r2),stat=istat)
               allocate(swild(max(nsa+nvrt+12+ntracers,nz_r2)),swild2(max(nvrt,nz_r2),12), &
      &swild10(max(3,nvrt,nz_r2),12),stat=istat)
-              do k=1,nz_r2
-                read(10,*)j,z_r2(k),swild10(k,1)
-                if(swild10(k,1)<0.d0) then
-                  write(errmsg,*)'Initial invalid Tr at',k,swild10(k,1)
-                  call parallel_abort(errmsg)
-                endif
-                if(k>=2) then; if(z_r2(k)<=z_r2(k-1)) then
-                  write(errmsg,*)'Inverted z-level (10):',k
-                  call parallel_abort(errmsg)
-                endif; endif
-              enddo !k
-              close(10)
+
+              if(myrank==0) then
+                do k=1,nz_r2
+                  read(10,*)j,z_r2(k),swild10(k,1)
+                  if(swild10(k,1)<0.d0) then
+                    write(errmsg,*)'Initial invalid Tr at',k,swild10(k,1)
+                    call parallel_abort(errmsg)
+                  endif
+                  if(k>=2) then; if(z_r2(k)<=z_r2(k-1)) then
+                    write(errmsg,*)'Inverted z-level (10):',k
+                    call parallel_abort(errmsg)
+                  endif; endif
+                enddo !k
+                close(10)
+              endif !myrank
+              call mpi_bcast(z_r2,nz_r2,rtype,0,comm,istat)
+              call mpi_bcast(swild10,max(3,nvrt,nz_r2)*12,rtype,0,comm,istat)
 
 !             Cubic spline coefficients
               call cubic_spline(nz_r2,z_r2,swild10(1:nz_r2,1),0._rkind,0._rkind,swild,swild99(:,1))
@@ -4674,14 +5058,22 @@
             !Model sets own i.c.
 !Error: wrong if both ECO and FABM on
 #ifdef USE_ECO
-            call bio_init !init. tr_nd
-#else
-#ifdef USE_FABM
-            call fabm_schism_init_concentrations()
-#else
-            write(errmsg,*)'INIT: type 0 i.c.:',mm
-            call parallel_abort(errmsg)
+            if(mm==6) call bio_init !init. tr_nd
 #endif
+!#ifdef USE_FABM
+!            if(mm==11) call fabm_schism_init_concentrations()
+!#else
+!            write(errmsg,*)'INIT: type 0 i.c.:',mm
+!            call parallel_abort(errmsg)
+!#endif
+!#endif
+
+#ifdef USE_DVD
+            if(mm==12) then
+              do i=1,npa  
+                tr_nd(irange_tr(1,mm),:,i)=tr_nd(2,:,i)*tr_nd(2,:,i)
+              enddo !i
+            endif !mm
 #endif
 
 !#ifdef USE_TIMOR
@@ -4707,28 +5099,28 @@
           enddo !i=1,nea
 
 #ifdef USE_AGE
-          !AGE: deal with first half of tracers only (2nd half=0). Mark non-0
-          !elem
+          !AGE: deal with first half of tracers only (2nd half=0). Mark non-0 elem
           indx2=m-irange_tr(1,mm)+1 !local tracer index
-          !If level_age=-999, the init above is good (1 for all levels)
-          if(mm==4.and.indx2<=ntrs(4)/2.and.level_age(indx2)/=-999) then
+          !If level_age=-999, the init from .ic is good (1 for all levels)
+          if(mm==4.and.indx2<=ntrs(4)/2) then !.and.level_age(indx2)/=-999) then
             do i=1,nea
               if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then
                 nelem_age(indx2)=nelem_age(indx2)+1
                 if(nelem_age(indx2)>nea) call parallel_abort('INIT: increase dim of ielem_age')
                 ielem_age(nelem_age(indx2),indx2)=i
 
-                if(idry_e(i)==1) then
-                  kl=nvrt !arbitrary
-                else
-                  kl=max(kbe(i)+1,min(nvrt,level_age(indx2)))
-                endif
-                tr_el(m,:,i)=0.d0 !reset 
-                tr_el(m,kl,i)=1.d0
-                !tr_nd i.c. is not correct but this will be corrected during
-                !time loop
-                !tr_nd(m,1:kl-1,elnode(1:i34(i),i))=0
-                !tr_nd(m,kl+1:nvrt,elnode(1:i34(i),i))=0
+                if(level_age(indx2)/=-999) then
+                  if(idry_e(i)==1) then
+                    kl=nvrt !arbitrary
+                  else
+                    kl=max(kbe(i)+1,min(nvrt,level_age(indx2)))
+                  endif
+                  tr_el(m,:,i)=0.d0 !reset 
+                  tr_el(m,kl,i)=1.d0
+                  !tr_nd i.c. is not correct but this will be corrected during time loop
+                  !tr_nd(m,1:kl-1,elnode(1:i34(i),i))=0
+                  !tr_nd(m,kl+1:nvrt,elnode(1:i34(i),i))=0
+                endif !level_age
               endif !abs()
             enddo !i=1,nea
 
@@ -4748,18 +5140,7 @@
 
 #ifdef USE_ICM
       !read ICM parameter and initial ICM variables
-      call icm_init
-
-      !initial ICM variable wqc
-!$OMP parallel do default(shared) private(i,k,j)
-      do i=1,nea
-        do k=1,nvrt
-          do j=1,ntrs(7)
-            wqc(j,k,i)=tr_el(j-1+irange_tr(1,7),k,i)
-          enddo !j
-        enddo !k
-      enddo !i
-!$OMP end parallel do
+      call read_icm_param(1)
 #endif
 
 !     Store i.c. 
@@ -4813,7 +5194,7 @@
 !...  otherwise they will be assigned values below.
       if(itur==4) then
 #ifdef USE_GOTM
-          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
+          call init_turbulence(8,'gotmturb.nml',nvrt-1) !GOTM starts from level 0
           call init_tridiagonal(nvrt-1)
 #endif
       endif
@@ -4830,6 +5211,37 @@
 #endif 
 #endif /*USE_SED2D*/
 
+#ifdef USE_MICE
+      if(lhas_quad) call parallel_abort('init: no quads for mice')
+      if(.not.lreadll) call parallel_abort('init: mice needs hgrid.ll')
+      !Read in modified (rotated north pole) lon/lat for ice model
+!      if(myrank==0) then
+!        open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
+!        read(32,*)
+!        read(32,*) !ne,np
+!        do i=1,np_global
+!          read(32,*)j,buf3(i),buf4(i) 
+!        enddo !i
+!        close(32)
+!      endif !myrank
+!      call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!      call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+!
+!      do i=1,np_global
+!        if(ipgl(i)%rank==myrank) then
+!          xlon2(ipgl(i)%id)=buf3(i)*pi/180.d0
+!          ylat2(ipgl(i)%id)=buf4(i)*pi/180.d0 
+!        endif
+!      enddo !i
+!      xlon2=xlon
+!      ylat2=ylat
+
+!     Make sure no nodes are too close to North Pole to avoid forcing
+!     singularity there (wind)
+      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
+
+#endif /*USE_MICE*/
+
 #ifdef USE_ICE
       if(lhas_quad) call parallel_abort('init: no quads for ice')
       if(.not.lreadll) call parallel_abort('init: ice needs hgrid.ll')
@@ -4838,9 +5250,9 @@
 #endif
 
 !     Write local to global mapping and header info for combining scripts
-      fdb='local_to_global_0000'
+      fdb='local_to_global_000000'
       lfdb=len_trim(fdb)
-      write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
+      write(fdb(lfdb-5:lfdb),'(i6.6)') myrank
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
 
 !     header info 
@@ -4861,27 +5273,40 @@
       enddo
 
       write(10,*)'Header:'
-      write(10,*)start_year,start_month,start_day,start_hour,utc_start
-      write(10,*)nrec,real(dt*nspool),nspool,nvrt,kz,real(h0),real(h_s),real(h_c),real(theta_b),real(theta_f),ics
-      write(10,*)(real(ztot(k)),k=1,kz-1),(real(sigma(k)),k=1,nvrt-kz+1)
+      write(10,'(3(1x,i10),2(1x,f14.2))')start_year,start_month,start_day,start_hour,utc_start
+      write(10,'(i10,1x,e14.7,3(1x,i6),5(1x,e17.8),1x,i3)')nrec,real(dt*nspool),nspool,nvrt,kz, &
+     &real(h0),real(h_s),real(h_c),real(theta_b),real(theta_f),ics
+      do k=1,kz-1
+        write(10,*)real(ztot(k))
+      enddo !k
+      do k=1,nvrt-kz+1
+        write(10,*)real(sigma(k))
+      enddo !k
+
       write(10,*)np,ne
       if(ics==1) then
         do m=1,np
-          write(10,*)real(xnd(m)),real(ynd(m)),real(dp00(m)),kbp00(m)
+          write(10,*)xnd(m),ynd(m),real(dp00(m)),kbp00(m)
         enddo !m
       else !lat/lon
         do m=1,np
-          write(10,*)real(xlon(m)/pi*180.d0),real(ylat(m)/pi*180.d0),real(dp00(m)),kbp00(m)
+          write(10,*)xlon(m)/pi*180.d0,ylat(m)/pi*180.d0,real(dp00(m)),kbp00(m)
         enddo !m
       endif !ics
       do m=1,ne
         write(10,*)i34(m),(elnode(mm,m),mm=1,i34(m))
       enddo !m
 
+      do i=1,ns
+        write(10,*)i,isidenode(1:2,i)
+      enddo !i
+
       close(10)
       
-      if(myrank==0) write(16,*)'done initializing cold start'
-      
+      if(myrank==0) then
+        write(16,*)'done initializing cold start'
+        call flush(16)
+      endif
       
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -4891,7 +5316,6 @@
       time=0.d0
       iths=0
       if(ihot/=0) then
-        allocate(buf3(ns_global),stat=istat)
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
         !All ranks open .nc but rank 0 reads most of data 
@@ -4929,10 +5353,15 @@
           if(j/=NF90_NOERR) call parallel_abort('init: nc ifile1')
           j=nf90_get_var(ncid2,mm,ifile);
           if(j/=NF90_NOERR) call parallel_abort('init: nc ifile2')
+          j=nf90_inq_varid(ncid2, "nsteps_from_cold",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc nsteps_from_cold')
+          j=nf90_get_var(ncid2,mm,nsteps_from_cold);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc nsteps_from_cold2')
         endif !myrank==0
         call mpi_bcast(time,1,rtype,0,comm,istat)
         call mpi_bcast(iths,1,itype,0,comm,istat)
         call mpi_bcast(ifile,1,itype,0,comm,istat)
+        call mpi_bcast(nsteps_from_cold,1,itype,0,comm,istat)
 
         ! Element data
         if(myrank==0) then
@@ -5100,14 +5529,20 @@
           if(j/=NF90_NOERR) call parallel_abort('init: nc eta2')
           j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
           if(j/=NF90_NOERR) call parallel_abort('init: nc eta2b')
+          j=nf90_inq_varid(ncid2, "cumsum_eta",mm);
+          if(j/=NF90_NOERR) call parallel_abort('init: nc cumsum_eta')
+          j=nf90_get_var(ncid2,mm,buf4(1:np_global),(/1/),(/np_global/))
+          if(j/=NF90_NOERR) call parallel_abort('init: nc cumsum_eta2')
         endif !myrank
         call mpi_bcast(nwild2,ns_global,itype,0,comm,istat)
-        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)        
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+        call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             ip=ipgl(i)%id
             eta2(ip)=buf3(i)
+            cumsum_eta(ip)=buf4(i)
             idry(ip)=nwild2(i)
           endif
         enddo !i
@@ -5154,7 +5589,7 @@
           enddo !k
         enddo !m
 
-        qnon=0.d0
+        !qnon=0.d0
 
 !        write(12,*)'elem after hot'
 !        do i=1,nea
@@ -5174,24 +5609,13 @@
 
 
 #ifdef USE_ICM
-       ! !temportary fix, need to write wqc in hotstart, ZG
-       ! do i=1,nea
-       !   do k=1,nvrt
-       !     do j=1,ntrs(7)
-       !       wqc(j,k,i)=tr_el(j-1+irange_tr(1,7),k,i)
-       !     enddo
-       !   enddo
-       ! enddo
-
         !gfortran requires all chars have same length
-        ar_name(1:32)=(/'SED_BENDO','CTEMP    ','BBM      ','CPOS     ','PO4T2TM1S', &
-     &'NH4T2TM1S','NO3T2TM1S','HST2TM1S ','CH4T2TM1S','CH41TM1S ','SO4T2TM1S', &
-     &'SIT2TM1S ','BENSTR1S ','NH41TM1S ','NO31TM1S ','HS1TM1S  ','SI1TM1S  ', &
-     &'PO41TM1S ','PON1TM1S ','PON2TM1S ','PON3TM1S ','POC1TM1S ','POC2TM1S ', &
-     &'POC3TM1S ','POP1TM1S ','POP2TM1S ','POP3TM1S ','PSITM1S  ','BFORMAXS ', &
-     &'ISWBENS  ','DFEEDM1S ','hcansav  '/)
+        ar_name(1:14)=(/'btemp ','bstc  ','bSTR  ','bThp  ','bTox  ', &
+                      & 'bNH4  ','bNH4s ','bNO3  ','bPO4  ','bH2S  ', &
+                      & 'bCH4  ','bPOS  ','bSA   ','sht   '/)
 !'
-        do k=1,32 !# of 1D arrays
+        do k=1,14 !# of 1D arrays
+          if(isav_icm==0.and.k==14) cycle
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
@@ -5204,140 +5628,101 @@
             if(iegl(i)%rank==myrank) then
               ie=iegl(i)%id
               if(k==1) then
-                SED_BENDO(ie)=buf3(i)
+                btemp(ie)=buf3(i)
               else if(k==2) then
-                CTEMP(ie)=buf3(i)
+                bstc(ie)=buf3(i)
               else if(k==3) then
-                BBM(ie)=buf3(i)
+                bSTR(ie)=buf3(i)
               else if(k==4) then
-                CPOS(ie)=buf3(i)
+                bThp(ie)=buf3(i)
               else if(k==5) then
-                PO4T2TM1S(ie)=buf3(i)
+                bTox(ie)=buf3(i)
               else if(k==6) then
-                NH4T2TM1S(ie)=buf3(i)
+                bNH4(ie)=buf3(i)
               else if(k==7) then
-                NO3T2TM1S(ie)=buf3(i)
+                bNH4s(ie)=buf3(i)
               else if(k==8) then
-                HST2TM1S(ie)=buf3(i)
+                bNO3(ie)=buf3(i)
               else if(k==9) then
-                CH4T2TM1S(ie)=buf3(i)
+                bPO4(ie)=buf3(i)
               else if(k==10) then
-                CH41TM1S(ie)=buf3(i)
+                bH2S(ie)=buf3(i)
               else if(k==11) then
-                SO4T2TM1S(ie)=buf3(i)
+                bCH4(ie)=buf3(i)
               else if(k==12) then
-                SIT2TM1S(ie)=buf3(i)
+                bPOS(ie)=buf3(i)
               else if(k==13) then
-                BENSTR1S(ie)=buf3(i)
+                bSA(ie)=buf3(i)
               else if(k==14) then
-                NH41TM1S(ie)=buf3(i)
-              else if(k==15) then
-                NO31TM1S(ie)=buf3(i)
-              else if(k==16) then
-                HS1TM1S(ie)=buf3(i)
-              else if(k==17) then
-                SI1TM1S(ie)=buf3(i)
-              else if(k==18) then
-                PO41TM1S(ie)=buf3(i)
-              else if(k==19) then
-                PON1TM1S(ie)=buf3(i)
-              else if(k==20) then
-                PON2TM1S(ie)=buf3(i)
-              else if(k==21) then
-                PON3TM1S(ie)=buf3(i)
-              else if(k==22) then
-                POC1TM1S(ie)=buf3(i)
-              else if(k==23) then
-                POC2TM1S(ie)=buf3(i)
-              else if(k==24) then
-                POC3TM1S(ie)=buf3(i)
-              else if(k==25) then
-                POP1TM1S(ie)=buf3(i)
-              else if(k==26) then
-                POP2TM1S(ie)=buf3(i)
-              else if(k==27) then
-                POP3TM1S(ie)=buf3(i)
-              else if(k==28) then
-                PSITM1S(ie)=buf3(i)
-              else if(k==29) then
-                BFORMAXS(ie)=buf3(i)
-              else if(k==30) then
-                ISWBENS(ie)=buf3(i)
-              else if(k==31) then
-                DFEEDM1S(ie)=buf3(i)
-              else if(k==32) then
-                hcansav(ie)=buf3(i)
+                sht(ie)=buf3(i)
               endif
             endif !iegl
           enddo !i
-        enddo !k=1,31
+        enddo !k=1,20
 
         !gfortran requires all chars have same length
-        ar_name(1:6)=(/'CPOP ','CPON ','CPOC ','lfsav','stsav','rtsav'/)
-        do k=1,3 !# of 2D arrays
+        ar_name(1:10)=(/'bPOC  ','bPON  ','bPOP  ','sleaf ','sstem ','sroot ','vht   ','vtleaf','vtstem','vtroot'/)
+        do k=1,10 !# of 2D arrays
+          if(isav_icm==0.and.k>=4.and.k<=6) cycle
+          if(iveg_icm==0.and.k>=7.and.k<=10) cycle
+
           if(myrank==0) then
             j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
             if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
           endif
 
-          do m=1,3
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+          if((k>=1.and.k<=3).or.(k>=7.and.k<=10)) then
+            do m=1,3
+              if(myrank==0) then
+                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
+              endif
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                ie=iegl(i)%id
-                if(k==1) then
-                  CPOP(ie,m)=buf3(i)
-                else if(k==2) then
-                  CPON(ie,m)=buf3(i)
-                else if(k==3) then
-                  CPOC(ie,m)=buf3(i)
-                endif
-              endif !iegl
-            enddo !i
-          enddo !m
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  ie=iegl(i)%id
+                  if(k==1) then
+                    bPOC(ie,m)=buf3(i)
+                  elseif(k==2) then
+                    bPON(ie,m)=buf3(i)
+                  elseif(k==3) then
+                    bPOP(ie,m)=buf3(i)
+                  elseif(k==7) then
+                    vht(ie,m)=buf3(i)
+                  else if(k==8) then
+                    vtleaf(ie,m)=buf3(i)
+                  else if(k==9) then
+                    vtstem(ie,m)=buf3(i)
+                  else if(k==10) then
+                    vtroot(ie,m)=buf3(i)
+                  endif
+                endif !iegl
+              enddo !i
+            enddo !m
+          elseif(k>=4.and.k<=6) then
+            do m=1,nvrt
+              if(myrank==0) then
+                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
+              endif
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  ie=iegl(i)%id
+                  if(k==4) then
+                    sleaf(m,ie)=buf3(i)
+                  else if(k==5) then
+                    sstem(m,ie)=buf3(i)
+                  else if(k==6) then
+                    sroot(m,ie)=buf3(i)
+                  endif
+                endif !iegl
+              enddo !i
+            enddo !m
+          endif!if((k>=1.and.k<=3
         enddo !k
-
-        do k=4,6 !# of 2D arrays
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
-          endif
-          do m=1,nvrt
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM6')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                ie=iegl(i)%id
-                if(k==4) then
-                  lfsav(m,ie)=buf3(i)
-                else if(k==5) then
-                  stsav(m,ie)=buf3(i)
-                else if(k==6) then
-                  rtsav(m,ie)=buf3(i)
-                endif
-              endif !iegl
-            enddo !i
-          enddo !m
-        enddo !k
-
-        j=nf90_inq_varid(ncid2,'wqc',mm)
-        if(j/=NF90_NOERR) call parallel_abort('init: nc ICM7')
-        do i=1,ne_global
-          if(iegl(i)%rank==myrank) then
-            ie=iegl(i)%id
-            j=nf90_get_var(ncid2,mm,wqc(:,:,ie),(/1,1,i/),(/ntrs(7),nvrt,1/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM8')
-          endif!iegl
-        enddo !i
 
 #endif /*USE_ICM*/
 
@@ -5520,6 +5905,139 @@
         enddo !i
 #endif /*USE_MARSH*/
 
+#ifdef USE_MICE
+        do i=1,nea
+          do k=1,nvrt
+            tf=icepack_sea_freezing_temperature(tr_el(2,k,i))
+            if(tr_el(1,k,i)<tf) tr_el(1,k,i)=tf         !reset temp. below freezing temp.  
+          enddo
+        enddo
+
+        do i=1,npa
+          do k=1,nvrt
+            tf=icepack_sea_freezing_temperature(tr_nd(2,k,i))
+            if(tr_nd(1,k,i)<tf) tr_nd(1,k,i)=tf         !reset temp. below freezing temp. 
+            tf=icepack_sea_freezing_temperature(tr_nd0(2,k,i))
+            if(tr_nd0(1,k,i)<tf) tr_nd0(1,k,i)=tf         !reset temp. below freezing temp.  
+          enddo
+        enddo
+        
+        lice_free_gb=.false.
+        t_oi(:)=0
+        fresh_wa_flux(:)=0
+        net_heat_flux(:)=0
+        u_ice(:)=0
+        v_ice(:)=0
+        tau_oi(:,:)=0
+        ice_tr(:,:)=0
+        ice_evap(:)=0
+        srad_th_ice(:)=0
+        srad_o(:) = 0
+        if(lice_free_gb) then
+          j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
+          j=nf90_get_var(ncid2,mm,itmp)
+          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
+          if(itmp==0) then
+            lice_free_gb=.false.
+          else
+            lice_free_gb=.true.
+          endif
+          if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
+
+          !gfortran requires all chars have same length
+          ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
+          do k=1,5 !# of 1D node arrays
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                if(k==1) then
+                  t_oi(ip)=buf3(i)
+                else if(k==2) then
+                  fresh_wa_flux(ip)=buf3(i)
+                else if(k==3) then
+                  net_heat_flux(ip)=buf3(i)
+                else if(k==4) then
+                  u_ice(ip)=buf3(i)
+                else if(k==5) then
+                  v_ice(ip)=buf3(i)
+                endif
+              endif !ipgl
+            enddo !i
+          enddo !k
+
+          ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
+          do k=1,3 !# of 1D elem arrays
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
+              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                ie=iegl(i)%id
+                if(k==1) then
+                  sigma11(ie)=buf3(i)
+                else if(k==2) then
+                  sigma12(ie)=buf3(i)
+                else if(k==3) then
+                  sigma22(ie)=buf3(i)
+                endif
+              endif !ipgl
+            enddo !i
+          enddo !k
+
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
+          endif
+          do m=1,2
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                tau_oi(m,ip)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
+
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid2,"ice_tracers",mm)
+            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
+          endif
+          do m=1,ntr_ice
+            if(myrank==0) then
+              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                ice_tr(m,ip)=buf3(i)
+              endif !iegl
+            enddo !i
+          enddo !m
+        endif !lice_free_gb
+#endif /*USE_MICE*/
+
 #ifdef USE_ICE
         j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
         if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
@@ -5625,10 +6143,9 @@
 #endif /*USE_ICE*/
 
 #ifdef USE_HA
-        call parallel_abort('init: hot option for HA diabled')
+        if(ihot==2) call parallel_abort('init: hot option for HA diabled')
 #endif /*USE_HA*/
 
-        deallocate(buf3)
         j=nf90_close(ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: nc close')
 
@@ -5646,30 +6163,864 @@
           iths=0
         endif
 
-        if(myrank==0) write(16,*)'hot start at time=',time,iths,' ; stack #=',ifile
+        if(myrank==0) then
+          write(16,*)'hot start at time=',time,iths !,' ; stack #=',ifile
+          call flush(16)
+        endif
 
 !     end hot start section
       endif !ihot/=0
+
+! MP from KM
+#ifdef USE_WWM
+      ! Computation of the bed slope at nodes
+      allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
+      call compute_bed_slope !iof(198) = 1
+  
+!      ! Exchanges between ghost zones and smoothing
+!      call exchange_p2d(tanbeta_x)
+!      call exchange_p2d(tanbeta_y)
+      do i = 1,2
+        call smooth_2dvar(tanbeta_x,npa)
+        call smooth_2dvar(tanbeta_y,npa)
+      enddo
+#endif
 
 !     Broadcast to global module
       iths_main=iths
  
 !     Open global output files and write header data
       if(ihot<=1) ifile=1 !reset output file #
-      call fill_nc_header(0)
 
-#ifdef SINGLE_NETCDF_OUTPUT
-      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
+#ifdef OLDIO
+      if(nc_out>0) call fill_nc_header(0)
+#else
+!...  Prep info for I/O scribes: # of output vars and attributes etc
+      !Count 2D&3D outputs; vectors count as 2
+      !This section must be consistent with schism_step and scribe_io
+      nsend_varout=0 !init for first waitall in _step
+      out_name='' !init
+      !iout_23d: ndicates location where outputs are defined. 1:3 - node 2D/3D
+      !whole/3D half level; 4:6 - elem 2D/3D whole/3D half levels; 7:9 - side 2D/3D
+      !whole/3D half levels; 0: no vertical info (e.g. time)
+      iout_23d=0 
+
+!------------------
+!---  2D node
+      !Total # of 2D dynamic outputs, including those not controlled by flags: idry
+      ncount_2dnode=1 !idry
+      out_name(1)='dryFlagNode'
+      iout_23d(ncount_2dnode)=1
+      !Scalar
+      do i=1,12
+        if(iof_hydro(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(1)
+              out_name(ncount_2dnode)='elevation'
+            case(2)
+              out_name(ncount_2dnode)='airPressure'
+            case(3)
+              out_name(ncount_2dnode)='airTemperature'
+            case(4)
+              out_name(ncount_2dnode)='specificHumidity'
+            case(5)
+              out_name(ncount_2dnode)='solarRadiation'
+            case(6)
+              out_name(ncount_2dnode)='sensibleHeat'
+            case(7)
+              out_name(ncount_2dnode)='latentHeat'
+            case(8)
+              out_name(ncount_2dnode)='upwardLongwave'
+            case(9)
+              out_name(ncount_2dnode)='downwardLongwave'
+            case(10)
+              out_name(ncount_2dnode)='totalHeat'
+            case(11)
+              out_name(ncount_2dnode)='evaporationRate'
+            case(12)
+              out_name(ncount_2dnode)='precipitationRate'
+          end select
+        endif
+      enddo !i
+      !Vectors count as 2
+      do i=13,16
+        if(iof_hydro(i)/=0) then
+          ncount_2dnode=ncount_2dnode+2
+          iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+          select case(i)
+            case(13)
+              out_name(ncount_2dnode-1)='bottomStressX'
+              out_name(ncount_2dnode)='bottomStressY'
+            case(14)
+              out_name(ncount_2dnode-1)='windSpeedX'
+              out_name(ncount_2dnode)='windSpeedY'
+            case(15)
+              out_name(ncount_2dnode-1)='windStressX'
+              out_name(ncount_2dnode)='windStressY'
+            case(16)
+              out_name(ncount_2dnode-1)='depthAverageVelX'
+              out_name(ncount_2dnode)='depthAverageVelY'
+          end select
+        endif
+      enddo !i
+
+!     Add module outputs of 2D node below (scalars&vectors)
+#ifdef USE_WWM
+      !2D node scalar
+      itmp=0 !counter
+      do i=1,28
+        if(i==7.or.i==8) cycle !skip vectors first
+
+        itmp=itmp+1
+        if(iof_wwm(itmp)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(itmp)
+            case(1)
+              out_name(ncount_2dnode)='sigWaveHeight'
+            case(2)
+              out_name(ncount_2dnode)='meanWavePeriod'
+            case(3)
+              out_name(ncount_2dnode)='zeroDowncrossPeriod'
+            case(4)
+              out_name(ncount_2dnode)='TM10'
+            case(5)
+              out_name(ncount_2dnode)='meanWaveNumber'
+            case(6)
+              out_name(ncount_2dnode)='meanWaveLength'
+            case(7)
+              out_name(ncount_2dnode)='meanWaveDirection'
+            case(8)
+              out_name(ncount_2dnode)='meanDirSpreading'
+            case(9)
+              out_name(ncount_2dnode)='peakPeriod'
+            case(10)
+              out_name(ncount_2dnode)='continuousPeakPeriod'
+            case(11)
+              out_name(ncount_2dnode)='peakPhaseVel'
+            case(12)
+              out_name(ncount_2dnode)='peakNFactor'
+            case(13)
+              out_name(ncount_2dnode)='peakGroupVel'
+            case(14)
+              out_name(ncount_2dnode)='peakWaveNumber'
+            case(15)
+              out_name(ncount_2dnode)='peakWaveLength'
+            case(16)
+              out_name(ncount_2dnode)='dominantDirection'
+            case(17)
+              out_name(ncount_2dnode)='peakSpreading'
+            case(18)
+              out_name(ncount_2dnode)='discretePeakDirectio'
+            case(19)
+              out_name(ncount_2dnode)='orbitalVelocity'
+            case(20)
+              out_name(ncount_2dnode)='rmsOrbitalVelocity' 
+            case(21)
+              out_name(ncount_2dnode)='bottomExcursionPerio'
+            case(22)
+              out_name(ncount_2dnode)='bottomWavePeriod'
+            case(23)
+              out_name(ncount_2dnode)='UresellNumber' 
+            case(24)
+              out_name(ncount_2dnode)='frictionalVelocity'
+            case(25)
+              out_name(ncount_2dnode)='CharnockCoeff'
+            case(26)
+              out_name(ncount_2dnode)='rougnessLength'
+          end select
+        endif !iof_wwm
+      enddo !i
+
+      do i=27,31
+        if(iof_wwm(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(27)
+              out_name(ncount_2dnode)='rollerDissRate'
+            case(28)
+              out_name(ncount_2dnode)='dissRateDepBreaking'
+            case(29)
+              out_name(ncount_2dnode)='dissRateBottFriction'
+            case(30)
+              out_name(ncount_2dnode)='dissRateWhiteCapping'
+            case(31)
+              out_name(ncount_2dnode)='energyInputAtmos'
+          end select 
+        endif !iof_wwm
+      enddo !i
+
+      !Vectors count as 2
+      if(iof_wwm(32)/=0) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='waveEnergyDirX'
+        out_name(ncount_2dnode)='waveEnergyDirY'
+      endif
+#endif /*USE_WWM*/
+
+#ifdef USE_SED
+      do i=7,13
+        if(iof_sed(i)/=0) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          select case(i)
+            case(7)
+              out_name(ncount_2dnode)='sedDepthChange'
+            case(8)
+              out_name(ncount_2dnode)='sedD50'
+            case(9)
+              out_name(ncount_2dnode)='sedBedStress'
+            case(10)
+              out_name(ncount_2dnode)='sedBedRoughness'
+            case(11)
+              out_name(ncount_2dnode)='sedPorocity'
+            case(12)
+              out_name(ncount_2dnode)='sedErosionalFlux'
+            case(13)
+              out_name(ncount_2dnode)='sedDepositionalFlux'
+          end select
+        endif
+      enddo !i
+
+      if(iof_sed(14)/=0) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='sedBedloadTransportX'
+        out_name(ncount_2dnode)='sedBedloadTransportY'
+      endif !iof
+
+      ised_out_sofar=14 !set output flag index so far
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then !vectors
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_2dnode=ncount_2dnode+2
+          iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+          out_name(ncount_2dnode-1)='sedBedloadX_'//ifile_char(1:itmp2)
+          out_name(ncount_2dnode)='sedBedloadY_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          out_name(ncount_2dnode)='sedBedFraction_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5)
+#endif /*USE_SED*/
+
+#ifdef USE_ICE
+      if(iof_ice(2)==1) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='iceVelocityX'
+        out_name(ncount_2dnode)='iceVelocityY'
+      endif
+
+      do i=3,5+ntr_ice
+        if(iof_ice(i)==1) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          if(i==3) then
+            out_name(ncount_2dnode)='iceNetHeatFlux'
+          else if(i==4) then
+            out_name(ncount_2dnode)='iceFreshwaterFlux'
+          else if(i==5) then
+            out_name(ncount_2dnode)='iceTopTemperature'
+          else 
+            write(ifile_char,'(i12)')i-5
+            ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)             
+            out_name(ncount_2dnode)='iceTracer_'//ifile_char(1:itmp2)
+          endif !i
+        endif !iof
+      enddo !i
+#endif /*USE_ICE*/
+
+!     Done with 2D node outputs; init counter_out_name to be used for other
+!     outputs
+      counter_out_name=ncount_2dnode !index of out_name
+
+!------------------
+!---  2D elem
+      ncount_2delem=1 !idry
+      counter_out_name=counter_out_name+1
+      out_name(counter_out_name)='dryFlagElement'
+      iout_23d(counter_out_name)=4
+
+!     Add module outputs of 2D elem below (scalars&vectors)
+#ifdef USE_SED
+      do i=1,6
+        if(iof_sed(i)==1) then
+          ncount_2delem=ncount_2delem+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=4
+          select case(i)
+            case(1)
+              out_name(counter_out_name)='sedBedThickness'
+            case(2)
+              out_name(counter_out_name)='sedBedAge'
+            case(3)
+              out_name(counter_out_name)='sedTransportRough'
+            case(4)
+              out_name(counter_out_name)='sedRoughCurrentRippl'
+            case(5)
+              out_name(counter_out_name)='sedRoughSandWave'
+            case(6)
+              out_name(counter_out_name)='sedRoughWaveRipple'
+          end select
+        endif !iof
+      enddo !i
 #endif
 
-      if(myrank==0) write(16,'(a)')'Done initializing outputs'
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=1,4
+          if(iof_icm_sav(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i+2)))
+          endif !iof
+        enddo !i
+      endif !isav_icm/
+
+      if(iveg_icm/=0) then
+        do i=1,nout_veg
+          if(iof_icm_veg(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+i-1)))
+          endif !iof
+        enddo !i
+      endif !iveg_icm/
+
+      if(ised_icm/=0) then
+        do i=1,nout_sed
+          if(iof_icm_sed(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+i-1)))
+          endif !iof
+        enddo !i
+      endif
+
+      if(iBA_icm/=0) then
+        do i=1,nout_ba
+          if(iof_icm_ba(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+i-1)))
+          endif !iof
+        enddo !i
+      endif
+#endif
+
+#ifdef USE_MARSH
+      if(iof_marsh(1)==1) 
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='marshFlag'
+        iout_23d(counter_out_name)=4
+      endif !iof_marsh 
+#endif
+
+#ifdef USE_FABM
+      do i=1,ubound(fs%bottom_state,2)
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)=trim(fs%model%bottom_state_variables(i)%name)
+        iout_23d(counter_out_name)=4
+      enddo !i
+#endif
+
+#ifdef USE_ICE
+      if(iof_ice(1)==1) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='iceStrainRate'
+        iout_23d(counter_out_name)=4
+      endif
+#endif
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(1)==1) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='minTransportTimeStep'
+        iout_23d(counter_out_name)=4
+      endif
+#endif
+
+!end of 2D elem
+!------------------
+!---  2D side
+      ncount_2dside=1 !idry
+      counter_out_name=counter_out_name+1
+      out_name(counter_out_name)='dryFlagSide'
+      iout_23d(counter_out_name)=7
+
+      if(iof_hydro(31)==1) then
+        ncount_2dside=ncount_2dside+2
+        counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=7
+        out_name(counter_out_name-1)='barotropicPresGradX'
+        out_name(counter_out_name)='barotropicPresGradY'
+      endif !iof_hydro
+
+!     Add module outputs of 2D side below (scalars&vectors)
+#ifdef USE_ANALYSIS
+      do i=2,5
+        if(iof_ana(i)==1) then
+          ncount_2dside=ncount_2dside+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=7
+          select case(i)
+            case(2)
+              out_name(counter_out_name)='airPressureGradientX'
+            case(3)
+              out_name(counter_out_name)='airPressureGradientY'
+            case(4)
+              out_name(counter_out_name)='tidePotentialGradX'
+            case(5)
+              out_name(counter_out_name)='tidePotentialGradY'
+          end select
+        endif
+      enddo !i
+#endif
+
+!end of 2D side
+!------------------
+!---  3D nodes 
+      ncount_3dnode=0
+      !Scalar
+      do i=17,25 
+        if(iof_hydro(i)/=0) then
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+
+          select case(i)
+            case(17)
+              out_name(counter_out_name)='verticalVelocity'
+            case(18)
+              out_name(counter_out_name)='temperature'
+            case(19)
+              out_name(counter_out_name)='salinity'
+            case(20)
+              out_name(counter_out_name)='waterDensity'
+            case(21)
+              out_name(counter_out_name)='diffusivity'
+            case(22)
+              out_name(counter_out_name)='viscosity'
+            case(23)
+              out_name(counter_out_name)='turbulentKineticEner'
+            case(24)
+              out_name(counter_out_name)='mixingLength'
+            case(25)
+              out_name(counter_out_name)='zCoordinates'
+          end select
+        endif
+      enddo !i
+      !Vectors count as 2
+      if(iof_hydro(26)/=0) then
+        ncount_3dnode=ncount_3dnode+2    
+        counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=2
+        out_name(counter_out_name-1)='horizontalVelX'
+        out_name(counter_out_name)='horizontalVelY'
+      endif
+
+#ifdef USE_WWM
+      do i=35,36
+        if(iof_wwm(i)/=0) then
+          ncount_3dnode=ncount_3dnode+2
+          counter_out_name=counter_out_name+2
+          iout_23d(counter_out_name-1:counter_out_name)=2
+          if(i==35) then
+            out_name(counter_out_name-1)='stokesDriftVelX'
+            out_name(counter_out_name)='stokesDriftVelY'
+          else
+            out_name(counter_out_name-1)='rollStokesDriftVelX'
+            out_name(counter_out_name)='rollStokesDriftVelY'
+          endif
+        endif !iof_wwm
+      enddo !i
+#endif /*USE_WWM*/
+
+#ifdef USE_GEN
+      do i=1,ntrs(3)
+        if(iof_gen(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='GEN_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif /*USE_GEN*/
+
+#ifdef USE_AGE
+      do i=1,ntrs(4)/2
+        if(iof_age(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='AGE_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif /*USE_AGE*/
+
+#ifdef USE_SED
+      istart_sed_3dnode=ised_out_sofar
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='sedConcentration_'//ifile_char(1:itmp2)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
+      
+      if(iof_sed(ised_out_sofar+1)==1) then
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+        out_name(counter_out_name)='totalSuspendedLoad'
+      endif
+      ised_out_sofar=ised_out_sofar+1
+#endif /*USE_SED*/
+
+#ifdef USE_ECO
+      do i=1,ntrs(6)
+        if(iof_eco(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='ECO_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_ICM
+      do i=1,ntrs(7)
+        if(iof_icm(i)==1) then
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(i)))
+        endif
+      enddo !i
+#endif/*USE_ICM*/
+
+#ifdef USE_COSINE
+      do i=1,ntrs(8)
+        if(iof_cos(i)==1) then
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='COS_'//trim(adjustl(name_cos(i)))
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_FIB
+      do i=1,ntrs(9)
+        if(iof_fib(i)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dnode=ncount_3dnode+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='FIB_'//ifile_char(1:itmp2)
+        endif
+      enddo !i
+#endif
+
+#ifdef USE_FABM
+      do i=1,ntrs(11)
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+#if _FABM_API_VERSION_ < 1
+        out_name(counter_out_name)=trim(fs%model%state_variables(i)%name)
+#else
+        out_name(counter_out_name)=trim(fs%model%interior_state_variables(i)%name)
+#endif
+      enddo !i
+#endif/*USE_FABM*/
+
+#ifdef USE_ANALYSIS
+      if(iof_ana(14)==1) then
+        ncount_3dnode=ncount_3dnode+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+        out_name(counter_out_name)='gradientRichardson'        
+      endif
+#endif
+
+!end of 3D node
+!------------------
+!---  3D side 
+      ncount_3dside=0
+      do i=27,27
+        if(iof_hydro(i)/=0) then
+          ncount_3dside=ncount_3dside+2
+          counter_out_name=counter_out_name+2
+          iout_23d(counter_out_name-1:counter_out_name)=8
+          out_name(counter_out_name-1)='horizontalSideVelX'
+          out_name(counter_out_name)='horizontalSideVelY'
+        endif
+      enddo !i
+
+#ifdef USE_WWM
+      if(iof_wwm(33)/=0) then
+        ncount_3dside=ncount_3dside+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=8
+        out_name(counter_out_name)='verticalStokesVel'
+      endif
+
+      !Vector
+      if(iof_wwm(34)/=0) then
+        ncount_3dside=ncount_3dside+2
+        counter_out_name=counter_out_name+2
+        iout_23d(counter_out_name-1:counter_out_name)=8
+        out_name(counter_out_name-1)='waveForceX'
+        out_name(counter_out_name)='waveForceY'
+      endif
+#endif /*USE_WWM*/
+
+#ifdef USE_ANALYSIS
+      do i=6,13
+        if(iof_ana(i)/=0) then
+          ncount_3dside=ncount_3dside+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=8
+          select case(i)
+            case(6)
+              out_name(counter_out_name)='horzontalViscosityX'
+            case(7)
+              out_name(counter_out_name)='horzontalViscosityY'
+            case(8)
+              out_name(counter_out_name)='baroclinicForceX'
+            case(9)
+              out_name(counter_out_name)='baroclinicForceY'
+            case(10)
+              out_name(counter_out_name)='verticalViscosityX'
+            case(11)
+              out_name(counter_out_name)='verticalViscosityY'
+            case(12)
+              out_name(counter_out_name)='mommentumAdvectionX'
+            case(13)
+              out_name(counter_out_name)='mommentumAdvectionY'
+          end select 
+        endif
+      enddo !i
+#endif
+!end of 3D side
+!------------------
+!---  3D elem scalar
+      ncount_3delem=0
+      do i=28,30
+        if(iof_hydro(i)/=0) then
+          ncount_3delem=ncount_3delem+1
+          counter_out_name=counter_out_name+1
+          if(i==28) then
+            out_name(counter_out_name)='verticalVelAtElement'
+            iout_23d(counter_out_name)=5
+          else if(i==29) then
+            out_name(counter_out_name)='temperatureAtElement'
+            iout_23d(counter_out_name)=6
+          else
+            out_name(counter_out_name)='salinityAtElement'
+            iout_23d(counter_out_name)=6
+          endif
+        endif
+      enddo !i
+
+      !Modules
+#ifdef USE_ICM
+      if(isav_icm/=0) then
+        do i=1,3
+          if(iof_icm_sav(i)==1) then
+            ncount_3delem=ncount_3delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=6
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
+          endif
+        enddo !i
+      endif !isav_icm/
+#endif
+
+#ifdef USE_DVD
+      if(iof_dvd(1)==1) then
+        ncount_3delem=ncount_3delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='DVD_1'
+        iout_23d(counter_out_name)=6
+      endif
+#endif /*USE_DVD*/
+!end of 3D elem
+!------------------
+
+      !Allocate send varout buffers for _step
+      if(iorder==0) then
+        allocate(varout_2dnode(ncount_2dnode,np),varout_2delem(ncount_2delem,ne), &
+     &varout_2dside(ncount_2dside,ns),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: 2dnode')
+
+        if(ncount_3dnode>0) then
+          allocate(varout_3dnode(nvrt,np,ncount_3dnode),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: 3dnode')
+        endif
+
+        if(ncount_3dside>0) then
+          allocate(varout_3dside(nvrt,ns,ncount_3dside),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: 3dside')
+        endif
+
+        if(ncount_3delem>0) then
+          allocate(varout_3delem(nvrt,ne,ncount_3delem),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: 3delem')
+        endif
+      endif !iorder
+
+!...  Send basic time info to scribes. Make sure the send vars are not altered
+!     during non-block sends/recv
+!     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
+      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
+      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if(counter_out_name>max_ncoutvar) call parallel_abort('INIT: increase out_name dim')
+      if(myrank==0) then 
+        write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
+        do i=1,nscribes
+          call mpi_send(dt,1,rtype,nproc_schism-i,100,comm_schism,ierr)
+          call mpi_send(nspool,1,itype,nproc_schism-i,101,comm_schism,ierr)
+          call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,102,comm_schism,ierr)
+          call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
+          call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
+          call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
+          call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
+          call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
+          call mpi_send(ihfskip,1,itype,nproc_schism-i,108,comm_schism,ierr)
+          call mpi_send(counter_out_name,1,itype,nproc_schism-i,109,comm_schism,ierr)
+          call mpi_send(iths,1,itype,nproc_schism-i,110,comm_schism,ierr)
+          call mpi_send(ntime,1,itype,nproc_schism-i,111,comm_schism,ierr)
+          call mpi_send(iof_hydro,40,itype,nproc_schism-i,112,comm_schism,ierr)
+          call mpi_send(iof_wwm,40,itype,nproc_schism-i,113,comm_schism,ierr)
+          !Make sure char len is 20 in scribe_io also!
+          call mpi_send(out_name,counter_out_name*20,MPI_CHAR,nproc_schism-i,114,comm_schism,ierr)
+          call mpi_send(ncount_2delem,1,itype,nproc_schism-i,115,comm_schism,ierr)
+          call mpi_send(ncount_2dside,1,itype,nproc_schism-i,116,comm_schism,ierr)
+          call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,117,comm_schism,ierr)
+          call mpi_send(ncount_3dside,1,itype,nproc_schism-i,118,comm_schism,ierr)
+          call mpi_send(ncount_3delem,1,itype,nproc_schism-i,119,comm_schism,ierr)
+          call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
+          call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
+          call mpi_send(ntrs,natrm,itype,nproc_schism-i,122,comm_schism,ierr)
+          call mpi_send(iof_cos,20,itype,nproc_schism-i,124,comm_schism,ierr)
+          call mpi_send(iof_fib,5,itype,nproc_schism-i,125,comm_schism,ierr)
+          call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
+          call mpi_send(iof_ice,10,itype,nproc_schism-i,127,comm_schism,ierr)
+          call mpi_send(iof_ana,20,itype,nproc_schism-i,128,comm_schism,ierr)
+          call mpi_send(iof_marsh,2,itype,nproc_schism-i,129,comm_schism,ierr)
+
+          call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
+          call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)
+          call mpi_send(iof_sed,3*ntrs(5)+20,itype,nproc_schism-i,132,comm_schism,ierr)
+          call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
+          call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
+          call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)
+          call mpi_send(start_year,1,itype,nproc_schism-i,136,comm_schism,ierr)
+          call mpi_send(start_month,1,itype,nproc_schism-i,137,comm_schism,ierr)
+          call mpi_send(start_day,1,itype,nproc_schism-i,138,comm_schism,ierr)
+          call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
+          call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
+#ifdef USE_ICM
+          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
+          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
+          call mpi_send(nout_sav,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
+          call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,145,comm_schism,ierr)
+#endif
+        call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
+        enddo !i
+      endif !myrank=0
+
+!     Send subdomain info to last scribe (all compute ranks participate)
+!      srqst3(:)=MPI_REQUEST_NULL !init
+      call mpi_send(np,1,itype,nproc_schism-1,199,comm_schism,ierr) 
+      call mpi_send(ne,1,itype,nproc_schism-1,198,comm_schism,ierr) 
+      call mpi_send(ns,1,itype,nproc_schism-1,197,comm_schism,ierr) 
+
+      call mpi_send(iplg(1:np),np,itype,nproc_schism-1,196,comm_schism,ierr) 
+      call mpi_send(ielg(1:ne),ne,itype,nproc_schism-1,195,comm_schism,ierr) 
+      call mpi_send(islg(1:ns),ns,itype,nproc_schism-1,194,comm_schism,ierr) 
+
+!     Better use block sends here; some weird issues on TACC systems
+      !Make sure index arrays are completely sent as others depend on them
+!      call mpi_waitall(3,srqst3(1:3),MPI_STATUS_IGNORE,ierr)
+!      srqst3(:)=MPI_REQUEST_NULL !init
+      if(ics==1) then
+        buf3(1:np)=xnd(1:np)
+        buf4(1:np)=ynd(1:np)
+      else
+        buf3(1:np)=xlon(1:np)/pi*180.d0
+        buf4(1:np)=ylat(1:np)/pi*180.d0
+      endif
+      call mpi_send(buf3(1:np),np,rtype,nproc_schism-1,193,comm_schism,ierr) 
+      call mpi_send(buf4(1:np),np,rtype,nproc_schism-1,192,comm_schism,ierr) 
+      call mpi_send(dp(1:np),np,rtype,nproc_schism-1,191,comm_schism,ierr) 
+      call mpi_send(kbp00(1:np),np,itype,nproc_schism-1,190,comm_schism,ierr) 
+      call mpi_send(i34(1:ne),ne,itype,nproc_schism-1,189,comm_schism,ierr) 
+      call mpi_send(elnode(1:4,1:ne),4*ne,itype,nproc_schism-1,188,comm_schism,ierr) 
+      call mpi_send(isidenode(:,1:ns),2*ns,itype,nproc_schism-1,187,comm_schism,ierr) 
+      !Check send status later to hide latency
+!      nnonblock=6
+#endif /*OLDIO*/
+
+!#ifdef SINGLE_NETCDF_OUTPUT
+!      CALL INIT_NETCDF_SINGLE_OUTPUT(start_year, start_month, start_day, start_hour, 0.d0, 0.d0)
+!#endif
+
+      if(myrank==0) then
+        write(16,'(a)')'Done initializing outputs'
+        call flush(16)
+      endif
       
 !...  init. eta1 (for some routines like WWM) and i.c. (for ramp function)
       eta1=eta2 
       etaic=eta2
 
+!...  Reset nsteps_from_cold and cumsum_eta to avoid the former being too large
+      if(nsteps_from_cold*dt/86400.d0>365.d0) then !use 1 yr
+        nsteps_from_cold=0; cumsum_eta=0.d0
+      endif
+
 !...  Assign variables in GOTM for cold starts
-      if(itur==4.and.(ihot==0.or.ihot==1.and.nramp==1)) then
+      if(itur==4.and.(ihot==0.or.ihot==1.and.dramp>0.d0)) then
 #ifdef USE_GOTM
 !          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
 !          call init_tridiagonal(nvrt-1)
@@ -5715,6 +7066,25 @@
       call init_petsc
 #endif 
 
+#ifdef USE_MICE
+      if(myrank==0) write(16,*)'start init multi ice...'
+      call ice_init
+      if(myrank==0) write(16,*)'done init multi ice...'
+#endif
+
+
+!...  Init PaHM on rank 0 only
+#ifdef USE_PAHM
+      if(nws<0) then
+        if(myrank==0) then
+          write(16,*)'reading PaHM inputs...'
+          call ReadControlFile !('pahm_control.in') !TRIM(controlFileName))
+          call ReadCsvBestTrackFile()
+          write(16,*)'done pre-proc PaHM...'
+        endif
+      endif !nws<0
+#endif /*USE_PAHM*/
+
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)
       iwbl_itmax=0 !cumulative max. of iterations for WBL (Grant-Madsen formulation) for a rank 
 
@@ -5726,6 +7096,12 @@
         write(16,*)'time stepping begins...',iths_main+1,ntime
         call flush(16) ! flush "mirror.out"
       endif
+
+      !Set global time stamp
+      time_stamp=iths_main*dt
+
+!...  Catch up with non-block comm
+!      if(nc_out>0) call mpi_waitall(nnonblock,srqst3(1:nnonblock),MPI_STATUS_IGNORE,ierr)
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -5740,9 +7116,12 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10)
-!      if(allocated(rwild)) deallocate(rwild)
-!      deallocate(swild9)
+      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4)
+      if(allocated(tp_name)) deallocate(tp_name)
+
+#ifdef USE_FIB
+       deallocate(sink0,fraction0,kk10,kk20)
+#endif
 
       end subroutine schism_init
 

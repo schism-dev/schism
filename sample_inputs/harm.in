@@ -1,0 +1,15 @@
+6 !# of freq
+S2
+0.145444E-03  1.00000       0.00    !angular freq, nodal factor, argument (deg)
+M2
+0.140519E-03  1.02068     221.61
+N2
+0.137880E-03  1.02068     296.05
+K1
+0.729212E-04  0.94715     242.07
+O1
+0.675977E-04  0.91404     343.55
+Q1
+0.649585E-04  0.91404      57.99
+10. 40. 24 0. !starting day, end day, stride in step, de-tending %
+1 0 !do HA for elev, vel (latter not active)

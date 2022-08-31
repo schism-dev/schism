@@ -1,0 +1,34 @@
+Recommended usage:
+
+1) "cp -rL" the current dir ("Sflux2Source/") to your run dir and see usage in the first few lines of following script:
+  sflux2source.m
+  merge_source_sink.m
+
+
+2) sflux2source.m:
+  Convert precipitation from sflux to volume source, see usage in the beginning of the script.
+
+
+3) merge_source_sink.m:
+  Merge two sets of source/sink files:
+    <Original source/sink, e.g. from NWM>
+      source_sink.in.1
+      vsource.th.1
+      msource.th.1
+      vsink.th.1
+    <source/sink converted from sflux>
+      source_sink.in.2
+      vsource.th.2
+      msource.th.2
+      (no sinks, because evaporation is not included)
+  See usage in the beginning of the script.
+
+
+4) move the final outputs:
+      source_sink.in
+      vsource.th
+      msource.th
+      vsink.th
+  into your run dir.
+
+5) Visualize final outputs using viz_source.m. See usage in the beginning of the script.

@@ -3,7 +3,7 @@
 !    WARNING: most variables/arrays in this program use '1' as surface, and nvrt*
 !    as bottom!!!
 
-!    Inputs: (1) consts. inside the code (for max. flexibility); (2) hgrid.gr3 (in map projection); 
+!    Inputs: (1) consts. inside the code (for max. flexibility); (2) hgrid.gr3 (in map projection or lon/lat); 
 !            (3) screen; (4) transect.bp (optional transect bp file; depths can be seg #s); 
 !            (5) v_regions.gr3 (depths define which master grid is used
 !            locally. In this example, '2' is Black Sea, '1' is rest,
@@ -152,6 +152,7 @@
       allocate(xnd(np),ynd(np),dp(np),i34(ne),elnode(4,ne),kbp0(np),kbp(np),eta2(np), &
      &sigma_vqs(nvrt,np),znd(nvrt,np),m0(np),z1tmp(nvrt),z2tmp(nvrt),ireg(np),iflag(np))
       eta2=etal
+      sigma_vqs=-9. !init
       do i=1,np
         read(14,*)j,xnd(i),ynd(i),dp(i)
         read(17,*)j,tmp,tmp,tmp2
@@ -283,6 +284,12 @@
         close(13)
       endif !itran
 
+      if(minval(kbp)<2) then
+        print*, '# of levels <2:',minval(kbp)
+        print*, 'Check parameters like dz_bot_min etc'
+        stop
+      endif
+
       nvrt=maxval(kbp)
       print*, 'Final nvrt=',nvrt
 !     # of prisms
@@ -299,6 +306,9 @@
       open(19,file='vgrid.in',status='replace')
       write(19,*)1 !ivcor
       write(19,*)nvrt
+      if(np>10000000) stop 'Please increase write length'
+      write(19,'(10000000(1x,i10))')nvrt+1-kbp(:)
+
       do i=1,np
 !        if(dp(i)<=hsm(1)) then
         if(iflag(i)/=0) then
@@ -319,8 +329,12 @@
           endif
         enddo !k
 
-        write(19,'(2(1x,i10),10000(1x,f14.6))')i,nvrt+1-kbp(i),sigma_vqs(kbp(i):1:-1,i)
+!        write(19,'(2(1x,i10),10000(1x,f14.6))')i,nvrt+1-kbp(i),sigma_vqs(kbp(i):1:-1,i)
       enddo !i
+
+      do k=1,nvrt
+        write(19,'(i10,10000000(1x,f14.6))')k,(sigma_vqs(nvrt+1-k,i),i=1,np)
+      enddo !k
       close(19)
 
 !     Output horizontal map of # of levels for more adjustment

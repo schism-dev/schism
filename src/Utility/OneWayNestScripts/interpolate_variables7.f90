@@ -12,8 +12,7 @@
 !          (1) bg.gr3 (for more precise x,y): hgrid.gr3 from large-domain run;
 ! 	   (2) fg.gr3: hgrid.gr3 from small-domain run; boundary segments 
 !                      (specified in interpolate_variables.in) that need *3D.th 
-!                      may be lumped; make sure that the parent elem. in the large-domain run
-!                      never becomes dry!
+!                      may be lumped
 !          (3) vgrid.bg: background vgrid.in
 !	   (4) vgrid.fg: vgrid.in from the small-domain run
 !          (5) interpolate_variables.in (see sample in this dir):
@@ -21,9 +20,10 @@
 !                        and TEM_3D.th; =3: uv3D.th); rndays is the # of days needed;
 !              2nd line: total # of open bnd seg. (that need *3D.th in fg.gr3), list of segments IDs
 !              3rd line: idebug - more outputs for debug if idebug=1
-!          (6) combined nc outputs from large-domain run (must have elev or temp or salt or hvel depending on ifile)
+!          (6) combined nc outputs (schout*.nc) from large-domain run (must have elev or temp or salt or hvel depending on ifile)
 !       Outputs: 
-!          (1) *[23]D.th.nc, depending on the choice in interpolate_variables.in
+!          (1) *[23]D.th.nc, depending on the choice in interpolate_variables.in. The code will not complain if parent elements
+!              have dry nodes; make sure the entire open bnd won't become dry.
 !          (2) fort.11: fatal errors; fort.12: non-fatal errors.
 !
 ! ifort -O2 -mcmodel=medium -CB -g -traceback -o interpolate_variables7.exe ../UtilLib/extract_mod.f90 \
@@ -290,11 +290,11 @@
               nwild(1:3)=(/1,3,4/)
             endif !j
             n1=elnode(nwild(1),ie); n2=elnode(nwild(2),ie); n3=elnode(nwild(3),ie)
-            ar1=signa_single(xfg(i),x(n2),x(n3),yfg(i),y(n2),y(n3))  
-            ar2=signa_single(x(n1),xfg(i),x(n3),y(n1),yfg(i),y(n3))
-            ar3=signa_single(x(n1),x(n2),xfg(i),y(n1),y(n2),yfg(i))
+            ar1=signa_single(xfg(i),real(x(n2)),real(x(n3)),yfg(i),real(y(n2)),real(y(n3)))  
+            ar2=signa_single(real(x(n1)),xfg(i),real(x(n3)),real(y(n1)),yfg(i),real(y(n3)))
+            ar3=signa_single(real(x(n1)),real(x(n2)),xfg(i),real(y(n1)),real(y(n2)),yfg(i))
             bb=abs(ar1)+abs(ar2)+abs(ar3)
-            aa=abs(signa_single(x(n1),x(n2),x(n3),y(n1),y(n2),y(n3)))
+            aa=abs(signa_single(real(x(n1)),real(x(n2)),real(x(n3)),real(y(n1)),real(y(n2)),real(y(n3))))
             rat=abs(bb-aa)/aa
             if(rat<ratmin(i)) then
               ratmin(i)=rat
@@ -422,10 +422,10 @@
         if(ifile>1) then !get 3D vars
           do ii=1,n_vars
             if(ifile==2) then !TS
-              call get_outvar(1,iday,it1,varname(ii),np,last_dim,nvrt,outvar0,i23d,ivs,eta2)
+              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar0,i23d,ivs,eta2)
               outvar(ii,:,:)=outvar0(1,:,:)
             else if(ifile==3) then !uv
-              call get_outvar(1,iday,it1,varname(ii),np,last_dim,nvrt,outvar,i23d,ivs,eta2)
+              call get_outvar(iday,it1,varname(ii),np,last_dim,nvrt,outvar,i23d,ivs,eta2)
             endif !
 
 !            varname2=adjustl(varname(ii))
@@ -468,15 +468,14 @@
             do j=1,i34(ie)
               nd=elnode(j,ie)
 
-              !if(eta2(nd)+dp(nd)<=h0) iflag=1
               etafg(i)=etafg(i)+eta2(nd)*arco(i,j)
             enddo !j
             if(etafg(i)+dpfg(i)<=h0) iflag=1
 !           Bg dry nodes
-            if(iflag==1) then
-              write(11,*)'Dry node:',i
-              stop
-            endif
+!            if(iflag==1) then
+!              write(11,*)'Dry node:',i
+!              stop
+!            endif
           enddo !i
 
           if(idebug==1) write(23,'(10000(1x,e15.7))')time,etafg(1:npfg)
@@ -545,7 +544,7 @@
               do j=1,i34(ie)
                 nd=elnode(j,ie)
                  
-                if(ifile==2.and.outvar(2,klev,nd)<0) then
+                if(ifile==2.and.outvar(2,klev,nd)<0) then !S<0
                   iflag=1
                 else
                   tanc=outvar(1,klev,nd) !tnd(nd,klev)
@@ -587,8 +586,6 @@
               iret=nf90_put_var(ncid2,itimeout_id2,aa1,(/irec_out/),(/1/))
               iret=nf90_put_var(ncid2,ivarid2,transpose(sfg(1:npfg,1:nvrt_fg)), &
      &(/1,1,1,irec_out/),(/1,nvrt_fg,npfg,1/))
-!              write(17,rec=irec_out)0.,((tfg(i,k),k=1,nvrt_fg),i=1,npfg)
-!              write(18,rec=irec_out)0.,((sfg(i,k),k=1,nvrt_fg),i=1,npfg)
             endif
 
             irec_out=irec_out+1
@@ -599,8 +596,6 @@
             iret=nf90_put_var(ncid2,itimeout_id2,aa1,(/irec_out/),(/1/))
             iret=nf90_put_var(ncid2,ivarid2,transpose(sfg(1:npfg,1:nvrt_fg)), &
      &(/1,1,1,irec_out/),(/1,nvrt_fg,npfg,1/))
-!            write(17,rec=irec_out+1)time,((tfg(i,k),k=1,nvrt_fg),i=1,npfg)
-!            write(18,rec=irec_out+1)time,((sfg(i,k),k=1,nvrt_fg),i=1,npfg)
           else !uv
             !Add a record at t=0
             if(iday==1.and.it1==1) then
@@ -611,9 +606,7 @@
      &(/1,1,1,irec_out/),(/1,nvrt_fg,npfg,1/))
               iret=nf90_put_var(ncid,ivarid,transpose(sfg(1:npfg,1:nvrt_fg)), &
      &(/2,1,1,irec_out/),(/1,nvrt_fg,npfg,1/))
-!              write(17,rec=irec_out+1)0.,((tfg(i,k),sfg(i,k),k=1,nvrt_fg),i=1,npfg)
             endif
-!            write(17,rec=irec_out+1)time,((tfg(i,k),sfg(i,k),k=1,nvrt_fg),i=1,npfg)
 
             irec_out=irec_out+1
             aa1(1)=timeout(it1)

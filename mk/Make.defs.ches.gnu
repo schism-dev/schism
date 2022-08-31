@@ -65,7 +65,7 @@ FLDFLAGS = -O2
 #EXEC := $(EXEC)_OMP
 
 #####Libraries
-MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
+##MTSLIBS = -L./ParMetis-3.1-Sep2010 -lparmetis -lmetis
 CDFLIBS = -L$(NETCDF)/lib -lnetcdf
 CDFMOD = -I$(NETCDF)/include # modules for netcdf
 

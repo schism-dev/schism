@@ -1,0 +1,38 @@
+#!/bin/bash
+#SBATCH --job-name=R10t
+#SBATCH --partition=compute2
+#SBATCH --nodes=80
+#SBATCH --ntasks-per-node=36
+###Max 8 hrs
+#SBATCH --time=01:00:00
+#SBATCH --mail-type=NONE
+#SBATCH --account=gg0028
+#SBATCH --output=my_job.o%j
+#SBATCH --error=my_job.e%j
+
+# limit stacksize ... adjust to your programs need. Mistral does not suggest unlimited
+#ulimit -s 102400
+ulimit -s 132400
+ulimit -c 0
+
+# Environment settings to run a MPI parallel program 
+# compiled with Intel MPI
+# limit stacksize ... adjust to your programs need
+# and core file size
+ulimit -s 102400
+ulimit -c 0
+
+# Environment settings to run a MPI parallel program 
+# compiled with Intel MPI
+module load intel/18.0.4
+module load intelmpi/2018.5.288
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+
+# Use srun (not mpirun or mpiexec) command to launch
+# programs compiled with any MPI library
+srun -l --propagate=STACK,CORE --cpu_bind=cores \
+  --distribution=block:cyclic ./pschism_mistral_VL
+
+#module load netcdf-c/4.7.4-intel-17.0.6 netcdf-fortran/4.5.3-intel-17.0.6
+#module list
+

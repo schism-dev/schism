@@ -20,7 +20,9 @@
     character(len=48), save :: start_time 
     integer, save :: nrec,nspool,nvrt,kz,np,ne,ns,nproc
     real, save :: h0,fill_in,dtout
-    real, save, allocatable :: x(:),y(:),dp(:)
+    !coordinates in double
+    real*8, save, allocatable :: x(:),y(:)
+    real, save, allocatable :: dp(:)
     integer, save, allocatable :: kbp00(:),i34(:),elnode(:,:), &
   &iplg(:,:),ielg(:,:),islg(:,:),np_lcl(:),ne_lcl(:),ns_lcl(:),iegl_rank(:)
 
@@ -48,6 +50,9 @@
       file_char='schout_'//stack_char(1:char_len)//'.nc'
 
       iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      if(iret.ne.NF90_NOERR) then
+        print*, nf90_strerror(iret); stop 'extract_mod: (1)'
+      endif
       iret=nf90_inq_dimid(ncid2,'nSCHISM_hgrid_edge',i)
       iret=nf90_Inquire_Dimension(ncid2,i,len=ns)
       iret=nf90_inq_dimid(ncid2,'nSCHISM_vgrid_layers',i)
@@ -58,7 +63,10 @@
       iret=nf90_Inquire_Variable(ncid2,varid1,dimids=dimids(1:2))
       iret=nf90_Inquire_Dimension(ncid2,dimids(1),len=nvtx)
       iret=nf90_Inquire_Dimension(ncid2,dimids(2),len=ne)
-      if(nvtx/=4) stop 'readheader: vtx/=4'
+      if(nvtx/=4) then
+        print*, 'readheader:',ns,nvrt,ne,h0
+        stop 'readheader: vtx/=4'
+      endif
       iret=nf90_inq_varid(ncid2,'SCHISM_hgrid_node_x',varid2)
       iret=nf90_Inquire_Variable(ncid2,varid2,dimids=dimids)
       iret=nf90_Inquire_Dimension(ncid2,dimids(1),len=np)
@@ -119,7 +127,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(icomb)) then !uncombined
-        file_char='schout_0000_'//stack_char(1:char_len)//'.nc'
+        file_char='schout_000000_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
@@ -167,16 +175,15 @@
 !     Returned vars: outvar(2,nvrt,np|ne),i23d,ivs and eta2(np) (on global
 !     indices). For uncombined nc, only subdomain part of arrays will be filled with values
 !================================================================
-      subroutine get_outvar(ics,istack,irec,varname,np2,last_dim,nvrt2,outvar,i23d,ivs,eta2,irank)
-      !use ics=1 if linear interp
-      integer, intent(in) :: ics,istack,irec,np2,last_dim,nvrt2
+      subroutine get_outvar(istack,irec,varname,np2,last_dim,nvrt2,outvar,i23d,ivs,eta2,irank)
+      integer, intent(in) :: istack,irec,np2,last_dim,nvrt2
       character(len=*),intent(inout) :: varname
       real, intent(out) :: outvar(2,nvrt2,last_dim),eta2(np2)
       integer, intent(out) :: i23d,ivs
       integer, optional, intent(in) :: irank
 
       integer :: iret,i,npes,len_var,ivarid1,ndims,dimids(100),idims(100),ncid2,ielev_id
-      character(len=4) :: a_4
+      character(len=6) :: a_4
       real, allocatable :: worka(:,:,:),workb(:)
 
       if(allocated(worka)) deallocate(worka) 
@@ -188,12 +195,12 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(irank)) then !uncombined
-        write(a_4,'(i4.4)') irank
+        write(a_4,'(i6.6)') irank
         file_char='schout_'//a_4//'_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
-      print*, 'File=',trim(adjustl(file_char)),ics,istack,irec,varname
+!      print*, 'Inside get_outvar, file=',trim(adjustl(file_char)),istack,irec,varname
       iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
       if(iret/=nf90_NoErr) stop 'get_outvar: cannot open'
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
@@ -224,16 +231,16 @@
 
       npes=idims(ndims-1) !np|ne|ns
       if(present(irank)) then
-        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank)) stop 'get_outvar: can only handle node- or elem-based'
+        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank).and.npes/=ns_lcl(irank)) stop 'get_outvar: unknown dim'
       else
-        if(npes/=np.and.npes/=ne) stop 'get_outvar: can only handle node- or elem-based'
+        if(npes/=np.and.npes/=ne.and.npes/=ns) stop 'get_outvar: unknown dim'
       endif
 
       allocate(worka(2,nvrt,npes))      
 
       iret=nf90_get_att(ncid2,ivarid1,'i23d',i23d)
-      if(i23d<=0.or.i23d>6) stop 'get_outvar: wrong i23d'
-      if(i23d>3.and.ics==2) stop 'get_outvar: ics=2 with elem-based var'
+      if(i23d<=0.or.i23d>9) stop 'get_outvar: wrong i23d'
+!      if(i23d>3.and.ics==2) stop 'get_outvar: ics=2 with elem-based var'
       iret=nf90_get_att(ncid2,ivarid1,'ivs',ivs)
       !print*, 'i23d:',i23d,ivs,idims(1:ndims)
 
@@ -268,8 +275,8 @@
           outvar(:,:,iplg(irank,1:np_lcl(irank)))=worka
         else if(i23d<=6) then !elem
           outvar(:,:,ielg(irank,1:ne_lcl(irank)))=worka
-        else
-          stop 'get_outvar: cannot be side based'
+        else !side
+          outvar(:,:,islg(irank,1:ns_lcl(irank)))=worka
         endif
       else
         outvar(:,:,1:npes)=worka
@@ -293,8 +300,8 @@
       real*8 :: dble2
       real, allocatable :: ztot(:),sigma(:)
 
-      !Read local_to_global_0000 for global info
-      open(10,file='local_to_global_0000',status='old')
+      !Read local_to_global_000000 for global info
+      open(10,file='local_to_global_000000',status='old')
       read(10,*)ns,ne,np,nvrt,nproc
       close(10)
       if(allocated(x)) deallocate(x)
@@ -320,12 +327,12 @@
       ! Read rank-specific local_to_global*
       !-------------------------------------------------------------------------------
       ! Read in local-global mappings from all ranks
-      file_char='local_to_global_0000'
+      file_char='local_to_global_000000'
       char_len=len_trim(file_char)
     
       !Find max. for dimensioning
       do irank=0,nproc-1
-        write(file_char(char_len-3:char_len),'(i4.4)') irank
+        write(file_char(char_len-5:char_len),'(i6.6)') irank
         open(10,file=file_char,status='old')
         read(10,*) !global info
         read(10,*) !info
@@ -354,7 +361,7 @@
     
       !Re-read
       do irank=0,nproc-1
-        write(file_char(char_len-3:char_len),'(i4.4)') irank
+        write(file_char(char_len-5:char_len),'(i6.6)') irank
         open(10,file=file_char,status='old')
         read(10,*) !global info
         read(10,*) !info
@@ -375,7 +382,13 @@
         read(10,*) !'Header:'
         read(10,*) itmp,itmp,itmp,dble2,dble2 !start_year,start_month,start_day,start_hour,utc_start 
         read(10,*)nrec,dtout,nspool,nvrt,kz,h0,h_s,h_c,theta_b,theta_f,itmp !ics
-        read(10,*)(ztot(k),k=1,kz-1),(sigma(k),k=1,nvrt-kz+1)
+        do k=1,kz-1
+          read(10,*)ztot(k)
+        enddo !k
+        do k=1,nvrt-kz+1
+          read(10,*)sigma(k)
+        enddo
+
         read(10,*)np_lcl(irank),ne_lcl(irank),(x(iplg(irank,m)),y(iplg(irank,m)), &
       &dp(iplg(irank,m)),kbp00(iplg(irank,m)),m=1,np_lcl(irank)), &
       &(i34(ielg(irank,m)),(nm2(mm,m),mm=1,i34(ielg(irank,m))),m=1,ne_lcl(irank))
@@ -412,18 +425,18 @@
 !     either max array size (usually used for uncombined) or max # of records (
 !     usually for combined) allowed. 
 !     Returned vars: outvar(2,nvrt,np|ne,nrec3),i23d,ivs and eta2(np,nrec3) (on global
-!     indices). For uncombined nc, only subdomain part of arrays will be filled with values
+!     indices), where nrec3 is the max allowed dimension defined in the driver. 
+!     For uncombined nc, only subdomain part of arrays will be filled with values
 !================================================================
-      subroutine get_outvar_multirecord(ics,istack,varname,irec1,irec2,np2,last_dim,nvrt2,nrec3,outvar,i23d,ivs,eta2,irank)
-      !use ics=1 if linear interp
-      integer, intent(in) :: ics,istack,irec1,irec2,np2,last_dim,nvrt2,nrec3
+      subroutine get_outvar_multirecord(istack,varname,irec1,irec2,np2,last_dim,nvrt2,nrec3,outvar,i23d,ivs,eta2,irank)
+      integer, intent(in) :: istack,irec1,irec2,np2,last_dim,nvrt2,nrec3
       character(len=*),intent(inout) :: varname
       real, intent(out) :: outvar(2,nvrt2,last_dim,nrec3),eta2(np2,nrec3)
       integer, intent(out) :: i23d,ivs
       integer, optional, intent(in) :: irank
 
       integer :: iret,i,npes,len_var,ivarid1,ndims,dimids(100),idims(100),ncid2,ielev_id,nrec4
-      character(len=4) :: a_4
+      character(len=6) :: a_4
       real, allocatable :: worka(:,:,:,:),workb(:,:)
 
       if(allocated(worka)) deallocate(worka)
@@ -438,7 +451,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       if(present(irank)) then !uncombined
-        write(a_4,'(i4.4)') irank
+        write(a_4,'(i6.6)') irank
         file_char='schout_'//a_4//'_'//stack_char(1:char_len)//'.nc'
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
@@ -470,17 +483,17 @@
 
       npes=idims(ndims-1) !np|ne|ns
       if(present(irank)) then
-        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank)) stop 'get_outvar_multirecord: can only handle node- or elem-based'
+        if(npes/=np_lcl(irank).and.npes/=ne_lcl(irank).and.npes/=ns_lcl(irank)) stop 'get_outvar_multirecord: unknown dim'
       else
-        if(npes/=np.and.npes/=ne) stop 'get_outvar_multirecord: can only handle node- or elem-based'
+        if(npes/=np.and.npes/=ne.and.npes/=ns) stop 'get_outvar_multirecord: unknown dim'
       endif
 
       allocate(worka(2,nvrt,npes,nrec4))
       worka(2,nvrt,npes,nrec4)=0 !test mem
 
       iret=nf90_get_att(ncid2,ivarid1,'i23d',i23d)
-      if(i23d<=0.or.i23d>6) stop 'get_outvar_multirecord: wrong i23d'
-      if(i23d>3.and.ics==2) stop 'get_outvar_multirecord: ics=2 with elem-based var'
+      if(i23d<=0.or.i23d>9) stop 'get_outvar_multirecord: wrong i23d'
+!      if(i23d>3.and.ics==2) stop 'get_outvar_multirecord: ics=2 with elem-based var'
       iret=nf90_get_att(ncid2,ivarid1,'ivs',ivs)
       !print*, 'i23d:',i23d,ivs,idims(1:ndims)
 
@@ -515,8 +528,8 @@
           outvar(:,:,iplg(irank,1:np_lcl(irank)),1:nrec4)=worka
         else if(i23d<=6) then !elem
           outvar(:,:,ielg(irank,1:ne_lcl(irank)),1:nrec4)=worka
-        else
-          stop 'get_outvar_multirecord: cannot be side based'
+        else !side
+          outvar(:,:,islg(irank,1:ns_lcl(irank)),1:nrec4)=worka
         endif
       else
         outvar(:,:,1:npes,1:nrec4)=worka

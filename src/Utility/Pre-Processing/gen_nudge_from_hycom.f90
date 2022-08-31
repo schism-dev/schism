@@ -26,17 +26,16 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R3000 and up);
-!     (4) include.gr3: if depth=0, skip the interpolation to speed up.
-!                      Should be larger than the non-0 regions in *_nudge.gr3
+!     (4) TEM_nudge.gr3: used to mark elem's that need nudging (assuming identical to SAL_nudge.gr3!)
 !     (5) gen_nudge_from_nc.in: 
 !                     1st line: T,S values for pts outside bg grid in nc (make sure nudging zone is inside bg grid in nc)
 !                     2nd line: time step in .nc in sec; output stride
 !                     3rd line: # of nc files
 !     (6) HYCOM files: TS_[1,2,..nfiles].nc (includes lon/lat; beware scaling etc)
 !                      The extent the HYCOM files cover needs to be
-!                      larger than the region specified in include.gr3,
+!                      larger than the nudging region specified in TEM_nudge.gr3,
 !                      and lon/lat coord monotonically increasing.
-!   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only)
+!   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only); include3.gr3 (nudging zone)
 !   Debug outputs: fort.11 (fatal errors); fort.*
 
       program gen_hot
@@ -64,9 +63,10 @@
       integer :: evid ! SSH variable IDs
       integer :: var1d_dims(1),var4d_dims(4)
       integer, dimension(nf90_max_var_dims) :: dids
+      integer :: lldim ! check lat/lon dimension
              
 !     Local variables for data
-      real (kind = 4), allocatable :: xind(:), yind(:), lind(:) 
+      real (kind = 4), allocatable :: xind(:), yind(:), lind(:), xind2(:,:), yind2(:,:) 
 !     Lat, lon, bathymetry
       real (kind = 4), allocatable :: lat(:,:), lon(:,:), hnc(:)
 !     Vertical postion, salinity, and temperature
@@ -94,7 +94,7 @@
       dimension nx(4,4,3),month_day(12)
       dimension ndays_mon(12)
       allocatable :: z(:,:),sigma_lcl(:,:),kbp2(:),iparen_of_dry(:,:)
-      real*8 :: aa1(1)
+      real*8 :: aa1(1),dtmp
 
 !     First statement
 !     Currently we assume rectangular grid in HYCOM
@@ -106,7 +106,7 @@
 !      hr_char=(/'03','09','15','21'/) !each day has 4 starting hours in ROMS
 
       open(10,file='gen_nudge_from_nc.in',status='old')
-      read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc or include.gr3
+      read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc or TEM_nudge.gr3
       read(10,*) dtout,nt_out !time step in .nc [sec], output stride
       !read(10,*) istart_year,istart_mon,istart_day 
       read(10,*) nndays !# of nc files
@@ -114,7 +114,7 @@
 
 !     Read in hgrid and vgrid
       open(16,file='hgrid.ll',status='old')
-      open(15,file='include.gr3',status='old')
+      open(15,file='TEM_nudge.gr3',status='old')
       open(14,file='hgrid.gr3',status='old') !only need depth info and connectivity
       open(19,file='vgrid.in',status='old')
       open(11,file='fort.11',status='replace')
@@ -126,8 +126,13 @@
       do i=1,np
         read(14,*)j,xtmp,ytmp,dp(i)
         read(16,*)j,xl(i),yl(i) !,dp(i)
-        read(15,*)j,xtmp,ytmp,tmp
-        include2(i)=nint(tmp)
+        read(15,*)j,xtmp,ytmp,dtmp
+        !dtmp is double
+        if(abs(dtmp)>1.d-14) then
+          include2(i)=1 !nint(tmp)
+        else
+          include2(i)=0
+        endif
       enddo !i
       do i=1,ne
         read(14,*)j,i34(i),(elnode(l,i),l=1,i34(i))
@@ -145,9 +150,32 @@
 !        enddo
 !      enddo
 
+!     Expand nudging marker to neighbors (to account for elem)
+      imap=include2 !temp save
+      do i=1,ne
+        if(maxval(include2(elnode(1:i34(i),i)))>0) then
+          imap(elnode(1:i34(i),i))=1
+        endif
+      enddo !i
+      include2=imap
+
       close(14)
       close(15)
       close(16)
+
+      !Output
+      open(15,file='include3.gr3',status='replace')      
+      write(15,*); write(15,*)ne,np
+      icount=0
+      do i=1,np
+        write(15,*)i,xl(i),yl(i),include2(i)
+        if(include2(i)>0) icount=icount+1
+      enddo !i
+      print*, icount,' nodes included in _nu.nc'
+      do i=1,ne
+        write(15,*)i,i34(i),(elnode(l,i),l=1,i34(i))
+      enddo !i
+      close(15)
 
 !     V-grid
       read(19,*)ivcor
@@ -176,7 +204,7 @@
       tempmin=-15 
       tempmax=50
       saltmin=0
-      saltmax=45
+      saltmax=45.2
 
 !     Assume S,T have same dimensions (and time step) and grids do not change over time
       timeout=-dtout !sec
@@ -211,9 +239,26 @@
         status = nf90_Inquire_Dimension(sid, dids(4), len = ntime)
         print*, 'ixlen,iylen,ilen,ntime= ',ixlen,iylen,ilen,ntime
 
+!       Check static info (lat/lon) dimension & allocate
+        status = nf90_inq_varid(sid, "xlon", xvid)
+        status = nf90_Inquire_Variable(sid, xvid,ndims = lldim)
+        print*, 'xlon, ylat is ', lldim ,' dimension.'
+        if (lldim.eq.1) then
+           allocate(xind(ixlen),stat=ier)
+           allocate(yind(iylen),stat=ier)
+        else if (lldim.eq.2) then
+           allocate(xind2(ixlen,iylen),stat=ier)
+           allocate(yind2(ixlen,iylen),stat=ier)
+           interp_mode=1
+        else
+           print*, 'Error dimension in xlon,ylat!'
+           stop
+        end if
+
+
 !       allocate arrays
-        allocate(xind(ixlen),stat=ier)
-        allocate(yind(iylen),stat=ier)
+!       allocate(xind(ixlen),stat=ier)
+!       allocate(yind(iylen),stat=ier)
         allocate(lind(ilen),stat=ier)
         allocate(lat(ixlen,iylen))
         allocate(lon(ixlen,iylen))
@@ -226,31 +271,61 @@
 !        allocate(salt0(ixlen,iylen,ilen),stat=ier)
 !        allocate(temp0(ixlen,iylen,ilen),stat=ier)
   
-!       get static info (lat/lon grids etc) 
+!       get static info (lat/lon grids etc)
+        if (lldim.eq.1) then
+           status = nf90_inq_varid(sid, "xlon", xvid)
+           status = nf90_get_var(sid, xvid, xind)
+           status = nf90_inq_varid(sid, "ylat", yvid)
+           status = nf90_get_var(sid, yvid, yind)
+        elseif (lldim.eq.2) then
+           status = nf90_inq_varid(sid, "xlon", xvid)
+           status = nf90_get_var(sid, xvid, xind2)
+           status = nf90_inq_varid(sid, "ylat", yvid)
+           status = nf90_get_var(sid, yvid, yind2)
+        end if
+
         status = nf90_inq_varid(sid, "depth", hvid)
         status = nf90_get_var(sid, hvid, hnc)
-        status = nf90_inq_varid(sid, "xlon", xvid)
-        status = nf90_get_var(sid, xvid, xind)
-        status = nf90_inq_varid(sid, "ylat", yvid)
-        status = nf90_get_var(sid, yvid, yind)
 
 !       processing static info
 !       lon/lat as 2D arrays mostly for potential extension to
 !       non-rectangular grids
-        do i=1,ixlen
-          lon(i,:)=xind(i)
-          if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
-            write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
-            stop 
-          endif; endif;
-        enddo !i
-        do j=1,iylen
-          lat(:,j)=yind(j)
-          if(j<iylen) then; if(yind(j)>=yind(j+1)) then
-            write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
-            stop 
-          endif; endif;
-        enddo !j
+        if (lldim.eq.1) then
+           do i=1,ixlen
+             lon(i,:)=xind(i)
+             if(i<ixlen) then; if(xind(i)>=xind(i+1)) then
+               write(11,*)'Lon must be increasing:',i,xind(i),xind(i+1)
+               stop
+             endif; endif;
+           enddo !i
+           do j=1,iylen
+             lat(:,j)=yind(j)
+             if(j<iylen) then; if(yind(j)>=yind(j+1)) then
+               write(11,*)'Lat must be increasing:',j,yind(j),yind(j+1)
+               stop
+             endif; endif;
+           enddo !j
+        elseif (lldim.eq.2) then
+           lon=xind2
+           lat=yind2
+           do j=1,iylen
+            do i=1,ixlen
+             if(i<ixlen) then; if(lon(i,j)>=lon(i+1,j)) then
+               write(11,*)'Lon must be increasing:',i,lon(i,j),lon(i+1,j)
+               stop
+             endif; endif;
+            enddo !i
+           enddo !j
+           do i=1,ixlen
+            do j=1,iylen
+             if(j<iylen) then; if(lat(i,j)>=lat(i,j+1)) then
+               write(11,*)'Lat must be increasing:',i,lat(i,j),lat(i,j+1)
+               stop
+             endif; endif;
+            enddo !j
+           enddo !i
+        end if
+
 !        lon=lon-360 !convert to our long.
 
 !       Grid bounds for searching for parents  later
@@ -623,14 +698,19 @@
               endif
           
 !              write(18,*)i,k,ix,iy,lev,vrat,kbp(ix,iy)
-              wild2(1,1)=temp(ix,iy,lev)*(1-vrat)+temp(ix,iy,lev+1)*vrat
-              wild2(1,2)=salt(ix,iy,lev)*(1-vrat)+salt(ix,iy,lev+1)*vrat
-              wild2(2,1)=temp(ix+1,iy,lev)*(1-vrat)+temp(ix+1,iy,lev+1)*vrat
-              wild2(2,2)=salt(ix+1,iy,lev)*(1-vrat)+salt(ix+1,iy,lev+1)*vrat
-              wild2(3,1)=temp(ix+1,iy+1,lev)*(1-vrat)+temp(ix+1,iy+1,lev+1)*vrat
-              wild2(3,2)=salt(ix+1,iy+1,lev)*(1-vrat)+salt(ix+1,iy+1,lev+1)*vrat
-              wild2(4,1)=temp(ix,iy+1,lev)*(1-vrat)+temp(ix,iy+1,lev+1)*vrat
-              wild2(4,2)=salt(ix,iy+1,lev)*(1-vrat)+salt(ix,iy+1,lev+1)*vrat
+              !Impose bounds for odd cases
+              lev2=lev+1
+              lev=max(1,min(ilen,lev))
+              lev2=max(1,min(ilen,lev2))
+
+              wild2(1,1)=temp(ix,iy,lev)*(1-vrat)+temp(ix,iy,lev2)*vrat
+              wild2(1,2)=salt(ix,iy,lev)*(1-vrat)+salt(ix,iy,lev2)*vrat
+              wild2(2,1)=temp(ix+1,iy,lev)*(1-vrat)+temp(ix+1,iy,lev2)*vrat
+              wild2(2,2)=salt(ix+1,iy,lev)*(1-vrat)+salt(ix+1,iy,lev2)*vrat
+              wild2(3,1)=temp(ix+1,iy+1,lev)*(1-vrat)+temp(ix+1,iy+1,lev2)*vrat
+              wild2(3,2)=salt(ix+1,iy+1,lev)*(1-vrat)+salt(ix+1,iy+1,lev2)*vrat
+              wild2(4,1)=temp(ix,iy+1,lev)*(1-vrat)+temp(ix,iy+1,lev2)*vrat
+              wild2(4,2)=salt(ix,iy+1,lev)*(1-vrat)+salt(ix,iy+1,lev2)*vrat
 
               tempout(k,i)=dot_product(wild2(1:4,1),arco(1:4,i))
               saltout(k,i)=dot_product(wild2(1:4,2),arco(1:4,i))

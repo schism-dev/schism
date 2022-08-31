@@ -16,11 +16,12 @@
 module schism_version
 
 character(LEN=32),parameter :: schism_rev = '@{VERSION_SCHISM}'
-character(LEN=32),parameter :: svn_rev = '@{VERSION_SVN}' 
+character(LEN=64),parameter :: git_rev = '@{VERSION_GIT}' 
 
 contains
 subroutine print_version
-print *,"schism ",trim(schism_rev),"; svn revision ",trim(svn_rev)
+print *,"schism ",trim(schism_rev)
+print *,"git hash ",trim(git_rev)
 end subroutine
 
 end module schism_version

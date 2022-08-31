@@ -52,7 +52,7 @@ PPFLAGS    := $(PPFLAGS) -DMPIVERSION=2    #-DUSE_WRAP
 FCPFLAGS    = $(PPFLAGS) -O2 -ffree-line-length-0
 FLDFLAGS    = -O2
 
-MTSLIBS     = -L./ParMetis-3.1-Sep2010  -lparmetis -lmetis
+##MTSLIBS     = -L./ParMetis-3.1-Sep2010  -lparmetis -lmetis
 CDFLIBS     = ${ANAG_NETCDF_LIB}  -lhdf5_hl ${ANAG_HDF5_LIB} 
 CDFMOD      = ${ANAG_NETCDF_INC} ${ANAG_HDF5_INC}
 USE_OPEN64 := TRUE

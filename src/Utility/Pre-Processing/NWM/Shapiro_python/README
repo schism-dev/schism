@@ -1,0 +1,12 @@
+Set shapiro filter strength based on bathymetry slope,
+then set a few constant values in specified regions, see the "input" section in the script.
+
+1). Install Python library on your system: git clone git@github.com:wzhengui/pylibs.git 
+
+2). Add PYTHONPATH environmental variable to the python libaray
+   e.g. on C-Shell: setenv PYTHONPATH 'YourDir/pylibs/Scripts/:YourDir/pylibs/Utility/' 
+
+3). copy this folder to your run dir, then "cd Shapiro_python/"
+
+4). run "./write_shapiro.py", which writes "shapiro.gr3" in your run dir (../),
+    any exisiting "shapiro.gr3" in your run dir will be replaced

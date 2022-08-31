@@ -65,40 +65,115 @@
 !                                                                                       
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! OMP: search for 'new21' for TODO
+!'OLDIO' for scribe I/O 
+! To add new outputs: work in schism_init, schism_step and scribe_io; make sure
+! the order is consistent among these.
 !===============================================================================
 !===============================================================================
 ! SCHISM main driver 
 !===============================================================================
 !===============================================================================
 program schism_driver
-  use schism_msgp, only: parallel_init,parallel_finalize,parallel_abort
+  use schism_msgp, only: nscribes,parallel_init,parallel_finalize,parallel_abort
   use schism_version
   implicit none
-  character*8 cli
+  character(len=20) :: cli
+
+#ifdef OLDIO
+  nscribes=0
   call get_command_argument(1,cli)
   if (cli(1:2) == "-v")then
      print*, ""
      call print_version
      stop
   endif
+#else
+  if(COMMAND_ARGUMENT_COUNT()<1) then
+    print*, 'Must have at least 1 cmd argument: # of scribes to run, or -v for version.'
+    stop
+  endif
+
+  call get_command_argument(1,cli)
+  if (cli(1:2) == "-v")then
+    print*, ""
+    call print_version
+    stop
+  else
+    read(cli,*)nscribes
+    if(nscribes<0) then
+      print*, 'nscribes<0:',nscribes
+      stop 
+    endif
+  endif
+#endif
 
   call parallel_init
 
-  !Deal with command args
-  !call get_command_args
   call schism_main
   call parallel_finalize
  
 end program schism_driver
 
 subroutine schism_main
-  use schism_msgp, only: myrank !! debug only
+!  use schism_msgp, only: myrank !! debug only
   implicit none
   integer :: it,iths,ntime
-  call schism_init('./',iths,ntime)
+
+#ifdef OLDIO
+  call schism_init(0,'./',iths,ntime)
   do it=iths+1,ntime
     call schism_step(it)
   enddo !it
   call schism_finalize
+#else
+  call schism_init0(iths,ntime)
+  do it=iths+1,ntime
+    call schism_step0(it)
+  enddo !it
+  call schism_finalize0
+#endif
+
 end subroutine schism_main
 
+subroutine schism_init0(iths,ntime)
+  use schism_msgp, only: task_id
+  use scribe_io
+  implicit none
+  integer, intent(out) :: iths,ntime
+
+  if(task_id==1) then !compute
+    call schism_init(0,'./',iths,ntime)
+  else !I/O scribes
+    call scribe_init('./',iths,ntime)
+  endif !task_id
+
+end subroutine schism_init0
+
+subroutine schism_step0(it)
+  use schism_msgp, only: task_id
+  use scribe_io
+  implicit none
+  integer, intent(in) :: it
+
+  if(task_id==1) then !compute
+    call schism_step(it)
+  else !I/O scribes
+    call scribe_step(it)
+  endif !task_id
+  
+end subroutine schism_step0
+
+subroutine schism_finalize0
+  use schism_msgp, only: task_id,comm_schism
+  use scribe_io
+  implicit none
+  integer :: ierr
+
+  if(task_id==1) then !compute
+    call schism_finalize
+  else !I/O scribes
+    call scribe_finalize
+  endif !task_id
+  call mpi_barrier(comm_schism,ierr)
+
+end subroutine schism_finalize0

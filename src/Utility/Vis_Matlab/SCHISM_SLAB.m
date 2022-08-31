@@ -1,4 +1,4 @@
-function []=SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test)
+function []=SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,ispher_nowrap,stacks,nspool,test)
 % Authors: Joseph Zhang
 % Date: Feb 2019
 % Matlab function to visualize horizontal slabs at either a fix z level
@@ -6,7 +6,6 @@ function []=SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test
 % For a fixed z level, nan is used for above surface/below bottom.
 % Works for mixed grid.
 % Requires get_global_info.m (in this dir)
-
 % SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test)
 % Inputs: 
 %         icomb: work with uncombined (0) or combined (1) nc 
@@ -17,6 +16,7 @@ function []=SCHISM_SLAB(icomb,base,varname,s_or_z,lev_or_zcor,stacks,nspool,test
 %         lev_or_zcor = level index (1 to nvrt) if s_or_z='S'; z-coordinate value 
 %                       (z<0 is below MSL) if s_or_z='Z'. 
 %                       This is not used for 2D variables.
+%         ispher_nowrap: for spherical grid only. 1: remove wrap-around elem's across dateline in scalar display. 0: original
 %         stacks: array of stack numbers (e.g. [2 4 5]) in the output file names (related to time)
 %         nspool: sub-sampling frequency within each stack (e.g. '1' - include all)
 %         test: 'y' (only plot out 1st frame for test); 'n' (plot all frames)
@@ -49,6 +49,28 @@ end
 %nm(:,end)
 %vzcor
 
+%Mark all nodes in wrap-around elements for scalar display later
+if(ispher_nowrap==1)
+  %If a node is on dateline, make it 180 deg
+  xtmp=xy00(:,1);
+  xtmp(find(xtmp==-180))=180;
+  xy00(:,1)=xtmp;
+  icolor_nd(1:np)=0;
+  for i=1:ne
+    lon_min=1.e10; lon_max=-1.e10;
+    if(isnan(nm(4,i))) 
+      i34=3;
+    else
+      i34=4;
+    end
+    lon_min=min(xy00(nm(1:i34,i),1));
+    lon_max=max(xy00(nm(1:i34,i),1));
+    if(lon_min<-100 && lon_max>100)
+      icolor_nd(nm(1:i34,i))=1;
+    end
+  end %for i
+end %ispher_nowrap==1
+
 %For plotting vector scales
 xmax=max(xy00(:,1)); 
 xmin=min(xy00(:,1)); 
@@ -68,7 +90,7 @@ for day=stacks2
   istep=istep+1;
 
   if(icomb==0) 
-    fname=[base,'/outputs/' 'schout_0000_' num2str(day) '.nc'];
+    fname=[base,'/outputs/' 'schout_000000_' num2str(day) '.nc'];
   else
     fname=[base,'/outputs/' 'schout_' num2str(day) '.nc'];
   end
@@ -95,7 +117,7 @@ for day=stacks2
     %out5(ivs,np) if 2D or 'S'; otherwise out5(ivs,nvrt,np)
     if(icomb==0) 
       for irank=0:nproc-1
-        fname3=[base '/outputs/schout_' num2str(irank,'%04.f') '_' num2str(day) '.nc'];
+        fname3=[base '/outputs/schout_' num2str(irank,'%06.f') '_' num2str(day) '.nc'];
         ncid3 = netcdf.open(fname3,'NC_NOWRITE');
         
         clear tmp tmp2 tmp3;
@@ -170,6 +192,9 @@ for day=stacks2
     %Construct output uout(ivs,1:np) 
     if(i23d==1 || strcmp(s_or_z,'S'))
       uout=out5;
+      %Mask dry nodes
+      indx=find(eta2+dp<=h0);
+      uout(:,indx)=nan;
     else
       %Interp in vertical @ wet spots only
       uout=NaN(ivs,np);
@@ -195,10 +220,16 @@ for day=stacks2
     loc_info_y=v2(4)*0.97+v2(3)*0.03;
 
     if(ivs==1) %scalar
-      h1=patch('Faces',nm','Vertices',xy00,'FaceVertexCData',uout(1,:)','FaceColor','interp','EdgeColor','none');
+      uout_p=uout(1,:);
+      %Remove elem across dateline
+      if(ispher_nowrap==1)
+        uout_p(find(icolor_nd==1))=nan;
+      end %ispher_nowrap
+
+      h1=patch('Faces',nm','Vertices',xy00,'FaceVertexCData',uout_p','FaceColor','interp','EdgeColor','none');
       colormap(jet(40));
       % Set colormap range
-      caxis([0 32]); colorbar;
+      caxis([0 30]); colorbar;
     else %vector
       loc_scale_x=v2(2)*0.3+v2(1)*0.7;
       loc_scale_y=-v2(4)*0.02+v2(3)*1.02;
@@ -206,10 +237,16 @@ for day=stacks2
       y_aug=[xy00(:,2)' loc_scale_y];
       quiver(x_aug,y_aug,[uout(1,:) 1],[uout(2,:) 0]);
       text(loc_scale_x,loc_scale_y,'1 m/s');
+
+      %Alternatively, plot vector magnitude
+%      h1=patch('Faces',nm','Vertices',xy00,'FaceVertexCData',sqrt(uout(1,:).^2+uout(2,:).^2)','FaceColor','interp','EdgeColor','none');
+%      colormap(jet(40));
+%      caxis([0 1]); colorbar;
+
     end %ivs
 
-    %axis([xmin xmax ymin ymax]);
-    axis([3.2e5 3.7e5 2.5e5 3.1e5]);
+    axis([xmin xmax ymin ymax]);
+    %axis([3.2e5 3.7e5 2.5e5 3.1e5]);
     text(loc_info_x,loc_info_y,{'Time (DD:HH:MM:SS)'; num2str([time_d time_h time_m time_s])});
 
     %axis off;

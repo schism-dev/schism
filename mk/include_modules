@@ -1,3 +1,11 @@
+# ParMETIS enabled/off
+# NO_PARMETIS = yes
+# EXEC := $(EXEC)_NOPM
+
+# Old nc output option (each rank dumps its own data)
+# USE_OLDIO = yes
+# EXEC := $(EXEC)_OLDIO
+
 # Use PetSc as solver for FE eq
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
 # PETSC_VERSION = v2
@@ -7,6 +15,10 @@
 # Precip/evaporation model
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP
+
+# Impose net satl/heat fluxes in sflux*.nc
+# IMPOSE_NET_FLUX = yes
+# EXEC := $(EXEC)_IMPOSE_NET_FLUX
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -30,9 +42,20 @@
 # USE_WWM = yes
 # EXEC := $(EXEC)_WWM
 
+#aParametric wind module
+# USE_PAHM = yes
+# EXEC := $(EXEC)_PAHM
+
 # Harmonic analysis tool
 # USE_HA = yes
 # EXEC := $(EXEC)_HA
+
+# A second surface turbulent fluxes computation
+# using FAIRALL Bulk scheme to replace the original
+# Zeng el al. scheme
+# USE_BULK_FAIRALL = yes
+# EXEC := $(EXEC)_FAIRALL
+
 
 #####Tracer models 
 # Generic (user defined) tracer model
@@ -79,12 +102,20 @@
 #  FABM_BASE = $(HOME)/fabm-code
 #  EXEC := $(EXEC)_FABM
 
+# DVD (Klingbeit)
+# USE_DVD = yes
+# EXEC := $(EXEC)_DVD
+
 ####End of tracer models
 
 # Ice module
 # USE_ICE = yes
 # EXEC := $(EXEC)_ICE
 
+# Multiclass Ice module
+# USE_MICE = yes
+# EXEC := $(EXEC)_MICE
+ 
 # Sediment model (2D)
 # USE_SED2D = yes
 # EXEC := $(EXEC)_SED2D
