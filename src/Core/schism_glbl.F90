@@ -439,8 +439,8 @@ module schism_glbl
   real(rkind),save,allocatable :: bdef(:)   !bottom deformation
   real(rkind),save,allocatable :: bdef1(:)   !bottom deformation
   real(rkind),save,allocatable :: bdef2(:)   !bottom deformation
-  real(rkind),save,allocatable :: dfh(:,:) !diffusivity
-  real(rkind),save,allocatable :: dfv(:,:) !viscosity
+  real(rkind),save,allocatable :: dfh(:,:) !vertical diffusivity
+  real(rkind),save,allocatable :: dfv(:,:) !vertical viscosity
   integer,save,allocatable :: itier_nd(:,:) !multi-tier neighborhood; used in Kriging
   real(rkind),save,allocatable :: akrmat_nd(:,:,:)         ! Kriging matrix
   real(rkind),save,allocatable :: albedo(:)         ! albedo(npa)

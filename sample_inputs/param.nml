@@ -798,8 +798,8 @@
   iof_hydro(18) = 0 !water temperature [C] {temperature}  3D
   iof_hydro(19) = 0 !water salinity [PSU] {salinity}  3D
   iof_hydro(20) = 0 !water density [kg/m^3] {waterDensity}  3D
-  iof_hydro(21) = 0 !eddy diffusivity [m^2/s] {diffusivity}  3D
-  iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}  3D
+  iof_hydro(21) = 0 !vertical eddy diffusivity [m^2/s] {diffusivity}  3D
+  iof_hydro(22) = 0 !vertical eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
 !  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
