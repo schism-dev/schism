@@ -32,8 +32,8 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   !local variables
   integer :: i,j,k,m,ierr,iPBS(3)
   real(rkind) :: stc,Kd,Kp,j1,j2,k1,k2,fd0,fd1,fd2,SA1,SA2,PO41,PO42
-  real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON
-  real(rkind) :: wRPOP,wLPOP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA,wPO4d,wPO4p,wSAd
+  real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON,wRPOP,wLPOP
+  real(rkind) :: wSRPOC,wSRPON,wSRPOP,wPIP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA,wPO4d,wPO4p,wSAd
   real(rkind) :: XJC,XJN,XJP,rKTC(3),rKTN(3),rKTP(3),rKTS,FPOC(3),FPON(3),FPOP(3),FPOS
   real(rkind) :: fSTR,SODrt,tau,erate,edfrac(2),swild(50)
   character(len=10) :: snames(50)
@@ -50,24 +50,42 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
   wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =max(DOX(kb+1),1.d-2)
   fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
+  if(iCBP==1) then
+    wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
+  endif
 
   !------------------------------------------------------------------------
   !POM fluxes (g.m-2.day-1)
   !------------------------------------------------------------------------
   FPOC=0.0; FPON=0.0; FPOP=0.0; iPBS=(/iPB1,iPB2,iPB3/)
+  !PB contribution
   do m=1,3 !G3 class
-    do i=1,3 !PBS contribution
+    do i=1,3 !PBS class
       FPOC(m)=FPOC(m)+bFCP(m,i)*WSPn(iPBS(i))*wPBS(i)
       FPON(m)=FPON(m)+bFNP(m,i)*WSPn(iPBS(i))*wPBS(i)*n2c(i)
       FPOP(m)=FPOP(m)+bFPP(m,i)*WSPn(iPBS(i))*wPBS(i)*p2c(i)
     enddo 
-    FPOC(m)=FPOC(m)+WSPn(iRPOC)*wRPOC*bFCM(m) !RPOM contribution
-    FPON(m)=FPON(m)+WSPn(iRPON)*wRPON*bFNM(m)
-    FPOP(m)=FPOP(m)+WSPn(iRPOP)*wRPOP*bFPM(m)
-  enddo !m
+  enddo
+
+  !POM contribution
   FPOC(1)=FPOC(1)+WSPn(iLPOC)*wLPOC !LPOM contribution
   FPON(1)=FPON(1)+WSPn(iLPON)*wLPON
   FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
+  if(iCBP==1) then
+      FPOP(1)=FPOP(1)+WSPn(iPIP)*wPIP   !PIP contribution
+      FPOC(2)=FPOC(2)+WSPn(iRPOC)*wRPOC !RPOM contribution
+      FPON(2)=FPON(2)+WSPn(iRPON)*wRPON
+      FPOP(2)=FPOP(2)+WSPn(iRPOP)*wRPOP
+      FPOC(3)=FPOC(3)+WSPn(iSRPOC)*wSRPOC !SRPOM contribution
+      FPON(3)=FPON(3)+WSPn(iSRPON)*wSRPON
+      FPOP(3)=FPOP(3)+WSPn(iSRPOP)*wSRPOP
+  else
+    do m=1,3 !G3 class
+      FPOC(m)=FPOC(m)+WSPn(iRPOC)*wRPOC*bFCM(m) !RPOM contribution
+      FPON(m)=FPON(m)+WSPn(iRPON)*wRPON*bFNM(m)
+      FPOP(m)=FPOP(m)+WSPn(iRPOP)*wRPOP*bFPM(m)
+    enddo !m
+  endif
 
   !------------------------------------------------------------------------
   !SAV,VEG,BA effects

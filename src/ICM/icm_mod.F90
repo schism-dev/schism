@@ -30,7 +30,7 @@ module icm_mod
   integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux
   integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),WSP(29),WSPn(29)
-  real(rkind),save,target,dimension(3) :: alpha,Iopt,Hopt
+  real(rkind),save,target,dimension(3) :: alpha
   integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
 
   integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26, nout_ba=1

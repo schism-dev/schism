@@ -36,7 +36,7 @@ subroutine read_icm_param(imode)
 
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,ibflux,iSilica,&
-           & iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha,Iopt,Hopt, &
+           & iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha, &
            & Ke0,tss2c,PRR,WSP,WSPn
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
@@ -73,7 +73,7 @@ subroutine read_icm_param(imode)
     !initilize global switches
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; iCBP=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
-    alpha=5.0; Iopt=40.0; Hopt=1.0; Ke0=0.26; tss2c=6.0; PRR=0;  WSP=0.0; WSPn=0.0
+    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0;  WSP=0.0; WSPn=0.0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm; ised_icm=>iSed; iBA_icm=>iBA
 
     !read global switches
