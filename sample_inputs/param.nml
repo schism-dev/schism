@@ -761,6 +761,13 @@
   nc_out = 1
 
 !-----------------------------------------------------------------------
+! UGRID option for _3D_ outputs under scribed IO (out2d*.nc always has meta
+! data info). If iof_ugrid/=0, 3D outputs will also have UGRID metadata (at
+! the expense of file size). 
+!-----------------------------------------------------------------------
+  iof_ugrid = 0
+
+!-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------
   nhot = 0 !1: output *_hotstart every 'hotout_write' steps
