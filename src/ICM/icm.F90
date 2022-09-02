@@ -30,7 +30,7 @@
 !---------------------------------------------------------------------------------
 !---------------------------state variables in ICM--------------------------------
 !---------------------------------------------------------------------------------
-!Core Module
+!Core Module (1)
 !     1  PB1   :  Diatom                                     g/m^3
 !     2  PB2   :  Green Algae                                g/m^3
 !     3  PB3   :  Cyanobacteria                              g/m^3
@@ -48,26 +48,26 @@
 !     15 PO4   :  Total Phosphate                            g/m^3
 !     16 COD   :  Chemical Oxygen Demand                     g/m^3
 !     17 DOX   :  Dissolved Oxygen                           g/m^3
-!Silica Module
+!Silica Module (2)
 !     1  SU    :  Particulate Biogenic Silica                g/m^3
 !     2  SA    :  Available Silica                           g/m^3
-!Zooplankton Module
+!Zooplankton Module (3)
 !     1  ZB1   :  1st zooplankton                            g/m^3
 !     2  ZB2   :  2nd zooplankton                            g/m^3
-!pH Module
+!pH Module (4)
 !     1  TIC   :  Total Inorganic Carbon                     g/m^3
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
-!CBP Module
+!CBP Module (5)
 !     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
 !     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
-!SAV Module (no transport variables)
-!VEG Module (no transport variables)
-!SFM Module (no transport variables)
-!BA  Module (no transport variables)
+!SAV Module (no transport variables) (6)
+!VEG Module (no transport variables) (7)
+!SFM Module (no transport variables) (8)
+!BA  Module (no transport variables) (9)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -85,7 +85,7 @@ subroutine ecosystem(it)
   !local variables
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
-  real(rkind) :: tmp,time,rat,s,z1,z2 
+  real(rkind) :: tmp,time,rat,s,z1,z2,dzb 
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC,rKSR(3)
   real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
@@ -252,7 +252,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       sdwqc=0; vdwqc=0; zdwqc=0; gdwqc=0;
       !silica module
-      if(iSilica==1) call silica_calc(kb,PR,MT,GP)
+      if(iSilica==1) call silica_calc(id,kb,PR,MT,GP)
 
       !SAV
       if(jsav==1.and.spatch(id)==1) call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
@@ -428,19 +428,42 @@ subroutine ecosystem(it)
         enddo!i
       enddo
 
+      !************************************************************************************
+      !debug mode for 2D/3D variables (for ICM developers)
+      !************************************************************************************
+      !Core
+      wqc_d2d(1:2,id)=0 !TN,TP
+      do k=kb+1,nvrt
+        dzb=(zid(k)-zid(k-1))
+        wqc_d2d(1,id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k))
+        wqc_d2d(2,id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k))
+        if(iCBP==1) then
+          wqc_d2d(1,id)=wqc_d2d(1,id)+dzb*SRPON(k)
+          wqc_d2d(2,id)=wqc_d2d(2,id)+dzb*SRPOP(k)
+        endif
+        wqc_d3d(1,k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+      enddo
+
+      !SAV
+      if(jsav==1) then
+        wqc_d3d(i3d(6)+0,:,id)=sleaf(:,id)
+        wqc_d3d(i3d(6)+1,:,id)=sstem(:,id)
+        wqc_d3d(i3d(6)+2,:,id)=sroot(:,id)
+      endif
+
     enddo !id
   enddo !isub
 
 end subroutine ecosystem
 
-subroutine silica_calc(kb,PR,MT,GP)
+subroutine silica_calc(id,kb,PR,MT,GP)
 !--------------------------------------------------------------------------------------
 !Silica modules
 !--------------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nvrt
   use icm_mod
   implicit none
-  integer,intent(in) :: kb
+  integer,intent(in) :: id,kb
   real(rkind),intent(in) :: PR(3,nvrt),MT(3,nvrt),GP(3,nvrt)
 
   !local variables

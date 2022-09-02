@@ -14,7 +14,6 @@
 
 !Routines & functions:
 !WQinput: read time varying input 
-!read_gr3_prop: function to read spatially varying parameter 
 !read_icm_param: read parameter in icm.nml
 
 subroutine read_icm_param(imode)
@@ -31,7 +30,7 @@ subroutine read_icm_param(imode)
   integer,intent(in) :: imode
 
   !local variables
-  integer :: istat,i,j,k
+  integer :: istat,i,j,k,m,n2,n3
   real(rkind) :: rat,swild(nea)
 
   !define namelists
@@ -119,15 +118,13 @@ subroutine read_icm_param(imode)
     if(iBA==1) then
        itrs(1,9)=nout_icm+1; itrs(2,9)=nout_icm+nout_ba;  nout_icm=nout_icm+nout_ba
     endif
-    allocate(name_icm(nout_icm),stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. name_icm')
     name_icm(itrs(1,1):itrs(2,1))=(/'PB1 ','PB2 ','PB3 ','RPOC','LPOC','DOC ','RPON', &
               & 'LPON','DON ','NH4 ','NO3 ','RPOP','LPOP','DOP ','PO4 ','COD ','DOX '/)
     if(iSilica==1) name_icm(itrs(1,2):itrs(2,2))=(/'SU  ','SA  '/)
     if(iZB==1) name_icm(itrs(1,3):itrs(2,3))=(/'ZB1  ','ZB2  '/)
     if(iPh==1) name_icm(itrs(1,4):itrs(2,4))=(/'TIC  ','ALK  ','CA   ','CACO3'/)
     if(iCBP==1) name_icm(itrs(1,5):itrs(2,5))=(/'SRPOC','SRPON','SRPOP','PIP  '/)
-    if(jsav==1) name_icm(itrs(1,6):itrs(2,6))=(/'sleaf ','sstem ','sroot ','stleaf','ststem','stroot','sht   '/)
+    if(jsav==1) name_icm(itrs(1,6):itrs(2,6))=(/'stleaf','ststem','stroot','sht   '/)
     if(jveg==1) name_icm(itrs(1,7):itrs(2,7))=(/'vtleaf1','vtleaf2','vtleaf3','vtstem1','vtstem2','vtstem3', & 
                                               & 'vtroot1','vtroot2','vtroot3','vht1   ','vht2   ','vht3   '/)
     if(iSed==1) name_icm(itrs(1,8):itrs(2,8))=&
@@ -137,6 +134,33 @@ subroutine read_icm_param(imode)
     if(iBA==1) name_icm(itrs(1,9):itrs(2,9))=(/'BA'/)
 
   elseif(imode==1) then
+    !************************************************************************************
+    !debug mode for 2D/3D variables (for ICM developers)
+    !  n2d/n3d: number of variables for each modules
+    !  i2d/i3d: 1st variable index of each modules
+    !
+    !Add debug variables: 
+    !   step1: edit (m,n2d,n3d) for each module, and edit name_d2d/name_d3d if n2d/n3d=0
+    !   step2: assign values to wqc_d2d/wqc_d3d for each module in the main subroutine
+    !************************************************************************************
+    n2d=0; n3d=0; i2d=0; i3d=0; n2=0; n3=0
+    !Core
+    m=1; n2d(m)=2; n3d(m)=1; i2d(m)=n2+1; n2=n2+n2d(m); i3d(m)=n3+1; n3=n3+n3d(m)
+    name_d2d(i2d(m):(i2d(m)+n2d(m)-1))=(/'TN','TP'/)
+    name_d3d(i3d(m):(i3d(m)+n3d(m)-1))=(/'CHLA '/)
+
+    !SAV
+    if(jsav==1) then
+      m=6; n2d(m)=0; n3d(m)=3; i2d(m)=n2+1; n2=n2+n2d(m); i3d(m)=n3+1; n3=n3+n3d(m)
+      name_d3d(i3d(m):(i3d(m)+n3d(m)-1))=(/'sleaf','sstem','sroot'/)
+    endif
+
+    !allocate debug arrays
+    nout_d2d=sum(n2d(1:9)); nout_d3d=sum(n3d(1:9))
+    allocate(wqc_d2d(nout_d2d,nea),wqc_d3d(nout_d3d,nvrt,nea),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. wqc_d2d')
+    wqc_d2d=-99; wqc_d3d=-99
+
     !------------------------------------------------------------------------------------
     !read module variables
     !------------------------------------------------------------------------------------
@@ -284,50 +308,6 @@ subroutine read_icm_param(imode)
 
 end subroutine read_icm_param
 
-    !check values
-    !if(iRad>2)     call parallel_abort('check parameter: iRad>2')
-    !if(iKe>2)      call parallel_abort('check parameter: iKe>1')
-    !if(iLight>1)   call parallel_abort('check parameter: iLight>1')
-    !if(iLimit>1)   call parallel_abort('check parameter: iLimit>1')
-    !if(iZB>1)      call parallel_abort('check parameter: iZB>1')
-    !if(jsav>1)     call parallel_abort('check parameter: isav_icm>1')
-    !if(jveg>1)     call parallel_abort('check parameter: iveg_icm>1')
-    !if(jdry>1)     call parallel_abort('check parameter: idry_icm>1')
-    !if(isflux>1)     call parallel_abort('check parameter: isflux>1')
-    !if(iSed>1)     call parallel_abort('check parameter: iSed>1')
-    !if(ibflux>1)     call parallel_abort('check parameter: ibflux>1')
-
-    !put these check later as SCHISM hasn't been initilized
-    !if(iRad==0.and.(ihconsv==0.or.nws/=2)) call parallel_abort('check parameter: iRad=0 needs heat exchange')
-    !if(iLight==1.and.(iRad/=1).and.(iRad/=2)) call parallel_abort('check parameter: iRad=1/2 is required for iLight=1')
-
-    !if(ivNs/=0.and.ivNs/=1) call parallel_abort('read_icm: illegal ivNs')
-    !if(ivNc/=0.and.ivNc/=1) call parallel_abort('read_icm: illegal ivNc')
-    !if(ivPs/=0.and.ivPs/=1) call parallel_abort('read_icm: illegal ivPs')
-    !if(ivPc/=0.and.ivPc/=1) call parallel_abort('read_icm: illegal ivPc')
-
-    !if(jsav==1) then
-    !  if(salpha<=0) call parallel_abort('read_icm_input: salpha')
-    !  if(sGPM<=0) call parallel_abort('read_icm_input: sGPM')
-    !  if(sKhNs<=0) call parallel_abort('read_icm_input: sKhNs')
-    !  if(sKhNw<=0) call parallel_abort('read_icm_input: sKhNw')
-    !  if(sKhPs<=0) call parallel_abort('read_icm_input: sKhPs')
-    !  if(sKhPw<=0) call parallel_abort('read_icm_input: sKhPw')
-    !  if(sc2dw<=0) call parallel_abort('read_icm_input: sc2dw')
-    !  if(sMTB(1)<=0.or.sMTB(2)<=0.or.sMTB(3)<=0) call parallel_abort('read_icm_input: sMTB')
-    !endif !jsav
-
-    !if(jveg==1) then
-    !  do j=1,3
-    !    if(valpha(j)<=0) call parallel_abort('read_icm_input: valpha')
-    !    if(vGPM(j)<=0) call parallel_abort('read_icm_input: vGPM')
-    !    if(vKhNs(j)<=0) call parallel_abort('read_icm_input: vKhNs')
-    !    if(vKhPs(j)<=0) call parallel_abort('read_icm_input: vKhPs')
-    !    if(vc2dw(j)<=0) call parallel_abort('read_icm_input: vc2dw')
-    !    if(vMTB(j,1)<=0.or.vMTB(j,2)<=0.or.vMTB(j,3)<=0) call parallel_abort('read_icm_input: vMTB')
-    !  enddo !j::veg species
-    !endif !jveg
-
 subroutine update_icm_input(time)
 !---------------------------------------------------------------------
 !update time dependent inputs of ICM
@@ -451,7 +431,7 @@ subroutine update_icm_input(time)
 
 end subroutine update_icm_input
 
-subroutine WQinput(time)
+subroutine WQinput(time) !todo: remove this function
 !---------------------------------------------------------------------
 !read time varying input:
 !1) benthic flux, 2) atmoshperic loading, 3)solor radition 
@@ -738,8 +718,7 @@ subroutine icm_vars_init
 
   !assign initial condition values read from parameters
   do i=1,nea
-    !update parameter at current element
-    call update_vars(i,usf,wspd)
+    call update_vars(i,usf,wspd) !update parameter at current element
 
     !SFM init
     if(iSed==1) then

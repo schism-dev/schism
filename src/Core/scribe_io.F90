@@ -52,8 +52,8 @@
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day, ics,iof_ugrid
     !Output flag dim must be same as schism_init!
-    integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_cos(20),iof_fib(5), &
-  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,nout_icm,nout_sav,isav_icm
+    integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_icm_dbg(2),iof_cos(20),iof_fib(5), &
+  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,nout_icm,nout_d3d
     real(rkind), save :: dt,h0,start_hour,utc_start
     character(len=20), save :: out_name(max_ncoutvar)
     integer, save :: iout_23d(max_ncoutvar)
@@ -63,7 +63,7 @@
 
     integer,save,allocatable :: np(:),ne(:),ns(:),iplg(:,:),ielg(:,:),islg(:,:),kbp00(:), &
   &i34(:),elnode(:,:),rrqst2(:),ivar_id2(:),iof_gen(:),iof_age(:),iof_sed(:),iof_eco(:), &
-  &iof_dvd(:),isidenode(:,:),iof_icm(:),iof_icm_sav(:)
+  &iof_dvd(:),isidenode(:,:),iof_icm(:)
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:),xel(:),yel(:),xsd(:),ysd(:)
     real(4),save,allocatable :: var2dnode(:,:,:),var2dnode_gb(:,:),var2delem(:,:,:),var2delem_gb(:,:), &
   &var2dside(:,:,:),var2dside_gb(:,:),var3dnode(:,:,:),var3dnode_gb(:,:),var3dside(:,:,:),var3dside_gb(:,:), &
@@ -130,12 +130,11 @@
       call mpi_recv(iof_ana,20,itype,0,128,comm_schism,rrqst,ierr)
       call mpi_recv(iof_marsh,2,itype,0,129,comm_schism,rrqst,ierr)
 #ifdef USE_ICM
-      call mpi_recv(isav_icm,1,itype,0,141,comm_schism,rrqst,ierr)
       call mpi_recv(nout_icm,1,itype,0,142,comm_schism,rrqst,ierr)
-      call mpi_recv(nout_sav,1,itype,0,143,comm_schism,rrqst,ierr)
-      allocate(iof_icm(nout_icm),iof_icm_sav(nout_sav))
+      call mpi_recv(nout_d3d,1,itype,0,143,comm_schism,rrqst,ierr)
+      allocate(iof_icm(nout_icm))
       call mpi_recv(iof_icm,nout_icm,itype,0,144,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_icm_sav,nout_sav,itype,0,145,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_icm_dbg,2,itype,0,145,comm_schism,rrqst,ierr)
 #endif
       call mpi_recv(ics,1,itype,0,146,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,rrqst,ierr)
@@ -816,11 +815,11 @@
 
       !Add modules
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do j=1,3
-          if(iof_icm_sav(j)/=0) call scribe_recv_write(it,2,1,itotal,icount_out_name)
+      if(iof_icm_dbg(2)/=0) then
+        do j=1,nout_d3d
+          call scribe_recv_write(it,2,1,itotal,icount_out_name)
         enddo !j
-      endif !isav_icm/
+      endif !ICM debug
 #endif
 
 #ifdef USE_DVD

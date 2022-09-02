@@ -961,9 +961,6 @@
 !  iof_icm_cbp(4) = 0 !PIP
 !
 !  !SAV model
-!  iof_icm_sav(1) = 0 !sleaf:  leaf biomass @elem [gC/m^3]
-!  iof_icm_sav(2) = 0 !sstem:  stem biomass @elem [gC/m^3]
-!  iof_icm_sav(3) = 0 !sroot:  root biomass @elem [gC/m^3]
 !  iof_icm_sav(4) = 0 !stleaf: total leaf biomass @elem [gC/m^2]
 !  iof_icm_sav(5) = 0 !ststem: total stem biomass @elem [gC/m^2]
 !  iof_icm_sav(6) = 0 !stroot: total root biomass @elem [gC/m^2]
@@ -1013,6 +1010,10 @@
 !
 !  !Benthic Algae model
 !  iof_icm_ba(1)    = 0 !BA    (g[C].m-2)
+!
+!  !ICM Debug Outputs (need coding, for developers)
+!  iof_icm_dbg(1)   = 0 !2D ICM debug variables
+!  iof_icm_dbg(2)   = 0 !3D ICM debug variables
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D

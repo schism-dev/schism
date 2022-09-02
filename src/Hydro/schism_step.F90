@@ -51,7 +51,7 @@
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,isav_icm,iveg_icm, &
                         & ised_icm,iBA_icm,sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
                         & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP,& 
-                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA
+                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA,nout_d2d,nout_d3d,name_d2d,name_d3d,wqc_d2d,wqc_d3d
 #endif
 
 #ifdef USE_COSINE
@@ -8721,14 +8721,11 @@
          
         !SAV model
         if(isav_icm/=0) then
-          if(iof_icm_sav(1)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+1-1))), 6,nvrt,nea,dble(sleaf))
-          if(iof_icm_sav(2)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+2-1))), 6,nvrt,nea,dble(sstem))
-          if(iof_icm_sav(3)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+3-1))), 6,nvrt,nea,dble(sroot))
-          if(iof_icm_sav(4)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+4-1))),4,1,nea,dble(stleaf))
-          if(iof_icm_sav(5)==1) call writeout_nc(id_out_var(noutput+4+5),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+5-1))),4,1,nea,dble(ststem))
-          if(iof_icm_sav(6)==1) call writeout_nc(id_out_var(noutput+4+6),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+6-1))),4,1,nea,dble(stroot))
-          if(iof_icm_sav(7)==1) call writeout_nc(id_out_var(noutput+4+7),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+7-1))),4,1,nea,dble(sht))
-          noutput=noutput+7
+          if(iof_icm_sav(1)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+1-1))),4,1,nea,dble(stleaf))
+          if(iof_icm_sav(2)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+2-1))),4,1,nea,dble(ststem))
+          if(iof_icm_sav(3)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+3-1))),4,1,nea,dble(stroot))
+          if(iof_icm_sav(4)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+4-1))),4,1,nea,dble(sht))
+          noutput=noutput+4
         endif
 
         !VEG model
@@ -8783,6 +8780,20 @@
         if(iBA_icm/=0) then
           if(iof_icm_ba(1)==1)  call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+1-1))),4,1,nea,dble(BA))
           noutput=noutput+1
+        endif
+
+        !ICM debug option
+        if(iof_icm_dbg(1)/=0) then
+          do i=1,nout_d2d
+            call writeout_nc(id_out_var(noutput+4+i),'ICM_'//trim(adjustl(name_d2d(i))),4,1,nea,dble(wqc_d2d(i,:)))
+          enddo
+          noutput=noutput+nout_d2d
+        endif
+        if(iof_icm_dbg(2)/=0) then
+          do i=1,nout_d3d
+            call writeout_nc(id_out_var(noutput+4+i),'ICM_'//trim(adjustl(name_d3d(i))),6,nvrt,nea,dble(wqc_d3d(i,:,:)))
+          enddo
+          noutput=noutput+nout_d3d
         endif
 
 #endif /*USE_ICM*/
@@ -9281,8 +9292,8 @@
 
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=1,4
-          if(iof_icm_sav(i+3)==1) then
+        do i=1,nout_sav
+          if(iof_icm_sav(i)==1) then
             icount=icount+1
             if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.131)')
             select case(i)
@@ -9401,9 +9412,17 @@
         do i=1,nout_ba
           if(iof_icm_ba(i)==1) then
             icount=icount+1
-            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.134)')
+            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.135)')
             if(i==1) varout_2delem(icount,:)=BA(1:ne)
           endif !iof_icm_ba
+        enddo
+      endif
+
+      if(iof_icm_dbg(1)/=0) then
+        do i=1,nout_d2d
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.136)')
+          varout_2delem(icount,:)=wqc_d2d(i,1:ne)
         enddo
       endif
 #endif
@@ -9849,19 +9868,11 @@
 
         !Modules
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do i=1,3
-          if(iof_icm_sav(i)==1) then
-            if(i==1) then
-              call savensend3D_scribe(icount,2,1,nvrt,ne,sleaf(:,1:ne))
-            else if(i==2) then
-              call savensend3D_scribe(icount,2,1,nvrt,ne,sstem(:,1:ne))
-            else
-              call savensend3D_scribe(icount,2,1,nvrt,ne,sroot(:,1:ne))
-            endif
-          endif !iof_icm
-        enddo !i
-      endif !isav_icm/
+      if(iof_icm_dbg(2)/=0) then
+        do i=1,nout_d3d
+          call savensend3D_scribe(icount,2,1,nvrt,ne,wqc_d3d(i,:,1:ne))
+        enddo 
+      endif !ICM 3D debug
 #endif
 
 #ifdef USE_DVD

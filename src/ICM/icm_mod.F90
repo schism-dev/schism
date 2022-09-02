@@ -33,15 +33,15 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: alpha
   integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
 
-  integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26, nout_ba=1
-  integer,save,target :: ntrs_icm,itrs(2,9),nout_icm
+  integer,parameter :: nout_sav=4, nout_veg=12, nout_sed=26, nout_ba=1
+  integer,save,target :: ntrs_icm,itrs(2,9),nout_icm,nout_d2d,nout_d3d,n2d(9),n3d(9),i2d(9),i3d(9)
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
         & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
-  character(len=6),save,allocatable :: name_icm(:)
+  character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
-  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:) 
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:),wqc_d2d(:,:),wqc_d3d(:,:,:)
 
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
