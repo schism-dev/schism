@@ -492,7 +492,7 @@
   courant_weno=0.5 !Courant number for weno transport
   nquad = 2  !number of quad points on each side, nquad= 1 or 2
   ntd_weno = 1 !order of temporal discretization: (1) Euler (default); (3): 3rd-order Runge-Kutta (only for benchmarking)
-  epsilon1 = 1.e-3   !coefficient for 2nd order weno smoother
+  epsilon1 = 1.e-15   !coefficient for 2nd order weno smoother (larger values are more prone to numerical dispersion)
   epsilon2 = 1.e-10  !1st coefficient for 3rd order weno smoother (larger values are more prone to numerical dispersion
                      !, 1.e-10 should be fairly safe, recommended values: 1.e-8 ~ 1.e-6 (from the real applications so far)
   i_prtnftl_weno = 0 !option for writing nonfatal errors on invalid temp. or salinity for density: (0) off; (1) on.
