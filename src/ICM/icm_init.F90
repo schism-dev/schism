@@ -22,7 +22,7 @@ subroutine read_icm_param(imode)
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir, &
                    & len_in_dir,len_out_dir,ihconsv,nws,nea,npa,ihot, &
-                   & idry_e,ze,kbe
+                   & idry_e,ze,kbe,iof_icm_dbg
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : read_gr3_prop
   use icm_mod
@@ -36,7 +36,7 @@ subroutine read_icm_param(imode)
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,ibflux,iSilica,&
            & iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha, &
-           & Ke0,tss2c,PRR,WSP,WSPn
+           & Ke0,tss2c,PRR,wqc0,WSP,WSPn
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
@@ -72,7 +72,7 @@ subroutine read_icm_param(imode)
     !initilize global switches
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; iCBP=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
-    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0;  WSP=0.0; WSPn=0.0
+    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm; ised_icm=>iSed; iBA_icm=>iBA
 
     !read global switches
@@ -157,9 +157,16 @@ subroutine read_icm_param(imode)
 
     !allocate debug arrays
     nout_d2d=sum(n2d(1:9)); nout_d3d=sum(n3d(1:9))
-    allocate(wqc_d2d(nout_d2d,nea),wqc_d3d(nout_d3d,nvrt,nea),stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. wqc_d2d')
-    wqc_d2d=-99; wqc_d3d=-99
+    if(iof_icm_dbg(0)/=0) then
+      allocate(wqc_d2d(nout_d2d,nea),stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. wqc_d2d')
+      wqc_d2d=-99
+    endif 
+    if(iof_icm_dbg(1)/=0) then
+      allocate(wqc_d3d(nout_d3d,nvrt,nea),stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. wqc_d3d')
+      wqc_d3d=-99
+    endif
 
     !------------------------------------------------------------------------------------
     !read module variables
@@ -228,6 +235,8 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
+    call check_icm_param()
+
     !concentration changes: assign pointers
     if(iZB==1) then
       zdPBS=>zdwqc(1:3,:); zdC=>zdwqc(4:6,:);   zdN=>zdwqc(8:11,:)
@@ -235,11 +244,6 @@ subroutine read_icm_param(imode)
       if(iSilica==1) zdS=>zdwqc(itrs(1,2):itrs(2,2),:)
     endif
 
-#ifndef USE_SED 
-    if(iKe==1) then
-      call parallel_abort('iKe=1,need to turn on SED3D module')
-    endif
-#endif
     dtw=dt/86400.0/dble(nsub) !time step in days
 
     !Zooplankton not graze on themselves
@@ -470,9 +474,9 @@ subroutine icm_vars_init
   !--------------------------------------------------------------------------------
   !allocate ICM arrays and initialize
   !--------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,nea,npa,nvrt,ntrs,in_dir,len_in_dir,np_global, &
-                        & ne_global,ielg,iplg,i34,elnode
-  use schism_msgp, only : parallel_abort,myrank,comm,itype,rtype
+  use schism_glbl, only : rkind,nea,npa,nvrt,irange_tr,ntrs,in_dir,len_in_dir,np_global, &
+                        & ne_global,ielg,iplg,i34,elnode,flag_ic,tr_nd,tr_el,indel,np,nne
+  use schism_msgp, only : exchange_p3d_tr,parallel_abort,myrank,comm,itype,rtype
   use netcdf
   use icm_mod
   use misc_modules
@@ -581,7 +585,7 @@ subroutine icm_vars_init
 
   m=0
   !global and core modules
-  pname(1:60)=(/'KeC    ','KeS    ','KeSalt ','Ke0    ','tss2c  ', &
+  pname(1:61)=(/'KeC    ','KeS    ','KeSalt ','Ke0    ','tss2c  ', &
               & 'alpha  ','WSP    ','WSPn   ','GPM    ','TGP    ', &
               & 'PRR    ','MTB    ','TMT    ','KTMT   ','KTGP   ', &
               & 'FCP    ','FNP    ','FPP    ','FCM    ','FNM    ', &
@@ -592,7 +596,8 @@ subroutine icm_vars_init
               & 'KhN    ','KhP    ','KhSal  ','c2chl  ','n2c    ', &
               & 'p2c    ','KhDO   ','o2c    ','o2n    ','dn2c   ', &
               & 'an2c   ','KPO4p  ','WRea   ','PBmin  ','dz_flux', &
-              & 'KSR0   ','TRSR   ','KTRSR  ','KPIP   ','MTR    '/)
+              & 'KSR0   ','TRSR   ','KTRSR  ','KPIP   ','MTR    ', &
+              & 'wqc0   '/)
   sp(m+1)%p=>KeC;    sp(m+2)%p=>KeS;    sp(m+3)%p=>KeSalt;  sp(m+4)%p=>Ke0;    sp(m+5)%p=>tss2c;    m=m+5
   sp(m+1)%p1=>alpha; sp(m+2)%p1=>WSP;   sp(m+3)%p1=>WSPn;   sp(m+4)%p1=>GPM;   sp(m+5)%p1=>TGP;     m=m+5
   sp(m+1)%p1=>PRR;   sp(m+2)%p1=>MTB;   sp(m+3)%p1=>TMT;    sp(m+4)%p1=>KTMT;  sp(m+5)%p2=>KTGP;    m=m+5
@@ -605,6 +610,7 @@ subroutine icm_vars_init
   sp(m+1)%p1=>p2c;   sp(m+2)%p1=>KhDO;  sp(m+3)%p=>o2c;     sp(m+4)%p=>o2n;    sp(m+5)%p=>dn2c;     m=m+5
   sp(m+1)%p=>an2c;   sp(m+2)%p=>KPO4p;  sp(m+3)%p=>WRea;    sp(m+4)%p1=>PBmin; sp(m+5)%p1=>dz_flux; m=m+5
   sp(m+1)%p1=>KSR0;  sp(m+2)%p1=>TRSR;  sp(m+3)%p1=>KTRSR;  sp(m+4)%p=>KPIP;   sp(m+5)%p1=>MTR;     m=m+5
+  sp(m+1)%p1=>wqc0;  m=m+1
 
   !SFM modules
   pname((m+1):(m+85))=&
@@ -720,6 +726,13 @@ subroutine icm_vars_init
   do i=1,nea
     call update_vars(i,usf,wspd) !update parameter at current element
 
+    !ICM variable init. @elem
+    if(flag_ic(7)==0) then
+      do k=1,nvrt
+        tr_el(irange_tr(1,7):irange_tr(2,7),k,i)=wqc0(1:ntrs_icm)
+      enddo !k
+    endif
+
     !SFM init
     if(iSed==1) then
       bPOC(i,:)=bPOC0(:); bPON(i,:)=bPON0(:); bPOP(i,:)=bPOP0(:)
@@ -743,6 +756,18 @@ subroutine icm_vars_init
       gpatch(i)=nint(gpatch0); BA(i)=BA0
     endif
   enddo
+
+ !ICM variable init. @node
+ if(flag_ic(7)==0) then
+   do m=irange_tr(1,7),irange_tr(2,7)
+     do k=1,nvrt
+       do i=1,np
+         tr_nd(m,k,i)=sum(tr_el(indel(1:nne(i),i),k,i))/dble(nne(i))
+       enddo !p
+     enddo !k
+   enddo !m
+   call exchange_p3d_tr(tr_nd)
+ endif
 
 end subroutine icm_vars_init
 
@@ -817,3 +842,40 @@ subroutine update_vars(id,usf,wspd)
   enddo !m
 
 end subroutine update_vars
+
+subroutine check_icm_param()
+  use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws
+  use schism_msgp,only : myrank,parallel_abort
+  use icm_mod
+  implicit none
+
+  !local variables
+  logical :: lexist
+
+  !check global swtiches
+  if(iKe/=0.and.iKe/=1.and.iKe/=2) call parallel_abort('ICM iKe: 0/1/2')
+  if(iLight/=0.and.iLight/=1) call parallel_abort('ICM iLight: 0/1')
+  if(iPR/=0.and.iPR/=1) call parallel_abort('ICM iPR: 0/1')
+  if(iSilica/=0.and.iSilica/=1) call parallel_abort('ICM iSilica: 0/1')
+  if(iZB/=0.and.iZB/=1) call parallel_abort('ICM iZB: 0/1')
+  if(iPh/=0.and.iPh/=1) call parallel_abort('ICM iPh: 0/1')
+  if(iCBP/=0.and.iCBP/=1) call parallel_abort('ICM iCBP: 0/1')
+  if(jsav/=0.and.jsav/=1) call parallel_abort('ICM isav_icm: 0/1')
+  if(jveg/=0.and.jveg/=1) call parallel_abort('ICM iveg_icm: 0/1')
+  if(iSed/=0.and.iSed/=1) call parallel_abort('ICM iSed: 0/1')
+  if(iBA/=0.and.iBA/=1) call parallel_abort('ICM iBA: 0/1')
+  if(iRad/=0.and.iRad/=1) call parallel_abort('ICM iRad: 0/1')
+  if(isflux/=0.and.isflux/=1) call parallel_abort('ICM isflux: 0/1')
+  if(ibflux/=0.and.ibflux/=1) call parallel_abort('ICM ibflux: 0/1')
+  if(iLimit/=0.and.iLimit/=1) call parallel_abort('ICM iLimit: 0/1')
+  if(jdry/=0.and.jdry/=1) call parallel_abort('ICM idry_icm: 0/1')
+
+#ifndef USE_SED
+  if(iKe==1) call parallel_abort('iKe=1,need to turn on SED3D module')
+#endif
+
+  inquire(file=in_dir(1:len_in_dir)//'ICM_rad.th.nc',exist=lexist)
+  if(iRad==0.and.ihconsv/=1.and.nws/=2) call parallel_abort('iRad=0: need ihconsv=1,nws=2 ')
+  if(iRad==1.and.(.not.lexist)) call parallel_abort('iRad=1: need ICM_rad.th.nc')
+
+end subroutine check_icm_param

@@ -75,7 +75,7 @@ subroutine ecosystem(it)
 !calculate kinetic source/sink
 !---------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,dt,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
-                        & ielg,kbe,ze,elnode,srad,airt1,pi,dt
+                        & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : signf
   use icm_mod
@@ -243,7 +243,6 @@ subroutine ecosystem(it)
       enddo !k
 
       !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
-      !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
       DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
       rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
@@ -431,25 +430,33 @@ subroutine ecosystem(it)
       !************************************************************************************
       !debug mode for 2D/3D variables (for ICM developers)
       !************************************************************************************
-      !Core
-      wqc_d2d(1:2,id)=0 !TN,TP
-      do k=kb+1,nvrt
-        dzb=(zid(k)-zid(k-1))
-        wqc_d2d(1,id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k))
-        wqc_d2d(2,id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k))
-        if(iCBP==1) then
-          wqc_d2d(1,id)=wqc_d2d(1,id)+dzb*SRPON(k)
-          wqc_d2d(2,id)=wqc_d2d(2,id)+dzb*SRPOP(k)
-        endif
-        wqc_d3d(1,k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
-      enddo
+      if(iof_icm_dbg(0)/=0) then
+        !Core
+        wqc_d2d(1:2,id)=0 !TN,TP
+        do k=kb+1,nvrt
+          dzb=(zid(k)-zid(k-1))
+          wqc_d2d(1,id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k))
+          wqc_d2d(2,id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k))
+          if(iCBP==1) then
+            wqc_d2d(1,id)=wqc_d2d(1,id)+dzb*SRPON(k)
+            wqc_d2d(2,id)=wqc_d2d(2,id)+dzb*SRPOP(k)
+          endif
+        enddo
+      endif !iof_icm_dbg(0)/=0
 
-      !SAV
-      if(jsav==1) then
-        wqc_d3d(i3d(6)+0,:,id)=sleaf(:,id)
-        wqc_d3d(i3d(6)+1,:,id)=sstem(:,id)
-        wqc_d3d(i3d(6)+2,:,id)=sroot(:,id)
-      endif
+      if(iof_icm_dbg(1)/=0) then
+        !Core
+        do k=kb+1,nvrt
+          wqc_d3d(1,k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+        enddo
+
+        !SAV
+        if(jsav==1) then
+          wqc_d3d(i3d(6)+0,:,id)=sleaf(:,id)
+          wqc_d3d(i3d(6)+1,:,id)=sstem(:,id)
+          wqc_d3d(i3d(6)+2,:,id)=sroot(:,id)
+        endif
+      endif !iof_icm_dbg(1)/=0
 
     enddo !id
   enddo !isub

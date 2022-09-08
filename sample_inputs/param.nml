@@ -922,98 +922,98 @@
 ! ICM outputs 
 !-----------------------------------------------------------------------
 !  !core Module
-!  iof_icm_core(1)  = 0 !PB1
-!  iof_icm_core(2)  = 0 !PB2
-!  iof_icm_core(3)  = 0 !PB3
-!  iof_icm_core(4)  = 0 !RPOC
-!  iof_icm_core(5)  = 0 !LPOC
-!  iof_icm_core(6)  = 0 !DOC
-!  iof_icm_core(7)  = 0 !RPON
-!  iof_icm_core(8)  = 0 !LPON
-!  iof_icm_core(9)  = 0 !DON
-!  iof_icm_core(10) = 0 !NH4
-!  iof_icm_core(11) = 0 !NO3
-!  iof_icm_core(12) = 0 !RPOP
-!  iof_icm_core(13) = 0 !LPOP
-!  iof_icm_core(14) = 0 !DOP
-!  iof_icm_core(15) = 0 !PO4
-!  iof_icm_core(16) = 0 !COD
-!  iof_icm_core(17) = 0 !DOX
+!  iof_icm_core(1)  = 1 !PB1
+!  iof_icm_core(2)  = 1 !PB2
+!  iof_icm_core(3)  = 1 !PB3
+!  iof_icm_core(4)  = 1 !RPOC
+!  iof_icm_core(5)  = 1 !LPOC
+!  iof_icm_core(6)  = 1 !DOC
+!  iof_icm_core(7)  = 1 !RPON
+!  iof_icm_core(8)  = 1 !LPON
+!  iof_icm_core(9)  = 1 !DON
+!  iof_icm_core(10) = 1 !NH4
+!  iof_icm_core(11) = 1 !NO3
+!  iof_icm_core(12) = 1 !RPOP
+!  iof_icm_core(13) = 1 !LPOP
+!  iof_icm_core(14) = 1 !DOP
+!  iof_icm_core(15) = 1 !PO4
+!  iof_icm_core(16) = 1 !COD
+!  iof_icm_core(17) = 1 !DOX
 !
 !  !silica module
-!  iof_icm_silica(1) = 0 !SU
-!  iof_icm_silica(2) = 0 !SA
+!  iof_icm_silica(1) = 1 !SU
+!  iof_icm_silica(2) = 1 !SA
 !
 !  !zooplankton module
-!  iof_icm_zb(1)  = 0 !ZB1
-!  iof_icm_zb(2)  = 0 !ZB2
+!  iof_icm_zb(1)  = 1 !ZB1
+!  iof_icm_zb(2)  = 1 !ZB2
 !
 !  !pH model
-!  iof_icm_ph(1) = 0 !TIC
-!  iof_icm_ph(2) = 0 !ALK
-!  iof_icm_ph(3) = 0 !CA
-!  iof_icm_ph(4) = 0 !CACO3
+!  iof_icm_ph(1) = 1 !TIC
+!  iof_icm_ph(2) = 1 !ALK
+!  iof_icm_ph(3) = 1 !CA
+!  iof_icm_ph(4) = 1 !CACO3
 !
 !  !CBP model
-!  iof_icm_cbp(1) = 0 !SRPOC
-!  iof_icm_cbp(2) = 0 !SRPON
-!  iof_icm_cbp(3) = 0 !SRPOP
-!  iof_icm_cbp(4) = 0 !PIP
+!  iof_icm_cbp(1) = 1 !SRPOC
+!  iof_icm_cbp(2) = 1 !SRPON
+!  iof_icm_cbp(3) = 1 !SRPOP
+!  iof_icm_cbp(4) = 1 !PIP
 !
 !  !SAV model
-!  iof_icm_sav(4) = 0 !stleaf: total leaf biomass @elem [gC/m^2]
-!  iof_icm_sav(5) = 0 !ststem: total stem biomass @elem [gC/m^2]
-!  iof_icm_sav(6) = 0 !stroot: total root biomass @elem [gC/m^2]
-!  iof_icm_sav(7) = 0 !sht:    canopy height @elem [m]
+!  iof_icm_sav(1) = 1 !stleaf: total leaf biomass @elem [gC/m^2]
+!  iof_icm_sav(2) = 1 !ststem: total stem biomass @elem [gC/m^2]
+!  iof_icm_sav(3) = 1 !stroot: total root biomass @elem [gC/m^2]
+!  iof_icm_sav(4) = 1 !sht:    canopy height @elem [m]
 !
 !  !VEG model
-!  iof_icm_veg(1)  = 0 !vtleaf1: leaf biomass group 1 [gC/m^2]
-!  iof_icm_veg(2)  = 0 !vtleaf2: leaf biomass group 2 [gC/m^2]
-!  iof_icm_veg(3)  = 0 !vtleaf3: leaf biomass group 3 [gC/m^2]
-!  iof_icm_veg(4)  = 0 !vtstem1: stem biomass group 1 [gC/m^2]
-!  iof_icm_veg(5)  = 0 !vtstem2: stem biomass group 2 [gC/m^2]
-!  iof_icm_veg(6)  = 0 !vtstem3: stem biomass group 3 [gC/m^2]
-!  iof_icm_veg(7)  = 0 !vtroot1: root biomass group 1 [gC/m^2]
-!  iof_icm_veg(8)  = 0 !vtroot2: root biomass group 2 [gC/m^2]
-!  iof_icm_veg(9)  = 0 !vtroot3: root biomass group 3 [gC/m^2]
-!  iof_icm_veg(10) = 0 !vht1:    canopy height group 1 [m]
-!  iof_icm_veg(11) = 0 !vht2:    canopy height group 2 [m]
-!  iof_icm_veg(12) = 0 !vht3:    canopy height group 3 [m]
+!  iof_icm_veg(1)  = 1 !vtleaf1: leaf biomass group 1 [gC/m^2]
+!  iof_icm_veg(2)  = 1 !vtleaf2: leaf biomass group 2 [gC/m^2]
+!  iof_icm_veg(3)  = 1 !vtleaf3: leaf biomass group 3 [gC/m^2]
+!  iof_icm_veg(4)  = 1 !vtstem1: stem biomass group 1 [gC/m^2]
+!  iof_icm_veg(5)  = 1 !vtstem2: stem biomass group 2 [gC/m^2]
+!  iof_icm_veg(6)  = 1 !vtstem3: stem biomass group 3 [gC/m^2]
+!  iof_icm_veg(7)  = 1 !vtroot1: root biomass group 1 [gC/m^2]
+!  iof_icm_veg(8)  = 1 !vtroot2: root biomass group 2 [gC/m^2]
+!  iof_icm_veg(9)  = 1 !vtroot3: root biomass group 3 [gC/m^2]
+!  iof_icm_veg(10) = 1 !vht1:    canopy height group 1 [m]
+!  iof_icm_veg(11) = 1 !vht2:    canopy height group 2 [m]
+!  iof_icm_veg(12) = 1 !vht3:    canopy height group 3 [m]
 !
 !  !SFM model
-!  iof_icm_sed(1)   = 0 !bPOC1 (g.m-3)
-!  iof_icm_sed(2)   = 0 !bPOC2 (g.m-3)
-!  iof_icm_sed(3)   = 0 !bPOC3 (g.m-3)
-!  iof_icm_sed(4)   = 0 !bPON1 (g.m-3)
-!  iof_icm_sed(5)   = 0 !bPON2 (g.m-3)
-!  iof_icm_sed(6)   = 0 !bPON3 (g.m-3)
-!  iof_icm_sed(7)   = 0 !bPOP1 (g.m-3)
-!  iof_icm_sed(8)   = 0 !bPOP2 (g.m-3)
-!  iof_icm_sed(9)   = 0 !bPOP3 (g.m-3)
-!  iof_icm_sed(10)  = 0 !bNH4  (g.m-3)
-!  iof_icm_sed(11)  = 0 !bNO3  (g.m-3)
-!  iof_icm_sed(12)  = 0 !bPO4  (g.m-3)
-!  iof_icm_sed(13)  = 0 !bH2S  (g.m-3)
-!  iof_icm_sed(14)  = 0 !bCH4  (g.m-3)
-!  iof_icm_sed(15)  = 0 !bPOS  (g.m-3)
-!  iof_icm_sed(16)  = 0 !bSA   (g.m-3)
-!  iof_icm_sed(17)  = 0 !bstc: surface transfer coeff. (m/day)
-!  iof_icm_sed(18)  = 0 !bSTR: benthic stress      (day)
-!  iof_icm_sed(19)  = 0 !bThp: consective days of hypoxia (day)
-!  iof_icm_sed(20)  = 0 !bTox: consective days of oxic condition after hypoxia (day)
-!  iof_icm_sed(21)  = 0 !SOD   (g.m-2.day-1)
-!  iof_icm_sed(22)  = 0 !JNH4  (g.m-2.day-1)
-!  iof_icm_sed(23)  = 0 !JNO3  (g.m-2.day-1)
-!  iof_icm_sed(24)  = 0 !JPO4  (g.m-2.day-1)
-!  iof_icm_sed(25)  = 0 !JSA   (g.m-2.day-1)
-!  iof_icm_sed(26)  = 0 !JCOD  (g.m-2.day-1)
+!  iof_icm_sed(1)   = 1 !bPOC1 (g.m-3)
+!  iof_icm_sed(2)   = 1 !bPOC2 (g.m-3)
+!  iof_icm_sed(3)   = 1 !bPOC3 (g.m-3)
+!  iof_icm_sed(4)   = 1 !bPON1 (g.m-3)
+!  iof_icm_sed(5)   = 1 !bPON2 (g.m-3)
+!  iof_icm_sed(6)   = 1 !bPON3 (g.m-3)
+!  iof_icm_sed(7)   = 1 !bPOP1 (g.m-3)
+!  iof_icm_sed(8)   = 1 !bPOP2 (g.m-3)
+!  iof_icm_sed(9)   = 1 !bPOP3 (g.m-3)
+!  iof_icm_sed(10)  = 1 !bNH4  (g.m-3)
+!  iof_icm_sed(11)  = 1 !bNO3  (g.m-3)
+!  iof_icm_sed(12)  = 1 !bPO4  (g.m-3)
+!  iof_icm_sed(13)  = 1 !bH2S  (g.m-3)
+!  iof_icm_sed(14)  = 1 !bCH4  (g.m-3)
+!  iof_icm_sed(15)  = 1 !bPOS  (g.m-3)
+!  iof_icm_sed(16)  = 1 !bSA   (g.m-3)
+!  iof_icm_sed(17)  = 1 !bstc: surface transfer coeff. (m/day)
+!  iof_icm_sed(18)  = 1 !bSTR: benthic stress      (day)
+!  iof_icm_sed(19)  = 1 !bThp: consective days of hypoxia (day)
+!  iof_icm_sed(20)  = 1 !bTox: consective days of oxic condition after hypoxia (day)
+!  iof_icm_sed(21)  = 1 !SOD   (g.m-2.day-1)
+!  iof_icm_sed(22)  = 1 !JNH4  (g.m-2.day-1)
+!  iof_icm_sed(23)  = 1 !JNO3  (g.m-2.day-1)
+!  iof_icm_sed(24)  = 1 !JPO4  (g.m-2.day-1)
+!  iof_icm_sed(25)  = 1 !JSA   (g.m-2.day-1)
+!  iof_icm_sed(26)  = 1 !JCOD  (g.m-2.day-1)
 !
 !  !Benthic Algae model
-!  iof_icm_ba(1)    = 0 !BA    (g[C].m-2)
+!  iof_icm_ba(1)    = 1 !BA    (g[C].m-2)
 !
 !  !ICM Debug Outputs (need coding, for developers)
-!  iof_icm_dbg(1)   = 0 !2D ICM debug variables
-!  iof_icm_dbg(2)   = 0 !3D ICM debug variables
+!  iof_icm_dbg(1)   = 1 !2D ICM debug variables
+!  iof_icm_dbg(2)   = 1 !3D ICM debug variables
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D
