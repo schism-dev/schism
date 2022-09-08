@@ -3256,10 +3256,10 @@ subroutine calkwq(id,nv,ure,it)
       do j=1,3
         if(tdep-hcanveg(id,j)>1.e-5) then
           if(idry_e(id)==1) then
-            rtmp=rtmp+aocrveg(j)*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,hcanveg(id,j))
+            rtmp=rtmp+aocrveg(j)*plfveg(id,j)*(1-famveg(j))*tlfveg(id,j)/max(1.e-5,hcanveg(id,j))
           else
             if(ze(klev-1,id)<hcanveg(id,j)+ze(kbe(id),id)) then
-              rtmp=rtmp+aocrveg(j)*plfveg(id,j)*tlfveg(id,j)/max(1.e-5,hcanveg(id,j))
+              rtmp=rtmp+aocrveg(j)*plfveg(id,j)*(1-famveg(j))*tlfveg(id,j)/max(1.e-5,hcanveg(id,j))
             endif !ze
           endif !idry_e
         endif !submerged
@@ -3612,16 +3612,20 @@ subroutine calkwq(id,nv,ure,it)
      
       !recycling of nutrients unit: g/m^2/day
       rtmp=(bmlfveg(j)+plfveg(id,j)*famveg(j))*tlfveg(id,j)+bmstveg(j)*tstveg(id,j)
-      !immediate release to add on to benthic fluxes
+      !immediate release to add on to benthic fluxes, fniveg and fpiveg are mostly by default to be 0 
       tNH4veg(id,j)=ancveg(j)*fniveg(j)*rtmp
       tPO4veg(id,j)=apcveg(j)*fpiveg(j)*rtmp
+      !release of POM to add on to depostional fluxes
+      tponveg(id,j)=ancveg(j)*(bmrtveg(j)*trtveg(id,j)+(1-fniveg(j))*rtmp)
+      tpopveg(id,j)=apcveg(j)*(bmrtveg(j)*trtveg(id,j)+(1-fpiveg(j))*rtmp)
+
+      !DOC and DO
+      rtmp=bmlfveg(j)*tlfveg(id,j)+bmstveg(j)*tstveg(id,j)
       tDOveg(id,j)=(1-khrveg(i)/(khrveg(i)+DOO(nv,1)))*aocrveg(j)*fdoveg(j)*rtmp
       tDOCveg(id,j)=(khrveg(i)/(khrveg(i)+DOO(nv,1)))*fdoveg(j)*rtmp
       trtdoveg(id,j)=aocrveg(j)*frtdoveg(j)*bmrtveg(j)*trtveg(id,j)
       !release of POM to add on to depostional fluxes
       tpocveg(id,j)=(1-frtdoveg(j))*bmrtveg(j)*trtveg(id,j)+(1-fdoveg(j))*rtmp
-      tponveg(id,j)=ancveg(j)*(bmrtveg(j)*trtveg(id,j)+(1-fniveg(j))*rtmp)
-      tpopveg(id,j)=apcveg(j)*(bmrtveg(j)*trtveg(id,j)+(1-fpiveg(j))*rtmp)
 
  !     if(isrecnveg==0)then !recycled nutrients go to sediment directly
  !       trtponveg(id,j)=trtponveg(id,j)+ancveg(j)*(1-fniveg(j))* &

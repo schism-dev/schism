@@ -95,7 +95,7 @@ function sed_zbrent(id,ierr)
   integer, intent(out) :: ierr !0: normal; /=0: error
   integer, parameter :: nloop=100
 !Error: tweak single
-  real(kind=iwp), parameter :: eps=3.0e-8_iwp, tol=1.e-5_iwp,sodmin=1.e-8_iwp,sodmax=100._iwp
+  real(kind=iwp), parameter :: eps=3.0e-8_iwp, tol=1.e-5_iwp,sodmin=1.e-10_iwp,sodmax=100._iwp
   !real(kind=iwp),intent(out) :: fout
 !  real(kind=iwp), external :: sedf
   real(kind=iwp) :: sed_zbrent
@@ -126,17 +126,25 @@ function sed_zbrent(id,ierr)
   !call sedf(fb,b)
  
   !root must be bracketed in brent 
-  if(abs(fa)<2.e-6) then
+  if(abs(fa)<1.e-3) then
     sed_zbrent=a
     return
   endif !fa
+
+  if(SOD<1.e-3) then
+    sed_zbrent=SOD
+    return
+  endif 
 
   if(fa*fb>0.0) then
     if(O20<0.02)then
       sed_zbrent=a
       return
+    elseif(SOD<1.e-1)then
+      sed_zbrent=SOD
+      return
     else
-      ierr=1
+      !ierr=1
       write(12,*)'sed_zbrent: sod=',fa,fb,myrank
       return
     endif !water column hypoxia
