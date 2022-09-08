@@ -88,8 +88,7 @@ alpha  = 8.0   8.0  8.0  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0
 !-----------------------------------------------------------------------
 iPR = 1   !(0: linear formulation; 1: quadratic)
 
-!PRR = 0.1   0.2    0.3    !linear:  predation rate by higher trophic level (day-1)
-PRR = 0.1    0.2    0.05   !quadratic: predation rate by higher trophic level (day-1.g-1.m3)
+PRR = 0.1  0.2  0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
 
 !-----------------------------------------------------------------------
 !ICM init. value (wqc0), settling velocity (WSP), net settling velocity (WSPn) (m.day-1)
@@ -143,7 +142,7 @@ iBA = 0
 !-----------------------------------------------------------------------
 !solar radiation: dim=(npt,time) or (time,)
 !  iRad=0: short wave from sflux; require ihconsv =1, nws=2
-!  iRad=1: short wave from ICM_rad.th.nc (unit: W/m2)
+!  iRad=1: short wave from ICM_rad.th.nc (unit: E.m-2.day-1)
 !  note: npt=1/np/ne/other; need to add "elements" number if npt=other 
 !-----------------------------------------------------------------------
 iRad = 0

@@ -235,19 +235,23 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
-    call check_icm_param()
+    dtw=dt/86400.0/dble(nsub) !time step in days
 
     !concentration changes: assign pointers
     if(iZB==1) then
       zdPBS=>zdwqc(1:3,:); zdC=>zdwqc(4:6,:);   zdN=>zdwqc(8:11,:)
       zdP=>zdwqc(12:15,:); zdDOX=>zdwqc(17,:)
       if(iSilica==1) zdS=>zdwqc(itrs(1,2):itrs(2,2),:)
+      zGPM(1,1)=0.0; zGPM(2,2)=0.0 !Zooplankton not graze on themselves
     endif
 
-    dtw=dt/86400.0/dble(nsub) !time step in days
+    !make sure FCP(:,4)=0 (same for FCM,FNP,FNM,FPP,FPM)
+    if(iCBP==1) then
+      FCP(:,4)=0; FCM(:,4)=0; FNP(:,5)=0; FNM(:,5)=0; FPP(:,5)=0; FPM(:,5)=0
+    endif
 
-    !Zooplankton not graze on themselves
-    zGPM(1,1)=0.0; zGPM(2,2)=0.0 
+    !check
+    call check_icm_param()
 
     !1) allocate ICM variables; 2) read spatially varying parameters
     call icm_vars_init
@@ -850,6 +854,7 @@ subroutine check_icm_param()
   implicit none
 
   !local variables
+  integer :: i,j,k,m
   logical :: lexist
 
   !check global swtiches
@@ -877,5 +882,15 @@ subroutine check_icm_param()
   inquire(file=in_dir(1:len_in_dir)//'ICM_rad.th.nc',exist=lexist)
   if(iRad==0.and.ihconsv/=1.and.nws/=2) call parallel_abort('iRad=0: need ihconsv=1,nws=2 ')
   if(iRad==1.and.(.not.lexist)) call parallel_abort('iRad=1: need ICM_rad.th.nc')
+
+  !check (FCP,FCM,FNP,FNM,FPP,FPM)
+  do i=1,3
+    if(abs(sum(FCP(i,1:4))-1.0)>1.d-6) call parallel_abort('check FCP: sum(FCP(i,:))/=1')
+    if(sum(FCM(i,1:4))>1.d0) call parallel_abort('check FCM: sum(FCM(i,:))>1')
+    if(abs(sum(FNP(i,1:5))-1.0)>1.d-6) call parallel_abort('check FNP: sum(FNP(i,:))/=1')
+    if(abs(sum(FNM(i,1:5))-1.0)>1.d-6) call parallel_abort('check FNM: sum(FNM(i,:))/=1')
+    if(abs(sum(FPP(i,1:5))-1.0)>1.d-6) call parallel_abort('check FPP: sum(FNP(i,:))/=1')
+    if(abs(sum(FPM(i,1:5))-1.0)>1.d-6) call parallel_abort('check FPM: sum(FNM(i,:))/=1')
+  enddo
 
 end subroutine check_icm_param
