@@ -27,27 +27,27 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iRad,isflux,ibflux
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux
   integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),WSP(29),WSPn(29)
-  real(rkind),save,target,dimension(3) :: alpha,Iopt,Hopt
-  integer,save,pointer :: jdry,jsav,jveg,ised_icm
+  real(rkind),save,target,dimension(3) :: alpha
+  integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
 
-  integer,parameter :: nout_sav=7, nout_veg=12, nout_sed=26
-  integer,save,target :: ntrs_icm,itrs(2,8),nout_icm
+  integer,parameter :: nout_sav=4, nout_veg=12, nout_sed=26, nout_ba=1
+  integer,save,target :: ntrs_icm,itrs(2,9),nout_icm,nout_d2d,nout_d3d,n2d(9),n3d(9),i2d(9),i3d(9)
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
         & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
-  character(len=6),save,allocatable :: name_icm(:)
+  character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
-  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:) 
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:),wqc_d2d(:,:),wqc_d3d(:,:,:)
 
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                               & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
-  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:) 
+  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:) 
   real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer,dimension(:) :: zdDOX 
  
@@ -85,17 +85,17 @@ module icm_mod
   !pH parameters and variables
   !-------------------------------------------------------------------------------
   integer,save,target :: inu_ph
-  real(rkind),save,target :: pKCACO3,pKCA,pRea
+  real(rkind),save,target :: ppatch0,pKCACO3,pKCA,pRea
 
   integer, save :: irec_ph
-  integer,save,allocatable :: iphgb(:)
+  integer,save,allocatable :: ppatch(:)
   real(rkind),save,allocatable :: ph_nudge(:),ph_nudge_nd(:)
   real(rkind),save,allocatable,dimension(:,:) :: TIC_el,ALK_el
 
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: stleaf0,ststem0,stroot0
+  real(rkind),save,target :: spatch0,stleaf0,ststem0,stroot0
   real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(3) !growth related coefficients
   real(rkind),save,target :: sMTB(3),sTMT(3),sKTMT(3)        !meta. coefficients (rate, temp, temp dependence)
   real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism to (RPOM,RLOM,DOM,DIM)
@@ -113,7 +113,7 @@ module icm_mod
   !VEG parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,target,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
-  real(rkind),save,target :: vGPM(3),vFAM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
+  real(rkind),save,target :: vpatch0,vGPM(3),vFAM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
   real(rkind),save,target,dimension(3,3) :: vMTB,vTMT,vKTMT    !meta. coefficients (rate,temp,temp dependence)
   real(rkind),save,target,dimension(3,4) :: vFNM,vFPM,vFCM     !metabolism to (RPOM,RLOM,DOM,DIM)
   real(rkind),save,target,dimension(3) :: vKhNs,vKhPs,vScr,vSopt,vInun,valpha,vKe !growth limit(nutrent,light,salinity,inundation)
@@ -153,6 +153,15 @@ module icm_mod
   real(rkind),save,target,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
   real(rkind),save,target,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
   real(rkind),save,target,allocatable,dimension(:) :: SOD,JNH4,JNO3,JPO4,JCOD,JSA
+
+  !-------------------------------------------------------------------------------
+  !Benthic Algea model (BA) parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: gpatch0,BA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
+  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
+
+  integer,save,allocatable,dimension(:) :: gpatch
+  real(rkind),save,target,allocatable,dimension(:) :: BA,gPR
 
   !-------------------------------------------------------------------------------
   !benthic erosion (ERO) parameters and variables

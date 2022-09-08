@@ -30,7 +30,7 @@
 !---------------------------------------------------------------------------------
 !---------------------------state variables in ICM--------------------------------
 !---------------------------------------------------------------------------------
-!Core Module
+!Core Module (1)
 !     1  PB1   :  Diatom                                     g/m^3
 !     2  PB2   :  Green Algae                                g/m^3
 !     3  PB3   :  Cyanobacteria                              g/m^3
@@ -48,25 +48,26 @@
 !     15 PO4   :  Total Phosphate                            g/m^3
 !     16 COD   :  Chemical Oxygen Demand                     g/m^3
 !     17 DOX   :  Dissolved Oxygen                           g/m^3
-!Silica Module
+!Silica Module (2)
 !     1  SU    :  Particulate Biogenic Silica                g/m^3
 !     2  SA    :  Available Silica                           g/m^3
-!Zooplankton Module
+!Zooplankton Module (3)
 !     1  ZB1   :  1st zooplankton                            g/m^3
 !     2  ZB2   :  2nd zooplankton                            g/m^3
-!pH Module
+!pH Module (4)
 !     1  TIC   :  Total Inorganic Carbon                     g/m^3
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
-!CBP Module
+!CBP Module (5)
 !     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
 !     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
-!SAV Module (no transport variables)
-!VEG Module (no transport variables)
-!SFM Module (no transport variables)
+!SAV Module (no transport variables) (6)
+!VEG Module (no transport variables) (7)
+!SFM Module (no transport variables) (8)
+!BA  Module (no transport variables) (9)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -84,7 +85,7 @@ subroutine ecosystem(it)
   !local variables
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
-  real(rkind) :: tmp,time,rat,s,z1,z2 
+  real(rkind) :: tmp,time,rat,s,z1,z2,dzb 
   real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC,rKSR(3)
   real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
@@ -92,7 +93,7 @@ subroutine ecosystem(it)
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
-  real(rkind),pointer :: mtime(:)
+  real(rkind),pointer :: mtime(:) 
 
   !todo: 1) debug module, 2) add flexible channel outputs
   do isub=1,nsub  !sub-cycling
@@ -200,17 +201,15 @@ subroutine ecosystem(it)
           fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
           if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
           if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
-          if(iPh==1.and.iphgb(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
+          if(iPh==1.and.ppatch(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
           !light factor
           if(iLight==0) then !Cerco
             mLight=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
-            rIK=(1.d3*c2chl(i))*fT*GPM(i)/alpha(i)
+            rIK=(1.d3*c2chl(i))*GPM(i)/alpha(i)
             fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
-          elseif(iLight==1) then !Chapra S.C. #todo: change this option
-            !calculate optimal light intensity for PB
-            if(k==nvrt) rIs(i)=max(rIavg*exp(-rKe(k)*Hopt(i)),Iopt(i))
-            fR=2.718*(exp(-Light(k-1)/rIs(i))-exp(-Light(k)/rIs(i)))/max(rKe(k)*dz(k),1.d-8) 
+          else
+            call parallel_abort('iLight/=0 option not available yet')
           endif
 
           !growth
@@ -243,18 +242,17 @@ subroutine ecosystem(it)
         rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
       enddo !k
 
-      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?) todo: put this in sflux
+      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
       !DOsat=14.6244-0.367134*temp(k)+4.497d-3*temp(k)*temp(k)-(0.0966-2.05d-3*temp(k)-2.739d-4*salt(k))*salt(k) !(Chi-Fang Wang, 2009)
       DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
-      !rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5/max(dz(nvrt),5.d-2)
       rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
       !----------------------------------------------------------------------------------
       !modules (exception: CBP sub-module is embeded in the core module)
       !----------------------------------------------------------------------------------
-      sdwqc=0; vdwqc=0; zdwqc=0
+      sdwqc=0; vdwqc=0; zdwqc=0; gdwqc=0;
       !silica module
-      if(iSilica==1) call silica_calc(kb,PR,MT,GP)
+      if(iSilica==1) call silica_calc(id,kb,PR,MT,GP)
 
       !SAV
       if(jsav==1.and.spatch(id)==1) call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
@@ -270,6 +268,9 @@ subroutine ecosystem(it)
 
       !pH model
       if(iPh==1) call ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN) 
+
+      !BA module
+      if(iBA==1) call ba_calc(id,kb,dz(kb+1))
 
       !----------------------------------------------------------------------------------
       !surface and bottom flux
@@ -296,7 +297,7 @@ subroutine ecosystem(it)
       !sediment fluxes addition from SFM
       if(iSed==1) then
         !pH effect on sediment PO4 release
-        if(iPh==1 .and.iphgb(id)/=0) then
+        if(iPh==1 .and.ppatch(id)/=0) then
           JPO4(id)=max(JPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)
           !BnPO4=max(BnPO4*exp(1.3d0*(PH(kb+1)-8.5)),0.02d0)
           !nPO4=max(2.5d-3*(temp(kb+1)-0.0)/35.d0,0.d0);
@@ -413,7 +414,8 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       do k=kb+1,nvrt
         do i=1,ntrs_icm
-          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k)+zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k))
+          wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k) &
+                  & +zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k)+gdwqc(i,k))
         enddo !i
       enddo !k=1,nv
 
@@ -426,19 +428,42 @@ subroutine ecosystem(it)
         enddo!i
       enddo
 
+      !************************************************************************************
+      !debug mode for 2D/3D variables (for ICM developers)
+      !************************************************************************************
+      !Core
+      wqc_d2d(1:2,id)=0 !TN,TP
+      do k=kb+1,nvrt
+        dzb=(zid(k)-zid(k-1))
+        wqc_d2d(1,id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k))
+        wqc_d2d(2,id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k))
+        if(iCBP==1) then
+          wqc_d2d(1,id)=wqc_d2d(1,id)+dzb*SRPON(k)
+          wqc_d2d(2,id)=wqc_d2d(2,id)+dzb*SRPOP(k)
+        endif
+        wqc_d3d(1,k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+      enddo
+
+      !SAV
+      if(jsav==1) then
+        wqc_d3d(i3d(6)+0,:,id)=sleaf(:,id)
+        wqc_d3d(i3d(6)+1,:,id)=sstem(:,id)
+        wqc_d3d(i3d(6)+2,:,id)=sroot(:,id)
+      endif
+
     enddo !id
   enddo !isub
 
 end subroutine ecosystem
 
-subroutine silica_calc(kb,PR,MT,GP)
+subroutine silica_calc(id,kb,PR,MT,GP)
 !--------------------------------------------------------------------------------------
 !Silica modules
 !--------------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nvrt
   use icm_mod
   implicit none
-  integer,intent(in) :: kb
+  integer,intent(in) :: id,kb
   real(rkind),intent(in) :: PR(3,nvrt),MT(3,nvrt),GP(3,nvrt)
 
   !local variables
@@ -479,7 +504,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
   do k=kb+1,nvrt
     call get_ph(temp(k),salt(k),TIC(k),ALK(k),pH,CO2,CAsat)
 
-    if(iphgb(id)/=0) then
+    if(ppatch(id)/=0) then
       !pre-compute the dissolution terms
       xKCA=0.0; xKCACO3=0.0
       if(.not.(CA(k)<CAsat.and.CACO3(k)==0.0)) then
@@ -535,7 +560,7 @@ subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
         TIC(k)=TIC(k)*(1.0-ph_nudge(id))+TIC_el(k,id)*ph_nudge(id)
         ALK(k)=ALK(k)*(1.0-ph_nudge(id))+ALK_el(k,id)*ph_nudge(id)
       endif
-    endif !iphgb(id)/=0
+    endif !ppatch(id)/=0
   enddo !k
 
 end subroutine ph_calc
@@ -618,7 +643,7 @@ subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS)
       else
         mLight=vLight*C2_PAR*(1-exp(-tmp))/tmp
       endif
-      rIK=vGPM(j)*vfT/valpha(j) !check valpha >0
+      rIK=vGPM(j)/valpha(j) !check valpha >0
       vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
 
       vfN=bNH4(id)/(vKhNs(j)+bNH4(id))
@@ -890,7 +915,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
           endif !knp
 
           mLight=max(sLight*C2_PAR*(1-exp(-tmp))/tmp,1.d-5)
-          rIK=sGPM*sfT/salpha
+          rIK=sGPM/salpha
 
           !light limitation function for sav
           sfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
@@ -999,6 +1024,68 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   !denssav=(stleaf(id)+ststem(id))/(s2den*max(sht(id),1.e-4))
 
 end subroutine sav_calc
+
+subroutine ba_calc(id,kb,wdz)
+!----------------------------------------------------------------------------
+!Benthic algae computation
+!----------------------------------------------------------------------------
+  use schism_glbl,only : rkind
+  use icm_mod
+  use icm_misc, only : signf
+  implicit none
+  integer,intent(in) :: id,kb
+  real(rkind),intent(in) :: wdz
+
+  !local variables
+  integer :: i,j,k
+  real(rkind) :: xT,mLight,rIK,wNH4,wNO3,wPO4,sNH4,sNO3,sPO4,gNH4,gNO3,gDIN,gPO4
+  real(rkind) :: fT,fR,fN,fP,fPN,GP,MT,PR
+  real(rkind),parameter :: mval=1.d-16
+
+  if(iBA==1.and.gpatch(id)/=0) then
+    !temp. effect
+    xT=temp(kb+1)-gTGP; fT=exp(-max(-gKTGP(1)*signf(xT),gKTGP(2)*signf(xT))*xT*xT) 
+
+    !light effect
+    mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA(id))
+    rIK=gGPM/galpha
+    fR=mLight/sqrt(mLight*mLight+rIK*rIK+mval)
+
+    !nutrient effect
+    wNH4=NH4(kb+1)*wdz; sNH4=max(JNH4(id),0.d0)*dtw; gNH4=wNH4+sNH4 !g[N]/m2
+    wNO3=NO3(kb+1)*wdz; sNO3=max(JNO3(id),0.d0)*dtw; gNO3=wNO3+sNO3 !g[N]/m2
+    wPO4=PO4(kb+1)*wdz; sPO4=max(JPO4(id),0.d0)*dtw; gPO4=wPO4+sPO4 !g[P]/m2
+    gDIN=gNH4+gNO3; fPN=(gNH4/(gKhN+gNO3+mval))*(gNO3/(gKhN+gNH4+mval)+gKhN/(gDIN+mval)) !NH4 preference
+    fN=gDIN/(gDIN+gKhN+mval); fP=gPO4/(gPO4+gKhP+mval)
+
+    !growth,metabolism and predation
+    GP=gGPM*fT*fR*min(fN,fP)*BA(id)*dtw
+    MT=gMTB*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
+    PR=gPRR*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
+    if((GP*gn2c*fPN>gNH4).or.(GP*gn2c*(1.0-fPN)>gNO3).or.(GP*gp2c>gPO4)) then !check BA growth term
+      GP=min(gNH4/(gn2c*max(fPN,mval)),gNO3/(gn2c*max(1.0-fPN,mval)),gPO4/gp2c)
+    endif
+    if((MT+PR)>BA(id)) then !check sink terms 
+      MT=BA(id)*(gMTB/(gMTB+gPRR)); PR=BA(id)*(gPRR/(gMTB+gPRR))
+    endif
+
+    !update BA biomass
+    BA(id)=BA(id)+GP-MT-PR
+
+    !BA effect on bottom water
+    gdwqc(iPO4,kb+1)=gp2c*(MT-GP*wPO4/(gPO4+mval))/(wdz*dtw)
+    gdwqc(iNH4,kb+1)=gn2c*(MT-GP*fPN*wNH4/(gNH4+mval))/(wdz*dtw)
+    gdwqc(iNO3,kb+1)=gn2c*(-GP*(1.0-fPN)*wNO3/(gNO3+mval))/(wdz*dtw)
+    gdwqc(iDOX,kb+1)=go2c*(GP-MT)/(wdz*dtw)
+
+    !BA effect on benthic N/P flux (JN*dtw is normally much samller than wN*wdz)
+    JNH4(id)=JNH4(id)-gn2c*GP*fPN*sNH4/(gNH4*dtw+mval)
+    JNO3(id)=JNO3(id)-gn2c*GP*(1.0-fPN)*sNO3/(gNO3*dtw+mval)
+    JPO4(id)=JPO4(id)-gp2c*GP*sPO4/(gPO4*dtw+mval)
+    gPR(id)=PR/dtw
+  endif !iBA==1
+
+end subroutine ba_calc
 
 subroutine get_ph(temp,salt,TIC,ALK,pH,CO2,CAsat)
 !----------------------------------------------------------------------------

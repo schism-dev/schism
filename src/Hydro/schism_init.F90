@@ -48,10 +48,10 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,name_icm,iSilica,iZB,iPh, &
-                    & iCBP,isav_icm,iveg_icm,ised_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,iSilica,iZB,iPh, &
+                    & iCBP,isav_icm,iveg_icm,ised_icm,iBA_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
                     & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
-                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA
+                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA,nout_d2d,nout_d3d,name_d2d,name_d3d
 #endif
 
 #ifdef USE_COSINE
@@ -176,7 +176,7 @@
 #endif
 
 #ifndef USE_ICM
-      integer,parameter :: nout_icm=1,nout_sav=7,nout_veg=12,nout_sed=26
+      integer,parameter :: nout_icm=1,nout_sav=4,nout_veg=12,nout_sed=26,nout_ba=1
 #endif
 
 #ifdef USE_OIL
@@ -212,8 +212,8 @@
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
-     &iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
-     &nhot,nhot_write,iout_sta,nspool_sta
+     &iof_icm_ba,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -438,8 +438,8 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
-     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_cos(20),iof_fib(5), &
-     &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_icm_ba(nout_ba), &
+     &iof_icm_dbg(2),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
@@ -500,8 +500,8 @@
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_icm_sed=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
-      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10;
+      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
+      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -517,6 +517,7 @@
       if(isav_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_sav
       if(iveg_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_veg
       if(ised_icm==1) iof_icm(itrs_icm(1,8):itrs_icm(2,8))=iof_icm_sed
+      if(iBA_icm==1) iof_icm(itrs_icm(1,9):itrs_icm(2,9))=iof_icm_ba
 #endif
 
       !zcor should be on usually
@@ -6482,12 +6483,12 @@
 
 #ifdef USE_ICM
       if(isav_icm/=0) then
-        do i=1,4
+        do i=1,nout_sav
           if(iof_icm_sav(i)==1) then
             ncount_2delem=ncount_2delem+1
             counter_out_name=counter_out_name+1
             iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i+2)))
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
           endif !iof
         enddo !i
       endif !isav_icm/
@@ -6512,6 +6513,26 @@
             out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+i-1)))
           endif !iof
         enddo !i
+      endif
+
+      if(iBA_icm/=0) then
+        do i=1,nout_ba
+          if(iof_icm_ba(i)==1) then
+            ncount_2delem=ncount_2delem+1
+            counter_out_name=counter_out_name+1
+            iout_23d(counter_out_name)=4
+            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+i-1)))
+          endif !iof
+        enddo !i
+      endif
+
+      if(iof_icm_dbg(1)/=0) then
+        do i=1,nout_d2d
+          ncount_2delem=ncount_2delem+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=4
+          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d2d(i)))
+        enddo
       endif
 #endif
 
@@ -6850,16 +6871,14 @@
 
       !Modules
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do i=1,3
-          if(iof_icm_sav(i)==1) then
-            ncount_3delem=ncount_3delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=6
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
-          endif
-        enddo !i
-      endif !isav_icm/
+      if(iof_icm_dbg(2)/=0) then
+        do i=1,nout_d3d
+          ncount_3delem=ncount_3delem+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=6
+          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d3d(i)))
+        enddo
+      endif
 #endif
 
 #ifdef USE_DVD
@@ -6947,12 +6966,13 @@
           call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
           call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
 #ifdef USE_ICM
-          call mpi_send(isav_icm,1,itype,nproc_schism-i,141,comm_schism,ierr)
           call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
-          call mpi_send(nout_sav,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
           call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
-          call mpi_send(iof_icm_sav,nout_sav,itype,nproc_schism-i,145,comm_schism,ierr)
+          call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
+        call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
+        call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
         enddo !i
       endif !myrank=0
 
@@ -7083,7 +7103,7 @@
         write(16,*)'time stepping begins...',iths_main+1,ntime
         call flush(16) ! flush "mirror.out"
       endif
-     
+
       !Set global time stamp
       time_stamp=iths_main*dt
 

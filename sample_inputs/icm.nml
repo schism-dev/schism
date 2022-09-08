@@ -51,6 +51,7 @@
 !SAV Module (no transport variables)
 !VEG Module (no transport variables)
 !SFM Module (no transport variables)
+!BA  Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 &MARCO
@@ -76,13 +77,11 @@ tss2c  = 6.0             !TSS to carbon ratio
 !-----------------------------------------------------------------------
 !options of computing light limitation factor
 !  iLight=0: (Carl Cerco), unit: E/m^2
-!  iLight=1: (Chapra S.C., Page 611), PAR is needed in ICM_rad.th, unit: ly/day, iRad=2
+!  iLight=1: todo (add other options)
 !-----------------------------------------------------------------------
 iLight = 0
 
 alpha  = 8.0   10.0  3.15  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0)
-Iopt   = 40.0  40.0  40.0  !optimal irradiance for PB growth (iLight=1)
-Hopt   = 1.0   0.5   0.1   !optimal depth for PB growth      (iLight=1)
 
 !-----------------------------------------------------------------------
 !options of phytoplankton' predation term
@@ -134,6 +133,11 @@ iveg_icm = 0                   !0: VEG off;  1: VEG on
 !benthic flux provided by sed_flux_model
 !-----------------------------------------------------------------------
 iSed = 1 
+
+!-----------------------------------------------------------------------
+!Benthic Algae
+!-----------------------------------------------------------------------
+iBA = 0
 
 !-----------------------------------------------------------------------
 !solar radiation: dim=(npt,time) or (time,)
@@ -294,13 +298,15 @@ bKTC   = 1.10    1.150    1.17     !temp. dependence of POC decay (oC-1)
 bKTN   = 1.10    1.150    1.17     !temp. dependence of PON decay (oC-1)
 bKTP   = 1.10    1.150    1.17     !temp. dependence of POP decay (oC-1)
 
-!fraction of refractory/PB/SAV/VEG POM into sediment 3G POM  (depositional flux)
-bFCM = 0.0   0.43   0.57          !refractory POC into sed POC(3G) 
-bFNM = 0.0   0.54   0.46          !refractory PON into sed PON(3G)
-bFPM = 0.0   0.43   0.57          !refractory POP into sed POP(3G)
+!fraction of phytoplankton into sediment 3G POM  (depositional flux)
 bFCP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POC into sed POC (G3,PB=1:3)
 bFNP = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !Phyto PON into sed PON (G3,PB=1:3) 
 bFPP = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !Phyto POP into sed POP (G3,PB=1:3) 
+
+!fraction of RPOM into sediment 3G POM (depositional flux, for iCBP=0); when iCBP=1, RPOM will be routed to sediment G2 pool
+bFCM = 0.0   0.43   0.57          !refractory POC into sed POC(3G) 
+bFNM = 0.0   0.54   0.46          !refractory PON into sed PON(3G)
+bFPM = 0.0   0.43   0.57          !refractory POP into sed POP(3G)
 
 !nitrification (NH4)
 bKNH4f    = 0.20    !NH4 reaction rate in freshwater  at bTR (1st layer) (m/day)
@@ -349,7 +355,7 @@ bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
 bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
 bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
 
-!SAV and VEG contribution to sediment POM
+!SAV and VEG contribution to sediment POM (for isav_icm=1, iveg_icm=1)
 bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
 bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
 bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
@@ -417,16 +423,18 @@ p2pr = 0.25                       !ratio converting ZB+PB biomass to predation r
 !-----------------------------------------------------------------------
 !PH model parameter
 !-----------------------------------------------------------------------
-inu_ph= 0                     !nudge option for pH model
+ppatch0  = -999               !region flag for pH (1: ON all elem.; -999: spatial)
 pKCACO3  = 60.0               !dissulution bewteen CaCO3 and Ca++
 pKCA     = 60.0               !sediment surface transfer coefficient from CaCO3 to Ca++
 pRea     = 1.0                !reaeration rate for CO2
+inu_ph   = 0                  !nudge option for pH model
 /
 
 &SAV
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
+spatch0 = -999              !region flag for SAV. (1: ON all elem.; -999: spatial)
 stleaf0 = -9999             !init conc of total sav leaf
 ststem0 = -9999             !init conc of total sav stem
 stroot0 = -9999             !init conc of total sav root
@@ -469,6 +477,7 @@ so2c   = 2.67               !oxygen to carbon ratio
 !-----------------------------------------------------------------------
 !Intertidal Vegetation (VEG), paramters
 !-----------------------------------------------------------------------
+vpatch0 = -999                 !region flag for VEG. (1: ON all elem.; -999: spatial)
 vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
 vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
 vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
@@ -517,6 +526,32 @@ v2den  = 10     10     10     !coeff. computing veg density
 vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
 vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
 vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
+/
+
+&BAG
+!-----------------------------------------------------------------------
+!Benthic Algae
+!-----------------------------------------------------------------------
+gpatch0 =  -999          !region flag for BA. (1: ON all elem.; -999: spatial) 
+BA0     =  5.0           !initial BA concentration (g[C].m-2)
+gGPM    =  2.25          !BA maximum growth rate (day-1) 
+gTGP    =  20.0          !optimal temp. for BA growth (oC)
+gKTGP   =  0.004  0.006  !temp. dependence for BA growth (oC-2)
+gMTB    =  0.05          !respiration rate at temp. of gTR (day-1)
+gPRR    =  0.1           !predation rate at temp. of gTR (day-1)
+gTR     =  20.0          !reference temperature for BA respiration (oC)
+gKTR    =  0.069         !temp. dependence for BA respiration (oC-1)
+galpha  =  0.1           !init. slope of P-I curve (m2/E)
+gKSED   =  0.0           !light attenuation due to sediment (None)
+gKBA    =  0.01          !light attenuation coef. due to BA self-shading (g[C]-1.m2)
+gKhN    =  0.01          !nitrogen half saturation for BA growth (g[N]/m2)
+gKhP    =  0.001         !phosphorus half saturation for BA growth (g[P]/2)
+gp2c    = 0.0167         !phosphorus to carbon ratio
+gn2c    = 0.167          !nitrogen to carbon ratio
+go2c    = 2.67           !oxygen to carbon ratio
+gFCP    = 0.5 0.45 0.05  !fraction of predation BA C into 3G classes in sediment 
+gFNP    = 0.5 0.45 0.05  !fraction of predation BA N into 3G classes in sediment 
+gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment 
 /
 
 &ERO

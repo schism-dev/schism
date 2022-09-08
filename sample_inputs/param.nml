@@ -761,6 +761,13 @@
   nc_out = 1
 
 !-----------------------------------------------------------------------
+! UGRID option for _3D_ outputs under scribed IO (out2d*.nc always has meta
+! data info). If iof_ugrid/=0, 3D outputs will also have UGRID metadata (at
+! the expense of file size). 
+!-----------------------------------------------------------------------
+  iof_ugrid = 0
+
+!-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------
   nhot = 0 !1: output *_hotstart every 'hotout_write' steps
@@ -798,8 +805,8 @@
   iof_hydro(18) = 0 !water temperature [C] {temperature}  3D
   iof_hydro(19) = 0 !water salinity [PSU] {salinity}  3D
   iof_hydro(20) = 0 !water density [kg/m^3] {waterDensity}  3D
-  iof_hydro(21) = 0 !eddy diffusivity [m^2/s] {diffusivity}  3D
-  iof_hydro(22) = 0 !eddy viscosity [m^2/s] {viscosity}  3D
+  iof_hydro(21) = 0 !vertical eddy diffusivity [m^2/s] {diffusivity}  3D
+  iof_hydro(22) = 0 !vertical eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
 !  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
@@ -954,9 +961,6 @@
 !  iof_icm_cbp(4) = 0 !PIP
 !
 !  !SAV model
-!  iof_icm_sav(1) = 0 !sleaf:  leaf biomass @elem [gC/m^3]
-!  iof_icm_sav(2) = 0 !sstem:  stem biomass @elem [gC/m^3]
-!  iof_icm_sav(3) = 0 !sroot:  root biomass @elem [gC/m^3]
 !  iof_icm_sav(4) = 0 !stleaf: total leaf biomass @elem [gC/m^2]
 !  iof_icm_sav(5) = 0 !ststem: total stem biomass @elem [gC/m^2]
 !  iof_icm_sav(6) = 0 !stroot: total root biomass @elem [gC/m^2]
@@ -1003,6 +1007,13 @@
 !  iof_icm_sed(24)  = 0 !JPO4  (g.m-2.day-1)
 !  iof_icm_sed(25)  = 0 !JSA   (g.m-2.day-1)
 !  iof_icm_sed(26)  = 0 !JCOD  (g.m-2.day-1)
+!
+!  !Benthic Algae model
+!  iof_icm_ba(1)    = 0 !BA    (g[C].m-2)
+!
+!  !ICM Debug Outputs (need coding, for developers)
+!  iof_icm_dbg(1)   = 0 !2D ICM debug variables
+!  iof_icm_dbg(2)   = 0 !3D ICM debug variables
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D
