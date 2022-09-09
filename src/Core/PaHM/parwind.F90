@@ -131,8 +131,6 @@ MODULE ParWind
   ! Array of info about the best track data (extension to use multiple storms)
   TYPE(BestTrackData_T), ALLOCATABLE    :: bestTrackData(:)
 
-  ! Array of info about the best track data (extension to use multiple storms)
-  TYPE(BestTrackData_T), ALLOCATABLE    :: bestTrackData(:)
 
   !----------------------------------------------------------------
   ! The HollandData_T structure holds all required data for the Holland model
