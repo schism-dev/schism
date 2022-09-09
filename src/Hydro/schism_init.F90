@@ -466,7 +466,7 @@
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=8._rkind;  
       itr_met=3; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
-      courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-3; epsilon2=1.d-10; epsilon3=1.d-25; 
+      courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 

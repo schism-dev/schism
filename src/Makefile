@@ -228,7 +228,7 @@ endif
 
 ifdef USE_ICM
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_ICM
-  OBJS := $(OBJS) icm_mod.o icm_sed_mod.o icm_init.o icm_sed_flux.o  icm.o  read_icm_input.o
+  OBJS := $(OBJS) icm_mod.o icm_misc.o icm_init.o icm_sfm.o icm.o
 endif
 
 ifdef USE_COSINE

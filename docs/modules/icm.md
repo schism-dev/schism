@@ -44,7 +44,10 @@ SFM Module (no transport variables)
 
 ### 1.1 Mass Balance Equations of State Variables in ICM
 
-  (**Note: settling of variables are addressed in separate section**)
+**Note: ** <br>
+>> a). settling of variables are addressed in separate section, and not included in the equations below <br>
+>>  b). When iCBP=0, equations of ($\text{SRPOC},\text{SRPON},\text{SRPOP},\text{PIP}$) are omiited, 
+and $(FCP_4^m,FCM_4^m,FNP_5^m,FNM_5^m,FPP_5^m,FPM_5^m)=0, (KC_S,KN_S,KP_S,KP_P)=0$ 
 
 **Phytoplankton (PB1, PB2, PB3)**:
 
@@ -52,23 +55,8 @@ SFM Module (no transport variables)
   & d\text{PB}^i = \text{GP}^i-\text{MT}^i-\text{PR}^i \text{ ,   i=1,3}  \\
 \end{flalign}
 
+
 **Carbon (RPOC, LPOC, DOC)**:
-
-\begin{flalign}
-  & d\text{RPOC} = -KC_1 \cdot \text{RPOC}+ \sum_{m=1,3} FCP_1^m \cdot \text{PR}^m \\
-  & d\text{LPOC} = -KC_2 \cdot \text{LPOC}+ \sum_{m=1,3} FCP_2^m \cdot \text{PR}^m \\
-  & \begin{split}
-    & d\text{DOC}=KC_1 \cdot \text{RPOC}+ KC_2 \cdot \text{LPOC}-K_{HR} \cdot \text{DOC} -Denit \cdot \text{DOC} \\
-    & + \sum_{m=1,3} FCP_3^m \cdot \text{PR}^m + \sum_{m=1,3} \left[FCM^m+ \left(1-FCM^m\right) \cdot \frac{KhDO^m}{DO+KhDO^m} \right] \cdot \text{MT}^m \\
-  & \end{split}
-\end{flalign}
-
-<p style="color:red","bold"> 
-**CBP change is shown below:**  <br>
-1). partitioning coefficients of FCM (metabolism) and FCP (predation) are expanded into 2D parameters dims(PB=1:3,C=1:4),where the last dimension C=4 refers to SRPOC <br>
-2). need to add check on the sum of FCP and FCM in the model
-3). If CBP module is turned off, FCP_4 and FCM_4 will set to zero in the model
-</p>
 
 \begin{flalign}
   & d\text{RPOC} = -KC_1 \cdot \text{RPOC}+ \sum_{m=1,3} \left( FCP_1^m \cdot \text{PR}^m + FCM_1^m \cdot \text{MT}^m \right)\\
@@ -80,51 +68,27 @@ SFM Module (no transport variables)
   & d\text{SRPOC} = -KC_S \cdot \text{SRPOC}+ \sum_{m=1,3} \left( FCP_4^m \cdot \text{PR}^m + FCM_4^m \cdot \text{MT}^m \right)\\
 \end{flalign}
 
+
 **Nitrogen (RPON, LPON, DON, NH4, NO3)**:
 
 \begin{flalign}
-  & d\text{RPON} = -KN_1 \cdot \text{RPON}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_1 \cdot \text{PR}^m + FNM_1^m \cdot \text{MT}^m \right) \\
-  & d\text{LPON} = -KN_2 \cdot \text{LPON}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_2 \cdot \text{PR}^m + FNM_2^m \cdot \text{MT}^m \right) \\
-  & d\text{DON} = KN_1 \cdot \text{RPON} + KN_2 \cdot \text{LPON} -KN_3 \cdot \text{DON} + \sum_{m=1,3} n2c^m \cdot \left( FNP_3 \cdot \text{PR}^m + FNM_3^m \cdot \text{MT}^m \right) \\
-  & d\text{NH4} = KN_3 \cdot \text{DON}-Nit \cdot \text{NH4}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_4 \cdot \text{PR}^m + FNM_4^m \cdot \text{MT}^m -fPN^m \cdot \text{GP}^m \right) \\
-  & d\text{NO3} = Nit \cdot \text{NH4}-dn2c \cdot Denit \cdot \text{DOC}-\sum_{m=1,3} n2c^m \cdot \left( 1-fPN^m \right) \cdot \text{GP}^m  \\
-\end{flalign}
-
-<p style="color:red","bold"> 
-**CBP change is shown below:**  <br>
-1). partitioning coefficients of FNM (metabolism) and FNP (predation) are expanded into 2D parameters dims(PB=1:3,N=1:5), where the last dimension N=5 refers to SRPON <br>
-2). need to add check on the sum of FNP and FNM in the model <br>
-3). If CBP module is turned off, FNP_5 and FNM_5 will set to zero in the model <br>
-4). Note the equations for (RPON,LPON,NH4,NO3) keep the same, except the FNP dimensions are expended.
-</p>
-
-\begin{flalign}
+  & d\text{RPON} = -KN_1 \cdot \text{RPON}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_1^m \cdot \text{PR}^m + FNM_1^m \cdot \text{MT}^m \right) \\
+  & d\text{LPON} = -KN_2 \cdot \text{LPON}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_2^m \cdot \text{PR}^m + FNM_2^m \cdot \text{MT}^m \right) \\
   & \begin{split} 
      & d\text{DON} = KN_1 \cdot \text{RPON} + KN_2 \cdot \text{LPON} + KN_S \cdot \text{SRPON} -KN_3 \cdot \text{DON} \\
      & + \sum_{m=1,3} n2c^m \cdot \left( FNP_3^m \cdot \text{PR}^m + FNM_3^m \cdot \text{MT}^m \right) 
   & \end{split} \\
+  & d\text{NH4} = KN_3 \cdot \text{DON}-Nit \cdot \text{NH4}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_4^m \cdot \text{PR}^m + FNM_4^m \cdot \text{MT}^m -fPN^m \cdot \text{GP}^m \right) \\
+  & d\text{NO3} = Nit \cdot \text{NH4}-dn2c \cdot Denit \cdot \text{DOC}-\sum_{m=1,3} n2c^m \cdot \left( 1-fPN^m \right) \cdot \text{GP}^m  \\
   & d\text{SRPON} = -KN_S \cdot \text{SRPON}+ \sum_{m=1,3} n2c^m \cdot \left( FNP_5^m \cdot \text{PR}^m + FNM_5^m \cdot \text{MT}^m \right)\\
 \end{flalign}
+
 
 **Phosphorus (RPOP, LPOP, DOP, PO4)**:
 
 \begin{flalign}
-  & d\text{RPOP}= -KP_1 \cdot \text{RPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_1 \cdot \text{PR}^m + FPM_1^m \cdot \text{MT}^m \right) \\
-  & d\text{LPOP}= -KP_2 \cdot \text{LPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_2 \cdot \text{PR}^m + FPM_2^m \cdot \text{MT}^m \right) \\
-  & d\text{DOP} = KP_1 \cdot \text{RPOP} + KP_2 \cdot \text{LPOP} -KP_3 \cdot \text{DOP}  + \sum_{m=1,3} p2c^m \cdot \left( FPP_3 \cdot \text{PR}^m + FPM_3^m \cdot \text{MT}^m \right) \\ 
-  & d\text{PO4} = KP_3 \cdot \text{DOP} + \sum_{m=1,3} p2c^m \cdot \left( FPP_4 \cdot \text{PR}^m + FPM_4^m \cdot \text{MT}^m - \text{GP}^m \right) \\
-\end{flalign}
-
-<p style="color:red","bold"> 
-**CBP change is shown below:**  <br>
-1). partitioning coefficients of FPM (metabolism) and FPP (predation) are expanded into 2D parameters dims(PB=1:3,P=1:5), where the last dimension P=5 refers to SRPOP <br>
-2). need to add check on the sum of FPP and FPM in the model (check in the subroutine, because of spatially varying variables) <br>
-3). If CBP module is turned off, FPP_5 and FPM_5 will set to zero in the model <br>
-4). Check the source of PIP (from external inputs ? )  
-4). Note the equations for (RPOP,LPOP) keep the same,except that FPP dimension is expended. 
-</p>
-
-\begin{flalign}
+  & d\text{RPOP}= -KP_1 \cdot \text{RPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_1^m \cdot \text{PR}^m + FPM_1^m \cdot \text{MT}^m \right) \\
+  & d\text{LPOP}= -KP_2 \cdot \text{LPOP}+ \sum_{m=1,3} p2c^m \cdot \left( FPP_2^m \cdot \text{PR}^m + FPM_2^m \cdot \text{MT}^m \right) \\
   & \begin{split} 
      & d\text{DOP} = KP_1 \cdot \text{RPOP} + KP_2 \cdot \text{LPOP} + KP_S \cdot \text{SRPOP} -KP_3 \cdot \text{DOP}  \\
      & + \sum_{m=1,3} p2c^m \cdot \left( FPP_3^m \cdot \text{PR}^m + FPM_3^m \cdot \text{MT}^m \right) 
@@ -138,22 +102,10 @@ SFM Module (no transport variables)
 
 \begin{flalign}
  & d\text{COD} = -K_{COD} \cdot \text{COD}  \\
- & \begin{split}
+ & \begin{split} \\
    & d\text{DO} = -o2n \cdot Nit \cdot \text{NH4} -o2c \cdot K_{HR} \cdot \text{DOC} -K_{COD} \cdot \text{COD} \\
-   & \sum_{m=1,3} o2c \cdot \left[ \left(1.3-0.3 \cdot fPN^m \right) \cdot \text{GP}^m -\left(1-FCM^m \right) \cdot \frac{DO}{DO+KhDO^m} \cdot \text{MT}^m \right] \\  
- & \end{split}
-\end{flalign}
-
-<p style="color:red","bold"> 
-**CBP change is shown below:**  <br>
- the change of equation of DO is minor: only in FCM
-</p>
-
-\begin{flalign}
- & \begin{split}
-   & d\text{DO} = -o2n \cdot Nit \cdot \text{NH4} -o2c \cdot K_{HR} \cdot \text{DOC} -K_{COD} \cdot \text{COD} \\
-   & \sum_{m=1,3} o2c \cdot \left[ \left(1.3-0.3 \cdot fPN^m \right) \cdot \text{GP}^m -\left(1- \sum_{i=1,4} FCM_i^m \right) \cdot \frac{DO}{DO+KhDO^m} \cdot \text{MT}^m \right] \\  
- & \end{split}
+   & + \sum_{m=1,3} o2c \cdot \left[ \left(1.3-0.3 \cdot fPN^m \right) \cdot \text{GP}^m -\left(1- \sum_{i=1,4} FCM_i^m \right) \cdot \frac{DO}{DO+KhDO^m} \cdot \text{MT}^m \right] \\  
+ & \end{split} \\
 \end{flalign}
 
 
@@ -162,21 +114,13 @@ SFM Module (no transport variables)
 #### 1.2.1. Growth, metabolism, predation
 \begin{flalign}
   & \text{GP}^i = \text{GPM}^i \cdot f(T) \cdot f(Sal) \cdot f(I) \cdot \text{min} \left[ f(N),f(P),f(S) \right] \cdot \text{PB}^i \\
-  & \text{MT}^i = \text{MTB}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \text{PB}^i \\
-  & \text{PR}^i = \text{PRR}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \text{PB}^i \\ 
+  & \text{MT}^i = \text{MTR}^i \cdot \text{GP} +\text{MTB}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \text{PB}^i \\
+  & \text{PR}^i =
+\begin{cases} 
+  & \text{PRR}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \text{PB}^i \text{,        iPR=0} \\ 
+  & \text{PRR}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \left( \text{PB}^i \right)^2 \text{,   iPR=1} \\ 
+\end{cases} \\ 
 \end{flalign}
-
-<p style="color:red","bold"> 
-**CBP change is shown below:  ** <br>
- 1). MT will use the new equation. revert back by using Presp=0 <br>
- 2). We will add options for PR formulation: (=0: linear; =1: quadratic)
-</p>
-
-\begin{flalign}
-  & \text{CBP} \Rightarrow \text{MT}^i = Presp \cdot \text{GP} +\text{MTB}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \text{PB}^i \\
-  & \text{CBP} \Rightarrow \text{PR}^i = \text{PRR}^i \cdot \text{exp} \left[ KT_{MT}^i \cdot \left( T-T_{MT}^i \right) \right] \cdot \left( \text{PB}^i \right)^2 \\ 
-\end{flalign}
-
 
 \begin{flalign}
   & f(I)= \frac{\text{mLight}}{\sqrt{\text{mLight}^2+IK^2}}   \\
