@@ -72,7 +72,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   FPON(1)=FPON(1)+WSPn(iLPON)*wLPON
   FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
   if(iCBP==1) then
-      FPOP(1)=FPOP(1)+WSPn(iPIP)*wPIP   !PIP contribution
+      bPO4(id)=bPO4(id)+dtw*WSPn(iPIP)*wPIP !PIP contribution
       FPOC(2)=FPOC(2)+WSPn(iRPOC)*wRPOC !RPOM contribution
       FPON(2)=FPON(2)+WSPn(iRPON)*wRPON
       FPOP(2)=FPOP(2)+WSPn(iRPOP)*wRPOP
