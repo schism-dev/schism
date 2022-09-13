@@ -76,6 +76,7 @@
                                      ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM: ! 1: exterior bnd; -1: interior (islands)
                                      ! exterior and interior boundaries need not to be defined.
  IBOUNDFORMAT   = 3                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only). WW3 works only with LBCWA=T.
+                                     ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (works with prescribed spectra only).
  FILEWAVE       = 'bndfiles.dat'     ! Boundary file defining boundary input from WW3
  LINDSPRDEG     = F                  ! If 1-d wave spectra are read this flag defines whether the input for the directional spreading is in degrees (true) or exponent (false)
  LPARMDIR       = F                  ! If LPARMDIR is true then directional spreading is read from WBDS and must be in exponential format at this time, only valid for 1d Spectra

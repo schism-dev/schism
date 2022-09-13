@@ -737,7 +737,7 @@
 
 !      iwind_form=0 !init.
       if(nws/=0) then
-        if(iwind_form<-2.or.iwind_form>1) then
+        if(iwind_form<-3.or.iwind_form>1) then
           write(errmsg,*)'Unknown iwind_form',iwind_form
           call parallel_abort(errmsg)
         endif

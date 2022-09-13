@@ -518,7 +518,9 @@
 ! routine; 
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
-! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2, stress is overwritten by WWM.
+! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:
+! If iwind_form=-2, stress=rho_air*ufric^2; scaled by rho_water
+! If iwind_form=-3, the stress is calculated according to the param. of Donelan et al. (1993) based on the wave age.
 ! In all cases, if USE_ICE the stress in ice-covered portion is calculated by ICE routine.
 !-----------------------------------------------------------------------
   nws = 0 

@@ -85,6 +85,7 @@
                                      ! 2: active bnd (Direchlet). Bnd flags imported from SELFE:
                                      ! 1: exterior bnd; -1: interior (islands)
  IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 2 ~ FVCOM: 3 ~ WW3. FVCOM and WW3 works only with LBCWA=T.
+                                     ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (works with prescribed spectra only).
                                      ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
                                      ! LMONO_IN = F ! incident wave is defined as monochromatic wave height, which is Hmono = sqrt(2) * Hs
                                      ! The following are needed only if LBCWA=T and LINHOM=F
