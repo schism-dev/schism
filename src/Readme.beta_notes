@@ -551,7 +551,7 @@ git versions:
 (135) dde345f (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0: 
                               uninit'ed stress values.
 (136) 6524e19 (27 April 2022): merged with La Rochelle group on WWM  (VOR);
-(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a fram change
+(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a frame transformation
                              for better vel near poles.
 ================================================================================================
 (D) Auto-test history:
