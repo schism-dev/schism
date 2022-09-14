@@ -395,7 +395,7 @@
                 !Extend near bottom
                 klev0=-1 !flag
                 do k=1,ilen
-                  if(salt(i,j,k)>rjunk) then
+                  if(salt(i,j,k)>=rjunk+0.1) then
                     klev0=k; exit
                   endif
                 enddo !k
@@ -605,7 +605,7 @@
                 !Extend bottom - kbp changes over time
                 klev0=-1 !flag
                 do k=1,ilen
-                  if(salt(i,j,k)>rjunk) then 
+                  if(salt(i,j,k)>=rjunk+0.1) then 
                     klev0=k; exit
                   endif
                 enddo !k
