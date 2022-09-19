@@ -3101,6 +3101,9 @@
      &    u_air, v_air, p_air, t_air, q_air
       real(rkind), dimension(num_nodes), intent(out) :: &
      &    sen_flux, lat_flux, tau_xz, tau_yz
+#ifdef PREC_EVAP
+        real(rkind), dimension(num_nodes), intent(out) :: evap_flux
+#endif
 
 !      REAL(rkind),INTENT(IN) :: wspd0,patm,TairC,TseaC,RH0,radlw,radsw
 !      REAL(rkind),INTENT(OUT) :: stflx
