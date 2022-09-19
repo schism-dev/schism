@@ -96,6 +96,13 @@
                    CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SNL3,  NDYNITER_SNL3 , ACLOC, NIT_SNL3,4)! Snl3
                    CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBR,  NDYNITER_SBR  , ACLOC, NIT_SBR,5) ! Sbr
                    CALL INT_IP_DYN(IP, DT4S, LLIMT, DTMIN_SBF,  NDYNITER_SBF  , ACLOC, NIT_SBF,6) ! Sbf
+                 ELSE IF (SMETHOD == 6) THEN
+                   IF ((MESBR .GT. 0 .OR. MESBF .GT. 0 .OR. MEVEG .GT. 0) .AND. ISHALLOW(IP).EQ. 1) CALL INT_SHALLOW_SOURCETERMS(IP,DT4S,ACLOC)
+                   IF (LSOURCESWAM) THEN
+                     CALL SOURCE_INT_EXP_WAM(IP, ACLOC)
+                   ELSE
+                     CALL INT_IP_STAT(IP,DT4S,LLIMT,ACLOC,20)
+                   ENDIF																											  
                  END IF
                  CALL SOURCETERMS(IP, ACLOC, IMATRA, IMATDA, .TRUE., 1, 'RECALC BOUNDARY') ! Update everything based on the new spectrum ...
                  IF (LMAXETOT .AND. .NOT. LADVTEST .AND. ISHALLOW(IP) .EQ. 1) THEN
@@ -265,7 +272,7 @@
          REAL(rkind)  :: SSNL3(MSC,MDC),DSSNL3(MSC,MDC), DSSVEG(MSC,MDC)
          REAL(rkind)  :: SSBR(MSC,MDC),DSSBR(MSC,MDC), SSVEG(MSC,MDC)
          REAL(rkind)  :: SSBF(MSC,MDC),DSSBF(MSC,MDC), SSINL(MSC,MDC)
-         REAL(rkind)  :: SBRTOT, SBFTOT
+         REAL(rkind)  :: SBRTOT, SBFTOT, SVEGTOT
          REAL(rkind)  :: ETOT,SME01,SME10,SMECP,KME01,KMWAM,KMWAM2,HS,WIND10
          REAL(rkind)  :: ETAIL,EFTAIL,EMAX,LIMAC,NEWDAC,FPM,WINDTH,TEMP,GTEMP1
          REAL(rkind)  :: RATIO,LIMFAC,LIMDAC,GTEMP2,FLHAB,DELFL,USFM, NEWDACDT
@@ -285,7 +292,7 @@
 !$OMP&         LSOUBOUND,LINID,MESTR,MESBR,MESBF,LIMFAK,&
 !$OMP&         COFRM4,WINDFAC,MESIN,MESDS,MESNL,SPSIG) &
 !$OMP&         PRIVATE(IP,ACLOC,AC2,IMATDA,IMATRA,IMATRAA,IMATDAA, &
-!$OMP&         SSNL3,DSSNL3,SSBR,DSSBR,SSBF,DSSBF,FL3,FL,Z0NEW,&
+!$OMP&         SSNL3,DSSNL3,SSBR,DSSBR,SSBF,DSSBF,SSVEG,DSSVEG,FL3,FL,Z0NEW,&
 !$OMP&         SSDS,DSSDS,JAC,USNEW,ZIDLNEW,FF,FMEAN,USFM,LIMFAC,&
 !$OMP&         FCONST,ZIDLOLD,TAUW,USOLD,WINDXY,WIND10,WINDTH,&
 !$OMP&         TEMP,HS,ETOT,FPM,ISHALLOW,KME01,SME10,KMWAM, &
@@ -425,11 +432,19 @@
                END IF
 
                ! Interaction with vegetation
-               IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+               IF (MEVEG .GT. 0) THEN
+                 CALL VEGDISSIP(IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+                 CALL COMPUTE_WAVE_SVEGTOT(-(DSSVEG*ACLOC-SSVEG),SVEGTOT)
+                 WAVE_SVEGTOT(IP) = SVEGTOT
+                 ! In case of VOR + implicit mode, we deal with the SBR term here
+                 IF (RADFLAG .EQ. 'VOR') THEN
+                   CALL COMPUTE_SVEG(IP,-(DSSVEG*ACLOC-SSVEG))
+                 ENDIF
+               ENDIF
 
                ! Updating matrices with these source terms
                IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG
-               IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG  
+               IMATRAA(:,:,IP) = IMATRAA(:,:,IP) + SSBR + SSNL3 + SSVEG
              ENDIF ! ISHALLOW(IP) .EQ. 1
            ELSE ! IOBP(IP) .NE. 0
              IF (LSOUBOUND) THEN ! Source terms on boundary ...
@@ -520,7 +535,15 @@
                    END IF
 
                    ! Interaction with vegetation
-                   IF (MEVEG .GT. 0) CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+                   IF (MEVEG .GT. 0) THEN
+                     CALL VEGDISSIP(IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+                     CALL COMPUTE_WAVE_SVEGTOT(-(DSSVEG*ACLOC-SSVEG),SVEGTOT)
+                     WAVE_SVEGTOT(IP) = SVEGTOT					 
+                     ! In case of VOR + implicit mode, we deal with the SBF term here
+                     IF (RADFLAG .EQ. 'VOR') THEN
+                       CALL COMPUTE_SVEG(IP,-(DSSVEG*ACLOC-SSVEG))
+                     ENDIF
+                   ENDIF
 
                    ! Updating matrices with these source terms
                    IMATDAA(:,:,IP) = IMATDAA(:,:,IP) + DSSBR  + DSSNL3 + DSSBF + DSSVEG
@@ -676,7 +699,7 @@
          REAL(rkind) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
          REAL(rkind) :: SSBR(MSC,MDC), DSSBR(MSC,MDC), SURFA0_CUM, SSBR_TOTAL(MSC,MDC)
          REAL(rkind) :: SSBF(MSC,MDC), DSSBF(MSC,MDC), SBFTOT, SBFTOT_CUM, SSBF_TOTAL(MSC,MDC)
-         REAL(rkind) :: DSSVEG(MSC,MDC), SSVEG(MSC,MDC)
+         REAL(rkind) :: DSSVEG(MSC,MDC), SSVEG(MSC,MDC), SVEGTOT, SVEGTOT_CUM, SSVEG_TOTAL(MSC,MDC)
          REAL(rkind) :: SSNL3(MSC,MDC), DSSNL3(MSC,MDC)
 
          ! Depth-induced breaking
@@ -749,7 +772,7 @@
          AC2(:,:,IP) = ACLOC
          IF (MEVEG .GE. 1) THEN
            ! Initialization
-           IMATRA = ZERO; IMATDA = ZERO
+           IMATRA = ZERO; IMATDA = ZERO; SVEGTOT_CUM = ZERO
            CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
            CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
 
@@ -765,6 +788,8 @@
 
            ! Integration with sub-cycles
            DO TI = 1, NB_SUBITE
+             CALL COMPUTE_WAVE_SVEGTOT(SSVEG,SVEGTOT)
+             SVEGTOT_CUM = SVEGTOT_CUM + SVEGTOT*DT_LOC
              DO ID = 1, MDC
                DO IS = 1, MSC
                  NEWDAC = DT_LOC*IMATRA(IS,ID) / (ONE - DT_LOC*MIN(ZERO,IMATDA(IS,ID)))
@@ -778,6 +803,16 @@
              CALL MEAN_WAVE_PARAMETER(IP, ACLOC, HS, ETOT, SME01, SME10, SMECP, KME01, KMWAM, KMWAM2)
              CALL VEGDISSIP(IP, IMATRA, IMATDA, SSVEG, DSSVEG ,ACLOC, DEP(IP), ETOT, SME01, KME01)
            END DO
+
+           ! Compute the total wave energy dissipation rate by vegetation
+           WAVE_SVEGTOT(IP) =  SVEGTOT_CUM/DT
+
+           ! Storing the vegetation-induced source term for the wave force
+           ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSVEG
+           SSVEG_TOTAL = (AC2(:,:,IP) - ACLOC)/DT
+           
+           ! Compute SVEG for SCHISM
+           IF (RADFLAG .EQ. 'VOR') CALL COMPUTE_SVEG(IP, -SSVEG_TOTAL)
          END IF
 
          ! Bottom friction
@@ -819,8 +854,8 @@
            ! Compute the total wave energy dissipation rate by bottom friction
            WAVE_SBFTOT(IP) =  SBFTOT_CUM/DT
            
-           ! Storing the wave breaking-induced source term for the wave force
-           ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSBR
+           ! Storing the wave friction-induced source term for the wave force
+           ! Otherwise, at the end of the sub-cycles, only a fraction of what is dissipated is stored in SSBF
            SSBF_TOTAL = (AC2(:,:,IP) - ACLOC)/DT
            
            ! Compute SBF for SCHISM

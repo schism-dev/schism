@@ -348,6 +348,8 @@
              CALL COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM ! Conservative terms (relative to Stokes drift advection, Coriolis and pressure head: Eq. 17, 19 and 20 from Bennis 2011)
              IF (fwvor_breaking == 1) CALL COMPUTE_BREAKING_VF_TERMS_SCHISM     ! Sink of momentum due to wave breaking and update wwave_force
              IF (fwvor_streaming == 1) CALL COMPUTE_STREAMING_VF_TERMS_SCHISM ! Sink of momentum due to bottom streaming and update wwave_force
+             IF (fwvor_wveg == 1) CALL COMPUTE_VEGDISS_VF_TERMS_SCHISM     ! Sink of momentum due to wave dissipation by vegetation and update wwave_force            
+             IF (fwvor_wveg_NL == 1) CALL COMPUTE_INTRAWAVE_VEG_FORCE	   ! Compute non linear intrawave vegetation force and update wwave_force
            ELSE ! Radiation stress formalism (Longuet-Higgins and Stewart, 1962 and 1964) as described in Battjes (1974)
              CALL RADIATION_STRESS_SCHISM
            ENDIF

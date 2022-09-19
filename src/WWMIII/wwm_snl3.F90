@@ -72,9 +72,11 @@
             END IF
           ELSE
             IMATRA(IS,ID) = IMATRA(IS,ID) + eCont
-            IMATDA(IS,ID) = ZERO !IMATDA(IS,ID) + STRI / (ACLOC(IS,ID)*SIGPI)
+            !IMATDA(IS,ID) = ZERO !IMATDA(IS,ID) + STRI / (ACLOC(IS,ID)*SIGPI)
+            IMATDA(IS,ID) = STRI / MAX(1.E-18,ACLOC(IS,ID)*SIGPI)			
             SSNL3(IS,ID)  = eCont
-            DSSNL3(IS,ID) = eCont / ACLOC(IS,ID)
+            !DSSNL3(IS,ID) = eCont / ACLOC(IS,ID)
+            DSSNL3(IS,ID) = STRI / MAX(1.E-18,ACLOC(IS,ID)*SIGPI)			
           END IF
         END DO
       END DO

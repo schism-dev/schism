@@ -86,7 +86,8 @@ module schism_glbl
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
-                  &fwvor_streaming,cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
+				  &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
@@ -588,7 +589,7 @@ module schism_glbl
 ! WWM
 !#ifdef USE_WWM
   integer,save :: msc2,mdc2
-  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:),sds(:,:), eps_w(:), eps_r(:),eps_br(:)
+  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
   real(rkind),save,allocatable :: roller_stokes_hvel(:,:,:), roller_stokes_hvel_side(:,:,:)
   !real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
@@ -602,6 +603,7 @@ module schism_glbl
   real(rkind),save,allocatable :: wave_sbftot(:)
   real(rkind),save,allocatable :: wave_sintot(:)
   real(rkind),save,allocatable :: wave_sdstot(:)
+  real(rkind),save,allocatable :: wave_svegtot(:)
 !#endif
 
 ! TIMOR

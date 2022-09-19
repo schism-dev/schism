@@ -16,7 +16,7 @@
       USE DATAPOOL, ONLY : MESTR, ISHALLOW, DS_INCR, IOBP, IOBPD, MEVEG
       USE DATAPOOL, ONLY : LNANINFCHK, DBG, WRITEDBGFLAG, IFRIC, RTIME, DISSIPATION
       USE DATAPOOL, ONLY : AIRMOMENTUM, ONEHALF, NSPEC, RKIND, ICOMP, IROLLER
-      USE DATAPOOL, ONLY : WAVE_SBRTOT, WAVE_SBFTOT, WAVE_SINTOT, WAVE_SDSTOT
+      USE DATAPOOL, ONLY : WAVE_SBRTOT, WAVE_SBFTOT, WAVE_SINTOT, WAVE_SDSTOT, WAVE_SVEGTOT
       USE DATAPOOL, ONLY : EPS_W, EPS_BR
       USE DATAPOOL, ONLY : RHOW
 #ifdef WWM_MPI
@@ -61,7 +61,7 @@
          REAL(rkind)    :: SSVEG(MSC,MDC),DSSVEG(MSC,MDC), DSSBF(MSC,MDC)
          REAL(rkind)    :: SSBF(MSC,MDC), SSBR(MSC,MDC), SSINE(MSC,MDC), DSSNL3(MSC,MDC), DSSBR(MSC,MDC)
          REAL(rkind)    :: TMP_IN(MSC), TMP_DS(MSC), WN2(MSC*MDC),SPRDD(MDC),AK2VGM1,AKM1
-         REAL(rkind)    :: SINTOT,SDSTOT,SBRTOT,SBFTOT
+         REAL(rkind)    :: SINTOT,SDSTOT,SBRTOT,SBFTOT, SVEGTOT
 
          REAL(rkind)    :: EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, AS
          REAL(rkind)    :: FMEANWS, TAUWAX, TAUWAY, XJ, FLLOWEST, GADIAG
@@ -417,7 +417,7 @@
                ENDIF
                ! In case of VOR + implicit mode, we deal with the SBR term here
                ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
-               ! In exlicit, we should use SMETHOD = 6, and SBR is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+               ! In explicit, we should use SMETHOD = 6, and SBR is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
                IF ( ISELECT.EQ.10 ) THEN 
                  CALL COMPUTE_WAVE_SBRTOT(-(DSSBR*ACLOC-SSBR),SBRTOT)
                  WAVE_SBRTOT(IP) = SBRTOT
@@ -442,7 +442,7 @@
               CALL SDS_BOTF(IP,ACLOC,IMATRA,IMATDA,SSBF,DSSBF)
               ! In case of VOR + implicit mode, we deal with the SBF term here
               ! In implicit, ISELECT.EQ.10 => call from SOURCE_INT_IMP_WWM
-              ! In exlicit, we should use SMETHOD = 6, and SBF is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
+              ! In explicit, we should use SMETHOD = 6, and SBF is computed in SUBROUTINE INT_SHALLOW_SOURCETERMS
               ! In contrast to the breaking source term, the friction source term is not linearized (hence SSBF) 
               IF ( ISELECT.EQ.10 ) THEN 
                 CALL COMPUTE_WAVE_SBFTOT(SSBF,SBFTOT)
@@ -459,6 +459,11 @@
            IF (((ISELECT.EQ.6 .OR. ISELECT.EQ.10 .OR. ISELECT.EQ.30) .AND. ISHALLOW(IP) .EQ. 1) .AND. .NOT. LRECALC) THEN
              IF (IOBP(IP) == 0 .OR. IOBP(IP) == 4 .OR. IOBP(IP) == 3) THEN
               CALL VEGDISSIP (IP,IMATRA,IMATDA,SSVEG,DSSVEG,ACLOC,DEP(IP),ETOT,SME01,KME01)
+              IF ( ISELECT.EQ.10 ) THEN 
+                CALL COMPUTE_WAVE_SVEGTOT(-(DSSVEG*ACLOC-SSVEG),SVEGTOT)
+                WAVE_SVEGTOT(IP) = SVEGTOT
+              ENDIF  
+              IF ( ISELECT.EQ.10 .AND. RADFLAG .EQ. 'VOR' ) CALL COMPUTE_SVEG(IP,-(DSSVEG*ACLOC-SSVEG))																							
              END IF
            END IF
          ENDIF
@@ -630,6 +635,28 @@
       DO IS = 1, MSC
         DO ID = 1, MDC
           SDSTOT = SDSTOT + SPSIG(IS)*SSDS(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
+        END DO
+      END DO
+    END SUBROUTINE
+#endif
+!**********************************************************************
+!*                                                                    *
+!**********************************************************************
+#ifdef SCHISM
+    SUBROUTINE COMPUTE_WAVE_SVEGTOT(SSVEG,SVEGTOT)
+      USE DATAPOOL
+      IMPLICIT NONE
+      INTEGER                 :: IS, ID
+      REAL(rkind), INTENT(IN) :: SSVEG(MSC,MDC)
+      REAL(rkind), INTENT(OUT):: SVEGTOT
+	  
+      ! Initialization
+      SVEGTOT = ZERO
+
+      ! Loop over frequencies and directions
+      DO IS = 1, MSC
+        DO ID = 1, MDC
+          SVEGTOT = SVEGTOT + SPSIG(IS)*SSVEG(IS,ID)*DS_INCR(IS)*DDIR*G9*RHOW
         END DO
       END DO
     END SUBROUTINE

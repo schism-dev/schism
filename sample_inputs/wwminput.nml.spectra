@@ -11,10 +11,10 @@
 
 &PROC
  PROCNAME       = 'limon'            ! Project Name
- DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SELFE
+ DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SCHISM
  LSTEA          = F                  ! steady mode; under development
  LQSTEA         = F                  ! Quasi-Steady Mode; In this case WWM-II is doing subiterations defined as DELTC/NQSITER unless QSCONVI is not reached
- LSPHE          = F                  ! Spherical coordinates
+ LSPHE          = F                  ! Spherical coordinates (lon/lat)
  LNAUTIN        = T                  ! Nautical convention for all inputs given in degrees (suggestion: T)
                                      ! If T, 0 is _from_ north, 90 is from east etc;
                                      ! If F, maths. convention - 0: to east; 90: going to north
@@ -25,11 +25,11 @@
  DELTC          = 5                 ! Time step (MUST match dt*nstep_wwm in SCHISM!)
  UNITC          = 'SEC'              ! Unity of time step
  ENDTC          = '19980901.060000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
- DMIN           = 0.01              ! Minimum water depth. Use 'h0' as in SCHISM
+ DMIN           = 0.01              ! Minimum water depth. This must be the same as h0 in SCHISM
 /
 
 &COUPL
- LCPL           = T                  ! Couple with current model ... main switch - keep it on
+ LCPL           = T                  ! Couple with current model ... main switch - keep it on for SCHISM-WWM
  LROMS          = F                  ! ROMS (set as F)
  LTIMOR         = F                  ! TIMOR (set as F)
  LSHYFEM        = F                  ! SHYFEM (set as F)
@@ -38,28 +38,28 @@
                                      ! e.g. Etot = Int,0,inf;Int,0,2*pi[N(sigma,theta)]dsigma,dtheta. If .F. the radiation stress is estimated as given in Roland et al. (2008) based
                                      ! on the directional spectra itself. It is always desirable to use .F., since otherwise the spectral informations are truncated and therefore
                                      ! LETOT = .T., is only for testing and developers!
- NLVT           = 10                 ! Number of vertical Layers; not used with SELFE
- DTCOUP         = 600.               ! Couple time step - not used when coupled to SELFE
+ NLVT           = 10                 ! Number of vertical Layers; not used with SCHISM
+ DTCOUP         = 600.               ! Couple time step - not used when coupled to SCHISM
 /
 
 &GRID
  LCIRD          = T                  ! Full circle in directional space
- LSTAG          = T                  ! Stagger directional bins with a half Dtheta; may use T only for regular grid to avoid char. line aligning with grid line
+ LSTAG          = F                  ! Stagger directional bins with a half Dtheta; may use T only for regular grid to avoid char. line aligning with grid line
  MINDIR         = 0.                 ! Minimum direction for simulation (unit: degrees; nautical convention; 0: from N; 90: from E); not used if LCIRD = .T.
  MAXDIR         = 360.               ! Maximum direction for simulation (unit: degrees); may be < MINDIR; not used if LCIRD = .T.
- MDC = 36                 ! Number of directional bins
+ MDC            = 36                 ! Number of directional bins
  FRLOW          = 0.04               ! Low frequency limit of the discrete wave period (Hz; 1/period)
  FRHIGH         = 1.                 ! High frequency limit of the discrete wave period.
- MSC = 36                 ! Number of frequency bins
- IGRIDTYPE      = 3                  ! Gridtype used. 1 ~ XFN, 2 ~ WWM-PERIODIC, 3 ~ SELFE, 4 ~ OLD WWM GRID
- FILEGRID       = 'hgrid_WWM.gr3'        ! Name of the grid file. hgrid.gr3 or hgrid.ll if IGRIDTYPE = 3 (SELFE)
+ MSC            = 36                 ! Number of frequency bins
+ IGRIDTYPE      = 3                  ! Gridtype used. 1 ~ XFN, 2 ~ WWM-PERIODIC, 3 ~ SCHISM, 4 ~ OLD WWM GRID
+ FILEGRID       = 'hgrid_WWM.gr3'    ! Name of the grid file. hgridi_WWM.gr3 if IGRIDTYPE = 3 (SCHISM)
  LSLOP          = F                  ! Bottom Slope limiter (default=F)
  SLMAX          = 0.2                ! Max Slope;
- LVAR1D         = F                  ! For 1d-mode if variable dx is used; not used with SELFE
+ LVAR1D         = F                  ! For 1d-mode if variable dx is used; not used with SCHISM
 /
 
 &INIT
- LHOTR          = F                  ! Use hotstart file. If T, the name is specified in &HOTFILE
+ LHOTR          = F                  ! Use hotstart file. (see &HOTFILE section for input file)
  LINID          = F                  ! Initial condition; F for default; use T if using WW3 as i.c. etc
  INITSTYLE      = 1                  ! 1 - Parametric Jonswap, 2 - Read from Global NETCDF files, work only if IBOUNDFORMAT=3
 /
@@ -78,14 +78,14 @@
 
  BEGTC          = '19980901.000000'  ! Begin time of the wave boundary file (FILEWAVE)
  DELTC          = 1                  ! Time step in FILEWAVE
- UNITC          = 'HR'               ! Unit
+ UNITC          = 'HR'               ! Unit can be HR, MIN, SEC 
  ENDTC          = '19981002.000000'  ! End time
  FILEBOUND      = 'wwmbnd.gr3'       ! Boundary file defining boundary and Neumann nodes.
                                      ! Flag 0: not on bnd; 3: Neumann (0 gradient);
-                                     ! 2: active bnd (Direchlet). Bnd flags imported from SELFE:
+                                     ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM:
                                      ! 1: exterior bnd; -1: interior (islands)
- IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 2 ~ FVCOM: 3 ~ WW3. FVCOM and WW3 works only with LBCWA=T.
-                                     ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (works with prescribed spectra only).
+ IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only - LBCWA=T).
+                                     ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (prescribed spectra).
                                      ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
                                      ! LMONO_IN = F ! incident wave is defined as monochromatic wave height, which is Hmono = sqrt(2) * Hs
                                      ! The following are needed only if LBCWA=T and LINHOM=F
@@ -96,7 +96,7 @@
  WBTP           = 8.                 ! Tp at the boundary (sec); mean or peak depending on the sign of WBSS
  WBDM           = 90.0               ! Avg. Wave Direction at the boundary
  WBDSMS         = 1.                 ! Directional spreading value in degrees (1) or as exponent (2)
- WBDS           = 20.                 ! Directioanl spreading at the boundary (degrees/exponent)
+ WBDS           = 20.                ! Directional spreading at the boundary (degrees/exponent)
  WBGAUSS        = 0.1                ! factor for gaussian distribution if WBSS=1
                                      ! End section for LBCWA=T and LINHOM=F
  WBPKEN         = 3.3                ! Peak enhancement factor for Jonswap Spectra if WBSS=2
@@ -118,20 +118,51 @@
 
 
 &ENGS !SOURCE TERMS
- MESNL          = 1                  ! SNL4; MESNL = 0 , MESNL = 1, (Discrete Interaction approx.)
- MESIN          = 1                  ! Wind input: Ardhuin etal (1), Cycle 4 (2), Makin & Stam (3); Babanin et al. (4), Cycle 3 (5), no wind (0) (default = 1; all others are just for rearch and explicitly not supported at all!!!)
- IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=3); only used if MESIN .GT. 2
- MESBF          = 1                  ! Bottomg friction: JONSWAP(1) (Default at 1); 2 - Madsen
- FRICC          = 0.067              ! Cjon - Bottom friction coefficient (always positive)
- MESBR          = 1                  ! Shallow water wave breaking; 0: no; 1: BJ78 (Default at 1)
- ICRIT          = 1                  ! Wave breaking criterion: set as 1 - SWAN, 2 - Dingemans - default = 2
- B_ALP          = 1.                 ! Dissipation proportionality coefficient (0.5 is default)
- BRCR           = 0.73               ! Wave breaking coefficient for Const. type wave breaking criterion; range: 0.6-0.83 (suggested 0.78)
- MEVEG          = 0
+ MESNL          = 1                  ! Nonlinear Interaction NL4 , 1 ~ on, 0 ~ off (Discrete Interaction approx.)
+ MESIN          = 1                  ! Wind input: Ardhuin et al. (1) (use LSOURCESWAM = F); 
+                                     ! for ECMWF physics (2); Makin & Stam (3); Babanin et al. (4); Cycle 3 (5); 
+                                     !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
+ IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=3);
+ MESBF          = 1                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
+ FRICC          = 0.067              ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50 (if negative read from SHOWEX_D50.gr3) 
+ MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
+ IBREAK         = 1                  ! Wave breaking formulation: 1 - Battjes and Janssen (1978)
+                                     !                            2 - Thornton and Guza (1983) - Constant weighting function
+                                     !                            3 - Thornton and Guza (1983) - Skewed weighting function
+                                     !                            4 - van der Westhuysen (2010)
+                                     !                            5 - Baldock et al (1998) modified by Janssen and Battjes (2007)
+                                     !                            6 - Church and Thornton (1993)
+ ICRIT          = 1                  ! Wave breaking criterion: 1   - Constant breaker index (gamma) or gamma_TG defined with BRCR
+                                     !                          2,6 - gamma computed with local steepness adapted from Battjes and Stive (1985)
+                                     !                          3   - Biphase threshold (intended for IBREAK=4)
+                                     !                          4   - gamma_TG = a_BRCR * slope + b_BRCR / min_BRCR < gamma_TG < max_BRCR
+                                     !                                e.g. Sallenger and Holman 1985
+                                     !                          5   - gamma = a_BRCR * k_ph + b_BRCR / min_BRCR < gamma < max_BRCR
+                                     !                                e.g. Ruessink et al (2003) with a_BRCR=0.76 and b_BRCR=0.29
+ BRCR           = 0.78               ! either gamma, default is 0.73 for IBREAK=1,5 or gamma_TG, default is 0.42 for IBREAK=2,3 or biphase_ref, default is -4pi/9 = -1.3963 for IBREAK=4
+ a_BRCR         = 0.76               ! cf ICRIT = 4, 5
+ b_BRCR         = 0.29               ! cf ICRIT = 4, 5
+ min_BRCR       = 0.25               ! cf ICRIT = 4, 5
+ max_BRCR       = 0.8                ! cf ICRIT = 4, 5
+ a_BIPH         = 0.2                ! Biphase coefficient, default 0.2 (intended for IBREAK=3)
+ BR_COEF_METHOD = 1                  ! Method for the breaking coefficient: 1 - constant, 2 - adaptive
+ B_ALP          = 0.5                  ! breaking coefficient. If BR_COEF_METHOD = 2, B_ALP ~ 40
+ ZPROF_BREAK    = 2                  ! Vertical distribution function of wave breaking source term, only used in 3D run
+                                     ! IS: side index, k: vertical layer index, dps: depth, zs: z vertical coordinate (/MSL), tmp0: Hs
+                                     ! 1 - Homogeneous vertical distribution (swild_3D(k) = 1)
+                                     ! 2 - swild_3D(k) = cosh((dps(IS)+zs(k,IS))/(0.2D0*tmp0))
+                                     ! 3 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**2.D0)
+                                     ! 4 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**4.D0)
+                                     ! 5 - swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**8.D0)
+                                     ! 6 - Sink of momentum applied in the two surface layers (IF (k .GE. NVRT-1) swild_3D(k)=1.D0)
+ BC_BREAK       = 1                  ! Apply depth-limited breaking at the boundaries: 1 - On; 0 - Off
+ IROLLER        = 0                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
+ ALPROL         = 0.85               ! Alpha coefficient for the wave roller model (between 0 and 1): 1 - full conversion; 0 - no energy transferred to the roller
+ MEVEG          = 0                  ! Vegetation on/off. If on, isav must = 1 in param.nml
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
- MESDS          = 1                  ! Formulation for the whitecapping source function; usually same as MESIN
- MESTR          = 0                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA) like SWAN) (Default at 1)
- TRICO          = 1.                 ! proportionality const. (\alpha_EB); default is 0.1
+ MESDS          = 1                  ! Formulation for the whitecapping source function; same value as MESIN
+ MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA) like SWAN) (Default at 1)
+ TRICO          = 0.1                ! proportionality const. (\alpha_EB); default is 0.1
  TRIRA          = 2.5                ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
  TRIURS         = 0.1                ! critical Ursell number; if Ursell # < TRIURS; triads are not computed
 /
@@ -193,7 +224,7 @@
 
 
 &NUMS
- ICOMP          = 3 
+ ICOMP          = 3
                                      ! This parameter controls the way how the splitting is done and whether implicit or explicit schemes are used for spectral advection
                                      ! ICOMP = 0
                                      ! This means that all dimensions are integrated using explicit methods. Similar
@@ -206,8 +237,9 @@
                                      ! This means that the advection is done using implicit methods and that the
                                      ! source terms are integrated semi-implicit using Patankar rules and linearized
                                      ! source terms as done in SWAN. Spectral part is still a fractional step
+                                     ! ICOMP = 3: fully implicit and no splitting
 
- AMETHOD        = 7 
+ AMETHOD        = 7
                                      ! AMETHOD controls the different Methods in geographical space
                                      ! AMETHOD = 0
                                      ! No Advection in geo. Space
@@ -227,17 +259,20 @@
                                      ! this is for large scale applications
 
                                      ! Remark for AMETHOD = 4 and 5. This methods are new and only tested on a few cases where the results look reasonable and do not depend on the number of CPU's which
-                                     ! valdiates the correct implementation. The scaling performance is anticipated to be "quite poor" at this time. Mandy different consituents influence the parallel speedup.
-                                     ! Please let me know all the information you have in order to improve and accelarate the developement of implicit parallel WWM-III.
+                                     ! validates the correct implementation. The scaling performance is anticipated to be "quite poor" at this time. Many different constituents influence the parallel speedup.
+                                     ! Please let me know all the information you have in order to improve and accelerate the development of implicit parallel WWM-III.
                                      ! Have fun ... Aron and Thomas.
+                                     ! AMETHOD = 6 - BCGS Solver 
+                                     ! AMETHOD = 7 - GAUSS and JACOBI SOLVER
 ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no memory the rest r hybrid levels ... it is try and error stuff depends on architecture
 
- SMETHOD        = 1 
+ SMETHOD        = 6
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
+                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS)
 
- DMETHOD        = 1 
+ DMETHOD        = 2
                                      ! This switch controls the numerical method in directional space.
                                      ! DMETHOD = 0
                                      ! No advection in directional space
@@ -250,28 +285,35 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
                                      ! DMETHOD = 4
                                      ! Explicit FVM Upwind scheme
 
- RTHETA         = 0.5                ! Weighing factor for DMETHOD = 1, not really useful since Crank Nicholson integration can only be montotone for CFL .le. 2
- LITERSPLIT     = F                  ! T: double Strang split; F: simple split (more efficienct). Default: F
+ RTHETA         = 0.5                ! Weighing factor for DMETHOD = 1, not really useful since Crank Nicholson integration can only be monotone for CFL .le. 2
+ LITERSPLIT     = F                  ! T: double Strang split; F: simple split (more efficient). Default: F
 
  LFILTERTH      = F
                                      ! LFILTERTH: use a CFL filter to limit the advection vel. In directional space. This is similar to WW3.
                                      ! Mostly not used. WWMII is always stable.
  MAXCFLTH       = 1.0                ! Max Cfl in Theta space; used only if LFILTERTH=T
- FMETHOD        = 1 
+ FMETHOD        = 1
                                      ! This switch controls the numerical method used in freq. space
                                      ! = 0
                                      ! No Advection in spectral space
                                      ! = 1
                                      ! Ultimate Quickest as in WW3 (best)
- LFILTERSIG     = F                  ! Limit the advection velocitiy in freq. space (usually F)
+ LFILTERSIG     = F                  ! Limit the advection velocity in freq. space (usually F)
  MAXCFLSIG      = 1.0                ! Max Cfl in freq. space; used only if LFILTERSIG=T
+ LLIMT          = T                  ! Switch on/off Action limiter, Action limiter must mostly be turned on.
  LSIGBOUND      = F                  ! Theta space on wet land/island boundary
  LTHBOUND       = F                  ! Sigma space on wet land/island boundary
- LSOUBOUND      = F                  ! Source Terms on wet land/island boundary
- MELIM          = 1                  ! Numerical Limiter 
- LIMFAK         = 0.1
+ LSOUBOUND      = T                  ! Source Terms on wet land/island boundary
+ MELIM          = 1                  ! Formulation for the action limiter
+                                     ! MELIM = 1 (default)
+                                     ! Limiter according to the WAM group (1988)
+                                     ! MELIM = 2
+                                     ! Limiter according to Hersbach Janssen (1999)
+                                     ! For MESIN = 1 and MESDS = 1, which represents Cycle 3 formulation or Ardhuin, or other formulations except Cycle4, use MELIM = 1 and LIMFAK = 0.1
+                                     ! For MESIN = 2 and MESDS = 2, which represents Cycle 4 formulation, use MELIM = 3 and LIMFAK = 0.6
+ LIMFAK         = 0.1                ! Proportionality coefficient for the action limiter MAX_DAC_DT = Limfak * Limiter; see notes above for value
  LDIFR          = F                  ! Use phase decoupled diffraction approximation according to Holthuijsen et al. (2003) (usually T; if crash, use F)
- IDIFFR         = 1                  ! Extended WAE account for higher order effects WAE becomes nonlinear; 1: Holthuijsen et al. ; 2: Liau et al. ; 3: Toledo et al. (in preparation)
+ IDIFFR         = 1                  ! Extended WAE accounting for higher order effects WAE becomes nonlinear; 1: Holthuijsen et al. ; 2: Liau et al. ; 3: Toledo et al. (in preparation)
  LCONV          = F                  ! Estimate convergence criterian and write disk (quasi-steady - qstea.out)
  LCFL           = F                  ! Write out CFL numbers; use F to save time
  NQSITER        = 10                 ! # of quasi-steady (Q-S) sub-divisions within each WWM time step (trial and errors)
@@ -291,20 +333,20 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
  IVECTOR        = 2                  ! USed if LVECTOR=T; Different flavours of communications
                                      ! LVECTOR = 1; same propagation style as if LVECTOR = F, this is for testing and development
                                      ! LVECTOR = 2; all spectral bins are propagated with the same time step and communications is done only once per sub-iteration
-                                     ! LVECTOR = 3; all directions with the same freq. are propgated using the same time step the communications is done for each freq.
+                                     ! LVECTOR = 3; all directions with the same freq. are propagated using the same time step the communications is done for each freq.
                                      ! LVECTOR = 4; 2 but for mixed open-mpi, code has to be compiled with -openmp
                                      ! LVECTOR = 5; 3 but for mixed open-mpi, code has to be compiled with -openmp
-                                     ! LVECTOR = 6; same as 2 but highly optmizied with respect to memory usage, of course it is must less efficient than 2
-                                     ! remarks: if you are using this routines be aware that the memory amount that is used is approx. for LVECTOR 1-5 arround
+                                     ! LVECTOR = 6; same as 2 but highly optimized with respect to memory usage, of course it is must less efficient than 2
+                                     ! remarks: if you are using this routines be aware that the memory amount that is used is approx. for LVECTOR 1-5 around
                                      ! 24 * MSC * MDC * MNP, so if you are trying this on 1 CPU you get a segmentation fault if your system has not enough memory or
                                      ! if your system is not properly configured it may results into the fact that your computer starts blocking since it try's to swap to disk
-                                     ! The total amount of memoery used per CPU = 24 * MSC * MDC * MNP / No.CPU
+                                     ! The total amount of memory used per CPU = 24 * MSC * MDC * MNP / No.CPU
  LADVTEST       = F                  ! for testing the advection schemes, testcase will be added soon
  LCHKCONV       = T                  ! needs to set to .true. for quasi-steady mode. in order to compute the QSCONVi criteria and check them
- NB_BLOCK        =           3,
+ NB_BLOCK       =           3,
  WAE_SOLVERTHR   =  1.E-6,
  MAXITER =          1000,
- LSOURCESWAM = F
+ LSOURCESWAM = F,   ! Use ECMWF WAM formualtion for deep water physics.
  LNANINFCHK      = F,
  LZETA_SETUP     = F,
  ZETA_METH       =           0,

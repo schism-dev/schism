@@ -8926,6 +8926,12 @@
         icount=icount+1
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'wave_sdstot',1,1,npa,dble(wave_sdstot(:)))
+	 
+        ! Total wave energy dissipation rate by vegetation [W/m²]
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'wave_svegtot',1,1,npa,dble(wave_svegtot(:)))	 
 
         ! Total wave energy input rate from atmospheric forcing [W/m²]
         noutput=noutput+1

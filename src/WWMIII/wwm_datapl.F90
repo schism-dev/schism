@@ -18,7 +18,7 @@
 #else
 # if defined(SCHISM) || defined(WWM_MPI)
       use schism_msgp !, only: comm,             & ! MPI communicator
-! WARNING: DO NOT USE SCHISM CONECTIVITY ARRAYS WITHOTU CHECKING, AS WWM
+! WARNING: DO NOT USE SCHISM CONNECTIVITY ARRAYS WITHOUT CHECKING, AS WWM
 ! CANNOT HANDLE QUADS!
       use schism_glbl, only  : MNE => nea_wwm,       & ! Elements of the augmented domain
      &                         MNP => npa,       & ! Nodes in the augmented domain
@@ -41,7 +41,7 @@
 !     &                         ielg,             & ! element local to global mapping
      &                         nx1=>nx,          & ! nx is often used as a function parameter. So I renamed it to avoid name conflicts
      &                         tanbeta_x,        & !bed slope in x direction
-     &                         tanbeta_y           !bed slope in ydirection
+     &                         tanbeta_y           !bed slope in y direction
 
 
 #  if !defined ROMS_WWM_PGMCL_COUPLING && !defined MODEL_COUPLING_ATM_WAV && !defined MODEL_COUPLING_OCN_WAV
@@ -72,21 +72,24 @@
      &                         WAVE_SBFTOT => wave_sbftot,   & ! Total wave energy dissipation rate by bottom friction [W/m²]
      &                         WAVE_SINTOT => wave_sintot,   & ! Total wave energy input rate from atmospheric forcing [W/m²]
      &                         WAVE_SDSTOT => wave_sdstot,   & ! Total wave energy dissipation rate by whitecapping [W/m²]
+     &                         WAVE_SVEGTOT => wave_svegtot,  & ! Total wave energy dissipation rate by vegetation [W/m²]
      &                         OUTT_INTPARROL=>out_wwm_rol,  & !outputs from WWM
      &                         WIND_INTPAR=>out_wwm_windpar, & ! boundary layer stuff from wwm ...
      &                         ISBND,                        & !bnd flags
      &                         RKIND,                        &
-     &                         JPRESS,SBR,SBF,SROL,SDS, & !for vortex formulation
+     &                         JPRESS,SBR,SBF,SROL,SDS,SVEG, & !for vortex formulation
      &                         EPS_W, EPS_R, EPS_BR,         & ! energy dissipation of wave and roller, and total forcing
      &                         STOKES_HVEL, STOKES_HVEL_SIDE, & !horizontal Stokes drift velocities (u,v)
      &                         STOKES_WVEL, STOKES_WVEL_SIDE, & !vertical Stokes drift velocities
      &                         ROLLER_STOKES_HVEL,ROLLER_STOKES_HVEL_SIDE, & ! horizontal Stokes drift velocities (u,v)for the surface rollers
      &                         SHOREWAFO,                    & ! wave forces at the shoreline
-     &                         SAV_ALPHA, SAV_H,             &
+     &                         SAV_ALPHA, SAV_H, SAV_DI, SAV_NV, SAV_CD,  &  !Vegetation characteristics  
      &                         fwvor_advxy_stokes,            & ! BM: accounting (1) or not (0) for the different 
      &                         fwvor_advz_stokes,             & ! terms involved in the vortex force formalism (RADFLAG='VOR')
      &                         fwvor_gradpress,               &
      &                         fwvor_breaking,                &
+     &                         fwvor_wveg,                    &
+     &                         fwvor_wveg_NL,                 &	!Flag for non linear intrawave vegetation force
      &                         fwvor_streaming,               &
      &                         wafo_obcramp                   ! BM: flag (0/1:off/on) to apply a ramp on wave forces at open boundary
 !     &                         wafo_opbnd_ramp                  ! The corresponding ramp value defined at sides
@@ -251,7 +254,7 @@
 
          LOGICAL           :: LSIGBOUND  = .FALSE.
          LOGICAL           :: LTHBOUND   = .FALSE.
-         LOGICAL           :: LSOUBOUND  = .FALSE.
+         LOGICAL           :: LSOUBOUND  = .TRUE.
          LOGICAL           :: IOBPD_HISTORY = .FALSE.
          LOGICAL           :: DOPEAK_BOUNDARY = .TRUE.
          LOGICAL           :: DOPEAK_GLOBAL = .TRUE.
@@ -374,7 +377,7 @@
          LOGICAL    :: LFIRSTREADBOUNDARY              = .FALSE.
 
          CHARACTER(LEN=8)       :: PROCNAME  = 'DEFAULT'
-         INTEGER                :: IGRIDTYPE  = 1
+         INTEGER                :: IGRIDTYPE  = 3 ! Default is SCHISM
          INTEGER                :: IITERSPLIT = 1
 !
 ! variables for the WAM
@@ -940,7 +943,7 @@
 !
 ! ... source term ... wwmDsi.mod
 !
-         INTEGER                :: MESIN = 2 
+         INTEGER                :: MESIN = 2
          INTEGER                :: MEVEG = 0
          INTEGER                :: MESBR = 1
          INTEGER                :: MESDS = 2
