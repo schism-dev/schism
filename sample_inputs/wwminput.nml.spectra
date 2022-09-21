@@ -161,7 +161,7 @@
  MEVEG          = 0                  ! Vegetation on/off. If on, isav must = 1 in param.nml
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
  MESDS          = 1                  ! Formulation for the whitecapping source function; same value as MESIN
- MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA) like SWAN) (Default at 1)
+ MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA)), MESTR = 2 (corrected version of LTA by Salmon et al. (2016)))
  TRICO          = 0.1                ! proportionality const. (\alpha_EB); default is 0.1
  TRIRA          = 2.5                ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
  TRIURS         = 0.1                ! critical Ursell number; if Ursell # < TRIURS; triads are not computed

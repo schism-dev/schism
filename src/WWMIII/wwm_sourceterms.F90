@@ -377,23 +377,27 @@
 #endif 
          IF (((ISELECT.EQ.4 .OR. ISELECT.EQ.10) .AND.ISHALLOW(IP).EQ.1) .AND. .NOT. LRECALC) THEN
            IF (SUMACLOC .GT. VERYSMALL) THEN
-             IF ((MESTR .EQ. 1).or.(MESTR .eq. 5) ) THEN
+             !IF ((MESTR .EQ. 1).or.(MESTR .eq. 5) ) THEN
+               !CALL TRIAD_ELDEBERKY(IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3,DSSNL3)
+             !ELSE IF (MESTR .EQ. 2) THEN
+               !CALL SNL31 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
+             !ELSE IF (MESTR .EQ. 3) THEN
+               !CALL SNL32 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
+             !ELSE IF (MESTR .EQ. 4) THEN
+               !CALL SNL33 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
+             !ELSE IF (MESTR .EQ. 6) THEN
+               !CALL WWM_ABORT('NOT READ YET')
+               !CALL TRIAD_DINGEMANS (IP,ACLOC,IMATRA,IMATDA,SSNL3)
+             !ELSE IF (MESTR .EQ. 7) THEN
+               !CALL WWM_ABORT('NOT READ YET')
+               !CALL snl3ta(ip,snl3,dsnl3)
+               !SSNL3 = SNL3
+               !IMATRA = IMATRA + SNL3
+               !IMATDA = IMATDA + DSNL3
+             IF ((MESTR .EQ. 1).or.(MESTR .EQ. 2) ) THEN
                CALL TRIAD_ELDEBERKY(IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3,DSSNL3)
-             ELSE IF (MESTR .EQ. 2) THEN
-               CALL SNL31 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
-             ELSE IF (MESTR .EQ. 3) THEN
-               CALL SNL32 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
-             ELSE IF (MESTR .EQ. 4) THEN
-               CALL SNL33 (IP,HS,SME01,ACLOC,IMATRA,IMATDA,SSNL3)
-             ELSE IF (MESTR .EQ. 6) THEN
-               CALL WWM_ABORT('NOT READ YET')
-               CALL TRIAD_DINGEMANS (IP,ACLOC,IMATRA,IMATDA,SSNL3)
-             ELSE IF (MESTR .EQ. 7) THEN
-               CALL WWM_ABORT('NOT READ YET')
-               CALL snl3ta(ip,snl3,dsnl3)
-               SSNL3 = SNL3
-               IMATRA = IMATRA + SNL3
-               IMATDA = IMATDA + DSNL3
+             ELSE IF (MESTR .GT. 2) THEN
+               CALL WWM_ABORT('PARAMATERIZATIONS FOR SNL3 OTHER THAN LTA (MESTR = 1 or MESTR = 2) ARE NOT YET READY')
              END IF
            END IF
          END IF
