@@ -567,7 +567,6 @@
             ! we take awd = 1 but literature suggests awd>1
             ! we note 1/kwd = tmp0
             tmp0 = (delta_wbl(n1) + delta_wbl(n2))/2.D0
-            WRITE(30,*) tmp0
             IF(tmp0 .LT. SMALL) CYCLE
             
             ! Vertical distribution function of qdm
