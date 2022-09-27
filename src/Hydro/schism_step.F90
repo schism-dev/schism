@@ -171,7 +171,7 @@
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
-                     &bigfa1,bigfa2,vnf,grav3,tf,maxpice
+                     &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -812,7 +812,7 @@
       dragcmin=1.0d-3*(0.61d0+0.063d0*6.d0)
       dragcmax=1.0d-3*(0.61d0+0.063d0*50.d0)
 
-!$OMP parallel default(shared) private(i,wmag,dragcoef,tmp,theta)
+!$OMP parallel default(shared) private(i,wmag,dragcoef,tmp,theta,z0_donelan)
 
 !$OMP workshare
       tau=0.d0 !init.
@@ -854,18 +854,36 @@
 
 !     Overwrite by WWM values
 #ifdef USE_WWM
-      if(icou_elfe_wwm>0.and.iwind_form==-2) then 
+      if(icou_elfe_wwm>0.and.iwind_form<=-2) then 
 !$OMP   do
         do i=1,npa
           if(idry(i)==1) then
             tau(1:2,i)=0.d0
-          else
+          else if (iwind_form==-2) then
             !stress=rho_air*ufric^2 [Pa]; scaled by rho_water
             tmp=1.293d-3*out_wwm_windpar(i,8)**2.d0*rampwind 
             !Wind direction
             theta=atan2(windy(i),windx(i))
             tau(1,i)=tmp*cos(theta)
             tau(2,i)=tmp*sin(theta)
+          else if (iwind_form==-3) then !Donelan et al. (1993): wave-dependant surface stress based on the wave age
+            wmag=sqrt(windx(i)**2.d0+windy(i)**2.d0)
+            theta=atan2(windy(i),windx(i))
+            if (out_wwm(i,13) > 0.d0) then !Peak phase velocity
+              z0_donelan = 0.00067d0*(out_wwm(i,1)/sqrt(2.d0))*(wmag/out_wwm(i,13))**2.6d0 !z0 = 6.7*10^-4*Hrms*(U10/Cp)^2.6
+            else
+              z0_donelan = 0.d0
+            endif
+            if (z0_donelan > 0.d0) then
+              dragcoef = (0.41d0/log(10.d0/z0_donelan))**2.d0 ! Cd = (k/ln(z_obs/z0))**2  with
+              ! z_obs : height at which the wind is taken ; z0 : roughness length ; k : Von Karman's constant
+              tau(1,i)=1.293d-3*dragcoef*wmag*windx(i)*rampwind 
+              tau(2,i)=1.293d-3*dragcoef*wmag*windy(i)*rampwind
+            else
+              tmp=1.293d-3*out_wwm_windpar(i,8)**2.d0*rampwind !stress=rho_air*ufric^2; scaled by rho_water
+              tau(1,i)=tmp*cos(theta)
+              tau(2,i)=tmp*sin(theta)
+            endif			  
           endif
         enddo !i
 !$OMP   end do
@@ -8908,6 +8926,12 @@
         icount=icount+1
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'wave_sdstot',1,1,npa,dble(wave_sdstot(:)))
+	 
+        ! Total wave energy dissipation rate by vegetation [W/m²]
+        noutput=noutput+1
+        icount=icount+1
+        if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
+     &'wave_svegtot',1,1,npa,dble(wave_svegtot(:)))	 
 
         ! Total wave energy input rate from atmospheric forcing [W/m²]
         noutput=noutput+1

@@ -8,8 +8,8 @@
  LSTEA          = F                  ! steady mode; under development
  LQSTEA         = F                  ! Quasi-Steady Mode; In this case WWM-II is doing subiterations defined as DELTC/NQSITER unless QSCONVI is not reached
  LSPHE          = T                  ! Spherical coordinates (lon/lat)
- LNAUTIN        = T                  ! Nautical convention for all inputs given in degrees 
- LNAUTOUT       = T                  ! Output in Nautical convention 
+ LNAUTIN        = T                  ! Nautical convention for all inputs given in degrees (suggestion: T)
+ LNAUTOUT       = T                  ! Output in Nautical convention
                                      ! If T, 0 is _from_ north, 90 is from east etc;
                                      ! If F, maths. convention - 0: to east; 90: going to north
  LMONO_IN       = F                  ! For prescribing monochromatic wave height Hmono as a boundary conditions; incident wave is defined as monochromatic wave height, which is Hmono = sqrt(2) * Hs
@@ -18,7 +18,7 @@
  DELTC          = 600                ! Time step (MUST match dt*nstep_wwm in SCHISM!)
  UNITC          = 'SEC'              ! Unity of time step
  ENDTC          = '20031008.000000'  ! Time for stop the simulation, ex:yyyymmdd. hhmmss
- DMIN           = 0.01              ! Minimum water depth. THis must be same as h0 in SCHISM
+ DMIN           = 0.01              ! Minimum water depth. This must be the same as h0 in SCHISM
 /
 
 &COUPL
@@ -75,7 +75,8 @@
                                      ! In this file there is following definition Flag 0: not on boundary; 3: Neumann (0 gradient only for advection part);
                                      ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM: ! 1: exterior bnd; -1: interior (islands)
                                      ! exterior and interior boundaries need not to be defined.
- IBOUNDFORMAT   = 3                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only). WW3 works only with LBCWA=T.
+ IBOUNDFORMAT   = 3                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only - LBCWA=T).
+                                     ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (prescribed spectra).
  FILEWAVE       = 'bndfiles.dat'     ! Boundary file defining boundary input from WW3
  LINDSPRDEG     = F                  ! If 1-d wave spectra are read this flag defines whether the input for the directional spreading is in degrees (true) or exponent (false)
  LPARMDIR       = F                  ! If LPARMDIR is true then directional spreading is read from WBDS and must be in exponential format at this time, only valid for 1d Spectra
@@ -111,11 +112,11 @@
 
 
 &ENGS !SOURCE TERMS
- MESNL          = 1   ! Nonlinear Interaction NL4 , 1 ~ on, 0 ~ off (Discrete Interaction approx.)
- MESIN          = 1   ! Wind input: Ardhuin et al. (1) (use LSOURCESWAM = F); 
-                      ! for ECMWF physics (2); Makin & Stam (3); Babanin et al. (4); Cycle 3 (5); 
-                      !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
- IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=5); only used if cycle 3 is switched on
+ MESNL          = 1                  ! Nonlinear Interaction NL4 , 1 ~ on, 0 ~ off (Discrete Interaction approx.)
+ MESIN          = 1                  ! Wind input: Ardhuin et al. (1) (use LSOURCESWAM = F); 
+                                     ! for ECMWF physics (2); Makin & Stam (3); Babanin et al. (4); Cycle 3 (5); 
+                                     !no wind (0). Try MESIN=1, LSOURCESWAM=F or MESIN=2 and LSOURCESWAM=T
+ IFRIC          = 1                  ! Formulation for atmospheric boundary layer, (IFRIC = 1 for MESIN = 1, IFRIC = 4 for MESIN=3);
  MESBF          = 1                  ! Bottom friction: 1 - JONSWAP (Default); 2 - Madsen et al. (1989); 3 - SHOWEX
  FRICC          = 0.067              ! if MESBF=1: JONSWAP bottom friction coefficient [0.038,0.067]. If MESBF=2: physical bottom roughness (ignored if given in rough.gr3). If MESBF=3: D50 (if negative read from SHOWEX_D50.gr3) 
  MESBR          = 1                  ! Shallow water wave breaking; 0: off; 1: on
@@ -151,12 +152,12 @@
  BC_BREAK       = 1                  ! Apply depth-limited breaking at the boundaries: 1 - On; 0 - Off
  IROLLER        = 0                  ! Wave roller model (e.g., see Uchiyama et al., 2010): 1 - On; 0 - Off; not used at the moment
  ALPROL         = 0.85               ! Alpha coefficient for the wave roller model (between 0 and 1): 1 - full conversion; 0 - no energy transferred to the roller
- MEVEG          = 0                  ! Vegetation on/off. If on, isav must =1 in param.nml
+ MEVEG          = 0                  ! Vegetation on/off. If on, isav must = 1 in param.nml
  LMAXETOT       = T                  ! Limit shallow water wave height by wave breaking limiter (default=T)
  MESDS          = 1                  ! Formulation for the whitecapping source function; same value as MESIN
- MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA) like SWAN) (Default at 1)
+ MESTR          = 1                  ! Formulation for the triad 3 wave interactions (MESTR = 0 (off), MESTR = 1 (Lumped Triad Approx. (LTA)), MESTR = 2 (corrected version of LTA by Salmon et al. (2016)))
  TRICO          = 0.1                ! proportionality const. (\alpha_EB); default is 0.1
- TRIRA          = 5                  ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
+ TRIRA          = 2.5                ! ratio of max. freq. considered in triads over mean freq.; 2.5 is suggested
  TRIURS         = 0.1                ! critical Ursell number; if Ursell # < TRIURS; triads are not computed
 /
 
@@ -200,8 +201,8 @@
                                      ! Please let me know all the information you have in order to improve and accelerate the development of implicit parallel WWM-III.
                                      ! Have fun ... Aron and Thomas.
                                      ! AMETHOD = 6 - BCGS Solver 
-                                     ! AMETHOD = 7 - GAUSS and JACOBI SOLVER 
- SMETHOD        = 1
+                                     ! AMETHOD = 7 - GAUSS and JACOBI SOLVER
+ SMETHOD        = 6
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
@@ -236,8 +237,7 @@
  MAXCFLSIG      = 1.0                ! Max Cfl in freq. space; used only if LFILTERSIG=T
  LLIMT          = T                  ! Switch on/off Action limiter, Action limiter must mostly be turned on.
 
- MELIM          = 1
-                                     ! Formulation for the action limiter
+ MELIM          = 1                  ! Formulation for the action limiter
                                      ! MELIM = 1 (default)
                                      ! Limiter according to the WAM group (1988)
                                      ! MELIM = 2
@@ -292,7 +292,7 @@
  NDYNITER_SBR   = 10,        	     !
  NDYNITER_SNL3  = 10,       	     ! 
  NDYNITER_SBF   = 10,        	     !
- LSOUBOUND      = F                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height
+ LSOUBOUND      = T                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height
                                      ! based on infinie fetch ... good for harbor studies. This is efficiently used for flume experiemnts mostly since in this case one would get a gradient in the crossection due to the effect
                                      ! that source terms are not treated there.
                                      ! 1: use PETSC
@@ -302,7 +302,7 @@
  LNANINFCHK      = F,                ! Check for NaN and INF; usually turned off for efficiency
  LZETA_SETUP     = F,                ! Compute wave setup (simple momentum eq.)
  ZETA_METH       = 0,                ! Method for wave setup, Mathieu please explain!
-! LSOURCESWAM     = F,                ! Use ECMWF WAM formualtion for deep water physics. 
+ LSOURCESWAM     = F,                ! Use ECMWF WAM formualtion for deep water physics. 
 ! LSOURCESWWIII   = F,                ! WW3 Ardhuin et al. sources, not working yet in this code- use MESIN=1
  BLOCK_GAUSS_SEIDEL = T,             ! Use the Gauss Seidel on each
                                      ! computer block. The result seems

@@ -207,7 +207,9 @@
   fwvor_advz_stokes = 1  !  --> Stokes drift advection (z) , Coriolis
   fwvor_gradpress = 1    !  --> Pressure term
   fwvor_breaking = 1     !  --> Wave breaking
-  fwvor_streaming = 1     !  --> Wave streaming
+  fwvor_streaming = 1    !  --> Wave streaming (works with iwbl /= 0)
+  fwvor_wveg = 0         !  --> Wave dissipation by vegetation acceleration term
+  fwvor_wveg_NL = 0      !  --> Non linear intrawave vegetation force (see Dean and Bender, 2006 or van Rooijen et al., 2016 for details) 
   cur_wwm = 0            ! Coupling current in WWM
                          ! 0: surface layer current
                          ! 1: depth-averaged current
@@ -518,7 +520,9 @@
 ! routine; 
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
-! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2, stress is overwritten by WWM.
+! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:
+! If iwind_form=-2, stress=rho_air*ufric^2; scaled by rho_water
+! If iwind_form=-3, the stress is calculated according to the param. of Donelan et al. (1993) based on the wave age.
 ! In all cases, if USE_ICE the stress in ice-covered portion is calculated by ICE routine.
 !-----------------------------------------------------------------------
   nws = 0 
@@ -859,14 +863,15 @@
 !  iof_wwm(28) = 0 !Total wave energy dissipation rate by depth-induced breaking (W/m²) @nodes {wave_sbrtot}  2D
 !  iof_wwm(29) = 0 !Total wave energy dissipation rate by bottom friction (W/m²) @nodes {wave_sbftot} 2D
 !  iof_wwm(30) = 0 !Total wave energy dissipation rate by whitecapping (W/m²) @nodes {wave_sdstot} 2D
-!  iof_wwm(31) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot} 2D
-!  iof_wwm(32) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
+!  iof_wwm(31) = 0 !Total wave energy dissipation rate by vegetation (W/m²) @nodes {wave_svegtot} 2D
+!  iof_wwm(32) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot} 2D
+!  iof_wwm(33) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
 
-!  iof_wwm(33) = 0 !Vertical Stokes velocity (m.s-1) @sides and whole levels {stokes_wvel}  3D
-!  iof_wwm(34) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
+!  iof_wwm(34) = 0 !Vertical Stokes velocity (m.s-1) @sides and whole levels {stokes_wvel}  3D
+!  iof_wwm(35) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
 
-!  iof_wwm(35) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 3D vector
-!  iof_wwm(36) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel} 3D vector 
+!  iof_wwm(36) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 3D vector
+!  iof_wwm(37) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel} 3D vector 
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used

@@ -563,7 +563,7 @@
           ELSE !3D
           
             ! Threshold on WBBL
-            ! 1/kwd = awd * delta_wbl
+            ! 1/kwd = awd * delta_wbl (delta_wbl defined for iwbl=1.or.iwbl=2)
             ! we take awd = 1 but literature suggests awd>1
             ! we note 1/kwd = tmp0
             tmp0 = (delta_wbl(n1) + delta_wbl(n2))/2.D0
@@ -573,7 +573,7 @@
             swild_3D = 0.D0
             DO k = kbs(IS), NVRT
               ! Homogeneous vertical distribution
-              swild_3D(k) = 1.D0
+              !swild_3D(k) = 1.D0
               ! Hyperbolic distribution - Type of profile 1
               !swild_3D(k) = cosh((eta_tmp-zs(k,IS))/tmp0)
               ! Hyperbolic distribution - Type of profile 2
@@ -607,6 +607,258 @@
         CALL exchange_s3d_2(WWAVE_FORCE)
 
       END SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
+
+!**********************************************************************
+!*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
+!*  => Computation of the non-conservative terms due to wave dissipation by vegetation
+!**********************************************************************
+      SUBROUTINE COMPUTE_VEGDISS_VF_TERMS_SCHISM
+        USE DATAPOOL
+        USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm, zs, idry_s, isidenode
+        USE schism_msgp 
+        IMPLICIT NONE
+
+        INTEGER     :: IS, isd, k, j, l, n1, n2, n3, topveg_k
+        REAL(rkind) :: eta_tmp, tmp0, htot, sum_3D
+        REAL(rkind) :: swild_3D(NVRT)
+        REAL(rkind) :: Fveg_x_loc, Fveg_y_loc
+        REAL(rkind) :: VLTH(ns), SAV_H_tmp
+
+#ifndef SCHISM
+        VLTH  = 2. ! vegetation height !Should be the same as in SUBROUTINE VEGDISSIP
+#else
+        VLTH  = SAV_H
+#endif
+
+          ! Compute sink of momentum due to wave dissipation by vegetation
+          DO IS = 1, ns
+            ! Check IF dry segment or open bnd segment
+            IF(idry_s(IS) == 1 .or. isbs(IS) > 0) CYCLE
+          
+            ! Water depth at side
+            n1 = isidenode(1,IS); n2 = isidenode(2,IS)
+            eta_tmp = (eta2(n1) + eta2(n2))/2.D0
+            !htot = max(h0,dps(IS)+eta_tmp,hmin_radstress)
+            htot = max(h0,dps(IS)+eta_tmp)
+			
+            !vegetation height at sides
+            SAV_H_tmp = (VLTH(n1)+VLTH(n2))/2.D0 
+   
+            IF(kbs(IS)+1 == NVRT) THEN !2D
+              ! N.B. average between the two adjacent nodes
+              Fveg_x_loc = - (SVEG(1,n1) + SVEG(1,n2))/2.D0/htot
+              Fveg_y_loc = - (SVEG(2,n1) + SVEG(2,n2))/2.D0/htot
+              ! Saving in WWAVE_FORCE
+              WWAVE_FORCE(1,:,IS) = WWAVE_FORCE(1,:,IS) + Fveg_x_loc
+              WWAVE_FORCE(2,:,IS) = WWAVE_FORCE(2,:,IS) + Fveg_y_loc
+  
+            ELSE !3D  
+
+              tmp0 = 0.D0
+              topveg_k = NVRT
+              IF (SAV_H_tmp >= htot) THEN !emergent vegetation
+                topveg_k = NVRT
+              ELSE
+                DO k = kbs(IS), NVRT-1
+                  tmp0 = tmp0 + zs(k+1,IS) - zs(k,IS)
+                  IF (tmp0 >= SAV_H_tmp) THEN !submerged vegetation
+                    topveg_k = k+1
+				    EXIT
+                  ENDIF
+                END DO
+              ENDIF
+
+              ! Vertical distribution function of qdm
+              swild_3D = 0.D0
+
+              DO k = kbs(IS), topveg_k 
+                  ! Homogeneous vertical distribution
+                  swild_3D(k) = 1.D0
+                  ! Pther potential empirical distributions could be adapted from COMPUTE_STREAMING_VF_TERMS_SCHISM
+              END DO !k
+
+              ! Integral of the vertical distribution function
+              sum_3D = 0.0D0
+              DO k = kbs(IS), topveg_k-1
+                sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
+              END DO !topveg_k-1
+              IF(sum_3D == 0) CALL parallel_abort('Vertical profile in wave vegetation force: integral=0')
+
+              DO k = kbs(IS), topveg_k
+                Fveg_x_loc = - swild_3D(k)*(SVEG(1,n1) + SVEG(1,n2))/2.D0/sum_3D
+                Fveg_y_loc = - swild_3D(k)*(SVEG(2,n1) + SVEG(2,n2))/2.D0/sum_3D
+                ! Saving in WWAVE_FORCE
+                WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS) + Fveg_x_loc
+                WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS) + Fveg_y_loc
+              END DO
+            ENDIF !2D/3D
+          END DO !MNS
+
+        ! Exchange between ghost regions
+        CALL exchange_s3d_2(WWAVE_FORCE)
+
+      END SUBROUTINE COMPUTE_VEGDISS_VF_TERMS_SCHISM
+!**********************************************************************
+! This subroutine computes the vegetation drag force related to 
+! sea-swell orbital motion. In case of emergent vegetation and/or propagation
+! of non-linear waves in a vegetated field, the drag force integrated over a 
+! wave cycle results in a non-zero net force acting opposite to the wave 
+! direction, which tends to decrease the wave setup (Dean and Bender, 2006;
+! van Rooijen et al., 2016) 
+! Author: laura lavaud (laura.lavaud@univ-lr.fr)    
+! Date: 30/03/2022
+!**********************************************************************
+      SUBROUTINE COMPUTE_INTRAWAVE_VEG_FORCE
+
+        USE DATAPOOL
+        USE schism_glbl, ONLY: ns, np, isbs, dps, h0, out_wwm, idry_s, isidenode, zs, kbs
+        USE schism_msgp         
+        IMPLICIT NONE
+
+        INTEGER     :: IS, n1, n2, t, k, topveg_k
+        INTEGER, PARAMETER :: ech = 50 !sampling of wave orbital velocity uw(t)
+        REAL(rkind) :: eta_tmp, tmp1, tmp2, htot, Hs_tmp, Hrms_tmp, TM10_tmp, klm_tmp, tmp0
+        REAL(rkind) :: w_dir_tmp0, DEG, w_dir_tmp, tanbeta_x_tmp, tanbeta_y_tmp
+        REAL(rkind) :: VCD(ns), VDM(ns), VNV(ns), VLTH(ns), SAV_CD_tmp, SAV_BV_tmp, SAV_NV_tmp, SAV_H_tmp
+        REAL(rkind) :: dt, Ucrest, Utrough, T_crest, T_trough
+        REAL(rkind) :: WWAVE_FORCE_VEG_NL_x, WWAVE_FORCE_VEG_NL_y, WWAVE_FORCE_VEG_NL_TOT
+        REAL(rkind) :: sum_3D, swild_3D(NVRT)
+        REAL(rkind), DIMENSION(ech) :: Uorbi, etaw
+
+#ifndef SCHISM
+        VCD   = 1.  ! drag coefficient !Should be the same as in SUBROUTINE VEGDISSIP
+        VDM   = 0.04 ! diam of veg. !Should be the same as in SUBROUTINE VEGDISSIP
+        VNV   = 10 ! veg. density !Should be the same as in SUBROUTINE VEGDISSIP
+        VLTH  = 2. ! vegetation height !Should be the same as in SUBROUTINE VEGDISSIP 
+#else
+        VCD  = SAV_CD
+        VDM = SAV_DI
+        VNV = SAV_NV
+        VLTH  = SAV_H
+#endif
+
+          DO IS = 1, ns
+  
+            !Initialization
+            WWAVE_FORCE_VEG_NL_TOT = 0.D0
+
+            Uorbi(:) = 0.D0							
+            etaw(:) = 0.D0
+
+            ! Check IF dry segment or open bnd segment
+            IF(idry_s(IS) == 1 .or. isbs(IS) > 0) CYCLE
+
+            ! Water depth at side
+            n1 = isidenode(1,IS); n2 = isidenode(2,IS)
+
+            eta_tmp = (eta2(n1) + eta2(n2))/2.D0
+            htot = max(h0,dps(IS)+eta_tmp)
+
+            !Vegetation characteristics at sides
+            SAV_CD_tmp = (VCD(n1) + VCD(n2))/2.D0
+            SAV_BV_tmp = (VDM(n1) + VDM(n2))/2.D0
+            SAV_NV_tmp = (VNV(n1) + VNV(n2))/2.D0
+            SAV_H_tmp = (VLTH(n1) + VLTH(n2))/2.D0
+			
+            !Check IF this is a vegetated SIDE
+            IF (SAV_CD_tmp*SAV_BV_tmp*SAV_NV_tmp*SAV_H_tmp == 0.D0) CYCLE
+
+            !Wave characteristics at sides
+            Hs_tmp = (out_wwm(n1,1) + out_wwm(n2,1))/2.D0 !Hs
+            Hrms_tmp = (out_wwm(n1,1) + out_wwm(n2,1))/2.D0/sqrt(2.D0) !Hrms
+            TM10_tmp = (out_wwm(n1,2) + out_wwm(n2,2))/2.D0
+            klm_tmp = (out_wwm(n1,5) + out_wwm(n2,5))/2.D0 !klm mean wavenumber			
+            !TM10_tmp = (out_wwm(n1,12) + out_wwm(n2,12))/2.D0 ! Continious peak period Tpc
+            w_dir_tmp0 = (out_wwm(n1,9) + out_wwm(n2,9))/2.D0 !mean wave direction
+            CALL DEG2NAUT (w_dir_tmp0, DEG, LNAUTOUT)
+            w_dir_tmp = DEG*PI/180.d0
+
+            IF (Hs_tmp <= 0.00D0) CYCLE
+            IF (TM10_tmp <= 0.00D0) CYCLE									 
+
+            !Bed slope at sides
+            tanbeta_x_tmp = (tanbeta_x(n1) + tanbeta_x(n2))/2.D0
+            tanbeta_y_tmp = (tanbeta_y(n1) + tanbeta_y(n2))/2.D0
+			
+            ! Computation of wave orbital velocities and water surface elevations over a wave cycle in case of non linear waves.
+            ! Both of the proposed methods compute near bed orbital velocity. As effects of coastal vegetation on waves usually 
+            ! occur in shallow water conditions, near bed orbital velocity is used as the depth-averaged value to a first approximation. 
+            !The vegetation force is then empirically distributed over the vegetation height. The implementation of a more accurate
+            ! method computing vertical profiles of orbital velocity is under development (See Fenton, 1988).
+			
+            ! Choose ONE of the following methods : WAVE_ASYMMETRY_ELFRINK_VEG or WAVE_ASYMMETRY_RF.
+			
+            ! The routine WAVE_ASYMMETRY_ELFRINK_VEG computes a time series of wave orbital velocity
+            ! and water surface elevation over a wave cycle based on Elfrink et al. (2006). 
+
+            !CALL WAVE_ASYMMETRY_ELFRINK_VEG(Hs_tmp,TM10_tmp,w_dir_tmp,htot,tanbeta_x_tmp,tanbeta_y_tmp,&
+                 !ech+1,Uorbi,Ucrest,Utrough,T_crest,T_trough,etaw)
+				 
+            ! The routine WAVE_ASYMMETRY_RF computes a time series of wave orbital velocity
+            ! and water surface elevation over a wave cycle based on Rienecker and Fenton (1981) and Ruessink et al. (2012). 				 
+				 
+            CALL WAVE_ASYMMETRY_RF(Hrms_tmp,TM10_tmp,klm_tmp,htot,ech,Uorbi,etaw)			
+
+            !Fv,w = 1/Trep int 0 -> Trep 0.5*rhow*Cd*bv*Nv*h'v*uw*abs(uw) dt
+            dt = TM10_tmp/(ech-1)
+            DO t = 1,ech-1
+              tmp1 = Uorbi(t)*abs(Uorbi(t))*min(max(etaw(t)+htot,0.d0),SAV_H_tmp)
+              tmp2 = Uorbi(t+1)*abs(Uorbi(t+1))*min(max(etaw(t+1)+htot,0.d0),SAV_H_tmp)
+              WWAVE_FORCE_VEG_NL_TOT  = WWAVE_FORCE_VEG_NL_TOT + 0.5D0*SAV_CD_tmp*SAV_BV_tmp*SAV_NV_tmp*(tmp1+tmp2)/2.D0*dt/TM10_tmp
+            END DO
+
+            !Distribution over the vertical
+
+            IF(kbs(IS)+1 == NVRT) THEN !2D
+
+            WWAVE_FORCE_VEG_NL_x = - WWAVE_FORCE_VEG_NL_TOT * COS(w_dir_tmp)/htot
+            WWAVE_FORCE_VEG_NL_y = - WWAVE_FORCE_VEG_NL_TOT * SIN(w_dir_tmp)/htot
+
+            WWAVE_FORCE(1,:,IS) = WWAVE_FORCE(1,:,IS) + WWAVE_FORCE_VEG_NL_x
+            WWAVE_FORCE(2,:,IS) = WWAVE_FORCE(2,:,IS) + WWAVE_FORCE_VEG_NL_y
+
+            ELSE !3D
+              tmp0 = 0.D0
+              topveg_k = NVRT
+              IF (SAV_H_tmp >= htot) THEN !emergent vegetation
+                topveg_k = NVRT
+              ELSE
+                DO k = kbs(IS), NVRT-1
+                  tmp0 = tmp0 + zs(k+1,IS) - zs(k,IS)
+                  IF (tmp0 >= SAV_H_tmp) THEN !submerged vegetation
+                    topveg_k = k+1
+				    EXIT
+                  ENDIF
+                END DO
+              ENDIF
+                
+              DO k = kbs(IS), topveg_k 
+                  ! Homogeneous vertical distribution on vegetation height
+                  swild_3D(k) = 1.D0
+              END DO !k
+
+              ! Integral of the vertical distribution function
+              sum_3D = 0.0D0
+
+              DO k = kbs(IS), topveg_k-1
+                sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
+              END DO !topveg_k-1
+
+              IF(sum_3D == 0) CALL parallel_abort('Vertical profile in intrawave vegetation force: integral=0')
+
+              DO k = kbs(IS), topveg_k
+                WWAVE_FORCE_VEG_NL_x = - swild_3D(k)*WWAVE_FORCE_VEG_NL_TOT*COS(w_dir_tmp)/sum_3D
+                WWAVE_FORCE_VEG_NL_y = - swild_3D(k)*WWAVE_FORCE_VEG_NL_TOT*SIN(w_dir_tmp)/sum_3D
+				
+                WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS) + WWAVE_FORCE_VEG_NL_x
+                WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS) + WWAVE_FORCE_VEG_NL_y
+              END DO
+            ENDIF !2D/3D
+          END DO
+
+        CALL exchange_s3d_2(WWAVE_FORCE)
+		
+      END SUBROUTINE
 
 !**********************************************************************
 !*   This routine fixes the wave forces to the barotropic gradient at the numerical shoreline (boundary between dry and wet elements)			
