@@ -8,7 +8,8 @@ This beta notes are divided into 5 part:
 (A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
-24a2723 (27 Sep 2022): [merged PR from LRU[] new options related to vegetation effects on WWM; also 
+24a2723 (27 Sep 2022): [merged PR from LRU[] new options related to vegetation effects on WWM. Added
+                       iof_wwm(31) as dissipation due to vegetation. Also 
                        nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;
 c94b2ca (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;
 a0960ed (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes 

@@ -84,7 +84,7 @@
       if (iinitial.ne.0 .and. iinitial.ne.1) stop 'wrong initialization flag'
 
 !!'
-      if(varname(1:len_var).eq.'elev' .and. iinitial==1) then
+      if(varname(1:len_var).eq.'elevation' .and. iinitial==1) then
         is_elev=1 
         print*, '<<<<<special treatment will be implemented for elev'
       else
