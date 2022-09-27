@@ -6331,7 +6331,7 @@
         endif !iof_wwm
       enddo !i
 
-      do i=27,31
+      do i=27,32
         if(iof_wwm(i)/=0) then
           ncount_2dnode=ncount_2dnode+1
           iout_23d(ncount_2dnode)=1
@@ -6345,13 +6345,15 @@
             case(30)
               out_name(ncount_2dnode)='dissRateWhiteCapping'
             case(31)
+              out_name(ncount_2dnode)='dissRateVegetation'
+            case(32)
               out_name(ncount_2dnode)='energyInputAtmos'
           end select 
         endif !iof_wwm
       enddo !i
 
       !Vectors count as 2
-      if(iof_wwm(32)/=0) then
+      if(iof_wwm(33)/=0) then
         ncount_2dnode=ncount_2dnode+2
         iout_23d(ncount_2dnode-1:ncount_2dnode)=1
         out_name(ncount_2dnode-1)='waveEnergyDirX'

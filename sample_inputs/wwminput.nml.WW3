@@ -202,11 +202,11 @@
                                      ! Have fun ... Aron and Thomas.
                                      ! AMETHOD = 6 - BCGS Solver 
                                      ! AMETHOD = 7 - GAUSS and JACOBI SOLVER
- SMETHOD        = 6
+ SMETHOD        = 1
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
-                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS)
+                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS), to enhance stability in surf zone if explicit method is used
 
  DMETHOD        = 2
                                      ! This switch controls the numerical method in directional space.
@@ -292,7 +292,7 @@
  NDYNITER_SBR   = 10,        	     !
  NDYNITER_SNL3  = 10,       	     ! 
  NDYNITER_SBF   = 10,        	     !
- LSOUBOUND      = T                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height
+ LSOUBOUND      = F                  ! Do source terms on boundary, this is possible as long only dissipative processes are governing the spectral evolution, otherwise, with wind u will get the max. possible wave height
                                      ! based on infinie fetch ... good for harbor studies. This is efficiently used for flume experiemnts mostly since in this case one would get a gradient in the crossection due to the effect
                                      ! that source terms are not treated there.
                                      ! 1: use PETSC

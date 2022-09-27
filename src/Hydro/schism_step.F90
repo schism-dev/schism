@@ -883,7 +883,7 @@
               tmp=1.293d-3*out_wwm_windpar(i,8)**2.d0*rampwind !stress=rho_air*ufric^2; scaled by rho_water
               tau(1,i)=tmp*cos(theta)
               tau(2,i)=tmp*sin(theta)
-            endif			  
+            endif
           endif
         enddo !i
 !$OMP   end do
@@ -8926,12 +8926,12 @@
         icount=icount+1
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'wave_sdstot',1,1,npa,dble(wave_sdstot(:)))
-	 
+
         ! Total wave energy dissipation rate by vegetation [W/m²]
         noutput=noutput+1
         icount=icount+1
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
-     &'wave_svegtot',1,1,npa,dble(wave_svegtot(:)))	 
+     &'wave_svegtot',1,1,npa,dble(wave_svegtot(:)))
 
         ! Total wave energy input rate from atmospheric forcing [W/m²]
         noutput=noutput+1
@@ -9173,7 +9173,7 @@
           endif !iof_wwm
         enddo !i
 
-        do i=27,31
+        do i=27,32
           if(iof_wwm(i)/=0) then
             icount=icount+1
             if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.11)')
@@ -9185,6 +9185,8 @@
               varout_2dnode(icount,:)=wave_sbftot(1:np)
             else if(i==30) then
               varout_2dnode(icount,:)=wave_sdstot(1:np)
+            else if(i==31) then
+              varout_2dnode(icount,:)=wave_svegtot(1:np)
             else
               varout_2dnode(icount,:)=wave_sintot(1:np)
             endif !i
@@ -9192,7 +9194,7 @@
         enddo !i
 
         !vectors
-        if(iof_wwm(32)/=0) then
+        if(iof_wwm(33)/=0) then
           icount=icount+2
           if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.2)')
           varout_2dnode(icount-1,:)=out_wwm(1:np,8)

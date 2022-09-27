@@ -266,11 +266,11 @@
                                      ! AMETHOD = 7 - GAUSS and JACOBI SOLVER
 ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no memory the rest r hybrid levels ... it is try and error stuff depends on architecture
 
- SMETHOD        = 6
+ SMETHOD        = 1
                                      ! This switch controls the way the source terms are integrated. 0: no source terms;
                                      ! 1: splitting using RK-3 and SI for fast and slow modes 2: semi-implicit;
                                      ! 3: R-K3 (if ICOMP=0 or 1) - slow; 4: Dynamic Splitting (experimental)
-                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS)
+                                     ! 6: Sub-time steps for breaking term integration (subroutine INT_SHALLOW_SOURCETERMS) to enhance stability in surf zone if explicit method is used.
 
  DMETHOD        = 2
                                      ! This switch controls the numerical method in directional space.
@@ -303,7 +303,7 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
  LLIMT          = T                  ! Switch on/off Action limiter, Action limiter must mostly be turned on.
  LSIGBOUND      = F                  ! Theta space on wet land/island boundary
  LTHBOUND       = F                  ! Sigma space on wet land/island boundary
- LSOUBOUND      = T                  ! Source Terms on wet land/island boundary
+ LSOUBOUND      = F                  ! Source Terms on wet land/island boundary. Use T if SMETHOD=6
  MELIM          = 1                  ! Formulation for the action limiter
                                      ! MELIM = 1 (default)
                                      ! Limiter according to the WAM group (1988)
