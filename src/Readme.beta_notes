@@ -8,6 +8,8 @@ This beta notes are divided into 5 part:
 (A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
+24a2723 (27 Sep 2022): [merged PR from LRU[] new options related to vegetation effects on WWM; also 
+                       nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;
 c94b2ca (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;
 a0960ed (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes 
                near tropical islands etc);
@@ -554,6 +556,7 @@ git versions:
 (137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a frame transformation
                              for better vel near poles.
 (138) 510874ec (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)
+(139) 24a2723 (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
