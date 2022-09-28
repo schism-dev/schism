@@ -239,6 +239,7 @@ subroutine ecosystem(it)
         rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
         rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
         rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3dn+NO3(k))
+        !Note: default KhNH4n=1.d10 is used to shut down NH4 impactor on nitrificaton with f(NH4)=1.0 
         rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
       enddo !k
 
@@ -430,7 +431,7 @@ subroutine ecosystem(it)
       !************************************************************************************
       !debug mode for 2D/3D variables (for ICM developers)
       !************************************************************************************
-      if(iof_icm_dbg(0)/=0) then
+      if(iof_icm_dbg(1)/=0) then
         !Core
         wqc_d2d(1:2,id)=0 !TN,TP
         do k=kb+1,nvrt
@@ -442,9 +443,9 @@ subroutine ecosystem(it)
             wqc_d2d(2,id)=wqc_d2d(2,id)+dzb*SRPOP(k)
           endif
         enddo
-      endif !iof_icm_dbg(0)/=0
+      endif !iof_icm_dbg(1)/=0
 
-      if(iof_icm_dbg(1)/=0) then
+      if(iof_icm_dbg(2)/=0) then
         !Core
         do k=kb+1,nvrt
           wqc_d3d(1,k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
@@ -456,7 +457,7 @@ subroutine ecosystem(it)
           wqc_d3d(i3d(6)+1,:,id)=sstem(:,id)
           wqc_d3d(i3d(6)+2,:,id)=sroot(:,id)
         endif
-      endif !iof_icm_dbg(1)/=0
+      endif !iof_icm_dbg(2)/=0
 
     enddo !id
   enddo !isub

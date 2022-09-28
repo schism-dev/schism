@@ -157,6 +157,8 @@ and $(FCP_4^m,FCM_4^m,FNP_5^m,FNM_5^m,FPP_5^m,FPM_5^m)=0, (KC_S,KN_S,KP_S,KP_P)=
 \end{cases}
 \end{flalign}
 
+Note: nitrification factor $f(NH_{4})=\frac{KhNH4_n}{KhNH4_n+NH4}$ can be disabled by setting large $KhNH4n$ value (e.g. 1e10)
+
 ### 1.3 Light
 
 ### 1.4 Surface/bottom fluxes

@@ -157,12 +157,12 @@ subroutine read_icm_param(imode)
 
     !allocate debug arrays
     nout_d2d=sum(n2d(1:9)); nout_d3d=sum(n3d(1:9))
-    if(iof_icm_dbg(0)/=0) then
+    if(iof_icm_dbg(1)/=0) then
       allocate(wqc_d2d(nout_d2d,nea),stat=istat)
       if(istat/=0) call parallel_abort('failed in alloc. wqc_d2d')
       wqc_d2d=-99
     endif 
-    if(iof_icm_dbg(1)/=0) then
+    if(iof_icm_dbg(2)/=0) then
       allocate(wqc_d3d(nout_d3d,nvrt,nea),stat=istat)
       if(istat/=0) call parallel_abort('failed in alloc. wqc_d3d')
       wqc_d3d=-99
@@ -173,7 +173,7 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !init. CORE module
     GPM=0; TGP=0; KTGP=0; MTR=0; MTB=0; TMT=0; KTMT=0; FCP=0; FNP=0; FPP=0; FCM=0; 
-    FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0; KhDOn=0; KhNH4n=0; KhDOox=0; KhNO3dn=0; 
+    FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0; KhDOn=0; KhNH4n=1e10; KhDOox=0; KhNO3dn=0; 
     KC0=0; KN0=0; KP0=0; KCalg=0; KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
     KhCOD=0; KhN=0; KhP=0; KhSal=0; c2chl=0; n2c=0; p2c=0; o2c=0;
     o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0; PBmin=0; dz_flux=0
