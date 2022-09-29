@@ -469,7 +469,7 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
  UNITC          = 'SEC'  ! unit used above
  ENDTC          = '19980901.060000'  ! Ending time of hotfile writing
  LCYCLEHOT      = T ! Applies only to netcdf
-                    ! If T then hotfile contains 2 last records.
+                    ! If T then hotfile contains 2 last records (1st record is most recent).
                     ! If F then hotfile contains N record if N outputs
                     ! have been done
                     ! For binary only one record.
@@ -480,13 +480,15 @@ ASPAR_LOCAL_LEVEL = 0               ! locality level 0 - a lot of memory 10 - no
                      ! 1: hotfiles in separate files, each associated
                      !    with one process
  FILEHOT_OUT    = 'hotfile_out_WWM.nc' !name of hot outputs
+
+ !Input part: to use WWM hotstart input, need to turn on LHOTR in &INIT!!
  HOTSTYLE_IN    = 2  ! 1: binary hotfile of data as input
                      ! 2: netcdf hotfile of data as input (default)
  IHOTPOS_IN        = 1 ! Position in hotfile (only for netcdf)
-                       ! for reading. If LCYCLEHOT=T, this can be 1 or 2
+                       ! for reading. If LCYCLEHOT=T, this can be 1 or 2 (we use here 1st of 2 records, the most recent time)
  MULTIPLEIN     = 0    ! 0: read hotfile from one single file
                        ! 1: read hotfile from multiple files.
- FILEHOT_IN     = 'hotfile_in_WWM.nc' ! Hot file name for input if LHOTR=T in &INIT. This can be simply hotfile_out.nc above
+ FILEHOT_IN     = 'hotfile_in_WWM.nc' ! Hot file name for input if LHOTR=T in &INIT. This should be hotfile_out_WWM.nc above
 /
 
 &NESTING
