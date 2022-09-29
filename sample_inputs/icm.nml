@@ -200,7 +200,6 @@ Nit    = 0.07                     !maximum nitrification rate (day-1)
 TNit   = 27.0                     !optimal temp. for nitrification (oC)
 KTNit  = 0.0045  0.0045           !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
 KhDOn  = 1.0                      !DO half saturation for nitrification (mg/L)
-KhNH4n = 1e10                     !NH4 half saturation for nitrification (mg/L)
 
 !denitrifcation
 KhDOox  = 0.5                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
