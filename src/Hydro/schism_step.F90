@@ -8441,7 +8441,6 @@
             vnn=(su2(k+1,i)+su2(k,i))/2.d0*snx(i)+(sv2(k+1,i)+sv2(k,i))/2.d0*sny(i) 
             ftmp=fac*distj(i)*(zs(k+1,i)-zs(k,i))*vnn !m^3/s
             fluxes_tr(itmp1,1)=fluxes_tr(itmp1,1)+ftmp
-!#ifdef USE_ANALYSIS
             !Other fluxes
             if(ftmp>=0.d0) then !positive flux
               fluxes_tr(itmp1,2)=fluxes_tr(itmp1,2)+ftmp
@@ -8453,7 +8452,6 @@
               fluxes_tr(itmp1,5:(3+2*ntracers):2)=fluxes_tr(itmp1,5:(3+2*ntracers):2)+ &
      &ftmp*tr_el(1:ntracers,k+1,ie)
             endif
-!#endif
           enddo !k
         endif !side bordering 2 regions
       enddo !i=1,ns
@@ -8468,15 +8466,15 @@
       wtimer(11,2)=wtimer(11,2)+mpi_wtime()-cwtmp
 #endif
       if(myrank==0) then
-        write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1:3)
-#ifdef USE_ANALYSIS
-!        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
-!        write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
-        do m=1,ntracers
-          write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+2)
-          write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+3)
-        enddo !m
-#endif
+        write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1)
+        if(iflux_out_format/=0) then
+          write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
+          write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
+          do m=1,ntracers
+            write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+2)
+            write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+3)
+          enddo !m
+        endif !iflux_out_format
         write(16,*)'done computing fluxes...'
       endif
 !$OMP end master
