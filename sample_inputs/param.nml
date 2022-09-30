@@ -636,6 +636,7 @@
 ! output file flux.dat need to be saved before continuing hotstart
 !-----------------------------------------------------------------------
   iflux = 0
+  iflux_out_format = 0 !1: more detailed outputs
 
 !-----------------------------------------------------------------------
 ! Test flags for debugging. These flags should be turned off normally.
