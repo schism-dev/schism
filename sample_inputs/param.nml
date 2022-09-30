@@ -639,11 +639,11 @@
 !-----------------------------------------------------------------------
 ! Conservation check option. If iflux=1, some fluxes are computed
 ! in regions specified in fluxflag.prop (regional number from -1 to an arbitrary integer).
-! in output flux.dat, positive means flux from region n to region n-1 (n>=1)
+! in output flux.out, positive means flux from region n to region n-1 (n>=1)
 ! output file flux.dat need to be saved before continuing hotstart
 !-----------------------------------------------------------------------
   iflux = 0
-  iflux_out_format = 0 !1: more detailed outputs
+  iflux_out_format = 0 !0: basic flux output; 1: more detailed outputs
 
 !-----------------------------------------------------------------------
 ! Test flags for debugging. These flags should be turned off normally.
