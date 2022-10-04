@@ -201,3 +201,11 @@ module icm_mod
 
 end module icm_mod
 
+module icm_interface
+  interface brent_def
+    subroutine brent(bv)
+      use icm_mod, only: brent_var
+      type(brent_var),target,intent(inout) :: bv
+    end subroutine brent
+  end interface
+end module icm_interface

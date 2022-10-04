@@ -1215,8 +1215,9 @@ subroutine ph_f(f,bv)
   use schism_glbl, only : rkind,errmsg
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod, only : brent_var
+  use icm_interface
   implicit none
-  type(brent_var),intent(in) :: bv
+  type(brent_var),intent(inout) :: bv
   real(rkind), intent(out):: f
   
   !local variabels

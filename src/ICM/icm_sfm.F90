@@ -25,6 +25,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
                         & idry_e,eta2,dpe,nvrt
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
+  use icm_interface
   implicit none
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
