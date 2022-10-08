@@ -10,7 +10,8 @@
 clear all; close all;
 
 iflag=2;
-const={'s2','m2','n2','k2','k1','p1','o1','q1'};
+%const={'s2','m2','n2','k2','k1','p1','o1','q1'};
+const={'s2','m2','n2','k2','k1','p1','o1','q1','m4'};
 
 %List of open bnd seg's that contain lon/lat of open bnd nodes
 open_ll={'fg.bp.1','fg.bp.2','fg.bp.3'};
