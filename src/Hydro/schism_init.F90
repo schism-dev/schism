@@ -2831,7 +2831,7 @@
         endif !myrank=0
         call mpi_bcast(nsources,1,itype,0,comm,istat)
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
-        call mpi_bcast(th_dt3,nthfiles2,rtype,0,comm,istat)
+        call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
 
         if(iorder==0) then
           allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
