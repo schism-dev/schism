@@ -560,6 +560,7 @@ git versions:
                              for better vel near poles.
 (138) 510874ec (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)
 (139) 24a2723 (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
+(140) 1828489 (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
