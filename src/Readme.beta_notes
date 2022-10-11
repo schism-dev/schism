@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-(11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
+f8e15ee (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
 bc113eb2 (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;
 24a2723 (27 Sep 2022): [merged PR from LRU[] new options related to vegetation effects on WWM. Added
                        iof_wwm(31) as dissipation due to vegetation. Also 
