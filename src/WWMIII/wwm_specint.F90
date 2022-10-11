@@ -249,9 +249,6 @@
      &                      U10NEW(IP), THWNEW(IP), USNEW(IP), &
      &                      Z0NEW(IP), ROAIRN(IP), ZIDLNEW(IP), &
      &                      SL(IP,:,:), FCONST(IP,:), FMEANWS(IP), MIJ(IP))
-           ELSE IF (ICODE == 3) THEN
-             CALL IMPLSCH_LOCAL (IP, FL3(IP,:,:), FL(IP,:,:), 1, &
-     &                     SL(IP,:,:))
            ENDIF ! ICODE
            DO IS = 1, MSC
              DO ID = 1, MDC
