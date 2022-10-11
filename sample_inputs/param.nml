@@ -288,7 +288,9 @@
   meth_sink = 1 !options to treat sinks @ dry elem
 
 ! Specify vertical level to inject source concentration for each tracer _module_.
-! Code will extrapolate below bottom/above surface.
+! Code will extrapolate below bottom/above surface unless level 0 is specified. In
+! the latter case, the incoming tracer mass will be distributed across all vertical layers - 
+! this approach works best in shallow waters. 
   lev_tr_source(1) = -9 !T
   lev_tr_source(2) = -9 !S
   lev_tr_source(3) = -9 !GEN

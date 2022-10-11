@@ -7491,13 +7491,18 @@
 
             !Positive source only
             do j=1,ntracers
-              kin=max(kbe(i)+1,min(nvrt,lev_tr_source2(j)))
-              !bigv=area(i)*(ze(kbe(i)+1,i)-ze(kbe(i),i))
-              bigv=area(i)*(ze(kin,i)-ze(kin-1,i))
-              if(bigv<=0.d0) call parallel_abort('STEP: bigv==0 (3)')
-              rat=vsource(i)*dt/bigv !ratio of volumes (>0)
-              !if(msource(j,i)>-99.d0) tr_el(j,kbe(i)+1,i)=(tr_el(j,kbe(i)+1,i)+rat*msource(j,i))/(1.d0+rat)
-              if(msource(j,i)>-99.d0) tr_el(j,kin,i)=(tr_el(j,kin,i)+rat*msource(j,i))/(1.d0+rat)
+              if(lev_tr_source2(j)==0) then !tracers added in entire water column
+                bigv=area(i)*(ze(nvrt,i)-ze(kbe(i),i))
+                if(bigv<=0.d0) call parallel_abort('STEP: bigv==0 (4)')
+                rat=vsource(i)*dt/bigv !ratio of volumes (>0)
+                if(msource(j,i)>-99.d0) tr_el(j,:,i)=(tr_el(j,:,i)+rat*msource(j,i))/(1.d0+rat)
+              else
+                kin=max(kbe(i)+1,min(nvrt,lev_tr_source2(j)))
+                bigv=area(i)*(ze(kin,i)-ze(kin-1,i))
+                if(bigv<=0.d0) call parallel_abort('STEP: bigv==0 (3)')
+                rat=vsource(i)*dt/bigv !ratio of volumes (>0)
+                if(msource(j,i)>-99.d0) tr_el(j,kin,i)=(tr_el(j,kin,i)+rat*msource(j,i))/(1.d0+rat)
+              endif !lev_tr_source2
             enddo !j
 
           enddo !i
