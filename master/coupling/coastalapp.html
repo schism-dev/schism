@@ -1222,18 +1222,17 @@
   <h1>NOAA's CoastalApp</h1>
 
 <p>The NOAA Environmental Modeling System (NEMS) Coastal Application "CoastalApp" is a NUOPC-based coupled system using the NEMS coupler.</p>
-<p>The <a href="nuopc.html">SCHISM NUOPC</a> cap is currently being integrated as an OCN component of the CoastalApp; this is available from a public repository <a href="https://github.com/noaa-ocs-modeling/CoastalApp">https://github.com/noaa-ocs-modeling/CoastalApp</a></p>
+<p>The <a href="nuopc.html">SCHISM NUOPC</a> cap is currently being integrated as an ocean component of the CoastalApp, replacing the twodimensional ADCIRC model; CoastalApp is available from a public repository <a href="https://github.com/noaa-ocs-modeling/CoastalApp">https://github.com/noaa-ocs-modeling/CoastalApp</a>, and its integration with SCHISM occurs in the <code>develop</code> branch</p>
 <h2 id="obtaining-and-building-coastalapp">Obtaining and building CoastalApp<a class="headerlink" href="#obtaining-and-building-coastalapp" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>export COASTALAPP_DIR=/my/path/to/coastalapp
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git clone https://github.com/noaa-ocs-modeling/CoastalApp $COASTALAPP_DIR
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git clone https://github.com/noaa-ocs-modeling/CoastalApp -b develop $COASTALAPP_DIR 
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cd $COASTALAPP_DIR
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git checkout feature/schism
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>git submodule update --init --recursive SCHISM NEMS 
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>bash ./build.sh -component &quot;SCHISM&quot;
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git submodule update --init --recursive SCHISM/schism SCHISM/schism-esmf NEMS 
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>bash ./build.sh -component &quot;SCHISM&quot;
 </code></pre></div>
-<p>You can add components like <code>WW3</code> or <code>ADCIRC</code>, and you may be required to choose a compiler or platform.  Consult <code>./build.sh -h</code> for help and further information.</p>
+<p>You can add components like <code>WW3</code> or <code>ADCIRC</code>, and you may be required to choose a <code>-compiler</code>  or <code>-platform</code>, or set environment variables like <code>PARMETIS</code> or <code>ESMFMKFILE</code>.  Consult <code>./build.sh -h</code> for help and further information.</p>
 <h2 id="reporting-bugs-or-requesting-features">Reporting bugs or requesting features<a class="headerlink" href="#reporting-bugs-or-requesting-features" title="Permanent link">&para;</a></h2>
-<p>The integration of SCHISM into CoastalApp is still in development.  Please report any errors or annoyances in our bug tracker on <a href="https://github.com/schism-dev/CoastalApp/issues">https://github.com/schism-dev/CoastalApp/issues</a>. </p>
+<p>The integration of SCHISM into CoastalApp is still in development.  Please report any errors or annoyances in the upstream bug tracker on <a href="https://github.com/noaa-ocs-modeling/CoastalApp/issues">https://github.com/noaa-ocs-modeling/CoastalApp/issues</a>. </p>
 
               
             </article>

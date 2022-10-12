@@ -1228,12 +1228,11 @@
 
   <h1>Modular System for Shelves and Coasts</h1>
 
-<p>MOSSCO, the "Modular System for Shelves and Coasts" is a framework for coupling
+<p>The Modular System for Shelves and Coasts (MOSSCO) is a framework for coupling
 processes or domains that are originally developed in standalone numerical models.
 The software MOSSCO implements this infrastructure in the form of a library of
 components and couplers, and of example coupled applications. The components
-"wrap" external models used in coastal and shelf sciences; these wrapped components are then coupled
-to each other in the Earth System Modeling Framework (ESMF).</p>
+"wrap" external models used in coastal and shelf sciences; these wrapped components are then coupled to each other in the Earth System Modeling Framework (ESMF).</p>
 <p>The <a href="esmf.html">SCHISM ESMF</a> cap integrates with MOSSCO.</p>
 <h2 id="obtaining-and-building-mossco">Obtaining and building MOSSCO<a class="headerlink" href="#obtaining-and-building-mossco" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>export SCHISM_BUILD_DIR=/my/path/to/schism/build
@@ -1244,8 +1243,6 @@ to each other in the Earth System Modeling Framework (ESMF).</p>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>cd $MOSSCO_DIR
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>make all install
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>bash ./build.sh -component &quot;SCHISM&quot;
 </code></pre></div>
 <h2 id="using-schism-as-part-of-a-mossco-coupled-system">Using SCHISM as part of a MOSSCO coupled system<a class="headerlink" href="#using-schism-as-part-of-a-mossco-coupled-system" title="Permanent link">&para;</a></h2>
 <p>A simple preconfigured application is available in <code>$MOSSCO_DIR/examples/esmf/schism</code>. To build it, run <code>make</code> in that directory.  You can use the resulting executable as a drop-in replacement for SCHISM's standalone <code>pschism</code> executable, but you need to add the <code>mossco.cfg</code> resource file which overrides <code>param.nml</code> for control parameters of the coupled system, like start and stop time.</p>

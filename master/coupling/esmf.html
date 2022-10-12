@@ -1243,12 +1243,9 @@
   <h1>Earth System Modeling Framework</h1>
 
 <p>The Earth System Modeling Framework (ESMF) is a suite of software tools for developing high-performance, multi-component Earth science modeling applications. Such applications may include a few or dozens of components representing atmospheric, oceanic, terrestrial, or other physical domains, and their constituent processes (dynamical, chemical, biological, etc.). Often these components are developed by different groups independently, and must be “coupled” together using software that transfers and transforms data among the components in order to form functional simulations.</p>
-<p>SCHISM can be such a component within an ESMF-coupled system.  A so-called "cap" wraps SCHISM and exposes it via the ESMF Application Programming Interface (API).  The interfaces exposed through the API are
- * import of fields
- * export of fields
- * control structure</p>
+<p>SCHISM can be such a model component within an ESMF-coupled system.  A so-called "cap" wraps SCHISM and exposes it via the ESMF Application Programming Interface (API).  The interfaces exposed through the API are (1) import of fields, (2) export of fields, and (3) control structure.</p>
 <h2 id="obtaining-and-building-the-cap">Obtaining and building the cap<a class="headerlink" href="#obtaining-and-building-the-cap" title="Permanent link">&para;</a></h2>
-<p>The ESMF cap and the <a href="nuopc.html">NUOPC</a> cap are jointly hosted in a separate repository on <a href="https://github.com/schism-dev/schism-esmf">https://github.com/schism-dev/schism-esmf</a>.  It requires that the SCHISM core is built and pointed to by the environment variable <code>$SCHISM_BUILD_DIR</code> </p>
+<p>The <a href="esmf.html">ESMF</a> and the <a href="nuopc.html">NUOPC</a> caps are jointly hosted in a separate repository on <a href="https://github.com/schism-dev/schism-esmf">https://github.com/schism-dev/schism-esmf</a>.  It requires that the SCHISM core is built and pointed to by the environment variable <code>$SCHISM_BUILD_DIR</code> </p>
 <p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>export SCHISM_ESMF_DIR=/my/path/to/schism-esmf
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git clone https://github.com/schism-dev/schism-esmf.git $SCHISM_ESMF_DIR
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cd $SCHISM_ESMF_DIR
@@ -1256,19 +1253,19 @@
 </code></pre></div>
 The combined SCHISM and SCHISM-ESMF libraries will be available in the <code>./lib</code> subdirectory.  </p>
 <h2 id="pre-configured-executables">Pre-configured executables<a class="headerlink" href="#pre-configured-executables" title="Permanent link">&para;</a></h2>
-<p>While the API exposed through the SCHISM-ESMF library is the core functionality of the cap, there are also several
- pre-configured simple coupled systems available for you to  <code>make</code> or use as a template: </p>
+<p>While the API exposed through the SCHISM-ESMF library is the core functionality of the cap, there are also several pre-configured simple coupled systems available for you to  <code>make</code> or use as a template: </p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>concurrent_esmf_test.F90  
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>multi_schism.F90
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>schism_driver_interfaces.F90
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>schism_pdaf.F90
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>triple_schism.F90
 </code></pre></div>
+<p>Have a look at the <code>examples</code> subdirectory!</p>
 <h2 id="applications">Applications<a class="headerlink" href="#applications" title="Permanent link">&para;</a></h2>
-<p>(1) The SCHISM ESMF cap is used to couple SCHISM to the Parallel Data Assimilation Framework leveraging the control structures of ESMF, see <code>schism_pdaf.F90</code>.</p>
+<p>(1) The SCHISM ESMF cap is used to couple SCHISM to the Parallel Data Assimilation Framework leveraging the control structures of ESMF, see the example <code>schism_pdaf.F90</code>.</p>
 <p>(2) The SCHISM ESMF cap is used in the Modular System for Shelves and Coasts, see  <a href="mossco.html">MOSSCO</a>.  Within that system, SCHISM can be flexibly coupled to components for the atmosphere, waves, ocean BGC, generic input/output, sediment. </p>
 <h2 id="publications">Publications<a class="headerlink" href="#publications" title="Permanent link">&para;</a></h2>
-<p>Hao-Cheng Yu, Yinglong J. Zhang, Nerger Lars, Carsten Lemmen, Jason C.S Yu, Tzu-Yin Chou, Chi-Hao Chu, and Chuen-Teyr Terng: Development of a flexible data assimilation method in a 3D unstructured-grid ocean model under Earth System Modeling Framework, submitted to Geoscientific Model Development, March 2022</p>
+<p>Yu, H.-C., Zhang, Y. J., Nerger, L., Lemmen, C., Yu, J. C. S., Chou, T.-Y., Chu, C.-H., and Terng, C.-T.: Development of a flexible data assimilation method in a 3D unstructured-grid ocean model under Earth System Modeling Framework, EGUsphere [preprint], <a href="https://doi.org/10.5194/egusphere-2022-114">https://doi.org/10.5194/egusphere-2022-114</a>, 2022.</p>
 <h2 id="reporting-bugs-or-requesting-features">Reporting bugs or requesting features<a class="headerlink" href="#reporting-bugs-or-requesting-features" title="Permanent link">&para;</a></h2>
 <p>The ESMF cap is still in development.  Please report any errors or annoyances in our bug tracker on https://github.com/schism-dev/schism-esmf/issues.  Also, please request features there, such as additional import or export fields.</p>
 

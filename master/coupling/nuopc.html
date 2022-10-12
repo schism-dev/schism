@@ -1229,20 +1229,17 @@
   <h1>National Unified Operational Prediction Capability</h1>
 
 <p>The National Unified Operational Prediction Capability (NUOPC) is a consortium of Navy, NOAA, and Air Force modelers and their research partners. It aims to advance the weather prediction modeling systems used by meteorologists, mission planners, and decision makers. NUOPC partners are working toward a common model architecture - a standard way of building models - in order to make it easier to collaboratively build modeling systems. To this end, they have developed the NUOPC Layer that defines conventions and a set of generic components for building coupled models using the Earth System Modeling Framework (ESMF).</p>
-<p>SCHISM can be such a model component within an NUOPC-coupled system.  A so-called "cap" wraps SCHISM and exposes it via the NUOPC Application Programming Interface (API).  The interfaces exposed through the API are
- * import of fields
- * export of fields
- * control structure</p>
+<p>SCHISM can be such a model component within an NUOPC-coupled system.  A so-called "cap" wraps SCHISM and exposes it via the NUOPC Application Programming Interface (API).  The interfaces exposed through the API are (1) import of fields, (2) export of fields, and (3) control structure.</p>
 <h2 id="obtaining-and-building-the-cap">Obtaining and building the cap<a class="headerlink" href="#obtaining-and-building-the-cap" title="Permanent link">&para;</a></h2>
-<p>The NUOPC cap and the <a href="esmf.html">ESMF</a> cap are jointly hosted in a separate repository on <a href="https://github.com/schism-dev/schism-esmf">https://github.com/schism-dev/schism-esmf</a>.  It requires that the SCHISM core is built and pointed to by the environment variable <code>$SCHISM_BUILD_DIR</code> </p>
+<p>The <a href="nuopc.html">NUOPC</a>(esmf.html) cap are jointly hosted in a separate repository on <a href="https://github.com/schism-dev/schism-esmf">https://github.com/schism-dev/schism-esmf</a>.  It requires that the SCHISM core is built and pointed to by the environment variable <code>$SCHISM_BUILD_DIR</code> </p>
 <p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>export SCHISM_ESMF_DIR=/my/path/to/schism-esmf
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git clone https://github.com/schism-dev/schism-esmf.git $SCHISM_ESMF_DIR
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cd $SCHISM_ESMF_DIR
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>make install-nuopc
 </code></pre></div>
-The combined SCHISM and SCHISM-NUOPC libraries, as well as the NUOPC-compliant <code>Makefile</code> snippet will be available in the <code>./lib</code> subdirectory.  </p>
+The combined SCHISM and SCHISM-NUOPC libraries, as well as the NUOPC-compliant <code>Makefile</code> snippet <code>schism.mk</code> will be available in the <code>./lib</code> subdirectory.  </p>
 <h2 id="applications">Applications<a class="headerlink" href="#applications" title="Permanent link">&para;</a></h2>
-<p>The SCHISM NUOPC cap is currently used in the development version of the NOAA Environmental Modeling System (NEMS) Coastal Application "CoastalApp", see  <a href="coastalapp.html">CoastalApp</a>.  Within that system, SCHISM is coupled to components for the atmosphere (data or WRF), waves (data or WaveWatch III), and inland water (National Water Model).</p>
+<p>The SCHISM NUOPC cap is currently used in the development version of the NOAA Environmental Modeling System (NEMS) <a href="coastalapp.html">CoastalApp</a>.  Within that system, SCHISM is coupled to components for the atmosphere (data or WRF), waves (data or WaveWatch III), and inland water (National Water Model).</p>
 <h2 id="reporting-bugs-or-requesting-features">Reporting bugs or requesting features<a class="headerlink" href="#reporting-bugs-or-requesting-features" title="Permanent link">&para;</a></h2>
 <p>The ESMF cap is still in development.  Please report any errors or annoyances in our bug tracker on https://github.com/schism-dev/schism-esmf/issues.  Also, please request features there, such as additional import or export fields.</p>
 
