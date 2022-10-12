@@ -1,9 +1,8 @@
-MOSSCO, the "Modular System for Shelves and Coasts" is a framework for coupling
+The Modular System for Shelves and Coasts (MOSSCO) is a framework for coupling
 processes or domains that are originally developed in standalone numerical models.
 The software MOSSCO implements this infrastructure in the form of a library of
 components and couplers, and of example coupled applications. The components
-"wrap" external models used in coastal and shelf sciences; these wrapped components are then coupled
-to each other in the Earth System Modeling Framework (ESMF).
+"wrap" external models used in coastal and shelf sciences; these wrapped components are then coupled to each other in the Earth System Modeling Framework (ESMF).
 
 The [SCHISM ESMF](esmf.html) cap integrates with MOSSCO.
 
@@ -18,8 +17,6 @@ git clone https://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
 cd $MOSSCO_DIR
 make all install
-
-bash ./build.sh -component "SCHISM"
 ```
 
 ## Using SCHISM as part of a MOSSCO coupled system
