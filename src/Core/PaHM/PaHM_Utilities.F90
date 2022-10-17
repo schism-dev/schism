@@ -262,7 +262,8 @@ MODULE PaHM_Utilities
     endDateSpecified = .TRUE.
     endSimSpecified  = .TRUE.
 
-    modelType=1   
+!    modelType=1   ! HM model
+    modelType=10  ! GAHM model
     writeParams = .TRUE.
 
     CALL SetMessageSource("ReadControlFile")

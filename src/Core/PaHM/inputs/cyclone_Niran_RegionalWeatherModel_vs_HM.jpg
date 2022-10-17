@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en-US" xml:lang="en-US">
+    <!-- main.tt2 -->
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="generator" content="Sympa 6.2.66" />
+        <meta name="viewport"  content="width=device-width, initial-scale=1.0">
+        <title> schism_list - Email list of SCHISM users around the world -  </title>
+
+        <!-- head_ui.tt2 -->
+<link rel="stylesheet" href="/static-sympa/js/jquery-ui/jquery-ui.css?v1.12.1" />
+<link rel="stylesheet" href="/static-sympa/js/jqplot/jquery.jqplot.css?v1.0.8" />
+<link rel="stylesheet" href="/static-sympa/js/jquery-minicolors/jquery.minicolors.css?v2.3.1">
+<link rel="stylesheet" href="/static-sympa/fonts/font-awesome/css/font-awesome.css?v4.3.0" />
+<link rel="stylesheet" href="/static-sympa/fonts/foundation-icons/foundation-icons.css?v3.0" />
+<link rel="stylesheet" href="/static-sympa/js/foundation/css/foundation-float.css?v6.4.2" />
+
+<style>
+  select[multiple], select[size] { height: auto; background-image: none; }
+</style>
+<link rel="stylesheet" href="/static-sympa/css/vims.edu/style.css?h=3e496277846d89f4e080352ea8d3d0a8" title="Sympa CSS" />
+
+<link rel="shortcut icon" href="/static-sympa/icons/favicon_sympa.png" />
+<!-- end head_ui.tt2 -->
+
+
+        <!-- head_javascript.tt2 -->
+
+<script>
+<!--
+var sympa = {
+    backText:           'Back',
+    calendarButtonText: 'Calendar',
+    calendarFirstDay:   0,
+    closeText:          'Close',
+    dayNames:           'Sunday:Monday:Tuesday:Wednesday:Thursday:Friday:Saturday'.split(":"),
+    dayNamesMin:        'Su:Mo:Tu:We:Th:Fr:Sa'.split(":"),
+    home_url:           '/wws/',
+    icons_url:          '/static-sympa/icons',
+    lang:               'en-US',
+    loadingText:        'Please Wait...',
+    monthNamesShort:    'Jan:Feb:Mar:Apr:May:Jun:Jul:Aug:Sep:Oct:Nov:Dec'.split(":"),
+    openInNewWinText:   'Open in a new window',
+    resetText:          'Reset'
+};
+var lang = 'en-US';
+//-->
+</script>
+
+<script src="/static-sympa/js/jquery.js?v3.6.0"></script>
+<script src="/static-sympa/js/jquery-migrate.js?v1.4.1"></script>
+<script src="/static-sympa/js/jquery-ui/jquery-ui.js?v1.12.1"></script>
+<script src="/static-sympa/js/jqplot/jquery.jqplot.min.js?v1.0.8"></script>
+<script src="/static-sympa/js/jqplot/jqplot.categoryAxisRenderer.min.js?v1.0.8"></script>
+<script src="/static-sympa/js/jqplot/jqplot.barRenderer.min.js?v1.0.8"></script>
+<script src="/static-sympa/js/jqplot/jqplot.canvasAxisTickRenderer.min.js?v1.0.8"></script>
+<script src="/static-sympa/js/jqplot/jqplot.canvasTextRenderer.min.js?v1.0.8"></script>
+<script src="/static-sympa/js/jquery-minicolors/jquery.minicolors.min.js?v2.3.1"></script>
+<script src="/static-sympa/js/sympa.js?v6.2.66"></script>
+
+<!--[if lt IE 9]>
+    <script type="text/javascript" src="/static-sympa/js/html5shiv/html5shiv.js?v3.7.2"></script>
+<![endif]-->
+<script type="text/javascript" src="/static-sympa/js/respondjs/respond.min.js?v1.4.2"></script>
+<script src="/static-sympa/js/foundation/js/vendor/what-input.js?v4.2.0"></script>
+<script src="/static-sympa/js/foundation/js/foundation.min.js?v6.4.2"></script>
+
+<!-- end head_javascript.tt2 -->
+
+
+        <!-- RSS chanel -->
+                                            </head>
+
+    <body>
+        
+        <div id="top">
+            <a class="displayNone" name="top" href="#content-inner">
+                Skip to Content.
+            </a>
+        </div>
+
+        <noscript>
+            <em>Please activate JavaScript in your web browser</em>
+        </noscript>
+
+        
+            <!-- error.tt2 -->
+<div id="ErrorMsg" class="reveal medium" data-reveal
+     aria-labelledby="Error" aria-hidden="true" role="dialog">
+    <div class="alert-box alert radius">
+        <i class="fi-x"></i>
+
+                                
+
+                                
+
+                                
+
+                                
+            AUTHORIZATION REJECT (d_read)            
+                                    Shared document reading is restricted to list subscribers.
+If you are subscribed to the list with a different email address, you should either use that other email address or update your list membership with the new email address.
+            <br />
+        
+
+        </div>
+</div>
+<!-- end error.tt2 -->
+
+            
+                <!-- header.tt2 -->
+<header>
+    <div class="title-bar"
+         data-responsive-toggle="sympa-top-bar" data-hide-for="medium">
+        <span class="menu-text" aria-hidden="true">
+            <a href="http://www.vims.edu"><img style="float: left; margin-top: 0px; margin-left: 0px:" src="/wwsicons/logo_vims.png" alt="VIMS" /></a>
+        </span>
+        <div class="title-bar-right">
+            <div class="title-bar-title">
+                <span>Sympa Menu</span>
+            </div>
+            <a class="menu-icon" href="#" data-toggle="sympa-top-bar"></a>
+        </div>
+    </div>
+
+    <nav class="top-bar" id="sympa-top-bar" role="navigation">
+        <ul class="top-bar-left medium-2 columns show-for-medium">
+            <li class="name">
+                <span class="menu-text">
+                    <a href="http://www.vims.edu"><img style="float: left; margin-top: 0px; margin-left: 0px:" src="/wwsicons/logo_vims.png" alt="VIMS" /></a>
+                </span>
+            </li>
+        </ul>
+
+        <menu class="top-bar-right">
+            <ul class="vertical medium-horizontal menu" data-responsive-menu="drilldown medium-dropdown">
+                <!-- sympa_menu.tt2 -->
+
+
+    
+
+    <li class="">
+        <a href="/wws/home">
+            <i class="fi-home"></i>  Home
+        </a>
+    </li>
+
+
+
+
+
+    
+        
+    
+    <li class="">
+        <a href="#">
+            <i class="fa fa-search-plus"></i> Search for List(s)
+        </a>
+        <ul class="vertical menu">
+
+            
+                
+            
+            <li class="">
+                <a href="/wws/search_list_request">
+                    <i class="fa fa-search"></i> Search form
+                </a>
+            </li>
+            
+                
+            
+            <li class="">
+                <a class="heavyWork" href="/wws/lists">
+                    <i class="fa fa-list"></i> Index of Lists
+                </a>
+            </li>
+            
+                
+            
+            <li class=""><a href="/wws/lists_categories" target=""><i class="fa fa-sitemap"></i> Browse lists by categories</a>
+
+        </ul>
+    </li>
+
+
+    
+
+
+    <li class="">
+        <a href="#">
+            <i class="fa fa-life-ring"></i> Support
+        </a>
+        <ul class="vertical menu">
+
+            
+                
+            
+            <li class="">
+                <a href="/wws/help" title="Documentation">
+                    <i class="fa fa-book"></i> Documentation
+                </a>
+            </li>
+            
+                
+            
+            <li class="">
+                <a href="/wws/help/faq.html" title="Frequently asked questions">
+                    <i class="fa fa-question"></i> FAQ
+                </a>
+            </li>
+            
+            
+
+        </ul>
+    </li>
+
+
+
+
+
+
+
+
+<!-- end sympa_menu.tt2 -->
+
+                <!-- login_menu.tt2 -->
+
+
+
+
+<li class="">
+        <form action="/wws" method="POST" autocomplete="off">
+            <fieldset><input type="hidden" name="csrftoken" value="5366d0892f36a71625e9144b6d2b3568" />
+                
+                <span>
+                    <button type="submit" name="action_login" value="Login">
+                        <i class="fa fa-user"></i>
+                        Login
+                    </button>
+                </span>
+            </fieldset>
+        </form>
+    </li>
+<!-- end login_menu.tt2 -->
+
+            </ul>
+        </menu>
+    </nav>
+    <h1 class="medium-offset-3 medium-9 columns">schism_list - Email list of SCHISM users around the world</h1>
+</header>
+<!-- end header.tt2 -->
+
+            
+
+            <div id="loading"></div>
+            <!-- aside_menu.tt2 -->
+<aside class="medium-3 columns">
+        <div class="title-bar" data-responsive-toggle="sympa-sub-bar" data-hide-for="medium">
+                <span class="menu-text" aria-hidden="true">
+                    <i class="fa fa-envelope-square fa-lg"></i>
+                </span>
+                <div class="title-bar-right">
+                    <div class="title-bar-title">
+                        <span>List Options Menu</span>
+                    </div>
+                    <a class="menu-icon" href="#" data-toggle="sympa-sub-bar"></a>
+                </div>
+            </div>
+            <nav class="top-bar" id="sympa-sub-bar" role="navigation">
+                <menu class="top-bar-left list">
+                    <ul class="vertical menu" data-responsive-menu="drilldown medium-accordion">
+                        <!-- list_menu.tt2 -->
+
+
+
+<li class="menu_title nolink">
+    <label>
+        <i class="fa fa-envelope-square fa-lg"></i>
+        List Options
+    </label>
+</li>
+
+<!-- list_panel.tt2 -->
+
+
+
+
+
+<li class="nolink">
+    <span>
+        Owners:
+        <span>
+            (1 owners)</span>
+
+        
+    </span>
+</li>
+
+<li class="nolink">
+    <span>
+        Moderators:
+        <span>
+            
+                <i>(same as owners)</i>
+            
+        </span>
+
+        
+    </span>
+</li>
+
+
+
+<li>
+    <script type="text/javascript">
+<!--
+document.write("<" +
+"a" +
+" " +
+"href" +
+"=\"" +
+"mailto" +
+":" +
+"schism_list" +
+"-" +
+"request" +
+"@" +
+"vims" +
+"." +
+"edu" +
+"\">" +
+"Contact" +
+" " +
+"owners" +
+"</" +
+"a" +
+">")
+// -->
+</script>
+</li>
+
+<!-- end list_panel.tt2 -->
+
+
+<li class="divider" role="separator"></li>
+<li></li>
+
+    
+
+<li class="">
+    <a href="/wws/info/schism_list">List Home</a>
+</li>
+
+
+
+
+
+
+    
+        
+            
+        
+        <li class="">
+            <a href="/wws/subscribe/schism_list?previous_action=">Subscribe</a>
+        </li>
+    
+
+    
+        
+            
+        
+        <li class="">
+            <a href="/wws/signoff/schism_list">Unsubscribe</a>
+        </li>
+    
+
+
+<li class="divider" role="separator"></li>
+<li></li>
+
+    
+        <li class="menuInactive2">
+            <span>Archive</span>
+        </li>
+    
+
+
+
+    <li class="menuInactive2">
+        <span>Post</span>
+    </li>
+
+
+
+
+
+    
+        <li class="menuInactive2">
+            <span>Shared documents</span>
+        </li>
+    
+
+
+
+    
+
+
+
+<!-- end list_menu.tt2 -->
+
+                    </ul>
+                </menu>
+            </nav>
+    </aside>
+<!-- end aside_menu.tt2 -->
+
+            <main id="content-inner" class="medium-9 columns"><a name="content-inner"></a>
+                
+                
+                    <!-- title.tt2 -->
+<h1 style="padding-top: 10px;"><script type="text/javascript">
+<!--
+document.write("schism_list" +
+"@" +
+"vims" +
+"." +
+"edu")
+// -->
+</script></h1>
+<!-- end title.tt2 -->
+
+                    
+                        <p>
+                            <b>Subject:</b>
+                            Email list of SCHISM users around the world
+                            
+                        </p>
+                    
+                    
+                
+
+                <!-- nav.tt2 -->
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- end nav.tt2 -->
+
+
+            
+            
+            
+
+            </main><!-- End content-inner -->
+
+            <div class="displayNone"><a href="#top">Top of Page</a></div>
+            <div class="scroll-top-wrapper "></div>
+
+            <!-- $Id: footer.tt2 12224 2015-06-17 13:29:15Z sikeda $ -->
+<footer role="contentinfo">
+
+<img src="/static-sympa/icons/favicon_sympa.png" alt="SYMPA logo" width="20" height="20"/> 
+
+<a href="http://www.sympa.org"> Powered by Sympa </a>
+</footer>
+<!-- end footer.tt2 -->
+
+        
+    </body>
+    <!-- end main.tt2 -->
+</html>

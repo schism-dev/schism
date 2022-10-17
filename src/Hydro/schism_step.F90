@@ -467,9 +467,17 @@
       if(nws<0) then 
         !PaHM: rank 0 returns wind and air pressure only for global nodes
         if(myrank==0) then
-          write(16,*)'before GetHollandFields'
-          call GetHollandFields(np_global,rwild)
-          if(myrank==0) write(16,*)'after GetHollandFields'
+          if (modelType==1) then       
+            write(16,*)'before GetHollandFields'
+            call GetHollandFields(np_global,rwild)
+            if(myrank==0) write(16,*)'after GetHollandFields'
+          elseif (modelType==10) then
+            write(16,*)'before GetGAHMFields'
+            call GetGAHMFields(np_global,rwild)
+            if(myrank==0) write(16,*)'after GetGAHMFields'      
+          else  
+            call parallel_abort('PaHM: modelType /=1 or =/10')
+          endif
         endif !myrank
 
         call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
