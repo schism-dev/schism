@@ -334,8 +334,8 @@ subroutine update_icm_input(time)
 
   !local variables
   integer :: i,j,k,n,m,ie,itmp,irec,istat,varid,jof(3),ntr(3)
-  integer :: ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
-  integer,pointer :: ncid,npt,elem(:)
+  integer :: npt,ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
+  integer,pointer :: ncid,elem(:)
   real(rkind):: mtime(2),ath(max(np_global,ne_global))
   real(rkind),pointer :: mdt,bth(:,:)
   character(len=20) :: fnames(3)
@@ -344,7 +344,7 @@ subroutine update_icm_input(time)
   jof=(/iRad,isflux,ibflux/); ntr=(/1,ntrs_icm,ntrs_icm/)
   do n=1,3
     if(jof(n)==0) cycle
-    ncid=>ncid_icm(n); npt=>npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n); elem=>elem_in(:,n)
+    ncid=>ncid_icm(n); npt=npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n); elem=>elem_in(:,n)
 
     !open file
     if(myrank==0.and.mtime(2)<0.d0) then 
@@ -380,9 +380,9 @@ subroutine update_icm_input(time)
       if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
     endif !myrank=0
     if(mtime(2)<0.d0) then
-      call mpi_bcast(npt,1,itype,0,comm,istat)
+      call mpi_bcast(npt,1,itype,0,comm,istat); npt_icm(n)=npt
       if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !mapping elements
-        call mpi_bcast(elem_gb(1:npt),npt,itype,0,comm,istat)
+        call mpi_bcast(elem_gb,max(np_global,ne_global),itype,0,comm,istat)
         elem=0
         do ie=1,npt
           if(iegl(elem_gb(ie))%rank==myrank) elem(iegl(elem_gb(ie))%id)=ie
@@ -418,7 +418,7 @@ subroutine update_icm_input(time)
         endif
 
         !bcast record
-        call mpi_bcast(ath(1:npt),npt,rtype,0,comm,istat)
+        call mpi_bcast(ath,max(np_global,ne_global),rtype,0,comm,istat)
      
         !interp record
         do ie=1,nea
@@ -708,7 +708,7 @@ subroutine icm_vars_init
           j=nf90_close(ncid)
         endif
         call mpi_bcast(npt,1,itype,0,comm,istat)
-        call mpi_bcast(swild(1:npt),npt,rtype,0,comm,istat)
+        call mpi_bcast(swild,max(np_global,ne_global),rtype,0,comm,istat)
 
         !get parameter value for each rank
         do ie=1,nea
