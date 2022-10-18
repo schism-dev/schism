@@ -232,6 +232,7 @@ subroutine read_icm_param(imode)
            & vdwqc(ntrs_icm,nvrt),gdwqc(ntrs_icm,nvrt),rad_in(nea,2),sflux_in(nea,ntrs_icm,2), &
            & bflux_in(nea,ntrs_icm,2),elem_in(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
+    rad_in=0.0; sflux_in=0.0; bflux_in=0.0
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
@@ -337,59 +338,65 @@ subroutine update_icm_input(time)
   integer :: i,j,k,n,m,ie,itmp,irec,istat,varid,jof(3),ntr(3)
   integer :: npt,ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
   integer,pointer :: ncid,elem(:)
-  real(rkind):: mtime(2),ath(max(np_global,ne_global))
-  real(rkind),pointer :: mdt,bth(:,:)
+  real(rkind):: mdt,mtime(2),ath(max(np_global,ne_global))
+  real(rkind),pointer ::bth(:,:)
   character(len=20) :: fnames(3)
 
   fnames=(/'ICM_rad.th.nc  ','ICM_sflux.th.nc','ICM_bflux.th.nc'/)
   jof=(/iRad,isflux,ibflux/); ntr=(/1,ntrs_icm,ntrs_icm/)
   do n=1,3
     if(jof(n)==0) cycle
-    ncid=>ncid_icm(n); npt=npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n); elem=>elem_in(:,n)
+    ncid=>ncid_icm(n); npt=npt_icm(n); mtime=time_icm(:,n); mdt=dt_icm(n); elem=>elem_in(:,n)
 
-    !open file
-    if(myrank==0.and.mtime(2)<0.d0) then 
-      j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
-      if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
-
-      !determine npt
-      j=nf90_inq_varid(ncid,"time_series",varid)
-      if(j/=NF90_NOERR) call parallel_abort('wrong varid in ICM: '//trim(adjustl(fnames(n))))
-      j=nf90_inquire_variable(ncid,varid,ndims=ndim)
-      if(j/=NF90_NOERR) call parallel_abort('wrong ndim in ICM: '//trim(adjustl(fnames(n))))
-      if((n==1.and.ndim/=1.and.ndim/=2).or.(n/=1.and.ndim/=3)) call parallel_abort('wrong ndim (2):'//trim(adjustl(fnames(n))))
-      j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
-      if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM: '//trim(adjustl(fnames(n))))
-      j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
-      if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM: '//trim(adjustl(fnames(n))))
-      if(n==1.and.ndim==1) npt=1  !in case ICM_rad is just 1D variable
-      if(npt<1.or.npt>max(np_global,ne_global)) call parallel_abort(trim(adjustl(fnames(n)))//': npt<1 or npt>max(np,ne)')
-      if(n==2.or.n==3) then !check ntracer
-        j=nf90_inquire_dimension(ncid,dimid(2),len=itmp)
-        if(itmp/=ntr(n)) call parallel_abort('wrong ntr in ICM: '//trim(adjustl(fnames(n))))
-      endif
-      if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !specify elements with inputs
-        j=nf90_inq_varid(ncid,"elements",varid)
-        j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:1))
-        if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM (2): '//trim(adjustl(fnames(n))))
-        j=nf90_inquire_dimension(ncid,dimid(1),len=itmp)
-        if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM (2): '//trim(adjustl(fnames(n))))
-        if(itmp/=npt) call parallel_abort('elements/=npt in ICM: '//trim(adjustl(fnames(n))))
-        j=nf90_get_var(ncid,varid,elem_gb(1:npt), (/1/),(/npt/))
-      endif
-      j=nf90_inq_varid(ncid, "time_step",varid); j=nf90_get_var(ncid,varid,mdt) 
-      if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
-    endif !myrank=0
     if(mtime(2)<0.d0) then
-      call mpi_bcast(npt,1,itype,0,comm,istat); npt_icm(n)=npt
+      if(myrank==0) then !read information about input file on myrank=0
+        j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
+
+        !determine npt
+        j=nf90_inq_varid(ncid,"time_series",varid)
+        if(j/=NF90_NOERR) call parallel_abort('wrong varid in ICM: '//trim(adjustl(fnames(n))))
+        j=nf90_inquire_variable(ncid,varid,ndims=ndim)
+        if(j/=NF90_NOERR) call parallel_abort('wrong ndim in ICM: '//trim(adjustl(fnames(n))))
+        if((n==1.and.ndim/=1.and.ndim/=2).or.(n/=1.and.ndim/=3)) call parallel_abort('wrong ndim (2):'//trim(adjustl(fnames(n))))
+        j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+        if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM: '//trim(adjustl(fnames(n))))
+        j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+        if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM: '//trim(adjustl(fnames(n))))
+        if(n==1.and.ndim==1) npt=1  !in case ICM_rad is just 1D variable
+        if(npt<1.or.npt>max(np_global,ne_global)) call parallel_abort(trim(adjustl(fnames(n)))//': npt<1 or npt>max(np,ne)')
+        if(n==2.or.n==3) then !check ntracer
+          j=nf90_inquire_dimension(ncid,dimid(2),len=itmp)
+          if(itmp/=ntr(n)) call parallel_abort('wrong ntr in ICM: '//trim(adjustl(fnames(n))))
+        endif
+        if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !specify elements with inputs
+          j=nf90_inq_varid(ncid,"elements",varid)
+          j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:1))
+          if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM (2): '//trim(adjustl(fnames(n))))
+          j=nf90_inquire_dimension(ncid,dimid(1),len=itmp)
+          if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM (2): '//trim(adjustl(fnames(n))))
+          if(itmp/=npt) call parallel_abort('elements/=npt in ICM: '//trim(adjustl(fnames(n))))
+          j=nf90_get_var(ncid,varid,elem_gb(1:npt), (/1/),(/npt/))
+        endif
+        j=nf90_inq_varid(ncid, "time_step",varid); j=nf90_get_var(ncid,varid,mdt)
+        if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
+      endif !myrank=0
+
+      !bcast info. about input files
+      call mpi_bcast(npt,1,itype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: npt (1)')
+      call mpi_bcast(mdt,1,rtype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: mdt (1)')
+      call mpi_bcast(elem_gb,max(np_global,ne_global),itype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: elem_gb (1)')
+
+      npt_icm(n)=npt; dt_icm(n)=mdt; elem=0
       if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !mapping elements
-        call mpi_bcast(elem_gb,max(np_global,ne_global),itype,0,comm,istat)
-        elem=0
         do ie=1,npt
           if(iegl(elem_gb(ie))%rank==myrank) elem(iegl(elem_gb(ie))%id)=ie
         enddo !ie
       endif !npt/=1
-    endif !mtime
+    endif !if(mtime(2)<0.d0)
     
     !update record
     if(mtime(2)<time) then
@@ -405,8 +412,8 @@ subroutine update_icm_input(time)
         bth(:,1)=bth(:,2); bth(:,2)=0.0
 
         !read new record
+        irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt; time_icm(:,n)=mtime
         if(myrank==0) then
-          irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt
           j=nf90_inq_varid(ncid, "time_series",varid)
           j=nf90_inquire_variable(ncid,varid,ndims=ndim)
           if(n==1) then
@@ -434,8 +441,7 @@ subroutine update_icm_input(time)
           endif !npt
         enddo !ie
       enddo !m 
-      call mpi_bcast(mtime,2,rtype,0,comm,istat); time_icm(:,n)=mtime
-    endif !mtime
+    endif !if(mtime(2)<time)
   enddo !n
 
 end subroutine update_icm_input
@@ -674,7 +680,7 @@ subroutine icm_vars_init
     elseif(associated(p%p1)) then 
       p%ndim=2; p%data0(1:size(p%p1))=p%p1; p%dims(1)=size(p%p1)
     elseif(associated(p%p2)) then 
-      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/n/)); p%dims=shape(p%p2)
+      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/size(p%p2)/)); p%dims=shape(p%p2)
     else
       cycle
     endif
