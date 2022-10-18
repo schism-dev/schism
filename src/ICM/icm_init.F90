@@ -330,6 +330,7 @@ subroutine update_icm_input(time)
   use netcdf
   use icm_mod
   implicit none
+  include 'mpif.h'
   real(rkind),intent(in) :: time
 
   !local variables
@@ -485,6 +486,7 @@ subroutine icm_vars_init
   use icm_mod
   use misc_modules
   implicit none
+  include 'mpif.h'
 
   !local variables
   integer :: istat,i,j,k,ie,m,n,ip,ncid,varid,npt,nsp,ndim,dimid(3),dims(3)
