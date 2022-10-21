@@ -27,6 +27,7 @@
       use gen_modules_clock
 
 #ifdef USE_PAHM
+      use PaHM_Global, only: modelType
       use ParWind, only: GetHollandFields,GetGAHMFields
 #endif
 
