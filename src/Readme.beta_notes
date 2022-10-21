@@ -562,6 +562,16 @@ git versions:
 (138) 510874ec (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)
 (139) 24a2723 (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
 (140) 1828489 (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)
+(141) 87c7611f (21 Oct 2022): from Dr. Jerome Lefevre
+- Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+ (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf),
+- Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models),
+- Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output)
+- CAUTION // CAUTION :
+  To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism
+- CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there isnot Control File support in SCHISM/PaHM yet
+(142)
+
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);
