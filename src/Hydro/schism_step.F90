@@ -27,7 +27,7 @@
       use gen_modules_clock
 
 #ifdef USE_PAHM
-      use ParWind, only: GetHollandFields
+      use ParWind, only: GetHollandFields,GetGAHMFields
 #endif
 
 #ifdef USE_GOTM
