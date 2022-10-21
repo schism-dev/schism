@@ -36,7 +36,8 @@ MODULE PaHM_Vortex
              fitRmaxes4, calcRmaxesFull,              &
              UVPR, newVortexFull,                     &
              rMaxes4, quadFlag4, quadIr4, bs4, vmBL4, &
-             CalcIntensityChange, UVTransPoint
+             CalcIntensityChange, UVTransPoint,       &
+             RossbyNumber
 
   PRIVATE
 
@@ -76,6 +77,31 @@ MODULE PaHM_Vortex
 
 
   CONTAINS
+
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   R O S S B Y  N U M B E R
+  !----------------------------------------------------------------
+  !
+  ! Computes the estimate of the Rossby number in a tropical cyclone
+  ! @param vmaxBoundaryLayer max wind speed for stationary storm at top of
+  ! boundary layer
+  ! @param radiusToMaxWinds radius from storm center to vmaxBoundaryLayer
+  ! @param coriolis Coriolis parameter
+  ! @return estimate to Rossby number
+  !/
+   SUBROUTINE RossbyNumber(vmaxBoundaryLayer, radiusToMaxWinds, coriolis,Rzero)
+
+    USE PaHM_Global, ONLY : DEG2RAD
+    USE PaHM_Utilities, ONLY : SphericalDistance
+
+    IMPLICIT NONE
+
+    REAL(SZ), INTENT(IN)  :: vmaxBoundaryLayer, radiusToMaxWinds
+    REAL(SZ), INTENT(IN)  :: coriolis
+    REAL(SZ), INTENT(OUT) :: Rzero
+
+    Rzero = vmaxBoundaryLayer / (abs(coriolis) * abs(radiusToMaxWinds))
+   END SUBROUTINE RossbyNumber
 
 
   !----------------------------------------------------------------
@@ -580,7 +606,7 @@ MODULE PaHM_Vortex
     vMax = vm
 !PV Check conversions
     ! evaluate basic physical params
-    corio = 2.0_SZ * OMEGA * SIN(DEG2RAD * cLat)
+    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
     B = (vMax * KT2MS)**2 * rhoAir * EXP(1.0_SZ) / ((pn - pc) * MB2PA)
     B = MAX(MIN(B, 2.0_SZ), 1.0_SZ) ! limit B to range 1.0->2.5
 !PV Data already have been converted
@@ -634,7 +660,7 @@ MODULE PaHM_Vortex
     vMax = vm
  
     ! evaluate basic physical params
-    corio = 2.0_SZ * OMEGA * SIN(DEG2RAD * cLat)
+    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
     B = (vMax * KT2MS)**2 * rhoAir * EXP(1.0_SZ) / ((pn - pc) * MB2PA)
     phi       = 1.0_SZ
     bs(1:6)   = B
@@ -685,7 +711,7 @@ MODULE PaHM_Vortex
     cLon = lon
 
     ! evaluate basic physical params
-    corio = 2.0_SZ * OMEGA * SIN(DEG2RAD * cLat)
+    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
 
   END SUBROUTINE SetVortex
 
@@ -1530,9 +1556,15 @@ MODULE PaHM_Vortex
 
     ! Now reduce the wind speed to the surface
     speed = speed * windReduction
-
-    u = -speed * COS(DEG2RAD * angle)
-    v =  speed * SIN(DEG2RAD * angle)
+    
+    ! Caution NH and SH hemisphere
+    if(cLat.lt.0.0_SZ) then
+     u =  speed * COS(DEG2RAD * angle)
+     v = -speed * SIN(DEG2RAD * angle)
+    else
+     u = -speed * COS(DEG2RAD * angle)
+     v =  speed * SIN(DEG2RAD * angle)
+    endif
 
     ! Alter wind direction by adding a frictional inflow angle
     CALL Rotate(u, v, FAng(dist, rmx), cLat, uf, vf)
@@ -1682,8 +1714,14 @@ MODULE PaHM_Vortex
     ! Now reduce the wind speed to the surface
     speed = speed * windReduction
 
-    u = -speed * COS(DEG2RAD * iAngle)
-    v =  speed * SIN(DEG2RAD * iAngle)
+    ! Caution NH and SH hemisphere
+    if(cLat.lt.0.0_SZ) then
+     u = speed * COS(DEG2RAD * iAngle)
+     v = -speed * SIN(DEG2RAD * iAngle)            
+    else        
+     u = -speed * COS(DEG2RAD * iAngle)
+     v =  speed * SIN(DEG2RAD * iAngle)
+    endif
 
     ! Alter wind direction by adding a frictional inflow angle
     CALL Rotate(u, v, FAng(iDist, iRmxTrue), cLat, uf, vf)
