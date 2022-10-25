@@ -1266,6 +1266,10 @@
 </ul>
 </li>
 <li>Iterate with Grid generation step to fix any grid issues.</li>
+<li>If your goal is to set up 3D baroclinic model later, it's advisable to do the following test. Set a minimum
+  depth of say 5m in the entire mesh, and set up a simple baroclinic model (cold start with <code>salt.ic</code> and <code>temp.ic</code>; vertical
+  grid use simple SZ).
+  Run SCHISM to see if there are additional mesh issues.</li>
 </ol>
 <h2 id="2d-model-calibration">2D model: calibration<a class="headerlink" href="#2d-model-calibration" title="Permanent link">&para;</a></h2>
 <ol>
