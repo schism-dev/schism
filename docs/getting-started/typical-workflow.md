@@ -24,6 +24,10 @@
     - You can cheat without any open boundary segments during this step
     - Remember to `mkdir outputs` in the run directory
 2. Iterate with Grid generation step to fix any grid issues.
+3. If your goal is to set up 3D baroclinic model later, it's advisable to do the following test. Set a minimum
+  depth of say 5m in the entire mesh, and set up a simple baroclinic model (cold start with `salt.ic` and `temp.ic`; vertical
+  grid use simple SZ).
+  Run SCHISM to see if there are additional mesh issues.
 
 ## 2D model: calibration
 1. Start from simple and then build up complexity. Simplest may be a tidal run with a constant Manning’s $n$.
