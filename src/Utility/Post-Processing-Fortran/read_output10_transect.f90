@@ -54,7 +54,7 @@
       real :: swild(3)
       real*8,allocatable :: timeout(:),xnd(:),ynd(:)
       
-      print*, 'Input variable name to read from nc (e.g. salt):'
+      print*, 'Input variable name to read from nc (e.g. salinity):'
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
 
@@ -65,9 +65,9 @@
       read(*,*) iday1,iday2
 
 !     Input transect depths
-      ntran=31
+      ntran=201
       allocate(z0(ntran))
-      z0(1:ntran)=(/(-30+i, i=0,ntran-1) /)
+      z0(1:ntran)=(/(-200+i, i=0,ntran-1) /)
 
       open(10,file='station.bp',status='old')
       read(10,*) 
