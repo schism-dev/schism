@@ -5185,11 +5185,14 @@
               endif
             enddo !j
             if(icount==0) then
-              write(errmsg,*)'MAIN: baroc. failure (3):',ielg(i),k
-              call parallel_abort(errmsg)
+              !write(errmsg,*)'MAIN: baroc. failure (3):',ielg(i),k
+              !call parallel_abort(errmsg)
+              !Bad mesh quality; bail out with 0 b-cc
+              dr_dxy(1:2,k,i)=0.d0
+            else
+              dr_dxy(1,k,i)=sum(swild10(1:icount,1))/real(icount,rkind)
+              dr_dxy(2,k,i)=sum(swild10(1:icount,2))/real(icount,rkind)
             endif
-            dr_dxy(1,k,i)=sum(swild10(1:icount,1))/real(icount,rkind)
-            dr_dxy(2,k,i)=sum(swild10(1:icount,2))/real(icount,rkind)
           enddo !k=kbe(i)+1,nvrt
         enddo !i=1,ne
 !$OMP   end do

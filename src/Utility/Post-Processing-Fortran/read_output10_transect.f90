@@ -20,7 +20,8 @@
 !       Need to manually modify ntran etc. 
 !       Works for mixed tri/quad outputs and node/elem based vars from
 !       scribe I/O versions.
-!       Will extrapolate above surface but not below bottom.
+!       Will not extrapolate below bottom. Option to extrap above
+!       surface. Only works for scalars.
 
 !       Inputs: screen; vgrid (in this dir or ../); station.bp (build pts; depths not used); relevant nc and out2d*.nc
 !       Outputs: transect.out & transect_grd.[zr]0 (ascii on struc'ed grid; 
@@ -63,6 +64,9 @@
       
       print*, 'Input start and end file # to read:'
       read(*,*) iday1,iday2
+
+      print*, 'Extrapolate above surface (0: no; 1: yes):'
+      read(*,*)iextrap_sf 
 
 !     Input transect depths
       ntran=201
@@ -201,11 +205,11 @@
       enddo !j
       if(iabort==1) stop 'check station points'
 
-      if(varname(1:len_var).eq.'hvel') then
+!      if(varname(1:len_var).eq.'horizontalVelX') then
         rjunk=0 !invalid values
-      else
-        rjunk=-9999
-      endif
+!      else
+      rjunk=-9999
+!      endif
 
 !...  Time iteration
 !...
@@ -340,7 +344,11 @@
 !             Interplate in vertical
               do kk=1,ntran
                 if(z0(kk)>=ztmp(nvrt)) then !extrap above F.S.
-                  k0=nvrt-1; rat=1
+                  if(iextrap_sf==0) then !no extrap
+                    k0=0
+                  else
+                    k0=nvrt-1; rat=1
+                  endif
                 else !no extrap below bottom
                   k0=0
                   do k=kbpl,nvrt-1
@@ -352,7 +360,7 @@
                   enddo !k
                 endif 
 
-                if(k0==0) then !no extrap below bottom
+                if(k0==0) then !no extrap 
 !                  write(12,*)'Warning: failed to find a vertical level:',it,i
                   out4(kk)=rjunk
                 else
