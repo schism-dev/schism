@@ -56,7 +56,7 @@
 &INIT
  LHOTR          = F                  ! Use hotstart file (see &HOTFILE section for input file)
  LINID          = T                  ! Initial condition; F for default; use T if using WW3 as i.c. etc
- INITSTYLE      = 2                  ! 1 - Parametric Jonswap, 2 - Read from Global NETCDF files, work only if IBOUNDFORMAT=2
+ INITSTYLE      = 2                  ! 1 - Parametric Jonswap, 2 - Read from Global NETCDF files, work only if IBOUNDFORMAT=3
 /
 
 &BOUC

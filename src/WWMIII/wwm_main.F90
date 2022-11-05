@@ -160,7 +160,7 @@
            LSECU       = .TRUE.
            LSEWL       = .TRUE.
            LCALC       = .TRUE.
-         ELSE IF (icou_elfe_wwm == 0) THEN ! No interaction at all 
+         ELSE IF (icou_elfe_wwm == 0) THEN !no elevation and no currents in wwm, no wave force in SCHISM 
            WLDEP       = DEP8
            WATLEV      = ZERO 
            WATLEVOLD   = ZERO
@@ -174,7 +174,7 @@
            LSECU       = .FALSE.
            LSEWL       = .FALSE.
            LCALC       = .TRUE. 
-         ELSE IF (icou_elfe_wwm == 2) THEN ! Currents and water levels in wwm but no radiation stress in SCHISM
+         ELSE IF (icou_elfe_wwm == 2) THEN ! Currents and water levels in wwm but no wave force in SCHISM
            WLDEP       = DEP8
            WATLEV      = ETA2
            WATLEVOLD   = ETA1

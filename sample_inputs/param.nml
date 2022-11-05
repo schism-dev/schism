@@ -174,8 +174,10 @@
   thetai = 0.6 
 
 !-----------------------------------------------------------------------
-! If WWM is used, set coupling/decoupling flag. Not used if USE_WWM is distabled in Makefile
-!       0: decoupled so 2 models will run independently; 
+! If WWM is used, set coupling/decoupling flag 'icou_elfe_wwm'. 
+! No effects if USE_WWM is distabled in Makefile.
+! Note that all these parameters must be present in this file (even when not used).
+!       0: no elevation and no currents in wwm, no wave force in SCHISM (but wave turbulecne, WBL etc are still in SCHISM);
 !       1: full coupled (elevation, vel, and wind are all passed to WWM); 
 !       2: elevation and currents in wwm, no wave force in SCHISM;  
 !       3: no elevation and no currents in wwm, wave force in SCHISM;
@@ -183,10 +185,10 @@
 !       5: elevation but no currents in wwm, no wave force in SCHISM;
 !       6: no elevation but currents in wwm, wave force in SCHISM;
 !       7: no elevation but currents in wwm, no wave force in SCHISM;
-! Note that all these parameters must be present in this file (even though not used).
 ! If WWM is used and RADFLAG='VOR' in wwminput.nml, some parameters (fwvor_*)
 ! are added to take into account (1) or not (0) the different terms in vortex
 ! force expression.
+! To get SCHISM-only result withno feedback from WWM, compile without WWM.
 !-----------------------------------------------------------------------
   icou_elfe_wwm = 0 
   nstep_wwm = 1  !call WWM every this many time steps 
