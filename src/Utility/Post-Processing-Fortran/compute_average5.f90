@@ -16,7 +16,8 @@
 !********************************************************************************
 !										
 !	Read nc outputs and compute average field from scribed I/O
-!       at a particular Z-level (use above surface/below bottom to get surface/bottom).
+!       at a particular Z-level (use above surface/below bottom to get surface/bottom; use
+!       <-1.e8 to get depth-averaged value for 3D vars).
 !       Skip dry times for 3D variables.
 !       Works for mixed quad/tri on NODE based variables only.
 !       Input: out2d* and corresponding nc file if the variable is 3D; vgrid.in; screen
@@ -59,10 +60,9 @@
       read(*,*) iskipst
 
       print*, 'Input start and end record #s in start|end stack respectively:'
-!'
       read(*,*) irec_start,irec_end
 
-      print*, 'Input z-coord. (<=0 below MSL):'
+      print*, 'Input z-coord. (<=0 below MSL; <=-1.e8 to get depth average):'
       read(*,*) z00
 
 !      if(mod(iday2-iday1,iskipst)/=0) then
@@ -197,16 +197,30 @@
               endif !ztmp
 
               if(k0==0) then
-                write(*,*)'failed to find a vertical level:',irec_real,i,ifs,z2,ztmp(:,i)
+                write(*,*)'failed to find a vertical level:',i,ztmp(:,i)
                 stop
               endif
               if(.not.(iday==iday1.and.irec<irec_start.or.iday==iday2.and.irec>irec_end)) then
                 icounter(i)=icounter(i)+1
-                do m=1,ivs
-                  tmp=outvar(k0,i)*(1-rat)+outvar(k0+1,i)*rat
-                  residual(i,m)=residual(i,m)+tmp
-                enddo !m
-              endif !not
+
+                if(z00<=-1.e8) then !depth average
+                   av=0.
+                   do k=kbp(i),nvrt-1
+                     av=av+(outvar(k,i)+outvar(k+1,i))*0.5*(ztmp(k+1,i)-ztmp(k,i))
+                   enddo !k
+                   toth=ztmp(nvrt,i)-ztmp(kbp(i),i)
+                   if(toth<=0.) then
+                     write(*,*)'Negative depth at node:',i,toth
+                     stop
+                   endif
+                   residual(i,1)=residual(i,1)+av/toth
+                else !not depth average
+                  do m=1,ivs
+                    tmp=outvar(k0,i)*(1-rat)+outvar(k0+1,i)*rat
+                    residual(i,m)=residual(i,m)+tmp
+                  enddo !m
+                endif !z00
+              endif !.not.(iday==
             endif !idry
           enddo !i=1,np
         endif !2/3D
@@ -243,7 +257,7 @@
 !      endif !file63
 
       if(ivs==1) then
-        write(65,*)iday1,iday2
+        write(65,*)iday1,iday2,z00
         write(65,*)ne,np
         do i=1,np
           write(65,*)i,xnd(i),ynd(i),residual(i,1)

@@ -97,6 +97,7 @@ nav:
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
     - FABM: modules/fabm.md
+    - PaHM: modules/pahm.md
   - Code structure: code-contribution.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
