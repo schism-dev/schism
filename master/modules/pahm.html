@@ -13,7 +13,7 @@
     
     
       
-        <title>3D Sediment model - SCHISM</title>
+        <title>PaHM - SCHISM</title>
       
     
     
@@ -95,7 +95,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              3D Sediment model
+              PaHM
             
           </span>
         </div>
@@ -845,19 +845,11 @@
               
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="sed3d.html" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="sed3d.html" class="md-nav__link">
         3D Sediment model
       </a>
-      
     </li>
   
 
@@ -993,11 +985,19 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="pahm.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="pahm.html" class="md-nav__link md-nav__link--active">
         PaHM
       </a>
+      
     </li>
   
 
@@ -1186,27 +1186,15 @@
             <article class="md-content__inner md-typeset">
               
                 
-  <a href="https://github.com/schism-dev/schism/edit/master/docs/modules/sed3d.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/modules/pahm.md" title="Edit this page" class="md-content__button md-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
 
-  <h1>3D Sediment model</h1>
+  <h1>PaHM</h1>
 
-<p>The 3D sediment model inside SCHISM (USE_SED, also referred to as ‘SED3D’ sometimes to differentiate it from the 2D sediment module ‘SED2D’) is adapted from Community Sediment Transport Model (<a href="#warner2008">Warner et al. 2008</a>). The algorithm is implemented on UGs and we have also reworked several components and added a morphological module (Exner equation). Detailed are reported in <a href="#pinto2012">Pinto et al. (2012)</a>. Also note that for best results this module should be run in conjunction with the wave model (WWM) to account for the wave-enhanced bottom stress.</p>
-<p>The main parameter input is <code>sediment.nml</code>, which is a namelist file. 
-The sample file has comments /explanations for each parameter; a few important ones are explained below:</p>
-<ul>
-<li><code>sed_morph</code>: This parameter controls active morphology.</li>
-<li><code>Nbed</code>: The # of bed layers affects the stability of the sorting, and <code>Nbed=1</code> works robustly with <code>sed_morph&gt;0</code>.</li>
-</ul>
-<p>Other inputs include <code>sed_class</code> and output flags in <code>param.nml</code>, and a few <code>.ic</code> files: <code>bedthick.ic</code>, <code>bed_frac_[1,2..].ic</code>, and I.C. for concentrations of all classes (<code>*_[hvar]_[1,2…].ic</code> or (<code>*_[vvar]_[1,2…].ic</code>). The B.C. inputs may include <code>SED_[1,2..].th</code>, <code>SED_3D.th.nc</code>. The nudging inputs may be <code>SED_nudge.gr3</code> and <code>SED_nu.nc</code>.</p>
-<p>The outputs from SED3D can be combined and visualized just as other SCHISM outputs.</p>
-<p>A common crash occurs when the active morphology is on. At a river inflow boundary, often the depths will decrease over time due to deposition there and eventually the boundary will become dry/blocked. A work-around is to use a combination of ‘bare-rock’ bed around the boundary (specified in <code>bedthick.ic</code>), and ‘clear-water’ inflow as B.C. (sediment concentration =0 in <code>bctides.in</code>) , and then input the incoming sediment concentration as point sources (<code>msource.th</code>) a distance away from the boundary.</p>
-<p><strong>References</strong></p>
-<p><span id="pinto2012">Pinto, L., Fortunato, A.B., Zhang, Y., Oliveira, A. and Sancho, F.E.P. (2012) Development and validation of a three-dimensional morphodynamic modelling system, Ocean Mod., 57-58, 1-14.</span></p>
-<p><span id="warner2008">Warner, J.C., Sherwood, C.R., Signell, R.P., Harris, C.K., Arango, H.G. 2008. Development of a three-dimensional, regional, coupled wave, current, and sediment-transport model. Comput. Geosci. 34 (10), 1284–1306. doi: 10.1016/j.cageo.2008.02.012</span></p>
+<p>The manual for Parametric Hurricane Modeling System (PaHM) can be found <a href="https://noaa-ocs-modeling.github.io/PaHM/html/index.html">here</a></p>
 
               
             </article>
@@ -1222,7 +1210,7 @@ The sample file has comments /explanations for each parameter; a few important o
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="sed2d.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: 2D Sediment model" rel="prev">
+        <a href="fabm.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: FABM" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -1231,20 +1219,20 @@ The sample file has comments /explanations for each parameter; a few important o
               <span class="md-footer__direction">
                 Previous
               </span>
-              2D Sediment model
+              FABM
             </div>
           </div>
         </a>
       
       
         
-        <a href="icm.html" class="md-footer__link md-footer__link--next" aria-label="Next: ICM" rel="next">
+        <a href="../code-contribution.html" class="md-footer__link md-footer__link--next" aria-label="Next: Code structure" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              ICM
+              Code structure
             </div>
           </div>
           <div class="md-footer__button md-icon">
