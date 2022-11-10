@@ -5,7 +5,7 @@ This section serves as a brief guide for contributing to this manual.
 
 # Directory structure
 All files used to build this manual are included in [SCHISM's Git Repository](https://github.com/schism-dev/schism).
-As of April 9, 2021, You automatically get a copy of them after you download the SCHISM code:
+As of April 9, 2021, you automatically get a copy of them after you download the SCHISM code:
 ```
 git clone https://github.com/schism-dev/schism
 ```
@@ -137,7 +137,7 @@ If you are making non-trivial changes, you may want to preview your edits before
 To do this, you will have to install "mkdocs" on your local machine.
 This can be done system-wide using the system python installation (and associated pip command):
 ```bash
-pip install mkdocs mkdocs_material mkdocs-with-pdf
+pip install mike mkdocs mkdocs_material mkdocs-with-pdf
 ```
 Then, under
 ```
