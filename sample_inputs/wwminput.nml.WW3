@@ -73,8 +73,7 @@
  ENDTC          = '20031008.000000'  ! End time
  FILEBOUND      = 'wwmbnd.gr3'       ! Boundary file defining boundary conditions and Neumann nodes.
                                      ! In this file there is following definition Flag 0: not on boundary; 3: Neumann (0 gradient only for advection part);
-                                     ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM: ! 1: exterior bnd; -1: interior (islands)
-                                     ! exterior and interior boundaries need not to be defined.
+                                     ! 2: active bnd (Dirichlet) 
  IBOUNDFORMAT   = 3                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only - LBCWA=T).
                                      ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (prescribed spectra).
  FILEWAVE       = 'bndfiles.dat'     ! Boundary file defining boundary input from WW3

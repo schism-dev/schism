@@ -82,8 +82,7 @@
  ENDTC          = '19981002.000000'  ! End time
  FILEBOUND      = 'wwmbnd.gr3'       ! Boundary file defining boundary and Neumann nodes.
                                      ! Flag 0: not on bnd; 3: Neumann (0 gradient);
-                                     ! 2: active bnd (Dirichlet). Bnd flags imported from SCHISM:
-                                     ! 1: exterior bnd; -1: interior (islands)
+                                     ! 2: active bnd (Dirichlet). 
  IBOUNDFORMAT   = 1                  ! 1 ~ WWM, 3 ~ WW3 (2D spectra in netcdf format only - LBCWA=T).
                                      ! 6 ~ WW3 2D spectra in netcdf format with LBCSP=T (prescribed spectra).
                                      ! For WW3 boundary input also set LINHOM=T, LBCSE=T and this works only for spherical coordinates
