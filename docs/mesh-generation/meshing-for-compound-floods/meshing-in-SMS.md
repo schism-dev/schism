@@ -16,7 +16,7 @@ The purpose of each SMS project component is as follows:
 
 - Map Data:
 
-    - select\*: A map containing a polygon that intersects with all polygons where the "scalar density paving" attribute is needed, see details [here]().
+    - <a name="select">select\*</a>: A map containing a polygon that intersects with all polygons where the "scalar density paving" attribute is needed, see details [here]().
                 This is useful when the number of watershed polygons is too large to select manually.
                 The polygon can be made in Qgis by first extracting the grid boundary then simplifying its geometry (otherwise the polygon is too complex for efficient selection of intersecting features).
 
@@ -43,7 +43,7 @@ The purpose of each SMS project component is as follows:
 !!! Attention
     Never edit the merged map directly, unless you are willing to take the time to exactly reproduce the changes in all individual maps (which is more time consuming in most cases, so don't do it).
     Unsyncing the merged map with the individual maps make it practically impossible for any significant changes in the future.
-    The only case in which editing the merged map may be beneficial is when you work on a huge map (with tens of thousands of arcs) and cleaning the merged map take much time (e.g. hours).
+    The only case in which editing the merged map may be beneficial is when you work on a huge map (with tens of thousands of arcs) and cleaning the merged map takes much time (e.g. hours).
     In this case, make sure the changes are also reproduced in individual maps.
 
 
@@ -53,7 +53,7 @@ Clean the merged map twice with the following parameters: 
 
 ![Clean SMS map](../../assets/mesh-clean-map.png)
 
-The second clean will snap some of the newly created points in the first clean.
+Two cleans are needed because the second clean will snap some of the newly created points during the first clean.
 
 
 ## Build polygons
@@ -62,23 +62,25 @@ The second clean will snap some of the newly created points in the first clean.
 
 
 ## Set watershed resolution
-With the automatically-generated arcs merged into the final map (especially when there are intersections between river arcs and the land boundary), there may be many watershed polygons.
-Instead of manual selection, use the "select\*" map coverage to select all polygons that need "scalar paving density".
+To avoid over-refinement, most watershed polygons should have a specified mesh resolution, which can be set via the "scalar paving density" option in each polygon's attributes.
+
+Selecting the watershed polygons may involve much labor because many small polygons are generated after the river arcs are merged into the final map.
+Instead of manual selection, use the ["select\*" map coverage](#select) to select all polygons more efficiently.
 
 Activate the "select\*" coverage:
 
 ![Activate\_select](../../assets/mesh-activate-select.png)
 
-Select the big polygon, right click on it, and intersect it with the "merge map":
+Select the big polygon, right click on it, and click "Select intersecting objects":
 
 ![Intersect\_polygons](../../assets/mesh-intersect-polygons.png)
 
-Set the intersecting parameters as follows:
+Intersect it with "merge coverage" with the following parameters:
 
 ![Intersect-parameters](../../assets/mesh-intersect-parameters.png)
 
 It will take about 10 minutes to do the selection for the STOFS3D domain.
-Right click on the selected polygons and set the "polygon attributes" to scalar paving density: 
+Right click on the selected polygons and set "mesh type" in "polygon attributes" to scalar paving density: 
 
 ![Scalar paving](../../assets/mesh-scalar-paving.png)
 
@@ -105,9 +107,9 @@ Breaking the large polygon into smaller and simpler polygons can help fix the is
 ![intersect joints](../../assets/mesh-breakline-issue.png)
 
 
-##Find and fix SMS issues
+##Find and avoid SMS issues
 We have reported the above issues to the SMS team.
-Before these issues are fixed, you can use the following methods to find and fix them before the final meshing.
+Before these issues are officially fixed, you can use the following methods to find and avoid them before the final meshing.
 
 Using STOFS3D Atlantic as an example, launch about 5 - 6 SMS sessions to mesh in sub-regions simultaneously.
 
@@ -119,7 +121,7 @@ Make sure there are no overlaps among the sub-maps except for the interface line
 
 ![sub-map](../../assets/mesh-sub-map.png)
 
-Mesh each sub-map in a seperate SMS session and fix issues that crash SMS where necessary.
+Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier.
 
 Combine the sub-meshes using the following script in [SCHISM Git]():
 ```
@@ -140,7 +142,12 @@ This takes about 3-5 hours, depending on how fast your desktop is.
 
 
 ## Relax crowded elements (at river intersections) 
-Import and activate the "intersection joints" map coverage (which is one of the products from the [last step](generate-river-map.md)):  
+The automatic river map generation tool may lead to over-crowded points at river intersections if the thalwegs themselves are not cleanly seperated there.
+This doesn't affect the stableness of the simulation, but it is recommended to remedy it by a "relax" operation in SMS.
+
+![mesh-thalweg-relax-with-without](../../assets/mesh-thalweg-relax-with-without.png)
+
+Import and activate the ["intersection joints"](generate-river-map.md#products) map coverage (which is one of the products from the [previous step](generate-river-map.md)):  
  
 ![intersect joints](../../assets/mesh-intersection-joints.png)
 
