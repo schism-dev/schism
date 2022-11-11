@@ -1055,7 +1055,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../overview.md" class="md-nav__link">
+      <a href="../overview.html" class="md-nav__link">
         Overview
       </a>
     </li>
@@ -1197,9 +1197,36 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#known-sms-issues" class="md-nav__link">
+    Known SMS issues
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#find-and-fix-sms-issues" class="md-nav__link">
     Find and fix SMS issues
   </a>
+  
+    <nav class="md-nav" aria-label="Find and fix SMS issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-more-manual-work-but-takes-less-time" class="md-nav__link">
+    Option 1. More manual work but takes less time
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-less-manual-work-but-takes-more-time" class="md-nav__link">
+    Option 2. Less manual work but takes more time
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1433,7 +1460,7 @@ Merging individual maps should be done as the last step.</p>
 <li>
 <p>select*: A map containing a polygon that intersects with all polygons where the "scalar density paving" attribute is needed, see details <a href="">here</a>.
             This is useful when the number of watershed polygons is too large to select manually.
-            The polygon can be made in Qgis by first extracting the grid boundary then simplify its geometry (otherwise the polygon is too complex for efficient selection of intersecting features).</p>
+            The polygon can be made in Qgis by first extracting the grid boundary then simplifying its geometry (otherwise the polygon is too complex for efficient selection of intersecting features).</p>
 </li>
 <li>
 <p>lbnd: land boundary roughly along the 10-m contour, see <a href="">caveats of making the land boundary</a>.</p>
@@ -1451,9 +1478,9 @@ Merging individual maps should be done as the last step.</p>
 <p>ocean: This map includes everything beyond the coastline and in the ocean.</p>
 </li>
 <li>
-<p>divide: A few manually drawn arcs that divide the coastal regions into subregions.
+<p><a name="divide">divide</a>: A few manually drawn arcs that divide the coastal regions into subregions.
           This makes the mesh generation of complex maps more robust in SMS.
-          This is also useful for locating SMS issues because you can mesh different subregions in seperate SMS sessions simultaneously, which speeds up the diagnosis of SMS exceptions (crashing or hanging) that may occur for a complex map.</p>
+          This is also useful for locating SMS issues because you can mesh different subregions in seperate SMS sessions simultaneously, which speeds up the diagnosis of SMS exceptions (crashing or hanging) that may occur for a complex map, see details <a href="#find-and-fix-sms-issues">below</a>.</p>
 </li>
 <li>
 <p>merge coverge: Merged map of all individual maps above.</p>
@@ -1496,24 +1523,39 @@ Right click on the selected polygons and set the "polygon attributes" to scalar
 <p><img alt="Scalar options" src="../../assets/mesh-scalar-options.png" /></p>
 <p>In addition, set the polygon attribute of the "island" between Chesapeake Bay and Delaware Bay as "None":</p>
 <p><img alt="Polygon None" src="../../assets/mesh-none.png" /></p>
-<h2 id="find-and-fix-sms-issues">Find and fix SMS issues<a class="headerlink" href="#find-and-fix-sms-issues" title="Permanent link">&para;</a></h2>
+<h2 id="known-sms-issues">Known SMS issues<a class="headerlink" href="#known-sms-issues" title="Permanent link">&para;</a></h2>
 <p>There are some known issues in SMS that may hang or crash SMS:</p>
 <ul>
-<li>SMS may hang while generating mesh for a complex polygon. Breaking the large polygon into smaller and simpler pieces can help fix the issue.</li>
+<li>SMS may hang while generating mesh for a complex polygon.
+Breaking the large polygon into smaller and simpler polygons can help fix the issue.</li>
 </ul>
 <p><img alt="intersect joints" src="../../assets/mesh-sms-hang.png" /></p>
 <ul>
 <li>"Void in breakline" in some polygons. Slightly moving some vertices may fix the problem.</li>
 </ul>
 <p><img alt="intersect joints" src="../../assets/mesh-breakline-issue.png" /></p>
-<p>To identify all issues, launch about 5 SMS sessions.
-In each session, select the polygons within a sub-domain and try to generate a sub-domain mesh.
-This can speed up the process of identifying potential SMS problems. 
-Normally, there can be 5-8 "breakline" issues and SMS will indicate the problematic polygons.</p>
-<p>After fixing all issues, generate the mesh for the full domain.
-This takes about 6 hours. </p>
+<h2 id="find-and-fix-sms-issues">Find and fix SMS issues<a class="headerlink" href="#find-and-fix-sms-issues" title="Permanent link">&para;</a></h2>
+<p>We have reported the above issues to the SMS team.
+Before these issues are fixed, you can use the following methods to find and fix them before the final meshing.</p>
+<p>Using STOFS3D Atlantic as an example, launch about 5 - 6 SMS sessions to mesh in sub-regions simultaneously.</p>
+<p>Here you have two options.</p>
+<h3 id="option-1-more-manual-work-but-takes-less-time">Option 1. More manual work but takes less time<a class="headerlink" href="#option-1-more-manual-work-but-takes-less-time" title="Permanent link">&para;</a></h3>
+<p>Break the merged map into sub-maps along the <a href="#divide">division lines</a>.
+Make sure there are no overlaps among the sub-maps except for the interface line:</p>
+<p><img alt="sub-map" src="../../assets/mesh-sub-map.png" /></p>
+<p>Mesh each sub-map in a seperate SMS session and fix issues that crash SMS where necessary.</p>
+<p>Combine the sub-meshes using the following script in <a href="">SCHISM Git</a>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/
+</code></pre></div></p>
+<h3 id="option-2-less-manual-work-but-takes-more-time">Option 2. Less manual work but takes more time<a class="headerlink" href="#option-2-less-manual-work-but-takes-more-time" title="Permanent link">&para;</a></h3>
+<p>In each session, select the polygons within a sub-domain and try to generate a sub-domain mesh.
+Normally, there won't be any "hanging" issues, but there can be 5 - 8 "breakline" issues in total and SMS will prompt for the IDs of the problematic polygons.</p>
+<p>Open another SMS session and fix all issues in the merged map.
+Here, editing the merged map is unavoidable because the issues originates from the merging step.</p>
+<p>Finally, generate the mesh for the full domain.
+This takes about 3-5 hours, depending on how fast your desktop is.</p>
 <h2 id="relax-crowded-elements-at-river-intersections">Relax crowded elements (at river intersections)<a class="headerlink" href="#relax-crowded-elements-at-river-intersections" title="Permanent link">&para;</a></h2>
-<p>Activate the "intersection joints" map coverage:<br />
+<p>Import and activate the "intersection joints" map coverage (which is one of the products from the <a href="generate-river-map.html">last step</a>):<br />
 <img alt="intersect joints" src="../../assets/mesh-intersection-joints.png" /></p>
 <p>Make a copy of the generated mesh and select the copy:<br />
 <img alt="mesh copy" src="../../assets/mesh-copy.png" /></p>
@@ -1536,7 +1578,7 @@ This takes about 6 hours. </p>
 <p>Save the mesh as *.2dm:</p>
 <p><img alt="renumber nodes" src="../../assets/mesh-save.png" /></p>
 <p>Quality check using a script:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
 </code></pre></div>
 from the <a href="https://github.com/feiye-vims/STOFS3D-scripts">STOFS3D scripts</a> repository
 , which identifies small elements, skew elements, and bad quads,
