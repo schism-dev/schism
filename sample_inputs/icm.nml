@@ -63,7 +63,7 @@ nsub=1
 !-----------------------------------------------------------------------
 !options of formulations for computing light attenuation coefficients
 !  iKe=0: Ke=Ke0+KeC*Chl+KeS*(tss2c*POC);  TSS=tss2c*POC
-!  iKe=1: Ke=Ke0+KeC*Chl+KeS*TSS;        TSS from sediment model (SED3D)
+!  iKe=1: Ke=Ke0+KeC*Chl+KeS*TSS;        from SED3D or saved total_sed_conc
 !  iKe=2: Ke=Ke0+KeC*Chl+KeSalt*Salt;    CDOM effect related to Salinity
 !-----------------------------------------------------------------------
 iKe = 0

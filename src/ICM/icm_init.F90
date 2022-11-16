@@ -856,7 +856,7 @@ subroutine update_vars(id,usf,wspd)
 end subroutine update_vars
 
 subroutine check_icm_param()
-  use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws
+  use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws,itransport_only
   use schism_msgp,only : myrank,parallel_abort
   use icm_mod
   implicit none
@@ -884,7 +884,7 @@ subroutine check_icm_param()
   if(jdry/=0.and.jdry/=1) call parallel_abort('ICM idry_icm: 0/1')
 
 #ifndef USE_SED
-  if(iKe==1) call parallel_abort('iKe=1,need to turn on SED3D module')
+  if(iKe==1.and.itransport_only/=2) call parallel_abort('iKe=1,need to turn on SED3D module, or itransport_only=2')
 #endif
 
   inquire(file=in_dir(1:len_in_dir)//'ICM_rad.th.nc',exist=lexist)

@@ -617,7 +617,7 @@ module schism_glbl
 !#endif /*USE_TIMOR*/
 
 !#ifdef USE_SED
-  real(rkind),save,allocatable :: dave(:),total_sus_conc(:,:)
+  real(rkind),save,allocatable :: dave(:),total_sus_conc(:,:),btaun(:)
   INTEGER :: ddensed ! activation key for sediment density effects on water density
 !#endif
 

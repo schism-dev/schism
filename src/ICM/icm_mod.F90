@@ -149,6 +149,7 @@ module icm_mod
   real(rkind),save,target :: bKCH4,bKTCH4,bKhDO_CH4,bo2n !CH4 reaction
 
   !sediment concentrations and fluxes
+  real(rkind),save,target :: btau !sediment shear stress
   real(rkind),save,target,allocatable,dimension(:) :: bLight,bThp,bTox,btemp,bCH4,bSTR,bPOS
   real(rkind),save,target,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
   real(rkind),save,target,allocatable,dimension(:,:) :: bPOC,bPON,bPOP

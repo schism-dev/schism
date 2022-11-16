@@ -129,8 +129,8 @@
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
                  &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
                  &ised_out_sofar,ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
-                 &ncid_schout6,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
-                 &ncid_schout6_2,nstride_schout,nrec2_schout,irec4,istack4,nvars_hot_icm
+                 &ncid_schout6,ncid_schout7,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
+                 &ncid_schout6_2,ncid_schout7_2,nstride_schout,nrec2_schout,irec4,istack4,nvars_hot_icm
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -1902,7 +1902,6 @@
       endif !nchi==-1
 
 !$OMP end parallel
-
 !     Bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
@@ -1982,6 +1981,10 @@
           if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found')
           j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout6)
           if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found')
+          if(itransport_only==2) then !read additional variables
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout7)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
+          endif !itransport_only==2
 #endif
           if(myrank==0) write(16,*)'reading from schout stack #:',istack,irec2,time/3600
         endif !istack
@@ -1993,6 +1996,9 @@
           ncid_schout4_2=ncid_schout4
           ncid_schout5_2=ncid_schout5
           ncid_schout6_2=ncid_schout6
+          if(itransport_only==2) then !read additional variables
+            ncid_schout7_2=ncid_schout7
+          endif
         else !open new stack
           write(it_char,'(i72)')istack4
           it_char=adjustl(it_char); lit=len_trim(it_char)
@@ -2010,6 +2016,9 @@
             ncid_schout4_2=ncid_schout4
             ncid_schout5_2=ncid_schout5
             ncid_schout6_2=ncid_schout6
+            if(itransport_only==2) then !read additional variables
+              ncid_schout7_2=ncid_schout7
+            endif
           else !stack exists
 
 #ifdef OLDIO
@@ -2028,6 +2037,10 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found(2)')
             j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout6_2)
             if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found(2)')
+            if(itransport_only==2) then !read additional variables
+              j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout7)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
+            endif !itransport_only==2
 #endif
           endif !.not.ltmp
           if(myrank==0) write(16,*)'reading from schout stack #:',istack4,irec4,time/3600
@@ -2051,6 +2064,27 @@
           eta1(ip)=swild11(i)
         endif
       enddo !i
+
+      if(itransport_only==2) then
+        !read saved sediment bed shear stress
+        if(myrank==0) then
+#ifdef OLDIO
+          j=nf90_inq_varid(ncid_schout,"SED_bed_stress",mm)
+#else
+          j=nf90_inq_varid(ncid_schout,"sedBedStress",mm)
+#endif
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc SED_bed_stress')
+          j=nf90_get_var(ncid_schout,mm,swild11(1:np_global),(/1,irec2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get SED_bed_stress')
+        endif !myrank=0
+        call mpi_bcast(swild11,np_global,mpi_real,0,comm,istat)
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            btaun(ip)=swild11(i)/rho0
+          endif
+        enddo !i
+      endif !itransport_only==2
       deallocate(swild11)
 
       allocate(swild12(nvrt,ns_global),stat=istat)
@@ -2122,6 +2156,30 @@
           sv2(:,isd)=swild12(:,i)
         endif
       enddo !i
+
+      if(itransport_only==2) then
+        !read saved total_sed_conc
+        if(myrank==0) then
+#ifdef OLDIO
+          j=nf90_inq_varid(ncid_schout, "SED_TSC",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc SED_TSC')
+          j=nf90_get_var(ncid_schout,mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get SED_TSC')
+#else
+          j=nf90_inq_varid(ncid_schout7,"totalSuspendedLoad",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc totalSuspendedLoad')
+          j=nf90_get_var(ncid_schout7,mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get totalSuspendedLoad')
+#endif
+        endif !myrank=0
+        call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            total_sus_conc(:,ip)=swild12(:,i)
+          endif
+        enddo !i
+      endif !itransport_only==2
       deallocate(swild12)
 
 !     T,S
@@ -8332,6 +8390,9 @@
 
       !Compute TSC 
       total_sus_conc(:,:)=sum(tr_nd(irange_tr(1,5):irange_tr(2,5),:,:),1)
+
+      !btaun is also for offline transport mode
+      btaun(:)=bed_taun(:)
 #endif
 !$OMP end master
 
@@ -10573,7 +10634,7 @@
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       deallocate(swild9)
-      if(allocated(ts_offline)) deallocate(ts_offline)
+      !if(allocated(ts_offline)) deallocate(ts_offline)
 
 #ifdef USE_NAPZD
       deallocate(Bio_bdefp)

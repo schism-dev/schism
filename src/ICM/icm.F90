@@ -75,7 +75,8 @@ subroutine ecosystem(it)
 !calculate kinetic source/sink
 !---------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,dt,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
-                        & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg
+                        & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg,rho0, &
+                        & total_sus_conc,btaun
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : signf
   use icm_mod
@@ -132,8 +133,14 @@ subroutine ecosystem(it)
         !temp,TSS; todo: TSS from inputs
         if(idry_e(id)==1) temp(k)=sum(airt1(elnode(1:i34(id),id)))/i34(id) !use air temp 
         if(iKe==0) TSS(k)=(RPOC(k)+LPOC(k))*tss2c  !TSS values from POC
-        if(iKe==1) then !TSS from 3D sediment model
-          TSS(k)=0; do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo 
+        if(iKe==1) then !TSS from 3D sediment model or from saved TSS
+          TSS(k)=0; btau=0
+#if USE_SED
+          do i=1,ntrs(5); TSS(k)=TSS(k)+1.d3*max(tr_el(i-1+irange_tr(1,5),k,id),0.d0); enddo
+#else
+          do i=1,i34(id); TSS(k)=TSS(k)+1.d3*max(total_sus_conc(k,elnode(i,id))/dble(i34(id)),0.d0); enddo
+#endif
+          do i=1,i34(id); btau=btau+rho0*btaun(elnode(i,id))/dble(i34(id)); enddo
         endif
         rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
         if(iSilica==1) then

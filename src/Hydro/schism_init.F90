@@ -1647,6 +1647,14 @@
         endif !itur==5 0821
 #endif /*USE_SED*/
 
+#ifndef USE_SED
+        !allocate variables for offline mode when SED module is turned off
+        if(itransport_only==2) then
+          allocate(total_sus_conc(nvrt,npa),btaun(npa),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: total_sus_conc (2)')
+        endif
+#endif
+
 #ifdef USE_FIB
        allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
        allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
