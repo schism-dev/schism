@@ -118,8 +118,7 @@ module schism_glbl
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
                   &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
-                  &max_iadjust_mass_consv,nsteps_from_cold,nrec_schout,nstride_schout, &
-                  &ncid_schout(7),ncid_schout_2(7)
+                  &max_iadjust_mass_consv,nsteps_from_cold
 
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
@@ -162,7 +161,7 @@ module schism_glbl
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D, &
- &istack0_schout,ncid_source
+ &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
