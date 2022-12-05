@@ -74,9 +74,9 @@ subroutine ecosystem(it)
 !---------------------------------------------------------------------------------
 !calculate kinetic source/sink
 !---------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg,dt,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
+  use schism_glbl, only : rkind,errmsg,dt,ne,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
                         & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg,rho0, &
-                        & total_sus_conc,btaun
+                        & total_sus_conc,btaun,rnday
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : signf
   use icm_mod
@@ -86,17 +86,16 @@ subroutine ecosystem(it)
   !local variables
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
-  real(rkind) :: tmp,time,rat,s,z1,z2,dzb 
-  real(rkind) :: chl,mLight,rIK,rIs(3),xT,xS,fT,fST,fR,fN,fP,fS,fC,rKSR(3)
+  real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs
+  real(rkind) :: xT,xS,rKSR(3)
   real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
-  real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV
+  real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,chl
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
-  real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN
+  real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN,fT,fST,fR,fN,fP,fS,fC,rIK
   real(rkind),dimension(ntrs_icm) :: WS,WB,sflux,bflux
   real(rkind),dimension(ntrs_icm,nvrt) :: sink
   real(rkind),pointer :: mtime(:) 
 
-  !todo: 1) debug module, 2) add flexible channel outputs
   do isub=1,nsub  !sub-cycling
     time=(it+isub/dble(nsub)-1)*dt; call update_icm_input(time) !update ICM inputs 
     do id=1,nea
@@ -144,7 +143,7 @@ subroutine ecosystem(it)
         endif
         rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
         if(iSilica==1) then
-          rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k);   SAp(k)=(1.0-rat)*SA(k)
+          rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k); SAp(k)=(1.0-rat)*SA(k)
         endif
       enddo!
 
@@ -170,11 +169,11 @@ subroutine ecosystem(it)
       !compute light attenuation
       do k=kb+1,nvrt
         !light attenuation due to (water,chlorophyll,TSS)
-        chl=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0)
+        chl(k)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0)
         if(iKe==0.or.iKe==1) then
-          rKe0(k)=Ke0+KeC*chl+KeS*TSS(k)
+          rKe0(k)=Ke0+KeC*chl(k)+KeS*TSS(k)
         elseif(iKe==2) then
-          rKe0(k)=Ke0+KeC*chl+KeSalt*salt(k)
+          rKe0(k)=Ke0+KeC*chl(k)+KeSalt*salt(k)
         endif !iKe
 
         !light attenuation due to SAV 
@@ -203,25 +202,25 @@ subroutine ecosystem(it)
           fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
           
           !limitation factors: T/N/P/Si/Sal/CO2
-          fT=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
-          fN=DIN(k)/(DIN(k)+KhN(i))   !nitrogen
-          fP=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
-          if(iSilica==1.and.KhS(i)>1.d-10) fS=SAd(k)/(SAd(k)+KhS(i)) !silica
-          if(KhSal(i)<100.d0) fST=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
-          if(iPh==1.and.ppatch(id)/=0) fC=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
+          fT(i,k)=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
+          fN(i,k)=DIN(k)/(DIN(k)+KhN(i))   !nitrogen
+          fP(i,k)=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
+          if(iSilica==1.and.KhS(i)>1.d-10) fS(i,k)=SAd(k)/(SAd(k)+KhS(i)) !silica
+          if(KhSal(i)<100.d0) fST(i,k)=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
+          if(iPh==1.and.ppatch(id)/=0) fC(i,k)=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
           !light factor
           if(iLight==0) then !Cerco
-            mLight=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1) 
-            rIK=(1.d3*c2chl(i))*GPM(i)/alpha(i)
-            fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.e-12)
+            mLight(k)=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1)
+            rIK(i,k)=(1.d3*c2chl(i))*GPM(i)/alpha(i)
+            fR(i,k)=mLight(k)/sqrt(mLight(k)*mLight(k)+rIK(i,k)*rIK(i,k)+1.e-12)
           else
             call parallel_abort('iLight/=0 option not available yet')
           endif
 
           !growth
-          GP(i,k)=GPM(i)*fT*fST*fR*min(fN,fP,fS)*fC*PBS(i,k)
-          if(iLimit==1) GP(i,k)=GPM(i)*fT*fST*min(fR,fN,fP,fS)*fC*PBS(i,k)
+          GP(i,k)=GPM(i)*fT(i,k)*fST(i,k)*fR(i,k)*min(fN(i,k),fP(i,k),fS(i,k))*fC(i,k)*PBS(i,k)
+          if(iLimit==1) GP(i,k)=GPM(i)*fT(i,k)*fST(i,k)*min(fR(i,k),fN(i,k),fP(i,k),fS(i,k))*fC(i,k)*PBS(i,k)
 
           !metabolism, predation
           MT(i,k)=MTR(i)*GP(i,k)+MTB(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
@@ -268,7 +267,7 @@ subroutine ecosystem(it)
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
       !sediment flux module
-      if(iSed==1) call sfm_calc(id,kb,tdep,dz(kb+1),TSS)
+      if(iSed==1) call sfm_calc(id,kb,tdep,dz(kb+1),TSS,it,isub)
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -427,17 +426,90 @@ subroutine ecosystem(it)
       enddo !k=1,nv
 
       !nan check
-      do k=kb,nvrt
-        do i=1,ntrs_icm
-          if(wqc(i,k)/=wqc(i,k)) then
-            write(errmsg,*)'nan found in ICM(2) : ',wqc(i,k),ielg(id),i,k
-          endif
-        enddo!i
-      enddo
+      !do k=kb,nvrt
+      !  do i=1,ntrs_icm
+      !    if(wqc(i,k)/=wqc(i,k)) then
+      !      write(errmsg,*)'nan found in ICM(2) : ',wqc(i,k),ielg(id),i,k
+      !    endif
+      !  enddo!i
+      !enddo
 
-      !************************************************************************************
+      !----------------------------------------------------------------------------------
+      !ICM station output
+      !----------------------------------------------------------------------------------
+      if(iout_icm/=0.and.dg%nsta/=0.and.mod(it,nspool_icm)==0) then
+        do i=1,dg%nsta
+          if(dg%iep(i)/=id) cycle !check elem. id
+          zs=min(max(-(dg%z(i)-zid(nvrt)),zid(kb)+1.d-10),zid(nvrt)-1.d-10)
+          do k=kb+1,nvrt
+            if(isub==1.and.((zs>zid(k-1).and.zs<=zid(k)).or.dg%istat==0)) then
+              !ICM state variables
+              do m=1,ntrs_icm
+                call icm_output(name_icm(m),(/wqc(m,k)/),1,i)
+              enddo!m
+              call icm_output('temp',(/temp(k)/),1,i)
+              call icm_output('salt',(/salt(k)/),1,i)
+
+              !intermidate variables
+              if(iout_icm==2) then
+                call icm_output('dz',(/dz(k)/),1,i)
+                call icm_output('TSS',(/TSS(k)/),1,i)
+                call icm_output('mLight',(/mLight(k)/),1,i)
+                call icm_output('chl',(/chl(k)/),1,i)
+                call icm_output('rKHR',(/rKHR(k)/),1,i)
+                call icm_output('rKCOD',(/rKCOD(k)/),1,i)
+                call icm_output('rDenit',(/rDenit(k)/),1,i)
+                call icm_output('rNit',(/rNit(k)/),1,i)
+                call icm_output('DOsat',(/DOsat/),1,i)
+                call icm_output('rKa',(/rKa/),1,i)
+                call icm_output('srat',(/srat(k)/),1,i)
+                call icm_output('brat',(/brat(k)/),1,i)
+                call icm_output('JNH4',(/JNH4(id)/),1,i)
+                call icm_output('JNO3',(/JNO3(id)/),1,i)
+                call icm_output('JPO4',(/JPO4(id)/),1,i)
+                call icm_output('JSA', (/JSA(id)/),1,i)
+                call icm_output('JCOD',(/JCOD(id)/),1,i)
+                call icm_output('SOD',(/SOD(id)/),1,i)
+
+                call icm_output('fT', (/fT(:,k)/), 3,i)
+                call icm_output('fR', (/fR(:,k)/), 3,i)
+                call icm_output('fN', (/fN(:,k)/), 3,i)
+                call icm_output('fP', (/fP(:,k)/), 3,i)
+                call icm_output('fS', (/fS(:,k)/), 3,i)
+                call icm_output('fC', (/fC(:,k)/), 3,i)
+                call icm_output('fST',(/fST(:,k)/),3,i)
+                call icm_output('rIK',(/rIK(:,k)/),3,i)
+                call icm_output('GP', (/GP(:,k)/), 3,i)
+                call icm_output('MT', (/MT(:,k)/), 3,i)
+                call icm_output('PR', (/PR(:,k)/), 3,i)
+                call icm_output('rKC',(/rKC(:,k)/),3,i)
+                call icm_output('rKN',(/rKN(:,k)/),3,i)
+                call icm_output('rKP',(/rKP(:,k)/),3,i)
+                call icm_output('fPN',(/fPN(:,k)/),3,i)
+
+                call icm_output('sflux',(/sflux(:)/),ntrs_icm,i)
+                call icm_output('bflux',(/bflux(:)/),ntrs_icm,i)
+                call icm_output('sink',(/sink(:,k)/),ntrs_icm,i)
+                call icm_output('dwqc',(/dwqc(:,k)/),ntrs_icm,i)
+                !call icm_output('zdwqc',(/zdwqc(:,k)/),ntrs_icm,i)
+                !call icm_output('sdwqc',(/sdwqc(:,k)/),ntrs_icm,i)
+                !call icm_output('vdwqc',(/vdwqc(:,k)/),ntrs_icm,i)
+                !call icm_output('gdwqc',(/gdwqc(:,k)/),ntrs_icm,i)
+              endif
+
+              if(dg%istat==0) dg%istat=1
+            endif!isub
+          enddo!k
+
+          if(i==1) then !save time for current record
+            dg%time=time; dg%it=dg%it+1
+          endif!i==1
+        enddo!i=1,dg%nsta
+      endif!iout_icm
+
+      !----------------------------------------------------------------------------------
       !debug mode for 2D/3D variables (for ICM developers)
-      !************************************************************************************
+      !----------------------------------------------------------------------------------
       if(iof_icm_dbg(1)/=0) then
         !Core
         wqc_d2d(1:2,id)=0 !TN,TP
@@ -468,6 +540,12 @@ subroutine ecosystem(it)
 
     enddo !id
   enddo !isub
+
+  !ICM station output
+  if(iout_icm/=0.and.dg%nsta/=0.and.mod(it,nspool_icm)==0) then
+    if(dg%istat==1) call icm_output_proc(1,it)
+    call icm_output_proc(2,it)
+  endif
 
 end subroutine ecosystem
 

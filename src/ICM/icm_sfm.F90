@@ -17,7 +17,7 @@
 !sfm_calc: sediment flux; sub-models
 !sod_calc: calculate SOD
 
-subroutine sfm_calc(id,kb,tdep,wdz,TSS)
+subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
 !-----------------------------------------------------------------------
 !sediment flux model (two-layer)
 !-----------------------------------------------------------------------
@@ -27,7 +27,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   use icm_mod
   use icm_interface
   implicit none
-  integer,intent(in) :: id,kb
+  integer,intent(in) :: id,kb,it,isub
   real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
 
   !local variables
@@ -277,6 +277,45 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
       call parallel_abort(errmsg)
     endif
   enddo 
+
+  !ICM station outputs
+  if(iout_icm/=0.and.dg%nsta/=0.and.isub==1.and.mod(it,nspool_icm)==0) then
+    do i=1,dg%nsta
+      if(dg%iep(i)/=id) cycle !check elem. id
+      call icm_output('bPOC', (/bPOC(id,:)/),3,i)
+      call icm_output('bPON', (/bPON(id,:)/),3,i)
+      call icm_output('bPOP', (/bPOP(id,:)/),3,i)
+      call icm_output('bNH4s',(/bNH4s(id)/),1,i)
+      call icm_output('bNH4', (/bNH4(id)/),1,i)
+      call icm_output('bNO3', (/bNO3(id)/),1,i)
+      call icm_output('bPO4', (/bPO4(id)/),1,i)
+      call icm_output('bH2S', (/bH2S(id)/),1,i)
+      call icm_output('bCH4', (/bCH4(id)/),1,i)
+      call icm_output('bPOS', (/bPOS(id)/),1,i)
+      call icm_output('bSA',  (/bSA(id)/),1,i)
+      call icm_output('bstc', (/bstc(id)/),1,i)
+      call icm_output('bSTR', (/bSTR(id)/),1,i)
+      call icm_output('bThp', (/bThp(id)/),1,i)
+      call icm_output('bTox', (/bTox(id)/),1,i)
+      if(iout_icm==2) then !bottom water concentrations
+        call icm_output('wTSS', (/wTSS/),1,i)
+        call icm_output('wtemp',(/wtemp/),1,i)
+        call icm_output('wsalt',(/wsalt/),1,i)
+        call icm_output('wPBS', (/wPBS/),1,i)
+        call icm_output('wRPOC',(/wRPOC/),1,i)
+        call icm_output('wLPOC',(/wLPOC/),1,i)
+        call icm_output('wRPON',(/wRPON/),1,i)
+        call icm_output('wLPON',(/wLPON/),1,i)
+        call icm_output('wRPOP',(/wRPOP/),1,i)
+        call icm_output('wLPOP',(/wLPOP/),1,i)
+        call icm_output('wPO4', (/wPO4/),1,i)
+        call icm_output('wNH4', (/wNH4/),1,i)
+        call icm_output('wNO3', (/wNO3/),1,i)
+        call icm_output('wCOD', (/wCOD/),1,i)
+        call icm_output('wDOX', (/wDOX/),1,i)
+      endif
+    enddo !i
+  endif !iout_icm
 
 end subroutine sfm_calc
 

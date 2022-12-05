@@ -36,7 +36,7 @@ subroutine read_icm_param(imode)
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,ibflux,iSilica,&
            & iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha, &
-           & Ke0,tss2c,PRR,wqc0,WSP,WSPn
+           & Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
@@ -72,7 +72,7 @@ subroutine read_icm_param(imode)
     !initilize global switches
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; iCBP=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
-    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0
+    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0; iout_icm=0; nspool_icm=0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm; ised_icm=>iSed; iBA_icm=>iBA
 
     !read global switches
@@ -311,6 +311,9 @@ subroutine read_icm_param(imode)
       open(406,file=in_dir(1:len_in_dir)//'ph_nudge.in',access='direct',recl=8*(1+2*nvrt*ne_global),status='old')
       time_ph=-999.0;  irec_ph=1
     endif
+
+    !station output
+    if(iout_icm/=0) call icm_output_proc(0,0)
 
     if(myrank==0) write(16,*) 'done ICM initialization'
   endif
@@ -854,6 +857,151 @@ subroutine update_vars(id,usf,wspd)
   enddo !m
 
 end subroutine update_vars
+
+subroutine icm_output(varname,vdata,vdim,ista)
+!--------------------------------------------------------------------
+!ICM diagnostic outputs
+!--------------------------------------------------------------------
+  use schism_glbl, only : rkind
+  use schism_msgp, only : myrank,parallel_abort
+  use icm_mod, only : dg
+  implicit none
+  integer,intent(in) :: vdim,ista
+  character(*),intent(in) :: varname
+  real(rkind),intent(in) :: vdata(vdim)
+
+  !local variables
+  integer :: i,ivar,istat,lvar
+
+  !locate variable index
+  ivar=0; lvar=len(trim(adjustl(varname)))
+  do i=1,dg%nvar
+    if(trim(adjustl(dg%vars(i)%varname))==trim(adjustl(varname))) ivar=i
+  enddo
+  if(ivar==0) then !add new variables
+    dg%nvar=dg%nvar+1; ivar=dg%nvar; dg%vars(ivar)%vlen=vdim
+    dg%vars(ivar)%varname(1:lvar)=trim(adjustl(varname))
+    allocate(dg%vars(ivar)%data(dg%nsta,vdim),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. dg%vars(ivar)%data')
+    dg%vars(ivar)%data=0 !init
+  endif
+
+  !save data
+  dg%vars(ivar)%data(ista,:)=vdata
+end subroutine icm_output
+
+subroutine icm_output_proc(imode,it)
+!--------------------------------------------------------------------
+!ICM diagnostic outputs processing
+!imode=0: read station info
+!imode=1: open file for station output
+!imode=2: write station output
+!--------------------------------------------------------------------
+  use schism_glbl, only : out_dir,len_out_dir,in_dir,len_in_dir,rkind,ne, &
+                        & i34,xnd,ynd,elnode,ihot,dt,rnday
+  use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
+  use icm_mod, only : dg,nspool_icm
+  use icm_misc, only : pt_in_poly
+  use netcdf
+  implicit none
+  include 'mpif.h'
+  integer,intent(in) :: imode,it
+
+  !local variables
+  integer :: i,j,k,n,m,nsta,istat,inside,nodel(3),ierr,ndim,dims(30), &
+           & var_dim(30),idm(200),id_sta,id_x,id_y,id_z,time_dim,nsta_dim
+  integer,allocatable :: idims(:)
+  real(rkind) :: x(4),y(4),arco(3)
+  real(rkind),allocatable :: xyz(:,:)
+  character(len=200) :: fname
+  character(len=6) :: stmp
+  logical :: lexist
+
+  if(imode==0) then !read station information
+    if(myrank==0) then
+      open(31,file=in_dir(1:len_in_dir)//'istation.in',status='old')
+      read(31,*); read(31,*)nsta
+      allocate(xyz(nsta,3),dg%ista(nsta),dg%iep(nsta),dg%x(nsta),dg%y(nsta),dg%z(nsta),stat=istat)
+      if(istat/=0) call parallel_abort('failed to alloc. xyz')
+      do i=1,nsta; read(31,*)j,(xyz(i,k),k=1,3); enddo
+      close(31)
+    endif !myrank=0
+    call mpi_bcast(nsta,1,itype,0,comm,ierr)
+    if(.not.allocated(xyz)) allocate(xyz(nsta,3),dg%ista(nsta),dg%iep(nsta),dg%x(nsta),dg%y(nsta),dg%z(nsta),stat=istat)
+    call mpi_bcast(xyz,nsta*3,rtype,0,comm,ierr)
+
+    !find parent elements inside each subdomain
+    do n=1,nsta
+      do i=1,ne
+        x(1:i34(i))=xnd(elnode(1:i34(i),i)); y(1:i34(i))=ynd(elnode(1:i34(i),i))
+        call pt_in_poly(i34(i),x(1:i34(i)),y(1:i34(i)),xyz(n,1),xyz(n,2),inside,arco,nodel)
+        if(inside==1) then
+          dg%nsta=dg%nsta+1; dg%ista(dg%nsta)=n; dg%iep(dg%nsta)=i
+          dg%x(dg%nsta)=xyz(n,1); dg%y(dg%nsta)=xyz(n,2); dg%z(dg%nsta)=xyz(n,3)
+          exit
+        endif
+      enddo
+    enddo
+    deallocate(xyz)
+  elseif(imode==1) then
+    !gather information about variables dimensions
+    dg%istat=2; ndim=0; idm=0
+    do m=1,dg%nvar
+      do i=1,ndim !get dimension index
+        if(dg%vars(m)%vlen==dims(i)) idm(m)=i
+      enddo 
+      if(idm(m)==0) then !new dimension
+        ndim=ndim+1; dims(ndim)=dg%vars(m)%vlen; idm(m)=ndim
+      endif
+    enddo!m
+
+    !open station output file, and def dimensions
+    write(stmp,'(i6.6)') myrank
+    fname=trim(adjustl(out_dir(1:len_out_dir)))//'icm_'//stmp//'.nc'
+    inquire(file=trim(adjustl(fname)),exist=lexist)
+    if(ihot==2.and.lexist) then
+      j=nf90_open(trim(adjustl(fname)),NF90_WRITE,dg%ncid)
+      j=nf90_inq_varid(dg%ncid,'time',dg%id_time); dg%it=int(dg%time/(dt*nspool_icm))+1
+      do m=1,dg%nvar
+        j=nf90_inq_varid(dg%ncid,trim(adjustl(dg%vars(m)%varname)),dg%vars(m)%varid)
+      enddo!m
+    else
+      j=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),dg%ncid)
+      j=nf90_def_dim(dg%ncid,'time',NF90_UNLIMITED,time_dim)
+      j=nf90_def_dim(dg%ncid,'nstation',dg%nsta,nsta_dim)
+      do i=1,ndim
+        write(stmp(1:2),'(i2.2)')dims(i)
+        j=nf90_def_dim(dg%ncid,'dim_'//stmp(1:2),dims(i),var_dim(i))
+      enddo
+
+      !define variables
+      j=nf90_def_var(dg%ncid,'istation',nf90_int,(/nsta_dim/),id_sta)
+      j=nf90_def_var(dg%ncid,'x',nf90_double,(/nsta_dim/),id_x)
+      j=nf90_def_var(dg%ncid,'y',nf90_double,(/nsta_dim/),id_y)
+      j=nf90_def_var(dg%ncid,'z',nf90_double,(/nsta_dim/),id_z)
+      j=nf90_def_var(dg%ncid,'time',nf90_double,(/time_dim/),dg%id_time)
+      do m=1,dg%nvar
+        j=nf90_def_var(dg%ncid,trim(adjustl(dg%vars(m)%varname)),nf90_double, &
+          & (/time_dim,nsta_dim,var_dim(idm(m))/),dg%vars(m)%varid)
+      enddo!m
+      j=nf90_enddef(dg%ncid)
+
+      !put values for station,and xyz
+      j=nf90_put_var(dg%ncid,id_sta,dg%ista,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_x,dg%x,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_y,dg%y,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_z,dg%z,start=(/1/),count=(/dg%nsta/))
+    endif
+  elseif(imode==2) then !output data
+    j=nf90_put_var(dg%ncid,dg%id_time,(/dg%time/),start=(/dg%it/),count=(/1/))
+    do m=1,dg%nvar
+      j=nf90_put_var(dg%ncid,dg%vars(m)%varid,dg%vars(m)%data,start=(/dg%it,1,1/),count=(/1,dg%nsta,dg%vars(m)%vlen/))
+    enddo
+    if(abs(mod(dg%time,86400.d0))<60.d0) j=nf90_sync(dg%ncid)  !flush data every day
+    if(it==int(rnday*86400.d0/dt+0.5d0)) j=nf90_close(dg%ncid) !close file
+  endif !imode
+
+end subroutine icm_output_proc
 
 subroutine check_icm_param()
   use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws,itransport_only

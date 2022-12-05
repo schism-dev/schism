@@ -27,7 +27,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
@@ -199,6 +199,26 @@ module icm_mod
     real(rkind),allocatable,dimension(:,:,:) :: data
   end type icm_spatial_param
   type(icm_spatial_param),save,target,allocatable,dimension(:) :: sp
+
+  !---------------------------------------------------------------------------
+  !station outputs
+  !---------------------------------------------------------------------------
+  type :: station_var
+    integer :: varid,vlen      !netcdf varid, var length
+    character(len=30) :: varname=''  !variable name
+    real(rkind),allocatable,dimension(:,:) :: data
+  end type
+
+  type :: station_data
+    integer :: istat=0,it=0,nsta=0,nvar=0
+    integer :: ncid,id_time
+    real(rkind) :: time
+    integer,allocatable :: ista(:)  !station index
+    integer,allocatable :: iep(:)   !elem. in subdomain
+    real(rkind),allocatable :: x(:),y(:),z(:)
+    type(station_var) :: vars(200)
+  end type
+  type(station_data),save :: dg
 
 end module icm_mod
 
