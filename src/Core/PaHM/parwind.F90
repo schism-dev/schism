@@ -281,12 +281,12 @@ MODULE ParWind
           !--- col:  6
           bestTrackData(iFile)%tau(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 6))))
           !--- col:  7
-          tmpStr = TRIM(sval2D(iCnt, 7))
+          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 7)))
           READ(tmpStr, '(i3, a1)') &
                bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt)
           !--- col:  8
-          tmpStr = TRIM(sval2D(iCnt, 8))
-          READ(tmpStr, '(i4, a1)') &
+          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 8)))
+          READ(tmpStr, '(i3, a1)') &
                bestTrackData(iFile)%intLon(iCnt), bestTrackData(iFile)%ew(iCnt)
           !--- col:  9
           bestTrackData(iFile)%intVMax(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 9))))
