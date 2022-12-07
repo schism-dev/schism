@@ -9,3 +9,10 @@ export  NetCDF_LIBRARIES=$NetCDF_LIBRARIES
 export  NetCDF_FORTRAN_DIR=$NETCDF
 export  TVD_LIM=VL
 
+
+For large meshes (e.g. from OWP), it's also necessary to set these in the batch script:
+
+export FI_OFI_RXM_SAR_LIMIT=3145728
+export FI_MR_CACHE_MAX_COUNT=0
+
+Zhengtao used 64 cores/nodes.
