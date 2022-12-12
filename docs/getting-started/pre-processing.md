@@ -24,7 +24,7 @@ for other gridded data sources from other structured-grid models).
  like HYCOM. It essentially consists of 3D interpolations.
 
 ## Sflux_nc
-The matlab scripts inside Sflux_nc dir show you the structure of sflux*.nc as well as how to generate your own files.
+The matlab scripts inside Sflux_nc dir show you the structure of sflux\*.nc as well as how to generate your own files.
 
 ## METIS for offline domain decomposition
 You'll only need to do this if you invoked offline partitioning in compilation (e.g. with `NO_PARMETIS` turned ON in cmake)
@@ -46,8 +46,3 @@ Step 3: run METIS: `./gpmetis graphinfo <nproc> -ufactor=1.01 -seed=15`
 
 
    (replace `<nproc>` with actual # of cores).
-
-## Pre-processing with PySCHISM
-PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by HYCOM and
- a few pre-selected atmospheric models. PySCHISM has its own repository (in parallel to SCHISM) and you can
- find a user manual [here](https://pyschism.readthedocs.io/en/latest/index.html).
