@@ -417,17 +417,113 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#pre-processing-with-pyschism" class="md-nav__link">
-    Pre-processing with PySCHISM
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_7" type="checkbox" id="__nav_3_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_7">
+          Preprocessing with PySCHISM
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with PySCHISM" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_7">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with PySCHISM
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing-with-pyschism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing-with-pyschism/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing-with-pyschism/boundary.html" class="md-nav__link">
+        Boundary Conditions
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing-with-pyschism/atmos.html" class="md-nav__link">
+        Atmospheric forcing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="pre-processing-with-pyschism/nwm.html" class="md-nav__link">
+        Souce and Sink
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -1445,10 +1541,6 @@ If so, you'll need to prepare an input called <code>partion.prop</code> (which i
    compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:</p>
 <p><code>awk '{print NR,$0}' graphinfo.part.&lt;nproc&gt; &gt; partition.prop</code></p>
 <p>(replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
-<h2 id="pre-processing-with-pyschism">Pre-processing with PySCHISM<a class="headerlink" href="#pre-processing-with-pyschism" title="Permanent link">&para;</a></h2>
-<p>PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by HYCOM and
- a few pre-selected atmospheric models. PySCHISM has its own repository (in parallel to SCHISM) and you can
- find a user manual <a href="https://pyschism.readthedocs.io/en/latest/index.html">here</a>.</p>
 
               
             </article>
@@ -1480,13 +1572,13 @@ If so, you'll need to prepare an input called <code>partion.prop</code> (which i
       
       
         
-        <a href="running-model.html" class="md-footer__link md-footer__link--next" aria-label="Next: Running the model" rel="next">
+        <a href="pre-processing-with-pyschism/overview.html" class="md-footer__link md-footer__link--next" aria-label="Next: Overview" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Running the model
+              Overview
             </div>
           </div>
           <div class="md-footer__button md-icon">
