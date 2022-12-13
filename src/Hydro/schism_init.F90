@@ -203,7 +203,7 @@
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
      &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj,turbinjds,alphaw, &
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
-	 &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,wafo_obcramp, &
+     &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &

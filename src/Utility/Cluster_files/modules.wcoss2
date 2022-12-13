@@ -16,3 +16,15 @@ export FI_OFI_RXM_SAR_LIMIT=3145728
 export FI_MR_CACHE_MAX_COUNT=0
 
 Zhengtao used 64 cores/nodes.
+
+Below is from Zizang on STOFS3D-Atlantic setting on WCOSS2:
+Total nodes: 29
+Number of mpi processors: 128
+Key MPI parameter setup1:
+- export MPICH_OFI_STARTUP_CONNECT=1 a
+- export MPICH_COLL_SYNC=MPI_Bcast b
+- export MPICH_REDUCE_NO_SMP=1 c
+a Purpose: set up MPI connections and buffers at start of run - helps efficiency of MPI later in run
+b Pace MPI_Bcast messaging when reading and distributing initial conditions - prevents the Bcast hangs
+c Turn off MPI_Reduce on node optimization - prevent MPI_Reduce hangs during time stepping
+
