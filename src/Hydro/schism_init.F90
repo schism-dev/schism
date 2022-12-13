@@ -643,9 +643,6 @@
         endif
       endif !ishapiro
 
-!...  Horizontal diffusivity option; only works for upwind/TVD
-!     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
-!      call get_param('param.in','ihdif',1,ihdif,tmp,stringvalue)
 !...  Implicitness factor
 !      call get_param('param.in','thetai',2,itmp,thetai,stringvalue)
 
@@ -2992,7 +2989,7 @@
 !        endif !lexist
       endif !ishapiro==-1
 
-!...  Horizontal diffusivity option; only works for upwind/TVD
+!...  Horizontal diffusivity option
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
       if(ihdif==0) then
         hdif=0.d0

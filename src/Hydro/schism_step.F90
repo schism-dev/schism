@@ -7561,6 +7561,8 @@
 !$OMP     end do
         endif !if_source
 
+!       Filter style horizontal diffusion scheme
+
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 
         do i=1,nea
