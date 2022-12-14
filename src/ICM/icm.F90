@@ -501,8 +501,8 @@ subroutine ecosystem(it)
             endif!isub
           enddo!k
 
-          if(i==1) then !save time for current record
-            dg%time=time; dg%it=dg%it+1
+          if(i==1.and.isub==1) then !save time for current record
+            dg%time=it*dt; dg%it=dg%it+1
           endif!i==1
         enddo!i=1,dg%nsta
       endif!iout_icm

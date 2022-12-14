@@ -997,7 +997,7 @@ subroutine icm_output_proc(imode,it)
     do m=1,dg%nvar
       j=nf90_put_var(dg%ncid,dg%vars(m)%varid,dg%vars(m)%data,start=(/dg%it,1,1/),count=(/1,dg%nsta,dg%vars(m)%vlen/))
     enddo
-    if(abs(mod(dg%time,86400.d0))<60.d0) j=nf90_sync(dg%ncid)  !flush data every day
+    if(mod(it*dt,86400.d0)<dt) j=nf90_sync(dg%ncid)  !flush data every day
     if(it==int(rnday*86400.d0/dt+0.5d0)) j=nf90_close(dg%ncid) !close file
   endif !imode
 
