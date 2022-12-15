@@ -1413,7 +1413,7 @@
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
          & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
-         & wwave_force(2,nvrt,nsa),stat=istat)
+         & wwave_force(2,nvrt,nsa),btaun(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1647,7 +1647,7 @@
 #ifndef USE_SED
         !allocate variables for offline mode when SED module is turned off
         if(itransport_only==2) then
-          allocate(total_sus_conc(nvrt,npa),btaun(npa),stat=istat)
+          allocate(total_sus_conc(nvrt,npa),stat=istat)
           if(istat/=0) call parallel_abort('INIT: total_sus_conc (2)')
         endif
 #endif
