@@ -2,6 +2,8 @@
 ! Other mandatory inputs: wwmbnd.gr3 (boundary flag files; see below)
 ! Depending on the choices of parameters below you may need additional inputs
 
+! Hotstart option for WWM: see header of spectra
+
 &PROC
  PROCNAME       = 'Isabel'           ! Project Name
  DIMMODE        = 2                  ! Mode of run (ex: 1 = 1D, 2 = 2D) always 2D when coupled to SCHISM

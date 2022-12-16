@@ -1,7 +1,7 @@
 !     Generate hdif.gr3 (or hvis.gr3) with hdif=L_h^2 * gamma/dt (where 
 !     gamma is a dimensionless constant between [0,0.25), and L_h is a length scale)
 !     Works for mixed tri/quads.
-!     Inputs: screen (gamma1,dt; hdif_max); hgrid.gr3
+!     Inputs: screen (gamma1,dt; hdif_max); hgrid.gr3 (proj only)
 !     Output: hdif.gr3
 
 !     ifort -Bstatic -O3 -o gen_hdif gen_hdif.f90
