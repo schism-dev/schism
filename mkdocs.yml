@@ -105,7 +105,7 @@ nav:
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
   - Code structure: code-contribution.md
-  - Mesh generation- advanced topics
+  - Mesh generation - advanced topics:
     - Overview: mesh-generation/overview.md
     - Meshing for compound floods:
       - Overview: mesh-generation/meshing-for-compound-floods/overview.md
