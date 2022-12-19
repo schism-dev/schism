@@ -107,6 +107,9 @@ Breaking the large polygon into smaller and simpler polygons can help fix the is
 ![intersect joints](../../assets/mesh-breakline-issue.png)
 
 
+If SMS hangs, copy down the polygon ID (found in the lower-left corner) and restart the session. 
+ Note that occasionally the real problematic polygon may be the next one from 'ID'.
+
 ##Find and avoid SMS issues
 We have reported the above issues to the SMS team.
 Before these issues are officially fixed, you can use the following methods to find and avoid them before the final meshing.
@@ -125,7 +128,7 @@ Mesh each sub-map in a seperate SMS session and fix issues when they occur using
 
 Combine the sub-meshes using the following script in [SCHISM Git]():
 ```
-/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/
+/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Grid_Scripts/mergegrid5.f90
 ```
 
 
