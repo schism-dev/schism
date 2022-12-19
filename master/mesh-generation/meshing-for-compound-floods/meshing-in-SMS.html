@@ -1141,14 +1141,14 @@
       
       
         <label class="md-nav__link" for="__nav_8">
-          Mesh generation
+          Mesh generation - advanced topics
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Mesh generation" data-md-level="1">
+      <nav class="md-nav" aria-label="Mesh generation - advanced topics" data-md-level="1">
         <label class="md-nav__title" for="__nav_8">
           <span class="md-nav__icon md-icon"></span>
-          Mesh generation
+          Mesh generation - advanced topics
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -1638,6 +1638,8 @@ Breaking the large polygon into smaller and simpler polygons can help fix the is
 <li>"Void in breakline" in some polygons. Slightly moving some vertices may fix the problem.</li>
 </ul>
 <p><img alt="intersect joints" src="../../assets/mesh-breakline-issue.png" /></p>
+<p>If SMS hangs, copy down the polygon ID (found in the lower-left corner) and restart the session. 
+ Note that occasionally the real problematic polygon may be the next one from 'ID'.</p>
 <h2 id="find-and-avoid-sms-issues">Find and avoid SMS issues<a class="headerlink" href="#find-and-avoid-sms-issues" title="Permanent link">&para;</a></h2>
 <p>We have reported the above issues to the SMS team.
 Before these issues are officially fixed, you can use the following methods to find and avoid them before the final meshing.</p>
@@ -1649,7 +1651,7 @@ Make sure there are no overlaps among the sub-maps except for the interface line
 <p><img alt="sub-map" src="../../assets/mesh-sub-map.png" /></p>
 <p>Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier.</p>
 <p>Combine the sub-meshes using the following script in <a href="">SCHISM Git</a>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Grid_Scripts/mergegrid5.f90
 </code></pre></div></p>
 <h3 id="option-2-less-manual-work-but-takes-more-time">Option 2. Less manual work but takes more time<a class="headerlink" href="#option-2-less-manual-work-but-takes-more-time" title="Permanent link">&para;</a></h3>
 <p>In each session, select the polygons within a sub-domain and try to generate a sub-domain mesh.
