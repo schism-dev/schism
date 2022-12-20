@@ -1,0 +1,15 @@
+*gen_sourcesink.py*
+This script is used to generate source/sink th files for hindcast.
+##There are three datasets:
+- AWS 
+  - Feb 1979 - Dec 2020
+  - hourly
+- Google cloud (from Jan 2021 through today)
+  - 20210101 - today
+  - data before April 20, 2021 (including Apirl 20) is 3-hr interval, after that is hourly
+  - has missing files
+- VIMS 
+  - needs pre-download
+  - use *link.py* to link files to the cache/
+
+

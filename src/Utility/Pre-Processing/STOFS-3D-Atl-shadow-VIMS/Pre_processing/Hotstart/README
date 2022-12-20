@@ -1,0 +1,7 @@
+1) Download hycom files by download_hycom.py
+
+2) rename hycom files to SSH_1.nc, TS_1.nc, and UV_1.nc, SSH_2.nc, TS_2.nc, and UV_2.nc, ..., and put them under the current folder; change the last input parameter in gen*.in accordingly
+
+3) make estuary.gr3 and fill with 0; run "./gen_hot*" and rename the product hotstart.nc to hotstart.nc.hycom
+
+4) run "python tweak*.py" to introduce observation in the watershed and initialize watershed/urban elevation to 0.1 meters below ground.
