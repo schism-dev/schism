@@ -4,7 +4,7 @@ SCHISM can be such a model component within an NUOPC-coupled system.  A so-calle
 
 ## Obtaining and building the cap
 
-The [NUOPC](nuopc.html)(esmf.html) cap are jointly hosted in a separate repository on [https://github.com/schism-dev/schism-esmf](https://github.com/schism-dev/schism-esmf).  It requires that the SCHISM core is built and pointed to by the environment variable `$SCHISM_BUILD_DIR` 
+The [NUOPC](nuopc.html) and the [ESMF](esmf.html) caps are jointly hosted in a separate repository on [https://github.com/schism-dev/schism-esmf](https://github.com/schism-dev/schism-esmf).  It requires that the SCHISM core is built and pointed to by the environment variable `$SCHISM_BUILD_DIR` 
 
 ```
 export SCHISM_ESMF_DIR=/my/path/to/schism-esmf
