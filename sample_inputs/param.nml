@@ -780,7 +780,7 @@
 !-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------
-  nhot = 0 !1: output *_hotstart every 'hotout_write' steps
+  nhot = 0 !1: output *_hotstart every 'nhot_write' steps
   nhot_write = 8640 !must be a multiple of ihfskip if nhot=1
 
 !-----------------------------------------------------------------------
