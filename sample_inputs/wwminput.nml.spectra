@@ -4,10 +4,12 @@
 
 !Notes on hotstart: (1) generate hotstart outputs from WWM; see &HOTFILE section. Turn on LHOTF and 
 ! match interval (see &HOTFILE) with SCHISM's so the 2 models can be hotstarted together. Use single nc output
-! with last 2 records. Also need to make sure the start/end time info is correct 
+! with last 2 records (default setting). Also need to make sure the start/end time info is correct 
 ! in &PROC, &HOTFILE; (2) to restart both models, copy the hot out to input (e.g. hotfile_in_WWM.nc),
 ! turn on &INIT->LHOTR and input hot input name in &HOTFILE. IHOTPOS_IN controls position of the 2 time records.
+! Adjust 'BEGTC' in all sections to reflect the new starting time.
 ! Then do the usual things in SCHISM (ihot>0).
+! NOTES: WWM hotstart does not seem to work with quads.
 
 &PROC
  PROCNAME       = 'limon'            ! Project Name
