@@ -1430,7 +1430,7 @@
 <h1 id="documenting-on-mkdocs">Documenting on mkdocs<a class="headerlink" href="#documenting-on-mkdocs" title="Permanent link">&para;</a></h1>
 <h2 id="installation-optional-for-local-development">Installation (optional; for local development)<a class="headerlink" href="#installation-optional-for-local-development" title="Permanent link">&para;</a></h2>
 <p>The basic install only requires <code>mkdocs</code> and <code>mkdocs_materials</code> to be installed. This can be done system-wide using the system python installation (and associated <code>pip</code> command). </p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip install mkdocs mkdocs_material mkdocs-with-pdf
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs_material<span class="w"> </span>mkdocs-with-pdf
 </code></pre></div>
 <p>To check where <code>pip</code> is located, use <code>which pip</code> in linux/unix system.</p>
 <p>If you are a conda/anaconda user, you can also create a new environment from the provided <code>environment.yml</code> file</p>
@@ -1475,9 +1475,9 @@ will produce - </p>
 <p><strong>References</strong></p>
 <p>References can be added as link. For example <code>[Zhang et al. 2016](#zhang2016)</code>. An entry for this reference cab be added with html <code>&lt;span&gt;</code> in the end of each page as <code>&lt;span id="zhang2016"&gt;Zhang, Y., Stanev, E.V. and S. Grashorn (2016) Unstructured-grid model for the North Sea and Baltic Sea: validation against observations, Ocean Modelling, 97, 91-108.&lt;/span&gt;</code>. Here <code>id</code> is what makes the link works.</p>
 <h2 id="build-and-deploy-site">Build and deploy site<a class="headerlink" href="#build-and-deploy-site" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mkdocs serve <span class="c1"># to see locally</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mkdocs build <span class="c1"># build site</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mkdocs gh-deploy --force <span class="c1"># serve site to github on gh-page branch</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mkdocs<span class="w"> </span>serve<span class="w"> </span><span class="c1"># to see locally</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mkdocs<span class="w"> </span>build<span class="w"> </span><span class="c1"># build site</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mkdocs<span class="w"> </span>gh-deploy<span class="w"> </span>--force<span class="w"> </span><span class="c1"># serve site to github on gh-page branch</span>
 </code></pre></div>
 <p>You will need github pages fully setup. See <a href="https://pages.github.com/">Github Pages</a> for more information.</p>
 

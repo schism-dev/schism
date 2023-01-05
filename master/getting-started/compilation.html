@@ -1484,10 +1484,10 @@ In <code>mk/</code>, there are other makefiles <code>Make.defs.*</code> which ca
  of compilers). </p>
 <p>You need a <code>mk/Make.defs.local</code> file for compilation. To help you design this file, we have put <code>Make.defs.*</code> which are from various clusters around the world as well as common linux operating systems. You should copy/link one of these to <code>Make.defs.local</code>. For example, if your MPI compiler is Intel based ifort, you may try - </p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Copy</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp Make.defs.bora Make.defs.myown
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>Make.defs.bora<span class="w"> </span>Make.defs.myown
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># and then link</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>ln -sf Make.defs.myown Make.defs.local
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>ln<span class="w"> </span>-sf<span class="w"> </span>Make.defs.myown<span class="w"> </span>Make.defs.local
 </code></pre></div>
 <p>Then you need to edit <code>Make.defs.local</code> for e.g. the MPI compiler name, path names for <code>netcdf</code> library 
 (v4.4 and above preferred) on your local cluster (sometimes you may also need to add <code>FORTRAN</code> support 
@@ -1497,9 +1497,9 @@ C compiler names in <code>src/ParMetis-*</code> (consult also <code>INSTALL</cod
 Lastly, turn on/off modules in <code>include_modules</code> (note that <code>TVD_LIM</code> should always have a valid value). 
 Make sure <code>mk/sfmakedepend.pl</code> and <code>mk/cull_depends.py</code> are executable (otherwise make them executable with <code>chmod +x</code>).</p>
 <p>After all of these are done - </p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span> ../src
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make clean
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make pschism
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>../src
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>clean
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>pschism
 </code></pre></div>
 <p>You might get some errors if you did not use git to clone so the make cannot find the hash information; 
 ignore it and proceed in making. The final name of executable has the cluster name and also additional suffixes
@@ -1525,15 +1525,15 @@ ignore it and proceed in making. The final name of executable has the cluster na
   You can start from an existing file for a similar cluster e.g. <code>cp –L SCHISM.local.whirlwind SCHISM.local.myown</code></li>
 </ol>
 <p>Once these two files are set, run - </p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mkdir ../build
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span> ../build<span class="p">;</span> rm -rf * <span class="c1"># Clean old cache</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.myown ../src/
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mkdir<span class="w"> </span>../build
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>../build<span class="p">;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>*<span class="w"> </span><span class="c1"># Clean old cache</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>cmake<span class="w"> </span>-C<span class="w"> </span>../cmake/SCHISM.local.build<span class="w"> </span>-C<span class="w"> </span>../cmake/SCHISM.local.myown<span class="w"> </span>../src/
 </code></pre></div>
 <p>The cmake is essentially a pre-processor for make, and it creates cache files (e.g. build/ CMakeCache.txt, 
 where you can inspect all env variables). After cmake is done, make can be executed in parallel or in serial mode.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make -j8 pschism <span class="c1"># efficient parallel build; you can replace &quot;8&quot; with number of processes you want</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>-j8<span class="w"> </span>pschism<span class="w"> </span><span class="c1"># efficient parallel build; you can replace &quot;8&quot; with number of processes you want</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># or</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>make <span class="nv">VERBOSE</span><span class="o">=</span><span class="m">1</span> pschism <span class="c1"># serial build with a lot of messages</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>make<span class="w"> </span><span class="nv">VERBOSE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>pschism<span class="w"> </span><span class="c1"># serial build with a lot of messages</span>
 </code></pre></div>
 <p>The executable (<code>pschism_</code> with extensions) is found in <code>build/bin/</code> and the compiled libraries are in <code>build/lib/</code>. If <code>pschism</code> is omitted above, the main executable and all utility scripts will be built in <code>bin/</code>.</p>
 
