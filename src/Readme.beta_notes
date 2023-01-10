@@ -54,7 +54,7 @@ e9aec89 (1 Oct 2021): added most module outputs; order of flags changed in: ICE,
 
 Tag v5.9.0: 657157a (1 July, 2021)
 
-e281d94 (25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
+e281d94 (in a branch; 25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
 bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
 d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
