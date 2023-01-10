@@ -898,7 +898,7 @@ subroutine icm_output_proc(imode,it)
 !imode=2: write station output
 !--------------------------------------------------------------------
   use schism_glbl, only : out_dir,len_out_dir,in_dir,len_in_dir,rkind,ne, &
-                        & i34,xnd,ynd,elnode,ihot,dt,rnday
+                        & i34,xnd,ynd,xlon,ylat,elnode,ihot,dt,rnday,ics,pi
   use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
   use icm_mod, only : dg,nspool_icm
   use icm_misc, only : pt_in_poly
@@ -911,6 +911,7 @@ subroutine icm_output_proc(imode,it)
   integer :: i,j,k,n,m,nsta,istat,inside,nodel(3),ierr,ndim,dims(30), &
            & var_dim(30),idm(200),id_sta,id_x,id_y,id_z,time_dim,nsta_dim
   integer,allocatable :: idims(:)
+  real(rkind),parameter :: deg2rad=pi/180.d0
   real(rkind) :: x(4),y(4),arco(3)
   real(rkind),allocatable :: xyz(:,:)
   character(len=200) :: fname
@@ -933,7 +934,11 @@ subroutine icm_output_proc(imode,it)
     !find parent elements inside each subdomain
     do n=1,nsta
       do i=1,ne
-        x(1:i34(i))=xnd(elnode(1:i34(i),i)); y(1:i34(i))=ynd(elnode(1:i34(i),i))
+        if(ics==1) then
+          x(1:i34(i))=xnd(elnode(1:i34(i),i)); y(1:i34(i))=ynd(elnode(1:i34(i),i))
+        else
+          x(1:i34(i))=xlon(elnode(1:i34(i),i))/deg2rad; y(1:i34(i))=ylat(elnode(1:i34(i),i))/deg2rad
+        endif
         call pt_in_poly(i34(i),x(1:i34(i)),y(1:i34(i)),xyz(n,1),xyz(n,2),inside,arco,nodel)
         if(inside==1) then
           dg%nsta=dg%nsta+1; dg%ista(dg%nsta)=n; dg%iep(dg%nsta)=i
