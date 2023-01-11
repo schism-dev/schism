@@ -1,18 +1,12 @@
 # %%
-from difflib import ndiff
-from functools import cache
 import json
-from statistics import median
 from osgeo import gdal
 from glob import glob
 import copy
-from schism_py_pre_post.Rivermap.make_river_map import Tif2XYZ, get_all_points_from_shp
+from RiverMapGen.make_river_map import Tif2XYZ, get_all_points_from_shp
 import numpy as np
 import os
-import matplotlib.pyplot as plt
-import shapefile
-from schism_py_pre_post.Grid.SMS import lonlat2cpp, cpp2lonlat
-from pylib import schism_grid
+from RiverMapGen.SMS import lonlat2cpp, cpp2lonlat
 import pickle
 import math
 
@@ -29,11 +23,11 @@ def parse_dem_tiles(dem_code, dem_tile_digits):
         dem_tile_ids.append(int(x-1))
     return dem_tile_ids
 
-def get_tif_boxes(tif_files:list):
+def get_tif_boxes(tif_files:list, dem_cache=True):
     tif_box = []
     for i, tif_file in enumerate(tif_files):
         print(f'reading tifs: {i+1} of {len(tif_files)}, {tif_file}')
-        tif = Tif2XYZ(tif_file)
+        tif = Tif2XYZ(tif_file, dem_cache)
         tif_box.append([min(tif.x), min(tif.y), max(tif.x), max(tif.y)])
     return tif_box
 
@@ -112,7 +106,7 @@ def find_thalweg_tile(
                 dem_dict[k]['boxes'] = tmp_dict['boxes']
         else:
             dem_dict[k]['file_list'] = glob(dem_dict[k]['glob_pattern'])
-            dem_dict[k]['boxes'] = get_tif_boxes(dem_dict[k]['file_list'])
+            dem_dict[k]['boxes'] = get_tif_boxes(dem_dict[k]['file_list'], dem_cache=i_DEM_cache)
             tmp_dict = {
                 'file_list': dem_dict[k]['file_list'],
                 'boxes': dem_dict[k]['boxes']

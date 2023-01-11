@@ -18,14 +18,14 @@ regions=['./regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenP
          "Elk_river.reg","Hudson_river.reg","James_river.reg","NorthEast_river.reg",
          "Rappahannock_river.reg","Susquehanna_river.reg","York_river.reg",
          "Androscoggin_Kennebec_rivers.reg","Merrimack_river.reg","Patuxent_river.reg",
-         "Penobscot_river.reg","Saco_river.reg","StCroix_river.reg","GoME_NE_min_2m.reg","Oyster_landing.reg",
+         "Penobscot_river.reg","Saco_river.reg","StCroix_river.reg","Oyster_landing.reg",
          )] #regions for modifying depth
 rvalues=(5,7,5,15,
          2,16,14,5,
          6,10,10,
          3,3,5,
-         5,3,5,2,1,
-         10) #minimum depth in regions
+         5,3,5,1,
+         ) #minimum depth in regions
 headers=("etopo1","crm_3arcs","cdem13_","dem_continetalus_southcarolina","North_Carolina_USGS_3m",
          "al_ll","nc_ll","fl_ll","gulf_1_dem_usgs","gulf_3_demcombined_ll","ge_ll","sc_ll",
          "cb_ll","db_ll","new_england_topobathy_dem_3m_dd","Tile3_R3_DEMv2","cb_bay_dem_v3.1_ll",
