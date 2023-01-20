@@ -55,7 +55,7 @@ nav:
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
     - Typical workflow (a cheat sheet): getting-started/typical-workflow.md
-    - Grid generation: getting-started/grid-generation.md
+    - Mesh generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
     - Preprocessing with PySCHISM:
       - Overview: getting-started/pre-processing-with-pyschism/overview.md
