@@ -132,7 +132,7 @@ Channels serve as the main conduit for fresh and ocean water flow, and thus are 
  cross section as faithfully as possible to capture the water volume. 
  There is no need for bathymetry smoothing or other manipulation (and implicitness 
   allows high resolution on steep slope and skew elements). A good mesh together with 
-  SCHISM's flexible vertical gridding system $LSC^2$ one can accurately capture the 3D processes. 
+  SCHISM’s flexible vertical gridding system $LSC^2$ one can accurately capture the 3D processes. 
 
 <figure markdown id='figure04'>
 ![Channel representation in the grid](../assets/channel-representation.png){width=800}
@@ -140,7 +140,7 @@ Channels serve as the main conduit for fresh and ocean water flow, and thus are 
 </figure>
 
 !!!notes "Patch method"
-   It's well known that channelized flow is better simulated using flow-aligned quads. Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
+   It is well known that channelized flow is better simulated using flow-aligned quads. Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
 
 ## Meshing near wetting and drying
 You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shorelin). 
