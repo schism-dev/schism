@@ -1651,7 +1651,7 @@ more accurately represent the salt intrusion process.</p>
  cross section as faithfully as possible to capture the water volume. 
  There is no need for bathymetry smoothing or other manipulation (and implicitness 
   allows high resolution on steep slope and skew elements). A good mesh together with 
-  SCHISM's flexible vertical gridding system <span class="arithmatex">\(LSC^2\)</span> one can accurately capture the 3D processes. </p>
+  SCHISM’s flexible vertical gridding system <span class="arithmatex">\(LSC^2\)</span> one can accurately capture the 3D processes. </p>
 <figure id="figure04">
 <p><img alt="Channel representation in the grid" src="../assets/channel-representation.png" width="800" /></p>
 <figcaption>Side view of channel representation. Remember SCHISM does not allow partial wet/dry.</figcaption>
@@ -1659,7 +1659,7 @@ more accurately represent the salt intrusion process.</p>
 <div class="admonition notes">
 <p class="admonition-title">Patch method</p>
 </div>
-<p>It's well known that channelized flow is better simulated using flow-aligned quads. Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
+<p>It is well known that channelized flow is better simulated using flow-aligned quads. Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
 <h2 id="meshing-near-wetting-and-drying">Meshing near wetting and drying<a class="headerlink" href="#meshing-near-wetting-and-drying" title="Permanent link">&para;</a></h2>
 <p>You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shorelin). 
  Reasonable mesh transition should be done from shoreline to dryland. Use comparable or finer mesh resolution 
