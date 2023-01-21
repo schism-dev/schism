@@ -29,11 +29,11 @@ set(comp_lang_list C Fortran)
 project(SCHISM LANGUAGES ${comp_lang_list} CXX)
 add_definitions("-DSCHISM")
 
-
-
-
 ########### Announce compiler #####
-message(STATUS "\n### Your compiler is ${CMAKE_Fortran_COMPILER}")
+message(STATUS "\n### Compiler combination and executables")
+message(STATUS "Compiler ID is ${CMAKE_Fortran_COMPILER_ID}-${CMAKE_C_COMPILER_ID}")
+message(STATUS "Fortran compiler is ${CMAKE_Fortran_COMPILER}")
+message(STATUS "C compiler is ${CMAKE_C_COMPILER}")
 
 ########### Build types are Release, Debug and RelWithDebInfo (Release with debug info) #####
 if (NOT CMAKE_BUILD_TYPE)
@@ -41,15 +41,14 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-
 ########### C Preprocessor #####
 # The thought is to enable this globally, since it is needed for all
 # of SCHISM and several Utilities
+# @todo this might be more elegantly handled (from cmake 3.18) with FORTRAN_PREPROCESS boolean flag
 if (NOT DEFINED C_PREPROCESS_FLAG)
   message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI0 is not set")
 endif()
 add_compile_options(${C_PREPROCESS_FLAG})
-
 
 ######### Algorithmic switches and build options involving functionality
 
