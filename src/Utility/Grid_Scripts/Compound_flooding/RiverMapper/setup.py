@@ -5,8 +5,8 @@ with io.open('README.md','r', encoding='utf8') as fh:
   long_description = fh.read()
 
   setuptools.setup(
-  name='RiverMapGen',
-  version='0.0.1',
+  name='RiverMapper',
+  version='0.0.2',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for generating watershed river arcs for meshing',
@@ -18,15 +18,15 @@ with io.open('README.md','r', encoding='utf8') as fh:
   },
   license='MIT',
   packages=[
-    'RiverMapGen',
+    'RiverMapper',
   ],
-  package_data={'RiverMapGen': ['Datafiles/*']},
+  package_data={'RiverMapper': ['Datafiles/*']},
   install_requires=[
     'numpy',
     'pandas',
-    'gdal',
-    'shapely',
-    'pyshp',
-    'geopandas'
+    'gdal>=3.6.2',
+    'shapely>=2.0.0',
+    'pyshp>=2.3.1',
+    'geopandas>=0.12.2'
   ],
 )

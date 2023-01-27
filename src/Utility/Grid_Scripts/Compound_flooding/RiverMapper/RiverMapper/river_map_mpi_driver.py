@@ -4,9 +4,9 @@ from mpi4py import MPI
 import glob
 import numpy as np
 import pickle
-from RiverMapGen.river_map_tif_preproc import find_thalweg_tile
-from RiverMapGen.make_river_map import make_river_map
-from RiverMapGen.SMS import merge_maps
+from RiverMapper.river_map_tif_preproc import find_thalweg_tile
+from RiverMapper.make_river_map import make_river_map
+from RiverMapper.SMS import merge_maps
 
 
 comm = MPI.COMM_WORLD

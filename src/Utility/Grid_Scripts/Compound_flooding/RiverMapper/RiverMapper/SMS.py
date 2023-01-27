@@ -29,7 +29,7 @@ def dl_cpp2lonlat(dl, lat0=0):
     lat0_radian = lat0/180*np.pi
 
     dlon_radian = dl/R/np.cos(lat0_radian)
-    
+
     dlon = dlon_radian*180/np.pi
 
     return dlon
@@ -41,8 +41,8 @@ def cpp2lonlat(x, y, lon0=0, lat0=0):
 
     lon_radian = lon0_radian + x/R/np.cos(lat0_radian)
     lat_radian = y / R
-    
-    lon, lat = lon_radian*180/np.pi, lat_radian*180/np.pi 
+
+    lon, lat = lon_radian*180/np.pi, lat_radian*180/np.pi
 
     return [lon, lat]
 
@@ -90,7 +90,7 @@ def redistribute(x, y, length=None, num_points=None, iplot=False):
 
     if length is not None:
         num_points = max(2, int(line.length / length))
-    
+
     new_points = [line.interpolate(i/float(num_points - 1), normalized=True) for i in range(num_points)]
     x_subsampled = [p.x for p in new_points]
     y_subsampled = [p.y for p in new_points]
@@ -114,7 +114,7 @@ COVID 26200
 COVGUID 57a1fdc1-d908-44d3-befe-8785288e69e7
 COVATTS VISIBLE 1
 COVATTS ACTIVECOVERAGE Area Property
-COV_WKT GEOGCS["GCS_WGS_1984",DATUM["WGS84",SPHEROID["WGS84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]END_COV_WKT 
+COV_WKT GEOGCS["GCS_WGS_1984",DATUM["WGS84",SPHEROID["WGS84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]END_COV_WKT
 COV_VERT_DATUM 0
 COV_VERT_UNITS 0
 COVATTS PROPERTIES MESH_GENERATION
@@ -148,7 +148,7 @@ ARCVERTICES 6
 DISTNODE 0
 NODETYPE 0
 ARCBIAS 1
-MERGED 0 0 0 0 
+MERGED 0 0 0 0
 END
 ARC
 ID 2
@@ -161,7 +161,7 @@ ARCVERTICES 3
 DISTNODE 0
 NODETYPE 0
 ARCBIAS 1
-MERGED 0 0 0 0 
+MERGED 0 0 0 0
 END
 ENDCOV
 BEGTS
@@ -169,7 +169,7 @@ LEND
 '''
 
 def merge_maps(mapfile_glob_str, merged_fname):
-    map_file_list = glob.glob(mapfile_glob_str) 
+    map_file_list = glob.glob(mapfile_glob_str)
     if len(map_file_list) > 0:
         map_objects = [SMS_MAP(filename=map_file) for map_file in map_file_list]
 
@@ -182,7 +182,7 @@ def merge_maps(mapfile_glob_str, merged_fname):
 
 
 class SMS_ARC():
-    '''class for manipulating arcs in SMS maps''' 
+    '''class for manipulating arcs in SMS maps'''
     def __init__(self, points=None, node_idx=[0, -1], src_prj=None, dst_prj='epsg:4326'):
         # self.isDummy = (len(points) == 0)
 
@@ -208,7 +208,7 @@ class SMS_ARC():
             raise Exception('Arc hat length <= 0')
         else:
             self.arc_hat_length = arc_hat_length
-        
+
         # make hats (a perpendicular line at each of the arc ends)
         for i, [x0, y0, xx, yy] in enumerate([
             [self.points[0, 0], self.points[0, 1], self.points[1, 0], self.points[1, 1]],
@@ -224,7 +224,7 @@ class SMS_ARC():
             self.arc_hats[2*i, 1] = y0 + xt
             self.arc_hats[2*i+1, 0] = x0 + yt
             self.arc_hats[2*i+1, 1] = y0 - xt
-        
+
         # import matplotlib.pyplot as plt
         # plt.scatter(self.points[:, 0], self.points[:, 1])
         # plt.scatter(self.arc_hats[:, 0], self.arc_hats[:, 1])
@@ -232,9 +232,9 @@ class SMS_ARC():
         # plt.show()
 
         return [SMS_ARC(points=self.arc_hats[:2, :]), SMS_ARC(points=self.arc_hats[2:, :])]
-   
+
 class SMS_MAP():
-    '''class for manipulating SMS maps''' 
+    '''class for manipulating SMS maps'''
     def __init__(self, filename=None, arcs=[], detached_nodes=[], epsg=4326):
         self.epsg = None
         self.arcs = []
@@ -252,15 +252,15 @@ class SMS_MAP():
             arcs = list(filter(lambda item: item is not None, arcs))
             if arcs == [] and detached_nodes==[]:
                 self.valid = False
-            
+
             self.arcs = arcs
             self.detached_nodes = detached_nodes
-    
+
     def __add__(self, other):
         self.arcs = self.arcs + other.arcs
         self.detached_nodes = np.r_[self.detached_nodes, other.detached_nodes]
         return SMS_MAP(arcs=self.arcs, detached_nodes=self.detached_nodes, epsg=self.epsg)
-    
+
     def get_xyz(self):
         self.n_xyz = 0
         self.l2g = []
@@ -268,13 +268,13 @@ class SMS_MAP():
         for arc in self.arcs:
             self.l2g.append(np.array(np.arange(self.n_xyz, self.n_xyz+len(arc.points))))
             self.n_xyz += len(arc.points)
-        
+
         self.xyz = np.zeros((self.n_xyz, 3), dtype=float)
         for ids, arc in zip(self.l2g, self.arcs):
             self.xyz[ids, :] = arc.points
 
         return self.xyz, self.l2g
-    
+
     def reader(self, filename='test.map'):
         self.n_glb_nodes = 0
         self.n_arcs = 0
@@ -289,7 +289,7 @@ class SMS_MAP():
 
                 strs = re.split(' +', line.strip())
                 if strs[0] == 'COV_WKT':
-                    if "GCS_WGS_1984" in line:
+                    if "WGS_1984" in line:
                         self.epsg = 4326
                     else:
                         raiseExceptions('unkown epsg')
@@ -320,7 +320,7 @@ class SMS_MAP():
                     arc_nodes.append(this_arc_node_idx[0])
                     arc_nodes.append(this_arc_node_idx[1])
         pass
-    
+
     def writer(self, filename='test.map'):
         import os
 
@@ -352,7 +352,7 @@ class SMS_MAP():
             f.write('COV_VERT_DATUM 0\n')
             f.write('COV_VERT_UNITS 0\n')
             f.write('COVATTS PROPERTIES MESH_GENERATION\n')
-            
+
             node_counter = 0
             for i, arc in enumerate(self.arcs):
                 for j, node in enumerate(arc.nodes):
@@ -379,7 +379,7 @@ class SMS_MAP():
                 for vertex in arc.arcvertices:
                     f.write(f'{vertex[0]} {vertex[1]} {vertex[2]}\n')
                 f.write('END\n')
-                    
+
             f.write('ENDCOV\n')
             f.write('BEGTS\n')
             f.write('LEND\n')
@@ -391,12 +391,12 @@ class Levee_SMS_MAP(SMS_MAP):
         self.centerline_list = arcs
         self.subsampled_centerline_list = []
         self.offsetline_list = []
-    
+
     def make_levee_maps(self, offset_list=[-5, 5, -15, 15], subsample=[300, 10]):
         for arc in self.centerline_list:
             x_sub, y_sub, _ = redistribute(x=arc.points[:, 0], y=arc.points[:, 1], length=subsample[0])
             self.subsampled_centerline_list.append(SMS_ARC(points=np.c_[x_sub, y_sub]))
-            
+
             for offset in offset_list:
                 x_off, y_off = makeOffsetPoly(x_sub, y_sub, offset)
                 self.offsetline_list.append(SMS_ARC(points=np.c_[x_off, y_off]))
@@ -469,7 +469,7 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
             shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
             n += len(shp.points)
         '''
-        
+
         # using geopandas, which seems more efficient than pyshp
         shapefile = gpd.read_file(fname)
         npts = 0
@@ -505,7 +505,7 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
             line = xyz[shape_pts_l2g[i], :]
             curv[shape_pts_l2g[i]] = curvature(line)
             perp[shape_pts_l2g[i]] = get_perpendicular_angle(line)
-        
+
         # for i in range(shapefile.shape[0]):
         #     try:
         #         shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
@@ -549,7 +549,7 @@ def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
 def extract_quad_polygons(input_fname='test.map', output_fname=None):
     if output_fname is None:
         output_fname = os.path.splitext(input_fname)[0] + '.quad.map'
-    
+
     with open(output_fname, 'w') as fout:
         lines_buffer = []
         iPatch = False

@@ -3,10 +3,10 @@ import json
 from osgeo import gdal
 from glob import glob
 import copy
-from RiverMapGen.make_river_map import Tif2XYZ, get_all_points_from_shp
+from RiverMapper.make_river_map import Tif2XYZ, get_all_points_from_shp
 import numpy as np
 import os
-from RiverMapGen.SMS import lonlat2cpp, cpp2lonlat
+from RiverMapper.SMS import lonlat2cpp, cpp2lonlat
 import pickle
 import math
 

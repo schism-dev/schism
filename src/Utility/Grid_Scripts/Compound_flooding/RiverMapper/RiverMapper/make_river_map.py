@@ -7,7 +7,7 @@ from osgeo import gdal
 from dataclasses import dataclass
 import pathlib
 import pickle
-from RiverMapGen.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, \
+from RiverMapper.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, \
     curvature, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat, \
     get_perpendicular_angle
 
