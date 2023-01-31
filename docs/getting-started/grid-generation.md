@@ -170,7 +170,7 @@ cell thickness is very small). A classical pathological velocity field obtained 
 </figure>
 
 There are a few approaches to resolve this issue. First, make sure the channel is not blocked. Second, 
-try to use 2D prisms in shallows (so you can use large friction) with SCHISM's $LSC^2$ system. 
+try to use 2D prisms in shallows (so you can use large friction) with SCHISM $LSC^2$ system. 
 Using a larger `thetai` would also stabilize the wetting and drying fronts. 
  As a last resort if you have to use 3D configuration in shallows,
  reduce friction (or even set it to 0).

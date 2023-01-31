@@ -39,7 +39,9 @@
 !     Outputs:
 !            inside: 0, outside; 1, inside
 !            arco(3), nodel(3) : area coord. and 3 local node indices (valid only if inside)
+!     May adjust small3 if error occurs.
       implicit real(a-h,o-z), integer(i-n)
+      real, parameter :: small3=1.e-5
       integer, intent(in) :: i34
       real, intent(in) :: x(i34),y(i34),xp,yp
       integer, intent(out) :: inside,nodel(3)
@@ -77,7 +79,7 @@
         enddo !j=1,3
 
         ae=abs(aa-ar(m))/ar(m)
-        if(ae<=1.e-5) then
+        if(ae<=small3) then
           inside=1
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
@@ -107,7 +109,9 @@
 !     Outputs:
 !            inside: 0, outside; 1, inside
 !            arco(3), nodel(3) : area coord. and 3 local node indices (valid only if inside)
+!     May adjust small3 if error occurs.
       implicit real*8(a-h,o-z), integer(i-n)
+      real*8, parameter :: small3=1.d-5
       integer, intent(in) :: i34
       real*8, intent(in) :: x(i34),y(i34),xp,yp
       integer, intent(out) :: inside,nodel(3)
@@ -145,7 +149,7 @@
         enddo !j=1,3
 
         ae=abs(aa-ar(m))/ar(m)
-        if(ae<=1.e-5) then
+        if(ae<=small3) then
           inside=1
           nodel(1:3)=list(1:3)
           arco(1:3)=swild(m,1:3)/ar(m)
