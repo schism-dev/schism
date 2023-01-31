@@ -185,7 +185,7 @@ GPM  = 2.5    2.8    3.5        !PB growth rates (day-1)
 TGP  = 15.0   22.0   27.0        !optimal temp. for PB growth (oC)
 KTGP = 0.005  0.004  0.003    0.008  0.006  0.004  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
-!phytoplankton predation & metabolism
+!phytoplankton photorespiration & metabolism
 MTR  = 0.0    0.0    0.0          !PB photorespiration coefficient (0<MTR<1)
 MTB  = 0.01   0.02   0.03         !PB metabolism rates (day-1)
 TMT  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
