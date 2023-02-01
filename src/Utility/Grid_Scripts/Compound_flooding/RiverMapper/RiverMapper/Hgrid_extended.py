@@ -15,7 +15,7 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
     if return_source_dir:
         dirname = os.path.dirname(gd_filename)
         file_basename = os.path.basename(gd_filename)
-        file_extension = pathlib.Path(gd_filename).suffix
+    file_extension = pathlib.Path(gd_filename).suffix
 
 
     if overwrite_cache or not os.path.exists(gd_cache_fname):
@@ -48,7 +48,7 @@ def get_inp(gd, ntiers=1, return_grid=False):
     else:
 
         large_int = gd.np + 100
-        
+
         if not hasattr(gd, 'ine'):
             gd.compute_nne()
         elnode_padded = np.r_[np.maximum(-1, gd.elnode), np.array([-1, -1, -1, -1]).reshape(1, 4)]
@@ -79,7 +79,7 @@ def get_inp(gd, ntiers=1, return_grid=False):
         edge = np.argmax(sorted, axis=1).max()
         inp = sorted[:, :edge]
         inp[inp==large_int] = -1
-    
+
     if return_grid:
         gd.inp = inp
         return inp, gd
@@ -98,12 +98,12 @@ def propogate_nd(gd, nd_ids, ntiers=1):
         i_nd[nd_ids] = True
 
     return nd_ids, i_nd
-    
+
 def get_bnd_nd_cached(gd, cache_file='./bnd_xy.pkl'):
     if not os.path.exists(cache_file):
         gd.compute_bnd()
         # cache boundary points coordinates
-        bnd_x, bnd_y = gd.x[gd.bndinfo.ip], gd.y[gd.bndinfo.ip] 
+        bnd_x, bnd_y = gd.x[gd.bndinfo.ip], gd.y[gd.bndinfo.ip]
         with open(cache_file, 'wb') as file:
             pickle.dump([bnd_x, bnd_y], file)
         bnd_nd = gd.bndinfo.ip
@@ -112,7 +112,7 @@ def get_bnd_nd_cached(gd, cache_file='./bnd_xy.pkl'):
         with open(cache_file, 'rb') as file:
             bnd_x, bnd_y = pickle.load(file)
         bnd_nd = spatial.cKDTree(np.c_[bnd_x, bnd_y]).query(gd.x, gd.y)[1]
-    
+
     return bnd_nd
 
 def hgrid_basic(gd):
@@ -134,7 +134,7 @@ def compute_ie_area(gd, ie):
 
 def find_nearest_nd(gd, pts):
     _, nd_ids = spatial.cKDTree(np.c_[gd.x, gd.y]).query(pts[:, :2])
-    return nd_ids 
+    return nd_ids
 
 
 if __name__ == "__main__":
@@ -144,4 +144,4 @@ if __name__ == "__main__":
 
     gd = sms2grd('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/Relax_test4/Relax_test4.2dm')
     gd.split_quads()
-    
+

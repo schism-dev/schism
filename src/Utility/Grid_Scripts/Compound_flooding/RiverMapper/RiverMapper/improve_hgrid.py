@@ -5,6 +5,7 @@ from pylib import schism_grid, grd2sms, proj_pts, read_schism_bpfile
 import shutil
 import os
 import numpy as np
+import RiverMapper
 from RiverMapper.Hgrid_extended import find_nearest_nd, hgrid_basic, read_schism_hgrid_cached, get_inp, propogate_nd, compute_ie_area
 from RiverMapper.SMS import SMS_MAP
 import pathlib
@@ -34,7 +35,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     bar = fill * filledLength + '-' * (length - filledLength)
     print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
     # Print New Line on Complete
-    if iteration == total: 
+    if iteration == total:
         print()
 
 def spring(gd):
@@ -101,7 +102,7 @@ def reduce_bad_elements(
         small_elnode_x = gd.x[gd.elnode[is_target_triangle, :3]]
         small_elnode_y = gd.y[gd.elnode[is_target_triangle, :3]]
         small_elnode_xy = small_elnode_x[:, :3] + 1j*small_elnode_y[:, :3]
-        
+
         small_elnode_flatten = gd.elnode[is_target_triangle, :3].flatten()
         _, idx, counts = np.unique(small_elnode_xy.flatten(), return_counts=True, return_index=True)
         degenerate_count = np.zeros((gd.np, ), dtype=int)
@@ -181,7 +182,7 @@ def reduce_bad_elements(
                 continue
 
             moved_nodes_id = this_sorted_nodes[~i_degenerate_node]
-            degenerate_node_id = this_sorted_nodes[i_degenerate_node] 
+            degenerate_node_id = this_sorted_nodes[i_degenerate_node]
             gd_xy0_local = copy.deepcopy(gd_xy[moved_nodes_id])
             gd_xy[moved_nodes_id] = gd.x[degenerate_node_id] + 1j*gd.y[degenerate_node_id]  # reduce the last two points to the first point
             gd.x[moved_nodes_id] = np.real(gd_xy[moved_nodes_id])
@@ -312,13 +313,14 @@ def grid_element_relax(gd, target_points=None, niter=3, ntier=0, max_dist=50, mi
     i_relax[relax_points] = True
     i_relax = i_relax * interior_points
     relax_points = np.argwhere(i_relax)
-    
+
     ifixed = (~i_relax).astype(int)
     gd.write_hgrid(f'{wdir}/fixed.gr3', value=ifixed, fmt=1)
-    
+
     # springing
+    script_dir = os.path.dirname(RiverMapper)
     print(f'running grid_spring with {niter} iteration(s)...')
-    p = subprocess.Popen(f'{wdir}/grid_spring', cwd=wdir, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    p = subprocess.Popen(f'{script_dir}/grid_spring', cwd=wdir, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     p.stdin.write(f'{niter}\n{min_area_allowed}\n'.encode()) #expects a bytes type object
     p.communicate()[0]
     p.stdin.close()
@@ -337,7 +339,7 @@ def grid_element_relax(gd, target_points=None, niter=3, ntier=0, max_dist=50, mi
     print(f'Sorted area after springing: {np.sort(gd.area)[:50]}')
 
     return gd
-    
+
 def quality_check_hgrid(gd, outdir='./', small_ele_limit=5.0, skew_ele_minangle=0.5):
     '''
     Check several types of grid issues that may crash the model:
@@ -363,7 +365,7 @@ def quality_check_hgrid(gd, outdir='./', small_ele_limit=5.0, skew_ele_minangle=
             print(f'Element {ie+1}: {gd.area[ie]}, {gd.xctr[ie]}, {gd.yctr[ie]}')
 
     # skew elements
-    skew_ele = gd.check_skew_elems(angle_min=skew_ele_minangle, fmt=1, fname=None) 
+    skew_ele = gd.check_skew_elems(angle_min=skew_ele_minangle, fmt=1, fname=None)
     print(f'\n{len(skew_ele)} skew (min angle < {skew_ele_minangle})')
     if len(skew_ele) > 0:
         sorted_idx = np.argsort(gd.area[skew_ele])
@@ -382,7 +384,7 @@ def quality_check_hgrid(gd, outdir='./', small_ele_limit=5.0, skew_ele_minangle=
         invalid_neighbors = invalid_neighbors[invalid_neighbors>=0]
         i_invalid_nodes = np.zeros((gd.np, ), dtype=bool)
         i_invalid_nodes[invalid_elnode] = True  # set invalid nodes to be "not fixed", i.e., can be tweaked.
-        
+
         # SMS_MAP(detached_nodes=np.c_[gd.xctr[invalid_neighbors], gd.yctr[invalid_neighbors], gd.yctr[invalid_neighbors]*0]).writer(f'{outdir}/invalid_element_relax.map')
     else:
         invalid_elnode = None
@@ -466,11 +468,11 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=2):
                 output_fname=f'{dirname}/{file_basename}_fix_bad_eles_round_{n_fix}.2dm'
             )
 
-            # quality check again since gd is updated 
+            # quality check again since gd is updated
             i_target_nodes = quality_check_hgrid(gd, outdir=dirname)['i_invalid_nodes']
             if i_target_nodes is None: continue
 
-            if n_fix == 1: 
+            if n_fix == 1:
                 # re-find intersection nodes since gd is updated
                 inter_relax_nd = find_nearest_nd(gd, np.c_[inter_relax_pts_x, inter_relax_pts_y])
                 i_target_nodes[inter_relax_nd] = True
@@ -496,7 +498,7 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=2):
     #         raise Exception('failed to load bathymetry')
     #     else:
     #         print('done loading bathymetry')
-            
+
     pass
 
 if __name__ == "__main__":

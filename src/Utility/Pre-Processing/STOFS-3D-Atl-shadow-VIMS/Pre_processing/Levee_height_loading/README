@@ -1,8 +1,0 @@
-copy Levee_info.tar.gz to your working dir and extract with
-tar xzvf Levee_info.tar.gz
-
-Your working dir should have bathy-loaded hgrid.utm.gr3 (epsg: 26918) and hgrid.ll
-
-Load levee:
-  1) set_levee_height.py, set levee height for LA and FA levees based on National Levee Database
-  2) set_additional_dp.py, force higher levee height at upstream Missi. R. and remove forced levee height at lower Missi. R.
