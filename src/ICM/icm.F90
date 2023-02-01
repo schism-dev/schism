@@ -422,17 +422,9 @@ subroutine ecosystem(it)
         do i=1,ntrs_icm
           wqc(i,k)=wqc(i,k)+dtw*(dwqc(i,k)+sink(i,k)+(srat(k)*sflux(i)+brat(k)*bflux(i))/dz(k) &
                   & +zdwqc(i,k)+sdwqc(i,k)+vdwqc(i,k)+gdwqc(i,k))
+          wqc(i,k)=max(wqc(i,k),0.d0) !impose minimum value
         enddo !i
       enddo !k=1,nv
-
-      !nan check
-      !do k=kb,nvrt
-      !  do i=1,ntrs_icm
-      !    if(wqc(i,k)/=wqc(i,k)) then
-      !      write(errmsg,*)'nan found in ICM(2) : ',wqc(i,k),ielg(id),i,k
-      !    endif
-      !  enddo!i
-      !enddo
 
       !----------------------------------------------------------------------------------
       !ICM station output
