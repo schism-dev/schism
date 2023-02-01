@@ -1074,7 +1074,7 @@
 !-----------------------------------------------------------------------
 ! Ice module outputs (if USE_ICE is on)
 !-----------------------------------------------------------------------
-!  iof_ice(1)= 0 !strain rate @ elem [1/sec] {iceStrainRate}  2D
+!  iof_ice(1)= 0 !divergence @ elem ('Delta') [1/sec] {iceStrainRate}  2D
 !  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
 !  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
 !  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D
