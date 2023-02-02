@@ -119,6 +119,7 @@ nav:
     - National Unified Operational Prediction Capability: coupling/nuopc.md
     - NOAA's CoastalApp: coupling/coastalapp.md
     - Modular System for Shelves and Coasts: coupling/mossco.md
+    - NCAR's Community Earth System Model: coupling/cesm.md
 #  - Publications: publications.md
   - Frequently Asked Questions: faq.md
   - Contribute to this online manual: contribute-to-this-online-manual.md
