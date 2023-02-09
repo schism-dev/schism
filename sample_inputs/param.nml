@@ -326,6 +326,7 @@
   dzb_min = 0.5 !needed if nchi=1; min. bottom boundary layer thickness [m].
 !  dzb_decay = 0. !needed if nchi=1; a decay const. [-]. should =0
   hmin_man = 1. !needed if nchi=-1: min. depth in Manning's formulation [m]
+  coef_man = 0. !proportional constant to energy gradient [s^2/m^(2/3)]. Sun et al. suggest coef_man ~ 1
 
 !-----------------------------------------------------------------------
 ! Coriolis. If ncor=-1, specify "rlatitude" (in degrees); if ncor=0,

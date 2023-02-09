@@ -1886,12 +1886,42 @@
 !$OMP   end workshare
 
 !       Drag at nodes
+!       Variable Manning based on energy gradient (Sun et al. 2019) - not
+!       working for OMP
+        swild=0.d0 !init for gradients @ elem
+        do i=1,nea
+          tmpx=0.d0; tmpy=0.d0
+          do j=1,i34(i)
+            nd=elnode(j,i)
+            !Assuming 2D vel
+            arg=(uu2(nvrt,nd)**2.d0+vv2(nvrt,nd)**2.d0)/2.d0/grav
+            tmpx=tmpx+dldxy(j,1,i)*(eta2(nd)+arg)
+            tmpy=tmpy+dldxy(j,2,i)*(eta2(nd)+arg)
+          enddo !j
+          swild(i)=sqrt(tmpx*tmpx+tmpy*tmpy)
+        enddo !i
+
 !$OMP   do
-        do i=1,npa
+        do i=1,np
           if(idry(i)==1) cycle
 !         Wet node
+          !Manning
+          arg=0.d0
+          itmp=0
+          do j=1,nne(i)
+            ie=indel(j,i) 
+            if(idry_e(ie)==1) cycle
+
+            itmp=itmp+1
+            arg=arg+swild(ie)
+          enddo !j
+           
+          if(itmp/=0) arg=arg/itmp
+          tmp=max(0.d0,rmanning(i)*rmanning(i)-coef_man*arg)
+          
           htot=max(hmin_man,dp(i)+eta2(i)) !>0
-          Cdp(i)=grav2(i)*rmanning(i)*rmanning(i)/htot**0.333d0
+          !Cdp(i)=grav2(i)*rmanning(i)*rmanning(i)/htot**0.333d0
+          Cdp(i)=grav2(i)*tmp/htot**0.333d0
 #ifdef USE_SED2D
           if(idrag_sed2d<-1) then
             Cdp(i)=Cdsed(i)
@@ -1899,6 +1929,8 @@
           endif
 #endif
         enddo !i
+
+        call exchange_p2d(Cdp)
 !$OMP   end do
       endif !nchi==-1
 
