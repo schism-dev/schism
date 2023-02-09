@@ -61,8 +61,13 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None, write_bnd=True):
 
 if __name__ == "__main__":
     # Sample usage
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42_post_proc2/'
+    # wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42_post_proc2/'
     # Add boundary and generate different hgrid formats
-    gd = set_ocean_bnd(f'{wdir}/hgrid.ll')
+    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008_fixed.2dm')
+    # gd = set_ocean_bnd(f'{wdir}/hgrid.ll')
+    gd.proj(prj0='esri:102008', prj1='epsg:4326')
+    gd.compute_bnd()
+    gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
+
     gen_hgrid_formats(gd=gd)  # put bnd in the wdir before this step
     pass

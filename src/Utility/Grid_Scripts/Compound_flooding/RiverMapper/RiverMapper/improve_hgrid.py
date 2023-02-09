@@ -5,7 +5,7 @@ from pylib import schism_grid, grd2sms, proj_pts, read_schism_bpfile
 import shutil
 import os
 import numpy as np
-import RiverMapper
+from RiverMapper import improve_hgrid as original_file
 from RiverMapper.Hgrid_extended import find_nearest_nd, hgrid_basic, read_schism_hgrid_cached, get_inp, propogate_nd, compute_ie_area
 from RiverMapper.SMS import SMS_MAP
 import pathlib
@@ -318,7 +318,7 @@ def grid_element_relax(gd, target_points=None, niter=3, ntier=0, max_dist=50, mi
     gd.write_hgrid(f'{wdir}/fixed.gr3', value=ifixed, fmt=1)
 
     # springing
-    script_dir = os.path.dirname(RiverMapper)
+    script_dir =  os.path.dirname(original_file.__file__)
     print(f'running grid_spring with {niter} iteration(s)...')
     p = subprocess.Popen(f'{script_dir}/grid_spring', cwd=wdir, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     p.stdin.write(f'{niter}\n{min_area_allowed}\n'.encode()) #expects a bytes type object
@@ -397,7 +397,7 @@ def quality_check_hgrid(gd, outdir='./', small_ele_limit=5.0, skew_ele_minangle=
         'small_ele': small_ele, 'skew_ele': skew_ele
     }
 
-def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=2):
+def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
     '''
     Fix small and skew elements and bad quads
     prj: needs to specify hgrid's projection (the unit must be in meters)
@@ -503,4 +503,17 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=2):
 
 if __name__ == "__main__":
     # Sample usage
-    improve_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42_post_proc2/v14.42.gr3')
+    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13r_LL/hgrid_xGEOID20b.gr3')
+    gd.proj(prj0='epsg:4326', prj1='esri:102008')
+    grd2sms(gd, '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.2dm')
+
+    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.2dm')
+    quality_check_hgrid(gd)
+    gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008_fixed.gr3')
+
+    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.gr3')
+    gd.proj(prj0='esri:102008', prj1='epsg:4326')
+    gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
+
+    # Sample usage
+    improve_hgrid('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/v15.gr3')

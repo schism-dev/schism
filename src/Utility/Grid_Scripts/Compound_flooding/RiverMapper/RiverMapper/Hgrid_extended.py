@@ -30,6 +30,9 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
         with open(gd_cache_fname, 'rb') as file:
             gd = pickle.load(file)
 
+    if gd.source_file is None:
+        gd.source_file = gd_filename
+
     if return_source_dir:
         return gd, {"dir": dirname, "basename": file_basename, "extension": file_extension}
     else:
