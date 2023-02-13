@@ -1891,14 +1891,24 @@
         swild=0.d0 !init for gradients @ elem
         do i=1,nea
           tmpx=0.d0; tmpy=0.d0
+          eta1_bar=0.d0; eta2_bar=0.d0 !av elev
           do j=1,i34(i)
             nd=elnode(j,i)
             !Assuming 2D vel
             arg=(uu2(nvrt,nd)**2.d0+vv2(nvrt,nd)**2.d0)/2.d0/grav
             tmpx=tmpx+dldxy(j,1,i)*(eta2(nd)+arg)
             tmpy=tmpy+dldxy(j,2,i)*(eta2(nd)+arg)
+            eta1_bar=eta1_bar+eta1(nd)
+            eta2_bar=eta2_bar+eta2(nd)
           enddo !j
-          swild(i)=sqrt(tmpx*tmpx+tmpy*tmpy)
+
+          !Direction
+          if(eta2_bar>eta1_bar) then
+            ss=1.d0 
+          else
+            ss=-1.d0 
+          endif
+          swild(i)=sqrt(tmpx*tmpx+tmpy*tmpy)*ss
         enddo !i
 
 !$OMP   do
