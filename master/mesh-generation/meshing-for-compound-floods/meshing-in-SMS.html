@@ -1300,42 +1300,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#known-sms-issues" class="md-nav__link">
-    Known SMS issues
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#find-and-avoid-sms-issues" class="md-nav__link">
     Find and avoid SMS issues
   </a>
   
-    <nav class="md-nav" aria-label="Find and avoid SMS issues">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#option-1-more-manual-work-but-takes-less-time" class="md-nav__link">
-    Option 1. More manual work but takes less time
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#option-2-less-manual-work-but-takes-more-time" class="md-nav__link">
-    Option 2. Less manual work but takes more time
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#relax-crowded-elements-at-river-intersections" class="md-nav__link">
-    Relax crowded elements (at river intersections)
+  <a href="#skew-elements" class="md-nav__link">
+    Skew elements
   </a>
   
 </li>
@@ -1539,7 +1512,7 @@
 
   <h1>Meshing in SMS</h1>
 
-<h2 id="preparation">Preparation<a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h2>
+<h2 id="preparation"><strong>Preparation</strong><a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h2>
 <p>Typically, you should have the following items in an SMS project:</p>
 <p><img alt="SMS project" src="../../assets/mesh-sms-proj.png" /> </p>
 <p>For a complex meshing project, it is imperative to keep different features in seperate maps.
@@ -1604,13 +1577,13 @@ Unsyncing the merged map with the individual maps make it practically impossible
 The only case in which editing the merged map may be beneficial is when you work on a huge map (with tens of thousands of arcs) and cleaning the merged map takes much time (e.g. hours).
 In this case, make sure the changes are also reproduced in individual maps.</p>
 </div>
-<h2 id="clean-the-merged-map">Clean the merged map<a class="headerlink" href="#clean-the-merged-map" title="Permanent link">&para;</a></h2>
+<h2 id="clean-the-merged-map"><strong>Clean the merged map</strong><a class="headerlink" href="#clean-the-merged-map" title="Permanent link">&para;</a></h2>
 <p>Clean the merged map twice with the following parameters: </p>
 <p><img alt="Clean SMS map" src="../../assets/mesh-clean-map.png" /></p>
 <p>Two cleans are needed because the second clean will snap some of the newly created points during the first clean.</p>
-<h2 id="build-polygons">Build polygons<a class="headerlink" href="#build-polygons" title="Permanent link">&para;</a></h2>
+<h2 id="build-polygons"><strong>Build polygons</strong><a class="headerlink" href="#build-polygons" title="Permanent link">&para;</a></h2>
 <p><img alt="Build polygons" src="../../assets/mesh-build-polygons.png" /></p>
-<h2 id="set-watershed-resolution">Set watershed resolution<a class="headerlink" href="#set-watershed-resolution" title="Permanent link">&para;</a></h2>
+<h2 id="set-watershed-resolution"><strong>Set watershed resolution</strong><a class="headerlink" href="#set-watershed-resolution" title="Permanent link">&para;</a></h2>
 <p>To avoid over-refinement, most watershed polygons should have a specified mesh resolution, which can be set via the "scalar paving density" option in each polygon's attributes.</p>
 <p>Selecting the watershed polygons may involve much labor because many small polygons are generated after the river arcs are merged into the final map.
 Instead of manual selection, use the <a href="#select">"select*" map coverage</a> to select all polygons more efficiently.</p>
@@ -1627,8 +1600,11 @@ Right click on the selected polygons and set "mesh type" in "polygon attributes
 <p><img alt="Scalar options" src="../../assets/mesh-scalar-options.png" /></p>
 <p>In addition, set the polygon attribute of the "island" between Chesapeake Bay and Delaware Bay as "None":</p>
 <p><img alt="Polygon None" src="../../assets/mesh-none.png" /></p>
-<h2 id="known-sms-issues">Known SMS issues<a class="headerlink" href="#known-sms-issues" title="Permanent link">&para;</a></h2>
-<p>There are some known issues in SMS that may hang or crash SMS:</p>
+<h2 id="find-and-avoid-sms-issues"><strong>Find and avoid SMS issues</strong><a class="headerlink" href="#find-and-avoid-sms-issues" title="Permanent link">&para;</a></h2>
+<p>There are some known issues in SMS that may hang or crash a large scale mesh project
+(e.g., the US east coast and Gulf coast domain of STOFS-3D-Atlantic; smaller domains with 1 or 2 states have less problems).
+We have reported them to the SMS team and most of them will be fixed when the next SMS version is released.</p>
+<p>The issues include:</p>
 <ul>
 <li>SMS may hang while generating mesh for a complex polygon.
 Breaking the large polygon into smaller and simpler polygons can help fix the issue.</li>
@@ -1640,46 +1616,32 @@ Breaking the large polygon into smaller and simpler polygons can help fix the is
 <p><img alt="intersect joints" src="../../assets/mesh-breakline-issue.png" /></p>
 <p>If SMS hangs, copy down the polygon ID (found in the lower-left corner) and restart the session. 
  Note that occasionally the real problematic polygon may be the next one from 'ID'.</p>
-<h2 id="find-and-avoid-sms-issues">Find and avoid SMS issues<a class="headerlink" href="#find-and-avoid-sms-issues" title="Permanent link">&para;</a></h2>
-<p>We have reported the above issues to the SMS team.
-Before these issues are officially fixed, you can use the following methods to find and avoid them before the final meshing.</p>
-<p>Using STOFS3D Atlantic as an example, launch about 5 - 6 SMS sessions to mesh in sub-regions simultaneously.</p>
-<p>Here you have two options.</p>
-<h3 id="option-1-more-manual-work-but-takes-less-time">Option 1. More manual work but takes less time<a class="headerlink" href="#option-1-more-manual-work-but-takes-less-time" title="Permanent link">&para;</a></h3>
+<p>Before these issues are officially fixed, you may consider the following steps (Using STOFS3D Atlantic as an example)
+to find and avoid them before the final meshing.</p>
+<p>Option 1 (More manual work but takes less time):</p>
 <p>Break the merged map into sub-maps along the <a href="#divide">division lines</a>.
 Make sure there are no overlaps among the sub-maps except for the interface line:</p>
 <p><img alt="sub-map" src="../../assets/mesh-sub-map.png" /></p>
-<p>Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier.</p>
-<p>Combine the sub-meshes using the following script in <a href="">SCHISM Git</a>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Grid_Scripts/mergegrid5.f90
+<p>Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier,
+then combine the sub-meshes in SMS or using the following script in <a href="">SCHISM Git</a>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$your_schism_dir/schism/src/Utility/Grid_Scripts/mergegrid5.f90
 </code></pre></div></p>
-<h3 id="option-2-less-manual-work-but-takes-more-time">Option 2. Less manual work but takes more time<a class="headerlink" href="#option-2-less-manual-work-but-takes-more-time" title="Permanent link">&para;</a></h3>
-<p>In each session, select the polygons within a sub-domain and try to generate a sub-domain mesh.
-Normally, there won't be any "hanging" issues, but there can be 5 - 8 "breakline" issues in total and SMS will prompt for the IDs of the problematic polygons.</p>
-<p>Open another SMS session and fix all issues in the merged map.
-Here, editing the merged map is unavoidable because the issues originates from the merging step.</p>
-<p>Finally, generate the mesh for the full domain.
+<p>Option 2 (Less manual work but takes more time):</p>
+<p>In each SMS session, select the polygons within a sub-domain and try to generate a sub-domain mesh with the selected polygons only.
+Normally, there won't be any "hanging" issues, but there can be 5 - 8 "breakline" issues in total and SMS will prompt for the IDs of the problematic polygons.
+Open another SMS session and fix all issues in the merged map.
+Here, editing the merged map is unavoidable because the issues originates from the merging step.
+Finally, generate the mesh for the full domain.
 This takes about 3-5 hours, depending on how fast your desktop is.</p>
-<h2 id="relax-crowded-elements-at-river-intersections">Relax crowded elements (at river intersections)<a class="headerlink" href="#relax-crowded-elements-at-river-intersections" title="Permanent link">&para;</a></h2>
-<p>The automatic river map generation tool may lead to over-crowded points at river intersections if the thalwegs themselves are not cleanly seperated there.
-This doesn't affect the stableness of the simulation, but it is recommended to remedy it by a "relax" operation in SMS.</p>
-<p><img alt="mesh-thalweg-relax-with-without" src="../../assets/mesh-thalweg-relax-with-without.png" /></p>
-<p>Import and activate the <a href="generate-river-map.html#products">"intersection joints"</a> map coverage (which is one of the products from the <a href="generate-river-map.html">previous step</a>):<br />
-<img alt="intersect joints" src="../../assets/mesh-intersection-joints.png" /></p>
-<p>Make a copy of the generated mesh and select the copy:<br />
-<img alt="mesh copy" src="../../assets/mesh-copy.png" /></p>
-<p>Press the select element button:</p>
-<p><img alt="" src="../../assets/mesh-select-element.png" /></p>
-<p>Select the elements within a specified distance of the intersecting coverage: </p>
-<p><img alt="" src="../../assets/mesh-select-by-coverage.png" /></p>
-<p><img alt="" src="../../assets/mesh-select-coverage-tolerance.png" /></p>
-<p>Set relax options: </p>
-<p><img alt="" src="../../assets/mesh-relax-options.png" />
- 
-<img alt="" src="../../assets/mesh-relax-options1.png" /></p>
-<p>Relax the selected elements: </p>
-<p><img alt="" src="../../assets/mesh-relax.png" /></p>
-<h2 id="finalize-the-mesh">Finalize the mesh<a class="headerlink" href="#finalize-the-mesh" title="Permanent link">&para;</a></h2>
+<h2 id="skew-elements"><strong> Skew elements </strong><a class="headerlink" href="#skew-elements" title="Permanent link">&para;</a></h2>
+<p>Although the script tries to optimize the convergence of river arcs at river intersections
+, skew elements may occasionally occur.
+<img alt="river-intersections" src="../../assets/mesh-intersections.png" /></p>
+<p>It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.</p>
+<p>If you think it is necessary, you may remedy them using the following script provided in <a href="">SCHISM Git</a>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
+</code></pre></div></p>
+<h2 id="finalize-the-mesh"><strong>Finalize the mesh</strong><a class="headerlink" href="#finalize-the-mesh" title="Permanent link">&para;</a></h2>
 <p>Delete the disjoint nodes:</p>
 <p><img alt="disjoint nodes" src="../../assets/mesh-disjoint-nodes.png" /></p>
 <p>Renumber nodes:</p>
@@ -1687,7 +1649,7 @@ This doesn't affect the stableness of the simulation, but it is recommended to r
 <p>Save the mesh as *.2dm:</p>
 <p><img alt="renumber nodes" src="../../assets/mesh-save.png" /></p>
 <p>Quality check using a script:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
 </code></pre></div>
 from the <a href="https://github.com/feiye-vims/STOFS3D-scripts">STOFS3D scripts</a> repository
 , which identifies small elements, skew elements, and bad quads,
