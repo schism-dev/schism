@@ -1,4 +1,4 @@
-## Preparation
+## **Preparation**
 Typically, you should have the following items in an SMS project:
 
 ![SMS project](../../assets/mesh-sms-proj.png) 
@@ -47,7 +47,7 @@ The purpose of each SMS project component is as follows:
     In this case, make sure the changes are also reproduced in individual maps.
 
 
-## Clean the merged map
+## **Clean the merged map**
 
 Clean the merged map twice with the following parameters: 
 
@@ -56,12 +56,12 @@ Clean the merged map twice with the following parameters: 
 Two cleans are needed because the second clean will snap some of the newly created points during the first clean.
 
 
-## Build polygons
+## **Build polygons**
 
 ![Build polygons](../../assets/mesh-build-polygons.png)
 
 
-## Set watershed resolution
+## **Set watershed resolution**
 To avoid over-refinement, most watershed polygons should have a specified mesh resolution, which can be set via the "scalar paving density" option in each polygon's attributes.
 
 Selecting the watershed polygons may involve much labor because many small polygons are generated after the river arcs are merged into the final map.
@@ -93,8 +93,12 @@ In addition, set the polygon attribute of the "island" between Chesapeake Bay an
 ![Polygon None](../../assets/mesh-none.png)
 
 
-## Known SMS issues 
-There are some known issues in SMS that may hang or crash SMS:
+##**Find and avoid SMS issues**
+There are some known issues in SMS that may hang or crash a large scale mesh project
+(e.g., the US east coast and Gulf coast domain of STOFS-3D-Atlantic; smaller domains with 1 or 2 states have less problems).
+We have reported them to the SMS team and most of them will be fixed when the next SMS version is released.
+
+The issues include:
 
 - SMS may hang while generating mesh for a complex polygon.
 Breaking the large polygon into smaller and simpler polygons can help fix the issue.
@@ -106,80 +110,49 @@ Breaking the large polygon into smaller and simpler polygons can help fix the is
 
 ![intersect joints](../../assets/mesh-breakline-issue.png)
 
-
 If SMS hangs, copy down the polygon ID (found in the lower-left corner) and restart the session. 
  Note that occasionally the real problematic polygon may be the next one from 'ID'.
 
-##Find and avoid SMS issues
-We have reported the above issues to the SMS team.
-Before these issues are officially fixed, you can use the following methods to find and avoid them before the final meshing.
+Before these issues are officially fixed, you may consider the following steps (Using STOFS3D Atlantic as an example)
+to find and avoid them before the final meshing.
 
-Using STOFS3D Atlantic as an example, launch about 5 - 6 SMS sessions to mesh in sub-regions simultaneously.
+Option 1 (More manual work but takes less time):
 
-Here you have two options.
-
-### Option 1. More manual work but takes less time
 Break the merged map into sub-maps along the [division lines](#divide).
 Make sure there are no overlaps among the sub-maps except for the interface line:
 
 ![sub-map](../../assets/mesh-sub-map.png)
 
-Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier.
-
-Combine the sub-meshes using the following script in [SCHISM Git]():
+Mesh each sub-map in a seperate SMS session and fix issues when they occur using the methods discussed earlier,
+then combine the sub-meshes in SMS or using the following script in [SCHISM Git]():
 ```
-/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Grid_Scripts/mergegrid5.f90
+$your_schism_dir/schism/src/Utility/Grid_Scripts/mergegrid5.f90
 ```
 
+Option 2 (Less manual work but takes more time):
 
-### Option 2. Less manual work but takes more time
-
-In each session, select the polygons within a sub-domain and try to generate a sub-domain mesh.
+In each SMS session, select the polygons within a sub-domain and try to generate a sub-domain mesh with the selected polygons only.
 Normally, there won't be any "hanging" issues, but there can be 5 - 8 "breakline" issues in total and SMS will prompt for the IDs of the problematic polygons.
-
 Open another SMS session and fix all issues in the merged map.
 Here, editing the merged map is unavoidable because the issues originates from the merging step.
-
 Finally, generate the mesh for the full domain.
 This takes about 3-5 hours, depending on how fast your desktop is.
 
 
-## Relax crowded elements (at river intersections) 
-The automatic river map generation tool may lead to over-crowded points at river intersections if the thalwegs themselves are not cleanly seperated there.
-This doesn't affect the stableness of the simulation, but it is recommended to remedy it by a "relax" operation in SMS.
+## ** Skew elements **
+Although the script tries to optimize the convergence of river arcs at river intersections
+, skew elements may occasionally occur.
+![river-intersections](../../assets/mesh-intersections.png)
 
-![mesh-thalweg-relax-with-without](../../assets/mesh-thalweg-relax-with-without.png)
+It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.
 
-Import and activate the ["intersection joints"](generate-river-map.md#products) map coverage (which is one of the products from the [previous step](generate-river-map.md)):  
- 
-![intersect joints](../../assets/mesh-intersection-joints.png)
-
-Make a copy of the generated mesh and select the copy:  
- 
-![mesh copy](../../assets/mesh-copy.png)
-
-Press the select element button:
-
-![](../../assets/mesh-select-element.png)
-
-Select the elements within a specified distance of the intersecting coverage: 
-
-![](../../assets/mesh-select-by-coverage.png)
-
-![](../../assets/mesh-select-coverage-tolerance.png)
-
-Set relax options: 
-
-![](../../assets/mesh-relax-options.png)
- 
-![](../../assets/mesh-relax-options1.png)
-
-Relax the selected elements: 
-
-![](../../assets/mesh-relax.png)
+If you think it is necessary, you may remedy them using the following script provided in [SCHISM Git]():
+```
+$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
+```
 
 
-## Finalize the mesh
+## **Finalize the mesh**
 Delete the disjoint nodes:
 
 ![disjoint nodes](../../assets/mesh-disjoint-nodes.png)
