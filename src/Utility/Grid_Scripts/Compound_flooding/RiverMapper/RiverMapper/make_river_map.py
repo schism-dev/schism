@@ -121,7 +121,9 @@ def clean_arcs(LineStringList, blast_center, blast_radius):
 
     cleaned_arc_list = []
     for i, line in enumerate(uu.geoms):
-        cleaned_arc_list.append(LineString(np.array(line.xy).T))
+        line = LineString(np.array(line.xy).T)
+        # if line.length > 30e-5:
+        cleaned_arc_list.append(line)
 
     return cleaned_arc_list
 
@@ -688,7 +690,8 @@ def make_river_map(
     MapUnit2METER = 1, river_threshold = [10, 400], 
     outer_arcs_positions = [],
     length_width_ratio = 8.0,
-    i_close_poly = True, i_blast_intersection = False, blast_radius_scale = 0.8, bomb_radius_coef = 0.4
+    i_close_poly = True, i_blast_intersection = False,
+    blast_radius_scale = 0.6, bomb_radius_coef = 0.4
 ):
     '''
     [Core routine for making river maps]
@@ -727,7 +730,7 @@ def make_river_map(
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
-    iCleanIntersection = False
+    iCleanIntersection = True
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
     standard_watershed_resolution = 400.0  # deprecated: resolution of non-river area in the watershed
     intersect_res_scale  = 0.4  # deprecated: coef controlling the resolution of the paved mesh at intersections
@@ -741,7 +744,7 @@ def make_river_map(
     # maximum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs)
     max_nrow_arcs = width2narcs(river_threshold[-1]) + 2 * len(outer_arcs_positions)
     outer_arcs_positions = np.array(outer_arcs_positions)
-    endpoints_scale = 1
+    endpoints_scale = 1.5
     # ---------------------- end pre-processing some inputs -------------------------
 
     if i_thalweg_cache:
@@ -1110,8 +1113,16 @@ def make_river_map(
         _, idx = nearest_neighbour(np.c_[bombed_lon, bombed_lat], np.c_[thalweg_reso_all_lon, thalweg_reso_all_lat])
         blast_radius_ll = thalweg_reso_all_ll[idx]
 
-        for scale in [0.3, 0.3, 0.3]:
-            total_arcs_cleaned = clean_arcs(total_arcs_cleaned, np.c_[bombed_lon, bombed_lat], blast_radius_ll*scale)
+        iter = 0
+        n_arcs = len(total_arcs_cleaned)
+        while True:
+            iter += 1
+            total_arcs_cleaned = clean_arcs(total_arcs_cleaned, np.c_[bombed_lon, bombed_lat], blast_radius_ll*0.3)
+            if len(total_arcs_cleaned) == n_arcs:
+                break
+            else:
+                n_arcs = len(total_arcs_cleaned)
+            
         
     total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
 
