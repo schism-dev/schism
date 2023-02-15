@@ -15,8 +15,8 @@
 !
 !****************************************************************************************
 
-!	Read nc outputs from scribe I/O versions for multiple files at all nodes 
-!       Works for mixed tri/quad outputs on NODE/ELEMENT based vars.
+!	Read nc outputs from scribe I/O versions for multiple files at all nodes
+!       Works for mixed tri/quad outputs on NODE based vars.
 !       Inputs: screen; nc file and out2d*.nc; vgrid.in (in this dir or ../)
 !       Outputs: extract.out (ascii); optional: max/min/avg 2D output (*_[max|min|avg].gr3 and *_violators.bp)
 !****************************************************************************************
@@ -29,13 +29,13 @@
       use compute_zcor
 
 !      parameter(nbyte=4)
-      character(len=30) :: file63,varname,outname(3),file62
+      character(len=30) :: file63,varname,varname2,outname(3),file62,file64
       character(len=12) :: it_char
 !      character*48 data_format
-      logical::lexist
+      logical::lexist,lexist2
       integer :: nx(4,4,3),dimids(100),idims(100)
       allocatable :: sigma(:),cs(:),ztot(:)
-      allocatable :: outvar(:,:),out(:,:,:),icum(:,:,:),eta2(:),ztmp(:,:)
+      allocatable :: outvar(:,:,:),out(:,:,:),icum(:,:,:),eta2(:),ztmp(:,:)
       allocatable :: xcj(:),ycj(:),dp(:),dps(:),kbs(:),xctr(:),yctr(:),dpe(:),kbe(:)
       allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rstat2d(:,:),rviolator(:)
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:),kbp00(:)
@@ -48,14 +48,19 @@
       integer :: icomp_stats(3)
 
       print*, 'Input NODE-based variable name to read from nc (e.g. elevation):'
+      print*, '(if vector, input X component)'
       read(*,'(a30)')varname
 !!'
       print*, '<<<<<var name: ',varname
 
-      print*, 'Is the var node-based or ele-based? 0: node based; 1: element based'
-      read(*,*)inode_ele
-!!'
-      print*, '<<<<<inode_ele: ',inode_ele
+      print*, 'Is variable scalar (1) or vector (2)?'
+      read(*,*) ivs
+      if(ivs/=1.and.ivs/=2) stop 'check ivs'     
+
+!      print*, 'Is the var node-based or ele-based? 0: node based; 1: element based'
+!      read(*,*)inode_ele
+!      print*, '<<<<<inode_ele: ',inode_ele
+      inode_ele=0
 
       varname=adjustl(varname); len_var=len_trim(varname)
       
@@ -156,16 +161,16 @@
       !For dimensioning purpose
       if(np>ns.or.ne>ns) stop 'ns is not largest'
 
-      if (inode_ele==0) then
-        last_dim=np
-      elseif (inode_ele==1) then
-        last_dim=ne
-      endif
+!      if (inode_ele==0) then
+      last_dim=np
+!      elseif (inode_ele==1) then
+!        last_dim=ne
+!      endif
 
       print*, '<<<<<last_dim: ',last_dim
 
       allocate(idry_e(ne),rstat2d(3,ne),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np), &
-     &outvar(nvrt,last_dim),eta2(np),idry(np),ztmp(nvrt,np),timeout(nrec), &
+     &outvar(nvrt,last_dim,ivs),eta2(np),idry(np),ztmp(nvrt,np),timeout(nrec), &
      &rviolator(ne),iviolator(ne),kbp00(np))
       outvar=-huge(1.0) !test mem
 
@@ -208,6 +213,7 @@
       leng=len_trim(it_char)
       file62='out2d_'//it_char(1:leng)//'.nc'
       iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+      if(iret/=nf90_NoErr) stop 'Failed to open file62'
       !time is double
       iret=nf90_inq_varid(ncid4,'time',itime_id)
       iret=nf90_get_var(ncid4,itime_id,timeout,(/1/),(/nrec/))
@@ -215,15 +221,27 @@
  
       !Find nc file
       file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      if(ivs==2) varname2=varname(1:len_var-1)//'Y'
       inquire(file=file63,exist=lexist)
       if(lexist) then
         i23d=2 !3D var
+        if(ivs==2) then
+          file64=varname2(1:len_var)//'_'//it_char(1:leng)//'.nc'
+          inquire(file=file64,exist=lexist2)
+          if(.not.lexist2) then
+            print*, 'Missing y-component:',file64
+            print*, file63
+            stop
+          endif
+        endif
       else
         i23d=1 !2D
         file63=file62
+        file64=file62
       endif
 
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      if(iret/=nf90_NoErr) stop 'Failed to open file63'
       iret=nf90_inq_varid(ncid,varname(1:len_var),ivarid1)
       if(iret/=nf90_NoErr) stop 'Var not found'
       iret=nf90_Inquire_Variable(ncid,ivarid1,ndims=ndims,dimids=dimids)
@@ -235,6 +253,13 @@
       if(npes/=np.and.npes/=ne) stop 'can only handle node- or elem-based'
 !'
       if(idims(ndims)/=nrec) stop 'last dim is not time'
+
+      if(ivs==2) then !vector
+        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=nf90_NoErr) stop 'Failed to open file64'
+        iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
+        if(iret/=nf90_NoErr) stop 'Var2 not found'
+      endif !ivs
 
 !        iret=nf90_get_att(ncid,ivarid1,'i23d',i23d)
 !        if(i23d<=0.or.i23d>6) stop 'wrong i23d'
@@ -252,18 +277,20 @@
         if(i23d==1) then !2D
           start_2d(1)=1; start_2d(2)=irec
           count_2d(1)=npes; count_2d(2)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes,1),start_2d,count_2d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(1,1:npes,2),start_2d,count_2d)
         else !3D
           start_3d(1:2)=1; start_3d(3)=irec
           count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes,1),start_3d,count_3d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(:,1:npes,2),start_3d,count_3d)
         endif 
 
-        !Available now: outvar(nvrt,np|ne), eta2(np)
+        !Available now: outvar(nvrt,np,ivs), eta2(np)
           if(i23d==1) then !2D
-!           Output: time, 2D variable at all nodes
+!           Output: time, 2D variable at all nodes/elem
             if(maxval(icomp_stats(1:3))/=0) &
-     &write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i),i=1,np)
+     &write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i,1),i=1,np)
 
             !Compute stats (magnitude for vectors)
             if(sum(icomp_stats(:))/=0) then
@@ -271,7 +298,8 @@
 
                 !Mark wet elem
                 do i=1,ne
-                  if(minval(outvar(1,elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
+                  !if(minval(outvar(1,elnode(1:i34(i),i),1)+dp(elnode(1:i34(i),i)))>0) then
+                  if(minval(eta2(elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
                     idry_e(i)=0
                   else
                     idry_e(i)=1
@@ -294,7 +322,7 @@
                     if(ifl==0) then ! not isolated wet
                       do j=1,i34(i)
                         nd=elnode(j,i)
-                        tmp=outvar(1,nd)
+                        tmp=outvar(1,nd,1)
                         if(tmp+dp(nd)>0) rstat2d(2,nd)=max(rstat2d(2,nd),tmp)
                       enddo
                     endif 
@@ -302,20 +330,20 @@
                 enddo !i=1,ne 
               else !other variables, or min_ele or avg_ele
                 do i=1,last_dim
-                  tmp=outvar(1,i)
+                  tmp=outvar(1,i,1)
                   if (icomp_stats(1)==1) then !min
                     rstat2d(1,i)=min(rstat2d(1,i),tmp)
                   endif
                   if(icomp_stats(2)==1) then !max
                     rstat2d(2,i)=max(rstat2d(2,i),tmp)
                   endif
-                  if(icomp_stats(3)==1) then !min
+                  if(icomp_stats(3)==1) then !average
                     rstat2d(3,i)=tmp+rstat2d(3,i)
                   endif
                 enddo !i 
               endif !is_elev
             endif ! icomp_stats
-          else !if(i23d==3) then !3D 
+          else !3D 
             !Compute z coordinates
             do i=1,last_dim
               if(ivcor==1) then !localized
@@ -335,9 +363,9 @@
               do k=max0(1,kbp00(i)),nvrt
 !               Output: time, node #, level #, z-coordinate, 3D variable 
                 if(idry(i)==1) then
-                  write(65,*)timeout(irec)/86400,i,k,-1.e6,outvar(k,i)
+                  write(65,*)timeout(irec)/86400,i,k,-1.e6,outvar(k,i,1:ivs)
                 else
-                  write(65,*)timeout(irec)/86400,i,k,ztmp(k,i),outvar(k,i)
+                  write(65,*)timeout(irec)/86400,i,k,ztmp(k,i),outvar(k,i,1:ivs)
                 endif
               enddo !k
  
@@ -361,7 +389,7 @@
       do k=1,3
         if(icomp_stats(k)==0) cycle
 
-        if (inode_ele==0) then !node-based, write gr3
+!        if (inode_ele==0) then !node-based, write gr3
           open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.gr3',status='replace')
           write(12,*)iday1,iday2
           write(12,*)ne,np
@@ -372,12 +400,12 @@
             write(12,*)i,i34(i),elnode(1:i34(i),i)
           enddo !i
           close(12)
-        elseif(inode_ele==1) then !ele based, write prop
-          open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.prop',status='replace')
-          do i=1,ne
-            write(12,*)i,rstat2d(k,i)
-          enddo
-        endif
+!        elseif(inode_ele==1) then !ele based, write prop
+!          open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.prop',status='replace')
+!          do i=1,ne
+!            write(12,*)i,rstat2d(k,i)
+!          enddo
+!        endif
 
         close(12)
       enddo !k=1,3
@@ -398,18 +426,18 @@
         write(13,*) 'violators <', thres
         write(13,*) nrec
 
-        if (inode_ele==0) then !node-based
-          do i=1,nrec
-            ip=iviolator(i)
-            write(13,*) i,xnd(ip),ynd(ip),rviolator(i),ip
-          enddo
-        elseif (inode_ele==1) then !ele based
-          do i=1,nrec
-            ie=iviolator(i)
-            write(13,*) i,sum(xnd(elnode(1:i34(ie),ie)))/i34(ie),&
-              & sum(ynd(elnode(1:i34(ie),ie)))/i34(ie), rviolator(i),ie
-          enddo
-        endif
+!        if (inode_ele==0) then !node-based
+        do i=1,nrec
+          ip=iviolator(i)
+          write(13,*) i,xnd(ip),ynd(ip),rviolator(i),ip
+        enddo
+!        elseif (inode_ele==1) then !ele based
+!          do i=1,nrec
+!            ie=iviolator(i)
+!            write(13,*) i,sum(xnd(elnode(1:i34(ie),ie)))/i34(ie),&
+!              & sum(ynd(elnode(1:i34(ie),ie)))/i34(ie), rviolator(i),ie
+!          enddo
+!        endif
         close(13)
       enddo !k=1,3
 

@@ -21,10 +21,10 @@
 !       Works for mixed tri/quad outputs and node/elem based vars from
 !       scribe I/O versions.
 !       Will not extrapolate below bottom. Option to extrap above
-!       surface. Only works for scalars.
+!       surface. 
 
 !       Inputs: screen; vgrid (in this dir or ../); station.bp (build pts; depths not used); relevant nc and out2d*.nc
-!       Outputs: transect.out & transect_grd.[zr]0 (ascii on struc'ed grid; 
+!       Outputs: transect[12].out & transect_grd.[zr]0 (ascii on struc'ed grid; 
 !                use plot_transect.m, but also consider using SCHISM_TRANSECT.m)
 !                average_transect.out (averaged; in .bp with header) 
 
@@ -39,12 +39,12 @@
       use pt_in_poly_test
 
 !      parameter(nbyte=4)
-      character(len=30) :: file63,varname,file62
+      character(len=30) :: file63,varname,file62,varname2,file64
       character(len=12) :: it_char
-      logical::lexist
+      logical :: lexist,lexist2
       allocatable :: sigma(:),cs(:),ztot(:)
-      allocatable:: outvar(:,:),out(:,:,:),out2(:,:),eta2(:),node3(:,:),arco(:,:)
-      allocatable :: ztmp(:),x00(:),y00(:),iep(:),out3(:,:),out4(:),av_out3(:,:)
+      allocatable:: outvar(:,:,:),out(:,:,:,:),out2(:,:,:),eta2(:),node3(:,:),arco(:,:)
+      allocatable :: ztmp(:),x00(:),y00(:),iep(:),out3(:,:,:),out4(:,:),av_out3(:,:,:)
       allocatable :: nmxz(:,:),z0(:),r0(:),r00(:),z00(:),dp(:)
       allocatable :: sigma_lcl(:,:),kbp(:),kbp00(:),ztmp2(:,:),irank_read(:)
       integer :: nodel(3),dimids(100),idims(100)
@@ -61,6 +61,10 @@
 
       print*, 'Is the var node (1) or elem (2) based?'
       read(*,*) inode_elem
+
+      print*, 'Is variable scalar (1) or vector (2)?'
+      read(*,*) ivs
+      if(ivs/=1.and.ivs/=2) stop 'check ivs'
       
       print*, 'Input start and end file # to read:'
       read(*,*) iday1,iday2
@@ -122,7 +126,8 @@
         enddo !j
       enddo !i
 
-      open(21,file='transect.out',status='replace')
+      open(21,file='transect1.out',status='replace')
+      open(20,file='transect2.out',status='replace')
       
 !...  Get basic info from out2d*.nc
       !Returned vars: ne,np,ns,nrec,[xnd ynd dp](np),
@@ -142,8 +147,8 @@
       !nstep=(iday2-iday1+1)*nrec/iskip
 !      if(nxz*ivs>6000) stop 'Increase output statement below!'
  
-      allocate(out(nxy,3,nvrt),out2(nxy,nvrt),node3(nxy,3),arco(nxy,3),iep(nxy), &
-     &out3(ntran,nxy),av_out3(ntran,nxy),out4(ntran),stat=istat)
+      allocate(out(nxy,3,nvrt,ivs),out2(nxy,nvrt,ivs),node3(nxy,3),arco(nxy,3),iep(nxy), &
+     &out3(ntran,nxy,ivs),av_out3(ntran,nxy,ivs),out4(ntran,ivs),stat=istat)
       if(istat/=0) stop 'Falied to allocate (5)'
 
       if(inode_elem==1) then !node based
@@ -153,7 +158,7 @@
       endif
 
       allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp00(np), &
-     &timeout(nrec),outvar(nvrt,last_dim),eta2(np))
+     &timeout(nrec),outvar(nvrt,last_dim,ivs),eta2(np))
       outvar=-huge(1.0) !init
 
 !     Read in vgrid.in
@@ -229,12 +234,23 @@
  
       !Find nc file
       file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      if(ivs==2) varname2=varname(1:len_var-1)//'Y'
       inquire(file=file63,exist=lexist)
-      if(lexist) then
-        i23d=2 !3D var
+      if(lexist) then !3D var
+        i23d=2 
+        if(ivs==2) then
+          file64=varname2(1:len_var)//'_'//it_char(1:leng)//'.nc'
+          inquire(file=file64,exist=lexist2)
+          if(.not.lexist2) then
+            print*, 'Missing y-component:',file64
+            print*, file63
+            stop
+          endif
+        endif
       else
         i23d=1 !2D
         file63=file62
+        file64=file62
       endif
 
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
@@ -250,12 +266,13 @@
 !'
       if(idims(ndims)/=nrec) stop 'last dim is not time'
 
-!        iret=nf90_get_att(ncid,ivarid1,'i23d',i23d)
-!        if(i23d<=0.or.i23d>6) stop 'wrong i23d'
-!        if(i23d>3.and.ics==2) stop 'ics=2 with elem-based var'
-!        iret=nf90_get_att(ncid,ivarid1,'ivs',ivs)
-!        !print*, 'i23d:',i23d,ivs,idims(1:ndims)
-!
+      if(ivs==2) then !vector
+        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=nf90_NoErr) stop 'Failed to open file64'
+        iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
+        if(iret/=nf90_NoErr) stop 'Var2 not found'
+      endif !ivs
+
       do irec=1,nrec
         !Get elev
         iret=nf90_inq_varid(ncid4,'elevation',itmp)
@@ -266,14 +283,16 @@
         if(i23d==1) then !2D
           start_2d(1)=1; start_2d(2)=irec
           count_2d(1)=npes; count_2d(2)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes,1),start_2d,count_2d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(1,1:npes,2),start_2d,count_2d)
         else !3D
           start_3d(1:2)=1; start_3d(3)=irec
           count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes,1),start_3d,count_3d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(:,1:npes,2),start_3d,count_3d)
         endif 
 
-        !Available now: outvar(nvrt,np|ne), eta2(np)
+        !Available now: outvar(nvrt,np|ne,ivs), eta2(np)
         out2=0
         if(i23d==1) then !2D
           stop 'No 2D vars plz'
@@ -283,7 +302,7 @@
               do j=1,3 !nodes
                 nd=node3(i,j)
                 do k=max0(1,kbp00(nd)),nvrt
-                  out(i,j,k)=outvar(k,nd)
+                  out(i,j,k,:)=outvar(k,nd,:)
                 enddo !k
               enddo !j
             enddo !i
@@ -303,7 +322,7 @@
 
             enddo !j
             if(idry==1) then
-              out4(:)=rjunk
+              out4(:,:)=rjunk
             else !element wet
               !Compute z-coordinates
               if(ivcor==1) then !localized
@@ -335,11 +354,11 @@
                   do j=1,3
                     nd=node3(i,j)
                     kin=max(k,kbp00(nd))
-                    out2(i,k)=out2(i,k)+arco(i,j)*out(i,j,kin)
+                    out2(i,k,:)=out2(i,k,:)+arco(i,j)*out(i,j,kin,:)
                   enddo !j
 !                  write(65,*)i,k,ztmp(k),out2(i,k)
                 enddo !k
-              endif
+              endif !node
 
 !             Interplate in vertical
               do kk=1,ntran
@@ -362,12 +381,12 @@
 
                 if(k0==0) then !no extrap 
 !                  write(12,*)'Warning: failed to find a vertical level:',it,i
-                  out4(kk)=rjunk
+                  out4(kk,:)=rjunk
                 else
                   if(i23d<=3) then !node based
-                    out4(kk)=out2(i,k0)*(1-rat)+out2(i,k0+1)*rat
+                    out4(kk,:)=out2(i,k0,:)*(1-rat)+out2(i,k0+1,:)*rat
                   else if(i23d<=6) then !elem
-                    out4(kk)=outvar(k0+1,iep(i)) !FV
+                    out4(kk,:)=outvar(k0+1,iep(i),:) !FV
                   endif
         
                   !Debug
@@ -377,14 +396,15 @@
             endif !dry/wet
 
             do kk=1,ntran
-              out3(kk,i)=out4(kk)
+              out3(kk,i,:)=out4(kk,:)
             enddo !kk
           enddo !i=1,nxy
 
           !Along all vertical levels of each build pt
           do i=1,nxy
             do kk=1,ntran
-              write(21,'(e22.12,2(1x,f10.3))')timeout(irec),out3(kk,i)
+              write(21,'(e22.12,2(1x,f10.3))')timeout(irec),out3(kk,i,1)
+              if(ivs==2) write(20,'(e22.12,2(1x,f10.3))')timeout(irec),out3(kk,i,2)
             enddo !kk
           enddo !i
 
@@ -398,11 +418,12 @@
  
 !     Output average
       open(24,file='average_transect.out',status='replace')
+      if(nstep==0) stop 'No time steps'
       av_out3=av_out3/nstep
       do i=1,nxy
         do kk=1,ntran
           j=(i-1)*ntran+kk
-          write(24,'(i13,4(1x,e22.10))')j,r0(i),z0(kk),av_out3(kk,i)
+          write(24,'(i13,4(1x,e22.10))')j,r0(i),z0(kk),av_out3(kk,i,:)
         enddo !kk
       enddo !i
       close(24)

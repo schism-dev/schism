@@ -29,7 +29,7 @@
 !              (4) out2d*.nc
 !              (4) nc outputs for that variable(tri-quad)
 
-!       Outputs: fort.18; ; fort.20 - local depth for each pt.
+!       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
 !   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -41,43 +41,21 @@
       use compute_zcor
       use pt_in_poly_test
 
-      character(len=30) :: file63,file62,varname
+      character(len=30) :: file63,file62,varname,varname2,file64
       character(len=12) :: it_char
 !      character(len=48) :: version,variable_nm,variable_dim
-      logical :: lexist
+      logical :: lexist,lexist2
       dimension swild(3)
       integer, allocatable :: i34(:),elnode(:,:),node3(:,:),kbp(:),iep(:),irank_read(:),kbp00(:)
       real*8,allocatable :: timeout(:),xnd(:),ynd(:)
-      real,allocatable :: dp(:),ztot(:),sigma(:),sigma_lcl(:,:),outvar(:,:), &
-     &out(:,:,:,:),out2(:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
-     &out3(:),z00(:),rl2min(:),dep(:),ztmp2(:,:)
+      real,allocatable :: dp(:),ztot(:),sigma(:),sigma_lcl(:,:),outvar(:,:,:), &
+     &out2(:,:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
+     &out3(:,:),z00(:),rl2min(:),dep(:),ztmp2(:,:),sum1(:)
       integer :: nodel(3),dimids(100),idims(100)
       integer :: char_len,start_2d(2),start_3d(3),start_4d(4), &
      &count_2d(2),count_3d(3),count_4d(4)
 !      real*8 :: h0
       
-!      print*, 'Do you work on uncombined (0) or combined (1) nc?'
-!      read(*,*)icomb
-!      if(icomb/=0.and.icomb/=1) stop 'Unknown icomb'
-
-!...  Set max array size for system memory
-!      print*, 'Recommendation: for uncombined nc, specify max array size (e.g., <=2.e9);'
-!      print*, 'for combined nc, specify # of records to read each time.'
-!      print*, 'Do you want to specify max array size (1) or # of records (2)'
-!      read(*,*)ispec_max
-!      if(ispec_max==1) then
-!        print*, 'Input max array size (e.g., <=2.e9):'
-!        read(*,*)max_array_size
-!        print*, 'max_array_size read in=',max_array_size
-!      else
-!        print*, 'Input # of records:'
-!        read(*,*)nrec3
-!      endif
-!      ispec_max=2
-!      print*, 'Input # of records:'
-!      read(*,*)nrec3
-!      nrec3=1
-
       print*, 'Input extraction pts format (1: .bp; 2:.sta):'
       read(*,*)ibp
       if(ibp/=1.and.ibp/=2) stop 'Unknown format'
@@ -86,11 +64,13 @@
       read(*,*)ics
 
       print*, 'Input variable name to read from nc (e.g. elevation):'
+      print*, '(if vector, input X component)'
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
       
-!      print*, 'Is the var 2D (1) or 3D (2)?'
-!      read(*,*) i23d
+      print*, 'Is the var scalar (1) or vector (2)?'
+      read(*,*) ivs
+      if(ivs/=1.and.ivs/=2) stop 'check ivs'
 
       print*, 'Is the var node (1) or elem (2) based?'
       read(*,*) inode_elem
@@ -142,8 +122,8 @@
       endif
 
       allocate(timeout(nrec),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp00(np), &
-     &outvar(nvrt,last_dim),eta2(np),out2(nxy,nvrt),out3(nxy), &
-     &out(nxy,3,nvrt,2),node3(nxy,3),arco(nxy,3),iep(nxy),ztmp(nvrt),ztmp2(nvrt,3))
+     &outvar(nvrt,last_dim,ivs),eta2(np),out2(nxy,nvrt,ivs),out3(nxy,ivs),sum1(ivs), &
+     &node3(nxy,3),arco(nxy,3),iep(nxy),ztmp(nvrt),ztmp2(nvrt,3))
       outvar=-huge(1.0) !test mem
 
 !     Read in vgrid
@@ -161,7 +141,7 @@
         enddo !i
       endif !ivcor
 
-!...  Find parent element for (x00,y00) (global indices)
+!...  Find parent element for (x00,y00) 
       iep=0
       if(ics==1) then !Cartesian
         do i=1,ne
@@ -226,12 +206,23 @@
  
       !Find nc file
       file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      if(ivs==2) varname2=varname(1:len_var-1)//'Y'
       inquire(file=file63,exist=lexist)
-      if(lexist) then
-        i23d=2 !3D var
+      if(lexist) then !3D var
+        i23d=2 
+        if(ivs==2) then
+          file64=varname2(1:len_var)//'_'//it_char(1:leng)//'.nc'
+          inquire(file=file64,exist=lexist2)
+          if(.not.lexist2) then
+            print*, 'Missing y-component:',file64
+            print*, file63
+            stop
+          endif
+        endif
       else
         i23d=1 !2D
         file63=file62
+        file64=file62
       endif
 
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
@@ -247,12 +238,13 @@
 !'
       if(idims(ndims)/=nrec) stop 'last dim is not time'
 
-!        iret=nf90_get_att(ncid,ivarid1,'i23d',i23d)
-!        if(i23d<=0.or.i23d>6) stop 'wrong i23d'
-!        if(i23d>3.and.ics==2) stop 'ics=2 with elem-based var'
-!        iret=nf90_get_att(ncid,ivarid1,'ivs',ivs)
-!        !print*, 'i23d:',i23d,ivs,idims(1:ndims)
-!
+      if(ivs==2) then !vector
+        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=nf90_NoErr) stop 'Failed to open file64'
+        iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
+        if(iret/=nf90_NoErr) stop 'Var2 not found'
+      endif !ivs
+
       do irec=1,nrec
         !Get elev
         iret=nf90_inq_varid(ncid4,'elevation',itmp)
@@ -260,18 +252,19 @@
         count_2d(1)=np; count_2d(2)=1
         iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)
 
-!        if(ivs==1) then !scalar
         if(i23d==1) then !2D
           start_2d(1)=1; start_2d(2)=irec
           count_2d(1)=npes; count_2d(2)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes,1),start_2d,count_2d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(1,1:npes,2),start_2d,count_2d)
         else !3D
           start_3d(1:2)=1; start_3d(3)=irec
           count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes,1),start_3d,count_3d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(:,1:npes,2),start_3d,count_3d)
         endif 
 
-        !Available now: outvar(nvrt,np|ne), eta2(np)
+        !Available now: outvar(nvrt,np|ne,ivs), eta2(np)
         out2=0
         out3=0
         if(i23d==1) then !2D
@@ -282,14 +275,15 @@
               !Compute local depth
               dep(i)=dep(i)+arco(i,j)*dp(nd)
               if(inode_elem==1) then !node
-                out2(i,1)=out2(i,1)+arco(i,j)*outvar(1,nd)
+                out2(i,1,:)=out2(i,1,:)+arco(i,j)*outvar(1,nd,:)
               else if (inode_elem==2) then !elem
                 if(iep(i)<=0) stop 'iep(i)<=0'
-                out2(i,1)=outvar(1,iep(i))
+                out2(i,1,:)=outvar(1,iep(i),:)
               endif
             enddo !j
           enddo !i
-          write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1),i=1,nxy)
+          write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,1),i=1,nxy)
+          if(ivs==2) write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
         else !3D
 !         Do interpolation
           do i=1,nxy
@@ -303,7 +297,7 @@
 !              write(11,*)i,j,nd,dp(nd),arco(i,j)
             enddo !j
             if(idry==1) then
-              out3(i)=-99
+              out3(i,:)=-99
 !              write(65,*)'Dry'
             else !element wet
               !Compute z-coordinates
@@ -337,7 +331,7 @@
                   do j=1,3
                     nd=node3(i,j)
                     kin=max(k,kbp00(nd))
-                    out2(i,k)=out2(i,k)+arco(i,j)*outvar(kin,nd) !out(i,j,kin,m)
+                    out2(i,k,:)=out2(i,k,:)+arco(i,j)*outvar(kin,nd,:)
                   enddo !j
                 enddo !k
               endif !inode_elem
@@ -351,12 +345,12 @@
                 sum1=0
                 do k=kbpl,nvrt-1
                   if(inode_elem==1) then !node
-                    sum1=sum1+(ztmp(k+1)-ztmp(k))*(out2(i,k)+out2(i,k+1))/2
+                    sum1(:)=sum1(:)+(ztmp(k+1)-ztmp(k))*(out2(i,k,:)+out2(i,k+1,:))/2
                   else if(inode_elem==2) then !elem
-                    sum1=sum1+(ztmp(k+1)-ztmp(k))*outvar(k+1,iep(i))
+                    sum1(:)=sum1(:)+(ztmp(k+1)-ztmp(k))*outvar(k+1,iep(i),:)
                   endif    
                 enddo !k
-                out3(i)=sum1/total_dp
+                out3(i,:)=sum1(:)/total_dp
               else !Interplate in vertical
                 if(ifs==0) then !relative to MSL
                   z2=z00(i)
@@ -383,17 +377,18 @@
 !'
                   stop
                 else
-                    if(inode_elem==1) then !node
-                      out3(i)=out2(i,k0)*(1-rat)+out2(i,k0+1)*rat
-                    else if(inode_elem==2) then !elem
-                      if(iep(i)<=0) stop 'iep(i)<=0(2)'
-                      out3(i)=outvar(k0+1,iep(i)) !FV
-                    endif
+                  if(inode_elem==1) then !node
+                    out3(i,:)=out2(i,k0,:)*(1-rat)+out2(i,k0+1,:)*rat
+                  else if(inode_elem==2) then !elem
+                    if(iep(i)<=0) stop 'iep(i)<=0(2)'
+                    out3(i,:)=outvar(k0+1,iep(i),:) !FV
+                  endif
                 endif
               endif !depth average or not
             endif !dry/wet
           enddo !i=1,nxy
-          write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i),i=1,nxy)
+          write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,1),i=1,nxy)
+          if(ivs==2) write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
          
         endif !i23d
       enddo !irec
