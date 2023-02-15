@@ -1,39 +1,74 @@
 ## Scripts
-The scripts are available from this [Git Repo]().
+The group of scripts for generating river map are available from a sub-folder ([RiverMapper](https://github.com/schism-dev/schism/tree/master/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper)) in the SCHISM Git Repo.
+
 
 ## Usage
-The inputs include the following:
+The inputs include:
 
 1. DEM tiles in lon/lat from one or more sources (such as CuDEM).
 
 2. Thalwegs specified in a line type shapefile.
 
-For a small domain (one or two states), a direct function call to the serial "make_river_map" suffices, which looks like:
+The outputs include:
+
+- "total_river_arcs.map", which contains river arcs to be used for the final meshing in SMS.
+
+- other \*.map files for diagnostic purposes.
+
+A sample product is like this:
+
+![Sample river map](../../assets/sample-river-map.png) 
+
+
+## Sample applications
+Two sample applications are available in a tar archive, which can be downloaded [here](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
+
+For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices:
 
 ```python
-make_river_map(
-    tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/'
-)
+from RiverMapper.make_river_map import make_river_map
+
+
+if __name__ == "__main__":
+    '''
+    A sample serial application of RiverMapper
+    '''
+    make_river_map(
+        tif_fnames = ['./Inputs/DEMs/GA_dem_merged_ll.tif'],
+        thalweg_shp_fname = './Inputs/Shapefiles/GA_local.shp',
+        output_dir = './Outputs/',
+        cache_folder = './Cache/'
+    )
 ```
+
+You can try it out by extracting "RiverMapper_Samples/Serial/" from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar),
+where you can find the sample python script and necessary input files.
 
 For a large domain such as [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/),
 a parallel driver is provided to automatically group thalwegs based on their parent tiles, then distribute the groups to parallel processors.
-The driver can be called like this:
+The driver is provided in RiverMapper's folder in SCHISM's git repository:
+
+```
+[your_schism_dir]/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/river_map_mpi_driver.py
+```
+
+You only need to change the parameters in the main function at the bottom of the script:
 
 ```python
+if __name__ == "__main__":
+
+# ------------------------- sample input ---------------------------
+dems_json_file = './Inputs/DEMs/dems.json'  # specifying files for all DEM tiles
+thalweg_shp_fname='./Inputs/Shapefiles/LA_local.shp'
+output_dir = './Outputs/' +  f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
+# ------------------------- end input section ---------------------------
+
 river_map_mpi_driver(
     dems_json_file=dems_json_file,
     thalweg_shp_fname=thalweg_shp_fname,
     output_dir=output_dir,
 )
-```
 
-and executed like this:
-
-```
-mpirun -n 20 ./river_map_mpi_driver
 ```
 
 The first argument takes a \*.json file that specifies multiple sets of DEMs (arranged from high priority to low priority), for example:
@@ -41,39 +76,25 @@ The first argument takes a \*.json file that specifies multiple sets of DEMs (ar
 {
     "CuDEM": {
         "name": "CuDEM",
-        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CuDEM/Lonlat/*.tif",
+        "glob_pattern": "./Inputs/DEMs/CuDEM/*.tif",
         "file_list": [],
         "boxes": []
     },
     "CRM": {
         "name": "CRM",
-        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CRM/Lonlat/*.tif",
+        "glob_pattern": "./Inputs/DEMs/CRM/*.tif",
         "file_list": [],
         "boxes": []
     }
 }
 ```
 
-## Products
-The outputs of the script include the following files:
+The driver script can be executed like this:
 
-- "total_river_arcs.map", which contains river arcs to be used for the final meshing in SMS.
-
-- "total_intersection_joints.map", which contains points used for identifying intersection elements to be relaxed in the [meshing stage](meshing-in-SMS.md#relax-crowded-elements-at-river-intersections).
-
-, which can be imported to SMS directly.
-
-The "total_river_arcs.map" needs to be cleaned to add feature points at line intersections and remove duplicated points.
-
-This can be done in SMS, but it can be slow.
-For example, cleaning the map for STOFS3D Atlantic can take hours and sometimes the intersection points are not generted correctly.
-We have reported the problems to the SMS team and they are improving the cleaning process.
-
-In the meantime, it is recommended to use Qgis to do the cleaning, see details [here]().
+```
+mpirun -n 20 ./river_map_mpi_driver
+```
 
 
-## Other comments
+A sample application utilizing the parallel driver (RiverMapper_Samples/Parallel/) can be extracted from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar)
 
-### Thalwegs
-
-### Cleaning the river arcs

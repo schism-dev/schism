@@ -24,7 +24,7 @@ The purpose of each SMS project component is as follows:
 
     - \*levee\*: Levees from National Levee Database.
 
-    - auto\*arcs: Automatically generated river arcs, which have been cleaned in Qgis (see details in [cleaning river arcs]()) .
+    - auto\*arcs: Automatically generated river arcs.
 
     - coast: This map includes all manually made polygons (including quad patches) and the coastline.
 
@@ -139,19 +139,6 @@ Finally, generate the mesh for the full domain.
 This takes about 3-5 hours, depending on how fast your desktop is.
 
 
-## ** Skew elements **
-Although the script tries to optimize the convergence of river arcs at river intersections
-, skew elements may occasionally occur.
-![river-intersections](../../assets/mesh-intersections.png)
-
-It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.
-
-If you think it is necessary, you may remedy them using the following script provided in [SCHISM Git]():
-```
-$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
-```
-
-
 ## **Finalize the mesh**
 Delete the disjoint nodes:
 
@@ -165,12 +152,18 @@ Save the mesh as \*.2dm:
 
 ![renumber nodes](../../assets/mesh-save.png)
 
-Quality check using a script:
-```bash
-STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
-```
-from the [STOFS3D scripts](https://github.com/feiye-vims/STOFS3D-scripts) repository
-, which identifies small elements, skew elements, and bad quads,
-then generate hgrid.\* in different projections.
 
+## ** Mesh quality and skew elements **
+Although the script tries to optimize the convergence of river arcs at river intersections
+, skew elements may occasionally occur.
+![river-intersections](../../assets/mesh-intersections.png)
+
+It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.
+
+If you think it is necessary, you may remedy them using the following script provided in [SCHISM Git]():
+```
+$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
+```
+The script automatically checks for small and skew elements,
+then improve the mesh either by removing the problematic elements or local relaxation.
 
