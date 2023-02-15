@@ -1272,36 +1272,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#products" class="md-nav__link">
-    Products
+  <a href="#sample-applications" class="md-nav__link">
+    Sample applications
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#other-comments" class="md-nav__link">
-    Other comments
-  </a>
-  
-    <nav class="md-nav" aria-label="Other comments">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#thalwegs" class="md-nav__link">
-    Thalwegs
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cleaning-the-river-arcs" class="md-nav__link">
-    Cleaning the river arcs
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1512,9 +1485,9 @@
   <h1>Generate river map</h1>
 
 <h2 id="scripts">Scripts<a class="headerlink" href="#scripts" title="Permanent link">&para;</a></h2>
-<p>The scripts are available from this <a href="">Git Repo</a>.</p>
+<p>The group of scripts for generating river map are available from a sub-folder (<a href="https://github.com/schism-dev/schism/tree/master/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper">RiverMapper</a>) in the SCHISM Git Repo.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<p>The inputs include the following:</p>
+<p>The inputs include:</p>
 <ol>
 <li>
 <p>DEM tiles in lon/lat from one or more sources (such as CuDEM).</p>
@@ -1523,60 +1496,76 @@
 <p>Thalwegs specified in a line type shapefile.</p>
 </li>
 </ol>
-<p>For a small domain (one or two states), a direct function call to the serial "make_river_map" suffices, which looks like:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">make_river_map</span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">tif_fnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif&#39;</span><span class="p">],</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">thalweg_shp_fname</span> <span class="o">=</span> <span class="s1">&#39;/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp&#39;</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/&#39;</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span>
-</code></pre></div>
-<p>For a large domain such as <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>,
-a parallel driver is provided to automatically group thalwegs based on their parent tiles, then distribute the groups to parallel processors.
-The driver can be called like this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">river_map_mpi_driver</span><span class="p">(</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="n">thalweg_shp_fname</span><span class="p">,</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
-</code></pre></div>
-<p>and executed like this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mpirun -n 20 ./river_map_mpi_driver
-</code></pre></div>
-<p>The first argument takes a *.json file that specifies multiple sets of DEMs (arranged from high priority to low priority), for example:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nt">&quot;CuDEM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CuDEM&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="nt">&quot;glob_pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CuDEM/Lonlat/*.tif&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">&quot;file_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;CRM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CRM&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="nt">&quot;glob_pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CRM/Lonlat/*.tif&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="nt">&quot;file_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">}</span>
-</code></pre></div></p>
-<h2 id="products">Products<a class="headerlink" href="#products" title="Permanent link">&para;</a></h2>
-<p>The outputs of the script include the following files:</p>
+<p>The outputs include:</p>
 <ul>
 <li>
 <p>"total_river_arcs.map", which contains river arcs to be used for the final meshing in SMS.</p>
 </li>
 <li>
-<p>"total_intersection_joints.map", which contains points used for identifying intersection elements to be relaxed in the <a href="meshing-in-SMS.html#relax-crowded-elements-at-river-intersections">meshing stage</a>.</p>
+<p>other *.map files for diagnostic purposes.</p>
 </li>
 </ul>
-<p>, which can be imported to SMS directly.</p>
-<p>The "total_river_arcs.map" needs to be cleaned to add feature points at line intersections and remove duplicated points.</p>
-<p>This can be done in SMS, but it can be slow.
-For example, cleaning the map for STOFS3D Atlantic can take hours and sometimes the intersection points are not generted correctly.
-We have reported the problems to the SMS team and they are improving the cleaning process.</p>
-<p>In the meantime, it is recommended to use Qgis to do the cleaning, see details <a href="">here</a>.</p>
-<h2 id="other-comments">Other comments<a class="headerlink" href="#other-comments" title="Permanent link">&para;</a></h2>
-<h3 id="thalwegs">Thalwegs<a class="headerlink" href="#thalwegs" title="Permanent link">&para;</a></h3>
-<h3 id="cleaning-the-river-arcs">Cleaning the river arcs<a class="headerlink" href="#cleaning-the-river-arcs" title="Permanent link">&para;</a></h3>
+<p>A sample product is like this:</p>
+<p><img alt="Sample river map" src="../../assets/sample-river-map.png" /> </p>
+<h2 id="sample-applications">Sample applications<a class="headerlink" href="#sample-applications" title="Permanent link">&para;</a></h2>
+<p>Two sample applications are available in a tar archive, which can be downloaded <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">here</a>.</p>
+<p>For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">RiverMapper.make_river_map</span> <span class="kn">import</span> <span class="n">make_river_map</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="sd">    A sample serial application of RiverMapper</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="sd">    &#39;&#39;&#39;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">make_river_map</span><span class="p">(</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="n">tif_fnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./Inputs/DEMs/GA_dem_merged_ll.tif&#39;</span><span class="p">],</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="n">thalweg_shp_fname</span> <span class="o">=</span> <span class="s1">&#39;./Inputs/Shapefiles/GA_local.shp&#39;</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="n">cache_folder</span> <span class="o">=</span> <span class="s1">&#39;./Cache/&#39;</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="p">)</span>
+</code></pre></div>
+<p>You can try it out by extracting "RiverMapper_Samples/Serial/" from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>,
+where you can find the sample python script and necessary input files.</p>
+<p>For a large domain such as <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>,
+a parallel driver is provided to automatically group thalwegs based on their parent tiles, then distribute the groups to parallel processors.
+The driver is provided in RiverMapper's folder in SCHISM's git repository:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[your_schism_dir]/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/river_map_mpi_driver.py
+</code></pre></div>
+<p>You only need to change the parameters in the main function at the bottom of the script:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># ------------------------- sample input ---------------------------</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">dems_json_file</span> <span class="o">=</span> <span class="s1">&#39;./Inputs/DEMs/dems.json&#39;</span>  <span class="c1"># specifying files for all DEM tiles</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="s1">&#39;./Inputs/Shapefiles/LA_local.shp&#39;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span> <span class="o">+</span>  <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">thalweg_shp_fname</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s1">cores/&#39;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># ------------------------- end input section ---------------------------</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">river_map_mpi_driver</span><span class="p">(</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="n">thalweg_shp_fname</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
+</code></pre></div>
+<p>The first argument takes a *.json file that specifies multiple sets of DEMs (arranged from high priority to low priority), for example:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nt">&quot;CuDEM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CuDEM&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="nt">&quot;glob_pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./Inputs/DEMs/CuDEM/*.tif&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">&quot;file_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;CRM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CRM&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="nt">&quot;glob_pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./Inputs/DEMs/CRM/*.tif&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="nt">&quot;file_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">}</span>
+</code></pre></div></p>
+<p>The driver script can be executed like this:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mpirun -n 20 ./river_map_mpi_driver
+</code></pre></div>
+<p>A sample application utilizing the parallel driver (RiverMapper_Samples/Parallel/) can be extracted from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a></p>
 
               
             </article>

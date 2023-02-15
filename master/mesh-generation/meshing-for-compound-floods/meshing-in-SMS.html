@@ -1307,15 +1307,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#skew-elements" class="md-nav__link">
-    Skew elements
+  <a href="#finalize-the-mesh" class="md-nav__link">
+    Finalize the mesh
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#finalize-the-mesh" class="md-nav__link">
-    Finalize the mesh
+  <a href="#mesh-quality-and-skew-elements" class="md-nav__link">
+    Mesh quality and skew elements
   </a>
   
 </li>
@@ -1545,7 +1545,7 @@ Merging individual maps should be done as the last step.</p>
 <p>*levee*: Levees from National Levee Database.</p>
 </li>
 <li>
-<p>auto*arcs: Automatically generated river arcs, which have been cleaned in Qgis (see details in <a href="">cleaning river arcs</a>) .</p>
+<p>auto*arcs: Automatically generated river arcs.</p>
 </li>
 <li>
 <p>coast: This map includes all manually made polygons (including quad patches) and the coastline.</p>
@@ -1633,14 +1633,6 @@ Open another SMS session and fix all issues in the merged map.
 Here, editing the merged map is unavoidable because the issues originates from the merging step.
 Finally, generate the mesh for the full domain.
 This takes about 3-5 hours, depending on how fast your desktop is.</p>
-<h2 id="skew-elements"><strong> Skew elements </strong><a class="headerlink" href="#skew-elements" title="Permanent link">&para;</a></h2>
-<p>Although the script tries to optimize the convergence of river arcs at river intersections
-, skew elements may occasionally occur.
-<img alt="river-intersections" src="../../assets/mesh-intersections.png" /></p>
-<p>It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.</p>
-<p>If you think it is necessary, you may remedy them using the following script provided in <a href="">SCHISM Git</a>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
-</code></pre></div></p>
 <h2 id="finalize-the-mesh"><strong>Finalize the mesh</strong><a class="headerlink" href="#finalize-the-mesh" title="Permanent link">&para;</a></h2>
 <p>Delete the disjoint nodes:</p>
 <p><img alt="disjoint nodes" src="../../assets/mesh-disjoint-nodes.png" /></p>
@@ -1648,12 +1640,16 @@ This takes about 3-5 hours, depending on how fast your desktop is.</p>
 <p><img alt="renumber nodes" src="../../assets/mesh-renumber-nodes.png" /></p>
 <p>Save the mesh as *.2dm:</p>
 <p><img alt="renumber nodes" src="../../assets/mesh-save.png" /></p>
-<p>Quality check using a script:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>STOFS3D_scripts/Pre_processing/Grid/proc_hgrid.py
+<h2 id="mesh-quality-and-skew-elements"><strong> Mesh quality and skew elements </strong><a class="headerlink" href="#mesh-quality-and-skew-elements" title="Permanent link">&para;</a></h2>
+<p>Although the script tries to optimize the convergence of river arcs at river intersections
+, skew elements may occasionally occur.
+<img alt="river-intersections" src="../../assets/mesh-intersections.png" /></p>
+<p>It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.</p>
+<p>If you think it is necessary, you may remedy them using the following script provided in <a href="">SCHISM Git</a>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
 </code></pre></div>
-from the <a href="https://github.com/feiye-vims/STOFS3D-scripts">STOFS3D scripts</a> repository
-, which identifies small elements, skew elements, and bad quads,
-then generate hgrid.* in different projections.</p>
+The script automatically checks for small and skew elements,
+then improve the mesh either by removing the problematic elements or local relaxation.</p>
 
               
             </article>
