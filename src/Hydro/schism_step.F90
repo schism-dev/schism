@@ -111,7 +111,7 @@
       integer, intent(in) :: it
 
 !     External functions
-      integer :: kronecker,lindex_s,omp_get_num_threads,omp_get_thread_num
+      integer :: kronecker,lindex_s,omp_get_num_threads,omp_get_thread_num,julian_day
       real(rkind) :: eqstate,quad_int !,signa
 
 !     Local variables
@@ -173,7 +173,7 @@
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
-                     &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan
+                     &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -182,6 +182,7 @@
       character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
       character(len=6),save :: a_6
+      character(len=48) :: time_string
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout
       real(8) :: dbleout2(1)
@@ -1906,13 +1907,14 @@
 !     Bypass solver for transport only option
       if(itransport_only/=0) then
 !=================================================================================
-      !Read in saved hydro outputs, and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:).
+      !Read in saved hydro outputs, and update new soln: eta2, s[uv]2, dfh, tr_el(1:2,:,:), and
+      !optionally, suspended sediment etc.
       !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
       !transport solver; similarly for tr_nd* and [uu,vv,ww]2 (for btrack)
 
       !Read time from 1st stack and check dt==multiple of dtout
       if(it==iths_main+1.and.myrank==0) then
-        !Outputs (nstride_schout,nrec_schout) are only used by rank 0
+        !Outputs (nstride_schout,nrec_schout) and time origin info are only used by rank 0
 #ifdef OLDIO
         j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
 #else 
@@ -1926,6 +1928,7 @@
 
         j=nf90_inq_varid(ncid_schout(1),"time",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc time')
+        j=nf90_get_att(ncid_schout(1),m,'base_date',time_string)
         !For some reason nf90 does not like start/count for unlimited dim
         j=nf90_get_var(ncid_schout(1),mm,swild13) !,(/1/),(/1/)) !double
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get time')
@@ -1935,7 +1938,21 @@
           call parallel_abort(errmsg)
         endif
         j=nf90_close(ncid_schout(1))
-        if(myrank==0)write(16,*)'done reading time info from schout_1: ',nstride_schout,nrec_schout
+
+        !Time origin
+        read(time_string,'(i5,2(1x,i2),2(1x,f10.2))')nwild(1:3),av_cff1,av_cff2 !start_year,start_month,start_day,start_hour,utc_start
+        !Save fraction Julian day for origins
+        start_t0=julian_day(nwild(1),nwild(2),nwild(3))+(av_cff1+av_cff2)/24.d0
+        start_t1=julian_day(start_year,start_month,start_day)+(start_hour+utc_start)/24.d0
+        if(start_t1<start_t0) then
+          write(errmsg,*)'STEP: cannot start before hydro_out time,',start_t1,start_t0
+          call parallel_abort(errmsg)
+        endif
+        !Starting cumulative record # (offset) for reading below
+        icount3=(start_t1-start_t0)*86400.d0/swild13(1)
+
+        write(16,*)'done reading time info from hydro_out: ',nstride_schout,nrec_schout, &
+     &nwild(1:3),av_cff1,av_cff2,start_t0,start_t1,icount3
         deallocate(swild13)
       endif !it==
 
@@ -1943,14 +1960,14 @@
       if(istat/=0) call parallel_abort('STEP: alloc swild11')
       if(myrank==0) then
         !Calculate stack and record # to read from for step n and n+1
-        istack=(it*nstride_schout-1)/nrec_schout+1
-        irec2=it*nstride_schout-(istack-1)*nrec_schout !->time step n (start)
+        istack=(it*nstride_schout+icount3-1)/nrec_schout+1
+        irec2=it*nstride_schout+icount3-(istack-1)*nrec_schout !->time step n (start)
         if(istack<=0.or.irec2<=0.or.irec2>nrec_schout) then
           write(errmsg,*)'STEP: wrong record or stack #, ',istack,irec2
           call parallel_abort(errmsg)
         endif
-        istack4=((it+1)*nstride_schout-1)/nrec_schout+1 !may exceed max stack #
-        irec4=(it+1)*nstride_schout-(istack4-1)*nrec_schout !->time step n+1 (new)
+        istack4=((it+1)*nstride_schout+icount3-1)/nrec_schout+1 !may exceed max stack #
+        irec4=(it+1)*nstride_schout+icount3-(istack4-1)*nrec_schout !->time step n+1 (new)
         if(istack4<=0.or.irec4<=0.or.irec4>nrec_schout) then
           write(errmsg,*)'STEP: wrong new record or stack #, ',istack4,irec4
           call parallel_abort(errmsg)
@@ -1984,7 +2001,7 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
           endif !itransport_only==2
 #endif
-          if(myrank==0) write(16,*)'reading from schout stack #:',istack,irec2,time/3600
+          write(16,*)'reading from schout stack #:',istack,irec2,time/3600
         endif !istack
 
         if(istack4==istack) then !existing stack for reading step n+1
@@ -2025,7 +2042,7 @@
             endif !itransport_only==2
 #endif
           endif !.not.ltmp
-          if(myrank==0) write(16,*)'reading from schout stack #:',istack4,irec4,time/3600
+          write(16,*)'reading from schout stack #:',istack4,irec4,time/3600
         endif !istack4
 
 #ifdef OLDIO
@@ -2037,6 +2054,7 @@
         j=nf90_get_var(ncid_schout(1),mm,swild11(1:np_global),(/1,irec2/),(/np_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get eta2')
       endif !myrank=0
+
       call mpi_bcast(swild11,np_global,mpi_real,0,comm,istat) 
       do i=1,np_global
         if(ipgl(i)%rank==myrank) then
@@ -2078,7 +2096,6 @@
 #ifdef OLDIO
         j=nf90_inq_varid(ncid_schout(1), "diffusivity",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
-        !j=nf90_get_var(ncid_schout(1),mm,swild11(1:np_global),(/k,1,irec2/),(/1,np_global,1/))
         j=nf90_get_var(ncid_schout(1),mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
 #else

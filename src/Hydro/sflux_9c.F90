@@ -284,7 +284,7 @@
 !   char_num (function): convert number to char
 !   get_file_name (fucntion):
 !   check_err
-!   JD (function): Julian date
+!   julian_day (function): Julian day
 !   get_times_etc: 
 !   get_file_times:
 !   check_times
@@ -1893,14 +1893,16 @@
       return
       end
 !-----------------------------------------------------------------------
-      INTEGER FUNCTION JD(YYYY,MM,DD)
+      INTEGER FUNCTION julian_day(YYYY,MM,DD)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: YYYY,MM,DD
-!              DATE ROUTINE JD(YYYY,MM,DD) CONVERTS CALENDER DATE TO
+!              DATE ROUTINE julian_day(YYYY,MM,DD) CONVERTS CALENDER DATE TO
 !              JULIAN DATE.  SEE CACM 1968 11(10):657, LETTER TO THE
 !              EDITOR BY HENRY F. FLIEGEL AND THOMAS C. VAN FLANDERN.
-!    EXAMPLE JD(1970,1,1)=2440588
-      JD=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4 &
+!    EXAMPLE julian_day(1970,1,1)=2440588
+!    Note: Julian time starts at noon, so there is a half day
+!    difference. It's best to use this function to compute the time _difference_ 
+      julian_day=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4 &
      &         +367*(MM-2-((MM-14)/12)*12)/12-3* &
      &         ((YYYY+4900+(MM-14)/12)/100)/4
       RETURN
@@ -2061,7 +2063,7 @@
         integer :: ncid, iret, time_dim(1), time_id, i_time, istat
         character(len=50) :: data_name, attr_name
         integer, allocatable, dimension(:) :: base_date
-        integer :: day, month, year, jd, n_base_date, allocate_stat
+        integer :: day, month, year, julian_day, n_base_date, allocate_stat
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
@@ -2130,7 +2132,7 @@
           year = base_date(1)
           month = base_date(2)
           day = base_date(3)
-          file_julian_date = jd(year,month,day)
+          file_julian_date = julian_day(year,month,day)
 
 !   deallocate base_date
           deallocate(base_date)
@@ -2726,7 +2728,7 @@
         character, parameter :: &
      &    sflux_inputs_file*50 = 'sflux/sflux_inputs.txt'
         real(rkind), parameter :: hours_per_day = 24.0d0
-        integer jd
+        integer julian_day
         logical, save :: first_call = .true.
         logical exst
 
@@ -2759,7 +2761,7 @@
 
 !'
 ! calculate the starting Julian date and starting fractional Julian date
-          start_jdate = jd(start_year,start_month,start_day)
+          start_jdate = julian_day(start_year,start_month,start_day)
 
           start_frac_jdate = real(start_jdate,rkind) &
      &                     + (start_hour + utc_start) / hours_per_day
