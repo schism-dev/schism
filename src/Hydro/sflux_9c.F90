@@ -52,7 +52,7 @@
 !       fdb
 !       lfdb
 !       albedo
-!       start_year,start_month,start_day,start_hour,utc_start
+!       start_year,start_month,start_day,start_hour,utc_start (in netcdf_io)
 !
 ! From module schism_msgp:
 !       myrank
@@ -1123,8 +1123,6 @@
       end subroutine check_allocation
 
 !-----------------------------------------------------------------------
-!#else              /* USE_NETCDF is defined */
-!-----------------------------------------------------------------------
       module netcdf_io
 
         use schism_glbl, only : rkind,start_year,start_month,start_day,start_hour,utc_start
@@ -1346,11 +1344,11 @@
         data_name = trim(prmsl_name)
         call combine_sflux_data &
      &    (time_now, dataset_1, dataset_2, &
-#ifndef MM5     /* MM5 not defined  */
+!#ifndef MM5     /* MM5 not defined  */
      &     dataset_1%exist, dataset_2%exist, &
-#else           /* MM5 is defined   */
-     &     dataset_1%exist, .false., &
-#endif          /* end of MM5 block */
+!#else           /* MM5 is defined   */
+!     &     dataset_1%exist, .false., &
+!#endif          /* end of MM5 block */
      &     data_name, p_air_node, &
      &     num_nodes_out)
         
@@ -1732,7 +1730,7 @@
 !-----------------------------------------------------------------------
       subroutine get_dataset_info (info)
 
-        use schism_glbl, only : rkind, npa, xlon, ylat
+        use schism_glbl, only : rkind, npa, xlon, ylat,in_dir,len_in_dir
         use schism_msgp, only : myrank,parallel_abort
         use netcdf_io
         implicit none
@@ -1747,7 +1745,7 @@
 ! determine if the first file exists for this dataset
         file_num = 1
         file_name = get_file_name(info%name, file_num)
-        inquire(file=file_name, exist=info%exist)
+        inquire(file=in_dir(1:len_in_dir)//file_name, exist=info%exist)
         
         if(myrank==0) then
           write(16,*)
@@ -1915,7 +1913,7 @@
      &                          num_files, jdate_for_file, &
      &                          nx, ny, max_times, max_files)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,in_dir,len_in_dir
         use schism_msgp, only : myrank
         implicit none
 
@@ -1939,7 +1937,7 @@
         do
           file_num = file_num + 1
           file_name = get_file_name(dataset_name, file_num)
-          inquire(file=file_name, exist=have_file)
+          inquire(file=in_dir(1:len_in_dir)//file_name, exist=have_file)
           if (.not. have_file) exit
           num_files = file_num
         enddo
@@ -2737,7 +2735,7 @@
           first_call = .false.
 
 ! make sure sflux_inputs_file exists (fail if it doesn't)
-          inquire(file=sflux_inputs_file, exist=exst)
+          inquire(file=in_dir(1:len_in_dir)//sflux_inputs_file, exist=exst)
           if (.not. exst) &
      &      call halt_error ('you must have sflux_inputs_file!')
 
