@@ -6,13 +6,21 @@ The [SCHISM NUOPC](nuopc.html) cap is currently being integrated as an ocean com
 
 ```
 export COASTALAPP_DIR=/my/path/to/coastalapp
-git clone https://github.com/noaa-ocs-modeling/CoastalApp -b develop-updates $COASTALAPP_DIR 
+git clone https://github.com/noaa-ocs-modeling/CoastalApp -b develop $COASTALAPP_DIR 
 cd $COASTALAPP_DIR
 git submodule update --init --recursive SCHISM/schism SCHISM/schism-esmf NEMS 
 bash ./build.sh -component "SCHISM"
 ```
 
 You can add components like `WW3` or `ADCIRC`, and you may be required to choose a `-compiler`  or `-platform`, or set environment variables like `PARMETIS` or `ESMFMKFILE`.  Consult `./build.sh -h` for help and further information.
+
+A typical coupled system that we currently use for testing would, e.g., include the three components OCN-ATM-WAV:
+
+```
+git submodule update --init --recursive SCHISM/schism SCHISM/schism-esmf NEMS WW3 ATMESH
+./scripts/download_parmetis.sh
+bash ./build.sh -component "SCHISM WW3 ATMESH" --thirdparty parmetis
+```
 
 ## Reporting bugs or requesting features
 
