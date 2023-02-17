@@ -6922,7 +6922,11 @@
 !     during non-block sends/recv
 !     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
       noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
-      if(noutvars>nscribes) call parallel_abort('INIT: too few scribes')
+      if (noutvars > nscribes) then
+        write(errmsg, '(A,I0,A,A,I0,A)') 'INIT: Too few scribes (', nscribes , '). ', &
+        ' Please specify atleast equal to number of output variables (', noutvars, ')' 
+        call parallel_abort(errmsg)
+      endif
       if(counter_out_name>max_ncoutvar) call parallel_abort('INIT: increase out_name dim')
       if(myrank==0) then 
         write(16,*)'# of scribe can be set as small as:',noutvars,nscribes
