@@ -417,15 +417,22 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
 
 def Tif2XYZ(tif_fname=None, cache=True):
     cache_name = tif_fname + '.pkl'
-    if not cache:
+
+    if not cache:  # remove existing cache
         if os.path.exists(cache_name):
             os.remove(cache_name)
 
-    if os.path.exists(cache_name):
-        with open(cache_name, 'rb') as f:
-            S = pickle.load(f)
-        pass
-    else:
+    if os.path.exists(cache_name):  # try to load cache
+        try:
+            with open(cache_name, 'rb') as f:
+                S = pickle.load(f)
+        except ModuleNotFoundError:
+            cache=False
+            if os.path.exists(cache_name):
+                os.remove(cache_name)
+
+    # read from raw tif and generate cache
+    if not cache:
         ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
         band = ds.GetRasterBand(1)
 
@@ -559,7 +566,10 @@ def moving_average(a, n=10, self_weights=0):
 
         return ret2
 
-def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0.4, length_width_ratio=6.0, reso_thres=[3, 300], endpoints_scale=1.0, idryrun=False):
+def redistribute_arc(line, line_smooth, channel_width, this_nrow_arcs, smooth_option=1, R_coef=0.4, length_width_ratio=6.0, reso_thres=[5, 300], endpoints_scale=1.0, idryrun=False):
+
+    cross_channel_length_scale = channel_width/this_nrow_arcs
+
     retained_points = np.ones((line.shape[0]), dtype=bool)
 
     if (line.shape[0] < 2):
@@ -602,13 +612,13 @@ def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0
 
     R = 1.0/(curv+1e-10)
     # resolution at points
-    river_resolution = np.minimum(R_coef * R, length_width_ratio * channel_width)
+    river_resolution = np.minimum(R_coef * R, length_width_ratio * cross_channel_length_scale)
     river_resolution = np.minimum(np.maximum(reso_thres[0], river_resolution), reso_thres[1])
 
     if idryrun:
         river_resolution /= 1.0  # testing
 
-    # increase resolution near endpoints for better intersections
+    # deprecated: increase resolution near endpoints for better intersections
     if endpoints_scale != 1.0:
         for k in [0.5, 1, 2]:
             starting_points = np.r_[0.0, np.cumsum(dist_along_thalweg)] < k * np.mean(channel_width)  # tweak within the length of k river widths
@@ -681,15 +691,14 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
     return valid_idx, valid_idx_headtail
 
 def width2narcs(width):
-    width /= 4.0
-    return int(3 + np.floor(0.5*width**0.25))
+    return int(3 + np.floor(0.35*width**0.25))
 
 def make_river_map(
     tif_fnames = [], thalweg_shp_fname = '',
     selected_thalweg = None, cache_folder=None, output_dir = './', output_prefix = '', mpi_print_prefix = '',
     MapUnit2METER = 1, river_threshold = [10, 400], 
     outer_arcs_positions = [],
-    length_width_ratio = 8.0,
+    length_width_ratio = 32.0,
     i_close_poly = True, i_blast_intersection = False,
     blast_radius_scale = 0.6, bomb_radius_coef = 0.4
 ):
@@ -883,7 +892,8 @@ def make_river_map(
             continue
 
         # Redistribute thalwegs vertices
-        thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth, width, length_width_ratio=length_width_ratio, smooth_option=1, endpoints_scale=endpoints_scale, idryrun=True)
+        this_nrow_arcs = min(max_nrow_arcs, width2narcs(np.mean(width)))
+        thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth, width, this_nrow_arcs, length_width_ratio=length_width_ratio, smooth_option=1, endpoints_scale=endpoints_scale, idryrun=True)
         smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]], src_prj='cpp')
         redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
@@ -907,7 +917,8 @@ def make_river_map(
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
         # Redistribute thalwegs vertices
-        thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth[retained_idx], width, length_width_ratio=length_width_ratio, smooth_option=1, endpoints_scale=endpoints_scale)
+        this_nrow_arcs = min(max_nrow_arcs, width2narcs(np.mean(width)))
+        thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth[retained_idx], width, this_nrow_arcs, length_width_ratio=length_width_ratio, smooth_option=1, endpoints_scale=endpoints_scale)
         smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]], src_prj='cpp')
         redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 

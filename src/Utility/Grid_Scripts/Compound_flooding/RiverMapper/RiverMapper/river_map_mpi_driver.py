@@ -118,7 +118,6 @@ def river_map_mpi_driver(
         make_river_map(
             tif_fnames = my_tile_group,
             thalweg_shp_fname = thalweg_shp_fname,
-            thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
             selected_thalweg = my_tile_group_thalwegs,
             cache_folder=cache_folder,
             output_dir = output_dir,
@@ -160,5 +159,5 @@ if __name__ == "__main__":
     river_map_mpi_driver(
         dems_json_file=dems_json_file,
         thalweg_shp_fname=thalweg_shp_fname,
-        output_dir=output_dir,
+        output_dir=output_dir
     )
