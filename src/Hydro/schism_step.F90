@@ -1928,7 +1928,7 @@
 
         j=nf90_inq_varid(ncid_schout(1),"time",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc time')
-        j=nf90_get_att(ncid_schout(1),m,'base_date',time_string)
+        j=nf90_get_att(ncid_schout(1),m,"base_date",time_string)
         !For some reason nf90 does not like start/count for unlimited dim
         j=nf90_get_var(ncid_schout(1),mm,swild13) !,(/1/),(/1/)) !double
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get time')
@@ -1952,7 +1952,7 @@
         icount3=(start_t1-start_t0)*86400.d0/swild13(1)
 
         write(16,*)'done reading time info from hydro_out: ',nstride_schout,nrec_schout, &
-     &nwild(1:3),av_cff1,av_cff2,start_t0,start_t1,icount3
+     &nwild(1:3),av_cff1,av_cff2,start_t0,start_t1,icount3,'; time_string=',time_string
         deallocate(swild13)
       endif !it==
 
