@@ -1928,7 +1928,7 @@
 
         j=nf90_inq_varid(ncid_schout(1),"time",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc time')
-        j=nf90_get_att(ncid_schout(1),m,"base_date",time_string)
+        j=nf90_get_att(ncid_schout(1),mm,"base_date",time_string)
         !For some reason nf90 does not like start/count for unlimited dim
         j=nf90_get_var(ncid_schout(1),mm,swild13) !,(/1/),(/1/)) !double
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get time')
