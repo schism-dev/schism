@@ -41,21 +41,21 @@ Being an implicit model using ELM, SCHISM has a somewhat opposite requirement:
 \text{CFL} \gt 0.4
 \end{equation}
 
-You may be able to get away with $\text{CFL}\gt 0.2$ in some applications like tsunami. Therefore care must be taken in the grid generation process; otherwise numerical diffusion in ELM would ruin your results, which may manifest itself in the form of either noise or dissipation. For a given grid, the errors changes with $\Delta t$ in a nonlinear manner, as shown in Figure [2](#figure02).
+You may be able to get away with $\text{CFL}\gt 0.2$ in some applications like tsunami. Therefore care must be taken in the mesh generation process; otherwise numerical diffusion in ELM would ruin your results, which may manifest itself in the form of either noise or dissipation. For a given mesh, the errors changes with $\Delta t$ in a nonlinear manner, as shown in Figure [2](#figure02).
 
 <figure markdown id='figure02'>
 ![Operating timestep](../assets/timestep-range.png){width=800}
-<figcaption>Operational range for time step for a given grid size.</figcaption>
+<figcaption>Operational range for time step for a given mesh size.</figcaption>
 </figure>
 
-The gridgen process for SCHISM therefore starts with a range of time step for your application, We found the
+The meshgen process for SCHISM therefore starts with a range of time step for your application, We found the
  following ranges work for field applications: 100-400s step for barotropic applications, and 100-200s for
- baroclinic applications. Eqn. $\ref{eq02}$ is then used to calculate the $coarsest$ grid size at each depth 
+ baroclinic applications. Eqn. $\ref{eq02}$ is then used to calculate the $coarsest$ mesh size at each depth 
 (in anticipation of the smallest possible $\Delta t = 100s$). Table [1](#table01) shows some examples. 
 You can see that the inverse CFL restriction is not restrictive.
 
 <div id='table01'></div>
-**Table 1. Coarsest grid resolution at sample depths, assuming a ‘worse case’ scenario of $\Delta t=100s$.**
+**Table 1. Coarsest mesh resolution at sample depths, assuming a ‘worse case’ scenario of $\Delta t=100s$.**
 
 | h(m)   | $\Delta x_{max}$ (m)|
 |--------|---------------------|
@@ -69,11 +69,14 @@ You can see that the inverse CFL restriction is not restrictive.
 
 Three immediate consequences of Eqs. $\ref{eq02}$ are that - 
 
-1. you do not need to reduce $\Delta t$ if you refine grid (yay!)
+1. you do not need to reduce $\Delta t$ if you refine mesh (yay!)
 2. if you have to coarsen mesh, you will have to recheck Eq. $\ref{eq02}$
 3. if you have to reduce the time step for some reason, you may have to refine mesh
 
-The first consequence embodies the greatest strength (efficiency) of SCHISM as an implicit model. If you are doing a convergence study, you need to keep the $\text{CFL}$ number fixed while reducing the time step (which means you have to reduce the grid spacing), as is done with explicit models. Therefore both explicit and implicit models converge (and are consistent) as $\Delta x, \Delta t \rightarrow 0$ and $\frac{\Delta x}{\Delta t} = \text{constant}$.
+The first consequence embodies the greatest strength (efficiency) of SCHISM as an implicit model. (However, if you 
+are doing a convergence study, you need to keep the $\text{CFL}$ number fixed while reducing 
+ the time step (which means you have to reduce the mesh spacing), as is done with explicit models.) 
+ Therefore both explicit and implicit models converge (and are consistent) as $\Delta x, \Delta t \rightarrow 0$ and $\frac{\Delta x}{\Delta t} = \text{constant}$.
 
 !!!notes "Check CFL number in xmgredit5"
     With xmgredit5, you can very easily visualize CFL for the entire grid.
@@ -96,7 +99,7 @@ The first consequence embodies the greatest strength (efficiency) of SCHISM as a
 SCHISM’s superior stability means the model is very forgiving in mesh quality; skewness of triangles (defined 
 as the ratio between the max. side and the equivalent radius) >15 can be used without problem 
 (the skewness can be easily checked with xmgredit5: Evaluate $\rightarrow$ Acceptable skewness). However, 
-for baroclinic applications, mesh quality may be important especially in critical regions. Also note that 
+for baroclinic applications, mesh quality may be important in critical regions. Also note that 
 quality quads are required; always use the pre-processing script `fix_bad_quads.f90` to split bad quads. 
 (You can check quad quality in xmgredit5 $\rightarrow$ Edit $\rightarrow$ Edit over region $\rightarrow$ 
  Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted.)
@@ -105,24 +108,40 @@ Unlike explicit models, you’ll find meshgen for SCHISM is more ‘intuitive’
 Implicit model allows you to focus on physics instead of numerics. You are freer to resolve important features
  (e.g. jetties) without worrying about cost/instability. SCHISM is not picky about mesh quality 
 (except for quads). While the physics generally suggests that coarser resolution be used in deeper
- depths, this is not always the best practice. E.g., you may want to resolve the channel to 
+ depths, this is not always the best practice. E.g., you should resolve the channel to 
 more accurately represent the salt intrusion process.
 
 !!!note "Barotropic simulation"
-    Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution in deeper depths and finer resolution for shallow depths). Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!
+    Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, 
+ you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution 
+ in deeper depths and finer resolution for shallow depths but make sure channels are resolved/unblocked). 
+ Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!
 
 !!!note "Baroclinic simulation"
-    The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic simulations needs some attention. The mesh quality may need to be better in some critical areas (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution in high-flow area would speed up the transport TVD solver. Mesh generation process for baroclinic applications requires more effort and is often an iterative process, and so it’s important to establish a good work flow from the start. 
+    The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic 
+ simulations needs some attention. The mesh quality may need to be better in some critical areas
+  (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, 
+ not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition 
+ in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution 
+ in high-flow area would speed up the transport TVD solver. Mesh generation process for 
+ baroclinic applications requires more effort and is often an iterative process, 
+  and so it’s important to establish a good work flow from the start. In a [later chapter](../mesh-generation/overview.md) 
+ we will cover some advanced topics on meshing eddying and transitional regimes.
 
 !!!notes "Conceptual maps in SMS"
-    While there are many methods for creating conceptual maps in SMS, we typically create representative isobaths (e.g., isobath at the highest gradient that represents slope) first and specify resolution along each arc based on Table [1](#table01). An exmample map is given below. The key is to faithfully capture the main features of DEMs. There are two main types of meshing options in SMS: paving (triangles) and patch (quads) that can be effetively utilized for our purpose.
+    While there are many methods for creating conceptual maps in SMS, we typically extract representative 
+ isobaths (e.g., isobath at the highest gradient that represents slope) first as shapefiles using e.g. GIS tools,
+ and then import the shapefiles into SMS as feature arcs, and specify resolution along each arc 
+ based on Table [1](#table01). An exmample map is given below. The key is to faithfully 
+ capture the main features of DEMs. There are two main types of meshing options in SMS: 
+   paving (triangles) and patch (quads) that can be effetively utilized for our purpose.
 
     <figure markdown id='figure03'>
     ![SMS Map](../assets/sms-map.png){width=800}
     <figcaption>SMS map in a stretch of San Francisco Bay.</figcaption>
     </figure>
 
-## Channels
+## Channels, channels, channels
 Channels serve as the main conduit for fresh and ocean water flow, and thus are very 
  important features for gravitational circulation. When meshing channels, try to use ‘patch’ method 
  to generate quads as much as possible for better efficiency and precise control on cross-channel resolution 
@@ -140,10 +159,13 @@ Channels serve as the main conduit for fresh and ocean water flow, and thus are 
 </figure>
 
 !!!notes "Patch method"
-   It is well known that channelized flow is better simulated using flow-aligned quads. Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
+   It is well known that channelized flow is better simulated using flow-aligned quads. 
+ Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control 
+ on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, 
+ can lead to either excessively large mesh size or inadequate cross-channel resolution.
 
 ## Meshing near wetting and drying
-You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shorelin). 
+You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shoreline). 
  Reasonable mesh transition should be done from shoreline to dryland. Use comparable or finer mesh resolution 
  in the dryland that is expected to be wetted, and then transition to coarser resolution beyond (to account for rare inundation).
 
@@ -176,11 +198,26 @@ Using a larger `thetai` would also stabilize the wetting and drying fronts.
  reduce friction (or even set it to 0).
 
 !!!important "Dredging open boundary"
-    A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an entire open boundary segment to become dry at ANY time (while drying at individual nodes is fine). Therefore you need to make sure the depths there are deep enough compared to expected tidal range. An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.
+    A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow 
+ an **entire** open boundary segment to become dry at ANY time (while drying at individual nodes is fine). 
+ Therefore you need to make sure the depths there are deep enough compared to expected tidal range.  
+ An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) 
+ if the accuracy near the boundary is not of importance.
 
-    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements into the domain, not just at open boundary nodes. This ensures that water can come into the domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at land/island boundaries or interior nodes.
+   Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding 
+ elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements 
+ into the domain, not just at open boundary nodes. This ensures that water can come into the 
+ domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at 
+ land/island boundaries or interior nodes.
 
-    If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location. The most robust option, however, is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code.
+!!!note "Some alternative options"
+    If you care about wetting and drying near the open boundary location, one option is to 
+ relocate the open boundary elsewhere. Also for upstream rivers where depths become negative 
+ and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): 
+ start with a dredged boundary, and then gradually move the bed back to its original location. 
+ The most robust option, however, is to use point sources (`if_source=1`): in this case 
+ no open boundary is required there so wet/dry can happen without crashing the code. However,
+  the open boundary approach is usually the most accurate one.
 
 ## Periodic boundary condition
 Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in `Utility/Pre-Processing/periodic_grid.f90`.
