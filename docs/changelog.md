@@ -60,6 +60,19 @@ To find all the changes between tag releases, search for 'Tag'.
 ## Changes in input and output format
 The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as [param.nml](input-output/param.md)).
 
+- `f8e15ee` (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
+- `bc113eb2` (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;
+- `24a2723` (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added
+                       iof_wwm(31) as dissipation due to vegetation. Also
+                       nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;
+- `c94b2ca` (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;
+- `a0960ed` (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes
+               near tropical islands etc);
+- `ed26f60` (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
+
+Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.10.0: (13 July, 2022)
+
 - `d03830e` (16 May 2022): removed the 2 extra lines required in `partition.prop` (so it's identical to `global_to_local.prop` now);
 - `a71ea69` (12 May 2022): removed `ioffline_partition` and replaced it with CPP (`NO_PARMETIS`) to allow build without ParMETIS lib; renamed `global_to_local.in` as `partition.prop`;
 - `da90a33` (2 May 2022): removed `itr_met=1,2`;

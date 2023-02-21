@@ -5,7 +5,7 @@ git clone https://github.com/schism-dev/schism.git
 cd schism
 ```
 
-This will give you the latest master branch. If you want to get certain tagged versions use the `tag` command of git as `git checkout tags/v5.9.0` - for v5.9.0.
+This will give you the latest master branch. If you want to get certain tagged versions use the `tag` command of git as (for example) `git checkout tags/v5.10.0` - for v5.10.0.
 
 Note that sometimes you might need to add your system’s ssh public key to your github.com account first before cloning. 
 If cloning fails, you can also go to https://github.com/schism-dev and directly download the zip files.
@@ -19,6 +19,8 @@ Due to the large file size inside, the test suite used to test the code is still
 svn co https://columbia.vims.edu/schism/schism_verification_tests
 ```
 
-Note that the test suite is used to test the latest master branch. Due to the differences between the release tags and master branch, you may need to modify some input files (e.g. param.nml) but we hope these tests  how you how we set up models for different problems.
+Note that the test suite is used to test the latest master branch. Due to the differences 
+between the release tags and master branch, you may need to modify some input files (e.g. `param.nml`) 
+but we hope these tests  how you how we set up models for different problems.
 
 Useful user info can be found in src/Readme.beta_notes (including change of format for input files and bug fixes).
