@@ -112,29 +112,13 @@ Implicit model allows you to focus on physics instead of numerics. You are freer
 more accurately represent the salt intrusion process.
 
 !!!note "Barotropic simulation"
-    Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, 
- you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution 
- in deeper depths and finer resolution for shallow depths but make sure channels are resolved/unblocked). 
- Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!
+    Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution in deeper depths and finer resolution for shallow depths but make sure channels are resolved/unblocked).  Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!
 
 !!!note "Baroclinic simulation"
-    The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic 
- simulations needs some attention. The mesh quality may need to be better in some critical areas
-  (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, 
- not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition 
- in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution 
- in high-flow area would speed up the transport TVD solver. Mesh generation process for 
- baroclinic applications requires more effort and is often an iterative process, 
-  and so it’s important to establish a good work flow from the start. In a [later chapter](../mesh-generation/overview.md) 
- we will cover some advanced topics on meshing eddying and transitional regimes.
+    The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic simulations needs some attention. The mesh quality may need to be better in some critical areas (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution in high-flow area would speed up the transport TVD solver. Mesh generation process for baroclinic applications requires more effort and is often an iterative process, and so it’s important to establish a good work flow from the start. In a [later chapter](../mesh-generation/overview.md) we will cover some advanced topics on meshing eddying and transitional regimes.
 
 !!!notes "Conceptual maps in SMS"
-    While there are many methods for creating conceptual maps in SMS, we typically extract representative 
- isobaths (e.g., isobath at the highest gradient that represents slope) first as shapefiles using e.g. GIS tools,
- and then import the shapefiles into SMS as feature arcs, and specify resolution along each arc 
- based on Table [1](#table01). An exmample map is given below. The key is to faithfully 
- capture the main features of DEMs. There are two main types of meshing options in SMS: 
-   paving (triangles) and patch (quads) that can be effetively utilized for our purpose.
+    While there are many methods for creating conceptual maps in SMS, we typically extract representative isobaths (e.g., isobath at the highest gradient that represents slope) first as shapefiles using e.g. GIS tools, and then import the shapefiles into SMS as feature arcs, and specify resolution along each arc based on Table [1](#table01). An exmample map is given below. The key is to faithfully capture the main features of DEMs. There are two main types of meshing options in SMS: paving (triangles) and patch (quads) that can be effetively utilized for our purpose.
 
     <figure markdown id='figure03'>
     ![SMS Map](../assets/sms-map.png){width=800}
@@ -159,10 +143,7 @@ Channels serve as the main conduit for fresh and ocean water flow, and thus are 
 </figure>
 
 !!!notes "Patch method"
-   It is well known that channelized flow is better simulated using flow-aligned quads. 
- Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control 
- on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, 
- can lead to either excessively large mesh size or inadequate cross-channel resolution.
+   It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
 
 ## Meshing near wetting and drying
 You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shoreline). 
@@ -198,11 +179,7 @@ Using a larger `thetai` would also stabilize the wetting and drying fronts.
  reduce friction (or even set it to 0).
 
 !!!important "Dredging open boundary"
-    A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow 
- an **entire** open boundary segment to become dry at ANY time (while drying at individual nodes is fine). 
- Therefore you need to make sure the depths there are deep enough compared to expected tidal range.  
- An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) 
- if the accuracy near the boundary is not of importance.
+    A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an **entire** open boundary segment to become dry at ANY time (while drying at individual nodes is fine).  Therefore you need to make sure the depths there are deep enough compared to expected tidal range.  An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.
 
    Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding 
  elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements 
@@ -210,13 +187,8 @@ Using a larger `thetai` would also stabilize the wetting and drying fronts.
  domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at 
  land/island boundaries or interior nodes.
 
-    If you care about wetting and drying near the open boundary location, one option is to 
- relocate the open boundary elsewhere. Also for upstream rivers where depths become negative 
- and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): 
- start with a dredged boundary, and then gradually move the bed back to its original location. 
- The most robust option, however, is to use point sources (`if_source=1`): in this case 
- no open boundary is required there so wet/dry can happen without crashing the code. However,
-  the open boundary approach is usually the most accurate one.
+!!!note "Alternative options"
+    If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (`imm=1`): start with a dredged boundary, and then gradually move the bed back to its original location.  The most robust option, however, is to use point sources (`if_source=1`): in this case no open boundary is required there so wet/dry can happen without crashing the code. However, the open boundary approach is usually more accurate.
 
 ## Periodic boundary condition
 Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in `Utility/Pre-Processing/periodic_grid.f90`.
