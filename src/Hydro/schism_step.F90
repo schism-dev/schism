@@ -1949,10 +1949,10 @@
           call parallel_abort(errmsg)
         endif
         !Starting cumulative record # (offset) for reading below
-        icount3=(start_t1-start_t0)*86400.d0/swild13(1)
+        irec0_schout=(start_t1-start_t0)*86400.d0/swild13(1)
 
         write(16,*)'done reading time info from hydro_out: ',nstride_schout,nrec_schout, &
-     &nwild(1:3),av_cff1,av_cff2,start_t0,start_t1,icount3,'; time_string=',time_string
+     &nwild(1:3),av_cff1,av_cff2,start_t0,start_t1,irec0_schout,'; time_string=',time_string
         deallocate(swild13)
       endif !it==
 
@@ -1960,14 +1960,14 @@
       if(istat/=0) call parallel_abort('STEP: alloc swild11')
       if(myrank==0) then
         !Calculate stack and record # to read from for step n and n+1
-        istack=(it*nstride_schout+icount3-1)/nrec_schout+1
-        irec2=it*nstride_schout+icount3-(istack-1)*nrec_schout !->time step n (start)
+        istack=(it*nstride_schout+irec0_schout-1)/nrec_schout+1
+        irec2=it*nstride_schout+irec0_schout-(istack-1)*nrec_schout !->time step n (start)
         if(istack<=0.or.irec2<=0.or.irec2>nrec_schout) then
           write(errmsg,*)'STEP: wrong record or stack #, ',istack,irec2
           call parallel_abort(errmsg)
         endif
-        istack4=((it+1)*nstride_schout+icount3-1)/nrec_schout+1 !may exceed max stack #
-        irec4=(it+1)*nstride_schout+icount3-(istack4-1)*nrec_schout !->time step n+1 (new)
+        istack4=((it+1)*nstride_schout+irec0_schout-1)/nrec_schout+1 !may exceed max stack #
+        irec4=(it+1)*nstride_schout+irec0_schout-(istack4-1)*nrec_schout !->time step n+1 (new)
         if(istack4<=0.or.irec4<=0.or.irec4>nrec_schout) then
           write(errmsg,*)'STEP: wrong new record or stack #, ',istack4,irec4
           call parallel_abort(errmsg)
