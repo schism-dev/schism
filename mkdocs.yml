@@ -88,6 +88,13 @@ nav:
     - Atmospheric flux (/sflux): input-output/sflux.md
     - Optional inputs: input-output/optional-inputs.md
     - Outputs: input-output/outputs.md
+  - Mesh generation - advanced topics:
+    - Overview: mesh-generation/overview.md
+    - Meshing for compound floods:
+      - Overview: mesh-generation/meshing-for-compound-floods/overview.md
+      - Extract thalwegs: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
+      - Generate river map: mesh-generation/meshing-for-compound-floods/generate-river-map.md
+      - Meshing in SMS: mesh-generation/meshing-for-compound-floods/meshing-in-SMS.md
   - Modules:
     - Overview: modules/overview.md
     - Generic tracer module: modules/generic-tracer.md
@@ -105,13 +112,6 @@ nav:
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
   - Code structure: code-contribution.md
-  - Mesh generation - advanced topics:
-    - Overview: mesh-generation/overview.md
-    - Meshing for compound floods:
-      - Overview: mesh-generation/meshing-for-compound-floods/overview.md
-      - Extract thalwegs: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
-      - Generate river map: mesh-generation/meshing-for-compound-floods/generate-river-map.md
-      - Meshing in SMS: mesh-generation/meshing-for-compound-floods/meshing-in-SMS.md
   - Verification tests: verification-tests.md
   - Case studies: case-study.md
   - SCHISM external coupling:
