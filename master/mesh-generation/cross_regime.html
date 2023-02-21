@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cross-scale-applications-that-include-eddying-regime" class="md-skip">
+        <a href="#mesh-generation-in-cross-scale-applications-involving-eddying-and-non-eddying-regimes" class="md-skip">
           Skip to content
         </a>
       
@@ -943,15 +943,8 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#cross-scale-applications-that-include-eddying-regime" class="md-nav__link">
-    Cross-scale applications that include eddying regime
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#grid-generation-in-cross-scale-applications" class="md-nav__link">
-    Grid generation in cross-scale applications
+  <a href="#mesh-generation-in-cross-scale-applications-involving-eddying-and-non-eddying-regimes" class="md-nav__link">
+    Mesh generation in cross-scale applications involving eddying and non-eddying regimes
   </a>
   
 </li>
@@ -1503,10 +1496,19 @@
 
   <h1>Meshing for cross-scale regimes</h1>
 
-<h2 id="cross-scale-applications-that-include-eddying-regime">Cross-scale applications that include eddying regime<a class="headerlink" href="#cross-scale-applications-that-include-eddying-regime" title="Permanent link">&para;</a></h2>
+<h2 id="mesh-generation-in-cross-scale-applications-involving-eddying-and-non-eddying-regimes">Mesh generation in cross-scale applications involving eddying and non-eddying regimes<a class="headerlink" href="#mesh-generation-in-cross-scale-applications-involving-eddying-and-non-eddying-regimes" title="Permanent link">&para;</a></h2>
+<p>Mesh generation is most challenging in applications that include eddying (open deep ocean), non-eddying, 
+ and the transitional regimes between the previous two regimes. The challenge here is mostly related to
+   the different physics requirements rather than numerics between eddying and non-eddying regimes. Danilov &amp; Wang (2015)
+  demonstrated that the mesh in the eddying regime should vary smoothly to not distort eddying processes. This
+ is understandable also because the bathymetric variations in the deep ocean do not play as an important role
+ as in non-eddying regime, so there is no compelling reason to drastically vary mesh resolution there. </p>
+<p>One common mistake from users is to over-refine in eddying and transitional regimes. This actually 
+violate the hydrostatic assumption (the horizontal scale &gt;&gt; vertical scale). For example, 
+ setting mesh resolution at 500m at 500m depth would likely lead to spurious 'upwelling'. </p>
 <p>To get a good SCHISM baroclinic setup for this type of applications, one needs to pay attention to </p>
 <ol>
-<li>Horizontal grid</li>
+<li>Horizontal mesh</li>
 <li>Vertical grid: use <span class="arithmatex">\(\text{LSC}^2\)</span>, and at least resolve the surface layer</li>
 <li>Parameterization: especially important are parameters that control momentum dissipation (<code>indvel</code>, <code>ihorcon</code>, <code>ishapiro</code>, <code>dt</code>)</li>
 </ol>
@@ -1519,7 +1521,7 @@
 <p><img alt="SST South China Sea" src="../assets/case-study-scs-sst.png" width="600" /></p>
 <figcaption>Surface temperature (SST) resulted from the grid generated from Figure 1, showing the excessive spurious upwelling of cold water.</figcaption>
 </figure>
-<p>For gridgen, start with modest and quasi-uniform resolution for eddying regime. High resolution (&lt;=2km) in deep water (h&gt;=1km) should be avoided (Figure <a href="#figure01">1</a>) (if this is absolutely required, one needs to reduce time step below 100 sec or apply some special parameterization such as <code>niter_shap</code> etc). At steep slopes, this means that an ‘outer arc’ (in SMS map) may need 3). With the corrected grid, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure <a href="#figure04">4</a>).</p>
+<p>For meshgen, always start with modest and quasi-uniform resolution for eddying regime. High resolution (&lt;=2km) in deep water (h&gt;=1km) should be avoided (Figure <a href="#figure01">1</a>). At steep slopes, this means that an ‘outer arc’ (in SMS map) may be needed). With the corrected mesh, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure <a href="#figure04">4</a>).</p>
 <figure id="figure03">
 <p><img alt="Corrected Grid South China Sea" src="../assets/case-study-scs-corrected.png" width="800" /></p>
 <figcaption>A corrected SMS map file. Outer arcs are added near shelf break of west coast of Luzon and Spratly Islands, but are missing in the southern Philippines.</figcaption>
@@ -1528,14 +1530,12 @@
 <p><img alt="SST South China Sea Corrected grid" src="../assets/case-study-scs-corrected-sst.png" width="600" /></p>
 <figcaption>SST calculated from the corrected grid. The remaining ‘upwelling’ in the circled area is due to the missing outer arcs in that area (cf. Figure 3).</figcaption>
 </figure>
-<p><strong>Parameters</strong> <code>dt=100s</code> (slightly larger values like 120 s should also work), <code>indvel=0</code>, <code>ihorcon=2</code>, <code>ishapiro= -1</code>. <code>shapiro.gr3</code> is then generated using <code>gen_slope_filter2.f90</code> by using larger filter strengths near steep slopes (and small elsewhere). Figure <a href="#figure05">5a</a> shows the resultant input. In general, the momentum needs to be stabilized with larger viscosity near steep slopes, as bi-harmonic viscosity alone is not sufficient there. The I.C. and B.C. can be derived from HYCOM and FES 2014 (i.e. use type ‘5’ for both elevation and velocity B.C.). In addition, tracers are relaxed to HYCOM values near open boundaries (Figure <a href="#figure05">5b</a>). Required pro-processing scripts can be found in <code>Utility/</code>.</p>
+<p><strong>Parameters</strong> <code>dt=100s</code> (slightly larger values like 120 s should also work), <code>indvel=0</code>, <code>ihorcon=2</code>, <code>ishapiro= -1</code>. <code>shapiro.gr3</code> is then generated using <code>gen_slope_filter2.f90</code> by using larger filter strengths near steep slopes (and small elsewhere). Figure <a href="#figure05">5a</a> shows the resultant input. In general, the momentum needs to be stabilized with larger viscosity near steep slopes, as bi-harmonic viscosity alone is not sufficient there. Other pre-processing is same as before: the I.C. and B.C. can be derived from HYCOM and FES 2014 (i.e. use type ‘5’ for both elevation and velocity B.C.). In addition, tracers are relaxed to HYCOM values near open boundaries (Figure <a href="#figure05">5b</a>). Required pro-processing scripts can be found in <code>Utility/</code>.</p>
 <p>Starting from v5.9, users can also try the new Smagorinsky–like filter option (<code>ishapiro=2</code>) with a proper <code>shapiro0</code>.</p>
 <figure id="figure05">
 <p><img alt="Shapiro filter South China Sea" src="../assets/case-study-scs-shapiro.png" width="600" /></p>
 <figcaption>(a) Filter strength input (shapiro.gr3). Larger values are used near steep slopes. (b) Nudging strength input (TEM_nudge.gr3, SAL_nudge.gr3), generated from gen_slope_filter2.f90, with maximum time scale of 1 day.</figcaption>
 </figure>
-<h2 id="grid-generation-in-cross-scale-applications">Grid generation in cross-scale applications<a class="headerlink" href="#grid-generation-in-cross-scale-applications" title="Permanent link">&para;</a></h2>
-<p>Mesh generation is most challenging in applications that include eddying and transitional regimes (i.e. with open deep ocean water). This is because users often tend to over-refine in these regimes, thus violate the hydrostatic assumption (the horizontal scale &gt;&gt; vertical scale). For example, setting mesh resolution at 500m at 500m depth would likely lead to spurious upwelling discussed in the previous sub-section. If sub-mesoscale processes are of interest, users will need to apply some treatments such as reducing the time step and using iterative viscosity filter etc.</p>
 <p>This challenge is particularly acute when one deals with islands sitting on top of steep slopes. Figure <a href="#figure06">6</a> shows 3 attempts to add high resolution near Guam in the Pacific basin mesh. The mesh resolution in the surrounding deep ocean is about 5km, and we need to refine the mesh to about 30m around Guam. The Apra Harbor jetty that requires higher resolution happens to be located close to a steep slope. Combination of wet/dry and forced sharp transition in ‘new14’ and ‘new15’ led to spread of upwelled water there. Removing an inner arc in ‘new15’ helped smoother transition from the outer arc to the inner arc and thus alleviated the upwelling issue. In ‘new16’, we made more ‘room’ for transition by moving the inner arc away from the outer arc and coarsening it a little (to match the resolution of the outer arc), thus further reducing the upwelling. However, we had to add more internal arcs to provide adequate resolution nearshore (otherwise the nearshore area would be represented by a few skew elements that have side lengths of a few km’s on the outside and 30m on the inside). Figure <a href="#figure07">7</a> shows the details of ‘new16’ and final mesh. Note that in all three maps, we used 500m isobaths for the outer arc (as representation of start of eddying regime) but the arc veered to 1km isobaths near the harbor as a way to make more room for transition there.</p>
 <figure id="figure06">
 <p><img alt="Guam case study" src="../assets/case-study-guam.png" width="800" /></p>
@@ -1545,6 +1545,10 @@
 <p><img alt="Guam case study zoom" src="../assets/case-study-guam-zoom.png" width="800" /></p>
 <figcaption>Details for map ‘new16’ and the final mesh around Apra Harbor. Skew elements nearshore are fine.</figcaption>
 </figure>
+<div class="admonition note">
+<p class="admonition-title">Sub-mesoscale</p>
+</div>
+<p>If sub-mesoscale processes are of interest, one may need to reduce time step below 100 sec or apply some special parameterization such as <code>niter_shap</code> etc.</p>
 
               
             </article>
