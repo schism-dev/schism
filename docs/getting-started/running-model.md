@@ -1,4 +1,4 @@
-To simulate the model, the model executable needs to be run inside the folder where all the model files reside. The following inputs are minimum - 
+The model executable needs to be run inside the folder where all the model input files reside. The following inputs are minimum - 
 
 1. hgrid.gr3
 2. vgrid.in
@@ -8,16 +8,16 @@ To simulate the model, the model executable needs to be run inside the folder wh
 
 The model is usually run through a batch script, which in essence executes the code like:
 
-- `mpirun -np NPROC ./pschism  <# scribes>` if OLDIO is OFF 
-- `mpirun -np NPROC ./pschism ` if OLDIO is ON
+- `mpirun -np NPROC ./pschism  <# scribes>`  (if OLDIO is OFF)
+- `mpirun -np NPROC ./pschism ` (if OLDIO is ON)
 
 where NPROC is the number of process used for parallel computing. Note that your system may require 
- other commands than `mpirun` or more arguments.
+ other commands than `mpirun` or more arguments. You can find example batch scripts in `Utility/Cluster_files`.
 
 !!!caution "Scribed IO"
     Shortly after [v5.9.0](https://github.com/schism-dev/schism/commit/8efc374) we have implemented a new I/O mode called scribed I/O. 
     
-Under scribed IO mode, the outputs are combined during the model simulation by dedicated cores for combining. Efficient asynchronous message passing is done inside the code for I/O that minimizes latency.
+Under scribed IO mode, the outputs are combined during the model simulation by dedicated "scribed" cores. Efficient asynchronous message passing is done inside the code for I/O that minimizes latency.
 
 Some details for using scribed IO mode are following:
     
