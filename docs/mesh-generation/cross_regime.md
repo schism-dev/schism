@@ -1,4 +1,3 @@
-## Mesh generation in cross-scale applications involving eddying and non-eddying regimes
 Mesh generation is most challenging in applications that include eddying (open deep ocean), non-eddying, 
  and the transitional regimes between the previous two regimes. The challenge here is mostly related to
    the different physics requirements rather than numerics between eddying and non-eddying regimes. Danilov & Wang (2015)
@@ -6,9 +5,9 @@ Mesh generation is most challenging in applications that include eddying (open d
  is understandable also because the bathymetric variations in the deep ocean do not play as an important role
  as in non-eddying regime, so there is no compelling reason to drastically vary mesh resolution there. 
 
-One common mistake from users is to over-refine in eddying and transitional regimes. This actually 
+One common mistake users make is to over-refine in eddying and transitional regimes. This actually 
 violate the hydrostatic assumption (the horizontal scale >> vertical scale). For example, 
- setting mesh resolution at 500m at 500m depth would likely lead to spurious 'upwelling'. 
+ setting mesh resolution at 500m at 500m depth would likely lead to spurious 'upwelling' (Figure [2](#figure02)). 
 
 To get a good SCHISM baroclinic setup for this type of applications, one needs to pay attention to 
 
@@ -16,7 +15,7 @@ To get a good SCHISM baroclinic setup for this type of applications, one needs t
 2. Vertical grid: use $\text{LSC}^2$, and at least resolve the surface layer
 3. Parameterization: especially important are parameters that control momentum dissipation (`indvel`, `ihorcon`, `ishapiro`, `dt`)
 
-The case study on South China Sea (SCS) shown below illustrates some common mistakes made by users (Figure [1](#figure01)). A particularly severe challenge is a transitional regime (between eddying and non-eddying regimes) with steep slopes that tend to excite parasitic noises, and a common symptom for this manifests itself as spurious upwelling of cold water (Figure [2](#figure02)).
+The example of South China Sea (SCS) shown below illustrates this type of mistakes made by users (Figure [1](#figure01)). A particularly severe challenge is a transitional regime (between eddying and non-eddying regimes) with steep slopes that tend to excite parasitic noises (if the mesh resolution is too fine), and a common symptom for this manifests itself as spurious upwelling of cold water (Figure [2](#figure02)).
 
 <figure markdown id='figure01'>
 ![Grid South China Sea](../assets/case-study-scs.png){width=800}
@@ -28,7 +27,8 @@ The case study on South China Sea (SCS) shown below illustrates some common mist
 <figcaption>Surface temperature (SST) resulted from the grid generated from Figure 1, showing the excessive spurious upwelling of cold water.</figcaption>
 </figure>
 
-For meshgen, always start with modest and quasi-uniform resolution for eddying regime. High resolution (<=2km) in deep water (h>=1km) should be avoided (Figure [1](#figure01)). At steep slopes, this means that an ‘outer arc’ (in SMS map) may be needed). With the corrected mesh, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure [4](#figure04)).
+For meshgen, always start with modest and quasi-uniform resolution for eddying regime. In SMS,
+ this can be achieved with fewer constraints in the form of arcs. High resolution (<=2km) in deep water (h>=1km) should be avoided (Figure [1](#figure01)). At steep slopes, this means that an ‘outer arc’ (in SMS map) may be needed). With the corrected mesh, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure [4](#figure04)).
 
 <figure markdown id='figure03'>
 ![Corrected Grid South China Sea](../assets/case-study-scs-corrected.png){width=800}
@@ -49,7 +49,7 @@ Starting from v5.9, users can also try the new Smagorinsky–like filter option 
 <figcaption>(a) Filter strength input (shapiro.gr3). Larger values are used near steep slopes. (b) Nudging strength input (TEM_nudge.gr3, SAL_nudge.gr3), generated from gen_slope_filter2.f90, with maximum time scale of 1 day.</figcaption>
 </figure>
 
-This challenge is particularly acute when one deals with islands sitting on top of steep slopes. Figure [6](#figure06) shows 3 attempts to add high resolution near Guam in the Pacific basin mesh. The mesh resolution in the surrounding deep ocean is about 5km, and we need to refine the mesh to about 30m around Guam. The Apra Harbor jetty that requires higher resolution happens to be located close to a steep slope. Combination of wet/dry and forced sharp transition in ‘new14’ and ‘new15’ led to spread of upwelled water there. Removing an inner arc in ‘new15’ helped smoother transition from the outer arc to the inner arc and thus alleviated the upwelling issue. In ‘new16’, we made more ‘room’ for transition by moving the inner arc away from the outer arc and coarsening it a little (to match the resolution of the outer arc), thus further reducing the upwelling. However, we had to add more internal arcs to provide adequate resolution nearshore (otherwise the nearshore area would be represented by a few skew elements that have side lengths of a few km’s on the outside and 30m on the inside). Figure [7](#figure07) shows the details of ‘new16’ and final mesh. Note that in all three maps, we used 500m isobaths for the outer arc (as representation of start of eddying regime) but the arc veered to 1km isobaths near the harbor as a way to make more room for transition there.
+The meshing challenge is particularly acute when one deals with islands sitting on top of steep slopes. Figure [6](#figure06) shows 3 attempts to add high resolution near Guam in the Pacific basin mesh. The mesh resolution in the surrounding deep ocean is about 5km, and we need to refine the mesh to about 30m around Guam. The Apra Harbor jetty that requires higher resolution happens to be located close to a steep slope. Combination of wet/dry and forced sharp transition in ‘new14’ and ‘new15’ led to spread of upwelled water there. Removing an inner arc in ‘new15’ helped smoother transition from the outer arc to the inner arc and thus alleviated the upwelling issue. In ‘new16’, we made more ‘room’ for transition by moving the inner arc away from the outer arc and coarsening it a little (to match the resolution of the outer arc), thus further reducing the upwelling. However, we had to add more internal arcs to provide adequate resolution nearshore (otherwise the nearshore area would be represented by a few skew elements that have side lengths of a few km’s on the outside and 30m on the inside). Figure [7](#figure07) shows the details of ‘new16’ and final mesh. Note that in all three maps, we used 500m isobaths for the outer arc (as representation of start of eddying regime) but the arc veered to 1km isobaths near the harbor as a way to make more room for transition there.
 
 <figure markdown id='figure06'>
 ![Guam case study](../assets/case-study-guam.png){width=800}
