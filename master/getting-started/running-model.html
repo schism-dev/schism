@@ -1448,7 +1448,7 @@
 
   <h1>Running the model</h1>
 
-<p>To simulate the model, the model executable needs to be run inside the folder where all the model files reside. The following inputs are minimum - </p>
+<p>The model executable needs to be run inside the folder where all the model input files reside. The following inputs are minimum - </p>
 <ol>
 <li>hgrid.gr3</li>
 <li>vgrid.in</li>
@@ -1458,16 +1458,16 @@
 </ol>
 <p>The model is usually run through a batch script, which in essence executes the code like:</p>
 <ul>
-<li><code>mpirun -np NPROC ./pschism  &lt;# scribes&gt;</code> if OLDIO is OFF </li>
-<li><code>mpirun -np NPROC ./pschism</code> if OLDIO is ON</li>
+<li><code>mpirun -np NPROC ./pschism  &lt;# scribes&gt;</code>  (if OLDIO is OFF)</li>
+<li><code>mpirun -np NPROC ./pschism</code> (if OLDIO is ON)</li>
 </ul>
 <p>where NPROC is the number of process used for parallel computing. Note that your system may require 
- other commands than <code>mpirun</code> or more arguments.</p>
+ other commands than <code>mpirun</code> or more arguments. You can find example batch scripts in <code>Utility/Cluster_files</code>.</p>
 <div class="admonition caution">
 <p class="admonition-title">Scribed IO</p>
 <p>Shortly after <a href="https://github.com/schism-dev/schism/commit/8efc374">v5.9.0</a> we have implemented a new I/O mode called scribed I/O. </p>
 </div>
-<p>Under scribed IO mode, the outputs are combined during the model simulation by dedicated cores for combining. Efficient asynchronous message passing is done inside the code for I/O that minimizes latency.</p>
+<p>Under scribed IO mode, the outputs are combined during the model simulation by dedicated "scribed" cores. Efficient asynchronous message passing is done inside the code for I/O that minimizes latency.</p>
 <p>Some details for using scribed IO mode are following:</p>
 <ul>
 <li>The user needs to specify at runtime how many 'scribe' cores they want to use. The # of scribes= # of 3D outputs (vectors counted as 2) plus 1 (the one that is used for all 2D variables).</li>

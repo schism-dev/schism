@@ -1496,11 +1496,11 @@
 
   <h1>Postprocessing</h1>
 
-<p>You can find some useful post-processing tools in the src/Utility directory. </p>
+<p>You can find some useful post-processing tools in the <code>src/Utility</code> directory. </p>
 <h2 id="combining-scripts">Combining scripts<a class="headerlink" href="#combining-scripts" title="Permanent link">&para;</a></h2>
 <p><code>combine_output11.f90</code> is used to combine process-specific netcdf to global netcdf. 
 <code>autocombine_MPI_elfe.pl</code> is a simple perl wrapper script that automatically combines 
-all available outputs during or after the run. Use these if you invoked OLDIO.</p>
+all available outputs during or after the run. Use these if you invoked <code>OLDIO</code> in make.</p>
 <p><code>combine_hotstart7.f90</code> is used combine process-specific hotstart outputs (<code>outputs/hotstart_0*.nc</code>)
  into <code>hotstart.nc</code>. This is required even if you used scribed I/O (as hotstart outputs are still be emitted per MPI
  process).</p>
@@ -1515,8 +1515,8 @@ After you are familiar with these scripts, you can easily customize them for you
 <h2 id="one-way-nesting">One-way nesting<a class="headerlink" href="#one-way-nesting" title="Permanent link">&para;</a></h2>
 <p><code>OneWayNestScripts/interpolate_variables7.f90</code>: The purpose of this script is to generate <code>elev2D.th.nc</code>, 
 <code>SAL_3D.th.nc</code>, <code>TEM_3D.th.nc</code> and/or <code>uv3D.th.nc</code> from a large-domain run to be used in a small-domain run. 
-This is of limited utility now because <code>uv3D.th.nc</code> for the sub-tidal component 
-can be generated using e.g. HYCOM.</p>
+This is of limited utility now because <code>uv3D.th.nc</code> etc for the sub-tidal component 
+can be generated using HYCOM or other large-scale models or observation.</p>
 <p>To prepare for the nesting, first do a 2D barotropic run for a larger or same grid, with only elevation b.c. Note that 2D model is inherently more stable than 3D model, and to further enhance stability, make sure you use <code>indvel=1 (ishapiro=ihorcon=0)</code>, <code>thetai=1</code>, and also use a large Manning’s <span class="arithmatex">\(n\)</span> (e.g., 0.025 or larger) near the boundary. Once this is done</p>
 <ol>
 <li>use interpolate_variables7.f90 to generate *[23]D.th.nc for the small-domain run;</li>

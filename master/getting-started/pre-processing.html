@@ -1524,16 +1524,17 @@
 
   <h1>Preprocessing</h1>
 
-<p>All .gr3 and .prop inputs can be visualized/generated using xmgredit5. For other inputs, you can find some useful pre-proc tools in the src/Utility directory. In general, all FORTRAN scripts have a header that explains its purpose, how to use it (inputs/outputs) and sample compilation command.</p>
+<p>All .gr3 and .prop inputs can be visualized/generated using xmgredit5. For other inputs, you can find some useful pre-proc tools in the src/Utility directory. In general, all of our FORTRAN scripts have a header that explains its purpose, how to use it (inputs/outputs) and sample compilation command.</p>
 <h2 id="grid-conversion">Grid conversion<a class="headerlink" href="#grid-conversion" title="Permanent link">&para;</a></h2>
 <p><code>2dm2gr3_m2m.pl</code> and <code>grd2sms.pl</code> : These 2 perl scripts are used to convert between .2dm (SMS) and .gr3.</p>
 <h2 id="interpolation">Interpolation<a class="headerlink" href="#interpolation" title="Permanent link">&para;</a></h2>
 <p><code>interpolate_unstructured.f90</code>: This efficient script can be used to interpolate depths from .gr3 onto another 
-.gr3 quickly. It uses a bucket search algorithm along either x or y direction.</p>
+.gr3 quickly. It uses a bucket search algorithm along either x or y direction. 
+ To interpolate from raster files (.asc), use <code>interpolate_depth_structured2.f90</code>.</p>
 <h2 id="lsc2-scripts"><span class="arithmatex">\(LSC^2\)</span> scripts<a class="headerlink" href="#lsc2-scripts" title="Permanent link">&para;</a></h2>
-<p><code>gen_vqs.f90</code> and <code>plot_VQS.m</code>: The FORTRAN script can be used as a start for creating a LSC2 grid and you need to use the matlab script to plot out transects to see if the vertical grid makes sense. You may lump multiple transects into 1 transect.bp. If you want to use this type of vgrid, make sure you go through the FORTRAN carefully and understand the details.</p>
+<p><code>gen_vqs.f90</code> and <code>plot_VQS.m</code>: The FORTRAN script can be used as a start for creating a <span class="arithmatex">\(LSC^2\)</span> grid and you need to use the matlab script to plot out transects to see if the vertical grid makes sense. You may lump multiple transects into 1 <code>transect.bp</code>. If you want to use this type of vgrid, make sure you go through the FORTRAN script carefully and understand the details.</p>
 <h2 id="nudging-scripts">Nudging scripts<a class="headerlink" href="#nudging-scripts" title="Permanent link">&para;</a></h2>
-<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>: the two scripts generate either a simple elliptic nudging zone or a zone with fixed distance from boundary as *_nudge.gr3. </p>
+<p><code>gen_nudge.f90</code>, <code>gen_nudge2.f90</code>: the two scripts generate either a simple elliptic nudging zone or a zone with fixed distance from boundary as <code>*_nudge.gr3</code>. </p>
 <p><code>gen_nudge_from_hycom.f90</code>: This
 script generates the actual nudge data for tracers <code>*_nu.nc</code> from HYCOM (you may modify this 
 for other gridded data sources from other structured-grid models).</p>
@@ -1547,14 +1548,15 @@ for other gridded data sources from other structured-grid models).</p>
 <p>You'll only need to do this if you invoked offline partitioning in compilation (e.g. with <code>NO_PARMETIS</code> turned ON in cmake)
  to bypass ParMETIS.
 If so, you'll need to prepare an input called <code>partion.prop</code> (which is essentially the MPI process # for each element).</p>
-<p>Step 1: build METIS v5.1.0 by (<code>src/metis-5.1.0</code>) following README inside. You only need gpmetis (for VIMS users, it's in <code>/sciclone/home10/yinglong/git/schism/src/metis-5.1.0/build/Linux-x86_64/programs/gpmetis</code>)</p>
-<p>Step 2: run a pre-processor for METIS: <code>src/Utility/Grid_Scripts/metis_prep.f90</code>, which only requires hgrid.gr3 
-   (with B.C. parts) and vgrid.in, to get <code>graphinfo</code>;</p>
+<p>Step 1: build METIS v5.1.0 by (<code>src/metis-5.1.0</code>) following README inside. You only need gpmetis. </p>
+<p>Step 2: run a pre-processor for METIS: <code>src/Utility/Grid_Scripts/metis_prep.f90</code>, which only requires <code>hgrid.gr3</code> 
+   (with B.C. parts) and <code>vgrid.in</code>, to get <code>graphinfo</code>;</p>
 <p>Step 3: run METIS: <code>./gpmetis graphinfo &lt;nproc&gt; -ufactor=1.01 -seed=15</code> </p>
 <p>where <code>&lt;nproc&gt;</code> is # of 
    compute cores excluding scribes. The output is <code>graphinfo.part.&lt;nproc&gt;</code>, and then use awk to get <code>partion.prop</code>:</p>
 <p><code>awk '{print NR,$0}' graphinfo.part.&lt;nproc&gt; &gt; partition.prop</code></p>
 <p>(replace <code>&lt;nproc&gt;</code> with actual # of cores).</p>
+<p>(For VIMS users, there is a simple perl wrapper in <code>/sciclone/home10/yinglong/bin/partition_offline.pl</code>)</p>
 
               
             </article>
