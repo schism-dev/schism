@@ -1644,37 +1644,20 @@ Implicit model allows you to focus on physics instead of numerics. You are freer
 more accurately represent the salt intrusion process.</p>
 <div class="admonition note">
 <p class="admonition-title">Barotropic simulation</p>
-<p>Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, </p>
+<p>Mesh quality requirement is relatively lax for barotropic simulations. Besides the considerations above, you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution in deeper depths and finer resolution for shallow depths but make sure channels are resolved/unblocked).  Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!</p>
 </div>
-<p>you mainly need to use appropriate resolution based on physics (e.g., generally coarser resolution 
- in deeper depths and finer resolution for shallow depths but make sure channels are resolved/unblocked). 
- Most important task is to accurately capture the water volume for tide propagation. Remember: you are on implicit UG territory, and so you are free to resolve features as you wish!</p>
 <div class="admonition note">
 <p class="admonition-title">Baroclinic simulation</p>
-<p>The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic </p>
+<p>The transport process is influenced by your choice of mesh, and so the meshgen for baroclinic simulations needs some attention. The mesh quality may need to be better in some critical areas (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution in high-flow area would speed up the transport TVD solver. Mesh generation process for baroclinic applications requires more effort and is often an iterative process, and so it’s important to establish a good work flow from the start. In a <a href="../mesh-generation/overview.html">later chapter</a> we will cover some advanced topics on meshing eddying and transitional regimes.</p>
 </div>
-<p>simulations needs some attention. The mesh quality may need to be better in some critical areas
-  (otherwise you may see noise). Quasi-uniform grid needs to be used in the eddying regime, 
- not for stability but to avoid distortion of eddies (Zhang et al. 2016); gradual transition 
- in resolution should be used as much as possible for eddying regime. Avoiding excessive resolution 
- in high-flow area would speed up the transport TVD solver. Mesh generation process for 
- baroclinic applications requires more effort and is often an iterative process, 
-  and so it’s important to establish a good work flow from the start. In a <a href="../mesh-generation/overview.html">later chapter</a> 
- we will cover some advanced topics on meshing eddying and transitional regimes.</p>
 <div class="admonition notes">
 <p class="admonition-title">Conceptual maps in SMS</p>
-<p>While there are many methods for creating conceptual maps in SMS, we typically extract representative </p>
+<p>While there are many methods for creating conceptual maps in SMS, we typically extract representative isobaths (e.g., isobath at the highest gradient that represents slope) first as shapefiles using e.g. GIS tools, and then import the shapefiles into SMS as feature arcs, and specify resolution along each arc based on Table <a href="#table01">1</a>. An exmample map is given below. The key is to faithfully capture the main features of DEMs. There are two main types of meshing options in SMS: paving (triangles) and patch (quads) that can be effetively utilized for our purpose.</p>
+<p><figure markdown id='figure03'>
+<img alt="SMS Map" src="../assets/sms-map.png" width="800" />
+<figcaption>SMS map in a stretch of San Francisco Bay.</figcaption>
+</figure></p>
 </div>
-<p>isobaths (e.g., isobath at the highest gradient that represents slope) first as shapefiles using e.g. GIS tools,
- and then import the shapefiles into SMS as feature arcs, and specify resolution along each arc 
- based on Table <a href="#table01">1</a>. An exmample map is given below. The key is to faithfully 
- capture the main features of DEMs. There are two main types of meshing options in SMS: 
-   paving (triangles) and patch (quads) that can be effetively utilized for our purpose.</p>
-<div class="highlight"><pre><span></span><code>&lt;figure markdown id=&#39;figure03&#39;&gt;
-![SMS Map](../assets/sms-map.png){width=800}
-&lt;figcaption&gt;SMS map in a stretch of San Francisco Bay.&lt;/figcaption&gt;
-&lt;/figure&gt;
-</code></pre></div>
 <h2 id="channels-channels-channels">Channels, channels, channels<a class="headerlink" href="#channels-channels-channels" title="Permanent link">&para;</a></h2>
 <p>Channels serve as the main conduit for fresh and ocean water flow, and thus are very 
  important features for gravitational circulation. When meshing channels, try to use ‘patch’ method 
@@ -1693,10 +1676,7 @@ more accurately represent the salt intrusion process.</p>
 <div class="admonition notes">
 <p class="admonition-title">Patch method</p>
 </div>
-<p>It is well known that channelized flow is better simulated using flow-aligned quads. 
- Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control 
- on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, 
- can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
+<p>It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
 <h2 id="meshing-near-wetting-and-drying">Meshing near wetting and drying<a class="headerlink" href="#meshing-near-wetting-and-drying" title="Permanent link">&para;</a></h2>
 <p>You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shoreline). 
  Reasonable mesh transition should be done from shoreline to dryland. Use comparable or finer mesh resolution 
@@ -1725,25 +1705,17 @@ Using a larger <code>thetai</code> would also stabilize the wetting and drying f
  reduce friction (or even set it to 0).</p>
 <div class="admonition important">
 <p class="admonition-title">Dredging open boundary</p>
-<p>A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow </p>
+<p>A very common crash is related to the wet/dry near the open boundary. SCHISM does NOT allow an <strong>entire</strong> open boundary segment to become dry at ANY time (while drying at individual nodes is fine).  Therefore you need to make sure the depths there are deep enough compared to expected tidal range.  An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) if the accuracy near the boundary is not of importance.</p>
 </div>
-<p>an <strong>entire</strong> open boundary segment to become dry at ANY time (while drying at individual nodes is fine). 
- Therefore you need to make sure the depths there are deep enough compared to expected tidal range.<br />
- An easy way is to impose a minimum depth near those segments (which can be done using xmgredit5) 
- if the accuracy near the boundary is not of importance.</p>
 <p>Since the wet/dry rule inside SCHISM is element-based, a node becomes dry if all of its surrounding 
  elements become dry. As a result, you may need to impose a minimum depth a couple of rows of elements 
  into the domain, not just at open boundary nodes. This ensures that water can come into the 
  domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at 
  land/island boundaries or interior nodes.</p>
-<div class="highlight"><pre><span></span><code>If you care about wetting and drying near the open boundary location, one option is to
-</code></pre></div>
-<p>relocate the open boundary elsewhere. Also for upstream rivers where depths become negative 
- and you do not want to dredge depths there, you can use the bed deformation option (<code>imm=1</code>): 
- start with a dredged boundary, and then gradually move the bed back to its original location. 
- The most robust option, however, is to use point sources (<code>if_source=1</code>): in this case 
- no open boundary is required there so wet/dry can happen without crashing the code. However,
-  the open boundary approach is usually the most accurate one.</p>
+<div class="admonition note">
+<p class="admonition-title">Alternative options</p>
+<p>If you care about wetting and drying near the open boundary location, one option is to relocate the open boundary elsewhere. Also for upstream rivers where depths become negative and you do not want to dredge depths there, you can use the bed deformation option (<code>imm=1</code>): start with a dredged boundary, and then gradually move the bed back to its original location.  The most robust option, however, is to use point sources (<code>if_source=1</code>): in this case no open boundary is required there so wet/dry can happen without crashing the code. However, the open boundary approach is usually more accurate.</p>
+</div>
 <h2 id="periodic-boundary-condition">Periodic boundary condition<a class="headerlink" href="#periodic-boundary-condition" title="Permanent link">&para;</a></h2>
 <p>Implementing this type of B.C. in SCHISM introduces some challenges in the barotropic solver because it’d destroy the symmetry of the matrix and cause blowup if the conditioning is sufficiently bad. A workaround is to ‘drape’ the hgrid onto a sphere to avoid the corresponding open boundary segments altogether. A simple script to guide this process can be found in <code>Utility/Pre-Processing/periodic_grid.f90</code>.</p>
 <div class="admonition note">
