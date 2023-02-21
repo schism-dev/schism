@@ -1736,10 +1736,8 @@ Using a larger <code>thetai</code> would also stabilize the wetting and drying f
  into the domain, not just at open boundary nodes. This ensures that water can come into the 
  domain without being blocked at the open boundary. Note that wet/dry is allowed to occur at 
  land/island boundaries or interior nodes.</p>
-<div class="admonition note">
-<p class="admonition-title">Some alternative options</p>
-<p>If you care about wetting and drying near the open boundary location, one option is to </p>
-</div>
+<div class="highlight"><pre><span></span><code>If you care about wetting and drying near the open boundary location, one option is to
+</code></pre></div>
 <p>relocate the open boundary elsewhere. Also for upstream rivers where depths become negative 
  and you do not want to dredge depths there, you can use the bed deformation option (<code>imm=1</code>): 
  start with a dredged boundary, and then gradually move the bed back to its original location. 
