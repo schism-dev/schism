@@ -90,6 +90,7 @@ nav:
     - Outputs: input-output/outputs.md
   - Mesh generation - advanced topics:
     - Overview: mesh-generation/overview.md
+    - Meshing for cross-scale regimes: mesh-generation/cross_regime.md
     - Meshing for compound floods:
       - Overview: mesh-generation/meshing-for-compound-floods/overview.md
       - Extract thalwegs: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
