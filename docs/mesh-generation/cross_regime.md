@@ -63,3 +63,6 @@ The meshing challenge is particularly acute when one deals with islands sitting 
 
 !!!note "Sub-mesoscale"
 If sub-mesoscale processes are of interest, one may need to reduce time step below 100 sec or apply some special parameterization such as `niter_shap` etc.
+
+##References
+Danilov, Sergey & Wang, Qiang. (2015). Resolving eddies by local mesh refinement. Ocean Modelling. 93. 10.1016/j.ocemod.2015.07.006. 
