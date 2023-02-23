@@ -14,6 +14,8 @@ from shapely.ops import split
 from shapely.geometry import Point, LineString
 from geopandas import GeoSeries
 import geopandas as gpd
+from shapely.ops import polygonize, unary_union
+from sklearn.feature_selection import mutual_info_classif
 
 
 np.seterr(all='raise')
@@ -418,51 +420,51 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
 def Tif2XYZ(tif_fname=None, cache=True):
     cache_name = tif_fname + '.pkl'
 
-    if not cache:  # remove existing cache
+    if cache:
+        if os.path.exists(cache_name):  # try to load cache
+            try:
+                with open(cache_name, 'rb') as f:
+                    S = pickle.load(f)
+                    return S  # cache successfully read
+            except ModuleNotFoundError:
+                # remove existing cache if failing to read from it
+                if os.path.exists(cache_name):
+                    os.remove(cache_name)
+    else:  # remove existing cache if cache=False
         if os.path.exists(cache_name):
             os.remove(cache_name)
 
-    if os.path.exists(cache_name):  # try to load cache
-        try:
-            with open(cache_name, 'rb') as f:
-                S = pickle.load(f)
-        except ModuleNotFoundError:
-            cache=False
-            if os.path.exists(cache_name):
-                os.remove(cache_name)
-
     # read from raw tif and generate cache
-    if not cache:
-        ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
-        band = ds.GetRasterBand(1)
+    ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
 
-        width = ds.RasterXSize
-        height = ds.RasterYSize
+    width = ds.RasterXSize
+    height = ds.RasterYSize
 
-        gt = ds.GetGeoTransform()
-        TL_x, TL_y = gt[0], gt[3]
+    gt = ds.GetGeoTransform()
+    TL_x, TL_y = gt[0], gt[3]
 
-        #showing a 2D image of the topo
-        # plt.imshow(elevation, cmap='gist_earth',extent=[minX, maxX, minY, maxY])
-        # plt.show()
+    #showing a 2D image of the topo
+    # plt.imshow(elevation, cmap='gist_earth',extent=[minX, maxX, minY, maxY])
+    # plt.show()
 
-        z = band.ReadAsArray()
+    z = band.ReadAsArray()
 
-        dx = gt[1]
-        dy = gt[5]
-        if gt[2] != 0 or gt[4] != 0:
-            raise Exception()
+    dx = gt[1]
+    dy = gt[5]
+    if gt[2] != 0 or gt[4] != 0:
+        raise Exception()
 
-        x_idx = np.array(range(width))
-        y_idx = np.array(range(height))
-        xp = dx * x_idx + TL_x + dx/2
-        yp = dy * y_idx + TL_y + dy/2
+    x_idx = np.array(range(width))
+    y_idx = np.array(range(height))
+    xp = dx * x_idx + TL_x + dx/2
+    yp = dy * y_idx + TL_y + dy/2
 
-        S = dem_data(xp, yp, xp, yp, z, dx, dy)
-        with open(cache_name, 'wb') as f:
-            pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
+    S = dem_data(xp, yp, xp, yp, z, dx, dy)
+    with open(cache_name, 'wb') as f:
+        pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        ds = None  # close dataset
+    ds = None  # close dataset
 
     return S
 
@@ -871,6 +873,7 @@ def make_river_map(
     bank_arcs_raw = deepcopy(bank_arcs)
     bank_arcs_final = deepcopy(bank_arcs)
     river_arcs = np.empty((len(thalwegs), max_nrow_arcs), dtype=object)
+    river_polygons = [None] * len(thalwegs)
     cc_arcs = deepcopy(bank_arcs)  # [, 0] is head, [, 1] is tail
     smoothed_thalwegs = [None] * len(thalwegs)
     redistributed_thalwegs = [None] * len(thalwegs)
@@ -1032,11 +1035,11 @@ def make_river_map(
                 if len(bombs_xyz[l]) > 0:
                     bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
 
-            # assemble cross-channel arcs
             if sum(valid_points) > 0:
+                # assemble cross-channel arcs
                 for j in [0, -1]:
                     cc_arcs[i, j] = SMS_ARC(points=np.c_[x_river_arcs[:, valid_points][:, j], y_river_arcs[:, valid_points][:, j]], src_prj='cpp')
-                    pass
+
     # end enumerating each thalweg
 
     # ------------------------- Clean up and finalize ---------------------------
@@ -1137,6 +1140,36 @@ def make_river_map(
         
     total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
 
+    # map cleaned arc points to original arc points
+    total_arcs_cleaned_xy = np.empty((0, 2), dtype=float)
+    for arc in total_arcs_cleaned:
+        total_arcs_cleaned_xy = np.r_[total_arcs_cleaned_xy, arc.points[:, :2]]
+    
+    river_arcs_cleaned = deepcopy(river_arcs)
+    for i, river in enumerate(river_arcs_cleaned):
+        for j, arc in enumerate(river):
+            if arc is not None:
+                _, idx = nearest_neighbour(arc.points[:, :2], total_arcs_cleaned_xy)
+                river_arcs_cleaned[i, j].points[:, :2] = total_arcs_cleaned_xy[idx, :]
+
+    for i, river in enumerate(river_arcs_cleaned):
+        # save river polygon (enclosed by two out-most arcs and two cross-river transects at both ends)
+        if sum(river_arcs_cleaned[i, :] != None) >= 2:  # at least two rows of arcs to make a polygon
+            river_polygons[i] = []
+            idx = np.argwhere(river_arcs[i, :] != None).squeeze()
+            valid_river_arcs = river_arcs[i, idx]
+            for j in range(1):  # range(len(valid_river_arcs)-1):
+                mls_uu = unary_union(LineString(np.r_[valid_river_arcs[0].points[:, :2], np.flipud(valid_river_arcs[-1].points[:, :2]), valid_river_arcs[0].points[0, :2].reshape(-1,2)]))
+                for polygon in polygonize(mls_uu):
+                    river_polygons[i].append(polygon)
+
+    # convert river polygons to shapefile
+    final_river_polygons = []
+    for river_polygon in river_polygons:
+        if river_polygon is not None:
+            final_river_polygons += river_polygon
+
+
     # ------------------------- write SMS maps ---------------------------
     if any(bank_arcs.flatten()):  # not all arcs are None
         SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank.map')
@@ -1160,6 +1193,8 @@ def make_river_map(
         SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs_raw.map')
         SMS_MAP(arcs=total_arcs_cleaned).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
         SMS_MAP(detached_nodes=np.c_[bombed_lon, bombed_lat]).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
+
+        gpd.GeoDataFrame(index=range(len(final_river_polygons)), crs='epsg:4326', geometry=final_river_polygons).to_file(filename=f'{output_dir}/{output_prefix}final_river_polygons.shp', driver="ESRI Shapefile")
     else:
         print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
     

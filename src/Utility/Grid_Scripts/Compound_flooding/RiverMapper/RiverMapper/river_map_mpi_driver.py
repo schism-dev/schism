@@ -1,3 +1,4 @@
+from functools import cache
 import os
 import time
 from mpi4py import MPI
@@ -66,6 +67,8 @@ def river_map_mpi_driver(
             os.system(f"rm -r {output_dir}")
         else:
             os.makedirs(output_dir, exist_ok=True)
+        if not os.path.exists(cache_folder):
+            os.makedirs(cache_folder)
     comm.barrier()
 
     # group thalwegs (with the option of cache)
@@ -159,5 +162,5 @@ if __name__ == "__main__":
     river_map_mpi_driver(
         dems_json_file=dems_json_file,
         thalweg_shp_fname=thalweg_shp_fname,
-        output_dir=output_dir
+        output_dir=output_dir,
     )

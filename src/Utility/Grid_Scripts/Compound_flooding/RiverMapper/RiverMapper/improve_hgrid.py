@@ -488,7 +488,7 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
 
     grd2sms(gd, f'{dirname}/hgrid.2dm')
     gd.proj(prj0=prj, prj1='epsg:4326')
-    gd.save(f'{dirname}/hgrid.ll')
+    gd.save(f'{dirname}/hgrid.ll', fmt=1)
 
     # load bathymetry
     # if load_bathy:
@@ -502,18 +502,18 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
     pass
 
 if __name__ == "__main__":
+    # # Sample usage
+    # gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13r_LL/hgrid_xGEOID20b.gr3')
+    # gd.proj(prj0='epsg:4326', prj1='esri:102008')
+    # grd2sms(gd, '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.2dm')
+
+    # gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.2dm')
+    # quality_check_hgrid(gd)
+    # gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008_fixed.gr3')
+
+    # gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.gr3')
+    # gd.proj(prj0='esri:102008', prj1='epsg:4326')
+    # gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
+
     # Sample usage
-    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13r_LL/hgrid_xGEOID20b.gr3')
-    gd.proj(prj0='epsg:4326', prj1='esri:102008')
-    grd2sms(gd, '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.2dm')
-
-    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.2dm')
-    quality_check_hgrid(gd)
-    gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008_fixed.gr3')
-
-    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008.fixed.gr3')
-    gd.proj(prj0='esri:102008', prj1='epsg:4326')
-    gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
-
-    # Sample usage
-    improve_hgrid('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/v15.gr3')
+    improve_hgrid('/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v15.1/Preproc_hgrid2/final.gr3')
