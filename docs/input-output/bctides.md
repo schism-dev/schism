@@ -132,9 +132,9 @@ end for !j: open boundary segment
     1. !relax for AGE
     3 0 2 3 3 2 !Fraser River
     1. !relax for T
-    2. !relax for S
-    3. 1. 0. 0. !inject age tracer #2 here
-    4. !relax for AGE
+    1. !relax for S
+    0. 1. 0. 0. !inject age tracer #2 here
+    1. !relax for AGE
     ```
 
 !!!note 
