@@ -435,11 +435,12 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
 
             print(f'\n----------------Fixing invalid elements, Round {n_fix}--------------------')
 
-            # split bad quads
             print('\n ------------------- Splitting bad quads >')
             bp_name = f'{dirname}/bad_quad.bp'
-            gd.check_quads(angle_min=60,angle_max=120,fname=bp_name)
-            gd.split_quads(angle_min=60, angle_max=120)
+            # split bad quads
+            gd.check_quads(angle_min=50,angle_max=130,fname=bp_name)
+            gd.split_quads(angle_min=50, angle_max=130)
+            # outputs from split quads
             bad_quad_bp = read_schism_bpfile(fname=bp_name)
             print(f'{bad_quad_bp.nsta} bad quads split')
             if bad_quad_bp.nsta > 0:
@@ -447,13 +448,12 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
                     new_gr3_name = f"{dirname}/hgrid_split_quads.gr3"
                     gd.save(new_gr3_name)
                     print(f'the updated hgrid is saved as {new_gr3_name}')
-
                 # quality check again since gd is updated
                 i_target_nodes = quality_check_hgrid(gd, outdir=dirname)['i_invalid_nodes']
                 if i_target_nodes is None: continue
 
+            print('\n ----------------------------- include intersection relax points only at Round 1 >')
             if n_fix == 1:
-                # include intersection relax points only at Round 1
                 inter_relax_pts = SMS_MAP(filename=f'{dirname}/intersection_relax.map').detached_nodes
                 inter_relax_pts_x, inter_relax_pts_y = proj_pts(inter_relax_pts[:, 0], inter_relax_pts[:, 1], prj1='epsg:4326', prj2=prj)
                 inter_relax_nd = find_nearest_nd(gd, np.c_[inter_relax_pts_x, inter_relax_pts_y])
@@ -485,19 +485,36 @@ def improve_hgrid(hgrid_name='', prj='esri:102008', load_bathy=False, nmax=3):
             )
 
             print(f'\n****************Done fixing invalid elements, Round {n_fix}*********************\n')
+    # end while loop
 
+    if prj != 'epsg:4326':
+        gd_x, gd_y = gd.x, gd.y
+        gd.proj(prj0=prj, prj1='epsg:4326')
+        gd_lon, gd_lat = gd.x, gd.y
+
+    print('\n ------------------- Splitting bad quads in lon/lat >')
+    bp_name = f'{dirname}/bad_quad.bp'
+    # split bad quads
+    gd.check_quads(angle_min=60,angle_max=120,fname=bp_name)
+    gd.split_quads(angle_min=60, angle_max=120)
+    # outputs from split quads
+    bad_quad_bp = read_schism_bpfile(fname=bp_name)
+    print(f'{bad_quad_bp.nsta} bad quads split')
+    if bad_quad_bp.nsta > 0:
+        if iDiagnosticOutputs:
+            new_gr3_name = f"{dirname}/hgrid_split_quads.gr3"
+            gd.save(new_gr3_name)
+            print(f'the updated hgrid is saved as {new_gr3_name}')
+        # quality check again since gd is updated
+        if prj != 'epsg:4326':
+            gd.x, gd.y = gd_x, gd_y
+        i_target_nodes = quality_check_hgrid(gd, outdir=dirname)['i_invalid_nodes']
+        if prj != 'epsg:4326':
+            gd.x, gd.y = gd_lon, gd_lat
+
+    print('\n ------------------- Outputting final hgrid >')
     grd2sms(gd, f'{dirname}/hgrid.2dm')
-    gd.proj(prj0=prj, prj1='epsg:4326')
     gd.save(f'{dirname}/hgrid.ll', fmt=1)
-
-    # load bathymetry
-    # if load_bathy:
-    #     os.chdir(dirname)
-    #     os.system('python ./pload_depth.py')
-    #     if not os.exist(f'{dirname}/hgrid.ll.new'):
-    #         raise Exception('failed to load bathymetry')
-    #     else:
-    #         print('done loading bathymetry')
 
     pass
 
