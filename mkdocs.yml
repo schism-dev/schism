@@ -54,7 +54,7 @@ nav:
     - Overview: schism/overview.md
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
-    - Test suit:  getting-started/test_suite.md
+    - Test suite:  getting-started/test_suite.md
     - Typical workflow (a cheat sheet): getting-started/typical-workflow.md
     - Mesh generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
@@ -114,7 +114,6 @@ nav:
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
   - Code structure: code-contribution.md
-  ##- Verification tests: verification-tests.md
   - Case studies: case-study.md
   - SCHISM external coupling:
     - Earth System Modeling Framework: coupling/esmf.md
@@ -122,7 +121,6 @@ nav:
     - NOAA's CoastalApp: coupling/coastalapp.md
     - Modular System for Shelves and Coasts: coupling/mossco.md
     - NCAR's Community Earth System Model: coupling/cesm.md
-#  - Publications: publications.md
   - Frequently Asked Questions: faq.md
   - Known issues: known_issues.md
   - Contribute to this online manual: contribute-to-this-online-manual.md
