@@ -20,12 +20,4 @@ The SCHISM NUOPC cap is currently used in the development version of the NOAA En
 
 ## Reporting bugs or requesting features
 
-The ESMF cap is still in development.  Please report any errors or annoyances in our bug tracker on https://github.com/schism-dev/schism-esmf/issues.  Also, please request features there, such as additional import or export fields.
-
-
-
-
-
-
-
-
+The ESMF cap is still in development.  Please report any errors or annoyances in our bug tracker [here](https://github.com/schism-dev/schism-esmf/issues). Also, please request features there, such as additional import or export fields.

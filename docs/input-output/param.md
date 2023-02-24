@@ -25,7 +25,7 @@ Pre-processing flag (1: on; 0: off). `ipre=0`: normal run.
 Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. `ipre=1`: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and `mirror.out` and stop. Check errors in `fatal.error`. 
 
 !!!important 
-    `ipre/=0` only works for single CPU!
+    `ipre/=0` only works for single CPU! If you use scribed I/O, make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist from all cores. Check `outputs/` (`mirror.out` and `fatal.error`); if the run is finished you can manually kill it.
 
 ### ibc (int), ibtp (int)
 Barotropic/baroclinic flags.
