@@ -339,7 +339,9 @@
   coricoef = 0 !if ncor=0
 
 !-----------------------------------------------------------------------
-! Elevation initial condition flag for cold start only. If ic_elev=1, elev.ic (in *.gr3 format) is needed
+! Elevation initial condition flag for cold start only. For hotstart, set this to 0
+! (and elev will be read in from hotstart.nc).
+! If ic_elev=1, elev.ic (in *.gr3 format) is needed
 ! to specify the initial elevations; otherwise elevation is initialized to 0 everywhere 
 !-----------------------------------------------------------------------
   ic_elev = 0
