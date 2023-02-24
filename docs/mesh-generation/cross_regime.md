@@ -28,7 +28,7 @@ The example of South China Sea (SCS) shown below illustrates this type of mistak
 </figure>
 
 For meshgen, always start with modest and quasi-uniform resolution for eddying regime. In SMS,
- this can be achieved with fewer constraints in the form of arcs. High resolution (<=2km) in deep water (h>=1km) should be avoided (Figure [1](#figure01)). At steep slopes, this means that an ‘outer arc’ (in SMS map) may be needed). With the corrected mesh, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure [4](#figure04)).
+ this can be achieved with fewer constraints in the form of arcs. High resolution (<=2km) in deep water (h>=1km) should be avoided (Figure [1](#figure01)). At steep slopes, this means that an ‘outer arc’ (in SMS map) may be needed. With the corrected mesh, the noise is greatly reduced: the remaining noise in southern Philippines can be rectified by adding outer arcs there (Figure [4](#figure04)).
 
 <figure markdown id='figure03'>
 ![Corrected Grid South China Sea](../assets/case-study-scs-corrected.png){width=800}

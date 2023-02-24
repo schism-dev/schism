@@ -1,5 +1,5 @@
 !!! attention
-    Note that some modules are under active development and we will update the info as it becomes available in the future.
+    Note that some modules are under active development and we will update the info as it becomes available.
 
 SCHISM modules can be broadly divided into two categories: tracer and non-tracer modules. The main difference is that tracer modules share more infrastructure with the main hydro code base, e.g. using the transport solver, with I.C. and B.C.’s that resemble those for the temperature and salinity, and sharing the source inputs (`msource.th`). Most modules also require additional inputs of their own (e.g. `wwminput.nml` for WWM).
 
@@ -18,16 +18,18 @@ There are 12 tracer modules and they are (in order of appearance and precedence 
 11. FABM [`FBM`]: Framework for Aquatic Biogeochemical Models, a flexible biogeochemical model framework;
 12. DVD [`DVD`]: numerical mixing analysis of Klingbeit et al. (2014)
 
-The B.C. flags for each invoked tracer module are specified in `bctides.in`. For example, if you invoked `GEN`, `SED`, and `ICM`, the boundary condition at an open segment may look like - 
+The B.C. flags for each invoked tracer module are specified in `bctides.in`. For example, if you invoked `GEN` (1 class), `SED` (1 class), and `ICM` (21 state variables inside), the boundary condition at an open segment may look like - 
 
 ```
-39 2 0 3 4 1 2 0 ![# of nodes], elev, vel, T,S, GEN, SED, ICM
+39 2 0 3 4 1 2 2 ![# of nodes], elev, vel, T,S, GEN, SED, ICM
 0.5 !constant elev
 0.1 !relax for T
 0.1 !relax for S
 0.5 !relax for GEN
 0. !constant SED concentration
 1.e-3 !relax for SED
+0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. !ICM concentrations
+1.e-3  !relax for ICM
 [next segment...]
 ```
 
@@ -51,4 +53,4 @@ sed_class = 5 !SED3D (USE_SED)
 eco_class = 27 !EcoSim
 ```
 
-The output flags for all modules are `iof_[name]`, where name is the lower case of the module name; e.g. `iof_wwm()`. See the [sample `param.nml`](https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml) for a complete list of output flags as well as the variable names that appear in the outputs schout*.nc. Some modules have additional parameters specified in `param.nml`; e.g., `gen_wsett`, `flag_fib` etc. See the [sample `param.nml`](https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml) for explanation.
+The output flags for all modules are `iof_[name]`, where name is the lower case of the module name; e.g. `iof_wwm()`. See the [sample `param.nml`](https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml) for a complete list of output flags as well as the variable names that appear in the netcdf outputs. Some modules have additional parameters specified in `param.nml`; e.g., `gen_wsett`, `flag_fib` etc. See the [sample `param.nml`](https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml) for explanation.

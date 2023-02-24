@@ -4,7 +4,7 @@ The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs 
  the new scribed outputs, while `SCHISM_SLAB.m` and `SCHISM_TRANSECT.m` are for the old outputs (schout*.nc).
 
 ## Visualization with Python
-[more coming]
+[more coming] You can also find several packages on the [Forum site](http://ccrm.vims.edu/w/index.php/Share_your_tools)
 
 ## Visualization with VisIT
 The most comprehensive way to visualize SCHISM nc4 outputs is via VisIT.

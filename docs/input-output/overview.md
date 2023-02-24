@@ -20,6 +20,6 @@ These inputs are required for all SCHISM simulations:
 2. Vertical grid (`vgrid.in`)
 3. Parameter input (`param.nml`)
 4. B.C. input (`bctides.in`)
-5. Bottom friction input (`drag.gr3`, or `rough.gr3` or `manning.gr3`)
+5. Bottom friction input (`drag.gr3`, or `rough.gr3` or `manning.gr3`, depending on parameter choice in `param.nml`)
 
 We’ll explain these inputs in detail below. Comments/explanations are usually preceded by '!'.

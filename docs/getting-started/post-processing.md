@@ -11,7 +11,7 @@ all available outputs during or after the run. Use these if you invoked `OLDIO` 
 
 `combine_gr3.f90` is used to combine process-specific `maxelev_*` and `maxdahv_*` (ASCII) into `maxelev.gr3` or `maxdahv.gr3`.
 
-## Extraction
+## Extraction & analysis
 `read_output*.f90`: This group of scripts read multiple nc4 outputs and extract time series of a point, 
 a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
 format as well as how to do your own processing. You may start from `read_output*_xyz.f90`. 
@@ -19,6 +19,11 @@ After you are familiar with these scripts, you can easily customize them for you
 
 Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
  E.g., if you use scribe I/O, the FORTRAN extraction scripts are `read_output10*.f90`.
+
+There are also some analysis scripts, e.g. computing the averaged fields etc.
+
+## Particle tracking
+This tool is explained [here](modules/particle-tracking.md). 
 
 ## One-way nesting
 `OneWayNestScripts/interpolate_variables7.f90`: The purpose of this script is to generate `elev2D.th.nc`, 

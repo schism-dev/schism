@@ -11,6 +11,9 @@ A common, convenient method for introducing river flows into watershed in SCHISM
 
 The model is stable, but interpretation of results may be problematic in those cases. Besides more grid work in those spots, using open-boundary segments can help. Also one should really exclude transient responses during ramp-up period in computing the maximum elevation to allow the system time to adjust. Also don’t forget that sometimes the rainfall (which can also be introduced as sources) on high mountains should result in high surface elevations there, which are realistic.
 
+To get accurate results in the hydrologic regime, it is also important to resolve channels to avoid blocking flows. Semi-automatic mesh generation
+ tools have been developed specifically for this purpose; see [this chapter](mesh-generation/meshing-for-compound-floods/overview.md).
+
 <figure markdown id='figure08'>
 ![Guam case study zoom](assets/case-study-nwm-1.png){width=800}
 <figcaption>Coupling of hydrologic model (National Water Model in this case) with SCHISM. The river network (lines) intersects SCHISM land boundary, and the river flow is introduced at the intersection points (sources for inflow and sinks for outflow).</figcaption>

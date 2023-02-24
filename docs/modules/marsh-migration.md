@@ -1,4 +1,4 @@
-This module is not a tracer module and simulates the long-term migration of marshes under sea level rise. It is usually invoked together with SED (with optional morphological acceleration) and optionally with WWM; cf. [Nunez et al. (2020)](#Nunez2020).
+This module (`USE_MARSH`) is not a tracer module and simulates the long-term migration of marshes under sea level rise. It is usually invoked together with SED (with optional morphological acceleration) and optionally with WWM; cf. [Nunez et al. (2020)](#Nunez2020).
 
 The only parameter for this module is `slr_rate` (sea-level rise rate in mm/yr). The output flag is `iof_marsh`, which is an integer of either 0 (no marsh) or 1 (has marsh) at an element. Optionally, the user might also consider invoking the vegetation option in the code `isav` in conjunction with the marsh module to simulate the form drag and turbulence induced by the marsh vegetation.
 

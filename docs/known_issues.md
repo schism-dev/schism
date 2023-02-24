@@ -1,5 +1,4 @@
-## Known issues and work-around
-### Freshwater injection stuck near injection place
+## Freshwater injection stuck near injection place
   This can happen with the combined use of (1) point source/sink (`if_source`=1); (2) LSC2 with 1-2 layers near 
 injection places; (3) baroclinic model. The main symptom is that the freshwater seemingly gets stuck near the 
  injection points and does not flow out as expected.

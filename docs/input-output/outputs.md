@@ -93,7 +93,7 @@ All 2D variables (e.g. `elevation`, `sigWaveHeight` etc) as well as static infor
 Under this mode, each MPI process will dump its own output and a post-processing script (`combin_output*.f90`)
  will need to be used to combine these into global netcdf outputs.  
 
-An example output file name is `outputs/schout_0000_2.nc`. More generally, the file name is: `schout_[processor_no]_[time_block /stack #].nc`
+An example output file name is `outputs/schout_000000_2.nc`. More generally, the file name is: `schout_[processor_no]_[time_block /stack #].nc`
 
 !!!notes "Processor number"
     The mpi_processor number starts at 0 and represents the MPI processor ID from the task that wrote the output. 
@@ -117,7 +117,7 @@ An example output file name is `outputs/schout_0000_2.nc`. More generally, the f
     You can visualize the combined nc4 outputs using VisIT (with SCHISM plug-ins). More info can be found in [Visualization](./../getting-started/visualization.md)
 
 !!!notes "Other global outputs"
-    The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (`outputs/maxelev_*` and `outputs/maxdahv_*`). These files can be combined using `Utility/Combining_Scripts/combine_gr3.f90` to generate `maxelev.gr3` and `maxdahv.gr3`.
+    The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (`outputs/maxelev_*` and `outputs/maxdahv_*`). These files can be combined using `Utility/Combining_Scripts/combine_gr3.f90` to generate `maxelev.gr3` and `maxdahv.gr3`. Another type of global outputs are hotstart outputs, which should be combined (using `combine_hotstart7.f90`) to generate a restart input.
 
 ## Station outputs
 These outputs are invoked with `iout_sta=1`, and are found in `outputs/staout_[1..,9]`, corresponding respectively to elev, air pressure, wind u, wind v, T, S, u, v, w. Each output has a simple ASCII format:
