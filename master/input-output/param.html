@@ -1935,7 +1935,7 @@ for easier explanation, but you should specify them on separate lines. Also you'
 <p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code>. </p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p><code>ipre/=0</code> only works for single CPU!</p>
+<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O, make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist from all cores. Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>); if the run is finished you can manually kill it.</p>
 </div>
 <h3 id="ibc-int-ibtp-int">ibc (int), ibtp (int)<a class="headerlink" href="#ibc-int-ibtp-int" title="Permanent link">&para;</a></h3>
 <p>Barotropic/baroclinic flags.</p>

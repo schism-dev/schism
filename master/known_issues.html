@@ -1526,15 +1526,15 @@
 <p>This can happen with the combined use of (1) point source/sink (<code>if_source</code>=1); (2) LSC2 with 1-2 layers near 
 injection places; (3) baroclinic model. The main symptom is that the freshwater seemingly gets stuck near the 
  injection points and does not flow out as expected.</p>
-<p>The reason is that insufficient number of vertical layers cannot properly support exchange flow (that 
+<p>The reason is that insufficient number of vertical layers cannot properly set up an exchange flow (that 
 requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expects.
 Some work-arounds are:</p>
 <ol>
+<li>Change to open boundary condition approach</li>
+<li>Better salinity initial condition. If the salt intrusion should never reach the injection place, create
+   a freswater zone near the injection in the I.C.</li>
 <li>Use more vertical layers near injection (one way to do this is to deepen the local depths to allow more layers)</li>
 <li>Nudge (inu_SAL=1 or 2) strongly in a region near injection</li>
-<li>Change to open boundary condition approach</li>
-<li>If the salt intrusion should never reach the injection place, change salinity initial condition by creating
-   a freswater zone from injection to somewhere downstream near the max intrusion.</li>
 </ol>
 
               
