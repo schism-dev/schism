@@ -1476,7 +1476,7 @@
 
   <h1>Boundary conditions (bctides.in)</h1>
 
-<p>Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the <a href="/input-output/optional-inputs.md">Optional inputs</a> section.</p>
+<p>Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the <a href="optional-inputs.html">Optional inputs</a> section.</p>
 <table>
 <thead>
 <tr>
@@ -1653,6 +1653,10 @@
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>0. 1. 0. 0. !inject age tracer #2 here
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>1. !relax for AGE
 </code></pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>bctides.in</code> is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out errors is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag at a segment to see if the code crashes before or after this point.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
