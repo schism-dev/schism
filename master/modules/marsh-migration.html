@@ -1476,7 +1476,7 @@
 
   <h1>Marsh migration</h1>
 
-<p>This module is not a tracer module and simulates the long-term migration of marshes under sea level rise. It is usually invoked together with SED (with optional morphological acceleration) and optionally with WWM; cf. <a href="#Nunez2020">Nunez et al. (2020)</a>.</p>
+<p>This module (<code>USE_MARSH</code>) is not a tracer module and simulates the long-term migration of marshes under sea level rise. It is usually invoked together with SED (with optional morphological acceleration) and optionally with WWM; cf. <a href="#Nunez2020">Nunez et al. (2020)</a>.</p>
 <p>The only parameter for this module is <code>slr_rate</code> (sea-level rise rate in mm/yr). The output flag is <code>iof_marsh</code>, which is an integer of either 0 (no marsh) or 1 (has marsh) at an element. Optionally, the user might also consider invoking the vegetation option in the code <code>isav</code> in conjunction with the marsh module to simulate the form drag and turbulence induced by the marsh vegetation.</p>
 <p>Additional inputs are required to specify the I.C. for marsh extent (<code>marsh_init.prop</code>) as well as migration barrier info (<code>marsh_barrier.prop</code>); both use 0 or 1 to specify ‘on/off’.</p>
 <p><strong>References</strong></p>

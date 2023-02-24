@@ -1478,7 +1478,7 @@
 
 <div class="admonition attention">
 <p class="admonition-title">Attention</p>
-<p>Note that some modules are under active development and we will update the info as it becomes available in the future.</p>
+<p>Note that some modules are under active development and we will update the info as it becomes available.</p>
 </div>
 <p>SCHISM modules can be broadly divided into two categories: tracer and non-tracer modules. The main difference is that tracer modules share more infrastructure with the main hydro code base, e.g. using the transport solver, with I.C. and B.C.’s that resemble those for the temperature and salinity, and sharing the source inputs (<code>msource.th</code>). Most modules also require additional inputs of their own (e.g. <code>wwminput.nml</code> for WWM).</p>
 <p>There are 12 tracer modules and they are (in order of appearance and precedence in <code>bctides.in</code>; the names in brackets are used in input names; e.g. <code>TEM_1.th</code> etc) - </p>
@@ -1496,15 +1496,17 @@
 <li>FABM [<code>FBM</code>]: Framework for Aquatic Biogeochemical Models, a flexible biogeochemical model framework;</li>
 <li>DVD [<code>DVD</code>]: numerical mixing analysis of Klingbeit et al. (2014)</li>
 </ol>
-<p>The B.C. flags for each invoked tracer module are specified in <code>bctides.in</code>. For example, if you invoked <code>GEN</code>, <code>SED</code>, and <code>ICM</code>, the boundary condition at an open segment may look like - </p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>39 2 0 3 4 1 2 0 ![# of nodes], elev, vel, T,S, GEN, SED, ICM
+<p>The B.C. flags for each invoked tracer module are specified in <code>bctides.in</code>. For example, if you invoked <code>GEN</code> (1 class), <code>SED</code> (1 class), and <code>ICM</code> (21 state variables inside), the boundary condition at an open segment may look like - </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>39 2 0 3 4 1 2 2 ![# of nodes], elev, vel, T,S, GEN, SED, ICM
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>0.5 !constant elev
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>0.1 !relax for T
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>0.1 !relax for S
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>0.5 !relax for GEN
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>0. !constant SED concentration
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>1.e-3 !relax for SED
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>[next segment...]
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. !ICM concentrations
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>1.e-3  !relax for ICM
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>[next segment...]
 </code></pre></div>
 <p>And in addition, you’ll need to prepare inputs: <code>SAL_3D.th.nc</code> and <code>GEN_*.th</code>. </p>
 <p>Similarly, msource.th should also include the tracer concentrations for all invoked modules; for the example shown above, a line in the msource.th should look like this (assuming 2 sources in source_sink.in):</p>
@@ -1519,7 +1521,7 @@
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>sed_class = 5 !SED3D (USE_SED)
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>eco_class = 27 !EcoSim
 </code></pre></div>
-<p>The output flags for all modules are <code>iof_[name]</code>, where name is the lower case of the module name; e.g. <code>iof_wwm()</code>. See the <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml">sample <code>param.nml</code></a> for a complete list of output flags as well as the variable names that appear in the outputs schout*.nc. Some modules have additional parameters specified in <code>param.nml</code>; e.g., <code>gen_wsett</code>, <code>flag_fib</code> etc. See the <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml">sample <code>param.nml</code></a> for explanation.</p>
+<p>The output flags for all modules are <code>iof_[name]</code>, where name is the lower case of the module name; e.g. <code>iof_wwm()</code>. See the <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml">sample <code>param.nml</code></a> for a complete list of output flags as well as the variable names that appear in the netcdf outputs. Some modules have additional parameters specified in <code>param.nml</code>; e.g., <code>gen_wsett</code>, <code>flag_fib</code> etc. See the <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml">sample <code>param.nml</code></a> for explanation.</p>
 
               
             </article>

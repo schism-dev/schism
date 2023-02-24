@@ -1476,7 +1476,8 @@
 
   <h1>Particle tracking</h1>
 
-<p>SCHISM supports a 3D particle tracking code in <code>Utility/Particle_Tracking/ptrack3.f90</code>, which can also be used for simple oil spill simulation. The code can do forward/backward tracking and has simple dispersion and beach retention processes for oil spill.</p>
+<p>This is not a module per se; rather the stand-alone code <code>Utility/Particle_Tracking/ptrack*.f90</code> takes the outputs from SCHISM.</p>
+<p>SCHISM supports a 3D particle tracking, which can also be used for simple oil spill simulation. The code can do forward/backward tracking and has simple dispersion and beach retention processes for oil spill.</p>
 <p>The inputs to this code are: <code>hgrid.gr3</code>, <code>vgrid.in</code>, <code>particle.bp</code>, and <code>schout*.nc</code>. The main parameters are set in <code>particle.bp</code>. Below is a sample:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1 !screen outputs
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>0 !mod_part (0: passive; 1: oil spill)
@@ -1489,7 +1490,7 @@
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>2 84610. 300000 450000 0.
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>...
 </code></pre></div>
-<p>The main output is particle.pth, which uses the drogue format that can be visualized with ACE/xmvis6. Figure <a href="#figure01">1</a> shows an example.</p>
+<p>The main output is <code>particle.pth</code>, which uses the drogue format that can be visualized with ACE/xmvis6. Figure <a href="#figure01">1</a> shows an example.</p>
 <figure id="figure01">
 <p><img alt="Particle tracking" src="../assets/particle-tracking.png" width="600" /></p>
 <figcaption>Particle tracking with SCHISM.</figcaption>

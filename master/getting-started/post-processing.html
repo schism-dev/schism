@@ -535,8 +535,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#extraction" class="md-nav__link">
-    Extraction
+  <a href="#extraction-analysis" class="md-nav__link">
+    Extraction &amp; analysis
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#particle-tracking" class="md-nav__link">
+    Particle tracking
   </a>
   
 </li>
@@ -1533,13 +1540,16 @@ all available outputs during or after the run. Use these if you invoked <code>OL
  into <code>hotstart.nc</code>. This is required even if you used scribed I/O (as hotstart outputs are still be emitted per MPI
  process).</p>
 <p><code>combine_gr3.f90</code> is used to combine process-specific <code>maxelev_*</code> and <code>maxdahv_*</code> (ASCII) into <code>maxelev.gr3</code> or <code>maxdahv.gr3</code>.</p>
-<h2 id="extraction">Extraction<a class="headerlink" href="#extraction" title="Permanent link">&para;</a></h2>
+<h2 id="extraction-analysis">Extraction &amp; analysis<a class="headerlink" href="#extraction-analysis" title="Permanent link">&para;</a></h2>
 <p><code>read_output*.f90</code>: This group of scripts read multiple nc4 outputs and extract time series of a point, 
 a slab, a transect etc. They share similar code structure and can be used to understand the nc4 output 
 format as well as how to do your own processing. You may start from <code>read_output*_xyz.f90</code>. 
 After you are familiar with these scripts, you can easily customize them for your own purpose.</p>
 <p>Note that you'll need to use different extraction scripts depending on whether you use scribe I/O or not.
  E.g., if you use scribe I/O, the FORTRAN extraction scripts are <code>read_output10*.f90</code>.</p>
+<p>There are also some analysis scripts, e.g. computing the averaged fields etc.</p>
+<h2 id="particle-tracking">Particle tracking<a class="headerlink" href="#particle-tracking" title="Permanent link">&para;</a></h2>
+<p>This tool is explained <a href="modules/particle-tracking.md">here</a>. </p>
 <h2 id="one-way-nesting">One-way nesting<a class="headerlink" href="#one-way-nesting" title="Permanent link">&para;</a></h2>
 <p><code>OneWayNestScripts/interpolate_variables7.f90</code>: The purpose of this script is to generate <code>elev2D.th.nc</code>, 
 <code>SAL_3D.th.nc</code>, <code>TEM_3D.th.nc</code> and/or <code>uv3D.th.nc</code> from a large-domain run to be used in a small-domain run. 

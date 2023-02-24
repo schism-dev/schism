@@ -1618,7 +1618,7 @@ For example the latest VisIT plugins can visualize these outputs directly.</p>
 <p>2) Old I/O (OLDIO is ON)
 Under this mode, each MPI process will dump its own output and a post-processing script (<code>combin_output*.f90</code>)
  will need to be used to combine these into global netcdf outputs.  </p>
-<p>An example output file name is <code>outputs/schout_0000_2.nc</code>. More generally, the file name is: <code>schout_[processor_no]_[time_block /stack #].nc</code></p>
+<p>An example output file name is <code>outputs/schout_000000_2.nc</code>. More generally, the file name is: <code>schout_[processor_no]_[time_block /stack #].nc</code></p>
 <div class="admonition notes">
 <p class="admonition-title">Processor number</p>
 <p>The mpi_processor number starts at 0 and represents the MPI processor ID from the task that wrote the output. </p>
@@ -1645,7 +1645,7 @@ Under this mode, each MPI process will dump its own output and a post-processing
 </div>
 <div class="admonition notes">
 <p class="admonition-title">Other global outputs</p>
-<p>The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (<code>outputs/maxelev_*</code> and <code>outputs/maxdahv_*</code>). These files can be combined using <code>Utility/Combining_Scripts/combine_gr3.f90</code> to generate <code>maxelev.gr3</code> and <code>maxdahv.gr3</code>.</p>
+<p>The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (<code>outputs/maxelev_*</code> and <code>outputs/maxdahv_*</code>). These files can be combined using <code>Utility/Combining_Scripts/combine_gr3.f90</code> to generate <code>maxelev.gr3</code> and <code>maxdahv.gr3</code>. Another type of global outputs are hotstart outputs, which should be combined (using <code>combine_hotstart7.f90</code>) to generate a restart input.</p>
 </div>
 <h2 id="station-outputs">Station outputs<a class="headerlink" href="#station-outputs" title="Permanent link">&para;</a></h2>
 <p>These outputs are invoked with <code>iout_sta=1</code>, and are found in <code>outputs/staout_[1..,9]</code>, corresponding respectively to elev, air pressure, wind u, wind v, T, S, u, v, w. Each output has a simple ASCII format:</p>
