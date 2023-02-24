@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 from schism_py_pre_post import Datafiles
 from schism_py_pre_post.Geometry.inpoly import find_node_in_shpfiles
@@ -149,48 +151,36 @@ def set_additional_dp_v11_91(gd_ll=None, gd_dem=None, wdir='./'):
 
     return gd_ll
 
-def tweak_depths(hgrid_name='', gd:schism_grid=None, original_hgrid_name='hgrid.ll'):
-    shutil.move(hgrid_name, hgrid_name+'.gr3')
+def set_levees(hgrid_name='', gd:schism_grid=None):
+    shutil.copy(hgrid_name, hgrid_name+'.gr3')
     hgrid_name += '.gr3'
     if gd is None:
         gd = schism_grid(hgrid_name)
     else:
         hgrid_name = gd.source_file
+    os.remove(hgrid_name)
 
     dirname = os.path.dirname(hgrid_name)
-
-    gd_ll_original = schism_grid(f'{dirname}/{original_hgrid_name}')  # before loading DEM (x, y may be slightly changed after DEM loading)
-
-
-    os.system(f'mv {hgrid_name} {dirname}/hgrid.ll')
-    gd = schism_grid(f'{dirname}/hgrid.ll')
-    gd.x, gd.y = gd_ll_original.x, gd_ll_original.y  # force original x, y
     gd_DEM_loaded = copy.deepcopy(gd)
 
     print('set default levee heights (-9 m)')
     gd = set_constant_levee_height(gd=gd, wdir=dirname)
+    # gd.save(f'{dirname}/hgrid.set_default_levee_height.gr3')
 
     print('loading levee heights from National Levee Database')
     gd = set_levee_profile(gd=gd, wdir=dirname)
+    # gd.save(f'{dirname}/hgrid.set_nld.gr3')
 
-    print('loading additional tweaks on levee heights')
+    print('loading additional tweaks on levee heights')  # some heights needs to be reverted
     gd = set_additional_dp_v11_91(gd_ll=gd, gd_dem=gd_DEM_loaded, wdir=dirname)
-
-    print('outputing hgrid.ll')
-    gd.save(f'{dirname}/hgrid.ll')
-
-    # set feeder dp
-    # gd = set_feeder_dp(
-    #     feeder_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/',
-    #     new_grid_dir=dirname
-    # )
-    # os.system(f'mv {dirname}/hgrid.ll {dirname}/hgrid.ll_before_feeder_dp')
-    # gd.save(f'{dirname}/hgrid.ll')
+    # gd.save(f'{dirname}/hgrid.set_additional_dp_v11_91.gr3')
 
     return gd
 
-
 if __name__ == "__main__":
-    # Sample usage
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42_post_proc2/'
-    gd = tweak_depths(f'{wdir}/hgrid.ll.new')
+    wdir = './'
+    gd = set_levees(f'{wdir}/hgrid.ll.new')  # input is the bathy-loaded hgrid
+    gd.save(f'{wdir}/hgrid.ll')
+
+
+
