@@ -23,10 +23,10 @@ Note that you'll need to use different extraction scripts depending on whether y
 There are also some analysis scripts, e.g. computing the averaged fields etc.
 
 ## Particle tracking
-This tool is explained [here](modules/particle-tracking.md). 
+This tool is explained [here](../modules/particle-tracking.md). 
 
 ## One-way nesting
-`OneWayNestScripts/interpolate_variables7.f90`: The purpose of this script is to generate `elev2D.th.nc`, 
+`OneWayNestScripts/interpolate_variables*.f90`: The purpose of this script is to generate `elev2D.th.nc`, 
 `SAL_3D.th.nc`, `TEM_3D.th.nc` and/or `uv3D.th.nc` from a large-domain run to be used in a small-domain run. 
 This is of limited utility now because `uv3D.th.nc` etc for the sub-tidal component 
 can be generated using HYCOM or other large-scale models or observation.

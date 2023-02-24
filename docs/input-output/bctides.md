@@ -1,4 +1,4 @@
-Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the [Optional inputs](/input-output/optional-inputs.md) section.
+Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the [Optional inputs](optional-inputs.md) section.
 
 | Variable | Type 1 (`*.th`) | Type 2 | Type 3 | Type 4 (`*[23]D.th`) | Type 5 | Type -1 | Type -4, -5 (`uv3D.th`); Nudging | Nudging/Sponge layer near bnd |
 |----------|---------------|--------|--------|--------------------|--------|---------|--------------------------------|-------------------------------|
@@ -136,6 +136,9 @@ end for !j: open boundary segment
     0. 1. 0. 0. !inject age tracer #2 here
     1. !relax for AGE
     ```
+
+!!!note 
+    `bctides.in` is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out errors is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag at a segment to see if the code crashes before or after this point.
 
 !!!note 
     The tidal amplitudes and phases can be generated using utility scripts shown on the [Pre-processing](../getting-started/pre-processing.md) section.
