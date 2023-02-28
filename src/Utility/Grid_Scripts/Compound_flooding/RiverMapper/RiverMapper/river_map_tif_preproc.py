@@ -1,27 +1,97 @@
 # %%
+import os
+import copy
+import numpy as np
+import pickle
 import json
+import math
+from dataclasses import dataclass
 from osgeo import gdal
 from glob import glob
-import copy
-from RiverMapper.make_river_map import Tif2XYZ, get_all_points_from_shp
-import numpy as np
-import os
-from RiverMapper.SMS import lonlat2cpp, cpp2lonlat
-import pickle
-import math
+from RiverMapper.SMS import lonlat2cpp, cpp2lonlat, get_all_points_from_shp
+
+
+@dataclass
+class dem_data():
+    x: np.ndarray
+    y: np.ndarray
+    lon: np.ndarray
+    lat: np.ndarray
+    elev: np.ndarray
+    dx: float
+    dy: float
+
 
 def parse_dem_tiles(dem_code, dem_tile_digits):
+    '''
+    Parse a dem_code into the original DEM id.
+    A unique code is assigned to all parent tiles (from the same DEM source) of a thalweg, e.g.:
+    327328329 is actually Tile No. 327, 328, 329
+    Almost all thalwegs only have <=4 parent tiles (when it is near the intersection point);
+    n_tiles > 4 will generate an exception.
+    '''
     if dem_code == 0:
         return [-1]  # no DEM found
 
     dem_tile_ids = []
     n_tiles = int(math.log10(dem_code)/dem_tile_digits) + 1
     if n_tiles > 4:
-        raise Exception("Some thalweg points belong to more than 4 tiles from one DEM source, clean up the DEM tiles first.")
+        raise ValueError("Some thalweg points belong to more than 4 tiles from one DEM source, you may need to clean up the DEM tiles first.")
     for digit in reversed(range(n_tiles)):
         x, dem_code = divmod(dem_code, 10**(digit*dem_tile_digits))
         dem_tile_ids.append(int(x-1))
     return dem_tile_ids
+
+def Tif2XYZ(tif_fname=None, cache=True):
+    cache_name = tif_fname + '.pkl'
+
+    if cache:
+        if os.path.exists(cache_name):  # try to load cache
+            try:
+                with open(cache_name, 'rb') as f:
+                    S = pickle.load(f)
+                    return S  # cache successfully read
+            except (ModuleNotFoundError, AttributeError) as e:
+                # remove existing cache if failing to read from it
+                if os.path.exists(cache_name):
+                    os.remove(cache_name)
+    else:  # remove existing cache if cache=False
+        if os.path.exists(cache_name):
+            os.remove(cache_name)
+
+    # read from raw tif and generate cache
+    ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
+
+    width = ds.RasterXSize
+    height = ds.RasterYSize
+
+    gt = ds.GetGeoTransform()
+    TL_x, TL_y = gt[0], gt[3]
+
+    #showing a 2D image of the topo
+    # plt.imshow(elevation, cmap='gist_earth',extent=[minX, maxX, minY, maxY])
+    # plt.show()
+
+    z = band.ReadAsArray()
+
+    dx = gt[1]
+    dy = gt[5]
+    if gt[2] != 0 or gt[4] != 0:
+        raise ValueError()
+
+    x_idx = np.array(range(width))
+    y_idx = np.array(range(height))
+    xp = dx * x_idx + TL_x + dx/2
+    yp = dy * y_idx + TL_y + dy/2
+
+    S = dem_data(xp, yp, xp, yp, z, dx, dy)
+    # with open(cache_name, 'wb') as f:
+    #     pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    ds = None  # close dataset
+
+    return S
 
 def get_tif_boxes(tif_files:list, dem_cache=True):
     tif_box = []
@@ -49,6 +119,40 @@ def pts_in_box(pts, box):
     in_box = (pts[:, 0] >  box[0]) * (pts[:, 0] <= box[2]) * \
              (pts[:, 1] >  box[1]) * (pts[:, 1] <= box[3])
     return in_box
+
+def Sidx(S, lon, lat):
+    '''
+    return nearest index (i, j) in DEM mesh for point (x, y),
+    assuming lon/lat, not projected coordinates
+    '''
+    dSx = S.lon[1] - S.lon[0]
+    dSy = S.lat[1] - S.lat[0]
+    i = (np.round((lon - S.lon[0]) / dSx)).astype(int)
+    j = (np.round((lat - S.lat[0]) / dSy)).astype(int)
+
+    valid = (i < S.lon.shape) * (j < S.lat.shape) * (i >= 0) * (j >= 0)
+    return [i, j], valid
+
+def get_elev_from_tiles(x_cpp, y_cpp, tile_list):
+    '''
+    x: vector of x coordinates, assuming cpp;
+    y: vector of x coordinates, assuming cpp;
+    tile_list: list of DEM tiles (in dem_data type, defined in river_map_tif_preproc)
+    '''
+
+    lon, lat = cpp2lonlat(x_cpp, y_cpp)
+
+    elevs = np.empty(lon.shape, dtype=float); elevs.fill(np.nan)
+    for S in tile_list:
+        [j, i], in_box = Sidx(S, lon, lat)
+        idx = (np.isnan(elevs) * in_box).astype(bool)  # only update valid entries that are not already set (i.e. nan at this step) and in DEM box
+        elevs[idx] = S.elev[i[idx], j[idx]]
+
+    if np.isnan(elevs).any():
+        # raise ValueError('failed to find elevation')
+        return None
+    else:
+        return elevs
 
 def find_parent_box(pts, boxes, i_overlap=False):
     ndigits = int(math.log10(len(boxes))) + 1  # number of digits needed for representing tile id, e.g., CuDEM (819 tiles) needs 3 digits

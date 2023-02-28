@@ -46,6 +46,32 @@ def cpp2lonlat(x, y, lon0=0, lat0=0):
 
     return [lon, lat]
 
+def curvature(pts):
+    if len(pts[:, 0]) < 3:
+        cur = np.zeros((len(pts[:, 0])))
+    else:
+        dx = np.gradient(pts[:,0]) # first derivatives
+        dy = np.gradient(pts[:,1])
+
+        d2x = np.gradient(dx) #second derivatives
+        d2y = np.gradient(dy)
+
+        cur = np.abs(dx * d2y - d2x * dy) / ((dx * dx + dy * dy)**1.5 + 1e-20)
+
+    return cur
+
+def get_perpendicular_angle(line):
+    line_cplx = np.squeeze(line.copy().view(np.complex128))
+    angles = np.angle(np.diff(line_cplx))
+    angle_diff0 = np.diff(angles)
+    angle_diff = np.diff(angles)
+    angle_diff[angle_diff0 > np.pi] -= 2 * np.pi
+    angle_diff[angle_diff0 < -np.pi] += 2 * np.pi
+    perp = angles[:-1] + angle_diff / 2 - np.pi / 2
+    perp = np.r_[angles[0] - np.pi / 2, perp, angles[-1] - np.pi / 2]
+
+    return perp
+
 def normalizeVec(x, y):
     distance = np.sqrt(x*x+y*y)
     return x/distance, y/distance
@@ -401,32 +427,6 @@ class Levee_SMS_MAP(SMS_MAP):
                 x_off, y_off = makeOffsetPoly(x_sub, y_sub, offset)
                 self.offsetline_list.append(SMS_ARC(points=np.c_[x_off, y_off]))
         return SMS_MAP(arcs=self.subsampled_centerline_list), SMS_MAP(arcs=self.offsetline_list)
-
-def get_perpendicular_angle(line):
-    line_cplx = np.squeeze(line.copy().view(np.complex128))
-    angles = np.angle(np.diff(line_cplx))
-    angle_diff0 = np.diff(angles)
-    angle_diff = np.diff(angles)
-    angle_diff[angle_diff0 > np.pi] -= 2 * np.pi
-    angle_diff[angle_diff0 < -np.pi] += 2 * np.pi
-    perp = angles[:-1] + angle_diff / 2 - np.pi / 2
-    perp = np.r_[angles[0] - np.pi / 2, perp, angles[-1] - np.pi / 2]
-
-    return perp
-
-def curvature(pts):
-    if len(pts[:, 0]) < 3:
-        cur = np.zeros((len(pts[:, 0])))
-    else:
-        dx = np.gradient(pts[:,0]) # first derivatives
-        dy = np.gradient(pts[:,1])
-
-        d2x = np.gradient(dx) #second derivatives
-        d2y = np.gradient(dy)
-
-        cur = np.abs(dx * d2y - d2x * dy) / ((dx * dx + dy * dy)**1.5 + 1e-20)
-
-    return cur
 
 def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=None):
     if not iNoPrint: print(f'reading shapefile: {fname}')

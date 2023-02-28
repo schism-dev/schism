@@ -1,10 +1,10 @@
-from functools import cache
 import os
 import time
 from mpi4py import MPI
-import glob
+from glob import glob
 import numpy as np
 import pickle
+import geopandas as gpd
 from RiverMapper.river_map_tif_preproc import find_thalweg_tile
 from RiverMapper.make_river_map import make_river_map
 from RiverMapper.SMS import merge_maps
@@ -146,7 +146,10 @@ def river_map_mpi_driver(
         merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
         merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
 
-        xyz_files = glob.glob(f'{output_dir}/*.xyz')
+        shapefile_list = glob(f'{output_dir}/*.shp')
+        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in shapefile_list]).to_file(f'{output_dir}/total_river_outline.shp')
+
+        xyz_files = glob(f'{output_dir}/*.xyz')
         os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')
 
         print(f'Total run time: {time.time()-time_all_groups_start} seconds.')

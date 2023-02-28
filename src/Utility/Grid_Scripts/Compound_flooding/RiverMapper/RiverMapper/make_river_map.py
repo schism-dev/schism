@@ -1,37 +1,20 @@
 import os
+import pathlib
 from copy import deepcopy
 import numpy as np
 from scipy import interpolate
 import math
-from osgeo import gdal
-from dataclasses import dataclass
-import pathlib
-import pickle
-from RiverMapper.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, \
-    curvature, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat, \
-    get_perpendicular_angle
-from shapely.ops import split
-from shapely.geometry import Point, LineString
-from geopandas import GeoSeries
+from shapely.geometry import LineString
+from shapely.ops import polygonize, unary_union, split
 import geopandas as gpd
-from shapely.ops import polygonize, unary_union
-from sklearn.feature_selection import mutual_info_classif
+from RiverMapper.SMS import get_all_points_from_shp, curvature, get_perpendicular_angle
+from RiverMapper.SMS import SMS_ARC, SMS_MAP, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat
+from RiverMapper.river_map_tif_preproc import Tif2XYZ, get_elev_from_tiles
 
 
 np.seterr(all='raise')
 
 
-@dataclass
-class dem_data():
-    x: np.ndarray
-    y: np.ndarray
-    lon: np.ndarray
-    lat: np.ndarray
-    elev: np.ndarray
-    dx: float
-    dy: float
-
-@dataclass
 class Bombs():
     def __init__(self, center_x=None, center_y=None,
                  x=np.empty((0,1), dtype=float),
@@ -67,231 +50,39 @@ class Bombs():
                 i_valid[nearby_idx] = False
 
         if sum(i_valid) == 0:
-            raise Exception("impossible: all points bombed.")
+            raise ValueError("impossible: all points bombed.")
 
         self.points = self.points[i_valid]
         self.res = self.res[i_valid]
 
         return np.c_[self.points.real, self.points.imag, self.res]
 
-def geos2SmsArcList(geoms):
-    sms_arc_list = []
-    for i, line in enumerate(geoms):
-        sms_arc_list.append(SMS_ARC(points=np.c_[line.xy[0], line.xy[1]], src_prj='epsg:4326'))
-    
-    return sms_arc_list
+def moving_average(a, n=10, self_weights=0):
+    if len(a) <= n:
+        ret2 = a * 0.0 + np.mean(a)
+        return ret2
+    else:
+        ret = np.cumsum(a, axis=0, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        ret[n-1:] = ret[n-1:] / n
 
-def split_line_by_point(line, point, tolerance: float=1.0e-12):
-    # return split(snap(line, point, tolerance), point)
-    return split(line, point)
+        # re-align time series
+        ret1 = ret * 0.0
+        m = int(np.floor(n/2))
+        ret1[m:-m] = ret[2*m:]
 
-def clean_arcs(LineStringList, blast_center, blast_radius):
-    uu = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
+        # fill the first and last few records
+        ret1[:m] = ret1[m]
+        ret1[-m:] = ret1[-m-1]
 
-    # # sample
-    # uu = GeoSeries(uu).set_crs('epsg:4326')
-    # uu_meter = uu.to_crs('esri:102008')
+        # put more weights on self
+        ret2 = (ret1 + self_weights * a) / (1 + self_weights)
 
-    # ls1 = LineString([(0,0), (1,1)])
-    # ls2 = LineString([(0,1), (1,0)])
-    # inter = ls1.intersection(ls2)
-    # gc = split_line_by_point(ls1, MultiPoint([inter, Point(0.25, 0.25)]))
-    
-    uu_xy = np.empty((0, 2), dtype=float)
-    uu_xy_idx = np.empty((0, 2), dtype=int)
-    idx = 0
-    for i, line in enumerate(uu.geoms):
-        uu_xy = np.r_[uu_xy, np.array(line.xy).T]
-        uu_xy_idx = np.r_[uu_xy_idx, np.c_[idx, idx+len(line.xy[0])]]
-        idx += len(line.xy[0])
-    
-    i_snap = np.zeros((len(uu_xy), ), dtype=bool)
-    for center, radius in zip(blast_center, blast_radius):
-        idx = abs(uu_xy[:, 0]+1j*uu_xy[:, 1] - (center[0]+1j*center[1])) < radius
-        i_snap[idx] = True
-    
-    _, idx = nearest_neighbour(uu_xy[i_snap], np.c_[blast_center[:, 0], blast_center[:, 1]])
-    uu_xy[i_snap, :] = blast_center[idx, :]
-
-    LineStringList_Cleaned = []
-    for i, line in enumerate(uu.geoms):
-        line_xy = uu_xy[uu_xy_idx[i, 0]:uu_xy_idx[i, 1], :]
-        LineStringList_Cleaned.append(LineString(np.c_[line_xy[:, 0], line_xy[:, 1]]))
-
-    river_arcs_gdf = gpd.GeoDataFrame({'index':range(len(LineStringList_Cleaned)),'geometry':LineStringList_Cleaned})
-    uu = river_arcs_gdf.geometry.unary_union
-
-    cleaned_arc_list = []
-    for i, line in enumerate(uu.geoms):
-        line = LineString(np.array(line.xy).T)
-        # if line.length > 30e-5:
-        cleaned_arc_list.append(line)
-
-    return cleaned_arc_list
-
+        return ret2
 
 def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
-
-
-def get_elev_from_tiles(x_cpp, y_cpp, tile_list):
-    '''
-    x: vector of x coordinates, assuming cpp;
-    y: vector of x coordinates, assuming cpp;
-    tile_list: list of tiles
-    '''
-
-    lon, lat = cpp2lonlat(x_cpp, y_cpp)
-
-    elevs = np.empty(lon.shape, dtype=float); elevs.fill(np.nan)
-    for S in tile_list:
-        [j, i], in_box = Sidx(S, lon, lat)
-        idx = (np.isnan(elevs) * in_box).astype(bool)  # only update valid entries that are not already set and in DEM box
-        elevs[idx] = S.elev[i[idx], j[idx]]
-
-    if np.isnan(elevs).any():
-        pass
-        # raise Exception('failed to find elevation')
-        return None
-    else:
-        return elevs
-
-def Sidx(S, lon, lat):
-    '''
-    return nearest index (i, j) in DEM mesh for point (x, y),
-    assuming lon/lat, not projected coordinates
-    '''
-    dSx = S.lon[1] - S.lon[0]
-    dSy = S.lat[1] - S.lat[0]
-    i = (np.round((lon - S.lon[0]) / dSx)).astype(int)
-    j = (np.round((lat - S.lat[0]) / dSy)).astype(int)
-
-    valid = (i < S.lon.shape) * (j < S.lat.shape) * (i >= 0) * (j >= 0)
-    return [i, j], valid
-
-def improve_thalwegs(S_list, dl, line, search_length, perp, mpi_print_prefix):
-    x = line[:, 0]
-    y = line[:, 1]
-
-    xt_right = line[:, 0] + search_length * np.cos(perp)
-    yt_right = line[:, 1] + search_length * np.sin(perp)
-    xt_left = line[:, 0] + search_length * np.cos(perp + np.pi)
-    yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
-
-    __search_steps = int(np.max(search_length/dl))
-    __search_steps = max(5, __search_steps)  # give it at least something to search for, i.e., the length of 5 grid points
-
-    x_new = np.empty((len(x), 2), dtype=float); x_new.fill(np.nan)
-    y_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
-    elev_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
-    thalweg_idx = np.ones(xt_right.shape) * 9999
-    for k, [xt, yt] in enumerate([[xt_left, yt_left], [xt_right, yt_right]]):
-        xts = np.linspace(x, xt, __search_steps, axis=1)
-        yts = np.linspace(y, yt, __search_steps, axis=1)
-
-        ''' One tile
-        [jj, ii], valid = Sidx(S, xts[:], yts[:])
-        if valid.all():
-            elevs = S.elev[ii, jj]
-            low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
-            thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
-
-            x_new[:, k] = xts[range(len(x)), thalweg_idx]
-            y_new[:, k] = yts[range(len(x)), thalweg_idx]
-            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
-        else:
-            return np.c_[x, y], False  # return orignial thalweg
-        '''
-        # multiple tiles in a tile list
-        elevs = get_elev_from_tiles(xts, yts, S_list)
-        if np.isnan(elevs).any():
-            print(f'{mpi_print_prefix} Warning: nan found in elevs\n' + \
-                  f'when trying to improve Thalweg: {np.c_[x, y]}')
-            return np.c_[x, y], False  # return orignial thalweg
-
-        if elevs is not None:
-            if elevs.shape[1] < 2:
-                print(f'{mpi_print_prefix} Warning: elevs shape[1] < 2')
-                return np.c_[x, y], False  # return orignial thalweg
-
-            n_low = min(10, elevs.shape[1]-1)
-            low = np.argpartition(elevs, n_low, axis=1)
-            thalweg_idx = np.median(low[:, :n_low], axis=1).astype(int)
-
-            if any(thalweg_idx<0) or any(thalweg_idx>=len(x)):
-                return np.c_[x, y], False  # return orignial thalweg
-
-            x_new[:, k] = xts[range(len(x)), thalweg_idx]
-            y_new[:, k] = yts[range(len(x)), thalweg_idx]
-            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
-        else:
-            return np.c_[x, y], False  # return orignial thalweg
-
-    left_or_right = elev_new[:, 0] > elev_new[:, 1]
-    x_real = x_new[range(len(x)), left_or_right.astype(int)]  # if left higher than right, then use right
-    y_real = y_new[range(len(x)), left_or_right.astype(int)]
-
-    return np.c_[x_real, y_real], True
-
-def get_bank(S_list, x, y, thalweg_eta, xt, yt, search_steps=100, search_tolerance=5):
-    '''
-    Get a bank on one side of the thalweg (x, y)
-    Inputs:
-        x, y, eta along a thalweg
-        parameter deciding the search area: search_stps
-    '''
-
-    # search_steps_tile = np.repeat(np.arange(search_steps).reshape(1, -1), len(x), axis=0)  # expanded to the search area
-
-    # form a search area between thalweg and search limit
-    xts = np.linspace(x, xt, search_steps, axis=1)
-    yts = np.linspace(y, yt, search_steps, axis=1)
-
-    ''' one tile
-    [j, i], valid = Sidx(S, x, y)
-    if all(valid):
-        elevs = S.elev[i, j]
-    else:
-        return None, None
-    '''
-
-    eta_stream = np.tile(thalweg_eta.reshape(-1, 1), (1, search_steps))  # expanded to the search area
-
-    ''' one tile
-    [jj, ii], valid = Sidx(S, xts[:], yts[:])
-    if valid.all:
-        elevs = S.elev[ii, jj]
-    else:
-        return None, None
-    '''
-    elevs = get_elev_from_tiles(xts, yts, S_list)
-    if elevs is None:
-        return None, None
-
-    R = (elevs - eta_stream)  # closeness to target depth
-    bank_idx = np.argmax(R>0, axis=1)
-
-    invalid = bank_idx == 0
-    bank_idx[invalid] = np.argmin(abs(R[invalid, :]), axis=1)
-
-    # R_sort_idx = np.argsort(R)
-    # bank_idx = np.min(R_sort_idx[:, :min(search_steps, search_tolerance)], axis=1)
-
-    # x_banks = S.lon[jj[range(0, len(x)), bank_idx]]
-    # y_banks = S.lat[ii[range(0, len(x)), bank_idx]]
-    x_banks = xts[range(len(x)), bank_idx]
-    y_banks = yts[range(len(x)), bank_idx]
-
-    return x_banks, y_banks
-
-def get_dist_increment(line):
-    line_copy = deepcopy(line)
-    line_cplx = np.squeeze(line_copy.view(np.complex128))
-    dist = np.absolute(line_cplx[1:] - line_cplx[:-1])
-
-    # return np.r_[0.0, np.cumsum(dist)]
-    return dist
 
 def get_angle_diffs(xs, ys):
     line = np.c_[xs, ys]
@@ -303,6 +94,45 @@ def get_angle_diffs(xs, ys):
     angle_diff[angle_diff0 < -np.pi] += 2 * np.pi
 
     return angle_diff
+
+def geos2SmsArcList(geoms):
+    sms_arc_list = []
+    for i, line in enumerate(geoms):
+        sms_arc_list.append(SMS_ARC(points=np.c_[line.xy[0], line.xy[1]], src_prj='epsg:4326'))
+    
+    return sms_arc_list
+
+def nearest_neighbour(points_a, points_b):
+    from scipy import spatial
+    tree = spatial.cKDTree(points_b)
+    return tree.query(points_a)[0], tree.query(points_a)[1]
+
+def split_line_by_point(line, point, tolerance: float=1.0e-12):
+    # return split(snap(line, point, tolerance), point)
+    return split(line, point)
+
+def snap_vertices(line, thalweg_resolution):
+    dist_along_thalweg = get_dist_increment(line)
+
+    idx = 0
+    original_seg_length = dist_along_thalweg[0]
+    while idx < len(dist_along_thalweg)-1:
+        if original_seg_length < thalweg_resolution[idx]:
+            line[idx+1, :] = line[idx, :]  # snap current point to the previous one
+            original_seg_length += dist_along_thalweg[idx+1]
+        else:
+            original_seg_length = dist_along_thalweg[idx+1]
+        idx += 1  # move original arc forward
+
+    return line
+
+def get_dist_increment(line):
+    line_copy = deepcopy(line)
+    line_cplx = np.squeeze(line_copy.view(np.complex128))
+    dist = np.absolute(line_cplx[1:] - line_cplx[:-1])
+
+    # return np.r_[0.0, np.cumsum(dist)]
+    return dist
 
 def ccw(A,B,C):
     # A is a point with the coordinate x=A[0], y=A[1]
@@ -417,56 +247,6 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
 
     return xs, ys
 
-def Tif2XYZ(tif_fname=None, cache=True):
-    cache_name = tif_fname + '.pkl'
-
-    if cache:
-        if os.path.exists(cache_name):  # try to load cache
-            try:
-                with open(cache_name, 'rb') as f:
-                    S = pickle.load(f)
-                    return S  # cache successfully read
-            except ModuleNotFoundError:
-                # remove existing cache if failing to read from it
-                if os.path.exists(cache_name):
-                    os.remove(cache_name)
-    else:  # remove existing cache if cache=False
-        if os.path.exists(cache_name):
-            os.remove(cache_name)
-
-    # read from raw tif and generate cache
-    ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
-    band = ds.GetRasterBand(1)
-
-    width = ds.RasterXSize
-    height = ds.RasterYSize
-
-    gt = ds.GetGeoTransform()
-    TL_x, TL_y = gt[0], gt[3]
-
-    #showing a 2D image of the topo
-    # plt.imshow(elevation, cmap='gist_earth',extent=[minX, maxX, minY, maxY])
-    # plt.show()
-
-    z = band.ReadAsArray()
-
-    dx = gt[1]
-    dy = gt[5]
-    if gt[2] != 0 or gt[4] != 0:
-        raise Exception()
-
-    x_idx = np.array(range(width))
-    y_idx = np.array(range(height))
-    xp = dx * x_idx + TL_x + dx/2
-    yp = dy * y_idx + TL_y + dy/2
-
-    S = dem_data(xp, yp, xp, yp, z, dx, dy)
-    with open(cache_name, 'wb') as f:
-        pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-    ds = None  # close dataset
-
-    return S
 
 def set_eta(x, y):
     eta = np.zeros(x.shape, dtype=float)
@@ -545,29 +325,6 @@ def get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min
 
     return x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, bank2bank_width
 
-def moving_average(a, n=10, self_weights=0):
-    if len(a) <= n:
-        ret2 = a * 0.0 + np.mean(a)
-        return ret2
-    else:
-        ret = np.cumsum(a, axis=0, dtype=float)
-        ret[n:] = ret[n:] - ret[:-n]
-        ret[n-1:] = ret[n-1:] / n
-
-        # re-align time series
-        ret1 = ret * 0.0
-        m = int(np.floor(n/2))
-        ret1[m:-m] = ret[2*m:]
-
-        # fill the first and last few records
-        ret1[:m] = ret1[m]
-        ret1[-m:] = ret1[-m-1]
-
-        # put more weights on self
-        ret2 = (ret1 + self_weights * a) / (1 + self_weights)
-
-        return ret2
-
 def redistribute_arc(line, line_smooth, channel_width, this_nrow_arcs, smooth_option=1, R_coef=0.4, length_width_ratio=6.0, reso_thres=[5, 300], endpoints_scale=1.0, idryrun=False):
 
     cross_channel_length_scale = channel_width/this_nrow_arcs
@@ -645,26 +402,6 @@ def redistribute_arc(line, line_smooth, channel_width, this_nrow_arcs, smooth_op
 
     return line[retained_points, :], line_smooth, river_resolution, retained_points
 
-def snap_vertices(line, thalweg_resolution):
-    dist_along_thalweg = get_dist_increment(line)
-
-    idx = 0
-    original_seg_length = dist_along_thalweg[0]
-    while idx < len(dist_along_thalweg)-1:
-        if original_seg_length < thalweg_resolution[idx]:
-            line[idx+1, :] = line[idx, :]  # snap current point to the previous one
-            original_seg_length += dist_along_thalweg[idx+1]
-        else:
-            original_seg_length = dist_along_thalweg[idx+1]
-        idx += 1  # move original arc forward
-
-    return line
-
-def nearest_neighbour(points_a, points_b):
-    from scipy import spatial
-    tree = spatial.cKDTree(points_b)
-    return tree.query(points_a)[0], tree.query(points_a)[1]
-
 def get_thalweg_neighbors(thalwegs, thalweg_endpoints):
     # rounding_digits = 12
     # thalweg_endpoints_unique = np.unique(np.array(thalweg_endpoints).round(decimals=rounding_digits), axis=0)
@@ -694,6 +431,151 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
 
 def width2narcs(width):
     return int(3 + np.floor(0.35*width**0.25))
+
+def clean_arcs(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
+    uu = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
+
+    # # sample
+    # uu = GeoSeries(uu).set_crs('epsg:4326')
+    # uu_meter = uu.to_crs('esri:102008')
+
+    # ls1 = LineString([(0,0), (1,1)])
+    # ls2 = LineString([(0,1), (1,0)])
+    # inter = ls1.intersection(ls2)
+    # gc = split_line_by_point(ls1, MultiPoint([inter, Point(0.25, 0.25)]))
+    
+    uu_xy = np.empty((0, 2), dtype=float)
+    uu_xy_idx = np.empty((0, 2), dtype=int)
+    idx = 0
+    for i, line in enumerate(uu.geoms):
+        uu_xy = np.r_[uu_xy, np.array(line.xy).T]
+        uu_xy_idx = np.r_[uu_xy_idx, np.c_[idx, idx+len(line.xy[0])]]
+        idx += len(line.xy[0])
+    
+    i_snap = np.zeros((len(uu_xy), ), dtype=bool)
+    for center, radius in zip(blast_center, blast_radius):
+        idx = abs(uu_xy[:, 0]+1j*uu_xy[:, 1] - (center[0]+1j*center[1])) < radius
+        i_snap[idx] = True
+    
+    _, idx = nearest_neighbour(uu_xy[i_snap], np.c_[blast_center[:, 0], blast_center[:, 1]])
+    uu_xy[i_snap, :] = blast_center[idx, :]
+
+    LineStringList_Cleaned = []
+    for i, line in enumerate(uu.geoms):
+        line_xy = uu_xy[uu_xy_idx[i, 0]:uu_xy_idx[i, 1], :]
+        LineStringList_Cleaned.append(LineString(np.c_[line_xy[:, 0], line_xy[:, 1]]))
+
+    river_arcs_gdf = gpd.GeoDataFrame({'index':range(len(LineStringList_Cleaned)),'geometry':LineStringList_Cleaned})
+    uu = river_arcs_gdf.geometry.unary_union
+
+    cleaned_arc_list = []
+    for i, line in enumerate(uu.geoms):
+        line = LineString(np.array(line.xy).T)
+        if line.length > dl_cpp2lonlat(minimum_arc_length, line.xy[1][0]):
+            cleaned_arc_list.append(line)
+
+    return cleaned_arc_list
+
+def improve_thalwegs(S_list, dl, line, search_length, perp, mpi_print_prefix):
+    x = line[:, 0]
+    y = line[:, 1]
+
+    xt_right = line[:, 0] + search_length * np.cos(perp)
+    yt_right = line[:, 1] + search_length * np.sin(perp)
+    xt_left = line[:, 0] + search_length * np.cos(perp + np.pi)
+    yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
+
+    __search_steps = int(np.max(search_length/dl))
+    __search_steps = max(5, __search_steps)  # give it at least something to search for, i.e., the length of 5 grid points
+
+    x_new = np.empty((len(x), 2), dtype=float); x_new.fill(np.nan)
+    y_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
+    elev_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
+    thalweg_idx = np.ones(xt_right.shape) * 9999
+    for k, [xt, yt] in enumerate([[xt_left, yt_left], [xt_right, yt_right]]):
+        xts = np.linspace(x, xt, __search_steps, axis=1)
+        yts = np.linspace(y, yt, __search_steps, axis=1)
+
+        ''' One tile
+        [jj, ii], valid = Sidx(S, xts[:], yts[:])
+        if valid.all():
+            elevs = S.elev[ii, jj]
+            low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
+            thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
+
+            x_new[:, k] = xts[range(len(x)), thalweg_idx]
+            y_new[:, k] = yts[range(len(x)), thalweg_idx]
+            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
+        else:
+            return np.c_[x, y], False  # return orignial thalweg
+        '''
+        # multiple tiles in a tile list
+        elevs = get_elev_from_tiles(xts, yts, S_list)
+        if np.isnan(elevs).any():
+            print(f'{mpi_print_prefix} Warning: nan found in elevs\n' + \
+                  f'when trying to improve Thalweg: {np.c_[x, y]}')
+            return np.c_[x, y], False  # return orignial thalweg
+
+        if elevs is not None:
+            if elevs.shape[1] < 2:
+                print(f'{mpi_print_prefix} Warning: elevs shape[1] < 2')
+                return np.c_[x, y], False  # return orignial thalweg
+
+            n_low = min(10, elevs.shape[1]-1)
+            low = np.argpartition(elevs, n_low, axis=1)
+            thalweg_idx = np.median(low[:, :n_low], axis=1).astype(int)
+
+            if any(thalweg_idx<0) or any(thalweg_idx>=len(x)):
+                return np.c_[x, y], False  # return orignial thalweg
+
+            x_new[:, k] = xts[range(len(x)), thalweg_idx]
+            y_new[:, k] = yts[range(len(x)), thalweg_idx]
+            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
+        else:
+            return np.c_[x, y], False  # return orignial thalweg
+
+    left_or_right = elev_new[:, 0] > elev_new[:, 1]
+    x_real = x_new[range(len(x)), left_or_right.astype(int)]  # if left higher than right, then use right
+    y_real = y_new[range(len(x)), left_or_right.astype(int)]
+
+    return np.c_[x_real, y_real], True
+
+def get_bank(S_list, x, y, thalweg_eta, xt, yt, search_steps=100, search_tolerance=5):
+    '''
+    Get a bank on one side of the thalweg (x, y)
+    Inputs:
+        x, y, eta along a thalweg
+        parameter deciding the search area: search_stps
+    '''
+
+    # search_steps_tile = np.repeat(np.arange(search_steps).reshape(1, -1), len(x), axis=0)  # expanded to the search area
+
+    # form a search area between thalweg and search limit
+    xts = np.linspace(x, xt, search_steps, axis=1)
+    yts = np.linspace(y, yt, search_steps, axis=1)
+
+    eta_stream = np.tile(thalweg_eta.reshape(-1, 1), (1, search_steps))  # expanded to the search area
+
+    elevs = get_elev_from_tiles(xts, yts, S_list)
+    if elevs is None:
+        return None, None
+
+    R = (elevs - eta_stream)  # closeness to target depth
+    bank_idx = np.argmax(R>0, axis=1)
+
+    invalid = bank_idx == 0
+    bank_idx[invalid] = np.argmin(abs(R[invalid, :]), axis=1)
+
+    # R_sort_idx = np.argsort(R)
+    # bank_idx = np.min(R_sort_idx[:, :min(search_steps, search_tolerance)], axis=1)
+
+    # x_banks = S.lon[jj[range(0, len(x)), bank_idx]]
+    # y_banks = S.lat[ii[range(0, len(x)), bank_idx]]
+    x_banks = xts[range(len(x)), bank_idx]
+    y_banks = yts[range(len(x)), bank_idx]
+
+    return x_banks, y_banks
+
 
 def make_river_map(
     tif_fnames = [], thalweg_shp_fname = '',
@@ -758,10 +640,6 @@ def make_river_map(
     endpoints_scale = 1.5
     # ---------------------- end pre-processing some inputs -------------------------
 
-    if i_thalweg_cache:
-        if cache_folder is None or not os.path.exists(cache_folder):
-            raise Exception("Cache folder not found.")
-
     # ------------------------- read DEM ---------------------------
     main_dem_id = 1
     S_list = []
@@ -773,10 +651,8 @@ def make_river_map(
         else:
             nvalid_tile += 1
 
-        if pathlib.Path(tif_fname).suffix == ".tif" :
-            S = Tif2XYZ(tif_fname=tif_fname, cache=i_dem_cache)
-        else:
-            raise Exception("Unknown DEM format.")
+        S = Tif2XYZ(tif_fname=tif_fname, cache=i_dem_cache)
+
         print(f'{mpi_print_prefix} [{os.path.basename(tif_fname)}] DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
         S_list.append(S)
 
@@ -789,7 +665,7 @@ def make_river_map(
             search_steps = int(river_threshold[-1] / dl)
 
     if nvalid_tile == 0:
-        raise Exception('Fatal Error: no valid DEM tiles')
+        raise ValueError('Fatal Error: no valid DEM tiles')
 
     # ------------------------- read thalweg ---------------------------
     xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache, cache_folder=cache_folder)
@@ -1109,7 +985,11 @@ def make_river_map(
 
     # Clean river intersections
     total_arcs_cleaned = []
-    for arcs in [river_arcs, cc_arcs]:
+    if i_close_poly:
+        arc_groups = [river_arcs, cc_arcs]
+    else:
+        arc_groups = [river_arcs]
+    for arcs in arc_groups:
         for i, river in enumerate(arcs):
             for j, line in enumerate(river):
                 if line is not None:
@@ -1132,7 +1012,9 @@ def make_river_map(
         while True:
             iter += 1
             total_arcs_cleaned = clean_arcs(total_arcs_cleaned, np.c_[bombed_lon, bombed_lat], blast_radius_ll*0.3)
-            if len(total_arcs_cleaned) == n_arcs:
+            if len(total_arcs_cleaned) == 0:  # all arcs removed due to minumum length limit
+                break
+            if len(total_arcs_cleaned) == n_arcs:  # same number of arcs as last iteration, end cleaning
                 break
             else:
                 n_arcs = len(total_arcs_cleaned)
