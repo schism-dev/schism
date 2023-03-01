@@ -6,7 +6,7 @@ with io.open('README.md','r', encoding='utf8') as fh:
 
   setuptools.setup(
   name='RiverMapper',
-  version='0.0.3',
+  version='0.0.4',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for generating watershed river arcs for meshing',
@@ -28,6 +28,5 @@ with io.open('README.md','r', encoding='utf8') as fh:
     'shapely>=2.0.0',
     'pyshp>=2.3.0',
     'geopandas>=0.12.0',
-    'scikit-learn>=1.0.0'
   ],
 )

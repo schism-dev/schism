@@ -1,10 +1,10 @@
 import os
-import pathlib
+import pandas as pd
 from copy import deepcopy
 import numpy as np
 from scipy import interpolate
 import math
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 from shapely.ops import polygonize, unary_union, split
 import geopandas as gpd
 from RiverMapper.SMS import get_all_points_from_shp, curvature, get_perpendicular_angle
@@ -432,6 +432,59 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
 def width2narcs(width):
     return int(3 + np.floor(0.35*width**0.25))
 
+def points2GeoDataFrame(points: np.ndarray, crs='epsg:4326'):
+    '''
+    Takes a (n, 2) array of (lon, lat) coordinates and convert to GeoPanda's GeoDataFrame
+    '''
+    df = pd.DataFrame({'lon':points[:, 0], 'lat':points[:, 1]})
+    df['coords'] = list(zip(df['lon'],df['lat']))
+    df['coords'] = df['coords'].apply(Point)
+    return gpd.GeoDataFrame(df, geometry='coords', crs=crs)
+
+def clean_intersections(LineStringList: list, target_polygons: np.ndarray, snap_points: np.ndarray, minimum_arc_length=100.0, buffer=30.0):
+    '''
+    Clean arcs (LineStringList, a list of Shapely's LineString objects)
+    by first intersecting them (by unary_union),
+    then snapping target points (within 'target_polygons') to 'snap_points',
+    and finally remove any arcs < minimum_arc_length.
+    '''
+    arcs = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
+    
+    arcs_xy = np.empty((0, 2), dtype=float)
+    arcs_xy_idx = np.empty((0, 2), dtype=int)
+    idx = 0
+    for i, line in enumerate(arcs.geoms):
+        arcs_xy = np.r_[arcs_xy, np.array(line.xy).T]
+        arcs_xy_idx = np.r_[arcs_xy_idx, np.c_[idx, idx+len(line.xy[0])]]
+        idx += len(line.xy[0])
+
+    arcs_xy_gdf = points2GeoDataFrame(arcs_xy)
+    target_poly_gdf = gpd.GeoDataFrame(index=range(len(target_polygons)), crs='epsg:4326', geometry=target_polygons)
+    target_poly_gdf['geometry'] = target_poly_gdf.geometry.to_crs('esri:102008').buffer(buffer).to_crs('epsg:4326')
+    pointInPolys = gpd.tools.sjoin(arcs_xy_gdf, target_poly_gdf, predicate="within", how='left')
+
+    _, idx = np.unique(pointInPolys.index, return_index=True)  # some points belong to multiple polygons
+    i_target_points = np.array(~np.isnan(pointInPolys.index_right))[idx]
+    
+    _, idx = nearest_neighbour(arcs_xy[i_target_points], np.c_[snap_points[:, 0], snap_points[:, 1]])
+    arcs_xy[i_target_points, :] = snap_points[idx, :]
+
+    LineStringList_Cleaned = []
+    for i, line in enumerate(arcs.geoms):
+        line_xy = arcs_xy[arcs_xy_idx[i, 0]:arcs_xy_idx[i, 1], :]
+        LineStringList_Cleaned.append(LineString(np.c_[line_xy[:, 0], line_xy[:, 1]]))
+
+    river_arcs_gdf = gpd.GeoDataFrame({'index':range(len(LineStringList_Cleaned)),'geometry':LineStringList_Cleaned})
+    cleaned_arcs = river_arcs_gdf.geometry.unary_union
+
+    cleaned_arc_list = []
+    for i, line in enumerate(cleaned_arcs.geoms):
+        line = LineString(np.array(line.xy).T)
+        if line.length > dl_cpp2lonlat(minimum_arc_length, line.xy[1][0]):
+            cleaned_arc_list.append(line)
+
+    return cleaned_arc_list
+
 def clean_arcs(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
     uu = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
 
@@ -584,7 +637,7 @@ def make_river_map(
     outer_arcs_positions = [],
     length_width_ratio = 32.0,
     i_close_poly = True, i_blast_intersection = False,
-    blast_radius_scale = 0.6, bomb_radius_coef = 0.4
+    blast_radius_scale = 0.6, bomb_radius_coef = 0.7
 ):
     '''
     [Core routine for making river maps]
@@ -619,7 +672,7 @@ def make_river_map(
     
     blast_radius_scale:  coef controlling the blast radius at intersections, a larger number leads to more intersection features being deleted
 
-    bomb_radius_coef:  coef controlling the spacing among intersection joints, a larger number leads to more sparse intersection joints
+    bomb_radius_coef:  coef controlling the spacing among intersection joints, a larger number leads to sparser intersection joints
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
@@ -637,7 +690,7 @@ def make_river_map(
     # maximum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs)
     max_nrow_arcs = width2narcs(river_threshold[-1]) + 2 * len(outer_arcs_positions)
     outer_arcs_positions = np.array(outer_arcs_positions)
-    endpoints_scale = 1.5
+    endpoints_scale = 1.0
     # ---------------------- end pre-processing some inputs -------------------------
 
     # ------------------------- read DEM ---------------------------
@@ -761,6 +814,7 @@ def make_river_map(
     real_bank_width = np.zeros((len(thalwegs), 2), dtype=float)  # [, 0] is head, [, 1] is tail
     bombed_points = np.empty((0, 3), dtype=float)  # left bank and right bank for each thalweg
     bombs = [None]* len(thalwegs) *2 # left bank and right bank for each thalweg
+    bomb_polygons = []
 
     # enumerate each thalweg
     for i, [thalweg, curv, width, valid_thalweg, thalweg_smooth] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs, thalwegs_smooth)):
@@ -910,6 +964,56 @@ def make_river_map(
             for l in [0, 1]:
                 if len(bombs_xyz[l]) > 0:
                     bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
+            
+            # save bombing polygons
+            if np.all(bombed_idx):
+                poly_xy = np.r_[
+                    np.c_[x_river_arcs[0], y_river_arcs[0]],
+                    np.flipud(np.c_[x_river_arcs[-1], y_river_arcs[-1]]),
+                    np.c_[x_river_arcs[0][0], y_river_arcs[0][0]],
+                ]
+                poly_lon, poly_lat = cpp2lonlat(poly_xy[:, 0], poly_xy[:, 1])
+                mls_uu = unary_union(LineString(np.c_[poly_lon, poly_lat]))
+                for polygon in polygonize(mls_uu):
+                    bomb_polygons.append(polygon)
+
+            elif np.any(bombed_idx):
+                x_river_midpoints = 0.5 * (x_river_arcs[:, :-1] + x_river_arcs[:, 1:])
+                y_river_midpoints = 0.5 * (y_river_arcs[:, :-1] + y_river_arcs[:, 1:])
+                for l in range(2):
+                    if l==0:
+                        bomb_start = 0
+                        try:
+                            bomb_end = np.where(~bombed_idx)[0][0]
+                        except IndexError:
+                            bomb_end = len(bombed_idx)
+                        if bomb_end >= bomb_start:
+                            poly_xy = np.r_[
+                                np.c_[x_river_arcs[0][bomb_start:bomb_end], y_river_arcs[0][bomb_start:bomb_end]],
+                                np.c_[x_river_midpoints[0][bomb_end-1], y_river_midpoints[0][bomb_end-1]],
+                                np.c_[x_river_midpoints[-1][bomb_end-1], y_river_midpoints[-1][bomb_end-1]],
+                                np.flipud(np.c_[x_river_arcs[-1][bomb_start:bomb_end], y_river_arcs[-1][bomb_start:bomb_end]]),
+                                np.c_[x_river_arcs[0][bomb_start], y_river_arcs[0][bomb_start]],
+                            ]
+                    else:
+                        try:
+                            bomb_start = np.where(~bombed_idx)[0][-1]
+                        except IndexError:
+                            bomb_start = len(bombed_idx)
+                        bomb_end = len(bombed_idx) - 1
+                        if bomb_end >= bomb_start:
+                            poly_xy = np.r_[
+                                np.c_[x_river_midpoints[0][bomb_start], y_river_midpoints[0][bomb_start]],
+                                np.c_[x_river_arcs[0][bomb_start+1:bomb_end], y_river_arcs[0][bomb_start+1:bomb_end]],
+                                np.flipud(np.c_[x_river_arcs[-1][bomb_start+1:bomb_end], y_river_arcs[-1][bomb_start+1:bomb_end]]),
+                                np.c_[x_river_midpoints[-1][bomb_start], y_river_midpoints[-1][bomb_start]],
+                                np.c_[x_river_midpoints[0][bomb_start], y_river_midpoints[0][bomb_start]],
+                            ]
+                    
+                    poly_lon, poly_lat = cpp2lonlat(poly_xy[:, 0], poly_xy[:, 1])
+                    mls_uu = unary_union(LineString(np.c_[poly_lon, poly_lat]))
+                    for polygon in polygonize(mls_uu):
+                        bomb_polygons.append(polygon)
 
             if sum(valid_points) > 0:
                 # assemble cross-channel arcs
@@ -974,7 +1078,6 @@ def make_river_map(
                         bombs[2*i+j] += bombs[nei]
                         bombs[nei] = None
 
-
     bombed_xyz = np.empty((0,3), dtype=float)
     for i, bomb in enumerate(bombs):
         if bomb is not None:
@@ -989,15 +1092,22 @@ def make_river_map(
         arc_groups = [river_arcs, cc_arcs]
     else:
         arc_groups = [river_arcs]
+    total_arcs_xy = np.empty((0, 3), dtype=float)
+    total_arcs_xy_idx = []
+    nxy = 0
     for arcs in arc_groups:
         for i, river in enumerate(arcs):
             for j, line in enumerate(river):
                 if line is not None:
+                    nxy += len(line.points)
                     total_arcs_cleaned.append(LineString(line.points))
+                    total_arcs_xy = np.r_[total_arcs_xy, line.points]
+                    total_arcs_xy_idx.append(nxy)
+    if nxy != len(total_arcs_xy):
+        raise ValueError('inconsistent nxy')
     
     if iCleanIntersection:
-        # blast_center_ll = cpp2lonlat(blast_center.reshape(-1,).real, blast_center.reshape(-1,).imag)
-        # blast_center_ll = blast_center_ll[0] + 1j * blast_center_ll[1] 
+
         thalweg_reso_all = np.zeros((0, 3), dtype=float)
         for l, w in zip(thalwegs, thalweg_widths):
             idx = w > 0
@@ -1011,7 +1121,8 @@ def make_river_map(
         n_arcs = len(total_arcs_cleaned)
         while True:
             iter += 1
-            total_arcs_cleaned = clean_arcs(total_arcs_cleaned, np.c_[bombed_lon, bombed_lat], blast_radius_ll*0.3)
+            # total_arcs_cleaned = clean_arcs(total_arcs_cleaned, np.c_[bombed_lon, bombed_lat], 0.5*(blast_radius_ll*0.2+bombed_res_ll*0.5))
+            total_arcs_cleaned = clean_intersections(total_arcs_cleaned, bomb_polygons, snap_points=np.c_[bombed_lon, bombed_lat])
             if len(total_arcs_cleaned) == 0:  # all arcs removed due to minumum length limit
                 break
             if len(total_arcs_cleaned) == n_arcs:  # same number of arcs as last iteration, end cleaning
@@ -1019,7 +1130,6 @@ def make_river_map(
             else:
                 n_arcs = len(total_arcs_cleaned)
             
-        
     total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
 
     # map cleaned arc points to original arc points
@@ -1050,7 +1160,7 @@ def make_river_map(
     for river_polygon in river_polygons:
         if river_polygon is not None:
             final_river_polygons += river_polygon
-
+    
 
     # ------------------------- write SMS maps ---------------------------
     if any(bank_arcs.flatten()):  # not all arcs are None
@@ -1077,6 +1187,7 @@ def make_river_map(
         SMS_MAP(detached_nodes=np.c_[bombed_lon, bombed_lat]).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
 
         gpd.GeoDataFrame(index=range(len(final_river_polygons)), crs='epsg:4326', geometry=final_river_polygons).to_file(filename=f'{output_dir}/{output_prefix}final_river_polygons.shp', driver="ESRI Shapefile")
+        gpd.GeoDataFrame(index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
     else:
         print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
     

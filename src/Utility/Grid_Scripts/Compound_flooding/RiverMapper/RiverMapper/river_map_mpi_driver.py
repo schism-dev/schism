@@ -146,7 +146,7 @@ def river_map_mpi_driver(
         merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
         merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
 
-        shapefile_list = glob(f'{output_dir}/*.shp')
+        shapefile_list = glob(f'{output_dir}/*river*.shp')
         gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in shapefile_list]).to_file(f'{output_dir}/total_river_outline.shp')
 
         xyz_files = glob(f'{output_dir}/*.xyz')
