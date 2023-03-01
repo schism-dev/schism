@@ -71,6 +71,7 @@ The info below can also be found in src/Readme.beta_notes. Most changes are made
 - `ed26f60` (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
 
 Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
+
 Tag v5.10.0: (13 July, 2022)
 
 - `d03830e` (16 May 2022): removed the 2 extra lines required in `partition.prop` (so it's identical to `global_to_local.prop` now);
