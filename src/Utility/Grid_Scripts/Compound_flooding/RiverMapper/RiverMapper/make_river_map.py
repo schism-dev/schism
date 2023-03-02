@@ -1,3 +1,13 @@
+"""
+This is the main worker script for generating river maps
+
+Usage: 
+Import and call the function "make_river_map",
+either directly, see sample_serial.py in the installation directory;
+or via the parralel driver, see sample_parallel.py in the installation directory
+"""
+
+
 import os
 import pandas as pd
 from copy import deepcopy
@@ -637,7 +647,8 @@ def make_river_map(
     outer_arcs_positions = [],
     length_width_ratio = 32.0,
     i_close_poly = True, i_blast_intersection = False,
-    blast_radius_scale = 0.6, bomb_radius_coef = 0.7
+    blast_radius_scale = 0.6, bomb_radius_coef = 0.7,
+    i_DEM_cache = True
 ):
     '''
     [Core routine for making river maps]
@@ -673,6 +684,9 @@ def make_river_map(
     blast_radius_scale:  coef controlling the blast radius at intersections, a larger number leads to more intersection features being deleted
 
     bomb_radius_coef:  coef controlling the spacing among intersection joints, a larger number leads to sparser intersection joints
+
+    i_DEM_cache : Whether or not to read DEM info from cache.
+                  Reading from original *.tif files can be slow, so the default option is True
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
@@ -680,8 +694,6 @@ def make_river_map(
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
     standard_watershed_resolution = 400.0  # deprecated: resolution of non-river area in the watershed
     intersect_res_scale  = 0.4  # deprecated: coef controlling the resolution of the paved mesh at intersections
-    i_thalweg_cache = False
-    i_dem_cache = False
     thalweg_smooth_shp_fname = None  # deprecated: name of a polyline shapefile containing the smoothed thalwegs (e.g., pre-processed by GIS tools or SMS)
     # ------------------------- end other inputs ---------------------------
 
@@ -704,7 +716,7 @@ def make_river_map(
         else:
             nvalid_tile += 1
 
-        S = Tif2XYZ(tif_fname=tif_fname, cache=i_dem_cache)
+        S = Tif2XYZ(tif_fname=tif_fname, cache=i_DEM_cache)
 
         print(f'{mpi_print_prefix} [{os.path.basename(tif_fname)}] DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
         S_list.append(S)
@@ -721,7 +733,7 @@ def make_river_map(
         raise ValueError('Fatal Error: no valid DEM tiles')
 
     # ------------------------- read thalweg ---------------------------
-    xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache, cache_folder=cache_folder)
+    xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname)
     xyz[:, 0], xyz[:, 1] = lonlat2cpp(xyz[:, 0], xyz[:, 1])
 
     # Optional: provide a smoothed thalweg (on the 2D plane, not smoothed in z) to guide vertices distribution.

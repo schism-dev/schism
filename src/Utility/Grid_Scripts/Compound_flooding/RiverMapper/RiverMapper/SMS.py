@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+This script provides methods of dealing with SMS maps for RiverMapper
+"""
+
+
 from logging import raiseExceptions
 import pickle
 import os
@@ -197,14 +203,15 @@ LEND
 def merge_maps(mapfile_glob_str, merged_fname):
     map_file_list = glob.glob(mapfile_glob_str)
     if len(map_file_list) > 0:
-        map_objects = [SMS_MAP(filename=map_file) for map_file in map_file_list]
+        map_list = [SMS_MAP(filename=map_file) for map_file in map_file_list]
 
-        total_map = map_objects[0]
-        for map_object in map_objects[1:]:
-            total_map += map_object
+        total_map = map_list[0]
+        for map in map_list[1:]:
+            total_map += map
         total_map.writer(merged_fname)
     else:
-        print(f'failed to combine {mapfile_glob_str}, no files found')
+        # print(f'warning: outputs do not exist: {mapfile_glob_str}')
+        pass
 
 
 class SMS_ARC():
@@ -431,16 +438,16 @@ class Levee_SMS_MAP(SMS_MAP):
 def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=None):
     if not iNoPrint: print(f'reading shapefile: {fname}')
 
-    if cache_folder is None:
-        cache_folder = ''
+    # if cache_folder is None:
+    #     cache_folder = ''
 
-    cache_name = cache_folder + Path(fname).stem + '.pkl'
+    # cache_name = cache_folder + Path(fname).stem + '.pkl'
 
-    if iCache == False:
-        if os.path.exists(cache_name):
-            os.remove(cache_name)
+    # if iCache == False:
+    #     if os.path.exists(cache_name):
+    #         os.remove(cache_name)
 
-    if os.path.exists(cache_name):
+    if False:  # os.path.exists(cache_name):
         with open(cache_name, 'rb') as file:
             tmp_dict = pickle.load(file)
             xyz = tmp_dict['xyz']
@@ -528,9 +535,9 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
 
         # if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
 
-        with open(cache_name, 'wb') as file:
-            tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv, 'perp': perp}
-            pickle.dump(tmp_dict, file)
+        # with open(cache_name, 'wb') as file:
+        #     tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv, 'perp': perp}
+        #     pickle.dump(tmp_dict, file)
 
     return xyz, shape_pts_l2g, curv, perp
 
