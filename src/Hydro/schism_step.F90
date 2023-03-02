@@ -1960,13 +1960,13 @@
       if(istat/=0) call parallel_abort('STEP: alloc swild11')
       if(myrank==0) then
         !Calculate stack and record # to read from for step n and n+1
-        istack=(it*nstride_schout+irec0_schout-1)/nrec_schout+1
+        istack=nint(dble((it*nstride_schout+irec0_schout-1))/nrec_schout)+1
         irec2=it*nstride_schout+irec0_schout-(istack-1)*nrec_schout !->time step n (start)
         if(istack<=0.or.irec2<=0.or.irec2>nrec_schout) then
           write(errmsg,*)'STEP: wrong record or stack #, ',istack,irec2
           call parallel_abort(errmsg)
         endif
-        istack4=((it+1)*nstride_schout+irec0_schout-1)/nrec_schout+1 !may exceed max stack #
+        istack4=nint(dble(((it+1)*nstride_schout+irec0_schout-1))/nrec_schout)+1 !may exceed max stack #
         irec4=(it+1)*nstride_schout+irec0_schout-(istack4-1)*nrec_schout !->time step n+1 (new)
         if(istack4<=0.or.irec4<=0.or.irec4>nrec_schout) then
           write(errmsg,*)'STEP: wrong new record or stack #, ',istack4,irec4
