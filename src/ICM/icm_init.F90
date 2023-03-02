@@ -966,7 +966,7 @@ subroutine icm_output_proc(imode,it)
     inquire(file=trim(adjustl(fname)),exist=lexist)
     if(ihot==2.and.lexist) then
       j=nf90_open(trim(adjustl(fname)),NF90_WRITE,dg%ncid)
-      j=nf90_inq_varid(dg%ncid,'time',dg%id_time); dg%it=int(dg%time/(dt*nspool_icm))+1
+      j=nf90_inq_varid(dg%ncid,'time',dg%id_time); dg%it=nint(dg%time/(dt*nspool_icm))
       do m=1,dg%nvar
         j=nf90_inq_varid(dg%ncid,trim(adjustl(dg%vars(m)%varname)),dg%vars(m)%varid)
       enddo!m
