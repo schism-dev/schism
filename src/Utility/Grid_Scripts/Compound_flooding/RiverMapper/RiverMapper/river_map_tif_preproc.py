@@ -56,22 +56,16 @@ def get_tif_box(tif_fname=None):
     lry = uly + (src.RasterYSize * yres)
     return [ulx, lry, lrx, uly]
 
-def Tif2cache(tif_fname=None):
+def Tif2XYZ(tif_fname=None, cache=True):
+    is_new_cache = False
 
-    S = Tif2XYZ(tif_fname, cache=True)
-
-    cache_name = tif_fname + '.pkl'
-    with open(cache_name, 'wb') as f:
-        pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-def Tif2XYZ(tif_fname=None, cache=False):
     cache_name = tif_fname + '.pkl'
 
     if cache:
         try:
             with open(cache_name, 'rb') as f:
                 S = pickle.load(f)
-                return S  # cache successfully read
+                return [S, is_new_cache]  # cache successfully read
         except (ModuleNotFoundError, AttributeError) as e:
             # remove existing cache if failing to read from it
             silentremove(cache_name)
@@ -109,7 +103,12 @@ def Tif2XYZ(tif_fname=None, cache=False):
 
     S = dem_data(xp, yp, xp, yp, z, dx, dy)
 
-    return S
+    if cache:
+        with open(cache_name, 'wb') as f:
+            pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
+        is_new_cache = True
+
+    return [S, is_new_cache]  # already_cached = False
 
 def reproject_tifs(tif_files:list, srcSRS='EPSG:4326', dstSRS='EPSG:26917', outdir='./'):
     '''
@@ -190,7 +189,7 @@ def find_thalweg_tile(
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp',
     thalweg_buffer=1000,
     cache_folder=None,
-    iNoPrint=True, i_thalweg_cache=True
+    iNoPrint=True, i_thalweg_cache=False
 ):
     '''
     Assign thalwegs to DEM tiles

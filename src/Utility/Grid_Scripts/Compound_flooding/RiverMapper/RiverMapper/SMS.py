@@ -17,6 +17,8 @@ import shapefile
 import geopandas as gpd
 from pathlib import Path
 
+from sympy import det
+
 
 def lonlat2cpp(lon, lat, lon0=0, lat0=0):
     R = 6378206.4
@@ -31,14 +33,25 @@ def lonlat2cpp(lon, lat, lon0=0, lat0=0):
 
 def dl_cpp2lonlat(dl, lat0=0):
     R = 6378206.4
-
     lat0_radian = lat0/180*np.pi
-
     dlon_radian = dl/R/np.cos(lat0_radian)
-
     dlon = dlon_radian*180/np.pi
-
     return dlon
+    
+    # x0 = 0.0
+    # x1 = dl
+    # y0 = 0.0
+    # y1 = 0.0
+    # lon0, lat0 = cpp2lonlat(x0, y0)
+    # lon1, lat1 = cpp2lonlat(x1, y1)
+    # return abs((lon0-lon1)+1j*(lat0-lat1))
+
+def dl_lonlat2cpp(dl, lat0=0):
+    R = 6378206.4
+    lat0_radian = lat0/180*np.pi
+    dl_radian = dl * np.pi / 180
+    dl_cpp = dl_radian * R * np.cos(lat0_radian)
+    return dl_cpp
 
 def cpp2lonlat(x, y, lon0=0, lat0=0):
     R = 6378206.4
@@ -216,8 +229,10 @@ def merge_maps(mapfile_glob_str, merged_fname):
 
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps'''
-    def __init__(self, points=None, node_idx=[0, -1], src_prj=None, dst_prj='epsg:4326'):
+    def __init__(self, points=None, node_idx=None, src_prj=None, dst_prj='epsg:4326'):
         # self.isDummy = (len(points) == 0)
+        if node_idx is None:
+            node_idx = [0, -1]
 
         if src_prj is None:
             raise Exception('source projection not specified when initializing SMS_ARC')
@@ -268,7 +283,12 @@ class SMS_ARC():
 
 class SMS_MAP():
     '''class for manipulating SMS maps'''
-    def __init__(self, filename=None, arcs=[], detached_nodes=[], epsg=4326):
+    def __init__(self, filename=None, arcs=None, detached_nodes=None, epsg=4326):
+        if arcs is None:
+            arcs = []
+        if detached_nodes is None:
+            detached_nodes = []
+
         self.epsg = None
         self.arcs = []
         self.nodes = np.zeros((0, 3))
@@ -399,7 +419,7 @@ class SMS_MAP():
             for i, node in enumerate(self.detached_nodes):
                 node_counter += 1
                 f.write('POINT\n')
-                f.write(f'XY {node[0]} {node[1]} 0.0\n')
+                f.write(f'XY {node[0]} {node[1]} {node[2]}\n')
                 f.write(f'ID {node_counter}\n')
                 f.write('END\n')
 
@@ -417,15 +437,29 @@ class SMS_MAP():
             f.write('BEGTS\n')
             f.write('LEND\n')
             pass
+    
+    def to_GeoDataFrame(self):
+        return gpd.GeoDataFrame(geometry=[LineString(line.points) for line in self.arcs if line is not None])
+    
+    def to_LineStringList(self):
+        return [LineString(line.points) for line in self.arcs if line is not None]
 
 class Levee_SMS_MAP(SMS_MAP):
-    def __init__(self, arcs=[], epsg=4326):
+    def __init__(self, arcs=None, epsg=4326):
+        if arcs is None:
+            arcs = []
+
         super().__init__(arcs=arcs, epsg=epsg)
         self.centerline_list = arcs
         self.subsampled_centerline_list = []
         self.offsetline_list = []
 
-    def make_levee_maps(self, offset_list=[-5, 5, -15, 15], subsample=[300, 10]):
+    def make_levee_maps(self, offset_list=None, subsample=None):
+        if offset_list is None:
+            offset_list = [-5, 5, -15, 15]
+        if subsample is None:
+            subsample = [300, 10]
+
         for arc in self.centerline_list:
             x_sub, y_sub, _ = redistribute(x=arc.points[:, 0], y=arc.points[:, 1], length=subsample[0])
             self.subsampled_centerline_list.append(SMS_ARC(points=np.c_[x_sub, y_sub]))

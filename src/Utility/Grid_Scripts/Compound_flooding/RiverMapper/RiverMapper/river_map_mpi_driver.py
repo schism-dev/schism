@@ -15,9 +15,10 @@ from mpi4py import MPI
 from glob import glob
 import numpy as np
 import geopandas as gpd
-from RiverMapper.river_map_tif_preproc import find_thalweg_tile, Tif2cache
-from RiverMapper.make_river_map import make_river_map
-from RiverMapper.SMS import merge_maps
+from shapely.ops import polygonize
+from RiverMapper.river_map_tif_preproc import find_thalweg_tile, Tif2XYZ
+from RiverMapper.make_river_map import make_river_map, clean_intersections, geos2SmsArcList
+from RiverMapper.SMS import merge_maps, SMS_MAP
 from RiverMapper.util import silentremove
 
 
@@ -28,15 +29,11 @@ def my_mpi_idx(N, size, rank):
     my_idx[rank*n_per_rank:min((rank+1)*n_per_rank, N)] = True
     return my_idx
 
-def cache_DEM_tiles(dem_file_list):
-    pass
-
 def river_map_mpi_driver(
     dems_json_file = './dems.json',  # files for all DEM tiles
     thalweg_shp_fname='',
     output_dir = './',
     thalweg_buffer = 1000,
-    cache_folder = './Cache/',
     i_DEM_cache = True,
     comm = MPI.COMM_WORLD
 ):
@@ -55,7 +52,6 @@ def river_map_mpi_driver(
     thalweg_buffer: unit in meters. This is the search range on either side of the thalweg.
                     Because banks will be searched within this range,
                     its value is needed now to associate DEM tiles with each thalweg
-    cache_folder: Used to store temporary variables, so that the next run with similar inputs can be executed faster
     i_DEM_cache : Whether or not to read DEM info from cache.
                   Reading from original *.tif files can be slow, so the default option is True
     '''
@@ -74,7 +70,6 @@ def river_map_mpi_driver(
         print(f'A total of {size} core(s) used.')
         silentremove(output_dir)
         os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(cache_folder, exist_ok=True)
 
         # group thalwegs (with the option of cache)
         thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = find_thalweg_tile(
@@ -82,7 +77,7 @@ def river_map_mpi_driver(
             thalweg_shp_fname=thalweg_shp_fname,
             thalweg_buffer = thalweg_buffer,
             iNoPrint=bool(rank), # only rank 0 prints to screen
-            cache_folder=cache_folder, i_thalweg_cache=i_thalweg_cache
+            i_thalweg_cache=i_thalweg_cache
         )
     else:
         thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = None, None, None
@@ -111,8 +106,11 @@ def river_map_mpi_driver(
         unique_tile_files = np.array(unique_tile_files)
 
         for tif_fname in unique_tile_files[my_mpi_idx(len(unique_tile_files), size, rank)]:
-            Tif2cache(tif_fname=tif_fname)
-            print(f'[Rank: {rank} cached {tif_fname}.')
+            _, is_new_cache = Tif2XYZ(tif_fname=tif_fname)
+            if is_new_cache:
+                print(f'[Rank: {rank} cached DEM {tif_fname}.')
+            else:
+                print(f'[Rank: {rank} read DEM from cache {tif_fname}.')
 
     comm.Barrier()
     if rank == 0: print('\n---------------------------------assign groups to each core---------------------------------\n')
@@ -135,7 +133,6 @@ def river_map_mpi_driver(
             tif_fnames = my_tile_group,
             thalweg_shp_fname = thalweg_shp_fname,
             selected_thalweg = my_tile_group_thalwegs,
-            cache_folder=cache_folder,
             output_dir = output_dir,
             output_prefix = f'{rank}_{i}_',
             mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}] ',
@@ -153,16 +150,29 @@ def river_map_mpi_driver(
 
     # merge outputs from all ranks
     if rank == 0:
+        print(f'\n------------------ merging outputs from all cores --------------\n')
+        # sms maps
         merge_maps(f'{output_dir}/Rank*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
         merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map')
         merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map')
         merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
         merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
+        # shapefiles
+        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*river_outline*.shp')]).to_file(f'{output_dir}/total_river_outline.shp')
+        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*bomb*.shp')]).to_file(f'{output_dir}/total_bomb_polygons.shp')
+        
+        # 
+        print(f'\n--------------- final clean-ups on intersections near inter-subdomain interfaces ----\n')
+        total_arcs_cleaned = clean_intersections(
+            lines=SMS_MAP(filename=f'{output_dir}/total_arcs.map').to_GeoDataFrame(),
+            target_polygons=gpd.read_file(f'{output_dir}/total_bomb_polygons.shp'),
+            snap_points=SMS_MAP(filename=f'{output_dir}/total_intersection_joints.map').detached_nodes
+        )
+        SMS_MAP(arcs=geos2SmsArcList(total_arcs_cleaned)).writer(filename=f'{output_dir}/total_arcs.map')
 
-        shapefile_list = glob(f'{output_dir}/*river*.shp')
-        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in shapefile_list]).to_file(f'{output_dir}/total_river_outline.shp')
+        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+        gpd.GeoDataFrame(
+            index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
+        ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
 
-        xyz_files = glob(f'{output_dir}/*.xyz')
-        os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')
-
-        print(f'Total run time: {time.time()-time_all_groups_start} seconds.')
+        print(f'>>>>>>>> Total run time: {time.time()-time_all_groups_start} seconds >>>>>>>>')
