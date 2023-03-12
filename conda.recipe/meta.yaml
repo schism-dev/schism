@@ -1,56 +1,53 @@
-{% set name = "schism" %}
-{% set version = "5.9.0" %}
+{% set name = "pschism" %}
+{% set version = "5.9" %}
 {% set build = 0 %}
 
-# Based on https://github.com/conda-forge/netcdf-fortran-feedstock/blob/master/recipe/meta.yaml
-#{% set data = load_setup_py_data() %}
-
 package:
-  name: {{ name|lower }}
+  name: {{ name|lower }}      #-{{ TVD_LIM|lower }}
   version: {{ version }}
 
 source:
-# path: ..
-  url: https://github.com/schism-dev/schism/archive/refs/tags/v5.9.0.tar.gz
-  sha256: 3f990b8f005079a07a62f08f491ba2818000fb2905772ce50e2253a1334d8420
+  git_url: https://github.com/schism-dev/schism.git
+  git_tag: v5.9
 
 build:
   number: {{ build }}
   skip: true #[win]
   merge_build_host: true
 
-outputs:
-  - name: pschism
-    script: build.sh
-    {% set mpi_prefix = "mpi_" + mpi %}
-    string: {{ mpi_prefix }}_h{{ PKG_HASH }}_{{ build }}
-    {% set build_pin = mpi_prefix + '_*' %}
+  {% set mpi_prefix = "mpi_" + mpi %}
+  string: {{ mpi_prefix }}_h{{ PKG_HASH }}_{{ build }}
+  {% set build_pin = mpi_prefix + '_*' %}
 
-    requirements:
-      build:
-      host:
-        - {{ compiler('cxx') }}
-        - {{ compiler('c') }}
-        - {{ compiler('fortran') }}
-        - cmake  ##>=3.17
-        - sed
-        - python #=3.8
-        - {{ mpi }}
-        - {{ mpi }}-mpifort
-        - {{ mpi }}-mpicc
-        - {{ mpi }}-mpicxx
-        - netcdf-fortran * {{ mpi_prefix }}_*
-      run:
-        - {{ mpi }}
-        - parmetis
-        - metis
-        - netcdf-fortran * {{ mpi_prefix }}_*
-#   test:
-#     commands:
-#      - echo $BUILD_PREFIX
-#      - echo {{ environ.get('PREFIX') }}
-#      - echo {{ environ.get('SRC_DIR') }}
-
+requirements:
+  build:
+  host:
+    - python
+    - git
+    - {{ compiler('cxx') }}
+    - {{ compiler('c') }}
+    - {{ compiler('fortran') }}
+    - cmake
+    - sed
+    - {{ mpi }}
+    - {{ mpi }}-mpifort
+    - {{ mpi }}-mpicc
+    - {{ mpi }}-mpicxx
+    - llvm-openmp
+    - parmetis
+    - metis
+    - netcdf-fortran * {{ mpi_prefix }}_*
+    - libgfortran5
+  run:
+    - python
+    - {{ mpi }}
+    - llvm-openmp
+    - parmetis
+    - metis
+    - netcdf-fortran * {{ mpi_prefix }}_*
+test:
+  commands:
+    - schism -v
 
 about:
   home: https://github.com/schism-dev/schism
@@ -61,4 +58,4 @@ about:
 
 extra:
   recipe-maintainers:
-#   - brey
+    - brey
