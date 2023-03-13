@@ -49,7 +49,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   wPBS =PBS(:,kb+1); wRPOC=RPOC(kb+1); wLPOC=LPOC(kb+1)
   wRPON=RPON(kb+1);  wLPON=LPON(kb+1); wRPOP=RPOP(kb+1)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
-  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =max(DOX(kb+1),1.d-2)
+  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =min(max(DOX(kb+1),1.d-2),50.d0)
   fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
   if(iCBP==1) then
     wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
@@ -186,12 +186,14 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   P%imed=0; P%vmin=1.d-8; P%vmax=100.0; call brent(P)
   stc=P%SOD/max(wDOX,1.d-2)
 
-  if(P%ierr/=0) then
-    if(wDOX<1.d-2) then
-      stc=bstc(id)
-    else
-      call parallel_abort('wrong in computing SOD')
-    endif
+  if(P%ierr/=0) then !SOD computing fails, use previous stc value
+    stc=bstc(id)
+    write(12,*)'fail in computing SOD',it,id,ielg(id),P%ierr,P%SOD,wDOX
+    !if(wDOX<1.d-2) then
+    !  stc=bstc(id)
+    !else
+    !  call parallel_abort('wrong in computing SOD')
+    !endif
   endif
 
   !update sediment concentrations (NH4,NO3,H2S,CH4)
