@@ -1,7 +1,8 @@
 %Extract river flows and prep vsource.th etc (up to 2018) from (Dai & Trenberth). Needs read_gr3.m
 %Script will combine duplicated source elem's. River mouth locations are used in bp.
-%Inputs: out_river (gredit extract from coastal-stns-byVol-updated-oct2007.bp, commented out 1st 2 lines); 
-%        hgrid.gr3
+%Inputs: out_river (gredit extract from coastal-stns-byVol-updated-oct2007.bp, commented out 1st 2 lines. 
+%        lon in [-180,180]); 
+%        hgrid.gr3 (lon in [-180,180])
 %        coastal-stns-Vol-monthly.updated-May2019.nc (Dai&Trenberth via ucar)
 %        dates below
 %Outputs: source_sink.in, vsource.th, msource.th (-9999 for T). Time step is 1 day and may need pad 
@@ -10,8 +11,8 @@
 clear all; close all;
 
 %Output  info
-start_yr=2017; end_yr=2018;
-start_mon=10; end_mon=12;
+start_yr=2018; end_yr=2018;
+start_mon=1; end_mon=12;
 start_day=1; end_day=31; %GMT
 
 %Location

@@ -35,7 +35,7 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R1703 and up);
-!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside
+!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside. Use .rgn (CORIE, Fraser)
 !     (5) gen_hot_from_nc.in: 
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
