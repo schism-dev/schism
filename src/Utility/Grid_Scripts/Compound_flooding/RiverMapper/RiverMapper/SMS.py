@@ -16,6 +16,7 @@ import re
 import shapefile
 import geopandas as gpd
 from pathlib import Path
+from RiverMapper.util import silentremove
 
 from sympy import det
 
@@ -214,6 +215,9 @@ LEND
 '''
 
 def merge_maps(mapfile_glob_str, merged_fname):
+    if merged_fname is not None:
+        silentremove(merged_fname)
+
     map_file_list = glob.glob(mapfile_glob_str)
     if len(map_file_list) > 0:
         map_list = [SMS_MAP(filename=map_file) for map_file in map_file_list]
@@ -223,8 +227,9 @@ def merge_maps(mapfile_glob_str, merged_fname):
             total_map += map
         total_map.writer(merged_fname)
     else:
-        # print(f'warning: outputs do not exist: {mapfile_glob_str}')
-        pass
+        raise FileNotFoundError(f'warning: outputs do not exist: {mapfile_glob_str}')
+
+    return total_map
 
 
 class SMS_ARC():

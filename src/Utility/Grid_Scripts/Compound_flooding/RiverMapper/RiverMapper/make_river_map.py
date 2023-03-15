@@ -80,13 +80,17 @@ class Geoms_XY():
         self.crs = crs
 
     def geomlist2xy(self):
-        geoms_xy = np.empty((0, 2), dtype=float)
-        geoms_xy_idx = np.empty((0, 2), dtype=int)
+        geoms_xy_idx = np.ones((len(self.geom_list), 2), dtype=int) * -9999
+
         idx = 0
-        for geom in self.geom_list:
-            geoms_xy = np.r_[geoms_xy, np.array(geom.xy).T]
-            geoms_xy_idx = np.r_[geoms_xy_idx, np.c_[idx, idx+len(geom.xy[0])]]
+        for i, geom in enumerate(self.geom_list):
+            geoms_xy_idx[i, 0] = idx
+            geoms_xy_idx[i, 1] = idx + len(geom.xy[0])
             idx += len(geom.xy[0])
+
+        geoms_xy = np.empty((geoms_xy_idx[-1, 1], 2), dtype=float)
+        for i, geom in enumerate(self.geom_list):
+            geoms_xy[geoms_xy_idx[i, 0]:geoms_xy_idx[i, 1], :] = np.array(geom.xy).T
 
         return geoms_xy, geoms_xy_idx
 
@@ -498,16 +502,18 @@ def list2gdf(obj_list, crs='epsg:4326'):
     else:
         raise TypeError('Input objects must be in a list or np.array')
 
-def clean_intersections(lines, target_polygons, snap_points: np.ndarray, buffer_coef=0.2):
+def clean_intersections(arcs, target_polygons, snap_points: np.ndarray, buffer_coef=0.2):
     '''
     Clean arcs (LineStringList, a list of Shapely's LineString objects)
     by first intersecting them (by unary_union),
     then snapping target points (within 'target_polygons') to 'snap_points',
     '''
-    if isinstance(lines, list):
-        arcs_gdf = gpd.GeoDataFrame({'index': range(len(lines)),'geometry': lines})
-    elif isinstance(lines, gpd.GeoDataFrame):
-        arcs_gdf = lines
+    if isinstance(arcs, list):
+        arcs_gdf = gpd.GeoDataFrame({'index': range(len(arcs)),'geometry': arcs})
+    elif isinstance(arcs, gpd.GeoDataFrame):
+        arcs_gdf = arcs
+    else:
+        raise TypeError()
         
     if isinstance(target_polygons, list):
         target_poly_gdf = list2gdf(target_polygons)
@@ -1152,38 +1158,39 @@ def make_river_map(
         arc_groups = [river_arcs]
     total_arcs = [LineString(line.points[:, :2]) for arcs in arc_groups for arc in arcs for line in arc if line is not None]
     
-    total_arcs_cleaned = clean_intersections(total_arcs, bomb_polygons, snap_points=bombed_xyz)
-    total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
-    total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
+    final_river_polygons = []; total_arcs_cleaned = []; total_arcs_cleaned_polys = []
+    if len(total_arcs) > 0:
+        total_arcs_cleaned = clean_intersections(total_arcs, bomb_polygons, snap_points=bombed_xyz)
+        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+        total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
 
-    # map cleaned arc points to original arc points
-    total_arcs_cleaned_xy = np.empty((0, 2), dtype=float)
-    for arc in total_arcs_cleaned:
-        total_arcs_cleaned_xy = np.r_[total_arcs_cleaned_xy, arc.points[:, :2]]
-    
-    river_arcs_cleaned = deepcopy(river_arcs)
-    for i, river in enumerate(river_arcs_cleaned):
-        for j, arc in enumerate(river):
-            if arc is not None:
-                _, idx = nearest_neighbour(arc.points[:, :2], total_arcs_cleaned_xy)
-                river_arcs_cleaned[i, j].points[:, :2] = total_arcs_cleaned_xy[idx, :]
+        # map cleaned arc points to original arc points
+        total_arcs_cleaned_xy = np.empty((0, 2), dtype=float)
+        for arc in total_arcs_cleaned:
+            total_arcs_cleaned_xy = np.r_[total_arcs_cleaned_xy, arc.points[:, :2]]
+        
+        river_arcs_cleaned = deepcopy(river_arcs)
+        for i, river in enumerate(river_arcs_cleaned):
+            for j, arc in enumerate(river):
+                if arc is not None:
+                    _, idx = nearest_neighbour(arc.points[:, :2], total_arcs_cleaned_xy)
+                    river_arcs_cleaned[i, j].points[:, :2] = total_arcs_cleaned_xy[idx, :]
 
-    for i, river in enumerate(river_arcs_cleaned):
-        # save river polygon (enclosed by two out-most arcs and two cross-river transects at both ends)
-        if sum(river_arcs_cleaned[i, :] != None) >= 2:  # at least two rows of arcs to make a polygon
-            river_polygons[i] = []
-            idx = np.argwhere(river_arcs[i, :] != None).squeeze()
-            valid_river_arcs = river_arcs[i, idx]
-            for j in range(1):  # range(len(valid_river_arcs)-1):
-                mls_uu = unary_union(LineString(np.r_[valid_river_arcs[0].points[:, :2], np.flipud(valid_river_arcs[-1].points[:, :2]), valid_river_arcs[0].points[0, :2].reshape(-1,2)]))
-                for polygon in polygonize(mls_uu):
-                    river_polygons[i].append(polygon)
+        for i, river in enumerate(river_arcs_cleaned):
+            # save river polygon (enclosed by two out-most arcs and two cross-river transects at both ends)
+            if sum(river_arcs_cleaned[i, :] != None) >= 2:  # at least two rows of arcs to make a polygon
+                river_polygons[i] = []
+                idx = np.argwhere(river_arcs[i, :] != None).squeeze()
+                valid_river_arcs = river_arcs[i, idx]
+                for j in range(1):  # range(len(valid_river_arcs)-1):
+                    mls_uu = unary_union(LineString(np.r_[valid_river_arcs[0].points[:, :2], np.flipud(valid_river_arcs[-1].points[:, :2]), valid_river_arcs[0].points[0, :2].reshape(-1,2)]))
+                    for polygon in polygonize(mls_uu):
+                        river_polygons[i].append(polygon)
 
-    # convert river polygons to shapefile
-    final_river_polygons = []
-    for river_polygon in river_polygons:
-        if river_polygon is not None:
-            final_river_polygons += river_polygon
+        # convert river polygons to shapefile
+        for river_polygon in river_polygons:
+            if river_polygon is not None:
+                final_river_polygons += river_polygon
 
     # ------------------------- write SMS maps ---------------------------
     if any(bank_arcs.flatten()):  # not all arcs are None
@@ -1203,12 +1210,28 @@ def make_river_map(
         else:
             total_arcs = np.r_[river_arcs.reshape((-1, 1))]
         SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs_raw.map')
-        SMS_MAP(arcs=total_arcs_cleaned).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+
+        if len(total_arcs_cleaned) > 0:
+            SMS_MAP(arcs=total_arcs_cleaned).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+        else:
+            print(f'{mpi_print_prefix} Warning: total_arcs_cleaned empty')
+
         SMS_MAP(detached_nodes=bombed_xyz).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
 
-        gpd.GeoDataFrame(index=range(len(final_river_polygons)), crs='epsg:4326', geometry=final_river_polygons).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
-        gpd.GeoDataFrame(index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
-        gpd.GeoDataFrame(index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
+        if len(final_river_polygons) > 0:
+            gpd.GeoDataFrame(index=range(len(final_river_polygons)), crs='epsg:4326', geometry=final_river_polygons).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
+        else:
+            print(f'{mpi_print_prefix} Warning: final_river_polygons empty')
+        
+        if len(bomb_polygons) > 0:
+            gpd.GeoDataFrame(index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
+        else:
+            print(f'{mpi_print_prefix} Warning: bomb_polygons empty')
+        
+        if len(total_arcs_cleaned_polys) > 0:
+            gpd.GeoDataFrame(index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
+        else:
+            print(f'{mpi_print_prefix} Warning: total_arcs_cleaned_polys empty')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
     
