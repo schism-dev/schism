@@ -151,7 +151,7 @@ def get_angle_diffs(xs, ys):
 
     return angle_diff
 
-def geos2SmsArcList(geoms):
+def geos2SmsArcList(geoms=None):
     sms_arc_list = []
     for i, line in enumerate(geoms):
         sms_arc_list.append(SMS_ARC(points=np.c_[line.xy[0], line.xy[1]], src_prj='epsg:4326'))
@@ -502,7 +502,7 @@ def list2gdf(obj_list, crs='epsg:4326'):
     else:
         raise TypeError('Input objects must be in a list or np.array')
 
-def clean_intersections(arcs, target_polygons, snap_points: np.ndarray, buffer_coef=0.2):
+def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.2):
     '''
     Clean arcs (LineStringList, a list of Shapely's LineString objects)
     by first intersecting them (by unary_union),
@@ -586,6 +586,40 @@ def clean_intersections(arcs, target_polygons, snap_points: np.ndarray, buffer_c
     # assemble
     cleaned2_arcs = np.r_[cleaned_noninter_arcs, cleaned_inter_arcs]
     return [arc for arc in gpd.GeoDataFrame(geometry=cleaned2_arcs).unary_union.geoms]
+
+def clean_river_arcs(river_arcs=None, total_arcs=None):
+
+    total_arcs_geomsxy = Geoms_XY(total_arcs, crs="epsg:4326")
+
+    river_arcs_cleaned = deepcopy(river_arcs)
+    for i, river in enumerate(river_arcs_cleaned):
+        for j, arc in enumerate(river):
+            if arc is not None:
+                _, idx = nearest_neighbour(arc.points[:, :2], total_arcs_geomsxy.xy)
+                river_arcs_cleaned[i, j].points[:, :2] = total_arcs_geomsxy.xy[idx, :]
+
+    return river_arcs_cleaned
+
+def generate_river_outline_polys(river_arcs=None):
+    river_outline_polygons = []
+    river_polygons = [None] * river_arcs.shape[0]
+    for i, river in enumerate(river_arcs):
+        # save river polygon (enclosed by two out-most arcs and two cross-river transects at both ends)
+        if sum(river[:] != None) >= 2:  # at least two rows of arcs to make a polygon
+            river_polygons[i] = []
+            idx = np.argwhere(river_arcs[i, :] != None).squeeze()
+            valid_river_arcs = river_arcs[i, idx]
+            for j in range(1):  # range(len(valid_river_arcs)-1):
+                mls_uu = unary_union(LineString(np.r_[valid_river_arcs[0].points[:, :2], np.flipud(valid_river_arcs[-1].points[:, :2]), valid_river_arcs[0].points[0, :2].reshape(-1,2)]))
+                for polygon in polygonize(mls_uu):
+                    river_polygons[i].append(polygon)
+
+    # convert to 1D list for later conversion to shapefile
+    for river_polygon in river_polygons:
+        if river_polygon is not None:
+            river_outline_polygons += river_polygon
+    
+    return river_outline_polygons
 
 def clean_arcs(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
     uu = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
@@ -779,6 +813,7 @@ def make_river_map(
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
+    iAdditionalOutputs = False
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
     thalweg_smooth_shp_fname = None  # deprecated: name of a polyline shapefile containing the smoothed thalwegs (e.g., pre-processed by GIS tools or SMS)
     # ------------------------- end other inputs ---------------------------
@@ -907,7 +942,6 @@ def make_river_map(
     river_arcs = np.empty((len(thalwegs), max_nrow_arcs), dtype=object)
     blast_radius = -np.ones((len(thalwegs), 2), dtype=float)
     blast_center = np.zeros((len(thalwegs), 2), dtype=complex)
-    river_polygons = [None] * len(thalwegs)
     smoothed_thalwegs = [None] * len(thalwegs)
     redistributed_thalwegs = [None] * len(thalwegs)
     corrected_thalwegs = [None] * len(thalwegs)
@@ -1130,6 +1164,22 @@ def make_river_map(
 
     # end enumerating each thalweg
 
+    # -----------------------------------diagnostic outputs ----------------------------
+    if any(bank_arcs.flatten()):  # not all arcs are None
+        SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank.map')
+        SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_raw.map')
+        SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}cc_arcs.map')
+        SMS_MAP(arcs=river_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}river_arcs.map')
+        SMS_MAP(detached_nodes=bombed_points).writer(filename=f'{output_dir}/{output_prefix}relax_points.map')
+        SMS_MAP(arcs=smoothed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}smoothed_thalweg.map')
+        SMS_MAP(arcs=redistributed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}redist_thalweg.map')
+        SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
+    else:
+        print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
+    
+    del smoothed_thalwegs[:], redistributed_thalwegs[:], corrected_thalwegs[:]
+    del bank_arcs, bank_arcs_raw, bombed_points, smoothed_thalwegs, redistributed_thalwegs, corrected_thalwegs
+
     # ------------------------- Clean up and finalize ---------------------------
     for i, thalweg_neighbors in enumerate(thalwegs_neighbors):
         for j, neibs in enumerate(thalweg_neighbors):  # head and tail
@@ -1157,82 +1207,51 @@ def make_river_map(
     else:
         arc_groups = [river_arcs]
     total_arcs = [LineString(line.points[:, :2]) for arcs in arc_groups for arc in arcs for line in arc if line is not None]
-    
-    final_river_polygons = []; total_arcs_cleaned = []; total_arcs_cleaned_polys = []
+
     if len(total_arcs) > 0:
-        total_arcs_cleaned = clean_intersections(total_arcs, bomb_polygons, snap_points=bombed_xyz)
-        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
-        total_arcs_cleaned = geos2SmsArcList(total_arcs_cleaned)
+        total_arcs_cleaned = clean_intersections(arcs=total_arcs, target_polygons=bomb_polygons, snap_points=bombed_xyz)
+    else:
+        total_arcs_cleaned = []
+    del total_arcs[:]; del total_arcs, cc_arcs
 
-        # map cleaned arc points to original arc points
-        total_arcs_cleaned_xy = np.empty((0, 2), dtype=float)
-        for arc in total_arcs_cleaned:
-            total_arcs_cleaned_xy = np.r_[total_arcs_cleaned_xy, arc.points[:, :2]]
-        
-        river_arcs_cleaned = deepcopy(river_arcs)
-        for i, river in enumerate(river_arcs_cleaned):
-            for j, arc in enumerate(river):
-                if arc is not None:
-                    _, idx = nearest_neighbour(arc.points[:, :2], total_arcs_cleaned_xy)
-                    river_arcs_cleaned[i, j].points[:, :2] = total_arcs_cleaned_xy[idx, :]
-
-        for i, river in enumerate(river_arcs_cleaned):
-            # save river polygon (enclosed by two out-most arcs and two cross-river transects at both ends)
-            if sum(river_arcs_cleaned[i, :] != None) >= 2:  # at least two rows of arcs to make a polygon
-                river_polygons[i] = []
-                idx = np.argwhere(river_arcs[i, :] != None).squeeze()
-                valid_river_arcs = river_arcs[i, idx]
-                for j in range(1):  # range(len(valid_river_arcs)-1):
-                    mls_uu = unary_union(LineString(np.r_[valid_river_arcs[0].points[:, :2], np.flipud(valid_river_arcs[-1].points[:, :2]), valid_river_arcs[0].points[0, :2].reshape(-1,2)]))
-                    for polygon in polygonize(mls_uu):
-                        river_polygons[i].append(polygon)
-
-        # convert river polygons to shapefile
-        for river_polygon in river_polygons:
-            if river_polygon is not None:
-                final_river_polygons += river_polygon
-
-    # ------------------------- write SMS maps ---------------------------
-    if any(bank_arcs.flatten()):  # not all arcs are None
-        SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank.map')
-        SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}cc_arcs.map')
-        SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_raw.map')
-        SMS_MAP(arcs=bank_arcs_final.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_final.map')
-        SMS_MAP(arcs=river_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}river_arcs.map')
-        SMS_MAP(detached_nodes=bombed_points).writer(filename=f'{output_dir}/{output_prefix}relax_points.map')
-        SMS_MAP(arcs=smoothed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}smoothed_thalweg.map')
-        SMS_MAP(arcs=redistributed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}redist_thalweg.map')
-        SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
+    # ------------------------- main outputs ---------------------------
+    if len(total_arcs_cleaned) > 0:
         SMS_MAP(arcs=centerlines).writer(filename=f'{output_dir}/{output_prefix}centerlines.map')
+        del centerlines[:]; del centerlines
         SMS_MAP(arcs=final_thalwegs).writer(filename=f'{output_dir}/{output_prefix}final_thalweg.map')
-        if i_close_poly:
-            total_arcs = np.r_[river_arcs.reshape((-1, 1)), cc_arcs.reshape((-1, 1))]
-        else:
-            total_arcs = np.r_[river_arcs.reshape((-1, 1))]
-        SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs_raw.map')
+        del final_thalwegs[:]; del final_thalwegs
+        SMS_MAP(arcs=bank_arcs_final.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_final.map')
+        del bank_arcs_final
 
-        if len(total_arcs_cleaned) > 0:
-            SMS_MAP(arcs=total_arcs_cleaned).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
-        else:
-            print(f'{mpi_print_prefix} Warning: total_arcs_cleaned empty')
-
-        SMS_MAP(detached_nodes=bombed_xyz).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
-
-        if len(final_river_polygons) > 0:
-            gpd.GeoDataFrame(index=range(len(final_river_polygons)), crs='epsg:4326', geometry=final_river_polygons).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
-        else:
-            print(f'{mpi_print_prefix} Warning: final_river_polygons empty')
-        
         if len(bomb_polygons) > 0:
             gpd.GeoDataFrame(index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
         else:
             print(f'{mpi_print_prefix} Warning: bomb_polygons empty')
-        
-        if len(total_arcs_cleaned_polys) > 0:
-            gpd.GeoDataFrame(index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
+        del bomb_polygons[:]; del bomb_polygons
+
+        if len(total_arcs_cleaned) > 0:
+            SMS_MAP(arcs=geos2SmsArcList(geoms=total_arcs_cleaned)).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
         else:
-            print(f'{mpi_print_prefix} Warning: total_arcs_cleaned_polys empty')
-    else:
-        print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
-    
-    pass
+            print(f'{mpi_print_prefix} Warning: total_sms_arcs_cleaned empty')
+
+        SMS_MAP(detached_nodes=bombed_xyz).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
+
+        if iAdditionalOutputs:
+            total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+            if len(total_arcs_cleaned_polys) > 0:
+                gpd.GeoDataFrame(index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
+            else:
+                print(f'{mpi_print_prefix} Warning: total_arcs_cleaned_polys empty')
+            del total_arcs_cleaned_polys[:]; del total_arcs_cleaned_polys
+
+            cleaned_river_arcs = clean_river_arcs(river_arcs=river_arcs, total_arcs=total_arcs_cleaned)
+            del river_arcs
+            total_river_outline_polys = generate_river_outline_polys(river_arcs=cleaned_river_arcs)
+            del cleaned_river_arcs
+            if len(total_river_outline_polys) > 0:
+                gpd.GeoDataFrame(index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
+            else:
+                print(f'{mpi_print_prefix} Warning: total_river_outline_polys empty')
+            del total_river_outline_polys
+
+        del total_arcs_cleaned[:]; del total_arcs_cleaned

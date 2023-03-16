@@ -18,8 +18,6 @@ import geopandas as gpd
 from pathlib import Path
 from RiverMapper.util import silentremove
 
-from sympy import det
-
 
 def lonlat2cpp(lon, lat, lon0=0, lat0=0):
     R = 6378206.4
@@ -38,7 +36,7 @@ def dl_cpp2lonlat(dl, lat0=0):
     dlon_radian = dl/R/np.cos(lat0_radian)
     dlon = dlon_radian*180/np.pi
     return dlon
-    
+
     # x0 = 0.0
     # x1 = dl
     # y0 = 0.0
@@ -442,10 +440,10 @@ class SMS_MAP():
             f.write('BEGTS\n')
             f.write('LEND\n')
             pass
-    
+
     def to_GeoDataFrame(self):
         return gpd.GeoDataFrame(geometry=[LineString(line.points) for line in self.arcs if line is not None])
-    
+
     def to_LineStringList(self):
         return [LineString(line.points) for line in self.arcs if line is not None]
 

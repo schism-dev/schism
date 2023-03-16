@@ -18,7 +18,7 @@ import pickle
 import geopandas as gpd
 from shapely.ops import polygonize
 from RiverMapper.river_map_tif_preproc import find_thalweg_tile, Tif2XYZ
-from RiverMapper.make_river_map import make_river_map, clean_intersections, geos2SmsArcList
+from RiverMapper.make_river_map import make_river_map, clean_intersections, geos2SmsArcList, generate_river_outline_polys, clean_river_arcs
 from RiverMapper.SMS import merge_maps, SMS_MAP
 from RiverMapper.util import silentremove
 
@@ -40,26 +40,27 @@ def merge_outputs(output_dir):
     time_merge_start = time.time()
 
     # sms maps
-    total_map = merge_maps(f'{output_dir}/*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
-    total_intersection_joints = merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map')
-    merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map')
+    total_arcs_map = merge_maps(f'{output_dir}/*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
+    total_intersection_joints = merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map').detached_nodes
+    total_river_arcs = merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map').arcs
     merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
     merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
-    # shapefiles
-    gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*river_outline*.shp')]).to_file(f'{output_dir}/total_river_outline.shp')
+
+    # # shapefiles
+    # gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*river_outline*.shp')]).to_file(f'{output_dir}/total_river_outline.shp')
     gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*bomb*.shp')]).to_file(f'{output_dir}/total_bomb_polygons.shp')
     print(f'Merging outputs took: {time.time()-time_merge_start} seconds.')
 
-    return [total_map, total_intersection_joints]
+    return [total_arcs_map, total_intersection_joints, total_river_arcs]
 
 
-def final_clean_up(output_dir, total_map, total_intersection_joints):
+def final_clean_up(output_dir, total_arcs_map, total_intersection_joints, total_river_arcs):
     print(f'\n--------------- final clean-ups on intersections near inter-subdomain interfaces ----\n')
     time_final_cleanup_start = time.time()
     total_arcs_cleaned = clean_intersections(
-        arcs=total_map.to_GeoDataFrame(),
+        arcs=total_arcs_map.to_GeoDataFrame(),
         target_polygons=gpd.read_file(f'{output_dir}/total_bomb_polygons.shp'),
-        snap_points=total_intersection_joints.detached_nodes
+        snap_points=total_intersection_joints
     )
     SMS_MAP(arcs=geos2SmsArcList(total_arcs_cleaned)).writer(filename=f'{output_dir}/total_arcs.map')
 
@@ -67,6 +68,16 @@ def final_clean_up(output_dir, total_map, total_intersection_joints):
     gpd.GeoDataFrame(
         index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
     ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
+
+    # river_arcs_cleaned = clean_river_arcs(total_river_arcs, total_arcs_cleaned)
+    # total_river_outline_polys = generate_river_outline_polys(river_arcs_cleaned)
+    # if len(total_river_outline_polys) > 0:
+    #     gpd.GeoDataFrame(
+    #         index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys
+    #     ).to_file(filename=f'{output_dir}/total_river_outline.shp', driver="ESRI Shapefile")
+    # else:
+    #     print(f'Warning: total_river_outline_polys empty')
+
     print(f'Final clean-ups took: {time.time()-time_final_cleanup_start} seconds.')
 
 
@@ -218,6 +229,6 @@ def river_map_mpi_driver(
 
     # merge outputs from all ranks
     if rank == 0:
-        total_map, total_intersection_joints = merge_outputs(output_dir)
-        final_clean_up(output_dir, total_map, total_intersection_joints)
+        total_arcs_map, total_intersection_joints, total_river_arcs = merge_outputs(output_dir)
+        final_clean_up(output_dir, total_arcs_map, total_intersection_joints, total_river_arcs)
         print(f'>>>>>>>> Total run time: {time.time()-time_start} seconds >>>>>>>>')
