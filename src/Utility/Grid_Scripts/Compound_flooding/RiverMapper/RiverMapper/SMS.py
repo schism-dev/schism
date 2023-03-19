@@ -15,7 +15,6 @@ import numpy as np
 import re
 import shapefile
 import geopandas as gpd
-from pathlib import Path
 from RiverMapper.util import silentremove
 
 
@@ -242,6 +241,8 @@ class SMS_ARC():
 
         if src_prj == 'cpp' and dst_prj == 'epsg:4326':
             points[:, 0], points[: ,1] = cpp2lonlat(points[:, 0], points[: ,1])
+            if points.shape[1] == 3:
+                points[:, 2] = dl_cpp2lonlat(points[:, 2], lat0=points[:, 1])
 
         npoints, ncol = points.shape
         self.points = np.zeros((npoints, 3), dtype=float)

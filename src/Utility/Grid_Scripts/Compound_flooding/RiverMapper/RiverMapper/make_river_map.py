@@ -68,7 +68,7 @@ class Bombs():
         return ch_buffered
 
 class Geoms_XY():
-    def __init__(self, geom_list, crs='epsg:4326'):
+    def __init__(self, geom_list, crs='epsg:4326', add_z=False):
         try:
             if not isinstance(geom_list[-1], LineString):
                 raise TypeError()
@@ -76,11 +76,14 @@ class Geoms_XY():
             raise ValueError('Input must be an iterable of geometries')
         
         self.geom_list = [geom for geom in geom_list]
+        self.add_z = add_z
         self.xy, self.xy_idx = self.geomlist2xy()
         self.crs = crs
 
     def geomlist2xy(self):
-        geoms_xy_idx = np.ones((len(self.geom_list), 2), dtype=int) * -9999
+        ncol = 3 if self.add_z else 2
+
+        geoms_xy_idx = np.ones((len(self.geom_list), ncol), dtype=int) * -9999
 
         idx = 0
         for i, geom in enumerate(self.geom_list):
@@ -88,15 +91,23 @@ class Geoms_XY():
             geoms_xy_idx[i, 1] = idx + len(geom.xy[0])
             idx += len(geom.xy[0])
 
-        geoms_xy = np.empty((geoms_xy_idx[-1, 1], 2), dtype=float)
+        geoms_xy = np.empty((geoms_xy_idx[-1, 1], ncol), dtype=float)
         for i, geom in enumerate(self.geom_list):
-            geoms_xy[geoms_xy_idx[i, 0]:geoms_xy_idx[i, 1], :] = np.array(geom.xy).T
+            geoms_xy[geoms_xy_idx[i, 0]:geoms_xy_idx[i, 1], :] = geom.coords._coords[:, :ncol]
 
         return geoms_xy, geoms_xy_idx
 
     def xy2geomlist(self):
         for i, _ in enumerate(self.geom_list):
             self.geom_list[i] = LineString(self.xy[self.xy_idx[i, 0]:self.xy_idx[i, 1], :])
+    
+    def update_coords(self, new_coords:np.ndarray):
+        iupdate = False
+        if not np.array_equal(self.xy, new_coords):
+            self.xy[:, :] = new_coords[:, :]
+            self.xy2geomlist()
+            iupdate = True
+        return iupdate
 
     def snap_to_points(self, snap_points, target_poly_gdf=None):
         geoms_xy_gdf = points2GeoDataFrame(self.xy, crs=self.crs)
@@ -108,8 +119,8 @@ class Geoms_XY():
             _, idx = np.unique(pointInPolys.index, return_index=True)  # some points belong to multiple polygons
             i_target_points = np.array(~np.isnan(pointInPolys.index_right))[idx]
 
-        _, idx = nearest_neighbour(self.xy[i_target_points, :], np.c_[snap_points[:, 0], snap_points[:, 1]])
-        self.xy[i_target_points, :] = snap_points[idx, :2]
+        _, idx = nearest_neighbour(self.xy[i_target_points, :2], np.c_[snap_points[:, 0], snap_points[:, 1]])
+        self.xy[i_target_points, :] = snap_points[idx, :]
 
         self.xy2geomlist()
     
@@ -154,7 +165,7 @@ def get_angle_diffs(xs, ys):
 def geos2SmsArcList(geoms=None):
     sms_arc_list = []
     for i, line in enumerate(geoms):
-        sms_arc_list.append(SMS_ARC(points=np.c_[line.xy[0], line.xy[1]], src_prj='epsg:4326'))
+        sms_arc_list.append(SMS_ARC(points=line.coords._coords, src_prj='epsg:4326'))
     
     return sms_arc_list
 
@@ -385,7 +396,7 @@ def get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min
 
 def redistribute_arc(line, line_smooth, channel_width, this_nrow_arcs, smooth_option=1, R_coef=0.4, length_width_ratio=6.0, reso_thres=(5, 300), endpoints_scale=1.0, idryrun=False):
 
-    cross_channel_length_scale = channel_width/this_nrow_arcs
+    cross_channel_length_scale = channel_width/(this_nrow_arcs-1)
 
     retained_points = np.ones((line.shape[0]), dtype=bool)
 
@@ -502,16 +513,69 @@ def list2gdf(obj_list, crs='epsg:4326'):
     else:
         raise TypeError('Input objects must be in a list or np.array')
 
-def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.2):
+def BinA(A=None, B=None):
+    index = np.argsort(A)
+    sorted_A = A[index]
+    sorted_index = np.searchsorted(sorted_A, B)
+
+    Bindex = np.take(index, sorted_index, mode="raise")
+    mask = A[Bindex] != B
+
+    result = np.ma.array(Bindex, mask=mask)
+    return result
+
+def snap_closeby_points(pt_xyz:np.ndarray):
+    xyz = deepcopy(pt_xyz)
+    for i in range(xyz.shape[0]):
+        i_near = abs((xyz[i, 0]+1j*xyz[i, 1]) - (xyz[:, 0]+1j*xyz[:, 1])) < xyz[i, 2] * 0.3
+        xyz[i_near, :] = xyz[i, :]
+    return xyz
+
+def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
+    from sklearn.neighbors import NearestNeighbors
+
+    xyz = deepcopy(pt_xyz)
+    npts = xyz.shape[0]
+    nbrs = NearestNeighbors(n_neighbors=min(npts, n_nei)).fit(xyz)
+    distances, indices = nbrs.kneighbors(xyz)
+
+    nsnap = 0
+
+    # not sure if any additional points besides the closest n_nei points are within buffer
+    i_crowded = (distances[:, -1] < xyz[:, 2]*reso_ratio) 
+    print(f'{sum(i_crowded)} vertices marked for cleaning I')
+    nsnap += sum(i_crowded)
+    if sum(i_crowded) > 0:
+        for i in np.argwhere(i_crowded).squeeze():
+            i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[:, 0]+1j*xyz[:, 1])) < xyz[i, 2]
+            xyz[i_near, :] = xyz[i, :]
+    
+    # at least one target point within n_nei-node neighborhood
+    distances[distances==0.0] = 9999
+    i_crowded = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio) 
+    nsnap += sum(i_crowded)
+    print(f'{sum(i_crowded)} vertices marked for cleaning II')
+    if sum(i_crowded) > 0:
+        for i in np.argwhere(i_crowded).squeeze():
+            idx = indices[i, :]
+            i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
+            idx = indices[i, i_near]
+            xyz[idx, :] = xyz[i, :]
+    
+    return xyz, nsnap
+
+def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.3, idummy=False):
     '''
     Clean arcs (LineStringList, a list of Shapely's LineString objects)
     by first intersecting them (by unary_union),
     then snapping target points (within 'target_polygons') to 'snap_points',
     '''
-    if isinstance(arcs, list):
+
+    arcs0 = deepcopy(arcs)
+    if isinstance(arcs0, list):
         arcs_gdf = gpd.GeoDataFrame({'index': range(len(arcs)),'geometry': arcs})
-    elif isinstance(arcs, gpd.GeoDataFrame):
-        arcs_gdf = arcs
+    elif isinstance(arcs0, gpd.GeoDataFrame):
+        arcs_gdf = arcs0
     else:
         raise TypeError()
         
@@ -519,73 +583,97 @@ def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray
         target_poly_gdf = list2gdf(target_polygons)
     elif isinstance(target_polygons, gpd.GeoDataFrame):
         target_poly_gdf = target_polygons
+    elif target_polygons is None:
+        print(f'Warning: target polygons do not exist, cleaning all arcs without snapping')
     else:
         raise TypeError()
 
-    # ------------------snapping -------------------------------------------
-    # mapping between arcs to arc points
     arcs = arcs_gdf.geometry.unary_union.geoms
-    arc_points = Geoms_XY(geom_list=arcs, crs='epsg:4326')
-    arc_points.snap_to_points(snap_points[:, :2], target_poly_gdf)
 
-    snapped_arcs = np.array([arc for arc in gpd.GeoDataFrame(geometry=arc_points.geom_list).unary_union.geoms])
+    if idummy:
+        return [arc for arc in arcs]
 
-    # # ------------------ further cleaning intersection arcs -------------------------------------------
-    cleaned_arcs_gdf = gpd.GeoDataFrame(crs='epsg:4326', index=range(len(snapped_arcs)), geometry=snapped_arcs)
-    lineInPolys = gpd.tools.sjoin(cleaned_arcs_gdf, target_poly_gdf, predicate="within", how='left')
-    _, idx = np.unique(lineInPolys.index, return_index=True)  # some points belong to multiple polygons
-    i_cleaned_noninter_arcs =  np.array(np.isnan(lineInPolys.index_right))[idx]
-    i_cleaned_intersection_arcs = np.array(~np.isnan(lineInPolys.index_right))[idx]
+    if target_polygons is not None:
+        # ------------------snapping -------------------------------------------
+        arc_points = Geoms_XY(geom_list=arcs, crs='epsg:4326', add_z=True)
+        arc_points.snap_to_points(snap_points[:, :], target_poly_gdf)
 
-    # keep non intersection arcs as is
-    cleaned_noninter_arcs = snapped_arcs[i_cleaned_noninter_arcs]
-    cleaned_inter_arcs = snapped_arcs[i_cleaned_intersection_arcs]
+        snapped_arcs = np.array([arc for arc in gpd.GeoDataFrame(geometry=arc_points.geom_list).unary_union.geoms], dtype=object)
 
-    # clean intersection arcs that are too close to each other
-    if np.any(i_cleaned_intersection_arcs):
-        snapped_intersection_arcs_gdf = gpd.GeoDataFrame(crs='epsg:4326', index=range(len(cleaned_inter_arcs)), geometry=cleaned_inter_arcs)
-        tmp_gdf = snapped_intersection_arcs_gdf.to_crs("esri:102008")
-        reso_gs = gpd.GeoSeries(map(Point, snap_points[:, :2]), crs='epsg:4326').to_crs('esri:102008')
-        _, idx = nearest_neighbour(np.c_[tmp_gdf.centroid.x, tmp_gdf.centroid.y], np.c_[reso_gs.x, reso_gs.y])
+        # # ------------------ further cleaning intersection arcs -------------------------------------------
+        cleaned_arcs_gdf = gpd.GeoDataFrame(crs='epsg:4326', index=range(len(snapped_arcs)), geometry=snapped_arcs)
+        lineInPolys = gpd.tools.sjoin(cleaned_arcs_gdf, target_poly_gdf, predicate="within", how='left')
+        _, idx = np.unique(lineInPolys.index, return_index=True)  # some points belong to multiple polygons
+        i_cleaned_noninter_arcs =  np.array(np.isnan(lineInPolys.index_right))[idx]
+        i_cleaned_intersection_arcs = np.array(~np.isnan(lineInPolys.index_right))[idx]
 
-        arc_buffer = dl_lonlat2cpp(snap_points[idx, 2] * buffer_coef, snap_points[idx, 1])
-        line_buf_gdf = snapped_intersection_arcs_gdf.to_crs('esri:102008').buffer(distance=arc_buffer)
+        # keep non intersection arcs as is
+        arcs_cleaned_1 = snapped_arcs[i_cleaned_noninter_arcs]
+        arcs_cleaned_2 = snapped_arcs[i_cleaned_intersection_arcs]
 
-        arc_points = Geoms_XY(geom_list=cleaned_inter_arcs, crs='epsg:4326')
+        # clean intersection arcs that are too close to each other
+        print('cleaning arcs around river intersections ...')
+        if len(arcs_cleaned_2) > 0:
+            arcs_cleaned_2_gdf = gpd.GeoDataFrame(crs='epsg:4326', index=range(len(arcs_cleaned_2)), geometry=arcs_cleaned_2)
+            tmp_gdf = arcs_cleaned_2_gdf.to_crs("esri:102008")
+            reso_gs = gpd.GeoSeries(map(Point, snap_points[:, :2]), crs='epsg:4326').to_crs('esri:102008')
+            _, idx = nearest_neighbour(np.c_[tmp_gdf.centroid.x, tmp_gdf.centroid.y], np.c_[reso_gs.x, reso_gs.y])
 
-        arc_pointsInPolys = gpd.tools.sjoin(
-            points2GeoDataFrame(arc_points.xy, crs='epsg:4326').to_crs('esri:102008'),
-            gpd.GeoDataFrame(geometry=line_buf_gdf), predicate="within", how='left'
-        )
-        arcs_buffer = [None] * len(cleaned_inter_arcs)
-        for i in range(len(arcs_buffer)):
-            arcs_buffer[i] = []
-        for index, row in arc_pointsInPolys.iterrows():
-            arcs_buffer[row.index_right].append(index)
-        
-        invalid_point_idx = np.empty((0, ), dtype=int)
-        for i, pt in enumerate(arcs_buffer):
-            arc_points_inbuffer = arc_points.xy[pt, :]
-            dist, idx = nearest_neighbour(arc_points_inbuffer, np.array(arc_points.geom_list[i].xy).T)
-            invalid = dist > 1e-10
-            if np.any(invalid):
-                invalid_point_idx = np.r_[invalid_point_idx, np.array(pt)[invalid]]
-        invalid_point_idx = np.unique(invalid_point_idx)
-        i_invalid = np.zeros((len(arc_points.xy), ), dtype=bool)
-        i_invalid[invalid_point_idx] = True
-        arc_points.snap_to_points(snap_points=arc_points.xy[~i_invalid, :])
-        cleaned_inter_arcs = [arc for arc in gpd.GeoDataFrame(geometry=arc_points.geom_list).unary_union.geoms]
+            arc_buffer = dl_lonlat2cpp(snap_points[idx, 2] * buffer_coef, snap_points[idx, 1])
+            line_buf_gdf = arcs_cleaned_2_gdf.to_crs('esri:102008').buffer(distance=arc_buffer)
 
-        # gdf = gpd.GeoDataFrame(geometry=cleaned_inter_arcs, crs='epsg:4326')
-        # arcs_in_poly = gpd.tools.sjoin(gdf.to_crs('esri:102008'), target_poly_gdf.to_crs('esri:102008'), predicate="within", how='left')
-        # arcs_in_poly = arcs_in_poly.to_crs('epsg:4326')
-        # polys = np.unique(arcs_in_poly.index_right)
-        # hull_list = [arcs_in_poly[arcs_in_poly.index_right==poly].unary_union.convex_hull.boundary for poly in polys]
-        # cleaned_inter_arcs = np.array(cleaned_inter_arcs + hull_list)
+            arc_points = Geoms_XY(geom_list=arcs_cleaned_2, crs='epsg:4326', add_z=True)
 
-    # assemble
-    cleaned2_arcs = np.r_[cleaned_noninter_arcs, cleaned_inter_arcs]
-    return [arc for arc in gpd.GeoDataFrame(geometry=cleaned2_arcs).unary_union.geoms]
+            arc_pointsInPolys = gpd.tools.sjoin(
+                points2GeoDataFrame(arc_points.xy, crs='epsg:4326').to_crs('esri:102008'),
+                gpd.GeoDataFrame(geometry=line_buf_gdf), predicate="within", how='left'
+            )
+            arcs_buffer = [None] * len(arcs_cleaned_2)
+            for i in range(len(arcs_buffer)):
+                arcs_buffer[i] = []
+            for index, row in arc_pointsInPolys.iterrows():
+                arcs_buffer[row.index_right].append(index)
+            
+            invalid_point_idx = np.empty((0, ), dtype=int)
+            for i, pt in enumerate(arcs_buffer):
+                arc_points_inbuffer = arc_points.xy[pt, :]
+                dist, idx = nearest_neighbour(arc_points_inbuffer[:, :2], np.array(arc_points.geom_list[i].xy).T)
+                invalid = dist > 1e-10
+                if np.any(invalid):
+                    invalid_point_idx = np.r_[invalid_point_idx, np.array(pt)[invalid]]
+            invalid_point_idx = np.unique(invalid_point_idx)
+            i_invalid = np.zeros((len(arc_points.xy), ), dtype=bool)
+            i_invalid[invalid_point_idx] = True
+            arc_points.snap_to_points(snap_points=arc_points.xy[~i_invalid, :])
+            arcs_cleaned_2 = np.array([arc for arc in gpd.GeoDataFrame(geometry=arc_points.geom_list).unary_union.geoms], dtype=object)
+
+            # gdf = gpd.GeoDataFrame(geometry=cleaned_inter_arcs, crs='epsg:4326')
+            # arcs_in_poly = gpd.tools.sjoin(gdf.to_crs('esri:102008'), target_poly_gdf.to_crs('esri:102008'), predicate="within", how='left')
+            # arcs_in_poly = arcs_in_poly.to_crs('epsg:4326')
+            # polys = np.unique(arcs_in_poly.index_right)
+            # hull_list = [arcs_in_poly[arcs_in_poly.index_right==poly].unary_union.convex_hull.boundary for poly in polys]
+            # cleaned_inter_arcs = np.array(cleaned_inter_arcs + hull_list)
+        cleaned_arcs = gpd.GeoDataFrame(geometry=np.r_[arcs_cleaned_1, arcs_cleaned_2]).unary_union.geoms
+    
+    return [arc for arc in cleaned_arcs]
+
+def clean_arcs(arcs):
+    print('cleaning all arcs iteratively ...')
+    niter = 0
+    while niter <= 10:
+        niter += 1
+        print(f'niter = {niter}')
+        arc_points = Geoms_XY(geom_list=arcs, crs='epsg:4326', add_z=True)
+        xyz, nsnap = snap_closeby_points_global(arc_points.xy)
+        if nsnap == 0:
+            break
+        arc_points.update_coords(xyz)
+        arcs_gdf = gpd.GeoDataFrame({'index': range(len(arcs)),'geometry': arc_points.geom_list})
+        arcs = [arc for arc in arcs_gdf.geometry.unary_union.geoms]
+    else:
+        print(f'warning: cleaning terminated prematurely after {niter-1} iterations')
+
+    return arcs
 
 def clean_river_arcs(river_arcs=None, total_arcs=None):
 
@@ -621,7 +709,7 @@ def generate_river_outline_polys(river_arcs=None):
     
     return river_outline_polygons
 
-def clean_arcs(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
+def clean_arcs0(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
     uu = gpd.GeoDataFrame({'index': range(len(LineStringList)),'geometry': LineStringList}).geometry.unary_union
 
     # # sample
@@ -770,9 +858,9 @@ def make_river_map(
     tif_fnames: list, thalweg_shp_fname = '',
     selected_thalweg = None, output_dir = './', output_prefix = '', mpi_print_prefix = '',
     MapUnit2METER = 1, river_threshold = (5, 400), 
-    outer_arcs_positions = (), length_width_ratio = 12.0,
+    outer_arcs_positions = (), length_width_ratio = 6.0,
     i_close_poly = True, i_blast_intersection = False,
-    blast_radius_scale = 0.7, bomb_radius_coef = 0.2,
+    blast_radius_scale = 0.4, bomb_radius_coef = 0.3,
     i_DEM_cache = True
 ):
     '''
@@ -828,7 +916,7 @@ def make_river_map(
     # maximum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs)
     max_nrow_arcs = width2narcs(river_threshold[-1]) + 2 * outer_arcs_positions.size
     # refine toward endpoints to better fit intersections
-    endpoints_scale = 1.1
+    endpoints_scale = 1.3
     # ---------------------- end pre-processing some inputs -------------------------
 
     # ------------------------- read DEM ---------------------------
@@ -1029,13 +1117,13 @@ def make_river_map(
 
         # make inner arcs between two banks
         this_nrow_arcs = min(max_nrow_arcs, width2narcs(np.mean(width)))
-        thalwegs_cc_reso[i] = np.c_[thalweg, width / this_nrow_arcs]  # record cross-channel (cc) resolution at each thalweg point
+        thalwegs_cc_reso[i] = np.c_[thalweg, width / (this_nrow_arcs-1)]  # record cross-channel (cc) resolution at each thalweg point
         arc_position = np.linspace(0.0, 1.0, this_nrow_arcs)
         arc_position = np.r_[-outer_arcs_positions, arc_position, 1.0+outer_arcs_positions].reshape(-1, 1)
         x_river_arcs = x_banks_left.reshape(1, -1) + np.matmul(arc_position, (x_banks_right-x_banks_left).reshape(1, -1))
         y_river_arcs = y_banks_left.reshape(1, -1) + np.matmul(arc_position, (y_banks_right-y_banks_left).reshape(1, -1))
 
-        z_centerline = this_nrow_arcs + width/1e4
+        z_centerline = width/(this_nrow_arcs-1)
 
         # determine blast radius based on mean channel width at an intersection
         valid_points = np.ones(x_banks_left.shape, dtype=bool)
@@ -1090,12 +1178,12 @@ def make_river_map(
                     if k == int(len(x_river_arcs)/2):
                         centerlines[i] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]], src_prj='cpp')
                     # save bombed points
-                    bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/this_nrow_arcs]]
+                    bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/(this_nrow_arcs-1)]]
 
                 # test bombs
                 for l in [0, 1]:
                     if sum(~valid_points_headtail[:, l]) > 0:
-                        bombs_xyz[l] = np.r_[bombs_xyz[l], np.c_[line[~valid_points_headtail[:, l]][:, :2], width[~valid_points_headtail[:, l]]/this_nrow_arcs]]
+                        bombs_xyz[l] = np.r_[bombs_xyz[l], np.c_[line[~valid_points_headtail[:, l]][:, :2], width[~valid_points_headtail[:, l]]/(this_nrow_arcs)]]
 
             for l in [0, 1]:
                 if len(bombs_xyz[l]) > 0:
@@ -1104,63 +1192,14 @@ def make_river_map(
                     # dl_cpp = dl_lonlat2cpp(dl_lonlat, lat0=lat)
                     bombs[2*i+l] = Bombs(xyz=np.c_[lon, lat, dl_lonlat], crs='epsg:4326')
             
-            # save bombing polygons
-            if np.all(bombed_idx):
-                poly_xy = np.r_[
-                    np.c_[x_river_arcs[0], y_river_arcs[0]],
-                    np.flipud(np.c_[x_river_arcs[-1], y_river_arcs[-1]]),
-                    np.c_[x_river_arcs[0][0], y_river_arcs[0][0]],
-                ]
-                poly_lon, poly_lat = cpp2lonlat(poly_xy[:, 0], poly_xy[:, 1])
-                mls_uu = unary_union(LineString(np.c_[poly_lon, poly_lat]))
-                for polygon in polygonize(mls_uu):
-                    bomb_polygons.append(polygon)
-
-            elif np.any(bombed_idx):
-                x_river_midpoints = 0.5 * (x_river_arcs[:, :-1] + x_river_arcs[:, 1:])
-                y_river_midpoints = 0.5 * (y_river_arcs[:, :-1] + y_river_arcs[:, 1:])
-                for l in range(2):
-                    poly_xy = None
-                    if len(thalwegs_neighbors[i, l]) <= 1:  # one river, i.e., no intersections
-                        continue
-                    if l == 0:
-                        bomb_start = 0
-                        try:
-                            bomb_end = np.where(~bombed_idx)[0][0]
-                        except IndexError:
-                            bomb_end = len(bombed_idx)
-                        if bomb_end >= bomb_start:
-                            poly_xy = np.r_[
-                                np.c_[x_river_arcs[0][bomb_start:bomb_end], y_river_arcs[0][bomb_start:bomb_end]],
-                                np.c_[x_river_midpoints[0][bomb_end-1], y_river_midpoints[0][bomb_end-1]],
-                                np.c_[x_river_midpoints[-1][bomb_end-1], y_river_midpoints[-1][bomb_end-1]],
-                                np.flipud(np.c_[x_river_arcs[-1][bomb_start:bomb_end], y_river_arcs[-1][bomb_start:bomb_end]]),
-                                np.c_[x_river_arcs[0][bomb_start], y_river_arcs[0][bomb_start]],
-                            ]
-                    else:
-                        try:
-                            bomb_start = np.where(~bombed_idx)[0][-1]
-                        except IndexError:
-                            bomb_start = len(bombed_idx)
-                        bomb_end = len(bombed_idx) - 1
-                        if bomb_end >= bomb_start:
-                            poly_xy = np.r_[
-                                np.c_[x_river_midpoints[0][bomb_start], y_river_midpoints[0][bomb_start]],
-                                np.c_[x_river_arcs[0][bomb_start+1:bomb_end], y_river_arcs[0][bomb_start+1:bomb_end]],
-                                np.flipud(np.c_[x_river_arcs[-1][bomb_start+1:bomb_end], y_river_arcs[-1][bomb_start+1:bomb_end]]),
-                                np.c_[x_river_midpoints[-1][bomb_start], y_river_midpoints[-1][bomb_start]],
-                                np.c_[x_river_midpoints[0][bomb_start], y_river_midpoints[0][bomb_start]],
-                            ]
-                    
-                    poly_lon, poly_lat = cpp2lonlat(poly_xy[:, 0], poly_xy[:, 1])
-                    mls_uu = unary_union(LineString(np.c_[poly_lon, poly_lat]))
-                    for polygon in polygonize(mls_uu):
-                        bomb_polygons.append(polygon)
-
             if sum(valid_points) > 0:
                 # assemble cross-channel arcs
                 for j in [0, -1]:
-                    cc_arcs[i, j] = SMS_ARC(points=np.c_[x_river_arcs[:, valid_points][:, j], y_river_arcs[:, valid_points][:, j]], src_prj='cpp')
+                    cc_arcs[i, j] = SMS_ARC(points=np.c_[
+                        x_river_arcs[:, valid_points][:, j],
+                        y_river_arcs[:, valid_points][:, j],
+                        np.tile(z_centerline[valid_points][j], this_nrow_arcs)
+                    ], src_prj='cpp')
 
     # end enumerating each thalweg
 
@@ -1206,13 +1245,16 @@ def make_river_map(
         arc_groups = [river_arcs, cc_arcs]
     else:
         arc_groups = [river_arcs]
-    total_arcs = [LineString(line.points[:, :2]) for arcs in arc_groups for arc in arcs for line in arc if line is not None]
 
-    if len(total_arcs) > 0:
-        total_arcs_cleaned = clean_intersections(arcs=total_arcs, target_polygons=bomb_polygons, snap_points=bombed_xyz)
+    total_arcs_cleaned = [LineString(line.points[:, :]) for arcs in arc_groups for arc in arcs for line in arc if line is not None]
+    if len(total_arcs_cleaned) > 0:
+        if output_prefix == '':  # clean river intersections if in serial mode
+            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=bombed_xyz)
+            total_arcs_cleaned = clean_arcs(arcs=total_arcs_cleaned)
+        else:  # defer river intersections if in parallel mode
+            pass
     else:
-        total_arcs_cleaned = []
-    del total_arcs[:]; del total_arcs, cc_arcs
+        print(f'{mpi_print_prefix} Warning: total_arcs empty')
 
     # ------------------------- main outputs ---------------------------
     if len(total_arcs_cleaned) > 0:
@@ -1223,11 +1265,14 @@ def make_river_map(
         SMS_MAP(arcs=bank_arcs_final.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_final.map')
         del bank_arcs_final
 
-        if len(bomb_polygons) > 0:
-            gpd.GeoDataFrame(index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
-        else:
-            print(f'{mpi_print_prefix} Warning: bomb_polygons empty')
-        del bomb_polygons[:]; del bomb_polygons
+        if not i_blast_intersection:
+            if len(bomb_polygons) > 0:
+                gpd.GeoDataFrame(
+                    index=range(len(bomb_polygons)), crs='epsg:4326', geometry=bomb_polygons
+                ).to_file(filename=f'{output_dir}/{output_prefix}bomb_polygons.shp', driver="ESRI Shapefile")
+            else:
+                print(f'{mpi_print_prefix} Warning: bomb_polygons empty')
+            del bomb_polygons[:]; del bomb_polygons
 
         if len(total_arcs_cleaned) > 0:
             SMS_MAP(arcs=geos2SmsArcList(geoms=total_arcs_cleaned)).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
@@ -1239,7 +1284,9 @@ def make_river_map(
         if iAdditionalOutputs:
             total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
             if len(total_arcs_cleaned_polys) > 0:
-                gpd.GeoDataFrame(index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
+                gpd.GeoDataFrame(
+                    index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
+                ).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
             else:
                 print(f'{mpi_print_prefix} Warning: total_arcs_cleaned_polys empty')
             del total_arcs_cleaned_polys[:]; del total_arcs_cleaned_polys
@@ -1249,7 +1296,9 @@ def make_river_map(
             total_river_outline_polys = generate_river_outline_polys(river_arcs=cleaned_river_arcs)
             del cleaned_river_arcs
             if len(total_river_outline_polys) > 0:
-                gpd.GeoDataFrame(index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
+                gpd.GeoDataFrame(
+                    index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys
+                ).to_file(filename=f'{output_dir}/{output_prefix}river_outline.shp', driver="ESRI Shapefile")
             else:
                 print(f'{mpi_print_prefix} Warning: total_river_outline_polys empty')
             del total_river_outline_polys

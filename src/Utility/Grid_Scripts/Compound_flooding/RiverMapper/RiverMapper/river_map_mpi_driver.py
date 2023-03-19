@@ -18,7 +18,7 @@ import pickle
 import geopandas as gpd
 from shapely.ops import polygonize
 from RiverMapper.river_map_tif_preproc import find_thalweg_tile, Tif2XYZ
-from RiverMapper.make_river_map import make_river_map, clean_intersections, geos2SmsArcList, generate_river_outline_polys, clean_river_arcs
+from RiverMapper.make_river_map import make_river_map, clean_intersections, geos2SmsArcList, Geoms_XY, clean_arcs
 from RiverMapper.SMS import merge_maps, SMS_MAP
 from RiverMapper.util import silentremove
 
@@ -43,43 +43,24 @@ def merge_outputs(output_dir):
     total_arcs_map = merge_maps(f'{output_dir}/*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
     total_intersection_joints = merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map').detached_nodes
     total_river_arcs = merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map').arcs
-    merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
+    total_centerlines = merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
     merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
 
     # # shapefiles
-    # gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*river_outline*.shp')]).to_file(f'{output_dir}/total_river_outline.shp')
-    gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in glob(f'{output_dir}/*bomb*.shp')]).to_file(f'{output_dir}/total_bomb_polygons.shp')
+    river_outline_files = glob(f'{output_dir}/*_river_outline.shp')
+    if len(river_outline_files) > 0:
+        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in river_outline_files]).to_file(f'{output_dir}/total_river_outline.shp')
+
+    bomb_polygon_files = glob(f'{output_dir}/*_bomb_polygons.shp')
+    if len(bomb_polygon_files) > 0:
+        gpd.pd.concat([gpd.read_file(x).to_crs('epsg:4326') for x in bomb_polygon_files]).to_file(f'{output_dir}/total_bomb_polygons.shp')
+
     print(f'Merging outputs took: {time.time()-time_merge_start} seconds.')
+    return [total_arcs_map, total_intersection_joints, total_river_arcs, total_centerlines]
 
-    return [total_arcs_map, total_intersection_joints, total_river_arcs]
 
-
-def final_clean_up(output_dir, total_arcs_map, total_intersection_joints, total_river_arcs):
-    print(f'\n--------------- final clean-ups on intersections near inter-subdomain interfaces ----\n')
-    time_final_cleanup_start = time.time()
-    total_arcs_cleaned = clean_intersections(
-        arcs=total_arcs_map.to_GeoDataFrame(),
-        target_polygons=gpd.read_file(f'{output_dir}/total_bomb_polygons.shp'),
-        snap_points=total_intersection_joints
-    )
-    SMS_MAP(arcs=geos2SmsArcList(total_arcs_cleaned)).writer(filename=f'{output_dir}/total_arcs.map')
-
-    total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
-    gpd.GeoDataFrame(
-        index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
-    ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
-
-    # river_arcs_cleaned = clean_river_arcs(total_river_arcs, total_arcs_cleaned)
-    # total_river_outline_polys = generate_river_outline_polys(river_arcs_cleaned)
-    # if len(total_river_outline_polys) > 0:
-    #     gpd.GeoDataFrame(
-    #         index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys
-    #     ).to_file(filename=f'{output_dir}/total_river_outline.shp', driver="ESRI Shapefile")
-    # else:
-    #     print(f'Warning: total_river_outline_polys empty')
-
-    print(f'Final clean-ups took: {time.time()-time_final_cleanup_start} seconds.')
-
+def final_clean_up(output_dir, total_arcs_map, snap_points, i_blast_intersection=False, total_river_arcs=None):
+    pass
 
 def river_map_mpi_driver(
     dems_json_file = './dems.json',  # files for all DEM tiles
@@ -87,6 +68,7 @@ def river_map_mpi_driver(
     output_dir = './',
     thalweg_buffer = 1000,
     i_DEM_cache = True,
+    i_blast_intersection = False,
     comm = MPI.COMM_WORLD
 ):
     '''
@@ -169,7 +151,7 @@ def river_map_mpi_driver(
             print(f'[ Group {i+1} ]-----------------------------------------------------------------------\n' + \
                   f'Group {i+1} includes the following thalwegs (idx starts from 0): {tile_group2thalwegs}\n' + \
                   f'Group {i+1} needs the following DEMs: {tile_groups_files[i]}\n')
-            print(f'Grouping took: {time.time()-time_grouping_start} seconds')
+        print(f'Grouping took: {time.time()-time_grouping_start} seconds')
 
     comm.barrier()
     if rank == 0: print('\n---------------------------------caching DEM tiles---------------------------------\n')
@@ -205,7 +187,6 @@ def river_map_mpi_driver(
     comm.Barrier()
     time_all_groups_start = time.time()
 
-    # my_group_ids = np.argwhere(i_my_groups).squeeze() # each core handles its assigned groups sequentially
     for i, (my_group_id, my_tile_group, my_tile_group_thalwegs) in enumerate(zip(my_group_ids, my_tile_groups, my_tile_groups_thalwegs)):
         time_this_group_start = time.time()
         print(f'Rank {rank}: Group {i+1} (global: {my_group_id}) started ...')
@@ -217,6 +198,7 @@ def river_map_mpi_driver(
                 output_dir = output_dir,
                 output_prefix = f'Group_{my_group_id}_{rank}_{i}_',
                 mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}, global: {my_group_id}] ',
+                i_blast_intersection=i_blast_intersection
             )
         else:
             pass  # print(f'Rank {rank}: Group {my_group_id} failed')
@@ -227,8 +209,37 @@ def river_map_mpi_driver(
 
     comm.Barrier()
 
-    # merge outputs from all ranks
+    # finalize
     if rank == 0:
-        total_arcs_map, total_intersection_joints, total_river_arcs = merge_outputs(output_dir)
-        final_clean_up(output_dir, total_arcs_map, total_intersection_joints, total_river_arcs)
+        # merge outputs from all ranks
+        total_arcs_map, total_intersection_joints, total_river_arcs, total_centerlines = merge_outputs(output_dir)
+
+        print(f'\n--------------- final clean-ups --------------------------------------------------------\n')
+        time_final_cleanup_start = time.time()
+
+        total_arcs_cleaned = [arc for arc in total_arcs_map.to_GeoDataFrame().geometry.unary_union.geoms]
+        if not i_blast_intersection:
+            bomb_polygons = gpd.read_file(f'{output_dir}/total_bomb_polygons.shp')
+            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=total_intersection_joints)
+        total_arcs_cleaned = clean_arcs(total_arcs_cleaned)
+        SMS_MAP(arcs=geos2SmsArcList(total_arcs_cleaned)).writer(filename=f'{output_dir}/total_arcs.map')
+
+        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+        gpd.GeoDataFrame(
+            index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
+        ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
+
+        # river_arcs_cleaned = clean_river_arcs(total_river_arcs, total_arcs_cleaned)
+        # total_river_outline_polys = generate_river_outline_polys(river_arcs_cleaned)
+        # if len(total_river_outline_polys) > 0:
+        #     gpd.GeoDataFrame(
+        #         index=range(len(total_river_outline_polys)), crs='epsg:4326', geometry=total_river_outline_polys
+        #     ).to_file(filename=f'{output_dir}/total_river_outline.shp', driver="ESRI Shapefile")
+        # else:
+        #     print(f'Warning: total_river_outline_polys empty')
+
+        print(f'Final clean-ups took: {time.time()-time_final_cleanup_start} seconds.')
+    
+        # delete per-core outputs
+        silentremove(glob(f'{output_dir}/Group*'))
         print(f'>>>>>>>> Total run time: {time.time()-time_start} seconds >>>>>>>>')
