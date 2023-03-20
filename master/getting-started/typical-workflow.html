@@ -1546,7 +1546,7 @@
 <li>First estimate the smallest <span class="arithmatex">\(\Delta t\)</span> you’d anticipate (e.g., 100s for field applications), and then estimate the coarsest <span class="arithmatex">\(\Delta t\)</span> at sample depths to make sure <span class="arithmatex">\(CFL&gt;0.4\)</span> (cf. Table 5.1).</li>
 <li>Resolving features is much easier with SCHISM – be game! Bathymetry smoothing is not necessary.</li>
 <li>Make sure open boundaries do not become completely dry during simulation </li>
-<li>Implicit <span class="arithmatex">\(TVD^2\)</span> transport is very efficient, but horizontal transport is still explicit 
+<li>[3D simulations with transport] Implicit <span class="arithmatex">\(TVD^2\)</span> transport is very efficient, but horizontal transport is still explicit 
 (and is the main bottleneck). Therefore beware of grid resolution in critical regions to avoid 
 excessive sub-cycling; use upwind in areas of no stratification. Another way to speed up is 
  to use hybrid ELM and FV by setting <code>ielm_transport=1</code>.</li>
@@ -1554,7 +1554,7 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
 <li>Minimum area: make sure there are no negative elements (under xmgredit5-&gt;Status).</li>
 <li><span class="arithmatex">\(CFL&gt;0.4\)</span> (at least in ‘wet’ areas). Note that you need to do this check in map projection (meters), not in lon/lat!</li>
 <li>Maximum skewness for triangle: use a generous threshold of 17, mainly to find excessive "collapsed" elements that originate from the SMS map issues (and fix them in SMS).</li>
-<li>Quad quality: fix all bad-quality quads using <code>fix_bad_quads.f90</code>; use 0.5 (ratio of min and max internal angles) as threshold.</li>
+<li>Quad quality: <strong>fix all bad-quality quads</strong> using <code>fix_bad_quads.f90</code>; use 0.5 (ratio of min and max internal angles) as threshold.</li>
 </ul>
 </li>
 </ol>
@@ -1566,11 +1566,12 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
 </ul>
 </li>
 <li>Iterate with mesh generation step to fix any mesh issues.</li>
-<li>If your goal is to set up 3D baroclinic model later, you can also do the following simple test. Set a minimum
-  depth of say 5m in the entire mesh, and set up a simple baroclinic model (cold start with <code>salt.ic</code> and <code>temp.ic</code>; vertical
-  grid use simple SZ).
-  Run SCHISM to see if there are any additional mesh issues.</li>
 </ol>
+<!--- 3. If your goal is to set up 3D baroclinic model later, you can also do the following simple test. Set a minimum
+  depth of say 5m in the entire mesh, and set up a simple baroclinic model (cold start with `salt.ic` and `temp.ic`; vertical
+  grid use simple SZ).
+  Run SCHISM to see if there are any additional mesh issues. -->
+
 <h2 id="2d-model-calibration">2D model: calibration<a class="headerlink" href="#2d-model-calibration" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Start from simple and then build up complexity. Simplest may be a tidal run with a constant Manning’s <span class="arithmatex">\(n\)</span>.</li>
@@ -1591,7 +1592,7 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
 <li>Control the balance between numerical diffusion and dispersion (<code>indvel</code>, <code>ihorcon</code>)</li>
 <li>Transport solver efficiency may require some experience.</li>
 <li><span class="arithmatex">\(LSC^2\)</span> grid requires some learning/experience, but is a very powerful tool (resembling unstructured grid in the vertical)</li>
-<li>See <a href="../case-study.html">Case studies</a> commonly encountered issues in 3D setup.</li>
+<li>See <a href="../case-study.html">Case studies</a> for commonly encountered issues in 3D setup.</li>
 </ol>
 <div class="admonition note a beginners guide">
 <p class="admonition-title">Note</p>
