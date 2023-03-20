@@ -13,7 +13,7 @@
 5. First estimate the smallest $\Delta t$ you’d anticipate (e.g., 100s for field applications), and then estimate the coarsest $\Delta t$ at sample depths to make sure $CFL>0.4$ (cf. Table 5.1).
 6. Resolving features is much easier with SCHISM – be game! Bathymetry smoothing is not necessary.
 7. Make sure open boundaries do not become completely dry during simulation 
-8. Implicit $TVD^2$ transport is very efficient, but horizontal transport is still explicit 
+8. [3D simulations with transport] Implicit $TVD^2$ transport is very efficient, but horizontal transport is still explicit 
 (and is the main bottleneck). Therefore beware of grid resolution in critical regions to avoid 
 excessive sub-cycling; use upwind in areas of no stratification. Another way to speed up is 
  to use hybrid ELM and FV by setting `ielm_transport=1`.
@@ -21,17 +21,17 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
     - Minimum area: make sure there are no negative elements (under xmgredit5->Status).
     - $CFL>0.4$ (at least in ‘wet’ areas). Note that you need to do this check in map projection (meters), not in lon/lat!
     - Maximum skewness for triangle: use a generous threshold of 17, mainly to find excessive "collapsed" elements that originate from the SMS map issues (and fix them in SMS).
-    - Quad quality: fix all bad-quality quads using `fix_bad_quads.f90`; use 0.5 (ratio of min and max internal angles) as threshold.
+    - Quad quality: **fix all bad-quality quads** using `fix_bad_quads.f90`; use 0.5 (ratio of min and max internal angles) as threshold.
 
 ## 2D model: pre-processing
 1. Check additional grid issues with a 2D barotropic model with `ipre=1`, `ibc=1`, `ibtp=0`
     - You can cheat without any open boundary segments during this step
     - Remember to `mkdir outputs` in the run directory
 2. Iterate with mesh generation step to fix any mesh issues.
-3. If your goal is to set up 3D baroclinic model later, you can also do the following simple test. Set a minimum
+<!--- 3. If your goal is to set up 3D baroclinic model later, you can also do the following simple test. Set a minimum
   depth of say 5m in the entire mesh, and set up a simple baroclinic model (cold start with `salt.ic` and `temp.ic`; vertical
   grid use simple SZ).
-  Run SCHISM to see if there are any additional mesh issues.
+  Run SCHISM to see if there are any additional mesh issues. -->
 
 ## 2D model: calibration
 1. Start from simple and then build up complexity. Simplest may be a tidal run with a constant Manning’s $n$.
@@ -51,7 +51,7 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
 4. Control the balance between numerical diffusion and dispersion (`indvel`, `ihorcon`)
 5. Transport solver efficiency may require some experience.
 6. $LSC^2$ grid requires some learning/experience, but is a very powerful tool (resembling unstructured grid in the vertical)
-7. See [Case studies](../case-study.md) commonly encountered issues in 3D setup.
+7. See [Case studies](../case-study.md) for commonly encountered issues in 3D setup.
 
 !!!note A Beginners guide
     Another good resource for beginners is a mini live [manual](https://github.com/Krys1202/Guide_SCHISM) by Ms. Christelle Auguste (U. of Tasmania). There is a PDF on there.
