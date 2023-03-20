@@ -5,7 +5,7 @@
 %        hgrid.gr3 (lon in [-180,180])
 %        coastal-stns-Vol-monthly.updated-May2019.nc (Dai&Trenberth via ucar)
 %        dates below
-%Outputs: source_sink.in, vsource.th, msource.th (-9999 for T). Time step is 1 day and may need pad 
+%Outputs: source_sink.in, vsource.th, msource.th (-9999 for T; 30PSU for S). Time step is 1 day and may need pad 
 %         extra record for last model step
 
 clear all; close all;
@@ -126,7 +126,7 @@ end
 fid=fopen('vsource.th','w');
 fid2=fopen('msource.th','w');
 fprintf(fid,[out_char '\n'],[timeout2*86400; out_flow3]);
-fprintf(fid2,[out_char2 '\n'],[timeout2*86400; -9999*ones(nriv_out2,nstep); zeros(nriv_out2,nstep)]);
+fprintf(fid2,[out_char2 '\n'],[timeout2*86400; -9999*ones(nriv_out2,nstep); 30*ones(nriv_out2,nstep)]);
 fclose(fid); fclose(fid2);
 
 fid=fopen('source_sink.in','w');

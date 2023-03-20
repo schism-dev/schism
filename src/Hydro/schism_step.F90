@@ -157,8 +157,8 @@
                      &tmpxs,tmpys,tmpx1,tmpy1,tmpx2,tmpy2,tmpx3,tmpy3, &
                      &tmpx1s,tmpy1s,tmpx2s,tmpy2s,tmpx3s,tmpy3s,taux2,tauy2, &
                      &taux2s,tauy2s,uths,vths,vtan,suru,surv,dhdx,dhdy,ubar1, &
-                     &ubar2,vbar1,vbar2,ubar,vbar,eta1_bar,eta2_bar, &
-                     &xcon,ycon,zcon,vnor1,vnor2,bflux,bflux0,top, &
+                     &ubar2,vbar1,vbar2,ubar,vbar,ubar3,vbar3,eta1_bar,eta2_bar, &
+                     &xcon,ycon,zcon,vnor1,vnor2,bflux,bflux0,bflux2,top, &
                      &deta_dx,deta_dy,hmin,dzds_av,css,dsigma,dgam0,dgam1, &
                      &hat_i0,dzds,dsdx,dsdy,dsig2,hat_ir,vol,dz,tmp_max, &
                      &tmp_max_gb,dia_min,dia_min_gb,df_max,qhat_e1,qhat_e2,dqdz,uvnu, &
@@ -6832,25 +6832,31 @@
       endif !itransport_only==0
 
 !     Add Stokes drift to horizontal vel for wvel and transport; will restore
-!     after transport
+!     after transport. Temporarily save original Eulerian vel s[uv]2 as bcc for
+!     F.V. calculation below
 #ifdef USE_WWM
       if(RADFLAG.eq.'VOR') then
+        bcc(1,:,1:nsa)=su2
+        bcc(2,:,1:nsa)=sv2
         su2=su2+stokes_hvel_side(1,:,:)
         sv2=sv2+stokes_hvel_side(2,:,:)
       endif
 #endif
 
 !...  solve for vertical velocities using F.V.
-!...  For hydrostatic model, this is the vertical vel; for non-hydrostatic
-!...  model, this is only used in transport
+!...  For hydrostatic model, this is the total Lagrangian vertical vel
+!...  while dr_dxy(1,:,:) is used to temporarily save the Eulerian wvel in the vortex formalism
 
 !$OMP parallel default(shared) private(i,i34inv,n1,n2,n3,n4,av_bdef1,av_bdef2,l, &
 !$OMP xcon,ycon,zcon,area_e,sne,ubar,vbar,m,isd,dhdx,dhdy,dep,swild,ubed,vbed,wbed, &
-!$OMP bflux0,sum1,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux,surface_flux_ratio, &
-!$OMP wflux_correct,vn1,vn2,tt1,ss1)
+!$OMP bflux0,sum1,sum2,ubar1,vbar1,j,jsj,vnor1,vnor2,bflux,surface_flux_ratio, &
+!$OMP wflux_correct,vn1,vn2,tt1,ss1,ubar2,vbar2,ubar3,vbar3,bflux2)
 
 !$OMP workshare
       we=0.d0 !for dry and below bottom levels; in eframe if ics=2
+#ifdef USE_WWM
+      dr_dxy=0.d0 !Eulerian wvel
+#endif
       flux_adv_vface=-1.d34 !used in transport; init. as flags
 !$OMP end workshare
 
@@ -6904,16 +6910,26 @@
 
 !       Rotate hvel. for sides at all levels
         ubar=0.d0; vbar=0.d0 !average bottom hvel
+        ubar2=0.d0; vbar2=0.d0 !average bottom Eulerian hvel
         do m=1,i34(i) !side
           isd=elside(m,i)
 !new37
           if(ics==1) then
             ubar=ubar+su2(kbs(isd),isd)*i34inv 
             vbar=vbar+sv2(kbs(isd),isd)*i34inv
+#ifdef USE_WWM
+            ubar2=ubar2+bcc(1,kbs(isd),isd)*i34inv
+            vbar2=vbar2+bcc(2,kbs(isd),isd)*i34inv
+#endif
           else
             call project_hvec(su2(kbs(isd),isd),sv2(kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             ubar=ubar+vn1*i34inv
             vbar=vbar+vn2*i34inv
+#ifdef USE_WWM
+            call project_hvec(bcc(1,kbs(isd),isd),bcc(2,kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
+            ubar2=ubar2+vn1*i34inv
+            vbar2=vbar2+vn2*i34inv
+#endif
           endif !ics
 
         enddo !m
@@ -6926,22 +6942,38 @@
           ubed=swild(1); vbed=swild(2); wbed=swild(3)
           bflux0=ubed*sne(1,kbe(i))+vbed*sne(2,kbe(i))+wbed*sne(3,kbe(i)) !normal bed vel.
           we(kbe(i),i)=wbed
+#ifdef USE_WWM
+          dr_dxy(1,kbe(i),i)=wbed
+#endif
         else
           !Error: /=0 for 2D (but OK b/cos fluxes are 0 below for transport)
           we(kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar-dhdy*vbar
+#ifdef USE_WWM
+          dr_dxy(1,kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar2-dhdy*vbar2
+#endif
         endif
 
         do l=kbe(i),nvrt-1
           sum1=0.d0
+          sum2=0.d0
           ubar=0.d0
           vbar=0.d0
           ubar1=0.d0
           vbar1=0.d0
+          ubar2=0.d0
+          vbar2=0.d0
+          ubar3=0.d0
+          vbar3=0.d0
           do j=1,i34(i)
             jsj=elside(j,i)
             vnor1=su2(l,jsj)*snx(jsj)+sv2(l,jsj)*sny(jsj)
             vnor2=su2(l+1,jsj)*snx(jsj)+sv2(l+1,jsj)*sny(jsj)
             sum1=sum1+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
+#ifdef USE_WWM
+            vnor1=bcc(1,l,jsj)*snx(jsj)+bcc(2,l,jsj)*sny(jsj)
+            vnor2=bcc(1,l+1,jsj)*snx(jsj)+bcc(2,l+1,jsj)*sny(jsj)
+            sum2=sum2+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
+#endif
 
             !In eframe; new37
             if(ics==1) then
@@ -6949,6 +6981,12 @@
               ubar1=ubar1+su2(l+1,jsj)*i34inv 
               vbar=vbar+sv2(l,jsj)*i34inv 
               vbar1=vbar1+sv2(l+1,jsj)*i34inv 
+#ifdef USE_WWM
+              ubar2=ubar2+bcc(1,l,jsj)*i34inv 
+              ubar3=ubar3+bcc(1,l+1,jsj)*i34inv 
+              vbar2=vbar2+bcc(2,l,jsj)*i34inv 
+              vbar3=vbar3+bcc(2,l+1,jsj)*i34inv 
+#endif
             else
               call project_hvec(su2(l,jsj),sv2(l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
               call project_hvec(su2(l+1,jsj),sv2(l+1,jsj),sframe2(:,:,jsj),eframe(:,:,i),tt1,ss1)
@@ -6956,6 +6994,14 @@
               vbar=vbar+vn2*i34inv
               ubar1=ubar1+tt1*i34inv
               vbar1=vbar1+ss1*i34inv
+#ifdef USE_WWM
+              call project_hvec(bcc(1,l,jsj),bcc(2,l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
+              call project_hvec(bcc(1,l+1,jsj),bcc(2,l+1,jsj),sframe2(:,:,jsj),eframe(:,:,i),tt1,ss1)
+              ubar2=ubar2+vn1*i34inv
+              vbar2=vbar2+vn2*i34inv
+              ubar3=ubar3+tt1*i34inv
+              vbar3=vbar3+ss1*i34inv
+#endif
             endif !ics
           enddo !j
 
@@ -6963,16 +7009,26 @@
           if(l==kbe(i)) then
             bflux=(av_bdef2-av_bdef1)/dt
             if(imm==2) bflux=bflux0
+#ifdef USE_WWM
+            bflux2=bflux
+#endif
           else
             !For mixed 2/3D prisms, the depth-av. 2D vel. applied at the
             !bottom (due to degenerate prism) may cause some
             !large w-vel, but flux balance is not affected (nor is
             !transport)
             bflux=ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l)
+#ifdef USE_WWM
+            bflux2=ubar2*sne(1,l)+vbar2*sne(2,l)+dr_dxy(1,l,i)*sne(3,l)
+#endif
           endif
 
           we(l+1,i)=(-sum1-(ubar1*sne(1,l+1)+vbar1*sne(2,l+1))*area_e(l+1) + &
      &bflux*area_e(l))/sne(3,l+1)/area_e(l+1)
+#ifdef USE_WWM
+          dr_dxy(1,l+1,i)=(-sum2-(ubar3*sne(1,l+1)+vbar3*sne(2,l+1))*area_e(l+1) + &
+     &bflux2*area_e(l))/sne(3,l+1)/area_e(l+1)
+#endif
 
           !Save flux_adv_vface for transport - not working for bed deformation
           flux_adv_vface(l,1:ntracers,i)=bflux*area_e(l) 
@@ -7837,11 +7893,12 @@
 
       if(myrank==0) write(16,*)'done solving transport equation'
 
-!     Restore Eulerian vel
+!     Restore 3D Eulerian vel
 #ifdef USE_WWM
       if(RADFLAG.eq.'VOR') then
         su2=su2-stokes_hvel_side(1,:,:)
         sv2=sv2-stokes_hvel_side(2,:,:)
+        we=dr_dxy(1,:,1:nea)
       endif
 #endif
 
