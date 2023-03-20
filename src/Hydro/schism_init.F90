@@ -718,9 +718,9 @@
 !        call parallel_abort(errmsg)
 !      endif
 
-      if(nws<0) then
+      if(nws==-1) then
 #ifndef USE_PAHM 
-        call parallel_abort('INIT: nws<0 requires USE_PAHM')
+        call parallel_abort('INIT: nws=-1 requires USE_PAHM')
 #endif
       endif
 
@@ -1436,7 +1436,7 @@
         if(istat/=0) call parallel_abort('INIT: failed to alloc ts_offline')
       endif
    
-      if(nws<0) then
+      if(nws==-1) then
         allocate(xlon_gb(np_global),ylat_gb(np_global),stat=istat)
         if(istat/=0) call parallel_abort('INIT: alloc xlon_gb failure')
       endif !nws
@@ -3181,14 +3181,14 @@
       endif !ncor
 
 !     Wind 
-      if(nws<0.or.(nws>=2.and.nws<=3)) then !CORIE mode; read in hgrid.ll and open debug outputs
+      if(nws==-1.or.(nws>=2.and.nws<=3)) then !read in hgrid.ll and open debug outputs
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
           read(32,*)
           read(32,*) !ne,np
           do i=1,np_global
             read(32,*)j,buf3(i),buf4(i) !tmp1,tmp2
-            if(nws<0) then !save only on rank 0
+            if(nws==-1) then !save only on rank 0
               xlon_gb(i)=buf3(i) !degr
               ylat_gb(i)=buf4(i)
             endif
@@ -7090,14 +7090,14 @@
 
 !...  Init PaHM on rank 0 only
 #ifdef USE_PAHM
-      if(nws<0) then
+      if(nws==-1) then
         if(myrank==0) then
           write(16,*)'reading PaHM inputs...'
           call ReadControlFile !('pahm_control.in') !TRIM(controlFileName))
           call ReadCsvBestTrackFile()
           write(16,*)'done pre-proc PaHM...'
         endif
-      endif !nws<0
+      endif !nws
 #endif /*USE_PAHM*/
 
       difnum_max_l2=0.d0 !max. horizontal diffusion number reached by each process (check stability)

@@ -340,7 +340,7 @@
 
 !'    Alloc. the large array for nws=4,-1 option (may consider changing
 !     to unformatted binary read)
-      if(nws==4.or.nws<0) then
+      if(nws==4.or.nws==-1) then
         allocate(rwild(np_global,3),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
@@ -467,7 +467,7 @@
       endif
 
 #ifdef USE_PAHM
-      if(nws<0) then 
+      if(nws==-1) then 
         !PaHM: rank 0 returns wind and air pressure only for global nodes
         if(myrank==0) then
           if (modelType==1) then       
@@ -492,7 +492,7 @@
             pr(nd)=rwild(i,3)
           endif
         enddo !i
-      endif !nws<0
+      endif !nws=-1
 #endif /*USE_PAHM*/
 
       if(nws==1) then
