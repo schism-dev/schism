@@ -296,6 +296,7 @@ MODULE PaHM_Utilities
     endSimSpecified  = .TRUE.
 
     modelType=model_type_pahm  ! Holland or GAHM model
+
     writeParams = .TRUE.
 
     CALL SetMessageSource("ReadControlFile")
@@ -827,7 +828,7 @@ MODULE PaHM_Utilities
       WRITE(*, '(a, a)')    '   ncVarNam_WndY        = ', TRIM(ncVarNam_WndY)
 
         PRINT *, ''
-      WRITE(*, '(a, i1)')   '   modelType            = ', modelType
+      WRITE(*, '(a, i10)')   '   modelType            = ', modelType
 
       WRITE(*, '(a)')    '---------- MODEL PARAMETERS ----------'
         PRINT *, ''
