@@ -209,7 +209,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
@@ -495,6 +495,7 @@
       h_massconsv=2.d0; rinflation_icm=1.d-3
       lev_tr_source=-9 !bottom
       iprecip_off_bnd=0
+      model_type_pahm=10
 
       !Output elev, hvel by detault
       nc_out=1
@@ -722,6 +723,7 @@
 #ifndef USE_PAHM 
         call parallel_abort('INIT: nws=-1 requires USE_PAHM')
 #endif
+        if(model_type_pahm/=1.and.model_type_pahm/=10) call parallel_abort('INIT: check model_type_pahm')
       endif
 
       if(nws==3) then

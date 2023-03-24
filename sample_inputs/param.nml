@@ -520,7 +520,7 @@
 ! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
 ! If nws=-1 (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
 !  In this case, the Holland model is called every step so wtiminc is not used. An extra 
-!  input is needed: hurricane-track.dat
+!  input file is needed: hurricane-track.dat, in addition to a few parameters below.
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
@@ -538,6 +538,8 @@
   drampwind = 1. !ramp-up period in days for wind (no ramp-up if <=0)
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
+  model_type_pahm=10 !only used if nws=-1: hurricane model type (1: Holland; 10: GAHM)
+
   !If IMPOSE_NET_FLUX is on and nws=2, read in net _surface_ heat flux as var 'dlwrf' 
   !(Downward Long Wave) in sflux_rad (solar radiation is still used separately),
   !and if PREC_EVAP is on, also read in net P-E as 'prate' (Surface Precipitation Rate) in sflux_prc.

@@ -13,6 +13,39 @@
 !> @author Panagiotis Velissariou <panagiotis.velissariou@noaa.gov>
 !----------------------------------------------------------------
 
+!Routines:
+!penFileForRead
+!ReadControlFile
+!PrintModelParams
+!GeoToCPP_Scalar
+!GeoToCPP_1D
+!CPPToGeo_Scalar
+!CPPToGeo_1D
+!SphericalFracPoint
+!GetLocAndRatio
+
+!Functions:
+!GetLineRecord
+!ParseLine
+!CheckControlFileInputs
+!LoadINTVar
+!LoadLOGVar
+!LoadREALVar
+!ToLowerCase
+!ToUpperCase
+!ConvLon
+!SphericalDistance_Scalar
+!SphericalDistance_1D
+!SphericalDistance_2D
+!SphericalDistanceHarv
+!CharUnique
+!ValStr
+!DValStr
+!IntValStr
+!RealScan
+!DRealScan
+!IntScan
+
 MODULE PaHM_Utilities
 
   USE PaHM_Sizes
@@ -159,7 +192,7 @@ MODULE PaHM_Utilities
     USE TimeDateUtils, ONLY : TimeConv, SplitDateTimeString, JoinDate,  GregToJulDay, JulDayToGreg, &
                               GetTimeConvSec, DateTime2String
     use schism_glbl, only : start_year,start_month,start_day,start_hour,utc_start,grav, &
-     &rho0
+     &rho0,model_type_pahm
     
     IMPLICIT NONE
 
@@ -262,8 +295,7 @@ MODULE PaHM_Utilities
     endDateSpecified = .TRUE.
     endSimSpecified  = .TRUE.
 
-!    modelType=1   ! HM model
-    modelType=10  ! GAHM model
+    modelType=model_type_pahm  ! Holland or GAHM model
     writeParams = .TRUE.
 
     CALL SetMessageSource("ReadControlFile")
