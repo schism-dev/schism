@@ -478,7 +478,7 @@
       s1_mxnbt=0.5_rkind; s2_mxnbt=3.5_rkind;
       iharind=0; icou_elfe_wwm=0; drampwafo=0.d0; nstep_wwm=1; hmin_radstress=1._rkind; turbinj=0.15_rkind;
       alphaw=1.0_rkind; fwvor_advxy_stokes=1; fwvor_advz_stokes=1;
-      fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; fwvor_wveg=1; fwvor_wveg_NL=1; wafo_obcramp=0;
+      fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; fwvor_wveg=0; fwvor_wveg_NL=0; wafo_obcramp=0;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
       slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind

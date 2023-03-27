@@ -321,11 +321,11 @@
           IF (fwvor_gradpress == 1) THEN ! BM
             DO l = 1,2 !elements
               IE = isdel(l,IS)
-              IF(ie /= 0 .AND. idry_e(IE) == 0) THEN
+              IF(ie /= 0) then; if(idry_e(IE) == 0) THEN
                 icount = icount + 1
                 dJ_dx_loc = dJ_dx_loc + dot_product(JPRESS(elnode(1:3,IE)),dldxy(1:3,1,IE)) !in eframe
                 dJ_dy_loc = dJ_dy_loc + dot_product(JPRESS(elnode(1:3,IE)),dldxy(1:3,2,IE))
-              END IF
+              END IF; endif
             END DO
             ! Averaging the values from the two surrounding elements
             IF(icount > 2) CALL parallel_abort('Pressure term:icount>2')
@@ -614,7 +614,7 @@
 !**********************************************************************
       SUBROUTINE COMPUTE_VEGDISS_VF_TERMS_SCHISM
         USE DATAPOOL
-        USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm, zs, idry_s, isidenode
+        USE schism_glbl, ONLY: hmin_radstress, kbs, ns,npa, isbs, dps, h0, out_wwm, zs, idry_s, isidenode
         USE schism_msgp 
         IMPLICIT NONE
 
@@ -622,7 +622,7 @@
         REAL(rkind) :: eta_tmp, tmp0, htot, sum_3D
         REAL(rkind) :: swild_3D(NVRT)
         REAL(rkind) :: Fveg_x_loc, Fveg_y_loc
-        REAL(rkind) :: VLTH(ns), SAV_H_tmp
+        REAL(rkind) :: VLTH(npa), SAV_H_tmp
 
 #ifndef SCHISM
         VLTH  = 2. ! vegetation height !Should be the same as in SUBROUTINE VEGDISSIP
@@ -711,7 +711,7 @@
       SUBROUTINE COMPUTE_INTRAWAVE_VEG_FORCE
 
         USE DATAPOOL
-        USE schism_glbl, ONLY: ns, np, isbs, dps, h0, out_wwm, idry_s, isidenode, zs, kbs
+        USE schism_glbl, ONLY: ns, np,npa, isbs, dps, h0, out_wwm, idry_s, isidenode, zs, kbs
         USE schism_msgp         
         IMPLICIT NONE
 
@@ -719,7 +719,7 @@
         INTEGER, PARAMETER :: ech = 50 !sampling of wave orbital velocity uw(t)
         REAL(rkind) :: eta_tmp, tmp1, tmp2, htot, Hs_tmp, Hrms_tmp, TM10_tmp, klm_tmp, tmp0
         REAL(rkind) :: w_dir_tmp0, DEG, w_dir_tmp, tanbeta_x_tmp, tanbeta_y_tmp
-        REAL(rkind) :: VCD(ns), VDM(ns), VNV(ns), VLTH(ns), SAV_CD_tmp, SAV_BV_tmp, SAV_NV_tmp, SAV_H_tmp
+        REAL(rkind) :: VCD(npa), VDM(npa), VNV(npa), VLTH(npa), SAV_CD_tmp, SAV_BV_tmp, SAV_NV_tmp, SAV_H_tmp
         REAL(rkind) :: dt, Ucrest, Utrough, T_crest, T_trough
         REAL(rkind) :: WWAVE_FORCE_VEG_NL_x, WWAVE_FORCE_VEG_NL_y, WWAVE_FORCE_VEG_NL_TOT
         REAL(rkind) :: sum_3D, swild_3D(NVRT)
