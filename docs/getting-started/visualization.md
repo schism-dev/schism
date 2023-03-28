@@ -13,7 +13,8 @@ Shortly after v5.9.0, we have successfully implemented a new mode of efficient I
  At runtime, the user needs to specify number of scribe cores (= # of 3D outputs variables 
 (vectors counted as 2) plus 1), and the code, compiled without `OLDIO`, will output 
  combined netcdf outputs for each 3D variable and also all 2D variables in `out2d*.nc`. 
-Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`.
+Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`. You can find sample outputs [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Scribe_IO_outputs/).
+Sample outputs using OLDIO (schout*.nc) can be found [here](http://ccrm.vims.edu/yinglong/SVN_large_files/SCHISM_v5.6.1_sample_outputs/).
 
 You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by following these steps:
 
