@@ -35,4 +35,4 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 Newer versions can be found at the master branch of [github](https://github.com/schism-dev/schism_visit_plugin).
 
 !!!note
-    Note that the new plugins also work with the old I/O (combined `schout*.nc`).
+    Note that the new plugins also work with the old I/O (combined `schout*.nc`). To visualize any variables under new I/O with VisIT, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIT also needs corresponding `zCoordinates*.nc`. 
