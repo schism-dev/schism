@@ -1521,11 +1521,11 @@
 <p>Most SCHISM inputs can be visualized with ACE/xmgredit5 or xmgr5 tools; see src/Utility/ACE for instructions on how to install these tools. Other useful tools will be mentioned in the later chapters.</p>
 <p>SCHISM input files can be broadly categorized into following 7 groups:</p>
 <ol>
-<li><code>*.gr3</code>, <code>hgrid.ll</code>: node centered spatial data and mesh connectivity. These file can be visualized using <code>ACE/xmgredit5</code>;</li>
+<li><code>*.gr3</code>, <code>hgrid.ll</code>: node centered spatial data and mesh connectivity. These file can be created/visualized using <code>ACE/xmgredit5</code>;</li>
 <li><code>*.th</code>: time history files in ASCII format. The ASCII files can be visualized using <code>ACE/xmgr5</code>;</li>
 <li><code>*.ic</code>: initial condition files. Some of these files use <code>.gr3</code> format, while others have simple ASCII format;</li>
-<li><code>*.prop</code>: element-centered spatial data and properties; can be visualized using <code>ACE/xmgredit5</code>;</li>
-<li><code>*.nc</code>: netcdf4 inputs, including time history (<code>*.th.nc</code>), hotstart (<code>hotstart.nc</code>), and nudging inputs (<code>*_nu.nc</code>);</li>
+<li><code>*.prop</code>: element-centered spatial data and properties; can be created/visualized using <code>ACE/xmgredit5</code>;</li>
+<li><code>*.nc</code>: netcdf4 inputs, including time history (<code>*.th.nc</code>), hotstart (<code>hotstart.nc</code>), and nudging inputs (<code>*_nu.nc</code>). These inputs may be created by PYSCHISM tool;</li>
 <li><code>*.nml</code>: main parameter input (<code>param.nml</code>);</li>
 <li><code>*.in</code>: role-specific input files with individual formats. ASCII inputs include vertical grid (<code>vgrid.in</code>), B.C. input (<code>bctides.in</code>), and <code>hydraulics.in</code> (for hydraulics module) etc;</li>
 <li><code>sflux/</code>: atmospheric and heat flux files in netcdf format (CF convention v1.0). These files can be visualized using standard tools like ncview, ferret etc;</li>
