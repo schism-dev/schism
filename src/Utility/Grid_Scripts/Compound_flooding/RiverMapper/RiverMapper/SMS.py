@@ -224,7 +224,8 @@ def merge_maps(mapfile_glob_str, merged_fname):
             total_map += map
         total_map.writer(merged_fname)
     else:
-        raise FileNotFoundError(f'warning: outputs do not exist: {mapfile_glob_str}')
+        print(f'warning: outputs do not exist: {mapfile_glob_str}, abort writing to map')
+        return None
 
     return total_map
 
@@ -382,7 +383,7 @@ class SMS_MAP():
         import os
 
         if not self.valid:
-            print(f'No arcs found in map, aborting writing to *.map')
+            print(f'No arcs found in map, aborting writing to {filename}')
             return
 
         fpath = os.path.dirname(filename)
