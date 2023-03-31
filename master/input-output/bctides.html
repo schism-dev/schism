@@ -1476,7 +1476,7 @@
 
   <h1>Boundary conditions (bctides.in)</h1>
 
-<p>Please refer to sample bctides.in in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the <a href="optional-inputs.html">Optional inputs</a> section.</p>
+<p>Please refer to sample <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/bctides.in">bctides.in</a> in the source code directory when you read this. The following table summarizes all horizontal B.C. and nudging options supported by SCHISM. The format for other necessary input files are decribed in the <a href="optional-inputs.html">Optional inputs</a> section.</p>
 <table>
 <thead>
 <tr>
@@ -1527,8 +1527,8 @@
 </tr>
 </tbody>
 </table>
-<p>Following is a psudo code to explain the structure of <code>bctides.in</code> for different types of boundary conditions listed above. Spaces between lines are for clarity. See also sample <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/bctides.in">bctides.in</a> file.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="o">&lt;</span><span class="n">you</span><span class="w"> </span><span class="n">notes</span><span class="o">&gt;</span><span class="w"> </span><span class="c">!Not used in code; write your own comments</span>
+<p>Following is a psudo code to explain the structure of <code>bctides.in</code> for different types of boundary conditions listed above. Spaces between lines are for clarity.</p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="o">&lt;</span><span class="n">you</span><span class="w"> </span><span class="n">notes</span><span class="o">&gt;</span><span class="w"> </span><span class="c">!Not used in code; write your own comments</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">ntip</span><span class="w"> </span><span class="n">tip_dp</span><span class="w"> </span><span class="c">!# of constituents used in earth tidal potential; cut-off depth for applying tidal potential (i.e., it is not calculated when depth &lt; tip_dp).</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
@@ -1636,6 +1636,15 @@
 <a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>
 <a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="c">!j: open boundary segment</span>
 </code></pre></div>
+<br/></p>
+<p>The following two samples provide more direct views on the structure of bctides.in.
+<br/></p>
+<p>Sample 1 illustrates how to set Type 1 (Time history; uniform along bnd) and Type 2 (Constant) boundaries:
+<img alt="" src="../assets/bctides_sample_type_1_2.png" />  <br />
+<br/></p>
+<p>Sample 2 illustrates how to set a Type 3 (tidal) boundary:
+<img alt="" src="../assets/bctides_sample_type_3.png" />  <br />
+<br/></p>
 <div class="admonition caution">
 <p class="admonition-title">Note on AGE module</p>
 <p>The number of tracers inside this module (<code>ntracer_age</code>) must be an even number, and usually you only specify the first <code>ntracer_age/2</code> tracers on some open boundaries. For example, suppose <code>ntracer_age=4</code>, you can set the B.C. flags as:</p>
