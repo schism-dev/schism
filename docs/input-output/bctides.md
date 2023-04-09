@@ -2,11 +2,11 @@ Please refer to sample [bctides.in](https://github.com/schism-dev/schism/blob/ma
 
 | Variable | Type 1 (`*.th`) | Type 2 | Type 3 | Type 4 (`*[23]D.th`) | Type 5 | Type -1 | Type -4, -5 (`uv3D.th`); Nudging | Nudging/Sponge layer near bnd |
 |----------|---------------|--------|--------|--------------------|--------|---------|--------------------------------|-------------------------------|
-| $\eta$ | `elev.th`; Time history; uniform along bnd | constant | Tidal amp/phases | `elev2D.th.nc`: time- and space- varying along bnd | `elev2D.th.nc`: combination of 3 and 4 | Must = 0 | N\/A | `inu_elev=1`|
-| S&T, Tracers | `[MOD]_[ID].th`: relax to time history (uniform along bnd for inflow) | Relax to constant for inflow | Relax to i.c. for inflow | `[MOD]_3D.th.nc`: relax to time- and space- varying values along bnd during inflow | N/A | N/A | N/A | `inu_[MOD]=1 or 2`|
-| u,v | `flux.th`: via discharge ( <0 for inflow!) | Via dischage (<0 for inflow) | Tidal amp/phases for u and v components | `uv3D.th.nc`: time- and space- varying along bnd (in lon/lat for `ics=2`) | `uv3D.th.nc`: combination of 3 and 4 (but tidal amp/phases vary along bnd) | Flather (0 for $\eta$) | Relax to `uv3D.th.nc` (2 separate relaxations for in and outflow) | `inu_uv=1` |
+| $\eta$ | `elev.th`; Time history; uniform along bnd | constant | Tidal amp/phases | `elev2D.th.nc`: time- and space- varying along bnd | `elev2D.th.nc`: sum of 3 and 4 | Must = 0 | N\/A | `inu_elev=1`|
+| S&T, Tracers | `[MOD]_[ID].th`: relax to time history (uniform along bnd for inflow) | Relax to specified value for inflow | Relax to i.c. for inflow | `[MOD]_3D.th.nc`: relax to time- and space- varying values along bnd during inflow | N/A | N/A | N/A | `inu_[MOD]=1 or 2`|
+| u,v | `flux.th`: via discharge ( <0 for inflow!) | Via dischage (<0 for inflow) | Tidal amp/phases for u and v components | `uv3D.th.nc`: time- and space- varying along bnd (in lon/lat for `ics=2`) | `uv3D.th.nc`: sum of 3 and 4 | Flather (0 for $\eta$) | Relax to `uv3D.th.nc` (2 separate relaxations for in and outflow) | `inu_uv=1` |
 
-Following is a psudo code to explain the structure of `bctides.in` for different types of boundary conditions listed above. Spaces between lines are for clarity.
+Following is a psudo code to explain the structure of `bctides.in` for different types of boundary conditions listed above. Spaces between lines are added for clarity.
 
 ```fortran
 <you notes> !Not used in code; write your own comments
@@ -83,11 +83,11 @@ for j=1, nope
             end for i
         end for k
     else if (ifltype(j) == -1) !Flather type radiation b.c. (iettype must be 0 in this case)
-        eta_mean !mean elevation below
+        'eta_mean' !comment only - mean elevation below
         for i=1,nond(j) !loop over all nodes
             eta_m0(i) !mean elev at each node
         end for i
-        vn_mean !mean normal velocity
+        'vn_mean'!comment only - mean normal velocity below
         for i=1,nond(j)
             qthcon(1:Nz,i,j) !mean normal velocity at the node (at all levels)
         end for i
@@ -113,7 +113,7 @@ for j=1, nope
         .........
     endif
 
-    ! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature.
+    ! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections we will give examples for `.nc` inputs.
 
 end for !j: open boundary segment
 ```
@@ -150,7 +150,7 @@ Sample 2 illustrates how to set a Type 3 (tidal) boundary:
     ```
 
 !!!note 
-    `bctides.in` is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out errors is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag at a segment to see if the code crashes before or after this point.
+    `bctides.in` is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out the  error location is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag of `6` at a segment to see if the code crashes before or after this point.
 
 !!!note 
     The tidal amplitudes and phases can be generated using utility scripts shown on the [Pre-processing](../getting-started/pre-processing.md) section.
