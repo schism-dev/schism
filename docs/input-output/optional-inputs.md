@@ -151,8 +151,8 @@ Beside the time series inputs, we have the other types of netcdf4 input files as
 **source.nc**
 !!!notes "source.nc"
     ```
-netcdf source {
-dimensions:
+    netcdf source {
+    dimensions:
         nsources = 1268 ;
         nsinks = UNLIMITED ; // (0 currently)
         ntracers = 23 ;
@@ -160,7 +160,7 @@ dimensions:
         time_vsource = 732 ;
         time_vsink = UNLIMITED ; // (0 currently)
         one = 1 ;
-variables:
+    variables:
         int64 source_elem(nsources) ;
         double vsource(time_vsource, nsources) ;
         double msource(time_msource, ntracers, nsources) ;
@@ -170,7 +170,7 @@ variables:
         double time_step_msource(one) ;
         double time_step_vsink(one) ;
 
-// global attributes:
+    // global attributes:
                 :file_format = "NETCDF4" ;
                 :_NCProperties = "version=2,netcdf=4.8.1,hdf5=1.12.1" ;
     }
@@ -180,13 +180,13 @@ variables:
 
 !!!notes "TEM_nu.nc"
     ```
-netcdf TEM_nu {
-dimensions:
+    netcdf TEM_nu {
+    dimensions:
         node = 27023 ;
         nLevels = 40 ;
         one = 1 ;
         time = UNLIMITED ; // (367 currently)
-variables:
+    variables:
         float time(time) ;
         int map_to_global_node(node) ;
         float tracer_concentration(time, node, nLevels, one) ;
