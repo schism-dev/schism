@@ -930,14 +930,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#of-records-for-sources-and-sinks-can-be-different" class="md-nav__link">
-    of records for sources and sinks can be different;
-  </a>
-  
-    <nav class="md-nav" aria-label="of records for sources and sinks can be different;">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#in" class="md-nav__link">
     .in
   </a>
@@ -970,11 +962,6 @@
   <a href="#harmin" class="md-nav__link">
     harm.in
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1604,6 +1591,8 @@
 
 
 
+  <h1>Optional inputs</h1>
+
 <p>This section explains the details of some options inputs triggered by <code>param.nml</code>. The list is non-exhaustive as there
  are many such inputs. You can also find some example in <a href="../getting-started/test_suite.html">test suite</a>.</p>
 <h2 id="hgridll">hgrid.ll<a class="headerlink" href="#hgridll" title="Permanent link">&para;</a></h2>
@@ -1764,9 +1753,7 @@
 <div class="admonition notes">
 <p class="admonition-title">Notes</p>
 <ol>
-<li>
-<h1 id="of-records-for-sources-and-sinks-can-be-different">of records for sources and sinks can be different;<a class="headerlink" href="#of-records-for-sources-and-sinks-can-be-different" title="Permanent link">&para;</a></h1>
-</li>
+<li>Numbers of records for sources and sinks can be different;</li>
 <li><code>source_elem</code> and <code>sink_elem</code> specify the element indices for source/sinks;</li>
 <li>The time stamps in <code>time_msource</code> etc are not needed by the code; only <code>time_step_*</code> (in sec) are required;</li>
 <li><code>ntracers</code> specifies the <strong>total</strong> # of classes in <strong>all</strong> tracer modules (including T,S,..). The example above used ICM module (which has 21 classes), so together with T,S there are 23 'tracers'.</li>
