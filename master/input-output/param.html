@@ -902,6 +902,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#dramp1-double-drampbc1-double" class="md-nav__link">
+    dramp=1. (double), drampbc=1. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#flag_ic1-int-array" class="md-nav__link">
     flag_ic(:)=1 (int array)
   </a>
@@ -951,8 +958,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double" class="md-nav__link">
-    i_hmin_airsea_ex (int), hmin_airsea_ex (double)
+  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" class="md-nav__link">
+    i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
   </a>
   
 </li>
@@ -1128,13 +1135,6 @@
           <li class="md-nav__item">
   <a href="#ncor0-int" class="md-nav__link">
     ncor=0 (int)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dramp1-double-drampbc1-double" class="md-nav__link">
-    dramp=1. (double), drampbc=1. (double)
   </a>
   
 </li>
@@ -1929,58 +1929,66 @@ have to follow the order below (cf. <code>param.nml</code>). In many cases we ha
 for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
  info in the comments of the sample <code>param.nml</code>. The parameters are listed out below in alphabetic order.</p>
 <h2 id="core-block">CORE block<a class="headerlink" href="#core-block" title="Permanent link">&para;</a></h2>
-<p>The following parameters have to be specified by the user; otherwise you’ll get a fatal error.</p>
+<p>The following parameters have to be specified by the user; otherwise you may get a fatal error. The exceptions are
+ those parameters required by optional modules (e.g., WWM), which do not need to be present if the modules are
+ not invoked.</p>
 <h3 id="ipre-int">ipre (int)<a class="headerlink" href="#ipre-int" title="Permanent link">&para;</a></h3>
-<p>Pre-processing flag (1: on; 0: off). <code>ipre=0</code>: normal run.</p>
-<p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code>. </p>
+<p>Pre-processing flag (1: on; 0: off). <code>ipre=0</code>: normal run. </p>
+<p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code> or system outputs. </p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O, make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist from all cores. Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>); if the run is finished you can manually kill it.</p>
+<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O (<code>OLDIO</code> off), make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist (as the scribe world is still initializing). Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>) and system outputs; if the run is finished you can manually kill it.</p>
 </div>
 <h3 id="ibc-int-ibtp-int">ibc (int), ibtp (int)<a class="headerlink" href="#ibc-int-ibtp-int" title="Permanent link">&para;</a></h3>
-<p>Barotropic/baroclinic flags.</p>
+<p>Barotropic/baroclinic flags. </p>
 <p>If <code>ibc=0</code>, a baroclinic model is used and regardless of the value for <code>ibtp</code>, the transport equation is solved. If <code>ibc=1</code>, a barotropic model is used, and the transport equation may (when <code>ibtp=1</code>) or may not (when <code>ibtp=0</code>) be solved; in the former case, S and T are treated as passive tracers.</p>
 <h3 id="rnday-double">rnday (double)<a class="headerlink" href="#rnday-double" title="Permanent link">&para;</a></h3>
 <p>Total simulation time in days.</p>
 <h3 id="dt-double">dt (double)<a class="headerlink" href="#dt-double" title="Permanent link">&para;</a></h3>
-<p>Time step in seconds.</p>
+<p>Time step in seconds. This is the main time step in SCHISM. The transport solvers have their own adaptive time step for subcycling to satisfy the stability constraint.</p>
 <h3 id="msc2-int-mdc2-int">msc2 (int), mdc2 (int)<a class="headerlink" href="#msc2-int-mdc2-int" title="Permanent link">&para;</a></h3>
 <p>These two parameters are only used if the wave module WWM is invoked (<code>USE_WWM</code> is on and <code>icou_elfe_wwm=1</code>).
  The values represent the spectral resolution used in WWM and must match those in 
 <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3">wwminput.nml</a>;</p>
 <h3 id="eco_class-ntracer_gen-ntracer_age-sed_class-int">eco_class, ntracer_gen, ntracer_age, sed_class (int)<a class="headerlink" href="#eco_class-ntracer_gen-ntracer_age-sed_class-int" title="Permanent link">&para;</a></h3>
-<p>These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED3D), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.</p>
+<p>These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.</p>
 <h3 id="nspool-ihfskip-int">nspool, ihfskip (int)<a class="headerlink" href="#nspool-ihfskip-int" title="Permanent link">&para;</a></h3>
-<p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps.</p>
+<p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. The code requires that <code>ihfskip</code> is a multiple of <code>nspool</code>, and <code>nhot_write</code> (see SCHOUT section) is a a multiple of <code>ihfskip</code>.</p>
 <h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
 <p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
 <h3 id="dtb_min10-dtb_max30-double">dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
-<p>Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local gradients.</p>
+<p>Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.</p>
+<h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
+<p>Ramp periods in days for the tides, B.C. or baroclincity. 
+If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
+Turn off ramp-up by setting the ramp-up period &lt;=0. 
+The ramp function is a hyperbolic tangent function; e.g. <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
 <h3 id="flag_ic1-int-array">flag_ic(:)=1 (int array)<a class="headerlink" href="#flag_ic1-int-array" title="Permanent link">&para;</a></h3>
-<p>Options for specifying initial tracer field for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If <code>flag_ic=1</code>, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like <code>temp.ic</code>, <code>salt.ic</code>, <code>[MOD]_hvar_[class #].ic</code> etc. If <code>flag_ic=2</code>, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like <code>ts.ic</code>, <code>[MOD]_vvar_[class #].ic</code>. For more general 3D initial tracer fields, use the hot start option.</p>
+<p>Options for specifying initial tracer fields for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If <code>flag_ic=1</code>, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like <code>temp.ic</code>, <code>salt.ic</code>, <code>[MOD]_hvar_[class #].ic</code> etc. If <code>flag_ic=2</code>, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like <code>ts.ic</code>, <code>[MOD]_vvar_[class #].ic</code>. For more general 3D initial tracer fields, use the hot start option. See <code>Optional inputs</code> section for examples of some of these inputs. Note that there is a requirement that <code>flag_ic(1)=flag_ic(2)</code>.</p>
 <h3 id="h0001-double">h0=0.01 (double)<a class="headerlink" href="#h0001-double" title="Permanent link">&para;</a></h3>
-<p>Minimum depth (in m) for wetting and drying (recommended value: <code>1cm</code>). When the total depth is less than <code>h0</code>, the corresponding nodes/sides/elements are considered dry. It should always be positive.</p>
+<p>Minimum depth (in m) for wetting and drying (recommended value: <code>1cm</code>). When the total depth is less than <code>h0</code>, the corresponding nodes/sides/elements are marked as dry. It should always be positive.</p>
 <h3 id="h12_bcc50100-double">h[1,2]_bcc=50,100 (double)<a class="headerlink" href="#h12_bcc50100-double" title="Permanent link">&para;</a></h3>
 <p>Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if <code>h&gt;=h2_bcc</code> (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if <code>h&lt;=h1_bcc(&lt;h2_bcc)</code>. A linear transition is used if the local depth <code>h1_bcc&lt;h&lt;h2_bcc</code>.</p>
 <h3 id="ibcc_mean0-int">ibcc_mean=0 (int)<a class="headerlink" href="#ibcc_mean0-int" title="Permanent link">&para;</a></h3>
-<p>Mean T,S profile option. If <code>ibcc_mean=1</code> (or <code>ihot=0</code> and <code>icst=2</code>), mean T/S profile is read in from <code>ts.ic</code>, and will be removed when calculating baroclinic force. No <code>ts.ic</code> is needed if <code>ibcc_mean=0</code>.</p>
+<p>Mean T,S profile option. If <code>ibcc_mean=1</code> (or <code>ihot=0</code> and <code>flag_ic(1:2)=2</code>), mean T/S profile is read in from <code>ts.ic</code>, and will be removed when calculating baroclinic force. No <code>ts.ic</code> is needed if <code>ibcc_mean=0</code>.</p>
 <h3 id="ic_elev0-int-nramp_elev0-int-int">ic_elev=0 (int), nramp_elev=0 (int) (int)<a class="headerlink" href="#ic_elev0-int-nramp_elev0-int-int" title="Permanent link">&para;</a></h3>
 <p>Elevation initial condition flag for cold start only (<code>ihot=0</code>). If <code>ic_elev=1</code>, <code>elev.ic</code> (in <code>*.gr3</code> format) 
-is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only). 
+is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
+ elevation values in <code>hotstart.nc</code> (hotstart option). 
 If <code>ic_elev=1</code>, the user can ramp up the elevation
- smoothly starting from the specified <code>elev.ic</code> or <code>hotstart.nc</code> (if <span class="arithmatex">\(ihot\neq 0\)</span>) by setting <code>nramp_elev=1</code> (and the ramp-up
- period in this case is <code>dramp</code>).</p>
+ smoothly at the boundary starting from the specified <code>elev.ic</code> or <code>hotstart.nc</code> (if <span class="arithmatex">\(ihot\neq 0\)</span>) by setting <code>nramp_elev=1</code> (and the ramp-up
+ period in this case is <code>dramp</code>). It's usually OK to use <code>nramp_elev=1</code> under either cold or hot start.</p>
 <h3 id="icou_elfe_wwm0-iwbl0-int">icou_elfe_wwm=0, iwbl=0 (int)<a class="headerlink" href="#icou_elfe_wwm0-iwbl0-int" title="Permanent link">&para;</a></h3>
 <p>Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. <code>icou_elfe_wwm = 0</code>: no feedback from WWM to SCHISM (decoupled); <code>1</code>: coupled SCHISM-WWM.</p>
 <p><code>iwbl=1</code>: modified Grant-Madsen formulation for wave enhanced boundary layer; =2: Soulsby (1997) formulation; <code>=0</code>: off.</p>
 <p>If <code>icou_elfe_wwm=1</code>, additional parameters are:</p>
 <ul>
-<li><code>nstep_wwm=1</code> (int): call WWM every this many time steps;</li>
-<li><code>hmin_radstress=1.0</code> (double): min. total water depth used only in radiation stress calculation; the radiation stress is zero if <code>local depth &lt;hmin_radstress</code>.</li>
+<li><code>nstep_wwm=1</code> (int): call WWM every <code>nstep_wwm</code> time steps;</li>
+<li><code>hmin_radstress=1.0</code> (double): minimum total water depth in meters used only in radiation stress calculation; the radiation stress is zero if <code>local depth &lt;hmin_radstress</code>.</li>
 </ul>
 <h3 id="ics1-int">ics=1 (int)<a class="headerlink" href="#ics1-int" title="Permanent link">&para;</a></h3>
 <p>Coordinate frame flag. If <code>ics=1</code>, Cartesian coordinates are used; if <code>ics=2</code>, both <code>hgrid.ll</code> and <code>hgrid.gr3</code> use degrees latitude/longitude (and they should be identical to each other in this case).</p>
-<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double">i_hmin_airsea_ex (int), hmin_airsea_ex (double)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double" title="Permanent link">&para;</a></h3>
+<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters">i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" title="Permanent link">&para;</a></h3>
 <p>Option to locally turn off heat exchange.</p>
 <ul>
 <li><code>i_hmin_airsea_ex=1</code>: exchange turned off if <code>local grid depth&lt;hmin_airsea_ex</code></li>
@@ -1992,31 +2000,37 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, 
 the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in 
 transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
-more efficient ELM transport is used locally (at the expense of mass conservation, 
+more efficient ELM transport is used locally (at the expense of mass conservation and accuracy, 
 so make sure this option is used sparingly).</p>
 <h3 id="ieos_type0-ieos_pres0-int">ieos_type=0, ieos_pres=0 (int)<a class="headerlink" href="#ieos_type0-ieos_pres0-int" title="Permanent link">&para;</a></h3>
-<p>By default, use the nonlinear equation of state: <code>ieos_type==0</code>. If the potential temperature is used, the pressure effect has been accounted for: <code>ieos_pres=0.</code></p>
+<p>By default, use the nonlinear equation of state: <code>ieos_type=0</code>. <code>ieos_pres=0,1</code> will turn on/off hydrostatic pressure effects. If the potential temperature is used, the pressure effect has been accounted for, so <code>ieos_pres=0.</code></p>
 <h3 id="if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array">if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)<a class="headerlink" href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" title="Permanent link">&para;</a></h3>
 <p>Point sources/sinks option (0: no; 1: on). If <code>if_source=1</code>, needs <code>source_sink.in</code>, <code>vsource.th</code>, <code>vsink.th</code>, 
 and <code>msource.th</code> (see sample files in the source code directory src/ for their formats). 
 If <code>if_source=-1</code>, the input is <code>source.nc</code>, which includes element list inside and allows for different time 
 steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code>, specify ramp-up period (in days) with <code>dramp_ss</code> (no
  ramp-up if &lt;=0). </p>
-<p>The tracers are injected into an element at a particular level, as specified by <code>lev_tr_source(1:ntr)</code> (where <code>ntr</code> is
- # of tracer modules, i.e. 1 input for each module). The code will extrapolate below bottom/above surface if necessary, 
+<p>The tracers are injected into an element at a particular level, as specified by <code>lev_tr_source(1:ntr)</code> (where <code>ntr</code> is total
+ # of tracer modules, i.e. 1 input level per module). The code will extrapolate below bottom/above surface if necessary, 
  so e.g., '-9' means bottom.</p>
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
-<p>Parameter for checking volume and salt conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
+<p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
-<p>Harmonic analysis flag. If <code>iharind≠0</code>, an input <code>harm.in</code> is needed.</p>
+<p>Harmonic analysis flag. If $iharind \neq 0 $, an input <code>harm.in</code> is needed.</p>
 <h3 id="ihconsv0-isconsv0-int">ihconsv=0, isconsv=0 (int)<a class="headerlink" href="#ihconsv0-isconsv0-int" title="Permanent link">&para;</a></h3>
-<p>Heat budget and salt conservation models flags. If <code>ihconsv=0</code>, the heat budget model is not used. If <code>ihconsv=1</code>, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from <code>sflux/sflux_rad*.nc</code>. If <code>isconsv=1</code>, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag <code>PREC_EVAP</code> in makefile and recompile. In this case, <code>ihconsv</code> must be <code>1</code>, and additional netcdf inputs for precipitation (<code>sflux/sflux_prc*.nc</code>) are required.</p>
+<p>Heat budget and salt conservation models flags. If <code>ihconsv=0</code>, the heat budget model is not used. If <code>ihconsv=1</code>, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from <code>sflux/sflux_rad*.nc</code>. If <code>isconsv=1</code>, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag <code>PREC_EVAP</code> in makefile and recompile. In this case, <code>ihconsv</code> must be <code>1</code>, and additional netcdf inputs for precipitation (<code>sflux/sflux_prc*.nc</code>) are required. The user can also turn on <code>USE_BULK_FAIRALL</code> in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.</p>
 <h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
-<p>Flag to use non-zero horizontal diffusivity. If <code>ihdif=0</code>, it is not used. If <code>ihdif≠0</code>, input <code>hdif.gr3</code> is needed.</p>
+<p>Flag to use non-zero horizontal diffusivity. If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is needed.</p>
 <h3 id="ihot0-int">ihot=0 (int)<a class="headerlink" href="#ihot0-int" title="Permanent link">&para;</a></h3>
-<p>Hot start flag. If <code>ihot=0</code>, cold start; if <code>ihot≠0</code>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>, and in this case, you do not need to adjust other inputs.</p>
+<p>Hot start flag. If <code>ihot=0</code>, cold start; if <span class="arithmatex">\(ihot \neq 0\)</span>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.</li>
+</ol>
+</div>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
-<p>Hydraulic model option. If <code>ihydraulics≠0</code>, <code>hydraulics.in</code> is required.</p>
+<p>Hydraulic model option. If <span class="arithmatex">\(ihydraulics \neq 0\)</span>, <code>hydraulics.in</code> is required (cf. hydraulics user manual).</p>
 <h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int)  loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
 <p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. 
 If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from a tide database,
@@ -2104,11 +2118,6 @@ Euler or 2nd-order Runge-Kutta scheme.</p>
 <h3 id="ncor0-int">ncor=0 (int)<a class="headerlink" href="#ncor0-int" title="Permanent link">&para;</a></h3>
 <p>Coriolis option. If <code>ncor=0</code> or <code>-1</code>, a constant Coriolis parameter is specified. If <code>ncor=0</code>, <code>coricoef</code> specifies the Coriolis factor. If <code>ncor=-1</code>, <code>rlatitude</code> specifies the mean latitude used to calculate the Coriolis factor.</p>
 <p>If <code>ncor=1</code>, a variable Coriolis parameter, based either on a beta-plane approximation (<code>ics=1</code>) or on the latitude-dependent Coriolis (<code>ics=2</code>), is used, with the lat/lon coordinates read in from <code>hgrid.ll</code>. For <code>ics=1</code>, the center of beta-plane approximation must be correctly specified in <code>sfea0</code>.</p>
-<h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
-<p>Ramp periods in days for the tides, B.C. or baroclincity. 
-If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
-Turn off ramp-up by setting the ramp-up period &lt;=0. 
-The ramp function is a hyperbolic tangent function: <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
 <h3 id="nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double">nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
 <p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no 
 wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain 

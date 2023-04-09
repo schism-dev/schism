@@ -1632,9 +1632,12 @@
 <a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a><span class="w">        </span><span class="p">.........</span>
 <a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a><span class="w">    </span><span class="k">endif</span>
 <a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>
-<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="w">    </span><span class="c">! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections we will give examples for `.nc` inputs.</span>
-<a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>
-<a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="c">!j: open boundary segment</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="w">    </span><span class="c">! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. </span>
+<a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a><span class="w">    </span><span class="c">!However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), </span>
+<a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a><span class="w">    </span><span class="c">!you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections </span>
+<a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a><span class="w">    </span><span class="c">!we will give examples for `.nc` inputs.</span>
+<a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a>
+<a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="c">!j: open boundary segment</span>
 </code></pre></div>
 <br/></p>
 <p>The following two samples provide more direct views on the structure of bctides.in.

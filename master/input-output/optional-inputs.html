@@ -1697,14 +1697,18 @@
 <p>The I.C. inputs include the initial condition for elevation or tracers (<code>salt.ic</code>, <code>temp.ic</code>, and <code>ts.ic</code>). For most generic form of I.C. (variable in space and time), use <code>hotstart.nc</code>. </p>
 <p><code>elev.ic</code> is a <code>.gr3</code> file that specifies the initial elevation at each node. Depending on the values of <code>icst</code>, T,S I.C. inputs have different format.</p>
 <ul>
-<li>If <code>icst = 1</code>, <code>salt.ic</code> and <code>temp.ic</code> take the <code>.gr3</code> format;</li>
-<li>If <code>icst = 2</code>, <code>ts.ic</code> takes the following simple format:</li>
+<li>If <code>flag_ic(1:2)= 1</code>, <code>salt.ic</code> and <code>temp.ic</code> take the <code>.gr3</code> format;</li>
+<li>If <code>flag_ic(1:2)= 2</code>, <code>ts.ic</code> takes the following simple format:</li>
 </ul>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>43 !total # of vertical levels
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>1 -2000. 4. 34. !level #, z-coordinates, temperature, salinity
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>2 -1000. 5. 34.
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>...
 </code></pre></div>
+<div class="admonition caution">
+<p class="admonition-title">Note on ts.ic</p>
+<p>The code will extrapolate above surface or below bottom for you if your z-coordinates do not cover the full depth. Since it uses cubic spline interpolate, make sure your vertical profiles are well resolved to avoid unexpected min/max due to the cubic spline method.</p>
+</div>
 <p>Similar format is used for other tracers.</p>
 <h2 id="nc">.nc<a class="headerlink" href="#nc" title="Permanent link">&para;</a></h2>
 <p>Beside the time series inputs, we have the other types of netcdf4 input files as follows. Sample files can be found in the test suite (e.g. schism_verification_tests/Test_ICM_UB/).</p>
