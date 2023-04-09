@@ -895,13 +895,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dtb_min10-dtb_max30-double" class="md-nav__link">
-    dtb_min=10, dtb_max=30 (double)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#dramp1-double-drampbc1-double" class="md-nav__link">
     dramp=1. (double), drampbc=1. (double)
   </a>
@@ -1112,15 +1105,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#meth_sink0-int" class="md-nav__link">
-    meth_sink=0 (int)
+  <a href="#meth_sink1-int" class="md-nav__link">
+    meth_sink=1 (int)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#nadv1-int" class="md-nav__link">
-    nadv=1 (int)
+  <a href="#nadv1-int-dtb_min10-dtb_max30-double" class="md-nav__link">
+    nadv=1 (int), dtb_min=10, dtb_max=30 (double)
   </a>
   
 </li>
@@ -1956,8 +1949,6 @@ for easier explanation, but you should specify them on separate lines. Also you'
 <p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. The code requires that <code>ihfskip</code> is a multiple of <code>nspool</code>, and <code>nhot_write</code> (see SCHOUT section) is a a multiple of <code>ihfskip</code>.</p>
 <h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
 <p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
-<h3 id="dtb_min10-dtb_max30-double">dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
-<p>Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.</p>
 <h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
 <p>Ramp periods in days for the tides, B.C. or baroclincity. 
 If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
@@ -2016,7 +2007,7 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
 <p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
-<p>Harmonic analysis flag. If $iharind \neq 0 $, an input <code>harm.in</code> is needed.</p>
+<p>Harmonic analysis flag. If <span class="arithmatex">\(iharind \neq 0\)</span>, an input <code>harm.in</code> is needed.</p>
 <h3 id="ihconsv0-isconsv0-int">ihconsv=0, isconsv=0 (int)<a class="headerlink" href="#ihconsv0-isconsv0-int" title="Permanent link">&para;</a></h3>
 <p>Heat budget and salt conservation models flags. If <code>ihconsv=0</code>, the heat budget model is not used. If <code>ihconsv=1</code>, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from <code>sflux/sflux_rad*.nc</code>. If <code>isconsv=1</code>, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag <code>PREC_EVAP</code> in makefile and recompile. In this case, <code>ihconsv</code> must be <code>1</code>, and additional netcdf inputs for precipitation (<code>sflux/sflux_prc*.nc</code>) are required. The user can also turn on <code>USE_BULK_FAIRALL</code> in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.</p>
 <h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
@@ -2026,22 +2017,22 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol>
-<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.</li>
+<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout\_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.</li>
 </ol>
 </div>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
 <p>Hydraulic model option. If <span class="arithmatex">\(ihydraulics \neq 0\)</span>, <code>hydraulics.in</code> is required (cf. hydraulics user manual).</p>
 <h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int)  loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
-<p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. 
+<p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
 If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from a tide database,
  e.g., FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with 
 tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) 
 and phases (degrees behind GMT). In this option, SAL is
  lumped into tidal potential so it shares some parameters with tidal potential
- in bctides.in (cut-off depth, frequencies).</p>
+ in <code>bctides.in</code> (cut-off depth, frequencies).</p>
 <p>If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
  SAL is applied everywhere and does not share parameters with tidal potential).
-If <code>iloadtide=2</code>, a simple scaling is used to reduce 
+If <code>iloadtide=2</code>, a simple scaling specified by <code>loadtide_coef</code> is used to reduce 
 the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004),
  with a maximum value of <code>loadtide_coef</code>.</p>
 <h3 id="imm0-ibdef10-int">imm=0, ibdef=10 (int)<a class="headerlink" href="#imm0-ibdef10-int" title="Permanent link">&para;</a></h3>
@@ -2049,7 +2040,7 @@ the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local 
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
 <p>These parameters (and <code>inter_mom</code> below) control the numerical dissipation in momentum solver; see SCHISM paper (Zhang et al. 2016) for details.</p>
 <p><code>indvel</code> determines the method of converting side velocity to node velocity. If <code>indvel=0</code>, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If <code>indvel=1</code>, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (<code>inter_mom &gt;0</code>). In general, <code>indvel=0</code> leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.</p>
-<p>Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. <code>ihorcon=0</code>:no horizontal viscosity; <code>=1</code>: Laplacian (implemented as a filter); <code>=2</code>: bi-harmonic. For <code>ihorcon/=0</code>, <code>hvis_coef0</code> specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by <code>ishapiro</code> =0,±1, 2 (turn off/on Shapiro filter). If <code>ishapiro=1</code>, <code>shapiro0</code> specifies the Shapiro filter strength. If <code>ishapiro=-1</code>, an input called <code>shapiro.gr3</code> is required which specifies the filter strength at each node. If <code>ishapiro=2</code>, a Smagorinsky-like filter is applied and <code>shapiro0</code> is a coefficient <span class="arithmatex">\((\gamma_0)\)</span>, which is on the order of <span class="arithmatex">\(10^3\)</span>:</p>
+<p>Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. <code>ihorcon=0</code>:no horizontal viscosity; <code>=1</code>: Laplacian (implemented as a filter); <code>=2</code>: bi-harmonic. For <code>ihorcon/=0</code>, <code>hvis_coef0</code> specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by <code>ishapiro</code> =0,±1, 2 (turn off/on Shapiro filter). If <code>ishapiro=1</code>, <code>shapiro0</code> specifies the Shapiro filter strength. If <code>ishapiro=-1</code>, an input called <code>shapiro.gr3</code> is required which specifies the filter strength at each node (there is a pre-proc script <code>gen_slope_filter2.f90</code> for this). If <code>ishapiro=2</code>, a Smagorinsky-like filter is applied and <code>shapiro0</code> is a coefficient <span class="arithmatex">\((\gamma_0)\)</span>, which is on the order of <span class="arithmatex">\(10^3\)</span>:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq01}
 \begin{aligned}
@@ -2057,13 +2048,14 @@ the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local 
 \hat\mu &amp;= \sqrt{u_x^2 + v_y^2 + \frac{(u_y + v_x)^2}{2}}
 \end{aligned}
 \end{equation}\]</div>
-<p>If <code>ishapiro/=0</code>, <code>niter_shap</code> specifies the number of times the filter is applied. Note that for non-eddying regime applications (nearshore, estuary, river), an easiest option is: <code>indvel=0</code>, <code>ishapiro=1</code> (<code>shapiro0=0.5</code>), <code>ihorcon= inter_mom=0</code>.</p>
+<p>If <code>ishapiro/=0</code>, <code>niter_shap</code> specifies the number of times the filter is applied. </p>
+<p>For non-eddying regime applications (nearshore, estuary, river), an easiest option is: <code>indvel=0</code>, <code>ishapiro=1</code> (<code>shapiro0=0.5</code>), <code>ihorcon= inter_mom=0</code>.</p>
 <p>For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: <code>indvel=ishapiro=inter_mom=0</code>, <code>ihorcon=2</code>, <code>hvis_coef0=0.025</code>. If the amount of dissipation is insufficient in the non-eddying regime, consider using <code>ishapiro=-1</code>, with an appropriate <code>shapiro.gr3</code> to turn on Shapiro filter locally to add dissipation, or use <code>ishapiro=2</code> and <code>shapiro0=1000</code>.</p>
 <h3 id="inter_mom0-kr_co1-int">inter_mom=0, kr_co=1 (int)<a class="headerlink" href="#inter_mom0-kr_co1-int" title="Permanent link">&para;</a></h3>
-<p>Interpolation method at foot of characteristic line during ELM. <code>inter_mom=0</code>: linear interpolation; <code>=1</code>: dual kriging method. If <code>inter_mom=-1</code>, the depth in <code>krvel.gr3</code> (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in <code>kr_co</code>: 1: linear <span class="arithmatex">\(f(h)=-h\)</span>; 2: <span class="arithmatex">\((h^2*log(h)\)</span>; 3: cubic <span class="arithmatex">\((h^3)\)</span>; 4: <span class="arithmatex">\((-h^5)\)</span>.</p>
-<p>In general, <code>indvel=0</code> should be used with <code>inter_mom=0</code> or <code>1</code> to avoid large dispersion (with additional viscosity/filter also). <code>indvel=1</code> can be used with any covariance function without viscosity/filter.</p>
+<p>Interpolation method at foot of characteristic line during ELM. <code>inter_mom=0</code>: default linear interpolation; <code>=1</code>: dual kriging method. If <code>inter_mom=-1</code>, the depth in <code>krvel.gr3</code> (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in <code>kr_co</code>: 1: linear <span class="arithmatex">\(f(h)=-h\)</span>; 2: <span class="arithmatex">\((h^2*log(h)\)</span>; 3: cubic <span class="arithmatex">\((h^3)\)</span>; 4: <span class="arithmatex">\((-h^5)\)</span>.</p>
+<p>In general, <code>indvel=0</code> should be used with <code>inter_mom=0</code> or <code>inter_mom=1, kr_co=1,2</code> to avoid large dispersion (with additional viscosity/filter also). <code>indvel=1</code> can be used with any covariance function without viscosity/filter.</p>
 <h3 id="inu_elev0-inu_uv0-int">inu_elev=0, inu_uv=0 (int)<a class="headerlink" href="#inu_elev0-inu_uv0-int" title="Permanent link">&para;</a></h3>
-<p>Sponge layer for elevation and velocity. In SCHISM, relaxation/nudging of a generic variable is implemented as:</p>
+<p>Sponge layer for elevation and velocity (which is rarely used in SCHISM). Relaxation/nudging of a generic variable is implemented as:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq02}
 \widetilde \varphi = (1-\gamma)\varphi + \gamma\varphi_{target}
@@ -2077,7 +2069,7 @@ the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local 
 <h3 id="inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double">inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)<a class="headerlink" href="#inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double" title="Permanent link">&para;</a></h3>
 <p>Nudging flag for tracer models (e.g. temperature), and nudging step (in sec). When <code>inu_tr=0</code>, no nudging is done.</p>
 <p>When <code>inu_tr=1</code>, relax back to initial conditions.</p>
-<p>When <code>inu_tr=2</code>, nudge to values specified in <code>[MOD]_nu.nc</code>, which has a time step of <code>step_nu_tr</code>.</p>
+<p>When <code>inu_tr=2</code>, nudge to values specified in <code>[MOD]_nu.nc</code>, which has a time step of <code>step_nu_tr</code> (in sec).</p>
 <p>If <code>inu_tr≠0</code>, the horizontal relaxation factors are specified in <code>[MOD]_nudge.gr3</code> (as depths info), 
  and the vertical relaxation factors are specified as a linear function of depths with: <code>vnh[1,2]</code> 
 (transitional depths) and <code>vnf[1,2]</code> (relaxation constants at the 2 depths). The final relaxation 
@@ -2088,7 +2080,11 @@ i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt
 <h3 id="isav0-int">isav=0 (int)<a class="headerlink" href="#isav0-int" title="Permanent link">&para;</a></h3>
 <p>Parameters for submerged or emergent vegetation. If <code>isav=1</code> (module on), you need to supply 4 extra inputs: <code>sav_cd.gr3</code> (form drag coefficient), <code>sav_D.gr3</code> (depth is stem diameter in meters); <code>sav_N.gr3</code> (depth is # of stems per m2); and <code>sav_h.gr3</code> (height of canopy in meters).</p>
 <h3 id="itr_met3-int-h_tvd5-double">itr_met=3 (int), h_tvd=5. (double)<a class="headerlink" href="#itr_met3-int-h_tvd5-double" title="Permanent link">&para;</a></h3>
-<p>Transport option for all tracers. <code>itr_met=3</code> for <span class="arithmatex">\(TVD^2\)</span>, and <code>itr_met=4</code> for 3rd order WENO. <strong>Note that <code>itr_met=1,2</code> (explicit) is only kept for comparison and benchmark purpose and so should NOT be used normally- use ‘3’ or ‘4’ instead</strong>. If <code>itr_met&gt;=3</code>, 1 extra parameter is needed: <code>h_tvd</code> which specifies the transition depth (in meters) between upwind and TVD schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. Also in this case, additional toggle between upwind and TVD is specified in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_ LIM</code> in <code>mk/include_modules</code> (for efficiency purpose). If itr_met=3, 2 tolerances are also required (use recommended values).</p>
+<p>Transport option for all tracers. <code>itr_met=3</code> for <span class="arithmatex">\(TVD^2\)</span>, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
+Also in this case, you can additional toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
+<p>If <code>itr_met=3</code>, 2 tolerances are also required (use recommended values).
+If <code>itr_met=4</code> (WENO), there are several additional parameters. The most important ones are <code>epsilon[12]</code>, which controls the
+ numerical dispersion for the 2nd and 3rd-order WENO respectively (note that the code will decide which order is used at each prism based on geometric constraints).</p>
 <h3 id="itur0-int">itur=0 (int)<a class="headerlink" href="#itur0-int" title="Permanent link">&para;</a></h3>
 <p>Turbulence closure model selection.</p>
 <p>If <code>itur=0</code>, constant diffusivities are used for momentum and transport, and the diffusivities are specified in <code>dfv0</code>, <code>dfh0</code>.</p>
@@ -2102,19 +2098,26 @@ and recompile. In this case, the minimum and maximum viscosity/diffusivity are s
 and <code>diffmax.gr3</code>. In addition, GOTM also requires an input called <code>gotmturb.inp</code>. There are some 
 ready-made samples for this input in the source code bundle. If you wish to tune some parameters 
 inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>We only tested GOTM v3, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results.</li>
+</ol>
+</div>
 <h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
 <p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.</p>
-<h3 id="meth_sink0-int">meth_sink=0 (int)<a class="headerlink" href="#meth_sink0-int" title="Permanent link">&para;</a></h3>
+<h3 id="meth_sink1-int">meth_sink=1 (int)<a class="headerlink" href="#meth_sink1-int" title="Permanent link">&para;</a></h3>
 <p>Option for sinks. If <code>meth_sink =1</code>, the sink value is reset to <code>0</code> if an element is dry with 
 a net sink value locally to prevent further drawdown of groundwater.</p>
-<h3 id="nadv1-int">nadv=1 (int)<a class="headerlink" href="#nadv1-int" title="Permanent link">&para;</a></h3>
+<h3 id="nadv1-int-dtb_min10-dtb_max30-double">nadv=1 (int), dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#nadv1-int-dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
 <p>Advection on/off option. If <code>nadv=0</code>, advection is selectively turned off based on the input file <code>adv.gr3</code>. 
 If <code>nadv=1</code> or <code>2</code>, advection is on for the whole domain, and backtracking is done using either 
-Euler or 2nd-order Runge-Kutta scheme.</p>
+Euler or 2nd-order Runge-Kutta scheme.
+<code>dtb_[min,max]</code> are min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.</p>
 <h3 id="nchi0-int">nchi=0 (int)<a class="headerlink" href="#nchi0-int" title="Permanent link">&para;</a></h3>
-<p>Bottom friction option. If <code>nchi=-1</code>, and Manning's n is specified in <code>manning.gr3</code>. If <code>nchi=0</code>, spatially varying drag coefficients are read in from <code>drag.gr3</code> (as depth info). For <code>nchi=1</code>, bottom roughnesses (in meters) are read in from <code>rough.gr3</code>.</p>
+<p>Bottom friction option. If <code>nchi=-1</code>, and Manning's <span class="arithmatex">\(n\)</span> is specified in <code>manning.gr3</code>. If <code>nchi=0</code>, spatially varying drag coefficients are read in from <code>drag.gr3</code> (as depth info). For <code>nchi=1</code>, bottom roughnesses (in meters) are read in from <code>rough.gr3</code>.</p>
 <p>If <code>nchi=-1</code>, an additional parameter is required: <code>hmin_man</code> (in meters) which sets the minimum depth used in the Manning formulation.</p>
-<p>If <code>nchi=1</code>, one additional parameter is required: <code>dzb_min</code> (in meters). In this case the drag coefficients are calculated using the log drag law when the bottom cell thickness <span class="arithmatex">\(\delta_b&gt;=\text{dzb_min}\)</span>. when <span class="arithmatex">\(\delta_b&lt;\text{dzb_min}\)</span>, <span class="arithmatex">\(\text{Cd}=\text{Cdmax}\)</span>, where <span class="arithmatex">\(\text{Cdmax}=\text{Cd}(\delta_b=\text{dzb_min})\)</span>. This is to avoid exaggeration of <span class="arithmatex">\(\text{Cd}\)</span> in very shallow water.</p>
+<p>If <code>nchi=1</code>, one additional parameter is required: <code>dzb_min</code> (in meters). In this case the drag coefficients are calculated using the log drag law when the bottom cell thickness <span class="arithmatex">\(\delta_b&gt;=\text{dzb_min}\)</span>; when <span class="arithmatex">\(\delta_b&lt;\text{dzb_min}\)</span>, <span class="arithmatex">\(\text{Cd}=\text{Cdmax}\)</span>, where <span class="arithmatex">\(\text{Cdmax}=\text{Cd}(\delta_b=\text{dzb_min})\)</span>. This is to avoid exaggeration of <span class="arithmatex">\(\text{Cd}\)</span> in very shallow water.</p>
 <h3 id="ncor0-int">ncor=0 (int)<a class="headerlink" href="#ncor0-int" title="Permanent link">&para;</a></h3>
 <p>Coriolis option. If <code>ncor=0</code> or <code>-1</code>, a constant Coriolis parameter is specified. If <code>ncor=0</code>, <code>coricoef</code> specifies the Coriolis factor. If <code>ncor=-1</code>, <code>rlatitude</code> specifies the mean latitude used to calculate the Coriolis factor.</p>
 <p>If <code>ncor=1</code>, a variable Coriolis parameter, based either on a beta-plane approximation (<code>ics=1</code>) or on the latitude-dependent Coriolis (<code>ics=2</code>), is used, with the lat/lon coordinates read in from <code>hgrid.ll</code>. For <code>ics=1</code>, the center of beta-plane approximation must be correctly specified in <code>sfea0</code>.</p>
@@ -2125,32 +2128,32 @@ at any given time, and the time history of wind is read in from <code>wind.th</c
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
  <code>sflux/</code>. The option <code>nws=3</code> is reserved for coupling with atmospheric model via ESMF caps. If <code>nws=4</code>, 
 the required input <code>wind.th</code> specifies wind and pressure at each node and at time of multiple of <code>wtiminc</code>. 
-If <code>nws=-1</code>, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: <code>hurricane-track.dat</code>.</p>
 <p>If <code>nws&gt;0</code>, the ramp-up period (in days) is specified with <code>drampwind</code>. Also
  the user has the option to scale the wind speed using <code>iwindoff</code>=1 (which requires an additional input <code>windfactor.gr3</code>).</p>
-<p>The wind stress formulation is selected with <code>iwind_form</code>. If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, 
-or <code>nws=2 &amp;&amp; iwind_form=-1</code>, the stress is calculated from Pond &amp; Pichard formulation (originally from Garret). 
-If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form=1</code>, the stress is calculated from 
-Hwang (2018) formulation. If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated 
-from heat exchange routine. If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, 
-stress is calculated by WWM; otherwise the formulations above are used.</p>
+<p>The wind stress formulation is selected with <code>iwind_form</code>. </p>
+<ul>
+<li>If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated from heat exchange routine. </li>
+<li>If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form≠ 0</code>, the stress is calculated from Pond &amp; Pichard formulation (originally from Garret) if <code>iwind_form=-1</code>, or from Hwang (2018) if <code>iwind_form=1</code>.</li>
+<li>If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, stress is calculated by WWM.</li>
+</ul>
 <h3 id="rho01000-shw4184-double">rho0=1000, shw=4184. (double)<a class="headerlink" href="#rho01000-shw4184-double" title="Permanent link">&para;</a></h3>
 <p>Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.</p>
 <h3 id="rmaxvel10-double">rmaxvel=10. (double)<a class="headerlink" href="#rmaxvel10-double" title="Permanent link">&para;</a></h3>
-<p>Maximum velocity. This is needed mainly for the air-water exchange as the model may blow up if the water velocity is above 20m/s.</p>
+<p>Maximum velocity. This is needed mainly for the air-water exchange as the latter may blow up if the water velocity is above 20m/s.</p>
 <h3 id="s1_mxbnt05-s2_mxnbnt35-double">s1_mxbnt=0.5, s2_mxnbnt=3.5 (double)<a class="headerlink" href="#s1_mxbnt05-s2_mxnbnt35-double" title="Permanent link">&para;</a></h3>
-<p>Dimensioning parameters used in inter-subdomain backtracking. Start from <code>s[12]_mxnbt=0.53</code>, and increase them (gradually) if you get a fatal error like “btrack: overflow”. Accuracy is not affected by the choice of these two parameters.</p>
+<p>Dimensioning parameters used in inter-subdomain backtracking. Start from <code>s[12]_mxnbt=0.53</code>, and increase them (gradually) if you get a fatal error like “btrack: overflow”. Accuracy is not affected by the choice of these two parameters; these only affect memory consumption.</p>
 <h3 id="slam0-124-sfea045-double">slam0=-124, sfea0=45 (double)<a class="headerlink" href="#slam0-124-sfea045-double" title="Permanent link">&para;</a></h3>
 <p>Centers of projection used to convert lat/lon to Cartesian coordinates. These are used if a variable Coriolis parameter is employed (ncor=1).</p>
 <h3 id="start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double">start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)<a class="headerlink" href="#start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double" title="Permanent link">&para;</a></h3>
-<p>Starting time for simulation. <code>utc_start</code> is hours behind the GMT, and is used to adjust time zone. For example, <code>utc_start=5</code> is US Eastern Time, and <code>utc_start= -8</code> is Beijing Time.</p>
+<p>Starting time for simulation. <code>utc_start</code> is hours <strong>behind</strong> the GMT, and is used to adjust time zone. For example, <code>utc_start=5</code> is US Eastern Time, and <code>utc_start= -8</code> is Beijing Time.</p>
 <h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
-<p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6.</p>
+<p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.</p>
 <h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
 <h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
-<p>Station output flag. If <code>iout_sta≠1</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output.</p>
+<p>Station output flag. If <code>iout_sta≠1</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.</p>
 <h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
 <p>Main switch to turn on/off netcdf outputs, useful for other programs to control outputs.</p>
 <h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
