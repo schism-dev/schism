@@ -1645,7 +1645,7 @@ Under this mode, each MPI process will dump its own output and a post-processing
 </div>
 <div class="admonition notes">
 <p class="admonition-title">Special care for elevation outputs</p>
-<p>The elevation outputs from SCHISM are 'raw' outputs, which means users usually need to do post-processing to weed out dry instances themselves. This is a very common mistake from users. Always compare the elevation against local bottom elevation; if the total depth is less than <code>h0</code> you should not take the elevation outputs at face value - they should be instead NaN. For example, if the local depth is 2m, an elevation value of -3m or -1000m is the same: the node at this time instance is dry.</p>
+<p>The elevation outputs from SCHISM are 'raw' outputs, which means users usually need to do post-processing to weed out dry instances themselves. This is a very common mistake from users. Always compare the elevation against local bottom elevation; if the total depth is less than <code>h0</code> (as specified in <code>param.nml</code>) you should not take the elevation outputs at face value - they should be instead NaN. For example, if the local depth is 2m, an elevation value of -3m or -1000m is the same: the node at this time instance is dry.</p>
 </div>
 <div class="admonition notes">
 <p class="admonition-title">Other global outputs</p>
