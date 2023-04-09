@@ -930,6 +930,14 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#of-records-for-sources-and-sinks-can-be-different" class="md-nav__link">
+    of records for sources and sinks can be different;
+  </a>
+  
+    <nav class="md-nav" aria-label="of records for sources and sinks can be different;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#in" class="md-nav__link">
     .in
   </a>
@@ -962,6 +970,11 @@
   <a href="#harmin" class="md-nav__link">
     harm.in
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1591,8 +1604,6 @@
 
 
 
-  <h1>Optional inputs</h1>
-
 <p>This section explains the details of some options inputs triggered by <code>param.nml</code>. The list is non-exhaustive as there
  are many such inputs. You can also find some example in <a href="../getting-started/test_suite.html">test suite</a>.</p>
 <h2 id="hgridll">hgrid.ll<a class="headerlink" href="#hgridll" title="Permanent link">&para;</a></h2>
@@ -1721,8 +1732,8 @@
 <p>Similar format is used for other tracers; e.g., <code>ICM_vvar_[1,2..].ic</code> has a similar format to <code>ts.ic</code>.</p>
 <h2 id="nc">.nc<a class="headerlink" href="#nc" title="Permanent link">&para;</a></h2>
 <p>Beside the time series inputs, we have the other types of netcdf4 input files as follows. Some sample files can be found in the test suite (e.g. schism_verification_tests/Test_ICM_UB/).</p>
-<p><strong>hotstart.nc</strong> This input basically contains all major state variables defined at node/side/element.
-<strong>source.nc</strong></p>
+<p><strong>hotstart.nc</strong> This input basically contains all major state variables defined at node/side/element.</p>
+<p><strong>source.nc</strong>  Required if <code>if_source=-1</code>, this input combines all info needed for source/sink.</p>
 <div class="admonition notes">
 <p class="admonition-title">source.nc</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>netcdf source {
@@ -1750,21 +1761,42 @@
 <a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>}
 </code></pre></div>
 </div>
+<div class="admonition notes">
+<p class="admonition-title">Notes</p>
+<ol>
+<li>
+<h1 id="of-records-for-sources-and-sinks-can-be-different">of records for sources and sinks can be different;<a class="headerlink" href="#of-records-for-sources-and-sinks-can-be-different" title="Permanent link">&para;</a></h1>
+</li>
+<li><code>source_elem</code> and <code>sink_elem</code> specify the element indices for source/sinks;</li>
+<li>The time stamps in <code>time_msource</code> etc are not needed by the code; only <code>time_step_*</code> (in sec) are required;</li>
+<li><code>ntracers</code> specifies the <strong>total</strong> # of classes in <strong>all</strong> tracer modules (including T,S,..). The example above used ICM module (which has 21 classes), so together with T,S there are 23 'tracers'.</li>
+</ol>
+</div>
 <p><strong>*_nu.nc</strong> This input is used for tracer nudging (<code>inu_tr=2</code>). You only need to specify values in the nudging zone and may use junk values -9999 inside (in this case the code will not nudge to the junk value). The mapping array ‘map_to_global_node’ is used to map the array indices to the global node indices.</p>
 <div class="admonition notes">
-<p class="admonition-title">TEM_nu.nc</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>netcdf TEM_nu {
+<p class="admonition-title">ICM_nu.nc</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>netcdf ICM_nu {
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>dimensions:
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    node = 27023 ;
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    nLevels = 40 ;
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    one = 1 ;
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    ntracers = 21 ;
 <a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    time = UNLIMITED ; // (367 currently)
 <a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>variables:
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    float time(time) ;
 <a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    int map_to_global_node(node) ;
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    float tracer_concentration(time, node, nLevels, one) ;
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    float tracer_concentration(time, node, nLevels, ntracers) ;
 <a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>}
 </code></pre></div>
+</div>
+<div class="admonition notes">
+<p class="admonition-title">Notes</p>
+<ol>
+<li><code>node</code> specifies total # of nodes in the nudging zone (i.e. with non-zero depths in <code>*_nudge.gr3</code>);</li>
+<li><code>ntracers</code> is the # of tracer classes in this module (1 for T,S);</li>
+<li><code>map_to_global_node</code> maps the local node indices to global nodes;</li>
+<li>The time stamps in <code>time</code> are not needed by the code, as <code>step_inu_tr</code> already specified the time step in nudging inputs.</li>
+<li><code>tracer_concentration</code> specifies the tarcer concentrations to nudge toward.</li>
+</ol>
 </div>
 <h2 id="in">.in<a class="headerlink" href="#in" title="Permanent link">&para;</a></h2>
 <h3 id="stationin-bp-format">station.in (.bp format)<a class="headerlink" href="#stationin-bp-format" title="Permanent link">&para;</a></h3>
