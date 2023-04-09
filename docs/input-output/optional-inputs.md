@@ -39,10 +39,11 @@ This includes `elev.th`, `flux.th`, `TEM_1.th`, `SAL_1.th` etc, which share same
 These include `elev2D.th.nc`, `uv3D.th.nc`, `TEM_3D.th.nc`, `SAL_3D.th.nc`, and `[MOD]_3D.th.nc` (where MOD is the tracer module name like ‘COS’). The format can be found below (also in test suite (e.g. schism_verification_tests/Test_ICM_UB/)).
 
 !!!notes
-    1. the time always start from 0, and the time step can be anything `≥dt`. Note that the time stamp series in `time` is not needed by the code; only `time_step` (in sec) is needed;
-    2. ‘nOpenBndNodes’ should be total number of nodes on all open boundary segments that require this input, and the values appear in same order as in bctides.in inside ‘time_series’;
-    3. `nLevels` specifies the vertical structure, and `nComponents` specifies either scalar/vector, or # of classes in the tracer module;
-    4. Most netcdf4 libraries allow float and double to be interchangeable but it's better to be strict about data type.
+    1. the time always starts from 0, and the time step can be anything `≥dt`. Note that the time stamp series in `time` is not needed by the code; only `time_step` (in sec) is needed;
+    2. `time_series` contains the main data at all relevant nodes;
+    3. ‘nOpenBndNodes’ should be total number of nodes on all open boundary segments that require this input, and the values appear in same order as in bctides.in inside ‘time_series’;
+    4. `nLevels` specifies the vertical structure, and `nComponents` specifies either scalar/vector, or # of classes in the tracer module;
+    5. Most netcdf4 libraries allow float and double to be interchangeable but it's better to be strict about data type.
 
 !!!notes "elev2D.th.nc"
     ```
@@ -172,14 +173,24 @@ variables:
 // global attributes:
                 :file_format = "NETCDF4" ;
                 :_NCProperties = "version=2,netcdf=4.8.1,hdf5=1.12.1" ;
-
+    }
     ```
 
 ***_nu.nc** This input is used for tracer nudging (`inu_tr=2`). You only need to specify values in the nudging zone and may use junk values -9999 inside (in this case the code will not nudge to the junk value). The mapping array ‘map_to_global_node’ is used to map the array indices to the global node indices.
 
 !!!notes "TEM_nu.nc"
     ```
-
+netcdf TEM_nu {
+dimensions:
+        node = 27023 ;
+        nLevels = 40 ;
+        one = 1 ;
+        time = UNLIMITED ; // (367 currently)
+variables:
+        float time(time) ;
+        int map_to_global_node(node) ;
+        float tracer_concentration(time, node, nLevels, one) ;
+    }
     ```
 
 ## .in
