@@ -1,7 +1,7 @@
 All SCHISM outputs (except system outputs) can be found in `outputs/` directory.
 
 ## Run info output (mirror.out)
-This is a mirror image of now-defunct screen output. Below is a sample:
+This is a mirror image of now-defunct screen output and is useful for diagnosis. Below is a sample:
 
 ```
 Barotropic model without ST calculation
@@ -81,8 +81,8 @@ Depending on whether or not you turned on OLDIO, the global netcdf outputs will 
 
 1) Scribed I/O (OLDIO is OFF)
 Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
- using latest FORTRAN (e.g., read_output10*), matlab or python scripts. 
-For example the latest VisIT plugins can visualize these outputs directly.
+ using latest FORTRAN (e.g., read_output10*), matlab or python scripts, or 
+the latest VisIT plugins.
 
 All 2D variables (e.g. `elevation`, `sigWaveHeight` etc) as well as static information such as geometry
  and connectivity info are grouped into `out2d_*.nc`. On the other hand, each 3D variable has its own 
@@ -112,12 +112,18 @@ An example output file name is `outputs/schout_000000_2.nc`. More generally, the
 !!!notes "Combine outputs"
     The per-processor outputs need to be gathered into combined nc4 outputs first before you can visualize or post-process them. The script that does this is called `combine_output11.f90` (a simple perl script `autocombine_MPI_elfe.pl` exists to combine all available outputs transparently; you just need to update the path to the compiled `combine_output11` inside the script, and it can be launched before or after a run is done). See the header of `combine_output11.f90` on sample compilation commands and usage. Once you are done combining, you should have nc4 files called something like `schout_2.nc` etc. Note that the stack # remains but the MPI process number is gone. There is no utility for gathering the outputs in stack/time; instead most post-processing tools are able to work with multiple stacks.
 
-    Note that SCHISM allows users to easily add more customized outputs, using the routine writeout_nc() inside schism_step. The combine scripts will automatically combine the additional outputs.
+    Note that under OLDIO, SCHISM allows users to easily add more customized outputs, using the routine writeout_nc() inside schism_step. The combine scripts will automatically combine the additional outputs.
 
     You can visualize the combined nc4 outputs using VisIT (with SCHISM plug-ins). More info can be found in [Visualization](./../getting-started/visualization.md)
 
+!!!notes "Special care for elevation outputs"
+
+    The elevation outputs from SCHISM are 'raw' outputs, which means users usually need to do post-processing to weed out dry instances themselves. This is a very common mistake from users. Always compare the elevation against local bottom elevation; if the total depth is less than `h0` you should not take the elevation outputs at face value - they should be instead NaN. For example, if the local depth is 2m, an elevation value of -3m or -1000m is the same: the node at this time instance is dry.
+
 !!!notes "Other global outputs"
-    The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (`outputs/maxelev_*` and `outputs/maxdahv_*`). These files can be combined using `Utility/Combining_Scripts/combine_gr3.f90` to generate `maxelev.gr3` and `maxdahv.gr3`. Another type of global outputs are hotstart outputs, which should be combined (using `combine_hotstart7.f90`) to generate a restart input.
+    The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (`outputs/maxelev_*` and `outputs/maxdahv_*`). These files can be combined using `Utility/Combining_Scripts/combine_gr3.f90` to generate `maxelev.gr3` and `maxdahv.gr3`. However, please exercise caution with `maxelev.gr3` calculated this way because it may contain transient responses from cold start that should be disgarded. We recommend using `Utility/Post-Processing-Fortran/read_output10_allnodes.f90`, which gives you more controls. Also see above for the general comments on elevation outputs.
+
+    Another type of global outputs are hotstart outputs, which must be combined (using `combine_hotstart7.f90`) to generate a restart input.
 
 ## Station outputs
 These outputs are invoked with `iout_sta=1`, and are found in `outputs/staout_[1..,9]`, corresponding respectively to elev, air pressure, wind u, wind v, T, S, u, v, w. Each output has a simple ASCII format:

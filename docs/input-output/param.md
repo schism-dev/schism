@@ -246,7 +246,7 @@ If `itur=-1`, horizontally homogeneous but vertically varying diffusivities are 
 
 If `itur=2`, the zero-equation Pacanowski and Philander closure is used. In this case, a few extra parameters are required: `h1_pp`, `vdmax_pp1`, `vdmin_pp1`, `tdmin_pp1`, `h2_pp`, `vdmax_pp2`, `vdmin_pp2`, `tdmin_pp2`. Eddy viscosity is computed as: $\text{vdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{vdiff_min}$, and diffusivity $\text{tdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{tdiff_min}$, where $\text{rich}$ is a Richardson number. The limits (`vdiff_max`, `vdiff_min` and `tdiff_min`) vary linearly with depth between depths `h1_pp` and `h2_pp`.
 
-If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability function used: `mid=` `MY` is Mellor & Yamada; `=KL` is GLS as k-kl; KE is GLS as $k-\varepsilon$ =KW is GLS as $k-\omega$ =UB is Umlauf & Burchard's optimal; `stab=` GA is Galperin's clipping (only for MY); =KC is Kantha & Clayson's stability function) Also the user needs to specify max/min diffusivity/viscosity in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`.
+If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability function used: `mid=` `MY` is Mellor & Yamada; `KL` is GLS as k-kl; `KE` is GLS as $k-\varepsilon$; `KW` is GLS as $k-\omega$; `UB` is Umlauf & Burchard's optimal. `stab=GA` is Galperin's clipping (only for MY); `KC` is Kantha & Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`.
 
 If `itur=4`, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first 
 (see README inside GOTM/ for instructions), and turn on pre-processing flag `USE_GOTM` in makefile 
@@ -327,28 +327,32 @@ Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to g
 Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
 
 ### nc_out =1(int)
-Main switch to turn on/off netcdf outputs, useful for other programs to control outputs.
+Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.
 
 ### nhot=0, nhot_write=8640 (int)
 Hot start output control parameters. If `nhot=0`, no hot start output is generated. If `nhot=1`, 
-hotstart output is named `outputs/hotstart_[process_id]_[time_step].nc` every `nhot_write` 
+hotstart output is named `outputs/hotstart_[process_id]_[it].nc` every `nhot_write` 
 steps, where `it` is the corresponding time iteration number. `nhot_write` must be a multiple of 
-`ihfskip`. If you want to hotstart a run from step `it`, you need to combine all process-specific 
-hotstart outputs into a `hotstart.nc` using `combine_hotstart7.f90` (`./combine_hotstart7 –h` for help).
+`ihfskip` and `nspool_sta`. If you want to hotstart a run from step `it`, you need to combine all process-specific 
+hotstart outputs into a `hotstart.nc` using `combine_hotstart7.f90` (`./combine_hotstart7 -h` for help).
 
 ### iof_* (int)
 Global output (in netcdf4 format) options, where `*` stands for module name (e.g. "hydro", "wwm" etc). 
 The frequency of global outputs is controlled by 2 parameters in [CORE](#core): 
 [`nspool`](#nspool-ihfskip-int) and [`ihfskip`](#nspool-ihfskip-int). Output is done every
- `nspool` steps, and a new output stack is opened every `ihfskip` steps. 
+ `nspool` steps, and a new output stack is created every `ihfskip` steps. 
+
 Under OLDIO, the outputs are named as `outputs/schout_[MPI process id]_[1,2,3,...].nc` etc. The combine scripts 
 are then used to gather each output variable across all MPI processes into a single output, e.g., `schout_[1,2,3…].nc`.
-With new scribed I/O, outputs look like `out2d_1,2,3…].nc` etc (and no combining is necessary).
 
-Each output variable is controlled by `1` flag in `param.nml`. We only show a few examples below; 
+With new scribed I/O, outputs look like `out2d_1,2,3…].nc` etc (and no combining is necessary). In this mode,
+ all 2D outputs are found in `out2d*` and each 3D output (note that vector output like horizontal velocity counts as 2
+ outputs) has its own netcdf files, e.g. `salinity_[1,2..].nc`, `horizontalVelX_[1,2..].nc` etc.
+
+Each output variable is controlled by an I/O flag in `param.nml`. We only show a few examples below; 
 the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and 
 whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels,
- and most post-processing FORTRAN scripts can only handle this type of outputs.
+ and most post-processing FORTRAN scripts can only handle this type of outputs (while VisIT can handle other types).
 
 ```
 iof_hydro(1) = 1 !global elevation output control. If iof_hydro(1)=0, no global elevation is recorded. 
