@@ -54,8 +54,6 @@ These two flags control the global netcdf outputs. Output is done every `nspool`
 ## OPT block
 The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).
 
-### dtb_min=10, dtb_max=30 (double)
-Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.
 
 ###  dramp=1. (double), drampbc=1. (double)
 Ramp periods in days for the tides, B.C. or baroclincity. 
@@ -130,7 +128,7 @@ The tracers are injected into an element at a particular level, as specified by 
 Parameter for checking volume and tracer mass conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
 
 ### iharind=0 (int)
-Harmonic analysis flag. If $iharind \neq 0 $, an input `harm.in` is needed.
+Harmonic analysis flag. If $iharind \neq 0$, an input `harm.in` is needed.
 
 ### ihconsv=0, isconsv=0 (int)
 Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
@@ -142,24 +140,24 @@ Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If $i
 Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`. 
 
 !!! note
-    1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.
+    1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout\_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.
 
 ### ihydraulics=0 (int)
 Hydraulic model option. If $ihydraulics \neq 0$, `hydraulics.in` is required (cf. hydraulics user manual).
 
 
 ### iloadtide=0 (int)  loadtide_coef (double)
-Option to specify Self Attraction and Loading (SAL) tide, usually used for basin-scale applications. 
+Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
 If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from a tide database,
  e.g., FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with 
 tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) 
 and phases (degrees behind GMT). In this option, SAL is
  lumped into tidal potential so it shares some parameters with tidal potential
- in bctides.in (cut-off depth, frequencies).
+ in `bctides.in` (cut-off depth, frequencies).
 
 If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
  SAL is applied everywhere and does not share parameters with tidal potential).
-If `iloadtide=2`, a simple scaling is used to reduce 
+If `iloadtide=2`, a simple scaling specified by `loadtide_coef` is used to reduce 
 the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004),
  with a maximum value of `loadtide_coef`.
 
@@ -171,7 +169,7 @@ These parameters (and `inter_mom` below) control the numerical dissipation in mo
 
 `indvel` determines the method of converting side velocity to node velocity. If `indvel=0`, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If `indvel=1`, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (`inter_mom >0`). In general, `indvel=0` leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.
 
-Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. `ihorcon=0`:no horizontal viscosity; `=1`: Laplacian (implemented as a filter); `=2`: bi-harmonic. For `ihorcon/=0`, `hvis_coef0` specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by `ishapiro` =0,±1, 2 (turn off/on Shapiro filter). If `ishapiro=1`, `shapiro0` specifies the Shapiro filter strength. If `ishapiro=-1`, an input called `shapiro.gr3` is required which specifies the filter strength at each node. If `ishapiro=2`, a Smagorinsky-like filter is applied and `shapiro0` is a coefficient $(\gamma_0)$, which is on the order of $10^3$:
+Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. `ihorcon=0`:no horizontal viscosity; `=1`: Laplacian (implemented as a filter); `=2`: bi-harmonic. For `ihorcon/=0`, `hvis_coef0` specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by `ishapiro` =0,±1, 2 (turn off/on Shapiro filter). If `ishapiro=1`, `shapiro0` specifies the Shapiro filter strength. If `ishapiro=-1`, an input called `shapiro.gr3` is required which specifies the filter strength at each node (there is a pre-proc script `gen_slope_filter2.f90` for this). If `ishapiro=2`, a Smagorinsky-like filter is applied and `shapiro0` is a coefficient $(\gamma_0)$, which is on the order of $10^3$:
 
 \begin{equation}
 \label{eq01}
@@ -181,17 +179,19 @@ Due to spurious modes or dispersion (oscillation), viscosity/filter should be ap
 \end{aligned}
 \end{equation}
 
-If `ishapiro/=0`, `niter_shap` specifies the number of times the filter is applied. Note that for non-eddying regime applications (nearshore, estuary, river), an easiest option is: `indvel=0`, `ishapiro=1` (`shapiro0=0.5`), `ihorcon= inter_mom=0`.
+If `ishapiro/=0`, `niter_shap` specifies the number of times the filter is applied. 
+
+For non-eddying regime applications (nearshore, estuary, river), an easiest option is: `indvel=0`, `ishapiro=1` (`shapiro0=0.5`), `ihorcon= inter_mom=0`.
 
 For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: `indvel=ishapiro=inter_mom=0`, `ihorcon=2`, `hvis_coef0=0.025`. If the amount of dissipation is insufficient in the non-eddying regime, consider using `ishapiro=-1`, with an appropriate `shapiro.gr3` to turn on Shapiro filter locally to add dissipation, or use `ishapiro=2` and `shapiro0=1000`.
 
 ### inter_mom=0, kr_co=1 (int)
-Interpolation method at foot of characteristic line during ELM. `inter_mom=0`: linear interpolation; `=1`: dual kriging method. If `inter_mom=-1`, the depth in `krvel.gr3` (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in `kr_co`: 1: linear $f(h)=-h$; 2: $(h^2*log(h)$; 3: cubic $(h^3)$; 4: $(-h^5)$.
+Interpolation method at foot of characteristic line during ELM. `inter_mom=0`: default linear interpolation; `=1`: dual kriging method. If `inter_mom=-1`, the depth in `krvel.gr3` (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in `kr_co`: 1: linear $f(h)=-h$; 2: $(h^2*log(h)$; 3: cubic $(h^3)$; 4: $(-h^5)$.
 
-In general, `indvel=0` should be used with `inter_mom=0` or `1` to avoid large dispersion (with additional viscosity/filter also). `indvel=1` can be used with any covariance function without viscosity/filter.
+In general, `indvel=0` should be used with `inter_mom=0` or `inter_mom=1, kr_co=1,2` to avoid large dispersion (with additional viscosity/filter also). `indvel=1` can be used with any covariance function without viscosity/filter.
 
 ### inu_elev=0, inu_uv=0 (int)
-Sponge layer for elevation and velocity. In SCHISM, relaxation/nudging of a generic variable is implemented as:
+Sponge layer for elevation and velocity (which is rarely used in SCHISM). Relaxation/nudging of a generic variable is implemented as:
 
 \begin{equation}
 \label{eq02}
@@ -212,7 +212,7 @@ Nudging flag for tracer models (e.g. temperature), and nudging step (in sec). Wh
 
 When `inu_tr=1`, relax back to initial conditions.
 
-When `inu_tr=2`, nudge to values specified in `[MOD]_nu.nc`, which has a time step of `step_nu_tr`.
+When `inu_tr=2`, nudge to values specified in `[MOD]_nu.nc`, which has a time step of `step_nu_tr` (in sec).
 
 If `inu_tr≠0`, the horizontal relaxation factors are specified in `[MOD]_nudge.gr3` (as depths info), 
  and the vertical relaxation factors are specified as a linear function of depths with: `vnh[1,2]` 
@@ -228,7 +228,12 @@ Choice of inundation algorithm. `inunfl=1` can be used if the horizontal resolut
 Parameters for submerged or emergent vegetation. If `isav=1` (module on), you need to supply 4 extra inputs: `sav_cd.gr3` (form drag coefficient), `sav_D.gr3` (depth is stem diameter in meters); `sav_N.gr3` (depth is # of stems per m2); and `sav_h.gr3` (height of canopy in meters).
 
 ### itr_met=3 (int), h_tvd=5. (double)
-Transport option for all tracers. `itr_met=3` for $TVD^2$, and `itr_met=4` for 3rd order WENO. **Note that `itr_met=1,2` (explicit) is only kept for comparison and benchmark purpose and so should NOT be used normally- use ‘3’ or ‘4’ instead**. If `itr_met>=3`, 1 extra parameter is needed: `h_tvd` which specifies the transition depth (in meters) between upwind and TVD schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. Also in this case, additional toggle between upwind and TVD is specified in `tvd.prop`. The TVD limiter function is specified in `TVD_ LIM` in `mk/include_modules` (for efficiency purpose). If itr_met=3, 2 tolerances are also required (use recommended values).
+Transport option for all tracers. `itr_met=3` for $TVD^2$, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 
+Also in this case, you can additional toggle between upwind and TVD by specifying regions in `tvd.prop`. The TVD limiter function is specified in `TVD_LIM` in `mk/include_modules` (for code efficiency purpose). 
+
+If `itr_met=3`, 2 tolerances are also required (use recommended values).
+If `itr_met=4` (WENO), there are several additional parameters. The most important ones are `epsilon[12]`, which controls the
+ numerical dispersion for the 2nd and 3rd-order WENO respectively (note that the code will decide which order is used at each prism based on geometric constraints).
 
 ### itur=0 (int)
 Turbulence closure model selection.
@@ -250,24 +255,28 @@ and `diffmax.gr3`. In addition, GOTM also requires an input called `gotmturb.inp
 ready-made samples for this input in the source code bundle. If you wish to tune some parameters 
 inside, you may consult [gotm.net](https://gotm.net) for more details.
 
+!!! note
+    1. We only tested GOTM v3, not newer versions of GOTM. Using `itur=3` generally gave similar results.
+
 ### level_age(:)=-999 (int array)
 If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.
 
-### meth_sink=0 (int)
+### meth_sink=1 (int)
 Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with 
 a net sink value locally to prevent further drawdown of groundwater.
 
-### nadv=1 (int)
+### nadv=1 (int), dtb_min=10, dtb_max=30 (double) 
 Advection on/off option. If `nadv=0`, advection is selectively turned off based on the input file `adv.gr3`. 
 If `nadv=1` or `2`, advection is on for the whole domain, and backtracking is done using either 
 Euler or 2nd-order Runge-Kutta scheme.
+`dtb_[min,max]` are min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.
 
 ### nchi=0 (int)
-Bottom friction option. If `nchi=-1`, and Manning's n is specified in `manning.gr3`. If `nchi=0`, spatially varying drag coefficients are read in from `drag.gr3` (as depth info). For `nchi=1`, bottom roughnesses (in meters) are read in from `rough.gr3`.
+Bottom friction option. If `nchi=-1`, and Manning's $n$ is specified in `manning.gr3`. If `nchi=0`, spatially varying drag coefficients are read in from `drag.gr3` (as depth info). For `nchi=1`, bottom roughnesses (in meters) are read in from `rough.gr3`.
 
 If `nchi=-1`, an additional parameter is required: `hmin_man` (in meters) which sets the minimum depth used in the Manning formulation.
 
-If `nchi=1`, one additional parameter is required: `dzb_min` (in meters). In this case the drag coefficients are calculated using the log drag law when the bottom cell thickness $\delta_b>=\text{dzb_min}$. when $\delta_b<\text{dzb_min}$, $\text{Cd}=\text{Cdmax}$, where $\text{Cdmax}=\text{Cd}(\delta_b=\text{dzb_min})$. This is to avoid exaggeration of $\text{Cd}$ in very shallow water.
+If `nchi=1`, one additional parameter is required: `dzb_min` (in meters). In this case the drag coefficients are calculated using the log drag law when the bottom cell thickness $\delta_b>=\text{dzb_min}$; when $\delta_b<\text{dzb_min}$, $\text{Cd}=\text{Cdmax}$, where $\text{Cdmax}=\text{Cd}(\delta_b=\text{dzb_min})$. This is to avoid exaggeration of $\text{Cd}$ in very shallow water.
 
 ### ncor=0 (int)
 Coriolis option. If `ncor=0` or `-1`, a constant Coriolis parameter is specified. If `ncor=0`, `coricoef` specifies the Coriolis factor. If `ncor=-1`, `rlatitude` specifies the mean latitude used to calculate the Coriolis factor.
@@ -281,7 +290,7 @@ at any given time, and the time history of wind is read in from `wind.th`. If `n
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
  `sflux/`. The option `nws=3` is reserved for coupling with atmospheric model via ESMF caps. If `nws=4`, 
 the required input `wind.th` specifies wind and pressure at each node and at time of multiple of `wtiminc`. 
-If `nws=-1`, use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+If `nws=-1` (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: `hurricane-track.dat`.
 
@@ -289,34 +298,33 @@ If `nws=-1`, use Holland parametric wind model (barotropic only with wind and at
 If `nws>0`, the ramp-up period (in days) is specified with `drampwind`. Also
  the user has the option to scale the wind speed using `iwindoff`=1 (which requires an additional input `windfactor.gr3`).
 
-The wind stress formulation is selected with `iwind_form`. If `nws=1` or `4`, or `nws=2 && ihconsv=0`, 
-or `nws=2 && iwind_form=-1`, the stress is calculated from Pond & Pichard formulation (originally from Garret). 
-If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form=1`, the stress is calculated from 
-Hwang (2018) formulation. If `nws=2, ihconsv=1 && iwind_form=0`, the stress is calculated 
-from heat exchange routine. If `WWM` is enabled and `icou_elfe_wwm > 0` and `iwind_form=-2`, 
-stress is calculated by WWM; otherwise the formulations above are used.
+The wind stress formulation is selected with `iwind_form`. 
+
+- If `nws=2, ihconsv=1 && iwind_form=0`, the stress is calculated from heat exchange routine. 
+- If `nws=1` or `4`, or `nws=2 && ihconsv=0`, or `nws=2 && iwind_form≠ 0`, the stress is calculated from Pond & Pichard formulation (originally from Garret) if `iwind_form=-1`, or from Hwang (2018) if `iwind_form=1`.
+- If `WWM` is enabled and `icou_elfe_wwm > 0` and `iwind_form=-2`, stress is calculated by WWM.
 
 ### rho0=1000, shw=4184. (double)
 Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.
 
 ### rmaxvel=10. (double)
-Maximum velocity. This is needed mainly for the air-water exchange as the model may blow up if the water velocity is above 20m/s.
+Maximum velocity. This is needed mainly for the air-water exchange as the latter may blow up if the water velocity is above 20m/s.
 
 ### s1_mxbnt=0.5, s2_mxnbnt=3.5 (double)
-Dimensioning parameters used in inter-subdomain backtracking. Start from `s[12]_mxnbt=0.53`, and increase them (gradually) if you get a fatal error like “btrack: overflow”. Accuracy is not affected by the choice of these two parameters.
+Dimensioning parameters used in inter-subdomain backtracking. Start from `s[12]_mxnbt=0.53`, and increase them (gradually) if you get a fatal error like “btrack: overflow”. Accuracy is not affected by the choice of these two parameters; these only affect memory consumption.
 
 ### slam0=-124, sfea0=45 (double)
 Centers of projection used to convert lat/lon to Cartesian coordinates. These are used if a variable Coriolis parameter is employed (ncor=1).
 
 ### start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)
-Starting time for simulation. `utc_start` is hours behind the GMT, and is used to adjust time zone. For example, `utc_start=5` is US Eastern Time, and `utc_start= -8` is Beijing Time.
+Starting time for simulation. `utc_start` is hours **behind** the GMT, and is used to adjust time zone. For example, `utc_start=5` is US Eastern Time, and `utc_start= -8` is Beijing Time.
 
 ### thetai=0.6 (double)
-Implicitness parameter (between 0.5 and 1). Recommended value: 0.6.
+Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.
 
 ## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
-Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output.
+Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
 
 ### nc_out =1(int)
 Main switch to turn on/off netcdf outputs, useful for other programs to control outputs.
