@@ -1626,7 +1626,8 @@
 <div class="admonition notes">
 <p class="admonition-title">Notes</p>
 <ol>
-<li>the time always start from 0, and the time step can be anything <code>≥dt</code>. Note that the time stamp series in <code>time</code> is not needed by the code; only <code>time_step</code> (in sec) is needed;</li>
+<li>the time always starts from 0, and the time step can be anything <code>≥dt</code>. Note that the time stamp series in <code>time</code> is not needed by the code; only <code>time_step</code> (in sec) is needed;</li>
+<li><code>time_series</code> contains the main data at all relevant nodes;</li>
 <li>‘nOpenBndNodes’ should be total number of nodes on all open boundary segments that require this input, and the values appear in same order as in bctides.in inside ‘time_series’;</li>
 <li><code>nLevels</code> specifies the vertical structure, and <code>nComponents</code> specifies either scalar/vector, or # of classes in the tracer module;</li>
 <li>Most netcdf4 libraries allow float and double to be interchangeable but it's better to be strict about data type.</li>
@@ -1746,48 +1747,59 @@ variables:
         double time_step_vsink(one) ;</p>
 <p>// global attributes:
                 :file_format = "NETCDF4" ;
-                :_NCProperties = "version=2,netcdf=4.8.1,hdf5=1.12.1" ;</p>
-<div class="highlight"><pre><span></span><code>```
-</code></pre></div>
+                :_NCProperties = "version=2,netcdf=4.8.1,hdf5=1.12.1" ;
+    }
+    ```</p>
 <p><strong>*_nu.nc</strong> This input is used for tracer nudging (<code>inu_tr=2</code>). You only need to specify values in the nudging zone and may use junk values -9999 inside (in this case the code will not nudge to the junk value). The mapping array ‘map_to_global_node’ is used to map the array indices to the global node indices.</p>
 <div class="admonition notes">
 <p class="admonition-title">TEM_nu.nc</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>
-</code></pre></div>
+<p>```</p>
 </div>
+<p>netcdf TEM_nu {
+dimensions:
+        node = 27023 ;
+        nLevels = 40 ;
+        one = 1 ;
+        time = UNLIMITED ; // (367 currently)
+variables:
+        float time(time) ;
+        int map_to_global_node(node) ;
+        float tracer_concentration(time, node, nLevels, one) ;
+    }
+    ```</p>
 <h2 id="in">.in<a class="headerlink" href="#in" title="Permanent link">&para;</a></h2>
 <h3 id="stationin-bp-format">station.in (.bp format)<a class="headerlink" href="#stationin-bp-format" title="Permanent link">&para;</a></h3>
 <p>This file is needed if <code>iout_sta=1</code> and is in a build point format (essentially.gr3 without the connectivity table):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>1 1 1 1 1 1 1 1 1 !on (1)|off(0) flags for elev, air pressure, windx, windy, T, S, u, v, w
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>nsta !# of stations
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>do i=1,np
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    i,xsta(i),ysta(i),zsta(i) !zsta(i) is z-coordinates (from vertical datum; &lt;0 is below)
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>enddo    
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>1 1 1 1 1 1 1 1 1 !on (1)|off(0) flags for elev, air pressure, windx, windy, T, S, u, v, w
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>nsta !# of stations
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>do i=1,np
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    i,xsta(i),ysta(i),zsta(i) !zsta(i) is z-coordinates (from vertical datum; &lt;0 is below)
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>enddo    
 </code></pre></div>
 <p>Also see <a href="https://raw.githubusercontent.com/schism-dev/schism/master/sample_inputs/station.in">station.in.sample</a> in the source bundle.</p>
 <h3 id="source_sinkin">source_sink.in<a class="headerlink" href="#source_sinkin" title="Permanent link">&para;</a></h3>
 <p>This input is invoked if <code>if_source=1</code>, and specifies the element #’s for each (volume and mass) source and sink. The format is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>2   ! total # of elements with sources
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>100 ! element # of 1st source
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>101 ! element # of 2nd source
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    !A blank line for readability; below are sinks
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>3   ! total # of elements with sinks
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>99  ! element # of 1st sink
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>100
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>105 ! element # of 3rd sink
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>2   ! total # of elements with sources
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>100 ! element # of 1st source
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>101 ! element # of 2nd source
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    !A blank line for readability; below are sinks
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>3   ! total # of elements with sinks
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>99  ! element # of 1st sink
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>100
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>105 ! element # of 3rd sink
 </code></pre></div>
 <h3 id="hydraulicsin">hydraulics.in<a class="headerlink" href="#hydraulicsin" title="Permanent link">&para;</a></h3>
 <p>This input is invoked if <code>ihydraulics=1</code>, and is the main input for the hydraulics module. See hydraulics module manual for details.</p>
 <h3 id="harmin">harm.in<a class="headerlink" href="#harmin" title="Permanent link">&para;</a></h3>
 <p>This file is needed if <code>iharind=1</code>. Harmonic analysis capabilities were introduced in SCHISM by Andre Fortunato, using the routines of ADCIRC. These routines were developed by R.A. Luettich and J.J. Westerink, who are hereby acknowledged, and were used with written permission by R.A. Luettich. Note that only analysis on elevations at all nodes can be done at the moment.</p>
 <p>The file has the following format (text adapted from the ADCIRC user's manual):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>NFREQ = number of frequencies included in harmonic analysis of model results.
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>for k=1 to NFREQ
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    NAMEFR(k) = an alphanumeric descriptor (i.e. the constituent name) whose length must be &lt;=16 characters
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    HAFREQ(k), HAFF(k), HAFACE(k) = frequency (rad/s), nodal factor, equilibrium argument (degrees)
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>end k loop
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>THAS, THAF, NHAINC, FMV = See detail in the notes below
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>NHAGE, NHAGV = flags that indicate whether or not harmonic analysis is performed, see notes below
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>NFREQ = number of frequencies included in harmonic analysis of model results.
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>for k=1 to NFREQ
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    NAMEFR(k) = an alphanumeric descriptor (i.e. the constituent name) whose length must be &lt;=16 characters
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    HAFREQ(k), HAFF(k), HAFACE(k) = frequency (rad/s), nodal factor, equilibrium argument (degrees)
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>end k loop
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>THAS, THAF, NHAINC, FMV = See detail in the notes below
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>NHAGE, NHAGV = flags that indicate whether or not harmonic analysis is performed, see notes below
 </code></pre></div>
 <div class="admonition notes">
 <p class="admonition-title">Notes</p>
