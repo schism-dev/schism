@@ -17,18 +17,20 @@ for easier explanation, but you should specify them on separate lines. Also you'
  info in the comments of the sample `param.nml`. The parameters are listed out below in alphabetic order.
 
 ## CORE block
-The following parameters have to be specified by the user; otherwise you’ll get a fatal error.
+The following parameters have to be specified by the user; otherwise you may get a fatal error. The exceptions are
+ those parameters required by optional modules (e.g., WWM), which do not need to be present if the modules are
+ not invoked.
 
 ### ipre (int)
-Pre-processing flag (1: on; 0: off). `ipre=0`: normal run.
+Pre-processing flag (1: on; 0: off). `ipre=0`: normal run. 
 
-Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. `ipre=1`: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and `mirror.out` and stop. Check errors in `fatal.error`. 
+Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. `ipre=1`: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and `mirror.out` and stop. Check errors in `fatal.error` or system outputs. 
 
 !!!important 
-    `ipre/=0` only works for single CPU! If you use scribed I/O, make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist from all cores. Check `outputs/` (`mirror.out` and `fatal.error`); if the run is finished you can manually kill it.
+    `ipre/=0` only works for single CPU! If you use scribed I/O (`OLDIO` off), make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist (as the scribe world is still initializing). Check `outputs/` (`mirror.out` and `fatal.error`) and system outputs; if the run is finished you can manually kill it.
 
 ### ibc (int), ibtp (int)
-Barotropic/baroclinic flags.
+Barotropic/baroclinic flags. 
 
 If `ibc=0`, a baroclinic model is used and regardless of the value for `ibtp`, the transport equation is solved. If `ibc=1`, a barotropic model is used, and the transport equation may (when `ibtp=1`) or may not (when `ibtp=0`) be solved; in the former case, S and T are treated as passive tracers.
 
@@ -36,7 +38,7 @@ If `ibc=0`, a baroclinic model is used and regardless of the value for `ibtp`, t
 Total simulation time in days.
 
 ### dt (double)
-Time step in seconds.
+Time step in seconds. This is the main time step in SCHISM. The transport solvers have their own adaptive time step for subcycling to satisfy the stability constraint.
 
 ### msc2 (int), mdc2 (int)
 These two parameters are only used if the wave module WWM is invoked (`USE_WWM` is on and `icou_elfe_wwm=1`).
@@ -44,35 +46,42 @@ These two parameters are only used if the wave module WWM is invoked (`USE_WWM` 
 [wwminput.nml](https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3);
 
 ### eco_class, ntracer_gen, ntracer_age, sed_class (int)
-These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED3D), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.
+These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.
 
 ### nspool, ihfskip (int)
-These two flags control the global netcdf outputs. Output is done every `nspool` steps, and a new output stack is opened every `ihfskip` steps.
+These two flags control the global netcdf outputs. Output is done every `nspool` steps, and a new output stack is opened every `ihfskip` steps. The code requires that `ihfskip` is a multiple of `nspool`, and `nhot_write` (see SCHOUT section) is a a multiple of `ihfskip`.
 
 ## OPT block
 The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).
 
 ### dtb_min=10, dtb_max=30 (double)
-Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local gradients.
+Min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.
+
+###  dramp=1. (double), drampbc=1. (double)
+Ramp periods in days for the tides, B.C. or baroclincity. 
+If `ibc=0`, the ramp-up for baroclinicity is specified with `drampbc` (in days). 
+Turn off ramp-up by setting the ramp-up period <=0. 
+The ramp function is a hyperbolic tangent function; e.g. $f(t) = \tanh(2t/86400/\text{drampbc})$.
 
 ### flag_ic(:)=1 (int array)
-Options for specifying initial tracer field for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If `flag_ic=1`, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like `temp.ic`, `salt.ic`, `[MOD]_hvar_[class #].ic` etc. If `flag_ic=2`, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like `ts.ic`, `[MOD]_vvar_[class #].ic`. For more general 3D initial tracer fields, use the hot start option.
+Options for specifying initial tracer fields for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If `flag_ic=1`, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like `temp.ic`, `salt.ic`, `[MOD]_hvar_[class #].ic` etc. If `flag_ic=2`, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like `ts.ic`, `[MOD]_vvar_[class #].ic`. For more general 3D initial tracer fields, use the hot start option. See `Optional inputs` section for examples of some of these inputs. Note that there is a requirement that `flag_ic(1)=flag_ic(2)`.
 
 ### h0=0.01 (double)
-Minimum depth (in m) for wetting and drying (recommended value: `1cm`). When the total depth is less than `h0`, the corresponding nodes/sides/elements are considered dry. It should always be positive.
+Minimum depth (in m) for wetting and drying (recommended value: `1cm`). When the total depth is less than `h0`, the corresponding nodes/sides/elements are marked as dry. It should always be positive.
 
 ### h[1,2]_bcc=50,100 (double)
 Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if `h>=h2_bcc` (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if `h<=h1_bcc(<h2_bcc)`. A linear transition is used if the local depth `h1_bcc<h<h2_bcc`.
 
 ### ibcc_mean=0 (int)
-Mean T,S profile option. If `ibcc_mean=1` (or `ihot=0` and `icst=2`), mean T/S profile is read in from `ts.ic`, and will be removed when calculating baroclinic force. No `ts.ic` is needed if `ibcc_mean=0`.
+Mean T,S profile option. If `ibcc_mean=1` (or `ihot=0` and `flag_ic(1:2)=2`), mean T/S profile is read in from `ts.ic`, and will be removed when calculating baroclinic force. No `ts.ic` is needed if `ibcc_mean=0`.
 
 ### ic_elev=0 (int), nramp_elev=0 (int) (int)
 Elevation initial condition flag for cold start only (`ihot=0`). If `ic_elev=1`, `elev.ic` (in `*.gr3` format) 
-is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only). 
+is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
+ elevation values in `hotstart.nc` (hotstart option). 
 If `ic_elev=1`, the user can ramp up the elevation
- smoothly starting from the specified `elev.ic` or `hotstart.nc` (if $ihot\neq 0$) by setting `nramp_elev=1` (and the ramp-up
- period in this case is `dramp`).
+ smoothly at the boundary starting from the specified `elev.ic` or `hotstart.nc` (if $ihot\neq 0$) by setting `nramp_elev=1` (and the ramp-up
+ period in this case is `dramp`). It's usually OK to use `nramp_elev=1` under either cold or hot start.
 
 ### icou_elfe_wwm=0, iwbl=0 (int)
 Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. `icou_elfe_wwm = 0`: no feedback from WWM to SCHISM (decoupled); `1`: coupled SCHISM-WWM.
@@ -81,13 +90,13 @@ Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. `icou_elfe_ww
 
 If `icou_elfe_wwm=1`, additional parameters are:
 
-- `nstep_wwm=1` (int): call WWM every this many time steps;
-- `hmin_radstress=1.0` (double): min. total water depth used only in radiation stress calculation; the radiation stress is zero if `local depth <hmin_radstress`.
+- `nstep_wwm=1` (int): call WWM every `nstep_wwm` time steps;
+- `hmin_radstress=1.0` (double): minimum total water depth in meters used only in radiation stress calculation; the radiation stress is zero if `local depth <hmin_radstress`.
 
 ### ics=1 (int)
 Coordinate frame flag. If `ics=1`, Cartesian coordinates are used; if `ics=2`, both `hgrid.ll` and `hgrid.gr3` use degrees latitude/longitude (and they should be identical to each other in this case).
 
-### i_hmin_airsea_ex (int), hmin_airsea_ex (double)
+### i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
 Option to locally turn off heat exchange.
 
 - `i_hmin_airsea_ex=1`: exchange turned off if `local grid depth<hmin_airsea_ex`
@@ -100,11 +109,11 @@ Simialr tpo `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_transport=1`, 
 the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in 
 transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
-more efficient ELM transport is used locally (at the expense of mass conservation, 
+more efficient ELM transport is used locally (at the expense of mass conservation and accuracy, 
 so make sure this option is used sparingly).
 
 ### ieos_type=0, ieos_pres=0 (int)
-By default, use the nonlinear equation of state: `ieos_type==0`. If the potential temperature is used, the pressure effect has been accounted for: `ieos_pres=0.`
+By default, use the nonlinear equation of state: `ieos_type=0`. `ieos_pres=0,1` will turn on/off hydrostatic pressure effects. If the potential temperature is used, the pressure effect has been accounted for, so `ieos_pres=0.`
 
 ### if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
 Point sources/sinks option (0: no; 1: on). If `if_source=1`, needs `source_sink.in`, `vsource.th`, `vsink.th`, 
@@ -113,27 +122,30 @@ If `if_source=-1`, the input is `source.nc`, which includes element list inside 
 steps and # of records for volume/mass source/sinks. If `if_source/=0`, specify ramp-up period (in days) with `dramp_ss` (no
  ramp-up if <=0). 
 
-The tracers are injected into an element at a particular level, as specified by `lev_tr_source(1:ntr)` (where `ntr` is
- # of tracer modules, i.e. 1 input for each module). The code will extrapolate below bottom/above surface if necessary, 
+The tracers are injected into an element at a particular level, as specified by `lev_tr_source(1:ntr)` (where `ntr` is total
+ # of tracer modules, i.e. 1 input level per module). The code will extrapolate below bottom/above surface if necessary, 
  so e.g., '-9' means bottom.
 
 ### iflux=0 (int)
-Parameter for checking volume and salt conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
+Parameter for checking volume and tracer mass conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
 
 ### iharind=0 (int)
-Harmonic analysis flag. If `iharind≠0`, an input `harm.in` is needed.
+Harmonic analysis flag. If $iharind \neq 0 $, an input `harm.in` is needed.
 
 ### ihconsv=0, isconsv=0 (int)
-Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required.
+Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
 
 ### ihdif=0 (int)
-Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If `ihdif≠0`, input `hdif.gr3` is needed.
+Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If $ihdif \neq 0$, input `hdif.gr3` is needed.
 
 ### ihot=0 (int)
-Hot start flag. If `ihot=0`, cold start; if `ihot≠0`, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`, and in this case, you do not need to adjust other inputs.
+Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`. 
+
+!!! note
+    1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.
 
 ### ihydraulics=0 (int)
-Hydraulic model option. If `ihydraulics≠0`, `hydraulics.in` is required.
+Hydraulic model option. If $ihydraulics \neq 0$, `hydraulics.in` is required (cf. hydraulics user manual).
 
 
 ### iloadtide=0 (int)  loadtide_coef (double)
@@ -261,12 +273,6 @@ If `nchi=1`, one additional parameter is required: `dzb_min` (in meters). In thi
 Coriolis option. If `ncor=0` or `-1`, a constant Coriolis parameter is specified. If `ncor=0`, `coricoef` specifies the Coriolis factor. If `ncor=-1`, `rlatitude` specifies the mean latitude used to calculate the Coriolis factor.
 
 If `ncor=1`, a variable Coriolis parameter, based either on a beta-plane approximation (`ics=1`) or on the latitude-dependent Coriolis (`ics=2`), is used, with the lat/lon coordinates read in from `hgrid.ll`. For `ics=1`, the center of beta-plane approximation must be correctly specified in `sfea0`.
-
-###  dramp=1. (double), drampbc=1. (double)
-Ramp periods in days for the tides, B.C. or baroclincity. 
-If `ibc=0`, the ramp-up for baroclinicity is specified with `drampbc` (in days). 
-Turn off ramp-up by setting the ramp-up period <=0. 
-The ramp function is a hyperbolic tangent function: $f(t) = \tanh(2t/86400/\text{drampbc})$.
 
 ### nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
 Wind forcing options and the interval (in seconds) with which the wind input is read in. If `nws=0`, no 

@@ -113,7 +113,10 @@ for j=1, nope
         .........
     endif
 
-    ! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections we will give examples for `.nc` inputs.
+    ! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. 
+    !However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), 
+    !you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections 
+    !we will give examples for `.nc` inputs.
 
 end for !j: open boundary segment
 ```

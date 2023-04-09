@@ -116,8 +116,8 @@ The I.C. inputs include the initial condition for elevation or tracers (`salt.ic
 
 `elev.ic` is a `.gr3` file that specifies the initial elevation at each node. Depending on the values of `icst`, T,S I.C. inputs have different format.
 
-- If `icst = 1`, `salt.ic` and `temp.ic` take the `.gr3` format;
-- If `icst = 2`, `ts.ic` takes the following simple format:
+- If `flag_ic(1:2)= 1`, `salt.ic` and `temp.ic` take the `.gr3` format;
+- If `flag_ic(1:2)= 2`, `ts.ic` takes the following simple format:
 
 ```
 43 !total # of vertical levels
@@ -125,6 +125,9 @@ The I.C. inputs include the initial condition for elevation or tracers (`salt.ic
 2 -1000. 5. 34.
 ...
 ```
+
+!!!caution "Note on ts.ic"
+    The code will extrapolate above surface or below bottom for you if your z-coordinates do not cover the full depth. Since it uses cubic spline interpolate, make sure your vertical profiles are well resolved to avoid unexpected min/max due to the cubic spline method.
 
 Similar format is used for other tracers.
 
