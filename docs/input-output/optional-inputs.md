@@ -148,7 +148,8 @@ Similar format is used for other tracers; e.g., `ICM_vvar_[1,2..].ic` has a simi
 Beside the time series inputs, we have the other types of netcdf4 input files as follows. Some sample files can be found in the test suite (e.g. schism_verification_tests/Test_ICM_UB/).
 
 **hotstart.nc** This input basically contains all major state variables defined at node/side/element.
-**source.nc**
+
+**source.nc**  Required if `if_source=-1`, this input combines all info needed for source/sink.
 !!!notes "source.nc"
     ```
     netcdf source {
@@ -176,22 +177,34 @@ Beside the time series inputs, we have the other types of netcdf4 input files as
     }
     ```
 
+!!!notes
+    1. # of records for sources and sinks can be different;
+    2. `source_elem` and `sink_elem` specify the element indices for source/sinks;
+    3. The time stamps in `time_msource` etc are not needed by the code; only `time_step_*` (in sec) are required;
+    4. `ntracers` specifies the **total** # of classes in **all** tracer modules (including T,S,..). The example above used ICM module (which has 21 classes), so together with T,S there are 23 'tracers'.
+
 ***_nu.nc** This input is used for tracer nudging (`inu_tr=2`). You only need to specify values in the nudging zone and may use junk values -9999 inside (in this case the code will not nudge to the junk value). The mapping array ‘map_to_global_node’ is used to map the array indices to the global node indices.
 
-!!!notes "TEM_nu.nc"
+!!!notes "ICM_nu.nc"
     ```
-    netcdf TEM_nu {
+    netcdf ICM_nu {
     dimensions:
         node = 27023 ;
         nLevels = 40 ;
-        one = 1 ;
+        ntracers = 21 ;
         time = UNLIMITED ; // (367 currently)
     variables:
         float time(time) ;
         int map_to_global_node(node) ;
-        float tracer_concentration(time, node, nLevels, one) ;
+        float tracer_concentration(time, node, nLevels, ntracers) ;
     }
     ```
+!!!notes
+    1. `node` specifies total # of nodes in the nudging zone (i.e. with non-zero depths in `*_nudge.gr3`);
+    2. `ntracers` is the # of tracer classes in this module (1 for T,S);
+    3. `map_to_global_node` maps the local node indices to global nodes;
+    4. The time stamps in `time` are not needed by the code, as `step_inu_tr` already specified the time step in nudging inputs.
+    5. `tracer_concentration` specifies the tarcer concentrations to nudge toward.
 
 ## .in
 ### station.in (.bp format)
