@@ -1643,7 +1643,7 @@
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    nComponents = 1 ;
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    one = 1 ;
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>variables:
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    double time_series(time, nOpenBndNodes, nLevels, nComponents) ;
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    float time_series(time, nOpenBndNodes, nLevels, nComponents) ;
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    float time_step(one) ;
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    double time(time) ;
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>}
@@ -1676,9 +1676,9 @@
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    time = UNLIMITED ; // (371 currently)
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>variables:
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    float time_step(one) ;
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    time_step:long_name = &quot;time step in seconds&quot; ;
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>      time_step:long_name = &quot;time step in seconds&quot; ;
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    double time(time) ;
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    time:long_name = &quot;simulation time in seconds&quot; ;
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>      time:long_name = &quot;simulation time in seconds&quot; ;
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    float time_series(time, nOpenBndNodes, nLevels, nComponents) ;
 </code></pre></div>
 </div>
@@ -1735,14 +1735,14 @@
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    time_vsink = UNLIMITED ; // (0 currently)
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    one = 1 ;
 <a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>variables:
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    int64 source_elem(nsources) ;
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    double vsource(time_vsource, nsources) ;
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    double msource(time_msource, ntracers, nsources) ;
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    int source_elem(nsources) ;
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    float vsource(time_vsource, nsources) ;
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    float msource(time_msource, ntracers, nsources) ;
 <a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    double time_msource(time_msource) ;
 <a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    double time_vsource(time_vsource) ;
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    double time_step_vsource(one) ;
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    double time_step_msource(one) ;
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    double time_step_vsink(one) ;
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    float time_step_vsource(one) ;
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    float time_step_msource(one) ;
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    float time_step_vsink(one) ;
 <a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
 <a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>// global attributes:
 <a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>            :file_format = &quot;NETCDF4&quot; ;
