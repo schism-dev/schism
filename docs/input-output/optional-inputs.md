@@ -178,7 +178,7 @@ Beside the time series inputs, we have the other types of netcdf4 input files as
     ```
 
 !!!notes
-    1. # of records for sources and sinks can be different;
+    1. Numbers of records for sources and sinks can be different;
     2. `source_elem` and `sink_elem` specify the element indices for source/sinks;
     3. The time stamps in `time_msource` etc are not needed by the code; only `time_step_*` (in sec) are required;
     4. `ntracers` specifies the **total** # of classes in **all** tracer modules (including T,S,..). The example above used ICM module (which has 21 classes), so together with T,S there are 23 'tracers'.
