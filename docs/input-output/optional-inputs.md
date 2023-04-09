@@ -55,7 +55,7 @@ These include `elev2D.th.nc`, `uv3D.th.nc`, `TEM_3D.th.nc`, `SAL_3D.th.nc`, and 
         nComponents = 1 ;
         one = 1 ;
     variables:
-        double time_series(time, nOpenBndNodes, nLevels, nComponents) ;
+        float time_series(time, nOpenBndNodes, nLevels, nComponents) ;
         float time_step(one) ;
         double time(time) ;
     }
@@ -88,9 +88,9 @@ These include `elev2D.th.nc`, `uv3D.th.nc`, `TEM_3D.th.nc`, `SAL_3D.th.nc`, and 
         time = UNLIMITED ; // (371 currently)
     variables:
         float time_step(one) ;
-        time_step:long_name = "time step in seconds" ;
+          time_step:long_name = "time step in seconds" ;
         double time(time) ;
-        time:long_name = "simulation time in seconds" ;
+          time:long_name = "simulation time in seconds" ;
         float time_series(time, nOpenBndNodes, nLevels, nComponents) ;
     ```
 
@@ -162,14 +162,14 @@ Beside the time series inputs, we have the other types of netcdf4 input files as
         time_vsink = UNLIMITED ; // (0 currently)
         one = 1 ;
     variables:
-        int64 source_elem(nsources) ;
-        double vsource(time_vsource, nsources) ;
-        double msource(time_msource, ntracers, nsources) ;
+        int source_elem(nsources) ;
+        float vsource(time_vsource, nsources) ;
+        float msource(time_msource, ntracers, nsources) ;
         double time_msource(time_msource) ;
         double time_vsource(time_vsource) ;
-        double time_step_vsource(one) ;
-        double time_step_msource(one) ;
-        double time_step_vsink(one) ;
+        float time_step_vsource(one) ;
+        float time_step_msource(one) ;
+        float time_step_vsink(one) ;
 
     // global attributes:
                 :file_format = "NETCDF4" ;
