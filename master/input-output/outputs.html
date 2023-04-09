@@ -1533,7 +1533,7 @@
 
 <p>All SCHISM outputs (except system outputs) can be found in <code>outputs/</code> directory.</p>
 <h2 id="run-info-output-mirrorout">Run info output (mirror.out)<a class="headerlink" href="#run-info-output-mirrorout" title="Permanent link">&para;</a></h2>
-<p>This is a mirror image of now-defunct screen output. Below is a sample:</p>
+<p>This is a mirror image of now-defunct screen output and is useful for diagnosis. Below is a sample:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Barotropic model without ST calculation
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> # of tracers in each module:            1            1            0
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>            0            0            0            0            0            0      0
@@ -1609,8 +1609,8 @@ will get an immediate crash from the model. </p>
 <p>Depending on whether or not you turned on OLDIO, the global netcdf outputs will look different.</p>
 <p>1) Scribed I/O (OLDIO is OFF)
 Under this mode, the netcdf outputs are global (combined) outputs, and you can visualize or process thm
- using latest FORTRAN (e.g., read_output10*), matlab or python scripts. 
-For example the latest VisIT plugins can visualize these outputs directly.</p>
+ using latest FORTRAN (e.g., read_output10*), matlab or python scripts, or 
+the latest VisIT plugins.</p>
 <p>All 2D variables (e.g. <code>elevation</code>, <code>sigWaveHeight</code> etc) as well as static information such as geometry
  and connectivity info are grouped into <code>out2d_*.nc</code>. On the other hand, each 3D variable has its own 
  output, and vector variables have X and  Y components in separate outputs (e.g. <code>horizontalVelX_*.nc</code> and
@@ -1640,12 +1640,17 @@ Under this mode, each MPI process will dump its own output and a post-processing
 <div class="admonition notes">
 <p class="admonition-title">Combine outputs</p>
 <p>The per-processor outputs need to be gathered into combined nc4 outputs first before you can visualize or post-process them. The script that does this is called <code>combine_output11.f90</code> (a simple perl script <code>autocombine_MPI_elfe.pl</code> exists to combine all available outputs transparently; you just need to update the path to the compiled <code>combine_output11</code> inside the script, and it can be launched before or after a run is done). See the header of <code>combine_output11.f90</code> on sample compilation commands and usage. Once you are done combining, you should have nc4 files called something like <code>schout_2.nc</code> etc. Note that the stack # remains but the MPI process number is gone. There is no utility for gathering the outputs in stack/time; instead most post-processing tools are able to work with multiple stacks.</p>
-<p>Note that SCHISM allows users to easily add more customized outputs, using the routine writeout_nc() inside schism_step. The combine scripts will automatically combine the additional outputs.</p>
+<p>Note that under OLDIO, SCHISM allows users to easily add more customized outputs, using the routine writeout_nc() inside schism_step. The combine scripts will automatically combine the additional outputs.</p>
 <p>You can visualize the combined nc4 outputs using VisIT (with SCHISM plug-ins). More info can be found in <a href="../getting-started/visualization.html">Visualization</a></p>
 </div>
 <div class="admonition notes">
+<p class="admonition-title">Special care for elevation outputs</p>
+<p>The elevation outputs from SCHISM are 'raw' outputs, which means users usually need to do post-processing to weed out dry instances themselves. This is a very common mistake from users. Always compare the elevation against local bottom elevation; if the total depth is less than <code>h0</code> you should not take the elevation outputs at face value - they should be instead NaN. For example, if the local depth is 2m, an elevation value of -3m or -1000m is the same: the node at this time instance is dry.</p>
+</div>
+<div class="admonition notes">
 <p class="admonition-title">Other global outputs</p>
-<p>The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (<code>outputs/maxelev_*</code> and <code>outputs/maxdahv_*</code>). These files can be combined using <code>Utility/Combining_Scripts/combine_gr3.f90</code> to generate <code>maxelev.gr3</code> and <code>maxdahv.gr3</code>. Another type of global outputs are hotstart outputs, which should be combined (using <code>combine_hotstart7.f90</code>) to generate a restart input.</p>
+<p>The user may be interested in some maximum quantities. At the moment, SCHISM outputs two max files for elevation and depth-averaged velocity (<code>outputs/maxelev_*</code> and <code>outputs/maxdahv_*</code>). These files can be combined using <code>Utility/Combining_Scripts/combine_gr3.f90</code> to generate <code>maxelev.gr3</code> and <code>maxdahv.gr3</code>. However, please exercise caution with <code>maxelev.gr3</code> calculated this way because it may contain transient responses from cold start that should be disgarded. We recommend using <code>Utility/Post-Processing-Fortran/read_output10_allnodes.f90</code>, which gives you more controls. Also see above for the general comments on elevation outputs.</p>
+<p>Another type of global outputs are hotstart outputs, which must be combined (using <code>combine_hotstart7.f90</code>) to generate a restart input.</p>
 </div>
 <h2 id="station-outputs">Station outputs<a class="headerlink" href="#station-outputs" title="Permanent link">&para;</a></h2>
 <p>These outputs are invoked with <code>iout_sta=1</code>, and are found in <code>outputs/staout_[1..,9]</code>, corresponding respectively to elev, air pressure, wind u, wind v, T, S, u, v, w. Each output has a simple ASCII format:</p>
