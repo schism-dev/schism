@@ -1498,7 +1498,7 @@
 <td>constant</td>
 <td>Tidal amp/phases</td>
 <td><code>elev2D.th.nc</code>: time- and space- varying along bnd</td>
-<td><code>elev2D.th.nc</code>: combination of 3 and 4</td>
+<td><code>elev2D.th.nc</code>: sum of 3 and 4</td>
 <td>Must = 0</td>
 <td>N\/A</td>
 <td><code>inu_elev=1</code></td>
@@ -1506,7 +1506,7 @@
 <tr>
 <td>S&amp;T, Tracers</td>
 <td><code>[MOD]_[ID].th</code>: relax to time history (uniform along bnd for inflow)</td>
-<td>Relax to constant for inflow</td>
+<td>Relax to specified value for inflow</td>
 <td>Relax to i.c. for inflow</td>
 <td><code>[MOD]_3D.th.nc</code>: relax to time- and space- varying values along bnd during inflow</td>
 <td>N/A</td>
@@ -1520,14 +1520,14 @@
 <td>Via dischage (&lt;0 for inflow)</td>
 <td>Tidal amp/phases for u and v components</td>
 <td><code>uv3D.th.nc</code>: time- and space- varying along bnd (in lon/lat for <code>ics=2</code>)</td>
-<td><code>uv3D.th.nc</code>: combination of 3 and 4 (but tidal amp/phases vary along bnd)</td>
+<td><code>uv3D.th.nc</code>: sum of 3 and 4</td>
 <td>Flather (0 for <span class="arithmatex">\(\eta\)</span>)</td>
 <td>Relax to <code>uv3D.th.nc</code> (2 separate relaxations for in and outflow)</td>
 <td><code>inu_uv=1</code></td>
 </tr>
 </tbody>
 </table>
-<p>Following is a psudo code to explain the structure of <code>bctides.in</code> for different types of boundary conditions listed above. Spaces between lines are for clarity.</p>
+<p>Following is a psudo code to explain the structure of <code>bctides.in</code> for different types of boundary conditions listed above. Spaces between lines are added for clarity.</p>
 <p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="o">&lt;</span><span class="n">you</span><span class="w"> </span><span class="n">notes</span><span class="o">&gt;</span><span class="w"> </span><span class="c">!Not used in code; write your own comments</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">ntip</span><span class="w"> </span><span class="n">tip_dp</span><span class="w"> </span><span class="c">!# of constituents used in earth tidal potential; cut-off depth for applying tidal potential (i.e., it is not calculated when depth &lt; tip_dp).</span>
@@ -1602,11 +1602,11 @@
 <a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="w">            </span><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="n">i</span>
 <a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a><span class="w">        </span><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="n">k</span>
 <a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a><span class="w">    </span><span class="k">else if</span><span class="w"> </span><span class="p">(</span><span class="n">ifltype</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="c">!Flather type radiation b.c. (iettype must be 0 in this case)</span>
-<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a><span class="w">        </span><span class="n">eta_mean</span><span class="w"> </span><span class="c">!mean elevation below</span>
+<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a><span class="w">        </span><span class="s1">&#39;eta_mean&#39;</span><span class="w"> </span><span class="c">!comment only - mean elevation below</span>
 <a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a><span class="w">        </span><span class="n">for</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nond</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="c">!loop over all nodes</span>
 <a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="w">            </span><span class="n">eta_m0</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="c">!mean elev at each node</span>
 <a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a><span class="w">        </span><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="n">i</span>
-<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="w">        </span><span class="n">vn_mean</span><span class="w"> </span><span class="c">!mean normal velocity</span>
+<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="w">        </span><span class="s1">&#39;vn_mean&#39;</span><span class="c">!comment only - mean normal velocity below</span>
 <a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a><span class="w">        </span><span class="n">for</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nond</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
 <a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a><span class="w">            </span><span class="n">qthcon</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">Nz</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="c">!mean normal velocity at the node (at all levels)</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a><span class="w">        </span><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="n">i</span>
@@ -1632,7 +1632,7 @@
 <a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a><span class="w">        </span><span class="p">.........</span>
 <a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a><span class="w">    </span><span class="k">endif</span>
 <a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>
-<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="w">    </span><span class="c">! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature.</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a><span class="w">    </span><span class="c">! If any tracer module is invoked, you also need the corresponding B.C. part for each tracer module, and the structure is similar to temperature. However, if the tracer module has multiple classes (which is the case for most modules; e.g.,  AGE, SED etc), you need to specify the concentration constants (under `2` etc) for all classes in 1 row. In later sections we will give examples for `.nc` inputs.</span>
 <a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>
 <a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a><span class="k">end </span><span class="n">for</span><span class="w"> </span><span class="c">!j: open boundary segment</span>
 </code></pre></div>
@@ -1665,7 +1665,7 @@
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code>bctides.in</code> is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out errors is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag at a segment to see if the code crashes before or after this point.</p>
+<p><code>bctides.in</code> is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out the  error location is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag of <code>6</code> at a segment to see if the code crashes before or after this point.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
