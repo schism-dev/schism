@@ -986,6 +986,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#level_age-999-int-array" class="md-nav__link">
+    level_age(:)=-999 (int array)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#iflux0-int" class="md-nav__link">
     iflux=0 (int)
   </a>
@@ -1093,13 +1100,6 @@
           <li class="md-nav__item">
   <a href="#itur0-int" class="md-nav__link">
     itur=0 (int)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#level_age-999-int-array" class="md-nav__link">
-    level_age(:)=-999 (int array)
   </a>
   
 </li>
@@ -2004,7 +2004,13 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
  ramp-up if &lt;=0). </p>
 <p>The tracers are injected into an element at a particular level, as specified by <code>lev_tr_source(1:ntr)</code> (where <code>ntr</code> is total
  # of tracer modules, i.e. 1 input level per module). The code will extrapolate below bottom/above surface if necessary, 
- so e.g., '-9' means bottom.</p>
+ so e.g., '-9' means bottom. To inject at all levels, set the level at '0'.</p>
+<div class="admonition note">
+<p class="admonition-title">AGE module</p>
+</div>
+<p>The AGE mpdule has its own way of injecting age tracers (see below), so make sure the age concentrations from all sources are all -9999. in msource.th so as to not interfere.</p>
+<h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
+<p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.</p>
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
 <p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
@@ -2105,8 +2111,6 @@ inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details
 <li>We only tested GOTM v3, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results.</li>
 </ol>
 </div>
-<h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
-<p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.</p>
 <h3 id="meth_sink1-int">meth_sink=1 (int)<a class="headerlink" href="#meth_sink1-int" title="Permanent link">&para;</a></h3>
 <p>Option for sinks. If <code>meth_sink =1</code>, the sink value is reset to <code>0</code> if an element is dry with 
 a net sink value locally to prevent further drawdown of groundwater.</p>
@@ -2154,7 +2158,7 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 <p class="admonition-title">Note</p>
 <ol>
 <li>SCHISM's view of the time origin is relatively simple. The code starts from t=0 and marches with time step <code>dt</code> under cold start. It starts from a specified time upon hot start. </li>
-<li>There only 2 exceptions: (1) in air-sea exchange (<code>ihconsv=1</code>), the origin info (including <code>utc_start</code>) specified in these parameters will be used against the time origins in each <code>sflux</code> file to determine the starting stack; (2) WWM manages its own time origin in <code>wwminput.nml</code>; it's advisable to align the latter with SCHISM's origin.</li>
+<li>There are only 2 exceptions: (1) in air-sea exchange (<code>ihconsv=1</code>), the origin info (including <code>utc_start</code>) specified in these parameters will be compared against the time origins in each <code>sflux</code> file to determine the starting stack; (2) WWM manages its own time origins in <code>wwminput.nml</code>; it's advisable to align the latter with SCHISM's origin.</li>
 </ol>
 </div>
 <h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
