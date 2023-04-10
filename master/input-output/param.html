@@ -916,8 +916,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#h12_bcc50100-double" class="md-nav__link">
-    h[1,2]_bcc=50,100 (double)
+  <a href="#h12_bcc50100-double-in-meters" class="md-nav__link">
+    h[1,2]_bcc=50,100 (double; in meters)
   </a>
   
 </li>
@@ -1029,7 +1029,7 @@
         
           <li class="md-nav__item">
   <a href="#iloadtide0-int-loadtide_coef-double" class="md-nav__link">
-    iloadtide=0 (int)  loadtide_coef (double)
+    iloadtide=0 (int), loadtide_coef (double)
   </a>
   
 </li>
@@ -1915,10 +1915,10 @@
 <li>if multiple entries for a parameter are found, the last one wins - please avoid this</li>
 <li>array inputs follow column major (like FORTRAN) and can spill to multiple line.</li>
 </ul>
-<p>The namelist file is divided into 3 major sections: <a href="#core">CORE</a>, <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a>. <a href="#core">CORE</a> lists out all core parameters that <em>must</em> be specified by the user, i.e., no defaults are provided by the code. <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a> sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file <code>param_out.nml</code>.</p>
+<p>The namelist file is divided into 3 major sections: <a href="#core">CORE</a>, <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a>. <a href="#core">CORE</a> lists out all core parameters that <em>must</em> be specified by the user, i.e., no defaults are provided by the code. <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a> sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file <code>outputs/param_out.nml</code>.</p>
 <p>Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should 
 not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not 
-have to follow the order below (cf. <code>param.nml</code>). In many cases we have grouped related parameters 
+have to follow the order below. In many cases we have grouped related parameters 
 for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
  info in the comments of the sample <code>param.nml</code>. The parameters are listed out below in alphabetic order.</p>
 <h2 id="core-block">CORE block<a class="headerlink" href="#core-block" title="Permanent link">&para;</a></h2>
@@ -1930,7 +1930,7 @@ for easier explanation, but you should specify them on separate lines. Also you'
 <p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code> or system outputs. </p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O (<code>OLDIO</code> off), make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist (as the scribe world is still initializing). Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>) and system outputs; if the run is finished you can manually kill it.</p>
+<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O (<code>OLDIO</code> off), make sure the number of 'computes' is 1, plus extra for scribes. Also under the scribe mode, the pre-processing run will likely finish without a clean exist (as the scribe world is still initializing). Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>) and system outputs; if the run is finished (e.g., you see 'Pre-processing completed successfully') you can manually kill the run.</p>
 </div>
 <h3 id="ibc-int-ibtp-int">ibc (int), ibtp (int)<a class="headerlink" href="#ibc-int-ibtp-int" title="Permanent link">&para;</a></h3>
 <p>Barotropic/baroclinic flags. </p>
@@ -1950,7 +1950,7 @@ for easier explanation, but you should specify them on separate lines. Also you'
 <h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
 <p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
 <h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
-<p>Ramp periods in days for the tides, B.C. or baroclincity. 
+<p>Ramp periods in days for the tides, B.C. (boundary condition) or baroclincity. 
 If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
 Turn off ramp-up by setting the ramp-up period &lt;=0. 
 The ramp function is a hyperbolic tangent function; e.g. <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
@@ -1958,13 +1958,13 @@ The ramp function is a hyperbolic tangent function; e.g. <span class="arithmatex
 <p>Options for specifying initial tracer fields for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If <code>flag_ic=1</code>, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like <code>temp.ic</code>, <code>salt.ic</code>, <code>[MOD]_hvar_[class #].ic</code> etc. If <code>flag_ic=2</code>, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like <code>ts.ic</code>, <code>[MOD]_vvar_[class #].ic</code>. For more general 3D initial tracer fields, use the hot start option. See <code>Optional inputs</code> section for examples of some of these inputs. Note that there is a requirement that <code>flag_ic(1)=flag_ic(2)</code>.</p>
 <h3 id="h0001-double">h0=0.01 (double)<a class="headerlink" href="#h0001-double" title="Permanent link">&para;</a></h3>
 <p>Minimum depth (in m) for wetting and drying (recommended value: <code>1cm</code>). When the total depth is less than <code>h0</code>, the corresponding nodes/sides/elements are marked as dry. It should always be positive.</p>
-<h3 id="h12_bcc50100-double">h[1,2]_bcc=50,100 (double)<a class="headerlink" href="#h12_bcc50100-double" title="Permanent link">&para;</a></h3>
+<h3 id="h12_bcc50100-double-in-meters">h[1,2]_bcc=50,100 (double; in meters)<a class="headerlink" href="#h12_bcc50100-double-in-meters" title="Permanent link">&para;</a></h3>
 <p>Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if <code>h&gt;=h2_bcc</code> (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if <code>h&lt;=h1_bcc(&lt;h2_bcc)</code>. A linear transition is used if the local depth <code>h1_bcc&lt;h&lt;h2_bcc</code>.</p>
 <h3 id="ibcc_mean0-int">ibcc_mean=0 (int)<a class="headerlink" href="#ibcc_mean0-int" title="Permanent link">&para;</a></h3>
 <p>Mean T,S profile option. If <code>ibcc_mean=1</code> (or <code>ihot=0</code> and <code>flag_ic(1:2)=2</code>), mean T/S profile is read in from <code>ts.ic</code>, and will be removed when calculating baroclinic force. No <code>ts.ic</code> is needed if <code>ibcc_mean=0</code>.</p>
 <h3 id="ic_elev0-int-nramp_elev0-int-int">ic_elev=0 (int), nramp_elev=0 (int) (int)<a class="headerlink" href="#ic_elev0-int-nramp_elev0-int-int" title="Permanent link">&para;</a></h3>
 <p>Elevation initial condition flag for cold start only (<code>ihot=0</code>). If <code>ic_elev=1</code>, <code>elev.ic</code> (in <code>*.gr3</code> format) 
-is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
+is needed to specify the initial condition (I.C.) Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
  elevation values in <code>hotstart.nc</code> (hotstart option). 
 If <code>ic_elev=1</code>, the user can ramp up the elevation
  smoothly at the boundary starting from the specified <code>elev.ic</code> or <code>hotstart.nc</code> (if <span class="arithmatex">\(ihot\neq 0\)</span>) by setting <code>nramp_elev=1</code> (and the ramp-up
@@ -1977,6 +1977,7 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <li><code>nstep_wwm=1</code> (int): call WWM every <code>nstep_wwm</code> time steps;</li>
 <li><code>hmin_radstress=1.0</code> (double): minimum total water depth in meters used only in radiation stress calculation; the radiation stress is zero if <code>local depth &lt;hmin_radstress</code>.</li>
 </ul>
+<p>In addition, there are parameters related to Vortex Formalism of Bennice and Ardhuin (2008).</p>
 <h3 id="ics1-int">ics=1 (int)<a class="headerlink" href="#ics1-int" title="Permanent link">&para;</a></h3>
 <p>Coordinate frame flag. If <code>ics=1</code>, Cartesian coordinates are used; if <code>ics=2</code>, both <code>hgrid.ll</code> and <code>hgrid.gr3</code> use degrees latitude/longitude (and they should be identical to each other in this case).</p>
 <h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters">i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" title="Permanent link">&para;</a></h3>
@@ -1988,7 +1989,7 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double">i_hmin_salt_ex (int), hmin_salt_ex (double)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double" title="Permanent link">&para;</a></h3>
 <p>Simialr tpo <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
 <h3 id="ielm_transport-0-max_subcyc-10-int">ielm_transport = 0, max_subcyc = 10 (int)<a class="headerlink" href="#ielm_transport-0-max_subcyc-10-int" title="Permanent link">&para;</a></h3>
-<p>Hybrid ELM-FV transport for performance; used only with <code>itr_met&gt;=3</code>. If <code>ielm_transport=1</code>, 
+<p>Hybrid ELM-FV transport for performance. If <code>ielm_transport=1</code>, 
 the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in 
 transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
 more efficient ELM transport is used locally (at the expense of mass conservation and accuracy, 
@@ -2017,12 +2018,12 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol>
-<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout\_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.</li>
+<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout\_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them. On the other hand, you don't need to have the global outputs in <code>outputs/</code> because <code>nhot_write</code> is a multiple of <code>ihfskip</code> so the new outputs will be written into a new stack. In fact, you can change the core count upon hotstart this way.</li>
 </ol>
 </div>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
 <p>Hydraulic model option. If <span class="arithmatex">\(ihydraulics \neq 0\)</span>, <code>hydraulics.in</code> is required (cf. hydraulics user manual).</p>
-<h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int)  loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
+<h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int), loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
 <p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
 If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from a tide database,
  e.g., FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with 
@@ -2052,7 +2053,7 @@ the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local 
 <p>For non-eddying regime applications (nearshore, estuary, river), an easiest option is: <code>indvel=0</code>, <code>ishapiro=1</code> (<code>shapiro0=0.5</code>), <code>ihorcon= inter_mom=0</code>.</p>
 <p>For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: <code>indvel=ishapiro=inter_mom=0</code>, <code>ihorcon=2</code>, <code>hvis_coef0=0.025</code>. If the amount of dissipation is insufficient in the non-eddying regime, consider using <code>ishapiro=-1</code>, with an appropriate <code>shapiro.gr3</code> to turn on Shapiro filter locally to add dissipation, or use <code>ishapiro=2</code> and <code>shapiro0=1000</code>.</p>
 <h3 id="inter_mom0-kr_co1-int">inter_mom=0, kr_co=1 (int)<a class="headerlink" href="#inter_mom0-kr_co1-int" title="Permanent link">&para;</a></h3>
-<p>Interpolation method at foot of characteristic line during ELM. <code>inter_mom=0</code>: default linear interpolation; <code>=1</code>: dual kriging method. If <code>inter_mom=-1</code>, the depth in <code>krvel.gr3</code> (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in <code>kr_co</code>: 1: linear <span class="arithmatex">\(f(h)=-h\)</span>; 2: <span class="arithmatex">\((h^2*log(h)\)</span>; 3: cubic <span class="arithmatex">\((h^3)\)</span>; 4: <span class="arithmatex">\((-h^5)\)</span>.</p>
+<p>Interpolation method at foot of characteristic line during ELM. <code>inter_mom=0</code>: default linear interpolation; <code>=1</code>: dual kriging method. If <code>inter_mom=-1</code>, the depth in <code>krvel.gr3</code> (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in <code>kr_co</code>: 1: linear <span class="arithmatex">\(f(h)=-h\)</span>; 2: <span class="arithmatex">\((h^2*log(h))\)</span>; 3: cubic <span class="arithmatex">\((h^3)\)</span>; 4: <span class="arithmatex">\((-h^5)\)</span>.</p>
 <p>In general, <code>indvel=0</code> should be used with <code>inter_mom=0</code> or <code>inter_mom=1, kr_co=1,2</code> to avoid large dispersion (with additional viscosity/filter also). <code>indvel=1</code> can be used with any covariance function without viscosity/filter.</p>
 <h3 id="inu_elev0-inu_uv0-int">inu_elev=0, inu_uv=0 (int)<a class="headerlink" href="#inu_elev0-inu_uv0-int" title="Permanent link">&para;</a></h3>
 <p>Sponge layer for elevation and velocity (which is rarely used in SCHISM). Relaxation/nudging of a generic variable is implemented as:</p>
@@ -2080,8 +2081,8 @@ i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt
 <h3 id="isav0-int">isav=0 (int)<a class="headerlink" href="#isav0-int" title="Permanent link">&para;</a></h3>
 <p>Parameters for submerged or emergent vegetation. If <code>isav=1</code> (module on), you need to supply 4 extra inputs: <code>sav_cd.gr3</code> (form drag coefficient), <code>sav_D.gr3</code> (depth is stem diameter in meters); <code>sav_N.gr3</code> (depth is # of stems per m2); and <code>sav_h.gr3</code> (height of canopy in meters).</p>
 <h3 id="itr_met3-int-h_tvd5-double">itr_met=3 (int), h_tvd=5. (double)<a class="headerlink" href="#itr_met3-int-h_tvd5-double" title="Permanent link">&para;</a></h3>
-<p>Transport option for all tracers. <code>itr_met=3</code> for <span class="arithmatex">\(TVD^2\)</span>, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
-Also in this case, you can additional toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
+<p>Transport option for all tracers. <code>itr_met=3</code> for TVD, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
+Also in this case, you can additionally toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
 <p>If <code>itr_met=3</code>, 2 tolerances are also required (use recommended values).
 If <code>itr_met=4</code> (WENO), there are several additional parameters. The most important ones are <code>epsilon[12]</code>, which controls the
  numerical dispersion for the 2nd and 3rd-order WENO respectively (note that the code will decide which order is used at each prism based on geometric constraints).</p>
@@ -2149,6 +2150,13 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 <p>Centers of projection used to convert lat/lon to Cartesian coordinates. These are used if a variable Coriolis parameter is employed (ncor=1).</p>
 <h3 id="start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double">start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)<a class="headerlink" href="#start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double" title="Permanent link">&para;</a></h3>
 <p>Starting time for simulation. <code>utc_start</code> is hours <strong>behind</strong> the GMT, and is used to adjust time zone. For example, <code>utc_start=5</code> is US Eastern Time, and <code>utc_start= -8</code> is Beijing Time.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>SCHISM's view of the time origin is relatively simple. The code starts from t=0 and marches with time step <code>dt</code> under cold start. It starts from a specified time upon hot start. </li>
+<li>There only 2 exceptions: (1) in air-sea exchange (<code>ihconsv=1</code>), the origin info (including <code>utc_start</code>) specified in these parameters will be used against the time origins in each <code>sflux</code> file to determine the starting stack; (2) WWM manages its own time origin in <code>wwminput.nml</code>; it's advisable to align the latter with SCHISM's origin.</li>
+</ol>
+</div>
 <h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
 <p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.</p>
 <h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
