@@ -156,4 +156,4 @@ Sample 2 illustrates how to set a Type 3 (tidal) boundary:
     `bctides.in` is one of the most error prone inputs for users due to its rigid formatting requirements. One useful trick to quickly find out the  error location is to deliberately crash the code by placing illegal choices along this input to help isolate the errors (think of bi-section method). For example, you can intentionally set an illegal B.C. flag of `6` at a segment to see if the code crashes before or after this point.
 
 !!!note 
-    The tidal amplitudes and phases can be generated using utility scripts shown on the [Pre-processing](../getting-started/pre-processing.md) section.
+    The tidal amplitudes and phases can be generated using utility scripts in the `Tides`.

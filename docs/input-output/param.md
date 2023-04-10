@@ -8,11 +8,11 @@ The file uses the FORTRAN namelist format. The order of input parameters is not 
 - if multiple entries for a parameter are found, the last one wins - please avoid this
 - array inputs follow column major (like FORTRAN) and can spill to multiple line.
 
-The namelist file is divided into 3 major sections: [CORE](#core), [OPT](#opt) and [SCHOUT](#schout). [CORE](#core) lists out all core parameters that _must_ be specified by the user, i.e., no defaults are provided by the code. [OPT](#opt) and [SCHOUT](#schout) sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file `param_out.nml`.
+The namelist file is divided into 3 major sections: [CORE](#core), [OPT](#opt) and [SCHOUT](#schout). [CORE](#core) lists out all core parameters that _must_ be specified by the user, i.e., no defaults are provided by the code. [OPT](#opt) and [SCHOUT](#schout) sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file `outputs/param_out.nml`.
 
 Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should 
 not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not 
-have to follow the order below (cf. `param.nml`). In many cases we have grouped related parameters 
+have to follow the order below. In many cases we have grouped related parameters 
 for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
  info in the comments of the sample `param.nml`. The parameters are listed out below in alphabetic order.
 
@@ -27,7 +27,7 @@ Pre-processing flag (1: on; 0: off). `ipre=0`: normal run.
 Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. `ipre=1`: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and `mirror.out` and stop. Check errors in `fatal.error` or system outputs. 
 
 !!!important 
-    `ipre/=0` only works for single CPU! If you use scribed I/O (`OLDIO` off), make sure the number of 'computes' is 1, plus extra for scribes. Also under this option, the pre-processing run may finish without a clean exist (as the scribe world is still initializing). Check `outputs/` (`mirror.out` and `fatal.error`) and system outputs; if the run is finished you can manually kill it.
+    `ipre/=0` only works for single CPU! If you use scribed I/O (`OLDIO` off), make sure the number of 'computes' is 1, plus extra for scribes. Also under the scribe mode, the pre-processing run will likely finish without a clean exist (as the scribe world is still initializing). Check `outputs/` (`mirror.out` and `fatal.error`) and system outputs; if the run is finished (e.g., you see 'Pre-processing completed successfully') you can manually kill the run.
 
 ### ibc (int), ibtp (int)
 Barotropic/baroclinic flags. 
@@ -56,7 +56,7 @@ The optional parameters below are explained in alphabetical order. The default v
 
 
 ###  dramp=1. (double), drampbc=1. (double)
-Ramp periods in days for the tides, B.C. or baroclincity. 
+Ramp periods in days for the tides, B.C. (boundary condition) or baroclincity. 
 If `ibc=0`, the ramp-up for baroclinicity is specified with `drampbc` (in days). 
 Turn off ramp-up by setting the ramp-up period <=0. 
 The ramp function is a hyperbolic tangent function; e.g. $f(t) = \tanh(2t/86400/\text{drampbc})$.
@@ -67,7 +67,7 @@ Options for specifying initial tracer fields for cold start, where each array en
 ### h0=0.01 (double)
 Minimum depth (in m) for wetting and drying (recommended value: `1cm`). When the total depth is less than `h0`, the corresponding nodes/sides/elements are marked as dry. It should always be positive.
 
-### h[1,2]_bcc=50,100 (double)
+### h[1,2]_bcc=50,100 (double; in meters)
 Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if `h>=h2_bcc` (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if `h<=h1_bcc(<h2_bcc)`. A linear transition is used if the local depth `h1_bcc<h<h2_bcc`.
 
 ### ibcc_mean=0 (int)
@@ -75,7 +75,7 @@ Mean T,S profile option. If `ibcc_mean=1` (or `ihot=0` and `flag_ic(1:2)=2`), me
 
 ### ic_elev=0 (int), nramp_elev=0 (int) (int)
 Elevation initial condition flag for cold start only (`ihot=0`). If `ic_elev=1`, `elev.ic` (in `*.gr3` format) 
-is needed to specify the I.C. Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
+is needed to specify the initial condition (I.C.) Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
  elevation values in `hotstart.nc` (hotstart option). 
 If `ic_elev=1`, the user can ramp up the elevation
  smoothly at the boundary starting from the specified `elev.ic` or `hotstart.nc` (if $ihot\neq 0$) by setting `nramp_elev=1` (and the ramp-up
@@ -91,6 +91,8 @@ If `icou_elfe_wwm=1`, additional parameters are:
 - `nstep_wwm=1` (int): call WWM every `nstep_wwm` time steps;
 - `hmin_radstress=1.0` (double): minimum total water depth in meters used only in radiation stress calculation; the radiation stress is zero if `local depth <hmin_radstress`.
 
+In addition, there are parameters related to Vortex Formalism of Bennice and Ardhuin (2008).
+
 ### ics=1 (int)
 Coordinate frame flag. If `ics=1`, Cartesian coordinates are used; if `ics=2`, both `hgrid.ll` and `hgrid.gr3` use degrees latitude/longitude (and they should be identical to each other in this case).
 
@@ -104,7 +106,7 @@ Option to locally turn off heat exchange.
 Simialr tpo `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 
 ### ielm_transport = 0, max_subcyc = 10 (int)
-Hybrid ELM-FV transport for performance; used only with `itr_met>=3`. If `ielm_transport=1`, 
+Hybrid ELM-FV transport for performance. If `ielm_transport=1`, 
 the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in 
 transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
 more efficient ELM transport is used locally (at the expense of mass conservation and accuracy, 
@@ -140,13 +142,13 @@ Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If $i
 Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`. 
 
 !!! note
-    1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout\_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them.
+    1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout\_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them. On the other hand, you don't need to have the global outputs in `outputs/` because `nhot_write` is a multiple of `ihfskip` so the new outputs will be written into a new stack. In fact, you can change the core count upon hotstart this way.
 
 ### ihydraulics=0 (int)
 Hydraulic model option. If $ihydraulics \neq 0$, `hydraulics.in` is required (cf. hydraulics user manual).
 
 
-### iloadtide=0 (int)  loadtide_coef (double)
+### iloadtide=0 (int), loadtide_coef (double)
 Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
 If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from a tide database,
  e.g., FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with 
@@ -186,7 +188,7 @@ For non-eddying regime applications (nearshore, estuary, river), an easiest opti
 For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: `indvel=ishapiro=inter_mom=0`, `ihorcon=2`, `hvis_coef0=0.025`. If the amount of dissipation is insufficient in the non-eddying regime, consider using `ishapiro=-1`, with an appropriate `shapiro.gr3` to turn on Shapiro filter locally to add dissipation, or use `ishapiro=2` and `shapiro0=1000`.
 
 ### inter_mom=0, kr_co=1 (int)
-Interpolation method at foot of characteristic line during ELM. `inter_mom=0`: default linear interpolation; `=1`: dual kriging method. If `inter_mom=-1`, the depth in `krvel.gr3` (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in `kr_co`: 1: linear $f(h)=-h$; 2: $(h^2*log(h)$; 3: cubic $(h^3)$; 4: $(-h^5)$.
+Interpolation method at foot of characteristic line during ELM. `inter_mom=0`: default linear interpolation; `=1`: dual kriging method. If `inter_mom=-1`, the depth in `krvel.gr3` (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in `kr_co`: 1: linear $f(h)=-h$; 2: $(h^2*log(h))$; 3: cubic $(h^3)$; 4: $(-h^5)$.
 
 In general, `indvel=0` should be used with `inter_mom=0` or `inter_mom=1, kr_co=1,2` to avoid large dispersion (with additional viscosity/filter also). `indvel=1` can be used with any covariance function without viscosity/filter.
 
@@ -228,8 +230,8 @@ Choice of inundation algorithm. `inunfl=1` can be used if the horizontal resolut
 Parameters for submerged or emergent vegetation. If `isav=1` (module on), you need to supply 4 extra inputs: `sav_cd.gr3` (form drag coefficient), `sav_D.gr3` (depth is stem diameter in meters); `sav_N.gr3` (depth is # of stems per m2); and `sav_h.gr3` (height of canopy in meters).
 
 ### itr_met=3 (int), h_tvd=5. (double)
-Transport option for all tracers. `itr_met=3` for $TVD^2$, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 
-Also in this case, you can additional toggle between upwind and TVD by specifying regions in `tvd.prop`. The TVD limiter function is specified in `TVD_LIM` in `mk/include_modules` (for code efficiency purpose). 
+Transport option for all tracers. `itr_met=3` for TVD, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 
+Also in this case, you can additionally toggle between upwind and TVD by specifying regions in `tvd.prop`. The TVD limiter function is specified in `TVD_LIM` in `mk/include_modules` (for code efficiency purpose). 
 
 If `itr_met=3`, 2 tolerances are also required (use recommended values).
 If `itr_met=4` (WENO), there are several additional parameters. The most important ones are `epsilon[12]`, which controls the
@@ -318,6 +320,10 @@ Centers of projection used to convert lat/lon to Cartesian coordinates. These ar
 
 ### start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)
 Starting time for simulation. `utc_start` is hours **behind** the GMT, and is used to adjust time zone. For example, `utc_start=5` is US Eastern Time, and `utc_start= -8` is Beijing Time.
+
+!!! note
+    1. SCHISM's view of the time origin is relatively simple. The code starts from t=0 and marches with time step `dt` under cold start. It starts from a specified time upon hot start. 
+    2. There only 2 exceptions: (1) in air-sea exchange (`ihconsv=1`), the origin info (including `utc_start`) specified in these parameters will be used against the time origins in each `sflux` file to determine the starting stack; (2) WWM manages its own time origin in `wwminput.nml`; it's advisable to align the latter with SCHISM's origin.
 
 ### thetai=0.6 (double)
 Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.
