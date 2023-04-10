@@ -5105,10 +5105,10 @@
 #ifdef USE_AGE
           !AGE: deal with first half of tracers only (2nd half=0). Mark non-0 elem
           indx2=m-irange_tr(1,mm)+1 !local tracer index
-          !If level_age=-999, the init from .ic is good (1 for all levels)
+          !If level_age=-999, the init from .ic is good (inject 1 at all levels)
           if(mm==4.and.indx2<=ntrs(4)/2) then !.and.level_age(indx2)/=-999) then
             do i=1,nea
-              if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then
+              if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then !non-0 elem initially
                 nelem_age(indx2)=nelem_age(indx2)+1
                 if(nelem_age(indx2)>nea) call parallel_abort('INIT: increase dim of ielem_age')
                 ielem_age(nelem_age(indx2),indx2)=i

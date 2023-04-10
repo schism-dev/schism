@@ -290,14 +290,18 @@
   dramp_ss = 2 !needed if if_source/=0; ramp-up period in days for source/sinks (no ramp-up if <=0)
   meth_sink = 1 !options to treat sinks @ dry elem
 
+!----------------------------------------------------------------------
 ! Specify vertical level to inject source concentration for each tracer _module_.
 ! Code will extrapolate below bottom/above surface unless level 0 is specified. In
 ! the latter case, the incoming tracer mass will be distributed across all vertical layers - 
 ! this approach works best in shallow waters. 
+! NOTE: AGE module has its own way of injecting age tracers, so make sure the age concentrations
+!  are all -9999. in msource.th so as to not interfere!
+!----------------------------------------------------------------------
   lev_tr_source(1) = -9 !T
   lev_tr_source(2) = -9 !S
   lev_tr_source(3) = -9 !GEN
-  lev_tr_source(4) = -9 !AGE
+  lev_tr_source(4) = -9 !AGE: set -9999. in msource's AGE section
   lev_tr_source(5) = -9 !SED3D
   lev_tr_source(6) = -9 !EcoSim
   lev_tr_source(7) = -9 !ICM
@@ -306,6 +310,11 @@
   lev_tr_source(10) = -9 !TIMOR
   lev_tr_source(11) = -9 !FABM
   lev_tr_source(12) = -9 !DVD
+
+!----------------------------------------------------------------------
+! Specify level #'s if age module is invoked (USE_AGE), for 1st half of tracers only
+!----------------------------------------------------------------------
+  level_age = 9, -999 !default: -999 (all levels)
 
 !-----------------------------------------------------------------------
 ! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
@@ -704,11 +713,6 @@
 !----------------------------------------------------------------------
   nstep_ice = 1 !call ice module every nstep_ice steps of SCHISM
 
-
-!----------------------------------------------------------------------
-! Specify level #'s if age module is invoked (USE_AGE), for 1st half of tracers only
-!----------------------------------------------------------------------
-  level_age = 9, -999 !default: -999 (all levels)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Physical constants

@@ -124,7 +124,14 @@ steps and # of records for volume/mass source/sinks. If `if_source/=0`, specify 
 
 The tracers are injected into an element at a particular level, as specified by `lev_tr_source(1:ntr)` (where `ntr` is total
  # of tracer modules, i.e. 1 input level per module). The code will extrapolate below bottom/above surface if necessary, 
- so e.g., '-9' means bottom.
+ so e.g., '-9' means bottom. To inject at all levels, set the level at '0'.
+
+!!! note "AGE module"
+ The AGE mpdule has its own way of injecting age tracers (see below), so make sure the age concentrations from all sources are all -9999. in msource.th so as to not interfere.
+
+
+### level_age(:)=-999 (int array)
+If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.
 
 ### iflux=0 (int)
 Parameter for checking volume and tracer mass conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
@@ -260,9 +267,6 @@ inside, you may consult [gotm.net](https://gotm.net) for more details.
 !!! note
     1. We only tested GOTM v3, not newer versions of GOTM. Using `itur=3` generally gave similar results.
 
-### level_age(:)=-999 (int array)
-If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.
-
 ### meth_sink=1 (int)
 Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with 
 a net sink value locally to prevent further drawdown of groundwater.
@@ -323,7 +327,7 @@ Starting time for simulation. `utc_start` is hours **behind** the GMT, and is us
 
 !!! note
     1. SCHISM's view of the time origin is relatively simple. The code starts from t=0 and marches with time step `dt` under cold start. It starts from a specified time upon hot start. 
-    2. There only 2 exceptions: (1) in air-sea exchange (`ihconsv=1`), the origin info (including `utc_start`) specified in these parameters will be used against the time origins in each `sflux` file to determine the starting stack; (2) WWM manages its own time origin in `wwminput.nml`; it's advisable to align the latter with SCHISM's origin.
+    2. There are only 2 exceptions: (1) in air-sea exchange (`ihconsv=1`), the origin info (including `utc_start`) specified in these parameters will be compared against the time origins in each `sflux` file to determine the starting stack; (2) WWM manages its own time origins in `wwminput.nml`; it's advisable to align the latter with SCHISM's origin.
 
 ### thetai=0.6 (double)
 Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.
