@@ -1537,7 +1537,7 @@
 <figcaption>Pathologic cases for hydrologic flows.</figcaption>
 </figure>
 <h2 id="tsunami-simulations">Tsunami simulations<a class="headerlink" href="#tsunami-simulations" title="Permanent link">&para;</a></h2>
-<p>Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) <a href="http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz">here</a>.
+<p>Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) at http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz
 Note that the files are compatible with the serial version of SCHISM, but the idea for parallel version is similar.</p>
 <p>The operational time step for tsunami applications is generally in the range of a few seconds because of the constraint from shorter wavelength
  and inundation processes. You'll need higher mesh resolution also to satisfy the inverse CFL criterion (<code>CFL&gt;0.2</code>). 
@@ -1551,12 +1551,11 @@ If you use the newer parallel version, you can also use a 2D model with a proper
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  c) We typically run this stage for 10 sec duration and at the end of the run you&#39;ll find an output files called `10_hotstart` which is then used as hotstart.in for the next (propagation and inundation) stage.
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  d) In addition, use `mod_depth.f` (inside the bundle), which takes info in `bdef.gr3` and `hgrid.gr3` (pre-earthquake depths) to generate hgrid.new (post-earthquake depths). The latter is used in the next stage. For completeness you need to attach the boundary condition part (`b.tmp` in the bundle) of `hgrid.gr3` to the end of `hgrid.new`;
 </code></pre></div></li>
-<li>Propagation and inundation stage (EX15/ in the sample run): this run continues from the deformation run above with no further seafloor movement. You'll notice that many input files are identical to the Def/ run, but be careful of differences in hgrid.gr3 (linked to Def/hgrid.new) and param.in (imm=0 etc).</li>
-</ol>
-<p>a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it's negligible there (adv.gr3) -  this bypasses the inverse CFL criterion.
-  b) Also note that <code>hotstart.in</code> is from the previous stage. </p>
-<ol>
-<li>After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (maxelev.gr3) and depth-averaged velocity (maxdahv.gr3) are also part of the outputs (for parallel versions, use <code>/src/Utility/Combining_Scripts/combine_gr3.f90</code>). The maximum inundation can be easily computed from <code>maxelev.gr3</code>.</li>
+<li>Propagation and inundation stage (EX15/ in the sample run): this run continues from the deformation run above with no further seafloor movement. You'll notice that many input files are identical to the Def/ run, but be careful of differences in hgrid.gr3 (linked to Def/hgrid.new) and param.in (imm=0 etc).
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it&#39;s negligible there (`adv.gr3`) -  this bypasses the inverse CFL criterion and allows you to use a coarser resolution in deeper ocean.
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  b) Also note that `hotstart.in` is from the previous stage. 
+</code></pre></div></li>
+<li>After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (<code>maxelev.gr3</code>) and depth-averaged velocity (<code>maxdahv.gr3</code>) are also part of the outputs (for parallel versions, use <code>/src/Utility/Combining_Scripts/combine_gr3.f90</code>). The maximum inundation can be easily computed from <code>maxelev.gr3</code>.</li>
 </ol>
 
               
