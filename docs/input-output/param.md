@@ -131,7 +131,8 @@ The tracers are injected into an element at a particular level, as specified by 
 
 
 ### level_age(:)=-999 (int array)
-If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.
+If `USE_AGE` is on, this array specifies the vertical level indices used to inject age tracers. You only need to 
+ specify this for the first half of the tracer classes. Use -999 to inject the tracer at all levels.
 
 ### iflux=0 (int)
 Parameter for checking volume and tracer mass conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
