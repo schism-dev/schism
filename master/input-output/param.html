@@ -2010,7 +2010,8 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 </div>
 <p>The AGE mpdule has its own way of injecting age tracers (see below), so make sure the age concentrations from all sources are all -9999. in msource.th so as to not interfere.</p>
 <h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
-<p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. Use -999 to inject the tracer at all levels.</p>
+<p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. You only need to 
+ specify this for the first half of the tracer classes. Use -999 to inject the tracer at all levels.</p>
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
 <p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
