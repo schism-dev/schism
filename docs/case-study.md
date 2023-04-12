@@ -25,19 +25,27 @@ To get accurate results in the hydrologic regime, it is also important to resolv
 </figure>
 
 ## Tsunami simulations
-Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) [here](http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz). 
+Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) [here](http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz ).
 Note that the files are compatible with the serial version of SCHISM, but the idea for parallel version is similar.
+
+The operational time step for tsunami applications is generally in the range of a few seconds because of the constraint from shorter wavelength
+ and inundation processes. You'll need higher mesh resolution also to satisfy the inverse CFL criterion (`CFL>0.2`). 
+ The inundation results may also be sensitive to the min. depth used in the run (1cm in this example). 
+If you use the newer parallel version, you can also use a 2D model with a proper Manning coefficient.
 
 Typically you need to follow these 2 steps in tsunami simulations:
 
 1. Deformation run (EX15/Def/ in the sample run): this simulates the earthquake and the set-up of the initial surface waves. For this you need:
-  a) bdef.gr3 (refer to the user manual) which specifies the total seafloor deformation.
-  b) turn on the hotstart output handle, dt=1s, 10 steps, rnday=1.158e-4
-  c) We typically run this stage for 10 sec duration and at the end of the run you'll find an output files called 10_hotstart which is then used as hotstart.in for the next (propagation and inundation) stage.
-  d) In addition, use mod_depth.f (inside the bundle), which takes info in bdef.gr3 and hgrid.gr3 (pre-earthquake depths) to generate hgrid.new (post-earthquake depths). The latter is used in the next stage. For completeness you need to attach the boundary condition part (b.tmp in the bundle) of hgrid.gr3 to the end of hgrid.new;
+```
+  a) `bdef.gr3` (refer to the user manual) which specifies the total seafloor deformation.
+  b) turn on the hotstart output handle, and `dt=1s, ibdef=10, rnday=1.158e-4`
+  c) We typically run this stage for 10 sec duration and at the end of the run you'll find an output files called `10_hotstart` which is then used as hotstart.in for the next (propagation and inundation) stage.
+  d) In addition, use `mod_depth.f` (inside the bundle), which takes info in `bdef.gr3` and `hgrid.gr3` (pre-earthquake depths) to generate hgrid.new (post-earthquake depths). The latter is used in the next stage. For completeness you need to attach the boundary condition part (`b.tmp` in the bundle) of `hgrid.gr3` to the end of `hgrid.new`;
+```
 2. Propagation and inundation stage (EX15/ in the sample run): this run continues from the deformation run above with no further seafloor movement. You'll notice that many input files are identical to the Def/ run, but be careful of differences in hgrid.gr3 (linked to Def/hgrid.new) and param.in (imm=0 etc).
-  a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it's negligible there (adv.gr3) - see for info on CFL number.
-  b) Also note that hotstart.in is from the previous stage. A relatively small time step of 1 sec (by SCHISM standard) is used because of the constraint from inundation stage.
 
-The operational time step for tsunami applications is generally in the range of a few seconds. The inundation results may also be sensitive to the min. depth used in the run (1cm in this example). Also since only 2 S layers are used in the vertical (quasi-2D mode) we set the bottom friction to 0. If you have to use non-zero friction you'll need to use more layers and make sure the bottom boundary layer is resolved. If you use the recent parallel version, you can simply use a 2D model with a proper Manning coefficient.
-3. After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (maxelev.gr3) and depth-averaged velocity (maxdahv.gr3) are also part of the outputs (for parallel versions, use /src/Utility/Combining_Scripts/combine_gr3.f90). The maximum inundation can be easily computed from maxelev.gr3.
+  a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it's negligible there (adv.gr3) -  this bypasses the inverse CFL criterion.
+  b) Also note that `hotstart.in` is from the previous stage. 
+
+
+3. After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (maxelev.gr3) and depth-averaged velocity (maxdahv.gr3) are also part of the outputs (for parallel versions, use `/src/Utility/Combining_Scripts/combine_gr3.f90`). The maximum inundation can be easily computed from `maxelev.gr3`.
