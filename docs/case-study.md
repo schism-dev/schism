@@ -25,7 +25,7 @@ To get accurate results in the hydrologic regime, it is also important to resolv
 </figure>
 
 ## Tsunami simulations
-Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) [here](http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz ).
+Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) at http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz
 Note that the files are compatible with the serial version of SCHISM, but the idea for parallel version is similar.
 
 The operational time step for tsunami applications is generally in the range of a few seconds because of the constraint from shorter wavelength
@@ -43,9 +43,8 @@ Typically you need to follow these 2 steps in tsunami simulations:
   d) In addition, use `mod_depth.f` (inside the bundle), which takes info in `bdef.gr3` and `hgrid.gr3` (pre-earthquake depths) to generate hgrid.new (post-earthquake depths). The latter is used in the next stage. For completeness you need to attach the boundary condition part (`b.tmp` in the bundle) of `hgrid.gr3` to the end of `hgrid.new`;
 ```
 2. Propagation and inundation stage (EX15/ in the sample run): this run continues from the deformation run above with no further seafloor movement. You'll notice that many input files are identical to the Def/ run, but be careful of differences in hgrid.gr3 (linked to Def/hgrid.new) and param.in (imm=0 etc).
-
-  a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it's negligible there (adv.gr3) -  this bypasses the inverse CFL criterion.
+```
+  a) For this run we also turn off the advection in the open ocean (up to say 60m isobath) because it's negligible there (`adv.gr3`) -  this bypasses the inverse CFL criterion and allows you to use a coarser resolution in deeper ocean.
   b) Also note that `hotstart.in` is from the previous stage. 
-
-
-3. After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (maxelev.gr3) and depth-averaged velocity (maxdahv.gr3) are also part of the outputs (for parallel versions, use `/src/Utility/Combining_Scripts/combine_gr3.f90`). The maximum inundation can be easily computed from `maxelev.gr3`.
+```
+3. After the run is done you can look at global outputs (elevation, depth-averaged velocity etc). The maximum elevation (`maxelev.gr3`) and depth-averaged velocity (`maxdahv.gr3`) are also part of the outputs (for parallel versions, use `/src/Utility/Combining_Scripts/combine_gr3.f90`). The maximum inundation can be easily computed from `maxelev.gr3`.
