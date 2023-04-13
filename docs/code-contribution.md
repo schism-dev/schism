@@ -24,7 +24,7 @@ The domain decomposition is done using ParMETIS graph partitioning library (incl
 
 The Utility dir has a lot of useful utility scripts for pre- and post-processing. The header of each program generally has info on its purpose and instructions on how to use it.
 
-- `ACE`: source code and install notes for ACE tools; the manual can be found on the web site.
+- `ACE`: source code and install notes for ACE tools; the manual can be found on [Forum](http://ccrm.vims.edu/w/index.php/Online_tutorials#ACE_tool_tutorial).
 - `Combining_Scripts`: FORTRAN and perl scripts used to gather outputs from SCHISM (e.g., `outputs/schout_0*_[stack number].nc` etc) into one binary file (`schout_[stack_number].nc`).
 - `Grid_Scripts`: FORTRAN codes to interpolate depths from DEM files in either structured grid (raster) or unstructured grid format. While ACE/xmgredit5 can do similar things, these scripts are mostly for interpolating from very large DEM files.
 - `Gen_Hotstart`: scripts for preparing `hotstart.nc` from e.g., netcdf outputs from a structured-grid model.

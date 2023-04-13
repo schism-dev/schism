@@ -26,6 +26,7 @@ To get accurate results in the hydrologic regime, it is also important to resolv
 
 ## Tsunami simulations
 Your can diwnload a sample tsunami run (impact of Alaska tsunami waves on Cannon Beach, OR) at http://www.ccrm.vims.edu/yinglong/wiki_files/tsunami_ex15.tgz
+
 Note that the files are compatible with the serial version of SCHISM, but the idea for parallel version is similar.
 
 The operational time step for tsunami applications is generally in the range of a few seconds because of the constraint from shorter wavelength
