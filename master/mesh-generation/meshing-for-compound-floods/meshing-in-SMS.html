@@ -1686,12 +1686,15 @@ This takes about 3-5 hours, depending on how fast your desktop is.</p>
 <p>Although the script tries to optimize the convergence of river arcs at river intersections
 , skew elements may occasionally occur.
 <img alt="river-intersections" src="../../assets/mesh-intersections.png" /></p>
-<p>It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.</p>
-<p>If you think it is necessary, you may remedy them using the following script provided in <a href="">SCHISM Git</a>:
+<p>Normally these small 'bad' elements do not affect the efficiency or stability of SCHISM simulations. 
+However, it's advisable to edit out very small/skew elements.
+You may remedy them using the following script provided in <a href="">SCHISM Git</a>:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
 </code></pre></div>
-The script automatically checks for small and skew elements,
+The script automatically checks for very small and skew elements,
 then improve the mesh either by removing the problematic elements or local relaxation.</p>
+<p>As a general rule of thumb, SCHISM can comfortably handle elements &gt;= <span class="arithmatex">\(1m^2\)</span> (<span class="arithmatex">\(10^{-10}\)</span> in lon/lat), and skewness&lt;=60. 
+Use <code>ACE/xmgredit5</code> or SMS to check these. Most of those extreme elements are due to SMS map issues so you should fix them there.</p>
 
               
             </article>
