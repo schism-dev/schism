@@ -21,7 +21,8 @@ excessive sub-cycling; use upwind in areas of no stratification. Another way to 
     - Minimum area: make sure there are no negative elements (under xmgredit5->Status).
     - $CFL>0.4$ (at least in ‘wet’ areas). Note that you need to do this check in map projection (meters), not in lon/lat!
     - Maximum skewness for triangle: use a generous threshold of 17, mainly to find excessive "collapsed" elements that originate from the SMS map issues (and fix them in SMS).
-    - Quad quality: **fix all bad-quality quads** using `fix_bad_quads.f90`; use 0.5 (ratio of min and max internal angles) as threshold.
+    - As a general rule of thumb, SCHISM can comfortably handle elements >= $1m^2$ ($10^{-10}$ in lon/lat), and skewness<=60. Use `ACE/xmgredit5` or SMS to check these. Most of those extreme elements are due to SMS map issues so you should fix them there.
+    - Fix bad quads: **fix all bad-quality quads** using `fix_bad_quads.f90` as the last step; use 0.5 (ratio of min and max internal angles) as threshold.
 
 ## 2D model: pre-processing
 1. Check additional grid issues with a 2D barotropic model with `ipre=1`, `ibc=1`, `ibtp=0`
