@@ -353,7 +353,5 @@ if (BLD_STANDALONE)
 endif()
 
 ######## Utilities ########
-if (BLD_STANDALONE)
-  message(STATUS "\n### Configuring Utilities")
-  add_subdirectory( Utility )
-endif()
+message(STATUS "\n### Configuring Utilities")
+add_subdirectory( Utility )
