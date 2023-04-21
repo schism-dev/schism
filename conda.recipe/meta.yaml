@@ -1,5 +1,5 @@
 {% set name = "pschism" %}
-{% set version = "5.9" %}
+{% set version = "5.10.1" %}
 {% set build = 0 %}
 
 package:
@@ -8,7 +8,7 @@ package:
 
 source:
   git_url: https://github.com/schism-dev/schism.git
-  git_tag: v5.9
+  git_tag: v5.10
 
 build:
   number: {{ build }}
@@ -16,13 +16,13 @@ build:
   merge_build_host: true
 
   {% set mpi_prefix = "mpi_" + mpi %}
-  string: {{ mpi_prefix }}_h{{ PKG_HASH }}_{{ build }}
+  string: {{ mpi_prefix }}_py{{ python }}_h{{ PKG_HASH }}_{{ build }}
   {% set build_pin = mpi_prefix + '_*' %}
 
 requirements:
   build:
   host:
-    - python
+    - python {{ python }}
     - git
     - {{ compiler('cxx') }}
     - {{ compiler('c') }}
@@ -39,7 +39,7 @@ requirements:
     - netcdf-fortran * {{ mpi_prefix }}_*
     - libgfortran5
   run:
-    - python
+    - python {{ python }}
     - {{ mpi }}
     - llvm-openmp
     - parmetis
