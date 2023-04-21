@@ -234,7 +234,7 @@ def river_map_mpi_driver(
         total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
         gpd.GeoDataFrame(
             index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
-        ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
+        ).to_file(filename=f'{output_dir}/total_arcs.shp', driver="ESRI Shapefile")
 
         # river_arcs_cleaned = clean_river_arcs(total_river_arcs, total_arcs_cleaned)
         # total_river_outline_polys = generate_river_outline_polys(river_arcs_cleaned)

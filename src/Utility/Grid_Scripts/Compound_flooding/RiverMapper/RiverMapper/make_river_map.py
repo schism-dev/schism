@@ -1,5 +1,5 @@
 """
-This is the main worker script for generating river maps
+This is the core script for generating river maps
 
 Usage: 
 Import and call the function "make_river_map",
@@ -887,6 +887,7 @@ def make_river_map(
     outer_arcs_positions = (), length_width_ratio = 6.0,
     i_close_poly = True, i_blast_intersection = False,
     blast_radius_scale = 0.4, bomb_radius_coef = 0.3,
+    i_smooth_banks = False,
     i_DEM_cache = True
 ):
     '''
@@ -927,7 +928,7 @@ def make_river_map(
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
-    iAdditionalOutputs = False
+    iAdditionalOutputs = True
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
     thalweg_smooth_shp_fname = None  # deprecated: name of a polyline shapefile containing the smoothed thalwegs (e.g., pre-processed by GIS tools or SMS)
     i_fake_channel = False
@@ -948,7 +949,7 @@ def make_river_map(
         require_dem = True
         endpoints_scale = 1.3
 
-    outer_arcs_positions = np.array(outer_arcs_positions).reshape(-1, )  # example: np.array([-0.1, 0.1])
+    outer_arcs_positions = np.array(outer_arcs_positions).reshape(-1, )  # example: [0.1, 0.2]
     if np.any(outer_arcs_positions <= 0.0):
         raise ValueError('outer arcs position must > 0, a pair of arcs (one on each side of the river) will be placed for each position value')
 
@@ -1153,12 +1154,13 @@ def make_river_map(
             x_banks_right, y_banks_right = nudge_bank(thalweg, perp, x_banks_right, y_banks_right, dist=nudge_ratio*0.5*np.mean(width))
 
             # smooth banks
-            thalweg, x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp = smooth_bank(thalweg, x_banks_left, y_banks_left, x_banks_right, y_banks_right)
-            if thalweg is None:
-                continue
-            thalweg, x_banks_right, y_banks_right, x_banks_left, y_banks_left, perp = smooth_bank(thalweg, x_banks_right, y_banks_right, x_banks_left, y_banks_left)
-            if thalweg is None:
-                continue
+            if i_smooth_banks:
+                thalweg, x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp = smooth_bank(thalweg, x_banks_left, y_banks_left, x_banks_right, y_banks_right)
+                if thalweg is None:
+                    continue
+                thalweg, x_banks_right, y_banks_right, x_banks_left, y_banks_left, perp = smooth_bank(thalweg, x_banks_right, y_banks_right, x_banks_left, y_banks_left)
+                if thalweg is None:
+                    continue
 
             # update width
             width = ((x_banks_left-x_banks_right)**2 + (y_banks_left-y_banks_right)**2)**0.5
@@ -1251,7 +1253,7 @@ def make_river_map(
                     cc_arcs[i, j] = SMS_ARC(points=np.c_[
                         x_river_arcs[:, valid_points][:, j],
                         y_river_arcs[:, valid_points][:, j],
-                        np.tile(z_centerline[valid_points][j], this_nrow_arcs)
+                        np.tile(z_centerline[valid_points][j], arc_position.size)
                     ], src_prj='cpp')
 
     # end enumerating each thalweg
@@ -1334,16 +1336,16 @@ def make_river_map(
 
         SMS_MAP(detached_nodes=bombed_xyz).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
 
-        if iAdditionalOutputs:
-            total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
-            if len(total_arcs_cleaned_polys) > 0:
-                gpd.GeoDataFrame(
-                    index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
-                ).to_file(filename=f'{output_dir}/{output_prefix}river_arc_polygons.shp', driver="ESRI Shapefile")
-            else:
-                print(f'{mpi_print_prefix} Warning: total_arcs_cleaned_polys empty')
-            del total_arcs_cleaned_polys[:]; del total_arcs_cleaned_polys
+        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+        if len(total_arcs_cleaned_polys) > 0:
+            gpd.GeoDataFrame(
+                index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
+            ).to_file(filename=f'{output_dir}/{output_prefix}total_arcs.shp', driver="ESRI Shapefile")
+        else:
+            print(f'{mpi_print_prefix} Warning: total_arcs empty')
+        del total_arcs_cleaned_polys[:]; del total_arcs_cleaned_polys
 
+        if iAdditionalOutputs:
             cleaned_river_arcs = clean_river_arcs(river_arcs=river_arcs, total_arcs=total_arcs_cleaned)
             del river_arcs
             total_river_outline_polys = generate_river_outline_polys(river_arcs=cleaned_river_arcs)

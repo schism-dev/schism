@@ -396,6 +396,16 @@
                 !write(99,*) iplg(i)
                 ielem_elm(i)=1
                 dtbl2=dt !unlimited
+                !also set tier-1 neighbors to ELM
+                do j=1,i34(i)
+                  nd=elnode(j,i)
+                  do k=1,nne(nd)
+                    ie=indel(k,nd)
+                    if (ie>0) then
+                      ielem_elm(ie)=1
+                    endif
+                  enddo
+                enddo
               endif
             endif
 
