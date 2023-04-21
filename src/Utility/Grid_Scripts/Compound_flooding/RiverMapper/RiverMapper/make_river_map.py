@@ -1,7 +1,7 @@
 """
 This is the core script for generating river maps
 
-Usage: 
+Usage:
 Import and call the function "make_river_map",
 either directly, see sample_serial.py in the installation directory;
 or via the parralel driver, see sample_parallel.py in the installation directory
@@ -63,7 +63,7 @@ class Bombs():
         self.i_cleaned = True
 
         return np.c_[self.points.real, self.points.imag, self.res]
-    
+
     def get_convex_hull(self):
         ch = gpd.GeoSeries(map(Point, np.c_[self.points.real, self.points.imag]), crs=self.crs).unary_union.convex_hull
         ch_buffered = ch.buffer(distance=0.3*np.mean(self.res))
@@ -76,7 +76,7 @@ class Geoms_XY():
                 raise TypeError()
         except:
             raise ValueError('Input must be an iterable of geometries')
-        
+
         self.geom_list = [geom for geom in geom_list]
         self.add_z = add_z
         self.xy, self.xy_idx = self.geomlist2xy()
@@ -102,7 +102,7 @@ class Geoms_XY():
     def xy2geomlist(self):
         for i, _ in enumerate(self.geom_list):
             self.geom_list[i] = LineString(self.xy[self.xy_idx[i, 0]:self.xy_idx[i, 1], :])
-    
+
     def update_coords(self, new_coords:np.ndarray):
         iupdate = False
         if not np.array_equal(self.xy, new_coords):
@@ -113,7 +113,7 @@ class Geoms_XY():
 
     def snap_to_points(self, snap_points, target_poly_gdf=None):
         geoms_xy_gdf = points2GeoDataFrame(self.xy, crs=self.crs)
-        
+
         if target_poly_gdf is None:
             i_target_points = np.ones((self.xy.shape[0], ), dtype=bool)
         else:
@@ -125,7 +125,7 @@ class Geoms_XY():
         self.xy[i_target_points, :] = snap_points[idx, :]
 
         self.xy2geomlist()
-    
+
 def moving_average(a, n=10, self_weights=0):
     if len(a) <= n:
         ret2 = a * 0.0 + np.mean(a)
@@ -168,7 +168,7 @@ def geos2SmsArcList(geoms=None):
     sms_arc_list = []
     for i, line in enumerate(geoms):
         sms_arc_list.append(SMS_ARC(points=line.coords._coords, src_prj='epsg:4326'))
-    
+
     return sms_arc_list
 
 def nearest_neighbour(points_a, points_b):
@@ -462,7 +462,7 @@ def redistribute_arc(line, line_smooth, channel_width, this_nrow_arcs, smooth_op
         for k in [0.5, 1, 2]:
             starting_points = np.r_[0.0, np.cumsum(dist_along_thalweg)] < k * np.mean(channel_width)  # tweak within the length of k river widths
             river_resolution[starting_points] /= endpoints_scale
-            ending_points = np.flip(np.r_[0.0, np.cumsum(np.flip(dist_along_thalweg))]) <  k * np.mean(channel_width)  # tweak within the length of 3 river widths 
+            ending_points = np.flip(np.r_[0.0, np.cumsum(np.flip(dist_along_thalweg))]) <  k * np.mean(channel_width)  # tweak within the length of 3 river widths
             river_resolution[ending_points] /= endpoints_scale
 
     # resolution between two points
@@ -520,7 +520,7 @@ def set_inner_arc_position(nrow_arcs, type='regular'):
         pass
     else:
         raise ValueError(f'unknown inner arc type: {type}')
-    
+
     return arc_position
 
 def points2GeoDataFrame(points: np.ndarray, crs='epsg:4326'):
@@ -567,17 +567,17 @@ def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
     nsnap = 0
 
     # not sure if any additional points besides the closest n_nei points are within buffer
-    i_crowded = (distances[:, -1] < xyz[:, 2]*reso_ratio) 
+    i_crowded = (distances[:, -1] < xyz[:, 2]*reso_ratio)
     print(f'{sum(i_crowded)} vertices marked for cleaning I')
     nsnap += sum(i_crowded)
     if sum(i_crowded) > 0:
         for i in np.argwhere(i_crowded).squeeze():
             i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[:, 0]+1j*xyz[:, 1])) < xyz[i, 2]
             xyz[i_near, :] = xyz[i, :]
-    
+
     # at least one target point within n_nei-node neighborhood
     distances[distances==0.0] = 9999
-    i_crowded = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio) 
+    i_crowded = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio)
     nsnap += sum(i_crowded)
     print(f'{sum(i_crowded)} vertices marked for cleaning II')
     if sum(i_crowded) > 0:
@@ -586,7 +586,7 @@ def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
             i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
             idx = indices[i, i_near]
             xyz[idx, :] = xyz[i, :]
-    
+
     return xyz, nsnap
 
 def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.3, idummy=False):
@@ -603,7 +603,7 @@ def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray
         arcs_gdf = arcs0
     else:
         raise TypeError()
-        
+
     if isinstance(target_polygons, list):
         target_poly_gdf = list2gdf(target_polygons)
     elif isinstance(target_polygons, gpd.GeoDataFrame):
@@ -658,7 +658,7 @@ def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray
                 arcs_buffer[i] = []
             for index, row in arc_pointsInPolys.iterrows():
                 arcs_buffer[row.index_right].append(index)
-            
+
             invalid_point_idx = np.empty((0, ), dtype=int)
             for i, pt in enumerate(arcs_buffer):
                 arc_points_inbuffer = arc_points.xy[pt, :]
@@ -679,7 +679,7 @@ def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray
             # hull_list = [arcs_in_poly[arcs_in_poly.index_right==poly].unary_union.convex_hull.boundary for poly in polys]
             # cleaned_inter_arcs = np.array(cleaned_inter_arcs + hull_list)
         cleaned_arcs = gpd.GeoDataFrame(geometry=np.r_[arcs_cleaned_1, arcs_cleaned_2]).unary_union.geoms
-    
+
     return [arc for arc in cleaned_arcs]
 
 def clean_arcs(arcs):
@@ -731,7 +731,7 @@ def generate_river_outline_polys(river_arcs=None):
     for river_polygon in river_polygons:
         if river_polygon is not None:
             river_outline_polygons += river_polygon
-    
+
     return river_outline_polygons
 
 def clean_arcs0(LineStringList, blast_center, blast_radius, minimum_arc_length=10):
@@ -745,7 +745,7 @@ def clean_arcs0(LineStringList, blast_center, blast_radius, minimum_arc_length=1
     # ls2 = LineString([(0,1), (1,0)])
     # inter = ls1.intersection(ls2)
     # gc = split_line_by_point(ls1, MultiPoint([inter, Point(0.25, 0.25)]))
-    
+
     uu_xy = np.empty((0, 2), dtype=float)
     uu_xy_idx = np.empty((0, 2), dtype=int)
     idx = 0
@@ -753,12 +753,12 @@ def clean_arcs0(LineStringList, blast_center, blast_radius, minimum_arc_length=1
         uu_xy = np.r_[uu_xy, np.array(line.xy).T]
         uu_xy_idx = np.r_[uu_xy_idx, np.c_[idx, idx+len(line.xy[0])]]
         idx += len(line.xy[0])
-    
+
     i_snap = np.zeros((len(uu_xy), ), dtype=bool)
     for center, radius in zip(blast_center, blast_radius):
         idx = abs(uu_xy[:, 0]+1j*uu_xy[:, 1] - (center[0]+1j*center[1])) < radius
         i_snap[idx] = True
-    
+
     _, idx = nearest_neighbour(uu_xy[i_snap], np.c_[blast_center[:, 0], blast_center[:, 1]])
     uu_xy[i_snap, :] = blast_center[idx, :]
 
@@ -882,12 +882,12 @@ def get_bank(S_list, x, y, thalweg_eta, xt, yt, search_steps=100, search_toleran
 def make_river_map(
     tif_fnames: list, thalweg_shp_fname = '',
     selected_thalweg = None, output_dir = './', output_prefix = '', mpi_print_prefix = '',
-    MapUnit2METER = 1, river_threshold = (5, 400), 
+    MapUnit2METER = 1, river_threshold = (5, 400),
     min_arcs = 3,
     outer_arcs_positions = (), length_width_ratio = 6.0,
     i_close_poly = True, i_blast_intersection = False,
     blast_radius_scale = 0.4, bomb_radius_coef = 0.3,
-    i_smooth_banks = False,
+    i_smooth_banks = True,
     i_DEM_cache = True
 ):
     '''
@@ -914,11 +914,11 @@ def make_river_map(
 
     length_width_ratio: a ratio of element length in the along-channel direction to river width;
                         when a river is narrower than the lower limit, the bank will be nudged (see next parameter) to widen the river
-    
+
     i_close_poly: whether to add cross-channel arcs to enclose river arcs into a polygon
 
     i_blast_intersection: whether to replace intersecting arcs (often noisy) at river intersections with scatter points (cleaner)
-    
+
     blast_radius_scale:  coef controlling the blast radius at intersections, a larger number leads to more intersection features being deleted
 
     bomb_radius_coef:  coef controlling the spacing among intersection joints, a larger number leads to sparser intersection joints
@@ -928,7 +928,7 @@ def make_river_map(
     '''
 
     # ------------------------- other input parameters not exposed to user ---------------------------
-    iAdditionalOutputs = True
+    iAdditionalOutputs = False
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
     thalweg_smooth_shp_fname = None  # deprecated: name of a polyline shapefile containing the smoothed thalwegs (e.g., pre-processed by GIS tools or SMS)
     i_fake_channel = False
@@ -1246,7 +1246,7 @@ def make_river_map(
                     dl_lonlat = dl_cpp2lonlat(bombs_xyz[l][:, 2], lat0=lat)
                     # dl_cpp = dl_lonlat2cpp(dl_lonlat, lat0=lat)
                     bombs[2*i+l] = Bombs(xyz=np.c_[lon, lat, dl_lonlat], crs='epsg:4326')
-            
+
             if sum(valid_points) > 0:
                 # assemble cross-channel arcs
                 for j in [0, -1]:
@@ -1270,7 +1270,7 @@ def make_river_map(
         SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborted writing to *.map')
-    
+
     del smoothed_thalwegs[:], redistributed_thalwegs[:], corrected_thalwegs[:]
     del bank_arcs, bank_arcs_raw, bombed_points, smoothed_thalwegs, redistributed_thalwegs, corrected_thalwegs
 
