@@ -71,7 +71,7 @@
       real(rkind), allocatable :: up_rat_hface(:,:,:) !upwind ratios for horizontal faces
 !      real(rkind), allocatable :: psum2(:,:,:)
 
-      integer :: iupwind_e(nea) !iupwind_e_tmp(nea)  !to mark upwind prisms when TVD is used
+      integer :: iupwind_e(nea) !to mark upwind prisms when TVD is used
       real(rkind) :: dtb_min3(ne),buf(2,1),buf2(2,1)
       real(rkind) :: flux_mod_v1(nvrt) !coefficient of limited advective fluxes on vertical faces (space)
       real(rkind) :: flux_mod_v2(nvrt) !coefficient of limited advective fluxes on vertical faces (time)
@@ -379,7 +379,7 @@
                 if (iupwind_e(i)==1) then !upwind
                   tmp=vj/psumtr(1)*(1.d0-1.d-6) !safety factor included
                 else !weno
-                  tmp=vj/psumtr(1)*courant_weno*(1.d0-1.d-6) !safety factor 1.e-6 included
+                  tmp=vj/psumtr(1)*courant_weno*(1.d0-1.d-6) !safety factor 1.e-6 included; <=upwind dt above
                 endif
 
                 if(tmp<dtbl2) then
@@ -417,6 +417,58 @@
           enddo !i=1,ne
 !$OMP     end do
 
+          !Post-proc flags to avoid shocks in WENO stencil; update
+          !dtb_min3 if necessary
+          !Exchange ielem_elm
+          call exchange_e2di(ielem_elm)
+            
+          !Mark all nodes of ielem_elm=1: ind_elm not correct in halo
+          ind_elm=0
+!$OMP     do 
+          do i=1,nea
+            if (ielem_elm(i)==1) then
+              ind_elm(elnode(1:i34(i),i))=1
+            endif
+          enddo !i
+!$OMP     end do
+
+          if(0) then
+!==========================================================================
+          !Mark all resident elements that has at least 1 ELM node as ELM elements
+          !We only need ielem_elm correct in resident
+!$OMP     do 
+          do i=1,ne
+            do j=1,i34(i)
+              nd=elnode(j,i)
+              if (ind_elm(nd)>0) then
+                ielem_elm(i)=1
+                !Can relax dtb_min3 here to dt
+                exit
+              endif
+            enddo !j
+          enddo !i
+!$OMP     end do
+!==========================================================================
+          else !make upwind
+          !Mark all resident elements that has at least 1 ELM node as upwind elements 
+          !if it's not ELM (i.e., upwind or WENO). 
+!$OMP     do 
+          do i=1,ne
+            do j=1,i34(i)
+              nd=elnode(j,i)
+              if (ind_elm(nd)>0.and.ielem_elm(i)/=1) then
+                iupwind_e(i)=1
+                !No updates on dtb_min3 as WENO is more strict
+                exit
+              endif
+            enddo !j
+          enddo !i
+!$OMP     end do
+    
+          call exchange_e2di(iupwind_e)
+!==========================================================================
+          endif !make ELM or upwind
+
 !$OMP     workshare
           dtbl=minval(dtb_min3)
 !$OMP     end workshare
@@ -440,31 +492,6 @@
             call parallel_abort(errmsg)
           endif
 #endif
-
-          !exchange ielem_elm
-          call exchange_e2di(ielem_elm)
-            
-!$OMP do 
-          !mark all nodes of ielem_elm=1
-          ind_elm=0
-          do i=1,nea
-            if (ielem_elm(i)==1) then
-              ind_elm(elnode(i34(i),i))=1
-            endif
-          enddo !i
-!$OMP end do
-!$OMP do 
-          !mark all resident elements that has at least 1 ELM node as ELM elements
-          do i=1,ne
-            do j=1,i34(i)
-              nd=elnode(j,i)
-              if (ind_elm(nd)>0) then
-                ielem_elm(i)=1
-                exit
-              endif
-            enddo
-          enddo
-!$OMP end do
 
 !         Output time step
 !          if(myrank==int(buf2(2,1)).and.ie01>0) &

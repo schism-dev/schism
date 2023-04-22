@@ -850,7 +850,7 @@
           call parallel_abort(errmsg)
         endif
 
-        if(courant_weno<=0._rkind) then
+        if(courant_weno<=0._rkind.or.courant_weno>1._rkind) then
           write(errmsg,*)'Illegal courant_weno:',courant_weno
           call parallel_abort(errmsg)
         endif
