@@ -304,7 +304,7 @@
 
 !$OMP parallel default(shared) private(i,dtbl2,k,j,ie02,lev02,in_st2,psumtr,jsj,ie,ref_flux, &
 !$OMP same_sign,vj,tmp,m,wm,sum1,wm1,wm2,b1,b2,b3,b4,b5,n1,n2,trsd,kk,bigv,dtb_by_bigv, &
-!$OMP iweno,iel,ibnd,nwild,ll,ndo,lll,ind1,ind2,jj,adv_tr,trel_tmp_outside)
+!$OMP iweno,iel,ibnd,nwild,ll,ndo,lll,ind1,ind2,jj,adv_tr,trel_tmp_outside,nd)
 !'
 #ifdef USE_ANALYSIS
 !$OMP workshare
@@ -420,19 +420,32 @@
           !Post-proc flags to avoid shocks in WENO stencil; update
           !dtb_min3 if necessary
           !Exchange ielem_elm
+!$OMP     master
           call exchange_e2di(ielem_elm)
+!$OMP     end master
             
           !Mark all nodes of ielem_elm=1: ind_elm not correct in halo
+!$OMP     workshare
           ind_elm=0
+!$OMP     end workshare 
+!          do i=1,nea
+!            if (ielem_elm(i)==1) then
+!              ind_elm(elnode(1:i34(i),i))=1
+!            endif
+!          enddo !i
+
 !$OMP     do 
-          do i=1,nea
-            if (ielem_elm(i)==1) then
-              ind_elm(elnode(1:i34(i),i))=1
-            endif
+          do i=1,np
+            do j=1,nne(i)
+              if(ielem_elm(indel(j,i))==1) then
+                ind_elm(i)=1
+                exit 
+              endif
+            enddo !j
           enddo !i
 !$OMP     end do
 
-          if(0) then
+          if(0) then !make ELM
 !==========================================================================
           !Mark all resident elements that has at least 1 ELM node as ELM elements
           !We only need ielem_elm correct in resident
@@ -465,7 +478,9 @@
           enddo !i
 !$OMP     end do
     
+!$OMP     master
           call exchange_e2di(iupwind_e)
+!$OMP     end master
 !==========================================================================
           endif !make ELM or upwind
 
