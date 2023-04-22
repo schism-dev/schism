@@ -88,7 +88,7 @@
       real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr),tmass(ntr),h_mass_in(ntr), &
      &alow(nvrt),bdia(nvrt),cupp(nvrt),rrhs(1,nvrt),soln(1,nvrt),gam(nvrt), &
      &swild(max(3,nvrt)),swild4(3,2),trel_tmp_outside(ntr),swild5(3)
-      integer :: nwild(2),ielem_elm(nea),ielem_elm_tmp(nea)
+      integer :: nwild(2),ielem_elm(nea),ind_elm(npa)
 
       integer :: istat,i,j,k,kk,l,m,khh2,ie,n1,n2,n3,n4,isd,isd0,isd1,isd2,isd3,j0,je, &
                  &nd,it_sub,ntot_v,ntot_vgb,kup,kdo,jsj,jsj0,kb, &
@@ -395,16 +395,6 @@
               if(dtbl2<dtb_min_transport) then
                 !write(99,*) iplg(i)
                 ielem_elm(i)=1
-                !also set tier-1 neighbors to ELM
-                do m=1,i34(i)
-                  nd=elnode(m,i)
-                  do l=1,nne(nd)
-                    ie=indel(l,nd)
-                    if (ie>0) then
-                      ielem_elm(ie)=1
-                    endif
-                  enddo
-                enddo
                 dtbl2=dt !unlimited
               endif
             endif
@@ -451,34 +441,30 @@
           endif
 #endif
 
-          !exchange ielem_elm, but revoke some changes so that ielem_elm=1 prevails
-          ielem_elm_tmp(1:nea)=ielem_elm(1:nea)
+          !exchange ielem_elm
           call exchange_e2di(ielem_elm)
-          where (ielem_elm<ielem_elm_tmp) ielem_elm=1
-
-! Obsolete option with iupwind_e
-!!$OMP do 
-!          do i=1,ne
-!            if(ielem_elm(i)==1) then
-!              !Although Element i is set to upwind below,
-!              !it will eventually be overwritten by the ELM value
-!              do j=1,i34(i)
-!                nd=elnode(j,i)
-!                do k=1,nne(nd)
-!                  ie=indel(k,nd)
-!                  if (ie>0) then
-!                    iupwind_e(ie)=1
-!                  endif
-!                enddo !k
-!              enddo !j
-!            endif !ielem_elm
-!          enddo !i=1,ne
-!!$OMP end do
-!
-!          !exchange, but revoke any changes from 1 to 0
-!          iupwind_e_tmp(1:nea)=iupwind_e(1:nea)
-!          call exchange_e2di(iupwind_e)
-!          where (iupwind_e<iupwind_e_tmp) iupwind_e=1
+            
+!$OMP do 
+          !mark all nodes of ielem_elm=1
+          ind_elm=0
+          do i=1,nea
+            if (ielem_elm(i)==1) then
+              ind_elm(elnode(i34(i),i))=1
+            endif
+          enddo !i
+!$OMP end do
+!$OMP do 
+          !mark all resident elements that has at least 1 ELM node as ELM elements
+          do i=1,ne
+            do j=1,i34(i)
+              nd=elnode(j,i)
+              if (ind_elm(nd)>0) then
+                ielem_elm(i)=1
+                exit
+              endif
+            enddo
+          enddo
+!$OMP end do
 
 !         Output time step
 !          if(myrank==int(buf2(2,1)).and.ie01>0) &
