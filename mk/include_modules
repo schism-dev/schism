@@ -12,6 +12,10 @@
 # USE_PETSC = yes
 # EXEC := $(EXEC)_PETSC
 
+# Coupling with atmospheric model via ESMF
+# USE_ATMOS = yes
+# EXEC := $(EXEC)_EVAP
+
 # Precip/evaporation model
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP

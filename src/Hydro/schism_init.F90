@@ -705,8 +705,8 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (nws=3: for coupling directly to atmos model; otherwise same as nws=2)
-      if(nws<-1.or.nws>6) then
+!     Wind (use nws=2 and USE_ATMOS for coupling directly to atmos model)
+      if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
       endif
@@ -726,14 +726,9 @@
         if(model_type_pahm/=1.and.model_type_pahm/=10) call parallel_abort('INIT: check model_type_pahm')
       endif
 
-      if(nws==3) then
-!#ifndef USE_ESMF
-        !> @todo the USE_ESMF macro is not yet implemented in CMake, thus the 
-        !> following check is disabled
-        !call parallel_abort('nws=3 requires coupler')
-!#endif        
+!      if(nws==3) then
         !Error:overwrite wtiminc by coupling step
-      endif !nws==3
+!      endif !nws==3
 
 !      iwind_form=0 !init.
       if(nws/=0) then
@@ -758,6 +753,11 @@
       if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
+#ifdef USE_ATMOS
+      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=0')
+      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
+#endif
+
       if(ihconsv/=0) then
         if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
           write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
@@ -780,8 +780,6 @@
 !       isconsv=1
 #endif
       endif
-
-!      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -3183,7 +3181,7 @@
       endif !ncor
 
 !     Wind 
-      if(nws==-1.or.(nws>=2.and.nws<=3)) then !read in hgrid.ll and open debug outputs
+      if(nws==-1.or.nws==2) then !read in hgrid.ll and open debug outputs
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
           read(32,*)
@@ -4598,94 +4596,6 @@
 !      endif
 !      call parallel_finalize
 !      stop
-
-!...  initialize wind for nws=1,2 (first two lines)
-!...  Wind vector always in lat/lon frame and so will have problem at poles
-!      if(nws==0) then
-!        windx1 = 0
-!        windy1 = 0
-!        windy2 = 0
-!        windx2 = 0  
-!        windx  = 0
-!        windy  = 0 
-!      endif
-!
-!      if(nws==1) then
-!        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-!        read(22,*)tmp1,wx1,wy1
-!        read(22,*)tmp2,wx2,wy2
-!        if(abs(tmp1)>1.e-4.or.abs(tmp2-wtiminc)>1.e-4) &
-!     &call parallel_abort('check time stamp in wind.th')
-!        do i=1,npa
-!          windx1(i)=wx1
-!          windy1(i)=wy1
-!          windx2(i)=wx2
-!          windy2(i)=wy2
-!        enddo
-!        wtime1=0
-!        wtime2=wtiminc 
-!      endif
-!
-!      if(nws==4) then
-!        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-!        read(22,*)tmp1,rwild(:,:)
-!        do i=1,np_global
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            windx1(nd)=rwild(i,1)
-!            windy1(nd)=rwild(i,2)
-!            pr1(nd)=rwild(i,3)
-!          endif
-!        enddo !i
-!
-!        read(22,*)tmp2,rwild(:,:)
-!        do i=1,np_global
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            windx2(nd)=rwild(i,1)
-!            windy2(nd)=rwild(i,2)
-!            pr2(nd)=rwild(i,3)
-!          endif
-!        enddo !i
-!        if(abs(tmp1)>1.e-4.or.abs(tmp2-wtiminc)>1.e-4) &
-!     &call parallel_abort('check time stamp in wind.th (4)')
-!
-!        wtime1=0
-!        wtime2=wtiminc
-!      endif !nws=4
-!
-!#ifdef USE_SIMPLE_WIND
-!      if(nws==5.or.nws==6) then
-!        itmp1=1
-!        wtime1=0
-!        wtime2=wtiminc 
-!        if(nws==5) then 
-!          CALL READ_REC_ATMO_FD(itmp1,   windx1, windy1, pr1)
-!          CALL READ_REC_ATMO_FD(itmp1+1, windx2, windy2, pr2)
-!        endif
-!        if(nws==6)  then
-!          CALL READ_REC_ATMO_FEM(itmp1,   windx1, windy1, pr1)
-!          CALL READ_REC_ATMO_FEM(itmp1+1, windx2, windy2, pr2)
-!        endif
-!      endif !5|6
-!#endif
-!
-!!     CORIE mode
-!      if(nws>=2.and.nws<=3) then
-!        wtime1=0
-!        wtime2=wtiminc 
-!!       wind speed upon output is rotated to the map projection
-!!       For ics=2, make sure windrot* =0 (i.e. true east/north direction)
-!        if(nws==2) then
-!          call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
-!          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-!        else
-!          windx1=0; windy1=0; windx2=0; windy2=0
-!          pr1=1.e5; pr2=1.e5 
-!          airt1=20; airt2=20
-!          shum1=0; shum2=0
-!        endif
-!      endif !nws>=2
 !------------------------------------------------------------------
       endif !ihot=0
 

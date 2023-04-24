@@ -396,14 +396,12 @@
         endif
       endif
 
-!      if(nws>0.and.nrampwind/=0) then
       if(nws/=0.and.drampwind>0.d0) then
         rampwind=tanh(2.d0*time/86400.d0/drampwind)
       else
         rampwind=1.d0
       endif
 
-!      if(nrampwafo/=0) then
       if(drampwafo>0.d0) then
         rampwafo=tanh(2.d0*time/86400.d0/drampwafo)
       else
@@ -412,7 +410,6 @@
 
       !For source/sinks
       if(if_source/=0) then
-        !if(nramp_ss==1) then
         if(dramp_ss>0.d0) then
           ramp_ss=tanh(2.d0*time/86400.d0/dramp_ss)
         else
@@ -420,7 +417,6 @@
         endif
       endif
 
-      !if(nramp==1) then
       if(dramp>0.d0) then
         ramp=tanh(2.d0*time/86400.d0/dramp)
       else
@@ -587,16 +583,18 @@
 #endif
 
 !     CORIE mode
-      if(nws>=2.and.nws<=3) then
+      if(nws==2) then
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-            if(nws==2) call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
+#ifndef     USE_ATMOS
+            call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
      &                       fluxprc,fluxevp,prec_snow, &
 #endif
      &                       nws ) 
+#endif /*USE_ATMOS*/
 
 !$OMP parallel default(shared) private(i,j)
 !$OMP       do
@@ -653,14 +651,15 @@
             shum1(i)=shum2(i)
           enddo
 !$OMP end parallel do
-          if(nws==2) call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
 
-          if(nws==3) then !via ESMF
-            !ESMF may not extend to ghosts
-            call exchange_p2d(windx2)
-            call exchange_p2d(windy2)
-            call exchange_p2d(pr2)
-          endif !nws==3
+#ifdef    USE_ATMOS
+          !ESMF may not extend to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+#else
+          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
+#endif
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
@@ -834,7 +833,7 @@
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
+        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined; USE_ATMOS not defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
@@ -1650,7 +1649,7 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
-!...  For nws=3, needs evap for atmos model 
+!...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
 #ifdef  IMPOSE_NET_FLUX
 !        if(impose_net_flux/=0) then !impose net precip (nws=2)

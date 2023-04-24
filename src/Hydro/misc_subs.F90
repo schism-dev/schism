@@ -319,19 +319,21 @@
         enddo !i
       endif !nws=4
 
-      if(nws>=2.and.nws<=3) then
+      if(nws==2) then
         ninv=time/wtiminc
         wtime1=real(ninv,rkind)*wtiminc 
         wtime2=real(ninv+1,rkind)*wtiminc 
-        if(nws==2) then
+#ifndef USE_ATMOS
           call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-        else !=3; init
+#else
+!         Init
           windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
           pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
           airt1=20._rkind; airt2=20._rkind
           shum1=0._rkind; shum2=0._rkind
-        endif
+#endif
+!        endif
 
       endif !nws
 
@@ -816,7 +818,7 @@
 
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
-!     For nws=3, sflux etc are init'ed as 0 in _init
+!     For USE_ATMOS, sflux etc are init'ed as 0 in _init
       if(ihconsv/=0.and.nws==2) then
         call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
