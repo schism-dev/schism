@@ -424,15 +424,10 @@
           call exchange_e2di(ielem_elm)
 !$OMP     end master
             
-          !Mark all nodes of ielem_elm=1: ind_elm not correct in halo
+          !Mark all nodes of ielem_elm=1: ind_elm only correct in resident
 !$OMP     workshare
           ind_elm=0
 !$OMP     end workshare 
-!          do i=1,nea
-!            if (ielem_elm(i)==1) then
-!              ind_elm(elnode(1:i34(i),i))=1
-!            endif
-!          enddo !i
 
 !$OMP     do 
           do i=1,np
@@ -445,7 +440,8 @@
           enddo !i
 !$OMP     end do
 
-          if(0) then !make ELM
+          !Fei tested both options, and ELM seems to be more stable
+!          if(0) then !Mark ELM
 !==========================================================================
           !Mark all resident elements that has at least 1 ELM node as ELM elements
           !We only need ielem_elm correct in resident
@@ -462,27 +458,27 @@
           enddo !i
 !$OMP     end do
 !==========================================================================
-          else !make upwind
-          !Mark all resident elements that has at least 1 ELM node as upwind elements 
-          !if it's not ELM (i.e., upwind or WENO). 
-!$OMP     do 
-          do i=1,ne
-            do j=1,i34(i)
-              nd=elnode(j,i)
-              if (ind_elm(nd)>0.and.ielem_elm(i)/=1) then
-                iupwind_e(i)=1
-                !No updates on dtb_min3 as WENO is more strict
-                exit
-              endif
-            enddo !j
-          enddo !i
-!$OMP     end do
-    
-!$OMP     master
-          call exchange_e2di(iupwind_e)
-!$OMP     end master
+!          else !Mark upwind
+!          !Mark all resident elements that has at least 1 ELM node as upwind elements 
+!          !if it's not ELM (i.e., upwind or WENO). 
+!!$OMP     do 
+!          do i=1,ne
+!            do j=1,i34(i)
+!              nd=elnode(j,i)
+!              if (ind_elm(nd)>0.and.ielem_elm(i)/=1) then
+!                iupwind_e(i)=1
+!                !No updates on dtb_min3 as WENO is more strict
+!                exit
+!              endif
+!            enddo !j
+!          enddo !i
+!!$OMP     end do
+!    
+!!$OMP     master
+!          call exchange_e2di(iupwind_e)
+!!$OMP     end master
 !==========================================================================
-          endif !make ELM or upwind
+!          endif !make ELM or upwind
 
 !$OMP     workshare
           dtbl=minval(dtb_min3)
