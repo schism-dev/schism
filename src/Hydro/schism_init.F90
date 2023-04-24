@@ -827,7 +827,7 @@
 !     Pass time info to EcoSim and ICM
 #ifdef USE_ECO
       year=start_year
-      month=start_month
+!      month=start_month !not needed by ECO
       day=start_day
       hour=start_hour
       minutes=0 !sim_minute
@@ -4673,27 +4673,27 @@
       if(myrank==0) write(16,*)'Numbert of Biological Tracers (NBIT)=', NBIT
 
       !converts to Julian day 
-      if(month==1)then
+      if(start_month==1)then
         yday = day
-      else if(month==2)then
+      else if(start_month==2)then
         yday = day + 31
-      else if(month==3)then
+      else if(start_month==3)then
         yday = day + 59
-      else if(month==4)then
+      else if(start_month==4)then
         yday = day + 90
-      else if(month==5)then
+      else if(start_month==5)then
         yday = day + 120
-      else if(month==6)then
+      else if(start_month==6)then
         yday = day + 151
-      else if(month==7)then
+      else if(start_month==7)then
         yday = day + 181
-      else if(month==8)then
+      else if(start_month==8)then
         yday = day + 212
-      else if(month==9)then
+      else if(start_month==9)then
         yday = day + 243
-      else if(month==10)then
+      else if(start_month==10)then
         yday = day + 273
-      else if(month==11)then
+      else if(start_month==11)then
         yday = day + 304
       else
         yday = day + 334

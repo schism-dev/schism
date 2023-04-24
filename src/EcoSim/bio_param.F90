@@ -210,7 +210,7 @@
 ! Marta Rodrigues
 ! Other variables (for date and time)
 
-       real(r8) :: day, month, year, hour, minutes, seconds, yday
+       real(r8) :: day, year, hour, minutes, seconds, yday
  
 !-----------------------------------------------------------------------
 ! Parameters
