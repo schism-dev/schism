@@ -601,6 +601,22 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
+#ifdef USE_NWM_BMI
+      ninv=time/th_dt3(1)
+      th_time3(1,1)=ninv*th_dt3(1)
+      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+
+      ninv=time/th_dt3(2)
+      th_time3(1,2)=ninv*th_dt3(2)
+      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+
+      ninv=time/th_dt3(3)
+      th_time3(1,3)=ninv*th_dt3(3)
+      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+
+      ath3(:,1,1,1:2)=0.d0
+      ath3(:,1,1,3)=-9999.d0
+#else
       if(if_source==1.and.myrank==0) then !ASCII
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
@@ -650,7 +666,7 @@
           read(64,*)tmp,ath3(1:nsinks,1,2,2)
           th_time3(2,2)=tmp
         endif !nsinks
-      endif !if_source
+      endif !if_source=1
 
       if(if_source==-1.and.myrank==0) then !nc
         if(nsources>0) then
@@ -695,6 +711,7 @@
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
       endif 
+#endif /*USE_NWM_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization

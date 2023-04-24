@@ -284,6 +284,8 @@
 
 ! meth_sink: options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
 ! zero out sink if the elem is dry if meth_sink=1
+! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
+! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
 !  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks

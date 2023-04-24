@@ -1137,7 +1137,10 @@
       endif
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
-      if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
+      if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
+#ifdef USE_NWM_BMI
+      if(if_source==0) call parallel_abort('INIT: USE_NWM_BMI cannot go with if_source=0')
+#endif
 
 !     Check all ramp periods
 !      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')

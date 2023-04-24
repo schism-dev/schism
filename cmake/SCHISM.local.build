@@ -21,6 +21,8 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O
 set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
+set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
+set (USE_NWM_BMI OFF CACHE BOOLEAN "Use NWM BMI for source and some b.c.")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 #IMPOSE_NET_FLUX will be removed eventually

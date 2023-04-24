@@ -1537,6 +1537,29 @@
         !Exceptions
         msource(1:2,:)=-9999.d0 !junk so ambient values will be used
 
+#ifdef USE_NWM_BMI
+        !Update everything except time series at new time (need to coordinate
+        !with BMI on the timing of updates)
+        if(nsources>0) then
+          if(time>th_time3(2,1)) then
+            ath3(:,1,1,1)=ath3(:,1,2,1)
+            th_time3(1,1)=th_time3(2,1)
+            th_time3(2,1)=th_time3(2,1)+th_dt3(1)
+          endif
+          if(time>th_time3(2,3)) then
+            ath3(:,:,1,3)=ath3(:,:,2,3)
+            th_time3(1,3)=th_time3(2,3)
+            th_time3(2,3)=th_time3(2,3)+th_dt3(3)
+          endif
+        endif !nsources
+
+        if(nsinks>0.and.time>th_time3(2,2)) then !not '>=' to avoid last step
+          ath3(:,1,1,2)=ath3(:,1,2,2)
+          th_time3(1,2)=th_time3(2,2)
+          th_time3(2,2)=th_time3(2,2)+th_dt3(2)
+        endif
+
+#else
         !Reading by rank 0
         if(nsources>0.and.myrank==0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
@@ -1590,6 +1613,7 @@
 !       Finished reading; bcast
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif /*USE_NWM_BMI*/
 
         if(nsources>0) then
           rat=(time-th_time3(1,1))/th_dt3(1)
