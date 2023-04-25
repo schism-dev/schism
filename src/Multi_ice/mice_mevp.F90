@@ -20,7 +20,7 @@ subroutine ice_mevp
   
     integer :: iball(mnei)
     real(rkind) :: swild(2,3),deta(2,nea), &
-   &swild2(nea),alow(4),bdia(4),rrhs(3,4),U_ice_0(npa),V_ice_0(npa),utmp(3),vtmp(3),strength(npa), &
+   &swild2(nea),alow(4),bdia(4),rrhs(3,4),U_ice_0(npa),V_ice_0(npa),utmp(3),vtmp(3),                &
    &a_ice0_0(npa),a_icen0(npa,ncat),v_icen0(npa,ncat),a_icen_elem(ncat),v_icen_elem(ncat),swild1(3),&
    &deta_pice(2,nea),p_ice(3)
     logical :: &
