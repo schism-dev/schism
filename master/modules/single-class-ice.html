@@ -1533,7 +1533,7 @@ computing pressure <span class="arithmatex">\(P\)</span> and moduli <span class=
 \end{equation}\]</div>
 <p><span class="arithmatex">\(e=2\)</span>  (the ellipticity parameter), <span class="arithmatex">\(C=20\)</span>, <span class="arithmatex">\(\Delta_{min}=2.e-9 s^{-1}\)</span>, and <span class="arithmatex">\(p^*=15000 Pa\)</span> 
 are default values, they are adjusted in practice. In this scheme, 
-<span class="arithmatex">\(\Delta_{min}\)</span> serves for viscous regularization of plastic behavior in areas where <span class="arithmatex">\(\Dela t\)</span> is very small. We note that recent multi-category
+<span class="arithmatex">\(\Delta_{min}\)</span> serves for viscous regularization of plastic behavior in areas where <span class="arithmatex">\(\Delta t\)</span> is very small. We note that recent multi-category
 ice implementations (such as CICE, see Hunke and Lipscomb 2008) use different parameterization for <span class="arithmatex">\(P_0\)</span>, which takes into account the distribution of ice over thickness categories. This
 does not change the basic equations (<span class="arithmatex">\(\ref{ice01}\)</span>, <span class="arithmatex">\(\ref{ice02}\)</span>).</p>
 <p>In our case we deal with three tracers, the area coverage <span class="arithmatex">\(a\)</span>, ice volume <span class="arithmatex">\(h_{ice}\)</span> and snow
@@ -1604,6 +1604,12 @@ using one of these approaches. Second, their numerical efficiency and performanc
 on applications, and one may wish to select the most appropriate approach.</p>
 <p>The tracer transport equation (<span class="arithmatex">\(\ref{ice03}\)</span>) is solved using a FCT scheme. </p>
 <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
+<ol>
+<li>Compile with USE_ICE on;</li>
+<li>The time step for this moule is controlled by <code>nstep_ice</code> in <code>param.nml</code>. In addition, the output handles are found in <code>SCHOUT</code> section. The code will compute the ice-ocean stress at cells covered by ice;</li>
+<li>The main parameter input for this module is <code>ice.nml</code> (you can find a sample in <code>sample_inputs/</code>), where you specify the ice thermodynamic constants etc. You can specify the new mEVP option with <code>mevp_coef</code>.</li>
+<li>Control dispersion/diffusion in transport by using the parameters in <code>ice.nml</code> and <code>ice_fct.gr3</code>. This is important for very fine mesh size.</li>
+</ol>
 <h1 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h1>
 <ol>
 <li>Bouillon, S., Fichefet, T., Legat, V., Madec, G., 2013. The elastic-viscous-plastic method
