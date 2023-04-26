@@ -1498,11 +1498,11 @@
 <h1 id="theory">Theory<a class="headerlink" href="#theory" title="Permanent link">&para;</a></h1>
 <p>The single-class ice/snow module is taken from FESOM2, courtesy of Dr. Sergey Danilov's group. The info below is from the FESOM2 manual with minor modifications 
  to show some new additions.</p>
-<p>Dynamical part solves the ice motion equation:
-\begin{equation}
+<p>Dynamical part solves the ice motion equation:</p>
+<div class="arithmatex">\[\begin{equation}
 \label{ice01}
  m(\partial_t + \pmb{f} \times)=a\tau - aC_d\rho_o (\pmb{u}-\pmb{u}_0)|\pmb{u}-\pmb{u}_0| +\pmb{F} -mg\nabla H
-\end{equation}</p>
+\end{equation}\]</div>
 <p>Here <span class="arithmatex">\(m\)</span> is the ice plus snow mass per unit area, <span class="arithmatex">\(C_d\)</span> the ice-ocean drag coefficient, <span class="arithmatex">\(\rho_o\)</span> the
 water density, <span class="arithmatex">\(a\)</span> the ice compactness, <span class="arithmatex">\(u\)</span> and <span class="arithmatex">\(u_o\)</span> the ice and ocean velocities, <span class="arithmatex">\(\tau\)</span> the wind
 stress, <span class="arithmatex">\(H\)</span> the sea surface elevation, <span class="arithmatex">\(g\)</span> the acceleration due to gravity and <span class="arithmatex">\(F_j = \partial_i σ_{ij}\)</span> is
