@@ -524,7 +524,7 @@
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. Use nws=2 USE_ATMOS for coupling with atmospheric model.
+! Atmos. option. Use nws=2 and USE_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.

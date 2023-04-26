@@ -10,7 +10,7 @@ This beta notes are divided into 5 part:
 Github versions:
 
 ae67c5e1 (24 April 2023): add USE_NWM_BMI (with if_source/=0) for NWM work;
-a248ce1d (24 April 2023): replaced nws=3 with USE_ATMOS;
+a248ce1d (24 April 2023): replaced nws=3 with USE_ATMOS (and nws=2);
 f8e15ee (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
 bc113eb2 (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;
 24a2723 (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added

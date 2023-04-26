@@ -113,6 +113,7 @@ nav:
     - WWM: modules/wwm.md
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
+    - Single-class ice module: modules/single-class-ice.md
   - Code structure: code-contribution.md
   - Case studies: case-study.md
   - SCHISM external coupling:
