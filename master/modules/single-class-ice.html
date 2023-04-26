@@ -1529,22 +1529,22 @@ Both the stress and deformation rate tensors are symmetric, so they are characte
 three independent components. The standard VP rheology adopts the following scheme of
 computing pressure <span class="arithmatex">\(P\)</span> and moduli <span class="arithmatex">\(\eta\)</span> and <span class="arithmatex">\(\zeta\)</span>: </p>
 <div class="arithmatex">\[\begin{equation}
- P_0=h_{ice}p^* exp[-C(1-a)], P=P_0\frac{\Delta}(\Delta+\Delta_{min}}, \zeta=\frac{0.5P_0}{\Delta+\Delta_{min}}, \eta=\frac{\zeta}{e^2}
+ P_0=h_{ice}p^* exp[-C(1-a)], P=P_0\frac{\Delta}{(\Delta+\Delta_{min}}, \zeta=\frac{0.5P_0}{\Delta+\Delta_{min}}, \eta=\frac{\zeta}{e^2}
 \end{equation}\]</div>
 <p><span class="arithmatex">\(e=2\)</span>  (the ellipticity parameter), <span class="arithmatex">\(C=20\)</span>, <span class="arithmatex">\(\Delta_{min}=2.e-9 s^{-1}\)</span>, and <span class="arithmatex">\(p^*=15000 Pa\)</span> 
 are default values, they are adjusted in practice. In this scheme, 
-<span class="arithmatex">\(\Delta_{min}\)</span> serves for viscous regularization of plastic behavior in areas where <span class="arithmatex">\(\Delat\)</span> is very small. We note that recent multi-category
+<span class="arithmatex">\(\Delta_{min}\)</span> serves for viscous regularization of plastic behavior in areas where <span class="arithmatex">\(\Dela t\)</span> is very small. We note that recent multi-category
 ice implementations (such as CICE, see Hunke and Lipscomb 2008) use different parameterization for <span class="arithmatex">\(P_0\)</span>, which takes into account the distribution of ice over thickness categories. This
-does not change the basic equations <span class="arithmatex">\(\ref{ice01}\)</span>, <span class="arithmatex">\(\ref{ice02}\)</span>.</p>
+does not change the basic equations (<span class="arithmatex">\(\ref{ice01}\)</span>, <span class="arithmatex">\(\ref{ice02}\)</span>).</p>
 <p>In our case we deal with three tracers, the area coverage <span class="arithmatex">\(a\)</span>, ice volume <span class="arithmatex">\(h_{ice}\)</span> and snow
 volume <span class="arithmatex">\(h_s\)</span>. They are advected with ice velocities and modified through thermodynamical
 forcing</p>
 <div class="arithmatex">\[\begin{equation}
 \label{ice03}
-\partial_t a+\nabla(a\pmb{u})=S_a, \partial_t h_{ice}+\nabla(h_{ice}\pmb{u})=S_{ice}, \partial_t H-s+\nabla(h_s\pmb{u})=S_s
+\partial_t a+\nabla(a\pmb{u})=S_a, \partial_t h_{ice}+\nabla(h_{ice}\pmb{u})=S_{ice}, \partial_t h_s+\nabla(h_s\pmb{u})=S_s
 \end{equation}\]</div>
 <p>with <span class="arithmatex">\(S_a\)</span>, <span class="arithmatex">\(S_{ice}\)</span> and <span class="arithmatex">\(S_s\)</span> the sources due to the exchange with atmosphere and ocean.</p>
-<p>The system <span class="arithmatex">\(\ref{ice01}, \ref{ice02}\)</span>, \ref{ice03}$, augmented with appropriate model of sources and boundary conditions, defines the sea ice model. We use the boundary conditions of no slip for
+<p>The system (<span class="arithmatex">\(\ref{ice01}, \ref{ice02}, \ref{ice03}\)</span>), augmented with appropriate model of sources and boundary conditions, defines the sea ice model. We use the boundary conditions of no slip for
 momentum and no flux for tracers at lateral walls. The well known difficulty in solving
 these equation is related to the rheology term in the momentum equation, which makes this
 equation very stiff and would require time steps of fractions of second if stepped explicitly.
@@ -1569,7 +1569,15 @@ It can be considered as a pseudo-time solver for VP rheology. In this case one w
 <div class="arithmatex">\[\begin{equation}
 \beta(\pmb{u}^{p+1}-\pmb{u}^p)=-\pmb{u}^{p+1}+\pmb{u}^n-\Delta t \pmb{f}\times \pmb{u}^{p+1}+\frac{\Delta t}{m}[\pmb{F}^{p+1}+a\tau+C_da\rho_o(\pmb{u}_o^n-\pmb{u}^{p+1})|\pmb{u}_o^n-\pmb{u}^p| -mg\nabla H^n]
 \end{equation}\]</div>
-<p>for velocity. Here <span class="arithmatex">\(\alpha\)</span> and <span class="arithmatex">\(\beta\)</span> are some large constants. The subscript <span class="arithmatex">\(p\)</span> is related to pseudotime
+<p>for velocity. We define:</p>
+<div class="arithmatex">\[\begin{equation}
+  \sigma_1=\sigma_{11}+\sigma_{22},  \sigma_2=\sigma_{11}-\sigma_{22}
+\end{equation}\]</div>
+<p>and similarly for deformation:</p>
+<div class="arithmatex">\[\begin{equation}
+  \dot{\epsilon}_1=\dot{\epsilon}_{11}+\dot{\epsilon}_{22},  \dot{\epsilon}_2=\dot{\epsilon}_{11}-\dot{\epsilon}_{22}
+\end{equation}\]</div>
+<p>Here <span class="arithmatex">\(\alpha\)</span> and <span class="arithmatex">\(\beta\)</span> are some large constants. The subscript <span class="arithmatex">\(p\)</span> is related to pseudotime
 iterations, replacing subcycling of the standard EVP, and <span class="arithmatex">\(n\)</span> is the previous time step.
 Fields are initialized with values at time step <span class="arithmatex">\(n\)</span> for <span class="arithmatex">\(p = 1\)</span>, and their values for the last
 iteration <span class="arithmatex">\(p = N_{EVP}\)</span> are taken as solutions for time step <span class="arithmatex">\(n+ 1\)</span>. Clearly, if <span class="arithmatex">\(N_{EVP}\)</span> is sufficiently
@@ -1577,7 +1585,15 @@ large, the VP solutions have to be recovered. In order that CFL limitations be s
 the product <span class="arithmatex">\(\alpha\beta\)</span> should be sufficiently large (see Bouillon et al. (2013)). The regime of the
 standard EVP scheme (<span class="arithmatex">\(N_{EVP} = 120\)</span> and <span class="arithmatex">\(T_{EVP} = \Delta t/3\)</span>) will be approximately recovered
 for <span class="arithmatex">\(\alpha =\beta  = 40\)</span> and <span class="arithmatex">\(N_{EVP} = 120\)</span>, but much larger values have to be used on fine meshes to
-warrant absence of noise.</p>
+warrant absence of noise. For this reason, in SCHISM we have added a new option where <span class="arithmatex">\(\alpha\)</span> and <span class="arithmatex">\(\beta\)</span> are functions
+ of the mesh size:</p>
+<div class="arithmatex">\[\begin{equation}
+  \alpha =\beta=\frac{C}{tanh(BA/\Delta t_{ice})}
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(A\)</span> is element area, <span class="arithmatex">\(C\)</span> is the minimum, and <span class="arithmatex">\(B\)</span> is
+an adjustable coefficient that controls how quickly <span class="arithmatex">\(\alpha\)</span> and  <span class="arithmatex">\(\beta\)</span>
+depart from their minimum, <span class="arithmatex">\(\Delta t_{ice}\)</span> is the time step used in the
+ice model. </p>
 <p>One expects that if this scheme is stable and converged, it should produce solutions
 identical to those of converging VP solver. In reality, it will not be run for full convergence,
 which is still too expensive, and some difference will be preserved.
@@ -1586,9 +1602,21 @@ which will be referred further as VP, EVP and mEVP. The reason of keeping all th
 two-fold. First, it facilitates the comparison of results with other models which may be
 using one of these approaches. Second, their numerical efficiency and performance depend
 on applications, and one may wish to select the most appropriate approach.</p>
-<p>The tracer transport equation <span class="arithmatex">\(\ref{ice03}\)</span> is solved using a FCT scheme. </p>
+<p>The tracer transport equation (<span class="arithmatex">\(\ref{ice03}\)</span>) is solved using a FCT scheme. </p>
 <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
 <h1 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h1>
+<ol>
+<li>Bouillon, S., Fichefet, T., Legat, V., Madec, G., 2013. The elastic-viscous-plastic method
+revisited, Ocean Modelling 71, 2–12.</li>
+<li>Lemieux, J.-F., Knoll, D., Tremblay, B., Holland, D., Losch, M., 2012. A comparison of
+the Jacobian-free Newton–Krylov method and the EVP model for solving the sea ice
+momentum equation with a viscous-plastic formulation: a serial algorithm study. Journal
+of Computational Physics 231 (17), 5926–5944.</li>
+<li>Lemieux, J.-F., Tremblay, B., 2009. Numerical convergence of viscousplastic sea ice models.
+Journal of Geophysical Research 114, C05009.</li>
+<li>Zhang, J., Hibler, W.D, On an efficient numerical method for modeling sea ice dynamics, J.
+Geophys. Res., 102, 8691–8702, 1997.</li>
+</ol>
 
               
             </article>
