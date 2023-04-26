@@ -217,7 +217,7 @@
           istep1        = it_main
           time          = it_main*dt
           mday          = day_in_month
-          month_i       = month
+          month_i       = month_mice
           nyr           = yearnew
           sec           = timenew
           yday          = real(ndpyr, kind=dbl_kind)

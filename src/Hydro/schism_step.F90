@@ -24,7 +24,6 @@
       use schism_io
       use netcdf
       use misc_modules
-      use gen_modules_clock
 
 #ifdef USE_PAHM
       use PaHM_Global, only: modelType
@@ -84,6 +83,7 @@
 #endif
 
 #ifdef USE_MICE
+      use gen_modules_clock
       use icedrv_main, only:io_icepack,restart_icepack,step_icepack
       use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
@@ -381,7 +381,7 @@
 #ifdef USE_MICE
       call clock_newyear                        ! check if it is a new year
       call clock
-      if(myrank==0) write(16,*) yearold,month,day_in_month,timeold/3600
+      if(myrank==0) write(16,*) yearold,month_mice,day_in_month,timeold/3600
 #endif
 
 !...  define ramp function for boundary elevation forcing, wind and pressure

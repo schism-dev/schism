@@ -118,7 +118,7 @@ include o/$(config)/autosrc.mk
 #OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
 #        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
 #        csv_utilities.o  parwind.o 
-OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -312,7 +312,7 @@ ifdef USE_MICE
                   icepack_mechred.o icepack_algae.o icepack_therm_vertical.o icepack_zbgc.o icepack_therm_itd.o \
                   icepack_intfc.o icedrv_kinds.o icedrv_constants.o mice_module.o icedrv_system.o \
                   icedrv_main.o icedrv_allocate.o icedrv_set.o mice_init.o mice_evp.o icedrv_init.o\
-                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o
+                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o gen_modules_clock.o
 endif
 
 ifdef USE_MARSH

@@ -29,7 +29,6 @@
       use schism_io
       use netcdf
       use misc_modules
-      use gen_modules_clock
 
 #ifdef USE_PAHM
       use ParWind, only : ReadCsvBestTrackFile
@@ -91,6 +90,7 @@
       USE hydraulic_structures
 
 #ifdef USE_MICE
+      use gen_modules_clock
       use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
       use mice_therm_mod, only: t_oi
@@ -7000,6 +7000,8 @@
       if(myrank==0) write(16,*)'start init multi ice...'
       call ice_init
       if(myrank==0) write(16,*)'done init multi ice...'
+      call clock_init(time) !by wq
+      if(myrank==0) write(16,*) yearnew,month_mice,day_in_month,timeold
 #endif
 
 

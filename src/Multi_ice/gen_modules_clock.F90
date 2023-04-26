@@ -5,10 +5,10 @@ module gen_modules_clock
   use schism_msgp, only : myrank
   implicit none
   save
-  real(rkind)            :: timeold, timenew     !time in a day, unit: sec
+  real(rkind)              :: timeold, timenew     !time in a day, unit: sec
   integer                  :: dayold, daynew       !day in a year
   integer                  :: yearold, yearnew     !year before and after time step
-  integer                  :: month, day_in_month  !month and day in a month
+  integer                  :: month_mice, day_in_month  !month and day in a month
   integer                  :: fleapyear            !1 fleapyear, 0 not 
   integer                  :: ndpyr                !number of days in yearnew 
   integer                  :: num_day_in_month(0:1,12)
@@ -55,7 +55,7 @@ contains
     do i=1,12
        aux2=aux1+num_day_in_month(fleapyear,i)
        if(daynew>aux1 .and. daynew<=aux2) then
-          month=i
+          month_mice=i
           day_in_month=daynew-aux1
           exit
        end if
@@ -66,23 +66,35 @@ contains
   !
   !--------------------------------------------------------------------------------
   !
-  subroutine clock_init
+  subroutine clock_init(time)
+    
     !use g_parsup
     !use g_config
     implicit none
-    integer          :: i, daystart, yearstart
+
+    real(rkind), intent(in) :: time
+    integer          :: i,j, daystart, yearstart
     real(rkind)    :: aux1, aux2, timestart
  
     ! the model initialized at
     timenew=start_hour*3600
     yearnew=start_year
     call check_fleapyr(yearnew, fleapyear)
+    ndpyr=365+fleapyear
     aux1=0
       do i=1,start_month
          aux1=aux1+num_day_in_month(fleapyear,i)
       end do
     aux1=aux1+start_day-num_day_in_month(fleapyear,start_month)
     daynew=aux1
+   
+   j=time/dt
+
+   do i=1,j
+      call clock_newyear 
+      call clock
+   enddo
+
     timestart=timenew
     daystart=daynew
     yearstart=yearnew
@@ -119,14 +131,14 @@ contains
     
     ! check fleap year
     
-    ndpyr=365+fleapyear
+    !ndpyr=365+fleapyear
 
     ! find month and dayinmonth at the new time step
     aux1=0
     do i=1,12
        aux2=aux1+num_day_in_month(fleapyear,i)
        if(daynew>aux1 .and. daynew<=aux2) then
-          month=i
+          month_mice=i
           day_in_month=daynew-aux1
           exit
        end if
