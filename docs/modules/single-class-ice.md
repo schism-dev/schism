@@ -4,6 +4,7 @@ The single-class ice/snow module is taken from FESOM2, courtesy of Dr. Sergey Da
  to show some new additions.
 
 Dynamical part solves the ice motion equation:
+
 \begin{equation}
 \label{ice01}
  m(\partial_t + \pmb{f} \times)=a\tau - aC_d\rho_o (\pmb{u}-\pmb{u}_0)|\pmb{u}-\pmb{u}_0| +\pmb{F} -mg\nabla H
