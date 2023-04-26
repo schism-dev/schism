@@ -1,6 +1,6 @@
 
 set(schismmodlibs schism_mice ${schismmodlibs} PARENT_SCOPE)
-add_library(schism_mice icepack_kinds.F90 icepack_warnings.F90 icepack_parameters.F90 icepack_age.F90 
+add_library(schism_mice gen_modules_clock.F90 icepack_kinds.F90 icepack_warnings.F90 icepack_parameters.F90 icepack_age.F90 
                         icepack_tracers.F90 icepack_mushy_physics.F90 icepack_orbital.F90 
                         icepack_ocean.F90 icepack_firstyear.F90 icepack_meltpond_cesm.F90 
                         icepack_therm_shared.F90 icepack_therm_bl99.F90 icepack_meltpond_lvl.F90 
