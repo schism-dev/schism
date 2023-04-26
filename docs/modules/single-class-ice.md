@@ -51,7 +51,7 @@ computing pressure $P$ and moduli $\eta$ and $\zeta$:
 
 $e=2$  (the ellipticity parameter), $C=20$, $\Delta_{min}=2.e-9 s^{-1}$, and $p^*=15000 Pa$ 
 are default values, they are adjusted in practice. In this scheme, 
-$\Delta_{min}$ serves for viscous regularization of plastic behavior in areas where $\Dela t$ is very small. We note that recent multi-category
+$\Delta_{min}$ serves for viscous regularization of plastic behavior in areas where $\Delta t$ is very small. We note that recent multi-category
 ice implementations (such as CICE, see Hunke and Lipscomb 2008) use different parameterization for $P_0$, which takes into account the distribution of ice over thickness categories. This
 does not change the basic equations ($\ref{ice01}$, $\ref{ice02}$).
 
@@ -144,6 +144,11 @@ on applications, and one may wish to select the most appropriate approach.
 The tracer transport equation ($\ref{ice03}$) is solved using a FCT scheme. 
 
 #Usage
+
+1. Compile with USE_ICE on;
+2. The time step for this moule is controlled by `nstep_ice` in `param.nml`. In addition, the output handles are found in `SCHOUT` section. The code will compute the ice-ocean stress at cells covered by ice;
+3. The main parameter input for this module is `ice.nml` (you can find a sample in `sample_inputs/`), where you specify the ice thermodynamic constants etc. You can specify the new mEVP option with `mevp_coef`.
+4. Control dispersion/diffusion in transport by using the parameters in `ice.nml` and `ice_fct.gr3`. This is important for very fine mesh size.
 
 #References
 1. Bouillon, S., Fichefet, T., Legat, V., Madec, G., 2013. The elastic-viscous-plastic method
