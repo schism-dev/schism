@@ -1545,9 +1545,9 @@ Some work-arounds are:</p>
 </ol>
 <h2 id="numerical-dispersion-with-weno">Numerical dispersion with WENO<a class="headerlink" href="#numerical-dispersion-with-weno" title="Permanent link">&para;</a></h2>
 <p>The 3rd-order WENO scheme has numerical dispersion that needs to be controlled, usually by adjusting <code>epsilon[12]</code> 
- in <code>param.nml</code>. Usually this approach usually works well. Under some circumstances, e.g. watershed in the compound flooding cases, this
+ in <code>param.nml</code>. This approach usually works well. Under some circumstances, e.g. watershed in the compound flooding cases, this
  adjustment is not enough, especially if hybrization with ELM transport is used (<code>ielm_transport=1</code>). This is 
- because ELM tracer results may introduce 'shocks' to the local WENO stencil, which n turn generates disperision. 
+ because ELM tracer results may introduce 'shocks' to the local WENO stencil, which in turn generate disperision. 
 In those cases, the users need to adjust <code>tvd.prop</code> to make some areas upwind as well to ensure monotonicity, because
  upwind scheme is able to handle chocks well.</p>
 <p>Figure <a href="#figure_weno1">1</a> shows the result of disperion symptom from WENO, in the form of high salinity in some upriver
@@ -1555,14 +1555,13 @@ In those cases, the users need to adjust <code>tvd.prop</code> to make some area
  elements in close proximity in those upriver regions
  (note that <code>h_tvd</code>=5m in this case). Making those upriver elements upwind via <code>tvd.prop</code> resolves this issue; cf. Fig. <a href="#figure_weno2">2</a>.</p>
 <figure id="figure_weno1" markdown="block">
-![Operating timestep](./assets/hi_SSS_CB_RUN13t3.png){width=800}
+<img alt="WENO1" src="assets/hi_SSS_CB_RUN13t3.png" title="" /> {width=800}
 <figcaption markdown="off">Numerical dispersion in WENO led to high surface salinity in Chesapeake Bay.</figcaption>
 </figure>
-<p>Figure <a href="#figure_weno2">2</a>.
- <figure id="figure_weno2" markdown="block">
-![Operating timestep](./assets/hi_SSS_gone_CB_RUN13t4.png){width=800}
+<figure id="figure_weno2" markdown="block">
+![Operating timestep](assets/hi_SSS_gone_CB_RUN13t4.png){width=800}
 <figcaption markdown="off">Making upstream rivers upwind resolved the high surface salinity issue in Chesapeake Bay.</figcaption>
-</figure></p>
+</figure>
 
               
             </article>
