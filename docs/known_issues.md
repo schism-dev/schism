@@ -28,7 +28,7 @@ Figure [1](#figure_weno1) shows the result of disperion symptom from WENO, in th
  (note that `h_tvd`=5m in this case). Making those upriver elements upwind via `tvd.prop` resolves this issue; cf. Fig. [2](#figure_weno2).
 
  <figure markdown id='figure_weno1'>
-<img alt="WENO1" src="assets/hi_SSS_CB_RUN13t3.png"  width="500" height="500"> 
+<img alt="WENO1" src="assets/hi_SSS_CB_RUN13t3.png"  width="500" height="500" /> 
 <figcaption>Numerical dispersion in WENO led to high surface salinity in Chesapeake Bay (circled area).</figcaption>
 </figure>
 
