@@ -26,7 +26,7 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
     * [For VisIT v2.13.3](https://cadwr.box.com/s/tiuaeb87ka1tb7i185l0cpf7g3da2h63)
     * [For VisIT v3.1.4](https://cadwr.box.com/s/jrj83yycyumhkf9kqod7teb7biqovmta)
     
-    You need to put dlls on `C:\Users\username\Documents\VisIt\databases`. Alternatively, please email Jon Shu at Qiang.shu[at]water[dot]ca[dot]gov and let him know the version of visit you are using.
+    You need to put dlls on OneDrive: `Documents/VisIt/databases` (create new folders if necessary).
 
 4. After these steps, you'd be able to read in SCHISM outputs in ViSIT; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
 
@@ -35,4 +35,4 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 Newer versions can be found at the master branch of [github](https://github.com/schism-dev/schism_visit_plugin).
 
 !!!note
-    Note that the new plugins also work with the old I/O (combined `schout*.nc`). To visualize any variables under new I/O with VisIT, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIT also needs corresponding `zCoordinates*.nc`. 
+    Note that the new plugins also work with the old I/O (combined `schout*.nc`) or even the older binary outputs. To visualize any variables under new I/O with VisIT, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIT also needs corresponding `zCoordinates*.nc`. 
