@@ -28,13 +28,13 @@ Figure [1](#figure_weno1) shows the result of disperion symptom from WENO, in th
  (note that `h_tvd`=5m in this case). Making those upriver elements upwind via `tvd.prop` resolves this issue; cf. Fig. [2](#figure_weno2).
 
  <figure markdown id='figure_weno1'>
-![Operating timestep](../assets/hi_SSS_CB_RUN13t3.png){width=800}
+![Operating timestep](./assets/hi_SSS_CB_RUN13t3.png){width=800}
 <figcaption>Numerical dispersion in WENO led to high surface salinity in Chesapeake Bay.</figcaption>
 </figure>
 
 Figure [2](#figure_weno2).
  <figure markdown id='figure_weno2'>
-![Operating timestep](../assets/hi_SSS_gone_CB_RUN13t4.png){width=800}
+![Operating timestep](./assets/hi_SSS_gone_CB_RUN13t4.png){width=800}
 <figcaption>Making upstream rivers upwind resolved the high surface salinity issue in Chesapeake Bay.</figcaption>
 </figure>
 
