@@ -20,7 +20,7 @@ Some work-arounds are:
  adjustment is not enough, especially if hybrization with ELM transport is used (`ielm_transport=1`). This is 
  because ELM tracer results may introduce 'shocks' to the local WENO stencil, which in turn generate disperision. 
 In those cases, the users need to adjust `tvd.prop` to make some areas upwind as well to ensure monotonicity, because
- upwind scheme is able to handle chocks well.
+ upwind scheme handles shocks well.
 
 Figure [1](#figure_weno1) shows the result of disperion symptom from WENO, in the form of high salinity in some upriver
  regions of Chesapeake Bay. Higher-order WENO, 1st-order upwind and ELM solvers are applied in adjacent
