@@ -723,6 +723,20 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#third-order-weno-scheme" class="md-nav__link">
+    Third-order WENO scheme
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hybridization-with-eulerian-lagrangian-method" class="md-nav__link">
+    Hybridization with Eulerian-Lagrangian Method
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#vertical-movement" class="md-nav__link">
     Vertical movement
   </a>
@@ -1554,7 +1568,7 @@
 
   <h1>Transport equation</h1>
 
-<p>SCHISM supports a few FV solvers for the transport equation. All of the tracers, including T,S, sediment (if invoked) etc are solved simultaneously for efficiency.</p>
+<p>SCHISM supports a few FV solvers for the transport equation. All of the tracers, including T,S, sediment (if invoked) etc are solved simultaneously for efficiency. </p>
 <p>The transport equation for a generic tracer C is given by:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq01}
@@ -1569,8 +1583,11 @@
 \end{aligned}
 \end{equation}\]</div>
 <p>Note that the 3D continuity equation ensures the constancy condition for the transport equation, i.e. <span class="arithmatex">\(C=\text{const}\)</span> initially will remain so in the absence of sinks/source.</p>
+<p>In the following, we describe the numerical algorithm starting from 
+the simplest 1st-order upwind scheme to the more complex 3rd-order WENO. In the newer versions, the pure upwind and explicit 
+ TVD schemes have been deprecated.</p>
 <h2 id="upwind">Upwind<a class="headerlink" href="#upwind" title="Permanent link">&para;</a></h2>
-<p>ince most of the variables below are defined at prism center, we will use shorthand like <span class="arithmatex">\(i\)</span> etc to denote a prism at level <span class="arithmatex">\(k + 1/2\)</span> when there is no confusion. Also we often omit the superscript <span class="arithmatex">\(n\)</span> in the explicit terms for brevity.</p>
+<p>Since most of the variables below are defined at prism center, we will use shorthand like <span class="arithmatex">\(i\)</span> etc to denote a prism at level <span class="arithmatex">\(k + 1/2\)</span> when there is no confusion. Also we often omit the superscript <span class="arithmatex">\(n\)</span> in the explicit terms for brevity.</p>
 <p>A FV discretization of Eq. <span class="arithmatex">\(\ref{eq01}\)</span> for prism <span class="arithmatex">\(i\)</span> is :</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq03}
@@ -1637,7 +1654,9 @@ C_i^{m+1} = C_i + \frac{\Delta t'}{V_i} \sum_{j\in S^-} \left| Q_j \right| (C_j 
 r_p = \frac{\sum_{m\in S^-} \left| Q_m \right| (C_m - C_i)}{\left| Q_p \right| (C_i - C_p)}, p \in S^+
 \end{equation}\]</div>
 <p>In Eqs. <span class="arithmatex">\(\ref{eq09}\)</span> and <span class="arithmatex">\(\ref{eq10}\)</span>, the faces <span class="arithmatex">\(S\)</span>, <span class="arithmatex">\(S^+\)</span>, and <span class="arithmatex">\(S^-\)</span> need to exclude the locations where upwind is applied: all horizontal and vertical boundaries, and interfaces between wetting and drying. In those places, <span class="arithmatex">\(\varphi_j = \delta_i = 0\)</span>. Again SCHISM automatically calculates the time step according to the Courant condition (Eq. <span class="arithmatex">\(\ref{eq10}\)</span>); the sub-time step used is the minimum of all prisms. The choices for the limiter function include: <em>MINMOD</em>, <em>OSHER</em>, <em>van Leer</em>, <em>Super Bee</em> etc.</p>
-<p>Since TVD is a nonlinear method, we cannot treat the vertical fluxes implicitly, and so all fluxes have to be treated explicitly. TVD method is therefore more expensive than upwind. A hybrid upwind/TVD, with TVD being used in the deeper depths and upwind in the shallow depths, has been implemented in SCHISM to improve efficiency. The user can also manually specify upwind/TVD zones in the domain via <code>tvd.prop</code>. You are encouraged to use <a href="#tvd2"><span class="arithmatex">\(TVD^2\)</span></a> as much as possible for efficiency/accuracy.</p>
+<p>Since TVD scheme here is a nonlinear method, we cannot treat the vertical fluxes implicitly, and so all fluxes have 
+to be treated explicitly. TVD method is therefore more expensive than upwind. A more efficient <a href="#tvd2"><span class="arithmatex">\(TVD^2\)</span></a> using a fractional
+ time step method should be used. </p>
 <h2 id="tvd2"><span class="arithmatex">\(TVD^2\)</span><a class="headerlink" href="#tvd2" title="Permanent link">&para;</a></h2>
 <p>The TVD scheme shown above is explicit in 3D space and thus subject to the Courant condition, which comprises of horizontal and vertical fluxes across each of the prism faces (<a href="#casulli2005">Casulli and Zanolli 2005</a>). The restriction related to the vertical fluxes is especially severe due to smaller grid size used in the vertical dimension, and therefore a large number of sub-cycles within each time step are usually required. To partially mitigate the issue, a hybrid upwind-TVD approach can be used in which the more efficient upwind scheme, with an implicit treatment of the vertical fluxes, is used when the flow depth falls below a given threshold (with the assumption that stratification is usually much smaller in the shallows). However, this approach does not work in deeper depths of eddying regime, as large vertical velocities are not uncommon along steep bathymetric slopes. Together with the fact that a large number of vertical levels are usually required in the eddying regime, the explicit scheme leads to subpar computational performance and usually takes over 90% of the total CPU time.</p>
 <p>We therefore develop an implicit TVD scheme in the vertical dimension in SCHISM. We start from the FVM formulation of the 3D transport equation at a prism <span class="arithmatex">\(i\)</span>:</p>
@@ -1724,6 +1743,23 @@ s_q &amp;= \frac{(\widetilde C_i - C_i^{M+1}) \sum_{p\in S_V^+} \left| Q_p \righ
 \end{equation}\]</div>
 <p>where we have imposed a maximum of 1 in an attempt to obtain 2nd-order accuracy in time. Note that the limiter is a function of the vertical Courant number: it decreases as the Courant number increases. Eqs. <span class="arithmatex">\(\ref{eq21}\)</span> and <span class="arithmatex">\(\ref{eq26}\)</span> are then solved using a simple Picard iteration method starting from <span class="arithmatex">\(\psi = 0\)</span> everywhere, and fast convergence within a few iterations is usually observed.</p>
 <p>Simple benchmark tests indicate that <span class="arithmatex">\(TVD^2\)</span> is accurate for a wide range of Courant numbers as found in typical geophysical flows. It works equally well in eddying and non-eddying regimes, from very shallow to very deep depths, and is thus ideal for cross-scale applications. You are encouraged to use this option as much as possible.</p>
+<h2 id="third-order-weno-scheme">Third-order WENO scheme<a class="headerlink" href="#third-order-weno-scheme" title="Permanent link">&para;</a></h2>
+<p>This option starts from the same Eqs (<span class="arithmatex">\(\ref{eq15}\)</span> - <span class="arithmatex">\(\ref{eq17}\)</span>), but solve Eq. (<span class="arithmatex">\(\ref{eq15}\)</span>) using a third-order WENO scheme.
+Essentially we use a higher-order reconstruction method to approximate the numerical flux and the details can be found in 
+ <a href="http://ccrm.vims.edu/yinglong/wiki_files/Ye_etal_OM_2019-SCHISM-WENO.pdf">Ye et al. (2019)</a>.</p>
+<h2 id="hybridization-with-eulerian-lagrangian-method">Hybridization with Eulerian-Lagrangian Method<a class="headerlink" href="#hybridization-with-eulerian-lagrangian-method" title="Permanent link">&para;</a></h2>
+<p>The FV schemes described above all have explicit component (e.g. in the horizontal dimension) that is subject to stability 
+ constraint (Courant condition). This constraint can become severe, e.g. with high mesh resolution in the shallows in watershed
+ applications. To alleviate this constaint, SCHISM allows local hybridization between any of the FV schemes and the Eulerian-Lagrangian Method (ELM). Like the ELM scheme used for momentum advection, the ELM scheme for the transport advection is unconditionally
+ stable and monotone (if a linear interpolation is used at the foot of the characteristic line). The only downside of the ELM
+ is that it does not conserve mass in Eulerian sense (but it does in Lagrangian sense), and therefore should be used sparingly,
+ i.e., only to locally speed up the transport solver.</p>
+<p>The user can invoke this scheme by setting <code>ielm_transport=1</code> and prescribing a maximum allowed number of sub-sucyclings per
+ time step <code>max_subcyc</code>. To limit the use of ELM only for extreme cases, it's important to set a proper <code>max_subcyc</code>. A
+ rule of thumb is that a sub time step (for the explicit FV sovler) should be around 10 sec, so max_subcyc should be <code>dt/10</code>.</p>
+<p>Another issue with this hybridized scheme is that the combination of WENO and ELM in shallows can sometimes lead to 
+large numerical dispersion; see <a href="../known_issues.html#numerical-dispersion-with-weno">Known issues</a> for details. A simple
+ solution for this issue is to make the affected regions upwind via <code>tvd.prop</code>.</p>
 <h2 id="vertical-movement">Vertical movement<a class="headerlink" href="#vertical-movement" title="Permanent link">&para;</a></h2>
 <p>Many tracers have ‘behaviors’ in the form of vertical migration (upward or downward) in the water column. This is modeled with a ‘settling’ term: </p>
 <div class="arithmatex">\[\begin{equation}
