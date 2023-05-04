@@ -3,10 +3,8 @@ from time import time
 import pathlib
 import logging
 
-#from pyschism.forcing import source_sink
 from pyschism.forcing.source_sink.nwm import NationalWaterModel, NWMElementPairings
 from pyschism.mesh import Hgrid
-
 
 logging.basicConfig(
     format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
@@ -33,6 +31,7 @@ if __name__ == '__main__':
     #input directory which saves nc files
     cache = pathlib.Path(f'./{startdate.strftime("%Y%m%d")}')
     cache.mkdir(exist_ok=True, parents=True)
+    # cache = pathlib.Path('./NWM_v2.1')
 
     # check if source/sink json file exists
     if all([sources_pairings.is_file(), sinks_pairings.is_file()]) is False:
@@ -41,8 +40,8 @@ if __name__ == '__main__':
         pairings.save_json(sources=sources_pairings, sinks=sinks_pairings)
     else:
         pairings = NWMElementPairings.load_json(
-            hgrid, 
-            sources_pairings, 
+            hgrid,
+            sources_pairings,
             sinks_pairings)
 
     #check nc files, if not exist will download

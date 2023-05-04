@@ -1,14 +1,17 @@
 # Convert Datum from NAVD88 to xGEOID20b:
 
-## 1. gen.py: prepare ascii file for NOAA's vertical Datum transformation software
+## 1. generate_txt.py: prepare ascii file for NOAA's vertical Datum transformation software
     inputs:
       - chea_del_bay.reg 
       - stofs3d_inland2.reg 
       - hgrid.ll (after loading bathymetry, setting levee/feeder depth)
 
     outputs:
-      - hgrid_nochesdel_navd_positiveup.txt
-      - hgrid_chesdel_navd_positiveup.txt
+        hgrid_stofs3d_inland_ches_del.txt
+        hgrid_stofs3d_inland_1.txt
+        hgrid_stofs3d_inland_2.txt
+        hgrid_stofs3d_inland_3.txt
+        hgrid_stofs3d_inland_4.txt
 
 ## 2. VDatum:
     2.1 download the latest full vdatum package from https://vdatum.noaa.gov/docs/datums.html
@@ -16,6 +19,7 @@
     2.2 unzip the package and enter into the vdatum_all_20221116/vdatum/ folder, submit job.sh
 
     Outputs will be saved to a new created folder result/, and rename the file as:
+    (Under UNIX, the "_New" won't be added by vdatum)
         hgrid_stofs3d_inland_ches_del_New.txt
         hgrid_stofs3d_inland_1_New.txt
         hgrid_stofs3d_inland_2_New.txt

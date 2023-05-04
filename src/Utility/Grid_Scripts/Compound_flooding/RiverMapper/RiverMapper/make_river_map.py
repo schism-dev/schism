@@ -580,12 +580,13 @@ def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
     i_crowded = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio)
     nsnap += sum(i_crowded)
     print(f'{sum(i_crowded)} vertices marked for cleaning II')
-    if sum(i_crowded) > 0:
-        for i in np.argwhere(i_crowded).squeeze():
-            idx = indices[i, :]
-            i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
-            idx = indices[i, i_near]
-            xyz[idx, :] = xyz[i, :]
+    if sum(i_crowded) > 1:
+        id_crowded = np.atleast_2d(np.argwhere(i_crowded)).flatten()
+    for i in id_crowded:
+        idx = indices[i, :]
+        i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
+        idx = indices[i, i_near]
+        xyz[idx, :] = xyz[i, :]
 
     return xyz, nsnap
 
