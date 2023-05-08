@@ -25,7 +25,7 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 3. Download pre-built plug-in, developed at California Dept of Water Resource
     * [For VisIT v2.13.3](https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8)
     * [For VisIT v3.1.4](https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos)
-    # [For VisIT v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
+    * [For VisIT v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
     
     You need to put dlls on OneDrive: `Documents/VisIt/databases` (create new folders if necessary).
 
