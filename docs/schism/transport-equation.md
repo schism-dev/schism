@@ -243,13 +243,13 @@ Simple benchmark tests indicate that $TVD^2$ is accurate for a wide range of Cou
 
 ## Third-order WENO scheme
 
-This option starts from the same Eqs ($\ref{eq15}$ - $\ref{eq17}$), but solve Eq. ($\ref{eq15}$) using a third-order WENO scheme.
+This option starts from the same Eqs ($\ref{eq15}$ - $\ref{eq17}$), but solves Eq. ($\ref{eq15}$) using a third-order WENO scheme.
 Essentially we use a higher-order reconstruction method to approximate the numerical flux and the details can be found in 
  [Ye et al. (2019)](http://ccrm.vims.edu/yinglong/wiki_files/Ye_etal_OM_2019-SCHISM-WENO.pdf).
 
 ## Hybridization with Eulerian-Lagrangian Method
 
-The FV schemes described above all have explicit component (e.g. in the horizontal dimension) that is subject to stability 
+The FV schemes described above all have explicit component (in the horizontal dimension) that is subject to stability 
  constraint (Courant condition). This constraint can become severe, e.g. with high mesh resolution in the shallows in watershed
  applications. To alleviate this constaint, SCHISM allows local hybridization between any of the FV schemes and the Eulerian-Lagrangian Method (ELM). Like the ELM scheme used for momentum advection, the ELM scheme for the transport advection is unconditionally
  stable and monotone (if a linear interpolation is used at the foot of the characteristic line). The only downside of the ELM

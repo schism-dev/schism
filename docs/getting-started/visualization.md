@@ -23,8 +23,9 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 1. First download VisIT from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Use default dir (and record it), e.g. `C:\Users\username\AppData\Local\Programs\LLNL\VisIt*`
 2. Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIT)
 3. Download pre-built plug-in, developed at California Dept of Water Resource
-    * [For VisIT v2.13.3](https://cadwr.box.com/s/tiuaeb87ka1tb7i185l0cpf7g3da2h63)
-    * [For VisIT v3.1.4](https://cadwr.box.com/s/jrj83yycyumhkf9kqod7teb7biqovmta)
+    * [For VisIT v2.13.3](https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8)
+    * [For VisIT v3.1.4](https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos)
+    # [For VisIT v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
     
     You need to put dlls on OneDrive: `Documents/VisIt/databases` (create new folders if necessary).
 
