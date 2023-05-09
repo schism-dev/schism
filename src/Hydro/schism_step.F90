@@ -10356,15 +10356,11 @@
         j=nf90_def_var(ncid_hot,'dfq1',NF90_DOUBLE,var2d_dim,nwild(18))
         j=nf90_def_var(ncid_hot,'dfq2',NF90_DOUBLE,var2d_dim,nwild(19))
 
-        !var1d_dim(1)=side_dim
-        !j=nf90_def_var(ncid_hot,'xcj',NF90_DOUBLE,var1d_dim,nwild(20))
-        !j=nf90_def_var(ncid_hot,'ycj',NF90_DOUBLE,var1d_dim,nwild(21))
-        !var1d_dim(1)=node_dim
-        !j=nf90_def_var(ncid_hot,'xnd',NF90_DOUBLE,var1d_dim,nwild(22))
-        !j=nf90_def_var(ncid_hot,'ynd',NF90_DOUBLE,var1d_dim,nwild(23))
-        !var2d_dim(1)=nvrt_dim; var2d_dim(2)=node_dim
-        !j=nf90_def_var(ncid_hot,'uu2',NF90_DOUBLE,var2d_dim,nwild(24))
-        !j=nf90_def_var(ncid_hot,'vv2',NF90_DOUBLE,var2d_dim,nwild(25))
+        !Deflate some vars
+        do i=4,21
+          if(i==20) cycle !skip 20
+          j=nf90_def_var_deflate(ncid_hot,nwild(i),0,1,4) 
+        enddo !i
 
         j=nf90_enddef(ncid_hot)
 
@@ -10390,13 +10386,6 @@
         j=nf90_put_var(ncid_hot,nwild(17),dfh(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(18),dfq1(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(19),dfq2(:,1:np),(/1,1/),(/nvrt,np/))
-
-        !j=nf90_put_var(ncid_hot,nwild(20),xcj,(/1/),(/ns/))
-        !j=nf90_put_var(ncid_hot,nwild(21),ycj,(/1/),(/ns/))
-        !j=nf90_put_var(ncid_hot,nwild(22),xnd,(/1/),(/np/))
-        !j=nf90_put_var(ncid_hot,nwild(23),ynd,(/1/),(/np/))
-        !j=nf90_put_var(ncid_hot,nwild(24),uu2(:,1:np),(/1,1/),(/nvrt,np/))
-        !j=nf90_put_var(ncid_hot,nwild(25),vv2(:,1:np),(/1,1/),(/nvrt,np/))
 
         nvars_hot=21 !record # of vars in nwild so far
         !Debug

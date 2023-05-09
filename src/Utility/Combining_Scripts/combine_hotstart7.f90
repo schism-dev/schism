@@ -272,6 +272,7 @@ subroutine combine_hotstart7(istep)
           iret=nf90_redef(ncid)
           var1d_dims(1)=npse_dim
           iret=nf90_def_var(ncid,variable_nm(1:len_var),NF90_INT,var1d_dims,ivarid)
+          iret=nf90_def_var_deflate(ncid,ivarid,0,1,4)
           iret=nf90_enddef(ncid)
         endif
 
@@ -286,6 +287,7 @@ subroutine combine_hotstart7(istep)
             iret=nf90_redef(ncid)
             var1d_dims(1)=npse_dim
             iret=nf90_def_var(ncid,variable_nm(1:len_var),NF90_DOUBLE,var1d_dims,ivarid)
+            iret=nf90_def_var_deflate(ncid,ivarid,0,1,4)
             iret=nf90_enddef(ncid)
           endif
 !          write(99,*)'Im in:',m,irank,ivarid,work1(1,1,1:npse_lcl)
@@ -301,6 +303,7 @@ subroutine combine_hotstart7(istep)
             !Pre- and post-comb nc share same dims of ID>3
             var2d_dims(1)=dimids(1); var2d_dims(2)=npse_dim
             iret=nf90_def_var(ncid,variable_nm(1:len_var),NF90_DOUBLE,var2d_dims,ivarid)
+            iret=nf90_def_var_deflate(ncid,ivarid,0,1,4)
             iret=nf90_enddef(ncid)
           endif
 
@@ -315,6 +318,7 @@ subroutine combine_hotstart7(istep)
             iret=nf90_redef(ncid)
             var3d_dims(1:2)=dimids(1:2); var3d_dims(3)=npse_dim
             iret=nf90_def_var(ncid,variable_nm(1:len_var),NF90_DOUBLE,var3d_dims,ivarid)
+            iret=nf90_def_var_deflate(ncid,ivarid,0,1,4)
             iret=nf90_enddef(ncid)
           endif
         else
