@@ -575,6 +575,7 @@ git versions:
 (142) 6108700 (Feb 24, 2023): Laura L. fixed a bug in wwm_friction
 (143) 46767d2 (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
           'shocks' experienced by WENO stencil to help dispersion issue;
+(144) 594bf10 (May 9, 2023): deflated global nc and hotstart scribe outputs;
 
 ================================================================================================
 (D) Auto-test history:
