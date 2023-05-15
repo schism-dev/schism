@@ -227,6 +227,7 @@
 !#endif
       
       real(4),allocatable :: swild9(:,:) !used in tracer nudging
+      real(4),allocatable :: rwild6(:,:) !nws=4 only
       real(rkind),allocatable :: rwild(:,:),uth(:,:),vth(:,:),d2uv(:,:,:),dr_dxy(:,:,:),bcc(:,:,:)
       real(rkind),allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange (deallocate immediately afterwards)
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
@@ -338,10 +339,14 @@
       if(istat/=0) call parallel_abort('STEP: analysis allocation error')
 #endif
 
-!'    Alloc. the large array for nws=4,-1 option (may consider changing
-!     to unformatted binary read)
-      if(nws==4.or.nws==-1) then
+!'    Alloc. the large array for nws=4,-1 option 
+      if(nws==-1) then
         allocate(rwild(np_global,3),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (70)')
+      endif 
+
+      if(nws==4) then
+        allocate(rwild6(7,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
 
@@ -524,24 +529,65 @@
 !$OMP end parallel
 
       if(nws==4) then
-        if(time>=wtime2) then
+        if(time>wtime2) then
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
           windy1=windy2
           pr1=pr2
-!          The large array for nws=4 option (may consider changing to
-!          unformatted binary read)
-          if(myrank==0) read(22,*)tmp,rwild(:,:) 
-          call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+
+          !Read in next record
+          itmp2=wtime2/wtiminc+1
+          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+          if(ihconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+            j=nf90_inq_varid(ncid_atmos, "solar",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
+          endif !ihconsv/
+          if(isconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "prate",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
+            j=nf90_inq_varid(ncid_atmos, "evap",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+          endif !isconsv/
+          call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
               nd=ipgl(i)%id
-              windx2(nd)=rwild(i,1)
-              windy2(nd)=rwild(i,2)
-              pr2(nd)=rwild(i,3)
-            endif
+              windx2(nd)=rwild6(1,i)
+              windy2(nd)=rwild6(2,i)
+              pr2(nd)=rwild6(3,i)
+
+              if(ihconsv/=0) then
+                sflux(nd)=rwild6(4,i)
+                srad(nd)=rwild6(5,i)
+              endif !ihconsv/
+              if(isconsv/=0) then
+                fluxprc(nd)=rwild6(6,i)
+                fluxevp(nd)=rwild6(7,i)
+              endif !isconsv/
+            endif !ipgl
           enddo !i
         endif !time
 
@@ -677,7 +723,7 @@
 !        windx2=wx2; windy2=wy2
 !        windx=wx2; windy=wy2
 !       End
-      endif !nws>=2
+      endif !nws=2
 
 !...  Re-scale wind
       if(nws/=0) then; if(iwindoff/=0) then
@@ -10703,6 +10749,7 @@
       if(if_source/=0) deallocate(msource)
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
+      if(allocated(rwild6)) deallocate(rwild6)
       deallocate(swild9)
       !if(allocated(ts_offline)) deallocate(ts_offline)
 

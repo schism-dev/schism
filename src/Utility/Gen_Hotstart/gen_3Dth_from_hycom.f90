@@ -294,9 +294,9 @@
 
 !     Define limits for variables for sanity checks
       tempmin=-10 
-      tempmax=40
+      tempmax=45
       saltmin=0
-      saltmax=45
+      saltmax=50
       vmag_max=10 !max. |u| or |v|
       ssh_max=6 !max. of |SSH|
 

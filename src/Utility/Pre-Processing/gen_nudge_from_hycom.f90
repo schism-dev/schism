@@ -204,7 +204,7 @@
       tempmin=-15 
       tempmax=50
       saltmin=0
-      saltmax=45.2
+      saltmax=50.
 
 !     Assume S,T have same dimensions (and time step) and grids do not change over time
       timeout=-dtout !sec

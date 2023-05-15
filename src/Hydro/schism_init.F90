@@ -745,7 +745,7 @@
       endif
       if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
 !'
-      if(ihconsv/=0.and.(nws<2.or.nws>3)) call parallel_abort('Heat budge model must have nws>=2')
+      if(ihconsv/=0.and.nws/=2.and.nws/=4) call parallel_abort('Heat budge model must have nws>=2')
 
 #ifdef USE_BULK_FAIRALL
       if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
@@ -754,7 +754,7 @@
 #endif
 
 #ifdef USE_ATMOS
-      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=0')
+      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=2')
       if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
 #endif
 
