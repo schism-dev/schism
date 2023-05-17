@@ -15,8 +15,10 @@ import pandas as pd
 from copy import deepcopy
 import numpy as np
 from scipy import interpolate
+from scipy.spatial import cKDTree
+from sklearn.neighbors import NearestNeighbors
 import math
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, MultiPoint
 from shapely.ops import polygonize, unary_union, split, snap
 import geopandas as gpd
 from RiverMapper.SMS import get_all_points_from_shp, curvature, get_perpendicular_angle
@@ -172,8 +174,7 @@ def geos2SmsArcList(geoms=None):
     return sms_arc_list
 
 def nearest_neighbour(points_a, points_b):
-    from scipy import spatial
-    tree = spatial.cKDTree(points_b)
+    tree = cKDTree(points_b)
     return tree.query(points_a)[0], tree.query(points_a)[1]
 
 def split_line_by_point(line, point, tolerance: float=1.0e-12):
@@ -557,7 +558,6 @@ def snap_closeby_points(pt_xyz:np.ndarray):
     return xyz
 
 def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
-    from sklearn.neighbors import NearestNeighbors
 
     xyz = deepcopy(pt_xyz)
     npts = xyz.shape[0]
@@ -566,31 +566,61 @@ def snap_closeby_points_global(pt_xyz:np.ndarray, reso_ratio=0.2, n_nei=30):
 
     nsnap = 0
 
-    # not sure if any additional points besides the closest n_nei points are within buffer
-    i_crowded = (distances[:, -1] < xyz[:, 2]*reso_ratio)
-    print(f'{sum(i_crowded)} vertices marked for cleaning I')
-    nsnap += sum(i_crowded)
-    if sum(i_crowded) > 0:
-        for i in np.argwhere(i_crowded).squeeze():
-            i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[:, 0]+1j*xyz[:, 1])) < xyz[i, 2]
-            xyz[i_near, :] = xyz[i, :]
+    # Two groups of points:
+    # I) > n_nei points within the search radius
+    points_with_many_neighbors = (distances[:, -1] < xyz[:, 2]*reso_ratio)
+    print(f'{sum(points_with_many_neighbors)} vertices marked for cleaning I')
+    nsnap += sum(points_with_many_neighbors)
+    if sum(points_with_many_neighbors) > 0:
+        points_with_many_neighbors = np.atleast_2d(np.argwhere(points_with_many_neighbors)).ravel()
+        for i in points_with_many_neighbors:
+            nearby_points = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[:, 0]+1j*xyz[:, 1])) < xyz[i, 2]
+            target = min(np.argwhere(nearby_points).squeeze())  # always snap to the least index to assure consistency
+            xyz[nearby_points, :] = xyz[target, :]
 
-    # at least one target point within n_nei-node neighborhood
+    # II) <=  n_nei points within the search radius
+    # most points fall in this category, so we only need to deal with n_nei neighbors
+    nbrs = NearestNeighbors(n_neighbors=min(npts, n_nei)).fit(xyz)
+    distances, indices = nbrs.kneighbors(xyz)
     distances[distances==0.0] = 9999
-    i_crowded = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio)
-    nsnap += sum(i_crowded)
-    print(f'{sum(i_crowded)} vertices marked for cleaning II')
-    if sum(i_crowded) > 1:
-        id_crowded = np.atleast_2d(np.argwhere(i_crowded)).flatten()
-    for i in id_crowded:
-        idx = indices[i, :]
-        i_near = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
-        idx = indices[i, i_near]
-        xyz[idx, :] = xyz[i, :]
-
+    points_with_few_neighbors = (np.min(distances, axis=1) <= xyz[:, 2]*reso_ratio)*(distances[:, -1] >= xyz[:, 2]*reso_ratio)
+    nsnap += sum(points_with_few_neighbors)
+    print(f'{sum(points_with_few_neighbors)} vertices marked for cleaning II')
+    if sum(points_with_few_neighbors) > 0:
+        points_with_few_neighbors = np.atleast_2d(np.argwhere(points_with_few_neighbors)).ravel()
+        for i in points_with_few_neighbors:
+            idx = indices[i, :]
+            i_nearby = abs((xyz[i, 0]+1j*xyz[i, 1])-(xyz[idx, 0]+1j*xyz[idx, 1])) < xyz[i, 2]
+            target = min(idx[np.argwhere(i_nearby).squeeze()])  # always snap to the least index to assure consistency
+            xyz[idx[i_nearby], :] = xyz[target, :]
+    
     return xyz, nsnap
 
-def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.3, idummy=False):
+def CloseArcs(polylines: gpd.GeoDataFrame):
+    # Get all points from all polylines
+    all_points = [point for line in polylines.geometry for point in line.coords]
+    # Create a MultiPoint object from all points
+    multipoint = MultiPoint(all_points)
+    all_coords = np.array(all_points)
+
+    for k in [0, -1]:
+        end_points = np.array([line.geometry.coords[k] for line in polylines.itertuples()])
+        nbrs = NearestNeighbors(n_neighbors=2).fit(end_points)
+        distances, indices = nbrs.kneighbors(end_points)
+        i_disconnected = np.atleast_2d(np.argwhere(distances[:, 1] > 0.0)).ravel()
+
+        for i, line in zip(i_disconnected, polylines.geometry[i_disconnected]):
+            # Connect the line with the nearest point
+            if k==0:
+                new_line = LineString([all_points[indices[i, 1]]] + list(line.coords))
+            else:
+                new_line = LineString(list(line.coords) + [all_points[indices[i, 1]]])
+            polylines.loc[i, 'geometry'] = new_line
+
+    return polylines.geometry.to_list(), polylines
+
+
+def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray=None, buffer_coef=0.3, idummy=False, i_OCSMesh=False):
     '''
     Clean arcs (LineStringList, a list of Shapely's LineString objects)
     by first intersecting them (by unary_union),
@@ -638,8 +668,10 @@ def clean_intersections(arcs=None, target_polygons=None, snap_points: np.ndarray
         arcs_cleaned_2 = snapped_arcs[i_cleaned_intersection_arcs]
 
         # clean intersection arcs that are too close to each other
-        print('cleaning arcs around river intersections ...')
-        if len(arcs_cleaned_2) > 0:
+        # Disabled for OCSMesh because it may cause some polylines to be not closed and thus not polygonized
+        # This is not a problem for SMS, because SMS works on polylines not polygons
+        if len(arcs_cleaned_2) > 0 and not i_OCSMesh:
+            print('cleaning arcs around river intersections ...')
             arcs_cleaned_2_gdf = gpd.GeoDataFrame(crs='epsg:4326', index=range(len(arcs_cleaned_2)), geometry=arcs_cleaned_2)
             tmp_gdf = arcs_cleaned_2_gdf.to_crs("esri:102008")
             reso_gs = gpd.GeoSeries(map(Point, snap_points[:, :2]), crs='epsg:4326').to_crs('esri:102008')
@@ -699,6 +731,7 @@ def clean_arcs(arcs):
     else:
         print(f'warning: cleaning terminated prematurely after {niter-1} iterations')
 
+    # arcs, arcs_gdf = CloseArcs(arcs_gdf)
     return arcs
 
 def clean_river_arcs(river_arcs=None, total_arcs=None):
@@ -889,7 +922,8 @@ def make_river_map(
     i_close_poly = True, i_blast_intersection = False,
     blast_radius_scale = 0.4, bomb_radius_coef = 0.3,
     i_smooth_banks = True,
-    i_DEM_cache = True
+    i_DEM_cache = True,
+    i_OCSMesh = False,
 ):
     '''
     [Core routine for making river maps]
@@ -1296,7 +1330,6 @@ def make_river_map(
             bombed_xyz = np.r_[bombed_xyz, xyz]
 
     # Clean river intersections
-    total_arcs = []
     if i_close_poly:
         arc_groups = [river_arcs, cc_arcs]
     else:
@@ -1305,7 +1338,7 @@ def make_river_map(
     total_arcs_cleaned = [LineString(line.points[:, :]) for arcs in arc_groups for arc in arcs for line in arc if line is not None]
     if len(total_arcs_cleaned) > 0:
         if output_prefix == '':  # clean river intersections if in serial mode
-            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=bombed_xyz)
+            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=bombed_xyz, i_OCSMesh=i_OCSMesh)
             total_arcs_cleaned = clean_arcs(arcs=total_arcs_cleaned)
         else:  # if in parallel mode, defer river intersections until merging is complete
             pass
