@@ -21,7 +21,7 @@
 !       Skip dry times for 3D variables.
 !       Works for mixed quad/tri on NODE based variables only.
 !       Input: out2d* and corresponding nc file if the variable is 3D; vgrid.in; screen
-!       Output: average.out (gredit fromat)
+!       Output: average.out (gredit or xyuv format)
 !										
 !       ifort -O2 -mcmodel=medium -assume byterecl -CB -o compute_average5.exe ../UtilLib/extract_mod2.f90 ../UtilLib/compute_zcor.f90 compute_average5.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !********************************************************************************
@@ -31,28 +31,32 @@
       use extract_mod2
       use compute_zcor
       parameter(nbyte=4)
-      character(len=30) :: file62,file63,varname
+      character(len=30) :: file62,file63,file64,varname,varname2
       character(len=12) :: it_char
       character(len=48) :: data_format
   
       integer,allocatable :: i34(:),elnode(:,:)
       integer :: iday1, iday2, iskipst
       allocatable :: sigma(:),cs(:),ztot(:)
-      allocatable :: outvar(:,:),icum(:,:,:),eta2(:),ztmp(:,:)
+      allocatable :: outvar(:,:,:),icum(:,:,:),eta2(:),ztmp(:,:)
       allocatable :: xcj(:),ycj(:),dp(:),dps(:),kbs(:),xctr(:),yctr(:),dpe(:),kbe(:)
       allocatable :: idry(:),outs(:,:,:),residual(:,:),icounter(:)
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:)
+      real :: wild(2)
       real*8,allocatable :: timeout(:),xnd(:),ynd(:)
       integer :: char_len,start_2d(2),start_3d(3),start_4d(4), &
      &count_2d(2),count_3d(3),count_4d(4),dimids(100),idims(100)
 
       pi=3.1415926
-      ivs=1 !for vectors, use own script to combine components
 
-      print*, 'Input variable name (e.g. salinity):'
+      print*, 'Input variable name (e.g. horizontalVelX):'
       read(*,'(a30)')varname
       varname=adjustl(varname); len_var=len_trim(varname)
       
+      print*, 'Is the var scalar (1) or vector (2)?'
+      read(*,*) ivs
+      if(ivs/=1.and.ivs/=2) stop 'check ivs'
+
       print*, 'Input start and end stack #s to read:'
       read(*,*) iday1,iday2
 
@@ -87,14 +91,13 @@
 !...  Read in time records in segments for mem
       last_dim=np
       allocate(ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),timeout(nrec), &
-     &outvar(nvrt,last_dim),eta2(np),ztmp(nvrt,np),residual(np,2),icounter(np),idry(np))
-      outvar=-huge(1.0) !test mem
+     &outvar(nvrt,last_dim,ivs),eta2(np),ztmp(nvrt,np),residual(np,2),icounter(np),idry(np))
+      outvar=-99. !test mem
 
       call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
 
 !...  Time iteration
 !...
-      outvar=-99
       ztmp=-99
       residual=0
       icounter=0 !counter for each node (wet/dry)
@@ -112,12 +115,23 @@
 
       !Find nc file
       file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+      if(ivs==2) varname2=varname(1:len_var-1)//'Y'
       inquire(file=file63,exist=lexist)
-      if(lexist) then
-        i23d=2 !3D var
-      else
-        i23d=1 !2D
+      if(lexist) then !3D var
+        i23d=2 
+        if(ivs==2) then
+          file64=varname2(1:len_var)//'_'//it_char(1:leng)//'.nc'
+          inquire(file=file64,exist=lexist2)
+          if(.not.lexist2) then
+            print*, 'Missing y-component:',file64
+            print*, file63
+            stop
+          endif
+        endif
+      else !2D
+        i23d=1 
         file63=file62
+        file64=file62
       endif
 
       iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
@@ -133,6 +147,13 @@
 !'
       if(idims(ndims)/=nrec) stop 'last dim is not time'
 
+      if(ivs==2) then !vector
+        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(iret/=nf90_NoErr) stop 'Failed to open file64'
+        iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
+        if(iret/=nf90_NoErr) stop 'Var2 not found'
+      endif !ivs
+
       do irec=1,nrec
 !----------------------------------------------------------------------------
         !Get elev
@@ -144,21 +165,23 @@
         if(i23d==1) then !2D
           start_2d(1)=1; start_2d(2)=irec
           count_2d(1)=npes; count_2d(2)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes,1),start_2d,count_2d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(1,1:npes,2),start_2d,count_2d)
         else !3D
           start_3d(1:2)=1; start_3d(3)=irec
           count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
-          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+          iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes,1),start_3d,count_3d)
+          if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(:,1:npes,2),start_3d,count_3d)
         endif
 
-        !Available now: outvar(nvrt,np|ne), eta2(np)
+        !Available now: outvar(nvrt,np,ivs), eta2(np)
 
         if(i23d==1) then !2D
           !print*,'irec=',irec,iday1,irec_start,iday2,irec_end
           if(.not.(iday==iday1.and.irec<irec_start.or.iday==iday2.and.irec>irec_end)) then
             do i=1,np
               icounter(i)=icounter(i)+1
-              residual(i,1)=residual(i,1)+outvar(1,i)
+              residual(i,:)=residual(i,:)+outvar(1,i,:)
             enddo !i
           endif
         else !3D
@@ -204,19 +227,19 @@
                 icounter(i)=icounter(i)+1
 
                 if(z00<=-1.e8) then !depth average
-                   av=0.
+                   wild=0.
                    do k=kbp(i),nvrt-1
-                     av=av+(outvar(k,i)+outvar(k+1,i))*0.5*(ztmp(k+1,i)-ztmp(k,i))
+                     wild(1:2)=wild(1:2)+(outvar(k,i,:)+outvar(k+1,i,:))*0.5*(ztmp(k+1,i)-ztmp(k,i))
                    enddo !k
                    toth=ztmp(nvrt,i)-ztmp(kbp(i),i)
                    if(toth<=0.) then
                      write(*,*)'Negative depth at node:',i,toth
                      stop
                    endif
-                   residual(i,1)=residual(i,1)+av/toth
+                   residual(i,:)=residual(i,:)+wild(1:2)/toth
                 else !not depth average
                   do m=1,ivs
-                    tmp=outvar(k0,i)*(1-rat)+outvar(k0+1,i)*rat
+                    tmp=outvar(k0,i,m)*(1-rat)+outvar(k0+1,i,m)*rat
                     residual(i,m)=residual(i,m)+tmp
                   enddo !m
                 endif !z00
@@ -265,10 +288,10 @@
         do i=1,ne
           write(65,*)i,i34(i),elnode(1:i34(i),i)
         enddo !i
-!      else !vectors
-!        do i=1,np
-!          write(65,*)x(i),y(i),residual(i,1:2)
-!        enddo !i
+      else !vectors
+        do i=1,np
+          write(65,*)xnd(i),ynd(i),residual(i,1:2)
+        enddo !i
       endif !ivs
       close(65)
 
