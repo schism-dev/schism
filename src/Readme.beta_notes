@@ -9,6 +9,10 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+a6fd5cb (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+                        If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
+                        the latter is the net surface heat flux). 
+                        If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
 ae67c5e1 (24 April 2023): add USE_NWM_BMI (with if_source/=0) for NWM work;
 a248ce1d (24 April 2023): replaced nws=3 with USE_ATMOS (together with nws=2);
 f8e15ee (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
