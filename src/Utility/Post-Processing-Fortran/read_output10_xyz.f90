@@ -29,7 +29,7 @@
 !              (4) out2d*.nc
 !              (4) nc outputs for that variable(tri-quad)
 
-!       Outputs: fort.1[89]; ; fort.20 - local depth for each pt.
+!       Outputs: fort.1[89]; fort.21 (magnitude), fort.22 (dir in deg in math convention); fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
 !   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -56,6 +56,8 @@
      &count_2d(2),count_3d(3),count_4d(4)
 !      real*8 :: h0
       
+      pi=3.1515926
+
       print*, 'Input extraction pts format (1: .bp; 2:.sta):'
       read(*,*)ibp
       if(ibp/=1.and.ibp/=2) stop 'Unknown format'
@@ -283,7 +285,11 @@
             enddo !j
           enddo !i
           write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,1),i=1,nxy)
-          if(ivs==2) write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
+          if(ivs==2) then
+            write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
+            write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out2(i,1,1)**2+out2(i,1,2)**2),i=1,nxy)
+            write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out2(i,1,2),out2(i,1,1))/pi*180,i=1,nxy)
+          endif
         else !3D
 !         Do interpolation
           do i=1,nxy
@@ -388,7 +394,11 @@
             endif !dry/wet
           enddo !i=1,nxy
           write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,1),i=1,nxy)
-          if(ivs==2) write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
+          if(ivs==2) then
+            write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
+            write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out3(i,1)**2+out3(i,2)**2),i=1,nxy)
+            write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out3(i,2),out3(i,1))/pi*180,i=1,nxy)
+          endif
          
         endif !i23d
       enddo !irec
