@@ -1,43 +1,45 @@
-!     Generate tvd.prop for hybrid WENO/ELM based on depth, and remove
+!     Generate tvd.prop for hybrid WENO/ELM and cross-scale applications, based on depth and remove
 !     'isolated' WENO elements etc.
-!     Typically, you need to run this program twice: (1) account for
-!     eddying regime by setting iaugment=1;
-!     (2) account for nearshore regime by setting iaugment=0 (also
-!     possibly a different hmin). Then
-!     create a nearshore region and adjust flags inside using (2) (e.g.
-!     using combine_TVD.f90). You may do additional fine adjustments also.
-!     Inputs: screen; 
-!             hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
-!     Output: tvd.prop.0
+!     Inputs: (1) screen; 
+!             (2) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
+!             (3) nearshore.gr3: '0' for eddying regime; non-0 for nearshore. Nearshore region 
+!                                 should be slightly offshore of isobath 'hmin_of'
+!     Output: tvd.prop.0 (may be further edited)
 
-!     ifort -O2 -o gen_tvd_WENO UtilLib/schism_geometry.f90 gen_tvd_WENO.f90
+!     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 gen_tvd_WENO.f90
 
       use schism_geometry_mod
       implicit real*8(a-h,o-z)
       integer :: nwild(3)
       integer, allocatable :: i34(:),elnode(:,:),nne(:),indel(:,:),nnp(:), &
-     &indnd(:,:),isbnd(:),itvd(:),itvd0(:)
+     &indnd(:,:),isbnd(:),itvd(:),itvd0(:),iest(:),iest_e(:)
       integer, allocatable :: ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
       real*8, allocatable :: xnd(:),ynd(:),dp(:),area(:),xpoly(:),ypoly(:),xcj(:),ycj(:)
 
-      print*, 'Input min depth in meters:'
-      read*, hmin
+      print*, 'Input transition depths (meters) for offshore (e.g., 30m)):'
+      read*, hmin_of
 
-      print*, 'Augment upwind by 1 extra layer? (1: yes); 0: no'
-      read*, iaugment
+      print*, 'Input transition depths (meters) for nearshore (usually <hmin_of):'
+      read*, hmin_near
+!'
 
       open(14,file='hgrid.gr3',status='old')
-      read(14,*)
-      read(14,*) ne,np
+      open(13,file='nearshore.gr3',status='old')
+      read(14,*); read(14,*) ne,np
+      read(13,*); read(13,*) 
       allocate(xnd(np),ynd(np),dp(np),area(ne),i34(ne),elnode(4,ne),nne(np), &
-     &isbnd(np),itvd(ne),itvd0(ne))
+     &isbnd(np),itvd(ne),itvd0(ne),iest(np),iest_e(ne))
 
       do i=1,np
         read(14,*) j,xnd(i),ynd(i),dp(i)
+        read(13,*) j,tmp,tmp,tmp2
+        iest(i)=nint(tmp2)
       enddo !i
 
       do i=1,ne
         read(14,*) j,i34(i),elnode(1:i34(i),i)
+
+        iest_e(i)=maxval(iest(elnode(1:i34(i),i)))
 
         n1=elnode(1,i)
         n2=elnode(2,i)
@@ -94,36 +96,35 @@
       itvd(:)=0 !init
       do i=1,ne
         hmin2=minval(dp(elnode(1:i34(i),i)))
-!        xctr=sum(xnd(elnode(1:i34(i),i)))/i34(i)
-!        yctr=sum(ynd(elnode(1:i34(i),i)))/i34(i)
-        if(hmin2>=hmin) then
-          itvd(i)=1
-        endif 
+        if(iest_e(i)==0) then !offshore
+          if(hmin2>=hmin_of) itvd(i)=1
+        else !nearshore
+          if(hmin2>=hmin_near) itvd(i)=1
+        endif !iest_e
       enddo !i
 
-!     Augment upwind zone by 1 extra layer
-      if(iaugment/=0) then
-        itvd0=itvd
-        do i=1,ne
-          if(itvd0(i)==0) then
-            do j=1,i34(i)
-              nd=elnode(j,i)
-              do m=1,nne(nd)
-                ie=indel(m,nd)
-                itvd(ie)=0
-              enddo !m
-            enddo !j
-          endif !in_out
-        enddo !i
-      endif !iaugment/
+!     Augment upwind zone by 1 extra layer for offshore
+      itvd0=itvd
+      do i=1,ne
+        if(iest_e(i)==0.and.itvd0(i)==0) then
+          do j=1,i34(i)
+            nd=elnode(j,i)
+            do m=1,nne(nd)
+              ie=indel(m,nd)
+              itvd(ie)=0
+            enddo !m
+          enddo !j
+        endif !ifl
+      enddo !i
 
-!     Remove 'isolated' WENO elem
+!     Remove 'isolated' WENO elem nearshore
       loop1: do
         itouched=0 !# of elem changed in this iteration
         itvd0=itvd
         loop2: do i=1,ne
-          if(itvd0(i)==0) cycle
+          if(iest_e(i)==0.or.itvd0(i)==0) cycle
 
+          !WENO elem nearshore 
           icount=0
           do j=1,i34(i)
             ie=ic3(j,i)

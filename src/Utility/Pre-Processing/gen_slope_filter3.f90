@@ -1,4 +1,4 @@
-!     Generate .gr3 (e.g. shapiro.gr3)  using bottom slope & depths as criteria
+!     Generate .gr3 (e.g. shapiro.gr3) for cross-scale applications, using bottom slope & depths as criteria
 !     Works for mixed tri/quads 
 !     Inputs: hgrid.gr3 (projection or lon/lat); consts below
 !     Output: slope_filter.gr3
