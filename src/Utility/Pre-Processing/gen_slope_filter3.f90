@@ -1,7 +1,8 @@
-!     Generate .gr3 (e.g. shapiro.gr3) for cross-scale applications, using bottom slope & depths as criteria
+!     Generate .gr3 (e.g. shapiro.gr3) for cross-scale applications, using bottom slope & depths as criteria. 
+!     The goal is to provide a baseline dissipation nearshore.
 !     Works for mixed tri/quads 
 !     Inputs: hgrid.gr3 (projection or lon/lat); consts below
-!     Output: slope_filter.gr3
+!     Output: slope_filter.gr3 (may need further edits nearshore, e.g. deep channels/fjords)
 
 !     ifort -O2 -CB -o gen_slope_filter3 gen_slope_filter3.f90
 
@@ -16,11 +17,12 @@
       dimension nne(mnp),indel(mnei,mnp),hdif(mnp),hdif_e(mne),rlh(4)
       real*8 :: lframe(3,3),xnd(mnp),ynd(mnp),znd(mnp),xloc(3),yloc(3)
 
-      !Formula: if depth<=shallow_depth2, filter=hdif_max+(hdif2-hdif_max)*(h-shallow_depth1)/(shallow_depth2-shallow_depth1), i.e. lnear transition to 0.5 in shallows.
       !If depth>shallow_depth2 (i.e. deep), filter=hdif_max*tanh(2*gam/threshold_slope), where gam is
       !slope if slope>slope_min; otherwise =0.
+      !If depth<=shallow_depth2 (nearshore), extra amount from linear transition btw 0.2 and 0.5
+
       hdif_max=0.5 !max 
-      hdif2=0.1 !min in shallow depths
+      hdif2=0.2 !min in shallow depths
       pi=3.1415926d0
 
       print*, 'Input coord system (1: Cartesian; 2: lon/lat):'
@@ -164,12 +166,12 @@
           slopemax=max(slopemax,slope(ie))
         enddo !j
 
+        hdif(i)=hdif_max*tanh(2*slopemax/threshold_slope)
         if(dp(i)>shallow_depth2) then !deep
-          hdif(i)=hdif_max*tanh(2*slopemax/threshold_slope)
           if(hdif(i)<=1.e-2) hdif(i)=0
         else !shallow: increase filter to max
           tmp=hdif_max+(hdif2-hdif_max)*(dp(i)-shallow_depth1)/(shallow_depth2-shallow_depth1)
-          hdif(i)=max(hdif2,min(hdif_max,tmp))
+          hdif(i)=max(hdif2,min(hdif_max,tmp+hdif(i)))
         endif
       enddo !i
 

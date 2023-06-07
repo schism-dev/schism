@@ -1,10 +1,12 @@
 !     Generate tvd.prop for hybrid WENO/ELM and cross-scale applications, based on depth and remove
-!     'isolated' WENO elements etc.
+!     'isolated' WENO elements in shallow water, etc. The goal is to
+!     minimize the direct 'contact' between WENO and ELM cells, which
+!     can cause dispersion.
 !     Inputs: (1) screen; 
 !             (2) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
 !             (3) nearshore.gr3: '0' for eddying regime; non-0 for nearshore. Nearshore region 
 !                                 should be slightly offshore of isobath 'hmin_of'
-!     Output: tvd.prop.0 (may be further edited)
+!     Output: tvd.prop.0 (may be further edited, e.g. deep channels/fjords)
 
 !     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 gen_tvd_WENO.f90
 
