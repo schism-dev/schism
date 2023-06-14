@@ -630,12 +630,12 @@
         endif
       endif !ishapiro==1
 
-      if(ishapiro==2) then
-        if(shapiro0<0._rkind) then
-          write(errmsg,*)'Illegal shapiro(2):',shapiro0
-          call parallel_abort(errmsg)
-        endif
-      endif !ishapiro
+!      if(ishapiro==2) then
+!        if(shapiro0<0._rkind) then
+!          write(errmsg,*)'Illegal shapiro(2):',shapiro0
+!          call parallel_abort(errmsg)
+!        endif
+!      endif !ishapiro
 
       if(ishapiro/=0) then
         if(niter_shap<0) then
@@ -1408,7 +1408,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         & hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
+         & hdif(nvrt,npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -2938,7 +2938,7 @@
 !...  Set shapiro(:). For ishapiro=2, this will be done in _step
       if(ishapiro==1) then
         shapiro(:)=shapiro0
-      else if(ishapiro==-1) then
+      else if(ishapiro==-1.or.ishapiro==2) then
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
           read(32,*)
@@ -2957,9 +2957,13 @@
         enddo !i
       
         do i=1,nsa
-          shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
-          !Check range
-          if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
+          if(ishapiro==-1) then
+            shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
+            if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
+          else !=2
+            shapiro_smag(i)=sum(swild(isidenode(1:2,i)))/2.d0
+            if(shapiro_smag(i)<0.d0) call parallel_abort('INIT: check shapiro(2)')
+          endif
 !'
         enddo !i
 !      else if(ishapiro==2) then 
@@ -2990,7 +2994,7 @@
 !            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
 !          enddo !i
 !        endif !lexist
-      endif !ishapiro==-1
+      endif !ishapiro
 
 !...  Horizontal diffusivity option
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed

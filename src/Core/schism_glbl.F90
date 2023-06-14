@@ -457,7 +457,7 @@ module schism_glbl
 !  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
-  real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
+  real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:),shapiro_smag(:), &
                                   &windx1(:),windy1(:),windx2(:),windy2(:), &
                                   &surf_t1(:),surf_t2(:),surf_t(:), & !YC
                                   !WARNING: airt[12] are in C not K. The

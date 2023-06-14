@@ -3976,7 +3976,7 @@
             enddo !l=1,2
           enddo !k=kbs(j)+1,nvrt 
 
-          shapiro(j)=0.5d0*tanh(dt*vmax*shapiro0)
+          shapiro(j)=0.5d0*tanh(dt*vmax*shapiro_smag(j))
 !          vmin=0.5d0*(shapiro_min(isidenode(1,j))+shapiro_min(isidenode(2,j)))
 !          shapiro(j)=max(shapiro(j),vmin)
         enddo !j=1,ns
