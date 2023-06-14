@@ -163,11 +163,11 @@
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
   niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter
-  !shapiro0: Shapiro filter strength, needed only if ishapiro=1 or 2 
+  !shapiro0: Shapiro filter strength, needed only if ishapiro=1 
   !If ishapiro=1, shapiro0 is the filter strength (max is 0.5).
-  !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest ~1.e3
-  !If ishapiro=-1, this is not used as the filter strength is read in from shapiro.gr3
-  shapiro0 = 0.5 
+  !If ishapiro=2, the coefficient in tanh() is specified in shapiro.gr3. Experiences so far suggest 100 to 1.e3
+  !If ishapiro=-1, the filter strength is directly read in from shapiro.gr3
+  shapiro0 = 0.5 !needed only if ishapiro=1
 
 !-----------------------------------------------------------------------
 ! Implicitness factor (0.5<thetai<=1).

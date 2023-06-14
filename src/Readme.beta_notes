@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+ae1c210 (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
 a6fd5cb (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
                         If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
                         the latter is the net surface heat flux). 
