@@ -1,0 +1,8 @@
+Step 1: NWM
+Intersecting SCHISM land boundary and NWM river segments and set sources/sinks at inlets/outlets
+
+Step 2: Relocate
+(for v6) Relocating sources to match the resolved river channels in the SCHISM grid.
+
+Step 3: Constant_sinks
+set constant sinks, including pumps in cities and background sinks.
