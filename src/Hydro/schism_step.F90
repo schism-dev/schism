@@ -7377,6 +7377,7 @@
         endif !heat exchange
 
 #ifdef USE_GEN
+        call GEN_model
 !       user-defined tracer part
 !       define bdy_frc, flx_sf, flx_bt
 !       bdy_frc(,kbe(i)+1:nvrt,1:nea): body force at prism center Q_{i,k} (for all wet elements i);

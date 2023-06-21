@@ -106,7 +106,7 @@ endif
 
 #Search path
 VPATH = Core/ Core/PaHM/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
-        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Multi_ice/ Fabm/
+        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Multi_ice/ Fabm/ GEN/
 
 ifdef FUJITSU
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DFUJITSU
@@ -223,6 +223,7 @@ endif
 
 ifdef USE_GEN
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_GEN
+  OBJS := $(OBJS) GEN_model.o
 endif
 
 ifdef USE_AGE

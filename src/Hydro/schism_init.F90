@@ -4644,6 +4644,7 @@
       !for generic use by users
       !user-defined tracer part
       if(myrank==0) write(16,*)'Generic tracer transport model evoked'
+      call GEN_init !init. GEN model
 #endif
 
 #ifdef USE_AGE
