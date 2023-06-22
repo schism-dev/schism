@@ -6,7 +6,7 @@ module GEN_mod
   implicit none
 
   !constant parameter
-  real(rkind),save,target :: dz_flux,WRea
+  real(rkind),save,target :: dz_flux,WRea,KT,TR
 
   !spatial varying parameters
   real(rkind),save,target,allocatable :: dr(:)
@@ -61,7 +61,7 @@ subroutine GEN_model
 
     !update DO 
     do k=kb+1,nvrt
-      DOX(k)=DOX(k)+dtw*(srat(k)*sflux/dz(k)-dr(ie))
+      DOX(k)=DOX(k)+dtw*(srat(k)*sflux/dz(k)-dr(ie)*(KT**(temp(k)-TR)))
       DOX(k)=max(DOX(k),0.d0)
     enddo !k
 
@@ -85,7 +85,7 @@ subroutine GEN_init
   integer :: i,j,ie,m,npt,istat,ncid,varid,attrid,dimid(1)
   real(rkind) :: swild(max(np_global,ne_global))
   character(len=20) :: fname
-  integer, parameter :: nsp=3
+  integer, parameter :: nsp=5
   character(len=15) :: pname(nsp)
   type(gen_param),pointer :: p
 
@@ -97,8 +97,8 @@ subroutine GEN_init
   fname='GEN_param.nc'
   allocate(sp(nsp),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. pname') 
-  pname(1:nsp)=(/'dz_flux','dr','WRea'/)
-  sp(1)%p=>dz_flux; sp(2)%p1=>dr; sp(3)%p=>WRea
+  pname(1:nsp)=(/'dz_flux','dr','WRea','KT','TR'/)
+  sp(1)%p=>dz_flux; sp(2)%p1=>dr; sp(3)%p=>WRea; sp(4)%p=>KT; sp(5)%p=>TR
 
   !read constant parameters
   do m=1,nsp
