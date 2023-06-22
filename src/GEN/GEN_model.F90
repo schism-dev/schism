@@ -62,6 +62,7 @@ subroutine GEN_model
     !update DO 
     do k=kb+1,nvrt
       DOX(k)=DOX(k)+dtw*(srat(k)*sflux/dz(k)-dr(ie))
+      DOX(k)=max(DOX(k),0.d0)
     enddo !k
 
   enddo !nea
