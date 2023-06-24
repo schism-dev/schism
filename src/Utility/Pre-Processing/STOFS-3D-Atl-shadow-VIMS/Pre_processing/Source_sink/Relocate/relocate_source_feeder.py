@@ -88,7 +88,7 @@ def relocate_sources(
                 valid_old_vsources = old_source_sink.vsource.get_time_average(valid_old_sources)
                 target_old_source = valid_old_sources[np.argmax(valid_old_vsources)]
                 new2old_sources[i] = target_old_source
-                relocation_distance[i] = dist[np.argmax(valid_old_sources)]
+                relocation_distance[i] = dist[target_old_source]
             else:
                 if i < len(mandatory_sources_coor):  # mandatory sources must be relocated
                     raise ValueError(f'mandatory new source {i}: {x, y} cannot be mapped to an old source')
@@ -112,7 +112,7 @@ def relocate_sources(
         np.savetxt(f'{outdir}/relocate_map.txt', np.c_[valid_new_sources_eleids, valid_new2old_sources], fmt='%d %d')
     else:
         valid_new_sources_eleids = relocate_map[:, 0]; valid_new2old_sources = relocate_map[:, 1]
-    
+
     # Assemble new source/sink files
     nsources = len(valid_new_sources_eleids)
 
@@ -145,10 +145,10 @@ def relocate_sources(
 
 if __name__ == "__main__":
     #--------------------------- inputs -------------------------
-    old_ss_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/SourceSink_relocate/Original_SS/'
+    old_ss_dir = '../original_source_sink/'
     feeder_info_file = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl'
-    hgrid_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hgrid/hgrid.ll'
-    outdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/SourceSink_relocate/'
+    hgrid_fname = './hgrid.gr3'
+    outdir = './'
     max_search_radius = 2000.0
 
     # Some major rivers may not have a feeder channel, or the feeder channel doesn't match the main river inputs.
