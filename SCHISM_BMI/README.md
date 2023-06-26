@@ -37,8 +37,9 @@ export CC=mpiicc
 
 # Compile SCHISM BMI shared libraries and BMI driver that will allow the user to test the SCHISM BMI functionality for a given simulation
 1. cd ../SCHISM_BMI/
-2. mkdir build ; cd build
-3. cmake ../
-4. cmake --build . --target testbmifortranmodel
-5. cmake --build . --target schism_driver
-6. Once these steps are completed, you should see that a "schism_driver" executable has been created. This is linked to the SCHISM BMI shared libraries and should allow you to evaluate a SCHISM model using BMI functionality.
+2. tar -xvf ParMetis-4.0.3.tar.gz ; iso_c_fortran_bmi.tar.gz ; metis-5.1.0.tar.gz
+3. mkdir build ; cd build
+4. cmake ../
+5. cmake --build . --target testbmifortranmodel
+6. cmake --build . --target schism_driver
+7. Once these steps are completed, you should see that a "schism_driver" executable has been created. This is linked to the SCHISM BMI shared libraries and should allow you to evaluate a SCHISM model using BMI functionality.
