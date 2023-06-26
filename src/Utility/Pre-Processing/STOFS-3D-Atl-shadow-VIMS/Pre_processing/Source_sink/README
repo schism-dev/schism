@@ -3,6 +3,8 @@ Intersecting SCHISM land boundary and NWM river segments and set sources/sinks a
 
 Step 2: Relocate
 (for v6) Relocating sources to match the resolved river channels in the SCHISM grid.
+this generates "relocate_map.txt", needed by the operational forecast.
 
 Step 3: Constant_sinks
 set constant sinks, including pumps in cities and background sinks.
+this generates "pump_sinks.txt", needed by the operational forecast.
