@@ -623,7 +623,13 @@
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
+      endif
 
+      if(nettype2>0) then
+#ifdef USE_NWM_BMI
+        ath2(1,1,:,1:2,1)=0.d0
+        ath2(1,1,:,3,1)=-9999.d0
+#else
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
@@ -632,7 +638,8 @@
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
     &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series2')
-      endif !nettype2
+#endif /*USE_NWM_BMI*/
+      endif
 
       if(nfltype2>0) then
         j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
