@@ -4,21 +4,32 @@ This is the driver script to run the STOFS3D-ATL model.
 
 # Import modules
 import os
-import sys
 import numpy as np
-import shutil
+from glob import glob
 import subprocess
 from scipy.spatial import cKDTree
-# from pylib_essentials.schism_file import schism_grid
-from spp_essentials.Hgrid_extended import read_schism_hgrid_cached as schism_grid
-from pylib_essentials.schism_file import read_schism_reg
-from pylib_utils.utility_functions import inside_polygon
-import os
-from glob import glob
+import copy
 
+# self-defined modules
+from spp_essentials.Hgrid_extended import read_schism_hgrid_cached as schism_grid  # only for testing purposes
+# support both the experimental and original versions of pylib; the former is imported by default
+try:
+    # from pylib_essentials.schism_file import schism_grid
+    from pylib_essentials.schism_file import read_schism_reg
+    from pylib_utils.utility_functions import inside_polygon
+except:
+    from pylib import inside_polygon, schism_grid, read_schism_reg
+# modules to be moved to pylib
+from schism_py_pre_post.Grid.SourceSinkIn import source_sink
+
+# import from the sub folders, not the installed package
+from Source_sink.Constant_sinks.set_constant_sink import set_constant_sink
+
+# Global variables:
 # define script path; scripts are available from schism's git repo
 script_path = '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-shadow-VIMS/Pre_processing/'
 
+# Classes and functions:
 class Config_stofs3d_atlantic():
     '''A class to handle the configuration of STOFS-3D-ATL model,
     i.e., processing the parameters and storing the factory settings.
@@ -68,19 +79,14 @@ def try_mkdir(folder_path):
         print("Error creating folder:", folder_path)
         print("Error message:", str(e))
     
-def try_remove(path):
+def try_remove(file):
     try:
-        if os.path.isfile(path):
-            os.remove(path)
-            # print("File removed successfully:", path)
-        elif os.path.isdir(path):
-            shutil.rmtree(path)
+        os.remove(file)
             # print("Folder removed successfully:", path)
-        else:
-            pass
-            # print("Path does not exist:", path)
+    except FileNotFoundError:
+        pass
     except OSError as e:
-        print("Error removing path:", path)
+        print("Error removing path:", file)
         print("Error message:", str(e))
 
 def gen_nudge_coef(hgrid:schism_grid, rlmax = 1.5, rnu_day=0.25, open_bnd_list=[0, 1]):
@@ -150,7 +156,7 @@ def main():
 
     driver_print_prefix = '-----------------STOFS3D-ATL driver:---------------------\n'
     # define the path where the model inputs are generated
-    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I99/'
+    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16/'
     # make the directory if it does not exist
     try_mkdir(model_input_path)
 
@@ -169,10 +175,11 @@ def main():
 
     # -----------------Vgrid---------------------
     if input_files['vgrid']:
+        sub_dir = 'Vgrid'
         print(f'{driver_print_prefix}Generating vgrid.in ...')
-        prep_and_change_to_subdir(f'{model_input_path}/Vgrid', 'vgrid.in')
-        try_remove('hgrid.gr3')
-        os.symlink(f'{model_input_path}hgrid.gr3', 'hgrid.gr3')
+        prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}', [])
+        os.system(f'ln -sf ../hgrid.gr3 .')
+
         # call a fortran program to generate vgrid.in
         # compile the fortran program if necessary
         # fortran_script_path = '/path/to/your/fortran_script.f90'
@@ -183,14 +190,17 @@ def main():
 
         print(f'{driver_print_prefix}converting the format of vgrid.in ...')
         # rename vgrid.in to vgrid.in.old
-        try_remove('vgrid.in.old')
+        try_remove(f'{model_input_path}/{sub_dir}/vgrid.in.old')
         os.rename('vgrid.in', 'vgrid.in.old')
+
         # convert the format of the vgrid.in file using a fortran script
         subprocess.run([f'{script_path}/Vgrid/change_vgrid'], check=True)  # , stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # rename vgrid.in.new to vgrid.in
-        try_remove('vgrid.in')
+        try_remove(f'{model_input_path}/{sub_dir}/vgrid.in')
         os.rename('vgrid.in.new', 'vgrid.in')
+
         os.chdir(model_input_path)
+        os.system(f'ln -sf {sub_dir}/vgrid.in .')
 
     # -----------------spatially uniform Gr3---------------------
     if input_files['gr3']:
@@ -225,8 +235,9 @@ def main():
         hgrid.save(f'{model_input_path}/{sub_dir}/nudge.gr3', value=nudge_coef)
 
         # link nudge.gr3 to SAL_nudge.gr3 and TEM_nudge.gr3
-        try_remove('SAL_nudge.gr3'); try_remove('TEM_nudge.gr3')
+        try_remove(f'{model_input_path}/{sub_dir}/SAL_nudge.gr3')
         os.system('ln -s nudge.gr3 SAL_nudge.gr3')
+        try_remove(f'{model_input_path}/{sub_dir}/TEM_nudge.gr3')
         os.system('ln -s nudge.gr3 TEM_nudge.gr3')
 
         os.chdir(model_input_path)
@@ -263,21 +274,27 @@ def main():
         pass
         
         # relocate source locations to resolved river channels
-        prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        subprocess.run(
-            [f'{script_path}/Source_sink/Relocate/relocate_source_feeder.py'],
-            cwd=f'{model_input_path}/{sub_dir}/relocated_source_sink/'
-        )
+        # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
+        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        # subprocess.run(
+        #     [f'{script_path}/Source_sink/Relocate/relocate_source_feeder.py'],
+        #     cwd=f'{model_input_path}/{sub_dir}/relocated_source_sink/'
+        # )
+        relocated_ss = source_sink(source_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/')
 
         # set constant sinks (pumps and background sinks)
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/constant_sink/', [])
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        subprocess.run(
-            [f'{script_path}/Source_sink/constant_sink/set_constant_sink.py'],
-            cwd=f'{model_input_path}/{sub_dir}/constant_sink/'
-        )
-        pass
+        # copy *.shp to the current directory
+        os.system(f'cp {script_path}/Source_sink/Constant_sinks/levee_4_pump_polys.* .')
+
+        hgrid_utm = copy.deepcopy(hgrid)
+        hgrid_utm.proj(prj0='epsg:4326', prj1='epsg:26918')  # needed because the levee shapefile is in 26918 (lon/lat would lead to problems due to truncation errors)
+        background_ss = set_constant_sink(wdir=f'{model_input_path}/{sub_dir}/constant_sink/', hgrid_utm=hgrid_utm)
+
+        total_ss = relocated_ss + background_ss
+        total_ss.writer(f'{model_input_path}/{sub_dir}/')
+        
+        os.chdir(model_input_path)
 
 if __name__ == '__main__':
     main()

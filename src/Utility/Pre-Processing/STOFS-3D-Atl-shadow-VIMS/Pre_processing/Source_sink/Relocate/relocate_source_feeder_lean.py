@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import numpy as np
 import pandas as pd
 
@@ -40,10 +38,12 @@ class SourceSinkIn():
                     fout.write(f"{self.ip_group[k][i]}\n")
                 fout.write("\n")  # empty line
 
+def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, outdir=None, relocate_map = None):
 
-def relocate_sources(old_ss_dir=None, outdir=None, relocate_map = None):
-    old_source_sink_in = SourceSinkIn(f'{old_ss_dir}/source_sink.in')
+    # make a dataframe from vsource to facilitate column subsetting and reordering
+    df = pd.DataFrame(data=old_vsource, columns=['time'] + [str(x) for x in old_source_sink_in.ip_group[0]])
 
+    # read relocate_map
     if relocate_map is not None:
         eleids = relocate_map[:, 0]; new2old_sources = relocate_map[:, 1]
     else:
@@ -54,12 +54,6 @@ def relocate_sources(old_ss_dir=None, outdir=None, relocate_map = None):
     source_sink_in.writer(f'{outdir}/source_sink.in')
 
     # Rearrange vsource.th and msource.th
-    # Assuming you have a CSV file with n columns
-    df = pd.read_csv(
-        f'{old_ss_dir}/vsource.th', sep='\s+', header=None,
-        names=['time'] + [str(x) for x in old_source_sink_in.ip_group[0]]
-    )
-    # Suppose the mapping is a dictionary where the key is the old column and the value is the new column
     map_dict = {str(k): str(v) for k, v in np.c_[old_source_sink_in.ip_group[0][new2old_sources], eleids]}
     map_dict = {**{'time': 'time'}, **map_dict}
 
@@ -83,13 +77,14 @@ def relocate_sources(old_ss_dir=None, outdir=None, relocate_map = None):
     pass
 
 if __name__ == "__main__":
-    #--------------------------- inputs -------------------------
-    old_ss_dir = '../original_source_sink'
-    outdir = './'
+    old_source_sink_in = SourceSinkIn(filename='../original_source_sink/source_sink.in')
+    old_vsource = np.loadtxt('../original_source_sink/vsource.th')
     relocate_map = np.loadtxt(f'./relocate_map.txt', dtype=int)
+    outdir = './'
 
     relocate_sources(
-        old_ss_dir=old_ss_dir,
+        old_source_sink_in=old_source_sink_in,
+        old_vsource=old_vsource,
         outdir=outdir,
         relocate_map=relocate_map
     )
