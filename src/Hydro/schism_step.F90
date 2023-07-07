@@ -7504,6 +7504,17 @@
         call sediment(it,moitn0,mxitn0,rtol0,dave,tot_bedmass)
         if(myrank==0) write(16,*) 'done sediment model...'
 
+        !Calculate settling vel
+        do i=1,nea
+          if(idry_e(i)==1) cycle
+          do k=kbe(i),nvrt
+            do m=itmp1,itmp2
+!Wei Chen: add here
+              wsett(m,k,i)=tr_el(m,k,i)*...
+            enddo !m
+          enddo !k
+        enddo !i
+
 !171217
         if(itur==5) then !1018:itur==5 1128:Wsed
           do m=1,ntrs(5)
