@@ -15,10 +15,7 @@ logging.captureWarnings(True)
 log_level = logging.DEBUG
 logging.getLogger('pyschism').setLevel(log_level)
 
-if __name__ == '__main__':
-
-    startdate = datetime(2022, 1, 1)
-    rnday = 10
+def gen_sourcesink(startdate:datetime, rnday:float):
     hgrid = Hgrid.open("./hgrid.gr3", crs="epsg:4326")
 
     t0 = time()
@@ -49,3 +46,6 @@ if __name__ == '__main__':
 
     nwm.write(output_directory, hgrid, startdate, rnday, overwrite=True)
     print(f'It took {time()-t0} seconds to generate source/sink')
+
+if __name__ == '__main__':
+    gen_sourcesink(datetime(2017, 12, 1), 10)

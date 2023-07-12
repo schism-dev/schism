@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-class SourceSinkIn():
+class SourceSinkIn:
     """ class for *.prop or other similar formats"""
     def __init__(self, filename=None, number_of_groups=2, ele_groups=[]):
         self.n_group = number_of_groups  # 0: source; 1: sink
@@ -38,10 +38,12 @@ class SourceSinkIn():
                     fout.write(f"{self.ip_group[k][i]}\n")
                 fout.write("\n")  # empty line
 
-def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, outdir=None, relocate_map = None):
+def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, times: np.array, outdir=None, relocate_map = None, output_vsource=False):
 
     # make a dataframe from vsource to facilitate column subsetting and reordering
-    df = pd.DataFrame(data=old_vsource, columns=['time'] + [str(x) for x in old_source_sink_in.ip_group[0]])
+    #df = pd.DataFrame(data=old_vsource, columns=['time'] + [str(x) for x in old_source_sink_in.ip_group[0]])
+    df = pd.DataFrame(data=old_vsource, columns=[str(x) for x in old_source_sink_in.ip_group[0]])
+    df['time'] = times
 
     # read relocate_map
     if relocate_map is not None:
@@ -51,7 +53,7 @@ def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, ou
 
     # Assemble new source_sink.in
     source_sink_in = SourceSinkIn(filename=None, number_of_groups=2, ele_groups=[eleids.tolist(),[]])
-    source_sink_in.writer(f'{outdir}/source_sink.in')
+    source_sink_in.writer(f'{outdir}/source.in')
 
     # Rearrange vsource.th and msource.th
     map_dict = {str(k): str(v) for k, v in np.c_[old_source_sink_in.ip_group[0][new2old_sources], eleids]}
@@ -64,7 +66,8 @@ def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, ou
     df_subset = df[list(map_dict.keys())].rename(columns=map_dict)
 
     # Save the subset dataframe to a new CSV file
-    df_subset.to_csv(f'{outdir}/vsource.th', index=False, header=False, sep=' ')
+    if output_vsource:
+        df_subset.to_csv(f'{outdir}/vsource.th', index=False, header=False, sep=' ')
 
     # msource
     msource = np.c_[
@@ -74,17 +77,23 @@ def relocate_sources(old_source_sink_in:SourceSinkIn, old_vsource:np.ndarray, ou
     ]
     np.savetxt(f'{outdir}/msource.th', msource, fmt='%d', delimiter=' ')
 
-    pass
+    return df_subset
+
 
 if __name__ == "__main__":
     old_source_sink_in = SourceSinkIn(filename='../original_source_sink/source_sink.in')
     old_vsource = np.loadtxt('../original_source_sink/vsource.th')
+    times = old_vsource[:, 0]
+    old_vsource = old_vsource[:, 1:]
     relocate_map = np.loadtxt(f'./relocate_map.txt', dtype=int)
     outdir = './'
 
     relocate_sources(
         old_source_sink_in=old_source_sink_in,
         old_vsource=old_vsource,
+        times=times,
+        relocate_map=relocate_map,
         outdir=outdir,
-        relocate_map=relocate_map
+        output_vsource=True,
     )
+

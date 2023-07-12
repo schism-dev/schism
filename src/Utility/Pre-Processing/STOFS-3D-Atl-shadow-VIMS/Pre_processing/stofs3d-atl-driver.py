@@ -9,21 +9,26 @@ from glob import glob
 import subprocess
 from scipy.spatial import cKDTree
 import copy
+from datetime import datetime
 
 # self-defined modules
 from spp_essentials.Hgrid_extended import read_schism_hgrid_cached as schism_grid  # only for testing purposes
+# from pylib import schism_grid
+
 # support both the experimental and original versions of pylib; the former is imported by default
 try:
     # from pylib_essentials.schism_file import schism_grid
-    from pylib_essentials.schism_file import read_schism_reg
+    from pylib_essentials.schism_file import read_schism_reg, source_sink
     from pylib_utils.utility_functions import inside_polygon
 except:
-    from pylib import inside_polygon, schism_grid, read_schism_reg
+    from pylib import inside_polygon, read_schism_reg
+
 # modules to be moved to pylib
-from schism_py_pre_post.Grid.SourceSinkIn import source_sink
+# from schism_py_pre_post.Grid.SourceSinkIn import source_sink
 
 # import from the sub folders, not the installed package
 from Source_sink.Constant_sinks.set_constant_sink import set_constant_sink
+from Source_sink.NWM.gen_sourcesink import gen_sourcesink
 
 # Global variables:
 # define script path; scripts are available from schism's git repo
@@ -35,12 +40,16 @@ class Config_stofs3d_atlantic():
     i.e., processing the parameters and storing the factory settings.
     '''
     def __init__(self,
+        startdate = datetime(2017, 12, 1),  # start date of the model
+        rnday = 10,  # number of days to run the model
         nudging_zone_width = 1.5,  # in degrees
         nudging_day = 1.0,  # in days
         shapiro_zone_width = 2.5,  # in degrees
         shapiro_tilt = 2.0,  # more abrupt transition in the shapiro zone
     ):
         # see a description of the parameters in the function make_river_map()
+        self.startdate = startdate
+        self.rnday = rnday
         self.nudging_zone_width = nudging_zone_width
         self.nudging_day = nudging_day
         self.shapiro_zone_width = shapiro_zone_width
@@ -156,7 +165,7 @@ def main():
 
     driver_print_prefix = '-----------------STOFS3D-ATL driver:---------------------\n'
     # define the path where the model inputs are generated
-    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16/'
+    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I99a/'
     # make the directory if it does not exist
     try_mkdir(model_input_path)
 
@@ -269,28 +278,29 @@ def main():
         print(f'{driver_print_prefix}Generating source_sink.in ...')
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}', file_list)
 
-        # generate source_sink files by intersecting NWM river segments with the model land boundary
+        # # generate source_sink files by intersecting NWM river segments with the model land boundary
         # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/original_source_sink/', [])
-        pass
+        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        # gen_sourcesink(startdate=config.startdate, rnday=config.rnday)
         
-        # relocate source locations to resolved river channels
+        # # relocate source locations to resolved river channels
         # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
         # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
         # subprocess.run(
         #     [f'{script_path}/Source_sink/Relocate/relocate_source_feeder.py'],
         #     cwd=f'{model_input_path}/{sub_dir}/relocated_source_sink/'
         # )
-        relocated_ss = source_sink(source_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/')
+        relocated_ss = source_sink.from_files(source_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/')
 
         # set constant sinks (pumps and background sinks)
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/constant_sink/', [])
         # copy *.shp to the current directory
         os.system(f'cp {script_path}/Source_sink/Constant_sinks/levee_4_pump_polys.* .')
-
         hgrid_utm = copy.deepcopy(hgrid)
         hgrid_utm.proj(prj0='epsg:4326', prj1='epsg:26918')  # needed because the levee shapefile is in 26918 (lon/lat would lead to problems due to truncation errors)
         background_ss = set_constant_sink(wdir=f'{model_input_path}/{sub_dir}/constant_sink/', hgrid_utm=hgrid_utm)
 
+        # assemble source/sink files and write to model_input_path
         total_ss = relocated_ss + background_ss
         total_ss.writer(f'{model_input_path}/{sub_dir}/')
         
