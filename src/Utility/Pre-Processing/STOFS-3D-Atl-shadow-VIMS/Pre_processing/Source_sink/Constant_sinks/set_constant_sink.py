@@ -1,66 +1,46 @@
 #!/usr/bin/env python3
-
 import shapefile
-import matplotlib.pyplot as plt
-try:
-    from pylib_utils.utility_functions import inside_polygon
-    from pylib_essentials.schism_file import schism_grid
-    from spp_essentials.Hgrid_extended import read_schism_hgrid_cached  # only for testing purposes
-except:
-    from pylib import inside_polygon, schism_grid
 import numpy as np
 from time import time
-from pylib_essentials.schism_file import source_sink, TimeHistory
 from pathlib import Path
 
+from pylib_essentials.utility_functions import inside_polygon
+from pylib_essentials.schism_file import schism_grid
+from pylib_essentials.schism_file import source_sink, TimeHistory
 
 
-def find_ele_in_shpfile(shapefile_name, hgrid: str = ""):
+def find_ele_in_shpfile(shapefile_name, hgrid:schism_grid):
     '''
     Find element index within polygons of a list of shapefiles
-
-    hgrid:
-        input hgrid to be modified
     '''
-    # hgrid
-    t = time()
-    if type(hgrid) is str:
-        gd = read_schism_hgrid_cached(hgrid)
-        print(f'Reading hgrid took {time()-t} seconds')
-    elif isinstance(hgrid, schism_grid):
-        gd = hgrid
-    else:
-        raise ValueError('hgrid must be either str or schism_grid')
-
-    gd.compute_ctr()
+    hgrid.compute_ctr()
 
     # set default value outside polygons
     t = time()
-    # shapefile # records = sf.records() # sf.shapeType # len(sf) # s = sf.shape(idx)
     sf = shapefile.Reader(shapefile_name)
     shapes = sf.shapes()
 
     ind_list = []
     for shp in shapes:
         poly_xy = np.array(shp.points).T
-        ind = inside_polygon(np.c_[gd.xctr, gd.yctr], poly_xy[0], poly_xy[1])  # 1: true; 0: false
+        ind = inside_polygon(np.c_[hgrid.xctr, hgrid.yctr], poly_xy[0], poly_xy[1])  # 1: true; 0: false
         ind = ind.astype('bool')
         ind_list.append(ind)
 
     print(f'Processing {shapefile_name} took {time()-t} seconds')
 
-    return [ind_list, gd]
+    return ind_list
 
 
-def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid_utm=None):
+def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid_utm:schism_grid=None):
     # copy datafiles
-    shp_basename = Path(shapefile_name).stem
+    gd = hgrid_utm
 
     # set pump capacities
-    [ele_idx_list, gd] = find_ele_in_shpfile(
+    ele_idx_list = find_ele_in_shpfile(
         # order matters, latter prevails
         shapefile_name=f'{wdir}/{shapefile_name}',
-        hgrid=hgrid_utm,
+        hgrid=gd,
     )
     gd.compute_area()
 
@@ -102,16 +82,11 @@ def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid_
     # build a source_sink object
     const_source_sink = source_sink(vsource=None, vsink=vsink, msource=None)
     # write source sink files, actually only vsink.th and source_sink.in
-    const_source_sink.writer(wdir=wdir)
+    const_source_sink.writer(output_dir=wdir)
 
     return const_source_sink
 
 if __name__ == "__main__":
-    background_ss = set_constant_sink(wdir='./')
-    original_ss = source_sink(source_dir='../relocated_source_sink/', hgird_utm='./hgrid.utm.gr3')
-    total_ss = original_ss + background_ss
-    total_ss.writer('../')
-    total_ss.nc_writer('../')
     pass
 
 

@@ -2,6 +2,10 @@
 This is the driver script to run the STOFS3D-ATL model.
 '''
 
+# Global variables:
+# define script path; scripts are available from schism's git repo
+script_path = '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-shadow-VIMS/Pre_processing/'
+
 # Import modules
 import os
 import numpy as np
@@ -10,29 +14,18 @@ import subprocess
 from scipy.spatial import cKDTree
 import copy
 from datetime import datetime
+from pyproj import Transformer
 
 # self-defined modules
-from spp_essentials.Hgrid_extended import read_schism_hgrid_cached as schism_grid  # only for testing purposes
-# from pylib import schism_grid
+iTest = True
+from pylib_essentials.schism_file import read_schism_reg, source_sink, schism_grid, read_schism_hgrid_cached
+from pylib_essentials.utility_functions import inside_polygon
 
-# support both the experimental and original versions of pylib; the former is imported by default
-try:
-    # from pylib_essentials.schism_file import schism_grid
-    from pylib_essentials.schism_file import read_schism_reg, source_sink
-    from pylib_utils.utility_functions import inside_polygon
-except:
-    from pylib import inside_polygon, read_schism_reg
-
-# modules to be moved to pylib
-# from schism_py_pre_post.Grid.SourceSinkIn import source_sink
-
-# import from the sub folders, not the installed package
+# import from the sub folders, not from the installed packages
 from Source_sink.Constant_sinks.set_constant_sink import set_constant_sink
 from Source_sink.NWM.gen_sourcesink import gen_sourcesink
+from Source_sink.Relocate.relocate_source_feeder import relocate_sources, v16_mandatory_sources_coor
 
-# Global variables:
-# define script path; scripts are available from schism's git repo
-script_path = '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-shadow-VIMS/Pre_processing/'
 
 # Classes and functions:
 class Config_stofs3d_atlantic():
@@ -125,6 +118,23 @@ def gen_nudge_coef(hgrid:schism_grid, rlmax = 1.5, rnu_day=0.25, open_bnd_list=[
         
         return nudge_coeff
 
+def gen_drag(hgrid:schism_grid):
+    # depth based
+    grid_depths = [-9e9,  -3,    -1,     9e9]
+    drag_coef = [0.025, 0.025, 0.0025, 0.0025]
+
+    drag = np.interp(hgrid.dp, grid_depths, drag_coef)
+
+    # region based
+    region_files = [f'{script_path}/Gr3/Drag/GoME+0.001.reg', f'{script_path}/Gr3/Drag/Lake_Charles_0.reg']
+    region_tweaks = [0.001, 0.0]
+    for region_tweak, region_file in zip(region_tweaks, region_files):
+        reg = read_schism_reg(region_file)
+        idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
+        drag[idx] = region_tweak
+    
+    return drag
+
 def gen_shapiro_strength(hgrid:schism_grid, init_shapiro_dist:np.ndarray=None, tilt=2.5):
 
     shapiro_min=100; shapiro_max=1000
@@ -170,7 +180,7 @@ def main():
     try_mkdir(model_input_path)
 
     # hgrid must be prepared before running this script
-    hgrid = schism_grid(f'{model_input_path}hgrid.gr3')
+    hgrid = read_schism_hgrid_cached(f'{model_input_path}/hgrid.gr3')
 
     # set a dict to indicate input files to be generated
     input_files = {
@@ -268,7 +278,15 @@ def main():
 
     # -----------------drag.gr3---------------------
     if input_files['drag']:
-        pass
+        sub_dir = 'Drag'
+        print(f'{driver_print_prefix}Generating drag.gr3 ...')
+        prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}', 'drag.gr3')
+        drag = gen_drag(hgrid)
+
+        hgrid.save(f'{model_input_path}/{sub_dir}/drag.gr3', value=drag)
+
+        os.chdir(model_input_path)
+        
     # <<< end spatially varying Gr3 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     # -----------------source_sink---------------------
@@ -278,31 +296,44 @@ def main():
         print(f'{driver_print_prefix}Generating source_sink.in ...')
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}', file_list)
 
-        # # generate source_sink files by intersecting NWM river segments with the model land boundary
+        # generate source_sink files by intersecting NWM river segments with the model land boundary
         # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/original_source_sink/', [])
         # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
         # gen_sourcesink(startdate=config.startdate, rnday=config.rnday)
         
-        # # relocate source locations to resolved river channels
-        # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
-        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        # subprocess.run(
-        #     [f'{script_path}/Source_sink/Relocate/relocate_source_feeder.py'],
-        #     cwd=f'{model_input_path}/{sub_dir}/relocated_source_sink/'
-        # )
-        relocated_ss = source_sink.from_files(source_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/')
+        # relocate source locations to resolved river channels
+        prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
+        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        relocated_ss = relocate_sources(
+            old_ss_dir=f'{model_input_path}/{sub_dir}/original_source_sink/',
+            feeder_info_file=f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl',
+            hgrid_fname=f'{model_input_path}/hgrid.gr3',
+            outdir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
+            max_search_radius=2000, mandatory_sources_coor=v16_mandatory_sources_coor, relocate_map=None,
+        )
 
         # set constant sinks (pumps and background sinks)
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/constant_sink/', [])
         # copy *.shp to the current directory
         os.system(f'cp {script_path}/Source_sink/Constant_sinks/levee_4_pump_polys.* .')
         hgrid_utm = copy.deepcopy(hgrid)
-        hgrid_utm.proj(prj0='epsg:4326', prj1='epsg:26918')  # needed because the levee shapefile is in 26918 (lon/lat would lead to problems due to truncation errors)
+        hgrid_utm.proj(prj0='epsg:4326', prj1='epsg:26918')
         background_ss = set_constant_sink(wdir=f'{model_input_path}/{sub_dir}/constant_sink/', hgrid_utm=hgrid_utm)
 
         # assemble source/sink files and write to model_input_path
         total_ss = relocated_ss + background_ss
         total_ss.writer(f'{model_input_path}/{sub_dir}/')
+
+        # write diagnostic outputs
+        hgrid.compute_ctr()
+        np.savetxt(
+            f'{model_input_path}/{sub_dir}/vsource.xyz',
+            np.c_[hgrid.xctr[total_ss.source_eles-1], hgrid.yctr[total_ss.source_eles-1], total_ss.vsource.df.mean().values]
+        )
+        np.savetxt(
+            f'{model_input_path}/{sub_dir}/vsink.xyz',
+            np.c_[hgrid.xctr[total_ss.sink_eles-1], hgrid.yctr[total_ss.sink_eles-1], total_ss.vsink.df.mean().values]
+        )
         
         os.chdir(model_input_path)
 
