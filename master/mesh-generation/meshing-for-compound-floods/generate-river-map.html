@@ -1072,6 +1072,26 @@
     Advanced Parameterization
   </a>
   
+    <nav class="md-nav" aria-label="Advanced Parameterization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mandatory-inputs" class="md-nav__link">
+    Mandatory inputs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-inputs" class="md-nav__link">
+    Optional inputs
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1588,7 +1608,7 @@
   <h1>Generate river map</h1>
 
 <h2 id="scripts">Scripts<a class="headerlink" href="#scripts" title="Permanent link">&para;</a></h2>
-<p><a href="https://github.com/schism-dev/schism/tree/master/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper">RiverMapper</a> is available from the Utility folder in the SCHISM Git Repo.</p>
+<p><a href="https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper">RiverMapper</a> is available from the <a href="https://github.com/schism-dev/RiverMeshTools">RiverMeshTools repository</a> under schism-dev.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <p>RiverMapper requires two inputs:</p>
 <ol>
@@ -1619,6 +1639,7 @@
 </ul>
 <p>A sample output looks like this:</p>
 <p><img alt="Sample river map" src="../../assets/sample-river-map.png" /> </p>
+<p>The exact mpi command may vary based on your system.</p>
 <h2 id="sample-applications">Sample applications<a class="headerlink" href="#sample-applications" title="Permanent link">&para;</a></h2>
 <p>To test the RiverMapper tool, you can begin by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.
 It contains two subdirectories: "Serial" and "Parallel", providing sample applications for a smaller domain and a larger domain respectively.
@@ -1671,7 +1692,7 @@ a parallel driver is provided to automatically group thalwegs based on their par
 <a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="n">comm</span><span class="o">=</span><span class="n">comm</span>
 <a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="p">)</span>
 </code></pre></div></p>
-<p>The first argument takes a *.json file that specifies multiple sets of DEMs (arranged from high priority to low priority), for example:
+<p>The first argument takes a *.json file that specifies multiple sets of DEMs, for example:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nt">&quot;CuDEM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CuDEM&quot;</span><span class="p">,</span>
@@ -1686,11 +1707,32 @@ a parallel driver is provided to automatically group thalwegs based on their par
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
-</code></pre></div></p>
+</code></pre></div>
+There are a few things to be noted:</p>
+<ul>
+<li>
+<p>In stead of specifying a file list for the DEM tiles (as in the serial example),
+you can either specify a glob pattern or a list of file names;
+if both are specified, the script will automatically pool all files together and take the unique files.</p>
+</li>
+<li>
+<p>No need to manually specify the bounding "boxes", just leave it empty.</p>
+</li>
+<li>
+<p>Different DEM products should be arranged from high priority to low priority.
+In the above example, "CuDEM" precedes "CRM", meaning that if a point is within CuDEM's spatial coverage,
+then its elevation value is solely based on CuDEM.</p>
+</li>
+</ul>
+<blockquote>
+<p>The order of the dictionary key is preserved as long as you are using Python 3.7 or a later version.
+We may replace the regular dictionary to OrderedDict in the future.</p>
+</blockquote>
 <p>Under the directory "RiverMapper_Samples/Parallel/", execute the parallel script like this:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mpirun -n 20 ./sample_parallel.py
 </code></pre></div>
 <h2 id="advanced-parameterization">Advanced Parameterization<a class="headerlink" href="#advanced-parameterization" title="Permanent link">&para;</a></h2>
+<h3 id="mandatory-inputs">Mandatory inputs<a class="headerlink" href="#mandatory-inputs" title="Permanent link">&para;</a></h3>
 <p>In the "Serial" and "Parallel" examples above, you may have noticed there are 3 mandatory Inputs:</p>
 <table>
 <thead>
@@ -1701,7 +1743,7 @@ a parallel driver is provided to automatically group thalwegs based on their par
 </thead>
 <tbody>
 <tr>
-<td>tif_fnames</td>
+<td>tif_fnames (or a *.json file if there are many tiles)</td>
 <td>a list of TIF file names. These TIFs should cover the area of interest and be arranged by priority (higher priority ones in front)</td>
 </tr>
 <tr>
@@ -1714,96 +1756,116 @@ a parallel driver is provided to automatically group thalwegs based on their par
 </tr>
 </tbody>
 </table>
+<h3 id="optional-inputs">Optional inputs<a class="headerlink" href="#optional-inputs" title="Permanent link">&para;</a></h3>
 <p>In addition to the mandatory inpouts, RiverMapper provides a few parameters to fine tune the output polylines or generate special features like levees or pseudo-channels.</p>
 <table>
 <thead>
 <tr>
 <th>parameter</th>
+<th>type</th>
 <th>explanation</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>selected_thalweg</td>
-<td>indices of selected thalwegs for which the river arcs will be sought.</td>
+<td>numpy array</td>
+<td>Indices of a subset of thalwegs for which the river arcs will be sought; mainly used by the parallel driver</td>
 </tr>
 <tr>
 <td>output_prefix</td>
+<td>string</td>
 <td>a prefix of the output files, mainly used by the caller of this script; can be empty</td>
 </tr>
 <tr>
 <td>mpi_print_prefix</td>
+<td>string</td>
 <td>a prefix string to identify the calling mpi processe in the output messages; can be empty</td>
 </tr>
 <tr>
 <td>MapUnit2METER = 1</td>
-<td>to be replaced by projection code, e.g., epsg: 4326, esri: 120008, etc.</td>
+<td>float</td>
+<td>no need to change; to be replaced by projection code, e.g., epsg: 4326, esri: 120008, etc.</td>
 </tr>
 <tr>
 <td>river_threshold</td>
+<td>float</td>
 <td>minimum and maximum river widths (in meters) to be resolved</td>
 </tr>
 <tr>
 <td>outer_arc_positions</td>
+<td>a list/tuple of floats</td>
 <td>relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 * riverwidth and 0.2 * riverwidth from the banks.</td>
 </tr>
 <tr>
 <td>length_width_ratio</td>
+<td>float</td>
 <td>a ratio of element length in the along-channel direction to river width; when a river is narrower than the lower limit, the bank will be nudged (see next parameter) to widen the river</td>
 </tr>
 <tr>
 <td>i_close_poly</td>
+<td>bool</td>
 <td>whether to add cross-channel arcs to enclose river arcs into a polygon</td>
 </tr>
 <tr>
 <td>i_blast_intersection</td>
+<td>bool</td>
 <td>whether to replace intersecting arcs (often noisy) at river intersections with scatter points (cleaner)</td>
 </tr>
 <tr>
 <td>blast_radius_scale</td>
-<td>coef controlling the blast radius at intersections, a larger number leads to more intersection features being deleted</td>
+<td>float</td>
+<td>coefficient controlling the blast radius at intersections, a larger number leads to more intersection features being deleted</td>
 </tr>
 <tr>
 <td>bomb_radius_coef</td>
-<td>coef controlling the spacing among intersection joints, a larger number leads to sparser intersection joints</td>
+<td>float</td>
+<td>coefficient controlling the spacing among intersection joints, a larger number leads to sparser intersection joints</td>
 </tr>
 <tr>
 <td>snap_point_reso_ratio</td>
+<td>float</td>
 <td>scaling the threshold of the point snapping; a negtive number means absolute distance value</td>
 </tr>
 <tr>
 <td>snap_arc_reso_ratio</td>
+<td>float</td>
 <td>scaling the threshold of the arc snapping; a negtive number means absolute distance value</td>
 </tr>
 <tr>
 <td>i_DEM_cache</td>
+<td>bool</td>
 <td>Whether or not to read DEM info from cache.  Reading from original *.tif files can be slow, so the default option is True</td>
 </tr>
 <tr>
 <td>i_OCSMesh</td>
+<td>bool</td>
 <td>Whether or not to generate outputs to be used as inputs to OCSMesh.</td>
 </tr>
 <tr>
 <td>i_DiagnosticsOutput</td>
+<td>bool</td>
 <td>whether to output diagnostic information</td>
 </tr>
 <tr>
 <td>i_pseudo_channel</td>
+<td>int</td>
 <td>0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline =2: implement a pseudo channel when the river is poorly defined in DEM</td>
 </tr>
 <tr>
 <td>pseudo_channel_width</td>
+<td>float</td>
 <td>width of the pseudo channel (in meters)</td>
 </tr>
 <tr>
 <td>nrow_pseudo_channel</td>
+<td>int</td>
 <td>number of rows of elements in the cross-channel direction in the pseudo channel</td>
 </tr>
 </tbody>
 </table>
-<p>If their values are not explicitly specified, default values will be used.
-You can also change the values of these parameters so that the output river map better fits your application.
-For example, if you want to add a two pairs of outer arcs outside the river channel, you can do:
+<p>You can change the values of these parameters so that the output river map better fits your application (otherwise default values are used).
+For example, if you want to add two pairs of outer arcs that flank the main river channel, you can do:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>    <span class="n">make_river_map</span><span class="p">(</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>        <span class="n">tif_fnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./Inputs/DEMs/GA_dem_merged_ll.tif&#39;</span><span class="p">],</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="n">thalweg_shp_fname</span> <span class="o">=</span> <span class="s1">&#39;./Inputs/Shapefiles/GA_local.shp&#39;</span><span class="p">,</span>
@@ -1811,8 +1873,10 @@ For example, if you want to add a two pairs of outer arcs outside the river chan
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        <span class="n">outer_arc_positions</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="p">)</span>
 </code></pre></div>
-where the last argument specifies the relative distance of the outer arcs to the main channel.</p>
-<p>However, it may not be easy at first because there are many things to tune.
+, where the last argument specifies the relative distances of the outer arcs to the main channel.
+In this case two outer arcs will be placed to the left of the channel at distances of "<span class="arithmatex">\(0.1 \times\)</span> channel width" and "<span class="arithmatex">\(0.2 \times\)</span> channel width" from the left bank;
+the same goes for the right bank, so 4 outer arcs in total.</p>
+<p>However, tuning the parameters may not be easy at first because there are many of them.
 To simplify the parameter configuration, RiverMapper offers a class called "Config_make_river_map",
 which provides commonly used parameter presets.
 You can use these presets to directly configure the parameters.
@@ -1829,10 +1893,10 @@ For example,
 </code></pre></div>
 , where "LooselyFollowRivers" is a parameter preset defined in the "Config_make_river_map" class,
 and the operator "**" unpacks the optional parameters from the configuration.</p>
-<p>You can also peruse the "class methods" inside "Config_make_river_map" at the beginning of "make_river_map.py" to get a hang of what each parameter does.
-Each preset (class method, or factory method) comes with a short description, for example,
+<p>You can also peruse the "class methods" inside "Config_make_river_map" at the beginning of "make_river_map.py" to familiarize with different parameter settings.
+Each preset (class method, or factory method) comes with a short description in the code, for example,
 "LooselyFollowRivers" means that "Small-scale river curvatures may not be exactly followed, but channel connectivity is still preserved".
-To avoid duplication, the descriptions of the presets (which may be updated from time to time) are not listed in this manual.</p>
+The presets may be regularly updated, so their descriptions are not repeated here to avoid duplication and inconsistency.</p>
 <p>Another utility of the "Config_make_river_map" class is to facilitate the parameter transfer from the parallel driver to the core routine.
 The stardard way of setting the parameters in the parallel mode is as follows:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
@@ -1856,12 +1920,14 @@ The stardard way of setting the parameters in the parallel mode is as follows:</
 <a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>        <span class="n">comm</span><span class="o">=</span><span class="n">comm</span>
 <a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    <span class="p">)</span>
 </code></pre></div>
-<p>Compare with the previous parallel sample, the above example adds a few lines of code.
-It first imported the "Config_make_river_map", then created a default configuration,
-and finally passed it to the parallel driver.
-Since the default configuration is used, this example is essentially the same as the previous parallel example.
-But if you don't want to start from the default configuration but from a preset,
-and if you want to further modify the parameters based on the preset, you can do:
+<p>Comparing with the parallel <a href="#parallel-mode">example</a> in the previous section, the above example adds a few lines of code that does the following:</p>
+<ul>
+<li>importing the "Config_make_river_map"</li>
+<li>creating a default configuration,</li>
+<li>passing the configration to the parallel driver.</li>
+</ul>
+<p>Since the default configuration is used, this example is essentially the same as the previous parallel example.
+But it facilitates further parameter tweaking, e.g.:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">Config_make_river_map</span><span class="o">.</span><span class="n">LooselyFollowRivers</span><span class="p">()</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;i_DiagnosticOutput&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;i_real_clean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
@@ -1869,11 +1935,11 @@ and if you want to further modify the parameters based on the preset, you can do
 , without changing other parts of the code.</p>
 <h2 id="experimental-features">Experimental Features<a class="headerlink" href="#experimental-features" title="Permanent link">&para;</a></h2>
 <h3 id="global-arc-cleaning">Global arc cleaning<a class="headerlink" href="#global-arc-cleaning" title="Permanent link">&para;</a></h3>
-<p>There is an optional input in Config_make_river_map called "i_realclean",
+<p>There is an optional input in Config_make_river_map called "i_real_clean",
 which defaults to False.
-When turned on, an extra cleaning process will be applied on all arcs.
-However, this process is not efficient enough for large applications,
-specifically it increases the total running time 7 to 8 times.
+When turned on, an extra cleaning process will be applied to all arcs.
+However, this process is not efficient enough for large applications at the time being,
+specifically it increases the total run time by 7 to 8 times.
 Another issue is that it does not guarantee all river arcs are closed to form polygons,
 which affects OCSMesh.
 Updates in the near future will address the efficiency issue first.</p>
