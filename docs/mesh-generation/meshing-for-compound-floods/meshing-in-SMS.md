@@ -54,7 +54,7 @@ Clean the merged map twice with the following parameters: 
 ![Clean SMS map](../../assets/mesh-clean-map.png)
 
 Two cleans are needed because the second clean will snap some of the newly created points during the first clean.
-
+SOmetimes it helps to close and restart the SMS session to get around mesh errors.
 
 ## **Build polygons**
 
