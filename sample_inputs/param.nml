@@ -158,7 +158,10 @@
 
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
-! if indvel=0. To transition between eddying/non-eddying regimes, use
+! if indvel=0. ishapiro=0: off; =1: constant filter strength in shapiro0; =-1:
+! variable filter strength specified in shapiro.gr3; =2: variable filter strength specified
+! as a Smagorinsky-like filter, with the coefficient specified in shapiro.gr3.
+! To transition between eddying/non-eddying regimes, use
 ! indvel=0, ihorcon/=0, and ishapiro=-1 (requiring shapiro.gr3) or 2 (Smagorinsky-like filter).
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
