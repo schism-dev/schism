@@ -1049,15 +1049,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#serial-mode" class="md-nav__link">
-    Serial mode
+  <a href="#meshing-rivers-in-a-small-domain-serial-mode" class="md-nav__link">
+    Meshing rivers in a small domain (Serial mode)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#parallel-mode" class="md-nav__link">
-    Parallel mode
+  <a href="#meshing-rivers-in-a-large-domain-parallel-mode" class="md-nav__link">
+    Meshing rivers in a large domain (Parallel mode)
   </a>
   
 </li>
@@ -1076,15 +1076,49 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#mandatory-inputs" class="md-nav__link">
-    Mandatory inputs
+  <a href="#mandatory-input-parameters" class="md-nav__link">
+    Mandatory input parameters
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#optional-inputs" class="md-nav__link">
-    Optional inputs
+  <a href="#optional-input-parameters" class="md-nav__link">
+    Optional input parameters
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameter-presets" class="md-nav__link">
+    Parameter presets
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-parameter-presets" class="md-nav__link">
+    More parameter presets
+  </a>
+  
+    <nav class="md-nav" aria-label="More parameter presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#levees" class="md-nav__link">
+    Levees
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#barrier-islands" class="md-nav__link">
+    Barrier islands
   </a>
   
 </li>
@@ -1613,7 +1647,7 @@
 <p>RiverMapper requires two inputs:</p>
 <ol>
 <li>
-<p>*.tif, which are DEM tiles in lon/lat from one or more sources (such as CuDEM).</p>
+<p>*.tif, which are DEM tiles in lon/lat from one or more sources.</p>
 </li>
 <li>
 <p>a shapefile with a 'LineString' type, which contains a 1D river network.</p>
@@ -1639,12 +1673,11 @@
 </ul>
 <p>A sample output looks like this:</p>
 <p><img alt="Sample river map" src="../../assets/sample-river-map.png" /> </p>
-<p>The exact mpi command may vary based on your system.</p>
 <h2 id="sample-applications">Sample applications<a class="headerlink" href="#sample-applications" title="Permanent link">&para;</a></h2>
 <p>To test the RiverMapper tool, you can begin by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.
 It contains two subdirectories: "Serial" and "Parallel", providing sample applications for a smaller domain and a larger domain respectively.
 Each subdirectory contains a sample Python script and the necessary input files. </p>
-<h3 id="serial-mode">Serial mode<a class="headerlink" href="#serial-mode" title="Permanent link">&para;</a></h3>
+<h3 id="meshing-rivers-in-a-small-domain-serial-mode">Meshing rivers in a small domain (Serial mode)<a class="headerlink" href="#meshing-rivers-in-a-small-domain-serial-mode" title="Permanent link">&para;</a></h3>
 <p>For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices.
 See the sample script:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>RiverMapper_Samples/Serial/sample_serial.py
@@ -1666,7 +1699,16 @@ See the sample script:
 <p>Under the  directory "RiverMapper_Samples/Serial/", execute the serial script like this:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./sample_serial.py
 </code></pre></div></p>
-<h3 id="parallel-mode">Parallel mode<a class="headerlink" href="#parallel-mode" title="Permanent link">&para;</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Although only one DEM tile is used in this example, but multiple DEM tiles are allowed.</li>
+<li>If the tiles are from different DEM sources, they should be arranged from high to low priority in the list.
+    Tiles from the high priority DEM source should have high fidelity and high resolution.</li>
+<li>The script allows DEM tiles of different sizes and shapes.</li>
+</ul>
+</div>
+<h3 id="meshing-rivers-in-a-large-domain-parallel-mode">Meshing rivers in a large domain (Parallel mode)<a class="headerlink" href="#meshing-rivers-in-a-large-domain-parallel-mode" title="Permanent link">&para;</a></h3>
 <p>For a large domain such as <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>,
 a parallel driver is provided to automatically group thalwegs based on their parent tiles, then distribute the groups to parallel processors.</p>
 <p>The sample parallel script is:
@@ -1676,23 +1718,23 @@ a parallel driver is provided to automatically group thalwegs based on their par
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span> <span class="nn">os</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span> <span class="nn">RiverMapper.river_map_mpi_driver</span> <span class="kn">import</span> <span class="n">river_map_mpi_driver</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span> <span class="nn">RiverMapper.make_river_map</span> <span class="kn">import</span> <span class="n">Config_make_river_map</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="c1"># ------------------------- sample input ---------------------------</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">dems_json_file</span> <span class="o">=</span> <span class="s1">&#39;/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Inputs/dems.json&#39;</span>  <span class="c1"># specifying files for all DEM tiles</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="s1">&#39;/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Shapefiles/CUDEM_Merged_for_v16.shp&#39;</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span> <span class="o">+</span>  <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">thalweg_shp_fname</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span><span class="si">}</span><span class="s1">-core/&#39;</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="c1"># ------------------------- end input section ---------------------------</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">river_map_mpi_driver</span><span class="p">(</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="n">thalweg_shp_fname</span><span class="p">,</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="n">comm</span><span class="o">=</span><span class="n">comm</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="c1"># ------------------------- sample input ---------------------------</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">dems_json_file</span> <span class="o">=</span> <span class="s1">&#39;./Inputs/DEMs/dems.json&#39;</span>  <span class="c1"># specifying files for all DEM tiles</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="s1">&#39;./Inputs/Shapefiles/LA_local.shp&#39;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span> <span class="o">+</span>  <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">thalweg_shp_fname</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span><span class="si">}</span><span class="s1">-core/&#39;</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="c1"># ------------------------- end input section ---------------------------</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">river_map_mpi_driver</span><span class="p">(</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="n">thalweg_shp_fname</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="n">comm</span><span class="o">=</span><span class="n">comm</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="p">)</span>
 </code></pre></div></p>
-<p>The first argument takes a *.json file that specifies multiple sets of DEMs, for example:
+<p>In stead of specifying a file list for the DEM tiles as in the serial example,
+the first argument takes a *.json file that specifies multiple sets of DEMs, for example:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nt">&quot;CuDEM&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CuDEM&quot;</span><span class="p">,</span>
@@ -1707,32 +1749,30 @@ a parallel driver is provided to automatically group thalwegs based on their par
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">&quot;boxes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
-</code></pre></div>
-There are a few things to be noted:</p>
+</code></pre></div></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
 <ul>
 <li>
-<p>In stead of specifying a file list for the DEM tiles (as in the serial example),
-you can either specify a glob pattern or a list of file names;
-if both are specified, the script will automatically pool all files together and take the unique files.</p>
+<p>For each DEM source, specify a glob pattern and/or a list of file names;
+if both are specified, the script will pool all files together and take the unique files.</p>
 </li>
 <li>
-<p>No need to manually specify the bounding "boxes", just leave it empty.</p>
+<p>No need to manually specify the bounding "boxes", just leave them empty.</p>
 </li>
 <li>
 <p>Different DEM products should be arranged from high priority to low priority.
-In the above example, "CuDEM" precedes "CRM", meaning that if a point is within CuDEM's spatial coverage,
-then its elevation value is solely based on CuDEM.</p>
+The order of the dictionary key ("CuDEM" and "CRM") is preserved as long as you are using Python 3.7 or a later version.
+We may replace the regular dictionary to OrderedDict if there is a need.</p>
 </li>
 </ul>
-<blockquote>
-<p>The order of the dictionary key is preserved as long as you are using Python 3.7 or a later version.
-We may replace the regular dictionary to OrderedDict in the future.</p>
-</blockquote>
+</div>
 <p>Under the directory "RiverMapper_Samples/Parallel/", execute the parallel script like this:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mpirun -n 20 ./sample_parallel.py
 </code></pre></div>
+<p>The exact mpi command may vary based on your system.</p>
 <h2 id="advanced-parameterization">Advanced Parameterization<a class="headerlink" href="#advanced-parameterization" title="Permanent link">&para;</a></h2>
-<h3 id="mandatory-inputs">Mandatory inputs<a class="headerlink" href="#mandatory-inputs" title="Permanent link">&para;</a></h3>
+<h3 id="mandatory-input-parameters">Mandatory input parameters<a class="headerlink" href="#mandatory-input-parameters" title="Permanent link">&para;</a></h3>
 <p>In the "Serial" and "Parallel" examples above, you may have noticed there are 3 mandatory Inputs:</p>
 <table>
 <thead>
@@ -1756,7 +1796,7 @@ We may replace the regular dictionary to OrderedDict in the future.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="optional-inputs">Optional inputs<a class="headerlink" href="#optional-inputs" title="Permanent link">&para;</a></h3>
+<h3 id="optional-input-parameters">Optional input parameters<a class="headerlink" href="#optional-input-parameters" title="Permanent link">&para;</a></h3>
 <p>In addition to the mandatory inpouts, RiverMapper provides a few parameters to fine tune the output polylines or generate special features like levees or pseudo-channels.</p>
 <table>
 <thead>
@@ -1791,6 +1831,11 @@ We may replace the regular dictionary to OrderedDict in the future.</p>
 <td>river_threshold</td>
 <td>float</td>
 <td>minimum and maximum river widths (in meters) to be resolved</td>
+</tr>
+<tr>
+<td>elev_scale</td>
+<td>float</td>
+<td>scaling factor for elevations; a number of -1 (invert elevations) is useful for finding ridges (e.g., of a barrier island)</td>
 </tr>
 <tr>
 <td>outer_arc_positions</td>
@@ -1876,14 +1921,17 @@ For example, if you want to add two pairs of outer arcs that flank the main rive
 , where the last argument specifies the relative distances of the outer arcs to the main channel.
 In this case two outer arcs will be placed to the left of the channel at distances of "<span class="arithmatex">\(0.1 \times\)</span> channel width" and "<span class="arithmatex">\(0.2 \times\)</span> channel width" from the left bank;
 the same goes for the right bank, so 4 outer arcs in total.</p>
-<p>However, tuning the parameters may not be easy at first because there are many of them.
-To simplify the parameter configuration, RiverMapper offers a class called "Config_make_river_map",
+<h2 id="parameter-presets">Parameter presets<a class="headerlink" href="#parameter-presets" title="Permanent link">&para;</a></h2>
+<p>Tuning the parameters may not be easy at first because there are many of them.
+To simplify the parameter configuration, RiverMapper offers a class called "ConfigRiverMap",
 which provides commonly used parameter presets.
-You can use these presets to directly configure the parameters.
-For example,
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>    <span class="kn">from</span> <span class="nn">RiverMapper.make_river_map</span> <span class="kn">import</span> <span class="n">Config_make_river_map</span>
+These presets are "class methods" in <a href="https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/RiverMapper/config_river_map.py">config_river_map.py</a>,
+and each preset (class method, or factory method) comes with a short description in the code.</p>
+<p>For example, the preset "LooselyFollowRivers" means that "Small-scale river curvatures may not be exactly followed, but channel connectivity is still preserved",
+and this is the sample code:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>    <span class="kn">from</span> <span class="nn">RiverMapper.config_river_map</span> <span class="kn">import</span> <span class="n">ConfigRiverMap</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">Config_make_river_map</span><span class="o">.</span><span class="n">LooselyFollowRivers</span><span class="p">()</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">LooselyFollowRivers</span><span class="p">()</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">make_river_map</span><span class="p">(</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="n">tif_fnames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;./Inputs/DEMs/GA_dem_merged_ll.tif&#39;</span><span class="p">],</span>
 <a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="n">thalweg_shp_fname</span> <span class="o">=</span> <span class="s1">&#39;./Inputs/Shapefiles/GA_local.shp&#39;</span><span class="p">,</span>
@@ -1891,18 +1939,13 @@ For example,
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="o">**</span><span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">,</span>
 <a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="p">)</span>
 </code></pre></div>
-, where "LooselyFollowRivers" is a parameter preset defined in the "Config_make_river_map" class,
 and the operator "**" unpacks the optional parameters from the configuration.</p>
-<p>You can also peruse the "class methods" inside "Config_make_river_map" at the beginning of "make_river_map.py" to familiarize with different parameter settings.
-Each preset (class method, or factory method) comes with a short description in the code, for example,
-"LooselyFollowRivers" means that "Small-scale river curvatures may not be exactly followed, but channel connectivity is still preserved".
-The presets may be regularly updated, so their descriptions are not repeated here to avoid duplication and inconsistency.</p>
-<p>Another utility of the "Config_make_river_map" class is to facilitate the parameter transfer from the parallel driver to the core routine.
+<p>Another utility of the "ConfigRiverMap" class is to facilitate the parameter transfer from the parallel driver to the core routine.
 The stardard way of setting the parameters in the parallel mode is as follows:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">import</span> <span class="nn">os</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">from</span> <span class="nn">RiverMapper.river_map_mpi_driver</span> <span class="kn">import</span> <span class="n">river_map_mpi_driver</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span> <span class="nn">RiverMapper.make_river_map</span> <span class="kn">import</span> <span class="n">Config_make_river_map</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span> <span class="nn">RiverMapper.config_river_map</span> <span class="kn">import</span> <span class="n">ConfigRiverMap</span>
 <a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
@@ -1910,7 +1953,7 @@ The stardard way of setting the parameters in the parallel mode is as follows:</
 <a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="n">dems_json_file</span> <span class="o">=</span> <span class="s1">&#39;/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Inputs/dems.json&#39;</span>  <span class="c1"># specifying files for all DEM tiles</span>
 <a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="s1">&#39;/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Shapefiles/CUDEM_Merged_for_v16.shp&#39;</span>
 <a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span> <span class="o">+</span>  <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">thalweg_shp_fname</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span><span class="si">}</span><span class="s1">-core/&#39;</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">Config_make_river_map</span><span class="p">()</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="p">()</span>
 <a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c1"># ------------------------- end input section ---------------------------</span>
 <a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    <span class="n">river_map_mpi_driver</span><span class="p">(</span>
 <a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>        <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
@@ -1922,20 +1965,47 @@ The stardard way of setting the parameters in the parallel mode is as follows:</
 </code></pre></div>
 <p>Comparing with the parallel <a href="#parallel-mode">example</a> in the previous section, the above example adds a few lines of code that does the following:</p>
 <ul>
-<li>importing the "Config_make_river_map"</li>
-<li>creating a default configuration,</li>
+<li>importing the "ConfigRiverMap" class</li>
+<li>creating a default configuration "river_map_config",</li>
 <li>passing the configration to the parallel driver.</li>
 </ul>
 <p>Since the default configuration is used, this example is essentially the same as the previous parallel example.
 But it facilitates further parameter tweaking, e.g.:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">Config_make_river_map</span><span class="o">.</span><span class="n">LooselyFollowRivers</span><span class="p">()</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;i_DiagnosticOutput&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">LooselyFollowRivers</span><span class="p">()</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;outer_arc_positions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;i_real_clean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 </code></pre></div>
 , without changing other parts of the code.</p>
+<h2 id="more-parameter-presets">More parameter presets<a class="headerlink" href="#more-parameter-presets" title="Permanent link">&para;</a></h2>
+<p>By tweaking the parameters, RiverMapper can also aid in the meshing of other channel-like features.</p>
+<h3 id="levees">Levees<a class="headerlink" href="#levees" title="Permanent link">&para;</a></h3>
+<p>In the STOFS-3D-Atlantic domain, levees are important features to be incorporated in the model mesh.
+Instead of parameterizing them as hydraulic structures, the levees are explicitly represented by meter-scale elements,
+with two rows of nodes resolving the feet of the levee and another two rows resolving the top of the levee:</p>
+<p><img alt="Sample river map" src="../../assets/sample-levee-map.png" /> </p>
+<p>With the levee centerlines available from National Levee Database,
+the levee map can be easily made by invoking the pseudo channel option of RiverMapper:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">Levees</span><span class="p">()</span>
+</code></pre></div>
+<p>Notice that the along-channel (in this case along-levee) resolution also adapts for bends,
+just like for rivers.</p>
+<h3 id="barrier-islands">Barrier islands<a class="headerlink" href="#barrier-islands" title="Permanent link">&para;</a></h3>
+<p>Barrier islands are long and narrow topographical features similar to river channels.
+In fact, the map of a barrier island can be made in the same way as river channels
+if the sign of the DEM's elevation values is inverted.</p>
+<p><img alt="Sample river map" src="../../assets/sample-barrier-island-map.png" /> </p>
+<p>This can be done by setting the optional parameter "elev_scale" to "-1",
+or directly invoking the preset "BarrierIsland":</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">BarrierIsland</span><span class="p">()</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The above two sample applications can also be found in 
+<a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a></p>
+</div>
 <h2 id="experimental-features">Experimental Features<a class="headerlink" href="#experimental-features" title="Permanent link">&para;</a></h2>
 <h3 id="global-arc-cleaning">Global arc cleaning<a class="headerlink" href="#global-arc-cleaning" title="Permanent link">&para;</a></h3>
-<p>There is an optional input in Config_make_river_map called "i_real_clean",
+<p>There is an optional input in for "make_river_map" called "i_real_clean",
 which defaults to False.
 When turned on, an extra cleaning process will be applied to all arcs.
 However, this process is not efficient enough for large applications at the time being,
