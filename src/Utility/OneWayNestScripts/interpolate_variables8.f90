@@ -635,6 +635,9 @@
 !        print*, 'finished writing time (days) = ',time/86400
       enddo !it1=1,nrec
       iret=nf90_close(ncid3)
+      iret=nf90_close(ncid4)
+      iret=nf90_close(ncid5)
+      iret=nf90_close(ncid6)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday=1,
