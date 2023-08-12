@@ -21,7 +21,8 @@
       print*, 'Input transition depths (meters) for offshore (e.g., 30m)):'
       read*, hmin_of
 
-      print*, 'Input transition depths (meters) for nearshore (usually <hmin_of):'
+      print*, 'Input transition depths (meters) for nearshore (usually <hmin_of).'
+      print*, 'Upwind will be used shallower than this depth (e.g. same as h_tvd):'
       read*, hmin_near
 !'
 
@@ -150,7 +151,7 @@
       do i=1,ne
         write(12,*)i,itvd(i)
       enddo !i
-      write(12,*)'hmin=',hmin
+      write(12,*)'hmin=',hmin_of,hmin_near
       close(12)
 
       stop
