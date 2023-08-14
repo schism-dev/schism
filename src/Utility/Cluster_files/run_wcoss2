@@ -1,0 +1,32 @@
+###Sample run script from Zizang Y. (Aug 2023)
+#PBS  -N 0hrrr_newCode_nfcast_t12z
+#PBS  -A ESTOFS-DEV
+#PBS  -q dev
+
+#PBS  -V
+
+#PBS -l place=vscatter:excl,select=30:ncpus=128:mpiprocs=120:ompthreads=1
+
+#PBS  -l walltime=3:00:00
+
+export NCPU_PBS=4472
+
+# ----------------option flags (WCOSS2/NCO/Pete)
+# set up MPI connections and buffers at start of run - helps efficiency of MPI later in run
+export MPICH_OFI_STARTUP_CONNECT=1
+# pace MPI_Bcast messaging when reading and distributing initial conditions - prevents the Bcast hangs
+export MPICH_COLL_SYNC=MPI_Bcast
+# turn off MPI_Reduce on node optimization - prevent MPI_Reduce hangs during time stepping
+export MPICH_REDUCE_NO_SMP=1
+
+fn_pschism=/lfs/h1/nos/estofs/noscrub/Zizang.Yang/VIMS_v6_1-stofs.v1.1.0/exec/stofs_3d_atl/stofs_3d_atl_pschism
+
+dir_jobs=/lfs/h1/nos/estofs/noscrub/Zizang.Yang/VIMS_v6_1-stofs.v1.1.0/work/stofs_3d_atl/run_20230809_0HRRR/
+cd $dir_jobs
+
+echo ${dir_jobs}
+pwd
+
+mkdir outputs
+rm -f outputs/*
+mpiexec -n $NCPU_PBS  --cpu-bind core ${fn_pschism} 6
