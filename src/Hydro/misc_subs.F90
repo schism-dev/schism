@@ -3286,7 +3286,7 @@
         endif
       enddo !k
 
-      call tridag(npts,1,npts,1,alow,bdia,cupp,rrhs,ypp,gam)
+      call tridag_sch(npts,1,npts,1,alow,bdia,cupp,rrhs,ypp,gam)
     
       yp(1)=yp1; yp(npts)=yp2
       do k=2,npts-1

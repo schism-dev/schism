@@ -1773,7 +1773,7 @@
             !write(12,*)'bdia:',bdia
             !write(12,*)'cupp:',cupp
 
-            call tridag(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
+            call tridag_sch(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
 
             !check convergence, based on increment
             term1=sqrt(sum((soln(1,1:ndim)-tr_el(m,kbe(i)+1:nvrt,i))**2.d0))
@@ -2009,7 +2009,7 @@
 
           enddo !k=kbe(i)+1,nvrt
 
-          call tridag(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
+          call tridag_sch(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
 
           do k=kbe(i)+1,nvrt
             kin=k-kbe(i)

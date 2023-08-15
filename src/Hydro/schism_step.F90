@@ -2964,7 +2964,7 @@
         enddo !k=kbp(j)+1,nvrt
 
 !	Soln for q2 at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
         q2tmp(nvrt)=q2fs
         !Extrapolate to bottom mainly for diffusivities
         q2tmp(kbp(j):kbp(j)+1)=q2bot
@@ -3044,7 +3044,7 @@
 !        enddo 
 
 !	Soln for q2l and xl at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
 
 !        write(90,*)'WOW6',it,j
 
@@ -3324,7 +3324,7 @@
 !------------------------------------------before this line done
 
 !	Soln for q2 at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
         q2tmp(nvrt)=q2fs
         !Extrapolate to bottom mainly for diffusivities
         q2tmp(kbp(j):kbp(j)+1)=q2bot
@@ -3420,7 +3420,7 @@
 !        enddo 
 
 !	Soln for q2l and xl at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
 
 !        write(90,*)'WOW6',it,j
 
@@ -6575,7 +6575,7 @@
 #endif /*USE_WWM*/
         enddo !k=kbs(j)+1,nvrt
 
-        call tridag(nvrt,2,ndim,2,alow,bdia,cupp,rrhs,soln,gam)
+        call tridag_sch(nvrt,2,ndim,2,alow,bdia,cupp,rrhs,soln,gam)
         do k=kbs(j)+1,nvrt
           kin=k-kbs(j)
 !         Impose limits

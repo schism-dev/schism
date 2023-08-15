@@ -993,7 +993,7 @@
           if(k==kbe(i)+1) rrhs(1:ntr,kin)=rrhs(1:ntr,kin)-area(i)*dtb_by_bigv*flx_bt(1:ntr,i)
         enddo !k=kbe(i)+1,nvrt
 
-        call tridag(nvrt,ntr,ndim,ntr,alow,bdia,cupp,rrhs,soln,gam)
+        call tridag_sch(nvrt,ntr,ndim,ntr,alow,bdia,cupp,rrhs,soln,gam)
         do k=kbe(i)+1,nvrt
           kin=k-kbe(i)
           tr_el(:,k,i)=soln(:,kin)
