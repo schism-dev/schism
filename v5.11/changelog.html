@@ -1,0 +1,1758 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-8.3.4">
+    
+    
+      
+        <title>Changelog - SCHISM</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.4a0965b7.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#bug-fixes-and-major-algorithmic-changes" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="SCHISM" class="md-header__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCHISM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="SCHISM" class="md-nav__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    SCHISM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Changelog
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="changelog.html" class="md-nav__link md-nav__link--active">
+        Changelog
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#bug-fixes-and-major-algorithmic-changes" class="md-nav__link">
+    Bug fixes and major algorithmic changes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changes-in-input-and-output-format" class="md-nav__link">
+    Changes in input and output format
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/getting-sourcecode.html" class="md-nav__link">
+        Getting the source code
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/compilation.html" class="md-nav__link">
+        Compilation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/test_suite.html" class="md-nav__link">
+        Test suite
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/typical-workflow.html" class="md-nav__link">
+        Typical workflow (a cheat sheet)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/grid-generation.html" class="md-nav__link">
+        Mesh generation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing.html" class="md-nav__link">
+        Preprocessing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_8" type="checkbox" id="__nav_3_8" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_8">
+          Preprocessing with PySCHISM
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with PySCHISM" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_8">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with PySCHISM
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/boundary.html" class="md-nav__link">
+        Boundary Conditions
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/atmos.html" class="md-nav__link">
+        Atmospheric forcing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/nwm.html" class="md-nav__link">
+        Souce and Sink
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/running-model.html" class="md-nav__link">
+        Running the model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/visualization.html" class="md-nav__link">
+        Visualization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/post-processing.html" class="md-nav__link">
+        Postprocessing
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Model formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Model formulation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Model formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/physical-formulation.html" class="md-nav__link">
+        Physical formulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_2">
+          Numerical formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          Numerical formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/geometry-discretization.html" class="md-nav__link">
+        Geometry and discretization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/barotropic-solver.html" class="md-nav__link">
+        Barotropic solver
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/eulerian-lagrangian-method.html" class="md-nav__link">
+        Eulerian-Lagrangian Method
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/momentum-equation.html" class="md-nav__link">
+        Momentum equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/vertical-velocity.html" class="md-nav__link">
+        Vertical velocity
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/turbulence-closure.html" class="md-nav__link">
+        Turbulence closure
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/transport-equation.html" class="md-nav__link">
+        Transport equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/updating-levels.html" class="md-nav__link">
+        Updating the levels/Inundation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/spherical-coordinates.html" class="md-nav__link">
+        Spherical coordinates
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Input/Output
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Input/Output" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Input/Output
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/hgrid.html" class="md-nav__link">
+        Horizontal grid (hgrid.gr3)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/vgrid.html" class="md-nav__link">
+        Vertical grid (vgrid.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/param.html" class="md-nav__link">
+        Model parameters (param.nml)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/bctides.html" class="md-nav__link">
+        Boundary conditions (bctides.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/friction.html" class="md-nav__link">
+        Bottom friction
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/sflux.html" class="md-nav__link">
+        Atmospheric flux (/sflux)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/optional-inputs.html" class="md-nav__link">
+        Optional inputs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/outputs.html" class="md-nav__link">
+        Outputs
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Mesh generation - advanced topics
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Mesh generation - advanced topics" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Mesh generation - advanced topics
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/cross_regime.html" class="md-nav__link">
+        Meshing for cross-scale regimes
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_3">
+          Meshing for compound floods
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Meshing for compound floods" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Meshing for compound floods
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/extract-thalweg.html" class="md-nav__link">
+        Extract thalwegs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/generate-river-map.html" class="md-nav__link">
+        Generate river map
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/meshing-in-SMS.html" class="md-nav__link">
+        Meshing in SMS
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_7">
+          Modules
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Modules" data-md-level="1">
+        <label class="md-nav__title" for="__nav_7">
+          <span class="md-nav__icon md-icon"></span>
+          Modules
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/generic-tracer.html" class="md-nav__link">
+        Generic tracer module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/age.html" class="md-nav__link">
+        AGE
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/sed2d.html" class="md-nav__link">
+        2D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/sed3d.html" class="md-nav__link">
+        3D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/icm.html" class="md-nav__link">
+        ICM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/cosine.html" class="md-nav__link">
+        CoSiNe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/dvd.html" class="md-nav__link">
+        DVD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/marsh-migration.html" class="md-nav__link">
+        Marsh migration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/analysis-mode.html" class="md-nav__link">
+        Analysis mode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/hydraulics.html" class="md-nav__link">
+        Hydraulics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/particle-tracking.html" class="md-nav__link">
+        Particle tracking
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/wwm.html" class="md-nav__link">
+        WWM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/fabm.html" class="md-nav__link">
+        FABM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/pahm.html" class="md-nav__link">
+        PaHM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/single-class-ice.html" class="md-nav__link">
+        Single-class ice module
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="code-contribution.html" class="md-nav__link">
+        Code structure
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="case-study.html" class="md-nav__link">
+        Case studies
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          SCHISM external coupling
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SCHISM external coupling" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          SCHISM external coupling
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/esmf.html" class="md-nav__link">
+        Earth System Modeling Framework
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/nuopc.html" class="md-nav__link">
+        National Unified Operational Prediction Capability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/coastalapp.html" class="md-nav__link">
+        NOAA's CoastalApp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/mossco.html" class="md-nav__link">
+        Modular System for Shelves and Coasts
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/cesm.html" class="md-nav__link">
+        NCAR's Community Earth System Model
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq.html" class="md-nav__link">
+        Frequently Asked Questions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="known_issues.html" class="md-nav__link">
+        Known issues
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-to-this-online-manual.html" class="md-nav__link">
+        Contribute to this online manual
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/changelog.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Changelog</h1>
+
+<p>Following is a curated changelog of the code. The IDs starts with <code>R</code> represents the <code>svn</code> era id, others are <code>git</code> hash.
+To find all the changes between tag releases, search for 'Tag'.</p>
+<h2 id="bug-fixes-and-major-algorithmic-changes">Bug fixes and major algorithmic changes<a class="headerlink" href="#bug-fixes-and-major-algorithmic-changes" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>R5178</code>: fix bug of saturate <code>DO</code> in <a href="modules/icm.html">ICM</a></li>
+<li><code>R5187</code>: incorporated dry bnd treatment from bndry (c/o Jens Wyrwa). However, to get good volume conservation it's best to keep all open flow bnd's wet all the time as before;</li>
+<li><code>R5191</code>: fixed a bug in <code>iwind_form</code> (accidentally re-init'ed after reading);</li>
+<li><code>R5202</code>: fixed a bug on negative ICM tracer concentration - check negative values before sending back to hydro.</li>
+<li><code>R5204</code>: a new option to control behavior of <code>btrack</code> when trajectory hots an open bnd (set <code>vel=0</code> and exit). Goal is to eventually use this as default;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/64b7181"><code>64b7181</code></a>: fixed an efficiency issue and added nc checks in <code>ptrack3</code> (c/o Marcel Rieker)</li>
+<li><a href="https://github.com/schism-dev/schism/commit/2138e77"><code>2138e77</code></a>: Fixed a major bug introduced during reshuffling of <code>_init</code> for PDAF: need to call <code>nodavel</code> before sflux, as uu2,vv20 are needed there.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/5ff2198"><code>5ff2198</code></a>: revamped <a href="modules/age.html">AGE</a> module. B.C. now all should use 0. Only 0 and 1 should be used in <code>AGE_hvar_[1:ntr/2].ic</code>, where ntr is @ of age tracers, and the code will 'hold' concentration at 1 at those prisms (level specified in param.nml) that have 1 as i.c. I.C. in <code>AGE_hvar_[ntr/2+1:ntr].ic</code> should <code>=0</code>. Injecting '1' at dry elem's is allowed but results may be harder to interpret.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/6cec698"><code>6cec698</code></a>: bug fix for spherical coord in <a href="modules/wwm.html">WWM</a> (around dateline);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/c46c7bd"><code>c46c7bd</code></a> (Feb 14, 2020): Fei tweaked WENO solver (wrt upwind);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/d3adb2c"><code>d3adb2c</code></a> (Feb 14, 2020): changed to bilinear interp for HYCOM hot and nudging scripts (to speed up);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/7506147"><code>7506147</code></a> (Mar 1, 2020): add limiter for settling vel to avoid char line out of bnd;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/5665418"><code>5665418</code></a> (Mar 18, 2020): PR from Baptiste mengual for <a href="modules/sed3d.html">SED3D</a> (<code>sed_frition.F90</code> merged after the rest).</li>
+<li><a href="https://github.com/schism-dev/schism/commit/eb00a00"><code>eb00a00</code></a> (Mar 31, 2020): added 12th tracer model (<code>USE_DVD</code> of Klingbeil)</li>
+<li><a href="https://github.com/schism-dev/schism/commit/aaf1306"><code>aaf1306</code></a> (April 4, 2020): added hybrid ELM transport for efficiency (via branch hybrid_ELM);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/40955ab"><code>40955ab</code></a> (April 16, 2020): replaced the fatal error in <code>nadv=2</code> (aptivity trap) with exit;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/e703189"><code>e703189</code></a> (May 6, 2020): reverted to old simple approach for depositional mass (c/o Baptiste Mengual);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/14e201f"><code>14e201f</code></a> (May 7, 2020): switched to ParMETIS v4.0.3;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/33fb37f"><code>33fb37f</code></a> (Jun 30, 2020): fixed a bug in <code>ielm_transport</code> (Fei Y.);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/55910d1"><code>55910d1</code></a> (July 31, 2020; via branch mem_leak_nc4): reverted the change in schism_io (close/open nc output after/b4 each write, to accommodate PDAF's flexible mode), as this has caused a lot of mem leaking (discovered by Nicole C. when testing ICM).</li>
+<li><a href="https://github.com/schism-dev/schism/commit/eaf9093"><code>eaf9093</code></a> (Aug 2020): Baptiste M. modified the computation of the bottom shear stress under combined waves and currents in SED3D</li>
+<li><a href="https://github.com/schism-dev/schism/commit/4ac56df"><code>4ac56df</code></a> (Aug 2020): Paul Ryan and Claire Trenham (CSIRO) fixed some init array issues in hydro and WWM.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/7e9ff0a"><code>7e9ff0a</code></a> (Aug 20, 2020): Fei Y fixed a msource bug (init of msource at 0 at elem's not in source_sink.in led to ice rain;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/f311026"><code>f311026</code></a> (Aug. 27, 2020): reverted init of msource to 0 for tracers other than T,S, c/o Nicole Cai. Using ambient values for other tracers can lead to artificial and additional accumulation of nutrients;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/00b6f16"><code>00b6f16</code></a> (Nov. 9, 2020): PR #21 from Kijin merged (SED): changed method to compute near bottom vel for <span class="arithmatex">\(LSC^2\)</span>.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/8083cfa"><code>8083cfa</code></a> (Nov. 10, 2020): added option for transport solver only (<code>itransport_only</code>)</li>
+<li><a href="https://github.com/schism-dev/schism/commit/6dc44d3"><code>6dc44d3</code></a> (Dec 14, 2020): Fixed a bug, thanks to Kevin Kartin, on vortex formulism of wave force (missing a factor of area() in <span class="arithmatex">\(I_4\)</span>);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/28ff9d1"><code>28ff9d1</code></a> (Dec 16, 2020): added optional self-attraction loading tides. The option shares some constants with tidal potential: freq names and cut-off depth;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/b1bcaa0"><code>b1bcaa0</code></a> (April 20, 2021): removed most of <code>goto</code>. Remaining ones: <code>harm.F90</code>, <code>lap.F90</code>, <code>WWM</code>;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/0cec024"><code>0cec024</code></a> (April 21, 2021): bug fix in <code>misc_subs</code> c/o of Fei (<code>inunfl=1</code>: nodeA in final extrap stage may be interface node);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/fb30239"><code>fb30239</code></a> (April 22, 2021): bug fix for ellipsoidal earth (tensor frames).</li>
+<li><a href="https://github.com/schism-dev/schism/commit/fb79cdc"><code>fb79cdc</code></a> (May 26, 2021): in <code>interpolate_depth_structured2*</code>, added an option to shift 1/2 cell for ll corner (c/o Charles Seaton);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/5e87c24"><code>5e87c24</code></a> (June 9, 2021): more changes in <code>interpolate_depth_structured2*</code> to extrap also into right/upper sides.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/843c40f"><code>843c40f</code></a> (19 June, 2021): fixed a bug in <code>ptrack3</code> (pt_in_poly3; c/o Jilian Xiong) that affects quads;</li>
+<li>
+<p><a href="https://github.com/schism-dev/schism/commit/b2cf92b"><code>b2cf92b</code></a> (29 June, 2021): fixed a bug in station outputs in basin scale cases <code>ics=2</code> (local proj is not accurate if the station is far away from the local frame);</p>
+</li>
+<li>
+<p>Tag v5.9.0: 657157a (1 July, 2021)</p>
+</li>
+<li>
+<p><code>a9f8f6c</code> (8 July, 2021): fixed a bug in iloadtide=1 (index error). Also revamped reading of input files
+                              for large core counts.</p>
+</li>
+<li>
+<p><code>ab46def</code> (20 July, 2021): merged multi ice model (CICE) from Qian Wang.</p>
+</li>
+<li>
+<p><code>70db927</code> (11 Aug 2021): bug fixes from Qian Wang on ice matrix (ghost nodes)</p>
+</li>
+<li><code>8efc374</code> (30 Aug 2021): first version of scribe dictated I/O (as an option)</li>
+<li><code>53689f4</code> (12 Sept 2021): fixed a bug in weno transport introduced in e794d8c (23 Aug 2021).</li>
+<li><code>c7dd516</code> (27 Sept 2021): AGE module tweaked (clamped @ i.c. at injection points for both concentrations).</li>
+<li>(19 Oct 2021): filtered isolated wet nodes during outputs (should not change other results);</li>
+<li><code>7455d5d</code> (30 Dec 2021): added a new option nws=-1 (PaHM, Parametric Hurricane Model);</li>
+<li><code>7455d5d</code> (30 Dec 2021): added Fariall air-sea exchange (USE_BULK_FAIRALL) c/o Jerome Lefevre;</li>
+<li><code>e288f9a</code> (31 Jan 2022): removed the restriction of counter-clockwise orientation in sflux grid;</li>
+<li><code>dde345f</code> (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0:
+                              uninit'ed stress values.</li>
+<li><code>6524e19</code> (27 April 2022): merged with La Rochelle group on WWM  (VOR);</li>
+</ol>
+<h2 id="changes-in-input-and-output-format">Changes in input and output format<a class="headerlink" href="#changes-in-input-and-output-format" title="Permanent link">&para;</a></h2>
+<p>The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as <a href="input-output/param.html">param.nml</a>).</p>
+<ul>
+<li><code>f8e15ee</code> (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;</li>
+<li><code>bc113eb2</code> (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;</li>
+<li><code>24a2723</code> (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added
+                       iof_wwm(31) as dissipation due to vegetation. Also
+                       nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;</li>
+<li><code>c94b2ca</code> (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;</li>
+<li><code>a0960ed</code> (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes
+               near tropical islands etc);</li>
+<li><code>ed26f60</code> (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);</li>
+</ul>
+<p>Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release</p>
+<p>Tag v5.10.0: (13 July, 2022)</p>
+<ul>
+<li><code>d03830e</code> (16 May 2022): removed the 2 extra lines required in <code>partition.prop</code> (so it's identical to <code>global_to_local.prop</code> now);</li>
+<li><code>a71ea69</code> (12 May 2022): removed <code>ioffline_partition</code> and replaced it with CPP (<code>NO_PARMETIS</code>) to allow build without ParMETIS lib; renamed <code>global_to_local.in</code> as <code>partition.prop</code>;</li>
+<li><code>da90a33</code> (2 May 2022): removed <code>itr_met=1,2</code>;</li>
+<li><code>2165224</code> (29 April 2022): added optional offline partitioning <code>ioffline_partition</code> to bypass ParMETIS;
+                         if on, needs <code>global_to_local.in</code>;</li>
+<li><code>567b612</code> (28 April 2022): added new WWM outputs and re-ordered after <code>iof_wwm(26)</code>; <code>zCoordinate</code> outputs made optional (for performance test);</li>
+<li><code>6524e19</code> (27 April 2022): a few more WWM related parameters under VOR (<code>turbinjds,alpha,wfwvor_streaming</code>)
+                         and new WWM outputs, after merging with <code>lrdev_updates</code>;</li>
+<li><code>d44dbdf</code> (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: <code>rinflation_icm</code></li>
+<li><code>6f367d0</code> (30 Mar 2022): added optional vertical levels to inject source tracer conventration: <code>lev_tr_source</code>;</li>
+<li><code>7cc7f27</code> (30 Mar 2022): added an optional threshold depth for mass conversation for ICM: <code>h_massconsv</code>;</li>
+<li><code>1788867</code> (16 Mar 2022): added optional parameters for S exchange (split from heat exchange): <code>i_hmin_salt_ex,hmin_salt_ex</code>;</li>
+<li><code>dcd5356</code> (31 Jan 2022): removed ramp flags except <code>nramp_elev</code> (use <code>dramp*</code>&lt;=0 to turn off ramp):
+      <code>nramp, nrampbc, nrampwind, nrampwafo,nramp_ss</code>; removed the optional input <code>shapiro_min.gr3</code>;</li>
+<li><code>80f1caa</code> (26 Jan 2022): added 4 parameters in <code>ice.nml</code>: <code>albsn,albsnm, albi,albm</code></li>
+<li><code>d792ed0</code> (18 Jan 2022): added 2 new ice parameters: <code>ice_atmos_stress_form</code> and <code>cdwin0</code>;</li>
+<li><code>b4d2214</code> (7 Jan 2022): added a new parameter <code>nu_sum_mult</code> to allow sum/product of final relax constants for tracer nudging;</li>
+<li><code>f9f0844</code> (3 Jan 2022): ICE module, added 2 new parameters: <code>lead_closing, Saterm</code>. Also changed ice-wind stress formula;</li>
+<li><code>7455d5d</code> (30 Dec 2021): added a new option <code>nws=-1</code> (PaHM, Parametric Hurricane Model);</li>
+<li><code>91c91a7</code> (17 Dec 2021): ICE module, added new parameters: <code>ncyc_fct, depth_ice_fct</code>. Also requires <code>ice_fct.gr3</code> now;</li>
+<li><code>0e2f90e</code> (17 Dec 2021): added a new parameter in <code>ice.nml</code> <code>mevp_coef</code> and 2 related ones: <code>mevp_alpha[34]</code></li>
+<li><code>2a7647d</code> (24&amp;29 Nov 2021): added a new parmater <code>loadtide_coef</code> for <code>iloadtide=2,3</code>;</li>
+<li><code>a7a0b2b</code> (17 Oct 2021): restored <code>iwindoff</code>;</li>
+<li><code>afc7b1a</code> (11 Oct 2021): changed <code>vgrid.in</code> format for <code>ivcor=1</code> to facilitate parallel read (use
+                       <code>change_vgrid.f90</code> to convert)</li>
+<li><code>e9aec89</code> (1 Oct 2021): added most module outputs; order of flags changed in: ICE, ANALYSIS, SED;</li>
+<li><code>85b585a</code> (1 Sept 2021): add zcor output flag as <code>iof_hydro(25)</code>; rest of hydro output flags (<code>iof_hydro</code>) shifted by 1;</li>
+<li><code>8efc374</code> (30 Aug 2021): first version of scribe dictated I/O (as an option);</li>
+<li>
+<p><code>1902c1e</code> (16 July 2021): changed <code>hotstart.nc</code>: added <code>nsteps_from_cold</code> and <code>cumsum_eta</code> for DA;</p>
+</li>
+<li>
+<p>Tag v5.9.0: 657157a (1 July, 2021)</p>
+</li>
+<li><a href="https://github.com/schism-dev/schism/commit/e281d94"><code>e281d94</code></a> (25 June 2021): added a new option for SAL (Stepanov &amp; Hughes 2004): <code>iloadtide=3</code>;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/bfb4afc"><code>bfb4afc</code></a> (18 June, 2021): added an optional input <code>shapiro_min.gr3</code> to be used with <code>ishapiro=2</code>;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/d07d75d"><code>d07d75d</code></a> (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/b66e554"><code>b66e554</code></a> (April 14, 2021): added <code>ishapiro=2</code> - Smagorinsky like filter option. In this option, <code>shapiro0</code> is the coefficient;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/b43afea"><code>b43afea</code></a> (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/9150d86"><code>9150d86</code></a> (Mar 31, 2021): added a new SAL option (<code>iloadtide=2</code>) using a simple scaling;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/084e149"><code>084e149</code></a> (Feb 25, 2021): Removed parameters: <code>ibtrack_openbnd</code>, <code>iwindoff</code>, <code>dzb_decay</code> (with hardwire); also removed option for negative roughness. Fixed race condition for marsh module.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/3576c9c"><code>3576c9c</code></a> (Jan 24, 2021): added new option for source/sink input: <code>if_source=-1</code> requires
+<code>source.nc</code> (which includes elem list inside; allows different time steps and # of records for volume/mass source/sinks. Also, now the source/sink values in <code>.th</code> must be single precision (not double);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/bcdfce6"><code>bcdfce6</code></a> (Jan 6, 2021): added main switch for nc output <code>nc_out</code> (useful for other programs to control outputs);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/28ff9d1"><code>28ff9d1</code></a> (Dec 16, 2020): added optional self-attraction loading tides; if <code>iloadtide=1</code>, need amp/phases in <code>loadtide_[FREQ].gr3</code> (freq's shared with tidal potential);</li>
+<li><a href="https://github.com/schism-dev/schism/commit/f8ba470"><code>f8ba470</code></a> (Dec 3, 2020): Added a new option (<code>meth_sink</code>) to treat net sink: if an elem is dry with a net sink, vsource is reset to 0;</li>
+<li><a href="https://github.com/schism-dev/schism/commit/f9043e2"><code>f9043e2</code></a> (Nov. 12, 2020): merged with LRU branch <code>wwm_lr</code>; removed <code>sav_cd</code> (<code>isav=1</code> now requires <code>sav_cd.gr3</code>). <ul>
+<li>New parameters related to WWM: <code>fwvor_advxy_stokes</code>,<code>fwvor_advz_stokes</code>, <code>fwvor_advz_stokes</code>, <code>fwvor_breaking</code>, <code>cur_wwm</code>, <code>wafo_obcramp</code>; </li>
+<li>Changes in WWM .nml: <code>ALPBJ -&gt;B_ALP</code>, <code>BRHD-&gt;BRCR</code>.</li>
+</ul>
+</li>
+<li><a href="https://github.com/schism-dev/schism/commit/8083cfa"><code>8083cfa</code></a> (Nov. 10, 2020): added option for offline transport solver only ('itransport_only');</li>
+<li><a href="https://github.com/schism-dev/schism/commit/7e9ff0a"><code>7e9ff0a</code></a> (Aug 20, 2020): added two options (selected by <code>i_hmin_airsea_ex</code>) for locally turning off heat/salt exchange.<ul>
+<li><code>i_hmin_airsea_ex=1</code>: exchange turned off if local grid depth&lt;hmin_airsea_ex;</li>
+<li><code>i_hmin_airsea_ex=2</code>: exchange turned off if local water depth&lt;hmin_airsea_ex</li>
+<li>This replaces the change made by <a href="https://github.com/schism-dev/schism/commit/adde1aa"><code>adde1aa</code></a> (July 8, 2020): added a new parameter <code>hmin_airsea_ex</code> (min total water depth for heat/salt exchange);</li>
+</ul>
+</li>
+<li><a href="https://github.com/schism-dev/schism/commit/2f7bab1"><code>2f7bab1</code></a> (Jun 28,2020): reorganized ICM process (rates/fluxes) and added output flag in <code>param.nml</code>.</li>
+<li><a href="https://github.com/schism-dev/schism/commit/1477780"><code>1477780</code></a> (May 8, 2020): changed <code>sediment.in</code> to sediment.nml. <ul>
+<li><code>BEDLOAD_COEFF</code> <span class="arithmatex">\(\rightarrow\)</span> <code>bedload_coeff</code>, <code>NEWLAYER_THICK</code> <span class="arithmatex">\(\rightarrow\)</span> <code>newlayer_thick</code>, <code>IMETH_BED_EVOL</code> <span class="arithmatex">\(\rightarrow\)</span> <code>imeth_bed_evol</code></li>
+<li><code>SAND_SD50</code> <span class="arithmatex">\(\rightarrow\)</span> <code>Sd50</code>, <code>SAND_ERATE</code> <span class="arithmatex">\(\rightarrow\)</span> <code>Erate</code>, <code>SED_TYPE</code> <span class="arithmatex">\(\rightarrow\)</span> <code>iSedtype</code>, <code>SAND_SRHO</code> <span class="arithmatex">\(\rightarrow\)</span> <code>Srho</code>, <code>SAND_WSED</code> <span class="arithmatex">\(\rightarrow\)</span> <code>Wsed</code>, <code>SAND_TAU_CE</code> <span class="arithmatex">\(\rightarrow\)</span> <code>tau_ce</code>, <code>sed_morph_fac</code> <span class="arithmatex">\(\rightarrow\)</span> <code>morph_fac</code>, <code>poro_cst</code> <span class="arithmatex">\(\rightarrow\)</span> <code>porosity</code>);</li>
+</ul>
+</li>
+</ul>
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="index.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Home" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Home
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="schism/overview.html" class="md-footer__link md-footer__link--next" aria-label="Next: Overview" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Overview
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": ".", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.f758a944.min.js"></script>
+      
+        <script src="javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
