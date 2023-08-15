@@ -4268,12 +4268,12 @@
             akrp(i+j*(j-1)/2)=akr(i,j)
           enddo !i
         enddo !j
-        call dsptrf('U',npp+3,akrp,ipiv,info)
+        call dsptrf_sch('U',npp+3,akrp,ipiv,info)
         if(info/=0) then
           write(errmsg,*)'MAIN: Failed dsptrf:',info,ielg(k),(i,(j,akr(i,j),j=1,npp+3),i=1,npp+3)
           call parallel_abort(errmsg) 
         endif
-        call dsptri('U',npp+3,akrp,ipiv,work4,info)
+        call dsptri_sch('U',npp+3,akrp,ipiv,work4,info)
         if(info/=0) then
           write(errmsg,*)'Failed dsptri:',info,ielg(k)
           call parallel_abort(errmsg)
