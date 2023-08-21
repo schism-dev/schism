@@ -6,8 +6,8 @@ The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs 
 ## Visualization with Python
 [more coming] You can also find several packages on the [Forum site](http://ccrm.vims.edu/w/index.php/Share_your_tools)
 
-## Visualization with VisIT
-The most comprehensive way to visualize SCHISM nc4 outputs is via VisIT.
+## Visualization with VisIt
+The most comprehensive way to visualize SCHISM nc4 outputs is via VisIt.
 
 Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'.
  At runtime, the user needs to specify number of scribe cores (= # of 3D outputs variables 
@@ -16,24 +16,24 @@ Shortly after v5.9.0, we have successfully implemented a new mode of efficient I
 Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`. You can find sample outputs [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Scribe_IO_outputs/).
 Sample outputs using OLDIO (schout*.nc) can be found [here](http://ccrm.vims.edu/yinglong/SVN_large_files/SCHISM_v5.6.1_sample_outputs/).
 
-You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by following these steps:
+You can download newer versions of VisIt plugins c/o Jon Shu, DWR by following these steps:
 
 **On Windows 7 or 10**
 
-1. First download VisIT from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Use default dir (and record it), e.g. `C:\Users\username\AppData\Local\Programs\LLNL\VisIt*`
-2. Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIT)
+1. First download VisIt from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Use default dir (and record it), e.g. `C:\Users\username\AppData\Local\Programs\LLNL\VisIt*`
+2. Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIt)
 3. Download pre-built plug-in, developed at California Dept of Water Resource
-    * [For VisIT v2.13.3](https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8)
-    * [For VisIT v3.1.4](https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos)
-    * [For VisIT v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
+    * [For VisIt v2.13.3](https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8)
+    * [For VisIt v3.1.4](https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos)
+    * [For VisIt v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
     
-    You need to put dlls on OneDrive: `Documents/VisIt/databases` (create new folders if necessary).
+    You need to put dlls to: `Documents/VisIt/databases` (create new folders if necessary), except `netcdf_c++.dll`. The NetCDF DLL needs to be copied to `%USERPROFILE%\LLNL\VisIt 3.3.1` or an equivalent VisIt installation directory.
 
-4. After these steps, you'd be able to read in SCHISM outputs in ViSIT; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
+4. After these steps, you'd be able to read in SCHISM outputs in ViSIt; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
 
 **On Linux Systems**
 
 Newer versions can be found at the master branch of [github](https://github.com/schism-dev/schism_visit_plugin).
 
 !!!note
-    Note that the new plugins also work with the old I/O (combined `schout*.nc`) or even the older binary outputs. To visualize any variables under new I/O with VisIT, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIT also needs corresponding `zCoordinates*.nc`. 
+    Note that the new plugins also work with the old I/O (combined `schout*.nc`) or even the older binary outputs. To visualize any variables under new I/O with VisIt, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIt also needs corresponding `zCoordinates*.nc`. 
