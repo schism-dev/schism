@@ -43,8 +43,8 @@
  EXEC := $(EXEC)_$(TVD_LIM)
 
 # GOTM turbulence closure model
-# USE_GOTM = yes
-# EXEC := $(EXEC)_GOTM
+ USE_GOTM = yes
+ EXEC := $(EXEC)_GOTM
 
 # Wind wave model WWM
 # USE_WWM = yes
