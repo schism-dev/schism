@@ -80,8 +80,8 @@ include ../mk/include_modules
 
 # Don't comment out the follow ifdef
 ifdef USE_GOTM
-   GTMMOD =  -I/sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/modules/IFORT/ #modules
-   GTMLIBS = -L/sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/lib/IFORT/ -lturbulence_prod  -lutil_prod
+   GTMMOD =  -I/sciclone/home/yinglong/GOTM3.2.5_libs/Bora/modules/IFORT/ #modules
+   GTMLIBS = -L/sciclone/home/yinglong/GOTM3.2.5_libs/Bora/lib/IFORT/ -lturbulence_prod  -lutil_prod
 else
    GTMMOD =
    GTMLIBS =
