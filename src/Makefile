@@ -347,7 +347,6 @@ CONFIG_OBJS :=  $(addprefix o/$(config)/, $(OBJS))
 # Names of source files with relative path as found on $VPATH
 FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%=%$f) not-found:$f)))
 
-#PARMETISDIR := ./ParMetis-3.1-Sep2010
 PARMETISDIR := ./ParMetis-4.0.3
 ifeq ($(ENV),EDISON)
     PARMETISDIR := $(PARMETISDIR).cray
