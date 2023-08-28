@@ -24,7 +24,6 @@
       use schism_io
       use netcdf
       use misc_modules
-      use gen_modules_clock
 
 #ifdef USE_PAHM
       use PaHM_Global, only: modelType
@@ -84,6 +83,7 @@
 #endif
 
 #ifdef USE_MICE
+      use gen_modules_clock
       use icedrv_main, only:io_icepack,restart_icepack,step_icepack
       use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
@@ -227,6 +227,7 @@
 !#endif
       
       real(4),allocatable :: swild9(:,:) !used in tracer nudging
+      real(4),allocatable :: rwild6(:,:) !nws=4 only
       real(rkind),allocatable :: rwild(:,:),uth(:,:),vth(:,:),d2uv(:,:,:),dr_dxy(:,:,:),bcc(:,:,:)
       real(rkind),allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange (deallocate immediately afterwards)
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
@@ -338,10 +339,14 @@
       if(istat/=0) call parallel_abort('STEP: analysis allocation error')
 #endif
 
-!'    Alloc. the large array for nws=4,-1 option (may consider changing
-!     to unformatted binary read)
-      if(nws==4.or.nws==-1) then
+!'    Alloc. the large array for nws=4,-1 option 
+      if(nws==-1) then
         allocate(rwild(np_global,3),stat=istat)
+        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (70)')
+      endif 
+
+      if(nws==4) then
+        allocate(rwild6(7,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
 
@@ -381,7 +386,7 @@
 #ifdef USE_MICE
       call clock_newyear                        ! check if it is a new year
       call clock
-      if(myrank==0) write(16,*) yearold,month,day_in_month,timeold/3600
+      if(myrank==0) write(16,*) yearold,month_mice,day_in_month,timeold/3600
 #endif
 
 !...  define ramp function for boundary elevation forcing, wind and pressure
@@ -396,14 +401,12 @@
         endif
       endif
 
-!      if(nws>0.and.nrampwind/=0) then
       if(nws/=0.and.drampwind>0.d0) then
         rampwind=tanh(2.d0*time/86400.d0/drampwind)
       else
         rampwind=1.d0
       endif
 
-!      if(nrampwafo/=0) then
       if(drampwafo>0.d0) then
         rampwafo=tanh(2.d0*time/86400.d0/drampwafo)
       else
@@ -412,7 +415,6 @@
 
       !For source/sinks
       if(if_source/=0) then
-        !if(nramp_ss==1) then
         if(dramp_ss>0.d0) then
           ramp_ss=tanh(2.d0*time/86400.d0/dramp_ss)
         else
@@ -420,7 +422,6 @@
         endif
       endif
 
-      !if(nramp==1) then
       if(dramp>0.d0) then
         ramp=tanh(2.d0*time/86400.d0/dramp)
       else
@@ -528,24 +529,65 @@
 !$OMP end parallel
 
       if(nws==4) then
-        if(time>=wtime2) then
+        if(time>wtime2) then
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
           windy1=windy2
           pr1=pr2
-!          The large array for nws=4 option (may consider changing to
-!          unformatted binary read)
-          if(myrank==0) read(22,*)tmp,rwild(:,:) 
-          call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+
+          !Read in next record
+          itmp2=wtime2/wtiminc+1
+          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
+          j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+          if(ihconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+            j=nf90_inq_varid(ncid_atmos, "solar",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
+          endif !ihconsv/
+          if(isconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "prate",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
+            j=nf90_inq_varid(ncid_atmos, "evap",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+          endif !isconsv/
+          call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
               nd=ipgl(i)%id
-              windx2(nd)=rwild(i,1)
-              windy2(nd)=rwild(i,2)
-              pr2(nd)=rwild(i,3)
-            endif
+              windx2(nd)=rwild6(1,i)
+              windy2(nd)=rwild6(2,i)
+              pr2(nd)=rwild6(3,i)
+
+              if(ihconsv/=0) then
+                sflux(nd)=rwild6(4,i)
+                srad(nd)=rwild6(5,i)
+              endif !ihconsv/
+              if(isconsv/=0) then
+                fluxprc(nd)=rwild6(6,i)
+                fluxevp(nd)=rwild6(7,i)
+              endif !isconsv/
+            endif !ipgl
           enddo !i
         endif !time
 
@@ -587,16 +629,18 @@
 #endif
 
 !     CORIE mode
-      if(nws>=2.and.nws<=3) then
+      if(nws==2) then
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-            if(nws==2) call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
+#ifndef     USE_ATMOS
+            call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
      &                       fluxprc,fluxevp,prec_snow, &
 #endif
      &                       nws ) 
+#endif /*USE_ATMOS*/
 
 !$OMP parallel default(shared) private(i,j)
 !$OMP       do
@@ -653,14 +697,15 @@
             shum1(i)=shum2(i)
           enddo
 !$OMP end parallel do
-          if(nws==2) call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
 
-          if(nws==3) then !via ESMF
-            !ESMF may not extend to ghosts
-            call exchange_p2d(windx2)
-            call exchange_p2d(windy2)
-            call exchange_p2d(pr2)
-          endif !nws==3
+#ifdef    USE_ATMOS
+          !ESMF may not extend to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+#else
+          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
+#endif
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
@@ -678,7 +723,7 @@
 !        windx2=wx2; windy2=wy2
 !        windx=wx2; windy=wy2
 !       End
-      endif !nws>=2
+      endif !nws=2
 
 !...  Re-scale wind
       if(nws/=0) then; if(iwindoff/=0) then
@@ -834,7 +879,7 @@
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
+        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined; USE_ATMOS not defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
@@ -1538,6 +1583,29 @@
         !Exceptions
         msource(1:2,:)=-9999.d0 !junk so ambient values will be used
 
+#ifdef USE_NWM_BMI
+        !Update everything except time series at new time (need to coordinate
+        !with BMI on the timing of updates)
+        if(nsources>0) then
+          if(time>th_time3(2,1)) then
+            ath3(:,1,1,1)=ath3(:,1,2,1)
+            th_time3(1,1)=th_time3(2,1)
+            th_time3(2,1)=th_time3(2,1)+th_dt3(1)
+          endif
+          if(time>th_time3(2,3)) then
+            ath3(:,:,1,3)=ath3(:,:,2,3)
+            th_time3(1,3)=th_time3(2,3)
+            th_time3(2,3)=th_time3(2,3)+th_dt3(3)
+          endif
+        endif !nsources
+
+        if(nsinks>0.and.time>th_time3(2,2)) then !not '>=' to avoid last step
+          ath3(:,1,1,2)=ath3(:,1,2,2)
+          th_time3(1,2)=th_time3(2,2)
+          th_time3(2,2)=th_time3(2,2)+th_dt3(2)
+        endif
+
+#else
         !Reading by rank 0
         if(nsources>0.and.myrank==0) then
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
@@ -1591,6 +1659,7 @@
 !       Finished reading; bcast
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif /*USE_NWM_BMI*/
 
         if(nsources>0) then
           rat=(time-th_time3(1,1))/th_dt3(1)
@@ -1650,7 +1719,7 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
-!...  For nws=3, needs evap for atmos model 
+!...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
 #ifdef  IMPOSE_NET_FLUX
 !        if(impose_net_flux/=0) then !impose net precip (nws=2)
@@ -2895,7 +2964,7 @@
         enddo !k=kbp(j)+1,nvrt
 
 !	Soln for q2 at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
         q2tmp(nvrt)=q2fs
         !Extrapolate to bottom mainly for diffusivities
         q2tmp(kbp(j):kbp(j)+1)=q2bot
@@ -2975,7 +3044,7 @@
 !        enddo 
 
 !	Soln for q2l and xl at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
 
 !        write(90,*)'WOW6',it,j
 
@@ -3255,7 +3324,7 @@
 !------------------------------------------before this line done
 
 !	Soln for q2 at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
         q2tmp(nvrt)=q2fs
         !Extrapolate to bottom mainly for diffusivities
         q2tmp(kbp(j):kbp(j)+1)=q2bot
@@ -3351,7 +3420,7 @@
 !        enddo 
 
 !	Soln for q2l and xl at new level
-        call tridag(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
+        call tridag_sch(nvrt,1,nqdim,1,alow,bdia,cupp,gam2,soln2,gam)
 
 !        write(90,*)'WOW6',it,j
 
@@ -3907,7 +3976,7 @@
             enddo !l=1,2
           enddo !k=kbs(j)+1,nvrt 
 
-          shapiro(j)=0.5d0*tanh(dt*vmax*shapiro0)
+          shapiro(j)=0.5d0*tanh(dt*vmax*shapiro_smag(j))
 !          vmin=0.5d0*(shapiro_min(isidenode(1,j))+shapiro_min(isidenode(2,j)))
 !          shapiro(j)=max(shapiro(j),vmin)
         enddo !j=1,ns
@@ -6506,7 +6575,7 @@
 #endif /*USE_WWM*/
         enddo !k=kbs(j)+1,nvrt
 
-        call tridag(nvrt,2,ndim,2,alow,bdia,cupp,rrhs,soln,gam)
+        call tridag_sch(nvrt,2,ndim,2,alow,bdia,cupp,rrhs,soln,gam)
         do k=kbs(j)+1,nvrt
           kin=k-kbs(j)
 !         Impose limits
@@ -10333,15 +10402,11 @@
         j=nf90_def_var(ncid_hot,'dfq1',NF90_DOUBLE,var2d_dim,nwild(18))
         j=nf90_def_var(ncid_hot,'dfq2',NF90_DOUBLE,var2d_dim,nwild(19))
 
-        !var1d_dim(1)=side_dim
-        !j=nf90_def_var(ncid_hot,'xcj',NF90_DOUBLE,var1d_dim,nwild(20))
-        !j=nf90_def_var(ncid_hot,'ycj',NF90_DOUBLE,var1d_dim,nwild(21))
-        !var1d_dim(1)=node_dim
-        !j=nf90_def_var(ncid_hot,'xnd',NF90_DOUBLE,var1d_dim,nwild(22))
-        !j=nf90_def_var(ncid_hot,'ynd',NF90_DOUBLE,var1d_dim,nwild(23))
-        !var2d_dim(1)=nvrt_dim; var2d_dim(2)=node_dim
-        !j=nf90_def_var(ncid_hot,'uu2',NF90_DOUBLE,var2d_dim,nwild(24))
-        !j=nf90_def_var(ncid_hot,'vv2',NF90_DOUBLE,var2d_dim,nwild(25))
+        !Deflate some vars
+        do i=4,21
+          if(i==20) cycle !skip 20
+          j=nf90_def_var_deflate(ncid_hot,nwild(i),0,1,4) 
+        enddo !i
 
         j=nf90_enddef(ncid_hot)
 
@@ -10367,13 +10432,6 @@
         j=nf90_put_var(ncid_hot,nwild(17),dfh(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(18),dfq1(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(19),dfq2(:,1:np),(/1,1/),(/nvrt,np/))
-
-        !j=nf90_put_var(ncid_hot,nwild(20),xcj,(/1/),(/ns/))
-        !j=nf90_put_var(ncid_hot,nwild(21),ycj,(/1/),(/ns/))
-        !j=nf90_put_var(ncid_hot,nwild(22),xnd,(/1/),(/np/))
-        !j=nf90_put_var(ncid_hot,nwild(23),ynd,(/1/),(/np/))
-        !j=nf90_put_var(ncid_hot,nwild(24),uu2(:,1:np),(/1,1/),(/nvrt,np/))
-        !j=nf90_put_var(ncid_hot,nwild(25),vv2(:,1:np),(/1,1/),(/nvrt,np/))
 
         nvars_hot=21 !record # of vars in nwild so far
         !Debug
@@ -10691,6 +10749,7 @@
       if(if_source/=0) deallocate(msource)
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
+      if(allocated(rwild6)) deallocate(rwild6)
       deallocate(swild9)
       !if(allocated(ts_offline)) deallocate(ts_offline)
 

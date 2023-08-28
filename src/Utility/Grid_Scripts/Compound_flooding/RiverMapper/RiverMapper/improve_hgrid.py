@@ -533,4 +533,4 @@ if __name__ == "__main__":
     # gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
 
     # Sample usage
-    improve_hgrid('/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v15.1/Preproc_hgrid2/final.gr3')
+    improve_hgrid('/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v15.3/Improve_hgrid/final.gr3')

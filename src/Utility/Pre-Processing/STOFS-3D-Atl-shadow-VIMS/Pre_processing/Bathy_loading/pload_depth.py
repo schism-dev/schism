@@ -19,19 +19,21 @@ regions=['./regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenP
          "Rappahannock_river.reg","Susquehanna_river.reg","York_river.reg",
          "Androscoggin_Kennebec_rivers.reg","Merrimack_river.reg","Patuxent_river.reg",
          "Penobscot_river.reg","Saco_river.reg","StCroix_river.reg","Oyster_landing.reg",
+         "st_lawrence1.reg", "st_lawrence2.reg", "st_lawrence3.reg",
          )] #regions for modifying depth
 rvalues=(5,7,5,15,
          2,16,14,5,
          6,10,10,
          3,3,5,
          5,3,5,1,
+         10,10,10
          ) #minimum depth in regions
-headers=("etopo1","crm_3arcs","cdem13_","dem_continetalus_southcarolina","North_Carolina_USGS_3m",
+headers=("gebco","etopo1","crm_3arcs","cdem13_","dem_continetalus_southcarolina","North_Carolina_USGS_3m",
          "al_ll","nc_ll","fl_ll","gulf_1_dem_usgs","gulf_3_demcombined_ll","ge_ll","sc_ll",
          "cb_ll","db_ll","new_england_topobathy_dem_3m_dd","Tile3_R3_DEMv2","cb_bay_dem_v3.1_ll",
          "ncei19_2019v1","tx_ncei19","ncei19_MS_LA", "ncei19_MA_NH_NE", "ncei19_AL_nwFL", "ncei19_FL")
 
-sdir=r'/sciclone/data10/wangzg/DEM/npz'  #directory of DEM data
+sdir=r'/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN13q/Hgrid/npz'  #directory of DEM data
 reverse_sign=1  #invert depth sign
 
 #resource requst

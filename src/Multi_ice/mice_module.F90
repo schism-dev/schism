@@ -74,7 +74,7 @@ ice_gamma_fct, ice_diff, theta_io,ice_ave_steps, c_pressure
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_x
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_y
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tbu   !seabed stress factor
-  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: strength   !seabed stress factor
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: strength   !icepack strength factor
   real(rkind),allocatable :: u_ocean(:),v_ocean(:) !ocean surface current@nodes
 
 #if defined (__oasis)

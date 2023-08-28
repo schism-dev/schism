@@ -29,7 +29,6 @@
       use schism_io
       use netcdf
       use misc_modules
-      use gen_modules_clock
 
 #ifdef USE_PAHM
       use ParWind, only : ReadCsvBestTrackFile
@@ -91,6 +90,7 @@
       USE hydraulic_structures
 
 #ifdef USE_MICE
+      use gen_modules_clock
       use mice_module, only: ntr_ice,u_ice,v_ice,ice_tr,delta_ice,sigma11, &
    &sigma12,sigma22
       use mice_therm_mod, only: t_oi
@@ -630,12 +630,12 @@
         endif
       endif !ishapiro==1
 
-      if(ishapiro==2) then
-        if(shapiro0<0._rkind) then
-          write(errmsg,*)'Illegal shapiro(2):',shapiro0
-          call parallel_abort(errmsg)
-        endif
-      endif !ishapiro
+!      if(ishapiro==2) then
+!        if(shapiro0<0._rkind) then
+!          write(errmsg,*)'Illegal shapiro(2):',shapiro0
+!          call parallel_abort(errmsg)
+!        endif
+!      endif !ishapiro
 
       if(ishapiro/=0) then
         if(niter_shap<0) then
@@ -705,8 +705,8 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (nws=3: for coupling directly to atmos model; otherwise same as nws=2)
-      if(nws<-1.or.nws>6) then
+!     Wind (use nws=2 and USE_ATMOS for coupling directly to atmos model)
+      if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
       endif
@@ -726,14 +726,9 @@
         if(model_type_pahm/=1.and.model_type_pahm/=10) call parallel_abort('INIT: check model_type_pahm')
       endif
 
-      if(nws==3) then
-!#ifndef USE_ESMF
-        !> @todo the USE_ESMF macro is not yet implemented in CMake, thus the 
-        !> following check is disabled
-        !call parallel_abort('nws=3 requires coupler')
-!#endif        
+!      if(nws==3) then
         !Error:overwrite wtiminc by coupling step
-      endif !nws==3
+!      endif !nws==3
 
 !      iwind_form=0 !init.
       if(nws/=0) then
@@ -750,12 +745,17 @@
       endif
       if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
 !'
-      if(ihconsv/=0.and.(nws<2.or.nws>3)) call parallel_abort('Heat budge model must have nws>=2')
+      if(ihconsv/=0.and.nws/=2.and.nws/=4) call parallel_abort('Heat budge model must have nws>=2')
 
 #ifdef USE_BULK_FAIRALL
       if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
 #else
       if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
+#endif
+
+#ifdef USE_ATMOS
+      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=2')
+      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
 #endif
 
       if(ihconsv/=0) then
@@ -780,8 +780,6 @@
 !       isconsv=1
 #endif
       endif
-
-!      if(nws==3.and.isconsv==0) call parallel_abort('INIT: nws=3.and.isconsv=0')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -829,7 +827,7 @@
 !     Pass time info to EcoSim and ICM
 #ifdef USE_ECO
       year=start_year
-      month=start_month
+!      month=start_month !not needed by ECO
       day=start_day
       hour=start_hour
       minutes=0 !sim_minute
@@ -850,7 +848,7 @@
           call parallel_abort(errmsg)
         endif
 
-        if(courant_weno<=0._rkind) then
+        if(courant_weno<=0._rkind.or.courant_weno>1._rkind) then
           write(errmsg,*)'Illegal courant_weno:',courant_weno
           call parallel_abort(errmsg)
         endif
@@ -1139,7 +1137,10 @@
       endif
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
-      if(iabs(if_source)>1) call parallel_abort('Wrong if_source')
+      if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
+#ifdef USE_NWM_BMI
+      if(if_source==0) call parallel_abort('INIT: USE_NWM_BMI cannot go with if_source=0')
+#endif
 
 !     Check all ramp periods
 !      if(if_source/=0.and.nramp_ss/=0.and.dramp_ss<=0.d0) call parallel_abort('INIT: wrong dramp_ss')
@@ -1407,7 +1408,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         & hdif(nvrt,npa),shapiro(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
+         & hdif(nvrt,npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -2937,7 +2938,7 @@
 !...  Set shapiro(:). For ishapiro=2, this will be done in _step
       if(ishapiro==1) then
         shapiro(:)=shapiro0
-      else if(ishapiro==-1) then
+      else if(ishapiro==-1.or.ishapiro==2) then
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'shapiro.gr3',status='old')
           read(32,*)
@@ -2956,9 +2957,13 @@
         enddo !i
       
         do i=1,nsa
-          shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
-          !Check range
-          if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
+          if(ishapiro==-1) then
+            shapiro(i)=sum(swild(isidenode(1:2,i)))/2.d0
+            if(shapiro(i)<0.d0.or.shapiro(i)>0.5d0) call parallel_abort('INIT: check shapiro')
+          else !=2
+            shapiro_smag(i)=sum(swild(isidenode(1:2,i)))/2.d0
+            if(shapiro_smag(i)<0.d0) call parallel_abort('INIT: check shapiro(2)')
+          endif
 !'
         enddo !i
 !      else if(ishapiro==2) then 
@@ -2989,7 +2994,7 @@
 !            if(ipgl(i)%rank==myrank) shapiro_min(ipgl(i)%id)=buf3(i) !tmp
 !          enddo !i
 !        endif !lexist
-      endif !ishapiro==-1
+      endif !ishapiro
 
 !...  Horizontal diffusivity option
 !     ihdif=0 means all hdif=0 and no hdif.gr3 is needed
@@ -3183,7 +3188,7 @@
       endif !ncor
 
 !     Wind 
-      if(nws==-1.or.(nws>=2.and.nws<=3)) then !read in hgrid.ll and open debug outputs
+      if(nws==-1.or.nws==2) then !read in hgrid.ll and open debug outputs
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
           read(32,*)
@@ -4263,12 +4268,12 @@
             akrp(i+j*(j-1)/2)=akr(i,j)
           enddo !i
         enddo !j
-        call dsptrf('U',npp+3,akrp,ipiv,info)
+        call dsptrf_sch('U',npp+3,akrp,ipiv,info)
         if(info/=0) then
           write(errmsg,*)'MAIN: Failed dsptrf:',info,ielg(k),(i,(j,akr(i,j),j=1,npp+3),i=1,npp+3)
           call parallel_abort(errmsg) 
         endif
-        call dsptri('U',npp+3,akrp,ipiv,work4,info)
+        call dsptri_sch('U',npp+3,akrp,ipiv,work4,info)
         if(info/=0) then
           write(errmsg,*)'Failed dsptri:',info,ielg(k)
           call parallel_abort(errmsg)
@@ -4598,94 +4603,6 @@
 !      endif
 !      call parallel_finalize
 !      stop
-
-!...  initialize wind for nws=1,2 (first two lines)
-!...  Wind vector always in lat/lon frame and so will have problem at poles
-!      if(nws==0) then
-!        windx1 = 0
-!        windy1 = 0
-!        windy2 = 0
-!        windx2 = 0  
-!        windx  = 0
-!        windy  = 0 
-!      endif
-!
-!      if(nws==1) then
-!        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-!        read(22,*)tmp1,wx1,wy1
-!        read(22,*)tmp2,wx2,wy2
-!        if(abs(tmp1)>1.e-4.or.abs(tmp2-wtiminc)>1.e-4) &
-!     &call parallel_abort('check time stamp in wind.th')
-!        do i=1,npa
-!          windx1(i)=wx1
-!          windy1(i)=wy1
-!          windx2(i)=wx2
-!          windy2(i)=wy2
-!        enddo
-!        wtime1=0
-!        wtime2=wtiminc 
-!      endif
-!
-!      if(nws==4) then
-!        open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-!        read(22,*)tmp1,rwild(:,:)
-!        do i=1,np_global
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            windx1(nd)=rwild(i,1)
-!            windy1(nd)=rwild(i,2)
-!            pr1(nd)=rwild(i,3)
-!          endif
-!        enddo !i
-!
-!        read(22,*)tmp2,rwild(:,:)
-!        do i=1,np_global
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            windx2(nd)=rwild(i,1)
-!            windy2(nd)=rwild(i,2)
-!            pr2(nd)=rwild(i,3)
-!          endif
-!        enddo !i
-!        if(abs(tmp1)>1.e-4.or.abs(tmp2-wtiminc)>1.e-4) &
-!     &call parallel_abort('check time stamp in wind.th (4)')
-!
-!        wtime1=0
-!        wtime2=wtiminc
-!      endif !nws=4
-!
-!#ifdef USE_SIMPLE_WIND
-!      if(nws==5.or.nws==6) then
-!        itmp1=1
-!        wtime1=0
-!        wtime2=wtiminc 
-!        if(nws==5) then 
-!          CALL READ_REC_ATMO_FD(itmp1,   windx1, windy1, pr1)
-!          CALL READ_REC_ATMO_FD(itmp1+1, windx2, windy2, pr2)
-!        endif
-!        if(nws==6)  then
-!          CALL READ_REC_ATMO_FEM(itmp1,   windx1, windy1, pr1)
-!          CALL READ_REC_ATMO_FEM(itmp1+1, windx2, windy2, pr2)
-!        endif
-!      endif !5|6
-!#endif
-!
-!!     CORIE mode
-!      if(nws>=2.and.nws<=3) then
-!        wtime1=0
-!        wtime2=wtiminc 
-!!       wind speed upon output is rotated to the map projection
-!!       For ics=2, make sure windrot* =0 (i.e. true east/north direction)
-!        if(nws==2) then
-!          call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
-!          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-!        else
-!          windx1=0; windy1=0; windx2=0; windy2=0
-!          pr1=1.e5; pr2=1.e5 
-!          airt1=20; airt2=20
-!          shum1=0; shum2=0
-!        endif
-!      endif !nws>=2
 !------------------------------------------------------------------
       endif !ihot=0
 
@@ -4760,27 +4677,27 @@
       if(myrank==0) write(16,*)'Numbert of Biological Tracers (NBIT)=', NBIT
 
       !converts to Julian day 
-      if(month==1)then
+      if(start_month==1)then
         yday = day
-      else if(month==2)then
+      else if(start_month==2)then
         yday = day + 31
-      else if(month==3)then
+      else if(start_month==3)then
         yday = day + 59
-      else if(month==4)then
+      else if(start_month==4)then
         yday = day + 90
-      else if(month==5)then
+      else if(start_month==5)then
         yday = day + 120
-      else if(month==6)then
+      else if(start_month==6)then
         yday = day + 151
-      else if(month==7)then
+      else if(start_month==7)then
         yday = day + 181
-      else if(month==8)then
+      else if(start_month==8)then
         yday = day + 212
-      else if(month==9)then
+      else if(start_month==9)then
         yday = day + 243
-      else if(month==10)then
+      else if(start_month==10)then
         yday = day + 273
-      else if(month==11)then
+      else if(start_month==11)then
         yday = day + 304
       else
         yday = day + 334
@@ -5105,10 +5022,10 @@
 #ifdef USE_AGE
           !AGE: deal with first half of tracers only (2nd half=0). Mark non-0 elem
           indx2=m-irange_tr(1,mm)+1 !local tracer index
-          !If level_age=-999, the init from .ic is good (1 for all levels)
+          !If level_age=-999, the init from .ic is good (inject 1 at all levels)
           if(mm==4.and.indx2<=ntrs(4)/2) then !.and.level_age(indx2)/=-999) then
             do i=1,nea
-              if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then
+              if(abs(tr_el(m,nvrt,i)-1)<1.d-4) then !non-0 elem initially
                 nelem_age(indx2)=nelem_age(indx2)+1
                 if(nelem_age(indx2)>nea) call parallel_abort('INIT: increase dim of ielem_age')
                 ielem_age(nelem_age(indx2),indx2)=i
@@ -7087,6 +7004,8 @@
       if(myrank==0) write(16,*)'start init multi ice...'
       call ice_init
       if(myrank==0) write(16,*)'done init multi ice...'
+      call clock_init(time) !by wq
+      if(myrank==0) write(16,*) yearnew,month_mice,day_in_month,timeold
 #endif
 
 

@@ -54,7 +54,7 @@ Clean the merged map twice with the following parameters: 
 ![Clean SMS map](../../assets/mesh-clean-map.png)
 
 Two cleans are needed because the second clean will snap some of the newly created points during the first clean.
-
+SOmetimes it helps to close and restart the SMS session to get around mesh errors.
 
 ## **Build polygons**
 
@@ -158,12 +158,15 @@ Although the script tries to optimize the convergence of river arcs at river int
 , skew elements may occasionally occur.
 ![river-intersections](../../assets/mesh-intersections.png)
 
-It is recommended to just leave them be, because these small 'bad' elements do not affect the quality, efficiency, or stableness of SCHISM simulations.
-
-If you think it is necessary, you may remedy them using the following script provided in [SCHISM Git]():
+Normally these small 'bad' elements do not affect the efficiency or stability of SCHISM simulations. 
+However, it's advisable to edit out very small/skew elements.
+You may remedy them using the following script provided in [SCHISM Git]():
 ```
 $your_schism_dir/schism/src/Utility/Grid_Scripts/Compound_flooding/RiverMapper/RiverMapper/improve_hgrid.py
 ```
-The script automatically checks for small and skew elements,
+The script automatically checks for very small and skew elements,
 then improve the mesh either by removing the problematic elements or local relaxation.
+
+As a general rule of thumb, SCHISM can comfortably handle elements >= $1m^2$ ($10^{-10}$ in lon/lat), and skewness<=60. 
+Use `ACE/xmgredit5` or SMS to check these. Most of those extreme elements are due to SMS map issues so you should fix them there.
 

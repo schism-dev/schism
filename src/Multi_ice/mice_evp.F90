@@ -21,7 +21,7 @@ subroutine ice_evp
    &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength,tmp0,tmpsum,maxdeta,maxstr,maxstress,str_ocn_u,str_ocn_v
   
     integer :: iball(mnei),n
-    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3),strength(npa), &
+    real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3), &
     &a_ice0_0(npa),a_icen0(npa,ncat),v_icen0(npa,ncat),a_icen_elem(ncat),v_icen_elem(ncat),swild1(3)
 
     logical :: &

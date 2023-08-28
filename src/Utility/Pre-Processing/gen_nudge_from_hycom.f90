@@ -204,7 +204,7 @@
       tempmin=-15 
       tempmax=50
       saltmin=0
-      saltmax=45.2
+      saltmax=50.
 
 !     Assume S,T have same dimensions (and time step) and grids do not change over time
       timeout=-dtout !sec
@@ -669,7 +669,7 @@
         tempout=tem_outside; saltout=sal_outside !init
         npout=0 !# of _valid_ output points
         do i=1,np
-          if(ixy(i,1)==0.or.ixy(i,2)==0) then
+          if(ixy(i,1)==0.or.ixy(i,2)==0) then !T,S use outside values
           else !found parent 
             npout=npout+1
             imap(npout)=i

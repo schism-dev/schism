@@ -224,14 +224,15 @@ def merge_maps(mapfile_glob_str, merged_fname):
             total_map += map
         total_map.writer(merged_fname)
     else:
-        raise FileNotFoundError(f'warning: outputs do not exist: {mapfile_glob_str}')
+        print(f'warning: outputs do not exist: {mapfile_glob_str}, abort writing to map')
+        return None
 
     return total_map
 
 
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps'''
-    def __init__(self, points=None, node_idx=None, src_prj=None, dst_prj='epsg:4326'):
+    def __init__(self, points=None, node_idx=None, src_prj=None, dst_prj='epsg:4326', proj_z=True):
         # self.isDummy = (len(points) == 0)
         if node_idx is None:
             node_idx = [0, -1]
@@ -241,7 +242,7 @@ class SMS_ARC():
 
         if src_prj == 'cpp' and dst_prj == 'epsg:4326':
             points[:, 0], points[: ,1] = cpp2lonlat(points[:, 0], points[: ,1])
-            if points.shape[1] == 3:
+            if points.shape[1] == 3 and proj_z == True:
                 points[:, 2] = dl_cpp2lonlat(points[:, 2], lat0=points[:, 1])
 
         npoints, ncol = points.shape
@@ -382,7 +383,7 @@ class SMS_MAP():
         import os
 
         if not self.valid:
-            print(f'No arcs found in map, aborting writing to *.map')
+            print(f'No arcs found in map, aborting writing to {filename}')
             return
 
         fpath = os.path.dirname(filename)

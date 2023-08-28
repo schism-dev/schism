@@ -41,8 +41,15 @@ def merge_outputs(output_dir):
 
     # sms maps
     total_arcs_map = merge_maps(f'{output_dir}/*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
+
     total_intersection_joints = merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map').detached_nodes
-    total_river_arcs = merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map').arcs
+
+    total_river_map = merge_maps(f'{output_dir}/*river_arcs.map', merged_fname=f'{output_dir}/total_river_arcs.map')
+    if total_river_map is not None:
+        total_river_arcs = total_river_map.arcs
+    else:
+        total_river_arcs = None
+
     total_centerlines = merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
     merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
 
@@ -69,6 +76,7 @@ def river_map_mpi_driver(
     thalweg_buffer = 1000,
     i_DEM_cache = True,
     i_blast_intersection = False,
+    i_OCSMesh = False,
     comm = MPI.COMM_WORLD
 ):
     '''
@@ -198,7 +206,8 @@ def river_map_mpi_driver(
                 output_dir = output_dir,
                 output_prefix = f'Group_{my_group_id}_{rank}_{i}_',
                 mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}, global: {my_group_id}] ',
-                i_blast_intersection=i_blast_intersection
+                i_blast_intersection=i_blast_intersection,
+                i_OCSMesh=i_OCSMesh,
             )
         else:
             pass  # print(f'Rank {rank}: Group {my_group_id} failed')
@@ -220,14 +229,20 @@ def river_map_mpi_driver(
         total_arcs_cleaned = [arc for arc in total_arcs_map.to_GeoDataFrame().geometry.unary_union.geoms]
         if not i_blast_intersection:
             bomb_polygons = gpd.read_file(f'{output_dir}/total_bomb_polygons.shp')
-            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=total_intersection_joints)
+            total_arcs_cleaned = clean_intersections(arcs=total_arcs_cleaned, target_polygons=bomb_polygons, snap_points=total_intersection_joints, i_OCSMesh=i_OCSMesh)
         total_arcs_cleaned = clean_arcs(total_arcs_cleaned)
         SMS_MAP(arcs=geos2SmsArcList(total_arcs_cleaned)).writer(filename=f'{output_dir}/total_arcs.map')
 
-        total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
         gpd.GeoDataFrame(
-            index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
-        ).to_file(filename=f'{output_dir}/total_river_arc_polygons.shp', driver="ESRI Shapefile")
+            index=range(len(total_arcs_cleaned)), crs='epsg:4326', geometry=total_arcs_cleaned
+        ).to_file(filename=f'{output_dir}/total_arcs.shp', driver="ESRI Shapefile")
+
+        # outputs for OCSMesh
+        if i_OCSMesh:
+            total_arcs_cleaned_polys = [poly for poly in polygonize(gpd.GeoSeries(total_arcs_cleaned))]
+            gpd.GeoDataFrame(
+                index=range(len(total_arcs_cleaned_polys)), crs='epsg:4326', geometry=total_arcs_cleaned_polys
+            ).to_file(filename=f'{output_dir}/total_polys_for_OCSMesh.shp', driver="ESRI Shapefile")
 
         # river_arcs_cleaned = clean_river_arcs(total_river_arcs, total_arcs_cleaned)
         # total_river_outline_polys = generate_river_outline_polys(river_arcs_cleaned)

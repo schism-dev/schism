@@ -21,6 +21,8 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O
 set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
+set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
+set (USE_NWM_BMI OFF CACHE BOOLEAN "Use NWM BMI for source and some b.c.")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 #IMPOSE_NET_FLUX will be removed eventually
@@ -32,7 +34,8 @@ set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
 set( USE_PAHM OFF CACHE BOOLEAN "Use PaHM module")
 
 #   Enable/Disable Modules
-set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
+#Use SED instead of USE_SED2D
+##set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
 set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 ##Coupling to WW3, either via ESMF or hard coupling (in dev)
 set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")

@@ -8,7 +8,7 @@
 !     Out:
 !            ne_bin(1:nbin) - # of elem. for each bin
 !            ie_bin(1:mne_bin,1:nbin) - list of elem. for each bin
-!            xybin(1:nbin+1) - x or y coord. of each bin line
+!            xybin(1:nbin+1) - x or y coord. of each bin line in ascending order
 !            binwid: bin width
 
       subroutine stripesearch_unstr(is_xy,nbin,mne_bin,nebg,npbg,xbg,ybg,i34,nmbg, &

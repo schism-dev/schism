@@ -84,7 +84,6 @@
       use schism_msgp
       use netcdf
       use hydraulic_structures
-      use gen_modules_clock
 #ifdef USE_SED
        USE sed_mod, only : Srho,Nbed,MBEDP,bed,bed_frac,Wsed,Sd50
 #endif
@@ -99,13 +98,14 @@
       real :: floatout 
       real(rkind) :: tmp,wx1,wx2,wy1,wy2,wtratio,ttt,dep,eqstate
       character(len=48) :: inputfile
-      real(rkind), allocatable :: swild(:),rwild(:,:)
+      real(rkind), allocatable :: swild(:)
       real(4), allocatable :: swild9(:,:) !used in tracer nudging
+      real(4), allocatable :: rwild(:,:) !used in nws=4
 
       allocate(swild9(nvrt,mnu_pts),swild(nsa+nvrt+12+ntracers),stat=istat)
       if(istat/=0) call parallel_abort('MISC: swild9')
       if(nws==4) then
-        allocate(rwild(np_global,3),stat=istat)
+        allocate(rwild(7,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MISC: failed to alloc. (71)')
       endif !nws=4
 
@@ -236,10 +236,6 @@
       call WQinput(time)
 #endif /*USE_ICM*/
 
-#ifdef USE_MICE
-      call clock_init !by wq
-      if(myrank==0) write(16,*) yearnew,month,day_in_month,timeold
-#endif
 
 !...  Find position in the wind input file for nws=1,2, and read in wind[x,y][1,2]
 !...  Wind vector always in lat/lon frame
@@ -284,54 +280,106 @@
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
 
+        !Read 1st record
         if(myrank==0) then
-          open(22,file=in_dir(1:len_in_dir)//'wind.th',status='old')
-          rewind(22)
-          do it=0,ninv
-            read(22,*)tmp,rwild(:,:)
-            if(it==0.and.abs(tmp)>real(1.e-4,rkind)) &
-     &call parallel_abort('check time stamp in wind.th(4.1)')
-            if(it==1.and.abs(tmp-wtiminc)>real(1.e-4,rkind)) &
-     &call parallel_abort('check time stamp in wind.th(4.2)')
-          enddo !it
-        endif !myrank=0
-        call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc')
+!          j=nf90_inq_varid(ncid_atmos, "time_step",mm)
+!          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc time_step')
+!          j=nf90_get_var(ncid_atmos,mm,floatout)
+!          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc time_step(2)')
+!          if(abs(floatout-wtiminc)>1.d-3) call parallel_abort('MISC: atmos.nc time_step(3)')
+          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc uwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild(1,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc uwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc vwind')
+          j=nf90_get_var(ncid_atmos,mm,rwild(2,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc vwind(2)')
+          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl')
+          j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(2)')
+          if(ihconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux')
+            j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux(2)')
+            j=nf90_inq_varid(ncid_atmos, "solar",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar')
+            j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar(2)')
+          endif !'ihconsv/
+          if(isconsv/=0) then
+            j=nf90_inq_varid(ncid_atmos, "prate",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate')
+            j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate(2)')
+            j=nf90_inq_varid(ncid_atmos, "evap",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap')
+            j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap(2)')
+          endif !isconsv/
+        endif !myrank
+        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            windx1(nd)=rwild(i,1)
-            windy1(nd)=rwild(i,2)
-            pr1(nd)=rwild(i,3)
+            windx1(nd)=rwild(1,i)
+            windy1(nd)=rwild(2,i)
+            pr1(nd)=rwild(3,i)
+            if(ihconsv/=0) then
+              sflux(nd)=rwild(4,i)
+              srad(nd)=rwild(5,i)
+            endif !ihconsv/
+            if(isconsv/=0) then
+              fluxprc(nd)=rwild(6,i)
+              fluxevp(nd)=rwild(7,i)
+            endif !isconsv/
           endif
         enddo !i
 
-        if(myrank==0) read(22,*)tmp,rwild(:,:)
-        call mpi_bcast(rwild,3*np_global,rtype,0,comm,istat)
+        !Read 2nd record
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(1,:),(/1,ninv+2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc uwind(3)')
+          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(2,:),(/1,ninv+2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc vwind(3)')
+          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+2/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(3)')
+        endif !'myrank
+        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            windx2(nd)=rwild(i,1)
-            windy2(nd)=rwild(i,2)
-            pr2(nd)=rwild(i,3)
+            windx2(nd)=rwild(1,i)
+            windy2(nd)=rwild(2,i)
+            pr2(nd)=rwild(3,i)
           endif
         enddo !i
       endif !nws=4
 
-      if(nws>=2.and.nws<=3) then
+      if(nws==2) then
         ninv=time/wtiminc
         wtime1=real(ninv,rkind)*wtiminc 
         wtime2=real(ninv+1,rkind)*wtiminc 
-        if(nws==2) then
+#ifndef USE_ATMOS
           call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-        else !=3; init
+#else
+!         Init
           windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
           pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
           airt1=20._rkind; airt2=20._rkind
           shum1=0._rkind; shum2=0._rkind
-        endif
+#endif
+!        endif
 
       endif !nws
 
@@ -599,6 +647,22 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
+#ifdef USE_NWM_BMI
+      ninv=time/th_dt3(1)
+      th_time3(1,1)=ninv*th_dt3(1)
+      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+
+      ninv=time/th_dt3(2)
+      th_time3(1,2)=ninv*th_dt3(2)
+      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+
+      ninv=time/th_dt3(3)
+      th_time3(1,3)=ninv*th_dt3(3)
+      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+
+      ath3(:,1,1,1:2)=0.d0
+      ath3(:,1,1,3)=-9999.d0
+#else
       if(if_source==1.and.myrank==0) then !ASCII
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
@@ -648,7 +712,7 @@
           read(64,*)tmp,ath3(1:nsinks,1,2,2)
           th_time3(2,2)=tmp
         endif !nsinks
-      endif !if_source
+      endif !if_source=1
 
       if(if_source==-1.and.myrank==0) then !nc
         if(nsources>0) then
@@ -693,6 +757,7 @@
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
       endif 
+#endif /*USE_NWM_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization
@@ -816,7 +881,7 @@
 
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
-!     For nws=3, sflux etc are init'ed as 0 in _init
+!     For USE_ATMOS, sflux etc are init'ed as 0 in _init
       if(ihconsv/=0.and.nws==2) then
         call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
@@ -3221,7 +3286,7 @@
         endif
       enddo !k
 
-      call tridag(npts,1,npts,1,alow,bdia,cupp,rrhs,ypp,gam)
+      call tridag_sch(npts,1,npts,1,alow,bdia,cupp,rrhs,ypp,gam)
     
       yp(1)=yp1; yp(npts)=yp2
       do k=2,npts-1

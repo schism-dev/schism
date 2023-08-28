@@ -18,7 +18,7 @@
 !
 ! subroutine solve_jcg
 ! subroutine solve_jcg_qnon (non-hydrostatic)
-! subroutine tridag
+! subroutine tridag_sch
 !
 !===============================================================================
 !===============================================================================
@@ -393,7 +393,7 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
       rrhs(l,l)=1.d0
     enddo !l
 
-    call tridag(nvrt,nvrt,ndim,ndim,alow,bdia,cupp,rrhs,soln,gam)
+    call tridag_sch(nvrt,nvrt,ndim,ndim,alow,bdia,cupp,rrhs,soln,gam)
     !indice order of blockj: (row #, column #, node)
     blockj(kbp_e(ip):(nvrt-1),kbp_e(ip):(nvrt-1),ip)=transpose(soln(1:ndim,1:ndim))
     
@@ -586,7 +586,7 @@ end subroutine solve_jcg_qnon
 
 !===============================================================================
 !===============================================================================
-subroutine tridag(nmax,nvec,n,nc,a,b,c,r,u,gam)
+subroutine tridag_sch(nmax,nvec,n,nc,a,b,c,r,u,gam)
 !-------------------------------------------------------------------------------
 ! This program solves a tridiagonal system. It was adapted from "Numerical 
 ! Recipes in FORTRAN (pp.43 ).
@@ -636,5 +636,5 @@ subroutine tridag(nmax,nvec,n,nc,a,b,c,r,u,gam)
     u(1:nc,j)=u(1:nc,j)-gam(j+1)*u(1:nc,j+1)
   enddo
   
-end subroutine tridag
+end subroutine tridag_sch
 

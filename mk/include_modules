@@ -12,6 +12,14 @@
 # USE_PETSC = yes
 # EXEC := $(EXEC)_PETSC
 
+# Coupling with atmospheric model via ESMF
+# USE_ATMOS = yes
+# EXEC := $(EXEC)_EVAP
+
+# Use NWM BMI for source and some b.c.
+# USE_NWM_BMI = yes
+# EXEC := $(EXEC)_EVAP
+
 # Precip/evaporation model
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP
@@ -117,8 +125,6 @@
 # EXEC := $(EXEC)_MICE
  
 # Sediment model (2D)
-# USE_SED2D = yes
-# EXEC := $(EXEC)_SED2D
 
 # Marsh migration model
 # USE_MARSH = yes

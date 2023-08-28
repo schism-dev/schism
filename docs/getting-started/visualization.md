@@ -13,7 +13,8 @@ Shortly after v5.9.0, we have successfully implemented a new mode of efficient I
  At runtime, the user needs to specify number of scribe cores (= # of 3D outputs variables 
 (vectors counted as 2) plus 1), and the code, compiled without `OLDIO`, will output 
  combined netcdf outputs for each 3D variable and also all 2D variables in `out2d*.nc`. 
-Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`.
+Sample 3D outputs are: `salinity_*.nc`, `horizontalVelX_*.nc` etc - note that vectors variable names end with `X,Y`. You can find sample outputs [here](http://ccrm.vims.edu/yinglong/SVN_large_files/Scribe_IO_outputs/).
+Sample outputs using OLDIO (schout*.nc) can be found [here](http://ccrm.vims.edu/yinglong/SVN_large_files/SCHISM_v5.6.1_sample_outputs/).
 
 You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by following these steps:
 
@@ -22,10 +23,11 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 1. First download VisIT from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Use default dir (and record it), e.g. `C:\Users\username\AppData\Local\Programs\LLNL\VisIt*`
 2. Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIT)
 3. Download pre-built plug-in, developed at California Dept of Water Resource
-    * [For VisIT v2.13.3](https://cadwr.box.com/s/tiuaeb87ka1tb7i185l0cpf7g3da2h63)
-    * [For VisIT v3.1.4](https://cadwr.box.com/s/jrj83yycyumhkf9kqod7teb7biqovmta)
+    * [For VisIT v2.13.3](https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8)
+    * [For VisIT v3.1.4](https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos)
+    * [For VisIT v3.3.1](https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj)
     
-    You need to put dlls on `C:\Users\username\Documents\VisIt\databases`. Alternatively, please email Jon Shu at Qiang.shu[at]water[dot]ca[dot]gov and let him know the version of visit you are using.
+    You need to put dlls on OneDrive: `Documents/VisIt/databases` (create new folders if necessary).
 
 4. After these steps, you'd be able to read in SCHISM outputs in ViSIT; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
 
@@ -34,4 +36,4 @@ You can download newer versions of VisIT plugins c/o Dr. Jon Shu, DWR by followi
 Newer versions can be found at the master branch of [github](https://github.com/schism-dev/schism_visit_plugin).
 
 !!!note
-    Note that the new plugins also work with the old I/O (combined `schout*.nc`).
+    Note that the new plugins also work with the old I/O (combined `schout*.nc`) or even the older binary outputs. To visualize any variables under new I/O with VisIT, you'll always need corresponding `out2d*.nc`; additionally for any 3D variables, VisIT also needs corresponding `zCoordinates*.nc`. 

@@ -3,10 +3,8 @@ from time import time
 import pathlib
 import logging
 
-#from pyschism.forcing import source_sink
 from pyschism.forcing.source_sink.nwm import NationalWaterModel, NWMElementPairings
 from pyschism.mesh import Hgrid
-
 
 logging.basicConfig(
     format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
@@ -17,10 +15,7 @@ logging.captureWarnings(True)
 log_level = logging.DEBUG
 logging.getLogger('pyschism').setLevel(log_level)
 
-if __name__ == '__main__':
-
-    startdate = datetime(2022, 1, 1)
-    rnday = 10
+def gen_sourcesink(startdate:datetime, rnday:float):
     hgrid = Hgrid.open("./hgrid.gr3", crs="epsg:4326")
 
     t0 = time()
@@ -33,6 +28,7 @@ if __name__ == '__main__':
     #input directory which saves nc files
     cache = pathlib.Path(f'./{startdate.strftime("%Y%m%d")}')
     cache.mkdir(exist_ok=True, parents=True)
+    # cache = pathlib.Path('./NWM_v2.1')
 
     # check if source/sink json file exists
     if all([sources_pairings.is_file(), sinks_pairings.is_file()]) is False:
@@ -41,8 +37,8 @@ if __name__ == '__main__':
         pairings.save_json(sources=sources_pairings, sinks=sinks_pairings)
     else:
         pairings = NWMElementPairings.load_json(
-            hgrid, 
-            sources_pairings, 
+            hgrid,
+            sources_pairings,
             sinks_pairings)
 
     #check nc files, if not exist will download
@@ -50,3 +46,6 @@ if __name__ == '__main__':
 
     nwm.write(output_directory, hgrid, startdate, rnday, overwrite=True)
     print(f'It took {time()-t0} seconds to generate source/sink')
+
+if __name__ == '__main__':
+    gen_sourcesink(datetime(2017, 12, 1), 10)

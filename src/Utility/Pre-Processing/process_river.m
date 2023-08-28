@@ -38,7 +38,7 @@ for i=1:nmonths
   for j=1:nrivers
     if(monthly_flow(j,i)>0)
       mean_flow(j,mon)=mean_flow(j,mon)+monthly_flow(j,i);
-      icount(j,mon)=icount(mon)+1;
+      icount(j,mon)=icount(j,mon)+1;
     end
   end %for j
 end %for i

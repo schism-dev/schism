@@ -35,7 +35,7 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R1703 and up);
-!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside. Use .rgn (CORIE, Fraser)
+!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside. 
 !     (5) gen_hot_from_nc.in: 
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
@@ -630,7 +630,15 @@
           else !stripes along y
             xy3=yl(i)
           endif !is_xy
+
+          if(xy3<xybin(1).or.xy3>xybin(nbin+1)) cycle loop4
+
           l0=min(nbin,int((xy3-xybin(1))/binwid+1)) !>=1
+          if(l0<1) then
+            write(11,*)'l0<1:',l0,xy3,xybin(1)
+            stop
+          endif
+
           !Deal with border cases
           if(xy3==xybin(l0)) then
             ibin1=max(l-1,1); ibin2=l
@@ -756,7 +764,7 @@
         tempout=-99; saltout=-99
         do i=1,np
           if(ixy(i,1)==0.or.ixy(i,2)==0) then
-            !write(20,*)'Cannot find a parent element:',i
+            write(20,*)'Cannot find a parent element:',i
             tempout(:,i)=tem_outside
             saltout(:,i)=sal_outside
             uout(:,i)=0
