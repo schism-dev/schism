@@ -1593,11 +1593,44 @@ To find all the changes between tag releases, search for 'Tag'.</p>
 <li><code>dde345f</code> (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0:
                               uninit'ed stress values.</li>
 <li><code>6524e19</code> (27 April 2022): merged with La Rochelle group on WWM  (VOR);</li>
+<li><code>cd0b2a3</code> (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a frame transformation
+                             for better vel near poles.</li>
+<li><code>510874ec</code> (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)</li>
+<li><code>24a2723</code> (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)</li>
+<li><code>1828489</code> (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)</li>
+<li><code>87c7611f</code> (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre</li>
+<li>Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+ (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf),</li>
+<li>Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models),</li>
+<li>Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output)</li>
+<li>CAUTION // CAUTION :
+  To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism</li>
+<li>CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet</li>
+<li><code>6108700</code> (Feb 24, 2023): Laura L. fixed a bug in wwm_friction</li>
+<li><code>46767d2</code> (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
+          'shocks' experienced by WENO stencil to help dispersion issue;</li>
+<li><code>594bf10</code> (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in
+     combine_hotstart7.f90 as it seems to cause hang in restart;</li>
+<li><code>a6fd5cb</code> (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.</li>
+<li><code>a832e4fd</code> (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.</li>
 </ol>
 <h2 id="changes-in-input-and-output-format">Changes in input and output format<a class="headerlink" href="#changes-in-input-and-output-format" title="Permanent link">&para;</a></h2>
 <p>The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as <a href="input-output/param.html">param.nml</a>).</p>
+<p>Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.11.0: (Aug 2022)</p>
 <ul>
-<li><code>f8e15ee</code> (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;</li>
+<li><code>ae1c210</code> (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);</li>
+<li><code>a6fd5cb</code> (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+                        If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
+                        the latter is the net surface heat flux).
+                        If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.</li>
+<li><code>ae67c5e1</code> (24 April 2023): add USE_NWM_BMI (with if_source/=0) for NWM work;</li>
+<li>
+<p><code>a248ce1d</code> (24 April 2023): replaced nws=3 with USE_ATMOS (together with nws=2);</p>
+</li>
+<li>
+<p><code>f8e15ee</code> (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;</p>
+</li>
 <li><code>bc113eb2</code> (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;</li>
 <li><code>24a2723</code> (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added
                        iof_wwm(31) as dissipation due to vegetation. Also
