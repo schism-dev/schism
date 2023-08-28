@@ -1598,15 +1598,19 @@ To find all the changes between tag releases, search for 'Tag'.</p>
 <li><code>510874ec</code> (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)</li>
 <li><code>24a2723</code> (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)</li>
 <li><code>1828489</code> (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)</li>
-<li><code>87c7611f</code> (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre</li>
-<li>Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
- (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf),</li>
-<li>Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models),</li>
-<li>Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output)</li>
-<li>CAUTION // CAUTION :
-  To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism</li>
-<li>CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet</li>
-<li><code>6108700</code> (Feb 24, 2023): Laura L. fixed a bug in wwm_friction</li>
+<li>
+<p><code>87c7611f</code> (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre
+      a) Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+      (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf),
+      b) Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models),
+      c) Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output)
+      d) CAUTION // CAUTION :
+      To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism
+      e) CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet</p>
+</li>
+<li>
+<p><code>6108700</code> (Feb 24, 2023): Laura L. fixed a bug in wwm_friction</p>
+</li>
 <li><code>46767d2</code> (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
           'shocks' experienced by WENO stencil to help dispersion issue;</li>
 <li><code>594bf10</code> (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in
