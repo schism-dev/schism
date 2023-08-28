@@ -32,9 +32,9 @@
 ################################################################################
 
 ################################################################################
-## Sciclone/Bora (Broadwell)
+## Sciclone/Femto
 ################################################################################
-ENV = BORA
+ENV = FEMTO
 
 ################################################################################
 # Alternate executable name if you do not want the default. 
@@ -49,14 +49,12 @@ FCP = mpif90
 FCS = ifort
 FLD = $(FCP)
 # MPI vserion (1 or 2) 
-PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 #-DUSE_WRAP
+PPFLAGS := $(PPFLAGS) -DMPIVERSION=2 
 
 #-CB is much slower to compile and run
 #Pure MPI
-FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays 
-FLDFLAGS = -O2 -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays #for final linking of object files
-#FCPFLAGS = $(PPFLAGS) -O2 -CB -g -traceback -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays 
-#FLDFLAGS = -O2 -CB -g -traceback -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 ##-heap-arrays #for final linking of object files
+FCPFLAGS = $(PPFLAGS) -O3 -xCORE-AVX2 -mcmodel=medium -fma -align array64byte -finline-functions
+FLDFLAGS = -O3 -xCORE-AVX2 -mcmodel=medium -fma -align array64byte -finline-functions
 
 #Hybrid 
 #FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 -qopenmp
@@ -80,8 +78,8 @@ include ../mk/include_modules
 
 # Don't comment out the follow ifdef
 ifdef USE_GOTM
-   GTMMOD =  -I/sciclone/home/yinglong/GOTM3.2.5_libs/Bora/modules/IFORT/ #modules
-   GTMLIBS = -L/sciclone/home/yinglong/GOTM3.2.5_libs/Bora/lib/IFORT/ -lturbulence_prod  -lutil_prod
+   GTMMOD =  -I/sciclone/home/yinglong/GOTM3.2.5_libs/Femto/modules/IFORT/ #modules
+   GTMLIBS = -L/sciclone/home/yinglong/GOTM3.2.5_libs/Femto/lib/IFORT/ -lturbulence_prod  -lutil_prod
 else
    GTMMOD =
    GTMLIBS =

@@ -9,8 +9,11 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-ae1c210 (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
-a6fd5cb (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.11.0: (Aug 2022)
+
+- `ae1c210` (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
+- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
                         If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
                         the latter is the net surface heat flux). 
                         If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
@@ -582,7 +585,8 @@ git versions:
           'shocks' experienced by WENO stencil to help dispersion issue;
 (144) 594bf10 (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in 
       combine_hotstart7.f90 as it seems to cause hang in restart;
-(145) a6fd5cb (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
+145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
+146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
 
 ================================================================================================
 (D) Auto-test history:
