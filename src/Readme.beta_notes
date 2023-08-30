@@ -587,6 +587,7 @@ git versions:
       combine_hotstart7.f90 as it seems to cause hang in restart;
 145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
 146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
+147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (as Kijin did for 1-way script)
 
 ================================================================================================
 (D) Auto-test history:
