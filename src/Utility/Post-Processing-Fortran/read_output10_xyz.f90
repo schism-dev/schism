@@ -404,6 +404,7 @@
       enddo !irec
       iret=nf90_close(ncid)
       iret=nf90_close(ncid4)
+      if(ivs==2) iret=nf90_close(ncid2)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday

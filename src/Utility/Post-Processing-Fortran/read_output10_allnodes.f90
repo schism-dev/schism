@@ -206,7 +206,7 @@
         endif
       endif
 
-      do iday=iday1,iday2 !1,ndays
+      do iday=iday1,iday2 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       write(it_char,'(i12)')iday
       it_char=adjustl(it_char)
@@ -375,6 +375,9 @@
             enddo !i
           endif !i23d
       enddo !irec
+      iret=nf90_close(ncid)
+      iret=nf90_close(ncid4)
+      if(ivs==2) iret=nf90_close(ncid2)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday
