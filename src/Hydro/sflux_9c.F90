@@ -3551,7 +3551,7 @@
       END SUBROUTINE FAIRALL
 !=======================================================================
 
-      REAL FUNCTION bulk_psiu(ZoL)
+      REAL(rkind) FUNCTION bulk_psiu(ZoL)
 
       use schism_glbl, only : rkind
 
