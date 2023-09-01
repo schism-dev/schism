@@ -293,7 +293,14 @@
       dt=tmp2; rnday=tmp2
       open(15,file=in_dir(1:len_in_dir)//'param.nml',delim='apostrophe',status='old')
       read(15,nml=CORE)
-
+#ifdef USE_QSIM
+      !quarter of an hour output-timestep for offline transport in large estuaries
+      if(myrank==0)print*,'USE_QSIM timestep, output-timestep, nspool',dt,nspool*dt,nspool
+      if(nspool*dt > 900)then
+         nspool=nint(900/dt)
+         if(myrank==0)print*,'USE_QSIM nspool changed to ',nspool,nspool*dt
+      endif
+#endif
       !Check core parameters
       if(nproc>1.and.ipre/=0) call parallel_abort('ipre/=0 is not enabled for nproc>1')
 
@@ -508,6 +515,18 @@
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
       close(15)
+#ifdef USE_QSIM
+        ! iof_hydro(18)=1   ! 'temp' tr_nd(1,:,:)
+        ! iof_hydro(19)=1   ! 'salt' tr_nd(2,:,:)
+        iof_hydro( 1)=1   ! 'elev'
+        iof_hydro(21)=1   ! 'diffusivity' dfh
+        iof_hydro(27)=1   ! 'hvel_side' su2,sv2
+        !iof_hydro(28)=1   ! 'wvel_elem' we
+        iof_hydro(29)=1   ! 'temp_elem' tr_el(1,:,:)
+        iof_hydro(30)=1   ! 'salt_elem' tr_el(2,:,:)
+        ! iof_hydro(28)=1   ! 'wvel_elem' we
+        if(myrank==0) write(16,*)'USE_QSIM, iof_hydro=',iof_hydro
+#endif
 
 #ifdef USE_ICM
       !get value of iof_icm from ICM submodules
@@ -5180,15 +5199,27 @@
       write(10,'(1000(1x,i10))')ns_global,ne_global,np_global,nvrt,nproc,ntracers,ntrs(:) !global info
 !     local to global mapping      
       write(10,*)'local to global mapping:'
+#ifdef USE_QSIM
+      write(10,*)ne,nea,nea2
+#else
       write(10,*)ne
+#endif
       do ie=1,ne
         write(10,*)ie,ielg(ie)
       enddo
+#ifdef USE_QSIM
+      write(10,*)np,npa
+#else
       write(10,*)np 
+#endif
       do ip=1,np
         write(10,*)ip,iplg(ip)
       enddo
+#ifdef USE_QSIM
+      write(10,*)ns,nsa
+#else
       write(10,*)ns
+#endif
       do isd=1,ns
         write(10,*)isd,islg(isd)
       enddo
@@ -5216,10 +5247,17 @@
       endif !ics
       do m=1,ne
         write(10,*)i34(m),(elnode(mm,m),mm=1,i34(m))
+#ifdef USE_QSIM
+        write(10,*)kbe(m),area(m),ic3(1,m),ic3(2,m),ic3(3,m),ic3(4,m)
+        write(10,*)elside(1,m),elside(2,m),elside(3,m),elside(4,m),ssign(1,m),ssign(2,m),ssign(3,m),ssign(4,m)
+#endif
       enddo !m
 
       do i=1,ns
         write(10,*)i,isidenode(1:2,i)
+#ifdef USE_QSIM
+        write(10,*)distj(i),delj(i),snx(i),sny(i),isbs(i),kbs(i),isdel(1,i),isdel(2,i)
+#endif
       enddo !i
 
       close(10)

@@ -8789,6 +8789,22 @@
 !=============================================================================
 !     Old approach: each rank dumps its own data
       if(nc_out>0.and.mod(it,nspool)==0) then
+      
+#ifdef USE_QSIM
+        call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
+        call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
+        call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
+        !call writeout_nc(id_out_var(4),'zcor',2,nvrt,npa,znl(:,:))
+        !integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone
+        !Hydro/transport_TVD_imp.F90:203:      idry_e_2t(1:ne)=idry_e(1:ne)
+        call writeout_nc(id_out_var(4),'elev',1,1,npa,swild(1:npa))
+        call writeout_nc(id_out_var(5),'hvel_side',8,nvrt,nsa,su2,sv2)
+        call writeout_nc(id_out_var(6),'wvel_elem',5,nvrt,nea,we)
+        call writeout_nc(id_out_var(7),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
+        call writeout_nc(id_out_var(8),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
+        call writeout_nc(id_out_var(9),'diffusivity',2,nvrt,npa,dfh)
+        noutput=9 !total # of outputs so far (for dim of id_out_var)
+#else
         call writeout_nc(id_out_var(1),'wetdry_node',1,1,npa,dble(idry))
         call writeout_nc(id_out_var(2),'wetdry_elem',4,1,nea,dble(idry_e))
         call writeout_nc(id_out_var(3),'wetdry_side',7,1,nsa,dble(idry_s))
@@ -8825,7 +8841,7 @@
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
         noutput=31 !total # of outputs so far (for dim of id_out_var)
-
+#endif
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs 
 #ifdef USE_GEN
@@ -9259,6 +9275,17 @@
      &'ANA_Richardson',2,nvrt,npa,swild95(:,1:npa,7))
         noutput=14
 #endif /*USE_ANALYSIS*/
+
+#ifdef USE_QSIM
+         noutput=noutput+1
+         call writeout_nc(id_out_var(noutput),'flux_adv_vface',6,nvrt,nea,flux_adv_vface(:,1,:))
+         noutput=noutput+1
+         call writeout_nc(id_out_var(noutput),'hdif',2,nvrt,npa,hdif)  ! horizontal diffusivity
+         noutput=noutput+1
+         call writeout_nc(id_out_var(noutput),'depth',1,1,npa,dp)
+         if(myrank==0)write(16,*)'noutput,id_out_var(noutput),ntrs(1),size(id_out_var)=',  &
+                      noutput,id_out_var(noutput),ntrs(1),size(id_out_var)
+#endif
 
         !Check dim of id_out_var
         if(noutput+4>2000) call parallel_abort('STEP: index over for id_out_var')

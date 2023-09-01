@@ -2703,7 +2703,18 @@ subroutine dump_hgrid
   ! Rank 0 writes global to local element info
   if(myrank==0) then
     open(32,file=out_dir(1:len_out_dir)//'global_to_local.prop',status='unknown')
+#ifdef USE_QSIM
+    !write(32,*)ne_global
+    do ie=1,ne_global
+      write(32,'(i8,1x,i6,1x,i6,1x,i6)')ie,iegrpv(ie),iegl2(1,ie),iegl2(2,ie)
+    enddo !ie
+    !write(32,*)np_global
+    do ie=1,np_global
+      write(32,'(i8,1x,i6,1x,i6)')ie, ipgl(ie)%rank, ipgl(ie)%id
+    enddo !ie
+#else
     write(32,'(i8,1x,i6)')(ie,iegrpv(ie),ie=1,ne_global)
+#endif
     !Add more info
 !    write(32,*)
 !    write(32,*)nproc

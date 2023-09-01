@@ -384,9 +384,15 @@
 
       if(iopen==1) iret=nf90_close(ncid_schism_io)
       iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_io)
+#ifdef USE_QSIM
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_node',npa,node_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',nea,nele_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',nsa,nedge_dim)
+#else
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_node',np,node_dim)
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',ne,nele_dim)
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',ns,nedge_dim)
+#endif
       iret=nf90_def_dim(ncid_schism_io,'nMaxSCHISM_hgrid_face_nodes',4, four_dim)
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_vgrid_layers',nvrt,nv_dim)
       iret=nf90_def_dim(ncid_schism_io,'one',1,one_dim)

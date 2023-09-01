@@ -31,8 +31,62 @@
 !#ifdef USE_MPIMODULE
 !      use mpi
 !#endif
+
+#ifdef USE_QSIM
+! flux_adv_vface  !unmodified vertical fluxes (positive upward)
+! =0
+! dfhm if itur==5 !Tsinghua group:0825 !diff in transport Eq. at nodes & whole levels 1007 | itur=3 is default
+! bdy_frc   !body force at prism center Q_{i,k}
+! flx_sf    !surface b.c. \kappa*dC/dz = flx_sf (at element center)
+! flx_bt    !bottom b.c.
+!dfh(nvrt,npa)   - vertikale? Diffusion Turbulenzmodell
+!hdif(nvrt,npa)  - horizontale Diffusion nur von hdif.gr3 ??
+! delj(ns), 
+! iwsett(ntracers), 
+! kbs(nsa)
+
+      use schism_glbl, only : rkind,                                 &
+                              iwsett,wsett,                          &
+                              saltmax,saltmin,tempmax,tempmin,       &
+                              tr_nd0,                                &
+                              max_iadjust_mass_consv,                &
+                              dtb_min_transport,                     &
+                              mnweno1,mnweno2,nweno1,nweno2,         &
+                              itvd_e,isten1,isten2,fwts2,            &
+                              wts1,wts2,wmat1,wmat2,                 &
+                              itrtype,irange_tr,                     &
+                              isbnd,isbe,trth,trobc,                 &
+                              natrm,                                 &
+                              delj,                                  &
+                              distj,area,isbs,snx,sny,               &
+                              iegl2,kbs,kbe,elside,ic3,nsa,nea,dp,   &
+                              ssign,isten_qual2,isdel,iside_table,   &
+                              nvrt,ntrs,                             &
+                              ne,ielg,ns,i34,isidenode,elnode,       &
+                              dt,                                    &
+                              ihdif,ihconsv,isconsv,itur,itr_met,    &
+                              h_tvd,eps1_tvd_imp,eps2_tvd_imp,       &
+                              ip_weno,courant_weno,ntd_weno,nquad,   &
+                              epsilon1,epsilon2,ielm_transport       &
+                              ,                                      &
+                              idry_s,idry_e,idry_e_2t,                     &
+                              sdbt,                                        &
+                              su2,sv2,eta2,zs,ze,dfh,hdif,                 &
+                              flux_adv_vface,                              &
+                              dfhm,bdy_frc,flx_sf,flx_bt                   &
+                              ,                                            &
+                              total_mass_error,                   tr_el,         &
+                                                                  tr_nd          &
+                              ,                                                  &
+                              errmsg
+                              
+      use schism_msgp, only : nproc,myrank,comm,ierr,rtype,                           &
+                              parallel_abort,exchange_e2di_2t,exchange_e3d_2t_tr,     &
+                              exchange_s3dw,exchange_s3d_tr3,exchange_s3d_tr2
+#else
       use schism_glbl
       use schism_msgp
+#endif
       use misc_modules
 
 !#ifdef USE_TIMOR
