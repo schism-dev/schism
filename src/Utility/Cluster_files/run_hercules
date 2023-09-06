@@ -1,0 +1,23 @@
+#!/bin/bash --login
+
+#SBATCH -D .
+#SBATCH -J 03b
+#SBATCH -A nos-surge
+#SBATCH -p hercules
+##queues: 'windfall' max 450 nodes (no walltime limit but lower priority; for quick turn-around try <=8 hrs)
+###80 cores/node (mem 512GB/node)
+#SBATCH -N 10
+#SBATCH -n 800
+#SBATCH --exclusive
+#SBATCH -t 08:00:00  
+#SBATCH -o myout
+#SBATCH -e err2.out
+#SBATCH --mail-user=yjzhang@vims.edu
+#SBATCH --mail-type=all  #send email for start, end and fail
+
+set -e
+ulimit -s unlimited 
+
+source /home/yjzhang/intel_modules
+
+srun ./pschism_HERCULES_NO_PARMETIS_PREC_EVAP_TVD-VL 7
