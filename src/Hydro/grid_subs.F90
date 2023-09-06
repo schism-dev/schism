@@ -19,8 +19,7 @@
 !
 ! include subroutine aquire_vgrid
 ! subroutine partition_hgrid
-! include subroutine aquire_hgrid
-! function signa
+! include subroutine aquire_hgrid with function signa
 ! subroutine dump_hgrid
 !
 !===============================================================================
@@ -420,21 +419,6 @@ end subroutine partition_hgrid
 !===============================================================================
 !===============================================================================
    include 'aquire_hgrid.F90'
-
-!dir$ attributes forceinline :: signa
-function signa(x1,x2,x3,y1,y2,y3)
-!-------------------------------------------------------------------------------
-! Compute signed area formed by pts 1,2,3 (positive counter-clockwise)
-!-------------------------------------------------------------------------------
-  use schism_glbl, only : rkind,errmsg
-  implicit none
-  real(rkind) :: signa
-  real(rkind),intent(in) :: x1,x2,x3,y1,y2,y3
-
-  signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
-  
-end function signa
-
 !===============================================================================
 !===============================================================================
 
