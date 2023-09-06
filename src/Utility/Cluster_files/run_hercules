@@ -18,6 +18,6 @@
 set -e
 ulimit -s unlimited 
 
-source /home/yjzhang/intel_modules
+source /home/yjzhang/modules.hercules
 
 srun ./pschism_HERCULES_NO_PARMETIS_PREC_EVAP_TVD-VL 7
