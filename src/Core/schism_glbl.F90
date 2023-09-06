@@ -239,7 +239,7 @@ module schism_glbl
   real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in _degrees_
   real(rkind),save,allocatable :: dpe(:)          ! Depth at element (min of all nodes)
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
-  integer,save,allocatable :: idry_e(:)       ! wet/dry flag
+  integer,save,allocatable,target :: idry_e(:)       ! wet/dry flag
   integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone
   integer,save,allocatable :: interpol(:)       ! interpolation mode
 !  integer,save,allocatable :: lqk(:)       ! interpolation for S,T in btrack
