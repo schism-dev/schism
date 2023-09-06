@@ -12,8 +12,8 @@
 #SBATCH -t 02:00:00  
 #SBATCH -o myout
 #SBATCH -e err2.out
-##SBATCH --mail-user=yjzhang@vims.edu
-##SBATCH --mail-type=all  #send email for start, end and fail
+#SBATCH --mail-user=yjzhang@vims.edu
+#SBATCH --mail-type=all  #send email for start, end and fail
 
 set -e
 ulimit -s unlimited 
