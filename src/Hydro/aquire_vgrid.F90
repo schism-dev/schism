@@ -26,19 +26,27 @@ subroutine aquire_vgrid
 !-------------------------------------------------------------------------------
 ! Aquire vertical grid data from vgrid.in
 !-------------------------------------------------------------------------------
-  use schism_glbl
-  use schism_msgp
-  implicit none
-  integer :: i,j,k,l,jki,stat,kin,m
-  real(rkind) :: buf1(100),hmod2,zz
-
+   use schism_glbl
+   use schism_msgp
+   implicit none
+   integer :: i,j,k,l,jki,stat,kin,m
+   real(rkind) :: buf1(100),hmod2,zz
+   character (len = 2000)        :: dateiname
+   character (256) :: my_iomsg
+   
   !ivcor: types of vertical coord.; surface must all be nvrt (for sflux routines)
-  if(myrank==0) then
-    open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old',iostat=stat)
-    if(stat/=0) call parallel_abort('AQUIRE_VGIRD: open(19) failure')
-    read(19,*)ivcor
-  endif !myrank
-  call mpi_bcast(ivcor,1,itype,0,comm,stat)
+   if(myrank==0) then
+      write(dateiname,"(2A)")adjustl(trim(in_dir)),"vgrid.in"
+      open(19,file=dateiname,status='old',iostat=stat, iomsg=my_iomsg)
+      !open(19,file=in_dir(1:len_in_dir)//'vgrid.in',status='old',iostat=stat)
+      if(stat/=0) then
+         print*," error in aquire_vgrid when opening:",trim(dateiname), len_in_dir
+         print*,stat,'  ',trim(my_iomsg),' =>',in_dir,'<= '
+         call parallel_abort('AQUIRE_VGIRD: open(19) failure')
+      endif
+      read(19,*)ivcor
+   endif !myrank
+   call mpi_bcast(ivcor,1,itype,0,comm,stat)
 
   if(ivcor==2) then !SZ coordinates
     if(myrank==0) then
@@ -52,15 +60,25 @@ subroutine aquire_vgrid
         write(errmsg,*)'h_s needs to be larger:',h_s
         call parallel_abort(errmsg)
       endif
-    endif !myrank
-    call mpi_bcast(nvrt,1,itype,0,comm,stat)
-    call mpi_bcast(kz,1,itype,0,comm,stat)
-    call mpi_bcast(h_s,1,rtype,0,comm,stat)
+   endif !myrank
+   call mpi_bcast(nvrt,1,itype,0,comm,stat)
+   call mpi_bcast(kz,1,itype,0,comm,stat)
+   call mpi_bcast(h_s,1,rtype,0,comm,stat)
 
-    ! Allocate vertical layers arrays
-    allocate(ztot(nvrt),sigma(nvrt),cs(nvrt),dcs(nvrt),stat=stat)
-    if(stat/=0) call parallel_abort('AQUIRE_VGIRD: ztot allocation failure')
-    nsig=nvrt-kz+1 !# of S levels (including "bottom" & f.s.)
+   ! Allocate vertical layers arrays
+   stat=0
+   !print*,myrank,nvrt,"allocateed ztot,sigma,cs,dcs",allocated(ztot),allocated(sigma),allocated(cs),allocated(dcs)
+   if(.not. allocated(ztot))allocate(ztot(nvrt),stat=stat)
+   if(stat/=0)call parallel_abort('AQUIRE_VGIRD: ztot allocation failure')
+   if(.not. allocated(sigma))allocate(sigma(nvrt),stat=stat)
+   if(stat/=0)call parallel_abort('AQUIRE_VGIRD: sigma allocation failure')
+   if(.not. allocated(cs))allocate(cs(nvrt),stat=stat)
+   if(stat/=0)call parallel_abort('AQUIRE_VGIRD: cs allocation failure')
+   if(.not. allocated(dcs))allocate(dcs(nvrt),stat=stat)
+   if(stat/=0)call parallel_abort('AQUIRE_VGIRD: dcs allocation failure')
+   !allocate(ztot(nvrt),sigma(nvrt),cs(nvrt),dcs(nvrt),stat=stat)
+   !if(stat/=0) call parallel_abort('AQUIRE_VGIRD: ztot allocation failure')
+   nsig=nvrt-kz+1 !# of S levels (including "bottom" & f.s.)
 
     if(myrank==0) then
       ! # of z-levels excluding "bottom" at h_s
