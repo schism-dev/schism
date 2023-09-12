@@ -3,8 +3,8 @@ The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs 
  z level or at a sigma level) or vertical transects. In particular, `SCHISM_SLAB2.m`  and `SCHISM_TRANSECT2.m` for for 
  the new scribed outputs, while `SCHISM_SLAB.m` and `SCHISM_TRANSECT.m` are for the old outputs (schout*.nc).
 
-## Visualization with Python
-[more coming] You can also find several packages on the [Forum site](http://ccrm.vims.edu/w/index.php/Share_your_tools)
+## Visualization with pylib
+
 
 ## Visualization with VisIt
 The most comprehensive way to visualize SCHISM nc4 outputs is via VisIt.

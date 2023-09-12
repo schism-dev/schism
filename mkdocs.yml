@@ -58,6 +58,8 @@ nav:
     - Typical workflow (a cheat sheet): getting-started/typical-workflow.md
     - Mesh generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
+    - Preprocessing with pylib:
+      - Overview: getting-started/pre-processing-with-pylib/overview.md 
     - Preprocessing with PySCHISM:
       - Overview: getting-started/pre-processing-with-pyschism/overview.md
       - Installation: getting-started/pre-processing-with-pyschism/installation.md
