@@ -1,0 +1,7 @@
+module load intel-oneapi-compilers/2022.2.1
+module load intel-oneapi-mpi/2021.7.1
+module load netcdf-fortran/4.6.0
+module load netcdf-c/4.9.0
+module load cmake
+module load python
+

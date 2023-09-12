@@ -894,7 +894,6 @@
 #endif
 
 ! bottom of main iteration loop
-!          if (.not. converged .and. iter .lt. max_iter) goto 100
             if (converged.or.iter>= max_iter) exit
           enddo
 
@@ -2598,7 +2597,6 @@
             last_elem = i_elem
 
 ! loop again if need to
-!          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
             if(completed_check.or.zero_ae) exit
           enddo !infinite do
 
