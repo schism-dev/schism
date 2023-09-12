@@ -63,6 +63,7 @@
                               ssign,isten_qual2,isdel,iside_table,   &
                               nvrt,ntrs,                             &
                               ne,ielg,ns,i34,isidenode,elnode,       &
+                              nea, np, npa, indel, nne,              &
                               dt,                                    &
                               ihdif,ihconsv,isconsv,itur,itr_met,    &
                               h_tvd,eps1_tvd_imp,eps2_tvd_imp,       &
@@ -81,8 +82,9 @@
                               errmsg
                               
       use schism_msgp, only : nproc,myrank,comm,ierr,rtype,                           &
-                              parallel_abort,exchange_e2di_2t,exchange_e3d_2t_tr,     &
-                              exchange_s3dw,exchange_s3d_tr3,exchange_s3d_tr2
+                              parallel_abort,exchange_e2di,exchange_e2di_2t,          &
+                              exchange_e3d_2t_tr,exchange_s3dw,exchange_s3d_tr3,      &
+                              exchange_s3d_tr2
 #else
       use schism_glbl
       use schism_msgp

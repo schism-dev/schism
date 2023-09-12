@@ -35,7 +35,7 @@
 ## Environment for the oss-hpc01 cluster of the BfG
 #################################################################################
 ENV = cln51
-VER = s23_02
+VER = s23_03
 
 ################################################################################
 # Environment for BfG oss-hpc1 (HPC Xeon Cluster, Xeon E5-2670, Qlogic Infiniband (QDR))
