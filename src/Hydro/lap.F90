@@ -173,12 +173,14 @@
 !
          K = N
          KC = ( N-1 )*N / 2 + 1
-   10    CONTINUE
+!   10    CONTINUE
+         do 
+!------------------------------------
          KNC = KC
 !
 !        If K < 1, exit from loop
 !
-         IF( K.LT.1 ) GO TO 110
+         IF( K.LT.1 ) exit !GO TO 110
          KSTEP = 1
 !
 !        Determine rows and columns to be interchanged and whether
@@ -334,7 +336,7 @@
                END IF
 !
             END IF
-         END IF
+         END IF !MAX( ABSAKK,
 !
 !        Store details of the interchanges in IPIV
 !
@@ -349,9 +351,11 @@
 !
          K = K - KSTEP
          KC = KNC - K
-         GO TO 10
+!         GO TO 10
+!------------------------------------
+         enddo !infinite loop
 !
-      ELSE
+      ELSE !not UPPER
 !
 !        Factorize A as L*D*L' using the lower triangle of A
 !
@@ -361,12 +365,14 @@
          K = 1
          KC = 1
          NPP = N*( N+1 ) / 2
-   60    CONTINUE
+!   60    CONTINUE
+         do
+!-------------------------------------------
          KNC = KC
 !
 !        If K > N, exit from loop
 !
-         IF( K.GT.N ) GO TO 110
+         IF( K.GT.N ) exit !GO TO 110
          KSTEP = 1
 !
 !        Determine rows and columns to be interchanged and whether
@@ -523,7 +529,7 @@
   100             CONTINUE
                END IF
             END IF
-         END IF
+         END IF !MAX( ABSAKK,
 !
 !        Store details of the interchanges in IPIV
 !
@@ -538,9 +544,11 @@
 !
          K = K + KSTEP
          KC = KNC + N - K + 2
-         GO TO 60
+!         GO TO 60
+!-------------------------------------------
+         enddo !infinite loop
 !
-      END IF
+      END IF !UPPER
 !
   110 CONTINUE
       RETURN
@@ -548,6 +556,8 @@
 !     End of DSPTRF_SCH
 !
       END
+
+
       SUBROUTINE DSPTRI_SCH( UPLO, N, AP, IPIV, WORK, INFO )
 !
 !  -- LAPACK routine (version 3.1) --
@@ -668,7 +678,7 @@
             IF( IPIV( INFO ).GT.0 .AND. AP( KP ).EQ.ZERO ) RETURN
             KP = KP + N - INFO + 1
    20    CONTINUE
-      END IF
+      END IF !UPPER
       INFO = 0
 !
       IF( UPPER ) THEN
@@ -680,11 +690,13 @@
 !
          K = 1
          KC = 1
-   30    CONTINUE
+!   30    CONTINUE
+         do
+!------------------------------
 !
 !        If K > N, exit from loop.
 !
-         IF( K.GT.N ) GO TO 50
+         IF( K.GT.N ) exit  !GO TO 50
 !
          KCNEXT = KC + K
          IF( IPIV( K ).GT.0 ) THEN
@@ -731,7 +743,7 @@
             END IF
             KSTEP = 2
             KCNEXT = KCNEXT + K + 1
-         END IF
+         END IF !IPIV( K 
 !
          KP = ABS( IPIV( K ) )
          IF( KP.NE.K ) THEN
@@ -756,14 +768,16 @@
                AP( KC+K+K-1 ) = AP( KC+K+KP-1 )
                AP( KC+K+KP-1 ) = TEMP
             END IF
-         END IF
+         END IF !KP.NE.K
 !
          K = K + KSTEP
          KC = KCNEXT
-         GO TO 30
-   50    CONTINUE
+!         GO TO 30
+!------------------------------
+         enddo 
+!   50    CONTINUE
 !
-      ELSE
+      ELSE !not UPPER
 !
 !        Compute inv(A) from the factorization A = L*D*L'.
 !
@@ -773,11 +787,13 @@
          NPP = N*( N+1 ) / 2
          K = N
          KC = NPP
-   60    CONTINUE
+!   60    CONTINUE
+         do
+!------------------------------
 !
 !        If K < 1, exit from loop.
 !
-         IF( K.LT.1 ) GO TO 80
+         IF( K.LT.1 ) exit  !GO TO 80
 !
          KCNEXT = KC - ( N-K+2 )
          IF( IPIV( K ).GT.0 ) THEN
@@ -824,7 +840,7 @@
             END IF
             KSTEP = 2
             KCNEXT = KCNEXT - ( N-K+3 )
-         END IF
+         END IF !IPIV( K ).
 !
          KP = ABS( IPIV( K ) )
          IF( KP.NE.K ) THEN
@@ -849,19 +865,22 @@
                AP( KC-N+K-1 ) = AP( KC-N+KP-1 )
                AP( KC-N+KP-1 ) = TEMP
             END IF
-         END IF
+         END IF !KP.NE.K 
 !
          K = K - KSTEP
          KC = KCNEXT
-         GO TO 60
-   80    CONTINUE
-      END IF
+!         GO TO 60
+!--------------------------------
+         enddo
+!   80    CONTINUE
+      END IF !UPPER
 !
       RETURN
 !
 !     End of DSPTRI_SCH
 !
       END
+
       SUBROUTINE XERBLA5_SCH(SRNAME,INFO)
 !
 !  -- LAPACK auxiliary routine (preliminary version) --
@@ -1166,6 +1185,7 @@
 !     End of DSPMV_SCH .
 !
       END
+
       SUBROUTINE DSWAP_SCH(N,DX,INCX,DY,INCY)
 !     .. Scalar Arguments ..
       INTEGER INCX,INCY,N
@@ -1191,38 +1211,47 @@
       INTRINSIC MOD
 !     ..
       IF (N.LE.0) RETURN
-      IF (INCX.EQ.1 .AND. INCY.EQ.1) GO TO 20
+!      IF (INCX.EQ.1 .AND. INCY.EQ.1) GO TO 20
+      IF (.not.(INCX.EQ.1 .AND. INCY.EQ.1)) then
+
 !
 !       code for unequal increments or equal increments not equal
 !         to 1
 !
-      IX = 1
-      IY = 1
-      IF (INCX.LT.0) IX = (-N+1)*INCX + 1
-      IF (INCY.LT.0) IY = (-N+1)*INCY + 1
-      DO 10 I = 1,N
-          DTEMP = DX(IX)
-          DX(IX) = DY(IY)
-          DY(IY) = DTEMP
-          IX = IX + INCX
-          IY = IY + INCY
-   10 CONTINUE
-      RETURN
+        IX = 1
+        IY = 1
+        IF (INCX.LT.0) IX = (-N+1)*INCX + 1
+        IF (INCY.LT.0) IY = (-N+1)*INCY + 1
+        DO 10 I = 1,N
+            DTEMP = DX(IX)
+            DX(IX) = DY(IY)
+            DY(IY) = DTEMP
+            IX = IX + INCX
+            IY = IY + INCY
+     10 CONTINUE
+        RETURN
 !
 !       code for both increments equal to 1
 !
 !
 !       clean-up loop
 !
-   20 M = MOD(N,3)
-      IF (M.EQ.0) GO TO 40
-      DO 30 I = 1,M
-          DTEMP = DX(I)
-          DX(I) = DY(I)
-          DY(I) = DTEMP
-   30 CONTINUE
-      IF (N.LT.3) RETURN
-   40 MP1 = M + 1
+      ELSE
+        M = MOD(N,3)
+      ENDIF !.not.
+
+!      IF (M.EQ.0) GO TO 40
+      IF (M.NE.0) THEN
+        DO 30 I = 1,M
+            DTEMP = DX(I)
+            DX(I) = DY(I)
+            DY(I) = DTEMP
+30      CONTINUE
+        IF (N.LT.3) RETURN
+      ENDIF !M
+!   40 MP1 = M + 1
+      MP1 = M + 1
+
       DO 50 I = MP1,N,3
           DTEMP = DX(I)
           DX(I) = DY(I)
@@ -1236,6 +1265,7 @@
    50 CONTINUE
       RETURN
       END
+
       SUBROUTINE DSPR_SCH(UPLO,N,ALPHA,X,INCX,AP)
 !     .. Scalar Arguments ..
       DOUBLE PRECISION ALPHA
@@ -1435,6 +1465,7 @@
 !     End of DSPR_SCH  .
 !
       END
+
       SUBROUTINE DSCAL_SCH(N,DA,DX,INCX)
 !     .. Scalar Arguments ..
       DOUBLE PRECISION DA
@@ -1461,28 +1492,37 @@
       INTRINSIC MOD
 !     ..
       IF (N.LE.0 .OR. INCX.LE.0) RETURN
-      IF (INCX.EQ.1) GO TO 20
+!      IF (INCX.EQ.1) GO TO 20
+      IF (INCX.NE.1) THEN
 !
 !        code for increment not equal to 1
 !
-      NINCX = N*INCX
-      DO 10 I = 1,NINCX,INCX
-          DX(I) = DA*DX(I)
-   10 CONTINUE
-      RETURN
+        NINCX = N*INCX
+        DO 10 I = 1,NINCX,INCX
+            DX(I) = DA*DX(I)
+ 10     CONTINUE
+        RETURN
 !
 !        code for increment equal to 1
 !
 !
 !        clean-up loop
 !
-   20 M = MOD(N,5)
-      IF (M.EQ.0) GO TO 40
-      DO 30 I = 1,M
-          DX(I) = DA*DX(I)
-   30 CONTINUE
-      IF (N.LT.5) RETURN
-   40 MP1 = M + 1
+      ELSE
+!   20 M = MOD(N,5)
+        M = MOD(N,5)
+      ENDIF
+
+!      IF (M.EQ.0) GO TO 40
+      IF (M.NE.0) THEN
+        DO 30 I = 1,M
+            DX(I) = DA*DX(I)
+ 30     CONTINUE
+        IF (N.LT.5) RETURN
+      ENDIF !M
+
+!   40 MP1 = M + 1
+      MP1 = M + 1
       DO 50 I = MP1,N,5
           DX(I) = DA*DX(I)
           DX(I+1) = DA*DX(I+1)
@@ -1607,26 +1647,33 @@
       IF (N.LT.1 .OR. INCX.LE.0) RETURN
       IDAMAX_SCH = 1
       IF (N.EQ.1) RETURN
-      IF (INCX.EQ.1) GO TO 20
+!      IF (INCX.EQ.1) GO TO 20
+      IF (INCX.NE.1) THEN
 !
 !        code for increment not equal to 1
 !
-      IX = 1
-      DMAX = DABS(DX(1))
-      IX = IX + INCX
-      DO 10 I = 2,N
-          IF (DABS(DX(IX)).LE.DMAX) GO TO 5
-          IDAMAX_SCH = I
-          DMAX = DABS(DX(IX))
+        IX = 1
+        DMAX = DABS(DX(1))
+        IX = IX + INCX
+        DO 10 I = 2,N
+!          IF (DABS(DX(IX)).LE.DMAX) GO TO 5
+          IF (DABS(DX(IX)).GT.DMAX) THEN 
+            IDAMAX_SCH = I
+            DMAX = DABS(DX(IX))
+          ENDIF
     5     IX = IX + INCX
-   10 CONTINUE
-      RETURN
+   10   CONTINUE
+        RETURN
+      ELSE !INCX
 !
 !        code for increment equal to 1
 !
-   20 DMAX = DABS(DX(1))
+!   20 DMAX = DABS(DX(1))
+        DMAX = DABS(DX(1))
+      ENDIF !INCX
+
       DO 30 I = 2,N
-          IF (DABS(DX(I)).LE.DMAX) GO TO 30
+          IF (DABS(DX(I)).LE.DMAX) cycle  !GO TO 30
           IDAMAX_SCH = I
           DMAX = DABS(DX(I))
    30 CONTINUE
@@ -1661,12 +1708,15 @@
 !        CLEAN-UP LOOP SO REMAINING VECTOR LENGTH IS A MULTIPLE OF 7. 
 !       
    30 M = N-(N/7)*7 
-      IF (M.EQ.0) GO TO 50  
-      DO 40 I = 1,M 
-         DY(I) = DX(I)      
-   40 CONTINUE    
-      IF (N.LT.7) RETURN    
-   50 MP1 = M+1   
+!      IF (M.EQ.0) GO TO 50  
+      IF (M.NE.0) THEN
+        DO 40 I = 1,M 
+           DY(I) = DX(I)      
+   40   CONTINUE    
+        IF (N.LT.7) RETURN    
+      ENDIF
+
+      MP1 = M+1   
       DO 60 I = MP1,N,7     
          DY(I) = DX(I)      
          DY(I+1) = DX(I+1)  
@@ -1716,12 +1766,15 @@
 !        CLEAN-UP LOOP SO REMAINING VECTOR LENGTH IS A MULTIPLE OF 5. 
 !       
    30 M = N-(N/5)*5 
-      IF (M.EQ.0) GO TO 50  
-      DO 40 I = 1,M 
-         DDOT_SCH = DDOT_SCH+DX(I)*DY(I)      
-   40 CONTINUE    
-      IF (N.LT.5) RETURN    
-   50 MP1 = M+1   
+!      IF (M.EQ.0) GO TO 50  
+      IF (M.NE.0) THEN
+        DO 40 I = 1,M 
+           DDOT_SCH = DDOT_SCH+DX(I)*DY(I)      
+   40   CONTINUE    
+        IF (N.LT.5) RETURN    
+      ENDIF
+      MP1 = M+1   
+
       DO 60 I = MP1,N,5     
          DDOT_SCH = DDOT_SCH+DX(I)*DY(I)+DX(I+1)*DY(I+1)+DX(I+2)*DY(I+2)+DX(I+3)&
      &      *DY(I+3)+DX(I+4)*DY(I+4)  
