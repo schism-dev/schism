@@ -1,2 +1,24 @@
-PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by [TPXO](https://richdem.readthedocs.io/en/latest/using_it.html), [HYCOM](https://www.hycom.org/), [NWM](https://water.noaa.gov/about/nwm), and
- a few pre-selected atmospheric models ([ERA5](https://www.ecmwf.int/en/forecasts/datasets/reanalysis-datasets/era5), [GFS](https://registry.opendata.aws/noaa-gfs-bdp-pds/), and [HRRR](https://registry.opendata.aws/noaa-hrrr-pds/)). PySCHISM has its own [repository](https://github.com/schism-dev/pyschism). The syntax of classes and methods in the library are subject to change in future releases, which will also significantly optimize performace and speed of some functionalities.
+**pylib** provides
+
+* a matlab-style platform for python usage
+* and an independent python-based SCHISM modeling workflow
+
+please refer to `https://github.com/wzhengui/pylibs` for more information.
+
+<br>
+**some of pylib basic functions**
+
+* database usage
+* time manipulation, geometry handling (`inside_polygon, near_pts, compute_contour`)
+* data analysis: `low/band-pass filters, running smooth, FFT, statistics, least-square-fit, EOF, harmonic analysis, etc`.
+* handling different file formats: `SCHISM inputs/outputs, ASCII files, netcdf, shapefile, Excel, DEM files, projections, etc.`
+
+<br>
+**some of SCHISM related functions**
+
+* geometry information: `node, element, side, etc.`
+* hgrid: `plot, interplation, boundary, read/save, grid-preprocess (grd2sms, sms2grd, quads check/split, skew-element check, projection)`
+* vgrid: `compute_zcor, etc.`
+* point/region files
+* post-process: `extract time series, profiles, slabs, fluxes, etc.`
+* visualization of SCHISM inputs/outputs

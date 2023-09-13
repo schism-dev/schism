@@ -60,6 +60,8 @@ nav:
     - Preprocessing: getting-started/pre-processing.md
     - Preprocessing with pylib:
       - Overview: getting-started/pre-processing-with-pylib/overview.md 
+      - Installation: getting-started/pre-processing-with-pylib/installation.md
+      - schismCheck (input visualization): getting-started/pre-processing-with-pylib/schismcheck.md
     - Preprocessing with PySCHISM:
       - Overview: getting-started/pre-processing-with-pyschism/overview.md
       - Installation: getting-started/pre-processing-with-pyschism/installation.md
