@@ -406,6 +406,34 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schismcheck.html" class="md-nav__link">
+        schismCheck (input visualization)
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1539,8 +1567,30 @@
 
   <h1>Overview</h1>
 
-<p>PySCHISM is a python based package for preparing most inputs required of 3D baroclinic SCHISM run, driven by <a href="https://richdem.readthedocs.io/en/latest/using_it.html">TPXO</a>, <a href="https://www.hycom.org/">HYCOM</a>, <a href="https://water.noaa.gov/about/nwm">NWM</a>, and
- a few pre-selected atmospheric models (<a href="https://www.ecmwf.int/en/forecasts/datasets/reanalysis-datasets/era5">ERA5</a>, <a href="https://registry.opendata.aws/noaa-gfs-bdp-pds/">GFS</a>, and <a href="https://registry.opendata.aws/noaa-hrrr-pds/">HRRR</a>). PySCHISM has its own <a href="https://github.com/schism-dev/pyschism">repository</a>. The syntax of classes and methods in the library are subject to change in future releases, which will also significantly optimize performace and speed of some functionalities.</p>
+<p><strong>pylib</strong> provides</p>
+<ul>
+<li>a matlab-style platform for python usage</li>
+<li>and an independent python-based SCHISM modeling workflow</li>
+</ul>
+<p>please refer to <code>https://github.com/wzhengui/pylibs</code> for more information.</p>
+<p><br>
+<strong>some of pylib basic functions</strong></p>
+<ul>
+<li>database usage</li>
+<li>time manipulation, geometry handling (<code>inside_polygon, near_pts, compute_contour</code>)</li>
+<li>data analysis: <code>low/band-pass filters, running smooth, FFT, statistics, least-square-fit, EOF, harmonic analysis, etc</code>.</li>
+<li>handling different file formats: <code>SCHISM inputs/outputs, ASCII files, netcdf, shapefile, Excel, DEM files, projections, etc.</code></li>
+</ul>
+<p><br>
+<strong>some of SCHISM related functions</strong></p>
+<ul>
+<li>geometry information: <code>node, element, side, etc.</code></li>
+<li>hgrid: <code>plot, interplation, boundary, read/save, grid-preprocess (grd2sms, sms2grd, quads check/split, skew-element check, projection)</code></li>
+<li>vgrid: <code>compute_zcor, etc.</code></li>
+<li>point/region files</li>
+<li>post-process: <code>extract time series, profiles, slabs, fluxes, etc.</code></li>
+<li>visualization of SCHISM inputs/outputs</li>
+</ul>
 
               
             </article>
@@ -1572,13 +1622,13 @@
       
       
         
-        <a href="../pre-processing-with-pyschism/overview.html" class="md-footer__link md-footer__link--next" aria-label="Next: Overview" rel="next">
+        <a href="installation.html" class="md-footer__link md-footer__link--next" aria-label="Next: Installation" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Overview
+              Installation
             </div>
           </div>
           <div class="md-footer__button md-icon">
