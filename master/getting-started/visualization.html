@@ -600,6 +600,26 @@
     Visualization with pylib
   </a>
   
+    <nav class="md-nav" aria-label="Visualization with pylib">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation-of-pylib" class="md-nav__link">
+    Installation of pylib
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-use-schismview" class="md-nav__link">
+    How to use schismview
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1618,6 +1638,73 @@
  z level or at a sigma level) or vertical transects. In particular, <code>SCHISM_SLAB2.m</code>  and <code>SCHISM_TRANSECT2.m</code> for for 
  the new scribed outputs, while <code>SCHISM_SLAB.m</code> and <code>SCHISM_TRANSECT.m</code> are for the old outputs (schout*.nc).</p>
 <h2 id="visualization-with-pylib">Visualization with pylib<a class="headerlink" href="#visualization-with-pylib" title="Permanent link">&para;</a></h2>
+<p>pylib provides <code>schismview</code> to visualize outputs (scribed outputs, OLDIO not supported yet). <code>schismview</code> will collect all the available variables from your outputs. For each variable, you can do 1). contour plot, 2). animation, 3). extract time series, and 4) query, etc. This is a lightweight app, and please report bug to SCHISM maillist or wzhengui@gmail.com.</p>
+<h3 id="installation-of-pylib"><strong><a href="pre-processing-with-pylib/installation.html">Installation of pylib</a></strong><a class="headerlink" href="#installation-of-pylib" title="Permanent link">&para;</a></h3>
+<p>By running the following code, you can locate the executable of <code>schismview</code> <br>
+<code>python -c "from pylib import *; print(mylib.__file__[:-16]+'Scripts/schismview')"</code></p>
+<h3 id="how-to-use-schismview"><strong>How to use <code>schismview</code></strong><a class="headerlink" href="#how-to-use-schismview" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p>To lauch <code>schismview</code>, you can run the executable either under your run directory, or pass the run directory as a argument to the executable, which will give you an <code>schismview</code> window below.
+    <figure markdown id='view_1'>
+    <img alt="'1'" src="../../assets/schismview_1.png" width="500" /></p>
+</li>
+<li>
+<p><strong>variable</strong>: All availalbe SCHISM output variables are collected, and you can choose the variable you want to view from the list window.</p>
+</li>
+<li>
+<p><strong>figure</strong>:  list of figures. You can have multiple figures for different variables. You can close it if you want. Later on, you can retrieve previous figures from the list. If you want to add a new figure, choose add. </p>
+</li>
+<li>
+<p><strong>layer</strong>: For 3D variable, you can specify which layer you want to view. For 2D variable, this option is not needed.</p>
+</li>
+<li>
+<p><strong>grid</strong> or <strong>bnd</strong>: If clicked, schism grid/boundary will plotted out along with the contour plot. If you only want to view the grid/boundary, choose <code>none</code> from the variable list.</p>
+</li>
+<li>
+<p><strong>ctr</strong>: By default, <code>schismview</code> will use <code>tripcolor</code> to plot contours, which is element-based. If <code>ctr</code> is clicked, <code>schismview</code> will use <code>tricontourf</code> to plot, which can be faster for very large grid.</p>
+</li>
+<li>
+<p><strong>time</strong>: There are three available time options (calendar time, SCHISM stack number, or Julian date). You can set the Start and End dates for viewing variables in the textbox. This may be needed for animation if you only want to view for a specific period of time.</p>
+</li>
+<li>
+<p><strong>limit</strong>: It sets the lower and upper limits of contours. The values beyond are extended.</p>
+</li>
+<li>
+<p><strong>vector</strong>: You can choose vector you want to view from the list. vector shown will be limitted to the current domain specified by <code>xlim</code> and <code>ylim</code>.</p>
+</li>
+<li>
+<p><strong>curve</strong>: By <code>right double click</code>, you can add location points for extractng times for the active variable. <code>middle double click</code> will remove the points. Then, click <code>curve</code>, <code>schismview</code> will extract time series in background and the button will display <code>wait</code>. Once <code>wait</code> becomes <code>curve</code> again, clicking on it will show the time series. Note, extracting time series can be very slow for 3D variables depending on how the netcdf outputs are stored (chuncking the files can help, but it is a separate topic beyond <code>schismview</code>). It is better to specify short time range. </p>
+</li>
+<li>
+<p><strong>query</strong>: You can query the value of variable. By clicking query (becomes sunken once chosen), you can use <code>middle single click</code> to query the value. By clicking query again, it will exit query mode.</p>
+</li>
+<li>
+<p><strong>xlim</strong>/<strong>ylim</strong>: Sspecify the X/Y axis range.</p>
+</li>
+<li>
+<p><strong>animation</strong></p>
+<ul>
+<li><strong><code>|&lt;</code></strong>: go to start time</li>
+<li><strong><code>&lt;</code></strong>:  go to previous time</li>
+<li><strong><code>play</code></strong>:  play animation for the current variable. The button will display <code>stop</code>, and click <code>stop</code> will stop the animation. Note <code>doulbe right click</code> will have the same effect of <code>play</code> buttion</li>
+<li><strong><code>&gt;</code></strong>:  go to next time</li>
+<li><strong><code>&gt;|</code></strong>: go to end time</li>
+<li><strong>skip</strong>: specify the animation interval</li>
+</ul>
+</li>
+<li>
+<p><strong>draw</strong>: draw plot or refresh the plot.</p>
+</li>
+<li>
+<p><strong>option</strong>: Advaned features</p>
+<ul>
+<li><strong>command window</strong>: type commands to interact with the plot, which can be used to generate desired high-quality figures.</li>
+<li><strong>save animation</strong></li>
+<li><strong>show node/element number</strong></li>
+</ul>
+</li>
+</ul>
 <h2 id="visualization-with-visit">Visualization with VisIt<a class="headerlink" href="#visualization-with-visit" title="Permanent link">&para;</a></h2>
 <p>The most comprehensive way to visualize SCHISM nc4 outputs is via VisIt.</p>
 <p>Shortly after v5.9.0, we have successfully implemented a new mode of efficient I/O using dedicated 'scribes'.
