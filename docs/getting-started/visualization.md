@@ -14,7 +14,7 @@ By running the following code, you can locate the executable of `schismview` <br
 ### **How to use `schismview`**
 * To lauch `schismview`, you can run the executable either under your run directory, or pass the run directory as a argument to the executable, which will give you an `schismview` window below.
     <figure markdown id='view_1'>
-    !['1'](../../assets/schismview_1.png){width=500}
+    !['1'](../assets/schismview_1.png){width=500}
 
 * **variable**: All availalbe SCHISM output variables are collected, and you can choose the variable you want to view from the list window.
 
