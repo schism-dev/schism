@@ -590,6 +590,7 @@ git versions:
 147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (as Kijin did for 1-way script)
 148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
 149. `045962` (Sept 13, 2023): removed goto in lap.F90
+150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 
 ================================================================================================
 (D) Auto-test history:
