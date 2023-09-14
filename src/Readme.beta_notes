@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` : removed iflux_out_format (folded it into iflux);
+- `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
 
 Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
 Tag v5.11.0: (Aug 2022)
