@@ -220,14 +220,14 @@
         rewind(9)
         do it=1,it_now 
           read(9,*)
-#ifdef USE_ANALYSIS
-          read(9,*)
-          read(9,*)
-          do m=1,ntracers
+          if(iflux==2) then
             read(9,*)
             read(9,*)
-          enddo !m
-#endif
+            do m=1,ntracers
+              read(9,*)
+              read(9,*)
+            enddo !m
+          endif !iflux=2
         enddo !it
       endif !iflux/=0
 

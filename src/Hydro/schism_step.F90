@@ -8723,14 +8723,14 @@
 #endif
       if(myrank==0) then
         write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1)
-        if(iflux_out_format/=0) then
+        if(iflux==2) then
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
           do m=1,ntracers
             write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+2)
             write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+3)
           enddo !m
-        endif !iflux_out_format
+        endif !iflux
         write(16,*)'done computing fluxes...'
       endif
 !$OMP end master
