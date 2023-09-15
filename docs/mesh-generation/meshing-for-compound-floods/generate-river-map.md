@@ -154,26 +154,28 @@ In addition to the mandatory inpouts, RiverMapper provides a few parameters to f
 
 | parameter | type | explanation |
 | ----------- | ----------- | ----------- |
-| selected_thalweg | numpy array | Indices of a subset of thalwegs for which the river arcs will be sought; mainly used by the parallel driver |
+| selected_thalweg | integer numpy array | Indices of a subset of thalwegs for which the river arcs will be sought; mainly used by the parallel driver |
 | output_prefix | string | a prefix of the output files, mainly used by the caller of this script; can be empty |
 | mpi_print_prefix | string | a prefix string to identify the calling mpi processe in the output messages; can be empty |
-| MapUnit2METER = 1 | float |  no need to change; to be replaced by projection code, e.g., epsg: 4326, esri: 120008, etc. |
 | river_threshold | float | minimum and maximum river widths (in meters) to be resolved |
+| min_arcs | integer | minimum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs) |
 | elev_scale | float | scaling factor for elevations; a number of -1 (invert elevations) is useful for finding ridges (e.g., of a barrier island) |
-| outer_arc_positions | a list/tuple of floats | relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 \* riverwidth and 0.2 \* riverwidth from the banks. |
-| length_width_ratio | float |  a ratio of element length in the along-channel direction to river width; when a river is narrower than the lower limit, the bank will be nudged (see next parameter) to widen the river |
-| i_close_poly | bool | whether to add cross-channel arcs to enclose river arcs into a polygon |
-| i_blast_intersection | bool | whether to replace intersecting arcs (often noisy) at river intersections with scatter points (cleaner) |
-| blast_radius_scale | float | coefficient controlling the blast radius at intersections, a larger number leads to more intersection features being deleted |
-| bomb_radius_coef | float | coefficient controlling the spacing among intersection joints, a larger number leads to sparser intersection joints |
+| outer_arc_positions | a tuple of floats | relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 \* riverwidth and 0.2 \* riverwidth from the banks. |
+| R_coef | float | coef controlling the along-channel resolutions at river bends (with a radius of R), a larger number leads to coarser resolutions (R\*R_coef) |
+| length_width_ratio | float |  the ratio between along-channel resolution and cross-channel resolution
+| along_channel_reso_thres | a tuple of 2 floats | the minimum and maximum along-channel resolution (in meters) |
 | snap_point_reso_ratio | float | scaling the threshold of the point snapping; a negtive number means absolute distance value |
 | snap_arc_reso_ratio | float | scaling the threshold of the arc snapping; a negtive number means absolute distance value |
+| n_clean_iter | int | number of iterations for cleaning; more iterations produce cleaner intersections and better channel connectivity |
+| i_close_poly | bool | whether to add cross-channel arcs to enclose river arcs into a polygon |
+| i_smooth_banks | bool | whether to smooth the river banks at abrupt changes of the curvature |
 | i_DEM_cache  | bool | Whether or not to read DEM info from cache.  Reading from original \*.tif files can be slow, so the default option is True |
-| i_OCSMesh | bool | Whether or not to generate outputs to be used as inputs to OCSMesh. |
+| i_OCSMesh | bool | Whether or not to generate polygon-based outputs to be used as inputs to OCSMesh |
 | i_DiagnosticsOutput | bool | whether to output diagnostic information |
-| i_pseudo_channel | int | 0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline =2: implement a pseudo channel when the river is poorly defined in DEM
+| i_pseudo_channel | int | 0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline; 2: implement a pseudo channel when the river is poorly defined in DEM
 | pseudo_channel_width | float | width of the pseudo channel (in meters) |
 | nrow_pseudo_channel |int| number of rows of elements in the cross-channel direction in the pseudo channel |
+
 
 You can change the values of these parameters so that the output river map better fits your application (otherwise default values are used).
 For example, if you want to add two pairs of outer arcs that flank the main river channel, you can do:
@@ -295,11 +297,32 @@ river_map_config = ConfigRiverMap.BarrierIsland()
 
 ## Experimental Features
 ### Global arc cleaning
-There is an optional input in for "make_river_map" called "i_real_clean",
-which defaults to False.
-When turned on, an extra cleaning process will be applied to all arcs.
-However, this process is not efficient enough for large applications at the time being,
-specifically it increases the total run time by 7 to 8 times.
-Another issue is that it does not guarantee all river arcs are closed to form polygons,
-which affects OCSMesh.
-Updates in the near future will address the efficiency issue first.
+The experimental option "i_real_clean" has been removed from the parameter list,
+because it has superseded all other options for river confluence cleaning.
+It is the only cleaning option in the latest code and enabled by default.
+
+The idea is simple: arc vertices that are too close to any vertex or arc segment are snapped to the closest vertices.
+
+A critical step is defining how close is close.
+Setting a global threshold value would not work well because a larger value tends to over-simplify small rivers thus not ensuring channel connectivity
+and a smaller value causes insufficient cleaning for larger rivers.
+As a result, a spatially varying threshold is specified for each vertex based on the cross-channel resolution at that location.
+This ensures a sufficent level of cleaning while maintaining channel connectivity.
+For example, the resolution around a confluence is largely determined by the smallest branch:
+![Confluence_cleaning](../../assets/confluence_cleaning.png) 
+
+For a continental application like STOFS-3D-Atlantic that includes about 30,000 rivers, the cleaning takes about 10 minutes.
+Since the algorithm is fairly efficient, several iterations of cleaning are implemented allowing the threshold gradually increasing from a small value to the target value;
+in other words, the most close-by vertices are snapped first, which prevents overly aggressive snapping and slightly improve the quality of the end product.
+
+### Outputs for OCSMesh
+The "i_OCSMesh" option leads to an extra shapefile output containing river polygons,
+which serves as an input to [OCSMesh](https://github.com/noaa-ocs-modeling/OCSMesh).
+The option is enabled by default because the polygon-based output may be useful for other mesh generators too.
+
+### Outputting river mesh elements
+It may be desirable in some circumstances to directly discretize river polygons into elements (quadrangles and triangles).
+However, this is not the intended function of the tool at least by its original design but rather a task for mesh generators.  
+In addition, the accuracy and efficiency of SCHISM are not sensitive to how mesh generators decide to form the elements (as quads or triangles), as long as they adhere to the given river arcs or polygons.
+We can implement this option if there is a need.
+
