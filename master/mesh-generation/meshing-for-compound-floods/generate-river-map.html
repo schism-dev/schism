@@ -1218,6 +1218,20 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#outputs-for-ocsmesh" class="md-nav__link">
+    Outputs for OCSMesh
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outputting-river-mesh-elements" class="md-nav__link">
+    Outputting river mesh elements
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1884,7 +1898,7 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <tbody>
 <tr>
 <td>selected_thalweg</td>
-<td>numpy array</td>
+<td>integer numpy array</td>
 <td>Indices of a subset of thalwegs for which the river arcs will be sought; mainly used by the parallel driver</td>
 </tr>
 <tr>
@@ -1898,14 +1912,14 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <td>a prefix string to identify the calling mpi processe in the output messages; can be empty</td>
 </tr>
 <tr>
-<td>MapUnit2METER = 1</td>
-<td>float</td>
-<td>no need to change; to be replaced by projection code, e.g., epsg: 4326, esri: 120008, etc.</td>
-</tr>
-<tr>
 <td>river_threshold</td>
 <td>float</td>
 <td>minimum and maximum river widths (in meters) to be resolved</td>
+</tr>
+<tr>
+<td>min_arcs</td>
+<td>integer</td>
+<td>minimum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs)</td>
 </tr>
 <tr>
 <td>elev_scale</td>
@@ -1914,33 +1928,23 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 </tr>
 <tr>
 <td>outer_arc_positions</td>
-<td>a list/tuple of floats</td>
+<td>a tuple of floats</td>
 <td>relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 * riverwidth and 0.2 * riverwidth from the banks.</td>
+</tr>
+<tr>
+<td>R_coef</td>
+<td>float</td>
+<td>coef controlling the along-channel resolutions at river bends (with a radius of R), a larger number leads to coarser resolutions (R*R_coef)</td>
 </tr>
 <tr>
 <td>length_width_ratio</td>
 <td>float</td>
-<td>a ratio of element length in the along-channel direction to river width; when a river is narrower than the lower limit, the bank will be nudged (see next parameter) to widen the river</td>
+<td>the ratio between along-channel resolution and cross-channel resolution</td>
 </tr>
 <tr>
-<td>i_close_poly</td>
-<td>bool</td>
-<td>whether to add cross-channel arcs to enclose river arcs into a polygon</td>
-</tr>
-<tr>
-<td>i_blast_intersection</td>
-<td>bool</td>
-<td>whether to replace intersecting arcs (often noisy) at river intersections with scatter points (cleaner)</td>
-</tr>
-<tr>
-<td>blast_radius_scale</td>
-<td>float</td>
-<td>coefficient controlling the blast radius at intersections, a larger number leads to more intersection features being deleted</td>
-</tr>
-<tr>
-<td>bomb_radius_coef</td>
-<td>float</td>
-<td>coefficient controlling the spacing among intersection joints, a larger number leads to sparser intersection joints</td>
+<td>along_channel_reso_thres</td>
+<td>a tuple of 2 floats</td>
+<td>the minimum and maximum along-channel resolution (in meters)</td>
 </tr>
 <tr>
 <td>snap_point_reso_ratio</td>
@@ -1953,6 +1957,21 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <td>scaling the threshold of the arc snapping; a negtive number means absolute distance value</td>
 </tr>
 <tr>
+<td>n_clean_iter</td>
+<td>int</td>
+<td>number of iterations for cleaning; more iterations produce cleaner intersections and better channel connectivity</td>
+</tr>
+<tr>
+<td>i_close_poly</td>
+<td>bool</td>
+<td>whether to add cross-channel arcs to enclose river arcs into a polygon</td>
+</tr>
+<tr>
+<td>i_smooth_banks</td>
+<td>bool</td>
+<td>whether to smooth the river banks at abrupt changes of the curvature</td>
+</tr>
+<tr>
 <td>i_DEM_cache</td>
 <td>bool</td>
 <td>Whether or not to read DEM info from cache.  Reading from original *.tif files can be slow, so the default option is True</td>
@@ -1960,7 +1979,7 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <tr>
 <td>i_OCSMesh</td>
 <td>bool</td>
-<td>Whether or not to generate outputs to be used as inputs to OCSMesh.</td>
+<td>Whether or not to generate polygon-based outputs to be used as inputs to OCSMesh</td>
 </tr>
 <tr>
 <td>i_DiagnosticsOutput</td>
@@ -1970,7 +1989,7 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <tr>
 <td>i_pseudo_channel</td>
 <td>int</td>
-<td>0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline =2: implement a pseudo channel when the river is poorly defined in DEM</td>
+<td>0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline; 2: implement a pseudo channel when the river is poorly defined in DEM</td>
 </tr>
 <tr>
 <td>pseudo_channel_width</td>
@@ -2080,14 +2099,29 @@ or directly invoking the preset "BarrierIsland":</p>
 </div>
 <h2 id="experimental-features">Experimental Features<a class="headerlink" href="#experimental-features" title="Permanent link">&para;</a></h2>
 <h3 id="global-arc-cleaning">Global arc cleaning<a class="headerlink" href="#global-arc-cleaning" title="Permanent link">&para;</a></h3>
-<p>There is an optional input in for "make_river_map" called "i_real_clean",
-which defaults to False.
-When turned on, an extra cleaning process will be applied to all arcs.
-However, this process is not efficient enough for large applications at the time being,
-specifically it increases the total run time by 7 to 8 times.
-Another issue is that it does not guarantee all river arcs are closed to form polygons,
-which affects OCSMesh.
-Updates in the near future will address the efficiency issue first.</p>
+<p>The experimental option "i_real_clean" has been removed from the parameter list,
+because it has superseded all other options for river confluence cleaning.
+It is the only cleaning option in the latest code and enabled by default.</p>
+<p>The idea is simple: arc vertices that are too close to any vertex or arc segment are snapped to the closest vertices.</p>
+<p>A critical step is defining how close is close.
+Setting a global threshold value would not work well because a larger value tends to over-simplify small rivers thus not ensuring channel connectivity
+and a smaller value causes insufficient cleaning for larger rivers.
+As a result, a spatially varying threshold is specified for each vertex based on the cross-channel resolution at that location.
+This ensures a sufficent level of cleaning while maintaining channel connectivity.
+For example, the resolution around a confluence is largely determined by the smallest branch:
+<img alt="Confluence_cleaning" src="../../assets/confluence_cleaning.png" /> </p>
+<p>For a continental application like STOFS-3D-Atlantic that includes about 30,000 rivers, the cleaning takes about 10 minutes.
+Since the algorithm is fairly efficient, several iterations of cleaning are implemented allowing the threshold gradually increasing from a small value to the target value;
+in other words, the most close-by vertices are snapped first, which prevents overly aggressive snapping and slightly improve the quality of the end product.</p>
+<h3 id="outputs-for-ocsmesh">Outputs for OCSMesh<a class="headerlink" href="#outputs-for-ocsmesh" title="Permanent link">&para;</a></h3>
+<p>The "i_OCSMesh" option leads to an extra shapefile output containing river polygons,
+which serves as an input to <a href="https://github.com/noaa-ocs-modeling/OCSMesh">OCSMesh</a>.
+The option is enabled by default because the polygon-based output may be useful for other mesh generators too.</p>
+<h3 id="outputting-river-mesh-elements">Outputting river mesh elements<a class="headerlink" href="#outputting-river-mesh-elements" title="Permanent link">&para;</a></h3>
+<p>It may be desirable in some circumstances to directly discretize river polygons into elements (quadrangles and triangles).
+However, this is not the intended function of the tool at least by its original design but rather a task for mesh generators.<br />
+In addition, the accuracy and efficiency of SCHISM are not sensitive to how mesh generators decide to form the elements (as quads or triangles), as long as they adhere to the given river arcs or polygons.
+We can implement this option if there is a need.</p>
 
               
             </article>
