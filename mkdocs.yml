@@ -65,7 +65,8 @@ nav:
     - Preprocessing with PySCHISM:
       - Overview: getting-started/pre-processing-with-pyschism/overview.md
       - Installation: getting-started/pre-processing-with-pyschism/installation.md
-      - Boundary Conditions: getting-started/pre-processing-with-pyschism/boundary.md
+      - Tides: getting-started/pre-processing-with-pyschism/bctides.md
+      - B.C. from HYCOM: getting-started/pre-processing-with-pyschism/boundary.md
       - Atmospheric forcing: getting-started/pre-processing-with-pyschism/atmos.md
       - Souce and Sink: getting-started/pre-processing-with-pyschism/nwm.md
     - Running the model: getting-started/running-model.md
