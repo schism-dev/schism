@@ -9,11 +9,11 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-8.3.4">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-8.3.4">
     
     
       
-        <title>Boundary Conditions - SCHISM</title>
+        <title>B.C. from HYCOM - SCHISM</title>
       
     
     
@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#boundary-condition" class="md-skip">
+        <a href="#boundary-condition-from-hycom" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Boundary Conditions
+              B.C. from HYCOM
             
           </span>
         </div>
@@ -496,6 +496,20 @@
               
   
   
+  
+    <li class="md-nav__item">
+      <a href="bctides.html" class="md-nav__link">
+        Tides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
     
   
   
@@ -507,47 +521,9 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Boundary Conditions
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="boundary.html" class="md-nav__link md-nav__link--active">
-        Boundary Conditions
+        B.C. from HYCOM
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#tpxo" class="md-nav__link">
-    TPXO
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#hycom" class="md-nav__link">
-    HYCOM
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -1610,36 +1586,28 @@
 
 
 
-<h1 id="boundary-condition"><strong>Boundary Condition</strong><a class="headerlink" href="#boundary-condition" title="Permanent link">&para;</a></h1>
+<h1 id="boundary-condition-from-hycom"><strong>Boundary Condition from HYCOM</strong><a class="headerlink" href="#boundary-condition-from-hycom" title="Permanent link">&para;</a></h1>
 <p>Please refer to <a href="https://schism-dev.github.io/schism/master/input-output/bctides.html">this page</a> for detailed horizontal B.C. and nudging options supported by SCHISM.</p>
-<h2 id="tpxo"><strong>TPXO</strong><a class="headerlink" href="#tpxo" title="Permanent link">&para;</a></h2>
-<p>PySCHISM uses TPXO Global Tidal Model database. You may need to register an account on the website to download the data.</p>
-<p>Generating <em>bctides.in</em>: <br />
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span> <span class="nn">pyschism.mesh</span> <span class="kn">import</span> <span class="n">Hgrid</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span> <span class="nn">pyschism.forcing.bctides</span> <span class="kn">import</span> <span class="n">Bctides</span><span class="p">,</span> <span class="n">iettype</span><span class="p">,</span> <span class="n">ifltype</span><span class="p">,</span> <span class="n">isatype</span><span class="p">,</span> <span class="n">itetype</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">startdate</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">rnday</span> <span class="o">=</span> <span class="mi">10</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">hgrid</span> <span class="o">=</span> <span class="n">Hgrid</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;./hgrid.gr3&quot;</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;epsg:4326&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">iet3</span> <span class="o">=</span> <span class="n">iettype</span><span class="o">.</span><span class="n">Iettype3</span><span class="p">(</span><span class="n">constituents</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s1">&#39;tpxo&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">iet4</span> <span class="o">=</span> <span class="n">iettype</span><span class="o">.</span><span class="n">Iettype4</span><span class="p">()</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">iet5</span> <span class="o">=</span> <span class="n">iettype</span><span class="o">.</span><span class="n">Iettype5</span><span class="p">(</span><span class="n">iettype3</span><span class="o">=</span><span class="n">iet3</span><span class="p">,</span> <span class="n">iettype4</span><span class="o">=</span><span class="n">iet4</span><span class="p">)</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">ifl3</span> <span class="o">=</span> <span class="n">ifltype</span><span class="o">.</span><span class="n">Ifltype3</span><span class="p">(</span><span class="n">constituents</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s1">&#39;tpxo&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">ifl4</span> <span class="o">=</span> <span class="n">ifltype</span><span class="o">.</span><span class="n">Ifltype4</span><span class="p">()</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">ifl5</span> <span class="o">=</span> <span class="n">ifltype</span><span class="o">.</span><span class="n">Ifltype5</span><span class="p">(</span><span class="n">ifltype3</span><span class="o">=</span><span class="n">ifl3</span><span class="p">,</span> <span class="n">ifltype4</span><span class="o">=</span><span class="n">ifl4</span><span class="p">)</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">isa3</span> <span class="o">=</span> <span class="n">isatype</span><span class="o">.</span><span class="n">Isatype4</span><span class="p">()</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">ite3</span> <span class="o">=</span> <span class="n">itetype</span><span class="o">.</span><span class="n">Itetype4</span><span class="p">()</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">bctides</span> <span class="o">=</span> <span class="n">Bctides</span><span class="p">(</span><span class="n">hgrid</span><span class="p">,</span> <span class="n">iettype</span><span class="o">=</span><span class="n">iet5</span><span class="p">,</span> <span class="n">ifltype</span><span class="o">=</span><span class="n">ifl5</span><span class="p">,</span> <span class="n">isatype</span><span class="o">=</span><span class="n">isa3</span><span class="p">,</span> <span class="n">itetype</span><span class="o">=</span><span class="n">ite3</span><span class="p">)</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">bctides</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;./&#39;</span><span class="p">,</span> <span class="n">startdate</span><span class="p">,</span> <span class="n">rnday</span><span class="p">,</span> <span class="n">bctides</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">elev2D</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">uv3D</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tem3D</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sal3D</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div></p>
-<h2 id="hycom"><strong>HYCOM</strong><a class="headerlink" href="#hycom" title="Permanent link">&para;</a></h2>
 <p>Generating <em>elev.2D.th.nc</em>, <em>SAL_3D.th.nc</em>, <em>TEM_3D.th.nc</em>, and <em>uv3D.th.nc</em>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span> <span class="nn">pyschism.mesh.hgrid</span> <span class="kn">import</span> <span class="n">Hgrid</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span> <span class="nn">pyschism.forcing.hycom.hycom2schism</span> <span class="kn">import</span> <span class="n">OpenBoundaryInventory</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">start_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">rnday</span> <span class="o">=</span> <span class="mi">10</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">hgrid</span> <span class="o">=</span> <span class="n">Hgrid</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">&#39;./hgrid.gr3&#39;</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;epsg:4326&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">vgrid</span> <span class="o">=</span> <span class="s1">&#39;./vgrid.in&#39;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">outdir</span> <span class="o">=</span> <span class="s1">&#39;./&#39;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">bnd</span> <span class="o">=</span> <span class="n">OpenBoundaryInventory</span><span class="p">(</span><span class="n">hgrid</span><span class="p">,</span> <span class="n">vgrid</span><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">bnd</span><span class="o">.</span><span class="n">fetch_data</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">rnday</span><span class="p">,</span> <span class="n">elev2D</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">TS</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">UV</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+Generating <em>SAL_nu.nc</em> and <em>TEM_nu.nc</em> for nudging:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span> <span class="nn">pyschism.mesh.hgrid</span> <span class="kn">import</span> <span class="n">Hgrid</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span> <span class="nn">pyschism.forcing.hycom.hycom2schism</span> <span class="kn">import</span> <span class="n">OpenBoundaryInventory</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span> <span class="nn">pyschism.mesh</span> <span class="kn">import</span> <span class="n">Hgrid</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span> <span class="nn">pyschism.forcing.hycom.hycom2schism</span> <span class="kn">import</span> <span class="n">Nudge</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">start_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
@@ -1647,24 +1615,9 @@
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">hgrid</span> <span class="o">=</span> <span class="n">Hgrid</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">&#39;./hgrid.gr3&#39;</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;epsg:4326&#39;</span><span class="p">)</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">vgrid</span> <span class="o">=</span> <span class="s1">&#39;./vgrid.in&#39;</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">outdir</span> <span class="o">=</span> <span class="s1">&#39;./&#39;</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">bnd</span> <span class="o">=</span> <span class="n">OpenBoundaryInventory</span><span class="p">(</span><span class="n">hgrid</span><span class="p">,</span> <span class="n">vgrid</span><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">bnd</span><span class="o">.</span><span class="n">fetch_data</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">rnday</span><span class="p">,</span> <span class="n">elev2D</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">TS</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">UV</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-Generating <em>SAL_nu.nc</em> and <em>TEM_nu.nc</em> for nudging:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span> <span class="nn">pyschism.mesh</span> <span class="kn">import</span> <span class="n">Hgrid</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span> <span class="nn">pyschism.forcing.hycom.hycom2schism</span> <span class="kn">import</span> <span class="n">Nudge</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">start_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">rnday</span> <span class="o">=</span> <span class="mi">10</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">hgrid</span> <span class="o">=</span> <span class="n">Hgrid</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">&#39;./hgrid.gr3&#39;</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;epsg:4326&#39;</span><span class="p">)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">vgrid</span> <span class="o">=</span> <span class="s1">&#39;./vgrid.in&#39;</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">outdir</span> <span class="o">=</span> <span class="s1">&#39;./&#39;</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">nudge</span><span class="o">=</span><span class="n">Nudge</span><span class="p">()</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">nudge</span><span class="o">.</span><span class="n">fetch_data</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">hgrid</span><span class="p">,</span> <span class="n">vgrid</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">rnday</span><span class="p">)</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">nudge</span><span class="o">=</span><span class="n">Nudge</span><span class="p">()</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">nudge</span><span class="o">.</span><span class="n">fetch_data</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">hgrid</span><span class="p">,</span> <span class="n">vgrid</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">rnday</span><span class="p">)</span>
 </code></pre></div>
 This script also generates nudging coefficient files <em>SAL_nu.gr3</em> and <em>TEM_nu.gr3</em>.</p>
 
@@ -1682,7 +1635,7 @@ This script also generates nudging coefficient files <em>SAL_nu.gr3</em> and <em
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="installation.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation" rel="prev">
+        <a href="bctides.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Tides" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -1691,7 +1644,7 @@ This script also generates nudging coefficient files <em>SAL_nu.gr3</em> and <em
               <span class="md-footer__direction">
                 Previous
               </span>
-              Installation
+              Tides
             </div>
           </div>
         </a>
