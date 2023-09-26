@@ -56,3 +56,9 @@ target_link_libraries(gen_vqs_1 utillib)
 target_link_libraries(gen_vqs_2 utillib)
 target_link_libraries(gen_vqs_2masters utillib)
 target_link_libraries(gen_nudge_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIES})
+
+# add include directories for linking
+target_include_directories(gen_vqs_1 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
+target_include_directories(gen_vqs_2 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
+target_include_directories(gen_vqs_2masters PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
+target_include_directories(gen_nudge_from_hycom PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
