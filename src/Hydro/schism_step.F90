@@ -1333,7 +1333,7 @@
       
         rat=(time-th_time(1,1,1))/th_dt(1,1)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1)
+          write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1),th_dt(1,1)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1391,7 +1391,7 @@
 
             rat=(time-th_time(m,1,5))/th_dt(m,5)
             if(rat<-small1.or.rat>1.d0+small1) then
-              write(errmsg,*) 'STEP: rat out in htr_.th:',rat,time,th_time(m,1:2,5)
+              write(errmsg,*) 'STEP: rat out in htr_.th:',rat,time,th_time(m,1:2,5),th_dt(m,5)
               call parallel_abort(errmsg)
             endif
             icount=0
@@ -1427,7 +1427,7 @@
 
         rat=(time-th_time2(1,1))/th_dt2(1)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in elev2D.th:',rat,time,th_time2(1:2,1)
+          write(errmsg,*) 'STEP: rat out in elev2D.th:',rat,time,th_time2(1:2,1),th_dt2(1)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1478,7 +1478,7 @@
 
         rat=(time-th_time2(1,2))/th_dt2(2)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in uv3D.th:',rat,time,th_time2(1:2,2)
+          write(errmsg,*) 'STEP: rat out in uv3D.th:',rat,time,th_time2(1:2,2),th_dt2(2)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1534,7 +1534,7 @@
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           rat=(time-th_time2(1,5))/th_dt2(5)
           if(rat<-small1.or.rat>1.d0+small1) then
-            write(errmsg,*) 'STEP: rat out in tr3D.th:',rat,time,th_time2(1:2,5)
+            write(errmsg,*) 'STEP: rat out in tr3D.th:',rat,time,th_time2(1:2,5),th_dt2(5)
             call parallel_abort(errmsg)
           endif
 !          icount=0
