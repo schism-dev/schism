@@ -894,7 +894,6 @@
 #endif
 
 ! bottom of main iteration loop
-!          if (.not. converged .and. iter .lt. max_iter) goto 100
             if (converged.or.iter>= max_iter) exit
           enddo
 
@@ -2424,12 +2423,9 @@
         integer, intent(in), dimension(num_nodes) :: node_i, node_j
         integer, intent(in), dimension(num_elems,3) :: elem_nodes
         real(rkind), intent(in), dimension(nx,ny) :: x_in, y_in
-        real(rkind), intent(in), dimension(num_nodes_out) :: &
-     &    x_out, y_out
-        real(rkind), intent(out), &
-     &    dimension(num_nodes_out,3) :: weight
-        integer, intent(out), dimension(num_nodes_out) :: &
-     &    in_elem_for_out_node
+        real(rkind), intent(in), dimension(num_nodes_out) :: x_out, y_out
+        real(rkind), intent(out), dimension(num_nodes_out,3) :: weight
+        integer, intent(out), dimension(num_nodes_out) :: in_elem_for_out_node
 
         real(rkind) :: area_in(num_elems)
         integer :: i_elem, i_node
@@ -2598,7 +2594,6 @@
             last_elem = i_elem
 
 ! loop again if need to
-!          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
             if(completed_check.or.zero_ae) exit
           enddo !infinite do
 
@@ -2651,6 +2646,7 @@
           y4 = y_out(i_node)
 
 ! now calculate the weighting functions, which may be outside [0,1]
+! (this will be checked when combining)
 ! Signs are consistent btw area_in and each signed area
           weight(i_node,1) = ((x4-x3)*(y2-y3) + (x2-x3)*(y3-y4)) &
      &                     / ( 2.0d0*area_in(i_elem) )
@@ -3551,7 +3547,7 @@
       END SUBROUTINE FAIRALL
 !=======================================================================
 
-      REAL FUNCTION bulk_psiu(ZoL)
+      REAL(rkind) FUNCTION bulk_psiu(ZoL)
 
       use schism_glbl, only : rkind
 

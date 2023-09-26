@@ -29,3 +29,6 @@ The procedure includes three steps:
 
 3. [Meshing in SMS]( meshing-in-SMS.md)
 
+## Publication
+[A parallel Python-based tool for meshing watershed rivers at continental scale](https://www.sciencedirect.com/science/article/abs/pii/S1364815223001172)
+

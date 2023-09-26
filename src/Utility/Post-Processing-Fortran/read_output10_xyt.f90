@@ -350,6 +350,11 @@
               enddo !k
             endif !dry/wet
           endif !i23d
+
+          iret=nf90_close(ncid)
+          iret=nf90_close(ncid4)
+          if(ivs==2) iret=nf90_close(ncid2)
+
         enddo loop1 !l=1,2; 2 times
 
 !       Interpolate in time

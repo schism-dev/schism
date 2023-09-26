@@ -14,11 +14,11 @@
 
 # Coupling with atmospheric model via ESMF
 # USE_ATMOS = yes
-# EXEC := $(EXEC)_EVAP
+# EXEC := $(EXEC)_ATMOS
 
 # Use NWM BMI for source and some b.c.
 # USE_NWM_BMI = yes
-# EXEC := $(EXEC)_EVAP
+# EXEC := $(EXEC)_NWM_BMI
 
 # Precip/evaporation model
 # USE_PREC_EVAP = yes

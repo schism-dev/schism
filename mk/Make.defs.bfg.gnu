@@ -34,8 +34,8 @@
 ################################################################################
 ## Environment for the oss-hpc01 cluster of the BfG
 #################################################################################
-ENV = hpc01
-VER = trunk
+ENV = cln51
+VER = schiqu23
 
 ################################################################################
 # Environment for BfG oss-hpc1 (HPC Xeon Cluster, Xeon E5-2670, Qlogic Infiniband (QDR))
@@ -110,4 +110,39 @@ endif
 
 # Obsolete flags: use USE_WRAP flag to avoid problems in ParMetis lib (calling C from FORTRAN)
 # PPFLAGS := $(PPFLAGS) -DUSE_WRAP 
+
+################################################################################
+compiling notes:
+################################################################################
+# 
+# git clone https://github.com/schism-dev/schism.git
+# git pull origin
+# 
+# Zum Compilieren source-code auf HPC home kopieren:
+# Wyrwa@voss-cln-preprocess:~/SCHISM> p = /home/Wyrwa/SCHISM
+# Wyrwa@voss-cln-preprocess:/srv/cifs-mounts/u2/Projekte/QSim/Entwicklung/JensWyrwa/SCHISM22> cp -rp schism23 /home/Wyrwa/SCHISM
+# 
+# Auf den oss-cln51 wechseln (wegen der benötigten libraries)
+# Wyrwa@voss-cln-preprocess:~/SCHISM/schism23> ssh oss-cln51
+# Warning: Permanently added 'oss-cln51,192.168.54.51' (ECDSA) to the list of known hosts.
+# Wyrwa@oss-cln51's password:
+# Last login: Wed Jul 19 11:36:25 2023 from vclnprepro
+# Wyrwa@oss-cln51:~> cd ~/SCHISM/schism23
+# Wyrwa@oss-cln51:~/SCHISM/schism23>
+# 
+# Wyrwa@voss-cln-preprocess:/srv/cifs-mounts/u2/Projekte/QSim/Entwicklung/JensWyrwa/SCHISM22/schism23> rsync -av . /home/Wyrwa/SCHISM/schism23
+# 
+# Wyrwa@oss-cln51:~/SCHISM/schism23/mk> cp Make.defs.bfg.gnu Make.defs.local
+# 
+# mk/sfmakedepend.pl  + cull_depends.py auf Unix(LF) umgestellt mit notepad ... rsync
+# 
+# mpif90 aus /opt/produktiv/mvapich2-2.3-mlnx/bin/mpif90
+# Wyrwa@oss-cln51:~/SCHISM/schism23/src> module del i4/openmpi/4.1.4
+# 
+# mk/include_modules:
+# USE_OLDIO = yes
+# EXEC := $(EXEC)_OLDIO
+# 
+# Wyrwa@oss-cln51:~/SCHISM/schism23/src> make pschism   ###funzt
+# 
 

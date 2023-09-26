@@ -61,13 +61,14 @@ To find all the changes between tag releases, search for 'Tag'.
 139. `24a2723` (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
 140. `1828489` (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)
 141. `87c7611f` (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre
-- Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
- (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf),
-- Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models),
-- Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output)
-- CAUTION // CAUTION :
-  To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism
-- CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet
+      a) Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+      (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf);
+      b) Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models);
+      c) Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output);
+      d) CAUTION // CAUTION :
+      To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism;
+      e) CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet.
+
 142. `6108700` (Feb 24, 2023): Laura L. fixed a bug in wwm_friction
 143. `46767d2` (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
           'shocks' experienced by WENO stencil to help dispersion issue;

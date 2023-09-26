@@ -220,14 +220,14 @@
         rewind(9)
         do it=1,it_now 
           read(9,*)
-#ifdef USE_ANALYSIS
-          read(9,*)
-          read(9,*)
-          do m=1,ntracers
+          if(iflux==2) then
             read(9,*)
             read(9,*)
-          enddo !m
-#endif
+            do m=1,ntracers
+              read(9,*)
+              read(9,*)
+            enddo !m
+          endif !iflux=2
         enddo !it
       endif !iflux/=0
 
@@ -475,10 +475,10 @@
       enddo !k
 
 !     The following to init th_dt*, th_time* and ath* is only done by
-!     rank 0 and but bcast'ed, b/c in _step we'll continue the reading
-!     by rank0 and only bcast the final
+!     rank 0, not bcast'ed, b/c in _step we'll continue the reading
+!     by rank 0 and only bcast the final
 !     products of eth, trth (since they use global indices) etc, 
-!     and the th_dt[12], th_time[12] and ath[12] are not used further 
+!     and the th_dt[-,12], th_time[-,12] and ath[-,12] are not used further 
       if(myrank==0) then
 !-----------------------------------------------------------------------------
 !...  Init reading t.h. files 

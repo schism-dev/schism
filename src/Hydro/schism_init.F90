@@ -198,7 +198,7 @@
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
      &courant_weno,ntd_weno,nquad,epsilon1,epsilon2,epsilon3,ielad_weno,small_elad, &
      &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2, &
-     &moitn0,mxitn0,rtol0,iflux,iflux_out_format,inter_mom,h_bcc1,inu_elev,inu_uv, &
+     &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
      &iharind,icou_elfe_wwm,drampwafo,nstep_wwm,hmin_radstress,turbinj,turbinjds,alphaw, &
@@ -470,7 +470,7 @@
       courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
-      moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; iflux_out_format=0; inter_mom=0; 
+      moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
       ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
       ibtrack_test=0; irouse_test=0;  
