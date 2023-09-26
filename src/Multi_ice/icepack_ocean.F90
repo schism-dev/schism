@@ -86,7 +86,7 @@
 
       ! shortwave radiative flux
       swabs = (c1-alvdr_ocn) * swvdr + (c1-alidr_ocn) * swidr &
-            + (c1-alvdf_ocn) * swvdf + (c1-alidf_ocn) * swidf 
+            + (c1-alvdf_ocn) * swvdf + (c1-alidf_ocn) * swidf
 
       ! ocean surface temperature in Kelvin
       TsfK = sst + Tffresh

@@ -1,5 +1,5 @@
 !=======================================================================
-! Indices and flags associated with the tracer infrastructure. 
+! Indices and flags associated with the tracer infrastructure.
 ! Grid-dependent and max_trcr-dependent arrays are declared in ice_state.F90.
 !
 ! author Elizabeth C. Hunke, LANL
@@ -7,7 +7,8 @@
       module icepack_tracers
 
       use icepack_kinds
-      use icepack_parameters, only: c0, c1, puny, Tocnfrz
+      use icepack_parameters, only: c0, c1, puny, Tocnfrz, rhos, rhosnew, rsnw_fall
+      use icepack_parameters, only: snwredist, snwgrain
       use icepack_warnings, only: warnstr, icepack_warnings_add
       use icepack_warnings, only: icepack_warnings_setabort, icepack_warnings_aborted
 
@@ -80,28 +81,32 @@
          nt_hpnd      = 0, & ! melt pond depth
          nt_ipnd      = 0, & ! melt pond refrozen lid thickness
          nt_fsd       = 0, & ! floe size distribution
+         nt_smice     = 0, & ! mass of ice in snow
+         nt_smliq     = 0, & ! mass of liquid water in snow
+         nt_rhos      = 0, & ! snow density
+         nt_rsnw      = 0, & ! snow grain radius
          nt_isosno    = 0, & ! starting index for isotopes in snow
          nt_isoice    = 0, & ! starting index for isotopes in ice
          nt_aero      = 0, & ! starting index for aerosols in ice
          nt_bgc_Nit   = 0, & ! nutrients
-         nt_bgc_Am    = 0, & ! 
+         nt_bgc_Am    = 0, & !
          nt_bgc_Sil   = 0, & !
          nt_bgc_DMSPp = 0, & ! trace gases (skeletal layer)
-         nt_bgc_DMSPd = 0, & ! 
-         nt_bgc_DMS   = 0, & ! 
+         nt_bgc_DMSPd = 0, & !
+         nt_bgc_DMS   = 0, & !
          nt_bgc_PON   = 0, & ! zooplankton and detritus
          nt_bgc_hum   = 0, & ! humic material
          nt_zbgc_frac = 0, & ! fraction of tracer in the mobile phase
-         nt_bgc_S     = 0    ! Bulk salinity in fraction ice with dynamic salinity (Bio grid)
+         nt_bgc_S     = 0    ! Bulk salinity in fraction ice with dynamic salinity (Bio grid) (deprecated)
 
       logical (kind=log_kind), public :: &
          tr_iage      = .false., & ! if .true., use age tracer
          tr_FY        = .false., & ! if .true., use first-year area tracer
          tr_lvl       = .false., & ! if .true., use level ice tracer
          tr_pond      = .false., & ! if .true., use melt pond tracer
-         tr_pond_cesm = .false., & ! if .true., use cesm pond tracer
          tr_pond_lvl  = .false., & ! if .true., use level-ice pond tracer
          tr_pond_topo = .false., & ! if .true., use explicit topography-based ponds
+         tr_snow      = .false., & ! if .true., use snow redistribution or metamorphosis tracers
          tr_iso       = .false., & ! if .true., use isotope tracers
          tr_aero      = .false., & ! if .true., use aerosol tracers
          tr_brine     = .false., & ! if .true., brine height differs from ice thickness
@@ -111,7 +116,7 @@
       !  biogeochemistry
       !-----------------------------------------------------------------
 
-      logical (kind=log_kind), public :: & 
+      logical (kind=log_kind), public :: &
          tr_zaero     = .false., & ! if .true., black carbon as tracers  (n_zaero)
          tr_bgc_Nit   = .false., & ! if .true. Nitrate tracer in ice
          tr_bgc_N     = .false., & ! if .true., algal nitrogen tracers  (n_algae)
@@ -132,11 +137,11 @@
 
       integer (kind=int_kind), dimension(max_aero), public :: &
          nlt_zaero_sw = 0    ! points to aerosol in trcrn_sw
-  
+
       integer (kind=int_kind), dimension(max_algae), public :: &
          nlt_bgc_N    = 0, & ! algae
-         nlt_bgc_C    = 0, & ! 
-         nlt_bgc_chl  = 0    ! 
+         nlt_bgc_C    = 0, & !
+         nlt_bgc_chl  = 0    !
 
       integer (kind=int_kind), dimension(max_doc), public :: &
          nlt_bgc_DOC  = 0    ! disolved organic carbon
@@ -156,11 +161,11 @@
 
       integer (kind=int_kind), public :: &
          nlt_bgc_Nit  = 0, & ! nutrients
-         nlt_bgc_Am   = 0, & ! 
+         nlt_bgc_Am   = 0, & !
          nlt_bgc_Sil  = 0, & !
          nlt_bgc_DMSPp= 0, & ! trace gases (skeletal layer)
-         nlt_bgc_DMSPd= 0, & ! 
-         nlt_bgc_DMS  = 0, & ! 
+         nlt_bgc_DMSPd= 0, & !
+         nlt_bgc_DMS  = 0, & !
          nlt_bgc_PON  = 0, & ! zooplankton and detritus
          nlt_bgc_hum  = 0    ! humic material
 
@@ -169,7 +174,7 @@
          nt_bgc_C     = 0, & ! diatoms, phaeocystis, pico/small
          nt_bgc_chl   = 0    ! diatoms, phaeocystis, pico/small
 
-      integer (kind=int_kind), dimension(max_doc), public :: & 
+      integer (kind=int_kind), dimension(max_doc), public :: &
          nt_bgc_DOC   = 0    !  dissolved organic carbon
 
       integer (kind=int_kind), dimension(max_don), public :: &
@@ -184,13 +189,13 @@
 
       integer (kind=int_kind), dimension(max_aero), public :: &
          nt_zaero     = 0    !  black carbon and other aerosols
-      
+
       integer (kind=int_kind), dimension(max_nbtrcr), public :: &
          bio_index_o  = 0    ! relates nlt_bgc_NO to ocean concentration index
                              ! see ocean_bio_all
 
       integer (kind=int_kind), dimension(max_nbtrcr), public :: &
-         bio_index    = 0    ! relates bio indices, ie.  nlt_bgc_N to nt_bgc_N 
+         bio_index    = 0    ! relates bio indices, ie.  nlt_bgc_N to nt_bgc_N
 
 !=======================================================================
 
@@ -201,8 +206,8 @@
 ! set tracer active flags
 
       subroutine icepack_init_tracer_flags(&
-           tr_iage_in, tr_FY_in, tr_lvl_in, &
-           tr_pond_in, tr_pond_cesm_in, tr_pond_lvl_in, tr_pond_topo_in, &
+           tr_iage_in, tr_FY_in, tr_lvl_in, tr_snow_in, &
+           tr_pond_in, tr_pond_lvl_in, tr_pond_topo_in, &
            tr_fsd_in, tr_aero_in, tr_iso_in, tr_brine_in, tr_zaero_in, &
            tr_bgc_Nit_in, tr_bgc_N_in, tr_bgc_DON_in, tr_bgc_C_in, tr_bgc_chl_in, &
            tr_bgc_Am_in, tr_bgc_Sil_in, tr_bgc_DMS_in, tr_bgc_Fe_in, tr_bgc_hum_in, &
@@ -213,25 +218,25 @@
              tr_FY_in        , & ! if .true., use first-year area tracer
              tr_lvl_in       , & ! if .true., use level ice tracer
              tr_pond_in      , & ! if .true., use melt pond tracer
-             tr_pond_cesm_in , & ! if .true., use cesm pond tracer
              tr_pond_lvl_in  , & ! if .true., use level-ice pond tracer
              tr_pond_topo_in , & ! if .true., use explicit topography-based ponds
+             tr_snow_in      , & ! if .true., use snow redistribution or metamorphosis tracers
              tr_fsd_in       , & ! if .true., use floe size distribution tracers
              tr_iso_in       , & ! if .true., use isotope tracers
              tr_aero_in      , & ! if .true., use aerosol tracers
              tr_brine_in     , & ! if .true., brine height differs from ice thickness
              tr_zaero_in     , & ! if .true., black carbon is tracers  (n_zaero)
-             tr_bgc_Nit_in   , & ! if .true., Nitrate tracer in ice 
+             tr_bgc_Nit_in   , & ! if .true., Nitrate tracer in ice
              tr_bgc_N_in     , & ! if .true., algal nitrogen tracers  (n_algae)
              tr_bgc_DON_in   , & ! if .true., DON pools are tracers  (n_don)
-             tr_bgc_C_in     , & ! if .true., algal carbon tracers + DOC and DIC 
-             tr_bgc_chl_in   , & ! if .true., algal chlorophyll tracers 
-             tr_bgc_Am_in    , & ! if .true., ammonia/um as nutrient tracer 
-             tr_bgc_Sil_in   , & ! if .true., silicon as nutrient tracer 
-             tr_bgc_DMS_in   , & ! if .true., DMS as product tracer 
-             tr_bgc_Fe_in    , & ! if .true., Fe as product tracer 
-             tr_bgc_hum_in   , & ! if .true., hum as product tracer 
-             tr_bgc_PON_in       ! if .true., PON as product tracer 
+             tr_bgc_C_in     , & ! if .true., algal carbon tracers + DOC and DIC
+             tr_bgc_chl_in   , & ! if .true., algal chlorophyll tracers
+             tr_bgc_Am_in    , & ! if .true., ammonia/um as nutrient tracer
+             tr_bgc_Sil_in   , & ! if .true., silicon as nutrient tracer
+             tr_bgc_DMS_in   , & ! if .true., DMS as product tracer
+             tr_bgc_Fe_in    , & ! if .true., Fe as product tracer
+             tr_bgc_hum_in   , & ! if .true., hum as product tracer
+             tr_bgc_PON_in       ! if .true., PON as product tracer
 
 !autodocument_end
 
@@ -241,25 +246,25 @@
         if (present(tr_FY_in)  ) tr_FY   = tr_FY_in
         if (present(tr_lvl_in) ) tr_lvl  = tr_lvl_in
         if (present(tr_pond_in)) tr_pond = tr_pond_in
-        if (present(tr_pond_cesm_in)) tr_pond_cesm = tr_pond_cesm_in
         if (present(tr_pond_lvl_in) ) tr_pond_lvl  = tr_pond_lvl_in
         if (present(tr_pond_topo_in)) tr_pond_topo = tr_pond_topo_in
+        if (present(tr_snow_in)   ) tr_snow    = tr_snow_in
         if (present(tr_fsd_in)    ) tr_fsd     = tr_fsd_in
         if (present(tr_iso_in)    ) tr_iso     = tr_iso_in
         if (present(tr_aero_in)   ) tr_aero    = tr_aero_in
         if (present(tr_brine_in)  ) tr_brine   = tr_brine_in
-        if (present(tr_zaero_in)  ) tr_zaero   = tr_zaero_in 
+        if (present(tr_zaero_in)  ) tr_zaero   = tr_zaero_in
         if (present(tr_bgc_Nit_in)) tr_bgc_Nit = tr_bgc_Nit_in
-        if (present(tr_bgc_N_in)  ) tr_bgc_N   = tr_bgc_N_in 
+        if (present(tr_bgc_N_in)  ) tr_bgc_N   = tr_bgc_N_in
         if (present(tr_bgc_DON_in)) tr_bgc_DON = tr_bgc_DON_in
-        if (present(tr_bgc_C_in)  ) tr_bgc_C   = tr_bgc_C_in 
+        if (present(tr_bgc_C_in)  ) tr_bgc_C   = tr_bgc_C_in
         if (present(tr_bgc_chl_in)) tr_bgc_chl = tr_bgc_chl_in
         if (present(tr_bgc_Am_in) ) tr_bgc_Am  = tr_bgc_Am_in
         if (present(tr_bgc_Sil_in)) tr_bgc_Sil = tr_bgc_Sil_in
         if (present(tr_bgc_DMS_in)) tr_bgc_DMS = tr_bgc_DMS_in
-        if (present(tr_bgc_Fe_in )) tr_bgc_Fe  = tr_bgc_Fe_in 
+        if (present(tr_bgc_Fe_in )) tr_bgc_Fe  = tr_bgc_Fe_in
         if (present(tr_bgc_hum_in)) tr_bgc_hum = tr_bgc_hum_in
-        if (present(tr_bgc_PON_in)) tr_bgc_PON = tr_bgc_PON_in 
+        if (present(tr_bgc_PON_in)) tr_bgc_PON = tr_bgc_PON_in
 
       end subroutine icepack_init_tracer_flags
 
@@ -268,8 +273,8 @@
 ! query tracer active flags
 
       subroutine icepack_query_tracer_flags(&
-           tr_iage_out, tr_FY_out, tr_lvl_out, &
-           tr_pond_out, tr_pond_cesm_out, tr_pond_lvl_out, tr_pond_topo_out, &
+           tr_iage_out, tr_FY_out, tr_lvl_out, tr_snow_out, &
+           tr_pond_out, tr_pond_lvl_out, tr_pond_topo_out, &
            tr_fsd_out, tr_aero_out, tr_iso_out, tr_brine_out, tr_zaero_out, &
            tr_bgc_Nit_out, tr_bgc_N_out, tr_bgc_DON_out, tr_bgc_C_out, tr_bgc_chl_out, &
            tr_bgc_Am_out, tr_bgc_Sil_out, tr_bgc_DMS_out, tr_bgc_Fe_out, tr_bgc_hum_out, &
@@ -280,25 +285,25 @@
              tr_FY_out        , & ! if .true., use first-year area tracer
              tr_lvl_out       , & ! if .true., use level ice tracer
              tr_pond_out      , & ! if .true., use melt pond tracer
-             tr_pond_cesm_out , & ! if .true., use cesm pond tracer
              tr_pond_lvl_out  , & ! if .true., use level-ice pond tracer
              tr_pond_topo_out , & ! if .true., use explicit topography-based ponds
+             tr_snow_out      , & ! if .true., use snow redistribution or metamorphosis tracers
              tr_fsd_out       , & ! if .true., use floe size distribution
              tr_iso_out       , & ! if .true., use isotope tracers
              tr_aero_out      , & ! if .true., use aerosol tracers
              tr_brine_out     , & ! if .true., brine height differs from ice thickness
              tr_zaero_out     , & ! if .true., black carbon is tracers  (n_zaero)
-             tr_bgc_Nit_out   , & ! if .true., Nitrate tracer in ice 
+             tr_bgc_Nit_out   , & ! if .true., Nitrate tracer in ice
              tr_bgc_N_out     , & ! if .true., algal nitrogen tracers  (n_algae)
              tr_bgc_DON_out   , & ! if .true., DON pools are tracers  (n_don)
-             tr_bgc_C_out     , & ! if .true., algal carbon tracers + DOC and DIC 
-             tr_bgc_chl_out   , & ! if .true., algal chlorophyll tracers 
-             tr_bgc_Am_out    , & ! if .true., ammonia/um as nutrient tracer 
-             tr_bgc_Sil_out   , & ! if .true., silicon as nutrient tracer 
-             tr_bgc_DMS_out   , & ! if .true., DMS as product tracer 
-             tr_bgc_Fe_out    , & ! if .true., Fe as product tracer 
-             tr_bgc_hum_out   , & ! if .true., hum as product tracer 
-             tr_bgc_PON_out       ! if .true., PON as product tracer 
+             tr_bgc_C_out     , & ! if .true., algal carbon tracers + DOC and DIC
+             tr_bgc_chl_out   , & ! if .true., algal chlorophyll tracers
+             tr_bgc_Am_out    , & ! if .true., ammonia/um as nutrient tracer
+             tr_bgc_Sil_out   , & ! if .true., silicon as nutrient tracer
+             tr_bgc_DMS_out   , & ! if .true., DMS as product tracer
+             tr_bgc_Fe_out    , & ! if .true., Fe as product tracer
+             tr_bgc_hum_out   , & ! if .true., hum as product tracer
+             tr_bgc_PON_out       ! if .true., PON as product tracer
 
 !autodocument_end
 
@@ -308,9 +313,9 @@
         if (present(tr_FY_out)  ) tr_FY_out   = tr_FY
         if (present(tr_lvl_out) ) tr_lvl_out  = tr_lvl
         if (present(tr_pond_out)) tr_pond_out = tr_pond
-        if (present(tr_pond_cesm_out)) tr_pond_cesm_out = tr_pond_cesm
         if (present(tr_pond_lvl_out) ) tr_pond_lvl_out  = tr_pond_lvl
         if (present(tr_pond_topo_out)) tr_pond_topo_out = tr_pond_topo
+        if (present(tr_snow_out)   ) tr_snow_out    = tr_snow
         if (present(tr_fsd_out)    ) tr_fsd_out     = tr_fsd
         if (present(tr_iso_out)    ) tr_iso_out     = tr_iso
         if (present(tr_aero_out)   ) tr_aero_out    = tr_aero
@@ -344,26 +349,26 @@
 
         write(iounit,*) subname//":"
         write(iounit,*) "  tr_iage = ",tr_iage
-        write(iounit,*) "  tr_FY   = ",tr_FY  
-        write(iounit,*) "  tr_lvl  = ",tr_lvl 
+        write(iounit,*) "  tr_FY   = ",tr_FY
+        write(iounit,*) "  tr_lvl  = ",tr_lvl
         write(iounit,*) "  tr_pond = ",tr_pond
-        write(iounit,*) "  tr_pond_cesm = ",tr_pond_cesm
-        write(iounit,*) "  tr_pond_lvl  = ",tr_pond_lvl 
+        write(iounit,*) "  tr_pond_lvl  = ",tr_pond_lvl
         write(iounit,*) "  tr_pond_topo = ",tr_pond_topo
+        write(iounit,*) "  tr_snow    = ",tr_snow
         write(iounit,*) "  tr_fsd     = ",tr_fsd
-        write(iounit,*) "  tr_iso     = ",tr_iso   
+        write(iounit,*) "  tr_iso     = ",tr_iso
         write(iounit,*) "  tr_aero    = ",tr_aero
-        write(iounit,*) "  tr_brine   = ",tr_brine  
-        write(iounit,*) "  tr_zaero   = ",tr_zaero  
+        write(iounit,*) "  tr_brine   = ",tr_brine
+        write(iounit,*) "  tr_zaero   = ",tr_zaero
         write(iounit,*) "  tr_bgc_Nit = ",tr_bgc_Nit
-        write(iounit,*) "  tr_bgc_N   = ",tr_bgc_N  
+        write(iounit,*) "  tr_bgc_N   = ",tr_bgc_N
         write(iounit,*) "  tr_bgc_DON = ",tr_bgc_DON
-        write(iounit,*) "  tr_bgc_C   = ",tr_bgc_C  
+        write(iounit,*) "  tr_bgc_C   = ",tr_bgc_C
         write(iounit,*) "  tr_bgc_chl = ",tr_bgc_chl
-        write(iounit,*) "  tr_bgc_Am  = ",tr_bgc_Am 
+        write(iounit,*) "  tr_bgc_Am  = ",tr_bgc_Am
         write(iounit,*) "  tr_bgc_Sil = ",tr_bgc_Sil
         write(iounit,*) "  tr_bgc_DMS = ",tr_bgc_DMS
-        write(iounit,*) "  tr_bgc_Fe  = ",tr_bgc_Fe 
+        write(iounit,*) "  tr_bgc_Fe  = ",tr_bgc_Fe
         write(iounit,*) "  tr_bgc_hum = ",tr_bgc_hum
         write(iounit,*) "  tr_bgc_PON = ",tr_bgc_PON
 
@@ -375,8 +380,9 @@
 
       subroutine icepack_init_tracer_indices(&
            nt_Tsfc_in, nt_qice_in, nt_qsno_in, nt_sice_in, &
-           nt_fbri_in, nt_iage_in, nt_FY_in, & 
+           nt_fbri_in, nt_iage_in, nt_FY_in, &
            nt_alvl_in, nt_vlvl_in, nt_apnd_in, nt_hpnd_in, nt_ipnd_in, &
+           nt_smice_in, nt_smliq_in, nt_rhos_in, nt_rsnw_in, &
            nt_fsd_in, nt_isosno_in, nt_isoice_in, &
            nt_aero_in, nt_zaero_in, nt_bgc_C_in, &
            nt_bgc_N_in, nt_bgc_chl_in, nt_bgc_DOC_in, nt_bgc_DON_in, &
@@ -397,47 +403,51 @@
              nt_sice_in, & ! volume-weighted ice bulk salinity (CICE grid layers)
              nt_fbri_in, & ! volume fraction of ice with dynamic salt (hinS/vicen*aicen)
              nt_iage_in, & ! volume-weighted ice age
-             nt_FY_in, & ! area-weighted first-year ice area
+             nt_FY_in,   & ! area-weighted first-year ice area
              nt_alvl_in, & ! level ice area fraction
              nt_vlvl_in, & ! level ice volume fraction
              nt_apnd_in, & ! melt pond area fraction
              nt_hpnd_in, & ! melt pond depth
              nt_ipnd_in, & ! melt pond refrozen lid thickness
+             nt_smice_in,& ! mass of ice in snow
+             nt_smliq_in,& ! mass of liquid water in snow
+             nt_rhos_in, & ! snow density
+             nt_rsnw_in, & ! snow grain radius
              nt_fsd_in,  & ! floe size distribution
              nt_isosno_in,  & ! starting index for isotopes in snow
              nt_isoice_in,  & ! starting index for isotopes in ice
              nt_aero_in,    & ! starting index for aerosols in ice
-             nt_bgc_Nit_in, & ! nutrients  
-             nt_bgc_Am_in,  & ! 
+             nt_bgc_Nit_in, & ! nutrients
+             nt_bgc_Am_in,  & !
              nt_bgc_Sil_in, & !
              nt_bgc_DMSPp_in,&! trace gases (skeletal layer)
-             nt_bgc_DMSPd_in,&! 
-             nt_bgc_DMS_in, & ! 
-             nt_bgc_hum_in, & ! 
-             nt_bgc_PON_in, & ! zooplankton and detritus   
-             nlt_bgc_Nit_in,& ! nutrients  
-             nlt_bgc_Am_in, & ! 
+             nt_bgc_DMSPd_in,&!
+             nt_bgc_DMS_in, & !
+             nt_bgc_hum_in, & !
+             nt_bgc_PON_in, & ! zooplankton and detritus
+             nlt_bgc_Nit_in,& ! nutrients
+             nlt_bgc_Am_in, & !
              nlt_bgc_Sil_in,& !
              nlt_bgc_DMSPp_in,&! trace gases (skeletal layer)
-             nlt_bgc_DMSPd_in,&! 
-             nlt_bgc_DMS_in,& ! 
-             nlt_bgc_hum_in,& ! 
-             nlt_bgc_PON_in,& ! zooplankton and detritus  
+             nlt_bgc_DMSPd_in,&!
+             nlt_bgc_DMS_in,& !
+             nlt_bgc_hum_in,& !
+             nlt_bgc_PON_in,& ! zooplankton and detritus
              nt_zbgc_frac_in,&! fraction of tracer in the mobile phase
-             nt_bgc_S_in,   & ! Bulk salinity in fraction ice with dynamic salinity (Bio grid))
+             nt_bgc_S_in,   & ! (deprecated, was related to zsalinity)
              nlt_chl_sw_in    ! points to total chla in trcrn_sw
 
         integer (kind=int_kind), dimension(:), intent(in), optional :: &
-             bio_index_o_in, & 
-             bio_index_in  
+             bio_index_o_in, &
+             bio_index_in
 
         integer (kind=int_kind), dimension(:), intent(in), optional :: &
-             nt_bgc_N_in ,  & ! diatoms, phaeocystis, pico/small   
-             nt_bgc_C_in ,  & ! diatoms, phaeocystis, pico/small   
-             nt_bgc_chl_in, & ! diatoms, phaeocystis, pico/small 
-             nlt_bgc_N_in , & ! diatoms, phaeocystis, pico/small   
-             nlt_bgc_C_in , & ! diatoms, phaeocystis, pico/small   
-             nlt_bgc_chl_in   ! diatoms, phaeocystis, pico/small 
+             nt_bgc_N_in ,  & ! diatoms, phaeocystis, pico/small
+             nt_bgc_C_in ,  & ! diatoms, phaeocystis, pico/small
+             nt_bgc_chl_in, & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_N_in , & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_C_in , & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_chl_in   ! diatoms, phaeocystis, pico/small
 
         integer (kind=int_kind), dimension(:), intent(in), optional :: &
              nt_bgc_DOC_in, & !  dissolved organic carbon
@@ -465,7 +475,7 @@
 !autodocument_end
 
         ! local
-        integer (kind=int_kind) :: k, nsiz
+        integer (kind=int_kind) :: nsiz
         character(len=*),parameter :: subname='(icepack_init_tracer_indices)'
 
         if (present(nt_Tsfc_in)) nt_Tsfc = nt_Tsfc_in
@@ -481,6 +491,10 @@
         if (present(nt_hpnd_in)) nt_hpnd = nt_hpnd_in
         if (present(nt_ipnd_in)) nt_ipnd = nt_ipnd_in
         if (present(nt_fsd_in) ) nt_fsd  = nt_fsd_in
+        if (present(nt_smice_in)     ) nt_smice      = nt_smice_in
+        if (present(nt_smliq_in)     ) nt_smliq      = nt_smliq_in
+        if (present(nt_rhos_in)      ) nt_rhos       = nt_rhos_in
+        if (present(nt_rsnw_in)      ) nt_rsnw       = nt_rsnw_in
         if (present(nt_isosno_in)    ) nt_isosno     = nt_isosno_in
         if (present(nt_isoice_in)    ) nt_isoice     = nt_isoice_in
         if (present(nt_aero_in)      ) nt_aero       = nt_aero_in
@@ -728,8 +742,9 @@
 
       subroutine icepack_query_tracer_indices(&
            nt_Tsfc_out, nt_qice_out, nt_qsno_out, nt_sice_out, &
-           nt_fbri_out, nt_iage_out, nt_FY_out, & 
+           nt_fbri_out, nt_iage_out, nt_FY_out, &
            nt_alvl_out, nt_vlvl_out, nt_apnd_out, nt_hpnd_out, nt_ipnd_out, &
+           nt_smice_out, nt_smliq_out, nt_rhos_out, nt_rsnw_out, &
            nt_fsd_out, nt_isosno_out, nt_isoice_out, &
            nt_aero_out, nt_zaero_out, nt_bgc_C_out, &
            nt_bgc_N_out, nt_bgc_chl_out, nt_bgc_DOC_out, nt_bgc_DON_out, &
@@ -756,41 +771,45 @@
              nt_apnd_out, & ! melt pond area fraction
              nt_hpnd_out, & ! melt pond depth
              nt_ipnd_out, & ! melt pond refrozen lid thickness
+             nt_smice_out,& ! mass of ice in snow
+             nt_smliq_out,& ! mass of liquid water in snow
+             nt_rhos_out, & ! snow density
+             nt_rsnw_out, & ! snow grain radius
              nt_fsd_out,  & ! floe size distribution
              nt_isosno_out,  & ! starting index for isotopes in snow
              nt_isoice_out,  & ! starting index for isotopes in ice
              nt_aero_out,    & ! starting index for aerosols in ice
-             nt_bgc_Nit_out, & ! nutrients  
-             nt_bgc_Am_out,  & ! 
+             nt_bgc_Nit_out, & ! nutrients
+             nt_bgc_Am_out,  & !
              nt_bgc_Sil_out, & !
              nt_bgc_DMSPp_out,&! trace gases (skeletal layer)
-             nt_bgc_DMSPd_out,&! 
-             nt_bgc_DMS_out, & ! 
-             nt_bgc_hum_out, & ! 
-             nt_bgc_PON_out, & ! zooplankton and detritus   
-             nlt_bgc_Nit_out,& ! nutrients  
-             nlt_bgc_Am_out, & ! 
+             nt_bgc_DMSPd_out,&!
+             nt_bgc_DMS_out, & !
+             nt_bgc_hum_out, & !
+             nt_bgc_PON_out, & ! zooplankton and detritus
+             nlt_bgc_Nit_out,& ! nutrients
+             nlt_bgc_Am_out, & !
              nlt_bgc_Sil_out,& !
              nlt_bgc_DMSPp_out,&! trace gases (skeletal layer)
-             nlt_bgc_DMSPd_out,&! 
-             nlt_bgc_DMS_out,& ! 
-             nlt_bgc_hum_out,& ! 
-             nlt_bgc_PON_out,& ! zooplankton and detritus  
+             nlt_bgc_DMSPd_out,&!
+             nlt_bgc_DMS_out,& !
+             nlt_bgc_hum_out,& !
+             nlt_bgc_PON_out,& ! zooplankton and detritus
              nt_zbgc_frac_out,&! fraction of tracer in the mobile phase
-             nt_bgc_S_out,   & ! Bulk salinity in fraction ice with dynamic salinity (Bio grid))
+             nt_bgc_S_out,   & ! (deprecated, was related to zsalinity)
              nlt_chl_sw_out    ! points to total chla in trcrn_sw
 
         integer (kind=int_kind), dimension(:), intent(out), optional :: &
-             bio_index_o_out, & 
-             bio_index_out  
+             bio_index_o_out, &
+             bio_index_out
 
         integer (kind=int_kind), dimension(:), intent(out), optional :: &
-             nt_bgc_N_out ,  & ! diatoms, phaeocystis, pico/small   
-             nt_bgc_C_out ,  & ! diatoms, phaeocystis, pico/small   
-             nt_bgc_chl_out, & ! diatoms, phaeocystis, pico/small 
-             nlt_bgc_N_out , & ! diatoms, phaeocystis, pico/small   
-             nlt_bgc_C_out , & ! diatoms, phaeocystis, pico/small   
-             nlt_bgc_chl_out   ! diatoms, phaeocystis, pico/small 
+             nt_bgc_N_out ,  & ! diatoms, phaeocystis, pico/small
+             nt_bgc_C_out ,  & ! diatoms, phaeocystis, pico/small
+             nt_bgc_chl_out, & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_N_out , & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_C_out , & ! diatoms, phaeocystis, pico/small
+             nlt_bgc_chl_out   ! diatoms, phaeocystis, pico/small
 
         integer (kind=int_kind), dimension(:), intent(out), optional :: &
              nt_bgc_DOC_out, & !  dissolved organic carbon
@@ -832,6 +851,10 @@
         if (present(nt_hpnd_out)) nt_hpnd_out = nt_hpnd
         if (present(nt_ipnd_out)) nt_ipnd_out = nt_ipnd
         if (present(nt_fsd_out) ) nt_fsd_out  = nt_fsd
+        if (present(nt_smice_out)     ) nt_smice_out      = nt_smice
+        if (present(nt_smliq_out)     ) nt_smliq_out      = nt_smliq
+        if (present(nt_rhos_out)      ) nt_rhos_out       = nt_rhos
+        if (present(nt_rsnw_out)      ) nt_rsnw_out       = nt_rsnw
         if (present(nt_isosno_out)    ) nt_isosno_out     = nt_isosno
         if (present(nt_isoice_out)    ) nt_isoice_out     = nt_isoice
         if (present(nt_aero_out)      ) nt_aero_out       = nt_aero
@@ -857,25 +880,25 @@
 
         if (present(bio_index_o_out) ) bio_index_o_out  = bio_index_o
         if (present(bio_index_out)   ) bio_index_out    = bio_index
-        if (present(nt_bgc_N_out)    ) nt_bgc_N_out     = nt_bgc_N 
-        if (present(nlt_bgc_N_out)   ) nlt_bgc_N_out    = nlt_bgc_N 
-        if (present(nt_bgc_C_out)    ) nt_bgc_C_out     = nt_bgc_C 
-        if (present(nlt_bgc_C_out)   ) nlt_bgc_C_out    = nlt_bgc_C 
-        if (present(nt_bgc_chl_out)  ) nt_bgc_chl_out   = nt_bgc_chl 
-        if (present(nlt_bgc_chl_out) ) nlt_bgc_chl_out  = nlt_bgc_chl 
-        if (present(nt_bgc_DOC_out)  ) nt_bgc_DOC_out   = nt_bgc_DOC 
-        if (present(nlt_bgc_DOC_out) ) nlt_bgc_DOC_out  = nlt_bgc_DOC 
-        if (present(nt_bgc_DON_out)  ) nt_bgc_DON_out   = nt_bgc_DON 
-        if (present(nlt_bgc_DON_out) ) nlt_bgc_DON_out  = nlt_bgc_DON 
-        if (present(nt_bgc_DIC_out)  ) nt_bgc_DIC_out   = nt_bgc_DIC 
-        if (present(nlt_bgc_DIC_out) ) nlt_bgc_DIC_out  = nlt_bgc_DIC 
-        if (present(nt_bgc_Fed_out)  ) nt_bgc_Fed_out   = nt_bgc_Fed 
-        if (present(nlt_bgc_Fed_out) ) nlt_bgc_Fed_out  = nlt_bgc_Fed 
-        if (present(nt_bgc_Fep_out)  ) nt_bgc_Fep_out   = nt_bgc_Fep 
-        if (present(nlt_bgc_Fep_out) ) nlt_bgc_Fep_out  = nlt_bgc_Fep 
-        if (present(nt_zaero_out)    ) nt_zaero_out     = nt_zaero   
-        if (present(nlt_zaero_out)   ) nlt_zaero_out    = nlt_zaero   
-        if (present(nlt_zaero_sw_out)) nlt_zaero_sw_out = nlt_zaero_sw   
+        if (present(nt_bgc_N_out)    ) nt_bgc_N_out     = nt_bgc_N
+        if (present(nlt_bgc_N_out)   ) nlt_bgc_N_out    = nlt_bgc_N
+        if (present(nt_bgc_C_out)    ) nt_bgc_C_out     = nt_bgc_C
+        if (present(nlt_bgc_C_out)   ) nlt_bgc_C_out    = nlt_bgc_C
+        if (present(nt_bgc_chl_out)  ) nt_bgc_chl_out   = nt_bgc_chl
+        if (present(nlt_bgc_chl_out) ) nlt_bgc_chl_out  = nlt_bgc_chl
+        if (present(nt_bgc_DOC_out)  ) nt_bgc_DOC_out   = nt_bgc_DOC
+        if (present(nlt_bgc_DOC_out) ) nlt_bgc_DOC_out  = nlt_bgc_DOC
+        if (present(nt_bgc_DON_out)  ) nt_bgc_DON_out   = nt_bgc_DON
+        if (present(nlt_bgc_DON_out) ) nlt_bgc_DON_out  = nlt_bgc_DON
+        if (present(nt_bgc_DIC_out)  ) nt_bgc_DIC_out   = nt_bgc_DIC
+        if (present(nlt_bgc_DIC_out) ) nlt_bgc_DIC_out  = nlt_bgc_DIC
+        if (present(nt_bgc_Fed_out)  ) nt_bgc_Fed_out   = nt_bgc_Fed
+        if (present(nlt_bgc_Fed_out) ) nlt_bgc_Fed_out  = nlt_bgc_Fed
+        if (present(nt_bgc_Fep_out)  ) nt_bgc_Fep_out   = nt_bgc_Fep
+        if (present(nlt_bgc_Fep_out) ) nlt_bgc_Fep_out  = nlt_bgc_Fep
+        if (present(nt_zaero_out)    ) nt_zaero_out     = nt_zaero
+        if (present(nlt_zaero_out)   ) nlt_zaero_out    = nlt_zaero
+        if (present(nlt_zaero_sw_out)) nlt_zaero_sw_out = nlt_zaero_sw
 
       end subroutine icepack_query_tracer_indices
 
@@ -885,7 +908,7 @@
 
       subroutine icepack_write_tracer_indices(iounit)
 
-        integer, intent(in), optional :: iounit 
+        integer, intent(in) :: iounit
 
 !autodocument_end
 
@@ -900,40 +923,44 @@
         write(iounit,*) "  nt_sice = ",nt_sice
         write(iounit,*) "  nt_fbri = ",nt_fbri
         write(iounit,*) "  nt_iage = ",nt_iage
-        write(iounit,*) "  nt_FY   = ",nt_FY  
+        write(iounit,*) "  nt_FY   = ",nt_FY
         write(iounit,*) "  nt_alvl = ",nt_alvl
         write(iounit,*) "  nt_vlvl = ",nt_vlvl
         write(iounit,*) "  nt_apnd = ",nt_apnd
         write(iounit,*) "  nt_hpnd = ",nt_hpnd
         write(iounit,*) "  nt_ipnd = ",nt_ipnd
         write(iounit,*) "  nt_fsd  = ",nt_fsd
+        write(iounit,*) "  nt_smice      = ",nt_smice
+        write(iounit,*) "  nt_smliq      = ",nt_smliq
+        write(iounit,*) "  nt_rhos       = ",nt_rhos
+        write(iounit,*) "  nt_rsnw       = ",nt_rsnw
         write(iounit,*) "  nt_isosno     = ",nt_isosno
         write(iounit,*) "  nt_isoice     = ",nt_isoice
         write(iounit,*) "  nt_aero       = ",nt_aero
-        write(iounit,*) "  nt_bgc_Nit    = ",nt_bgc_Nit   
-        write(iounit,*) "  nt_bgc_Am     = ",nt_bgc_Am    
-        write(iounit,*) "  nt_bgc_Sil    = ",nt_bgc_Sil   
-        write(iounit,*) "  nt_bgc_DMSPp  = ",nt_bgc_DMSPp 
-        write(iounit,*) "  nt_bgc_DMSPd  = ",nt_bgc_DMSPd 
-        write(iounit,*) "  nt_bgc_DMS    = ",nt_bgc_DMS   
-        write(iounit,*) "  nt_bgc_hum    = ",nt_bgc_hum   
-        write(iounit,*) "  nt_bgc_PON    = ",nt_bgc_PON   
-        write(iounit,*) "  nlt_bgc_Nit   = ",nlt_bgc_Nit  
-        write(iounit,*) "  nlt_bgc_Am    = ",nlt_bgc_Am   
-        write(iounit,*) "  nlt_bgc_Sil   = ",nlt_bgc_Sil  
+        write(iounit,*) "  nt_bgc_Nit    = ",nt_bgc_Nit
+        write(iounit,*) "  nt_bgc_Am     = ",nt_bgc_Am
+        write(iounit,*) "  nt_bgc_Sil    = ",nt_bgc_Sil
+        write(iounit,*) "  nt_bgc_DMSPp  = ",nt_bgc_DMSPp
+        write(iounit,*) "  nt_bgc_DMSPd  = ",nt_bgc_DMSPd
+        write(iounit,*) "  nt_bgc_DMS    = ",nt_bgc_DMS
+        write(iounit,*) "  nt_bgc_hum    = ",nt_bgc_hum
+        write(iounit,*) "  nt_bgc_PON    = ",nt_bgc_PON
+        write(iounit,*) "  nlt_bgc_Nit   = ",nlt_bgc_Nit
+        write(iounit,*) "  nlt_bgc_Am    = ",nlt_bgc_Am
+        write(iounit,*) "  nlt_bgc_Sil   = ",nlt_bgc_Sil
         write(iounit,*) "  nlt_bgc_DMSPp = ",nlt_bgc_DMSPp
         write(iounit,*) "  nlt_bgc_DMSPd = ",nlt_bgc_DMSPd
-        write(iounit,*) "  nlt_bgc_DMS   = ",nlt_bgc_DMS  
-        write(iounit,*) "  nlt_bgc_hum   = ",nlt_bgc_hum  
-        write(iounit,*) "  nlt_bgc_PON   = ",nlt_bgc_PON  
-        write(iounit,*) "  nlt_chl_sw    = ",nlt_chl_sw   
-        write(iounit,*) "  nt_zbgc_frac  = ",nt_zbgc_frac 
-        write(iounit,*) "  nt_bgc_S      = ",nt_bgc_S     
+        write(iounit,*) "  nlt_bgc_DMS   = ",nlt_bgc_DMS
+        write(iounit,*) "  nlt_bgc_hum   = ",nlt_bgc_hum
+        write(iounit,*) "  nlt_bgc_PON   = ",nlt_bgc_PON
+        write(iounit,*) "  nlt_chl_sw    = ",nlt_chl_sw
+        write(iounit,*) "  nt_zbgc_frac  = ",nt_zbgc_frac
+        write(iounit,*) "  nt_bgc_S      = ",nt_bgc_S," (deprecated)"
 
         write(iounit,*) "  max_nbtrcr = ",max_nbtrcr
         do k = 1, max_nbtrcr
            write(iounit,*) "  bio_index_o(k) = ",k,bio_index_o(k)
-           write(iounit,*) "  bio_index(k)   = ",k,bio_index(k)  
+           write(iounit,*) "  bio_index(k)   = ",k,bio_index(k)
         enddo
 
         write(iounit,*) "  max_algae = ",max_algae
@@ -942,40 +969,40 @@
            write(iounit,*) "  nlt_bgc_N(k) = ",k,nlt_bgc_N(k)
            write(iounit,*) "  nt_bgc_C(k)  = ",k,nt_bgc_C(k)
            write(iounit,*) "  nlt_bgc_C(k) = ",k,nlt_bgc_C(k)
-           write(iounit,*) "  nt_bgc_chl(k)  = ",k,nt_bgc_chl(k) 
+           write(iounit,*) "  nt_bgc_chl(k)  = ",k,nt_bgc_chl(k)
            write(iounit,*) "  nlt_bgc_chl(k) = ",k,nlt_bgc_chl(k)
         enddo
 
         write(iounit,*) "  max_DOC = ",max_DOC
         do k = 1, max_DOC
-           write(iounit,*) "  nt_bgc_DOC(k)  = ",k,nt_bgc_DOC(k) 
+           write(iounit,*) "  nt_bgc_DOC(k)  = ",k,nt_bgc_DOC(k)
            write(iounit,*) "  nlt_bgc_DOC(k) = ",k,nlt_bgc_DOC(k)
         enddo
 
         write(iounit,*) "  max_DON = ",max_DON
         do k = 1, max_DON
-           write(iounit,*) "  nt_bgc_DON(k)  = ",k,nt_bgc_DON(k) 
+           write(iounit,*) "  nt_bgc_DON(k)  = ",k,nt_bgc_DON(k)
            write(iounit,*) "  nlt_bgc_DON(k) = ",k,nlt_bgc_DON(k)
         enddo
 
         write(iounit,*) "  max_DIC = ",max_DIC
         do k = 1, max_DIC
-           write(iounit,*) "  nt_bgc_DIC(k)  = ",k,nt_bgc_DIC(k) 
+           write(iounit,*) "  nt_bgc_DIC(k)  = ",k,nt_bgc_DIC(k)
            write(iounit,*) "  nlt_bgc_DIC(k) = ",k,nlt_bgc_DIC(k)
         enddo
 
         write(iounit,*) "  max_fe = ",max_fe
         do k = 1, max_fe
-           write(iounit,*) "  nt_bgc_Fed(k)  = ",k,nt_bgc_Fed(k) 
+           write(iounit,*) "  nt_bgc_Fed(k)  = ",k,nt_bgc_Fed(k)
            write(iounit,*) "  nlt_bgc_Fed(k) = ",k,nlt_bgc_Fed(k)
-           write(iounit,*) "  nt_bgc_Fep(k)  = ",k,nt_bgc_Fep(k) 
+           write(iounit,*) "  nt_bgc_Fep(k)  = ",k,nt_bgc_Fep(k)
            write(iounit,*) "  nlt_bgc_Fep(k) = ",k,nlt_bgc_Fep(k)
         enddo
 
         write(iounit,*) "  max_aero = ",max_aero
         do k = 1, max_aero
-           write(iounit,*) "  nt_zaero(k)     = ",k,nt_zaero(k)    
-           write(iounit,*) "  nlt_zaero(k)    = ",k,nlt_zaero(k)   
+           write(iounit,*) "  nt_zaero(k)     = ",k,nt_zaero(k)
+           write(iounit,*) "  nlt_zaero(k)    = ",k,nlt_zaero(k)
            write(iounit,*) "  nlt_zaero_sw(k) = ",k,nlt_zaero_sw(k)
         enddo
 
@@ -1002,7 +1029,7 @@
          n_DON_in  , & !
          n_DIC_in  , & !
          n_fed_in  , & !
-         n_fep_in  , & ! 
+         n_fep_in  , & !
          n_zaero_in, & !
          n_iso_in  , & !
          n_aero_in , & !
@@ -1073,7 +1100,7 @@
          n_DON_out  , & !
          n_DIC_out  , & !
          n_fed_out  , & !
-         n_fep_out  , & ! 
+         n_fep_out  , & !
          n_zaero_out, & !
          n_iso_out  , & !
          n_aero_out , & !
@@ -1172,10 +1199,10 @@
 ! Given atrcrn = aicen*trcrn (or vicen*trcrn, vsnon*trcrn), compute trcrn.
 
       subroutine icepack_compute_tracers (ntrcr,     trcr_depend,    &
-                                         atrcrn,    aicen,          &
-                                         vicen,     vsnon,          &
-                                         trcr_base, n_trcr_strata,  &
-                                         nt_strata, trcrn)
+                                          atrcrn,    aicen,          &
+                                          vicen,     vsnon,          &
+                                          trcr_base, n_trcr_strata,  &
+                                          nt_strata, trcrn)
 
       integer (kind=int_kind), intent(in) :: &
          ntrcr                 ! number of tracers in use
@@ -1230,7 +1257,7 @@
          divisor(3) = trcr_base(it,3)*vsnon
 
          if (trcr_depend(it) == 0) then ! ice area tracers
-            if (aicen > puny) then  
+            if (aicen > puny) then
                trcrn(it) = atrcrn(it) / aicen
             else
                trcrn(it) = c0
@@ -1256,13 +1283,23 @@
                   endif
                enddo
             endif
-            if (vicen <= c0 .and. it == nt_fbri) trcrn(it) = c1
 
          endif ! trcr_depend=0
 
       enddo
 
-    end subroutine icepack_compute_tracers
+      if (vicen <= c0 .and. tr_brine) trcrn(nt_fbri) = c1
+      if (vsnon <= c0) then
+         if (snwredist(1:3) == 'ITD') then
+            trcrn(nt_rhos :nt_rhos +nslyr-1) = rhosnew
+         endif
+         if (snwgrain) then
+            trcrn(nt_rsnw :nt_rsnw +nslyr-1) = rsnw_fall
+            trcrn(nt_smice:nt_smice+nslyr-1) = rhos
+         endif
+      endif ! vsnon <= 0
+
+      end subroutine icepack_compute_tracers
 
 !=======================================================================
 

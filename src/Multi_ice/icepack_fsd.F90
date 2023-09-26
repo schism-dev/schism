@@ -33,13 +33,13 @@
 !
 !  authors: Lettie Roach, VUW/NIWA
 !           C. M. Bitz, UW
-!  
+!
 !  2016: CMB started
 !  2016-8: LR worked on most of it
 !  2019: ECH ported to Icepack
 
 !-----------------------------------------------------------------
- 
+
       module icepack_fsd
 
       use icepack_kinds
@@ -114,26 +114,15 @@
 
       real (kind=dbl_kind) :: test
 
-      real (kind=dbl_kind), dimension (nfsd+1) :: &
-         area_lims, area_lims_scaled
-
       real (kind=dbl_kind), dimension (0:nfsd) :: &
          floe_rad
-                                              
+
       real (kind=dbl_kind), dimension(:), allocatable :: &
          lims
-
-      logical (kind=log_kind) :: &
-         l_write_diags  ! local write diags
 
       character(len=8) :: c_fsd1,c_fsd2
       character(len=2) :: c_nf
       character(len=*), parameter :: subname='(icepack_init_fsd_bounds)'
-
-      l_write_diags = .true.
-      if (present(write_diags)) then
-         l_write_diags = write_diags
-      endif
 
       if (nfsd.eq.24) then
 
@@ -146,7 +135,7 @@
                    3.35434988e+03,   4.55051413e+03,   6.17323164e+03,   8.37461170e+03, &
                    1.13610059e+04,   1.54123510e+04,   2.09084095e+04,   2.83643675e+04, &
                    3.84791270e+04 /)
-        
+
       elseif (nfsd.eq.16) then
 
          allocate(lims(16+1))
@@ -156,7 +145,7 @@
                    3.08037274e+02,   4.31203059e+02,   5.81277225e+02,   7.55141047e+02, &
                    9.45812834e+02,   1.34354446e+03,   1.82265364e+03,   2.47261361e+03, &
                    3.35434988e+03 /)
-        
+
       else if (nfsd.eq.12) then
 
          allocate(lims(12+1))
@@ -165,7 +154,7 @@
                    5.24122136e+01,   8.78691405e+01,   1.39518470e+02,   2.11635752e+02, &
                    3.08037274e+02,   4.31203059e+02,   5.81277225e+02,   7.55141047e+02, &
                    9.45812834e+02 /)
- 
+
       else if (nfsd.eq.1) then ! default case
 
          allocate(lims(1+1))
@@ -176,7 +165,7 @@
 
          call icepack_warnings_add(subname//&
             ' floe size categories not defined for nfsd')
-         call icepack_warnings_setabort(.true.,__FILE__,__LINE__) 
+         call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
          return
 
       end if
@@ -191,7 +180,7 @@
          stat=ierr)
       if (ierr/=0) then
          call icepack_warnings_add(subname//' Out of Memory fsd')
-         call icepack_warnings_setabort(.true.,__FILE__,__LINE__) 
+         call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
          return
       endif
 
@@ -206,7 +195,7 @@
       floe_binwidth = floe_rad_h - floe_rad_l
 
       floe_area_binwidth = floe_area_h - floe_area_l
-      
+
       ! floe size categories that can combine during welding
       iweld(:,:) = -999
       do n = 1, nfsd
@@ -227,13 +216,14 @@
       do n = 1, nfsd
          floe_rad(n) = floe_rad_h(n)
          ! Save character string to write to history file
-         write (c_nf, '(i2)') n    
-         write (c_fsd1, '(f6.3)') floe_rad(n-1)
-         write (c_fsd2, '(f6.3)') floe_rad(n)
+         write (c_nf, '(i2)') n
+         write (c_fsd1, '(f7.3)') floe_rad(n-1)
+         write (c_fsd2, '(f7.3)') floe_rad(n)
          c_fsd_range(n)=c_fsd1//'m < fsd Cat '//c_nf//' < '//c_fsd2//'m'
       enddo
 
-      if (l_write_diags) then
+      if (present(write_diags)) then
+      if (write_diags) then
          write(warnstr,*) ' '
          call icepack_warnings_add(warnstr)
          write(warnstr,*) subname
@@ -247,6 +237,7 @@
          write(warnstr,*) ' '
          call icepack_warnings_add(warnstr)
       endif
+      endif
 
       end subroutine icepack_init_fsd_bounds
 
@@ -255,16 +246,16 @@
 !  This allows the FSD to emerge, as described in Roach, Horvat et al. (2018)
 !
 !  Otherwise initalize with a power law, following Perovich
-!  & Jones (2014). The basin-wide applicability of such a 
+!  & Jones (2014). The basin-wide applicability of such a
 !  prescribed power law has not yet been tested.
 !
-!  Perovich, D. K., & Jones, K. F. (2014). The seasonal evolution of 
+!  Perovich, D. K., & Jones, K. F. (2014). The seasonal evolution of
 !  sea ice floe size distribution. Journal of Geophysical Research: Oceans,
 !  119(12), 8767–8777. doi:10.1002/2014JC010136
 !
 !autodocument_start icepack_init_fsd
 !
-!  Initialize the FSD 
+!  Initialize the FSD
 !
 !  authors: Lettie Roach, NIWA/VUW
 
@@ -302,11 +293,11 @@
          afsd(:) = c0
 
       else            ! Perovich (2014)
- 
+
          ! fraction of ice in each floe size and thickness category
          ! same for ALL cells (even where no ice) initially
          alpha = 2.1_dbl_kind
-         totfrac = c0                                   ! total fraction of floes 
+         totfrac = c0                                   ! total fraction of floes
          do k = 1, nfsd
             num_fsd(k) = (2*floe_rad_c(k))**(-alpha-c1) ! number distribution of floes
             afsd   (k) = num_fsd(k)*floe_area_c(k)*floe_binwidth(k) ! fraction distribution of floes
@@ -393,7 +384,7 @@
       end subroutine icepack_cleanup_fsdn
 
 !=======================================================================
-! 
+!
 !  Given the joint ice thickness and floe size distribution, calculate
 !  the lead region and the total lateral surface area following Horvat
 !  and Tziperman (2015).
@@ -586,7 +577,7 @@
                             + c2*aicen(n)*afsdn(k,n)*G_radial*dt/floe_rad_c(k)
             end do
          end do ! n
-         
+
          ! cannot expand ice laterally beyond lead region
          if (SUM(d_an_latg(:)).ge.lead_area) then
              d_an_latg(:) = d_an_latg(:)/SUM(d_an_latg(:))
@@ -613,8 +604,8 @@
 !  Shen et al. (2001). Otherwise, new floes all grow in the smallest
 !  floe size category, representing pancake ice formation.
 !
-!  Shen, H., Ackley, S., & Hopkins, M. (2001). A conceptual model 
-!  for pancake-ice formation in a wave field. 
+!  Shen, H., Ackley, S., & Hopkins, M. (2001). A conceptual model
+!  for pancake-ice formation in a wave field.
 !  Annals of Glaciology, 33, 361-367. doi:10.3189/172756401781818239
 !
 !  authors: Lettie Roach, NIWA/VUW
@@ -706,10 +697,13 @@
          nsubt = 0
 
          DO WHILE (elapsed_t.lt.dt)
-        
+
              nsubt = nsubt + 1
-             if (nsubt.gt.100) print *, 'latg not converging'
- 
+             if (nsubt.gt.100) then
+                write(warnstr,*) subname,'latg not converging'
+                call icepack_warnings_add(warnstr)
+             endif
+
              ! finite differences
              df_flx(:) = c0 ! NB could stay zero if all in largest FS cat
              f_flx (:) = c0
@@ -720,8 +714,6 @@
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
 
-!         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
-
              dafsd_tmp(:) = c0
              do k = 1, nfsd
                 dafsd_tmp(k) = (-df_flx(k) + c2 * G_radial * afsdn_latg(k,n) &
@@ -730,9 +722,9 @@
              end do
 
             ! timestep required for this
-            subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:)) 
+            subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:))
             subdt = MIN(subdt, dt)
- 
+
             ! update fsd and elapsed time
             afsdn_latg(:,n) = afsdn_latg(:,n) + subdt*dafsd_tmp(:)
             elapsed_t = elapsed_t + subdt
@@ -818,7 +810,7 @@
 
 !=======================================================================
 !
-!  Given a wave spectrum, calculate size of new floes based on 
+!  Given a wave spectrum, calculate size of new floes based on
 !  tensile failure, following Shen et al. (2001)
 !
 !  The tensile mode parameter is based on in-situ measurements
@@ -877,9 +869,9 @@
 !=======================================================================
 !
 !  Floes are perimitted to weld together in freezing conditions, according
-!  to their geometric probability of overlap if placed randomly on the 
-!  domain. The rate per unit area c_weld is the total number 
-!  of floes that weld with another, per square meter, per unit time, in the 
+!  to their geometric probability of overlap if placed randomly on the
+!  domain. The rate per unit area c_weld is the total number
+!  of floes that weld with another, per square meter, per unit time, in the
 !  case of a fully covered ice surface (aice=1), equal to twice the reduction
 !  in total floe number. See Roach, Smith & Dean (2018).
 !
@@ -916,16 +908,15 @@
          aminweld = p1  ! minimum ice concentration likely to weld
 
       real (kind=dbl_kind), parameter :: &
-         c_weld = 1.0e-8_dbl_kind     
+         c_weld = 1.0e-8_dbl_kind
                         ! constant of proportionality for welding
                         ! total number of floes that weld with another, per square meter,
                         ! per unit time, in the case of a fully covered ice surface
                         ! units m^-2 s^-1, see documentation for details
 
       integer (kind=int_kind) :: &
-        nt          , & ! time step index
         n           , & ! thickness category index
-        k, kx, ky, i, j ! floe size category indices
+        k, i, j         ! floe size category indices
 
       real (kind=dbl_kind), dimension(nfsd,ncat) :: &
          afsdn          ! floe size distribution tracer
@@ -941,7 +932,6 @@
          gain, loss     ! welding tendencies
 
       real(kind=dbl_kind) :: &
-         prefac     , & ! multiplies kernel
          kern       , & ! kernel
          subdt      , & ! subcycling time step for stability (s)
          elapsed_t      ! elapsed subcycling time
@@ -952,7 +942,6 @@
       afsdn  (:,:) = c0
       afsd_init(:) = c0
       stability    = c0
-      prefac       = p5
 
       do n = 1, ncat
 
@@ -970,14 +959,14 @@
 
             afsd_init(:) = afsdn(:,n)     ! save initial values
             afsd_tmp (:) = afsd_init(:)   ! work array
-               
+
             ! in case of minor numerical errors
             WHERE(afsd_tmp < puny) afsd_tmp = c0
             afsd_tmp = afsd_tmp/SUM(afsd_tmp)
 
             ! adaptive sub-timestep
-            elapsed_t = c0 
-            DO WHILE (elapsed_t < dt) 
+            elapsed_t = c0
+            DO WHILE (elapsed_t < dt)
 
                ! calculate sub timestep
                nfsd_tmp = afsd_tmp/floe_area_c
@@ -996,8 +985,7 @@
                    if (k > i) then
                        kern = c_weld * floe_area_c(i) * aicen(n)
                        loss(i) = loss(i) + kern*afsd_tmp(i)*afsd_tmp(j)
-                       if (i.eq.j) prefac = c1 ! otherwise 0.5
-                       gain(k) = gain(k) + prefac*kern*afsd_tmp(i)*afsd_tmp(j)
+                       gain(k) = gain(k) + kern*afsd_tmp(i)*afsd_tmp(j)
                    end if
                end do
                end do
@@ -1006,7 +994,7 @@
 !               if (loss(nfsd) > puny) stop 'weld, largest cat losing'
 !               if (gain(1) > puny) stop 'weld, smallest cat gaining'
 
-               ! update afsd   
+               ! update afsd
                afsd_tmp(:) = afsd_tmp(:) + subdt*(gain(:) - loss(:))
 
                ! in case of minor numerical errors
@@ -1021,11 +1009,11 @@
 
             END DO ! time
 
+            afsdn(:,n) = afsd_tmp(:)
             call icepack_cleanup_fsdn (nfsd, afsdn(:,n))
             if (icepack_warnings_aborted(subname)) return
 
             do k = 1, nfsd
-               afsdn(k,n) = afsd_tmp(k)
                trcrn(nt_fsd+k-1,n) = afsdn(k,n)
                ! history/diagnostics
                d_afsdn_weld(k,n) = afsdn(k,n) - afsd_init(k)
@@ -1058,7 +1046,7 @@
          nfsd       ! number of floe size categories
 
       real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
-         afsd_init, d_afsd ! floe size distribution tracer 
+         afsd_init, d_afsd ! floe size distribution tracer
 
       ! output
       real (kind=dbl_kind) :: &
@@ -1070,11 +1058,11 @@
 
       integer (kind=int_kind) :: k
 
-      check_dt(:) = bignum 
+      check_dt(:) = bignum
       do k = 1, nfsd
           if (d_afsd(k) >  puny) check_dt(k) = (1-afsd_init(k))/d_afsd(k)
           if (d_afsd(k) < -puny) check_dt(k) = afsd_init(k)/ABS(d_afsd(k))
-      end do 
+      end do
 
       subdt = MINVAL(check_dt)
 

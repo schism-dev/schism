@@ -15,13 +15,13 @@
       use icepack_parameters, only: op_dep_min, fr_graze_s, fr_graze_e, fr_mort2min, fr_dFe
       use icepack_parameters, only: k_nitrif, t_iron_conv, max_loss, max_dfe_doc1
       use icepack_parameters, only: fr_resp_s, y_sk_DMS, t_sk_conv, t_sk_ox
-      use icepack_parameters, only: scale_bgc, ktherm, skl_bgc, solve_zsal
+      use icepack_parameters, only: scale_bgc, ktherm, skl_bgc
       use icepack_parameters, only: z_tracers, fsal, conserv_check
 
-      use icepack_tracers, only: nt_sice, nt_bgc_S, bio_index 
+      use icepack_tracers, only: nt_sice, bio_index
       use icepack_tracers, only: tr_brine, nt_fbri, nt_qice, nt_Tsfc
       use icepack_tracers, only: nt_zbgc_frac
-      use icepack_tracers, only: bio_index_o,  bio_index  
+      use icepack_tracers, only: bio_index_o,  bio_index
 
       use icepack_zbgc_shared, only: zbgc_init_frac
       use icepack_zbgc_shared, only: zbgc_frac_init
@@ -41,13 +41,12 @@
       use icepack_warnings, only: icepack_warnings_setabort, icepack_warnings_aborted
 
       use icepack_brine, only: preflushing_changes, compute_microS_mushy
-      use icepack_brine, only: update_hbrine, compute_microS 
+      use icepack_brine, only: update_hbrine
       use icepack_algae, only: zbio, sklbio
       use icepack_therm_shared, only: calculate_Tin_from_qin
       use icepack_itd, only: column_sum, column_conservation_check
-      use icepack_zsalinity, only: zsalinity
 
-      implicit none 
+      implicit none
 
       private
       public :: add_new_ice_bgc, &
@@ -78,9 +77,9 @@
 
       integer (kind=int_kind), intent(in) :: &
          nblyr   , & ! number of bio layers
-         ncat     , & ! number of thickness categories
-         nilyr    , & ! number of ice layers
-         nltrcr, & ! number of zbgc tracers
+         ncat    , & ! number of thickness categories
+         nilyr   , & ! number of ice layers
+         nltrcr  , & ! number of zbgc tracers
          nbtrcr  , & ! number of biology tracers
          ntrcr       ! number of tracers in use
 
@@ -89,15 +88,14 @@
 
       real (kind=dbl_kind), dimension (nblyr+1), intent(in) :: &
          igrid              ! biology vertical interface points
- 
+
       real (kind=dbl_kind), dimension (nilyr+1), intent(in) :: &
-         cgrid              ! CICE vertical coordinate   
+         cgrid              ! CICE vertical coordinate
 
       real (kind=dbl_kind), intent(in) :: &
          dt              ! time step (s)
 
-      real (kind=dbl_kind), dimension (:), &
-         intent(in) :: &
+      real (kind=dbl_kind), dimension (:), intent(in) :: &
          aicen_init  , & ! initial concentration of ice
          vicen_init  , & ! intiial volume per unit area of ice  (m)
          aicen       , & ! concentration of ice
@@ -106,8 +104,7 @@
       real (kind=dbl_kind), intent(in) :: &
          vsnon1          ! category 1 snow volume per unit area (m)
 
-      real (kind=dbl_kind), dimension (:,:), &
-         intent(inout) :: &
+      real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
          trcrn           ! ice tracers
 
       real (kind=dbl_kind), intent(in) :: &
@@ -120,12 +117,10 @@
       real (kind=dbl_kind), intent(in) :: &
          hsurp           ! thickness of new ice added to each cat
 
-      real (kind=dbl_kind), dimension (:), &
-         intent(inout) :: &
-         flux_bio   ! tracer flux to ocean from biology (mmol/m^2/s) 
-        
-      real (kind=dbl_kind), dimension (:), &
-         intent(in) :: &
+      real (kind=dbl_kind), dimension (:), intent(inout) :: &
+         flux_bio   ! tracer flux to ocean from biology (mmol/m^2/s)
+
+      real (kind=dbl_kind), dimension (:), intent(in) :: &
          ocean_bio       ! ocean concentration of biological tracer
 
 ! local
@@ -143,10 +138,10 @@
       real (kind=dbl_kind) :: &
          vsurp       , & ! volume of new ice added to each cat
          vtmp            ! total volume of new and old ice
-        
+
       real (kind=dbl_kind), dimension (ncat) :: &
-         vbrin           ! trcrn(nt_fbri,n)*vicen(n) 
-       
+         vbrin           ! trcrn(nt_fbri,n)*vicen(n)
+
       real (kind=dbl_kind) :: &
          vice_new        ! vicen_init + vsurp
 
@@ -158,7 +153,7 @@
 
       character(len=*),parameter :: subname='(add_new_ice_bgc)'
 
-      !-----------------------------------------------------------------     
+      !-----------------------------------------------------------------
       ! brine
       !-----------------------------------------------------------------
       vbrin(:) = c0
@@ -166,33 +161,33 @@
          vbrin(n) = vicen_init(n)
          if (tr_brine) vbrin(n) =  trcrn(nt_fbri,n)*vicen_init(n)
       enddo
-     
+
       call column_sum (ncat,  vbrin,  vbri_init)
       if (icepack_warnings_aborted(subname)) return
 
       vbri_init = vbri_init + vi0_init
-      do k = 1, nbtrcr  
+      do k = 1, nbtrcr
          flux_bio(k) = flux_bio(k) &
                             - vi0_init/dt*ocean_bio(k)*zbgc_init_frac(k)
       enddo
       !-----------------------------------------------------------------
-      ! Distribute bgc in new ice volume among all ice categories by 
+      ! Distribute bgc in new ice volume among all ice categories by
       ! increasing ice thickness, leaving ice area unchanged.
       !-----------------------------------------------------------------
 
          ! Diffuse_bio handles concentration changes from ice growth/melt
          ! ice area does not change
-         ! add salt to the bottom , location = 1 
+         ! add salt to the bottom , location = 1
 
        vsurp = c0
        vtmp = c0
 
       do n = 1,ncat
- 
+
       if (hsurp > c0) then
 
          vtmp = vbrin(n)
-         vsurp = hsurp * aicen_init(n) 
+         vsurp = hsurp * aicen_init(n)
          vbrin(n) = vbrin(n) + vsurp
          vice_new = vicen_init(n) + vsurp
          if (tr_brine .and. vicen(n) > c0) then
@@ -201,8 +196,8 @@
             trcrn(nt_fbri,n) = c1
          endif
 
-         if (nltrcr > 0) then 
-            location = 1  
+         if (nltrcr > 0) then
+            location = 1
             call adjust_tracer_profile(nbtrcr,   dt, ntrcr, &
                                        aicen_init(n),       &
                                        vbrin(n),            &
@@ -211,35 +206,35 @@
                                        vtmp,                &
                                        vsurp,        sss,   &
                                        nilyr,        nblyr, &
-                                       solve_zsal,   bgrid, & 
+                                       bgrid,               &
                                        cgrid,               &
                                        ocean_bio,    igrid, &
                                        location)
             if (icepack_warnings_aborted(subname)) return
-         endif       ! nltrcr       
+         endif       ! nltrcr
       endif          ! hsurp > 0
       enddo          ! n
 
       !-----------------------------------------------------------------
       ! Combine bgc in new ice grown in open water with category 1 ice.
       !-----------------------------------------------------------------
-       
+
       if (vi0new > c0) then
 
-         vbri1    = vbrin(1) 
+         vbri1    = vbrin(1)
          vbrin(1) = vbrin(1) + vi0new
          if (tr_brine .and. vicen(1) > c0) then
             trcrn(nt_fbri,1) = vbrin(1)/vicen(1)
          elseif (tr_brine .and. vicen(1) <= c0) then
             trcrn(nt_fbri,1) = c1
          endif
-       
+
       ! Diffuse_bio handles concentration changes from ice growth/melt
       ! ice area changes
       ! add salt throughout, location = 0
 
-         if (nltrcr > 0) then 
-            location = 0  
+         if (nltrcr > 0) then
+            location = 0
             call adjust_tracer_profile(nbtrcr,  dt,     ntrcr,  &
                                        aicen(1),                &
                                        vbrin(1),                &
@@ -248,16 +243,12 @@
                                        vbri1,                   &
                                        vi0new,          sss,    &
                                        nilyr,           nblyr,  &
-                                       solve_zsal,      bgrid,  &
+                                       bgrid,                   &
                                        cgrid,                   &
                                        ocean_bio,       igrid,  &
                                        location)
             if (icepack_warnings_aborted(subname)) return
 
-            if (solve_zsal .and. vsnon1 .le. c0) then
-               Tmlts = -trcrn(nt_sice,1)*depressT
-               trcrn(nt_Tsfc,1) =  calculate_Tin_from_qin(trcrn(nt_qice,1),Tmlts)
-            endif        ! solve_zsal 
          endif           ! nltrcr > 0
       endif              ! vi0new > 0
 
@@ -282,7 +273,7 @@
       subroutine lateral_melt_bgc (dt,                 &
                                    ncat,     nblyr,    &
                                    rside,    vicen,    &
-                                   trcrn,    fzsal,    &
+                                   trcrn,              &
                                    flux_bio, nbltrcr)
 
       integer (kind=int_kind), intent(in) :: &
@@ -302,9 +293,6 @@
       real (kind=dbl_kind), intent(in) :: &
          rside     ! fraction of ice that melts laterally
 
-      real (kind=dbl_kind), intent(inout) :: &
-         fzsal     ! salt flux from layer Salinity (kg/m^2/s)
-  
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
          flux_bio  ! biology tracer flux from layer bgc (mmol/m^2/s)
 
@@ -322,16 +310,6 @@
 
       zspace = c1/(real(nblyr,kind=dbl_kind))
 
-      if (solve_zsal) then
-         do n = 1, ncat
-         do k = 1,nblyr
-            fzsal = fzsal + rhosi*trcrn(nt_fbri,n) &
-                  * vicen(n)*p001*zspace*trcrn(nt_bgc_S+k-1,n) &
-                  * rside/dt
-         enddo
-         enddo
-      endif
-
       do m = 1, nbltrcr
          do n = 1, ncat
          do k = 1, nblyr+1
@@ -342,11 +320,11 @@
          enddo
       enddo
 
-      end subroutine lateral_melt_bgc 
+      end subroutine lateral_melt_bgc
 
 !=======================================================================
 !
-! Add new ice tracers to the ice bottom and adjust the vertical profile 
+! Add new ice tracers to the ice bottom and adjust the vertical profile
 !
 ! author: Nicole Jeffery, LANL
 
@@ -356,7 +334,7 @@
                                         vtmp,              &
                                         vsurp,      sss,   &
                                         nilyr,      nblyr, &
-                                        solve_zsal, bgrid, &
+                                        bgrid,             &
                                         cgrid,      ocean_bio, &
                                         igrid,      location)
 
@@ -383,9 +361,6 @@
 
       real (kind=dbl_kind), intent(in) :: &
          vbrin       ! fbri*volume per unit area of ice  (m)
-       
-      logical (kind=log_kind), intent(in) :: &
-         solve_zsal 
 
       real (kind=dbl_kind), dimension (nblyr+1), intent(in) :: &
          igrid       ! zbio grid
@@ -396,35 +371,34 @@
       real (kind=dbl_kind), dimension (nilyr+1), intent(in) :: &
          cgrid       ! CICE grid
 
-      real (kind=dbl_kind), dimension (ntrcr), &
-         intent(inout) :: &
+      real (kind=dbl_kind), dimension (ntrcr), intent(inout) :: &
          trcrn       ! ice tracers
-      
+
       ! local variables
 
       real (kind=dbl_kind), dimension (ntrcr+2) :: &
          trtmp0, &      ! temporary, remapped tracers
          trtmp          ! temporary, remapped tracers
-        
+
       real (kind=dbl_kind) :: &
          hin     , & ! ice height
          hinS_new, & ! brine height
-         temp_S         
+         temp_S
 
       integer (kind=int_kind) :: &
-         k, m 
+         k, m
 
-      real (kind=dbl_kind), dimension (nblyr+1) ::  &     
+      real (kind=dbl_kind), dimension (nblyr+1) ::  &
          C_stationary      ! stationary bulk concentration*h (mmol/m^2)
 
-      real (kind=dbl_kind), dimension (nblyr) ::  &     
+      real (kind=dbl_kind), dimension (nblyr) ::  &
          S_stationary      ! stationary bulk concentration*h (ppt*m)
 
       real(kind=dbl_kind) :: &
          top_conc     , & ! salinity or bgc ocean concentration of frazil
          fluxb        , & ! needed for regrid (set to zero here)
          hbri_old     , & ! previous timestep brine height
-         hbri             ! brine height 
+         hbri             ! brine height
 
       character(len=*),parameter :: subname='(adjust_tracer_profile)'
 
@@ -436,26 +410,10 @@
 
          hbri     = vbrin
          hbri_old = vtmp
-         if (solve_zsal) then
-            top_conc = sss * salt_loss
-            do k = 1, nblyr 
-               S_stationary(k) = trcrn(nt_bgc_S+k-1)* hbri_old
-            enddo
-            call regrid_stationary (S_stationary, hbri_old, &
-                                    hbri,         dt,       &
-                                    ntrcr,                  &
-                                    nblyr-1,      top_conc, &
-                                    bgrid(2:nblyr+1), fluxb )
-            if (icepack_warnings_aborted(subname)) return
-            do k = 1, nblyr 
-               trcrn(nt_bgc_S+k-1) =  S_stationary(k)/hbri
-               trtmp0(nt_sice+k-1) = trcrn(nt_bgc_S+k-1)
-            enddo
-         endif  ! solve_zsal
 
          do m = 1, nbtrcr
             top_conc = ocean_bio(m)*zbgc_init_frac(m)
-            do k = 1, nblyr+1 
+            do k = 1, nblyr+1
                C_stationary(k) = trcrn(bio_index(m) + k-1)* hbri_old
             enddo !k
             call regrid_stationary (C_stationary, hbri_old, &
@@ -464,68 +422,19 @@
                                     nblyr,        top_conc, &
                                     igrid,        fluxb )
             if (icepack_warnings_aborted(subname)) return
-            do k = 1, nblyr+1 
+            do k = 1, nblyr+1
                trcrn(bio_index(m) + k-1) =  C_stationary(k)/hbri
-            enddo !k                  
+            enddo !k
          enddo !m
-
-         if (solve_zsal) then
-            if (aicen > c0) then
-               hinS_new  = vbrin/aicen
-               hin       = vicen/aicen
-            else
-               hinS_new  = c0
-               hin       = c0
-            endif                   ! aicen
-            temp_S    = min_salin   ! bio to cice
-            call remap_zbgc(nilyr,    &
-                            nt_sice,                   &
-                            trtmp0(1:ntrcr), trtmp,    &
-                            1,               nblyr,    &
-                            hin,             hinS_new, &
-                            cgrid(2:nilyr+1),          &
-                            bgrid(2:nblyr+1), temp_S   )
-            if (icepack_warnings_aborted(subname)) return
-            do k = 1, nilyr
-               trcrn(nt_sice+k-1) = trtmp(nt_sice+k-1)   
-            enddo        ! k
-         endif           ! solve_zsal
 
       elseif (vbrin > c0) then   ! add frazil throughout  location == 0 .and.
 
          do k = 1, nblyr+1
-            if (solve_zsal .and. k < nblyr + 1) then
-               trcrn(nt_bgc_S+k-1) = (trcrn(nt_bgc_S+k-1) * vtmp &
-                                          + sss*salt_loss * vsurp) / vbrin
-               trtmp0(nt_sice+k-1) = trcrn(nt_bgc_S+k-1)
-            endif                    ! solve_zsal
             do m = 1, nbtrcr
                trcrn(bio_index(m) + k-1) = (trcrn(bio_index(m) + k-1) * vtmp &
                          + ocean_bio(m)*zbgc_init_frac(m) * vsurp) / vbrin
             enddo
          enddo
-
-         if (solve_zsal) then
-            if (aicen > c0) then
-               hinS_new  = vbrin/aicen
-               hin       = vicen/aicen
-            else
-               hinS_new  = c0
-               hin       = c0
-            endif              !aicen
-            temp_S    = min_salin   ! bio to cice
-            call remap_zbgc(nilyr,    &
-                         nt_sice,                   &
-                         trtmp0(1:ntrcr), trtmp,    &
-                         1,               nblyr,    &
-                         hin,             hinS_new, &
-                         cgrid(2:nilyr+1),          &        
-                         bgrid(2:nblyr+1),temp_S    )
-            if (icepack_warnings_aborted(subname)) return
-            do k = 1, nilyr
-               trcrn(nt_sice+k-1) = trtmp(nt_sice+k-1)   
-            enddo        !k
-         endif   ! solve_zsal
 
       endif     ! location
 
@@ -534,7 +443,6 @@
 !=======================================================================
 !autodocument_start icepack_init_bgc
 !
-
       subroutine icepack_init_bgc(ncat, nblyr, nilyr, ntrcr_o, &
          cgrid, igrid, ntrcr, nbtrcr, &
          sicen, trcrn, sss, ocean_bio_all)
@@ -546,18 +454,18 @@
          ntrcr_o,& ! number of tracers not including bgc
          ntrcr , & ! number of tracers in use
          nbtrcr    ! number of bio tracers in use
- 
+
       real (kind=dbl_kind), dimension (nblyr+1), intent(inout) :: &
          igrid     ! biology vertical interface points
- 
+
       real (kind=dbl_kind), dimension (nilyr+1), intent(inout) :: &
-         cgrid     ! CICE vertical coordinate   
+         cgrid     ! CICE vertical coordinate
 
       real (kind=dbl_kind), dimension(nilyr, ncat), intent(in) :: &
          sicen     ! salinity on the cice grid
 
       real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
-         trcrn     ! subset of tracer array (only bgc) 
+         trcrn     ! subset of tracer array (only bgc)
 
       real (kind=dbl_kind), intent(in) :: &
          sss       ! sea surface salinity (ppt)
@@ -570,58 +478,41 @@
       ! local variables
 
       integer (kind=int_kind) :: &
-         k     , & ! vertical index 
-         n     , & ! category index 
+         k     , & ! vertical index
+         n     , & ! category index
          mm        ! bio tracer index
 
-      real (kind=dbl_kind), dimension (ntrcr+2) :: & 
-         trtmp     ! temporary, remapped tracers   
-      
+      real (kind=dbl_kind), dimension (ntrcr+2) :: &
+         trtmp     ! temporary, remapped tracers
+
       character(len=*),parameter :: subname='(icepack_init_bgc)'
 
-      !-----------------------------------------------------------------------------   
+      !-----------------------------------------------------------------------------
       !     Skeletal Layer Model
       !  All bgc tracers are Bulk quantities in units of mmol or mg per m^3
-      !  The skeletal layer model assumes a constant 
+      !  The skeletal layer model assumes a constant
       !  layer depth (sk_l) and porosity (phi_sk)
-      !-----------------------------------------------------------------------------   
+      !-----------------------------------------------------------------------------
          if (skl_bgc) then
-       
+
             do  n = 1,ncat
             do mm = 1,nbtrcr
                ! bulk concentration (mmol or mg per m^3, or 10^-3 mmol/m^3)
                trcrn(bio_index(mm)-ntrcr_o, n) = ocean_bio_all(bio_index_o(mm))
             enddo       ! nbtrcr
-            enddo       ! n 
+            enddo       ! n
 
-      !-----------------------------------------------------------------------------   
+      !-----------------------------------------------------------------------------
       !    zbgc Model
       !  All bgc tracers are Bulk quantities in units of mmol or mg per m^3
       !  The vertical layer model uses prognosed porosity and layer depth
-      !-----------------------------------------------------------------------------   
+      !-----------------------------------------------------------------------------
 
          else   ! not skl_bgc
 
-            if (scale_bgc .and. solve_zsal) then ! bulk concentration (mmol or mg per m^3)
-               do n = 1,ncat
-               do mm = 1,nbtrcr
-                  do k = 2, nblyr
-                     trcrn(bio_index(mm)+k-1-ntrcr_o,n) = &
-                          (p5*(trcrn(nt_bgc_S+k-1-ntrcr_o,n)+ trcrn(nt_bgc_S+k-2-ntrcr_o,n)) &
-                         / sss*ocean_bio_all(bio_index_o(mm))) 
-                  enddo  !k
-                  trcrn(nt_zbgc_frac-1+mm-ntrcr_o,n) = zbgc_frac_init(mm)
-                  trcrn(bio_index(mm)-ntrcr_o,n) = (trcrn(nt_bgc_S-ntrcr_o,n) &
-                                         / sss*ocean_bio_all(bio_index_o(mm))) 
-                  trcrn(bio_index(mm)+nblyr-ntrcr_o,n) = (trcrn(nt_bgc_S+nblyr-1-ntrcr_o,n) &
-                                               / sss*ocean_bio_all(bio_index_o(mm)))
-                  trcrn(bio_index(mm)+nblyr+1-ntrcr_o:bio_index(mm)+nblyr+2-ntrcr_o,n) = c0 ! snow
-               enddo ! mm
-               enddo ! n 
-    
-            elseif (scale_bgc .and. ktherm == 2) then
+            if (scale_bgc .and. ktherm == 2) then
                trtmp(:) = c0
-               do n = 1,ncat     
+               do n = 1,ncat
                   call remap_zbgc(nilyr,    &
                                   1,                          &
                                   sicen(:,n),       trtmp,    &
@@ -633,27 +524,27 @@
                   if (icepack_warnings_aborted(subname)) return
 
                   do mm = 1,nbtrcr
-                  do k = 1, nblyr + 1            
+                  do k = 1, nblyr + 1
                      trcrn(bio_index(mm)+k-1-ntrcr_o,n) =   &
                           (trtmp(k)/sss*ocean_bio_all(bio_index_o(mm)))
                      trcrn(bio_index(mm)+nblyr+1-ntrcr_o:bio_index(mm)+nblyr+2-ntrcr_o,n) = c0 ! snow
                   enddo  ! k
                   enddo  ! mm
-               enddo     ! n 
+               enddo     ! n
 
-            elseif (nbtrcr > 0 .and. nt_fbri > 0) then ! not scale_bgc         
-     
+            elseif (nbtrcr > 0 .and. nt_fbri > 0) then ! not scale_bgc
+
                do n = 1,ncat
                do mm = 1,nbtrcr
                do k = 1, nblyr+1
                   trcrn(bio_index(mm)+k-1-ntrcr_o,n) = ocean_bio_all(bio_index_o(mm)) &
-                                             * zbgc_init_frac(mm) 
+                                             * zbgc_init_frac(mm)
                   trcrn(bio_index(mm)+nblyr+1-ntrcr_o:bio_index(mm)+nblyr+2-ntrcr_o,n) = c0 ! snow
                enddo    ! k
                trcrn(nt_zbgc_frac-1+mm-ntrcr_o,n) = zbgc_frac_init(mm)
                enddo    ! mm
-               enddo    ! n 
-              
+               enddo    ! n
+
             endif  ! scale_bgc
          endif     ! skl_bgc
 
@@ -680,7 +571,7 @@
       real (kind=dbl_kind), optional :: R_chl2N_in(:)      ! 3 algal chlorophyll to N (mg/mmol)
       real (kind=dbl_kind), optional :: F_abs_chl_in(:)    ! to scale absorption in Dedd
       real (kind=dbl_kind), optional :: R_C2N_DON_in(:)    ! increase compare to algal R_Fe2C
-      real (kind=dbl_kind), optional :: R_Si2N_in(:)       ! algal Sil to N (mole/mole) 
+      real (kind=dbl_kind), optional :: R_Si2N_in(:)       ! algal Sil to N (mole/mole)
       real (kind=dbl_kind), optional :: R_S2N_in(:)        ! algal S to N (mole/mole)
       real (kind=dbl_kind), optional :: R_Fe2C_in(:)       ! algal Fe to carbon (umol/mmol)
       real (kind=dbl_kind), optional :: R_Fe2N_in(:)       ! algal Fe to N (umol/mmol)
@@ -717,8 +608,8 @@
       real (kind=dbl_kind), optional :: mort_pre_in(:)     ! mortality (1/day)
       real (kind=dbl_kind), optional :: mort_Tdep_in(:)    ! T dependence of mortality (1/C)
       real (kind=dbl_kind), optional :: k_exude_in(:)      ! algal carbon  exudation rate (1/d)
-      real (kind=dbl_kind), optional :: K_Nit_in(:)        ! nitrate half saturation (mmol/m^3) 
-      real (kind=dbl_kind), optional :: K_Am_in(:)         ! ammonium half saturation (mmol/m^3) 
+      real (kind=dbl_kind), optional :: K_Nit_in(:)        ! nitrate half saturation (mmol/m^3)
+      real (kind=dbl_kind), optional :: K_Am_in(:)         ! ammonium half saturation (mmol/m^3)
       real (kind=dbl_kind), optional :: K_Sil_in(:)        ! silicon half saturation (mmol/m^3)
       real (kind=dbl_kind), optional :: K_Fe_in(:)         ! iron half saturation  or micromol/m^3
       real (kind=dbl_kind), optional :: f_don_in(:)        ! fraction of spilled grazing to DON
@@ -726,7 +617,7 @@
       real (kind=dbl_kind), optional :: f_don_Am_in(:)     ! fraction of remineralized DON to Am
       real (kind=dbl_kind), optional :: f_doc_in(:)        ! fraction of mort_N that goes to each doc pool
       real (kind=dbl_kind), optional :: f_exude_in(:)      ! fraction of exuded carbon to each DOC pool
-      real (kind=dbl_kind), optional :: k_bac_in(:)        ! Bacterial degredation of DOC (1/d)    
+      real (kind=dbl_kind), optional :: k_bac_in(:)        ! Bacterial degredation of DOC (1/d)
 
       real (kind=dbl_kind), optional :: zbgc_frac_init_in(:)  ! initializes mobile fraction
       real (kind=dbl_kind), optional :: bgc_tracer_type_in(:) ! described tracer in mobile or stationary phases
@@ -838,7 +729,7 @@
       real (kind=dbl_kind), dimension (:), intent(inout) :: &
          bgrid         , &  ! biology nondimensional vertical grid points
          igrid         , &  ! biology vertical interface points
-         cgrid         , &  ! CICE vertical coordinate   
+         cgrid         , &  ! CICE vertical coordinate
          icgrid        , &  ! interface grid for CICE (shortwave variable)
          ocean_bio     , &  ! contains all the ocean bgc tracer concentrations
          fbio_snoice   , &  ! fluxes from snow to ice
@@ -847,9 +738,9 @@
          dhbr_bot      , &  ! brine bottom change
          darcy_V       , &  ! darcy velocity positive up (m/s)
          hin_old       , &  ! old ice thickness
-         sice_rho      , &  ! avg sea ice density  (kg/m^3) 
-         ice_bio_net   , &  ! depth integrated tracer (mmol/m^2) 
-         snow_bio_net  , &  ! depth integrated snow tracer (mmol/m^2) 
+         sice_rho      , &  ! avg sea ice density  (kg/m^3)
+         ice_bio_net   , &  ! depth integrated tracer (mmol/m^2)
+         snow_bio_net  , &  ! depth integrated snow tracer (mmol/m^2)
          flux_bio     ! all bio fluxes to ocean
 
       logical (kind=log_kind), dimension (:), intent(inout) :: &
@@ -861,25 +752,29 @@
       real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
          Zoo            , & ! N losses accumulated in timestep (ie. zooplankton/bacteria)
                             ! mmol/m^3
-         bphi           , & ! porosity of layers    
+         bphi           , & ! porosity of layers
          bTiz           , & ! layer temperatures interpolated on bio grid (C)
          zfswin         , & ! Shortwave flux into layers interpolated on bio grid  (W/m^2)
-         iDi            , & ! igrid Diffusivity (m^2/s)    
-         iki            , & ! Ice permeability (m^2)  
-         trcrn     ! tracers   
+         iDi            , & ! igrid Diffusivity (m^2/s)
+         iki            , & ! Ice permeability (m^2)
+         trcrn     ! tracers
 
       real (kind=dbl_kind), intent(inout) :: &
          grow_net       , & ! Specific growth rate (/s) per grid cell
          PP_net         , & ! Total production (mg C/m^2/s) per grid cell
          hbri           , & ! brine height, area-averaged for comparison with hi (m)
-         zsal_tot       , & ! Total ice salinity in per grid cell (g/m^2) 
-         fzsal          , & ! Total flux  of salt to ocean at time step for conservation
-         fzsal_g        , & ! Total gravity drainage flux
          upNO           , & ! nitrate uptake rate (mmol/m^2/d) times aice
-         upNH         ! ammonium uptake rate (mmol/m^2/d) times aice
+         upNH               ! ammonium uptake rate (mmol/m^2/d) times aice
 
-      logical (kind=log_kind), intent(inout) :: &
-         Rayleigh_criteria    ! .true. means Ra_c was reached  
+      real (kind=dbl_kind), intent(inout), optional :: &
+         zsal_tot           ! Total ice salinity in per grid cell (g/m^2) (deprecated)
+
+      real (kind=dbl_kind), intent(inout), optional :: &
+         fzsal          , & ! Total flux  of salt to ocean at time step for conservation (deprecated)
+         fzsal_g            ! Total gravity drainage flux (deprecated)
+
+      logical (kind=log_kind), intent(inout), optional :: &
+         Rayleigh_criteria    ! .true. means Ra_c was reached (deprecated)
 
       real (kind=dbl_kind), dimension (:,:), intent(in) :: &
          fswpenln        ! visible SW entering ice layers (W m-2)
@@ -891,10 +786,10 @@
          meltbn      , & ! bottom melt in category n (m)
          congeln     , & ! congelation ice formation in category n (m)
          snoicen     , & ! snow-ice formation in category n (m)
-         flux_bio_atm, & ! all bio fluxes to ice from atmosphere  
+         flux_bio_atm, & ! all bio fluxes to ice from atmosphere
          aicen_init  , & ! initial ice concentration, for linear ITD
          vicen_init  , & ! initial ice volume (m), for linear ITD
-         vsnon_init  , & ! initial snow volume (m), for aerosol 
+         vsnon_init  , & ! initial snow volume (m), for aerosol
          aicen , & ! concentration of ice
          vicen , & ! volume per unit area of ice          (m)
          vsnon     ! volume per unit area of snow         (m)
@@ -921,7 +816,7 @@
          hbr_old     , & ! old brine thickness before growh/melt
          dhice       , & ! change due to sublimation/condensation (m)
          kavg        , & ! average ice permeability (m^2)
-         bphi_o      , & ! surface ice porosity 
+         bphi_o      , & ! surface ice porosity
          hbrin       , & ! brine height
          dh_direct       ! surface flooding or runoff
 
@@ -933,19 +828,19 @@
 
       real (kind=dbl_kind), dimension (nblyr+1) :: &
       ! Defined on Bio Grid interfaces
-         iphin       , & ! porosity 
+         iphin       , & ! porosity
          ibrine_sal  , & ! brine salinity  (ppt)
          ibrine_rho  , & ! brine_density (kg/m^3)
          iTin            ! Temperature on the interface grid (oC)
 
-      real (kind=dbl_kind) :: & 
+      real (kind=dbl_kind) :: &
          sloss            ! brine flux contribution from surface runoff (g/m^2)
 
       ! for bgc sk
-      real (kind=dbl_kind) :: & 
+      real (kind=dbl_kind) :: &
          dh_bot_chl  , & ! Chlorophyll may or may not flush
          dh_top_chl  , & ! Chlorophyll may or may not flush
-         darcy_V_chl     
+         darcy_V_chl
 
       character(len=*),parameter :: subname='(icepack_biogeochemistry)'
 
@@ -956,7 +851,7 @@
       ! initialize
       !-----------------------------------------------------------------
          hin_old(n) = c0
-         if (aicen_init(n) > puny) then 
+         if (aicen_init(n) > puny) then
             hin_old(n) = vicen_init(n) &
                                 / aicen_init(n)
          else
@@ -967,12 +862,10 @@
                   trcrn(nt_zbgc_frac-1+mm,n) = zbgc_frac_init(mm)
                enddo
             endif
-            if (n == 1) Rayleigh_criteria = .false.
-            if (solve_zsal) trcrn(nt_bgc_S:nt_bgc_S+nblyr-1,n) = c0
          endif
 
          if (aicen(n) > puny) then
-          
+
             dh_top_chl = c0
             dh_bot_chl = c0
             darcy_V_chl= c0
@@ -983,7 +876,7 @@
             kavg       = c0
             bphi_o     = c0
             sloss      = c0
-  
+
       !-----------------------------------------------------------------
       ! brine dynamics
       !-----------------------------------------------------------------
@@ -991,7 +884,7 @@
             dhbr_top(n) = c0
             dhbr_bot(n) = c0
 
-            if (tr_brine) then 
+            if (tr_brine) then
                if (trcrn(nt_fbri,n) .le. c0) trcrn(nt_fbri,n) = c1
 
                dhice = c0
@@ -999,45 +892,29 @@
                                  vicen   (n), vsnon  (n),   &
                                  meltbn  (n), melttn (n),   &
                                  congeln (n), snoicen(n),   &
-                                 hin_old (n), dhice,        & 
+                                 hin_old (n), dhice,        &
                                  trcrn(nt_fbri,n),          &
                                  dhbr_top(n), dhbr_bot(n),  &
                                  hbr_old,     hin,          &
                                  hsn,         first_ice(n)  )
                if (icepack_warnings_aborted(subname)) return
 
-               if (solve_zsal)  then  
+               ! Requires the average ice permeability = kavg(:)
+               ! and the surface ice porosity = zphi_o(:)
+               ! computed in "compute_microS" or from "thermosaline_vertical"
 
-                  call compute_microS (n,         nilyr,       nblyr,             &
-                                bgrid,            cgrid,       igrid,             &
-                                trcrn(1:ntrcr,n), hin_old(n),  hbr_old,           &
-                                sss,              sst,         bTiz(:,n),         &
-                                iTin,             bphi(:,n),   kavg,              &
-                                bphi_o,           Rayleigh_criteria, &
-                                first_ice(n),     bSin,        brine_sal,         &
-                                brine_rho,        iphin,       ibrine_rho,        &
-                                ibrine_sal,       sice_rho(n), sloss)
-                  if (icepack_warnings_aborted(subname)) return
-               else     
+               iDi(:,n) = c0
 
-                 ! Requires the average ice permeability = kavg(:)
-                 ! and the surface ice porosity = zphi_o(:)
-                 ! computed in "compute_microS" or from "thermosaline_vertical"
-
-                  iDi(:,n) = c0
-
-                  call compute_microS_mushy (nilyr,         nblyr,       &
-                                   bgrid,         cgrid,         igrid,       &
-                                   trcrn(:,n),    hin_old(n),    hbr_old,     &
-                                   sss,           sst,           bTiz(:,n),   & 
-                                   iTin(:),       bphi(:,n),     kavg,        &
-                                   bphi_o,        bSin(:),     &
-                                   brine_sal(:),  brine_rho(:),  iphin(:),    &
-                                   ibrine_rho(:), ibrine_sal(:), sice_rho(n), &
-                                   iDi(:,n)       )
-                  if (icepack_warnings_aborted(subname)) return
-
-               endif ! solve_zsal  
+               call compute_microS_mushy (nilyr,         nblyr,       &
+                           bgrid,         cgrid,         igrid,       &
+                           trcrn(:,n),    hin_old(n),    hbr_old,     &
+                           sss,           sst,           bTiz(:,n),   &
+                           iTin(:),       bphi(:,n),     kavg,        &
+                           bphi_o,        bSin(:),     &
+                           brine_sal(:),  brine_rho(:),  iphin(:),    &
+                           ibrine_rho(:), ibrine_sal(:), sice_rho(n), &
+                           iDi(:,n)       )
+               if (icepack_warnings_aborted(subname)) return
 
                call update_hbrine (melttn(n),   &
                                    meltsn  (n), dt,          &
@@ -1047,43 +924,14 @@
                                    hbr_old,     &
                                    trcrn(nt_fbri,n),         &
                                    dhbr_top(n), dhbr_bot(n), &
-                                   dh_top_chl,  dh_bot_chl,  & 
+                                   dh_top_chl,  dh_bot_chl,  &
                                    kavg,        bphi_o,      &
-                                   darcy_V (n), darcy_V_chl, &  
+                                   darcy_V (n), darcy_V_chl, &
                                    bphi(2,n),   aice0,       &
                                    dh_direct)
                if (icepack_warnings_aborted(subname)) return
-               
-               hbri = hbri + hbrin * aicen(n)  
 
-               if (solve_zsal) then 
-
-                  call zsalinity (n,             dt,                  &
-                                  nilyr,         bgrid,               & 
-                                  cgrid,         igrid,               &
-                                  trcrn(nt_bgc_S:nt_bgc_S+nblyr-1,n), &
-                                  trcrn(nt_qice:nt_qice+nilyr-1,n),   &
-                                  trcrn(nt_sice:nt_sice+nilyr-1,n),   &
-                                  ntrcr,         trcrn(nt_fbri,n),    &
-                                  bSin,          bTiz(:,n),           &
-                                  bphi(:,n),     iphin,               &
-                                  iki(:,n),      hbr_old,             &
-                                  hbrin,         hin,                 &
-                                  hin_old(n),    iDi(:,n),            &
-                                  darcy_V(n),    brine_sal,           & 
-                                  brine_rho,     ibrine_sal,          & 
-                                  ibrine_rho,    dh_direct,           &
-                                  Rayleigh_criteria,                  &
-                                  first_ice(n),  sss,                 &
-                                  sst,           dhbr_top(n),         &
-                                  dhbr_bot(n),                        &
-                                  fzsal,         fzsal_g,             &
-                                  bphi_o,        nblyr,               & 
-                                  vicen(n),      aicen_init(n),       &
-                                  zsal_tot) 
-                  if (icepack_warnings_aborted(subname)) return
-
-               endif  ! solve_zsal
+               hbri = hbri + hbrin * aicen(n)
 
             endif ! tr_brine
 
@@ -1091,13 +939,13 @@
       ! biogeochemistry
       !-----------------------------------------------------------------
 
-            if (z_tracers) then 
- 
+            if (z_tracers) then
+
                call zbio (dt,                    nblyr,                  &
                           nslyr,                 nilyr,                  &
                           melttn(n),                                     &
                           meltsn(n),             meltbn  (n),            &
-                          congeln(n),            snoicen(n),             & 
+                          congeln(n),            snoicen(n),             &
                           nbtrcr,                fsnow,                  &
                           ntrcr,                 trcrn(1:ntrcr,n),       &
                           bio_index(1:nbtrcr),   aicen_init(n),          &
@@ -1110,7 +958,7 @@
                           n_fed,                 n_fep,                  &
                           n_zaero,               first_ice(n),           &
                           hin_old(n),            ocean_bio(1:nbtrcr),    &
-                          bphi(:,n),             iphin,                  &     
+                          bphi(:,n),             iphin,                  &
                           iDi(:,n),  &
                           fswpenln(:,n),                                 &
                           dhbr_top(n),           dhbr_bot(n),            &
@@ -1129,7 +977,7 @@
                           PP_net,                ice_bio_net (1:nbtrcr), &
                           snow_bio_net(1:nbtrcr),grow_net                )
                if (icepack_warnings_aborted(subname)) return
-     
+
             elseif (skl_bgc) then
 
                call sklbio (dt,                      ntrcr,               &
@@ -1165,16 +1013,16 @@
           doc, don, dic, fed, fep, zaeros, ocean_bio_all, hum)
 
       integer (kind=int_kind), intent(in) :: &
-         max_algae   , & ! maximum number of algal types 
-         max_dic     , & ! maximum number of dissolved inorganic carbon types 
+         max_algae   , & ! maximum number of algal types
+         max_dic     , & ! maximum number of dissolved inorganic carbon types
          max_doc     , & ! maximum number of dissolved organic carbon types
          max_don     , & ! maximum number of dissolved organic nitrogen types
          max_fe      , & ! maximum number of iron types
-         max_aero    , & ! maximum number of aerosols 
+         max_aero    , & ! maximum number of aerosols
          max_nbtrcr      ! maximum number of bio tracers
 
       real (kind=dbl_kind), intent(in) :: &
-         nit         , & ! ocean nitrate (mmol/m^3)          
+         nit         , & ! ocean nitrate (mmol/m^3)
          amm         , & ! ammonia/um (mmol/m^3)
          sil         , & ! silicate (mmol/m^3)
          dmsp        , & ! dmsp (mmol/m^3)
@@ -1188,16 +1036,16 @@
          doc             ! ocean doc (mmol/m^3)  (proteins, EPS, lipid)
 
       real (kind=dbl_kind), dimension (max_don), intent(in) :: &
-         don             ! ocean don (mmol/m^3) 
+         don             ! ocean don (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_dic), intent(in) :: &
-         dic             ! ocean dic (mmol/m^3) 
+         dic             ! ocean dic (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_fe), intent(in) :: &
-         fed, fep        ! ocean disolved and particulate fe (nM) 
+         fed, fep        ! ocean disolved and particulate fe (nM)
 
       real (kind=dbl_kind), dimension (max_aero), intent(in) :: &
-         zaeros          ! ocean aerosols (mmol/m^3) 
+         zaeros          ! ocean aerosols (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_nbtrcr), intent(inout) :: &
          ocean_bio_all   ! fixed order, all values even for tracers false
@@ -1213,25 +1061,25 @@
 
       ocean_bio_all(:) = c0
 
-      do k = 1, max_algae           
+      do k = 1, max_algae
          ocean_bio_all(k)      = algalN(k)           ! N
          ks = max_algae + max_doc + max_dic + 1
          ocean_bio_all(ks + k) = R_chl2N(k)*algalN(k)!chl
-      enddo   
+      enddo
 
       ks = max_algae + 1
       do k = 1, max_doc
          ocean_bio_all(ks + k) = doc(k)              ! doc
-      enddo  
+      enddo
       ks = ks + max_doc
       do k = 1, max_dic
          ocean_bio_all(ks + k) = dic(k)              ! dic
-      enddo 
+      enddo
 
       ks = 2*max_algae + max_doc + max_dic + 7
       do k = 1, max_don
          ocean_bio_all(ks + k) = don(k)              ! don
-      enddo  
+      enddo
 
       ks = max_algae + 1
       ocean_bio_all(ks) = nit                        ! nit
@@ -1243,7 +1091,7 @@
       ks = ks + 1
       ocean_bio_all(ks) =  R_S2N(1)*algalN(1) &      ! DMSPp
                         +  R_S2N(2)*algalN(2) &
-                        +  R_S2N(3)*algalN(3) 
+                        +  R_S2N(3)*algalN(3)
       ks = ks + 1
       ocean_bio_all(ks) = dmsp                       ! DMSPd
       ks = ks + 1
@@ -1253,16 +1101,16 @@
       ks = 2*max_algae + max_doc + 7 + max_dic + max_don
       do k = 1, max_fe
          ocean_bio_all(ks + k) = fed(k)              ! fed
-      enddo  
+      enddo
       ks = ks + max_fe
       do k = 1, max_fe
          ocean_bio_all(ks + k) = fep(k)              ! fep
-      enddo  
+      enddo
       ks = ks + max_fe
       do k = 1, max_aero
          ocean_bio_all(ks+k) = zaeros(k)             ! zaero
       enddo
-      ks = ks + max_aero + 1 
+      ks = ks + max_aero + 1
       ocean_bio_all(ks)  = hum                       ! humics
 
       end subroutine icepack_load_ocean_bio_array
@@ -1307,53 +1155,53 @@
       ! local variables
 
       integer (kind=int_kind) :: &
-        k 
+        k
 
       character(len=*),parameter :: subname='(icepack_init_ocean_bio)'
 
        if (present(CToN)) then
          CToN(1) = R_C2N(1)
-         CToN(2) = R_C2N(2)    
-         CToN(3) = R_C2N(3)     
+         CToN(2) = R_C2N(2)
+         CToN(3) = R_C2N(3)
        endif
 
        if (present(CToN_DON)) then
          CToN_DON(1) = R_C2N_DON(1)
        endif
 
-       amm  = c1 ! ISPOL < 1 mmol/m^3 
-       dmsp = p1  
-       dms  = p1    
-       algalN(1) = c1  !0.0026_dbl_kind ! ISPOL, Lannuzel 2013(pennate) 
+       amm  = c1 ! ISPOL < 1 mmol/m^3
+       dmsp = p1
+       dms  = p1
+       algalN(1) = c1  !0.0026_dbl_kind ! ISPOL, Lannuzel 2013(pennate)
        algalN(2) = 0.0057_dbl_kind ! ISPOL, Lannuzel 2013(small plankton)
        algalN(3) = 0.0027_dbl_kind ! ISPOL, Lannuzel 2013(Phaeocystis)
-                                     ! 0.024_dbl_kind ! 5% of 1 mgchl/m^3 
+                                     ! 0.024_dbl_kind ! 5% of 1 mgchl/m^3
        doc(1) = 16.2_dbl_kind ! 18% saccharides
        doc(2) = 9.0_dbl_kind  ! lipids
-       doc(3) = c1 ! 
+       doc(3) = c1 !
        do k = 1, max_dic
             dic(k) = c1
-       enddo  
+       enddo
        do k = 1, max_don
-            don(k) = 12.9_dbl_kind              
+            don(k) = 12.9_dbl_kind
             ! 64.3_dbl_kind ! 72% Total DOC~90 mmolC/m^3  ISPOL with N:C of 0.2
-       enddo  
+       enddo
        !ki = 1
        !if (trim(fe_data_type) == 'clim') ki = 2
        do k = 1, max_fe ! ki, max_fe
-            fed(k) = 0.4_dbl_kind ! c1 (nM) Lannuzel2007 DFe, 
+            fed(k) = 0.4_dbl_kind ! c1 (nM) Lannuzel2007 DFe,
                                   ! range 0.14-2.6 (nM) van der Merwe 2011
                                   ! Tagliabue 2012 (0.4 nM)
             fep(k) = c2 ! (nM) van der Merwe 2011
                         ! (0.6 to 2.9 nM ocean)
-       enddo 
+       enddo
        hum  = c1        ! mmol C/m^3
        nit  = 12.0_dbl_kind
        sil  = 25.0_dbl_kind
        do k = 1, max_aero
          zaeros(k) = c0
        enddo
- 
+
 
       end subroutine icepack_init_ocean_bio
 

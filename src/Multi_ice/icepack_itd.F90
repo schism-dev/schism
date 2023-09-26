@@ -19,7 +19,7 @@
 !
 ! 2004 WHL: Added multiple snow layers, block structure, cleanup_itd
 ! 2006 ECH: Added WMO standard ice thickness categories as kcatbound=2
-!           Streamlined for efficiency 
+!           Streamlined for efficiency
 !           Converted to free source form (F90)
 ! 2014 ECH: Converted to column package
 
@@ -28,14 +28,13 @@
       use icepack_kinds
       use icepack_parameters, only: c0, c1, c2, c3, c15, c25, c100, p1, p01, p001, p5, puny
       use icepack_parameters, only: Lfresh, rhos, ice_ref_salinity, hs_min, cp_ice, Tocnfrz, rhoi
-      use icepack_parameters, only: rhosi, sk_l, hs_ssl, min_salin
+      use icepack_parameters, only: rhosi, sk_l, hs_ssl, min_salin, rsnw_fall, rhosnew
       use icepack_tracers,    only: nt_Tsfc, nt_qice, nt_qsno, nt_aero, nt_isosno, nt_isoice
-      use icepack_tracers,    only: nt_apnd, nt_hpnd, nt_fbri, tr_brine, nt_bgc_S, bio_index
-      use icepack_tracers,    only: n_iso
-      use icepack_tracers,    only: tr_iso
+      use icepack_tracers,    only: nt_apnd, nt_hpnd, nt_fbri, tr_brine, bio_index
+      use icepack_tracers,    only: n_iso, tr_iso, nt_smice, nt_rsnw, nt_rhos, nt_sice
       use icepack_tracers,    only: icepack_compute_tracers
-      use icepack_parameters, only: solve_zsal, skl_bgc, z_tracers
-      use icepack_parameters, only: kcatbound, kitd
+      use icepack_parameters, only: skl_bgc, z_tracers
+      use icepack_parameters, only: kcatbound, kitd, saltflux_option, snwgrain, snwredist
       use icepack_therm_shared, only: Tmin, hi_min
       use icepack_warnings,   only: warnstr, icepack_warnings_add
       use icepack_warnings,   only: icepack_warnings_setabort, icepack_warnings_aborted
@@ -60,7 +59,7 @@
 
 !=======================================================================
 
-! Aggregate ice area (but not other state variables) over thickness 
+! Aggregate ice area (but not other state variables) over thickness
 ! categories.
 !
 ! authors: William H. Lipscomb, LANL
@@ -388,7 +387,7 @@
          trcrn     ! ice tracers
 
       ! NOTE: Third index of donor, daice, dvice should be ncat-1,
-      !       except that compilers would have trouble when ncat = 1 
+      !       except that compilers would have trouble when ncat = 1
       integer (kind=int_kind), dimension(:), intent(in) :: &
          donor             ! donor category index
 
@@ -408,7 +407,7 @@
          itl               ! loop index
 
       real (kind=dbl_kind), dimension(ntrcr,ncat) :: &
-         atrcrn            ! aicen*trcrn   
+         atrcrn            ! aicen*trcrn
 
       real (kind=dbl_kind) :: &
          dvsnow        , & ! snow volume transferred
@@ -477,9 +476,9 @@
                      daice_negative = .true.
                   endif
                endif
-         
+
                if (dvice(n) < c0) then
-                  if (dvice(n) > -puny*vicen(nd)) then   
+                  if (dvice(n) > -puny*vicen(nd)) then
                      daice(n) = c0 ! shift no ice
                      dvice(n) = c0
                   else
@@ -494,7 +493,7 @@
                   else
                      daice_greater_aicen = .true.
                   endif
-               endif    
+               endif
 
                if (dvice(n) > vicen(nd)*(c1-puny)) then
                   if (dvice(n) < vicen(nd)*(c1+puny)) then
@@ -639,7 +638,7 @@
 
                atrcrn(it,nd) = atrcrn(it,nd) - datrcr
                atrcrn(it,nr) = atrcrn(it,nr) + datrcr
-            
+
             enddo ! ntrcr
          endif    ! daice
       enddo       ! boundaries, 1 to ncat-1
@@ -651,7 +650,7 @@
       do n = 1, ncat
 
          if (aicen(n) > puny) then
-            hicen(n) = vicen (n) / aicen(n)                
+            hicen(n) = vicen (n) / aicen(n)
          else
             hicen(n) = c0
          endif
@@ -682,8 +681,7 @@
       integer (kind=int_kind), intent(in) :: &
          nsum             ! number of categories/layers
 
-      real (kind=dbl_kind), dimension (nsum), &
-         intent(in) :: &
+      real (kind=dbl_kind), dimension (nsum), intent(in) :: &
          xin              ! input field
 
       real (kind=dbl_kind), intent(out) :: &
@@ -747,10 +745,10 @@
 !=======================================================================
 
 ! Cleanup subroutine that rebins thickness categories if necessary,
-!  eliminates very small ice areas while conserving mass and energy, 
-!  aggregates state variables, and does a boundary call.  
+!  eliminates very small ice areas while conserving mass and energy,
+!  aggregates state variables, and does a boundary call.
 ! It is a good idea to call this subroutine after the thermodynamics
-!  (thermo_vertical/thermo_itd) and again after the dynamics 
+!  (thermo_vertical/thermo_itd) and again after the dynamics
 !  (evp/transport/ridging).
 !
 ! author: William H. Lipscomb, LANL
@@ -760,22 +758,20 @@
                               ncat,        hin_max,    &
                               aicen,       trcrn,      &
                               vicen,       vsnon,      &
-                              aice0,       aice,       &   
+                              aice0,       aice,       &
                               n_aero,                  &
                               nbtrcr,      nblyr,      &
                               tr_aero,                 &
                               tr_pond_topo,            &
-                              heat_capacity,           & 
                               first_ice,               &
                               trcr_depend, trcr_base,  &
                               n_trcr_strata,nt_strata, &
                               fpond,       fresh,      &
                               fsalt,       fhocn,      &
                               faero_ocn,   fiso_ocn,   &
-                              fzsal,                   &
                               flux_bio,    limit_aice_in)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat  , & ! number of thickness categories
          nilyr , & ! number of ice layers
          nblyr , & ! number of bio layers
@@ -783,25 +779,25 @@
          ntrcr , & ! number of tracers in use
          nbtrcr, & ! number of bio tracers in use
          n_aero    ! number of aerosol tracers
- 
-      real (kind=dbl_kind), intent(in) :: & 
-         dt        ! time step 
- 
+
+      real (kind=dbl_kind), intent(in) :: &
+         dt        ! time step
+
       real (kind=dbl_kind), dimension(0:ncat), intent(in) :: &
          hin_max   ! category boundaries (m)
 
-      real (kind=dbl_kind), dimension (:), intent(inout) :: & 
-         aicen , & ! concentration of ice 
-         vicen , & ! volume per unit area of ice          (m) 
-         vsnon     ! volume per unit area of snow         (m) 
- 
-      real (kind=dbl_kind), dimension (:,:), intent(inout) :: & 
-         trcrn     ! ice tracers 
+      real (kind=dbl_kind), dimension (:), intent(inout) :: &
+         aicen , & ! concentration of ice
+         vicen , & ! volume per unit area of ice          (m)
+         vsnon     ! volume per unit area of snow         (m)
 
-      real (kind=dbl_kind), intent(inout) :: & 
+      real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
+         trcrn     ! ice tracers
+
+      real (kind=dbl_kind), intent(inout) :: &
          aice  , & ! total ice concentration
-         aice0     ! concentration of open water 
-     
+         aice0     ! concentration of open water
+
       integer (kind=int_kind), dimension (:), intent(in) :: &
          trcr_depend, & ! = 0 for aicen tracers, 1 for vicen, 2 for vsnon
          n_trcr_strata  ! number of underlying tracer layers
@@ -815,8 +811,7 @@
 
       logical (kind=log_kind), intent(in) :: &
          tr_aero,      & ! aerosol flag
-         tr_pond_topo, & ! topo pond flag
-         heat_capacity   ! if false, ice and snow have zero heat capacity
+         tr_pond_topo    ! topo pond flag
 
       logical (kind=log_kind), dimension(ncat), intent(inout) :: &
          first_ice   ! For bgc and S tracers. set to true if zapping ice.
@@ -827,8 +822,7 @@
          fpond    , & ! fresh water flux to ponds (kg/m^2/s)
          fresh    , & ! fresh water flux to ocean (kg/m^2/s)
          fsalt    , & ! salt flux to ocean        (kg/m^2/s)
-         fhocn    , & ! net heat flux to ocean     (W/m^2)
-         fzsal        ! net salt flux to ocean from zsalinity (kg/m^2/s)
+         fhocn        ! net heat flux to ocean     (W/m^2)
 
       real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
          flux_bio     ! net tracer flux to ocean from biology (mmol/m^2/s)
@@ -836,7 +830,7 @@
       real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
          faero_ocn    ! aerosol flux to ocean     (kg/m^2/s)
 
-      real (kind=dbl_kind), dimension (:), intent(inout) :: &
+      real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
          fiso_ocn     ! isotope flux to ocean     (kg/m^2/s)
 
       logical (kind=log_kind), intent(in), optional ::   &
@@ -853,8 +847,7 @@
          dfpond   , & ! zapped pond water flux (kg/m^2/s)
          dfresh   , & ! zapped fresh water flux (kg/m^2/s)
          dfsalt   , & ! zapped salt flux   (kg/m^2/s)
-         dfhocn   , & ! zapped energy flux ( W/m^2)
-         dfzsal       ! zapped salt flux for zsalinity (kg/m^2/s)
+         dfhocn       ! zapped energy flux ( W/m^2)
 
       real (kind=dbl_kind), dimension (n_aero) :: &
          dfaero_ocn   ! zapped aerosol flux   (kg/m^2/s)
@@ -887,7 +880,6 @@
       dfaero_ocn(:) = c0
       dfiso_ocn (:) = c0
       dflux_bio (:) = c0
-      dfzsal = c0
 
       !-----------------------------------------------------------------
       ! Compute total ice area.
@@ -940,7 +932,7 @@
 
       if (limit_aice) then
          call zap_small_areas (dt,           ntrcr,         &
-                               ncat,                        &         
+                               ncat,                        &
                                n_aero,                      &
                                nblyr,                       &
                                nilyr,        nslyr,         &
@@ -949,12 +941,12 @@
                                vicen,        vsnon,         &
                                dfpond,                      &
                                dfresh,       dfsalt,        &
-                               dfhocn, &     
+                               dfhocn, &
                                dfaero_ocn,   dfiso_ocn,     &
                                tr_aero,                     &
                                tr_pond_topo,                &
                                first_ice,    nbtrcr,        &
-                               dfzsal,       dflux_bio      )
+                               dflux_bio                    )
 
          if (icepack_warnings_aborted(subname)) then
             write(warnstr,*) subname, 'aice:', aice
@@ -973,7 +965,7 @@
     !-------------------------------------------------------------------
 
       call zap_snow_temperature(dt,            ncat,     &
-                                heat_capacity, nblyr,    &
+                                nblyr,                   &
                                 nslyr,         aicen,    &
                                 trcrn,         vsnon,    &
                                 dfresh,        dfhocn,   &
@@ -988,9 +980,9 @@
     !-------------------------------------------------------------------
 
       if (present(fpond)) &
-           fpond        = fpond        + dfpond 
+           fpond        = fpond        + dfpond
       if (present(fresh)) &
-           fresh        = fresh        + dfresh 
+           fresh        = fresh        + dfresh
       if (present(fsalt)) &
            fsalt        = fsalt        + dfsalt
       if (present(fhocn)) &
@@ -1000,30 +992,17 @@
            faero_ocn(it) = faero_ocn(it) + dfaero_ocn(it)
          enddo
       endif
-      if (tr_iso) then
-         do it = 1, n_iso
-           fiso_ocn(it) = fiso_ocn(it) + dfiso_ocn(it)
-         enddo
+      if (present(fiso_ocn)) then
+         if (tr_iso) then
+            do it = 1, n_iso
+              fiso_ocn(it) = fiso_ocn(it) + dfiso_ocn(it)
+            enddo
+         endif
       endif
       if (present(flux_bio)) then
          do it = 1, nbtrcr
            flux_bio (it) = flux_bio(it) + dflux_bio(it)
          enddo
-      endif
-      if (present(fzsal)) &
-           fzsal        = fzsal         + dfzsal     
-
-      !----------------------------------------------------------------
-      ! If using zero-layer model (no heat capacity), check that the 
-      ! energy of snow and ice is correct. 
-      !----------------------------------------------------------------
-
-      if ((.not. heat_capacity) .and. aice > puny) then
-         call zerolayer_check (ncat,       nilyr,    &
-                               nslyr,      aicen,    &
-                               vicen,      vsnon,    &
-                               trcrn)
-         if (icepack_warnings_aborted(subname)) return
       endif
 
       end subroutine cleanup_itd
@@ -1048,9 +1027,9 @@
                                   dfhocn,                  &
                                   dfaero_ocn, dfiso_ocn,   &
                                   tr_aero,                 &
-                                  tr_pond_topo, &
+                                  tr_pond_topo,            &
                                   first_ice, nbtrcr,       &
-                                  dfzsal,    dflux_bio     )
+                                  dflux_bio                )
 
       integer (kind=int_kind), intent(in) :: &
          ncat     , & ! number of thickness categories
@@ -1080,8 +1059,7 @@
          dfpond   , & ! zapped pond water flux (kg/m^2/s)
          dfresh   , & ! zapped fresh water flux (kg/m^2/s)
          dfsalt   , & ! zapped salt flux   (kg/m^2/s)
-         dfhocn   , & ! zapped energy flux ( W/m^2)
-         dfzsal       ! zapped salt flux from zsalinity(kg/m^2/s) 
+         dfhocn       ! zapped energy flux ( W/m^2)
 
       real (kind=dbl_kind), dimension (:), intent(inout) :: &
          dfaero_ocn   ! zapped aerosol flux   (kg/m^2/s)
@@ -1097,7 +1075,7 @@
          tr_pond_topo ! pond flag
 
       logical (kind=log_kind), dimension (:), intent(inout) :: &
-         first_ice    ! For bgc tracers.  Set to true if zapping ice 
+         first_ice    ! For bgc tracers.  Set to true if zapping ice
 
       ! local variables
 
@@ -1105,17 +1083,16 @@
          n, k, it, & !counting indices
          blevels
 
-      real (kind=dbl_kind) :: xtmp      ! temporary variables
-      real (kind=dbl_kind) , dimension (1):: trcr_skl    
-      real (kind=dbl_kind) , dimension (nblyr+1):: bvol     
+      real (kind=dbl_kind) :: xtmp, sicen      ! temporary variables
+      real (kind=dbl_kind) , dimension (1):: trcr_skl
+      real (kind=dbl_kind) , dimension (nblyr+1):: bvol
 
       character(len=*),parameter :: subname='(zap_small_areas)'
 
       !-----------------------------------------------------------------
       ! I. Zap categories with very small areas.
       !-----------------------------------------------------------------
-      dfzsal = c0
-      
+
       do n = 1, ncat
 
       !-----------------------------------------------------------------
@@ -1152,15 +1129,6 @@
                   xtmp = vicen(n)*trcrn(nt_isoice+it-1,n)/dt
                   dfiso_ocn(it) = dfiso_ocn(it) + xtmp
                enddo
-            endif
-
-            if (solve_zsal) then
-               do it = 1, nblyr
-                  xtmp = rhosi*trcrn(nt_fbri,n)*vicen(n)*p001&
-                        *trcrn(nt_bgc_S+it-1,n)/ &
-                         real(nblyr,kind=dbl_kind)/dt
-                  dfzsal = dfzsal + xtmp
-               enddo                 ! n
             endif
 
             if (skl_bgc .and. nbtrcr > 0) then
@@ -1203,7 +1171,15 @@
             xtmp = (rhoi*vicen(n)) / dt
             dfresh = dfresh + xtmp
 
-            xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 / dt
+            if (saltflux_option == 'prognostic') then
+               sicen = c0
+               do k=1,nilyr
+                  sicen = sicen + trcrn(nt_sice+k-1,n) / real(nilyr,kind=dbl_kind)
+               enddo
+               xtmp = rhoi*vicen(n)*sicen*p001 / dt
+            else
+               xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 / dt
+            endif
             dfsalt = dfsalt + xtmp
 
             aice0 = aice0 + aicen(n)
@@ -1227,14 +1203,22 @@
       !-----------------------------------------------------------------
       ! Zap tracers
       !-----------------------------------------------------------------
-         
+
             if (ntrcr >= 2) then
                do it = 2, ntrcr
-                  if (tr_brine .and. it == nt_fbri) then
-                     trcrn(it,n) = c1
-                  else
-                     trcrn(it,n) = c0
-                  endif
+                  trcrn(it,n) = c0
+               enddo
+            endif
+            if (tr_brine) trcrn(nt_fbri,n) = c1
+            if (snwredist(1:3) == 'ITD') then
+               do k = 1, nslyr
+                  trcrn(nt_rhos +k-1,n) = rhosnew
+               enddo
+            endif
+            if (snwgrain) then
+               do k = 1, nslyr
+                  trcrn(nt_smice+k-1,n) = rhos
+                  trcrn(nt_rsnw +k-1,n) = rsnw_fall
                enddo
             endif
             first_ice(n) = .true.
@@ -1286,59 +1270,53 @@
                enddo               ! it
             endif
 
-      !----------------------------------------------------------------- 
-      ! Zap ice energy and use ocean heat to melt ice 
-      !----------------------------------------------------------------- 
-       
-            do k = 1, nilyr 
+      !-----------------------------------------------------------------
+      ! Zap ice energy and use ocean heat to melt ice
+      !-----------------------------------------------------------------
+
+            do k = 1, nilyr
                xtmp = trcrn(nt_qice+k-1,n) &
                     * vicen(n)/real(nilyr,kind=dbl_kind) &
-                    * (aice-c1)/aice / dt ! < 0 
-               dfhocn = dfhocn + xtmp 
-            enddo                  ! k 
- 
-      !----------------------------------------------------------------- 
-      ! Zap snow energy and use ocean heat to melt snow 
-      !----------------------------------------------------------------- 
- 
-            do k = 1, nslyr 
+                    * (aice-c1)/aice / dt ! < 0
+               dfhocn = dfhocn + xtmp
+            enddo                  ! k
+
+      !-----------------------------------------------------------------
+      ! Zap snow energy and use ocean heat to melt snow
+      !-----------------------------------------------------------------
+
+            do k = 1, nslyr
                xtmp = trcrn(nt_qsno+k-1,n) &
                     * vsnon(n)/real(nslyr,kind=dbl_kind) &
-                    * (aice-c1)/aice / dt ! < 0 
-               dfhocn = dfhocn + xtmp 
+                    * (aice-c1)/aice / dt ! < 0
+               dfhocn = dfhocn + xtmp
             enddo                  ! k
- 
+
       !-----------------------------------------------------------------
       ! Zap ice and snow volume, add water and salt to ocean
       !-----------------------------------------------------------------
 
             xtmp = (rhoi*vicen(n) + rhos*vsnon(n)) &
-                 * (aice-c1)/aice / dt 
-            dfresh = dfresh + xtmp 
- 
-            xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 &
                  * (aice-c1)/aice / dt
-            dfsalt = dfsalt + xtmp 
- 
-            if (solve_zsal) then
-            do k = 1,nblyr
-               xtmp = rhosi*trcrn(nt_fbri,n)*vicen(n)*p001&
-                    /real(nblyr,kind=dbl_kind)*trcrn(nt_bgc_S+k-1,n) &
-                    * (aice-c1)/aice /dt
-               dfzsal = dfzsal + xtmp
-            enddo
+            dfresh = dfresh + xtmp
 
-            if (vicen(n) > vicen(n)*trcrn(nt_fbri,n)) then
-               xtmp = (vicen(n)-vicen(n)*trcrn(nt_fbri,n))*(aice-c1)/&
-                      aice*p001*rhosi*min_salin/dt
-               dfzsal = dfzsal + xtmp
+            if (saltflux_option == 'prognostic') then
+               sicen = c0
+               do k=1,nilyr
+                  sicen = sicen + trcrn(nt_sice+k-1,n) / real(nilyr,kind=dbl_kind)
+               enddo
+               xtmp = rhoi*vicen(n)*sicen*p001 &
+                    * (aice-c1)/aice / dt
+            else
+               xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 &
+                    * (aice-c1)/aice / dt
             endif
-            endif ! solve_zsal
+            dfsalt = dfsalt + xtmp
 
-            aicen(n) = aicen(n) * (c1/aice) 
-            vicen(n) = vicen(n) * (c1/aice) 
+            aicen(n) = aicen(n) * (c1/aice)
+            vicen(n) = vicen(n) * (c1/aice)
             vsnon(n) = vsnon(n) * (c1/aice)
- 
+
       ! Note: Tracers are unchanged.
 
          enddo                     ! n
@@ -1370,7 +1348,7 @@
          n_aero   , & ! number of aerosol tracers
          nblyr    , & ! number of bio  layers
          nbtrcr
- 
+
       real (kind=dbl_kind), intent(in) :: &
          dt           ! time step
 
@@ -1424,19 +1402,19 @@
       endif ! tr_iso
 
       if (z_tracers) then
-            dvssl  = min(p5*vsnon, hs_ssl*aicen)   !snow surface layer
-            dvint  = vsnon- dvssl                  !snow interior
+         dvssl = min(p5*vsnon/real(nslyr,kind=dbl_kind), hs_ssl*aicen) ! snow surface layer
+         dvint = vsnon - dvssl                                         ! snow interior
 
-            do it = 1, nbtrcr
-               xtmp = (trcrn(bio_index(it)+nblyr+1)*dvssl + &
-                       trcrn(bio_index(it)+nblyr+2)*dvint)/dt
-               dflux_bio(it) = dflux_bio(it) + xtmp
-            enddo                 ! it
+         do it = 1, nbtrcr
+            xtmp = (trcrn(bio_index(it)+nblyr+1)*dvssl + &
+                    trcrn(bio_index(it)+nblyr+2)*dvint)/dt
+            dflux_bio(it) = dflux_bio(it) + xtmp
+         enddo                 ! it
 
       endif ! z_tracers
 
       ! snow enthalpy tracer
-      do k = 1, nslyr 
+      do k = 1, nslyr
          xtmp = trcrn(nt_qsno+k-1) / dt &
               * vsnon/real(nslyr,kind=dbl_kind) ! < 0
          dfhocn = dfhocn + xtmp
@@ -1451,9 +1429,8 @@
       end subroutine zap_snow
 
 !=======================================================================
-   
+
       subroutine zap_snow_temperature(dt,         ncat,     &
-                                      heat_capacity,        &
                                       nblyr,                &
                                       nslyr,      aicen,    &
                                       trcrn,      vsnon,    &
@@ -1473,11 +1450,8 @@
       real (kind=dbl_kind), intent(in) :: &
          dt           ! time step
 
-      logical (kind=log_kind), intent(in) :: &
-         heat_capacity   ! if false, ice and snow have zero heat capacity
-
-      real (kind=dbl_kind), dimension (:), intent(in) :: & 
-         aicen        ! concentration of ice 
+      real (kind=dbl_kind), dimension (:), intent(in) :: &
+         aicen        ! concentration of ice
 
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
          vsnon        ! volume per unit area of snow         (m)
@@ -1519,7 +1493,7 @@
       character(len=*),parameter :: subname='(zap_snow_temperature)'
 
       rnslyr = real(nslyr,kind=dbl_kind)
-      
+
       do n = 1, ncat
 
       !-----------------------------------------------------------------
@@ -1537,15 +1511,15 @@
          do k = 1, nslyr
 
             ! snow enthalpy and max temperature
-            if (hsn > hs_min .and. heat_capacity) then
-               ! zqsn < 0              
+            if (hsn > hs_min) then
+               ! zqsn < 0
                zqsn = trcrn(nt_qsno+k-1,n)
                Tmax = -zqsn*puny*rnslyr / (rhos*cp_ice*vsnon(n))
             else
                zqsn = -rhos * Lfresh
                Tmax = puny
             endif
-                     
+
             ! snow temperature
             zTsn = (Lfresh + zqsn/rhos)/cp_ice
 
@@ -1587,144 +1561,6 @@
       enddo ! n
 
       end subroutine zap_snow_temperature
-
-!=======================================================================
-! Checks that the snow and ice energy in the zero layer thermodynamics
-! model still agrees with the snow and ice volume.
-! If there is an error, the model will abort.
-! This subroutine is only called if heat_capacity = .false.
-!
-! author: Alison McLaren, Met Office
-!         May 2010:  ECH replaced eicen, esnon with trcrn but did not test 
-! the changes.  The loop below runs over n=1,ncat and I added loops 
-! over k, making the test more stringent.
-
-      subroutine zerolayer_check (ncat,        nilyr,      &
-                                  nslyr,       aicen,      &
-                                  vicen,       vsnon,      &
-                                  trcrn)
-
-      integer (kind=int_kind), intent(in) :: & 
-         ncat  , & ! number of thickness categories
-         nilyr , & ! number of ice layers
-         nslyr     ! number of snow layers
-
-      real (kind=dbl_kind), dimension (:), intent(inout) :: & 
-         aicen , & ! concentration of ice 
-         vicen , & ! volume per unit area of ice          (m) 
-         vsnon     ! volume per unit area of snow         (m) 
-
-      real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
-         trcrn     ! ice tracers
-      
-      ! local variables
-
-      integer (kind=int_kind) :: &
-         k     , & ! vertical index
-         n         ! category index
-
-      real (kind=dbl_kind) :: &
-         max_error ! max error in zero layer energy check
-                   ! (so max volume error = puny)
-
-      real (kind=dbl_kind), dimension (ncat) :: &
-         eicen     ! energy of melting for each ice layer (J/m^2) 
- 
-      real (kind=dbl_kind), dimension (ncat) :: &
-         esnon     ! energy of melting for each snow layer (J/m^2) 
-
-      logical (kind=log_kind) :: &
-         ice_energy_correct  , & ! zero layer ice energy check
-         snow_energy_correct     ! zero layer snow energy check
-
-      real (kind=dbl_kind) :: &
-         worka, workb
-
-      character(len=*),parameter :: subname='(zerolayer_check)'
-
-      !-----------------------------------------------------------------
-      ! Initialize
-      !-----------------------------------------------------------------
-
-      max_error = puny*Lfresh*rhos ! max error in zero layer energy check
-                                   ! (so max volume error = puny)
-
-      !----------------------------------------------------------------
-      ! Calculate difference between ice and snow energies and the
-      ! energy values derived from the ice and snow volumes
-      !----------------------------------------------------------------
-
-      ice_energy_correct  = .true.
-      snow_energy_correct = .true.
-
-      worka = c0
-      workb = c0
-
-      do n = 1, ncat
-
-         eicen(n) = c0
-         do k = 1, nilyr
-            eicen(n) = eicen(n) + trcrn(nt_qice+k-1,n) &
-                     * vicen(n) / real(nilyr,kind=dbl_kind)
-         enddo
-         worka = eicen(n) + rhoi * Lfresh * vicen(n)
-         esnon(n) = c0
-         do k = 1, nslyr
-            esnon(n) = esnon(n) + trcrn(nt_qsno+k-1,n) &
-                     * vsnon(n) / real(nslyr,kind=dbl_kind)
-         enddo
-         workb = esnon(n) + rhos * Lfresh * vsnon(n)
-
-         if(abs(worka) > max_error) ice_energy_correct = .false.
-         if(abs(workb) > max_error) snow_energy_correct = .false.
-
-      !----------------------------------------------------------------
-      ! If there is a problem, abort with error message
-      !----------------------------------------------------------------
-
-         if (.not. ice_energy_correct) then
-
-            if (abs(worka) > max_error) then
-               call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-               call icepack_warnings_add(subname//' zerolayer check - wrong ice energy')
-               write(warnstr,*) subname, 'n:', n
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'eicen =', eicen(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'error=',  worka
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'vicen =', vicen(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'aicen =', aicen(n)
-               call icepack_warnings_add(warnstr)
-            endif
-
-         endif
-         if (icepack_warnings_aborted(subname)) return
-
-         if (.not. snow_energy_correct) then
-
-            if (abs(workb) > max_error) then
-               call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-               call icepack_warnings_add(subname//' zerolayer check - wrong snow energy')
-               write(warnstr,*) subname, 'n:', n
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'esnon =', esnon(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'error=',  workb
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'vsnon =', vsnon(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'aicen =', aicen(n)
-               call icepack_warnings_add(warnstr)
-               return
-            endif
-
-         endif
-
-      enddo  ! ncat
-
-      end subroutine zerolayer_check
 
 !=======================================================================
 !autodocument_start icepack_init_itd
@@ -1779,7 +1615,7 @@
 !                1.20_dbl_kind, 2.00_dbl_kind,  &
 !                4.56729_dbl_kind, &
 !                 999._dbl_kind /
-      ! all thickness categories 
+      ! all thickness categories
       data wmo7 / 0.10_dbl_kind, 0.15_dbl_kind, &
                   0.30_dbl_kind, 0.70_dbl_kind,  &
                   1.20_dbl_kind, 2.00_dbl_kind,  &
@@ -1798,23 +1634,23 @@
       !-----------------------------------------------------------------
       ! Choose category boundaries based on one of four options.
       !
-      ! The first formula (kcatbound = 0) was used in Lipscomb (2001) 
+      ! The first formula (kcatbound = 0) was used in Lipscomb (2001)
       !  and in CICE versions 3.0 and 3.1.
       !
       ! The second formula is more user-friendly in the sense that it
       !  is easy to obtain round numbers for category boundaries:
       !
-      !    H(n) = n * [d1 + d2*(n-1)] 
-      ! 
+      !    H(n) = n * [d1 + d2*(n-1)]
+      !
       ! Default values are d1 = 300/ncat, d2 = 50/ncat.
-      ! For ncat = 5, boundaries in cm are 60, 140, 240, 360, which are 
+      ! For ncat = 5, boundaries in cm are 60, 140, 240, 360, which are
       !  close to the standard values given by the first formula.
       ! For ncat = 10, boundaries in cm are 30, 70, 120, 180, 250, 330,
-      !  420, 520, 630.    
+      !  420, 520, 630.
       !
       ! The third option provides support for World Meteorological
       !  Organization classification based on thickness.  The full
-      !  WMO thickness distribution is used if ncat = 7;  if ncat=5 
+      !  WMO thickness distribution is used if ncat = 7;  if ncat=5
       !  or ncat = 6, some of the thinner categories are combined.
       ! For ncat = 5,  boundaries are         30, 70, 120, 200, >200 cm.
       ! For ncat = 6,  boundaries are     15, 30, 70, 120, 200, >200 cm.
@@ -1891,7 +1727,7 @@
          enddo
        else
          call icepack_warnings_add(subname//' kcatbound=2 (WMO) must have ncat=5, 6 or 7')
-         call icepack_warnings_setabort(.true.,__FILE__,__LINE__) 
+         call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
          return
        endif
 
@@ -1947,11 +1783,11 @@
             write(warnstr,*) hin_max(n-1),' < Cat ',n, ' < ',hin_max(n)
             call icepack_warnings_add(warnstr)
             ! Write integer n to character string
-            write (c_nc, '(i2)') n    
+            write (c_nc, '(i2)') n
 
             ! Write hin_max to character string
-            write (c_hinmax1, '(f6.3)') hin_max(n-1)
-            write (c_hinmax2, '(f6.3)') hin_max(n)
+            write (c_hinmax1, '(f7.3)') hin_max(n-1)
+            write (c_hinmax2, '(f7.3)') hin_max(n)
 
             ! Save character string to write to history file
             c_hi_range(n)=c_hinmax1//'m < hi Cat '//c_nc//' < '//c_hinmax2//'m'
@@ -1977,7 +1813,7 @@
                                    aice0,              &
                                    ntrcr,              &
                                    trcr_depend,        &
-                                   trcr_base,          & 
+                                   trcr_base,          &
                                    n_trcr_strata,      &
                                    nt_strata)
 
@@ -2074,7 +1910,7 @@
                                    atrcr,     aice,          &
                                    vice ,     vsno,          &
                                    trcr_base, n_trcr_strata, &
-                                   nt_strata, trcr)   
+                                   nt_strata, trcr)
       if (icepack_warnings_aborted(subname)) return
 
       deallocate (atrcr)
