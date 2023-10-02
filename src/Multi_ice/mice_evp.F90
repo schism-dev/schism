@@ -3,7 +3,7 @@ subroutine ice_evp
     use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
    &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
    &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa,xctr,yctr,zctr,pi,&
-   &pframe,eframe,indnd,nnp,omega_e,xlon,ylat,dp,idry_e
+   &pframe,eframe,indnd,nnp,omega_e,xlon,ylat,dp,idry_e,pr
     use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,rtype,comm
     use mice_module
     use mice_therm_mod
@@ -18,7 +18,8 @@ subroutine ice_evp
    &pp0,delta,delta_inv,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
    &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
    &cori_nd,umod,gam1,rx,ry,rxp,ryp,eps11,eps12,eps22, &
-   &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength,tmp0,tmpsum,maxdeta,maxstr,maxstress,str_ocn_u,str_ocn_v
+   &zeta,delta_nd,ar1,ar2,tmp3,tmp4,ave_strength,tmp0,tmpsum,maxdeta,maxstr,&
+   &maxstress,str_ocn_u,str_ocn_v,maxocns
   
     integer :: iball(mnei),n
     real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),deta_pice(2,nea),p_ice(3),utmp(3),vtmp(3), &
@@ -35,9 +36,6 @@ subroutine ice_evp
 
     rdg_conv_elem(:)  = 0.0
     rdg_shear_elem(:) = 0.0
-    !sigma11(:) = 0
-    !sigma12(:) = 0
-    !sigma22(:) = 0
     strength(:) = 0
     a_ice0_0(:) = 0
     a_icen0(:,:) = 0
@@ -60,20 +58,20 @@ subroutine ice_evp
      !   swild1(1) = sum(a_ice0(elnode(1:i34(i),i)))/i34(i)
      !   swild1(2) = sum(m_ice0(elnode(1:i34(i),i)))/i34(i)
      !   swild1(3) = sum(a_ice0_0(elnode(1:i34(i),i)))/i34(i)
-
-     !   do j = 1,ncat
-     !     a_icen_elem(j) = sum(a_icen0(elnode(1:i34(i),i),j))/i34(i)
-     !     v_icen_elem(j) = sum(v_icen0(elnode(1:i34(i),i),j))/i34(i)
-     !   enddo
-     !   call icepack_ice_strength(ncat     = ncat,            &
-     !                             aice     = swild1(1),       & 
-     !                             vice     = swild1(2),       & 
-     !                             aice0    = swild1(3),       & 
-     !                             aicen    = a_icen_elem (:), &  
-     !                             vicen    = v_icen_elem (:), & 
-     !                             strength = strength(i)      )
-     !   !write(12,*) i ,swild1(1),swild1(2), strength(i)
-     ! enddo
+      !
+      !  do j = 1,ncat
+      !    a_icen_elem(j) = sum(a_icen0(elnode(1:i34(i),i),j))/i34(i)
+      !    v_icen_elem(j) = sum(v_icen0(elnode(1:i34(i),i),j))/i34(i)
+      !  enddo
+      !  call icepack_ice_strength(ncat     = ncat,            &
+      !                            aice     = swild1(1),       & 
+      !                            vice     = swild1(2),       & 
+      !                            aice0    = swild1(3),       & 
+      !                            aicen    = a_icen_elem (:), &  
+      !                            vicen    = v_icen_elem (:), & 
+      !                            strength = strength(i)      )
+      !  !write(12,*) i ,swild1(1),swild1(2), strength(i)
+      !enddo
       do i = 1,npa
         call icepack_ice_strength(ncat     = ncat,            &
                                   aice     = a_ice0(i),       & 
@@ -128,10 +126,10 @@ subroutine ice_evp
         h_ice_el=sum(m_ice0(elnode(1:3,i)))/3.0
         a_ice_el=sum(a_ice0(elnode(1:3,i)))/3.0
         pp0=h_ice_el*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
+        !pp0=h_ice_el**1.5*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
         !pp0 = strength(i)
         !pp0 = sum(strength(elnode(1:3,i)))/3.0
-        pp0 = sum(strength(elnode(1:3,i)))/3.0
-        !if(any(a_ice0(elnode(1:3,i))<=0).or.any(m_ice0(elnode(1:3,i))<=0)) pp0 = 0
+        !pp0 = sum(strength(elnode(1:3,i)))/3.0
         zeta=pp0*0.5/max(delta_ice(i),delta_min)
     
         rr1=zeta*t_evp_inv*(eps11+eps22-delta_ice(i)) !RHS for 1st eq
@@ -147,15 +145,16 @@ subroutine ice_evp
         sigma11(i)=0.5*(sig1+sig2)
         sigma22(i)=0.5*(sig1-sig2)
 
-        do j=1,i34(i)
-          if(a_ice0(elnode(j,i))<=ice_cutoff.or.m_ice0(elnode(j,i))<=ice_cutoff) then
-            sigma12(i) = 0
-            sigma11(i) = 0
-            sigma22(i) = 0
-            rdg_conv_elem(i) = 0
-            rdg_shear_elem(i) = 0
-          endif
-        enddo
+        !do j=1,i34(i)
+        !  if(a_ice0(elnode(j,i))<=ice_cutoff.or.m_ice0(elnode(j,i))<=ice_cutoff) then
+        !    rdg_conv_elem(i) = 0
+        !    rdg_shear_elem(i) = 0
+        !  endif
+        !  if(isbnd(1,elnode(j,i))/=0) then
+        !    rdg_conv_elem(i) = 0
+        !    rdg_shear_elem(i) = 0
+        !  endif
+        !enddo
         if(idry_e(i) == 1) then
             rdg_conv_elem(i) = 0
             rdg_shear_elem(i) = 0
@@ -206,7 +205,7 @@ subroutine ice_evp
             !do n=1,3
             !  if(any(isbnd(1,elnode(1:i34(i),i))/=0))  p_ice(n)=(rhoice*m_ice0(elnode(n,i))+rhosno*m_snow0(elnode(n,i)))/rho0
             !enddo
-            p_ice=(rhoice*m_ice0(elnode(1:i34(i),i))+rhosno*m_snow0(elnode(1:i34(i),i)))/rho0
+            p_ice=(rhoice*m_ice0(elnode(1:i34(i),i))+rhosno*m_snow0(elnode(1:i34(i),i))+pr(elnode(1:i34(i),i))/grav)/rho0
             !do n=1,3
             !  p_ice(n)=min(p_ice(n),5.0)
             !end do
@@ -230,6 +229,7 @@ subroutine ice_evp
         iball(1:nne(i))=indel(1:nne(i),i)
         if(a_ice0(i)<=ice_cutoff.or.m_ice0(i)<=ice_cutoff) then !no ice
           U_ice(i)=0; V_ice(i)=0
+          !U_ice(i)=u_ocean(i); V_ice(i)=v_ocean(i)
           cycle 
         endif
         
@@ -241,8 +241,7 @@ subroutine ice_evp
      
         !Not bnd node; has ice
         mass=(rhoice*m_ice0(i)+rhosno*m_snow0(i)) !>0
-        !mass=max(mass,9*a_ice0(i))
-        !mass=min(mass,rhoice*10)
+        mass=max(mass,9*a_ice0(i))
         !Error: limit mass>9?
         !Coriolis @ node
         !cori_nd = dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
@@ -318,7 +317,7 @@ subroutine ice_evp
         rx=U_ice(i)+rxp*dtevp+gam1*dtevp*(u_ocean(i)*cos_io-v_ocean(i)*sin_io)
         ry=V_ice(i)+ryp*dtevp+gam1*dtevp*(u_ocean(i)*sin_io+v_ocean(i)*cos_io)
        
-        tmp1=1+gam1*dtevp*cos_io
+        tmp1=1+gam1*dtevp*cos_io+Tbu(i)*dtevp/(sqrt(U_ice(i)**2+V_ice(i)**2)+5e-5)
         tmp2=dtevp*(cori_nd+gam1*sin_io)
         delta=tmp1*tmp1+tmp2*tmp2
         if(delta<=0) call parallel_abort('ice_evp: delta<=0')

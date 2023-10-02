@@ -4,6 +4,7 @@
 ! (a list of available functions and routines; submodules in other files
 ! then expand those).
 ! Author: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
+!        Qian Wang upate ICEPACK to 1.3.4
 !  Modified by Qian Wang to apply to SCHISM
 !=======================================================================
 
@@ -262,7 +263,8 @@
              fresh(:)   , & ! fresh water flux to ocean (kg/m^2/s)
              fsalt(:)   , & ! salt flux to ocean (kg/m^2/s)
              fhocn(:)   , & ! net heat flux to ocean (W/m^2)
-             fswthru(:)     ! shortwave penetrating to ocean (W/m^2)
+             fswthru(:) , & ! shortwave penetrating to ocean (W/m^2)
+             fsloss(:)      ! rate of snow loss to leads (kg/m^2/s)
 
           real (kind=dbl_kind), allocatable, save :: & ! DIM nx
              fresh_tot(:)   , & ! total fresh water flux to ocean (kg/m^2/s)
@@ -336,7 +338,8 @@
              fcondtopn(:,:),& ! category fcondtop
              fcondbotn(:,:),& ! category fcondbot
              fsensn(:,:),   & ! category sensible heat flux
-             flatn(:,:)       ! category latent heat flux
+             flatn(:,:),    & ! category latent heat flux
+             snwcnt(:,:)      ! counter for presence of snow
     
           ! As above but these remain grid box mean values i.e. they are not
           ! divided by aice at end of ice_dynamics.
@@ -354,6 +357,7 @@
           real (kind=dbl_kind), allocatable, save :: & ! DIM nx
              rside(:),          & ! fraction of ice that melts laterally
              fside(:),          & ! lateral heat flux (W/m^2)
+             wlat(:),           & ! lateral heat rate (m/s)             
              cos_zen(:),        & ! cosine solar zenith angle, < 0 for sun below horizon
              rdg_conv_elem(:),  & ! convergence term for ridging on elements (1/s)
              rdg_shear_elem(:), & ! shear term for ridging on elements (1/s)
@@ -390,10 +394,6 @@
              allocatable, save :: & ! DIM nx,icepack_max_nbtrcr
              flux_bio(:,:)   , & ! all bio fluxes to ocean
              flux_bio_ai(:,:)    ! all bio fluxes to ocean, averaged over grid cell
-        
-          real (kind=dbl_kind), allocatable, save :: & ! DIM nx
-             fzsal_ai(:), & ! salt flux to ocean from zsalinity (kg/m^2/s)
-             fzsal_g_ai(:)  ! gravity drainage salt flux to ocean (kg/m^2/s)
         
           ! internal
         
@@ -472,7 +472,12 @@
              hin_max(:) ! category limits (m)
     
           character (len=35), save, allocatable :: c_hi_range(:) ! DIM ncat
-    
+         ! icepack_snow.F90
+         real (kind=dbl_kind), public, dimension (:), allocatable :: &
+            meltsliq     ! snow melt mass (kg/m^2/step-->kg/m^2/day)
+
+         real (kind=dbl_kind), public, dimension (:,:), allocatable :: &
+            meltsliqn       ! snow melt mass in category n (kg/m^2)    
           ! icepack_meltpond_lvl.F90
           real (kind=dbl_kind), save, & ! DIM nx,ncat
              allocatable :: &
@@ -648,16 +653,7 @@
           real (kind=dbl_kind), &
              allocatable, public :: & ! DIM nx,ncat
              sice_rho(:,:)       ! avg sea ice density  (kg/m^3)  ! ech: diagnostic only?
-    
-          real (kind=dbl_kind), &
-             allocatable, public :: & ! DIM nx,ncat
-             fzsaln(:,:)     , & ! category fzsal(kg/m^2/s)
-             fzsaln_g(:,:)       ! salt flux from gravity drainage only
-    
-          real (kind=dbl_kind), allocatable, save :: & ! DIM nx
-             fzsal(:)      , & ! Total flux  of salt to ocean at time step for conservation
-             fzsal_g(:)        ! Total gravity drainage flux
-    
+       
           real (kind=dbl_kind), allocatable, save :: & ! DIM nx,nblyr+1,ncat
              zfswin(:,:,:)         ! Shortwave flux into layers interpolated on bio grid  (W/m^2)
     
@@ -860,6 +856,27 @@
                   implicit none
                   !type(t_mesh), intent(in), target :: mesh
               end subroutine tracer_advection_icepack3
+              module subroutine tracer_advection_icepack_cd()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack_cd
+              module subroutine tracer_advection_icepack4()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack4
+
+               module subroutine tracer_advection_icepack5()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack5
+               module subroutine tracer_advection_icepack6()
+                  !use mod_mesh
+                  implicit none
+                  !type(t_mesh), intent(in), target :: mesh
+              end subroutine tracer_advection_icepack6
 
               ! Advection initialization
               module subroutine init_advection_icepack()

@@ -74,7 +74,7 @@ ice_gamma_fct, ice_diff, theta_io,ice_ave_steps, c_pressure
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_x
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tau_oi_y
   REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: tbu   !seabed stress factor
-  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: strength   !icepack strength factor
+  REAL(rkind), ALLOCATABLE, DIMENSION(:)         :: strength   !icepack stress factor
   real(rkind),allocatable :: u_ocean(:),v_ocean(:) !ocean surface current@nodes
 
 #if defined (__oasis)
@@ -109,6 +109,7 @@ real(rkind),allocatable :: bafux(:,:),bafuy(:,:) !(3,nea): derivatives of shape 
 real(rkind),allocatable :: voltriangle(:) !(nea): area of triangles on sphere
 real(rkind),allocatable :: ice_matrix(:,:) !(0:mnei_p,np): TG mass matrix
 real(rkind),allocatable :: lump_ice_matrix(:) !(npa): lumped mass matrix
+real(rkind),allocatable :: dudicex(:,:),dudicey(:,:) !(npa): lumped mass matrix
 real(rkind)             :: scalevol=2.0e7
 
 

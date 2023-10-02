@@ -3,7 +3,9 @@
 ! This submodule initializes the icepack variables
 !
 ! Author: L. Zampieri ( lorenzo.zampieri@awi.de )
+!         Qian Wang update to ICEPACK 1.3.4
 !
+!         Modified by Qian Wang to apply to SCHISM
 !=======================================================================
 
       submodule (icedrv_main) icedrv_init
@@ -29,7 +31,7 @@
 
       subroutine init_state()
  
-          use icepack_intfc, only: icepack_aggregate
+          use icepack_intfc,           only: icepack_aggregate
           use mice_module,             only: ihot_mice   
     
           implicit none
@@ -38,16 +40,15 @@
              i           , & ! horizontal indes
              k           , & ! vertical index
              it              ! tracer index
-    
-          logical (kind=log_kind) :: &
-             heat_capacity   ! from icepack
-    
+        
           integer (kind=int_kind) :: ntrcr
-          logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_aero, tr_fsd
-          logical (kind=log_kind) :: tr_pond_cesm, tr_pond_lvl, tr_pond_topo
+          logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_iso, tr_aero
+          logical (kind=log_kind) :: tr_snow, tr_fsd
+          logical (kind=log_kind) :: tr_pond_lvl, tr_pond_topo
           integer (kind=int_kind) :: nt_Tsfc, nt_sice, nt_qice, nt_qsno, nt_iage, nt_fy
           integer (kind=int_kind) :: nt_alvl, nt_vlvl, nt_apnd, nt_hpnd, &
-                                     nt_ipnd, nt_aero, nt_fsd
+                                     nt_ipnd, nt_aero, nt_fsd,  nt_isosno, nt_isoice,&
+                                     nt_smice, nt_smliq, nt_rhos, nt_rsnw
     
           character(len=*), parameter :: subname='(init_state)'
     
@@ -59,18 +60,19 @@
           ! query Icepack values
           !-----------------------------------------------------------------
     
-          call icepack_query_parameters(heat_capacity_out=heat_capacity)
           call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
           call icepack_query_tracer_flags(tr_iage_out=tr_iage,                 &
-               tr_FY_out=tr_FY, tr_lvl_out=tr_lvl, tr_aero_out=tr_aero,        &
-               tr_pond_cesm_out=tr_pond_cesm, tr_pond_lvl_out=tr_pond_lvl,     &
-               tr_pond_topo_out=tr_pond_topo, tr_fsd_out=tr_fsd)
-          call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc,               &
-               nt_sice_out=nt_sice, nt_qice_out=nt_qice,                       &
-               nt_qsno_out=nt_qsno, nt_iage_out=nt_iage, nt_fy_out=nt_fy,      &
-               nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl,                       &
-               nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd,                       &
-               nt_ipnd_out=nt_ipnd, nt_aero_out=nt_aero, nt_fsd_out=nt_fsd)
+               tr_FY_out=tr_FY, tr_lvl_out=tr_lvl, tr_iso_out=tr_iso, tr_aero_out=tr_aero,        &
+               tr_pond_lvl_out=tr_pond_lvl, tr_pond_topo_out=tr_pond_topo, &
+               tr_snow_out=tr_snow, tr_fsd_out=tr_fsd)
+          call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_sice_out=nt_sice, &
+               nt_qice_out=nt_qice, nt_qsno_out=nt_qsno, nt_iage_out=nt_iage, nt_fy_out=nt_fy, &
+               nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, &
+               nt_ipnd_out=nt_ipnd, nt_aero_out=nt_aero, nt_fsd_out=nt_fsd, &
+               nt_smice_out=nt_smice, nt_smliq_out=nt_smliq, &
+               nt_rhos_out=nt_rhos, nt_rsnw_out=nt_rsnw, &
+               nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice)
+
           call icepack_warnings_flush(ice_stderr)
           if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
               file=__FILE__,line= __LINE__)
@@ -90,26 +92,6 @@
              call icedrv_system_abort(file=__FILE__,line=__LINE__)
           endif
     
-          if (.not.heat_capacity) then
-    
-             !write (nu_diag,*) 'WARNING - Zero-layer thermodynamics'
-    
-             if (nilyr > 1) then
-                write (nu_diag,*) 'nilyr =', nilyr
-                write (nu_diag,*)        &
-                     'Must have nilyr = 1 if ktherm = 0'
-                call icedrv_system_abort(file=__FILE__,line=__LINE__)
-             endif
-    
-             if (nslyr > 1) then
-                write (nu_diag,*) 'nslyr =', nslyr
-                write (nu_diag,*)        &
-                     'Must have nslyr = 1 if heat_capacity = F'
-                call icedrv_system_abort(file=__FILE__,line=__LINE__)
-             endif
-    
-          endif   ! heat_capacity = F
-    
           !-----------------------------------------------------------------
           ! Set tracer types
           !-----------------------------------------------------------------
@@ -126,10 +108,6 @@
           if (tr_FY)   trcr_depend(nt_FY)    = 0   ! area-weighted first-year ice area
           if (tr_lvl)  trcr_depend(nt_alvl)  = 0   ! level ice area
           if (tr_lvl)  trcr_depend(nt_vlvl)  = 1   ! level ice volume
-          if (tr_pond_cesm) then
-                       trcr_depend(nt_apnd)  = 0           ! melt pond area
-                       trcr_depend(nt_hpnd)  = 2+nt_apnd   ! melt pond depth
-          endif
           if (tr_pond_lvl) then
                        trcr_depend(nt_apnd)  = 2+nt_alvl   ! melt pond area
                        trcr_depend(nt_hpnd)  = 2+nt_apnd   ! melt pond depth
@@ -140,11 +118,25 @@
                        trcr_depend(nt_hpnd)  = 2+nt_apnd   ! melt pond depth
                        trcr_depend(nt_ipnd)  = 2+nt_apnd   ! refrozen pond lid
           endif
+          if (tr_snow) then                                ! snow-volume-weighted snow tracers
+             do k = 1, nslyr
+                trcr_depend(nt_smice + k - 1) = 2          ! ice mass in snow
+                trcr_depend(nt_smliq + k - 1) = 2          ! liquid mass in snow
+                trcr_depend(nt_rhos  + k - 1) = 2          ! effective snow density
+                trcr_depend(nt_rsnw  + k - 1) = 2          ! snow radius
+             enddo
+          endif
           if (tr_fsd) then
              do it = 1, nfsd
                 trcr_depend(nt_fsd + it - 1) = 0    ! area-weighted floe size distribution
              enddo
           endif
+          !if (tr_iso) then  ! isotopes
+          !   do it = 1, n_iso
+          !      trcr_depend(nt_isosno+it-1) = 2     ! snow
+          !      trcr_depend(nt_isoice+it-1) = 1     ! ice
+          !   enddo
+          !endif
           if (tr_aero) then ! volume-weighted aerosols
              do it = 1, n_aero
                 trcr_depend(nt_aero+(it-1)*4  ) = 2 ! snow
@@ -175,10 +167,6 @@
              nt_strata   (it,2) = 0
           enddo
     
-          if (tr_pond_cesm) then
-             n_trcr_strata(nt_hpnd)   = 1       ! melt pond depth
-             nt_strata    (nt_hpnd,1) = nt_apnd ! on melt pond area
-          endif
           if (tr_pond_lvl) then
              n_trcr_strata(nt_apnd)   = 1       ! melt pond area
              nt_strata    (nt_apnd,1) = nt_alvl ! on level ice area
@@ -200,9 +188,10 @@
           ! Set state variables
           !-----------------------------------------------------------------
 
-          call init_state_var()    
-
+          !if(ihot_mice == 0)    call init_state_var()    
+          call init_state_var()  
           if(ihot_mice == 1)    call mice_hotstart_var()
+          if(ihot_mice == 2)    call mice_hotstart_HYCOM_var()
     
       end subroutine init_state
 
@@ -553,8 +542,6 @@
           snow_bio_net(:,:) = c0
           fbio_snoice (:,:) = c0
           fbio_atmice (:,:) = c0
-          fzsal         (:) = c0
-          fzsal_g       (:) = c0
           zfswin    (:,:,:) = c0
           fnit          (:) = c0
           fsil          (:) = c0
@@ -576,7 +563,7 @@
 
       subroutine init_thermo_vertical()
  
-          use icepack_intfc,        only: icepack_init_thermo
+          use icepack_intfc,        only: icepack_init_thermo,icepack_sea_freezing_temperature
 
           implicit none
 
@@ -607,7 +594,8 @@
           do i = 1, nx
              do k = 1, nilyr+1
                 salinz(i,k) = sprofile(k)
-                Tmltz (i,k) = -salinz(i,k)*depressT
+                Tmltz (i,k) = icepack_sea_freezing_temperature(salinz(i,k))
+                !Tmltz (i,k) = -salinz(i,k)*depressT
              enddo ! k
           enddo    ! i
 
@@ -642,10 +630,10 @@
           real (kind=dbl_kind), dimension(ncat) :: &
              fbri             ! brine height to ice thickness
           real (kind=dbl_kind), allocatable, dimension(:,:) :: &
-             ztrcr_sw
-          logical (kind=log_kind) :: tr_brine, tr_zaero, tr_bgc_N
+             ztrcr_sw, rsnow
+          logical (kind=log_kind) :: tr_brine, tr_zaero, tr_bgc_N, snwgrain
           integer (kind=int_kind) :: nt_alvl, nt_apnd, nt_hpnd, nt_ipnd, nt_aero, &
-             nt_fbri, nt_tsfc, ntrcr, nbtrcr_sw, nlt_chl_sw
+             nt_fbri, nt_tsfc, ntrcr, nbtrcr_sw, nlt_chl_sw, nt_rsnw
           integer (kind=int_kind), dimension(icepack_max_aero) :: nlt_zaero_sw
           integer (kind=int_kind), dimension(icepack_max_aero) :: nt_zaero
           integer (kind=int_kind), dimension(icepack_max_algae) :: nt_bgc_N
@@ -657,6 +645,7 @@
           !-----------------------------------------------------------------
     
              call icepack_query_parameters(puny_out=puny)
+             call icepack_query_parameters(snwgrain_out=snwgrain)
              call icepack_query_parameters(shortwave_out=shortwave)
              call icepack_query_parameters(dEdd_algae_out=dEdd_algae)
              call icepack_query_parameters(modal_aero_out=modal_aero)
@@ -669,7 +658,8 @@
                   nt_ipnd_out=nt_ipnd, nt_aero_out=nt_aero, &
                   nt_fbri_out=nt_fbri, nt_tsfc_out=nt_tsfc, &
                   nt_bgc_N_out=nt_bgc_N, nt_zaero_out=nt_zaero, &
-                  nlt_chl_sw_out=nlt_chl_sw, nlt_zaero_sw_out=nlt_zaero_sw)
+                  nlt_chl_sw_out=nlt_chl_sw, nlt_zaero_sw_out=nlt_zaero_sw,&
+                  nt_rsnw_out=nt_rsnw)
              call icepack_warnings_flush(ice_stderr)
              if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
                  file=__FILE__,line= __LINE__)
@@ -679,6 +669,7 @@
           !-----------------------------------------------------------------
     
              allocate(ztrcr_sw(nbtrcr_sw, ncat))
+             allocate(rsnow(nslyr,ncat))
     
              fswpenln(:,:,:) = c0
              Iswabsn(:,:,:) = c0
@@ -728,9 +719,15 @@
                 endif
     
                 fbri(:) = c0
+                rsnow(:,:) = c0
                 ztrcr_sw(:,:) = c0
                 do n = 1, ncat
                    if (tr_brine)  fbri(n) = trcrn(i,nt_fbri,n)
+                   if (snwgrain) then
+                      do k = 1, nslyr
+                         rsnow(k,n) = trcrn(i,nt_rsnw+k-1,n)
+                      enddo
+                   endif
                 enddo
     
                 call icepack_step_radiation (                      &
@@ -774,7 +771,7 @@
                              albpndn=albpndn(i,:),   apeffn=apeffn(i,:),       &
                              snowfracn=snowfracn(i,:),                         &
                              dhsn=dhsn(i,:),         ffracn=ffracn(i,:),       &
-                             l_print_point=l_print_point,                      &
+                             rsnow=rsnow(:,:),  l_print_point=l_print_point,   &
                              initonly = .true.)
                 
                 call icepack_warnings_flush(ice_stderr)
@@ -845,6 +842,7 @@
              enddo ! i
     
              deallocate(ztrcr_sw)
+             deallocate(rsnow)
 
       end subroutine init_shortwave
 
@@ -920,6 +918,7 @@
           use icepack_intfc, only: icepack_init_fsd
           use icepack_intfc, only: icepack_init_fsd_bounds
           use icepack_intfc, only: icepack_warnings_flush
+          use icepack_intfc, only: icepack_init_snow
     
           implicit none
     
@@ -927,14 +926,15 @@
              tr_aero,   &   ! from icepack
              tr_zaero,  &   ! from icepack
              tr_fsd,    &   ! from icepack
-             wave_spec      ! from icepack
+             wave_spec, &   ! from icepack
+             tr_snow
           character(len=*), parameter :: subname='(icedrv_initialize)'
           !type(t_mesh), intent(in), target :: mesh
 
           call icepack_query_parameters(wave_spec_out=wave_spec)
           call icepack_query_tracer_flags(tr_aero_out=tr_aero)
           call icepack_query_tracer_flags(tr_zaero_out=tr_zaero)
-          call icepack_query_tracer_flags(tr_fsd_out=tr_fsd)
+          call icepack_query_tracer_flags(tr_fsd_out=tr_fsd, tr_snow_out=tr_snow)
           call icepack_warnings_flush(ice_stderr)
           if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
               file=__FILE__,line= __LINE__)
@@ -984,7 +984,10 @@
           call schism_to_icepack    
           call init_state           ! initialize the ice state
           call init_history_therm   ! initialize thermo history variables
-
+         ! snow aging lookup table initialization
+          if (tr_snow) then         ! advanced snow physics
+            call icepack_init_snow()
+          endif
           if (tr_fsd .and. wave_spec) call init_wave_spec    ! wave spectrum in ice
           if (tr_aero .or. tr_zaero)  call init_faero        ! default aerosols values
     
@@ -1003,6 +1006,7 @@
 
           use icepack_intfc,   only: icepack_init_fsd
           use icepack_intfc,   only: icepack_aggregate
+          use schism_glbl,     only : xnd, ynd
 
           implicit none
 
@@ -1016,7 +1020,7 @@
     
           real (kind=dbl_kind) :: &
              Tsfc, sum, hbar, &
-             rhos, Lfresh, puny, pi
+             rhos, Lfresh, puny, pi, rsnw_fall
     
           real (kind=dbl_kind), dimension(ncat) :: &
              ainit, hinit    ! initial area, thickness
@@ -1030,9 +1034,10 @@
           real (kind=dbl_kind), parameter :: &
              hsno_init = 0.25_dbl_kind   ! initial snow thickness (m)
     
-          logical (kind=log_kind) :: tr_brine, tr_lvl, tr_fsd
+          logical (kind=log_kind) :: tr_brine, tr_lvl, tr_fsd, tr_snow
           integer (kind=int_kind) :: nt_Tsfc, nt_qice, nt_qsno, nt_sice, nt_fsd
-          integer (kind=int_kind) :: nt_fbri, nt_alvl, nt_vlvl, ntrcr
+          integer (kind=int_kind) :: nt_fbri, nt_alvl, nt_vlvl, ntrcr, nt_rsnw, &
+                                     nt_smice, nt_smliq, nt_rhos
     
           character(len=char_len_long), parameter  :: ice_ic='default'
           character(len=*),             parameter  :: subname='(set_state_var)'
@@ -1042,12 +1047,15 @@
           !-----------------------------------------------------------------
     
           call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_lvl_out=tr_lvl,    &
-            tr_fsd_out=tr_fsd)
+            tr_fsd_out=tr_fsd, tr_snow_out=tr_snow)
           call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
           call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc, nt_qice_out=nt_qice, &
                nt_qsno_out=nt_qsno, nt_sice_out=nt_sice, nt_fsd_out=nt_fsd,            &
-               nt_fbri_out=nt_fbri, nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl)
-          call icepack_query_parameters(rhos_out=rhos, Lfresh_out=Lfresh, puny_out=puny, pi_out=pi)
+               nt_fbri_out=nt_fbri, nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl,          &
+               nt_smice_out=nt_smice, nt_smliq_out=nt_smliq, &
+               nt_rhos_out=nt_rhos, nt_rsnw_out=nt_rsnw)
+          call icepack_query_parameters(rhos_out=rhos, Lfresh_out=Lfresh, puny_out=puny, &
+          rsnw_fall_out=rsnw_fall, pi_out=pi)
           call icepack_warnings_flush(ice_stderr)
           if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname,     &
              file=__FILE__,line= __LINE__)
@@ -1077,52 +1085,76 @@
                 do k = 1, nslyr
                    trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
                 enddo
+                if (tr_snow) then
+                   do k = 1, nslyr
+                      trcrn(i,nt_rsnw +k-1,n) = rsnw_fall
+                      trcrn(i,nt_rhos +k-1,n) = rhos
+                      trcrn(i,nt_smice+k-1,n) = rhos
+                      trcrn(i,nt_smliq+k-1,n) = c0
+                   enddo               ! nslyr
+                endif
              enddo
              ainit(n) = c0
              hinit(n) = c0
           enddo
 
+         ! if (3 <= ncat) then
+         !   n = 3
+         !   ainit(n) = c1  ! assumes we are using the default ITD boundaries
+         !   hinit(n) = c2
+         ! else
+         !   ainit(ncat) = c1
+         !   hinit(ncat) = c2
+         ! endif
           if (3 <= ncat) then
             n = 3
             ainit(n) = c1  ! assumes we are using the default ITD boundaries
-            hinit(n) = c2
+            hinit(n) = 1.5
           else
             ainit(ncat) = c1
-            hinit(ncat) = c2
+            hinit(ncat) = 1.5
           endif
-          !do i = 1, nx
-          !  do n = 1, ncat
-          !     if((lat_val(i)*180/pi)>91) then
-          !        write(*,*) i,lat_val(i)*180/pi,lat_val(i)
-          !          aicen(i,n) = ainit(n)
-          !          vicen(i,n) = hinit(n) * ainit(n) ! m
-          !          vsnon(i,n) = c0
-          !                          call icepack_init_trcr(Tair     = T_air(i),    &
-          !                                   Tf       = Tf(i),       &
-          !                                   Sprofile = salinz(i,:), &
-          !                                   Tprofile = Tmltz(i,:),  &
-          !                                   Tsfc     = Tsfc,        &
-          !                                   nilyr=nilyr, nslyr=nslyr, &
-          !                                   qin=qin(:), qsn=qsn(:))
-          !                                   ! surface temperature
-          !           trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
-          !           ! ice enthalpy, salinity
-          !           do k = 1, nilyr
-          !              trcrn(i,nt_qice+k-1,n) = qin(k)
-          !              trcrn(i,nt_sice+k-1,n) = salinz(i,k)
-          !           enddo
-          !           ! snow enthalpy
-         !            do k = 1, nslyr
-         !               trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
-         !            enddo               ! nslyr
-         !            ! brine fraction
-         !            if (tr_brine) trcrn(i,nt_fbri,n) = c1
-         !      endif
-         !   enddo                  ! ncat
-         !       call icepack_warnings_flush(ice_stderr)
-         !       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
-         !           file=__FILE__, line=__LINE__)     
-         !enddo
+          do i = 1, nx
+            do n = 1, ncat
+               !if((lat_val(i)*180/pi)>91) then
+               !if (sst(i) <= -1 .and. (lat_val(i)*180/pi)>80 .and. (lat_val(i)*180/pi)<85 .and. (lon_val(i)*180/pi)>140 .and. (lon_val(i)*180/pi)<150) then
+               !if (xnd(i) <= -65000 .and. xnd(i) >= -70000 .and. ynd(i) >= 500 .and. ynd(i) <= 5500) then
+               if (xnd(i) <= -55000 .and. xnd(i) >= -58000 .and. ynd(i) >= 4000 .and. ynd(i) <= 7000) then
+               !if (xnd(i) <= 49000 .and. xnd(i) >= 44000 .and. ynd(i) >= -2500 .and. ynd(i) <= 2500) then
+               !if (sst(i) <= -1) then 
+                  !write(*,*) i,lat_val(i)*180/pi,lat_val(i)
+                    aicen(i,n) = ainit(n)
+                    vicen(i,n) = hinit(n) * ainit(n) ! m
+                    vsnon(i,n) = c0
+                      call icepack_init_trcr(Tair     = T_air(i),    &
+                                             Tf       = Tf(i),       &
+                                             Sprofile = salinz(i,:), &
+                                             Tprofile = Tmltz(i,:),  &
+                                             Tsfc     = Tsfc,        &
+                                             nilyr=nilyr, nslyr=nslyr, &
+                                             qin=qin(:), qsn=qsn(:))
+                                             ! surface temperature
+                     trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
+                     ! ice enthalpy, salinity
+                     do k = 1, nilyr
+                        trcrn(i,nt_qice+k-1,n) = qin(k)
+                        !if(qin(k).ne.qin(k)) write(12,*) qin(k),T_air(i),Tf(i)
+                        trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+                     enddo
+                     ! snow enthalpy
+                     do k = 1, nslyr
+                        trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+                     enddo               ! nslyr
+                     ! brine fraction
+                     if (tr_brine) trcrn(i,nt_fbri,n) = c1
+               endif
+            enddo                  ! ncat
+                call icepack_warnings_flush(ice_stderr)
+                if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+                    file=__FILE__, line=__LINE__)
+
+            
+         enddo
           ! For the moment we start we no sea ice
 
 !          if (3 <= ncat) then
@@ -1226,19 +1258,20 @@
                                      nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
                                      nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
                                      ktherm,  nt_fbri,                      &
+                                     nt_smice, nt_smliq, nt_rhos, nt_rsnw,  &
                                      var1d_dim(1),var2d_dim(2),var3d_dim(3),&
                                      ice_ntr_dim,ncid2,mm,ip
 
         logical (kind=log_kind)   ::                        &
              solve_zsal, skl_bgc, z_tracers,                &
-             tr_iage, tr_FY, tr_lvl, tr_aero, tr_pond_cesm, &
+             tr_iage, tr_FY, tr_lvl, tr_aero,               &
              tr_pond_topo, tr_pond_lvl, tr_brine,           &
              tr_bgc_N, tr_bgc_C, tr_bgc_Nit,                &
              tr_bgc_Sil,  tr_bgc_DMS,                       &
              tr_bgc_chl,  tr_bgc_Am,                        &
              tr_bgc_PON,  tr_bgc_DON,                       &
              tr_zaero,    tr_bgc_Fe,                        &
-             tr_bgc_hum
+             tr_bgc_hum,  tr_snow 
         real(kind=dbl_kind), allocatable, dimension(:,:) :: &
          swild,swild2
         character(500)            :: longname
@@ -1254,12 +1287,14 @@
              nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_Tsfc_out=nt_Tsfc,         &
              nt_iage_out=nt_iage, nt_FY_out=nt_FY,                                  &
              nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
-             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno)
+             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno,                              &
+             nt_smice_out=nt_smice, nt_smliq_out=nt_smliq,nt_rhos_out=nt_rhos,      &
+             nt_rsnw_out=nt_rsnw)
         call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
              skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
         call icepack_query_tracer_flags(                                            &
              tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
-             tr_aero_out=tr_aero, tr_pond_cesm_out=tr_pond_cesm,                    &
+             tr_aero_out=tr_aero, tr_snow_out=tr_snow,                              &
              tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
              tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
              tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
@@ -1405,40 +1440,7 @@
 
           !call def_variable_2d(ip_id, 'vlvl',  (/nod2D, ncat/), 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:));
       end if
-    
-      if (tr_pond_cesm) then
 
-         j=nf90_inq_varid(ncid2, "apnd",mm)
-         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm apnd1')
-         do i=1,np_global
-            if(ipgl(i)%rank==myrank) then
-               ip=ipgl(i)%id
-               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
-               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
-               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm apnd2')
-            endif
-         enddo
-         swild = transpose(swild2)
-         trcrn(1:npa,nt_apnd,1:ncat) = swild
-
-          !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
-
-         j=nf90_inq_varid(ncid2, "hpnd",mm)
-         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm hpnd1')
-         do i=1,np_global
-            if(ipgl(i)%rank==myrank) then
-               ip=ipgl(i)%id
-               !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
-               j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
-               if(j/=NF90_NOERR) call parallel_abort('mice_init: nc cesm hpnd2')
-            endif
-         enddo
-         swild = transpose(swild2)
-         trcrn(1:npa,nt_hpnd,1:ncat) = swild
-
-          !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
-      end if
-    
       if (tr_pond_topo) then
 
          j=nf90_inq_varid(ncid2, "apnd",mm)
@@ -1568,7 +1570,7 @@
 
           !call def_variable_2d(ip_id, 'dhsn',    (/nod2D, ncat/), 'depth difference for snow on sea ice and pond ice', 'm',    dhsn);
       end if
-    
+
       if (tr_brine) then
 
          j=nf90_inq_varid(ncid2, "fbri",mm)
@@ -1672,12 +1674,388 @@
 
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qsno+k-1,:));
      end do
+
+      if (tr_snow) then
+         do k=1,nslyr
+            write(trname,'(A6,i1)') 'smice_', k
+            write(longname,'(A18,i1)') 'mass of ice in snow:', k
+            units='kg/m^3'
+            j=nf90_inq_varid(ncid2, trim(trname),mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            do i=1,np_global
+               if(ipgl(i)%rank==myrank) then
+                  ip=ipgl(i)%id
+                  !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+                  j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+               endif
+            enddo
+            swild = transpose(swild2)
+            trcrn(1:npa,nt_smice+k-1,1:ncat) = swild            
+         enddo
+         do k=1,nslyr
+            write(trname,'(A6,i1)') 'smliq_', k
+            write(longname,'(A18,i1)') 'mass of liquid in snow:', k
+            units='kg/m^3'
+            j=nf90_inq_varid(ncid2, trim(trname),mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            do i=1,np_global
+               if(ipgl(i)%rank==myrank) then
+                  ip=ipgl(i)%id
+                  !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+                  j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+               endif
+            enddo
+            swild = transpose(swild2)
+            trcrn(1:npa,nt_smliq+k-1,1:ncat) = swild            
+         enddo
+         do k=1,nslyr
+            write(trname,'(A6,i1)') 'rhos_', k
+            write(longname,'(A18,i1)') 'snow grain radius:', k
+            units='10^-6 m'
+            j=nf90_inq_varid(ncid2, trim(trname),mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            do i=1,np_global
+               if(ipgl(i)%rank==myrank) then
+                  ip=ipgl(i)%id
+                  !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+                  j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+               endif
+            enddo
+            swild = transpose(swild2)
+            trcrn(1:npa,nt_rhos+k-1,1:ncat) = swild            
+         enddo
+         do k=1,nslyr
+            write(trname,'(A6,i1)') 'rsnw_', k
+            write(longname,'(A18,i1)') 'effective snow density:', k
+            units='kg/m^3'
+            j=nf90_inq_varid(ncid2, trim(trname),mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            do i=1,np_global
+               if(ipgl(i)%rank==myrank) then
+                  ip=ipgl(i)%id
+                  !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+                  j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+               endif
+            enddo
+            swild = transpose(swild2)
+            trcrn(1:npa,nt_rsnw+k-1,1:ncat) = swild            
+         enddo         
+      
+      endif   
+      
         j=nf90_close(ncid2)
         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc close')
       deallocate(swild,swild2)
       end subroutine mice_hotstart_var
 
+!=======================================================================
+
+      subroutine mice_hotstart_HYCOM_var ()
+         use schism_glbl, only:in_dir,np,len_in_dir,np_global,ipgl,npa
+         use schism_msgp, only: myrank,rtype,comm,parallel_abort,exchange_p2d
+         use icepack_intfc, only: icepack_aggregate
+         use mice_module, only: u_ice,v_ice
+         use netcdf
+        implicit none
+
+        ! include 'mpif.h'
+        integer (kind=int_kind)   :: i, j, k, iblk,n,it, &     ! counting indices
+                                     nt_Tsfc, nt_sice, nt_qice, nt_qsno,    &
+                                     nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
+                                     nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
+                                     ktherm,  nt_fbri,                      &
+                                     var1d_dim(1),var2d_dim(2),var3d_dim(3),&
+                                     ice_ntr_dim,ncid2,mm,ip, ntrcr, istat
+          real (kind=dbl_kind) :: &
+             Tsfc, sum, hbar, &
+             rhos, Lfresh, puny, pi
+    
+          real (kind=dbl_kind), dimension(ncat) :: &
+             ainit, hinit    ! initial area, thickness
+    
+          real (kind=dbl_kind), dimension(nilyr) :: &
+             qin             ! ice enthalpy (J/m3)
+    
+          real (kind=dbl_kind), dimension(nslyr) :: &
+             qsn             ! snow enthalpy (J/m3)
+
+        logical (kind=log_kind)   ::                        &
+             solve_zsal, skl_bgc, z_tracers,                &
+             tr_iage, tr_FY, tr_lvl, tr_aero,               &
+             tr_pond_topo, tr_pond_lvl, tr_brine,           &
+             tr_bgc_N, tr_bgc_C, tr_bgc_Nit,                &
+             tr_bgc_Sil,  tr_bgc_DMS,                       &
+             tr_bgc_chl,  tr_bgc_Am,                        &
+             tr_bgc_PON,  tr_bgc_DON,                       &
+             tr_zaero,    tr_bgc_Fe,                        &
+             tr_bgc_hum
+        real(kind=dbl_kind), allocatable, dimension(:) :: &
+         swild,swild2, aicetmp, vicetmp, hicetmp
+         
+         character(len=*),             parameter  :: subname='(mice_hotstart_HYCOM_var)'
+        character(500)            :: longname
+        character(500)            :: filename
+        character(500)            :: trname, units
+
+
+
+         call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_sice_out=nt_sice, &
+             nt_qice_out=nt_qice, nt_qsno_out=nt_qsno)
+        call icepack_query_tracer_indices(                                          &
+             nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, nt_ipnd_out=nt_ipnd,         &
+             nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_Tsfc_out=nt_Tsfc,         &
+             nt_iage_out=nt_iage, nt_FY_out=nt_FY,                                  &
+             nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
+             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno)
+        call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
+             skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
+        call icepack_query_tracer_flags(                                            &
+             tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
+             tr_aero_out=tr_aero,                                                   &
+             tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
+             tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
+             tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
+             tr_bgc_DMS_out=tr_bgc_DMS,                                             &
+             tr_bgc_chl_out=tr_bgc_chl, tr_bgc_Am_out=tr_bgc_Am,                    &
+             tr_bgc_PON_out=tr_bgc_PON, tr_bgc_DON_out=tr_bgc_DON,                  &
+             tr_zaero_out=tr_zaero,     tr_bgc_Fe_out=tr_bgc_Fe,                    &
+             tr_bgc_hum_out=tr_bgc_hum)
+        call icepack_warnings_flush(nu_diag)
+         
+         allocate(swild2(np_global),swild(np_global),aicetmp(npa),vicetmp(npa),hicetmp(npa)) 
+
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        if(j/=NF90_NOERR) call parallel_abort('mice_init: hotstart.nc not found')
+
+
+          !HYCOM hotstart var
+
+         if(myrank==0) then
+            j=nf90_inq_varid(ncid2, "sic2",mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sic1')
+            j=nf90_get_var(ncid2,mm,swild2(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sic2')
+            j=nf90_inq_varid(ncid2, "sih2",mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sih1')
+            j=nf90_get_var(ncid2,mm,swild(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc sih2')
+         endif
+         call mpi_bcast(swild,np_global,rtype,0,comm,istat)
+         call mpi_bcast(swild2,np_global,rtype,0,comm,istat)
+          do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            aicetmp(ip) = real(int(swild2(i)*1000))/1000
+            vicetmp(ip) = real(int(swild(i)*1000))/1000
+          endif
+        enddo !i
+
+         if(myrank==0) then
+            j=nf90_inq_varid(ncid2, "siu2",mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc siu1')
+            j=nf90_get_var(ncid2,mm,swild2(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc siu2')
+            j=nf90_inq_varid(ncid2, "siv2",mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc siv1')
+            j=nf90_get_var(ncid2,mm,swild(1:np_global),(/1/),(/np_global/))
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc siv2')
+         endif
+         call mpi_bcast(swild,np_global,rtype,0,comm,istat)
+         call mpi_bcast(swild2,np_global,rtype,0,comm,istat)
+         do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            ip=ipgl(i)%id
+            U_ice(ip) = swild2(i)
+            V_ice(ip) = swild(i)
+          endif
+         enddo !i
+         uvel(:) = U_ice(:)
+         vvel(:) = V_ice(:)
+
+
+
+          !-----------------------------------------------------------------
+          ! Initialize state variables.
+          ! If restarting, these values are overwritten.
+          !-----------------------------------------------------------------
+    
+          do n = 1, ncat
+             do i = 1, nx
+                aicen(i,n) = c0
+                vicen(i,n) = c0
+                vsnon(i,n) = c0
+                trcrn(i,nt_Tsfc,n) = Tf(i)  ! surface temperature
+                if (max_ntrcr >= 2) then
+                   do it = 2, max_ntrcr
+                      trcrn(i,it,n) = c0
+                   enddo
+                endif
+                if (tr_lvl)   trcrn(i,nt_alvl,n) = c1
+                if (tr_lvl)   trcrn(i,nt_vlvl,n) = c1
+                if (tr_brine) trcrn(i,nt_fbri,n) = c1
+                do k = 1, nilyr
+                   trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+                enddo
+                do k = 1, nslyr
+                   trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+                enddo
+             enddo
+             ainit(n) = c0
+             hinit(n) = c0
+          enddo
+
+
+          do i = 1, nx
+            ainit(:) = 0
+            hinit(:) = 0
+
+            if (aicetmp(i) > 0 .and. vicetmp(i) > 0) then
+               hicetmp(i) = vicetmp(i) / aicetmp(i)
+               do n = 1 ,ncat 
+                  if(hicetmp(i)<hin_max(n)) exit
+               enddo
+               ainit(n) = aicetmp(i)
+               hinit(n) = hicetmp(i)
+            endif
+
+            do n = 1, ncat
+               !if((lat_val(i)*180/pi)>91) then
+               !if (sst(i) <= -1 .and. (lat_val(i)*180/pi)>80 .and. (lat_val(i)*180/pi)<85 .and. (lon_val(i)*180/pi)>140 .and. (lon_val(i)*180/pi)<150) then
+               if (aicetmp(i) > 0 .and. vicetmp(i) > 0) then 
+               !if (sst(i) <= -1) then
+                  !write(*,*) i,lat_val(i)*180/pi,lat_val(i)
+                    aicen(i,n) = ainit(n)
+                    vicen(i,n) = hinit(n) * ainit(n) ! m
+                    vsnon(i,n) = c0
+                      call icepack_init_trcr(Tair     = T_air(i),    &
+                                             Tf       = Tf(i),       &
+                                             Sprofile = salinz(i,:), &
+                                             Tprofile = Tmltz(i,:),  &
+                                             Tsfc     = Tsfc,        &
+                                             nilyr=nilyr, nslyr=nslyr, &
+                                             qin=qin(:), qsn=qsn(:))
+                                             ! surface temperature
+                     trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
+                     !write(12,*) i,n,aicen(i,n),vicen(i,n),Tf(i),sst(i),Tsfc,aicetmp(i),vicetmp(i),hicetmp(i)
+                     ! ice enthalpy, salinity
+                     do k = 1, nilyr
+                        trcrn(i,nt_qice+k-1,n) = qin(k)
+                        !if(qin(k).ne.qin(k)) write(12,*) qin(k),T_air(i),Tf(i)
+                        trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+                     enddo
+                     ! snow enthalpy
+                     do k = 1, nslyr
+                        trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+                     enddo               ! nslyr
+                     ! brine fraction
+                     if (tr_brine) trcrn(i,nt_fbri,n) = c1
+               endif
+            enddo                  ! ncat
+                call icepack_warnings_flush(ice_stderr)
+                if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+                    file=__FILE__, line=__LINE__)
+
+            
+         enddo
+          ! For the moment we start we no sea ice
+
+!          if (3 <= ncat) then
+!              n = 3
+!              ainit(n) = c1  ! assumes we are using the default ITD boundaries
+!              hinit(n) = c2
+!          else
+!              ainit(ncat) = c1
+!              hinit(ncat) = c2
+!          endif
+!
+!          do i = 1, nx
+!             if (sst(i) <= Tf(i)) then             !
+!                do n = 1, ncat
+!                   ! ice volume, snow volume
+!                   aicen(i,n) = ainit(n)
+!                   vicen(i,n) = hinit(n) * ainit(n) ! m
+!                   vsnon(i,n) = c0
+!                   ! tracers
+!                   call icepack_init_trcr(Tair     = T_air(i),    &
+!                                          Tf       = Tf(i),       &
+!                                          Sprofile = salinz(i,:), &
+!                                          Tprofile = Tmltz(i,:),  &
+!                                          Tsfc     = Tsfc,        &
+!                                          nilyr=nilyr, nslyr=nslyr, &
+!                                          qin=qin(:), qsn=qsn(:))
+!          
+!                   ! floe size distribution
+!                   if (tr_fsd) call icepack_init_fsd(nfsd=nfsd, ice_ic=ice_ic, &
+!                                            floe_rad_c=floe_rad_c,                &
+!                                            floe_binwidth=floe_binwidth,          &
+!                                            afsd=trcrn(i,nt_fsd:nt_fsd+nfsd-1,n))
+!                   ! surface temperature
+!                   trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
+!                   ! ice enthalpy, salinity
+!                   do k = 1, nilyr
+!                      trcrn(i,nt_qice+k-1,n) = qin(k)
+!                      trcrn(i,nt_sice+k-1,n) = salinz(i,k)
+!                   enddo
+!                   ! snow enthalpy
+!                   do k = 1, nslyr
+!                      trcrn(i,nt_qsno+k-1,n) = -rhos * Lfresh
+!                   enddo               ! nslyr
+!                   ! brine fraction
+!                   if (tr_brine) trcrn(i,nt_fbri,n) = c1
+!                enddo                  ! ncat
+!                call icepack_warnings_flush(ice_stderr)
+!                if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+!                    file=__FILE__, line=__LINE__)
+!             endif 
+!          enddo
+
+          !-----------------------------------------------------------------
+          ! compute aggregate ice state and open water area
+          !-----------------------------------------------------------------
+    
+          do i = 1, nx
+             aice(i) = c0
+             vice(i) = c0
+             vsno(i) = c0
+             do it = 1, max_ntrcr
+                trcr(i,it) = c0
+             enddo
+    
+             call icepack_aggregate(ncat=ncat,                            &
+                                    trcrn=trcrn(i,1:ntrcr,:),             &
+                                    aicen=aicen(i,:),                     &
+                                    vicen=vicen(i,:),                     &
+                                    vsnon=vsnon(i,:),                     &
+                                    trcr=trcr (i,1:ntrcr),                &
+                                    aice=aice (i),                        &
+                                    vice=vice (i),                        &
+                                    vsno=vsno (i),                        &
+                                    aice0=aice0(i),                       &
+                                    ntrcr=ntrcr,                          &
+                                    trcr_depend=trcr_depend(1:ntrcr),     &
+                                    trcr_base=trcr_base    (1:ntrcr,:),   &
+                                    n_trcr_strata=n_trcr_strata(1:ntrcr), &
+                                    nt_strata=nt_strata    (1:ntrcr,:))
+    
+             aice_init(i) = aice(i)
+             !write(12,*) i,aice(i),vice(i),aicen(i,:),vicen(i,:),aice0(i)
+    
+          enddo
+    
+          call icepack_warnings_flush(ice_stderr)
+          if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+              file=__FILE__, line=__LINE__)
+
+      deallocate(swild,swild2,aicetmp,vicetmp,hicetmp)
+      end subroutine mice_hotstart_HYCOM_var
+
       end submodule icedrv_init
+
+      
 
 
 !=======================================================================
