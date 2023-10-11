@@ -1,4 +1,4 @@
-# Building and documentation
+# SCHISM Building and documentation
 The manual may be found on the SCHISM wiki at http://ccrm.vims.edu/schismweb/. Build instructions are described in Chapter 1.
 
 The online documentation can be accessed at https://schism-dev.github.io/schism.
