@@ -1639,6 +1639,7 @@
 <p>sflux_prc_1.[XXXX].nc (<font color="blue">needed</font> if isconsv=1): NetCDF files that have time and precipitation rate;</p>
 <p>sflux_rad_1.[XXXX].nc (<font color="blue">needed</font> if ihconsv=1): NetCDF files that have time, downward longwave and shortwave radiation fluxes.</p>
 <p>PySCHISM supports three types of atmpsheric datasets.</p>
+<p>Notes: startdate should be one day earlier than the actual run startdate, because there is no data at t00z. Acoordingly, add two more extra days for rnday in the following scripts.</p>
 <h2 id="ecmwf-era5"><strong>ECMWF ERA5</strong><a class="headerlink" href="#ecmwf-era5" title="Permanent link">&para;</a></h2>
 <p>ERA5 provides hourly estimates of a large number of atmoshperic, land and oceanic climate variables. The data cover the Earth on a 30km grid and resolve the atmoshpere using 137 levels from the surface up to a height of 80km. The dataset covers from 1950 to present. PySCHISM downloads ERA5 data through CDS API service. To do so, you need to install CDS API package. <a href="https://cds.climate.copernicus.eu/api-how-to">Here</a> is the instruction about how to install the package.</p>
 <p>The python script to generate sflux file from ERA5 is as follows:
