@@ -26,7 +26,7 @@
 !
 
 !     Do upwind and TVD transport
-      subroutine do_transport_tvd_imp(it,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
+      subroutine do_transport_tvd_imp(it,ntr,difnum_max_l, control_elem, control_proc) !,nvrt1,npa1,dfh1)
 
 !#ifdef USE_MPIMODULE
 !      use mpi
@@ -107,6 +107,7 @@
 !      real(rkind), intent(in) :: dfh1(nvrt1,npa1) 
       real(rkind), intent(out) :: difnum_max_l !max. horizontal diffusion number reached by this process (check stability)
 
+      integer, intent(in) :: control_elem, control_proc
 
 !     Functions used
       real(rkind) :: flux_lim
@@ -181,6 +182,7 @@
             psumtr(1:ntr)=psumtr(1:ntr)+vol*tr_el(1:ntr,k,i)
           enddo !k
         enddo !i=1,ne
+        if (myrank==control_proc)print*,'do_transport_tvd_imp: kbe,nvrt,ntr,ntrs=',kbe(control_elem),nvrt,ntr,ntrs
         call mpi_allreduce(psumtr,tmass,ntr,rtype,MPI_SUM,comm,ierr)
 !        if(myrank==0) write(25,*)'mass entering transport:',real(time_stamp/86400),adv_tr(1:ntr)
       endif !max_iadjust_mass_consv
@@ -275,6 +277,14 @@
 !           if(it==46.and.i==58422) write(99,*)j,k,vnor1,vnor2,flux_adv_hface(k,jsj)
           endif !is_land
         enddo !k=kbs(i)+1,nvrt
+        
+        !if(myrank==control_proc)then
+        !  if(j==elside(1,control_elem))print*,j,kbs(j),nvrt," do_transport_tvd_imp: flux_adv_hface1=",flux_adv_hface((kbs(j)+1):nvrt,j)
+        !  if(j==elside(2,control_elem))print*,j,kbs(j),nvrt," do_transport_tvd_imp: flux_adv_hface2=",flux_adv_hface((kbs(j)+1):nvrt,j)
+        !  if(j==elside(3,control_elem))print*,j,kbs(j),nvrt," do_transport_tvd_imp: flux_adv_hface3=",flux_adv_hface((kbs(j)+1):nvrt,j)
+        !  if(j==elside(4,control_elem))print*,j,kbs(j),nvrt," do_transport_tvd_imp: flux_adv_hface4=",flux_adv_hface((kbs(j)+1):nvrt,j)
+        !endif
+        
       enddo !j=1,ns
 !$OMP end do
 
