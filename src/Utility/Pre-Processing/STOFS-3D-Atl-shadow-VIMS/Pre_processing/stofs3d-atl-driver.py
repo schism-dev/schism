@@ -377,9 +377,9 @@ def main():
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}', file_list)
 
         # generate source_sink files by intersecting NWM river segments with the model land boundary
-        # prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/original_source_sink/', [])
-        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        # gen_sourcesink(startdate=config.startdate, rnday=config.rnday)
+        prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/original_source_sink/', [])
+        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        gen_sourcesink(startdate=config.startdate, rnday=config.rnday)
         
         # relocate source locations to resolved river channels
         prep_and_change_to_subdir(f'{model_input_path}/{sub_dir}/relocated_source_sink/', [])
