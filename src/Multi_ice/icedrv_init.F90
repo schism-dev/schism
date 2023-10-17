@@ -1257,7 +1257,7 @@
                                      nt_Tsfc, nt_sice, nt_qice, nt_qsno,    &
                                      nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
                                      nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
-                                     ktherm,  nt_fbri,                      &
+                                     ktherm,  nt_fbri, nt_fsd,              &
                                      nt_smice, nt_smliq, nt_rhos, nt_rsnw,  &
                                      var1d_dim(1),var2d_dim(2),var3d_dim(3),&
                                      ice_ntr_dim,ncid2,mm,ip
@@ -1271,7 +1271,7 @@
              tr_bgc_chl,  tr_bgc_Am,                        &
              tr_bgc_PON,  tr_bgc_DON,                       &
              tr_zaero,    tr_bgc_Fe,                        &
-             tr_bgc_hum,  tr_snow 
+             tr_bgc_hum,  tr_snow, tr_fsd 
         real(kind=dbl_kind), allocatable, dimension(:,:) :: &
          swild,swild2
         character(500)            :: longname
@@ -1289,12 +1289,12 @@
              nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
              nt_aero_out=nt_aero, nt_qsno_out=nt_qsno,                              &
              nt_smice_out=nt_smice, nt_smliq_out=nt_smliq,nt_rhos_out=nt_rhos,      &
-             nt_rsnw_out=nt_rsnw)
+             nt_rsnw_out=nt_rsnw, nt_fsd_out=nt_fsd)
         call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
              skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
         call icepack_query_tracer_flags(                                            &
              tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
-             tr_aero_out=tr_aero, tr_snow_out=tr_snow,                              &
+             tr_aero_out=tr_aero, tr_snow_out=tr_snow, tr_fsd_out=tr_fsd,           &
              tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
              tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
              tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
@@ -1407,7 +1407,7 @@
 
           !call def_variable_2d(ip_id, 'FY',  (/nod2D, ncat/), 'first year ice', 'none', trcrn(:,nt_FY,:));
       end if
-    
+
       if (tr_lvl) then
 
          j=nf90_inq_varid(ncid2, "alvl",mm)
@@ -1698,47 +1698,47 @@
             write(longname,'(A18,i1)') 'mass of liquid in snow:', k
             units='kg/m^3'
             j=nf90_inq_varid(ncid2, trim(trname),mm)
-            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smliq_a')
             do i=1,np_global
                if(ipgl(i)%rank==myrank) then
                   ip=ipgl(i)%id
                   !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
                   j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
-                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smliq_b')
                endif
             enddo
             swild = transpose(swild2)
             trcrn(1:npa,nt_smliq+k-1,1:ncat) = swild            
          enddo
          do k=1,nslyr
-            write(trname,'(A6,i1)') 'rhos_', k
+            write(trname,'(A5,i1)') 'rhos_', k
             write(longname,'(A18,i1)') 'snow grain radius:', k
             units='10^-6 m'
             j=nf90_inq_varid(ncid2, trim(trname),mm)
-            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc rhos_a')
             do i=1,np_global
                if(ipgl(i)%rank==myrank) then
                   ip=ipgl(i)%id
                   !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
                   j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
-                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc rhos_b')
                endif
             enddo
             swild = transpose(swild2)
             trcrn(1:npa,nt_rhos+k-1,1:ncat) = swild            
          enddo
          do k=1,nslyr
-            write(trname,'(A6,i1)') 'rsnw_', k
-            write(longname,'(A18,i1)') 'effective snow density:', k
+            write(trname,'(A5,i1)') 'rsnw_', k
+            write(longname,'(A23,i1)') 'effective snow density:', k
             units='kg/m^3'
             j=nf90_inq_varid(ncid2, trim(trname),mm)
-            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_a')
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc rsnw_a')
             do i=1,np_global
                if(ipgl(i)%rank==myrank) then
                   ip=ipgl(i)%id
                   !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
                   j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
-                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc smice_b')
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc rsnw_b')
                endif
             enddo
             swild = transpose(swild2)
@@ -1747,6 +1747,24 @@
       
       endif   
       
+      if (tr_fsd) then
+         do k=1,nfsd
+            write(trname,'(A4,i1)') 'fsd_', k
+            write(longname,'(A23,i1)') 'floe size distribution:', k
+            j=nf90_inq_varid(ncid2, trim(trname),mm)
+            if(j/=NF90_NOERR) call parallel_abort('mice_init: nc fsd1')
+            do i=1,np_global
+               if(ipgl(i)%rank==myrank) then
+                  ip=ipgl(i)%id
+                  !j=nf90_get_var(ncid2,mm,tr_nd0(:,:,ip),(/1,1,i/),(/ntracers,nvrt,1/))
+                  j=nf90_get_var(ncid2,mm,swild2(:,ip),(/1,i/),(/ncat,1/))
+                  if(j/=NF90_NOERR) call parallel_abort('mice_init: nc fsd2')
+               endif
+            enddo
+            swild = transpose(swild2)
+            trcrn(1:npa,nt_fsd+k-1,1:ncat) = swild
+         enddo
+      endif
         j=nf90_close(ncid2)
         if(j/=NF90_NOERR) call parallel_abort('mice_init: nc close')
       deallocate(swild,swild2)

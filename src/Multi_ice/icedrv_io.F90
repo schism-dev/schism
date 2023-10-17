@@ -336,7 +336,7 @@
                                      nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
                                      nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
                                      nt_smice, nt_smliq, nt_rhos, nt_rsnw,  &
-                                     ktherm,  nt_fbri,                      &
+                                     ktherm,  nt_fbri, nt_fsd,              &
                                      var1d_dim(1),var2d_dim(2),var3d_dim(3),&
                                      ice_ntr_dim,nvars_hot0
         integer (kind=int_kind)   :: varid
@@ -356,7 +356,7 @@
              tr_bgc_chl,  tr_bgc_Am,                        &
              tr_bgc_PON,  tr_bgc_DON,                       &
              tr_zaero,    tr_bgc_Fe,                        &
-             tr_bgc_hum
+             tr_bgc_hum,  tr_fsd
     
 !#include "../associate_mesh.h"
     
@@ -370,12 +370,12 @@
              nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
              nt_aero_out=nt_aero, nt_qsno_out=nt_qsno,                              &
              nt_smice_out=nt_smice, nt_smliq_out=nt_smliq,nt_rhos_out=nt_rhos,      &
-             nt_rsnw_out=nt_rsnw)
+             nt_rsnw_out=nt_rsnw, nt_fsd_out=nt_fsd)
         call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
              skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
         call icepack_query_tracer_flags(                                            &
              tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
-             tr_aero_out=tr_aero,tr_snow_out=tr_snow,                                &
+             tr_aero_out=tr_aero,tr_snow_out=tr_snow,  tr_fsd_out=tr_fsd,           &
              tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
              tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
              tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
@@ -522,33 +522,41 @@
      if (tr_snow) then
          do k = 1,nslyr
             write(trname,'(A6,i1)') 'smice_', k
-            write(longname,'(A18,i1)') 'mass of ice in snow:', k
+            write(longname,'(A20,i1)') 'mass of ice in snow:', k
             units='kg/m^3'
             j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
             nvars_hot0=nvars_hot0+1 
          enddo
          do k = 1,nslyr
             write(trname,'(A6,i1)') 'smliq_', k
-            write(longname,'(A18,i1)') 'mass of liquid in snow:', k
+            write(longname,'(A23,i1)') 'mass of liquid in snow:', k
             units='kg/m^3'
             j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
             nvars_hot0=nvars_hot0+1 
          enddo
          do k = 1,nslyr
-            write(trname,'(A6,i1)') 'rhos_', k
+            write(trname,'(A5,i1)') 'rhos_', k
             write(longname,'(A18,i1)') 'snow grain radius:', k
             units='10^-6 m'
             j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
             nvars_hot0=nvars_hot0+1 
          enddo
          do k = 1,nslyr
-            write(trname,'(A6,i1)') 'rsnw_', k
-            write(longname,'(A18,i1)') 'effective snow density:', k
+            write(trname,'(A5,i1)') 'rsnw_', k
+            write(longname,'(A23,i1)') 'effective snow density:', k
             units='kg/m^3'
             j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
             nvars_hot0=nvars_hot0+1 
          enddo
      endif
+      if(tr_fsd) then
+         do k = 1,nfsd
+            write(trname,'(A4,i1)') 'fsd_', k
+            write(longname,'(A23,i1)') 'floe size distribution:', k
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+      endif
         j=nf90_enddef(ncid_hot)
 
 
@@ -703,7 +711,7 @@
      if (tr_snow) then
          do k = 1,nslyr
             write(trname,'(A6,i1)') 'smice_', k
-            write(longname,'(A18,i1)') 'mass of ice in snow:', k
+            write(longname,'(A20,i1)') 'mass of ice in snow:', k
             units='kg/m^3'
             swild = trcrn(1:np,nt_smice+k-1,1:ncat)
             swild2 = transpose(swild) 
@@ -712,7 +720,7 @@
          enddo
          do k = 1,nslyr
             write(trname,'(A6,i1)') 'smliq_', k
-            write(longname,'(A18,i1)') 'mass of liquid in snow:', k
+            write(longname,'(A23,i1)') 'mass of liquid in snow:', k
             units='kg/m^3'
             swild = trcrn(1:np,nt_smliq+k-1,1:ncat)
             swild2 = transpose(swild) 
@@ -720,7 +728,7 @@
             nvars_hot=nvars_hot+1
          enddo
          do k = 1,nslyr
-            write(trname,'(A6,i1)') 'rhos_', k
+            write(trname,'(A5,i1)') 'rhos_', k
             write(longname,'(A18,i1)') 'snow grain radius:', k
             units='10^-6 m'
             swild = trcrn(1:np,nt_rhos+k-1,1:ncat)
@@ -729,10 +737,20 @@
             nvars_hot=nvars_hot+1
          enddo
          do k = 1,nslyr
-            write(trname,'(A6,i1)') 'rsnw_', k
-            write(longname,'(A18,i1)') 'effective snow density:', k
+            write(trname,'(A5,i1)') 'rsnw_', k
+            write(longname,'(A23,i1)') 'effective snow density:', k
             units='kg/m^3'
             swild = trcrn(1:np,nt_rsnw+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+     endif
+     if(tr_fsd) then
+         do k = 1,nfsd
+            write(trname,'(A4,i1)') 'fsd_', k
+            write(longname,'(A23,i1)') 'floe size distribution:', k
+            swild = trcrn(1:np,nt_fsd+k-1,1:ncat)
             swild2 = transpose(swild) 
             j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
             nvars_hot=nvars_hot+1
