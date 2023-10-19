@@ -1,13 +1,17 @@
 import numpy as np
 import os
-import STOFS3D_scripts
+from pathlib import Path
+
+# pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
 from schism_py_pre_post.Shared_modules.hotstart_proc import Hotstart
 from schism_py_pre_post.Download.download_usgs_with_api import get_usgs_obs_for_stofs3d
 from schism_py_pre_post.Download.download_cbp_with_api import get_cbp_obs_for_stofs3d
 from schism_py_pre_post.Shared_modules.gen_subregion_ic2 import gen_subregion_ic_stofs3d
 from schism_py_pre_post.Grid.Grid_geometry import find_points_in_polyshp
+import schism_py_pre_post  # this is needed for the __file__ attribute
+
+# pip install git+https://github.com/wzhengui/pylibs.git
 from pylib import schism_grid
-from pathlib import Path
 
 
 def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None):
@@ -29,7 +33,10 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None):
 
     return elev_ic
     
-def tweak_stofs3d_hotstart(wdir ='./', hotstart_date_str='2021-05-01', city_shapefile_names=[]):
+def tweak_stofs3d_hotstart(
+    wdir ='./', hotstart_date_str='2021-05-01', city_shapefile_names=[],
+    hycom_TS_file='TS_1.nc', hycom_hot_file='hotstart.nc.hycom'
+):
     '''
     The "wdir" should contain the following files:
         hgrid.gr3 (should be the same as hgrid.ll for STOFS3D), vgrid.in
@@ -41,25 +48,23 @@ def tweak_stofs3d_hotstart(wdir ='./', hotstart_date_str='2021-05-01', city_shap
     only specify the file basename, the script will copy these files to your wdir.
     '''
 
-    # input section
     griddir = wdir
-    output_obs_dir = f'{wdir}/Obs/'
-    hycom_TS_file = f'{wdir}/TS_1.nc'
-    hycom_hot_file = f'{wdir}/hotstart.nc.hycom'
-    my_hot_file = f'{wdir}/hotstart.nc'
-    # end input section
+    output_obs_dir = f'{wdir}/Obs/'  # observations will be downloaded to this directory
+    my_hot_file = f'{wdir}/hotstart.nc'  # this is the final hotstart.nc file
+    hycom_TS_file = f'{wdir}/TS_1.nc'  # this file should already be prepared in the previous step of hotstart.nc generation from HYCOM
+    hycom_hot_file = f'{wdir}/hotstart.nc.hycom'  # this file should already be prepared in the previous step of hotstart.nc generation from HYCOM, renamed with the '.hycom' suffix.
 
     # copy datafiles
-    mydir = os.path.dirname(STOFS3D_scripts.__file__)
+    mydir = os.path.dirname(schism_py_pre_post.__file__)
     for shp in city_shapefile_names:
         shp_basename = Path(shp).stem
-        os.system(f'cp {mydir}/Datafiles/Tweak_hotstart/{shp_basename}.* {wdir}')
+        os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
 
     # download coastal obs from usgs
     get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
 
-    # download coastal obs from CBP
-    get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str)
+    # download coastal obs from CBP; only salinity, no temperature (cbp samples are sparse in time)
+    get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str, varname=['sal'])
 
     # interpolate obs onto model grid
     gen_subregion_ic_stofs3d(wdir=wdir, obsdir=output_obs_dir, hycom_TS_file=hycom_TS_file, date_str=hotstart_date_str)
@@ -95,11 +100,15 @@ def tweak_stofs3d_hotstart(wdir ='./', hotstart_date_str='2021-05-01', city_shap
 if __name__ == "__main__":
     '''
     Modify hycom-based hotstart.nc.hycom with coastal observation values
-    See instructions in "def tweak_stofs3d_hotstart()"
     '''
+
+    # Sample usage:
+    # The "wdir" should be the dir where the original hotstart.nc from hycom is generated.
+    # It should include hgrid.gr3 and vgrid.in, TS_1.nc;
+    # in addition, rename the original hotstart.nc from hycom to hotstart.nc.hycom
     tweak_stofs3d_hotstart(
         wdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I24/Hot_test/',
         hotstart_date_str='2021-05-01',
-        city_shapefile_names = ["city_polys_from_v10_lonlat.shp"]
+        city_shapefile_names = ["city_polys_from_v10_lonlat.shp"],  # polygon shapefile specifying cities
     )
     

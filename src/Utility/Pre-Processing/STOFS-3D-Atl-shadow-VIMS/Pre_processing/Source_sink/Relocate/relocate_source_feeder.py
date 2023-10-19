@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 
+'''
+Relocate sources/sinks based on the feeder channel information.
+See __main__ for sample usage.
+'''
+
+import os
 import numpy as np
 from scipy import spatial
-import pickle
 
-from pylib_essentials.schism_file import source_sink, TimeHistory, read_schism_hgrid_cached
+from pylib_essentials.schism_file import source_sink, TimeHistory, read_schism_hgrid_cached, schism_bpfile
+from pylib_essentials.utility_functions import inside_polygon
 
 # Global Var
 # Some major rivers may not have a feeder channel, or the feeder channel doesn't match the main river inputs.
@@ -83,8 +89,12 @@ def relocate_sources(
     max_search_radius = 1000.0,
     mandatory_sources_coor = np.empty((0, 4)),
     relocate_map = None,
+    region_list = [],  # a list of polygons, each specified by a 2D array (npts, 2) of coordinates
     #--------------------------- end inputs -------------------------
 ):
+    # make the output directory if it doesn't exist
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     # Read original source/sink based on NWM
     old_source_sink = source_sink.from_files(source_dir=old_ss_dir)
@@ -102,15 +112,17 @@ def relocate_sources(
         np.savetxt(f'{old_ss_dir}/original_sources.xy', old_sources_coor)
 
         # Read feeder channel info
-        with open(feeder_info_file, 'rb') as file:
-            [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
-        np.savetxt(f'{outdir}/feeder_heads.xy', feeder_heads)
-        np.savetxt(f'{outdir}/feeder_bases.xy', feeder_bases)
+        # with open(feeder_info_file, 'rb') as file:
+        #     [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
+        # np.savetxt(f'{outdir}/feeder_heads_bases.xy', np.c_[feeder_heads[:, :2], feeder_bases[:, :2]])
+
+        tmp = np.loadtxt(feeder_info_file)
+        feeder_heads = tmp[:, :2]
+        feeder_bases = tmp[:, 2:]
 
         # get new hgrid (with feeders)
         new_gd = read_schism_hgrid_cached(hgrid_fname, overwrite_cache=False)
         new_gd.compute_ctr()
-
 
         # process nan values in mandatory_sources_coor
         for i, row in enumerate(mandatory_sources_coor):
@@ -118,6 +130,16 @@ def relocate_sources(
                 mandatory_sources_coor[i, 2] = mandatory_sources_coor[i, 0]
             if np.isnan(row[3]):
                 mandatory_sources_coor[i, 3] = mandatory_sources_coor[i, 1]
+        
+        # restrict to a region
+        idx = np.zeros(len(feeder_heads), dtype=bool)
+        for region in region_list:
+            idx += inside_polygon(feeder_heads[:, :2], region[:, 0], region[:, 1]).astype(bool)
+        feeder_heads = feeder_heads[idx]
+        feeder_bases = feeder_bases[idx]
+
+        idx = inside_polygon(mandatory_sources_coor[:, :2], region[:, 0], region[:, 1]).astype(bool)
+        mandatory_sources_coor = mandatory_sources_coor[idx]
 
         # find matching source point at mandatory_sources_coor and feeders' base points
         # these are the desired new source locations
@@ -202,20 +224,48 @@ def relocate_sources(
     return new_source_sink
 
 if __name__ == "__main__":
-    #--------------------------- inputs -------------------------
-    old_ss_dir = '../original_source_sink/'
-    feeder_info_file = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl'
-    hgrid_fname = './hgrid.gr3'
-    outdir = './'
-    max_search_radius = 2000.0
-    relocate_map = None
+    '''
+    Sample usage: relocate sources/sinks in a region of the Florence mesh.
+    The mesh is same as the mesh of STOFS-3D-Atl v2.1 in the Florence region and coarser elsewhere.
+    '''
+    schism_git_dir = f'/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/'
+    # inputs
+    wdir = '/sciclone/schism10/feiye/Test_Project/Runs/R99a/Source_sink/'
+    feeder_info_file = f'{schism_git_dir}/src/Utility/Pre-Processing/STOFS-3D-Atl-shadow-VIMS/Pre_processing/Source_sink/feeder_heads_bases_v2.1.xy'  # this file is prepared during mesh generation  # f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl'
+    region_file = f'{schism_git_dir}/src/Utility/Pre-Processing/STOFS-3D-Atl-shadow-VIMS/Pre_processing/Source_sink/relocate_florence.reg'
+    old_ss_dir = f'{wdir}/original_source_sink/'
+    hgrid_fname = f'{old_ss_dir}/hgrid.gr3'
+    # end inputs
 
-    relocate_sources(
-        old_ss_dir=old_ss_dir,
-        feeder_info_file=feeder_info_file,
-        hgrid_fname=hgrid_fname,
-        outdir=outdir,
-        max_search_radius=max_search_radius,
+    # copy data files from git to the working directory for record if needed
+
+    # read hgrid
+    hgrid = read_schism_hgrid_cached(hgrid_fname, overwrite_cache=False)
+
+    # read region
+    region = schism_bpfile()
+    region.read_reg(fname=region_file) 
+
+    # read original source/sink
+    original_ss = source_sink.from_files(source_dir=old_ss_dir)
+    # original_ss.diag_writer(hgrid, old_ss_dir)
+
+    # split source/sink into inside and outside region
+    _, outside_ss = original_ss.clip_by_polygons(hgrid=hgrid, polygons_xy=[np.c_[region.x, region.y]])
+
+    # relocate sources
+    relocated_ss = relocate_sources(
+        old_ss_dir=old_ss_dir,  # strictly speaking, this is based on the without feeder hgrid, but the with feeder hgrid is also applicable with minor differences in the results
+        feeder_info_file=feeder_info_file,  
+        hgrid_fname=hgrid_fname,  # strictly speaking, this is the with feeder hgrid
+        outdir=f'{wdir}/relocated_source_sink/',
+        max_search_radius=2000, # search radius (in meters) for relocating sources
         mandatory_sources_coor=v16_mandatory_sources_coor,
-        relocate_map=relocate_map,
+        relocate_map=None,
+        region_list=[np.c_[region.x, region.y]]
     )
+
+    # combine outside and relocated sources
+    combined_ss = outside_ss + relocated_ss
+    combined_ss.writer(f'{wdir}/combined_source_sink/')
+    # combined_ss.diag_writer(hgrid, f'{wdir}/combined_source_sink/')
