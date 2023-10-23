@@ -17,11 +17,16 @@ from pathlib import Path
 job_scheduler = 'slurm' # 'pbs' or 'slurm'
 
 rundir = os.getcwd()  # use os.getcwd if launch from rundir; otherwise specify a string yourself, e.g.,
-                      # rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R02/'
+# rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R02/'
+
 last_stack = None  # if None, the script will try to find the last stack number in the file "param.nml"
                    # make sure the run can finish the specified rnday in param.nml (i.e., the forcing covers the whole period);
                    # otherwise, change the "rnday" in param.nml or specify another number here
-remove_old_hotstart = True  # if True, remove all previous hotstart files, including the combined hotstart_it*.nc
+
+remove_old_hotstart = 2  # 2: remove previous hotstart files except the combined hotstart_it*.nc
+                         # 1: remove all previous hotstart files, including the combined hotstart_it*.nc
+                         #    i.e., only keep the latest uncombined hotstart files (combined and uncombined)
+                         # 0: keep all hotstart files
 #----------end input---------------------------------
 
 
@@ -171,12 +176,18 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
         hot_combined = f'{rundir}/outputs/hotstart_it={hot_step}.nc'
         print(f'{my_print_decor}{run_id} stopped, last hotstart to combine: {hot_combined}{my_print_decor}', flush=True)
 
-        if remove_old_hotstart: # remove all previous hotstart files, including the combined hotstart_it*.nc
+        if remove_old_hotstart > 0: # remove previous hotstart files to save disk space
             all_hot_files = glob.glob(f"{rundir}/outputs/hotstart_*.nc")
-            current_hot_files = glob.glob(f"{rundir}/outputs/hotstart_*_{hot_step}.nc")
-            previous_hot_files = list(set(all_hot_files) - set(current_hot_files))
-            for previous_hot_file in previous_hot_files:
-                os.remove(previous_hot_file)
+            combined_hot_files = glob.glob(f"{rundir}/outputs/hotstart_it=*.nc")
+            current_hot_files = glob.glob(f"{rundir}/outputs/hotstart*{hot_step}.nc")  # combined and uncombined
+
+            if remove_old_hotstart == 1:  # remove all previous hotstart files, only keeping uncombined files of the latest hotstart step
+                removed_hot_files = list(set(all_hot_files) - set(current_hot_files))
+            elif remove_old_hotstart == 2:  # remove previous hotstart files except the combined hotstart_it*.nc
+                removed_hot_files = list(set(all_hot_files) - set(current_hot_files) - set(combined_hot_files))
+
+            for removed_hot_file in removed_hot_files:
+                os.remove(removed_hot_file)
 
         os.chdir(f'{rundir}/outputs/')
         Replace_string_in_file(f'{rundir}/run_comb', '-i 0000', f'-i {hot_step}')
@@ -184,11 +195,11 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
         print(f'{my_print_decor}{batch_cmd} run_comb{my_print_decor}', flush=True)
         os.system(f'{batch_cmd} {rundir}/run_comb')
 
-	# restore run_cmb template
+        # restore run_cmb template
         os.system(f'cat {rundir}/run_comb')
         Replace_string_in_file(f'{rundir}/run_comb', f'-i {hot_step}', '-i 0000')
 
-	# wait for combine hotstart to finish
+        # wait for combine hotstart to finish
         while combine_job_name in subprocess.getoutput(queue_query_str):
             time.sleep(20)
             print(f'{my_print_decor}waiting for job {combine_job_name} to finish{my_print_decor}', flush=True)
