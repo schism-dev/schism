@@ -642,8 +642,7 @@
      &                       nws ) 
 #endif /*USE_ATMOS*/
 
-!$OMP parallel default(shared) private(i,j)
-!$OMP       do
+!$OMP parallel do default(shared) private(i)
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
@@ -662,11 +661,11 @@
 !              endif
 #endif
             enddo !i
-!$OMP       end do
+!$OMP end parallel do
 
             !Turn off precip near land bnd
             if(iprecip_off_bnd/=0) then
-!$OMP         do
+!$OMP parallel do default(shared) private(i,j)
               loop_prc: do i=1,np
                 if(isbnd(1,i)==-1) then
                   fluxprc(i)=0.d0; cycle loop_prc
@@ -678,8 +677,7 @@
                   endif
                 enddo !j
               end do loop_prc !i=1,np
-!$OMP         end do
-!$OMP end parallel
+!$OMP end parallel do
               call exchange_p2d(fluxprc)
             endif !iprecip_off_bnd
 
