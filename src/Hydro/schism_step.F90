@@ -2657,7 +2657,9 @@
           !u_taub=((1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt3
 #else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
-          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+!          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+          !GOTM seems to dislike 0 friction
+          u_taub=sqrt(max(Cdp(j),1.d-10)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
 #endif
           nlev=nvrt-kbp(j) !>1
           do k=0,nlev 
@@ -2720,7 +2722,8 @@
           z0s=min(0.1d0,toth/10.d0)
 #endif
           if(Cdp(j)==0.d0) then
-            z0b=0.d0
+            !GOTM seems to dislike 0 friction
+            z0b=1.d-10 !0.d0
           else
             z0b=(znl(kbp(j)+1,j)-znl(kbp(j),j))*exp(-0.4d0/sqrt(Cdp(j)))
           endif
