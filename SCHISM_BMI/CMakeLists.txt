@@ -215,9 +215,9 @@ else()
     add_library(testbmifortranmodel SHARED ${BMI_SOURCES})
 endif()
 
-set(SCHISM_INCLUDE /scratch2/NCEPDEV/ohd/Jason.Ducker/ngen_master_troute/ngen-master/extern/test_bmi_schism/driver/SCHISM_LIB_NWM_BMI/include)
-set(SCHISM_HYDRO /scratch2/NCEPDEV/ohd/Jason.Ducker/ngen_master_troute/ngen-master/extern/test_bmi_schism/driver/SCHISM_LIB_NWM_BMI/lib/libhydro.a)
-set(SCHISM_CORE /scratch2/NCEPDEV/ohd/Jason.Ducker/ngen_master_troute/ngen-master/extern/test_bmi_schism/driver/SCHISM_LIB_NWM_BMI/lib/libcore.a)
+set(SCHISM_INCLUDE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/include")
+set(SCHISM_HYDRO "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libhydro.a")
+set(SCHISM_CORE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libcore.a")
 
 
 include_directories(${SCHISM_INCLUDE})
@@ -237,8 +237,8 @@ install(TARGETS testbmifortranmodel
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 
-set(BMI_INCLUDE /scratch2/NCEPDEV/ohd/Jason.Ducker/ngen_master_troute/ngen-master/extern/test_bmi_schism/driver/build/fortran)
-set(BMI_LIB /scratch2/NCEPDEV/ohd/Jason.Ducker/ngen_master_troute/ngen-master/extern/test_bmi_schism/driver/build/libtestbmifortranmodel.so)
+set(BMI_INCLUDE "${PROJECT_SOURCE_DIR}/build/fortran")
+set(BMI_LIB "${PROJECT_SOURCE_DIR}/build/libtestbmifortranmodel.so")
 
 include_directories(${BMI_INCLUDE})
 link_directories(${BMI_LIB})
