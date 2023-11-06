@@ -1187,6 +1187,7 @@ end function schism_finalizer
         ! Convert rainrate data to discharge flux
         ath3(:,1,2,1) = ath3(:,1,2,1) + (src(1) * area(:)/1000.0)
         bmi_status=BMI_SUCCESS
+      endif	
     case("UU10m")
       if(SUM(windx2) .eq. 0.0) then
         ! Allow model engine to set data
@@ -1454,6 +1455,7 @@ end function schism_finalizer
             ath3(inds(i),1,2,1) = ath3(inds(i),1,2,1) + (src(i) * area(inds(i))/1000.0)
         enddo
         bmi_status=BMI_SUCCESS
+      endif	
     case("UU10m")
       if(SUM(windx2) .eq. 0.0) then
         ! Allow model engine to set data
