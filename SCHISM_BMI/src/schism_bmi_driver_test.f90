@@ -223,7 +223,7 @@ program schism_driver_test
 
   ! Set 2m air temperature component with allocated 
   ! dummy data after model has been initialized
-  allocate(TMP2m_t0(npa))
+  allocate(TMP2m(npa))
 
   TMP2m(:) = 348.0
   status = m%set_value('TMP2m', TMP2m)
