@@ -17,7 +17,7 @@ grd='hgrid.ll'  #grid name
 grdout='hgrid.ll.new' #grid name with depth loaded
 
 #parameter
-regions=['./regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenPoint.reg","Washington_3.reg",
+regions=['/sciclone/schism10/Hgrid_projects/DEMs/regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenPoint.reg","Washington_3.reg",
          "Elk_river.reg","Hudson_river.reg","James_river.reg","NorthEast_river.reg",
          "Rappahannock_river.reg","Susquehanna_river.reg","York_river.reg",
          "Androscoggin_Kennebec_rivers.reg","Merrimack_river.reg","Patuxent_river.reg",
@@ -32,7 +32,7 @@ rvalues=(5,7,5,15,
          10,10,10
          ) #minimum depth in regions
 
-dem_info_dict = json.load(open('DEM_info.json'))  # existing json containing the DEM info
+dem_info_dict = json.load(open('/sciclone/schism10/Hgrid_projects/DEMs/DEM_info.json'))  # existing json containing the DEM info
 headers=tuple(dem_info_dict.keys()) #DEM headers used for glob'ing the DEM files; python3.6+ only, which preserves the order of the keys
 
 sdir=r'/sciclone/schism10/Hgrid_projects/DEMs/npz2/'  #directory of DEM data
