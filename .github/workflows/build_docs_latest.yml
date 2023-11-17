@@ -27,7 +27,7 @@ jobs:
         id: tag_name
       - name: Deploy with mike
         run: |
-          mike deploy --force --update-aliases master stable
+          mike deploy --update-aliases master stable
           mike retitle master stable
           mike set-default --push stable
 
