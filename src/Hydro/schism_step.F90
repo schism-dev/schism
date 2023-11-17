@@ -538,38 +538,40 @@
 
           !Read in next record
           itmp2=wtime2/wtiminc+1
-          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
-          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
-          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
-          if(ihconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
-            j=nf90_inq_varid(ncid_atmos, "solar",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
-          endif !ihconsv/
-          if(isconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "prate",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
-            j=nf90_inq_varid(ncid_atmos, "evap",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
-          endif !isconsv/
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
+            j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
+            j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+            if(ihconsv/=0) then
+              j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+              j=nf90_inq_varid(ncid_atmos, "solar",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
+            endif !ihconsv/
+            if(isconsv/=0) then
+              j=nf90_inq_varid(ncid_atmos, "prate",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
+              j=nf90_inq_varid(ncid_atmos, "evap",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+            endif !isconsv/
+          endif !myrank=0
           call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
