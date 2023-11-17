@@ -238,16 +238,13 @@ install(TARGETS testbmifortranmodel
 
 
 set(BMI_INCLUDE "${PROJECT_SOURCE_DIR}/build/fortran")
-set(BMI_LIB "${PROJECT_SOURCE_DIR}/build/libtestbmifortranmodel.so")
 
 include_directories(${BMI_INCLUDE})
-link_directories(${BMI_LIB})
-
 
 add_executable(schism_driver src/schism_bmi_driver_test.f90)
 
 #add_dependencies(schism_driver ${NetCDFLIBS} parmetis)
 
-target_link_libraries(schism_driver PUBLIC ${BMI_LIB} ${NetCDFLIBS} parmetis)
+target_link_libraries(schism_driver PUBLIC ${NetCDFLIBS} parmetis testbmifortranmodel)
 
 install(TARGETS schism_driver DESTINATION ${CMAKE_BINARY_DIR})
