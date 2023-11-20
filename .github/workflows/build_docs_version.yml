@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Install python packages
-        run: pip install mkdocs-material==8.3.4 mike setuptools
+        run: pip install mkdocs=1.5.2 mkdocs-material==8.3.4 mike==1.1.2 setuptools
       - name: Configure git user
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -29,5 +29,5 @@ jobs:
         uses: tj-actions/branch-names@v5.4
       - name: Deploy with mike
         run: |
-          mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
+          mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
           mike set-default --push stable
