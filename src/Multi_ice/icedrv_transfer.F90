@@ -36,6 +36,7 @@
           use icepack_intfc,    only: icepack_sea_freezing_temperature
           !use g_comm_auto,      only: exchange_nod
           use icedrv_system,    only: icedrv_system_abort
+          use icepack_parameters, only: fbot_xfer_type
           !use g_config,         only: dt
           !use o_param,          only: mstep
           !use mod_mesh
@@ -60,7 +61,8 @@
              !rhowat = 1025.0_dbl_kind,  & ! Water density
              !cc     = rhowat*4190.0_dbl_kind, & 
              ! Volumetr. heat cap. of water [J/m**3/K](cc = rhowat*cp_water)
-             ex     = 0.286_dbl_kind
+             ex     = 0.286_dbl_kind,   &
+             threshold_hw = 30            ! max water depth for grounding
 
           integer(kind=dbl_kind)   :: i, n,  k,  elem, j, kbp1, indx
           integer (kind=int_kind)  :: nt_Tsfc
@@ -70,34 +72,90 @@
           real (kind=dbl_kind) :: &
              aux,                 &
              cprho,maxu,maxv,tmp1,tmp2,tmpsum,maxuwind,maxvwind,tmpw1,tmpw2,tmpwsum
-          real(rkind) :: ug,ustar,T_oc,S_oc,fw,ehf,srad2,dux,dvy,rampwind,dptot,hmixt
+          real(rkind) :: ug,ustar,T_oc,S_oc,fw,ehf,srad2,dux,dvy,rampwind,dptot,hmixt,puny
           !type(t_mesh), target, intent(in) :: mesh
          real(rkind), allocatable :: depth0(:)
 
          allocate(depth0(nvrt))
             call icepack_query_tracer_indices( nt_Tsfc_out=nt_Tsfc)
+            
           ! Ice 
           do i=1,npa
            
                uvel(i)  = u_ice(i)
                vvel(i)  = v_ice(i)
+
                dptot = max(0.d0,dp(i)+eta2(i))
-               depth0 = abs(znl(:,i))
+               depth0 = znl(:,i)
+
+               if(aice(i)>puny ) then
+                  tmp1 = vice(i)/aice(i) !hice
+               else
+                  tmp1 = 0
+               endif
+                  tmp2 = tmp1 - vice(i) -0.001
+
+               ! find hice layer depth
+               indx = nvrt
+               do j = nvrt - 1 , kbp(i),-1
+                  if(depth0(nvrt)-depth0(j) > tmp2) then
+                     indx = j 
+                     exit
+                  endif
+               enddo
+               uocn(i)   = uu2(nvrt,i) 
+               vocn(i)   = vv2(nvrt,i)  
+               u_ocean(i)= uu2(nvrt,i) 
+               v_ocean(i)= vv2(nvrt,i) 
+               !sss(i)    = tr_nd(2,indx,i)
+               !sst(i)    = tr_nd(1,indx,i)
+               !sstdat(i) = tr_nd(1,indx,i)
+               
+               !if(tmp2 > dptot) then
+               !   write(12,*) 'almost dry node in Multi_ice', i,tmp2,dptot,eta2(i)
+               !   uocn(i)   = 0
+               !   vocn(i)   = 0
+               !   u_ocean(i)= 0
+               !   v_ocean(i)= 0
+                  !sss(i)    = tr_nd(2,nvrt,i)
+                  !sst(i)    = tr_nd(1,nvrt,i)
+                  !sstdat(i) = tr_nd(1,nvrt,i)
+               !endif
+               uatm(i)   = windx(i)
+               vatm(i)   = windy(i)
+               sss(i)    = tr_nd(2,nvrt,i)
+               sst(i)    = tr_nd(1,nvrt,i)
+               sstdat(i) = tr_nd(1,nvrt,i)
+               if(idry(i)/=0) then
+                  uocn(i)   = 0 
+                  vocn(i)   = 0  
+                  u_ocean(i)= 0 
+                  v_ocean(i)= 0 
+               endif
+               
+               if(isbnd(1,i)/=0) then !b.c. (including open)
+                  uocn(i)   = 0
+                  vocn(i)   = 0
+                  u_ocean(i)= 0
+                  v_ocean(i)= 0
+               endif
+
+               Tbu(i) = 0
+               if(dptot < threshold_hw)then
+                  tmp1 = aice(i) * dptot / 7.5
+                  Tbu(i) = 15 * max(0.d0,vice(i)- tmp1) * exp(-20.d0 * (c1 - aice(i)))
+               endif
+
+
                !hmix(i)=min(dptot)
                ! Ocean 
                !T_oc(:)=tr_nd(1,nvrt,:) !T@ mixed layer - may want to average top layers??
                !S_oc(:)=tr_nd(2,nvrt,:) !S
-               uocn(i)   = uu2(nvrt,i)
-               vocn(i)   = vv2(nvrt,i)
-               u_ocean(i)= uu2(nvrt,i)
-               v_ocean(i)= vv2(nvrt,i)
-               uatm(i)   = windx(i)
-               vatm(i)   = windy(i)
      
-               sss(i)    = tr_nd(2,nvrt,i)
+               !sss(i)    = tr_nd(2,nvrt,i)
 
                Tf(i)   = icepack_sea_freezing_temperature(sss(i))
-               
+                              
                hmix(i) = abs(depth0(nvrt)-depth0(nvrt - 1))
                hmix(i) = min(dptot , hmix(i))
                !if(idry(i)==1) hmix(i) = 0
@@ -117,11 +175,11 @@
      
                !if ( l_mslp ) then
                   !potT(:) = T_air(:)*(press_air(:)/100000.0_dbl_kind)**ex             
-                  rhoa(:) = pr(:) / (R_dry * T_air(:) * (c1 + ((R_vap/R_dry) * Qa) ))
+                  !rhoa(:) = pr(:) / (R_dry * T_air(:) * (c1 + ((R_vap/R_dry) * Qa) ))
                !else 
                   ! The option below is used in FESOM2
                   potT(i) = T_air(i) !+ 0.0098d0*2
-                  !rhoa(i) = 1.3_dbl_kind
+                  rhoa(i) = 1.3_dbl_kind
                !endif
                ! divide shortwave into spectral bands
                swvdr(i) = fsw(i)*frcvdr        ! visible direct
@@ -130,7 +188,7 @@
                swidf(i) = fsw(i)*frcidf        ! near IR diffuse
              
             !endif
-            call icepack_query_parameters(calc_strair_out=calc_strair, cprho_out=cprho)
+            call icepack_query_parameters(calc_strair_out=calc_strair, cprho_out=cprho,puny_out=puny)
             call icepack_warnings_flush(ice_stderr)
   
             if (icepack_warnings_aborted()) then
@@ -146,6 +204,8 @@
                     !stress_atmice_y(i) = cdwin*aux*dvy
                     stress_atmice_x(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dux
                     stress_atmice_y(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dvy
+                    !stress_atmice_x(i) = (0.5_dbl_kind)/1000*aux*dux
+                    !stress_atmice_y(i) = (0.5_dbl_kind)/1000*aux*dvy
                     
                  endif
      
@@ -168,14 +228,22 @@
           do i = 1 , npa
             ! ocean - ice stress
             !if(lhas_ice(i)) then
-              aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*cd_oce_ice
-              strocnxT(i) = aux*(uvel(i) - uocn(i))
-              strocnyT(i) = aux*(vvel(i) - vocn(i))
+              !aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*cdwat
+              aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*Cdn_ocn(i)
+              ! if (trim(fbot_xfer_type) == 'Cdn_ocn') then
+              !    aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*Cdn_ocn(i)
+              ! else
+              !    aux = sqrt((uvel(i)-uocn(i))**2+(vvel(i)-vocn(i))**2)*rhowat*Cdn_ocn(i)
+              ! endif
+              strocnxT(i) = aux*(uocn(i) - uvel(i))
+              strocnyT(i) = aux*(vocn(i) - vvel(i))
             !endif
               ! freezing - melting potential
               Tf(i)   = icepack_sea_freezing_temperature(sss(i))
-              !frzmlt(i) = min(max((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt,-1000.0_dbl_kind), 1000.0_dbl_kind)
-              frzmlt(i) = min((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt, 1000.0_dbl_kind)
+              frzmlt(i) = min(max((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt,-1000.0_dbl_kind), 1000.0_dbl_kind)
+              !frzmlt(i) = 0
+              !frzmlt(i) = min((Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt, 1000.0_dbl_kind)
+              !frzmlt(i) = (Tf(i)-sst(i)) * cprho * hmix(i) / ice_dt
             
          enddo
 
@@ -192,19 +260,37 @@
                  ty = ty + rdg_shear_elem(elem) * area(elem)
               enddo
               
-              if(isbnd(1,i)/=0) then
-               rdg_conv(i)  = 0
-               rdg_shear(i) = 0
-              else
-               rdg_conv(i)  = tx / tvol
-               rdg_shear(i) = ty / tvol
-              endif
-              
+              !if(isbnd(1,i)/=0) then
+              ! rdg_conv(i)  = 0
+              ! rdg_shear(i) = 0
+              !elseif(any(isbnd(1,indnd(1:nnp(i),i))/=0)) then
+              ! rdg_conv(i)  = 0
+              ! rdg_shear(i) = 0
+              !else
+               rdg_conv(i)  = tx / tvol 
+               rdg_shear(i) = ty / tvol 
+              !endif
+              ! if(rdg_conv(i)>0.1/86400) rdg_conv(i) = 0.1/86400
+              ! if(abs(rdg_shear(i))>0.1/86400) rdg_shear(i) = 0.1/86400*rdg_shear(i)/abs(rdg_shear(i))
            enddo
-
            call exchange_p2d(rdg_conv)
            call exchange_p2d(rdg_shear)
 
+         if(ice_tests==1) then
+            rdg_conv = 0
+            rdg_shear = 0
+            frzmlt = 0
+            uocn   = 1
+            vocn   = 0
+            u_ocean = 1
+            v_ocean = 0
+            frain  = 0
+            fsnow  = 0
+            T_air = Tf + 273.15_dbl_kind
+            sst    = Tf
+            sstdat = Tf
+         endif
+              
           ! Clock variables
     
           days_per_year = ndpyr

@@ -3,6 +3,7 @@
 !   
 ! 
 ! Author: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
+!        Qian Wang upate ICEPACK to 1.3.4
 !  Modified by Qian Wang to apply to SCHISM
 ! -------------------------------------------------------------
 
@@ -189,6 +190,7 @@
          fresh_tot(nx) , & ! total fresh water flux to ocean (kg/m^2/s)
          fsalt(nx)     , & ! salt flux to ocean (kg/m^2/s)
          fhocn(nx)     , & ! net heat flux to ocean (W/m^2)
+         fsloss(nx)    , & ! rate of snow loss to leads (kg/m^2/s)
          fhocn_tot(nx) , & ! total net heat flux to ocean (W/m^2)
          fswthru(nx)   , & ! shortwave penetrating to ocean (W/m^2)
          fswfac(nx)    , & ! for history
@@ -243,6 +245,7 @@
          fswthru_ai(nx), &  ! shortwave penetrating to ocean (W/m^2)
          rside(nx)     , & ! fraction of ice that melts laterally
          fside(nx)     , & ! lateral heat flux (W/m^2)
+         wlat(nx)      , & ! lateral melt rate (m/s)         
          fsw(nx)       , & ! incoming shortwave radiation (W/m^2)
          cos_zen(nx)   , & ! cosine solar zenith angle, < 0 for sun below horizon
          rdg_conv(nx)  , & ! convergence term for ridging on nodes (1/s)
@@ -277,8 +280,6 @@
          faero_ocn(nx,icepack_max_aero)       , & ! aerosol flux to ocean  (kg/m^2/s)
          flux_bio(nx,icepack_max_nbtrcr)      , & ! all bio fluxes to ocean
          flux_bio_ai(nx,icepack_max_nbtrcr)   , & ! all bio fluxes to ocean, averaged over grid cell
-         fzsal_ai(nx)          , & ! salt flux to ocean from zsalinity (kg/m^2/s)
-         fzsal_g_ai(nx)        , & ! gravity drainage salt flux to ocean (kg/m^2/s)
          hin_old(nx,ncat)      , & ! old ice thickness
          dsnown(nx,ncat)       , & ! change in snow thickness in category n (m)
          nit(nx)        , & ! ocean nitrate (mmol/m^3)
@@ -351,6 +352,8 @@
          Cdn_atm_ratio(nx), & ! ratio drag atm / neutral drag atm
          hin_max(0:ncat)  , & ! category limits (m)
          c_hi_range(ncat) , & !
+         meltsliq(nx)     , & ! snow melt mass (kg/m^2)
+         meltsliqn(nx,ncat), & ! snow melt mass in category n (kg/m^2)
          dhsn(nx,ncat)    , & ! depth difference for snow on sea ice and pond ice
          ffracn(nx,ncat)  , & ! fraction of fsurfn used to melt ipond
          alvdrn(nx,ncat)     , & ! visible direct albedo           (fraction)
@@ -406,10 +409,6 @@
          Rayleigh_criteria(nx)       , & ! .true. means Ra_c was reached
          Rayleigh_real(nx)           , & ! .true. = c1, .false. = c0
          sice_rho(nx,ncat)           , & ! avg sea ice density  (kg/m^3)  ! ech: diagnostic only?
-         fzsaln(nx,ncat)             , & ! category fzsal(kg/m^2/s)
-         fzsaln_g(nx,ncat)           , & ! salt flux from gravity drainage only
-         fzsal(nx)                   , & ! Total flux  of salt to ocean at time step for conservation
-         fzsal_g(nx)                 , & ! Total gravity drainage flux
          zfswin(nx,nblyr+1,ncat)     , & ! Shortwave flux into layers interpolated on bio grid  (W/m^2)
          iDi(nx,nblyr+1,ncat)        , & ! igrid Diffusivity (m^2/s)
          iki(nx,nblyr+1,ncat)        , & ! Ice permeability (m^2)

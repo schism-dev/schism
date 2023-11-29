@@ -9,6 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
+
 Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
 Tag v5.11.0: (Aug 2022)
 
@@ -589,6 +591,8 @@ git versions:
 146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
 147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (as Kijin did for 1-way script)
 148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
+149. `045962` (Sept 13, 2023): removed goto in lap.F90
+150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 
 ================================================================================================
 (D) Auto-test history:

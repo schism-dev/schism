@@ -1,6 +1,7 @@
 !     Fix bad quality quads based on angle ratio criterion (like
 !     xmgredit5).
-!     Inputs: screen; hgrid.gr3 (projection or lon/lat)
+!     Inputs: screen; hgrid.gr3 (projection or lon/lat; quads can be
+!     concave)
 !     Output: hgrid.gr3.new (node order not changed); split_loc.bp (location of quads that r
 !     split)
 
@@ -9,7 +10,7 @@
       implicit real*8(a-h,o-z)
       integer :: nwild(3),nwild2(4)
       real*8 :: aspect_ratio(2,2)
-      integer, allocatable :: i34(:),elnode(:,:),i34_new(:),elnode_new(:,:)
+      integer, allocatable :: i34(:),elnode(:,:),i34_new(:),elnode_new(:,:),isplit(:)
       real*8, allocatable :: xnd(:),ynd(:),dp(:),area(:),quad_loc(:,:), &
      &xctr(:),yctr(:)
 
@@ -22,33 +23,37 @@
       open(14,file='hgrid.gr3',status='old')
       read(14,*)
       read(14,*) ne,np
-      allocate(xnd(np),ynd(np),dp(np),area(ne),i34(ne),elnode(4,ne), &
+      allocate(xnd(np),ynd(np),dp(np),i34(ne),elnode(4,ne),isplit(ne), &
      &i34_new(2*ne),elnode_new(4,2*ne),quad_loc(2,ne),xctr(ne),yctr(ne))
 
       do i=1,np
         read(14,*) j,xnd(i),ynd(i),dp(i)
       enddo !i
 
+      !Init isplit: local index (=1 or 2) where splitting occurs; quad is split into tri
+      !(isplit,isplit+1,isplit+2)
+      isplit(:)=0 
       do i=1,ne
         read(14,*) j,i34(i),elnode(1:i34(i),i)
 
         n1=elnode(1,i)
         n2=elnode(2,i)
         n3=elnode(3,i)
-        area(i)=signa(xnd(n1),xnd(n2),xnd(n3),ynd(n1),ynd(n2),ynd(n3))
-        if(area(i)<=0) then
-          write(*,*)'Negative area at elem:',i
-          stop
-        endif
-         
-        if(i34(i)==4) then
-          n4=elnode(4,i)
-          tmp=signa(xnd(n1),xnd(n3),xnd(n4),ynd(n1),ynd(n3),ynd(n4))
-          if(tmp<=0) then
-            write(*,*)'Negative area at elem:',i
+        area2=signa(xnd(n1),xnd(n2),xnd(n3),ynd(n1),ynd(n2),ynd(n3))
+        !Quads can be concave
+        if(i34(i)==3) then
+          if(area2<=0) then
+            write(*,*)'Negative area at elem:',i,i34(i)
             stop
           endif
-          area(i)=area(i)+tmp
+        else !quad
+          n4=elnode(4,i)
+          tmp=signa(xnd(n1),xnd(n3),xnd(n4),ynd(n1),ynd(n3),ynd(n4))
+          if(area2<=0.or.tmp<=0) isplit(i)=2
+!            write(*,*)'Negative area at elem:',i
+!            stop
+!          endif
+!          area(i)=area(i)+tmp
         endif
 
         xctr(i)=sum(xnd(elnode(1:i34(i),i)))/i34(i)
@@ -63,9 +68,6 @@
 
         !Quads; interior angles
         ang_max=-1; ang_min=pi*1.1
-        !local index where splitting occurs; quad is split into tri
-        !(isplit,isplit+1,isplit+2)
-        isplit=0 
         do j=1,4
           n1=elnode(j,i) !angle centered @ n1
           j1=j+1; j3=j+3
@@ -76,10 +78,10 @@
 
           ar2=signa(xnd(n1),xnd(n2),xnd(n3),ynd(n1),ynd(n2),ynd(n3))
           if(ar2<=0) then !concave quad; split from this node
-            isplit=j; exit
+            isplit(i)=j; exit
           endif
 
-          !Convext @ n1; interior angle
+          !Convex @ n1; interior angle
           dot=(xnd(n2)-xnd(n1))*(xnd(n3)-xnd(n1))+(ynd(n2)-ynd(n1))*(ynd(n3)-ynd(n1))
           rl1=sqrt((xnd(n2)-xnd(n1))**2+(ynd(n2)-ynd(n1))**2)
           rl3=sqrt((xnd(n3)-xnd(n1))**2+(ynd(n3)-ynd(n1))**2)
@@ -94,7 +96,7 @@
           if(ang<ang_min) ang_min=ang
         enddo !j=1,4
 
-        if(isplit==0) then !calc angle ratio for convex quad
+        if(isplit(i)==0) then !calc angle ratio for convex quad
           if(ang_max==0.or.ang_max<ang_min) stop 'failed to find max/min'
 !'
           if(ang_min/ang_max<rat_angle) then
@@ -118,33 +120,44 @@
                 n3=elnode(nwild2(nwild(3)),i)
                 ar3=signa(xnd(n1),xnd(n2),xnd(n3),ynd(n1),ynd(n2),ynd(n3))
                 if(ar3<=0) then
-                  print*, 'ar3<=0:',i,j,k,n1,n2,n3
-                  stop
+!                  print*, 'ar3<=0:',i,j,k,n1,n2,n3
+!                  stop
+                  aspect_ratio(k,j)=-1. !flag
+                else
+                  rl1=sqrt((xnd(n1)-xnd(n2))**2+(ynd(n1)-ynd(n2))**2)
+                  rl2=sqrt((xnd(n1)-xnd(n3))**2+(ynd(n1)-ynd(n3))**2)
+                  rl3=sqrt((xnd(n2)-xnd(n3))**2+(ynd(n2)-ynd(n3))**2)
+                  rlmax=max(rl1,rl2,rl3)
+                  aspect_ratio(k,j)=rlmax/sqrt(ar3/pi)
                 endif
-                rl1=sqrt((xnd(n1)-xnd(n2))**2+(ynd(n1)-ynd(n2))**2)
-                rl2=sqrt((xnd(n1)-xnd(n3))**2+(ynd(n1)-ynd(n3))**2)
-                rl3=sqrt((xnd(n2)-xnd(n3))**2+(ynd(n2)-ynd(n3))**2)
-                rlmax=max(rl1,rl2,rl3)
-                aspect_ratio(k,j)=rlmax/sqrt(ar3/pi)
               enddo !k
             enddo !j=1,2
             
             !Change here if you want to use different criteria
-            arat1=sum(aspect_ratio(:,1))
-            arat2=sum(aspect_ratio(:,2))
-            if(arat1<arat2) then
-              isplit=1 !split at node 1
+            if(minval(aspect_ratio(:,1))<0.and.minval(aspect_ratio(:,2))<0) then
+              print*, 'Cannot find a split point at elem:',i
+              stop
+            else if(minval(aspect_ratio(:,1))<0) then
+              isplit(i)=2
+            else if(minval(aspect_ratio(:,2))<0) then
+              isplit(i)=1
             else
-              isplit=2
+              arat1=sum(aspect_ratio(:,1))
+              arat2=sum(aspect_ratio(:,2))
+              if(arat1<arat2) then
+                isplit(i)=1 !split at node 1
+              else
+                isplit(i)=2 !split at node 2
+              endif
             endif
           endif !ang_min/
         endif !isplit==0
 
-        if(isplit/=0) then !add extra tri to the end of conn table
+        if(isplit(i)/=0) then !add extra tri to the end of conn table
           ne_extra=ne_extra+1
           if(ne_extra>ne) stop 'overflow(1)'
           i34_new(i)=3; i34_new(ne+ne_extra)=3 
-          i1=isplit; i2=isplit+1; i3=isplit+2; i4=isplit+3
+          i1=isplit(i); i2=isplit(i)+1; i3=isplit(i)+2; i4=isplit(i)+3
           if(i2>4) i2=i2-4
           if(i3>4) i3=i3-4
           if(i4>4) i4=i4-4

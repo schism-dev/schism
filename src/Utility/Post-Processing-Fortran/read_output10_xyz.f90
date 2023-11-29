@@ -56,7 +56,7 @@
      &count_2d(2),count_3d(3),count_4d(4)
 !      real*8 :: h0
       
-      pi=3.1515926
+      pi=3.1415926
 
       print*, 'Input extraction pts format (1: .bp; 2:.sta):'
       read(*,*)ibp

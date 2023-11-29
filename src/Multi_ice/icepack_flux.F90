@@ -9,14 +9,14 @@
       module icepack_flux
 
       use icepack_kinds
-      use icepack_parameters, only: c1, emissivity
+      use icepack_parameters, only: c1, emissivity, snwgrain
       use icepack_warnings, only: warnstr, icepack_warnings_add
       use icepack_warnings, only: icepack_warnings_setabort, icepack_warnings_aborted
       use icepack_tracers, only: tr_iso
 
       implicit none
       private
-      public :: merge_fluxes, set_sfcflux               
+      public :: merge_fluxes, set_sfcflux
 
 !=======================================================================
 
@@ -28,13 +28,13 @@
 !
 ! author: Elizabeth C. Hunke and William H. Lipscomb, LANL
 
-      subroutine merge_fluxes (aicen,                &    
+      subroutine merge_fluxes (aicen,                &
                                flw, &
                                strairxn, strairyn,   &
                                Cdn_atm_ratio_n,      &
-                               fsurfn,   fcondtopn,  &  
+                               fsurfn,   fcondtopn,  &
                                fcondbotn,            &
-                               fsensn,   flatn,      & 
+                               fsensn,   flatn,      &
                                fswabsn,  flwoutn,    &
                                evapn,                &
                                evapsn,   evapin,     &
@@ -43,23 +43,24 @@
                                fhocnn,   fswthrun,   &
                                fswthrun_vdr, fswthrun_vdf,&
                                fswthrun_idr, fswthrun_idf,&
-                               strairxT, strairyT,   &  
+                               strairxT, strairyT,   &
                                Cdn_atm_ratio,        &
                                fsurf,    fcondtop,   &
                                fcondbot,             &
-                               fsens,    flat,       & 
+                               fsens,    flat,       &
                                fswabs,   flwout,     &
-                               evap,                 & 
+                               evap,                 &
                                evaps,    evapi,      &
                                Tref,     Qref,       &
-                               fresh,    fsalt,      & 
+                               fresh,    fsalt,      &
                                fhocn,    fswthru,    &
                                fswthru_vdr, fswthru_vdf,&
                                fswthru_idr, fswthru_idf,&
                                melttn, meltsn, meltbn, congeln, snoicen, &
                                meltt,  melts,        &
-                               meltb,                &
+                               meltb,  dsnow, dsnown,&
                                congel,  snoice,      &
+                               meltsliq, meltsliqn,  &
                                Uref,     Urefn,      &
                                Qref_iso, Qrefn_iso,  &
                                fiso_ocn, fiso_ocnn,  &
@@ -71,7 +72,7 @@
           flw     , & ! downward longwave flux          (W/m**2)
           strairxn, & ! air/ice zonal  strss,           (N/m**2)
           strairyn, & ! air/ice merdnl strss,           (N/m**2)
-          Cdn_atm_ratio_n, & ! ratio of total drag over neutral drag  
+          Cdn_atm_ratio_n, & ! ratio of total drag over neutral drag
           fsurfn  , & ! net heat flux to top surface    (W/m**2)
           fcondtopn,& ! downward cond flux at top sfc   (W/m**2)
           fcondbotn,& ! downward cond flux at bottom sfc   (W/m**2)
@@ -88,17 +89,19 @@
           fsaltn  , & ! salt flux to ocean              (kg/m2/s)
           fhocnn  , & ! actual ocn/ice heat flx         (W/m**2)
           fswthrun, & ! sw radiation through ice bot    (W/m**2)
+          melttn  , & ! top ice melt                    (m)
+          meltbn  , & ! bottom ice melt                 (m)
+          meltsn  , & ! snow melt                       (m)
+          meltsliqn,& ! mass of snow melt               (kg/m^2)
+          dsnown  , & ! change in snow depth            (m)
+          congeln , & ! congelation ice growth          (m)
+          snoicen     ! snow-ice growth                 (m)
+
+      real (kind=dbl_kind), optional, intent(in):: &
           fswthrun_vdr, & ! vis dir sw radiation through ice bot    (W/m**2)
           fswthrun_vdf, & ! vis dif sw radiation through ice bot    (W/m**2)
           fswthrun_idr, & ! nir dir sw radiation through ice bot    (W/m**2)
           fswthrun_idf, & ! nir dif sw radiation through ice bot    (W/m**2)
-          melttn  , & ! top ice melt                    (m)
-          meltbn  , & ! bottom ice melt                 (m)
-          meltsn  , & ! snow melt                       (m)
-          congeln , & ! congelation ice growth          (m)
-          snoicen     ! snow-ice growth                 (m)
-           
-      real (kind=dbl_kind), optional, intent(in):: &
           Urefn       ! air speed reference level       (m/s)
 
       ! cumulative fluxes
@@ -125,6 +128,7 @@
           meltt   , & ! top ice melt                    (m)
           meltb   , & ! bottom ice melt                 (m)
           melts   , & ! snow melt                       (m)
+          meltsliq, & ! mass of snow melt               (kg/m^2)
           congel  , & ! congelation ice growth          (m)
           snoice      ! snow-ice growth                 (m)
 
@@ -134,18 +138,19 @@
           fswthru_idr , & ! nir dir sw radiation through ice bot    (W/m**2)
           fswthru_idf     ! nir dif sw radiation through ice bot    (W/m**2)
 
-      real (kind=dbl_kind), optional, intent(inout):: &
+      real (kind=dbl_kind), intent(inout), optional :: &
+          dsnow,    & ! change in snow depth            (m)
           Uref        ! air speed reference level       (m/s)
 
-      real (kind=dbl_kind), optional, dimension(:), intent(inout):: &
-          Qref_iso, & ! isotope air sp hum reference level (kg/kg)
-          fiso_ocn, & ! isotope fluxes to ocean (kg/m2/s)
-          fiso_evap   ! isotope evaporation (kg/m2/s)
+      real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
+          Qref_iso, & ! isotope air sp hum ref level    (kg/kg)
+          fiso_ocn, & ! isotope fluxes to ocean         (kg/m2/s)
+          fiso_evap   ! isotope evaporation             (kg/m2/s)
 
-      real (kind=dbl_kind), optional, dimension(:), intent(in):: &
-          Qrefn_iso, & ! isotope air sp hum reference level (kg/kg)
-          fiso_ocnn, & ! isotope fluxes to ocean (kg/m2/s)
-          fiso_evapn   ! isotope evaporation (kg/m2/s)
+      real (kind=dbl_kind), dimension(:), intent(in), optional :: &
+          Qrefn_iso, & ! isotope air sp hum ref level   (kg/kg)
+          fiso_ocnn, & ! isotope fluxes to ocean        (kg/m2/s)
+          fiso_evapn   ! isotope evaporation            (kg/m2/s)
 
       character(len=*),parameter :: subname='(merge_fluxes)'
 
@@ -153,7 +158,7 @@
       ! Merge fluxes
       ! NOTE: The albedo is aggregated only in cells where ice exists
       !       and (for the delta-Eddington scheme) where the sun is above
-      !       the horizon. 
+      !       the horizon.
       !-----------------------------------------------------------------
 
       ! atmo fluxes
@@ -163,8 +168,8 @@
       Cdn_atm_ratio = Cdn_atm_ratio + &
                       Cdn_atm_ratio_n   * aicen
       fsurf      = fsurf    + fsurfn    * aicen
-      fcondtop   = fcondtop + fcondtopn * aicen 
-      fcondbot   = fcondbot + fcondbotn * aicen 
+      fcondtop   = fcondtop + fcondtopn * aicen
+      fcondbot   = fcondbot + fcondbotn * aicen
       fsens      = fsens    + fsensn    * aicen
       flat       = flat     + flatn     * aicen
       fswabs     = fswabs   + fswabsn   * aicen
@@ -212,9 +217,15 @@
       meltt     = meltt     + melttn    * aicen
       meltb     = meltb     + meltbn    * aicen
       melts     = melts     + meltsn    * aicen
+      if (snwgrain) then
+         meltsliq  = meltsliq  + meltsliqn * aicen
+      endif
+      if (present(dsnow)) then
+         dsnow     = dsnow     + dsnown    * aicen
+      endif
       congel    = congel    + congeln   * aicen
       snoice    = snoice    + snoicen   * aicen
-      
+
       end subroutine merge_fluxes
 
 !=======================================================================
@@ -223,8 +234,8 @@
 ! flux values using values read in from forcing data or supplied via
 ! coupling (stored in ice_flux).
 !
-! If CICE is running in NEMO environment, convert fluxes from GBM values 
-! to per unit ice area values. If model is not running in NEMO environment, 
+! If CICE is running in NEMO environment, convert fluxes from GBM values
+! to per unit ice area values. If model is not running in NEMO environment,
 ! the forcing is supplied as per unit ice area values.
 !
 ! authors Alison McLaren, Met Office
@@ -240,17 +251,16 @@
                               fcondtopn)
 
       ! ice state variables
-      real (kind=dbl_kind), &
-         intent(in) :: &
+      real (kind=dbl_kind), intent(in) :: &
          aicen       , & ! concentration of ice
-         flatn_f     , & ! latent heat flux   (W/m^2) 
-         fsensn_f    , & ! sensible heat flux (W/m^2) 
+         flatn_f     , & ! latent heat flux   (W/m^2)
+         fsensn_f    , & ! sensible heat flux (W/m^2)
          fsurfn_f    , & ! net flux to top surface, not including fcondtopn
          fcondtopn_f     ! downward cond flux at top surface (W m-2)
 
       real (kind=dbl_kind), intent(out):: &
-         flatn       , & ! latent heat flux   (W/m^2) 
-         fsensn      , & ! sensible heat flux   (W/m^2) 
+         flatn       , & ! latent heat flux   (W/m^2)
+         fsensn      , & ! sensible heat flux   (W/m^2)
          fsurfn      , & ! net flux to top surface, not including fcondtopn
          fcondtopn       ! downward cond flux at top surface (W m-2)
 
@@ -262,7 +272,7 @@
       logical (kind=log_kind) :: &
          extreme_flag    ! flag for extreme forcing values
 
-      logical (kind=log_kind), parameter :: & 
+      logical (kind=log_kind), parameter :: &
          extreme_test=.false. ! test and write out extreme forcing data
 
       character(len=*),parameter :: subname='(set_sfcflux)'
@@ -271,7 +281,7 @@
 
 #ifdef CICE_IN_NEMO
 !----------------------------------------------------------------------
-! Convert fluxes from GBM values to per ice area values when 
+! Convert fluxes from GBM values to per ice area values when
 ! running in NEMO environment.  (When in standalone mode, fluxes
 ! are input as per ice area.)
 !----------------------------------------------------------------------
@@ -289,60 +299,60 @@
       if (extreme_test) then
          extreme_flag = .false.
 
-         if (fcondtopn < -100.0_dbl_kind & 
+         if (fcondtopn < -100.0_dbl_kind &
               .or. fcondtopn > 20.0_dbl_kind) then
             extreme_flag = .true.
          endif
-         
-         if (fsurfn < -100.0_dbl_kind & 
+
+         if (fsurfn < -100.0_dbl_kind &
               .or. fsurfn > 80.0_dbl_kind) then
             extreme_flag = .true.
          endif
-         
-         if (flatn < -20.0_dbl_kind & 
+
+         if (flatn < -20.0_dbl_kind &
               .or. flatn > 20.0_dbl_kind) then
             extreme_flag = .true.
          endif
 
          if (extreme_flag) then
 
-            if (fcondtopn < -100.0_dbl_kind & 
+            if (fcondtopn < -100.0_dbl_kind &
                  .or. fcondtopn > 20.0_dbl_kind) then
-               write(warnstr,*) subname, & 
+               write(warnstr,*) subname, &
                     'Extreme forcing: -100 > fcondtopn > 20'
                call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, & 
-                    'aicen,fcondtopn = ', & 
+               write(warnstr,*) subname, &
+                    'aicen,fcondtopn = ', &
                     aicen,fcondtopn
                call icepack_warnings_add(warnstr)
             endif
-            
-            if (fsurfn < -100.0_dbl_kind & 
+
+            if (fsurfn < -100.0_dbl_kind &
                  .or. fsurfn > 80.0_dbl_kind) then
-               write(warnstr,*) subname, & 
+               write(warnstr,*) subname, &
                     'Extreme forcing: -100 > fsurfn > 40'
                call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, & 
-                    'aicen,fsurfn = ', & 
+               write(warnstr,*) subname, &
+                    'aicen,fsurfn = ', &
                     aicen,fsurfn
                call icepack_warnings_add(warnstr)
             endif
-            
-            if (flatn < -20.0_dbl_kind & 
+
+            if (flatn < -20.0_dbl_kind &
                  .or. flatn > 20.0_dbl_kind) then
-               write(warnstr,*) subname, & 
+               write(warnstr,*) subname, &
                     'Extreme forcing: -20 > flatn > 20'
                call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, & 
-                    'aicen,flatn = ', & 
+               write(warnstr,*) subname, &
+                    'aicen,flatn = ', &
                     aicen,flatn
                call icepack_warnings_add(warnstr)
             endif
-            
+
          endif  ! extreme_flag
-      endif     ! extreme_test    
-         
-      end subroutine set_sfcflux 
+      endif     ! extreme_test
+
+      end subroutine set_sfcflux
 
 !=======================================================================
 

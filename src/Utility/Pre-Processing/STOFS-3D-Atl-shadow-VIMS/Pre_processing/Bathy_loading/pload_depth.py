@@ -2,10 +2,13 @@
 '''
 load bathymetry for NWM model grid
 '''
+import os
+import re
 from pylib import *
 import time
 import errno
-import os
+import json
+from glob import glob
 
 #-----------------------------------------------------------------------------
 #Input
@@ -14,7 +17,7 @@ grd='hgrid.ll'  #grid name
 grdout='hgrid.ll.new' #grid name with depth loaded
 
 #parameter
-regions=['./regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenPoint.reg","Washington_3.reg",
+regions=['/sciclone/schism10/Hgrid_projects/DEMs/regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenPoint.reg","Washington_3.reg",
          "Elk_river.reg","Hudson_river.reg","James_river.reg","NorthEast_river.reg",
          "Rappahannock_river.reg","Susquehanna_river.reg","York_river.reg",
          "Androscoggin_Kennebec_rivers.reg","Merrimack_river.reg","Patuxent_river.reg",
@@ -28,12 +31,11 @@ rvalues=(5,7,5,15,
          5,3,5,1,
          10,10,10
          ) #minimum depth in regions
-headers=("gebco","etopo1","crm_3arcs","cdem13_","dem_continetalus_southcarolina","North_Carolina_USGS_3m",
-         "al_ll","nc_ll","fl_ll","gulf_1_dem_usgs","gulf_3_demcombined_ll","ge_ll","sc_ll",
-         "cb_ll","db_ll","new_england_topobathy_dem_3m_dd","Tile3_R3_DEMv2","cb_bay_dem_v3.1_ll",
-         "ncei19_2019v1","tx_ncei19","ncei19_MS_LA", "ncei19_MA_NH_NE", "ncei19_AL_nwFL", "ncei19_FL")
 
-sdir=r'/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN13q/Hgrid/npz'  #directory of DEM data
+dem_info_dict = json.load(open('/sciclone/schism10/Hgrid_projects/DEMs/DEM_info.json'))  # existing json containing the DEM info
+headers=tuple(dem_info_dict.keys()) #DEM headers used for glob'ing the DEM files; python3.6+ only, which preserves the order of the keys
+
+sdir=r'/sciclone/schism10/Hgrid_projects/DEMs/npz2/'  #directory of DEM data
 reverse_sign=1  #invert depth sign
 
 #resource requst
@@ -95,9 +97,10 @@ for header in headers:
     fnames_sub=array([i for i in fnames0 if i.startswith(header)])
     if len(fnames_sub)==1: fnames_sort.extend(fnames_sub); continue
 
-    #get id number
-    fid=array([i.replace('tif.','').replace('.','_')[len(header):].split('_')[-2] for i in fnames_sub]).astype('int')
+    #get id number, which is the last number before the suffix ".*"
+    fid = array([int(re.findall(r'(\d+)', i)[-1]) for i in fnames_sub])
     sind=argsort(fid); fnames_sub=fnames_sub[sind]; fnames_sort.extend(fnames_sub)
+    pass
 fnames_sort=array(fnames_sort)
 
 #to exactly match the order to old method

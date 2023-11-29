@@ -13,7 +13,7 @@ subroutine ice_init
     real(rkind) :: sum1,meancos,local_cart(2,3),jacobian2D(2,2),jacobian2D_inv(2,2), &
    &det,der_transp(3,2),derivative_stdbf(2,3),ar1,ar2
 
-    namelist /ice_in/ice_tests,ihot_mice,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
+    namelist /mice_in/ice_tests,ihot_mice,ice_advection,ice_therm_on,ievp,ice_cutoff,evp_rheol_steps,mevp_rheol_steps, &
    &delta_min,theta_io,mevp_alpha1,mevp_alpha2,pstar,ellipse,c_pressure,niter_fct, &
    &ice_gamma_fct,h_ml0,salt_ice,salt_water
     
@@ -27,13 +27,14 @@ subroutine ice_init
     ellipse=-huge(1.d0); c_pressure=-huge(1.d0); ice_gamma_fct=-huge(1.d0);
     h_ml0=-huge(1.d0); salt_ice=-huge(1.d0); salt_water=-huge(1.d0)
   
-    open(10,file=in_dir(1:len_in_dir)//'ice.nml',status='old')
-    read(10,nml=ice_in)
+    open(10,file=in_dir(1:len_in_dir)//'mice.nml',status='old')
+    read(10,nml=mice_in)
     close(10)
   !Check
     if(ice_tests/=0.and.ice_tests/=1) call parallel_abort('ice_init: ice_tests')
-    if(ihot_mice/=0.and.ihot_mice/=1) call parallel_abort('ice_init: ihot_mice')
-    if(ice_advection/=0.and.ice_advection/=1.and.ice_advection/=2.and.ice_advection/=3) call parallel_abort('ice_init: ice_advection')
+    if(ihot_mice/=0.and.ihot_mice/=1.and.ihot_mice/=2) call parallel_abort('ice_init: ihot_mice')
+    if(ice_advection/=0.and.ice_advection/=1.and.ice_advection/=2.and.ice_advection/=3.and.ice_advection/=4.and.&
+    &ice_advection/=5.and.ice_advection/=6.and.ice_advection/=7) call parallel_abort('ice_init: ice_advection')
     if(ice_therm_on/=0.and.ice_therm_on/=1) call parallel_abort('ice_init: ice_therm_on')
     if(ievp/=0.and.ievp/=1.and.ievp/=2) call parallel_abort('ice_init: ievp')
     if(ice_cutoff<=0) call parallel_abort('ice_init: ice_cutoff')
@@ -57,7 +58,7 @@ subroutine ice_init
      &v_ocean(npa),area_median(np),voltriangle(nea),bafux(3,nea),bafuy(3,nea), &
      &ice_matrix(0:mnei_p,np),lump_ice_matrix(npa),delta_ice(nea),t_oi(npa),fresh_wa_flux0(npa), &
      &net_heat_flux0(npa),m_snow0(npa),a_ice0(npa),m_ice0(npa),evaporation(npa),stress_atmice_x(npa),&
-     &stress_atmice_y(npa),fsrad_ice_out0(npa),Tbu(npa),strength(npa),stat=istat)
+     &stress_atmice_y(npa),fsrad_ice_out0(npa),Tbu(npa),strength(npa),dudicex(6,npa),dudicey(6,npa),stat=istat)
      if(istat/=0) call parallel_abort('ice_init: alloc (1)')
      !  if(ice_therm_on==1) then
      !    allocate(t_oi(npa),stat=istat)

@@ -331,17 +331,19 @@
          
 !     Decomposition of matrix a
 
-         do 100 ir=1,mm
+!         do 100 ir=1,mm
+         do ir=1,mm
             ire=ir+1
             do 20 j=ire,mm
  20         ha(ir,j)=ha(ir,j)/ha(ir,ir)
-            if(ire.gt.mm) goto 100
+            if(ire.gt.mm) cycle  !goto 100
             do 40 j=ire,mm
               do 40 k=ire,mm
  40           ha(k,j)=ha(k,j)-ha(k,ir)*ha(ir,j)
             do 50 j=ire,mm
  50           ha(j,ir)=0.0
- 100     continue
+! 100     continue
+         enddo !ir
          return
       endif
 
@@ -362,13 +364,17 @@
 
 !...  solve for x by back-substituting for l(tr)*x=c
 
-            ir=mm
- 140        continue
+          ir=mm
+! 140        continue
+          do
             hax(ir)=c(ir)
             do 150 jr=ir+1,mm
  150          hax(ir)=hax(ir)-ha(ir,jr)*hax(jr)
             ir=ir-1
-            if(ir.ge.1) goto 140
+!            if(ir.ge.1) goto 140
+            if(ir.lt.1) exit
+          enddo
+
       deallocate(c,y)
       return
       end subroutine
@@ -958,7 +964,10 @@
          endif
          if(fdiff.ge.1.d-6) iflag=1
       end do
-      if(iflag.eq.1) goto 999
+
+!      if(iflag.eq.1) goto 999
+      if(iflag.ne.1) then
+!--------------------------------------
 !
 !***** Read in time of most recent H.A. update
 !
@@ -976,7 +985,9 @@
 !
 !***** FATAL Error Messages
 !
- 999  continue
+! 999  continue
+      else !iflag.eq.1
+!--------------------------------------
       if(iflag.ne.0) then
          if(NSCREEN.EQ.1.AND.myrank.EQ.0) write(6,1000)
 !        Use 12 for non-fatal messages; need parallel_abort() if using 11
@@ -1094,7 +1105,9 @@
          write(12,1010)
  1010    FORMAT(//,5x,'********** RUN TERMINATED **********',/)
          stop
-      endif
+      endif !iflag.eq.1
+!--------------------------------------
+      endif !iflag.ne.1
 
       return
       end subroutine

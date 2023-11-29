@@ -2,8 +2,10 @@
 !
 ! This submodule initializes the IO subroutines
 !
-! Author: L. Zampieri ( lorenzo.zampieri@awi.de )
-!  Modified by Qian Wang to apply to SCHISM
+! Author: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
+!        Qian Wang upate ICEPACK to 1.3.4
+!     Modified by Qian Wang to apply to SCHISM
+!        
 !=======================================================================
 
       submodule (icedrv_main) icedrv_io
@@ -17,7 +19,7 @@
       use icedrv_system,    only: icedrv_system_abort
       use schism_glbl,      only: id_out_var,npa,nea,np
       use schism_io
-      use mice_module,       only: io_listsize,io_list_icepack
+      use mice_module,       only: io_listsize,io_list_icepack,lump_ice_matrix,dudicex,dudicey
       contains
 
       module subroutine io_icepack(noutput)
@@ -43,7 +45,7 @@
         
           logical (kind=log_kind)   ::                        &
                solve_zsal, skl_bgc, z_tracers,                &
-               tr_iage, tr_FY, tr_lvl, tr_aero, tr_pond_cesm, &
+               tr_iage, tr_FY, tr_lvl, tr_aero, tr_snow,      &
                tr_pond_topo, tr_pond_lvl, tr_brine,           &
                tr_bgc_N, tr_bgc_C, tr_bgc_Nit,                &
                tr_bgc_Sil,  tr_bgc_DMS,                       &
@@ -68,7 +70,7 @@
                skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
           call icepack_query_tracer_flags(                                            &
                tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
-               tr_aero_out=tr_aero, tr_pond_cesm_out=tr_pond_cesm,                    &
+               tr_aero_out=tr_aero, tr_snow_out=tr_snow,                                          &
                tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
                tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
                tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
@@ -118,9 +120,15 @@
              ! Sea ice velocity components
              case ('uvel      ')
                   call writeout_nc(id_out_var(noutput+26), 'x-component_of_ice_velocity',1,1,npa,uvel)
+                  !call writeout_nc(id_out_var(noutput+26), 'x-component_of_ice_velocity',1,1,npa,dble(Cdn_ocn))
+                  !call writeout_nc(id_out_var(noutput+26), 'x-component_of_ice_velocity',1,1,npa,dble(lump_ice_matrix))
+                  !call writeout_nc(id_out_var(noutput+26), 'x-component_of_ice_velocity',1,1,npa,dble(dudicex(4,:)))
                  !call def_stream2D(nod2D,  nx_nh,  'uvel', 'x-component of ice velocity', 'm/s', uvel(:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
              case ('vvel      ')
                   call writeout_nc(id_out_var(noutput+27), 'y-component_of_ice_velocity',1,1,npa,vvel)
+                  !call writeout_nc(id_out_var(noutput+27), 'y-component_of_ice_velocity',1,1,npa,dble(Cdn_atm))
+                  !call writeout_nc(id_out_var(noutput+27), 'y-component_of_ice_velocity',1,1,npa,dble(dudicey(4,:)))
+                  !call writeout_nc(id_out_var(noutput+26), 'y-component_of_ice_velocity',1,1,npa,dble(fresh))
                  !call def_stream2D(nod2D,  nx_nh,  'vvel', 'y-component of ice velocity', 'm/s', vvel(:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
              ! Sea ice or snow surface temperature
              case ('Tsfc      ')
@@ -157,17 +165,6 @@
                      call writeout_nc(id_out_var(noutput+68+k), 'ridged sea ice volume',1,1,npa, trcrn(:,nt_vlvl,k))
                   enddo
                   !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'vlvl', 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
-                end if
-             case ('pond_cesmn')
-                if (tr_pond_cesm) then
-                  do k = 1,ncat
-                     call writeout_nc(id_out_var(noutput+78+k), 'melt pond area fraction',1,1,npa, trcrn(:,nt_apnd,k))
-                  enddo
-                  !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'apnd', 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh) 
-                  do k = 1,ncat
-                     call writeout_nc(id_out_var(noutput+88+k), 'melt pond depth',1,1,npa, trcrn(:,nt_hpnd,k))
-                  enddo
-                  !call def_stream3D((/nod2D, ncat/),  (/nx_nh, ncat/),  'hpnd', 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh) 
                 end if
              case ('pond_topon')
                 if (tr_pond_topo) then
@@ -250,13 +247,6 @@
                   !call def_stream2D(nod2D, nx_nh,  'alvl', 'ridged sea ice area',   'none', trcr(:,nt_alvl), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
                   call writeout_nc(id_out_var(noutput+171), 'ridged sea ice volume',1,1,npa, trcr(:,nt_vlvl))
                   !call def_stream2D(nod2D, nx_nh,  'vlvl', 'ridged sea ice volume', 'm',    trcr(:,nt_vlvl), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh)
-                end if
-             case ('pond_cesm ')
-                if (tr_pond_cesm) then
-                  call writeout_nc(id_out_var(noutput+172), 'melt pond area fraction',1,1,npa, trcr(:,nt_apnd))
-                  !call def_stream2D(nod2D, nx_nh,  'apnd', 'melt pond area fraction', 'none', trcr(:,nt_apnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh) 
-                  call writeout_nc(id_out_var(noutput+173), 'melt pond depth',1,1,npa, trcr(:,nt_hpnd))
-                  !call def_stream2D(nod2D, nx_nh,  'hpnd', 'melt pond depth',         'm',    trcr(:,nt_hpnd), io_list_icepack(i)%freq, io_list_icepack(i)%unit, io_list_icepack(i)%precision, mesh) 
                 end if
              case ('pond_topo ')
                 if (tr_pond_topo) then
@@ -345,7 +335,8 @@
                                      nt_Tsfc, nt_sice, nt_qice, nt_qsno,    &
                                      nt_apnd, nt_hpnd, nt_ipnd, nt_alvl,    &
                                      nt_vlvl, nt_iage, nt_FY,   nt_aero,    &
-                                     ktherm,  nt_fbri,                      &
+                                     nt_smice, nt_smliq, nt_rhos, nt_rsnw,  &
+                                     ktherm,  nt_fbri, nt_fsd,              &
                                      var1d_dim(1),var2d_dim(2),var3d_dim(3),&
                                      ice_ntr_dim,nvars_hot0
         integer (kind=int_kind)   :: varid
@@ -358,14 +349,14 @@
     
         logical (kind=log_kind)   ::                        &
              solve_zsal, skl_bgc, z_tracers,                &
-             tr_iage, tr_FY, tr_lvl, tr_aero, tr_pond_cesm, &
+             tr_iage, tr_FY, tr_lvl, tr_aero, tr_snow,      &
              tr_pond_topo, tr_pond_lvl, tr_brine,           &
              tr_bgc_N, tr_bgc_C, tr_bgc_Nit,                &
              tr_bgc_Sil,  tr_bgc_DMS,                       &
              tr_bgc_chl,  tr_bgc_Am,                        &
              tr_bgc_PON,  tr_bgc_DON,                       &
              tr_zaero,    tr_bgc_Fe,                        &
-             tr_bgc_hum
+             tr_bgc_hum,  tr_fsd
     
 !#include "../associate_mesh.h"
     
@@ -377,12 +368,14 @@
              nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_Tsfc_out=nt_Tsfc,         &
              nt_iage_out=nt_iage, nt_FY_out=nt_FY,                                  &
              nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_fbri_out=nt_fbri,         &
-             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno)
+             nt_aero_out=nt_aero, nt_qsno_out=nt_qsno,                              &
+             nt_smice_out=nt_smice, nt_smliq_out=nt_smliq,nt_rhos_out=nt_rhos,      &
+             nt_rsnw_out=nt_rsnw, nt_fsd_out=nt_fsd)
         call icepack_query_parameters(solve_zsal_out=solve_zsal,                    &
              skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, ktherm_out=ktherm)
         call icepack_query_tracer_flags(                                            &
              tr_iage_out=tr_iage, tr_FY_out=tr_FY, tr_lvl_out=tr_lvl,               &
-             tr_aero_out=tr_aero, tr_pond_cesm_out=tr_pond_cesm,                    &
+             tr_aero_out=tr_aero,tr_snow_out=tr_snow,  tr_fsd_out=tr_fsd,           &
              tr_pond_topo_out=tr_pond_topo, tr_pond_lvl_out=tr_pond_lvl,            &
              tr_brine_out=tr_brine, tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C,   &
              tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Sil_out=tr_bgc_Sil,                  &
@@ -453,14 +446,6 @@
           !call def_variable_2d(ip_id, 'vlvl',  (/nod2D, ncat/), 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:));
       end if
     
-      if (tr_pond_cesm) then
-          j=nf90_def_var(ncid_hot,'apnd',NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
-          nvars_hot0=nvars_hot0+1 
-          !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
-          j=nf90_def_var(ncid_hot,'hpnd',NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
-          nvars_hot0=nvars_hot0+1 
-          !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
-      end if
     
       if (tr_pond_topo) then
           j=nf90_def_var(ncid_hot,'apnd',NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
@@ -534,6 +519,44 @@
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qsno+k-1,:));
      end do
 
+     if (tr_snow) then
+         do k = 1,nslyr
+            write(trname,'(A6,i1)') 'smice_', k
+            write(longname,'(A20,i1)') 'mass of ice in snow:', k
+            units='kg/m^3'
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A6,i1)') 'smliq_', k
+            write(longname,'(A23,i1)') 'mass of liquid in snow:', k
+            units='kg/m^3'
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A5,i1)') 'rhos_', k
+            write(longname,'(A18,i1)') 'snow grain radius:', k
+            units='10^-6 m'
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A5,i1)') 'rsnw_', k
+            write(longname,'(A23,i1)') 'effective snow density:', k
+            units='kg/m^3'
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+     endif
+      if(tr_fsd) then
+         do k = 1,nfsd
+            write(trname,'(A4,i1)') 'fsd_', k
+            write(longname,'(A23,i1)') 'floe size distribution:', k
+            j=nf90_def_var(ncid_hot,trim(trname),NF90_DOUBLE,var2d_dim,nwild(nvars_hot0+1))
+            nvars_hot0=nvars_hot0+1 
+         enddo
+      endif
         j=nf90_enddef(ncid_hot)
 
 
@@ -585,18 +608,6 @@
           !call def_variable_2d(ip_id, 'vlvl',  (/nod2D, ncat/), 'ridged sea ice volume', 'm',    trcrn(:,nt_vlvl,:));
       end if
     
-      if (tr_pond_cesm) then
-         swild = trcrn(1:np,nt_apnd,1:ncat)
-         swild2 = transpose(swild) 
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
-          nvars_hot=nvars_hot+1
-          !call def_variable_2d(ip_id, 'apnd',  (/nod2D, ncat/), 'melt pond area fraction', 'none', trcrn(:,nt_apnd,:));
-         swild = trcrn(1:np,nt_hpnd,1:ncat)
-         swild2 = transpose(swild) 
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
-          nvars_hot=nvars_hot+1
-          !call def_variable_2d(ip_id, 'hpnd',  (/nod2D, ncat/), 'melt pond depth',         'm',    trcrn(:,nt_hpnd,:));
-      end if
     
       if (tr_pond_topo) then
          swild = trcrn(1:np,nt_apnd,1:ncat)
@@ -697,6 +708,54 @@
         !call def_variable_2d(ip_id, trim(trname), (/nod2D, ncat/), trim(longname), trim(units), trcrn(:,nt_qsno+k-1,:));
      end do
 
+     if (tr_snow) then
+         do k = 1,nslyr
+            write(trname,'(A6,i1)') 'smice_', k
+            write(longname,'(A20,i1)') 'mass of ice in snow:', k
+            units='kg/m^3'
+            swild = trcrn(1:np,nt_smice+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A6,i1)') 'smliq_', k
+            write(longname,'(A23,i1)') 'mass of liquid in snow:', k
+            units='kg/m^3'
+            swild = trcrn(1:np,nt_smliq+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A5,i1)') 'rhos_', k
+            write(longname,'(A18,i1)') 'snow grain radius:', k
+            units='10^-6 m'
+            swild = trcrn(1:np,nt_rhos+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+         do k = 1,nslyr
+            write(trname,'(A5,i1)') 'rsnw_', k
+            write(longname,'(A23,i1)') 'effective snow density:', k
+            units='kg/m^3'
+            swild = trcrn(1:np,nt_rsnw+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+     endif
+     if(tr_fsd) then
+         do k = 1,nfsd
+            write(trname,'(A4,i1)') 'fsd_', k
+            write(longname,'(A23,i1)') 'floe size distribution:', k
+            swild = trcrn(1:np,nt_fsd+k-1,1:ncat)
+            swild2 = transpose(swild) 
+            j=nf90_put_var(ncid_hot,nwild(nvars_hot+1),swild2,(/1,1/),(/ncat,np/))
+            nvars_hot=nvars_hot+1
+         enddo
+     endif
         !call def_variable_2d(ip_id, 'aicen',  (/nod2D, ncat/), 'sea ice concentration',       'none', aicen(:,:));
         !call def_variable_2d(ip_id, 'vicen',  (/nod2D, ncat/), 'volum per unit area of ice',  'm',    vicen(:,:));
         !call def_variable_2d(ip_id, 'vsnon',  (/nod2D, ncat/), 'volum per unit area of snow', 'm',    vsnon(:,:));
