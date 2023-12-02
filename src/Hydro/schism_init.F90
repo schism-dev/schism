@@ -5199,7 +5199,7 @@
 
 !     Make sure no nodes are too close to North Pole to avoid forcing
 !     singularity there (wind)
-      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
+!      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
 
 #endif /*USE_MICE*/
 

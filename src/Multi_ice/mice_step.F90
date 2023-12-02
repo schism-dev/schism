@@ -1516,8 +1516,8 @@ module subroutine step_icepack()
            lhas_ice(i)=.false.
            !U_ice(i)=0
            !V_ice(i)=0
-           U_ice(i)=u_ocean(i)
-           V_ice(i)=v_ocean(i)
+           !U_ice(i)=u_ocean(i)
+           !V_ice(i)=v_ocean(i)
          else
            lhas_ice(i)=.true.
            lice_free=.false.
@@ -1635,8 +1635,8 @@ do i=1,npa
     lhas_ice(i)=.false.
    !U_ice(i)=0
    !V_ice(i)=0
-    U_ice(i)=u_ocean(i)
-    V_ice(i)=v_ocean(i)
+   !U_ice(i)=u_ocean(i)
+   !V_ice(i)=v_ocean(i)
   else
     lhas_ice(i)=.true.
     lice_free=.false.
