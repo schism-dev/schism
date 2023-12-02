@@ -279,6 +279,10 @@ function schism_initialize(this, config_file) result (bmi_status)
 
   if (len(config_file) > 0) then
      call read_init_config(this, config_file, bmi_status)
+     if  (bmi_status == BMI_FAILURE) then
+        return
+     end if
+
      this%model%current_model_time = 0.0
      if ( this%model%num_time_steps == 0 .and. this%model%model_end_time == 0) then
         this%model%num_time_steps = 24
