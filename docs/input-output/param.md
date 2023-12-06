@@ -258,12 +258,12 @@ If `itur=2`, the zero-equation Pacanowski and Philander closure is used. In this
 
 If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability function used: `mid=` `MY` is Mellor & Yamada; `KL` is GLS as k-kl; `KE` is GLS as $k-\varepsilon$; `KW` is GLS as $k-\omega$; `UB` is Umlauf & Burchard's optimal. `stab=GA` is Galperin's clipping (only for MY); `KC` is Kantha & Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`.
 
-If `itur=4`, GOTM turbulence model is invoked; the user needs turn on pre-processing flag `USE_GOTM` in makefile 
+If `itur=4`, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag `USE_GOTM` in makefile 
 and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
 viscosity/diffusivity are still specified in `diffmin.gr3` 
-and `diffmax.gr3`. In addition, GOTM also requires an input called `gotmturb.inp`. There are some 
+and `diffmax.gr3`. In addition, GOTM also requires an input file called `gotmturb.inp`. There are some 
 ready-made samples for this input in the source code bundle. An example for the Columbia River 
-(with steady state Richardson number ri_st= 0.15) is included in sample_inputs/. If you wish to tune some parameters 
+(with steady state Richardson number set to ri_st= 0.15) is included in 'sample_inputs/'. If you wish to tune some parameters 
 inside, you may consult [gotm.net](https://gotm.net) for more details.
 
 !!! note
