@@ -365,7 +365,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','ETA2_bnd', 'RAINRATE','SFCPRS','SPFH2m','TMP2m','UU10m','VV10m','VX','VY')
+    case('ETA2','ETA2_bnd', 'Q_bnd', 'RAINRATE','SFCPRS','SPFH2m','TMP2m','UU10m','VV10m','VX','VY')
        type = "double precision"
        bmi_status = BMI_SUCCESS
     case default
