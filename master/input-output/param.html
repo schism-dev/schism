@@ -2203,16 +2203,17 @@ If <code>itr_met=4</code> (WENO), there are several additional parameters. The m
 <p>If <code>itur=-1</code>, horizontally homogeneous but vertically varying diffusivities are used, which are read in from <code>vvd.dat</code>.</p>
 <p>If <code>itur=2</code>, the zero-equation Pacanowski and Philander closure is used. In this case, a few extra parameters are required: <code>h1_pp</code>, <code>vdmax_pp1</code>, <code>vdmin_pp1</code>, <code>tdmin_pp1</code>, <code>h2_pp</code>, <code>vdmax_pp2</code>, <code>vdmin_pp2</code>, <code>tdmin_pp2</code>. Eddy viscosity is computed as: <span class="arithmatex">\(\text{vdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{vdiff_min}\)</span>, and diffusivity <span class="arithmatex">\(\text{tdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{tdiff_min}\)</span>, where <span class="arithmatex">\(\text{rich}\)</span> is a Richardson number. The limits (<code>vdiff_max</code>, <code>vdiff_min</code> and <code>tdiff_min</code>) vary linearly with depth between depths <code>h1_pp</code> and <code>h2_pp</code>.</p>
 <p>If <code>itur=3</code>, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: <code>mid</code>, <code>stab</code>, which specify the closure scheme and stability function used: <code>mid=</code> <code>MY</code> is Mellor &amp; Yamada; <code>KL</code> is GLS as k-kl; <code>KE</code> is GLS as <span class="arithmatex">\(k-\varepsilon\)</span>; <code>KW</code> is GLS as <span class="arithmatex">\(k-\omega\)</span>; <code>UB</code> is Umlauf &amp; Burchard's optimal. <code>stab=GA</code> is Galperin's clipping (only for MY); <code>KC</code> is Kantha &amp; Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity in <code>diffmax.gr3</code> and <code>diffmin.gr3</code>, as well as a surface mixing length scale constant <code>xlsc0</code>.</p>
-<p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to compile the GOTM libraries first 
-(see README inside GOTM/ for instructions), and turn on pre-processing flag <code>USE_GOTM</code> in makefile 
-and recompile. In this case, the minimum and maximum viscosity/diffusivity are still specified in <code>diffmin.gr3</code> 
-and <code>diffmax.gr3</code>. In addition, GOTM also requires an input called <code>gotmturb.inp</code>. There are some 
-ready-made samples for this input in the source code bundle. If you wish to tune some parameters 
+<p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag <code>USE_GOTM</code> in makefile 
+and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
+viscosity/diffusivity are still specified in <code>diffmin.gr3</code> 
+and <code>diffmax.gr3</code>. In addition, GOTM also requires an input file called <code>gotmturb.inp</code> (the file is in NML format. If it is absent in a GOTM run, GOTM will error out with a notice that gotmturb.nml is missing, but SCHISM expects the file to be named .inp). There are some 
+ready-made samples for this input in the source code bundle. An example for the Columbia River 
+(with steady state Richardson number set to ri_st= 0.15) is included in 'sample_inputs/'. If you wish to tune some parameters 
 inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol>
-<li>We only tested GOTM v3, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results.</li>
+<li>GOTM has only been tested up to v5.2, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results, except in the Columbia River under high flow conditions, where GOTM produces substantially better stratification.</li>
 </ol>
 </div>
 <h3 id="meth_sink1-int">meth_sink=1 (int)<a class="headerlink" href="#meth_sink1-int" title="Permanent link">&para;</a></h3>
