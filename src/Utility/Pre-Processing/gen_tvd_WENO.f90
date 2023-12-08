@@ -18,11 +18,12 @@
       integer, allocatable :: ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
       real*8, allocatable :: xnd(:),ynd(:),dp(:),area(:),xpoly(:),ypoly(:),xcj(:),ycj(:)
 
-      print*, 'Input transition depths (meters) for offshore (e.g., 30m)):'
+      print*, 'Input cut-off depth (meters) for offshore (e.g., 30m));'
+      print*, 'Upwind will be used shallower than this depth in offshore:'
       read*, hmin_of
 
-      print*, 'Input transition depths (meters) for nearshore (usually <hmin_of).'
-      print*, 'Upwind will be used shallower than this depth (e.g. same as h_tvd):'
+      print*, 'Input cut-off depth (meters) for nearshore.gr3 (usually <hmin_of; e.g. same as h_tvd).'
+      print*, 'Upwind will be used shallower than this depth in nearshore region:'
       read*, hmin_near
 !'
 

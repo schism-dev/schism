@@ -93,8 +93,8 @@
 !                       (Craig & Banner (1994) use cw=100)
 ! compute_kappa    ->   compute von Karman constant from model parameters
 ! kappa            ->   the desired von Karman constant (if compute_kappa=.true.)
-! compute_c3       ->   compute c3 (E3 for Mellor-Yamada) for given Ri_st
-! Ri_st            ->   the desired steady-state Richardson number (if compute_c3=.true.)
+! compute_c3       ->   compute c3 (E3 for Mellor-Yamada) for given ri_st
+! ri_st            ->   the desired steady-state Richardson number (if compute_c3=.true.)
 ! length_lim       ->   apply length scale limitation (see Galperin et al. 1988)
 ! galp             ->   coef. for length scale limitation
 ! const_num        ->   minimum eddy diffusivity (only with turb_method=0)
