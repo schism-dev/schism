@@ -261,13 +261,13 @@ If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf 
 If `itur=4`, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag `USE_GOTM` in makefile 
 and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
 viscosity/diffusivity are still specified in `diffmin.gr3` 
-and `diffmax.gr3`. In addition, GOTM also requires an input file called `gotmturb.inp` (the file is in NML format. If it is absent in a GOTM run, GOTM will error out with a notice that gotmturb.nml is missing, but SCHISM expects the file to be named .inp). There are some 
-ready-made samples for this input in the source code bundle. An example for the Columbia River 
-(with steady state Richardson number set to ri_st= 0.15) is included in 'sample_inputs/'. If you wish to tune some parameters 
+and `diffmax.gr3`. There are some 
+ready-made samples for this input in the source code bundle. 
+A key parameter is the steady state Richardson number. If you wish to tune some parameters 
 inside, you may consult [gotm.net](https://gotm.net) for more details.
 
 !!! note
-    1. GOTM has only been tested up to v5.2, not newer versions of GOTM. Using `itur=3` generally gave similar results, except in the Columbia River under high flow conditions, where GOTM produces substantially better stratification.
+    1. GOTM has only been tested up to v5.2, not newer versions of GOTM. Using `itur=3` generally gave similar results, but GOTM can produce substantially better stratification in some cases.
 
 ### meth_sink=1 (int)
 Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with 

@@ -42,7 +42,7 @@
  TVD_LIM = VL
  EXEC := $(EXEC)_$(TVD_LIM)
 
-# GOTM turbulence closure model
+# GOTM turbulence closure model- user needs to compile GOTM5.2 lib first by themselves
 # USE_GOTM = yes
 # EXEC := $(EXEC)_GOTM
 
