@@ -328,8 +328,9 @@ string(REPLACE _HYDRO_SCHISM "" mod_tag_rev ${mod_tag_rev})
 # call cmake with -DUSE_GOTM=ON -DGOTM_BASE=[gotm code directory]
 #
 if(USE_GOTM)
-find_path(GOTM_BASE src/gotm/gotm.F90 DOC "GOTM source directory")
+find_path(GOTM_BASE src/gotm/gotm.F90 $GOTM_BASE ${CMAKE_CURRENT_SOURCE_DIR}/GOTM5.2/code DOC "GOTM source directory")
 if(GOTM_BASE)
+  message(STATUS "using GOTM_BASE ${GOTM_BASE}")
   set(GOTM_BUILD_LIBRARIES_ONLY ON)
   set(GOTM_USE_FABM OFF CACHE BOOL "use GOTM without FABM")
   set(GOTM_USE_FLEXIBLE_OUTPUT OFF CACHE BOOL "use GOTM without flexible output")
