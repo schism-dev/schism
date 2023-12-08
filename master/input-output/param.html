@@ -2206,14 +2206,14 @@ If <code>itr_met=4</code> (WENO), there are several additional parameters. The m
 <p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag <code>USE_GOTM</code> in makefile 
 and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
 viscosity/diffusivity are still specified in <code>diffmin.gr3</code> 
-and <code>diffmax.gr3</code>. In addition, GOTM also requires an input file called <code>gotmturb.inp</code> (the file is in NML format. If it is absent in a GOTM run, GOTM will error out with a notice that gotmturb.nml is missing, but SCHISM expects the file to be named .inp). There are some 
-ready-made samples for this input in the source code bundle. An example for the Columbia River 
-(with steady state Richardson number set to ri_st= 0.15) is included in 'sample_inputs/'. If you wish to tune some parameters 
+and <code>diffmax.gr3</code>. There are some 
+ready-made samples for this input in the source code bundle. 
+A key parameter is the steady state Richardson number. If you wish to tune some parameters 
 inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ol>
-<li>GOTM has only been tested up to v5.2, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results, except in the Columbia River under high flow conditions, where GOTM produces substantially better stratification.</li>
+<li>GOTM has only been tested up to v5.2, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results, but GOTM can produce substantially better stratification in some cases.</li>
 </ol>
 </div>
 <h3 id="meth_sink1-int">meth_sink=1 (int)<a class="headerlink" href="#meth_sink1-int" title="Permanent link">&para;</a></h3>
