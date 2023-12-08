@@ -112,7 +112,7 @@
   compute_kappa=   .true.
   kappa=           0.4
   compute_c3=      .true.
-  ri_st=           0.15
+  ri_st=           0.18   !usually in: 0.18-0.25
   length_lim=      .false.
   galp=            0.53
   const_num=       5.e-4

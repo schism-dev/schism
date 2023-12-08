@@ -5155,7 +5155,7 @@
 !...  otherwise they will be assigned values below.
       if(itur==4) then
 #ifdef USE_GOTM
-          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
+          call init_turbulence(8,'gotmturb.nml',nvrt-1) !GOTM starts from level 0
           call init_tridiagonal(nvrt-1)
 #endif
       endif
