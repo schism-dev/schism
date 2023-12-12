@@ -1138,8 +1138,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#meshing-rivers-in-a-small-domain-serial-mode" class="md-nav__link">
-    Meshing rivers in a small domain (Serial mode)
+  <a href="#meshing-watershed-rivers-in-a-small-domain-serial-mode" class="md-nav__link">
+    Meshing watershed rivers in a small domain (Serial mode)
   </a>
   
 </li>
@@ -1191,12 +1191,19 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#more-parameter-presets" class="md-nav__link">
-    More parameter presets
+  <a href="#more-parameterization" class="md-nav__link">
+    More parameterization
   </a>
   
-    <nav class="md-nav" aria-label="More parameter presets">
+    <nav class="md-nav" aria-label="More parameterization">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hudson-river-and-tributaries" class="md-nav__link">
+    Hudson River and tributaries
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#levees" class="md-nav__link">
@@ -1777,10 +1784,14 @@
 <p>A sample output looks like this:</p>
 <p><img alt="Sample river map" src="../../assets/sample-river-map.png" /> </p>
 <h2 id="sample-applications">Sample applications<a class="headerlink" href="#sample-applications" title="Permanent link">&para;</a></h2>
-<p>To test the RiverMapper tool, you can begin by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.
-It contains two subdirectories: "Serial" and "Parallel", providing sample applications for a smaller domain and a larger domain respectively.
-Each subdirectory contains a sample Python script and the necessary input files. </p>
-<h3 id="meshing-rivers-in-a-small-domain-serial-mode">Meshing rivers in a small domain (Serial mode)<a class="headerlink" href="#meshing-rivers-in-a-small-domain-serial-mode" title="Permanent link">&para;</a></h3>
+<p>To test the RiverMapper tool, you can start by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.
+Find the following two subdirectories: "Serial" and "Parallel", which provide sample applications for meshing watershed rivers in a smaller domain and a larger domain respectively.
+Each subdirectory contains a sample Python script and the necessary input files.</p>
+<p>Note that these two samples use the default settings suitable for small watershed rivers that are 
+narrower than a few hundred meters.
+Similar settings are used in the latest version of NOAA's operational forecast <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>.
+If you are interested in meshing rivers with a wider range of widths, check samples with more parameter settings <a href="#more-parameterization">below</a>.</p>
+<h3 id="meshing-watershed-rivers-in-a-small-domain-serial-mode">Meshing watershed rivers in a small domain (Serial mode)<a class="headerlink" href="#meshing-watershed-rivers-in-a-small-domain-serial-mode" title="Permanent link">&para;</a></h3>
 <p>For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices.
 See the sample script:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>RiverMapper_Samples/Serial/sample_serial.py
@@ -1936,6 +1947,16 @@ We may replace the regular dictionary to OrderedDict if there is a need.</p>
 <td>minimum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs)</td>
 </tr>
 <tr>
+<td>width2narcs_option</td>
+<td>string or callable</td>
+<td>pre-defined options ('regular', 'sensitive', 'insensitve') or  'custom' if a user-defined function is specified</td>
+</tr>
+<tr>
+<td>custom_width2narcs</td>
+<td>a user-defined function</td>
+<td>a function that takes one parameter 'width' and returns 'narcs', i.e., the number of arcs in the cross-channel direction</td>
+</tr>
+<tr>
 <td>elev_scale</td>
 <td>float</td>
 <td>scaling factor for elevations; a number of -1 (invert elevations) is useful for finding ridges (e.g., of a barrier island)</td>
@@ -2084,8 +2105,64 @@ But it facilitates further parameter tweaking, e.g.:
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;i_real_clean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 </code></pre></div>
 , without changing other parts of the code.</p>
-<h2 id="more-parameter-presets">More parameter presets<a class="headerlink" href="#more-parameter-presets" title="Permanent link">&para;</a></h2>
-<p>By tweaking the parameters, RiverMapper can also aid in the meshing of other channel-like features.</p>
+<h2 id="more-parameterization">More parameterization<a class="headerlink" href="#more-parameterization" title="Permanent link">&para;</a></h2>
+<p>By tweaking the parameters, RiverMapper can also aid in the meshing of a wider range of river sizes or other channel-like features.</p>
+<h3 id="hudson-river-and-tributaries">Hudson River and tributaries<a class="headerlink" href="#hudson-river-and-tributaries" title="Permanent link">&para;</a></h3>
+<p>This example shows how to customize cross-channel divisions for a main channel that is a few kilometers wide and
+smaller tributaries.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">import</span> <span class="nn">os</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="kn">from</span> <span class="nn">RiverMapper.river_map_mpi_driver</span> <span class="kn">import</span> <span class="n">river_map_mpi_driver</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kn">from</span> <span class="nn">RiverMapper.config_river_map</span> <span class="kn">import</span> <span class="n">ConfigRiverMap</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="c1"># ------------------------- sample input ---------------------------</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    <span class="n">dems_json_file</span> <span class="o">=</span> <span class="s1">&#39;/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/dems.json&#39;</span>  <span class="c1"># specifying files for all DEM tiles</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="s1">&#39;/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/Thalwegs/thalweg_v16_subset_Hudson2.shp&#39;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="n">output_dir</span> <span class="o">=</span> <span class="s1">&#39;./Outputs/&#39;</span> <span class="o">+</span>  <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">thalweg_shp_fname</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span><span class="si">}</span><span class="s1">-core/&#39;</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>    <span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="p">()</span>  <span class="c1"># initialize a default configuration</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;river_threshold&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5000</span><span class="p">)</span>  <span class="c1"># change the search range of river banks to accomodate for Hudson River</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;along_channel_reso_thres&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1200</span><span class="p">)</span>  <span class="c1"># change the maximum element length from 300 (default for small rivers) to 1200</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;length_width_ratio&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">4.0</span>  <span class="c1"># set element aspect ratio as needed</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>    <span class="c1"># Customize a width-to-narcs function and pass it to the configuration.</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    <span class="k">def</span> <span class="nf">width2narcs</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>  <span class="c1"># do not change this line even if width is not used</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>        <span class="n">narcs</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># you can specify more sophisticated configurations here as needed</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>        <span class="k">return</span> <span class="n">narcs</span>  <span class="c1"># narcs is the number of rows in the cross-channel direction.</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>    <span class="c1"># pass the customized function to the configuration</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>    <span class="n">river_map_config</span><span class="o">.</span><span class="n">optional</span><span class="p">[</span><span class="s1">&#39;custom_width2narcs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">width2narcs</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>    <span class="c1"># ------------------------- end input section ---------------------------</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>    <span class="n">river_map_mpi_driver</span><span class="p">(</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>        <span class="n">dems_json_file</span><span class="o">=</span><span class="n">dems_json_file</span><span class="p">,</span>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>        <span class="n">thalweg_shp_fname</span><span class="o">=</span><span class="n">thalweg_shp_fname</span><span class="p">,</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>        <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>        <span class="n">river_map_config</span><span class="o">=</span><span class="n">river_map_config</span><span class="p">,</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>        <span class="n">comm</span><span class="o">=</span><span class="n">comm</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>    <span class="p">)</span>
+</code></pre></div>
+<p>The above code adds more customization to the parallel example.
+Please read the comments which explain each piece of customization.
+In particular, note how to pass a customized width-to-narcs function to the configuration.
+This function takes the width of a river and returns the number of rows in the cross-channel directions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The option 'river_threshold' specifies the min and max river width to be resolved, which affects the search range of river banks.
+A large value like 5000 m used here can slow down the execution compared to the default value (600 m, for small watershed rivers).
+In the future, we will allow users to select rivers and specify different values for this option.</p>
+</div>
+<p>Here, a simplest function is used that specifies five rows of arcs regardless of river width,
+and the result is shown below:</p>
+<p><img alt="Hudson river" src="../../assets/Hudson.jpg" /></p>
+<p>Of course you can specify  more sophisticated functions depending on your needs, e.g.,</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">nrow</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">min_arcs</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>  <span class="c1"># add one arc for every increase of 100 m</span>
+</code></pre></div>
+<p>or</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">nrow</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">min_arcs</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="mf">0.35</span><span class="o">*</span><span class="n">width</span><span class="o">**</span><span class="mf">0.25</span><span class="p">))</span>  <span class="c1"># add one arc for every increase of one order of magnitude</span>
+</code></pre></div>
+<p>or even make a master plan (similar to the master grid for SCHISM's <a href="https://feiye-vims.github.io/schism-tut/docs/compound-flood/vgrid_3d">vgrid</a>) of how many arcs should be used for a given river width.</p>
 <h3 id="levees">Levees<a class="headerlink" href="#levees" title="Permanent link">&para;</a></h3>
 <p>In the STOFS-3D-Atlantic domain, levees are important features to be incorporated in the model mesh.
 Instead of parameterizing them as hydraulic structures, the levees are explicitly represented by meter-scale elements,
@@ -2093,7 +2170,7 @@ with two rows of nodes resolving the feet of the levee and another two rows reso
 <p><img alt="Sample river map" src="../../assets/sample-levee-map.png" /> </p>
 <p>With the levee centerlines available from National Levee Database,
 the levee map can be easily made by invoking the pseudo channel option of RiverMapper:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">Levees</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">Levees</span><span class="p">()</span>
 </code></pre></div>
 <p>Notice that the along-channel (in this case along-levee) resolution also adapts for bends,
 just like for rivers.</p>
@@ -2104,7 +2181,7 @@ if the sign of the DEM's elevation values is inverted.</p>
 <p><img alt="Sample river map" src="../../assets/sample-barrier-island-map.png" /> </p>
 <p>This can be done by setting the optional parameter "elev_scale" to "-1",
 or directly invoking the preset "BarrierIsland":</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">BarrierIsland</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">river_map_config</span> <span class="o">=</span> <span class="n">ConfigRiverMap</span><span class="o">.</span><span class="n">BarrierIsland</span><span class="p">()</span>
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
