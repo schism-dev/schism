@@ -29,11 +29,17 @@ A sample output looks like this:
 
 
 ## Sample applications
-To test the RiverMapper tool, you can begin by extracting the "RiverMapper_Samples/" directory from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
-It contains two subdirectories: "Serial" and "Parallel", providing sample applications for a smaller domain and a larger domain respectively.
-Each subdirectory contains a sample Python script and the necessary input files. 
+To test the RiverMapper tool, you can start by extracting the "RiverMapper_Samples/" directory from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
+Find the following two subdirectories: "Serial" and "Parallel", which provide sample applications for meshing watershed rivers in a smaller domain and a larger domain respectively.
+Each subdirectory contains a sample Python script and the necessary input files.
 
-### Meshing rivers in a small domain (Serial mode)
+Note that these two samples use the default settings suitable for small watershed rivers that are 
+narrower than a few hundred meters.
+Similar settings are used in the latest version of NOAA's operational forecast [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/).
+If you are interested in meshing rivers with a wider range of widths, check samples with more parameter settings [below](#more-parameterization).
+
+
+### Meshing watershed rivers in a small domain (Serial mode)
 For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices.
 See the sample script:
 ```
@@ -159,10 +165,12 @@ In addition to the mandatory inpouts, RiverMapper provides a few parameters to f
 | mpi_print_prefix | string | a prefix string to identify the calling mpi processe in the output messages; can be empty |
 | river_threshold | float | minimum and maximum river widths (in meters) to be resolved |
 | min_arcs | integer | minimum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs) |
+| width2narcs_option | string or callable | pre-defined options ('regular', 'sensitive', 'insensitve') or  'custom' if a user-defined function is specified |
+| custom_width2narcs | a user-defined function | a function that takes one parameter 'width' and returns 'narcs', i.e., the number of arcs in the cross-channel direction |
 | elev_scale | float | scaling factor for elevations; a number of -1 (invert elevations) is useful for finding ridges (e.g., of a barrier island) |
 | outer_arc_positions | a tuple of floats | relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 \* riverwidth and 0.2 \* riverwidth from the banks. |
-| R_coef | float | coef controlling the along-channel resolutions at river bends (with a radius of R), a larger number leads to coarser resolutions (R\*R_coef) |
-| length_width_ratio | float |  the ratio between along-channel resolution and cross-channel resolution
+| R_coef | float | coef controlling the along-channel resolutions at river bends (with a radius of R), a larger number leads to coarser resolutions (R*R_coef) |
+| length_width_ratio | float |  the ratio between along-channel resolution and cross-channel resolution |
 | along_channel_reso_thres | a tuple of 2 floats | the minimum and maximum along-channel resolution (in meters) |
 | snap_point_reso_ratio | float | scaling the threshold of the point snapping; a negtive number means absolute distance value |
 | snap_arc_reso_ratio | float | scaling the threshold of the arc snapping; a negtive number means absolute distance value |
@@ -175,7 +183,6 @@ In addition to the mandatory inpouts, RiverMapper provides a few parameters to f
 | i_pseudo_channel | int | 0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline; 2: implement a pseudo channel when the river is poorly defined in DEM
 | pseudo_channel_width | float | width of the pseudo channel (in meters) |
 | nrow_pseudo_channel |int| number of rows of elements in the cross-channel direction in the pseudo channel |
-
 
 You can change the values of these parameters so that the output river map better fits your application (otherwise default values are used).
 For example, if you want to add two pairs of outer arcs that flank the main river channel, you can do:
@@ -257,8 +264,77 @@ But it facilitates further parameter tweaking, e.g.:
 , without changing other parts of the code.
 
 
-## More parameter presets
-By tweaking the parameters, RiverMapper can also aid in the meshing of other channel-like features.
+## More parameterization
+By tweaking the parameters, RiverMapper can also aid in the meshing of a wider range of river sizes or other channel-like features.
+
+### Hudson River and tributaries
+This example shows how to customize cross-channel divisions for a main channel that is a few kilometers wide and
+smaller tributaries.
+
+```python
+from mpi4py import MPI
+import os
+from RiverMapper.river_map_mpi_driver import river_map_mpi_driver
+from RiverMapper.config_river_map import ConfigRiverMap
+
+if __name__ == "__main__":
+    comm=MPI.COMM_WORLD
+    # ------------------------- sample input ---------------------------
+    dems_json_file = '/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/dems.json'  # specifying files for all DEM tiles
+    thalweg_shp_fname='/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/Thalwegs/thalweg_v16_subset_Hudson2.shp'
+    output_dir = './Outputs/' +  f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{comm.Get_size()}-core/'
+
+    river_map_config = ConfigRiverMap()  # initialize a default configuration
+    river_map_config.optional['river_threshold'] = (2, 5000)  # change the search range of river banks to accomodate for Hudson River
+    river_map_config.optional['along_channel_reso_thres'] = (5, 1200)  # change the maximum element length from 300 (default for small rivers) to 1200
+    river_map_config.optional['length_width_ratio'] = 4.0  # set element aspect ratio as needed
+
+    # Customize a width-to-narcs function and pass it to the configuration.
+    def width2narcs(width):  # do not change this line even if width is not used
+        narcs = 5  # you can specify more sophisticated configurations here as needed
+        return narcs  # narcs is the number of rows in the cross-channel direction.
+    # pass the customized function to the configuration
+    river_map_config.optional['custom_width2narcs'] = width2narcs
+    # ------------------------- end input section ---------------------------
+
+    river_map_mpi_driver(
+        dems_json_file=dems_json_file,
+        thalweg_shp_fname=thalweg_shp_fname,
+        output_dir=output_dir,
+        river_map_config=river_map_config,
+        comm=comm
+    )
+```
+
+The above code adds more customization to the parallel example.
+Please read the comments which explain each piece of customization.
+In particular, note how to pass a customized width-to-narcs function to the configuration.
+This function takes the width of a river and returns the number of rows in the cross-channel directions.
+
+!!!Note
+    The option 'river_threshold' specifies the min and max river width to be resolved, which affects the search range of river banks.
+    A large value like 5000 m used here can slow down the execution compared to the default value (600 m, for small watershed rivers).
+    In the future, we will allow users to select rivers and specify different values for this option.
+
+Here, a simplest function is used that specifies five rows of arcs regardless of river width,
+and the result is shown below:
+
+![Hudson river](../../assets/Hudson.jpg)
+
+Of course you can specify  more sophisticated functions depending on your needs, e.g.,
+
+```python
+nrow = int(min_arcs + np.ceil(width / 100))  # add one arc for every increase of 100 m
+```
+
+or
+
+```python
+nrow = int(min_arcs + np.floor(0.35*width**0.25))  # add one arc for every increase of one order of magnitude
+```
+
+or even make a master plan (similar to the master grid for SCHISM's [vgrid](https://feiye-vims.github.io/schism-tut/docs/compound-flood/vgrid_3d)) of how many arcs should be used for a given river width.
+
 
 ### Levees
 In the STOFS-3D-Atlantic domain, levees are important features to be incorporated in the model mesh.
