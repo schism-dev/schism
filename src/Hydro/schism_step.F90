@@ -10275,7 +10275,7 @@
                 endif
               endif
             enddo !j
-            write(250+i,'(e14.6,6000(1x,e14.6e3))')time,sta_out_gb(:,i)
+            write(250+i,'(e24.16,6000(1x,e14.6e3))')time,sta_out_gb(:,i)
 !            if(i>4) write(250+i,'(e14.6,100000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
           enddo !i
           write(16,*)'done station outputs...'
