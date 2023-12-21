@@ -13,7 +13,7 @@ from shapely.ops import polygonize
 
 wdir = '/sciclone/schism10/feiye/Test/RUN02b_JZ/Dredge/'
 crs = 'esri:102008'
-
+'''
 coastal = gpd.read_file(f'{wdir}/coastal.shp')
 coastal.set_crs(crs, inplace=True)
 
@@ -35,15 +35,16 @@ watershed = raw_watershed.overlay(refined_coastal_buf, how='difference').dissolv
 watershed = watershed.overlay(levee_buf, how='difference').dissolve()
 
 watershed.to_file(f'{wdir}/watershed.shp', crs=crs)
+'''
+
 watershed = gpd.read_file(f'{wdir}/watershed.shp')
 
-total_arcs = gpd.read_file(f'{wdir}/total_arcs.shp').to_crs(crs)
-total_arcs_clipped = total_arcs.clip(watershed)
-total_arcs_clipped.to_file(f'{wdir}/total_arcs_clipped.shp', crs=crs)
+# total_arcs = gpd.read_file(f'{wdir}/total_arcs.shp').to_crs(crs)
+# total_arcs_clipped = total_arcs.clip(watershed)
+# total_arcs_clipped.to_file(f'{wdir}/total_arcs_clipped.shp', crs=crs)
 
-# this step may fail, in that case do it manually in qgis
-total_arcs_polygons = gpd.read_file(f'{wdir}/total_river_polys.shp').to_crs(crs)
-total_arcs_polygons_clipped = total_arcs_polygons.buffer(0).clip(watershed)
-# total_arcs_polygons_clipped.to_file(f'{wdir}/total_river_polys_clipped.shp', crs=crs)
+total_arcs_polygons = gpd.read_file(f'{wdir}/local_river_polys.shp').to_crs(crs)
+total_arcs_polygons_clipped = total_arcs_polygons.clip(watershed)
+total_arcs_polygons_clipped.to_file(f'{wdir}/total_river_polys_clipped.shp', crs=crs)
 
 pass

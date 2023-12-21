@@ -65,17 +65,21 @@ def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_r
     hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hg.x, hg.y), crs='epsg:4326').to_crs(crs_region)
     joined_gdf = gpd.sjoin(hg_points, channel_polys, how="inner", predicate='within')
 
-    idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
-    in_channel = np.zeros_like(hg.dp, dtype=bool)
-    in_channel[idx] = True
+    inchannel_idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
 
     # diagnostic plot
-    plt.figure()
-    hg.plot(value=in_channel.astype(int), fmt=1)
+    # in_channel = np.zeros_like(hg.dp, dtype=bool)
+    # in_channel[inchannel_idx] = True
+    # plt.figure()
+    # hg.plot(value=in_channel.astype(int), fmt=1)
+    # plt.show()
 
-    # for inpolygon nodes, find the nearest sounding_xyz point using k-d tree
-    idx = KDTree(sounding_xyz[:, :2]).query(np.c_[hg.x, hg.y])[1]
-    dp_sounding = sounding_xyz[idx, 2]
+    # find the nearest sounding_xyz point using k-d tree
+    idx = KDTree(sounding_xyz[:, :2]).query(np.c_[hg.x[inchannel_idx], hg.y[inchannel_idx]])[1]
+    inchannel_sounding_z = sounding_xyz[idx, 2]
+
+    dp_sounding = np.ones_like(hg.dp, dtype=float) * -9999  # initialize with a large negative number
+    dp_sounding[inchannel_idx] = inchannel_sounding_z  # only update the nodes in the channel
 
     return dp_sounding
 
@@ -110,8 +114,9 @@ def load_NCF(hg:schism_grid, NCF_shpfile:Path):
     dp_NCF[idx] = joined_gdf['depthmaint'].to_numpy() * 0.3048  # convert from feet to meters
 
     # diagnostic plot
-    plt.figure()
-    hg.plot(value=dp_NCF.astype(int), fmt=1)
+    # plt.figure()
+    # hg.plot(value=dp_NCF.astype(int), fmt=1)
+    # plt.show()
 
     return dp_NCF
 
@@ -133,19 +138,29 @@ def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
 if __name__ == '__main__':
     hg_file = Path('/sciclone/schism10/feiye/Test/RUN02b_JZ/hgrid.gr3')
     hg = read_schism_hgrid_cached(hg_file)
+    dp_orig = hg.dp.copy()
+
+    # extract xyz coordinates into an array
+    sounding = gpd.read_file('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.shp')
+    sounding_xyz = np.c_[np.array([point.coords[0] for point in sounding['geometry']]), sounding['z'].values]
+    np.savetxt('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.txt', sounding_xyz)
 
     # the chart data needs a manual region file to limit the nodes to be loaded
     dp_from_chart = load_chart(
         hg=hg,
-        sounding_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_2_xyz_edited.shp'),
-        region_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/manual_chart_region.shp'), crs_region='esri:102008'
+        sounding_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.shp'),
+        region_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/secofs_chart_loading_zones.shp'), crs_region='esri:102008'
     )
-    hg.dp = np.maximum(hg.dp, dp_from_chart)  # change the depth only if it is deeper than the original depth
+    hg.dp = np.maximum(dp_orig, dp_from_chart)  # change the depth only if it is deeper than the original depth
+    # grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
 
     # the NCF data already defines the region
     dp_from_NCF = load_NCF(hg=hg, NCF_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Mississippi/channel_quarter_NCF.shp'))
-    hg.dp = np.maximum(hg.dp, dp_from_NCF)  # change the depth only if it is deeper than the original depth
+    hg.dp = np.maximum(dp_orig, dp_from_NCF)  # change the depth only if it is deeper than the original depth
+    # grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_NCF_loaded.2dm"))
 
+    hg.dp = np.maximum(dp_orig, dp_from_NCF, dp_from_chart)  # change the depth only if it is deeper than the original depth
+    hg.save(f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.gr3", fmt=1)
     grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.2dm"))
 
     pass
