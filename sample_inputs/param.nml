@@ -779,6 +779,10 @@
   h_massconsv = 2. ![m]
   rinflation_icm = 1.e-3
 
+! add a sediment layer for the buffer effect on temperature
+  stemp_stc  = 5.0   !heat transfer coefficient W.m-2.K-1
+  stemp_dz(1)= 2.0   !equivalent sediment buffer depth (m) for heat into sediment
+  stemp_dz(2)= 0.1   !equivalent sediment buffer depth (m) for heat out of sediment
 /
 
 &SCHOUT
