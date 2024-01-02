@@ -1,8 +1,19 @@
-Generate river inputs for St Lawrence river:
-flux.th
-    - download_flow.sh (get river discharge data)
-    - python gen_fluxth.py
+Preparing river forcing (flow/temp)
 
-TEM_1.th
-    - python get_realtime_temp_crawl.py (download water temperature data from CCG. In the winter, there may be no data because of water is frozen)
-    - python gen_TEM_1.py
+The order of rivers:
+Willamette
+Columbia/3
+Columbia/3
+Columbia/3
+Lewis
+Cowlitz
+Fraser
+
+Flow:
+Use download_flow.sh to get discharge data (USACE/USGS/Canada), then use gen_fluxth.py to generate flux.th
+
+TEMP:
+Use download_temp.sh to get temperature data (USACE/USGS), and get_fraserriver_realtime_waterT.py to crawl bouy observation data for Fraser river.
+Then use gen_TEM_1.py to generate TEM_1.th
+
+
