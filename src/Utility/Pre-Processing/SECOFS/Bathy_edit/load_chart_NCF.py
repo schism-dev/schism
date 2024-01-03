@@ -81,6 +81,8 @@ def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_r
     dp_sounding = np.ones_like(hg.dp, dtype=float) * -9999  # initialize with a large negative number
     dp_sounding[inchannel_idx] = inchannel_sounding_z  # only update the nodes in the channel
 
+    # hg.plot(value=dp_sounding, fmt=1)
+
     return dp_sounding
 
 
@@ -136,30 +138,47 @@ def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
     pass
 
 if __name__ == '__main__':
-    hg_file = Path('/sciclone/schism10/feiye/Test/RUN02b_JZ/hgrid.gr3')
-    hg = read_schism_hgrid_cached(hg_file)
+    hg_file = Path('/sciclone/schism10/feiye/SECOFS/Inputs/I02e/Edit_bathy/Load_charts_NCF/hgrid_levee_loaded.gr3')
+    hg = schism_grid(str(hg_file))
     dp_orig = hg.dp.copy()
 
+    ''' prepare the chart data
     # extract xyz coordinates into an array
     sounding = gpd.read_file('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.shp')
     sounding_xyz = np.c_[np.array([point.coords[0] for point in sounding['geometry']]), sounding['z'].values]
     np.savetxt('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.txt', sounding_xyz)
 
+    # load txt file
+    xyz_xgeoid = np.loadtxt('/sciclone/schism10/Hgrid_projects/DEMs/vdatum/vdatum/result/reversed_input.txt')
+    xyz_xgeoid = - xyz_xgeoid  # convert from elevation to bathymetry
+    # convert from MLLW to xgeoid
+    idx = np.argwhere(abs(xyz_xgeoid[:, 2]) < 9e5).flatten()
+    mean_datum_shift = np.mean(xyz_xgeoid[idx, 2] - sounding_xyz[idx, 2])  # use average shift for invalid values
+    datum_shift = np.ones_like(xyz_xgeoid[:, 2]) * mean_datum_shift
+    datum_shift[idx] = xyz_xgeoid[idx, 2] - sounding_xyz[idx, 2]
+    sounding_xyz[:, 2] = sounding_xyz[:, 2] + datum_shift
+    # replace 'z' column in the shapefile
+    sounding['z'] = sounding_xyz[:, 2]
+    sounding.to_file('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited_xgeoid.shp')
+    '''
+
+
     # the chart data needs a manual region file to limit the nodes to be loaded
     dp_from_chart = load_chart(
         hg=hg,
-        sounding_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited.shp'),
+        sounding_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited_xgeoid.shp'),
         region_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/secofs_chart_loading_zones.shp'), crs_region='esri:102008'
     )
     hg.dp = np.maximum(dp_orig, dp_from_chart)  # change the depth only if it is deeper than the original depth
-    # grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
+    grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
 
     # the NCF data already defines the region
     dp_from_NCF = load_NCF(hg=hg, NCF_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Mississippi/channel_quarter_NCF.shp'))
     hg.dp = np.maximum(dp_orig, dp_from_NCF)  # change the depth only if it is deeper than the original depth
     # grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_NCF_loaded.2dm"))
 
-    hg.dp = np.maximum(dp_orig, dp_from_NCF, dp_from_chart)  # change the depth only if it is deeper than the original depth
+    dp_new = np.maximum(dp_from_chart, dp_from_NCF)  # take the maximum of the two
+    hg.dp = np.maximum(dp_orig, dp_new)  # change the depth only if it is deeper than the original depth
     hg.save(f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.gr3", fmt=1)
     grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.2dm"))
 

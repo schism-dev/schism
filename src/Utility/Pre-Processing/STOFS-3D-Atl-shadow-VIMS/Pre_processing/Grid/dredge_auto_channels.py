@@ -1,15 +1,16 @@
-from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms
+from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
 from pathlib import Path
 import geopandas as gpd
 import numpy as np
 
-wdir = Path('/sciclone/schism10/feiye/Test/RUN02b_JZ/Dredge/')
-dredge_depth = 5
+wdir = Path('/sciclone/schism10/feiye/SECOFS/Inputs/I02e/Edit_bathy/Dredge')
+hg_file = Path(f'{wdir}/hgrid_levee_loaded_chart_NCF_loaded.gr3')
+dredge_depth = 2
 
-hg = read_schism_hgrid_cached(f'{wdir}/hgrid_chart_NCF_loaded.gr3')
+hg = schism_grid(str(hg_file))  # epsg:4326
 
 # load river polygons
-river_polys = gpd.read_file(wdir / 'total_river_polys_clipped_dissolved.shp')
+river_polys = gpd.read_file(wdir / 'total_river_polys_clipped_dissolved.shp')  # epsg:4326
 # shrink the polygons by 1 m to exclude bank nodes
 river_polys.geometry = river_polys.geometry.to_crs('esri:102008').buffer(-1).to_crs('epsg:4326')
 
@@ -25,7 +26,7 @@ hg.plot(value=in_channel.astype(int), fmt=1)
 # dredge the in-channel nodes
 hg.dp[idx] += dredge_depth
 
-grd2sms(hg, f'{wdir}/hgrid_chart_NCF_loaded_dredged_{dredge_depth}m.2dm')
-hg.save(f'{wdir}/hgrid_chart_NCF_loaded_dredged_{dredge_depth}m.gr3', fmt=1)
+grd2sms(hg, f'{wdir}/{hg_file.stem}_dredged_{dredge_depth}m.2dm')
+hg.save(f'{wdir}/{hg_file.stem}_dredged_{dredge_depth}m.gr3', fmt=1)
 
 pass
