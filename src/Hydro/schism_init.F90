@@ -209,7 +209,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
@@ -496,6 +496,7 @@
       lev_tr_source=-9 !bottom
       iprecip_off_bnd=0
       model_type_pahm=10
+      stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1387,7 +1388,7 @@
           &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stemp(nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -6131,6 +6132,11 @@
 
 !     end hot start section
       endif !ihot/=0
+
+      !Init sediment temp.
+      do i=1,nea
+         stemp(i)=tr_el(1,kbe(i)+1,i)
+      enddo
 
 ! MP from KM
 #ifdef USE_WWM

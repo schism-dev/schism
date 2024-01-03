@@ -7677,7 +7677,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle). Do nothing for net sinks
@@ -7707,6 +7707,25 @@
         endif !if_source
 
 !       Filter style horizontal diffusion scheme
+
+!       Heat exchange between sediment and bottom water
+        if(abs(stemp_stc)>1.d-16) then
+!$OMP     do
+          do i=1,nea
+             tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
+             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3)
+               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
+             else
+               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
+             endif
+             !Bottom T update
+             tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
+             do k=1,kbe(i) 
+               tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
+             enddo !k
+          enddo !i
+!$OMP     enddo
+        endif !abs(stemp_stc)
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 

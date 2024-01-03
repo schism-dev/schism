@@ -593,6 +593,14 @@
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
 
 !-----------------------------------------------------------------------
+! Option to add a sediment layer for the buffer effect on temperature
+! stemp_stc=0 recovers previous results
+!-----------------------------------------------------------------------
+  stemp_stc  = 0.0   !heat transfer coefficient W.m-2.K-1
+  stemp_dz(1)= 1.0   !equivalent sediment buffer depth (m) for heat into sediment
+  stemp_dz(2)= 1.0   !equivalent sediment buffer depth (m) for heat out of sediment
+
+!-----------------------------------------------------------------------
 ! Turbulence closure.
 !-----------------------------------------------------------------------
   itur = 3 !Default: 0
