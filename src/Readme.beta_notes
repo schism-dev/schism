@@ -9,6 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
+            new parameters: stemp_stc, stemp_dz(1:2);
 - `6a079f9` (30 Nov 2023): Fei added i_epsilon2 (to allow spatially variable epsilon2;
 - `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
 
