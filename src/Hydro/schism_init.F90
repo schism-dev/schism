@@ -6133,7 +6133,7 @@
 !     end hot start section
       endif !ihot/=0
 
-      !initial sediment temp.
+      !Init sediment temp.
       do i=1,nea
          stemp(i)=tr_el(1,kbe(i)+1,i)
       enddo
