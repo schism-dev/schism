@@ -1,50 +1,103 @@
 !     Generate tvd.prop for hybrid WENO/ELM and cross-scale applications, based on depth and remove
 !     'isolated' WENO elements in shallow water, etc. The goal is to
-!     minimize the direct 'contact' between WENO and ELM cells, which
-!     can cause dispersion.
+!     minimize the direct 'contact' between WENO and ELM cells, which can cause dispersion.
 !     Inputs: (1) screen; 
 !             (2) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
-!             (3) nearshore.gr3: '0' for eddying regime; non-0 for nearshore. Nearshore region 
-!                                 should be slightly offshore of isobath 'hmin_of'
-!     Output: tvd.prop.0 (may be further edited, e.g. deep channels/fjords)
+!             (3) nearshore.rgn: nearshore region (e.g. using 20m isoth) inside
+!                                which upwind is used except in estuary_*.rgn;
+!             (4) optional estuary_[1,2..].rgn: specific estuary regions where TVD/WENO is desired;
+!                     make sure these verlap with nearshore.rgn (so no gap in TVD/WENO zone)
+!     Output: tvd.prop.0 (may be further edited, e.g. connectivity etc)
 
-!     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 gen_tvd_WENO.f90
+!     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_tvd_WENO.f90
 
       use schism_geometry_mod
+      use pt_in_poly_test
       implicit real*8(a-h,o-z)
+      real*8, parameter :: small1=1.d-4
+      real*8, parameter :: ray_angle=3.13192d0
+
+      character(len=100) :: it_char
       integer :: nwild(3)
       integer, allocatable :: i34(:),elnode(:,:),nne(:),indel(:,:),nnp(:), &
-     &indnd(:,:),isbnd(:),itvd(:),itvd0(:),iest(:),iest_e(:)
-      integer, allocatable :: ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:)
+     &indnd(:,:),isbnd(:),itvd(:),itvd0(:),iest(:),iest_e(:),inear(:),inear_e(:)
+      integer, allocatable :: ic3(:,:),elside(:,:),isdel(:,:),isidenode(:,:),nvertices(:)
       real*8, allocatable :: xnd(:),ynd(:),dp(:),area(:),xpoly(:),ypoly(:),xcj(:),ycj(:)
 
-      print*, 'Input cut-off depth (meters) for offshore (e.g., 30m));'
-      print*, 'Upwind will be used shallower than this depth in offshore:'
-      read*, hmin_of
+      type :: poly_vertex
+        real*8,pointer :: xy(:,:)=>null()
+      end type
+      type(poly_vertex),allocatable :: poly(:)
 
-      print*, 'Input cut-off depth (meters) for nearshore.gr3 (usually <hmin_of; e.g. same as h_tvd).'
-      print*, 'Upwind will be used shallower than this depth in nearshore region:'
-      read*, hmin_near
-!'
+
+!      print*, 'Input cut-off depth (meters) for offshore (e.g., 30m));'
+!      print*, 'Upwind will be used shallower than this depth in offshore:'
+!      read*, hmin_of
+
+      print*, 'Input # of estuary regions (can be 0):'
+      read*, nestuaries
+      if(nestuaries<0) stop 'nestuaries<0'
+
+      print*, 'Input cut-off depth (meters) for estuaries (e.g. h_tvd):'
+      read*, hmin_estu
+
+      !Read in nearshore.rgn and estuary regions
+      allocate(nvertices(nestuaries+1),poly(nestuaries+1)) !first is the nearshore.rgn
+      open(10,file='nearshore.rgn',status='old')
+      read(10,*); read(10,*)npoly
+      if(npoly/=1) stop 'can only have 1 poly in .rgn'
+      read(10,*)nvertices(1)
+      allocate(poly(1)%xy(nvertices(1)+1,2)) !extra pt to close the region
+      poly(1)%xy(nvertices(1)+1,:)=0. !init
+      do i=1,nvertices(1)
+        read(10,*)poly(1)%xy(i,1:2) !xpoly(i,1),ypoly(i,1)
+      enddo !i
+      close(10)
+      
+      !Check if the region is closed
+      rl=(poly(1)%xy(1,1)-poly(1)%xy(nvertices(1),1))**2+(poly(1)%xy(1,2)-poly(1)%xy(nvertices(1),2))**2
+      if(rl>1.d-14) then
+        nvertices(1)=nvertices(1)+1
+        poly(1)%xy(nvertices(1),:)=poly(1)%xy(1,:)
+      endif
+
+      do irgn=1,nestuaries
+        write(it_char,*) irgn    
+        it_char=adjustl(it_char); itmp=len_trim(it_char)
+        open(10,file='estuary_'//it_char(1:itmp)//'.rgn',status='old')
+        read(10,*); read(10,*)npoly
+        if(npoly/=1) then
+          print*, 'Can only have 1 poly in .rgn:',irgn
+          stop 
+        endif
+        read(10,*)nvertices(irgn+1)
+        allocate(poly(irgn+1)%xy(nvertices(irgn+1)+1,2))
+        poly(irgn+1)%xy(nvertices(irgn+1)+1,:)=0.
+        do i=1,nvertices(irgn+1)
+          read(10,*)poly(irgn+1)%xy(i,1:2) 
+        enddo !i
+        close(10)
+      
+        !Check if the region is closed
+        rl=(poly(irgn+1)%xy(1,1)-poly(irgn+1)%xy(nvertices(irgn+1),1))**2+ &
+         &+(poly(irgn+1)%xy(1,2)-poly(irgn+1)%xy(nvertices(irgn+1),2))**2
+        if(rl>1.d-14) then
+          nvertices(irgn+1)=nvertices(irgn+1)+1
+          poly(irgn+1)%xy(nvertices(irgn+1),:)=poly(irgn+1)%xy(1,:)
+        endif
+      enddo !irgn
 
       open(14,file='hgrid.gr3',status='old')
-      open(13,file='nearshore.gr3',status='old')
       read(14,*); read(14,*) ne,np
-      read(13,*); read(13,*) 
       allocate(xnd(np),ynd(np),dp(np),area(ne),i34(ne),elnode(4,ne),nne(np), &
-     &isbnd(np),itvd(ne),itvd0(ne),iest(np),iest_e(ne))
+     &isbnd(np),itvd(ne),itvd0(ne),iest(np),iest_e(ne),inear(np),inear_e(ne))
 
       do i=1,np
         read(14,*) j,xnd(i),ynd(i),dp(i)
-        read(13,*) j,tmp,tmp,tmp2
-        iest(i)=nint(tmp2)
       enddo !i
 
       do i=1,ne
         read(14,*) j,i34(i),elnode(1:i34(i),i)
-
-        iest_e(i)=maxval(iest(elnode(1:i34(i),i)))
-
         n1=elnode(1,i)
         n2=elnode(2,i)
         n3=elnode(3,i)
@@ -96,21 +149,43 @@
 !     inputs (xnd,ynd) (x,y coordinates of each node)
       call schism_geometry_double(np,ne,ns,xnd,ynd,i34,elnode,ic3,elside,isdel,isidenode,xcj,ycj)
       
+!     Mark nearshore & estuary nodes
+      iest=0 !init as outside any estuary of interest
+      do i=1,np
+        call pt_in_poly_ray_method_double(nvertices(1),small1,ray_angle, &
+     &poly(1)%xy(1:nvertices(1),1),poly(1)%xy(1:nvertices(1),2),xnd(i),ynd(i),in_out,inters,npoly)
+        if(in_out==1) then 
+          inear(i)=1 !nearshore
+        else
+          inear(i)=0 !offshore
+        endif
+
+        !Estuaries
+        do irgn=1,nestuaries
+          call pt_in_poly_ray_method_double(nvertices(irgn+1),small1,ray_angle, &
+     &poly(irgn+1)%xy(1:nvertices(irgn+1),1),poly(irgn+1)%xy(1:nvertices(irgn+1),2), &
+     &xnd(i),ynd(i),in_out,inters,npoly)
+          
+          if(in_out==1) iest(i)=1 !inside any estuaries
+        enddo !irgn
+      enddo !i=1,np
+
+      do i=1,ne
+        inear_e(i)=maxval(inear(elnode(1:i34(i),i)))
+        iest_e(i)=minval(iest(elnode(1:i34(i),i)))
+      enddo !i
+
 !     Set TVD flag
       itvd(:)=0 !init
       do i=1,ne
         hmin2=minval(dp(elnode(1:i34(i),i)))
-        if(iest_e(i)==0) then !offshore
-          if(hmin2>=hmin_of) itvd(i)=1
-        else !nearshore
-          if(hmin2>=hmin_near) itvd(i)=1
-        endif !iest_e
+        if((inear_e(i)==0.or.iest_e(i)/=0).and.hmin2>=hmin_estu) itvd(i)=1
       enddo !i
 
 !     Augment upwind zone by 1 extra layer for offshore
       itvd0=itvd
       do i=1,ne
-        if(iest_e(i)==0.and.itvd0(i)==0) then
+        if(inear_e(i)==0.and.itvd0(i)==0) then
           do j=1,i34(i)
             nd=elnode(j,i)
             do m=1,nne(nd)
@@ -121,14 +196,14 @@
         endif !ifl
       enddo !i
 
-!     Remove 'isolated' WENO elem nearshore
+!     Remove 'isolated' WENO elem 
       loop1: do
         itouched=0 !# of elem changed in this iteration
         itvd0=itvd
         loop2: do i=1,ne
-          if(iest_e(i)==0.or.itvd0(i)==0) cycle
+          if(itvd0(i)==0) cycle
 
-          !WENO elem nearshore 
+          !WENO elem 
           icount=0
           do j=1,i34(i)
             ie=ic3(j,i)
@@ -152,8 +227,15 @@
       do i=1,ne
         write(12,*)i,itvd(i)
       enddo !i
-      write(12,*)'hmin=',hmin_of,hmin_near
+      write(12,*)'hmin=',hmin_estu
       close(12)
+
+      ! deallocate pointer arrays
+      do m=1,size(poly)
+        if (associated(poly(m)%xy)) deallocate(poly(m)%xy)
+        nullify(poly(m)%xy)
+      enddo
+      deallocate(poly)
 
       stop
       end
