@@ -6,7 +6,6 @@ from scipy.spatial import KDTree
 from matplotlib import pyplot as plt
 
 from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
-from pylib_essentials.utility_functions import inside_polygon
 
 def prep_chart_data(sounding_shpfile:Path):
     '''
@@ -85,43 +84,6 @@ def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_r
 
     return dp_sounding
 
-
-def load_NCF(hg:schism_grid, NCF_shpfile:Path):
-    '''
-    Load the maintained depth from National Channel Framework data into the hgrid.
-    The original NCF polygons are enlarged to accommodate the mismatch between the hgrid and the NCF data.
-    The maintained depth is converted from feet to meters.
-    '''
-
-    # get the nodes in the NCF (National Channel Framework) polygons
-    NCF_shpfile = Path('/sciclone/schism10/Hgrid_projects/Charts/Mississippi/channel_quarter_NCF.shp')
-    NCF_data = gpd.read_file(NCF_shpfile)
-
-    # remove the polygons that are not in the bounding box of the hgrid
-    NCF_data = NCF_data.cx[hg.x.min():hg.x.max(), hg.y.min():hg.y.max()]
-    # convert any multipolygons to polygons
-    NCF_data = NCF_data.explode()
-
-    # enlarge the polygons by 4 m
-    NCF_data['geometry'] = NCF_data['geometry'].to_crs('esri:102008').buffer(4).to_crs('epsg:4326')
-    # extract the polygons to a list of nx2 numpy arrays
-    # NCF_polygons = [np.array(poly.exterior.coords) for poly in NCF_data['geometry']]
-
-    # put hgrid points into a Point GeoDataFrame
-    hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hg.x, hg.y), crs='epsg:4326')
-    # determine which points are inside the polygons and get the maintained depth
-    joined_gdf = gpd.sjoin(hg_points, NCF_data, how="inner", op='within')
-    idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
-    dp_NCF = np.ones_like(hg.dp, dtype=float) * -9999  # initialize with a large negative number
-    dp_NCF[idx] = joined_gdf['depthmaint'].to_numpy() * 0.3048  # convert from feet to meters
-
-    # diagnostic plot
-    # plt.figure()
-    # hg.plot(value=dp_NCF.astype(int), fmt=1)
-    # plt.show()
-
-    return dp_NCF
-
 def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
     # # plot to check the changed nodes
     # plt.figure()
@@ -138,7 +100,10 @@ def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
     pass
 
 if __name__ == '__main__':
-    hg_file = Path('/sciclone/schism10/feiye/SECOFS/Inputs/I02e/Edit_bathy/Load_charts_NCF/hgrid_levee_loaded.gr3')
+    # -----------------inputs-----------------------------
+    hg_file = Path('/sciclone/schism10/feiye/SECOFS/Inputs/I02e/Edit_bathy/Load_charts_NCF/hgrid_dem_levee_loaded.gr3')
+    # -----------------end inputs-----------------------------
+
     hg = schism_grid(str(hg_file))
     dp_orig = hg.dp.copy()
 
@@ -170,16 +135,8 @@ if __name__ == '__main__':
         region_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/secofs_chart_loading_zones.shp'), crs_region='esri:102008'
     )
     hg.dp = np.maximum(dp_orig, dp_from_chart)  # change the depth only if it is deeper than the original depth
+    hg.save(f"{hg_file.parent}/{hg_file.stem}_chart_loaded.gr3", fmt=1)
     grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
 
-    # the NCF data already defines the region
-    dp_from_NCF = load_NCF(hg=hg, NCF_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Mississippi/channel_quarter_NCF.shp'))
-    hg.dp = np.maximum(dp_orig, dp_from_NCF)  # change the depth only if it is deeper than the original depth
-    # grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_NCF_loaded.2dm"))
-
-    dp_new = np.maximum(dp_from_chart, dp_from_NCF)  # take the maximum of the two
-    hg.dp = np.maximum(dp_orig, dp_new)  # change the depth only if it is deeper than the original depth
-    hg.save(f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.gr3", fmt=1)
-    grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_NCF_loaded.2dm"))
-
     pass
+

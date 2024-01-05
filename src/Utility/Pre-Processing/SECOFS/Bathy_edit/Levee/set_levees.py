@@ -179,8 +179,8 @@ def set_levees(hgrid_name='', gd:schism_grid=None):
 
 if __name__ == "__main__":
     wdir = './'
-    gd = set_levees(f'{wdir}/hgrid.ll.new')  # input is the bathy-loaded hgrid
-    gd.save(f'{wdir}/hgrid_levee_loaded.gr3')
+    gd = set_levees(f'{wdir}/hgrid.ll.dem_loaded.gr3')  # input is the bathy-loaded hgrid
+    gd.save(f'{wdir}/hgrid_dem_levee_loaded.gr3')
 
 
 

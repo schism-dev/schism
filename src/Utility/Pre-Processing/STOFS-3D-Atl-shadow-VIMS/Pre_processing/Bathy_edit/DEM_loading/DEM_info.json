@@ -113,5 +113,10 @@
         "Annotation": "CuDEM (Continously updated DEM): Updated Florida",
         "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
         "File": "/sciclone/schism10/lcui01/schism20/DEM/CUDEM/FL/"
+    },
+    "BlueTopo": {
+        "Annotation": "BlueTopo",
+        "Note": "",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/BlueTopo/"
     }
 }

@@ -14,7 +14,7 @@ from glob import glob
 #Input
 #-----------------------------------------------------------------------------
 grd='hgrid.ll'  #grid name
-grdout='hgrid.ll.new' #grid name with depth loaded
+grdout='hgrid.ll.dem_loaded.gr3' #grid name with depth loaded
 
 #parameter
 regions=[
