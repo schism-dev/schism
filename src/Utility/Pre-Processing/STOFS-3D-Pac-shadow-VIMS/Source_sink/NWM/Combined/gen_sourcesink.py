@@ -8,6 +8,12 @@ import numpy as np
 import pandas as pd
 from netCDF4 import Dataset
 
+def is_leap_year(year):
+    if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
+        return True
+    else:
+        return False
+
 def read_featureID_file(filename):
 
     with open(filename) as f:
@@ -216,8 +222,16 @@ if __name__ == '__main__':
     print(sinks.shape)
 
     #combine with Dai_Trenberth_climatology
-    df = pd.read_csv(clima_filename)
-    df.set_index('date', inplace=True)
+    df = pd.read_csv(clima_filename, parse_dates=['date'], index_col='date')
+
+    if is_leap_year(int(startdate.year)):
+        print(f'Year {startdate.year} is a leap year')
+    else:
+        print('Year {startdate.year} is not a leap year, drop day 02-29')
+        df = df[~(df.index.date == pd.to_datetime(f'2024-02-29').date())]
+    date_forecast = pd.date_range(f'{startdate.year}-01-01', f'{int(startdate.year) + 1}-02-01', freq='H')
+    df.index = date_forecast
+    
     mask = (pd.to_datetime(df.index) >= dates[0]) & (pd.to_datetime(df.index) <=dates[-1])
     df_forecast = df[mask]
     df_nwm = pd.DataFrame(data=sources, columns=np.array(eid_sources), index=np.array(dates))

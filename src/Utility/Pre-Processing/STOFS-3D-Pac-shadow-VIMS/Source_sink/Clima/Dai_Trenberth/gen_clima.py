@@ -21,8 +21,8 @@ def read_station_file(station_file_name):
 
 if __name__ == '__main__':
 
-    #year = 2024
-    date_forecast = pd.date_range('2024-01-01', '2025-01-01', freq='MS')
+    #year = 2024 (value is independant with year. date will be changed based on NWM's date, gen_sourcesink.py)
+    date_forecast = pd.date_range('2024-01-01', '2025-02-01', freq='MS')
     river_filename = 'out_river'
     hgrid = 'hgrid.gr3'
 
@@ -52,14 +52,16 @@ if __name__ == '__main__':
         if mask.sum() > 0:
             month_mean.loc[mask == 1, i] = 0
 
-    #add January to the end
+    #add January and Feb to the end
     month_mean.loc[13] = month_mean.loc[1]
+    month_mean.loc[14] = month_mean.loc[2]
+
     #climatology monthly
-    df2023 = pd.DataFrame(data=month_mean.values, columns=stations, index=date_forecast)
-    #df_2023_daily = df2023.resample('D').asfreq()
-    #df_2023_daily.interpolate('linear', inplace=True)
-    df_2023_hourly = df2023.resample('H').asfreq()
-    df_2023_hourly.interpolate('linear', inplace=True)
+    df2024 = pd.DataFrame(data=month_mean.values, columns=stations, index=date_forecast)
+    #df_2024_daily = df2024.resample('D').asfreq()
+    #df_2024_daily.interpolate('linear', inplace=True)
+    df_2024_hourly = df2024.resample('H').asfreq()
+    df_2024_hourly.interpolate('linear', inplace=True)
 
     #to daily
     # tmp = month_mean.loc[df.index.month]
@@ -84,7 +86,7 @@ if __name__ == '__main__':
     #print(rank)
 
     #select rivers
-    df_clima_hourly = df_2023_hourly.loc[:, rank-1]
+    df_clima_hourly = df_2024_hourly.loc[:, rank-1]
 
     #Find nearest elem
     gd = read_schism_hgrid(hgrid)
@@ -104,8 +106,9 @@ if __name__ == '__main__':
     # ie_r = values[15]
     # idxs = np.where(ie_river == ie_r)[0]
     # cols = rank[idxs] - 1
-    # tmp = df_2023_hourly.loc[:, cols[0]]+df_2023_hourly.loc[:, cols[1]]+df_2023_hourly.loc[:, cols[2]]
+    # tmp = df_2024_hourly.loc[:, cols[0]]+df_2024_hourly.loc[:, cols[1]]+df_2024_hourly.loc[:, cols[2]]
     # tmp2 = out_flow_transposed.loc[:, ie_r]
     
     
     out_flow_transposed.to_csv('Dai_Trenberth_climatology_1990-2018_hourly.csv', index_label='date')
+    #out_flow_transposed.to_csv('Dai_Trenberth_climatology_1990-2018_hourly.csv', index_label='date', mode='a', header=False)
