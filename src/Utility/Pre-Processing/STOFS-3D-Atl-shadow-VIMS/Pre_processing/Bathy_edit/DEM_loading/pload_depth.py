@@ -139,13 +139,12 @@ for m,fname in enumerate(fnames):
    while(True):
        try:
           dpi,sindi=load_bathymetry(gd.x,gd.y,'{}/{}'.format(sdir,fname),fmt=1)
+          # reverse depth sign
+          if reverse_sign==1:
+             dpi=-dpi
           break
        except:
            time.sleep(15)
-
-   # reverse depth sign
-   if reverse_sign==1:
-      dpi=-dpi
 
    #save results
    S.dp[bname]=dpi; S.sind[bname]=sindi
@@ -171,10 +170,6 @@ if myrank==0:
        sind=S.sind[bname]; dp=S.dp[bname]
        gd.dp[sind]=dp; did[sind]=i+1
        dnamei=[k for k in fnames0 if k.startswith(fname)][0]; dname.append(dnamei)
-
-   #reverse depth sign
-   if reverse_sign==1:
-      gd.dp=-gd.dp
 
    #applying minimum depth
    if regions is not None:

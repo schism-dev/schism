@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
 from pathlib import Path
 import geopandas as gpd
@@ -20,7 +22,7 @@ river_polys.geometry = river_polys.geometry.to_crs('esri:102008').buffer(-1).to_
 # determine in-channel nodes
 hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hg.x, hg.y), crs='epsg:4326')
 joined_gdf = gpd.sjoin(hg_points, river_polys, how="inner", op='within')
-idx = joined_gdf.index.to_numpy() 
+idx = joined_gdf.index.to_numpy()
 
 in_channel = np.zeros_like(hg.dp, dtype=bool)
 in_channel[idx] = True

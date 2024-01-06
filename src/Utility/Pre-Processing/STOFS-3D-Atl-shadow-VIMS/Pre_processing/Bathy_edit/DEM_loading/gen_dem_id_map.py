@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 '''
 This script generates a polygon shapefile covering the spatial domain of hgrid.*,
 with each polygon showing the corresponding source DEM.
