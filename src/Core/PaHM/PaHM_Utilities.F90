@@ -2626,6 +2626,109 @@ MODULE PaHM_Utilities
 
 !================================================================================
 
+  ! ----------------------------------------------------------------
+  !  F U N C T I O N   E S T I M A T E  R O C I
+  ! ----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Calculates the radius of outermost closed isobar (ROCI)
+  !>
+  !> @details
+  !>   Function to estimate the radius of outermost closed isobar (ROCI) that determines
+  !>   the size of a Tropical Storm (TC), using the 34-knot radii.
+  !>
+  !> @see L. Dean et al. (July 2009). "On the size distribution of Atlantic tropical cyclones". \n
+  !>      Datasets Using QuikSCAT Data". \n
+  !>      Geophysical Research Letters, Vol. 36, July 2009: L14803. doi:10.1029/2009GL039051.
+  !> @see Benjamin A. Schenkel et al. (November 2017). "Evaluating Outer Tropical Cyclone Size in Reanalysis \n
+  !>      Datasets Using QuikSCAT Data". \n
+  !>      Journal of Climate, Volume 30, November 2017: 8745-8762. doi: 10.1175/JCLI-D-17-0122.1.
+  !> @see Emanuel Kerry (2004). "Tropical Cyclone Energetics and Structure". \n
+  !>      https://en.wikipedia.org/wiki/Great-circle_distance#Computational_formulas.
+  !> @see Albenis Perez-Alarcon (September 2021). "Comparative climatology of outer tropical cyclone \n
+  !>      size using radial wind profiles". \n
+  !>      Weather and Climate Extremes, Volume 33, September 2021, 100366. https://doi.org/10.1016/j.wace.2021.100366.
+  !>
+  !> @param[in]
+  !>   rad34      34-knot wind radii in the 4 quadrants - real, vector(4), nautical miles (nm)
+  !> @param[in]
+  !>   lat        Latitude - real, scalar, (degrees)
+  !> @param[in]
+  !>   useMaxR34  Flag - integer, scalar. (>=1 means to use the max value of rad34, otherwise \n
+  !>                                        use the average value of rad34
+  !>
+  !> @return      myValOut: The estimated R0 (ROCI) in nautical miles (nm)
+  !>
+  !----------------------------------------------------------------
+  INTEGER FUNCTION EstimateROCI(rad34, lat, useMaxR34) RESULT(myValOut)
+
+    USE PaHM_Sizes, ONLY : FixNearWholeReal
+    USE PaHM_Global, ONLY : OMEGA, KT2MS, NM2M, M2NM, DEG2RAD
+
+    IMPLICIT NONE
+
+    INTEGER, DIMENSION(4), INTENT(IN) :: rad34  ! 34-knot radii in the four quadrants (nautical miles)
+    REAL(SZ), INTENT(IN) :: lat                 ! latitude (degrees)
+    INTEGER, OPTIONAL    :: useMaxR34           ! if <=0 use the average value of the R34 raddii
+                                                ! otherwise, use max(R34)
+
+    REAL(SZ) :: V34, CD, cori, wrad, term
+    INTEGER  :: R34, numR34, commFlag, i
+
+    ! Ro  = estimated radius of the outermost closed isobar
+    ! R34 = radii of the 34-knot winds
+    ! v34 = 34-knot wind speed converted to m/s
+    ! CD  = momentum drag coefficient taken wqual to 10^-3
+    ! cori = coriolis parameter, cori = 2 * OMEGA * sin(lat)
+    ! lat  = latitude in degrees
+    ! wrad = equilibrium subsidence valocity taken to be constant (0.016 m/s)
+
+    commFlag = 0
+    IF (PRESENT(useMaxR34)) THEN
+      IF (useMaxR34 <= 0) commFlag = 0
+      IF (useMaxR34 > 0)  commFlag = 1
+    END IF
+
+    ! Compute coriolis.
+    ! Using absolute value for coriolis for Southern Hemispher
+    cori = ABS(2.0_SZ * OMEGA * SIN(lat * DEG2RAD))
+
+    ! Set the values of the constant variables
+    V34  = 34.0_SZ * KT2MS
+    CD   = 0.001_SZ
+    wrad = 0.016_SZ
+
+    ! Here we need only values of rad34 > 0. rad34 = 0 means that this radius is missing
+    ! from the data and of course a rad34 < 0 does not have any physiacal meaning
+    IF (commFlag <= 0) THEN
+      R34   = 0
+      numR34 = 0
+      DO i = 1, 4
+        IF (rad34(i) > 0) THEN
+          R34   = R34 + rad34(i)
+          numR34 = numR34 + 1
+        END IF
+      END DO
+      IF (numR34 > 0) R34 = R34 / numR34
+    ELSE
+      R34 = MAXVAL(rad34, MASK = rad34 >= 0)
+    END IF
+    IF (R34 < 0)   R34 = 0
+
+    IF (R34 > 0) THEN
+      term = M2NM * (((2.0_SZ * CD) / (cori * wrad)) * V34 * V34) ! convert to nautical miles
+      myValOut = FixNearWholeReal(SQRT(R34 * R34 + term  * R34))
+      IF (myValOut > 999) myValOut = 999
+    ELSE
+      myValOut = 0
+    END IF
+
+    RETURN
+
+  END FUNCTION EstimateROCI
+
+!================================================================================
+
   !----------------------------------------------------------------
   ! F U N C T I O N   C H A R  U N I Q U E
   !----------------------------------------------------------------

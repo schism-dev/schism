@@ -120,6 +120,10 @@ MODULE PaHM_Global
   REAL(SZ), PARAMETER     :: DEFV_WINDREDUCTION = 0.90_SZ
   REAL(SZ)                :: windReduction      = DEFV_WINDREDUCTION  ! BL reduction factor used in the Holland model
 
+  ! Used when estinating the ROCI
+  INTEGER, PARAMETER      :: DEFV_USEMAXR34 = 1
+  INTEGER                 :: useMaxR34      = DEFV_USEMAXR34
+
   !====================
   !=== This block is for the : time/date and time stepping variables
   !====================

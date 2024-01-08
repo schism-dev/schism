@@ -128,14 +128,16 @@ MODULE ParWind
                                                          !   x  = Subregion code: W,A,B,S,P,C,E,L,Q.
     INTEGER, ALLOCATABLE             :: cycleNum(:)      ! the cycle number
 
-!    !----- converted data from the above values (if needed)
+    !----- extra variable the value of which is an estimation of ROCI (radius of the last closed isobar)
+    INTEGER, ALLOCATABLE             :: intEROuter(:)    ! estimated radius of the last closed isobar, 0 - 999 n mi
+
+    !----- converted data from the above values (if needed)
     INTEGER, DIMENSION(:), ALLOCATABLE  :: year, month, day, hour
     REAL(SZ), DIMENSION(:), ALLOCATABLE :: lat, lon
   END TYPE BestTrackData_T
 
   ! Array of info about the best track data (extension to use multiple storms)
   TYPE(BestTrackData_T), ALLOCATABLE    :: bestTrackData(:)
-
 
   !----------------------------------------------------------------
   ! The HollandData_T structure holds all required data for the Holland model
@@ -151,7 +153,7 @@ MODULE ParWind
     INTEGER, ALLOCATABLE                :: stormNumber(:)   ! annual cyclone number: 1 - 99
     CHARACTER(LEN=10),      ALLOCATABLE :: dtg(:)           ! warning Date-Time-Group (DTG), YYYYMMDDHH
     INTEGER, DIMENSION(:),  ALLOCATABLE :: year, month, day, hour
-    REAL(SZ), ALLOCATABLE               :: castTime(:)      ! YJZ: sec from ref time
+    REAL(SZ), ALLOCATABLE               :: castTime(:)      ! converted to decimal E/N (lon, lat)
     CHARACTER(LEN=4),       ALLOCATABLE :: castType(:)      ! BEST, OFCL, CALM, ...
     INTEGER,                ALLOCATABLE :: fcstInc(:)       ! forecast period: -24 through 240 hours, 0 for best-track
 
@@ -166,6 +168,9 @@ MODULE ParWind
 
     INTEGER,                ALLOCATABLE :: iRrp(:)          ! radius of the last closed isobar, 0 - 999 n mi
     REAL(SZ),               ALLOCATABLE :: rrp(:)           ! converted from nm to m
+
+    INTEGER,                ALLOCATABLE :: iERrp(:)         ! estimated radius of the last closed isobar, 0 - 999 n mi
+    REAL(SZ),               ALLOCATABLE :: errp(:)          ! converted from nm to m
 
     INTEGER,                ALLOCATABLE :: iRmw(:)          ! radius of max winds, 0 - 999 n mi
     REAL(SZ),               ALLOCATABLE :: rmw(:)           ! converted from nm to m
@@ -218,6 +223,9 @@ MODULE ParWind
 
     INTEGER,                ALLOCATABLE :: iRrp(:)          ! radius of the last closed isobar, 0 - 999 n mi
     REAL(SZ),               ALLOCATABLE :: rrp(:)           ! converted from nm to m
+
+    INTEGER,                ALLOCATABLE :: iERrp(:)         ! estimated radius of the last closed isobar, 0 - 999 n mi
+    REAL(SZ),               ALLOCATABLE :: errp(:)          ! converted from nm to m
 
     INTEGER,                ALLOCATABLE :: iRmw(:)          ! radius of max winds, 0 - 999 n mi
     REAL(SZ),               ALLOCATABLE :: rmw(:)           ! converted from nm to m
@@ -3146,51 +3154,54 @@ MODULE ParWind
     IMPLICIT NONE
 
     TYPE(BestTrackData_T), INTENT(INOUT) :: str
-    INTEGER, INTENT(IN)   :: nRec
+    INTEGER, INTENT(IN)                  :: nRec
 
     str%numRec = nRec
     str%loaded = .FALSE.
 
     !----- Input parameters
-    IF (.NOT. ALLOCATED(str%basin))     ALLOCATE(str%basin(nRec))
-    IF (.NOT. ALLOCATED(str%cyNum))     ALLOCATE(str%cyNum(nRec))
-    IF (.NOT. ALLOCATED(str%dtg))       ALLOCATE(str%dtg(nRec))
-    IF (.NOT. ALLOCATED(str%techNum))   ALLOCATE(str%techNum(nRec))
-    IF (.NOT. ALLOCATED(str%tech))      ALLOCATE(str%tech(nRec))
-    IF (.NOT. ALLOCATED(str%tau))       ALLOCATE(str%tau(nRec))
-    IF (.NOT. ALLOCATED(str%intLat))    ALLOCATE(str%intLat(nRec))
-    IF (.NOT. ALLOCATED(str%intLon))    ALLOCATE(str%intLon(nRec))
-    IF (.NOT. ALLOCATED(str%ew))        ALLOCATE(str%ew(nRec))
-    IF (.NOT. ALLOCATED(str%ns))        ALLOCATE(str%ns(nRec))
-    IF (.NOT. ALLOCATED(str%intVMax))   ALLOCATE(str%intVMax(nRec))
-    IF (.NOT. ALLOCATED(str%intMslp))   ALLOCATE(str%intMslp(nRec))
-    IF (.NOT. ALLOCATED(str%ty))        ALLOCATE(str%ty(nRec))
-    IF (.NOT. ALLOCATED(str%rad))       ALLOCATE(str%rad(nRec))
-    IF (.NOT. ALLOCATED(str%windCode))  ALLOCATE(str%windCode(nRec))
-    IF (.NOT. ALLOCATED(str%intRad1))   ALLOCATE(str%intRad1(nRec))
-    IF (.NOT. ALLOCATED(str%intRad2))   ALLOCATE(str%intRad2(nRec))
-    IF (.NOT. ALLOCATED(str%intRad3))   ALLOCATE(str%intRad3(nRec))
-    IF (.NOT. ALLOCATED(str%intRad4))   ALLOCATE(str%intRad4(nRec))
-    IF (.NOT. ALLOCATED(str%intPOuter)) ALLOCATE(str%intPOuter(nRec))
-    IF (.NOT. ALLOCATED(str%intROuter)) ALLOCATE(str%intROuter(nRec))
-    IF (.NOT. ALLOCATED(str%intRmw))    ALLOCATE(str%intRmw(nRec))     
-    IF (.NOT. ALLOCATED(str%gusts))     ALLOCATE(str%gusts(nRec))
-    IF (.NOT. ALLOCATED(str%eye))       ALLOCATE(str%eye(nRec))
-    IF (.NOT. ALLOCATED(str%subregion)) ALLOCATE(str%subregion(nRec))
-    IF (.NOT. ALLOCATED(str%maxseas))   ALLOCATE(str%maxseas(nRec))
-    IF (.NOT. ALLOCATED(str%initials))  ALLOCATE(str%initials(nRec))
-    IF (.NOT. ALLOCATED(str%dir))       ALLOCATE(str%dir(nRec))
-    IF (.NOT. ALLOCATED(str%intSpeed))  ALLOCATE(str%intSpeed(nRec))
-    IF (.NOT. ALLOCATED(str%stormName)) ALLOCATE(str%stormName(nRec))
-    IF (.NOT. ALLOCATED(str%cycleNum))  ALLOCATE(str%cycleNum(nRec))
+    IF (.NOT. ALLOCATED(str%basin))      ALLOCATE(str%basin(nRec))
+    IF (.NOT. ALLOCATED(str%cyNum))      ALLOCATE(str%cyNum(nRec))
+    IF (.NOT. ALLOCATED(str%dtg))        ALLOCATE(str%dtg(nRec))
+    IF (.NOT. ALLOCATED(str%techNum))    ALLOCATE(str%techNum(nRec))
+    IF (.NOT. ALLOCATED(str%tech))       ALLOCATE(str%tech(nRec))
+    IF (.NOT. ALLOCATED(str%tau))        ALLOCATE(str%tau(nRec))
+    IF (.NOT. ALLOCATED(str%intLat))     ALLOCATE(str%intLat(nRec))
+    IF (.NOT. ALLOCATED(str%intLon))     ALLOCATE(str%intLon(nRec))
+    IF (.NOT. ALLOCATED(str%ew))         ALLOCATE(str%ew(nRec))
+    IF (.NOT. ALLOCATED(str%ns))         ALLOCATE(str%ns(nRec))
+    IF (.NOT. ALLOCATED(str%intVMax))    ALLOCATE(str%intVMax(nRec))
+    IF (.NOT. ALLOCATED(str%intMslp))    ALLOCATE(str%intMslp(nRec))
+    IF (.NOT. ALLOCATED(str%ty))         ALLOCATE(str%ty(nRec))
+    IF (.NOT. ALLOCATED(str%rad))        ALLOCATE(str%rad(nRec))
+    IF (.NOT. ALLOCATED(str%windCode))   ALLOCATE(str%windCode(nRec))
+    IF (.NOT. ALLOCATED(str%intRad1))    ALLOCATE(str%intRad1(nRec))
+    IF (.NOT. ALLOCATED(str%intRad2))    ALLOCATE(str%intRad2(nRec))
+    IF (.NOT. ALLOCATED(str%intRad3))    ALLOCATE(str%intRad3(nRec))
+    IF (.NOT. ALLOCATED(str%intRad4))    ALLOCATE(str%intRad4(nRec))
+    IF (.NOT. ALLOCATED(str%intPOuter))  ALLOCATE(str%intPOuter(nRec))
+    IF (.NOT. ALLOCATED(str%intROuter))  ALLOCATE(str%intROuter(nRec))
+    IF (.NOT. ALLOCATED(str%intRmw))     ALLOCATE(str%intRmw(nRec))     
+    IF (.NOT. ALLOCATED(str%gusts))      ALLOCATE(str%gusts(nRec))
+    IF (.NOT. ALLOCATED(str%eye))        ALLOCATE(str%eye(nRec))
+    IF (.NOT. ALLOCATED(str%subregion))  ALLOCATE(str%subregion(nRec))
+    IF (.NOT. ALLOCATED(str%maxseas))    ALLOCATE(str%maxseas(nRec))
+    IF (.NOT. ALLOCATED(str%initials))   ALLOCATE(str%initials(nRec))
+    IF (.NOT. ALLOCATED(str%dir))        ALLOCATE(str%dir(nRec))
+    IF (.NOT. ALLOCATED(str%intSpeed))   ALLOCATE(str%intSpeed(nRec))
+    IF (.NOT. ALLOCATED(str%stormName))  ALLOCATE(str%stormName(nRec))
+    IF (.NOT. ALLOCATED(str%cycleNum))   ALLOCATE(str%cycleNum(nRec))
+
+    !----- extra variable the value of which is an estimation of ROCI (radius of the last closed isobar)
+    IF (.NOT. ALLOCATED(str%intEROuter)) ALLOCATE(str%intEROuter(nRec))
 
     !----- Converted parameters
-    IF (.NOT. ALLOCATED(str%year))      ALLOCATE(str%year(nRec))
-    IF (.NOT. ALLOCATED(str%month))     ALLOCATE(str%month(nRec))
-    IF (.NOT. ALLOCATED(str%day))       ALLOCATE(str%day(nRec))
-    IF (.NOT. ALLOCATED(str%hour))      ALLOCATE(str%hour(nRec))
-    IF (.NOT. ALLOCATED(str%lat))       ALLOCATE(str%lat(nRec))
-    IF (.NOT. ALLOCATED(str%lon))       ALLOCATE(str%lon(nRec))
+    IF (.NOT. ALLOCATED(str%year))       ALLOCATE(str%year(nRec))
+    IF (.NOT. ALLOCATED(str%month))      ALLOCATE(str%month(nRec))
+    IF (.NOT. ALLOCATED(str%day))        ALLOCATE(str%day(nRec))
+    IF (.NOT. ALLOCATED(str%hour))       ALLOCATE(str%hour(nRec))
+    IF (.NOT. ALLOCATED(str%lat))        ALLOCATE(str%lat(nRec))
+    IF (.NOT. ALLOCATED(str%lon))        ALLOCATE(str%lon(nRec))
 
   END SUBROUTINE AllocBTrStruct
 
@@ -3220,45 +3231,48 @@ MODULE ParWind
     str%loaded = .FALSE.
 
     !----- Input parameters
-    IF (ALLOCATED(str%basin))     DEALLOCATE(str%basin)
-    IF (ALLOCATED(str%cyNum))     DEALLOCATE(str%cyNum)
-    IF (ALLOCATED(str%dtg))       DEALLOCATE(str%dtg)
-    IF (ALLOCATED(str%techNum))   DEALLOCATE(str%techNum)
-    IF (ALLOCATED(str%tech))      DEALLOCATE(str%tech)
-    IF (ALLOCATED(str%tau))       DEALLOCATE(str%tau)
-    IF (ALLOCATED(str%intLat))    DEALLOCATE(str%intLat)
-    IF (ALLOCATED(str%intLon))    DEALLOCATE(str%intLon)
-    IF (ALLOCATED(str%ew))        DEALLOCATE(str%ew)
-    IF (ALLOCATED(str%ns))        DEALLOCATE(str%ns)
-    IF (ALLOCATED(str%intVMax))   DEALLOCATE(str%intVMax)
-    IF (ALLOCATED(str%intMslp))   DEALLOCATE(str%intMslp)
-    IF (ALLOCATED(str%ty))        DEALLOCATE(str%ty)
-    IF (ALLOCATED(str%rad))       DEALLOCATE(str%rad)
-    IF (ALLOCATED(str%windCode))  DEALLOCATE(str%windCode)
-    IF (ALLOCATED(str%intRad1))   DEALLOCATE(str%intRad1)
-    IF (ALLOCATED(str%intRad2))   DEALLOCATE(str%intRad2)
-    IF (ALLOCATED(str%intRad3))   DEALLOCATE(str%intRad3)
-    IF (ALLOCATED(str%intRad4))   DEALLOCATE(str%intRad4)
-    IF (ALLOCATED(str%intPOuter)) DEALLOCATE(str%intPOuter)
-    IF (ALLOCATED(str%intROuter)) DEALLOCATE(str%intROuter)
-    IF (ALLOCATED(str%intRmw))    DEALLOCATE(str%intRmw)     
-    IF (ALLOCATED(str%gusts))     DEALLOCATE(str%gusts)
-    IF (ALLOCATED(str%eye))       DEALLOCATE(str%eye)
-    IF (ALLOCATED(str%subregion)) DEALLOCATE(str%subregion)
-    IF (ALLOCATED(str%maxseas))   DEALLOCATE(str%maxseas)
-    IF (ALLOCATED(str%initials))  DEALLOCATE(str%initials)
-    IF (ALLOCATED(str%dir))       DEALLOCATE(str%dir)
-    IF (ALLOCATED(str%intSpeed))  DEALLOCATE(str%intSpeed)
-    IF (ALLOCATED(str%stormName)) DEALLOCATE(str%stormName)
-    IF (ALLOCATED(str%cycleNum))  DEALLOCATE(str%cycleNum)
- 
-     !----- Converted parameters
-    IF (ALLOCATED(str%year))      DEALLOCATE(str%year)
-    IF (ALLOCATED(str%month))     DEALLOCATE(str%month)
-    IF (ALLOCATED(str%day))       DEALLOCATE(str%day)
-    IF (ALLOCATED(str%hour))      DEALLOCATE(str%hour)
-    IF (ALLOCATED(str%lat))       DEALLOCATE(str%lat)
-    IF (ALLOCATED(str%lon))       DEALLOCATE(str%lon)
+    IF (ALLOCATED(str%basin))      DEALLOCATE(str%basin)
+    IF (ALLOCATED(str%cyNum))      DEALLOCATE(str%cyNum)
+    IF (ALLOCATED(str%dtg))        DEALLOCATE(str%dtg)
+    IF (ALLOCATED(str%techNum))    DEALLOCATE(str%techNum)
+    IF (ALLOCATED(str%tech))       DEALLOCATE(str%tech)
+    IF (ALLOCATED(str%tau))        DEALLOCATE(str%tau)
+    IF (ALLOCATED(str%intLat))     DEALLOCATE(str%intLat)
+    IF (ALLOCATED(str%intLon))     DEALLOCATE(str%intLon)
+    IF (ALLOCATED(str%ew))         DEALLOCATE(str%ew)
+    IF (ALLOCATED(str%ns))         DEALLOCATE(str%ns)
+    IF (ALLOCATED(str%intVMax))    DEALLOCATE(str%intVMax)
+    IF (ALLOCATED(str%intMslp))    DEALLOCATE(str%intMslp)
+    IF (ALLOCATED(str%ty))         DEALLOCATE(str%ty)
+    IF (ALLOCATED(str%rad))        DEALLOCATE(str%rad)
+    IF (ALLOCATED(str%windCode))   DEALLOCATE(str%windCode)
+    IF (ALLOCATED(str%intRad1))    DEALLOCATE(str%intRad1)
+    IF (ALLOCATED(str%intRad2))    DEALLOCATE(str%intRad2)
+    IF (ALLOCATED(str%intRad3))    DEALLOCATE(str%intRad3)
+    IF (ALLOCATED(str%intRad4))    DEALLOCATE(str%intRad4)
+    IF (ALLOCATED(str%intPOuter))  DEALLOCATE(str%intPOuter)
+    IF (ALLOCATED(str%intROuter))  DEALLOCATE(str%intROuter)
+    IF (ALLOCATED(str%intRmw))     DEALLOCATE(str%intRmw)     
+    IF (ALLOCATED(str%gusts))      DEALLOCATE(str%gusts)
+    IF (ALLOCATED(str%eye))        DEALLOCATE(str%eye)
+    IF (ALLOCATED(str%subregion))  DEALLOCATE(str%subregion)
+    IF (ALLOCATED(str%maxseas))    DEALLOCATE(str%maxseas)
+    IF (ALLOCATED(str%initials))   DEALLOCATE(str%initials)
+    IF (ALLOCATED(str%dir))        DEALLOCATE(str%dir)
+    IF (ALLOCATED(str%intSpeed))   DEALLOCATE(str%intSpeed)
+    IF (ALLOCATED(str%stormName))  DEALLOCATE(str%stormName)
+    IF (ALLOCATED(str%cycleNum))   DEALLOCATE(str%cycleNum)
+
+    !----- extra variable the value of which is an estimation of ROCI (radius of the last closed isobar)
+    IF (ALLOCATED(str%intEROuter)) DEALLOCATE(str%intEROuter)
+
+    !----- Converted parameters
+    IF (ALLOCATED(str%year))       DEALLOCATE(str%year)
+    IF (ALLOCATED(str%month))      DEALLOCATE(str%month)
+    IF (ALLOCATED(str%day))        DEALLOCATE(str%day)
+    IF (ALLOCATED(str%hour))       DEALLOCATE(str%hour)
+    IF (ALLOCATED(str%lat))        DEALLOCATE(str%lat)
+    IF (ALLOCATED(str%lon))        DEALLOCATE(str%lon)
 
   END SUBROUTINE DeAllocBTrStruct
 
@@ -3285,7 +3299,7 @@ MODULE ParWind
     IMPLICIT NONE
 
     TYPE(HollandData_T), INTENT(INOUT) :: str
-    INTEGER, INTENT(IN) :: nRec
+    INTEGER, INTENT(IN)                :: nRec
 
     str%numRec = nRec
     str%loaded = .FALSE.
@@ -3317,6 +3331,9 @@ MODULE ParWind
 
     IF (.NOT. ALLOCATED(str%iRrp))        ALLOCATE(str%iRrp(nRec))
     IF (.NOT. ALLOCATED(str%rrp))         ALLOCATE(str%rrp(nRec))
+
+    IF (.NOT. ALLOCATED(str%iERrp))       ALLOCATE(str%iERrp(nRec))
+    IF (.NOT. ALLOCATED(str%errp))        ALLOCATE(str%errp(nRec))
 
     IF (.NOT. ALLOCATED(str%iRmw))        ALLOCATE(str%iRmw(nRec))
     IF (.NOT. ALLOCATED(str%rmw))         ALLOCATE(str%rmw(nRec))
@@ -3380,6 +3397,9 @@ MODULE ParWind
 
     IF (ALLOCATED(str%iRrp))         DEALLOCATE(str%iRrp)
     IF (ALLOCATED(str%rrp))          DEALLOCATE(str%rrp)
+
+    IF (ALLOCATED(str%iERrp))        DEALLOCATE(str%iERrp)
+    IF (ALLOCATED(str%errp))         DEALLOCATE(str%errp)
 
     IF (ALLOCATED(str%iRmw))         DEALLOCATE(str%iRmw)
     IF (ALLOCATED(str%rmw))          DEALLOCATE(str%rmw)
@@ -3457,6 +3477,9 @@ MODULE ParWind
     IF (.NOT. ALLOCATED(str%prp))                ALLOCATE(str%prp(nRec))
     IF (.NOT. ALLOCATED(str%iRrp))               ALLOCATE(str%iRrp(nRec))
     IF (.NOT. ALLOCATED(str%rrp))                ALLOCATE(str%rrp(nRec))
+
+    IF (.NOT. ALLOCATED(str%iERrp))              ALLOCATE(str%iERrp(nRec))
+    IF (.NOT. ALLOCATED(str%errp))               ALLOCATE(str%errp(nRec))
 
     IF (.NOT. ALLOCATED(str%iRmw))               ALLOCATE(str%iRmw(nRec))
     IF (.NOT. ALLOCATED(str%rmw))                ALLOCATE(str%rmw(nRec))
@@ -3550,6 +3573,9 @@ MODULE ParWind
     IF (ALLOCATED(str%prp))                DEALLOCATE(str%prp)
     IF (ALLOCATED(str%iRrp))               DEALLOCATE(str%iRrp)
     IF (ALLOCATED(str%rrp))                DEALLOCATE(str%rrp)
+
+    IF (ALLOCATED(str%iERrp))              DEALLOCATE(str%iERrp)
+    IF (ALLOCATED(str%errp))               DEALLOCATE(str%errp)
 
     IF (ALLOCATED(str%iRmw))               DEALLOCATE(str%iRmw)
     IF (ALLOCATED(str%rmw))                DEALLOCATE(str%rmw)
