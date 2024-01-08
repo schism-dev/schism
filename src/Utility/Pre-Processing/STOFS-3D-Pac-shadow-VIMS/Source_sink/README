@@ -1,0 +1,22 @@
+1. Clima/Dai_Trenberth/ 
+       gen_clima.py generate hourly data 
+
+
+2. NWM/
+   a. subset_hgrid.py: generate subgrid for conus, hawaii, alaska to avoid shapely.errors.topologicalerror caused by hull from [-180, 180)
+       outputs: local_to_global_{conus, alaska, hawaii}.json - map subgrid elment id to global element id
+                hgrid_sub_convert_lon_{conus, alaska, hawaii}.gr3 - [-180, 180)
+
+   b. gen_sourcesink_json.py: generate sources_{conus, alaska, hawaii}.json and sinks_{conus, alaska, hawaii}.json
+   
+   c. map_local_to_global.py: map sub_grid element id to global element id, and remove elements near willamette/columbia river
+      outputs: sources_{conus, alaska, hawaii}_global.json
+               sinks_{conus, alaska, hawaii}_global.json
+               (may need to manually delete null values)
+
+   d. Combined/
+      gen_sourcesink.py: combine Dai&Trenberth data, and NWM, then write source/sink files
+         inputs: sources_{conus, alaska, hawaii}_global.json
+                 sinks_{conus, alaska, hawaii}_global.json
+                 cached/nwm_*_{conus, alaska, hawaii}.nc
+

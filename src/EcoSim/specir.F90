@@ -94,7 +94,7 @@
 !
       
       integer :: i, iband, ic, j, nc
-      integer :: iday !, month, year
+      integer :: iday 
 
       real(r8) :: Dangle, Hangle, LatRad, LonRad
       real(r8) :: cff, cff1, cff2  !, hour, yday

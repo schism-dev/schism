@@ -1,3 +1,6 @@
+#ifdef CCSMCOUPLED
+#define CESMCOUPLED
+#endif
 !=======================================================================
 
 ! Defines variable precision for all common data types
@@ -24,7 +27,7 @@
                             int8_kind = selected_int_kind(13), &
 #endif
                             real_kind = selected_real_kind(6), &
-                            dbl_kind  = selected_real_kind(8), &
+                            dbl_kind  = selected_real_kind(13), &
 #if defined (NO_R16)
                             r16_kind  = selected_real_kind(13)
 #else

@@ -68,6 +68,7 @@ for ifile=1:nfiles
   
   subplot(nrows,num_columns,ifile); hold on;
   %Plot with grid on
+  %To plot .prop, use 'CData'
   %patch('Faces',nm(:,1:4),'Vertices',[x y],'FaceVertexCData',bathy,'FaceColor','interp'); 
   patch('Faces',nm(:,1:4),'Vertices',[x y],'FaceVertexCData',bathy,'FaceColor','interp','EdgeColor','none');
   colormap(jet);

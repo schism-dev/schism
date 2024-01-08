@@ -82,8 +82,8 @@ include ../mk/include_modules
 
 # Don't comment out the follow ifdef
 ifdef USE_GOTM
-   GTMMOD =  -I/home/yinglong/GOTM/gotm-3.2.5/TSUNAMI/modules/IFORT/ #modules
-   GTMLIBS = -L/home/yinglong/GOTM/gotm-3.2.5/TSUNAMI/lib/IFORT/ -lturbulence_prod  -lutil_prod
+   GTMMOD =  -I/home/yinglong/GOTM/gotm5.2/TSUNAMI/modules/IFORT/ #modules
+   GTMLIBS = -L/home/yinglong/GOTM/gotm5.2/TSUNAMI/lib/IFORT/ -lturbulence_prod  -lutil_prod
 else
    GTMMOD =
    GTMLIBS =

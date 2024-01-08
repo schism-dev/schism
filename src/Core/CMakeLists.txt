@@ -14,10 +14,13 @@ set_source_files_properties(${versionfile} PROPERTIES GENERATED TRUE)
 # resolved in later versions of gcc
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "10.0.0" )
-	 add_compile_options(-fallow-argument-mismatch)
+
+   add_compile_options("$<$<COMPILE_LANGUAGE:Fortran>:-fallow-argument-mismatch>")
+	 #add_compile_options(-fallow-argument-mismatch)
   endif()
-   add_compile_options(-ffree-line-length-none)
-endif()
+  #add_compile_options(-ffree-line-length-none)
+  add_compile_options("$<$<COMPILE_LANGUAGE:Fortran>:-ffree-line-length-none>")
+  endif()
 
 
 set(core_extra_src "")
@@ -37,7 +40,6 @@ add_library(core ${local_extra_code}
                  scribe_io.F90
 		 misc_modules.F90
                  hydraulic_structures.F90
-                 gen_modules_clock.F90
                  ${core_extra_src}
                  ${versionfile}
            )

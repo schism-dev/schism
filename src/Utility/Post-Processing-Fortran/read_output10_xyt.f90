@@ -24,14 +24,15 @@
 !               (2) station.xyt (bp format): make sure all times (in sec) are after 1st record (to ensure interpolation in time); 
 !                                pad extra days before and after if necessary.
 !               (3) read_output_xyt.in: 
-!                   1st line: variable name (e.g. elev)\n 
-!                   2nd line: invalid value (for out of domain, dry etc)\n 
-!                   3rd line: window (hours) b4 and after the cast, stride (hrs) - used to 
+!                   1st line: variable name (e.g. elevation; if vector, input X component)\n 
+!                   2nd line: scalar (1) or vector (2) \n
+!                   3rd line: invalid value (for out of domain, dry etc)\n 
+!                   4th line: window (hours) b4 and after the cast, stride (hrs) - used to 
 !                             examine the phase error. If window=0, each cast is repeated twice 
 !                             there are no other extra casts. \n
-!                   4th line: inode_elem (1: node based; 2: elem based)
+!                   5th line: inode_elem (1: node based; 2: elem based)
 !                (4) vgrid.in (in this dir or ../)
-!       Outputs: fort.18; fort.11 (fatal errors); fort.12: nonfatal errors.
+!       Outputs: fort.1[89]; fort.11 (fatal errors); fort.12: nonfatal errors.
 !                The total # of 'virtual' casts for each actual cast is 2*window/stride+2
 !									
 ! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyt.exe ../UtilLib/extract_mod2.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
@@ -43,25 +44,26 @@
       use compute_zcor
       use pt_in_poly_test
 
-      character(len=30) :: file63,varname,file62
+      character(len=30) :: file63,varname,varname2,file62,file64
       character(len=12) :: it_char
-      logical :: lexist
+      logical :: lexist,lexist2
       integer,allocatable :: kbp(:),kbp00(:),node3(:,:),iep(:),iday(:,:),irecord(:,:),irank_read(:), &
      &i34(:),elnode(:,:)
-      real,allocatable :: sigma(:),cs(:),ztot(:),out2(:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
-    &out4(:),t00(:),times(:,:),sigma_lcl(:,:),ztmp2(:,:),outvar(:,:),dp(:)
+      real,allocatable :: sigma(:),cs(:),ztot(:),out2(:,:,:),eta2(:),arco(:,:),ztmp(:),x00(:),y00(:), &
+    &out4(:,:),t00(:),times(:,:),sigma_lcl(:,:),ztmp2(:,:),outvar(:,:,:),dp(:)
       real*8,allocatable :: timeout(:),xnd(:),ynd(:)
       integer :: nodel(3),dimids(100),idims(100),char_len,start_2d(2),start_3d(3),start_4d(4), &
      &count_2d(2),count_3d(3),count_4d(4)
       
       open(10,file='read_output_xyt.in',status='old')
       read(10,'(a30)')varname
+      read(10,*)ivs !scalar/vector
 !     Junk used for 3D variables: below bottom; dry spot; no parents
       read(10,*)rjunk
       read(10,*)window,wstride !in hours
       read(10,*)inode_elem
       close(10)
-      if(icomb/=0.and.icomb/=1) stop 'Unknown icomb'
+      if(ivs/=1.and.ivs/=2) stop 'check ivs'
       varname=adjustl(varname); len_var=len_trim(varname)
 
       if(wstride==0) stop 'wstride=0'
@@ -113,12 +115,12 @@
 
 !     Read in vgrid.in
       last_dim=max(np,ne,ns)
-      allocate(timeout(nrec),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp00(np),outvar(nvrt,last_dim), &
+      allocate(timeout(nrec),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp00(np),outvar(nvrt,last_dim,ivs), &
     &node3(nxy,3),arco(nxy,3),iep(nxy))
       outvar=-huge(1.0)
       call get_vgrid_single('vgrid.in',np,nvrt,ivcor,kz,h_s,h_c,theta_b,theta_f,ztot,sigma,sigma_lcl,kbp)
 
-      allocate(ztmp(nvrt),ztmp2(nvrt,3),out2(2,nvrt),out4(nvrt),iday(2,nxy), &
+      allocate(ztmp(nvrt),ztmp2(nvrt,3),out2(2,nvrt,ivs),out4(nvrt,ivs),iday(2,nxy), &
     &irecord(2,nxy),times(2,nxy),stat=istat)
       if(istat/=0) stop 'Falied to allocate (2)'
 
@@ -226,12 +228,23 @@
      
           !Find nc file
           file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
+          if(ivs==2) varname2=varname(1:len_var-1)//'Y'
           inquire(file=file63,exist=lexist)
-          if(lexist) then
-            i23d=2 !3D var
+          if(lexist) then !3D var
+            i23d=2 
+            if(ivs==2) then
+              file64=varname2(1:len_var)//'_'//it_char(1:leng)//'.nc'
+              inquire(file=file64,exist=lexist2)
+              if(.not.lexist2) then
+                print*, 'Missing y-component:',file64
+                print*, file63
+                stop
+              endif
+            endif !ivs
           else
             i23d=1 !2D
             file63=file62
+            file64=file62
           endif
 
           iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
@@ -247,6 +260,12 @@
 !'
           if(idims(ndims)/=nrec) stop 'last dim is not time'
 
+          if(ivs==2) then !vector
+            iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+            iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
+            if(iret/=nf90_NoErr) stop 'Var2 not found'
+          endif !ivs
+
           irec=irecord(l,i)
           !Get elev
           iret=nf90_inq_varid(ncid4,'elevation',itmp)
@@ -257,23 +276,25 @@
           if(i23d==1) then !2D
             start_2d(1)=1; start_2d(2)=irec
             count_2d(1)=npes; count_2d(2)=1
-            iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes),start_2d,count_2d)
+            iret=nf90_get_var(ncid,ivarid1,outvar(1,1:npes,1),start_2d,count_2d)
+            if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(1,1:npes,2),start_2d,count_2d)
           else !3D
             start_3d(1:2)=1; start_3d(3)=irec
             count_3d(1)=nvrt; count_3d(2)=npes; count_3d(3)=1
-            iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes),start_3d,count_3d)
+            iret=nf90_get_var(ncid,ivarid1,outvar(:,1:npes,1),start_3d,count_3d)
+            if(ivs==2) iret=nf90_get_var(ncid2,ivarid2,outvar(:,1:npes,2),start_3d,count_3d)
           endif 
 
-          !Available now: outvar(nvrt,np|ne), eta2(np)
+          !Available now: outvar(nvrt,np|ne,ivs), eta2(np)
 
-          out2(l,:)=0
+          out2(l,:,:)=0
           if(i23d==1) then !2D
             do j=1,3 !nodes
               nd=node3(i,j)
                 if(inode_elem==1) then !node
-                  out2(l,1)=out2(l,1)+arco(i,j)*outvar(1,nd)
+                  out2(l,1,:)=out2(l,1,:)+arco(i,j)*outvar(1,nd,:)
                 else !elem
-                  out2(l,1)=outvar(1,iep(i))
+                  out2(l,1,:)=outvar(1,iep(i),:)
                 endif
             enddo !j
           else !3D
@@ -288,7 +309,7 @@
 !              write(11,*)i,j,nd,dp(nd),arco(i,j)
             enddo !j
             if(idry==1) then
-              out2(:,:)=rjunk
+              out2=rjunk
               exit loop1
             else !element wet
               !Compute z-coordinates
@@ -317,44 +338,50 @@
               endif
        
               do k=kbpl,nvrt
-                  do j=1,3
-                    nd=node3(i,j)
-                    kin=max(k,kbp00(nd))
-                    if(inode_elem==1) then !node
-                      out2(l,k)=out2(l,k)+arco(i,j)*outvar(kin,nd)
-                    else !elem; off by half a layer
-                      out2(l,k)=outvar(k,iep(i))
-                    endif !i23d
-                  enddo !j
+                do j=1,3
+                  nd=node3(i,j)
+                  kin=max(k,kbp00(nd))
+                  if(inode_elem==1) then !node
+                    out2(l,k,:)=out2(l,k,:)+arco(i,j)*outvar(kin,nd,:)
+                  else !elem; off by half a layer
+                    out2(l,k,:)=outvar(k,iep(i),:)
+                  endif !i23d
+                enddo !j
               enddo !k
             endif !dry/wet
           endif !i23d
+
+          iret=nf90_close(ncid)
+          iret=nf90_close(ncid4)
+          if(ivs==2) iret=nf90_close(ncid2)
+
         enddo loop1 !l=1,2; 2 times
 
 !       Interpolate in time
         trat=(t00(i)-times(1,i))/(times(2,i)-times(1,i)) !must be [0,1]
         if(i23d==1) then !2D
           if(iep(i)==0) then !no parents
-            out4(1)=rjunk
+            out4(1,:)=rjunk
           else
-            out4(1)=out2(1,1)*(1-trat)+out2(2,1)*trat
+            out4(1,:)=out2(1,1,:)*(1-trat)+out2(2,1,:)*trat
           endif
-          write(18,'(e16.8,2(1x,f12.3))')t00(i)/86400,out4(1)
+          write(18,'(e16.8,4(1x,f12.3))')t00(i)/86400,out4(1,:)
         else !3D
           if(iep(i)==0) then !no parents
-            out4(:)=rjunk
+            out4=rjunk
           else
-            out4(kbpl:nvrt)=out2(1,kbpl:nvrt)*(1-trat)+out2(2,kbpl:nvrt)*trat
+            out4(kbpl:nvrt,:)=out2(1,kbpl:nvrt,:)*(1-trat)+out2(2,kbpl:nvrt,:)*trat
             !Extend
             do k=1,kbpl-1
-              out4(k)=out4(kbpl)
+              out4(k,:)=out4(kbpl,:)
               ztmp(k)=ztmp(kbpl)
             enddo !k
           endif
 
           do k=nvrt,1,-1
             !First of each cast suite is at the actual cast time (followed by b4 and after)
-            write(18,'(i6,4(1x,f12.3))')i,out4(k),ztmp(k)-ztmp(nvrt),ztmp(k),t00(i)/86400
+            write(18,'(i6,4(1x,f12.3))')i,out4(k,1),ztmp(k)-ztmp(nvrt),ztmp(k),t00(i)/86400
+            if(ivs==2) write(19,'(i6,4(1x,f12.3))')i,out4(k,2),ztmp(k)-ztmp(nvrt),ztmp(k),t00(i)/86400
           enddo !k
         endif
       enddo !i=1,nxy

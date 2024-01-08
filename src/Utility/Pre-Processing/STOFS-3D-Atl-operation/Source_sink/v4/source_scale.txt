@@ -1,0 +1,2 @@
+1  #total_number_of_scaled_sources. Starting from Row 2, Col 1: number (not used); Col 2: source_ele_idx (idx_starting_from_1), Col 3: scale
+1,       482,      0.7

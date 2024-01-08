@@ -1,0 +1,27 @@
+*gen_sourcesink.py*
+This script is used to generate source/sink th files for hindcast.
+This script depends on pyschism
+
+If you have pre-downloaded NWM products,
+you can create a sub-folder and link the necessary data to avoid downloading,
+then change the cache folder in gen_sourcesink.py, e.g.:
+cache = pathlib.Path('./NWM_v2.1') 
+
+Year 201712010000-201901312300 is pre-downloaded on SciClone at
+/sciclone/schism10/whuang07/schism20/NWM_v2.1/
+Year 1990-1999
+/sciclone/schism10/lcui01/schism20/ICOGS/MainBayModel/RUN01a/NWM/NWM_v2.1/
+
+##There are three datasets:
+- AWS 
+  - Feb 1979 - Dec 2020
+  - hourly
+- Google cloud (from Jan 2021 through today)
+  - 20210101 - today
+  - data before April 20, 2021 (including Apirl 20) is 3-hr interval, after that is hourly
+  - has missing files
+- VIMS 
+  - needs pre-download
+  - use *link.py* to link files to the cache/
+
+

@@ -36,7 +36,7 @@ subroutine read_icm_param(imode)
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,ibflux,iSilica,&
            & iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,KeC,KeS,KeSalt,alpha, &
-           & Ke0,tss2c,PRR,wqc0,WSP,WSPn
+           & Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
@@ -72,7 +72,7 @@ subroutine read_icm_param(imode)
     !initilize global switches
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; iCBP=0; isav_icm=0; iveg_icm=0; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
-    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0
+    alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0; iout_icm=0; nspool_icm=0
     jdry=>idry_icm; jsav=>isav_icm; jveg=>iveg_icm; ised_icm=>iSed; iBA_icm=>iBA
 
     !read global switches
@@ -157,12 +157,12 @@ subroutine read_icm_param(imode)
 
     !allocate debug arrays
     nout_d2d=sum(n2d(1:9)); nout_d3d=sum(n3d(1:9))
-    if(iof_icm_dbg(0)/=0) then
+    if(iof_icm_dbg(1)/=0) then
       allocate(wqc_d2d(nout_d2d,nea),stat=istat)
       if(istat/=0) call parallel_abort('failed in alloc. wqc_d2d')
       wqc_d2d=-99
     endif 
-    if(iof_icm_dbg(1)/=0) then
+    if(iof_icm_dbg(2)/=0) then
       allocate(wqc_d3d(nout_d3d,nvrt,nea),stat=istat)
       if(istat/=0) call parallel_abort('failed in alloc. wqc_d3d')
       wqc_d3d=-99
@@ -173,7 +173,7 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !init. CORE module
     GPM=0; TGP=0; KTGP=0; MTR=0; MTB=0; TMT=0; KTMT=0; FCP=0; FNP=0; FPP=0; FCM=0; 
-    FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0; KhDOn=0; KhNH4n=0; KhDOox=0; KhNO3dn=0; 
+    FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0; KhDOn=0; KhNH4n=1e10; KhDOox=0; KhNO3dn=0; 
     KC0=0; KN0=0; KP0=0; KCalg=0; KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
     KhCOD=0; KhN=0; KhP=0; KhSal=0; c2chl=0; n2c=0; p2c=0; o2c=0;
     o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0; PBmin=0; dz_flux=0
@@ -232,6 +232,7 @@ subroutine read_icm_param(imode)
            & vdwqc(ntrs_icm,nvrt),gdwqc(ntrs_icm,nvrt),rad_in(nea,2),sflux_in(nea,ntrs_icm,2), &
            & bflux_in(nea,ntrs_icm,2),elem_in(nea,3),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. dwqc') 
+    rad_in=0.0; sflux_in=0.0; bflux_in=0.0
     !------------------------------------------------------------------------------------
     !pre-processing
     !------------------------------------------------------------------------------------
@@ -311,6 +312,9 @@ subroutine read_icm_param(imode)
       time_ph=-999.0;  irec_ph=1
     endif
 
+    !station output
+    if(iout_icm/=0) call icm_output_proc(0,0)
+
     if(myrank==0) write(16,*) 'done ICM initialization'
   endif
 
@@ -330,65 +334,72 @@ subroutine update_icm_input(time)
   use netcdf
   use icm_mod
   implicit none
+  include 'mpif.h'
   real(rkind),intent(in) :: time
 
   !local variables
   integer :: i,j,k,n,m,ie,itmp,irec,istat,varid,jof(3),ntr(3)
-  integer :: ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
-  integer,pointer :: ncid,npt,elem(:)
-  real(rkind):: mtime(2),ath(max(np_global,ne_global))
-  real(rkind),pointer :: mdt,bth(:,:)
+  integer :: npt,ndim,dimid(3),dims(3),elem_gb(max(np_global,ne_global))
+  integer,pointer :: ncid,elem(:)
+  real(rkind):: mdt,mtime(2),ath(max(np_global,ne_global))
+  real(rkind),pointer ::bth(:,:)
   character(len=20) :: fnames(3)
 
   fnames=(/'ICM_rad.th.nc  ','ICM_sflux.th.nc','ICM_bflux.th.nc'/)
   jof=(/iRad,isflux,ibflux/); ntr=(/1,ntrs_icm,ntrs_icm/)
   do n=1,3
     if(jof(n)==0) cycle
-    ncid=>ncid_icm(n); npt=>npt_icm(n); mtime=time_icm(:,n); mdt=>dt_icm(n); elem=>elem_in(:,n)
+    ncid=>ncid_icm(n); npt=npt_icm(n); mtime=time_icm(:,n); mdt=dt_icm(n); elem=>elem_in(:,n)
 
-    !open file
-    if(myrank==0.and.mtime(2)<0.d0) then 
-      j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
-      if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
-
-      !determine npt
-      j=nf90_inq_varid(ncid,"time_series",varid)
-      if(j/=NF90_NOERR) call parallel_abort('wrong varid in ICM: '//trim(adjustl(fnames(n))))
-      j=nf90_inquire_variable(ncid,varid,ndims=ndim)
-      if(j/=NF90_NOERR) call parallel_abort('wrong ndim in ICM: '//trim(adjustl(fnames(n))))
-      if((n==1.and.ndim/=1.and.ndim/=2).or.(n/=1.and.ndim/=3)) call parallel_abort('wrong ndim (2):'//trim(adjustl(fnames(n))))
-      j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
-      if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM: '//trim(adjustl(fnames(n))))
-      j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
-      if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM: '//trim(adjustl(fnames(n))))
-      if(n==1.and.ndim==1) npt=1  !in case ICM_rad is just 1D variable
-      if(npt<1.or.npt>max(np_global,ne_global)) call parallel_abort(trim(adjustl(fnames(n)))//': npt<1 or npt>max(np,ne)')
-      if(n==2.or.n==3) then !check ntracer
-        j=nf90_inquire_dimension(ncid,dimid(2),len=itmp)
-        if(itmp/=ntr(n)) call parallel_abort('wrong ntr in ICM: '//trim(adjustl(fnames(n))))
-      endif
-      if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !specify elements with inputs
-        j=nf90_inq_varid(ncid,"elements",varid)
-        j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:1))
-        if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM (2): '//trim(adjustl(fnames(n))))
-        j=nf90_inquire_dimension(ncid,dimid(1),len=itmp)
-        if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM (2): '//trim(adjustl(fnames(n))))
-        if(itmp/=npt) call parallel_abort('elements/=npt in ICM: '//trim(adjustl(fnames(n))))
-        j=nf90_get_var(ncid,varid,elem_gb(1:npt), (/1/),(/npt/))
-      endif
-      j=nf90_inq_varid(ncid, "time_step",varid); j=nf90_get_var(ncid,varid,mdt) 
-      if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
-    endif !myrank=0
     if(mtime(2)<0.d0) then
+      if(myrank==0) then !read information about input file on myrank=0
+        j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
+
+        !determine npt
+        j=nf90_inq_varid(ncid,"time_series",varid)
+        if(j/=NF90_NOERR) call parallel_abort('wrong varid in ICM: '//trim(adjustl(fnames(n))))
+        j=nf90_inquire_variable(ncid,varid,ndims=ndim)
+        if(j/=NF90_NOERR) call parallel_abort('wrong ndim in ICM: '//trim(adjustl(fnames(n))))
+        if((n==1.and.ndim/=1.and.ndim/=2).or.(n/=1.and.ndim/=3)) call parallel_abort('wrong ndim (2):'//trim(adjustl(fnames(n))))
+        j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:ndim))
+        if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM: '//trim(adjustl(fnames(n))))
+        j=nf90_inquire_dimension(ncid,dimid(1),len=npt)
+        if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM: '//trim(adjustl(fnames(n))))
+        if(n==1.and.ndim==1) npt=1  !in case ICM_rad is just 1D variable
+        if(npt<1.or.npt>max(np_global,ne_global)) call parallel_abort(trim(adjustl(fnames(n)))//': npt<1 or npt>max(np,ne)')
+        if(n==2.or.n==3) then !check ntracer
+          j=nf90_inquire_dimension(ncid,dimid(2),len=itmp)
+          if(itmp/=ntr(n)) call parallel_abort('wrong ntr in ICM: '//trim(adjustl(fnames(n))))
+        endif
+        if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !specify elements with inputs
+          j=nf90_inq_varid(ncid,"elements",varid)
+          j=nf90_inquire_variable(ncid,varid,dimids=dimid(1:1))
+          if(j/=NF90_NOERR) call parallel_abort('wrong dimid in ICM (2): '//trim(adjustl(fnames(n))))
+          j=nf90_inquire_dimension(ncid,dimid(1),len=itmp)
+          if(j/=NF90_NOERR) call parallel_abort('wrong npt in ICM (2): '//trim(adjustl(fnames(n))))
+          if(itmp/=npt) call parallel_abort('elements/=npt in ICM: '//trim(adjustl(fnames(n))))
+          j=nf90_get_var(ncid,varid,elem_gb(1:npt), (/1/),(/npt/))
+        endif
+        j=nf90_inq_varid(ncid, "time_step",varid); j=nf90_get_var(ncid,varid,mdt)
+        if(mdt<dt.or.mdt<0.d0) call parallel_abort(trim(adjustl(fnames(n)))//': wrong dt')
+      endif !myrank=0
+
+      !bcast info. about input files
       call mpi_bcast(npt,1,itype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: npt (1)')
+      call mpi_bcast(mdt,1,rtype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: mdt (1)')
+      call mpi_bcast(elem_gb,max(np_global,ne_global),itype,0,comm,istat)
+      if(istat/=MPI_SUCCESS) call parallel_abort('failed to bcast: elem_gb (1)')
+
+      npt_icm(n)=npt; dt_icm(n)=mdt; elem=0
       if(npt/=1.and.npt/=np_global.and.npt/=ne_global) then !mapping elements
-        call mpi_bcast(elem_gb(1:npt),npt,itype,0,comm,istat)
-        elem=0
         do ie=1,npt
           if(iegl(elem_gb(ie))%rank==myrank) elem(iegl(elem_gb(ie))%id)=ie
         enddo !ie
       endif !npt/=1
-    endif !mtime
+    endif !if(mtime(2)<0.d0)
     
     !update record
     if(mtime(2)<time) then
@@ -404,8 +415,8 @@ subroutine update_icm_input(time)
         bth(:,1)=bth(:,2); bth(:,2)=0.0
 
         !read new record
+        irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt; time_icm(:,n)=mtime
         if(myrank==0) then
-          irec=int(time/mdt); mtime(1)=dble(irec)*mdt; mtime(2)=mtime(1)+mdt
           j=nf90_inq_varid(ncid, "time_series",varid)
           j=nf90_inquire_variable(ncid,varid,ndims=ndim)
           if(n==1) then
@@ -418,7 +429,7 @@ subroutine update_icm_input(time)
         endif
 
         !bcast record
-        call mpi_bcast(ath(1:npt),npt,rtype,0,comm,istat)
+        call mpi_bcast(ath,max(np_global,ne_global),rtype,0,comm,istat)
      
         !interp record
         do ie=1,nea
@@ -433,8 +444,7 @@ subroutine update_icm_input(time)
           endif !npt
         enddo !ie
       enddo !m 
-      call mpi_bcast(mtime,2,rtype,0,comm,istat); time_icm(:,n)=mtime
-    endif !mtime
+    endif !if(mtime(2)<time)
   enddo !n
 
 end subroutine update_icm_input
@@ -485,6 +495,7 @@ subroutine icm_vars_init
   use icm_mod
   use misc_modules
   implicit none
+  include 'mpif.h'
 
   !local variables
   integer :: istat,i,j,k,ie,m,n,ip,ncid,varid,npt,nsp,ndim,dimid(3),dims(3)
@@ -672,7 +683,7 @@ subroutine icm_vars_init
     elseif(associated(p%p1)) then 
       p%ndim=2; p%data0(1:size(p%p1))=p%p1; p%dims(1)=size(p%p1)
     elseif(associated(p%p2)) then 
-      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/n/)); p%dims=shape(p%p2)
+      p%ndim=3; p%data0(1:size(p%p2))=reshape(p%p2,(/size(p%p2)/)); p%dims=shape(p%p2)
     else
       cycle
     endif
@@ -708,7 +719,7 @@ subroutine icm_vars_init
           j=nf90_close(ncid)
         endif
         call mpi_bcast(npt,1,itype,0,comm,istat)
-        call mpi_bcast(swild(1:npt),npt,rtype,0,comm,istat)
+        call mpi_bcast(swild,max(np_global,ne_global),rtype,0,comm,istat)
 
         !get parameter value for each rank
         do ie=1,nea
@@ -847,8 +858,158 @@ subroutine update_vars(id,usf,wspd)
 
 end subroutine update_vars
 
+subroutine icm_output(varname,vdata,vdim,ista)
+!--------------------------------------------------------------------
+!ICM diagnostic outputs
+!--------------------------------------------------------------------
+  use schism_glbl, only : rkind
+  use schism_msgp, only : myrank,parallel_abort
+  use icm_mod, only : dg
+  implicit none
+  integer,intent(in) :: vdim,ista
+  character(*),intent(in) :: varname
+  real(rkind),intent(in) :: vdata(vdim)
+
+  !local variables
+  integer :: i,ivar,istat,lvar
+
+  !locate variable index
+  ivar=0; lvar=len(trim(adjustl(varname)))
+  do i=1,dg%nvar
+    if(trim(adjustl(dg%vars(i)%varname))==trim(adjustl(varname))) ivar=i
+  enddo
+  if(ivar==0) then !add new variables
+    dg%nvar=dg%nvar+1; ivar=dg%nvar; dg%vars(ivar)%vlen=vdim
+    dg%vars(ivar)%varname(1:lvar)=trim(adjustl(varname))
+    allocate(dg%vars(ivar)%data(dg%nsta,vdim),stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. dg%vars(ivar)%data')
+    dg%vars(ivar)%data=0 !init
+  endif
+
+  !save data
+  dg%vars(ivar)%data(ista,:)=vdata
+end subroutine icm_output
+
+subroutine icm_output_proc(imode,it)
+!--------------------------------------------------------------------
+!ICM diagnostic outputs processing
+!imode=0: read station info
+!imode=1: open file for station output
+!imode=2: write station output
+!--------------------------------------------------------------------
+  use schism_glbl, only : out_dir,len_out_dir,in_dir,len_in_dir,rkind,ne, &
+                        & i34,xnd,ynd,xlon,ylat,elnode,ihot,dt,rnday,ics,pi
+  use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
+  use icm_mod, only : dg,nspool_icm
+  use icm_misc, only : pt_in_poly
+  use netcdf
+  implicit none
+  include 'mpif.h'
+  integer,intent(in) :: imode,it
+
+  !local variables
+  integer :: i,j,k,n,m,nsta,istat,inside,nodel(3),ierr,ndim,dims(30), &
+           & var_dim(30),idm(200),id_sta,id_x,id_y,id_z,time_dim,nsta_dim
+  integer,allocatable :: idims(:)
+  real(rkind),parameter :: deg2rad=pi/180.d0
+  real(rkind) :: x(4),y(4),arco(3)
+  real(rkind),allocatable :: xyz(:,:)
+  character(len=200) :: fname
+  character(len=6) :: stmp
+  logical :: lexist
+
+  if(imode==0) then !read station information
+    if(myrank==0) then
+      open(31,file=in_dir(1:len_in_dir)//'istation.in',status='old')
+      read(31,*); read(31,*)nsta
+      allocate(xyz(nsta,3),dg%ista(nsta),dg%iep(nsta),dg%x(nsta),dg%y(nsta),dg%z(nsta),stat=istat)
+      if(istat/=0) call parallel_abort('failed to alloc. xyz')
+      do i=1,nsta; read(31,*)j,(xyz(i,k),k=1,3); enddo
+      close(31)
+    endif !myrank=0
+    call mpi_bcast(nsta,1,itype,0,comm,ierr)
+    if(.not.allocated(xyz)) allocate(xyz(nsta,3),dg%ista(nsta),dg%iep(nsta),dg%x(nsta),dg%y(nsta),dg%z(nsta),stat=istat)
+    call mpi_bcast(xyz,nsta*3,rtype,0,comm,ierr)
+
+    !find parent elements inside each subdomain
+    do n=1,nsta
+      do i=1,ne
+        if(ics==1) then
+          x(1:i34(i))=xnd(elnode(1:i34(i),i)); y(1:i34(i))=ynd(elnode(1:i34(i),i))
+        else
+          x(1:i34(i))=xlon(elnode(1:i34(i),i))/deg2rad; y(1:i34(i))=ylat(elnode(1:i34(i),i))/deg2rad
+        endif
+        call pt_in_poly(i34(i),x(1:i34(i)),y(1:i34(i)),xyz(n,1),xyz(n,2),inside,arco,nodel)
+        if(inside==1) then
+          dg%nsta=dg%nsta+1; dg%ista(dg%nsta)=n; dg%iep(dg%nsta)=i
+          dg%x(dg%nsta)=xyz(n,1); dg%y(dg%nsta)=xyz(n,2); dg%z(dg%nsta)=xyz(n,3)
+          exit
+        endif
+      enddo
+    enddo
+    deallocate(xyz)
+  elseif(imode==1) then
+    !gather information about variables dimensions
+    dg%istat=2; ndim=0; idm=0
+    do m=1,dg%nvar
+      do i=1,ndim !get dimension index
+        if(dg%vars(m)%vlen==dims(i)) idm(m)=i
+      enddo 
+      if(idm(m)==0) then !new dimension
+        ndim=ndim+1; dims(ndim)=dg%vars(m)%vlen; idm(m)=ndim
+      endif
+    enddo!m
+
+    !open station output file, and def dimensions
+    write(stmp,'(i6.6)') myrank
+    fname=trim(adjustl(out_dir(1:len_out_dir)))//'icm_'//stmp//'.nc'
+    inquire(file=trim(adjustl(fname)),exist=lexist)
+    if(ihot==2.and.lexist) then
+      j=nf90_open(trim(adjustl(fname)),NF90_WRITE,dg%ncid)
+      j=nf90_inq_varid(dg%ncid,'time',dg%id_time); dg%it=nint(dg%time/(dt*nspool_icm))
+      do m=1,dg%nvar
+        j=nf90_inq_varid(dg%ncid,trim(adjustl(dg%vars(m)%varname)),dg%vars(m)%varid)
+      enddo!m
+    else
+      j=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),dg%ncid)
+      j=nf90_def_dim(dg%ncid,'time',NF90_UNLIMITED,time_dim)
+      j=nf90_def_dim(dg%ncid,'nstation',dg%nsta,nsta_dim)
+      do i=1,ndim
+        write(stmp(1:2),'(i2.2)')dims(i)
+        j=nf90_def_dim(dg%ncid,'dim_'//stmp(1:2),dims(i),var_dim(i))
+      enddo
+
+      !define variables
+      j=nf90_def_var(dg%ncid,'istation',nf90_int,(/nsta_dim/),id_sta)
+      j=nf90_def_var(dg%ncid,'x',nf90_double,(/nsta_dim/),id_x)
+      j=nf90_def_var(dg%ncid,'y',nf90_double,(/nsta_dim/),id_y)
+      j=nf90_def_var(dg%ncid,'z',nf90_double,(/nsta_dim/),id_z)
+      j=nf90_def_var(dg%ncid,'time',nf90_double,(/time_dim/),dg%id_time)
+      do m=1,dg%nvar
+        j=nf90_def_var(dg%ncid,trim(adjustl(dg%vars(m)%varname)),nf90_double, &
+          & (/time_dim,nsta_dim,var_dim(idm(m))/),dg%vars(m)%varid)
+      enddo!m
+      j=nf90_enddef(dg%ncid)
+
+      !put values for station,and xyz
+      j=nf90_put_var(dg%ncid,id_sta,dg%ista,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_x,dg%x,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_y,dg%y,start=(/1/),count=(/dg%nsta/))
+      j=nf90_put_var(dg%ncid,id_z,dg%z,start=(/1/),count=(/dg%nsta/))
+    endif
+  elseif(imode==2) then !output data
+    j=nf90_put_var(dg%ncid,dg%id_time,(/dg%time/),start=(/dg%it/),count=(/1/))
+    do m=1,dg%nvar
+      j=nf90_put_var(dg%ncid,dg%vars(m)%varid,dg%vars(m)%data,start=(/dg%it,1,1/),count=(/1,dg%nsta,dg%vars(m)%vlen/))
+    enddo
+    if(mod(it*dt,86400.d0)<dt) j=nf90_sync(dg%ncid)  !flush data every day
+    if(it==int(rnday*86400.d0/dt+0.5d0)) j=nf90_close(dg%ncid) !close file
+  endif !imode
+
+end subroutine icm_output_proc
+
 subroutine check_icm_param()
-  use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws
+  use schism_glbl,only : in_dir,len_in_dir,ihconsv,nws,itransport_only
   use schism_msgp,only : myrank,parallel_abort
   use icm_mod
   implicit none
@@ -876,7 +1037,7 @@ subroutine check_icm_param()
   if(jdry/=0.and.jdry/=1) call parallel_abort('ICM idry_icm: 0/1')
 
 #ifndef USE_SED
-  if(iKe==1) call parallel_abort('iKe=1,need to turn on SED3D module')
+  if(iKe==1.and.itransport_only/=2) call parallel_abort('iKe=1,need to turn on SED3D module, or itransport_only=2')
 #endif
 
   inquire(file=in_dir(1:len_in_dir)//'ICM_rad.th.nc',exist=lexist)

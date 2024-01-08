@@ -215,8 +215,8 @@
        ! Loop over frequencies and directions
        DO IS = 1, MSC
          DO ID = 1, MDC
-           SBF(1,IP) = SBF(1,IP) + COSTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
-           SBF(2,IP) = SBF(2,IP) + SINTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
+           SBF(1,IP) = SBF(1,IP) + G9*COSTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
+           SBF(2,IP) = SBF(2,IP) + G9*SINTH(ID)*WK(IS,IP)*SSBF(IS,ID)*DS_INCR(IS)*DDIR
          END DO
        END DO
      END SUBROUTINE

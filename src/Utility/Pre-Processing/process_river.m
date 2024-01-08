@@ -1,18 +1,19 @@
 %Extract river flows and prep vsource.th etc (up to 2018) from (Dai & Trenberth). Needs read_gr3.m
 %Script will combine duplicated source elem's. River mouth locations are used in bp.
-%Inputs: out_river (gredit extract from coastal-stns-byVol-updated-oct2007.bp, commented out 1st 2 lines); 
-%        hgrid.gr3
+%Inputs: out_river (gredit extract from coastal-stns-byVol-updated-oct2007.bp, commented out 1st 2 lines. 
+%        lon in [-180,180]); 
+%        hgrid.gr3 (lon in [-180,180])
 %        coastal-stns-Vol-monthly.updated-May2019.nc (Dai&Trenberth via ucar)
 %        dates below
-%Outputs: source_sink.in, vsource.th, msource.th (-9999 for T). Time step is 1 day and may need pad 
+%Outputs: source_sink.in, vsource.th, msource.th (-9999 for T; 30PSU for S). Time step is 1 day and may need pad 
 %         extra record for last model step
 
 clear all; close all;
 
 %Output  info
-start_yr=2017; end_yr=2018;
-start_mon=10; end_mon=1;
-start_day=1; end_day=1; %GMT
+start_yr=2018; end_yr=2018;
+start_mon=1; end_mon=12;
+start_day=1; end_day=31; %GMT
 
 %Location
 riv=load('out_river'); %id,lon,lat,rank
@@ -37,7 +38,7 @@ for i=1:nmonths
   for j=1:nrivers
     if(monthly_flow(j,i)>0)
       mean_flow(j,mon)=mean_flow(j,mon)+monthly_flow(j,i);
-      icount(j,mon)=icount(mon)+1;
+      icount(j,mon)=icount(j,mon)+1;
     end
   end %for j
 end %for i
@@ -125,7 +126,7 @@ end
 fid=fopen('vsource.th','w');
 fid2=fopen('msource.th','w');
 fprintf(fid,[out_char '\n'],[timeout2*86400; out_flow3]);
-fprintf(fid2,[out_char2 '\n'],[timeout2*86400; -9999*ones(nriv_out2,nstep); zeros(nriv_out2,nstep)]);
+fprintf(fid2,[out_char2 '\n'],[timeout2*86400; -9999*ones(nriv_out2,nstep); 30*ones(nriv_out2,nstep)]);
 fclose(fid); fclose(fid2);
 
 fid=fopen('source_sink.in','w');

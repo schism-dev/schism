@@ -1,4 +1,6 @@
-SCHISM supports a 3D particle tracking code in `Utility/Particle_Tracking/ptrack3.f90`, which can also be used for simple oil spill simulation. The code can do forward/backward tracking and has simple dispersion and beach retention processes for oil spill.
+This is not a module per se; rather the stand-alone code `Utility/Particle_Tracking/ptrack*.f90` takes the outputs from SCHISM.
+
+SCHISM supports a 3D particle tracking, which can also be used for simple oil spill simulation. The code can do forward/backward tracking and has simple dispersion and beach retention processes for oil spill.
 
 The inputs to this code are: `hgrid.gr3`, `vgrid.in`, `particle.bp`, and `schout*.nc`. The main parameters are set in `particle.bp`. Below is a sample:
 
@@ -16,7 +18,7 @@ The inputs to this code are: `hgrid.gr3`, `vgrid.in`, `particle.bp`, and `schout
 
 ```
 
-The main output is particle.pth, which uses the drogue format that can be visualized with ACE/xmvis6. Figure [1](#figure01) shows an example.
+The main output is `particle.pth`, which uses the drogue format that can be visualized with ACE/xmvis6. Figure [1](#figure01) shows an example.
 
 <figure markdown id='figure01'>
 ![Particle tracking](../assets/particle-tracking.png){width=600}

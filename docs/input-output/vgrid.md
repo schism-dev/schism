@@ -39,7 +39,7 @@ S levels !S-levels below
 ```
 
 Notes:
- - Global outputs are from the bottom (`kbp`, variable in space) to surface (level `nvrt`) at each node;
+ - The water column is from the bottom (`kbp`, variable in space) to surface (level `nvrt`) at each node;
  - The code will crash if the surface elevation falls below $–h_c$ so make sure $h_c$ is sufficiently large (there is a hardwired lower bound for this around 5m in the code).
 
 ### An example of pure S grid
@@ -58,7 +58,8 @@ S levels
 ```
 
 ### An example of $LSC^2$ grid
-This type of grid requires some user experience and can be generated using scripts (e.g., `Utility/Pre-Processing/gen_vqs.f90`).
+This type of grid requires some user experience and can be generated using scripts (e.g., `Utility/Pre-Processing/gen_vqs*.f90`). 
+There is no limit such as $h_c$ mentioned above, so $LSC^2$ is more robust.
 
 ```
 1 !ivcor (1: LSC2; 2: SZ)

@@ -12,7 +12,7 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-      SUBROUTINE DSPTRF( UPLO, N, AP, IPIV, INFO )
+      SUBROUTINE DSPTRF_SCH( UPLO, N, AP, IPIV, INFO )
 !
 !  -- LAPACK routine (version 3.1) --
 !     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd..
@@ -30,7 +30,7 @@
 !  Purpose
 !  =======
 !
-!  DSPTRF computes the factorization of a real symmetric matrix A stored
+!  DSPTRF_SCH computes the factorization of a real symmetric matrix A stored
 !  in packed format using the Bunch-Kaufman diagonal pivoting method:
 !
 !     A = U*D*U**T  or  A = L*D*L**T
@@ -134,12 +134,12 @@
      &                   ROWMAX, T, WK, WKM1, WKP1
 !     ..
 !     .. External Functions ..
-      LOGICAL            LSAME
-      INTEGER            IDAMAX
-      EXTERNAL           LSAME, IDAMAX
+      LOGICAL            LSAME_SCH
+      INTEGER            IDAMAX_SCH
+      EXTERNAL           LSAME_SCH, IDAMAX_SCH
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL           DSCAL, DSPR, DSWAP, XERBLA5
+      EXTERNAL           DSCAL_SCH, DSPR_SCH, DSWAP_SCH, XERBLA5_SCH
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, SQRT
@@ -149,14 +149,14 @@
 !     Test the input parameters.
 !
       INFO = 0
-      UPPER = LSAME( UPLO, 'U' )
-      IF( .NOT.UPPER .AND. .NOT.LSAME( UPLO, 'L' ) ) THEN
+      UPPER = LSAME_SCH( UPLO, 'U' )
+      IF( .NOT.UPPER .AND. .NOT.LSAME_SCH( UPLO, 'L' ) ) THEN
          INFO = -1
       ELSE IF( N.LT.0 ) THEN
          INFO = -2
       END IF
       IF( INFO.NE.0 ) THEN
-         CALL XERBLA5( 'DSPTRF', -INFO )
+         CALL XERBLA5_SCH( 'DSPTRF', -INFO )
          RETURN
       END IF
 !
@@ -173,12 +173,14 @@
 !
          K = N
          KC = ( N-1 )*N / 2 + 1
-   10    CONTINUE
+!   10    CONTINUE
+         do 
+!------------------------------------
          KNC = KC
 !
 !        If K < 1, exit from loop
 !
-         IF( K.LT.1 ) GO TO 110
+         IF( K.LT.1 ) exit !GO TO 110
          KSTEP = 1
 !
 !        Determine rows and columns to be interchanged and whether
@@ -190,7 +192,7 @@
 !        column K, and COLMAX is its absolute value
 !
          IF( K.GT.1 ) THEN
-            IMAX = IDAMAX( K-1, AP( KC ), 1 )
+            IMAX = IDAMAX_SCH( K-1, AP( KC ), 1 )
             COLMAX = ABS( AP( KC+IMAX-1 ) )
          ELSE
             COLMAX = ZERO
@@ -225,7 +227,7 @@
    20          CONTINUE
                KPC = ( IMAX-1 )*IMAX / 2 + 1
                IF( IMAX.GT.1 ) THEN
-                  JMAX = IDAMAX( IMAX-1, AP( KPC ), 1 )
+                  JMAX = IDAMAX_SCH( IMAX-1, AP( KPC ), 1 )
                   ROWMAX = MAX( ROWMAX, ABS( AP( KPC+JMAX-1 ) ) )
                END IF
 !
@@ -257,7 +259,7 @@
 !              Interchange rows and columns KK and KP in the leading
 !              submatrix A(1:k,1:k)
 !
-               CALL DSWAP( KP-1, AP( KNC ), 1, AP( KPC ), 1 )
+               CALL DSWAP_SCH( KP-1, AP( KNC ), 1, AP( KPC ), 1 )
                KX = KPC + KP - 1
                DO 30 J = KP + 1, KK - 1
                   KX = KX + J - 1
@@ -290,11 +292,11 @@
 !              A := A - U(k)*D(k)*U(k)' = A - W(k)*1/D(k)*W(k)'
 !
                R1 = ONE / AP( KC+K-1 )
-               CALL DSPR( UPLO, K-1, -R1, AP( KC ), 1, AP )
+               CALL DSPR_SCH( UPLO, K-1, -R1, AP( KC ), 1, AP )
 !
 !              Store U(k) in column k
 !
-               CALL DSCAL( K-1, R1, AP( KC ), 1 )
+               CALL DSCAL_SCH( K-1, R1, AP( KC ), 1 )
             ELSE
 !
 !              2-by-2 pivot block D(k): columns k and k-1 now hold
@@ -334,7 +336,7 @@
                END IF
 !
             END IF
-         END IF
+         END IF !MAX( ABSAKK,
 !
 !        Store details of the interchanges in IPIV
 !
@@ -349,9 +351,11 @@
 !
          K = K - KSTEP
          KC = KNC - K
-         GO TO 10
+!         GO TO 10
+!------------------------------------
+         enddo !infinite loop
 !
-      ELSE
+      ELSE !not UPPER
 !
 !        Factorize A as L*D*L' using the lower triangle of A
 !
@@ -361,12 +365,14 @@
          K = 1
          KC = 1
          NPP = N*( N+1 ) / 2
-   60    CONTINUE
+!   60    CONTINUE
+         do
+!-------------------------------------------
          KNC = KC
 !
 !        If K > N, exit from loop
 !
-         IF( K.GT.N ) GO TO 110
+         IF( K.GT.N ) exit !GO TO 110
          KSTEP = 1
 !
 !        Determine rows and columns to be interchanged and whether
@@ -378,7 +384,7 @@
 !        column K, and COLMAX is its absolute value
 !
          IF( K.LT.N ) THEN
-            IMAX = K + IDAMAX( N-K, AP( KC+1 ), 1 )
+            IMAX = K + IDAMAX_SCH( N-K, AP( KC+1 ), 1 )
             COLMAX = ABS( AP( KC+IMAX-K ) )
          ELSE
             COLMAX = ZERO
@@ -412,7 +418,7 @@
    70          CONTINUE
                KPC = NPP - ( N-IMAX+1 )*( N-IMAX+2 ) / 2 + 1
                IF( IMAX.LT.N ) THEN
-                  JMAX = IMAX + IDAMAX( N-IMAX, AP( KPC+1 ), 1 )
+                  JMAX = IMAX + IDAMAX_SCH( N-IMAX, AP( KPC+1 ), 1 )
                   ROWMAX = MAX( ROWMAX, ABS( AP( KPC+JMAX-IMAX ) ) )
                END IF
 !
@@ -444,7 +450,7 @@
 !              Interchange rows and columns KK and KP in the trailing
 !              submatrix A(k:n,k:n)
 !
-               IF( KP.LT.N ) CALL DSWAP( N-KP, AP( KNC+KP-KK+1 ), 1, AP( KPC+1 ),1)
+               IF( KP.LT.N ) CALL DSWAP_SCH( N-KP, AP( KNC+KP-KK+1 ), 1, AP( KPC+1 ),1)
                KX = KNC + KP - KK
                DO 80 J = KK + 1, KP - 1
                   KX = KX + N - J + 1
@@ -479,11 +485,11 @@
 !                 A := A - L(k)*D(k)*L(k)' = A - W(k)*(1/D(k))*W(k)'
 !
                   R1 = ONE / AP( KC )
-                  CALL DSPR( UPLO, N-K, -R1, AP( KC+1 ), 1, AP( KC+N-K+1 ) )
+                  CALL DSPR_SCH( UPLO, N-K, -R1, AP( KC+1 ), 1, AP( KC+N-K+1 ) )
 !
 !                 Store L(k) in column K
 !
-                  CALL DSCAL( N-K, R1, AP( KC+1 ), 1 )
+                  CALL DSCAL_SCH( N-K, R1, AP( KC+1 ), 1 )
                END IF
             ELSE
 !
@@ -523,7 +529,7 @@
   100             CONTINUE
                END IF
             END IF
-         END IF
+         END IF !MAX( ABSAKK,
 !
 !        Store details of the interchanges in IPIV
 !
@@ -538,17 +544,21 @@
 !
          K = K + KSTEP
          KC = KNC + N - K + 2
-         GO TO 60
+!         GO TO 60
+!-------------------------------------------
+         enddo !infinite loop
 !
-      END IF
+      END IF !UPPER
 !
   110 CONTINUE
       RETURN
 !
-!     End of DSPTRF
+!     End of DSPTRF_SCH
 !
       END
-      SUBROUTINE DSPTRI( UPLO, N, AP, IPIV, WORK, INFO )
+
+
+      SUBROUTINE DSPTRI_SCH( UPLO, N, AP, IPIV, WORK, INFO )
 !
 !  -- LAPACK routine (version 3.1) --
 !     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd..
@@ -566,9 +576,9 @@
 !  Purpose
 !  =======
 !
-!  DSPTRI computes the inverse of a real symmetric indefinite matrix
+!  DSPTRI_SCH computes the inverse of a real symmetric indefinite matrix
 !  A in packed storage using the factorization A = U*D*U**T or
-!  A = L*D*L**T computed by DSPTRF.
+!  A = L*D*L**T computed by DSPTRF_SCH.
 !
 !  Arguments
 !  =========
@@ -584,7 +594,7 @@
 !
 !  AP      (input/output) DOUBLE PRECISION array, dimension (N*(N+1)/2)
 !          On entry, the block diagonal matrix D and the multipliers
-!          used to obtain the factor U or L as computed by DSPTRF,
+!          used to obtain the factor U or L as computed by DSPTRF_SCH,
 !          stored as a packed triangular matrix.
 !
 !          On exit, if INFO = 0, the (symmetric) inverse of the original
@@ -596,7 +606,7 @@
 !
 !  IPIV    (input) INTEGER array, dimension (N)
 !          Details of the interchanges and the block structure of D
-!          as determined by DSPTRF.
+!          as determined by DSPTRF_SCH.
 !
 !  WORK    (workspace) DOUBLE PRECISION array, dimension (N)
 !
@@ -618,12 +628,12 @@
       DOUBLE PRECISION   AK, AKKP1, AKP1, D, T, TEMP
 !     ..
 !     .. External Functions ..
-      LOGICAL            LSAME
-      DOUBLE PRECISION   DDOT
-      EXTERNAL           LSAME, DDOT
+      LOGICAL            LSAME_SCH
+      DOUBLE PRECISION   DDOT_SCH
+      EXTERNAL           LSAME_SCH, DDOT_SCH
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL           DCOPY, DSPMV, DSWAP, XERBLA5
+      EXTERNAL           DCOPY_SCH, DSPMV_SCH, DSWAP_SCH, XERBLA5_SCH
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC          ABS
@@ -633,14 +643,14 @@
 !     Test the input parameters.
 !
       INFO = 0
-      UPPER = LSAME( UPLO, 'U' )
-      IF( .NOT.UPPER .AND. .NOT.LSAME( UPLO, 'L' ) ) THEN
+      UPPER = LSAME_SCH( UPLO, 'U' )
+      IF( .NOT.UPPER .AND. .NOT.LSAME_SCH( UPLO, 'L' ) ) THEN
          INFO = -1
       ELSE IF( N.LT.0 ) THEN
          INFO = -2
       END IF
       IF( INFO.NE.0 ) THEN
-         CALL XERBLA5( 'DSPTRI', -INFO )
+         CALL XERBLA5_SCH( 'DSPTRI', -INFO )
          RETURN
       END IF
 !
@@ -668,7 +678,7 @@
             IF( IPIV( INFO ).GT.0 .AND. AP( KP ).EQ.ZERO ) RETURN
             KP = KP + N - INFO + 1
    20    CONTINUE
-      END IF
+      END IF !UPPER
       INFO = 0
 !
       IF( UPPER ) THEN
@@ -680,11 +690,13 @@
 !
          K = 1
          KC = 1
-   30    CONTINUE
+!   30    CONTINUE
+         do
+!------------------------------
 !
 !        If K > N, exit from loop.
 !
-         IF( K.GT.N ) GO TO 50
+         IF( K.GT.N ) exit  !GO TO 50
 !
          KCNEXT = KC + K
          IF( IPIV( K ).GT.0 ) THEN
@@ -698,9 +710,9 @@
 !           Compute column K of the inverse.
 !
             IF( K.GT.1 ) THEN
-               CALL DCOPY( K-1, AP( KC ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KC ),1)
-               AP( KC+K-1 ) = AP( KC+K-1 ) - DDOT( K-1, WORK, 1, AP( KC ), 1 )
+               CALL DCOPY_SCH( K-1, AP( KC ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KC ),1)
+               AP( KC+K-1 ) = AP( KC+K-1 ) - DDOT_SCH( K-1, WORK, 1, AP( KC ), 1 )
             END IF
             KSTEP = 1
          ELSE
@@ -721,17 +733,17 @@
 !           Compute columns K and K+1 of the inverse.
 !
             IF( K.GT.1 ) THEN
-               CALL DCOPY( K-1, AP( KC ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KC ),1)
-               AP( KC+K-1 ) = AP( KC+K-1 ) - DDOT( K-1, WORK, 1, AP( KC ), 1 )
-               AP( KCNEXT+K-1 ) = AP( KCNEXT+K-1 ) - DDOT( K-1, AP( KC ), 1, AP( KCNEXT ),1)
-               CALL DCOPY( K-1, AP( KCNEXT ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KCNEXT ), 1 )
-               AP( KCNEXT+K ) = AP( KCNEXT+K ) - DDOT( K-1, WORK, 1, AP( KCNEXT ), 1 )
+               CALL DCOPY_SCH( K-1, AP( KC ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KC ),1)
+               AP( KC+K-1 ) = AP( KC+K-1 ) - DDOT_SCH( K-1, WORK, 1, AP( KC ), 1 )
+               AP( KCNEXT+K-1 ) = AP( KCNEXT+K-1 ) - DDOT_SCH( K-1, AP( KC ), 1, AP( KCNEXT ),1)
+               CALL DCOPY_SCH( K-1, AP( KCNEXT ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, K-1, -ONE, AP, WORK, 1, ZERO, AP( KCNEXT ), 1 )
+               AP( KCNEXT+K ) = AP( KCNEXT+K ) - DDOT_SCH( K-1, WORK, 1, AP( KCNEXT ), 1 )
             END IF
             KSTEP = 2
             KCNEXT = KCNEXT + K + 1
-         END IF
+         END IF !IPIV( K 
 !
          KP = ABS( IPIV( K ) )
          IF( KP.NE.K ) THEN
@@ -740,7 +752,7 @@
 !           submatrix A(1:k+1,1:k+1)
 !
             KPC = ( KP-1 )*KP / 2 + 1
-            CALL DSWAP( KP-1, AP( KC ), 1, AP( KPC ), 1 )
+            CALL DSWAP_SCH( KP-1, AP( KC ), 1, AP( KPC ), 1 )
             KX = KPC + KP - 1
             DO 40 J = KP + 1, K - 1
                KX = KX + J - 1
@@ -756,14 +768,16 @@
                AP( KC+K+K-1 ) = AP( KC+K+KP-1 )
                AP( KC+K+KP-1 ) = TEMP
             END IF
-         END IF
+         END IF !KP.NE.K
 !
          K = K + KSTEP
          KC = KCNEXT
-         GO TO 30
-   50    CONTINUE
+!         GO TO 30
+!------------------------------
+         enddo 
+!   50    CONTINUE
 !
-      ELSE
+      ELSE !not UPPER
 !
 !        Compute inv(A) from the factorization A = L*D*L'.
 !
@@ -773,11 +787,13 @@
          NPP = N*( N+1 ) / 2
          K = N
          KC = NPP
-   60    CONTINUE
+!   60    CONTINUE
+         do
+!------------------------------
 !
 !        If K < 1, exit from loop.
 !
-         IF( K.LT.1 ) GO TO 80
+         IF( K.LT.1 ) exit  !GO TO 80
 !
          KCNEXT = KC - ( N-K+2 )
          IF( IPIV( K ).GT.0 ) THEN
@@ -791,9 +807,9 @@
 !           Compute column K of the inverse.
 !
             IF( K.LT.N ) THEN
-               CALL DCOPY( N-K, AP( KC+1 ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, N-K, -ONE, AP( KC+N-K+1 ), WORK, 1, ZERO, AP( KC+1 ), 1 )
-               AP( KC ) = AP( KC ) - DDOT( N-K, WORK, 1, AP( KC+1 ), 1 )
+               CALL DCOPY_SCH( N-K, AP( KC+1 ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, N-K, -ONE, AP( KC+N-K+1 ), WORK, 1, ZERO, AP( KC+1 ), 1 )
+               AP( KC ) = AP( KC ) - DDOT_SCH( N-K, WORK, 1, AP( KC+1 ), 1 )
             END IF
             KSTEP = 1
          ELSE
@@ -814,17 +830,17 @@
 !           Compute columns K-1 and K of the inverse.
 !
             IF( K.LT.N ) THEN
-               CALL DCOPY( N-K, AP( KC+1 ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, N-K, -ONE, AP( KC+( N-K+1 ) ), WORK, 1, ZERO, AP( KC+1 ), 1 )
-               AP( KC ) = AP( KC ) - DDOT( N-K, WORK, 1, AP( KC+1 ), 1 )
-               AP( KCNEXT+1 ) = AP( KCNEXT+1 ) - DDOT( N-K, AP( KC+1 ), 1,AP( KCNEXT+2 ), 1 )
-               CALL DCOPY( N-K, AP( KCNEXT+2 ), 1, WORK, 1 )
-               CALL DSPMV( UPLO, N-K, -ONE, AP( KC+( N-K+1 ) ), WORK, 1, ZERO, AP( KCNEXT+2 ), 1 )
-               AP( KCNEXT ) = AP( KCNEXT ) - DDOT( N-K, WORK, 1, AP( KCNEXT+2 ), 1 )
+               CALL DCOPY_SCH( N-K, AP( KC+1 ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, N-K, -ONE, AP( KC+( N-K+1 ) ), WORK, 1, ZERO, AP( KC+1 ), 1 )
+               AP( KC ) = AP( KC ) - DDOT_SCH( N-K, WORK, 1, AP( KC+1 ), 1 )
+               AP( KCNEXT+1 ) = AP( KCNEXT+1 ) - DDOT_SCH( N-K, AP( KC+1 ), 1,AP( KCNEXT+2 ), 1 )
+               CALL DCOPY_SCH( N-K, AP( KCNEXT+2 ), 1, WORK, 1 )
+               CALL DSPMV_SCH( UPLO, N-K, -ONE, AP( KC+( N-K+1 ) ), WORK, 1, ZERO, AP( KCNEXT+2 ), 1 )
+               AP( KCNEXT ) = AP( KCNEXT ) - DDOT_SCH( N-K, WORK, 1, AP( KCNEXT+2 ), 1 )
             END IF
             KSTEP = 2
             KCNEXT = KCNEXT - ( N-K+3 )
-         END IF
+         END IF !IPIV( K ).
 !
          KP = ABS( IPIV( K ) )
          IF( KP.NE.K ) THEN
@@ -833,7 +849,7 @@
 !           submatrix A(k-1:n,k-1:n)
 !
             KPC = NPP - ( N-KP+1 )*( N-KP+2 ) / 2 + 1
-            IF( KP.LT.N ) CALL DSWAP( N-KP, AP( KC+KP-K+1 ), 1, AP( KPC+1 ), 1 )
+            IF( KP.LT.N ) CALL DSWAP_SCH( N-KP, AP( KC+KP-K+1 ), 1, AP( KPC+1 ), 1 )
             KX = KC + KP - K
             DO 70 J = K + 1, KP - 1
                KX = KX + N - J + 1
@@ -849,20 +865,23 @@
                AP( KC-N+K-1 ) = AP( KC-N+KP-1 )
                AP( KC-N+KP-1 ) = TEMP
             END IF
-         END IF
+         END IF !KP.NE.K 
 !
          K = K - KSTEP
          KC = KCNEXT
-         GO TO 60
-   80    CONTINUE
-      END IF
+!         GO TO 60
+!--------------------------------
+         enddo
+!   80    CONTINUE
+      END IF !UPPER
 !
       RETURN
 !
-!     End of DSPTRI
+!     End of DSPTRI_SCH
 !
       END
-      SUBROUTINE XERBLA5(SRNAME,INFO)
+
+      SUBROUTINE XERBLA5_SCH(SRNAME,INFO)
 !
 !  -- LAPACK auxiliary routine (preliminary version) --
 !     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd..
@@ -876,7 +895,7 @@
 !  Purpose
 !  =======
 !
-!  XERBLA5  is an error handler for the LAPACK routines.
+!  XERBLA5_SCH  is an error handler for the LAPACK routines.
 !  It is called by an LAPACK routine if an input parameter has an
 !  invalid value.  A message is printed and execution stops.
 !
@@ -887,7 +906,7 @@
 !  =========
 !
 !  SRNAME  (input) CHARACTER*6
-!          The name of the routine which called XERBLA5.
+!          The name of the routine which called XERBLA5_SCH.
 !
 !  INFO    (input) INTEGER
 !          The position of the invalid parameter in the parameter list
@@ -901,10 +920,10 @@
  9999 FORMAT (' ** On entry to ',A6,' parameter number ',I2,' had ', &
      &       'an illegal value')
 !
-!     End of XERBLA5
+!     End of XERBLA5_SCH
 !
       END
-      SUBROUTINE DSPMV(UPLO,N,ALPHA,AP,X,INCX,BETA,Y,INCY)
+      SUBROUTINE DSPMV_SCH(UPLO,N,ALPHA,AP,X,INCX,BETA,Y,INCY)
 !     .. Scalar Arguments ..
       DOUBLE PRECISION ALPHA,BETA
       INTEGER INCX,INCY,N
@@ -917,7 +936,7 @@
 !  Purpose
 !  =======
 !
-!  DSPMV  performs the matrix-vector operation
+!  DSPMV_SCH  performs the matrix-vector operation
 !
 !     y := alpha*A*x + beta*y,
 !
@@ -1009,17 +1028,17 @@
       INTEGER I,INFO,IX,IY,J,JX,JY,K,KK,KX,KY
 !     ..
 !     .. External Functions ..
-      LOGICAL LSAME
-      EXTERNAL LSAME
+      LOGICAL LSAME_SCH
+      EXTERNAL LSAME_SCH
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL XERBLA5
+      EXTERNAL XERBLA5_SCH
 !     ..
 !
 !     Test the input parameters.
 !
       INFO = 0
-      IF (.NOT.LSAME(UPLO,'U') .AND. .NOT.LSAME(UPLO,'L')) THEN
+      IF (.NOT.LSAME_SCH(UPLO,'U') .AND. .NOT.LSAME_SCH(UPLO,'L')) THEN
           INFO = 1
       ELSE IF (N.LT.0) THEN
           INFO = 2
@@ -1029,7 +1048,7 @@
           INFO = 9
       END IF
       IF (INFO.NE.0) THEN
-          CALL XERBLA5('DSPMV ',INFO)
+          CALL XERBLA5_SCH('DSPMV ',INFO)
           RETURN
       END IF
 !
@@ -1083,7 +1102,7 @@
       END IF
       IF (ALPHA.EQ.ZERO) RETURN
       KK = 1
-      IF (LSAME(UPLO,'U')) THEN
+      IF (LSAME_SCH(UPLO,'U')) THEN
 !
 !        Form  y  when AP contains the upper triangle.
 !
@@ -1163,10 +1182,11 @@
 !
       RETURN
 !
-!     End of DSPMV .
+!     End of DSPMV_SCH .
 !
       END
-      SUBROUTINE DSWAP(N,DX,INCX,DY,INCY)
+
+      SUBROUTINE DSWAP_SCH(N,DX,INCX,DY,INCY)
 !     .. Scalar Arguments ..
       INTEGER INCX,INCY,N
 !     ..
@@ -1191,38 +1211,47 @@
       INTRINSIC MOD
 !     ..
       IF (N.LE.0) RETURN
-      IF (INCX.EQ.1 .AND. INCY.EQ.1) GO TO 20
+!      IF (INCX.EQ.1 .AND. INCY.EQ.1) GO TO 20
+      IF (.not.(INCX.EQ.1 .AND. INCY.EQ.1)) then
+
 !
 !       code for unequal increments or equal increments not equal
 !         to 1
 !
-      IX = 1
-      IY = 1
-      IF (INCX.LT.0) IX = (-N+1)*INCX + 1
-      IF (INCY.LT.0) IY = (-N+1)*INCY + 1
-      DO 10 I = 1,N
-          DTEMP = DX(IX)
-          DX(IX) = DY(IY)
-          DY(IY) = DTEMP
-          IX = IX + INCX
-          IY = IY + INCY
-   10 CONTINUE
-      RETURN
+        IX = 1
+        IY = 1
+        IF (INCX.LT.0) IX = (-N+1)*INCX + 1
+        IF (INCY.LT.0) IY = (-N+1)*INCY + 1
+        DO 10 I = 1,N
+            DTEMP = DX(IX)
+            DX(IX) = DY(IY)
+            DY(IY) = DTEMP
+            IX = IX + INCX
+            IY = IY + INCY
+     10 CONTINUE
+        RETURN
 !
 !       code for both increments equal to 1
 !
 !
 !       clean-up loop
 !
-   20 M = MOD(N,3)
-      IF (M.EQ.0) GO TO 40
-      DO 30 I = 1,M
-          DTEMP = DX(I)
-          DX(I) = DY(I)
-          DY(I) = DTEMP
-   30 CONTINUE
-      IF (N.LT.3) RETURN
-   40 MP1 = M + 1
+      ELSE
+        M = MOD(N,3)
+      ENDIF !.not.
+
+!      IF (M.EQ.0) GO TO 40
+      IF (M.NE.0) THEN
+        DO 30 I = 1,M
+            DTEMP = DX(I)
+            DX(I) = DY(I)
+            DY(I) = DTEMP
+30      CONTINUE
+        IF (N.LT.3) RETURN
+      ENDIF !M
+!   40 MP1 = M + 1
+      MP1 = M + 1
+
       DO 50 I = MP1,N,3
           DTEMP = DX(I)
           DX(I) = DY(I)
@@ -1236,7 +1265,8 @@
    50 CONTINUE
       RETURN
       END
-      SUBROUTINE DSPR(UPLO,N,ALPHA,X,INCX,AP)
+
+      SUBROUTINE DSPR_SCH(UPLO,N,ALPHA,X,INCX,AP)
 !     .. Scalar Arguments ..
       DOUBLE PRECISION ALPHA
       INTEGER INCX,N
@@ -1249,7 +1279,7 @@
 !  Purpose
 !  =======
 !
-!  DSPR    performs the symmetric rank 1 operation
+!  DSPR_SCH    performs the symmetric rank 1 operation
 !
 !     A := alpha*x*x' + A,
 !
@@ -1328,17 +1358,17 @@
       INTEGER I,INFO,IX,J,JX,K,KK,KX
 !     ..
 !     .. External Functions ..
-      LOGICAL LSAME
-      EXTERNAL LSAME
+      LOGICAL LSAME_SCH
+      EXTERNAL LSAME_SCH
 !     ..
 !     .. External Subroutines ..
-      EXTERNAL XERBLA5
+      EXTERNAL XERBLA5_SCH
 !     ..
 !
 !     Test the input parameters.
 !
       INFO = 0
-      IF (.NOT.LSAME(UPLO,'U') .AND. .NOT.LSAME(UPLO,'L')) THEN
+      IF (.NOT.LSAME_SCH(UPLO,'U') .AND. .NOT.LSAME_SCH(UPLO,'L')) THEN
           INFO = 1
       ELSE IF (N.LT.0) THEN
           INFO = 2
@@ -1346,7 +1376,7 @@
           INFO = 5
       END IF
       IF (INFO.NE.0) THEN
-          CALL XERBLA5('DSPR  ',INFO)
+          CALL XERBLA5_SCH('DSPR  ',INFO)
           RETURN
       END IF
 !
@@ -1366,7 +1396,7 @@
 !     are accessed sequentially with one pass through AP.
 !
       KK = 1
-      IF (LSAME(UPLO,'U')) THEN
+      IF (LSAME_SCH(UPLO,'U')) THEN
 !
 !        Form  A  when upper triangle is stored in AP.
 !
@@ -1432,10 +1462,11 @@
 !
       RETURN
 !
-!     End of DSPR  .
+!     End of DSPR_SCH  .
 !
       END
-      SUBROUTINE DSCAL(N,DA,DX,INCX)
+
+      SUBROUTINE DSCAL_SCH(N,DA,DX,INCX)
 !     .. Scalar Arguments ..
       DOUBLE PRECISION DA
       INTEGER INCX,N
@@ -1461,28 +1492,37 @@
       INTRINSIC MOD
 !     ..
       IF (N.LE.0 .OR. INCX.LE.0) RETURN
-      IF (INCX.EQ.1) GO TO 20
+!      IF (INCX.EQ.1) GO TO 20
+      IF (INCX.NE.1) THEN
 !
 !        code for increment not equal to 1
 !
-      NINCX = N*INCX
-      DO 10 I = 1,NINCX,INCX
-          DX(I) = DA*DX(I)
-   10 CONTINUE
-      RETURN
+        NINCX = N*INCX
+        DO 10 I = 1,NINCX,INCX
+            DX(I) = DA*DX(I)
+ 10     CONTINUE
+        RETURN
 !
 !        code for increment equal to 1
 !
 !
 !        clean-up loop
 !
-   20 M = MOD(N,5)
-      IF (M.EQ.0) GO TO 40
-      DO 30 I = 1,M
-          DX(I) = DA*DX(I)
-   30 CONTINUE
-      IF (N.LT.5) RETURN
-   40 MP1 = M + 1
+      ELSE
+!   20 M = MOD(N,5)
+        M = MOD(N,5)
+      ENDIF
+
+!      IF (M.EQ.0) GO TO 40
+      IF (M.NE.0) THEN
+        DO 30 I = 1,M
+            DX(I) = DA*DX(I)
+ 30     CONTINUE
+        IF (N.LT.5) RETURN
+      ENDIF !M
+
+!   40 MP1 = M + 1
+      MP1 = M + 1
       DO 50 I = MP1,N,5
           DX(I) = DA*DX(I)
           DX(I+1) = DA*DX(I+1)
@@ -1492,7 +1532,8 @@
    50 CONTINUE
       RETURN
       END
-      LOGICAL FUNCTION LSAME(CA,CB)
+
+      LOGICAL FUNCTION LSAME_SCH(CA,CB)
 !
 !  -- LAPACK auxiliary routine (version 3.1) --
 !     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd..
@@ -1505,7 +1546,7 @@
 !  Purpose
 !  =======
 !
-!  LSAME returns .TRUE. if CA is the same letter as CB regardless of
+!  LSAME_SCH returns .TRUE. if CA is the same letter as CB regardless of
 !  case.
 !
 !  Arguments
@@ -1527,8 +1568,8 @@
 !
 !     Test if the characters are equal
 !
-      LSAME = CA .EQ. CB
-      IF (LSAME) RETURN
+      LSAME_SCH = CA .EQ. CB
+      IF (LSAME_SCH) RETURN
 !
 !     Now test for equivalence if both characters are alphabetic.
 !
@@ -1570,14 +1611,15 @@
           IF (INTA.GE.225 .AND. INTA.LE.250) INTA = INTA - 32
           IF (INTB.GE.225 .AND. INTB.LE.250) INTB = INTB - 32
       END IF
-      LSAME = INTA .EQ. INTB
+      LSAME_SCH = INTA .EQ. INTB
 !
 !     RETURN
 !
-!     End of LSAME
+!     End of LSAME_SCH
 !
       END
-      INTEGER FUNCTION IDAMAX(N,DX,INCX)
+
+      INTEGER FUNCTION IDAMAX_SCH(N,DX,INCX)
 !     .. Scalar Arguments ..
       INTEGER INCX,N
 !     ..
@@ -1601,37 +1643,44 @@
 !     .. Intrinsic Functions ..
       INTRINSIC DABS
 !     ..
-      IDAMAX = 0
+      IDAMAX_SCH = 0
       IF (N.LT.1 .OR. INCX.LE.0) RETURN
-      IDAMAX = 1
+      IDAMAX_SCH = 1
       IF (N.EQ.1) RETURN
-      IF (INCX.EQ.1) GO TO 20
+!      IF (INCX.EQ.1) GO TO 20
+      IF (INCX.NE.1) THEN
 !
 !        code for increment not equal to 1
 !
-      IX = 1
-      DMAX = DABS(DX(1))
-      IX = IX + INCX
-      DO 10 I = 2,N
-          IF (DABS(DX(IX)).LE.DMAX) GO TO 5
-          IDAMAX = I
-          DMAX = DABS(DX(IX))
+        IX = 1
+        DMAX = DABS(DX(1))
+        IX = IX + INCX
+        DO 10 I = 2,N
+!          IF (DABS(DX(IX)).LE.DMAX) GO TO 5
+          IF (DABS(DX(IX)).GT.DMAX) THEN 
+            IDAMAX_SCH = I
+            DMAX = DABS(DX(IX))
+          ENDIF
     5     IX = IX + INCX
-   10 CONTINUE
-      RETURN
+   10   CONTINUE
+        RETURN
+      ELSE !INCX
 !
 !        code for increment equal to 1
 !
-   20 DMAX = DABS(DX(1))
+!   20 DMAX = DABS(DX(1))
+        DMAX = DABS(DX(1))
+      ENDIF !INCX
+
       DO 30 I = 2,N
-          IF (DABS(DX(I)).LE.DMAX) GO TO 30
-          IDAMAX = I
+          IF (DABS(DX(I)).LE.DMAX) cycle  !GO TO 30
+          IDAMAX_SCH = I
           DMAX = DABS(DX(I))
    30 CONTINUE
       RETURN
       END
 
-      SUBROUTINE DCOPY (N,DX,INCX,DY,INCY)      
+      SUBROUTINE DCOPY_SCH (N,DX,INCX,DY,INCY)      
 !       
 !     COPY DOUBLE PRECISION DX TO DOUBLE PRECISION DY.    
 !       
@@ -1659,12 +1708,15 @@
 !        CLEAN-UP LOOP SO REMAINING VECTOR LENGTH IS A MULTIPLE OF 7. 
 !       
    30 M = N-(N/7)*7 
-      IF (M.EQ.0) GO TO 50  
-      DO 40 I = 1,M 
-         DY(I) = DX(I)      
-   40 CONTINUE    
-      IF (N.LT.7) RETURN    
-   50 MP1 = M+1   
+!      IF (M.EQ.0) GO TO 50  
+      IF (M.NE.0) THEN
+        DO 40 I = 1,M 
+           DY(I) = DX(I)      
+   40   CONTINUE    
+        IF (N.LT.7) RETURN    
+      ENDIF
+
+      MP1 = M+1   
       DO 60 I = MP1,N,7     
          DY(I) = DX(I)      
          DY(I+1) = DX(I+1)  
@@ -1686,12 +1738,12 @@
       RETURN      
       END 
 
-      DOUBLE PRECISION FUNCTION DDOT (N,DX,INCX,DY,INCY)  
+      DOUBLE PRECISION FUNCTION DDOT_SCH (N,DX,INCX,DY,INCY)  
 !       
 !     RETURNS THE DOT PRODUCT OF DOUBLE PRECISION DX AND DY.
 !       
       DOUBLE PRECISION DX(N),DY(N)    
-      DDOT = 0.D0 
+      DDOT_SCH = 0.D0 
       IF (N.LE.0) RETURN    
       IF (INCX.EQ.INCY) IF (INCX-1) 10 , 30 , 70
    10 CONTINUE    
@@ -1703,7 +1755,7 @@
       IF (INCX.LT.0) IX = (-N+1)*INCX+1 
       IF (INCY.LT.0) IY = (-N+1)*INCY+1 
       DO 20 I = 1,N 
-         DDOT = DDOT+DX(IX)*DY(IY)    
+         DDOT_SCH = DDOT_SCH+DX(IX)*DY(IY)    
          IX = IX+INCX       
          IY = IY+INCY       
    20 CONTINUE    
@@ -1714,14 +1766,17 @@
 !        CLEAN-UP LOOP SO REMAINING VECTOR LENGTH IS A MULTIPLE OF 5. 
 !       
    30 M = N-(N/5)*5 
-      IF (M.EQ.0) GO TO 50  
-      DO 40 I = 1,M 
-         DDOT = DDOT+DX(I)*DY(I)      
-   40 CONTINUE    
-      IF (N.LT.5) RETURN    
-   50 MP1 = M+1   
+!      IF (M.EQ.0) GO TO 50  
+      IF (M.NE.0) THEN
+        DO 40 I = 1,M 
+           DDOT_SCH = DDOT_SCH+DX(I)*DY(I)      
+   40   CONTINUE    
+        IF (N.LT.5) RETURN    
+      ENDIF
+      MP1 = M+1   
+
       DO 60 I = MP1,N,5     
-         DDOT = DDOT+DX(I)*DY(I)+DX(I+1)*DY(I+1)+DX(I+2)*DY(I+2)+DX(I+3)&
+         DDOT_SCH = DDOT_SCH+DX(I)*DY(I)+DX(I+1)*DY(I+1)+DX(I+2)*DY(I+2)+DX(I+3)&
      &      *DY(I+3)+DX(I+4)*DY(I+4)  
    60 CONTINUE    
       RETURN      
@@ -1731,7 +1786,7 @@
    70 CONTINUE    
       NS = N*INCX 
       DO 80 I = 1,NS,INCX   
-         DDOT = DDOT+DX(I)*DY(I)      
+         DDOT_SCH = DDOT_SCH+DX(I)*DY(I)      
    80 CONTINUE    
       RETURN      
       END 

@@ -27,7 +27,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
@@ -149,6 +149,7 @@ module icm_mod
   real(rkind),save,target :: bKCH4,bKTCH4,bKhDO_CH4,bo2n !CH4 reaction
 
   !sediment concentrations and fluxes
+  real(rkind),save,target :: btau !sediment shear stress
   real(rkind),save,target,allocatable,dimension(:) :: bLight,bThp,bTox,btemp,bCH4,bSTR,bPOS
   real(rkind),save,target,allocatable,dimension(:) :: bNH4s,bNH4,bNO3,bH2S,bSA,bPO4,bstc
   real(rkind),save,target,allocatable,dimension(:,:) :: bPOC,bPON,bPOP
@@ -199,5 +200,33 @@ module icm_mod
   end type icm_spatial_param
   type(icm_spatial_param),save,target,allocatable,dimension(:) :: sp
 
+  !---------------------------------------------------------------------------
+  !station outputs
+  !---------------------------------------------------------------------------
+  type :: station_var
+    integer :: varid,vlen      !netcdf varid, var length
+    character(len=30) :: varname=''  !variable name
+    real(rkind),allocatable,dimension(:,:) :: data
+  end type
+
+  type :: station_data
+    integer :: istat=0,it=0,nsta=0,nvar=0
+    integer :: ncid,id_time
+    real(rkind) :: time
+    integer,allocatable :: ista(:)  !station index
+    integer,allocatable :: iep(:)   !elem. in subdomain
+    real(rkind),allocatable :: x(:),y(:),z(:)
+    type(station_var) :: vars(200)
+  end type
+  type(station_data),save :: dg
+
 end module icm_mod
 
+module icm_interface
+  interface brent_def
+    subroutine brent(bv)
+      use icm_mod, only: brent_var
+      type(brent_var),target,intent(inout) :: bv
+    end subroutine brent
+  end interface
+end module icm_interface

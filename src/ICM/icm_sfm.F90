@@ -17,7 +17,7 @@
 !sfm_calc: sediment flux; sub-models
 !sod_calc: calculate SOD
 
-subroutine sfm_calc(id,kb,tdep,wdz,TSS)
+subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
 !-----------------------------------------------------------------------
 !sediment flux model (two-layer)
 !-----------------------------------------------------------------------
@@ -25,8 +25,9 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
                         & idry_e,eta2,dpe,nvrt
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
+  use icm_interface
   implicit none
-  integer,intent(in) :: id,kb
+  integer,intent(in) :: id,kb,it,isub
   real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
 
   !local variables
@@ -48,7 +49,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   wPBS =PBS(:,kb+1); wRPOC=RPOC(kb+1); wLPOC=LPOC(kb+1)
   wRPON=RPON(kb+1);  wLPON=LPON(kb+1); wRPOP=RPOP(kb+1)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
-  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =max(DOX(kb+1),1.d-2)
+  wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =min(max(DOX(kb+1),1.d-2),50.d0)
   fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
   if(iCBP==1) then
     wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
@@ -72,7 +73,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   FPON(1)=FPON(1)+WSPn(iLPON)*wLPON
   FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
   if(iCBP==1) then
-      FPOP(1)=FPOP(1)+WSPn(iPIP)*wPIP   !PIP contribution
+      bPO4(id)=bPO4(id)+dtw*WSPn(iPIP)*wPIP !PIP contribution
       FPOC(2)=FPOC(2)+WSPn(iRPOC)*wRPOC !RPOM contribution
       FPON(2)=FPON(2)+WSPn(iRPON)*wRPON
       FPOP(2)=FPOP(2)+WSPn(iRPOP)*wRPOP
@@ -185,12 +186,14 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
   P%imed=0; P%vmin=1.d-8; P%vmax=100.0; call brent(P)
   stc=P%SOD/max(wDOX,1.d-2)
 
-  if(P%ierr/=0) then
-    if(wDOX<1.d-2) then
-      stc=bstc(id)
-    else
-      call parallel_abort('wrong in computing SOD')
-    endif
+  if(P%ierr/=0) then !SOD computing fails, use previous stc value
+    stc=bstc(id)
+    write(12,*)'fail in computing SOD',it,id,ielg(id),P%ierr,P%SOD,wDOX
+    !if(wDOX<1.d-2) then
+    !  stc=bstc(id)
+    !else
+    !  call parallel_abort('wrong in computing SOD')
+    !endif
   endif
 
   !update sediment concentrations (NH4,NO3,H2S,CH4)
@@ -276,6 +279,45 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS)
       call parallel_abort(errmsg)
     endif
   enddo 
+
+  !ICM station outputs
+  if(iout_icm/=0.and.dg%nsta/=0.and.isub==1.and.mod(it,nspool_icm)==0) then
+    do i=1,dg%nsta
+      if(dg%iep(i)/=id) cycle !check elem. id
+      call icm_output('bPOC', (/bPOC(id,:)/),3,i)
+      call icm_output('bPON', (/bPON(id,:)/),3,i)
+      call icm_output('bPOP', (/bPOP(id,:)/),3,i)
+      call icm_output('bNH4s',(/bNH4s(id)/),1,i)
+      call icm_output('bNH4', (/bNH4(id)/),1,i)
+      call icm_output('bNO3', (/bNO3(id)/),1,i)
+      call icm_output('bPO4', (/bPO4(id)/),1,i)
+      call icm_output('bH2S', (/bH2S(id)/),1,i)
+      call icm_output('bCH4', (/bCH4(id)/),1,i)
+      call icm_output('bPOS', (/bPOS(id)/),1,i)
+      call icm_output('bSA',  (/bSA(id)/),1,i)
+      call icm_output('bstc', (/bstc(id)/),1,i)
+      call icm_output('bSTR', (/bSTR(id)/),1,i)
+      call icm_output('bThp', (/bThp(id)/),1,i)
+      call icm_output('bTox', (/bTox(id)/),1,i)
+      if(iout_icm==2) then !bottom water concentrations
+        call icm_output('wTSS', (/wTSS/),1,i)
+        call icm_output('wtemp',(/wtemp/),1,i)
+        call icm_output('wsalt',(/wsalt/),1,i)
+        call icm_output('wPBS', (/wPBS/),3,i)
+        call icm_output('wRPOC',(/wRPOC/),1,i)
+        call icm_output('wLPOC',(/wLPOC/),1,i)
+        call icm_output('wRPON',(/wRPON/),1,i)
+        call icm_output('wLPON',(/wLPON/),1,i)
+        call icm_output('wRPOP',(/wRPOP/),1,i)
+        call icm_output('wLPOP',(/wLPOP/),1,i)
+        call icm_output('wPO4', (/wPO4/),1,i)
+        call icm_output('wNH4', (/wNH4/),1,i)
+        call icm_output('wNO3', (/wNO3/),1,i)
+        call icm_output('wCOD', (/wCOD/),1,i)
+        call icm_output('wDOX', (/wDOX/),1,i)
+      endif
+    enddo !i
+  endif !iout_icm
 
 end subroutine sfm_calc
 

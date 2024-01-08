@@ -31,12 +31,13 @@
 ##'development': max 40 nodes, 2hrs. Max 1 job
 ##'small': 1-2 node for up to 48 hrs
 ##'normal': up to 512 nodes, 48 hrs
-#SBATCH -p flex   # Queue (partition) name
+#SBATCH -p normal   # Queue (partition) name
 #SBATCH -N 20               # Total # of nodes (up to 56 cores/node)
 #SBATCH -n 1120              # Total # of mpi tasks
 #SBATCH -t 01:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
-####SBATCH -A CDA21001     # Project/Allocation name (req'd if you have more than 1)
+###SBATCH -A EAR21010      # Project/Allocation name (req'd if you have more than 1)
+#SBATCH -A OCE22003   # UFS
 #SBATCH --mail-user=yjzhang@vims.edu
 ###Can add dependency (e.g. only execute this after another job is done)
 ###SBATCH --dependency 

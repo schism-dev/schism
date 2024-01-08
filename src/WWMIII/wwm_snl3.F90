@@ -1,50 +1,74 @@
 #include "wwm_functions.h"
 !**********************************************************************
-!*  Yasser Eldeberky, Nonlinear Transformation of Wave Spectra in     *
-!*        the Nearshore Zone, PhD thesis, TU Delft                    *
+!   Subroutine computing non-linear wave interactions between triads
+!   with the Lumped Triad Approximation of Eldeberky (1996). His
+!   expression is based on a parametrization of the biphase (as
+!   function of the Ursell number), is directionally uncoupled and
+!   takes into account for the self-self interactions only.
+!   The consistent version proposed by Salmon et al. (2016) is also available:
+!     MESTR .EQ. 1 is for the old LTA 
+!     MESTR .EQ. 2 is for the corrected version by Salmon et al. (2016)
+!   Most of this code has been taken and modified from the SWAN code.
 !**********************************************************************
-      subroutine triad_eldeberky(ip, hs, smespc, acloc, imatra, imatda, ssnl3, dssnl3)
-      use datapool
-      implicit none
-      integer, intent(in)        :: ip
-      real(rkind), intent(in)    :: hs, smespc
-      real(rkind), intent(out)   :: ssnl3(msc,mdc), dssnl3(msc,mdc)
-      real(rkind), intent(in)    :: acloc(msc,mdc)
-      real(rkind), intent(inout) :: imatra(msc,mdc), imatda(msc,mdc)
-      integer i1, i2, id, is, ismax, ij1, ij2
-      real(rkind)    aux1, aux2, biph, c0, cm, dep_2, dep_3, e0
-      real(rkind)    em,ft, rint, sigpi, sinbph, stri
-      real(rkind)    w0, wm, wn0, wnm, ursell, c1, c2, c3
-      real(rkind)    eCont
-      real(rkind) :: E(MSC)
-      real(rkind) :: SA(1:MSC+TRI_ISP1,1:MDC)
+      SUBROUTINE TRIAD_ELDEBERKY(IP, HS, SMESPC, ACLOC, IMATRA, IMATDA, SSNL3, DSSNL3)
+      USE DATAPOOL
+      IMPLICIT NONE
 
-      ssnl3 = ZERO
-      dssnl3 = ZERO
+      INTEGER, INTENT(IN)        :: IP
+      REAL(RKIND), INTENT(IN)    :: HS, SMESPC, ACLOC(MSC,MDC)
+      REAL(RKIND), INTENT(OUT)   :: SSNL3(MSC,MDC), DSSNL3(MSC,MDC)
+      REAL(RKIND), INTENT(INOUT) :: IMATRA(MSC,MDC), IMATDA(MSC,MDC)
+
+      INTEGER     :: I1, I2, ID, IS, ISMAX, IJ1, IJ2
+      REAL(RKIND) :: AUX1, AUX2, BIPH, C0, CM, DEP_2, DEP_3, E0, ED0, EDM
+      REAL(RKIND) :: EM,FT, RINT, SIGPI, SINBPH, STRI
+      REAL(RKIND) :: W0, WM, WN0, WNM, URSELL, C1, C2, C3, ECONT
+      REAL(RKIND) :: E(MSC), ED(1:MSC)
+      REAL(RKIND) :: SA(1:MSC+TRI_ISP1,1:MDC)
+
+!---  Checking if we are in too deep water (threshold defined via Ursell number in wwminput.nml)
       IF (HS .LT. SMALL) RETURN
       CALL URSELL_NUMBER(HS,SMESPC,DEP(IP),URSELL) 
       IF ( URSELL .le. TRI_ARR(5) ) RETURN
-      E  = 0.
-      SA = 0.
+
+!---  Initialisation
+      SSNL3 = ZERO; DSSNL3 = ZERO
+      E = ZERO; ED = ZERO; SA = ZERO;
+
+!---  Compute maximum frequency for which interactions are calculated
       ISMAX = TRI_ISP1
       DO IS = TRI_ISP1, MSC
        IF ( SPSIG(IS) .LT. ( TRI_ARR(2) * SMESPC) ) THEN
           ISMAX = IS
         ENDIF
       ENDDO
+
+!---  Some coefficients
       c1 = G9*(DEP(IP)**2)
       c2 = (TWO/15._rkind)*G9*(DEP(IP)**4)
       c3 = (TWO/5._rkind)*(DEP(IP)**3)
+
+!---  Computing biphase
       BIPH   = PIHALF*(MyTANH(TRI_ARR(4)/URSELL)-1.)
       SINBPH = ABS( SIN(BIPH) )
+
+!---  Compute integral of energy density over directions
+      ED = SUM(ACLOC,DIM=2)*PI2*SPSIG*DDIR
+
+!---  Main loop computing triads interaction
       DO ID = 1, MDC
-        E = ACLOC(:,ID) * PI2 * SPSIG
-        DO IS=TRI_ISBEGIN, ISMAX 
+        ! Initialising E(f) in the corresponding directional bin
+        E = ACLOC(:,ID)*PI2*SPSIG
+
+        ! Loop over frequencies
+        DO IS = TRI_ISBEGIN, ISMAX 
           E0  = E(IS)
+          ED0 = ED(IS)
           W0  = SPSIG(IS)
           WN0 = WK(IS,IP)
           C0  = W0 / WN0
           EM  = TRI_WISM * E(IS+TRI_ISM1)      + TRI_WISM1 * E(IS+TRI_ISM)
+          EDM = TRI_WISM * ED(IS+TRI_ISM1)     + TRI_WISM1 * ED(IS+TRI_ISM)
           WM  = TRI_WISM * SPSIG(IS+TRI_ISM1)  + TRI_WISM1 * SPSIG(IS+TRI_ISM)
           WNM = TRI_WISM * WK(IS+TRI_ISM1,IP)  + TRI_WISM1 * WK(IS+TRI_ISM,IP)
           CM  = WM / WNM
@@ -52,12 +76,18 @@
           AUX2 = WN0 * ( c1 + c2 * WN0**2 - c3 * W0**2) ! (m/s² * m + m/s² * m³*1/m² - 1/s² * m²)
           RINT = AUX1 / AUX2
           FT = TRI_ARR(1) * C0 * CG(IS,IP) * RINT**2 * SINBPH
-          SA(IS,ID) = MAX(ZERO, FT*(EM*(EM - 2*E0)))
+          IF (MESTR .EQ. 1) THEN     ! Old LTA version
+            SA(IS,ID) = MAX(ZERO, FT*(EM*(EM - 2.*E0)))
+          ELSEIF (MESTR .EQ. 2) THEN ! Consistent LTA described in Salmon et al. (2016)
+            SA(IS,ID) = MAX(ZERO, FT*(EDM*(EM-E0) - ED0*EM))
+          ENDIF
         END DO
       END DO
+
+!---  Putting source terms together
       DO ID = 1, MDC
         DO IS = 1, MSC
-          SIGPI = SPSIG(IS) * PI2
+          SIGPI = SPSIG(IS)*PI2
           IF (ACLOC(IS,ID) .LT. THR) CYCLE
           STRI = SA(IS,ID) - TWO*(TRI_WISP*SA(IS+TRI_ISP1,ID) + TRI_WISP1*SA(IS+TRI_ISP,ID))
           IF (ABS(STRI) .LT. THR) CYCLE
@@ -72,9 +102,9 @@
             END IF
           ELSE
             IMATRA(IS,ID) = IMATRA(IS,ID) + eCont
-            IMATDA(IS,ID) = ZERO !IMATDA(IS,ID) + STRI / (ACLOC(IS,ID)*SIGPI)
+            IMATDA(IS,ID) = STRI / MAX(1.E-18,ACLOC(IS,ID)*SIGPI)
             SSNL3(IS,ID)  = eCont
-            DSSNL3(IS,ID) = eCont / ACLOC(IS,ID)
+            DSSNL3(IS,ID) = STRI / MAX(1.E-18,ACLOC(IS,ID)*SIGPI)
           END IF
         END DO
       END DO

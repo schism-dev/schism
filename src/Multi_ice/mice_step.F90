@@ -2,7 +2,8 @@
 !
 !  Contains Icepack component driver routines common to all drivers.
 !
-!  Authors: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
+! Author: Lorenzo Zampieri ( lorenzo.zampieri@awi.de )
+!        Qian Wang upate ICEPACK to 1.3.4
 !  Modified by Qian Wang to apply to SCHISM
 !=======================================================================
 
@@ -100,18 +101,21 @@ subroutine step_therm1 (dt)
 
     integer (kind=int_kind) :: &
        ntrcr, nt_apnd, nt_hpnd, nt_ipnd, nt_alvl, nt_vlvl, nt_Tsfc, &
-       nt_iage, nt_FY, nt_qice, nt_sice, nt_aero, nt_qsno
+       nt_iage, nt_FY, nt_qice, nt_sice, nt_aero, nt_qsno,          &
+       nt_rsnw, nt_smice, nt_smliq
 
     logical (kind=log_kind) :: &
-       tr_iage, tr_FY, tr_aero, tr_pond, tr_pond_cesm, &
-       tr_pond_lvl, tr_pond_topo, calc_Tsfc, calc_strair
+       tr_iage, tr_FY, tr_aero, tr_pond, &
+       tr_pond_lvl, tr_pond_topo, calc_Tsfc, calc_strair,           &
+       snwgrain
 
     real (kind=dbl_kind), dimension(n_aero,2,ncat) :: &
        aerosno,  aeroice    ! kg/m^2
 
     real (kind=dbl_kind) :: &
        puny
-
+    real (kind=dbl_kind), dimension(nslyr,ncat) :: &
+       rsnwn, smicen, smliqn
     character(len=*), parameter :: subname='(step_therm1)'
 
     !-----------------------------------------------------------------
@@ -120,6 +124,7 @@ subroutine step_therm1 (dt)
 
     call icepack_query_parameters(puny_out=puny)
     call icepack_query_parameters(calc_strair_out=calc_strair,calc_Tsfc_out=calc_Tsfc)
+    call icepack_query_parameters(snwgrain_out=snwgrain)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -132,7 +137,7 @@ subroutine step_therm1 (dt)
 
     call icepack_query_tracer_flags( &
          tr_iage_out=tr_iage, tr_FY_out=tr_FY, &
-         tr_aero_out=tr_aero, tr_pond_out=tr_pond, tr_pond_cesm_out=tr_pond_cesm, &
+         tr_aero_out=tr_aero, tr_pond_out=tr_pond,  &
          tr_pond_lvl_out=tr_pond_lvl, tr_pond_topo_out=tr_pond_topo)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
@@ -143,7 +148,8 @@ subroutine step_therm1 (dt)
          nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_Tsfc_out=nt_Tsfc, &
          nt_iage_out=nt_iage, nt_FY_out=nt_FY, &
          nt_qice_out=nt_qice, nt_sice_out=nt_sice, &
-         nt_aero_out=nt_aero, nt_qsno_out=nt_qsno)
+         nt_aero_out=nt_aero, nt_qsno_out=nt_qsno, &
+         nt_rsnw_out=nt_rsnw, nt_smice_out=nt_smice, nt_smliq_out=nt_smliq)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -153,7 +159,9 @@ subroutine step_therm1 (dt)
     prescribed_ice = .false.
     aerosno(:,:,:) = c0
     aeroice(:,:,:) = c0
-
+    rsnwn(:,:)    = c0
+    smicen(:,:)   = c0
+    smliqn(:,:)   = c0
     do i = 1, nx
       !if(idry(i)==1) cycle
     !-----------------------------------------------------------------
@@ -188,6 +196,16 @@ subroutine step_therm1 (dt)
         enddo
       endif ! tr_aero
 
+      if(snwgrain) then
+         do n=1,ncat
+            do k=1,nslyr
+               rsnwn(k,n)  = trcrn(i,nt_rsnw+k-1,n)
+               smicen(k,n) = trcrn(i,nt_smice+k-1,n)
+               smliqn(k,n) = trcrn(i,nt_smliq+k-1,n)
+            enddo
+         enddo
+      endif
+
       call icepack_step_therm1(dt=dt, ncat=ncat, nilyr=nilyr, nslyr=nslyr, &
           aicen_init = aicen_init(i,:), &
           vicen_init = vicen_init(i,:), &
@@ -207,6 +225,9 @@ subroutine step_therm1 (dt)
           ipnd = trcrn(i,nt_ipnd,:),                 & 
           iage = trcrn(i,nt_iage,:),                 &
           FY   = trcrn(i,nt_FY,:),                   & 
+          rsnwn= rsnwn(:,:),               &
+          smicen=smicen(:,:),              &
+          smliqn=smliqn(:,:),              &
           aerosno = aerosno(:,:,:),        &
           aeroice = aeroice(:,:,:),        &
           uatm = uatm(i), vatm = vatm(i),  &
@@ -239,8 +260,9 @@ subroutine step_therm1 (dt)
           fbot     = fbot(i),       frzmlt    = frzmlt(i),      &
           Tbot     = Tbot(i),       Tsnice    = Tsnice(i),      &
           rside    = rside(i),      fside     = fside(i),       &
+          wlat     = wlat(i),                                   &
           fsnow    = fsnow(i),      frain     = frain(i),       &
-          fpond    = fpond(i),                                  &
+          fpond    = fpond(i),      fsloss    = fsloss(i),      &
           fsurf    = fsurf(i),      fsurfn    = fsurfn(i,:),    &
           fcondtop = fcondtop(i),   fcondtopn = fcondtopn(i,:), &
           fcondbot = fcondbot(i),   fcondbotn = fcondbotn(i,:), &
@@ -264,7 +286,10 @@ subroutine step_therm1 (dt)
           melts    = melts(i),      meltsn    = meltsn(i,:),    &
           congel   = congel(i),     congeln   = congeln(i,:),   &
           snoice   = snoice(i),     snoicen   = snoicen(i,:),   &
+          dsnow    = dsnow(i),                                  &
           dsnown   = dsnown(i,:),                               &
+          meltsliq = meltsliq(i),                               &
+          meltsliqn= meltsliqn(i,:),                            &
           lmask_n  = lmask_n(i),    lmask_s   = lmask_s(i),     &
           mlt_onset=mlt_onset(i),   frz_onset = frz_onset(i),   &
           yday = yday,  prescribed_ice = prescribed_ice)
@@ -273,7 +298,17 @@ subroutine step_therm1 (dt)
             stress_atmice_x(i) = strairxT(i)
             stress_atmice_y(i) = strairyT(i)
          endif
-         
+
+      if (snwgrain) then
+         do n = 1, ncat
+            do k = 1, nslyr
+               trcrn(i,nt_rsnw +k-1,n) = rsnwn (k,n)
+               trcrn(i,nt_smice+k-1,n) = smicen(k,n)
+               trcrn(i,nt_smliq+k-1,n) = smliqn(k,n)
+            enddo
+         enddo
+      endif ! snwgrain
+
       if (tr_aero) then
         do n = 1, ncat
           if (vicen(i,n) > puny) &
@@ -361,6 +396,7 @@ subroutine step_therm2 (dt)
                     Tf=Tf(i), sss=sss(i),                        &
                     salinz=salinz(i,:), fside=fside(i),          &
                     rside=rside(i),   meltl=meltl(i),            &
+                    wlat = wlat(i),                              &
                     frzmlt=frzmlt(i), frazil=frazil(i),          &
                     frain=frain(i),   fpond=fpond(i),            &
                     fresh=fresh(i),   fsalt=fsalt(i),            &
@@ -368,7 +404,6 @@ subroutine step_therm2 (dt)
                     bgrid=bgrid,      cgrid=cgrid,               &
                     igrid=igrid,      faero_ocn=faero_ocn(i,:),  &
                     first_ice=first_ice(i,:),                    &
-                    fzsal=fzsal(i),                              &
                     flux_bio=flux_bio(i,1:nbtrcr),               &
                     ocean_bio=ocean_bio(i,1:nbtrcr),             &
                     frazil_diag=frazil_diag(i),                  &
@@ -624,6 +659,7 @@ subroutine step_dyn_ridge (dt, ndtd)
     ! column package includes
     use icepack_intfc, only: icepack_step_ridge
     use schism_glbl, only : idry_e,nne,indel
+    use mice_module, only : ice_tests
     implicit none
 
     real (kind=dbl_kind), intent(in) :: &
@@ -684,14 +720,14 @@ subroutine step_dyn_ridge (dt, ndtd)
                      dvirdgndt=dvirdgndt(i,:),                           &
                      araftn=araftn(i,:),       vraftn=vraftn(i,:),       &
                      aice=aice(i),             fsalt=fsalt(i),           &
-                     first_ice=first_ice(i,:), fzsal=fzsal(i),           &
+                     first_ice=first_ice(i,:),                           &
                      flux_bio=flux_bio(i,1:nbtrcr))
 
 
 
     enddo 
 
-    call cut_off_icepack
+    if(ice_tests==0) call cut_off_icepack
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__, line=__LINE__)
@@ -699,6 +735,82 @@ subroutine step_dyn_ridge (dt, ndtd)
 
 end subroutine step_dyn_ridge
 
+!=======================================================================
+!
+! Updates snow tracers
+!
+
+subroutine step_snow (dt)
+
+      use icepack_intfc, only: icepack_step_snow
+      use mice_module, only : ice_tests
+
+      real (kind=dbl_kind), intent(in) :: &
+         dt                 ! time step
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         nt_smice, nt_smliq, nt_rsnw, &
+         nt_Tsfc, nt_qice, nt_sice, nt_qsno, &
+         nt_alvl, nt_vlvl, nt_rhos
+
+      integer (kind=int_kind) :: &
+         ilo,ihi,jlo,jhi, & ! beginning and end of physical domain
+         i, j,            & ! horizontal indices
+         ns                 ! history streams index
+
+      real (kind=dbl_kind) :: &
+         puny
+
+      character(len=*), parameter :: subname = '(step_snow)'
+
+
+      !-----------------------------------------------------------------
+      ! query icepack values
+      !-----------------------------------------------------------------
+
+      call icepack_query_parameters(puny_out=puny)
+      call icepack_query_tracer_indices( &
+         nt_smice_out=nt_smice, nt_smliq_out=nt_smliq, &
+         nt_rsnw_out=nt_rsnw, nt_Tsfc_out=nt_Tsfc, &
+         nt_qice_out=nt_qice, nt_sice_out=nt_sice, nt_qsno_out=nt_qsno, &
+         nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, nt_rhos_out=nt_rhos)
+    call icepack_warnings_flush(ice_stderr)
+    if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+        file=__FILE__,line= __LINE__)
+
+      !-----------------------------------------------------------------
+      ! Snow redistribution and metamorphosis
+      !-----------------------------------------------------------------
+
+      do i = 1, nx
+
+         call icepack_step_snow (dt,     nilyr, &
+                     nslyr,              ncat,  &
+                     wind (i),         &
+                     aice (i),         &
+                     aicen(i,:),         &
+                     vicen(i,:),         &
+                     vsnon(i,:),         &
+                     trcrn(i,nt_Tsfc,:), &
+                     trcrn(i,nt_qice,:), & ! top layer only
+                     trcrn(i,nt_sice,:), & ! top layer only
+                     trcrn(i,nt_qsno:nt_qsno+nslyr-1,:),   &
+                     trcrn(i,nt_alvl,:), &
+                     trcrn(i,nt_vlvl,:), &
+                     trcrn(i,nt_smice:nt_smice+nslyr-1,:), &
+                     trcrn(i,nt_smliq:nt_smliq+nslyr-1,:), &
+                     trcrn(i,nt_rsnw:nt_rsnw+nslyr-1,:),   &
+                     trcrn(i,nt_rhos:nt_rhos+nslyr-1,:),   &
+                     fresh   (i),        &
+                     fhocn   (i),        &
+                     fsloss  (i),        &
+                     fsnow   (i))
+      enddo
+
+
+end subroutine step_snow
 !=======================================================================
 !
 ! Computes radiation fields
@@ -722,19 +834,19 @@ subroutine step_radiation (dt)
     integer (kind=int_kind) :: &
        max_aero, max_algae, nt_Tsfc, nt_alvl, &
        nt_apnd, nt_hpnd, nt_ipnd, nt_aero, nlt_chl_sw, &
-       ntrcr, nbtrcr_sw, nt_fbri
+       ntrcr, nbtrcr_sw, nt_fbri, nt_rsnw
 
     integer (kind=int_kind), dimension(:), allocatable :: &
        nlt_zaero_sw, nt_zaero, nt_bgc_N
 
     logical (kind=log_kind) :: &
-       tr_bgc_N, tr_zaero, tr_brine, dEdd_algae, modal_aero
+       tr_bgc_N, tr_zaero, tr_brine, dEdd_algae, modal_aero, snwgrain
 
     real (kind=dbl_kind), dimension(ncat) :: &
        fbri                 ! brine height to ice thickness
 
     real(kind= dbl_kind), dimension(:,:), allocatable :: &
-       ztrcr_sw
+       ztrcr_sw, rsnow
 
     logical (kind=log_kind) :: &
        l_print_point      ! flag for printing debugging information
@@ -753,7 +865,9 @@ subroutine step_radiation (dt)
     allocate(nlt_zaero_sw(max_aero))
     allocate(nt_zaero(max_aero))
     allocate(nt_bgc_N(max_algae))
+    allocate(rsnow(nslyr,ncat))
 
+    call icepack_query_parameters(snwgrain_out=snwgrain)
     call icepack_query_tracer_sizes(ntrcr_out=ntrcr, nbtrcr_sw_out=nbtrcr_sw)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
@@ -769,7 +883,8 @@ subroutine step_radiation (dt)
          nt_Tsfc_out=nt_Tsfc, nt_alvl_out=nt_alvl, nt_apnd_out=nt_apnd, &
          nt_hpnd_out=nt_hpnd, nt_ipnd_out=nt_ipnd, nt_aero_out=nt_aero, &
          nlt_chl_sw_out=nlt_chl_sw, nlt_zaero_sw_out=nlt_zaero_sw, &
-         nt_fbri_out=nt_fbri, nt_zaero_out=nt_zaero, nt_bgc_N_out=nt_bgc_N)
+         nt_fbri_out=nt_fbri, nt_zaero_out=nt_zaero, nt_bgc_N_out=nt_bgc_N,&
+         nt_rsnw_out=nt_rsnw)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -788,9 +903,15 @@ subroutine step_radiation (dt)
     do i = 1, nx
 
        fbri(:) = c0
+       rsnow(:,:) = c0
        ztrcr_sw(:,:) = c0
        do n = 1, ncat
          if (tr_brine)  fbri(n) = trcrn(i,nt_fbri,n)
+         if (snwgrain) then
+            do k = 1, nslyr
+               rsnow(k,n) = trcrn(i,nt_rsnw+k-1,n)
+            enddo
+         endif
        enddo
 
 
@@ -830,7 +951,7 @@ subroutine step_radiation (dt)
                        albpndn=albpndn(i,:),      apeffn=apeffn(i,:),       &
                        snowfracn=snowfracn(i,:),                            &
                        dhsn=dhsn(i,:),            ffracn=ffracn(i,:),       &
-                       l_print_point=l_print_point)
+                       rsnow=rsnow(:,:),          l_print_point=l_print_point)
 
 
     if (dEdd_algae .and. (tr_zaero .or. tr_bgc_N)) then
@@ -848,6 +969,7 @@ subroutine step_radiation (dt)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__, line=__LINE__)
 
+    deallocate(rsnow)
     deallocate(ztrcr_sw)
     deallocate(nlt_zaero_sw)
     deallocate(nt_zaero)
@@ -908,7 +1030,8 @@ subroutine ocean_mixed_layer (dt)
                                  vatm    = vatm(i),        &   
                                  wind    = wind(i),        &   
                                  !zlvl_t  = zlvl_t,         &   
-                                 !zlvl_q  = zlvl_q,         &   
+                                 !zlvl_q  = zlvl_q,         &
+                                 zlvs  = zlvs,           &   
                                  zlvl  = zlvl_v,         &   
                                  Qa      = Qa(i),          &     
                                  rhoa    = rhoa(i),        &
@@ -1047,14 +1170,15 @@ subroutine ocn_mixed_layer_icepack(                       &
        lfs_corr, &  ! fresh water correction for linear free surface      
        stefan_boltzmann, &
        ice_ref_salinity, &
-       cprho
+       cprho,            &
+       puny
 
     character(len=*),parameter :: subname='(icepack_ocn_mixed_layer)'
 
     call icepack_query_parameters( Tffresh_out=Tffresh, Lfresh_out=Lfresh, &
                                    stefan_boltzmann_out=stefan_boltzmann,  &
                                    ice_ref_salinity_out=ice_ref_salinity,  &
-                                   Lvap_out=Lvap,cprho_out=cprho                           )
+                                   Lvap_out=Lvap,cprho_out=cprho, puny_out=puny                 )
 
     ! shortwave radiative flux ! Visible is absorbed by clorophil
     ! afterwards
@@ -1092,7 +1216,9 @@ subroutine ocn_mixed_layer_icepack(                       &
        lfs_corr = fsalt/ice_ref_salinity/p001
        fresh = fresh - lfs_corr * ice_ref_salinity / sss
     endif
-    fresh = fresh - max(fsalt,0.d0) /p001 / sss
+
+    !if(sss > puny) fresh = fresh - fsalt /p001 / sss
+ 
     fresh_tot = fresh + (-evap_ocn + frain + fsnow)*(c1-aice)
 
 end subroutine ocn_mixed_layer_icepack
@@ -1200,8 +1326,6 @@ subroutine coupling_prep(dt)
           fsalt_ai  (i) = fsalt  (i)
           fhocn_ai  (i) = fhocn  (i)
           fswthru_ai(i) = fswthru(i)
-          fzsal_ai  (i) = fzsal  (i)
-          fzsal_g_ai(i) = fzsal_g(i)
 
           if (nbtrcr > 0) then
           do k = 1, nbtrcr
@@ -1227,8 +1351,8 @@ module subroutine step_icepack()
 
    use schism_glbl, only: rkind,pi,np,npa,nvrt,uu2,vv2,time_stamp,windx,windy,xnd,ynd, &
    &tau_oi,nws,ihconsv,isconsv,iplg,fresh_wa_flux,net_heat_flux,srad_th_ice,rho0,rnday,fdb,lfdb, &
-   &lice_free_gb,lhas_ice,errmsg,ice_evap,isbnd,nnp,indnd,nstep_ice,it_main
-    use schism_msgp, only : myrank,nproc,parallel_abort,comm,ierr,exchange_p2d
+   &lice_free_gb,lhas_ice,errmsg,ice_evap,isbnd,nnp,indnd,nstep_ice,it_main,ipgl
+    use schism_msgp, only : myrank,nproc,parallel_abort,comm,ierr,exchange_p2d,rtype,comm
     use mice_module
     use mice_therm_mod  
 
@@ -1240,12 +1364,12 @@ module subroutine step_icepack()
 
     logical (kind=log_kind) :: &
        calc_Tsfc, skl_bgc, solve_zsal, z_tracers, tr_brine, &  ! from icepack
-       tr_fsd, wave_spec
+       tr_fsd, wave_spec, tr_snow
    
     real (kind=dbl_kind) :: &
        offset,              &   ! d(age)/dt time offset
        t1, t2, t3, t4,dt,umod,tmp1,&
-       dux,dvy,aux,puny
+       dux,dvy,aux,puny,hice,totalicea,total_a,totaliceh,total_h
 
     real(kind=dbl_kind) :: &
        swild(npa)
@@ -1278,7 +1402,7 @@ module subroutine step_icepack()
                                   wave_spec_out=wave_spec,puny_out=puny)
     call icepack_query_tracer_indices( &
          nt_Tsfc_out=nt_Tsfc,nt_sice_out=nt_sice)
-    call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_fsd_out=tr_fsd)
+    call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_fsd_out=tr_fsd,tr_snow_out=tr_snow)
     call icepack_warnings_flush(ice_stderr)
     if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
         file=__FILE__,line= __LINE__)
@@ -1311,6 +1435,7 @@ module subroutine step_icepack()
 
     if (calc_Tsfc) call prep_radiation ()
 
+
     !-----------------------------------------------------------------
     ! thermodynamics and biogeochemistry
     !-----------------------------------------------------------------
@@ -1319,12 +1444,19 @@ module subroutine step_icepack()
          if(ice_tests==0.and.(nws/=2.or.ihconsv/=1.or.isconsv/=1)) &
       &call parallel_abort('ice_step: ice therm needs nws=2 etc')
          !Atmos variables are read in for thermodynamics
-   
-         call step_therm1     (dt) ! vertical thermodynamics
-         call step_therm2     (dt) ! ice thickness distribution thermo
-         if(myrank==0) write(16,*)'done ice thermodynamics'
+         if(ice_tests==0) then
+            call step_therm1     (dt) ! vertical thermodynamics
+
+            call step_therm2     (dt) ! ice thickness distribution thermo
+
+            if(myrank==0) write(16,*)'done ice thermodynamics'
+         else
+            if(myrank==0) write(16,*)'ice test, no ice thermodynamics'
+         endif
+         
       endif
    endif
+      
 
     ! clean up, update tendency diagnostics
 
@@ -1382,8 +1514,10 @@ module subroutine step_icepack()
        do i=1,npa
          if(a_ice0(i)<=ice_cutoff.or.m_ice0(i)<=ice_cutoff) then
            lhas_ice(i)=.false.
-           U_ice(i)=0
-           V_ice(i)=0
+           !U_ice(i)=0
+           !V_ice(i)=0
+           !U_ice(i)=u_ocean(i)
+           !V_ice(i)=v_ocean(i)
          else
            lhas_ice(i)=.true.
            lice_free=.false.
@@ -1414,8 +1548,20 @@ module subroutine step_icepack()
        else if (ice_advection==3) then
          call tracer_advection_icepack3
          if(myrank==0) write(16,*)'done ice upwind advection'
+       else if (ice_advection==4) then
+         call tracer_advection_icepack_cd
+         if(myrank==0) write(16,*)'done ice center-diff advection'
+       else if (ice_advection==5) then
+         call tracer_advection_icepack4
+         if(myrank==0) write(16,*)'done ice TVD advection'
+       else if (ice_advection==6) then
+         call tracer_advection_icepack5
+         if(myrank==0) write(16,*)'done ice TVD-UPWIND advection'
+       else if (ice_advection==7) then
+         call tracer_advection_icepack6
+         if(myrank==0) write(16,*)'done ice TVD-casulli advection'
        else
-         if(myrank==0) write(16,*)'no ice dynamics'
+         if(myrank==0) write(16,*)'no ice advection'
        endif
        
        !t3 = MPI_Wtime()
@@ -1431,6 +1577,13 @@ module subroutine step_icepack()
     enddo
 
     !call schism_to_icepack
+
+
+    !-----------------------------------------------------------------
+    ! snow redistribution and metamorphosis
+    !-----------------------------------------------------------------
+
+    if(tr_snow) call step_snow(dt)
 
     !-----------------------------------------------------------------
     ! albedo, shortwave radiation
@@ -1480,8 +1633,10 @@ lice_free=.true. !over all aug domain
 do i=1,npa
   if(a_ice0(i)<=ice_cutoff.or.m_ice0(i)<=ice_cutoff) then
     lhas_ice(i)=.false.
-    U_ice(i)=0
-    V_ice(i)=0
+   !U_ice(i)=0
+   !V_ice(i)=0
+   !U_ice(i)=u_ocean(i)
+   !V_ice(i)=v_ocean(i)
   else
     lhas_ice(i)=.true.
     lice_free=.false.
@@ -1493,7 +1648,7 @@ if(myrank==0) write(16,*)'lice_free_gb=',lice_free_gb
 
 fresh_wa_flux(:)=0
 net_heat_flux(:)=0
-tau_oi=0 !init as junk
+tau_oi(:,:)=0 !init as junk
 ice_tr(:,:)=0
 ice_evap(:)=0
 srad_th_ice(:)=0
@@ -1524,13 +1679,15 @@ srad_th_ice(:)=0
    if(lhas_ice(i)) then
       umod=sqrt((U_ice(i)-u_ocean(i))**2+(V_ice(i)-v_ocean(i))**2)
      tmp1=ice_tr(2,i)*Cdn_ocn(i)*umod
+     !tmp1=ice_tr(2,i)*cdwat*umod
      if(isbnd(1,i)<0) then !b.c. (including open)
       njj=0
       do kk=1,nnp(i)
          jj=indnd(kk,i)
          if((isbnd(1,jj)==0).and.(lhas_ice(jj))) then
             umod=sqrt((U_ice(jj)-u_ocean(jj))**2+(V_ice(jj)-v_ocean(jj))**2)
-            tmp1=a_ice0(jj)*Cdn_ocn(i)*umod
+            tmp1=a_ice0(jj)*Cdn_ocn(jj)*umod
+            !tmp1=a_ice0(jj)*cdwat*umod
             tau_oi(1,i)=tau_oi(1,i)+tmp1*((U_ice(jj)-u_ocean(jj))*cos_io-(V_ice(jj)-v_ocean(jj))*sin_io) !m^2/s/s
             tau_oi(2,i)=tau_oi(2,i)+tmp1*((U_ice(jj)-u_ocean(jj))*sin_io+(V_ice(jj)-v_ocean(jj))*cos_io)  
             njj=njj+1  
@@ -1539,18 +1696,23 @@ srad_th_ice(:)=0
 
       tau_oi(1,i)=tau_oi(1,i)/njj
       tau_oi(2,i)=tau_oi(2,i)/njj
+      !tau_oi(1,i)=tmp1*((U_ice(i)-u_ocean(i))*cos_io-(V_ice(i)-v_ocean(i))*sin_io) !m^2/s/s
+      !tau_oi(2,i)=tmp1*((U_ice(i)-u_ocean(i))*sin_io+(V_ice(i)-v_ocean(i))*cos_io)    
       !tau_oi(1,i)=0.01*tmp1*((U_ice(i)-u_ocean(i))*cos_io-(V_ice(i)-v_ocean(i))*sin_io) !m^2/s/s
       !tau_oi(2,i)=0.01*tmp1*((U_ice(i)-u_ocean(i))*sin_io+(V_ice(i)-v_ocean(i))*cos_io)    
       !tau_oi(1,i)=0 !0.001*((U_ice(i)-u_ocean(i))*cos_io-(V_ice(i)-v_ocean(i))*sin_io)/umod
       !tau_oi(2,i)=0 !0.001*((U_ice(i)-u_ocean(i))*sin_io+(V_ice(i)-v_ocean(i))*cos_io)/umod
-   else if(isbnd(1,i)>0) then
+      else if(isbnd(1,i)>0) then
       tau_oi(1,i)=0
       tau_oi(2,i)=0
+      !tau_oi(1,i)=tmp1*((U_ice(i)-u_ocean(i))*cos_io-(V_ice(i)-v_ocean(i))*sin_io) !m^2/s/s
+      !tau_oi(2,i)=tmp1*((U_ice(i)-u_ocean(i))*sin_io+(V_ice(i)-v_ocean(i))*cos_io)    
      else
       tau_oi(1,i)=tmp1*((U_ice(i)-u_ocean(i))*cos_io-(V_ice(i)-v_ocean(i))*sin_io) !m^2/s/s
       tau_oi(2,i)=tmp1*((U_ice(i)-u_ocean(i))*sin_io+(V_ice(i)-v_ocean(i))*cos_io)    
      endif
    endif
+
    if((tau_oi(1,i)/=tau_oi(1,i)).or.(tau_oi(2,i)/=tau_oi(2,i))) then
       tau_oi(1,i)=0
       tau_oi(2,i)=0
@@ -1558,14 +1720,20 @@ srad_th_ice(:)=0
 enddo
 
 
+ swild = 0
  swild=tau_oi(1,:)
  call exchange_p2d(swild)
  tau_oi(1,:)=swild
 
+ swild = 0
  swild=tau_oi(2,:)
  call exchange_p2d(swild)
  tau_oi(2,:)=swild
-
+!do i=1,npa
+!   if(tau_oi(2,i)*(V_ice(i)-v_ocean(i))<0) then
+!      write(12,*) 'mystery4',tau_oi(2,i),V_ice(i),v_ocean(i),ice_tr(2,i),Cdn_ocn(i),umod
+!   endif
+!enddo
  !call exchange_p2d(net_heat_flux)
  !call exchange_p2d(fresh_wa_flux)
  !call exchange_p2d(ice_evap)

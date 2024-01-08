@@ -39,7 +39,6 @@ add_library(hydro schism_init.F90
                   misc_subs.F90
                   sflux_9c.F90 
                   solver_subs.F90 
-                  transport_TVD.F90
                   transport_TVD_imp.F90
                   ${hydro_extra_src}
                   )

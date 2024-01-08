@@ -57,7 +57,7 @@ The cmake utility is a very powerful way of building the source code and utility
 2. `SCHISM.local.cluster_name`: similar to Make.defs.local, this file specifies the most important environment 
   variables like name/path of compiler, netcdf library etc. In general, cmake is quite adept at 
   inferring some of these variables but sometimes you might need to overwrite the `defaults` in this file. 
-  You can start from an existing file for a similar cluster e.g. `cp –L SCHISM.local.whirlwind SCHISM.local.myown`
+  You can start from an existing file for a similar cluster e.g. `cp -L SCHISM.local.whirlwind SCHISM.local.myown`
 
 Once these two files are set, run - 
 

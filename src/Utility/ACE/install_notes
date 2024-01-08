@@ -43,3 +43,14 @@
 
 (4) The steps above can be followed for windows running cygwin and a X server (Xming, Exceed etc).
     You need to do a FULL installation of cygwin (with all packages).
+
+
+(5) Usage: see http://ccrm.vims.edu/w/index.php/Online_tutorials#ACE_tool_tutorial.
+(6) Tips: 
+  (a) It's often tedious to create open/land boundary segments when there are many of them. With xmgredit5 there is
+  a shortcut that allows you to only create this info once. Place build points at the start and end of each open boundary
+  segment (note that the locations do not need to be exact as xmgredi5 will look for nearest nodes) and save the build point
+  file e.g. as bnd.bp. Then launch xmgredit5 as: xmgredit5 -bc bnd.bp hgrid.gr3
+  It will generate 'bcs.bnd' which is the b.c. part you need for hgrid.gr3. In addition, the display will highlight
+  open/land/island boundaries in blue/green/red respectively so you can inspect.
+  Note that if you substantially change the open/land boundary segments you may need to redo bnd.bp.

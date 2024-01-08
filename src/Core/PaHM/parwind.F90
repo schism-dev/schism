@@ -18,12 +18,17 @@
 !Routines & functions
 ! ReadCsvBestTrackFile
 ! ProcessHollandData: process track data into struc for time steps
+! ProcessAsymmetricVortexData : process track data into struc for time steps
 ! GetHollandFields: interpolate onto UG mesh wind and pressure
+! GetGAHMFields: interpolate onto UG mesh wind and pressure
 ! WriteBestTrackData
+! WriteAsymmetricVortexData
 ! AllocBTrStruct
 ! DeAllocBTrStruct 
 ! AllocHollStruct
 ! DeAllocHollStruct 
+! AllocAsymVortStruct
+! DeAllocAsymVortStruct
 
 MODULE ParWind
 
@@ -35,9 +40,9 @@ MODULE ParWind
   ! switch to turn on or off geostrophic balance in GAHM
   ! on (default): Coriolis term included, phiFactors will be calculated before being used 
   ! off         : parameter is set to 'TRUE', phiFactors will be set to constant 1
-!  LOGICAL :: geostrophicSwitch = .TRUE.  !PV shouldn't be a user input?
-!  INTEGER :: geoFactor = 1               !turn on or off gostrophic balance  !PV shouldn't be a user input?
-!  INTEGER :: method = 4, approach = 2    !PV shouldn't be a user input?
+  LOGICAL :: geostrophicSwitch = .TRUE.  !PV shouldn't be a user input?
+  INTEGER :: geoFactor = 1               !turn on or off gostrophic balance  !PV shouldn't be a user input?
+  INTEGER :: method = 4, approach = 2    !PV shouldn't be a user input?
 
   INTEGER, PARAMETER, PRIVATE :: STORMNAMELEN = 10
 
@@ -172,6 +177,90 @@ MODULE ParWind
 
   TYPE(HollandData_T), ALLOCATABLE      :: holStru(:)       ! array of Holland data structures
 
+  !----------------------------------------------------------------
+  ! The AsymetricVortexData_T structure holds all required data for
+  ! the asymetric vortexs models. The data are filtered to only include unique DTGs
+  !----------------------------------------------------------------
+  TYPE AsymetricVortexData_T
+    CHARACTER(LEN=FNAMELEN)             :: fileName         ! full path to the best track file
+    CHARACTER(LEN=10)                   :: thisStorm        ! the name of the "named" storm
+    LOGICAL                             :: loaded = .FALSE. ! .TRUE. if we have loaded the data from file
+    INTEGER                             :: numRec           ! number of records in the structure
+
+    CHARACTER(LEN=2),       ALLOCATABLE :: basin(:)         ! basin, e.g. WP, IO, SH, CP, EP, AL, LS
+    INTEGER, ALLOCATABLE                :: stormNumber(:)   ! annual cyclone number: 1 - 99
+    CHARACTER(LEN=10),      ALLOCATABLE :: dtg(:)           ! warning Date-Time-Group (DTG), YYYYMMDDHH
+    INTEGER, DIMENSION(:),  ALLOCATABLE :: year, month, day, hour
+    REAL(SZ), ALLOCATABLE               :: castTime(:)      ! time in seconds from the refernce date of the simulation
+    INTEGER, ALLOCATABLE                :: castTypeNum(:)   ! objective technique sorting number, minutes for best track: 00 - 99
+    CHARACTER(LEN=4),       ALLOCATABLE :: castType(:)      ! BEST, OFCL, CALM, ...
+    INTEGER,                ALLOCATABLE :: fcstInc(:)       ! forecast period: -24 through 240 hours, 0 for best-track
+
+    INTEGER,  DIMENSION(:), ALLOCATABLE :: iLat, iLon       ! latitude, longitude for the GTD
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: lat, lon         ! converted to decimal E/N (lon, lat)
+    CHARACTER(LEN=1), ALLOCATABLE       :: ns(:), ew(:)     ! N/S and E/S character
+
+    INTEGER,                ALLOCATABLE :: iSpeed(:)        ! maximum sustained wind speed in knots: 0 - 300 kts
+    REAL(SZ),               ALLOCATABLE :: speed(:)         ! converted from kts to m/s
+
+    INTEGER,                ALLOCATABLE :: iCPress(:)       ! minimum sea level pressure, 850 - 1050 mb
+    REAL(SZ),               ALLOCATABLE :: cPress(:)        ! converted to Pa
+
+    CHARACTER(LEN=2), ALLOCATABLE       :: ty(:)            ! Highest level of tc development (see best track structure)
+
+    INTEGER, ALLOCATABLE                :: ivr(:)           ! wind intensity for the radii defined in this record: 34, 50 or 64 kt
+    CHARACTER(LEN=3), ALLOCATABLE       :: windCode(:)      ! radius code: AAA - full circle, NEQ, SEQ, SWQ, NWQ - quadrant
+    INTEGER, ALLOCATABLE                :: ir(:, :)         ! if full circle, radius of specified wind intensity, or radius of
+                                                            ! 1: first quadrant, 2: 2nd quadrant, 3: 3rd quadrant, 4: 4th quadrant
+
+    INTEGER,                ALLOCATABLE :: iPrp(:)          ! pressure in millibars of the last closed isobar, 900 - 1050 mb
+    REAL(SZ),               ALLOCATABLE :: prp(:)           ! converted to Pa
+
+    INTEGER,                ALLOCATABLE :: iRrp(:)          ! radius of the last closed isobar, 0 - 999 n mi
+    REAL(SZ),               ALLOCATABLE :: rrp(:)           ! converted from nm to m
+
+    INTEGER,                ALLOCATABLE :: iRmw(:)          ! radius of max winds, 0 - 999 n mi
+    REAL(SZ),               ALLOCATABLE :: rmw(:)           ! converted from nm to m
+
+    INTEGER, ALLOCATABLE             :: gusts(:)            ! gusts, 0 - 999 kt
+    INTEGER, ALLOCATABLE             :: eye(:)              ! eye diameter, 0 - 120 n mi
+    CHARACTER(LEN=3), ALLOCATABLE    :: subregion(:)        ! subregion code: W,A,B,S,P,C,E,L,Q
+                                                            !   A - Arabian Sea
+                                                            !   B - Bay of Bengal
+                                                            !   C - Central Pacific
+                                                            !   E - Eastern Pacific
+                                                            !   L - Atlantic
+                                                            !   P - South Pacific (135E - 120W)
+                                                            !   Q - South Atlantic
+                                                            !   S - South IO (20E - 135E)
+                                                            !   W - Western Pacific
+    INTEGER, ALLOCATABLE             :: maxseas(:)          ! max seas: 0 - 999 ft
+    CHARACTER(LEN=3), ALLOCATABLE    :: initials(:)         ! forecaster's initials used for tau 0 WRNG or OFCL, up to 3 chars
+
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: trVx, trVy       ! translational velocity components (x, y) of the
+                                                            ! moving hurricane (m/s)
+
+    INTEGER, ALLOCATABLE                :: idir(:)          ! storm direction, 0 - 359 degrees
+    REAL(SZ), ALLOCATABLE               :: dir(:)           ! storm direction, 0 - 359 degrees
+    INTEGER, ALLOCATABLE                :: iStormSpeed(:)   ! storm speed, 0 - 999 kts
+    REAL(SZ), ALLOCATABLE               :: stormSpeed(:)    ! converted from kts to m/s
+    CHARACTER(LEN=STORMNAMELEN), ALLOCATABLE &
+                                        :: stormName(:)     ! literal storm name, number, NONAME or INVEST, or TCcyx where:
+                                                            !   cy = Annual cyclone number 01 - 99
+                                                            !   x  = Subregion code: W,A,B,S,P,C,E,L,Q.
+
+    ! extended/asymetric vortex data
+    INTEGER                                :: nCycles
+    INTEGER,  DIMENSION(:),    ALLOCATABLE :: numCycle
+    INTEGER,  DIMENSION(:),    ALLOCATABLE :: isotachsPerCycle
+    INTEGER , DIMENSION(:, :), ALLOCATABLE :: quadFlag
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: rMaxW
+    REAL(SZ), DIMENSION(:),    ALLOCATABLE :: hollB
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: hollBs
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: vMaxesBL
+  END TYPE AsymetricVortexData_T
+
+  TYPE(AsymetricVortexData_T), ALLOCATABLE :: asyVortStru(:) ! array of asymetric vortex data structures
 
 
   CONTAINS
@@ -281,12 +370,21 @@ MODULE ParWind
           !--- col:  6
           bestTrackData(iFile)%tau(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 6))))
           !--- col:  7
+<<<<<<< HEAD
           tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 7)))
           READ(tmpStr, '(i3, a1)') &
                bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt)
           !--- col:  8
           tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 8)))
           READ(tmpStr, '(i3, a1)') &
+=======
+          tmpStr = TRIM(sval2D(iCnt, 7))
+          READ(tmpStr, '(i4, a1)') &
+               bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt)
+          !--- col:  8
+          tmpStr = TRIM(sval2D(iCnt, 8))
+          READ(tmpStr, '(i5, a1)') &
+>>>>>>> master
                bestTrackData(iFile)%intLon(iCnt), bestTrackData(iFile)%ew(iCnt)
           !--- col:  9
           bestTrackData(iFile)%intVMax(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 9))))
@@ -709,6 +807,840 @@ MODULE ParWind
 !================================================================================
 
   !----------------------------------------------------------------
+  !  S U B R O U T I N E   P R O C E S S  A S Y M M E T R I C  V O R T E X  D A T A
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Subroutine to support the asymetric vortex model(s) (Holland or otherwise).
+  !>
+  !> @details
+  !>   Subroutine to support asymetric vortex models.
+  !>   Gets the next line from the file, skipping lines that are time repeats.
+  !>   - Does conversions to the proper units.
+  !>   - Uses old values of central pressure and rmw if the line is a
+  !>     forecast, since forecasts do not have that data in them.
+  !>   - Assumes longitude is WEST longitude, latitude is NORTH latitude.
+  !>
+  !> @param[in]
+  !>   idTrFile   The ID of the input track file (1, 2, ...)
+  !> @param[out]
+  !>   strOut     The AsymetricVortexData_T structure that stores all model generated data (output)
+  !> @param[out]
+  !>   status     Error status, 0 = no error (output)
+  !>
+  !----------------------------------------------------------------
+  SUBROUTINE ProcessAsymmetricVortexData(idTrFile, strOut, status)
+
+    USE PaHM_Global, ONLY   : RAD2DEG, DEG2RAD, NM2M, KT2MS, MS2KT, &
+                              backgroundAtmPress, windReduction, bestTrackFileName, nBTrFiles
+    USE PaHM_Utilities, ONLY: ToUpperCase, CharUnique, SphericalDistance
+    USE TimeDateUtils, ONLY : TimeConv
+    USE PaHM_Vortex
+                            
+
+    IMPLICIT NONE
+
+    INTEGER, INTENT(IN)                      :: idTrFile
+    TYPE(AsymetricVortexData_T), INTENT(OUT) :: strOut
+    INTEGER, INTENT(OUT)                     :: status ! error status
+
+    ! ----- Local variables
+    INTEGER                             :: numRec
+
+    INTEGER                             :: iCnt, iCyc, i, k ! loop counters
+
+    CHARACTER(LEN=4)                    :: castType         !hindcast,forecast
+    REAL(SZ), ALLOCATABLE               :: castTime(:)      ! seconds since start of year
+
+    INTEGER                             :: nCycles
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: cycleTime
+    INTEGER,  DIMENSION(:), ALLOCATABLE :: totRecPerCycle
+
+    INTEGER                :: radiiSum ! record radius values for filling in missing vals
+    INTEGER                :: numNonZero ! number of nonzero isotach radii
+    INTEGER                :: firstEntry    ! first entry in the cycle
+    INTEGER                :: lastEntry     ! last entry in the cycle
+    REAL(sz)               :: stormMotion   ! portion of Vmax attributable to storm motio
+    REAL(sz)               :: stormMotionU  ! U portion of Vmax attributable to storm motion
+    REAL(sz)               :: stormMotionV  ! V portion of Vmax attributable to storm motion
+    REAL(sz)               :: U_Vr, V_Vr
+    REAL(SZ), DIMENSION(4) :: vmwBL
+    INTEGER,  DIMENSION(4) :: vmwBLflag
+    REAL(SZ)               :: vMaxPseudo
+    REAL(SZ), DIMENSION(:,:), ALLOCATABLE  :: phiFactors
+    REAL(SZ), DIMENSION(4)                 :: vMaxesBLTemp
+    INTEGER , DIMENSION(:, :), ALLOCATABLE :: irad ! working isotach radii
+    REAL(SZ), DIMENSION(4)                 :: rMaxWTemp
+    INTEGER                                :: iQuadRot, nQuadRot
+    
+    INTEGER, DIMENSION(0:5) :: lookupRadii ! periodic interpolation
+    REAL(SZ), DIMENSION(4)  :: r
+    REAL(SZ)                :: pn    ! Ambient surface pressure (mb)
+    REAL(SZ)                :: pc    ! Surface pressure at center of storm (mb)
+    REAL(SZ)                :: cLat, cLon  ! Current eye location (degrees north, degrees east)
+    REAL(SZ)                :: vMax   ! Current Max sustained wind velocity in storm (knots)
+    REAL(SZ), DIMENSION(4)  :: gamma     ! factor applied to the StormMotion
+    REAL(SZ), DIMENSION(4)  :: quadRotateAngle, quadRotateAngle_new
+    REAL(SZ), DIMENSION(4)  :: rMaxWHighIso
+    REAL(SZ), DIMENSION(4)  :: epsilonAngle
+    INTEGER,  DIMENSION(4)  :: irr
+    LOGICAL,  DIMENSION(4)  :: vioFlag
+    REAL(SZ)                :: vMaxBL ! max sustained wind at top of atm. b.l.
+    REAL(SZ)                :: azimuth  ! angle of node w.r.t. vortex (radians)
+    REAL(SZ), DIMENSION(4)  :: quadrantVr, quadrantAngles, quadrantVecAngles
+    REAL(SZ)                :: vr ! Current velocity @ wind radii (knots)
+  
+    
+    status = 0  ! no error
+
+    CALL SetMessageSource("ProcessAsymmetricVortexData")
+
+    IF ((idTrFile >= 1) .AND. (idTrFile <= nBTrFiles)) THEN
+      IF (.NOT. bestTrackData(idTrFile)%loaded) THEN
+        status = 2
+
+        WRITE(scratchMessage, '(a, i0)') 'Error while loading best track data structure with id: ', idTrFile 
+        CALL AllMessage(ERROR, scratchMessage)
+
+        CALL UnsetMessageSource()
+
+        RETURN
+      END IF
+    ELSE
+      status = 1
+
+      WRITE(scratchMessage, '(a, i0, a, i0)') 'Wrong best track structure id (idTrFile): ', idTrFile, &
+                                              ', it should be: (1<= idTrFile <= nBTrFiles); nBTrFiles = ', nBTrFiles
+      CALL AllMessage(ERROR, scratchMessage)
+ 
+      CALL UnsetMessageSource()
+
+      RETURN
+    END IF
+
+    WRITE(scratchMessage, '(a, i0)') 'Processing the best track structure with id: ', idTrFile
+    CALL LogMessage(INFO, scratchMessage)
+
+    ! This is the number of all records in the processed best track data structure
+    numRec = bestTrackData(idTrFile)%numRec
+
+    !--------------------
+    ! Populate the asymmetric vortex structure
+    !--------------------
+    CALL AllocAsymVortStruct(strOut, numRec)
+
+    ALLOCATE(castTime(numRec))
+    ALLOCATE(cycleTime(numRec))
+    ALLOCATE(totRecPerCycle(numRec))
+    ALLOCATE(phiFactors(numRec, 4))
+    ALLOCATE(irad(numRec, 4))
+
+    strOut%fileName  = bestTrackData(idTrFile)%fileName
+    strOut%thisStorm = bestTrackData(idTrFile)%thisStorm
+    strOut%loaded    = .TRUE.
+    strOut%numRec    = numRec
+
+    totRecPerCycle   = 0
+
+    WRITE(scratchMessage, '(a)') 'Starting the population of the best track structure variables ...'
+    CALL LogMessage(INFO, scratchMessage)
+
+    nCycles = 1
+    totRecPerCycle(nCycles) = 1
+
+    DO iCnt = 1, numRec
+
+      castType = ToUpperCase(TRIM(ADJUSTL(bestTrackData(idTrFile)%tech(iCnt))))
+
+      strOut%basin(iCnt)       = bestTrackData(idTrFile)%basin(iCnt)
+      strOut%stormNumber(iCnt) = bestTrackData(idTrFile)%cyNum(iCnt)
+      strOut%dtg(iCnt)         = bestTrackData(idTrFile)%dtg(iCnt)
+      strOut%year(iCnt)        = bestTrackData(idTrFile)%year(iCnt)
+      strOut%month(iCnt)       = bestTrackData(idTrFile)%month(iCnt)
+      strOut%day(iCnt)         = bestTrackData(idTrFile)%day(iCnt)
+      strOut%hour(iCnt)        = bestTrackData(idTrFile)%hour(iCnt)
+      strOut%castTypeNum(iCnt) = bestTrackData(idTrFile)%techNum(iCnt)
+      strOut%castType(iCnt)    = ToUpperCase(TRIM(ADJUSTL(bestTrackData(idTrFile)%tech(iCnt))))
+      strOut%fcstInc(iCnt)     = bestTrackData(idTrFile)%tau(iCnt)
+      strOut%iLat(iCnt)        = bestTrackData(idTrFile)%intLat(iCnt)
+      strOut%lat(iCnt)         = bestTrackData(idTrFile)%lat(iCnt)
+      strOut%iLon(iCnt)        = bestTrackData(idTrFile)%intLon(iCnt)
+      strOut%lon(iCnt)         = bestTrackData(idTrFile)%lon(iCnt)
+      strOut%ew(iCnt)          = bestTrackData(idTrFile)%ew(iCnt)
+      strOut%ns(iCnt)          = bestTrackData(idTrFile)%ns(iCnt)
+      strOut%iSpeed(iCnt)      = bestTrackData(idTrFile)%intVMax(iCnt)
+      strOut%speed(iCnt)       = KT2MS * strOut%iSpeed(iCnt)            ! Convert speeds from knots to m/s
+      strOut%iCPress(iCnt)     = bestTrackData(idTrFile)%intMslp(iCnt)
+      strOut%cPress(iCnt)      = 100.0_SZ * strOut%iCPress(iCnt)
+      strOut%ty(iCnt)          = bestTrackData(idTrFile)%ty(iCnt)
+      strOut%ivr(iCnt)         = bestTrackData(idTrFile)%rad(iCnt)
+      strOut%windCode(iCnt)    = bestTrackData(idTrFile)%windCode(iCnt)
+      strOut%ir(iCnt, 1)       = bestTrackData(idTrFile)%intRad1(iCnt)
+      strOut%ir(iCnt, 2)       = bestTrackData(idTrFile)%intRad2(iCnt)
+      strOut%ir(iCnt, 3)       = bestTrackData(idTrFile)%intRad3(iCnt)
+      strOut%ir(iCnt, 4)       = bestTrackData(idTrFile)%intRad4(iCnt)
+      strOut%iPrp(iCnt)        = bestTrackData(idTrFile)%intPOuter(iCnt)
+      strOut%prp(iCnt)         = 100.0_SZ * strOut%iPrp(iCnt)           ! Convert pressure(s) from mbar to Pa
+      strOut%iRrp(iCnt)        = bestTrackData(idTrFile)%intROuter(iCnt)
+      strOut%rrp(iCnt)         = NM2M * strOut%iRrp(iCnt)               ! Convert all distances from nm to m
+      strOut%iRmw(iCnt)        = bestTrackData(idTrFile)%intRmw(iCnt)
+      strOut%rmw(iCnt)         = NM2M * strOut%iRmw(iCnt)
+      strOut%gusts(iCnt)       = bestTrackData(idTrFile)%gusts(iCnt)
+      strOut%eye(iCnt)         = bestTrackData(idTrFile)%eye(iCnt)
+      strOut%subregion(iCnt)   = bestTrackData(idTrFile)%subregion(iCnt)
+      strOut%maxseas(iCnt)     = bestTrackData(idTrFile)%maxseas(iCnt)
+      strOut%initials(iCnt)    = bestTrackData(idTrFile)%initials(iCnt)
+      strOut%idir(iCnt)        = bestTrackData(idTrFile)%dir(iCnt)
+      strOut%dir(iCnt)         = REAL(strOut%dir(iCnt))
+      strOut%iStormSpeed(iCnt) = bestTrackData(idTrFile)%intSpeed(iCnt)
+      strOut%stormSpeed(iCnt)  = KT2MS * strOut%iStormSpeed(iCnt)       ! Convert speeds from knots to m/s
+      strOut%stormName(iCnt)   = bestTrackData(idTrFile)%stormName(iCnt)
+
+
+!PV DO WE NEED TO INCLUDE THE SAME CODE FOR CASTTIME AS IN HOLLAND?
+      CALL TimeConv(strOut%year(iCnt), strOut%month(iCnt), strOut%day(iCnt), strOut%hour(iCnt), 0, 0.0_SZ, castTime(iCnt))
+      strOut%castTime(iCnt) = castTime(iCnt)
+
+      !---------- Check for a new cycle
+      IF (iCnt /= 1) THEN
+        IF (strOut%fcstInc(iCnt) /= strOut%fcstInc(iCnt-1)) THEN
+          nCycles = nCycles + 1
+          totRecPerCycle(nCycles) = 1
+        ELSE
+          ! Increment the number of isotachs for this cycle if this
+          ! entry belongs to the same cycle as the last
+          totRecPerCycle(nCycles) = totRecPerCycle(nCycles) + 1
+        END IF
+      END IF
+      strOut%nCycles        = nCycles
+      !strOut%numCycle(iCnt) = nCycles
+      strOut%numCycle(iCnt) = bestTrackData(idTrFile)%cycleNum(iCnt)
+      cycleTime(iCnt) = strOut%fcstInc(iCnt) * 3600.0_SZ
+    END DO   ! numRec
+
+    ! Calculate the translation velocity in m/s and knots,
+    ! Set background pressure
+    DO iCnt = 1, numRec
+      ! Set iPrp to background pressure
+      strOut%iPrp(iCnt) = NINT(backgroundAtmPress)     ! in mbar
+      strOut%prp(iCnt)  = 100.0_SZ * strOut%iPrp(iCnt) ! in Pa
+
+      ! Check/set central pressure
+      IF (strOut%iCPress(iCnt) == 0) THEN
+        IF (iCnt == 1) THEN
+          WRITE(scratchMessage, '(a)') &
+            'Central pressure set to zero on first line/record when processing the best track file: ' // &
+            TRIM(ADJUSTL(bestTrackFileName(idTrFile)))
+          CALL AllMessage(ERROR, scratchMessage)
+          CALL Terminate()
+        ELSE
+          CALL AllMessage(WARNING, "Central pressure persisted from previous value.")
+          strOut%iCPress(iCnt) = strOut%iCPress(iCnt - 1)
+          strOut%cPress(iCnt)  = strOut%cPress(iCnt - 1)
+        END IF
+      END IF
+
+      ! @jasonfleming: in rare cases where the central pressure is 
+      ! higher than 1012mb (e.g., charley 2004), set the background
+      ! pressure so that it is 1mb higher than the central pressure
+      ! to avoid producing negative Holland B values. 
+      IF (strOut%iCPress(iCnt) > 1012) THEN
+        WRITE(scratchMessage,'(a,i0,a)') 'The central pressure ' // &
+                                       'is higher than the PaHM default background barometric ' // &
+                                       'pressure on line ', iCnt, &
+                                       '. For this line, the background barometric ' // &
+                                       'pressure will be set 1mb higher than central pressure.'
+        CALL AllMessage(INFO, scratchMessage)
+        strOut%iPrp(iCnt) = strOut%iCPress(iCnt) + 1
+        strOut%prp(iCnt)  = 100.0_SZ * strOut%iPrp(iCnt)
+      END IF
+
+      IF (CompareReals(CycleTime(iCnt), CycleTime(1), 0.01_SZ) == 0) THEN
+        CYCLE
+      END IF
+
+      IF (CompareReals(CycleTime(iCnt), CycleTime(iCnt-1), 0.01_SZ) == 0) THEN
+        strOut%trVx(iCnt) = strOut%trVx(iCnt - 1)
+        strOut%trVy(iCnt) = strOut%trVy(iCnt - 1)
+        strOut%stormSpeed(iCnt)= strOut%stormSpeed(iCnt - 1)
+      ELSE
+        ! approximate u and v translation velocities
+        CALL UVTransPoint(strOut%lat(iCnt - 1), strOut%lon(iCnt - 1), strOut%lat(iCnt), strOut%lon(iCnt), &
+                          cycleTime(iCnt - 1), cycleTime(iCnt), strOut%trVx(iCnt), strOut%trVy(iCnt))
+
+        ! Get translation speed.
+        ! We convert this speed to Knots for the subsequent calculations, but at the
+        ! end we will set strOut%iStormSpeed = NINT(strOut%stormSpeed) and convert
+        ! back strOut%stormSpeed to m/s to store its value in the data structure
+        strOut%stormSpeed(iCnt) = MS2KT * sqrt(strOut%trVx(iCnt)**2 + strOut%trVy(iCnt)**2) ! in Knots
+      END IF
+    END DO   ! numRec
+
+    ! now set the translation velocity in the first cycle equal
+    ! to the translation velocity in the 2nd cycle, for lack of any
+    ! better information
+    DO iCnt = 2, numRec
+      IF (CompareReals(CycleTime(iCnt), CycleTime(1), 0.01_SZ) /= 0) THEN
+        strOut%trVx(1:(iCnt - 1)) = strOut%trVx(iCnt)
+        strOut%trVy(1:(iCnt - 1)) = strOut%trVy(iCnt)
+        strOut%stormSpeed(1:(iCnt - 1))= strOut%stormSpeed(iCnt)
+        EXIT
+      END IF
+    END DO
+
+    ! convert trVx and trVy to speed and direction
+    ! direction is in compass coordinates 0 == North
+    ! increasing clockwise
+    DO iCnt = 1, numRec
+      IF (strOut%stormSpeed(iCnt) < 1.0_SZ ) THEN
+        ! The vortex module can't handle speed and direction
+        ! being zero; it will return NaNs as a result. Persist the
+        ! direction from the previous cycle, and make the storm translation
+        ! speed small but nonzero.
+        strOut%stormSpeed(iCnt) = 1.0_SZ
+        IF (iCnt > 1) THEN
+          strOut%dir(iCnt) = strOut%dir(iCnt - 1)
+        ELSE
+           strOut%dir(iCnt) = 0.0
+        END IF
+      ELSE
+        ! calculate angle in compass coordinates
+        strOut%dir(iCnt) = RAD2DEG * ATAN2(strOut%trVx(iCnt), strOut%trVy(iCnt))
+        IF (strOut%dir(iCnt) < 0.0_SZ) THEN
+           strOut%dir(iCnt) = strOut%dir(iCnt) + 360.0_SZ
+        END IF
+      END IF
+    END DO
+
+    !-----------------------------------------
+    !  Now using the calculated translational velocities
+    !  call the vortex module and compute the Rmax's
+    !  to be used in the new input file
+    !----------------------------------------------
+    ! Initialize azimuth values in quadrants
+    azimuth = 45.0_SZ
+    DO i = 1, 4
+      quadrantAngles(i) = DEG2RAD * azimuth
+      azimuth = azimuth - 90.0_SZ
+    END DO
+
+    irad(:, :) = strOut%ir(:, :)
+
+    DO iCyc = 1, nCycles
+      lastEntry = sum(totRecPerCycle(1:iCyc))
+
+       DO k = 1, totRecPerCycle(iCyc)
+         iCnt = lastEntry + 1 - k
+
+         WRITE(scratchMessage,'(a,i0)') 'Start    processing iCnt = ', iCnt
+         CALL LogMessage(INFO, scratchMessage)
+
+         ! Transform variables from integers
+         ! to real numbers for hurricane vortex calcualtions.
+         vMax = REAL(strOut%iSpeed(iCnt), SZ)
+         pn   = REAL(strOut%iPrp(iCnt), SZ)
+         pc   = REAL(strOut%iCPress(iCnt), SZ)
+         cLat = strOut%lat(iCnt)
+         cLon = strOut%lon(iCnt)
+
+         !  need to get some logic incase Vr is  zero
+         !  if so we will also be setting ir(:) to Rmax
+         !  ... this happens when storms are at the "invest" stage
+         IF (strOut%ivr(iCnt) == 0 ) THEN
+           vr = vMax
+         ELSE
+           vr = REAL(strOut%ivr(iCnt))
+         END IF
+
+         lookupRadii(0) = strOut%ir(iCnt, 4)
+         lookupRadii(5) = strOut%ir(iCnt, 1)
+         radiiSum = 0
+         numNonZero = 0
+
+         DO i=1, 4
+           lookupRadii(i) = strOut%ir(iCnt,i)
+           radiiSum = radiiSum + strOut%ir(iCnt,i)
+           IF (strOut%ir(iCnt, i) > 0) THEN
+              numNonZero = numNonZero + 1
+              strOut%quadFlag(iCnt, i) = 1   ! use the Rmax resulting from this
+           ELSE
+              strOut%quadFlag(iCnt, i) = 0   ! don't use Rmax resulting from this
+           END IF
+         END DO
+
+         ! Fill missing values based on how many are missing
+         SELECT CASE(numNonZero)
+           CASE(0) ! no isotachs reported, use overall Rmax; set isotach to vMax
+             strOut%quadFlag(iCnt, :) = 1
+             IF (strOut%iRmw(iCnt) /= 0) THEN
+               irad(iCnt, :) = strOut%iRmw(iCnt)
+             ELSE
+               irad(iCnt, :) = 40 ! need a nonzero value for Rmax calcs,
+                                  ! this val will be thrown away later
+             END IF
+             vr = vMax
+           CASE(1) ! set missing radii equal to half the nonzero radius
+             WHERE(strOut%ir(iCnt, :) == 0) irad(iCnt, :) = NINT(0.5 * radiiSum)
+           CASE(2) ! set missing to half the avg of the 2 radii that are given
+             WHERE(strOut%ir(iCnt, :) == 0) irad(iCnt, :) = NINT(0.5 * radiiSum * 0.5)
+           CASE(3) ! set missing radius to half the average of the radii on either side
+             DO i = 1, 4
+               IF (strOut%ir(iCnt,i) == 0) THEN
+                 irad(iCnt,i) = NINT(0.5 * (lookupRadii(i + 1) + lookupRadii(i - 1)))
+               END IF
+             END DO
+           CASE(4)
+             ! use all these radii as-is
+           CASE default
+              ! the following error message should be unreachable
+             WRITE(scratchMessage,'(a,i0,a)') 'Number of nonzero radii on line ', iCnt, &
+                                            ' not in range 0 to 4.'
+             CALL AllMessage(INFO, scratchMessage)
+         END SELECT
+
+         DO i = 1, 4
+           r(i) = REAL(irad(iCnt, i), SZ)
+         END DO
+
+         strOut%hollB(iCnt)       = 1.0_SZ
+         strOut%hollBs(iCnt, 1:4) = 1.0_SZ
+         phiFactors(iCnt, 1:4)    = 1.0_SZ
+         irr                      = strOut%ir(iCnt, :)
+
+         !-------------------------------------------------------
+         ! Create a new asymmetric hurricane vortex.
+         !
+         ! Note: Subtract translational speed from vMax, then
+         ! scale (vMax - Vt) and vr up to the top of the surface,
+         ! where the cylcostrophic wind balance is valid.
+         !-------------------------------------------------------
+         CALL SetUseVMaxesBL(.TRUE.)
+
+         stormMotion  = 1.5_SZ * strOut%stormSpeed(iCnt)**0.63_SZ
+         stormMotionU = SIN(strOut%dir(iCnt) * DEG2RAD) * stormMotion
+         stormMotionV = COS(strOut%dir(iCnt) * DEG2RAD) * stormMotion
+         vMaxBL       = ( vMax - stormMotion ) / windReduction
+
+         SELECT CASE(approach)
+           CASE(1) !Normal approach: assume vr and quadrantVr vectors 
+                   !are both tangential to azimuth 
+             DO i = 1, 4
+               ! quadrant angles are in the radial direction, we need
+               ! the tangential direction, b/c that is the direction of vr
+               U_Vr = vr * COS(quadrantAngles(i) + (DEG2RAD * 90.0_SZ))
+               V_Vr = vr * SIN(quadrantAngles(i) + (DEG2RAD * 90.0_SZ))  
+
+               ! eliminate the translational speed based on vortex wind speed
+               ! gamma = |quadrantVr| / |vMaxBL|  
+               gamma(i) = ((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV) -            &
+                           SQRT((2.0_SZ * U_Vr * stormMotionU+2.0_SZ * V_Vr * stormMotionV)**2.0_SZ - &
+                                4.0_SZ * (stormMotion**2.0_SZ - vMaxBL**2.0_SZ *                      &
+                                windReduction**2.0_SZ) * vr**2.0_SZ)) / (2.0_SZ *                     &
+                          (stormMotion**2.0_SZ - vMaxBL**2.0_SZ * windReduction**2.0_SZ))
+               gamma(i) = MAX(MIN(gamma(i), 1.0_SZ), 0.0_SZ)
+               
+               quadrantVr(i) = SQRT((U_Vr - gamma(i) * stormMotionU)**2.0_SZ +                        &
+                                    (V_Vr - gamma(i) * stormMotionV)**2.0_SZ) / windReduction
+             END DO
+
+             ! If violation occurs at any quadrant (quadrantVr(i)>vMaxBL),
+             ! re-calculate quadrantVr at those violated quadrants
+             DO i = 1, 4
+               IF (quadrantVr(i) > vMaxBL) THEN
+                 ! Replace vMax with Vr when violation occurs (including 
+                 ! situations when isotach is not reported at thta quadrant: 
+                 ! especially at the investment stage or for the highest isotachs
+                 ! that is not always available.
+                 U_Vr = vr * COS(quadrantAngles(i) + (DEG2RAD * 90.0_SZ))
+                 V_Vr = vr * SIN(quadrantAngles(i) + (DEG2RAD * 90.0_SZ))
+
+                 IF (strOut%ir(iCnt,i) > 0) THEN
+                   vMaxPseudo = vr
+                   vmwBL(i) = SQRT((vMaxPseudo * COS(quadrantAngles(i) + (DEG2RAD * 90.0_SZ)) - &
+                                    stormMotionU)**2.0_SZ +                                     &
+                                   (vMaxPseudo * SIN(quadrantAngles(i) + (DEG2RAD * 90.0_SZ)) - &
+                                    stormMotionV)**2.0_SZ) / windReduction
+                 
+                   gamma(i) = ((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV) -       &
+                               SQRT((2.0_SZ*U_Vr*stormMotionU+2.0_SZ*V_Vr*stormMotionV)**2.0_SZ -    &
+                             4.0_SZ*(stormMotion**2.0_SZ-vmwBL(i)**2.0_SZ * windReduction**2.0_SZ) * &
+                             vr**2.0_SZ)) / (2.0_SZ * (stormMotion**2.0_SZ -                         &
+                                                     vmwBL(i)**2.0_SZ * windReduction**2.0_SZ))
+                   !gamma(i) = MAX(MIN(gamma(i), 1.0_SZ), 0.0_SZ)
+                   
+                   quadrantVr(i) = SQRT((U_Vr - gamma(i) * stormMotionU)**2.0_SZ +                &
+                                        (V_Vr - gamma(i) * stormMotionV)**2.0_SZ) / windReduction
+                 ELSE
+                   vmwBL(i) = vMaxBL  
+                   ! gamma = |quadrantVr| / |vMaxBL|  
+                   gamma(i) = ((2.0_SZ * U_Vr * stormMotionU+2.0_SZ * V_Vr * stormMotionV) - &
+                               SQRT((2.0_SZ * U_Vr * stormMotionU+2.0_SZ * V_Vr *            &
+                                     stormMotionV)**2.0_SZ -                                 &
+                                    4.0_SZ * (stormMotion**2.0_SZ - vMaxBL**2.0_SZ *         &
+                                             windReduction**2.0_SZ) * vr**2.0_SZ)) /         &
+                              (2.0_SZ * (stormMotion**2.0_SZ-vMaxBL**2.0_SZ * windReduction**2.0_SZ))
+                   gamma(i) = MAX(MIN(gamma(i), 1.0_SZ), 0.0_SZ)
+                
+                   quadrantVr(i) = (vr - gamma(i) * stormMotion) / windReduction !scalar cal.
+                 END IF
+               ELSE
+                 vmwBL(i) = vMaxBL
+               END IF
+             END DO
+           
+             CALL SetUsequadrantVR(.TRUE.)
+             CALL NewVortexFull(pn, pc, cLat, cLon, vMaxBL)
+             strOut%hollB(iCnt) = GetShapeParameter()
+             CALL SetIsotachWindSpeeds(quadrantVr)
+             CALL SetIsotachRadii(r)
+             CALL SetVMaxesBL(vmwBL)
+             IF (geostrophicSwitch .EQV. .TRUE.) THEN
+               CALL CalcRMaxesFull()
+             ELSE
+               CALL CalcRMaxes()
+             END IF    
+             CALL GetRmaxes(rMaxWTemp) 
+             strOut%rMaxW(iCnt, :) = rMaxWTemp(:)
+
+           CASE(2) !An updated approach: assume quadrantVr has an 
+                   ! additional inward angnel quadRotateAngle, and Vr angle is not known
+                   ! calculate quadRotateAngle for the highest isotach, and then 
+                   ! use it for other lower isotachs of the same numCycle
+             vmwBLFlag = 0
+          
+             IF (k == 1) THEN
+               nQuadRot = 300
+               quadRotateAngle(:) = 25.0_SZ ! initial guess of inward rotation angle (degree)
+               rMaxWHighIso(:)    = strOut%rMaxW(iCnt, :)
+             ELSE
+               DO i = 1, 4
+                 quadRotateAngle(i) = FAng(r(i), rMaxWHighIso(i))
+               END DO
+               nQuadRot = 1
+             END IF
+
+             ! Add loop to converge inward rotation angle
+             DO iQuadRot = 1, nQuadRot
+               vioFlag = .FALSE.
+
+               DO i = 1, 4
+                quadrantVecAngles(i) = quadrantAngles(i) + &
+                                       (90.0_SZ + quadrotateAngle(i)) * DEG2RAD 
+               END DO
+
+               ! radial direction -> tangential direction -> 
+               ! add inward direction -> the direction of quadrantVr
+               DO i = 1, 4
+                 IF ((iQuadRot == 1) .OR. (vmwBLFlag(i) == 0)) THEN
+                   epsilonAngle(i)= 360.0_SZ + RAD2DEG * &
+                                    ATAN2(vMaxBL * SIN(quadrantVecAngles(i)) + stormMotionV, &
+                                          vMaxBL * COS(quadrantVecAngles(i)) + stormMotionU)
+        
+                   IF (epsilonAngle(i) > 360.0_SZ) THEN
+                      epsilonAngle(i) = epsilonAngle(i) - 360.0_SZ
+                   END IF
+                      
+                   U_Vr = vr * COS(epsilonAngle(i) / RAD2DEG)
+                   V_Vr = vr * SIN(epsilonAngle(i) / RAD2DEG)
+
+                   ! Eliminate the translational speed based on vortex wind speed
+                   ! gamma = |quadrantVr| / |vMaxBL|  
+                   gamma(i) = ((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV) -              &
+                               SQRT((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV)**2.0_SZ - &
+                                    4.0_SZ * (stormMotion**2.0_SZ - vMaxBL**2.0_SZ *                        &
+                                             windReduction**2.0_SZ) * vr**2.0_SZ)) /                        &
+                               (2.0_SZ * (stormMotion**2.0_SZ-vMaxBL**2.0_SZ * windReduction**2.0_SZ))
+                   gamma(i) = MAX(MIN(gamma(i), 1.0_SZ), 0.0_SZ)
+
+                   quadrantVr(i) = SQRT((U_Vr - gamma(i) * stormMotionU)**2.0_SZ + &
+                                        (V_Vr - gamma(i) * stormMotionV)**2.0_SZ) / windReduction
+                 END IF
+               END DO
+
+               ! If violation occurs at any quadrant (quadrantVr(i)>vMaxBL),
+               ! re-calculate quadrantVr at those violated quadrants
+               DO i = 1, 4
+                 IF ((quadrantVr(i) > vMaxBL ) .OR. (VmwBLflag(i) == 1)) THEN
+                   ! Replace vMax with Vr when violation occurs (including 
+                   ! situations when isotach is not reported at that quadrant)
+                   IF (iQuadRot == 1) vmwBLFlag(i) = 1 ! assign violation flags
+
+                   IF (strOut%ir(iCnt,i) > 0) THEN
+                     quadrantVr(i) = (-2.0_SZ * (stormMotionU * COS(quadrantVecAngles(i)) +        &
+                                               stormMotionV * SIN(quadrantVecAngles(i))) +         &
+                                               SQRT(4.0_SZ * (stormMotionU *                       &
+                                                              COS(quadrantVecAngles(i)) +          &
+                                                            stormMotionV *                         &
+                                                              SIN(quadrantVecAngles(i)))**2.0_SZ - &
+                                                    4.0_SZ * (stormMotion**2.0_SZ-vr**2.0_SZ))) / 2.0_SZ
+        
+                      epsilonAngle(i)= 360.0_SZ + RAD2DEG *                                            &
+                                       ATAN2(quadrantVr(i) * SIN(quadrantVecAngles(i)) + stormMotionV, &
+                                             quadrantVr(i) * COS(quadrantVecAngles(i)) + stormMotionU)
+        
+                      IF (epsilonAngle(i) > 360.0_SZ) THEN 
+                        epsilonAngle(i) = epsilonAngle(i) - 360.0_SZ
+                      END IF 
+
+                      quadrantVr(i) = quadrantVr(i) / windReduction
+                      vmwBL(i) = quadrantVr(i)
+                   ELSE
+                     vmwBL(i) = vMaxBL 
+                     U_Vr = vr * SIN(strOut%dir(iCnt) * DEG2RAD)
+                     V_Vr = vr * SIN(strOut%dir(iCnt) * DEG2RAD) 
+
+                     ! gamma = |quadrantVr| / |vMaxBL|  
+                     gamma(i) = ((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV) -              &
+                                 SQRT((2.0_SZ * U_Vr * stormMotionU + 2.0_SZ * V_Vr * stormMotionV)**2.0_SZ - &
+                                      4.0_SZ * (stormMotion**2.0_SZ - vMaxBL**2.0_SZ *                        &
+                                               windReduction**2.0_SZ) * vr**2.0_SZ)) /                        &
+                                 (2.0_SZ * (stormMotion**2.0_SZ - vMaxBL**2.0_SZ * windReduction**2.0_SZ))
+                     gamma(i) = MAX(MIN(gamma(i), 1.0_SZ), 0.0_SZ)
+                   
+                     quadrantVr(i) = (vr - gamma(i) * stormMotion) / windReduction !scalar cal.
+                   END IF
+                 ELSE
+                   vmwBL(i) = vMaxBL
+                 END IF
+               END DO
+
+               CALL SetUsequadrantVR(.TRUE.)
+               CALL NewVortexFull(pn, pc, cLat, cLon, vMaxBL)
+               strOut%hollB(iCnt) = GetShapeParameter()
+               CALL SetIsotachWindSpeeds(quadrantVr)
+               CALL SetIsotachRadii(r)
+               CALL SetVMaxesBL(vmwBL)
+               IF (geostrophicSwitch .EQV. .TRUE.) THEN
+                 CALL CalcRMaxesFull()
+               ELSE
+                 CALL CalcRMaxes()
+               END IF
+               CALL GetRmaxes(rMaxWTemp)
+               strOut%rMaxW(iCnt, :) = rMaxWTemp(:)
+
+               ! add deterministic statement to exit the loop when conditions met
+               !IF (k == 1) rMaxWHighIso(:) = strOut%rMaxW(iCnt, :) !PV This should be at the beginning of the loop
+               DO i = 1, 4
+                 quadRotateAngle_new(i) = FAng(r(i), rMaxWHighIso(i))
+                 IF (abs(quadRotateAngle_new(i) - quadRotateAngle(i)) > 0.2_SZ) THEN
+                   vioFlag(i) = .TRUE.
+                 END IF
+               END DO
+
+               IF ((count(vioFlag) >= 1) .AND. (iQuadRot < nQuadRot)) THEN
+                  quadRotateAngle(:) = quadRotateAngle_new(:)
+               ELSE              
+                  EXIT
+               END IF   
+             
+               WHERE(.NOT. vioFlag) irr = 0
+               IF ((sum(irr(:))== 0) .AND. (iQuadRot==2)) EXIT
+             END DO  ! iQuadRot = 1,nQuadRot 
+
+             IF ((iQuadRot >= nQuadRot) .AND. (k == 1) .AND. (sum(irr(:)) /= 0)) THEN
+               !WRITE(*,*) "quadRotateAngle not fully converge, iCnt=", iCnt
+               WRITE(*,*) "Converge issue at iCnt = ", iCnt, " iQuadRot = ", iQuadRot 
+               WRITE(*,*) vioFlag, irr
+               WRITE(*, '(8(f6.3, x))') quadRotateAngle(:), quadRotateAngle_new(:)
+             ELSE
+               WRITE(scratchMessage,'(a, i0, ",", 2x, a, i0)') 'Finished processing iCnt = ', iCnt, &
+                                                               'iQuadRot = ', iQuadRot
+               CALL LogMessage(INFO, scratchMessage)
+             END IF
+
+           CASE default
+             WRITE(*, *) "Wrong approach #, must be 1 or 2"
+         END SELECT
+
+         CALL GetvMaxesBL(vMaxesBLTemp)
+         strOut%vMaxesBL(iCnt, :) = vMaxesBLTemp(:)
+         strOut%hollBs(iCnt, 1:4) = GetShapeParameters()
+         phiFactors(iCnt, 1:4) = GetPhiFactors()
+
+         ! Reset rmax to zero if there was a zero radius to the isotach for all
+         ! isotachs EXCEPT the 34 kt isotach.  in that case leave the radius that
+         ! has been substituted.
+         ! The isotach wind speed can sometimes be zero in cases
+         ! where all radii are zero (this has been observed in the BEST
+         ! track file for IGOR2010). Including this possibility in the if
+         ! statement, so that we can avoid setting the quadrant Rmax to zero if ivr was zero.
+         DO i=1,4
+           IF ((strOut%ivr(iCnt) /= 34) .AND. (strOut%ivr(iCnt) /= 0) .AND. &
+               (strOut%ir(iCnt,i) == 0) ) THEN
+             strOut%rMaxW(iCnt, i) = 0.0
+           END IF
+         END DO
+      END DO ! totRecPerCycle
+    END DO ! iCyc (main do loop)
+
+    !-------------------------------------
+    ! Now indicate which isotach quadrant radius
+    ! that the user desires ADCIRC to read in
+    ! for the final calculation of RMX in the
+    ! Asymmetric Holland wind calculations
+    !
+    ! 34... - 0 0 0 0 ...
+    ! 50... - 0 0 1 1 ...
+    ! 64... - 1 1 0 0 ...
+    !
+    ! would indicate -
+    ! use NO radii from the 34 kt isotach
+    ! use the 3 & 4 radii form the 50 kt isotach
+    ! use the 1 & 2 radii form the 64 kt isotach
+
+    ! users can then modify the input file
+    ! to indicate which set of radii to use
+    ! for each cycle
+    !
+    !  Loop through each cycle and choose
+    !  the isotach radii to use
+    !
+    !  method 1
+    !  use the 34kt isotach only (like original NWS=9)
+    !
+    !  method 2
+    !  use the fancy way of taking the highest
+    !  isotach Rmax that exists
+    !
+    !  method 3
+    !  use preferably the 50kt isotach Rmax in each quadrant, 
+    !  if not available, use the 34kt one
+    ! 
+    !  method 4
+    !  use all available isothch for each cycle, 
+    !  linearly weighted-combination will be performed in 
+    !  nws20get module
+    !  
+    !------------------------------------
+    SELECT CASE(method)
+      CASE(1) ! just use the Rmaxes from the 34kt isotach
+        DO iCnt = 1, numRec
+          IF ((strOut%ivr(iCnt) == 34) .OR. (strOut%ivr(iCnt) == 0)) THEN
+            strOut%quadFlag(iCnt, :) = 1
+          ELSE
+            strOut%quadFlag(iCnt, :) = 0
+          END IF
+        END DO
+
+      CASE(2) ! use the Rmax from the highest isotach in each quadrant
+        DO iCyc = 1, nCycles
+          lastEntry  = sum(totRecPerCycle(1:iCyc))
+          firstEntry = lastEntry - (totRecPerCycle(iCyc) - 1)
+          IF (totRecPerCycle(iCyc) == 1) THEN
+            strOut%quadFlag(lastEntry, :) = 1
+          ELSE
+            ! loop over quadrants
+            DO i=1, 4
+              numNonZero = count(strOut%quadFlag(firstEntry:lastEntry, i) /= 0)
+              SELECT CASE(numNonZero)
+                CASE(0,1) ! none, or only 34kt isotach has a radius value
+                   strOut%quadFlag(firstEntry, i) = 1
+                CASE(2) ! the 34kt and 50kt isotachs have radius value
+                   strOut%quadFlag(firstEntry, i) = 0
+                CASE(3) ! the 34kt, 50kt, and 64kt isotachs have values
+                   strOut%quadFlag(firstEntry:firstEntry + 1, i) = 0
+                CASE default ! zero isotachs have been flagged
+                  WRITE(scratchMessage,'(i0, a)') numNonZero, ' isotachs were nonzero.'
+                  CALL AllMessage(ERROR, scratchMessage)
+              END SELECT
+            END DO
+          END IF
+        END DO
+
+      CASE(3) ! use preferably the Rmax from the 50kt isotach in each quadrant
+        DO iCyc = 1, nCycles
+          lastEntry  = SUM(totRecPerCycle(1:iCyc))
+          firstEntry = lastEntry - (totRecPerCycle(iCyc) - 1)
+          IF (totRecPerCycle(iCyc) == 1) THEN
+            strOut%quadFlag(lastEntry, :) = 1
+          ELSE
+            ! loop over quadrants
+            DO i = 1, 4
+              numNonZero = COUNT(strOut%quadFlag(firstEntry:lastEntry, i) /= 0)
+              SELECT CASE(numNonZero)
+                CASE(0,1) ! none, or only 34kt isotach has a radius value
+                   strOut%quadFlag(firstEntry, i) = 1
+                CASE(2) ! the 34kt and 50kt isotachs have radius value
+                   strOut%quadFlag(firstEntry, i) = 0
+                CASE(3) ! the 34kt, 50kt, and 64kt isotachs have values
+                   strOut%quadFlag(firstEntry, i) = 0
+                   strOut%quadFlag(lastEntry,i) = 0
+                CASE default ! zero isotachs have been flagged
+                  WRITE(scratchMessage,'(i0, a)') numNonZero, ' isotachs were nonzero.'
+                  CALL AllMessage(ERROR, scratchMessage)
+              END SELECT
+            END DO
+          END IF
+        END DO
+
+      CASE(4) ! use all available Rmaxes from multiple reported isotachs
+         DO iCyc = 1, nCycles
+           lastEntry  = SUM(totRecPerCycle(1:iCyc))
+           firstEntry = lastEntry - (totRecPerCycle(iCyc) - 1)
+           ! since strOut%quadFlag is previously assigned 1 where (ir(iCnt,:)>0)
+           ! here we only have to deal with situations when only 0 or 34
+           ! isotach is reported and with missing ir values
+           IF (totRecPerCycle(iCyc) == 1) THEN 
+             strOut%quadFlag(lastEntry, :) = 1
+           ELSE
+             ! loop over quadrants
+             DO i=1,4
+               numNonZero = COUNT(strOut%quadFlag(firstEntry:lastEntry, i) /= 0)
+               SELECT CASE(numNonZero)
+                 CASE(0,1) ! none, or only 34kt isotach has a radius value
+                    strOut%quadFlag(firstEntry, i) = 1
+                 CASE(2, 3) ! the 34kt, 50kt, and/or 64kt isotachs have values
+                 CASE default
+                   WRITE(scratchMessage,'(i0, a)') numNonZero, ' isotachs were nonzero.'
+                   CALL AllMessage(ERROR, scratchMessage)
+               END SELECT
+             END DO
+           END IF                
+         END DO
+
+      CASE default
+        WRITE(scratchMessage,'(i0, a)') 'method = ', method, ' is not valid for setting rmax in quadrants.'
+        CALL AllMessage(ERROR, scratchMessage)
+        CALL AllMessage(ERROR, 'Execution terminated.')
+      END SELECT
+
+      ! Persist last good 34kt Rmax values if all radii are missing
+      DO iCyc = 1, nCycles
+        IF (totRecPerCycle(iCyc) == 1) THEN
+          iCnt = SUM(totRecPerCycle(1:iCyc))
+          IF ((ALL(strOut%ir(iCnt, :) == 0)) .AND. (strOut%iRmw(iCnt) == 0)) THEN
+            IF ((iCyc - 1) >= 1) THEN
+              strOut%rMaxW(iCnt, :) = strOut%rMaxW(iCnt - totRecPerCycle(iCyc - 1), :)
+            ELSE
+              strOut%rMaxW(iCnt, :) = 25 ! default value when all else fails
+            END IF
+          END IF
+        END IF
+      END DO
+
+    !----------
+    ! Here convert the hurricane speeds to be stored in the data structure
+    strOut%iStormSpeed = NINT(strOut%stormSpeed)
+    strOut%stormSpeed  = KT2MS * strOut%stormSpeed
+    strOut%idir        = NINT(strOut%dir)
+    !----------
+
+     DO iCnt = 1, numRec
+       strOut%isotachsPerCycle(iCnt) = count(strOut%quadFlag(iCnt, 1:4) /= 0)
+     END DO
+
+    DEALLOCATE(castTime)
+    !--------------------
+
+    CALL WriteAsymmetricVortexData(bestTrackFileName(idTrFile), strOut)
+
+    CALL UnsetMessageSource()
+
+  END SUBROUTINE ProcessAsymmetricVortexData
+
+!================================================================================
+
+  !----------------------------------------------------------------
   ! S U B R O U T I N E   G E T  H O L L A N D  F I E L D S
   !----------------------------------------------------------------
   !>
@@ -884,6 +1816,11 @@ MODULE ParWind
     ! are contained in these structures. We take into consideration that might be
     ! more than one "best track" file for the simulation period.
     !------------------------------
+
+!   JEROME I'm agreeing with YJZ, manage to call just once
+    IF (firstCall) THEN
+    firstCall = .FALSE.
+
     ALLOCATE(holStru(nBTrFiles))
 
     DO stCnt = 1, nBTrFiles
@@ -913,10 +1850,15 @@ MODULE ParWind
       ELSE
         WRITE(16,'(a)') 'Processing the Holland data structure for the best track file: ' // &
                                      TRIM(ADJUSTL(bestTrackFileName(stCnt)))
-        CALL LogMessage(INFO, scratchMessage)
+
+! JEROME I comment this line because might issuing a SegFault !?
+!        CALL LogMessage(INFO, scratchMessage)
+
+!        EXIT
       END IF
     END DO !stCnt
     !------------------------------
+    ENDIF ! FIRSTCALL
 
     !------------------------------
     ! THIS IS THE MAIN TIME LOOP   timeIDX
@@ -952,6 +1894,8 @@ MODULE ParWind
 
           CYCLE
         END IF
+
+        write(16,*)'GetHollandFields, date bracket',holStru(stCnt)%castTime(jl1),' ',holStru(stCnt)%castTime(jl2)
 
         ! Perform linear interpolation in time
         stormNumber = holStru(stCnt)%stormNumber(jl1)
@@ -1000,7 +1944,7 @@ MODULE ParWind
         !YJZ: limit rad;  I don't understand why distance can be <0
         where(rad<1.d-1) rad=1.d-1
         ! ... and the indices of the nodal points where rad <= rrp
-        radIDX = PACK([(i, i = 1, np_gb)], rad <= rrp) !leave dim of radIDX undefined to receive values from pack()
+        radIDX = PACK([(i, i = 1, np_gb)], rad <= 1.5*rrp) !leave dim of radIDX undefined to receive values from pack()
         maxRadIDX = SIZE(radIDX)
 
       ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
@@ -1082,17 +2026,22 @@ MODULE ParWind
         ! Subtract the translational speed of the storm from the observed max wind speed to avoid
         ! distortion in the Holland curve fit. The translational speed will be added back later.
         trSPD = SQRT(trVX * trVX + trVY * trVY)
+ !       write(16,*) 'translational speed:',trSPD
+ !       write(16,*) 'max wnd speed bfr',speed
         speed = speed - trSPD
+ !       write(16,*) 'max wnd speed aft',speed
 
         ! Convert wind speed from 10 meter altitude (which is what the
         ! NHC forecast contains) to wind speed at the top of the atmospheric
         ! boundary layer (which is what the Holland curve fit requires).
         speed = speed / windReduction
+!        write(16,*) 'max wnd speed reduc',speed
 
         ! Calculate Holland parameters and limit the result to its appropriate range.
         hlB = rhoAir * BASEE * (speed**2) / cPressDef
         IF (hlB < 1.0_SZ) hlB = 1.0_SZ
         IF (hlB > 2.5_SZ) hlB = 2.5_SZ
+!        write(16,*)'Holland B: ',hlB
 
         ! If we are running storm 2 in the Lake Pontchartrain !PV Do we need this?
         ! Forecast System ensemble, the final wind speeds should be multiplied by 1.2.
@@ -1124,7 +2073,7 @@ MODULE ParWind
           tmp3=min(tmp2**hlB,500.d0) !limit; tmp3>=0
 
           !sfPress = cPress + cPressDef * EXP(-(rmw / rad(i))**hlB)
-          sfPress = cPress + cPressDef * EXP(-tmp3)
+          sfPress = cPress + cPressDef * EXP(-tmp3)   ! units = Pascal
 
           ! Compute wind speed (speed - trSPD) at gradient level (m/s) and at a distance rad(i);
           ! all distances are in meters. Using absolute value for coriolis for Southern Hempisphere
@@ -1145,9 +2094,14 @@ MODULE ParWind
           ! Apply mutliplier for Storm #2 in LPFS ensemble.
           grVel = grVel * windMultiplier
 
-          ! Find the wind velocity components.
-          sfVelX = -grVel * SIN(theta)
-          sfVelY =  grVel * COS(theta)
+          ! Find the wind velocity components (caution to SH/NH)
+          if(lat.lt.0.d0) then ! SH
+           sfVelX = grVel * SIN(theta)
+           sfVelY = -grVel * COS(theta)
+          else ! NH
+           sfVelX = -grVel * SIN(theta)
+           sfVelY =  grVel * COS(theta)                  
+          endif
 
           ! Convert wind velocity from the gradient level (top of atmospheric boundary layer)
           ! which, is what the Holland curve fit produces, to 10-m wind velocity.
@@ -1166,7 +2120,8 @@ MODULE ParWind
           !YJZ, PV: Need to interpolate between storms if this nodal point
           !   is affected by more than on storm
           !Impose reasonable bounds
-          atmos_1(i,3) = max(0.9d5,min(1.1e5,sfPress))
+          !atmos_1(i,3) = max(0.9d5,min(1.1e5,sfPress))
+          atmos_1(i,3)  = max(0.85d5,min(1.1e5,sfPress))  !Typhoon Tip 870 hPa ... 12-oct-1979
           atmos_1(i,1)  = max(-200.d0,min(200.d0,sfVelX))
           atmos_1(i,2)  = max(-200.d0,min(200.d0,sfVelY))
 
@@ -1185,10 +2140,13 @@ MODULE ParWind
     !------------------------------
     IF (ALLOCATED(rad)) DEALLOCATE(rad)
     IF (ALLOCATED(radIDX)) DEALLOCATE(radIDX)
-    DO iCnt = 1, nBTrFiles
-      CALL DeAllocHollStruct(holStru(iCnt))
-    END DO
-    DEALLOCATE(holStru)
+
+!    JEROME Do Not DEALLOCATE !! Need to add a call at the end of schism_step, like Call DeAlloc_PaHM()
+!    DO iCnt = 1, nBTrFiles
+!      CALL DeAllocHollStruct(holStru(iCnt))
+!    END DO
+!    DEALLOCATE(holStru)
+
     !----------
 
 !    CALL UnsetMessageSource()
@@ -1201,6 +2159,754 @@ MODULE ParWind
   endif
 
   END SUBROUTINE GetHollandFields
+
+
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   G E T  G A H M  F I E L D S
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Calculates wind velocities and MSL pressures at the mesh nodes from the GAHM Wind model.
+  !>
+  !> @details
+  !>   This subroutine takes a wind file in best track format and uses the GHAM
+  !>   GAHM Wind model to calculate the wind fields (10-m wind speed and MSLP).
+  !>
+  !>   The format statement takes into account whether the track data is
+  !>   hindcast/nowcast (BEST) or forecast (OFCL).
+  !>
+  !>   The first line in the file MUST be a hindcast, since the central
+  !>   pressure and the rmw are carried forward from hindcasts into
+  !>   forecasts. So there needs to be at least one hindcast to carry the data
+  !>   forward.
+  !>
+  !>   Assumes geographical coordinates.
+  !>
+  !> @param[in]
+  !>   timeIDX   The time location to generate the fields for
+  !>
+  !----------------------------------------------------------------
+  SUBROUTINE GetGAHMFields(np_gb,atmos_1)
+
+!    USE PaHM_Mesh, ONLY     : slam, sfea, np, isMeshOK
+    USE PaHM_Global, ONLY   : backgroundAtmPress, ONE2TEN,                                              &
+                              DEG2RAD, RAD2DEG, BASEE, OMEGA, KT2MS, MB2PA, MB2KPA, M2NM, NM2M, REARTH, &
+                              nBTrFiles, bestTrackFileName,                                             &
+                              nOutDT, mdBegSimTime, mdEndSimTime, mdOutDT,                              &
+                              refYear, refMonth, refDay, refHour, refMin, refSec,                       &
+                              Times, DatesTimes,                                                        &
+                              wVelX, wVelY, wPress
+    USE PaHM_Utilities, ONLY: ToUpperCase, SphericalDistance, SphericalFracPoint, GetLocAndRatio
+    USE TimeDateUtils, ONLY : JulDayToGreg, GregToJulDay, GetTimeConvSec, DateTime2String, TimeConv
+    USE PaHM_Vortex
+
+    IMPLICIT NONE
+
+!   INTEGER, INTENT(IN)                  :: timeIDX
+    INTEGER, INTENT(IN)                  :: np_gb
+    real(rkind), intent(inout)           :: atmos_1(np_gb,3) !1:2 wind; 3: pressure
+
+    REAL(SZ)                             :: coriolis ! Coriolis force (1/s)
+
+    INTEGER                              :: iCnt, kCnt, stCnt
+    INTEGER                              :: i, jl1, jl2
+    INTEGER                              :: status
+
+    REAL(SZ)                             :: jday
+    INTEGER                              :: iYear, iMonth, iDay, iHour, iMin, iSec
+
+    CHARACTER(LEN=64)                    :: tmpTimeStr, tmpStr1, tmpStr2
+
+
+    INTEGER                                                 :: maxTrackRecords
+    INTEGER, SAVE                                           :: iCyc, iSot ! do we need to save this?
+    INTEGER,  DIMENSION(:, :, :, :), ALLOCATABLE, SAVE      :: ir, quadFlag
+    REAL(SZ), DIMENSION(:, :, :, :), ALLOCATABLE, SAVE      :: rMaxW, hollBs, vMaxesBL
+
+    REAL(SZ)               :: stormMotion   ! portion of Vmax attributable to storm motio
+    REAL(SZ)               :: stormMotionU  ! U portion of Vmax attributable to storm motion
+    REAL(SZ)               :: stormMotionV  ! V portion of Vmax attributable to storm motion
+
+    CHARACTER(LEN = 10), DIMENSION(:, :), ALLOCATABLE, SAVE ::stormName
+    CHARACTER(LEN =  4), DIMENSION(:, :), ALLOCATABLE, SAVE :: castType    ! hindcast/nowcast or forecast?
+    INTEGER , DIMENSION(:, :), ALLOCATABLE, SAVE            :: stormNumber ! storm identification number
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: year, month, day, hour
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: iRmw,iRrp
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE, SAVE            :: lat, lon
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: iSpeed, iCPress
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: fcstInc ! hours between forecasts
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE, SAVE            :: hollB
+    INTEGER,  DIMENSION(:),    ALLOCATABLE, SAVE            :: nCycles
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: numCycle
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: isotachsPerCycle
+
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: ipn
+    INTEGER,  DIMENSION(:, :), ALLOCATABLE, SAVE            :: ivr
+ 
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE, SAVE            :: cycleTime
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE, SAVE            :: uTrans, vTrans
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE, SAVE            :: hSpeed, hDir
+
+    REAL(SZ), ALLOCATABLE, SAVE :: cHollBs1(:), cHollBs2(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: cPhiFactor1(:), cPhiFactor2(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: cVmwBL1(:), cVmwBL2(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: crmaxw1(:), crmaxw2(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: crmaxwTrue1(:), crmaxwTrue2(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: cHollBs(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: cPhiFactor(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: cVmwBL(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: crmaxw(:)
+    REAL(SZ), ALLOCATABLE, SAVE :: crmaxwTrue(:)
+
+    REAL(SZ), SAVE                      :: uTransNow, vTransNow ! time-interpolated overland speed, kts
+    REAL(SZ), SAVE                      :: dirNow ! Jie
+
+    REAL(SZ), SAVE                      :: pn    ! Ambient surface pressure (mb)
+    REAL(SZ), SAVE                      :: pc    ! Surface pressure at center of storm (mb)
+    REAL(SZ), SAVE                      :: cLat, cLon  ! Current eye location (degrees north, degrees east)
+    REAL(SZ)                            :: wtRatio
+
+    REAL(SZ), DIMENSION(:), ALLOCATABLE, SAVE :: dx, dy, dist, azimuth
+
+    LOGICAL, SAVE                       :: firstCall = .TRUE.
+
+! New variables 
+    REAL(SZ)                             :: rrp             ! radius of the last closed isobar (m)
+    REAL(SZ)                             :: rmmw            ! radius of max winds (m)   jerome RMX is a function in PaHM_Vortex!
+    REAL(SZ)                             :: vmax            ! max wind at the boundary layer
+    INTEGER, ALLOCATABLE                 :: radIDX(:)       ! indices of nodal points duch that rad <= rrp
+    INTEGER                              :: maxRadIDX       ! total number of radIDX elements
+    INTEGER                              :: npCnt
+
+    real(rkind) :: RossNum
+    real(rkind) :: tmp2,tmp3,tmp4
+    real(rkind) :: atmos_0(np_gb,3)
+    logical :: lrevert
+
+
+!    CALL SetMessageSource("GetGAHMFields")
+
+   !------------------------------
+    ! Initialize the arrays. Here we are resetting the fields to their defaults.
+    ! This subroutine is called repeatdly and each time the following
+    ! atmospheric fields are recalculated.
+    !------------------------------
+    !Save previous outputs (error: not init'ed)
+    atmos_0=atmos_1
+    lrevert=.false. !init
+
+    atmos_1(:,1:2)=0.d0
+    atmos_1(:,3)=backgroundAtmPress*MB2PA
+    !------------------------------
+    
+
+    ! Check if timeIDX is within bounds (1 <= timeIDX <= nOutDT). If it is not then exit the program.
+!    IF ((timeIDX < 1) .OR. (timeIDX > nOutDT)) THEN
+!        WRITE(tmpStr1, '(a, i0)') 'timeIDX = ', timeIDX
+!        WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
+!        WRITE(scratchMessage, '(a)') 'timeIDX should be: 1 <= timeIDX <= nOutDT :' // &
+!                                     TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
+!        CALL AllMessage(ERROR, scratchMessage)
+!
+!        CALL UnsetMessageSource()
+!
+!        CALL Terminate()
+!    END IF
+
+   if(time_stamp<mdBegSimTime.or.time_stamp>mdEndSimTime) then
+     return
+   endif  
+
+
+!################################################################
+!###   BEG:: FIRSTCALL BLOCK
+!###         This part of the code should only be executed once
+!################################################################
+!    IF (firstCall) THEN
+!      ! Check if the mash variables are set and that nOutDT is greater than zero.
+!      IF (.NOT. isMeshOK) THEN
+!        WRITE(scratchMessage, '(a)') 'The mesh variables are not established properly. ' // &
+!                                     'Call subroutine ReadMesh to read/create the mesh topology first.'
+!        CALL AllMessage(ERROR, scratchMessage)
+!
+!        CALL UnsetMessageSource()
+!
+!        CALL Terminate()
+!      ELSE
+!        IF ((np <= 0) .OR. (nOutDT <= 0)) THEN
+!          WRITE(tmpStr1, '(a, i0)') 'np = ', np
+!          WRITE(tmpStr2, '(a, i0)') 'nOutDT = ', nOutDT
+!          WRITE(scratchMessage, '(a)') 'Variables "np" or "nOutDT" are not defined properly: ' // &
+!                                       TRIM(ADJUSTL(tmpStr1)) // ', ' // TRIM(ADJUSTL(tmpStr2))
+!          CALL AllMessage(ERROR, scratchMessage)
+!
+!          CALL UnsetMessageSource()
+!
+!          CALL Terminate()
+!        END IF
+!      END IF
+
+
+      !------------------------------
+      ! Allocate storage for the Times and DatesTimes arrays and populate them
+      ! with the output times and ouput dates respectively.
+      !------------------------------
+!      ALLOCATE(Times(nOutDT))
+!      ALLOCATE(DatesTimes(nOutDT))
+
+
+!      DO iCnt = 1, nOutDT
+!        Times(iCnt) = mdBegSimTime + (iCnt - 1) * mdOutDT
+!        jday = (Times(iCnt) *  GetTimeConvSec('D', 1)) + GregToJulDay(refYear, refMonth, refDay, refHour, refMin, refSec)
+!        CALL JulDayToGreg(jday, iYear, iMonth, iDay, iHour, iMin, iSec)
+!        DatesTimes(iCnt) = TRIM(ADJUSTL(DateTime2String(iYear, iMonth, iDay, iHour, iMin, iSec, 0)))
+!      END DO
+!      !------------------------------
+
+
+      !------------------------------
+      ! Allocate storage for the output atmospheric field arrays.
+      ! These arrays share the same mesh with the ocean and wave model
+      !------------------------------
+!      ALLOCATE(wVelX(np))
+!      ALLOCATE(wVelY(np))
+!      ALLOCATE(wPress(np))
+
+!   JEROME I'm agreeing with YJZ, manage to call just once
+    IF (firstCall) THEN
+      firstCall = .FALSE.
+
+      ALLOCATE(cHollBs1(np_gb), cHollBs2(np_gb))
+      ALLOCATE(cPhiFactor1(np_gb), cPhiFactor2(np_gb))
+      ALLOCATE(cVmwBL1(np_gb), cVmwBL2(np_gb))
+      ALLOCATE(crmaxw1(np_gb), crmaxw2(np_gb))
+      ALLOCATE(crmaxwTrue1(np_gb), crmaxwTrue2(np_gb))
+      ALLOCATE(cHollBs(np_gb))
+      ALLOCATE(cPhiFactor(np_gb))
+      ALLOCATE(cVmwBL(np_gb))
+      ALLOCATE(crmaxw(np_gb))
+      ALLOCATE(crmaxwTrue(np_gb))
+      ALLOCATE(dx(np_gb), dy(np_gb), dist(np_gb), azimuth(np_gb))
+      !------------------------------
+
+      !------------------------------
+      ! Allocate the asymetric vortex data structures. 
+      ! The asymetric vortex structures are allocated by calling the
+      ! ProcessAsymmetricVortexData subroutine.
+      ! Process and store the "best track" data into the array of asymetric vortex structures
+      ! for subsequent use. All required data to generate the P-W model wind fields
+      ! are contained in these structures. We take into consideration that might be
+      ! more than one "best track" file for the simulation period.
+      !------------------------------
+      ALLOCATE(asyVortStru(nBTrFiles))
+
+      DO stCnt = 1, nBTrFiles
+        CALL ProcessAsymmetricVortexData(stCnt, asyVortStru(stCnt), status)
+
+        IF (.NOT. asyVortStru(stCnt)%loaded) THEN
+          WRITE(scratchMessage, '(a)') 'There was an error loading the asymetric vortex data structure' // &
+                                       ' for the best track file: ' // TRIM(ADJUSTL(bestTrackFileName(stCnt)))
+!          CALL AllMessage(ERROR, scratchMessage)
+
+          CALL DeAllocAsymVortStruct(asyVortStru(stCnt))
+          DEALLOCATE(asyVortStru)
+
+          CALL UnsetMessageSource()
+          call parallel_abort(errmsg)
+
+!          CALL Terminate()
+        ELSE IF (status /= 0) THEN
+          WRITE(scratchMessage, '(a)') 'There was an error loading the asymetric vortex data structure' // &
+                                       ' for the best track file: ' // TRIM(ADJUSTL(bestTrackFileName(stCnt)))
+!          CALL AllMessage(ERROR, scratchMessage)
+
+          CALL DeAllocAsymVortStruct(asyVortStru(stCnt))
+          DEALLOCATE(asyVortStru)
+
+          CALL UnsetMessageSource()
+          call parallel_abort(errmsg)
+
+!          CALL Terminate()
+        ELSE
+          WRITE(scratchMessage, '(a)') 'Processing the asymmetric vortex data structure for the best track file: ' // &
+                                       TRIM(ADJUSTL(bestTrackFileName(stCnt)))
+          CALL LogMessage(INFO, scratchMessage)
+        END IF
+      END DO !stCnt
+      !------------------------------
+
+      maxTrackRecords = MAXVAL(asyVortStru(1:nBTrFiles)%numRec)
+
+      ALLOCATE(castType(nBTrFiles,         maxTrackRecords))
+      ALLOCATE(stormNumber(nBTrFiles,      maxTrackRecords))
+      ALLOCATE(year(nBTrFiles,             maxTrackRecords))
+      ALLOCATE(month(nBTrFiles,            maxTrackRecords))
+      ALLOCATE(day(nBTrFiles,              maxTrackRecords))
+      ALLOCATE(hour(nBTrFiles,             maxTrackRecords))
+      ALLOCATE(lat(nBTrFiles,              maxTrackRecords))
+      ALLOCATE(lon(nBTrFiles,              maxTrackRecords))
+      ALLOCATE(iRmw(nBTrFiles,             maxTrackRecords))
+      ALLOCATE(iRrp(nBTrFiles,             maxTrackRecords))
+      ALLOCATE(iSpeed(nBTrFiles,           maxTrackRecords))
+      ALLOCATE(iCPress(nBTrFiles,          maxTrackRecords))
+      ALLOCATE(fcstInc(nBTrFiles,          maxTrackRecords))
+      ALLOCATE(hollB(nBTrFiles,            maxTrackRecords))
+      ALLOCATE(nCycles(nBTrFiles))
+      ALLOCATE(numCycle(nBTrFiles,         maxTrackRecords))
+      ALLOCATE(isotachsPerCycle(nBTrFiles, maxTrackRecords))
+      ALLOCATE(ipn(nBTrFiles,              maxTrackRecords))
+      ALLOCATE(ivr(nBTrFiles,              maxTrackRecords))
+      ALLOCATE(cycleTime(nBTrFiles,        maxTrackRecords))
+      ALLOCATE(uTrans(nBTrFiles,           maxTrackRecords))
+      ALLOCATE(vTrans(nBTrFiles,           maxTrackRecords))
+      ALLOCATE(hSpeed(nBTrFiles,           maxTrackRecords))
+      ALLOCATE(hDir(nBTrFiles,             maxTrackRecords))
+      ALLOCATE(stormName(nBTrFiles,        maxTrackRecords))
+         
+      ALLOCATE(ir(nBTrFiles,               maxTrackRecords, 4, 4))
+      ALLOCATE(rMaxW(nBTrFiles,            maxTrackRecords, 4, 4))
+      ALLOCATE(quadFlag(nBTrFiles,         maxTrackRecords, 4, 4))
+      ALLOCATE(hollBs(nBTrFiles,           maxTrackRecords, 4, 4))
+      ALLOCATE(vMaxesBL(nBTrFiles,         maxTrackRecords, 4, 4))
+
+
+      !------------------------------
+      ! Initialize the variables
+      !------------------------------
+      ir       = 0
+      rMaxW    = 0.0_SZ
+      quadFlag = 0
+      hollBs   = 0.0_SZ
+      vMaxesBL = 0.0_SZ
+      !------------------------------
+
+
+      DO stCnt = 1, nBTrFiles
+
+        ! Loop through records in input data structure
+        DO kCnt = 1, asyVortStru(stCnt)%numRec
+          ! pick out the cycle data that the user wants to use
+          ! by looping through quads
+          IF (kCnt == 1) THEN
+            iCyc = 1
+            iSot = 1
+
+            stormNumber(stCnt, iCyc) = asyVortStru(stCnt)%stormNumber(kCnt)
+            year(stCnt, iCyc)        = asyVortStru(stCnt)%year(kCnt)
+            month(stCnt, iCyc)       = asyVortStru(stCnt)%month(kCnt)
+            day(stCnt, iCyc)         = asyVortStru(stCnt)%day(kCnt)
+            hour(stCnt, iCyc)        = asyVortStru(stCnt)%hour(kCnt)
+            castType(stCnt, iCyc)    = asyVortStru(stCnt)%castType(kCnt)
+            fcstInc(stCnt, iCyc)     = asyVortStru(stCnt)%fcstInc(kCnt)
+            lat(stCnt, iCyc)         = asyVortStru(stCnt)%lat(kCnt)
+            lon(stCnt, iCyc)         = asyVortStru(stCnt)%lon(kCnt)
+            iSpeed(stCnt, iCyc)      = asyVortStru(stCnt)%iSpeed(kCnt)
+            iCPress(stCnt, iCyc)     = asyVortStru(stCnt)%iCPress(kCnt)
+            ivr(stCnt, iCyc)         = asyVortStru(stCnt)%ivr(kCnt)
+            ipn(stCnt, iCyc)         = asyVortStru(stCnt)%iPrp(kCnt)
+            iRmw(stCnt, iCyc)        = asyVortStru(stCnt)%iRmw(kCnt)
+            iRrp(stCnt, iCyc)        = asyVortStru(stCnt)%iRrp(kCnt)
+
+            hDir(stCnt, iCyc)        = asyVortStru(stCnt)%iDir(kCnt)
+            hSpeed(stCnt, iCyc)      = asyVortStru(stCnt)%iStormSpeed(kCnt)
+            stormName(stCnt, iCyc)   = asyVortStru(stCnt)%stormName(kCnt)
+            numCycle(stCnt, iCyc)    = asyVortStru(stCnt)%numCycle(kCnt)
+            hollB(stCnt, iCyc)       = asyVortStru(stCnt)%hollB(kCnt)
+
+            uTrans(stCnt, iCyc)      = asyVortStru(stCnt)%trVx(kCnt)
+            vTrans(stCnt, iCyc)      = asyVortStru(stCnt)%trVy(kCnt)
+
+            CALL TimeConv(year(stCnt, iCyc), month(stCnt, iCyc), day(stCnt, iCyc), hour(stCnt, iCyc), &
+                          0, 0, cycleTime(stCnt, iCyc))
+
+            isotachsPerCycle(stCnt, iCyc) = asyVortStru(stCnt)%isotachsPerCycle(kCnt)
+
+            DO i = 1, 4
+              IF (asyVortStru(stCnt)%quadFlag(kCnt, i) == 1) THEN
+                ir(stCnt, iCyc, i, iSot)       = asyVortStru(stCnt)%ir(kCnt, i)
+                rMaxW(stCnt, iCyc, i, iSot)    = asyVortStru(stCnt)%rMaxW(kCnt, i)
+                quadFlag(stCnt, iCyc, i, iSot) = asyVortStru(stCnt)%quadFlag(kCnt, i)
+                hollBs(stCnt, iCyc, i, iSot)   = asyVortStru(stCnt)%hollBs(kCnt, i)
+                vMaxesBL(stCnt, iCyc, i, iSot) = asyVortStru(stCnt)%vMaxesBL(kCnt, i)
+              END IF
+            END DO
+
+          ELSE ! kCnt == 1
+            IF (asyVortStru(stCnt)%numCycle(kCnt) == asyVortStru(stCnt)%numCycle(kCnt-1)) THEN
+               IF (iSot > 4) THEN
+                 WRITE(scratchMessage,'(a, i0, a)')                                          &
+                    'The GAHM asymmetric data structure has more than 4 iSotachs in cycle ', &
+                    asyVortStru(stCnt)%numCycle(kCnt), '.'
+                 CALL AllMessage(ERROR, scratchMessage)
+                 CALL Terminate()
+               END IF
+               iSot = iSot + 1 ! same iCyc, next iSotach
+            ELSE
+              iSot = 1 ! initialize iSotach #
+              IF (asyVortStru(stCnt)%fcstInc(kCnt) == 0 .AND. asyVortStru(stCnt)%fcstInc(iCyc) == 0) THEN
+                 iCyc = iCyc
+              ELSE
+                 iCyc = iCyc + 1
+              END IF
+            END IF
+
+            stormNumber(stCnt, iCyc) = asyVortStru(stCnt)%stormNumber(kCnt)
+            year(stCnt, iCyc)        = asyVortStru(stCnt)%year(kCnt)
+            month(stCnt, iCyc)       = asyVortStru(stCnt)%month(kCnt)
+            day(stCnt, iCyc)         = asyVortStru(stCnt)%day(kCnt)
+            hour(stCnt, iCyc)        = asyVortStru(stCnt)%hour(kCnt)
+            castType(stCnt, iCyc)    = asyVortStru(stCnt)%castType(kCnt)
+            fcstInc(stCnt, iCyc)     = asyVortStru(stCnt)%fcstInc(kCnt)
+            lat(stCnt, iCyc)         = asyVortStru(stCnt)%lat(kCnt)
+            lon(stCnt, iCyc)         = asyVortStru(stCnt)%lon(kCnt)
+            iSpeed(stCnt, iCyc)      = asyVortStru(stCnt)%iSpeed(kCnt)
+            iCPress(stCnt, iCyc)     = asyVortStru(stCnt)%iCPress(kCnt)
+            ivr(stCnt, iCyc)         = asyVortStru(stCnt)%ivr(kCnt)
+            ipn(stCnt, iCyc)         = asyVortStru(stCnt)%iPrp(kCnt)
+            iRmw(stCnt, iCyc)        = asyVortStru(stCnt)%iRmw(kCnt)
+            iRrp(stCnt, iCyc)        = asyVortStru(stCnt)%iRrp(kCnt)
+            hDir(stCnt, iCyc)        = asyVortStru(stCnt)%iDir(kCnt)
+            hSpeed(stCnt, iCyc)      = asyVortStru(stCnt)%iStormSpeed(kCnt)
+            stormName(stCnt, iCyc)   = asyVortStru(stCnt)%stormName(kCnt)
+            numCycle(stCnt, iCyc)    = asyVortStru(stCnt)%numCycle(kCnt)
+            hollB(stCnt, iCyc)       = asyVortStru(stCnt)%hollB(kCnt)
+
+            uTrans(stCnt, iCyc)      = asyVortStru(stCnt)%trVx(kCnt)
+            vTrans(stCnt, iCyc)      = asyVortStru(stCnt)%trVy(kCnt)
+
+            CALL TimeConv(year(stCnt, iCyc), month(stCnt, iCyc), day(stCnt, iCyc), hour(stCnt, iCyc), &
+                          0, 0, cycleTime(stCnt, iCyc))
+
+            isotachsPerCycle(stCnt, iCyc) = asyVortStru(stCnt)%isotachsPerCycle(kCnt)
+
+            DO i = 1, 4
+              IF (asyVortStru(stCnt)%quadFlag(kCnt, i) == 1) THEN
+                ir(stCnt, iCyc, i, iSot)       = asyVortStru(stCnt)%ir(kCnt, i)
+                rMaxW(stCnt, iCyc, i, iSot)    = asyVortStru(stCnt)%rMaxW(kCnt, i)
+                quadFlag(stCnt, iCyc, i, iSot) = asyVortStru(stCnt)%quadFlag(kCnt, i)
+                hollBs(stCnt, iCyc, i, iSot)   = asyVortStru(stCnt)%hollBs(kCnt, i)
+                vMaxesBL(stCnt, iCyc, i, iSot) = asyVortStru(stCnt)%vMaxesBL(kCnt, i)
+              END IF
+            END DO
+          END IF ! kCnt /= 1
+        END DO ! kCnt = 1, asyVortStru(stCnt)%numRec
+
+        nCycles(stCnt) = asyVortStru(stCnt)%nCycles
+      END DO ! nBTrFiles
+
+      WRITE(16,*)'maxTrackRecords: ', maxTrackRecords
+      
+    END IF ! FIRSTCALL
+!################################################################
+!###   END:: FIRSTCALL BLOCK
+!################################################################
+
+    !------------------------------
+    ! THIS IS THE MAIN TIME LOOP
+    ! IT USES "timeIDX" TO ADVANCE THE CALCULATIONS IN TIME
+    !------------------------------
+!    iCnt = timeIDX
+!      WRITE(tmpStr1, '(i5)') iCnt
+!      WRITE(tmpStr2, '(i5)') nOutDT
+!    tmpStr1 = '(' // TRIM(tmpStr1) // '/' // TRIM(ADJUSTL(tmpStr2)) // ')'
+!      WRITE(tmpTimeStr, '(a)') DatesTimes(iCnt)
+!    WRITE(scratchMessage, '(a)') 'Working on time frame: ' // TRIM(ADJUSTL(tmpStr1)) // " " // TRIM(ADJUSTL(tmpTimeStr))
+!    CALL AllMessage(scratchMessage)
+
+    WRITE(tmpTimeStr, '(f20.3)') time_stamp !Times(iCnt) (time from ref in sec; make sure origin=ref time)
+    WRITE(16,*)'Working on time frame: ',time_stamp !// TRIM(ADJUSTL(tmpTimeStr))
+
+    DO stCnt = 1, nBTrFiles
+
+      ! Get the bin interval where Times(iCnt) is bounded and the corresponding ratio
+      ! factor for the subsequent linear interpolation in time. In order for this to
+      ! work, the array asyVortStru%castTime should be ordered in ascending order.
+      !PV (iCyc, iCyc - 1) = (jl2, jl1) jl1: lower limit and jl2: upper limit
+      CALL GetLocAndRatio(time_stamp, cycleTime(stCnt, 1:nCycles(stCnt)), jl1, jl2, wtRatio)
+
+      ! Skip the subsequent calculations if Times(iCnt) is outside the castTime range
+      ! by exiting this loop
+      IF ((jl1 <= 0) .OR. (jl2 <= 0)) THEN
+
+        WRITE(16,*) 'Requested output time: ',time_stamp,', skipping generating data for this time;', &
+     &cycleTime(stCnt, 1:nCycles(stCnt))
+
+        CYCLE
+      END IF
+
+      write(16,*)'GetGAHMFields, date bracket',cycleTime(stCnt,jl1),' ',cycleTime(stCnt,jl2)
+
+      IF ((ToUpperCase(TRIM(ADJUSTL(castType(stCnt, jl2)))) == 'CALM') .OR. &
+          (ToUpperCase(TRIM(ADJUSTL(castType(stCnt, jl1)))) == 'CALM')) THEN
+        atmos_1(:,3)=backgroundAtmPress*MB2PA
+        atmos_1(:,1:2)=0.d0
+        CYCLE
+      END IF
+
+      ! Perform linear interpolation in time
+      CALL SphericalFracPoint(lat(stCnt, jl1), lon(stCnt, jl1), &
+                             &lat(stCnt, jl2), lon(stCnt, jl2), &
+                             &wtRatio, cLat, cLon)
+
+      !Check NaN
+      if(wtRatio/=wtRatio.or.clat/=clat.or.clon/=clon) then
+          write(16,*)'GetGAHMFields, error in lonlat:',wtRatio,clat,clon,jl1,jl2
+!          write(errmsg,*)'GetHollandFields- nan(1):',wtRatio,lat,lon,jl1,jl2
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+      endif
+                     
+
+      !----- Calculate distance/azimuth of points in CPP plane
+      dx      = DEG2RAD * REARTH * (xlon_gb - cLon) * COS(DEG2RAD * cLat)
+      dy      = DEG2RAD * REARTH * (ylat_gb - cLat)
+      dist    = SQRT(dx * dx + dy * dy) * M2NM      ! jerome units are NM 
+      azimuth = 360.0_SZ + RAD2DEG * ATAN2(dx, dy)
+      WHERE(azimuth > 360.0_SZ) azimuth = azimuth - 360.0_SZ
+      !azimuth = (azimuth+360.0_SZ)%360.0_SZ ! Jerome
+      !-----
+
+      !Using absolute value for coriolis for Southern Hempisphere
+      coriolis   = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
+
+! -----------------------------------------------------------------------------
+! Jerome test distance to save computing cycles ... like in GetHollandFields ...
+      if(1==1) then
+        ! Radius of the last closed isobar
+        rrp = iRrp(stCnt, jl1) + &
+                wtRatio * (iRrp(stCnt, jl2) - iRrp(stCnt, jl1))
+
+        ! Radius of maximum winds
+        rmmw = iRmw(stCnt, jl1) + &
+                wtRatio * (iRmw(stCnt, jl2) - iRmw(stCnt, jl1))
+        
+        !Limit
+        rrp=max(rrp,0.d0)
+        rmmw=max(rmmw,0.d0)
+
+        vmax = iSpeed(stCnt, jl1) + &
+                wtRatio * (iSpeed(stCnt, jl2) - iSpeed(stCnt, jl1))
+
+        !JEROME Get The Rossby number (just informative)
+        call RossbyNumber(vmax*KT2MS, rmmw*NM2M, coriolis, RossNum)
+
+        !Check
+        write(16,*)'Rossby Number=',RossNum
+        write(16,*)'rrp,rmw=',rrp,rmmw
+        write(16,*)'time_stamp,stormNumber',time_stamp,stormNumber(stCnt, jl1)
+        write(16,*)'lon,lat',clon,clat
+        if(rrp/=rrp.or.rmmw/=rmmw) then
+          write(16,*)'GetGAHMFields- nan(2):',rrp,rmmw
+!          write(errmsg,*)'GetHollandFields- nan(2):',rrp,rmmw
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
+
+        write(16,*)'min &max dist (nm) =',minval(dist),maxval(dist)
+        !YJZ: limit rad;  I don't understand why distance can be <0
+        where(dist<1.d-5) dist=1.d-5
+
+        ! ... and the indices of the nodal points where rad <= rrp
+        ! JEROME note : both dist and rrp are in nm units !! 
+        radIDX = PACK([(i, i = 1, np_gb)], dist <= 1.5d0*rrp) !leave dim of radIDX undefined to receive values from pack()
+        maxRadIDX = SIZE(radIDX)
+
+      ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
+        IF (maxRadIDX == 0) THEN
+          WRITE(tmpStr1, '(f20.3)') rrp
+          tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' nm)'
+          WRITE(16, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
+                           TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
+                           TRIM(ADJUSTL(stormName(stCnt, jl1)))
+!          CALL LogMessage(INFO, scratchMessage)
+          EXIT
+        END IF
+
+        !From now on, rrp>=0.1
+        !Check
+        write(16,*)'rad:',size(dist),rrp,rmmw,maxRadIDX !,radIDX
+        tmp2=sum(dist)/np_gb
+        if(maxRadIDX/=maxRadIDX.or.tmp2/=tmp2) then
+          write(16,*)'GetGAHMFields- nan(3):',maxRadIDX,tmp2
+!          write(errmsg,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+        endif
+        if(maxRadIDX>0) then
+          tmp2=sum(radIDX)/np_gb
+          if(tmp2/=tmp2) then
+            write(16,*)'GetGAHMFields- nan(4):',tmp2
+!            write(errmsg,*)'GetHollandFields- nan(4):',tmp2
+!            call parallel_abort(errmsg)
+            lrevert=.true.
+          endif
+        endif
+        
+      endif
+! End Jerome, same logic like in GetHollandFields
+! -----------------------------------------------------------------------------
+
+      uTransNow = uTrans(stCnt, jl1) + wtratio * (uTrans(stCnt, jl2) - utrans(stCnt, jl1))
+      vTransNow = vTrans(stCnt, jl1) + wtratio * (vTrans(stCnt, jl2) - vTrans(stCnt, jl1))
+
+      if(uTransNow/=uTransNow.or.vTransNow/=vTransNow) then
+          write(16,*)'GetGAHMFields- nan(5):',time_stamp,uTransNow,vTransNow
+!          write(errmsg,*)'GetHollandFields- nan(5):',time_stamp,speed,cPress,trVX,trVY
+!          call parallel_abort(errmsg)
+          lrevert=.true.
+      endif      
+
+! ToDO : complete for other junks test ...      
+
+      !Revert if junks are found and exit
+      if(lrevert) then
+         atmos_1=atmos_0
+         exit
+      endif !lrevert
+
+
+      quadFlag4(2:5, 1:4) = quadFlag(stCnt, jl1, 1:4, 1:4)
+      quadIr4(2:5, 1:4)   = REAL(ir(stCnt, jl1, 1:4, 1:4))
+      rMaxes4(2:5, 1:4)   = rMaxw(stCnt, jl1, 1:4, 1:4)
+      bs4(2:5, 1:4)       = hollBs(stCnt, jl1, 1:4, 1:4)
+      vmBL4(2:5, 1:4)     = vMaxesBL(stCnt, jl1, 1:4, 1:4)
+
+      CALL FitRMaxes4()
+
+      DO i = 1, np_gb
+!      DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
+!        i = radIDX(npCnt)
+
+        crmaxw1(i)     = spInterp(azimuth(i), dist(i), 1) ! radiusToMaxWinds
+        crmaxwTrue1(i) = spInterp(azimuth(i), 1.0_SZ, 1)
+        !an artificial number 1.0 is chosen to ensure only
+        !rmax from the highest isotach is picked
+        cHollBs1(i)    = spInterp(azimuth(i), dist(i), 2) ! Holland B 
+        cVmwBL1(i)     = spInterp(azimuth(i), dist(i), 3) ! vmaxBoundaryLayer
+      END DO
+
+      quadFlag4(2:5, 1:4) = quadFlag(stCnt, jl2, 1:4, 1:4)
+      quadIr4(2:5, 1:4)   = REAL(ir(stCnt, jl2, 1:4, 1:4))
+      rMaxes4(2:5, 1:4)   = rMaxw(stCnt, jl2,1:4, 1:4)
+      bs4(2:5, 1:4)       = hollBs(stCnt, jl2,1:4, 1:4)
+      vmBL4(2:5, 1:4)     = vMaxesBL(stCnt, jl2, 1:4, 1:4)
+
+      CALL FitRMaxes4()
+
+      DO i = 1, np_gb      
+!      JEROME Comment : Restricting the computation to 1-maxRadIDX like in hetHollandFields 
+!      give strange results with zero values in some radial sectors. Need further investigations     
+!      DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
+!        i = radIDX(npCnt)
+
+        crmaxw2(i)     = spInterp(azimuth(i), dist(i), 1) ! radiusToMaxWinds
+        crmaxwTrue2(i) = spInterp(azimuth(i), 1.0_SZ, 1)
+        !an artificial number 1.0 is chosen to ensure only
+        !rmax from the highest isotach is picked
+        cHollBs2(i)    = spInterp(azimuth(i), dist(i), 2) ! Holland B
+        cVmwBL2(i)     = spInterp(azimuth(i), dist(i), 3) ! vmaxBoundaryLayer
+      END DO
+
+      pn         =  1.0_SZ * (ipn(stCnt, jl1) + wtratio*(ipn(stCnt, jl2)-ipn(stCnt, jl1)))
+      pc         =  1.0_SZ * (icpress(stCnt, jl1) + &
+                              wtratio * (icpress(stCnt, jl2) - icpress(stCnt, jl1)))
+      crmaxw     =  crmaxw1(:) + &
+                              wtratio * (crmaxw2(:) - crmaxw1(:))
+      crmaxwTrue =  crmaxwTrue1(:) + &
+                              wtratio * (crmaxwTrue2(:) - crmaxwTrue1(:))
+      cHollBs    =  cHollBs1(:) + &
+                              wtratio * (cHollBs2(:) - cHollBs1(:))
+      cVmwBL     =  cVmwBL1(:) + &
+                              wtratio * (cVmwBL2(:) - cVmwBL1(:))
+      DO i = 1, np_gb
+!      JEROME Comment : Restricting the computation to 1-maxRadIDX like in hetHollandFields 
+!      give strange results with zero values in some radial sectors. Need further investigations
+!      DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
+!        i = radIDX(npCnt)
+
+        cPhiFactor(i) =  1 + cVmwBL(i) * KT2MS * crmaxw(i) * NM2M * coriolis /  &
+                            (cHollBs(i)* ((cVmwBL(i) * KT2MS)**2 +              &
+                             cVmwBL(i) * KT2MS * crmaxw(i) * NM2M * coriolis))
+      END DO
+
+      write(16,*)'min/max cPhiFactor=',minval(cPhiFactor),maxval(cPhiFactor)
+
+      !-------------------------------
+      ! Create a new asymmetric hurricane vortex.
+      !
+      ! Note: Subtract translational speed from Vmax, then
+      ! scale (Vmax - Vt) and Vr up to the top of the surface,
+      ! where the cylcostrophic wind balance is valid.
+      !-------------------------------------------------------
+      !-------------------------------------------------------------
+      ! Calculate wind and pressure fields at model nodal points.
+      !
+      ! Note: the asymmetric vortex wind speed is reduced from the
+      ! top of the surface layer to the surface, then converted from
+      ! a 1-minute (max sustained) to a 10-minute average prior to
+      ! adding the translational velocity in subroutine uvp.
+      !-------------------------------------------------------------
+      stormMotion = 1.5_SZ * (SQRT(uTransNow**2.0_SZ + vTransNow**2.0_SZ))**0.63_SZ
+      dirNow = RAD2DEG * ATAN2(uTransNow, vTransNow)
+      IF (dirNow < 0.0_SZ) dirNow = dirNow + 360.0_SZ
+      stormMotionU = SIN(dirNow / RAD2DEG) * stormMotion
+      stormMotionV = COS(dirNow / RAD2DEG) * stormMotion
+      write(16,*)'stormMotionU,V',stormMotionU,stormMotionV
+
+      CALL setVortex(pn, pc, cLat, cLon)
+      ! uncomment call setRmaxes and call fitRmaxes() if CALL uvp() instead CALL uvpr()
+      !call setRmaxes(crmaxw)
+      !call fitRmaxes()
+
+      !PV Need to account for multiple storms in the basin
+      DO i = 1, np_gb
+!      JEROME Comment : Restricting the computation to 1-maxRadIDX like in hetHollandFields 
+!      give strange results with zero values in some radial sectors. Need further investigations
+!      DO npCnt = 1, maxRadIDX !do for all nodes inside last closed isobar
+!        i = radIDX(npCnt)
+
+        CALL uvpr(dist(i), azimuth(i), crmaxw(i), crmaxwTrue(i), &
+             cHollBs(i), cVmwBL(i), cPhiFactor(i), stormMotionU,  &
+             stormMotionV, geofactor, atmos_1(i,1),atmos_1(i,2),atmos_1(i,3))
+!         CALL uvp(ylat_gb(i),xlon_gb(i), stormMotionU,stormMotionV, &
+!             atmos_1(i,1),atmos_1(i,2),atmos_1(i,3))
+
+          !YJZ, PV: Need to interpolate between storms if this nodal point
+          !   is affected by more than on storm
+          !Impose reasonable bounds
+          atmos_1(i,3)  = max(0.85d5,min(1.1e5,atmos_1(i,3)))  !Typhoon Tip 870 hPa ... 12-oct-1979
+          atmos_1(i,1)  = max(-200.d0,min(200.d0,atmos_1(i,1)))
+          atmos_1(i,2)  = max(-200.d0,min(200.d0,atmos_1(i,2)))
+
+      END DO
+      
+
+    END DO ! stCnt = 1, nBTrFiles
+
+    !------------------------------
+    ! Deallocate the arrays
+    !------------------------------
+    !IF (ALLOCATED(dist)) DEALLOCATE(dist)
+    IF (ALLOCATED(radIDX)) DEALLOCATE(radIDX)
+
+    !------------------------------
+    ! Deallocate the arrays
+    !------------------------------
+    !DO iCnt = 1, nBTrFiles
+    !  CALL DeAllocAsymVortStruct(asyVortStru(iCnt))
+    !END DO
+    !DEALLOCATE(asyVortStru)
+    !----------
+
+!    CALL UnsetMessageSource()
+  !Check outputs
+  tmp2=sum(atmos_1(:,3))/np_gb; tmp3=sum(atmos_1(:,1))/np_gb; tmp4=sum(atmos_1(:,2))/np_gb
+  if(tmp2/=tmp2.or.tmp3/=tmp3.or.tmp4/=tmp4) then
+    write(errmsg,*)'GetGAHMFields- nan(7):',tmp2,tmp3,tmp4
+    call parallel_abort(errmsg)
+  endif
+
+  END SUBROUTINE GetGAHMFields
 
 !================================================================================
 
@@ -1248,7 +2954,7 @@ MODULE ParWind
 
     fmtStr = '(a2, ",", 1x, i2.2, ",", 1x, a10, ",", 1x, i2, ",", 1x, a4, ",", 1x, i3, ",",'
     fmtStr = TRIM(fmtStr) // ' 1x, i3, a1, ",", 1x, i4, a1, ",",'
-      fmtStr = TRIM(fmtStr) // ' 1x, i3, ",", 1x, i4, ",", 1x, a2, ",", 1x, i3, ",", 1x, a3, ",", '
+    fmtStr = TRIM(fmtStr) // ' 1x, i3, ",", 1x, i4, ",", 1x, a2, ",", 1x, i3, ",", 1x, a3, ",",'
     fmtStr = TRIM(fmtStr) // ' 4(1x, i4, ","), 1x, i4, ",", 1x, i4, ",", 1x, i3, ",", 1x, i3, ",", 1x, i3, ",",'
     fmtStr = TRIM(fmtStr) // ' 1x, a3,",", 1x, i3,",", 1x, a3, ",", 1x, i3, ",", 1x, i3, ",",'
     fmtStr = TRIM(fmtStr) // ' 1x, a10, ",", 1x, i4, ",")'
@@ -1282,7 +2988,7 @@ MODULE ParWind
     END IF
 
     DO iCnt = 1, trackStruc%numRec
-      WRITE(iUnit, fmtStr)                                     &
+      WRITE(iUnit, fmtStr)                                         &
           trackStruc%basin(iCnt),     trackStruc%cyNum(iCnt),      &
           trackStruc%dtg(iCnt),       trackStruc%techNum(iCnt),    &
           trackStruc%tech(iCnt),      trackStruc%tau(iCnt),        &
@@ -1306,6 +3012,116 @@ MODULE ParWind
     CALL UnsetMessageSource()
 
   END SUBROUTINE WriteBestTrackData
+
+!================================================================================
+
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   W R I T E  A S Y M M E T R I C  V O R T E X  D A T A
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Outputs the post-prossed best track data to file.
+  !>
+  !> @details
+  !>   Writes the generated asymetric vortex data in addition to the adjusted
+  !>   best track data into the "extended" best track output file.
+  !>
+  !> @param[in]
+  !>   inpFile    The name of the input best track file
+  !> @param[in]
+  !>   trackStruc The "extended"  best track data structure that corresponds to the inpFile
+  !> @param[in]
+  !>   suffix     The suffix (optional) to be appended to the inpFile (default '_asymvort')
+  !>
+  !----------------------------------------------------------------
+  SUBROUTINE WriteAsymmetricVortexData(inpFile, trackStruc, suffix)
+
+    USE PaHM_Global, ONLY : LUN_BTRK, LUN_BTRK1
+
+    IMPLICIT NONE
+
+    ! Global variables
+    CHARACTER(LEN=*), INTENT(IN)            :: inpFile
+    TYPE(AsymetricVortexData_T), INTENT(IN) :: trackStruc
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: suffix
+
+    ! Local variables
+    INTEGER                                 :: i
+    CHARACTER(LEN=FNAMELEN)                 :: outFile
+    CHARACTER(LEN=64)                       :: fSuf
+    INTEGER                                 :: iCnt
+    INTEGER                                 :: iUnit, errIO
+    CHARACTER(LEN=512)                      :: fmtStr
+
+
+    !---------- Initialize variables
+    iUnit  = LUN_BTRK1
+    errIO  = 0
+
+    fmtStr = '(a2, ",", 1x, i2.2, ",", 1x, a10, ",", 1x, i2, ",", 1x, a4, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, i3, a1, ",", 1x, i4, a1, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, i3, ",", 1x, i4, ",", 1x, a2, ",", 1x, i3, ",", 1x, a3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 4(1x, i4, ","), 1x, i4, ",", 1x, i4, ",", 1x, i3, ",", 1x, i3, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, a3,",", 1x, i3,",", 1x, a3, ",", 1x, i3, ",", 1x, i3, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, a10, ",", 1x, i4, ",",'
+    fmtStr = TRIM(fmtStr) // ' 1x, i4, ",", 4(1x, i1, ","), 2x, 4(1x, f6.1, ","), 9(1x, f8.4, ","))'
+    !----------
+
+    fSuf = '_asymvort'
+    IF (PRESENT(suffix)) fSuf = ADJUSTL(suffix)
+
+    CALL SetMessageSource("WriteAsymmetricVortexData")
+
+    IF (.NOT. trackStruc%loaded) THEN
+      WRITE(scratchMessage, '(a)') "The input best track structure is empty. Best track data won't be written."
+      CALL AllMessage(INFO, scratchMessage)
+      
+      RETURN
+    END IF
+
+    outFile = TRIM(ADJUSTL(inpFile)) // TRIM(fSuf)
+
+    WRITE(scratchMessage, '(a)') 'Writting the "extended" best track data to: ' // TRIM(ADJUSTL(outFile))
+    CALL LogMessage(INFO, scratchMessage)
+
+    OPEN(UNIT=iUnit, FILE=TRIM(outFile), STATUS='REPLACE', ACTION='WRITE', IOSTAT=errIO)
+
+    IF (errIO /= 0) THEN
+      WRITE(scratchMessage, '(a)') 'Error opening the outFile: '  // TRIM(outFile) // &
+                                   ', skip writting the "extended" best track fields'
+      CALL AllMessage(ERROR, scratchMessage)
+      
+      RETURN
+    END IF
+
+    DO iCnt = 1, trackStruc%numRec
+      WRITE(iUnit, fmtStr)                                                                 &
+          trackStruc%basin(iCnt),     trackStruc%stormNumber(iCnt),                        &
+          trackStruc%dtg(iCnt),       trackStruc%castTypeNum(iCnt),                        &
+          trackStruc%castType(iCnt),  trackStruc%fcstInc(iCnt),                            &
+          trackStruc%iLat(iCnt),      trackStruc%ns(iCnt),                                 &
+          trackStruc%iLon(iCnt),      trackStruc%ew(iCnt),                                 &
+          trackStruc%iSpeed(iCnt),    trackStruc%iCPress(iCnt),                            &
+          trackStruc%ty(iCnt),        trackStruc%ivr(iCnt),                                &
+          trackStruc%windCode(iCnt),  (trackStruc%ir(iCnt, i), i = 1, 4),                  &
+          trackStruc%iPrp(iCnt),      trackStruc%iRrp(iCnt),                               &
+          trackStruc%iRmw(iCnt),                                                           &
+          trackStruc%gusts(iCnt),     trackStruc%eye(iCnt),                                &
+          trackStruc%subregion(iCnt), trackStruc%maxseas(iCnt),                            &
+          trackStruc%initials(iCnt),                                                       &
+          trackStruc%idir(iCnt),      trackStruc%iStormSpeed(iCnt),                        &
+          trackStruc%stormName(iCnt), trackStruc%numCycle(iCnt),                           &
+          trackStruc%isotachsPerCycle(trackStruc%numCycle(iCnt)),                          &
+         (trackStruc%quadFlag(iCnt, i), i = 1, 4), (trackStruc%rMaxW(iCnt, i), i = 1, 4),  &
+         trackStruc%hollB(iCnt),                   (trackStruc%hollBs(iCnt, i), i = 1, 4), &
+         (trackStruc%vMaxesBL(iCnt, i), i = 1, 4)
+    END DO
+
+    CLOSE(iUnit)
+
+    CALL UnsetMessageSource()
+
+  END SUBROUTINE WriteAsymmetricVortexData
 
 !================================================================================
 
@@ -1574,6 +3390,194 @@ MODULE ParWind
     IF (ALLOCATED(str%trVy))         DEALLOCATE(str%trVy)
 
   END SUBROUTINE DeAllocHollStruct
+
+!================================================================================
+
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   A L L O C  A S Y M  V O R T  S T R U C T
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Subroutine to allocate memory for an asymmetric vortex structure
+  !>
+  !> @details
+  !>   
+  !>
+  !> @param[in,out]
+  !>   str    The asymmetric vortex structure of type AsymetricVortexData_T
+  !> @param[in]
+  !>   nRec   The number of records in the structure
+  !>
+  !----------------------------------------------------------------
+  SUBROUTINE AllocAsymVortStruct(str, nRec)
+
+    IMPLICIT NONE
+
+    TYPE(AsymetricVortexData_T), INTENT(INOUT) :: str
+    INTEGER, INTENT(IN)                        :: nRec
+
+    str%numRec = nRec
+    str%loaded = .FALSE.
+
+    !----- Input parameters
+    IF (.NOT. ALLOCATED(str%basin))              ALLOCATE(str%basin(nRec))
+
+    IF (.NOT. ALLOCATED(str%dtg))                ALLOCATE(str%dtg(nRec))
+    IF (.NOT. ALLOCATED(str%stormNumber))        ALLOCATE(str%stormNumber(nRec))
+    IF (.NOT. ALLOCATED(str%year))               ALLOCATE(str%year(nRec))
+    IF (.NOT. ALLOCATED(str%month))              ALLOCATE(str%month(nRec))
+    IF (.NOT. ALLOCATED(str%day))                ALLOCATE(str%day(nRec))
+    IF (.NOT. ALLOCATED(str%hour))               ALLOCATE(str%hour(nRec))
+
+    IF (.NOT. ALLOCATED(str%castTime))           ALLOCATE(str%castTime(nRec))
+    IF (.NOT. ALLOCATED(str%castTypeNum))        ALLOCATE(str%castTypeNum(nRec))
+    IF (.NOT. ALLOCATED(str%castType))           ALLOCATE(str%castType(nRec))
+    IF (.NOT. ALLOCATED(str%fcstInc))            ALLOCATE(str%fcstInc(nRec))
+
+    IF (.NOT. ALLOCATED(str%iLat))               ALLOCATE(str%iLat(nRec))
+    IF (.NOT. ALLOCATED(str%lat))                ALLOCATE(str%lat(nRec))
+    IF (.NOT. ALLOCATED(str%iLon))               ALLOCATE(str%iLon(nRec))
+    IF (.NOT. ALLOCATED(str%lon))                ALLOCATE(str%lon(nRec))
+    IF (.NOT. ALLOCATED(str%ew))                 ALLOCATE(str%ew(nRec))
+    IF (.NOT. ALLOCATED(str%ns))                 ALLOCATE(str%ns(nRec))
+
+    IF (.NOT. ALLOCATED(str%iSpeed))             ALLOCATE(str%iSpeed(nRec))
+    IF (.NOT. ALLOCATED(str%speed))              ALLOCATE(str%speed(nRec))
+
+    IF (.NOT. ALLOCATED(str%iCPress))            ALLOCATE(str%iCPress(nRec))
+    IF (.NOT. ALLOCATED(str%cPress))             ALLOCATE(str%cPress(nRec))
+
+    IF (.NOT. ALLOCATED(str%ty))                 ALLOCATE(str%ty(nRec))
+
+    IF (.NOT. ALLOCATED(str%ivr))                ALLOCATE(str%ivr(nRec))
+    IF (.NOT. ALLOCATED(str%windCode))           ALLOCATE(str%windCode(nRec))
+    IF (.NOT. ALLOCATED(str%ir))                 ALLOCATE(str%ir(nRec, 4))
+
+    IF (.NOT. ALLOCATED(str%iPrp))               ALLOCATE(str%iPrp(nRec))
+    IF (.NOT. ALLOCATED(str%prp))                ALLOCATE(str%prp(nRec))
+    IF (.NOT. ALLOCATED(str%iRrp))               ALLOCATE(str%iRrp(nRec))
+    IF (.NOT. ALLOCATED(str%rrp))                ALLOCATE(str%rrp(nRec))
+
+    IF (.NOT. ALLOCATED(str%iRmw))               ALLOCATE(str%iRmw(nRec))
+    IF (.NOT. ALLOCATED(str%rmw))                ALLOCATE(str%rmw(nRec))
+
+    IF (.NOT. ALLOCATED(str%gusts))              ALLOCATE(str%gusts(nRec))
+    IF (.NOT. ALLOCATED(str%eye))                ALLOCATE(str%eye(nRec))
+    IF (.NOT. ALLOCATED(str%subregion))          ALLOCATE(str%subregion(nRec))
+    IF (.NOT. ALLOCATED(str%maxseas))            ALLOCATE(str%maxseas(nRec))
+    IF (.NOT. ALLOCATED(str%initials))           ALLOCATE(str%initials(nRec))
+
+    IF (.NOT. ALLOCATED(str%trVx))               ALLOCATE(str%trVx(nRec))
+    IF (.NOT. ALLOCATED(str%trVy))               ALLOCATE(str%trVy(nRec))
+
+    IF (.NOT. ALLOCATED(str%idir))               ALLOCATE(str%idir(nRec))
+    IF (.NOT. ALLOCATED(str%dir))                ALLOCATE(str%dir(nRec))
+    IF (.NOT. ALLOCATED(str%iStormSpeed))        ALLOCATE(str%iStormSpeed(nRec))
+    IF (.NOT. ALLOCATED(str%stormSpeed))         ALLOCATE(str%stormSpeed(nRec))
+    IF (.NOT. ALLOCATED(str%stormName))          ALLOCATE(str%stormName(nRec))
+
+    IF (.NOT. ALLOCATED(str%numCycle))           ALLOCATE(str%numCycle(nRec))
+    IF (.NOT. ALLOCATED(str%isotachsPerCycle))   ALLOCATE(str%isotachsPerCycle(nRec))
+    IF (.NOT. ALLOCATED(str%quadFlag))           ALLOCATE(str%quadFlag(nRec, 4))
+    IF (.NOT. ALLOCATED(str%rMaxW))              ALLOCATE(str%rMaxW(nRec, 4))
+    IF (.NOT. ALLOCATED(str%hollB))              ALLOCATE(str%hollB(nRec))
+    IF (.NOT. ALLOCATED(str%hollBs))             ALLOCATE(str%hollBs(nRec, 4))
+    IF (.NOT. ALLOCATED(str%vMaxesBL))           ALLOCATE(str%vMaxesBL(nRec, 4))
+
+  END SUBROUTINE AllocAsymVortStruct
+
+!================================================================================
+
+  !----------------------------------------------------------------
+  ! S U B R O U T I N E   D E A L L O C  A S Y M  V O R T  S T R U C T
+  !----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Subroutine to deallocate memory of an allocated asymetric vortex structure
+  !>
+  !> @details
+  !>   
+  !>
+  !> @param[in,out]
+  !>   str    The asymetric vortex structure of type AsymetricVortexData_T
+  !>
+  !----------------------------------------------------------------
+  SUBROUTINE DeAllocAsymVortStruct(str)
+
+    IMPLICIT NONE
+
+    TYPE(AsymetricVortexData_T), INTENT(INOUT) :: str
+
+    str%numRec = -1
+    str%loaded = .FALSE.
+
+    !----- Input parameters
+    IF (ALLOCATED(str%basin))              DEALLOCATE(str%basin)
+
+    IF (ALLOCATED(str%dtg))                DEALLOCATE(str%dtg)
+    IF (ALLOCATED(str%stormNumber))        DEALLOCATE(str%stormNumber)
+    IF (ALLOCATED(str%year))               DEALLOCATE(str%year)
+    IF (ALLOCATED(str%month))              DEALLOCATE(str%month)
+    IF (ALLOCATED(str%day))                DEALLOCATE(str%day)
+    IF (ALLOCATED(str%hour))               DEALLOCATE(str%hour)
+
+    IF (ALLOCATED(str%castTime))           DEALLOCATE(str%castTime)
+    IF (ALLOCATED(str%castTypeNum))        DEALLOCATE(str%castTypeNum)
+    IF (ALLOCATED(str%castType))           DEALLOCATE(str%castType)
+    IF (ALLOCATED(str%fcstInc))            DEALLOCATE(str%fcstInc)
+
+    IF (ALLOCATED(str%iLat))               DEALLOCATE(str%iLat)
+    IF (ALLOCATED(str%lat))                DEALLOCATE(str%lat)
+    IF (ALLOCATED(str%iLon))               DEALLOCATE(str%iLon)
+    IF (ALLOCATED(str%lon))                DEALLOCATE(str%lon)
+    IF (ALLOCATED(str%ew))                 DEALLOCATE(str%ew)
+    IF (ALLOCATED(str%ns))                 DEALLOCATE(str%ns)
+
+
+    IF (ALLOCATED(str%iSpeed))             DEALLOCATE(str%iSpeed)
+    IF (ALLOCATED(str%speed))              DEALLOCATE(str%speed)
+
+    IF (ALLOCATED(str%iCPress))            DEALLOCATE(str%iCPress)
+    IF (ALLOCATED(str%cPress))             DEALLOCATE(str%cPress)
+
+    IF (ALLOCATED(str%ty))                 DEALLOCATE(str%ty)
+    
+    IF (ALLOCATED(str%ivr))                DEALLOCATE(str%ivr)
+    IF (ALLOCATED(str%windCode))           DEALLOCATE(str%windCode)
+    IF (ALLOCATED(str%ir))                 DEALLOCATE(str%ir)
+
+    IF (ALLOCATED(str%iPrp))               DEALLOCATE(str%iPrp)
+    IF (ALLOCATED(str%prp))                DEALLOCATE(str%prp)
+    IF (ALLOCATED(str%iRrp))               DEALLOCATE(str%iRrp)
+    IF (ALLOCATED(str%rrp))                DEALLOCATE(str%rrp)
+
+    IF (ALLOCATED(str%iRmw))               DEALLOCATE(str%iRmw)
+    IF (ALLOCATED(str%rmw))                DEALLOCATE(str%rmw)
+
+    IF (ALLOCATED(str%gusts))              DEALLOCATE(str%gusts)
+    IF (ALLOCATED(str%eye))                DEALLOCATE(str%eye)
+    IF (ALLOCATED(str%subregion))          DEALLOCATE(str%subregion)
+    IF (ALLOCATED(str%maxseas))            DEALLOCATE(str%maxseas)
+    IF (ALLOCATED(str%initials))           DEALLOCATE(str%initials)
+
+    IF (.NOT. ALLOCATED(str%trVx))         DEALLOCATE(str%trVx)
+    IF (.NOT. ALLOCATED(str%trVy))         DEALLOCATE(str%trVy)
+
+    IF (ALLOCATED(str%idir))               DEALLOCATE(str%idir)
+    IF (ALLOCATED(str%dir))                DEALLOCATE(str%dir)
+    IF (ALLOCATED(str%iStormSpeed))        DEALLOCATE(str%iStormSpeed)
+    IF (ALLOCATED(str%stormSpeed))         DEALLOCATE(str%stormSpeed)
+    IF (ALLOCATED(str%stormName))          DEALLOCATE(str%stormName)
+
+    IF (ALLOCATED(str%numCycle))           DEALLOCATE(str%numCycle)
+    IF (ALLOCATED(str%isotachsPerCycle))   DEALLOCATE(str%isotachsPerCycle)
+    IF (ALLOCATED(str%quadFlag))           DEALLOCATE(str%quadFlag)
+    IF (ALLOCATED(str%rMaxW))              DEALLOCATE(str%rMaxW)
+    IF (ALLOCATED(str%hollB))              DEALLOCATE(str%hollB)
+    IF (ALLOCATED(str%hollBs))             DEALLOCATE(str%hollBs)
+    IF (ALLOCATED(str%vMaxesBL))           DEALLOCATE(str%vMaxesBL)
+
+  END SUBROUTINE DeAllocAsymVortStruct
 
 !================================================================================
 

@@ -294,9 +294,9 @@
 
 !     Define limits for variables for sanity checks
       tempmin=-10 
-      tempmax=40
+      tempmax=45
       saltmin=0
-      saltmax=45
+      saltmax=50
       vmag_max=10 !max. |u| or |v|
       ssh_max=6 !max. of |SSH|
 
@@ -468,7 +468,7 @@
         uvel=uvel*1.e-3
         vvel=vvel*1.e-3
         ssh=ssh*1.e-3
-        !Define junk value for sid; the test is salt<rjunk+0.1
+        !Define junk value for sid; the test is var <rjunk+0.1
         rjunk=-3.e4*1.e-3+20
 
 !       Do sth for 1st step
@@ -487,22 +487,22 @@
                 klev0=-1 !flag
                 klev=-1 !flag
                 do k=1,ilen !uvel
-                  if(uvel(i,j,k)>rjunk) then
+                  if(uvel(i,j,k)>=rjunk+0.1) then
                     klev(1)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !vvel
-                  if(vvel(i,j,k)>rjunk) then
+                  if(vvel(i,j,k)>=rjunk+0.1) then
                     klev(2)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !temp
-                  if(temp(i,j,k)>rjunk) then
+                  if(temp(i,j,k)>=rjunk+0.1) then
                     klev(3)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !salt
-                  if(salt(i,j,k)>rjunk) then
+                  if(salt(i,j,k)>=rjunk+0.1) then
                     klev(4)=k; exit
                   endif
                 enddo !k
@@ -516,18 +516,19 @@
 
 !               Fill junk uvel, vvel with zero to eliminate HYCOM nc error
                 do k=klev0,ilen
-                  if (uvel(i,j,k)<rjunk) then
+                  if (uvel(i,j,k)<rjunk+0.1) then
                     write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
                     uvel(i,j,k)=0.
                   end if
-                  if (vvel(i,j,k)<rjunk) then
+                  if (vvel(i,j,k)<rjunk+0.1) then
                     write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
                     vvel(i,j,k)=0.
                    end if
                 end do !k
+
 !               Fill junk salt ,temp with bottom value
                 do k=klev0,ilen
-                  if (temp(i,j,k)<rjunk) then
+                  if (temp(i,j,k)<rjunk+0.1) then
                     if(k==klev0) then
                       write(11,*)'Bottom T is junk:',it2,i,j,k,temp(i,j,k) 
                       stop
@@ -535,7 +536,7 @@
                     write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
                     temp(i,j,k)=temp(i,j,klev0)
                   end if
-                  if (salt(i,j,k)<rjunk) then
+                  if (salt(i,j,k)<rjunk+0.1) then
                     if(k==klev0) then
                       write(11,*)'Bottom S is junk:',it2,i,j,k,salt(i,j,k) 
                       stop
@@ -768,7 +769,7 @@
                 if (ssh(i,j)<rjunk+0.1) then
                   do ii=1,2
                     do jj=1,2
-                      if(i+ii<=ixlen.and.j+jj<=iylen) then; if (ssh(i+ii,j+jj)>rjunk) then
+                      if(i+ii<=ixlen.and.j+jj<=iylen) then; if (ssh(i+ii,j+jj)>=rjunk+0.1) then
                         ssh(i,j)=ssh(i+ii,j+jj); exit
                       endif; endif
                     end do
@@ -783,22 +784,22 @@
                 klev0=-1 !flag
                 klev=-1 !flag
                 do k=1,ilen !uvel
-                  if(uvel(i,j,k)>rjunk) then
+                  if(uvel(i,j,k)>=rjunk+0.1) then
                     klev(1)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !vvel
-                  if(vvel(i,j,k)>rjunk) then
+                  if(vvel(i,j,k)>=rjunk+0.1) then
                     klev(2)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !temp
-                  if(temp(i,j,k)>rjunk) then
+                  if(temp(i,j,k)>=rjunk+0.1) then
                     klev(3)=k; exit
                   endif
                 enddo !k
                 do k=1,ilen !salt
-                  if(salt(i,j,k)>rjunk) then
+                  if(salt(i,j,k)>=rjunk+0.1) then
                     klev(4)=k; exit
                   endif
                 enddo !k
@@ -812,18 +813,18 @@
 
 !               Fill junk uvel, vvel with zero to easy eliminate HYCOM nc error
                 do k=klev0,ilen
-                  if (uvel(i,j,k)<rjunk) then
+                  if (uvel(i,j,k)<rjunk+0.1) then
                     write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
                     uvel(i,j,k)=0.
                   endif
-                  if (vvel(i,j,k)<rjunk) then
+                  if (vvel(i,j,k)<rjunk+0.1) then
                     write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
                     vvel(i,j,k)=0.
                   endif
                 end do !k
 !               Fill junk salt ,temp with bottom value
                 do k=klev0,ilen
-                  if (temp(i,j,k)<rjunk) then
+                  if (temp(i,j,k)<rjunk+0.1) then
                     if(k==klev0) then
                       write(11,*)'Bottom T is junk(2):',it2,i,j,k,temp(i,j,k)
                       stop
@@ -831,7 +832,7 @@
                     write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
                     temp(i,j,k)=temp(i,j,klev0)
                   endif
-                  if (salt(i,j,k)<rjunk) then
+                  if (salt(i,j,k)<rjunk+0.1) then
                     if(k==klev0) then
                       write(11,*)'Bottom S is junk(2):',it2,i,j,k,salt(i,j,k)
                       stop

@@ -55,10 +55,58 @@ To find all the changes between tag releases, search for 'Tag'.
 136. `dde345f` (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0:
                               uninit'ed stress values.
 137. `6524e19` (27 April 2022): merged with La Rochelle group on WWM  (VOR);
+137. `cd0b2a3` (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a frame transformation
+                             for better vel near poles.
+138. `510874ec` (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)
+139. `24a2723` (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
+140. `1828489` (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)
+141. `87c7611f` (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre
+      a) Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+      (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf);
+      b) Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models);
+      c) Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output);
+      d) CAUTION // CAUTION :
+      To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism;
+      e) CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet.
+
+142. `6108700` (Feb 24, 2023): Laura L. fixed a bug in wwm_friction
+143. `46767d2` (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
+          'shocks' experienced by WENO stencil to help dispersion issue;
+144. `594bf10` (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in
+     combine_hotstart7.f90 as it seems to cause hang in restart;
+145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
+146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
+
 
 
 ## Changes in input and output format
 The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as [param.nml](input-output/param.md)).
+
+
+Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.11.0: (Aug 2022)
+
+- `ae1c210` (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
+- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+                        If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
+                        the latter is the net surface heat flux).
+                        If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
+- `ae67c5e1` (24 April 2023): add USE_NWM_BMI (with if_source/=0) for NWM work;
+- `a248ce1d` (24 April 2023): replaced nws=3 with USE_ATMOS (together with nws=2);
+
+- `f8e15ee` (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
+- `bc113eb2` (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;
+- `24a2723` (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added
+                       iof_wwm(31) as dissipation due to vegetation. Also
+                       nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;
+- `c94b2ca` (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;
+- `a0960ed` (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes
+               near tropical islands etc);
+- `ed26f60` (25 Aug 2022): removed 'impose_net_flux' and replaced it with IMPOSE_NET_FLUX (so this won't be actively supported);
+
+Tag stofs3d-atl.v1.1.0 (identical to v5.10.0): for NOAA STOFS3D Atlantic operational forecast release
+
+Tag v5.10.0: (13 July, 2022)
 
 - `d03830e` (16 May 2022): removed the 2 extra lines required in `partition.prop` (so it's identical to `global_to_local.prop` now);
 - `a71ea69` (12 May 2022): removed `ioffline_partition` and replaced it with CPP (`NO_PARMETIS`) to allow build without ParMETIS lib; renamed `global_to_local.in` as `partition.prop`;

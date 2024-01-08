@@ -4,4 +4,4 @@ Bottom friction is a critical parameter in shallow area. Note that the bottom fr
 very different between 2D and 3D model, and so you cannot use same input. For details please read 
 [this article](http://ccrm.vims.edu/yinglong/wiki_files/Report-ChezyFlow-Sept2011.pdf).
 
-Further information will be ported later from [schism.wiki](http://ccrm.vims.edu/w/index.php/Simulating_wetting_and_drying_with_SELFE).
+Further information can be found [here](../getting-started/grid-generation.md).

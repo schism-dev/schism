@@ -54,9 +54,21 @@ nav:
     - Overview: schism/overview.md
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
+    - Test suite:  getting-started/test_suite.md
     - Typical workflow (a cheat sheet): getting-started/typical-workflow.md
-    - Grid generation: getting-started/grid-generation.md
+    - Mesh generation: getting-started/grid-generation.md
     - Preprocessing: getting-started/pre-processing.md
+    - Preprocessing with pylib:
+      - Overview: getting-started/pre-processing-with-pylib/overview.md 
+      - Installation: getting-started/pre-processing-with-pylib/installation.md
+      - schismCheck (input visualization): getting-started/pre-processing-with-pylib/schismcheck.md
+    - Preprocessing with PySCHISM:
+      - Overview: getting-started/pre-processing-with-pyschism/overview.md
+      - Installation: getting-started/pre-processing-with-pyschism/installation.md
+      - Tides: getting-started/pre-processing-with-pyschism/bctides.md
+      - B.C. from HYCOM: getting-started/pre-processing-with-pyschism/boundary.md
+      - Atmospheric forcing: getting-started/pre-processing-with-pyschism/atmos.md
+      - Souce and Sink: getting-started/pre-processing-with-pyschism/nwm.md
     - Running the model: getting-started/running-model.md
     - Visualization: getting-started/visualization.md
     - Postprocessing: getting-started/post-processing.md
@@ -82,6 +94,14 @@ nav:
     - Atmospheric flux (/sflux): input-output/sflux.md
     - Optional inputs: input-output/optional-inputs.md
     - Outputs: input-output/outputs.md
+  - Mesh generation - advanced topics:
+    - Overview: mesh-generation/overview.md
+    - Meshing for cross-scale regimes: mesh-generation/cross_regime.md
+    - Meshing for compound floods:
+      - Overview: mesh-generation/meshing-for-compound-floods/overview.md
+      - Extract thalwegs: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
+      - Generate river map: mesh-generation/meshing-for-compound-floods/generate-river-map.md
+      - Meshing in SMS: mesh-generation/meshing-for-compound-floods/meshing-in-SMS.md
   - Modules:
     - Overview: modules/overview.md
     - Generic tracer module: modules/generic-tracer.md
@@ -97,14 +117,16 @@ nav:
     - Particle tracking: modules/particle-tracking.md
     - WWM: modules/wwm.md
     - FABM: modules/fabm.md
+    - PaHM: modules/pahm.md
+    - Single-class ice module: modules/single-class-ice.md
   - Code structure: code-contribution.md
-  - Verification tests: verification-tests.md
   - Case studies: case-study.md
   - SCHISM external coupling:
     - Earth System Modeling Framework: coupling/esmf.md
     - National Unified Operational Prediction Capability: coupling/nuopc.md
     - NOAA's CoastalApp: coupling/coastalapp.md
     - Modular System for Shelves and Coasts: coupling/mossco.md
-#  - Publications: publications.md
+    - NCAR's Community Earth System Model: coupling/cesm.md
   - Frequently Asked Questions: faq.md
+  - Known issues: known_issues.md
   - Contribute to this online manual: contribute-to-this-online-manual.md

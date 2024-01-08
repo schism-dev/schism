@@ -175,7 +175,8 @@
              SURFA1 = WS + SbrD
            ELSE
              SURFA0 = ZERO 
-             SURFA1 = ZERO 
+             SURFA1 = ZERO
+             WS = ZERO
            END IF
          ! Explicit solver
          ELSE 
@@ -217,6 +218,7 @@
            ELSE
              SURFA0 = 0D0
              SURFA1 = 0D0
+             WS = 0D0
            END IF
          ! Explicit solver
          ELSE
@@ -285,6 +287,7 @@
            ELSE
              SURFA0 = 0D0
              SURFA1 = 0D0
+             WS = 0D0
            END IF
          ! Explicit Solver
          ELSE
@@ -352,6 +355,7 @@
           !ELSE
           !  SURFA0 = 0D0
           !  SURFA1 = 0D0
+          !  WS = 0D0
           !ENDIF
           CALL WWM_ABORT('IBREAK=6 not yet implemented in implicit')
          ELSE ! AR : Only works in explicit for now

@@ -13,6 +13,8 @@
 !   limitations under the License.
 
 ! Generate hotstart.nc only (no *.th.nc) from gridded HYCOM data (nc file); works for global grid.
+! This script assumes gridded data is on structured grid (interp_mode=0).
+
 ! Changed algorithm from gen_hot_3Dth_from_hycom: no longer do
 ! horizontal extension but simply fill invalid pts with T,S values from a valid
 ! location (0 for SSH, U,V).

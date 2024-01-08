@@ -1,0 +1,9 @@
+cp /sciclone/schism10/yinglong/NOAA-CSDL/Pacific_project_2021/RUN24e/Source/coastal-stns-byVol-updated-oct2007.bp  .
+cp /sciclone/schism10/yinglong/NOAA-CSDL/Pacific_project_2021/RUN24e/Source/coastal-stns-Vol-monthly.updated-May2019.nc .
+cp /sciclone/schism10/yinglong/NOAA-CSDL/Pacific_project_2021/RUN24e/Source/out_river .
+ln -sf /sciclone/schism10/yinglong/NOAA-CSDL/Pacific_project_2021/RUN24e/Source/hgrid.gr3 .
+
+Run "python gen_clima.py" to get file:
+Dai_Trenberth_climatology_1990-2018_hourly.csv
+
+

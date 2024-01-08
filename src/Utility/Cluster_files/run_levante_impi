@@ -2,6 +2,8 @@
 ##Batch script for Intel compiler + Intel MPI
 #SBATCH --job-name=R20c
 #SBATCH --partition=compute
+##Optionally use larger mem nodes
+##SBATCH --constraint=512G
 #SBATCH --nodes=40
 ##Up to 128cores/node
 ## recommend  --ntasks-per-node <= 100 for LARGE case

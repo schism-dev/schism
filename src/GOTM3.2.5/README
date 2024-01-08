@@ -2,10 +2,10 @@ To build GOTM lib:
 
 On tcsh:
 setenv NETCDFHOME /usr/local/intel64/nehalem/intel-2016/netcdf-4.3.2/ (so that NETCDFLIBNAME below points to right netcdf lib)
-setenv NETCDFINC /sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/netcdf_include (WARNING: use
+setenv NETCDFINC /sciclone/home/yinglong/git/schism/src/GOTM3.2.5/netcdf_include (WARNING: use
   files in this dir, not in the netcdf include dir!!!!)
 setenv NETCDFLIBNAME $NETCDFHOME/lib/libnetcdf.a
-setenv GOTMDIR /sciclone/home10/yinglong/SCHISM/svn/trunk/src/GOTM3.2.5/
+setenv GOTMDIR /sciclone/home/yinglong/git/schism/src/GOTM3.2.5/
 setenv FORTRAN_COMPILER IFORT (Note: see $GOTMDIR/compilers/ for names "IFORT" etc)
 
 On bash: export NETCDFHOME=/usr/local/ etc.

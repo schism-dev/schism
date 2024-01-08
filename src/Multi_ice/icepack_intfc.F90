@@ -1,21 +1,21 @@
 !=======================================================================
-! Copyright (c) 2020, Triad National Security, LLC 
+! Copyright (c) 2023, Triad National Security, LLC
 ! All rights reserved.
-!                
-! Copyright 2020. Triad National Security, LLC. This software was 
-! produced under U.S. Government contract DE-AC52-06NA25396 for Los 
+!
+! Copyright 2023. Triad National Security, LLC. This software was
+! produced under U.S. Government contract DE-AC52-06NA25396 for Los
 ! Alamos National Laboratory (LANL), which is operated by Triad
-! National Security, LLC for the U.S. Department of Energy. The U.S.  
-! Government has rights to use, reproduce, and distribute this software.  
-! NEITHER THE GOVERNMENT NOR TRIAD NATIONAL SECURITY, LLC MAKES ANY  
+! National Security, LLC for the U.S. Department of Energy. The U.S.
+! Government has rights to use, reproduce, and distribute this software.
+! NEITHER THE GOVERNMENT NOR TRIAD NATIONAL SECURITY, LLC MAKES ANY
 ! WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY FOR THE USE OF
-! THIS SOFTWARE. If software is modified to produce derivative works, 
-! such modified software should be clearly marked, so as not to confuse 
+! THIS SOFTWARE. If software is modified to produce derivative works,
+! such modified software should be clearly marked, so as not to confuse
 ! it with the version available from LANL.
 !
 ! The full license and distribution policy are available from
 ! https://github.com/CICE-Consortium
-! 
+!
 !=======================================================================
 !
 ! authors: Elizabeth C. Hunke, LANL
@@ -82,11 +82,14 @@
       use icepack_wavefracspec, only: icepack_init_wave
       use icepack_wavefracspec, only: icepack_step_wavefracture
 
+      use icepack_snow, only: icepack_init_snow
+      use icepack_snow, only: icepack_step_snow
+
       use icepack_shortwave, only: icepack_prep_radiation
       use icepack_shortwave, only: icepack_step_radiation
 
       use icepack_brine, only: icepack_init_hbrine
-      use icepack_brine, only: icepack_init_zsalinity
+      use icepack_brine, only: icepack_init_zsalinity    ! deprecated
 
       use icepack_zbgc , only: icepack_init_bgc
       use icepack_zbgc , only: icepack_init_zbgc
@@ -123,7 +126,7 @@
 
       implicit none
 
-      public 
+      public
 
       public :: icepack_configure
 

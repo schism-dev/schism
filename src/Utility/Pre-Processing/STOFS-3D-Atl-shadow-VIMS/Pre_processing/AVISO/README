@@ -1,0 +1,12 @@
+1. Download adt data
+    Register account at http://my.cmems-du.eu/motu-web/Motu
+    and install motuclient API:
+        pip install motuclient
+    Then use getdata.sh (replace username and password with yours)
+
+Replace eta2 in hotstart.nc with ADT:
+ replace_eta2_aviso.py 
+
+Generate elev2D.th.nc with ADT:
+    gen_bnd_aviso.py (check file name in aviso2schism.py)
+    modify_elev.py (to apply adjustment in elev)

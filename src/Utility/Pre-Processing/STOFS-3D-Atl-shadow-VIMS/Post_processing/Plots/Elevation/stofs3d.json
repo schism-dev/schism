@@ -1,0 +1,61 @@
+{
+    "Ida": {
+        "name": "Ida",
+        "plot_start_day_str": "2021-08-11 00:00:00",
+        "plot_end_day_str": "2021-09-11 00:00:00",
+        "model_start_day_str": "2021-05-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23e/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN23e/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "Ida_v5": {
+        "name": "Ida",
+        "plot_start_day_str": "2021-08-01 00:00:00",
+        "plot_end_day_str": "2021-08-11 00:00:00",
+        "model_start_day_str": "2021-05-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O24a/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v5/RUN24a/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "Ida_report": {
+        "name": "Ida",
+        "plot_start_day_str": "2021-08-25 00:00:00",
+        "plot_end_day_str": "2021-09-01 00:00:00",
+        "model_start_day_str": "2021-05-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23e/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN23e_report/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "stations_group": {"group_1": ["8760922", "8760721", "8761724", "8761305", "8747437", "8761927", "8741533"]},
+        "default_datums": {"group_1": "NAVD"}
+    },
+    "Florence": {
+        "name": "Florence",
+        "plot_start_day_str": "2018-09-13 00:00:00",
+        "plot_end_day_str": "2018-09-18 00:00:00",
+        "model_start_day_str": "2018-08-17 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O13e/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN13e/",
+        "box": {"W": -80.5, "E": -76, "S": 32.5, "N": 36} 
+    },
+    "Pre4": {
+        "name": "Pre4",
+        "plot_start_day_str": "2022-04-04 00:00:00",
+        "plot_end_day_str": "2022-04-17 00:00:00",
+        "model_start_day_str": "2022-04-04 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/OPre4/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/Pre4/"
+    },
+    "Year2015": {
+        "name": "Year2015",
+        "plot_start_day_str": "2015-01-01 00:00:00",
+        "plot_end_day_str": "2016-01-01 00:00:00",
+        "model_start_day_str": "2014-12-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23i/staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN23i/",
+        "box": {"W": -100, "E": -60, "S": 8, "N": 48}
+    },
+    "All":{
+        "station_bp_file": "/sciclone/schism10/feiye/Coastal_Act/Station_in/15a_station.in",
+        "box": {"W": -100, "E": -60, "S": 8, "N": 48}
+    }
+}

@@ -878,7 +878,7 @@
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i))),NF90_FLOAT,var2d_dims,ivar_id2(i))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
-          !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
@@ -887,7 +887,7 @@
           iret=nf90_def_var(ncid_schism_2d,trim(adjustl(vname(i+ncount_p))),NF90_FLOAT,var2d_dims,ivar_id2(i+ncount_p))
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
-          !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
@@ -898,7 +898,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(3)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
-          !iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2,0,1,4)
+          iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
@@ -947,7 +947,7 @@
       real(4), intent(in) :: var3d_gb2(idim1,idim2)
       character(len=*), intent(in) :: vname
 
-      integer :: irec,iret, ivarid
+      integer :: irec,iret, ivarid,chunks(3)
       character(len=140) :: fname
       character(len=12) :: ifile_char
       real(rkind) :: a1d(1)
@@ -963,6 +963,13 @@
       else
         call parallel_abort('nc_writeout3D: unknown imode')
       endif
+
+      !Define chunk size (contiguous block for access) for deflation: each chunk
+      !must be < 4GB in size
+      !TODO: add a scale for chunks(2) for large meshes
+      chunks(1)=idim1; chunks(2)=idim2; chunks(3)=1
+      !Outputs are in 4 bytes; 4GB is in binary not decimal - not precise
+      if(4.d0*chunks(1)*chunks(2)*chunks(3)>3.d9) call parallel_abort('nc_writeout3D: chunk size')
 
       if(mod(it-nspool,ihfskip)==0) then
         ifile=(it-1)/ihfskip+1  !output stack #
@@ -988,7 +995,11 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: var_dims')
         iret=nf90_put_att(ncid_schism_3d,ivar_id,'i23d',i23d) !set i23d flag
         iret=nf90_put_att(ncid_schism_3d,ivar_id,'missing_value',NF90_FILL_FLOAT) 
-        !iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
+
+        iret=nf90_def_var_chunking(ncid_schism_3d,ivar_id,NF90_CHUNKED,chunks)
+        !function nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level)
+        !where deflate_level\in[0,9] with 9 being most compression
+        iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         call add_mesh_attributes(ncid_schism_3d, ivar_id)
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
@@ -1018,7 +1029,7 @@
       subroutine fill_header_static(iheader,ncid_schism0,itime_id0,node_dim0, &
      &nele_dim0,nedge_dim0,four_dim0,nv_dim0,one_dim0,two_dim0,time_dim0)
       implicit none
-      integer, intent(in) :: iheader,ncid_schism0
+      integer, intent(in) :: iheader,ncid_schism0 !header: more elaborate header per UGRID
       integer, intent(out) :: itime_id0,node_dim0,nele_dim0,nedge_dim0, &
      &four_dim0,nv_dim0,one_dim0,two_dim0,time_dim0
 

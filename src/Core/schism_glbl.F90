@@ -86,13 +86,14 @@ module schism_glbl
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
-                  &fwvor_streaming,cur_wwm,wafo_obcramp,iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
+                  &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,meth_sink,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
-                  &iof_ugrid
+                  &iof_ugrid,model_type_pahm
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg, &
@@ -107,7 +108,8 @@ module schism_glbl
                       &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
-                      &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm
+                      &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
+                      &stemp_stc,stemp_dz(2)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -159,8 +161,9 @@ module schism_glbl
   character(len=16),save :: a_16
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
-  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D, &
- &istack0_schout,ncid_source
+  integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
+ &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout, &
+ &ncid_atmos
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -237,7 +240,7 @@ module schism_glbl
   real(rkind),save,allocatable :: xlon_el(:),ylat_el(:) ! Element center lat/lon coordinates in _degrees_
   real(rkind),save,allocatable :: dpe(:)          ! Depth at element (min of all nodes)
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
-  integer,save,allocatable :: idry_e(:)       ! wet/dry flag
+  integer,save,allocatable,target :: idry_e(:)       ! wet/dry flag
   integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone
   integer,save,allocatable :: interpol(:)       ! interpolation mode
 !  integer,save,allocatable :: lqk(:)       ! interpolation for S,T in btrack
@@ -265,6 +268,7 @@ module schism_glbl
   integer,save,allocatable :: iflux_e(:) !for computing fluxes
   integer,save,allocatable :: ielg2(:)      ! Local-to-global element index table (2-tier augmented)
   integer,save,allocatable :: iegl2(:,:)      ! Global-to-local element index table (2-tier augmented)
+  real(rkind),save,allocatable :: stemp(:)
 
   ! Node geometry data
   integer,save :: mnei  ! Max number of neighboring elements surrounding a node
@@ -455,7 +459,7 @@ module schism_glbl
 !  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
-  real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:), &
+  real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:),shapiro_smag(:), &
                                   &windx1(:),windy1(:),windx2(:),windy2(:), &
                                   &surf_t1(:),surf_t2(:),surf_t(:), & !YC
                                   !WARNING: airt[12] are in C not K. The
@@ -494,17 +498,19 @@ module schism_glbl
   integer,save,allocatable :: isbe(:) !(ne): bnd seg flags, isbe(ie)=1 if any node of element ie lies on bnd; isbe(ie)=0 otherwise
   logical,save,allocatable :: is_inter(:)  !identifier of interface sides (between two ranks), for debugging only
   integer,save,allocatable :: iside_table(:) !a record of all interface sides within the current rank
-  integer, save :: ip_weno !order of the polynomials used for weno stencils, see param.in.sample
+  integer,save :: ip_weno !order of the polynomials used for weno stencils, see param.in.sample
   real(rkind),save :: courant_weno !Courant number for weno transport
   real(rkind),save :: epsilon1 !coefficient for 2nd order weno smoother
-  real(rkind),save :: epsilon2 !1st coefficient for 3rd order weno smoother
+  integer,save :: i_epsilon2 !switch for 1st coefficient of 3rd order weno smoother
+  real(rkind),save :: epsilon2 !1st coefficient of 3rd order weno smoother, spatially uniform value from param.nml
+  real(rkind),save,allocatable :: epsilon2_elem(:) !1st coefficient of 3rd order weno smoother, elemental values
   real(rkind),save :: epsilon3 !2nd coefficient for 3rd order weno smoother
-  integer, save :: nquad !number of quad points used for 3rd order weno
+  integer,save :: nquad !number of quad points used for 3rd order weno
   !levels of time discretization, mainly for testing purposes
-  integer, save :: ntd_weno !(1) one-level, reduces to Euler; (2) not implemented yet; (3) 3rd-order Runge-Kutta temporal discretization (Shu and Osher, 1988)
+  integer,save :: ntd_weno !(1) one-level, reduces to Euler; (2) not implemented yet; (3) 3rd-order Runge-Kutta temporal discretization (Shu and Osher, 1988)
   !Elad filter
-  integer, save :: ielad_weno !switch for elad filter, not used at the moment
-  integer, save :: i_prtnftl_weno !switch for printing invalid T/S to nonfatal_*
+  integer,save :: ielad_weno !switch for elad filter, not used at the moment
+  integer,save :: i_prtnftl_weno !switch for printing invalid T/S to nonfatal_*
   real(rkind),save :: small_elad !criteria for ELAD, not used at the moment
 
   real(rkind),save,allocatable :: xqp(:,:),yqp(:,:)  !quadrature point coordinates
@@ -588,7 +594,7 @@ module schism_glbl
 ! WWM
 !#ifdef USE_WWM
   integer,save :: msc2,mdc2
-  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:),sds(:,:), eps_w(:), eps_r(:),eps_br(:)
+  real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
   real(rkind),save,allocatable :: roller_stokes_hvel(:,:,:), roller_stokes_hvel_side(:,:,:)
   !real(rkind),save,allocatable :: stokes_vel(:,:,:), stokes_w_nd(:,:), stokes_vel_sd(:,:,:) 
@@ -602,6 +608,7 @@ module schism_glbl
   real(rkind),save,allocatable :: wave_sbftot(:)
   real(rkind),save,allocatable :: wave_sintot(:)
   real(rkind),save,allocatable :: wave_sdstot(:)
+  real(rkind),save,allocatable :: wave_svegtot(:)
 !#endif
 
 ! TIMOR
@@ -615,7 +622,7 @@ module schism_glbl
 !#endif /*USE_TIMOR*/
 
 !#ifdef USE_SED
-  real(rkind),save,allocatable :: dave(:),total_sus_conc(:,:)
+  real(rkind),save,allocatable :: dave(:),total_sus_conc(:,:),btaun(:)
   INTEGER :: ddensed ! activation key for sediment density effects on water density
 !#endif
 

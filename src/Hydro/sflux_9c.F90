@@ -52,7 +52,7 @@
 !       fdb
 !       lfdb
 !       albedo
-!       start_year,start_month,start_day,start_hour,utc_start
+!       start_year,start_month,start_day,start_hour,utc_start (in netcdf_io)
 !
 ! From module schism_msgp:
 !       myrank
@@ -284,7 +284,7 @@
 !   char_num (function): convert number to char
 !   get_file_name (fucntion):
 !   check_err
-!   JD (function): Julian date
+!   julian_day (function): Julian day
 !   get_times_etc: 
 !   get_file_times:
 !   check_times
@@ -894,7 +894,6 @@
 #endif
 
 ! bottom of main iteration loop
-!          if (.not. converged .and. iter .lt. max_iter) goto 100
             if (converged.or.iter>= max_iter) exit
           enddo
 
@@ -1123,8 +1122,6 @@
       end subroutine check_allocation
 
 !-----------------------------------------------------------------------
-!#else              /* USE_NETCDF is defined */
-!-----------------------------------------------------------------------
       module netcdf_io
 
         use schism_glbl, only : rkind,start_year,start_month,start_day,start_hour,utc_start
@@ -1346,11 +1343,11 @@
         data_name = trim(prmsl_name)
         call combine_sflux_data &
      &    (time_now, dataset_1, dataset_2, &
-#ifndef MM5     /* MM5 not defined  */
+!#ifndef MM5     /* MM5 not defined  */
      &     dataset_1%exist, dataset_2%exist, &
-#else           /* MM5 is defined   */
-     &     dataset_1%exist, .false., &
-#endif          /* end of MM5 block */
+!#else           /* MM5 is defined   */
+!     &     dataset_1%exist, .false., &
+!#endif          /* end of MM5 block */
      &     data_name, p_air_node, &
      &     num_nodes_out)
         
@@ -1732,7 +1729,7 @@
 !-----------------------------------------------------------------------
       subroutine get_dataset_info (info)
 
-        use schism_glbl, only : rkind, npa, xlon, ylat
+        use schism_glbl, only : rkind, npa, xlon, ylat,in_dir,len_in_dir
         use schism_msgp, only : myrank,parallel_abort
         use netcdf_io
         implicit none
@@ -1747,7 +1744,7 @@
 ! determine if the first file exists for this dataset
         file_num = 1
         file_name = get_file_name(info%name, file_num)
-        inquire(file=file_name, exist=info%exist)
+        inquire(file=in_dir(1:len_in_dir)//file_name, exist=info%exist)
         
         if(myrank==0) then
           write(16,*)
@@ -1883,23 +1880,26 @@
       end
 !-----------------------------------------------------------------------
       subroutine check_err(iret)
+        use netcdf
         implicit none
         integer iret
-        include 'netcdf.inc'
-        if (iret .ne. NF_NOERR) then
-          call halt_error (nf_strerror(iret))
+!        include 'netcdf.inc'
+        if (iret .ne. NF90_NOERR) then
+          call halt_error (nf90_strerror(iret))
         endif
       return
       end
 !-----------------------------------------------------------------------
-      INTEGER FUNCTION JD(YYYY,MM,DD)
+      INTEGER FUNCTION julian_day(YYYY,MM,DD)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: YYYY,MM,DD
-!              DATE ROUTINE JD(YYYY,MM,DD) CONVERTS CALENDER DATE TO
+!              DATE ROUTINE julian_day(YYYY,MM,DD) CONVERTS CALENDER DATE TO
 !              JULIAN DATE.  SEE CACM 1968 11(10):657, LETTER TO THE
 !              EDITOR BY HENRY F. FLIEGEL AND THOMAS C. VAN FLANDERN.
-!    EXAMPLE JD(1970,1,1)=2440588
-      JD=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4 &
+!    EXAMPLE julian_day(1970,1,1)=2440588
+!    Note: Julian time starts at noon, so there is a half day
+!    difference. It's best to use this function to compute the time _difference_ 
+      julian_day=DD-32075+1461*(YYYY+4800+(MM-14)/12)/4 &
      &         +367*(MM-2-((MM-14)/12)*12)/12-3* &
      &         ((YYYY+4900+(MM-14)/12)/100)/4
       RETURN
@@ -1912,7 +1912,7 @@
      &                          num_files, jdate_for_file, &
      &                          nx, ny, max_times, max_files)
 
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,in_dir,len_in_dir
         use schism_msgp, only : myrank
         implicit none
 
@@ -1936,7 +1936,7 @@
         do
           file_num = file_num + 1
           file_name = get_file_name(dataset_name, file_num)
-          inquire(file=file_name, exist=have_file)
+          inquire(file=in_dir(1:len_in_dir)//file_name, exist=have_file)
           if (.not. have_file) exit
           num_files = file_num
         enddo
@@ -2043,9 +2043,10 @@
      &                           num_file_times)
 
         use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
-        use schism_msgp, only : myrank,itype,rtype,comm
+        use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
+        use netcdf
         implicit none
-        include 'netcdf.inc'
+!        include 'netcdf.inc'
 
         character, intent(in) ::  file_name*50
         integer, intent(in) :: max_file_times
@@ -2056,35 +2057,46 @@
 ! file_times_tmp must be default real (netcdf)
         real, dimension(max_file_times) :: file_times_tmp
         
-        integer ncid, iret, time_dim, time_id, i_time, istat
-        character data_name*50, attr_name*50
+        integer :: ncid, iret, time_dim(1), time_id, i_time, istat
+        character(len=50) :: data_name, attr_name
         integer, allocatable, dimension(:) :: base_date
-        integer day, month, year, jd, n_base_date, allocate_stat
+        integer :: day, month, year, julian_day, n_base_date, allocate_stat
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          call check_err(iret)
+          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(1)')
+          !'call check_err(iret)
 
 !   get the variable id for the time variable
           data_name = 'time'
-          iret = nf_inq_varid(ncid, data_name, time_id)
-          call check_err(iret)
+          iret = nf90_inq_varid(ncid, data_name, time_id)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(2)')
+          !call check_err(iret)
 
 !   get the time dimension id
-          iret = nf_inq_vardimid (ncid, time_id, time_dim)
-          call check_err(iret)
+!          iret = nf_inq_vardimid (ncid, time_id, time_dim)
+          iret = nf90_inquire_variable(ncid,time_id,dimids=time_dim)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(3)')
+          !call check_err(iret)
           
 !   determine number of times stored in the time dimension
-          iret = nf_inq_dimlen(ncid, time_dim, num_file_times)
+!          iret = nf_inq_dimlen(ncid, time_dim, num_file_times)
+          iret =nf90_inquire_dimension(ncid,time_dim(1),len=num_file_times)
           if (num_file_times .gt. max_file_times) then
             call halt_error ('sflux:num_file_times .gt. max_file_times!')
           endif
-          call check_err(iret)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(4)')
+          !call check_err(iret)
+
+!          write(16,*)'reading time dim:',time_id,time_dim,num_file_times
 
 !   read the time vector for this file
-          iret = nf_get_var_real(ncid, time_id, file_times_tmp)
-          call check_err(iret)
+!          iret = nf_get_var_real(ncid, time_id, file_times_tmp)
+          iret=nf90_get_var(ncid,time_id,file_times_tmp,(/1/),(/num_file_times/))
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(5)')
+!          call check_err(iret)
 
 !   convert from file real type to data real type
           do i_time = 1, num_file_times
@@ -2096,7 +2108,9 @@
           attr_name = 'base_date'
 
 !   get size of base_date (make sure it is at least 3)
-          iret = nf_inq_attlen (ncid, time_id, attr_name, n_base_date)
+!          iret = nf_inq_attlen (ncid, time_id, attr_name, n_base_date)
+          iret = nf90_inquire_attribute(ncid, time_id, attr_name, len=n_base_date)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(6)')
           if (n_base_date .lt. 3) then
             call halt_error ('insufficient fields in base_date!')
           endif
@@ -2107,19 +2121,22 @@
        &                        allocate_stat)
 
 !   read base_date
-          iret = nf_get_att_int(ncid, time_id, attr_name, base_date)
+!          iret = nf_get_att_int(ncid, time_id, attr_name, base_date)
+          iret = nf90_get_att(ncid, time_id, attr_name, base_date)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(7)')
 
 !   convert base_date to integer Julian date
           year = base_date(1)
           month = base_date(2)
           day = base_date(3)
-          file_julian_date = jd(year,month,day)
+          file_julian_date = julian_day(year,month,day)
 
 !   deallocate base_date
           deallocate(base_date)
 !   close the netCDF file
-          iret = nf_close(ncid)
-          call check_err(iret)
+          iret = nf90_close(ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(8)')
+!          call check_err(iret)
         endif !myrank
         call mpi_bcast(num_file_times,1,itype,0,comm,istat)
         call mpi_bcast(file_times,max_file_times,rtype,0,comm,istat)
@@ -2158,40 +2175,52 @@
 !-----------------------------------------------------------------------
       subroutine get_dims (file_name, nx, ny)
         use schism_glbl, only : in_dir,out_dir,len_in_dir,len_out_dir
-        use schism_msgp, only : myrank,itype,rtype,comm
+        use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
+        use netcdf
         implicit none
-        include 'netcdf.inc'
+!        include 'netcdf.inc'
         character, intent(in) ::  file_name*50
         integer, intent(out) :: nx, ny
         
-        integer ncid, iret, nx_dim, ny_dim, dim_ids(3),test_var_id,istat
+        integer :: ncid, iret, nx_dim, ny_dim, dim_ids(3),test_var_id,istat
         character, parameter :: test_variable*50 = 'lat'
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          call check_err(iret)
+          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(1)')
+!          call check_err(iret)
 
 !   get the variable ID for the test variable
-          iret = nf_inq_varid(ncid, test_variable, test_var_id)
-          call check_err(iret)
+          !iret = nf_inq_varid(ncid, test_variable, test_var_id)
+          iret = nf90_inq_varid(ncid, test_variable, test_var_id)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(2)')
+!          call check_err(iret)
 
 !   get the dimension IDs for the test variable
-          iret = nf_inq_vardimid (ncid, test_var_id, dim_ids)
-          call check_err(iret)
+!          iret = nf_inq_vardimid (ncid, test_var_id, dim_ids)
+          iret=nf90_inquire_variable(ncid,test_var_id,dimids=dim_ids(1:2))
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(3)')
+!          call check_err(iret)
           
 !   determine number of points in the nx and ny dimensions
           nx_dim = dim_ids(1)
-          iret = nf_inq_dimlen(ncid, nx_dim, nx)
-          call check_err(iret)
+          !iret = nf_inq_dimlen(ncid, nx_dim, nx)
+          iret = nf90_inquire_dimension(ncid,nx_dim,len=nx)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(4)')
+!          call check_err(iret)
 
           ny_dim = dim_ids(2)
-          iret = nf_inq_dimlen(ncid, ny_dim, ny)
-          call check_err(iret)
+          !iret = nf_inq_dimlen(ncid, ny_dim, ny)
+          iret = nf90_inquire_dimension(ncid,ny_dim,len=ny)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(5)')
+!          call check_err(iret)
 
 !   close the netCDF file
-          iret = nf_close(ncid)
-          call check_err(iret)
+          iret = nf90_close(ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(6)')
+!          call check_err(iret)
         endif !myrank
         call mpi_bcast(nx,1,itype,0,comm,istat)
         call mpi_bcast(ny,1,itype,0,comm,istat)
@@ -2213,35 +2242,40 @@
      &                       nx, ny)
 
         use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
-        use schism_msgp, only : myrank,comm
+        use schism_msgp, only : myrank,comm,parallel_abort
 !        use mpi
+        use netcdf
         implicit none
-        include 'netcdf.inc'
+!        include 'netcdf.inc'
         include 'mpif.h'
 
         character, intent(in) ::  file_name*50, data_name*50
         integer, intent(in) :: nx, ny
         real(rkind), intent(out), dimension(nx,ny) :: coord
         
-        integer iret, ncid, var_id, i, j
+        integer :: iret, ncid, var_id, i, j
 ! coord_tmp must be default real (netcdf)
-        real coord_tmp(nx,ny)
+        real :: coord_tmp(nx,ny)
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          call check_err(iret)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(1)')
+          !call check_err(iret)
 
 ! get the variable id for this variable
-          iret = nf_inq_varid(ncid, data_name, var_id)
-          call check_err(iret)
+          iret = nf90_inq_varid(ncid, data_name, var_id)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(2)')
+!          call check_err(iret)
 
 ! read the coordinate data
-          iret = nf_get_var_real (ncid, var_id, coord_tmp)
-          call check_err(iret)
+          iret = nf90_get_var(ncid,var_id,coord_tmp)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(3)')
+!          call check_err(iret)
 ! close the netCDF file
-          iret = nf_close(ncid)
-          call check_err(iret)
+          iret = nf90_close(ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(4)')
+!          call check_err(iret)
         endif
 ! Distribute data
         call mpi_bcast(coord_tmp,nx*ny,mpi_real,0,comm,iret)
@@ -2260,21 +2294,22 @@
      &                      nx, ny, time_num)
 
         use schism_glbl, only : rkind,len_in_dir,len_out_dir,in_dir,out_dir
-        use schism_msgp, only : myrank,comm
+        use schism_msgp, only : myrank,comm,parallel_abort
 !        use mpi
+        use netcdf
         implicit none
-        include 'netcdf.inc'
+!        include 'netcdf.inc'
         include 'mpif.h'        
 
         character(*), intent(in) ::  file_name, data_name
         integer, intent(in) :: nx, ny, time_num
         real(rkind), intent(out), dimension(nx,ny) :: data
         
-        integer iret, ncid, var_id, i, j
-        integer data_start(3), data_count(3)
+        integer :: iret, ncid, var_id, i, j
+        integer :: data_start(3), data_count(3)
         
 ! data_tmp must be default real (netcdf)
-        real data_tmp(nx,ny)
+        real :: data_tmp(nx,ny)
 
 ! specify size of read
         data_start(1) = 1
@@ -2286,21 +2321,26 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          call check_err(iret)
+          iret=nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_data(1)')
+          !call check_err(iret)
 
 ! get the variable id for this variable
-          iret = nf_inq_varid(ncid, data_name, var_id)
-          call check_err(iret)
+          iret = nf90_inq_varid(ncid,data_name,var_id)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_data(2)')
+          !call check_err(iret)
 
 ! read the data
-          iret = nf_get_vara_real(ncid, var_id, data_start, &
-     &                          data_count, data_tmp)
-          call check_err(iret)
+!          iret = nf_get_vara_real(ncid, var_id, data_start, &
+!     &                          data_count, data_tmp)
+          iret=nf90_get_var(ncid,var_id,data_tmp,data_start,data_count)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_data(3)')
+          !call check_err(iret)
 
 ! close the netCDF file
-          iret = nf_close(ncid)
-          call check_err(iret)
+          iret = nf90_close(ncid)
+          if(iret.ne.NF90_NOERR) call parallel_abort('read_data(4)')
+!          call check_err(iret)
         endif
 ! distribute data
         call mpi_bcast(data_tmp,nx*ny,mpi_real,0,comm,iret)
@@ -2383,12 +2423,9 @@
         integer, intent(in), dimension(num_nodes) :: node_i, node_j
         integer, intent(in), dimension(num_elems,3) :: elem_nodes
         real(rkind), intent(in), dimension(nx,ny) :: x_in, y_in
-        real(rkind), intent(in), dimension(num_nodes_out) :: &
-     &    x_out, y_out
-        real(rkind), intent(out), &
-     &    dimension(num_nodes_out,3) :: weight
-        integer, intent(out), dimension(num_nodes_out) :: &
-     &    in_elem_for_out_node
+        real(rkind), intent(in), dimension(num_nodes_out) :: x_out, y_out
+        real(rkind), intent(out), dimension(num_nodes_out,3) :: weight
+        integer, intent(out), dimension(num_nodes_out) :: in_elem_for_out_node
 
         real(rkind) :: area_in(num_elems)
         integer :: i_elem, i_node
@@ -2557,7 +2594,6 @@
             last_elem = i_elem
 
 ! loop again if need to
-!          if ( (.not. completed_check) .and. (.not. zero_ae) ) goto 100
             if(completed_check.or.zero_ae) exit
           enddo !infinite do
 
@@ -2610,6 +2646,7 @@
           y4 = y_out(i_node)
 
 ! now calculate the weighting functions, which may be outside [0,1]
+! (this will be checked when combining)
 ! Signs are consistent btw area_in and each signed area
           weight(i_node,1) = ((x4-x3)*(y2-y3) + (x2-x3)*(y3-y4)) &
      &                     / ( 2.0d0*area_in(i_elem) )
@@ -2685,7 +2722,7 @@
         character, parameter :: &
      &    sflux_inputs_file*50 = 'sflux/sflux_inputs.txt'
         real(rkind), parameter :: hours_per_day = 24.0d0
-        integer jd
+        integer julian_day
         logical, save :: first_call = .true.
         logical exst
 
@@ -2694,7 +2731,7 @@
           first_call = .false.
 
 ! make sure sflux_inputs_file exists (fail if it doesn't)
-          inquire(file=sflux_inputs_file, exist=exst)
+          inquire(file=in_dir(1:len_in_dir)//sflux_inputs_file, exist=exst)
           if (.not. exst) &
      &      call halt_error ('you must have sflux_inputs_file!')
 
@@ -2718,7 +2755,7 @@
 
 !'
 ! calculate the starting Julian date and starting fractional Julian date
-          start_jdate = jd(start_year,start_month,start_day)
+          start_jdate = julian_day(start_year,start_month,start_day)
 
           start_frac_jdate = real(start_jdate,rkind) &
      &                     + (start_hour + utc_start) / hours_per_day
@@ -3101,6 +3138,9 @@
      &    u_air, v_air, p_air, t_air, q_air
       real(rkind), dimension(num_nodes), intent(out) :: &
      &    sen_flux, lat_flux, tau_xz, tau_yz
+#ifdef PREC_EVAP
+        real(rkind), dimension(num_nodes), intent(out) :: evap_flux
+#endif
 
 !      REAL(rkind),INTENT(IN) :: wspd0,patm,TairC,TseaC,RH0,radlw,radsw
 !      REAL(rkind),INTENT(OUT) :: stflx
@@ -3507,7 +3547,7 @@
       END SUBROUTINE FAIRALL
 !=======================================================================
 
-      REAL FUNCTION bulk_psiu(ZoL)
+      REAL(rkind) FUNCTION bulk_psiu(ZoL)
 
       use schism_glbl, only : rkind
 

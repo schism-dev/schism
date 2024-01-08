@@ -8,6 +8,27 @@ This beta notes are divided into 5 part:
 (A) Changes in param.[in,nml] and main parameter inputs for other modules:
 
 Github versions:
+
+- `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
+            new parameters: stemp_stc, stemp_dz(1:2);
+- `6a079f9` (30 Nov 2023): Fei added i_epsilon2 (to allow spatially variable epsilon2;
+- `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
+
+Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
+Tag v5.11.0: (Aug 2022)
+
+- `ae1c210` (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
+- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+                        If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
+                        the latter is the net surface heat flux). 
+                        If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
+ae67c5e1 (24 April 2023): add USE_NWM_BMI (with if_source/=0) for NWM work;
+a248ce1d (24 April 2023): replaced nws=3 with USE_ATMOS (together with nws=2);
+f8e15ee (11 Oct 2022): added lev_tr_source(:)=0 option to allow source injecton to the entire water column;
+bc113eb2 (30 Sep 2022): added a new flag 'iflux_out_format' to control flux.out format;
+24a2723 (27 Sep 2022): [merged PR from LRU] new options related to vegetation effects on WWM. Added
+                       iof_wwm(31) as dissipation due to vegetation. Also 
+                       nws=-3: surface stress formulation from Donelan et al. (1993) based on the wave age;
 c94b2ca (1 Sep 2022): added 'iof_ugrid' to output UGRID metadata for 3D outputs;
 a0960ed (25 Aug 2022): added 'iprecip_off_bnd' to optionally turn off precip near land bnd (to avoid some spurious plumes 
                near tropical islands etc);
@@ -22,7 +43,7 @@ da90a33 (2 May 2022): removed itr_met=1,2;
 2165224 (29 April 2022): added optional offline partitioning 'ioffline_partition' to bypass ParMETIS; 
                          if on, needs global_to_local.in;
 567b612 (28 April 2022): added new WWM outputs and re-ordered after iof_wwm(26); zCoordinate outputs made optional (for performance test);
-6524e19 (27 April 2022): a few more WWM related parameters under VOR (turbinjds,alpha,wfwvor_streaming) 
+6524e19 (27 April 2022): a few more WWM related parameters under VOR (turbinjds,alphaw,fwvor_streaming etc) 
                          and new WWM outputs, after merging with lrdev_updates;
 d44dbdf (1 April, 2022): added an optional threshold inflation ratio for mass conversation for ICM: 'rinflation_icm'
 6f367d0 (30 Mar 2022): added optional vertical levels to inject source tracer conventration: 'lev_tr_source'; 
@@ -48,7 +69,7 @@ e9aec89 (1 Oct 2021): added most module outputs; order of flags changed in: ICE,
 
 Tag v5.9.0: 657157a (1 July, 2021)
 
-e281d94 (25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
+e281d94 (in a branch; 25 June 2021): added a new option for SAL (Stepanov & Hughes 2004): iloadtide=3;
 bfb4afc (18 June, 2021): added an optional input 'shapiro_min.gr3' to be used with ishapiro=2;
 d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to use hydro only results);
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
@@ -551,8 +572,31 @@ git versions:
 (135) dde345f (7 April 2022): fixed a bug in sflux, invoked only if nws=2, ihconsv=1, and iwind_form=0: 
                               uninit'ed stress values.
 (136) 6524e19 (27 April 2022): merged with La Rochelle group on WWM  (VOR);
-(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a fram change
+(137) cd0b2a3 (14 Aug 2022): [via Qian_pole_treatment] changed nodalvel() under ics=2; commented out a frame transformation
                              for better vel near poles.
+(138) 510874ec (19 Sep 2022): upgraded all nf_ to nf90_ (in sflux)
+(139) 24a2723 (27 Sep 2022): PR merge with LRU's modifications for WWM (mostly related to vegetation effects on WWM)
+(140) 1828489 (10 Oct 2022): bug fix on msource (mismatch in bcast array dimension)
+(141) 87c7611f (21 Oct 2022): PR91 merge from Dr. Jerome Lefevre
+      a) Add GAHM (Generalized Asymmetric Holland Model) in PaHM/parwind.F90 as a second alternative to Holland Model
+      (see details https://wiki.adcirc.org/Generalized_Asymmetric_Holland_Model and https://noaa-ocs-modeling.github.io/PaHM/pahm_manual.pdf);
+      b) Add support for Hurricanes in both South and North Hemisphere (in HM and GAHM models);
+      c) Test using Niran, SW Pacific: (See inside src/Core/PaHM/inputs/ : a track for Cyclone Niran "niran2021-bdeck.dat" and my comparison with HM and GAHM versus a weather model output);
+      d) CAUTION // CAUTION :
+      To switch from HM (1) or GAHM (10), the user still need to change the value of "modelType" in Pahm_Utilities.F90 (line 3210) and recompile schism;
+      e) CAUTION / CAUTION : Unlike in noaa-ocs-modeling.github.io/PaHM, there is not Control File support in SCHISM/PaHM yet.
+(142) 6108700 (Feb 24, 2023): Laura L. fixed a bug in wwm_friction
+(143) 46767d2 (April 24, 2023): changed hybrid ELM-WENO, by augmenting ELM elem with 1 layer of extra ELM elements to reduce
+          'shocks' experienced by WENO stencil to help dispersion issue;
+(144) 594bf10 (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in 
+      combine_hotstart7.f90 as it seems to cause hang in restart;
+145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
+146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
+147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (as Kijin did for 1-way script)
+148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
+149. `045962` (Sept 13, 2023): removed goto in lap.F90
+150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
+
 ================================================================================================
 (D) Auto-test history:
 R100 (Nov 2011); R168 (minus WWM); R224 (basic); R240 (full); R306 (basic); R370 (basic); R408 (basic); R430 (basic); R601 (basic); R730 (basic); R747 (all hydro); R1120 (hydro+ SF BayDelta); R1305: (all hydro; ICM); R1532 (branch/selfe_opt1): all; R1641: hydro; R2018: hydro; R2232 (all);

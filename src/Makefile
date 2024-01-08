@@ -118,7 +118,7 @@ include o/$(config)/autosrc.mk
 #OBJS =  $(AUTO_OBJ) PaHM_Sizes.o PaHM_Global.o PaHM_Messages.o TimeDateUtils.o PaHM_Utilities.o \
 #        csv_module.o SortUtils.o csv_parameters.o PaHM_Vortex.o \
 #        csv_utilities.o  parwind.o 
-OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o gen_modules_clock.o
+OBJS :=  $(AUTO_OBJ) schism_glbl.o schism_msgp.o scribe_io.o misc_modules.o schism_io.o schism_driver.o
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -137,6 +137,14 @@ endif
 
 ifdef USE_OLDIO
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DOLDIO
+endif
+
+ifdef USE_ATMOS
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DATMOS
+endif
+
+ifdef USE_NWM_BMI
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DNWM_BMI
 endif
 
 ifdef USE_PREC_EVAP
@@ -297,14 +305,14 @@ ifdef USE_MICE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_MICE
   OBJS := $(OBJS) icepack_kinds.o icepack_warnings.o icepack_parameters.o icepack_age.o icepack_tracers.o \
                   icepack_mushy_physics.o icepack_orbital.o icepack_ocean.o icepack_firstyear.o \
-                  icepack_meltpond_cesm.o icepack_therm_shared.o icepack_therm_bl99.o icepack_meltpond_lvl.o \
+                  icepack_therm_shared.o icepack_therm_bl99.o icepack_meltpond_lvl.o \
                   icepack_meltpond_topo.o icepack_zbgc_shared.o icepack_fsd.o icepack_atmo.o icepack_therm_mushy.o \
                   icepack_isotope.o icepack_flux.o icepack_itd.o icepack_shortwave.o icepack_brine.o \
-                  icepack_aerosol.o icepack_therm_0layer.o icepack_zsalinity.o icepack_wavefracspec.o \
-                  icepack_mechred.o icepack_algae.o icepack_therm_vertical.o icepack_zbgc.o icepack_therm_itd.o \
+                  icepack_aerosol.o icepack_wavefracspec.o \
+                  icepack_mechred.o icepack_algae.o icepack_therm_vertical.o icepack_snow.o icepack_zbgc.o icepack_therm_itd.o \
                   icepack_intfc.o icedrv_kinds.o icedrv_constants.o mice_module.o icedrv_system.o \
                   icedrv_main.o icedrv_allocate.o icedrv_set.o mice_init.o mice_evp.o icedrv_init.o\
-                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o
+                  mice_mevp.o icedrv_advection.o icedrv_transfer.o icedrv_io.o mice_step.o gen_modules_clock.o
 endif
 
 ifdef USE_MARSH
@@ -325,7 +333,7 @@ endif
 #Remaining Hydro
 OBJS := $(OBJS) grid_subs.o hydraulic_structures.o schism_init.o \
         schism_step.o schism_finalize.o bktrk_subs.o solver_subs.o \
-        misc_subs.o transport_TVD.o transport_TVD_imp.o \
+        misc_subs.o transport_TVD_imp.o \
         sflux_9c.o lap.o
 
 ifdef USE_SIMPLE_WIND
@@ -339,7 +347,6 @@ CONFIG_OBJS :=  $(addprefix o/$(config)/, $(OBJS))
 # Names of source files with relative path as found on $VPATH
 FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%=%$f) not-found:$f)))
 
-#PARMETISDIR := ./ParMetis-3.1-Sep2010
 PARMETISDIR := ./ParMetis-4.0.3
 ifeq ($(ENV),EDISON)
     PARMETISDIR := $(PARMETISDIR).cray

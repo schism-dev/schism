@@ -1,0 +1,4 @@
+1) generate mask nc file using generate_adcirc.py
+
+2) generate out2d_1.mask.nc using nco commands, as requested by NOAA
+/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Mask_lbnd/mask_lbn_nd.sh

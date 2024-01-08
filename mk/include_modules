@@ -12,11 +12,19 @@
 # USE_PETSC = yes
 # EXEC := $(EXEC)_PETSC
 
+# Coupling with atmospheric model via ESMF
+# USE_ATMOS = yes
+# EXEC := $(EXEC)_ATMOS
+
+# Use NWM BMI for source and some b.c.
+# USE_NWM_BMI = yes
+# EXEC := $(EXEC)_NWM_BMI
+
 # Precip/evaporation model
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP
 
-# Impose net satl/heat fluxes in sflux*.nc
+# Impose net salt/heat fluxes in sflux*.nc (will be eventually removed)
 # IMPOSE_NET_FLUX = yes
 # EXEC := $(EXEC)_IMPOSE_NET_FLUX
 
@@ -34,7 +42,7 @@
  TVD_LIM = VL
  EXEC := $(EXEC)_$(TVD_LIM)
 
-# GOTM turbulence closure model
+# GOTM turbulence closure model- user needs to compile GOTM5.2 lib first by themselves
 # USE_GOTM = yes
 # EXEC := $(EXEC)_GOTM
 
@@ -117,8 +125,6 @@
 # EXEC := $(EXEC)_MICE
  
 # Sediment model (2D)
-# USE_SED2D = yes
-# EXEC := $(EXEC)_SED2D
 
 # Marsh migration model
 # USE_MARSH = yes

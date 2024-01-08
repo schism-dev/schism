@@ -2944,7 +2944,7 @@
        real(rkind)  :: rhs(*), sol(*)
 
        real(rkind)  :: eps
-       real(rkind)  :: eps1, epsmac, gam, t, ddot, dnrm2, ro, tl
+       real(rkind)  :: eps1, epsmac, gam, t, ddot_sch, dnrm2, ro, tl
 
        integer :: i,i1,j,jj,k,k1,iii,ii,ju0
        integer :: its,jrow,jcol,jf,jm,js,jw
@@ -3070,7 +3070,7 @@
 !      modified gram - schmidt...
        if (lblas) then
          do j=1, i
-           t = ddot(n, vv(1,j),1,vv(1,i1),1)
+           t = ddot_sch(n, vv(1,j),1,vv(1,i1),1)
            hh(j,i) = t
            call daxpy(n, -t, vv(1,j), 1, vv(1,i1), 1)
            t = dnrm2(n, vv(1,i1), 1)
@@ -3186,9 +3186,9 @@
       function distdot(n,x,ix,y,iy)
       use datapool, only : rkind
       integer n, ix, iy
-      real(rkind) distdot, x(*), y(*), ddot
-      external ddot
-      distdot = ddot(n,x,ix,y,iy)
+      real(rkind) distdot, x(*), y(*), ddot_sch
+      external ddot_sch
+      distdot = ddot_sch(n,x,ix,y,iy)
       return
       end
 !-----------------------------------------------------------------------

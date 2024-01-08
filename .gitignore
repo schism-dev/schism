@@ -30,3 +30,8 @@ site/
 
 src/Core/_version
 .DS_Store
+
+# Files related to Python scripts #
+#############
+*.egg*
+__pycache__

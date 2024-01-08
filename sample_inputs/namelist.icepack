@@ -31,11 +31,11 @@
     tr_iage      = .false.
     tr_FY        = .false.
     tr_lvl       = .true.
-    tr_pond_cesm = .false.
+    tr_snow      = .false.
     tr_pond_topo = .false.
-    tr_pond_lvl  = .true.
+    tr_pond_lvl  = .false.
     tr_aero      = .false.
-    tr_fsd       = .true.
+    tr_fsd       = .false.
 /
 
 &thermo_nml
@@ -45,20 +45,22 @@
     a_rapid_mode      =  0.5e-3
     Rac_rapid_mode    =    10.0
     aspect_rapid_mode =     1.0
-    dSdt_slow_mode    = -1.5e-7
+    dSdt_slow_mode    = -5.0e-8
     phi_c_slow_mode   =    0.05
     phi_i_mushy       =    0.85
     ksno              = 0.3
+    floediam          = 300.0
+    hfrazilmin        = 0.05
 /
 
 &shortwave_nml
-    shortwave       = 'ccsm3'
+    shortwave       = 'dEdd'
     albedo_type     = 'ccsm3'
     albicev         = 0.78
     albicei         = 0.36
     albsnowv        = 0.98
     albsnowi        = 0.70
-    albocn          = 0.1
+    albocn          = 0.06
     ahmax           = 0.3
     R_ice           = 0.
     R_pnd           = 0.
@@ -70,13 +72,27 @@
 
 &ponds_nml
     hp1             = 0.01
-    hs0             = 0.
+    hs0             = 0
     hs1             = 0.03
     dpscale         = 1.e-3
     frzpnd          = 'hlid'
     rfracmin        = 0.15
     rfracmax        = 1.
     pndaspect       = 0.8
+/
+
+&snow_nml
+    snwredist       = 'none'
+    snwgrain        = .false.
+    use_smliq_pnd   = .false.
+    rsnw_fall       =  100.0
+    rsnw_tmax       = 1500.0
+    rhosnew         =  100.0
+    rhosmin         =  100.0
+    rhosmax         =  450.0
+    windmin         =   10.0
+    drhosdwind      =   27.3
+    snwlvlfac       =    0.3
 /
 
 &forcing_nml
@@ -87,17 +103,18 @@
     highfreq        = .false.
     natmiter        = 5
     ustar_min       = 0.0005
-    emissivity      = 0.95
+    emissivity      = 0.985
     fbot_xfer_type  = 'constant'
     update_ocn_f    = .false.
     l_mpond_fresh   = .false.
     tfrz_option     = 'mushy'
     oceanmixed_ice  = .true.
     wave_spec_type  = 'none'
+    dragio          = 0.00536
 /
 
 &dynamics_nml
-    kstrength       = 1
+    kstrength       = 1 
     krdg_partic     = 1
     krdg_redist     = 1
     mu_rdg          = 3

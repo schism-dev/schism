@@ -416,17 +416,17 @@
       TRI_WISM   = (XIS**TRI_ISM -0.5) / (XIS**TRI_ISM - XIS**TRI_ISM1)
       TRI_WISM1  = 1. - TRI_WISM
       TRI_ISBEGIN = MAX(1, 1-TRI_ISM1)
-      IF (MESTR .eq. 1) THEN
+      IF (MESTR .EQ. 1 .OR. MESTR .EQ. 2) THEN
         TRI_ARR(1)  = 0.1
         TRI_ARR(2)  = 2.2
         TRI_ARR(3)  = 10.
-        TRI_ARR(4)  = 0.2
+        TRI_ARR(4)  = a_BIPH ! to be consistent with breaking in case the parametrization by van der Westhuysen is used
         TRI_ARR(5)  = 0.01
         IF (TRICO .GT. 0.)  TRI_ARR(1) = TRICO
         IF (TRIRA .GT. 0.)  TRI_ARR(2) = TRIRA
         IF (TRIURS .GT. 0.) TRI_ARR(5) = TRIURS
       END IF
-      IF (MESTR .eq. 5) THEN
+      IF (MESTR .EQ. 5) THEN
         TRI_ARR(1)  = 0.25
         TRI_ARR(2)  = 2.5
         TRI_ARR(3)  = 10.
@@ -620,7 +620,7 @@
          FRM5 = ZERO 
          COFRM4 = ZERO
 
-         if (LSOURCESWAM) then
+         if (LSOURCESWAM) then ! Something going wrong here, to check
            ALLOCATE(TH(MDC), stat=istat)
            th = zero
            DELTH = PI2/REAL(MDC)

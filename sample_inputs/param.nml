@@ -55,13 +55,14 @@
 
 !-----------------------------------------------------------------------
 ! Option to only solve tracer transport (and bypass most b-tropic solver)
-! Usage: turn the flag on ('1') and turn on your tracer modules and make sure 
+! Usage: turn the flag on ('1' or '2') and turn on your tracer modules and make sure
 ! (1) your inputs are consistent with the original hydro-only run (with additional tracers
 ! of course); (2) hydro-only run results are in hydro_out/schout*.nc, which must
 ! have 'hvel_side' (not normal hvel), 'elev', 'diffusivity', 'temp_elem', 'salt_elem' (for
 ! new scribe outputs, use corresponding files/var names); (3) dt above is 
 ! multiple of _output_ step used in the original hydro-only run 
-! (as found in in hydro_out/schout*.nc); e.g. dt = 1 hour. 
+! (as found in in hydro_out/schout*.nc); e.g. dt = 1 hour. (4). When itransport_only=2,
+! additional variables ('totalSuspendedLoad','sedBedStress') are needed.
 ! Hotstart should work also, but you'd probably not use an aggressively large dt especially
 ! when air-sea exchange is involved.
 !-----------------------------------------------------------------------
@@ -157,16 +158,19 @@
 
 !-----------------------------------------------------------------------
 ! 2nd stabilization method via Shapiro filter. This should normally be used 
-! if indvel=0. To transition between eddying/non-eddying regimes, use
+! if indvel=0. ishapiro=0: off; =1: constant filter strength in shapiro0; =-1:
+! variable filter strength specified in shapiro.gr3; =2: variable filter strength specified
+! as a Smagorinsky-like filter, with the coefficient specified in shapiro.gr3.
+! To transition between eddying/non-eddying regimes, use
 ! indvel=0, ihorcon/=0, and ishapiro=-1 (requiring shapiro.gr3) or 2 (Smagorinsky-like filter).
 !-----------------------------------------------------------------------
   ishapiro = 1 !options
   niter_shap = 1 !needed if ishapiro/=0: # of iterations with Shapiro filter
-  !shapiro0: Shapiro filter strength, needed only if ishapiro=1 or 2 
+  !shapiro0: Shapiro filter strength, needed only if ishapiro=1 
   !If ishapiro=1, shapiro0 is the filter strength (max is 0.5).
-  !If ishapiro=2, shapiro0 is the coefficient in tanh(). Experiences so far suggest ~1.e3
-  !If ishapiro=-1, this is not used as the filter strength is read in from shapiro.gr3
-  shapiro0 = 0.5 
+  !If ishapiro=2, the coefficient in tanh() is specified in shapiro.gr3. Experiences so far suggest 100 to 1.e3
+  !If ishapiro=-1, the filter strength is directly read in from shapiro.gr3
+  shapiro0 = 0.5 !needed only if ishapiro=1
 
 !-----------------------------------------------------------------------
 ! Implicitness factor (0.5<thetai<=1).
@@ -174,8 +178,10 @@
   thetai = 0.6 
 
 !-----------------------------------------------------------------------
-! If WWM is used, set coupling/decoupling flag. Not used if USE_WWM is distabled in Makefile
-!       0: decoupled so 2 models will run independently; 
+! If WWM is used, set coupling/decoupling flag 'icou_elfe_wwm'. 
+! No effects if USE_WWM is distabled in Makefile.
+! Note that all these parameters must be present in this file (even when not used).
+!       0: no elevation and no currents in wwm, no wave force in SCHISM (but wave turbulecne, WBL etc are still in SCHISM);
 !       1: full coupled (elevation, vel, and wind are all passed to WWM); 
 !       2: elevation and currents in wwm, no wave force in SCHISM;  
 !       3: no elevation and no currents in wwm, wave force in SCHISM;
@@ -183,10 +189,10 @@
 !       5: elevation but no currents in wwm, no wave force in SCHISM;
 !       6: no elevation but currents in wwm, wave force in SCHISM;
 !       7: no elevation but currents in wwm, no wave force in SCHISM;
-! Note that all these parameters must be present in this file (even though not used).
 ! If WWM is used and RADFLAG='VOR' in wwminput.nml, some parameters (fwvor_*)
 ! are added to take into account (1) or not (0) the different terms in vortex
 ! force expression.
+! To get SCHISM-only result withno feedback from WWM, compile without WWM.
 !-----------------------------------------------------------------------
   icou_elfe_wwm = 0 
   nstep_wwm = 1  !call WWM every this many time steps 
@@ -207,7 +213,9 @@
   fwvor_advz_stokes = 1  !  --> Stokes drift advection (z) , Coriolis
   fwvor_gradpress = 1    !  --> Pressure term
   fwvor_breaking = 1     !  --> Wave breaking
-  fwvor_streaming = 1     !  --> Wave streaming
+  fwvor_streaming = 1    !  --> Wave streaming (works with iwbl /= 0)
+  fwvor_wveg = 0         !  --> Wave dissipation by vegetation acceleration term
+  fwvor_wveg_NL = 0      !  --> Non linear intrawave vegetation force (see Dean and Bender, 2006 or van Rooijen et al., 2016 for details) 
   cur_wwm = 0            ! Coupling current in WWM
                          ! 0: surface layer current
                          ! 1: depth-averaged current
@@ -279,18 +287,26 @@
 
 ! meth_sink: options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
 ! zero out sink if the elem is dry if meth_sink=1
+! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
+! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
 !  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
   dramp_ss = 2 !needed if if_source/=0; ramp-up period in days for source/sinks (no ramp-up if <=0)
   meth_sink = 1 !options to treat sinks @ dry elem
 
+!----------------------------------------------------------------------
 ! Specify vertical level to inject source concentration for each tracer _module_.
-! Code will extrapolate below bottom/above surface.
+! Code will extrapolate below bottom/above surface unless level 0 is specified. In
+! the latter case, the incoming tracer mass will be distributed across all vertical layers - 
+! this approach works best in shallow waters. 
+! NOTE: AGE module has its own way of injecting age tracers, so make sure the age concentrations
+!  are all -9999. in msource.th so as to not interfere!
+!----------------------------------------------------------------------
   lev_tr_source(1) = -9 !T
   lev_tr_source(2) = -9 !S
   lev_tr_source(3) = -9 !GEN
-  lev_tr_source(4) = -9 !AGE
+  lev_tr_source(4) = -9 !AGE: set -9999. in msource's AGE section
   lev_tr_source(5) = -9 !SED3D
   lev_tr_source(6) = -9 !EcoSim
   lev_tr_source(7) = -9 !ICM
@@ -299,6 +315,11 @@
   lev_tr_source(10) = -9 !TIMOR
   lev_tr_source(11) = -9 !FABM
   lev_tr_source(12) = -9 !DVD
+
+!----------------------------------------------------------------------
+! Specify level #'s if age module is invoked (USE_AGE), for 1st half of tracers only
+!----------------------------------------------------------------------
+  level_age = 9, -999 !default: -999 (all levels)
 
 !-----------------------------------------------------------------------
 ! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
@@ -332,7 +353,9 @@
   coricoef = 0 !if ncor=0
 
 !-----------------------------------------------------------------------
-! Elevation initial condition flag for cold start only. If ic_elev=1, elev.ic (in *.gr3 format) is needed
+! Elevation initial condition flag for cold start only. For hotstart, set this to 0
+! (and elev will be read in from hotstart.nc).
+! If ic_elev=1, elev.ic (in *.gr3 format) is needed
 ! to specify the initial elevations; otherwise elevation is initialized to 0 everywhere 
 !-----------------------------------------------------------------------
   ic_elev = 0
@@ -492,33 +515,45 @@
   courant_weno=0.5 !Courant number for weno transport
   nquad = 2  !number of quad points on each side, nquad= 1 or 2
   ntd_weno = 1 !order of temporal discretization: (1) Euler (default); (3): 3rd-order Runge-Kutta (only for benchmarking)
-  epsilon1 = 1.e-15   !coefficient for 2nd order weno smoother (larger values are more prone to numerical dispersion)
-  epsilon2 = 1.e-10  !1st coefficient for 3rd order weno smoother (larger values are more prone to numerical dispersion
-                     !, 1.e-10 should be fairly safe, recommended values: 1.e-8 ~ 1.e-6 (from the real applications so far)
+
+  epsilon1 = 1.e-15   !coefficient of 2nd-order weno smoother (larger values are more prone to numerical dispersion)
+  i_epsilon2 = 1      !switch for the specification method of 3rd-order weno smoother coefficient
+                      !(1) spatially uniform, set by the parameter epsilon2 below;
+                      !(2) spatially varying, set by the input file epsilon2.gr3,
+                      !    Important:
+                      !      Provide log10(epsilon2) in epsilon2.gr3, e.g.,
+                      !      if epsilon2=10^(-6) or 1e-6, then write the z value should be -6 in epsilon2.gr3.
+                      !      This is mainly for the convenience of visualization.
+  epsilon2 = 1.e-10   !used when i_epsilon2 = 1
+                      !spatially uniform coefficient of 3rd-order weno smoother
+                      !(larger values are more prone to numerical dispersion,
+                      ! 1.e-10 should be fairly safe, recommended values: 1.e-8 ~ 1.e-6)
   i_prtnftl_weno = 0 !option for writing nonfatal errors on invalid temp. or salinity for density: (0) off; (1) on.
 
   !Inactive at the moment:
-  epsilon3 = 1.e-25  !2nd coefficient for 3rd order weno smoother (inactive at the moment)
+  epsilon3 = 1.e-25  !Second coefficient of 3rd-order weno smoother (inactive at the moment)
   !Elad filter has not been implemented yet; preliminary tests showed it might not be necessary
   ielad_weno = 0      !ielad, if ielad=1, use ELAD method to suppress dispersion (inactive at the moment)
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. nws=3 is reserved for coupling with atmospheric model.
+! Atmos. option. Use nws=2 and USE_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
 ! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
 ! If nws=-1 (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
 !  In this case, the Holland model is called every step so wtiminc is not used. An extra 
-!  input is needed: hurricane-track.dat
+!  input file is needed: hurricane-track.dat, in addition to a few parameters below.
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
-! routine; 
+! routine; in this case USE_ATMOS cannot be on.
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
-! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2, stress is overwritten by WWM.
+! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:
+! If iwind_form=-2, stress=rho_air*ufric^2; scaled by rho_water
+! If iwind_form=-3, the stress is calculated according to the param. of Donelan et al. (1993) based on the wave age.
 ! In all cases, if USE_ICE the stress in ice-covered portion is calculated by ICE routine.
 !-----------------------------------------------------------------------
   nws = 0 
@@ -527,6 +562,8 @@
   drampwind = 1. !ramp-up period in days for wind (no ramp-up if <=0)
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
+  model_type_pahm=10 !only used if nws=-1: hurricane model type (1: Holland; 10: GAHM)
+
   !If IMPOSE_NET_FLUX is on and nws=2, read in net _surface_ heat flux as var 'dlwrf' 
   !(Downward Long Wave) in sflux_rad (solar radiation is still used separately),
   !and if PREC_EVAP is on, also read in net P-E as 'prate' (Surface Precipitation Rate) in sflux_prc.
@@ -554,6 +591,14 @@
   i_hmin_salt_ex = 2 ! no effect if isconsv=0 
   hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
+
+!-----------------------------------------------------------------------
+! Option to add a sediment layer for the buffer effect on temperature
+! stemp_stc=0 recovers previous results
+!-----------------------------------------------------------------------
+  stemp_stc  = 0.0   !heat transfer coefficient W.m-2.K-1
+  stemp_dz(1)= 1.0   !equivalent sediment buffer depth (m) for heat into sediment
+  stemp_dz(2)= 1.0   !equivalent sediment buffer depth (m) for heat out of sediment
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
@@ -633,10 +678,11 @@
   iharind = 0
 
 !-----------------------------------------------------------------------
-! Conservation check option. If iflux=1, some fluxes are computed
-! in regions specified in fluxflag.prop (regional number from -1 to an arbitrary integer).
-! in output flux.dat, positive means flux from region n to region n-1 (n>=1)
-! output file flux.dat need to be saved before continuing hotstart
+! Conservation check option. If iflux/=0, some fluxes are computed
+! in regions specified in fluxflag.prop (regional number from -1 to an arbitrary integer)
+! in output flux.out, positive means flux from region n to region n-1 (n>=1).
+! Output file flux.out will be appended on ihot=2.
+! iflux=1: basic output; =2: more elaborate outputs
 !-----------------------------------------------------------------------
   iflux = 0
 
@@ -690,11 +736,6 @@
 !----------------------------------------------------------------------
   nstep_ice = 1 !call ice module every nstep_ice steps of SCHISM
 
-
-!----------------------------------------------------------------------
-! Specify level #'s if age module is invoked (USE_AGE), for 1st half of tracers only
-!----------------------------------------------------------------------
-  level_age = 9, -999 !default: -999 (all levels)
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Physical constants
@@ -770,7 +811,7 @@
 !-----------------------------------------------------------------------
 ! Option for hotstart outputs
 !-----------------------------------------------------------------------
-  nhot = 0 !1: output *_hotstart every 'hotout_write' steps
+  nhot = 0 !1: output *_hotstart every 'nhot_write' steps
   nhot_write = 8640 !must be a multiple of ihfskip if nhot=1
 
 !-----------------------------------------------------------------------
@@ -859,14 +900,15 @@
 !  iof_wwm(28) = 0 !Total wave energy dissipation rate by depth-induced breaking (W/m²) @nodes {wave_sbrtot}  2D
 !  iof_wwm(29) = 0 !Total wave energy dissipation rate by bottom friction (W/m²) @nodes {wave_sbftot} 2D
 !  iof_wwm(30) = 0 !Total wave energy dissipation rate by whitecapping (W/m²) @nodes {wave_sdstot} 2D
-!  iof_wwm(31) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot} 2D
-!  iof_wwm(32) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
+!  iof_wwm(31) = 0 !Total wave energy dissipation rate by vegetation (W/m²) @nodes {wave_svegtot} 2D
+!  iof_wwm(32) = 0 !Total wave energy input rate from atmospheric forcing (W/m²) @nodes {wave_sintot} 2D
+!  iof_wwm(33) = 0 !WWM_energy vector {waveEnergyDirX,Y}  2D vector
 
-!  iof_wwm(33) = 0 !Vertical Stokes velocity (m.s-1) @sides and whole levels {stokes_wvel}  3D
-!  iof_wwm(34) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
+!  iof_wwm(34) = 0 !Vertical Stokes velocity (m.s-1) @sides and whole levels {stokes_wvel}  3D
+!  iof_wwm(35) = 0 !Wave force vector (m.s-2) computed by wwm @side centers and whole levels {waveForceX,Y}   3D vector
 
-!  iof_wwm(35) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 3D vector
-!  iof_wwm(36) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel} 3D vector 
+!  iof_wwm(36) = 0 !Horizontal Stokes velocity (m.s-1) @nodes and whole levels {stokes_hvel} 3D vector
+!  iof_wwm(37) = 0 !Roller contribution to horizontal Stokes velocity (m.s-1) @nodes and whole levels {roller_stokes_hvel} 3D vector 
 
 !-----------------------------------------------------------------------
 ! Tracer module outputs. In most cases, actual # of outputs depends on # of tracers used
@@ -1063,7 +1105,7 @@
 !-----------------------------------------------------------------------
 ! Ice module outputs (if USE_ICE is on)
 !-----------------------------------------------------------------------
-!  iof_ice(1)= 0 !strain rate @ elem [1/sec] {iceStrainRate}  2D
+!  iof_ice(1)= 0 !divergence @ elem ('Delta') [1/sec] {iceStrainRate}  2D
 !  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
 !  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
 !  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D

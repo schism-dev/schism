@@ -71,7 +71,7 @@
       real(rkind), allocatable :: up_rat_hface(:,:,:) !upwind ratios for horizontal faces
 !      real(rkind), allocatable :: psum2(:,:,:)
 
-      real(rkind) :: iupwind_e(nea) !to mark upwind prisms when TVD is used
+      integer :: iupwind_e(nea) !to mark upwind prisms when TVD is used
       real(rkind) :: dtb_min3(ne),buf(2,1),buf2(2,1)
       real(rkind) :: flux_mod_v1(nvrt) !coefficient of limited advective fluxes on vertical faces (space)
       real(rkind) :: flux_mod_v2(nvrt) !coefficient of limited advective fluxes on vertical faces (time)
@@ -88,7 +88,7 @@
       real(rkind) :: psumtr(ntr),delta_tr(ntr),adv_tr(ntr),tmass(ntr),h_mass_in(ntr), &
      &alow(nvrt),bdia(nvrt),cupp(nvrt),rrhs(1,nvrt),soln(1,nvrt),gam(nvrt), &
      &swild(max(3,nvrt)),swild4(3,2),trel_tmp_outside(ntr),swild5(3)
-      integer :: nwild(2),ielem_elm(ne)
+      integer :: nwild(2),ielem_elm(nea),ind_elm(npa)
 
       integer :: istat,i,j,k,kk,l,m,khh2,ie,n1,n2,n3,n4,isd,isd0,isd1,isd2,isd3,j0,je, &
                  &nd,it_sub,ntot_v,ntot_vgb,kup,kdo,jsj,jsj0,kb, &
@@ -304,7 +304,7 @@
 
 !$OMP parallel default(shared) private(i,dtbl2,k,j,ie02,lev02,in_st2,psumtr,jsj,ie,ref_flux, &
 !$OMP same_sign,vj,tmp,m,wm,sum1,wm1,wm2,b1,b2,b3,b4,b5,n1,n2,trsd,kk,bigv,dtb_by_bigv, &
-!$OMP iweno,iel,ibnd,nwild,ll,ndo,lll,ind1,ind2,jj,adv_tr,trel_tmp_outside)
+!$OMP iweno,iel,ibnd,nwild,ll,ndo,lll,ind1,ind2,jj,adv_tr,trel_tmp_outside,nd)
 !'
 #ifdef USE_ANALYSIS
 !$OMP workshare
@@ -379,7 +379,7 @@
                 if (iupwind_e(i)==1) then !upwind
                   tmp=vj/psumtr(1)*(1.d0-1.d-6) !safety factor included
                 else !weno
-                  tmp=vj/psumtr(1)*courant_weno*(1.d0-1.d-6) !safety factor 1.e-6 included
+                  tmp=vj/psumtr(1)*courant_weno*(1.d0-1.d-6) !safety factor 1.e-6 included; <=upwind dt above
                 endif
 
                 if(tmp<dtbl2) then
@@ -416,6 +416,69 @@
 !!!$OMP       end critical
           enddo !i=1,ne
 !$OMP     end do
+
+          !Post-proc flags to avoid shocks in WENO stencil; update
+          !dtb_min3 if necessary
+          !Exchange ielem_elm
+!$OMP     master
+          call exchange_e2di(ielem_elm)
+!$OMP     end master
+            
+          !Mark all nodes of ielem_elm=1: ind_elm only correct in resident
+!$OMP     workshare
+          ind_elm=0
+!$OMP     end workshare 
+
+!$OMP     do 
+          do i=1,np
+            do j=1,nne(i)
+              if(ielem_elm(indel(j,i))==1) then
+                ind_elm(i)=1
+                exit 
+              endif
+            enddo !j
+          enddo !i
+!$OMP     end do
+
+          !Fei tested both options, and ELM seems to be more stable
+!          if(0) then !Mark ELM
+!==========================================================================
+          !Mark all resident elements that has at least 1 ELM node as ELM elements
+          !We only need ielem_elm correct in resident
+!$OMP     do 
+          do i=1,ne
+            do j=1,i34(i)
+              nd=elnode(j,i)
+              if (ind_elm(nd)>0) then
+                ielem_elm(i)=1
+                !Can relax dtb_min3 here to dt
+                exit
+              endif
+            enddo !j
+          enddo !i
+!$OMP     end do
+!==========================================================================
+!          else !Mark upwind
+!          !Mark all resident elements that has at least 1 ELM node as upwind elements 
+!          !if it's not ELM (i.e., upwind or WENO). 
+!!$OMP     do 
+!          do i=1,ne
+!            do j=1,i34(i)
+!              nd=elnode(j,i)
+!              if (ind_elm(nd)>0.and.ielem_elm(i)/=1) then
+!                iupwind_e(i)=1
+!                !No updates on dtb_min3 as WENO is more strict
+!                exit
+!              endif
+!            enddo !j
+!          enddo !i
+!!$OMP     end do
+!    
+!!$OMP     master
+!          call exchange_e2di(iupwind_e)
+!!$OMP     end master
+!==========================================================================
+!          endif !make ELM or upwind
 
 !$OMP     workshare
           dtbl=minval(dtb_min3)
@@ -518,9 +581,9 @@
                   endif
 #endif
 
-                  wm(i)=1.0d0/((epsilon2+b4)*(epsilon2+b4))
+                  wm(i)=1.0d0/((epsilon2_elem(ie)+b4)*(epsilon2_elem(ie)+b4))
                   !----test-------------- 
-                  !wm1(i)=1.0/((epsilon2+b1+b2)*(epsilon2+b1+b2)); ! sum1=sum1+wm1(i)
+                  !wm1(i)=1.0/((epsilon2_elem(ie)+b1+b2)*(epsilon2_elem(ie)+b1+b2)); ! sum1=sum1+wm1(i)
                   !wm2(i)=1.0/((epsilon3+b3)*(epsilon3+b3)); 
                   !wm(i)=wm1(i)*wm2(i)
                   !---------------------- 
@@ -655,7 +718,8 @@
                 if(iel/=0) then
                   if(idry_e(iel)==1) cycle
                   trel_tmp_outside(:)=trel_tmp(:,k,iel)
-                  if(iupwind_e(i)+iupwind_e(iel)>0) then !reset to upwind
+                  !reset to upwind; if Element i uses ELM, it will be overwritten by ELM value eventually
+                  if(iupwind_e(i)+iupwind_e(iel)>0) then
                     iweno=.false.
                   endif
                 else !land or open bnd side
@@ -1709,7 +1773,7 @@
             !write(12,*)'bdia:',bdia
             !write(12,*)'cupp:',cupp
 
-            call tridag(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
+            call tridag_sch(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
 
             !check convergence, based on increment
             term1=sqrt(sum((soln(1,1:ndim)-tr_el(m,kbe(i)+1:nvrt,i))**2.d0))
@@ -1945,7 +2009,7 @@
 
           enddo !k=kbe(i)+1,nvrt
 
-          call tridag(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
+          call tridag_sch(nvrt,1,ndim,1,alow,bdia,cupp,rrhs,soln,gam)
 
           do k=kbe(i)+1,nvrt
             kin=k-kbe(i)

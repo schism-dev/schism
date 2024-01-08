@@ -401,6 +401,7 @@ subroutine parallel_init(communicator)
   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
 
   nproc_compute=nproc_schism-nscribes
+  if(nproc_compute<1) call parallel_abort('MSGP: need at least 1 compute process')
   if(myrank_schism<nproc_schism-nscribes) then !compute ranks
     task_id=1
   else !IO ranks

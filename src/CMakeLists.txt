@@ -29,11 +29,11 @@ set(comp_lang_list C Fortran)
 project(SCHISM LANGUAGES ${comp_lang_list} CXX)
 add_definitions("-DSCHISM")
 
-
-
-
 ########### Announce compiler #####
-message(STATUS "\n### Your compiler is ${CMAKE_Fortran_COMPILER}")
+message(STATUS "\n### Compiler combination and executables")
+message(STATUS "Compiler ID is ${CMAKE_Fortran_COMPILER_ID}-${CMAKE_C_COMPILER_ID}")
+message(STATUS "Fortran compiler is ${CMAKE_Fortran_COMPILER}")
+message(STATUS "C compiler is ${CMAKE_C_COMPILER}")
 
 ########### Build types are Release, Debug and RelWithDebInfo (Release with debug info) #####
 if (NOT CMAKE_BUILD_TYPE)
@@ -41,15 +41,14 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-
 ########### C Preprocessor #####
 # The thought is to enable this globally, since it is needed for all
 # of SCHISM and several Utilities
+# @todo this might be more elegantly handled (from cmake 3.18) with FORTRAN_PREPROCESS boolean flag
 if (NOT DEFINED C_PREPROCESS_FLAG)
   message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI0 is not set")
 endif()
 add_compile_options(${C_PREPROCESS_FLAG})
-
 
 ######### Algorithmic switches and build options involving functionality
 
@@ -60,6 +59,8 @@ define_opt(DEBUG "Enable diagnostics (slow and not suitable for production simul
 define_opt(USE_ANALYSIS "Triggers detailed calculations and output options" OFF)
 define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
 define_opt(OLDIO "Old nc output option" OFF)
+define_opt(USE_ATMOS "Atmospheric model output option" OFF)
+define_opt(USE_NWM_BMI "Use NWM BMI for source and some b.c." OFF)
 define_opt(PREC_EVAP "Use  precipitation/evaporation option" OFF)
 define_opt(IMPOSE_NET_FLUX "Specify net heat and salt fluxes in sflux" OFF)
 define_opt(USE_BULK_FAIRALL "Enable Fairall scheme" OFF)
@@ -327,8 +328,9 @@ string(REPLACE _HYDRO_SCHISM "" mod_tag_rev ${mod_tag_rev})
 # call cmake with -DUSE_GOTM=ON -DGOTM_BASE=[gotm code directory]
 #
 if(USE_GOTM)
-find_path(GOTM_BASE src/gotm/gotm.F90 DOC "GOTM source directory")
+find_path(GOTM_BASE src/gotm/gotm.F90 $GOTM_BASE ${CMAKE_CURRENT_SOURCE_DIR}/GOTM5.2/code DOC "GOTM source directory")
 if(GOTM_BASE)
+  message(STATUS "using GOTM_BASE ${GOTM_BASE}")
   set(GOTM_BUILD_LIBRARIES_ONLY ON)
   set(GOTM_USE_FABM OFF CACHE BOOL "use GOTM without FABM")
   set(GOTM_USE_FLEXIBLE_OUTPUT OFF CACHE BOOL "use GOTM without flexible output")

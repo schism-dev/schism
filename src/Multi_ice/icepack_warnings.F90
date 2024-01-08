@@ -24,10 +24,10 @@ module icepack_warnings
         icepack_warnings_flush,    &
         icepack_warnings_aborted,  &
         icepack_warnings_add,      &
-        icepack_warnings_setabort
+        icepack_warnings_setabort, &
+        icepack_warnings_getall
 
       private :: &
-        icepack_warnings_getall,   &
         icepack_warnings_getone
 
 !=======================================================================
@@ -92,12 +92,12 @@ contains
       end subroutine icepack_warnings_clear
 
 !=======================================================================
-      
+
       subroutine icepack_warnings_getall(warningsOut)
 
         character(len=char_len_long), dimension(:), allocatable, intent(out) :: &
              warningsOut
- 
+
         integer :: iWarning
         character(len=*),parameter :: subname='(icepack_warnings_getall)'
 
@@ -159,7 +159,7 @@ contains
 
         character(len=*), intent(in) :: warning ! warning to add to array of warnings
 
-        ! local 
+        ! local
 
         character(len=char_len_long), dimension(:), allocatable :: warningsTmp
         integer :: &
@@ -182,10 +182,10 @@ contains
 
            ! find the size of the warnings array at the start
            nWarningsArray = size(warnings)
-           
+
            ! check to see if need more space in warnings array
            if (nWarnings + 1 > nWarningsArray) then
-           
+
               ! allocate the temporary warning storage
               allocate(warningsTmp(nWarningsArray))
 
@@ -207,7 +207,7 @@ contains
               deallocate(warningsTmp)
 
            endif
-              
+
         endif
 
         ! increase warning number

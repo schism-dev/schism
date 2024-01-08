@@ -1,7 +1,8 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !     Program to merge 2 hybrid grids (triangles and quads) at their common bnd, 
 !     determined by a small distance between corresponding bnd nodes from the 2 grids.
-!     It won't check negative elem (to accommodate global lon/lat grids).
+!     It won't check negative elem (to accommodate global lon/lat grids). Works for multi-connected
+!     grids (but the 2 grids must have at least 1 common node).
 
 !     Input files: screen (2 grids to be combined; no bnd info needed)
 !

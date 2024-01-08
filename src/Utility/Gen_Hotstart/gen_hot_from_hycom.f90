@@ -35,7 +35,7 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R1703 and up);
-!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside
+!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside. 
 !     (5) gen_hot_from_nc.in: 
 !                     1st line: 1: include vel and elev. in hotstart.nc; 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
@@ -434,7 +434,7 @@
         uvel=uvel*1.e-3
         vvel=vvel*1.e-3
         ssh=ssh*1.e-3
-        !Define junk value for sid; the test is salt<rjunk+0.1
+        !Define junk value for sid; the test is var <rjunk+0.1
         rjunk=-3.e4*1.e-3+20
 
 !       Assume these won't change over time iteration!!
@@ -451,22 +451,22 @@
               klev0=-1 !flag
               klev=-1 !flag
               do k=1,ilen !uvel
-                if(uvel(i,j,k)>rjunk) then
+                if(uvel(i,j,k)>=rjunk+0.1) then
                   klev(1)=k; exit
                 endif
               enddo !k
               do k=1,ilen !vvel
-                if(vvel(i,j,k)>rjunk) then
+                if(vvel(i,j,k)>=rjunk+0.1) then
                   klev(2)=k; exit
                 endif
               enddo !k
               do k=1,ilen !temp
-                if(temp(i,j,k)>rjunk) then
+                if(temp(i,j,k)>=rjunk+0.1) then
                   klev(3)=k; exit
                 endif
               enddo !k
               do k=1,ilen !salt
-                if(salt(i,j,k)>rjunk) then
+                if(salt(i,j,k)>=rjunk+0.1) then
                   klev(4)=k; exit
                 endif
               enddo !k
@@ -480,18 +480,18 @@
 
 !               Fill junk uvel, vvel with zero to eliminate HYCOM nc error
               do k=klev0,ilen
-                if (uvel(i,j,k)<rjunk) then
+                if (uvel(i,j,k)<rjunk+0.1) then
                   write(20,*) 'Warn! Uvel Junk in the middle:',it2,i,j,k
                   uvel(i,j,k)=0.
                 end if
-                if (vvel(i,j,k)<rjunk) then
+                if (vvel(i,j,k)<rjunk+0.1) then
                   write(20,*) 'Warn! Vvel Junk in the middle:',it2,i,j,k
                   vvel(i,j,k)=0.
                  end if
               end do !k
 !               Fill junk salt ,temp with bottom value
               do k=klev0,ilen
-                if (temp(i,j,k)<rjunk) then
+                if (temp(i,j,k)<rjunk+0.1) then
                   if(k==klev0) then
                     write(11,*)'Bottom T is junk:',it2,i,j,k,temp(i,j,k) 
                     stop
@@ -499,7 +499,7 @@
                   write(20,*) 'Warn! Temp Junk in the middle:',it2,i,j,k
                   temp(i,j,k)=temp(i,j,klev0)
                 end if
-                if (salt(i,j,k)<rjunk) then
+                if (salt(i,j,k)<rjunk+0.1) then
                   if(k==klev0) then
                     write(11,*)'Bottom S is junk:',it2,i,j,k,salt(i,j,k) 
                     stop
@@ -630,7 +630,15 @@
           else !stripes along y
             xy3=yl(i)
           endif !is_xy
+
+          if(xy3<xybin(1).or.xy3>xybin(nbin+1)) cycle loop4
+
           l0=min(nbin,int((xy3-xybin(1))/binwid+1)) !>=1
+          if(l0<1) then
+            write(11,*)'l0<1:',l0,xy3,xybin(1)
+            stop
+          endif
+
           !Deal with border cases
           if(xy3==xybin(l0)) then
             ibin1=max(l-1,1); ibin2=l
@@ -756,7 +764,7 @@
         tempout=-99; saltout=-99
         do i=1,np
           if(ixy(i,1)==0.or.ixy(i,2)==0) then
-            !write(20,*)'Cannot find a parent element:',i
+            write(20,*)'Cannot find a parent element:',i
             tempout(:,i)=tem_outside
             saltout(:,i)=sal_outside
             uout(:,i)=0
