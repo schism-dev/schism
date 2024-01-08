@@ -24,7 +24,7 @@ def file_check(input_fname, result_fname):
         failed_folder = f'{input_fname.parent}_failed'
         if not os.path.exists(failed_folder):
             os.mkdir(failed_folder)
-        failed_file = f'{failed_folder}/{input_fname.name}'
+        failed_file = Path(f'{failed_folder}/{input_fname.name}')
 
         # write the failed lines to a file
         with open(input_fname, 'r') as file:
@@ -69,8 +69,15 @@ if __name__ == "__main__":
                 if region_id == regions[-1]:
                     raise Exception(f"No other groups to try: Failed to convert {failed_file}")
                 else:
-                    print(f"Failed to convert {failed_file} in region{region_id}, trying the next region")
-                    os.system(f"cp {failed_file} region{region_id+1}/")  # copy the failed file (a portion of the original input file) to the next region's input folder
+                    print(f"Failed to convert {failed_file} in region{region_id}, sending the failed portion to the next region")
+                    # check if the next region also has the failed file, and remove it if it does because it probably has
+                    # an overlap with the failed file from the previous region. The overlap with previous region leads to no outputs.
+                    fname = f"region{region_id+1}/{failed_file.name}"
+                    if os.path.exists(fname):
+                        os.system(f"rm -rf {fname}")
+                    # copy the failed file (a portion of the original input file) to the next region's input folder,
+                    # rename the file so that the previous results are not overwritten
+                    os.system(f"cp {failed_file} region{region_id+1}/{failed_file.stem}_failed_in_region{region_id}.txt")  # copy the failed file (a portion of the original input file) to the next region's input folder
 
 
         pass
