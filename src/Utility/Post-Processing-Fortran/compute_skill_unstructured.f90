@@ -12,89 +12,77 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
+!   Compute error metrics using unstructured as background grid (tri or quad; e.g. from model), by 
+!   interpolating random points (e.g. from obs) onto the UG. 
+!   Main routine for outside driver is compute_skill_unstructured2() (see below)
 
-!     Interpolate based on an unstructured (tri or quad) grid background grid
-!     Search for parent elements along x- or y- strips (use small mne_bin for efficiency)
-!     Inputs: fg.gr3 (foreground grid with initial depths; triangular or quads)
-!             include.gr3 (based on fg.gr3): depths \in [0,1] indicate the weights
-!                                            (0: use original depth; 1:
-!                                            use interpolated depth if successful).
-!                                            Can also be used to avoid interpolation in bad
-!                                            parent triangles (in addition to ar_bgmax below);
-!             bg.gr3 (bg grid that has bathymetry (DEM); triangular or quads)
-!             interpolate_unstructured.in (see sample below): 
-!                                         (1) is_xy: search bins varies along x (1) or y (2) axis;
-!                                         (2) nbin,mne_bin: # of bins & max # of elements in each bin; 
-!                                         (3) ar_bgmax: threshold for aspect ratio etc. 
-!                                                       Note that this threshold only applies
-!                                                       to triangular elements in bg grid (i.e. quads 
-!                                                       will always be used for interpolation);
-!                                         (4) h_off: Offset in depth in m for output _if_ the 
-!                                                    interpolation is done successfully.
-!                                          These parameters can be found on the 1st line of output file.
-!                                          Also may consider adjust small1.
-!     Output:  fg.new with depth interpolated. If no parent elements or 
-!              good aspect-ratio parent elements are found,
-!              the original depth is unchanged.
-!              fort.11: fatal errors.
-!
-!     ifort -Bstatic -O3 -o interpolate_unstructured interpolate_unstructured.f90
-!     pgf90 -O2 -mcmodel=medium -Mbounds -Bstatic -o interpolate_unstructured interpolate_unstructured.f90
-
-!     Sample interpolate_unstructured.in
-!     1 !is_xy
-!     20000 34000 !nbin,mne_bin
-!     10 !ar_bgmax
-!     2.07 !h_off
-
-
-      module global
-        implicit real*8(a-h,o-z)
-
-        parameter(pi=3.141592653589793)
-        parameter(small1=1.e-4) !small number used to check if a pt is inside a polygon
-        integer,save :: mne_bin !max # of elements in each bin 
-
-        integer,save :: is_xy,nbin,nebg,npbg
-        real*8,save :: binwid,ar_bgmax,xy_min,xy_max
-
-        real*8,save,allocatable :: xbg(:),ybg(:),dpbg(:),areabg(:),arbg(:),xybin(:)
-        integer,save,allocatable :: nmbg(:,:),i34bg(:),ne_bin(:),ie_bin(:,:)
-      end module global
-
-      program cross
-      use global
+      module compute_skill_unstructured
       implicit real*8(a-h,o-z)
-      dimension arco(4),nmfg(4)
+      private
 
-      open(9,file='interpolate_unstructured.in',status='old')
-!     Input x- or y- search (1: x; 2: y)
-      read(9,*) is_xy
+      parameter(pi=3.141592653589793d0)
+      parameter(small1=1.d-3) !small number used to check if a pt is inside a polygon
+!      integer,save :: mne_bin !max # of elements in each bin 
+!      integer,save :: is_xy,nbin,nebg,npbg
+      real*8,save :: binwid,ar_bgmax,xy_min,xy_max
+
+      real*8,save,allocatable :: areabg(:),arbg(:),xybin(:)
+      integer,save,allocatable :: ne_bin(:),ie_bin(:,:)
+
+      public :: compute_skill_unstructured2
+
+      contains 
+
+!     Main routine
+!     Search for parent elements along x- or y- strips (use small mne_bin for efficiency)
+!     Input arguments:
+!     is_xy: search bins varies along x (1) or y (2) axis;
+!     nbin,mne_bin: # of bins & max # of elements in each bin; 
+!     nebg,npbg,xbg,ybg,dpbg,nmbg,i34bg: info from bg grid
+!     npfg,xfg,yfg,vfg: fg points and value (vfg; e.g. obs)
+!     v_range(1:2): min/max of valid range (to check both model and obs)
+!     Output arguments: scores (1: bias; 2: RMSE; 3: MAE); exception is large negative #
+!     Additional output file: fort.11 (fatal errors)
+      subroutine compute_skill_unstructured2(is_xy,nbin,mne_bin,nebg,npbg,xbg,ybg,dpbg,nmbg,i34bg, &
+     &npfg,xfg,yfg,vfg,v_range,scores)
+      integer, intent(in) :: is_xy,nbin,mne_bin,nebg,npbg,nmbg(nebg,4),i34bg(nebg),npfg
+      real*8, intent(in) :: xbg(npbg),ybg(npbg),dpbg(npbg),xfg(npfg),yfg(npfg),vfg(npfg), &
+     &v_range(2)
+      real*8, intent(out) :: scores(10)
+
+      real*8 :: arco(4),dpfg(npfg)
+      integer :: indx(npfg)
+
+      !init
+      scores=-huge(1.d0)
+
+!      open(9,file='interpolate_unstructured.in',status='old')
+!!     Input x- or y- search (1: x; 2: y)
+!      read(9,*) is_xy
       if(is_xy/=1.and.is_xy/=2) stop 'Check is_xy'
 !     Input # of bins (larger the better; e.g. 20000), 
 !     and max # of elements in each bin (smaller the better; e.g. # of elements/20000):'
-      read(9,*) nbin,mne_bin
-
+!      read(9,*) nbin,mne_bin
+!
 !     Set threshold for aspect ratio in background grid (suggest 8) so those triangular elements 
 !     will be discarded in interpolation
 !     Aspect ratio of a triangle is defined as AR=max(Li)/R, where Li are 3 sides, and R=sqrt(A/pi)
 !     is equivalent radius (A is area). Note that AR>=2*sqrt(pi/sqrt(3))=2.6935
-      read(9,*) ar_bgmax
-      if(mne_bin<=0.or.ar_bgmax<2.6935) stop 'Check mne_bin or ar_bgmax'
-
+!      read(9,*) ar_bgmax
+!      if(mne_bin<=0.or.ar_bgmax<2.6935) stop 'Check mne_bin or ar_bgmax'
+!
 !     Offset in depth in m for output (h_off is added to depths at output if interpolation is done)
-      read(9,*) h_off
-      close(9)
+!      read(9,*) h_off
+!      close(9)
 
-      open(10,file='bg.gr3',status='old')
-      read(10,*)
-      read(10,*)nebg,npbg
-      allocate(xbg(npbg),ybg(npbg),dpbg(npbg),nmbg(nebg,4),i34bg(nebg),areabg(nebg),arbg(nebg), &
-     &xybin(nbin+1),ne_bin(nbin),ie_bin(nbin,mne_bin),stat=istat)
+!      open(10,file='bg.gr3',status='old')
+!      read(10,*)
+!      read(10,*)nebg,npbg
+      allocate(areabg(nebg),arbg(nebg),xybin(nbin+1),ne_bin(nbin),ie_bin(nbin,mne_bin),stat=istat)
       ie_bin(nbin,mne_bin)=0 !test memory leak
-      if(istat/=0) stop 'Allocation failed (1)'
+      if(istat/=0) stop 'Inside score routine: allocation failed (1)'
       do i=1,npbg
-        read(10,*)j,xbg(i),ybg(i),dpbg(i)
+!        read(10,*)j,xbg(i),ybg(i),dpbg(i)
         if(i==1) then
           xmin_bg=xbg(1); xmax_bg=xbg(1)
           ymin_bg=ybg(1); ymax_bg=ybg(1)
@@ -114,7 +102,7 @@
 
       arbg=0 !A.R. for quad
       do i=1,nebg
-        read(10,*)j,i34bg(i),(nmbg(i,k),k=1,i34bg(i))
+!        read(10,*)j,i34bg(i),(nmbg(i,k),k=1,i34bg(i))
         if(i34bg(i)/=3.and.i34bg(i)/=4) then
           write(*,*)'Only triangles/quad allowed:',i
           stop
@@ -145,7 +133,7 @@
           arbg(i)=max(rl1,rl2,rl3)/sqrt(areabg(i)/pi)
         endif !i34bg(i)==3
       enddo !i=1,nebg
-      close(10)
+!      close(10)
 
 !     Bucket strip sorting
 !     If an element i is in ie_bin(l,:), it's 'physically' in it (i.e. at least one internal point
@@ -176,7 +164,7 @@
 
       iabort=0 !flag for success in binning elements
       do i=1,nebg
-        if(arbg(i)>=ar_bgmax) cycle
+!        if(arbg(i)>=ar_bgmax) cycle
 
         do j=1,i34bg(i)
           nd=nmbg(i,j)
@@ -207,6 +195,7 @@
         enddo !l
 
         if(ibin1==0.or.ibin2==0) then
+          write(*,*)'Cannot find a bin; see fort.11'
           write(11,*)'Cannot find a bin:',i,ibin1,ibin2,bmin,bmax
           do l=1,nbin+1
             write(11,*)xybin(l)
@@ -238,52 +227,70 @@
 !     end bucket sort
 
 !     Foreground build point file
-      open(12,file='fg.gr3',status='old')
-      open(14,file='include.gr3',status='old')
-      open(13,file='fg.new',status='replace')
-      read(12,*)
-      read(12,*)nefg,npfg
-      read(14,*); read(14,*)
-      write(13,'(a30,2i6,2(1x,f9.3))')'nbin,mne_bin,ar_bgmax,h_off=',nbin,mne_bin,ar_bgmax,h_off
-      write(13,*)nefg,npfg
-!     Interpolate and output
+!      open(12,file='fg.gr3',status='old')
+!      open(14,file='include.gr3',status='old')
+!      open(13,file='fg.new',status='replace')
+!      read(12,*)
+!      read(12,*)nefg,npfg
+!      read(14,*); read(14,*)
+!      write(13,'(a30,2i6,2(1x,f9.3))')'nbin,mne_bin,ar_bgmax,h_off=',nbin,mne_bin,ar_bgmax,h_off
+!      write(13,*)nefg,npfg
+!     Interpolate
+      dpfg=-1.e20 !init
+      n_valid=0 !# of valid pts
       do i=1,npfg
-        read(14,*)j,xfg,yfg,weight
-        read(12,*)j,xfg,yfg,dpfg
-        call binsearch(i,xfg,yfg,iparen,arco)
+        !Check obs range 
+        if(vfg(i)<v_range(1).or.vfg(i)>v_range(2)) cycle
+
+        call binsearch(i,nbin,xfg(i),yfg(i),is_xy,nebg,npbg,nmbg,i34bg,xbg,ybg,iparen,arco)
 !        write(19,*)i,iparen,arco(1:4)
         if(iparen/=0) then
-          dpfg2=h_off
+          dpfg(i)=0.
           do j=1,i34bg(iparen)
             nd=nmbg(iparen,j)
-            dpfg2=dpfg2+dpbg(nd)*arco(j)
+            dpfg(i)=dpfg(i)+dpbg(nd)*arco(j) !e.g., model value @ obs pt
           enddo !j
 
-          dpfg=dpfg2*weight+(1-weight)*dpfg
-        endif
-        write(13,'(i10,2(1x,e20.12),1x,f12.4)')i,xfg,yfg,dpfg
+          !Check range
+          if(dpfg(i)>=v_range(1).and.dpfg(i)<=v_range(2)) then
+            n_valid=n_valid+1
+            if(n_valid>npfg) stop 'Overflow(4)'
+            indx(n_valid)=i
+          endif
+        endif !iparen/
       enddo !i=1,npfg
-      do i=1,nefg
-        read(12,*)j,k,nmfg(1:k)
-        write(13,*)i,k,nmfg(1:k)
-      enddo !i
-      close(12)
-      close(13)
 
-      stop
-      end
+      !Output for debug
+!      do i=1,npfg
+!        write(99,'(i10,2(1x,e20.12),1x,e20.12)')i,xfg(i),yfg(i),dpfg(i)
+!      enddo !i
+
+!     Scores
+      if(n_valid>0) then
+        !bias
+        scores(1)=sum(dpfg(indx(1:n_valid))-vfg(indx(1:n_valid)))/n_valid
+        !RMSE
+        scores(2)=sum((dpfg(indx(1:n_valid))-vfg(indx(1:n_valid)))**2)/n_valid
+        scores(2)=sqrt(scores(2))
+        !MAE
+        scores(3)=sum(abs(dpfg(indx(1:n_valid))-vfg(indx(1:n_valid))))/n_valid
+      endif
+
+      deallocate(areabg,arbg,xybin,ne_bin,ie_bin)
+
+      end subroutine compute_skill_unstructured2
 
 !     Search for parent element of (x0,y0) and compute area coordinates arco(4)
 !     If the parent element cannot be found, iparen=0
 !     Sum of arco may not be exactly 1
-      subroutine binsearch(node_num,x0,y0,iparen,arco)
-      use global
-      implicit real*8(a-h,o-z)
+      subroutine binsearch(node_num,nbin,x0,y0,is_xy,nebg,npbg,nmbg,i34bg,xbg,ybg,iparen,arco)
       integer, intent(in) :: node_num !info only
-      real*8, intent(in) :: x0,y0
+      integer, intent(in) :: nbin,is_xy,nebg,npbg,nmbg(nebg,4),i34bg(nebg)
+      real*8, intent(in) :: x0,y0,xbg(npbg),ybg(npbg)
       integer, intent(out) :: iparen
       real*8, intent(out) :: arco(4)
-      dimension nind(3)
+
+      integer :: nind(3)
 
       if(is_xy==1) then
         xy=x0
@@ -302,8 +309,8 @@
       else if(xy>xybin(l).and.xy<xybin(l+1)) then
         ibin1=l; ibin2=l
       else
-        write(*,*)'Cannot find a bin (2):',node_num,x0,y0,xybin(l),xybin(l+1),binwid,l
-        write(99,*)(i,xybin(i),i=1,nbin+1)
+        write(*,*)'Cannot find a bin (2); see fort.11:',node_num,x0,y0,xybin(l),xybin(l+1),binwid,l
+        write(11,*)(i,xybin(i),i=1,nbin+1)
         stop
       endif
 
@@ -358,8 +365,7 @@
 !        stop
 !      endif
 
-      return
-      end
+      end subroutine binsearch
 
       function signa(x1,x2,x3,y1,y2,y3)
 !...  Compute signed area formed by pts 1,2,3
@@ -367,5 +373,6 @@
 
       signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
       
-      return
-      end
+      end function signa
+
+      end module compute_skill_unstructured
