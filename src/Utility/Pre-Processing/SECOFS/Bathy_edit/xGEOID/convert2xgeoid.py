@@ -1,10 +1,65 @@
-import numpy as np
-import subprocess
+#!/usr/bin/env python
 import os
-from glob import glob
+import subprocess
 from pathlib import Path
-import time
+from glob import glob
 
+import re
+import numpy as np
+import pandas as pd
+
+from pylib import read_schism_hgrid, inside_polygon
+
+def extract_trailing_numbers(s):
+    match = re.search(r'\d+$', s)
+    return match.group() if match else None
+
+def prep_folder(wdir):
+    os.chdir(wdir)
+
+    # remove any previous folders
+    os.system(f'rm -rf {wdir}/vdatum/region*')
+
+    # make a clean copy of vdatum
+    os.makedirs(f'{wdir}/vdatum', exist_ok=True)
+    os.makedirs(f'{wdir}/vdatum/result', exist_ok=True)
+    source_path = '/sciclone/schism10/Hgrid_projects/DEMs/vdatum/vdatum/'  # this is a clean copy of vdatum, all files under this folder are symlinks
+    os.chdir(f'{wdir}/vdatum')
+    os.system(f'ln -sf {source_path}/* .')
+    os.chdir(wdir)
+
+    # copy over the polygons
+    source_path = '/sciclone/schism10/hjyoo/task/task6_SECOFS/simulation/Whole_Domain/Grid/Script/xGEOID/VDatum_polygons/'
+    os.system(f'cp -rL {source_path} .')
+
+def generate_input_txt(hgrid_obj, wdir):
+    grouping = {'al': 4, 'fl': 4, 'ga': 4, 'nc': 4, 'de': 5, 'md': 5, 'nj': 5, 'va': 5}
+    polygon_files = glob(f'{wdir}/VDatum_polygons/*.bnd')
+
+    unique_groups = np.unique(list(grouping.values()))
+    for group in unique_groups:
+        os.makedirs(f'{wdir}/vdatum/region{group}', exist_ok=True)
+        os.system(f'rm -rf {wdir}/vdatum/region{group}/*')
+
+    for fname in polygon_files:
+        prefix = Path(fname).name[:2].lower()
+        group_id = grouping[prefix]
+
+        ##get nodes inside polgyon
+        bp = np.loadtxt(fname)
+        sind = inside_polygon(np.c_[hgrid_obj.x, hgrid_obj.y], bp[:, 0], bp[:, 1])
+
+        idxs = np.where(sind == 1)[0]
+        print(idxs.shape[0])
+        if idxs.shape[0] == 0: continue
+        lon = hgrid_obj.x[idxs]
+        lat = hgrid_obj.y[idxs]
+        depth = hgrid_obj.dp[idxs] #for sounding
+
+        name = Path(fname).name.split('_')[0].lower()
+        with open(f"{wdir}/vdatum/region{group_id}/hgrid_secofs_{name}.txt", "w") as f:
+            f.write("\n".join(" ".join(map(str, line)) for line in zip(idxs+1, lon, lat, depth)))
+        
 def file_check(input_fname, result_fname):
     '''
     Check if the result file is complete such that
@@ -37,30 +92,66 @@ def file_check(input_fname, result_fname):
     else:
         return None
 
-if __name__ == "__main__":
-    # ---------- inputs ----------
-    vdatum_folder = "/sciclone/schism10/feiye/SECOFS/Inputs/I03a/Bathy_edit/xGEOID/vdatum/"
-    regions = [4, 5]  # must be in ascending order
-    # --------------------
+def replace_depth(wdir, hgrid_obj):
+    depth_navd = hgrid_obj.dp.copy()
+    destination_datum = 'xGEOID20b'
+
+    files = glob(f'{wdir}/vdatum/result/*.txt')
+    files.sort()
+
+    depth_diff = np.zeros_like(hgrid_obj.dp)
+    depth_diff[:] = np.NaN
+
+    for fname in files:
+        print(fname)
+
+        with open(fname) as f:
+            df = pd.read_csv(f, header=None, delim_whitespace=True, names=['id', 'lon', 'lat', 'depth'], na_values=-999999.0)
+
+        idxs = df.index[~df['depth'].isnull()]
+        depth_geoid = df['depth'][idxs]
+
+        hgrid_obj.dp[df['id'][idxs.values]-1] = depth_geoid  # id is node id, which starts from 1, so need to subtract 1 for dp
+
+    hgrid_obj.write_hgrid(f'{wdir}/hgrid_{destination_datum}.gr3')
+
+    depth_diff = hgrid_obj.dp - depth_navd
+
+    return hgrid_obj, depth_diff
+
+
+def convert2xgeoid(wdir, hgrid_obj):
+    prep_folder(wdir=wdir)
+    generate_input_txt(hgrid_obj=hgrid_obj, wdir=wdir)
+
+    vdatum_folder = f"{wdir}/vdatum/" 
+    region_folders = glob(f"{vdatum_folder}/region*")  # outputs from generate_input_txt(), e.g., region4, region5, etc.
+    regions = [int(extract_trailing_numbers(folder)) for folder in region_folders]
+    regions = sorted(regions)  # must be sorted,
+    # e.g., if region4 is being processed and an input file (*.txt) has the first half of the points in region4,
+    # then the outputs will only contain the first half (valid points).
+    # the rest (invalid points) will be used as input for the next region (region5).
+    # However, if region5 is processed before region4, the outputs will be empty, i.e., neglecting the valid points in region4.
 
     # clear the result folder
+    os.makedirs(f'{vdatum_folder}/result', exist_ok=True)
     os.system(f"rm -rf {vdatum_folder}/result/*")
 
     # vdatum.jar needs to be in the same folder, and it treates all upper case letters as lower case in the input file name
     os.chdir(vdatum_folder)
-    for i, region_id in enumerate(regions):
+    for i, region_id in enumerate(regions): # calling vdatum.jar for each region
         input_fnames = glob(f"region{region_id}/*.txt")
 
         # Starting the processes
-        processes = [subprocess.Popen(f"java -jar vdatum.jar  ihorz:NAD83_2011 ivert:navd88:m:height ohorz:igs14:geo:deg overt:xgeoid20b:m:height -file:txt:space,1,2,3,skip0:{fname}:result region:{region_id}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for fname in input_fnames]
+        processes = [subprocess.Popen(f"java -jar vdatum.jar  ihorz:NAD83_2011 ivert:navd88:m:sounding ohorz:igs14:geo:deg overt:xgeoid20b:m:sounding -file:txt:space,1,2,3,skip0:{fname}:result region:{region_id}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for fname in input_fnames]
 
         # Wait for all processes to complete
         for i, process in enumerate(processes):
             exit_code = process.wait()
             if exit_code == 0:
-                print(f"Process {i+1} completed successfully")
+                print(f"Process {i+1} ({input_fnames[i]}) completed successfully")
             else:
-                print(f"Process {i+1} failed with exit code {exit_code}")
+                print(f"Process {i+1} ({input_fnames[i]}) failed with exit code {exit_code}")
         
         # Check if the output files are correct
         for input_fname in input_fnames:
@@ -80,5 +171,16 @@ if __name__ == "__main__":
                     os.system(f"cp {failed_file} region{region_id+1}/{failed_file.stem}_failed_in_region{region_id}.txt")  # copy the failed file (a portion of the original input file) to the next region's input folder
 
 
-        pass
+    hgrid_obj,depth_diff = replace_depth(wdir=wdir, hgrid_obj=hgrid_obj)
+    #hgrid_obj_diff = hgrid_obj.copy() # for save diff between NAVD and xGEOID
+    #hgrid_obj_diff.dp = depth_diff
+    #hgrid_obj_diff.save(f'{wdir}/depth_NAVD-{destination_datum}.gr3')
+    
+    return hgrid_obj
 
+if __name__ == "__main__":
+    wdir = '/sciclone/schism10/Hgrid_projects/TMP/DEM_edit/xGEOID/'
+    hgrid_obj = read_schism_hgrid(f'{wdir}/hgrid.gr3')
+    hgrid_obj = convert2xgeoid(wdir=wdir, hgrid_obj=hgrid_obj)
+    
+    pass
