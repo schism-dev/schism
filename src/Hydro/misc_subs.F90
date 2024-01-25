@@ -6199,7 +6199,7 @@
       sum3=sum(RSYY0)
       tmp=sum1+sum2+sum3
       if(tmp/=tmp) then
-        write(errmsg,*)'compute_wave_force_lon: NaN ',sum1,sum2,sum3,RSXX0
+        write(errmsg,*)'compute_wave_force_lon: NaN ',sum1,sum2,sum3
         call parallel_abort(errmsg)
       endif
 !new39
