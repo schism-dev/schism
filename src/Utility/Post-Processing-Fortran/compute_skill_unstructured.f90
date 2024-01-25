@@ -38,7 +38,7 @@
 !     Input arguments:
 !     is_xy: search bins varies along x (1) or y (2) axis;
 !     nbin,mne_bin: # of bins & max # of elements in each bin; 
-!     nebg,npbg,xbg,ybg,dpbg,nmbg,i34bg: info from bg grid
+!     nebg,npbg,xbg,ybg,dpbg,nmbg,i34bg: info from bg grid (dpbg is 'modeled' result)
 !     npfg,xfg,yfg,vfg: fg points and value (vfg; e.g. obs)
 !     v_range(1:2): min/max of valid range (to check both model and obs)
 !     Output arguments: scores (1: bias; 2: RMSE; 3: MAE); exception is large negative #
@@ -112,14 +112,14 @@
         n3=nmbg(i,3)
         areabg(i)=signa(xbg(n1),xbg(n2),xbg(n3),ybg(n1),ybg(n2),ybg(n3))
         if(areabg(i)<=0) then
-          write(*,*)'Concave element:',i
+          write(*,*)'Concave element:',i,areabg(i),nmbg(i,1:3)
           stop
         endif
         if(i34bg(i)==4) then
           n4=nmbg(i,4)
           tmp=signa(xbg(n1),xbg(n3),xbg(n4),ybg(n1),ybg(n3),ybg(n4))
           if(tmp<=0) then
-            write(*,*)'Concave element (2):',i
+            write(*,*)'Concave element (2):',i,tmp,nmbg(i,:)
             stop
           endif
           areabg(i)=areabg(i)+tmp
@@ -369,7 +369,7 @@
 
       function signa(x1,x2,x3,y1,y2,y3)
 !...  Compute signed area formed by pts 1,2,3
-      implicit real*8(a-h,o-z)
+!      implicit real*8(a-h,o-z)
 
       signa=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2
       
