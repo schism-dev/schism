@@ -130,7 +130,12 @@ There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yi
     }
     ```
 
-Note that `sflux_rad` is only required if the heat exchange module is invoked via `ihconsv=1`, and `sflux_prc` is only required if the salt exchange module is invoked via `isconsv=1`. We have NARR sflux files from 1979-present, but cannot upload all of them to the web due to disk space limitation. You can find some samples at [http://ccrm.vims.edu/yinglong/wiki_files/NARR/](http://ccrm.vims.edu/yinglong/wiki_files/NARR/).
+Note that `sflux_rad` is only required if the heat exchange module is invoked via `ihconsv=1`, and `sflux_prc` is only required if the salt exchange module is invoked via `isconsv=1`.
+Since a barotropic model cannot do heat/salt exchange properly, these two types of sflux inputs should not be used there. To impose rainfall in a  barotropic model,
+ you have to use the source/sink option `if_source` by converting rainfall rate into sources.
+
+
+We have NARR sflux files from 1979-present, but cannot upload all of them to the web due to disk space limitation. You can find some samples at [http://ccrm.vims.edu/yinglong/wiki_files/NARR/](http://ccrm.vims.edu/yinglong/wiki_files/NARR/).
 
 Two sources of data are allowed for each type of `.nc` files, and the relative priority is fixed by the file name. For instance `sflux_air_1.0003.nc` might be blended with a file called `sflux_air_2.0003.nc`. The ".0003" component of the name represents the order of the file within the stack of provided input files. For instance, there might be a new file (`0001`, `0002`, `0003`) produced every 12 hours in a forecast cycle.
 

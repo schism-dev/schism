@@ -107,8 +107,8 @@ if __name__ == "__main__":
     # It should include hgrid.gr3 and vgrid.in, TS_1.nc;
     # in addition, rename the original hotstart.nc from hycom to hotstart.nc.hycom
     tweak_stofs3d_hotstart(
-        wdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I24/Hot_test/',
-        hotstart_date_str='2021-05-01',
+        wdir='/sciclone/schism10/feiye/Test/RUN02b_JZ/Hotstart/',
+        hotstart_date_str='2018-07-01',
         city_shapefile_names = ["city_polys_from_v10_lonlat.shp"],  # polygon shapefile specifying cities
     )
     

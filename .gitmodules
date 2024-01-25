@@ -1,0 +1,3 @@
+[submodule "src/GOTM5.2/code"]
+	path = src/GOTM5.2/code
+	url = https://github.com/gotm-model/code.git

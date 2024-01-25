@@ -21,8 +21,7 @@
 !                                            use interpolated depth if successful).
 !                                            Can also be used to avoid interpolation in bad
 !                                            parent triangles (in addition to ar_bgmax below);
-!             bg.gr3 (bg grid that has bathymetry (DEM); triangular or quads; triangulation need not
-!                     be properly formed!);
+!             bg.gr3 (bg grid that has bathymetry (DEM); triangular or quads)
 !             interpolate_unstructured.in (see sample below): 
 !                                         (1) is_xy: search bins varies along x (1) or y (2) axis;
 !                                         (2) nbin,mne_bin: # of bins & max # of elements in each bin; 

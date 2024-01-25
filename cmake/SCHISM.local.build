@@ -27,7 +27,8 @@ set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculat
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 #IMPOSE_NET_FLUX will be removed eventually
 set (IMPOSE_NET_FLUX  OFF CACHE BOOLEAN "Specify net heat and salt fluxes in sflux")
-##Older versions of GOTM (3.*) have issues with netcdf v4, so are not maintained
+## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
+##set( GOTM_BASE /work2/03473/seatonc/frontera/GOTM5.2/code CACHE STRING "Path to non-standard GOTM base directory")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")
 set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")

@@ -1230,7 +1230,7 @@ submodule (icedrv_main) icedrv_advection
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -1271,6 +1271,8 @@ submodule (icedrv_main) icedrv_advection
           do j =1,i34(ie) !side
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
+
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
             
             indx1 = 0
             do m=1,nne(n1)
@@ -1401,7 +1403,7 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -1409,7 +1411,7 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -1509,14 +1511,14 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -1648,7 +1650,7 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !type(t_mesh),        target,        intent(in)    :: mesh
        call icepack_query_parameters(puny_out=puny)
 
-    adv_threshold = 10
+    adv_threshold = 1
     trl0(:) = c0
     fluxchan1(:) = c0 !positive flux
     fluxchan2(:) = c0 !negative flux
@@ -1662,7 +1664,7 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -1703,6 +1705,8 @@ subroutine upwind_icepack_other3(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           do j =1,i34(ie) !side
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
+
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
             
             indx1 = 0
             do m=1,nne(n1)
@@ -1891,7 +1895,7 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -1899,7 +1903,7 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -2002,14 +2006,14 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -2090,7 +2094,7 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !type(t_mesh),        target,        intent(in)    :: mesh
        call icepack_query_parameters(puny_out=puny)
 
-    adv_threshold = 10
+    adv_threshold = 1
     trl0(:) = c0
     fluxchan1(:) = c0 !positive flux
     fluxchan2(:) = c0 !negative flux
@@ -2128,7 +2132,7 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -2169,6 +2173,8 @@ subroutine upwind_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           do j =1,i34(ie) !side
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
+
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
             
             indx1 = 0
             do m=1,nne(n1)
@@ -2405,7 +2411,7 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -2413,7 +2419,7 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -2516,14 +2522,14 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -2604,7 +2610,7 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !type(t_mesh),        target,        intent(in)    :: mesh
        call icepack_query_parameters(puny_out=puny)
 
-    adv_threshold = 10
+    adv_threshold = 1
     trl0(:) = c0
     fluxchan1(:) = c0 !positive flux
     fluxchan2(:) = c0 !negative flux
@@ -2652,7 +2658,7 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -2693,6 +2699,8 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           do j =1,i34(ie) !side
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
+
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
             
             indx1 = 0
             do m=1,nne(n1)
@@ -2912,10 +2920,12 @@ subroutine tvd_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           enddo
     enddo
    do i=1,nx_nh
+      !if(idry(i)==1) cycle
       suma=0.d0 !sum of areas
       fluxchan0=0.d0
       do j=1,nne(i)
          ie=indel(j,i)
+         !if(idry_e(ie)==1) cycle
          suma=suma+area(ie)/3 !approx for quad
          fluxchan0=fluxchan0 + (flux_matrix1(j,i,trc_n) + flux_matrix2(j,i,trc_n))/2.d0
          fluxchan0=fluxchan0 + (flux_matrix3(j,i,trc_n) + flux_matrix4(j,i,trc_n))/2.d0
@@ -2956,7 +2966,7 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -2964,7 +2974,7 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -3067,14 +3077,14 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -3303,7 +3313,7 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !type(t_mesh),        target,        intent(in)    :: mesh
        call icepack_query_parameters(puny_out=puny)
 
-    adv_threshold = 10
+    adv_threshold = 1
     trl0(:) = c0
     fluxchan1(:) = c0 !positive flux
     fluxchan2(:) = c0 !negative flux
@@ -3347,7 +3357,7 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -3389,6 +3399,8 @@ subroutine tvdu_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
             
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
+
             indx1 = 0
             do m=1,nne(n1)
                if(indel(m,n1)==ie) then
@@ -3651,7 +3663,7 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -3659,7 +3671,7 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -3762,14 +3774,14 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -3849,7 +3861,7 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !type(t_mesh),        target,        intent(in)    :: mesh
        call icepack_query_parameters(puny_out=puny)
 
-    adv_threshold = 10
+    adv_threshold = 1
     trl0(:) = c0
     fluxchan1(:) = c0 !positive flux
     fluxchan2(:) = c0 !negative flux
@@ -3862,7 +3874,7 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       ! Driving sequence
     do ie=1,nx_elem
 
-          if(idry_e(ie)==1) cycle
+          !if(idry_e(ie)==1) cycle
           areatmp = area(ie)/6
           !Wet elem
 
@@ -3909,6 +3921,8 @@ subroutine tvd_casulli_icepack_other(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           do j =1,i34(ie) !side
             n1=isidenode(1,elside(j,ie))
             n2=isidenode(2,elside(j,ie))
+
+            if(idry(n1)/=0 .or. idry(n2)/=0) cycle
             
             indx1 = 0
             do m=1,nne(n1)
@@ -4095,7 +4109,7 @@ subroutine upwind_icepack_other4(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !if(isbnd(1,i)/=0) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
@@ -4103,7 +4117,7 @@ subroutine upwind_icepack_other4(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             suma=suma+area(ie)/3 !approx for quad
@@ -4197,14 +4211,14 @@ subroutine upwind_icepack_other4(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       flux_matrix0(:,:,:,trc_n) = c0
         ! Driving sequence
       do i=1,nx_nh
-        if(idry(i)==1) cycle
+        !if(idry(i)==1) cycle
         !Wet node
           fluxchan1=0.d0 !sum of fluxes;\int_\Gamma u*u_n d\Gamma
           fluxchan2=0.d0 !sum of fluxes;
           suma=0.d0 !sum of areas
           do j=1,nne(i)
             ie=indel(j,i)
-            if(idry_e(ie)==1) cycle
+            !if(idry_e(ie)==1) cycle
  
             !Wet elem
             areatmp = area(ie)/6
@@ -5267,9 +5281,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !enddo
       do i=1,nx
          if(vice(i)>puny) then
-            adv_threshold0(i)= 10 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
+            adv_threshold0(i)= 1 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
          else
-            adv_threshold0(i)= 10
+            adv_threshold0(i)= 1
          endif
       enddo
 
@@ -5704,9 +5718,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !enddo
       do i=1,nx
          if(vice(i)>puny) then
-            adv_threshold0(i)= 10 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
+            adv_threshold0(i)= 1 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
          else
-            adv_threshold0(i)= 10
+            adv_threshold0(i)= 1
          endif
       enddo
 
@@ -6141,9 +6155,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !enddo
       do i=1,nx
          if(vice(i)>puny) then
-            adv_threshold0(i)= 10 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
+            adv_threshold0(i)= 1 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
          else
-            adv_threshold0(i)= 10
+            adv_threshold0(i)= 1
          endif
       enddo
 
@@ -6581,9 +6595,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !enddo
       do i=1,nx
          if(vice(i)>puny) then
-            adv_threshold0(i)= 10 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
+            adv_threshold0(i)= 1 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
          else
-            adv_threshold0(i)= 10
+            adv_threshold0(i)= 1
          endif
       enddo
       
@@ -7024,9 +7038,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       !enddo
       do i=1,nx
          if(vice(i)>puny) then
-            adv_threshold0(i)= 10 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
+            adv_threshold0(i)= 1 !max(c0,min(0.01,exp(-10*aice(i))/vice(i)))
          else
-            adv_threshold0(i)= 10
+            adv_threshold0(i)= 1
          endif
       enddo
       
@@ -8303,8 +8317,8 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
          momentum_ui = sumvice_i * u_ice(i)
          momentum_vi = sumvice_i * v_ice(i)
          if(sumvice>puny) then
-            u_ice(i) = (momentum_ui + fluxchan1(i)/suma)/sumvice
-            v_ice(i) = (momentum_vi + fluxchan2(i)/suma)/sumvice
+            u_ice(i) = (momentum_ui - fluxchan1(i)/suma)/sumvice
+            v_ice(i) = (momentum_vi - fluxchan2(i)/suma)/sumvice
          else
             u_ice(i) = 0
             v_ice(i) = 0
@@ -8326,7 +8340,10 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
         if(ice_tests==1) then
           U_ice(i) = 1
           V_ice(i) = 0
-        endif      
+        endif  
+         if(idry(i)/=0) then !dry
+          U_ice(i)=0; V_ice(i)=0
+         endif    
       enddo
       call exchange_p2d(u_ice)
       call exchange_p2d(v_ice)
@@ -8356,7 +8373,7 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
       integer (kind=int_kind) ::      &
          i, n, it   , & ! counting indices
          narrays    , & ! counter for number of state variable arrays
-         nt_qsno,k,j,m, n1,n2,ie,trc_d,id,id2,id3
+         nt_qsno,k,j,m, n1,n2,ie,trc_d,id,id2,id3, tmpnode1, tmpnode2
 
       real (kind=dbl_kind) :: &
          rhos       , &
@@ -8410,33 +8427,40 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
                !               &+uvel(n2)*dot_product(pframe(:,1,n2),sframe2(:,2,elside(m,ie)))+vvel(n2)*dot_product(pframe(:,2,n2),sframe2(:,2,elside(m,ie)))) 
                
             enddo
-         utmp=sum(swild2(1:i34(ie),1))/3 !vel @ centroid
-         vtmp=sum(swild2(1:i34(ie),2))/3 !vel @ centroid
+            utmp=sum(swild2(1:i34(ie),1))/3 !vel @ centroid
+            vtmp=sum(swild2(1:i34(ie),2))/3 !vel @ centroid
          
+            tmpnode1 = flux_matrix00(j,i,1)
+            tmpnode2 = flux_matrix00(j,i,2)
+            trc_d = 3
+            do k = 1, ncat
 
-         trc_d = 3
-         do k = 1, ncat
-            fluxchan1(i) = fluxchan1(i) + (flux_matrix1(j,i,trc_d)*utmp+flux_matrix2(j,i,trc_d)*swild10(id3,1))/2.d0
-            fluxchan2(i) = fluxchan2(i) + (flux_matrix1(j,i,trc_d)*vtmp+flux_matrix2(j,i,trc_d)*swild10(id3,2))/2.d0
-            fluxchan1(i) = fluxchan1(i) + (flux_matrix3(j,i,trc_d)*utmp+flux_matrix4(j,i,trc_d)*swild10(id2,1))/2.d0
-            fluxchan2(i) = fluxchan2(i) + (flux_matrix3(j,i,trc_d)*vtmp+flux_matrix4(j,i,trc_d)*swild10(id2,2))/2.d0
-            trc_d = trc_d + ntrcr + 3
-         enddo
+               !fluxchan1(i) = fluxchan1(i) + (flux_matrix1(j,i,trc_d)*utmp+flux_matrix2(j,i,trc_d)*swild10(id3,1))/2.d0
+               !fluxchan2(i) = fluxchan2(i) + (flux_matrix1(j,i,trc_d)*vtmp+flux_matrix2(j,i,trc_d)*swild10(id3,2))/2.d0
+               !fluxchan1(i) = fluxchan1(i) + (flux_matrix3(j,i,trc_d)*utmp+flux_matrix4(j,i,trc_d)*swild10(id2,1))/2.d0
+               !fluxchan2(i) = fluxchan2(i) + (flux_matrix3(j,i,trc_d)*vtmp+flux_matrix4(j,i,trc_d)*swild10(id2,2))/2.d0
+
+               fluxchan1(i) = fluxchan1(i) + (flux_matrix1(j,i,trc_d)+flux_matrix2(j,i,trc_d))*uvel(tmpnode1)/2.d0
+               fluxchan2(i) = fluxchan2(i) + (flux_matrix1(j,i,trc_d)+flux_matrix2(j,i,trc_d))*vvel(tmpnode1)/2.d0
+               fluxchan1(i) = fluxchan1(i) + (flux_matrix3(j,i,trc_d)+flux_matrix4(j,i,trc_d))*uvel(tmpnode2)/2.d0
+               fluxchan2(i) = fluxchan2(i) + (flux_matrix3(j,i,trc_d)+flux_matrix4(j,i,trc_d))*vvel(tmpnode2)/2.d0
+               trc_d = trc_d + ntrcr + 3
+            enddo
          enddo
           trc_d = 3
           sumvice = 0
           sumaice = 0
          do k = 1, ncat
-         sumvice = sumvice + works(i,trc_d)
-         sumaice = sumaice + works(i,trc_d-1)
-         trc_d = trc_d + ntrcr + 3
+            sumvice = sumvice + works(i,trc_d)
+            sumaice = sumaice + works(i,trc_d-1)
+            trc_d = trc_d + ntrcr + 3
          enddo
          sumvice_i = sum(vicen_ini(i,:))
          momentum_ui = sumvice_i * u_ice(i)
          momentum_vi = sumvice_i * v_ice(i)
          if(sumvice>puny) then
-            u_ice(i) = (momentum_ui + fluxchan1(i)/suma)/sumvice
-            v_ice(i) = (momentum_vi + fluxchan2(i)/suma)/sumvice
+            u_ice(i) = (momentum_ui - fluxchan1(i)/suma)/sumvice
+            v_ice(i) = (momentum_vi - fluxchan2(i)/suma)/sumvice
          else
             u_ice(i) = 0
             v_ice(i) = 0
@@ -8459,9 +8483,14 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           U_ice(i) = 1
           V_ice(i) = 0
         endif 
+         if(idry(i)/=0) then !dry
+          U_ice(i)=0; V_ice(i)=0
+         endif    
       enddo
       call exchange_p2d(u_ice)
       call exchange_p2d(v_ice)
+      uvel=u_ice
+      vvel=v_ice
   end subroutine re_momentum
 
     !=======================================================================
@@ -8563,6 +8592,9 @@ subroutine upwind_icepack_other2(trc,trc_o,trc_n,trc_d,trc_d1,trc_d2)
           U_ice(i) = 1
           V_ice(i) = 0
         endif
+         if(idry(i)/=0) then !dry
+          U_ice(i)=0; V_ice(i)=0
+         endif    
       enddo
       call exchange_p2d(u_ice)
       call exchange_p2d(v_ice)

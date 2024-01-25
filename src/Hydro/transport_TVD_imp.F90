@@ -581,9 +581,9 @@
                   endif
 #endif
 
-                  wm(i)=1.0d0/((epsilon2+b4)*(epsilon2+b4))
+                  wm(i)=1.0d0/((epsilon2_elem(ie)+b4)*(epsilon2_elem(ie)+b4))
                   !----test-------------- 
-                  !wm1(i)=1.0/((epsilon2+b1+b2)*(epsilon2+b1+b2)); ! sum1=sum1+wm1(i)
+                  !wm1(i)=1.0/((epsilon2_elem(ie)+b1+b2)*(epsilon2_elem(ie)+b1+b2)); ! sum1=sum1+wm1(i)
                   !wm2(i)=1.0/((epsilon3+b3)*(epsilon3+b3)); 
                   !wm(i)=wm1(i)*wm2(i)
                   !---------------------- 

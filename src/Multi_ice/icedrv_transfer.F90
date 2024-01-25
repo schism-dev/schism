@@ -62,7 +62,7 @@
              !cc     = rhowat*4190.0_dbl_kind, & 
              ! Volumetr. heat cap. of water [J/m**3/K](cc = rhowat*cp_water)
              ex     = 0.286_dbl_kind,   &
-             threshold_hw = 15            ! max water depth for grounding
+             threshold_hw = 30            ! max water depth for grounding
 
           integer(kind=dbl_kind)   :: i, n,  k,  elem, j, kbp1, indx
           integer (kind=int_kind)  :: nt_Tsfc
@@ -103,35 +103,42 @@
                      exit
                   endif
                enddo
-               uocn(i)   = uu2(indx,i) 
-               vocn(i)   = vv2(indx,i)  
-               u_ocean(i)= uu2(indx,i) 
-               v_ocean(i)= vv2(indx,i) 
+               uocn(i)   = uu2(nvrt,i) 
+               vocn(i)   = vv2(nvrt,i)  
+               u_ocean(i)= uu2(nvrt,i) 
+               v_ocean(i)= vv2(nvrt,i) 
                !sss(i)    = tr_nd(2,indx,i)
                !sst(i)    = tr_nd(1,indx,i)
                !sstdat(i) = tr_nd(1,indx,i)
                
-               if(tmp2 > dptot) then
-                  write(12,*) 'almost dry node in Multi_ice', i,tmp2,dptot,eta2(i)
-                  uocn(i)   = 0
-                  vocn(i)   = 0
-                  u_ocean(i)= 0
-                  v_ocean(i)= 0
+               !if(tmp2 > dptot) then
+               !   write(12,*) 'almost dry node in Multi_ice', i,tmp2,dptot,eta2(i)
+               !   uocn(i)   = 0
+               !   vocn(i)   = 0
+               !   u_ocean(i)= 0
+               !   v_ocean(i)= 0
                   !sss(i)    = tr_nd(2,nvrt,i)
                   !sst(i)    = tr_nd(1,nvrt,i)
                   !sstdat(i) = tr_nd(1,nvrt,i)
-               endif
+               !endif
                uatm(i)   = windx(i)
                vatm(i)   = windy(i)
                sss(i)    = tr_nd(2,nvrt,i)
                sst(i)    = tr_nd(1,nvrt,i)
                sstdat(i) = tr_nd(1,nvrt,i)
-               !if(isbnd(1,i)/=0) then !b.c. (including open)
-               !   uocn(i)   = 0
-               !   vocn(i)   = 0
-               !   u_ocean(i)= 0
-               !   v_ocean(i)= 0
-               !endif
+               if(idry(i)/=0) then
+                  uocn(i)   = 0 
+                  vocn(i)   = 0  
+                  u_ocean(i)= 0 
+                  v_ocean(i)= 0 
+               endif
+               
+               if(isbnd(1,i)/=0) then !b.c. (including open)
+                  uocn(i)   = 0
+                  vocn(i)   = 0
+                  u_ocean(i)= 0
+                  v_ocean(i)= 0
+               endif
 
                Tbu(i) = 0
                if(dptot < threshold_hw)then

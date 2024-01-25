@@ -6182,6 +6182,7 @@
      &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl
       use schism_msgp
       implicit none
+!TODO: change to intent(in)
       REAL(rkind), intent(inout) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
 
       REAL(rkind) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
@@ -6199,7 +6200,9 @@
       sum3=sum(RSYY0)
       tmp=sum1+sum2+sum3
       if(tmp/=tmp) then
-        write(errmsg,*)'compute_wave_force_lon: NaN ',sum1,sum2,sum3,RSXX0
+        !errmsg cannot take large arrays
+        write(errmsg,*)'compute_wave_force_lon: NaN- see nonfatal; ',sum1,sum2,sum3
+        write(12,*)RSXX0,RSXY0,RSYY0
         call parallel_abort(errmsg)
       endif
 !new39

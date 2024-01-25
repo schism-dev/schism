@@ -1,0 +1,24 @@
+1. extract data for four stations from file usgs_river.****:
+    link usgs_river.**** to usgs_river.txt
+    python riverOB_extract_stations_pacific.py
+   This will generate four files:
+   usgs_station_14105700.txt  
+   usgs_station_14211720.txt  
+   usgs_station_14220500.txt  
+   usgs_station_14243000.txt 
+   BON.Flow-Out.Ave.1Hour.1Hour.txt
+
+2. generate flux.th (daily data):
+   In addtion to four files from step1, data for Fraser river should also need to be linked to the current directory:
+   BC_08MF005_hourly_hydrometric.csv
+   then run python script: python riverOB_gen_fluxth_new.py
+
+3. generate TEM_1.th (daily data):
+   Since we only have obs at Willamette and Dalles, temperature data at Dalles will be used for Lewis and Cowlitz.
+   Linear regression is used at Fraser river to get water T, so sflux_air_1.0001.nc is need.
+
+   run python script: python riverOB_gen_temp_1_new.py yyyy-mm-dd-hh
+
+
+updates on 11/20/2023
+

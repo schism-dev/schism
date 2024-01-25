@@ -86,7 +86,7 @@ subroutine ecosystem(it)
   !local variables
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
-  real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs
+  real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs,T
   real(rkind) :: xT,xS,rKSR(3)
   real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,chl
@@ -249,8 +249,9 @@ subroutine ecosystem(it)
         rNit(k)=(DOX(k)*Nit/(KhDOn+DOX(k)))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
       enddo !k
 
-      !saturated DO,(Genet et al. 1974; Carl Cerco,2002,201?)
-      DOsat=14.5532-0.38217*temp(nvrt)+5.4258e-3*temp(nvrt)*temp(nvrt)-salt(nvrt)*(1.665e-4-5.866e-6*temp(nvrt)+9.796e-8*temp(nvrt)*temp(nvrt))/1.80655
+      !saturated DO,(USGS, 2010, Carl Cerco,2019)
+      T=temp(nvrt)+273.15d0; tmp=exp(-salt(nvrt)*(0.017674d0-10.754d0/T+2140.7d0/T**2.d0))
+      DOsat=exp(-139.34411d0+1.575701d5/T-6.642308d7/T**2.d0+1.2438d10/T**3.d0-8.621949d11/T**4.d0)*tmp
       rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
       !----------------------------------------------------------------------------------

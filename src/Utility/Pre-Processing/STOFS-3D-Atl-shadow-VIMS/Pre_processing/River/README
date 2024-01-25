@@ -1,0 +1,8 @@
+Generate river inputs for St Lawrence river:
+flux.th
+    - download_flow.sh (get river discharge data)
+    - python gen_fluxth.py
+
+TEM_1.th
+    - python get_realtime_temp_crawl.py (download water temperature data from CCG. In the winter, there may be no data because of water is frozen)
+    - python gen_TEM_1.py

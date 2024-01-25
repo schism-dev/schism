@@ -196,7 +196,7 @@
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
-     &courant_weno,ntd_weno,nquad,epsilon1,epsilon2,epsilon3,ielad_weno,small_elad, &
+     &courant_weno,ntd_weno,nquad,epsilon1,i_epsilon2,epsilon2,epsilon3,ielad_weno,small_elad, &
      &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2, &
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
@@ -209,7 +209,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
@@ -467,7 +467,7 @@
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=8._rkind;  
       itr_met=3; h_tvd=5._rkind; eps1_tvd_imp=1.d-4; eps2_tvd_imp=1.d-14; ip_weno=2;  
-      courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; epsilon2=1.d-10; epsilon3=1.d-25; 
+      courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; i_epsilon2=1; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
@@ -496,6 +496,7 @@
       lev_tr_source=-9 !bottom
       iprecip_off_bnd=0
       model_type_pahm=10
+      stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
 
       !Output elev, hvel by detault
       nc_out=1
@@ -870,10 +871,16 @@
           call parallel_abort(errmsg)
         endif
 
-!        call get_param('param.in','epsilon2',2,itmp,epsilon2,stringvalue)
-        if(epsilon2<=0._rkind) then
-          write(errmsg,*)'Illegal epsilon2:',epsilon2
+        if(i_epsilon2.ne.1 .and. i_epsilon2.ne.2) then
+          write(errmsg,*)'Illegal i_epsilon2:',i_epsilon2
           call parallel_abort(errmsg)
+        endif
+
+        if (i_epsilon2.eq.1) then
+          if(epsilon2<=0._rkind) then
+            write(errmsg,*)'Illegal epsilon2:',epsilon2
+            call parallel_abort(errmsg)
+          endif
         endif
 
 !        call get_param('param.in','epsilon3',2,itmp,epsilon3,stringvalue)
@@ -1381,7 +1388,7 @@
           &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stemp(nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -1412,7 +1419,7 @@
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
-         &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa), & 
+         &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
          & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
@@ -3586,6 +3593,40 @@
         enddo !i
       endif
 
+!     epsilon2 (1st coefficient) of 3rd order weno smoother
+      if (i_epsilon2.eq.1) then
+          epsilon2_elem(:)=epsilon2
+      elseif (i_epsilon2.eq.2) then
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'epsilon2.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) & 
+     &call parallel_abort('Check epsilon2.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,tmp
+            buf3(i)=tmp
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+   
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            swild(ipgl(i)%id)=buf3(i)
+          endif
+        enddo !i
+
+        do i=1,ne
+          tmp = minval(swild(elnode(1:i34(i),i)))  !smaller values are safer
+          if (tmp>-2.0) then
+            write(errmsg,*)'Invalid epsilon2 (must <=0.01)', 10.0**tmp, ' at Element ', ielg(i)
+            call parallel_abort(errmsg)
+          endif
+          epsilon2_elem(i)=10.0**tmp
+        enddo !i
+      endif
+
 !...  Land b.c. option (inactive)
 !      read(15,*) !islip !0: free slip; otherwise no slip
       islip=0
@@ -5115,7 +5156,7 @@
 !...  otherwise they will be assigned values below.
       if(itur==4) then
 #ifdef USE_GOTM
-          call init_turbulence(8,'gotmturb.inp',nvrt-1) !GOTM starts from level 0
+          call init_turbulence(8,'gotmturb.nml',nvrt-1) !GOTM starts from level 0
           call init_tridiagonal(nvrt-1)
 #endif
       endif
@@ -5159,7 +5200,7 @@
 
 !     Make sure no nodes are too close to North Pole to avoid forcing
 !     singularity there (wind)
-      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
+!      if(maxval(ylat)>89.95d0) call parallel_abort('init: no nodes can be close to north pole')
 
 #endif /*USE_MICE*/
 
@@ -6091,6 +6132,11 @@
 
 !     end hot start section
       endif !ihot/=0
+
+      !Init sediment temp.
+      do i=1,nea
+         stemp(i)=tr_el(1,kbe(i)+1,i)
+      enddo
 
 ! MP from KM
 #ifdef USE_WWM

@@ -1,7 +1,7 @@
 SCHISM modeling system is mostly distributed via github. To download the source code it is good idea to have `git` installed in your system. If you have git, you can download the sourcecode with the following commands - 
 
 ```bash
-git clone https://github.com/schism-dev/schism.git
+git clone --recurse-submodules https://github.com/schism-dev/schism.git
 cd schism
 ```
 

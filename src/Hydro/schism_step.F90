@@ -538,38 +538,40 @@
 
           !Read in next record
           itmp2=wtime2/wtiminc+1
-          j=nf90_inq_varid(ncid_atmos, "uwind",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
-          j=nf90_inq_varid(ncid_atmos, "vwind",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
-          j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
-          j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
-          if(ihconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
-            j=nf90_inq_varid(ncid_atmos, "solar",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
-          endif !ihconsv/
-          if(isconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "prate",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
-            j=nf90_inq_varid(ncid_atmos, "evap",mm)
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
-            j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
-          endif !isconsv/
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_atmos, "uwind",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(1,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc uwind(2)')
+            j=nf90_inq_varid(ncid_atmos, "vwind",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(2,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc vwind(2)')
+            j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+            if(ihconsv/=0) then
+              j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+              j=nf90_inq_varid(ncid_atmos, "solar",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
+            endif !ihconsv/
+            if(isconsv/=0) then
+              j=nf90_inq_varid(ncid_atmos, "prate",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
+              j=nf90_inq_varid(ncid_atmos, "evap",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+            endif !isconsv/
+          endif !myrank=0
           call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
@@ -642,8 +644,7 @@
      &                       nws ) 
 #endif /*USE_ATMOS*/
 
-!$OMP parallel default(shared) private(i,j)
-!$OMP       do
+!$OMP parallel do default(shared) private(i)
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
@@ -662,11 +663,11 @@
 !              endif
 #endif
             enddo !i
-!$OMP       end do
+!$OMP end parallel do
 
             !Turn off precip near land bnd
             if(iprecip_off_bnd/=0) then
-!$OMP         do
+!$OMP parallel do default(shared) private(i,j)
               loop_prc: do i=1,np
                 if(isbnd(1,i)==-1) then
                   fluxprc(i)=0.d0; cycle loop_prc
@@ -678,8 +679,7 @@
                   endif
                 enddo !j
               end do loop_prc !i=1,np
-!$OMP         end do
-!$OMP end parallel
+!$OMP end parallel do
               call exchange_p2d(fluxprc)
             endif !iprecip_off_bnd
 
@@ -2659,7 +2659,9 @@
           !u_taub=((1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt3
 #else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
-          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+!          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+          !GOTM seems to dislike 0 friction
+          u_taub=sqrt(max(Cdp(j),1.d-10)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
 #endif
           nlev=nvrt-kbp(j) !>1
           do k=0,nlev 
@@ -2722,7 +2724,8 @@
           z0s=min(0.1d0,toth/10.d0)
 #endif
           if(Cdp(j)==0.d0) then
-            z0b=0.d0
+            !GOTM seems to dislike 0 friction
+            z0b=1.d-10 !0.d0
           else
             z0b=(znl(kbp(j)+1,j)-znl(kbp(j),j))*exp(-0.4d0/sqrt(Cdp(j)))
           endif
@@ -7674,7 +7677,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle). Do nothing for net sinks
@@ -7704,6 +7707,25 @@
         endif !if_source
 
 !       Filter style horizontal diffusion scheme
+
+!       Heat exchange between sediment and bottom water
+        if(abs(stemp_stc)>1.d-16) then
+!$OMP     do
+          do i=1,nea
+             tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
+             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3)
+               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
+             else
+               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
+             endif
+             !Bottom T update
+             tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
+             do k=1,kbe(i) 
+               tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
+             enddo !k
+          enddo !i
+!$OMP     enddo
+        endif !abs(stemp_stc)
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 
@@ -10272,7 +10294,7 @@
                 endif
               endif
             enddo !j
-            write(250+i,'(e14.6,6000(1x,e14.6e3))')time,sta_out_gb(:,i)
+            write(250+i,'(e24.16,6000(1x,e14.6e3))')time,sta_out_gb(:,i)
 !            if(i>4) write(250+i,'(e14.6,100000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
           enddo !i
           write(16,*)'done station outputs...'

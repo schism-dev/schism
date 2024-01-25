@@ -108,7 +108,8 @@ module schism_glbl
                       &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
-                      &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm
+                      &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
+                      &stemp_stc,stemp_dz(2)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -267,6 +268,7 @@ module schism_glbl
   integer,save,allocatable :: iflux_e(:) !for computing fluxes
   integer,save,allocatable :: ielg2(:)      ! Local-to-global element index table (2-tier augmented)
   integer,save,allocatable :: iegl2(:,:)      ! Global-to-local element index table (2-tier augmented)
+  real(rkind),save,allocatable :: stemp(:)
 
   ! Node geometry data
   integer,save :: mnei  ! Max number of neighboring elements surrounding a node
@@ -496,17 +498,19 @@ module schism_glbl
   integer,save,allocatable :: isbe(:) !(ne): bnd seg flags, isbe(ie)=1 if any node of element ie lies on bnd; isbe(ie)=0 otherwise
   logical,save,allocatable :: is_inter(:)  !identifier of interface sides (between two ranks), for debugging only
   integer,save,allocatable :: iside_table(:) !a record of all interface sides within the current rank
-  integer, save :: ip_weno !order of the polynomials used for weno stencils, see param.in.sample
+  integer,save :: ip_weno !order of the polynomials used for weno stencils, see param.in.sample
   real(rkind),save :: courant_weno !Courant number for weno transport
   real(rkind),save :: epsilon1 !coefficient for 2nd order weno smoother
-  real(rkind),save :: epsilon2 !1st coefficient for 3rd order weno smoother
+  integer,save :: i_epsilon2 !switch for 1st coefficient of 3rd order weno smoother
+  real(rkind),save :: epsilon2 !1st coefficient of 3rd order weno smoother, spatially uniform value from param.nml
+  real(rkind),save,allocatable :: epsilon2_elem(:) !1st coefficient of 3rd order weno smoother, elemental values
   real(rkind),save :: epsilon3 !2nd coefficient for 3rd order weno smoother
-  integer, save :: nquad !number of quad points used for 3rd order weno
+  integer,save :: nquad !number of quad points used for 3rd order weno
   !levels of time discretization, mainly for testing purposes
-  integer, save :: ntd_weno !(1) one-level, reduces to Euler; (2) not implemented yet; (3) 3rd-order Runge-Kutta temporal discretization (Shu and Osher, 1988)
+  integer,save :: ntd_weno !(1) one-level, reduces to Euler; (2) not implemented yet; (3) 3rd-order Runge-Kutta temporal discretization (Shu and Osher, 1988)
   !Elad filter
-  integer, save :: ielad_weno !switch for elad filter, not used at the moment
-  integer, save :: i_prtnftl_weno !switch for printing invalid T/S to nonfatal_*
+  integer,save :: ielad_weno !switch for elad filter, not used at the moment
+  integer,save :: i_prtnftl_weno !switch for printing invalid T/S to nonfatal_*
   real(rkind),save :: small_elad !criteria for ELAD, not used at the moment
 
   real(rkind),save,allocatable :: xqp(:,:),yqp(:,:)  !quadrature point coordinates

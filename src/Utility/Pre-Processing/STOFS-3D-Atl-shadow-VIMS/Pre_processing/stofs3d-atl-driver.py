@@ -225,7 +225,7 @@ def main():
 
     driver_print_prefix = '-----------------STOFS3D-ATL driver:---------------------\n'
     # define the path where the model inputs are generated
-    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I00/'
+    model_input_path = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I01/'
     # make the directory if it does not exist
     try_mkdir(model_input_path)
 
@@ -235,8 +235,8 @@ def main():
 
     # set a dict to indicate input files to be generated
     input_files = {
-        'bctides': True,
-        'vgrid': False,
+        'bctides': False,
+        'vgrid': True,
         'gr3': False,
         'nudge_gr3': False,
         'shapiro': False,

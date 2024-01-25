@@ -515,13 +515,23 @@
   courant_weno=0.5 !Courant number for weno transport
   nquad = 2  !number of quad points on each side, nquad= 1 or 2
   ntd_weno = 1 !order of temporal discretization: (1) Euler (default); (3): 3rd-order Runge-Kutta (only for benchmarking)
-  epsilon1 = 1.e-15   !coefficient for 2nd order weno smoother (larger values are more prone to numerical dispersion)
-  epsilon2 = 1.e-10  !1st coefficient for 3rd order weno smoother (larger values are more prone to numerical dispersion
-                     !, 1.e-10 should be fairly safe, recommended values: 1.e-8 ~ 1.e-6 (from the real applications so far)
+
+  epsilon1 = 1.e-15   !coefficient of 2nd-order weno smoother (larger values are more prone to numerical dispersion)
+  i_epsilon2 = 1      !switch for the specification method of 3rd-order weno smoother coefficient
+                      !(1) spatially uniform, set by the parameter epsilon2 below;
+                      !(2) spatially varying, set by the input file epsilon2.gr3,
+                      !    Important:
+                      !      Provide log10(epsilon2) in epsilon2.gr3, e.g.,
+                      !      if epsilon2=10^(-6) or 1e-6, then write the z value should be -6 in epsilon2.gr3.
+                      !      This is mainly for the convenience of visualization.
+  epsilon2 = 1.e-10   !used when i_epsilon2 = 1
+                      !spatially uniform coefficient of 3rd-order weno smoother
+                      !(larger values are more prone to numerical dispersion,
+                      ! 1.e-10 should be fairly safe, recommended values: 1.e-8 ~ 1.e-6)
   i_prtnftl_weno = 0 !option for writing nonfatal errors on invalid temp. or salinity for density: (0) off; (1) on.
 
   !Inactive at the moment:
-  epsilon3 = 1.e-25  !2nd coefficient for 3rd order weno smoother (inactive at the moment)
+  epsilon3 = 1.e-25  !Second coefficient of 3rd-order weno smoother (inactive at the moment)
   !Elad filter has not been implemented yet; preliminary tests showed it might not be necessary
   ielad_weno = 0      !ielad, if ielad=1, use ELAD method to suppress dispersion (inactive at the moment)
   small_elad = 1.e-4  !small (inactive at the moment)
@@ -581,6 +591,14 @@
   i_hmin_salt_ex = 2 ! no effect if isconsv=0 
   hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
+
+!-----------------------------------------------------------------------
+! Option to add a sediment layer for the buffer effect on temperature
+! stemp_stc=0 recovers previous results
+!-----------------------------------------------------------------------
+  stemp_stc  = 0.0   !heat transfer coefficient W.m-2.K-1
+  stemp_dz(1)= 1.0   !equivalent sediment buffer depth (m) for heat into sediment
+  stemp_dz(2)= 1.0   !equivalent sediment buffer depth (m) for heat out of sediment
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
