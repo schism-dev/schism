@@ -1586,23 +1586,23 @@ subroutine sed_calc(id)
     !sediemnt erosion >> nutrient erosion flux
     !dissolved sulfur + resuspended POM
     if(iERO==1)then
-      SED_EROH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
+      SED_EROH2S(id)=HST2*ero_elem*erodiso/(1.+m1*PIE1S)
       SED_EROLPOC(id)=0
       SED_ERORPOC(id)=0
     elseif(iERO==2)then
       SED_EROH2S(id)=0
-      SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
-      SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
+      SED_EROLPOC(id)=POC1*ero_elem*depofracL
+      SED_ERORPOC(id)=POC2*ero_elem*depofracR
     elseif(iERO==3)then
-      SED_EROH2S(id)=HST2TM1S(id)*ero_elem*erodiso/(1.+m1*PIE1S)
-      SED_EROLPOC(id)=POC1TM1S(id)*ero_elem*depofracL
-      SED_ERORPOC(id)=POC2TM1S(id)*ero_elem*depofracR
+      SED_EROH2S(id)=HST2*ero_elem*erodiso/(1.+m1*PIE1S)
+      SED_EROLPOC(id)=POC1*ero_elem*depofracL
+      SED_ERORPOC(id)=POC2*ero_elem*depofracR
     endif !iERO
 
     !minus erosion in sediment for mass balance
-    HST2TM1S(id)=max(1.0e-10_iwp,HST2TM1S(id)-SED_EROH2S(id)*dtw/HSED(id))
-    POC1TM1S(id)=max(1.0e-10_iwp,POC1TM1S(id)-SED_EROLPOC(id)*dtw/HSED(id))
-    POC2TM1S(id)=max(1.0e-10_iwp,POC2TM1S(id)-SED_ERORPOC(id)*dtw/HSED(id))
+    HST2=max(1.0e-10_iwp,HST2-SED_EROH2S(id)*dtw/HSED(id))
+    POC1=max(1.0e-10_iwp,POC1-SED_EROLPOC(id)*dtw/HSED(id))
+    POC2=max(1.0e-10_iwp,POC2-SED_ERORPOC(id)*dtw/HSED(id))
   endif !iERO
   !************************************************************************
 

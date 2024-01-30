@@ -138,7 +138,7 @@ subroutine combine_hotstart7(istep)
   write(it_char,'(i12)') istep
   it_char=adjustl(it_char)  !place blanks at end
   it_len=len_trim(it_char)  !length without trailing blanks
-  fgb='0000_'//it_char(1:it_len); 
+  fgb='000000_'//it_char(1:it_len); 
   fgb=adjustl(fgb); lfgb=len_trim(fgb);
   !print*, 'suffix is:',fgb(1:lfgb)
 
