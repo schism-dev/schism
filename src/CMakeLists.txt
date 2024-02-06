@@ -74,8 +74,7 @@ define_opt(USE_GEN "Enable generic tracer module" OFF)
 define_opt(USE_AGE "Enable age tracer module" OFF)
 define_opt(ICM_PH "Enable pH module in ICM" OFF)
 define_opt(USE_DVD "Enable DVD module" OFF)
-
-
+define_opt(BLD_STANDALONE "Standalone build mode" ON)
 
 if(NOT DEFINED TVD_LIM)
   message(WARNING "TVD_LIM must be provided, either in the cache. It must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher. Default is VL")
@@ -120,38 +119,40 @@ endif (CMAKE_C_FLAGS)
 include_directories(${MPI_C_INCLUDE_PATH})
 
 ########### NetCDF Dependency is handled here because so many libraries use it ##############
-message(STATUS "\n### Configuring NetCDF ")
-#set(NetCDF_DIR "/usr/local/dms/pkg/netcdf/4.1.3-intel12.0-parallel")
-if( NOT DEFINED NetCDF_DIR AND DEFINED NETCDF_DIR)
-  message(WARNING "Note the mixed case of NetCDF_DIR if you put it in your cache. This CMake variable is mixed case, different from the typical environment NETCDF_DIR. Proceeding anyway.")
-  set(NetCDF_C_DIR ${NETCDF_C_DIR})
+if (BLD_STANDALONE)
+  message(STATUS "\n### Configuring NetCDF ")
+  #set(NetCDF_DIR "/usr/local/dms/pkg/netcdf/4.1.3-intel12.0-parallel")
+  if( NOT DEFINED NetCDF_DIR AND DEFINED NETCDF_DIR)
+    message(WARNING "Note the mixed case of NetCDF_DIR if you put it in your cache. This CMake variable is mixed case, different from the typical environment NETCDF_DIR. Proceeding anyway.")
+    set(NetCDF_C_DIR ${NETCDF_C_DIR})
+  endif()
+  
+  if( NOT DEFINED NetCDF_C_DIR AND ($ENV{NETCDF_C_DIR} MATCHES ".+") )
+    message(STATUS "Using NETCDF_C_DIR location from environment.")
+    set(NetCDF_C_DIR $ENV{NETCDF_C_DIR})
+  endif()
+  
+  if( NOT DEFINED NetCDF_FORTRAN_DIR AND ($ENV{NETCDF_FORTRAN_DIR} MATCHES ".+") )
+    message(STATUS "Using NETCDF_FORTRAN_DIR location from environment.")
+    set(NetCDF_FORTRAN_DIR $ENV{NETCDF_FORTRAN_DIR})
+  endif()
+  
+  find_package(NetCDF REQUIRED COMPONENTS ${comp_lang_list})
+  if(NetCDF_NEEDS_HDF5)
+    set( HDF5_USE_STATIC_LIBRARIES 1 )
+    find_package(HDF5 COMPONENTS C REQUIRED)
+    # link_directories is bad cmake form, and was used because I would have had to add a lot to 2.6 to get the magic
+    # these next couple lines can be removed if we uniformly require cmake 2.8
+    set( HDF_LIB_NAMES "hdf5_hl;hdf5;z" )
+    link_directories( ${HDF5_LIBRARY_DIRS} )
+    if(HDF5_FOUND)
+      message(STATUS "HDF5 found")
+    endif(HDF5_FOUND)
+  endif(NetCDF_NEEDS_HDF5)
+  include_directories( ${NetCDF_INCLUDE_DIRS} )
+
+  set (NetCDFLIBS ${NetCDF_LIBRARIES} ${HDF_LIB_NAMES})
 endif()
-
-if( NOT DEFINED NetCDF_C_DIR AND ($ENV{NETCDF_C_DIR} MATCHES ".+") )
-  message(STATUS "Using NETCDF_C_DIR location from environment.")
-  set(NetCDF_C_DIR $ENV{NETCDF_C_DIR})
-endif()
-
-if( NOT DEFINED NetCDF_FORTRAN_DIR AND ($ENV{NETCDF_FORTRAN_DIR} MATCHES ".+") )
-  message(STATUS "Using NETCDF_FORTRAN_DIR location from environment.")
-  set(NetCDF_FORTRAN_DIR $ENV{NETCDF_FORTRAN_DIR})
-endif()
-
-find_package(NetCDF REQUIRED COMPONENTS ${comp_lang_list})
-if(NetCDF_NEEDS_HDF5)
-  set( HDF5_USE_STATIC_LIBRARIES 1 )
-  find_package(HDF5 COMPONENTS C REQUIRED)
-  # link_directories is bad cmake form, and was used because I would have had to add a lot to 2.6 to get the magic
-  # these next couple lines can be removed if we uniformly require cmake 2.8
-  set( HDF_LIB_NAMES "hdf5_hl;hdf5;z" )
-  link_directories( ${HDF5_LIBRARY_DIRS} )
-  if(HDF5_FOUND)
-    message(STATUS "HDF5 found")
-  endif(HDF5_FOUND)
-endif(NetCDF_NEEDS_HDF5)
-include_directories( ${NetCDF_INCLUDE_DIRS} )
-
-set (NetCDFLIBS ${NetCDF_LIBRARIES} ${HDF_LIB_NAMES})
 
 # this might help to use old or pre-compiled GOTM versions:
 #if (USE_GOTM)
@@ -171,25 +172,23 @@ set (NetCDFLIBS ${NetCDF_LIBRARIES} ${HDF_LIB_NAMES})
 
 ########### Put each type of output (exe, libraries, modules) in the normal places
 ###         This file is untested for compilers with no output module directory option
-message(STATUS "\n### Assigning output directories for binaries (bin), modules (include) and libraries (lib)")
-if( CMAKE_Fortran_MODDIR_FLAG)
+if (BLD_STANDALONE)
+  message(STATUS "\n### Assigning output directories for binaries (bin), modules (include) and libraries (lib)")
+  if( CMAKE_Fortran_MODDIR_FLAG)
     SET( CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include 
     CACHE PATH "Output location for include files and fortran modules")
-   include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
-endif(CMAKE_Fortran_MODDIR_FLAG)
+    include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
+  endif(CMAKE_Fortran_MODDIR_FLAG)
 
-set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
-   CACHE PATH "Output Directory for executables."
-   )
+  set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+    CACHE PATH "Output Directory for executables.")
 
-set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
-   CACHE PATH "Output Directory for all static libraries."
-   )
+  set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+    CACHE PATH "Output Directory for all static libraries.")
 
-set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
-   CACHE PATH "Output Directory for all shared libraries."
-   )
-
+  set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+    CACHE PATH "Output Directory for all shared libraries.")
+endif()
 
 ########### Process libraries ######
 message(STATUS "\n### Adding enabled libraries to project") ######
@@ -344,19 +343,18 @@ endif(GOTM_BASE)
 endif(USE_GOTM)
 
 ########  Main executable #######
-message(STATUS "\n### Configuring Driver")
-add_subdirectory( Driver )
+if (BLD_STANDALONE)
+  message(STATUS "\n### Configuring Driver")
+  add_subdirectory( Driver )
 
-get_property(all_define_options GLOBAL PROPERTY DEFINE-LIST)
-message(STATUS "All defines: ${all_define_options}")
-# Now that the list of global options are accumulated, apply it on all the directories
-foreach (moddir ${schismmoddirs} "Driver")
-   set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
-endforeach()
-
-
+  get_property(all_define_options GLOBAL PROPERTY DEFINE-LIST)
+  message(STATUS "All defines: ${all_define_options}")
+  # Now that the list of global options are accumulated, apply it on all the directories
+  foreach (moddir ${schismmoddirs} "Driver")
+    set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
+  endforeach()
+endif()
 
 ######## Utilities ########
 message(STATUS "\n### Configuring Utilities")
 add_subdirectory( Utility )
-
