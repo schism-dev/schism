@@ -285,15 +285,12 @@
 ! than once, and the code will accumulate the volumes; for mass conc, 
 ! values are applied at _net_ source elem (no summation for conc).
 
-! meth_sink: options to treat sinks @ dry elem: no speacial treatment if meth_sink=0;
-! zero out sink if the elem is dry if meth_sink=1
 ! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
 ! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
 !  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
   dramp_ss = 2 !needed if if_source/=0; ramp-up period in days for source/sinks (no ramp-up if <=0)
-  meth_sink = 1 !options to treat sinks @ dry elem
 
 !----------------------------------------------------------------------
 ! Specify vertical level to inject source concentration for each tracer _module_.
@@ -563,10 +560,6 @@
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
   model_type_pahm=10 !only used if nws=-1: hurricane model type (1: Holland; 10: GAHM)
-
-  !If IMPOSE_NET_FLUX is on and nws=2, read in net _surface_ heat flux as var 'dlwrf' 
-  !(Downward Long Wave) in sflux_rad (solar radiation is still used separately),
-  !and if PREC_EVAP is on, also read in net P-E as 'prate' (Surface Precipitation Rate) in sflux_prc.
 
 !-----------------------------------------------------------------------
 ! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.

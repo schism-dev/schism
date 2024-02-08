@@ -24,10 +24,6 @@
 # USE_PREC_EVAP = yes
 # EXEC := $(EXEC)_EVAP
 
-# Impose net salt/heat fluxes in sflux*.nc (will be eventually removed)
-# IMPOSE_NET_FLUX = yes
-# EXEC := $(EXEC)_IMPOSE_NET_FLUX
-
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
 # USE_SIMPLE_WIND = yes
@@ -50,7 +46,11 @@
 # USE_WWM = yes
 # EXEC := $(EXEC)_WWM
 
-#aParametric wind module
+# Wind wave model WW3
+# USE_WW3 = yes
+# EXEC := $(EXEC)_WW3
+
+#Parametric wind module
 # USE_PAHM = yes
 # EXEC := $(EXEC)_PAHM
 

@@ -656,12 +656,10 @@
               endif
 #endif
 
-#ifdef IMPOSE_NET_FLUX
-!              if(impose_net_flux/=0) then
-                sflux(i)=hradd(i) 
-                !fluxprc is net P-E 
-!              endif
-#endif
+!#ifdef IMPOSE_NET_FLUX
+!                sflux(i)=hradd(i) 
+!                !fluxprc is net P-E 
+!#endif
             enddo !i
 !$OMP end parallel do
 
@@ -970,13 +968,11 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))+maxpice
           srad(i)=srad_o(i)*(1-ice_tr(2,i))+srad_th_ice(i)
           !Update fluxes
-!          if(impose_net_flux==0) then
-#ifndef   IMPOSE_NET_FLUX
-            fluxprc(i)=fresh_wa_flux(i)*rampwind !kg/s/m/m
-            sflux(i)=net_heat_flux(i)*rampwind !W/m/m
-            fluxevp(i)=0
-!          endif   
-#endif
+!#ifndef   IMPOSE_NET_FLUX
+          fluxprc(i)=fresh_wa_flux(i)*rampwind !kg/s/m/m
+          sflux(i)=net_heat_flux(i)*rampwind !W/m/m
+          fluxevp(i)=0
+!#endif
  
           tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
           if(tmp>tmp_max) tmp_max=tmp
@@ -1027,12 +1023,10 @@
         if(lhas_ice(i)) then
           tau(:,i)=tau_oi(:,i)*rampwind !m^2/s/s
           !Update fluxes
-#ifndef   IMPOSE_NET_FLUX
-!          if(impose_net_flux==0) then
-            fluxprc(i)=fresh_wa_flux(i)*rho0 !kg/s/m/m
-            sflux(i)=net_heat_flux(i) !W/m/m
-!          endif   
-#endif
+!#ifndef   IMPOSE_NET_FLUX
+          fluxprc(i)=fresh_wa_flux(i)*rho0 !kg/s/m/m
+          sflux(i)=net_heat_flux(i) !W/m/m
+!#endif
  
           tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
           if(tmp>tmp_max) tmp_max=tmp
@@ -1721,30 +1715,24 @@
 !...  Volume sources from evap and precip
 !...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
-#ifdef  IMPOSE_NET_FLUX
-!        if(impose_net_flux/=0) then !impose net precip (nws=2)
-          do i=1,nea
-            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-            vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
-          enddo !i 
-#else
-!        else !=0
-          do i=1,nea
-            evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
-            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
-            vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
-          enddo !i
-!        endif !impose_net_flux
-#endif /*IMPOSE_NET_FLUX*/
+!#ifdef  IMPOSE_NET_FLUX
+!          do i=1,nea
+!            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
+!            vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
+!          enddo !i 
+!#else
+        do i=1,nea
+          evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
+        enddo !i
+!#endif /*IMPOSE_NET_FLUX*/
       endif !isconsv/=0
 
-!...  Option to zero out net sink @dry elem
-      if(meth_sink/=0) then
-        where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
-!        do i=1,nea
-!          if(minval(idry(elnode(1:i34(i),i)))>0.and.vsource(i)<0.d0) vsource=0.d0 !all nodes dry
-!        enddo !i
-      endif !meth_sink
+!...  Zero out net sink @dry elem
+!      if(meth_sink/=0) then
+      where(idry_e==1.and.vsource<0.d0) vsource=0.d0       
+!      endif !meth_sink
 
 !     Calculation of cross-section areas and length for flow b.c.
       if(lflbc) then
@@ -7290,16 +7278,15 @@
               if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
             endif
 
-#ifdef      IMPOSE_NET_FLUX
-!            if(impose_net_flux/=0) then !imposed net 
-              precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-              flx_sf(2,i)=tr_el(2,nvrt,i)*(-precip)/rho0
-#else
-              evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
-              precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
-              flx_sf(2,i)=tr_el(2,nvrt,i)*(evap-precip)/rho0
+!#ifdef      IMPOSE_NET_FLUX
+!              precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
+!              flx_sf(2,i)=tr_el(2,nvrt,i)*(-precip)/rho0
+!#else
+            evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
+            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
+            flx_sf(2,i)=tr_el(2,nvrt,i)*(evap-precip)/rho0
 !            endif !impose_net_flux
-#endif
+!#endif
           enddo !i
 !$OMP     end do
         endif !isconsv/=0
