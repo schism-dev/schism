@@ -1731,13 +1731,13 @@ Sample outputs using OLDIO (schout*.nc) can be found <a href="http://ccrm.vims.e
 <p><strong>On Windows 7 or 10</strong></p>
 <ol>
 <li>First download VisIt from <a href="https://wci.llnl.gov/simulation/computer-codes/visit/downloads">LLNL</a> site and install. Use default dir (and record it), e.g. <code>C:\Users\username\AppData\Local\Programs\LLNL\VisIt*</code></li>
-<li>Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIt)</li>
+<li>Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIt). If you are using VisIt 3.3.1, you need MS visualc++ 2013 x64 also.</li>
 <li>
 <p>Download pre-built plug-in, developed at California Dept of Water Resource</p>
 <ul>
-<li><a href="https://cadwr.box.com/s/5w8fxpmbe97iki322633yk29dvwmpaa8">For VisIt v2.13.3</a></li>
-<li><a href="https://cadwr.box.com/s/zf2gu4lylep8mt3f22ubnaeo5tjlpfos">For VisIt v3.1.4</a></li>
-<li><a href="https://cadwr.box.com/s/32fzfo8eh3mgng1ml6qhz22oj618vbmj">For VisIt v3.3.1</a></li>
+<li><a href="https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit2.13.3_win64_vs2012_tag_1.1.0.zip">For VisIt v2.13.3</a></li>
+<li><a href="https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.1.4_win64_vs2017_tag_1.1.0.zip">For VisIt v3.1.4</a></li>
+<li><a href="https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.3.1_win64_vs2017_tag_1.1.0.zip">For VisIt v3.3.1</a></li>
 </ul>
 <p>You need to put dlls to: <code>Documents/VisIt/databases</code> (create new folders if necessary), except <code>netcdf_c++.dll</code>. The NetCDF DLL needs to be copied to <code>%USERPROFILE%\LLNL\VisIt 3.3.1</code> or an equivalent VisIt installation directory.</p>
 </li>
