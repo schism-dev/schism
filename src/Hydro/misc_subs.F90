@@ -6179,11 +6179,12 @@
 !     Compute wave force using Longuet-Higgins Stewart formulation
       subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
       use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
-     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl
+     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl,id_out_ww3
       use schism_msgp
+      use schism_io, only: writeout_nc
       implicit none
 !TODO: change to intent(in)
-      REAL(rkind), intent(inout) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
+      REAL(rkind), intent(in) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
 
       REAL(rkind) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
       !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
@@ -6193,6 +6194,11 @@
     
 !      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),stat=i)
 !      if(i/=0) call parallel_abort('compute_wave_force_lon, alloc')
+
+      !Output for check
+      call writeout_nc(id_out_ww3(1),'RSXX',1,1,np,RSXX0)
+      call writeout_nc(id_out_ww3(2),'RSXY',1,1,np,RSXY0)
+      call writeout_nc(id_out_ww3(3),'RSYY',1,1,np,RSYY0)
 
       !Check
       sum1=sum(RSXX0)

@@ -295,6 +295,10 @@ ifdef USE_WWM
        wwm_output.o wwm_compute.o wwm_compute_roller.o wwm_diffrac.o wwm_coupl_roms_pipe.o wwm_coupl_roms_pgmcl.o wwm_jacobi.o wwm_coupl_shyfem.o wwm_coupl_selfe.o wwm_coupl_timor.o wwm_vegdiss.o wwm_main.o wwm_lpp_filter.o
 endif
 
+ifdef USE_WW3
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_WW3
+endif
+
 ifdef USE_ICE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_ICE
   OBJS := $(OBJS) ice_module.o ice_therm_mod.o ice_init.o ice_step.o ice_evp.o ice_mevp.o \
