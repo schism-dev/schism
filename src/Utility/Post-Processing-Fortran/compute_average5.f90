@@ -69,6 +69,9 @@
       print*, 'Input z-coord. (<=0 below MSL; <=-1.e8 to get depth average):'
       read(*,*) z00
 
+      print*, 'Input fill-in values:'
+      read(*,*) rjunk
+
 !      if(mod(iday2-iday1,iskipst)/=0) then
 !        write(*,*)'should be n skips over stack1 and stack2:',iday1,iday2,iskipst
 !        stop
@@ -255,7 +258,7 @@
 !     Output
       do i=1,np
         if(icounter(i)==0) then
-          residual(i,:)=0
+          residual(i,:)=rjunk
         else
           residual(i,:)=residual(i,:)/icounter(i)
         endif !icounter

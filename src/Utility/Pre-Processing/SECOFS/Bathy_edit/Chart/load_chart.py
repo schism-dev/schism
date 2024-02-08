@@ -38,7 +38,7 @@ def prep_chart_data(sounding_shpfile:Path):
 
     return output_file
 
-def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_region:str='esri:102008'):
+def load_chart(hgrid_obj:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_region:str='esri:102008'):
     '''
     Load the chart data into the hgrid.
     The sounding_shpfile is the chart data in xyz format, which is ususally based on MLLW.
@@ -63,7 +63,7 @@ def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_r
     channel_polys['geometry'] = channel_polys['geometry'].buffer(-1)
 
     # intersect hgrid points with the polygons
-    hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hg.x, hg.y), crs='epsg:4326').to_crs(crs_region)
+    hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hgrid_obj.x, hgrid_obj.y), crs='epsg:4326').to_crs(crs_region)
     joined_gdf = gpd.sjoin(hg_points, channel_polys, how="inner", predicate='within')
 
     inchannel_idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
@@ -76,15 +76,17 @@ def load_chart(hg:schism_grid, sounding_shpfile:Path, region_shpfile:Path, crs_r
     # plt.show()
 
     # find the nearest sounding_xyz point using k-d tree
-    idx = KDTree(sounding_xyz[:, :2]).query(np.c_[hg.x[inchannel_idx], hg.y[inchannel_idx]])[1]
+    idx = KDTree(sounding_xyz[:, :2]).query(np.c_[hgrid_obj.x[inchannel_idx], hgrid_obj.y[inchannel_idx]])[1]
     inchannel_sounding_z = sounding_xyz[idx, 2]
 
-    dp_sounding = np.ones_like(hg.dp, dtype=float) * -9999  # initialize with a large negative number
+    dp_sounding = np.ones_like(hgrid_obj.dp, dtype=float) * -9999  # initialize with a large negative number
     dp_sounding[inchannel_idx] = inchannel_sounding_z  # only update the nodes in the channel
 
     # hg.plot(value=dp_sounding, fmt=1)
 
-    return dp_sounding
+    hgrid_obj.dp = dp_sounding   
+
+    return hgrid_obj
 
 def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
     # # plot to check the changed nodes
@@ -103,11 +105,11 @@ def plot_diagnostic(hg:schism_grid, dp:np.ndarray):
 
 if __name__ == '__main__':
     # -----------------inputs-----------------------------
-    hg_file = Path('/sciclone/schism10/feiye/SECOFS/Inputs/I02e/Edit_bathy/Load_charts_NCF/hgrid_dem_levee_loaded.gr3')
+    hg_file = Path('./hgrid_dem_levee_loaded_NCF_loaded_xGEOID20b.gr3')
     # -----------------end inputs-----------------------------
 
-    hg = schism_grid(str(hg_file))
-    dp_orig = hg.dp.copy()
+    hgrid_obj = schism_grid(str(hg_file))
+    dp_orig = hgrid_obj.dp.copy()
 
     ''' prepare the chart data
     # extract xyz coordinates into an array
@@ -131,14 +133,14 @@ if __name__ == '__main__':
 
 
     # the chart data needs a manual region file to limit the nodes to be loaded
-    dp_from_chart = load_chart(
-        hg=hg,
+    hgrid_obj = load_chart(
+        hgrid_obj=hgrid_obj,
         sounding_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/savannah_cooper_sounding_3_xyz_edited_xgeoid.shp'),
         region_shpfile=Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/secofs_chart_loading_zones.shp'), crs_region='esri:102008'
     )
-    hg.dp = np.maximum(dp_orig, dp_from_chart)  # change the depth only if it is deeper than the original depth
-    hg.save(f"{hg_file.parent}/{hg_file.stem}_chart_loaded.gr3", fmt=1)
-    grd2sms(hg, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
+    hgrid_obj.dp = np.maximum(dp_orig, hgrid_obj.dp)  # change the depth only if it is deeper than the original depth
+    hgrid_obj.save(f"{hg_file.parent}/{hg_file.stem}_chart_loaded.gr3", fmt=1)
+    grd2sms(hgrid_obj, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
 
     pass
 

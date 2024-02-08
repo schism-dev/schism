@@ -152,8 +152,9 @@ def set_additional_dp_v11_91(gd_ll=None, gd_dem=None, wdir='./'):
     return gd_ll
 
 def set_levees(hgrid_name='', gd:schism_grid=None):
-    shutil.copy(hgrid_name, hgrid_name+'.gr3')
-    hgrid_name += '.gr3'
+#def set_levees(gd:schism_grid=None):
+    shutil.copy(hgrid_name, './'+hgrid_name.split('/')[-1]+'.gr3')
+    hgrid_name = './'+hgrid_name.split('/')[-1]+'.gr3'
     if gd is None:
         gd = schism_grid(hgrid_name)
     else:

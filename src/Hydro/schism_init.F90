@@ -207,7 +207,7 @@
      &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
      &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
-     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only,meth_sink, &
+     &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz
 
@@ -489,7 +489,7 @@
       ipre2=0
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind; hmin_salt_ex=0.2_rkind
-      itransport_only=0; meth_sink=1
+      itransport_only=0 
       iloadtide=0; loadtide_coef=0.1d0
       nu_sum_mult=1
       h_massconsv=2.d0; rinflation_icm=1.d-3

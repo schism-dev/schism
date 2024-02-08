@@ -898,7 +898,6 @@
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
           sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
-          !fluxprc is net flux P-E if IMPOSE_NET_FLUX is on
         enddo
 !$OMP end parallel do
         if(myrank==0) write(16,*)'heat budge model completes...'
@@ -6179,10 +6178,12 @@
 !     Compute wave force using Longuet-Higgins Stewart formulation
       subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
       use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
-     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl
+     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl,id_out_ww3
       use schism_msgp
+      use schism_io, only: writeout_nc
       implicit none
-      REAL(rkind), intent(inout) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
+!TODO: change to intent(in)
+      REAL(rkind), intent(in) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
 
       REAL(rkind) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
       !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
@@ -6193,13 +6194,20 @@
 !      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),stat=i)
 !      if(i/=0) call parallel_abort('compute_wave_force_lon, alloc')
 
+      !Output for check
+      call writeout_nc(id_out_ww3(1),'RSXX',1,1,np,RSXX0)
+      call writeout_nc(id_out_ww3(2),'RSXY',1,1,np,RSXY0)
+      call writeout_nc(id_out_ww3(3),'RSYY',1,1,np,RSYY0)
+
       !Check
       sum1=sum(RSXX0)
       sum2=sum(RSXY0)
       sum3=sum(RSYY0)
       tmp=sum1+sum2+sum3
       if(tmp/=tmp) then
-        write(errmsg,*)'compute_wave_force_lon: NaN ',sum1,sum2,sum3,RSXX0
+        !errmsg cannot take large arrays
+        write(errmsg,*)'compute_wave_force_lon: NaN- see nonfatal; ',sum1,sum2,sum3
+        write(12,*)RSXX0,RSXY0,RSYY0
         call parallel_abort(errmsg)
       endif
 !new39

@@ -12,7 +12,7 @@
 !   See the License for the specific language governing permissions and
 !   limitations under the License.
 
-!     Interpolate depths from a structured grid to unstructured grid.
+!     Interpolate depths from a structured grid (raster) to unstructured grid.
 !     Inputs: struc.grd (structured grid in *.asc (ASCII Raster Grid File with,
 !             Arc Header format - more restrictive than Mansour's format; see interpolate_depth_structured1)
 !             hgrid.old (unstructured grid, mixed tri and quads)

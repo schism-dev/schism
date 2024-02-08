@@ -80,7 +80,7 @@
         CALL exchange_s3d_2(DSXY3D)
 
         ! Computing the wave forces; these are noted Rsx, Rsy in Rolland et al. (2012), see Eq. (9)
-        ! These are stored in wwave_force(:,1:nsa,1:2)  [m/s^2]
+        ! These are stored in wwave_force(2,nvrt,nsa)  [m/s^2]
         DO IS = 1, nsa
           IF(idry_s(IS) == 1) CYCLE
 

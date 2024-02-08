@@ -1,13 +1,17 @@
 !     Generate tvd.prop for hybrid WENO/ELM and cross-scale applications, based on depth and remove
 !     'isolated' WENO elements in shallow water, etc. The goal is to
 !     minimize the direct 'contact' between WENO and ELM cells, which can cause dispersion.
-!     Inputs: (1) screen; 
-!             (2) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
-!             (3) nearshore.rgn: nearshore region (e.g. using 20m isoth) inside
-!                                which upwind is used except in estuary_*.rgn;
-!             (4) optional estuary_[1,2..].rgn: specific estuary regions where TVD/WENO is desired;
-!                     make sure these verlap with nearshore.rgn (so no gap in TVD/WENO zone)
-!     Output: tvd.prop.0 (may be further edited, e.g. connectivity etc)
+!     Inputs: 
+!             (1) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
+!             (2) gen_tvd_WENO.in:
+!                   hmin_estu: cut-off depth for estuaries (e.g. same as h_tvd)
+!                   nreg: # of regions (nearshore + estuaries; >=1)
+!                   list of region names: 1st one is nearshore (e.g. using 20m isobath); the rest
+!                        are optional estuaries. Inside nearshore region,
+!                        upwind is used except in estuaries. Make sure estuaries
+!                        overlap with nearshore (so no gap in TVD/WENO zone).
+!     Output: tvd.prop.0 (may be further edited, e.g. look for very skew elem nearby,
+!              and connectivity)
 
 !     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_tvd_WENO.f90
 
@@ -17,7 +21,7 @@
       real*8, parameter :: small1=1.d-4
       real*8, parameter :: ray_angle=3.13192d0
 
-      character(len=100) :: it_char
+      character(len=100) :: file_reg(200)
       integer :: nwild(3)
       integer, allocatable :: i34(:),elnode(:,:),nne(:),indel(:,:),nnp(:), &
      &indnd(:,:),isbnd(:),itvd(:),itvd0(:),iest(:),iest_e(:),inear(:),inear_e(:)
@@ -29,61 +33,64 @@
       end type
       type(poly_vertex),allocatable :: poly(:)
 
-
-!      print*, 'Input cut-off depth (meters) for offshore (e.g., 30m));'
-!      print*, 'Upwind will be used shallower than this depth in offshore:'
-!      read*, hmin_of
-
-      print*, 'Input # of estuary regions (can be 0):'
-      read*, nestuaries
-      if(nestuaries<0) stop 'nestuaries<0'
-
-      print*, 'Input cut-off depth (meters) for estuaries (e.g. h_tvd):'
-      read*, hmin_estu
-
-      !Read in nearshore.rgn and estuary regions
-      allocate(nvertices(nestuaries+1),poly(nestuaries+1)) !first is the nearshore.rgn
-      open(10,file='nearshore.rgn',status='old')
-      read(10,*); read(10,*)npoly
-      if(npoly/=1) stop 'can only have 1 poly in .rgn'
-      read(10,*)nvertices(1)
-      allocate(poly(1)%xy(nvertices(1)+1,2)) !extra pt to close the region
-      poly(1)%xy(nvertices(1)+1,:)=0. !init
-      do i=1,nvertices(1)
-        read(10,*)poly(1)%xy(i,1:2) !xpoly(i,1),ypoly(i,1)
+      !Read in control input
+      open(9,file='gen_tvd_WENO.in',status='old')
+      read(9,*) hmin_estu !cut-off depth for estuaries (e.g. h_tvd)
+      read(9,*) nreg
+      if(nreg<1.or.nreg>200) stop 'nreg<1 or nreg>200'
+      do i=1,nreg
+        read(9,*)file_reg(i)
       enddo !i
-      close(10)
-      
-      !Check if the region is closed
-      rl=(poly(1)%xy(1,1)-poly(1)%xy(nvertices(1),1))**2+(poly(1)%xy(1,2)-poly(1)%xy(nvertices(1),2))**2
-      if(rl>1.d-14) then
-        nvertices(1)=nvertices(1)+1
-        poly(1)%xy(nvertices(1),:)=poly(1)%xy(1,:)
-      endif
+      close(9)
 
-      do irgn=1,nestuaries
-        write(it_char,*) irgn    
-        it_char=adjustl(it_char); itmp=len_trim(it_char)
-        open(10,file='estuary_'//it_char(1:itmp)//'.rgn',status='old')
+!      print*, 'Input # of estuary regions (can be 0):'
+!      read*, nestuaries
+!      if(nestuaries<0) stop 'nestuaries<0'
+!      print*, 'Input cut-off depth (meters) for estuaries (e.g. h_tvd):'
+!      read*, hmin_estu
+
+      !Read in nearshore (1st file) and (optional) estuary regions
+      nestuaries=nreg-1 !>=0
+      allocate(nvertices(nreg),poly(nreg)) !first is the nearshore.rgn
+!      open(10,file='nearshore.rgn',status='old')
+!      read(10,*); read(10,*)npoly
+!      if(npoly/=1) stop 'can only have 1 poly in .rgn'
+!      read(10,*)nvertices(1)
+!      allocate(poly(1)%xy(nvertices(1)+1,2)) !extra pt to close the region
+!      poly(1)%xy(nvertices(1)+1,:)=0. !init
+!      do i=1,nvertices(1)
+!        read(10,*)poly(1)%xy(i,1:2) !xpoly(i,1),ypoly(i,1)
+!      enddo !i
+!      close(10)
+!      
+!      !Check if the region is closed
+!      rl=(poly(1)%xy(1,1)-poly(1)%xy(nvertices(1),1))**2+(poly(1)%xy(1,2)-poly(1)%xy(nvertices(1),2))**2
+!      if(rl>1.d-14) then
+!        nvertices(1)=nvertices(1)+1
+!        poly(1)%xy(nvertices(1),:)=poly(1)%xy(1,:)
+!      endif
+
+      do irgn=1,nreg
+        open(10,file=trim(adjustl(file_reg(irgn))),status='old')
         read(10,*); read(10,*)npoly
         if(npoly/=1) then
           print*, 'Can only have 1 poly in .rgn:',irgn
           stop 
         endif
-        read(10,*)nvertices(irgn+1)
-        allocate(poly(irgn+1)%xy(nvertices(irgn+1)+1,2))
-        poly(irgn+1)%xy(nvertices(irgn+1)+1,:)=0.
-        do i=1,nvertices(irgn+1)
-          read(10,*)poly(irgn+1)%xy(i,1:2) 
+        read(10,*)nvertices(irgn)
+        allocate(poly(irgn)%xy(nvertices(irgn)+1,2)) !extra pt to close the region
+        poly(irgn)%xy(nvertices(irgn)+1,:)=0.
+        do i=1,nvertices(irgn)
+          read(10,*)poly(irgn)%xy(i,1:2) 
         enddo !i
         close(10)
       
         !Check if the region is closed
-        rl=(poly(irgn+1)%xy(1,1)-poly(irgn+1)%xy(nvertices(irgn+1),1))**2+ &
-         &+(poly(irgn+1)%xy(1,2)-poly(irgn+1)%xy(nvertices(irgn+1),2))**2
+        rl=(poly(irgn)%xy(1,1)-poly(irgn)%xy(nvertices(irgn),1))**2+ &
+         &+(poly(irgn)%xy(1,2)-poly(irgn)%xy(nvertices(irgn),2))**2
         if(rl>1.d-14) then
-          nvertices(irgn+1)=nvertices(irgn+1)+1
-          poly(irgn+1)%xy(nvertices(irgn+1),:)=poly(irgn+1)%xy(1,:)
+          nvertices(irgn)=nvertices(irgn)+1
+          poly(irgn)%xy(nvertices(irgn),:)=poly(irgn)%xy(1,:)
         endif
       enddo !irgn
 
