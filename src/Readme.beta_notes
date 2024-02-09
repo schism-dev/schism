@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `4fb6228` (9 Feb 2024): add cmake CPP 'BLD_STANDALONE' to accommodate UFS
 - `9bee0f5` (8 Feb 2024): removed IMPOSE_NET_FLUX and 'meth_sink'
 - `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
             new parameters: stemp_stc, stemp_dz(1:2);
