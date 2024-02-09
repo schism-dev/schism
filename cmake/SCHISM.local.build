@@ -11,7 +11,9 @@
 #   PETSc status: discussions with PETSc developers indicate older versions are not actively supported with cmake,
 #   so use gnu make instead.
 #####################################################################
-#
+#Leave this on
+set(BLD_STANDALONE ON CACHE BOOLEAN "SCHISM standalone")
+
 #Default is NO_PARMETIS=OFF, i.e. use ParMETIS
 set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
 
