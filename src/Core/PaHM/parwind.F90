@@ -294,8 +294,8 @@ MODULE ParWind
   !----------------------------------------------------------------
   SUBROUTINE ReadCsvBestTrackFile()
 
-    USE PaHM_Global, ONLY : nBTrFiles, bestTrackFileName
-    USE PaHM_Utilities, ONLY : GetLineRecord, OpenFileForRead, ToUpperCase, CharUnique, &
+    USE PaHM_Global, ONLY : nBTrFiles, bestTrackFileName, useMaxR34
+    USE PaHM_Utilities, ONLY : GetLineRecord, OpenFileForRead, EstimateROCI, ToUpperCase, CharUnique, &
                           IntValStr
     USE TimeDateUtils, ONLY : TimeConv
     USE SortUtils, ONLY : Arth, Indexx, ArrayEqual
@@ -323,6 +323,7 @@ MODULE ParWind
 
     INTEGER, ALLOCATABLE           :: idx0(:), idx1(:)
     REAL(SZ)                       :: tmpFcstTime, refFcstTime
+    INTEGER, DIMENSION(4)          :: radii34
 
     CALL SetMessageSource("ReadCsvBestTrackFile")
     
@@ -378,21 +379,12 @@ MODULE ParWind
           !--- col:  6
           bestTrackData(iFile)%tau(iCnt)       = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 6))))
           !--- col:  7
-<<<<<<< HEAD
-          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 7)))
-          READ(tmpStr, '(i3, a1)') &
-               bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt)
-          !--- col:  8
-          tmpStr = TRIM(ADJUSTL(sval2D(iCnt, 8)))
-          READ(tmpStr, '(i3, a1)') &
-=======
           tmpStr = TRIM(sval2D(iCnt, 7))
           READ(tmpStr, '(i4, a1)') &
                bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt)
           !--- col:  8
           tmpStr = TRIM(sval2D(iCnt, 8))
           READ(tmpStr, '(i5, a1)') &
->>>>>>> master
                bestTrackData(iFile)%intLon(iCnt), bestTrackData(iFile)%ew(iCnt)
           !--- col:  9
           bestTrackData(iFile)%intVMax(iCnt)   = IntValStr(TRIM(ADJUSTL(sval2D(iCnt, 9))))
@@ -447,6 +439,12 @@ MODULE ParWind
           ELSE
             bestTrackData(iFile)%lon(iCnt) = 0.1_SZ * bestTrackData(iFile)%intLon(iCnt)
           END IF
+          !----------
+
+          !---------- Estimate a ROCI (radius of outer closed isobar)
+          radii34 = (/ bestTrackData(iFile)%intRad1(iCnt), bestTrackData(iFile)%intRad2(iCnt), &
+                       bestTrackData(iFile)%intRad3(iCnt), bestTrackData(iFile)%intRad4(iCnt) /)
+          bestTrackData(iFile)%intEROuter(iCnt) = EstimateROCI(radii34, bestTrackData(iFile)%lat(iCnt), useMaxR34)
           !----------
 
           !---------- Get the year, month, day, hour from the DGT string
@@ -634,7 +632,7 @@ MODULE ParWind
     CHARACTER(LEN=4)                 :: castType         !hindcast,forecast
     REAL(SZ), ALLOCATABLE            :: castTime(:)      ! seconds since start of year
 
-    REAL(SZ)                         :: spdVal, pressVal, rrpVal, rmwVal
+    REAL(SZ)                         :: rrpVal
 
     status = 0  ! no error
 
@@ -701,16 +699,6 @@ MODULE ParWind
 
       castType = ToUpperCase(TRIM(ADJUSTL(bestTrackData(idTrFile)%tech(iCnt))))
 
-      ! Convert speeds from knots to m/s
-      spdVal = KT2MS * bestTrackData(idTrFile)%intVMax(plIdx)
-
-      ! Convert pressure(s) from mbar to Pa
-      pressVal = 100.0_SZ * bestTrackData(idTrFile)%intMslp(plIdx)
-
-      ! Convert all distances from nm to km/m
-      rrpVal = NM2M * bestTrackData(idTrFile)%intROuter(plIdx) ! in m
-      rmwVal = NM2M * bestTrackData(idTrFile)%intRmw(plIdx)    ! in m
-
       strOut%basin(iCnt)       = bestTrackData(idTrFile)%basin(plIdx)
       strOut%stormNumber(iCnt) = bestTrackData(idTrFile)%cyNum(plIdx)
       strOut%dtg(iCnt)         = bestTrackData(idTrFile)%dtg(plIdx)
@@ -726,13 +714,15 @@ MODULE ParWind
       strOut%lon(iCnt)         = bestTrackData(idTrFile)%lon(plIdx)
 
       strOut%iSpeed(iCnt)      = bestTrackData(idTrFile)%intVMax(plIdx)
-      strOut%speed(iCnt)       = spdVal
+      strOut%speed(iCnt)       = KT2MS * bestTrackData(idTrFile)%intVMax(plIdx)     ! in m/s
       strOut%iCPress(iCnt)     = bestTrackData(idTrFile)%intMslp(plIdx)
-      strOut%cPress(iCnt)      = pressVal
+      strOut%cPress(iCnt)      = 100.0_SZ * bestTrackData(idTrFile)%intMslp(plIdx)  ! in Pa
       strOut%iRrp(iCnt)        = bestTrackData(idTrFile)%intROuter(plIdx)
-      strOut%rrp(iCnt)         = rrpVal
+      strOut%rrp(iCnt)         = NM2M * bestTrackData(idTrFile)%intROuter(plIdx)    ! in m
+      strOut%iERrp(iCnt)       = bestTrackData(idTrFile)%intEROuter(plIdx)
+      strOut%errp(iCnt)        = NM2M * bestTrackData(idTrFile)%intEROuter(plIdx)   ! in m
       strOut%iRmw(iCnt)        = bestTrackData(idTrFile)%intRmw(plIdx)
-      strOut%rmw(iCnt)         = rmwVal
+      strOut%rmw(iCnt)         = NM2M * bestTrackData(idTrFile)%intRmw(plIdx)       ! in m
 
       ! PV check if this SELECT code is actually needed. Need to check the different format
       ! of input files.
@@ -991,6 +981,8 @@ MODULE ParWind
       strOut%prp(iCnt)         = 100.0_SZ * strOut%iPrp(iCnt)           ! Convert pressure(s) from mbar to Pa
       strOut%iRrp(iCnt)        = bestTrackData(idTrFile)%intROuter(iCnt)
       strOut%rrp(iCnt)         = NM2M * strOut%iRrp(iCnt)               ! Convert all distances from nm to m
+      strOut%iERrp(iCnt)       = bestTrackData(idTrFile)%intEROuter(iCnt)
+      strOut%errp(iCnt)        = NM2M * strOut%iERrp(iCnt)               ! Convert all distances from nm to m
       strOut%iRmw(iCnt)        = bestTrackData(idTrFile)%intRmw(iCnt)
       strOut%rmw(iCnt)         = NM2M * strOut%iRmw(iCnt)
       strOut%gusts(iCnt)       = bestTrackData(idTrFile)%gusts(iCnt)
@@ -1135,7 +1127,7 @@ MODULE ParWind
     irad(:, :) = strOut%ir(:, :)
 
     DO iCyc = 1, nCycles
-      lastEntry = sum(totRecPerCycle(1:iCyc))
+      lastEntry = SUM(totRecPerCycle(1:iCyc))
 
        DO k = 1, totRecPerCycle(iCyc)
          iCnt = lastEntry + 1 - k
@@ -1694,7 +1686,7 @@ MODULE ParWind
 
     INTEGER                              :: stormNumber         ! storm identification number
     REAL(SZ)                             :: hlB                 ! Holland B parameter
-    REAL(SZ)                             :: rrp                 ! radius of the last closed isobar (m)
+    REAL(SZ)                             :: rrp, errp, rrpval   ! radius of the last closed isobar (m)
     REAL(SZ)                             :: rmw                 ! radius of max winds (m)
     REAL(SZ)                             :: speed               ! maximum sustained wind speed (m/s)
     REAL(SZ)                             :: cPress              ! central pressure (Pa)
@@ -1929,36 +1921,49 @@ MODULE ParWind
         rrp = holStru(stCnt)%rrp(jl1) + &
                 wtRatio * (holStru(stCnt)%rrp(jl2) - holStru(stCnt)%rrp(jl1))
 
+      ! Estimated radius of the last closed isobar
+      ! We use the estimated ERRP in case the RRP value is missing from the data file
+      errp = holStru(stCnt)%errp(jl1) + &
+              wtRatio * (holStru(stCnt)%errp(jl2) - holStru(stCnt)%errp(jl1))
+
+      ! This is used below for determining all nodal points inside RRP
+      rrpval = MAX(rrp, errp)
+
         ! Radius of maximum winds
         rmw = holStru(stCnt)%rmw(jl1) + &
                 wtRatio * (holStru(stCnt)%rmw(jl2) - holStru(stCnt)%rmw(jl1))
-        !Limit
-        rrp=max(rrp,0.d0)
-        rmw=max(rmw,0.d0)
+!P. Velissariou: why we need this code block?
+!P.V        !Limit
+!P.V        rrpval=max(rrpval,0.d0)
+!P.V        rmw=max(rmw,0.d0)
 
         !Check
-        write(16,*)'rrp,rmw=',rrp,rmw,time_stamp,stormNumber,lon,lat
-        if(rrp/=rrp.or.rmw/=rmw) then
-          write(16,*)'GetHollandFields- nan(2):',rrp,rmw
-!          write(errmsg,*)'GetHollandFields- nan(2):',rrp,rmw
+        write(16,*)'rrpval,rmw=',rrpval,rmw,time_stamp,stormNumber,lon,lat
+        if(rrpval/=rrpval.or.rmw/=rmw) then
+          write(16,*)'GetHollandFields- nan(2):',rrpval,rmw
+!          write(errmsg,*)'GetHollandFields- nan(2):',rrpval,rmw
 !          call parallel_abort(errmsg)
           lrevert=.true.
         endif
 
         ! Get all the distances of the mesh nodes from (lat, lon)
         !rad() is allocated inside the routine
-        rad    = SphericalDistance(ylat_gb, xlon_gb, lat, lon)
+        rad    = SphericalDistance(ylat_gb, xlon_gb, lat, lon) ! rad is in meters
         write(16,*)'min &max rad=',minval(rad),maxval(rad)
         !YJZ: limit rad;  I don't understand why distance can be <0
         where(rad<1.d-1) rad=1.d-1
-        ! ... and the indices of the nodal points where rad <= rrp
-        radIDX = PACK([(i, i = 1, np_gb)], rad <= 1.5*rrp) !leave dim of radIDX undefined to receive values from pack()
+        ! ... and the indices of the nodal points where rad <= rrpval
+        IF (rrpval > 0) THEN
+          radIDX = PACK([(i, i = 1, np_gb)], rad <= rrpval) !leave dim of radIDX undefined to receive values from pack(
+        ELSE
+          radIDX = PACK([(i, i = 1, np_gb)], .TRUE.) !leave dim of radIDX undefined to receive values from pack(
+        END IF
         maxRadIDX = SIZE(radIDX)
 
-      ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
+      ! If the condition rad <= rrpval is not satisfied anywhere then exit this loop
         IF (maxRadIDX == 0) THEN
-          WRITE(tmpStr1, '(f20.3)') rrp
-          tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
+          WRITE(tmpStr1, '(f20.3)') rrpval
+          tmpStr1 = '(rrpval = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
           WRITE(16, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
                                        TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
                                        TRIM(ADJUSTL(holStru(stCnt)%thisStorm))
@@ -1966,9 +1971,9 @@ MODULE ParWind
           EXIT
         END IF
 
-        !From now on, rrp>=0.1
+        !From now on, rrpval>=0.1
         !Check
-        write(16,*)'rad:',size(rad),rrp,rmw,maxRadIDX !,radIDX
+        write(16,*)'rad:',size(rad),rrpval,rmw,maxRadIDX !,radIDX
         tmp2=sum(rad)/np_gb
         if(maxRadIDX/=maxRadIDX.or.tmp2/=tmp2) then
           write(16,*)'GetHollandFields- nan(3):',maxRadIDX,tmp2
@@ -2216,7 +2221,7 @@ MODULE ParWind
 
     REAL(SZ)                             :: coriolis ! Coriolis force (1/s)
 
-    INTEGER                              :: iCnt, kCnt, stCnt
+    INTEGER                              :: iCnt, kCnt, stCnt, npCnt
     INTEGER                              :: i, jl1, jl2
     INTEGER                              :: status
 
@@ -2279,12 +2284,12 @@ MODULE ParWind
     LOGICAL, SAVE                       :: firstCall = .TRUE.
 
 ! New variables 
-    REAL(SZ)                             :: rrp             ! radius of the last closed isobar (m)
-    REAL(SZ)                             :: rmmw            ! radius of max winds (m)   jerome RMX is a function in PaHM_Vortex!
-    REAL(SZ)                             :: vmax            ! max wind at the boundary layer
-    INTEGER, ALLOCATABLE                 :: radIDX(:)       ! indices of nodal points duch that rad <= rrp
-    INTEGER                              :: maxRadIDX       ! total number of radIDX elements
-    INTEGER                              :: npCnt
+    REAL(SZ)                             :: rrp, errp, rrpval   ! radius of the last closed isobar (m)
+    REAL(SZ)                             :: rmmw                ! radius of max winds (m)   jerome RMX is a function in PaHM_Vortex!
+    REAL(SZ)                             :: vmax                ! max wind at the boundary layer
+    REAL(SZ), ALLOCATABLE                :: rad(:)              ! distance of nodal points from the eye location
+    INTEGER, ALLOCATABLE                 :: radIDX(:)           ! indices of nodal points duch that rad <= rrp
+    INTEGER                              :: maxRadIDX           ! total number of radIDX elements
 
     real(rkind) :: RossNum
     real(rkind) :: tmp2,tmp3,tmp4
@@ -2679,45 +2684,59 @@ MODULE ParWind
 
 ! -----------------------------------------------------------------------------
 ! Jerome test distance to save computing cycles ... like in GetHollandFields ...
-      if(1==1) then
-        ! Radius of the last closed isobar
-        rrp = iRrp(stCnt, jl1) + &
-                wtRatio * (iRrp(stCnt, jl2) - iRrp(stCnt, jl1))
-
+      if(1==1) then !P.V what is the purpose of this if block?
+ 
         ! Radius of maximum winds
-        rmmw = iRmw(stCnt, jl1) + &
-                wtRatio * (iRmw(stCnt, jl2) - iRmw(stCnt, jl1))
-        
-        !Limit
-        rrp=max(rrp,0.d0)
-        rmmw=max(rmmw,0.d0)
+        rmmw = asyVortStru(stCnt)%rmw(jl1) + &
+                wtRatio * (asyVortStru(stCnt)%rmw(jl2) - asyVortStru(stCnt)%rmw(jl1))
 
-        vmax = iSpeed(stCnt, jl1) + &
-                wtRatio * (iSpeed(stCnt, jl2) - iSpeed(stCnt, jl1))
+        ! Radius of the last closed isobar
+        rrp = asyVortStru(stCnt)%rrp(jl1) + &
+                wtRatio * (asyVortStru(stCnt)%rrp(jl2) - asyVortStru(stCnt)%rrp(jl1))
+
+        ! Estimated radius of the last closed isobar
+        ! We use the estimated ERRP in case the RRP value is missing from the data file
+        errp = asyVortStru(stCnt)%errp(jl1) + &
+                wtRatio * (asyVortStru(stCnt)%errp(jl2) - asyVortStru(stCnt)%errp(jl1))
+
+        ! This is used below for determining all nodal points inside RRP
+        rrpval = MAX(rrp, errp)
+
+!P. Velissariou: why we need this code block?
+!P.V        !Limit
+!P.V        rrp=max(rrp,0.d0)
+!P.V        rmmw=max(rmmw,0.d0)
+
+        ! Get all the distances of the mesh nodes from (lat, lon)
+        !rad() is allocated inside the routine
+        rad    = SphericalDistance(ylat_gb, xlon_gb, cLat, cLon) ! rad is in meters
+        write(16,*)'min &max rad=',minval(rad),maxval(rad)
+        !YJZ: limit rad;  I don't understand why distance can be <0
+        where(rad<1.d-1) rad=1.d-1
+        ! ... and the indices of the nodal points where rad <= rrpval
+        IF (rrpval > 0) THEN
+          radIDX = PACK([(i, i = 1, np_gb)], rad <= rrpval)
+        ELSE
+          radIDX = PACK([(i, i = 1, np_gb)], .TRUE.)
+        END IF
+        maxRadIDX = SIZE(radIDX)
 
         !JEROME Get The Rossby number (just informative)
+        vmax = asyVortStru(stCnt)%speed(jl1) + &
+                wtRatio * (asyVortStru(stCnt)%speed(jl2) - asyVortStru(stCnt)%speed(jl1))
         call RossbyNumber(vmax*KT2MS, rmmw*NM2M, coriolis, RossNum)
 
         !Check
         write(16,*)'Rossby Number=',RossNum
-        write(16,*)'rrp,rmw=',rrp,rmmw
+        write(16,*)'rrp,rmw=',rrpval,rmmw
         write(16,*)'time_stamp,stormNumber',time_stamp,stormNumber(stCnt, jl1)
         write(16,*)'lon,lat',clon,clat
-        if(rrp/=rrp.or.rmmw/=rmmw) then
-          write(16,*)'GetGAHMFields- nan(2):',rrp,rmmw
-!          write(errmsg,*)'GetHollandFields- nan(2):',rrp,rmmw
+        if(rrpval/=rrpval.or.rmmw/=rmmw) then
+          write(16,*)'GetGAHMFields- nan(2):',rrpval,rmmw
+!          write(errmsg,*)'GetHollandFields- nan(2):',rrpval,rmmw
 !          call parallel_abort(errmsg)
           lrevert=.true.
         endif
-
-        write(16,*)'min &max dist (nm) =',minval(dist),maxval(dist)
-        !YJZ: limit rad;  I don't understand why distance can be <0
-        where(dist<1.d-5) dist=1.d-5
-
-        ! ... and the indices of the nodal points where rad <= rrp
-        ! JEROME note : both dist and rrp are in nm units !! 
-        radIDX = PACK([(i, i = 1, np_gb)], dist <= 1.5d0*rrp) !leave dim of radIDX undefined to receive values from pack()
-        maxRadIDX = SIZE(radIDX)
 
       ! If the condition rad <= rrp is not satisfied anywhere then exit this loop
         IF (maxRadIDX == 0) THEN
@@ -2732,7 +2751,7 @@ MODULE ParWind
 
         !From now on, rrp>=0.1
         !Check
-        write(16,*)'rad:',size(dist),rrp,rmmw,maxRadIDX !,radIDX
+        write(16,*)'rad:',size(rad),rrpval,rmmw,maxRadIDX !,radIDX
         tmp2=sum(dist)/np_gb
         if(maxRadIDX/=maxRadIDX.or.tmp2/=tmp2) then
           write(16,*)'GetGAHMFields- nan(3):',maxRadIDX,tmp2
