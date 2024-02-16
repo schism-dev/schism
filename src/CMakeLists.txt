@@ -174,12 +174,6 @@ endif()
 ###         This file is untested for compilers with no output module directory option
 if (BLD_STANDALONE)
   message(STATUS "\n### Assigning output directories for binaries (bin), modules (include) and libraries (lib)")
-  if( CMAKE_Fortran_MODDIR_FLAG)
-    SET( CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include 
-    CACHE PATH "Output location for include files and fortran modules")
-    include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
-  endif(CMAKE_Fortran_MODDIR_FLAG)
-
   set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
     CACHE PATH "Output Directory for executables.")
 
@@ -189,6 +183,12 @@ if (BLD_STANDALONE)
   set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
     CACHE PATH "Output Directory for all shared libraries.")
 endif()
+if( CMAKE_Fortran_MODDIR_FLAG)
+  SET( CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include
+  CACHE PATH "Output location for include files and fortran modules")
+  include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
+endif(CMAKE_Fortran_MODDIR_FLAG)
+
 
 ########### Process libraries ######
 message(STATUS "\n### Adding enabled libraries to project") ######
@@ -343,18 +343,22 @@ endif(GOTM_BASE)
 endif(USE_GOTM)
 
 ########  Main executable #######
+get_property(all_define_options GLOBAL PROPERTY DEFINE-LIST)
+message(STATUS "All defines: ${all_define_options}")
+# Now that the list of global options are accumulated, apply it on all the directories
+foreach (moddir ${schismmoddirs})
+set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
+endforeach()
+
+# Set the driver information for BLD_STANDALONE
 if (BLD_STANDALONE)
   message(STATUS "\n### Configuring Driver")
   add_subdirectory( Driver )
-
-  get_property(all_define_options GLOBAL PROPERTY DEFINE-LIST)
-  message(STATUS "All defines: ${all_define_options}")
-  # Now that the list of global options are accumulated, apply it on all the directories
-  foreach (moddir ${schismmoddirs} "Driver")
-    set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
-  endforeach()
+  set_property( DIRECTORY "Driver" APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
 endif()
 
 ######## Utilities ########
+if (BLD_STANDALONE)
 message(STATUS "\n### Configuring Utilities")
 add_subdirectory( Utility )
+endif()
