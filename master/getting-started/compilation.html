@@ -1655,7 +1655,7 @@ ignore it and proceed in making. The final name of executable has the cluster na
 <p>The cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.</p>
 <ol>
 <li><code>SCHISM.local.build</code>: used to toggle on/off optional modules (similar to include_modules used in make).
- <code>TVD_LIM</code> should always have a valid value, but all other 'modules' are usually turned off for pure hydrodynamic 
+ <code>TVD_LIM</code> should always have a valid value, and BLD_STANDALONE should be ON (to build SCHISM alone; OFF is for building SCHISM as a UFS/ESMF component). All other 'modules' are usually turned off for pure hydrodynamic 
   applications. 
   <code>NO_PARMETIS</code>: you can bypass ParMETIS lib by providing instead a domain partitioning map (<code>partition.prop</code>
   which is identical to the output from ParMETIS <code>global_to_local.prop</code>) at runtime. 
