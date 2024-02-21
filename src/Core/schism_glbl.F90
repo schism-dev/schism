@@ -475,6 +475,7 @@ module schism_glbl
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
                                   &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
                                   &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
+  real(rkind),save,allocatable,target :: rsxx(:), rsxy(:), rsyy(:)
 
   !(2,npa). ocean-ice stress (junk if no ice) [m^2/s/s]
   real(rkind),save,allocatable :: tau_oi(:,:)

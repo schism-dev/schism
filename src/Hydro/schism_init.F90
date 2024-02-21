@@ -1423,7 +1423,8 @@
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
          & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
-         & wwave_force(2,nvrt,nsa),btaun(npa),stat=istat)
+         & wwave_force(2,nvrt,nsa),btaun(npa), &
+         & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1770,6 +1771,7 @@
       dfq1=0.d0; dfq2=0.d0 !for hotstart
       fluxevp=0.d0; fluxprc=0.d0
       prec_rain=0.d0; prec_snow=0.d0
+      rsxx=0.d0; rsxy=0.d0; rsyy=0.d0
 
 !     Fort.12 flags
 !      ifort12=0
