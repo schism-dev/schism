@@ -45,7 +45,7 @@ Note: the Makefile will automatically invoke `Core/gen_version.py`, which will g
 The cmake utility is a very powerful way of building the source code and utility script bundle. The main cmake files are found in cmake/. You’ll need two essential files in this directory.
 
 1. `SCHISM.local.build`: used to toggle on/off optional modules (similar to include_modules used in make).
- `TVD_LIM` should always have a valid value, but all other 'modules' are usually turned off for pure hydrodynamic 
+ `TVD_LIM` should always have a valid value, and BLD_STANDALONE should be ON (to build SCHISM alone; OFF is for building SCHISM as a UFS/ESMF component). All other 'modules' are usually turned off for pure hydrodynamic 
   applications. 
   `NO_PARMETIS`: you can bypass ParMETIS lib by providing instead a domain partitioning map (`partition.prop`
   which is identical to the output from ParMETIS `global_to_local.prop`) at runtime. 
