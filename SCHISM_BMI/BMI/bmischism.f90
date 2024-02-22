@@ -12,7 +12,7 @@ module bmischism
   use schism_glbl, only: ylat, xlon, npa, np, nea, ne, ics
   use schism_glbl, only: xel, yel
   use schism_glbl, only: ne_global, xlon_el, ylat_el
-  use schism_glbl, only: np_global, xnd, ynd, znd, area
+  use schism_glbl, only: np_global, xnd, ynd, znd, area, dp
   use schism_glbl, only: nope_global, nond_global, iond_global, nsources
   use schism_glbl, only: fluxsu, fluxlu, ieg_source, ath2, ath3
   use schism_glbl, only: windx1, windy1, pr1, airt1, shum1
@@ -113,7 +113,7 @@ module bmischism
 
   ! Exchange items
   integer, parameter :: input_item_count = 8
-  integer, parameter :: output_item_count = 3
+  integer, parameter :: output_item_count = 4
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -263,6 +263,8 @@ end subroutine read_init_config
     output_items(1) = 'ETA2'    ! Total water level (m)
     output_items(2) = 'VY'      ! current vector velocity in northward direction (m/s)
     output_items(3) = 'VX'      ! current vector velocity in eastward direction (m/s)
+    output_items(4) = 'BEDLEVEL'! Node bedlevel of the SCHISM mesh (m)
+  
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -365,7 +367,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','ETA2_bnd', 'Q_bnd', 'RAINRATE','SFCPRS','SPFH2m','TMP2m','UU10m','VV10m','VX','VY')
+    case('ETA2','ETA2_bnd', 'Q_bnd', 'RAINRATE','SFCPRS','SPFH2m','TMP2m','UU10m','VV10m','VX','VY','BEDLEVEL')
        type = "double precision"
        bmi_status = BMI_SUCCESS
     case default
@@ -389,6 +391,9 @@ end function schism_finalizer
     case("TMP2m")
        units = "K"
        bmi_status = BMI_SUCCESS
+    case("BEDLEVEL")
+       units = "m"
+       bmi_status = BMI_SUCCESS       
     case("RAINRATE")
        units = "kg m-2 s-1"
        bmi_status = BMI_SUCCESS
@@ -419,7 +424,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','VX','VY','ETA2_bnd','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m')
+    case('ETA2','VX','VY','ETA2_bnd','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m','BEDLEVEL')
        location = "node"
        bmi_status = BMI_SUCCESS
     case('Q_bnd','RAINRATE')
@@ -440,7 +445,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','VX','VY','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m')
+    case('ETA2','VX','VY','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m','BEDLEVEL')
        grid = 1
        bmi_status = BMI_SUCCESS
     case('Q_bnd','RAINRATE')
@@ -1000,6 +1005,9 @@ end function schism_finalizer
     case("VY")
        size = sizeof(vv2(1,:))
        bmi_status = BMI_SUCCESS
+    case("BEDLEVEL")
+       size = sizeof(dp)
+       bmi_status = BMI_SUCCESS       
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -1609,6 +1617,9 @@ end function schism_finalizer
     case("VY")
       dest = [vv2(1,:)]
       bmi_status=BMI_SUCCESS
+    case("BEDLEVEL")
+      dest = [dp(:)]
+      bmi_status=BMI_SUCCESS      
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -1722,6 +1733,11 @@ end function schism_finalizer
           dest(i) = vv2(1,inds(i))
       enddo
       bmi_status=BMI_SUCCESS
+    case("BEDLEVEL")
+      do i = 1, size(inds)
+          dest(i) = dp(inds(i))
+      enddo
+      bmi_status=BMI_SUCCESS      
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
