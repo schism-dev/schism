@@ -3,30 +3,23 @@ import time
 import subprocess
 import glob
 import re
-from pathlib import Path
 
 #----------input---------------------------------
-#Used to automatically restart due to wall clock limit
 #(1) Copy this script, run_test and run_comb into rundir
-#(2) Inside rundir: prep inputs as before (ihot=1 or 2 is fine):
-#    The "hotstart.nc" (if it exists under ihot=1 or 2) will be overwritten by this script by symlinks;
-#    so always use symlinks for this input.
+#(2) Inside rundir: prep inputs as before
+#    The "hotstart.nc" (if it exists under ihot=1 or 2) will be overwritten by this script by symlinks; 
+#    if you want to keep it, "mv hotstart.nc hotstart.nc.0" then "ln -s hotstart.nc.0 hotstart.nc"
 #(3) Under the run dir, "python auto_hotstart.py >& scrn.out"
 #Script will use the last part of current dir as runid
+#This script can also be launched inside an on-going run
 
 job_scheduler = 'slurm' # 'pbs' or 'slurm'
 
-rundir = os.getcwd()  # use os.getcwd if launch from rundir; otherwise specify a string yourself, e.g.,
-# rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R02/'
-
+rundir = os.getcwd()  # use os.getcwd if launch from rundir; otherwise specify a string yourself
 last_stack = None  # if None, the script will try to find the last stack number in the file "param.nml"
                    # make sure the run can finish the specified rnday in param.nml (i.e., the forcing covers the whole period);
                    # otherwise, change the "rnday" in param.nml or specify another number here
 
-remove_old_hotstart = 2  # 2: remove previous hotstart files except the combined hotstart_it*.nc
-                         # 1: remove all previous hotstart files, including the combined hotstart_it*.nc
-                         #    i.e., only keep the latest uncombined hotstart files (combined and uncombined)
-                         # 0: keep all hotstart files
 #----------end input---------------------------------
 
 
@@ -61,7 +54,7 @@ def ReplaceJobName(fname, job_name, job_scheduler='slurm'):
                 match_found = True
             modified_line = re.sub(pattern, replacement, line)
             print(modified_line, end='')
-
+    
     if not match_found:
         raise Exception(f'Job name specification not found in {fname}')
 
@@ -117,7 +110,7 @@ elif job_scheduler == 'pbs':
 else:
     raise Exception('job_scheduler must be either "slurm" or "pbs"')
 
-run_id = Path(rundir).name
+run_id = os.path.basename(rundir)
 if len(run_id) > 8:
     raise Exception('run_id must be 8 characters or less, otherwise it may be truncated by the job scheduler')
 print(f'{my_print_decor}RUN job name : {run_id}{my_print_decor}', flush=True)
@@ -143,11 +136,11 @@ ReplaceJobName(f'{rundir}/run_test', run_id, job_scheduler)
 ReplaceJobName(f'{rundir}/run_comb', combine_job_name, job_scheduler)
 
 os.chdir(f'{rundir}')
-print(f'{my_print_decor}Launch first run_test{my_print_decor}', flush=True)
-os.system(f'{batch_cmd} run_test')
+# print(f'{my_print_decor}Launch first run_test{my_print_decor}', flush=True)
+# os.system(f'{batch_cmd} run_test')
 
 # --------------------- monitor the run -----------------------
-while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) and (not os.path.exists(f'{rundir}/outputs/out2d_{last_stack+1}.nc')):
+while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) and (not os.path.exists(f'{rundir}/outputs/out2d_{last_stack}.nc')):
 
     job_status = subprocess.getoutput(queue_query_str)
     print(job_status)
@@ -167,7 +160,19 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
             print(f'{my_print_decor}{run_id} queueing, wait ...{my_print_decor}', flush=True)
         time.sleep(120)
     else:
-        #Combine hotstart
+        # check if the run finishes normally
+        # open a file and check if the last line contains "Run completed successfully"
+        with open(f'{rundir}/outputs/mirror.out', 'r') as file:
+            lines = file.readlines()  # Read all lines in the file
+            last_line = lines[-1] if lines else ''  # Get the last line if the file is not empty
+            # Check if the last line contains the desired phrase
+            if "Run completed successfully" in last_line:
+                print("The last line indicates that the run completed successfully.")
+                break
+            else:
+                print("The last line does not indicate a successful completion, try combining the last hotstart.nc the restart the run.")
+
+        # combine hotstart
         hot_steps = Get_hotstart_step(f'{rundir}/outputs/')
         if len(hot_steps) == 0:
             raise Exception('No hotstart files generated before run stopped.')
@@ -176,30 +181,17 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
         hot_combined = f'{rundir}/outputs/hotstart_it={hot_step}.nc'
         print(f'{my_print_decor}{run_id} stopped, last hotstart to combine: {hot_combined}{my_print_decor}', flush=True)
 
-        if remove_old_hotstart > 0: # remove previous hotstart files to save disk space
-            all_hot_files = glob.glob(f"{rundir}/outputs/hotstart_*.nc")
-            combined_hot_files = glob.glob(f"{rundir}/outputs/hotstart_it=*.nc")
-            current_hot_files = glob.glob(f"{rundir}/outputs/hotstart*{hot_step}.nc")  # combined and uncombined
-
-            if remove_old_hotstart == 1:  # remove all previous hotstart files, only keeping uncombined files of the latest hotstart step
-                removed_hot_files = list(set(all_hot_files) - set(current_hot_files))
-            elif remove_old_hotstart == 2:  # remove previous hotstart files except the combined hotstart_it*.nc
-                removed_hot_files = list(set(all_hot_files) - set(current_hot_files) - set(combined_hot_files))
-
-            for removed_hot_file in removed_hot_files:
-                os.remove(removed_hot_file)
-
         os.chdir(f'{rundir}/outputs/')
         Replace_string_in_file(f'{rundir}/run_comb', '-i 0000', f'-i {hot_step}')
 
         print(f'{my_print_decor}{batch_cmd} run_comb{my_print_decor}', flush=True)
         os.system(f'{batch_cmd} {rundir}/run_comb')
 
-        # restore run_cmb template
+	# restore run_cmb template
         os.system(f'cat {rundir}/run_comb')
         Replace_string_in_file(f'{rundir}/run_comb', f'-i {hot_step}', '-i 0000')
 
-        # wait for combine hotstart to finish
+	# wait for combine hotstart to finish
         while combine_job_name in subprocess.getoutput(queue_query_str):
             time.sleep(20)
             print(f'{my_print_decor}waiting for job {combine_job_name} to finish{my_print_decor}', flush=True)
@@ -212,7 +204,7 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
         print(f'{my_print_decor}linking {hot_combined}{my_print_decor}', flush=True)
         os.system(f'rm {rundir}/hotstart.nc')
         os.symlink(hot_combined, f'{rundir}/hotstart.nc')
-
+        
         # dealing with the paired normal run
         if rundir_normal != '':
             if re.search(rf"{run_id_normal}\s+{user_name}\s+R", job_status) is not None:
