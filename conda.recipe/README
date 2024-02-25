@@ -1,17 +1,45 @@
-# This are the recipe files for conda.
-
+# This is the recipe for conda.
 
 ## Files:
 
-meta.yaml : conda config
+**meta.yaml** : conda config
 
-build.sh : Bash script for compiling based on CMake.
+**build.sh** : Bash script for compiling based on `CMake`.
 
-conda_build_config.yaml: Used for defining various variants. Currently mpich options.
-
-cross-linux.cmake : left there for testing. Probably not needed.
-
+**conda\_build\_config.yaml** : Used for defining various variants.
 
 ## Procedure:
 
+Set the options in `conda_build_config.yaml`.
+
+Note that having both false/true in the options would create all combinations.
+
+It's better if the binaries are then differenciated by adding in the `meta.yaml` file the variable to the name definition e.g.
+
+```python
+  name: {{ name|lower }}-{{ TVD_LIM|lower }}
+```
+
+Edit `meta.yaml` file setting
+
+ - version
+
+```python
+{% set version = "5.9" %}
+```
+
+ - branch
+
+```python
+  git_tag: v5.9
+```
+
+Make sure that you have `conda-build` and `conda-verify` in your env. You can use
+
+`conda install conda-build conda-verify`
+
+Build by executing from the folder containing the *conda.recipe* folder:
+
 `conda build conda.recipe`
+
+Upload to your private channel. See [here](https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs.html#optional-uploading-new-packages-to-anaconda-org) for more info.
