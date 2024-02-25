@@ -14,9 +14,13 @@ if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
          set( CMAKE_Fortran_FLAGS_RELEASE_INIT "-O2 ${SCHISM_INTEL_OPTIONS}")
          set( CMAKE_Fortran_FLAGS_DEBUG_INIT "-g ${SCHISM_INTEL_OPTIONS}")
          set( CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -debug inline_debug_info ${SCHISM_INTEL_OPTIONS}")
-         set( C_PREPROCESS_FLAG CACHE STRING "C Preprocessor Flag")
+         set( C_PREPROCESS_FLAG -cpp CACHE STRING "C Preprocessor Flag")
     endif()
     
+endif()
+
+if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM")
+    set( C_PREPROCESS_FLAG CACHE STRING "C Preprocessor Flag")
 endif()
 
 if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")

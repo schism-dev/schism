@@ -1,0 +1,8 @@
+#!/bin/tcsh
+#SBATCH --job-name=R01a
+##64 cores/nodes
+#SBATCH -N 13 --ntasks-per-node=64
+##Max wall clock time is XX days
+#SBATCH -t 24:00:00
+
+srun ./pschism_i24 6
