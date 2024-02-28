@@ -19,6 +19,10 @@ if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
     
 endif()
 
+if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "IntelLLVM")
+    set( C_PREPROCESS_FLAG CACHE STRING "C Preprocessor Flag")
+endif()
+
 if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "PGI")
     #message(STATUS "Overriding default cmake Portland Group compiler flags")
     set (SCHISM_PG_OPTIONS "-mcmodel=medium")
