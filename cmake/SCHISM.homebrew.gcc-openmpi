@@ -1,0 +1,18 @@
+# CMake presets for compiling on a homebrew (linux/mac) system
+# 
+# SPDX-FileCopyrightText: 2024 Helmholtz-Zentrum hereon GmbH
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
+# 
+# Prerequisites
+#   `brew install gcc@13 gfortran cmake make`
+#   `brew install -cc=gcc open-mpi netcdf netcdf-fortran`
+#
+set(CMAKE_Fortran_COMPILER /opt/homebrew/bin/mpifort CACHE PATH "Path to parallel Fortran compiler")
+set(CMAKE_C_COMPILER /opt/homebrew/bin/mpicc CACHE PATH "Path to parallel C compiler")
+set(CMAKE_CXX_COMPILER /opt/local/bin/mpicxx CACHE PATH "Path to parallel C++ compiler")
+set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -fallow-argument-mismatch" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran release flags" FORCE)
+set(NetCDF_FORTRAN_DIR /opt/homebrew  CACHE PATH "Path to NetCDF Fortran library")
+set(NetCDF_C_DIR /opt/homebrew CACHE PATH "Path to NetCDF C library")
+set(BLD_STANDALONE "ON" CACHE STRING "Build standalone pschism")
