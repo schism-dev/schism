@@ -1730,7 +1730,7 @@ Sample outputs using OLDIO (schout*.nc) can be found <a href="http://ccrm.vims.e
 <p>You can download newer versions of VisIt plugins c/o Jon Shu, DWR by following these steps:</p>
 <p><strong>On Windows 7 or 10</strong></p>
 <ol>
-<li>First download VisIt from <a href="https://wci.llnl.gov/simulation/computer-codes/visit/downloads">LLNL</a> site and install. Use default dir (and record it), e.g. <code>C:\Users\username\AppData\Local\Programs\LLNL\VisIt*</code></li>
+<li>First download VisIt from <a href="https://wci.llnl.gov/simulation/computer-codes/visit/downloads">LLNL</a> site and install. Note the location, which will be in your Windows profile directory if you install for the current user or in <code>Program Files</code> if you install for all users. Note the location.</li>
 <li>Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIt). If you are using VisIt 3.3.1, you need MS visualc++ 2013 x64 also.</li>
 <li>
 <p>Download pre-built plug-in, developed at California Dept of Water Resource</p>
@@ -1739,10 +1739,10 @@ Sample outputs using OLDIO (schout*.nc) can be found <a href="http://ccrm.vims.e
 <li><a href="https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.1.4_win64_vs2017_tag_1.1.0.zip">For VisIt v3.1.4</a></li>
 <li><a href="https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.3.1_win64_vs2017_tag_1.1.0.zip">For VisIt v3.3.1</a></li>
 </ul>
-<p>You need to put dlls to: <code>Documents/VisIt/databases</code> (create new folders if necessary), except <code>netcdf_c++.dll</code>. The NetCDF DLL needs to be copied to <code>%USERPROFILE%\LLNL\VisIt 3.3.1</code> or an equivalent VisIt installation directory.</p>
+<p>You need to put the plugin dlls in: <code>%USERPROFILE%\Documents\VisIt\databases</code> (create new folders if necessary), except <code>netcdf_c++.dll</code>. The NetCDF DLL needs to be copied to the VisIt installation directory, which may be <code>%USERPROFILE%\LLNL\VisIt 3.3.1</code> if you installed for yourself or the system install directory <code>C:Program Files\LLNL\VisIt3.3.1.</code> if you installed for all users.</p>
 </li>
 <li>
-<p>After these steps, you'd be able to read in SCHISM outputs in ViSIt; look for <code>SCHISM</code>, <code>gr3</code> format from the dropdown list. To load in vectors, select only the <code>X</code> file.</p>
+<p>After these steps, you should be able to read in SCHISM outputs in ViSIt; look for <code>SCHISM</code>, <code>gr3</code> format from the dropdown list. To load in vectors, select only the <code>X</code> file.</p>
 </li>
 </ol>
 <p><strong>On Linux Systems</strong></p>
