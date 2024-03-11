@@ -67,16 +67,16 @@ You can download newer versions of VisIt plugins c/o Jon Shu, DWR by following t
 
 **On Windows 7 or 10**
 
-1. First download VisIt from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Use default dir (and record it), e.g. `C:\Users\username\AppData\Local\Programs\LLNL\VisIt*`
+1. First download VisIt from [LLNL](https://wci.llnl.gov/simulation/computer-codes/visit/downloads) site and install. Note the location, which will be in your Windows profile directory if you install for the current user or in `Program Files` if you install for all users. Note the location.
 2. Make sure MS visualc++ 2012 x64 is installed. If not, google it and install and restart (this is required for using multi-core VisIt). If you are using VisIt 3.3.1, you need MS visualc++ 2013 x64 also.
 3. Download pre-built plug-in, developed at California Dept of Water Resource
     * [For VisIt v2.13.3](https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit2.13.3_win64_vs2012_tag_1.1.0.zip)
     * [For VisIt v3.1.4](https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.1.4_win64_vs2017_tag_1.1.0.zip)
     * [For VisIt v3.3.1](https://github.com/schism-dev/schism_visit_plugin/releases/download/1.1.0/schism_plugin_visit3.3.1_win64_vs2017_tag_1.1.0.zip)
     
-    You need to put dlls to: `Documents/VisIt/databases` (create new folders if necessary), except `netcdf_c++.dll`. The NetCDF DLL needs to be copied to `%USERPROFILE%\LLNL\VisIt 3.3.1` or an equivalent VisIt installation directory.
+    You need to put the plugin dlls in: `%USERPROFILE%\Documents\VisIt\databases` (create new folders if necessary), except `netcdf_c++.dll`. The NetCDF DLL needs to be copied to the VisIt installation directory, which may be `%USERPROFILE%\LLNL\VisIt 3.3.1` if you installed for yourself or the system install directory `C:Program Files\LLNL\VisIt3.3.1.` if you installed for all users.
 
-4. After these steps, you'd be able to read in SCHISM outputs in ViSIt; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
+4. After these steps, you should be able to read in SCHISM outputs in ViSIt; look for `SCHISM`, `gr3` format from the dropdown list. To load in vectors, select only the `X` file.
 
 **On Linux Systems**
 
