@@ -35,7 +35,7 @@
 !diagnosis
      &                         NE_GLOBAL => ne_global, &! Global number of elements
      &                         NP_GLOBAL => np_global, &! Global number of nodes
-     &                         INETMP => elnode_wwm, & ! Element connection table of the augmented domain?
+     &                         INETMP => elnode_wwm, & ! Element connection table of the augmented domain (after splitting quads)
      &                         iplg,             & ! node local to global mapping
      &                         ipgl,             & ! node global to local mapping
 !     &                         ielg,             & ! element local to global mapping
