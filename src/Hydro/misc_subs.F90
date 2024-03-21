@@ -3223,7 +3223,7 @@
           endif
         enddo !j
         if(ifl==0) then    !todo: assert
-          write(errmsg,*)'EVAL_CUBIC: Falied to find:',i,xtmp,xmin,xmax
+          write(errmsg,*)'EVAL_CUBIC: Falied to find: i=',i,' xtmp=',xtmp,' xmin=',xmin,' xmax=',xmax
           call parallel_abort(errmsg)
         endif
       enddo !i=1,npts2
