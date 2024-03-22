@@ -9185,17 +9185,14 @@
 
 #if defined USE_WW3
         ! Eastward wave radiation stress
-        noutput=noutput+1
         icount=icount+1
         call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
 
         ! Eastward northward wave radiation stress
-        noutput=noutput+1
         icount=icount+1
         call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
 
         ! Northward wave radiation stress
-        noutput=noutput+1
         icount=icount+1
         call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
 #endif
