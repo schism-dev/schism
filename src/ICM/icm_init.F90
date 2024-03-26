@@ -507,21 +507,20 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(DIN(nvrt),temp(nvrt),spatch(nea),vpatch(nea),gpatch(nea),stat=istat)
+  allocate(DIN(nvrt),temp(nvrt),spatch(nea),vpatch(nea),gpatch(nea),ppatch(nea),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
 
-  DIN=0.0; temp=0.0; spatch=0; vpatch=0
+  DIN=0.0; temp=0.0; spatch=0; vpatch=0; ppatch=0
 
   !-------------------------------------------------------------------------------
   !pH variables
   !-------------------------------------------------------------------------------
   if(iPh==1) then
-    allocate(ppatch(nea),ph_nudge(nea),ph_nudge_nd(npa), &
+    allocate(ph_nudge(nea),ph_nudge_nd(npa), &
       & TIC_el(nvrt,nea),ALK_el(nvrt,nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. pH variables')
 
-    ppatch=0.0;  ph_nudge=0.0; ph_nudge_nd=0.0;
-    TIC_el=0.0;  ALK_el=0.0;
+    ph_nudge=0.0; ph_nudge_nd=0.0; TIC_el=0.0;  ALK_el=0.0;
   else
     ppatch0=0
   endif
@@ -777,7 +776,7 @@ subroutine icm_vars_init
    do m=irange_tr(1,7),irange_tr(2,7)
      do k=1,nvrt
        do i=1,np
-         tr_nd(m,k,i)=sum(tr_el(indel(1:nne(i),i),k,i))/dble(nne(i))
+         tr_nd(m,k,i)=sum(tr_el(m,k,indel(1:nne(i),i)))/dble(nne(i))
        enddo !p
      enddo !k
    enddo !m
