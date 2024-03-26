@@ -1737,6 +1737,7 @@
       nsteps_from_cold=0
       wind_rotate_angle=0.d0
       wwave_force=0.d0
+      diffmin=1.d-6; diffmax=1.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -7012,12 +7013,14 @@
 !          enddo !i
 !          stop
 
-!$OMP parallel do default(shared) private(j)
+!$OMP parallel do default(shared) private(j,k)
           do j=1,npa
             q2(:,j) = tke1d(0:(nvrt-1))
             xl(:,j) = L1d(0:(nvrt-1))
-            dfv(:,j) = min(diffmax(j),max(diffmin(j),num1d(0:(nvrt-1))))
-            dfh(:,j) = min(diffmax(j),max(diffmin(j),nuh1d(0:(nvrt-1))))
+            do k=1,nvrt
+              dfv(k,j) = min(diffmax(j),max(diffmin(j),num1d(k-1))) !0:(nvrt-1))))
+              dfh(k,j) = min(diffmax(j),max(diffmin(j),nuh1d(k-1)))
+            enddo !k
           enddo !j
 !$OMP end parallel do
 #endif
@@ -7025,8 +7028,10 @@
 
 !...  Impose limit for diffusivities for cold & hot starts
       do j=1,npa
-        dfv(:,j)=min(diffmax(j),max(diffmin(j),dfv(:,j)))
-        dfh(:,j)=min(diffmax(j),max(diffmin(j),dfh(:,j)))
+        do k=1,nvrt
+          dfv(k,j)=min(diffmax(j),max(diffmin(j),dfv(k,j)))
+          dfh(k,j)=min(diffmax(j),max(diffmin(j),dfh(k,j)))
+        enddo !k
       enddo !j
 
 !     Set essential b.c. flags (needed by PetSc)
