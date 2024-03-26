@@ -598,6 +598,7 @@ git versions:
 148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
 149. `045962` (Sept 13, 2023): removed goto in lap.F90
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
+151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
 
 ================================================================================================
 (D) Auto-test history:
