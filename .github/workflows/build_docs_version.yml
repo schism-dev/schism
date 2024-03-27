@@ -26,7 +26,7 @@ jobs:
         id: tag_name
       - name: Get branch names
         id: branch-name
-        uses: tj-actions/branch-names@v5.4
+        uses: tj-actions/branch-names@v7.0.7
       - name: Deploy with mike
         run: |
           mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
