@@ -6186,7 +6186,8 @@
       REAL(rkind), intent(in) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
 
       !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
-      REAL(rkind) :: DSXX3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),DSYY3D(2,NVRT,nsa)
+      REAL(rkind) :: DSXX3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),DSYY3D(2,NVRT,nsa), &
+                    &SXX3D(NVRT,npa),SXY3D(NVRT,npa),SYY3D(NVRT,npa)
       integer :: IS,i
       REAL(rkind) :: HTOT,sum1,sum2,sum3,tmp
     
@@ -6227,6 +6228,11 @@
           RSXY(i)=RSXY(i)/rho0
           RSYY(i)=RSYY(i)/rho0
         endif !idry
+ 
+        !Add vertical dimension
+        SXX3D(:,i)=RSXX(i)
+        SXY3D(:,i)=RSXY(i)
+        SYY3D(:,i)=RSYY(i)
       enddo !i
 
 !new39
@@ -6235,9 +6241,9 @@
       
 
       ! Computing gradients of the depth-averaged radiation stress (m^2/s/s)
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXX,DSXX3D)   !(dSxx/dx , dSxx/dy )
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSYY,DSYY3D)   !(dSyy/dx , dSyy/dy )
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXY,DSXY3D)   !(dSxy/dx , dSxy/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SXX3D,DSXX3D)   !(dSxx/dx , dSxx/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SYY3D,DSYY3D)   !(dSyy/dx , dSyy/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SXY3D,DSXY3D)   !(dSxy/dx , dSxy/dy )
       CALL exchange_s3d_2(DSXX3D)
       CALL exchange_s3d_2(DSYY3D)
       CALL exchange_s3d_2(DSXY3D)
