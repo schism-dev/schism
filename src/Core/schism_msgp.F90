@@ -93,6 +93,8 @@ module schism_msgp
   ! Private data
   !-----------------------------------------------------------------------------
 
+  logical,save :: schism_initialized_mpi  ! Whether SCHISM initialized MPI, and thus is responsible for finalizing it
+
   integer,save :: mnesend                 ! Max number of elements to send to a nbr
   integer,save,allocatable :: nesend(:)   ! Number of elements to send to each nbr
   integer,save,allocatable :: iesend(:,:) ! Local index of send elements
@@ -382,10 +384,12 @@ subroutine parallel_init(communicator)
   if (present(communicator)) then
     ! Expect external call to mpi_init,
     ! use communicator as provided by the interface
+    schism_initialized_mpi = .FALSE.
     call mpi_comm_dup(communicator,comm_schism,ierr)
   else
     ! Initialize MPI
     call mpi_init(ierr)
+    schism_initialized_mpi = .TRUE.
     if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
     ! Duplicate communication space to isolate ELCIRC communication
     call mpi_comm_dup(MPI_COMM_WORLD,comm_schism,ierr)
@@ -431,8 +435,10 @@ end subroutine parallel_init
 subroutine parallel_finalize
   implicit none
 
-  call mpi_finalize(ierr)
-  if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
+  if(schism_initialized_mpi) then
+   call mpi_finalize(ierr)
+   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
+  endif
 
 end subroutine parallel_finalize
 
