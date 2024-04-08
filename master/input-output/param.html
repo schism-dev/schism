@@ -1222,8 +1222,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
-    nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+  <a href="#nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
+    nws=0 (int), drampwind=1. (double), iwind_form=1 (int), iwindoff(int), wtiminc=dt (double)
   </a>
   
 </li>
@@ -2231,7 +2231,7 @@ Euler or 2nd-order Runge-Kutta scheme.
 <h3 id="ncor0-int">ncor=0 (int)<a class="headerlink" href="#ncor0-int" title="Permanent link">&para;</a></h3>
 <p>Coriolis option. If <code>ncor=0</code> or <code>-1</code>, a constant Coriolis parameter is specified. If <code>ncor=0</code>, <code>coricoef</code> specifies the Coriolis factor. If <code>ncor=-1</code>, <code>rlatitude</code> specifies the mean latitude used to calculate the Coriolis factor.</p>
 <p>If <code>ncor=1</code>, a variable Coriolis parameter, based either on a beta-plane approximation (<code>ics=1</code>) or on the latitude-dependent Coriolis (<code>ics=2</code>), is used, with the lat/lon coordinates read in from <code>hgrid.ll</code>. For <code>ics=1</code>, the center of beta-plane approximation must be correctly specified in <code>sfea0</code>.</p>
-<h3 id="nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double">nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-int-drampwind1-double-iwind_form-1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
+<h3 id="nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double">nws=0 (int), drampwind=1. (double), iwind_form=1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
 <p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no 
 wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain 
 at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code>, spatially 
