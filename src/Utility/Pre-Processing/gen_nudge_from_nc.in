@@ -1,0 +1,3 @@
+20. 33. !T,S outside
+86400. 1 !time step in .nc in sec; output stride
+1 !# of nc files

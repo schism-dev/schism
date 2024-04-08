@@ -291,7 +291,7 @@ Coriolis option. If `ncor=0` or `-1`, a constant Coriolis parameter is specified
 
 If `ncor=1`, a variable Coriolis parameter, based either on a beta-plane approximation (`ics=1`) or on the latitude-dependent Coriolis (`ics=2`), is used, with the lat/lon coordinates read in from `hgrid.ll`. For `ics=1`, the center of beta-plane approximation must be correctly specified in `sfea0`.
 
-### nws=0 (int), drampwind=1. (double), iwind_form=-1 (int), iwindoff(int), wtiminc=dt (double)
+### nws=0 (int), drampwind=1. (double), iwind_form=1 (int), iwindoff(int), wtiminc=dt (double)
 Wind forcing options and the interval (in seconds) with which the wind input is read in. If `nws=0`, no 
 wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is applied to the whole domain 
 at any given time, and the time history of wind is read in from `wind.th`. If `nws=2`, spatially 
