@@ -2270,7 +2270,7 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 <p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.</p>
 <h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
 <h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
-<p>Station output flag. If <code>iout_sta≠1</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.</p>
+<p>Station output flag. If <code>iout_sta≠0</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.</p>
 <h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
 <p>Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.</p>
 <h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
