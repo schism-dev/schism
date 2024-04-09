@@ -336,7 +336,7 @@ Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to g
 
 ## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
-Station output flag. If `iout_sta≠1`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
+Station output flag. If `iout_sta≠0`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
 
 ### nc_out =1(int)
 Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.
